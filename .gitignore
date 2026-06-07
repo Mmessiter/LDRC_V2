@@ -1,0 +1,11 @@
+# ── Build output / IDE / OS cruft — regeneratable, never tracked ──
+# (patterns without a leading slash match at any depth, so they cover every subproject)
+.pio/
+.cache/
+.vscode/
+compile_commands.json
+.DS_Store
+
+# ── Secrets — NEVER commit ──
+# The messiter.com FTP password lives here (also ignored inside LDRC2SIM/.gitignore).
+ftp_credentials.sh

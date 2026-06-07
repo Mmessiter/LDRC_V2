@@ -1,0 +1,8 @@
+{
+  "LDRC2SIM-1.0.12": "Firmware page shows an animated progress bar while an update downloads and flashes.",
+  "LDRC2SIM-1.0.11": "Updates now also come from messiter.com (public OTA mirror), alongside the local dev server.",
+  "LDRC2SIM-1.0.10": "Low-latency event-driven HID reports (sub-ms); Wi-Fi reconnect watchdog + mDNS restart.",
+  "LDRC2SIM-1.0.8": "Remap channels page: feed any of 8 USB outputs from any of 16 RX inputs, per-output reverse; colour input bars; saved to NVS.",
+  "LDRC2SIM-1.0.6": "Fix firmware-page hang, smoother channel bars, tidied text.",
+  "LDRC2SIM-1.0.5": "Lower latency, async Wi-Fi scan, please-wait + firmware-page styling."
+}
