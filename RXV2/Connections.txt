@@ -26,6 +26,6 @@ Reminders:
 - ML01SP4 / DP5 pinouts: GND, VCC, CE, CSN, SCK, MOSI, MISO, IRQ (in that order on the 2×4 header). Wire each socket the same; only the CE/CSN pair varies
 - Keep antenna ends spaced as far apart as practical — ideally orthogonal to each other for diversity
 
-With pluggable sockets you can test every combination (just 1 in slot 1, just 1 in slot 3, slots 1+2, slots 2+3, all three, etc.) and the firmware will adapt automatically — the home page banner tells you which slots came up at each boot.
+With pluggable sockets you can test every combination (just 1 in slot 1, just 1 in slot 3, slots 1+2, slots 2+3, all three, etc.) and the firmware will adapt automatically — the home page banner tells you which slots came up at each boot. testing!
 
 
