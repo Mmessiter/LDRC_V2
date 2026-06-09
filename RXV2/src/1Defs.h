@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.89-big-pad";
+constexpr const char* FW_VERSION = "RXV2-0.9.90-pad-menu";
 
 //*********************************************************************
 //  Auto-update manifest URLs

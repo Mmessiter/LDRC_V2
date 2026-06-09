@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.90-pad-menu",
+      "url": "https://messiter.com/rxv2/release/v0.9.90/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.90/littlefs.bin",
+      "notes": "Sim controls tidy-up: all six buttons now exactly the same size, with a full-size 'Return to menu' button at the bottom (the tiny top link is gone). Up is pale blue and Down dark blue for quick contrast. Page-only change; no re-calibration."
+    },
+    {
       "name": "RXV2-0.9.89-big-pad",
       "url": "https://messiter.com/rxv2/release/v0.9.89/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.89/littlefs.bin",

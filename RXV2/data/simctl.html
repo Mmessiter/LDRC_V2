@@ -11,28 +11,28 @@
 <link rel=stylesheet href="/style.css?v=30">
 <script src="/app.js?v=30" defer></script>
 <style>
-/* One tall column of big targets, filling the screen. */
-.pad{display:flex;flex-direction:column;gap:10px;
- min-height:calc(100vh - 168px);min-height:calc(100dvh - 168px)}
-.simBtn{flex:1 1 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.08em;
- border:0;border-radius:16px;cursor:pointer;color:#fff;font:inherit;text-align:center;min-height:64px;
- box-shadow:0 1px 4px rgba(0,0,0,.22);transition:transform .05s,filter .12s,box-shadow .12s;
+/* One tall column of equal, big, can't-miss targets, filling the screen. */
+.pad{display:flex;flex-direction:column;gap:9px;
+ min-height:calc(100vh - 104px);min-height:calc(100dvh - 104px)}
+.simBtn{flex:1 1 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.05em;
+ border:0;border-radius:16px;cursor:pointer;color:#fff;font:inherit;text-align:center;min-height:56px;
+ text-decoration:none;box-shadow:0 1px 4px rgba(0,0,0,.22);
+ transition:transform .05s,filter .12s,box-shadow .12s;
  user-select:none;-webkit-user-select:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .simBtn:active{transform:scale(.985)}
-.simBtn .lbl{font-weight:800;font-size:1.8em;line-height:1}
-.simBtn .sub{font-size:.78em;opacity:.8;font-variant-numeric:tabular-nums}
-.simBtn .arr{font-size:2.1em;line-height:.8;font-weight:900}
+.simBtn .lbl{font-weight:800;font-size:1.7em;line-height:1;text-shadow:0 1px 2px rgba(0,0,0,.28)}
+.simBtn .sub{font-size:.74em;opacity:.82;font-variant-numeric:tabular-nums}
 /* pressed (a TX switch on its channel, or a tap/hold) — a glow that reads on any colour */
-.simBtn.lit{filter:brightness(1.15);box-shadow:0 0 0 4px rgba(255,255,255,.7),0 1px 8px rgba(0,0,0,.3)}
-.sel{background:#36a85a}                       /* Select — green */
-.ud{background:#4a8fc9;touch-action:none}      /* Up / Down — blue */
-.can{background:#df8a36}                        /* Cancel — amber */
-.reset{background:#d6403c;flex-grow:1.35}       /* Reset — red, a touch bigger (the "spacebar") */
-.reset .lbl{font-size:2.2em}
+.simBtn.lit{filter:brightness(1.13);box-shadow:0 0 0 4px rgba(255,255,255,.7),0 1px 8px rgba(0,0,0,.3)}
+.sel{background:#36a85a}              /* Select — green */
+.ud{touch-action:none}               /* Up / Down share the press-and-hold auto-repeat */
+.up{background:#6cabdf}              /* Up — pale blue */
+.down{background:#2b568f}            /* Down — dark blue */
+.can{background:#df8a36}             /* Cancel — amber */
+.reset{background:#d6403c}           /* Reset — red */
+.menu{background:#6f7e8b}            /* Return to menu — neutral */
+.pageTitle{text-align:center;font-size:1.3em;font-weight:700;margin:.25em 0 .35em}
 .offNote{text-align:center;color:#9a5;font-weight:600;margin:.1em 0 .5em;display:none}
-.padHdr{display:flex;align-items:baseline;justify-content:space-between;margin:.1em 0 .35em}
-.padHdr h1{margin:0;font-size:1.4em}
-.padHdr a{font-size:.95em}
 </style>
 </head>
 <body>
@@ -40,23 +40,21 @@
 <div class=bg-photo aria-hidden=true></div>
 <div class=bg-wash  aria-hidden=true></div>
 <div class=container>
-    <div class=padHdr>
-        <h1>Sim controls</h1>
-        <a href="/">&#8617; Menu</a>
-    </div>
+    <div class=pageTitle>Sim controls</div>
     <div id=offNote class=offNote>Simulator mode is OFF &mdash; turn it on from the home screen for these to work.</div>
 
     <div class=pad>
         <button class="simBtn sel" id=b2 data-n=2>
             <span class=lbl>Select</span><span class=sub>ch 10 &middot; <span id=cv2>&middot;</span></span></button>
-        <button class="simBtn ud" id=b4 data-n=4>
-            <span class=arr>&#9650;</span><span class=lbl>Up</span><span class=sub>ch 12 &middot; <span id=cv4>&middot;</span></span></button>
-        <button class="simBtn ud" id=b5 data-n=5>
-            <span class=arr>&#9660;</span><span class=lbl>Down</span><span class=sub>ch 13 &middot; <span id=cv5>&middot;</span></span></button>
+        <button class="simBtn ud up" id=b4 data-n=4>
+            <span class=lbl>&#9650; Up</span><span class=sub>ch 12 &middot; <span id=cv4>&middot;</span></span></button>
+        <button class="simBtn ud down" id=b5 data-n=5>
+            <span class=lbl>&#9660; Down</span><span class=sub>ch 13 &middot; <span id=cv5>&middot;</span></span></button>
         <button class="simBtn can" id=b3 data-n=3>
             <span class=lbl>Cancel</span><span class=sub>ch 11 &middot; <span id=cv3>&middot;</span></span></button>
         <button class="simBtn reset" id=b1 data-n=1>
             <span class=lbl>Reset</span><span class=sub>ch 9 &middot; <span id=cv1>&middot;</span></span></button>
+        <a class="simBtn menu" href="/"><span class=lbl>&#8617; Return to menu</span></a>
     </div>
 
     <div class=footer></div>
@@ -92,6 +90,7 @@ async function poll() {
 document.addEventListener('DOMContentLoaded', async () => {
     document.querySelectorAll('.simBtn').forEach(b => {
         const n = +b.dataset.n;
+        if (!n) return;                                   // the "Return to menu" link just navigates
         if (b.classList.contains('ud')) {                 // Up / Down — press & hold to auto-repeat
             b.addEventListener('pointerdown', e => { e.preventDefault(); holdStart(n, b); });
             ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => b.addEventListener(ev, () => holdStop(b)));
