@@ -97,6 +97,7 @@
         <a class="btn btn-diag" href="/protocol" id=protobtn><span class=ico>&#128225;</span>Output protocol &mdash; <span id=protoname>&hellip;</span></a>
         <button class="btn" type=button id=simbtn style="display:none;background:#8e6cab"><span class=ico>&#127918;</span><span id=simlbl>Drive simulator over USB</span></button>
         <a class="btn" href="/map" id=mapbtn style="display:none;background:#c98a4a"><span class=ico>&#128256;</span>Remap channels</a>
+        <a class="btn" href="/simctl" id=ctlbtn style="display:none;background:#4a90c9"><span class=ico>&#128377;&#65039;</span>Sim controls</a>
     </div>
 
     <div id=fwBanner style="display:none;text-align:center;padding:.7em;border-radius:10px;margin:1em 0 0;font-weight:600"></div>
@@ -129,6 +130,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (simB) simB.style.display = simOn ? '' : 'none';
         const mb = document.getElementById('mapbtn');   // Remap channels — only shown in sim mode
         if (mb) mb.style.display = simOn ? '' : 'none';
+        const cb = document.getElementById('ctlbtn');   // Sim controls (buttons) — only shown in sim mode
+        if (cb) cb.style.display = simOn ? '' : 'none';
         sb.onclick = () => {
             const turnOn = !simOn;
             const msg = turnOn
@@ -151,6 +154,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           + '<p>The receiver is a <b>USB joystick</b> for a PC flight simulator, driven by your transmitter sticks. Its flight-controller output is OFF, so it cannot fly a real model.</p>'
           + '<h3>Buttons</h3><ul>'
           + '<li><b>Remap channels</b> &mdash; choose which channel drives each simulator axis, with live bars.</li>'
+          + '<li><b>Sim controls</b> &mdash; on-screen buttons (also fired by TX channels 9&ndash;16) for sim functions like reset / pause / view. Bind each to a function in your sim.</li>'
           + '<li><b>Drive simulator over USB</b> &mdash; tap to turn simulator mode OFF and return to a normal receiver.</li>'
           + '<li><b>Update firmware / WiFi settings / Black box log</b> &mdash; as usual.</li>'
           + '</ul><h3>Tip</h3><p>If the simulator doesn’t see the receiver, re-plug the USB cable. Turn simulator mode off to fly a real model again.</p>';

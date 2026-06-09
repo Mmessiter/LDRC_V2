@@ -1048,6 +1048,37 @@ inline void handleMapSave() {
 }
 
 //*********************************************************************
+//  Simulator function buttons — /simctl page, live states, button pulse
+//*********************************************************************
+// 8 HID joystick buttons, each fired by TX channel 9..16 (a switch past
+// BTN_THRESH) AND by a tap on the /simctl page. Bind each button to a sim
+// function (Reset, Pause, view…) in the sim's own controller setup — no keyboard.
+inline void handleSimCtl() {
+    if (serveLittleFsFile("/simctl.html", "text/html")) return;
+    server.send(503, "text/plain", "/simctl.html missing — uploadfs the data/ folder");
+}
+
+inline void handleApiSimButtons() {
+    uint8_t b = SimUSB::getButtons();
+    String j; j.reserve(120);
+    j = "{\"btn\":[";
+    for (int i = 0; i < 8; i++) { if (i) j += ','; j += ((b >> i) & 1); }
+    j += "],\"ch\":[";                                  // source channels 9..16 (µs)
+    for (int i = 8; i < 16; i++) { if (i > 8) j += ','; j += channelMicros[i]; }
+    j += "]}";
+    server.sendHeader("Cache-Control", "no-store");
+    server.send(200, "application/json", j);
+}
+
+inline void handleSimButton() {
+    int n = server.hasArg("n") ? server.arg("n").toInt() : 0;
+    if (n < 1 || n > 8) { server.send(400, "text/plain", "n must be 1..8"); return; }
+    SimUSB::pressButton((uint8_t)n);
+    server.sendHeader("Cache-Control", "no-store");
+    server.send(200, "text/plain", "ok");
+}
+
+//*********************************************************************
 //  POST /fly_arm — disable WiFi until next reboot
 //*********************************************************************
 
@@ -1426,6 +1457,8 @@ inline void registerWebRoutes() {
     server.on("/api/events.json",   handleApiEvents);
     server.on("/map",               handleMap);          // sim channel-remap page
     server.on("/api/simmap.json",   handleApiSimMap);    // current sim channel map
+    server.on("/simctl",               handleSimCtl);       // sim-function buttons page
+    server.on("/api/sim/buttons.json", handleApiSimButtons);// live sim-button states
 
     // POSTs that reboot
     server.on("/bind",        HTTP_POST, handleBindDo);
@@ -1441,6 +1474,7 @@ inline void registerWebRoutes() {
     server.on("/protocol",    HTTP_POST, handleProtocolSet);
     server.on("/api/sim",     HTTP_POST, handleSimSet);
     server.on("/api/map",     HTTP_POST, handleMapSave);   // save sim channel map (applies live, no reboot)
+    server.on("/api/sim/button", HTTP_POST, handleSimButton); // pulse a sim-function button (1..8)
     server.on("/fly_arm",     HTTP_POST, handleFlyArm);
 
     // Misc

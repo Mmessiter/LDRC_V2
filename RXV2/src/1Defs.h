@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.85-fresh-ui";
+constexpr const char* FW_VERSION = "RXV2-0.9.86-sim-buttons";
 
 //*********************************************************************
 //  Auto-update manifest URLs

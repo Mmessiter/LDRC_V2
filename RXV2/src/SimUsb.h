@@ -31,8 +31,11 @@ namespace SimUSB {
 namespace {
 
 constexpr uint8_t  NUM_AXES    = 8;
+constexpr uint8_t  NUM_BUTTONS = 8;            // sim-function buttons — fed by TX channels 9..16 AND the /simctl web page
 constexpr uint8_t  REPORT_ID   = 1;            // Report ID 1 (core's no-ID path is buggy on 2.0.x)
 constexpr uint32_t MIN_SEND_US = 1000;         // cap the report rate at <= 1 kHz
+constexpr uint16_t BTN_THRESH  = 1600;         // received channel µs above which a switch counts as "pressed"
+constexpr uint32_t BTN_PULSE_MS = 150;         // how long a web-page tap holds its button down
 
 // RC channel (microseconds, centre 1500) -> signed 16-bit HID axis.
 // RXV2's channelMicros carry the same ~1000..2000 µs domain LDRC2SIM fed its
@@ -66,7 +69,12 @@ public:
     SimHID() { buildDescriptor(); hid.addDevice(this, _descLen); }
     void begin() { hid.begin(); }
     bool ready() { return hid.ready(); }
-    bool send(const int16_t* axes) { return hid.SendReport(REPORT_ID, axes, NUM_AXES * sizeof(int16_t)); }
+    bool send(const int16_t* axes, uint8_t buttons) {
+        uint8_t rep[NUM_AXES * sizeof(int16_t) + 1];          // 8 axes (16 bytes) + 1 button byte
+        memcpy(rep, axes, NUM_AXES * sizeof(int16_t));
+        rep[NUM_AXES * sizeof(int16_t)] = buttons;
+        return hid.SendReport(REPORT_ID, rep, sizeof rep);
+    }
     uint16_t _onGetDescriptor(uint8_t* dst) override { memcpy(dst, _desc, _descLen); return _descLen; }
 private:
     USBHID   hid;
@@ -91,12 +99,24 @@ private:
             for (uint8_t i = 0; i < NUM_AXES; i++) { put(0x09); put(i < 16 ? AXIS_USAGES[i] : 0x36); }
             put(0x81); put(0x02);             //     Input (Data,Var,Abs)
           put(0xC0);                          //   End Collection (Physical)
+          // Buttons: sim functions, driven by TX channels 9..16 and the web page.
+          // NUM_BUTTONS == 8 -> exactly one byte, byte-aligned (no padding needed).
+          put(0x05); put(0x09);               //   Usage Page (Button)
+          put(0x19); put(0x01);               //   Usage Minimum (Button 1)
+          put(0x29); put(NUM_BUTTONS);        //   Usage Maximum (Button NUM_BUTTONS)
+          put(0x15); put(0x00);               //   Logical Minimum (0)
+          put(0x25); put(0x01);               //   Logical Maximum (1)
+          put(0x75); put(0x01);               //   Report Size (1)
+          put(0x95); put(NUM_BUTTONS);        //   Report Count (NUM_BUTTONS)
+          put(0x81); put(0x02);               //   Input (Data,Var,Abs)
         put(0xC0);                            // End Collection (Application)
     }
 };
 
 SimHID*  g_hid      = nullptr;
 int16_t  g_axis[NUM_AXES];                    // last report (centre/0 at boot; held on link loss)
+uint8_t  g_buttons  = 0;                       // last button bitfield sent (mirror of ch9-16 | web pulses)
+uint32_t g_btnUntil[NUM_BUTTONS] = {0};        // millis() until which a web-tapped button stays pressed
 uint32_t g_lastSend = 0;
 bool      g_started = false;
 
@@ -137,7 +157,16 @@ inline void sendChannels(const uint16_t ch[16]) {
         int16_t v    = usToAxis(ch[phys < 16 ? phys : 0]);
         g_axis[k]    = rev ? (int16_t)-v : v;
     }
-    g_hid->send(g_axis);
+    // Buttons 1..8 <- received channels 9..16 (a switch past BTN_THRESH presses it),
+    // OR'd with any still-active web-page tap. Bind each button to a sim function.
+    uint32_t ms   = millis();
+    uint8_t  btns = 0;
+    for (uint8_t i = 0; i < NUM_BUTTONS; i++) {
+        bool on = (ch[8 + i] >= BTN_THRESH) || ((int32_t)(g_btnUntil[i] - ms) > 0);
+        if (on) btns |= (uint8_t)(1u << i);
+    }
+    g_buttons = btns;
+    g_hid->send(g_axis, btns);
 }
 
 // Runtime channel remap (from the /map "Remap channels" web page). Clamped to
@@ -152,6 +181,15 @@ inline void getMap(uint8_t map[NUM_AXES], bool rev[NUM_AXES]) {
     for (uint8_t i = 0; i < NUM_AXES; i++) { map[i] = USER_MAP[i]; rev[i] = USER_REV[i]; }
 }
 
+// Momentary press of sim-function button `n` (1..NUM_BUTTONS) from the web page.
+// Held BTN_PULSE_MS; OR'd with the TX-channel mirror in sendChannels.
+inline void pressButton(uint8_t n) {
+    if (n >= 1 && n <= NUM_BUTTONS) g_btnUntil[n - 1] = millis() + BTN_PULSE_MS;
+}
+// Current button bitfield (bit0 = button 1), for the /simctl live indicators.
+inline uint8_t getButtons() { return g_buttons; }
+inline uint8_t buttonCount() { return NUM_BUTTONS; }
+
 #else
 // ====================================================================
 //  Stub (ARDUINO_USB_MODE==1 — TinyUSB unavailable, e.g. C3 prototype)
@@ -161,6 +199,9 @@ inline bool ready() { return false; }
 inline void sendChannels(const uint16_t* /*ch*/) {}
 inline void setMap(const uint8_t* /*map*/, const bool* /*rev*/) {}
 inline void getMap(uint8_t map[8], bool rev[8]) { for (int i = 0; i < 8; i++) { map[i] = (uint8_t)i; rev[i] = false; } }
+inline void pressButton(uint8_t /*n*/) {}
+inline uint8_t getButtons() { return 0; }
+inline uint8_t buttonCount() { return 8; }
 
 #endif
 

@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name=theme-color content="#5fa099">
+<meta name=apple-mobile-web-app-capable content=yes>
+<meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
+<meta name=apple-mobile-web-app-title content="LDRC RX V2">
+<title>Sim controls &middot; LDRC RX V2</title>
+<link rel=stylesheet href="/style.css?v=30">
+<script src="/app.js?v=30" defer></script>
+<style>
+.simGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.simBtn{display:flex;flex-direction:column;align-items:flex-start;gap:.15em;
+ padding:.85em .9em;border:0;border-radius:12px;text-align:left;cursor:pointer;
+ background:#4a90c9;color:#fff;font:inherit;box-shadow:0 1px 3px rgba(0,0,0,.18);
+ transition:transform .05s,background .12s,box-shadow .12s;-webkit-tap-highlight-color:transparent}
+.simBtn:active{transform:scale(.97)}
+.simBtn .lbl{font-weight:700;font-size:1.05em;line-height:1.15}
+.simBtn .sub{font-size:.78em;opacity:.85;font-variant-numeric:tabular-nums}
+/* lit = button is currently pressed (by a TX switch on its channel, or this tap) */
+.simBtn.lit{background:#3fae5a;box-shadow:0 0 0 3px rgba(63,174,90,.35),0 1px 3px rgba(0,0,0,.2)}
+.offNote{text-align:center;color:#9a5;font-weight:600;margin:.2em 0 .8em;display:none}
+</style>
+</head>
+<body>
+<button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
+<div class=bg-photo aria-hidden=true></div>
+<div class=bg-wash  aria-hidden=true></div>
+<div class=container>
+    <h1>Sim controls</h1>
+    <p class=subtitle>Tap to trigger a sim function &mdash; or flip a TX switch on channels 9&ndash;16</p>
+
+    <div id=offNote class=offNote>Simulator mode is OFF &mdash; turn it on from the home screen for these to do anything.</div>
+
+    <div class=card>
+        <div class=simGrid id=grid>loading&hellip;</div>
+    </div>
+
+    <p class=muted style="text-align:center;font-size:.85em;margin:.6em 0">
+        Bind each button to a function in your sim&rsquo;s controller setup
+        (joystick <b>button&nbsp;1&hellip;8</b>). The labels are just reminders.</p>
+
+    <a class="btn btn-back" href="/"><span class=ico>&#8617;</span>Return to menu</a>
+    <div class=footer></div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+// Default reminder labels. These are NOT what the button does — that's whatever
+// you bind joystick button N to in your sim. Edit to taste; they're just hints.
+const LABELS = ['Reset / recover','Pause','Restart','Next view',
+                'Cockpit view','Chase view','Freeze','Spare'];
+
+function build() {
+    let h = '';
+    for (let i = 0; i < 8; i++) {
+        h += '<button class=simBtn id=sb' + i + ' data-n="' + (i + 1) + '">'
+           + '<span class=lbl>' + LABELS[i] + '</span>'
+           + '<span class=sub>button ' + (i + 1) + ' &middot; ch ' + (i + 9) + ' &middot; <span id=cv' + i + '>&middot;</span></span>'
+           + '</button>';
+    }
+    $('grid').innerHTML = h;
+    $('grid').querySelectorAll('.simBtn').forEach(b =>
+        b.addEventListener('click', () => fire(+b.dataset.n, b)));
+}
+
+// Momentary press. The firmware holds it ~150 ms and OR's it with the TX-switch
+// mirror, so a quick tap is a clean button press in the sim.
+function fire(n, el) {
+    if (el) { el.classList.add('lit'); }
+    fetch('/api/sim/button?n=' + n, { method: 'POST', cache: 'no-store' }).catch(() => {});
+}
+
+async function poll() {
+    if (window.LDRC && LDRC.navigating) return;
+    try {
+        const d = await (await fetch('/api/sim/buttons.json', { cache: 'no-store' })).json();
+        for (let i = 0; i < 8; i++) {
+            if (Array.isArray(d.btn)) $('sb' + i).classList.toggle('lit', !!d.btn[i]);
+            if (Array.isArray(d.ch))  $('cv' + i).textContent = d.ch[i] + 'µs';
+        }
+    } catch (e) { /* transient */ }
+    setTimeout(poll, 100);          // ~10 Hz
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    build();
+    // Gentle nudge if sim mode is off (the buttons still pulse, but nothing's listening).
+    try { const s = await LDRC.fetchState(); if (s && !s.sim) $('offNote').style.display = ''; } catch (e) {}
+    setTimeout(poll, 120);
+});
+</script>
+<template id=helpContent><h2>Sim controls</h2>
+<p>Eight buttons that trigger functions in your PC flight simulator &mdash; like
+<b>reset / recover</b>, <b>pause</b> or <b>change view</b> &mdash; without touching the keyboard.</p>
+<h3>Two ways to fire each one</h3>
+<ul>
+<li><b>Tap it here</b> on your phone.</li>
+<li><b>Flip a switch on your transmitter</b>: channels 9&ndash;16 map to buttons 1&ndash;8 (ch&nbsp;9 &rarr; button&nbsp;1 &hellip; ch&nbsp;16 &rarr; button&nbsp;8). A button lights green while its switch is up or while you tap it.</li>
+</ul>
+<h3>Setting it up (once)</h3>
+<p>In your simulator&rsquo;s controller setup, bind each <b>joystick button 1&ndash;8</b> to the
+function you want (Reset, Pause, view, &hellip;). The labels here are just reminders &mdash; the real
+action is whatever you bind in the sim. Works in RealFlight, neXt and the like.</p>
+</template>
+</body>
+</html>

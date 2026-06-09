@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.86-sim-buttons",
+      "url": "https://messiter.com/rxv2/release/v0.9.86/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.86/littlefs.bin",
+      "notes": "Sim mode gains 8 function buttons on the USB joystick \u2014 fire them from the new 'Sim controls' phone page OR from your transmitter's switches on channels 9-16 (ch9\u2192button1 \u2026 ch16\u2192button8). Bind each to a sim function (reset, pause, view\u2026) in your sim's controller setup, and control the sim with no keyboard. Adding buttons changes the joystick, so it needs one re-calibration in the sim."
+    },
+    {
       "name": "RXV2-0.9.85-fresh-ui",
       "url": "https://messiter.com/rxv2/release/v0.9.85/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.85/littlefs.bin",
