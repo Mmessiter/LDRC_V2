@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.94-wifi-quiet",
+      "url": "https://messiter.com/rxv2/release/v0.9.94/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.94/littlefs.bin",
+      "notes": "Sim mode now runs WiFi at much lower power (8.5 dBm vs 19.5) so it stops desensitising the nRF24 receiver sitting right beside it \u2014 the cause of the short range and dropped frames when driving the sim (WiFi and the TX link share 2.4 GHz). Should markedly lift the frame rate and range. Normal mode keeps full WiFi reach. No re-calibration."
+    },
+    {
       "name": "RXV2-0.9.93-bind-restore",
       "url": "https://messiter.com/rxv2/release/v0.9.93/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.93/littlefs.bin",

@@ -129,7 +129,12 @@ inline void startWifiStation() {
     // "LDRC_RX" and can tell receivers apart at a glance.
     WiFi.softAP(g_effectiveName.c_str());
     WiFi.setSleep(false);
-    WiFi.setTxPower(WIFI_POWER_19_5dBm);
+    // The WiFi radio sits right beside the nRF24. In sim mode the TX link is live the
+    // whole time, and full WiFi power (~90 mW @ 19.5 dBm) desensitises the receiver —
+    // that's the short range + dropped frames seen when driving the sim. A phone on the
+    // same desk needs only a sliver of that, so dial WiFi right down in sim mode; normal
+    // (config) mode keeps full reach.
+    WiFi.setTxPower(simEnabled ? WIFI_POWER_8_5dBm : WIFI_POWER_19_5dBm);
     Serial.printf("[wifi] soft-AP '%s' up at %s\n",
                   g_effectiveName.c_str(), WiFi.softAPIP().toString().c_str());
 

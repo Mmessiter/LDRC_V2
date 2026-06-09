@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.93-bind-restore";
+constexpr const char* FW_VERSION = "RXV2-0.9.94-wifi-quiet";
 
 //*********************************************************************
 //  Auto-update manifest URLs
