@@ -263,23 +263,16 @@ void loop() {
     // STA state. From v0.9.51 the chip runs AP+STA in parallel, so
     // the web UI is reachable via the soft-AP even while STA is still
     // (re)connecting to home WiFi.
-    // Service the radio just BEFORE and just AFTER the web server. A single
-    // server.handleClient() can block the loop for several ms (lwIP + the handler),
-    // and a missed FHSS hop or ack in that gap is what made the TX link reluctant /
-    // flaky when a polling page (e.g. Sim controls) was open. Bracketing the web call
-    // with radioPoll() keeps hops and acks prompt; radioPoll() is a cheap SPI check
-    // when no packet is waiting, so calling it twice per loop costs almost nothing.
-    radioPoll();
     if (httpServerStarted) {
         server.handleClient();
     }
+
     radioPoll();
     if (simEnabled) {
         // Sim mode: the ONLY output is the USB joystick. Skip ALL flight-controller
         // work — no RC output frames, no telemetry, no MSP — so a real model can't
         // be flown from sim mode, and the loop has just one job (lower latency).
         SimUSB::sendChannels(channelMicros);
-        radioPoll();   // the USB write can briefly stall; keep the next hop/ack prompt
     } else {
         protocolRx();          // pull any telemetry/MSP bytes the FC has sent back on D5
         mspBridgePoll();       // TCP/5760 ↔ FC for wireless Rotorflight config

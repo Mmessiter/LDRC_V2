@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.93-bind-restore",
+      "url": "https://messiter.com/rxv2/release/v0.9.93/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.93/littlefs.bin",
+      "notes": "Reverts the 0.9.92 loop change (servicing the radio 3x per loop), which disturbed the timing-sensitive bind/hop handshake and stopped the transmitter binding. Back to the proven 0.9.91 radio servicing. Keeps the lighter Sim-controls polling. Proper fix (a dedicated radio core) to follow."
+    },
+    {
       "name": "RXV2-0.9.92-link-fix",
       "url": "https://messiter.com/rxv2/release/v0.9.92/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.92/littlefs.bin",

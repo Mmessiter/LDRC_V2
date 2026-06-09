@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.92-link-fix";
+constexpr const char* FW_VERSION = "RXV2-0.9.93-bind-restore";
 
 //*********************************************************************
 //  Auto-update manifest URLs
