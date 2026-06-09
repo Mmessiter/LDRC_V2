@@ -214,7 +214,8 @@ function makeVersionRow(v, sourceKey, srcManifestUrl) {
     btn.className = 'ver-btn';
     btn.textContent = verb + (src ? ' · ' + src.short : '');
     const url = resolveUrl(v.url, srcManifestUrl);
-    btn.addEventListener('click', () => doInstall(v, sourceKey, url, btn));
+    const fsUrl = v.fs_url ? resolveUrl(v.fs_url, srcManifestUrl) : '';
+    btn.addEventListener('click', () => doInstall(v, sourceKey, url, fsUrl, btn));
     wrap.appendChild(btn);
 
     if (v.notes) {
@@ -359,7 +360,7 @@ async function check() {
     }
 }
 
-async function doInstall(v, sourceKey, url, btnEl) {
+async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
     if (installing) return;
     const { ver } = splitName(v.name);
     if (!(await LDRC.confirm(
@@ -374,12 +375,14 @@ async function doInstall(v, sourceKey, url, btnEl) {
     showMessage('<b>Installing</b> <code>' + ver + '</code> from <b>' +
         (SOURCE_LABEL[sourceKey]?.long || 'this source') + '</b>. The receiver will reboot when done.');
     try {
-        const r = await fetch('/api/firmware/install?url=' + encodeURIComponent(url),
+        const r = await fetch('/api/firmware/install?url=' + encodeURIComponent(url) +
+                              (fsUrl ? '&fs_url=' + encodeURIComponent(fsUrl) : ''),
                               { method: 'POST' });
         if (r.ok) {
+            const t = await r.text();
             setStatePill('Installed', 'good');
-            showMessage('<b>✓ Installed.</b> Now running <code>' + ver +
-                '</code>. Page reloads in 10 s.');
+            showMessage('<b>✓ Installed</b> <code>' + ver + '</code> — ' + t +
+                '. Page reloads in 10 s.');
             setTimeout(() => location.href = '/', 10000);
         } else {
             const t = await r.text();

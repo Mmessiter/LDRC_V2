@@ -521,6 +521,107 @@ inline void handleFirmwareCheck() {
 // completes (or fails), then the chip reboots. Accepts both http:// and
 // https:// URLs (https:// is required for the messiter.com mirror).
 
+// Download `url` and flash it to the given Update target — U_FLASH (the app/OTA
+// slot) or U_SPIFFS (the LittleFS data partition). Returns "" on success, else a
+// short error string. Streamed: nothing is committed unless the full image lands.
+inline String flashStreamToPartition(const String& url, int command) {
+    HTTPClient       http;
+    WiFiClient       plain;
+    WiFiClientSecure secure;
+    // Generous timeouts — a slow messiter.com TLS handshake on a weak WiFi link
+    // can take a few seconds before the first bytes flow.
+    http.setConnectTimeout(8000);
+    http.setTimeout(15000);
+    if (!httpBeginAny(http, plain, secure, url)) return "begin failed";
+    int code = http.GET();
+    if (code != HTTP_CODE_OK) {
+        http.end();
+        char m[40]; snprintf(m, sizeof m, "HTTP %d", code);
+        return String(m);
+    }
+    int len = http.getSize();
+    if (len <= 0) { http.end(); return "no content-length"; }
+    if (!Update.begin((size_t)len, command)) { String e = Update.errorString(); http.end(); return e; }
+    size_t written = Update.writeStream(*http.getStreamPtr());
+    if (written != (size_t)len) {
+        Update.end(); http.end();
+        char m[48]; snprintf(m, sizeof m, "short write %u/%d", (unsigned)written, len);
+        return String(m);
+    }
+    if (!Update.end(true)) { String e = Update.errorString(); http.end(); return e; }
+    http.end();
+    return "";
+}
+
+// One preserved Rotorflight backup (held in RAM across a filesystem flash).
+struct SavedBackup { String name; String data; };
+
+// Update the web/data filesystem (LittleFS) from fsUrl WITHOUT losing the user's
+// /backups/*.json. The whole partition is overwritten by the new image, so we
+// snapshot the backups (max 20 × ~1.5 KB — tiny) into RAM first, flash, re-mount,
+// and write them back. Non-fatal: the firmware is already in place, so whatever
+// happens here we still reboot. Returns a short status note for the reply/log.
+inline String updateFilesystemKeepingBackups(const String& fsUrl) {
+    // Open the FS image and confirm it's really there BEFORE touching anything — so
+    // a release that ships no littlefs.bin (404) is a clean no-op that never disturbs
+    // the live filesystem or the backups. (This is what makes deriving the URL safe.)
+    HTTPClient       http;
+    WiFiClient       plain;
+    WiFiClientSecure secure;
+    http.setConnectTimeout(8000);
+    http.setTimeout(15000);
+    if (!httpBeginAny(http, plain, secure, fsUrl)) return "";
+    if (http.GET() != HTTP_CODE_OK) { http.end(); return ""; }   // no FS for this release
+    int len = http.getSize();
+    if (len <= 0) { http.end(); return ""; }
+
+    // 1) Snapshot the user's backups (old FS still mounted).
+    SavedBackup saved[BACKUP_MAX];
+    int n = 0;
+    if (littleFsMounted && LittleFS.exists(BACKUP_DIR)) {
+        File dir = LittleFS.open(BACKUP_DIR);
+        if (dir) {
+            for (File f = dir.openNextFile(); f && n < BACKUP_MAX; f = dir.openNextFile()) {
+                if (f.isDirectory()) { f.close(); continue; }
+                String nm = f.name();
+                int slash = nm.lastIndexOf('/'); if (slash >= 0) nm = nm.substring(slash + 1);
+                saved[n].name = nm;
+                saved[n].data = f.readString();
+                n++;
+                f.close();
+            }
+            dir.close();
+        }
+    }
+
+    // 2) Unmount + flash the new image straight from the open stream.
+    LittleFS.end();
+    bool ok = Update.begin((size_t)len, U_SPIFFS)
+              && Update.writeStream(*http.getStreamPtr()) == (size_t)len
+              && Update.end(true);
+    String err = ok ? String("") : String(Update.errorString());
+    http.end();
+
+    // 3) Re-mount (format only if the freshly-written image won't mount), restore backups.
+    bool mounted = LittleFS.begin(false) || LittleFS.begin(true);
+    littleFsMounted = mounted;
+    int restored = 0;
+    if (mounted && n > 0) {
+        if (!LittleFS.exists(BACKUP_DIR)) LittleFS.mkdir(BACKUP_DIR);
+        for (int i = 0; i < n; i++) {
+            String path = BACKUP_DIR; path += '/'; path += saved[i].name;
+            File w = LittleFS.open(path, "w");
+            if (w) { w.print(saved[i].data); w.close(); restored++; }
+        }
+    }
+    char m[96];
+    if (err.length())
+        snprintf(m, sizeof m, " (web files FAILED: %s; %d/%d backups kept)", err.c_str(), restored, n);
+    else
+        snprintf(m, sizeof m, " + web files (%d backups preserved)", restored);
+    return String(m);
+}
+
 inline void handleFirmwareInstall() {
     if (!server.hasArg("url")) {
         server.send(400, "text/plain", "missing url");
@@ -532,54 +633,33 @@ inline void handleFirmwareInstall() {
         server.send(400, "text/plain", "url must start with http:// or https://");
         return;
     }
-    HTTPClient       http;
-    WiFiClient       plain;
-    WiFiClientSecure secure;
-    // Generous timeouts — a slow messiter.com TLS handshake on a weak
-    // WiFi link can take a few seconds before the first bytes flow.
-    http.setConnectTimeout(8000);
-    http.setTimeout(15000);
-    if (!httpBeginAny(http, plain, secure, url)) {
-        server.send(500, "text/plain", "http.begin failed");
+    String fsUrl = server.hasArg("fs_url") ? server.arg("fs_url") : String("");
+    fsUrl.trim();
+    // If the client (e.g. an older firmware.html) didn't send fs_url, DERIVE it from
+    // the firmware URL — same folder, littlefs.bin — so the receiver fetches its own
+    // web files even from a stale page. A release with no littlefs.bin is a clean
+    // no-op (updateFilesystemKeepingBackups checks the URL exists before touching FS).
+    if (fsUrl.length() == 0 && url.endsWith("/firmware.bin")) {
+        fsUrl = url.substring(0, url.length() - 12) + "littlefs.bin";  // 12 = strlen("firmware.bin")
+    }
+
+    // 1) Application firmware -> OTA app slot. A mid-stream failure just leaves the
+    //    current firmware bootable, so report it and DON'T reboot.
+    String err = flashStreamToPartition(url, U_FLASH);
+    if (err.length()) {
+        server.send(502, "text/plain", "firmware: " + err);
         return;
     }
-    int code = http.GET();
-    if (code != HTTP_CODE_OK) {
-        char msg[64];
-        snprintf(msg, sizeof(msg), "HTTP %d from server", code);
-        http.end();
-        server.send(502, "text/plain", msg);
-        return;
+
+    // 2) Matching web/data filesystem, if the release ships one (fs_url). Flashing
+    //    it makes the web UI travel with the firmware — even on a jump up from an
+    //    old version — while preserving the user's Rotorflight backups.
+    String fsNote = "";
+    if (fsUrl.length() && (fsUrl.startsWith("http://") || isHttpsUrl(fsUrl))) {
+        fsNote = updateFilesystemKeepingBackups(fsUrl);
     }
-    int len = http.getSize();
-    if (len <= 0) {
-        http.end();
-        server.send(502, "text/plain", "no content-length");
-        return;
-    }
-    if (!Update.begin((size_t)len)) {
-        http.end();
-        server.send(500, "text/plain", Update.errorString());
-        return;
-    }
-    WiFiClient* stream = http.getStreamPtr();
-    size_t written = Update.writeStream(*stream);
-    if (written != (size_t)len) {
-        Update.end();
-        http.end();
-        char msg[80];
-        snprintf(msg, sizeof(msg), "short write: %u / %d", (unsigned)written, len);
-        server.send(500, "text/plain", msg);
-        return;
-    }
-    if (!Update.end(true)) {
-        http.end();
-        server.send(500, "text/plain", Update.errorString());
-        return;
-    }
-    http.end();
-    events.add("Firmware installed via auto-update — rebooting");
-    server.send(200, "text/plain", "ok — rebooting");
+    events.add((String("Firmware installed via auto-update") + fsNote + " — rebooting").c_str());
+    server.send(200, "text/plain", String("ok — rebooting") + fsNote);
     delay(300);
     ESP.restart();
 }

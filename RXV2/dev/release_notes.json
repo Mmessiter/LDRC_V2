@@ -1,0 +1,9 @@
+{
+  "RXV2-0.9.84-fs-auto": "The receiver now derives its web-filesystem URL from the firmware URL when the page doesn't supply it, so it pulls its own web files on the next update even from a stale page — updating twice fully self-heals an out-of-date UI, no computer needed. Backups still preserved.",
+  "RXV2-0.9.83-fs-ota": "OTA install now also flashes the matching web/data filesystem (and preserves your Rotorflight backups), so the web UI travels with the firmware on every update — no separate uploadfs needed. First release that ships a littlefs.bin.",
+  "RXV2-0.9.82-tx-happy": "Firmware-update check no longer stalls the radio while the TX link is live (it was starving radioPoll and dropping the transmitter); shorter idle timeouts.",
+  "RXV2-0.9.81-wifi-heal": "WiFi self-heals from AP-only — retries the home network every 20 s when it has saved credentials, instead of staying stranded. Plus a big SIMULATOR-MODE-ON home banner.",
+  "RXV2-0.9.80-sim-safe": "Drive-simulator-over-USB now disables the flight-controller output (D6 stays silent) so a real model can't be flown from sim mode; default channel map shown as a tidy 1:1.",
+  "RXV2-0.9.79-usb-sim-remap": "Adds the Remap-channels page for simulator mode (feed any of the 8 sim outputs from any received channel, with live bars).",
+  "RXV2-0.9.78-usb-sim": "First release with Drive-simulator-over-USB: the receiver can present as a USB HID joystick for a PC flight sim, driven by the channels it receives — no separate dongle."
+}
