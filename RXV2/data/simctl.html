@@ -77,6 +77,10 @@ function holdStop(el) { if (el && el._t) { clearInterval(el._t); el._t = null; }
 
 async function poll() {
     if (window.LDRC && LDRC.navigating) return;
+    // Be kind to the radio: each request briefly occupies the receiver's single-
+    // threaded loop, so don't poll when the page is hidden, and poll gently (~3 Hz)
+    // when visible. The buttons themselves still fire instantly on tap/hold.
+    if (document.hidden) { setTimeout(poll, 700); return; }
     try {
         const d = await (await fetch('/api/sim/buttons.json', { cache: 'no-store' })).json();
         for (const n of BTNS) {
@@ -85,7 +89,7 @@ async function poll() {
             if (Array.isArray(d.ch) && $('cv' + n)) $('cv' + n).textContent = d.ch[n - 1] + 'µs';
         }
     } catch (e) { /* transient */ }
-    setTimeout(poll, 100);          // ~10 Hz
+    setTimeout(poll, 300);          // ~3 Hz — light touch so it never starves the radio link
 }
 
 document.addEventListener('DOMContentLoaded', async () => {

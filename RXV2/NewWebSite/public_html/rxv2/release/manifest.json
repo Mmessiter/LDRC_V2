@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.92-link-fix",
+      "url": "https://messiter.com/rxv2/release/v0.9.92/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.92/littlefs.bin",
+      "notes": "Fixes a reluctant / flaky TX link when a web page was open during sim use. The radio is now serviced before AND after the web server (and after the USB sim write), so a slow web request can no longer make the receiver miss an FHSS hop or ack. The Sim controls page also polls 3x more gently and pauses when hidden. No re-calibration."
+    },
+    {
       "name": "RXV2-0.9.91-menu-fit",
       "url": "https://messiter.com/rxv2/release/v0.9.91/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.91/littlefs.bin",
