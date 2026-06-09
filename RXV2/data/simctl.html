@@ -30,7 +30,7 @@
 <div class=bg-wash  aria-hidden=true></div>
 <div class=container>
     <h1>Sim controls</h1>
-    <p class=subtitle>Tap to trigger a sim function &mdash; or flip a TX switch on channels 9&ndash;16</p>
+    <p class=subtitle>Tap to trigger a sim function &mdash; or flip a TX switch on channels 9&ndash;13</p>
 
     <div id=offNote class=offNote>Simulator mode is OFF &mdash; turn it on from the home screen for these to do anything.</div>
 
@@ -39,8 +39,8 @@
     </div>
 
     <p class=muted style="text-align:center;font-size:.85em;margin:.6em 0">
-        Bind each button to a function in your sim&rsquo;s controller setup
-        (joystick <b>button&nbsp;1&hellip;8</b>). The labels are just reminders.</p>
+        These match RealFlight&rsquo;s <b>User Interface</b> functions. In the sim, bind each by
+        <b>activating its control</b> &mdash; flip its TX switch (ch&nbsp;9&ndash;13) or tap it here.</p>
 
     <a class="btn btn-back" href="/"><span class=ico>&#8617;</span>Return to menu</a>
     <div class=footer></div>
@@ -48,17 +48,17 @@
 
 <script>
 const $ = id => document.getElementById(id);
-// Default reminder labels. These are NOT what the button does — that's whatever
-// you bind joystick button N to in your sim. Edit to taste; they're just hints.
-const LABELS = ['Reset / recover','Pause','Restart','Next view',
-                'Cockpit view','Chase view','Freeze','Spare'];
+// The 5 RealFlight "User Interface" functions, in order → joystick buttons 1-5,
+// fired by TX channels 9-13 (or a tap here). The firmware still presents 8 HID
+// buttons (so no re-calibration); we just show the five that matter.
+const LABELS = ['Reset','Select','Cancel','Up','Down'];
 
 function build() {
     let h = '';
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < LABELS.length; i++) {
         h += '<button class=simBtn id=sb' + i + ' data-n="' + (i + 1) + '">'
            + '<span class=lbl>' + LABELS[i] + '</span>'
-           + '<span class=sub>button ' + (i + 1) + ' &middot; ch ' + (i + 9) + ' &middot; <span id=cv' + i + '>&middot;</span></span>'
+           + '<span class=sub>ch ' + (i + 9) + ' &middot; <span id=cv' + i + '>&middot;</span></span>'
            + '</button>';
     }
     $('grid').innerHTML = h;
@@ -77,7 +77,7 @@ async function poll() {
     if (window.LDRC && LDRC.navigating) return;
     try {
         const d = await (await fetch('/api/sim/buttons.json', { cache: 'no-store' })).json();
-        for (let i = 0; i < 8; i++) {
+        for (let i = 0; i < LABELS.length; i++) {
             if (Array.isArray(d.btn)) $('sb' + i).classList.toggle('lit', !!d.btn[i]);
             if (Array.isArray(d.ch))  $('cv' + i).textContent = d.ch[i] + 'µs';
         }
@@ -93,17 +93,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 </script>
 <template id=helpContent><h2>Sim controls</h2>
-<p>Eight buttons that trigger functions in your PC flight simulator &mdash; like
-<b>reset / recover</b>, <b>pause</b> or <b>change view</b> &mdash; without touching the keyboard.</p>
+<p>Five buttons for RealFlight&rsquo;s <b>User Interface</b> functions &mdash; <b>Reset, Select, Cancel,
+Up, Down</b> &mdash; so you can recover crashes and drive the sim&rsquo;s menus from your transmitter,
+without touching the keyboard.</p>
 <h3>Two ways to fire each one</h3>
 <ul>
 <li><b>Tap it here</b> on your phone.</li>
-<li><b>Flip a switch on your transmitter</b>: channels 9&ndash;16 map to buttons 1&ndash;8 (ch&nbsp;9 &rarr; button&nbsp;1 &hellip; ch&nbsp;16 &rarr; button&nbsp;8). A button lights green while its switch is up or while you tap it.</li>
+<li><b>Flip a switch on your transmitter</b>: ch&nbsp;9&rarr;Reset, ch&nbsp;10&rarr;Select, ch&nbsp;11&rarr;Cancel, ch&nbsp;12&rarr;Up, ch&nbsp;13&rarr;Down. A button lights green while its switch is up or while you tap it.</li>
 </ul>
 <h3>Setting it up (once)</h3>
-<p>In your simulator&rsquo;s controller setup, bind each <b>joystick button 1&ndash;8</b> to the
-function you want (Reset, Pause, view, &hellip;). The labels here are just reminders &mdash; the real
-action is whatever you bind in the sim. Works in RealFlight, neXt and the like.</p>
+<p>In RealFlight&rsquo;s <b>Edit Profile &rarr; User Interface</b>, click the <b>Input</b> box beside a
+function (e.g. Reset) and <b>activate the control</b> &mdash; flip its TX switch or tap it here. RealFlight
+captures it as <b>Button&nbsp;0&ndash;4</b>, then <b>Save</b>. (Same idea in neXt.)</p>
 </template>
 </body>
 </html>

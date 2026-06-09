@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.87-ui-buttons",
+      "url": "https://messiter.com/rxv2/release/v0.9.87/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.87/littlefs.bin",
+      "notes": "Sim controls page now shows exactly RealFlight's 5 User Interface functions \u2014 Reset, Select, Cancel, Up, Down (ch9\u2192Reset \u2026 ch13\u2192Down) \u2014 instead of generic labels. The joystick is unchanged (still 8 HID buttons under the hood), so no re-calibration is needed."
+    },
+    {
       "name": "RXV2-0.9.86-sim-buttons",
       "url": "https://messiter.com/rxv2/release/v0.9.86/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.86/littlefs.bin",
