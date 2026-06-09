@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.89-big-pad",
+      "url": "https://messiter.com/rxv2/release/v0.9.89/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.89/littlefs.bin",
+      "notes": "Sim controls is now one tall column of big, easy-to-hit targets filling the screen, in order Select \u00b7 Up \u00b7 Down \u00b7 Cancel \u00b7 Reset \u2014 Reset largest at the bottom, like the spacebar. Same colours and Up/Down auto-repeat. Page-only change; no re-calibration."
+    },
+    {
       "name": "RXV2-0.9.88-sim-pad",
       "url": "https://messiter.com/rxv2/release/v0.9.88/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.88/littlefs.bin",

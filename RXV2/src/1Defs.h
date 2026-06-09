@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.88-sim-pad";
+constexpr const char* FW_VERSION = "RXV2-0.9.89-big-pad";
 
 //*********************************************************************
 //  Auto-update manifest URLs
