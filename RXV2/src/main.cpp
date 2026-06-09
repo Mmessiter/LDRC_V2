@@ -258,6 +258,21 @@ void setup() {
 //*********************************************************************
 
 void loop() {
+    // Diagnostic: loop frequency + worst-case iteration time, so we can tell a CPU /
+    // servicing stall (low Hz, or a big max) from an RF problem (high Hz, frames just
+    // not arriving). Folded into g_loopHz / g_loopMaxUs once a second.
+    {
+        static uint32_t loopCount = 0, lastRateMs = 0, lastLoopUs = 0, maxUs = 0;
+        uint32_t nowUs = micros();
+        if (lastLoopUs) { uint32_t dt = nowUs - lastLoopUs; if (dt > maxUs) maxUs = dt; }
+        lastLoopUs = nowUs;
+        loopCount++;
+        if ((uint32_t)(millis() - lastRateMs) >= 1000) {
+            g_loopHz = loopCount; g_loopMaxUs = maxUs;
+            loopCount = 0; maxUs = 0; lastRateMs = millis();
+        }
+    }
+
     if (otaStarted) ArduinoOTA.handle();
     // Server runs whenever the HTTP listener is bound, regardless of
     // STA state. From v0.9.51 the chip runs AP+STA in parallel, so

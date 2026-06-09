@@ -697,17 +697,22 @@ inline String confirmPage(const char* title, const char* body, bool autoReload =
                "Waiting for receiver to come back (<span id=__secs>0</span>&thinsp;s)&hellip;"
                "</p>"
                "<script>(()=>{"
-               "const $=i=>document.getElementById(i);let n=0;"
+               "const $=i=>document.getElementById(i);let n=0,ok=0;"
+               "const ping=()=>{let sg;try{sg=AbortSignal.timeout(2000);}"
+               "catch(e){const c=new AbortController();setTimeout(()=>c.abort(),2000);sg=c.signal;}"
+               "return fetch('/api/state.json',{cache:'no-store',signal:sg});};"
                "const tick=async()=>{$('__secs').textContent=n;"
-               "if(n>=4){try{const r=await fetch('/api/state.json',"
-               "{cache:'no-store',signal:AbortSignal.timeout(2000)});"
-               "if(r.ok){location.href='/';return;}}catch(e){}}"
-               "if(n>=60){$('__waitline').innerHTML="
-               "\"Receiver didn't come back. If you entered a wrong "
-               "password it may have fallen back to AP mode &mdash; "
-               "join the <b>LDRC_RX</b> WiFi and open "
+               // Require TWO consecutive good pings before redirecting: the chip answers
+               // the tiny state.json the instant its server binds, but needs a moment more
+               // before it can serve the full home page — redirecting on the first hit
+               // loaded a blank '/'. location.replace keeps it out of history.
+               "if(n>=3){try{const r=await ping();"
+               "if(r.ok){if(++ok>=2){location.replace('/');return;}}else ok=0;}catch(e){ok=0;}}"
+               "if(n>=90){$('__waitline').innerHTML="
+               "\"Receiver didn't come back. If a wrong WiFi password was entered "
+               "it may be in AP mode &mdash; join the <b>LDRC_RX</b> WiFi and open "
                "<code>http://192.168.4.1</code>.\";return;}"
-               "n++;setTimeout(tick,1000);};tick();})();</script>");
+               "n++;setTimeout(tick,1200);};tick();})();</script>");
     }
     s += F("</div>");
     s += F("<div class=footer>"); s += FW_VERSION; s += F("</div></div></body></html>");
@@ -1233,6 +1238,8 @@ inline void handleApiState() {
     j += ',';                     j += (radioPresent[1] ? "true" : "false");
     j += ',';                     j += (radioPresent[2] ? "true" : "false");
     j += "]";
+    j += ",\"loop_hz\":";     j += g_loopHz;       // diag: loop rate (radioPoll/sec)
+    j += ",\"loop_max_us\":"; j += g_loopMaxUs;    // diag: worst loop stall last second
     // Legacy field — kept for any older diagnostics page that reads it.
     j += ",\"radios_dual\":"; j += (numRadiosPresent >= 2 ? "true" : "false");
     j += ",\"active_radio\":"; j += activeRadioIdx;

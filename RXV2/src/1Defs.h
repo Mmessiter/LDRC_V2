@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.94-wifi-quiet";
+constexpr const char* FW_VERSION = "RXV2-0.9.96-ui-polish";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -208,6 +208,8 @@ constexpr uint8_t PROTO_DEFAULT = PROTO_SBUS;
 inline Protocol  currentProtocol = (Protocol)PROTO_DEFAULT;
 inline bool      ppmInverted     = false;
 inline bool      simEnabled      = false;    // "Drive simulator over USB" — present as a USB HID joystick (S3/TinyUSB only)
+inline uint32_t  g_loopHz        = 0;        // diag: main-loop iterations/sec (radioPoll runs once per loop)
+inline uint32_t  g_loopMaxUs     = 0;        // diag: worst single-loop duration in the last second (µs)
 
 //*********************************************************************
 //  NVS keys (Preferences namespace = "rxv2")

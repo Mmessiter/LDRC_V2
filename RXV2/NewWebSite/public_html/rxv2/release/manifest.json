@@ -1,6 +1,18 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.96-ui-polish",
+      "url": "https://messiter.com/rxv2/release/v0.9.96/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.96/littlefs.bin",
+      "notes": "Front-menu 'Sim controls' renamed to 'RealFlight controls' (those buttons are RealFlight's UI functions). After toggling simulator mode, the reboot page now waits for the receiver to be solidly back before returning to the home screen, instead of landing on a blank page. Also makes the USB sim write non-blocking so it can't stall the loop."
+    },
+    {
+      "name": "RXV2-0.9.95-loop-diag",
+      "url": "https://messiter.com/rxv2/release/v0.9.95/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.95/littlefs.bin",
+      "notes": "Diagnostic build: adds loop_hz (main-loop iterations/sec) and loop_max_us (worst loop stall) to /api/state.json, to tell a CPU/servicing limit from an RF problem when chasing dropped frames. No functional change."
+    },
+    {
       "name": "RXV2-0.9.94-wifi-quiet",
       "url": "https://messiter.com/rxv2/release/v0.9.94/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.94/littlefs.bin",
