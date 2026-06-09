@@ -11,16 +11,32 @@
 <link rel=stylesheet href="/style.css?v=30">
 <script src="/app.js?v=30" defer></script>
 <style>
-.simGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.simBtn{display:flex;flex-direction:column;align-items:flex-start;gap:.15em;
- padding:.85em .9em;border:0;border-radius:12px;text-align:left;cursor:pointer;
- background:#4a90c9;color:#fff;font:inherit;box-shadow:0 1px 3px rgba(0,0,0,.18);
- transition:transform .05s,background .12s,box-shadow .12s;-webkit-tap-highlight-color:transparent}
-.simBtn:active{transform:scale(.97)}
-.simBtn .lbl{font-weight:700;font-size:1.05em;line-height:1.15}
-.simBtn .sub{font-size:.78em;opacity:.85;font-variant-numeric:tabular-nums}
-/* lit = button is currently pressed (by a TX switch on its channel, or this tap) */
-.simBtn.lit{background:#3fae5a;box-shadow:0 0 0 3px rgba(63,174,90,.35),0 1px 3px rgba(0,0,0,.2)}
+.simBtn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.12em;
+ padding:.8em .7em;border:0;border-radius:14px;cursor:pointer;color:#fff;font:inherit;text-align:center;
+ box-shadow:0 1px 3px rgba(0,0,0,.2);transition:transform .05s,filter .12s,box-shadow .12s;
+ user-select:none;-webkit-user-select:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.simBtn:active{transform:scale(.96)}
+.simBtn .lbl{font-weight:800;line-height:1.1}
+.simBtn .sub{font-size:.72em;opacity:.85;font-variant-numeric:tabular-nums}
+.simBtn .arr{font-size:1.7em;line-height:.9;font-weight:900}
+/* pressed (a TX switch on its channel, or a tap/hold) — a bright glow that reads on any colour */
+.simBtn.lit{filter:brightness(1.15);box-shadow:0 0 0 4px rgba(255,255,255,.65),0 1px 6px rgba(0,0,0,.3)}
+
+/* Reset — big & red, the one you grab after a crash */
+.reset{background:#d6403c;min-height:104px;margin-bottom:12px}
+.reset .lbl{font-size:1.7em;letter-spacing:.02em}
+
+/* Select (green) / Cancel (amber) — a confirm/back pair */
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.pair .simBtn{min-height:70px}
+.pair .lbl{font-size:1.3em}
+.sel{background:#36a85a}
+.can{background:#df8a36}
+
+/* Up / Down — a stacked rocker with arrows, centred; press & hold to auto-repeat */
+.updown{display:flex;flex-direction:column;gap:8px;width:74%;margin:0 auto}
+.ud{background:#4a8fc9;min-height:62px;touch-action:none}
+.ud .lbl{font-size:1.2em}
 .offNote{text-align:center;color:#9a5;font-weight:600;margin:.2em 0 .8em;display:none}
 </style>
 </head>
@@ -35,12 +51,28 @@
     <div id=offNote class=offNote>Simulator mode is OFF &mdash; turn it on from the home screen for these to do anything.</div>
 
     <div class=card>
-        <div class=simGrid id=grid>loading&hellip;</div>
+        <button class="simBtn reset" id=sb0 data-n=1>
+            <span class=lbl>Reset</span><span class=sub>ch 9 &middot; <span id=cv0>&middot;</span></span></button>
+
+        <div class=pair>
+            <button class="simBtn sel" id=sb1 data-n=2>
+                <span class=lbl>Select</span><span class=sub>ch 10 &middot; <span id=cv1>&middot;</span></span></button>
+            <button class="simBtn can" id=sb2 data-n=3>
+                <span class=lbl>Cancel</span><span class=sub>ch 11 &middot; <span id=cv2>&middot;</span></span></button>
+        </div>
+
+        <div class=updown>
+            <button class="simBtn ud" id=sb3 data-n=4>
+                <span class=arr>&#9650;</span><span class=lbl>Up</span><span class=sub>ch 12 &middot; <span id=cv3>&middot;</span></span></button>
+            <button class="simBtn ud" id=sb4 data-n=5>
+                <span class=arr>&#9660;</span><span class=lbl>Down</span><span class=sub>ch 13 &middot; <span id=cv4>&middot;</span></span></button>
+        </div>
     </div>
 
     <p class=muted style="text-align:center;font-size:.85em;margin:.6em 0">
         These match RealFlight&rsquo;s <b>User Interface</b> functions. In the sim, bind each by
-        <b>activating its control</b> &mdash; flip its TX switch (ch&nbsp;9&ndash;13) or tap it here.</p>
+        <b>activating its control</b> &mdash; flip its TX switch (ch&nbsp;9&ndash;13) or tap it here.
+        <b>Hold Up/Down</b> to auto-repeat.</p>
 
     <a class="btn btn-back" href="/"><span class=ico>&#8617;</span>Return to menu</a>
     <div class=footer></div>
@@ -48,45 +80,41 @@
 
 <script>
 const $ = id => document.getElementById(id);
-// The 5 RealFlight "User Interface" functions, in order → joystick buttons 1-5,
-// fired by TX channels 9-13 (or a tap here). The firmware still presents 8 HID
-// buttons (so no re-calibration); we just show the five that matter.
-const LABELS = ['Reset','Select','Cancel','Up','Down'];
+const N = 5;
 
-function build() {
-    let h = '';
-    for (let i = 0; i < LABELS.length; i++) {
-        h += '<button class=simBtn id=sb' + i + ' data-n="' + (i + 1) + '">'
-           + '<span class=lbl>' + LABELS[i] + '</span>'
-           + '<span class=sub>ch ' + (i + 9) + ' &middot; <span id=cv' + i + '>&middot;</span></span>'
-           + '</button>';
-    }
-    $('grid').innerHTML = h;
-    $('grid').querySelectorAll('.simBtn').forEach(b =>
-        b.addEventListener('click', () => fire(+b.dataset.n, b)));
-}
+// Momentary press: the firmware holds it ~150 ms (BTN_PULSE_MS), so a tap is a
+// clean single press in the sim.
+function fire(n, el) { if (el) el.classList.add('lit'); fetch('/api/sim/button?n=' + n, { method: 'POST', cache: 'no-store' }).catch(() => {}); }
 
-// Momentary press. The firmware holds it ~150 ms and OR's it with the TX-switch
-// mirror, so a quick tap is a clean button press in the sim.
-function fire(n, el) {
-    if (el) { el.classList.add('lit'); }
-    fetch('/api/sim/button?n=' + n, { method: 'POST', cache: 'no-store' }).catch(() => {});
-}
+// Up/Down auto-repeat: holding keeps the press alive (re-pulse faster than it
+// expires); the firmware turns a sustained hold into repeated presses. Releasing
+// stops the re-pulse and the press lapses server-side, so there's no stuck key.
+function holdStart(n, el) { el.classList.add('holding', 'lit'); fire(n); el._t = setInterval(() => fire(n), 120); }
+function holdStop(el) { if (el && el._t) { clearInterval(el._t); el._t = null; } if (el) el.classList.remove('holding'); }
 
 async function poll() {
     if (window.LDRC && LDRC.navigating) return;
     try {
         const d = await (await fetch('/api/sim/buttons.json', { cache: 'no-store' })).json();
-        for (let i = 0; i < LABELS.length; i++) {
-            if (Array.isArray(d.btn)) $('sb' + i).classList.toggle('lit', !!d.btn[i]);
-            if (Array.isArray(d.ch))  $('cv' + i).textContent = d.ch[i] + 'µs';
+        for (let i = 0; i < N; i++) {
+            const el = $('sb' + i);
+            if (Array.isArray(d.btn) && el && !el.classList.contains('holding')) el.classList.toggle('lit', !!d.btn[i]);
+            if (Array.isArray(d.ch) && $('cv' + i)) $('cv' + i).textContent = d.ch[i] + 'µs';
         }
     } catch (e) { /* transient */ }
     setTimeout(poll, 100);          // ~10 Hz
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    build();
+    document.querySelectorAll('.simBtn').forEach(b => {
+        const n = +b.dataset.n;
+        if (b.classList.contains('ud')) {                 // Up / Down — press & hold to auto-repeat
+            b.addEventListener('pointerdown', e => { e.preventDefault(); holdStart(n, b); });
+            ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => b.addEventListener(ev, () => holdStop(b)));
+        } else {                                          // Reset / Select / Cancel — single tap
+            b.addEventListener('click', () => fire(n, b));
+        }
+    });
     // Gentle nudge if sim mode is off (the buttons still pulse, but nothing's listening).
     try { const s = await LDRC.fetchState(); if (s && !s.sim) $('offNote').style.display = ''; } catch (e) {}
     setTimeout(poll, 120);
@@ -98,8 +126,8 @@ Up, Down</b> &mdash; so you can recover crashes and drive the sim&rsquo;s menus 
 without touching the keyboard.</p>
 <h3>Two ways to fire each one</h3>
 <ul>
-<li><b>Tap it here</b> on your phone.</li>
-<li><b>Flip a switch on your transmitter</b>: ch&nbsp;9&rarr;Reset, ch&nbsp;10&rarr;Select, ch&nbsp;11&rarr;Cancel, ch&nbsp;12&rarr;Up, ch&nbsp;13&rarr;Down. A button lights green while its switch is up or while you tap it.</li>
+<li><b>Tap it here</b> on your phone &mdash; or <b>hold Up / Down</b> to auto-repeat through a menu.</li>
+<li><b>Flip a switch on your transmitter</b>: ch&nbsp;9&rarr;Reset, ch&nbsp;10&rarr;Select, ch&nbsp;11&rarr;Cancel, ch&nbsp;12&rarr;Up, ch&nbsp;13&rarr;Down. A button lights while its switch is up or you tap it (Up/Down repeat while held).</li>
 </ul>
 <h3>Setting it up (once)</h3>
 <p>In RealFlight&rsquo;s <b>Edit Profile &rarr; User Interface</b>, click the <b>Input</b> box beside a

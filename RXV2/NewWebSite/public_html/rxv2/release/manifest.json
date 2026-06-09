@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.88-sim-pad",
+      "url": "https://messiter.com/rxv2/release/v0.9.88/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.88/littlefs.bin",
+      "notes": "Sim controls redesigned as a proper pad: big red Reset, green Select, amber Cancel, and a stacked \u25b2/\u25bc Up/Down rocker. Up and Down now AUTO-REPEAT \u2014 hold the on-screen button (or a TX switch on ch12/ch13) to scroll a menu continuously. Joystick descriptor unchanged (8 buttons), so no re-calibration."
+    },
+    {
       "name": "RXV2-0.9.87-ui-buttons",
       "url": "https://messiter.com/rxv2/release/v0.9.87/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.87/littlefs.bin",

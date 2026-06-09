@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.87-ui-buttons";
+constexpr const char* FW_VERSION = "RXV2-0.9.88-sim-pad";
 
 //*********************************************************************
 //  Auto-update manifest URLs

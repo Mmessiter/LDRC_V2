@@ -36,6 +36,11 @@ constexpr uint8_t  REPORT_ID   = 1;            // Report ID 1 (core's no-ID path
 constexpr uint32_t MIN_SEND_US = 1000;         // cap the report rate at <= 1 kHz
 constexpr uint16_t BTN_THRESH  = 1600;         // received channel µs above which a switch counts as "pressed"
 constexpr uint32_t BTN_PULSE_MS = 150;         // how long a web-page tap holds its button down
+// Up & Down (buttons 4 & 5) auto-repeat while held — bits 3 and 4 -> 0x18.
+constexpr uint8_t  REPEAT_MASK     = 0x18;
+constexpr uint32_t REP_DELAY_MS    = 350;      // hold this long before auto-repeat starts
+constexpr uint32_t REP_INTERVAL_MS = 160;      // then one press this often
+constexpr uint32_t REP_ON_MS       = 70;       // each repeat press lasts this long
 
 // RC channel (microseconds, centre 1500) -> signed 16-bit HID axis.
 // RXV2's channelMicros carry the same ~1000..2000 µs domain LDRC2SIM fed its
@@ -117,8 +122,31 @@ SimHID*  g_hid      = nullptr;
 int16_t  g_axis[NUM_AXES];                    // last report (centre/0 at boot; held on link loss)
 uint8_t  g_buttons  = 0;                       // last button bitfield sent (mirror of ch9-16 | web pulses)
 uint32_t g_btnUntil[NUM_BUTTONS] = {0};        // millis() until which a web-tapped button stays pressed
+uint32_t g_repNext[NUM_BUTTONS]     = {0};     // auto-repeat: when the next repeat press begins
+uint32_t g_repPressEnd[NUM_BUTTONS] = {0};     // auto-repeat: end of the current press window
+bool     g_repHeld[NUM_BUTTONS]     = {false}; // auto-repeat: input held last cycle (rising-edge detect)
 uint32_t g_lastSend = 0;
 bool      g_started = false;
+
+// Keyboard-style auto-repeat (Up/Down): an immediate press on the rising edge, then
+// — if still held past REP_DELAY_MS — one press every REP_INTERVAL_MS. Driven by
+// `raw` (TX switch high OR a live web hold), so it repeats from sticks and phone alike.
+inline bool autoRepeatOn(uint8_t i, bool raw, uint32_t ms) {
+    if (!raw) { g_repHeld[i] = false; return false; }
+    if (!g_repHeld[i]) {                                    // rising edge — fire at once
+        g_repHeld[i]     = true;
+        g_repPressEnd[i] = ms + REP_ON_MS;
+        g_repNext[i]     = ms + REP_DELAY_MS;
+        return true;
+    }
+    if ((int32_t)(g_repPressEnd[i] - ms) > 0) return true;  // inside a press window
+    if ((int32_t)(ms - g_repNext[i]) >= 0) {                // begin the next repeat press
+        g_repPressEnd[i] = ms + REP_ON_MS;
+        g_repNext[i]     = ms + REP_INTERVAL_MS;
+        return true;
+    }
+    return false;                                           // gap between presses
+}
 
 }  // anonymous namespace
 
@@ -162,7 +190,8 @@ inline void sendChannels(const uint16_t ch[16]) {
     uint32_t ms   = millis();
     uint8_t  btns = 0;
     for (uint8_t i = 0; i < NUM_BUTTONS; i++) {
-        bool on = (ch[8 + i] >= BTN_THRESH) || ((int32_t)(g_btnUntil[i] - ms) > 0);
+        bool raw = (ch[8 + i] >= BTN_THRESH) || ((int32_t)(g_btnUntil[i] - ms) > 0);
+        bool on  = (REPEAT_MASK & (1u << i)) ? autoRepeatOn(i, raw, ms) : raw;   // Up/Down auto-repeat
         if (on) btns |= (uint8_t)(1u << i);
     }
     g_buttons = btns;
