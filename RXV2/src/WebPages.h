@@ -72,7 +72,11 @@ inline bool serveLittleFsFile(const char* path, const char* mime) {
     // headers (versioned via ?v= cache busters), so this only
     // affects text/html responses.
     if (mime && strncmp(mime, "text/html", 9) == 0) {
-        server.sendHeader("Cache-Control", "no-cache");
+        // no-store, not just no-cache: some browsers (notably iOS Safari)
+        // heuristically keep a cached page and never revalidate, so a
+        // freshly-updated UI keeps showing the old version. no-store forbids
+        // storing the page at all, so the browser always re-fetches it.
+        server.sendHeader("Cache-Control", "no-store, no-cache, must-revalidate");
     }
     server.streamFile(f, mime);
     f.close();

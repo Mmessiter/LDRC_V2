@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.85-fresh-ui",
+      "url": "https://messiter.com/rxv2/release/v0.9.85/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.85/littlefs.bin",
+      "notes": "Web pages are now sent no-store, so a freshly-updated UI appears immediately instead of the browser (iOS Safari especially) showing a stale cached copy \u2014 no hard-refresh needed."
+    },
+    {
       "name": "RXV2-0.9.84-fs-auto",
       "url": "https://messiter.com/rxv2/release/v0.9.84/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.84/littlefs.bin",

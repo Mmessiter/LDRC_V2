@@ -1,4 +1,5 @@
 {
+  "RXV2-0.9.85-fresh-ui": "Web pages are now sent no-store, so a freshly-updated UI appears immediately instead of the browser (iOS Safari especially) showing a stale cached copy — no hard-refresh needed.",
   "RXV2-0.9.84-fs-auto": "The receiver now derives its web-filesystem URL from the firmware URL when the page doesn't supply it, so it pulls its own web files on the next update even from a stale page — updating twice fully self-heals an out-of-date UI, no computer needed. Backups still preserved.",
   "RXV2-0.9.83-fs-ota": "OTA install now also flashes the matching web/data filesystem (and preserves your Rotorflight backups), so the web UI travels with the firmware on every update — no separate uploadfs needed. First release that ships a littlefs.bin.",
   "RXV2-0.9.82-tx-happy": "Firmware-update check no longer stalls the radio while the TX link is live (it was starving radioPoll and dropping the transmitter); shorter idle timeouts.",
