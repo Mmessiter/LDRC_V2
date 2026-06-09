@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.91-menu-fit",
+      "url": "https://messiter.com/rxv2/release/v0.9.91/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.91/littlefs.bin",
+      "notes": "Sim controls: the Return-to-menu button is now full-width but a normal height, so the five function buttons (Select/Up/Down/Cancel/Reset) grow taller to fill the screen. Page-only change; no re-calibration."
+    },
+    {
       "name": "RXV2-0.9.90-pad-menu",
       "url": "https://messiter.com/rxv2/release/v0.9.90/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.90/littlefs.bin",
