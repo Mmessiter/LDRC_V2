@@ -78,12 +78,11 @@ public:
         uint8_t rep[NUM_AXES * sizeof(int16_t) + 1];          // 8 axes (16 bytes) + 1 button byte
         memcpy(rep, axes, NUM_AXES * sizeof(int16_t));
         rep[NUM_AXES * sizeof(int16_t)] = buttons;
-        // timeout 0 = NON-BLOCKING: if the USB host hasn't collected the previous
-        // report yet, drop this one instead of waiting. Waiting (the default ~100 ms)
-        // stalled the single-threaded loop ~1 ms every send, throttling radioPoll()
-        // and jittering the FHSS hop timing → dropped TX frames. The sim only needs
-        // the latest stick positions, so a skipped report is harmless.
-        return hid.SendReport(REPORT_ID, rep, sizeof rep, 0);
+        // BLOCKING send (default timeout). A non-blocking variant (timeout 0) was tried
+        // in 0.9.96 to "free" the loop, but it spun the loop hot and HALVED the TX frame
+        // rate while flying (492 → ~200, vs 500 with sim off) — the blocking wait yields
+        // the CPU and paces the loop, which the radio link strongly prefers. Reverted.
+        return hid.SendReport(REPORT_ID, rep, sizeof rep);
     }
     uint16_t _onGetDescriptor(uint8_t* dst) override { memcpy(dst, _desc, _descLen); return _descLen; }
 private:

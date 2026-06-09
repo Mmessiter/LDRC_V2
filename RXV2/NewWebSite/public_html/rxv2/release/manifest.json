@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.97-usb-revert",
+      "url": "https://messiter.com/rxv2/release/v0.9.97/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.97/littlefs.bin",
+      "notes": "Reverts the 0.9.96 non-blocking USB write \u2014 it halved the TX frame rate while flying the sim (\u2248200 vs 500 with sim off). The blocking write yields the CPU and paces the loop, which the radio link needs. Back to the proven behaviour. Keeps the 'RealFlight controls' rename and the return-to-home fix."
+    },
+    {
       "name": "RXV2-0.9.96-ui-polish",
       "url": "https://messiter.com/rxv2/release/v0.9.96/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.96/littlefs.bin",
