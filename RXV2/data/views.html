@@ -22,7 +22,17 @@
 .vBtn .sub{font-size:.72em;opacity:.8;font-variant-numeric:tabular-nums}
 .vBtn.lit{filter:brightness(1.18);box-shadow:0 0 0 4px rgba(255,255,255,.7),0 1px 7px rgba(0,0,0,.3)}
 .offNote{text-align:center;color:#9a5;font-weight:600;margin:.1em 0 .6em;display:none}
-.pageTitle{text-align:center;font-size:1.4em;font-weight:700;margin:.25em 0 .35em}
+.pageHdr{display:flex;align-items:center;justify-content:space-between;margin:.2em 0 .4em}
+.pageHdr h1{margin:0;font-size:1.4em}
+.editRow{display:grid;grid-template-columns:1fr 1fr;gap:6px 8px;align-items:center;
+ padding:.5em 0;border-bottom:1px solid rgba(125,158,176,.18)}
+.editRow .num{grid-column:1/-1;font-weight:700;color:#3a5165;font-size:.85em}
+.editRow input[type=text]{width:100%;padding:.45em;font-size:1em}
+.editRow select{width:100%;padding:.45em;font-size:1em}
+.editRow .mods{grid-column:1/-1;display:flex;gap:1em;font-size:.85em;color:#5d7a8c;font-weight:600}
+.editRow .mods label{display:flex;align-items:center;gap:.3em}
+.editRow .mods input{width:auto;margin:0;transform:scale(1.1)}
+#editMsg{text-align:center;color:#3aaf5c;font-weight:600;min-height:1.1em;margin:.3em 0}
 </style>
 </head>
 <body>
@@ -30,17 +40,31 @@
 <div class=bg-photo aria-hidden=true></div>
 <div class=bg-wash  aria-hidden=true></div>
 <div class=container>
-    <div class=pageTitle>Views</div>
+    <div class=pageHdr>
+        <h1>Views</h1>
+        <button class="btn" type=button id=editBtn style="width:auto;padding:.5em 1em;margin:0">&#9998; Edit</button>
+    </div>
     <div id=offNote class=offNote>Simulator mode is OFF &mdash; turn it on from the home screen for these to work.</div>
 
-    <div class=card>
-        <div class=vGrid id=grid>loading&hellip;</div>
+    <!-- USE mode -->
+    <div id=useView>
+        <div class=card><div class=vGrid id=grid>loading&hellip;</div></div>
+        <p class=muted style="text-align:center;font-size:.82em;margin:.6em 0">
+            Tap to send the shortcut to RealFlight. Tap <b>Edit</b> to set each button to RealFlight&rsquo;s real keys.</p>
     </div>
 
-    <p class=muted style="text-align:center;font-size:.82em;margin:.6em 0">
-        Each button types a keyboard shortcut into RealFlight. The labels &amp; keycodes are
-        <b>placeholders</b> &mdash; edit the <code>VIEWS</code> table in this page to match RealFlight&rsquo;s
-        Keyboard&nbsp;Commands once you&rsquo;ve read them off.</p>
+    <!-- EDIT mode -->
+    <div id=editView style="display:none">
+        <div class=card>
+            <p class=muted style="margin:.2em 0 .6em">Set each button&rsquo;s <b>label</b> and <b>key</b> (from your
+            RealFlight Keyboard Commands). Leave a label blank to hide that button. Saved on this phone.</p>
+            <div id=editRows></div>
+        </div>
+        <div id=editMsg></div>
+        <button class="btn btn-fly" type=button id=saveBtn><span class=ico>&#9989;</span>Save</button>
+        <button class="btn btn-bb"  type=button id=cancelBtn><span class=ico>&#10005;</span>Cancel</button>
+        <button class="btn" type=button id=resetBtn style="background:#c98a4a"><span class=ico>&#8634;</span>Reset to defaults</button>
+    </div>
 
     <a class="btn btn-back" href="/"><span class=ico>&#8617;</span>Return to menu</a>
     <div class=footer></div>
@@ -48,73 +72,116 @@
 
 <script>
 const $ = id => document.getElementById(id);
+const STORE = 'rxv2_views';
+const NBTN = 8;   // editable slots
 
-// ── EDIT ME ──────────────────────────────────────────────────────────────────
-// One entry per button: { label, code, mods }.
-//   code = HID Usage ID (NOT ascii). Common ones:
-//     a–z = 0x04..0x1D    1–9 = 0x1E..0x26    0 = 0x27
-//     F1–F12 = 0x3A..0x45    Space=0x2C Enter=0x28 Esc=0x29 Tab=0x2B
-//     - = 0x2D    = = 0x2E    [ = 0x2F    ] = 0x30
-//     keypad + = 0x57    keypad - = 0x56
-//     arrows: Right=0x4F Left=0x50 Down=0x51 Up=0x52    Home=0x4A End=0x4D
-//   mods = bitmask: Ctrl=1, Shift=2, Alt=4, Win=8  (add for combos, e.g. Ctrl+Shift=3)
-// The codes below are PLACEHOLDERS that just type a visible character (good for the
-// Notepad test); replace them with RealFlight's real view shortcuts.
-const VIEWS = [
-    { label: 'Next view',     code: 0x1E, mods: 0 },   // '1'
-    { label: 'Prev view',     code: 0x1F, mods: 0 },   // '2'
-    { label: 'Zoom in',       code: 0x2E, mods: 0 },   // '='
-    { label: 'Zoom out',      code: 0x2D, mods: 0 },   // '-'
-    { label: 'Cockpit view',  code: 0x06, mods: 0 },   // 'c'
-    { label: 'Chase view',    code: 0x0B, mods: 0 },   // 'h'
-    { label: 'Reset view',    code: 0x15, mods: 0 },   // 'r'
-    { label: 'Pilot view',    code: 0x13, mods: 0 },   // 'p'
+// Friendly key list -> HID Usage IDs.
+const KEYS = [{ n: '— none —', c: 0 }];
+'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').forEach((ch, i) => KEYS.push({ n: ch, c: 0x04 + i }));
+'1234567890'.split('').forEach((ch, i) => KEYS.push({ n: ch, c: 0x1E + i }));
+for (let i = 1; i <= 12; i++) KEYS.push({ n: 'F' + i, c: 0x39 + i });
+[['Space', 0x2C], ['Enter', 0x28], ['Esc', 0x29], ['Tab', 0x2B], ['Backspace', 0x2A], ['Delete', 0x4C],
+ ['- _', 0x2D], ['= +', 0x2E], ['[ {', 0x2F], ['] }', 0x30], ['; :', 0x33], ["' \"", 0x34],
+ [', <', 0x36], ['. >', 0x37], ['/ ?', 0x38], ['` ~', 0x35],
+ ['Right →', 0x4F], ['Left ←', 0x50], ['Down ↓', 0x51], ['Up ↑', 0x52],
+ ['Home', 0x4A], ['End', 0x4D], ['PageUp', 0x4B], ['PageDown', 0x4E], ['Insert', 0x49],
+ ['Keypad +', 0x57], ['Keypad -', 0x56], ['Keypad *', 0x55], ['Keypad /', 0x54], ['Keypad Enter', 0x58]
+].forEach(([n, c]) => KEYS.push({ n, c }));
+const keyName = c => (KEYS.find(k => k.c === c) || {}).n || ('0x' + c.toString(16));
+
+// Placeholders (visible characters, good for the Notepad test). Edit on-screen.
+const DEFAULTS = [
+    { label: 'Next view', code: 0x1E, mods: 0 }, { label: 'Prev view', code: 0x1F, mods: 0 },
+    { label: 'Zoom in', code: 0x2E, mods: 0 },   { label: 'Zoom out', code: 0x2D, mods: 0 },
+    { label: 'Cockpit view', code: 0x06, mods: 0 }, { label: 'Chase view', code: 0x0B, mods: 0 },
+    { label: 'Reset view', code: 0x15, mods: 0 }, { label: 'Pilot view', code: 0x13, mods: 0 },
 ];
-// ─────────────────────────────────────────────────────────────────────────────
+
+function load() {
+    try { const c = JSON.parse(localStorage.getItem(STORE)); if (Array.isArray(c) && c.length) return c; } catch (e) {}
+    return DEFAULTS.map(x => ({ ...x }));
+}
+let cfg = load();
 
 const MOD_NAMES = ['Ctrl', 'Shift', 'Alt', 'Win'];
-function keyHint(v) {
-    let s = '';
-    for (let b = 0; b < 4; b++) if (v.mods & (1 << b)) s += MOD_NAMES[b] + '+';
-    return s + '0x' + v.code.toString(16).toUpperCase();
-}
+function keyHint(v) { let s = ''; for (let b = 0; b < 4; b++) if (v.mods & (1 << b)) s += MOD_NAMES[b] + '+'; return s + keyName(v.code); }
 
-function build() {
-    $('grid').innerHTML = VIEWS.map((v, i) =>
-        '<button class=vBtn id=v' + i + ' data-i=' + i + '>'
-        + '<span class=lbl>' + v.label + '</span>'
-        + '<span class=sub>' + keyHint(v) + '</span></button>').join('');
+function renderButtons() {
+    const live = cfg.filter(v => v.label && v.label.trim() && v.code);
+    $('grid').innerHTML = live.length
+        ? live.map((v) => '<button class=vBtn data-c=' + v.code + ' data-m=' + v.mods + '>'
+            + '<span class=lbl>' + esc(v.label) + '</span><span class=sub>' + keyHint(v) + '</span></button>').join('')
+        : '<p class=muted>No buttons yet — tap Edit.</p>';
     $('grid').querySelectorAll('.vBtn').forEach(b =>
-        b.addEventListener('click', () => fire(+b.dataset.i, b)));
+        b.addEventListener('click', () => fire(+b.dataset.c, +b.dataset.m, b)));
 }
+function esc(s) { return String(s).replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c])); }
 
-// Send the keystroke. POSTed twice ~60 ms apart for reliability over the (distant,
-// low-power) WiFi; the firmware debounces them into ONE keystroke, so a dropped
-// request doesn't cost the press and a delivered pair never double-fires.
-function fire(i, el) {
-    const v = VIEWS[i];
-    if (!v) return;
+// Send the keystroke; POSTed twice ~60 ms apart for reliability over WiFi. The
+// firmware debounces them into ONE keystroke.
+function fire(code, mods, el) {
+    if (!code) return;
     if (el) { el.classList.add('lit'); setTimeout(() => el.classList.remove('lit'), 220); }
-    const hit = () => fetch('/api/sim/key?code=' + v.code + '&mods=' + v.mods, { method: 'POST', cache: 'no-store' }).catch(() => {});
+    const hit = () => fetch('/api/sim/key?code=' + code + '&mods=' + mods, { method: 'POST', cache: 'no-store' }).catch(() => {});
     hit(); setTimeout(hit, 60);
 }
 
+function renderEditor() {
+    let h = '';
+    for (let i = 0; i < NBTN; i++) {
+        const v = cfg[i] || { label: '', code: 0, mods: 0 };
+        h += '<div class=editRow><div class=num>Button ' + (i + 1) + '</div>'
+           + '<input type=text id=el' + i + ' placeholder="label (blank = hide)" value="' + esc(v.label || '') + '">'
+           + '<select id=ek' + i + '>' + KEYS.map(k => '<option value=' + k.c + (k.c === v.code ? ' selected' : '') + '>' + k.n + '</option>').join('') + '</select>'
+           + '<div class=mods>'
+           + MOD_NAMES.map((m, b) => '<label><input type=checkbox id=em' + i + '_' + b + (v.mods & (1 << b) ? ' checked' : '') + '>' + m + '</label>').join('')
+           + '</div></div>';
+    }
+    $('editRows').innerHTML = h;
+}
+
+function readEditor() {
+    const out = [];
+    for (let i = 0; i < NBTN; i++) {
+        let mods = 0;
+        for (let b = 0; b < 4; b++) if ($('em' + i + '_' + b).checked) mods |= (1 << b);
+        out.push({ label: $('el' + i).value.trim(), code: +$('ek' + i).value, mods });
+    }
+    return out;
+}
+
+function showEdit(on) {
+    $('useView').style.display = on ? 'none' : '';
+    $('editView').style.display = on ? '' : 'none';
+    $('editBtn').style.display = on ? 'none' : '';
+    if (on) renderEditor();
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
-    build();
+    renderButtons();
+    $('editBtn').addEventListener('click', () => showEdit(true));
+    $('cancelBtn').addEventListener('click', () => showEdit(false));
+    $('saveBtn').addEventListener('click', () => {
+        cfg = readEditor();
+        localStorage.setItem(STORE, JSON.stringify(cfg));
+        $('editMsg').textContent = '✓ Saved on this phone';
+        renderButtons();
+        setTimeout(() => showEdit(false), 600);
+    });
+    $('resetBtn').addEventListener('click', () => { cfg = DEFAULTS.map(x => ({ ...x })); renderEditor(); $('editMsg').textContent = 'Defaults restored — tap Save to keep'; });
     try { const s = await LDRC.fetchState(); if (s && !s.sim) $('offNote').style.display = ''; } catch (e) {}
 });
 </script>
 <template id=helpContent><h2>Views</h2>
 <p>These buttons send <b>keyboard shortcuts</b> to your PC, so you can change RealFlight&rsquo;s camera /
 point of view from the phone &mdash; the receiver is a USB <b>keyboard</b> as well as a gamepad.</p>
-<h3>Setting it up</h3>
-<p>Open RealFlight&rsquo;s <b>Keyboard Commands</b> list (in its menus / help), note the keys for the views
-you want, then edit the <b>VIEWS</b> table near the top of this page&rsquo;s source: each row is a
-<b>label</b>, a <b>HID keycode</b>, and optional <b>modifiers</b> (Ctrl/Shift/Alt/Win). A keycode cheat-sheet
-is in the comments there.</p>
+<h3>Setting them up</h3>
+<p>Tap <b>Edit</b>. For each button, type a <b>label</b> and pick its <b>key</b> from the dropdown (tick
+Ctrl/Shift/Alt for combos). Use the keys RealFlight lists in its <b>Keyboard Commands</b>. Leave a label
+blank to hide that button. Tap <b>Save</b> &mdash; it&rsquo;s stored on this phone, no re&#8209;flashing.</p>
 <h3>Test</h3>
-<p>The shipped codes are placeholders that type plain characters &mdash; open <b>Notepad</b>, tap a button,
-and you should see the character appear. Then swap in RealFlight&rsquo;s real shortcuts.</p>
+<p>The defaults type plain characters &mdash; open <b>Notepad</b>, tap a button, see the character. Then
+Edit them to RealFlight&rsquo;s real view keys.</p>
 </template>
 </body>
 </html>

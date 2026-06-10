@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.102-views-editor",
+      "url": "https://messiter.com/rxv2/release/v0.9.102/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.102/littlefs.bin",
+      "notes": "The Views page now has an on-screen Edit button: set each button's label and pick its key from a friendly dropdown (Ctrl/Shift/Alt too), Save \u2014 stored on the phone, no re-flashing. So you can map the buttons to RealFlight's real view shortcuts yourself."
+    },
+    {
       "name": "RXV2-0.9.101-keyboard",
       "url": "https://messiter.com/rxv2/release/v0.9.101/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.101/littlefs.bin",
