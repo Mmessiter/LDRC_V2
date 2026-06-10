@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.104-edit-btn",
+      "url": "https://messiter.com/rxv2/release/v0.9.104/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.104/littlefs.bin",
+      "notes": "Views page: moved the Edit button down below the camera buttons so it no longer sits under the top-right ? Help button. Nothing else changed \u2014 same buttons, keys and mappings."
+    },
+    {
       "name": "RXV2-0.9.103-rf-views",
       "url": "https://messiter.com/rxv2/release/v0.9.103/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.103/littlefs.bin",
