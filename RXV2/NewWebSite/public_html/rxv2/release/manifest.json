@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.100-reset-ch10",
+      "url": "https://messiter.com/rxv2/release/v0.9.100/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.100/littlefs.bin",
+      "notes": "Swapped Reset and Select channels: Reset now on channel 10 (a switchable channel on the transmitter), Select on channel 14. Reset is the one you most want on a physical switch. Channels now: 10=Reset, 11=Cancel, 12=Up, 13=Down, 14=Select; ch9 still free for autorotation."
+    },
+    {
       "name": "RXV2-0.9.99-tap-reliable",
       "url": "https://messiter.com/rxv2/release/v0.9.99/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.99/littlefs.bin",
