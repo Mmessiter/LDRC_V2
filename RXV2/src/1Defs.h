@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.98-reset-ch14";
+constexpr const char* FW_VERSION = "RXV2-0.9.99-tap-reliable";
 
 //*********************************************************************
 //  Auto-update manifest URLs

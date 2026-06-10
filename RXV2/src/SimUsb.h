@@ -35,7 +35,7 @@ constexpr uint8_t  NUM_BUTTONS = 8;            // sim-function buttons — fed b
 constexpr uint8_t  REPORT_ID   = 1;            // Report ID 1 (core's no-ID path is buggy on 2.0.x)
 constexpr uint32_t MIN_SEND_US = 1000;         // cap the report rate at <= 1 kHz
 constexpr uint16_t BTN_THRESH  = 1600;         // received channel µs above which a switch counts as "pressed"
-constexpr uint32_t BTN_PULSE_MS = 150;         // how long a web-page tap holds its button down
+constexpr uint32_t BTN_PULSE_MS = 250;         // how long a web-page tap holds its button down (long enough the sim can't miss the edge)
 // Up & Down (buttons 4 & 5) auto-repeat while held — bits 3 and 4 -> 0x18.
 constexpr uint8_t  REPEAT_MASK     = 0x18;
 constexpr uint32_t REP_DELAY_MS    = 350;      // hold this long before auto-repeat starts

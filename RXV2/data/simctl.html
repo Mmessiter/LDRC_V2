@@ -100,7 +100,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             b.addEventListener('pointerdown', e => { e.preventDefault(); holdStart(n, b); });
             ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => b.addEventListener(ev, () => holdStop(b)));
         } else {                                          // Select / Cancel / Reset — single tap
-            b.addEventListener('click', () => fire(n, b));
+            // Fire 3× over ~180 ms: each is a separate POST, so a tap survives an
+            // occasional dropped request over the (distant, low-power) WiFi. The
+            // firmware OR's them into one ~250 ms press, so the sim still sees ONE
+            // clean Reset — never a triple-fire.
+            b.addEventListener('click', () => { fire(n, b); setTimeout(() => fire(n), 90); setTimeout(() => fire(n), 180); });
         }
     });
     // Gentle nudge if sim mode is off (the buttons still pulse, but nothing's listening).
