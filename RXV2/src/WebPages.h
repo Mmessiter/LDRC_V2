@@ -1084,6 +1084,27 @@ inline void handleSimButton() {
 }
 
 //*********************************************************************
+//  Camera / view keystrokes — /views page + POST a keystroke
+//*********************************************************************
+// The composite USB device includes a standard keyboard; /api/sim/key sends one
+// momentary keystroke (HID usage `code`, modifier bitmask `mods`) so the phone
+// can drive RealFlight's view shortcuts. The label/keycode table lives in the
+// /views page so it's easy to edit once the real shortcuts are confirmed.
+inline void handleViews() {
+    if (serveLittleFsFile("/views.html", "text/html")) return;
+    server.send(503, "text/plain", "/views.html missing — uploadfs the data/ folder");
+}
+
+inline void handleSimKey() {
+    int code = server.hasArg("code") ? server.arg("code").toInt() : 0;   // HID usage id
+    int mods = server.hasArg("mods") ? server.arg("mods").toInt() : 0;   // modifier bitmask
+    if (code < 1 || code > 255) { server.send(400, "text/plain", "code must be 1..255"); return; }
+    SimUSB::sendKey((uint8_t)code, (uint8_t)(mods & 0xFF));
+    server.sendHeader("Cache-Control", "no-store");
+    server.send(200, "text/plain", "ok");
+}
+
+//*********************************************************************
 //  POST /fly_arm — disable WiFi until next reboot
 //*********************************************************************
 
@@ -1465,6 +1486,7 @@ inline void registerWebRoutes() {
     server.on("/map",               handleMap);          // sim channel-remap page
     server.on("/api/simmap.json",   handleApiSimMap);    // current sim channel map
     server.on("/simctl",               handleSimCtl);       // sim-function buttons page
+    server.on("/views",                handleViews);        // camera/view keystroke page
     server.on("/api/sim/buttons.json", handleApiSimButtons);// live sim-button states
 
     // POSTs that reboot
@@ -1482,6 +1504,7 @@ inline void registerWebRoutes() {
     server.on("/api/sim",     HTTP_POST, handleSimSet);
     server.on("/api/map",     HTTP_POST, handleMapSave);   // save sim channel map (applies live, no reboot)
     server.on("/api/sim/button", HTTP_POST, handleSimButton); // pulse a sim-function button (1..8)
+    server.on("/api/sim/key",    HTTP_POST, handleSimKey);    // send a camera/view keystroke
     server.on("/fly_arm",     HTTP_POST, handleFlyArm);
 
     // Misc

@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.100-reset-ch10";
+constexpr const char* FW_VERSION = "RXV2-0.9.101-keyboard";
 
 //*********************************************************************
 //  Auto-update manifest URLs

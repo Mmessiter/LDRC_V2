@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name=theme-color content="#5fa099">
+<meta name=apple-mobile-web-app-capable content=yes>
+<meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
+<meta name=apple-mobile-web-app-title content="LDRC RX V2">
+<title>Views &middot; LDRC RX V2</title>
+<link rel=stylesheet href="/style.css?v=30">
+<script src="/app.js?v=30" defer></script>
+<style>
+.vGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.vBtn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.1em;
+ min-height:78px;padding:.7em .6em;border:0;border-radius:14px;cursor:pointer;color:#fff;font:inherit;
+ text-align:center;background:#4a8fc9;box-shadow:0 1px 4px rgba(0,0,0,.22);
+ transition:transform .05s,filter .12s,box-shadow .12s;
+ user-select:none;-webkit-user-select:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.vBtn:active{transform:scale(.97)}
+.vBtn .lbl{font-weight:800;font-size:1.15em;line-height:1.05;text-shadow:0 1px 2px rgba(0,0,0,.28)}
+.vBtn .sub{font-size:.72em;opacity:.8;font-variant-numeric:tabular-nums}
+.vBtn.lit{filter:brightness(1.18);box-shadow:0 0 0 4px rgba(255,255,255,.7),0 1px 7px rgba(0,0,0,.3)}
+.offNote{text-align:center;color:#9a5;font-weight:600;margin:.1em 0 .6em;display:none}
+.pageTitle{text-align:center;font-size:1.4em;font-weight:700;margin:.25em 0 .35em}
+</style>
+</head>
+<body>
+<button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
+<div class=bg-photo aria-hidden=true></div>
+<div class=bg-wash  aria-hidden=true></div>
+<div class=container>
+    <div class=pageTitle>Views</div>
+    <div id=offNote class=offNote>Simulator mode is OFF &mdash; turn it on from the home screen for these to work.</div>
+
+    <div class=card>
+        <div class=vGrid id=grid>loading&hellip;</div>
+    </div>
+
+    <p class=muted style="text-align:center;font-size:.82em;margin:.6em 0">
+        Each button types a keyboard shortcut into RealFlight. The labels &amp; keycodes are
+        <b>placeholders</b> &mdash; edit the <code>VIEWS</code> table in this page to match RealFlight&rsquo;s
+        Keyboard&nbsp;Commands once you&rsquo;ve read them off.</p>
+
+    <a class="btn btn-back" href="/"><span class=ico>&#8617;</span>Return to menu</a>
+    <div class=footer></div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+// ── EDIT ME ──────────────────────────────────────────────────────────────────
+// One entry per button: { label, code, mods }.
+//   code = HID Usage ID (NOT ascii). Common ones:
+//     a–z = 0x04..0x1D    1–9 = 0x1E..0x26    0 = 0x27
+//     F1–F12 = 0x3A..0x45    Space=0x2C Enter=0x28 Esc=0x29 Tab=0x2B
+//     - = 0x2D    = = 0x2E    [ = 0x2F    ] = 0x30
+//     keypad + = 0x57    keypad - = 0x56
+//     arrows: Right=0x4F Left=0x50 Down=0x51 Up=0x52    Home=0x4A End=0x4D
+//   mods = bitmask: Ctrl=1, Shift=2, Alt=4, Win=8  (add for combos, e.g. Ctrl+Shift=3)
+// The codes below are PLACEHOLDERS that just type a visible character (good for the
+// Notepad test); replace them with RealFlight's real view shortcuts.
+const VIEWS = [
+    { label: 'Next view',     code: 0x1E, mods: 0 },   // '1'
+    { label: 'Prev view',     code: 0x1F, mods: 0 },   // '2'
+    { label: 'Zoom in',       code: 0x2E, mods: 0 },   // '='
+    { label: 'Zoom out',      code: 0x2D, mods: 0 },   // '-'
+    { label: 'Cockpit view',  code: 0x06, mods: 0 },   // 'c'
+    { label: 'Chase view',    code: 0x0B, mods: 0 },   // 'h'
+    { label: 'Reset view',    code: 0x15, mods: 0 },   // 'r'
+    { label: 'Pilot view',    code: 0x13, mods: 0 },   // 'p'
+];
+// ─────────────────────────────────────────────────────────────────────────────
+
+const MOD_NAMES = ['Ctrl', 'Shift', 'Alt', 'Win'];
+function keyHint(v) {
+    let s = '';
+    for (let b = 0; b < 4; b++) if (v.mods & (1 << b)) s += MOD_NAMES[b] + '+';
+    return s + '0x' + v.code.toString(16).toUpperCase();
+}
+
+function build() {
+    $('grid').innerHTML = VIEWS.map((v, i) =>
+        '<button class=vBtn id=v' + i + ' data-i=' + i + '>'
+        + '<span class=lbl>' + v.label + '</span>'
+        + '<span class=sub>' + keyHint(v) + '</span></button>').join('');
+    $('grid').querySelectorAll('.vBtn').forEach(b =>
+        b.addEventListener('click', () => fire(+b.dataset.i, b)));
+}
+
+// Send the keystroke. POSTed twice ~60 ms apart for reliability over the (distant,
+// low-power) WiFi; the firmware debounces them into ONE keystroke, so a dropped
+// request doesn't cost the press and a delivered pair never double-fires.
+function fire(i, el) {
+    const v = VIEWS[i];
+    if (!v) return;
+    if (el) { el.classList.add('lit'); setTimeout(() => el.classList.remove('lit'), 220); }
+    const hit = () => fetch('/api/sim/key?code=' + v.code + '&mods=' + v.mods, { method: 'POST', cache: 'no-store' }).catch(() => {});
+    hit(); setTimeout(hit, 60);
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    build();
+    try { const s = await LDRC.fetchState(); if (s && !s.sim) $('offNote').style.display = ''; } catch (e) {}
+});
+</script>
+<template id=helpContent><h2>Views</h2>
+<p>These buttons send <b>keyboard shortcuts</b> to your PC, so you can change RealFlight&rsquo;s camera /
+point of view from the phone &mdash; the receiver is a USB <b>keyboard</b> as well as a gamepad.</p>
+<h3>Setting it up</h3>
+<p>Open RealFlight&rsquo;s <b>Keyboard Commands</b> list (in its menus / help), note the keys for the views
+you want, then edit the <b>VIEWS</b> table near the top of this page&rsquo;s source: each row is a
+<b>label</b>, a <b>HID keycode</b>, and optional <b>modifiers</b> (Ctrl/Shift/Alt/Win). A keycode cheat-sheet
+is in the comments there.</p>
+<h3>Test</h3>
+<p>The shipped codes are placeholders that type plain characters &mdash; open <b>Notepad</b>, tap a button,
+and you should see the character appear. Then swap in RealFlight&rsquo;s real shortcuts.</p>
+</template>
+</body>
+</html>

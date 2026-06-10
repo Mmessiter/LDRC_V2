@@ -284,10 +284,11 @@ void loop() {
 
     radioPoll();
     if (simEnabled) {
-        // Sim mode: the ONLY output is the USB joystick. Skip ALL flight-controller
-        // work — no RC output frames, no telemetry, no MSP — so a real model can't
-        // be flown from sim mode, and the loop has just one job (lower latency).
+        // Sim mode: the ONLY output is the USB composite device. Skip ALL flight-
+        // controller work — no RC output frames, no telemetry, no MSP — so a real
+        // model can't be flown from sim mode, and the loop stays lean.
         SimUSB::sendChannels(channelMicros);
+        SimUSB::keyboardTick();   // send any pending camera/view keystroke (non-blocking)
     } else {
         protocolRx();          // pull any telemetry/MSP bytes the FC has sent back on D5
         mspBridgePoll();       // TCP/5760 ↔ FC for wireless Rotorflight config

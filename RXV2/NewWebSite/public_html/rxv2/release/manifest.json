@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.101-keyboard",
+      "url": "https://messiter.com/rxv2/release/v0.9.101/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.101/littlefs.bin",
+      "notes": "Sim mode is now a USB composite device: the existing gamepad PLUS a standard keyboard. New 'Views (camera)' phone page sends keyboard shortcuts (next view, zoom, cockpit/chase, etc.) to RealFlight \u2014 keycodes editable in the page. Gamepad report unchanged (a one-time RealFlight re-detect of the composite device aside). Keystrokes are non-blocking and don't affect the channel rate."
+    },
+    {
       "name": "RXV2-0.9.100-reset-ch10",
       "url": "https://messiter.com/rxv2/release/v0.9.100/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.100/littlefs.bin",
