@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.98-reset-ch14",
+      "url": "https://messiter.com/rxv2/release/v0.9.98/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.98/littlefs.bin",
+      "notes": "Moved the RealFlight-controls Reset button from channel 9 to channel 14 (joystick button 6), leaving channel 9 free for RealFlight's helicopter autorotation. Channels now: 10=Select, 11=Cancel, 12=Up, 13=Down, 14=Reset. Page-only change; no re-calibration. You'll need to put the Reset switch on TX ch14 and re-bind Reset in RealFlight."
+    },
+    {
       "name": "RXV2-0.9.97-usb-revert",
       "url": "https://messiter.com/rxv2/release/v0.9.97/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.97/littlefs.bin",

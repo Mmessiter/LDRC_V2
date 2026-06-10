@@ -53,8 +53,8 @@
             <span class=lbl>&#9660; Down</span><span class=sub>ch 13 &middot; <span id=cv5>&middot;</span></span></button>
         <button class="simBtn can" id=b3 data-n=3>
             <span class=lbl>Cancel</span><span class=sub>ch 11 &middot; <span id=cv3>&middot;</span></span></button>
-        <button class="simBtn reset" id=b1 data-n=1>
-            <span class=lbl>Reset</span><span class=sub>ch 9 &middot; <span id=cv1>&middot;</span></span></button>
+        <button class="simBtn reset" id=b6 data-n=6>
+            <span class=lbl>Reset</span><span class=sub>ch 14 &middot; <span id=cv6>&middot;</span></span></button>
         <a class="simBtn menu" href="/"><span class=lbl>&#8617; Return to menu</span></a>
     </div>
 
@@ -63,7 +63,7 @@
 
 <script>
 const $ = id => document.getElementById(id);
-const BTNS = [1, 2, 3, 4, 5];               // button numbers in use; ch = n + 8, lit/ch index = n - 1
+const BTNS = [2, 3, 4, 5, 6];               // button numbers in use; ch = n + 8, lit/ch index = n - 1 (Reset moved to btn6/ch14)
 
 // Momentary press: the firmware holds it ~150 ms (BTN_PULSE_MS), so a tap is a
 // clean single press in the sim.
@@ -115,12 +115,12 @@ transmitter, without touching the keyboard. Reset sits at the bottom, like the s
 <h3>Two ways to fire each one</h3>
 <ul>
 <li><b>Tap it here</b> on your phone &mdash; or <b>hold Up / Down</b> to auto-repeat through a menu.</li>
-<li><b>Flip a switch on your transmitter</b>: ch&nbsp;9&rarr;Reset, ch&nbsp;10&rarr;Select, ch&nbsp;11&rarr;Cancel, ch&nbsp;12&rarr;Up, ch&nbsp;13&rarr;Down. A button lights while its switch is up or you tap it (Up/Down repeat while held).</li>
+<li><b>Flip a switch on your transmitter</b>: ch&nbsp;10&rarr;Select, ch&nbsp;11&rarr;Cancel, ch&nbsp;12&rarr;Up, ch&nbsp;13&rarr;Down, ch&nbsp;14&rarr;Reset (ch&nbsp;9 is left free for RealFlight&rsquo;s autorotation). A button lights while its switch is up or you tap it (Up/Down repeat while held).</li>
 </ul>
 <h3>Setting it up (once)</h3>
 <p>In RealFlight&rsquo;s <b>Edit Profile &rarr; User Interface</b>, click the <b>Input</b> box beside a
 function (e.g. Reset) and <b>activate the control</b> &mdash; flip its TX switch or tap it here. RealFlight
-captures it as <b>Button&nbsp;0&ndash;4</b>, then <b>Save</b>. (Same idea in neXt.)</p>
+captures it as the matching <b>Button</b>, then <b>Save</b>. (Same idea in neXt.)</p>
 </template>
 </body>
 </html>

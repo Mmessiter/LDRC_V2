@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.97-usb-revert";
+constexpr const char* FW_VERSION = "RXV2-0.9.98-reset-ch14";
 
 //*********************************************************************
 //  Auto-update manifest URLs
