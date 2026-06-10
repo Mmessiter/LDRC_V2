@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.103-rf-views",
+      "url": "https://messiter.com/rxv2/release/v0.9.103/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.103/littlefs.bin",
+      "notes": "Views page defaults are now RealFlight 9.5's real View Commands (read from its Keyboard Commands dialog): Chase/Fixed/Nose cam = F3/F1/F2, Cockpit = F4, Cycle cam = C, Zoom in/out = keypad +/-, Windsock = Up arrow. Tap 'Reset to defaults' to load them; the editor still lets you map any key/combo to any RealFlight command."
+    },
+    {
       "name": "RXV2-0.9.102-views-editor",
       "url": "https://messiter.com/rxv2/release/v0.9.102/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.102/littlefs.bin",

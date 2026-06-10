@@ -89,12 +89,16 @@ for (let i = 1; i <= 12; i++) KEYS.push({ n: 'F' + i, c: 0x39 + i });
 ].forEach(([n, c]) => KEYS.push({ n, c }));
 const keyName = c => (KEYS.find(k => k.c === c) || {}).n || ('0x' + c.toString(16));
 
-// Placeholders (visible characters, good for the Notepad test). Edit on-screen.
+// RealFlight 9.5 View Commands (from its Keyboard Commands dialog). Edit on-screen.
 const DEFAULTS = [
-    { label: 'Next view', code: 0x1E, mods: 0 }, { label: 'Prev view', code: 0x1F, mods: 0 },
-    { label: 'Zoom in', code: 0x2E, mods: 0 },   { label: 'Zoom out', code: 0x2D, mods: 0 },
-    { label: 'Cockpit view', code: 0x06, mods: 0 }, { label: 'Chase view', code: 0x0B, mods: 0 },
-    { label: 'Reset view', code: 0x15, mods: 0 }, { label: 'Pilot view', code: 0x13, mods: 0 },
+    { label: 'Chase cam', code: 0x3C, mods: 0 },   // F3
+    { label: 'Fixed cam', code: 0x3A, mods: 0 },   // F1
+    { label: 'Nose cam',  code: 0x3B, mods: 0 },   // F2
+    { label: 'Cockpit',   code: 0x3D, mods: 0 },   // F4  (onboard cameras)
+    { label: 'Cycle cam', code: 0x06, mods: 0 },   // C   (change camera mode)
+    { label: 'Zoom in',   code: 0x57, mods: 0 },   // keypad +
+    { label: 'Zoom out',  code: 0x56, mods: 0 },   // keypad -
+    { label: 'Windsock',  code: 0x52, mods: 0 },   // Up arrow (quick look at windsock)
 ];
 
 function load() {
