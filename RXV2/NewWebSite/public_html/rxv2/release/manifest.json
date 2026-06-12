@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.116-reboot-ux",
+      "url": "https://messiter.com/rxv2/release/v0.9.116/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.116/littlefs.bin",
+      "notes": "No more white screen when toggling simulator mode: the phone now shows 'Rebooting \u2014 please wait...' immediately (drawn before the toggle is even sent, so it cannot blank), counts the seconds, then returns to the home screen by itself \u2014 with a Return-to-menu button there throughout. And the home menu now has TWO simulator buttons \u2014 RealFlight and neXt \u2014 each opening the controls & views screen with that simulator's key set selected."
+    },
+    {
       "name": "RXV2-0.9.115-return-fix",
       "url": "https://messiter.com/rxv2/release/v0.9.115/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.115/littlefs.bin",

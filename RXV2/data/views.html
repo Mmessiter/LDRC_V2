@@ -262,6 +262,10 @@ const PROFILES = {
 };
 let prof = localStorage.getItem(PROF_KEY) || 'rf';
 if (!PROFILES[prof]) prof = 'rf';
+// Opened from a home-screen button? (/views?sim=rf or ?sim=next) — that choice
+// wins and is remembered for next time.
+const qSim = new URLSearchParams(location.search).get('sim');
+if (qSim && PROFILES[qSim]) { prof = qSim; localStorage.setItem(PROF_KEY, qSim); }
 
 function load(p) {
     const P = PROFILES[p];
