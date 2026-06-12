@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.110-equal-pills",
+      "url": "https://messiter.com/rxv2/release/v0.9.110/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.110/littlefs.bin",
+      "notes": "Select and Cancel are now each full-width \u2014 the same size as Reset; Up/Down triangles a touch smaller to make room."
+    },
+    {
       "name": "RXV2-0.9.109-ctl-fill",
       "url": "https://messiter.com/rxv2/release/v0.9.109/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.109/littlefs.bin",

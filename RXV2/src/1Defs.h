@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.109-ctl-fill";
+constexpr const char* FW_VERSION = "RXV2-0.9.110-equal-pills";
 
 //*********************************************************************
 //  Auto-update manifest URLs

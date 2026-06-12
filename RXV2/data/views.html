@@ -24,7 +24,7 @@
 /* touch-action:pan-y — a vertical swipe starting ON a triangle scrolls the page
    (the browser cancels the press, so scrolling never fires Up/Down). */
 .tri{position:relative;border:0;background:transparent;cursor:pointer;color:#fff;font:inherit;
- flex:1 1 0;width:min(85%,390px);min-height:110px;max-height:235px;padding:0;touch-action:pan-y;
+ flex:1 1 0;width:min(85%,390px);min-height:100px;max-height:200px;padding:0;touch-action:pan-y;
  user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
 .tri .shape{position:absolute;inset:0;transition:filter .12s;filter:drop-shadow(0 1px 2px rgba(0,0,0,.3))}
 .up .shape{clip-path:polygon(50% 0,100% 100%,0 100%);background:#6cabdf}   /* pale blue, points up */
@@ -39,7 +39,7 @@
 .tri:active .shape{filter:brightness(.9)}
 .tri.lit .shape{filter:brightness(1.18) drop-shadow(0 0 5px rgba(255,255,255,.85))}
 
-.pills{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%}
+.pills{display:grid;grid-template-columns:1fr;gap:10px;width:100%}   /* all three full-width = same size */
 .pill{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:.08em;
  border:0;border-radius:999px;cursor:pointer;color:#fff;font:inherit;text-align:center;
  padding:1.1em .5em;min-height:98px;box-shadow:0 1px 4px rgba(0,0,0,.22);
