@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.104-edit-btn";
+constexpr const char* FW_VERSION = "RXV2-0.9.107-big-ctl";
 
 //*********************************************************************
 //  Auto-update manifest URLs

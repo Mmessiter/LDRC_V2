@@ -1,6 +1,24 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.107-big-ctl",
+      "url": "https://messiter.com/rxv2/release/v0.9.107/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.107/littlefs.bin",
+      "notes": "Controls now FILL the first screen (huge Up/Down triangles + bigger Select/Cancel/Reset, with Reset full-width) so you can hit them without looking at the phone; scroll down for the views. Views expanded with RealFlight's other commands: Look at ground, Zoom reset, Follow/Pivot/Orbit cam, Next pit view, Zoom/Move mode, Kill engine, Flight failures, Screenshot, Record, Mute \u2014 all editable, and your earlier key edits are kept. Also fixes the Up/Down labels overlapping."
+    },
+    {
+      "name": "RXV2-0.9.106-ctl-size",
+      "url": "https://messiter.com/rxv2/release/v0.9.106/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.106/littlefs.bin",
+      "notes": "Tuned the RealFlight controls & views screen: bigger controls \u2014 especially the Up/Down triangles \u2014 so you can hit Up/Down repeatedly while watching the sim on a TV across the room, with the camera/view buttons made a little smaller to balance. Cosmetic only."
+    },
+    {
+      "name": "RXV2-0.9.105-rf-ui",
+      "url": "https://messiter.com/rxv2/release/v0.9.105/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.105/littlefs.bin",
+      "notes": "RealFlight controls and Views are now ONE home-menu item opening a single screen: controls up top (Select/Cancel/Reset as smaller ovals, Up/Down as up/down triangles you press & hold to repeat), the camera/view buttons below, then a darker 'Edit view keys' button. Cosmetic only \u2014 same buttons, channels, keys and behaviour."
+    },
+    {
       "name": "RXV2-0.9.104-edit-btn",
       "url": "https://messiter.com/rxv2/release/v0.9.104/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.104/littlefs.bin",
