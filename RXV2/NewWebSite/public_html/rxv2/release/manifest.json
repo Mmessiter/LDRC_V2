@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.117-prof-front",
+      "url": "https://messiter.com/rxv2/release/v0.9.117/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.117/littlefs.bin",
+      "notes": "The simulator choice now lives ONLY on the home screen: the RealFlight / neXt switch has been removed from the controls & views screen, whose title now simply shows which simulator is active (e.g. 'neXt \u2014 controls & views'). Tapping a home button always opens with the right key set; to change simulator, return to the menu."
+    },
+    {
       "name": "RXV2-0.9.116-reboot-ux",
       "url": "https://messiter.com/rxv2/release/v0.9.116/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.116/littlefs.bin",

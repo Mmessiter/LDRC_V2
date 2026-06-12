@@ -67,13 +67,8 @@
 /* ---- Edit view keys button: dark so the white text reads ---- */
 .editKeys{background:#3e5c74}
 
-/* ---- simulator profile switch (RealFlight / neXt — separate key sets) ---- */
-.profRow{display:flex;align-items:center;justify-content:center;gap:10px;margin:.15em 0 .55em}
-.profRow .plbl{font-weight:700;color:#3a5165;font-size:.95em}
-.prof{border:2px solid #3e5c74;border-radius:999px;padding:.55em 1.4em;font:inherit;font-weight:800;
- font-size:1.05em;cursor:pointer;background:#fff;color:#3e5c74;
- user-select:none;-webkit-user-select:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
-.prof.on{background:#3e5c74;color:#fff;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+/* (Simulator choice lives on the HOME screen — RealFlight / neXt buttons — and
+   this page's title shows which one is active. No switch here by design.) */
 
 /* ---- editor ---- */
 .editRow{display:grid;grid-template-columns:1fr 1fr;gap:6px 8px;align-items:center;
@@ -92,7 +87,7 @@
 <div class=bg-photo aria-hidden=true></div>
 <div class=bg-wash  aria-hidden=true></div>
 <div class=container>
-    <div class=pageHdr><h1>RealFlight controls &amp; views</h1></div>
+    <div class=pageHdr><h1 id=pageTitle>Controls &amp; views</h1></div>
     <div id=offNote class=offNote>Simulator mode is OFF &mdash; turn it on from the home screen for these to work.</div>
 
     <!-- USE mode -->
@@ -116,12 +111,7 @@
         <div class=scrollHint>&#8964; scroll down for camera / views &#8964;</div>
 
         <!-- Views -->
-        <div class=secHdr>Camera / view</div>
-        <div class=profRow>
-            <span class=plbl>Simulator:</span>
-            <button class=prof type=button id=profRf>RealFlight</button>
-            <button class=prof type=button id=profNext>neXt</button>
-        </div>
+        <div class=secHdr id=viewsHdr>Camera / view</div>
         <div class=card><div class=vGrid id=grid>loading&hellip;</div></div>
         <button class="btn editKeys" type=button id=editBtn style="margin-top:.5em">&#9998; Edit view keys</button>
     </div>
@@ -285,13 +275,14 @@ function load(p) {
 }
 let cfg = load(prof);
 
+// Reflect the active simulator in the page title (the choice itself is made on
+// the home screen — RealFlight / neXt buttons — so it can't be flipped by
+// accident mid-session here).
 function paintProf() {
-    $('profRf').classList.toggle('on', prof === 'rf');
-    $('profNext').classList.toggle('on', prof === 'next');
-}
-function setProf(p) {
-    prof = p; localStorage.setItem(PROF_KEY, p);
-    cfg = load(p); paintProf(); renderButtons();
+    const name = PROFILES[prof].label;
+    $('pageTitle').innerHTML = name + ' &mdash; controls &amp; views';
+    document.title = name + ' controls · LDRC RX V2';
+    $('viewsHdr').textContent = name + ' — camera / view keys';
 }
 
 // One colour per button slot (stable — a favourite keeps its colour even if others
@@ -371,8 +362,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderButtons();
     $('editBtn').addEventListener('click', () => showEdit(true));
     $('cancelBtn').addEventListener('click', () => showEdit(false));
-    $('profRf').addEventListener('click', () => setProf('rf'));
-    $('profNext').addEventListener('click', () => setProf('next'));
     paintProf();
     $('saveBtn').addEventListener('click', () => {
         cfg = readEditor();
@@ -401,11 +390,10 @@ enough to hit while watching the sim, not the phone. <b>Scroll down</b> for the 
 views, plus extras like Kill engine, Flight failures, Screenshot, Record and Mute. Tap <b>Edit view
 keys</b> to relabel any button or change its key — saved on this phone. Your earlier edits are kept.</p>
 <h3>Two simulators, two key sets</h3>
-<p>The <b>RealFlight / neXt</b> chips above the buttons switch between separate key sets, so each
-simulator keeps its own. Both come pre-filled with the simulator&rsquo;s real keys (neXt&rsquo;s from
-its Settings &rarr; Misc list: New model, Engine, Pause, Trainer, flight conditions&hellip;). Edit
-either freely — each profile&rsquo;s edits are saved separately on this phone, and your chip choice
-is remembered.</p>
+<p>You picked the simulator on the <b>home screen</b> (RealFlight or neXt) — the title above shows
+which is active, and its own key set loads with it. Both come pre-filled with the simulator&rsquo;s
+real keys (neXt&rsquo;s from its Settings &rarr; Misc list). Edits are saved separately per
+simulator on this phone. To switch simulator, <b>return to the menu</b> and tap the other button.</p>
 <h3>Using a Mac (neXt etc.)</h3>
 <p>Moving from Windows to a Mac, two one-time things:</p>
 <ul>
