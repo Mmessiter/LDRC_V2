@@ -696,6 +696,11 @@ inline String confirmPage(const char* title, const char* body, bool autoReload =
         s += F("<p id=__waitline class=muted style='margin-top:1em'>"
                "Waiting for receiver to come back (<span id=__secs>0</span>&thinsp;s)&hellip;"
                "</p>"
+               // Manual escape hatch, shown from the start: if the auto-return is
+               // ever defeated (iOS suspending the tab's timers, a stale pooled
+               // connection after the reboot, an mDNS hiccup...), ONE tap goes
+               // home — never "close the browser and reload".
+               "<a class='btn btn-back' href='/' style='margin-top:.8em'>&#8617; Return to menu</a>"
                "<script>(()=>{"
                "const $=i=>document.getElementById(i);let n=0,ok=0;"
                "const ping=()=>{let sg;try{sg=AbortSignal.timeout(2000);}"
@@ -705,14 +710,21 @@ inline String confirmPage(const char* title, const char* body, bool autoReload =
                // Require TWO consecutive good pings before redirecting: the chip answers
                // the tiny state.json the instant its server binds, but needs a moment more
                // before it can serve the full home page — redirecting on the first hit
-               // loaded a blank '/'. location.replace keeps it out of history.
-               "if(n>=3){try{const r=await ping();"
-               "if(r.ok){if(++ok>=2){location.replace('/');return;}}else ok=0;}catch(e){ok=0;}}"
-               "if(n>=90){$('__waitline').innerHTML="
-               "\"Receiver didn't come back. If a wrong WiFi password was entered "
-               "it may be in AP mode &mdash; join the <b>LDRC_RX</b> WiFi and open "
-               "<code>http://192.168.4.1</code>.\";return;}"
-               "n++;setTimeout(tick,1200);};tick();})();</script>");
+               // loaded a blank '/'. location.replace keeps it out of history; the ?r=
+               // cache-buster stops iOS resurrecting a stale cached copy of '/'.
+               "if(n>=2){try{const r=await ping();"
+               "if(r.ok){if(++ok>=2){location.replace('/?r='+Date.now());return;}}else ok=0;}catch(e){ok=0;}}"
+               "if(n>=120){$('__waitline').innerHTML="
+               "\"Receiver didn't come back by itself &mdash; tap <b>Return to menu</b> above. "
+               "If a wrong WiFi password was entered it may be in AP mode &mdash; join the "
+               "<b>LDRC_RX</b> WiFi and open <code>http://192.168.4.1</code>.\";return;}"
+               "n++;setTimeout(tick,1000);};tick();"
+               // iOS freezes timers while Safari is backgrounded/locked; when the tab
+               // comes back, do ONE immediate check (no second loop) — by then the
+               // chip has long rebooted, so a single good ping is enough to go home.
+               "document.addEventListener('visibilitychange',()=>{if(!document.hidden)"
+               "ping().then(r=>{if(r.ok)location.replace('/?r='+Date.now());}).catch(()=>{});});"
+               "})();</script>");
     }
     s += F("</div>");
     s += F("<div class=footer>"); s += FW_VERSION; s += F("</div></div></body></html>");

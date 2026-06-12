@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.115-return-fix",
+      "url": "https://messiter.com/rxv2/release/v0.9.115/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.115/littlefs.bin",
+      "notes": "Sim-mode toggle (and every other reboot page) now reliably returns to the home screen: a Return-to-menu button is always shown (one tap recovers it \u2014 never close-and-reload again), polling starts sooner and waits longer, the redirect dodges stale caches, and coming back to a backgrounded tab re-checks immediately. Also the Simulator switch (RealFlight / neXt) above the camera buttons is now big and obvious with a 'Simulator:' label \u2014 it was too subtle to spot before."
+    },
+    {
       "name": "RXV2-0.9.114-next-keys",
       "url": "https://messiter.com/rxv2/release/v0.9.114/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.114/littlefs.bin",
