@@ -14,6 +14,12 @@
 extern uint8_t userMap[8];
 extern bool    userRev[8];
 
+// Sim controls + keyboard, owned by main.cpp (the RXV2-style composite):
+// 8 HID buttons (web-pulsed / receiver ch 9-16) and a keystroke sender.
+extern void simPressButton(uint8_t n);            // n = 1..8, ~250 ms pulse
+extern bool simButtonLit(uint8_t n);              // current state, for the page
+extern void simSendKey(uint8_t code, uint8_t mods);
+
 // Web UI in the LockDownRadioControl house style (RXV2 / ReedMachine): warm
 // "flying-field" palette, translucent cards, colour-coded buttons, floating
 // "?" help modal, Rotorflight-style channel bars. style.css + app.js are
@@ -23,7 +29,7 @@ namespace {
 
 const char* AP_SSID    = "LDRC2SIM";
 const char* HOSTNAME   = "LDRC2SIM";
-const char* FW_VERSION = "LDRC2SIM-1.0.12";         // parseable: LDRC2SIM-x.y.z
+const char* FW_VERSION = "LDRC2SIM-1.1.0";          // parseable: LDRC2SIM-x.y.z
 // Update sources consulted by /api/firmware/check. Local = a firmware server on
 // the home LAN (dev/firmware_server.py, port 8001 to avoid the RXV2 one on 8000).
 // Public = messiter.com, mirrored the same way as the RXV2/ReedsV2 OTA areas
@@ -253,6 +259,370 @@ document.addEventListener('submit',()=>{LDRC.navigating=true;LDRC.showLoading('P
 window.addEventListener('pageshow',()=>{LDRC.navigating=false;LDRC.hideLoading();});
 )JS";
 
+// ====================================================================
+// RealFlight / neXt controls & views — port of RXV2's proven page
+// (v0.9.121): big no-look controls (RealFlight only), per-simulator
+// key sets with an on-phone editor, per-slot colours, per-sim help.
+// Served as one compiled-in page; profile comes from /views?sim=rf|next
+// (the two home-screen buttons) and is remembered in localStorage.
+// ====================================================================
+const char VIEWS_HTML[] PROGMEM = R"VW(<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name=theme-color content="#5fa099">
+<meta name=apple-mobile-web-app-capable content=yes>
+<meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
+<meta name=apple-mobile-web-app-title content="LDRC2SIM">
+<title>Controls &amp; views &middot; LDRC2SIM</title>
+<link rel=stylesheet href="/style.css?v=110">
+<script src="/app.js?v=110" defer></script>
+<style>
+.pageHdr{display:flex;align-items:center;justify-content:center;margin:.2em 0 .25em}
+.pageHdr h1{margin:0;font-size:1.25em;text-align:center}
+.secHdr{text-align:center;font-size:.9em;font-weight:700;color:#3a5165;letter-spacing:.02em;margin:.8em 0 .4em;opacity:.85}
+.scrollHint{text-align:center;color:#5d7a8c;font-weight:600;font-size:.85em;margin:.5em 0 .1em;opacity:.8}
+.ctlWrap{display:flex;flex-direction:column;align-items:center;gap:12px;
+ min-height:calc(100vh - 185px);min-height:calc(100dvh - 185px)}
+.rocker{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;flex:1 1 0;width:100%}
+.tri{position:relative;border:0;background:transparent;cursor:pointer;color:#fff;font:inherit;
+ flex:1 1 0;width:min(85%,390px);min-height:100px;max-height:200px;padding:0;touch-action:pan-y;
+ user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+.tri .shape{position:absolute;inset:0;transition:filter .12s;filter:drop-shadow(0 1px 2px rgba(0,0,0,.3))}
+.up .shape{clip-path:polygon(50% 0,100% 100%,0 100%);background:#6cabdf}
+.down .shape{clip-path:polygon(0 0,100% 0,50% 100%);background:#2b568f}
+.tri .lbl{position:absolute;left:0;right:0;text-align:center;font-weight:800;font-size:1.5em;line-height:1;
+ text-shadow:0 1px 2px rgba(0,0,0,.4);pointer-events:none}
+.up .lbl{bottom:24%}
+.down .lbl{top:20%}
+.tri:active .shape{filter:brightness(.9)}
+.tri.lit .shape{filter:brightness(1.18) drop-shadow(0 0 5px rgba(255,255,255,.85))}
+.pills{display:grid;grid-template-columns:1fr;gap:10px;width:100%}
+.pill{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:.08em;
+ border:0;border-radius:999px;cursor:pointer;color:#fff;font:inherit;text-align:center;
+ padding:1.1em .5em;min-height:98px;box-shadow:0 1px 4px rgba(0,0,0,.22);
+ transition:transform .05s,filter .12s,box-shadow .12s;
+ user-select:none;-webkit-user-select:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.pill:active{transform:scale(.96)}
+.pill .lbl{font-weight:800;font-size:1.65em;line-height:1;text-shadow:0 1px 2px rgba(0,0,0,.28)}
+.pill.lit{filter:brightness(1.15);box-shadow:0 0 0 4px rgba(255,255,255,.7),0 1px 8px rgba(0,0,0,.3)}
+.sel{background:#36a85a}   .can{background:#df8a36}
+.reset{background:#d6403c}
+.vGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.vBtn{display:flex;flex-direction:column;align-items:center;justify-content:center;
+ min-height:74px;padding:.6em .5em;border:0;border-radius:13px;cursor:pointer;color:#fff;font:inherit;
+ text-align:center;background:#4a8fc9;box-shadow:0 1px 4px rgba(0,0,0,.22);
+ transition:transform .05s,filter .12s,box-shadow .12s;
+ user-select:none;-webkit-user-select:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.vBtn:active{transform:scale(.97)}
+.vBtn .lbl{font-weight:800;font-size:1.18em;line-height:1.1;text-shadow:0 1px 2px rgba(0,0,0,.28)}
+.vBtn.lit{filter:brightness(1.18);box-shadow:0 0 0 4px rgba(255,255,255,.7),0 1px 7px rgba(0,0,0,.3)}
+.editKeys{background:#3e5c74}
+.editRow{display:grid;grid-template-columns:1fr 1fr;gap:6px 8px;align-items:center;
+ padding:.5em 0;border-bottom:1px solid rgba(125,158,176,.18)}
+.editRow .num{grid-column:1/-1;font-weight:700;color:#3a5165;font-size:.85em}
+.editRow input[type=text]{width:100%;padding:.45em;font-size:1em}
+.editRow select{width:100%;padding:.45em;font-size:1em}
+.editRow .mods{grid-column:1/-1;display:flex;gap:1em;font-size:.85em;color:#5d7a8c;font-weight:600}
+.editRow .mods label{display:flex;align-items:center;gap:.3em}
+.editRow .mods input{width:auto;margin:0;transform:scale(1.1)}
+#editMsg{text-align:center;color:#3aaf5c;font-weight:600;min-height:1.1em;margin:.3em 0}
+</style>
+</head>
+<body>
+<button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
+<div class=bg-wash aria-hidden=true></div>
+<div class=container>
+    <div class=pageHdr><h1 id=pageTitle>Controls &amp; views</h1></div>
+
+    <div id=useView>
+        <div class=card id=ctlCard>
+            <div class=ctlWrap>
+                <div class=rocker>
+                    <button class="tri up ud" id=b4 data-n=4>
+                        <span class=shape></span><span class=lbl>Up</span></button>
+                    <button class="tri down ud" id=b5 data-n=5>
+                        <span class=shape></span><span class=lbl>Down</span></button>
+                </div>
+                <div class=pills>
+                    <button class="pill sel" id=b6 data-n=6><span class=lbl>Select</span></button>
+                    <button class="pill can" id=b3 data-n=3><span class=lbl>Cancel</span></button>
+                    <button class="pill reset" id=b2 data-n=2><span class=lbl>Reset</span></button>
+                </div>
+            </div>
+        </div>
+        <div class=scrollHint id=hint>&#8964; scroll down for camera / views &#8964;</div>
+
+        <div class=secHdr id=viewsHdr>Camera / view</div>
+        <div class=card><div class=vGrid id=grid>loading&hellip;</div></div>
+        <button class="btn editKeys" type=button id=editBtn style="margin-top:.5em">&#9998; Edit view keys</button>
+    </div>
+
+    <div id=editView style="display:none">
+        <div class=card>
+            <p class=muted style="margin:.2em 0 .6em">Set each button&rsquo;s <b>label</b> and <b>key</b> (from the
+            simulator&rsquo;s keyboard list). Leave a label blank to hide that button. Saved on this phone.</p>
+            <div id=editRows></div>
+        </div>
+        <div id=editMsg></div>
+        <button class="btn btn-fly" type=button id=saveBtn><span class=ico>&#9989;</span>Save</button>
+        <button class="btn btn-bb"  type=button id=cancelBtn><span class=ico>&#10005;</span>Cancel</button>
+        <button class="btn" type=button id=resetBtn style="background:#c98a4a"><span class=ico>&#8634;</span>Reset to defaults</button>
+    </div>
+
+    <a class="btn btn-back" href="/"><span class=ico>&#8617;</span>Return to menu</a>
+    <div class=footer>LDRC2SIM</div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+/* ============ RealFlight controls (HID buttons; via receiver ch 9-16 too) ============ */
+const BTNS = [2, 3, 4, 5, 6];   // Reset=b2/ch10, Cancel=b3/ch11, Up=b4/ch12, Down=b5/ch13, Select=b6/ch14
+
+function fireBtn(n, el) { if (el) el.classList.add('lit'); fetch('/api/sim/button?n=' + n, { method: 'POST', cache: 'no-store' }).catch(() => {}); }
+function holdArm(n, el) { el._pend = setTimeout(() => { el._pend = null; holdStart(n, el); }, 90); }
+function holdStart(n, el) { el.classList.add('holding', 'lit'); fireBtn(n); el._t = setInterval(() => fireBtn(n), 120); }
+function holdEnd(el, n, wasRelease) {
+    if (el._pend) { clearTimeout(el._pend); el._pend = null; if (wasRelease) fireBtn(n, el); }
+    if (el._t) { clearInterval(el._t); el._t = null; }
+    el.classList.remove('holding');
+}
+
+async function poll() {
+    if (window.LDRC && LDRC.navigating) return;
+    if (document.hidden) { setTimeout(poll, 700); return; }
+    try {
+        const d = await (await fetch('/api/sim/buttons.json', { cache: 'no-store' })).json();
+        for (const n of BTNS) {
+            const el = $('b' + n);
+            if (Array.isArray(d.btn) && el && !el.classList.contains('holding')) el.classList.toggle('lit', !!d.btn[n - 1]);
+        }
+    } catch (e) { /* transient */ }
+    setTimeout(poll, 300);
+}
+
+/* ===================== Views (camera keyboard shortcuts) ===================== */
+const NBTN = 24;
+
+const KEYS = [{ n: '— none —', c: 0 }];
+'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').forEach((ch, i) => KEYS.push({ n: ch, c: 0x04 + i }));
+'1234567890'.split('').forEach((ch, i) => KEYS.push({ n: ch, c: 0x1E + i }));
+for (let i = 1; i <= 12; i++) KEYS.push({ n: 'F' + i, c: 0x39 + i });
+[['Space', 0x2C], ['Enter', 0x28], ['Esc', 0x29], ['Tab', 0x2B], ['Backspace', 0x2A], ['Delete', 0x4C],
+ ['- _', 0x2D], ['= +', 0x2E], ['[ {', 0x2F], ['] }', 0x30], ['; :', 0x33], ["' \"", 0x34],
+ [', <', 0x36], ['. >', 0x37], ['/ ?', 0x38], ['` ~', 0x35],
+ ['Right →', 0x4F], ['Left ←', 0x50], ['Down ↓', 0x51], ['Up ↑', 0x52],
+ ['Home', 0x4A], ['End', 0x4D], ['PageUp', 0x4B], ['PageDown', 0x4E], ['Insert', 0x49],
+ ['Keypad +', 0x57], ['Keypad -', 0x56], ['Keypad *', 0x55], ['Keypad /', 0x54], ['Keypad Enter', 0x58]
+].forEach(([n, c]) => KEYS.push({ n, c }));
+
+// RealFlight 9.5 defaults (its real View Commands) — same as RXV2.
+const DEFAULTS = [
+    { label: 'Chase cam',   code: 0x3C, mods: 0 },
+    { label: 'Fixed cam',   code: 0x3A, mods: 0 },
+    { label: 'Nose cam',    code: 0x3B, mods: 0 },
+    { label: 'Cockpit',     code: 0x3D, mods: 0 },
+    { label: 'Cycle cam',   code: 0x06, mods: 0 },
+    { label: 'Zoom in',     code: 0x57, mods: 0 },
+    { label: 'Zoom out',    code: 0x56, mods: 0 },
+    { label: 'Windsock',    code: 0x52, mods: 0 },
+    { label: 'Look at ground', code: 0x51, mods: 0 },
+    { label: 'Zoom reset',  code: 0x2A, mods: 0 },
+    { label: 'Follow cam',  code: 0x06, mods: 2 },
+    { label: 'Pivot cam',   code: 0x08, mods: 0 },
+    { label: 'Orbit cam',   code: 0x08, mods: 1 },
+    { label: 'Next pit view', code: 0x1B, mods: 0 },
+    { label: 'Zoom mode',   code: 0x1D, mods: 0 },
+    { label: 'Move mode',   code: 0x14, mods: 0 },
+    { label: 'Kill engine', code: 0x0E, mods: 0 },
+    { label: 'Flight failures', code: 0x09, mods: 0 },
+    { label: 'Screenshot',  code: 0x2B, mods: 0 },
+    { label: 'Record',      code: 0x15, mods: 0 },
+    { label: 'Mute',        code: 0x10, mods: 0 },
+];
+
+// neXt 2.087 defaults (its Settings -> Misc keys) — same as RXV2.
+const NEXT_DEFAULTS = [
+    { label: 'New model',   code: 0x15, mods: 0 },
+    { label: 'Engine',      code: 0x2C, mods: 0 },
+    { label: 'Pause',       code: 0x1B, mods: 0 },
+    { label: 'Self level',  code: 0x13, mods: 0 },
+    { label: 'Trainer',     code: 0x17, mods: 0 },
+    { label: 'Piro trainer',code: 0x1D, mods: 0 },
+    { label: 'Time scale',  code: 0x18, mods: 0 },
+    { label: 'Set spawn',   code: 0x09, mods: 0 },
+    { label: 'Prev model',  code: 0x06, mods: 0 },
+    { label: 'Prev scenery',code: 0x08, mods: 0 },
+    { label: 'Landing gear',code: 0x0A, mods: 0 },
+    { label: 'Condition 1', code: 0x1E, mods: 0 },
+    { label: 'Condition 2', code: 0x1F, mods: 0 },
+    { label: 'Condition 3', code: 0x20, mods: 0 },
+    { label: 'Condition 4', code: 0x21, mods: 0 },
+    { label: 'Mute',        code: 0x10, mods: 0 },
+    { label: 'Music',       code: 0x11, mods: 0 },
+    { label: 'Recorder',    code: 0x19, mods: 0 },
+    { label: 'Screenshot',  code: 0x14, mods: 0 },
+    { label: 'Chat',        code: 0x0D, mods: 0 },
+    { label: 'Menu',        code: 0x29, mods: 0 },
+];
+
+const PROF_KEY = 'ldrc2sim_views_prof';
+const PROFILES = {
+    rf:   { label: 'RealFlight', store: 'ldrc2sim_views_rf',   defaults: DEFAULTS },
+    next: { label: 'neXt',       store: 'ldrc2sim_views_next', defaults: NEXT_DEFAULTS },
+};
+let prof = localStorage.getItem(PROF_KEY) || 'rf';
+if (!PROFILES[prof]) prof = 'rf';
+const qSim = new URLSearchParams(location.search).get('sim');
+if (qSim && PROFILES[qSim]) { prof = qSim; localStorage.setItem(PROF_KEY, qSim); }
+
+function load(p) {
+    const P = PROFILES[p];
+    try { const c = JSON.parse(localStorage.getItem(P.store)); if (Array.isArray(c) && c.length) return c; } catch (e) {}
+    return P.defaults.map(x => ({ ...x }));
+}
+let cfg = load(prof);
+
+const COLORS = ['#4a8fc9','#36a85a','#df8a36','#8e6cab','#d6403c','#2ba8a0','#b8569b','#6f7e8b',
+                '#c9a23a','#5a76d6','#4a9e3f','#c96a4a','#3f7e9e','#a85a36','#7a4ac9','#36a8d6',
+                '#8b3a3a','#b0742b','#56789b','#9e3f7e','#3a8b6e','#5e5ec9','#9e6b3f','#3a6e8b'];
+const colorOf = i => COLORS[i % COLORS.length];
+
+const MOD_NAMES = ['Ctrl', 'Shift', 'Alt', 'Win'];
+function escp(s) { return String(s).replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c])); }
+
+const HELP_RF = `<h2>RealFlight — controls &amp; views</h2>
+<p>One screen for driving RealFlight from your phone. The <b>controls fill the first screen</b> — big
+enough to hit while watching the sim, not the phone. <b>Scroll down</b> for the key buttons.</p>
+<h3>Controls</h3>
+<ul>
+<li><b>Tap</b> a button — or <b>hold Up / Down</b> (the triangles) to auto-repeat through a menu.</li>
+<li>Or use <b>transmitter switches</b> on channels 10&ndash;14 (via your receiver): ch&nbsp;10&rarr;Reset,
+11&rarr;Cancel, 12&rarr;Up, 13&rarr;Down, 14&rarr;Select. A button lights while its switch is on.</li>
+<li>Bind each in RealFlight&rsquo;s <b>Edit Profile &rarr; User Interface</b> (click Input, then activate the control).</li>
+</ul>
+<h3>Key buttons</h3>
+<p>Each sends a RealFlight keyboard shortcut (the adapter is a USB keyboard too) — cameras, zoom, pit
+views, Kill engine, Flight failures and more. Tap <b>Edit view keys</b> to relabel a button or change
+its key — saved on this phone, separately per simulator.</p>
+<h3>Switching simulator</h3>
+<p>Return to the menu and tap the <b>neXt</b> button — each simulator keeps its own key set.</p>
+<h3>Using a Mac</h3>
+<p>First time on a Mac: quit the <b>Keyboard Setup Assistant</b> if it pops up, and allow the simulator
+in <b>System Settings &rarr; Privacy &amp; Security &rarr; Input Monitoring</b> (then restart it) —
+without that, macOS hides the sticks from it. Don&rsquo;t grant it to apps that don&rsquo;t need it.</p>`;
+
+const HELP_NEXT = `<h2>neXt — keys</h2>
+<p>These buttons send <b>neXt&rsquo;s keyboard shortcuts</b> from your phone (the adapter is a USB
+keyboard too): New model, Engine, Pause, Self level, Trainer, flight conditions and more — straight
+from neXt&rsquo;s <b>Settings &rarr; Misc</b> list.</p>
+<h3>Editing</h3>
+<p>Tap <b>Edit view keys</b> to relabel a button or change its key (neXt lists them all in
+Settings &rarr; Misc). Saved on this phone, separately per simulator.</p>
+<h3>Where are Select / Up / Down?</h3>
+<p>Those are RealFlight User-Interface bindings — neXt has nothing to bind them to, so this screen
+hides them. Everything in neXt is done with the key buttons.</p>
+<h3>Switching simulator</h3>
+<p>Return to the menu and tap the <b>RealFlight</b> button — each simulator keeps its own key set.</p>
+<h3>Using a Mac</h3>
+<p>First time on a Mac: quit the <b>Keyboard Setup Assistant</b> if it pops up, and allow <b>neXt</b>
+in <b>System Settings &rarr; Privacy &amp; Security &rarr; Input Monitoring</b> (then restart neXt) —
+without that, macOS hides the sticks and neXt won&rsquo;t respond. Then pick <b>LDRC2SIM</b> in
+neXt&rsquo;s controller setup and calibrate.</p>`;
+
+function paintProf() {
+    const name = PROFILES[prof].label;
+    const isNext = (prof === 'next');
+    $('pageTitle').innerHTML = name + (isNext ? ' &mdash; keys' : ' &mdash; controls &amp; views');
+    document.title = name + ' controls · LDRC2SIM';
+    $('viewsHdr').textContent = name + ' — keys';
+    $('ctlCard').style.display = isNext ? 'none' : '';
+    $('hint').style.display = isNext ? 'none' : '';
+    const hc = document.getElementById('helpContent');
+    if (hc) hc.innerHTML = isNext ? HELP_NEXT : HELP_RF;
+}
+
+function renderButtons() {
+    const live = cfg.map((v, i) => ({ ...v, _i: i })).filter(v => v.label && v.label.trim() && v.code);
+    $('grid').innerHTML = live.length
+        ? live.map((v) => '<button class=vBtn style="background:' + colorOf(v._i) + '" data-c=' + v.code + ' data-m=' + v.mods + '>'
+            + '<span class=lbl>' + escp(v.label) + '</span></button>').join('')
+        : '<p class=muted>No ' + PROFILES[prof].label + ' buttons yet — tap <b>Edit view keys</b>.</p>';
+    $('grid').querySelectorAll('.vBtn').forEach(b =>
+        b.addEventListener('click', () => fireKey(+b.dataset.c, +b.dataset.m, b)));
+}
+
+function fireKey(code, mods, el) {
+    if (!code) return;
+    if (el) { el.classList.add('lit'); setTimeout(() => el.classList.remove('lit'), 220); }
+    const hit = () => fetch('/api/sim/key?code=' + code + '&mods=' + mods, { method: 'POST', cache: 'no-store' }).catch(() => {});
+    hit(); setTimeout(hit, 60);
+}
+
+function renderEditor() {
+    let h = '';
+    for (let i = 0; i < NBTN; i++) {
+        const v = cfg[i] || { label: '', code: 0, mods: 0 };
+        h += '<div class=editRow><div class=num><span style="display:inline-block;width:.85em;height:.85em;border-radius:50%;background:' + colorOf(i) + ';vertical-align:-.1em;margin-right:.4em"></span>Button ' + (i + 1) + '</div>'
+           + '<input type=text id=el' + i + ' placeholder="label (blank = hide)" value="' + escp(v.label || '') + '">'
+           + '<select id=ek' + i + '>' + KEYS.map(k => '<option value=' + k.c + (k.c === v.code ? ' selected' : '') + '>' + k.n + '</option>').join('') + '</select>'
+           + '<div class=mods>'
+           + MOD_NAMES.map((m, b) => '<label><input type=checkbox id=em' + i + '_' + b + (v.mods & (1 << b) ? ' checked' : '') + '>' + m + '</label>').join('')
+           + '</div></div>';
+    }
+    $('editRows').innerHTML = h;
+}
+
+function readEditor() {
+    const out = [];
+    for (let i = 0; i < NBTN; i++) {
+        let mods = 0;
+        for (let b = 0; b < 4; b++) if ($('em' + i + '_' + b).checked) mods |= (1 << b);
+        out.push({ label: $('el' + i).value.trim(), code: +$('ek' + i).value, mods });
+    }
+    return out;
+}
+
+function showEdit(on) {
+    $('useView').style.display = on ? 'none' : '';
+    $('editView').style.display = on ? '' : 'none';
+    if (on) renderEditor();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('#useView .tri, #useView .pill').forEach(b => {
+        const n = +b.dataset.n;
+        if (!n) return;
+        if (b.classList.contains('ud')) {
+            b.addEventListener('pointerdown', () => holdArm(n, b));
+            b.addEventListener('pointerup', () => holdEnd(b, n, true));
+            ['pointerleave', 'pointercancel'].forEach(ev => b.addEventListener(ev, () => holdEnd(b, n, false)));
+        } else {
+            b.addEventListener('click', () => { fireBtn(n, b); setTimeout(() => fireBtn(n), 90); setTimeout(() => fireBtn(n), 180); });
+        }
+    });
+    paintProf();
+    renderButtons();
+    $('editBtn').addEventListener('click', () => showEdit(true));
+    $('cancelBtn').addEventListener('click', () => showEdit(false));
+    $('saveBtn').addEventListener('click', () => {
+        cfg = readEditor();
+        localStorage.setItem(PROFILES[prof].store, JSON.stringify(cfg));
+        $('editMsg').textContent = '✓ Saved on this phone (' + PROFILES[prof].label + ')';
+        renderButtons();
+        setTimeout(() => showEdit(false), 600);
+    });
+    $('resetBtn').addEventListener('click', () => { cfg = PROFILES[prof].defaults.map(x => ({ ...x })); renderEditor(); $('editMsg').textContent = PROFILES[prof].label + ' defaults restored — tap Save to keep'; });
+    if (prof !== 'next') setTimeout(poll, 120);
+});
+</script>
+<template id=helpContent></template>
+</body>
+</html>
+)VW";
+
 String page(const String& title, const String& body, const String& help = "") {
   String h; h.reserve(body.length() + 1100);
   h += F("<!doctype html><html lang=en><head><meta charset=utf-8>"
@@ -336,6 +706,42 @@ void handleScan() {
   server.send(200, "application/json", j);
 }
 
+// ---- RealFlight / neXt controls & views ----------------------------------
+void handleViews() {
+  server.sendHeader("Cache-Control", "no-store");
+  server.sendHeader("Connection", "close");
+  server.send_P(200, "text/html", VIEWS_HTML);
+}
+
+// POST /api/sim/button?n=1..8 — pulse a joystick button (~250 ms, re-arm merges
+// the page's triple-POST into one clean press).
+void handleSimButton() {
+  int n = server.arg("n").toInt();
+  if (n < 1 || n > 8) { server.send(400, "text/plain", "n=1..8"); return; }
+  simPressButton((uint8_t)n);
+  server.sendHeader("Cache-Control", "no-store");
+  server.send(200, "text/plain", "ok");
+}
+
+// GET /api/sim/buttons.json — current button states (web pulses + RX ch 9-16).
+void handleSimButtons() {
+  String j = "{\"btn\":[";
+  for (uint8_t n = 1; n <= 8; n++) { if (n > 1) j += ','; j += simButtonLit(n) ? '1' : '0'; }
+  j += "]}";
+  server.sendHeader("Cache-Control", "no-store");
+  server.send(200, "application/json", j);
+}
+
+// POST /api/sim/key?code=&mods= — one keystroke (press, ~50 ms, release).
+void handleSimKey() {
+  int code = server.arg("code").toInt();
+  int mods = server.arg("mods").toInt();
+  if (code < 1 || code > 255 || mods < 0 || mods > 15) { server.send(400, "text/plain", "bad key"); return; }
+  simSendKey((uint8_t)code, (uint8_t)mods);
+  server.sendHeader("Cache-Control", "no-store");
+  server.send(200, "text/plain", "ok");
+}
+
 void handleRoot() {
   String staState;
   if (WiFi.status() == WL_CONNECTED)
@@ -351,6 +757,8 @@ void handleRoot() {
          "<div id=txline style='font-size:1.3em;font-weight:500'>&hellip;</div></div>"
          "<a class='btn btn-ch'   href='/channels'><span class=ico>&#128202;</span>Channels</a>"
          "<a class='btn btn-map'  href='/map'><span class=ico>&#128279;</span>Remap channels</a>"
+         "<a class='btn' style='background:#4a90c9' href='/views?sim=rf'><span class=ico>&#128377;&#65039;</span>RealFlight &mdash; controls &amp; views</a>"
+         "<a class='btn' style='background:#6c8eb0' href='/views?sim=next'><span class=ico>&#128641;</span>neXt &mdash; keys</a>"
          "<a class='btn btn-fw'   href='/wifi'><span class=ico>&#128246;</span>Wi&#8209;Fi settings</a>"
          "<a class='btn btn-diag' href='/help'><span class=ico>&#128225;</span>Protocols</a>"
          "<a class='btn btn-bb'   href='/update'><span class=ico>&#11014;&#65039;</span>Firmware update</a>"
@@ -376,6 +784,10 @@ void handleRoot() {
     "<h3>Buttons</h3><ul><li><b>Channels</b> &mdash; live bars for each channel.</li>"
     "<li><b>Remap channels</b> &mdash; choose which receiver channel feeds each "
     "of the 8 sim outputs (and reverse any of them).</li>"
+    "<li><b>RealFlight</b> / <b>neXt</b> &mdash; drive the simulator from your phone: "
+    "RealFlight's Select/Cancel/Up/Down/Reset buttons (also fired by receiver channels "
+    "10&ndash;14) and camera/view keystrokes (the adapter is a USB keyboard too), with that "
+    "simulator's key set selected.</li>"
     "<li><b>Wi-Fi settings</b> &mdash; join your home network.</li>"
     "<li><b>Protocols</b> &mdash; what's supported and recommended, plus wiring.</li>"
     "<li><b>Firmware update</b> &mdash; over-the-air update.</li></ul>");
@@ -825,6 +1237,10 @@ void begin(RcInput* rcIn) {
   server.on("/channels",    HTTP_GET,  handleChannels);
   server.on("/map",         HTTP_GET,  handleMap);
   server.on("/api/map",     HTTP_POST, handleMapSave);
+  server.on("/views",       HTTP_GET,  handleViews);
+  server.on("/api/sim/button",       HTTP_POST, handleSimButton);
+  server.on("/api/sim/buttons.json", HTTP_GET,  handleSimButtons);
+  server.on("/api/sim/key",          HTTP_POST, handleSimKey);
   server.on("/wifi",        HTTP_GET,  handleWifi);
   server.on("/wifi",        HTTP_POST, handleWifiSave);
   server.on("/forget",      HTTP_POST, handleForget);

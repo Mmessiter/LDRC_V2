@@ -39,6 +39,20 @@ static const uint16_t HEARTBEAT_HZ = 200;          // fallback resend rate (no n
 static const uint32_t HEARTBEAT_US = 1000000UL / HEARTBEAT_HZ;
 static const uint8_t  REPORT_ID  = 1;              // Report ID 1 (core's no-ID path is buggy)
 
+// ---- Buttons + keyboard (ported from RXV2's proven composite) -----------
+// 8 HID buttons ride in the same joystick report (1 byte after the axes):
+// fired from the phone (/api/sim/button) for RealFlight's UI functions
+// (Select/Cancel/Up/Down/Reset), or by receiver channels 9-16 (ch9->btn1 ...
+// ch16->btn8, >=1600us = pressed) so a transmitter switch can work them.
+// A separate KEYBOARD collection (report ID 2) on the same HID interface
+// sends camera/view keystrokes — the exact layout flying daily on RXV2.
+static const uint8_t  NUM_BUTTONS     = 8;
+static const uint8_t  KB_REPORT_ID    = 2;
+static const uint32_t BTN_PULSE_MS    = 250;       // a web tap = one clean press
+static const uint16_t BTN_THRESH_US   = 1600;      // channel >= this = pressed
+static const uint32_t KEY_HOLD_MS     = 50;        // press ... release spacing
+static const uint32_t KEY_DEBOUNCE_MS = 120;       // merge the page's double-POST
+
 // RC receiver signal input. XIAO ESP32-S3 pin D7 (silk "RX") = GPIO44.
 // Auto-detects CRSF / SBUS / IBUS / PPM on this one pin.
 static const int8_t   RC_PIN     = 44;             // D7
@@ -93,19 +107,27 @@ static const uint8_t MAP_ROT = 2;
 // arduino-esp32 2.0.14 descriptor parser has an explicit "todo: handle
 // better when device has no report ID" branch — the report-ID path is the
 // well-tested one.
+// ONE shared HID interface; the joystick and keyboard are separate top-level
+// collections on it, distinguished by report ID — the layout proven daily by
+// RXV2 with RealFlight (Windows) and neXt (macOS).
+static USBHID g_hid;
+
 class SimRXHID : public USBHIDDevice {
 public:
   SimRXHID() {
     buildDescriptor();
-    hid.addDevice(this, _descLen);
+    g_hid.addDevice(this, _descLen);
   }
 
-  void begin() { hid.begin(); }
-  bool ready() { return hid.ready(); }
+  void begin() { g_hid.begin(); }
+  bool ready() { return g_hid.ready(); }
 
-  // data = NUM_AXES little-endian int16 axis values (32 bytes for 16 axes)
-  bool send(const int16_t* axes) {
-    return hid.SendReport(REPORT_ID, axes, NUM_AXES * sizeof(int16_t));
+  // axes = NUM_AXES little-endian int16 values; buttons = 1 bit each (bit0=btn1)
+  bool send(const int16_t* axes, uint8_t buttons) {
+    uint8_t buf[NUM_AXES * sizeof(int16_t) + 1];
+    memcpy(buf, axes, NUM_AXES * sizeof(int16_t));
+    buf[NUM_AXES * sizeof(int16_t)] = buttons;
+    return g_hid.SendReport(REPORT_ID, buf, sizeof buf);
   }
 
   // TinyUSB asks for our report descriptor at enumeration.
@@ -115,7 +137,6 @@ public:
   }
 
 private:
-  USBHID  hid;
   uint8_t _desc[160];
   uint16_t _descLen = 0;
 
@@ -147,14 +168,125 @@ private:
           put(i < 16 ? AXIS_USAGES[i] : 0x36);
         }
         put(0x81); put(0x02);          //     Input (Data,Var,Abs)
+        // 8 buttons, 1 bit each — fired from the phone or receiver ch 9-16.
+        // (RealFlight binds them as Button 1-8; neXt simply ignores them.)
+        put(0x05); put(0x09);          //     Usage Page (Button)
+        put(0x19); put(0x01);          //     Usage Minimum (1)
+        put(0x29); put(NUM_BUTTONS);   //     Usage Maximum (8)
+        put(0x15); put(0x00);          //     Logical Minimum (0)
+        put(0x25); put(0x01);          //     Logical Maximum (1)
+        put(0x75); put(0x01);          //     Report Size (1)
+        put(0x95); put(NUM_BUTTONS);   //     Report Count (8)
+        put(0x81); put(0x02);          //     Input (Data,Var,Abs)
       put(0xC0);                       //   End Collection (Physical)
     put(0xC0);                         // End Collection (Application)
   }
 };
 
-static SimRXHID simrx;
-static int16_t  axisBuf[NUM_AXES];
-static RcInput  rcin;
+// Standard input-only keyboard (modifiers + reserved + 6 keycodes), report ID 2.
+// Non-blocking press->50ms->release state machine; 120ms debounce merges the
+// phone page's reliability double-POST into ONE keystroke. Port of RXV2's
+// SimKeyboard, byte-for-byte descriptor.
+class SimKeyboard : public USBHIDDevice {
+public:
+  SimKeyboard() {
+    buildDescriptor();
+    g_hid.addDevice(this, _descLen);
+  }
+
+  // Queue a keystroke (HID usage id + modifier bitmask Ctrl=1 Shift=2 Alt=4 Win=8).
+  void sendKey(uint8_t code, uint8_t mods) {
+    uint32_t now = millis();
+    if (now - _lastAccept < KEY_DEBOUNCE_MS) return;   // double-POST -> one keystroke
+    _lastAccept = now;
+    uint8_t rep[8] = { mods, 0, code, 0, 0, 0, 0, 0 };
+    if (g_hid.ready() && g_hid.SendReport(KB_REPORT_ID, rep, sizeof rep)) {
+      _pressedAt = now;
+      _down = true;
+    }
+  }
+
+  // Call every loop: releases the key ~KEY_HOLD_MS after the press.
+  void tick() {
+    if (!_down || millis() - _pressedAt < KEY_HOLD_MS) return;
+    uint8_t rep[8] = { 0 };
+    if (g_hid.SendReport(KB_REPORT_ID, rep, sizeof rep)) _down = false;
+  }
+
+  uint16_t _onGetDescriptor(uint8_t* dst) override {
+    memcpy(dst, _desc, _descLen);
+    return _descLen;
+  }
+
+private:
+  uint8_t  _desc[64];
+  uint16_t _descLen = 0;
+  bool     _down = false;
+  uint32_t _pressedAt = 0, _lastAccept = 0;
+
+  void put(uint8_t b) { _desc[_descLen++] = b; }
+
+  void buildDescriptor() {
+    _descLen = 0;
+    put(0x05); put(0x01);              // Usage Page (Generic Desktop)
+    put(0x09); put(0x06);              // Usage (Keyboard)
+    put(0xA1); put(0x01);              // Collection (Application)
+      put(0x85); put(KB_REPORT_ID);    //   Report ID
+      put(0x05); put(0x07);            //   Usage Page (Key Codes)
+      put(0x19); put(0xE0);            //   Usage Min (LeftControl)
+      put(0x29); put(0xE7);            //   Usage Max (Right GUI)
+      put(0x15); put(0x00);            //   Logical Min (0)
+      put(0x25); put(0x01);            //   Logical Max (1)
+      put(0x75); put(0x01);            //   Report Size (1)
+      put(0x95); put(0x08);            //   Report Count (8)   — modifier bits
+      put(0x81); put(0x02);            //   Input (Data,Var,Abs)
+      put(0x95); put(0x01);            //   Report Count (1)   — reserved byte
+      put(0x75); put(0x08);            //   Report Size (8)
+      put(0x81); put(0x03);            //   Input (Const)
+      put(0x95); put(0x06);            //   Report Count (6)   — 6 keycode slots
+      put(0x75); put(0x08);            //   Report Size (8)
+      put(0x15); put(0x00);            //   Logical Min (0)
+      put(0x26); put(0xFF); put(0x00); //   Logical Max (255)
+      put(0x05); put(0x07);            //   Usage Page (Key Codes)
+      put(0x19); put(0x00);            //   Usage Min (0)
+      put(0x2A); put(0xFF); put(0x00); //   Usage Max (255)
+      put(0x81); put(0x00);            //   Input (Data,Array)
+    put(0xC0);                         // End Collection
+  }
+};
+
+static SimRXHID    simrx;
+static SimKeyboard simkb;
+static int16_t     axisBuf[NUM_AXES];
+static RcInput     rcin;
+
+// ---- Button state: web-tap pulses merged with receiver channels 9-16 ----
+static uint32_t btnPulseUntil[NUM_BUTTONS] = { 0 };
+
+// A web tap re-arms the pulse, so the page's triple-POST merges into one press.
+void simPressButton(uint8_t n) {                 // n = 1..8
+  if (n < 1 || n > NUM_BUTTONS) return;
+  btnPulseUntil[n - 1] = millis() + BTN_PULSE_MS;
+}
+
+static uint8_t fillButtons() {
+  uint8_t b = 0;
+  uint32_t now = millis();
+  for (uint8_t i = 0; i < NUM_BUTTONS; i++) {
+    bool on = (int32_t)(btnPulseUntil[i] - now) > 0;                     // web pulse
+    if (!on && rcin.linkUp() && rcin.channelCount() > 8 + i)
+      on = rcin.channelUs(8 + i) >= BTN_THRESH_US;                       // TX switch via RX ch 9-16
+    if (on) b |= (1 << i);
+  }
+  return b;
+}
+
+bool simButtonLit(uint8_t n) {                   // n = 1..8 (for the web page)
+  if (n < 1 || n > NUM_BUTTONS) return false;
+  return (fillButtons() >> (n - 1)) & 1;
+}
+
+void simSendKey(uint8_t code, uint8_t mods) { simkb.sendKey(code, mods); }
 
 // RC channel (microseconds, ~988..2012) -> signed 16-bit HID axis.
 // 1500us -> 0 (centre); ±512us -> full scale. neXt calibrates anyway.
@@ -232,6 +364,7 @@ void loop() {
 
   bool fresh = rcin.update();                       // true if a new RC frame landed
   WebPortal::loop();                                // service captive DNS + web
+  simkb.tick();                                     // release any pending keystroke (non-blocking)
 
   uint32_t now = micros();
   bool heartbeatDue = (int32_t)(now - nextHeartbeat) >= 0;
@@ -246,7 +379,7 @@ void loop() {
     nextHeartbeat = now + HEARTBEAT_US;
 
     fillAxes();
-    simrx.send(axisBuf);
+    simrx.send(axisBuf, fillButtons());
 
     // 1 Hz heartbeat blink + concise log (protocol, worst send gap, first 8 ch).
     if ((int32_t)(now - nextBeat) >= 0) {

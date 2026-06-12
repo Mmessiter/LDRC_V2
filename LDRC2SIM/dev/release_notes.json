@@ -4,5 +4,6 @@
   "LDRC2SIM-1.0.10": "Low-latency event-driven HID reports (sub-ms); Wi-Fi reconnect watchdog + mDNS restart.",
   "LDRC2SIM-1.0.8": "Remap channels page: feed any of 8 USB outputs from any of 16 RX inputs, per-output reverse; colour input bars; saved to NVS.",
   "LDRC2SIM-1.0.6": "Fix firmware-page hang, smoother channel bars, tidied text.",
-  "LDRC2SIM-1.0.5": "Lower latency, async Wi-Fi scan, please-wait + firmware-page styling."
+  "LDRC2SIM-1.0.5": "Lower latency, async Wi-Fi scan, please-wait + firmware-page styling.",
+  "LDRC2SIM-1.1.0": "Drive the simulator from your phone, like the RXV2 receiver does: new RealFlight and neXt buttons on the home page open a controls & views screen \u2014 RealFlight gets big Select/Cancel/Up/Down/Reset buttons (HID buttons 1-8, also fired by receiver channels 9-16, e.g. a TX switch on ch10 = Reset) plus its camera/view keys; neXt gets its own key set (New model, Engine, Pause...). The adapter is now a USB keyboard as well as a joystick, so the phone can send any simulator keyboard shortcut \u2014 all keys editable per simulator, saved on the phone. One re-calibration may be needed in the sim (the joystick gained buttons). On a Mac, allow the sim in System Settings -> Privacy & Security -> Input Monitoring."
 }
