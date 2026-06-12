@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.120-simple-look",
+      "url": "https://messiter.com/rxv2/release/v0.9.120/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.120/littlefs.bin",
+      "notes": "Cleaner look everywhere: all the tiny technical small print (ch 12 - 833us, F3, Keypad +, ...) is gone from the controls and the key buttons \u2014 just clear labels now. RealFlight's key buttons are the same bigger size as neXt's. (The key assigned to each button is still shown in the editor.)"
+    },
+    {
       "name": "RXV2-0.9.119-next-clean",
       "url": "https://messiter.com/rxv2/release/v0.9.119/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.119/littlefs.bin",

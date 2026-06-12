@@ -31,11 +31,9 @@
 .down .shape{clip-path:polygon(0 0,100% 0,50% 100%);background:#2b568f}    /* dark blue, points down */
 .tri .lbl{position:absolute;left:0;right:0;text-align:center;font-weight:800;font-size:1.5em;line-height:1;
  text-shadow:0 1px 2px rgba(0,0,0,.4);pointer-events:none}
-.tri .sub{position:absolute;left:0;right:0;text-align:center;font-size:.7em;opacity:.9;
- pointer-events:none;font-variant-numeric:tabular-nums;text-shadow:0 1px 2px rgba(0,0,0,.4)}
 /* Labels sit in each triangle's WIDE region (%-based so they never collide at the waist). */
-.up .lbl{bottom:26%}   .up .sub{bottom:10%}
-.down .lbl{top:12%}    .down .sub{top:38%}
+.up .lbl{bottom:24%}
+.down .lbl{top:20%}
 .tri:active .shape{filter:brightness(.9)}
 .tri.lit .shape{filter:brightness(1.18) drop-shadow(0 0 5px rgba(255,255,255,.85))}
 
@@ -47,21 +45,19 @@
  user-select:none;-webkit-user-select:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .pill:active{transform:scale(.96)}
 .pill .lbl{font-weight:800;font-size:1.65em;line-height:1;text-shadow:0 1px 2px rgba(0,0,0,.28)}
-.pill .sub{font-size:.7em;opacity:.82;font-variant-numeric:tabular-nums}
 .pill.lit{filter:brightness(1.15);box-shadow:0 0 0 4px rgba(255,255,255,.7),0 1px 8px rgba(0,0,0,.3)}
 .sel{background:#36a85a}   .can{background:#df8a36}
 .reset{background:#d6403c;grid-column:1/-1}
 
 /* ---- Views (camera) grid ---- */
 .vGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.vBtn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.1em;
- min-height:52px;padding:.42em .5em;border:0;border-radius:13px;cursor:pointer;color:#fff;font:inherit;
+.vBtn{display:flex;flex-direction:column;align-items:center;justify-content:center;
+ min-height:74px;padding:.6em .5em;border:0;border-radius:13px;cursor:pointer;color:#fff;font:inherit;
  text-align:center;background:#4a8fc9;box-shadow:0 1px 4px rgba(0,0,0,.22);
  transition:transform .05s,filter .12s,box-shadow .12s;
  user-select:none;-webkit-user-select:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .vBtn:active{transform:scale(.97)}
-.vBtn .lbl{font-weight:800;font-size:1.0em;line-height:1.05;text-shadow:0 1px 2px rgba(0,0,0,.28)}
-.vBtn .sub{font-size:.7em;opacity:.8;font-variant-numeric:tabular-nums}
+.vBtn .lbl{font-weight:800;font-size:1.18em;line-height:1.1;text-shadow:0 1px 2px rgba(0,0,0,.28)}
 .vBtn.lit{filter:brightness(1.18);box-shadow:0 0 0 4px rgba(255,255,255,.7),0 1px 7px rgba(0,0,0,.3)}
 
 /* ---- Edit view keys button: dark so the white text reads ---- */
@@ -70,11 +66,8 @@
 /* (Simulator choice lives on the HOME screen — RealFlight / neXt buttons — and
    this page's title shows which one is active. No switch here by design.) */
 
-/* neXt mode: the joystick UI buttons (Select/Up/Down/Cancel/Reset) are RealFlight-
-   only, so the whole controls section is hidden and the key buttons grow. */
-body.nextMode .vBtn{min-height:74px;padding:.6em .5em}
-body.nextMode .vBtn .lbl{font-size:1.18em}
-body.nextMode .vBtn .sub{font-size:.78em}
+/* (neXt mode hides the controls section — the key buttons are the same size in
+   both simulators, labels only, no technical small print.) */
 
 /* ---- editor ---- */
 .editRow{display:grid;grid-template-columns:1fr 1fr;gap:6px 8px;align-items:center;
@@ -104,14 +97,14 @@ body.nextMode .vBtn .sub{font-size:.78em}
             <div class=ctlWrap>
                 <div class=rocker>
                     <button class="tri up ud" id=b4 data-n=4>
-                        <span class=shape></span><span class=lbl>Up</span><span class=sub>ch 12 &middot; <span id=cv4>&middot;</span></span></button>
+                        <span class=shape></span><span class=lbl>Up</span></button>
                     <button class="tri down ud" id=b5 data-n=5>
-                        <span class=shape></span><span class=lbl>Down</span><span class=sub>ch 13 &middot; <span id=cv5>&middot;</span></span></button>
+                        <span class=shape></span><span class=lbl>Down</span></button>
                 </div>
                 <div class=pills>
-                    <button class="pill sel" id=b6 data-n=6><span class=lbl>Select</span><span class=sub>ch 14 &middot; <span id=cv6>&middot;</span></span></button>
-                    <button class="pill can" id=b3 data-n=3><span class=lbl>Cancel</span><span class=sub>ch 11 &middot; <span id=cv3>&middot;</span></span></button>
-                    <button class="pill reset" id=b2 data-n=2><span class=lbl>Reset</span><span class=sub>ch 10 &middot; <span id=cv2>&middot;</span></span></button>
+                    <button class="pill sel" id=b6 data-n=6><span class=lbl>Select</span></button>
+                    <button class="pill can" id=b3 data-n=3><span class=lbl>Cancel</span></button>
+                    <button class="pill reset" id=b2 data-n=2><span class=lbl>Reset</span></button>
                 </div>
             </div>
         </div>
@@ -173,7 +166,6 @@ async function poll() {
         for (const n of BTNS) {
             const el = $('b' + n);
             if (Array.isArray(d.btn) && el && !el.classList.contains('holding')) el.classList.toggle('lit', !!d.btn[n - 1]);
-            if (Array.isArray(d.ch) && $('cv' + n)) $('cv' + n).textContent = d.ch[n - 1] + 'µs';
         }
     } catch (e) { /* transient */ }
     setTimeout(poll, 300);     // ~3 Hz
@@ -292,11 +284,9 @@ function paintProf() {
     document.title = name + ' controls · LDRC RX V2';
     $('viewsHdr').textContent = name + ' — keys';
     // The Select/Up/Down/Cancel/Reset joystick buttons are RealFlight UI bindings;
-    // neXt has nothing to bind them to, so hide that whole section for neXt and
-    // let the key buttons grow into the space.
+    // neXt has nothing to bind them to, so hide that whole section for neXt.
     $('ctlCard').style.display = isNext ? 'none' : '';
     $('hint').style.display = isNext ? 'none' : '';
-    document.body.classList.toggle('nextMode', isNext);
 }
 
 // One colour per button slot (stable — a favourite keeps its colour even if others
@@ -307,14 +297,13 @@ const COLORS = ['#4a8fc9','#36a85a','#df8a36','#8e6cab','#d6403c','#2ba8a0','#b8
 const colorOf = i => COLORS[i % COLORS.length];
 
 const MOD_NAMES = ['Ctrl', 'Shift', 'Alt', 'Win'];
-function keyHint(v) { let s = ''; for (let b = 0; b < 4; b++) if (v.mods & (1 << b)) s += MOD_NAMES[b] + '+'; return s + keyName(v.code); }
 function esc(s) { return String(s).replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c])); }
 
 function renderButtons() {
     const live = cfg.map((v, i) => ({ ...v, _i: i })).filter(v => v.label && v.label.trim() && v.code);
     $('grid').innerHTML = live.length
         ? live.map((v) => '<button class=vBtn style="background:' + colorOf(v._i) + '" data-c=' + v.code + ' data-m=' + v.mods + '>'
-            + '<span class=lbl>' + esc(v.label) + '</span><span class=sub>' + keyHint(v) + '</span></button>').join('')
+            + '<span class=lbl>' + esc(v.label) + '</span></button>').join('')
         : '<p class=muted>No ' + PROFILES[prof].label + ' buttons yet — tap <b>Edit view keys</b> and set keys from the simulator&rsquo;s own keyboard list.</p>';
     $('grid').querySelectorAll('.vBtn').forEach(b =>
         b.addEventListener('click', () => fireKey(+b.dataset.c, +b.dataset.m, b)));
