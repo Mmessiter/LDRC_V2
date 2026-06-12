@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.112-mac-help";
+constexpr const char* FW_VERSION = "RXV2-0.9.113-sim-profiles";
 
 //*********************************************************************
 //  Auto-update manifest URLs

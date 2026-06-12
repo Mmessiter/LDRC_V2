@@ -67,6 +67,13 @@
 /* ---- Edit view keys button: dark so the white text reads ---- */
 .editKeys{background:#3e5c74}
 
+/* ---- simulator profile chips (RealFlight / neXt — separate key sets) ---- */
+.profRow{display:flex;justify-content:center;gap:8px;margin:.1em 0 .5em}
+.prof{border:0;border-radius:999px;padding:.45em 1.2em;font:inherit;font-weight:700;cursor:pointer;
+ background:rgba(125,158,176,.25);color:#3a5165;
+ user-select:none;-webkit-user-select:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.prof.on{background:#3e5c74;color:#fff;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+
 /* ---- editor ---- */
 .editRow{display:grid;grid-template-columns:1fr 1fr;gap:6px 8px;align-items:center;
  padding:.5em 0;border-bottom:1px solid rgba(125,158,176,.18)}
@@ -109,6 +116,10 @@
 
         <!-- Views -->
         <div class=secHdr>Camera / view</div>
+        <div class=profRow>
+            <button class=prof type=button id=profRf>RealFlight</button>
+            <button class=prof type=button id=profNext>neXt</button>
+        </div>
         <div class=card><div class=vGrid id=grid>loading&hellip;</div></div>
         <button class="btn editKeys" type=button id=editBtn style="margin-top:.5em">&#9998; Edit view keys</button>
     </div>
@@ -170,9 +181,7 @@ async function poll() {
 }
 
 /* ===================== Views (camera keyboard shortcuts) ===================== */
-const STORE = 'rxv2_views2';        // v2: expanded default set
-const OLD_STORE = 'rxv2_views';     // v1 (8 buttons) — migrated into the first 8 slots
-const NBTN = 24;                    // editable slots (3 spare beyond the defaults)
+const NBTN = 24;                    // editable slots per simulator profile
 
 const KEYS = [{ n: '— none —', c: 0 }];
 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').forEach((ch, i) => KEYS.push({ n: ch, c: 0x04 + i }));
@@ -214,22 +223,44 @@ const DEFAULTS = [
     { label: 'Mute',        code: 0x10, mods: 0 },   // M
 ];
 
-function load() {
-    try { const c = JSON.parse(localStorage.getItem(STORE)); if (Array.isArray(c) && c.length) return c; } catch (e) {}
-    // First visit since the expansion: carry the user's edited v1 buttons into
-    // slots 1-8, then append the new defaults — nothing they set is lost.
-    try {
-        const o = JSON.parse(localStorage.getItem(OLD_STORE));
+// Simulator profiles — RealFlight and neXt keep SEPARATE key sets, switched by
+// the chips above the grid. (Deliberately manual, not USB-host auto-detection:
+// the host OS isn't reliably detectable, and RealFlight in a VM on a Mac would
+// defeat any guess.) neXt starts empty — set its keys from neXt's own list.
+const PROF_KEY = 'rxv2_views_prof';
+const PROFILES = {
+    rf:   { label: 'RealFlight', store: 'rxv2_views2',     old: 'rxv2_views', defaults: DEFAULTS },
+    next: { label: 'neXt',       store: 'rxv2_views_next',                    defaults: [] },
+};
+let prof = localStorage.getItem(PROF_KEY) || 'rf';
+if (!PROFILES[prof]) prof = 'rf';
+
+function load(p) {
+    const P = PROFILES[p];
+    try { const c = JSON.parse(localStorage.getItem(P.store)); if (Array.isArray(c) && c.length) return c; } catch (e) {}
+    // RealFlight only: carry v1 (8-button) edits into slots 1-8, then append the
+    // expanded defaults — nothing the user set is lost.
+    if (P.old) try {
+        const o = JSON.parse(localStorage.getItem(P.old));
         if (Array.isArray(o) && o.length) {
-            const m = DEFAULTS.map(x => ({ ...x }));
+            const m = P.defaults.map(x => ({ ...x }));
             for (let i = 0; i < Math.min(8, o.length); i++) m[i] = o[i];
-            localStorage.setItem(STORE, JSON.stringify(m));
+            localStorage.setItem(P.store, JSON.stringify(m));
             return m;
         }
     } catch (e) {}
-    return DEFAULTS.map(x => ({ ...x }));
+    return P.defaults.map(x => ({ ...x }));
 }
-let cfg = load();
+let cfg = load(prof);
+
+function paintProf() {
+    $('profRf').classList.toggle('on', prof === 'rf');
+    $('profNext').classList.toggle('on', prof === 'next');
+}
+function setProf(p) {
+    prof = p; localStorage.setItem(PROF_KEY, p);
+    cfg = load(p); paintProf(); renderButtons();
+}
 
 // One colour per button slot (stable — a favourite keeps its colour even if others
 // are hidden or relabelled). Mid-tone hues so the white text always reads.
@@ -247,7 +278,7 @@ function renderButtons() {
     $('grid').innerHTML = live.length
         ? live.map((v) => '<button class=vBtn style="background:' + colorOf(v._i) + '" data-c=' + v.code + ' data-m=' + v.mods + '>'
             + '<span class=lbl>' + esc(v.label) + '</span><span class=sub>' + keyHint(v) + '</span></button>').join('')
-        : '<p class=muted>No buttons yet — tap Edit view keys.</p>';
+        : '<p class=muted>No ' + PROFILES[prof].label + ' buttons yet — tap <b>Edit view keys</b> and set keys from the simulator&rsquo;s own keyboard list.</p>';
     $('grid').querySelectorAll('.vBtn').forEach(b =>
         b.addEventListener('click', () => fireKey(+b.dataset.c, +b.dataset.m, b)));
 }
@@ -308,14 +339,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderButtons();
     $('editBtn').addEventListener('click', () => showEdit(true));
     $('cancelBtn').addEventListener('click', () => showEdit(false));
+    $('profRf').addEventListener('click', () => setProf('rf'));
+    $('profNext').addEventListener('click', () => setProf('next'));
+    paintProf();
     $('saveBtn').addEventListener('click', () => {
         cfg = readEditor();
-        localStorage.setItem(STORE, JSON.stringify(cfg));
-        $('editMsg').textContent = '✓ Saved on this phone';
+        localStorage.setItem(PROFILES[prof].store, JSON.stringify(cfg));
+        $('editMsg').textContent = '✓ Saved on this phone (' + PROFILES[prof].label + ')';
         renderButtons();
         setTimeout(() => showEdit(false), 600);
     });
-    $('resetBtn').addEventListener('click', () => { cfg = DEFAULTS.map(x => ({ ...x })); renderEditor(); $('editMsg').textContent = 'Defaults restored — tap Save to keep'; });
+    $('resetBtn').addEventListener('click', () => { cfg = PROFILES[prof].defaults.map(x => ({ ...x })); renderEditor(); $('editMsg').textContent = PROFILES[prof].label + ' defaults restored — tap Save to keep'; });
     // Gentle nudge if sim mode is off (the buttons still work, but nothing's listening).
     try { const s = await LDRC.fetchState(); if (s && !s.sim) $('offNote').style.display = ''; } catch (e) {}
     setTimeout(poll, 120);
@@ -334,6 +368,11 @@ enough to hit while watching the sim, not the phone. <b>Scroll down</b> for the 
 <p>Each button sends a keyboard shortcut (the receiver is a USB keyboard too) — cameras, zoom, pit
 views, plus extras like Kill engine, Flight failures, Screenshot, Record and Mute. Tap <b>Edit view
 keys</b> to relabel any button or change its key — saved on this phone. Your earlier edits are kept.</p>
+<h3>Two simulators, two key sets</h3>
+<p>The <b>RealFlight / neXt</b> chips above the buttons switch between separate key sets, so each
+simulator keeps its own. RealFlight comes pre-filled with its real keys; <b>neXt starts empty</b> —
+tap Edit view keys while neXt is selected and add keys from neXt&rsquo;s keyboard list. Your choice
+is remembered on this phone.</p>
 <h3>Using a Mac (neXt etc.)</h3>
 <p>Moving from Windows to a Mac, two one-time things:</p>
 <ul>

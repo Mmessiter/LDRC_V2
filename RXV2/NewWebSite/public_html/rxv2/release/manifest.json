@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.113-sim-profiles",
+      "url": "https://messiter.com/rxv2/release/v0.9.113/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.113/littlefs.bin",
+      "notes": "Two simulators, two key sets: new RealFlight / neXt chips above the camera buttons switch between separate view-key profiles, each remembered on the phone. RealFlight keeps its pre-filled keys (and your edits); neXt starts empty \u2014 select it and tap Edit view keys to add keys from neXt's keyboard list. Chosen deliberately over USB host auto-detection, which is unreliable (and wrong under a VM)."
+    },
+    {
       "name": "RXV2-0.9.112-mac-help",
       "url": "https://messiter.com/rxv2/release/v0.9.112/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.112/littlefs.bin",
