@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.108-touch-fix",
+      "url": "https://messiter.com/rxv2/release/v0.9.108/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.108/littlefs.bin",
+      "notes": "Scrolling fixed: a vertical swipe now scrolls the page even when it starts on the big Up/Down triangles (scrolling never fires them; a quick tap still does). Up/Down triangles made a bit smaller, Select/Cancel/Reset a bit bigger."
+    },
+    {
       "name": "RXV2-0.9.107-big-ctl",
       "url": "https://messiter.com/rxv2/release/v0.9.107/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.107/littlefs.bin",

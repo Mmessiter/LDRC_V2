@@ -20,9 +20,11 @@
 /* ---- RealFlight controls: fill the first screen — operated without looking ---- */
 .ctlWrap{display:flex;flex-direction:column;align-items:center;gap:12px;
  min-height:calc(100vh - 185px);min-height:calc(100dvh - 185px)}
-.rocker{display:flex;flex-direction:column;align-items:center;gap:10px;flex:1 1 0;width:100%}
+.rocker{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;flex:1 1 0;width:100%}
+/* touch-action:pan-y — a vertical swipe starting ON a triangle scrolls the page
+   (the browser cancels the press, so scrolling never fires Up/Down). */
 .tri{position:relative;border:0;background:transparent;cursor:pointer;color:#fff;font:inherit;
- flex:1 1 0;width:min(88%,400px);min-height:110px;padding:0;touch-action:none;
+ flex:1 1 0;width:min(74%,330px);min-height:100px;max-height:170px;padding:0;touch-action:pan-y;
  user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
 .tri .shape{position:absolute;inset:0;transition:filter .12s;filter:drop-shadow(0 1px 2px rgba(0,0,0,.3))}
 .up .shape{clip-path:polygon(50% 0,100% 100%,0 100%);background:#6cabdf}   /* pale blue, points up */
@@ -40,11 +42,11 @@
 .pills{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%}
 .pill{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:.08em;
  border:0;border-radius:999px;cursor:pointer;color:#fff;font:inherit;text-align:center;
- padding:.8em .5em;min-height:68px;box-shadow:0 1px 4px rgba(0,0,0,.22);
+ padding:1em .5em;min-height:86px;box-shadow:0 1px 4px rgba(0,0,0,.22);
  transition:transform .05s,filter .12s,box-shadow .12s;
  user-select:none;-webkit-user-select:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .pill:active{transform:scale(.96)}
-.pill .lbl{font-weight:800;font-size:1.35em;line-height:1;text-shadow:0 1px 2px rgba(0,0,0,.28)}
+.pill .lbl{font-weight:800;font-size:1.5em;line-height:1;text-shadow:0 1px 2px rgba(0,0,0,.28)}
 .pill .sub{font-size:.7em;opacity:.82;font-variant-numeric:tabular-nums}
 .pill.lit{filter:brightness(1.15);box-shadow:0 0 0 4px rgba(255,255,255,.7),0 1px 8px rgba(0,0,0,.3)}
 .sel{background:#36a85a}   .can{background:#df8a36}
@@ -137,8 +139,21 @@ const BTNS = [2, 3, 4, 5, 6];   // ch = n + 8; Reset=b2/ch10, Cancel=b3/ch11, Up
 // Momentary press: the firmware holds it ~250 ms (BTN_PULSE_MS), so a tap is one clean press in the sim.
 function fireBtn(n, el) { if (el) el.classList.add('lit'); fetch('/api/sim/button?n=' + n, { method: 'POST', cache: 'no-store' }).catch(() => {}); }
 // Up/Down auto-repeat: holding re-pulses faster than it expires; releasing lets it lapse server-side (no stuck key).
+// The first fire is ARMED for 90 ms rather than instant: a vertical swipe that starts on a triangle
+// makes the browser take the gesture as a scroll (touch-action:pan-y) and fire pointercancel inside
+// that window — so scrolling the page never sends a stray Up/Down. A real press feels instant.
+function holdArm(n, el) {
+    el._pend = setTimeout(() => { el._pend = null; holdStart(n, el); }, 90);
+}
 function holdStart(n, el) { el.classList.add('holding', 'lit'); fireBtn(n); el._t = setInterval(() => fireBtn(n), 120); }
-function holdStop(el) { if (el && el._t) { clearInterval(el._t); el._t = null; } if (el) el.classList.remove('holding'); }
+function holdEnd(el, n, wasRelease) {
+    if (el._pend) {                       // released/cancelled inside the arm window
+        clearTimeout(el._pend); el._pend = null;
+        if (wasRelease) fireBtn(n, el);   // a quick deliberate tap still fires once
+    }
+    if (el._t) { clearInterval(el._t); el._t = null; }
+    el.classList.remove('holding');
+}
 
 async function poll() {
     if (window.LDRC && LDRC.navigating) return;
@@ -275,8 +290,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const n = +b.dataset.n;
         if (!n) return;
         if (b.classList.contains('ud')) {
-            b.addEventListener('pointerdown', e => { e.preventDefault(); holdStart(n, b); });
-            ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => b.addEventListener(ev, () => holdStop(b)));
+            b.addEventListener('pointerdown', () => holdArm(n, b));
+            b.addEventListener('pointerup', () => holdEnd(b, n, true));
+            ['pointerleave', 'pointercancel'].forEach(ev => b.addEventListener(ev, () => holdEnd(b, n, false)));
         } else {
             b.addEventListener('click', () => { fireBtn(n, b); setTimeout(() => fireBtn(n), 90); setTimeout(() => fireBtn(n), 180); });
         }
