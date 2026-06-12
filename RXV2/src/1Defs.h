@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.120-simple-look";
+constexpr const char* FW_VERSION = "RXV2-0.9.121-help-per-sim";
 
 //*********************************************************************
 //  Auto-update manifest URLs

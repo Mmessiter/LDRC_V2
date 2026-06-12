@@ -274,9 +274,48 @@ function load(p) {
 }
 let cfg = load(prof);
 
-// Reflect the active simulator in the page title (the choice itself is made on
-// the home screen — RealFlight / neXt buttons — so it can't be flipped by
-// accident mid-session here).
+// Per-simulator help (the ? button reads #helpContent — swapped with the profile).
+const HELP_RF = `<h2>RealFlight — controls &amp; views</h2>
+<p>One screen for driving RealFlight from your phone. The <b>controls fill the first screen</b> — big
+enough to hit while watching the sim, not the phone. <b>Scroll down</b> for the key buttons.</p>
+<h3>Controls</h3>
+<ul>
+<li><b>Tap</b> a button — or <b>hold Up / Down</b> (the triangles) to auto-repeat through a menu.</li>
+<li>Or flip a <b>TX switch</b>: ch&nbsp;10&rarr;Reset, 11&rarr;Cancel, 12&rarr;Up, 13&rarr;Down, 14&rarr;Select. A button lights while its switch is on or you tap it.</li>
+<li>Bind each in RealFlight&rsquo;s <b>Edit Profile &rarr; User Interface</b> (click Input, then activate the control).</li>
+</ul>
+<h3>Key buttons</h3>
+<p>Each sends a RealFlight keyboard shortcut (the receiver is a USB keyboard too) — cameras, zoom, pit
+views, Kill engine, Flight failures and more. Tap <b>Edit view keys</b> to relabel a button or change
+its key — saved on this phone, separately per simulator.</p>
+<h3>Switching simulator</h3>
+<p>Return to the menu and tap the <b>neXt</b> button — each simulator keeps its own key set.</p>
+<h3>Using a Mac</h3>
+<p>First time on a Mac: quit the <b>Keyboard Setup Assistant</b> if it pops up, and allow the simulator
+in <b>System Settings &rarr; Privacy &amp; Security &rarr; Input Monitoring</b> (then restart it) —
+without that, macOS hides the sticks from it. Don&rsquo;t grant it to apps that don&rsquo;t need it.</p>`;
+
+const HELP_NEXT = `<h2>neXt — keys</h2>
+<p>These buttons send <b>neXt&rsquo;s keyboard shortcuts</b> from your phone (the receiver is a USB
+keyboard too): New model, Engine, Pause, Self level, Trainer, flight conditions and more — straight
+from neXt&rsquo;s <b>Settings &rarr; Misc</b> list.</p>
+<h3>Editing</h3>
+<p>Tap <b>Edit view keys</b> to relabel a button or change its key (neXt lists them all in
+Settings &rarr; Misc). Saved on this phone, separately per simulator.</p>
+<h3>Where are Select / Up / Down?</h3>
+<p>Those are RealFlight User-Interface bindings — neXt has nothing to bind them to, so this screen
+hides them. Everything in neXt is done with the key buttons.</p>
+<h3>Switching simulator</h3>
+<p>Return to the menu and tap the <b>RealFlight</b> button — each simulator keeps its own key set.</p>
+<h3>Using a Mac</h3>
+<p>First time on a Mac: quit the <b>Keyboard Setup Assistant</b> if it pops up, and allow <b>neXt</b>
+in <b>System Settings &rarr; Privacy &amp; Security &rarr; Input Monitoring</b> (then restart neXt) —
+without that, macOS hides the sticks and neXt won&rsquo;t respond. Then pick <b>RXV2&#8209;SIM</b> in
+neXt&rsquo;s controller setup and calibrate.</p>`;
+
+// Reflect the active simulator in the page title and help (the choice itself is
+// made on the home screen — RealFlight / neXt buttons — so it can't be flipped
+// by accident mid-session here).
 function paintProf() {
     const name = PROFILES[prof].label;
     const isNext = (prof === 'next');
@@ -287,6 +326,8 @@ function paintProf() {
     // neXt has nothing to bind them to, so hide that whole section for neXt.
     $('ctlCard').style.display = isNext ? 'none' : '';
     $('hint').style.display = isNext ? 'none' : '';
+    const hc = document.getElementById('helpContent');
+    if (hc) hc.innerHTML = isNext ? HELP_NEXT : HELP_RF;
 }
 
 // One colour per button slot (stable — a favourite keeps its colour even if others
