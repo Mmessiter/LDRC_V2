@@ -70,6 +70,12 @@
 /* (Simulator choice lives on the HOME screen — RealFlight / neXt buttons — and
    this page's title shows which one is active. No switch here by design.) */
 
+/* neXt mode: the joystick UI buttons (Select/Up/Down/Cancel/Reset) are RealFlight-
+   only, so the whole controls section is hidden and the key buttons grow. */
+body.nextMode .vBtn{min-height:74px;padding:.6em .5em}
+body.nextMode .vBtn .lbl{font-size:1.18em}
+body.nextMode .vBtn .sub{font-size:.78em}
+
 /* ---- editor ---- */
 .editRow{display:grid;grid-template-columns:1fr 1fr;gap:6px 8px;align-items:center;
  padding:.5em 0;border-bottom:1px solid rgba(125,158,176,.18)}
@@ -92,8 +98,9 @@
 
     <!-- USE mode -->
     <div id=useView>
-        <!-- Controls: fill the first screen, big enough to hit without looking -->
-        <div class=card>
+        <!-- Controls: fill the first screen, big enough to hit without looking.
+             RealFlight only — hidden entirely in neXt mode (no UI bindings there). -->
+        <div class=card id=ctlCard>
             <div class=ctlWrap>
                 <div class=rocker>
                     <button class="tri up ud" id=b4 data-n=4>
@@ -108,7 +115,7 @@
                 </div>
             </div>
         </div>
-        <div class=scrollHint>&#8964; scroll down for camera / views &#8964;</div>
+        <div class=scrollHint id=hint>&#8964; scroll down for camera / views &#8964;</div>
 
         <!-- Views -->
         <div class=secHdr id=viewsHdr>Camera / view</div>
@@ -280,9 +287,16 @@ let cfg = load(prof);
 // accident mid-session here).
 function paintProf() {
     const name = PROFILES[prof].label;
-    $('pageTitle').innerHTML = name + ' &mdash; controls &amp; views';
+    const isNext = (prof === 'next');
+    $('pageTitle').innerHTML = name + (isNext ? ' &mdash; keys' : ' &mdash; controls &amp; views');
     document.title = name + ' controls · LDRC RX V2';
-    $('viewsHdr').textContent = name + ' — camera / view keys';
+    $('viewsHdr').textContent = name + ' — keys';
+    // The Select/Up/Down/Cancel/Reset joystick buttons are RealFlight UI bindings;
+    // neXt has nothing to bind them to, so hide that whole section for neXt and
+    // let the key buttons grow into the space.
+    $('ctlCard').style.display = isNext ? 'none' : '';
+    $('hint').style.display = isNext ? 'none' : '';
+    document.body.classList.toggle('nextMode', isNext);
 }
 
 // One colour per button slot (stable — a favourite keeps its colour even if others
@@ -373,17 +387,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     $('resetBtn').addEventListener('click', () => { cfg = PROFILES[prof].defaults.map(x => ({ ...x })); renderEditor(); $('editMsg').textContent = PROFILES[prof].label + ' defaults restored — tap Save to keep'; });
     // Gentle nudge if sim mode is off (the buttons still work, but nothing's listening).
     try { const s = await LDRC.fetchState(); if (s && !s.sim) $('offNote').style.display = ''; } catch (e) {}
-    setTimeout(poll, 120);
+    if (prof !== 'next') setTimeout(poll, 120);   // button-state polling only exists for the RealFlight controls
 });
 </script>
 <template id=helpContent><h2>RealFlight controls &amp; views</h2>
 <p>One screen for driving RealFlight from your phone. The <b>controls fill the first screen</b> — big
 enough to hit while watching the sim, not the phone. <b>Scroll down</b> for the camera / view buttons.</p>
-<h3>Controls</h3>
+<h3>Controls (RealFlight only)</h3>
 <ul>
 <li><b>Tap</b> a button — or <b>hold Up / Down</b> (the triangles) to auto-repeat through a menu.</li>
 <li>Or flip a <b>TX switch</b>: ch&nbsp;10&rarr;Reset, 11&rarr;Cancel, 12&rarr;Up, 13&rarr;Down, 14&rarr;Select. A button lights while its switch is on or you tap it.</li>
 <li>Bind each in RealFlight&rsquo;s <b>Edit Profile &rarr; User Interface</b> (click Input, then activate the control).</li>
+<li>neXt has no such bindings, so in neXt these are hidden — everything there is done with the key buttons.</li>
 </ul>
 <h3>Camera / view</h3>
 <p>Each button sends a keyboard shortcut (the receiver is a USB keyboard too) — cameras, zoom, pit

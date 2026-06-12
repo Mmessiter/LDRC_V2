@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.119-next-clean",
+      "url": "https://messiter.com/rxv2/release/v0.9.119/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.119/littlefs.bin",
+      "notes": "neXt's screen no longer shows the Select/Up/Down/Cancel/Reset buttons \u2014 they're RealFlight User-Interface bindings and do nothing in neXt. The neXt key buttons are bigger to use the space (and the page skips the now-pointless button polling, kinder to the radio). RealFlight's screen is unchanged."
+    },
+    {
       "name": "RXV2-0.9.118-nice-confirm",
       "url": "https://messiter.com/rxv2/release/v0.9.118/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.118/littlefs.bin",

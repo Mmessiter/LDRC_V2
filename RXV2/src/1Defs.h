@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.118-nice-confirm";
+constexpr const char* FW_VERSION = "RXV2-0.9.119-next-clean";
 
 //*********************************************************************
 //  Auto-update manifest URLs
