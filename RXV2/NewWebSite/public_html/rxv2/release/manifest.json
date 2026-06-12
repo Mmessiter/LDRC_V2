@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.111-view-colours",
+      "url": "https://messiter.com/rxv2/release/v0.9.111/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.111/littlefs.bin",
+      "notes": "Every camera/view button now has its own colour, so you can find a favourite by colour at a glance. Colours are fixed to each button slot (your favourite stays the same colour), and the editor shows each slot's colour dot."
+    },
+    {
       "name": "RXV2-0.9.110-equal-pills",
       "url": "https://messiter.com/rxv2/release/v0.9.110/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.110/littlefs.bin",

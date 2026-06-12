@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.110-equal-pills";
+constexpr const char* FW_VERSION = "RXV2-0.9.111-view-colours";
 
 //*********************************************************************
 //  Auto-update manifest URLs

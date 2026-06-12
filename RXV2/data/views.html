@@ -231,14 +231,21 @@ function load() {
 }
 let cfg = load();
 
+// One colour per button slot (stable — a favourite keeps its colour even if others
+// are hidden or relabelled). Mid-tone hues so the white text always reads.
+const COLORS = ['#4a8fc9','#36a85a','#df8a36','#8e6cab','#d6403c','#2ba8a0','#b8569b','#6f7e8b',
+                '#c9a23a','#5a76d6','#4a9e3f','#c96a4a','#3f7e9e','#a85a36','#7a4ac9','#36a8d6',
+                '#8b3a3a','#b0742b','#56789b','#9e3f7e','#3a8b6e','#5e5ec9','#9e6b3f','#3a6e8b'];
+const colorOf = i => COLORS[i % COLORS.length];
+
 const MOD_NAMES = ['Ctrl', 'Shift', 'Alt', 'Win'];
 function keyHint(v) { let s = ''; for (let b = 0; b < 4; b++) if (v.mods & (1 << b)) s += MOD_NAMES[b] + '+'; return s + keyName(v.code); }
 function esc(s) { return String(s).replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c])); }
 
 function renderButtons() {
-    const live = cfg.filter(v => v.label && v.label.trim() && v.code);
+    const live = cfg.map((v, i) => ({ ...v, _i: i })).filter(v => v.label && v.label.trim() && v.code);
     $('grid').innerHTML = live.length
-        ? live.map((v) => '<button class=vBtn data-c=' + v.code + ' data-m=' + v.mods + '>'
+        ? live.map((v) => '<button class=vBtn style="background:' + colorOf(v._i) + '" data-c=' + v.code + ' data-m=' + v.mods + '>'
             + '<span class=lbl>' + esc(v.label) + '</span><span class=sub>' + keyHint(v) + '</span></button>').join('')
         : '<p class=muted>No buttons yet — tap Edit view keys.</p>';
     $('grid').querySelectorAll('.vBtn').forEach(b =>
@@ -257,7 +264,7 @@ function renderEditor() {
     let h = '';
     for (let i = 0; i < NBTN; i++) {
         const v = cfg[i] || { label: '', code: 0, mods: 0 };
-        h += '<div class=editRow><div class=num>Button ' + (i + 1) + '</div>'
+        h += '<div class=editRow><div class=num><span style="display:inline-block;width:.85em;height:.85em;border-radius:50%;background:' + colorOf(i) + ';vertical-align:-.1em;margin-right:.4em"></span>Button ' + (i + 1) + '</div>'
            + '<input type=text id=el' + i + ' placeholder="label (blank = hide)" value="' + esc(v.label || '') + '">'
            + '<select id=ek' + i + '>' + KEYS.map(k => '<option value=' + k.c + (k.c === v.code ? ' selected' : '') + '>' + k.n + '</option>').join('') + '</select>'
            + '<div class=mods>'
