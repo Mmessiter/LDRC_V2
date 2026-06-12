@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.114-next-keys",
+      "url": "https://messiter.com/rxv2/release/v0.9.114/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.114/littlefs.bin",
+      "notes": "The neXt profile now comes pre-filled with neXt 2.087's real keys (from its Settings -> Misc list): New model, Engine, Pause, Self level, Trainer, Piro trainer, Time scale, Set spawn, Prev model/scenery, Landing gear, flight Conditions 1-4, Mute, Music, Recorder, Screenshot, Chat, Menu. All editable per profile as before; anything you'd already saved for neXt is kept."
+    },
+    {
       "name": "RXV2-0.9.113-sim-profiles",
       "url": "https://messiter.com/rxv2/release/v0.9.113/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.113/littlefs.bin",
