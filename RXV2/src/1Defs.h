@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.108-touch-fix";
+constexpr const char* FW_VERSION = "RXV2-0.9.109-ctl-fill";
 
 //*********************************************************************
 //  Auto-update manifest URLs

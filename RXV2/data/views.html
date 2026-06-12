@@ -24,7 +24,7 @@
 /* touch-action:pan-y — a vertical swipe starting ON a triangle scrolls the page
    (the browser cancels the press, so scrolling never fires Up/Down). */
 .tri{position:relative;border:0;background:transparent;cursor:pointer;color:#fff;font:inherit;
- flex:1 1 0;width:min(74%,330px);min-height:100px;max-height:170px;padding:0;touch-action:pan-y;
+ flex:1 1 0;width:min(85%,390px);min-height:110px;max-height:235px;padding:0;touch-action:pan-y;
  user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
 .tri .shape{position:absolute;inset:0;transition:filter .12s;filter:drop-shadow(0 1px 2px rgba(0,0,0,.3))}
 .up .shape{clip-path:polygon(50% 0,100% 100%,0 100%);background:#6cabdf}   /* pale blue, points up */
@@ -42,11 +42,11 @@
 .pills{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%}
 .pill{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:.08em;
  border:0;border-radius:999px;cursor:pointer;color:#fff;font:inherit;text-align:center;
- padding:1em .5em;min-height:86px;box-shadow:0 1px 4px rgba(0,0,0,.22);
+ padding:1.1em .5em;min-height:98px;box-shadow:0 1px 4px rgba(0,0,0,.22);
  transition:transform .05s,filter .12s,box-shadow .12s;
  user-select:none;-webkit-user-select:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .pill:active{transform:scale(.96)}
-.pill .lbl{font-weight:800;font-size:1.5em;line-height:1;text-shadow:0 1px 2px rgba(0,0,0,.28)}
+.pill .lbl{font-weight:800;font-size:1.65em;line-height:1;text-shadow:0 1px 2px rgba(0,0,0,.28)}
 .pill .sub{font-size:.7em;opacity:.82;font-variant-numeric:tabular-nums}
 .pill.lit{filter:brightness(1.15);box-shadow:0 0 0 4px rgba(255,255,255,.7),0 1px 8px rgba(0,0,0,.3)}
 .sel{background:#36a85a}   .can{background:#df8a36}

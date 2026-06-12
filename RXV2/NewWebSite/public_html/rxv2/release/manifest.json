@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.109-ctl-fill",
+      "url": "https://messiter.com/rxv2/release/v0.9.109/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.109/littlefs.bin",
+      "notes": "Controls screen: all the buttons grow a little more to use the spare white space \u2014 wider/taller Up & Down triangles, taller Select/Cancel/Reset with larger text. Scroll behaviour unchanged."
+    },
+    {
       "name": "RXV2-0.9.108-touch-fix",
       "url": "https://messiter.com/rxv2/release/v0.9.108/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.108/littlefs.bin",
