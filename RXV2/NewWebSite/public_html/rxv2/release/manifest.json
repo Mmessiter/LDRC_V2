@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.118-nice-confirm",
+      "url": "https://messiter.com/rxv2/release/v0.9.118/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.118/littlefs.bin",
+      "notes": "The are-you-sure box for starting/leaving simulator mode is now a friendly colourful card in the app's own style (with a big green Yes and a Cancel), replacing the browser's grey utilitarian confirm dialog. Tap outside it to dismiss."
+    },
+    {
       "name": "RXV2-0.9.117-prof-front",
       "url": "https://messiter.com/rxv2/release/v0.9.117/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.117/littlefs.bin",

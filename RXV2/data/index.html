@@ -10,6 +10,18 @@
 <title>Home &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=30">
 <script src="/app.js?v=30" defer></script>
+<style>
+/* Friendly confirmation card (replaces the browser's utilitarian confirm()) */
+.modal{position:fixed;inset:0;background:rgba(16,38,58,.55);backdrop-filter:blur(2px);
+ display:flex;align-items:center;justify-content:center;z-index:50;padding:1em}
+.modal .mcard{background:rgba(255,255,255,.97);border-radius:18px;max-width:430px;width:100%;
+ padding:1.2em 1.2em 1em;box-shadow:0 12px 40px rgba(0,0,0,.4);text-align:center;
+ animation:mpop .18s ease-out}
+@keyframes mpop{from{transform:scale(.92);opacity:.4}to{transform:scale(1);opacity:1}}
+.mcard .mico{font-size:2.6em;line-height:1;margin:.05em 0 .1em}
+.mcard h2{margin:.15em 0 .35em;color:#23425c}
+.mcard p{color:#3a5165;line-height:1.5;margin:.3em 0 1em;font-size:.97em}
+</style>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -135,13 +147,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (cb) cb.style.display = simOn ? '' : 'none';
         const nb = document.getElementById('nextbtn');
         if (nb) nb.style.display = simOn ? '' : 'none';
-        sb.onclick = () => {
-            const turnOn = !simOn;
-            const msg = turnOn
-                ? 'Turn ON “Drive simulator over USB”?\n\nFOR SIMULATOR USE ONLY. The receiver reboots as a USB joystick, and its flight-controller output (D6) is DISABLED — it cannot fly a real model until you turn this off. Continue?'
-                : 'Turn OFF “Drive simulator over USB”?\n\nThe receiver reboots back to a normal receiver (flight-controller output restored).';
-            if (confirm(msg)) postSim(turnOn);
-        };
+        sb.onclick = () => showSimConfirm(!simOn);
     }
 
     // In sim mode the receiver is just a USB joystick — hide everything that
@@ -292,6 +298,28 @@ function postName(v) {
           document.close();
       })
       .catch(() => alert('Could not save — try again.'));
+}
+
+// Friendly confirmation card in the app's own style, instead of the browser's
+// grey confirm() box. Tap outside (or Cancel) to dismiss.
+function showSimConfirm(turnOn) {
+    const ov = document.createElement('div');
+    ov.className = 'modal';
+    ov.innerHTML = '<div class=mcard>'
+      + '<div class=mico>' + (turnOn ? '🎮' : '🚁') + '</div>'
+      + '<h2>' + (turnOn ? 'Start simulator mode?' : 'Leave simulator mode?') + '</h2>'
+      + (turnOn
+          ? '<p>The receiver reboots as a <b>USB joystick &amp; keyboard</b> for your PC simulator.<br>'
+            + 'Its flight-controller output switches <b>off</b> — it can&rsquo;t fly a real model until simulator mode is turned off again.</p>'
+          : '<p>The receiver reboots back to a <b>normal receiver</b> — flight-controller output restored, ready to fly a real model.</p>')
+      + '<button class="btn btn-fly" id=__mok><span class=ico>' + (turnOn ? '🎮' : '✅') + '</span>'
+      + (turnOn ? 'Yes — start simulator mode' : 'Yes — back to normal') + '</button>'
+      + '<button class="btn" id=__mcancel style="background:#6f7e8b"><span class=ico>&#10005;</span>Cancel</button>'
+      + '</div>';
+    document.body.appendChild(ov);
+    ov.querySelector('#__mok').onclick = () => { ov.remove(); postSim(turnOn); };
+    ov.querySelector('#__mcancel').onclick = () => ov.remove();
+    ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
 }
 
 // Sim toggle, white-screen-proof: draw the "rebooting" card FIRST (purely
