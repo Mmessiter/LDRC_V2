@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.112-mac-help",
+      "url": "https://messiter.com/rxv2/release/v0.9.112/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.112/littlefs.bin",
+      "notes": "Help now covers using the simulator on a Mac (neXt etc.): quit the Keyboard Setup Assistant, and crucially enable your simulator in System Settings -> Privacy & Security -> Input Monitoring (then restart it) \u2014 macOS hides the sticks from the sim until you do, because the device is part keyboard. Help-text only; no behaviour change."
+    },
+    {
       "name": "RXV2-0.9.111-view-colours",
       "url": "https://messiter.com/rxv2/release/v0.9.111/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.111/littlefs.bin",

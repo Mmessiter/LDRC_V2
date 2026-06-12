@@ -1,4 +1,5 @@
 {
+  "RXV2-0.9.112-mac-help": "Help now covers using the simulator on a Mac (neXt etc.): quit the Keyboard Setup Assistant, and crucially enable your simulator in System Settings -> Privacy & Security -> Input Monitoring (then restart it) — macOS hides the sticks from the sim until you do, because the device is part keyboard. Help-text only; no behaviour change.",
   "RXV2-0.9.111-view-colours": "Every camera/view button now has its own colour, so you can find a favourite by colour at a glance. Colours are fixed to each button slot (your favourite stays the same colour), and the editor shows each slot's colour dot.",
   "RXV2-0.9.110-equal-pills": "Select and Cancel are now each full-width — the same size as Reset; Up/Down triangles a touch smaller to make room.",
   "RXV2-0.9.109-ctl-fill": "Controls screen: all the buttons grow a little more to use the spare white space — wider/taller Up & Down triangles, taller Select/Cancel/Reset with larger text. Scroll behaviour unchanged.",

@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.111-view-colours";
+constexpr const char* FW_VERSION = "RXV2-0.9.112-mac-help";
 
 //*********************************************************************
 //  Auto-update manifest URLs
