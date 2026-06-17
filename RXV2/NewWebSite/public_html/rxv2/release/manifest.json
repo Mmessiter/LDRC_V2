@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.125-check-retry",
+      "url": "https://messiter.com/rxv2/release/v0.9.125/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.125/littlefs.bin",
+      "notes": "Makes the firmware check robust to a transient blip: it now retries once (after the receiver has had a moment to settle its WiFi, e.g. just after a reboot) before giving up. Fixes the spurious 'Network error talking to the receiver' on the firmware page and makes the 'Update now?' dialog appear reliably."
+    },
+    {
       "name": "RXV2-0.9.124-update-prompt",
       "url": "https://messiter.com/rxv2/release/v0.9.124/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.124/littlefs.bin",

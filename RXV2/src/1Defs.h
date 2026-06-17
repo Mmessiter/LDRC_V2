@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.124-update-prompt";
+constexpr const char* FW_VERSION = "RXV2-0.9.125-check-retry";
 
 //*********************************************************************
 //  Auto-update manifest URLs
