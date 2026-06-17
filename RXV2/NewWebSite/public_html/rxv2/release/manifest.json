@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.132-update-bar",
+      "url": "https://messiter.com/rxv2/release/v0.9.132/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.132/littlefs.bin",
+      "notes": "The firmware-update 'Installing\u2026' screen now shows the same green progress bar as the simulator reboot screen (fills over ~30 s, snaps to full the moment the receiver is back) instead of a seconds counter, and its redundant Return-to-menu button is gone \u2014 it returns to the home screen by itself."
+    },
+    {
       "name": "RXV2-0.9.131-reboot-bar",
       "url": "https://messiter.com/rxv2/release/v0.9.131/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.131/littlefs.bin",
@@ -65,12 +71,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.121/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.121/littlefs.bin",
       "notes": "The ? help on the controls & views screen now matches the simulator you opened: neXt gets its own help (its keys, why there are no Select/Up/Down buttons, and the Mac Input-Monitoring steps), RealFlight keeps its full controls-and-views help."
-    },
-    {
-      "name": "RXV2-0.9.120-simple-look",
-      "url": "https://messiter.com/rxv2/release/v0.9.120/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.120/littlefs.bin",
-      "notes": "Cleaner look everywhere: all the tiny technical small print (ch 12 - 833us, F3, Keypad +, ...) is gone from the controls and the key buttons \u2014 just clear labels now. RealFlight's key buttons are the same bigger size as neXt's. (The key assigned to each button is still shown in the editor.)"
     }
   ]
 }
