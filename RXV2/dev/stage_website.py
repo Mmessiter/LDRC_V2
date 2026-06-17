@@ -87,6 +87,9 @@ def main() -> int:
         versions.append(entry)
 
     versions.sort(key=lambda e: e["_v"], reverse=True)
+    versions = versions[:12]   # cap: the receiver proxies this manifest into RAM on every
+                               # update check, so keep it small — the newest dozen is plenty
+                               # for updating + rolling back. Older version dirs stay on disk.
     for e in versions:
         e.pop("_v")
     MANIFEST.write_text(json.dumps({"versions": versions}, indent=2) + "\n")

@@ -447,6 +447,17 @@ inline void fetchManifestInto(String& out, const String& url, uint32_t timeoutMs
     }
     String body = http.getString();
     http.end();
+    // Guard against an oversized manifest. Versions accumulate, and proxying two
+    // full manifests (~95 entries each, with notes = 76 KB) choked the response —
+    // blocking the single-threaded server and failing the check. Skip a manifest
+    // that's still too big rather than try to build a giant JSON. (Keep manifests
+    // trimmed to recent versions — see dev/stage_website.py / firmware_server.py.)
+    if (body.length() > 18000) {
+        out += ",\"ok\":false,\"error\":\"manifest too large (";
+        out += (int)body.length();
+        out += " bytes); trim it to recent versions\"}";
+        return;
+    }
     out += ",\"ok\":true,\"manifest\":";
     out += body;
     out += "}";

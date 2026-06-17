@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.129-no-back-btn";
+constexpr const char* FW_VERSION = "RXV2-0.9.130-check-size";
 
 //*********************************************************************
 //  Auto-update manifest URLs

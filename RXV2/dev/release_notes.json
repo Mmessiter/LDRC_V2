@@ -1,4 +1,5 @@
 {
+  "RXV2-0.9.130-check-size": "Fixes the update check failing ('network error') and the long pause entering simulator mode. The receiver was proxying the entire local + public manifests (~95 versions each, ~76 KB total) which choked it. Now the manifests are trimmed to the newest 12 versions, and the receiver skips any manifest that's still oversized — so the check stays small and fast. Rollback to recent versions is unaffected.",
   "RXV2-0.9.129-no-back-btn": "Removed the now-redundant 'Return to menu' button from the bottom of the pages — the floating 🏠 home button (top-left) does that from anywhere, no scrolling. Each page's Help (?) now reminds you the 🏠 button is the way back.",
   "RXV2-0.9.128-btn-clearance": "Every page now starts its content just below the floating Home/Help buttons, so the bigger buttons no longer overlap titles, cards or text at the top of any screen.",
   "RXV2-0.9.127-bigger-btns": "Made the floating Home (🏠) and Help (?) buttons bigger — easier to spot and tap.",

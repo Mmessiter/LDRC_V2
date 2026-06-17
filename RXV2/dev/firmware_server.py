@@ -57,6 +57,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 "ver": ver,
             })
         versions.sort(key=lambda v: v["ver"], reverse=True)
+        versions = versions[:12]   # cap: the chip proxies this manifest into RAM — keep it small
         for v in versions:
             v.pop("ver")
         body = json.dumps({"versions": versions}, indent=2).encode()
