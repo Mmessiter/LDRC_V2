@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.126-home-btn",
+      "url": "https://messiter.com/rxv2/release/v0.9.126/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.126/littlefs.bin",
+      "notes": "Every page now has a fixed home button (\ud83c\udfe0, top-left, mirroring the ? help button) that jumps straight back to the front menu \u2014 no more scrolling to the bottom to find Return to menu. Shown on all screens except the home page itself."
+    },
+    {
       "name": "RXV2-0.9.125-check-retry",
       "url": "https://messiter.com/rxv2/release/v0.9.125/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.125/littlefs.bin",

@@ -115,6 +115,21 @@ h1{
     z-index:50;box-shadow:0 2px 6px rgba(0,0,0,.15);padding:0;
 }
 .helpBtn:active{transform:scale(.95)}
+/* Fixed "front screen" (home) button — mirrors the help button, top-LEFT.
+   Injected by app.js on every page except the home page itself, so returning
+   to the menu never needs a scroll to the bottom. */
+.homeBtn{
+    position:fixed;
+    top:max(0.7em, env(safe-area-inset-top, 0.7em));
+    left:max(0.7em, env(safe-area-inset-left, 0.7em));
+    width:2.4em;height:2.4em;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(255,255,255,.85);
+    font-size:1.2em;line-height:1;text-decoration:none;
+    border:1.5px solid rgba(125,158,176,.5);cursor:pointer;
+    z-index:50;box-shadow:0 2px 6px rgba(0,0,0,.15);padding:0;
+}
+.homeBtn:active{transform:scale(.95)}
 .helpModal{
     position:fixed;inset:0;z-index:100;
     background:rgba(46,68,90,.55);

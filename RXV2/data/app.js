@@ -211,6 +211,19 @@
     // WebServer for the iOS keep-alive socket).
     document.addEventListener('DOMContentLoaded', () => {
         LDRC.mountFooter();
+        // Fixed "front screen" button, top-left on every page EXCEPT the home
+        // page itself — so returning to the menu is one tap, no scrolling to the
+        // bottom. It's a normal <a href="/">, so the click interceptor below
+        // gives it the same instant-nav + unsaved-edit guard as any link.
+        if (location.pathname !== '/' && location.pathname !== '/index.html') {
+            const home = document.createElement('a');
+            home.href = '/';
+            home.className = 'homeBtn';
+            home.setAttribute('aria-label', 'Front screen');
+            home.title = 'Front screen';
+            home.textContent = '🏠';
+            document.body.appendChild(home);
+        }
         setTimeout(() => {
             LDRC.fetchState().then(() => {
                 if (LDRC.state && LDRC.state.info) {
