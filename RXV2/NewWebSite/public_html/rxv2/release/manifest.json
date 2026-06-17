@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.128-btn-clearance",
+      "url": "https://messiter.com/rxv2/release/v0.9.128/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.128/littlefs.bin",
+      "notes": "Every page now starts its content just below the floating Home/Help buttons, so the bigger buttons no longer overlap titles, cards or text at the top of any screen."
+    },
+    {
       "name": "RXV2-0.9.127-bigger-btns",
       "url": "https://messiter.com/rxv2/release/v0.9.127/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.127/littlefs.bin",

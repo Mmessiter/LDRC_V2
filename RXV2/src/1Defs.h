@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.127-bigger-btns";
+constexpr const char* FW_VERSION = "RXV2-0.9.128-btn-clearance";
 
 //*********************************************************************
 //  Auto-update manifest URLs

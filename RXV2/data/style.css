@@ -27,7 +27,11 @@ body{
      * iPhone's Dynamic Island / notch when added to the Home Screen as
      * a PWA. Use env(safe-area-inset-*) to push the content far enough
      * away that the h1 model name isn't hidden behind the island. */
-    padding-top:    max(1.5em, env(safe-area-inset-top, 1.5em));
+    /* Leave a clear strip at the top so page content starts just BELOW the
+     * floating Home (left) / Help (right) buttons — they sit at top:0.7em and
+     * are 3em tall, so reserve button-top + ~3.4em. Stops wide titles / cards
+     * sliding under them. */
+    padding-top:    calc(max(0.7em, env(safe-area-inset-top, 0.7em)) + 3.4em);
     padding-right:  max(1em,   env(safe-area-inset-right, 1em));
     padding-bottom: max(3em,   env(safe-area-inset-bottom, 3em));
     padding-left:   max(1em,   env(safe-area-inset-left, 1em));
