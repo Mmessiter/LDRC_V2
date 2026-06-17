@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.129-no-back-btn",
+      "url": "https://messiter.com/rxv2/release/v0.9.129/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.129/littlefs.bin",
+      "notes": "Removed the now-redundant 'Return to menu' button from the bottom of the pages \u2014 the floating \ud83c\udfe0 home button (top-left) does that from anywhere, no scrolling. Each page's Help (?) now reminds you the \ud83c\udfe0 button is the way back."
+    },
+    {
       "name": "RXV2-0.9.128-btn-clearance",
       "url": "https://messiter.com/rxv2/release/v0.9.128/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.128/littlefs.bin",

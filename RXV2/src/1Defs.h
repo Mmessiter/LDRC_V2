@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.128-btn-clearance";
+constexpr const char* FW_VERSION = "RXV2-0.9.129-no-back-btn";
 
 //*********************************************************************
 //  Auto-update manifest URLs

@@ -123,10 +123,16 @@
             const tpl = document.getElementById('helpContent');
             const html = tpl ? tpl.innerHTML
                              : '<p>No help text on this page yet.</p>';
+            // Remind users that the floating 🏠 button (top-left) is the way back
+            // — now that the bottom "Return to menu" button has been removed.
+            // Skipped on the home page itself (no 🏠 there).
+            const homeTip = (location.pathname === '/' || location.pathname === '/index.html') ? ''
+                : '<p class=muted style="margin-top:1em;border-top:1px solid rgba(125,158,176,.25);padding-top:.8em">'
+                + '🏠 Tap the <b>home button</b> (top-left) any time to return to the menu.</p>';
             const overlay = document.createElement('div');
             overlay.className = 'helpModal';
             overlay.innerHTML =
-                '<div class=helpPanel>' + html +
+                '<div class=helpPanel>' + html + homeTip +
                 '<button class=helpClose type=button>Got it</button>' +
                 '</div>';
             const close = () => overlay.remove();
