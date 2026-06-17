@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.124-update-prompt",
+      "url": "https://messiter.com/rxv2/release/v0.9.124/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.124/littlefs.bin",
+      "notes": "When you open a receiver, it now checks for newer firmware straight away and, if there is some, pops an 'Update now?' dialog (installed vs available shown) instead of just a banner. Tap Update now and it downloads, flashes and reboots itself, then returns to the home screen \u2014 one tap, no firmware page needed. The banner remains as a tap-to-update fallback; Later dismisses it. (The check still defers while a transmitter link is live, so it never interrupts flying.)"
+    },
+    {
       "name": "RXV2-0.9.123-fly-bind-guards",
       "url": "https://messiter.com/rxv2/release/v0.9.123/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.123/littlefs.bin",

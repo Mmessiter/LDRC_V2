@@ -338,7 +338,7 @@ function modalCard(o) {
     ov.innerHTML = '<div class=mcard><div class=mico>' + o.icon + '</div>'
       + '<h2>' + o.title + '</h2><p>' + o.body + '</p>'
       + '<button class="btn btn-fly" id=__mok style="background:' + (o.okColor || '#6cab5e') + '">' + o.okLabel + '</button>'
-      + '<button class="btn" id=__mcancel style="background:#6f7e8b"><span class=ico>&#10005;</span>Cancel</button></div>';
+      + '<button class="btn" id=__mcancel style="background:#6f7e8b"><span class=ico>&#10005;</span>' + (o.cancelLabel || 'Cancel') + '</button></div>';
     document.body.appendChild(ov);
     ov.querySelector('#__mok').onclick = () => { ov.remove(); if (o.onOk) o.onOk(); };
     ov.querySelector('#__mcancel').onclick = () => ov.remove();
@@ -481,32 +481,74 @@ async function checkFirmware(current) {
         const j = await r.json();
         if (j.offline) return;            // chip in AP mode — nothing to compare
         if (j.link_active) return;        // TX connected — check deferred to keep the radio link stable
-        const names = [];
+        // Collect every version with the manifest URL it came from (so any
+        // relative download URL can be resolved at install time).
+        const all = [];
         for (const k of ['local', 'public']) {
             if (j[k] && j[k].ok && j[k].manifest && j[k].manifest.versions) {
-                for (const v of j[k].manifest.versions) names.push(v.name);
+                const base = j[k].manifest_url || '';
+                for (const v of j[k].manifest.versions) all.push({ name: v.name, url: v.url, fs_url: v.fs_url, base });
             }
         }
-        if (names.length === 0) return;
-        // Largest by vTuple = latest. vCmp(a,c)>0 means c is newer than a.
-        let latest = names[0];
-        for (const n of names) if (vCmp(latest, n) > 0) latest = n;
-        // vCmp(current, latest) > 0  ⇒  latest is newer than what's installed.
-        if (vCmp(current, latest) > 0) {
-            b.textContent = '⬆️  Update available: ' + latest;
+        if (!all.length) return;
+        let latest = all[0];
+        for (const v of all) if (vCmp(latest.name, v.name) > 0) latest = v;   // vCmp>0 ⇒ v newer
+        if (vCmp(current, latest.name) > 0) {                                 // latest newer than installed
+            b.textContent = '⬆️  Update available: ' + vr(latest.name) + ' — tap to update';
             b.style.background = 'rgba(255,210,120,.95)';
             b.style.color = '#5c3a00';
             b.style.cursor = 'pointer';
-            b.onclick = () => location.href = '/firmware';
+            b.onclick = () => offerUpdate(current, latest);
+            b.style.display = '';
+            offerUpdate(current, latest);     // proactively offer the update the moment we connect
         } else {
             b.textContent = '✓  Firmware up to date';
             b.style.background = 'rgba(168,210,154,.85)';
             b.style.color = '#2a4d1f';
+            b.style.display = '';
         }
-        b.style.display = '';
     } catch (e) {
         // silent — banner just doesn't appear
     }
+}
+
+function vr(n) { return String(n).replace(/^RXV2-/, ''); }
+
+// Proactive "Update now?" dialog — pops automatically on connect when newer
+// firmware exists, and is re-openable by tapping the banner.
+function offerUpdate(current, v) {
+    const resolve = u => { try { return new URL(u, v.base || location.href).href; } catch (e) { return u; } };
+    modalCard({
+        icon: '⬆️', title: 'Firmware update available',
+        body: 'Installed: <b>' + vr(current) + '</b><br>Available: <b>' + vr(v.name) + '</b><br><br>'
+            + 'Update now? The receiver downloads, flashes and reboots itself &mdash; about 30 seconds.',
+        okLabel: '⬆️ Update now', okColor: '#6cab5e', cancelLabel: 'Later',
+        onOk: () => doFirmwareUpdate(resolve(v.url), v.fs_url ? resolve(v.fs_url) : '', v.name)
+    });
+}
+
+// One-tap OTA from the home screen: fire the install, show a waiting card, then
+// poll until the receiver is back on the new firmware and return home.
+function doFirmwareUpdate(url, fsUrl, name) {
+    const c = document.querySelector('.container');
+    if (c) c.innerHTML = '<h1>Updating firmware</h1><div class=card>'
+      + '<p style="font-size:1.1em;font-weight:600">⏳ Installing ' + vr(name) + '&hellip;</p>'
+      + '<p id=__ul class=muted>Downloading, flashing and rebooting &mdash; about 30 s (<span id=__us>0</span> s)&hellip;</p>'
+      + '<a class="btn btn-back" href="/" style="margin-top:.8em"><span class=ico>&#8617;</span>Return to menu</a></div>';
+    let q = '/api/firmware/install?url=' + encodeURIComponent(url);
+    if (fsUrl) q += '&fs_url=' + encodeURIComponent(fsUrl);
+    fetch(q, { method: 'POST' }).catch(() => {});      // device reboots mid-response — expected
+    let n = 0, ok = 0;
+    const ping = () => { let sg; try { sg = AbortSignal.timeout(2500); } catch (e) { const a = new AbortController(); setTimeout(() => a.abort(), 2500); sg = a.signal; } return fetch('/api/state.json', { cache: 'no-store', signal: sg }); };
+    const tick = async () => {
+        const se = document.getElementById('__us'); if (!se) return;   // user navigated away
+        se.textContent = n;
+        if (n >= 6) { try { const r = await ping(); if (r.ok) { if (++ok >= 2) { location.replace('/?r=' + Date.now()); return; } } else ok = 0; } catch (e) { ok = 0; } }
+        if (n >= 150) { document.getElementById('__ul').innerHTML = 'Taking longer than expected &mdash; tap <b>Return to menu</b> above.'; return; }
+        n++; setTimeout(tick, 1000);
+    };
+    tick();
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) ping().then(r => { if (r.ok) location.replace('/?r=' + Date.now()); }).catch(() => {}); });
 }
 </script>
 <template id=helpContent><h2>About this page</h2>
