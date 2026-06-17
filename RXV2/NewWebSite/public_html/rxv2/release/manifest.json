@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.122-status-led",
+      "url": "https://messiter.com/rxv2/release/v0.9.122/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.122/littlefs.bin",
+      "notes": "Adds support for an external status LED on the D4 pad: OFF = bound but no link, ON = connected & receiving, 2 Hz flash = binding. Only active when transceiver 3 is absent (D4 is radio 3's CE on triple-radio boards, so those are unaffected \u2014 auto-detected). LED is assumed wired pad->resistor->LED->GND (active-high); tell me if yours is inverted."
+    },
+    {
       "name": "RXV2-0.9.121-help-per-sim",
       "url": "https://messiter.com/rxv2/release/v0.9.121/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.121/littlefs.bin",

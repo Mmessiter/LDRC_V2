@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.121-help-per-sim";
+constexpr const char* FW_VERSION = "RXV2-0.9.122-status-led";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -151,6 +151,15 @@ constexpr int8_t  PIN_SPI_MISO = D7;   // shared — kept OFF D9 because D9 is t
 constexpr int8_t  PIN_SPI_MOSI = D10;  // shared
 constexpr int8_t  PIN_SBUS_TX  = D6;   // RC output (UART/RMT)
 constexpr int8_t  PIN_FC_RX    = D5;   // FC telemetry RX (UART)
+
+// Optional external status LED on the D4 pad. D4 doubles as Radio3 CE on the
+// triple-radio PCB; on a 2-radio board that pad is free, so when Radio3 is
+// absent the firmware drives an LED here:  OFF = bound but no link ·
+// ON = bound + receiving · 2 Hz flash = binding (unbound). Same physical pad as
+// PIN_NRF_CE3, but only ever driven when radio 3 is absent — so the triple-radio
+// variant is unaffected.
+constexpr uint8_t PIN_STATUS_LED         = D4;
+constexpr bool    STATUS_LED_ACTIVE_HIGH = true;   // LED wired pad -> resistor -> LED -> GND
 
 constexpr uint32_t NRF_SPI_HZ = 4000000;     // 4 MHz — conservative, eliminates marginal timing
 

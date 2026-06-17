@@ -33,6 +33,44 @@
 #include "WebPages.h"
 
 //*********************************************************************
+//  D4 external status LED  (2-radio boards only)
+//*********************************************************************
+// A user LED on the D4 pad shows link state at a glance:
+//   OFF       = bound but no link (receiver not hearing the transmitter)
+//   ON        = bound + receiving  (connected, ready to fly)
+//   2 Hz flash= binding (unbound, listening for a transmitter)
+// D4 is Radio3's CE on the triple-radio PCB, so we only take the pad over when
+// radio 3 is ABSENT (auto-detected) — triple-radio boards are left untouched.
+static bool statusLedEnabled = false;
+
+static inline void statusLedWrite(bool on) {
+    digitalWrite(PIN_STATUS_LED, (on == STATUS_LED_ACTIVE_HIGH) ? HIGH : LOW);
+}
+
+static void statusLedBegin() {                     // call after detectAllRadios()
+    statusLedEnabled = !radioPresent[2];           // D4 is free only when radio 3 is gone
+    if (statusLedEnabled) { pinMode(PIN_STATUS_LED, OUTPUT); statusLedWrite(false); }
+}
+
+static void statusLedTick() {                      // call every loop()
+    if (!statusLedEnabled) return;
+    static uint32_t nextEdge = 0;
+    static bool     flashOn  = false;
+    const uint32_t now = millis();
+    if (!bindState.bound) {                        // binding — 2 Hz square wave
+        if ((int32_t)(now - nextEdge) >= 0) {
+            flashOn = !flashOn;
+            statusLedWrite(flashOn);
+            nextEdge = now + 250;                  // 250 ms half-period = 2 Hz
+        }
+        return;
+    }
+    nextEdge = 0; flashOn = false;                 // reset flash phase for the next unbind
+    const bool linkAlive = rx.lastMillis && (uint32_t)(now - rx.lastMillis) < 500;
+    statusLedWrite(linkAlive);                     // ON = connected, OFF = disconnected
+}
+
+//*********************************************************************
 //  setup() — one-time boot sequence
 //*********************************************************************
 
@@ -224,6 +262,7 @@ void setup() {
     runRadioSelfTest();
     detectAllRadios();       // probes slots 1/2/3 independently; sets radioPresent[]
     radioBeginListenV1();
+    statusLedBegin();        // D4 status LED — only if radio 3 is absent
 
     //*****************************************************************
     // Register HTTP routes (server.begin() is deferred to onWifiConnected()
@@ -305,6 +344,7 @@ void loop() {
     }
     if (!simEnabled) sbusTick();   // no RC output frames at all while in sim mode
     heartbeat();
+    statusLedTick();    // D4 connection-status LED (2-radio boards)
     netStep();
 
     // Periodic free-heap snapshot to the event log so we can spot leaks
