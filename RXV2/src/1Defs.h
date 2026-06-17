@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.126-home-btn";
+constexpr const char* FW_VERSION = "RXV2-0.9.127-bigger-btns";
 
 //*********************************************************************
 //  Auto-update manifest URLs

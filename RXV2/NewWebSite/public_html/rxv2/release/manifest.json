@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.127-bigger-btns",
+      "url": "https://messiter.com/rxv2/release/v0.9.127/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.127/littlefs.bin",
+      "notes": "Made the floating Home (\ud83c\udfe0) and Help (?) buttons bigger \u2014 easier to spot and tap."
+    },
+    {
       "name": "RXV2-0.9.126-home-btn",
       "url": "https://messiter.com/rxv2/release/v0.9.126/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.126/littlefs.bin",
