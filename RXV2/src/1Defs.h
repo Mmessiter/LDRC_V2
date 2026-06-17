@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.122-status-led";
+constexpr const char* FW_VERSION = "RXV2-0.9.123-fly-bind-guards";
 
 //*********************************************************************
 //  Auto-update manifest URLs

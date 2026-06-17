@@ -99,8 +99,8 @@
             </div>
         </div>
 
-        <a class="btn btn-fly"  href="/fly" id=flybtn><span class=ico>&#128641;&#9992;&#65039;</span>Fly now</a>
-        <a class="btn btn-bind" href="/bind" id=bindbtn><span class=ico>&#128279;</span>Start Bind mode</a>
+        <button class="btn btn-fly"  type=button id=flybtn><span class=ico>&#128641;&#9992;&#65039;</span>Fly now</button>
+        <button class="btn btn-bind" type=button id=bindbtn><span class=ico>&#128279;</span>Start Bind mode</button>
         <a class="btn btn-bb"   href="/rotorflight" id=rfbtn style="display:none;background:#8e6cab"><span class=ico>&#129357;</span>Rotorflight config &mdash; <span id=fcver>&hellip;</span></a>
         <a class="btn btn-fw"   href="/firmware"><span class=ico>&#128229;</span>Update or roll back firmware</a>
         <a class="btn btn-diag" href="/diagnostics" id=diagbtn><span class=ico>&#127916;</span>View channels</a>
@@ -125,6 +125,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Model name — show as the h1, prompt with warning + edit-on-tap.
     paintModelName(s);
+
+    // "Fly now" and "Start Bind mode" act through JS (not plain links) so they
+    // can confirm first: Fly now disables WiFi (what its name implies); Bind
+    // mode is guarded when the receiver is already bound, so it can't silently
+    // erase a working link.
+    const fbtn = document.getElementById('flybtn');
+    if (fbtn) fbtn.onclick = showFlyConfirm;
+    const bbtn = document.getElementById('bindbtn');
+    if (bbtn) bbtn.onclick = onBindClick;
 
     // In sim mode the D6 output is disabled and the USB joystick is the output,
     // so show "USB → SIM" instead of the (now-inactive) wire protocol.
@@ -320,6 +329,72 @@ function showSimConfirm(turnOn) {
     ov.querySelector('#__mok').onclick = () => { ov.remove(); postSim(turnOn); };
     ov.querySelector('#__mcancel').onclick = () => ov.remove();
     ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+}
+
+// Generic confirmation card in the app style (shared by Fly now + Bind mode).
+function modalCard(o) {
+    const ov = document.createElement('div');
+    ov.className = 'modal';
+    ov.innerHTML = '<div class=mcard><div class=mico>' + o.icon + '</div>'
+      + '<h2>' + o.title + '</h2><p>' + o.body + '</p>'
+      + '<button class="btn btn-fly" id=__mok style="background:' + (o.okColor || '#6cab5e') + '">' + o.okLabel + '</button>'
+      + '<button class="btn" id=__mcancel style="background:#6f7e8b"><span class=ico>&#10005;</span>Cancel</button></div>';
+    document.body.appendChild(ov);
+    ov.querySelector('#__mok').onclick = () => { ov.remove(); if (o.onOk) o.onOk(); };
+    ov.querySelector('#__mcancel').onclick = () => ov.remove();
+    ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+}
+
+// "Fly now" — disables WiFi for a clean radio-only link (what the name implies),
+// with a one-tap confirm that also shows the live link state as a quick
+// pre-flight check. WiFi stays off until the next power-cycle.
+function showFlyConfirm() {
+    fetch('/api/state.json', { cache: 'no-store' }).then(r => r.json()).then(flyCard).catch(() => flyCard(null));
+}
+function flyCard(s) {
+    let link = 'unknown';
+    if (s && s.bind && s.bind.bound) {
+        const alive = s.rf && s.rf.last_pkt_ms >= 0 && s.rf.last_pkt_ms < 1000;
+        link = alive ? '<span style="color:#2a7d44">connected ✓</span>'
+                     : '<span style="color:#a4242a">bound, no signal</span>';
+    } else if (s) link = '<span style="color:#a4242a">not bound</span>';
+    modalCard({
+        icon: '🛫', title: 'Disable WiFi and fly?',
+        body: 'Link: <b>' + link + '</b><br><br>The receiver runs <b>radio&#8209;only</b> for the cleanest '
+            + 'link — WiFi stays off until you power&#8209;cycle it. The RC output keeps streaming.',
+        okLabel: '🛫 Disable WiFi &amp; fly', okColor: '#c97464',
+        onOk: () => { fetch('/fly_arm', { method: 'POST' }).catch(() => {}); flyDone(); }
+    });
+}
+function flyDone() {
+    const c = document.querySelector('.container');
+    if (c) c.innerHTML = '<h1>RF&#8209;only mode</h1><div class=card>'
+      + '<p style="font-size:1.15em;font-weight:600">📡 WiFi is now <b>off</b>.</p>'
+      + '<p class=muted>Running radio&#8209;only for the strongest link. WiFi comes back when you '
+      + 'power&#8209;cycle the receiver — you can close this page.</p></div>';
+}
+
+// "Start Bind mode" — guarded. Re-binding erases the current bind and drops the
+// link, so if the receiver is already bound we confirm first (the accidental
+// case the user hit). Unbound -> bind straight away (that's the whole point).
+function onBindClick() {
+    fetch('/api/state.json', { cache: 'no-store' }).then(r => r.json()).then(s => {
+        if (s && s.bind && s.bind.bound) {
+            const alive = s.rf && s.rf.last_pkt_ms >= 0 && s.rf.last_pkt_ms < 1000;
+            modalCard({
+                icon: '⚠️',
+                title: alive ? 'Connected — re-bind anyway?' : 'Already bound — re-bind?',
+                body: (alive ? 'This receiver is <b>connected to a transmitter right now</b>. '
+                             : 'This receiver is already <b>bound</b> to a transmitter. ')
+                    + 'Entering bind mode <b>erases the bind and drops the link</b>, then listens for a '
+                    + 'transmitter to pair with. Only do this to pair with a <i>different</i> transmitter.',
+                okLabel: 'Erase bind &amp; re-bind', okColor: '#c97464',
+                onOk: () => { location.href = '/bind'; }
+            });
+        } else {
+            location.href = '/bind';
+        }
+    }).catch(() => { location.href = '/bind'; });
 }
 
 // Sim toggle, white-screen-proof: draw the "rebooting" card FIRST (purely
