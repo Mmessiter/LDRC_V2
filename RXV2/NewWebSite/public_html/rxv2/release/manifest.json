@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.131-reboot-bar",
+      "url": "https://messiter.com/rxv2/release/v0.9.131/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.131/littlefs.bin",
+      "notes": "The 'Rebooting\u2026' screen when starting/stopping simulator mode now shows a progress bar (fills over a few seconds, snaps to full the moment the receiver is back) instead of a seconds counter, and the now-redundant Return-to-menu button is gone \u2014 it returns to the home screen by itself."
+    },
+    {
       "name": "RXV2-0.9.130-check-size",
       "url": "https://messiter.com/rxv2/release/v0.9.130/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.130/littlefs.bin",
@@ -65,12 +71,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.120/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.120/littlefs.bin",
       "notes": "Cleaner look everywhere: all the tiny technical small print (ch 12 - 833us, F3, Keypad +, ...) is gone from the controls and the key buttons \u2014 just clear labels now. RealFlight's key buttons are the same bigger size as neXt's. (The key assigned to each button is still shown in the editor.)"
-    },
-    {
-      "name": "RXV2-0.9.119-next-clean",
-      "url": "https://messiter.com/rxv2/release/v0.9.119/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.119/littlefs.bin",
-      "notes": "neXt's screen no longer shows the Select/Up/Down/Cancel/Reset buttons \u2014 they're RealFlight User-Interface bindings and do nothing in neXt. The neXt key buttons are bigger to use the space (and the page skips the now-pointless button polling, kinder to the radio). RealFlight's screen is unchanged."
     }
   ]
 }

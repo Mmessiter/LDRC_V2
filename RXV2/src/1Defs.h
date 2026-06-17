@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.130-check-size";
+constexpr const char* FW_VERSION = "RXV2-0.9.131-reboot-bar";
 
 //*********************************************************************
 //  Auto-update manifest URLs

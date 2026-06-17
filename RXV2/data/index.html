@@ -407,12 +407,22 @@ function postSim(on) {
     if (c) c.innerHTML =
         '<h1>' + (on ? 'Starting simulator mode' : 'Leaving simulator mode') + '</h1>'
       + '<div class=card><p style="font-size:1.15em;font-weight:600">&#9203; Rebooting &mdash; please wait&hellip;</p>'
-      + '<p id=__waitline class=muted>Back in a few seconds (<span id=__secs>0</span>&thinsp;s)&hellip;</p>'
-      + '<a class="btn btn-back" href="/" style="margin-top:.8em">&#8617; Return to menu</a></div>'
+      + '<div style="background:rgba(125,158,176,.28);border-radius:9px;height:18px;overflow:hidden;margin:1.1em 0 .2em">'
+      + '<div id=__bar style="height:100%;width:0;background:#6cab5e;border-radius:9px"></div></div>'
+      + '<p id=__slow class=muted style="text-align:center;min-height:1.1em;margin:.4em 0 0"></p></div>'
       + '<div class=footer></div>';
+    // Estimated progress: glide to ~92% over ~9 s (a reboot is usually < 10 s) and
+    // snap to 100% the instant the receiver answers. An estimate — exactness doesn't matter.
+    const bar = document.getElementById('__bar');
+    if (bar) { bar.style.transition = 'width 9s linear'; requestAnimationFrame(() => { bar.style.width = '92%'; }); }
     const fd = new URLSearchParams();
     fd.set('on', on ? '1' : '0');
     fetch('/api/sim', { method: 'POST', body: fd }).catch(() => {});   // reply often dies mid-reboot — fine
+    const done = () => {
+        const b = document.getElementById('__bar');
+        if (b) { b.style.transition = 'width .3s'; b.style.width = '100%'; }
+        setTimeout(() => location.replace('/?r=' + Date.now()), 300);
+    };
     let n = 0, ok = 0;
     const ping = () => {
         let sg;
@@ -421,20 +431,20 @@ function postSim(on) {
         return fetch('/api/state.json', { cache: 'no-store', signal: sg });
     };
     const tick = async () => {
-        const s = document.getElementById('__secs');
-        if (!s) return;                              // user navigated away
-        s.textContent = n;
-        if (n >= 3) {                                // give the reboot a head start
-            try { const r = await ping(); if (r.ok) { if (++ok >= 2) { location.replace('/?r=' + Date.now()); return; } } else ok = 0; }
+        if (!document.getElementById('__bar')) return;          // user navigated away
+        if (n >= 2) {                                           // give the reboot a head start
+            try { const r = await ping(); if (r.ok) { if (++ok >= 2) { done(); return; } } else ok = 0; }
             catch (e) { ok = 0; }
         }
-        if (n >= 120) { document.getElementById('__waitline').innerHTML = 'Taking longer than expected &mdash; tap <b>Return to menu</b> above.'; return; }
+        // Rare hang only: after ~30 s, say so in plain text (no button — just reload).
+        if (n === 30) { const sl = document.getElementById('__slow'); if (sl) sl.textContent = 'Taking longer than usual — you can reload the page.'; }
+        if (n >= 120) return;
         n++; setTimeout(tick, 1000);
     };
     tick();
     // iOS freezes timers in backgrounded tabs — on return, one immediate check.
     document.addEventListener('visibilitychange', () => {
-        if (!document.hidden) ping().then(r => { if (r.ok) location.replace('/?r=' + Date.now()); }).catch(() => {});
+        if (!document.hidden) ping().then(r => { if (r.ok) done(); }).catch(() => {});
     });
 }
 
