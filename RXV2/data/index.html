@@ -163,9 +163,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     // doesn't apply (not flying, FC output off). Kept: firmware, WiFi, the sim
     // toggle, Remap channels, Black box, Help. Also swap the Help text to match.
     if (simOn) {
-        ['flybtn', 'bindbtn', 'diagbtn', 'protobtn'].forEach(id => {
+        ['bindbtn', 'diagbtn', 'protobtn'].forEach(id => {
             const e = document.getElementById(id); if (e) e.style.display = 'none';
         });
+        // Reuse the top "Fly now" button as the WiFi-off control in sim mode —
+        // same disableWifi action, sim-appropriate label, kept at the top (not
+        // buried) just as Fly sits at the top before flying a real model.
+        const fb = document.getElementById('flybtn');
+        if (fb) {
+            fb.innerHTML = '<span class=ico>&#128244;</span>Turn off WiFi &mdash; less interference';
+            fb.onclick = showSimWifiOff;
+        }
         const hc = document.getElementById('helpContent');
         if (hc) hc.innerHTML =
             '<h2>Simulator mode</h2>'
@@ -174,6 +182,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           + '<li><b>Remap channels</b> &mdash; choose which channel drives each simulator axis, with live bars.</li>'
           + '<li><b>RealFlight</b> / <b>neXt</b> &mdash; the same controls-and-views screen, opened with that simulator&rsquo;s key set selected: Select / Cancel / Up / Down / Reset buttons (also fired by TX channels 10&ndash;14) plus that sim&rsquo;s keyboard shortcuts (the device is a USB keyboard too).</li>'
           + '<li><b>Drive simulator over USB</b> &mdash; tap to turn simulator mode OFF and return to a normal receiver.</li>'
+          + '<li><b>Turn off WiFi</b> &mdash; cuts WiFi to reduce radio interference; the simulator keeps running over USB. WiFi (and this phone control) comes back when you power-cycle the receiver.</li>'
           + '<li><b>Update firmware / WiFi settings / Black box log</b> &mdash; as usual.</li>'
           + '</ul><h3>Tips</h3><p>If the simulator doesn’t see the receiver, re-plug the USB cable. Turn simulator mode off to fly a real model again.</p>'
           + '<p><b>On a Mac:</b> quit the Keyboard Setup Assistant if it pops up, and allow your simulator in <b>System Settings → Privacy & Security → Input Monitoring</b> (then restart the sim) — without that, macOS hides the sticks from it. Full steps in the controls-and-views page’s help.</p>';
@@ -372,6 +381,26 @@ function flyDone() {
       + '<p style="font-size:1.15em;font-weight:600">📡 WiFi is now <b>off</b>.</p>'
       + '<p class=muted>Running radio&#8209;only for the strongest link. WiFi comes back when you '
       + 'power&#8209;cycle the receiver — you can close this page.</p></div>';
+}
+
+// "Turn off WiFi" in sim mode — trims radio interference while the simulator
+// keeps running over USB. Same mechanism as Fly now (WiFi off until reboot),
+// just softer messaging since it isn't safety-critical like real flying.
+function showSimWifiOff() {
+    modalCard({
+        icon: '📴', title: 'Turn WiFi off?',
+        body: 'The simulator keeps running over USB &mdash; only the WiFi interference drops. '
+            + 'WiFi (and this phone control) stays off until you power&#8209;cycle the receiver.',
+        okLabel: '📴 Turn WiFi off', okColor: '#c97464',
+        onOk: () => { fetch('/fly_arm', { method: 'POST' }).catch(() => {}); simWifiOffDone(); }
+    });
+}
+function simWifiOffDone() {
+    const c = document.querySelector('.container');
+    if (c) c.innerHTML = '<h1>WiFi off</h1><div class=card>'
+      + '<p style="font-size:1.15em;font-weight:600">📴 WiFi is now <b>off</b>.</p>'
+      + '<p class=muted>The simulator keeps running over USB. WiFi (and phone control) comes back '
+      + 'when you power&#8209;cycle the receiver — you can close this page.</p></div>';
 }
 
 // "Start Bind mode" — guarded. Re-binding erases the current bind and drops the

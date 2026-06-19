@@ -1,6 +1,18 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.134-sim-wifi-top",
+      "url": "https://messiter.com/rxv2/release/v0.9.134/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.134/littlefs.bin",
+      "notes": "Refines 0.9.133: instead of a separate button lower down, simulator mode now repurposes the existing top 'Fly now' button as 'Turn off WiFi \u2014 less interference' (same WiFi-off-until-reboot action, kept at the top where the Fly button lives). One control, one place, in both flying and sim use."
+    },
+    {
+      "name": "RXV2-0.9.133-sim-wifi-off",
+      "url": "https://messiter.com/rxv2/release/v0.9.133/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.133/littlefs.bin",
+      "notes": "Simulator mode gains a 'Turn off WiFi' button (it only appears while in sim mode). Tapping it cuts WiFi to reduce radio interference while the simulator keeps running over USB \u2014 handy on a noisy bench, though not as critical as the Fly button before real flying. WiFi (and phone control) automatically comes back on the next power-cycle/reboot."
+    },
+    {
       "name": "RXV2-0.9.132-update-bar",
       "url": "https://messiter.com/rxv2/release/v0.9.132/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.132/littlefs.bin",
@@ -59,18 +71,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.123/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.123/littlefs.bin",
       "notes": "Two home-screen fixes. 'Fly now' now disables WiFi directly \u2014 one tap, with a friendly confirm that also shows your live link status (it used to just open a page where you had to find a second button). 'Start Bind mode' is now guarded: if the receiver is already bound/connected it warns before erasing the bind and dropping the link (so you can't do it by accident); unbound, it still binds straight away."
-    },
-    {
-      "name": "RXV2-0.9.122-status-led",
-      "url": "https://messiter.com/rxv2/release/v0.9.122/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.122/littlefs.bin",
-      "notes": "Adds support for an external status LED on the D4 pad: OFF = bound but no link, ON = connected & receiving, 2 Hz flash = binding. Only active when transceiver 3 is absent (D4 is radio 3's CE on triple-radio boards, so those are unaffected \u2014 auto-detected). LED is assumed wired pad->resistor->LED->GND (active-high); tell me if yours is inverted."
-    },
-    {
-      "name": "RXV2-0.9.121-help-per-sim",
-      "url": "https://messiter.com/rxv2/release/v0.9.121/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.121/littlefs.bin",
-      "notes": "The ? help on the controls & views screen now matches the simulator you opened: neXt gets its own help (its keys, why there are no Select/Up/Down buttons, and the Mac Input-Monitoring steps), RealFlight keeps its full controls-and-views help."
     }
   ]
 }

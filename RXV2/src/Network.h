@@ -244,7 +244,7 @@ inline void disableWifi() {
     WiFi.disconnect(true);
     WiFi.mode(WIFI_OFF);
     netMode = NET_NO_WIFI;
-    events.add("WiFi off (Fly mode)");
+    events.add("WiFi off (until reboot)");
 }
 
 //*********************************************************************

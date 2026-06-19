@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.132-update-bar";
+constexpr const char* FW_VERSION = "RXV2-0.9.134-sim-wifi-top";
 
 //*********************************************************************
 //  Auto-update manifest URLs
