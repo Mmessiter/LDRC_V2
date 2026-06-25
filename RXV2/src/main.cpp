@@ -342,6 +342,18 @@ void loop() {
         (uint32_t)(millis() - lastRadioSwapMs)   >= RADIO_SWAP_COOLDOWN_MS) {
         swapRadios();
     }
+
+    // Accrue dwell time on the currently-active radio every loop, so the
+    // per-transceiver "active time" counters always tick once/second while
+    // running (V1 behaviour). Independent of swaps; radioElapsedSec() reads it.
+    {
+        static uint32_t lastRadioTickMs = millis();
+        uint32_t nowTick = millis();
+        uint8_t  a = (uint8_t)(activeRadioIdx - 1);
+        if (a < 3) radioActiveMs[a] += (nowTick - lastRadioTickMs);
+        lastRadioTickMs = nowTick;
+    }
+
     if (!simEnabled) sbusTick();   // no RC output frames at all while in sim mode
     heartbeat();
     statusLedTick();    // D4 connection-status LED (2-radio boards)

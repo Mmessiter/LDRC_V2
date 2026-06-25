@@ -158,11 +158,9 @@ inline void swapRadios() {
     }
     if (nextIdx == startIdx) return;         // nothing else present
 
-    // Accrue the time we've spent on the outgoing radio before switching.
-    uint32_t now = millis();
-    radioActiveMs[startIdx] += (now - radioActiveStartMs);
-    radioActiveStartMs       = now;
-
+    // (Active-time accounting is now done continuously in loop(), so there's
+    // no per-swap banking to do here — loop() just starts crediting the new
+    // active slot on its next pass.)
     currentRadio->stopListening();
     delayMicroseconds(150);
     currentRadio   = radios[nextIdx];
@@ -193,12 +191,13 @@ inline void swapRadios() {
 // to switch channel; byte[5] carries the FHSS table index so the TX knows
 // where we're going.
 
-// Active seconds for radio slot idx (0..2). For the currently-active radio
-// this includes the live counter; for others it's the frozen accumulator.
+// Active seconds for radio slot idx (0..2). radioActiveMs[] is accrued every
+// loop in main.cpp for whichever radio is currently active, so this just reads
+// it back. That keeps the active radio's counter ticking once/second the whole
+// time we're running — the old "live-delta" form left BOTH counters frozen on a
+// solid (no-swap) link, which is wrong (V1 always increments one).
 inline uint32_t radioElapsedSec(uint8_t idx) {
-    uint32_t acc = radioActiveMs[idx];
-    if (idx == (uint8_t)(activeRadioIdx - 1)) acc += (millis() - radioActiveStartMs);
-    return acc / 1000;
+    return radioActiveMs[idx] / 1000;
 }
 
 inline void loadNextAck() {

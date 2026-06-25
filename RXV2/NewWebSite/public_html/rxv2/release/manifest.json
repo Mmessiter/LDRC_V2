@@ -1,6 +1,17 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.136-failsafe-flash-fix",
+      "url": "https://messiter.com/rxv2/release/v0.9.136/firmware.bin",
+      "notes": "Fixes all channels briefly flashing to zero in the flight-controller (e.g. Rotorflight Configurator) every few seconds while the sticks are held still \u2014 a momentary false RXLOSS. The receiver was deciding 'link lost' from the last packet that carried channel data, but with the sticks still the transmitter sends only changed channels, so the gaps between changes (filled with parameter/no-change packets) made the link look dropped for an instant. Failsafe is now judged from the actual packet stream from the bound transmitter (which never stops while connected), so the channels stay rock-steady when you're not moving the sticks. Important for steady hovers."
+    },
+    {
+      "name": "RXV2-0.9.135-radio-timer-fix",
+      "url": "https://messiter.com/rxv2/release/v0.9.135/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.135/littlefs.bin",
+      "notes": "Fixes the per-transceiver 'active time' counters on the TX screen sitting frozen at 0 on a solid link. The active radio's dwell time is now accrued continuously every loop (not via a live-delta that didn't land on a no-swap link), so one counter always ticks once per second while connected \u2014 matching V1."
+    },
+    {
       "name": "RXV2-0.9.134-sim-wifi-top",
       "url": "https://messiter.com/rxv2/release/v0.9.134/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.134/littlefs.bin",
@@ -59,18 +70,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.125/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.125/littlefs.bin",
       "notes": "Makes the firmware check robust to a transient blip: it now retries once (after the receiver has had a moment to settle its WiFi, e.g. just after a reboot) before giving up. Fixes the spurious 'Network error talking to the receiver' on the firmware page and makes the 'Update now?' dialog appear reliably."
-    },
-    {
-      "name": "RXV2-0.9.124-update-prompt",
-      "url": "https://messiter.com/rxv2/release/v0.9.124/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.124/littlefs.bin",
-      "notes": "When you open a receiver, it now checks for newer firmware straight away and, if there is some, pops an 'Update now?' dialog (installed vs available shown) instead of just a banner. Tap Update now and it downloads, flashes and reboots itself, then returns to the home screen \u2014 one tap, no firmware page needed. The banner remains as a tap-to-update fallback; Later dismisses it. (The check still defers while a transmitter link is live, so it never interrupts flying.)"
-    },
-    {
-      "name": "RXV2-0.9.123-fly-bind-guards",
-      "url": "https://messiter.com/rxv2/release/v0.9.123/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.123/littlefs.bin",
-      "notes": "Two home-screen fixes. 'Fly now' now disables WiFi directly \u2014 one tap, with a friendly confirm that also shows your live link status (it used to just open a page where you had to find a second button). 'Start Bind mode' is now guarded: if the receiver is already bound/connected it warns before erasing the bind and dropping the link (so you can't do it by accident); unbound, it still binds straight away."
     }
   ]
 }

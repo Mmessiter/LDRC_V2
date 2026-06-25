@@ -312,7 +312,21 @@ inline void sbusTick() {
     if ((uint32_t)(millis() - lastSbusMs) < protocolPeriodMs(currentProtocol)) return;
     lastSbusMs = millis();
 
-    uint32_t age      = millis() - lastChannelDataMs;
+    // Failsafe is "has the bound TX gone quiet" — a property of the LINK, not of
+    // whether the most recent packet happened to carry channel data. With the
+    // sticks held still the TX sends only *changed* channels, so between moves it
+    // sends runs of parameter / no-change packets (mask==0) that
+    // decodeChannelData() drops (Channels.h) BEFORE refreshing lastChannelDataMs.
+    // Basing failsafe on lastChannelDataMs therefore made the link look "lost"
+    // for a moment every few seconds even though packets never stopped — and in
+    // CRSF (idle-high) that briefly detached the UART, so the FC saw RXLOSS and
+    // every channel flashed to zero in the Configurator before snapping back.
+    // rx.lastMillis updates on EVERY received packet, so it tracks the true link
+    // state; hold the last channel values meanwhile (correct — nothing changed).
+    // Fall back to lastChannelDataMs pre-bind / before the first packet.
+    uint32_t linkRef   = (bindState.bound && rx.lastMillis) ? rx.lastMillis
+                                                            : lastChannelDataMs;
+    uint32_t age       = millis() - linkRef;
     bool     frameLost = age > 100;
     bool     failsafe  = age > 500;
 
