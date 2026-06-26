@@ -1270,7 +1270,7 @@ inline void handleApiState() {
     j += ",\"chip\":\""; j += ESP.getChipModel(); j += "\"";
     j += ",\"chip_rev\":"; j += ESP.getChipRevision();
     j += ",\"littlefs\":"; j += (littleFsMounted ? "true" : "false");
-    j += ",\"ap_ssid\":\""; j += AP_SSID; j += "\"";
+    j += ",\"ap_ssid\":\""; j += g_effectiveName; j += "\"";   // the SSID actually broadcast (model name), not the legacy "LDRC_RX" constant
     // ap_ip reports the soft-AP address whenever the AP interface is
     // up — in v0.9.51 that's "always" because the chip runs AP+STA in
     // parallel. The wifi UI uses this to tell the user they can reach
