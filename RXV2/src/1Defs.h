@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.152-ap-only-ux";
+constexpr const char* FW_VERSION = "RXV2-0.9.153-wifi-auto";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -81,7 +81,14 @@ inline bool     otaStarted    = false;
 // the AP fallback after one extra failure.
 inline uint8_t  staAttempts   = 0;
 
-constexpr uint32_t RF_WINDOW_MS         = 10000;   // boot window before falling through to WiFi
+constexpr uint32_t RF_WINDOW_MS         = 5000;    // boot window: if a TX is heard within this, go RF-only (WiFi off) for a clean band
+// RF-only "fly mode" auto-recovery: if the TX link then stays lost this long,
+// bring WiFi back up by itself so the user can reach the receiver after landing
+// without a power-cycle. NB this only runs in real flight (not sim, where WiFi
+// is kept on for convenience). A brief airborne dropout this long would also
+// re-enable WiFi mid-air — bump it up if that worries you (you can't really fly
+// 10 s with zero link, so it usually means you're down).
+constexpr uint32_t WIFI_REENABLE_AFTER_LOST_MS = 10000;
 // STA-join timeout per attempt. Stepped up from 12 s → 18 s → 25 s
 // because users kept seeing "WiFi password lost" symptoms that were
 // really slow router-side associations (stale DHCP leases, channel
@@ -99,9 +106,11 @@ constexpr uint8_t  WIFI_STA_RETRY_MAX   = 5;
 // *** DEV FLAG — set to false before shipping ***
 // When true: skip the RF-discovery boot window and go straight to WiFi STA,
 // even if the TX is on at boot. Lets us iterate without having to power-cycle
-// the TX before every reflash. Production behaviour (false) is: if a TX packet
-// arrives in the first 10 s, stay RF-only for the session.
-constexpr bool     DEV_KEEP_WIFI         = true;
+// the TX before every reflash. Now false: WiFi is auto-managed (RF-only when a
+// TX is present at boot; auto-re-enabled after the link is lost — see netStep).
+// Sim mode keeps WiFi on regardless (the boot decision in main.cpp ORs in
+// simEnabled), so the develop-over-WiFi-while-simming workflow still works.
+constexpr bool     DEV_KEEP_WIFI         = false;
 
 //*********************************************************************
 //  Pin map (XIAO ESP32-C3 / -S3, same pinout in either footprint)

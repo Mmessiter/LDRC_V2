@@ -276,12 +276,15 @@ void setup() {
     if (forceWifiMode) {
         Serial.println("[net] force-WiFi requested, skipping RF window");
         startWifiStation();
-    } else if (DEV_KEEP_WIFI) {
-        // Dev convenience: skip the RF-detect window so we can re-flash even
-        // when the TX is on. Flip DEV_KEEP_WIFI to false in 1Defs.h before
-        // shipping to restore the production "TX-on means RF-only" behaviour.
-        Serial.println("[net] DEV_KEEP_WIFI=true — skipping RF window, going to WiFi");
-        events.add("DEV mode: WiFi forced on at boot");
+    } else if (DEV_KEEP_WIFI || simEnabled) {
+        // Keep WiFi on (skip the RF-detect window) for development (DEV_KEEP_WIFI)
+        // OR whenever we're driving a simulator — sim sessions want the web UI
+        // reachable the whole time, and the ~5% frame-rate cost of WiFi coexistence
+        // doesn't matter on the bench. Real flight (not sim) falls through to the
+        // RF window below, so it gets WiFi-off / 501 Hz automatically.
+        Serial.printf("[net] %s — skipping RF window, WiFi on\n",
+                      simEnabled ? "sim mode" : "DEV_KEEP_WIFI");
+        events.add(simEnabled ? "Sim mode: WiFi kept on" : "DEV mode: WiFi forced on");
         startWifiStation();
     } else {
         netMode       = NET_WAITING_RF;

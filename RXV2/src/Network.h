@@ -369,7 +369,20 @@ inline void netStep() {
             }
             break;
 
-        case NET_NO_WIFI:   // Fly mode — WiFi deliberately off until reboot; don't retry
+        case NET_NO_WIFI: {
+            // RF-only "fly mode" — WiFi was switched off because a TX was present
+            // at boot. If the link then stays gone for WIFI_REENABLE_AFTER_LOST_MS
+            // (landed, or TX switched off), bring WiFi back automatically so the
+            // user can reach the receiver again without a power-cycle. Only fires
+            // once we've actually had a link (rx.lastMillis != 0).
+            if (rx.lastMillis != 0 &&
+                (uint32_t)(millis() - rx.lastMillis) >= WIFI_REENABLE_AFTER_LOST_MS) {
+                Serial.println("[net] TX link lost — bringing WiFi back up");
+                events.add("TX lost — WiFi re-enabled");
+                startWifiStation();   // → AP (+ STA if creds), reachable again
+            }
+            break;
+        }
         case NET_INIT:
             break;
     }
