@@ -303,7 +303,19 @@ void loop() {
     {
         static uint32_t loopCount = 0, lastRateMs = 0, lastLoopUs = 0, maxUs = 0;
         uint32_t nowUs = micros();
-        if (lastLoopUs) { uint32_t dt = nowUs - lastLoopUs; if (dt > maxUs) maxUs = dt; }
+        if (lastLoopUs) {
+            uint32_t dt = nowUs - lastLoopUs;
+            if (dt > maxUs) maxUs = dt;
+            // DIAG (0.9.145): a single loop iteration >50ms means the loop was
+            // blocked (e.g. WiFi reconnect) — long enough to pause CRSF/SBUS
+            // output and make the FC see RX-loss (the flash). Logged with the
+            // duration so we can line it up against "WiFi dropped" etc.
+            if (dt > 50000) {
+                char b[48];
+                snprintf(b, sizeof(b), "DIAG LOOP-STALL %lums", (unsigned long)(dt / 1000));
+                events.add(b);
+            }
+        }
         lastLoopUs = nowUs;
         loopCount++;
         if ((uint32_t)(millis() - lastRateMs) >= 1000) {
@@ -340,7 +352,21 @@ void loop() {
     if (numRadiosPresent >= 2 && bindState.bound && rx.lastMillis != 0 &&
         (uint32_t)(millis() - rx.lastMillis)     >= RADIO_SWAP_PACKET_TIMEOUT_MS &&
         (uint32_t)(millis() - lastRadioSwapMs)   >= RADIO_SWAP_COOLDOWN_MS) {
-        swapRadios();
+        // Try the other radio once per failure — but once we've cycled through
+        // all present radios with no packet returning, the TX is gone, so stop
+        // storming (back off to a slow dead-link probe). A real packet arriving
+        // resets the counter and re-arms instant failover. This kills the
+        // ~20-swaps/s storm that was flooding the log and bursting CRSF output.
+        static uint32_t pktsAtLastSwap = 0;
+        static uint8_t  triesSincePkt  = 0;
+        if (rx.packets != pktsAtLastSwap) triesSincePkt = 0;   // link responded → re-arm fast failover
+        bool triedAllRadios = (triesSincePkt >= numRadiosPresent);
+        bool deadProbeDue   = (uint32_t)(millis() - lastRadioSwapMs) >= RADIO_SWAP_DEAD_RETRY_MS;
+        if (!triedAllRadios || deadProbeDue) {
+            swapRadios();
+            pktsAtLastSwap = rx.packets;
+            triesSincePkt++;
+        }
     }
 
     // Accrue dwell time on the currently-active radio every loop, so the

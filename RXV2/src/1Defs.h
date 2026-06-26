@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.136-failsafe-flash-fix";
+constexpr const char* FW_VERSION = "RXV2-0.9.148-flash-fixed";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -180,7 +180,7 @@ constexpr uint8_t FHSS_CHANNELS[83] = {
      4, 10,  0
 };
 constexpr uint8_t  HOP_TIME_MS         = 8;   // v1 HOPTIME → ~100 Hz FHSS
-constexpr uint8_t  MAC_ACK_THRESHOLD   = 20;  // matches v1: MAC in first 20 acks, then telemetry rotation
+constexpr uint16_t MAC_ACK_THRESHOLD   = 200; // MAC on the first N acks of each connection (dense, a half per ack), then telemetry. v1 used 20; bumped so both MAC halves land reliably even if a radio swap fires during the opening burst, while still handing over to telemetry within ~0.4 s so the TX never starves (see loadNextAck)
 constexpr uint16_t MAC_STICK_DEADBAND  = 200;
 constexpr uint8_t  MAC_MOVE_CONFIRM    = 3;    // a channel must exceed the deadband on this many packets before "being flown" latches (rejects single-packet glitches)  // 12-bit counts a channel must move from its settled baseline to count as "being flown" → end ID broadcast (well above gimbal jitter, well below a real stick move)
 constexpr uint8_t  MAX_TELEMETRY_ITEM  = 36;  // bumped from 35 to make room for case 36 = RX3 active time
@@ -262,6 +262,18 @@ constexpr uint32_t FBUS_PERIOD_MS = 9;      // ~111 Hz
 
 inline uint16_t channelMicros[16];                       // initialised in setup() to 1500us
 inline uint32_t lastChannelDataMs = 0;
+// Legal decoded-channel range (microseconds), == v1 MINMICROS/MAXMICROS. A
+// decoded frame with any channel outside this isn't real channel data (a
+// bind/MAC/parameter frame misread, or a corrupt decode); decodeChannelData()
+// rejects it and holds the last good values — v1 CheckForCrazyValues parity.
+constexpr uint16_t CH_MIN_MICROS = 500;
+constexpr uint16_t CH_MAX_MICROS = 2500;
+// Output failsafe timeout (ms): how long the link may be silent before the
+// output stage treats it as lost. == v1 FAILSAFE_TIMEOUT (1500). The old 500 ms
+// was short enough that a brief glitch detached the CRSF UART and the FC saw a
+// momentary RX-loss (channels flashed to zero). Below this we keep streaming the
+// held channel values, exactly as v1 keeps sending SbusChannels.
+constexpr uint32_t OUTPUT_FAILSAFE_MS = 1500;
 inline uint8_t  sbusFrame[25];
 inline uint8_t  crsfFrame[26];
 inline uint8_t  ibusFrame[32];
@@ -340,6 +352,13 @@ inline uint32_t radioActiveStartMs   = 0;
 // receiving before we'd consider swapping again.
 constexpr uint32_t RADIO_SWAP_PACKET_TIMEOUT_MS = 50;
 constexpr uint32_t RADIO_SWAP_COOLDOWN_MS       = 50;
+// Once we've cycled through every present radio without a single packet coming
+// back, the TX is simply gone — swapping again at the 50 ms cooldown just storms
+// (~20 swaps/s: floods the event log + serial, blocks the loop ~13 ms each, and
+// the burst tears down CRSF output → channels flash to zero in the FC). After
+// trying all radios we back off to this slow dead-link probe; the instant a real
+// packet lands, fast failover re-arms.
+constexpr uint32_t RADIO_SWAP_DEAD_RETRY_MS     = 1000;
 
 //*********************************************************************
 //  Ack-payload rotation state
@@ -349,10 +368,10 @@ constexpr uint8_t ACK_PAYLOAD_BYTES = 6;     // v1 PAYLOADSIZE
 inline uint8_t  ackByteZero    = 1;
 // Run the MAC broadcast phase like v1 does — the v1 TX uses ack[0]==0 / ack[0]==1
 // frames to capture the receiver's 8-byte MAC and decide bind success. With this
-// initialised at 0 (not MAC_ACK_THRESHOLD), the first 20 acks send the real
-// chip boardMac in two halves so the TX recognises the receiver and exits bind.
-// (The earlier "skip MAC phase" workaround was for an old Model-ID stability
-// issue that's since been fixed by NVS-caching the board MAC.)
+// initialised at 0 (not MAC_ACK_THRESHOLD), the first MAC_ACK_THRESHOLD acks of
+// each connection send the real chip boardMac in two halves so the TX recognises
+// the receiver, then loadNextAck() hands over to the telemetry rotation. Reset to
+// 0 on every reconnect (a >500 ms ack gap), so the MAC is re-delivered each time.
 inline uint32_t macAcksSent    = 0;
 inline bool     idBroadcasting = false;      // true while we're putting the board ID on ack slots 0/1 (diagnostic, surfaced in state.json)
 inline bool     beingFlown     = false;      // latched once a control channel moves past MAC_STICK_DEADBAND on the current connection
@@ -437,7 +456,7 @@ inline uint8_t ibusRxIdx = 0;
 // few seconds" debugging without serial.
 
 struct EventLog {
-    static constexpr size_t SIZE     = 32;
+    static constexpr size_t SIZE     = 128;
     static constexpr size_t MSG_LEN  = 80;
     char     msgs[SIZE][MSG_LEN] = {};
     uint32_t when[SIZE]          = {};

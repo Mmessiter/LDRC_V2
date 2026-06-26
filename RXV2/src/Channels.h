@@ -62,6 +62,24 @@ inline void decodeChannelData(const uint8_t* payload, uint8_t size) {
     uint16_t raw[24] = {0};
     decompress(raw, compressed, decompressedSize(size));
 
+    // v1 CheckForCrazyValues parity. A frame whose decoded channels fall outside
+    // the legal servo range is NOT real channel data — it's a bind/MAC/parameter
+    // frame misread as channels (the TX sends these periodically), or a corrupt
+    // decode. Letting it through jolts every channel (the ~10-15 s flash-to-zero
+    // in the FC). Reject it and hold the last good channelMicros, exactly as v1
+    // does (it simply keeps sending the previous SbusChannels). rx.lastMillis —
+    // the link-alive signal — was already refreshed in radioPoll(), so this
+    // suppresses only the bad *values*, never the link itself.
+    {
+        uint8_t q = 0;
+        for (uint8_t i = 0; i < 16; ++i) {
+            if (mask & (1u << i)) {
+                uint16_t v = raw[q++];
+                if (v < CH_MIN_MICROS || v > CH_MAX_MICROS) return;   // crazy → hold last good
+            }
+        }
+    }
+
     // "Being flown" detection (drives the model-ID broadcast in loadNextAck).
     // Each channel's baseline is the FIRST value seen for it on this connection;
     // a later move past the deadband is a genuine stick input → the model is

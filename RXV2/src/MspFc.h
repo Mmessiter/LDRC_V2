@@ -203,11 +203,16 @@ inline void mspFcPoll() {
     // a competing probe causes the FC to interleave two responses, often
     // making the sync request time out and the page see "Read failed".
     if (mspWaitFunction != 0xFF) return;
-    // Don't probe while RC frames are being transmitted to a live TX session,
-    // unless dev mode keeps wifi on anyway. Probing during active flight would
-    // briefly compete for Serial1 bandwidth.
+    // Don't probe the FC while a live RC link is streaming frames to it. Our
+    // MSP-over-CRSF request is a second MSP master on the FC's wire; if a
+    // Configurator is also polling the FC (its Receiver tab reads RC over MSP),
+    // the two collide and the Configurator periodically reads a garbled/empty
+    // frame — every channel flashes to zero on its display (the real RC output
+    // is unaffected). It also competes for Serial1 bandwidth. So suppress
+    // probing whenever flying — including dev mode (DEV_KEEP_WIFI). The FC
+    // version is discovered when not flying, which is when the page wants it.
     bool flying = (rx.lastMillis != 0) && ((uint32_t)(millis() - rx.lastMillis) < 500);
-    if (flying && !DEV_KEEP_WIFI) return;
+    if (flying) return;
 
     uint32_t now = millis();
     uint32_t interval = fcInfo.detected ? PROBE_HEARTBEAT_MS : PROBE_INTERVAL_MS;

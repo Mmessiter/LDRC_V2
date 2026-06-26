@@ -252,6 +252,17 @@ inline void disableWifi() {
 //*********************************************************************
 
 inline void netStep() {
+    // Non-blocking WiFi re-begin: a STA retry used to do WiFi.disconnect() +
+    // delay(200) + WiFi.begin() inline, which BLOCKED the main loop for ~208 ms
+    // every retry — long enough to pause CRSF/SBUS output and starve radioPoll,
+    // so a flaky WiFi (desensed by the nRF24) made the FC flash to zero. We now
+    // record when to re-begin and fire it on a later pass, never delaying.
+    static uint32_t wifiRebeginAtMs = 0;
+    if (wifiRebeginAtMs && (int32_t)(millis() - wifiRebeginAtMs) >= 0) {
+        wifiRebeginAtMs = 0;
+        WiFi.begin(getEffectiveSsid().c_str(), getEffectivePass().c_str());
+        netStateStart = millis();
+    }
     switch (netMode) {
         case NET_WAITING_RF:
             // If a real packet has arrived, the TX is on — stay RF-only this session.
@@ -291,9 +302,7 @@ inline void netStep() {
                 // Restart the STA side only. AP stays up because we
                 // pass `false` to WiFi.disconnect (don't turn WiFi off).
                 WiFi.disconnect(false, true);   // disconnect STA, erase saved AP
-                delay(200);
-                WiFi.begin(getEffectiveSsid().c_str(),
-                           getEffectivePass().c_str());
+                wifiRebeginAtMs = millis() + 200;  // non-blocking: begin() fires on a later pass — never delay() the loop
                 netStateStart = millis();
                 break;
             }
@@ -328,9 +337,7 @@ inline void netStep() {
             events.add("WiFi dropped, retrying");
             disconnectedSinceMs = 0;
             WiFi.disconnect(false, true);
-            delay(200);
-            WiFi.begin(getEffectiveSsid().c_str(),
-                       getEffectivePass().c_str());
+            wifiRebeginAtMs = millis() + 200;  // non-blocking re-begin — never delay() the loop
             netMode       = NET_WIFI_CONNECTING;
             netStateStart = millis();
             break;

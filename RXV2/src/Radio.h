@@ -175,10 +175,15 @@ inline void swapRadios() {
 
     radioSwaps++;
     lastRadioSwapMs = millis();
-    char buf[60];
-    snprintf(buf, sizeof(buf), "Swapped to radio %u", activeRadioIdx);
-    events.add(buf);
-    Serial.printf("[rf] %s\n", buf);
+    // Only log genuine failovers (a packet arrived within the last ~2 s, so the
+    // link was live and this swap is a real response to a glitch). Dead-link
+    // probe swaps are silent — otherwise they'd flood the blackbox + serial.
+    if ((uint32_t)(millis() - rx.lastMillis) < 2000) {
+        char buf[60];
+        snprintf(buf, sizeof(buf), "Swapped to radio %u", activeRadioIdx);
+        events.add(buf);
+        Serial.printf("[rf] %s\n", buf);
+    }
 }
 
 //*********************************************************************
@@ -203,48 +208,37 @@ inline uint32_t radioElapsedSec(uint8_t idx) {
 inline void loadNextAck() {
     uint8_t ack[ACK_PAYLOAD_BYTES] = {0};
 
-    // MAC-delivery window. The v1 TX's pre-match parser (ParseAckPayload →
-    // GetModelsMacAddress while !ModelMatched && !LedWasGreen) latches ack[0]
-    // slot 0 into the low half and slot 1 into the high half of the model ID on
-    // *every* packet, until it has assembled a full 8-byte value and matched.
-    // So until the TX matches, anything other than our real MAC on slots 0/1
-    // becomes the (wrong) model ID — and the "Model IDs" identify screen keeps
-    // the TX permanently unmatched, reading slots 0/1 as the ID indefinitely.
+    // MAC-delivery window (mirrors v1's LoadAckPayload). The v1 TX's pre-match
+    // parser reads ack slots 0/1 as the two halves of our 8-byte board ID on
+    // *every* packet until it has assembled a full value and matched the model.
+    // So we must put the MAC on slots 0/1 densely at the START of each
+    // connection — but ONLY at the start: once the TX has matched it expects
+    // *telemetry* in the acks. A TX that keeps getting MAC instead of telemetry
+    // hiccups the link about every 10-15 s (a momentary RX-loss that flashes
+    // every channel to zero in the FC) and never shows the RX version or the
+    // per-radio "active time" counters. So: send the MAC for the first
+    // MAC_ACK_THRESHOLD acks of each connection (dense — a half on every ack,
+    // alternating, so both halves land within milliseconds even across radio
+    // swaps), then hand over to the telemetry rotation for the rest of the
+    // connection. Re-armed on every fresh connection: a >500 ms ack gap resets
+    // macAcksSent below, so each reconnection re-delivers the MAC, exactly like
+    // v1's reset-on-link-loss.
     //
-    // We can't see the TX's match state, so we broadcast the MAC densely (a half
-    // on *every* ack, alternating) until we have positive evidence the model is
-    // being *flown* — i.e. a stick has moved past a deadband from its value when
-    // the connection came up. On the identify screen the sticks sit still so the
-    // ID stays correct; on take-off the throttle/cyclic moves and we switch to
-    // telemetry within ~1 ack, exactly like v1 (which delivered the MAC only for
-    // the first 20 acks of each connection, then telemetry). A 60 s cap is a
-    // backstop. Notes:
-    //   • Dense (every-ack) alternation, not v1's count: swapRadios() fires
-    //     loadNextAck() three extra times per swap, so the old 20-ack count was
-    //     exhausted almost instantly on a three-transceiver board and the sparse
-    //     post-burst MAC (2 frames per ~37-item cycle) often failed to land both
-    //     halves on the radio the TX was hearing — it never assembled a full ID,
-    //     never matched, then misread the cycling telemetry as an ever-changing
-    //     MAC. Dense delivery lands both halves in milliseconds regardless of swaps.
-    //   • Re-armed on every fresh connection: a >500 ms ack gap (the same
-    //     threshold the output stage treats as failsafe) restarts the window,
-    //     matching v1's reset-on-link-loss so each reconnection re-delivers the MAC.
-    // beingFlown is owned by decodeChannelData() (per-channel first-sighting
-    // baseline + deadband). Broadcast the ID whenever the model isn't being
-    // flown — NO time cap: the Model IDs screen holds a connection up
-    // indefinitely while you read it, so any finite window can be outwaited
-    // (that was the 0.9.74 failure). beingFlown is what ends the broadcast, and
-    // it proved reliable in testing (no false trips). FHSS stays on the fixed
-    // channel while broadcasting — fine, because that only happens when NOT
-    // flying; the first stick move at take-off trips beingFlown and hands over
-    // to telemetry + FHSS within ~1 ack.
+    // HISTORY: 0.9.x briefly broadcast the MAC until a stick moved
+    // ("beingFlown"), to keep feeding the TX's "Model IDs" identify screen
+    // (which holds the TX permanently unmatched). That starved telemetry the
+    // whole time you were connected-but-not-flying — the cause of the 10-15 s
+    // zero-flash and the frozen version/counters. Steady-state telemetry is
+    // flight-critical and wins; the identify screen re-reads the MAC on the next
+    // (re)connect. macAcksSent is counted only on MAC acks actually written, so
+    // the threshold is robust to the extra loadNextAck() calls swapRadios makes.
     static uint32_t lastAckEntryMs = 0;
     const uint32_t  now            = millis();
     if (lastAckEntryMs == 0 || (uint32_t)(now - lastAckEntryMs) > 500) {
         macAcksSent = 0;          // fresh connection → reset diagnostic counter
     }
     lastAckEntryMs = now;
-    const bool inMacWindow = !beingFlown;
+    const bool inMacWindow = (macAcksSent < MAC_ACK_THRESHOLD);
     idBroadcasting = inMacWindow;
 
     // FHSS hop decision — suppressed during the MAC window so we never advance

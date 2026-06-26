@@ -328,7 +328,8 @@ inline void sbusTick() {
                                                             : lastChannelDataMs;
     uint32_t age       = millis() - linkRef;
     bool     frameLost = age > 100;
-    bool     failsafe  = age > 500;
+    bool     failsafe  = age > OUTPUT_FAILSAFE_MS;   // v1 FAILSAFE_TIMEOUT — hold last good values below this
+
 
     // Idle-HIGH protocol failsafe handling — detach the UART so the LED
     // pin can be driven by heartbeat() in Network.h. Only flips on the
@@ -351,12 +352,14 @@ inline void sbusTick() {
             digitalWrite(PIN_SBUS_TX, HIGH);   // park HIGH so LED starts off
             outputDetachedForFailsafe = true;
             Serial.println("[out] failsafe: UART released, LED owns the pin");
+            { char b[64]; snprintf(b, sizeof(b), "DIAG CRSF-DETACH age=%lums (output silent)", (unsigned long)age); events.add(b); }
             return;                            // no frame this tick
         }
         if (!wantDetach && outputDetachedForFailsafe) {
             configureOutputDriver(currentProtocol);
             outputDetachedForFailsafe = false;
             Serial.println("[out] link restored: UART re-attached");
+            events.add("DIAG CRSF-REATTACH (output resumed)");
         }
         if (outputDetachedForFailsafe) return; // skip TX while detached
     }
