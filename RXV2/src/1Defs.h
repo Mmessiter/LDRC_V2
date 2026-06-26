@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.148-flash-fixed";
+constexpr const char* FW_VERSION = "RXV2-0.9.149-wifi-advice";
 
 //*********************************************************************
 //  Auto-update manifest URLs

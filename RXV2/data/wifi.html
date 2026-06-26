@@ -32,6 +32,7 @@
     <div class=card>
         <h2>Set credentials</h2>
         <p>Saved to NVS and used on next boot. Edit either field and tap save; the current values are pre-filled.</p>
+        <p class=muted style="margin-top:-.2em">Tip: WiFi is steadiest with the <b>transmitter switched off</b>. The control radio and WiFi share the 2.4&nbsp;GHz band, so a live transmitter link can make WiFi drop in and out. Use the transmitter <em>or</em> the phone when you can &mdash; both together works, but expect WiFi to be less consistent.</p>
         <form method=POST action="/wifi">
             <p><label>SSID<br>
                 <input name=ssid type=text required id=ssidField value=""
@@ -202,6 +203,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 <h3>How to use it</h3>
 <p>Type your home WiFi SSID and password in the form, then tap <b>Save & reboot</b>. The receiver reboots and joins the new network. The page polls until the receiver returns.</p>
 <h3>Tips</h3>
+<p><b>Transmitter on?</b> WiFi shares the 2.4&nbsp;GHz band with the receiver's control radio, so a live transmitter link can make WiFi drop in and out. For the smoothest setup over WiFi, switch the transmitter off. Using both at once works, but expect WiFi to be less consistent &mdash; so when you can, use the transmitter <em>or</em> the phone, not both.</p>
 <p>Leave the password field blank to keep the existing saved one (handy when you want to change just the SSID).</p>
 <p>The receiver runs AP + STA at the same time — even when home WiFi is unavailable, the receiver is still reachable on its own <b>LDRC_RX</b> network at <code>http://192.168.4.1</code>. You're never locked out.</p>
 </template>
