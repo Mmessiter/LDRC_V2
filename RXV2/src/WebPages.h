@@ -965,19 +965,30 @@ inline void handleWifiSet() {
     prefs.putBool(NVS_KEY_AP_ONLY, apOnly);
     events.add(apOnly ? "AP-only mode enabled" : "WiFi credentials saved");
 
-    String b;
     if (apOnly) {
-        b = "<p><b>AP-only mode is on.</b> The receiver is rebooting and will <i>not</i> "
-            "try your home WiFi — it comes straight up as its own network <code>";
+        // The receiver is about to come back on its OWN network, not the one the
+        // phone is on now — so this page can't poll its way home. Turn off the
+        // auto-reload and tell the user plainly to switch their phone's WiFi.
+        String b = "<p><b>Saved.</b> The receiver is restarting as <b>its own WiFi "
+                   "network</b> &mdash; no home router involved.</p>"
+                   "<p style='font-size:1.05em'><b>Now, on your phone:</b></p>"
+                   "<ol style='line-height:1.7;padding-left:1.2em'>"
+                   "<li>Open your phone's <b>WiFi settings</b>.</li>"
+                   "<li>Join the network called <b>";
         b += g_effectiveName;
-        b += "</code>. Join that WiFi on your phone to reach it. Untick this and save "
-             "again to use home WiFi.</p>";
+        b += "</b>.</li>"
+             "<li>Then open <a href='http://192.168.4.1'><code>http://192.168.4.1</code></a>.</li>"
+             "</ol>"
+             "<p class=muted>This page can't refresh itself, because your phone is "
+             "still on your home WiFi until you switch it across.</p>";
+        server.send(200, "text/html",
+                    confirmPage("Switch your phone&rsquo;s WiFi", b.c_str(), /*autoReload=*/false));
     } else {
-        b = "<p>WiFi credentials saved. Receiver is rebooting and will attempt to join '";
+        String b = "<p>WiFi credentials saved. Receiver is rebooting and will attempt to join '";
         b += server.hasArg("ssid") ? server.arg("ssid") : getEffectiveSsid();
         b += "' on next boot.</p>";
+        server.send(200, "text/html", confirmPage("Saved & rebooting", b.c_str()));
     }
-    server.send(200, "text/html", confirmPage("Saved & rebooting", b.c_str()));
     delay(500);
     ESP.restart();
 }

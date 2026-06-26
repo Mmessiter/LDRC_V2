@@ -52,9 +52,13 @@
             </label></p>
             <p style="margin-top:.2em"><label style="font-size:.95em;color:#3a5165">
                 <input type=checkbox name=aponly id=aponlyField style="margin-right:.4em">
-                <b>AP mode only</b> — skip home WiFi (for the flying field)
+                <b>AP mode only</b> — receiver's own WiFi (for the flying field)
             </label></p>
-            <p class=muted style="margin-top:-.4em;font-size:.85em">When ticked, the receiver doesn't waste time trying to join your home network out at the field — it comes straight up as its own WiFi access point. Untick to use home WiFi again.</p>
+            <div class=muted style="margin-top:-.3em;font-size:.85em;line-height:1.5">
+                <p style="margin:.2em 0"><b>What is AP mode?</b> AP (&ldquo;access point&rdquo;) means the receiver makes <b>its own little WiFi network</b> that your phone joins directly &mdash; no home router, no internet, just your phone talking straight to the receiver.</p>
+                <p style="margin:.2em 0"><b>Tick this at the flying field.</b> Away from home, your house WiFi is out of range, so the receiver would otherwise waste every start-up trying to find it. Ticked, it skips that and is ready straight away on its own network.</p>
+                <p style="margin:.2em 0">After you save, your phone won't follow automatically &mdash; you'll need to open your phone's WiFi settings and join the receiver's network (the page will tell you the name). <b>Untick it at home</b> to go back to your normal WiFi.</p>
+            </div>
             <button class="btn btn-fw" type=submit><span class=ico>&#128190;</span>Save &amp; reboot</button>
         </form>
     </div>
