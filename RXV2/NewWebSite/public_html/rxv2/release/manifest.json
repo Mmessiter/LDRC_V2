@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.155-factory-card",
+      "url": "https://messiter.com/rxv2/release/v0.9.155/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.155/littlefs.bin",
+      "notes": "Readability fix: the 'Factory defaults' box on the WiFi page had a near-transparent background, so its text was hard to read over the background photo. It now uses the same pale card background as every other section (keeping its red border and warning styling so it still reads as a danger zone)."
+    },
+    {
       "name": "RXV2-0.9.154-wifi-1s",
       "url": "https://messiter.com/rxv2/release/v0.9.154/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.154/littlefs.bin",
@@ -58,12 +64,6 @@
       "name": "RXV2-0.9.136-failsafe-flash-fix",
       "url": "https://messiter.com/rxv2/release/v0.9.136/firmware.bin",
       "notes": "Fixes all channels briefly flashing to zero in the flight-controller (e.g. Rotorflight Configurator) every few seconds while the sticks are held still \u2014 a momentary false RXLOSS. The receiver was deciding 'link lost' from the last packet that carried channel data, but with the sticks still the transmitter sends only changed channels, so the gaps between changes (filled with parameter/no-change packets) made the link look dropped for an instant. Failsafe is now judged from the actual packet stream from the bound transmitter (which never stops while connected), so the channels stay rock-steady when you're not moving the sticks. Important for steady hovers."
-    },
-    {
-      "name": "RXV2-0.9.135-radio-timer-fix",
-      "url": "https://messiter.com/rxv2/release/v0.9.135/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.135/littlefs.bin",
-      "notes": "Fixes the per-transceiver 'active time' counters on the TX screen sitting frozen at 0 on a solid link. The active radio's dwell time is now accrued continuously every loop (not via a live-delta that didn't land on a no-swap link), so one counter always ticks once per second while connected \u2014 matching V1."
     }
   ]
 }
