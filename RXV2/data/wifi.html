@@ -50,6 +50,11 @@
                 <input type=checkbox onchange="document.getElementById('pwfield').type=this.checked?'text':'password'" style="margin-right:.4em">
                 Show password
             </label></p>
+            <p style="margin-top:.2em"><label style="font-size:.95em;color:#3a5165">
+                <input type=checkbox name=aponly id=aponlyField style="margin-right:.4em">
+                <b>AP mode only</b> — skip home WiFi (for the flying field)
+            </label></p>
+            <p class=muted style="margin-top:-.4em;font-size:.85em">When ticked, the receiver doesn't waste time trying to join your home network out at the field — it comes straight up as its own WiFi access point. Untick to use home WiFi again.</p>
             <button class="btn btn-fw" type=submit><span class=ico>&#128190;</span>Save &amp; reboot</button>
         </form>
     </div>
@@ -108,6 +113,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Pre-fill form
     document.getElementById('ssidField').value = n.ssid || '';
+    document.getElementById('aponlyField').checked = !!n.ap_only;
 
     // Rename card — pre-fill current name and wire live preview.
     const nf = document.getElementById('nameField');

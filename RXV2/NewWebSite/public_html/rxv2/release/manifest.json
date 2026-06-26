@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.150-ap-only",
+      "url": "https://messiter.com/rxv2/release/v0.9.150/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.150/littlefs.bin",
+      "notes": "Adds an 'AP mode only' tick-box to the WiFi page. When on, the receiver skips trying to join your home WiFi and comes straight up as its own access point \u2014 handy at the flying field, where the home network is miles away and the receiver would otherwise spend every boot fruitlessly retrying it. Your saved home SSID/password are kept; just untick it to use home WiFi again. The choice is saved in NVS and survives reboots/updates."
+    },
+    {
       "name": "RXV2-0.9.149-wifi-advice",
       "url": "https://messiter.com/rxv2/release/v0.9.149/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.149/littlefs.bin",
@@ -59,12 +65,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.132/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.132/littlefs.bin",
       "notes": "The firmware-update 'Installing\u2026' screen now shows the same green progress bar as the simulator reboot screen (fills over ~30 s, snaps to full the moment the receiver is back) instead of a seconds counter, and its redundant Return-to-menu button is gone \u2014 it returns to the home screen by itself."
-    },
-    {
-      "name": "RXV2-0.9.131-reboot-bar",
-      "url": "https://messiter.com/rxv2/release/v0.9.131/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.131/littlefs.bin",
-      "notes": "The 'Rebooting\u2026' screen when starting/stopping simulator mode now shows a progress bar (fills over a few seconds, snaps to full the moment the receiver is back) instead of a seconds counter, and the now-redundant Return-to-menu button is gone \u2014 it returns to the home screen by itself."
     }
   ]
 }

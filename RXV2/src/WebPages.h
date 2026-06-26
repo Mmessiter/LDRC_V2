@@ -959,11 +959,24 @@ inline void handleWifiSet() {
     if (server.hasArg("pass") && server.arg("pass").length() > 0) {
         prefs.putString(NVS_KEY_PASS, server.arg("pass"));
     }
-    events.add("WiFi credentials saved");
+    // "AP mode only" — a checkbox only submits when ticked, so its presence is
+    // the value. When on, next boot skips the home-WiFi STA and runs AP-only.
+    bool apOnly = server.hasArg("aponly");
+    prefs.putBool(NVS_KEY_AP_ONLY, apOnly);
+    events.add(apOnly ? "AP-only mode enabled" : "WiFi credentials saved");
 
-    String b = "<p>WiFi credentials saved. Receiver is rebooting and will attempt to join '";
-    b += server.hasArg("ssid") ? server.arg("ssid") : getEffectiveSsid();
-    b += "' on next boot.</p>";
+    String b;
+    if (apOnly) {
+        b = "<p><b>AP-only mode is on.</b> The receiver is rebooting and will <i>not</i> "
+            "try your home WiFi — it comes straight up as its own network <code>";
+        b += g_effectiveName;
+        b += "</code>. Join that WiFi on your phone to reach it. Untick this and save "
+             "again to use home WiFi.</p>";
+    } else {
+        b = "<p>WiFi credentials saved. Receiver is rebooting and will attempt to join '";
+        b += server.hasArg("ssid") ? server.arg("ssid") : getEffectiveSsid();
+        b += "' on next boot.</p>";
+    }
     server.send(200, "text/html", confirmPage("Saved & rebooting", b.c_str()));
     delay(500);
     ESP.restart();
@@ -1268,6 +1281,7 @@ inline void handleApiState() {
     j += "\"mode\":\""; j += netModeName(); j += "\"";
     j += ",\"ssid\":\""; j += getEffectiveSsid(); j += "\"";
     j += ",\"ssid_custom\":"; j += (wifiCredsAreCustom() ? "true" : "false");
+    j += ",\"ap_only\":"; j += ((prefs.isKey(NVS_KEY_AP_ONLY) && prefs.getBool(NVS_KEY_AP_ONLY, false)) ? "true" : "false");
     j += "}";
 
     // --- rf -----------------------------------------------------------

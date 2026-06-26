@@ -149,11 +149,18 @@ inline void startWifiStation() {
     mspBridgeStart();
 
     String ssid = getEffectiveSsid();
-    if (ssid.length() == 0) {
-        // No NVS creds — stay AP-only. User can reach 192.168.4.1 to
-        // set them up.
-        Serial.println("[wifi] no NVS SSID — AP-only");
-        events.add("No SSID — AP-only");
+    bool apOnly = prefs.isKey(NVS_KEY_AP_ONLY) && prefs.getBool(NVS_KEY_AP_ONLY, false);
+    if (apOnly || ssid.length() == 0) {
+        // Stay AP-only: either the user has chosen "AP mode only" (flying field —
+        // don't burn time chasing an out-of-range home network) or there are no
+        // saved creds. Everything (web/mDNS/OTA/bridge) is already up on the AP.
+        if (apOnly) {
+            Serial.println("[wifi] AP-only mode (field setting) — not trying home WiFi");
+            events.add("AP-only mode (field setting)");
+        } else {
+            Serial.println("[wifi] no NVS SSID — AP-only");
+            events.add("No SSID — AP-only");
+        }
         netMode = NET_AP;
         return;
     }

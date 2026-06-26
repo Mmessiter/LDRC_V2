@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.149-wifi-advice";
+constexpr const char* FW_VERSION = "RXV2-0.9.150-ap-only";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -237,6 +237,7 @@ constexpr const char* NVS_KEY_MODEL_NAME  = "nm";      // user-set model name (e
 constexpr const char* NVS_KEY_SIM         = "sim";     // 1 = drive flight simulator over USB (HID joystick)
 constexpr const char* NVS_KEY_SIM_MAP     = "simmap";  // 8-byte map: which RX channel (0..15) feeds each sim output
 constexpr const char* NVS_KEY_SIM_REV     = "simrev";  // 8-byte per-output reverse flags (0/1)
+constexpr const char* NVS_KEY_AP_ONLY     = "aponly";  // 1 = skip home-WiFi STA, run AP-only (flying field: no waiting on an out-of-range home network)
 
 constexpr uint8_t     QUICK_BOOT_THRESHOLD = 3;
 constexpr uint32_t    QUICK_BOOT_RESET_MS  = 5000;
