@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.154-wifi-1s",
+      "url": "https://messiter.com/rxv2/release/v0.9.154/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.154/littlefs.bin",
+      "notes": "Tunes the auto-WiFi from 0.9.153 and documents it. The boot listen-for-transmitter window is now 1 second (was 5): WiFi comes up almost instantly when there's no transmitter, which means the transmitter must be switched ON before the receiver to run radio-only \u2014 and switching the transmitter on first is normal RC practice anyway. Adds a clear 'WiFi and your transmitter' section to the WiFi page Help so users understand why WiFi may be off (a transmitter was on at switch-on) and how it returns by itself ~10s after the link is lost."
+    },
+    {
       "name": "RXV2-0.9.153-wifi-auto",
       "url": "https://messiter.com/rxv2/release/v0.9.153/firmware.bin",
       "notes": "WiFi is now managed automatically around the transmitter. (1) At power-up the receiver listens for the transmitter for 5 seconds; if it hears one, it switches WiFi OFF for the session and runs radio-only \u2014 the cleanest band and full 501 Hz. (2) If, in that radio-only mode, the transmitter link is then lost for 10 seconds (you've landed, or switched the TX off), WiFi comes back on by itself so you can reach the receiver from your phone \u2014 no power-cycle needed. Simulator sessions keep WiFi on throughout (so you can still use the web UI while driving the sim). Note: a real in-air dropout lasting 10 s would also re-enable WiFi mid-flight; the threshold is easy to raise if you'd prefer a longer wait."
@@ -58,12 +64,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.135/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.135/littlefs.bin",
       "notes": "Fixes the per-transceiver 'active time' counters on the TX screen sitting frozen at 0 on a solid link. The active radio's dwell time is now accrued continuously every loop (not via a live-delta that didn't land on a no-swap link), so one counter always ticks once per second while connected \u2014 matching V1."
-    },
-    {
-      "name": "RXV2-0.9.134-sim-wifi-top",
-      "url": "https://messiter.com/rxv2/release/v0.9.134/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.134/littlefs.bin",
-      "notes": "Refines 0.9.133: instead of a separate button lower down, simulator mode now repurposes the existing top 'Fly now' button as 'Turn off WiFi \u2014 less interference' (same WiFi-off-until-reboot action, kept at the top where the Fly button lives). One control, one place, in both flying and sim use."
     }
   ]
 }

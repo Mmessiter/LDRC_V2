@@ -212,10 +212,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 <p>Shows the receiver's current WiFi state and lets you set the home network SSID + password. Credentials are saved to NVS and persist across reboots and firmware updates.</p>
 <h3>How to use it</h3>
 <p>Type your home WiFi SSID and password in the form, then tap <b>Save & reboot</b>. The receiver reboots and joins the new network. The page polls until the receiver returns.</p>
+<h3>WiFi and your transmitter (automatic)</h3>
+<p>To keep the control link as strong as possible, the receiver manages WiFi for you, around the transmitter:</p>
+<ul>
+<li><b>Transmitter ON when you switch the receiver on</b> &rarr; it hears it within a second and runs <b>radio-only with WiFi off</b> &mdash; strongest link, full frame rate. <b>So always switch the transmitter on first.</b></li>
+<li><b>No transmitter found</b> &rarr; WiFi comes straight up so you can connect from your phone.</li>
+<li><b>After flying</b> &mdash; if the transmitter link is lost for about 10&nbsp;seconds (you've landed, or switched the transmitter off), <b>WiFi switches back on by itself</b>, so you can reach the receiver again without a power-cycle.</li>
+</ul>
+<p>So if WiFi ever seems to be off when you didn't expect it, it just means a transmitter was on at switch-on &mdash; turn the transmitter off for ~10&nbsp;seconds and WiFi will return. (Simulator sessions keep WiFi on the whole time.)</p>
 <h3>Tips</h3>
 <p><b>Transmitter on?</b> WiFi shares the 2.4&nbsp;GHz band with the receiver's control radio, so a live transmitter link can make WiFi drop in and out. For the smoothest setup over WiFi, switch the transmitter off. Using both at once works, but expect WiFi to be less consistent &mdash; so when you can, use the transmitter <em>or</em> the phone, not both.</p>
 <p>Leave the password field blank to keep the existing saved one (handy when you want to change just the SSID).</p>
-<p>The receiver runs AP + STA at the same time — even when home WiFi is unavailable, the receiver is still reachable on its own <b>LDRC_RX</b> network at <code>http://192.168.4.1</code>. You're never locked out.</p>
+<p>The receiver runs AP + STA at the same time — even when home WiFi is unavailable, the receiver is still reachable on its own network at <code>http://192.168.4.1</code>. You're never locked out.</p>
 </template>
 </body>
 </html>

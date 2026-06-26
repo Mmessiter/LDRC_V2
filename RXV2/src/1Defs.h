@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.153-wifi-auto";
+constexpr const char* FW_VERSION = "RXV2-0.9.154-wifi-1s";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -81,7 +81,7 @@ inline bool     otaStarted    = false;
 // the AP fallback after one extra failure.
 inline uint8_t  staAttempts   = 0;
 
-constexpr uint32_t RF_WINDOW_MS         = 5000;    // boot window: if a TX is heard within this, go RF-only (WiFi off) for a clean band
+constexpr uint32_t RF_WINDOW_MS         = 1000;    // boot window: if a TX is heard within this 1 s, go RF-only (WiFi off). Short so WiFi comes up fast when there's no TX (dev); means the TX must be ON BEFORE the receiver to suppress WiFi — which is standard RC practice (TX on first) anyway.
 // RF-only "fly mode" auto-recovery: if the TX link then stays lost this long,
 // bring WiFi back up by itself so the user can reach the receiver after landing
 // without a power-cycle. NB this only runs in real flight (not sim, where WiFi

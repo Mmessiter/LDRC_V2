@@ -275,13 +275,13 @@ inline void netStep() {
             // If a real packet has arrived, the TX is on — stay RF-only this session.
             if (rx.packets > 0) {
                 Serial.println("[net] TX heard during boot window — staying RF-only");
-                events.add("TX seen in 10s window — WiFi stays OFF");
+                events.add("TX heard at boot — WiFi stays OFF");
                 netMode = NET_NO_WIFI;
                 return;
             }
             if ((uint32_t)(millis() - netStateStart) >= RF_WINDOW_MS) {
                 Serial.println("[net] boot window timed out, trying WiFi");
-                events.add("No TX in 10s — trying WiFi");
+                events.add("No TX at boot — WiFi on");
                 startWifiStation();
             }
             break;
