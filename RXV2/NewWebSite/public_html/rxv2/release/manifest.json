@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.156-rf23-rates",
+      "url": "https://messiter.com/rxv2/release/v0.9.156/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.156/littlefs.bin",
+      "notes": "Fixes the Rates page for Rotorflight 2.3. RF 2.3 defaults to a new rates type (#6, 'ROTORFLIGHT') that didn't exist in 2.2; our page was still showing the old generic columns (Centre/Expo/Max\u2026) and the wrong scaling, so both the headings AND the numbers were wrong. The page is now rate-type aware: for the ROTORFLIGHT type it shows the correct columns \u2014 Rate, Shape, Expo, Max Vel \u2014 matching the official Configurator exactly (e.g. Roll 250 / 12 / 40, Yaw 400 / 12 / 50, Collective 12.5 / 12 / 0). Saving back is scaled correctly and now also preserves the new 2.3 cyclic-ring/polar settings instead of dropping them. Other rate types keep the previous columns."
+    },
+    {
       "name": "RXV2-0.9.155-factory-card",
       "url": "https://messiter.com/rxv2/release/v0.9.155/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.155/littlefs.bin",
@@ -59,11 +65,6 @@
       "name": "RXV2-0.9.137-mac-burst-telemetry",
       "url": "https://messiter.com/rxv2/release/v0.9.137/firmware.bin",
       "notes": "The real fix for channels flashing to zero every ~10-15s with the sticks still (0.9.136 only moved the symptom). Root cause: the receiver was broadcasting its board ID to the transmitter continuously whenever you weren't actively moving a stick, and never sending telemetry \u2014 so the transmitter, starved of telemetry, hiccuped the link about every 10-15s (a brief RX-loss that flashed every channel to zero) and also never showed the RX version or the per-transceiver active-time counters until you wiggled a stick. Now the board ID is sent only as a short dense burst at the start of each connection (and re-sent on every reconnect), exactly like V1, then telemetry flows continuously. Result: rock-steady channels when not moving, and the version + counters appear immediately without touching the sticks. Note: the transmitter's 'Model IDs' identify screen now re-reads the ID on reconnect rather than continuously."
-    },
-    {
-      "name": "RXV2-0.9.136-failsafe-flash-fix",
-      "url": "https://messiter.com/rxv2/release/v0.9.136/firmware.bin",
-      "notes": "Fixes all channels briefly flashing to zero in the flight-controller (e.g. Rotorflight Configurator) every few seconds while the sticks are held still \u2014 a momentary false RXLOSS. The receiver was deciding 'link lost' from the last packet that carried channel data, but with the sticks still the transmitter sends only changed channels, so the gaps between changes (filled with parameter/no-change packets) made the link look dropped for an instant. Failsafe is now judged from the actual packet stream from the bound transmitter (which never stops while connected), so the channels stay rock-steady when you're not moving the sticks. Important for steady hovers."
     }
   ]
 }
