@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.157-rates-curve",
+      "url": "https://messiter.com/rxv2/release/v0.9.157/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.157/littlefs.bin",
+      "notes": "Cosmetic follow-up to 0.9.156: the Rates preview curve now plots Roll/Pitch/Yaw on one shared deg/s scale (so Yaw at 400 visibly rises above Roll/Pitch at 250, like the official Configurator) while Collective keeps its own scale. Numbers were already correct; this just makes the curve picture match."
+    },
+    {
       "name": "RXV2-0.9.156-rf23-rates",
       "url": "https://messiter.com/rxv2/release/v0.9.156/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.156/littlefs.bin",
@@ -60,11 +66,6 @@
       "name": "RXV2-0.9.138-swap-storm-fix",
       "url": "https://messiter.com/rxv2/release/v0.9.138/firmware.bin",
       "notes": "The actual cause of the channels flashing to zero. When the active radio missed packets for a moment the receiver would try the other transceiver \u2014 correct \u2014 but it kept re-trying every 50ms in a tight storm (~20 swaps/second), and each swap briefly stops listening and reconfigures, which tore down the CRSF output stream long enough for the flight-controller to register a momentary RX-loss (the flash). It also flooded the event log so nothing else could be seen. Now: it tries each transceiver once per glitch, then \u2014 if no packet comes back (transmitter gone/out of range) \u2014 backs off to a slow once-a-second probe instead of storming, and re-arms instant failover the moment a real packet returns. Dead-link swaps no longer spam the log. Fast genuine failover between two good transceivers is unchanged."
-    },
-    {
-      "name": "RXV2-0.9.137-mac-burst-telemetry",
-      "url": "https://messiter.com/rxv2/release/v0.9.137/firmware.bin",
-      "notes": "The real fix for channels flashing to zero every ~10-15s with the sticks still (0.9.136 only moved the symptom). Root cause: the receiver was broadcasting its board ID to the transmitter continuously whenever you weren't actively moving a stick, and never sending telemetry \u2014 so the transmitter, starved of telemetry, hiccuped the link about every 10-15s (a brief RX-loss that flashed every channel to zero) and also never showed the RX version or the per-transceiver active-time counters until you wiggled a stick. Now the board ID is sent only as a short dense burst at the start of each connection (and re-sent on every reconnect), exactly like V1, then telemetry flows continuously. Result: rock-steady channels when not moving, and the version + counters appear immediately without touching the sticks. Note: the transmitter's 'Model IDs' identify screen now re-reads the ID on reconnect rather than continuously."
     }
   ]
 }

@@ -282,11 +282,14 @@ function drawCurves() {
     ctx.moveTo(0, H / 2); ctx.lineTo(W, H / 2);
     ctx.stroke();
 
-    // Plot each axis self-scaled to its own peak (top of chart = its max).
-    // 0.92 leaves a little headroom so peaks don't touch the very edge.
+    // Plot like the Configurator: Roll/Pitch/Yaw share ONE vertical °/s scale
+    // (so Yaw at 400 rises above Roll/Pitch at 250), while Collective — a
+    // different unit (degrees) and tiny range — keeps its own scale so it stays
+    // visible. 0.92 leaves a little headroom so peaks don't touch the edge.
+    const rpyMax = Math.max(1, ...curves.filter(c => c.ax.k !== 'Collective').map(c => c.max));
     for (const c0 of curves) {
         if (c0.max <= 0) continue;
-        const scaleMax = c0.max;
+        const scaleMax = (c0.ax.k === 'Collective') ? c0.max : rpyMax;
         ctx.strokeStyle = c0.ax.color;
         ctx.lineWidth = 2.5;
         ctx.beginPath();
