@@ -119,9 +119,29 @@
 </div>
 
 <script>
+// Show/hide the "Rotorflight config" button from the current state. Called on
+// load AND on a timer so the button appears by itself the moment the receiver
+// confirms the flight controller (and hides again if the FC goes away) — no
+// page reload needed.
+function updateRfButton(s) {
+    const rfb = document.getElementById('rfbtn');
+    if (!rfb) return;
+    const show = !!(s && !s.sim && s.fcinfo && s.fcinfo.rotorflight_capable);
+    rfb.style.display = show ? '' : 'none';
+    if (show) {
+        const fc = s.fcinfo;
+        LDRC.setText('fcver', (fc.rf_major > 0)
+            ? ('Rotorflight ' + fc.rf_major + '.' + fc.rf_minor)
+            : 'Flight controller connected');
+    }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     const s = await LDRC.fetchState();
     if (!s) { LDRC.setText('subtitle', 'connection lost — try refresh'); return; }
+
+    // Keep the Rotorflight button in step with live FC detection (see above).
+    setInterval(async () => { const s2 = await LDRC.fetchState(); if (s2) updateRfButton(s2); }, 3000);
 
     // Model name — show as the h1, prompt with warning + edit-on-tap.
     paintModelName(s);
@@ -193,16 +213,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const wb = document.getElementById('wifibtn');
     if (wb) wb.style.display = wifiVisible ? '' : 'none';
 
-    // Show Rotorflight config button when FC is reachable on CRSF (never in sim mode).
-    const rfb = document.getElementById('rfbtn');
-    if (rfb && !simOn && s.fcinfo && s.fcinfo.rotorflight_capable) {
-        rfb.style.display = '';
-        const fc = s.fcinfo;
-        const label = (fc.rf_major > 0)
-            ? ('Rotorflight ' + fc.rf_major + '.' + fc.rf_minor)
-            : 'Flight controller connected';
-        LDRC.setText('fcver', label);
-    }
+    // Show Rotorflight config button when the FC is reachable on CRSF. Detection
+    // can lag the page load by several seconds (the receiver probes the FC ~1/s),
+    // so this is also re-checked on a timer below — otherwise the button only
+    // appeared if you happened to open the page after the FC was already found,
+    // which is the "had to return to the front screen" intermittency.
+    updateRfButton(s);
 
     // Subtitle reflects current state.
     let subtitle = '';

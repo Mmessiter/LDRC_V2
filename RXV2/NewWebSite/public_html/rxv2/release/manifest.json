@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.158-rf-btn-live",
+      "url": "https://messiter.com/rxv2/release/v0.9.158/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.158/littlefs.bin",
+      "notes": "The home-screen \"Rotorflight config\" button now appears (and disappears) on its own as the flight-controller is detected, instead of only being decided once when the page opened. Detecting an FC over CRSF can take a few seconds, so previously the button was intermittently missing and only showed up if you re-opened the front screen after it had been found. Now the page re-checks every few seconds. (Note: this only reveals the button once the receiver actually hears the FC \u2014 if it never appears, the receiver isn't getting any telemetry back from the FC, which is a wiring/return-path issue, not this.)"
+    },
+    {
       "name": "RXV2-0.9.157-rates-curve",
       "url": "https://messiter.com/rxv2/release/v0.9.157/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.157/littlefs.bin",
@@ -61,11 +67,6 @@
       "name": "RXV2-0.9.139-hold-last-good",
       "url": "https://messiter.com/rxv2/release/v0.9.139/firmware.bin",
       "notes": "Channels flashing to zero, fixed the way V1 does it: hold the last good value. Two V1 behaviours the receiver was missing are now restored. (1) Crazy-value rejection: the transmitter periodically sends non-channel frames (bind/ID/parameter data); if one was misread as channel data it drove every channel to zero for an instant. Like V1's CheckForCrazyValues, any decoded frame with a channel outside the legal 500-2500us range is now rejected and the last good values are held. (2) The output no longer goes briefly silent on a momentary gap: the failsafe timeout is raised from 500ms to V1's 1500ms, and below it the receiver keeps streaming the held channel values (exactly as V1 keeps sending its SBUS frames) instead of detaching the CRSF line. True signal loss (>1.5s) still drops the link so the flight-controller can fail-safe."
-    },
-    {
-      "name": "RXV2-0.9.138-swap-storm-fix",
-      "url": "https://messiter.com/rxv2/release/v0.9.138/firmware.bin",
-      "notes": "The actual cause of the channels flashing to zero. When the active radio missed packets for a moment the receiver would try the other transceiver \u2014 correct \u2014 but it kept re-trying every 50ms in a tight storm (~20 swaps/second), and each swap briefly stops listening and reconfigures, which tore down the CRSF output stream long enough for the flight-controller to register a momentary RX-loss (the flash). It also flooded the event log so nothing else could be seen. Now: it tries each transceiver once per glitch, then \u2014 if no packet comes back (transmitter gone/out of range) \u2014 backs off to a slow once-a-second probe instead of storming, and re-arms instant failover the moment a real packet returns. Dead-link swaps no longer spam the log. Fast genuine failover between two good transceivers is unchanged."
     }
   ]
 }
