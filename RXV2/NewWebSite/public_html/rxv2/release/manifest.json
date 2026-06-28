@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.162-bind-live",
+      "url": "https://messiter.com/rxv2/release/v0.9.162/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.162/littlefs.bin",
+      "notes": "The front screen now updates the bind status by itself. Before, after a successful bind the LED went steady (correct) but the home page still said 'Bind mode' until you left and re-opened it. The page now re-checks every few seconds, so it flips to 'Bound' (and clears the amber bind banner) within a couple of seconds of binding \u2014 no navigation needed. Same live-refresh that the Rotorflight button uses."
+    },
+    {
       "name": "RXV2-0.9.161-deadband-x10",
       "url": "https://messiter.com/rxv2/release/v0.9.161/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.161/littlefs.bin",
@@ -64,12 +70,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.150/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.150/littlefs.bin",
       "notes": "Adds an 'AP mode only' tick-box to the WiFi page. When on, the receiver skips trying to join your home WiFi and comes straight up as its own access point \u2014 handy at the flying field, where the home network is miles away and the receiver would otherwise spend every boot fruitlessly retrying it. Your saved home SSID/password are kept; just untick it to use home WiFi again. The choice is saved in NVS and survives reboots/updates."
-    },
-    {
-      "name": "RXV2-0.9.149-wifi-advice",
-      "url": "https://messiter.com/rxv2/release/v0.9.149/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.149/littlefs.bin",
-      "notes": "Adds a setup tip on the WiFi page (and its help): WiFi is steadiest with the transmitter switched off, because the control radio and WiFi share the 2.4GHz band and a live transmitter link can make WiFi drop in and out. Advises using the transmitter or the phone when you can \u2014 both together works fine, but expect WiFi to be less consistent. Text only; no behaviour change. (Includes the data/web files, so the page updates.)"
     }
   ]
 }

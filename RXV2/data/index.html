@@ -136,12 +136,35 @@ function updateRfButton(s) {
     }
 }
 
+// Subtitle line + the amber "bind mode" banner, from current state. Called on
+// load AND on a timer so the front screen reflects a completed bind (or a lost
+// link) by itself — no need to navigate away and back.
+function updateBindState(s) {
+    if (!s) return;
+    let subtitle = '';
+    if (s.net && s.net.mode === 'AP mode') {
+        subtitle = "AP mode — join '" + ((s.info && s.info.ap_ssid) || 'LDRC_RX') + "' &amp; set your WiFi";
+    } else if (s.bind && s.bind.bound) {
+        const alive = s.rf && s.rf.last_pkt_ms >= 0 && s.rf.last_pkt_ms < 500;
+        subtitle = alive ? 'Bound &amp; receiving — ready to fly' : 'Bound, waiting for transmitter';
+    } else {
+        subtitle = 'Bind mode — listening for transmitter';
+    }
+    LDRC.setHtml('subtitle', subtitle);
+    const bb = document.getElementById('bindBanner');
+    if (bb) bb.style.display = (s.bind && s.bind.bound) ? 'none' : '';
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     const s = await LDRC.fetchState();
     if (!s) { LDRC.setText('subtitle', 'connection lost — try refresh'); return; }
 
-    // Keep the Rotorflight button in step with live FC detection (see above).
-    setInterval(async () => { const s2 = await LDRC.fetchState(); if (s2) updateRfButton(s2); }, 3000);
+    // Keep the Rotorflight button AND the bind status in step with live state
+    // (FC detection, and bind completing) without needing a page reload.
+    setInterval(async () => {
+        const s2 = await LDRC.fetchState();
+        if (s2) { updateRfButton(s2); updateBindState(s2); }
+    }, 3000);
 
     // Model name — show as the h1, prompt with warning + edit-on-tap.
     paintModelName(s);
@@ -220,23 +243,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // which is the "had to return to the front screen" intermittency.
     updateRfButton(s);
 
-    // Subtitle reflects current state.
-    let subtitle = '';
-    if (s.net.mode === 'AP mode') {
-        subtitle = "AP mode — join '" + (s.info.ap_ssid || 'LDRC_RX') + "' &amp; set your WiFi";
-    } else if (s.bind.bound) {
-        const alive = s.rf.last_pkt_ms >= 0 && s.rf.last_pkt_ms < 500;
-        subtitle = alive ? 'Bound &amp; receiving — ready to fly' : 'Bound, waiting for transmitter';
-    } else {
-        subtitle = 'Bind mode — listening for transmitter';
-    }
-    LDRC.setHtml('subtitle', subtitle);
-
-    // Big amber bind-mode banner at the top of the menu — only visible
-    // while unbound. Pairs with the 2 Hz LED blink so the user has an
-    // unmissable cue both on-screen and on the hardware itself.
-    const bb = document.getElementById('bindBanner');
-    if (bb) bb.style.display = s.bind.bound ? 'none' : '';
+    // Subtitle + amber bind banner — re-checked live on the timer too, so the
+    // front screen flips from "Bind mode" to "Bound" by itself the instant a
+    // bind completes, without needing to leave and re-open the page.
+    updateBindState(s);
 
     // Transceiver-presence banner at the top — shows which radio slots
     // came up at boot. A 3-slot PCB with one dead chip is immediately
