@@ -242,17 +242,19 @@ inline void mspFcPoll() {
 //  Convenience: is this a Rotorflight 2.2+ FC?
 //*********************************************************************
 
-// Map MSP API version → Rotorflight major.minor (per v1's Nexus.h mapping).
-// API 12.8 == Rotorflight 1.x ; API 12.9 == Rotorflight 2.3.
-// (2.2 maps to API 12.9 too in some builds — refine when we see one.)
+// Map MSP API version → Rotorflight major.minor. Rotorflight 2.x rides on the
+// Betaflight 4.x MSP API 12.x: API 12.6 = RF 2.0, 12.7 = 2.1, 12.8 = 2.2,
+// 12.9 = 2.3  (RF minor = apiMinor - 6, major = 2). Confirmed against live FCs:
+// API 12.8 / fw 4.5.1 = RF 2.2, API 12.9 / fw 4.6.0 = RF 2.3. (This previously
+// mis-mapped 12.8 to "1.x", which hid every Rotorflight option on a 2.2 FC.)
+// Gate at API >= 12.8 (RF 2.2), matching V1's api100 >= 1208 — that's the
+// minimum our config pages are built for. 12.8 -> RF 2.2, 12.9 -> RF 2.3, etc.
 inline uint8_t rotorflightMajor() {
-    if (fcInfo.apiMajor == 12 && fcInfo.apiMinor == 8) return 1;
-    if (fcInfo.apiMajor == 12 && fcInfo.apiMinor >= 9) return 2;
+    if (fcInfo.apiMajor == 12 && fcInfo.apiMinor >= 8) return 2;
     return 0;
 }
 inline uint8_t rotorflightMinor() {
-    // Best-guess: API 12.9 == RF 2.3 for now. Refine when we get RF 2.2 traffic.
-    if (fcInfo.apiMajor == 12 && fcInfo.apiMinor == 9) return 3;
+    if (fcInfo.apiMajor == 12 && fcInfo.apiMinor >= 8) return (uint8_t)(fcInfo.apiMinor - 6);
     return 0;
 }
 

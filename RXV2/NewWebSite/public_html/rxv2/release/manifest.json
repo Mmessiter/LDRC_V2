@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.159-rf22-detect",
+      "url": "https://messiter.com/rxv2/release/v0.9.159/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.159/littlefs.bin",
+      "notes": "Fixes Rotorflight 2.2 detection. The receiver was mis-mapping the FC API version, so a 2.2 flight-controller (API 12.8) was tagged as \"1.x\" and ALL Rotorflight options disappeared. The mapping is corrected (API 12.8 = RF 2.2, 12.9 = RF 2.3, etc.), so 2.2 is recognised and its config pages appear and read the right version. Following V1: on 2.2 you get everything EXCEPT the two Governor pages (governor needs Rotorflight 2.3 / API 12.9), which are now hidden on 2.2 rather than opening to a disabled page."
+    },
+    {
       "name": "RXV2-0.9.158-rf-btn-live",
       "url": "https://messiter.com/rxv2/release/v0.9.158/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.158/littlefs.bin",
@@ -62,11 +68,6 @@
       "name": "RXV2-0.9.140-no-fc-probe-flying",
       "url": "https://messiter.com/rxv2/release/v0.9.140/firmware.bin",
       "notes": "Found the real cause of the channels flashing to zero in the Rotorflight Configurator. The actual RC output was never glitching (steady 250Hz, link solid) \u2014 it was only the Configurator's *display*. The receiver was polling the flight-controller over MSP every few seconds to read its firmware version; that made the receiver a second MSP 'master' on the FC, colliding with the Configurator's own MSP polling of the same FC, so the Configurator periodically read an empty frame and showed all channels at zero. The receiver now never probes the FC while a transmitter link is live (it already behaved this way on shipping firmware; a dev-only setting was bypassing it). FC-version detection still happens when not flying, which is when the web page needs it. Note: the model itself was always controlled correctly throughout \u2014 this was a bench-display artifact, not a flight risk."
-    },
-    {
-      "name": "RXV2-0.9.139-hold-last-good",
-      "url": "https://messiter.com/rxv2/release/v0.9.139/firmware.bin",
-      "notes": "Channels flashing to zero, fixed the way V1 does it: hold the last good value. Two V1 behaviours the receiver was missing are now restored. (1) Crazy-value rejection: the transmitter periodically sends non-channel frames (bind/ID/parameter data); if one was misread as channel data it drove every channel to zero for an instant. Like V1's CheckForCrazyValues, any decoded frame with a channel outside the legal 500-2500us range is now rejected and the last good values are held. (2) The output no longer goes briefly silent on a momentary gap: the failsafe timeout is raised from 500ms to V1's 1500ms, and below it the receiver keeps streaming the held channel values (exactly as V1 keeps sending its SBUS frames) instead of detaching the CRSF line. True signal loss (>1.5s) still drops the link so the flight-controller can fail-safe."
     }
   ]
 }

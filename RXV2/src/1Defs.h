@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.158-rf-btn-live";
+constexpr const char* FW_VERSION = "RXV2-0.9.159-rf22-detect";
 
 //*********************************************************************
 //  Auto-update manifest URLs
