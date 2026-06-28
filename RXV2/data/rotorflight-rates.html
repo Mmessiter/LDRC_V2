@@ -166,7 +166,18 @@ function modelForType(t) {
             ],
         };
     }
-    // Legacy / Actual-style (the original behaviour, for other rate types)
+    if (t === 4) {   // ACTUAL — matches the official Configurator (Center Sensitivity / Max Rate / Expo / Max Vel)
+        return {
+            curve: 'actual', peak: 1, expo: 2, centre: 0,
+            cols: [
+                { h:'Centre',   slot:0, sc:10, scC:0.25 },   // Center Sensitivity
+                { h:'Max Rate', slot:2, sc:10, scC:0.25 },   // Max Rate (= Max Vel)
+                { h:'Expo',     slot:1, sc:1,  scC:1     },
+                { h:'Max Vel',  slot:2, sc:10, scC:0.25, ro:true },
+            ],
+        };
+    }
+    // Legacy generic (Betaflight/Raceflight/KISS/Quick — kept until each gets its own model)
     return {
         curve: 'actual', peak: 2, expo: 1, centre: 0,
         cols: [

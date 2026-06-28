@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.159-rf22-detect";
+constexpr const char* FW_VERSION = "RXV2-0.9.160-actual-cols";
 
 //*********************************************************************
 //  Auto-update manifest URLs
