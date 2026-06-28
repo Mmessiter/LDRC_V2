@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.161-deadband-x10",
+      "url": "https://messiter.com/rxv2/release/v0.9.161/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.161/littlefs.bin",
+      "notes": "Fixes a factor-of-10 on the Rates page 'Dynamic deadband filter' (yaw dynamics). It is stored in deci-Hz, so a value of 60 means 6.0 Hz \u2014 the page was showing the raw 60 instead of 6.0. Now displayed and saved in Hz to match the Configurator. The other yaw-dynamics fields were already correct."
+    },
+    {
       "name": "RXV2-0.9.160-actual-cols",
       "url": "https://messiter.com/rxv2/release/v0.9.160/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.160/littlefs.bin",
@@ -64,11 +70,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.149/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.149/littlefs.bin",
       "notes": "Adds a setup tip on the WiFi page (and its help): WiFi is steadiest with the transmitter switched off, because the control radio and WiFi share the 2.4GHz band and a live transmitter link can make WiFi drop in and out. Advises using the transmitter or the phone when you can \u2014 both together works fine, but expect WiFi to be less consistent. Text only; no behaviour change. (Includes the data/web files, so the page updates.)"
-    },
-    {
-      "name": "RXV2-0.9.148-flash-fixed",
-      "url": "https://messiter.com/rxv2/release/v0.9.148/firmware.bin",
-      "notes": "FIXES the channels flashing to zero on the Configurator. Root cause, pinned down by on-board logging: whenever WiFi tried to reconnect \u2014 and WiFi drops a lot while flying because the radio desenses it \u2014 the reconnect ran inline and FROZE the main loop for ~208ms each attempt, long enough to pause RC output and starve the radio, so the flight-controller saw a brief RX-loss and the channels flashed to zero, then recovered. WiFi reconnection is now fully non-blocking: the loop never stalls and RC output stays continuous no matter how much WiFi flaps. Verified over 20+ minutes connected with WiFi flapping throughout \u2014 zero output stalls, zero spurious drops. (Also rolls up the supporting robustness work from 0.9.136-0.9.140: failsafe keyed off the real packet stream, a short board-ID burst then continuous telemetry like V1, gentler dual-radio failover, out-of-range frames rejected so the last good values are held, and no FC version-polling while a link is live.)"
     }
   ]
 }

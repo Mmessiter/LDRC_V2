@@ -414,7 +414,7 @@ async function load() {
             }
             document.getElementById('a_ydcg').value = bytes[33];
             document.getElementById('a_yddg').value = bytes[34];
-            document.getElementById('a_yddf').value = bytes[35];
+            document.getElementById('a_yddf').value = +(bytes[35] / 10).toFixed(1);   // stored deci-Hz → Hz (Configurator shows 6.0 for 60)
         }
         LDRC.clearStale();
         setStatus('good', '✓ Loaded from flight controller (profile ' + (currentProfile + 1) + ')');
@@ -449,7 +449,7 @@ function buildPayload() {
         }
         bytes[33] = parseInt(document.getElementById('a_ydcg').value || '0');
         bytes[34] = parseInt(document.getElementById('a_yddg').value || '0');
-        bytes[35] = parseInt(document.getElementById('a_yddf').value || '0');
+        bytes[35] = Math.round(parseFloat(document.getElementById('a_yddf').value || '0') * 10);   // Hz → stored deci-Hz
     }
     return bytes;
 }
