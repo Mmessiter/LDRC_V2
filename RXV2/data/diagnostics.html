@@ -68,7 +68,7 @@
     <div class=card>
         <h2>Failsafe positions (signal loss)</h2>
         <p class=muted id=fsStatus>&hellip;</p>
-        <p class=muted style="font-size:.85em;line-height:1.5">Used when the transmitter link is <b>lost in flight</b>: the receiver drives every channel to the positions you save here and keeps sending them, so set the model where you want it to sit on signal loss (for a heli, usually <b>motor off / disarmed</b>), then tap <b>Save</b>. <b>Clear</b> forgets them &mdash; then the FC's own failsafe applies instead. <i>(A no-transmitter power-up is always disarmed-safe regardless of this.)</i></p>
+        <p class=muted style="font-size:.85em;line-height:1.5">Used when the transmitter link is <b>lost in flight</b>: the receiver drives every channel to the positions you save here. Set the model where you want it on signal loss (motor off / disarmed), then tap <b>Save</b>. <b>Note:</b> on <b>CRSF</b> the flight-controller (e.g. Rotorflight) runs its <i>own</i> failsafe and overrules this &mdash; set that in its Failsafe tab. This applies on <b>SBUS / FBUS / IBUS / PPM</b> models. <i>(A no-transmitter power-up is always disarmed-safe regardless.)</i></p>
         <button class="btn btn-fly" id=fsSave style="background:#6cab5e"><span class=ico>&#128190;</span>Save current positions as failsafe</button>
         <button class="btn btn-fw" id=fsClear style="background:#b06a6a"><span class=ico>&#10006;&#65039;</span>Clear failsafe</button>
     </div>

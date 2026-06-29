@@ -333,20 +333,25 @@ inline void sbusTick() {
     // In-flight signal loss → output the saved failsafe posture (the user's
     // choice; v1 behaviour). Gated on everConnected so a no-transmitter BOOT
     // keeps the guaranteed disarmed-safe default and never these values (which
-    // may have the arm switch off). We drive the channels to the saved set and
-    // keep streaming them as VALID RC (frameLost/failsafe cleared) so the FC
-    // holds the user's failsafe rather than running its own / seeing a dropout.
-    // Without a saved failsafe we fall through to the normal behaviour below.
+    // may have the arm switch off).
+    //
+    // BUT NOT on CRSF: a Rotorflight FC OVERRULES streamed channels once it
+    // detects link loss — over CRSF the FC's own failsafe is the authority, and
+    // streaming preset positions only delays it seeing the dropout. So on CRSF we
+    // skip this and fall through to the detach below (FC takes over — the better
+    // authority on that FC). On the other protocols (SBUS/FBUS/IBUS/PPM), which
+    // may drive systems that rely on the receiver's failsafe, we DO drive the
+    // outputs to the saved positions and present them as valid RC.
     static bool inFailsafePosture = false;
     bool everConnected = (lastChannelDataMs != 0);
-    if (failsafe && everConnected && failsafeSet) {
+    if (failsafe && everConnected && failsafeSet && !isIdleHighProto(currentProtocol)) {
         for (uint8_t i = 0; i < 16; ++i) channelMicros[i] = failsafeMicros[i];
-        if (!inFailsafePosture) { inFailsafePosture = true; events.add("Signal lost — failsafe posture applied"); }
+        if (!inFailsafePosture) { inFailsafePosture = true; events.add("Signal lost — RX failsafe positions applied"); }
         frameLost = false;
         failsafe  = false;
     } else if (inFailsafePosture) {
         inFailsafePosture = false;
-        events.add("Link restored — left failsafe posture");
+        events.add("Link restored — left RX failsafe");
     }
 
     // Idle-HIGH protocol failsafe handling — detach the UART so the LED
