@@ -330,6 +330,24 @@ inline void sbusTick() {
     bool     frameLost = age > 100;
     bool     failsafe  = age > OUTPUT_FAILSAFE_MS;   // v1 FAILSAFE_TIMEOUT — hold last good values below this
 
+    // In-flight signal loss → output the saved failsafe posture (the user's
+    // choice; v1 behaviour). Gated on everConnected so a no-transmitter BOOT
+    // keeps the guaranteed disarmed-safe default and never these values (which
+    // may have the arm switch off). We drive the channels to the saved set and
+    // keep streaming them as VALID RC (frameLost/failsafe cleared) so the FC
+    // holds the user's failsafe rather than running its own / seeing a dropout.
+    // Without a saved failsafe we fall through to the normal behaviour below.
+    static bool inFailsafePosture = false;
+    bool everConnected = (lastChannelDataMs != 0);
+    if (failsafe && everConnected && failsafeSet) {
+        for (uint8_t i = 0; i < 16; ++i) channelMicros[i] = failsafeMicros[i];
+        if (!inFailsafePosture) { inFailsafePosture = true; events.add("Signal lost — failsafe posture applied"); }
+        frameLost = false;
+        failsafe  = false;
+    } else if (inFailsafePosture) {
+        inFailsafePosture = false;
+        events.add("Link restored — left failsafe posture");
+    }
 
     // Idle-HIGH protocol failsafe handling — detach the UART so the LED
     // pin can be driven by heartbeat() in Network.h. Only flips on the
@@ -344,8 +362,7 @@ inline void sbusTick() {
     // guard makes "no link" a state we only enter after having had a
     // link, which is what the user actually wants the LED to warn about.
     if (isIdleHighProto(currentProtocol)) {
-        bool everConnected = (lastChannelDataMs != 0);
-        bool wantDetach    = everConnected && failsafe;
+        bool wantDetach    = everConnected && failsafe;   // false while a failsafe posture is being streamed
         if (wantDetach && !outputDetachedForFailsafe) {
             Serial1.end();
             pinMode(PIN_SBUS_TX, OUTPUT);

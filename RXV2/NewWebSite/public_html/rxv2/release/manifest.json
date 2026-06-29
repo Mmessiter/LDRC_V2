@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.166-fs-apply",
+      "url": "https://messiter.com/rxv2/release/v0.9.166/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.166/littlefs.bin",
+      "notes": "Completes the failsafe: the saved positions are now applied on IN-FLIGHT signal loss. If the transmitter link is lost after having been connected, the receiver drives every channel to your saved failsafe set and keeps streaming them as valid RC, so the flight-controller holds your chosen failsafe (set the model to a safe posture - motor off for a heli - before saving). If no failsafe is saved, behaviour is unchanged (the FC runs its own failsafe). A no-transmitter power-up still always uses the guaranteed disarmed-safe default, never these values."
+    },
+    {
       "name": "RXV2-0.9.165-headspeed",
       "url": "https://messiter.com/rxv2/release/v0.9.165/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.165/littlefs.bin",
@@ -64,12 +70,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.155/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.155/littlefs.bin",
       "notes": "Readability fix: the 'Factory defaults' box on the WiFi page had a near-transparent background, so its text was hard to read over the background photo. It now uses the same pale card background as every other section (keeping its red border and warning styling so it still reads as a danger zone)."
-    },
-    {
-      "name": "RXV2-0.9.154-wifi-1s",
-      "url": "https://messiter.com/rxv2/release/v0.9.154/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.154/littlefs.bin",
-      "notes": "Tunes the auto-WiFi from 0.9.153 and documents it. The boot listen-for-transmitter window is now 1 second (was 5): WiFi comes up almost instantly when there's no transmitter, which means the transmitter must be switched ON before the receiver to run radio-only \u2014 and switching the transmitter on first is normal RC practice anyway. Adds a clear 'WiFi and your transmitter' section to the WiFi page Help so users understand why WiFi may be off (a transmitter was on at switch-on) and how it returns by itself ~10s after the link is lost."
     }
   ]
 }

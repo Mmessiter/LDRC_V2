@@ -68,7 +68,7 @@
     <div class=card>
         <h2>Failsafe positions (signal loss)</h2>
         <p class=muted id=fsStatus>&hellip;</p>
-        <p class=muted style="font-size:.85em;line-height:1.5"><b>Boot is always disarmed-safe</b> (sticks centred, AUX low) and can't be overridden &mdash; so a no-transmitter power-up is always safe. Save here stores the <b>current</b> positions as your failsafe set. <b>Clear</b> forgets them.</p>
+        <p class=muted style="font-size:.85em;line-height:1.5">Used when the transmitter link is <b>lost in flight</b>: the receiver drives every channel to the positions you save here and keeps sending them, so set the model where you want it to sit on signal loss (for a heli, usually <b>motor off / disarmed</b>), then tap <b>Save</b>. <b>Clear</b> forgets them &mdash; then the FC's own failsafe applies instead. <i>(A no-transmitter power-up is always disarmed-safe regardless of this.)</i></p>
         <button class="btn btn-fly" id=fsSave style="background:#6cab5e"><span class=ico>&#128190;</span>Save current positions as failsafe</button>
         <button class="btn btn-fw" id=fsClear style="background:#b06a6a"><span class=ico>&#10006;&#65039;</span>Clear failsafe</button>
     </div>
@@ -660,7 +660,7 @@ document.getElementById('gearSave').addEventListener('click', async () => {
     } catch (e) { status.innerHTML = '<span class=statusBad>Gear save failed</span>'; }
 });
 document.getElementById('fsSave').addEventListener('click', async () => {
-    if (!(await LDRC.confirm('Save the CURRENT channel positions as the no-transmitter failsafe? Make sure the model is in a safe/disarmed posture now.',
+    if (!(await LDRC.confirm('Save the CURRENT channel positions as the in-flight signal-loss failsafe? Set the model to a safe posture (e.g. motor off) first.',
         { title: 'Save failsafe', icon: '💾', yes: 'Save failsafe' }))) return;
     try { const r = await (await fetch('/api/failsafe/save', { method: 'POST' })).json(); setFsStatus(!!r.failsafe_set); } catch (e) {}
 });

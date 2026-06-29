@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.165-headspeed";
+constexpr const char* FW_VERSION = "RXV2-0.9.166-fs-apply";
 
 //*********************************************************************
 //  Auto-update manifest URLs
