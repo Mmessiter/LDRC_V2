@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.168-gear-msg";
+constexpr const char* FW_VERSION = "RXV2-0.9.169-nocache-js";
 
 //*********************************************************************
 //  Auto-update manifest URLs

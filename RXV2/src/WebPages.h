@@ -88,7 +88,10 @@ inline bool serveLittleFsFile(const char* path, const char* mime) {
 //*********************************************************************
 
 inline void handleStyleCss() {
-    server.sendHeader("Cache-Control", "public, max-age=86400");
+    // Revalidate every load (like the HTML pages): style.css changes with UI
+    // releases, and a 1-day cache used to keep showing the old stylesheet for a
+    // day after an OTA. The file is small, so re-fetching on navigation is cheap.
+    server.sendHeader("Cache-Control", "no-store, no-cache, must-revalidate");
     if (serveLittleFsFile("/style.css", "text/css")) return;
     server.send_P(200, "text/css", PAGE_CSS_FALLBACK);
 }
@@ -98,7 +101,11 @@ inline void handleStyleCss() {
 //*********************************************************************
 
 inline void handleAppJs() {
-    server.sendHeader("Cache-Control", "public, max-age=86400");
+    // Revalidate every load. app.js is the shared helper bundle (LDRC.*) that the
+    // pages depend on; a stale day-long cache here meant a freshly-OTA'd page
+    // would call helpers (e.g. LDRC.alert) that the cached app.js didn't have yet
+    // — the new UI silently half-worked. Small file; re-fetch on navigation is cheap.
+    server.sendHeader("Cache-Control", "no-store, no-cache, must-revalidate");
     if (serveLittleFsFile("/app.js", "application/javascript")) return;
     server.send(503, "text/plain", "/app.js not in LittleFS — uploadfs the data/ folder");
 }
