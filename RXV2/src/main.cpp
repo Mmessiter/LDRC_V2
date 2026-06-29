@@ -114,11 +114,16 @@ void setup() {
     // If the user has saved a failsafe posture, use it as the pre-link default
     // (overrides the generic safe default above) — so a no-TX boot sits exactly
     // where they set it (e.g. AUX1 in the disarmed position for their heli).
+    // Boot ALWAYS comes up on the guaranteed-disarmed generic default above
+    // (ch1-5=1500, AUX low) — NEVER the captured failsafe values, which may have
+    // the arm/safety switch in the OFF (armed) position and would make the FC
+    // unhappy / unsafe at power-up. The captured failsafe is for in-flight signal
+    // loss only (loaded here so it's available if/when we wire that path).
     loadFailsafeFromNvs();
-    if (failsafeSet) {
-        for (uint8_t i = 0; i < 16; ++i) channelMicros[i] = failsafeMicros[i];
-        events.add("Failsafe defaults applied at boot");
-    }
+
+    // Head-speed gear ratio (motor:head). 1.0 = direct drive.
+    gearRatio = prefs.getFloat(NVS_KEY_GEAR_RATIO, 1.0f);
+    if (gearRatio < 0.1f || gearRatio > 100.0f) gearRatio = 1.0f;
 
     //*****************************************************************
     // NVS state report — surfaces silent data loss the moment it

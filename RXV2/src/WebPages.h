@@ -1031,6 +1031,24 @@ inline void handleFailsafeClear() {
 }
 
 //*********************************************************************
+//  POST /api/gear?ratio=<float>  — set the head-speed gear ratio
+//*********************************************************************
+inline void handleGearSet() {
+    if (server.hasArg("ratio")) {
+        float r = server.arg("ratio").toFloat();
+        if (r < 0.1f)   r = 0.1f;
+        if (r > 100.0f) r = 100.0f;
+        gearRatio = r;
+        prefs.putFloat(NVS_KEY_GEAR_RATIO, gearRatio);
+        events.add("Gear ratio updated");
+    }
+    char b[64];
+    snprintf(b, sizeof(b), "{\"ok\":true,\"gear_ratio\":%.3f}", gearRatio);
+    server.sendHeader("Cache-Control", "no-store");
+    server.send(200, "application/json", b);
+}
+
+//*********************************************************************
 //  POST /protocol — save output protocol selection and reboot
 //*********************************************************************
 
@@ -1343,6 +1361,9 @@ inline void handleApiState() {
     j += ",\"being_flown\":"; j += (beingFlown ? "true" : "false");
     j += ",\"sbus_frames_out\":"; j += sbusFramesOut;
     j += ",\"failsafe_set\":"; j += (failsafeSet ? "true" : "false");
+    { char gb[48]; snprintf(gb, sizeof(gb), ",\"gear_ratio\":%.3f", gearRatio); j += gb; }
+    j += ",\"head_speed\":"; j += (uint32_t)((gearRatio > 0.1f ? fcTelem.fcMotorRPM / gearRatio : fcTelem.fcMotorRPM) + 0.5f);
+    { char tb[48]; snprintf(tb, sizeof(tb), ",\"esc_temp_c\":%.1f", fcTelem.fcEscTempC); j += tb; }
     j += ",\"last_channel_ms\":";
     if (lastChannelDataMs) j += (uint32_t)(millis() - lastChannelDataMs); else j += "-1";
 
@@ -1573,6 +1594,7 @@ inline void registerWebRoutes() {
     server.on("/api/factory-reset", HTTP_POST, handleFactoryReset);
     server.on("/api/failsafe/save",  HTTP_POST, handleFailsafeSave);
     server.on("/api/failsafe/clear", HTTP_POST, handleFailsafeClear);
+    server.on("/api/gear",           HTTP_POST, handleGearSet);
     server.on("/protocol",    HTTP_POST, handleProtocolSet);
     server.on("/api/sim",     HTTP_POST, handleSimSet);
     server.on("/api/map",     HTTP_POST, handleMapSave);   // save sim channel map (applies live, no reboot)

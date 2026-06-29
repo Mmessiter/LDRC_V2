@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.164-failsafe";
+constexpr const char* FW_VERSION = "RXV2-0.9.165-headspeed";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -239,6 +239,7 @@ constexpr const char* NVS_KEY_SSID       = "ssid";
 constexpr const char* NVS_KEY_PASS       = "pass";
 constexpr const char* NVS_KEY_BOARD_ID   = "board_id";   // 6-byte board ID; captured first boot, never changes
 constexpr const char* NVS_KEY_FAILSAFE   = "fs";         // 16 x uint16 failsafe channel values (us); absent = not configured
+constexpr const char* NVS_KEY_GEAR_RATIO = "gear";       // float main-gear ratio (motor:head); head speed = motor RPM / gearRatio. 1.0 = direct drive
 constexpr const char* NVS_KEY_BOOT_COUNT = "qbc";        // quick-boot counter for escape hatch
 constexpr const char* NVS_KEY_PROTO      = "proto";
 constexpr const char* NVS_KEY_PPM_INV    = "ppm_inv";
@@ -280,6 +281,9 @@ inline uint32_t lastChannelDataMs = 0;
 // the generic safe default (ch1-5=1500, aux low) instead.
 inline uint16_t failsafeMicros[16] = {0};
 inline bool     failsafeSet        = false;
+// Main-gear ratio (motor turns : head turns). Head speed telemetry = motor RPM
+// / gearRatio. 1.0 = direct drive. User-set on the View-channels page, NVS-backed.
+inline float    gearRatio          = 1.0f;
 // Legal decoded-channel range (microseconds), == v1 MINMICROS/MAXMICROS. A
 // decoded frame with any channel outside this isn't real channel data (a
 // bind/MAC/parameter frame misread, or a corrupt decode); decodeChannelData()
@@ -431,6 +435,8 @@ struct FcTelem {
     int16_t  attitudePitch  = 0;        // mrad
     int16_t  attitudeRoll   = 0;
     int16_t  attitudeYaw    = 0;
+    uint32_t fcMotorRPM     = 0;        // first value of the CRSF RPM frame (0x0C) — motor/rotor RPM from the FC
+    float    fcEscTempC     = 0.0f;     // first value of the CRSF temperature frame (0x0D), deci-°C/10 — ESC temp
     char     flightMode[16] = {0};
     uint32_t framesParsed   = 0;
     uint32_t bytesIn        = 0;

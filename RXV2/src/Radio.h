@@ -299,6 +299,14 @@ inline void loadNextAck() {
             case 6:   packF32(ack, 0.0f);                           break;  // baro altitude
             case 7:   packF32(ack, 0.0f);                           break;  // baro temperature
             case 19:  packF32(ack, 0.0f);                           break;  // rate of climb
+            case 20: {
+                // Head speed (rotor RPM) — motor RPM from the FC's CRSF RPM frame
+                // divided by the user's gear ratio (1.0 = direct drive). Matches
+                // v1 (SendIntToAckPayload(RotorRPM) with RotorRPM = motorRPM/Ratio).
+                float hs = (gearRatio > 0.1f) ? (fcTelem.fcMotorRPM / gearRatio) : (float)fcTelem.fcMotorRPM;
+                packU32(ack, (uint32_t)(hs + 0.5f));
+                break;
+            }
             case 21:
                 // Battery current (Rotorflight). Forward FC's measured current.
                 if (fcTelem.valid) packF32(ack, fcTelem.fcBattAmps);
@@ -315,7 +323,7 @@ inline void loadNextAck() {
                 // (e.g. a 3-slot PCB with one dead chip reports as 2-radio).
                 ack[1] = (uint8_t)(3 + numRadiosPresent);  // 1→4, 2→5, 3→6
                 break;
-            case 24:  packF32(ack, 0.0f);                           break;  // ESC temp
+            case 24:  packF32(ack, fcTelem.fcEscTempC);             break;  // ESC temp (CRSF temperature frame 0x0D)
             case 31:
                 // Rotorflight version flag. Set when FC telemetry is active so v1 TX
                 // picks up the Rotorflight-specific slots (cases 20-22).

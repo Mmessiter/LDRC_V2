@@ -62,6 +62,19 @@ inline void parseCrsfFrame(const uint8_t* buf, uint8_t total) {
                 fcTelem.fcBattPct   = p[7];
             }
             break;
+        case 0x0C:   // CRSF_FRAMETYPE_RPM — [source_id][rpm: int24 BE] x N. Take the first value.
+            if (plLen >= 4) {
+                int32_t rpm = ((int32_t)p[1] << 16) | ((int32_t)p[2] << 8) | p[3];
+                if (rpm & 0x800000) rpm |= ~0xFFFFFF;            // sign-extend 24-bit
+                fcTelem.fcMotorRPM = (rpm < 0) ? 0u : (uint32_t)rpm;
+            }
+            break;
+        case 0x0D:   // CRSF_FRAMETYPE_TEMP — [source_id][temp: int16 BE, deci-degC] x N. First value.
+            if (plLen >= 3) {
+                int16_t t = (int16_t)(((uint16_t)p[1] << 8) | p[2]);
+                fcTelem.fcEscTempC = t / 10.0f;
+            }
+            break;
         case 0x1E:   // CRSF_FRAMETYPE_ATTITUDE
             if (plLen >= 6) {
                 fcTelem.attitudePitch = (int16_t)(((uint16_t)p[0] << 8) | p[1]);
