@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.164-failsafe",
+      "url": "https://messiter.com/rxv2/release/v0.9.164/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.164/littlefs.bin",
+      "notes": "Adds a configurable failsafe (no-transmitter) posture, like V1. On the View-channels page there is now a Failsafe section: set every stick and switch where you want the model to sit with no transmitter (e.g. disarmed, motor off) and tap Save - those exact positions are stored in NVS and output when the receiver is powered up without a transmitter. Clear reverts to the built-in safe default (sticks centred, AUX low). Replaces guessing with your real safe positions - e.g. your AUX1 safety channel."
+    },
+    {
       "name": "RXV2-0.9.163-safe-boot",
       "url": "https://messiter.com/rxv2/release/v0.9.163/firmware.bin",
       "notes": "Safer power-up with no transmitter. Until a transmitter connects, the receiver used to output every channel at mid (1500us) - which a flight-controller reads as a centred, ARMED link, so a heli FC tries to stabilise and the swashplate hunts up and down. It now boots into a disarmed/safe posture instead: sticks centred (ch1-5 = 1500) and all AUX channels low (ch6-16 = 500), so any arm/mode switch reads OFF and nothing spins. As soon as the transmitter connects, real values take over; signal loss after a link still holds the last good values. (Assumes the usual arm-switch-low = disarmed convention.)"
@@ -63,12 +69,6 @@
       "name": "RXV2-0.9.153-wifi-auto",
       "url": "https://messiter.com/rxv2/release/v0.9.153/firmware.bin",
       "notes": "WiFi is now managed automatically around the transmitter. (1) At power-up the receiver listens for the transmitter for 5 seconds; if it hears one, it switches WiFi OFF for the session and runs radio-only \u2014 the cleanest band and full 501 Hz. (2) If, in that radio-only mode, the transmitter link is then lost for 10 seconds (you've landed, or switched the TX off), WiFi comes back on by itself so you can reach the receiver from your phone \u2014 no power-cycle needed. Simulator sessions keep WiFi on throughout (so you can still use the web UI while driving the sim). Note: a real in-air dropout lasting 10 s would also re-enable WiFi mid-flight; the threshold is easy to raise if you'd prefer a longer wait."
-    },
-    {
-      "name": "RXV2-0.9.152-ap-only-ux",
-      "url": "https://messiter.com/rxv2/release/v0.9.152/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.152/littlefs.bin",
-      "notes": "Polishes the new 'AP mode only' option. (1) Plain-English explanation on the WiFi page \u2014 spells out that AP mode means the receiver makes its own little WiFi network your phone joins directly (no home router), why you'd tick it at the field, and that you'll need to switch your phone's WiFi after saving. (2) The save page no longer sits there waiting: when you turn AP-only on it stops polling the old address (which has gone) and instead clearly tells you to open your phone's WiFi settings, join the receiver's network (named), and go to 192.168.4.1. (3) Bug fix: the status page now shows the receiver's REAL access-point name (its model name, e.g. your renamed receiver) instead of always showing the old default 'LDRC_RX'."
     }
   ]
 }

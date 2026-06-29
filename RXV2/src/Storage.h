@@ -44,6 +44,38 @@ inline void clearBindNvs() {
 }
 
 //*********************************************************************
+//  Failsafe (no-signal) channel values
+//*********************************************************************
+// Captured from the live channels and applied as the pre-link defaults at boot
+// (see setup()), so a receiver powered up with no transmitter sits in whatever
+// safe posture the user set (v1 SaveFailSafeDataToEEPROM equivalent).
+
+inline void loadFailsafeFromNvs() {
+    if (prefs.isKey(NVS_KEY_FAILSAFE) &&
+        prefs.getBytesLength(NVS_KEY_FAILSAFE) == sizeof(failsafeMicros)) {
+        prefs.getBytes(NVS_KEY_FAILSAFE, failsafeMicros, sizeof(failsafeMicros));
+        failsafeSet = true;
+        Serial.println("[failsafe] loaded from NVS");
+    } else {
+        failsafeSet = false;
+    }
+}
+
+// Capture the CURRENT channel values as the failsafe set.
+inline void saveFailsafeToNvs() {
+    for (uint8_t i = 0; i < 16; ++i) failsafeMicros[i] = channelMicros[i];
+    prefs.putBytes(NVS_KEY_FAILSAFE, failsafeMicros, sizeof(failsafeMicros));
+    failsafeSet = true;
+    Serial.println("[failsafe] saved current channels to NVS");
+}
+
+inline void clearFailsafeNvs() {
+    prefs.remove(NVS_KEY_FAILSAFE);
+    failsafeSet = false;
+    Serial.println("[failsafe] cleared NVS");
+}
+
+//*********************************************************************
 //  WiFi credentials accessors
 //*********************************************************************
 // Effective = the value we'd actually use this boot. NVS wins if set; otherwise

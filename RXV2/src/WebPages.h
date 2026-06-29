@@ -1009,6 +1009,28 @@ inline void handleWifiResetGone() {
 }
 
 //*********************************************************************
+//  POST /api/failsafe/save  — capture the CURRENT channels as failsafe
+//  POST /api/failsafe/clear  — forget the saved failsafe
+//*********************************************************************
+// Stores the live channel values so a no-transmitter boot comes up in exactly
+// this posture (see setup()). The user sets every switch/stick where they want
+// the model to sit with no signal (e.g. disarmed), then taps Save.
+
+inline void handleFailsafeSave() {
+    saveFailsafeToNvs();
+    events.add("Failsafe captured from current channels");
+    server.sendHeader("Cache-Control", "no-store");
+    server.send(200, "application/json", "{\"ok\":true,\"failsafe_set\":true}");
+}
+
+inline void handleFailsafeClear() {
+    clearFailsafeNvs();
+    events.add("Failsafe cleared");
+    server.sendHeader("Cache-Control", "no-store");
+    server.send(200, "application/json", "{\"ok\":true,\"failsafe_set\":false}");
+}
+
+//*********************************************************************
 //  POST /protocol — save output protocol selection and reboot
 //*********************************************************************
 
@@ -1320,6 +1342,7 @@ inline void handleApiState() {
     j += ",\"id_broadcasting\":"; j += (idBroadcasting ? "true" : "false");
     j += ",\"being_flown\":"; j += (beingFlown ? "true" : "false");
     j += ",\"sbus_frames_out\":"; j += sbusFramesOut;
+    j += ",\"failsafe_set\":"; j += (failsafeSet ? "true" : "false");
     j += ",\"last_channel_ms\":";
     if (lastChannelDataMs) j += (uint32_t)(millis() - lastChannelDataMs); else j += "-1";
 
@@ -1548,6 +1571,8 @@ inline void registerWebRoutes() {
     server.on("/api/name",        HTTP_POST, handleNameSet);
     server.on("/api/firstrun",      HTTP_POST, handleFirstRun);
     server.on("/api/factory-reset", HTTP_POST, handleFactoryReset);
+    server.on("/api/failsafe/save",  HTTP_POST, handleFailsafeSave);
+    server.on("/api/failsafe/clear", HTTP_POST, handleFailsafeClear);
     server.on("/protocol",    HTTP_POST, handleProtocolSet);
     server.on("/api/sim",     HTTP_POST, handleSimSet);
     server.on("/api/map",     HTTP_POST, handleMapSave);   // save sim channel map (applies live, no reboot)

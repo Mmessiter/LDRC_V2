@@ -111,6 +111,15 @@ void setup() {
 
     prefs.begin(NVS_NAMESPACE, false);
 
+    // If the user has saved a failsafe posture, use it as the pre-link default
+    // (overrides the generic safe default above) — so a no-TX boot sits exactly
+    // where they set it (e.g. AUX1 in the disarmed position for their heli).
+    loadFailsafeFromNvs();
+    if (failsafeSet) {
+        for (uint8_t i = 0; i < 16; ++i) channelMicros[i] = failsafeMicros[i];
+        events.add("Failsafe defaults applied at boot");
+    }
+
     //*****************************************************************
     // NVS state report — surfaces silent data loss the moment it
     // happens. WiFi creds, bind state and proto should all survive

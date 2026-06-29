@@ -56,6 +56,14 @@
         <div class=chTable id=chTable></div>
     </div>
 
+    <div class=card>
+        <h2>Failsafe positions (no transmitter)</h2>
+        <p class=muted id=fsStatus>&hellip;</p>
+        <p class=muted style="font-size:.85em;line-height:1.5">Move every stick &amp; switch to where you want the model to sit when the receiver is powered up with <b>no transmitter</b> &mdash; usually <b>disarmed</b>, motor off &mdash; then tap <b>Save</b>. Those exact positions are stored and used on a no-signal boot. <b>Clear</b> reverts to the built-in safe default (sticks centred, AUX low).</p>
+        <button class="btn btn-fly" id=fsSave style="background:#6cab5e"><span class=ico>&#128190;</span>Save current positions as failsafe</button>
+        <button class="btn btn-fw" id=fsClear style="background:#b06a6a"><span class=ico>&#10006;&#65039;</span>Clear failsafe</button>
+    </div>
+
     <div class="card heliCard">
         <h2>Preview</h2>
         <div class=heliWrap id=heliWrap>
@@ -619,6 +627,30 @@ function paint(s) {
     }
     updatePose(ch, stale);
 }
+
+// --- Failsafe (no-transmitter) positions ---------------------------------
+function setFsStatus(set) {
+    const el = document.getElementById('fsStatus');
+    if (!el) return;
+    el.innerHTML = set
+        ? '<b style="color:#2e7d32">Failsafe is SET</b> — these saved positions are output when the receiver boots with no transmitter.'
+        : 'No failsafe saved — using the built-in safe default (sticks centred, AUX channels low).';
+}
+async function refreshFsStatus() {
+    try { const s = await (await fetch('/api/state.json', { cache: 'no-store' })).json();
+          setFsStatus(!!(s.rf && s.rf.failsafe_set)); } catch (e) {}
+}
+document.getElementById('fsSave').addEventListener('click', async () => {
+    if (!(await LDRC.confirm('Save the CURRENT channel positions as the no-transmitter failsafe? Make sure the model is in a safe/disarmed posture now.',
+        { title: 'Save failsafe', icon: '💾', yes: 'Save failsafe' }))) return;
+    try { const r = await (await fetch('/api/failsafe/save', { method: 'POST' })).json(); setFsStatus(!!r.failsafe_set); } catch (e) {}
+});
+document.getElementById('fsClear').addEventListener('click', async () => {
+    if (!(await LDRC.confirm('Clear the saved failsafe and revert to the built-in safe default?',
+        { title: 'Clear failsafe', icon: '❌', yes: 'Clear', kind: 'warn' }))) return;
+    try { const r = await (await fetch('/api/failsafe/clear', { method: 'POST' })).json(); setFsStatus(!!r.failsafe_set); } catch (e) {}
+});
+refreshFsStatus();
 
 let _stopping = false;
 async function tick() {

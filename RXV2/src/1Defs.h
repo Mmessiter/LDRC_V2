@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.163-safe-boot";
+constexpr const char* FW_VERSION = "RXV2-0.9.164-failsafe";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -238,6 +238,7 @@ constexpr const char* NVS_KEY_PIPE       = "pipe";
 constexpr const char* NVS_KEY_SSID       = "ssid";
 constexpr const char* NVS_KEY_PASS       = "pass";
 constexpr const char* NVS_KEY_BOARD_ID   = "board_id";   // 6-byte board ID; captured first boot, never changes
+constexpr const char* NVS_KEY_FAILSAFE   = "fs";         // 16 x uint16 failsafe channel values (us); absent = not configured
 constexpr const char* NVS_KEY_BOOT_COUNT = "qbc";        // quick-boot counter for escape hatch
 constexpr const char* NVS_KEY_PROTO      = "proto";
 constexpr const char* NVS_KEY_PPM_INV    = "ppm_inv";
@@ -272,6 +273,13 @@ constexpr uint32_t FBUS_PERIOD_MS = 9;      // ~111 Hz
 
 inline uint16_t channelMicros[16];                       // initialised in setup() to 1500us
 inline uint32_t lastChannelDataMs = 0;
+// Failsafe (no-signal) channel values, captured from the live channels via the
+// web UI and stored in NVS (NVS_KEY_FAILSAFE). When set, these are loaded as the
+// pre-link defaults at boot so a receiver powered up without a transmitter sits
+// in a SAFE posture (e.g. disarmed) instead of all-1500. failsafeSet=false => use
+// the generic safe default (ch1-5=1500, aux low) instead.
+inline uint16_t failsafeMicros[16] = {0};
+inline bool     failsafeSet        = false;
 // Legal decoded-channel range (microseconds), == v1 MINMICROS/MAXMICROS. A
 // decoded frame with any channel outside this isn't real channel data (a
 // bind/MAC/parameter frame misread, or a corrupt decode); decodeChannelData()
