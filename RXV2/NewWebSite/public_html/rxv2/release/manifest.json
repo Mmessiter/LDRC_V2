@@ -1,6 +1,11 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.163-safe-boot",
+      "url": "https://messiter.com/rxv2/release/v0.9.163/firmware.bin",
+      "notes": "Safer power-up with no transmitter. Until a transmitter connects, the receiver used to output every channel at mid (1500us) - which a flight-controller reads as a centred, ARMED link, so a heli FC tries to stabilise and the swashplate hunts up and down. It now boots into a disarmed/safe posture instead: sticks centred (ch1-5 = 1500) and all AUX channels low (ch6-16 = 500), so any arm/mode switch reads OFF and nothing spins. As soon as the transmitter connects, real values take over; signal loss after a link still holds the last good values. (Assumes the usual arm-switch-low = disarmed convention.)"
+    },
+    {
       "name": "RXV2-0.9.162-bind-live",
       "url": "https://messiter.com/rxv2/release/v0.9.162/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.162/littlefs.bin",
@@ -64,12 +69,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.152/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.152/littlefs.bin",
       "notes": "Polishes the new 'AP mode only' option. (1) Plain-English explanation on the WiFi page \u2014 spells out that AP mode means the receiver makes its own little WiFi network your phone joins directly (no home router), why you'd tick it at the field, and that you'll need to switch your phone's WiFi after saving. (2) The save page no longer sits there waiting: when you turn AP-only on it stops polling the old address (which has gone) and instead clearly tells you to open your phone's WiFi settings, join the receiver's network (named), and go to 192.168.4.1. (3) Bug fix: the status page now shows the receiver's REAL access-point name (its model name, e.g. your renamed receiver) instead of always showing the old default 'LDRC_RX'."
-    },
-    {
-      "name": "RXV2-0.9.150-ap-only",
-      "url": "https://messiter.com/rxv2/release/v0.9.150/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.150/littlefs.bin",
-      "notes": "Adds an 'AP mode only' tick-box to the WiFi page. When on, the receiver skips trying to join your home WiFi and comes straight up as its own access point \u2014 handy at the flying field, where the home network is miles away and the receiver would otherwise spend every boot fruitlessly retrying it. Your saved home SSID/password are kept; just untick it to use home WiFi again. The choice is saved in NVS and survives reboots/updates."
     }
   ]
 }

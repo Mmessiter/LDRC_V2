@@ -95,8 +95,17 @@ void setup() {
     buildDays = computeBuildDays();
     Serial.printf("[id] build %s -> %u days since 2020-01-01\n", __DATE__, (unsigned)buildDays);
 
-    // Centre all channels at 1500us so the output frame is sane immediately at boot.
-    for (uint8_t i = 0; i < 16; ++i) channelMicros[i] = 1500;
+    // Pre-link channel defaults — what we output BEFORE a transmitter has ever
+    // connected (e.g. the receiver powered up on the bench with the TX off).
+    // NOT all-1500: to an FC that reads as a centred, *armed* link (AUX/arm
+    // switches sitting at mid), so a heli FC tries to stabilise and the
+    // swashplate dances unhappily. Instead boot into a SAFE / disarmed posture:
+    //   ch1-5 (idx 0-4) = 1500  → cyclic/yaw centred, throttle/collective mid
+    //   ch6-16 (idx 5-15) = 500 → all AUX low, so any arm/mode switch reads OFF
+    // Being disarmed, nothing spins regardless of the throttle channel. Once a
+    // TX connects these are overwritten by real values; on signal loss AFTER a
+    // link the channels HOLD their last value instead (see Channels.h/Output.h).
+    for (uint8_t i = 0; i < 16; ++i) channelMicros[i] = (i < 5) ? 1500 : 500;
 
     events.add("Boot");
 
