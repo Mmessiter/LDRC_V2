@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.168-gear-msg",
+      "url": "https://messiter.com/rxv2/release/v0.9.168/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.168/littlefs.bin",
+      "notes": "Save gear ratio now pops a confirmation box (\"Gear ratio = <n> saved!\") instead of only a quiet status line. Added a shared single-button LDRC.alert() helper for tidy acknowledgements."
+    },
+    {
       "name": "RXV2-0.9.167-fs-crsf",
       "url": "https://messiter.com/rxv2/release/v0.9.167/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.167/littlefs.bin",
@@ -64,12 +70,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.157/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.157/littlefs.bin",
       "notes": "Cosmetic follow-up to 0.9.156: the Rates preview curve now plots Roll/Pitch/Yaw on one shared deg/s scale (so Yaw at 400 visibly rises above Roll/Pitch at 250, like the official Configurator) while Collective keeps its own scale. Numbers were already correct; this just makes the curve picture match."
-    },
-    {
-      "name": "RXV2-0.9.156-rf23-rates",
-      "url": "https://messiter.com/rxv2/release/v0.9.156/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.156/littlefs.bin",
-      "notes": "Fixes the Rates page for Rotorflight 2.3. RF 2.3 defaults to a new rates type (#6, 'ROTORFLIGHT') that didn't exist in 2.2; our page was still showing the old generic columns (Centre/Expo/Max\u2026) and the wrong scaling, so both the headings AND the numbers were wrong. The page is now rate-type aware: for the ROTORFLIGHT type it shows the correct columns \u2014 Rate, Shape, Expo, Max Vel \u2014 matching the official Configurator exactly (e.g. Roll 250 / 12 / 40, Yaw 400 / 12 / 50, Collective 12.5 / 12 / 0). Saving back is scaled correctly and now also preserves the new 2.3 cyclic-ring/polar settings instead of dropping them. Other rate types keep the previous columns."
     }
   ]
 }

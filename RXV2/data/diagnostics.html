@@ -656,8 +656,8 @@ document.getElementById('gearSave').addEventListener('click', async () => {
     try {
         const j = await (await fetch('/api/gear?ratio=' + encodeURIComponent(r), { method: 'POST' })).json();
         document.getElementById('gearField').value = j.gear_ratio;
-        status.innerHTML = '<span class=statusOK>Gear ratio saved: ' + j.gear_ratio + '</span>';
-    } catch (e) { status.innerHTML = '<span class=statusBad>Gear save failed</span>'; }
+        await LDRC.alert('Gear ratio = ' + j.gear_ratio + ' saved!', { title: 'Saved', icon: '⚙️' });
+    } catch (e) { await LDRC.alert('Gear ratio save failed.', { title: 'Error', icon: '⚠️', kind: 'danger' }); }
 });
 document.getElementById('fsSave').addEventListener('click', async () => {
     if (!(await LDRC.confirm('Save the CURRENT channel positions as the in-flight signal-loss failsafe? Set the model to a safe posture (e.g. motor off) first.',

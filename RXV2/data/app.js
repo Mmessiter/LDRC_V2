@@ -105,9 +105,51 @@
                 document.getElementById('_mMsg').textContent   = message;
                 yesBt.textContent = opts.yes || 'Yes, do it';
                 noBt.textContent  = opts.no  || 'Cancel';
+                noBt.style.display = '';   // restore in case alert() hid it on the shared modal
                 const close = (ok) => { ov.classList.remove('show'); yesBt.onclick = null; noBt.onclick = null; resolve(ok); };
                 yesBt.onclick = () => close(true);
                 noBt.onclick  = () => close(false);
+                ov.classList.add('show');
+                setTimeout(() => yesBt.focus(), 100);
+            });
+        },
+
+        // Single-button acknowledgement modal (info / "Saved!"). Reuses the
+        // confirm modal with the Cancel button hidden.
+        // Usage: await LDRC.alert('Gear ratio = 1.0 saved!', { title:'Saved', icon:'✅' });
+        alert(message, opts) {
+            opts = opts || {};
+            const kind = opts.kind || 'go';
+            return new Promise(resolve => {
+                let ov = document.getElementById('_ldrcModal');
+                if (!ov) {
+                    ov = document.createElement('div');
+                    ov.id = '_ldrcModal';
+                    ov.className = 'modalOverlay';
+                    ov.innerHTML = '<div class=modalBox>'
+                        + '<div class=modalAccent id=_mAcc>'
+                        +   '<div class=modalIcon id=_mIcon>⚡</div>'
+                        +   '<div class=modalTitle id=_mTitle></div>'
+                        + '</div>'
+                        + '<div class=modalMsg id=_mMsg></div>'
+                        + '<div class=modalBtns>'
+                        +   '<button class="modalBtn no" id=_mNo>Cancel</button>'
+                        +   '<button class="modalBtn yes" id=_mYes>OK</button>'
+                        + '</div></div>';
+                    document.body.appendChild(ov);
+                }
+                const acc   = document.getElementById('_mAcc');
+                const yesBt = document.getElementById('_mYes');
+                const noBt  = document.getElementById('_mNo');
+                acc.className   = 'modalAccent' + (kind === 'warn' ? ' warn' : kind === 'danger' ? ' danger' : '');
+                yesBt.className = 'modalBtn yes' + (kind === 'warn' ? ' warn' : kind === 'danger' ? ' danger' : '');
+                document.getElementById('_mIcon').textContent  = opts.icon  || '✅';
+                document.getElementById('_mTitle').textContent = opts.title || 'Done';
+                document.getElementById('_mMsg').textContent   = message;
+                yesBt.textContent  = opts.yes || 'OK';
+                noBt.style.display = 'none';
+                const close = () => { ov.classList.remove('show'); yesBt.onclick = null; resolve(true); };
+                yesBt.onclick = close;
                 ov.classList.add('show');
                 setTimeout(() => yesBt.focus(), 100);
             });
