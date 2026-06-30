@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.175-adv-preserve";
+constexpr const char* FW_VERSION = "RXV2-0.9.176-timing";
 
 //*********************************************************************
 //  Auto-update manifest URLs

@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.176-timing",
+      "url": "https://messiter.com/rxv2/release/v0.9.176/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.176/littlefs.bin",
+      "notes": "Reduces the occasional all-zeros when reading params from the transmitter. Removed the post-write cache blanking (the re-poll refreshes the saved values anyway), tightened the FC re-poll to ~50ms (was 80ms, matching V1), and shortened the stuck-fetch retry from 400ms to 250ms. Any remaining rare zeros are a dropped request packet from the TX (re-trigger to fix)."
+    },
+    {
       "name": "RXV2-0.9.175-adv-preserve",
       "url": "https://messiter.com/rxv2/release/v0.9.175/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.175/littlefs.bin",
@@ -65,12 +71,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.165/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.165/littlefs.bin",
       "notes": "Two telemetry items added like V1: HEAD SPEED and ESC TEMPERATURE, read from the CRSF telemetry the flight-controller streams (enable RPM + Temperature sensors in Rotorflight telemetry). Head speed = motor RPM / gear ratio, with a configurable GEAR RATIO on the View-channels page (1.0 = direct drive). SAFETY FIX: the receiver now NEVER boots to your saved failsafe positions (those can have the arm/safety switch off); a no-transmitter power-up always uses the guaranteed disarmed-safe default (sticks centred, AUX low). The failsafe Save still stores your positions for later use."
-    },
-    {
-      "name": "RXV2-0.9.164-failsafe",
-      "url": "https://messiter.com/rxv2/release/v0.9.164/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.164/littlefs.bin",
-      "notes": "Adds a configurable failsafe (no-transmitter) posture, like V1. On the View-channels page there is now a Failsafe section: set every stick and switch where you want the model to sit with no transmitter (e.g. disarmed, motor off) and tap Save - those exact positions are stored in NVS and output when the receiver is powered up without a transmitter. Clear reverts to the built-in safe default (sticks centred, AUX low). Replaces guessing with your real safe positions - e.g. your AUX1 safety channel."
     }
   ]
 }

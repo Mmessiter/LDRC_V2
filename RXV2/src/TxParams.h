@@ -289,7 +289,7 @@ inline void txParamsLoop() {
                 mspSendRequest(fn);                       // read-modify-write: get current first
                 pmState = PM_WRITE_ORIG; pmStateAt = now; txParamBusy = true;
             } else if (paramSend != PSEND_NONE && txParamMspFree() &&
-                       (int32_t)(now - lastParamFetchMs) >= 80) {   // continuous re-poll (V1 ~50ms)
+                       (int32_t)(now - lastParamFetchMs) >= 50) {   // continuous re-poll (matches V1 ~50ms)
                 lastParamFetchMs = now;
                 uint8_t fn = readGetFn();
                 mspAsyncFunc = fn; mspAsyncReady = false;
@@ -304,7 +304,7 @@ inline void txParamsLoop() {
                 if      (mspAsyncFunc == MSP_RC_TUNING) buildRatesFromMsp(mspAsyncBuf, mspAsyncLen);
                 else if (mspAsyncFunc == MSP_PID)       buildPidsFromMsp(mspAsyncBuf, mspAsyncLen);
                 mspAsyncFunc = 0xFF; pmState = PM_IDLE; txParamBusy = false;
-            } else if ((int32_t)(now - pmStateAt) > 400) {
+            } else if ((int32_t)(now - pmStateAt) > 250) {   // missed round-trip → retry quickly
                 mspAsyncFunc = 0xFF; pmState = PM_IDLE; txParamBusy = false;
             }
             break;
@@ -326,8 +326,12 @@ inline void txParamsLoop() {
         case PM_WRITE_EEPROM:
             if ((int32_t)(now - pmStateAt) > 120) {
                 mspSendRequest(MSP_EEPROM_WRITE);
-                if (pmWriteKind == WK_PID) { events.add("TX edit: PIDs -> FC");  pidAckValid = false; }
-                else                       { events.add(pmWriteKind == WK_RATES_ADV ? "TX edit: RATES+adv -> FC" : "TX edit: RATES -> FC"); ratesAckValid = false; }
+                // Do NOT invalidate the cache here — the continuous re-poll picks
+                // up the freshly-saved values within ~50ms. Blanking it would just
+                // flash zeros to the TX until the next poll.
+                events.add(pmWriteKind == WK_PID ? "TX edit: PIDs -> FC"
+                         : pmWriteKind == WK_RATES_ADV ? "TX edit: RATES+adv -> FC"
+                         : "TX edit: RATES -> FC");
                 pmWriteKind = WK_NONE;
                 pmState = PM_IDLE; txParamBusy = false;
             }
