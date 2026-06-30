@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.170-tx-rates",
+      "url": "https://messiter.com/rxv2/release/v0.9.170/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.170/littlefs.bin",
+      "notes": "NEW: edit Rotorflight RATES from the transmitter (not just the iPhone). A V1-compatible transmitter can now read and set the rate values over the radio link - the receiver fetches/writes them to the flight-controller over MSP. Built on a new non-blocking parameter engine (TxParams.h) ported byte-exact from V1, so it never stalls the RC link. RATES first; PIDs and governor to follow. iPhone editing unchanged."
+    },
+    {
       "name": "RXV2-0.9.169-nocache-js",
       "url": "https://messiter.com/rxv2/release/v0.9.169/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.169/littlefs.bin",
@@ -64,12 +70,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.159/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.159/littlefs.bin",
       "notes": "Fixes Rotorflight 2.2 detection. The receiver was mis-mapping the FC API version, so a 2.2 flight-controller (API 12.8) was tagged as \"1.x\" and ALL Rotorflight options disappeared. The mapping is corrected (API 12.8 = RF 2.2, 12.9 = RF 2.3, etc.), so 2.2 is recognised and its config pages appear and read the right version. Following V1: on 2.2 you get everything EXCEPT the two Governor pages (governor needs Rotorflight 2.3 / API 12.9), which are now hidden on 2.2 rather than opening to a disabled page."
-    },
-    {
-      "name": "RXV2-0.9.158-rf-btn-live",
-      "url": "https://messiter.com/rxv2/release/v0.9.158/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.158/littlefs.bin",
-      "notes": "The home-screen \"Rotorflight config\" button now appears (and disappears) on its own as the flight-controller is detected, instead of only being decided once when the page opened. Detecting an FC over CRSF can take a few seconds, so previously the button was intermittently missing and only showed up if you re-opened the front screen after it had been found. Now the page re-checks every few seconds. (Note: this only reveals the button once the receiver actually hears the FC \u2014 if it never appears, the receiver isn't getting any telemetry back from the FC, which is a wiring/return-path issue, not this.)"
     }
   ]
 }

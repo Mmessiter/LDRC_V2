@@ -370,6 +370,7 @@ void loop() {
         protocolRx();          // pull any telemetry/MSP bytes the FC has sent back on D5
         mspBridgePoll();       // TCP/5760 ↔ FC for wireless Rotorflight config
         mspFcPoll();           // periodic FC-variant / FC-version discovery
+        txParamsLoop();        // TX Rotorflight edits: async MSP read/write state machine
     }
 
     // Dual-radio redundancy: if we've not received a packet on the active

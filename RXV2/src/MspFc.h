@@ -58,6 +58,21 @@ inline uint8_t           mspWaitRespBuf[256] = {0};
 inline volatile uint16_t mspWaitRespLen = 0;
 inline volatile bool     mspWaitRespReady = false;
 
+// Async response capture for the non-blocking TX-parameter state machine
+// (TxParams.h). Unlike mspRequestAndWait (which blocks), the TX-param path
+// must never stall the radio loop while a transmitter link is live, so it
+// sends a request, sets mspAsyncFunc, and polls mspAsyncReady across loop
+// iterations — the response is captured here by mspParseResponse as it arrives
+// on the normal CRSF RX path. Matched by function code, so an interleaved probe
+// response (e.g. FC_VERSION) can't be mistaken for the awaited block.
+inline volatile uint8_t  mspAsyncFunc  = 0xFF;       // function TxParams is awaiting (0xFF = none)
+inline uint8_t           mspAsyncBuf[256] = {0};
+inline volatile uint16_t mspAsyncLen   = 0;
+inline volatile bool     mspAsyncReady = false;
+// Set by TxParams while a parameter MSP op is in flight, so mspFcPoll yields
+// the UART (avoids two outstanding requests confusing the FC).
+inline volatile bool     txParamBusy   = false;
+
 //*********************************************************************
 //  CRSF address constants
 //*********************************************************************
@@ -123,6 +138,14 @@ inline void mspParseResponse(const uint8_t* body, uint8_t bodyLen) {
             memcpy(mspWaitRespBuf, payload, size);
         }
         mspWaitRespReady = true;
+    }
+
+    // Async capture for the non-blocking TX-parameter state machine (TxParams.h).
+    // `size` is a uint8_t (0..255) so it always fits mspAsyncBuf[256].
+    if (func == mspAsyncFunc && !mspAsyncReady) {
+        mspAsyncLen = size;
+        if (size > 0) memcpy(mspAsyncBuf, payload, size);
+        mspAsyncReady = true;
     }
 
     switch (func) {
@@ -199,6 +222,9 @@ inline void mspFcPoll() {
     // Don't fight the bridge — if a Configurator client is talking to the FC
     // we'd just confuse both sides.
     if (mspBridgeActive) return;
+    // Yield while the TX-parameter state machine has an MSP request in flight,
+    // so we don't leave two outstanding requests for the FC to interleave.
+    if (txParamBusy) return;
     // Don't fight a synchronous /api/msp request that's mid-wait — sending
     // a competing probe causes the FC to interleave two responses, often
     // making the sync request time out and the page see "Read failed".

@@ -12,6 +12,7 @@
 #include "1Defs.h"
 #include "Storage.h"        // saveBindToNvs()
 #include "Channels.h"       // decompress(), decompressedSize(), decodeChannelData()
+#include "TxParams.h"       // readExtraParameters(), fillParamAck() — TX Rotorflight editing
 
 //*********************************************************************
 //  Data-rate name (for the self-test report)
@@ -324,6 +325,14 @@ inline void loadNextAck() {
                 ack[1] = (uint8_t)(3 + numRadiosPresent);  // 1→4, 2→5, 3→6
                 break;
             case 24:  packF32(ack, fcTelem.fcEscTempC);             break;  // ESC temp (CRSF temperature frame 0x0D)
+            case 25: case 26: case 27: case 28:
+            case 29: case 30: case 32: case 33: case 34:
+                // Rotorflight parameter blocks streamed to the TX (rates/PIDs/
+                // governor). fillParamAck loads ack[1..4] from the cached block
+                // when the matching read is active; otherwise leaves them zero
+                // (the TX ignores param slots unless it is reading that block).
+                fillParamAck(telemetryItem, ack);
+                break;
             case 31:
                 // Rotorflight version flag. Set when FC telemetry is active so v1 TX
                 // picks up the Rotorflight-specific slots (cases 20-22).
@@ -526,7 +535,11 @@ inline void radioPoll() {
         if (!bindState.bound) {
             tryBind(rx.lastBytes, size);
         } else {
-            decodeChannelData(rx.lastBytes, size);
+            // ChannelBitMask == 0 marks a PARAMETER packet (Rotorflight edits
+            // from the TX), not channel data — route it to the param parser.
+            uint16_t mask = (size >= 2) ? ((uint16_t)rx.lastBytes[0] | ((uint16_t)rx.lastBytes[1] << 8)) : 0xFFFF;
+            if (mask == 0) readExtraParameters(rx.lastBytes, size);
+            else           decodeChannelData(rx.lastBytes, size);
         }
 
         loadNextAck();
