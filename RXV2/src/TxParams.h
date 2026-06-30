@@ -133,11 +133,14 @@ inline void buildRatesFromMsp(const uint8_t* p, uint16_t len) {
     ratesAck[10] = p[19]; ratesAck[11] = p[21]; ratesAck[12] = p[20];  // Collective
 
     // Advanced rates live in the per-axis Response byte (o4/10/16/22) and the
-    // API-12.8 tail (boost gains 25-28, cutoffs 29-32, yaw dynamics 33-35).
+    // API-12.8 tail. The boost tail is INTERLEAVED per axis: o25 Roll-gain,
+    // o26 Roll-cutoff, o27 Pitch-gain, o28 Pitch-cutoff, o29 Yaw-gain,
+    // o30 Yaw-cutoff, o31 Coll-gain, o32 Coll-cutoff, o33/34/35 yaw dynamics.
+    // The ack wants them grouped: gains R,P,Y,C then cutoffs R,P,Y,C.
     if (len >= 36) {
-        advRatesAck[0]  = p[4];  advRatesAck[1]  = p[10]; advRatesAck[2]  = p[16]; advRatesAck[3] = p[22];
-        advRatesAck[4]  = p[25]; advRatesAck[5]  = p[26]; advRatesAck[6]  = p[27]; advRatesAck[7] = p[28];
-        advRatesAck[8]  = p[29]; advRatesAck[9]  = p[30]; advRatesAck[10] = p[31]; advRatesAck[11] = p[32];
+        advRatesAck[0]  = p[4];  advRatesAck[1]  = p[10]; advRatesAck[2]  = p[16]; advRatesAck[3]  = p[22];
+        advRatesAck[4]  = p[25]; advRatesAck[5]  = p[27]; advRatesAck[6]  = p[29]; advRatesAck[7]  = p[31]; // gains R,P,Y,C
+        advRatesAck[8]  = p[26]; advRatesAck[9]  = p[28]; advRatesAck[10] = p[30]; advRatesAck[11] = p[32]; // cutoffs R,P,Y,C
         advRatesAck[12] = p[33]; advRatesAck[13] = p[34]; advRatesAck[14] = p[35];
     }
     ratesAckValid = true;
@@ -265,9 +268,12 @@ inline void txParamsLoop() {
                     // advanced rates (only when the TX sent the advanced batch)
                     if (pmWriteAdv && n >= 36) {
                         pmScratch[4]  = wResp[0]; pmScratch[10] = wResp[1]; pmScratch[16] = wResp[2]; pmScratch[22] = wResp[3];
-                        pmScratch[25] = wBoostGain[0];   pmScratch[26] = wBoostGain[1];   pmScratch[27] = wBoostGain[2];   pmScratch[28] = wBoostGain[3];
-                        pmScratch[29] = wBoostCutoff[0]; pmScratch[30] = wBoostCutoff[1]; pmScratch[31] = wBoostCutoff[2]; pmScratch[32] = wBoostCutoff[3];
-                        pmScratch[33] = wYawDyn[0];       pmScratch[34] = wYawDyn[1];       pmScratch[35] = wYawDyn[2];
+                        // interleaved gain,cutoff per axis (Roll,Pitch,Yaw,Coll)
+                        pmScratch[25] = wBoostGain[0]; pmScratch[26] = wBoostCutoff[0];   // Roll
+                        pmScratch[27] = wBoostGain[1]; pmScratch[28] = wBoostCutoff[1];   // Pitch
+                        pmScratch[29] = wBoostGain[2]; pmScratch[30] = wBoostCutoff[2];   // Yaw
+                        pmScratch[31] = wBoostGain[3]; pmScratch[32] = wBoostCutoff[3];   // Collective
+                        pmScratch[33] = wYawDyn[0];    pmScratch[34] = wYawDyn[1];    pmScratch[35] = wYawDyn[2];
                     }
                     mspSendRequest(MSP_SET_RC_TUNING, pmScratch, (uint8_t)n);
                     pmState = PM_RATES_EEPROM; pmStateAt = now;

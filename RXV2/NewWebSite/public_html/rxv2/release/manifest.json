@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.173-adv-fix",
+      "url": "https://messiter.com/rxv2/release/v0.9.173/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.173/littlefs.bin",
+      "notes": "Fixes the advanced-rates setpoint boost gain/cutoff scramble on the transmitter. The MSP RC_TUNING boost tail is interleaved per axis (Roll gain, Roll cutoff, Pitch gain, Pitch cutoff ...), not grouped - corrected both the read (TX now shows the Configurator values) and the write-back."
+    },
+    {
       "name": "RXV2-0.9.172-adv-rates",
       "url": "https://messiter.com/rxv2/release/v0.9.172/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.172/littlefs.bin",
@@ -64,12 +70,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.162/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.162/littlefs.bin",
       "notes": "The front screen now updates the bind status by itself. Before, after a successful bind the LED went steady (correct) but the home page still said 'Bind mode' until you left and re-opened it. The page now re-checks every few seconds, so it flips to 'Bound' (and clears the amber bind banner) within a couple of seconds of binding \u2014 no navigation needed. Same live-refresh that the Rotorflight button uses."
-    },
-    {
-      "name": "RXV2-0.9.161-deadband-x10",
-      "url": "https://messiter.com/rxv2/release/v0.9.161/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.161/littlefs.bin",
-      "notes": "Fixes a factor-of-10 on the Rates page 'Dynamic deadband filter' (yaw dynamics). It is stored in deci-Hz, so a value of 60 means 6.0 Hz \u2014 the page was showing the raw 60 instead of 6.0. Now displayed and saved in Hz to match the Configurator. The other yaw-dynamics fields were already correct."
     }
   ]
 }
