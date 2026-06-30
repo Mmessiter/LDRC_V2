@@ -138,7 +138,11 @@ inline bool    govConfigValid  = false;
 
 // write requests raised by the packet parser, serviced by txParamsLoop()
 inline bool ratesWriteReq    = false;   // basic rates only (ID 14, word[7]==0)
-inline bool ratesAdvWriteReq = false;   // basic + advanced together (ID 16)
+inline bool ratesAdvWriteReq = false;   // advanced (ID 16); + basic too if basicRatesPending
+// True once the TX has sent the basic-rates batch (ID 13/14) since the last rates
+// write. Distinguishes a RESTORE of rates+advanced (basic IS sent → write it) from
+// an advanced-only EDIT (basic NOT sent → preserve the FC's basic, don't zero it).
+inline bool basicRatesPending = false;
 inline bool pidWriteReq      = false;   // PIDs (ID 11)
 inline bool advPidWriteReq   = false;   // advanced PID (ID 21)
 inline bool govProfileWriteReq = false; // governor profile (ID 30)
@@ -290,10 +294,12 @@ inline void readExtraParameters(const uint8_t* payload, uint8_t size) {
             wRatesType = (uint8_t)w[1];
             wRoll[0]  = (uint8_t)w[2]; wRoll[1]  = (uint8_t)w[3]; wRoll[2]  = (uint8_t)w[4];
             wPitch[0] = (uint8_t)w[5]; wPitch[1] = (uint8_t)w[6]; wPitch[2] = (uint8_t)w[7];
+            basicRatesPending = true;
             break;
-        case PID_RATES_SECOND6:                 // 14 — Yaw + Collective; word[7]==0 => basic write now
+        case PID_RATES_SECOND6:                 // 14 — Yaw + Collective; word[7]==0 => basic write now, set => defer to ID16 combined
             wYaw[0]  = (uint8_t)w[1]; wYaw[1]  = (uint8_t)w[2]; wYaw[2]  = (uint8_t)w[3];
             wColl[0] = (uint8_t)w[4]; wColl[1] = (uint8_t)w[5]; wColl[2] = (uint8_t)w[6];
+            basicRatesPending = true;
             if (!w[7]) ratesWriteReq = true;
             break;
 
@@ -362,6 +368,15 @@ inline void readExtraParameters(const uint8_t* payload, uint8_t size) {
 //*********************************************************************
 //  Apply staged write values into the read-modify-write scratch buffer
 //*********************************************************************
+// Basic rates → MSP RC_TUNING order (Centre, Expo, Max per axis).
+inline void writeBasicRatesToScratch() {
+    pmScratch[0]  = wRatesType;
+    pmScratch[1]  = wRoll[0];  pmScratch[2]  = wRoll[2];  pmScratch[3]  = wRoll[1];
+    pmScratch[7]  = wPitch[0]; pmScratch[8]  = wPitch[2]; pmScratch[9]  = wPitch[1];
+    pmScratch[13] = wYaw[0];   pmScratch[14] = wYaw[2];   pmScratch[15] = wYaw[1];
+    pmScratch[19] = wColl[0];  pmScratch[20] = wColl[2];  pmScratch[21] = wColl[1];
+}
+
 inline void applyWriteToScratch() {
     // Each rates screen writes ONLY its own fields; everything else is preserved
     // from the freshly-read RC_TUNING in pmScratch. This is why basic and
@@ -369,13 +384,13 @@ inline void applyWriteToScratch() {
     // the basic rates, so an advanced save must not touch them — and vice-versa).
     if (pmWriteKind == WK_RATES) {
         if (pmScratchLen < 25) return;
-        pmScratch[0]  = wRatesType;             // MSP order Centre, Expo, Max
-        pmScratch[1]  = wRoll[0];  pmScratch[2]  = wRoll[2];  pmScratch[3]  = wRoll[1];
-        pmScratch[7]  = wPitch[0]; pmScratch[8]  = wPitch[2]; pmScratch[9]  = wPitch[1];
-        pmScratch[13] = wYaw[0];   pmScratch[14] = wYaw[2];   pmScratch[15] = wYaw[1];
-        pmScratch[19] = wColl[0];  pmScratch[20] = wColl[2];  pmScratch[21] = wColl[1];
+        writeBasicRatesToScratch();
     } else if (pmWriteKind == WK_RATES_ADV) {
-        if (pmScratchLen < 36) return;          // advanced only — basic preserved
+        if (pmScratchLen < 36) return;
+        // V1 writes basic + advanced together. Write basic only if the TX actually
+        // sent it this transaction (restore) — otherwise (advanced-only edit) leave
+        // the FC's basic as read, so we never zero it.
+        if (basicRatesPending) writeBasicRatesToScratch();
         pmScratch[4]  = wResp[0]; pmScratch[10] = wResp[1]; pmScratch[16] = wResp[2]; pmScratch[22] = wResp[3];
         pmScratch[25] = wBoostGain[0]; pmScratch[26] = wBoostCutoff[0];   // Roll  (interleaved gain,cutoff)
         pmScratch[27] = wBoostGain[1]; pmScratch[28] = wBoostCutoff[1];   // Pitch
@@ -500,6 +515,7 @@ inline void txParamsLoop() {
                 memcpy(pmScratch, mspAsyncBuf, pmScratchLen);
                 mspAsyncFunc = 0xFF;
                 applyWriteToScratch();
+                basicRatesPending = false;       // staged basic consumed; next advanced-only edit preserves the FC's basic
                 mspSendRequest(writeSetFn(), pmScratch, (uint8_t)pmScratchLen);
                 pmState = PM_WRITE_EEPROM; pmStateAt = now;
             } else if ((int32_t)(now - pmStateAt) > 500) {
