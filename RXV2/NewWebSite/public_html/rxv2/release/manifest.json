@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.177-adv-pid",
+      "url": "https://messiter.com/rxv2/release/v0.9.177/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.177/littlefs.bin",
+      "notes": "Adds ADVANCED PID editing from the transmitter (read + write): the full Dynamics/bandwidth/cutoff/limit set (26 values) via MSP_PID_PROFILE / MSP_SET_PID_PROFILE, mapped through the scattered profile offsets. Read-modify-write preserves untouched fields. That is rates, advanced rates, PIDs and advanced PIDs all editable from the handset - governor next."
+    },
+    {
       "name": "RXV2-0.9.176-timing",
       "url": "https://messiter.com/rxv2/release/v0.9.176/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.176/littlefs.bin",
@@ -65,12 +71,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.166/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.166/littlefs.bin",
       "notes": "Completes the failsafe: the saved positions are now applied on IN-FLIGHT signal loss. If the transmitter link is lost after having been connected, the receiver drives every channel to your saved failsafe set and keeps streaming them as valid RC, so the flight-controller holds your chosen failsafe (set the model to a safe posture - motor off for a heli - before saving). If no failsafe is saved, behaviour is unchanged (the FC runs its own failsafe). A no-transmitter power-up still always uses the guaranteed disarmed-safe default, never these values."
-    },
-    {
-      "name": "RXV2-0.9.165-headspeed",
-      "url": "https://messiter.com/rxv2/release/v0.9.165/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.165/littlefs.bin",
-      "notes": "Two telemetry items added like V1: HEAD SPEED and ESC TEMPERATURE, read from the CRSF telemetry the flight-controller streams (enable RPM + Temperature sensors in Rotorflight telemetry). Head speed = motor RPM / gear ratio, with a configurable GEAR RATIO on the View-channels page (1.0 = direct drive). SAFETY FIX: the receiver now NEVER boots to your saved failsafe positions (those can have the arm/safety switch off); a no-transmitter power-up always uses the guaranteed disarmed-safe default (sticks centred, AUX low). The failsafe Save still stores your positions for later use."
     }
   ]
 }

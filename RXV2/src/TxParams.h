@@ -103,17 +103,35 @@ inline uint8_t wBoostCutoff[4] = {0};   // setpoint-boost cutoff R,P,Y,C
 inline uint8_t wYawDyn[3]      = {0};   // ceiling gain, deadband gain, deadband filter
 // PIDs (16-bit, All_PIDs order)
 inline uint16_t wPid[17]       = {0};
+// advanced PID (26 compact bytes, V1 PID_Advanced_Bytes order)
+inline uint8_t wAdvPid[26]     = {0};
+
+// ADVANCED PID — 26 compact bytes. MSP_PID_PROFILE scatters these across the
+// 43-byte profile; ADV_PID_MAP[i] = the MSP byte offset of compact byte i.
+// Used for BOTH read (advPidAck[i] = p[MAP[i]]) and write (p[MAP[i]] = wAdvPid[i]).
+//   0 Piro comp        1 Ground error decay
+//   2-4 Cutoff R/P/Y   5-7 Error limit R/P/Y   8-9 HSI offset limit R/P
+//   10-12 HSI bandwidth R/P/Y   13-15 D cutoff R/P/Y   16-18 B cutoff R/P/Y
+//   19 CW yaw stop  20 CCW yaw stop  21 Yaw precomp cutoff
+//   22 Cyclic FF gain  23 Collective FF gain  24 Inertia precomp gain  25 Inertia precomp cutoff
+inline const uint8_t ADV_PID_MAP[26] = {
+    6, 1, 17, 18, 19, 7, 8, 9, 36, 37, 10, 11, 12, 13, 14, 15,
+    38, 39, 40, 20, 21, 22, 23, 24, 41, 42
+};
+inline uint8_t advPidAck[26]   = {0};
+inline bool    advPidAckValid  = false;
 
 // write requests raised by the packet parser, serviced by txParamsLoop()
 inline bool ratesWriteReq    = false;   // basic rates only (ID 14, word[7]==0)
 inline bool ratesAdvWriteReq = false;   // basic + advanced together (ID 16)
 inline bool pidWriteReq      = false;   // PIDs (ID 11)
+inline bool advPidWriteReq   = false;   // advanced PID (ID 21)
 
 //*********************************************************************
 //  Async MSP state machine
 //*********************************************************************
 enum ParamMspState : uint8_t { PM_IDLE, PM_READ, PM_WRITE_ORIG, PM_WRITE_EEPROM };
-enum WriteKind     : uint8_t { WK_NONE, WK_RATES, WK_RATES_ADV, WK_PID };
+enum WriteKind     : uint8_t { WK_NONE, WK_RATES, WK_RATES_ADV, WK_PID, WK_PID_ADV };
 
 inline ParamMspState pmState     = PM_IDLE;
 inline WriteKind     pmWriteKind = WK_NONE;
@@ -128,7 +146,9 @@ inline bool txParamMspFree() {
 
 // MSP "get" function for the active read window.
 inline uint8_t readGetFn() {
-    return (paramSend == PSEND_PID) ? MSP_PID : MSP_RC_TUNING;
+    if (paramSend == PSEND_PID)     return MSP_PID;
+    if (paramSend == PSEND_PID_ADV) return MSP_PID_PROFILE;
+    return MSP_RC_TUNING;           // rates + advanced rates
 }
 
 //*********************************************************************
@@ -158,6 +178,13 @@ inline void buildPidsFromMsp(const uint8_t* p, uint16_t len) {
     for (uint8_t i = 0; i < 17; ++i)
         pidVals[i] = (uint16_t)p[i * 2] | ((uint16_t)p[i * 2 + 1] << 8);
     pidAckValid = true;
+}
+
+// MSP_PID_PROFILE → compact 26 bytes via the scatter map.
+inline void buildAdvPidFromMsp(const uint8_t* p, uint16_t len) {
+    if (len < 43) return;
+    for (uint8_t i = 0; i < 26; ++i) advPidAck[i] = p[ADV_PID_MAP[i]];
+    advPidAckValid = true;
 }
 
 // pack two uint16 into ack[1..4] (lo,hi,lo,hi) — V1 Send_2_x_uint16_t
@@ -191,6 +218,9 @@ inline void readExtraParameters(const uint8_t* payload, uint8_t size) {
             break;
         case PID_SEND_PID:
             if (w[1] == 321) { paramSend = PSEND_PID;       paramSendUntil = millis() + w[2]; lastParamFetchMs = 0; }
+            break;
+        case PID_SEND_PID_ADV:
+            if (w[1] == 321) { paramSend = PSEND_PID_ADV;   paramSendUntil = millis() + w[2]; lastParamFetchMs = 0; }
             break;
 
         // ---- RATES write ----
@@ -227,8 +257,20 @@ inline void readExtraParameters(const uint8_t* payload, uint8_t size) {
             pidWriteReq = true;
             break;
 
+        // ---- ADVANCED PID write: 3 batches into wAdvPid[26]; ID 21 triggers ----
+        case PID_PID_ADV_FIRST9:                // 19 — bytes 0..8
+            for (uint8_t i = 0; i < 9; ++i) wAdvPid[i] = (uint8_t)w[i + 1];
+            break;
+        case PID_PID_ADV_SECOND9:               // 20 — bytes 9..17
+            for (uint8_t i = 0; i < 9; ++i) wAdvPid[i + 9] = (uint8_t)w[i + 1];
+            break;
+        case PID_PID_ADV_THIRD8:                // 21 — bytes 18..25, then write
+            for (uint8_t i = 0; i < 8; ++i) wAdvPid[i + 18] = (uint8_t)w[i + 1];
+            advPidWriteReq = true;
+            break;
+
         default:
-            break;                              // advanced PID / governor — added next
+            break;                              // governor — added next
     }
 }
 
@@ -261,11 +303,22 @@ inline void applyWriteToScratch() {
             pmScratch[i * 2]     = (uint8_t)(wPid[i] & 0xFF);
             pmScratch[i * 2 + 1] = (uint8_t)(wPid[i] >> 8);
         }
+    } else if (pmWriteKind == WK_PID_ADV) {
+        if (pmScratchLen < 43) return;
+        for (uint8_t i = 0; i < 26; ++i) pmScratch[ADV_PID_MAP[i]] = wAdvPid[i];   // scatter back
     }
 }
 
-inline uint8_t writeSetFn() { return (pmWriteKind == WK_PID) ? MSP_SET_PID : MSP_SET_RC_TUNING; }
-inline uint8_t writeGetFn() { return (pmWriteKind == WK_PID) ? MSP_PID     : MSP_RC_TUNING; }
+inline uint8_t writeSetFn() {
+    if (pmWriteKind == WK_PID)     return MSP_SET_PID;
+    if (pmWriteKind == WK_PID_ADV) return MSP_SET_PID_PROFILE;
+    return MSP_SET_RC_TUNING;
+}
+inline uint8_t writeGetFn() {
+    if (pmWriteKind == WK_PID)     return MSP_PID;
+    if (pmWriteKind == WK_PID_ADV) return MSP_PID_PROFILE;
+    return MSP_RC_TUNING;
+}
 
 //*********************************************************************
 //  Loop-driven async MSP state machine  (V1 CheckMSPSerial, non-blocking)
@@ -280,9 +333,10 @@ inline void txParamsLoop() {
         case PM_IDLE: {
             WriteKind wk = ratesAdvWriteReq ? WK_RATES_ADV
                          : ratesWriteReq    ? WK_RATES
-                         : pidWriteReq      ? WK_PID : WK_NONE;
+                         : pidWriteReq      ? WK_PID
+                         : advPidWriteReq   ? WK_PID_ADV : WK_NONE;
             if (wk != WK_NONE && txParamMspFree()) {
-                ratesAdvWriteReq = ratesWriteReq = pidWriteReq = false;
+                ratesAdvWriteReq = ratesWriteReq = pidWriteReq = advPidWriteReq = false;
                 pmWriteKind = wk;
                 uint8_t fn = writeGetFn();
                 mspAsyncFunc = fn; mspAsyncReady = false;
@@ -301,8 +355,9 @@ inline void txParamsLoop() {
 
         case PM_READ:
             if (mspAsyncReady) {
-                if      (mspAsyncFunc == MSP_RC_TUNING) buildRatesFromMsp(mspAsyncBuf, mspAsyncLen);
-                else if (mspAsyncFunc == MSP_PID)       buildPidsFromMsp(mspAsyncBuf, mspAsyncLen);
+                if      (mspAsyncFunc == MSP_RC_TUNING)   buildRatesFromMsp(mspAsyncBuf, mspAsyncLen);
+                else if (mspAsyncFunc == MSP_PID)         buildPidsFromMsp(mspAsyncBuf, mspAsyncLen);
+                else if (mspAsyncFunc == MSP_PID_PROFILE) buildAdvPidFromMsp(mspAsyncBuf, mspAsyncLen);
                 mspAsyncFunc = 0xFF; pmState = PM_IDLE; txParamBusy = false;
             } else if ((int32_t)(now - pmStateAt) > 250) {   // missed round-trip → retry quickly
                 mspAsyncFunc = 0xFF; pmState = PM_IDLE; txParamBusy = false;
@@ -330,6 +385,7 @@ inline void txParamsLoop() {
                 // up the freshly-saved values within ~50ms. Blanking it would just
                 // flash zeros to the TX until the next poll.
                 events.add(pmWriteKind == WK_PID ? "TX edit: PIDs -> FC"
+                         : pmWriteKind == WK_PID_ADV ? "TX edit: adv PID -> FC"
                          : pmWriteKind == WK_RATES_ADV ? "TX edit: RATES+adv -> FC"
                          : "TX edit: RATES -> FC");
                 pmWriteKind = WK_NONE;
@@ -372,6 +428,16 @@ inline bool fillParamAck(uint8_t item, uint8_t* ack) {
             case 32: ackPair(ack, pidVals[12], pidVals[13]); return true;   // Roll boost, Pitch boost
             case 33: ackPair(ack, pidVals[14], 0);           return true;   // Yaw boost
             case 34: ackPair(ack, pidVals[15], pidVals[16]); return true;   // HSI offset Roll, Pitch
+        }
+    } else if (paramSend == PSEND_PID_ADV && advPidAckValid) {
+        switch (item) {                          // 26 bytes, 4 per slot (last slot 2)
+            case 25: ack[1]=advPidAck[0];  ack[2]=advPidAck[1];  ack[3]=advPidAck[2];  ack[4]=advPidAck[3];  return true;
+            case 26: ack[1]=advPidAck[4];  ack[2]=advPidAck[5];  ack[3]=advPidAck[6];  ack[4]=advPidAck[7];  return true;
+            case 27: ack[1]=advPidAck[8];  ack[2]=advPidAck[9];  ack[3]=advPidAck[10]; ack[4]=advPidAck[11]; return true;
+            case 28: ack[1]=advPidAck[12]; ack[2]=advPidAck[13]; ack[3]=advPidAck[14]; ack[4]=advPidAck[15]; return true;
+            case 29: ack[1]=advPidAck[16]; ack[2]=advPidAck[17]; ack[3]=advPidAck[18]; ack[4]=advPidAck[19]; return true;
+            case 30: ack[1]=advPidAck[20]; ack[2]=advPidAck[21]; ack[3]=advPidAck[22]; ack[4]=advPidAck[23]; return true;
+            case 32: ack[1]=advPidAck[24]; ack[2]=advPidAck[25];                                             return true;
         }
     }
     return false;
