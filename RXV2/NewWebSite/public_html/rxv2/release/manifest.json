@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.180-fc-keepalive",
+      "url": "https://messiter.com/rxv2/release/v0.9.180/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.180/littlefs.bin",
+      "notes": "Fixes the web UI losing its Rotorflight options after the transmitter is used then switched off (until a reboot). On CRSF, signal loss detaches the output UART (so the FC sees the dropout) - but that also kills the FC RX line, so MSP stops and the flight-controller detection times out. The receiver now keeps the UART attached whenever WiFi is up (bench/config mode, where there is no transmitter by design and you need MSP). In-flight failsafe is unchanged - WiFi is off in flight."
+    },
+    {
       "name": "RXV2-0.9.179-gov-global",
       "url": "https://messiter.com/rxv2/release/v0.9.179/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.179/littlefs.bin",
@@ -65,12 +71,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.169/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.169/littlefs.bin",
       "notes": "Fixed stale-UI-after-update: app.js and style.css were cached by the browser for a whole day (max-age=86400), so a freshly-updated page could call helpers the old cached app.js did not have yet (e.g. the new Save-confirmation box silently did nothing). They now revalidate every load like the HTML pages do. NOTE: after THIS update do one hard-refresh (Cmd/Ctrl-Shift-R) to clear the previously-cached app.js; subsequent UI updates take effect immediately."
-    },
-    {
-      "name": "RXV2-0.9.168-gear-msg",
-      "url": "https://messiter.com/rxv2/release/v0.9.168/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.168/littlefs.bin",
-      "notes": "Save gear ratio now pops a confirmation box (\"Gear ratio = <n> saved!\") instead of only a quiet status line. Added a shared single-button LDRC.alert() helper for tidy acknowledgements."
     }
   ]
 }

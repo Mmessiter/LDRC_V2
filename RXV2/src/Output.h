@@ -367,7 +367,14 @@ inline void sbusTick() {
     // guard makes "no link" a state we only enter after having had a
     // link, which is what the user actually wants the LED to warn about.
     if (isIdleHighProto(currentProtocol)) {
-        bool wantDetach    = everConnected && failsafe;   // false while a failsafe posture is being streamed
+        // Keep the UART ATTACHED whenever WiFi is up (bench / config mode). The
+        // detach kills the D5 RX line, so MSP to the FC stops and the web UI loses
+        // its Rotorflight options until a reboot — and after a TX session
+        // (everConnected) that's exactly what happens once the TX is switched off
+        // and WiFi auto-re-enables. WiFi is only up at the bench (auto-WiFi keeps
+        // it off in flight), so this never affects the in-flight failsafe detach.
+        bool wifiConfigUp  = (netMode == NET_WIFI_UP || netMode == NET_AP);
+        bool wantDetach    = everConnected && failsafe && !wifiConfigUp;
         if (wantDetach && !outputDetachedForFailsafe) {
             Serial1.end();
             pinMode(PIN_SBUS_TX, OUTPUT);
