@@ -48,6 +48,7 @@ constexpr uint8_t MSP_SET_GOVERNOR_CONFIG = 143;
 constexpr uint8_t MSP_GOVERNOR_PROFILE = 148;
 constexpr uint8_t MSP_SET_GOVERNOR_PROFILE = 149;
 constexpr uint8_t MSP_EEPROM_WRITE   = 250;
+constexpr uint8_t MSP_REBOOT         = 68;    // FC restart (governor config write needs it to apply, like V1)
 
 //*********************************************************************
 //  Sync-wait state for mspRequestAndWait()

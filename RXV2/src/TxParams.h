@@ -121,17 +121,34 @@ inline const uint8_t ADV_PID_MAP[26] = {
 inline uint8_t advPidAck[26]   = {0};
 inline bool    advPidAckValid  = false;
 
+// GOVERNOR (RF 2.3+ only). One ack array spans profile [0..17] + config [18..45]
+// (V1 GovAckPayload). Profile and config come from separate MSP reads, so they
+// have separate validity flags. Field order here is V1's, NOT the MSP order —
+// build/apply functions remap to/from the scattered MSP layouts.
+//  profile [0]RF23-flag [1/2]Headspeed [3]Gain [4]P [5]I [6]D [7]F [8]TTAgain
+//          [9]TTAlimit [10]MaxThr [11]MinThr [12]FallbackDrop [13]YawW [14]CycW
+//          [15]CollW [16/17]Flags
+//  config  [18]Mode [19]Handover [20/21]Startup [22/23]Spoolup [24/25]Spooldown
+//          [26/27]Tracking [28/29]Recovery [30/31]HoldTimeout [32/33]AutorotTimeout
+//          [34]RpmF [35]PwrF [36]DF [37]FfF [38]TtaF [39]ThrType [40]Idle [41]Auto
+inline uint8_t govAck[46]      = {0};
+inline uint8_t govWrite[46]    = {0};
+inline bool    govProfileValid = false;
+inline bool    govConfigValid  = false;
+
 // write requests raised by the packet parser, serviced by txParamsLoop()
 inline bool ratesWriteReq    = false;   // basic rates only (ID 14, word[7]==0)
 inline bool ratesAdvWriteReq = false;   // basic + advanced together (ID 16)
 inline bool pidWriteReq      = false;   // PIDs (ID 11)
 inline bool advPidWriteReq   = false;   // advanced PID (ID 21)
+inline bool govProfileWriteReq = false; // governor profile (ID 30)
+inline bool govConfigWriteReq  = false; // governor config (ID 33)
 
 //*********************************************************************
 //  Async MSP state machine
 //*********************************************************************
 enum ParamMspState : uint8_t { PM_IDLE, PM_READ, PM_WRITE_ORIG, PM_WRITE_EEPROM };
-enum WriteKind     : uint8_t { WK_NONE, WK_RATES, WK_RATES_ADV, WK_PID, WK_PID_ADV };
+enum WriteKind     : uint8_t { WK_NONE, WK_RATES, WK_RATES_ADV, WK_PID, WK_PID_ADV, WK_GOV_PROFILE, WK_GOV_CONFIG };
 
 inline ParamMspState pmState     = PM_IDLE;
 inline WriteKind     pmWriteKind = WK_NONE;
@@ -146,10 +163,15 @@ inline bool txParamMspFree() {
 
 // MSP "get" function for the active read window.
 inline uint8_t readGetFn() {
-    if (paramSend == PSEND_PID)     return MSP_PID;
-    if (paramSend == PSEND_PID_ADV) return MSP_PID_PROFILE;
+    if (paramSend == PSEND_PID)          return MSP_PID;
+    if (paramSend == PSEND_PID_ADV)      return MSP_PID_PROFILE;
+    if (paramSend == PSEND_GOV_PROFILE)  return MSP_GOVERNOR_PROFILE;
+    if (paramSend == PSEND_GOV_CONFIG)   return MSP_GOVERNOR_CONFIG;
     return MSP_RC_TUNING;           // rates + advanced rates
 }
+
+// Governor is RF 2.3+ only (V1 gates on api100 >= 1209).
+inline bool govSupported() { return rotorflightTxVersion() >= 2; }
 
 //*********************************************************************
 //  Build cached ack bytes from raw MSP responses
@@ -185,6 +207,43 @@ inline void buildAdvPidFromMsp(const uint8_t* p, uint16_t len) {
     if (len < 43) return;
     for (uint8_t i = 0; i < 26; ++i) advPidAck[i] = p[ADV_PID_MAP[i]];
     advPidAckValid = true;
+}
+
+// MSP_GOVERNOR_PROFILE (17 bytes) → govAck[0..17] (V1 order).
+inline void buildGovProfileFromMsp(const uint8_t* p, uint16_t len) {
+    if (len < 17) return;
+    govAck[0]  = govSupported() ? 1 : 0;        // RF2.3-required flag the TX checks
+    govAck[1]  = p[0];  govAck[2]  = p[1];      // Headspeed lo/hi
+    govAck[3]  = p[2];  govAck[4]  = p[3];  govAck[5] = p[4];  govAck[6] = p[5];  govAck[7] = p[6];  // Gain,P,I,D,F
+    govAck[8]  = p[7];  govAck[9]  = p[8];      // TTA_Gain, TTA_Limit
+    govAck[10] = p[12]; govAck[11] = p[13];     // Max_Throttle, Min_Throttle
+    govAck[12] = p[14];                         // Fallback_Drop
+    govAck[13] = p[9];  govAck[14] = p[10]; govAck[15] = p[11];   // Yaw/Cyclic/Collective weight
+    govAck[16] = p[15]; govAck[17] = p[16];     // Flags lo/hi
+    govProfileValid = true;
+}
+
+// MSP_GOVERNOR_CONFIG (42 bytes) → govAck[18..41] (V1 order).
+inline void buildGovConfigFromMsp(const uint8_t* p, uint16_t len) {
+    if (len < 42) return;
+    govAck[18] = p[0];                          // Gov_Mode
+    govAck[19] = p[19];                         // Handover_Throttle
+    govAck[20] = p[1];  govAck[21] = p[2];      // Startup
+    govAck[22] = p[3];  govAck[23] = p[4];      // Spoolup
+    govAck[24] = p[26]; govAck[25] = p[27];     // Spooldown
+    govAck[26] = p[5];  govAck[27] = p[6];      // Tracking
+    govAck[28] = p[7];  govAck[29] = p[8];      // Recovery
+    govAck[30] = p[9];  govAck[31] = p[10];     // Throttle_Hold_Timeout
+    govAck[32] = p[13]; govAck[33] = p[14];     // Autorotation_Timeout
+    govAck[34] = p[21];                         // Rpm_Filter
+    govAck[35] = p[20];                         // Pwr_Filter
+    govAck[36] = p[25];                         // D_Filter
+    govAck[37] = p[23];                         // Ff_Filter
+    govAck[38] = p[22];                         // Tta_Filter
+    govAck[39] = p[28];                         // Throttle_Type
+    govAck[40] = p[31];                         // Idle_Throttle
+    govAck[41] = p[32];                         // Auto_Throttle
+    govConfigValid = true;
 }
 
 // pack two uint16 into ack[1..4] (lo,hi,lo,hi) — V1 Send_2_x_uint16_t
@@ -269,8 +328,31 @@ inline void readExtraParameters(const uint8_t* payload, uint8_t size) {
             advPidWriteReq = true;
             break;
 
+        // ---- GOVERNOR (RF 2.3+ only) ----
+        case PID_SEND_GOV_PROFILE:              // 27 — read governor profile
+            if (govSupported() && w[1] == 321) { paramSend = PSEND_GOV_PROFILE; paramSendUntil = millis() + w[2]; lastParamFetchMs = 0; }
+            break;
+        case PID_SEND_GOV_CONFIG:               // 28 — read governor config
+            if (govSupported() && w[1] == 321) { paramSend = PSEND_GOV_CONFIG;  paramSendUntil = millis() + w[2]; lastParamFetchMs = 0; }
+            break;
+        case PID_GOV_WR_PROFILE1:               // 29 — profile bytes 1..11
+            if (govSupported()) for (uint8_t i = 0; i < 11; ++i) govWrite[i + 1] = (uint8_t)w[i + 1];
+            break;
+        case PID_GOV_WR_PROFILE2:               // 30 — profile bytes 12..17, then write
+            if (govSupported()) { for (uint8_t i = 0; i < 6; ++i) govWrite[i + 12] = (uint8_t)w[i + 1]; govProfileWriteReq = true; }
+            break;
+        case PID_GOV_WR_CONFIG1:                // 31 — config bytes 18..28
+            if (govSupported()) for (uint8_t i = 0; i < 11; ++i) govWrite[i + 18] = (uint8_t)w[i + 1];
+            break;
+        case PID_GOV_WR_CONFIG2:                // 32 — config bytes 29..39
+            if (govSupported()) for (uint8_t i = 0; i < 11; ++i) govWrite[i + 29] = (uint8_t)w[i + 1];
+            break;
+        case PID_GOV_WR_CONFIG3:                // 33 — config bytes 40..45, then write
+            if (govSupported()) { for (uint8_t i = 0; i < 6; ++i) govWrite[i + 40] = (uint8_t)w[i + 1]; govConfigWriteReq = true; }
+            break;
+
         default:
-            break;                              // governor — added next
+            break;
     }
 }
 
@@ -306,17 +388,51 @@ inline void applyWriteToScratch() {
     } else if (pmWriteKind == WK_PID_ADV) {
         if (pmScratchLen < 43) return;
         for (uint8_t i = 0; i < 26; ++i) pmScratch[ADV_PID_MAP[i]] = wAdvPid[i];   // scatter back
+    } else if (pmWriteKind == WK_GOV_PROFILE) {
+        if (pmScratchLen < 17) return;          // govWrite[1..17] → MSP profile order
+        pmScratch[0]  = govWrite[1];  pmScratch[1]  = govWrite[2];   // Headspeed lo/hi
+        pmScratch[2]  = govWrite[3];  pmScratch[3]  = govWrite[4];  pmScratch[4] = govWrite[5];  pmScratch[5] = govWrite[6];  pmScratch[6] = govWrite[7]; // Gain,P,I,D,F
+        pmScratch[7]  = govWrite[8];  pmScratch[8]  = govWrite[9];   // TTA_Gain, TTA_Limit
+        pmScratch[9]  = govWrite[13]; pmScratch[10] = govWrite[14]; pmScratch[11] = govWrite[15]; // Yaw/Cyclic/Collective weight
+        pmScratch[12] = govWrite[10]; pmScratch[13] = govWrite[11]; // Max/Min throttle
+        pmScratch[14] = govWrite[12];                               // Fallback_Drop
+        pmScratch[15] = govWrite[16]; pmScratch[16] = govWrite[17]; // Flags lo/hi
+    } else if (pmWriteKind == WK_GOV_CONFIG) {
+        if (pmScratchLen < 42) return;          // govWrite[18..41] → MSP config order (rest preserved)
+        pmScratch[0]  = govWrite[18];           // Gov_Mode
+        pmScratch[1]  = govWrite[20]; pmScratch[2]  = govWrite[21]; // Startup
+        pmScratch[3]  = govWrite[22]; pmScratch[4]  = govWrite[23]; // Spoolup
+        pmScratch[5]  = govWrite[26]; pmScratch[6]  = govWrite[27]; // Tracking
+        pmScratch[7]  = govWrite[28]; pmScratch[8]  = govWrite[29]; // Recovery
+        pmScratch[9]  = govWrite[30]; pmScratch[10] = govWrite[31]; // Throttle_Hold_Timeout
+        pmScratch[13] = govWrite[32]; pmScratch[14] = govWrite[33]; // Autorotation_Timeout
+        pmScratch[19] = govWrite[19];           // Handover_Throttle
+        pmScratch[20] = govWrite[35];           // Pwr_Filter
+        pmScratch[21] = govWrite[34];           // Rpm_Filter
+        pmScratch[22] = govWrite[38];           // Tta_Filter
+        pmScratch[23] = govWrite[37];           // Ff_Filter
+        pmScratch[25] = govWrite[36];           // D_Filter
+        pmScratch[26] = govWrite[24]; pmScratch[27] = govWrite[25]; // Spooldown
+        pmScratch[28] = govWrite[39];           // Throttle_Type
+        pmScratch[31] = govWrite[40];           // Idle_Throttle
+        pmScratch[32] = govWrite[41];           // Auto_Throttle
+        // [11/12] lost-headspeed, [15-18] autorot bailout/min-entry, [24] spoolup-min,
+        // [29/30] spare, [33-41] bypass curve — preserved from the read.
     }
 }
 
 inline uint8_t writeSetFn() {
-    if (pmWriteKind == WK_PID)     return MSP_SET_PID;
-    if (pmWriteKind == WK_PID_ADV) return MSP_SET_PID_PROFILE;
+    if (pmWriteKind == WK_PID)         return MSP_SET_PID;
+    if (pmWriteKind == WK_PID_ADV)     return MSP_SET_PID_PROFILE;
+    if (pmWriteKind == WK_GOV_PROFILE) return MSP_SET_GOVERNOR_PROFILE;
+    if (pmWriteKind == WK_GOV_CONFIG)  return MSP_SET_GOVERNOR_CONFIG;
     return MSP_SET_RC_TUNING;
 }
 inline uint8_t writeGetFn() {
-    if (pmWriteKind == WK_PID)     return MSP_PID;
-    if (pmWriteKind == WK_PID_ADV) return MSP_PID_PROFILE;
+    if (pmWriteKind == WK_PID)         return MSP_PID;
+    if (pmWriteKind == WK_PID_ADV)     return MSP_PID_PROFILE;
+    if (pmWriteKind == WK_GOV_PROFILE) return MSP_GOVERNOR_PROFILE;
+    if (pmWriteKind == WK_GOV_CONFIG)  return MSP_GOVERNOR_CONFIG;
     return MSP_RC_TUNING;
 }
 
@@ -331,12 +447,15 @@ inline void txParamsLoop() {
 
     switch (pmState) {
         case PM_IDLE: {
-            WriteKind wk = ratesAdvWriteReq ? WK_RATES_ADV
-                         : ratesWriteReq    ? WK_RATES
-                         : pidWriteReq      ? WK_PID
-                         : advPidWriteReq   ? WK_PID_ADV : WK_NONE;
+            WriteKind wk = ratesAdvWriteReq   ? WK_RATES_ADV
+                         : ratesWriteReq      ? WK_RATES
+                         : pidWriteReq        ? WK_PID
+                         : advPidWriteReq     ? WK_PID_ADV
+                         : govProfileWriteReq ? WK_GOV_PROFILE
+                         : govConfigWriteReq  ? WK_GOV_CONFIG : WK_NONE;
             if (wk != WK_NONE && txParamMspFree()) {
                 ratesAdvWriteReq = ratesWriteReq = pidWriteReq = advPidWriteReq = false;
+                govProfileWriteReq = govConfigWriteReq = false;
                 pmWriteKind = wk;
                 uint8_t fn = writeGetFn();
                 mspAsyncFunc = fn; mspAsyncReady = false;
@@ -355,9 +474,11 @@ inline void txParamsLoop() {
 
         case PM_READ:
             if (mspAsyncReady) {
-                if      (mspAsyncFunc == MSP_RC_TUNING)   buildRatesFromMsp(mspAsyncBuf, mspAsyncLen);
-                else if (mspAsyncFunc == MSP_PID)         buildPidsFromMsp(mspAsyncBuf, mspAsyncLen);
-                else if (mspAsyncFunc == MSP_PID_PROFILE) buildAdvPidFromMsp(mspAsyncBuf, mspAsyncLen);
+                if      (mspAsyncFunc == MSP_RC_TUNING)       buildRatesFromMsp(mspAsyncBuf, mspAsyncLen);
+                else if (mspAsyncFunc == MSP_PID)             buildPidsFromMsp(mspAsyncBuf, mspAsyncLen);
+                else if (mspAsyncFunc == MSP_PID_PROFILE)     buildAdvPidFromMsp(mspAsyncBuf, mspAsyncLen);
+                else if (mspAsyncFunc == MSP_GOVERNOR_PROFILE) buildGovProfileFromMsp(mspAsyncBuf, mspAsyncLen);
+                else if (mspAsyncFunc == MSP_GOVERNOR_CONFIG)  buildGovConfigFromMsp(mspAsyncBuf, mspAsyncLen);
                 mspAsyncFunc = 0xFF; pmState = PM_IDLE; txParamBusy = false;
             } else if ((int32_t)(now - pmStateAt) > 250) {   // missed round-trip → retry quickly
                 mspAsyncFunc = 0xFF; pmState = PM_IDLE; txParamBusy = false;
@@ -381,11 +502,17 @@ inline void txParamsLoop() {
         case PM_WRITE_EEPROM:
             if ((int32_t)(now - pmStateAt) > 120) {
                 mspSendRequest(MSP_EEPROM_WRITE);
+                // Governor CONFIG needs an FC restart to take effect (matches V1
+                // RestartRotorflight). NB this reboots the FC — fine on the bench
+                // while configuring; the RC link drops and re-establishes.
+                if (pmWriteKind == WK_GOV_CONFIG) mspSendRequest(MSP_REBOOT);
                 // Do NOT invalidate the cache here — the continuous re-poll picks
                 // up the freshly-saved values within ~50ms. Blanking it would just
                 // flash zeros to the TX until the next poll.
                 events.add(pmWriteKind == WK_PID ? "TX edit: PIDs -> FC"
                          : pmWriteKind == WK_PID_ADV ? "TX edit: adv PID -> FC"
+                         : pmWriteKind == WK_GOV_PROFILE ? "TX edit: gov profile -> FC"
+                         : pmWriteKind == WK_GOV_CONFIG ? "TX edit: gov config -> FC (reboot)"
                          : pmWriteKind == WK_RATES_ADV ? "TX edit: RATES+adv -> FC"
                          : "TX edit: RATES -> FC");
                 pmWriteKind = WK_NONE;
@@ -438,6 +565,23 @@ inline bool fillParamAck(uint8_t item, uint8_t* ack) {
             case 29: ack[1]=advPidAck[16]; ack[2]=advPidAck[17]; ack[3]=advPidAck[18]; ack[4]=advPidAck[19]; return true;
             case 30: ack[1]=advPidAck[20]; ack[2]=advPidAck[21]; ack[3]=advPidAck[22]; ack[4]=advPidAck[23]; return true;
             case 32: ack[1]=advPidAck[24]; ack[2]=advPidAck[25];                                             return true;
+        }
+    } else if (paramSend == PSEND_GOV_PROFILE && govProfileValid) {
+        switch (item) {                          // govAck[0..17]
+            case 25: ack[1]=govAck[0];  ack[2]=govAck[1];  ack[3]=govAck[2];  ack[4]=govAck[3];  return true;
+            case 26: ack[1]=govAck[4];  ack[2]=govAck[5];  ack[3]=govAck[6];  ack[4]=govAck[7];  return true;
+            case 27: ack[1]=govAck[8];  ack[2]=govAck[9];  ack[3]=govAck[10]; ack[4]=govAck[11]; return true;
+            case 28: ack[1]=govAck[12]; ack[2]=govAck[13]; ack[3]=govAck[14]; ack[4]=govAck[15]; return true;
+            case 29: ack[1]=govAck[16]; ack[2]=govAck[17];                                       return true;
+        }
+    } else if (paramSend == PSEND_GOV_CONFIG && govConfigValid) {
+        switch (item) {                          // govAck[18..41]
+            case 25: ack[1]=govAck[18]; ack[2]=govAck[19]; ack[3]=govAck[20]; ack[4]=govAck[21]; return true;
+            case 26: ack[1]=govAck[22]; ack[2]=govAck[23]; ack[3]=govAck[24]; ack[4]=govAck[25]; return true;
+            case 27: ack[1]=govAck[26]; ack[2]=govAck[27]; ack[3]=govAck[28]; ack[4]=govAck[29]; return true;
+            case 28: ack[1]=govAck[30]; ack[2]=govAck[31]; ack[3]=govAck[32]; ack[4]=govAck[33]; return true;
+            case 29: ack[1]=govAck[34]; ack[2]=govAck[35]; ack[3]=govAck[36]; ack[4]=govAck[37]; return true;
+            case 30: ack[1]=govAck[38]; ack[2]=govAck[39]; ack[3]=govAck[40]; ack[4]=govAck[41]; return true;
         }
     }
     return false;

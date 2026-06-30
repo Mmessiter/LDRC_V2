@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.178-tx-governor",
+      "url": "https://messiter.com/rxv2/release/v0.9.178/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.178/littlefs.bin",
+      "notes": "Adds GOVERNOR editing from the transmitter (profile + config), RF 2.3+ only. Profile via MSP_GOVERNOR_PROFILE/SET (148/149); config via MSP_GOVERNOR_CONFIG/SET (142/143) followed by an FC reboot so it takes effect (like V1). Completes full Rotorflight parity from the handset: rates, advanced rates, PIDs, advanced PIDs, governor - all readable and writable from the TX as well as the iPhone."
+    },
+    {
       "name": "RXV2-0.9.177-adv-pid",
       "url": "https://messiter.com/rxv2/release/v0.9.177/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.177/littlefs.bin",
@@ -65,12 +71,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.167/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.167/littlefs.bin",
       "notes": "Failsafe now defers to the flight-controller on CRSF. A Rotorflight FC overrules receiver-streamed channels on signal loss (its own failsafe is the authority over CRSF), so on CRSF the receiver no longer streams the saved failsafe - it lets the FC take over (configure it in Rotorflight's Failsafe tab). The saved failsafe is KEPT and still applied on signal loss for SBUS / FBUS / IBUS / PPM models that rely on it. No-transmitter boot is still always disarmed-safe."
-    },
-    {
-      "name": "RXV2-0.9.166-fs-apply",
-      "url": "https://messiter.com/rxv2/release/v0.9.166/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.166/littlefs.bin",
-      "notes": "Completes the failsafe: the saved positions are now applied on IN-FLIGHT signal loss. If the transmitter link is lost after having been connected, the receiver drives every channel to your saved failsafe set and keeps streaming them as valid RC, so the flight-controller holds your chosen failsafe (set the model to a safe posture - motor off for a heli - before saving). If no failsafe is saved, behaviour is unchanged (the FC runs its own failsafe). A no-transmitter power-up still always uses the guaranteed disarmed-safe default, never these values."
     }
   ]
 }
