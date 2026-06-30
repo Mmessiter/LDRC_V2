@@ -284,6 +284,17 @@ inline uint8_t rotorflightMinor() {
     return 0;
 }
 
+// Version code the way the V1 TX expects it in ack slot 31 (its RotorFlight_V):
+//   0 = not Rotorflight,  1 = RF 2.2 (API 12.8),  2 = RF 2.3+ (API 12.9+).
+// The TX picks its rate-display factor table from this (>=2 => RF 2.3 factors),
+// so sending a plain "1" forced the 2.2 factors and mis-scaled the 2.3 rates.
+// Mirrors V1's Rotorflight_Version (api100 1208 -> 1, >=1209 -> 2).
+inline uint8_t rotorflightTxVersion() {
+    if (fcInfo.apiMajor == 12 && fcInfo.apiMinor >= 9) return 2;   // RF 2.3+
+    if (fcInfo.apiMajor == 12 && fcInfo.apiMinor == 8) return 1;   // RF 2.2
+    return 0;
+}
+
 inline bool fcIsRotorflightConfigCapable() {
     // Strict check: only if MSP probe confirmed Rotorflight 2.2+.
     if (fcInfo.detected && fcInfo.versionKnown &&

@@ -334,9 +334,16 @@ inline void loadNextAck() {
                 fillParamAck(telemetryItem, ack);
                 break;
             case 31:
-                // Rotorflight version flag. Set when FC telemetry is active so v1 TX
-                // picks up the Rotorflight-specific slots (cases 20-22).
-                packU32(ack, fcTelem.valid ? 1u : 0u);
+                // Rotorflight version for the TX (its RotorFlight_V): 0 none, 1 = RF 2.2,
+                // 2 = RF 2.3+. The TX uses this to (a) enable the Rotorflight screens and
+                // (b) choose the rate-display factor table — sending a flat "1" forced the
+                // 2.2 factors and mis-scaled 2.3 rates. Falls back to a 0/1 telemetry flag
+                // if the FC is only telemetry-detected (API not yet probed).
+                {
+                    uint8_t rfv = rotorflightTxVersion();
+                    if (rfv == 0 && fcTelem.valid) rfv = 1;
+                    packU32(ack, rfv);
+                }
                 break;
             case 35:  packU32(ack, buildDays);                      break;  // BuildAge in days since 2020-01-01
             default:  break;

@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.171-rfver",
+      "url": "https://messiter.com/rxv2/release/v0.9.171/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.171/littlefs.bin",
+      "notes": "Fixes the rate FACTORS shown on the transmitter. Ack slot 31 now reports the real Rotorflight version (1 = RF2.2, 2 = RF2.3) instead of a flat 1, so the TX picks the correct 2.3 factor table - rates now read exactly as the Configurator (Roll 160/20/20, Yaw 400/20/20, Collective 6.0/48/0) instead of the 2.2-scaled 320/200/0.20. Also relabels the TX columns to Rate/Shape/Expo on 2.3."
+    },
+    {
       "name": "RXV2-0.9.170-tx-rates",
       "url": "https://messiter.com/rxv2/release/v0.9.170/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.170/littlefs.bin",
@@ -64,12 +70,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.160/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.160/littlefs.bin",
       "notes": "Tidies the Rates page for the ACTUAL rate type (Rotorflight 2.2 default) to match the official Configurator: columns are now Centre / Max Rate / Expo / Max Vel (instead of the old generic Centre / Expo / Max plus two always-zero Resp/Accel columns). Values were already correct; this just lays them out the same as the Configurator, like the ROTORFLIGHT type already does."
-    },
-    {
-      "name": "RXV2-0.9.159-rf22-detect",
-      "url": "https://messiter.com/rxv2/release/v0.9.159/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.159/littlefs.bin",
-      "notes": "Fixes Rotorflight 2.2 detection. The receiver was mis-mapping the FC API version, so a 2.2 flight-controller (API 12.8) was tagged as \"1.x\" and ALL Rotorflight options disappeared. The mapping is corrected (API 12.8 = RF 2.2, 12.9 = RF 2.3, etc.), so 2.2 is recognised and its config pages appear and read the right version. Following V1: on 2.2 you get everything EXCEPT the two Governor pages (governor needs Rotorflight 2.3 / API 12.9), which are now hidden on 2.2 rather than opening to a disabled page."
     }
   ]
 }
