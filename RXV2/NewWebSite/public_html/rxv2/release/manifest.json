@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.181-sticky-block",
+      "url": "https://messiter.com/rxv2/release/v0.9.181/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.181/littlefs.bin",
+      "notes": "Further reduces occasional all-zeros when reading params from the transmitter (seen most on governor profile). The receiver now keeps streaming the last-read block's cached values to the TX even after the read window ends - so lingering on a screen past the window, or a dropped request, shows the last good values (stale at worst) instead of zeros. FC re-polling still stops when the window closes, so no extra MSP load."
+    },
+    {
       "name": "RXV2-0.9.180-fc-keepalive",
       "url": "https://messiter.com/rxv2/release/v0.9.180/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.180/littlefs.bin",
@@ -65,12 +71,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.170/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.170/littlefs.bin",
       "notes": "NEW: edit Rotorflight RATES from the transmitter (not just the iPhone). A V1-compatible transmitter can now read and set the rate values over the radio link - the receiver fetches/writes them to the flight-controller over MSP. Built on a new non-blocking parameter engine (TxParams.h) ported byte-exact from V1, so it never stalls the RC link. RATES first; PIDs and governor to follow. iPhone editing unchanged."
-    },
-    {
-      "name": "RXV2-0.9.169-nocache-js",
-      "url": "https://messiter.com/rxv2/release/v0.9.169/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.169/littlefs.bin",
-      "notes": "Fixed stale-UI-after-update: app.js and style.css were cached by the browser for a whole day (max-age=86400), so a freshly-updated page could call helpers the old cached app.js did not have yet (e.g. the new Save-confirmation box silently did nothing). They now revalidate every load like the HTML pages do. NOTE: after THIS update do one hard-refresh (Cmd/Ctrl-Shift-R) to clear the previously-cached app.js; subsequent UI updates take effect immediately."
     }
   ]
 }

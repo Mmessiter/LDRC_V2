@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.180-fc-keepalive";
+constexpr const char* FW_VERSION = "RXV2-0.9.181-sticky-block";
 
 //*********************************************************************
 //  Auto-update manifest URLs

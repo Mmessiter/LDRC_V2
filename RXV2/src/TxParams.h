@@ -446,7 +446,12 @@ inline void txParamsLoop() {
     if (currentProtocol != PROTO_CRSF) return;
     const uint32_t now = millis();
 
-    if (paramSend != PSEND_NONE && (int32_t)(now - paramSendUntil) > 0) paramSend = PSEND_NONE;
+    // paramSend is STICKY — it keeps the last-read block selected so fillParamAck
+    // always streams that block's cached bytes (stale at worst, never zeros). The
+    // window (paramSendUntil) only gates RE-POLLING the FC below, so we stop
+    // hammering the FC once the TX's read window ends but the TX never reads zeros
+    // if it lingers on a screen past the window or its "send now" request drops.
+    const bool pollWindowOpen = (int32_t)(now - paramSendUntil) < 0;
 
     switch (pmState) {
         case PM_IDLE: {
@@ -464,8 +469,8 @@ inline void txParamsLoop() {
                 mspAsyncFunc = fn; mspAsyncReady = false;
                 mspSendRequest(fn);                       // read-modify-write: get current first
                 pmState = PM_WRITE_ORIG; pmStateAt = now; txParamBusy = true;
-            } else if (paramSend != PSEND_NONE && txParamMspFree() &&
-                       (int32_t)(now - lastParamFetchMs) >= 50) {   // continuous re-poll (matches V1 ~50ms)
+            } else if (paramSend != PSEND_NONE && pollWindowOpen && txParamMspFree() &&
+                       (int32_t)(now - lastParamFetchMs) >= 50) {   // continuous re-poll (matches V1 ~50ms), only within the window
                 lastParamFetchMs = now;
                 uint8_t fn = readGetFn();
                 mspAsyncFunc = fn; mspAsyncReady = false;
