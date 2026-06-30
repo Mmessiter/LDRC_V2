@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.179-gov-global",
+      "url": "https://messiter.com/rxv2/release/v0.9.179/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.179/littlefs.bin",
+      "notes": "Fixes the governor GLOBAL (config) screen showing nothing on the transmitter. The receiver was discarding the whole MSP_GOVERNOR_CONFIG response unless it was at least 42 bytes, but RF 2.3 can report a different length - and only bytes up to 32 are actually read (the bypass curve at 33+ is just preserved on write). Now accepts any response reaching byte 32, so the global settings populate."
+    },
+    {
       "name": "RXV2-0.9.178-tx-governor",
       "url": "https://messiter.com/rxv2/release/v0.9.178/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.178/littlefs.bin",
@@ -65,12 +71,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.168/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.168/littlefs.bin",
       "notes": "Save gear ratio now pops a confirmation box (\"Gear ratio = <n> saved!\") instead of only a quiet status line. Added a shared single-button LDRC.alert() helper for tidy acknowledgements."
-    },
-    {
-      "name": "RXV2-0.9.167-fs-crsf",
-      "url": "https://messiter.com/rxv2/release/v0.9.167/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.167/littlefs.bin",
-      "notes": "Failsafe now defers to the flight-controller on CRSF. A Rotorflight FC overrules receiver-streamed channels on signal loss (its own failsafe is the authority over CRSF), so on CRSF the receiver no longer streams the saved failsafe - it lets the FC take over (configure it in Rotorflight's Failsafe tab). The saved failsafe is KEPT and still applied on signal loss for SBUS / FBUS / IBUS / PPM models that rely on it. No-transmitter boot is still always disarmed-safe."
     }
   ]
 }

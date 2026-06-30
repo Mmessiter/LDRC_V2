@@ -223,9 +223,12 @@ inline void buildGovProfileFromMsp(const uint8_t* p, uint16_t len) {
     govProfileValid = true;
 }
 
-// MSP_GOVERNOR_CONFIG (42 bytes) → govAck[18..41] (V1 order).
+// MSP_GOVERNOR_CONFIG → govAck[18..41] (V1 order). We only read up to byte 32
+// (Auto_Throttle); the bypass curve at 33+ is preserved on write but not read,
+// so accept any response that reaches byte 32 — RF 2.3 may report a different
+// total length than V1's 42, and a strict ==42 check left the global screen blank.
 inline void buildGovConfigFromMsp(const uint8_t* p, uint16_t len) {
-    if (len < 42) return;
+    if (len < 33) return;
     govAck[18] = p[0];                          // Gov_Mode
     govAck[19] = p[19];                         // Handover_Throttle
     govAck[20] = p[1];  govAck[21] = p[2];      // Startup
@@ -398,7 +401,7 @@ inline void applyWriteToScratch() {
         pmScratch[14] = govWrite[12];                               // Fallback_Drop
         pmScratch[15] = govWrite[16]; pmScratch[16] = govWrite[17]; // Flags lo/hi
     } else if (pmWriteKind == WK_GOV_CONFIG) {
-        if (pmScratchLen < 42) return;          // govWrite[18..41] → MSP config order (rest preserved)
+        if (pmScratchLen < 33) return;          // govWrite[18..41] → MSP config order (rest preserved; write keeps the FC's own length)
         pmScratch[0]  = govWrite[18];           // Gov_Mode
         pmScratch[1]  = govWrite[20]; pmScratch[2]  = govWrite[21]; // Startup
         pmScratch[3]  = govWrite[22]; pmScratch[4]  = govWrite[23]; // Spoolup

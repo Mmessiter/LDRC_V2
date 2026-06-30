@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.178-tx-governor";
+constexpr const char* FW_VERSION = "RXV2-0.9.179-gov-global";
 
 //*********************************************************************
 //  Auto-update manifest URLs
