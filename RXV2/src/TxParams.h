@@ -236,21 +236,25 @@ inline void readExtraParameters(const uint8_t* payload, uint8_t size) {
 //  Apply staged write values into the read-modify-write scratch buffer
 //*********************************************************************
 inline void applyWriteToScratch() {
-    if (pmWriteKind == WK_RATES || pmWriteKind == WK_RATES_ADV) {
+    // Each rates screen writes ONLY its own fields; everything else is preserved
+    // from the freshly-read RC_TUNING in pmScratch. This is why basic and
+    // advanced no longer clobber each other (the Advanced screen doesn't edit
+    // the basic rates, so an advanced save must not touch them — and vice-versa).
+    if (pmWriteKind == WK_RATES) {
         if (pmScratchLen < 25) return;
         pmScratch[0]  = wRatesType;             // MSP order Centre, Expo, Max
         pmScratch[1]  = wRoll[0];  pmScratch[2]  = wRoll[2];  pmScratch[3]  = wRoll[1];
         pmScratch[7]  = wPitch[0]; pmScratch[8]  = wPitch[2]; pmScratch[9]  = wPitch[1];
         pmScratch[13] = wYaw[0];   pmScratch[14] = wYaw[2];   pmScratch[15] = wYaw[1];
         pmScratch[19] = wColl[0];  pmScratch[20] = wColl[2];  pmScratch[21] = wColl[1];
-        if (pmWriteKind == WK_RATES_ADV && pmScratchLen >= 36) {
-            pmScratch[4]  = wResp[0]; pmScratch[10] = wResp[1]; pmScratch[16] = wResp[2]; pmScratch[22] = wResp[3];
-            pmScratch[25] = wBoostGain[0]; pmScratch[26] = wBoostCutoff[0];   // Roll  (interleaved gain,cutoff)
-            pmScratch[27] = wBoostGain[1]; pmScratch[28] = wBoostCutoff[1];   // Pitch
-            pmScratch[29] = wBoostGain[2]; pmScratch[30] = wBoostCutoff[2];   // Yaw
-            pmScratch[31] = wBoostGain[3]; pmScratch[32] = wBoostCutoff[3];   // Collective
-            pmScratch[33] = wYawDyn[0];    pmScratch[34] = wYawDyn[1];    pmScratch[35] = wYawDyn[2];
-        }
+    } else if (pmWriteKind == WK_RATES_ADV) {
+        if (pmScratchLen < 36) return;          // advanced only — basic preserved
+        pmScratch[4]  = wResp[0]; pmScratch[10] = wResp[1]; pmScratch[16] = wResp[2]; pmScratch[22] = wResp[3];
+        pmScratch[25] = wBoostGain[0]; pmScratch[26] = wBoostCutoff[0];   // Roll  (interleaved gain,cutoff)
+        pmScratch[27] = wBoostGain[1]; pmScratch[28] = wBoostCutoff[1];   // Pitch
+        pmScratch[29] = wBoostGain[2]; pmScratch[30] = wBoostCutoff[2];   // Yaw
+        pmScratch[31] = wBoostGain[3]; pmScratch[32] = wBoostCutoff[3];   // Collective
+        pmScratch[33] = wYawDyn[0];    pmScratch[34] = wYawDyn[1];    pmScratch[35] = wYawDyn[2];
     } else if (pmWriteKind == WK_PID) {
         if (pmScratchLen < 34) return;
         for (uint8_t i = 0; i < 17; ++i) {

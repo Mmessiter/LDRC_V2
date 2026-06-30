@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.175-adv-preserve",
+      "url": "https://messiter.com/rxv2/release/v0.9.175/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.175/littlefs.bin",
+      "notes": "Fix: saving ADVANCED rates from the transmitter no longer zeroes that bank's BASIC rates (and vice-versa). Each rates screen now writes only its own fields via read-modify-write; the other fields are preserved from the FC. Previously the advanced save also wrote the basic-rate fields from staged values that could be zero (e.g. a lost batch packet), clobbering the bank."
+    },
+    {
       "name": "RXV2-0.9.174-tx-pids",
       "url": "https://messiter.com/rxv2/release/v0.9.174/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.174/littlefs.bin",
@@ -65,11 +71,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.164/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.164/littlefs.bin",
       "notes": "Adds a configurable failsafe (no-transmitter) posture, like V1. On the View-channels page there is now a Failsafe section: set every stick and switch where you want the model to sit with no transmitter (e.g. disarmed, motor off) and tap Save - those exact positions are stored in NVS and output when the receiver is powered up without a transmitter. Clear reverts to the built-in safe default (sticks centred, AUX low). Replaces guessing with your real safe positions - e.g. your AUX1 safety channel."
-    },
-    {
-      "name": "RXV2-0.9.163-safe-boot",
-      "url": "https://messiter.com/rxv2/release/v0.9.163/firmware.bin",
-      "notes": "Safer power-up with no transmitter. Until a transmitter connects, the receiver used to output every channel at mid (1500us) - which a flight-controller reads as a centred, ARMED link, so a heli FC tries to stabilise and the swashplate hunts up and down. It now boots into a disarmed/safe posture instead: sticks centred (ch1-5 = 1500) and all AUX channels low (ch6-16 = 500), so any arm/mode switch reads OFF and nothing spins. As soon as the transmitter connects, real values take over; signal loss after a link still holds the last good values. (Assumes the usual arm-switch-low = disarmed convention.)"
     }
   ]
 }

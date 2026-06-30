@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.174-tx-pids";
+constexpr const char* FW_VERSION = "RXV2-0.9.175-adv-preserve";
 
 //*********************************************************************
 //  Auto-update manifest URLs
