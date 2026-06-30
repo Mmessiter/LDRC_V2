@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.174-tx-pids",
+      "url": "https://messiter.com/rxv2/release/v0.9.174/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.174/littlefs.bin",
+      "notes": "Adds PID editing from the transmitter (read + write). 17 PID values (P/I/D/FF per axis, boosts, HSI offsets) read via MSP_PID and written via MSP_SET_PID, using the same continuous-re-poll engine as rates. Governor next."
+    },
+    {
       "name": "RXV2-0.9.173-adv-fix",
       "url": "https://messiter.com/rxv2/release/v0.9.173/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.173/littlefs.bin",
@@ -64,12 +70,6 @@
       "name": "RXV2-0.9.163-safe-boot",
       "url": "https://messiter.com/rxv2/release/v0.9.163/firmware.bin",
       "notes": "Safer power-up with no transmitter. Until a transmitter connects, the receiver used to output every channel at mid (1500us) - which a flight-controller reads as a centred, ARMED link, so a heli FC tries to stabilise and the swashplate hunts up and down. It now boots into a disarmed/safe posture instead: sticks centred (ch1-5 = 1500) and all AUX channels low (ch6-16 = 500), so any arm/mode switch reads OFF and nothing spins. As soon as the transmitter connects, real values take over; signal loss after a link still holds the last good values. (Assumes the usual arm-switch-low = disarmed convention.)"
-    },
-    {
-      "name": "RXV2-0.9.162-bind-live",
-      "url": "https://messiter.com/rxv2/release/v0.9.162/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.162/littlefs.bin",
-      "notes": "The front screen now updates the bind status by itself. Before, after a successful bind the LED went steady (correct) but the home page still said 'Bind mode' until you left and re-opened it. The page now re-checks every few seconds, so it flips to 'Bound' (and clears the amber bind banner) within a couple of seconds of binding \u2014 no navigation needed. Same live-refresh that the Rotorflight button uses."
     }
   ]
 }

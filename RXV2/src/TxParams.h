@@ -33,7 +33,7 @@
 #include "MspFc.h"      // mspSendRequest(), MSP codes, mspAsync* capture, fcIsRotorflightConfigCapable()
 
 //*********************************************************************
-//  Parameter IDs (V1 1Definitions.h) and ack-send states
+//  Parameter IDs (V1 1Definitions.h)
 //*********************************************************************
 
 enum ParamId : uint8_t {
@@ -60,9 +60,8 @@ enum ParamId : uint8_t {
     PARAM_MAX_ID            = 34,
 };
 
-// Which block the ack-payload is currently streaming back to the TX. Mirrors
-// V1 SendRotorFlightParametresNow. Cleared when the read window (duration the
-// TX asked for) expires.
+// Which block the ack-payload is currently streaming back to the TX (V1
+// SendRotorFlightParametresNow). Cleared when the read window expires.
 enum ParamSend : uint8_t {
     PSEND_NONE = 0, PSEND_PID = 1, PSEND_RATES = 2, PSEND_RATES_ADV = 3,
     PSEND_PID_ADV = 4, PSEND_GOV_CONFIG = 5, PSEND_GOV_PROFILE = 6
@@ -71,18 +70,22 @@ inline ParamSend paramSend      = PSEND_NONE;
 inline uint32_t  paramSendUntil = 0;
 
 //*********************************************************************
-//  Cached ack bytes (built from the FC's MSP_RC_TUNING response)
+//  Cached ack bytes
 //*********************************************************************
-// RATES ack order (V1 StoreRatesBytesForAckPayload): per axis Centre, Max, Expo
+// RATES (V1 order: per axis Centre, Max, Expo)
 //   [0]type [1]RollC [2]RollMax [3]RollExpo [4]PitchC [5]PitchMax [6]PitchExpo
 //   [7]YawC [8]YawMax [9]YawExpo [10]CollC [11]CollMax [12]CollExpo
-inline uint8_t ratesAck[13]  = {0};
-// ADVANCED RATES ack order (V1 StoreAdvancedRatesBytesForAckPayload):
-//   [0..3] Response time R,P,Y,C  [4..7] Setpoint-boost gain R,P,Y,C
-//   [8..11] Setpoint-boost cutoff R,P,Y,C
-//   [12] Yaw dyn ceiling gain  [13] Yaw dyn deadband gain  [14] Yaw dyn deadband filter
+inline uint8_t ratesAck[13]    = {0};
+// ADVANCED RATES: [0..3] Response R,P,Y,C  [4..7] Boost gain R,P,Y,C
+//   [8..11] Boost cutoff R,P,Y,C  [12] Yaw ceiling gain  [13] Yaw deadband gain  [14] Yaw deadband filter
 inline uint8_t advRatesAck[15] = {0};
-inline bool    ratesAckValid   = false;     // both blocks come from one RC_TUNING read
+inline bool    ratesAckValid   = false;   // rates + advanced both come from one RC_TUNING read
+
+// PIDs — 17 x 16-bit, V1 All_PIDs order:
+//   [0..3] Roll P,I,D,FF  [4..7] Pitch P,I,D,FF  [8..11] Yaw P,I,D,FF
+//   [12] Roll boost [13] Pitch boost [14] Yaw boost  [15] HSI offset Roll [16] HSI offset Pitch
+inline uint16_t pidVals[17]    = {0};
+inline bool     pidAckValid    = false;
 
 //*********************************************************************
 //  Staged write values from the TX
@@ -94,49 +97,52 @@ inline uint8_t wPitch[3] = {0};
 inline uint8_t wYaw[3]   = {0};
 inline uint8_t wColl[3]  = {0};
 // advanced rates
-inline uint8_t wResp[4]       = {0};   // response time R,P,Y,C
-inline uint8_t wBoostGain[4]  = {0};   // setpoint-boost gain R,P,Y,C
-inline uint8_t wBoostCutoff[4]= {0};   // setpoint-boost cutoff R,P,Y,C
-inline uint8_t wYawDyn[3]     = {0};   // ceiling gain, deadband gain, deadband filter
+inline uint8_t wResp[4]        = {0};   // response time R,P,Y,C
+inline uint8_t wBoostGain[4]   = {0};   // setpoint-boost gain R,P,Y,C
+inline uint8_t wBoostCutoff[4] = {0};   // setpoint-boost cutoff R,P,Y,C
+inline uint8_t wYawDyn[3]      = {0};   // ceiling gain, deadband gain, deadband filter
+// PIDs (16-bit, All_PIDs order)
+inline uint16_t wPid[17]       = {0};
 
 // write requests raised by the packet parser, serviced by txParamsLoop()
-inline bool ratesWriteReq    = false;  // basic rates only (ID 14, word[7]==0)
-inline bool ratesAdvWriteReq = false;  // basic + advanced together (ID 16)
+inline bool ratesWriteReq    = false;   // basic rates only (ID 14, word[7]==0)
+inline bool ratesAdvWriteReq = false;   // basic + advanced together (ID 16)
+inline bool pidWriteReq      = false;   // PIDs (ID 11)
 
 //*********************************************************************
 //  Async MSP state machine
 //*********************************************************************
-enum ParamMspState : uint8_t {
-    PM_IDLE, PM_RATES_READ, PM_RATES_ORIG, PM_RATES_EEPROM
-};
-inline ParamMspState pmState   = PM_IDLE;
-inline uint32_t      pmStateAt = 0;
-inline bool          pmWriteAdv = false;       // current write includes advanced fields
-inline uint8_t       pmScratch[64] = {0};      // read-modify-write buffer
-inline uint32_t      lastParamFetchMs = 0;     // last RC_TUNING re-poll (continuous refresh)
+enum ParamMspState : uint8_t { PM_IDLE, PM_READ, PM_WRITE_ORIG, PM_WRITE_EEPROM };
+enum WriteKind     : uint8_t { WK_NONE, WK_RATES, WK_RATES_ADV, WK_PID };
+
+inline ParamMspState pmState     = PM_IDLE;
+inline WriteKind     pmWriteKind = WK_NONE;
+inline uint32_t      pmStateAt   = 0;
+inline uint8_t       pmScratch[64] = {0};
+inline uint16_t      pmScratchLen  = 0;
+inline uint32_t      lastParamFetchMs = 0;     // last read re-poll (continuous refresh)
 
 inline bool txParamMspFree() {
     return currentProtocol == PROTO_CRSF && !mspBridgeActive && mspWaitFunction == 0xFF;
 }
 
+// MSP "get" function for the active read window.
+inline uint8_t readGetFn() {
+    return (paramSend == PSEND_PID) ? MSP_PID : MSP_RC_TUNING;
+}
+
 //*********************************************************************
-//  Build the cached ack bytes from a raw MSP_RC_TUNING response
+//  Build cached ack bytes from raw MSP responses
 //*********************************************************************
 // MSP RC_TUNING per-axis order: Centre(rcRate), Expo(rcExpo), Max(srate),
-// Response, Accel(2). The TX wants basic rates as Centre, Max, Expo.
+// Response, Accel(2). Advanced boost tail is INTERLEAVED per axis.
 inline void buildRatesFromMsp(const uint8_t* p, uint16_t len) {
     if (len < 25) return;
-    ratesAck[0]  = p[0];                                   // rates type
+    ratesAck[0]  = p[0];
     ratesAck[1]  = p[1];  ratesAck[2]  = p[3];  ratesAck[3]  = p[2];   // Roll  C,Max,Expo
     ratesAck[4]  = p[7];  ratesAck[5]  = p[9];  ratesAck[6]  = p[8];   // Pitch
     ratesAck[7]  = p[13]; ratesAck[8]  = p[15]; ratesAck[9]  = p[14];  // Yaw
     ratesAck[10] = p[19]; ratesAck[11] = p[21]; ratesAck[12] = p[20];  // Collective
-
-    // Advanced rates live in the per-axis Response byte (o4/10/16/22) and the
-    // API-12.8 tail. The boost tail is INTERLEAVED per axis: o25 Roll-gain,
-    // o26 Roll-cutoff, o27 Pitch-gain, o28 Pitch-cutoff, o29 Yaw-gain,
-    // o30 Yaw-cutoff, o31 Coll-gain, o32 Coll-cutoff, o33/34/35 yaw dynamics.
-    // The ack wants them grouped: gains R,P,Y,C then cutoffs R,P,Y,C.
     if (len >= 36) {
         advRatesAck[0]  = p[4];  advRatesAck[1]  = p[10]; advRatesAck[2]  = p[16]; advRatesAck[3]  = p[22];
         advRatesAck[4]  = p[25]; advRatesAck[5]  = p[27]; advRatesAck[6]  = p[29]; advRatesAck[7]  = p[31]; // gains R,P,Y,C
@@ -146,11 +152,23 @@ inline void buildRatesFromMsp(const uint8_t* p, uint16_t len) {
     ratesAckValid = true;
 }
 
+// MSP_PID: 17 little-endian uint16 (lo,hi), index*2.
+inline void buildPidsFromMsp(const uint8_t* p, uint16_t len) {
+    if (len < 34) return;
+    for (uint8_t i = 0; i < 17; ++i)
+        pidVals[i] = (uint16_t)p[i * 2] | ((uint16_t)p[i * 2 + 1] << 8);
+    pidAckValid = true;
+}
+
+// pack two uint16 into ack[1..4] (lo,hi,lo,hi) — V1 Send_2_x_uint16_t
+inline void ackPair(uint8_t* ack, uint16_t a, uint16_t b) {
+    ack[1] = (uint8_t)(a & 0xFF); ack[2] = (uint8_t)(a >> 8);
+    ack[3] = (uint8_t)(b & 0xFF); ack[4] = (uint8_t)(b >> 8);
+}
+
 //*********************************************************************
 //  Incoming parameter packet parser  (V1 ReadExtraParameters)
 //*********************************************************************
-// Called from radioPoll() for every received packet whose ChannelBitMask == 0.
-
 inline void readExtraParameters(const uint8_t* payload, uint8_t size) {
     if (size <= 2) return;
     uint16_t compressed[16] = {0};
@@ -164,41 +182,35 @@ inline void readExtraParameters(const uint8_t* payload, uint8_t size) {
     if (!fcIsRotorflightConfigCapable()) return;
 
     switch (id) {
-        // ---- RATES (read) ----
-        case PID_SEND_RATES:                    // 12 — "send rates now"
-            if (w[1] == 321) {
-                paramSend        = PSEND_RATES;
-                paramSendUntil   = millis() + w[2];
-                lastParamFetchMs = 0;           // fetch immediately (don't wait for the re-poll tick)
-            }
+        // ---- reads: "send block now" (word[1]==321, word[2]=duration ms) ----
+        case PID_SEND_RATES:
+            if (w[1] == 321) { paramSend = PSEND_RATES;     paramSendUntil = millis() + w[2]; lastParamFetchMs = 0; }
             break;
-        // ---- ADVANCED RATES (read) ----
-        case PID_SEND_RATES_ADV:                // 15 — "send advanced rates now"
-            if (w[1] == 321) {
-                paramSend        = PSEND_RATES_ADV;
-                paramSendUntil   = millis() + w[2];
-                lastParamFetchMs = 0;
-            }
+        case PID_SEND_RATES_ADV:
+            if (w[1] == 321) { paramSend = PSEND_RATES_ADV; paramSendUntil = millis() + w[2]; lastParamFetchMs = 0; }
+            break;
+        case PID_SEND_PID:
+            if (w[1] == 321) { paramSend = PSEND_PID;       paramSendUntil = millis() + w[2]; lastParamFetchMs = 0; }
             break;
 
-        // ---- RATES (write) ----
+        // ---- RATES write ----
         case PID_RATES_FIRST7:                  // 13 — type + Roll + Pitch (C,Max,Expo)
             wRatesType = (uint8_t)w[1];
             wRoll[0]  = (uint8_t)w[2]; wRoll[1]  = (uint8_t)w[3]; wRoll[2]  = (uint8_t)w[4];
             wPitch[0] = (uint8_t)w[5]; wPitch[1] = (uint8_t)w[6]; wPitch[2] = (uint8_t)w[7];
             break;
-        case PID_RATES_SECOND6:                 // 14 — Yaw + Collective; word[7]==0 => write basic now
+        case PID_RATES_SECOND6:                 // 14 — Yaw + Collective; word[7]==0 => basic write now
             wYaw[0]  = (uint8_t)w[1]; wYaw[1]  = (uint8_t)w[2]; wYaw[2]  = (uint8_t)w[3];
             wColl[0] = (uint8_t)w[4]; wColl[1] = (uint8_t)w[5]; wColl[2] = (uint8_t)w[6];
-            if (!w[7]) ratesWriteReq = true;    // basic only (no advanced batch pending)
+            if (!w[7]) ratesWriteReq = true;
             break;
 
-        // ---- ADVANCED RATES (write): FIRST_7 = ID 17, SECOND_8 = ID 16 (16 triggers combined write) ----
+        // ---- ADVANCED RATES write: FIRST_7=ID17, SECOND_8=ID16 (16 triggers combined write) ----
         case PID_RATES_ADV_FIRST7:              // 17
             wResp[0] = (uint8_t)w[1]; wResp[1] = (uint8_t)w[2]; wResp[2] = (uint8_t)w[3]; wResp[3] = (uint8_t)w[4];
             wBoostGain[0] = (uint8_t)w[5]; wBoostGain[1] = (uint8_t)w[6]; wBoostGain[2] = (uint8_t)w[7];
             break;
-        case PID_RATES_ADV_SECOND8:             // 16 — completes advanced; triggers rates+advanced write
+        case PID_RATES_ADV_SECOND8:             // 16
             wBoostGain[3]   = (uint8_t)w[1];
             wBoostCutoff[0] = (uint8_t)w[2]; wBoostCutoff[1] = (uint8_t)w[3];
             wBoostCutoff[2] = (uint8_t)w[4]; wBoostCutoff[3] = (uint8_t)w[5];
@@ -206,90 +218,113 @@ inline void readExtraParameters(const uint8_t* payload, uint8_t size) {
             ratesAdvWriteReq = true;
             break;
 
+        // ---- PID write: FIRST_6=ID10, SECOND_11=ID11 (11 triggers write). 16-bit values. ----
+        case PID_PID_FIRST6:                    // 10 — All_PIDs[0..5]
+            for (uint8_t i = 0; i < 6; ++i) wPid[i] = w[i + 1];
+            break;
+        case PID_PID_SECOND11:                  // 11 — All_PIDs[6..16], then write
+            for (uint8_t i = 0; i < 11; ++i) wPid[i + 6] = w[i + 1];
+            pidWriteReq = true;
+            break;
+
         default:
-            break;                              // PIDs / governor — added next
+            break;                              // advanced PID / governor — added next
     }
 }
 
 //*********************************************************************
+//  Apply staged write values into the read-modify-write scratch buffer
+//*********************************************************************
+inline void applyWriteToScratch() {
+    if (pmWriteKind == WK_RATES || pmWriteKind == WK_RATES_ADV) {
+        if (pmScratchLen < 25) return;
+        pmScratch[0]  = wRatesType;             // MSP order Centre, Expo, Max
+        pmScratch[1]  = wRoll[0];  pmScratch[2]  = wRoll[2];  pmScratch[3]  = wRoll[1];
+        pmScratch[7]  = wPitch[0]; pmScratch[8]  = wPitch[2]; pmScratch[9]  = wPitch[1];
+        pmScratch[13] = wYaw[0];   pmScratch[14] = wYaw[2];   pmScratch[15] = wYaw[1];
+        pmScratch[19] = wColl[0];  pmScratch[20] = wColl[2];  pmScratch[21] = wColl[1];
+        if (pmWriteKind == WK_RATES_ADV && pmScratchLen >= 36) {
+            pmScratch[4]  = wResp[0]; pmScratch[10] = wResp[1]; pmScratch[16] = wResp[2]; pmScratch[22] = wResp[3];
+            pmScratch[25] = wBoostGain[0]; pmScratch[26] = wBoostCutoff[0];   // Roll  (interleaved gain,cutoff)
+            pmScratch[27] = wBoostGain[1]; pmScratch[28] = wBoostCutoff[1];   // Pitch
+            pmScratch[29] = wBoostGain[2]; pmScratch[30] = wBoostCutoff[2];   // Yaw
+            pmScratch[31] = wBoostGain[3]; pmScratch[32] = wBoostCutoff[3];   // Collective
+            pmScratch[33] = wYawDyn[0];    pmScratch[34] = wYawDyn[1];    pmScratch[35] = wYawDyn[2];
+        }
+    } else if (pmWriteKind == WK_PID) {
+        if (pmScratchLen < 34) return;
+        for (uint8_t i = 0; i < 17; ++i) {
+            pmScratch[i * 2]     = (uint8_t)(wPid[i] & 0xFF);
+            pmScratch[i * 2 + 1] = (uint8_t)(wPid[i] >> 8);
+        }
+    }
+}
+
+inline uint8_t writeSetFn() { return (pmWriteKind == WK_PID) ? MSP_SET_PID : MSP_SET_RC_TUNING; }
+inline uint8_t writeGetFn() { return (pmWriteKind == WK_PID) ? MSP_PID     : MSP_RC_TUNING; }
+
+//*********************************************************************
 //  Loop-driven async MSP state machine  (V1 CheckMSPSerial, non-blocking)
 //*********************************************************************
-
 inline void txParamsLoop() {
     if (currentProtocol != PROTO_CRSF) return;
     const uint32_t now = millis();
 
-    // Expire the ack-send window the TX asked for.
     if (paramSend != PSEND_NONE && (int32_t)(now - paramSendUntil) > 0) paramSend = PSEND_NONE;
 
-    const bool ratesWindow = (paramSend == PSEND_RATES || paramSend == PSEND_RATES_ADV);
-
     switch (pmState) {
-        case PM_IDLE:
-            // Writes take priority over the read re-poll.
-            if ((ratesWriteReq || ratesAdvWriteReq) && txParamMspFree()) {
-                pmWriteAdv     = ratesAdvWriteReq;
-                ratesWriteReq  = false;
-                ratesAdvWriteReq = false;
-                mspAsyncFunc = MSP_RC_TUNING; mspAsyncReady = false;
-                mspSendRequest(MSP_RC_TUNING);          // read-modify-write: get current first
-                pmState = PM_RATES_ORIG; pmStateAt = now; txParamBusy = true;
-            } else if (ratesWindow && txParamMspFree() &&
+        case PM_IDLE: {
+            WriteKind wk = ratesAdvWriteReq ? WK_RATES_ADV
+                         : ratesWriteReq    ? WK_RATES
+                         : pidWriteReq      ? WK_PID : WK_NONE;
+            if (wk != WK_NONE && txParamMspFree()) {
+                ratesAdvWriteReq = ratesWriteReq = pidWriteReq = false;
+                pmWriteKind = wk;
+                uint8_t fn = writeGetFn();
+                mspAsyncFunc = fn; mspAsyncReady = false;
+                mspSendRequest(fn);                       // read-modify-write: get current first
+                pmState = PM_WRITE_ORIG; pmStateAt = now; txParamBusy = true;
+            } else if (paramSend != PSEND_NONE && txParamMspFree() &&
                        (int32_t)(now - lastParamFetchMs) >= 80) {   // continuous re-poll (V1 ~50ms)
                 lastParamFetchMs = now;
-                mspAsyncFunc = MSP_RC_TUNING; mspAsyncReady = false;
-                mspSendRequest(MSP_RC_TUNING);
-                pmState = PM_RATES_READ; pmStateAt = now; txParamBusy = true;
+                uint8_t fn = readGetFn();
+                mspAsyncFunc = fn; mspAsyncReady = false;
+                mspSendRequest(fn);
+                pmState = PM_READ; pmStateAt = now; txParamBusy = true;
+            }
+            break;
+        }
+
+        case PM_READ:
+            if (mspAsyncReady) {
+                if      (mspAsyncFunc == MSP_RC_TUNING) buildRatesFromMsp(mspAsyncBuf, mspAsyncLen);
+                else if (mspAsyncFunc == MSP_PID)       buildPidsFromMsp(mspAsyncBuf, mspAsyncLen);
+                mspAsyncFunc = 0xFF; pmState = PM_IDLE; txParamBusy = false;
+            } else if ((int32_t)(now - pmStateAt) > 400) {
+                mspAsyncFunc = 0xFF; pmState = PM_IDLE; txParamBusy = false;
             }
             break;
 
-        case PM_RATES_READ:
-            if (mspAsyncReady && mspAsyncFunc == MSP_RC_TUNING) {
-                buildRatesFromMsp(mspAsyncBuf, mspAsyncLen);
-                mspAsyncFunc = 0xFF; pmState = PM_IDLE; txParamBusy = false;
-            } else if ((int32_t)(now - pmStateAt) > 400) {     // FC didn't answer — let the next tick retry
-                mspAsyncFunc = 0xFF; pmState = PM_IDLE; txParamBusy = false;
-            }
-            break;
-
-        case PM_RATES_ORIG:
-            if (mspAsyncReady && mspAsyncFunc == MSP_RC_TUNING) {
-                uint16_t n = mspAsyncLen;
-                if (n > sizeof(pmScratch)) n = sizeof(pmScratch);
-                memcpy(pmScratch, mspAsyncBuf, n);
+        case PM_WRITE_ORIG:
+            if (mspAsyncReady) {
+                pmScratchLen = mspAsyncLen;
+                if (pmScratchLen > sizeof(pmScratch)) pmScratchLen = sizeof(pmScratch);
+                memcpy(pmScratch, mspAsyncBuf, pmScratchLen);
                 mspAsyncFunc = 0xFF;
-                if (n >= 25) {
-                    // basic rates — MSP order Centre, Expo, Max
-                    pmScratch[0]  = wRatesType;
-                    pmScratch[1]  = wRoll[0];  pmScratch[2]  = wRoll[2];  pmScratch[3]  = wRoll[1];
-                    pmScratch[7]  = wPitch[0]; pmScratch[8]  = wPitch[2]; pmScratch[9]  = wPitch[1];
-                    pmScratch[13] = wYaw[0];   pmScratch[14] = wYaw[2];   pmScratch[15] = wYaw[1];
-                    pmScratch[19] = wColl[0];  pmScratch[20] = wColl[2];  pmScratch[21] = wColl[1];
-                    // advanced rates (only when the TX sent the advanced batch)
-                    if (pmWriteAdv && n >= 36) {
-                        pmScratch[4]  = wResp[0]; pmScratch[10] = wResp[1]; pmScratch[16] = wResp[2]; pmScratch[22] = wResp[3];
-                        // interleaved gain,cutoff per axis (Roll,Pitch,Yaw,Coll)
-                        pmScratch[25] = wBoostGain[0]; pmScratch[26] = wBoostCutoff[0];   // Roll
-                        pmScratch[27] = wBoostGain[1]; pmScratch[28] = wBoostCutoff[1];   // Pitch
-                        pmScratch[29] = wBoostGain[2]; pmScratch[30] = wBoostCutoff[2];   // Yaw
-                        pmScratch[31] = wBoostGain[3]; pmScratch[32] = wBoostCutoff[3];   // Collective
-                        pmScratch[33] = wYawDyn[0];    pmScratch[34] = wYawDyn[1];    pmScratch[35] = wYawDyn[2];
-                    }
-                    mspSendRequest(MSP_SET_RC_TUNING, pmScratch, (uint8_t)n);
-                    pmState = PM_RATES_EEPROM; pmStateAt = now;
-                } else {
-                    pmState = PM_IDLE; txParamBusy = false;
-                }
+                applyWriteToScratch();
+                mspSendRequest(writeSetFn(), pmScratch, (uint8_t)pmScratchLen);
+                pmState = PM_WRITE_EEPROM; pmStateAt = now;
             } else if ((int32_t)(now - pmStateAt) > 500) {
                 mspAsyncFunc = 0xFF; pmState = PM_IDLE; txParamBusy = false;
             }
             break;
 
-        case PM_RATES_EEPROM:
-            if ((int32_t)(now - pmStateAt) > 120) {     // give SET time to land, then persist
+        case PM_WRITE_EEPROM:
+            if ((int32_t)(now - pmStateAt) > 120) {
                 mspSendRequest(MSP_EEPROM_WRITE);
-                events.add(pmWriteAdv ? "TX edit: RATES+advanced -> FC" : "TX edit: RATES -> FC");
-                ratesAckValid = false;                  // force a fresh read so the TX re-reads the saved values
+                if (pmWriteKind == WK_PID) { events.add("TX edit: PIDs -> FC");  pidAckValid = false; }
+                else                       { events.add(pmWriteKind == WK_RATES_ADV ? "TX edit: RATES+adv -> FC" : "TX edit: RATES -> FC"); ratesAckValid = false; }
+                pmWriteKind = WK_NONE;
                 pmState = PM_IDLE; txParamBusy = false;
             }
             break;
@@ -303,9 +338,6 @@ inline void txParamsLoop() {
 //*********************************************************************
 //  Ack-payload fill for parameter slots  (called from loadNextAck)
 //*********************************************************************
-// Returns true if it filled a parameter block (so the caller knows this slot is
-// param data). Only fills when the matching read is active and bytes are valid.
-
 inline bool fillParamAck(uint8_t item, uint8_t* ack) {
     if (paramSend == PSEND_RATES && ratesAckValid) {
         switch (item) {
@@ -320,6 +352,18 @@ inline bool fillParamAck(uint8_t item, uint8_t* ack) {
             case 26: ack[1]=advRatesAck[4];  ack[2]=advRatesAck[5];  ack[3]=advRatesAck[6];  ack[4]=advRatesAck[7];  return true;
             case 27: ack[1]=advRatesAck[8];  ack[2]=advRatesAck[9];  ack[3]=advRatesAck[10]; ack[4]=advRatesAck[11]; return true;
             case 28: ack[1]=advRatesAck[12]; ack[2]=advRatesAck[13]; ack[3]=advRatesAck[14];                         return true;
+        }
+    } else if (paramSend == PSEND_PID && pidAckValid) {
+        switch (item) {                          // uint16 pairs, V1 Send_2_x_uint16_t
+            case 25: ackPair(ack, pidVals[0],  pidVals[1]);  return true;   // Roll  P,I
+            case 26: ackPair(ack, pidVals[2],  pidVals[3]);  return true;   // Roll  D,FF
+            case 27: ackPair(ack, pidVals[4],  pidVals[5]);  return true;   // Pitch P,I
+            case 28: ackPair(ack, pidVals[6],  pidVals[7]);  return true;   // Pitch D,FF
+            case 29: ackPair(ack, pidVals[8],  pidVals[9]);  return true;   // Yaw   P,I
+            case 30: ackPair(ack, pidVals[10], pidVals[11]); return true;   // Yaw   D,FF
+            case 32: ackPair(ack, pidVals[12], pidVals[13]); return true;   // Roll boost, Pitch boost
+            case 33: ackPair(ack, pidVals[14], 0);           return true;   // Yaw boost
+            case 34: ackPair(ack, pidVals[15], pidVals[16]); return true;   // HSI offset Roll, Pitch
         }
     }
     return false;
