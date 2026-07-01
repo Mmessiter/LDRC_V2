@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.190-graph-traces";
+constexpr const char* FW_VERSION = "RXV2-0.9.191-flight-save";
 
 //*********************************************************************
 //  Auto-update manifest URLs

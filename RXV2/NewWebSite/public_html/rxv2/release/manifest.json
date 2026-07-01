@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.191-flight-save",
+      "url": "https://messiter.com/rxv2/release/v0.9.191/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.191/littlefs.bin",
+      "notes": "Flights now SURVIVE A REBOOT. When a flight ends (link gone ~15s) the receiver writes it to flash (LittleFS) and keeps the last 3, so you can compare today with earlier flights. The Black box page gains a flight selector (Current / Previous / N flights ago, with each duration) that drives both the link stats and the graph. New endpoints: /api/flights.json (list) and /api/flightlog.json?f=N."
+    },
+    {
       "name": "RXV2-0.9.190-graph-traces",
       "url": "https://messiter.com/rxv2/release/v0.9.190/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.190/littlefs.bin",
@@ -65,12 +71,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.180/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.180/littlefs.bin",
       "notes": "Fixes the web UI losing its Rotorflight options after the transmitter is used then switched off (until a reboot). On CRSF, signal loss detaches the output UART (so the FC sees the dropout) - but that also kills the FC RX line, so MSP stops and the flight-controller detection times out. The receiver now keeps the UART attached whenever WiFi is up (bench/config mode, where there is no transmitter by design and you need MSP). In-flight failsafe is unchanged - WiFi is off in flight."
-    },
-    {
-      "name": "RXV2-0.9.179-gov-global",
-      "url": "https://messiter.com/rxv2/release/v0.9.179/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.179/littlefs.bin",
-      "notes": "Fixes the governor GLOBAL (config) screen showing nothing on the transmitter. The receiver was discarding the whole MSP_GOVERNOR_CONFIG response unless it was at least 42 bytes, but RF 2.3 can report a different length - and only bytes up to 32 are actually read (the bypass curve at 33+ is just preserved on write). Now accepts any response reaching byte 32, so the global settings populate."
     }
   ]
 }

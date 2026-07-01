@@ -1286,28 +1286,18 @@ inline void handleApiChannels() {
 }
 
 //*********************************************************************
-//  /api/flightlog.json — the per-flight telemetry time-series (oldest→newest)
+//  /api/flightlog.json?f=N — flight time-series (0 = live, 1..3 = saved)
+//  /api/flights.json — list of available flights (for the selector)
 //*********************************************************************
 inline void handleApiFlightLog() {
+    uint8_t f = server.hasArg("f") ? (uint8_t)server.arg("f").toInt() : 0;
     String j;
-    j.reserve((size_t)teleCount * 16 + 128);
-    j += "{\"interval_s\":1,\"count\":"; j += teleCount;
-    const uint16_t start = (teleCount < TELE_RING) ? 0 : teleHead;
-    j += ",\"esc\":[";
-    for (uint16_t i = 0; i < teleCount; ++i) { if (i) j += ','; j += teleRing[(start + i) % TELE_RING].escC; }
-    j += "],\"head\":[";
-    for (uint16_t i = 0; i < teleCount; ++i) { if (i) j += ','; j += teleRing[(start + i) % TELE_RING].headRpm; }
-    j += "],\"v\":[";
-    for (uint16_t i = 0; i < teleCount; ++i) {
-        if (i) j += ',';
-        char b[8]; snprintf(b, sizeof(b), "%.2f", teleRing[(start + i) % TELE_RING].cV / 100.0f); j += b;
-    }
-    j += "],\"amps\":[";
-    for (uint16_t i = 0; i < teleCount; ++i) {
-        if (i) j += ',';
-        char b[8]; snprintf(b, sizeof(b), "%.1f", teleRing[(start + i) % TELE_RING].dA / 10.0f); j += b;
-    }
-    j += "]}";
+    if (!buildFlightJson(f, j)) { server.send(404, "application/json", "{\"count\":0}"); return; }
+    server.sendHeader("Cache-Control", "no-store");
+    server.send(200, "application/json", j);
+}
+inline void handleApiFlights() {
+    String j; buildFlightsListJson(j);
     server.sendHeader("Cache-Control", "no-store");
     server.send(200, "application/json", j);
 }
@@ -1623,6 +1613,7 @@ inline void registerWebRoutes() {
     server.on("/api/state.json",    handleApiState);
     server.on("/api/channels.json", handleApiChannels);
     server.on("/api/flightlog.json", handleApiFlightLog);
+    server.on("/api/flights.json",   handleApiFlights);
     server.on("/api/events.json",   handleApiEvents);
     server.on("/map",               handleMap);          // sim channel-remap page
     server.on("/api/simmap.json",   handleApiSimMap);    // current sim channel map

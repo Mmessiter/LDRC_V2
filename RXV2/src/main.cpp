@@ -26,6 +26,7 @@
 #include "Output.h"
 #include "Telemetry.h"
 #include "Radio.h"
+#include "FlightLog.h"
 #include "Network.h"
 #include "MspBridge.h"
 #include "MspFc.h"
@@ -373,6 +374,7 @@ void loop() {
         txParamsLoop();        // TX Rotorflight edits: async MSP read/write state machine
     }
     telemetrySampleTick();     // 1 Hz flight telemetry log (ESC temp / head speed / battery)
+    maybeSaveFlight();         // persist a completed flight to flash (survives reboot)
 
     // Dual-radio redundancy: if we've not received a packet on the active
     // radio for a while AND a swap cooldown has elapsed AND we have a second

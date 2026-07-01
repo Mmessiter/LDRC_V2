@@ -35,7 +35,10 @@
     </div>
 
     <div class=card>
-        <h2 style="margin-top:0">Link (last flight)</h2>
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.4em .8em;margin-bottom:.5em">
+            <h2 style="margin:0">Flight</h2>
+            <select id=flSel style="padding:.32em .5em;font-size:.95em;border-radius:8px;border:1px solid #b8c7d0;background:#fff"></select>
+        </div>
         <div id=lkRows class=muted style="font-size:.92em;line-height:1.9">&hellip;</div>
         <div id=lkHist style="margin-top:.5em"></div>
         <p id=lkNote class=muted style="font-size:.82em;margin-top:.4em"></p>
@@ -119,42 +122,65 @@ async function refreshStatus() {
     document.getElementById('stNote').textContent = telemLive
         ? '% is a resting-voltage estimate (reads low under load). Cell count auto-detected. Store at 3.80 V/cell (~40%).'
         : 'No flight-controller telemetry — is the model powered and on CRSF?';
+}
 
-    // --- Link statistics (last flight) ---
-    const lk = s.rf && s.rf.link;
-    const lkRows = document.getElementById('lkRows');
-    const lkHist = document.getElementById('lkHist');
-    if (lk && lk.packets > 0) {
-        const secs = lk.conn_ms / 1000;
-        const fr = secs > 0 ? lk.packets / secs : 0;
-        const gapCol = lk.max_gap_ms > 100 ? '#c0392b' : lk.max_gap_ms > 30 ? '#c98a4a' : '#2e7d32';
-        lkRows.innerHTML =
-            'Duration: <b>' + fmt(lk.conn_ms) + '</b><br>' +
-            'Avg frame rate: <b>' + fr.toFixed(0) + ' Hz</b> &nbsp;&middot;&nbsp; Packets: <b>' + lk.packets.toLocaleString() + '</b><br>' +
-            'Avg gap: <b>' + lk.avg_gap_ms.toFixed(2) + ' ms</b> &nbsp;&middot;&nbsp; Longest gap: <b style="color:' + gapCol + '">' + lk.max_gap_ms.toFixed(1) + ' ms</b>';
-        const labels = ['&lt;4', '4-8', '8-16', '16-32', '32-64', '&ge;64'];
-        const mx = Math.max(1, ...lk.hist);
-        let h = '<div style="font-size:.8em;color:#5a6b74;margin-bottom:.2em">Gap distribution (ms)</div>';
-        for (let i = 0; i < 6; i++) {
-            const w = Math.round(100 * lk.hist[i] / mx);
-            h += '<div style="display:flex;align-items:center;gap:.4em;margin:1px 0">' +
-                 '<span style="width:3em;text-align:right;font-size:.78em;color:#5a6b74">' + labels[i] + '</span>' +
-                 '<span style="flex:1;background:#e3e9ec;border-radius:3px;overflow:hidden;height:12px"><span style="display:block;height:100%;width:' + w + '%;background:' + (i >= 3 ? '#c98a4a' : '#5fa099') + '"></span></span>' +
-                 '<span style="width:4.5em;font-size:.78em;color:#5a6b74;text-align:right">' + lk.hist[i].toLocaleString() + '</span></div>';
-        }
-        lkHist.innerHTML = h;
-        document.getElementById('lkNote').textContent = 'Since the last connection began (resets on a new flight).';
-    } else {
-        lkRows.textContent = 'No flight recorded yet.';
-        lkHist.innerHTML = '';
-        document.getElementById('lkNote').textContent = '';
+// Link statistics for a chosen flight (from the flightlog's `link` object).
+function renderLink(lk) {
+    const lkRows = document.getElementById('lkRows'), lkHist = document.getElementById('lkHist');
+    if (!lk || !lk.packets) {
+        lkRows.textContent = 'No flight recorded yet.'; lkHist.innerHTML = '';
+        document.getElementById('lkNote').textContent = ''; return;
     }
+    const secs = lk.conn_ms / 1000, fr = secs > 0 ? lk.packets / secs : 0;
+    const gapCol = lk.max_gap_ms > 100 ? '#c0392b' : lk.max_gap_ms > 30 ? '#c98a4a' : '#2e7d32';
+    lkRows.innerHTML =
+        'Duration: <b>' + fmt(lk.conn_ms) + '</b><br>' +
+        'Avg frame rate: <b>' + fr.toFixed(0) + ' Hz</b> &nbsp;&middot;&nbsp; Packets: <b>' + lk.packets.toLocaleString() + '</b><br>' +
+        'Avg gap: <b>' + lk.avg_gap_ms.toFixed(2) + ' ms</b> &nbsp;&middot;&nbsp; Longest gap: <b style="color:' + gapCol + '">' + lk.max_gap_ms.toFixed(1) + ' ms</b>';
+    const labels = ['&lt;4', '4-8', '8-16', '16-32', '32-64', '&ge;64'];
+    const mx = Math.max(1, ...lk.hist);
+    let h = '<div style="font-size:.8em;color:#5a6b74;margin-bottom:.2em">Gap distribution (ms)</div>';
+    for (let i = 0; i < 6; i++) {
+        const w = Math.round(100 * lk.hist[i] / mx);
+        h += '<div style="display:flex;align-items:center;gap:.4em;margin:1px 0">' +
+             '<span style="width:3em;text-align:right;font-size:.78em;color:#5a6b74">' + labels[i] + '</span>' +
+             '<span style="flex:1;background:#e3e9ec;border-radius:3px;overflow:hidden;height:12px"><span style="display:block;height:100%;width:' + w + '%;background:' + (i >= 3 ? '#c98a4a' : '#5fa099') + '"></span></span>' +
+             '<span style="width:4.5em;font-size:.78em;color:#5a6b74;text-align:right">' + lk.hist[i].toLocaleString() + '</span></div>';
+    }
+    lkHist.innerHTML = h;
+    document.getElementById('lkNote').textContent = '';
+}
+
+// Populate the flight selector (Current + saved flights) from /api/flights.json.
+async function populateFlightSelector() {
+    let list;
+    try { list = await (await fetch('/api/flights.json', { cache: 'no-store' })).json(); } catch (e) { return; }
+    const sel = document.getElementById('flSel');
+    if (!sel) return;
+    const cur = sel.value;
+    let html = '';
+    for (const fl of list) {
+        let label;
+        if (fl.i === 0) label = 'Current' + (fl.count > 1 ? ' (' + fmt(fl.dur_ms) + ')' : ' — none yet');
+        else label = (fl.i === 1 ? 'Previous' : fl.i + ' flights ago') + ' (' + fmt(fl.dur_ms) + ')';
+        html += '<option value="' + fl.i + '">' + label + '</option>';
+    }
+    sel.innerHTML = html;
+    if (cur && sel.querySelector('option[value="' + cur + '"]')) sel.value = cur;
+}
+
+// Fetch the selected flight and update the link stats + graph.
+async function loadFlight() {
+    const sel = document.getElementById('flSel');
+    const f = sel ? (+sel.value || 0) : 0;
+    let d;
+    try { d = await (await fetch('/api/flightlog.json?f=' + f, { cache: 'no-store' })).json(); } catch (e) { return; }
+    renderLink(d.link);
+    drawFlight(d);
 }
 
 // --- Flight graph: multiple traces vs time, each auto-scaled to its own range ---
-async function drawFlightGraph() {
-    let d;
-    try { d = await (await fetch('/api/flightlog.json', { cache: 'no-store' })).json(); } catch (e) { return; }
+function drawFlight(d) {
     const cv = document.getElementById('flChart');
     if (!cv) return;
     const ctx = cv.getContext('2d');
@@ -206,8 +232,16 @@ async function drawFlightGraph() {
 document.addEventListener('DOMContentLoaded', async () => {
     refreshStatus();                       // LDRC (deferred app.js) is loaded by now
     setInterval(refreshStatus, 2000);
-    drawFlightGraph();
-    setInterval(drawFlightGraph, 5000);
+    await populateFlightSelector();
+    const sel = document.getElementById('flSel');
+    if (sel) sel.addEventListener('change', loadFlight);
+    loadFlight();
+    // Refresh the selector (a new flight may have saved) and, only when viewing
+    // the CURRENT flight, redraw it live.
+    setInterval(async () => {
+        await populateFlightSelector();
+        if ((+sel.value || 0) === 0) loadFlight();
+    }, 5000);
     const ev = await LDRC.fetchEvents();
     const sum = document.getElementById('summary');
     const list = document.getElementById('evlist');
