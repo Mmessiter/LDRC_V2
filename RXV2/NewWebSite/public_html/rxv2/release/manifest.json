@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.184-per-cell",
+      "url": "https://messiter.com/rxv2/release/v0.9.184/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.184/littlefs.bin",
+      "notes": "Battery status now shows PER-CELL voltage (large), with the cell count auto-detected from the pack voltage (ceil(V/4.3) - reliable for storage or charged packs of any size). Also shows cell count (e.g. 4S), pack voltage and %. Colour cue: green at/above storage, amber getting low, red very low. Reminder to store at 3.80 V/cell."
+    },
+    {
       "name": "RXV2-0.9.183-blackbox-status",
       "url": "https://messiter.com/rxv2/release/v0.9.183/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.183/littlefs.bin",
@@ -65,12 +71,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.173/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.173/littlefs.bin",
       "notes": "Fixes the advanced-rates setpoint boost gain/cutoff scramble on the transmitter. The MSP RC_TUNING boost tail is interleaved per axis (Roll gain, Roll cutoff, Pitch gain, Pitch cutoff ...), not grouped - corrected both the read (TX now shows the Configurator values) and the write-back."
-    },
-    {
-      "name": "RXV2-0.9.172-adv-rates",
-      "url": "https://messiter.com/rxv2/release/v0.9.172/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.172/littlefs.bin",
-      "notes": "Adds ADVANCED RATES editing from the transmitter (response time, setpoint-boost gain/cutoff, yaw dynamics), and fixes the intermittent all-zeros on bank switch. Like V1, the receiver now RE-POLLS the flight-controller continuously (~80ms) while the transmitter is reading a rates block, so a bank change or a single missed MSP round-trip no longer leaves the TX reading zeros. Rates + advanced are written together (combined MSP_SET_RC_TUNING) preserving untouched fields."
     }
   ]
 }

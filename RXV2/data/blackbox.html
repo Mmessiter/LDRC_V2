@@ -20,10 +20,10 @@
 
     <div class=card>
         <h2 style="margin-top:0">Status</h2>
-        <div style="display:flex;align-items:baseline;gap:.35em;margin:.1em 0 .5em">
-            <span id=stV style="font-size:2.6em;font-weight:700;line-height:1">&mdash;</span>
-            <span style="font-size:1.1em;color:#5a6b74">V</span>
-            <span id=stPct class=muted style="margin-left:.6em;font-size:1.05em"></span>
+        <div style="display:flex;align-items:baseline;gap:.35em;margin:.1em 0 .3em;flex-wrap:wrap">
+            <span id=stCell style="font-size:2.6em;font-weight:700;line-height:1">&mdash;</span>
+            <span style="font-size:1.05em;color:#5a6b74">V/cell</span>
+            <span id=stPack class=muted style="margin-left:.6em;font-size:1.05em"></span>
         </div>
         <div id=stRows class=muted style="font-size:.92em;line-height:1.8"></div>
         <p id=stNote class=muted style="font-size:.82em;margin-top:.55em"></p>
@@ -53,9 +53,21 @@ async function refreshStatus() {
     if (!s) return;
     const fc = s.fc || {}, rf = s.rf || {};
     const telemLive = (typeof fc.last_frame_ms === 'number' && fc.last_frame_ms >= 0 && fc.last_frame_ms < 3000);
-    const v = telemLive ? fc.v : null;
-    document.getElementById('stV').textContent  = (v != null && v > 0) ? (+v).toFixed(2) : '—';
-    document.getElementById('stPct').innerHTML  = (telemLive && fc.pct) ? (fc.pct + '%') : '';
+    const v = telemLive ? +fc.v : null;
+    const cellEl = document.getElementById('stCell');
+    const packEl = document.getElementById('stPack');
+    if (v != null && v > 0.5) {
+        const cells = Math.max(1, Math.ceil(v / 4.3));      // auto-detect cell count
+        const per = v / cells;
+        cellEl.textContent = per.toFixed(2);
+        // colour: red = very low, amber = getting low, green = at/above storage
+        cellEl.style.color = per < 3.5 ? '#c0392b' : per < 3.7 ? '#c98a4a' : '#2e7d32';
+        packEl.innerHTML = cells + 'S &middot; ' + v.toFixed(2) + ' V'
+                         + (fc.pct ? ' &middot; ' + fc.pct + '%' : '');
+    } else {
+        cellEl.textContent = '—'; cellEl.style.color = '';
+        packEl.textContent = '';
+    }
     let rows = '';
     if (telemLive) {
         rows += 'Current: <b>' + (+fc.a).toFixed(1) + ' A</b> &nbsp;&middot;&nbsp; Used: <b>' + (fc.mah || 0) + ' mAh</b><br>';
@@ -65,7 +77,7 @@ async function refreshStatus() {
     }
     document.getElementById('stRows').innerHTML = rows;
     document.getElementById('stNote').textContent = telemLive
-        ? 'Live from the flight-controller.'
+        ? 'Cell count auto-detected from pack voltage. Store batteries at 3.80 V/cell.'
         : 'No flight-controller telemetry — is the model powered and on CRSF?';
 }
 

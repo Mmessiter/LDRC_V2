@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.183-blackbox-status";
+constexpr const char* FW_VERSION = "RXV2-0.9.184-per-cell";
 
 //*********************************************************************
 //  Auto-update manifest URLs
