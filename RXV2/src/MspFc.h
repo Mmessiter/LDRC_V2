@@ -238,11 +238,25 @@ inline void mspFcPoll() {
     // is unaffected). It also competes for Serial1 bandwidth. So suppress
     // probing whenever flying — including dev mode (DEV_KEEP_WIFI). The FC
     // version is discovered when not flying, which is when the page wants it.
+    // Normally we don't probe while a live RC link is streaming (collision with a
+    // Configurator's Receiver-tab polling + Serial1 bandwidth). BUT if we booted
+    // with the TX already on (a flight), we'd otherwise NEVER learn the FC's
+    // variant/version/API — and the governor page needs the API (>=12.9). There's
+    // no Configurator in the air (WiFi is off), and mspSendRequest is non-blocking
+    // (it never stalls the RC output loop), so it's safe to get the FC identity
+    // ONCE even while flying, then latch and stay quiet for the rest of the flight.
+    // The API value persists (not cleared on the FC-lost timeout), so governor
+    // stays available after landing.
+    static bool fcIdLatched = false;
+    if (fcInfo.versionKnown && fcInfo.apiMajor != 0) fcIdLatched = true;
     bool flying = (rx.lastMillis != 0) && ((uint32_t)(millis() - rx.lastMillis) < 500);
-    if (flying) return;
+    if (flying && fcIdLatched) return;
 
     uint32_t now = millis();
-    uint32_t interval = fcInfo.detected ? PROBE_HEARTBEAT_MS : PROBE_INTERVAL_MS;
+    // Fast (1 s) until we have the full FC identity, then slow heartbeat. Using
+    // fcIdLatched (variant+version+API) not just `detected` means the version and
+    // API probes aren't slowed to 5 s right after the variant arrives.
+    uint32_t interval = fcIdLatched ? PROBE_HEARTBEAT_MS : PROBE_INTERVAL_MS;
     if ((uint32_t)(now - fcInfo.lastProbeMs) < interval) return;
     fcInfo.lastProbeMs = now;
 

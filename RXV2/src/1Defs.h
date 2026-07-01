@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.186-batt-icon";
+constexpr const char* FW_VERSION = "RXV2-0.9.187-fc-id-inflight";
 
 //*********************************************************************
 //  Auto-update manifest URLs

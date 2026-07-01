@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.187-fc-id-inflight",
+      "url": "https://messiter.com/rxv2/release/v0.9.187/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.187/littlefs.bin",
+      "notes": "Fixes governor options missing after a flight. The receiver used to skip all FC probing while a TX link was live, so booting with the transmitter on for a flight meant it never learned the flight-controller API version - and the governor pages need API 12.9+ (RF 2.3). It now learns the FC identity ONCE even in flight (a few tiny non-blocking requests, no Configurator in the air), then stays quiet; the API value persists, so governor is available after landing. General Rotorflight options may still take a few seconds to appear after landing while WiFi re-enables and telemetry resumes - switching the TX on makes them appear at once."
+    },
+    {
       "name": "RXV2-0.9.186-batt-icon",
       "url": "https://messiter.com/rxv2/release/v0.9.186/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.186/littlefs.bin",
@@ -65,12 +71,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.176/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.176/littlefs.bin",
       "notes": "Reduces the occasional all-zeros when reading params from the transmitter. Removed the post-write cache blanking (the re-poll refreshes the saved values anyway), tightened the FC re-poll to ~50ms (was 80ms, matching V1), and shortened the stuck-fetch retry from 400ms to 250ms. Any remaining rare zeros are a dropped request packet from the TX (re-trigger to fix)."
-    },
-    {
-      "name": "RXV2-0.9.175-adv-preserve",
-      "url": "https://messiter.com/rxv2/release/v0.9.175/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.175/littlefs.bin",
-      "notes": "Fix: saving ADVANCED rates from the transmitter no longer zeroes that bank's BASIC rates (and vice-versa). Each rates screen now writes only its own fields via read-modify-write; the other fields are preserved from the FC. Previously the advanced save also wrote the basic-rate fields from staged values that could be zero (e.g. a lost batch packet), clobbering the bank."
     }
   ]
 }
