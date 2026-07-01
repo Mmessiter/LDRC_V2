@@ -159,6 +159,7 @@ inline WriteKind     pmWriteKind = WK_NONE;
 inline uint32_t      pmStateAt   = 0;
 inline uint8_t       pmScratch[64] = {0};
 inline uint16_t      pmScratchLen  = 0;
+inline uint8_t       pmWriteRetries = 0;   // one automatic retry when the pre-write GET times out
 inline uint32_t      lastParamFetchMs = 0;     // last read re-poll (continuous refresh)
 
 inline bool txParamMspFree() {
@@ -377,16 +378,19 @@ inline void writeBasicRatesToScratch() {
     pmScratch[19] = wColl[0];  pmScratch[20] = wColl[2];  pmScratch[21] = wColl[1];
 }
 
-inline void applyWriteToScratch() {
+// Returns false when the freshly-read block is too short to edit safely (FC
+// error / truncated response) — the caller must then ABORT the write cycle
+// rather than send an unmodified (or empty) SET + EEPROM_WRITE.
+inline bool applyWriteToScratch() {
     // Each rates screen writes ONLY its own fields; everything else is preserved
     // from the freshly-read RC_TUNING in pmScratch. This is why basic and
     // advanced no longer clobber each other (the Advanced screen doesn't edit
     // the basic rates, so an advanced save must not touch them — and vice-versa).
     if (pmWriteKind == WK_RATES) {
-        if (pmScratchLen < 25) return;
+        if (pmScratchLen < 25) return false;
         writeBasicRatesToScratch();
     } else if (pmWriteKind == WK_RATES_ADV) {
-        if (pmScratchLen < 36) return;
+        if (pmScratchLen < 36) return false;
         // V1 writes basic + advanced together. Write basic only if the TX actually
         // sent it this transaction (restore) — otherwise (advanced-only edit) leave
         // the FC's basic as read, so we never zero it.
@@ -398,16 +402,16 @@ inline void applyWriteToScratch() {
         pmScratch[31] = wBoostGain[3]; pmScratch[32] = wBoostCutoff[3];   // Collective
         pmScratch[33] = wYawDyn[0];    pmScratch[34] = wYawDyn[1];    pmScratch[35] = wYawDyn[2];
     } else if (pmWriteKind == WK_PID) {
-        if (pmScratchLen < 34) return;
+        if (pmScratchLen < 34) return false;
         for (uint8_t i = 0; i < 17; ++i) {
             pmScratch[i * 2]     = (uint8_t)(wPid[i] & 0xFF);
             pmScratch[i * 2 + 1] = (uint8_t)(wPid[i] >> 8);
         }
     } else if (pmWriteKind == WK_PID_ADV) {
-        if (pmScratchLen < 43) return;
+        if (pmScratchLen < 43) return false;
         for (uint8_t i = 0; i < 26; ++i) pmScratch[ADV_PID_MAP[i]] = wAdvPid[i];   // scatter back
     } else if (pmWriteKind == WK_GOV_PROFILE) {
-        if (pmScratchLen < 17) return;          // govWrite[1..17] → MSP profile order
+        if (pmScratchLen < 17) return false;          // govWrite[1..17] → MSP profile order
         pmScratch[0]  = govWrite[1];  pmScratch[1]  = govWrite[2];   // Headspeed lo/hi
         pmScratch[2]  = govWrite[3];  pmScratch[3]  = govWrite[4];  pmScratch[4] = govWrite[5];  pmScratch[5] = govWrite[6];  pmScratch[6] = govWrite[7]; // Gain,P,I,D,F
         pmScratch[7]  = govWrite[8];  pmScratch[8]  = govWrite[9];   // TTA_Gain, TTA_Limit
@@ -416,7 +420,7 @@ inline void applyWriteToScratch() {
         pmScratch[14] = govWrite[12];                               // Fallback_Drop
         pmScratch[15] = govWrite[16]; pmScratch[16] = govWrite[17]; // Flags lo/hi
     } else if (pmWriteKind == WK_GOV_CONFIG) {
-        if (pmScratchLen < 33) return;          // govWrite[18..41] → MSP config order (rest preserved; write keeps the FC's own length)
+        if (pmScratchLen < 33) return false;          // govWrite[18..41] → MSP config order (rest preserved; write keeps the FC's own length)
         pmScratch[0]  = govWrite[18];           // Gov_Mode
         pmScratch[1]  = govWrite[20]; pmScratch[2]  = govWrite[21]; // Startup
         pmScratch[3]  = govWrite[22]; pmScratch[4]  = govWrite[23]; // Spoolup
@@ -436,7 +440,7 @@ inline void applyWriteToScratch() {
         pmScratch[32] = govWrite[41];           // Auto_Throttle
         // [11/12] lost-headspeed, [15-18] autorot bailout/min-entry, [24] spoolup-min,
         // [29/30] spare, [33-41] bypass curve — preserved from the read.
-    }
+    }    return true;
 }
 
 inline uint8_t writeSetFn() {
@@ -477,8 +481,20 @@ inline void txParamsLoop() {
                          : govProfileWriteReq ? WK_GOV_PROFILE
                          : govConfigWriteReq  ? WK_GOV_CONFIG : WK_NONE;
             if (wk != WK_NONE && txParamMspFree()) {
-                ratesAdvWriteReq = ratesWriteReq = pidWriteReq = advPidWriteReq = false;
-                govProfileWriteReq = govConfigWriteReq = false;
+                // Consume ONLY the selected request. A write cycle takes ~300 ms;
+                // a different edit raised meanwhile must survive to the next
+                // PM_IDLE pass, not be silently wiped with the others.
+                // (WK_RATES_ADV also consumes ratesWriteReq: both target the same
+                // RC_TUNING message, and the combined write applies the staged
+                // basic rates via basicRatesPending.)
+                switch (wk) {
+                    case WK_RATES_ADV:   ratesAdvWriteReq = false; ratesWriteReq = false; break;
+                    case WK_RATES:       ratesWriteReq      = false; break;
+                    case WK_PID:         pidWriteReq        = false; break;
+                    case WK_PID_ADV:     advPidWriteReq     = false; break;
+                    case WK_GOV_PROFILE: govProfileWriteReq = false; break;
+                    default:             govConfigWriteReq  = false; break;
+                }
                 pmWriteKind = wk;
                 uint8_t fn = writeGetFn();
                 mspAsyncFunc = fn; mspAsyncReady = false;
@@ -514,12 +530,41 @@ inline void txParamsLoop() {
                 if (pmScratchLen > sizeof(pmScratch)) pmScratchLen = sizeof(pmScratch);
                 memcpy(pmScratch, mspAsyncBuf, pmScratchLen);
                 mspAsyncFunc = 0xFF;
-                applyWriteToScratch();
+                if (!applyWriteToScratch()) {
+                    // Read came back too short to edit safely (FC error /
+                    // truncated) — ABORT: no SET, no EEPROM_WRITE. Used to fall
+                    // through and write the unmodified scratch anyway.
+                    events.add("TX edit: FC read too short — save aborted");
+                    pmWriteRetries = 0; pmWriteKind = WK_NONE;
+                    pmState = PM_IDLE; txParamBusy = false;
+                    break;
+                }
+                pmWriteRetries = 0;
                 basicRatesPending = false;       // staged basic consumed; next advanced-only edit preserves the FC's basic
                 mspSendRequest(writeSetFn(), pmScratch, (uint8_t)pmScratchLen);
                 pmState = PM_WRITE_EEPROM; pmStateAt = now;
             } else if ((int32_t)(now - pmStateAt) > 500) {
+                // GET never answered. The request flag was consumed at PM_IDLE,
+                // so without re-raising it the user's edit would vanish silently
+                // while the TX believes it saved. One retry; then log + drop the
+                // staged basic rates (a later advanced-only edit must not push
+                // stale staged values).
                 mspAsyncFunc = 0xFF; pmState = PM_IDLE; txParamBusy = false;
+                if (pmWriteRetries < 1) {
+                    pmWriteRetries++;
+                    switch (pmWriteKind) {
+                        case WK_RATES_ADV:   ratesAdvWriteReq   = true; break;
+                        case WK_RATES:       ratesWriteReq      = true; break;
+                        case WK_PID:         pidWriteReq        = true; break;
+                        case WK_PID_ADV:     advPidWriteReq     = true; break;
+                        case WK_GOV_PROFILE: govProfileWriteReq = true; break;
+                        default:             govConfigWriteReq  = true; break;
+                    }
+                } else {
+                    pmWriteRetries = 0;
+                    basicRatesPending = false;
+                    events.add("TX edit: FC not answering — save dropped");
+                }
             }
             break;
 

@@ -130,7 +130,13 @@ inline void mspParseResponse(const uint8_t* body, uint8_t bodyLen) {
     if ((uint16_t)(2 + size) > mspLen) return;       // payload doesn't fit (no inner CRC)
     const uint8_t* payload = &msp[2];
 
-    fcInfo.lastResponseMs = millis();
+    fcInfo.lastResponseMs = millis();                // even an error reply proves the FC is alive
+
+    // Status byte bit 7 = MSP ERROR. Never capture an error frame as a valid
+    // response: its size is 0, and treating it as data used to hand empty
+    // buffers to the waiters — the TX-param write machine would then send a
+    // zero-length SET followed by EEPROM_WRITE. Let waiters time out + retry.
+    if (body[2] & 0x80) return;
 
     // If a synchronous request is waiting for this function code, capture it.
     if (func == mspWaitFunction && !mspWaitRespReady) {

@@ -96,10 +96,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const tick = async () => {
             const el = document.getElementById('__secs');
             if (el) el.textContent = n;
-            if (n >= 4) {
+            if (n >= 2) {
                 try {
                     const r = await fetch('/api/state.json',
-                        { cache: 'no-store', signal: AbortSignal.timeout(2000) });
+                        { cache: 'no-store', signal: AbortSignal.timeout(1500) });
                     if (r.ok) { location.href = '/'; return; }
                 } catch (err) { /* chip still down */ }
             }

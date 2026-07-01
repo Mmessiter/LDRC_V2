@@ -112,9 +112,6 @@ void setup() {
 
     prefs.begin(NVS_NAMESPACE, false);
 
-    // If the user has saved a failsafe posture, use it as the pre-link default
-    // (overrides the generic safe default above) — so a no-TX boot sits exactly
-    // where they set it (e.g. AUX1 in the disarmed position for their heli).
     // Boot ALWAYS comes up on the guaranteed-disarmed generic default above
     // (ch1-5=1500, AUX low) — NEVER the captured failsafe values, which may have
     // the arm/safety switch in the OFF (armed) position and would make the FC
@@ -174,11 +171,29 @@ void setup() {
     }
 
     //*****************************************************************
+    // Config-reboot fast path — one-shot flag set by the web UI when it
+    // reboots to apply a setting (protocol, sim, WiFi, name…). The user is
+    // at the phone in config mode, NOT flying, so come straight back to WiFi:
+    // skip the 1 s RF window and never drop to fly-mode on a stray packet.
+    // This is the "reboot takes forever to come back" fix.
+    // MUST be consumed BEFORE the quick-boot counter below: a deliberate web
+    // reboot is proof the firmware ran fine, so it must not count towards the
+    // crash-loop threshold (three fast "save & reboot" taps used to trip
+    // recovery and silently overwrite the user's protocol with SBUS).
+    //*****************************************************************
+    bool cfgReboot = prefs.isKey(NVS_KEY_CFG_REBOOT) && prefs.getUChar(NVS_KEY_CFG_REBOOT, 0);
+    if (cfgReboot) {
+        prefs.putUChar(NVS_KEY_CFG_REBOOT, 0);   // consume the one-shot
+        forceWifiMode = true;
+        Serial.println("[boot] config reboot — bringing WiFi up immediately (no RF window)");
+    }
+
+    //*****************************************************************
     // Quick-boot escape hatch — three quick reboots forces WiFi + SBUS
     //*****************************************************************
     // Recovers cleanly from a protocol selection that's crashing the chip in
     // a reboot loop.
-    {
+    if (!cfgReboot) {
         uint8_t cnt = prefs.isKey(NVS_KEY_BOOT_COUNT) ? prefs.getUChar(NVS_KEY_BOOT_COUNT, 0) : 0;
         cnt++;
         prefs.putUChar(NVS_KEY_BOOT_COUNT, cnt);
@@ -194,7 +209,7 @@ void setup() {
     }
 
     //*****************************************************************
-    // Load saved output protocol (defaults to SBUS)
+    // Load saved output protocol (fresh NVS defaults to CRSF)
     //*****************************************************************
     {
         uint8_t p = prefs.isKey(NVS_KEY_PROTO) ? prefs.getUChar(NVS_KEY_PROTO, PROTO_DEFAULT) : PROTO_DEFAULT;
@@ -309,6 +324,13 @@ void setup() {
         Serial.printf("[net] %s — skipping RF window, WiFi on\n",
                       simEnabled ? "sim mode" : "DEV_KEEP_WIFI");
         events.add(simEnabled ? "Sim mode: WiFi kept on" : "DEV mode: WiFi forced on");
+        startWifiStation();
+    } else if (numRadiosPresent == 0) {
+        // No radios at all (bare chip / dev board / unpopulated PCB): it can
+        // never hear a real TX, so never sit in the RF window waiting — bring
+        // WiFi up immediately so the board is always reachable for config/OTA.
+        Serial.println("[net] no radios present — WiFi on immediately");
+        events.add("No radios — WiFi on");
         startWifiStation();
     } else {
         netMode       = NET_WAITING_RF;

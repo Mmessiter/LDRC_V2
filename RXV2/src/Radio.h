@@ -119,7 +119,13 @@ inline bool probeRadioSlot(RF24& r, uint8_t cePin, uint8_t csnPin, uint8_t idxFo
 
 inline void detectAllRadios() {
     // Slot 1 is the SPI-bench from runRadioSelfTest — read its verdict.
-    radioPresent[0] = rfTest.beginOk && rfTest.chipConnected;
+    // MUST include channelOk: a bare board with no nRF24 leaves MISO floating,
+    // which often reads back as 0xFF. begin()/isChipConnected() are both fooled
+    // by that (address-width 0xFF&3 = 3 looks "valid"), so without the channel
+    // write/read-back test we'd hallucinate a radio — and then a phantom "TX
+    // heard" at boot suppresses WiFi and no AP ever appears. The r/w test is the
+    // robust discriminator (matches probeRadioSlot for slots 2/3).
+    radioPresent[0] = rfTest.beginOk && rfTest.chipConnected && rfTest.channelOk;
     radioPresent[1] = probeRadioSlot(radio2, PIN_NRF_CE2, PIN_NRF_CSN2, 2);
     radioPresent[2] = probeRadioSlot(radio3, PIN_NRF_CE3, PIN_NRF_CSN3, 3);
     numRadiosPresent = (uint8_t)(radioPresent[0] + radioPresent[1] + radioPresent[2]);
@@ -245,10 +251,16 @@ inline void loadNextAck() {
     // FHSS hop decision — suppressed during the MAC window so we never advance
     // the channel index without telling the TX (the window keeps ack[5] = 0).
     bool hopThisAck = false;
-    if (fhssEnabled && !inMacWindow &&
+    if (fhssEnabled && !inMacWindow && !hopPending &&
         (uint32_t)(millis() - lastHopMs) >= HOP_TIME_MS) {
         nextChannelIdx = (nextChannelIdx + 1) % 83;
         hopThisAck = true;
+        // Stamp the DECISION, not just the execution (also gated on !hopPending
+        // above): swapRadios()/tryBind() preload 3 acks back-to-back, and with
+        // HOP_TIME_MS only 8 ms each preload used to advance nextChannelIdx
+        // again — FIFO acks promising N+1/N+2/N+3 while we tune only to N+3,
+        // desyncing the TX. Latent until fhssEnabled is turned on.
+        lastHopMs = millis();
     }
 
     if (inMacWindow) {
@@ -535,7 +547,11 @@ inline void telemetrySampleTick() {
     bool connected = (rx.lastMillis != 0) && ((uint32_t)(now - rx.lastMillis) < 2000);
     if (!connected || !fcTelem.valid) return;     // only log an actual flight with live telemetry
     TeleSample& s = teleRing[teleHead];
-    s.escC = (uint8_t)(fcTelem.fcEscTempC + 0.5f);
+    // ESC temp is a SIGNED deci-degC CRSF field — clamp before the uint8_t
+    // store (negative float → unsigned is UB; a frosty morning must log 0°,
+    // not garbage).
+    float tc = fcTelem.fcEscTempC + 0.5f;
+    s.escC = (tc < 0.0f) ? 0u : (tc > 255.0f) ? 255u : (uint8_t)tc;
     uint32_t hs = (gearRatio > 0.1f) ? (uint32_t)(fcTelem.fcMotorRPM / gearRatio + 0.5f) : fcTelem.fcMotorRPM;
     s.headRpm = (hs > 65535u) ? 65535u : (uint16_t)hs;
     float cv = fcTelem.fcBattVolts * 100.0f + 0.5f;
@@ -558,16 +574,28 @@ inline void radioPoll() {
                 memcpy(rx.maxBytes, rx.lastBytes, size);
             }
         } else {
+            // Corrupted R_RX_PL_WID (size 0 or >32): flush and BAIL OUT of the
+            // whole handler. Falling through used to hand the bogus `size`
+            // (e.g. 255) to decodeChannelData/tryBind/readExtraParameters,
+            // which then wrote ~200 bytes past their stack buffers — a single
+            // RF glitch could crash the receiver MID-FLIGHT. It also isn't a
+            // packet: don't count it in link stats or bump rx.lastMillis.
             currentRadio->flush_rx();
             rx.lastPayload = 0;
+            return;
         }
         // --- per-flight link statistics (gaps, frame rate, histogram) ---
         {
             uint32_t nowMs = millis();
             uint32_t nowUs = micros();
-            if (rx.lastMillis == 0 || (uint32_t)(nowMs - rx.lastMillis) > 500) {
-                // fresh connection → start a new run (previous run's figures are
-                // overwritten only when a new flight actually begins)
+            if (rx.lastMillis == 0 || (uint32_t)(nowMs - rx.lastMillis) >= FLIGHT_SAVE_AFTER_MS) {
+                // A NEW flight starts only after the link was gone long enough
+                // for the previous one to have been saved (same threshold as
+                // maybeSaveFlight). A shorter mid-flight dropout — the very
+                // event the blackbox exists for — continues the SAME flight:
+                // stats + telemetry ring keep accumulating, and the dropout
+                // shows up honestly as the longest gap. (Was >500 ms, which
+                // wiped the whole recording on any brief failsafe/reconnect.)
                 linkStats.connStartMs = nowMs;
                 linkStats.packets  = 0; linkStats.maxGapUs = 0;
                 linkStats.gapSumUs = 0; linkStats.gapCount = 0;

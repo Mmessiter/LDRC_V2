@@ -123,11 +123,22 @@ inline void startWifiStation() {
     // all come up immediately on the AP side; STA tries the home
     // network in the background and joins when it can.
     WiFi.persistent(false);
-    WiFi.mode(WIFI_AP_STA);
-    // AP SSID is the user-friendly model name (or "RXV2-XXXX" default).
+    // Decide pure-AP vs AP+STA UP FRONT. A pure softAP (STA interface off) stays
+    // pinned to channel 1 and is far more reliably joinable. An AP+STA radio has
+    // ONE PHY: whenever the STA side scans or (re)connects it hops channels, and
+    // the softAP is dragged along — which knocks a phone off mid-join ("Unable to
+    // join the network"). That's exactly the "had to try several times" symptom,
+    // and it's worst at the field where the home net is absent so STA retries
+    // forever. So only stand up STA when we actually intend to join a network.
+    String ssid = getEffectiveSsid();
+    bool apOnly = prefs.isKey(NVS_KEY_AP_ONLY) && prefs.getBool(NVS_KEY_AP_ONLY, false);
+    bool staWanted = !apOnly && ssid.length() > 0;
+    WiFi.mode(staWanted ? WIFI_AP_STA : WIFI_AP);
+    // AP SSID is the user-friendly model name (or "RXV2" default).
     // Phones in the area see "Goblin 700" instead of a generic
-    // "LDRC_RX" and can tell receivers apart at a glance.
-    WiFi.softAP(g_effectiveName.c_str());
+    // name and can tell receivers apart at a glance. Fixed channel 1 so the
+    // AP never moves under a connected client.
+    WiFi.softAP(g_effectiveName.c_str(), nullptr, 1);
     WiFi.setSleep(false);
     // The WiFi radio sits right beside the nRF24. In sim mode the TX link is live the
     // whole time, and full WiFi power (~90 mW @ 19.5 dBm) desensitises the receiver —
@@ -148,9 +159,7 @@ inline void startWifiStation() {
     startHttpServerIfNeeded();
     mspBridgeStart();
 
-    String ssid = getEffectiveSsid();
-    bool apOnly = prefs.isKey(NVS_KEY_AP_ONLY) && prefs.getBool(NVS_KEY_AP_ONLY, false);
-    if (apOnly || ssid.length() == 0) {
+    if (!staWanted) {
         // Stay AP-only: either the user has chosen "AP mode only" (flying field —
         // don't burn time chasing an out-of-range home network) or there are no
         // saved creds. Everything (web/mDNS/OTA/bridge) is already up on the AP.
@@ -298,6 +307,11 @@ inline void netStep() {
                 break;
             }
             if ((uint32_t)(millis() - netStateStart) >= WIFI_CONNECT_MS) {
+                // If a phone is on our softAP, DON'T churn the STA side now — a
+                // disconnect+scan hops channels and boots that phone off mid-
+                // session. Hold the retry until they're done (self-heal resumes
+                // the moment the AP is idle again). This is the field fix.
+                if (WiFi.softAPgetStationNum() > 0) { netStateStart = millis(); break; }
                 staAttempts++;
                 Serial.printf("[net] STA attempt %u timed out (status=%d), retrying — AP still up\n",
                               (unsigned)staAttempts, (int)s);
@@ -359,7 +373,10 @@ inline void netStep() {
             // stranding it off the home network until a manual power-cycle.
             {
                 static uint32_t lastApRetry = 0;
-                if (getEffectiveSsid().length() > 0 &&
+                bool apOnlySet = prefs.isKey(NVS_KEY_AP_ONLY) && prefs.getBool(NVS_KEY_AP_ONLY, false);
+                if (!apOnlySet &&                        // field "AP mode only": AP-only IS the wanted state — startWifiStation would just bounce straight back here, re-running softAP + spamming two events every retry
+                    getEffectiveSsid().length() > 0 &&
+                    WiFi.softAPgetStationNum() == 0 &&   // don't disrupt a phone using the AP
                     (uint32_t)(millis() - lastApRetry) >= AP_STA_RETRY_MS) {
                     lastApRetry = millis();
                     Serial.println("[net] AP-only but creds exist — retrying home WiFi");

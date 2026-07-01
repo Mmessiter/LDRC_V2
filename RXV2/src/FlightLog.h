@@ -15,7 +15,8 @@
 
 #include "1Defs.h"
 
-constexpr uint32_t FLIGHT_SAVE_AFTER_MS = 15000;  // link gone this long → flight over → save
+// FLIGHT_SAVE_AFTER_MS lives in 1Defs.h — Radio.h shares it as its new-flight
+// reset threshold, so the save boundary and the reset boundary can never drift.
 constexpr uint16_t FLIGHT_MIN_SAMPLES   = 10;     // don't bother saving a trivial run
 constexpr uint8_t  FLIGHT_KEEP          = 3;      // /flt0..2.bin
 
@@ -45,12 +46,10 @@ inline const char* flightPath(uint8_t idx) {
 //*********************************************************************
 inline void saveFlightToLittleFS() {
     if (!littleFsMounted || teleCount < FLIGHT_MIN_SAMPLES) return;
-    // Rotate: drop the oldest, shuffle the rest down one slot.
-    LittleFS.remove(flightPath(FLIGHT_KEEP - 1));
-    for (int8_t i = FLIGHT_KEEP - 2; i >= 0; --i) {
-        if (LittleFS.exists(flightPath(i))) LittleFS.rename(flightPath(i), flightPath(i + 1));
-    }
-    File f = LittleFS.open(flightPath(0), "w");
+    // Write the NEW flight to a temp file FIRST — only a successful write may
+    // rotate the old ones. (Rotating first meant a failed open/write — e.g.
+    // FS full — deleted the oldest saved flight and left no new one.)
+    File f = LittleFS.open("/flt.tmp", "w");
     if (!f) return;
     FlightHeader h{};
     h.magic     = FLIGHT_MAGIC;
@@ -63,11 +62,23 @@ inline void saveFlightToLittleFS() {
     for (uint8_t i = 0; i < 6; ++i) h.hist[i] = linkStats.hist[i];
     f.write((const uint8_t*)&h, sizeof(h));
     const uint16_t start = (teleCount < TELE_RING) ? 0 : teleHead;
+    size_t wrote = 0;
     for (uint16_t i = 0; i < teleCount; ++i) {
         TeleSample s = teleRing[(start + i) % TELE_RING];
-        f.write((const uint8_t*)&s, sizeof(s));
+        wrote += f.write((const uint8_t*)&s, sizeof(s));
     }
     f.close();
+    if (wrote != (size_t)teleCount * sizeof(TeleSample)) {   // short write (FS full) — keep the old flights
+        LittleFS.remove("/flt.tmp");
+        events.add("Flight save FAILED (flash full?)");
+        return;
+    }
+    // Success — NOW rotate: drop the oldest, shuffle down, move tmp into place.
+    LittleFS.remove(flightPath(FLIGHT_KEEP - 1));
+    for (int8_t i = FLIGHT_KEEP - 2; i >= 0; --i) {
+        if (LittleFS.exists(flightPath(i))) LittleFS.rename(flightPath(i), flightPath(i + 1));
+    }
+    LittleFS.rename("/flt.tmp", flightPath(0));
     events.add("Flight saved to flash");
 }
 
@@ -94,7 +105,11 @@ inline void maybeSaveFlight() {
 //*********************************************************************
 inline void renderFlightJson(String& j, const FlightHeader& h, const TeleSample* s) {
     char b[96];
-    j.reserve((size_t)h.count * 20 + 256);
+    // ~28 bytes/sample worst case across the four arrays (esc 4 + head 6 +
+    // v 6 + amps 7 + commas). Under-reserving forced several ~30 kB reallocs
+    // per render; a failed realloc on a fragmented heap silently truncates
+    // the JSON (Arduino String concat has no error path).
+    j.reserve((size_t)h.count * 28 + 300);
     snprintf(b, sizeof(b), "{\"count\":%u,\"interval_s\":%u", (unsigned)h.count, (unsigned)h.intervalS); j += b;
     snprintf(b, sizeof(b), ",\"dur_ms\":%u", (unsigned)h.connMs); j += b;
     j += ",\"link\":{";

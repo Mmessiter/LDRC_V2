@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.191-flight-save";
+constexpr const char* FW_VERSION = "RXV2-0.9.195-review-fixes";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -221,7 +221,7 @@ enum Protocol : uint8_t {
     PROTO_IBUS2 = 5,
 };
 constexpr uint8_t PROTO_MAX     = PROTO_PPM;
-constexpr uint8_t PROTO_DEFAULT = PROTO_SBUS;
+constexpr uint8_t PROTO_DEFAULT = PROTO_CRSF;   // CRSF is the common case (Rotorflight) — a fresh board talks to the FC out of the box
 
 inline Protocol  currentProtocol = (Protocol)PROTO_DEFAULT;
 inline bool      ppmInverted     = false;
@@ -249,6 +249,14 @@ constexpr const char* NVS_KEY_SIM         = "sim";     // 1 = drive flight simul
 constexpr const char* NVS_KEY_SIM_MAP     = "simmap";  // 8-byte map: which RX channel (0..15) feeds each sim output
 constexpr const char* NVS_KEY_SIM_REV     = "simrev";  // 8-byte per-output reverse flags (0/1)
 constexpr const char* NVS_KEY_AP_ONLY     = "aponly";  // 1 = skip home-WiFi STA, run AP-only (flying field: no waiting on an out-of-range home network)
+constexpr const char* NVS_KEY_CFG_REBOOT  = "cfgrb";   // one-shot: web-initiated reboot to apply a setting → next boot skips the RF window, WiFi comes straight back
+
+// A flight "ends" (and is saved to flash) after the link has been gone this
+// long. The SAME threshold decides when a returning link is a NEW flight:
+// radioPoll only resets the link stats + telemetry ring for gaps ≥ this, so a
+// brief mid-flight dropout — exactly the event the blackbox exists to record —
+// stays part of one continuous flight instead of silently wiping it.
+constexpr uint32_t FLIGHT_SAVE_AFTER_MS = 15000;
 
 constexpr uint8_t     QUICK_BOOT_THRESHOLD = 3;
 constexpr uint32_t    QUICK_BOOT_RESET_MS  = 5000;

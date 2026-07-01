@@ -293,6 +293,10 @@ inline void handleBackupSave() {
     if (!server.hasArg("plain")) { server.send(400, "text/plain", "missing body"); return; }
     String name = server.arg("name");
     if (!backupNameOk(name)) { server.send(400, "text/plain", "bad name"); return; }
+    // A real full backup is ~4 kB of JSON; anything much bigger is a runaway
+    // client. Cap it so a bad POST can't fill LittleFS (which would then make
+    // flight-log saves fail too).
+    if (server.arg("plain").length() > 16384) { server.send(413, "text/plain", "backup too large (max 16 kB)"); return; }
     if (!LittleFS.exists(BACKUP_DIR)) LittleFS.mkdir(BACKUP_DIR);
     // Enforce hard cap. Allow overwrite of an existing name without counting it.
     String path = backupPath(name);
@@ -358,6 +362,26 @@ inline void handleMspApi() {
             uint8_t lo = hexNibble(h[i + 1]);
             if (hi == 0xFF || lo == 0xFF) { server.send(400, "text/plain", "bad hex"); return; }
             reqBuf[reqLen++] = (uint8_t)((hi << 4) | lo);
+        }
+    }
+
+    // Yield to the TX-param state machine first. It runs a multi-step MSP
+    // transaction (GET → SET → EEPROM_WRITE); barging in mid-cycle puts two
+    // outstanding requests on the FC (mutual timeouts), and a web SET landing
+    // between the TX's GET and SET would be overwritten by the TX's stale
+    // scratch and EEPROM-saved. TxParams yields to the web (txParamMspFree);
+    // this is the missing other half of that mutex. Pump the machine to
+    // completion (worst cycle ~250 ms); if it stays busy, the FC is wedged.
+    {
+        uint32_t busyDeadline = millis() + 300;
+        while (txParamBusy && (int32_t)(busyDeadline - millis()) > 0) {
+            protocolRx();       // feed CRSF RX so the async response can land
+            txParamsLoop();     // advance the TX-param machine
+            delay(1);
+        }
+        if (txParamBusy) {
+            server.send(503, "text/plain", "receiver busy with a transmitter edit — try again");
+            return;
         }
     }
 
@@ -900,6 +924,7 @@ inline void handleFirstRun() {
                 "your home WiFi details next.</p>";
     }
     server.send(200, "text/html", confirmPage("Saved", body.c_str()));
+    prefs.putUChar(NVS_KEY_CFG_REBOOT, 1);   // config reboot: come straight back to WiFi even if a TX is on
     delay(500);
     ESP.restart();
 }
@@ -951,6 +976,7 @@ inline void handleNameSet() {
                   "new name takes effect across the WiFi AP, mDNS, and "
                   "page titles.</p>";
     server.send(200, "text/html", confirmPage("Name saved", body.c_str()));
+    prefs.putUChar(NVS_KEY_CFG_REBOOT, 1);   // config reboot: come straight back to WiFi even if a TX is on
     delay(500);
     ESP.restart();
 }
@@ -961,7 +987,9 @@ inline void handleNameSet() {
 
 inline void handleWifiSet() {
     if (server.hasArg("ssid")) {
-        prefs.putString(NVS_KEY_SSID, server.arg("ssid"));
+        String ssid = server.arg("ssid");
+        ssid.trim();   // an invisible trailing space breaks joining (firstrun trims; this path didn't)
+        prefs.putString(NVS_KEY_SSID, ssid);
     }
     if (server.hasArg("pass") && server.arg("pass").length() > 0) {
         prefs.putString(NVS_KEY_PASS, server.arg("pass"));
@@ -996,6 +1024,7 @@ inline void handleWifiSet() {
         b += "' on next boot.</p>";
         server.send(200, "text/html", confirmPage("Saved & rebooting", b.c_str()));
     }
+    prefs.putUChar(NVS_KEY_CFG_REBOOT, 1);   // config reboot: come straight back to WiFi even if a TX is on
     delay(500);
     ESP.restart();
 }
@@ -1043,6 +1072,13 @@ inline void handleFailsafeClear() {
 inline void handleGearSet() {
     if (server.hasArg("ratio")) {
         float r = server.arg("ratio").toFloat();
+        // toFloat() returns 0.0 for garbage — reject instead of silently
+        // clamping a typo to 0.1 (which would 10x the displayed head speed).
+        if (!(r > 0.0f)) {
+            server.sendHeader("Cache-Control", "no-store");
+            server.send(400, "application/json", "{\"ok\":false,\"error\":\"ratio must be a number > 0\"}");
+            return;
+        }
         if (r < 0.1f)   r = 0.1f;
         if (r > 100.0f) r = 100.0f;
         gearRatio = r;
@@ -1070,9 +1106,10 @@ inline void handleProtocolSet() {
         }
     }
     prefs.putUChar(NVS_KEY_PPM_INV, server.hasArg("ppm_inv") ? 1 : 0);
+    prefs.putUChar(NVS_KEY_CFG_REBOOT, 1);   // come straight back to WiFi (skip RF window)
     server.send(200, "text/html", confirmPage("Saved & rebooting",
         "<p>Output protocol updated. The receiver is rebooting to apply.</p>"));
-    delay(500);
+    delay(250);
     ESP.restart();
 }
 
@@ -1085,12 +1122,13 @@ inline void handleProtocolSet() {
 inline void handleSimSet() {
     bool on = server.hasArg("on") ? (server.arg("on").toInt() != 0) : false;
     prefs.putUChar(NVS_KEY_SIM, on ? 1 : 0);
+    prefs.putUChar(NVS_KEY_CFG_REBOOT, 1);   // come straight back to WiFi (skip RF window)
     events.add(on ? "Sim-over-USB enabled" : "Sim-over-USB disabled");
     server.send(200, "text/html", confirmPage("Saved & rebooting", on
         ? "<p>Simulator-over-USB <b>enabled</b>. The receiver is rebooting; plug it into your "
           "computer and it appears as a USB joystick driven by your sticks.</p>"
         : "<p>Simulator-over-USB <b>disabled</b>. The receiver is rebooting back to normal.</p>"));
-    delay(500);
+    delay(250);
     ESP.restart();
 }
 
@@ -1192,7 +1230,10 @@ inline void handleViews() {
 inline void handleSimKey() {
     int code = server.hasArg("code") ? server.arg("code").toInt() : 0;   // HID usage id
     int mods = server.hasArg("mods") ? server.arg("mods").toInt() : 0;   // modifier bitmask
-    if (code < 1 || code > 255) { server.send(400, "text/plain", "code must be 1..255"); return; }
+    // 0x65 (Application key) is the keyboard descriptor's declared Usage/
+    // Logical Maximum (SimUsb.h) — codes above it are outside the report's
+    // range and hosts silently discard them, so reject rather than "send" one.
+    if (code < 1 || code > 0x65) { server.send(400, "text/plain", "code must be 1..101 (0x65)"); return; }
     SimUSB::sendKey((uint8_t)code, (uint8_t)(mods & 0xFF));
     server.sendHeader("Cache-Control", "no-store");
     server.send(200, "text/plain", "ok");
@@ -1311,18 +1352,26 @@ inline void handleApiState() {
     j.reserve(2200);
     char buf[96];
 
+    // JSON string escaper for USER-SUPPLIED text (model name, SSID). An SSID
+    // may legally contain " or \ — embedding it raw makes state.json invalid
+    // JSON, which kills EVERY page (they all fetch it on load), including the
+    // wifi page needed to fix the SSID. Control chars → \u00XX for the same
+    // reason.
+    auto jsonEsc = [&j](const String& s) {
+        for (size_t i = 0; i < s.length(); i++) {
+            char c = s[i];
+            if (c == '"' || c == '\\') { j += '\\'; j += c; }
+            else if ((uint8_t)c < 0x20) {
+                char u[8]; snprintf(u, sizeof(u), "\\u%04x", (unsigned)(uint8_t)c); j += u;
+            } else j += c;
+        }
+    };
+
     // --- info ----------------------------------------------------------
     j += "{\"info\":{";
     j += "\"fw_version\":\""; j += FW_VERSION; j += "\"";
     j += ",\"build_date\":\""; j += __DATE__; j += ' '; j += __TIME__; j += "\"";
-    j += ",\"name\":\""; {
-        String n = g_effectiveName;
-        for (size_t i = 0; i < n.length(); i++) {
-            char c = n[i];
-            if (c == '"' || c == '\\') j += '\\';
-            j += c;
-        }
-    } j += "\"";
+    j += ",\"name\":\""; jsonEsc(g_effectiveName); j += "\"";
     j += ",\"name_custom\":"; j += (nameIsCustom() ? "true" : "false");
     j += ",\"hostname\":\""; j += g_hostname; j += "\"";
     j += ",\"ip\":\""; j += WiFi.localIP().toString(); j += "\"";
@@ -1334,7 +1383,7 @@ inline void handleApiState() {
     j += ",\"chip\":\""; j += ESP.getChipModel(); j += "\"";
     j += ",\"chip_rev\":"; j += ESP.getChipRevision();
     j += ",\"littlefs\":"; j += (littleFsMounted ? "true" : "false");
-    j += ",\"ap_ssid\":\""; j += g_effectiveName; j += "\"";   // the SSID actually broadcast (model name), not the legacy "LDRC_RX" constant
+    j += ",\"ap_ssid\":\""; jsonEsc(g_effectiveName); j += "\"";   // the SSID actually broadcast (model name), not the legacy "LDRC_RX" constant
     // ap_ip reports the soft-AP address whenever the AP interface is
     // up — in v0.9.51 that's "always" because the chip runs AP+STA in
     // parallel. The wifi UI uses this to tell the user they can reach
@@ -1354,7 +1403,7 @@ inline void handleApiState() {
     // --- net ----------------------------------------------------------
     j += ",\"net\":{";
     j += "\"mode\":\""; j += netModeName(); j += "\"";
-    j += ",\"ssid\":\""; j += getEffectiveSsid(); j += "\"";
+    j += ",\"ssid\":\""; jsonEsc(getEffectiveSsid()); j += "\"";
     j += ",\"ssid_custom\":"; j += (wifiCredsAreCustom() ? "true" : "false");
     j += ",\"ap_only\":"; j += ((prefs.isKey(NVS_KEY_AP_ONLY) && prefs.getBool(NVS_KEY_AP_ONLY, false)) ? "true" : "false");
     j += "}";

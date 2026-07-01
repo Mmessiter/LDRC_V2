@@ -202,9 +202,13 @@ inline void buildPpmRmtItems() {
     }
     uint32_t gap = (total < PPM_FRAME_US) ? (PPM_FRAME_US - total) : 1000;
     if (gap > 30000) gap = 30000;
-    ppmItems[PPM_CHANNELS].duration0 = (uint16_t)gap;
-    ppmItems[PPM_CHANNELS].level0    = idle_lvl;
-    ppmItems[PPM_CHANNELS].duration1 = 0;
+    // The frame gap must START with a sync pulse: PPM measures each channel
+    // between consecutive pulse LEADING edges, so without this closing pulse
+    // channel 8 has no end marker — decoders lump it into the sync gap and
+    // deliver only 7 channels. (gap is always ≥1000 µs, > PPM_SYNC_US.)
+    ppmItems[PPM_CHANNELS].duration0 = PPM_SYNC_US;
+    ppmItems[PPM_CHANNELS].level0    = sync_lvl;
+    ppmItems[PPM_CHANNELS].duration1 = (uint16_t)(gap - PPM_SYNC_US);
     ppmItems[PPM_CHANNELS].level1    = idle_lvl;
 }
 
@@ -344,7 +348,10 @@ inline void sbusTick() {
     // outputs to the saved positions and present them as valid RC.
     static bool inFailsafePosture = false;
     bool everConnected = (lastChannelDataMs != 0);
-    if (failsafe && everConnected && failsafeSet && !isIdleHighProto(currentProtocol)) {
+    // Gate is "not CRSF", NOT "not idle-high": IBUS/IBUS2 are idle-high too but
+    // have no FC-side failsafe authority (no in-frame loss flag either), so they
+    // rely on the receiver applying the captured posture like SBUS/PPM do.
+    if (failsafe && everConnected && failsafeSet && currentProtocol != PROTO_CRSF) {
         for (uint8_t i = 0; i < 16; ++i) channelMicros[i] = failsafeMicros[i];
         if (!inFailsafePosture) { inFailsafePosture = true; events.add("Signal lost — RX failsafe positions applied"); }
         frameLost = false;
@@ -371,8 +378,9 @@ inline void sbusTick() {
         // detach kills the D5 RX line, so MSP to the FC stops and the web UI loses
         // its Rotorflight options until a reboot — and after a TX session
         // (everConnected) that's exactly what happens once the TX is switched off
-        // and WiFi auto-re-enables. WiFi is only up at the bench (auto-WiFi keeps
-        // it off in flight), so this never affects the in-flight failsafe detach.
+        // and WiFi auto-re-enables. NB auto-WiFi also comes up ~10 s after an
+        // IN-FLIGHT signal loss, re-attaching this UART — the "silence while
+        // failsafe" guard below the detach block is what keeps that safe.
         bool wifiConfigUp  = (netMode == NET_WIFI_UP || netMode == NET_AP);
         bool wantDetach    = everConnected && failsafe && !wifiConfigUp;
         if (wantDetach && !outputDetachedForFailsafe) {
@@ -391,6 +399,20 @@ inline void sbusTick() {
             events.add("DIAG CRSF-REATTACH (output resumed)");
         }
         if (outputDetachedForFailsafe) return; // skip TX while detached
+    }
+
+    // SAFETY: link lost after a real session and no captured failsafe applied
+    // above — CRSF/IBUS/PPM frames have NO in-frame loss flag, so the only
+    // safe output is NONE (absence of frames IS their loss signal). Without
+    // this, a CRSF UART kept attached for WiFi (bench, or auto-WiFi coming up
+    // ~10 s after an in-flight signal loss) would resume streaming the held
+    // pre-loss channels — arm switch and collective included — as valid RC,
+    // letting the FC leave failsafe on a downed model. SBUS/FBUS keep sending
+    // because their frames carry explicit frameLost/failsafe flag bits.
+    if (failsafe && everConnected &&
+        (currentProtocol == PROTO_CRSF || currentProtocol == PROTO_IBUS ||
+         currentProtocol == PROTO_IBUS2 || currentProtocol == PROTO_PPM)) {
+        return;
     }
 
     switch (currentProtocol) {
