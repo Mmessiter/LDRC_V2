@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.188-link-stats",
+      "url": "https://messiter.com/rxv2/release/v0.9.188/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.188/littlefs.bin",
+      "notes": "Phase 1 of post-flight analysis on the receiver: the Black box page now shows LINK statistics for the last flight - connection duration, average frame rate, packet count, average gap and LONGEST gap (colour-coded), plus a gap-distribution histogram. Computed on the receiver from the RF packet timing, so no transmitter needed after landing. Resets when a new flight begins. (Telemetry-vs-time graph is Phase 2.)"
+    },
+    {
       "name": "RXV2-0.9.187-fc-id-inflight",
       "url": "https://messiter.com/rxv2/release/v0.9.187/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.187/littlefs.bin",
@@ -65,12 +71,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.177/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.177/littlefs.bin",
       "notes": "Adds ADVANCED PID editing from the transmitter (read + write): the full Dynamics/bandwidth/cutoff/limit set (26 values) via MSP_PID_PROFILE / MSP_SET_PID_PROFILE, mapped through the scattered profile offsets. Read-modify-write preserves untouched fields. That is rates, advanced rates, PIDs and advanced PIDs all editable from the handset - governor next."
-    },
-    {
-      "name": "RXV2-0.9.176-timing",
-      "url": "https://messiter.com/rxv2/release/v0.9.176/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.176/littlefs.bin",
-      "notes": "Reduces the occasional all-zeros when reading params from the transmitter. Removed the post-write cache blanking (the re-poll refreshes the saved values anyway), tightened the FC re-poll to ~50ms (was 80ms, matching V1), and shortened the stuck-fetch retry from 400ms to 250ms. Any remaining rare zeros are a dropped request packet from the TX (re-trigger to fix)."
     }
   ]
 }

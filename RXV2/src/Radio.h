@@ -535,6 +535,29 @@ inline void radioPoll() {
             currentRadio->flush_rx();
             rx.lastPayload = 0;
         }
+        // --- per-flight link statistics (gaps, frame rate, histogram) ---
+        {
+            uint32_t nowMs = millis();
+            uint32_t nowUs = micros();
+            if (rx.lastMillis == 0 || (uint32_t)(nowMs - rx.lastMillis) > 500) {
+                // fresh connection → start a new run (previous run's figures are
+                // overwritten only when a new flight actually begins)
+                linkStats.connStartMs = nowMs;
+                linkStats.packets  = 0; linkStats.maxGapUs = 0;
+                linkStats.gapSumUs = 0; linkStats.gapCount = 0;
+                for (uint8_t i = 0; i < 6; ++i) linkStats.hist[i] = 0;
+            } else {
+                uint32_t gapUs = nowUs - linkStats.lastPktUs;
+                if (gapUs > linkStats.maxGapUs) linkStats.maxGapUs = gapUs;
+                linkStats.gapSumUs += gapUs; linkStats.gapCount++;
+                uint32_t gapMs = gapUs / 1000;
+                uint8_t b = gapMs < 4 ? 0 : gapMs < 8 ? 1 : gapMs < 16 ? 2 : gapMs < 32 ? 3 : gapMs < 64 ? 4 : 5;
+                linkStats.hist[b]++;
+            }
+            linkStats.lastPktUs = nowUs;
+            linkStats.packets++;
+        }
+
         rx.packets   += 1;
         rx.lastMillis = millis();
 

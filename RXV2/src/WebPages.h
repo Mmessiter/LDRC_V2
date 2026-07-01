@@ -1374,6 +1374,20 @@ inline void handleApiState() {
     j += ",\"last_channel_ms\":";
     if (lastChannelDataMs) j += (uint32_t)(millis() - lastChannelDataMs); else j += "-1";
 
+    // Per-flight link statistics (gaps in ms, frame rate derived on the client).
+    {
+        uint32_t durMs = (rx.lastMillis > linkStats.connStartMs) ? (rx.lastMillis - linkStats.connStartMs) : 0;
+        uint32_t avgGapUs = linkStats.gapCount ? (uint32_t)(linkStats.gapSumUs / linkStats.gapCount) : 0;
+        char lb[220];
+        snprintf(lb, sizeof(lb),
+                 ",\"link\":{\"conn_ms\":%u,\"packets\":%u,\"max_gap_ms\":%.1f,\"avg_gap_ms\":%.2f,\"hist\":[%u,%u,%u,%u,%u,%u]}",
+                 (unsigned)durMs, (unsigned)linkStats.packets,
+                 linkStats.maxGapUs / 1000.0f, avgGapUs / 1000.0f,
+                 (unsigned)linkStats.hist[0], (unsigned)linkStats.hist[1], (unsigned)linkStats.hist[2],
+                 (unsigned)linkStats.hist[3], (unsigned)linkStats.hist[4], (unsigned)linkStats.hist[5]);
+        j += lb;
+    }
+
     snprintf(buf, sizeof(buf), ",\"board_mac\":\"%02X%02X%02X%02X%02X%02X\"",
              boardMac[0], boardMac[1], boardMac[2], boardMac[3], boardMac[4], boardMac[5]);
     j += buf;

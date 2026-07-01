@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.187-fc-id-inflight";
+constexpr const char* FW_VERSION = "RXV2-0.9.188-link-stats";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -325,6 +325,23 @@ struct RxStats {
     uint32_t acksWritten   = 0;
 };
 inline RxStats rx;
+
+// Per-connection (per-flight) link statistics — inter-packet gaps, frame rate,
+// and a gap histogram. Reset when a fresh connection starts (a >500 ms gap), so
+// after landing these hold the just-completed flight's figures — post-flight
+// analysis without the transmitter. Gaps in microseconds (micros() gives the
+// resolution the ~500 Hz frame needs; a flight is well under the ~71 min wrap).
+struct LinkStats {
+    uint32_t connStartMs = 0;    // when this connection began
+    uint32_t packets     = 0;    // packets received this connection
+    uint32_t lastPktUs   = 0;    // micros() of the last packet
+    uint32_t maxGapUs    = 0;    // longest inter-packet gap
+    uint64_t gapSumUs    = 0;    // sum of gaps (for the average)
+    uint32_t gapCount    = 0;
+    // gap histogram (ms buckets): 0:<4  1:4-8  2:8-16  3:16-32  4:32-64  5:>=64
+    uint32_t hist[6]     = {0};
+};
+inline LinkStats linkStats;
 
 inline uint8_t boardMac[8] = {0};      // v1 sends our 8-byte board ID in early acks
 
