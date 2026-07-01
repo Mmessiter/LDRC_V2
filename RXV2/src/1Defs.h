@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.188-link-stats";
+constexpr const char* FW_VERSION = "RXV2-0.9.189-flight-graph";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -342,6 +342,21 @@ struct LinkStats {
     uint32_t hist[6]     = {0};
 };
 inline LinkStats linkStats;
+
+// Flight telemetry time-series — one sample/second of ESC temp, head speed and
+// battery, into a ring holding the last ~20 min. Reset on a fresh connection so
+// it captures the immediately-preceding flight; plotted on the Black box page so
+// you can watch (e.g.) ESC temp track head speed. ~6 bytes/sample × 1200 ≈ 7 kB.
+struct TeleSample {
+    uint8_t  escC   = 0;     // ESC temperature, °C
+    uint16_t headRpm = 0;    // head speed, rpm
+    uint16_t cV     = 0;     // battery, centivolts (V × 100)
+};
+constexpr uint16_t TELE_RING = 1200;
+inline TeleSample teleRing[TELE_RING];
+inline uint16_t   teleCount = 0;         // valid samples (<= TELE_RING)
+inline uint16_t   teleHead  = 0;         // next write index (ring)
+inline uint32_t   teleLastSampleMs = 0;
 
 inline uint8_t boardMac[8] = {0};      // v1 sends our 8-byte board ID in early acks
 

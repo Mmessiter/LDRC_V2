@@ -372,6 +372,7 @@ void loop() {
         mspFcPoll();           // periodic FC-variant / FC-version discovery
         txParamsLoop();        // TX Rotorflight edits: async MSP read/write state machine
     }
+    telemetrySampleTick();     // 1 Hz flight telemetry log (ESC temp / head speed / battery)
 
     // Dual-radio redundancy: if we've not received a packet on the active
     // radio for a while AND a swap cooldown has elapsed AND we have a second

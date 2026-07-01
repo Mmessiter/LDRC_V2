@@ -1286,6 +1286,28 @@ inline void handleApiChannels() {
 }
 
 //*********************************************************************
+//  /api/flightlog.json — the per-flight telemetry time-series (oldest→newest)
+//*********************************************************************
+inline void handleApiFlightLog() {
+    String j;
+    j.reserve((size_t)teleCount * 16 + 128);
+    j += "{\"interval_s\":1,\"count\":"; j += teleCount;
+    const uint16_t start = (teleCount < TELE_RING) ? 0 : teleHead;
+    j += ",\"esc\":[";
+    for (uint16_t i = 0; i < teleCount; ++i) { if (i) j += ','; j += teleRing[(start + i) % TELE_RING].escC; }
+    j += "],\"head\":[";
+    for (uint16_t i = 0; i < teleCount; ++i) { if (i) j += ','; j += teleRing[(start + i) % TELE_RING].headRpm; }
+    j += "],\"v\":[";
+    for (uint16_t i = 0; i < teleCount; ++i) {
+        if (i) j += ',';
+        char b[8]; snprintf(b, sizeof(b), "%.2f", teleRing[(start + i) % TELE_RING].cV / 100.0f); j += b;
+    }
+    j += "]}";
+    server.sendHeader("Cache-Control", "no-store");
+    server.send(200, "application/json", j);
+}
+
+//*********************************************************************
 //  /api/state.json — comprehensive single endpoint for all pages
 //*********************************************************************
 
@@ -1595,6 +1617,7 @@ inline void registerWebRoutes() {
     // JSON APIs
     server.on("/api/state.json",    handleApiState);
     server.on("/api/channels.json", handleApiChannels);
+    server.on("/api/flightlog.json", handleApiFlightLog);
     server.on("/api/events.json",   handleApiEvents);
     server.on("/map",               handleMap);          // sim channel-remap page
     server.on("/api/simmap.json",   handleApiSimMap);    // current sim channel map

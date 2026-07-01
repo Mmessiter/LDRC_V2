@@ -520,6 +520,30 @@ inline void radioBeginListenV1() {
 //  Per-loop poll for incoming packets
 //*********************************************************************
 
+// Flight telemetry sampler — one sample/second while connected + FC telemetry is
+// valid. Reset on a fresh connection (new flight). Call from loop().
+inline void telemetrySampleTick() {
+    const uint32_t now = millis();
+    // A fresh connection restarts the log so it holds only the current flight.
+    static uint32_t lastConnStart = 0xFFFFFFFF;
+    if (linkStats.connStartMs != lastConnStart) {
+        lastConnStart = linkStats.connStartMs;
+        teleCount = 0; teleHead = 0; teleLastSampleMs = now;
+    }
+    if ((uint32_t)(now - teleLastSampleMs) < 1000) return;
+    teleLastSampleMs = now;
+    bool connected = (rx.lastMillis != 0) && ((uint32_t)(now - rx.lastMillis) < 2000);
+    if (!connected || !fcTelem.valid) return;     // only log an actual flight with live telemetry
+    TeleSample& s = teleRing[teleHead];
+    s.escC = (uint8_t)(fcTelem.fcEscTempC + 0.5f);
+    uint32_t hs = (gearRatio > 0.1f) ? (uint32_t)(fcTelem.fcMotorRPM / gearRatio + 0.5f) : fcTelem.fcMotorRPM;
+    s.headRpm = (hs > 65535u) ? 65535u : (uint16_t)hs;
+    float cv = fcTelem.fcBattVolts * 100.0f + 0.5f;
+    s.cV = (cv > 65535.0f) ? 65535u : (uint16_t)cv;
+    teleHead = (uint16_t)((teleHead + 1) % TELE_RING);
+    if (teleCount < TELE_RING) teleCount++;
+}
+
 inline void radioPoll() {
     uint8_t pipe = 0;
     if (currentRadio->available(&pipe)) {

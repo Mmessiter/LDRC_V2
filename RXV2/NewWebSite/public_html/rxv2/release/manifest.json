@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.189-flight-graph",
+      "url": "https://messiter.com/rxv2/release/v0.9.189/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.189/littlefs.bin",
+      "notes": "Phase 2 of post-flight analysis: the Black box page now plots a FLIGHT GRAPH - ESC temperature (left axis, red) and head speed (right axis, blue) over time, one sample/second, held from the last flight. Watch the ESC temp track head speed to catch a cooling/load problem before it bites. Receiver logs ~20 min in a ring buffer; served at /api/flightlog.json. No transmitter needed."
+    },
+    {
       "name": "RXV2-0.9.188-link-stats",
       "url": "https://messiter.com/rxv2/release/v0.9.188/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.188/littlefs.bin",
@@ -65,12 +71,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.178/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.178/littlefs.bin",
       "notes": "Adds GOVERNOR editing from the transmitter (profile + config), RF 2.3+ only. Profile via MSP_GOVERNOR_PROFILE/SET (148/149); config via MSP_GOVERNOR_CONFIG/SET (142/143) followed by an FC reboot so it takes effect (like V1). Completes full Rotorflight parity from the handset: rates, advanced rates, PIDs, advanced PIDs, governor - all readable and writable from the TX as well as the iPhone."
-    },
-    {
-      "name": "RXV2-0.9.177-adv-pid",
-      "url": "https://messiter.com/rxv2/release/v0.9.177/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.177/littlefs.bin",
-      "notes": "Adds ADVANCED PID editing from the transmitter (read + write): the full Dynamics/bandwidth/cutoff/limit set (26 values) via MSP_PID_PROFILE / MSP_SET_PID_PROFILE, mapped through the scattered profile offsets. Read-modify-write preserves untouched fields. That is rates, advanced rates, PIDs and advanced PIDs all editable from the handset - governor next."
     }
   ]
 }
