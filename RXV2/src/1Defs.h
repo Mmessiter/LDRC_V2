@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.184-per-cell";
+constexpr const char* FW_VERSION = "RXV2-0.9.185-voltage-soc";
 
 //*********************************************************************
 //  Auto-update manifest URLs
