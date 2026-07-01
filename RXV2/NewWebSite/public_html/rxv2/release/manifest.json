@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.186-batt-icon",
+      "url": "https://messiter.com/rxv2/release/v0.9.186/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.186/littlefs.bin",
+      "notes": "Adds the classic battery icon to the Black box status: it fills to the state-of-charge and colours green (>=50%), amber (>=20%) or red (low), matching the per-cell voltage reading. Purely visual, at-a-glance battery check."
+    },
+    {
       "name": "RXV2-0.9.185-voltage-soc",
       "url": "https://messiter.com/rxv2/release/v0.9.185/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.185/littlefs.bin",
@@ -65,12 +71,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.175/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.175/littlefs.bin",
       "notes": "Fix: saving ADVANCED rates from the transmitter no longer zeroes that bank's BASIC rates (and vice-versa). Each rates screen now writes only its own fields via read-modify-write; the other fields are preserved from the FC. Previously the advanced save also wrote the basic-rate fields from staged values that could be zero (e.g. a lost batch packet), clobbering the bank."
-    },
-    {
-      "name": "RXV2-0.9.174-tx-pids",
-      "url": "https://messiter.com/rxv2/release/v0.9.174/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.174/littlefs.bin",
-      "notes": "Adds PID editing from the transmitter (read + write). 17 PID values (P/I/D/FF per axis, boosts, HSI offsets) read via MSP_PID and written via MSP_SET_PID, using the same continuous-re-poll engine as rates. Governor next."
     }
   ]
 }

@@ -20,10 +20,15 @@
 
     <div class=card>
         <h2 style="margin-top:0">Status</h2>
-        <div style="display:flex;align-items:baseline;gap:.35em;margin:.1em 0 .3em;flex-wrap:wrap">
-            <span id=stCell style="font-size:2.6em;font-weight:700;line-height:1">&mdash;</span>
-            <span style="font-size:1.05em;color:#5a6b74">V/cell</span>
-            <span id=stPack class=muted style="margin-left:.6em;font-size:1.05em"></span>
+        <div style="display:flex;align-items:center;gap:.5em;margin:.1em 0 .3em;flex-wrap:wrap">
+            <svg id=battSvg width=66 height=30 viewBox="0 0 66 30" style="flex:none" aria-hidden=true>
+                <rect x=1 y=3 width=56 height=24 rx=3 fill=none stroke=#8199a8 stroke-width=2></rect>
+                <rect x=58 y=11 width=5 height=8 rx=1.5 fill=#8199a8></rect>
+                <rect id=battFill x=4 y=6 width=0 height=18 rx=1.5 fill=#2e7d32></rect>
+            </svg>
+            <span id=stCell style="font-size:2.4em;font-weight:700;line-height:1">&mdash;</span>
+            <span style="font-size:1.0em;color:#5a6b74;align-self:flex-end;padding-bottom:.3em">V/cell</span>
+            <span id=stPack class=muted style="margin-left:.3em;font-size:1.0em;align-self:flex-end;padding-bottom:.3em"></span>
         </div>
         <div id=stRows class=muted style="font-size:.92em;line-height:1.8"></div>
         <p id=stNote class=muted style="font-size:.82em;margin-top:.55em"></p>
@@ -73,16 +78,21 @@ async function refreshStatus() {
     const v = telemLive ? +fc.v : null;
     const cellEl = document.getElementById('stCell');
     const packEl = document.getElementById('stPack');
+    const fill = document.getElementById('battFill');
     if (v != null && v > 0.5) {
         const cells = Math.max(1, Math.ceil(v / 4.3));      // auto-detect cell count
         const per = v / cells;
+        const soc = lipoPct(per);                            // resting state-of-charge
+        const col = soc >= 50 ? '#2e7d32' : soc >= 20 ? '#d99a3a' : '#c0392b';  // green / amber / red
         cellEl.textContent = per.toFixed(2);
-        // colour: red = very low, amber = getting low, green = at/above storage
-        cellEl.style.color = per < 3.5 ? '#c0392b' : per < 3.7 ? '#c98a4a' : '#2e7d32';
-        packEl.innerHTML = cells + 'S &middot; ' + v.toFixed(2) + ' V &middot; ~' + lipoPct(per) + '%';
+        cellEl.style.color = col;
+        packEl.innerHTML = cells + 'S &middot; ' + v.toFixed(2) + ' V &middot; ~' + soc + '%';
+        fill.setAttribute('width', Math.max(0, Math.round(50 * soc / 100)));   // 50 = full inner width
+        fill.setAttribute('fill', col);
     } else {
         cellEl.textContent = '—'; cellEl.style.color = '';
         packEl.textContent = '';
+        fill.setAttribute('width', 0);
     }
     let rows = '';
     if (telemLive) {

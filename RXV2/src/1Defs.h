@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.185-voltage-soc";
+constexpr const char* FW_VERSION = "RXV2-0.9.186-batt-icon";
 
 //*********************************************************************
 //  Auto-update manifest URLs
