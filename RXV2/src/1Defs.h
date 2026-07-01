@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.182-restore-rates";
+constexpr const char* FW_VERSION = "RXV2-0.9.183-blackbox-status";
 
 //*********************************************************************
 //  Auto-update manifest URLs

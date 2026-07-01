@@ -19,6 +19,17 @@
     <h1>Black box log</h1>
 
     <div class=card>
+        <h2 style="margin-top:0">Status</h2>
+        <div style="display:flex;align-items:baseline;gap:.35em;margin:.1em 0 .5em">
+            <span id=stV style="font-size:2.6em;font-weight:700;line-height:1">&mdash;</span>
+            <span style="font-size:1.1em;color:#5a6b74">V</span>
+            <span id=stPct class=muted style="margin-left:.6em;font-size:1.05em"></span>
+        </div>
+        <div id=stRows class=muted style="font-size:.92em;line-height:1.8"></div>
+        <p id=stNote class=muted style="font-size:.82em;margin-top:.55em"></p>
+    </div>
+
+    <div class=card>
         <p class=muted id=summary>loading&hellip;</p>
         <dl id=evlist></dl>
     </div>
@@ -35,7 +46,32 @@ function fmt(ms) {
     return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(ss).padStart(2,'0');
 }
 
+// Live status — battery voltage etc. from the FC's telemetry (available whenever
+// the model is powered; the transmitter does not need to be on).
+async function refreshStatus() {
+    const s = await LDRC.fetchState();
+    if (!s) return;
+    const fc = s.fc || {}, rf = s.rf || {};
+    const telemLive = (typeof fc.last_frame_ms === 'number' && fc.last_frame_ms >= 0 && fc.last_frame_ms < 3000);
+    const v = telemLive ? fc.v : null;
+    document.getElementById('stV').textContent  = (v != null && v > 0) ? (+v).toFixed(2) : '—';
+    document.getElementById('stPct').innerHTML  = (telemLive && fc.pct) ? (fc.pct + '%') : '';
+    let rows = '';
+    if (telemLive) {
+        rows += 'Current: <b>' + (+fc.a).toFixed(1) + ' A</b> &nbsp;&middot;&nbsp; Used: <b>' + (fc.mah || 0) + ' mAh</b><br>';
+        rows += 'Head speed: <b>' + (rf.head_speed || 0) + ' rpm</b> &nbsp;&middot;&nbsp; ESC: <b>'
+              + (rf.esc_temp_c != null ? (+rf.esc_temp_c).toFixed(0) : '—') + ' &deg;C</b>';
+        if (fc.flight_mode) rows += '<br>Mode: <b>' + fc.flight_mode.replace(/</g, '&lt;') + '</b>';
+    }
+    document.getElementById('stRows').innerHTML = rows;
+    document.getElementById('stNote').textContent = telemLive
+        ? 'Live from the flight-controller.'
+        : 'No flight-controller telemetry — is the model powered and on CRSF?';
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
+    refreshStatus();                       // LDRC (deferred app.js) is loaded by now
+    setInterval(refreshStatus, 2000);
     const ev = await LDRC.fetchEvents();
     const sum = document.getElementById('summary');
     const list = document.getElementById('evlist');

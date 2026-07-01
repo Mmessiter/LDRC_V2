@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.183-blackbox-status",
+      "url": "https://messiter.com/rxv2/release/v0.9.183/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.183/littlefs.bin",
+      "notes": "Adds a live Status panel to the Black box page: battery VOLTAGE (large), pack %, current, mAh used, head speed, ESC temp and flight mode - all from the flight-controller telemetry, updating every 2s. Handy for a quick battery check with the model powered (the transmitter does not need to be on; just have WiFi up)."
+    },
+    {
       "name": "RXV2-0.9.182-restore-rates",
       "url": "https://messiter.com/rxv2/release/v0.9.182/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.182/littlefs.bin",
@@ -65,12 +71,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.172/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.172/littlefs.bin",
       "notes": "Adds ADVANCED RATES editing from the transmitter (response time, setpoint-boost gain/cutoff, yaw dynamics), and fixes the intermittent all-zeros on bank switch. Like V1, the receiver now RE-POLLS the flight-controller continuously (~80ms) while the transmitter is reading a rates block, so a bank change or a single missed MSP round-trip no longer leaves the TX reading zeros. Rates + advanced are written together (combined MSP_SET_RC_TUNING) preserving untouched fields."
-    },
-    {
-      "name": "RXV2-0.9.171-rfver",
-      "url": "https://messiter.com/rxv2/release/v0.9.171/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.171/littlefs.bin",
-      "notes": "Fixes the rate FACTORS shown on the transmitter. Ack slot 31 now reports the real Rotorflight version (1 = RF2.2, 2 = RF2.3) instead of a flat 1, so the TX picks the correct 2.3 factor table - rates now read exactly as the Configurator (Roll 160/20/20, Yaw 400/20/20, Collective 6.0/48/0) instead of the 2.2-scaled 320/200/0.20. Also relabels the TX columns to Rate/Shape/Expo on 2.3."
     }
   ]
 }
