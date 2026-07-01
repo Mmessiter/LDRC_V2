@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.189-flight-graph";
+constexpr const char* FW_VERSION = "RXV2-0.9.190-graph-traces";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -351,6 +351,7 @@ struct TeleSample {
     uint8_t  escC   = 0;     // ESC temperature, °C
     uint16_t headRpm = 0;    // head speed, rpm
     uint16_t cV     = 0;     // battery, centivolts (V × 100)
+    uint16_t dA     = 0;     // current, deci-amps (A × 10)
 };
 constexpr uint16_t TELE_RING = 1200;
 inline TeleSample teleRing[TELE_RING];

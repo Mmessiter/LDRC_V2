@@ -151,7 +151,7 @@ async function refreshStatus() {
     }
 }
 
-// --- Flight graph: ESC temp (left, red) + head speed (right, blue) vs time ---
+// --- Flight graph: multiple traces vs time, each auto-scaled to its own range ---
 async function drawFlightGraph() {
     let d;
     try { d = await (await fetch('/api/flightlog.json', { cache: 'no-store' })).json(); } catch (e) { return; }
@@ -167,30 +167,40 @@ async function drawFlightGraph() {
         leg.innerHTML = '';
         return;
     }
-    note.textContent = '';
-    const esc = d.esc, head = d.head, iv = d.interval_s || 1;
-    const pad = { l: 34, r: 46, t: 12, b: 20 };
+    const iv = d.interval_s || 1;
+    const pad = { l: 8, r: 8, t: 10, b: 20 };
     const gx = W - pad.l - pad.r, gy = H - pad.t - pad.b;
     ctx.strokeStyle = '#cdd7dc'; ctx.lineWidth = 1; ctx.strokeRect(pad.l, pad.t, gx, gy);
     const xat = i => pad.l + gx * i / (n - 1);
-    const escTop  = Math.max(20, Math.ceil((Math.max.apply(null, esc)  + 5) / 10) * 10);
-    const headTop = Math.max(100, Math.ceil((Math.max.apply(null, head) * 1.05) / 100) * 100);
-    const line = (arr, top, col) => {
-        ctx.strokeStyle = col; ctx.lineWidth = 1.8; ctx.beginPath();
-        for (let i = 0; i < n; i++) { const x = xat(i), y = pad.t + gy * (1 - arr[i] / top); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+    const traces = [
+        { key: 'esc',  label: 'ESC temp',   unit: '°C',  col: '#c0392b', dp: 0 },
+        { key: 'head', label: 'Head speed', unit: 'rpm', col: '#2b6cb0', dp: 0 },
+        { key: 'v',    label: 'Battery',    unit: 'V',   col: '#2e8b57', dp: 2 },
+        { key: 'amps', label: 'Current',    unit: 'A',   col: '#e08a1e', dp: 1 },
+    ];
+    let legHtml = '';
+    for (const t of traces) {
+        const a = d[t.key];
+        if (!a || a.length < 2) continue;
+        const lo = Math.min.apply(null, a), hi = Math.max.apply(null, a);
+        const m = (hi - lo) * 0.08 || 1;                 // small margin (or 1 if flat)
+        const ymin = lo - m, range = (hi - lo + 2 * m) || 1;
+        ctx.strokeStyle = t.col; ctx.lineWidth = 1.8; ctx.beginPath();
+        for (let i = 0; i < n; i++) {
+            const x = xat(i), y = pad.t + gy * (1 - (a[i] - ymin) / range);
+            i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+        }
         ctx.stroke();
-    };
-    line(head, headTop, '#2b6cb0');        // head speed
-    line(esc,  escTop,  '#c0392b');        // ESC temp (drawn on top)
-    ctx.font = '11px sans-serif';
-    ctx.fillStyle = '#c0392b'; ctx.textAlign = 'right';
-    ctx.fillText(escTop + '°', pad.l - 4, pad.t + 9); ctx.fillText('0', pad.l - 4, pad.t + gy);
-    ctx.fillStyle = '#2b6cb0'; ctx.textAlign = 'left';
-    ctx.fillText(headTop, pad.l + gx + 4, pad.t + 9); ctx.fillText('0', pad.l + gx + 4, pad.t + gy);
-    ctx.fillStyle = '#5a6b74'; ctx.textAlign = 'left'; ctx.fillText('0:00', pad.l, H - 6);
-    ctx.textAlign = 'right'; ctx.fillText(fmt(n * iv * 1000), pad.l + gx, H - 6);
-    leg.innerHTML = '<span style="color:#c0392b;font-weight:700">■</span> ESC temp (°C, left)'
-                  + ' &nbsp;&nbsp; <span style="color:#2b6cb0;font-weight:700">■</span> Head speed (rpm, right)';
+        legHtml += '<span style="white-space:nowrap;display:inline-block;margin:0 1em .2em 0">'
+                 + '<span style="color:' + t.col + ';font-weight:700">■</span> '
+                 + t.label + ' <b>' + a[n-1].toFixed(t.dp) + ' ' + t.unit + '</b>'
+                 + ' <span style="color:#8199a8">(' + lo.toFixed(t.dp) + '–' + hi.toFixed(t.dp) + ')</span></span>';
+    }
+    ctx.fillStyle = '#5a6b74'; ctx.font = '11px sans-serif';
+    ctx.textAlign = 'left';  ctx.fillText('0:00', pad.l, H - 5);
+    ctx.textAlign = 'right'; ctx.fillText(fmt(n * iv * 1000), pad.l + gx, H - 5);
+    leg.innerHTML = legHtml;
+    note.textContent = 'Each line auto-scaled to its own range (min–max in the key) so the shapes line up — watch ESC temp track head speed & current, and the battery sag under load.';
 }
 
 document.addEventListener('DOMContentLoaded', async () => {

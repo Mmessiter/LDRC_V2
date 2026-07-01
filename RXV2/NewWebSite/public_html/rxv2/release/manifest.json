@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.190-graph-traces",
+      "url": "https://messiter.com/rxv2/release/v0.9.190/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.190/littlefs.bin",
+      "notes": "Flight graph now plots four traces, each in its own colour with a labelled key showing the latest value and min-max: ESC temperature (red), head speed (blue), battery voltage (green) and current/amps (orange). Each line is auto-scaled to its own range so the shapes line up - you can see the battery sag and current spike as head speed and ESC temp rise. Current added to the receiver telemetry log."
+    },
+    {
       "name": "RXV2-0.9.189-flight-graph",
       "url": "https://messiter.com/rxv2/release/v0.9.189/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.189/littlefs.bin",
@@ -65,12 +71,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.179/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.179/littlefs.bin",
       "notes": "Fixes the governor GLOBAL (config) screen showing nothing on the transmitter. The receiver was discarding the whole MSP_GOVERNOR_CONFIG response unless it was at least 42 bytes, but RF 2.3 can report a different length - and only bytes up to 32 are actually read (the bypass curve at 33+ is just preserved on write). Now accepts any response reaching byte 32, so the global settings populate."
-    },
-    {
-      "name": "RXV2-0.9.178-tx-governor",
-      "url": "https://messiter.com/rxv2/release/v0.9.178/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.178/littlefs.bin",
-      "notes": "Adds GOVERNOR editing from the transmitter (profile + config), RF 2.3+ only. Profile via MSP_GOVERNOR_PROFILE/SET (148/149); config via MSP_GOVERNOR_CONFIG/SET (142/143) followed by an FC reboot so it takes effect (like V1). Completes full Rotorflight parity from the handset: rates, advanced rates, PIDs, advanced PIDs, governor - all readable and writable from the TX as well as the iPhone."
     }
   ]
 }

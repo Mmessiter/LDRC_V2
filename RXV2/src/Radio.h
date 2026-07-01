@@ -540,6 +540,8 @@ inline void telemetrySampleTick() {
     s.headRpm = (hs > 65535u) ? 65535u : (uint16_t)hs;
     float cv = fcTelem.fcBattVolts * 100.0f + 0.5f;
     s.cV = (cv > 65535.0f) ? 65535u : (uint16_t)cv;
+    float da = fcTelem.fcBattAmps * 10.0f + 0.5f;
+    s.dA = (da < 0.0f) ? 0u : (da > 65535.0f) ? 65535u : (uint16_t)da;
     teleHead = (uint16_t)((teleHead + 1) % TELE_RING);
     if (teleCount < TELE_RING) teleCount++;
 }

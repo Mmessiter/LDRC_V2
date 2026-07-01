@@ -1302,6 +1302,11 @@ inline void handleApiFlightLog() {
         if (i) j += ',';
         char b[8]; snprintf(b, sizeof(b), "%.2f", teleRing[(start + i) % TELE_RING].cV / 100.0f); j += b;
     }
+    j += "],\"amps\":[";
+    for (uint16_t i = 0; i < teleCount; ++i) {
+        if (i) j += ',';
+        char b[8]; snprintf(b, sizeof(b), "%.1f", teleRing[(start + i) % TELE_RING].dA / 10.0f); j += b;
+    }
     j += "]}";
     server.sendHeader("Cache-Control", "no-store");
     server.send(200, "application/json", j);
