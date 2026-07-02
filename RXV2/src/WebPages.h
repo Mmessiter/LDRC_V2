@@ -65,18 +65,29 @@ inline bool serveLittleFsFile(const char* path, const char* mime) {
     if (!LittleFS.exists(path)) return false;
     File f = LittleFS.open(path, "r");
     if (!f) return false;
-    // HTML pages are small and change every firmware release — ask
-    // the browser to revalidate each time so a stale cached page
-    // doesn't keep showing across an `uploadfs`. The dedicated
-    // handlers for css/js/jpg/svg set their own aggressive cache
-    // headers (versioned via ?v= cache busters), so this only
-    // affects text/html responses.
-    if (mime && strncmp(mime, "text/html", 9) == 0) {
-        // no-store, not just no-cache: some browsers (notably iOS Safari)
-        // heuristically keep a cached page and never revalidate, so a
-        // freshly-updated UI keeps showing the old version. no-store forbids
-        // storing the page at all, so the browser always re-fetches it.
-        server.sendHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+    // ETag revalidation. mklittlefs bakes each host file's mtime into the FS
+    // image, so size+mtime uniquely identifies the exact build of every asset.
+    // When the browser's copy matches we answer 304 (~100 B) instead of
+    // re-streaming 10-30 kB — with a TX on, page loads over the contended
+    // 2.4 GHz link were dominated by these pointless re-fetches (html + app.js
+    // + style.css ≈ 30 kB per navigation under the old no-store policy).
+    // Requires server.collectHeaders() in registerWebRoutes (or the request
+    // header is never captured and this silently always re-sends).
+    char etag[24];
+    snprintf(etag, sizeof(etag), "\"%x-%x\"", (unsigned)f.size(), (unsigned)f.getLastWrite());
+    server.sendHeader("ETag", etag);
+    if (server.header("If-None-Match") == etag) {
+        f.close();
+        server.send(304, mime ? mime : "text/plain", "");
+        return true;
+    }
+    // no-cache (NOT no-store): the browser MUST revalidate before using its
+    // copy — a fresh uploadfs/OTA changes the ETag so staleness is impossible
+    // (the old iOS-Safari stale-page bug came from max-age heuristics, i.e.
+    // caching WITHOUT revalidation) — but an unchanged file costs one tiny
+    // 304 round-trip instead of the whole transfer.
+    if (mime && (strncmp(mime, "text/html", 9) == 0)) {
+        server.sendHeader("Cache-Control", "no-cache");
     }
     server.streamFile(f, mime);
     f.close();
@@ -88,10 +99,11 @@ inline bool serveLittleFsFile(const char* path, const char* mime) {
 //*********************************************************************
 
 inline void handleStyleCss() {
-    // Revalidate every load (like the HTML pages): style.css changes with UI
-    // releases, and a 1-day cache used to keep showing the old stylesheet for a
-    // day after an OTA. The file is small, so re-fetching on navigation is cheap.
-    server.sendHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+    // Revalidate every load via ETag (serveLittleFsFile): a matching copy costs
+    // a ~100 B 304 instead of re-streaming 12 kB per navigation, and an OTA/
+    // uploadfs changes the ETag so the old day-long-stale-stylesheet bug can't
+    // return. no-cache forces the revalidation.
+    server.sendHeader("Cache-Control", "no-cache");
     if (serveLittleFsFile("/style.css", "text/css")) return;
     server.send_P(200, "text/css", PAGE_CSS_FALLBACK);
 }
@@ -101,11 +113,11 @@ inline void handleStyleCss() {
 //*********************************************************************
 
 inline void handleAppJs() {
-    // Revalidate every load. app.js is the shared helper bundle (LDRC.*) that the
-    // pages depend on; a stale day-long cache here meant a freshly-OTA'd page
-    // would call helpers (e.g. LDRC.alert) that the cached app.js didn't have yet
-    // — the new UI silently half-worked. Small file; re-fetch on navigation is cheap.
-    server.sendHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+    // Revalidate every load via ETag (serveLittleFsFile). A stale day-long cache
+    // here once meant a freshly-OTA'd page called helpers (e.g. LDRC.alert) the
+    // cached app.js didn't have — ETag revalidation keeps that fixed while an
+    // unchanged 17 kB bundle now costs a ~100 B 304 instead of a re-download.
+    server.sendHeader("Cache-Control", "no-cache");
     if (serveLittleFsFile("/app.js", "application/javascript")) return;
     server.send(503, "text/plain", "/app.js not in LittleFS — uploadfs the data/ folder");
 }
@@ -1624,6 +1636,12 @@ inline void handleApiState() {
 //*********************************************************************
 
 inline void registerWebRoutes() {
+    // WebServer only captures request headers it's told to collect. Without
+    // this, If-None-Match never reaches serveLittleFsFile and the ETag/304
+    // fast path silently never fires (every asset re-streams every load).
+    static const char* collectHdrs[] = { "If-None-Match" };
+    server.collectHeaders(collectHdrs, 1);
+
     // Static GET pages (served from LittleFS)
     server.on("/",            handleRoot);
     server.on("/fly",         handleFly);

@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.195-review-fixes";
+constexpr const char* FW_VERSION = "RXV2-0.9.196-snappy-web";
 
 //*********************************************************************
 //  Auto-update manifest URLs
