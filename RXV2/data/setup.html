@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name=theme-color content="#5fa099">
+<meta name=apple-mobile-web-app-capable content=yes>
+<meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
+<meta name=apple-mobile-web-app-title content="LDRC RX V2">
+<title>Setup &middot; LDRC RX V2</title>
+<link rel=stylesheet href="/style.css?v=129">
+<script src="/app.js?v=129" defer></script>
+</head>
+<body>
+<button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
+<div class=bg-photo aria-hidden=true></div>
+<div class=bg-wash  aria-hidden=true></div>
+<div class=container>
+    <h1>Setup</h1>
+    <p class=subtitle>One-time configuration &mdash; bind, output, WiFi, firmware</p>
+
+    <button class="btn btn-bind" type=button id=bindbtn><span class=ico>&#128279;</span>Start Bind mode</button>
+    <a class="btn btn-diag" href="/protocol" id=protobtn><span class=ico>&#128225;</span>Output protocol &mdash; <span id=protoname>&hellip;</span></a>
+    <a class="btn btn-diag" href="/diagnostics"><span class=ico>&#127916;</span>View channels &mdash; failsafe &amp; gear ratio</a>
+    <a class="btn btn-fw"   href="/wifi" id=wifibtn style="display:none"><span class=ico>&#128246;</span>WiFi settings</a>
+    <a class="btn btn-fw"   href="/firmware"><span class=ico>&#128229;</span>Update or roll back firmware</a>
+    <button class="btn" type=button id=renamebtn style="background:#6f7e8b"><span class=ico>&#127991;&#65039;</span>Rename receiver &mdash; <span id=curname>&hellip;</span></button>
+
+    <div class=footer></div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+    const s = await LDRC.fetchState();
+    if (!s) return;
+
+    // Output protocol — show what's selected right on the button.
+    LDRC.setText('protoname', s.sim ? 'USB → SIM' : (s.protocol && s.protocol.current) || '…');
+
+    // WiFi settings only make sense when an interface is up to serve the page from.
+    const wifiVisible = s.net && (s.net.mode === 'WiFi up' || s.net.mode === 'AP mode');
+    const wb = document.getElementById('wifibtn');
+    if (wb) wb.style.display = wifiVisible ? '' : 'none';
+
+    // Current name on the rename button.
+    LDRC.setText('curname', (s.info && s.info.name) || 'RXV2');
+
+    // "Start Bind mode" — guarded exactly as it was on the front screen:
+    // re-binding erases the current bind, so a bound receiver asks first.
+    const bb = document.getElementById('bindbtn');
+    if (bb) bb.onclick = async () => {
+        const s2 = await LDRC.fetchState() || s;
+        if (s2 && s2.bind && s2.bind.bound) {
+            const alive = s2.rf && s2.rf.last_pkt_ms >= 0 && s2.rf.last_pkt_ms < 1000;
+            const ok = await LDRC.confirm(
+                (alive ? 'This receiver is connected to a transmitter RIGHT NOW. '
+                       : 'This receiver is already bound to a transmitter. ')
+                + 'Entering bind mode erases the bind and drops the link, then listens for a '
+                + 'transmitter to pair with. Only do this to pair with a DIFFERENT transmitter.',
+                { title: alive ? 'Connected — re-bind anyway?' : 'Already bound — re-bind?',
+                  icon: '⚠️', yes: 'Erase bind & re-bind', kind: 'danger' });
+            if (!ok) return;
+        }
+        location.href = '/bind';
+    };
+
+    // Rename — same prompt-based flow as tapping the front-screen title.
+    const rb = document.getElementById('renamebtn');
+    if (rb) rb.onclick = () => {
+        const cur = (s.info && s.info.name_custom) ? s.info.name : '';
+        const v = prompt('Rename this receiver (blank = revert to "RXV2"):', cur);
+        if (v === null) return;
+        const fd = new URLSearchParams();
+        fd.set('name', v.trim());
+        fetch('/api/name', { method: 'POST', body: fd })
+          .then(r => r.text()).then(html => { document.open(); document.write(html); document.close(); })
+          .catch(() => alert('Could not save — try again.'));
+    };
+});
+</script>
+<template id=helpContent><h2>Setup</h2>
+<p>Everything you configure once and then rarely touch again lives here, so the front screen stays simple.</p>
+<h3>Buttons</h3>
+<ul>
+<li><b>Start Bind mode</b> &mdash; pair the receiver with your transmitter. If it&rsquo;s already bound you&rsquo;ll be asked first, because re-binding erases the current pairing.</li>
+<li><b>Output protocol</b> &mdash; what the receiver sends to your flight controller on D6 (CRSF for Rotorflight, SBUS, IBUS or PPM). The current choice is shown on the button.</li>
+<li><b>View channels</b> &mdash; live channel bars, plus capturing your failsafe positions and setting the head-speed gear ratio.</li>
+<li><b>WiFi settings</b> &mdash; home network details and the &ldquo;AP mode only&rdquo; field setting.</li>
+<li><b>Update firmware</b> &mdash; install newer firmware or roll back.</li>
+<li><b>Rename receiver</b> &mdash; the name is also the WiFi network name and the <code>.local</code> address.</li>
+</ul>
+<h3>Tips</h3>
+<p>A brand-new receiver only needs three visits here: bind it, check the protocol, add your WiFi. After that you may never need this page at the field.</p>
+</template>
+</body>
+</html>
