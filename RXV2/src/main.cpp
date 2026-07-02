@@ -108,7 +108,27 @@ void setup() {
     // link the channels HOLD their last value instead (see Channels.h/Output.h).
     for (uint8_t i = 0; i < 16; ++i) channelMicros[i] = (i < 5) ? 1500 : 500;
 
-    events.add("Boot");
+    // Log WHY we booted — the blackbox story starts here. Distinguishes a
+    // normal power-up from the silent self-reboots that matter: BROWNOUT
+    // (supply sagged — suspect the BEC/wiring), PANIC/WDT (firmware crash),
+    // SW (deliberate ESP.restart). Diagnosing the 2026-07-02 "receiver fell
+    // off WiFi when the TX came on" incident needed exactly this line.
+    {
+        esp_reset_reason_t rr = esp_reset_reason();
+        const char* rs = rr == ESP_RST_POWERON  ? "power-on"
+                       : rr == ESP_RST_SW       ? "software restart"
+                       : rr == ESP_RST_PANIC    ? "CRASH (panic)"
+                       : rr == ESP_RST_INT_WDT  ? "CRASH (int watchdog)"
+                       : rr == ESP_RST_TASK_WDT ? "CRASH (task watchdog)"
+                       : rr == ESP_RST_WDT      ? "CRASH (other watchdog)"
+                       : rr == ESP_RST_BROWNOUT ? "BROWNOUT (supply sagged!)"
+                       : rr == ESP_RST_DEEPSLEEP? "deep-sleep wake"
+                       : "other";
+        char b[64];
+        snprintf(b, sizeof(b), "Boot (%s)", rs);
+        events.add(b);
+        Serial.printf("[boot] reset reason: %s (%d)\n", rs, (int)rr);
+    }
 
     prefs.begin(NVS_NAMESPACE, false);
 

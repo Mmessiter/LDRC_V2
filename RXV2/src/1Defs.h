@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.199-back-buttons";
+constexpr const char* FW_VERSION = "RXV2-0.9.200-boot-reason";
 
 //*********************************************************************
 //  Auto-update manifest URLs
