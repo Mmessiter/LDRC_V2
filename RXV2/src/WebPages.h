@@ -208,6 +208,16 @@ inline void handleSimPage() {
     server.send(503, "text/plain", "/sim.html missing — uploadfs the data/ folder");
 }
 
+inline void handleFlightPage() {
+    if (serveLittleFsFile("/flight.html", "text/html")) return;
+    server.send(503, "text/plain", "/flight.html missing — uploadfs the data/ folder");
+}
+
+inline void handleEventsPage() {
+    if (serveLittleFsFile("/events.html", "text/html")) return;
+    server.send(503, "text/plain", "/events.html missing — uploadfs the data/ folder");
+}
+
 inline void handleRotorflightPid() {
     if (serveLittleFsFile("/rotorflight-pid.html", "text/html")) return;
     server.send(503, "text/plain", "/rotorflight-pid.html missing — uploadfs the data/ folder");
@@ -1663,6 +1673,8 @@ inline void registerWebRoutes() {
     server.on("/protocol",    HTTP_GET,  handleProtocolPage);
     server.on("/setup",       HTTP_GET,  handleSetupPage);
     server.on("/sim",         HTTP_GET,  handleSimPage);
+    server.on("/flight",      HTTP_GET,  handleFlightPage);
+    server.on("/events",      HTTP_GET,  handleEventsPage);
     server.on("/rotorflight",     handleRotorflight);
     server.on("/rotorflight-pid",     handleRotorflightPid);
     server.on("/rotorflight-pidplus", handleRotorflightPidPlus);

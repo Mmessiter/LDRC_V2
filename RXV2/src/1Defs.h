@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.197-calm-menu";
+constexpr const char* FW_VERSION = "RXV2-0.9.199-back-buttons";
 
 //*********************************************************************
 //  Auto-update manifest URLs

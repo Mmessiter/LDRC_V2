@@ -271,6 +271,35 @@
             home.title = 'Front screen';
             home.textContent = '🏠';
             document.body.appendChild(home);
+
+            // Bottom "Back to <the menu that called this page>" button. Without
+            // it, sub-menus dead-end: the only way onward was 🏠 to the front
+            // and drilling back down. One shared parent map here means every
+            // page gets the right button with no per-page markup; unknown pages
+            // fall back to the front screen. (Pages that swap their container
+            // for a "rebooting…" card lose the button with it — intended.)
+            const PARENTS = {
+                '/flight': '/blackbox', '/events': '/blackbox',
+                '/bind': '/setup', '/protocol': '/setup', '/diagnostics': '/setup',
+                '/wifi': '/setup', '/firmware': '/setup',
+                '/map': '/sim', '/views': '/sim', '/simctl': '/sim',
+                '/rotorflight-rates': '/rotorflight', '/rotorflight-pid': '/rotorflight',
+                '/rotorflight-pidplus': '/rotorflight', '/rotorflight-gov-profile': '/rotorflight',
+                '/rotorflight-gov-global': '/rotorflight', '/rotorflight-backups': '/rotorflight'
+            };
+            const LABELS = {
+                '/': 'front screen', '/blackbox': 'Black box', '/setup': 'Setup',
+                '/sim': 'Simulator', '/rotorflight': 'Rotorflight'
+            };
+            const parent = PARENTS[location.pathname] || '/';
+            const back = document.createElement('a');
+            back.href = parent;
+            back.className = 'btn';
+            back.style.background = '#6f7e8b';
+            back.innerHTML = '<span class=ico>&#11013;&#65039;</span>Back to ' + (LABELS[parent] || 'menu');
+            const foot = document.querySelector('.footer');
+            if (foot && foot.parentNode) foot.parentNode.insertBefore(back, foot);
+            else { const c = document.querySelector('.container'); if (c) c.appendChild(back); }
         }
         setTimeout(() => {
             LDRC.fetchState().then(() => {
