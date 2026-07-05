@@ -205,6 +205,7 @@ inline void onWifiConnected() {
     snprintf(buf, sizeof(buf), "WiFi up: %s", WiFi.localIP().toString().c_str());
     events.add(buf);
     staAttempts = 0;
+    staGaveUp   = false;   // home WiFi is here after all → back to normal AP+STA retry cadence
     netMode = NET_WIFI_UP;
     ledOff();
 
@@ -317,13 +318,32 @@ inline void netStep() {
                 // the moment the AP is idle again). This is the field fix.
                 if (WiFi.softAPgetStationNum() > 0) { netStateStart = millis(); break; }
                 staAttempts++;
-                Serial.printf("[net] STA attempt %u timed out (status=%d), retrying — AP still up\n",
+                Serial.printf("[net] STA attempt %u timed out (status=%d)\n",
                               (unsigned)staAttempts, (int)s);
-                char buf[64];
-                snprintf(buf, sizeof(buf),
-                         "STA retry %u (status=%d)",
-                         (unsigned)staAttempts, (int)s);
-                events.add(buf);
+
+                // Home network is clearly ABSENT (the flying-field case): stop
+                // hammering STA — every retry hops the shared radio's channel
+                // and makes the AP slow/unjoinable. Drop the STA interface and
+                // run a STABLE pure-AP (fixed channel 1). NET_AP re-probes home
+                // WiFi rarely (AP_RECHECK_MS), so a real home comes back on its own.
+                if (staAttempts >= STA_GIVEUP_ATTEMPTS) {
+                    Serial.println("[net] home WiFi not found — auto-enabling AP-only");
+                    { char b[80]; snprintf(b, sizeof(b), "Home WiFi '%s' not found — AP-only auto-enabled", getEffectiveSsid().c_str()); events.add(b); }
+                    // PERSIST it: subsequent power-ups (next flight at the field)
+                    // go straight to a stable AP with no 100 s of hunting for a
+                    // home net that isn't there. apAuto marks it as automatic so
+                    // the front page can say why and the user can undo it at home.
+                    prefs.putBool(NVS_KEY_AP_ONLY, true);
+                    prefs.putBool(NVS_KEY_AP_AUTO, true);
+                    apAutoEnabled = true;
+                    WiFi.disconnect(false, true);
+                    WiFi.mode(WIFI_AP);                                 // drop STA entirely
+                    WiFi.softAP(g_effectiveName.c_str(), nullptr, 1);   // re-pin AP to channel 1
+                    staGaveUp = true;
+                    netMode   = NET_AP;
+                    break;
+                }
+                { char buf[64]; snprintf(buf, sizeof(buf), "STA retry %u (status=%d)", (unsigned)staAttempts, (int)s); events.add(buf); }
                 // Restart the STA side only. AP stays up because we
                 // pass `false` to WiFi.disconnect (don't turn WiFi off).
                 WiFi.disconnect(false, true);   // disconnect STA, erase saved AP
@@ -378,14 +398,19 @@ inline void netStep() {
             {
                 static uint32_t lastApRetry = 0;
                 bool apOnlySet = prefs.isKey(NVS_KEY_AP_ONLY) && prefs.getBool(NVS_KEY_AP_ONLY, false);
-                if (!apOnlySet &&                        // field "AP mode only": AP-only IS the wanted state — startWifiStation would just bounce straight back here, re-running softAP + spamming two events every retry
+                // NB when the home net proved absent we AUTO-SET "AP mode only"
+                // (apOnlySet becomes true), so this self-heal retry stops firing —
+                // the field AP stays rock-stable, and every later power-up is
+                // instant AP-only. The user clears it from WiFi settings at home.
+                if (!apOnlySet &&
                     getEffectiveSsid().length() > 0 &&
                     WiFi.softAPgetStationNum() == 0 &&   // don't disrupt a phone using the AP
                     (uint32_t)(millis() - lastApRetry) >= AP_STA_RETRY_MS) {
                     lastApRetry = millis();
+                    staAttempts = 0;
                     Serial.println("[net] AP-only but creds exist — retrying home WiFi");
                     events.add("AP-only: retrying home WiFi");
-                    startWifiStation();   // AP+STA; → NET_WIFI_CONNECTING, which then retries forever
+                    startWifiStation();   // AP+STA → NET_WIFI_CONNECTING
                 }
             }
             break;

@@ -1030,6 +1030,8 @@ inline void handleWifiSet() {
     // the value. When on, next boot skips the home-WiFi STA and runs AP-only.
     bool apOnly = server.hasArg("aponly");
     prefs.putBool(NVS_KEY_AP_ONLY, apOnly);
+    prefs.putBool(NVS_KEY_AP_AUTO, false);   // any manual WiFi save makes AP-only a deliberate choice → clear the "auto" notice
+    apAutoEnabled = false;
     events.add(apOnly ? "AP-only mode enabled" : "WiFi credentials saved");
 
     if (apOnly) {
@@ -1119,6 +1121,27 @@ inline void handleGearSet() {
     }
     char b[64];
     snprintf(b, sizeof(b), "{\"ok\":true,\"gear_ratio\":%.3f}", gearRatio);
+    server.sendHeader("Cache-Control", "no-store");
+    server.send(200, "application/json", b);
+}
+
+//*********************************************************************
+//  POST /api/armch?ch=<0..16>  — set the arming channel for flight-save
+//*********************************************************************
+inline void handleArmChSet() {
+    if (server.hasArg("ch")) {
+        long c = server.arg("ch").toInt();
+        if (c < 0 || c > 16) {
+            server.sendHeader("Cache-Control", "no-store");
+            server.send(400, "application/json", "{\"ok\":false,\"error\":\"channel must be 0..16\"}");
+            return;
+        }
+        armingChannel = (uint8_t)c;
+        prefs.putUChar(NVS_KEY_ARM_CH, armingChannel);
+        events.add(armingChannel ? "Arming channel set" : "Arming channel cleared");
+    }
+    char b[64];
+    snprintf(b, sizeof(b), "{\"ok\":true,\"arming_channel\":%u}", (unsigned)armingChannel);
     server.sendHeader("Cache-Control", "no-store");
     server.send(200, "application/json", b);
 }
@@ -1438,6 +1461,7 @@ inline void handleApiState() {
     j += ",\"ssid\":\""; jsonEsc(getEffectiveSsid()); j += "\"";
     j += ",\"ssid_custom\":"; j += (wifiCredsAreCustom() ? "true" : "false");
     j += ",\"ap_only\":"; j += ((prefs.isKey(NVS_KEY_AP_ONLY) && prefs.getBool(NVS_KEY_AP_ONLY, false)) ? "true" : "false");
+    j += ",\"ap_auto\":"; j += (apAutoEnabled ? "true" : "false");   // AP-only was auto-enabled (home net not found)
     j += "}";
 
     // --- rf -----------------------------------------------------------
@@ -1467,6 +1491,11 @@ inline void handleApiState() {
     j += ",\"sbus_frames_out\":"; j += sbusFramesOut;
     j += ",\"failsafe_set\":"; j += (failsafeSet ? "true" : "false");
     { char gb[48]; snprintf(gb, sizeof(gb), ",\"gear_ratio\":%.3f", gearRatio); j += gb; }
+    j += ",\"arming_channel\":"; j += armingChannel;
+    // live armed state (so the config page can confirm the channel is right)
+    { bool live = (rx.lastMillis != 0) && ((uint32_t)(millis() - rx.lastMillis) < 2000);
+      bool armed = live && armingChannel >= 1 && armingChannel <= 16 && channelMicros[armingChannel - 1] > 1500;
+      j += ",\"armed\":"; j += (armed ? "true" : "false"); }
     j += ",\"head_speed\":"; j += (uint32_t)((gearRatio > 0.1f ? fcTelem.fcMotorRPM / gearRatio : fcTelem.fcMotorRPM) + 0.5f);
     { char tb[48]; snprintf(tb, sizeof(tb), ",\"esc_temp_c\":%.1f", fcTelem.fcEscTempC); j += tb; }
     j += ",\"last_channel_ms\":";
@@ -1726,6 +1755,7 @@ inline void registerWebRoutes() {
     server.on("/api/failsafe/save",  HTTP_POST, handleFailsafeSave);
     server.on("/api/failsafe/clear", HTTP_POST, handleFailsafeClear);
     server.on("/api/gear",           HTTP_POST, handleGearSet);
+    server.on("/api/armch",          HTTP_POST, handleArmChSet);
     server.on("/protocol",    HTTP_POST, handleProtocolSet);
     server.on("/api/sim",     HTTP_POST, handleSimSet);
     server.on("/api/map",     HTTP_POST, handleMapSave);   // save sim channel map (applies live, no reboot)

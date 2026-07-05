@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.200-boot-reason";
+constexpr const char* FW_VERSION = "RXV2-0.9.205-field-ap-persist";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -80,6 +80,12 @@ inline bool     otaStarted    = false;
 // inherit a stale count from a much earlier boot-time retry and trip
 // the AP fallback after one extra failure.
 inline uint8_t  staAttempts   = 0;
+// Set once the home network has proved ABSENT (repeated STA-join failures — the
+// classic flying-field case: creds saved, but home WiFi nowhere in range). We
+// then run a STABLE pure-AP (STA interface dropped, so it stops hopping the
+// radio's channel and disrupting the phone) and only re-probe home WiFi rarely.
+inline bool     staGaveUp     = false;
+inline bool     apAutoEnabled = false;    // true when AP-only was AUTO-enabled (home net not found) — front page shows a notice; user clears it in WiFi settings
 
 constexpr uint32_t RF_WINDOW_MS         = 1000;    // boot window: if a TX is heard within this 1 s, go RF-only (WiFi off). Short so WiFi comes up fast when there's no TX (dev); means the TX must be ON BEFORE the receiver to suppress WiFi — which is standard RC practice (TX on first) anyway.
 // RF-only "fly mode" auto-recovery: if the TX link then stays lost this long,
@@ -100,6 +106,8 @@ constexpr uint32_t WIFI_REENABLE_AFTER_LOST_MS = 10000;
 // (startWifiStation short-circuits when ssid is blank).
 constexpr uint32_t WIFI_CONNECT_MS      = 25000;
 constexpr uint32_t AP_STA_RETRY_MS      = 20000;   // in AP-only WITH saved creds, retry home WiFi this often (self-heal)
+constexpr uint8_t  STA_GIVEUP_ATTEMPTS  = 4;       // after this many failed STA joins (~100 s), assume home WiFi is ABSENT (field) → stable pure-AP
+constexpr uint32_t AP_RECHECK_MS        = 300000;  // once pure-AP (gave up), re-probe home WiFi only this often (one brief attempt) so the field AP stays stable
 constexpr uint32_t LINK_LIVE_MS         = 2000;    // a TX packet within this window = link live (defer blocking web work)
 constexpr uint8_t  WIFI_STA_RETRY_MAX   = 5;
 
@@ -240,6 +248,7 @@ constexpr const char* NVS_KEY_PASS       = "pass";
 constexpr const char* NVS_KEY_BOARD_ID   = "board_id";   // 6-byte board ID; captured first boot, never changes
 constexpr const char* NVS_KEY_FAILSAFE   = "fs";         // 16 x uint16 failsafe channel values (us); absent = not configured
 constexpr const char* NVS_KEY_GEAR_RATIO = "gear";       // float main-gear ratio (motor:head); head speed = motor RPM / gearRatio. 1.0 = direct drive
+constexpr const char* NVS_KEY_ARM_CH     = "armch";      // uint8 arming channel (1..16, 0=off): flight saved on DISARM after a real flight
 constexpr const char* NVS_KEY_BOOT_COUNT = "qbc";        // quick-boot counter for escape hatch
 constexpr const char* NVS_KEY_PROTO      = "proto";
 constexpr const char* NVS_KEY_PPM_INV    = "ppm_inv";
@@ -249,6 +258,7 @@ constexpr const char* NVS_KEY_SIM         = "sim";     // 1 = drive flight simul
 constexpr const char* NVS_KEY_SIM_MAP     = "simmap";  // 8-byte map: which RX channel (0..15) feeds each sim output
 constexpr const char* NVS_KEY_SIM_REV     = "simrev";  // 8-byte per-output reverse flags (0/1)
 constexpr const char* NVS_KEY_AP_ONLY     = "aponly";  // 1 = skip home-WiFi STA, run AP-only (flying field: no waiting on an out-of-range home network)
+constexpr const char* NVS_KEY_AP_AUTO     = "apauto";  // 1 = the AP-only above was set AUTOMATICALLY (home net not found), so the UI shows a notice + the user can undo it
 constexpr const char* NVS_KEY_CFG_REBOOT  = "cfgrb";   // one-shot: web-initiated reboot to apply a setting → next boot skips the RF window, WiFi comes straight back
 
 // A flight "ends" (and is saved to flash) after the link has been gone this
@@ -292,6 +302,7 @@ inline bool     failsafeSet        = false;
 // Main-gear ratio (motor turns : head turns). Head speed telemetry = motor RPM
 // / gearRatio. 1.0 = direct drive. User-set on the View-channels page, NVS-backed.
 inline float    gearRatio          = 1.0f;
+inline uint8_t  armingChannel      = 0;    // 1..16 = save the flight on DISARM of this channel; 0 = off (use link-loss save)
 // Legal decoded-channel range (microseconds), == v1 MINMICROS/MAXMICROS. A
 // decoded frame with any channel outside this isn't real channel data (a
 // bind/MAC/parameter frame misread, or a corrupt decode); decodeChannelData()

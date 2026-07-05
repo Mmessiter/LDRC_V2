@@ -1,76 +1,69 @@
 {
   "versions": [
     {
-      "name": "RXV2-0.9.191-flight-save",
-      "url": "https://messiter.com/rxv2/release/v0.9.191/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.191/littlefs.bin",
-      "notes": "Flights now SURVIVE A REBOOT. When a flight ends (link gone ~15s) the receiver writes it to flash (LittleFS) and keeps the last 3, so you can compare today with earlier flights. The Black box page gains a flight selector (Current / Previous / N flights ago, with each duration) that drives both the link stats and the graph. New endpoints: /api/flights.json (list) and /api/flightlog.json?f=N."
+      "name": "RXV2-0.9.205-field-ap-persist",
+      "url": "https://messiter.com/rxv2/release/v0.9.205/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.205/littlefs.bin",
+      "notes": ""
     },
     {
-      "name": "RXV2-0.9.190-graph-traces",
-      "url": "https://messiter.com/rxv2/release/v0.9.190/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.190/littlefs.bin",
-      "notes": "Flight graph now plots four traces, each in its own colour with a labelled key showing the latest value and min-max: ESC temperature (red), head speed (blue), battery voltage (green) and current/amps (orange). Each line is auto-scaled to its own range so the shapes line up - you can see the battery sag and current spike as head speed and ESC temp rise. Current added to the receiver telemetry log."
+      "name": "RXV2-0.9.204-field-ap-auto",
+      "url": "https://messiter.com/rxv2/release/v0.9.204/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.204/littlefs.bin",
+      "notes": ""
     },
     {
-      "name": "RXV2-0.9.189-flight-graph",
-      "url": "https://messiter.com/rxv2/release/v0.9.189/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.189/littlefs.bin",
-      "notes": "Phase 2 of post-flight analysis: the Black box page now plots a FLIGHT GRAPH - ESC temperature (left axis, red) and head speed (right axis, blue) over time, one sample/second, held from the last flight. Watch the ESC temp track head speed to catch a cooling/load problem before it bites. Receiver logs ~20 min in a ring buffer; served at /api/flightlog.json. No transmitter needed."
+      "name": "RXV2-0.9.203-arm-save-multisession",
+      "url": "https://messiter.com/rxv2/release/v0.9.203/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.203/littlefs.bin",
+      "notes": ""
     },
     {
-      "name": "RXV2-0.9.188-link-stats",
-      "url": "https://messiter.com/rxv2/release/v0.9.188/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.188/littlefs.bin",
-      "notes": "Phase 1 of post-flight analysis on the receiver: the Black box page now shows LINK statistics for the last flight - connection duration, average frame rate, packet count, average gap and LONGEST gap (colour-coded), plus a gap-distribution histogram. Computed on the receiver from the RF packet timing, so no transmitter needed after landing. Resets when a new flight begins. (Telemetry-vs-time graph is Phase 2.)"
+      "name": "RXV2-0.9.202-arm-based-flightsave",
+      "url": "https://messiter.com/rxv2/release/v0.9.202/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.202/littlefs.bin",
+      "notes": ""
     },
     {
-      "name": "RXV2-0.9.187-fc-id-inflight",
-      "url": "https://messiter.com/rxv2/release/v0.9.187/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.187/littlefs.bin",
-      "notes": "Fixes governor options missing after a flight. The receiver used to skip all FC probing while a TX link was live, so booting with the transmitter on for a flight meant it never learned the flight-controller API version - and the governor pages need API 12.9+ (RF 2.3). It now learns the FC identity ONCE even in flight (a few tiny non-blocking requests, no Configurator in the air), then stays quiet; the API value persists, so governor is available after landing. General Rotorflight options may still take a few seconds to appear after landing while WiFi re-enables and telemetry resumes - switching the TX on makes them appear at once."
+      "name": "RXV2-0.9.201-progressive-flightsave",
+      "url": "https://messiter.com/rxv2/release/v0.9.201/firmware.bin",
+      "notes": ""
     },
     {
-      "name": "RXV2-0.9.186-batt-icon",
-      "url": "https://messiter.com/rxv2/release/v0.9.186/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.186/littlefs.bin",
-      "notes": "Adds the classic battery icon to the Black box status: it fills to the state-of-charge and colours green (>=50%), amber (>=20%) or red (low), matching the per-cell voltage reading. Purely visual, at-a-glance battery check."
+      "name": "RXV2-0.9.200-boot-reason",
+      "url": "https://messiter.com/rxv2/release/v0.9.200/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.200/littlefs.bin",
+      "notes": ""
     },
     {
-      "name": "RXV2-0.9.185-voltage-soc",
-      "url": "https://messiter.com/rxv2/release/v0.9.185/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.185/littlefs.bin",
-      "notes": "Battery % is now a resting-voltage state-of-charge from the per-cell voltage, instead of the flight-controllers mAh-based figure (which reads ~full on the bench because little current has been drawn - e.g. 98% at 3.75 V/cell). Standard resting-LiPo curve: 3.75 V ~25%, 3.80 V ~40%, 4.20 V 100%. Note that it reads low under load."
+      "name": "RXV2-0.9.199-back-buttons",
+      "url": "https://messiter.com/rxv2/release/v0.9.199/firmware.bin",
+      "notes": ""
     },
     {
-      "name": "RXV2-0.9.184-per-cell",
-      "url": "https://messiter.com/rxv2/release/v0.9.184/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.184/littlefs.bin",
-      "notes": "Battery status now shows PER-CELL voltage (large), with the cell count auto-detected from the pack voltage (ceil(V/4.3) - reliable for storage or charged packs of any size). Also shows cell count (e.g. 4S), pack voltage and %. Colour cue: green at/above storage, amber getting low, red very low. Reminder to store at 3.80 V/cell."
+      "name": "RXV2-0.9.198-blackbox-split",
+      "url": "https://messiter.com/rxv2/release/v0.9.198/firmware.bin",
+      "notes": ""
     },
     {
-      "name": "RXV2-0.9.183-blackbox-status",
-      "url": "https://messiter.com/rxv2/release/v0.9.183/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.183/littlefs.bin",
-      "notes": "Adds a live Status panel to the Black box page: battery VOLTAGE (large), pack %, current, mAh used, head speed, ESC temp and flight mode - all from the flight-controller telemetry, updating every 2s. Handy for a quick battery check with the model powered (the transmitter does not need to be on; just have WiFi up)."
+      "name": "RXV2-0.9.197-calm-menu",
+      "url": "https://messiter.com/rxv2/release/v0.9.197/firmware.bin",
+      "notes": ""
     },
     {
-      "name": "RXV2-0.9.182-restore-rates",
-      "url": "https://messiter.com/rxv2/release/v0.9.182/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.182/littlefs.bin",
-      "notes": "Makes the transmitter backup/restore of Rates+Advanced behave like V1. When the TX restores both together it sends the basic batch AND the advanced batch; the receiver now writes BOTH (so the basic rates are actually restored), while an advanced-only EDIT still preserves the basic rates (no zeroing). Matches V1 exactly: basic is written on the combined save only when the TX actually sent it. PIDs, advanced PID and governor-profile restore were already full writes."
+      "name": "RXV2-0.9.196-snappy-web",
+      "url": "https://messiter.com/rxv2/release/v0.9.196/firmware.bin",
+      "notes": ""
     },
     {
-      "name": "RXV2-0.9.181-sticky-block",
-      "url": "https://messiter.com/rxv2/release/v0.9.181/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.181/littlefs.bin",
-      "notes": "Further reduces occasional all-zeros when reading params from the transmitter (seen most on governor profile). The receiver now keeps streaming the last-read block's cached values to the TX even after the read window ends - so lingering on a screen past the window, or a dropped request, shows the last good values (stale at worst) instead of zeros. FC re-polling still stops when the window closes, so no extra MSP load."
+      "name": "RXV2-0.9.195-review-fixes",
+      "url": "https://messiter.com/rxv2/release/v0.9.195/firmware.bin",
+      "notes": ""
     },
     {
-      "name": "RXV2-0.9.180-fc-keepalive",
-      "url": "https://messiter.com/rxv2/release/v0.9.180/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.180/littlefs.bin",
-      "notes": "Fixes the web UI losing its Rotorflight options after the transmitter is used then switched off (until a reboot). On CRSF, signal loss detaches the output UART (so the FC sees the dropout) - but that also kills the FC RX line, so MSP stops and the flight-controller detection times out. The receiver now keeps the UART attached whenever WiFi is up (bench/config mode, where there is no transmitter by design and you need MSP). In-flight failsafe is unchanged - WiFi is off in flight."
+      "name": "RXV2-0.9.194-crsf-default-fast-reboot",
+      "url": "https://messiter.com/rxv2/release/v0.9.194/firmware.bin",
+      "notes": ""
     }
   ]
 }

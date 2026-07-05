@@ -141,6 +141,9 @@ void setup() {
 
     // Head-speed gear ratio (motor:head). 1.0 = direct drive.
     gearRatio = prefs.getFloat(NVS_KEY_GEAR_RATIO, 1.0f);
+    armingChannel = prefs.isKey(NVS_KEY_ARM_CH) ? prefs.getUChar(NVS_KEY_ARM_CH, 0) : 0;
+    if (armingChannel > 16) armingChannel = 0;
+    apAutoEnabled = prefs.isKey(NVS_KEY_AP_AUTO) && prefs.getBool(NVS_KEY_AP_AUTO, false);
     if (gearRatio < 0.1f || gearRatio > 100.0f) gearRatio = 1.0f;
 
     //*****************************************************************
@@ -416,7 +419,7 @@ void loop() {
         txParamsLoop();        // TX Rotorflight edits: async MSP read/write state machine
     }
     telemetrySampleTick();     // 1 Hz flight telemetry log (ESC temp / head speed / battery)
-    maybeSaveFlight();         // persist a completed flight to flash (survives reboot)
+    flightSaveTick();          // save the flight to flash on DISARM — safe, on the ground (arming-channel idea)
 
     // Dual-radio redundancy: if we've not received a packet on the active
     // radio for a while AND a swap cooldown has elapsed AND we have a second

@@ -42,9 +42,14 @@ inline const char* flightPath(uint8_t idx) {
 }
 
 //*********************************************************************
-//  Save the current RAM flight to flash (rotating the older ones down)
+//  Save the current RAM flight to flash
 //*********************************************************************
-inline void saveFlightToLittleFS() {
+// rotate = true  : a NEW flight — shuffle flt0→flt1→flt2 and write flt0.
+// rotate = false : an UPDATE of the current session (e.g. a second take-off
+//                  after landing to inspect) — overwrite flt0 in place, so a
+//                  single battery with several arm/disarm cycles stays ONE
+//                  saved flight instead of cluttering the history with partials.
+inline void saveFlightToLittleFS(bool rotate = true) {
     if (!littleFsMounted || teleCount < FLIGHT_MIN_SAMPLES) return;
     // Write the NEW flight to a temp file FIRST — only a successful write may
     // rotate the old ones. (Rotating first meant a failed open/write — e.g.
@@ -73,13 +78,18 @@ inline void saveFlightToLittleFS() {
         events.add("Flight save FAILED (flash full?)");
         return;
     }
-    // Success — NOW rotate: drop the oldest, shuffle down, move tmp into place.
-    LittleFS.remove(flightPath(FLIGHT_KEEP - 1));
-    for (int8_t i = FLIGHT_KEEP - 2; i >= 0; --i) {
-        if (LittleFS.exists(flightPath(i))) LittleFS.rename(flightPath(i), flightPath(i + 1));
+    // Success — commit. A new flight shuffles the history down; an update of the
+    // current session just replaces flt0 (no rotation), keeping one slot per flight.
+    if (rotate) {
+        LittleFS.remove(flightPath(FLIGHT_KEEP - 1));
+        for (int8_t i = FLIGHT_KEEP - 2; i >= 0; --i) {
+            if (LittleFS.exists(flightPath(i))) LittleFS.rename(flightPath(i), flightPath(i + 1));
+        }
+    } else {
+        LittleFS.remove(flightPath(0));   // overwrite the current session's slot only
     }
     LittleFS.rename("/flt.tmp", flightPath(0));
-    events.add("Flight saved to flash");
+    events.add(rotate ? "Flight saved to flash" : "Flight updated (same session)");
 }
 
 //*********************************************************************
@@ -98,6 +108,57 @@ inline void maybeSaveFlight() {
         saveFlightToLittleFS();
         armedConnStart = 0;                        // saved; re-arms on the next connection
     }
+}
+
+//*********************************************************************
+//  ARM-BASED SAVE  (Malcolm's idea, 2026-07-03) — call from loop()
+//*********************************************************************
+// The safest possible trigger: write the flight to flash the moment the model
+// is DISARMED after a real flight. Disarming happens after landing while the
+// RX is still very much powered on, so the save runs SAFELY ON THE GROUND —
+// zero flash writes while airborne (a flash write stalls loop(), which must
+// never happen mid-flight). It also solves the RX-off-first problem: you
+// disarm, the flight is saved, THEN you switch off.
+//
+// "Armed" = the user's arming channel (armingChannel, 1..16; set on the View-
+// channels page) sitting above mid-stick. A >= 30 s armed spell marks a real
+// flight, so a spool-up test / aborted start isn't saved. If armingChannel is
+// 0 (unset) we fall back to the old link-loss save so nothing regresses.
+constexpr uint32_t FLIGHT_ARMED_MIN_MS = 30000;   // armed at least this long = a real flight
+
+inline void flightSaveTick() {
+    if (armingChannel < 1 || armingChannel > 16) {   // feature off → keep the old behaviour
+        maybeSaveFlight();
+        return;
+    }
+    static bool     wasArmed        = false;
+    static uint32_t armedSince      = 0;
+    static bool     sessionWorth    = false;         // has this session had a real (>=30 s) flight?
+    static bool     sessionSaved    = false;         // has this session been written to flt0 yet?
+    static uint32_t sessionConnStart = 0xFFFFFFFF;
+    const uint32_t now = millis();
+
+    // A NEW session = a new connection (>= 15 s link gap, i.e. a new battery /
+    // power-cycle). One session is ONE saved flight, however many times you
+    // arm/disarm within it (e.g. landing to inspect, then flying again).
+    if (linkStats.connStartMs != sessionConnStart) {
+        sessionConnStart = linkStats.connStartMs;
+        sessionWorth = false;
+        sessionSaved = false;
+    }
+
+    // Armed only counts while the link is actually live — a lost link freezes
+    // channelMicros at its last value, which must not read as "still armed".
+    const bool linkLive = (rx.lastMillis != 0) && ((uint32_t)(now - rx.lastMillis) < 2000);
+    const bool armed    = linkLive && (channelMicros[armingChannel - 1] > 1500);
+
+    if (armed && !wasArmed) armedSince = now;                                   // arm edge
+    if (armed && (uint32_t)(now - armedSince) >= FLIGHT_ARMED_MIN_MS) sessionWorth = true;
+    if (!armed && wasArmed && sessionWorth) {                                   // DISARM edge in a real flight
+        saveFlightToLittleFS(!sessionSaved);   // first disarm of the session rotates a new slot; later disarms overwrite it
+        sessionSaved = true;                   // (the RAM ring spans the whole session, so each save holds everything so far)
+    }
+    wasArmed = armed;
 }
 
 //*********************************************************************

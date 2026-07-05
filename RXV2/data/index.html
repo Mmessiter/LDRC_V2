@@ -87,6 +87,12 @@
         </div>
         <div id=radioBanner style="display:none;text-align:center;padding:.7em;border-radius:10px;margin:0 0 1em;font-weight:600"></div>
 
+        <!-- Shown when AP-only was auto-enabled because the home network wasn't
+             found (flying field). Tells the user why and links to WiFi settings
+             so they can re-enable home WiFi when back home. -->
+        <a id=apAutoBanner href="/wifi" style="display:none;text-decoration:none;text-align:center;padding:.8em 1em;border-radius:10px;margin:0 0 1em;
+             background:rgba(255,210,120,.95);color:#5c3a00;font-weight:600;line-height:1.4"></a>
+
         <!-- Bind-mode banner. Shown only when the receiver is unbound,
              so the user always knows at a glance why the LED is blinking
              and what the chip is waiting for. -->
@@ -159,7 +165,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // (FC detection, and bind completing) without needing a page reload.
     setInterval(async () => {
         const s2 = await LDRC.fetchState();
-        if (s2) { updateRfButton(s2); updateBindState(s2); }
+        if (s2) { updateRfButton(s2); updateBindState(s2); paintApAutoBanner(s2); }
     }, 3000);
 
     // Model name — show as the h1, prompt with warning + edit-on-tap.
@@ -216,6 +222,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // came up at boot. A 3-slot PCB with one dead chip is immediately
     // visible here ("2 transceivers detected: slots 1 and 3").
     paintRadioBanner(s);
+    paintApAutoBanner(s);
 
     // Background check: is a firmware update available? Banner is at the
     // bottom of the screen (moved here so the transceiver banner can
@@ -372,6 +379,21 @@ function simWifiOffDone() {
 }
 
 // (Bind-mode guard and the sim toggle now live on /setup and /sim.)
+
+// "AP-only was auto-enabled because home WiFi wasn't found" notice. Links to
+// the WiFi page so the user can re-enable home WiFi when back home.
+function paintApAutoBanner(s) {
+    const b = document.getElementById('apAutoBanner');
+    if (!b) return;
+    if (s && s.net && s.net.ap_auto) {
+        const ssid = (s.net.ssid || 'your home WiFi');
+        b.innerHTML = "📡 <b>AP-only mode auto-enabled</b> — home WiFi &lsquo;" + ssid.replace(/</g, '&lt;')
+                    + "&rsquo; wasn't found (flying field). Tap to open WiFi settings and switch it off when you're back home.";
+        b.style.display = '';
+    } else {
+        b.style.display = 'none';
+    }
+}
 
 function paintRadioBanner(s) {
     const rb = document.getElementById('radioBanner');
