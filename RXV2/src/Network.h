@@ -15,6 +15,11 @@
 #include "1Defs.h"
 #include "Storage.h"
 
+// Defined in BleConfig.h (included later in this translation unit).
+// BLE strictly mirrors the WiFi lifecycle: same on switches, same off switch.
+inline void bleStart();
+inline void bleStop();
+
 //*********************************************************************
 //  Net-mode name (for UI + serial)
 //*********************************************************************
@@ -175,6 +180,7 @@ inline void startWifiStation() {
             events.add("No SSID — AP-only");
         }
         netMode = NET_AP;
+        bleStart();   // BLE config comes up whenever WiFi config does
         return;
     }
     Serial.printf("[wifi] STA connecting to '%s' (AP stays up)\n", ssid.c_str());
@@ -186,6 +192,7 @@ inline void startWifiStation() {
     char buf[80];
     snprintf(buf, sizeof(buf), "Trying STA WiFi '%s' (AP also up)", ssid.c_str());
     events.add(buf);
+    bleStart();   // BLE config comes up whenever WiFi config does
 }
 
 //*********************************************************************
@@ -249,6 +256,7 @@ inline void startApMode() {
     startHttpServerIfNeeded();
     mspBridgeStart();
     netMode = NET_AP;
+    bleStart();   // BLE config comes up whenever WiFi config does
 }
 
 //*********************************************************************
@@ -257,6 +265,7 @@ inline void startApMode() {
 
 inline void disableWifi() {
     Serial.println("[wifi] turning off until reboot");
+    bleStop();    // fly mode silences BLE too — same rule as WiFi
     if (otaStarted) {
         ArduinoOTA.end();
         otaStarted = false;

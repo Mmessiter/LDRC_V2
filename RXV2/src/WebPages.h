@@ -18,6 +18,12 @@
 #include "Output.h"        // protocolName(), protocolDesc()
 #include "Network.h"       // netModeName(), uptimeString(), disableWifi()
 #include "Radio.h"         // runRadioSelfTest(), dataRateName()
+#include "BleConfig.h"     // ReqRouter: same handlers serve WiFi and BLE
+
+// Within this file every `server.` call goes through the router, which
+// forwards to the real WebServer normally and captures the response when a
+// BLE request is being serviced. One config engine, two transports.
+#define server g_bleRouter
 
 //*********************************************************************
 //  Embedded fallback CSS (used only if LittleFS mount failed)
@@ -1773,5 +1779,7 @@ inline void registerWebRoutes() {
     });
     server.onNotFound([]() { server.send(404, "text/plain", "not found"); });
 }
+
+#undef server
 
 #endif // _SRC_WEBPAGES_H

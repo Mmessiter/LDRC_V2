@@ -31,6 +31,7 @@
 #include "MspBridge.h"
 #include "MspFc.h"
 #include "SimUsb.h"         // before WebPages.h — the firmware web pages call SimUSB::getMap/setMap
+#include "BleConfig.h"      // before WebPages.h — WebPages routes through the BLE/WiFi router
 #include "WebPages.h"
 
 //*********************************************************************
@@ -404,6 +405,7 @@ void loop() {
     if (httpServerStarted) {
         server.handleClient();
     }
+    blePoll();   // execute + stream any pending BLE config request (same task as HTTP)
 
     radioPoll();
     if (simEnabled) {
