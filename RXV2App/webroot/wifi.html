@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name=theme-color content="#5fa099">
+<meta name=apple-mobile-web-app-capable content=yes>
+<meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
+<meta name=apple-mobile-web-app-title content="LDRC RX V2">
+<title>WiFi &middot; LDRC RX V2</title>
+<link rel=stylesheet href="/style.css?v=129">
+<script src="/app.js?v=129" defer></script>
+</head>
+<body>
+<button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
+<div class=bg-photo aria-hidden=true></div>
+<div class=bg-wash  aria-hidden=true></div>
+<div class=container>
+    <h1>WiFi settings</h1>
+
+    <div class=card><h2>Status</h2><dl>
+        <dt>Mode</dt>     <dd id=mode>&hellip;</dd>
+        <dt>Hostname</dt> <dd id=hostname></dd>
+        <dt>SSID</dt>     <dd id=ssid></dd>
+        <dt id=ipDt   style="display:none">IP</dt>      <dd id=ip    style="display:none"></dd>
+        <dt id=rssiDt style="display:none">RSSI</dt>    <dd id=rssi  style="display:none"></dd>
+        <dt id=apDt   style="display:none">AP IP</dt>   <dd id=apip  style="display:none"></dd>
+        <dt id=noteDt class=muted style="display:none">Note</dt>
+        <dd id=noteDd class=muted style="display:none">WiFi updates only work in STA mode &mdash; save credentials below so the next boot can join your network.</dd>
+    </dl></div>
+
+    <div class=card>
+        <h2>Set credentials</h2>
+        <p>Saved to NVS and used on next boot. Edit either field and tap save; the current values are pre-filled.</p>
+        <p class=muted style="margin-top:-.2em">Tip: WiFi is steadiest with the <b>transmitter switched off</b>. The control radio and WiFi share the 2.4&nbsp;GHz band, so a live transmitter link can make WiFi drop in and out. Use the transmitter <em>or</em> the phone when you can &mdash; both together works, but expect WiFi to be less consistent.</p>
+        <form method=POST action="/wifi">
+            <p><label>SSID<br>
+                <input name=ssid type=text required id=ssidField value=""
+                       autocomplete=username inputmode=text
+                       placeholder="Home WiFi network name"
+                       style="width:100%;padding:.6em;font-size:1em;border-radius:8px;border:1px solid #b8c7d0">
+            </label></p>
+            <p><label>Password<br>
+                <input name=pass type=password id=pwfield value=""
+                       autocomplete=current-password
+                       placeholder="Home WiFi password"
+                       style="width:100%;padding:.6em;font-size:1em;border-radius:8px;border:1px solid #b8c7d0">
+            </label></p>
+            <p style="margin-top:-.3em"><label style="font-size:.92em;color:#3a5165">
+                <input type=checkbox onchange="document.getElementById('pwfield').type=this.checked?'text':'password'" style="margin-right:.4em">
+                Show password
+            </label></p>
+            <p style="margin-top:.2em"><label style="font-size:.95em;color:#3a5165">
+                <input type=checkbox name=aponly id=aponlyField style="margin-right:.4em">
+                <b>AP mode only</b> — receiver's own WiFi (for the flying field)
+            </label></p>
+            <div class=muted style="margin-top:-.3em;font-size:.85em;line-height:1.5">
+                <p style="margin:.2em 0"><b>What is AP mode?</b> AP (&ldquo;access point&rdquo;) means the receiver makes <b>its own little WiFi network</b> that your phone joins directly &mdash; no home router, no internet, just your phone talking straight to the receiver.</p>
+                <p style="margin:.2em 0"><b>Tick this at the flying field.</b> Away from home, your house WiFi is out of range, so the receiver would otherwise waste every start-up trying to find it. Ticked, it skips that and is ready straight away on its own network.</p>
+                <p style="margin:.2em 0">After you save, your phone won't follow automatically &mdash; you'll need to open your phone's WiFi settings and join the receiver's network (the page will tell you the name). <b>Untick it at home</b> to go back to your normal WiFi.</p>
+            </div>
+            <button class="btn btn-fw" type=submit><span class=ico>&#128190;</span>Save &amp; reboot</button>
+        </form>
+    </div>
+
+    <div class=card>
+        <h2>Model name</h2>
+        <p>Used as this receiver's WiFi AP SSID and its <code>.local</code> hostname. Letters, digits and hyphens only; must start with a letter or digit; no spaces; up to 30 characters.</p>
+        <form id=nameForm>
+            <p><label>New name<br>
+                <input id=nameField name=name type=text required maxlength=30
+                       pattern="[A-Za-z0-9][A-Za-z0-9\-]{0,29}"
+                       autocomplete=off autocapitalize=off autocorrect=off spellcheck=false
+                       style="width:100%;padding:.6em;font-size:1em;border-radius:8px;border:1px solid #b8c7d0">
+            </label></p>
+            <p class=muted id=namePreview style="margin-top:-.3em"></p>
+            <button class="btn btn-fw" type=submit><span class=ico>&#9999;&#65039;</span>Rename &amp; reboot</button>
+        </form>
+    </div>
+
+    <div class=card style="border:1.5px solid rgba(201,116,100,.55)">
+        <h2 style="color:#8a2e1a">Factory defaults</h2>
+        <p class=muted>Use this <b>before passing the receiver to someone else</b>. Wipes the saved WiFi password, model name, bind state, output protocol and any Rotorflight backups. The receiver reboots and comes up as a fresh unit at <code>RXV2.local</code>.</p>
+        <button class="btn danger" id=factoryBtn type=button><span class=ico>&#9888;&#65039;</span>Erase all saved settings</button>
+    </div>
+
+    <div class=footer></div>
+</div>
+
+<script>
+function show(id, on) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = on ? '' : 'none';
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    const s = await LDRC.fetchState();
+    if (!s) return;
+    const n = s.net, info = s.info;
+
+    LDRC.setText('mode',     n.mode);
+    LDRC.setText('hostname', info.hostname + '.local');
+
+    if (!n.ssid) {
+        LDRC.setHtml('ssid', '<i>(none saved)</i>');
+    } else {
+        LDRC.setText('ssid', n.ssid + ' ' + (n.ssid_custom ? '(saved in NVS)' : '(empty default)'));
+    }
+
+    if (n.mode === 'WiFi up') {
+        show('ipDt', true);   show('ip', true);   LDRC.setText('ip',   info.ip);
+        show('rssiDt', true); show('rssi', true); LDRC.setText('rssi', info.rssi + ' dBm');
+    } else if (n.mode === 'AP mode') {
+        show('apDt', true);   show('apip', true); LDRC.setText('apip', info.ap_ip + " (connect to '" + info.ap_ssid + "')");
+        show('noteDt', true); show('noteDd', true);
+    }
+
+    // Pre-fill form
+    document.getElementById('ssidField').value = n.ssid || '';
+    document.getElementById('aponlyField').checked = !!n.ap_only;
+
+    // Rename card — pre-fill current name and wire live preview.
+    const nf = document.getElementById('nameField');
+    if (nf) {
+        const current = (info.name_custom && info.name) ? info.name : '';
+        nf.value = current;
+        const np = document.getElementById('namePreview');
+        const refreshPreview = () => {
+            const raw = nf.value.trim();
+            if (!raw) {
+                np.innerHTML = 'Leave blank to revert to the default <code>RXV2</code>.';
+                return;
+            }
+            // Mirror hostnameFromName(): keep alphanumerics + hyphen, max 30.
+            const clean = raw.replace(/[^A-Za-z0-9-]/g, '').slice(0, 30);
+            np.innerHTML = 'Will become <code>' + clean + '.local</code> on the home network, AP SSID <code>' + clean + '</code>.';
+        };
+        nf.addEventListener('input', refreshPreview);
+        refreshPreview();
+    }
+
+    // Rename submit. AJAX so the chip's confirmPage reply can be cut by
+    // the reboot without leaving the page stuck — we drive the wait UI
+    // and redirect from the browser. After reboot the chip is at a NEW
+    // mDNS hostname, so we poll that hostname (not this page's host).
+    const form = document.getElementById('nameForm');
+    if (form) form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const raw = nf.value.trim();
+        const clean = raw.replace(/[^A-Za-z0-9-]/g, '').slice(0, 30);
+        if (raw && !/^[A-Za-z0-9][A-Za-z0-9-]{0,29}$/.test(raw)) {
+            alert('Invalid name. Letters, digits and hyphens only; must start with a letter or digit; no spaces.');
+            return;
+        }
+        const newHost = clean || 'RXV2';
+        const newURL  = 'http://' + newHost + '.local/';
+        document.querySelector('.container').innerHTML =
+            '<h1>Renaming</h1><div class=card>' +
+            '<p>Renaming to <b>' + newHost + '</b>. The receiver is rebooting; its WiFi AP and <code>.local</code> hostname will both change.</p>' +
+            '<p>Once it is back, this page will jump to <code>' + newURL + '</code> automatically.</p>' +
+            '<p id=__waitline class=muted style="margin-top:1em">Waiting for receiver to come back at the new name (<span id=__secs>0</span>&thinsp;s)&hellip;</p>' +
+            '</div>';
+        const body = new URLSearchParams(); body.append('name', raw);
+        fetch('/api/name', { method: 'POST', body }).catch(() => {});
+        let n = 0;
+        const tick = async () => {
+            const el = document.getElementById('__secs');
+            if (el) el.textContent = n;
+            if (n >= 6) {
+                try {
+                    const r = await fetch(newURL + 'api/state.json',
+                        { cache: 'no-store', signal: AbortSignal.timeout(2000) });
+                    if (r.ok) { location.href = newURL; return; }
+                } catch (err) { /* not yet */ }
+            }
+            if (n >= 90) {
+                const w = document.getElementById('__waitline');
+                if (w) w.innerHTML = "Receiver didn't answer at <code>" + newURL + "</code> in 90&thinsp;s. "
+                    + "Your phone's mDNS cache may still be holding the old name &mdash; open the link above manually, "
+                    + "or join the new <b>" + newHost + "</b> AP and visit <code>http://192.168.4.1</code>.";
+                return;
+            }
+            n++;
+            setTimeout(tick, 1000);
+        };
+        tick();
+    });
+
+    // Factory-defaults handler. Two-step confirmation: an LDRC.confirm
+    // dialog, then we POST /api/factory-reset. Chip wipes NVS +
+    // backups and reboots fresh.
+    const fb = document.getElementById('factoryBtn');
+    if (fb) fb.addEventListener('click', async () => {
+        const ok = await LDRC.confirm(
+            'This will erase the saved WiFi password, model name, bind, output protocol and any Rotorflight backups. The receiver will reboot as a fresh unit. Continue?',
+            { title: 'Erase all settings?', icon: '⚠️',
+              yes: 'Yes, erase everything', kind: 'danger' });
+        if (!ok) return;
+        try {
+            const r = await fetch('/api/factory-reset', { method: 'POST' });
+            const html = await r.text();
+            document.open(); document.write(html); document.close();
+        } catch (e) {
+            alert('Could not contact the receiver — try again.');
+        }
+    });
+});
+</script>
+<template id=helpContent><h2>WiFi &amp; identity</h2>
+<p><b>Model name</b> sets the receiver's <code>.local</code> hostname and its AP SSID at the same time &mdash; rename here if you mis-typed the name on first run (for example, calling a three-transceiver board <code>PT2</code> when it should be <code>PT3</code>). After the rename, this page jumps to the new URL automatically.</p>
+<h2>WiFi settings</h2>
+<p>Shows the receiver's current WiFi state and lets you set the home network SSID + password. Credentials are saved to NVS and persist across reboots and firmware updates.</p>
+<h3>How to use it</h3>
+<p>Type your home WiFi SSID and password in the form, then tap <b>Save & reboot</b>. The receiver reboots and joins the new network. The page polls until the receiver returns.</p>
+<h3>WiFi and your transmitter (automatic)</h3>
+<p>To keep the control link as strong as possible, the receiver manages WiFi for you, around the transmitter:</p>
+<ul>
+<li><b>Transmitter ON when you switch the receiver on</b> &rarr; it hears it within a second and runs <b>radio-only with WiFi off</b> &mdash; strongest link, full frame rate. <b>So always switch the transmitter on first.</b></li>
+<li><b>No transmitter found</b> &rarr; WiFi comes straight up so you can connect from your phone.</li>
+<li><b>After flying</b> &mdash; if the transmitter link is lost for about 10&nbsp;seconds (you've landed, or switched the transmitter off), <b>WiFi switches back on by itself</b>, so you can reach the receiver again without a power-cycle.</li>
+</ul>
+<p>So if WiFi ever seems to be off when you didn't expect it, it just means a transmitter was on at switch-on &mdash; turn the transmitter off for ~10&nbsp;seconds and WiFi will return. (Simulator sessions keep WiFi on the whole time.)</p>
+<h3>Tips</h3>
+<p><b>Transmitter on?</b> WiFi shares the 2.4&nbsp;GHz band with the receiver's control radio, so a live transmitter link can make WiFi drop in and out. For the smoothest setup over WiFi, switch the transmitter off. Using both at once works, but expect WiFi to be less consistent &mdash; so when you can, use the transmitter <em>or</em> the phone, not both.</p>
+<p>Leave the password field blank to keep the existing saved one (handy when you want to change just the SSID).</p>
+<p>The receiver runs AP + STA at the same time — even when home WiFi is unavailable, the receiver is still reachable on its own network at <code>http://192.168.4.1</code>. You're never locked out.</p>
+</template>
+</body>
+</html>

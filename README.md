@@ -15,7 +15,14 @@ the version-1 code (which stays in the `LockDownRadioControl` repo).
   CRSF / SBUS / IBUS / PPM on one pin and presents an 8-axis USB joystick, with a
   WiFi portal and OTA updates from messiter.com. Built with PlatformIO.
 
-- **TXV2** — the V2 transmitter. **Not started yet** (placeholder).
+- **RXV2App** — iOS app that configures the receiver over **Bluetooth LE**
+  (no WiFi network-switching on the phone). It shows the receiver's own web
+  UI in a WebView with the static pages bundled in-app; only the JSON/POST
+  calls cross BLE, served by the same firmware handlers as the portal.
+  Built with xcodegen + Xcode; runs on-device with a free Apple ID.
+
+- **TXV2** — the V2 transmitter. **Not started yet** (placeholder — first
+  job is to freeze the rev-A PCB design).
 
 ## Notes
 

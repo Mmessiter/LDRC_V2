@@ -1,0 +1,37 @@
+# xcodegen spec for the RXV2 Bluetooth config app.
+# Regenerate the Xcode project with:  xcodegen generate
+name: RXV2App
+options:
+  bundleIdPrefix: com.messiter
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+
+targets:
+  RXV2App:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+      - path: webroot
+        type: folder
+        buildPhase: resources
+    info:
+      path: Info.plist
+      properties:
+        CFBundleDisplayName: RXV2
+        UILaunchScreen: {}
+        NSBluetoothAlwaysUsageDescription: >-
+          RXV2 uses Bluetooth to find and configure your LockDown Radio
+          Control receiver.
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.messiter.rxv2app
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_VERSION: "5.9"
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGN_STYLE: Automatic

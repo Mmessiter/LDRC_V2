@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name=theme-color content="#5fa099">
+<meta name=apple-mobile-web-app-capable content=yes>
+<meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
+<meta name=apple-mobile-web-app-title content="LDRC RX V2">
+<title>Flight analysis &middot; LDRC RX V2</title>
+<link rel=stylesheet href="/style.css?v=129">
+<script src="/app.js?v=129" defer></script>
+</head>
+<body>
+<button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
+<div class=bg-photo aria-hidden=true></div>
+<div class=bg-wash  aria-hidden=true></div>
+<div class=container>
+    <h1>Flight analysis</h1>
+    <p class=subtitle>Telemetry graph &amp; radio-link statistics, flight by flight</p>
+
+    <div class=card>
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.4em .8em;margin-bottom:.5em">
+            <h2 style="margin:0">Flight</h2>
+            <select id=flSel style="padding:.32em .5em;font-size:.95em;border-radius:8px;border:1px solid #b8c7d0;background:#fff"></select>
+        </div>
+        <div id=lkRows class=muted style="font-size:.92em;line-height:1.9">&hellip;</div>
+        <div id=lkHist style="margin-top:.5em"></div>
+        <p id=lkNote class=muted style="font-size:.82em;margin-top:.4em"></p>
+    </div>
+
+    <div class=card>
+        <h2 style="margin-top:0">Flight graph</h2>
+        <canvas id=flChart width=680 height=260 style="width:100%;height:auto;display:block"></canvas>
+        <div id=flLegend style="font-size:.82em;margin-top:.45em"></div>
+        <p id=flNote class=muted style="font-size:.82em;margin-top:.3em"></p>
+    </div>
+
+    <div class=footer></div>
+</div>
+
+<script>
+function fmt(ms) {
+    const s = Math.floor(ms / 1000);
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const ss = s % 60;
+    return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(ss).padStart(2,'0');
+}
+
+// Link statistics for a chosen flight (from the flightlog's `link` object).
+function renderLink(lk) {
+    const lkRows = document.getElementById('lkRows'), lkHist = document.getElementById('lkHist');
+    if (!lk || !lk.packets) {
+        lkRows.textContent = 'No flight recorded yet.'; lkHist.innerHTML = '';
+        document.getElementById('lkNote').textContent = ''; return;
+    }
+    const secs = lk.conn_ms / 1000, fr = secs > 0 ? lk.packets / secs : 0;
+    const gapCol = lk.max_gap_ms > 100 ? '#c0392b' : lk.max_gap_ms > 30 ? '#c98a4a' : '#2e7d32';
+    lkRows.innerHTML =
+        'Duration: <b>' + fmt(lk.conn_ms) + '</b><br>' +
+        'Avg frame rate: <b>' + fr.toFixed(0) + ' Hz</b> &nbsp;&middot;&nbsp; Packets: <b>' + lk.packets.toLocaleString() + '</b><br>' +
+        'Avg gap: <b>' + lk.avg_gap_ms.toFixed(2) + ' ms</b> &nbsp;&middot;&nbsp; Longest gap: <b style="color:' + gapCol + '">' + lk.max_gap_ms.toFixed(1) + ' ms</b>';
+    const labels = ['&lt;4', '4-8', '8-16', '16-32', '32-64', '&ge;64'];
+    const mx = Math.max(1, ...lk.hist);
+    let h = '<div style="font-size:.8em;color:#5a6b74;margin-bottom:.2em">Gap distribution (ms)</div>';
+    for (let i = 0; i < 6; i++) {
+        const w = Math.round(100 * lk.hist[i] / mx);
+        h += '<div style="display:flex;align-items:center;gap:.4em;margin:1px 0">' +
+             '<span style="width:3em;text-align:right;font-size:.78em;color:#5a6b74">' + labels[i] + '</span>' +
+             '<span style="flex:1;background:#e3e9ec;border-radius:3px;overflow:hidden;height:12px"><span style="display:block;height:100%;width:' + w + '%;background:' + (i >= 3 ? '#c98a4a' : '#5fa099') + '"></span></span>' +
+             '<span style="width:4.5em;font-size:.78em;color:#5a6b74;text-align:right">' + lk.hist[i].toLocaleString() + '</span></div>';
+    }
+    lkHist.innerHTML = h;
+    document.getElementById('lkNote').textContent = '';
+}
+
+// Populate the flight selector (Current + saved flights) from /api/flights.json.
+async function populateFlightSelector() {
+    let list;
+    try { list = await (await fetch('/api/flights.json', { cache: 'no-store' })).json(); } catch (e) { return; }
+    const sel = document.getElementById('flSel');
+    if (!sel) return;
+    const cur = sel.value;
+    let html = '';
+    for (const fl of list) {
+        let label;
+        if (fl.i === 0) label = 'Current' + (fl.count > 1 ? ' (' + fmt(fl.dur_ms) + ')' : ' — none yet');
+        else label = (fl.i === 1 ? 'Previous' : fl.i + ' flights ago') + ' (' + fmt(fl.dur_ms) + ')';
+        html += '<option value="' + fl.i + '">' + label + '</option>';
+    }
+    sel.innerHTML = html;
+    if (cur && sel.querySelector('option[value="' + cur + '"]')) sel.value = cur;
+}
+
+// Fetch the selected flight and update the link stats + graph.
+async function loadFlight() {
+    const sel = document.getElementById('flSel');
+    const f = sel ? (+sel.value || 0) : 0;
+    let d;
+    try { d = await (await fetch('/api/flightlog.json?f=' + f, { cache: 'no-store' })).json(); } catch (e) { return; }
+    renderLink(d.link);
+    drawFlight(d);
+}
+
+// --- Flight graph: multiple traces vs time, each auto-scaled to its own range ---
+function drawFlight(d) {
+    const cv = document.getElementById('flChart');
+    if (!cv) return;
+    const ctx = cv.getContext('2d');
+    const W = cv.width, H = cv.height;
+    ctx.clearRect(0, 0, W, H);
+    const n = d.count || 0;
+    const note = document.getElementById('flNote'), leg = document.getElementById('flLegend');
+    if (n < 2) {
+        note.textContent = 'No flight logged yet — the graph fills in during a flight (one point per second).';
+        leg.innerHTML = '';
+        return;
+    }
+    const iv = d.interval_s || 1;
+    const pad = { l: 8, r: 8, t: 10, b: 20 };
+    const gx = W - pad.l - pad.r, gy = H - pad.t - pad.b;
+    ctx.strokeStyle = '#cdd7dc'; ctx.lineWidth = 1; ctx.strokeRect(pad.l, pad.t, gx, gy);
+    const xat = i => pad.l + gx * i / (n - 1);
+    const traces = [
+        { key: 'esc',  label: 'ESC temp',   unit: '°C',  col: '#c0392b', dp: 0 },
+        { key: 'head', label: 'Head speed', unit: 'rpm', col: '#2b6cb0', dp: 0 },
+        { key: 'v',    label: 'Battery',    unit: 'V',   col: '#2e8b57', dp: 2 },
+        { key: 'amps', label: 'Current',    unit: 'A',   col: '#e08a1e', dp: 1 },
+    ];
+    let legHtml = '';
+    for (const t of traces) {
+        const a = d[t.key];
+        if (!a || a.length < 2) continue;
+        const lo = Math.min.apply(null, a), hi = Math.max.apply(null, a);
+        const m = (hi - lo) * 0.08 || 1;                 // small margin (or 1 if flat)
+        const ymin = lo - m, range = (hi - lo + 2 * m) || 1;
+        ctx.strokeStyle = t.col; ctx.lineWidth = 1.8; ctx.beginPath();
+        for (let i = 0; i < n; i++) {
+            const x = xat(i), y = pad.t + gy * (1 - (a[i] - ymin) / range);
+            i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+        }
+        ctx.stroke();
+        legHtml += '<span style="white-space:nowrap;display:inline-block;margin:0 1em .2em 0">'
+                 + '<span style="color:' + t.col + ';font-weight:700">■</span> '
+                 + t.label + ' <b>' + a[n-1].toFixed(t.dp) + ' ' + t.unit + '</b>'
+                 + ' <span style="color:#8199a8">(' + lo.toFixed(t.dp) + '–' + hi.toFixed(t.dp) + ')</span></span>';
+    }
+    ctx.fillStyle = '#5a6b74'; ctx.font = '11px sans-serif';
+    ctx.textAlign = 'left';  ctx.fillText('0:00', pad.l, H - 5);
+    ctx.textAlign = 'right'; ctx.fillText(fmt(n * iv * 1000), pad.l + gx, H - 5);
+    leg.innerHTML = legHtml;
+    note.textContent = 'Each line auto-scaled to its own range (min–max in the key) so the shapes line up — watch ESC temp track head speed & current, and the battery sag under load.';
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    await populateFlightSelector();
+    const sel = document.getElementById('flSel');
+    if (sel) sel.addEventListener('change', loadFlight);
+    loadFlight();
+    // Refresh the selector (a new flight may have saved) and, only when viewing
+    // the CURRENT flight, redraw it live.
+    setInterval(async () => {
+        await populateFlightSelector();
+        if (sel && (+sel.value || 0) === 0) loadFlight();
+    }, 5000);
+});
+</script>
+<template id=helpContent><h2>Flight analysis</h2>
+<p>Everything the receiver recorded about a flight, for the current session and the last three saved flights.</p>
+<h3>How to use it</h3>
+<p>Pick a flight with the selector at the top. <b>Current</b> is live (it redraws during a flight); <b>Previous</b> and older are saved to flash, so they survive reboots and battery swaps — compare today with yesterday.</p>
+<h3>What you're seeing</h3>
+<ul>
+<li><b>Link statistics</b> &mdash; duration, average frame rate, average and longest gap between packets, and the gap-size distribution. A longest gap under ~30&thinsp;ms is excellent.</li>
+<li><b>Flight graph</b> &mdash; ESC temperature, head speed, battery voltage and current, one point per second. Each trace is auto-scaled to its own range (shown in the key) so their shapes can be compared.</li>
+</ul>
+<h3>Tips</h3>
+<p>Watch ESC temperature track head speed and current, and the battery sag under load. A brief signal dropout shows up honestly as the longest gap — the recording carries straight on through it.</p>
+</template>
+</body>
+</html>
