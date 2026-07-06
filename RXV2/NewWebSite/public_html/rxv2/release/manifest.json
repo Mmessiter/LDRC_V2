@@ -1,6 +1,42 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.212-ble-config",
+      "url": "https://messiter.com/rxv2/release/v0.9.212/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.212/littlefs.bin",
+      "notes": "BLUETOOTH! Configure the receiver from the new RXV2 iPhone app over Bluetooth LE - no hotspot-joining dance, faster and more dependable than WiFi, and perfect at the field (the WiFi web setup is unchanged for everyone else). The View-channels page is now silky: the receiver PUSHES channel data continuously over Bluetooth, bars and the 3D helicopter animate smoothly through radio hiccups, and the ARMED indicator is live. Home page shows one pill per transceiver slot - green 'receiving' follows whichever radio carries your transmitter right now. Also: WiFi+Bluetooth coexistence boot-loop cured, wrapped-banner layout fixed, and every help screen explains the ways to connect. Installing this also updates the web pages; your Rotorflight backups are preserved."
+    },
+    {
+      "name": "RXV2-0.9.211-ble-config",
+      "url": "https://messiter.com/rxv2/release/v0.9.211/firmware.bin",
+      "notes": ""
+    },
+    {
+      "name": "RXV2-0.9.210-ble-config",
+      "url": "https://messiter.com/rxv2/release/v0.9.210/firmware.bin",
+      "notes": ""
+    },
+    {
+      "name": "RXV2-0.9.209-ble-config",
+      "url": "https://messiter.com/rxv2/release/v0.9.209/firmware.bin",
+      "notes": ""
+    },
+    {
+      "name": "RXV2-0.9.208-ble-config",
+      "url": "https://messiter.com/rxv2/release/v0.9.208/firmware.bin",
+      "notes": ""
+    },
+    {
+      "name": "RXV2-0.9.207-ble-config",
+      "url": "https://messiter.com/rxv2/release/v0.9.207/firmware.bin",
+      "notes": ""
+    },
+    {
+      "name": "RXV2-0.9.206-ble-config",
+      "url": "https://messiter.com/rxv2/release/v0.9.206/firmware.bin",
+      "notes": ""
+    },
+    {
       "name": "RXV2-0.9.205-field-ap-persist",
       "url": "https://messiter.com/rxv2/release/v0.9.205/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.205/littlefs.bin",
@@ -27,42 +63,6 @@
     {
       "name": "RXV2-0.9.201-progressive-flightsave",
       "url": "https://messiter.com/rxv2/release/v0.9.201/firmware.bin",
-      "notes": ""
-    },
-    {
-      "name": "RXV2-0.9.200-boot-reason",
-      "url": "https://messiter.com/rxv2/release/v0.9.200/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.200/littlefs.bin",
-      "notes": ""
-    },
-    {
-      "name": "RXV2-0.9.199-back-buttons",
-      "url": "https://messiter.com/rxv2/release/v0.9.199/firmware.bin",
-      "notes": ""
-    },
-    {
-      "name": "RXV2-0.9.198-blackbox-split",
-      "url": "https://messiter.com/rxv2/release/v0.9.198/firmware.bin",
-      "notes": ""
-    },
-    {
-      "name": "RXV2-0.9.197-calm-menu",
-      "url": "https://messiter.com/rxv2/release/v0.9.197/firmware.bin",
-      "notes": ""
-    },
-    {
-      "name": "RXV2-0.9.196-snappy-web",
-      "url": "https://messiter.com/rxv2/release/v0.9.196/firmware.bin",
-      "notes": ""
-    },
-    {
-      "name": "RXV2-0.9.195-review-fixes",
-      "url": "https://messiter.com/rxv2/release/v0.9.195/firmware.bin",
-      "notes": ""
-    },
-    {
-      "name": "RXV2-0.9.194-crsf-default-fast-reboot",
-      "url": "https://messiter.com/rxv2/release/v0.9.194/firmware.bin",
       "notes": ""
     }
   ]
