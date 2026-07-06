@@ -286,6 +286,9 @@ inline void bleStart() {
     svc->start();
     NimBLEAdvertising* adv = NimBLEDevice::getAdvertising();
     adv->addServiceUUID(BLE_SVC_UUID);
+    // NimBLE 2.x does NOT copy the init() name into the advert payload —
+    // without this the scan list shows a nameless device (found on hardware).
+    adv->setName(g_effectiveName.c_str());
     adv->enableScanResponse(true);
     NimBLEDevice::startAdvertising();
     bleStarted = true;
