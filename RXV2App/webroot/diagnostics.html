@@ -196,7 +196,10 @@ function buildHeli3D() {
     camera.lookAt(0, 0.15, 0);
 
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-    renderer.setPixelRatio(window.devicePixelRatio || 1);
+    // Cap at 1.5×: a 3× iPhone panel means 9× the pixels of @1x — that,
+    // at 60 fps, was janking the page (~100 ms hitches) during full-stick
+    // sweeps. At this widget size 1.5× is visually identical.
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
     renderer.setClearColor(0x000000, 0);
     renderer.setSize(w, h, false);
 
@@ -502,6 +505,9 @@ function buildHeli3D() {
     let rotorAng = 0, tailAng = 0, lastT = 0;
     function frame(t) {
         requestAnimationFrame(frame);
+        // 30 fps: indistinguishable for this widget, halves the render load
+        // that was stealing main-thread time from the live channel bars.
+        if (t - lastT < 32) return;
         const dt = lastT ? Math.min(0.1, (t - lastT) / 1000) : 0;
         lastT = t;
         rotorAng += rotorRateRPS * 2 * Math.PI * dt;
@@ -578,8 +584,10 @@ function updatePose(ch, stale) {
     //   pitch fwd  → nose down       → negative angle about body +Z
     //   roll right → right side dips → positive angle about body +X
     if (heliQuat && window.THREE) {
-        const tq = new THREE.Quaternion();
-        const v  = new THREE.Vector3();
+        // reuse scratch objects — allocating per frame at 21 Hz feeds the GC
+        if (!window._poseTq) { window._poseTq = new THREE.Quaternion(); window._poseV = new THREE.Vector3(); }
+        const tq = window._poseTq;
+        const v  = window._poseV;
         if (Math.abs(yaw) > STICK_DEAD) {
             tq.setFromAxisAngle(v.set(0, 1, 0), -dYaw);
             heliQuat.multiply(tq);
@@ -618,17 +626,34 @@ function updatePose(ch, stale) {
 //  Bar paint + polling
 // ---------------------------------------------------------------------
 
+let _rowEls = null;      // cached row elements — 48 getElementById per frame adds up at 21 Hz
+let _lastStale = null;
 function paint(s) {
     const ch    = s.ch;
     const age   = s.age_ms;
     const stale = (age < 0) || (age > STALE_MS);
-    table.classList.toggle('stale', stale);
-    status.innerHTML = stale
-        ? '<span class=statusBad>No RC signal</span>'
-        : '<span class=statusOK>RC signal live</span>';
+    if (stale !== _lastStale) {
+        _lastStale = stale;
+        table.classList.toggle('stale', stale);
+        status.innerHTML = stale
+            ? '<span class=statusBad>No RC signal</span>'
+            : '<span class=statusOK>RC signal live</span>';
+    }
 
+    if (!_rowEls) {
+        _rowEls = [];
+        for (let i = 0; i < 16; ++i) _rowEls.push({
+            f: document.getElementById('f' + i),
+            v: document.getElementById('v' + i),
+            p: document.getElementById('p' + i),
+            us: null,
+        });
+    }
     for (let i = 0; i < 16; ++i) {
         const us = ch[i];
+        const e  = _rowEls[i];
+        if (e.us === us) continue;             // unchanged — skip the DOM entirely
+        e.us = us;
         // Bar fill: slightly wider than protocol range so extremes stay visible.
         const fillPct = Math.max(0, Math.min(100, ((us - FILL_LO) / (FILL_HI - FILL_LO)) * 100));
         let pctTxt;
@@ -640,9 +665,9 @@ function paint(s) {
             const u = Math.max(0, Math.min(100, ((us - CH_LO) / (CH_HI - CH_LO)) * 100));
             pctTxt = u.toFixed(1) + '%';
         }
-        document.getElementById('f' + i).style.width = fillPct.toFixed(1) + '%';
-        document.getElementById('v' + i).textContent = us;
-        document.getElementById('p' + i).textContent = pctTxt;
+        e.f.style.width = fillPct.toFixed(1) + '%';
+        e.v.textContent = us;
+        e.p.textContent = pctTxt;
     }
     updatePose(ch, stale);
 }
