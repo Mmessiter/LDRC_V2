@@ -104,6 +104,50 @@ tap EN).
   barrel input on the case, balance charging outside the transmitter.
   No charger circuitry on the PCB.
 
+## Connectors (rev-A standard — goodbye DuPont)
+
+V1's DuPont headers work but don't lock, don't polarise, and creep
+loose. Rev-A standardises on ONE lockable family for every panel loom:
+
+| What | Connector | Why |
+|------|-----------|-----|
+| Gimbals (per gimbal loom) | **JST-XH** (2.5 mm) | polarised + friction-locked, sturdy, easy to crimp or buy pre-crimped; the RC-world workhorse |
+| Switches ×8 loom | **JST-XH** | same family everywhere = one crimper, one housing stock |
+| Trims ×8 loom | **JST-XH** | |
+| Power button + latch | **JST-XH** 2/3-pin | |
+| Nextion display | **JST-XH** 4-pin | Nextion's own pigtail is XH — plugs straight in |
+| Battery (2S Li-ion) | **XT30** | polarised, solid, the RC standard for this current class |
+| I2C expansion | **Qwiic (JST-SH 1.0 mm)** + XH 4-pin twin | Qwiic opens the whole plug-and-play sensor ecosystem (INA219 boards included); XH twin for hand-made looms |
+| nRF24 PA/LNA module | 2×4 socket, direct | no loom — module seats on the PCB |
+| Teensy 4.1 / DevKitC | machined-pin sockets | replaceable processors |
+| JR bay | standard JR 5-pin | compatibility with third-party modules |
+
+Premium alternative if positive latching is wanted: **JST-GH**
+(1.25 mm, the Pixhawk standard — pre-crimped cables everywhere).
+Suggested tooling either way: Engineer PA-09 crimper, or simply buy
+pre-crimped XH leads and solder the loose ends at the panel parts.
+
+## Status LEDs — two truth-tellers
+
+V1's RGB semantics stay: **blue = booting/processing, red = trying to
+connect, green = connected.** Rev-A improves on it by letting each
+processor tell its own truth:
+
+1. **Primary panel LED = WS2812 chain on Teensy pin 2** — shows the
+   RC-link state exactly as V1 did (the Teensy owns that link, so this
+   LED never lies, even if the ESP32 is rebooting). One pin, and the
+   "chain" means we can add a second pixel later without wiring.
+2. **ESP32 DevKitC's onboard addressable RGB** (Malcolm spotted it!) —
+   shows WiFi/BLE/portal state (blue booting, red portal down, green
+   app/browser connected). The DevKitC mounts so this LED is visible
+   through a small window or a cheap 3 mm **light pipe** to the panel.
+   NB the onboard pixel is GPIO48 on DevKitC v1.0 and GPIO38 on v1.1 —
+   firmware handles both via a build flag.
+
+If a single visible LED is preferred later, the Teensy chain can mirror
+ESP32 status sent over the link — but two honest lights beat one
+occasionally-lying light.
+
 ## Retained from V1
 
 - **Same Nextion display as V1** (Serial1 @ 921600 — zero display-code
