@@ -389,7 +389,9 @@ function paintApAutoBanner(s) {
         const ssid = (s.net.ssid || 'your home WiFi');
         b.innerHTML = "📡 <b>AP-only mode auto-enabled</b> — home WiFi &lsquo;" + ssid.replace(/</g, '&lt;')
                     + "&rsquo; wasn't found (flying field). Tap to open WiFi settings and switch it off when you're back home.";
-        b.style.display = '';
+        // 'block', not '': clearing display leaves an <a> at inline, whose
+        // per-line backgrounds overlap when the text wraps (seen on iPhone).
+        b.style.display = 'block';
     } else {
         b.style.display = 'none';
     }
