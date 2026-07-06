@@ -738,8 +738,10 @@ async function tick() {
     // Self-pacing: aim for POLL_MS between REQUEST STARTS. On a slow link
     // the round-trip itself is the pacing — don't add a fixed gap on top
     // (that alone was costing a third of the Bluetooth frame rate).
+    // 15 ms floor keeps a sliver of air between polls — a saturated BLE
+    // link queues stalls; a lightly-paced one absorbs radio hiccups.
     const elapsed = performance.now() - t0;
-    setTimeout(tick, Math.max(0, POLL_MS - elapsed));
+    setTimeout(tick, Math.max(15, POLL_MS - elapsed));
 }
 document.addEventListener('DOMContentLoaded', () => setTimeout(tick, 200));
 document.addEventListener('visibilitychange', () => { _stopping = document.hidden; if (!_stopping) { _lastSample = 0; tick(); } });

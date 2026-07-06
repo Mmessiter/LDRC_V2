@@ -235,6 +235,12 @@ class BleReqCallbacks : public NimBLECharacteristicCallbacks {
         std::string v = c->getValue();
         if (v.empty()) return;
         if (v[0] == 'Q') {                              // new request
+            // The app is strictly one-request-at-a-time, so a new 'Q' while
+            // we are still pumping means it gave up on that response (stall
+            // timeout). Drop the stale pump immediately — otherwise its
+            // leftover chunks arrive ahead of the new response and derail
+            // the app's framing.
+            if (blePumping) { blePumping = false; bleBody = ""; bleHeaderFrame = ""; }
             size_t bar = v.find('|');
             if (bar == std::string::npos) return;
             bleInboxExpected = strtoul(v.substr(1, bar - 1).c_str(), nullptr, 10);
