@@ -529,6 +529,7 @@ function buildHeli3D() {
         tailDisc.visible = tailBlur;
         tailRim.visible  = tailBlur;
 
+        integratePose(dt);            // dead-reckon body rotation every frame
         heli.quaternion.copy(heliQuat);
         renderer.render(scene, camera);
     }
@@ -550,24 +551,43 @@ const _axisRoll  = { x: 1, y: 0, z: 0 };
 const _axisPitch = { x: 0, y: 0, z: 1 };
 const _axisYaw   = { x: 0, y: 1, z: 0 };
 
+// updatePose only STORES the latest stick command now. The rotation itself
+// is integrated in the render loop (integratePose below) at a steady 30 fps
+// — dead-reckoning at the last commanded rates. Data-frame gaps (e.g. the
+// iPhone pausing BLE ~once a second to service WiFi on its shared antenna)
+// no longer freeze the motion: sticks command RATES, and the rate between
+// two frames 100 ms apart is simply the last one heard.
+const poseCmd = { roll: 0, pitch: 0, yaw: 0, thr: 0, stale: true };
+
 function updatePose(ch, stale) {
     if (stale) {
+        poseCmd.stale = true;
         rotorRateRPS = 0;
         tailRateRPS  = 0;
         heliWrap.classList.add('heliStale');
-        lastTickMs = 0;
         return;
     }
     heliWrap.classList.remove('heliStale');
+    poseCmd.stale = false;
+    poseCmd.roll  = stick(ch[I_ROLL]);
+    poseCmd.pitch = stick(ch[I_PITCH]);
+    poseCmd.yaw   = stick(ch[I_YAW]);
+    poseCmd.thr   = unit(ch[I_THROTTLE]);
 
-    const now = performance.now();
-    const dt  = lastTickMs ? Math.min(0.25, (now - lastTickMs) / 1000) : 0;
-    lastTickMs = now;
+    // Realistic-ish flight RPM scaling. Below the POV threshold (3 RPS)
+    // the discrete blades are visible during spool-up; from ~idle on
+    // up the disc takes over. Tail rotor is geared ~4.7:1 off the main.
+    rotorRateRPS = 8  + 28  * poseCmd.thr;   // idle 8 RPS, full ~36 RPS (~2160 RPM)
+    tailRateRPS  = 30 + 110 * poseCmd.thr;   // idle 30 RPS, full ~140 RPS
+}
 
-    const roll  = stick(ch[I_ROLL]);
-    const pitch = stick(ch[I_PITCH]);
-    const yaw   = stick(ch[I_YAW]);
-    const thr   = unit(ch[I_THROTTLE]);
+// Called from the 30 fps render loop with the frame's dt.
+let _lastReadout = '';
+function integratePose(dt) {
+    if (poseCmd.stale || !dt) return;
+    const roll  = poseCmd.roll;
+    const pitch = poseCmd.pitch;
+    const yaw   = poseCmd.yaw;
 
     const dRoll  = roll  * ROLL_RATE_DPS  * dt * Math.PI / 180;
     const dPitch = pitch * PITCH_RATE_DPS * dt * Math.PI / 180;
@@ -584,7 +604,7 @@ function updatePose(ch, stale) {
     //   pitch fwd  → nose down       → negative angle about body +Z
     //   roll right → right side dips → positive angle about body +X
     if (heliQuat && window.THREE) {
-        // reuse scratch objects — allocating per frame at 21 Hz feeds the GC
+        // reuse scratch objects — allocating per frame feeds the GC
         if (!window._poseTq) { window._poseTq = new THREE.Quaternion(); window._poseV = new THREE.Vector3(); }
         const tq = window._poseTq;
         const v  = window._poseV;
@@ -608,18 +628,13 @@ function updatePose(ch, stale) {
     if (Math.abs(pitch) > STICK_DEAD) attPitch += pitch * PITCH_RATE_DPS * dt;
     if (Math.abs(yaw)   > STICK_DEAD) attYaw   += yaw   * YAW_RATE_DPS   * dt;
 
-    // Realistic-ish flight RPM scaling. Below the POV threshold (3 RPS)
-    // the discrete blades are visible during spool-up; from ~idle on
-    // up the disc takes over. Tail rotor is geared ~4.7:1 off the main.
-    rotorRateRPS = 8  + 28  * thr;     // idle 8 RPS, full ~36 RPS (~2160 RPM)
-    tailRateRPS  = 30 + 110 * thr;     // idle 30 RPS, full ~140 RPS
-
     const wrap = a => { let x = ((a + 180) % 360 + 360) % 360 - 180; return x.toFixed(0); };
-    heliReadout.textContent =
+    const txt =
         'roll '  + wrap(attRoll)  + '° · ' +
         'pitch ' + wrap(attPitch) + '° · ' +
         'yaw '   + wrap(attYaw)   + '° · ' +
-        'thr '   + Math.round(thr * 100) + '%';
+        'thr '   + Math.round(poseCmd.thr * 100) + '%';
+    if (txt !== _lastReadout) { _lastReadout = txt; heliReadout.textContent = txt; }
 }
 
 // ---------------------------------------------------------------------
