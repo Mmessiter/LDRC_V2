@@ -25,16 +25,13 @@ struct RootView: View {
     var body: some View {
         NavigationStack {
             switch link.state {
-            case .ready(let name):
+            case .ready:
+                // Full-screen, like the web UI added to the home screen: no
+                // navigation bar. Disconnect lives on the page's Bluetooth
+                // badge (bottom-right), via the rxv2 JS message bridge.
                 WebScreen(link: link)
-                    .ignoresSafeArea(edges: .bottom)
-                    .navigationTitle(name)
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .topBarTrailing) {
-                            Button("Disconnect") { link.disconnect() }
-                        }
-                    }
+                    .ignoresSafeArea()
+                    .toolbar(.hidden, for: .navigationBar)
             default:
                 ScannerView()
             }
