@@ -403,17 +403,33 @@
     // Always-visible link badge: says at a glance whether this screen is
     // riding Bluetooth (iPhone app) or WiFi (browser). Scripts load with
     // `defer`, so the DOM is ready — safe to append immediately.
+    //
+    // Inside the app (ble:) the web UI runs full-screen with no native
+    // chrome, so the badge doubles as the Disconnect button: tap →
+    // confirm → post 'disconnect' over the rxv2 JS→Swift bridge.
     (function () {
-        const ble = LDRC.viaBle;
-        const b = document.createElement('div');
+        const ble    = LDRC.viaBle;
+        const bridge = ble && window.webkit && window.webkit.messageHandlers
+                           && window.webkit.messageHandlers.rxv2;
+        const b = document.createElement(bridge ? 'button' : 'div');
         b.id = 'linkBadge';
+        b.type = bridge ? 'button' : undefined;
         b.textContent = ble ? '🔵 Bluetooth' : '🛜 WiFi';
         b.style.cssText =
-            'position:fixed;right:10px;bottom:calc(8px + env(safe-area-inset-bottom,0px));'
-            + 'z-index:60;padding:.3em .75em;border-radius:999px;font-size:.72em;font-weight:600;'
-            + 'letter-spacing:.03em;pointer-events:none;user-select:none;'
-            + (ble ? 'background:rgba(74,122,201,.88);color:#eaf3ff;box-shadow:0 2px 8px rgba(30,70,140,.35)'
-                   : 'background:rgba(95,160,153,.85);color:#eafff9;box-shadow:0 2px 8px rgba(40,100,90,.30)');
+            'position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));'
+            + 'z-index:60;padding:.5em 1em;border-radius:999px;font-size:.95em;font-weight:600;'
+            + 'letter-spacing:.03em;user-select:none;border:0;font-family:inherit;'
+            + (bridge ? 'pointer-events:auto;cursor:pointer;' : 'pointer-events:none;')
+            + (ble ? 'background:rgba(74,122,201,.92);color:#eaf3ff;box-shadow:0 3px 10px rgba(30,70,140,.40)'
+                   : 'background:rgba(95,160,153,.88);color:#eafff9;box-shadow:0 3px 10px rgba(40,100,90,.35)');
+        if (bridge) {
+            b.onclick = async () => {
+                const ok = await LDRC.confirm(
+                    'Disconnect Bluetooth and return to the receiver list?',
+                    { icon: '🔵', title: 'Disconnect?', yes: 'Disconnect', no: 'Stay', kind: 'warn' });
+                if (ok) window.webkit.messageHandlers.rxv2.postMessage('disconnect');
+            };
+        }
         document.body.appendChild(b);
     })();
 })();

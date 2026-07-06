@@ -34,6 +34,8 @@ struct WebScreen: UIViewRepresentable {
     }, true);
     """
 
+    func makeCoordinator() -> Coordinator { Coordinator(link: link) }
+
     func makeUIView(context: Context) -> WKWebView {
         let cfg = WKWebViewConfiguration()
         cfg.setURLSchemeHandler(BleSchemeHandler(link: link), forURLScheme: "ble")
@@ -41,6 +43,10 @@ struct WebScreen: UIViewRepresentable {
                                 injectionTime: .atDocumentEnd,
                                 forMainFrameOnly: false)
         cfg.userContentController.addUserScript(shim)
+        // JS → app bridge: the page's link badge posts 'disconnect' here
+        // (window.webkit.messageHandlers.rxv2). The web UI runs full-screen
+        // with no native chrome, so the badge IS the disconnect button.
+        cfg.userContentController.add(context.coordinator, name: "rxv2")
         let web = WKWebView(frame: .zero, configuration: cfg)
         web.isOpaque = false
         web.scrollView.contentInsetAdjustmentBehavior = .automatic
@@ -49,4 +55,17 @@ struct WebScreen: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: WKWebView, context: Context) {}
+
+    final class Coordinator: NSObject, WKScriptMessageHandler {
+        private let link: BleLink
+        init(link: BleLink) { self.link = link }
+
+        func userContentController(_ ucc: WKUserContentController,
+                                   didReceive message: WKScriptMessage) {
+            guard message.name == "rxv2" else { return }
+            if (message.body as? String) == "disconnect" {
+                DispatchQueue.main.async { self.link.disconnect() }
+            }
+        }
+    }
 }
