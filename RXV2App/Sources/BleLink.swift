@@ -57,6 +57,7 @@ final class BleLink: NSObject, ObservableObject {
     private var rxCode = 0
     private var rxType = ""
     private var rxLocation = ""
+    private var rxDiscarded = 0        // stale bytes skipped while hunting the header
     private var timeoutTimer: Timer?
 
     override init() {
@@ -109,27 +110,45 @@ final class BleLink: NSObject, ObservableObject {
               let p = peripheral, let req = reqChr, case .ready = state else { return }
         queue.removeFirst()
         inFlight = next
-        rxHeader = Data(); rxBody = Data(); rxExpected = -1
+        rxHeader = Data(); rxBody = Data(); rxExpected = -1; rxDiscarded = 0
 
-        // frame + chunk the request
-        let maxLen = max(20, p.maximumWriteValueLength(for: .withResponse))
-        var first = Data("Q\(next.payload.count)|".utf8)
-        var offset = 0
-        let room = maxLen - first.count
-        let take = min(room, next.payload.count)
-        first.append(next.payload.prefix(take))
-        offset = take
-        p.writeValue(first, for: req, type: .withResponse)
-        while offset < next.payload.count {
-            var cont = Data("+".utf8)
-            let n = min(maxLen - 1, next.payload.count - offset)
-            cont.append(next.payload.subdata(in: offset..<offset + n))
-            offset += n
-            p.writeValue(cont, for: req, type: .withResponse)
+        // Small requests (polls — the vast majority) go write-WITHOUT-response
+        // when the characteristic allows it: the reply can ride the very next
+        // radio event instead of waiting for the write's own acknowledgement
+        // first. That halves the per-poll latency. Multi-frame requests keep
+        // acknowledged writes for ordering safety.
+        let canWNR  = req.properties.contains(.writeWithoutResponse)
+        let wnrLen  = max(20, p.maximumWriteValueLength(for: .withoutResponse))
+        let ackLen  = max(20, p.maximumWriteValueLength(for: .withResponse))
+        let prefix  = "Q\(next.payload.count)|"
+        if canWNR && prefix.utf8.count + next.payload.count <= wnrLen {
+            var first = Data(prefix.utf8)
+            first.append(next.payload)
+            p.writeValue(first, for: req, type: .withoutResponse)
+        } else {
+            var first = Data(prefix.utf8)
+            var offset = 0
+            let take = min(ackLen - first.count, next.payload.count)
+            first.append(next.payload.prefix(take))
+            offset = take
+            p.writeValue(first, for: req, type: .withResponse)
+            while offset < next.payload.count {
+                var cont = Data("+".utf8)
+                let n = min(ackLen - 1, next.payload.count - offset)
+                cont.append(next.payload.subdata(in: offset..<offset + n))
+                offset += n
+                p.writeValue(cont, for: req, type: .withResponse)
+            }
         }
+        armTimeout(4)   // generous first-byte window; each chunk re-arms 3 s
+    }
 
+    // Watchdog: instead of one long dead-air timeout, the timer re-arms on
+    // every received chunk. A healthy response of any size streams freely;
+    // a genuinely stuck one fails fast so the page can ask again.
+    private func armTimeout(_ seconds: TimeInterval) {
         timeoutTimer?.invalidate()
-        timeoutTimer = Timer.scheduledTimer(withTimeInterval: 12, repeats: false) { [weak self] _ in
+        timeoutTimer = Timer.scheduledTimer(withTimeInterval: seconds, repeats: false) { [weak self] _ in
             self?.finish(.failure(NSError(domain: "BleLink", code: 504,
                 userInfo: [NSLocalizedDescriptionKey: "Receiver did not answer (timeout)"])))
         }
@@ -145,25 +164,45 @@ final class BleLink: NSObject, ObservableObject {
 
     private func handleNotify(_ data: Data) {
         guard inFlight != nil else { return }
+        armTimeout(3)   // bytes are flowing — keep the watchdog fed
         if rxExpected < 0 {
-            // still collecting the header line
+            // Hunting for the header line. After a timed-out predecessor,
+            // leftover chunks of the abandoned response can arrive first —
+            // discard line by line until something parses as a real
+            // "R<code>|<type>|<len>|<location>" header (self-resync).
             rxHeader.append(data)
-            guard let nl = rxHeader.firstIndex(of: 0x0A) else { return }
-            let headLine = String(decoding: rxHeader[rxHeader.startIndex..<nl], as: UTF8.self)
-            let rest = rxHeader[(nl + 1)...]
-            // "R<code>|<type>|<len>|<location>"
-            guard headLine.hasPrefix("R") else {
-                finish(.failure(NSError(domain: "BleLink", code: 502,
-                    userInfo: [NSLocalizedDescriptionKey: "Bad response framing"])))
-                return
+            while true {
+                guard let nl = rxHeader.firstIndex(of: 0x0A) else {
+                    if rxHeader.count + rxDiscarded > 32768 {
+                        finish(.failure(NSError(domain: "BleLink", code: 502,
+                            userInfo: [NSLocalizedDescriptionKey: "Bad response framing"])))
+                    }
+                    return
+                }
+                let headLine = String(decoding: rxHeader[rxHeader.startIndex..<nl], as: UTF8.self)
+                if headLine.hasPrefix("R") {
+                    let parts = headLine.dropFirst().split(separator: "|", maxSplits: 3,
+                                                           omittingEmptySubsequences: false)
+                    if parts.count >= 3, let code = Int(parts[0]), let len = Int(parts[2]),
+                       code >= 100, code < 600, len >= 0 {
+                        rxCode = code
+                        rxType = String(parts[1])
+                        rxExpected = len
+                        rxLocation = parts.count > 3 ? String(parts[3]) : ""
+                        rxBody = Data(rxHeader[(nl + 1)...])
+                        rxHeader = Data()
+                        break
+                    }
+                }
+                // stale line — skip it and keep hunting
+                rxDiscarded += rxHeader.distance(from: rxHeader.startIndex, to: nl) + 1
+                rxHeader = Data(rxHeader[(nl + 1)...])
+                if rxDiscarded > 32768 {
+                    finish(.failure(NSError(domain: "BleLink", code: 502,
+                        userInfo: [NSLocalizedDescriptionKey: "Bad response framing"])))
+                    return
+                }
             }
-            let parts = headLine.dropFirst().split(separator: "|", maxSplits: 3,
-                                                   omittingEmptySubsequences: false)
-            rxCode = Int(parts.count > 0 ? parts[0] : "0") ?? 0
-            rxType = parts.count > 1 ? String(parts[1]) : "text/plain"
-            rxExpected = Int(parts.count > 2 ? parts[2] : "0") ?? 0
-            rxLocation = parts.count > 3 ? String(parts[3]) : ""
-            rxBody = Data(rest)
         } else {
             rxBody.append(data)
         }
