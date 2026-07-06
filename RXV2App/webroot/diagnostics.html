@@ -705,16 +705,44 @@ document.getElementById('fsClear').addEventListener('click', async () => {
 refreshFsStatus();
 
 let _stopping = false;
+let _lastSample = 0, _period = POLL_MS, _lastDur = 0;
+
+// Match each bar's glide time to the real sample period, so however fast
+// the link actually is (WiFi ~20 fps, Bluetooth ~8-12 fps with jitter),
+// bars slide smoothly between samples instead of stepping. The period is
+// an EMA of measured arrival times; the duration only rewrites styles
+// when it changes meaningfully.
+function syncGlide() {
+    const d = Math.min(180, Math.max(45, Math.round(_period * 1.1)));
+    if (Math.abs(d - _lastDur) < 15) return;
+    _lastDur = d;
+    document.querySelectorAll('.chFill').forEach(el => {
+        el.style.transitionDuration = d + 'ms, 200ms, 200ms';   // width, background, opacity
+    });
+}
+
 async function tick() {
     if (_stopping) return;
+    const t0 = performance.now();
     try {
         const r = await fetch('/api/channels.json', { cache: 'no-store' });
-        if (r.ok) paint(await r.json());
+        if (r.ok) {
+            const j = await r.json();
+            const now = performance.now();
+            if (_lastSample) _period = _period * 0.8 + (now - _lastSample) * 0.2;
+            _lastSample = now;
+            syncGlide();
+            paint(j);
+        }
     } catch (e) { /* single misses are fine */ }
-    setTimeout(tick, POLL_MS);
+    // Self-pacing: aim for POLL_MS between REQUEST STARTS. On a slow link
+    // the round-trip itself is the pacing — don't add a fixed gap on top
+    // (that alone was costing a third of the Bluetooth frame rate).
+    const elapsed = performance.now() - t0;
+    setTimeout(tick, Math.max(0, POLL_MS - elapsed));
 }
 document.addEventListener('DOMContentLoaded', () => setTimeout(tick, 200));
-document.addEventListener('visibilitychange', () => { _stopping = document.hidden; if (!_stopping) tick(); });
+document.addEventListener('visibilitychange', () => { _stopping = document.hidden; if (!_stopping) { _lastSample = 0; tick(); } });
 </script>
 <template id=helpContent><h2>View Channels</h2>
 <p>Shows the 16 RC channels arriving from the transmitter in real time, plus a 3-D model helicopter that mirrors your stick movements (roll, pitch, yaw, throttle, collective).</p>
