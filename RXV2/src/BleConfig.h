@@ -64,6 +64,15 @@ inline volatile bool bleClientConnected = false;
 inline bool          bleStarted         = false;   // advertising / accepting connections
 inline bool          bleInited          = false;   // controller+stack up (once, at boot)
 
+// Continuous channel streaming ("View channels" live bars): when armed, the
+// receiver pushes compact "S|us0,..,us15|age\n" frames on the notify
+// characteristic whenever the bridge is otherwise idle. Push beats polling:
+// no request leg, so stick-to-screen latency is one radio slot + frame gap.
+inline bool     bleStreamOn   = false;
+inline uint32_t bleStreamMs   = 50;      // frame interval (20-200 clamped)
+inline uint32_t bleStreamLast = 0;
+inline uint32_t bleStreamArm  = 0;       // page re-arms every ~25 s; auto-off at 60
+
 inline String  bleInbox;            // accumulating request payload
 inline size_t  bleInboxExpected = 0;
 inline volatile bool bleReqReady = false;   // full request waiting for blePoll()
@@ -396,11 +405,32 @@ inline void bleExecuteRequest() {
     bleReqReady = false;
 }
 
+// Emit one channel frame when the bridge is idle and the interval elapsed.
+// Never interleaves with a response (gated on !blePumping && !bleReqReady),
+// so the app can only ever see an "S|" line BETWEEN responses — its header
+// hunt forwards those out of band. Best-effort notify: a congested stack
+// just drops the frame; the next one is 50 ms away.
+inline void bleStreamPoll() {
+    if (!bleStreamOn || !bleClientConnected || !bleRespChr || bleReqReady || blePumping) return;
+    uint32_t now = millis();
+    if ((uint32_t)(now - bleStreamArm) > 60000) { bleStreamOn = false; return; }   // page gone
+    if ((uint32_t)(now - bleStreamLast) < bleStreamMs) return;
+    bleStreamLast = now;
+    char f[160];
+    int n = snprintf(f, sizeof(f), "S|");
+    for (int i = 0; i < 16; ++i)
+        n += snprintf(f + n, sizeof(f) - n, "%u%s", (unsigned)channelMicros[i], (i < 15) ? "," : "");
+    long age = lastChannelDataMs ? (long)(millis() - lastChannelDataMs) : -1;
+    n += snprintf(f + n, sizeof(f) - n, "|%ld\n", age);
+    bleRespChr->notify((const uint8_t*)f, (size_t)n);
+}
+
 inline void blePoll() {
     if (!bleStarted) return;
     if (bleReqReady && !blePumping) bleExecuteRequest();
     if (!blePumping || !bleRespChr || !bleClientConnected) {
         if (blePumping && !bleClientConnected) blePumping = false;   // client gone — drop it
+        bleStreamPoll();   // idle — the stream may speak
         return;
     }
     size_t mtu   = NimBLEDevice::getMTU();
