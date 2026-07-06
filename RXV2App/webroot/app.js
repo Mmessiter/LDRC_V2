@@ -17,6 +17,11 @@
         state: null,
         events: null,
 
+        // True when this page is being served through the iPhone app's
+        // Bluetooth bridge (custom ble:// scheme) rather than WiFi/HTTP.
+        // Pages use it to adapt wording; app.js shows the link badge.
+        viaBle: location.protocol === 'ble:',
+
         async fetchState() {
             try {
                 const r = await fetch('/api/state.json', { cache: 'no-store' });
@@ -171,10 +176,25 @@
             const homeTip = (location.pathname === '/' || location.pathname === '/index.html') ? ''
                 : '<p class=muted style="margin-top:1em;border-top:1px solid rgba(125,158,176,.25);padding-top:.8em">'
                 + '🏠 Tap the <b>home button</b> (top-left) any time to return to the menu.</p>';
+            // Shared "ways to connect" section — appears in every page's help,
+            // so users always know which pipe they're on and what the options are.
+            const linkTip =
+                '<div style="margin-top:1em;border-top:1px solid rgba(125,158,176,.25);padding-top:.8em">'
+                + '<h3 style="margin:.2em 0 .4em">📡 Ways to connect</h3>'
+                + '<p class=muted style="margin:.2em 0 .5em">Right now you are connected over '
+                + (this.viaBle ? '<b>Bluetooth</b> (the iPhone app).' : '<b>WiFi</b> (browser).') + '</p>'
+                + '<ul style="margin:.2em 0;padding-left:1.2em">'
+                + '<li><b>Bluetooth</b> — the RXV2 iPhone app. Nothing to join, no network needed; ideal at the flying field.</li>'
+                + '<li><b>WiFi</b> — any browser: join the receiver’s own hotspot (named after your model) and open '
+                + '<b>http://192.168.4.1</b> — or, when the receiver is on your home network, simply '
+                + '<b>http://&lt;model-name&gt;.local</b>.</li>'
+                + '<li><b>Android?</b> The app is Apple-only for now, so the poor unfortunate Android owner '
+                + 'must take the WiFi route above. 😉</li>'
+                + '</ul></div>';
             const overlay = document.createElement('div');
             overlay.className = 'helpModal';
             overlay.innerHTML =
-                '<div class=helpPanel>' + html + homeTip +
+                '<div class=helpPanel>' + html + linkTip + homeTip +
                 '<button class=helpClose type=button>Got it</button>' +
                 '</div>';
             const close = () => overlay.remove();
@@ -379,4 +399,21 @@
     // remain suspect until something actually arrives).
     LDRC.markStale  = function() { document.body.classList.add('stale-values'); };
     LDRC.clearStale = function() { document.body.classList.remove('stale-values'); };
+
+    // Always-visible link badge: says at a glance whether this screen is
+    // riding Bluetooth (iPhone app) or WiFi (browser). Scripts load with
+    // `defer`, so the DOM is ready — safe to append immediately.
+    (function () {
+        const ble = LDRC.viaBle;
+        const b = document.createElement('div');
+        b.id = 'linkBadge';
+        b.textContent = ble ? '🔵 Bluetooth' : '🛜 WiFi';
+        b.style.cssText =
+            'position:fixed;right:10px;bottom:calc(8px + env(safe-area-inset-bottom,0px));'
+            + 'z-index:60;padding:.3em .75em;border-radius:999px;font-size:.72em;font-weight:600;'
+            + 'letter-spacing:.03em;pointer-events:none;user-select:none;'
+            + (ble ? 'background:rgba(74,122,201,.88);color:#eaf3ff;box-shadow:0 2px 8px rgba(30,70,140,.35)'
+                   : 'background:rgba(95,160,153,.85);color:#eafff9;box-shadow:0 2px 8px rgba(40,100,90,.30)');
+        document.body.appendChild(b);
+    })();
 })();
