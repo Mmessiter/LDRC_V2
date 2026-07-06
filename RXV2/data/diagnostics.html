@@ -15,7 +15,7 @@
 .chIdx{color:#7a8b95;font-size:.9em;text-align:right;min-width:1.2em}
 .chLbl{color:#445;font-size:.95em;min-width:5em;white-space:nowrap}
 .chTrack{position:relative;height:24px;background:#eef0f2;border-radius:4px;overflow:hidden}
-.chFill{position:absolute;left:0;top:0;bottom:0;width:0;transition:width 50ms linear,background 200ms,opacity 200ms;border-radius:4px}
+.chFill{position:absolute;left:0;top:0;bottom:0;width:0;transition:background 200ms,opacity 200ms;border-radius:4px}
 .chVal{position:absolute;left:6px;top:0;bottom:0;display:flex;align-items:center;font-size:.88em;color:#222;text-shadow:0 0 2px rgba(255,255,255,.85)}
 .chPct{font-size:.88em;color:#445;min-width:3.6em;text-align:right}
 .stale .chFill{opacity:.25}
@@ -664,13 +664,13 @@ function paint(s) {
             us: null,
         });
     }
+    setChannelTargets(ch, stale);              // bars animate towards these (loop below)
     for (let i = 0; i < 16; ++i) {
         const us = ch[i];
         const e  = _rowEls[i];
         if (e.us === us) continue;             // unchanged — skip the DOM entirely
         e.us = us;
-        // Bar fill: slightly wider than protocol range so extremes stay visible.
-        const fillPct = Math.max(0, Math.min(100, ((us - FILL_LO) / (FILL_HI - FILL_LO)) * 100));
+        // numeric readouts show the REAL latest sample (bars may be mid-glide)
         let pctTxt;
         if (CH_BIPOLAR[i]) {
             const v = ((us - CH_MID) / ((CH_HI - CH_LO) / 2)) * 100;
@@ -680,12 +680,55 @@ function paint(s) {
             const u = Math.max(0, Math.min(100, ((us - CH_LO) / (CH_HI - CH_LO)) * 100));
             pctTxt = u.toFixed(1) + '%';
         }
-        e.f.style.width = fillPct.toFixed(1) + '%';
         e.v.textContent = us;
         e.p.textContent = pctTxt;
     }
     updatePose(ch, stale);
 }
+
+// ---- bar animation: extrapolate-and-chase, 30 fps -------------------
+// Each sample records per-channel velocity. Between samples the target is
+// extended along that velocity for up to EXTRAP_MS (so a ~100-150 ms link
+// gap mid-sweep keeps the bar moving), and the displayed position chases
+// the prediction with a damped approach (TAU) — continuous motion, no
+// hard stops, self-correcting the moment real data lands.
+const _barTgt = new Array(16).fill(1500);
+const _barVel = new Array(16).fill(0);       // µs per ms
+const _barPos = new Array(16).fill(null);
+let _barSampleT = 0;
+
+function setChannelTargets(ch, stale) {
+    const now = performance.now();
+    const dtS = _barSampleT ? (now - _barSampleT) : 0;
+    for (let i = 0; i < 16; ++i) {
+        const v = ch[i];
+        _barVel[i] = (!stale && dtS > 5 && dtS < 400) ? (v - _barTgt[i]) / dtS : 0;
+        _barTgt[i] = v;
+    }
+    _barSampleT = now;
+}
+
+const EXTRAP_MS = 140, BAR_TAU = 55;
+let _lastBarT = 0;
+function animateBars(now) {
+    requestAnimationFrame(animateBars);
+    if (now - _lastBarT < 32) return;                       // ~30 fps is plenty
+    const dt = _lastBarT ? Math.min(100, now - _lastBarT) : 16;
+    _lastBarT = now;
+    if (!_rowEls || !_barSampleT) return;
+    const ex = Math.min(now - _barSampleT, EXTRAP_MS);
+    const k  = 1 - Math.exp(-dt / BAR_TAU);
+    for (let i = 0; i < 16; ++i) {
+        const pred = Math.max(500, Math.min(2500, _barTgt[i] + _barVel[i] * ex));
+        let p = (_barPos[i] == null) ? pred : _barPos[i] + (pred - _barPos[i]) * k;
+        if (Math.abs(p - pred) < 0.5) p = pred;
+        if (_barPos[i] === p) continue;
+        _barPos[i] = p;
+        const fillPct = Math.max(0, Math.min(100, ((p - FILL_LO) / (FILL_HI - FILL_LO)) * 100));
+        _rowEls[i].f.style.width = fillPct.toFixed(2) + '%';
+    }
+}
+requestAnimationFrame(animateBars);
 
 // --- Failsafe (no-transmitter) positions ---------------------------------
 function setFsStatus(set) {
@@ -760,17 +803,12 @@ let _lastSample = 0, _period = POLL_MS, _lastDur = 0;
 // bars slide smoothly between samples instead of stepping. The period is
 // an EMA of measured arrival times; the duration only rewrites styles
 // when it changes meaningfully.
-function syncGlide() {
-    // 0.6× the sample period, capped at 90 ms: long enough to melt the
-    // steps together, short enough not to feel laggy — glide time IS
-    // added latency, so keep it lean.
-    const d = Math.min(90, Math.max(40, Math.round(_period * 0.6)));
-    if (Math.abs(d - _lastDur) < 12) return;
-    _lastDur = d;
-    document.querySelectorAll('.chFill').forEach(el => {
-        el.style.transitionDuration = d + 'ms, 200ms, 200ms';   // width, background, opacity
-    });
-}
+// Bars animate game-style now (see animateBars): a 30 fps loop chases each
+// channel's target with a damped approach and briefly EXTRAPOLATES along
+// its velocity through short link gaps (the iPhone parks BLE ~100 ms about
+// once a second to service WiFi on the shared antenna). CSS width
+// transitions are gone — one smoother, no queueing, no dead stops.
+function syncGlide() {}   // retired — kept so older call sites are harmless
 
 // ---- pushed channel stream (Bluetooth app only) ----------------------
 // The receiver notifies "S|us0,..,us15|age" frames continuously; the app
