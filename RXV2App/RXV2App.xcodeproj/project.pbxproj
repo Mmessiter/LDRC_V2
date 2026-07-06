@@ -19,7 +19,7 @@
 		31D9CCE1F50EA255F61EE94E /* BleLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BleLink.swift; sourceTree = "<group>"; };
 		49DABC3AF434C057351F857E /* WebScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebScreen.swift; sourceTree = "<group>"; };
 		768FFE82BD28C7F04C99E65F /* BleSchemeHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BleSchemeHandler.swift; sourceTree = "<group>"; };
-		F3007D2643EBD787A085BCC6 /* RXV2App.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = RXV2App.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F3007D2643EBD787A085BCC6 /* RXV2App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RXV2App.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F98EE89DF588F895922BB9AF /* webroot */ = {isa = PBXFileReference; lastKnownFileType = folder; path = webroot; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
@@ -257,6 +257,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = ANLD6T79T5;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -276,6 +277,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = ANLD6T79T5;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
