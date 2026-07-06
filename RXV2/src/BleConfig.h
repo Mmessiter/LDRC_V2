@@ -416,12 +416,20 @@ inline void bleStreamPoll() {
     if ((uint32_t)(now - bleStreamArm) > 60000) { bleStreamOn = false; return; }   // page gone
     if ((uint32_t)(now - bleStreamLast) < bleStreamMs) return;
     bleStreamLast = now;
-    char f[160];
+    char f[170];
     int n = snprintf(f, sizeof(f), "S|");
     for (int i = 0; i < 16; ++i)
         n += snprintf(f + n, sizeof(f) - n, "%u%s", (unsigned)channelMicros[i], (i < 15) ? "," : "");
     long age = lastChannelDataMs ? (long)(millis() - lastChannelDataMs) : -1;
-    n += snprintf(f + n, sizeof(f) - n, "|%ld\n", age);
+    // trailing field: arming state (-1 no arming channel, 0 disarmed, 1 armed)
+    // so the page's live ARMED indicator rides the stream instead of costing
+    // a 2.5 kB state poll every second (which paused the stream — the
+    // "brief pauses" Malcolm saw). Same computation as /api/state.json.
+    bool live    = (rx.lastMillis != 0) && ((uint32_t)(millis() - rx.lastMillis) < 2000);
+    bool armedNow = live && armingChannel >= 1 && armingChannel <= 16 &&
+                    channelMicros[armingChannel - 1] > 1500;
+    int armState = armingChannel ? (armedNow ? 1 : 0) : -1;
+    n += snprintf(f + n, sizeof(f) - n, "|%ld|%d\n", age, armState);
     bleRespChr->notify((const uint8_t*)f, (size_t)n);
 }
 
