@@ -61,7 +61,8 @@ constexpr size_t BLE_PUMP_BUDGET  = 6 * 1024;    // max bytes notified per blePo
 //*********************************************************************
 
 inline volatile bool bleClientConnected = false;
-inline bool          bleStarted         = false;
+inline bool          bleStarted         = false;   // advertising / accepting connections
+inline bool          bleInited          = false;   // controller+stack up (once, at boot)
 
 inline String  bleInbox;            // accumulating request payload
 inline size_t  bleInboxExpected = 0;
@@ -263,17 +264,25 @@ class BleServerCallbacks : public NimBLEServerCallbacks {
         bleReqReady = false;
         blePumping  = false;
         events.add("BLE app disconnected");
-        NimBLEDevice::startAdvertising();
+        if (bleStarted) NimBLEDevice::startAdvertising();   // not when BLE is meant to be off
     }
 };
 
 //*********************************************************************
 //  bleStart / bleStop — mirror the WiFi lifecycle exactly
+//
+//  The controller is initialised ONCE at boot (bleInitOnce, from setup)
+//  and never de-initialised: enabling the BT controller while WiFi is
+//  mid-connect trips the coexistence layer's abort() (seen on hardware
+//  via the NET_NO_WIFI → "TX lost, WiFi back up" path, 0.9.207 bootloop).
+//  An initialised stack that isn't advertising transmits nothing, so the
+//  flying rule — no BLE emissions when WiFi is off — still holds;
+//  start/stop below only gate advertising + live connections.
 //*********************************************************************
 
-inline void bleStart() {
-    if (bleStarted) return;
-    NimBLEDevice::init(g_effectiveName.c_str());        // adv name = model name
+inline void bleInitOnce() {
+    if (bleInited) return;
+    NimBLEDevice::init(g_effectiveName.c_str());        // GAP name = model name
     NimBLEDevice::setMTU(517);
     NimBLEDevice::setPower(ESP_PWR_LVL_P3);             // modest: bench-range only, kind to the nRF24s
     NimBLEServer* srv = NimBLEDevice::createServer();
@@ -290,6 +299,13 @@ inline void bleStart() {
     // without this the scan list shows a nameless device (found on hardware).
     adv->setName(g_effectiveName.c_str());
     adv->enableScanResponse(true);
+    bleInited = true;
+    Serial.println("[ble] stack initialised (silent)");
+}
+
+inline void bleStart() {
+    if (bleStarted) return;
+    bleInitOnce();                       // normally already done in setup()
     NimBLEDevice::startAdvertising();
     bleStarted = true;
     Serial.printf("[ble] advertising as '%s'\n", g_effectiveName.c_str());
@@ -298,12 +314,18 @@ inline void bleStart() {
 
 inline void bleStop() {
     if (!bleStarted) return;
-    NimBLEDevice::deinit(true);
-    bleStarted = false;
+    bleStarted = false;                  // first: stops onDisconnect re-advertising
+    NimBLEDevice::stopAdvertising();
+    NimBLEServer* srv = NimBLEDevice::getServer();
+    if (srv) {                           // drop live phone links — truly silent now
+        for (int i = 0; srv->getConnectedCount() > 0 && i < 50; i++) {
+            srv->disconnect(srv->getPeerInfo(0));
+            delay(10);                   // let the host task run the teardown
+        }
+    }
     bleClientConnected = false;
     bleReqReady = false;
     blePumping  = false;
-    bleRespChr  = nullptr;
     Serial.println("[ble] off");
     events.add("BLE config off");
 }

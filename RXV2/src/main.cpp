@@ -334,6 +334,13 @@ void setup() {
     registerWebRoutes();
 
     //*****************************************************************
+    // BLE stack up-front (silent — no advertising until WiFi config
+    // mode). Igniting the BT controller later, while WiFi is mid-
+    // connect, aborts in the IDF coexistence layer (0.9.207 bootloop).
+    //*****************************************************************
+    bleInitOnce();
+
+    //*****************************************************************
     // Net state machine — RF discovery window unless forced to WiFi
     //*****************************************************************
     if (forceWifiMode) {
