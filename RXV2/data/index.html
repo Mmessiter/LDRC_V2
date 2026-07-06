@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Home &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=131">
-<script src="/app.js?v=131" defer></script>
+<link rel=stylesheet href="/style.css?v=132">
+<script src="/app.js?v=132" defer></script>
 <style>
 /* Friendly confirmation card (replaces the browser's utilitarian confirm()) */
 .modal{position:fixed;inset:0;background:rgba(16,38,58,.55);backdrop-filter:blur(2px);
@@ -18,6 +18,7 @@
  padding:1.2em 1.2em 1em;box-shadow:0 12px 40px rgba(0,0,0,.4);text-align:center;
  animation:mpop .18s ease-out}
 @keyframes mpop{from{transform:scale(.92);opacity:.4}to{transform:scale(1);opacity:1}}
+@keyframes rxPulse{from{opacity:.25;transform:scale(.75)}to{opacity:1;transform:scale(1.05)}}
 .mcard .mico{font-size:2.6em;line-height:1;margin:.05em 0 .1em}
 .mcard h2{margin:.15em 0 .35em;color:#23425c}
 .mcard p{color:#3a5165;line-height:1.5;margin:.3em 0 1em;font-size:.97em}
@@ -168,7 +169,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // (FC detection, and bind completing) without needing a page reload.
     setInterval(async () => {
         const s2 = await LDRC.fetchState();
-        if (s2) { updateRfButton(s2); updateBindState(s2); paintApAutoBanner(s2); }
+        if (s2) { updateRfButton(s2); updateBindState(s2); paintApAutoBanner(s2); paintRadioBanner(s2); }
     }, 3000);
 
     // Model name — show as the h1, prompt with warning + edit-on-tap.
@@ -400,6 +401,11 @@ function paintApAutoBanner(s) {
     }
 }
 
+// One pill per fitted transceiver, live: green + pulsing dot on the slot
+// that is actually carrying the transmitter link right now, quiet "standby"
+// for its healthy sibling, neutral "listening…" when no TX is on the air.
+// Re-painted on the 3 s state timer, so it follows the TX being switched
+// on/off and any radio fail-over without a page reload.
 function paintRadioBanner(s) {
     const rb = document.getElementById('radioBanner');
     if (!rb) return;
@@ -408,22 +414,39 @@ function paintRadioBanner(s) {
     const slots   = [];
     present.forEach((on, i) => { if (on) slots.push(i + 1); });
     const n = (typeof rf.radios_count === 'number') ? rf.radios_count : slots.length;
-    let label, bg, fg;
     if (n === 0) {
-        label = '⚠️ No transceivers detected';
-        bg = 'rgba(220,160,140,.95)'; fg = '#5c2a1a';
-    } else {
-        const noun = (n === 1) ? 'transceiver' : 'transceivers';
-        const list = (slots.length === 1) ? ('slot ' + slots[0])
-                   : (slots.length === 2) ? ('slots ' + slots[0] + ' and ' + slots[1])
-                   :                        ('slots ' + slots.slice(0, -1).join(', ') + ', and ' + slots[slots.length-1]);
-        label = '✓  ' + n + ' ' + noun + ' detected: ' + list;
-        bg = 'rgba(168,210,154,.85)'; fg = '#2a4d1f';
+        rb.textContent      = '⚠️ No transceivers detected';
+        rb.style.background = 'rgba(220,160,140,.95)';
+        rb.style.color      = '#5c2a1a';
+        rb.style.display    = '';
+        return;
     }
-    rb.textContent       = label;
-    rb.style.background  = bg;
-    rb.style.color       = fg;
-    rb.style.display     = '';
+    const alive  = rf.last_pkt_ms >= 0 && rf.last_pkt_ms < 500;
+    const active = rf.active_radio;   // slot number (1-3) carrying the link
+    rb.style.background = 'none';
+    rb.style.padding    = '0';
+    rb.innerHTML = '<div style="display:flex;gap:.55em;justify-content:center;flex-wrap:wrap">'
+        + slots.map(sl => {
+            let bg, fg, txt, dot = '';
+            if (alive && sl === active) {
+                bg = 'rgba(112,196,98,.95)'; fg = '#0e3a08';
+                txt = 'receiving';
+                dot = '<span style="display:inline-block;width:.55em;height:.55em;border-radius:50%;'
+                    + 'background:#0e3a08;margin-right:.4em;vertical-align:.06em;'
+                    + 'animation:rxPulse 1s ease-in-out infinite alternate"></span>';
+            } else if (alive) {
+                bg = 'rgba(168,210,154,.55)'; fg = '#2a4d1f';
+                txt = 'standby';
+            } else {
+                bg = 'rgba(228,208,158,.88)'; fg = '#5c4a17';
+                txt = 'listening…';
+            }
+            return '<span style="padding:.5em .7em;border-radius:10px;background:' + bg
+                 + ';color:' + fg + ';font-weight:600;white-space:nowrap;font-size:.92em">📡 Slot ' + sl
+                 + ' <span style="font-weight:500;opacity:.85">·</span> ' + dot + txt + '</span>';
+        }).join('')
+        + '</div>';
+    rb.style.display = '';
 }
 
 function vTuple(n){ const m=n.match(/RXV2-(\d+)\.(\d+)\.(\d+)/); return m?[+m[1],+m[2],+m[3]]:[0,0,0]; }
@@ -535,7 +558,7 @@ function doFirmwareUpdate(url, fsUrl, name) {
 }
 </script>
 <template id=helpContent><h2>About this page</h2>
-<p>This is the receiver's home screen. It tells you whether the receiver is bound to a transmitter and which transceivers are alive at boot.</p>
+<p>This is the receiver's home screen. It tells you whether the receiver is bound to a transmitter, and the boxes at the top show each fitted transceiver <b>live</b>: a green pulsing <b>receiving</b> box is the slot carrying your transmitter's signal right now, <b>standby</b> is its healthy partner ready to take over, and <b>listening…</b> means no transmitter is on the air. Switch your transmitter on and off and watch them change.</p>
 <h3>Buttons</h3>
 <ul>
 <li><b>Fly now</b> — the only button to press immediately before flying; it shuts WiFi down so the radio link is uninterrupted.</li>
