@@ -435,7 +435,8 @@ function paintRadioBanner(s) {
                     + 'background:#0e3a08;margin-right:.4em;vertical-align:.06em;'
                     + 'animation:rxPulse 1s ease-in-out infinite alternate"></span>';
             } else if (alive) {
-                bg = 'rgba(168,210,154,.55)'; fg = '#2a4d1f';
+                // steel blue, clearly distinct from the green "receiving" pill
+                bg = 'rgba(139,175,214,.88)'; fg = '#1c3a5e';
                 txt = 'standby';
             } else {
                 bg = 'rgba(228,208,158,.88)'; fg = '#5c4a17';
