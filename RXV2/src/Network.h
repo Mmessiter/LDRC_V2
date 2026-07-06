@@ -144,7 +144,12 @@ inline void startWifiStation() {
     // name and can tell receivers apart at a glance. Fixed channel 1 so the
     // AP never moves under a connected client.
     WiFi.softAP(g_effectiveName.c_str(), nullptr, 1);
-    WiFi.setSleep(false);
+    // Modem sleep is MANDATORY now the BT controller is up (BLE config):
+    // with both radios on and sleep off the WiFi driver abort()s at start
+    // ("Should enable WiFi modem sleep when both WiFi and Bluetooth are
+    // enabled"). Costs a little web-UI latency; also trims WiFi airtime
+    // next to the nRF24s.
+    WiFi.setSleep(true);
     // The WiFi radio sits right beside the nRF24. In sim mode the TX link is live the
     // whole time, and full WiFi power (~90 mW @ 19.5 dBm) desensitises the receiver —
     // that's the short range + dropped frames seen when driving the sim. A phone on the
@@ -244,7 +249,7 @@ inline void startApMode() {
     delay(50);
     WiFi.mode(WIFI_AP);
     WiFi.softAP(g_effectiveName.c_str());
-    WiFi.setSleep(false);
+    WiFi.setSleep(true);   // required with BT controller up — see startWifiStation()
     delay(150);
     char buf[80];
     snprintf(buf, sizeof(buf), "AP-only mode: %s at %s",
