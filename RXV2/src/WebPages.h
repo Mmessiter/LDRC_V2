@@ -1387,6 +1387,19 @@ inline void handleApiChannels() {
     server.send(200, "application/json", j);
 }
 
+// Arm/disarm the BLE channel stream (state lives in BleConfig.h — frames
+// only ever flow to a connected Bluetooth client; over WiFi this simply
+// parks the flags, and the JSON poll above keeps working everywhere).
+inline void handleChannelStream() {
+    bleStreamOn = !server.hasArg("on") || server.arg("on") == "1";
+    if (server.hasArg("ms")) {
+        long ms = server.arg("ms").toInt();
+        bleStreamMs = (uint32_t)(ms < 20 ? 20 : (ms > 200 ? 200 : ms));
+    }
+    bleStreamArm = millis();
+    server.send(200, "text/plain", bleStreamOn ? "stream on" : "stream off");
+}
+
 //*********************************************************************
 //  /api/flightlog.json?f=N — flight time-series (0 = live, 1..3 = saved)
 //  /api/flights.json — list of available flights (for the selector)
@@ -1738,6 +1751,7 @@ inline void registerWebRoutes() {
     // JSON APIs
     server.on("/api/state.json",    handleApiState);
     server.on("/api/channels.json", handleApiChannels);
+    server.on("/api/channels.stream", HTTP_GET, handleChannelStream);
     server.on("/api/flightlog.json", handleApiFlightLog);
     server.on("/api/flights.json",   handleApiFlights);
     server.on("/api/events.json",   handleApiEvents);

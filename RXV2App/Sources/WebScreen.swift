@@ -50,6 +50,7 @@ struct WebScreen: UIViewRepresentable {
         let web = WKWebView(frame: .zero, configuration: cfg)
         web.isOpaque = false
         web.scrollView.contentInsetAdjustmentBehavior = .automatic
+        context.coordinator.attach(web)
         web.load(URLRequest(url: URL(string: "ble://rx/")!))
         return web
     }
@@ -58,7 +59,24 @@ struct WebScreen: UIViewRepresentable {
 
     final class Coordinator: NSObject, WKScriptMessageHandler {
         private let link: BleLink
+        private weak var webView: WKWebView?
         init(link: BleLink) { self.link = link }
+
+        // Pushed channel frames → the page's window.__rxStream(line).
+        // Frames are digits/commas/pipes only; anything else is dropped, so
+        // the single-quoted JS injection below is safe.
+        func attach(_ web: WKWebView) {
+            webView = web
+            link.onStreamFrame = { [weak self] line in
+                let clean = line.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard clean.hasPrefix("S|"),
+                      clean.dropFirst(2).allSatisfy({ $0.isNumber || $0 == "," || $0 == "|" || $0 == "-" })
+                else { return }
+                self?.webView?.evaluateJavaScript(
+                    "window.__rxStream && window.__rxStream('\(clean)')",
+                    completionHandler: nil)
+            }
+        }
 
         func userContentController(_ ucc: WKUserContentController,
                                    didReceive message: WKScriptMessage) {

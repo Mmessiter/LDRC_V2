@@ -39,6 +39,10 @@ final class BleLink: NSObject, ObservableObject {
     @Published var state: State = .idle
     @Published var found: [Discovered] = []
 
+    /// Out-of-band "S|us0,..,us15|age" channel frames pushed by the receiver
+    /// (View-channels live bars). Set by WebScreen; called on the main queue.
+    var onStreamFrame: ((String) -> Void)?
+
     private var central: CBCentralManager!
     private var peripheral: CBPeripheral?
     private var reqChr: CBCharacteristic?
@@ -163,7 +167,15 @@ final class BleLink: NSObject, ObservableObject {
     }
 
     private func handleNotify(_ data: Data) {
-        guard inFlight != nil else { return }
+        guard inFlight != nil else {
+            // Between requests the only traffic is pushed channel frames —
+            // the firmware gates them so they never interleave a response.
+            if data.first == UInt8(ascii: "S"),
+               let s = String(data: data, encoding: .utf8), s.hasPrefix("S|") {
+                onStreamFrame?(s)
+            }
+            return
+        }
         armTimeout(3)   // bytes are flowing — keep the watchdog fed
         if rxExpected < 0 {
             // Hunting for the header line. After a timed-out predecessor,
@@ -180,6 +192,12 @@ final class BleLink: NSObject, ObservableObject {
                     return
                 }
                 let headLine = String(decoding: rxHeader[rxHeader.startIndex..<nl], as: UTF8.self)
+                if headLine.hasPrefix("S|") {
+                    // a channel frame already queued when our request went out
+                    onStreamFrame?(headLine)
+                    rxHeader = Data(rxHeader[(nl + 1)...])
+                    continue
+                }
                 if headLine.hasPrefix("R") {
                     let parts = headLine.dropFirst().split(separator: "|", maxSplits: 3,
                                                            omittingEmptySubsequences: false)

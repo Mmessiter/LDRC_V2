@@ -713,16 +713,47 @@ let _lastSample = 0, _period = POLL_MS, _lastDur = 0;
 // an EMA of measured arrival times; the duration only rewrites styles
 // when it changes meaningfully.
 function syncGlide() {
-    const d = Math.min(180, Math.max(45, Math.round(_period * 1.1)));
-    if (Math.abs(d - _lastDur) < 15) return;
+    // 0.6× the sample period, capped at 90 ms: long enough to melt the
+    // steps together, short enough not to feel laggy — glide time IS
+    // added latency, so keep it lean.
+    const d = Math.min(90, Math.max(40, Math.round(_period * 0.6)));
+    if (Math.abs(d - _lastDur) < 12) return;
     _lastDur = d;
     document.querySelectorAll('.chFill').forEach(el => {
         el.style.transitionDuration = d + 'ms, 200ms, 200ms';   // width, background, opacity
     });
 }
 
+// ---- pushed channel stream (Bluetooth app only) ----------------------
+// The receiver notifies "S|us0,..,us15|age" frames continuously; the app
+// forwards them here. Push kills the request leg entirely, so bars react
+// in one radio slot. Polling below stays alive as a slow watchdog and
+// takes over automatically if frames stop (e.g. over WiFi, or old fw).
+let _streamAlive = 0;
+window.__rxStream = (line) => {
+    const seg = String(line).trim().split('|');
+    if (seg.length < 3 || seg[0] !== 'S') return;
+    const ch = seg[1].split(',').map(Number);
+    if (ch.length < 16 || ch.some(isNaN)) return;
+    const now = performance.now();
+    if (_lastSample) _period = _period * 0.8 + (now - _lastSample) * 0.2;
+    _lastSample = now;
+    _streamAlive = now;
+    syncGlide();
+    paint({ ch: ch, age_ms: parseInt(seg[2], 10) });
+};
+if (window.LDRC && LDRC.viaBle) {
+    const armStream = () => {
+        if (!document.hidden) fetch('/api/channels.stream?on=1&ms=50', { cache: 'no-store' }).catch(() => {});
+    };
+    armStream();
+    setInterval(armStream, 25000);   // firmware auto-disarms 60 s after the last arm
+}
+
 async function tick() {
     if (_stopping) return;
+    // While pushed frames are flowing, polling stands down to a watchdog.
+    if (performance.now() - _streamAlive < 1200) { setTimeout(tick, 400); return; }
     const t0 = performance.now();
     try {
         const r = await fetch('/api/channels.json', { cache: 'no-store' });
