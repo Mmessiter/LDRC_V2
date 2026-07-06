@@ -41,9 +41,9 @@ not available in a socket, so the budget is edge pins only.
 | 6 | JR-bay PPM out | reserved, optional bay |
 | 7 (RX2) | **ESP32-S3 link RX** | Serial2 @ 2 Mbaud |
 | 8 (TX2) | **ESP32-S3 link TX** | |
-| 9 | nRF24 **#1 CE** | |
-| 10 | nRF24 **#1 CSN** | |
-| 11/12/13 | SPI MOSI/MISO/SCK | shared by both radios |
+| 9 | nRF24 CE | |
+| 10 | nRF24 CSN | |
+| 11/12/13 | SPI MOSI/MISO/SCK | |
 | 14–17 (A0–A3) | Gimbal axes CH1–4 | |
 | 18/19 | I2C SDA/SCL | INA219 battery monitor + expansion header |
 | 20–23 (A6–A9) | Knobs/sliders CH5–8 | |
