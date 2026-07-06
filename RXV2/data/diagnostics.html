@@ -657,7 +657,15 @@ function setFsStatus(set) {
 }
 let armFieldTouched = false;
 document.getElementById('armField').addEventListener('input', () => { armFieldTouched = true; });
+let _lastFsFetch = 0;
 async function refreshFsStatus() {
+    // While the pushed channel stream is alive it carries the armed flag,
+    // so this heavyweight state fetch relaxes to housekeeping every 10 s —
+    // a 2.5 kB request per second was pausing the stream (visible hiccups).
+    const now = performance.now();
+    const streaming = (now - _streamAlive) < 1200;
+    if (streaming && (now - _lastFsFetch) < 10000) return;
+    _lastFsFetch = now;
     try { const s = await (await fetch('/api/state.json', { cache: 'no-store' })).json();
           setFsStatus(!!(s.rf && s.rf.failsafe_set));
           if (s.rf && s.rf.gear_ratio != null) document.getElementById('gearField').value = s.rf.gear_ratio;
@@ -741,6 +749,17 @@ window.__rxStream = (line) => {
     _streamAlive = now;
     syncGlide();
     paint({ ch: ch, age_ms: parseInt(seg[2], 10) });
+    // optional 4th field: arming state (-1 none / 0 disarmed / 1 armed) —
+    // keeps the ARMED indicator live without the per-second state poll
+    if (seg.length >= 4) {
+        const a = parseInt(seg[3], 10);
+        const al = document.getElementById('armLive');
+        if (al && !isNaN(a)) {
+            al.innerHTML = (a < 0) ? ''
+                : a ? '<b style="color:#c0392b">● ARMED</b>'
+                    : '<b style="color:#2e7d32">○ disarmed</b>';
+        }
+    }
 };
 if (window.LDRC && LDRC.viaBle) {
     const armStream = () => {
