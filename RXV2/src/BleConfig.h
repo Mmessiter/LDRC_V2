@@ -92,6 +92,13 @@ inline size_t  bleTxOffset = 0;
 
 inline NimBLECharacteristic* bleRespChr = nullptr;
 
+// Real negotiated ATT MTU for the live connection, captured in onMTUChange.
+// NimBLEDevice::getMTU() is the global PREFERRED value and does not track
+// per-connection negotiation — on Android it read back tiny (59), forcing
+// ~56-byte chunks so a 2.6 KB reply needed ~47 notifies, which exhausted
+// the host mbuf pool after the first chunk and stalled the whole response.
+inline uint16_t bleConnMtu = 23;
+
 // parsed request context (valid while bleActive)
 inline String bleMethod, blePath;
 inline std::map<String, String> bleArgs;
@@ -270,12 +277,17 @@ class BleReqCallbacks : public NimBLECharacteristicCallbacks {
 class BleServerCallbacks : public NimBLEServerCallbacks {
     void onConnect(NimBLEServer* s, NimBLEConnInfo& info) override {
         bleClientConnected = true;
+        bleConnMtu = 23;                                    // until the MTU exchange
         events.add("BLE app connected");
         // Ask for fast-ish connection parameters: good throughput, still polite.
         s->updateConnParams(info.getConnHandle(), 12, 24, 0, 400);
     }
+    void onMTUChange(uint16_t mtu, NimBLEConnInfo& info) override {
+        bleConnMtu = mtu;                                   // note the negotiated MTU
+    }
     void onDisconnect(NimBLEServer* s, NimBLEConnInfo& info, int reason) override {
         bleClientConnected = false;
+        bleConnMtu = 23;
         bleReqReady = false;
         blePumping  = false;
         events.add("BLE app disconnected");
@@ -441,8 +453,16 @@ inline void blePoll() {
         bleStreamPoll();   // idle — the stream may speak
         return;
     }
-    size_t mtu   = NimBLEDevice::getMTU();
+    // Chunk size: honour the negotiated MTU, but CAP at 240 bytes. Some
+    // phones (e.g. a Samsung Fold) advertise a big ATT MTU (517) yet
+    // silently drop notifications larger than their true limit (~452) —
+    // the app then receives one short chunk and stalls. 240 fits inside
+    // one link-layer packet (251 B DLE) on every device, so nothing is
+    // ever lost. Small replies still ride a single chunk. (Same lesson
+    // proved on the MCP fuel station's BLE bridge.)
+    size_t mtu   = bleConnMtu > 23 ? bleConnMtu : NimBLEDevice::getMTU();
     size_t chunk = (mtu > 23 ? mtu - 3 : 20);
+    if (chunk > 240) chunk = 240;
     size_t sentThisCall = 0;
 
     // header frame first (fits one chunk by construction of our short types)
