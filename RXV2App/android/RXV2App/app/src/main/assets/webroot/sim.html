@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name=theme-color content="#5fa099">
+<meta name=apple-mobile-web-app-capable content=yes>
+<meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
+<meta name=apple-mobile-web-app-title content="LDRC RX V2">
+<title>Simulator &middot; LDRC RX V2</title>
+<link rel=stylesheet href="/style.css?v=132">
+<script src="/app.js?v=132" defer></script>
+</head>
+<body>
+<button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
+<div class=bg-photo aria-hidden=true></div>
+<div class=bg-wash  aria-hidden=true></div>
+<div class=container>
+    <h1>Simulator</h1>
+    <p class=subtitle id=subtitle>&hellip;</p>
+
+    <!-- Big status sign, mirrors the front screen's banner -->
+    <div id=simBanner style="display:none;text-align:center;padding:1em;border-radius:12px;margin:0 0 1em;
+         background:rgba(108,171,94,.95);color:#0e2e08;font-weight:700;box-shadow:0 3px 12px rgba(108,171,94,.45)">
+        <div style="font-size:1.3em;letter-spacing:.05em">🎮 SIMULATOR MODE ON</div>
+        <div style="font-weight:500;font-size:.9em;line-height:1.4;margin-top:.3em">Driving the PC simulator over USB &mdash; flight-controller output is OFF.</div>
+    </div>
+
+    <!-- Shown only while sim mode is OFF: what this is, in one card -->
+    <div id=simIntro class=card style="display:none">
+        <p style="margin:.2em 0">Plug the receiver into a PC and it becomes a <b>USB joystick &amp; keyboard</b>, driven live by your transmitter sticks &mdash; fly RealFlight, neXt or any simulator with your real radio.</p>
+        <p class=muted style="margin:.5em 0 .2em">While simulator mode is on, the flight-controller output is <b>off</b> &mdash; it can&rsquo;t fly a real model until you turn it off again.</p>
+    </div>
+
+    <button class="btn" type=button id=simbtn><span class=ico>&#127918;</span><span id=simlbl>&hellip;</span></button>
+    <a class="btn" href="/map" id=mapbtn style="display:none;background:#c98a4a"><span class=ico>&#128256;</span>Remap channels</a>
+    <a class="btn" href="/views?sim=rf" id=ctlbtn style="display:none;background:#4a90c9"><span class=ico>&#128377;&#65039;</span>RealFlight &mdash; controls &amp; views</a>
+    <a class="btn" href="/views?sim=next" id=nextbtn style="display:none;background:#6c8eb0"><span class=ico>&#128641;</span>neXt &mdash; controls &amp; views</a>
+
+    <div class=footer></div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+    const s = await LDRC.fetchState();
+    if (!s) { LDRC.setText('subtitle', 'connection lost — try refresh'); return; }
+    const simOn = !!s.sim;
+
+    LDRC.setText('subtitle', simOn ? 'USB joystick active — pick your simulator below'
+                                   : 'Fly a PC simulator with your real transmitter');
+    const b   = document.getElementById('simBanner');  if (b)   b.style.display   = simOn ? '' : 'none';
+    const it  = document.getElementById('simIntro');   if (it)  it.style.display  = simOn ? 'none' : '';
+    ['mapbtn', 'ctlbtn', 'nextbtn'].forEach(id => {
+        const e = document.getElementById(id); if (e) e.style.display = simOn ? '' : 'none';
+    });
+
+    const sb = document.getElementById('simbtn');
+    if (sb) {
+        sb.style.background = simOn ? '#c97464' : '#6cab5e';
+        LDRC.setText('simlbl', simOn ? 'Turn simulator mode OFF' : 'Turn simulator mode ON');
+        sb.onclick = async () => {
+            const turnOn = !simOn;
+            const ok = await LDRC.confirm(
+                turnOn ? 'The receiver reboots as a USB joystick & keyboard for your PC simulator. '
+                       + 'Its flight-controller output switches OFF — it can’t fly a real model '
+                       + 'until simulator mode is turned off again.'
+                       : 'The receiver reboots back to a normal receiver — flight-controller output '
+                       + 'restored, ready to fly a real model.',
+                { title: turnOn ? 'Start simulator mode?' : 'Leave simulator mode?',
+                  icon: turnOn ? '🎮' : '🚁',
+                  yes: turnOn ? 'Yes — start simulator mode' : 'Yes — back to normal', kind: 'go' });
+            if (ok) postSim(turnOn);
+        };
+    }
+});
+
+// Toggle + reboot flow, white-screen-proof: draw the "rebooting" card FIRST,
+// fire the toggle (its reply usually dies mid-reboot — fine), then poll until
+// the receiver is back and return HERE so the buttons reflect the new mode.
+function postSim(on) {
+    const c = document.querySelector('.container');
+    if (c) c.innerHTML =
+        '<h1>' + (on ? 'Starting simulator mode' : 'Leaving simulator mode') + '</h1>'
+      + '<div class=card><p style="font-size:1.15em;font-weight:600">&#9203; Rebooting &mdash; please wait&hellip;</p>'
+      + '<div style="background:rgba(125,158,176,.28);border-radius:9px;height:18px;overflow:hidden;margin:1.1em 0 .2em">'
+      + '<div id=__bar style="height:100%;width:0;background:#6cab5e;border-radius:9px"></div></div>'
+      + '<p id=__slow class=muted style="text-align:center;min-height:1.1em;margin:.4em 0 0"></p></div>'
+      + '<div class=footer></div>';
+    const bar = document.getElementById('__bar');
+    if (bar) { bar.style.transition = 'width 9s linear'; requestAnimationFrame(() => { bar.style.width = '92%'; }); }
+    const fd = new URLSearchParams();
+    fd.set('on', on ? '1' : '0');
+    fetch('/api/sim', { method: 'POST', body: fd }).catch(() => {});
+    const done = () => {
+        const bb = document.getElementById('__bar');
+        if (bb) { bb.style.transition = 'width .3s'; bb.style.width = '100%'; }
+        setTimeout(() => location.replace('/sim?r=' + Date.now()), 300);
+    };
+    let n = 0, ok = 0;
+    const ping = () => {
+        let sg;
+        try { sg = AbortSignal.timeout(2000); }
+        catch (e) { const a = new AbortController(); setTimeout(() => a.abort(), 2000); sg = a.signal; }
+        return fetch('/api/state.json', { cache: 'no-store', signal: sg });
+    };
+    const tick = async () => {
+        if (!document.getElementById('__bar')) return;
+        if (n >= 2) {
+            try { const r = await ping(); if (r.ok) { if (++ok >= 2) { done(); return; } } else ok = 0; }
+            catch (e) { ok = 0; }
+        }
+        if (n === 30) { const sl = document.getElementById('__slow'); if (sl) sl.textContent = 'Taking longer than usual — you can reload the page.'; }
+        if (n >= 120) return;
+        n++; setTimeout(tick, 1000);
+    };
+    tick();
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) ping().then(r => { if (r.ok) done(); }).catch(() => {});
+    });
+}
+</script>
+<template id=helpContent><h2>Simulator</h2>
+<p>The receiver can be a <b>USB joystick &amp; keyboard</b> for a PC flight simulator, driven by your transmitter sticks.</p>
+<h3>Buttons</h3>
+<ul>
+<li><b>Turn simulator mode ON/OFF</b> &mdash; reboots the receiver into (or out of) USB-joystick mode. While it&rsquo;s on, the flight-controller output is off.</li>
+<li><b>Remap channels</b> &mdash; choose which channel drives each simulator axis, with live bars.</li>
+<li><b>RealFlight</b> / <b>neXt</b> &mdash; the same controls-and-views screen, opened with that simulator&rsquo;s key set: Select / Cancel / Up / Down / Reset buttons (also fired by TX channels 10&ndash;14) plus that sim&rsquo;s keyboard shortcuts.</li>
+</ul>
+<h3>Tips</h3>
+<p>If the simulator doesn&rsquo;t see the receiver, re-plug the USB cable.</p>
+<p><b>On a Mac:</b> quit the Keyboard Setup Assistant if it pops up, and allow your simulator in <b>System Settings &rarr; Privacy &amp; Security &rarr; Input Monitoring</b> (then restart the sim) &mdash; without that, macOS hides the sticks from it.</p>
+<p>To cut radio interference during a long session, use <b>Turn off WiFi</b> on the front screen &mdash; the sim keeps running over USB, and WiFi returns at the next power-cycle.</p>
+</template>
+</body>
+</html>
