@@ -1,6 +1,44 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.219-update-test",
+      "url": "https://messiter.com/rxv2/release/v0.9.219/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.219/littlefs.bin",
+      "notes": "No functional change - identical to 0.9.218 apart from the version number. Released to prove the new persistent update-offer works end to end (connect over Bluetooth, see the offer appear, tap to install)."
+    },
+    {
+      "name": "RXV2-0.9.218-update-check",
+      "url": "https://messiter.com/rxv2/release/v0.9.218/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.218/littlefs.bin",
+      "notes": "The 'Update available' offer no longer gets missed when you connect quickly after powering the receiver. The home page used to check for new firmware exactly once - if the receiver's WiFi was still coming up at that moment (typical in the first seconds after power-on) the check answered 'offline' and the offer silently never appeared, though a later connection (or another phone) would see it. The page now keeps quietly re-checking for a couple of minutes until the receiver is online, so the offer pops up as soon as it can be known. Installing this also updates the web pages; your Rotorflight backups are preserved."
+    },
+    {
+      "name": "RXV2-0.9.217-ble-name",
+      "url": "https://messiter.com/rxv2/release/v0.9.217/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.217/littlefs.bin",
+      "notes": "ANDROID! The receiver now works with the new RXV2 Android app as well as the iPhone app. Bluetooth is far more dependable on every phone: replies are sent in chunks every device can swallow (some Androids quietly drop oversized packets even after promising a big one), sized to the connection's true negotiated limit, with a larger buffer pool so a whole page queues at once. Also fixes the Bluetooth scan NAME - the receiver now correctly advertises your model's name (e.g. 'BenchTest') instead of appearing nameless or as a stale cached name; a subtle ordering bug meant the name never fitted into the advertisement. Installing this also updates the web pages; your Rotorflight backups are preserved."
+    },
+    {
+      "name": "RXV2-0.9.216-ble-chunkcap",
+      "url": "https://messiter.com/rxv2/release/v0.9.216/firmware.bin",
+      "notes": ""
+    },
+    {
+      "name": "RXV2-0.9.215-ble-diag",
+      "url": "https://messiter.com/rxv2/release/v0.9.215/firmware.bin",
+      "notes": ""
+    },
+    {
+      "name": "RXV2-0.9.214-ble-pool",
+      "url": "https://messiter.com/rxv2/release/v0.9.214/firmware.bin",
+      "notes": ""
+    },
+    {
+      "name": "RXV2-0.9.213-ble-mtu",
+      "url": "https://messiter.com/rxv2/release/v0.9.213/firmware.bin",
+      "notes": ""
+    },
+    {
       "name": "RXV2-0.9.212-ble-config",
       "url": "https://messiter.com/rxv2/release/v0.9.212/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.212/littlefs.bin",
@@ -24,45 +62,6 @@
     {
       "name": "RXV2-0.9.208-ble-config",
       "url": "https://messiter.com/rxv2/release/v0.9.208/firmware.bin",
-      "notes": ""
-    },
-    {
-      "name": "RXV2-0.9.207-ble-config",
-      "url": "https://messiter.com/rxv2/release/v0.9.207/firmware.bin",
-      "notes": ""
-    },
-    {
-      "name": "RXV2-0.9.206-ble-config",
-      "url": "https://messiter.com/rxv2/release/v0.9.206/firmware.bin",
-      "notes": ""
-    },
-    {
-      "name": "RXV2-0.9.205-field-ap-persist",
-      "url": "https://messiter.com/rxv2/release/v0.9.205/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.205/littlefs.bin",
-      "notes": ""
-    },
-    {
-      "name": "RXV2-0.9.204-field-ap-auto",
-      "url": "https://messiter.com/rxv2/release/v0.9.204/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.204/littlefs.bin",
-      "notes": ""
-    },
-    {
-      "name": "RXV2-0.9.203-arm-save-multisession",
-      "url": "https://messiter.com/rxv2/release/v0.9.203/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.203/littlefs.bin",
-      "notes": ""
-    },
-    {
-      "name": "RXV2-0.9.202-arm-based-flightsave",
-      "url": "https://messiter.com/rxv2/release/v0.9.202/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.202/littlefs.bin",
-      "notes": ""
-    },
-    {
-      "name": "RXV2-0.9.201-progressive-flightsave",
-      "url": "https://messiter.com/rxv2/release/v0.9.201/firmware.bin",
       "notes": ""
     }
   ]

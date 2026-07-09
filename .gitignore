@@ -9,3 +9,10 @@ compile_commands.json
 # ── Secrets — NEVER commit ──
 # The messiter.com FTP password lives here (also ignored inside LDRC2SIM/.gitignore).
 ftp_credentials.sh
+
+# ── Android app (RXV2App) — build artifacts + publish staging ──
+RXV2App/android/RXV2App/.gradle/
+RXV2App/android/RXV2App/app/build/
+RXV2App/android/RXV2App/local.properties
+RXV2App/android/site/
+RXV2App/android/RXV2App/build/
