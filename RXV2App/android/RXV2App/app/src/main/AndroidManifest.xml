@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Only used to check messiter.com for a newer version of this app;
+         all receiver traffic goes over Bluetooth. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Lets the app hand its own downloaded update APK to the installer
+         (user approves once in Settings the first time). -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
         android:usesPermissionFlags="neverForLocation" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />

@@ -323,9 +323,15 @@ inline void bleInitOnce() {
     NimBLEAdvertising* adv = NimBLEDevice::getAdvertising();
     adv->addServiceUUID(BLE_SVC_UUID);
     // NimBLE 2.x does NOT copy the init() name into the advert payload —
-    // without this the scan list shows a nameless device (found on hardware).
-    adv->setName(g_effectiveName.c_str());
+    // without setName() the scan list shows a nameless device (found on
+    // hardware). ORDER MATTERS: enableScanResponse() must come FIRST.
+    // setName() checks the scan-response flag at call time; with it still
+    // false the name is forced into the main advert packet, where flags +
+    // the 128-bit service UUID already use 21 of 31 bytes — any name over
+    // 8 chars fails silently and the device advertises nameless (phones
+    // then show a cached or placeholder name, e.g. "RXV2" for BenchTest).
     adv->enableScanResponse(true);
+    adv->setName(g_effectiveName.c_str());
     bleInited = true;
     Serial.println("[ble] stack initialised (silent)");
 }

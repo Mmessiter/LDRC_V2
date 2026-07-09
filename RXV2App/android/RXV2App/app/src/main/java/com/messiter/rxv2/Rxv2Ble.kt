@@ -24,7 +24,6 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.os.Looper
 import android.os.ParcelUuid
-import android.util.Log
 import java.util.UUID
 
 @SuppressLint("MissingPermission")
@@ -52,7 +51,6 @@ class Rxv2Ble(private val context: Context) {
     var onState: ((State) -> Unit)? = null
     var onFound: ((List<Discovered>) -> Unit)? = null
     var onStreamFrame: ((String) -> Unit)? = null
-    var onDebug: ((String) -> Unit)? = null      // on-screen diagnostics (no USB needed)
 
     var state: State = State.Idle
         private set(v) { field = v; ui.post { onState?.invoke(v) } }
@@ -84,10 +82,6 @@ class Rxv2Ble(private val context: Context) {
     private var rxCode = 0; private var rxType = ""; private var rxLocation = ""
     private var rxDiscarded = 0
     private var timeout: Runnable? = null
-    private var reqStartNs = 0L
-    private var streamCount = 0
-    private var streamWindowStart = 0L
-    private val rxNotifySizes = ArrayList<Int>()
 
     // ── Scanning ────────────────────────────────────────────────────
     fun startScan() {
@@ -109,22 +103,28 @@ class Rxv2Ble(private val context: Context) {
     private val scanCb = object : ScanCallback() {
         override fun onScanResult(type: Int, r: ScanResult) {
             val uuids = r.scanRecord?.serviceUuids
-            val nm = r.scanRecord?.deviceName ?: r.device.name
-            Log.d("RXV2perf", "scan '$nm' rssi=${r.rssi} uuids=${uuids?.map { it.uuid }}")
             if (uuids == null || uuids.none { it.uuid == SERVICE }) return
-            val name = nm ?: "RXV2"
-            synchronized(found) { found[r.device.address] = Discovered(r.device, name, r.rssi) }
+            // The real name rides the scan RESPONSE; adv-only results have a
+            // null deviceName. Never let those downgrade a name we already
+            // captured (device.name is Android's stale cache, "RXV2" is our
+            // placeholder of last resort).
+            synchronized(found) {
+                val name = r.scanRecord?.deviceName
+                    ?: found[r.device.address]?.name
+                    ?: r.device.name ?: "RXV2"
+                found[r.device.address] = Discovered(r.device, name, r.rssi)
+            }
             val list = synchronized(found) { found.values.sortedByDescending { it.rssi } }
             ui.post { onFound?.invoke(list) }
-        }
-        override fun onScanFailed(errorCode: Int) {
-            Log.d("RXV2perf", "SCAN FAILED code=$errorCode")
         }
     }
 
     // ── Connect / disconnect ────────────────────────────────────────
+    private var connName = "RXV2"   // scan-time name; g.device.name is a stale cache
+
     fun connect(d: Discovered) {
         stopScan()
+        connName = d.name
         state = State.Connecting(d.name)
         gatt = d.device.connectGatt(context, false, gattCb, BluetoothDevice.TRANSPORT_LE)
     }
@@ -155,8 +155,6 @@ class Rxv2Ble(private val context: Context) {
         if (state !is State.Ready) return
         val next = queue.removeFirstOrNull() ?: return
         inFlight = next
-        reqStartNs = System.nanoTime()
-        rxNotifySizes.clear()
         rxHeader = ByteArrayOut(); rxBody = ByteArrayOut(); rxExpected = -1; rxDiscarded = 0
 
         val prefix = "Q${next.payload.size}|".toByteArray(Charsets.UTF_8)
@@ -164,8 +162,6 @@ class Rxv2Ble(private val context: Context) {
         // Small requests (the polls) go write-without-response so the reply
         // rides the next radio event — halves per-poll latency. Larger ones
         // use acknowledged, chunked writes for ordering.
-        Log.d("RXV2perf", "pump write ${next.payload.size}B attMax=$attMax mtu=$mtu " +
-            "wnrProp=${(req.properties and BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE) != 0}")
         if (prefix.size + next.payload.size <= attMax &&
             (req.properties and BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE) != 0) {
             writeChar(g, req, prefix + next.payload, noResp = true)
@@ -182,20 +178,21 @@ class Rxv2Ble(private val context: Context) {
                 off += n
             }
         }
-        armTimeout(6000)
+        // Generous first-byte window: /api/firmware/check blocks the receiver
+        // for up to ~8 s of dead air while it fetches manifests over HTTPS.
+        armTimeout(12000)
     }
 
     private fun writeChar(g: BluetoothGatt, c: BluetoothGattCharacteristic,
                           data: ByteArray, noResp: Boolean) {
         val type = if (noResp) BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
                    else BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
-        val rc = if (Build.VERSION.SDK_INT >= 33) {
+        if (Build.VERSION.SDK_INT >= 33) {
             g.writeCharacteristic(c, data, type)
         } else {
             @Suppress("DEPRECATION")
-            run { c.writeType = type; c.value = data; if (g.writeCharacteristic(c)) 0 else -1 }
+            run { c.writeType = type; c.value = data; g.writeCharacteristic(c) }
         }
-        Log.d("RXV2perf", "writeChar rc=$rc noResp=$noResp size=${data.size}")
     }
 
     private fun armTimeout(ms: Long) {
@@ -206,12 +203,6 @@ class Rxv2Ble(private val context: Context) {
     }
 
     private fun finish(result: kotlin.Result<Response>) {
-        val sizes = rxNotifySizes.joinToString(",")
-        val dbg = result.fold(
-            onSuccess = { "OK ${it.code} ${it.body.size}B mtu=$mtu [$sizes]" },
-            onFailure = { "FAIL ${rxBody.size()}/$rxExpected mtu=$mtu [$sizes]" })
-        Log.d("RXV2perf", "finish $dbg")
-        ui.post { onDebug?.invoke(dbg) }
         timeout?.let { bg.removeCallbacks(it) }; timeout = null
         val done = inFlight; inFlight = null
         done?.cb?.invoke(result)
@@ -223,20 +214,11 @@ class Rxv2Ble(private val context: Context) {
             // Between requests: only pushed channel frames appear.
             if (data.isNotEmpty() && data[0] == 'S'.code.toByte()) {
                 val s = String(data, Charsets.UTF_8)
-                if (s.startsWith("S|")) {
-                    streamCount++
-                    val now = System.nanoTime()
-                    if (now - streamWindowStart > 1_000_000_000L) {
-                        Log.d("RXV2perf", "stream ${streamCount} frames/sec")
-                        streamCount = 0; streamWindowStart = now
-                    }
-                    ui.post { onStreamFrame?.invoke(s) }
-                }
+                if (s.startsWith("S|")) ui.post { onStreamFrame?.invoke(s) }
             }
             return
         }
         armTimeout(5000)
-        if (rxNotifySizes.size < 12) rxNotifySizes.add(data.size)
         if (rxExpected < 0) {
             rxHeader.append(data)
             while (true) {
@@ -261,7 +243,6 @@ class Rxv2Ble(private val context: Context) {
                         rxLocation = if (parts.size > 3) parts[3] else ""
                         rxBody = ByteArrayOut(); rxBody.append(rxHeader.bytes(), nl + 1, rxHeader.size() - (nl + 1))
                         rxHeader = ByteArrayOut()
-                        Log.d("RXV2perf", "header code=$code type=${parts[1]} expected=$len bodyStart=${rxBody.size()}")
                         break
                     }
                 }
@@ -273,11 +254,8 @@ class Rxv2Ble(private val context: Context) {
             }
         } else {
             rxBody.append(data)
-            Log.d("RXV2perf", "body += ${data.size} → ${rxBody.size()}/$rxExpected")
         }
         if (rxExpected in 0..rxBody.size()) {
-            val ms = (System.nanoTime() - reqStartNs) / 1_000_000
-            Log.d("RXV2perf", "reply code=$rxCode len=$rxExpected in ${ms}ms mtu=$mtu")
             val body = rxBody.bytes().copyOfRange(0, rxExpected)
             finish(kotlin.Result.success(Response(rxCode, rxType, rxLocation, body)))
         }
@@ -336,14 +314,13 @@ class Rxv2Ble(private val context: Context) {
         }
         override fun onDescriptorWrite(g: BluetoothGatt, d: BluetoothGattDescriptor, status: Int) {
             bg.post {
-                val name = g.device.name ?: "RXV2"
-                state = State.Ready(name)
+                state = State.Ready(connName)
                 pump()
             }
         }
         override fun onCharacteristicChanged(g: BluetoothGatt, c: BluetoothGattCharacteristic,
                                              value: ByteArray) {
-            if (c.uuid == RESP) { Log.d("RXV2perf", "notify ${value.size}B"); bg.post { handleNotify(value) } }
+            if (c.uuid == RESP) bg.post { handleNotify(value) }
         }
         @Deprecated("pre-33")
         override fun onCharacteristicChanged(g: BluetoothGatt, c: BluetoothGattCharacteristic) {

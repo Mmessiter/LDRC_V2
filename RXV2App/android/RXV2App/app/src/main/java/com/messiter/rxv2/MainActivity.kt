@@ -32,11 +32,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var ble: Rxv2Ble
     private lateinit var root: FrameLayout
     private var webView: WebView? = null
-    private var debugView: TextView? = null
 
     // Fake same-origin the WebView believes it is talking to. Every request
     // to this host is intercepted; the network is never actually touched.
     private val ORIGIN = "https://rxv2.local"
+
+    // Where publish_app.sh puts each release (host 301s plain http — keep https).
+    private val APP_MANIFEST_URL = "https://www.messiter.com/rxv2app/release/manifest.json"
 
     private val permReq = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
@@ -58,7 +60,6 @@ class MainActivity : AppCompatActivity() {
         }
         ble.onFound = { list -> scannerAdapter?.submit(list) }
         ble.onStreamFrame = { line -> injectStream(line) }
-        ble.onDebug = { s -> debugView?.text = "BLE: $s" }
 
         showScanner()
         requestPerms()
@@ -107,6 +108,96 @@ class MainActivity : AppCompatActivity() {
         col.addView(hint)
         root.addView(col)
         startScanIfPermitted()
+        checkAppUpdate(col)
+    }
+
+    // ── App self-update ─────────────────────────────────────────────
+    // The same idea as the receiver's own update banner: check messiter.com
+    // for a newer build of THIS app and offer it with one tap. The APK is
+    // downloaded in-app (progress in the notification shade) and handed
+    // straight to Android's installer when it completes — no trip through
+    // the browser and its blank tab. First ever time, Android sends the
+    // user to Settings to allow this app to install updates; we then carry
+    // on automatically. Checked once per launch, on the scanner screen.
+    private var updateChecked = false
+    private var pendingUpdate: Pair<String, String>? = null   // url to versionName
+
+    private fun checkAppUpdate(col: LinearLayout) {
+        if (updateChecked) return
+        updateChecked = true
+        Thread {
+            runCatching {
+                val txt = java.net.URL(APP_MANIFEST_URL).openStream()
+                    .use { it.readBytes().toString(Charsets.UTF_8) }
+                val j = JSONObject(txt)
+                val newest = j.getInt("versionCode")
+                val name = j.optString("versionName", "?")
+                val url = j.getString("url")
+                val installed = packageManager.getPackageInfo(packageName, 0).run {
+                    if (Build.VERSION.SDK_INT >= 28) longVersionCode.toInt()
+                    else @Suppress("DEPRECATION") versionCode
+                }
+                if (newest > installed) runOnUiThread {
+                    if (col.parent == null) return@runOnUiThread   // scanner gone — connected already
+                    col.addView(TextView(this).apply {
+                        text = "⬆️  App update available: v$name — tap to install"
+                        textSize = 15f; setPadding(40, 28, 40, 28)
+                        setBackgroundColor(0xFFFFD278.toInt()); setTextColor(0xFF5C3A00.toInt())
+                        setOnClickListener { installUpdate(url, name) }
+                    }, 0)
+                }
+            }
+        }.start()
+    }
+
+    private fun installUpdate(url: String, name: String) {
+        // One-time gate: this app needs the "install unknown apps" permission.
+        // Send the user straight to our entry in Settings; onResume retries.
+        if (!packageManager.canRequestPackageInstalls()) {
+            pendingUpdate = url to name
+            showMessage("Please allow RXV2 to install updates, then come back.")
+            startActivity(android.content.Intent(
+                android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                Uri.parse("package:$packageName")))
+            return
+        }
+        showMessage("Downloading v$name…")
+        val dm = getSystemService(DOWNLOAD_SERVICE) as android.app.DownloadManager
+        val req = android.app.DownloadManager.Request(Uri.parse(url))
+            .setTitle("RXV2 app v$name")
+            .setMimeType("application/vnd.android.package-archive")
+            .setNotificationVisibility(
+                android.app.DownloadManager.Request.VISIBILITY_VISIBLE)
+            .setDestinationInExternalFilesDir(this, null, "RXV2App-$name.apk")
+        val id = dm.enqueue(req)
+        val rx = object : android.content.BroadcastReceiver() {
+            override fun onReceive(c: android.content.Context?, i: android.content.Intent?) {
+                if (i?.getLongExtra(android.app.DownloadManager.EXTRA_DOWNLOAD_ID, -1) != id) return
+                runCatching { unregisterReceiver(this) }
+                val apk = dm.getUriForDownloadedFile(id)
+                    ?: run { showMessage("Download failed — please try again."); return }
+                startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW)
+                    .setDataAndType(apk, "application/vnd.android.package-archive")
+                    .addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                              android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+            }
+        }
+        val filter = android.content.IntentFilter(
+            android.app.DownloadManager.ACTION_DOWNLOAD_COMPLETE)
+        if (Build.VERSION.SDK_INT >= 33)
+            registerReceiver(rx, filter, android.content.Context.RECEIVER_EXPORTED)
+        else registerReceiver(rx, filter)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Back from the Settings permission screen — resume the update.
+        pendingUpdate?.let { (url, name) ->
+            if (packageManager.canRequestPackageInstalls()) {
+                pendingUpdate = null
+                installUpdate(url, name)
+            }
+        }
     }
 
     // Scan only once the runtime BLE permission is granted — calling the
@@ -152,11 +243,9 @@ class MainActivity : AppCompatActivity() {
         w.settings.cacheMode = WebSettings.LOAD_NO_CACHE
         w.settings.mediaPlaybackRequiresUserGesture = false
         w.setBackgroundColor(0xFF0B1220.toInt())
-        WebView.setWebContentsDebuggingEnabled(true)
         w.addJavascriptInterface(Bridge(), "AndroidBle")
         w.webViewClient = object : WebViewClient() {
             override fun shouldInterceptRequest(view: WebView, req: WebResourceRequest): WebResourceResponse? {
-                android.util.Log.d("RXV2perf", "intercept ${req.method} ${req.url}")
                 // Only GET page/asset loads reach here (fetch is bridged in JS).
                 if (req.url.host != Uri.parse(ORIGIN).host) return null
                 if (req.method.uppercase() != "GET") return null
@@ -185,23 +274,7 @@ class MainActivity : AppCompatActivity() {
                 return bleSync(req.method, req.url)
             }
         }
-        w.webChromeClient = object : WebChromeClient() {
-            override fun onConsoleMessage(m: ConsoleMessage): Boolean {
-                android.util.Log.d("RXV2web", "${m.messageLevel()} ${m.message()} @${m.lineNumber()}")
-                return true
-            }
-        }
         root.addView(w)
-        // On-screen BLE diagnostic strip (bottom) — lets us debug without USB.
-        val dbg = TextView(this).apply {
-            text = "BLE: —"; textSize = 11f
-            setBackgroundColor(0xCC000000.toInt()); setTextColor(0xFF4ADE80.toInt())
-            setPadding(16, 6, 16, 6)
-        }
-        debugView = dbg
-        root.addView(dbg, FrameLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-        ).apply { gravity = android.view.Gravity.BOTTOM })
         w.loadUrl("$ORIGIN/")
     }
 
@@ -265,7 +338,6 @@ class MainActivity : AppCompatActivity() {
     inner class Bridge {
         @JavascriptInterface
         fun request(id: Int, method: String, url: String, headersJson: String, body: String) {
-            android.util.Log.d("RXV2perf", "JS fetch → $method $url")
             val uri = Uri.parse(if (url.startsWith("http")) url else "$ORIGIN$url")
             var pathAndQuery = uri.encodedPath ?: "/"
             if (!uri.encodedQuery.isNullOrEmpty()) pathAndQuery += "?" + uri.encodedQuery
@@ -330,7 +402,6 @@ class MainActivity : AppCompatActivity() {
         private const val JS_SHIM = """
         (function(){
           if (window.__bleShim) return; window.__bleShim = true;
-          console.log('[shim] installing, AndroidBle=' + (typeof AndroidBle));
           window.__blePending = {}; window.__bleSeq = 0;
           window.__bleResolve = function(id, code, type, b64){
             var p = window.__blePending[id]; if(!p) return; delete window.__blePending[id];

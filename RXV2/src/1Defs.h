@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.216-ble-android";
+constexpr const char* FW_VERSION = "RXV2-0.9.219-update-test";
 
 //*********************************************************************
 //  Auto-update manifest URLs
