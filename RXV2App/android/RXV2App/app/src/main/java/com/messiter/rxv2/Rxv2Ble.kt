@@ -82,6 +82,18 @@ class Rxv2Ble(private val context: Context) {
     private var rxCode = 0; private var rxType = ""; private var rxLocation = ""
     private var rxDiscarded = 0
     private var timeout: Runnable? = null
+    private val txChunks = ArrayDeque<ByteArray>()   // outgoing request chunks, fed by onCharacteristicWrite
+
+    private fun writeNextChunk(g: BluetoothGatt, c: BluetoothGattCharacteristic) {
+        val chunk = txChunks.removeFirstOrNull() ?: return
+        // Write-without-response when the characteristic allows it: the BLE
+        // link layer still guarantees delivery AND order, but there is no
+        // ATT round trip per chunk — several chunks ride one connection
+        // event instead of one each. onCharacteristicWrite still fires when
+        // the stack is ready for the next chunk, so sequencing is kept.
+        val wnr = (c.properties and BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE) != 0
+        writeChar(g, c, chunk, noResp = wnr)
+    }
 
     // ── Scanning ────────────────────────────────────────────────────
     fun startScan() {
@@ -156,9 +168,15 @@ class Rxv2Ble(private val context: Context) {
         val next = queue.removeFirstOrNull() ?: return
         inFlight = next
         rxHeader = ByteArrayOut(); rxBody = ByteArrayOut(); rxExpected = -1; rxDiscarded = 0
+        txChunks.clear()
 
         val prefix = "Q${next.payload.size}|".toByteArray(Charsets.UTF_8)
-        val attMax = (mtu - 3).coerceAtLeast(20)
+        // Cap request chunks at 240 bytes. Two reasons: Android hard-rejects
+        // GATT writes over 512 bytes (with MTU 517, mtu-3 = 514 -> instant
+        // IllegalArgumentException that KILLS the BLE thread — found when the
+        // editor synced a 3 KB template on navigation), and 240 is the size
+        // every phone in this house has proven to carry reliably.
+        val attMax = (mtu - 3).coerceAtLeast(20).coerceAtMost(240)
         // Small requests (the polls) go write-without-response so the reply
         // rides the next radio event — halves per-poll latency. Larger ones
         // use acknowledged, chunked writes for ordering.
@@ -166,17 +184,24 @@ class Rxv2Ble(private val context: Context) {
             (req.properties and BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE) != 0) {
             writeChar(g, req, prefix + next.payload, noResp = true)
         } else {
+            // Multi-chunk request. Android accepts ONE GATT write at a time:
+            // issuing the next chunk before onCharacteristicWrite fires makes
+            // it silently rejected — every chunk after the first was lost and
+            // a 3 KB upload turned into a 12 s timeout. Queue the chunks and
+            // let the completion callback feed them out one by one.
+            txChunks.clear()
             var off = 0
             val take = (attMax - prefix.size).coerceAtMost(next.payload.size)
-            writeChar(g, req, prefix + next.payload.copyOfRange(0, take), noResp = false)
+            txChunks.addLast(prefix + next.payload.copyOfRange(0, take))
             off = take
             while (off < next.payload.size) {
                 val n = (attMax - 1).coerceAtMost(next.payload.size - off)
                 val cont = ByteArray(1 + n); cont[0] = '+'.code.toByte()
                 System.arraycopy(next.payload, off, cont, 1, n)
-                writeChar(g, req, cont, noResp = false)
+                txChunks.addLast(cont)
                 off += n
             }
+            writeNextChunk(g, req)
         }
         // Generous first-byte window: /api/firmware/check blocks the receiver
         // for up to ~8 s of dead air while it fetches manifests over HTTPS.
@@ -311,6 +336,10 @@ class Rxv2Ble(private val context: Context) {
                 @Suppress("DEPRECATION")
                 run { d.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE; g.writeDescriptor(d) }
             }
+        }
+        override fun onCharacteristicWrite(g: BluetoothGatt, c: BluetoothGattCharacteristic,
+                                           status: Int) {
+            if (c.uuid == REQ) bg.post { writeNextChunk(g, c) }
         }
         override fun onDescriptorWrite(g: BluetoothGatt, d: BluetoothGattDescriptor, status: Int) {
             bg.post {

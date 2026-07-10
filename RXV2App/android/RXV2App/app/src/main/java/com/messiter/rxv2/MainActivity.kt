@@ -49,6 +49,20 @@ class MainActivity : AppCompatActivity() {
         ble = Rxv2Ble(applicationContext)
         root = FrameLayout(this)
         setContentView(root)
+        // Android 15+ draws apps edge-to-edge: without this, the update
+        // banner (and the top of the scanner) slide UNDER the status bar,
+        // where taps never reach them. Pad the root by the system bars.
+        root.setOnApplyWindowInsetsListener { v, insets ->
+            if (Build.VERSION.SDK_INT >= 30) {
+                val b = insets.getInsets(android.view.WindowInsets.Type.systemBars())
+                v.setPadding(b.left, b.top, b.right, b.bottom)
+            } else {
+                @Suppress("DEPRECATION")
+                v.setPadding(insets.systemWindowInsetLeft, insets.systemWindowInsetTop,
+                             insets.systemWindowInsetRight, insets.systemWindowInsetBottom)
+            }
+            insets
+        }
 
         ble.onState = { st ->
             when (st) {
@@ -317,6 +331,18 @@ class MainActivity : AppCompatActivity() {
     private fun followFetch(method: String, pathAndQuery: String, headers: Map<String, String>,
                             body: ByteArray?, hops: Int,
                             cb: (kotlin.Result<Rxv2Ble.Response>) -> Unit) {
+        // Static files the pages fetch() (i18n dictionaries etc.) are in the
+        // app bundle — serve them locally instead of paying ~half a second
+        // of radio time on every page change. /api/* always crosses BLE.
+        if (hops == 0 && method == "GET") {
+            val bare = pathAndQuery.substringBefore("?")
+            if (!bare.startsWith("/api/")) {
+                bundled(bare)?.let {
+                    cb(kotlin.Result.success(Rxv2Ble.Response(200, it.second, "", it.first)))
+                    return
+                }
+            }
+        }
         ble.request(method, pathAndQuery, headers, body) { result ->
             val resp = result.getOrNull()
             if (resp != null && resp.code in 300..399 && resp.location.isNotEmpty() && hops < 3) {
