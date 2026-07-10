@@ -21,6 +21,7 @@ struct RXV2App: App {
 
 struct RootView: View {
     @EnvironmentObject var link: BleLink
+    @State private var demoMode = false
 
     var body: some View {
         NavigationStack {
@@ -33,7 +34,23 @@ struct RootView: View {
                     .ignoresSafeArea()
                     .toolbar(.hidden, for: .navigationBar)
             default:
-                ScannerView()
+                ScannerView(demoMode: $demoMode)
+            }
+        }
+        // No receiver? Let anyone play: canned data from a real receiver,
+        // with animated channels.
+        .fullScreenCover(isPresented: $demoMode) {
+            ZStack(alignment: .topTrailing) {
+                WebScreen(link: link, demo: true)
+                    .ignoresSafeArea()
+                Button {
+                    demoMode = false
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(.secondary)
+                        .padding(10)
+                }
             }
         }
     }
@@ -41,9 +58,18 @@ struct RootView: View {
 
 struct ScannerView: View {
     @EnvironmentObject var link: BleLink
+    @Binding var demoMode: Bool
 
     var body: some View {
         List {
+            Section {
+                Button {
+                    demoMode = true
+                } label: {
+                    Label("No receiver yet?  Try the demo",
+                          systemImage: "theatermasks")
+                }
+            }
             Section {
                 ForEach(link.found) { d in
                     Button {

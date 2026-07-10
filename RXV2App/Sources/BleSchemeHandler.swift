@@ -16,9 +16,13 @@ import WebKit
 
 final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
     private let link: BleLink
+    private let demo: Bool
     private var live = Set<ObjectIdentifier>()
 
-    init(link: BleLink) { self.link = link }
+    init(link: BleLink, demo: Bool = false) {
+        self.link = link
+        self.demo = demo
+    }
 
     private static let mime: [String: String] = [
         "html": "text/html", "css": "text/css", "js": "application/javascript",
@@ -32,9 +36,18 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
         let path = url.path.isEmpty ? "/" : url.path
         let method = (task.request.httpMethod ?? "GET").uppercased()
 
-        // 1) bundle-served static content (GET only)
-        if method == "GET", let (data, type) = bundled(path: path) {
+        // 1) bundle-served static content (GET only). In demo mode the demo
+        //    shim is injected into every page: it intercepts fetch() with
+        //    canned receiver data, so nothing ever touches Bluetooth.
+        if method == "GET", var (data, type) = bundled(path: path) {
+            if demo && type == "text/html" {
+                data = Data("<script src=\"/demo-shim.js\"></script>".utf8) + data
+            }
             deliver(task, url: url, code: 200, type: type, body: data)
+            return
+        }
+        if demo {   // nothing else exists in the demo — never touch BLE
+            deliver(task, url: url, code: 404, type: "text/plain", body: Data())
             return
         }
 
@@ -101,9 +114,11 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
     private func bundled(path: String) -> (Data, String)? {
         var name = path == "/" ? "index.html" : String(path.dropFirst())
         if !name.contains(".") { name += ".html" }
+        // The demo shim lives outside webroot so data syncs can't delete it.
+        let dir = name.hasPrefix("demo-") ? "demo" : "webroot"
         guard !name.contains(".."),
               let url = Bundle.main.url(forResource: name, withExtension: nil,
-                                        subdirectory: "webroot"),
+                                        subdirectory: dir),
               let data = try? Data(contentsOf: url) else { return nil }
         let ext = (name as NSString).pathExtension.lowercased()
         return (data, Self.mime[ext] ?? "application/octet-stream")

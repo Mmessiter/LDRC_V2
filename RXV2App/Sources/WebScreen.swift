@@ -10,6 +10,7 @@ import WebKit
 
 struct WebScreen: UIViewRepresentable {
     let link: BleLink
+    var demo: Bool = false
 
     static let formShim = """
     document.addEventListener('submit', function (ev) {
@@ -38,7 +39,7 @@ struct WebScreen: UIViewRepresentable {
 
     func makeUIView(context: Context) -> WKWebView {
         let cfg = WKWebViewConfiguration()
-        cfg.setURLSchemeHandler(BleSchemeHandler(link: link), forURLScheme: "ble")
+        cfg.setURLSchemeHandler(BleSchemeHandler(link: link, demo: demo), forURLScheme: "ble")
         let shim = WKUserScript(source: Self.formShim,
                                 injectionTime: .atDocumentEnd,
                                 forMainFrameOnly: false)
