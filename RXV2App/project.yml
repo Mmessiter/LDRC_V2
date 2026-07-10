@@ -16,6 +16,9 @@ targets:
       - path: webroot
         type: folder
         buildPhase: resources
+      - path: demo
+        type: folder
+        buildPhase: resources
       - path: Assets.xcassets
     info:
       path: Info.plist

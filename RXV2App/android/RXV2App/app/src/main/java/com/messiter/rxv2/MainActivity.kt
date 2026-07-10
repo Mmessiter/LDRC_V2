@@ -32,6 +32,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var ble: Rxv2Ble
     private lateinit var root: FrameLayout
     private var webView: WebView? = null
+    private var demoMode = false
 
     // Fake same-origin the WebView believes it is talking to. Every request
     // to this host is intercepted; the network is never actually touched.
@@ -66,7 +67,7 @@ class MainActivity : AppCompatActivity() {
 
         ble.onState = { st ->
             when (st) {
-                is Rxv2Ble.State.Ready -> showWeb()
+                is Rxv2Ble.State.Ready -> { demoMode = false; showWeb() }
                 is Rxv2Ble.State.Failed -> { showScanner(); showMessage(st.msg) }
                 is Rxv2Ble.State.Idle -> showScanner()
                 else -> {}
@@ -91,7 +92,10 @@ class MainActivity : AppCompatActivity() {
     override fun onBackPressed() {
         val w = webView
         if (w != null && w.canGoBack()) w.goBack()
-        else if (w != null) ble.disconnect()   // Ready → back = disconnect
+        else if (w != null) {
+            if (demoMode) { demoMode = false; showScanner() }
+            else ble.disconnect()               // Ready → back = disconnect
+        }
         else super.onBackPressed()
     }
 
@@ -120,6 +124,14 @@ class MainActivity : AppCompatActivity() {
             setPadding(40, 16, 40, 40); alpha = 0.6f; textSize = 13f
         }
         col.addView(hint)
+        // No receiver? Let anyone play: the same web UI runs against
+        // canned data from a real receiver, with animated channels.
+        col.addView(TextView(this).apply {
+            text = "🎭  No receiver yet?  Try the demo"
+            textSize = 15f; setPadding(40, 28, 40, 28)
+            setBackgroundColor(0xFF1E293B.toInt()); setTextColor(0xFF7DD3FC.toInt())
+            setOnClickListener { demoMode = true; showWeb() }
+        })
         root.addView(col)
         startScanIfPermitted()
         checkAppUpdate(col)
@@ -285,6 +297,8 @@ class MainActivity : AppCompatActivity() {
                 }
                 // Not a static file: a GET page that lives in firmware. Fetch
                 // it over BLE synchronously (this runs off the UI thread).
+                if (demoMode) return WebResourceResponse("text/plain", null, 404, "Not Found",
+                    emptyMap(), ByteArrayInputStream(ByteArray(0)))
                 return bleSync(req.method, req.url)
             }
         }
@@ -293,8 +307,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     // Prepend the bridge shim so it runs before any of the page's scripts.
+    // In demo mode the DEMO shim is injected instead: it intercepts fetch()
+    // with canned receiver data, so nothing ever touches Bluetooth.
     private fun withShim(html: ByteArray): ByteArray {
-        val tag = "<script>$JS_SHIM</script>".toByteArray(Charsets.UTF_8)
+        val tag = if (demoMode)
+            "<script src=\"/demo-shim.js\"></script>".toByteArray(Charsets.UTF_8)
+        else "<script>$JS_SHIM</script>".toByteArray(Charsets.UTF_8)
         return tag + html
     }
 
@@ -413,8 +431,10 @@ class MainActivity : AppCompatActivity() {
         var name = if (path == "/") "index.html" else path.trimStart('/')
         if (!name.contains(".")) name += ".html"
         if (name.contains("..")) return null
+        // The demo shim lives outside webroot so data syncs can't delete it.
+        val dir = if (name.startsWith("demo-")) "demo" else "webroot"
         return runCatching {
-            assets.open("webroot/$name").use { it.readBytes() } to
+            assets.open("$dir/$name").use { it.readBytes() } to
                 (mime[name.substringAfterLast('.').lowercase()] ?: "application/octet-stream")
         }.getOrNull()
     }
