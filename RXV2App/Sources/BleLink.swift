@@ -34,6 +34,7 @@ final class BleLink: NSObject, ObservableObject {
 
     enum State: Equatable {
         case idle, scanning, connecting(String), ready(String), failed(String)
+        case reconnecting(String)
     }
 
     @Published var state: State = .idle
@@ -80,8 +81,14 @@ final class BleLink: NSObject, ObservableObject {
 
     func stopScan() { central.stopScan() }
 
+    private var lastName = "RXV2"
+    private var userDisconnect = false
+    private var reconnectUntil: Date?
+
     func connect(_ d: Discovered) {
         stopScan()
+        lastName = d.name
+        userDisconnect = false
         state = .connecting(d.name)
         peripheral = d.peripheral
         d.peripheral.delegate = self
@@ -89,6 +96,7 @@ final class BleLink: NSObject, ObservableObject {
     }
 
     func disconnect() {
+        userDisconnect = true
         if let p = peripheral { central.cancelPeripheralConnection(p) }
         cleanupConnection(message: nil)
         state = .idle
@@ -98,6 +106,13 @@ final class BleLink: NSObject, ObservableObject {
     func request(method: String, path: String, headers: [String: String] = [:],
                  body: Data? = nil,
                  completion: @escaping (Result<BleResponse, Error>) -> Void) {
+        // Fail fast while the link is down (e.g. mid-reboot during a
+        // firmware install) so page polls keep their cadence.
+        if case .ready = state {} else {
+            completion(.failure(NSError(domain: "BleLink", code: 503,
+                userInfo: [NSLocalizedDescriptionKey: "Not connected"])))
+            return
+        }
         var text = "\(method) \(path)\n"
         for (k, v) in headers { text += "\(k): \(v)\n" }
         text += "\n"
@@ -285,6 +300,27 @@ extension BleLink: CBCentralManagerDelegate, CBPeripheralDelegate {
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral,
                         error: Error?) {
         cleanupConnection(message: "Receiver disconnected")
+        // Unexpected drop while in use (e.g. reboot after a firmware
+        // install) — retry quietly for 90 s; the page keeps polling and
+        // completes when the receiver is back.
+        let wasActive: Bool
+        if case .ready = state { wasActive = true }
+        else if case .reconnecting = state { wasActive = true }
+        else { wasActive = false }
+        if !userDisconnect && wasActive {
+            if case .ready = state { reconnectUntil = Date().addingTimeInterval(90) }
+            if let until = reconnectUntil, Date() < until {
+                self.peripheral = peripheral          // cleanup nilled it
+                peripheral.delegate = self
+                state = .reconnecting(lastName)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
+                    guard let self, case .reconnecting = self.state,
+                          let p = self.peripheral else { return }
+                    self.central.connect(p, options: nil)
+                }
+                return
+            }
+        }
         state = .idle
     }
 

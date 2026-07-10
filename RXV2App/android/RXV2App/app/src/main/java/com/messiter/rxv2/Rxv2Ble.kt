@@ -43,6 +43,7 @@ class Rxv2Ble(private val context: Context) {
         object Idle : State()
         object Scanning : State()
         data class Connecting(val name: String) : State()
+        data class Reconnecting(val name: String) : State()
         data class Ready(val name: String) : State()
         data class Failed(val msg: String) : State()
     }
@@ -133,16 +134,33 @@ class Rxv2Ble(private val context: Context) {
 
     // ── Connect / disconnect ────────────────────────────────────────
     private var connName = "RXV2"   // scan-time name; g.device.name is a stale cache
+    private var lastDevice: BluetoothDevice? = null
+    private var userDisconnect = false
+    private var reconnectUntil = 0L
 
     fun connect(d: Discovered) {
         stopScan()
         connName = d.name
+        lastDevice = d.device
+        userDisconnect = false
         state = State.Connecting(d.name)
         gatt = d.device.connectGatt(context, false, gattCb, BluetoothDevice.TRANSPORT_LE)
     }
 
     fun disconnect() {
+        userDisconnect = true
         gatt?.disconnect()
+    }
+
+    // Quietly re-establish the link after an unexpected drop — above all a
+    // firmware install, where the receiver reboots mid-session and comes
+    // back ~20 s later. The web page keeps polling the whole time; as soon
+    // as the link is back its requests start answering again, so the
+    // update flow completes instead of dying at the reboot.
+    private fun tryReconnect() {
+        val d = lastDevice ?: run { state = State.Idle; return }
+        if (System.currentTimeMillis() > reconnectUntil) { state = State.Idle; return }
+        gatt = d.connectGatt(context, false, gattCb, BluetoothDevice.TRANSPORT_LE)
     }
 
     // ── Public request API ──────────────────────────────────────────
@@ -154,6 +172,12 @@ class Rxv2Ble(private val context: Context) {
         val head = sb.toString().toByteArray(Charsets.UTF_8)
         val payload = if (body != null) head + body else head
         bg.post {
+            if (state !is State.Ready) {
+                // Fail fast (notably while quietly reconnecting after a
+                // firmware-install reboot) so page polls keep their cadence.
+                cb(kotlin.Result.failure(Exception("Not connected")))
+                return@post
+            }
             queue.addLast(Pending(payload, cb))
             pump()
         }
@@ -307,7 +331,15 @@ class Rxv2Ble(private val context: Context) {
                 bg.post {
                     cleanup("Receiver disconnected")
                     g.close(); gatt = null
-                    state = State.Idle
+                    if (!userDisconnect && state is State.Ready) {
+                        reconnectUntil = System.currentTimeMillis() + 90_000
+                        state = State.Reconnecting(connName)
+                        bg.postDelayed({ tryReconnect() }, 2000)
+                    } else if (!userDisconnect && state is State.Reconnecting) {
+                        bg.postDelayed({ tryReconnect() }, 2000)
+                    } else {
+                        state = State.Idle
+                    }
                 }
             }
         }

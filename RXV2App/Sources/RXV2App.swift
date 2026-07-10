@@ -25,7 +25,7 @@ struct RootView: View {
     var body: some View {
         NavigationStack {
             switch link.state {
-            case .ready:
+            case .ready, .reconnecting:
                 // Full-screen, like the web UI added to the home screen: no
                 // navigation bar. Disconnect lives on the page's Bluetooth
                 // badge (bottom-right), via the rxv2 JS message bridge.
