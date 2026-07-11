@@ -179,7 +179,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // it disables WiFi, which is what its name implies.
     // Radios off (fly mode) but we're still connected over the kept
     // Bluetooth link: the Fly-now slot becomes the way back instead.
+    let rfOnlyMenu = false;
     if (s && s.net && s.net.rf_only && window.LDRC && LDRC.viaBle) {
+        rfOnlyMenu = true;
         const fb0 = document.getElementById('flybtn');
         if (fb0) {
             fb0.style.background = '#6cab5e';
@@ -192,7 +194,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
     const fbtn = document.getElementById('flybtn');
-    if (fbtn) fbtn.onclick = showFlyConfirm;
+    if (fbtn && !rfOnlyMenu) fbtn.onclick = showFlyConfirm;
 
     // Simulator state — banner + tint the Simulator button green while active.
     const simOn = !!s.sim;

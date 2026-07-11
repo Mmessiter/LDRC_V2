@@ -154,7 +154,7 @@
     const path = q < 0 ? url : url.slice(0, q);
     const args = new URLSearchParams(q < 0 ? "" : url.slice(q + 1));
 
-    if (!path.startsWith("/api/") && !["/bind", "/fly_arm", "/protocol"].includes(path)) {
+    if (!path.startsWith("/api/") && !["/bind", "/fly_arm", "/fly_disarm", "/protocol"].includes(path)) {
       return _fetch(input, init);          // static pages load normally
     }
 
