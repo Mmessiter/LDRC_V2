@@ -129,6 +129,18 @@
     return T("");                            // EEPROM write, reboot, etc.
   }
 
+  // ── Persistent demo state (sim mode, receiver name) ─────────────
+  // Every page navigation loads a fresh copy of this shim, so anything
+  // the user changes has to live in localStorage to survive.
+  const demoState = (function () {
+    try { return JSON.parse(localStorage.getItem("rxv2DemoState") || "{}"); }
+    catch (e) { return {}; }
+  })();
+  function saveDemoState() {
+    try { localStorage.setItem("rxv2DemoState", JSON.stringify(demoState)); }
+    catch (e) {}
+  }
+
   function J(obj, status) {
     return Promise.resolve(new Response(JSON.stringify(obj), {
       status: status || 200,
@@ -162,8 +174,26 @@
         // "offline" makes the page skip the update offer quietly.
         return J({ current: "RXV2-demo", offline: true, net_mode: "demo" });
       case "/api/name":
-        if (args.get("name")) CANNED["/api/state.json"].info.name = args.get("name");
-        return J({ ok: true, name: CANNED["/api/state.json"].info.name });
+        if (args.get("name")) { demoState.name = args.get("name"); saveDemoState(); }
+        return J({ ok: true, name: demoState.name ||
+                   CANNED["/api/state.json"].info.name });
+      case "/api/sim": {
+        // The page confirms first, shows its "rebooting" card, THEN posts
+        // here — flip the persistent flag so the "rebooted" receiver
+        // really is in (or out of) simulator mode when the page returns.
+        const body = (init && init.body) ? String(init.body) : "";
+        const on = new URLSearchParams(body).get("on") === "1";
+        demoState.sim = on;
+        saveDemoState();
+        return J({ ok: true, sim: on });
+      }
+    }
+
+    if (path === "/api/state.json") {
+      const st = JSON.parse(JSON.stringify(CANNED["/api/state.json"]));
+      st.sim = !!demoState.sim;
+      if (demoState.name) { st.info.name = demoState.name; st.info.hostname = demoState.name; }
+      return J(st);
     }
 
     if (path in CANNED) return J(CANNED[path]);
