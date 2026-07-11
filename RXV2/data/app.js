@@ -412,6 +412,15 @@
         const bridge = ble && window.webkit && window.webkit.messageHandlers
                            && window.webkit.messageHandlers.rxv2;
         const b = document.createElement(bridge ? 'button' : 'div');
+        // Radios off (fly mode): the Bluetooth badge would be a fib — the
+        // receiver is only whispering down one kept link. Hide it until
+        // the radios come back (checked once; the flow reloads pages).
+        if (ble) {
+            fetch('/api/state.json', { cache: 'no-store' })
+                .then(r => r.json())
+                .then(st => { if (st && st.net && st.net.rf_only) b.style.display = 'none'; })
+                .catch(() => {});
+        }
         b.id = 'linkBadge';
         b.type = bridge ? 'button' : undefined;
         b.textContent = ble ? '🔵 Bluetooth' : '🛜 WiFi';

@@ -177,6 +177,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // "Fly now" acts through JS (not a plain link) so it can confirm first —
     // it disables WiFi, which is what its name implies.
+    // Radios off (fly mode) but we're still connected over the kept
+    // Bluetooth link: the Fly-now slot becomes the way back instead.
+    if (s && s.net && s.net.rf_only && window.LDRC && LDRC.viaBle) {
+        const fb0 = document.getElementById('flybtn');
+        if (fb0) {
+            fb0.style.background = '#6cab5e';
+            fb0.innerHTML = '<span class=ico>🔄</span>'
+              + '<span style="display:flex;flex-direction:column;align-items:flex-start;text-align:left">'
+              + '<span style="font-weight:700">Re-enable WiFi &amp; Bluetooth</span>'
+              + '<span style="font-size:.62em;font-weight:400;opacity:.9;margin-top:.25em">'
+              + 'radios are OFF for flying — tap to reboot and bring them back</span></span>';
+            fb0.onclick = flyDisarmFlow;
+        }
+    }
     const fbtn = document.getElementById('flybtn');
     if (fbtn) fbtn.onclick = showFlyConfirm;
 
@@ -373,25 +387,37 @@ function flyDone() {
               + '<span style="display:flex;flex-direction:column;align-items:flex-start;text-align:left">'
               + '<span style="font-weight:700">Turn WiFi &amp; Bluetooth back ON</span>'
               + '<span style="font-size:.72em;font-weight:400;opacity:.9;margin-top:.25em">'
-              + 'reboots the receiver and returns to the menu</span></span></button>';
+              + 'reboots the receiver and returns to the menu</span></span></button>'
+              + '<button class=btn id=__flymenu style="background:#7d9eb0"><span class=ico>📋</span>'
+              + '<span style="display:flex;flex-direction:column;align-items:flex-start;text-align:left">'
+              + '<span>Return to menu</span>'
+              + '<span style="font-size:.72em;font-weight:400;opacity:.9;margin-top:.25em">'
+              + 'keeps WiFi &amp; Bluetooth off</span></span></button>';
     } else {
         html += '<p class=muted>You can close this page.</p>';
     }
     c.innerHTML = html + '</div>';
     const back = document.getElementById('__flyback');
-    if (back) back.onclick = () => {
-        fetch('/fly_disarm', { method: 'POST' }).catch(() => {});
-        c.innerHTML = '<h1>Radios returning</h1><div class=card>'
-          + '<p style="font-size:1.15em;font-weight:600">⏳ Rebooting — WiFi &amp; Bluetooth back in ~15 s…</p></div>';
-        const tick = async () => {
-            try {
-                const r = await fetch('/api/state.json', { cache: 'no-store' });
-                if (r.ok) { location.replace('/'); return; }
-            } catch (e) {}
-            setTimeout(tick, 1500);
-        };
-        setTimeout(tick, 4000);
+    if (back) back.onclick = flyDisarmFlow;
+    const menu = document.getElementById('__flymenu');
+    if (menu) menu.onclick = () => location.replace('/');
+}
+
+// Re-enable both radios: reboot the receiver, wait for it to answer again
+// (the app quietly reconnects through the reboot), then land on the menu.
+function flyDisarmFlow() {
+    fetch('/fly_disarm', { method: 'POST' }).catch(() => {});
+    const c = document.querySelector('.container');
+    if (c) c.innerHTML = '<h1>Radios returning</h1><div class=card>'
+      + '<p style="font-size:1.15em;font-weight:600">⏳ Rebooting — WiFi &amp; Bluetooth back in ~15 s…</p></div>';
+    const tick = async () => {
+        try {
+            const r = await fetch('/api/state.json', { cache: 'no-store' });
+            if (r.ok) { const s = await r.json(); if (!s.net || !s.net.rf_only) { location.replace('/'); return; } }
+        } catch (e) {}
+        setTimeout(tick, 1500);
     };
+    setTimeout(tick, 4000);
 }
 
 // "Turn off WiFi" in sim mode — trims radio interference while the simulator

@@ -503,7 +503,10 @@ inline void bleStreamPoll() {
 }
 
 inline void blePoll() {
-    if (!bleStarted) return;
+    // Keep serving while a client is CONNECTED even when advertising is
+    // off (fly-quiet mode keeps the one live phone link) — otherwise the
+    // RF-only screen's buttons would be talking to a mute receiver.
+    if (!bleStarted && !bleClientConnected) return;
     if (bleReqReady && !blePumping) bleExecuteRequest();
     if (!blePumping || !bleRespChr || !bleClientConnected) {
         if (blePumping && !bleClientConnected) blePumping = false;   // client gone — drop it

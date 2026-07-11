@@ -1493,6 +1493,7 @@ inline void handleApiState() {
     // --- net ----------------------------------------------------------
     j += ",\"net\":{";
     j += "\"mode\":\""; j += netModeName(); j += "\"";
+    j += ",\"rf_only\":"; j += (netMode == NET_NO_WIFI) ? "true" : "false";
     j += ",\"ssid\":\""; jsonEsc(getEffectiveSsid()); j += "\"";
     j += ",\"ssid_custom\":"; j += (wifiCredsAreCustom() ? "true" : "false");
     j += ",\"ap_only\":"; j += ((prefs.isKey(NVS_KEY_AP_ONLY) && prefs.getBool(NVS_KEY_AP_ONLY, false)) ? "true" : "false");
