@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.221-fly-ui",
+      "url": "https://messiter.com/rxv2/release/v0.9.221/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.221/littlefs.bin",
+      "notes": "Fly-screen polish: the 'turns off WiFi & Bluetooth' note sits neatly under 'Fly now' instead of squashed beside it, and the return button on the RF-only screen now says 'Turn WiFi & Bluetooth back ON' in big friendly letters - it's rather important, after all. Installing this also updates the web pages."
+    },
+    {
       "name": "RXV2-0.9.220-fly-ble",
       "url": "https://messiter.com/rxv2/release/v0.9.220/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.220/littlefs.bin",
@@ -58,11 +64,6 @@
     {
       "name": "RXV2-0.9.210-ble-config",
       "url": "https://messiter.com/rxv2/release/v0.9.210/firmware.bin",
-      "notes": ""
-    },
-    {
-      "name": "RXV2-0.9.209-ble-config",
-      "url": "https://messiter.com/rxv2/release/v0.9.209/firmware.bin",
       "notes": ""
     }
   ]

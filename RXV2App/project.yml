@@ -25,7 +25,7 @@ targets:
       properties:
         ITSAppUsesNonExemptEncryption: false
         CFBundleShortVersionString: "1.0"
-        CFBundleVersion: "5"
+        CFBundleVersion: "6"
         CFBundleDisplayName: RXV2
         UILaunchScreen: {}
         NSBluetoothAlwaysUsageDescription: >-

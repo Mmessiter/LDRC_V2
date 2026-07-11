@@ -109,7 +109,7 @@
         <!-- Front screen = things you use AT the model. One-time configuration
              lives under Setup, everything sim under Simulator — a new user sees
              five calm buttons instead of twelve. -->
-        <button class="btn btn-fly"  type=button id=flybtn><span class=ico>&#128641;&#9992;&#65039;</span>Fly now<span style="display:block;font-size:.62em;font-weight:400;opacity:.85;margin-top:.15em">turns off WiFi &amp; Bluetooth</span></button>
+        <button class="btn btn-fly"  type=button id=flybtn><span class=ico>&#128641;&#9992;&#65039;</span><span style="display:flex;flex-direction:column;align-items:flex-start;text-align:left"><span>Fly now</span><span style="font-size:.62em;font-weight:400;opacity:.85;margin-top:.25em">turns off WiFi &amp; Bluetooth</span></span></button>
         <a class="btn btn-bb"   href="/rotorflight" id=rfbtn style="display:none;background:#8e6cab"><span class=ico>&#129357;</span>Rotorflight config &mdash; <span id=fcver>&hellip;</span></a>
         <a class="btn btn-bb"   href="/blackbox"><span class=ico>&#128209;</span>Black box log</a>
         <a class="btn" href="/sim" id=simpg style="background:#4a90c9"><span class=ico>&#127918;</span><span id=simpglbl>Simulator</span></a>
@@ -369,9 +369,11 @@ function flyDone() {
         // radios return, and the app reconnects by itself.
         html += '<p class=muted>Close the app and fly — this last Bluetooth link goes quiet the '
               + 'moment you do. Changed your mind?</p>'
-              + '<button class=btn id=__flyback style="background:#6cab5e">🔄 Return to menu '
-              + '<span style="display:block;font-size:.62em;font-weight:400;opacity:.85;margin-top:.15em">'
-              + 'turns WiFi &amp; Bluetooth back on</span></button>';
+              + '<button class=btn id=__flyback style="background:#6cab5e"><span class=ico>🔄</span>'
+              + '<span style="display:flex;flex-direction:column;align-items:flex-start;text-align:left">'
+              + '<span style="font-weight:700">Turn WiFi &amp; Bluetooth back ON</span>'
+              + '<span style="font-size:.72em;font-weight:400;opacity:.9;margin-top:.25em">'
+              + 'reboots the receiver and returns to the menu</span></span></button>';
     } else {
         html += '<p class=muted>You can close this page.</p>';
     }
