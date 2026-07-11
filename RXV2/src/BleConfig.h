@@ -367,6 +367,48 @@ inline void bleStop() {
 //  Request execution + chunked response pump — called from loop()
 //*********************************************************************
 
+
+// Early pump: push the CURRENT handler's captured response to the app NOW,
+// from inside the handler. Needed by handlers that reboot or silence the
+// radios right after replying — their reply is normally pumped from loop()
+// AFTER the handler returns, which would be too late. Small replies only.
+inline bool bleEarlyPumped = false;
+
+inline void bleEarlyPump() {
+    if (!bleActive || !bleSent || !bleClientConnected || !bleRespChr) return;
+    String hdr = "R" + String(bleCode) + "|" + bleType + "|" +
+                 String(bleBody.length()) + "|" + bleLocation + "\n";
+    for (int t = 0; t < 50 && !bleRespChr->notify((const uint8_t*)hdr.c_str(), hdr.length()); ++t)
+        delay(10);
+    size_t mtu   = bleConnMtu > 23 ? bleConnMtu : 23;
+    size_t chunk = (mtu > 23 ? mtu - 3 : 20);
+    if (chunk > 240) chunk = 240;
+    size_t off = 0;
+    int stalls = 0;
+    while (off < bleBody.length() && stalls < 100) {
+        size_t n = min(chunk, bleBody.length() - off);
+        if (!bleRespChr->notify((const uint8_t*)bleBody.c_str() + off, n)) { delay(10); ++stalls; continue; }
+        off += n;
+    }
+    delay(150);
+    bleBody = "";
+    bleEarlyPumped = true;
+}
+
+// Fly-quiet: stop advertising but KEEP the live phone connection, so the
+// "RF-only mode" page keeps a working "return to menu" button. The link
+// dies naturally when the user closes the app or walks away — and because
+// bleStarted is false, onDisconnect will NOT re-advertise: true silence.
+inline bool bleHasClient() { return bleClientConnected; }
+
+inline void bleFlyQuiet() {
+    if (!bleStarted) return;
+    bleStarted = false;
+    NimBLEDevice::stopAdvertising();
+    Serial.println("[ble] fly-quiet: advertising off, live link kept");
+    events.add("BLE quiet (fly) — link kept until app closes");
+}
+
 inline void bleExecuteRequest() {
     // Parse the framed payload.
     bleMethod = ""; blePath = ""; bleArgs.clear(); bleHeaders.clear();
@@ -410,8 +452,17 @@ inline void bleExecuteRequest() {
     bleSent = false;
     bleCode = 404; bleType = "text/plain"; bleBody = "not found"; bleLocation = "";
     if (fn) fn();
-    if (!bleSent) { bleCode = 500; bleType = "text/plain"; bleBody = "handler sent nothing"; }
     bleActive = false;
+    if (bleEarlyPumped) {                    // reply already sent from inside the handler
+        bleEarlyPumped = false;
+        bleBody = ""; bleHeaderFrame = "";
+        blePumping = false;
+        bleInbox = "";
+        bleInboxExpected = 0;
+        bleReqReady = false;
+        return;
+    }
+    if (!bleSent) { bleCode = 500; bleType = "text/plain"; bleBody = "handler sent nothing"; }
 
     // Frame the response and start pumping.
     bleHeaderFrame = "R" + String(bleCode) + "|" + bleType + "|" +

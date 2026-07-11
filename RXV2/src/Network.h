@@ -18,6 +18,8 @@
 // Defined in BleConfig.h (included later in this translation unit).
 // BLE strictly mirrors the WiFi lifecycle: same on switches, same off switch.
 inline void bleStart();
+inline void bleFlyQuiet();
+inline bool bleHasClient();
 inline void bleStop();
 
 //*********************************************************************
@@ -270,7 +272,11 @@ inline void startApMode() {
 
 inline void disableWifi() {
     Serial.println("[wifi] turning off until reboot");
-    bleStop();    // fly mode silences BLE too — same rule as WiFi
+    // Fly mode silences BLE too — same rule as WiFi. But when a phone is
+    // connected over BLE right now, keep just that link (no advertising):
+    // its "RF-only" page gets a working return-to-menu button, and the
+    // link drops to full silence the moment the app closes.
+    if (bleHasClient()) bleFlyQuiet(); else bleStop();
     if (otaStarted) {
         ArduinoOTA.end();
         otaStarted = false;
