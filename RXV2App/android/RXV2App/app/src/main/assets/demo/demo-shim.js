@@ -31,6 +31,104 @@
     }, Math.max(20, Math.min(200, ms || 50)));
   }
 
+
+  // ── Simulated Rotorflight flight controller ──────────────────────
+  // The Rotorflight pages read/write raw MSP frames via /api/msp. The
+  // demo keeps a little FC in localStorage: reads return stored bytes
+  // (or authentic-looking defaults), writes persist — so edited PIDs,
+  // rates and governor values survive and read back, even across app
+  // restarts. Byte layouts match the pages' own decoders (RF 2.3).
+  const MSP_DEFAULTS = {
+    // MSP_RC_TUNING (111): type 6 ROTORFLIGHT; per axis [rate,expo,shape,-,accel16]
+    // Roll 240°/s, Pitch 240°/s, Yaw 300°/s, Collective 12.5; boost tail + yaw dyn.
+    111: [6, 48,20,60,0,0,0, 48,20,60,0,0,0, 60,12,40,0,0,0, 100,0,50,0,0,0,
+          0,15, 0,15, 0,15, 0,15, 30,25,60],
+    // MSP_PID (112): 17 u16 LE — R/P/Y × (P,I,D,F) + boost R/P/Y + h R/P
+    112: (function () {
+      const w = [50,100,20,100, 50,100,40,100, 80,120,40,0, 0,0,0, 25,25];
+      const b = [];
+      for (const v of w) { b.push(v & 0xff, (v >> 8) & 0xff); }
+      return b;
+    })(),
+    // MSP_PID_ADVANCED (94): 43 bytes, sparse fields per the page's table
+    94: (function () {
+      const b = new Array(43).fill(0);
+      b[1] = 25;                      // ground error decay
+      b[6] = 1;                       // piro compensation on
+      b[7] = 45; b[8] = 45; b[9] = 45;      // error limits
+      b[10] = 50; b[11] = 50; b[12] = 100;  // bandwidths
+      b[13] = 15; b[14] = 15; b[15] = 20;   // D cutoffs
+      b[17] = 25; b[18] = 25; b[19] = 0;    // cross coupling
+      b[20] = 30; b[21] = 30;               // CW / CCW stop gain
+      b[22] = 5;                             // yaw precomp cutoff
+      b[23] = 10; b[24] = 0;                 // cyclic / collective FF
+      b[36] = 40; b[37] = 40;                // horizon gains
+      b[38] = 0; b[39] = 0; b[40] = 0;       // boost gains
+      b[41] = 10; b[42] = 20;                // inertia precomp gain / cutoff
+      return b;
+    })(),
+    // MSP_GOVERNOR_CONFIG (142): 42 bytes
+    142: (function () {
+      const b = new Array(42).fill(0);
+      const u16 = (o, v) => { b[o] = v & 0xff; b[o+1] = (v >> 8) & 0xff; };
+      b[0] = 2;            // mode: STANDARD
+      u16(1, 200);         // startup time 20.0 s
+      u16(3, 100);         // spoolup time 10.0 s
+      u16(5, 20);          // tracking time 2.0 s
+      u16(7, 50);          // recovery time 5.0 s
+      u16(9, 50);          // AR hold time
+      u16(13, 50);         // auto timeout
+      b[19] = 15;          // handover throttle %
+      b[20] = 20; b[21] = 20; b[22] = 20; b[23] = 10;   // filters
+      b[25] = 0;
+      u16(26, 100);        // spooldown
+      b[28] = 1;           // throttle type
+      return b;
+    })(),
+    // MSP_GOVERNOR_PROFILE (148): 17 bytes — headspeed 2100 etc.
+    148: [2100 & 0xff, (2100 >> 8) & 0xff, 40, 40, 50, 10, 15, 20, 20, 30, 10, 100, 100, 0,0,0,0],
+  };
+  // write-code → [read-code, profile-space]  ("rate" | "pid" | null)
+  const MSP_SET = { 204: [111, "rate"], 202: [112, "pid"], 95: [94, "pid"],
+                    143: [142, null],   149: [148, "pid"] };
+  const MSP_READ_SPACE = { 111: "rate", 112: "pid", 94: "pid", 142: null, 148: "pid" };
+  const mspStore = (function () {
+    try { return JSON.parse(localStorage.getItem("rxv2DemoMsp") || "{}"); }
+    catch (e) { return {}; }
+  })();
+  let rateProfile = 0, pidProfile = 0;
+  function mspKey(fn, space) {
+    return fn + "/" + (space === "rate" ? rateProfile : space === "pid" ? pidProfile : 0);
+  }
+  function toHex(bytes) {
+    return bytes.map(v => (v & 0xff).toString(16).padStart(2, "0")).join("");
+  }
+  function T(text) {
+    return Promise.resolve(new Response(text, {
+      status: 200, headers: { "Content-Type": "text/plain" },
+    }));
+  }
+  function mspHandle(args) {
+    const fn = parseInt(args.get("fn") || "0", 10);
+    const data = args.get("data") || "";
+    if (fn === 210 && data) {               // select rate / PID profile
+      const v = parseInt(data.slice(0, 2), 16);
+      if (v & 0x80) rateProfile = v & 0x0f; else pidProfile = v & 0x0f;
+      return T("");
+    }
+    if (fn in MSP_SET && data) {            // write: persist for the paired read
+      const [readFn, space] = MSP_SET[fn];
+      mspStore[mspKey(readFn, space)] = data.toLowerCase();
+      try { localStorage.setItem("rxv2DemoMsp", JSON.stringify(mspStore)); } catch (e) {}
+      return T("");
+    }
+    if (fn in MSP_READ_SPACE) {             // read: stored beats defaults
+      const stored = mspStore[mspKey(fn, MSP_READ_SPACE[fn])];
+      return T(stored || toHex(MSP_DEFAULTS[fn]));
+    }
+    return T("");                            // EEPROM write, reboot, etc.
+  }
+
   function J(obj, status) {
     return Promise.resolve(new Response(JSON.stringify(obj), {
       status: status || 200,
@@ -47,6 +145,8 @@
     if (!path.startsWith("/api/") && !["/bind", "/fly_arm", "/protocol"].includes(path)) {
       return _fetch(input, init);          // static pages load normally
     }
+
+    if (path === "/api/msp") return mspHandle(args);
 
     switch (path) {
       case "/api/channels.json": {
