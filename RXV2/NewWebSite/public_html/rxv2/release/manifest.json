@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.222-fly-menu",
+      "url": "https://messiter.com/rxv2/release/v0.9.222/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.222/littlefs.bin",
+      "notes": "Radios-off mode gets a proper front door: from the RF-only screen you can now return to the menu WITHOUT re-enabling the radios, and while they're off the Fly-now slot becomes a big green 'Re-enable WiFi & Bluetooth' button. The Bluetooth badge hides while the radios are off (the receiver is only whispering down one kept link). Also fixes the kept Bluetooth link going mute after fly-arm \u2014 the return buttons now genuinely work. Installing this also updates the web pages."
+    },
+    {
       "name": "RXV2-0.9.221-fly-ui",
       "url": "https://messiter.com/rxv2/release/v0.9.221/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.221/littlefs.bin",
@@ -59,11 +65,6 @@
     {
       "name": "RXV2-0.9.211-ble-config",
       "url": "https://messiter.com/rxv2/release/v0.9.211/firmware.bin",
-      "notes": ""
-    },
-    {
-      "name": "RXV2-0.9.210-ble-config",
-      "url": "https://messiter.com/rxv2/release/v0.9.210/firmware.bin",
       "notes": ""
     }
   ]

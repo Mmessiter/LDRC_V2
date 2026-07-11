@@ -177,6 +177,13 @@
         if (args.get("name")) { demoState.name = args.get("name"); saveDemoState(); }
         return J({ ok: true, name: demoState.name ||
                    CANNED["/api/state.json"].info.name });
+      case "/fly_arm":
+        demoState.rfOnly = true; saveDemoState();
+        return J({ ok: true });
+      case "/fly_disarm":
+        // the "reboot" — radios return
+        demoState.rfOnly = false; saveDemoState();
+        return J({ ok: true });
       case "/api/sim": {
         // The page confirms first, shows its "rebooting" card, THEN posts
         // here — flip the persistent flag so the "rebooted" receiver
@@ -192,6 +199,8 @@
     if (path === "/api/state.json") {
       const st = JSON.parse(JSON.stringify(CANNED["/api/state.json"]));
       st.sim = !!demoState.sim;
+      st.net.rf_only = !!demoState.rfOnly;
+      if (demoState.rfOnly) st.net.mode = "RF only (radios off)";
       if (demoState.name) { st.info.name = demoState.name; st.info.hostname = demoState.name; }
       return J(st);
     }
