@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.223-fly-fix",
+      "url": "https://messiter.com/rxv2/release/v0.9.223/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.223/littlefs.bin",
+      "notes": "Fixes the 'Re-enable WiFi & Bluetooth' button showing the fly-confirmation card instead of actually re-enabling (a later line of code was overwriting its action). Installing this also updates the web pages."
+    },
+    {
       "name": "RXV2-0.9.222-fly-menu",
       "url": "https://messiter.com/rxv2/release/v0.9.222/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.222/littlefs.bin",
@@ -61,11 +67,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.212/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.212/littlefs.bin",
       "notes": "BLUETOOTH! Configure the receiver from the new RXV2 iPhone app over Bluetooth LE - no hotspot-joining dance, faster and more dependable than WiFi, and perfect at the field (the WiFi web setup is unchanged for everyone else). The View-channels page is now silky: the receiver PUSHES channel data continuously over Bluetooth, bars and the 3D helicopter animate smoothly through radio hiccups, and the ARMED indicator is live. Home page shows one pill per transceiver slot - green 'receiving' follows whichever radio carries your transmitter right now. Also: WiFi+Bluetooth coexistence boot-loop cured, wrapped-banner layout fixed, and every help screen explains the ways to connect. Installing this also updates the web pages; your Rotorflight backups are preserved."
-    },
-    {
-      "name": "RXV2-0.9.211-ble-config",
-      "url": "https://messiter.com/rxv2/release/v0.9.211/firmware.bin",
-      "notes": ""
     }
   ]
 }

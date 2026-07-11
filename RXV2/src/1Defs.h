@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.222-fly-menu";
+constexpr const char* FW_VERSION = "RXV2-0.9.223-fly-fix";
 
 //*********************************************************************
 //  Auto-update manifest URLs
