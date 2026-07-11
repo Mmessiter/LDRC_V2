@@ -27,6 +27,18 @@ VCODE=$(sed -n 's/^[[:space:]]*versionCode = \([0-9][0-9]*\).*/\1/p' "$APP/app/b
 VNAME=$(sed -n 's/^[[:space:]]*versionName = "\([^"]*\)".*/\1/p' "$APP/app/build.gradle.kts")
 [[ -n "$VCODE" && -n "$VNAME" ]] || { echo "Could not read versionCode/versionName from build.gradle.kts" >&2; exit 1; }
 
+# Keep every copy of the shared assets in lockstep BEFORE building:
+# the web pages (master: RXV2/data) and the demo shim (master:
+# RXV2App/demo) are bundled into BOTH apps — a fix must never ship in
+# one and get left behind in another.
+ROOT="$(dirname "$(dirname "$HERE")")"
+rm -rf "$APP/app/src/main/assets/webroot" "$(dirname "$HERE")/webroot"
+cp -R "$ROOT/RXV2/data" "$APP/app/src/main/assets/webroot"
+cp -R "$ROOT/RXV2/data" "$(dirname "$HERE")/webroot"
+mkdir -p "$APP/app/src/main/assets/demo" "$(dirname "$HERE")/demo"
+cp "$(dirname "$HERE")/demo/"* "$APP/app/src/main/assets/demo/"
+echo "── Synced webroot + demo from masters (android + ios)"
+
 JAVA_HOME="${JAVA_HOME:-/Applications/Android Studio.app/Contents/jbr/Contents/Home}" \
     "$APP/gradlew" -p "$APP" assembleDebug -q
 APK="$APP/app/build/outputs/apk/debug/app-debug.apk"
