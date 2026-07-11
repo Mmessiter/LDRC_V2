@@ -109,7 +109,7 @@
         <!-- Front screen = things you use AT the model. One-time configuration
              lives under Setup, everything sim under Simulator — a new user sees
              five calm buttons instead of twelve. -->
-        <button class="btn btn-fly"  type=button id=flybtn><span class=ico>&#128641;&#9992;&#65039;</span>Fly now</button>
+        <button class="btn btn-fly"  type=button id=flybtn><span class=ico>&#128641;&#9992;&#65039;</span>Fly now<span style="display:block;font-size:.62em;font-weight:400;opacity:.85;margin-top:.15em">turns off WiFi &amp; Bluetooth</span></button>
         <a class="btn btn-bb"   href="/rotorflight" id=rfbtn style="display:none;background:#8e6cab"><span class=ico>&#129357;</span>Rotorflight config &mdash; <span id=fcver>&hellip;</span></a>
         <a class="btn btn-bb"   href="/blackbox"><span class=ico>&#128209;</span>Black box log</a>
         <a class="btn" href="/sim" id=simpg style="background:#4a90c9"><span class=ico>&#127918;</span><span id=simpglbl>Simulator</span></a>
@@ -347,19 +347,49 @@ function flyCard(s) {
                      : '<span style="color:#a4242a">bound, no signal</span>';
     } else if (s) link = '<span style="color:#a4242a">not bound</span>';
     modalCard({
-        icon: '🛫', title: 'Disable WiFi and fly?',
+        icon: '🛫', title: 'Disable WiFi &amp; Bluetooth and fly?',
         body: 'Link: <b>' + link + '</b><br><br>The receiver runs <b>radio&#8209;only</b> for the cleanest '
-            + 'link — WiFi stays off until you power&#8209;cycle it. The RC output keeps streaming.',
-        okLabel: '🛫 Disable WiFi &amp; fly', okColor: '#c97464',
+            + 'link — WiFi <b>and Bluetooth</b> both switch off so nothing interferes. '
+            + 'The RC output keeps streaming.',
+        okLabel: '🛫 Turn both off &amp; fly', okColor: '#c97464',
         onOk: () => { fetch('/fly_arm', { method: 'POST' }).catch(() => {}); flyDone(); }
     });
 }
 function flyDone() {
     const c = document.querySelector('.container');
-    if (c) c.innerHTML = '<h1>RF&#8209;only mode</h1><div class=card>'
-      + '<p style="font-size:1.15em;font-weight:600">📡 WiFi is now <b>off</b>.</p>'
-      + '<p class=muted>Running radio&#8209;only for the strongest link. WiFi comes back when you '
-      + 'power&#8209;cycle the receiver — you can close this page.</p></div>';
+    if (!c) return;
+    let html = '<h1>RF&#8209;only mode</h1><div class=card>'
+      + '<p style="font-size:1.15em;font-weight:600">📡 WiFi and Bluetooth are now both <b>off</b> — '
+      + 'nothing interferes with the radio link.</p>'
+      + '<p class=muted>Running radio&#8209;only for the strongest link. Both come back when you '
+      + 'power&#8209;cycle the receiver.</p>';
+    if (window.LDRC && LDRC.viaBle) {
+        // Over Bluetooth this one connection is quietly kept alive (no
+        // advertising), so the way back is one tap — the receiver reboots,
+        // radios return, and the app reconnects by itself.
+        html += '<p class=muted>Close the app and fly — this last Bluetooth link goes quiet the '
+              + 'moment you do. Changed your mind?</p>'
+              + '<button class=btn id=__flyback style="background:#6cab5e">🔄 Return to menu '
+              + '<span style="display:block;font-size:.62em;font-weight:400;opacity:.85;margin-top:.15em">'
+              + 'turns WiFi &amp; Bluetooth back on</span></button>';
+    } else {
+        html += '<p class=muted>You can close this page.</p>';
+    }
+    c.innerHTML = html + '</div>';
+    const back = document.getElementById('__flyback');
+    if (back) back.onclick = () => {
+        fetch('/fly_disarm', { method: 'POST' }).catch(() => {});
+        c.innerHTML = '<h1>Radios returning</h1><div class=card>'
+          + '<p style="font-size:1.15em;font-weight:600">⏳ Rebooting — WiFi &amp; Bluetooth back in ~15 s…</p></div>';
+        const tick = async () => {
+            try {
+                const r = await fetch('/api/state.json', { cache: 'no-store' });
+                if (r.ok) { location.replace('/'); return; }
+            } catch (e) {}
+            setTimeout(tick, 1500);
+        };
+        setTimeout(tick, 4000);
+    };
 }
 
 // "Turn off WiFi" in sim mode — trims radio interference while the simulator
@@ -367,20 +397,14 @@ function flyDone() {
 // just softer messaging since it isn't safety-critical like real flying.
 function showSimWifiOff() {
     modalCard({
-        icon: '📴', title: 'Turn WiFi off?',
-        body: 'The simulator keeps running over USB &mdash; only the WiFi interference drops. '
-            + 'WiFi (and this phone control) stays off until you power&#8209;cycle the receiver.',
-        okLabel: '📴 Turn WiFi off', okColor: '#c97464',
+        icon: '📴', title: 'Turn WiFi &amp; Bluetooth off?',
+        body: 'The simulator keeps running over USB &mdash; only the radio interference drops. '
+            + 'WiFi and Bluetooth stay off until you power&#8209;cycle the receiver.',
+        okLabel: '📴 Turn both off', okColor: '#c97464',
         onOk: () => { fetch('/fly_arm', { method: 'POST' }).catch(() => {}); simWifiOffDone(); }
     });
 }
-function simWifiOffDone() {
-    const c = document.querySelector('.container');
-    if (c) c.innerHTML = '<h1>WiFi off</h1><div class=card>'
-      + '<p style="font-size:1.15em;font-weight:600">📴 WiFi is now <b>off</b>.</p>'
-      + '<p class=muted>The simulator keeps running over USB. WiFi (and phone control) comes back '
-      + 'when you power&#8209;cycle the receiver — you can close this page.</p></div>';
-}
+function simWifiOffDone() { flyDone(); }
 
 // (Bind-mode guard and the sim toggle now live on /setup and /sim.)
 

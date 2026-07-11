@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.220-fly-ble",
+      "url": "https://messiter.com/rxv2/release/v0.9.220/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.220/littlefs.bin",
+      "notes": "Fly now enters the Bluetooth era: the button says what it does (turns off WiFi AND Bluetooth), every screen names both radios, and when you're connected by Bluetooth the 'RF-only' screen keeps ONE quiet link alive (no advertising) so it can offer a Return-to-menu button - tap it and the receiver reboots with both radios back, the app reconnecting by itself. Close the app instead and that last link goes silent for interference-free flying. Also: firmware installs over Bluetooth now confirm before rebooting. Installing this also updates the web pages."
+    },
+    {
       "name": "RXV2-0.9.219-update-test",
       "url": "https://messiter.com/rxv2/release/v0.9.219/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.219/littlefs.bin",
@@ -57,11 +63,6 @@
     {
       "name": "RXV2-0.9.209-ble-config",
       "url": "https://messiter.com/rxv2/release/v0.9.209/firmware.bin",
-      "notes": ""
-    },
-    {
-      "name": "RXV2-0.9.208-ble-config",
-      "url": "https://messiter.com/rxv2/release/v0.9.208/firmware.bin",
       "notes": ""
     }
   ]

@@ -744,6 +744,7 @@ inline void handleFirmwareInstall() {
     }
     events.add((String("Firmware installed via auto-update") + fsNote + " — rebooting").c_str());
     server.send(200, "text/plain", String("ok — rebooting") + fsNote);
+    bleEarlyPump();               // over BLE: deliver the reply before the reboot kills the link
     delay(300);
     ESP.restart();
 }
@@ -1312,7 +1313,22 @@ inline void handleFlyArm() {
         "<p>The receiver is now in <b>RF-only</b> mode. WiFi will return on the next power-cycle.</p>"
         "<p class=muted>SBUS keeps streaming. This page will stop responding the moment WiFi shuts down (any second now).</p>",
         /*autoReload=*/false));
+    bleEarlyPump();               // over BLE the reply must go out before the radios quieten
     flyArmRequested = true;       // disableWifi() runs from loop() after this response flushes
+}
+
+//*********************************************************************
+//  POST /fly_disarm — leave RF-only mode: reboot, radios return
+//*********************************************************************
+// Reachable only over the kept-alive BLE link (WiFi is already off).
+// A reboot is the proven way back: WiFi + BLE come up as normal at
+// boot, and the phone app auto-reconnects through it.
+
+inline void handleFlyDisarm() {
+    server.send(200, "text/plain", "ok — rebooting, radios return in ~15 s");
+    bleEarlyPump();
+    delay(300);
+    ESP.restart();
 }
 
 //*********************************************************************
@@ -1713,6 +1729,7 @@ inline void registerWebRoutes() {
     // Static GET pages (served from LittleFS)
     server.on("/",            handleRoot);
     server.on("/fly",         handleFly);
+    server.on("/fly_disarm",   HTTP_POST, handleFlyDisarm);
     server.on("/diagnostics", handleDiagnostics);
     server.on("/blackbox",    handleBlackbox);
     server.on("/bind",        HTTP_GET,  handleBind);
