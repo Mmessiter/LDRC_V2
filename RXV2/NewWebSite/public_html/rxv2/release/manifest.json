@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.226-async-update-check",
+      "url": "https://messiter.com/rxv2/release/v0.9.226/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.226/littlefs.bin",
+      "notes": "The update check no longer blocks the receiver: manifest fetches now run in the background, so opening the app's front screen can't pause the servo output (the brief servo twitch with no transmitter connected). Results are cached for 10 minutes."
+    },
+    {
       "name": "RXV2-0.9.225-fc-telem-switch",
       "url": "https://messiter.com/rxv2/release/v0.9.225/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.225/littlefs.bin",
@@ -62,11 +68,6 @@
     {
       "name": "RXV2-0.9.215-ble-diag",
       "url": "https://messiter.com/rxv2/release/v0.9.215/firmware.bin",
-      "notes": ""
-    },
-    {
-      "name": "RXV2-0.9.214-ble-pool",
-      "url": "https://messiter.com/rxv2/release/v0.9.214/firmware.bin",
       "notes": ""
     }
   ]
