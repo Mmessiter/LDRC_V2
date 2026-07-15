@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.224-crsf-rate";
+constexpr const char* FW_VERSION = "RXV2-0.9.225-fc-telem-switch";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -260,7 +260,8 @@ constexpr const char* NVS_KEY_SIM_REV     = "simrev";  // 8-byte per-output reve
 constexpr const char* NVS_KEY_AP_ONLY     = "aponly";  // 1 = skip home-WiFi STA, run AP-only (flying field: no waiting on an out-of-range home network)
 constexpr const char* NVS_KEY_AP_AUTO     = "apauto";  // 1 = the AP-only above was set AUTOMATICALLY (home net not found), so the UI shows a notice + the user can undo it
 constexpr const char* NVS_KEY_CFG_REBOOT  = "cfgrb";
-constexpr const char* NVS_KEY_CRSF_HZ     = "crsfhz";  // uint8 CRSF frame rate in Hz (50/100/250); some CRSF-to-PWM converters misbehave above ~100 Hz   // one-shot: web-initiated reboot to apply a setting → next boot skips the RF window, WiFi comes straight back
+constexpr const char* NVS_KEY_CRSF_HZ     = "crsfhz";
+constexpr const char* NVS_KEY_FC_TELEM    = "fctelem";  // uint8 1=expect FC on telemetry line (default); 0=ignore it (plain PWM converters echo junk that parses as telemetry)  // uint8 CRSF frame rate in Hz (50/100/250); some CRSF-to-PWM converters misbehave above ~100 Hz   // one-shot: web-initiated reboot to apply a setting → next boot skips the RF window, WiFi comes straight back
 
 // A flight "ends" (and is saved to flash) after the link has been gone this
 // long. The SAME threshold decides when a returning link is a NEW flight:
@@ -287,7 +288,8 @@ inline String g_hostname;
 
 constexpr uint32_t SBUS_PERIOD_MS = 14;     // ~71 Hz
 constexpr uint32_t CRSF_PERIOD_MS = 4;      // ~250 Hz
-inline uint8_t crsfRateHz = 250;            // user-configurable (NVS_KEY_CRSF_HZ): 250 native, 100/50 for fussy CRSF-to-PWM converters
+inline uint8_t crsfRateHz = 250;
+inline bool    fcTelemetryEnabled = true;   // NVS_KEY_FC_TELEM: false = ignore telemetry-line input + no Rotorflight/MSP probes            // user-configurable (NVS_KEY_CRSF_HZ): 250 native, 100/50 for fussy CRSF-to-PWM converters
 constexpr uint32_t IBUS_PERIOD_MS = 7;      // ~140 Hz
 constexpr uint32_t PPM_PERIOD_MS  = 25;     // 40 Hz — leaves 2-3 ms over the ~22 ms frame
 constexpr uint32_t FBUS_PERIOD_MS = 9;      // ~111 Hz

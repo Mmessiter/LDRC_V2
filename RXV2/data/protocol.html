@@ -39,6 +39,13 @@
                 </label>
                 <span class=muted style="display:block;margin-top:.5em;font-size:.88em">Lower this to 100&thinsp;Hz for CRSF&rarr;PWM servo converters &mdash; some of their firmwares misbehave above ~100&thinsp;Hz. Flight controllers are happiest at 250&thinsp;Hz.</span>
             </p>
+            <p style="margin:1.2em 0 0;padding:.8em 1em;background:rgba(255,255,255,.55);border-radius:8px;font-size:.92em">
+                <label style="display:flex;align-items:flex-start">
+                    <input type=checkbox name=fc_telem value=1 id=fcTelem checked style="margin:.25em .6em 0 0;transform:scale(1.2)">
+                    <span><b>Flight controller on the telemetry line</b> (Rotorflight support &amp; CRSF telemetry)<br>
+                    <span class=muted style="font-size:.88em">Untick for plain CRSF&rarr;PWM servo converters &mdash; some echo junk that gets misread as telemetry (phantom current readings, false alarms).</span></span>
+                </label>
+            </p>
             <button class="btn btn-fw" type=submit><span class=ico>&#128190;</span>Save &amp; reboot</button>
         </form>
     </div>
@@ -78,6 +85,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('ppmInv').checked = !!p.ppm_inverted;
     if (p.crsf_hz) document.getElementById('crsfHz').value = String(p.crsf_hz);
+    if (p.fc_telem !== undefined) document.getElementById('fcTelem').checked = !!p.fc_telem;
 
     // Intercept submit so the page doesn't sit on a half-loaded reply when
     // the chip cuts the TCP connection mid-response to reboot. Same flow

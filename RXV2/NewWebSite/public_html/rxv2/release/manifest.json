@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.225-fc-telem-switch",
+      "url": "https://messiter.com/rxv2/release/v0.9.225/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.225/littlefs.bin",
+      "notes": "New 'Flight controller on the telemetry line' switch on the Output protocol page. Untick it for plain CRSF-to-PWM servo converters: some echo junk that gets misread as telemetry (phantom current readings / false max-current alarms on the transmitter) \u2014 the receiver then ignores the telemetry line entirely and sends no Rotorflight probes. Default remains ON."
+    },
+    {
       "name": "RXV2-0.9.224-crsf-rate",
       "url": "https://messiter.com/rxv2/release/v0.9.224/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.224/littlefs.bin",
@@ -61,11 +67,6 @@
     {
       "name": "RXV2-0.9.214-ble-pool",
       "url": "https://messiter.com/rxv2/release/v0.9.214/firmware.bin",
-      "notes": ""
-    },
-    {
-      "name": "RXV2-0.9.213-ble-mtu",
-      "url": "https://messiter.com/rxv2/release/v0.9.213/firmware.bin",
       "notes": ""
     }
   ]

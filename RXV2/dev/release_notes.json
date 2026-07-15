@@ -113,5 +113,6 @@
  "RXV2-0.9.80-sim-safe": "Drive-simulator-over-USB now disables the flight-controller output (D6 stays silent) so a real model can't be flown from sim mode; default channel map shown as a tidy 1:1.",
  "RXV2-0.9.79-usb-sim-remap": "Adds the Remap-channels page for simulator mode (feed any of the 8 sim outputs from any received channel, with live bars).",
  "RXV2-0.9.78-usb-sim": "First release with Drive-simulator-over-USB: the receiver can present as a USB HID joystick for a PC flight sim, driven by the channels it receives \u2014 no separate dongle.",
- "RXV2-0.9.224-crsf-rate": "Adds a CRSF frame-rate setting on the Output protocol page (250/100/50 Hz). Lower it to 100 Hz for CRSF-to-PWM servo converters whose firmware misbehaves above ~100 Hz. Default stays 250 Hz. Installing this also updates the web pages."
+ "RXV2-0.9.224-crsf-rate": "Adds a CRSF frame-rate setting on the Output protocol page (250/100/50 Hz). Lower it to 100 Hz for CRSF-to-PWM servo converters whose firmware misbehaves above ~100 Hz. Default stays 250 Hz. Installing this also updates the web pages.",
+ "RXV2-0.9.225-fc-telem-switch": "New 'Flight controller on the telemetry line' switch on the Output protocol page. Untick it for plain CRSF-to-PWM servo converters: some echo junk that gets misread as telemetry (phantom current readings / false max-current alarms on the transmitter) \u2014 the receiver then ignores the telemetry line entirely and sends no Rotorflight probes. Default remains ON."
 }
