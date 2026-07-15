@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.232-live-settings",
+      "url": "https://messiter.com/rxv2/release/v0.9.232/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.232/littlefs.bin",
+      "notes": "Reboot only when it's actually needed: changing the CRSF rate, FC-telemetry switch, throttle channel or arming channel now applies instantly ('Saved \u2014 applied instantly' on the page, no reboot). Only changing the protocol itself (or PPM polarity) still reboots, because the output pin must be reconfigured."
+    },
+    {
       "name": "RXV2-0.9.231-channels-tidy",
       "url": "https://messiter.com/rxv2/release/v0.9.231/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.231/littlefs.bin",
@@ -63,12 +69,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.221/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.221/littlefs.bin",
       "notes": "Fly-screen polish: the 'turns off WiFi & Bluetooth' note sits neatly under 'Fly now' instead of squashed beside it, and the return button on the RF-only screen now says 'Turn WiFi & Bluetooth back ON' in big friendly letters - it's rather important, after all. Installing this also updates the web pages."
-    },
-    {
-      "name": "RXV2-0.9.220-fly-ble",
-      "url": "https://messiter.com/rxv2/release/v0.9.220/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.220/littlefs.bin",
-      "notes": "Fly now enters the Bluetooth era: the button says what it does (turns off WiFi AND Bluetooth), every screen names both radios, and when you're connected by Bluetooth the 'RF-only' screen keeps ONE quiet link alive (no advertising) so it can offer a Return-to-menu button - tap it and the receiver reboots with both radios back, the app reconnecting by itself. Close the app instead and that last link goes silent for interference-free flying. Also: firmware installs over Bluetooth now confirm before rebooting. Installing this also updates the web pages."
     }
   ]
 }
