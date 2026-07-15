@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.232-live-settings";
+constexpr const char* FW_VERSION = "RXV2-0.9.233-battery-save-dialog";
 
 //*********************************************************************
 //  Auto-update manifest URLs
