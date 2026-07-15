@@ -545,6 +545,33 @@ inline void fetchManifestInto(String& out, const String& url, uint32_t timeoutMs
 //     "public": { manifest_url, ok, manifest? | error }
 //   }
 
+//*********************************************************************
+//  Async firmware check — the manifest fetches (DNS + TLS to
+//  messiter.com) can block for seconds. Run them on a one-shot
+//  background task so loop() keeps feeding the servo output: a stalled
+//  loop = CRSF frame gap = the PWM converter twitches the servos.
+//*********************************************************************
+inline volatile uint8_t fwCheckState = 0;      // 0 idle, 1 running, 2 done
+inline String   fwCheckJson;                   // result, valid in state 2
+inline String   fwCheckLocalUrl;               // resolved on the main task (NVS is not touched from the worker)
+inline uint32_t fwCheckDoneMs = 0;
+
+inline void fwCheckTask(void*) {
+    String out;
+    out.reserve(2048);
+    out  = "{\"current\":\"";
+    out += FW_VERSION;
+    out += "\",\"local\":";
+    fetchManifestInto(out, fwCheckLocalUrl, 2500);
+    out += ",\"public\":";
+    fetchManifestInto(out, String(FW_PUBLIC_MANIFEST_URL), 5000);
+    out += "}";
+    fwCheckJson   = out;
+    fwCheckDoneMs = millis();
+    fwCheckState  = 2;
+    vTaskDelete(nullptr);
+}
+
 inline void handleFirmwareCheck() {
     if (netMode != NET_WIFI_UP) {
         // AP mode (or no-WiFi flight mode) can't reach either server.
@@ -572,30 +599,36 @@ inline void handleFirmwareCheck() {
         server.send(200, "application/json", j);
         return;
     }
-    String localUrl = prefs.isKey(NVS_KEY_FW_MANIFEST)
-                          ? prefs.getString(NVS_KEY_FW_MANIFEST, "")
-                          : String("");
-    localUrl.trim();
-    // Fall back to the compiled-in default when no override is in NVS, so
-    // the dev Mac's firmware_server.py is auto-discovered without anyone
-    // having to POST /api/firmware/seturl first. The page then renders
-    // the "local" section iff the fetch succeeds — production users who
-    // aren't running the dev server simply see no local card.
-    if (localUrl.length() == 0) {
-        localUrl = FW_DEFAULT_LOCAL_MANIFEST_URL;
+    // Serve a recent result straight from RAM — the front page checks on
+    // EVERY visit, and re-fetching each time is pointless.
+    if (fwCheckState == 2 && (uint32_t)(millis() - fwCheckDoneMs) < 10u * 60u * 1000u) {
+        server.sendHeader("Cache-Control", "no-store");
+        server.send(200, "application/json", fwCheckJson);
+        return;
     }
-
-    String out;
-    out.reserve(2048);
-    out  = "{\"current\":\"";
-    out += FW_VERSION;
-    out += "\",\"local\":";
-    fetchManifestInto(out, localUrl, 2500);
-    out += ",\"public\":";
-    fetchManifestInto(out, String(FW_PUBLIC_MANIFEST_URL), 5000);
-    out += "}";
+    if (fwCheckState != 1) {
+        // Resolve the local-manifest URL HERE (NVS on the main task), then
+        // hand the slow network work to the background task. Fall back to
+        // the compiled-in default so the dev Mac's firmware_server.py is
+        // auto-discovered — production users simply see no local card.
+        String localUrl = prefs.isKey(NVS_KEY_FW_MANIFEST)
+                              ? prefs.getString(NVS_KEY_FW_MANIFEST, "")
+                              : String("");
+        localUrl.trim();
+        if (localUrl.length() == 0)
+            localUrl = FW_DEFAULT_LOCAL_MANIFEST_URL;
+        fwCheckLocalUrl = localUrl;
+        fwCheckState    = 1;
+        // 12 KB stack: the TLS handshake (mbedtls) runs on this task's stack.
+        if (xTaskCreatePinnedToCore(fwCheckTask, "fwchk", 12288, nullptr, 1, nullptr, 0) != pdPASS)
+            fwCheckState = 0;   // couldn't start — report checking anyway; retried next poll
+    }
+    // Tell the page we're on it; it re-polls in a couple of seconds.
+    String j = "{\"current\":\"";
+    j += FW_VERSION;
+    j += "\",\"checking\":true}";
     server.sendHeader("Cache-Control", "no-store");
-    server.send(200, "application/json", out);
+    server.send(200, "application/json", j);
 }
 
 //*********************************************************************

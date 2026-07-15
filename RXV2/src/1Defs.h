@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.225-fc-telem-switch";
+constexpr const char* FW_VERSION = "RXV2-0.9.226-async-update-check";
 
 //*********************************************************************
 //  Auto-update manifest URLs
