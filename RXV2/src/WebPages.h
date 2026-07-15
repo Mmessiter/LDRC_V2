@@ -1253,6 +1253,13 @@ inline void handleProtocolSet() {
         if (tc >= 0 && tc <= 16)
             prefs.putUChar(NVS_KEY_THR_CH, (uint8_t)tc);
     }
+    if (server.hasArg("arm_ch")) {
+        long ac = server.arg("arm_ch").toInt();
+        if (ac >= 0 && ac <= 16) {
+            armingChannel = (uint8_t)ac;
+            prefs.putUChar(NVS_KEY_ARM_CH, armingChannel);
+        }
+    }
     prefs.putUChar(NVS_KEY_CFG_REBOOT, 1);   // come straight back to WiFi (skip RF window)
     server.send(200, "text/html", confirmPage("Saved & rebooting",
         "<p>Output protocol updated. The receiver is rebooting to apply.</p>"));

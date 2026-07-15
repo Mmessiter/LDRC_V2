@@ -68,32 +68,24 @@
     <div class=card>
         <h2>Receiver battery voltage <span id=vbatLive style="font-weight:400;font-size:.8em;margin-left:.4em" class=muted></span></h2>
         <p class=muted style="font-size:.85em;line-height:1.5">Measures the pack through a divider on <b>D9</b> (GPIO 8), the spare pad on 2-radio boards. <b>220&thinsp;k&Omega; over 10&thinsp;k&Omega;</b> = ratio 23.0, good to 12S; 100&thinsp;k/10&thinsp;k = 11.0, good to 6S. Add 100&thinsp;nF pin&rarr;GND. Volts go to the transmitter as telemetry. With FC&nbsp;telemetry switched off, the receiver <b>finds the divider by itself on D9</b> &mdash; the one free pad on 2-radio boards (D4 carries the status LED).</p>
-        <p style="margin:.3em 0">
-            <label>Pin
+        <p style="margin:.3em 0;display:flex;flex-wrap:wrap;gap:.6em 1.1em;align-items:center">
+            <label style="white-space:nowrap">Pin
                 <select id=vbatPin style="padding:.4em;font-size:1em;border-radius:8px;border:1px solid #b8c7d0;margin-left:.4em">
                     <option value=0>Off</option>
                     <option value=9>D9 (GPIO 8)</option>
                 </select>
             </label>
-            <label style="margin-left:.9em">Ratio
+            <label style="white-space:nowrap">Ratio
                 <input type=number id=vbatRatio step=0.1 min=1 max=50 value=23.0 style="width:5em;padding:.4em;font-size:1em;border-radius:8px;border:1px solid #b8c7d0;margin-left:.4em">
             </label>
-            <label style="margin-left:.9em">Cells
+            <label style="white-space:nowrap">Cells
                 <input type=number id=vbatCells step=1 min=0 max=12 value=0 style="width:4em;padding:.4em;font-size:1em;border-radius:8px;border:1px solid #b8c7d0;margin-left:.4em">
             </label>
         </p>
         <button class="btn btn-fw" id=vbatSave style="background:#5f8fab"><span class=ico>&#128190;</span>Save battery settings</button>
     </div>
 
-    <div class=card>
-        <h2>Arming channel (flight&nbsp;log)</h2>
-        <p class=muted style="font-size:.85em;line-height:1.5">Which channel arms the model. The flight graph is saved to flash the moment you <b>disarm</b> after a real flight (&ge;30&thinsp;s armed) &mdash; safely on the ground, with the receiver still on. So you can switch the receiver off first, as usual. <b>0 = off</b> (falls back to saving after the link is lost).</p>
-        <p style="margin:.3em 0"><label>Arming channel (0&ndash;16)
-            <input type=number id=armField step=1 min=0 max=16 style="width:5em;padding:.4em;font-size:1em;border-radius:8px;border:1px solid #b8c7d0;margin-left:.5em">
-        </label>
-        <span id=armLive class=muted style="margin-left:.6em;font-size:.9em"></span></p>
-        <button class="btn btn-fw" id=armSave style="background:#5f8fab"><span class=ico>&#128190;</span>Save arming channel</button>
-    </div>
+    <!-- Arming channel moved to the Output protocol page (0.9.231) -->
 
     <div class=card>
         <h2>Failsafe positions (signal loss)</h2>
@@ -758,8 +750,6 @@ function setFsStatus(set) {
         ? '<b style="color:#2e7d32">Failsafe is SET</b> — these saved positions are output when the receiver boots with no transmitter.'
         : 'No failsafe saved — using the built-in safe default (sticks centred, AUX channels low).';
 }
-let armFieldTouched = false;
-document.getElementById('armField').addEventListener('input', () => { armFieldTouched = true; });
 let _lastFsFetch = 0;
 async function refreshFsStatus() {
     // While the pushed channel stream is alive it carries the armed flag,
@@ -787,15 +777,6 @@ async function refreshFsStatus() {
                   lv.innerHTML = '<b style="color:#2e7d32">' + t + '</b>';
               } else lv.textContent = 'no reading';
           }
-          if (s.rf && s.rf.arming_channel != null && !armFieldTouched)
-              document.getElementById('armField').value = s.rf.arming_channel;
-          const al = document.getElementById('armLive');
-          if (al) {
-              if (!s.rf || !s.rf.arming_channel) al.textContent = '';
-              else al.innerHTML = s.rf.armed
-                  ? '<b style="color:#c0392b">● ARMED</b>'
-                  : '<b style="color:#2e7d32">○ disarmed</b>';
-          }
     } catch (e) {}
 }
 let vbatTouched = false;
@@ -817,97 +798,6 @@ document.getElementById('vbatSave').addEventListener('click', async () => {
     }
     setTimeout(() => { btn.innerHTML = '<span class=ico>&#128190;</span>Save battery settings'; }, 2500);
 });
-document.getElementById('armSave').addEventListener('click', async () => {
-    const c = parseInt(document.getElementById('armField').value || '0', 10);
-    try {
-        const j = await (await fetch('/api/armch?ch=' + encodeURIComponent(c), { method: 'POST' })).json();
-        if (!j.ok) throw new Error(j.error || 'rejected');
-        document.getElementById('armField').value = j.arming_channel;
-        armFieldTouched = false;
-        await LDRC.alert(j.arming_channel ? ('Arming channel = ' + j.arming_channel + ' saved!') : 'Arming channel turned off.',
-                         { title: 'Saved', icon: '🔒' });
-    } catch (e) { await LDRC.alert('Arming channel save failed (' + e.message + ').', { title: 'Error', icon: '⚠️', kind: 'danger' }); }
-});
-setInterval(refreshFsStatus, 1000);   // live armed indicator
-document.getElementById('gearSave').addEventListener('click', async () => {
-    const r = parseFloat(document.getElementById('gearField').value || '1');
-    try {
-        const j = await (await fetch('/api/gear?ratio=' + encodeURIComponent(r), { method: 'POST' })).json();
-        document.getElementById('gearField').value = j.gear_ratio;
-        await LDRC.alert('Gear ratio = ' + j.gear_ratio + ' saved!', { title: 'Saved', icon: '⚙️' });
-    } catch (e) { await LDRC.alert('Gear ratio save failed.', { title: 'Error', icon: '⚠️', kind: 'danger' }); }
-});
-document.getElementById('fsSave').addEventListener('click', async () => {
-    if (!(await LDRC.confirm('Save the CURRENT channel positions as the in-flight signal-loss failsafe? Set the model to a safe posture (e.g. motor off) first.',
-        { title: 'Save failsafe', icon: '💾', yes: 'Save failsafe' }))) return;
-    try { const r = await (await fetch('/api/failsafe/save', { method: 'POST' })).json(); setFsStatus(!!r.failsafe_set); } catch (e) {}
-});
-document.getElementById('fsClear').addEventListener('click', async () => {
-    if (!(await LDRC.confirm('Clear the saved failsafe and revert to the built-in safe default?',
-        { title: 'Clear failsafe', icon: '❌', yes: 'Clear', kind: 'warn' }))) return;
-    try { const r = await (await fetch('/api/failsafe/clear', { method: 'POST' })).json(); setFsStatus(!!r.failsafe_set); } catch (e) {}
-});
-refreshFsStatus();
-
-let _stopping = false;
-let _lastSample = 0, _period = POLL_MS, _lastDur = 0;
-
-// Match each bar's glide time to the real sample period, so however fast
-// the link actually is (WiFi ~20 fps, Bluetooth ~8-12 fps with jitter),
-// bars slide smoothly between samples instead of stepping. The period is
-// an EMA of measured arrival times; the duration only rewrites styles
-// when it changes meaningfully.
-// Bars animate game-style now (see animateBars): a 30 fps loop chases each
-// channel's target with a damped approach and briefly EXTRAPOLATES along
-// its velocity through short link gaps (the iPhone parks BLE ~100 ms about
-// once a second to service WiFi on the shared antenna). CSS width
-// transitions are gone — one smoother, no queueing, no dead stops.
-function syncGlide() {}   // retired — kept so older call sites are harmless
-
-// ---- pushed channel stream (Bluetooth app only) ----------------------
-// The receiver notifies "S|us0,..,us15|age" frames continuously; the app
-// forwards them here. Push kills the request leg entirely, so bars react
-// in one radio slot. Polling below stays alive as a slow watchdog and
-// takes over automatically if frames stop (e.g. over WiFi, or old fw).
-let _streamAlive = 0;
-window.__rxStream = (line) => {
-    const seg = String(line).trim().split('|');
-    if (seg.length < 3 || seg[0] !== 'S') return;
-    const ch = seg[1].split(',').map(Number);
-    if (ch.length < 16 || ch.some(isNaN)) return;
-    const now = performance.now();
-    if (_lastSample) _period = _period * 0.8 + (now - _lastSample) * 0.2;
-    _lastSample = now;
-    _streamAlive = now;
-    syncGlide();
-    paint({ ch: ch, age_ms: parseInt(seg[2], 10) });
-    // optional 4th field: arming state (-1 none / 0 disarmed / 1 armed) —
-    // keeps the ARMED indicator live without the per-second state poll
-    if (seg.length >= 4) {
-        const a = parseInt(seg[3], 10);
-        const al = document.getElementById('armLive');
-        if (al && !isNaN(a)) {
-            al.innerHTML = (a < 0) ? ''
-                : a ? '<b style="color:#c0392b">● ARMED</b>'
-                    : '<b style="color:#2e7d32">○ disarmed</b>';
-        }
-    }
-};
-if (window.LDRC && LDRC.viaBle) {
-    const armStream = () => {
-        if (!document.hidden) fetch('/api/channels.stream?on=1&ms=50', { cache: 'no-store' }).catch(() => {});
-    };
-    armStream();
-    setInterval(armStream, 25000);   // firmware auto-disarms 60 s after the last arm
-}
-
-async function tick() {
-    if (_stopping) return;
-    // While pushed frames are flowing, polling stands down to a watchdog.
-    if (performance.now() - _streamAlive < 1200) { setTimeout(tick, 400); return; }
-    const t0 = performance.now();
-    try {
-        const r = await fetch('/api/channels.json', { cache: 'no-store' });
         if (r.ok) {
             const j = await r.json();
             const now = performance.now();

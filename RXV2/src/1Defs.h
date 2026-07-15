@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.230-throttle-safe";
+constexpr const char* FW_VERSION = "RXV2-0.9.231-channels-tidy";
 
 //*********************************************************************
 //  Auto-update manifest URLs
