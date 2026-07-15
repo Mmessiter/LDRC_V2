@@ -786,18 +786,98 @@ document.getElementById('vbatSave').addEventListener('click', async () => {
     const pin   = document.getElementById('vbatPin').value;
     const ratio = document.getElementById('vbatRatio').value || '23.0';
     const cells = document.getElementById('vbatCells').value || '0';
-    const btn = document.getElementById('vbatSave');
     try {
         const j = await (await fetch('/api/vbat?pin=' + pin + '&ratio=' + ratio + '&cells=' + cells,
                                      { method: 'POST' })).json();
         if (!j.ok) throw new Error(j.error || 'rejected');
         vbatTouched = false;
-        btn.innerHTML = '<span class=ico>&#9989;</span>Saved';
-    } catch (e) {
-        btn.innerHTML = '<span class=ico>&#9888;&#65039;</span>' + (e.message || 'Failed');
-    }
-    setTimeout(() => { btn.innerHTML = '<span class=ico>&#128190;</span>Save battery settings'; }, 2500);
+        await LDRC.alert(j.pin ? ('Battery settings saved \u2014 pin D9, ratio ' + j.ratio +
+                                  (j.cells > 0 ? ', ' + j.cells + ' cells' : '') + '.')
+                               : 'Battery measurement turned off.',
+                         { title: 'Saved', icon: '\ud83d\udd0b' });
+    } catch (e) { await LDRC.alert('Battery settings save failed (' + (e.message || e) + ').',
+                                   { title: 'Error', icon: '\u26a0\ufe0f', kind: 'danger' }); }
 });
+setInterval(refreshFsStatus, 1000);   // live armed indicator
+document.getElementById('gearSave').addEventListener('click', async () => {
+    const r = parseFloat(document.getElementById('gearField').value || '1');
+    try {
+        const j = await (await fetch('/api/gear?ratio=' + encodeURIComponent(r), { method: 'POST' })).json();
+        document.getElementById('gearField').value = j.gear_ratio;
+        await LDRC.alert('Gear ratio = ' + j.gear_ratio + ' saved!', { title: 'Saved', icon: '⚙️' });
+    } catch (e) { await LDRC.alert('Gear ratio save failed.', { title: 'Error', icon: '⚠️', kind: 'danger' }); }
+});
+document.getElementById('fsSave').addEventListener('click', async () => {
+    if (!(await LDRC.confirm('Save the CURRENT channel positions as the in-flight signal-loss failsafe? Set the model to a safe posture (e.g. motor off) first.',
+        { title: 'Save failsafe', icon: '💾', yes: 'Save failsafe' }))) return;
+    try { const r = await (await fetch('/api/failsafe/save', { method: 'POST' })).json(); setFsStatus(!!r.failsafe_set); } catch (e) {}
+});
+document.getElementById('fsClear').addEventListener('click', async () => {
+    if (!(await LDRC.confirm('Clear the saved failsafe and revert to the built-in safe default?',
+        { title: 'Clear failsafe', icon: '❌', yes: 'Clear', kind: 'warn' }))) return;
+    try { const r = await (await fetch('/api/failsafe/clear', { method: 'POST' })).json(); setFsStatus(!!r.failsafe_set); } catch (e) {}
+});
+refreshFsStatus();
+
+let _stopping = false;
+let _lastSample = 0, _period = POLL_MS, _lastDur = 0;
+
+// Match each bar's glide time to the real sample period, so however fast
+// the link actually is (WiFi ~20 fps, Bluetooth ~8-12 fps with jitter),
+// bars slide smoothly between samples instead of stepping. The period is
+// an EMA of measured arrival times; the duration only rewrites styles
+// when it changes meaningfully.
+// Bars animate game-style now (see animateBars): a 30 fps loop chases each
+// channel's target with a damped approach and briefly EXTRAPOLATES along
+// its velocity through short link gaps (the iPhone parks BLE ~100 ms about
+// once a second to service WiFi on the shared antenna). CSS width
+// transitions are gone — one smoother, no queueing, no dead stops.
+function syncGlide() {}   // retired — kept so older call sites are harmless
+
+// ---- pushed channel stream (Bluetooth app only) ----------------------
+// The receiver notifies "S|us0,..,us15|age" frames continuously; the app
+// forwards them here. Push kills the request leg entirely, so bars react
+// in one radio slot. Polling below stays alive as a slow watchdog and
+// takes over automatically if frames stop (e.g. over WiFi, or old fw).
+let _streamAlive = 0;
+window.__rxStream = (line) => {
+    const seg = String(line).trim().split('|');
+    if (seg.length < 3 || seg[0] !== 'S') return;
+    const ch = seg[1].split(',').map(Number);
+    if (ch.length < 16 || ch.some(isNaN)) return;
+    const now = performance.now();
+    if (_lastSample) _period = _period * 0.8 + (now - _lastSample) * 0.2;
+    _lastSample = now;
+    _streamAlive = now;
+    syncGlide();
+    paint({ ch: ch, age_ms: parseInt(seg[2], 10) });
+    // optional 4th field: arming state (-1 none / 0 disarmed / 1 armed) —
+    // keeps the ARMED indicator live without the per-second state poll
+    if (seg.length >= 4) {
+        const a = parseInt(seg[3], 10);
+        const al = document.getElementById('armLive');
+        if (al && !isNaN(a)) {
+            al.innerHTML = (a < 0) ? ''
+                : a ? '<b style="color:#c0392b">● ARMED</b>'
+                    : '<b style="color:#2e7d32">○ disarmed</b>';
+        }
+    }
+};
+if (window.LDRC && LDRC.viaBle) {
+    const armStream = () => {
+        if (!document.hidden) fetch('/api/channels.stream?on=1&ms=50', { cache: 'no-store' }).catch(() => {});
+    };
+    armStream();
+    setInterval(armStream, 25000);   // firmware auto-disarms 60 s after the last arm
+}
+
+async function tick() {
+    if (_stopping) return;
+    // While pushed frames are flowing, polling stands down to a watchdog.
+    if (performance.now() - _streamAlive < 1200) { setTimeout(tick, 400); return; }
+    const t0 = performance.now();
+    try {
+        const r = await fetch('/api/channels.json', { cache: 'no-store' });
         if (r.ok) {
             const j = await r.json();
             const now = performance.now();
