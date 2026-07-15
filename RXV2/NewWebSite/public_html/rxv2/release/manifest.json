@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.224-crsf-rate",
+      "url": "https://messiter.com/rxv2/release/v0.9.224/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.224/littlefs.bin",
+      "notes": "Adds a CRSF frame-rate setting on the Output protocol page (250/100/50 Hz). Lower it to 100 Hz for CRSF-to-PWM servo converters whose firmware misbehaves above ~100 Hz. Default stays 250 Hz. Installing this also updates the web pages."
+    },
+    {
       "name": "RXV2-0.9.223-fly-fix",
       "url": "https://messiter.com/rxv2/release/v0.9.223/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.223/littlefs.bin",
@@ -61,12 +67,6 @@
       "name": "RXV2-0.9.213-ble-mtu",
       "url": "https://messiter.com/rxv2/release/v0.9.213/firmware.bin",
       "notes": ""
-    },
-    {
-      "name": "RXV2-0.9.212-ble-config",
-      "url": "https://messiter.com/rxv2/release/v0.9.212/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.212/littlefs.bin",
-      "notes": "BLUETOOTH! Configure the receiver from the new RXV2 iPhone app over Bluetooth LE - no hotspot-joining dance, faster and more dependable than WiFi, and perfect at the field (the WiFi web setup is unchanged for everyone else). The View-channels page is now silky: the receiver PUSHES channel data continuously over Bluetooth, bars and the 3D helicopter animate smoothly through radio hiccups, and the ARMED indicator is live. Home page shows one pill per transceiver slot - green 'receiving' follows whichever radio carries your transmitter right now. Also: WiFi+Bluetooth coexistence boot-loop cured, wrapped-banner layout fixed, and every help screen explains the ways to connect. Installing this also updates the web pages; your Rotorflight backups are preserved."
     }
   ]
 }

@@ -240,6 +240,10 @@ void setup() {
         if (p > PROTO_MAX) p = PROTO_DEFAULT;
         currentProtocol = (Protocol)p;
         ppmInverted = prefs.isKey(NVS_KEY_PPM_INV) ? (prefs.getUChar(NVS_KEY_PPM_INV, 0) != 0) : false;
+        uint8_t chz = prefs.isKey(NVS_KEY_CRSF_HZ) ? prefs.getUChar(NVS_KEY_CRSF_HZ, 250) : 250;
+        crsfRateHz = (chz == 50 || chz == 100) ? chz : 250;
+        if (currentProtocol == PROTO_CRSF)
+            Serial.printf("[out] CRSF frame rate = %u Hz\n", crsfRateHz);
         Serial.printf("[out] protocol = %s — %s  (PPM polarity: %s)\n",
                       protocolName(currentProtocol), protocolDesc(currentProtocol),
                       ppmInverted ? "negative (idle HIGH)" : "positive (idle LOW)");

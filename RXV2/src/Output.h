@@ -272,7 +272,8 @@ inline void configureOutputDriver(Protocol p) {
 inline uint32_t protocolPeriodMs(Protocol p) {
     switch (p) {
         case PROTO_SBUS:  return SBUS_PERIOD_MS;
-        case PROTO_CRSF:  return CRSF_PERIOD_MS;
+        case PROTO_CRSF:  // configurable: some CRSF-to-PWM converters choke above ~100 Hz
+            return (crsfRateHz >= 50 && crsfRateHz <= 250) ? (1000u / crsfRateHz) : CRSF_PERIOD_MS;
         case PROTO_IBUS:  return IBUS_PERIOD_MS;
         case PROTO_PPM:   return PPM_PERIOD_MS;
         case PROTO_FBUS:  return FBUS_PERIOD_MS;

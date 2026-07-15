@@ -1168,6 +1168,10 @@ inline void handleProtocolSet() {
         }
     }
     prefs.putUChar(NVS_KEY_PPM_INV, server.hasArg("ppm_inv") ? 1 : 0);
+    if (server.hasArg("crsf_hz")) {
+        long hz = server.arg("crsf_hz").toInt();
+        prefs.putUChar(NVS_KEY_CRSF_HZ, (hz == 50 || hz == 100) ? (uint8_t)hz : 250);
+    }
     prefs.putUChar(NVS_KEY_CFG_REBOOT, 1);   // come straight back to WiFi (skip RF window)
     server.send(200, "text/html", confirmPage("Saved & rebooting",
         "<p>Output protocol updated. The receiver is rebooting to apply.</p>"));
@@ -1598,6 +1602,7 @@ inline void handleApiState() {
     j += ",\"protocol\":{";
     j += "\"current\":\""; j += protocolName(currentProtocol); j += "\"";
     j += ",\"ppm_inverted\":"; j += (ppmInverted ? "true" : "false");
+    j += ",\"crsf_hz\":"; j += crsfRateHz;
     j += ",\"available\":[";
     // Display order — CRSF first (most-used), then the rest in enum order.
     static const Protocol DISPLAY_ORDER[] = { PROTO_CRSF, PROTO_SBUS, PROTO_IBUS, PROTO_PPM };
