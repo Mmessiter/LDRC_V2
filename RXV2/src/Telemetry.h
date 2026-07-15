@@ -277,8 +277,46 @@ inline void vbatInit() {
     Serial.printf("[vbat] battery ADC on GPIO %u, divider ratio %.2f\n", vbatPin, vbatRatio);
 }
 
+// With FC telemetry switched OFF there is no flight controller to report
+// volts — so if no pin is configured, quietly sniff the two free radio-3
+// pins for a stable, plausible pack voltage and latch whichever has it.
+// (Malcolm's idea: no FC == expect the divider.) Runtime only — a rewire
+// re-detects at next boot; an explicit user pin always wins. Never runs
+// when a third radio is fitted (those pins belong to it).
+
+inline void vbatSniff() {
+    if (vbatPin || fcTelemetryEnabled || radioPresent[2]) return;
+    static uint32_t last = 0;
+    static uint8_t  turn = 0;
+    static uint8_t  stableCount[2] = {0, 0};
+    static float    lastV[2]       = {0, 0};
+    if ((uint32_t)(millis() - last) < 250) return;
+    last = millis();
+    uint8_t pin = turn ? 9 : 6;   // D9 / D4
+    uint8_t i   = turn;
+    turn ^= 1;
+    pinMode(pin, INPUT);
+    analogSetPinAttenuation(pin, ADC_11db);
+    float v = analogReadMilliVolts(pin) / 1000.0f * vbatRatio;
+    // Plausible pack (2S empty .. 12S full) AND steady (a floating pin drifts)
+    if (v > 5.0f && v < 52.0f && fabsf(v - lastV[i]) < (0.03f * v + 0.2f))
+        stableCount[i]++;
+    else
+        stableCount[i] = 0;
+    lastV[i] = v;
+    if (stableCount[i] >= 8) {
+        vbatPin  = pin;
+        vbatAuto = true;
+        vbatVolts = 0.0f;
+        vbatInit();
+        char b[64];
+        snprintf(b, sizeof(b), "Battery divider detected on GPIO %u: %.1f V", pin, v);
+        events.add(b);
+    }
+}
+
 inline void vbatPoll() {     // self-limits to 5 Hz; cheap enough for loop()
-    if (!vbatPin) return;
+    if (!vbatPin) { vbatSniff(); return; }
     static uint32_t last = 0;
     if ((uint32_t)(millis() - last) < 200) return;
     last = millis();

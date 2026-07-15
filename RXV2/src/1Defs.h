@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.227-vbat-adc";
+constexpr const char* FW_VERSION = "RXV2-0.9.228-vbat-autodetect";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -296,7 +296,8 @@ inline bool    fcTelemetryEnabled = true;
 inline uint8_t vbatPin      = 0;        // battery-divider ADC GPIO (0 = feature off)
 inline float   vbatRatio    = 23.0f;    // divider ratio
 inline uint8_t vbatCellsCfg = 0;        // user-set cell count (0 = unset)
-inline float   vbatVolts    = 0.0f;     // smoothed pack voltage (V)   // NVS_KEY_FC_TELEM: false = ignore telemetry-line input + no Rotorflight/MSP probes            // user-configurable (NVS_KEY_CRSF_HZ): 250 native, 100/50 for fussy CRSF-to-PWM converters
+inline float   vbatVolts    = 0.0f;     // smoothed pack voltage (V)
+inline bool    vbatAuto     = false;    // pin was found by the sniffer, not set by the user   // NVS_KEY_FC_TELEM: false = ignore telemetry-line input + no Rotorflight/MSP probes            // user-configurable (NVS_KEY_CRSF_HZ): 250 native, 100/50 for fussy CRSF-to-PWM converters
 constexpr uint32_t IBUS_PERIOD_MS = 7;      // ~140 Hz
 constexpr uint32_t PPM_PERIOD_MS  = 25;     // 40 Hz — leaves 2-3 ms over the ~22 ms frame
 constexpr uint32_t FBUS_PERIOD_MS = 9;      // ~111 Hz

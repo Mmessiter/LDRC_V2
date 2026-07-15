@@ -67,7 +67,7 @@
 
     <div class=card>
         <h2>Receiver battery voltage <span id=vbatLive style="font-weight:400;font-size:.8em;margin-left:.4em" class=muted></span></h2>
-        <p class=muted style="font-size:.85em;line-height:1.5">Measures the pack through a divider on a spare pin (the radio-3 pins are free on 2-radio boards). <b>220&thinsp;k&Omega; over 10&thinsp;k&Omega;</b> = ratio 23.0, good to 12S; 100&thinsp;k/10&thinsp;k = 11.0, good to 6S. Add 100&thinsp;nF pin&rarr;GND. Volts go to the transmitter as telemetry.</p>
+        <p class=muted style="font-size:.85em;line-height:1.5">Measures the pack through a divider on a spare pin (the radio-3 pins are free on 2-radio boards). <b>220&thinsp;k&Omega; over 10&thinsp;k&Omega;</b> = ratio 23.0, good to 12S; 100&thinsp;k/10&thinsp;k = 11.0, good to 6S. Add 100&thinsp;nF pin&rarr;GND. Volts go to the transmitter as telemetry. With FC&nbsp;telemetry switched off, the receiver <b>finds the divider by itself</b> &mdash; just wire it to either free pin.</p>
         <p style="margin:.3em 0">
             <label>Pin
                 <select id=vbatPin style="padding:.4em;font-size:1em;border-radius:8px;border:1px solid #b8c7d0;margin-left:.4em">
@@ -783,7 +783,7 @@ async function refreshFsStatus() {
               const lv = document.getElementById('vbatLive');
               if (!v.pin) lv.textContent = '';
               else if (v.volts > 0.5) {
-                  let t = v.volts.toFixed(2) + ' V';
+                  let t = v.volts.toFixed(2) + ' V' + (v.auto ? ' (auto-detected)' : '');
                   if (v.cells > 0) t += ' (' + (v.volts / v.cells).toFixed(2) + ' V/cell)';
                   lv.innerHTML = '<b style="color:#2e7d32">' + t + '</b>';
               } else lv.textContent = 'no reading';
