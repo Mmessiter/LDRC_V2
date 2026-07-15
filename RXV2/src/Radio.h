@@ -304,7 +304,10 @@ inline void loadNextAck() {
                 // no CRSF telemetry. v1 TX has a backward-compat quirk: if it
                 // receives above 6S max it assumes 12S pre-halved and ×2. We pre-halve.
                 constexpr float V_6S_MAX = 25.2f;        // 6 × 4.2 V
-                float v = (fcTelem.valid && fcTelem.fcBattVolts > 0.1f) ? fcTelem.fcBattVolts : 0.0f;
+                // Prefer the receiver's own divider (wired deliberately) over
+                // FC-reported volts; fall back to the FC, then 0.
+                float v = (vbatPin && vbatVolts > 0.5f) ? vbatVolts
+                          : ((fcTelem.valid && fcTelem.fcBattVolts > 0.1f) ? fcTelem.fcBattVolts : 0.0f);
                 float vTx = (v > V_6S_MAX) ? (v * 0.5f) : v;
                 packF32(ack, vTx);
                 break;

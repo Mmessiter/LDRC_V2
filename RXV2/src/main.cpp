@@ -142,6 +142,11 @@ void setup() {
 
     // Head-speed gear ratio (motor:head). 1.0 = direct drive.
     gearRatio = prefs.getFloat(NVS_KEY_GEAR_RATIO, 1.0f);
+    vbatPin      = prefs.isKey(NVS_KEY_VBAT_PIN)   ? prefs.getUChar(NVS_KEY_VBAT_PIN, 0)      : 0;
+    vbatRatio    = prefs.isKey(NVS_KEY_VBAT_RATIO) ? prefs.getFloat(NVS_KEY_VBAT_RATIO, 23.0f) : 23.0f;
+    vbatCellsCfg = prefs.isKey(NVS_KEY_VBAT_CELLS) ? prefs.getUChar(NVS_KEY_VBAT_CELLS, 0)    : 0;
+    if (vbatPin != 0 && vbatPin != 6 && vbatPin != 9) vbatPin = 0;   // only the free radio-3 pins qualify
+    vbatInit();
     armingChannel = prefs.isKey(NVS_KEY_ARM_CH) ? prefs.getUChar(NVS_KEY_ARM_CH, 0) : 0;
     if (armingChannel > 16) armingChannel = 0;
     apAutoEnabled = prefs.isKey(NVS_KEY_AP_AUTO) && prefs.getBool(NVS_KEY_AP_AUTO, false);
@@ -434,6 +439,7 @@ void loop() {
         mspFcPoll();           // periodic FC-variant / FC-version discovery
         txParamsLoop();        // TX Rotorflight edits: async MSP read/write state machine
     }
+    vbatPoll();                // battery divider ADC (5 Hz, no-op when off)
     telemetrySampleTick();     // 1 Hz flight telemetry log (ESC temp / head speed / battery)
     flightSaveTick();          // save the flight to flash on DISARM — safe, on the ground (arming-channel idea)
 

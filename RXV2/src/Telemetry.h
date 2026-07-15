@@ -263,4 +263,29 @@ inline void protocolRx() {
     }
 }
 
+//*********************************************************************
+//  Receiver battery voltage — divider on a spare ADC1 pin
+//*********************************************************************
+// 220k/10k (ratio 23.0) reads up to 12S; 100k/10k (11.0) up to 6S.
+// ADC1 only (GPIO 1..10) — WiFi owns ADC2. analogReadMilliVolts uses the
+// chip's factory eFuse calibration, so 1% resistors are plenty.
+
+inline void vbatInit() {
+    if (!vbatPin) return;
+    pinMode(vbatPin, INPUT);
+    analogSetPinAttenuation(vbatPin, ADC_11db);
+    Serial.printf("[vbat] battery ADC on GPIO %u, divider ratio %.2f\n", vbatPin, vbatRatio);
+}
+
+inline void vbatPoll() {     // self-limits to 5 Hz; cheap enough for loop()
+    if (!vbatPin) return;
+    static uint32_t last = 0;
+    if ((uint32_t)(millis() - last) < 200) return;
+    last = millis();
+    uint32_t mv = 0;
+    for (int i = 0; i < 4; ++i) mv += analogReadMilliVolts(vbatPin);
+    float v = (mv / 4.0f) / 1000.0f * vbatRatio;
+    vbatVolts = (vbatVolts <= 0.01f) ? v : (vbatVolts * 0.8f + v * 0.2f);
+}
+
 #endif // _SRC_TELEMETRY_H
