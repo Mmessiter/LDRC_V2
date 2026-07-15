@@ -145,7 +145,7 @@ void setup() {
     vbatPin      = prefs.isKey(NVS_KEY_VBAT_PIN)   ? prefs.getUChar(NVS_KEY_VBAT_PIN, 0)      : 0;
     vbatRatio    = prefs.isKey(NVS_KEY_VBAT_RATIO) ? prefs.getFloat(NVS_KEY_VBAT_RATIO, 23.0f) : 23.0f;
     vbatCellsCfg = prefs.isKey(NVS_KEY_VBAT_CELLS) ? prefs.getUChar(NVS_KEY_VBAT_CELLS, 0)    : 0;
-    if (vbatPin != 0 && vbatPin != 6 && vbatPin != 9) vbatPin = 0;   // only the free radio-3 pins qualify
+    if (vbatPin != 0 && vbatPin != 9) vbatPin = 0;   // D9 only — the sole free pad (D4 is the status LED)
     vbatInit();
     armingChannel = prefs.isKey(NVS_KEY_ARM_CH) ? prefs.getUChar(NVS_KEY_ARM_CH, 0) : 0;
     if (armingChannel > 16) armingChannel = 0;

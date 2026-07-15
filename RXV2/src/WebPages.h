@@ -1146,9 +1146,9 @@ inline void handleFailsafeClear() {
 inline void handleVbatSet() {
     if (server.hasArg("pin")) {
         long pn = server.arg("pin").toInt();
-        if (pn != 0 && pn != 6 && pn != 9) {
+        if (pn != 0 && pn != 9) {
             server.sendHeader("Cache-Control", "no-store");
-            server.send(400, "application/json", "{\"ok\":false,\"error\":\"pin must be 0 (off), 6 (D4) or 9 (D9)\"}");
+            server.send(400, "application/json", "{\"ok\":false,\"error\":\"pin must be 0 (off) or 9 (D9)\"}");
             return;
         }
         vbatPin  = (uint8_t)pn;
