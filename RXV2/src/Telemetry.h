@@ -251,6 +251,8 @@ inline void protocolRx() {
     while (Serial1.available()) {
         uint8_t b = (uint8_t)Serial1.read();
         captureRawFcByte(b);
+        if (!fcTelemetryEnabled)
+            continue;             // no FC here (plain PWM converter): raw ring only, parse nothing
         mspBridgeOnFcByte(b);     // forward to TCP if MSP bridge has a client
         switch (currentProtocol) {
             case PROTO_CRSF:  parseCrsfIncoming(b);  break;

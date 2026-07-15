@@ -224,6 +224,8 @@ constexpr uint32_t PROBE_HEARTBEAT_MS   = 5000;   // once detected
 constexpr uint32_t PROBE_TIMEOUT_MS     = 10000;  // declare FC lost after this
 
 inline void mspFcPoll() {
+    if (!fcTelemetryEnabled)
+        return; // user says there is no FC on this line — don't probe
     // Only meaningful in CRSF mode (D6 is wired as CRSF UART to FC).
     if (currentProtocol != PROTO_CRSF) return;
     // Don't fight the bridge — if a Configurator client is talking to the FC
