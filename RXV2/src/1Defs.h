@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.229-vbat-d9-only";
+constexpr const char* FW_VERSION = "RXV2-0.9.230-throttle-safe";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -264,7 +264,8 @@ constexpr const char* NVS_KEY_CRSF_HZ     = "crsfhz";
 constexpr const char* NVS_KEY_FC_TELEM    = "fctelem";
 constexpr const char* NVS_KEY_VBAT_PIN    = "vbatpin";  // uint8 GPIO of the battery divider (0=off; 6=D4, 9=D9 — the free radio-3 pins on 2-radio boards)
 constexpr const char* NVS_KEY_VBAT_RATIO  = "vbatrat";  // float divider ratio ((Rtop+Rbot)/Rbot): 23.0 for 220k/10k (12S), 11.0 for 100k/10k (6S)
-constexpr const char* NVS_KEY_VBAT_CELLS  = "vbatcel";  // uint8 cell count for per-cell display (0 = not set, show pack volts only)  // uint8 1=expect FC on telemetry line (default); 0=ignore it (plain PWM converters echo junk that parses as telemetry)  // uint8 CRSF frame rate in Hz (50/100/250); some CRSF-to-PWM converters misbehave above ~100 Hz   // one-shot: web-initiated reboot to apply a setting → next boot skips the RF window, WiFi comes straight back
+constexpr const char* NVS_KEY_VBAT_CELLS  = "vbatcel";
+constexpr const char* NVS_KEY_THR_CH      = "thrch";    // uint8 throttle channel (1..16, 0=off); held at THROTTLE_SAFE_US until the TX is first heard  // uint8 cell count for per-cell display (0 = not set, show pack volts only)  // uint8 1=expect FC on telemetry line (default); 0=ignore it (plain PWM converters echo junk that parses as telemetry)  // uint8 CRSF frame rate in Hz (50/100/250); some CRSF-to-PWM converters misbehave above ~100 Hz   // one-shot: web-initiated reboot to apply a setting → next boot skips the RF window, WiFi comes straight back
 
 // A flight "ends" (and is saved to flash) after the link has been gone this
 // long. The SAME threshold decides when a returning link is a NEW flight:
@@ -297,7 +298,9 @@ inline uint8_t vbatPin      = 0;        // battery-divider ADC GPIO (0 = feature
 inline float   vbatRatio    = 23.0f;    // divider ratio
 inline uint8_t vbatCellsCfg = 0;        // user-set cell count (0 = unset)
 inline float   vbatVolts    = 0.0f;     // smoothed pack voltage (V)
-inline bool    vbatAuto     = false;    // pin was found by the sniffer, not set by the user   // NVS_KEY_FC_TELEM: false = ignore telemetry-line input + no Rotorflight/MSP probes            // user-configurable (NVS_KEY_CRSF_HZ): 250 native, 100/50 for fussy CRSF-to-PWM converters
+inline bool    vbatAuto     = false;
+inline uint8_t throttleChannel = 3;         // NVS_KEY_THR_CH — boot-safe low until the TX is heard
+constexpr uint16_t THROTTLE_SAFE_US = 885;  // well below 900: any ESC reads this as motor OFF    // pin was found by the sniffer, not set by the user   // NVS_KEY_FC_TELEM: false = ignore telemetry-line input + no Rotorflight/MSP probes            // user-configurable (NVS_KEY_CRSF_HZ): 250 native, 100/50 for fussy CRSF-to-PWM converters
 constexpr uint32_t IBUS_PERIOD_MS = 7;      // ~140 Hz
 constexpr uint32_t PPM_PERIOD_MS  = 25;     // 40 Hz — leaves 2-3 ms over the ~22 ms frame
 constexpr uint32_t FBUS_PERIOD_MS = 9;      // ~111 Hz

@@ -46,6 +46,13 @@
                     <span class=muted style="font-size:.88em">Untick for plain CRSF&rarr;PWM servo converters &mdash; some echo junk that gets misread as telemetry (phantom current readings, false alarms).</span></span>
                 </label>
             </p>
+            <p style="margin:1.2em 0 0;padding:.8em 1em;background:rgba(255,255,255,.55);border-radius:8px;font-size:.92em">
+                <label style="display:flex;align-items:center">
+                    <span style="margin-right:.7em"><b>Throttle channel</b></span>
+                    <input type=number name=thr_ch id=thrCh step=1 min=0 max=16 value=3 style="width:4em;font-size:1em;padding:.2em .4em">
+                </label>
+                <span class=muted style="display:block;margin-top:.5em;font-size:.88em">Held <b>fully low</b> (885&thinsp;&micro;s) from power-on until the transmitter is heard &mdash; so a receiver booted without its TX can never spin the motor. 0&nbsp;=&nbsp;off.</span>
+            </p>
             <button class="btn btn-fw" type=submit><span class=ico>&#128190;</span>Save &amp; reboot</button>
         </form>
     </div>
@@ -85,6 +92,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('ppmInv').checked = !!p.ppm_inverted;
     if (p.crsf_hz) document.getElementById('crsfHz').value = String(p.crsf_hz);
+    if (p.thr_ch !== undefined) document.getElementById('thrCh').value = String(p.thr_ch);
     if (p.fc_telem !== undefined) document.getElementById('fcTelem').checked = !!p.fc_telem;
 
     // Intercept submit so the page doesn't sit on a half-loaded reply when
