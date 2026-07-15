@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.228-vbat-autodetect";
+constexpr const char* FW_VERSION = "RXV2-0.9.229-vbat-d9-only";
 
 //*********************************************************************
 //  Auto-update manifest URLs

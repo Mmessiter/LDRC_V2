@@ -270,11 +270,16 @@ inline void protocolRx() {
 // ADC1 only (GPIO 1..10) — WiFi owns ADC2. analogReadMilliVolts uses the
 // chip's factory eFuse calibration, so 1% resistors are plenty.
 
+// vbatPin stores the XIAO pad NUMBER (9 = D9); translate to the real GPIO
+// through the Seeed variant macro. On the S3, D9 = GPIO8 (ADC1_CH7) — raw
+// GPIO 9 would be D10/MOSI, which must never be touched.
+inline uint8_t vbatGpio() { return vbatPin == 9 ? D9 : 0; }
+
 inline void vbatInit() {
-    if (!vbatPin) return;
-    pinMode(vbatPin, INPUT);
-    analogSetPinAttenuation(vbatPin, ADC_11db);
-    Serial.printf("[vbat] battery ADC on GPIO %u, divider ratio %.2f\n", vbatPin, vbatRatio);
+    if (!vbatGpio()) return;
+    pinMode(vbatGpio(), INPUT);
+    analogSetPinAttenuation(vbatGpio(), ADC_11db);
+    Serial.printf("[vbat] battery ADC on pad D%u (GPIO %u), divider ratio %.2f\n", vbatPin, vbatGpio(), vbatRatio);
 }
 
 // With FC telemetry switched OFF there is no flight controller to report
@@ -285,43 +290,43 @@ inline void vbatInit() {
 // when a third radio is fitted (those pins belong to it).
 
 inline void vbatSniff() {
+    // D9 (GPIO 9) ONLY: D4 doubles as the external status LED on boards
+    // without a third radio, so probing it as an ADC input would kill the
+    // LED. The divider's home is D9 — the radio-3 CSN hole.
     if (vbatPin || fcTelemetryEnabled || radioPresent[2]) return;
     static uint32_t last = 0;
-    static uint8_t  turn = 0;
-    static uint8_t  stableCount[2] = {0, 0};
-    static float    lastV[2]       = {0, 0};
+    static uint8_t  stableCount = 0;
+    static float    lastV       = 0;
     if ((uint32_t)(millis() - last) < 250) return;
     last = millis();
-    uint8_t pin = turn ? 9 : 6;   // D9 / D4
-    uint8_t i   = turn;
-    turn ^= 1;
+    const uint8_t pin = D9;   // GPIO8 on the S3 — the ONLY free pad on 2-radio boards
     pinMode(pin, INPUT);
     analogSetPinAttenuation(pin, ADC_11db);
     float v = analogReadMilliVolts(pin) / 1000.0f * vbatRatio;
     // Plausible pack (2S empty .. 12S full) AND steady (a floating pin drifts)
-    if (v > 5.0f && v < 52.0f && fabsf(v - lastV[i]) < (0.03f * v + 0.2f))
-        stableCount[i]++;
+    if (v > 5.0f && v < 52.0f && fabsf(v - lastV) < (0.03f * v + 0.2f))
+        stableCount++;
     else
-        stableCount[i] = 0;
-    lastV[i] = v;
-    if (stableCount[i] >= 8) {
-        vbatPin  = pin;
+        stableCount = 0;
+    lastV = v;
+    if (stableCount >= 8) {
+        vbatPin  = 9;          // pad number, not GPIO
         vbatAuto = true;
         vbatVolts = 0.0f;
         vbatInit();
         char b[64];
-        snprintf(b, sizeof(b), "Battery divider detected on GPIO %u: %.1f V", pin, v);
+        snprintf(b, sizeof(b), "Battery divider detected on D9: %.1f V", v);
         events.add(b);
     }
 }
 
 inline void vbatPoll() {     // self-limits to 5 Hz; cheap enough for loop()
-    if (!vbatPin) { vbatSniff(); return; }
+    if (!vbatGpio()) { vbatSniff(); return; }
     static uint32_t last = 0;
     if ((uint32_t)(millis() - last) < 200) return;
     last = millis();
     uint32_t mv = 0;
-    for (int i = 0; i < 4; ++i) mv += analogReadMilliVolts(vbatPin);
+    for (int i = 0; i < 4; ++i) mv += analogReadMilliVolts(vbatGpio());
     float v = (mv / 4.0f) / 1000.0f * vbatRatio;
     vbatVolts = (vbatVolts <= 0.01f) ? v : (vbatVolts * 0.8f + v * 0.2f);
 }
