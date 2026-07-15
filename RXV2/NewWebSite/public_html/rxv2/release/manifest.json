@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.227-vbat-adc",
+      "url": "https://messiter.com/rxv2/release/v0.9.227/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.227/littlefs.bin",
+      "notes": "Receiver battery voltage on a spare pin: wire the pack through a 220k/10k divider (ratio 23.0, good to 12S; 100k/10k = 11.0 for 6S) + 100nF to D4 or D9 (free on 2-radio boards). Configure on the View-channels page; live volts (and per-cell if you set the cell count) shown there, and the voltage is sent to the transmitter as telemetry (12S pre-halve quirk handled)."
+    },
+    {
       "name": "RXV2-0.9.226-async-update-check",
       "url": "https://messiter.com/rxv2/release/v0.9.226/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.226/littlefs.bin",
@@ -63,11 +69,6 @@
     {
       "name": "RXV2-0.9.216-ble-chunkcap",
       "url": "https://messiter.com/rxv2/release/v0.9.216/firmware.bin",
-      "notes": ""
-    },
-    {
-      "name": "RXV2-0.9.215-ble-diag",
-      "url": "https://messiter.com/rxv2/release/v0.9.215/firmware.bin",
       "notes": ""
     }
   ]

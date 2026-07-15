@@ -1143,6 +1143,47 @@ inline void handleFailsafeClear() {
 //*********************************************************************
 //  POST /api/gear?ratio=<float>  — set the head-speed gear ratio
 //*********************************************************************
+inline void handleVbatSet() {
+    if (server.hasArg("pin")) {
+        long pn = server.arg("pin").toInt();
+        if (pn != 0 && pn != 6 && pn != 9) {
+            server.sendHeader("Cache-Control", "no-store");
+            server.send(400, "application/json", "{\"ok\":false,\"error\":\"pin must be 0 (off), 6 (D4) or 9 (D9)\"}");
+            return;
+        }
+        vbatPin = (uint8_t)pn;
+        prefs.putUChar(NVS_KEY_VBAT_PIN, vbatPin);
+        vbatVolts = 0.0f;          // restart smoothing on the new pin
+        vbatInit();
+    }
+    if (server.hasArg("ratio")) {
+        float r = server.arg("ratio").toFloat();
+        if (!(r > 0.0f)) {
+            server.sendHeader("Cache-Control", "no-store");
+            server.send(400, "application/json", "{\"ok\":false,\"error\":\"ratio must be a number > 0\"}");
+            return;
+        }
+        if (r < 1.0f)  r = 1.0f;
+        if (r > 50.0f) r = 50.0f;
+        vbatRatio = r;
+        vbatVolts = 0.0f;
+        prefs.putFloat(NVS_KEY_VBAT_RATIO, vbatRatio);
+    }
+    if (server.hasArg("cells")) {
+        long c = server.arg("cells").toInt();
+        if (c < 0)  c = 0;
+        if (c > 12) c = 12;
+        vbatCellsCfg = (uint8_t)c;
+        prefs.putUChar(NVS_KEY_VBAT_CELLS, vbatCellsCfg);
+    }
+    events.add(vbatPin ? "Battery ADC settings updated" : "Battery ADC off");
+    char b[96];
+    snprintf(b, sizeof(b), "{\"ok\":true,\"pin\":%u,\"volts\":%.2f,\"ratio\":%.2f,\"cells\":%u}",
+             vbatPin, vbatVolts, vbatRatio, vbatCellsCfg);
+    server.sendHeader("Cache-Control", "no-store");
+    server.send(200, "application/json", b);
+}
+
 inline void handleGearSet() {
     if (server.hasArg("ratio")) {
         float r = server.arg("ratio").toFloat();
@@ -1565,6 +1606,8 @@ inline void handleApiState() {
     j += ",\"sbus_frames_out\":"; j += sbusFramesOut;
     j += ",\"failsafe_set\":"; j += (failsafeSet ? "true" : "false");
     { char gb[48]; snprintf(gb, sizeof(gb), ",\"gear_ratio\":%.3f", gearRatio); j += gb; }
+    { char vb[96]; snprintf(vb, sizeof(vb), ",\"vbat\":{\"pin\":%u,\"volts\":%.2f,\"ratio\":%.2f,\"cells\":%u}",
+                            vbatPin, vbatVolts, vbatRatio, vbatCellsCfg); j += vb; }
     j += ",\"arming_channel\":"; j += armingChannel;
     // live armed state (so the config page can confirm the channel is right)
     { bool live = (rx.lastMillis != 0) && ((uint32_t)(millis() - rx.lastMillis) < 2000);
@@ -1833,6 +1876,7 @@ inline void registerWebRoutes() {
     server.on("/api/failsafe/save",  HTTP_POST, handleFailsafeSave);
     server.on("/api/failsafe/clear", HTTP_POST, handleFailsafeClear);
     server.on("/api/gear",           HTTP_POST, handleGearSet);
+    server.on("/api/vbat",           HTTP_POST, handleVbatSet);
     server.on("/api/armch",          HTTP_POST, handleArmChSet);
     server.on("/protocol",    HTTP_POST, handleProtocolSet);
     server.on("/api/sim",     HTTP_POST, handleSimSet);
