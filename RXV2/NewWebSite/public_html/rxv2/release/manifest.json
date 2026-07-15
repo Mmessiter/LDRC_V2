@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.234-civilised-ota",
+      "url": "https://messiter.com/rxv2/release/v0.9.234/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.234/littlefs.bin",
+      "notes": "Civilised OTA (Malcolm's word): when the connection drops during an install \u2014 routine over Bluetooth, and at the reboot moment on WiFi \u2014 the page no longer cries 'failed'. It says 'Installing\u2026 waiting for the receiver to come back', polls until the receiver reappears, and judges by the version it reports: new version = success (auto-reload), same old version = a real failure, still absent after 5 min = 'reload in a moment'."
+    },
+    {
       "name": "RXV2-0.9.233-battery-save-dialog",
       "url": "https://messiter.com/rxv2/release/v0.9.233/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.233/littlefs.bin",
@@ -63,12 +69,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.223/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.223/littlefs.bin",
       "notes": "Fixes the 'Re-enable WiFi & Bluetooth' button showing the fly-confirmation card instead of actually re-enabling (a later line of code was overwriting its action). Installing this also updates the web pages."
-    },
-    {
-      "name": "RXV2-0.9.222-fly-menu",
-      "url": "https://messiter.com/rxv2/release/v0.9.222/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.222/littlefs.bin",
-      "notes": "Radios-off mode gets a proper front door: from the RF-only screen you can now return to the menu WITHOUT re-enabling the radios, and while they're off the Fly-now slot becomes a big green 'Re-enable WiFi & Bluetooth' button. The Bluetooth badge hides while the radios are off (the receiver is only whispering down one kept link). Also fixes the kept Bluetooth link going mute after fly-arm \u2014 the return buttons now genuinely work. Installing this also updates the web pages."
     }
   ]
 }

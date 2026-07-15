@@ -407,8 +407,42 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
             document.querySelectorAll('.ver-btn').forEach(b => b.disabled = false);
         }
     } catch (e) {
-        setStatePill('Network error', 'bad');
-        showMessage('Network error during install: ' + (e.message || e));
+        // Over Bluetooth (and often over WiFi at the reboot moment) the link
+        // drops before the reply arrives — that is NOT a failure. Wait for
+        // the receiver to come back and judge by the version it reports.
+        setStatePill('Installing\u2026', 'amber');
+        showMessage('<b>Installing</b> <code>' + ver + '</code>\u2026 the connection paused while the ' +
+                    'receiver downloads and reboots (normal). Waiting for it to come back\u2026');
+        const before = currentFw;
+        const t0 = Date.now();
+        let verdict = '';
+        while (Date.now() - t0 < 300000) {
+            await new Promise(res => setTimeout(res, 2500));
+            try {
+                const rs = await fetch('/api/state.json', { cache: 'no-store' });
+                if (!rs.ok) continue;
+                const st = await rs.json();
+                const now = (st.info && st.info.fw_version) ? st.info.fw_version : '';
+                if (!now) continue;
+                if (now !== before) { verdict = now; break; }
+                // Answering but still the OLD version: allow time for the
+                // download phase, then call it a real failure.
+                if (Date.now() - t0 > 90000) { verdict = 'same'; break; }
+            } catch (e2) { /* still flashing / rebooting */ }
+        }
+        if (verdict && verdict !== 'same') {
+            setStatePill('Installed', 'good');
+            showMessage('<b>\u2713 Updated</b> \u2014 now running <code>' + verdict + '</code>. Page reloads in 5\u2009s.');
+            setTimeout(() => location.href = '/', 5000);
+            return;
+        }
+        if (verdict === 'same') {
+            setStatePill('Failed', 'bad');
+            showMessage('The receiver came back still on <code>' + splitName(before).ver + '</code> \u2014 the install did not complete. Try again.');
+        } else {
+            setStatePill('Waiting\u2026', 'amber');
+            showMessage('The receiver hasn\u2019t come back yet \u2014 give it a moment and reload this page.');
+        }
         installing = false;
         $('check').disabled = false;
         document.querySelectorAll('.ver-btn').forEach(b => b.disabled = false);

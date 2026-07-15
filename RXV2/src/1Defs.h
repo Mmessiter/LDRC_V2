@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.233-battery-save-dialog";
+constexpr const char* FW_VERSION = "RXV2-0.9.234-civilised-ota";
 
 //*********************************************************************
 //  Auto-update manifest URLs
