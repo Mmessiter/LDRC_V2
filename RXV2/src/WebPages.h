@@ -1151,7 +1151,8 @@ inline void handleVbatSet() {
             server.send(400, "application/json", "{\"ok\":false,\"error\":\"pin must be 0 (off), 6 (D4) or 9 (D9)\"}");
             return;
         }
-        vbatPin = (uint8_t)pn;
+        vbatPin  = (uint8_t)pn;
+        vbatAuto = false;
         prefs.putUChar(NVS_KEY_VBAT_PIN, vbatPin);
         vbatVolts = 0.0f;          // restart smoothing on the new pin
         vbatInit();
@@ -1606,8 +1607,8 @@ inline void handleApiState() {
     j += ",\"sbus_frames_out\":"; j += sbusFramesOut;
     j += ",\"failsafe_set\":"; j += (failsafeSet ? "true" : "false");
     { char gb[48]; snprintf(gb, sizeof(gb), ",\"gear_ratio\":%.3f", gearRatio); j += gb; }
-    { char vb[96]; snprintf(vb, sizeof(vb), ",\"vbat\":{\"pin\":%u,\"volts\":%.2f,\"ratio\":%.2f,\"cells\":%u}",
-                            vbatPin, vbatVolts, vbatRatio, vbatCellsCfg); j += vb; }
+    { char vb[112]; snprintf(vb, sizeof(vb), ",\"vbat\":{\"pin\":%u,\"volts\":%.2f,\"ratio\":%.2f,\"cells\":%u,\"auto\":%s}",
+                            vbatPin, vbatVolts, vbatRatio, vbatCellsCfg, vbatAuto ? "true" : "false"); j += vb; }
     j += ",\"arming_channel\":"; j += armingChannel;
     // live armed state (so the config page can confirm the channel is right)
     { bool live = (rx.lastMillis != 0) && ((uint32_t)(millis() - rx.lastMillis) < 2000);

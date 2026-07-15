@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.228-vbat-autodetect",
+      "url": "https://messiter.com/rxv2/release/v0.9.228/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.228/littlefs.bin",
+      "notes": "Battery divider auto-detect: with FC telemetry switched OFF (no flight controller), the receiver sniffs the two free radio-3 pins for a stable, plausible pack voltage and starts reporting it automatically \u2014 just wire the 220k/10k divider to D4 or D9. An explicitly-set pin always wins; never runs when a third radio is fitted."
+    },
+    {
       "name": "RXV2-0.9.227-vbat-adc",
       "url": "https://messiter.com/rxv2/release/v0.9.227/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.227/littlefs.bin",
@@ -65,11 +71,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.217/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.217/littlefs.bin",
       "notes": "ANDROID! The receiver now works with the new RXV2 Android app as well as the iPhone app. Bluetooth is far more dependable on every phone: replies are sent in chunks every device can swallow (some Androids quietly drop oversized packets even after promising a big one), sized to the connection's true negotiated limit, with a larger buffer pool so a whole page queues at once. Also fixes the Bluetooth scan NAME - the receiver now correctly advertises your model's name (e.g. 'BenchTest') instead of appearing nameless or as a stale cached name; a subtle ordering bug meant the name never fitted into the advertisement. Installing this also updates the web pages; your Rotorflight backups are preserved."
-    },
-    {
-      "name": "RXV2-0.9.216-ble-chunkcap",
-      "url": "https://messiter.com/rxv2/release/v0.9.216/firmware.bin",
-      "notes": ""
     }
   ]
 }
