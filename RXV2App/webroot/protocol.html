@@ -105,10 +105,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     // as the bind page: swap to a local "Rebooting" panel, fire-and-forget
     // the POST, then poll /api/state.json until the chip answers.
     const f = document.getElementById('protoForm');
-    if (f) f.addEventListener('submit', (e) => {
+    if (f) f.addEventListener('submit', async (e) => {
         e.preventDefault();
         const chosen = f.querySelector('input[name=proto]:checked');
         const newProto = chosen ? chosen.parentElement.querySelector('b').textContent.replace(/ \(current\)$/, '') : '';
+
+        // Ask first: settings other than the protocol itself apply LIVE and
+        // the chip answers with JSON instead of rebooting.
+        const body0 = new URLSearchParams();
+        for (const [k, v] of new FormData(f).entries()) body0.append(k, v);
+        try {
+            const r0 = await fetch('/protocol', { method: 'POST', body: body0 });
+            const ct = (r0.headers.get('content-type') || '');
+            if (r0.ok && ct.indexOf('json') >= 0) {
+                const btn = f.querySelector('button[type=submit]');
+                if (btn) {
+                    btn.innerHTML = '<span class=ico>&#9989;</span>Saved &mdash; applied instantly';
+                    setTimeout(() => { btn.innerHTML = '<span class=ico>&#128190;</span>Save &amp; reboot'; }, 2500);
+                }
+                return;   // no reboot — stay on the page
+            }
+        } catch (err) { /* chip is rebooting — fall through to the wait panel */ }
         document.querySelector('.container').innerHTML =
             '<h1>Rebooting</h1>' +
             '<div class=card>' +
@@ -118,13 +135,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             '<div class=card>' +
             '<p id=__waitline class=muted style="margin:.2em 0">Waiting for receiver to come back (<span id=__secs>0</span>&thinsp;s)&hellip;</p>' +
             '</div>';
-        // Build URL-encoded body explicitly; `new URLSearchParams(FormData)`
-        // isn't reliable on iOS Safari and was silently producing an empty
-        // body on the iPhone, which meant the chip rebooted with no proto
-        // change applied.
-        const body = new URLSearchParams();
-        for (const [k, v] of new FormData(f).entries()) body.append(k, v);
-        fetch('/protocol', { method: 'POST', body }).catch(() => {});
         let n = 0;
         const tick = async () => {
             const el = document.getElementById('__secs');

@@ -1233,25 +1233,52 @@ inline void handleArmChSet() {
 //*********************************************************************
 
 inline void handleProtocolSet() {
+    // Only a PROTOCOL (or PPM-polarity) change needs a reboot — the D6 pin
+    // must be reconfigured as a different UART / RMT device. Everything else
+    // (CRSF rate, FC-telemetry switch, throttle & arming channels) applies
+    // LIVE; the page shows "Saved" and stays put.
+    bool needReboot = false;
+
     if (server.hasArg("proto")) {
         long v = server.arg("proto").toInt();
         if (v >= PROTO_SBUS && v <= PROTO_MAX) {
+            if ((Protocol)v != currentProtocol) needReboot = true;
             prefs.putUChar(NVS_KEY_PROTO, (uint8_t)v);
             char buf[60];
             snprintf(buf, sizeof(buf), "Output protocol set to %s", protocolName((Protocol)v));
             events.add(buf);
         }
     }
-    prefs.putUChar(NVS_KEY_PPM_INV, server.hasArg("ppm_inv") ? 1 : 0);
+    bool wantInv = server.hasArg("ppm_inv");
+    if (wantInv != ppmInverted && currentProtocol == PROTO_PPM) needReboot = true;
+    prefs.putUChar(NVS_KEY_PPM_INV, wantInv ? 1 : 0);
+
     if (server.hasArg("crsf_hz")) {
         long hz = server.arg("crsf_hz").toInt();
-        prefs.putUChar(NVS_KEY_CRSF_HZ, (hz == 50 || hz == 100) ? (uint8_t)hz : 250);
+        uint8_t v = (hz == 50 || hz == 100) ? (uint8_t)hz : 250;
+        prefs.putUChar(NVS_KEY_CRSF_HZ, v);
+        crsfRateHz = v;                                     // live: period is read every tick
     }
-    prefs.putUChar(NVS_KEY_FC_TELEM, server.hasArg("fc_telem") ? 1 : 0);
+    {
+        bool fcOn = server.hasArg("fc_telem");
+        prefs.putUChar(NVS_KEY_FC_TELEM, fcOn ? 1 : 0);
+        fcTelemetryEnabled = fcOn;                          // live: gates parser + probes
+    }
     if (server.hasArg("thr_ch")) {
         long tc = server.arg("thr_ch").toInt();
-        if (tc >= 0 && tc <= 16)
-            prefs.putUChar(NVS_KEY_THR_CH, (uint8_t)tc);
+        if (tc >= 0 && tc <= 16) {
+            uint8_t old = throttleChannel;
+            throttleChannel = (uint8_t)tc;
+            prefs.putUChar(NVS_KEY_THR_CH, throttleChannel);
+            // If the TX has never been heard, release the previously-pinned
+            // channel back to centre and pin the new one at once.
+            if (!lastChannelDataMs) {
+                if (old >= 1 && old <= 16 && old != throttleChannel)
+                    channelMicros[old - 1] = 1500;
+                if (throttleChannel >= 1)
+                    channelMicros[throttleChannel - 1] = THROTTLE_SAFE_US;
+            }
+        }
     }
     if (server.hasArg("arm_ch")) {
         long ac = server.arg("arm_ch").toInt();
@@ -1259,6 +1286,13 @@ inline void handleProtocolSet() {
             armingChannel = (uint8_t)ac;
             prefs.putUChar(NVS_KEY_ARM_CH, armingChannel);
         }
+    }
+
+    if (!needReboot) {
+        events.add("Output settings applied (no reboot needed)");
+        server.sendHeader("Cache-Control", "no-store");
+        server.send(200, "application/json", "{\"ok\":true,\"rebooting\":false}");
+        return;
     }
     prefs.putUChar(NVS_KEY_CFG_REBOOT, 1);   // come straight back to WiFi (skip RF window)
     server.send(200, "text/html", confirmPage("Saved & rebooting",

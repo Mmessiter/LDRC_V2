@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.231-channels-tidy";
+constexpr const char* FW_VERSION = "RXV2-0.9.232-live-settings";
 
 //*********************************************************************
 //  Auto-update manifest URLs
