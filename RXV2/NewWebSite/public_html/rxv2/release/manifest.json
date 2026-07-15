@@ -1,64 +1,74 @@
 {
- "versions": [
-  {
-   "name": "RXV2-0.9.229-vbat-d9-only",
-   "url": "https://messiter.com/rxv2/release/v0.9.229/firmware.bin",
-   "fs_url": "https://messiter.com/rxv2/release/v0.9.229/littlefs.bin",
-   "notes": "Battery divider: D9 only (GPIO 8 \u2014 the one free pad on 2-radio boards; D4 carries the status LED), auto-detected when FC telemetry is off. IMPORTANT: replaces 0.9.227/228, which used wrong GPIO numbers for the divider pin (raw 9 = the SPI MOSI line!) \u2014 do not use those two versions with a divider."
-  },
-  {
-   "name": "RXV2-0.9.226-async-update-check",
-   "url": "https://messiter.com/rxv2/release/v0.9.226/firmware.bin",
-   "fs_url": "https://messiter.com/rxv2/release/v0.9.226/littlefs.bin",
-   "notes": "The update check no longer blocks the receiver: manifest fetches now run in the background, so opening the app's front screen can't pause the servo output (the brief servo twitch with no transmitter connected). Results are cached for 10 minutes."
-  },
-  {
-   "name": "RXV2-0.9.225-fc-telem-switch",
-   "url": "https://messiter.com/rxv2/release/v0.9.225/firmware.bin",
-   "fs_url": "https://messiter.com/rxv2/release/v0.9.225/littlefs.bin",
-   "notes": "New 'Flight controller on the telemetry line' switch on the Output protocol page. Untick it for plain CRSF-to-PWM servo converters: some echo junk that gets misread as telemetry (phantom current readings / false max-current alarms on the transmitter) \u2014 the receiver then ignores the telemetry line entirely and sends no Rotorflight probes. Default remains ON."
-  },
-  {
-   "name": "RXV2-0.9.224-crsf-rate",
-   "url": "https://messiter.com/rxv2/release/v0.9.224/firmware.bin",
-   "fs_url": "https://messiter.com/rxv2/release/v0.9.224/littlefs.bin",
-   "notes": "Adds a CRSF frame-rate setting on the Output protocol page (250/100/50 Hz). Lower it to 100 Hz for CRSF-to-PWM servo converters whose firmware misbehaves above ~100 Hz. Default stays 250 Hz. Installing this also updates the web pages."
-  },
-  {
-   "name": "RXV2-0.9.223-fly-fix",
-   "url": "https://messiter.com/rxv2/release/v0.9.223/firmware.bin",
-   "fs_url": "https://messiter.com/rxv2/release/v0.9.223/littlefs.bin",
-   "notes": "Fixes the 'Re-enable WiFi & Bluetooth' button showing the fly-confirmation card instead of actually re-enabling (a later line of code was overwriting its action). Installing this also updates the web pages."
-  },
-  {
-   "name": "RXV2-0.9.222-fly-menu",
-   "url": "https://messiter.com/rxv2/release/v0.9.222/firmware.bin",
-   "fs_url": "https://messiter.com/rxv2/release/v0.9.222/littlefs.bin",
-   "notes": "Radios-off mode gets a proper front door: from the RF-only screen you can now return to the menu WITHOUT re-enabling the radios, and while they're off the Fly-now slot becomes a big green 'Re-enable WiFi & Bluetooth' button. The Bluetooth badge hides while the radios are off (the receiver is only whispering down one kept link). Also fixes the kept Bluetooth link going mute after fly-arm \u2014 the return buttons now genuinely work. Installing this also updates the web pages."
-  },
-  {
-   "name": "RXV2-0.9.221-fly-ui",
-   "url": "https://messiter.com/rxv2/release/v0.9.221/firmware.bin",
-   "fs_url": "https://messiter.com/rxv2/release/v0.9.221/littlefs.bin",
-   "notes": "Fly-screen polish: the 'turns off WiFi & Bluetooth' note sits neatly under 'Fly now' instead of squashed beside it, and the return button on the RF-only screen now says 'Turn WiFi & Bluetooth back ON' in big friendly letters - it's rather important, after all. Installing this also updates the web pages."
-  },
-  {
-   "name": "RXV2-0.9.220-fly-ble",
-   "url": "https://messiter.com/rxv2/release/v0.9.220/firmware.bin",
-   "fs_url": "https://messiter.com/rxv2/release/v0.9.220/littlefs.bin",
-   "notes": "Fly now enters the Bluetooth era: the button says what it does (turns off WiFi AND Bluetooth), every screen names both radios, and when you're connected by Bluetooth the 'RF-only' screen keeps ONE quiet link alive (no advertising) so it can offer a Return-to-menu button - tap it and the receiver reboots with both radios back, the app reconnecting by itself. Close the app instead and that last link goes silent for interference-free flying. Also: firmware installs over Bluetooth now confirm before rebooting. Installing this also updates the web pages."
-  },
-  {
-   "name": "RXV2-0.9.219-update-test",
-   "url": "https://messiter.com/rxv2/release/v0.9.219/firmware.bin",
-   "fs_url": "https://messiter.com/rxv2/release/v0.9.219/littlefs.bin",
-   "notes": "No functional change - identical to 0.9.218 apart from the version number. Released to prove the new persistent update-offer works end to end (connect over Bluetooth, see the offer appear, tap to install)."
-  },
-  {
-   "name": "RXV2-0.9.218-update-check",
-   "url": "https://messiter.com/rxv2/release/v0.9.218/firmware.bin",
-   "fs_url": "https://messiter.com/rxv2/release/v0.9.218/littlefs.bin",
-   "notes": "The 'Update available' offer no longer gets missed when you connect quickly after powering the receiver. The home page used to check for new firmware exactly once - if the receiver's WiFi was still coming up at that moment (typical in the first seconds after power-on) the check answered 'offline' and the offer silently never appeared, though a later connection (or another phone) would see it. The page now keeps quietly re-checking for a couple of minutes until the receiver is online, so the offer pops up as soon as it can be known. Installing this also updates the web pages; your Rotorflight backups are preserved."
-  }
- ]
+  "versions": [
+    {
+      "name": "RXV2-0.9.230-throttle-safe",
+      "url": "https://messiter.com/rxv2/release/v0.9.230/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.230/littlefs.bin",
+      "notes": "SAFETY: the throttle channel (configurable on the Output protocol page, default 3) is held fully LOW (885 us) from power-on until the transmitter is actually heard \u2014 a receiver booted without its TX can no longer put the motor at half stick. Plus: booting with the TX already on now leaves Bluetooth open for 30 s (connect in that window and the link stays); and renaming the receiver from the app now works (inline rename box \u2014 the old popup was silently ignored by app WebViews)."
+    },
+    {
+      "name": "RXV2-0.9.229-vbat-d9-only",
+      "url": "https://messiter.com/rxv2/release/v0.9.229/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.229/littlefs.bin",
+      "notes": "Battery divider: D9 only (GPIO 8 \u2014 the one free pad on 2-radio boards; D4 carries the status LED), auto-detected when FC telemetry is off. IMPORTANT: replaces 0.9.227/228, which used wrong GPIO numbers for the divider pin (raw 9 = the SPI MOSI line!) \u2014 do not use those two versions with a divider."
+    },
+    {
+      "name": "RXV2-0.9.228-vbat-autodetect",
+      "url": "https://messiter.com/rxv2/release/v0.9.228/firmware.bin",
+      "notes": ""
+    },
+    {
+      "name": "RXV2-0.9.227-vbat-adc",
+      "url": "https://messiter.com/rxv2/release/v0.9.227/firmware.bin",
+      "notes": "Receiver battery voltage on a spare pin: wire the pack through a 220k/10k divider (ratio 23.0, good to 12S; 100k/10k = 11.0 for 6S) + 100nF to D4 or D9 (free on 2-radio boards). Configure on the View-channels page; live volts (and per-cell if you set the cell count) shown there, and the voltage is sent to the transmitter as telemetry (12S pre-halve quirk handled)."
+    },
+    {
+      "name": "RXV2-0.9.226-async-update-check",
+      "url": "https://messiter.com/rxv2/release/v0.9.226/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.226/littlefs.bin",
+      "notes": "The update check no longer blocks the receiver: manifest fetches now run in the background, so opening the app's front screen can't pause the servo output (the brief servo twitch with no transmitter connected). Results are cached for 10 minutes."
+    },
+    {
+      "name": "RXV2-0.9.225-fc-telem-switch",
+      "url": "https://messiter.com/rxv2/release/v0.9.225/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.225/littlefs.bin",
+      "notes": "New 'Flight controller on the telemetry line' switch on the Output protocol page. Untick it for plain CRSF-to-PWM servo converters: some echo junk that gets misread as telemetry (phantom current readings / false max-current alarms on the transmitter) \u2014 the receiver then ignores the telemetry line entirely and sends no Rotorflight probes. Default remains ON."
+    },
+    {
+      "name": "RXV2-0.9.224-crsf-rate",
+      "url": "https://messiter.com/rxv2/release/v0.9.224/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.224/littlefs.bin",
+      "notes": "Adds a CRSF frame-rate setting on the Output protocol page (250/100/50 Hz). Lower it to 100 Hz for CRSF-to-PWM servo converters whose firmware misbehaves above ~100 Hz. Default stays 250 Hz. Installing this also updates the web pages."
+    },
+    {
+      "name": "RXV2-0.9.223-fly-fix",
+      "url": "https://messiter.com/rxv2/release/v0.9.223/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.223/littlefs.bin",
+      "notes": "Fixes the 'Re-enable WiFi & Bluetooth' button showing the fly-confirmation card instead of actually re-enabling (a later line of code was overwriting its action). Installing this also updates the web pages."
+    },
+    {
+      "name": "RXV2-0.9.222-fly-menu",
+      "url": "https://messiter.com/rxv2/release/v0.9.222/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.222/littlefs.bin",
+      "notes": "Radios-off mode gets a proper front door: from the RF-only screen you can now return to the menu WITHOUT re-enabling the radios, and while they're off the Fly-now slot becomes a big green 'Re-enable WiFi & Bluetooth' button. The Bluetooth badge hides while the radios are off (the receiver is only whispering down one kept link). Also fixes the kept Bluetooth link going mute after fly-arm \u2014 the return buttons now genuinely work. Installing this also updates the web pages."
+    },
+    {
+      "name": "RXV2-0.9.221-fly-ui",
+      "url": "https://messiter.com/rxv2/release/v0.9.221/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.221/littlefs.bin",
+      "notes": "Fly-screen polish: the 'turns off WiFi & Bluetooth' note sits neatly under 'Fly now' instead of squashed beside it, and the return button on the RF-only screen now says 'Turn WiFi & Bluetooth back ON' in big friendly letters - it's rather important, after all. Installing this also updates the web pages."
+    },
+    {
+      "name": "RXV2-0.9.220-fly-ble",
+      "url": "https://messiter.com/rxv2/release/v0.9.220/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.220/littlefs.bin",
+      "notes": "Fly now enters the Bluetooth era: the button says what it does (turns off WiFi AND Bluetooth), every screen names both radios, and when you're connected by Bluetooth the 'RF-only' screen keeps ONE quiet link alive (no advertising) so it can offer a Return-to-menu button - tap it and the receiver reboots with both radios back, the app reconnecting by itself. Close the app instead and that last link goes silent for interference-free flying. Also: firmware installs over Bluetooth now confirm before rebooting. Installing this also updates the web pages."
+    },
+    {
+      "name": "RXV2-0.9.219-update-test",
+      "url": "https://messiter.com/rxv2/release/v0.9.219/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.219/littlefs.bin",
+      "notes": "No functional change - identical to 0.9.218 apart from the version number. Released to prove the new persistent update-offer works end to end (connect over Bluetooth, see the offer appear, tap to install)."
+    }
+  ]
 }

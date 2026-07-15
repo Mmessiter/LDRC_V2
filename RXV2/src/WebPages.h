@@ -1248,6 +1248,11 @@ inline void handleProtocolSet() {
         prefs.putUChar(NVS_KEY_CRSF_HZ, (hz == 50 || hz == 100) ? (uint8_t)hz : 250);
     }
     prefs.putUChar(NVS_KEY_FC_TELEM, server.hasArg("fc_telem") ? 1 : 0);
+    if (server.hasArg("thr_ch")) {
+        long tc = server.arg("thr_ch").toInt();
+        if (tc >= 0 && tc <= 16)
+            prefs.putUChar(NVS_KEY_THR_CH, (uint8_t)tc);
+    }
     prefs.putUChar(NVS_KEY_CFG_REBOOT, 1);   // come straight back to WiFi (skip RF window)
     server.send(200, "text/html", confirmPage("Saved & rebooting",
         "<p>Output protocol updated. The receiver is rebooting to apply.</p>"));
@@ -1682,6 +1687,7 @@ inline void handleApiState() {
     j += ",\"ppm_inverted\":"; j += (ppmInverted ? "true" : "false");
     j += ",\"crsf_hz\":"; j += crsfRateHz;
     j += ",\"fc_telem\":"; j += (fcTelemetryEnabled ? "true" : "false");
+    j += ",\"thr_ch\":"; j += throttleChannel;
     j += ",\"available\":[";
     // Display order — CRSF first (most-used), then the rest in enum order.
     static const Protocol DISPLAY_ORDER[] = { PROTO_CRSF, PROTO_SBUS, PROTO_IBUS, PROTO_PPM };

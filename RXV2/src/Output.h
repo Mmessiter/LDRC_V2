@@ -349,6 +349,11 @@ inline void sbusTick() {
     // outputs to the saved positions and present them as valid RC.
     static bool inFailsafePosture = false;
     bool everConnected = (lastChannelDataMs != 0);
+    // SAFETY: with no TX ever heard this session, hold the throttle LOW in
+    // every output frame — a no-transmitter boot must never spin the motor
+    // (channels otherwise default to 1500 us = half throttle).
+    if (!everConnected && throttleChannel >= 1 && throttleChannel <= 16)
+        channelMicros[throttleChannel - 1] = THROTTLE_SAFE_US;
     // Gate is "not CRSF", NOT "not idle-high": IBUS/IBUS2 are idle-high too but
     // have no FC-side failsafe authority (no in-frame loss flag either), so they
     // rely on the receiver applying the captured posture like SBUS/PPM do.

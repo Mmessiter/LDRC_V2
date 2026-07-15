@@ -292,7 +292,15 @@ inline void disableWifi() {
 //  Periodic state-machine step (call from loop())
 //*********************************************************************
 
+inline uint32_t bleBootGraceUntil = 0;   // BLE-only boot window when the TX was on first
+
 inline void netStep() {
+    // Close the boot BLE window: stop advertising; keep a live client's link.
+    if (bleBootGraceUntil && (int32_t)(millis() - bleBootGraceUntil) >= 0) {
+        bleBootGraceUntil = 0;
+        if (bleHasClient()) bleFlyQuiet(); else bleStop();
+        events.add("Bluetooth boot window closed");
+    }
     // Non-blocking WiFi re-begin: a STA retry used to do WiFi.disconnect() +
     // delay(200) + WiFi.begin() inline, which BLOCKED the main loop for ~208 ms
     // every retry — long enough to pause CRSF/SBUS output and starve radioPoll,
@@ -306,11 +314,16 @@ inline void netStep() {
     }
     switch (netMode) {
         case NET_WAITING_RF:
-            // If a real packet has arrived, the TX is on — stay RF-only this session.
+            // If a real packet has arrived, the TX is on — stay RF-only this
+            // session, but give the phone app a 30 s BLE window (Malcolm: much
+            // more convenient than power-cycling with the TX off). A client
+            // that connects in time keeps its link (fly-quiet) until it leaves.
             if (rx.packets > 0) {
-                Serial.println("[net] TX heard during boot window — staying RF-only");
-                events.add("TX heard at boot — WiFi stays OFF");
+                Serial.println("[net] TX heard during boot window — RF-only, BLE for 30 s");
+                events.add("TX heard at boot — WiFi off, Bluetooth open for 30 s");
                 netMode = NET_NO_WIFI;
+                bleStart();
+                bleBootGraceUntil = millis() + 30000;
                 return;
             }
             if ((uint32_t)(millis() - netStateStart) >= RF_WINDOW_MS) {

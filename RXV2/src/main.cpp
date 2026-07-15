@@ -108,6 +108,12 @@ void setup() {
     // TX connects these are overwritten by real values; on signal loss AFTER a
     // link the channels HOLD their last value instead (see Channels.h/Output.h).
     for (uint8_t i = 0; i < 16; ++i) channelMicros[i] = (i < 5) ? 1500 : 500;
+    // SAFETY: never boot with the throttle at mid-stick. Until the TX is
+    // heard, the throttle channel is pinned low (Output.h keeps it there).
+    throttleChannel = prefs.isKey(NVS_KEY_THR_CH) ? prefs.getUChar(NVS_KEY_THR_CH, 3) : 3;
+    if (throttleChannel > 16) throttleChannel = 3;
+    if (throttleChannel >= 1)
+        channelMicros[throttleChannel - 1] = THROTTLE_SAFE_US;
 
     // Log WHY we booted — the blackbox story starts here. Distinguishes a
     // normal power-up from the silent self-reboots that matter: BROWNOUT
