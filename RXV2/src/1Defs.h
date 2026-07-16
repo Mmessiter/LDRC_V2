@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.235-tx-failsafe";
+constexpr const char* FW_VERSION = "RXV2-0.9.236-install-clarity";
 
 //*********************************************************************
 //  Auto-update manifest URLs

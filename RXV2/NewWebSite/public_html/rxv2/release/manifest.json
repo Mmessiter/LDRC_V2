@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.236-install-clarity",
+      "url": "https://messiter.com/rxv2/release/v0.9.236/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.236/littlefs.bin",
+      "notes": "Two update-flow niceties from Malcolm's hunting-lodge session: (1) trying to install while the receiver isn't on home WiFi now gets a plain explanation (the RECEIVER downloads the image itself, so the phone's internet can't help) instead of a cryptic failure; (2) an elapsed-time ticker during installs \u2014 the chip can't report true progress while flashing, but an honest count beats a frozen screen."
+    },
+    {
       "name": "RXV2-0.9.235-tx-failsafe",
       "url": "https://messiter.com/rxv2/release/v0.9.235/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.235/littlefs.bin",
@@ -63,12 +69,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.225/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.225/littlefs.bin",
       "notes": "New 'Flight controller on the telemetry line' switch on the Output protocol page. Untick it for plain CRSF-to-PWM servo converters: some echo junk that gets misread as telemetry (phantom current readings / false max-current alarms on the transmitter) \u2014 the receiver then ignores the telemetry line entirely and sends no Rotorflight probes. Default remains ON."
-    },
-    {
-      "name": "RXV2-0.9.224-crsf-rate",
-      "url": "https://messiter.com/rxv2/release/v0.9.224/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.224/littlefs.bin",
-      "notes": "Adds a CRSF frame-rate setting on the Output protocol page (250/100/50 Hz). Lower it to 100 Hz for CRSF-to-PWM servo converters whose firmware misbehaves above ~100 Hz. Default stays 250 Hz. Installing this also updates the web pages."
     }
   ]
 }

@@ -740,6 +740,14 @@ inline String updateFilesystemKeepingBackups(const String& fsUrl) {
 }
 
 inline void handleFirmwareInstall() {
+    if (netMode != NET_WIFI_UP) {
+        // ClaudeFix-16-7-2026 the chip itself downloads the image, so without home WiFi
+        // the install can only fail — say so plainly instead of "begin failed".
+        server.send(409, "text/plain",
+            "The receiver is not on home WiFi, so it cannot reach the update server. "
+            "Wait for it to join (or connect it to WiFi on the WiFi page) and try again.");
+        return;
+    }
     if (!server.hasArg("url")) {
         server.send(400, "text/plain", "missing url");
         return;
