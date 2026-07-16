@@ -386,19 +386,31 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
     document.querySelectorAll('.ver-btn').forEach(b => b.disabled = true);
     $('check').disabled = true;
     setStatePill('Installing ' + ver + '…', 'amber');
+    // The chip is single-minded while flashing (it can't answer requests
+    // mid-install), so true progress isn't possible — an honest elapsed
+    // ticker beats a frozen screen.
+    const instT0 = Date.now();
+    const instTick = setInterval(() => {
+        const el = document.getElementById('instSecs');
+        if (el) el.textContent = Math.round((Date.now() - instT0) / 1000);
+        else clearInterval(instTick);
+    }, 1000);
     showMessage('<b>Installing</b> <code>' + ver + '</code> from <b>' +
-        (SOURCE_LABEL[sourceKey]?.long || 'this source') + '</b>. The receiver will reboot when done.');
+        (SOURCE_LABEL[sourceKey]?.long || 'this source') + '</b>… ' +
+        '<span class=muted>(<span id=instSecs>0</span> s elapsed — typically 30–90 s, longer over Bluetooth. The receiver reboots when done.)</span>');
     try {
         const r = await fetch('/api/firmware/install?url=' + encodeURIComponent(url) +
                               (fsUrl ? '&fs_url=' + encodeURIComponent(fsUrl) : ''),
                               { method: 'POST' });
         if (r.ok) {
+            clearInterval(instTick);
             const t = await r.text();
             setStatePill('Installed', 'good');
             showMessage('<b>✓ Installed</b> <code>' + ver + '</code> — ' + t +
                 '. Page reloads in 10 s.');
             setTimeout(() => location.href = '/', 10000);
         } else {
+            clearInterval(instTick);
             const t = await r.text();
             setStatePill('Failed', 'bad');
             showMessage('Install failed: ' + t);
@@ -430,6 +442,7 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
                 if (Date.now() - t0 > 90000) { verdict = 'same'; break; }
             } catch (e2) { /* still flashing / rebooting */ }
         }
+        clearInterval(instTick);
         if (verdict && verdict !== 'same') {
             setStatePill('Installed', 'good');
             showMessage('<b>\u2713 Updated</b> \u2014 now running <code>' + verdict + '</code>. Page reloads in 5\u2009s.');
