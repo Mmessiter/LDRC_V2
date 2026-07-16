@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.235-tx-failsafe",
+      "url": "https://messiter.com/rxv2/release/v0.9.235/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.235/littlefs.bin",
+      "notes": "The transmitter's 'send failsafe to receiver' button now works on RXV2 (it was silently ignored): it captures the current channel positions \u2014 trims and subtrims included, since they're baked into the radio stream \u2014 exactly like the web 'Save failsafe' button. And with the FC-telemetry switch OFF (no flight controller, e.g. a PWM converter), the receiver now STREAMS the captured failsafe posture on CRSF after signal loss instead of going silent and letting the converter drift."
+    },
+    {
       "name": "RXV2-0.9.234-civilised-ota",
       "url": "https://messiter.com/rxv2/release/v0.9.234/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.234/littlefs.bin",
@@ -63,12 +69,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.224/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.224/littlefs.bin",
       "notes": "Adds a CRSF frame-rate setting on the Output protocol page (250/100/50 Hz). Lower it to 100 Hz for CRSF-to-PWM servo converters whose firmware misbehaves above ~100 Hz. Default stays 250 Hz. Installing this also updates the web pages."
-    },
-    {
-      "name": "RXV2-0.9.223-fly-fix",
-      "url": "https://messiter.com/rxv2/release/v0.9.223/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.223/littlefs.bin",
-      "notes": "Fixes the 'Re-enable WiFi & Bluetooth' button showing the fly-confirmation card instead of actually re-enabling (a later line of code was overwriting its action). Installing this also updates the web pages."
     }
   ]
 }
