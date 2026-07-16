@@ -357,7 +357,11 @@ inline void sbusTick() {
     // Gate is "not CRSF", NOT "not idle-high": IBUS/IBUS2 are idle-high too but
     // have no FC-side failsafe authority (no in-frame loss flag either), so they
     // rely on the receiver applying the captured posture like SBUS/PPM do.
-    if (failsafe && everConnected && failsafeSet && currentProtocol != PROTO_CRSF) {
+    // ClaudeFix-16-7-2026 CRSF with the FC-telemetry switch OFF means there is no FC —
+    // just a PWM converter — so the receiver IS the failsafe authority there
+    // too. (Previously CRSF always went silent and the converter drifted.)
+    if (failsafe && everConnected && failsafeSet &&
+        (currentProtocol != PROTO_CRSF || !fcTelemetryEnabled)) {
         for (uint8_t i = 0; i < 16; ++i) channelMicros[i] = failsafeMicros[i];
         if (!inFailsafePosture) { inFailsafePosture = true; events.add("Signal lost — RX failsafe positions applied"); }
         frameLost = false;

@@ -273,6 +273,17 @@ inline void readExtraParameters(const uint8_t* payload, uint8_t size) {
     decompress(w, compressed, decompressedSize(size));
     const uint16_t id = w[0];
     if (id < 1 || id > PARAM_MAX_ID) return;
+
+    // v1 FAILSAFE_SETTINGS (ID 1): the TX's "send failsafe to receiver"
+    // button. v1 receivers snapshot the CURRENT received channel values
+    // (trims and subtrims are baked into the stream by the TX) — we do the
+    // same thing our web "Save failsafe" button does. Not Rotorflight-
+    // gated: this must work on FC-less models (PWM converters etc).
+    if (id == 1) {
+        saveFailsafeToNvs();
+        events.add("Failsafe captured (transmitter command)");
+        return;
+    }
     if (!fcIsRotorflightConfigCapable()) return;
 
     switch (id) {
