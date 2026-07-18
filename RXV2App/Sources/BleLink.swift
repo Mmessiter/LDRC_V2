@@ -65,6 +65,13 @@ final class BleLink: NSObject, ObservableObject {
     private var rxDiscarded = 0        // stale bytes skipped while hunting the header
     private var timeoutTimer: Timer?
 
+    // Raw OTA chunk lane: 0xA5-framed writes streamed write-without-response,
+    // flow-controlled by canSendWriteWithoutResponse. Independent of the
+    // request pipeline — the firmware routes 0xA5 frames straight to flash.
+    private var otaFrames: [Data] = []
+    private var otaIndex = 0
+    private var otaCompletion: ((Result<Void, Error>) -> Void)?
+
     override init() {
         super.init()
         central = CBCentralManager(delegate: self, queue: .main)
@@ -120,6 +127,57 @@ final class BleLink: NSObject, ObservableObject {
         if let b = body { payload.append(b) }
         queue.append(Pending(payload: payload, completion: completion))
         pump()
+    }
+
+    // MARK: - raw OTA streaming
+
+    /// Payload bytes per 0xA5 frame (frame = 1 tag + 4 offset + payload).
+    /// Firmware caps BLE writes at 240 bytes.
+    func otaChunkSize() -> Int {
+        guard let p = peripheral else { return 64 }
+        let cap = min(240, p.maximumWriteValueLength(for: .withoutResponse))
+        return max(64, cap - 5)
+    }
+
+    /// Stream pre-built 0xA5 frames to the request characteristic.
+    /// Completion fires once every frame has been handed to CoreBluetooth.
+    /// Call from any thread; work happens on main alongside the pipeline.
+    func otaSend(_ frames: [Data], completion: @escaping (Result<Void, Error>) -> Void) {
+        DispatchQueue.main.async {
+            guard case .ready = self.state, self.peripheral != nil, self.reqChr != nil else {
+                completion(.failure(NSError(domain: "BleLink", code: 503,
+                    userInfo: [NSLocalizedDescriptionKey: "Not connected"])))
+                return
+            }
+            if let old = self.otaCompletion {   // stale batch (link hiccup) — supersede it
+                self.otaFrames = []; self.otaIndex = 0; self.otaCompletion = nil
+                old(.failure(NSError(domain: "BleLink", code: 409,
+                    userInfo: [NSLocalizedDescriptionKey: "superseded"])))
+            }
+            self.otaFrames = frames
+            self.otaIndex = 0
+            self.otaCompletion = completion
+            self.otaDrain()
+        }
+    }
+
+    fileprivate func otaDrain() {
+        guard otaCompletion != nil else { return }
+        guard let p = peripheral, let req = reqChr, case .ready = state else {
+            let done = otaCompletion
+            otaFrames = []; otaIndex = 0; otaCompletion = nil
+            done?(.failure(NSError(domain: "BleLink", code: 503,
+                userInfo: [NSLocalizedDescriptionKey: "Link lost during update"])))
+            return
+        }
+        while otaIndex < otaFrames.count {
+            if !p.canSendWriteWithoutResponse { return }  // resumes in peripheralIsReady
+            p.writeValue(otaFrames[otaIndex], for: req, type: .withoutResponse)
+            otaIndex += 1
+        }
+        let done = otaCompletion
+        otaFrames = []; otaIndex = 0; otaCompletion = nil
+        done?(.success(()))
     }
 
     // MARK: - internals
@@ -350,5 +408,9 @@ extension BleLink: CBCentralManagerDelegate, CBPeripheralDelegate {
                     didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
         guard characteristic.uuid == Self.responseUUID, let d = characteristic.value else { return }
         handleNotify(d)
+    }
+
+    func peripheralIsReady(toSendWriteWithoutResponse peripheral: CBPeripheral) {
+        otaDrain()
     }
 }

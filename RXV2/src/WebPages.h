@@ -673,6 +673,121 @@ inline String flashStreamToPartition(const String& url, int command) {
 // One preserved Rotorflight backup (held in RAM across a filesystem flash).
 struct SavedBackup { String name; String data; };
 
+// Snapshot/restore the user's /backups/*.json around a LittleFS reflash.
+inline SavedBackup g_fsBackups[BACKUP_MAX];
+inline int g_fsBackupCount = 0;
+
+inline void snapshotBackupsToRam() {
+    g_fsBackupCount = 0;
+    if (littleFsMounted && LittleFS.exists(BACKUP_DIR)) {
+        File dir = LittleFS.open(BACKUP_DIR);
+        if (dir) {
+            for (File f = dir.openNextFile(); f && g_fsBackupCount < BACKUP_MAX; f = dir.openNextFile()) {
+                if (f.isDirectory()) { f.close(); continue; }
+                String nm = f.name();
+                int slash = nm.lastIndexOf('/'); if (slash >= 0) nm = nm.substring(slash + 1);
+                g_fsBackups[g_fsBackupCount].name = nm;
+                g_fsBackups[g_fsBackupCount].data = f.readString();
+                g_fsBackupCount++;
+                f.close();
+            }
+            dir.close();
+        }
+    }
+}
+
+inline int restoreBackupsFromRam() {
+    int restored = 0;
+    if (littleFsMounted && g_fsBackupCount > 0) {
+        if (!LittleFS.exists(BACKUP_DIR)) LittleFS.mkdir(BACKUP_DIR);
+        for (int i = 0; i < g_fsBackupCount; i++) {
+            String path = BACKUP_DIR; path += '/'; path += g_fsBackups[i].name;
+            File w = LittleFS.open(path, "w");
+            if (w) { w.print(g_fsBackups[i].data); w.close(); restored++; }
+        }
+    }
+    return restored;
+}
+
+inline void safeOutputParkAndRestart();   // defined below (bind section)
+
+//*********************************************************************
+//  BLE OTA push — the app downloads with the PHONE's internet (5G!) and
+//  streams raw chunks over the BLE link (see BleConfig.h's 0xA5 lane).
+//*********************************************************************
+
+inline void handleBleOtaBegin() {
+    String type = server.hasArg("type") ? server.arg("type") : "fw";
+    uint32_t size = server.hasArg("size") ? (uint32_t) server.arg("size").toInt() : 0;
+    if (size == 0 || size > 4u * 1024u * 1024u) {
+        server.send(400, "application/json", "{\"ok\":false,\"error\":\"bad size\"}");
+        return;
+    }
+    if (bleOtaActive) { Update.abort(); bleOtaActive = false; }
+    bleOtaCmd = (type == "fs") ? U_SPIFFS : U_FLASH;
+    if (bleOtaCmd == U_SPIFFS) {
+        snapshotBackupsToRam();      // whole partition is about to be replaced
+        LittleFS.end();
+        littleFsMounted = false;
+    }
+    if (!Update.begin(size, bleOtaCmd)) {
+        String e = Update.errorString();
+        if (bleOtaCmd == U_SPIFFS) {
+            littleFsMounted = LittleFS.begin(false) || LittleFS.begin(true);
+            restoreBackupsFromRam();
+        }
+        server.send(500, "application/json", String("{\"ok\":false,\"error\":\"") + e + "\"}");
+        return;
+    }
+    bleOtaSize = size;
+    bleOtaGot = 0;
+    bleOtaError = "";
+    bleOtaLastChunkMs = millis();
+    bleOtaActive = true;
+    events.add(bleOtaCmd == U_SPIFFS ? "BLE OTA: web files transfer started"
+                                     : "BLE OTA: firmware transfer started");
+    server.sendHeader("Cache-Control", "no-store");
+    server.send(200, "application/json", "{\"ok\":true,\"chunk\":180}");
+}
+
+inline void handleBleOtaStatus() {
+    char b[128];
+    snprintf(b, sizeof(b), "{\"active\":%s,\"got\":%lu,\"size\":%lu,\"error\":\"%s\"}",
+             bleOtaActive ? "true" : "false",
+             (unsigned long) bleOtaGot, (unsigned long) bleOtaSize, bleOtaError.c_str());
+    server.sendHeader("Cache-Control", "no-store");
+    server.send(200, "application/json", b);
+}
+
+inline void handleBleOtaEnd() {
+    if (!bleOtaActive) {
+        server.send(409, "application/json", "{\"ok\":false,\"error\":\"no transfer\"}");
+        return;
+    }
+    bleOtaActive = false;
+    bool ok = (bleOtaGot == bleOtaSize) && bleOtaError.length() == 0 && Update.end(true);
+    String err = ok ? "" : (bleOtaError.length() ? bleOtaError : String(Update.errorString()));
+    if (!ok) Update.abort();
+    if (bleOtaCmd == U_SPIFFS) {
+        littleFsMounted = LittleFS.begin(false) || LittleFS.begin(true);
+        int restored = restoreBackupsFromRam();
+        char m[64]; snprintf(m, sizeof(m), "BLE OTA web files: %s (%d backups kept)", ok ? "done" : "FAILED", restored);
+        events.add(m);
+    } else {
+        events.add(ok ? "BLE OTA firmware: flashed OK" : "BLE OTA firmware: FAILED");
+    }
+    server.sendHeader("Cache-Control", "no-store");
+    if (ok) server.send(200, "application/json", "{\"ok\":true}");
+    else    server.send(500, "application/json", String("{\"ok\":false,\"error\":\"") + err + "\"}");
+}
+
+inline void handleBleOtaReboot() {
+    server.send(200, "application/json", "{\"ok\":true,\"rebooting\":true}");
+    bleEarlyPump();          // push the reply out over BLE before the radio dies
+    delay(300);
+    safeOutputParkAndRestart();   // throttle-low frames + parked pin — no prop blip
+}
+
 // Update the web/data filesystem (LittleFS) from fsUrl WITHOUT losing the user's
 // /backups/*.json. The whole partition is overwritten by the new image, so we
 // snapshot the backups (max 20 × ~1.5 KB — tiny) into RAM first, flash, re-mount,
@@ -693,23 +808,8 @@ inline String updateFilesystemKeepingBackups(const String& fsUrl) {
     if (len <= 0) { http.end(); return ""; }
 
     // 1) Snapshot the user's backups (old FS still mounted).
-    SavedBackup saved[BACKUP_MAX];
-    int n = 0;
-    if (littleFsMounted && LittleFS.exists(BACKUP_DIR)) {
-        File dir = LittleFS.open(BACKUP_DIR);
-        if (dir) {
-            for (File f = dir.openNextFile(); f && n < BACKUP_MAX; f = dir.openNextFile()) {
-                if (f.isDirectory()) { f.close(); continue; }
-                String nm = f.name();
-                int slash = nm.lastIndexOf('/'); if (slash >= 0) nm = nm.substring(slash + 1);
-                saved[n].name = nm;
-                saved[n].data = f.readString();
-                n++;
-                f.close();
-            }
-            dir.close();
-        }
-    }
+    snapshotBackupsToRam();
+    int n = g_fsBackupCount;
 
     // 2) Unmount + flash the new image straight from the open stream.
     LittleFS.end();
@@ -722,15 +822,7 @@ inline String updateFilesystemKeepingBackups(const String& fsUrl) {
     // 3) Re-mount (format only if the freshly-written image won't mount), restore backups.
     bool mounted = LittleFS.begin(false) || LittleFS.begin(true);
     littleFsMounted = mounted;
-    int restored = 0;
-    if (mounted && n > 0) {
-        if (!LittleFS.exists(BACKUP_DIR)) LittleFS.mkdir(BACKUP_DIR);
-        for (int i = 0; i < n; i++) {
-            String path = BACKUP_DIR; path += '/'; path += saved[i].name;
-            File w = LittleFS.open(path, "w");
-            if (w) { w.print(saved[i].data); w.close(); restored++; }
-        }
-    }
+    int restored = restoreBackupsFromRam();
     char m[96];
     if (err.length())
         snprintf(m, sizeof m, " (web files FAILED: %s; %d/%d backups kept)", err.c_str(), restored, n);
@@ -1912,6 +2004,10 @@ inline void registerWebRoutes() {
     server.on("/api/firmware/seturl",  HTTP_POST, handleFirmwareSetUrl);
     server.on("/api/firmware/check",   HTTP_GET,  handleFirmwareCheck);
     server.on("/api/firmware/install", HTTP_POST, handleFirmwareInstall);
+    server.on("/api/bleota/begin",   HTTP_POST, handleBleOtaBegin);
+    server.on("/api/bleota/status",  HTTP_GET,  handleBleOtaStatus);
+    server.on("/api/bleota/end",     HTTP_POST, handleBleOtaEnd);
+    server.on("/api/bleota/reboot",  HTTP_POST, handleBleOtaReboot);
 
     // Shared assets
     server.on("/style.css",         handleStyleCss);
