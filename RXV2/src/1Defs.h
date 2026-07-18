@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.238-ble-ota";
+constexpr const char* FW_VERSION = "RXV2-0.9.239-ble-push";
 
 //*********************************************************************
 //  Auto-update manifest URLs
