@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.236-install-clarity";
+constexpr const char* FW_VERSION = "RXV2-0.9.237-bind-safe";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -298,6 +298,7 @@ inline uint8_t vbatPin      = 0;        // battery-divider ADC GPIO (0 = feature
 inline float   vbatRatio    = 23.0f;    // divider ratio
 inline uint8_t vbatCellsCfg = 0;        // user-set cell count (0 = unset)
 inline float   vbatVolts    = 0.0f;     // smoothed pack voltage (V)
+inline uint32_t channelPacketsRx = 0;   // CHANNEL packets decoded this session (throttle stays pinned until a stable stream)
 inline bool    vbatAuto     = false;
 inline uint8_t throttleChannel = 3;         // NVS_KEY_THR_CH — boot-safe low until the TX is heard
 constexpr uint16_t THROTTLE_SAFE_US = 885;  // well below 900: any ESC reads this as motor OFF    // pin was found by the sniffer, not set by the user   // NVS_KEY_FC_TELEM: false = ignore telemetry-line input + no Rotorflight/MSP probes            // user-configurable (NVS_KEY_CRSF_HZ): 250 native, 100/50 for fussy CRSF-to-PWM converters
