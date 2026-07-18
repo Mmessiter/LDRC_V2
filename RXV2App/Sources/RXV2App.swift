@@ -62,12 +62,15 @@ struct ScannerView: View {
 
     var body: some View {
         List {
-            Section {
-                Button {
-                    demoMode = true
-                } label: {
-                    Label("No receiver yet?  Try the demo",
-                          systemImage: "theatermasks")
+            // a real receiver in sight → the demo offer just muddies the water
+            if link.found.isEmpty {
+                Section {
+                    Button {
+                        demoMode = true
+                    } label: {
+                        Label("No receiver yet?  Try the demo",
+                              systemImage: "theatermasks")
+                    }
                 }
             }
             Section {
