@@ -782,6 +782,7 @@ inline void handleBleOtaEnd() {
 }
 
 inline void handleBleOtaReboot() {
+    prefs.putUChar(NVS_KEY_CFG_REBOOT, 1);   // config reboot: skip the RF window so BLE advertising returns and the app can reconnect + confirm
     server.send(200, "application/json", "{\"ok\":true,\"rebooting\":true}");
     bleEarlyPump();          // push the reply out over BLE before the radio dies
     delay(300);

@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.240-ble-verify",
+      "url": "https://messiter.com/rxv2/release/v0.9.240/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.240/littlefs.bin",
+      "notes": ""
+    },
+    {
       "name": "RXV2-0.9.239-ble-push",
       "url": "https://messiter.com/rxv2/release/v0.9.239/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.239/littlefs.bin",
@@ -65,11 +71,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.229/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.229/littlefs.bin",
       "notes": "Battery divider: D9 only (GPIO 8 \u2014 the one free pad on 2-radio boards; D4 carries the status LED), auto-detected when FC telemetry is off. IMPORTANT: replaces 0.9.227/228, which used wrong GPIO numbers for the divider pin (raw 9 = the SPI MOSI line!) \u2014 do not use those two versions with a divider."
-    },
-    {
-      "name": "RXV2-0.9.228-vbat-autodetect",
-      "url": "https://messiter.com/rxv2/release/v0.9.228/firmware.bin",
-      "notes": ""
     }
   ]
 }
