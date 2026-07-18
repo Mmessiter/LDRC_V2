@@ -17,9 +17,8 @@
 <div class=bg-wash  aria-hidden=true></div>
 <div class=container>
     <h1>Setup</h1>
-    <p class=subtitle>One-time configuration &mdash; bind, output, WiFi, firmware</p>
+    <p class=subtitle>One-time configuration &mdash; output, WiFi, firmware</p>
 
-    <button class="btn btn-bind" type=button id=bindbtn><span class=ico>&#128279;</span>Start Bind mode</button>
     <a class="btn btn-diag" href="/protocol" id=protobtn><span class=ico>&#128225;</span>Output protocol &mdash; <span id=protoname>&hellip;</span></a>
     <a class="btn btn-diag" href="/diagnostics"><span class=ico>&#127916;</span>View channels &mdash; failsafe &amp; gear ratio</a>
     <a class="btn btn-fw"   href="/wifi" id=wifibtn style="display:none"><span class=ico>&#128246;</span>WiFi settings</a>
@@ -45,25 +44,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Current name on the rename button.
     LDRC.setText('curname', (s.info && s.info.name) || 'RXV2');
 
-    // "Start Bind mode" — guarded exactly as it was on the front screen:
-    // re-binding erases the current bind, so a bound receiver asks first.
-    const bb = document.getElementById('bindbtn');
-    if (bb) bb.onclick = async () => {
-        const s2 = await LDRC.fetchState() || s;
-        if (s2 && s2.bind && s2.bind.bound) {
-            const alive = s2.rf && s2.rf.last_pkt_ms >= 0 && s2.rf.last_pkt_ms < 1000;
-            const ok = await LDRC.confirm(
-                (alive ? 'This receiver is connected to a transmitter RIGHT NOW. '
-                       : 'This receiver is already bound to a transmitter. ')
-                + 'Entering bind mode erases the bind and drops the link, then listens for a '
-                + 'transmitter to pair with. Only do this to pair with a DIFFERENT transmitter.',
-                { title: alive ? 'Connected — re-bind anyway?' : 'Already bound — re-bind?',
-                  icon: '⚠️', yes: 'Erase bind & re-bind', kind: 'danger' });
-            if (!ok) return;
-        }
-        location.href = '/bind';
-    };
-
     // Rename — same prompt-based flow as tapping the front-screen title.
     const rb = document.getElementById('renamebtn');
     if (rb) rb.onclick = () => {
@@ -82,7 +62,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 <p>Everything you configure once and then rarely touch again lives here, so the front screen stays simple.</p>
 <h3>Buttons</h3>
 <ul>
-<li><b>Start Bind mode</b> &mdash; pair the receiver with your transmitter. If it&rsquo;s already bound you&rsquo;ll be asked first, because re-binding erases the current pairing.</li>
 <li><b>Output protocol</b> &mdash; what the receiver sends to your flight controller on D6 (CRSF for Rotorflight, SBUS, IBUS or PPM). The current choice is shown on the button.</li>
 <li><b>View channels</b> &mdash; live channel bars, plus capturing your failsafe positions and setting the head-speed gear ratio.</li>
 <li><b>WiFi settings</b> &mdash; home network details and the &ldquo;AP mode only&rdquo; field setting.</li>
@@ -90,7 +69,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 <li><b>Rename receiver</b> &mdash; the name is also the WiFi network name and the <code>.local</code> address.</li>
 </ul>
 <h3>Tips</h3>
-<p>A brand-new receiver only needs three visits here: bind it, check the protocol, add your WiFi. After that you may never need this page at the field.</p>
+<p>A brand-new receiver only needs two visits here: check the protocol and add your WiFi (Bind now lives on the front menu). After that you may never need this page at the field.</p>
 </template>
 </body>
 </html>

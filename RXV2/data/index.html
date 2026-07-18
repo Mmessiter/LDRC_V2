@@ -112,8 +112,9 @@
         <button class="btn btn-fly"  type=button id=flybtn><span class=ico>&#128641;&#9992;&#65039;</span><span style="display:flex;flex-direction:column;align-items:flex-start;text-align:left"><span>Fly now</span><span style="font-size:.62em;font-weight:400;opacity:.85;margin-top:.25em">turns off WiFi &amp; Bluetooth</span></span></button>
         <a class="btn btn-bb"   href="/rotorflight" id=rfbtn style="display:none;background:#8e6cab"><span class=ico>&#129357;</span>Rotorflight config &mdash; <span id=fcver>&hellip;</span></a>
         <a class="btn btn-bb"   href="/blackbox"><span class=ico>&#128209;</span>Black box log</a>
+        <button class="btn btn-bind" type=button id=bindbtn><span class=ico>&#128279;</span>Bind &mdash; pair with a transmitter</button>
         <a class="btn" href="/sim" id=simpg style="background:#4a90c9"><span class=ico>&#127918;</span><span id=simpglbl>Simulator</span></a>
-        <a class="btn" href="/setup" style="background:#6f7e8b"><span class=ico>&#9881;&#65039;</span>Setup &mdash; bind, protocol, WiFi&hellip;</a>
+        <a class="btn" href="/setup" style="background:#6f7e8b"><span class=ico>&#9881;&#65039;</span>Setup &mdash; protocol, WiFi&hellip;</a>
     </div>
 
     <div id=fwBanner style="display:none;text-align:center;padding:.7em;border-radius:10px;margin:1em 0 0;font-weight:600"></div>
@@ -195,6 +196,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     const fbtn = document.getElementById('flybtn');
     if (fbtn && !rfOnlyMenu) fbtn.onclick = showFlyConfirm;
+
+    // Bind — promoted from Setup (it's used far more often). Same guard:
+    // re-binding erases the current bind, so a bound receiver asks first.
+    const bbtn = document.getElementById('bindbtn');
+    if (bbtn) bbtn.onclick = async () => {
+        const s2 = await LDRC.fetchState();
+        if (s2 && s2.bind && s2.bind.bound) {
+            const alive = s2.rf && s2.rf.last_pkt_ms >= 0 && s2.rf.last_pkt_ms < 1000;
+            const ok = await LDRC.confirm(
+                (alive ? 'This receiver is connected to a transmitter RIGHT NOW. '
+                       : 'This receiver is already bound to a transmitter. ')
+                + 'Entering bind mode erases the bind and drops the link, then listens for a '
+                + 'transmitter to pair with. Only do this to pair with a DIFFERENT transmitter.',
+                { title: alive ? 'Connected \u2014 re-bind anyway?' : 'Already bound \u2014 re-bind?',
+                  icon: '\u26a0\ufe0f', yes: 'Erase bind & re-bind', kind: 'danger' });
+            if (!ok) return;
+        }
+        location.href = '/bind';
+    };
 
     // Simulator state — banner + tint the Simulator button green while active.
     const simOn = !!s.sim;
@@ -642,8 +662,9 @@ function doFirmwareUpdate(url, fsUrl, name) {
 <li><b>Fly now</b> — the only button to press immediately before flying; it shuts WiFi down so the radio link is uninterrupted.</li>
 <li><b>Rotorflight config</b> — appears when a Rotorflight flight controller is connected: rates, PIDs, governor and backups, from your phone.</li>
 <li><b>Black box log</b> — battery, link statistics, the flight graph and the event log.</li>
+<li><b>Bind</b> — pair the receiver with your transmitter. If it's already bound you'll be asked first, because re-binding erases the current pairing.</li>
 <li><b>Simulator</b> — fly a PC simulator over USB with your real transmitter.</li>
-<li><b>Setup</b> — bind, output protocol, view channels, WiFi, firmware and renaming. One-time configuration lives there so this screen stays simple.</li>
+<li><b>Setup</b> — output protocol, view channels, WiFi, firmware and renaming. One-time configuration lives there so this screen stays simple.</li>
 </ul>
 <h3>Tips</h3>
 <p>The green/amber banner at the top tells you which transceiver slots (1, 2, 3) were detected at boot. A banner at the bottom offers newer firmware when available.</p>

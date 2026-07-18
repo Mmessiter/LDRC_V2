@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.242-bind-front",
+      "url": "https://messiter.com/rxv2/release/v0.9.242/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.242/littlefs.bin",
+      "notes": ""
+    },
+    {
       "name": "RXV2-0.9.241-ble-retry",
       "url": "https://messiter.com/rxv2/release/v0.9.241/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.241/littlefs.bin",
@@ -65,12 +71,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.231/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.231/littlefs.bin",
       "notes": "Channel assignments consolidated: the arming channel now lives on the Output protocol page beside the throttle channel (one 'Channels' box); the arming card is gone from View channels. Battery card layout fixed so Pin/Ratio/Cells labels stay with their boxes on narrow phone screens."
-    },
-    {
-      "name": "RXV2-0.9.230-throttle-safe",
-      "url": "https://messiter.com/rxv2/release/v0.9.230/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.230/littlefs.bin",
-      "notes": "SAFETY: the throttle channel (configurable on the Output protocol page, default 3) is held fully LOW (885 us) from power-on until the transmitter is actually heard \u2014 a receiver booted without its TX can no longer put the motor at half stick. Plus: booting with the TX already on now leaves Bluetooth open for 30 s (connect in that window and the link stays); and renaming the receiver from the app now works (inline rename box \u2014 the old popup was silently ignored by app WebViews)."
     }
   ]
 }
