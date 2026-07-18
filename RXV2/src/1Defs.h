@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.237-bind-safe";
+constexpr const char* FW_VERSION = "RXV2-0.9.238-ble-ota";
 
 //*********************************************************************
 //  Auto-update manifest URLs

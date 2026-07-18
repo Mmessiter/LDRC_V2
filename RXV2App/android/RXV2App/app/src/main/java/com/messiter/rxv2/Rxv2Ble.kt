@@ -74,7 +74,8 @@ class Rxv2Ble(private val context: Context) {
     private var mtu = 23
 
     // ── Single-request pipeline ────────────────────────────────────
-    private class Pending(val payload: ByteArray, val cb: (kotlin.Result<Response>) -> Unit)
+    private class Pending(val payload: ByteArray, val cb: (kotlin.Result<Response>) -> Unit,
+                          val rawChunks: List<ByteArray>? = null)
     private val queue = ArrayDeque<Pending>()
     private var inFlight: Pending? = null
     private var rxHeader = ByteArrayOut()
@@ -86,7 +87,13 @@ class Rxv2Ble(private val context: Context) {
     private val txChunks = ArrayDeque<ByteArray>()   // outgoing request chunks, fed by onCharacteristicWrite
 
     private fun writeNextChunk(g: BluetoothGatt, c: BluetoothGattCharacteristic) {
-        val chunk = txChunks.removeFirstOrNull() ?: return
+        val chunk = txChunks.removeFirstOrNull()
+        if (chunk == null) {
+            // a raw OTA batch has no reply to wait for — done when drained
+            if (inFlight?.rawChunks != null)
+                finish(kotlin.Result.success(Response(200, "", "", ByteArray(0))))
+            return
+        }
         // Write-without-response when the characteristic allows it: the BLE
         // link layer still guarantees delivery AND order, but there is no
         // ATT round trip per chunk — several chunks ride one connection
@@ -183,6 +190,20 @@ class Rxv2Ble(private val context: Context) {
         }
     }
 
+    /** Max payload bytes per OTA chunk ([0xA5] + 4-byte offset overhead). */
+    fun otaChunkSize(): Int = ((mtu - 3).coerceAtMost(240) - 5).coerceAtLeast(64)
+
+    /** Stream pre-framed raw OTA chunks ([0xA5][offset LE][data]) through the
+     *  ordered write pipeline; completes when the last write is accepted.
+     *  Flow control is the ATT layer itself + periodic /api/bleota/status. */
+    fun otaSend(chunks: List<ByteArray>, cb: (kotlin.Result<Unit>) -> Unit) {
+        bg.post {
+            if (state !is State.Ready) { cb(kotlin.Result.failure(Exception("Not connected"))); return@post }
+            queue.addLast(Pending(ByteArray(0), { r -> cb(r.map { }) }, rawChunks = chunks))
+            pump()
+        }
+    }
+
     // ── Pipeline internals (main thread only) ───────────────────────
     private fun pump() {
         if (inFlight != null) return
@@ -193,6 +214,13 @@ class Rxv2Ble(private val context: Context) {
         inFlight = next
         rxHeader = ByteArrayOut(); rxBody = ByteArrayOut(); rxExpected = -1; rxDiscarded = 0
         txChunks.clear()
+
+        next.rawChunks?.let { raw ->
+            txChunks.addAll(raw)
+            writeNextChunk(g, req)
+            armTimeout(20000)
+            return
+        }
 
         val prefix = "Q${next.payload.size}|".toByteArray(Charsets.UTF_8)
         // Cap request chunks at 240 bytes. Two reasons: Android hard-rejects

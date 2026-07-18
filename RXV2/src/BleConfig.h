@@ -41,6 +41,7 @@
 
 #include "1Defs.h"
 #include <NimBLEDevice.h>
+#include <Update.h>
 #include <vector>
 #include <map>
 
@@ -76,6 +77,18 @@ inline uint32_t bleStreamArm  = 0;       // page re-arms every ~25 s; auto-off a
 inline String  bleInbox;            // accumulating request payload
 inline size_t  bleInboxExpected = 0;
 inline volatile bool bleReqReady = false;   // full request waiting for blePoll()
+
+// ── BLE OTA push ────────────────────────────────────────────────────
+// The app downloads firmware with the PHONE's internet (WiFi or 5G) and
+// streams it here in raw chunks: [0xA5][u32 offset LE][payload]. Chunks are
+// write-without-response for speed; the app resyncs via /api/bleota/status
+// (which still flows through the normal 'Q' request lane between chunks).
+inline volatile bool     bleOtaActive = false;
+inline int               bleOtaCmd = 0;          // U_FLASH / U_SPIFFS
+inline volatile uint32_t bleOtaSize = 0;
+inline volatile uint32_t bleOtaGot  = 0;
+inline volatile uint32_t bleOtaLastChunkMs = 0;
+inline String            bleOtaError;
 
 // captured response
 inline bool    bleActive   = false; // a handler is running against BLE
@@ -267,6 +280,18 @@ class BleReqCallbacks : public NimBLECharacteristicCallbacks {
         } else if (v[0] == '+') {                       // continuation
             if (!bleInboxExpected) return;
             bleInbox.concat(v.data() + 1, v.size() - 1);
+        } else if ((uint8_t) v[0] == 0xA5) {            // raw OTA chunk
+            if (!bleOtaActive || v.size() < 6) return;
+            uint32_t off = (uint8_t) v[1] | ((uint8_t) v[2] << 8) |
+                           ((uint8_t) v[3] << 16) | ((uint32_t)(uint8_t) v[4] << 24);
+            if (off != bleOtaGot) return;               // out of sequence — app resyncs via status
+            size_t n = v.size() - 5;
+            if (Update.write((uint8_t *) v.data() + 5, n) == n)
+                bleOtaGot += n;
+            else if (bleOtaError.length() == 0)
+                bleOtaError = Update.errorString();
+            bleOtaLastChunkMs = millis();
+            return;
         } else return;
         if (bleInboxExpected && bleInbox.length() >= bleInboxExpected) {
             bleReqReady = true;                          // blePoll() takes it from here
@@ -503,6 +528,15 @@ inline void bleStreamPoll() {
 }
 
 inline void blePoll() {
+    // OTA stall watchdog: abandon a transfer whose chunks stop coming, so a
+    // dropped link can't leave Update half-open (current firmware stays
+    // bootable — nothing commits until end()).
+    if (bleOtaActive && (uint32_t)(millis() - bleOtaLastChunkMs) > 30000) {
+        Update.abort();
+        bleOtaActive = false;
+        bleOtaError = "transfer stalled";
+        events.add("BLE OTA stalled — aborted (old firmware intact)");
+    }
     // Keep serving while a client is CONNECTED even when advertising is
     // off (fly-quiet mode keeps the one live phone link) — otherwise the
     // RF-only screen's buttons would be talking to a mute receiver.

@@ -18,6 +18,7 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
     private let link: BleLink
     private let demo: Bool
     private var live = Set<ObjectIdentifier>()
+    private lazy var ota = BleOta(link: link)
 
     init(link: BleLink, demo: Bool = false) {
         self.link = link
@@ -35,6 +36,24 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
         guard let url = task.request.url else { return fail(task, "bad URL") }
         let path = url.path.isEmpty ? "/" : url.path
         let method = (task.request.httpMethod ?? "GET").uppercased()
+
+        // 0) BLE OTA push — handled by the APP (phone downloads on WiFi/5G,
+        //    then streams the images over Bluetooth). Never reaches the radio.
+        if path == "/app/bleota/start" {
+            let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems
+            let fw = items?.first(where: { $0.name == "fw" })?.value
+            let fs = items?.first(where: { $0.name == "fs" })?.value
+            let ok = (fw != nil && !demo)
+            if ok { ota.start(fw: fw!, fs: fs) }
+            deliver(task, url: url, code: 200, type: "application/json",
+                    body: Data("{\"ok\":\(ok)}".utf8))
+            return
+        }
+        if path == "/app/bleota/progress" {
+            deliver(task, url: url, code: 200, type: "application/json",
+                    body: ota.progressJSON)
+            return
+        }
 
         // 1) bundle-served static content (GET only). In demo mode the demo
         //    shim is injected into every page: it intercepts fetch() with
@@ -143,5 +162,158 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
         task.didFailWithError(NSError(domain: "BleScheme", code: 400,
                                       userInfo: [NSLocalizedDescriptionKey: msg]))
         live.remove(ObjectIdentifier(task))
+    }
+}
+
+// MARK: - BLE OTA push runner
+//
+// Mirrors the Android RXV2App implementation: download firmware.bin (+
+// littlefs.bin) with the phone's own internet, then stream them to the
+// receiver as 0xA5 raw chunks over the BLE request characteristic while the
+// firmware writes flash incrementally (/api/bleota/begin → chunks →
+// /api/bleota/status resyncs → /api/bleota/end → /api/bleota/reboot).
+
+final class BleOta {
+    private let link: BleLink
+    private let lock = NSLock()
+    // phase: idle|download|fw|fs|rebooting|error|done  (firmware.html contract)
+    private var phase = "idle"
+    private var msg = ""
+    private var sent: Int64 = 0
+    private var total: Int64 = 0
+    private var running = false
+
+    init(link: BleLink) { self.link = link }
+
+    var progressJSON: Data {
+        lock.lock(); defer { lock.unlock() }
+        let esc = msg.replacingOccurrences(of: "\\", with: "\\\\")
+                     .replacingOccurrences(of: "\"", with: "\\\"")
+        return Data("{\"phase\":\"\(phase)\",\"msg\":\"\(esc)\",\"sent\":\(sent),\"total\":\(total)}".utf8)
+    }
+
+    func start(fw: String, fs: String?) {
+        lock.lock()
+        if running { lock.unlock(); return }
+        running = true
+        phase = "download"; msg = "Downloading with the phone's internet…"
+        sent = 0; total = 0
+        lock.unlock()
+        DispatchQueue.global(qos: .userInitiated).async { self.run(fwUrl: fw, fsUrl: fs) }
+    }
+
+    private func set(_ p: String, _ m: String) {
+        lock.lock(); phase = p; msg = m; lock.unlock()
+    }
+
+    private func run(fwUrl: String, fsUrl: String?) {
+        defer { lock.lock(); running = false; lock.unlock() }
+        do {
+            let fw = try download(fwUrl)
+            var fs: Data? = nil
+            if let u = fsUrl, !u.isEmpty { fs = try? download(u) }
+            lock.lock(); total = Int64(fw.count + (fs?.count ?? 0)); lock.unlock()
+            set("fw", "Sending firmware over Bluetooth…")
+            try streamImage(type: "fw", bytes: fw, base: 0)
+            if let fs {
+                set("fs", "Sending web pages over Bluetooth…")
+                try streamImage(type: "fs", bytes: fs, base: Int64(fw.count))
+            }
+            set("rebooting", "Rebooting the receiver…")
+            _ = try? reqSync("POST", "/api/bleota/reboot")   // reply may die with the radio
+            set("done", "Installed — receiver rebooting")
+        } catch {
+            set("error", error.localizedDescription)
+            _ = try? reqSync("POST", "/api/bleota/status")   // lets the 30 s watchdog abort cleanly
+        }
+    }
+
+    // MARK: sync helpers (all called on the background runner thread)
+
+    private func fault(_ m: String) -> Error {
+        NSError(domain: "BleOta", code: 1, userInfo: [NSLocalizedDescriptionKey: m])
+    }
+
+    private func reqSync(_ method: String, _ path: String) throws -> BleResponse {
+        let sem = DispatchSemaphore(value: 0)
+        var result: Result<BleResponse, Error>?
+        DispatchQueue.main.async {
+            self.link.request(method: method, path: path) { r in result = r; sem.signal() }
+        }
+        if sem.wait(timeout: .now() + 30) == .timedOut {
+            throw fault("BLE request timed out: \(path)")
+        }
+        return try result!.get()
+    }
+
+    private func sendSync(_ frames: [Data]) throws {
+        let sem = DispatchSemaphore(value: 0)
+        var failure: Error?
+        link.otaSend(frames) { r in
+            if case .failure(let e) = r { failure = e }
+            sem.signal()
+        }
+        if sem.wait(timeout: .now() + 60) == .timedOut { throw fault("chunk batch stalled") }
+        if let failure { throw failure }
+    }
+
+    private func download(_ url: String) throws -> Data {
+        guard let u = URL(string: url) else { throw fault("bad URL \(url)") }
+        let sem = DispatchSemaphore(value: 0)
+        var data: Data?
+        var failure: Error?
+        let task = URLSession.shared.dataTask(with: u) { d, resp, e in
+            if let e { failure = e }
+            else if let http = resp as? HTTPURLResponse, http.statusCode != 200 {
+                failure = self.fault("HTTP \(http.statusCode) for \(url)")
+            } else { data = d }
+            sem.signal()
+        }
+        task.resume()
+        if sem.wait(timeout: .now() + 60) == .timedOut {
+            task.cancel(); throw fault("download timed out")
+        }
+        if let failure { throw failure }
+        guard let data, !data.isEmpty else { throw fault("empty download") }
+        return data
+    }
+
+    private func streamImage(type: String, bytes: Data, base: Int64) throws {
+        let begin = try reqSync("POST", "/api/bleota/begin?type=\(type)&size=\(bytes.count)")
+        if begin.code == 404 {
+            throw fault("this receiver's firmware is too old for Bluetooth updates — do this one update over WiFi, then Bluetooth works from now on")
+        }
+        guard begin.code == 200 else {
+            throw fault("begin(\(type)): \(String(data: begin.body, encoding: .utf8) ?? "")")
+        }
+        var chunkData = 64
+        DispatchQueue.main.sync { chunkData = self.link.otaChunkSize() }
+        var off = 0
+        while off < bytes.count {
+            var frames: [Data] = []
+            var o = off
+            while o < bytes.count && frames.count < 128 {
+                let n = min(chunkData, bytes.count - o)
+                var f = Data([0xA5,
+                              UInt8(o & 0xFF), UInt8((o >> 8) & 0xFF),
+                              UInt8((o >> 16) & 0xFF), UInt8((o >> 24) & 0xFF)])
+                f.append(bytes.subdata(in: o..<o + n))
+                frames.append(f)
+                o += n
+            }
+            try sendSync(frames)
+            // resync: the receiver only accepts in-sequence chunks
+            let st = try reqSync("GET", "/api/bleota/status")
+            let j = (try? JSONSerialization.jsonObject(with: st.body)) as? [String: Any] ?? [:]
+            if let e = j["error"] as? String, !e.isEmpty { throw fault("receiver: \(e)") }
+            let got = (j["got"] as? NSNumber)?.intValue ?? o
+            if got == 0 && o > 0 { throw fault("receiver accepted nothing — aborted") }
+            off = got
+            lock.lock(); sent = base + Int64(off); lock.unlock()
+        }
+        let end = try reqSync("POST", "/api/bleota/end")
+        guard end.code == 200 else {
+            throw fault("end(\(type)): \(String(data: end.body, encoding: .utf8) ?? "")")
+        }
     }
 }

@@ -259,6 +259,92 @@ class MainActivity : AppCompatActivity() {
 
     // ── WebView over BLE ────────────────────────────────────────────
     @SuppressLint("SetJavaScriptEnabled")
+    // ── BLE OTA push: phone downloads (WiFi or 5G), streams over Bluetooth ──
+    @Volatile private var otaPhase = "idle"     // idle|download|fw|fs|finish|rebooting|error|done
+    @Volatile private var otaMsg = ""
+    @Volatile private var otaSent = 0L
+    @Volatile private var otaTotal = 0L
+
+    private fun bleReqSync(method: String, path: String, body: ByteArray? = null): Rxv2Ble.Response {
+        val latch = java.util.concurrent.CountDownLatch(1)
+        var result: kotlin.Result<Rxv2Ble.Response>? = null
+        ble.request(method, path, emptyMap(), body) { r -> result = r; latch.countDown() }
+        if (!latch.await(30, java.util.concurrent.TimeUnit.SECONDS))
+            throw Exception("BLE request timed out: $path")
+        return result!!.getOrThrow()
+    }
+
+    private fun otaSendSync(chunks: List<ByteArray>) {
+        val latch = java.util.concurrent.CountDownLatch(1)
+        var err: Throwable? = null
+        ble.otaSend(chunks) { r -> err = r.exceptionOrNull(); latch.countDown() }
+        if (!latch.await(60, java.util.concurrent.TimeUnit.SECONDS)) throw Exception("chunk batch stalled")
+        err?.let { throw it }
+    }
+
+    private fun httpDownload(url: String): ByteArray {
+        val conn = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+        conn.connectTimeout = 15000; conn.readTimeout = 30000
+        conn.instanceFollowRedirects = true
+        try {
+            if (conn.responseCode != 200) throw Exception("HTTP ${conn.responseCode} for $url")
+            return conn.inputStream.readBytes()
+        } finally { conn.disconnect() }
+    }
+
+    private fun streamImage(type: String, bytes: ByteArray) {
+        val begin = bleReqSync("POST", "/api/bleota/begin?type=$type&size=${bytes.size}")
+        if (begin.code == 404)
+            throw Exception("this receiver's firmware is too old for Bluetooth updates — do this one update over WiFi, then Bluetooth works from now on")
+        if (begin.code != 200) throw Exception("begin($type): ${String(begin.body)}")
+        val chunkData = ble.otaChunkSize()
+        var off = 0
+        while (off < bytes.size) {
+            val batch = ArrayList<ByteArray>(128)
+            var o = off
+            while (o < bytes.size && batch.size < 128) {
+                val n = minOf(chunkData, bytes.size - o)
+                val frame = ByteArray(5 + n)
+                frame[0] = 0xA5.toByte()
+                frame[1] = (o and 0xFF).toByte(); frame[2] = ((o shr 8) and 0xFF).toByte()
+                frame[3] = ((o shr 16) and 0xFF).toByte(); frame[4] = ((o shr 24) and 0xFF).toByte()
+                System.arraycopy(bytes, o, frame, 5, n)
+                batch.add(frame); o += n
+            }
+            otaSendSync(batch)
+            // resync: the receiver only accepts in-sequence chunks
+            val st = org.json.JSONObject(String(bleReqSync("GET", "/api/bleota/status").body))
+            val err = st.optString("error", "")
+            if (err.isNotEmpty()) throw Exception("receiver: $err")
+            off = st.optLong("got", o.toLong()).toInt()
+            otaSent = otaTotal - (bytes.size - off).toLong().coerceAtLeast(0)
+            if (off == 0 && o > 0) throw Exception("receiver accepted nothing — aborted")
+        }
+        val end = bleReqSync("POST", "/api/bleota/end")
+        if (end.code != 200) throw Exception("end($type): ${String(end.body)}")
+    }
+
+    private fun runBleOta(fwUrl: String, fsUrl: String?) {
+        try {
+            otaPhase = "download"; otaMsg = "Downloading with the phone's internet…"; otaSent = 0; otaTotal = 0
+            val fw = httpDownload(fwUrl)
+            val fs = fsUrl?.takeIf { it.isNotBlank() }?.let { runCatching { httpDownload(it) }.getOrNull() }
+            otaTotal = fw.size.toLong() + (fs?.size ?: 0).toLong()
+            otaPhase = "fw"; otaMsg = "Sending firmware over Bluetooth…"
+            streamImage("fw", fw)
+            if (fs != null) {
+                otaPhase = "fs"; otaMsg = "Sending web pages over Bluetooth…"
+                streamImage("fs", fs)
+            }
+            otaPhase = "rebooting"; otaMsg = "Rebooting the receiver…"
+            runCatching { bleReqSync("POST", "/api/bleota/reboot") }   // reply may die with the radio
+            otaPhase = "done"; otaMsg = "Installed — receiver rebooting"
+        } catch (e: Exception) {
+            otaPhase = "error"; otaMsg = e.message ?: "failed"
+            runCatching { bleReqSync("POST", "/api/bleota/status") }
+        }
+    }
+
     private fun showWeb() {
         if (webView != null) return
         root.removeAllViews()
@@ -276,6 +362,19 @@ class MainActivity : AppCompatActivity() {
                 if (req.url.host != Uri.parse(ORIGIN).host) return null
                 if (req.method.uppercase() != "GET") return null
                 val path = req.url.path ?: "/"
+                if (path == "/app/bleota/start") {
+                    val fw = req.url.getQueryParameter("fw") ?: return jsonResp("{\"ok\":false}")
+                    val fs = req.url.getQueryParameter("fs")
+                    if (otaPhase != "fw" && otaPhase != "fs" && otaPhase != "download")
+                        Thread { runBleOta(fw, fs) }.start()
+                    return jsonResp("{\"ok\":true}")
+                }
+                if (path == "/app/bleota/progress") {
+                    val j = org.json.JSONObject()
+                    j.put("phase", otaPhase); j.put("msg", otaMsg)
+                    j.put("sent", otaSent); j.put("total", otaTotal)
+                    return jsonResp(j.toString())
+                }
                 val asset = bundled(path)
                 if (asset != null) {
                     val (bytes, type) = asset
@@ -438,6 +537,9 @@ class MainActivity : AppCompatActivity() {
                 (mime[name.substringAfterLast('.').lowercase()] ?: "application/octet-stream")
         }.getOrNull()
     }
+
+    private fun jsonResp(j: String) = WebResourceResponse("application/json", null, 200, "OK",
+        mapOf("Cache-Control" to "no-store"), java.io.ByteArrayInputStream(j.toByteArray()))
 
     private fun showMessage(m: String) =
         Toast.makeText(this, m, Toast.LENGTH_LONG).show()
