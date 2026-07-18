@@ -219,9 +219,27 @@ final class BleOta {
                 set("fs", "Sending web pages over Bluetooth…")
                 try streamImage(type: "fs", bytes: fs, base: Int64(fw.count))
             }
-            set("rebooting", "Rebooting the receiver…")
+            set("rebooting", "Waiting for the receiver to come back…")
             _ = try? reqSync("POST", "/api/bleota/reboot")   // reply may die with the radio
-            set("done", "Installed — receiver rebooting")
+            // The receiver reboots straight back into BLE mode (config-reboot
+            // flag) and the link layer auto-reconnects for 90 s — poll until
+            // it answers, then report the version it now runs.
+            Thread.sleep(forTimeInterval: 4)
+            var newVer = ""
+            let deadline = Date().addingTimeInterval(120)
+            while Date() < deadline {
+                if let st = try? reqSync("GET", "/api/state.json"), st.code == 200,
+                   let j = (try? JSONSerialization.jsonObject(with: st.body)) as? [String: Any],
+                   let info = j["info"] as? [String: Any],
+                   let v = info["fw_version"] as? String, !v.isEmpty {
+                    newVer = v
+                    break
+                }
+                Thread.sleep(forTimeInterval: 3)
+            }
+            set("done", newVer.isEmpty
+                ? "installed; the receiver didn't reappear on Bluetooth to confirm — reopen the app to check it"
+                : "now running \(newVer)")
         } catch {
             set("error", error.localizedDescription)
             _ = try? reqSync("POST", "/api/bleota/status")   // lets the 30 s watchdog abort cleanly

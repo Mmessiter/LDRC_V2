@@ -336,9 +336,29 @@ class MainActivity : AppCompatActivity() {
                 otaPhase = "fs"; otaMsg = "Sending web pages over Bluetooth…"
                 streamImage("fs", fs)
             }
-            otaPhase = "rebooting"; otaMsg = "Rebooting the receiver…"
+            otaPhase = "rebooting"; otaMsg = "Waiting for the receiver to come back…"
             runCatching { bleReqSync("POST", "/api/bleota/reboot") }   // reply may die with the radio
-            otaPhase = "done"; otaMsg = "Installed — receiver rebooting"
+            // The receiver reboots straight back into BLE mode (config-reboot
+            // flag) and Rxv2Ble auto-reconnects for 90 s — poll until it
+            // answers, then report the version it now runs.
+            Thread.sleep(4000)
+            var newVer = ""
+            val deadline = System.currentTimeMillis() + 120_000
+            while (System.currentTimeMillis() < deadline) {
+                try {
+                    val st = bleReqSync("GET", "/api/state.json")
+                    if (st.code == 200) {
+                        val v = org.json.JSONObject(String(st.body))
+                            .optJSONObject("info")?.optString("fw_version", "") ?: ""
+                        if (v.isNotEmpty()) { newVer = v; break }
+                    }
+                } catch (_: Exception) {}
+                Thread.sleep(3000)
+            }
+            otaPhase = "done"
+            otaMsg = if (newVer.isEmpty())
+                "installed; the receiver didn't reappear on Bluetooth to confirm — reopen the app to check it"
+            else "now running $newVer"
         } catch (e: Exception) {
             otaPhase = "error"; otaMsg = e.message ?: "failed"
             runCatching { bleReqSync("POST", "/api/bleota/status") }
