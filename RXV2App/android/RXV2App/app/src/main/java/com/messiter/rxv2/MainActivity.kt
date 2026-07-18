@@ -33,6 +33,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var root: FrameLayout
     private var webView: WebView? = null
     private var demoMode = false
+    private var demoBtn: TextView? = null
 
     // Fake same-origin the WebView believes it is talking to. Every request
     // to this host is intercepted; the network is never actually touched.
@@ -73,7 +74,11 @@ class MainActivity : AppCompatActivity() {
                 else -> {}
             }
         }
-        ble.onFound = { list -> scannerAdapter?.submit(list) }
+        ble.onFound = { list ->
+            scannerAdapter?.submit(list)
+            // a real receiver in sight → the demo offer just muddies the water
+            demoBtn?.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
+        }
         ble.onStreamFrame = { line -> injectStream(line) }
 
         showScanner()
@@ -110,6 +115,10 @@ class MainActivity : AppCompatActivity() {
             text = "RXV2 Receivers"; textSize = 22f; setPadding(40, 60, 40, 8)
         })
         col.addView(TextView(this).apply {
+            text = "App v" + packageManager.getPackageInfo(packageName, 0).versionName
+            setPadding(40, 0, 40, 8); alpha = 0.5f; textSize = 12f
+        })
+        col.addView(TextView(this).apply {
             text = "Power the receiver with the transmitter OFF so its config radio comes up. The WiFi web interface still works exactly as before."
             setPadding(40, 0, 40, 20); alpha = 0.7f; textSize = 13f
         })
@@ -126,12 +135,13 @@ class MainActivity : AppCompatActivity() {
         col.addView(hint)
         // No receiver? Let anyone play: the same web UI runs against
         // canned data from a real receiver, with animated channels.
-        col.addView(TextView(this).apply {
+        demoBtn = TextView(this).apply {
             text = "🎭  No receiver yet?  Try the demo"
             textSize = 15f; setPadding(40, 28, 40, 28)
             setBackgroundColor(0xFF1E293B.toInt()); setTextColor(0xFF7DD3FC.toInt())
             setOnClickListener { demoMode = true; showWeb() }
-        })
+        }
+        col.addView(demoBtn)
         root.addView(col)
         startScanIfPermitted()
         checkAppUpdate(col)
@@ -145,12 +155,15 @@ class MainActivity : AppCompatActivity() {
     // the browser and its blank tab. First ever time, Android sends the
     // user to Settings to allow this app to install updates; we then carry
     // on automatically. Checked once per launch, on the scanner screen.
-    private var updateChecked = false
+    private var lastUpdateCheck = 0L
     private var pendingUpdate: Pair<String, String>? = null   // url to versionName
 
     private fun checkAppUpdate(col: LinearLayout) {
-        if (updateChecked) return
-        updateChecked = true
+        // every visit to the scanner re-checks (a backgrounded app can sit in
+        // recents for days — a once-per-launch gate never fired again);
+        // lightly throttled so back-and-forth doesn't hammer the server
+        if (System.currentTimeMillis() - lastUpdateCheck < 60_000) return
+        lastUpdateCheck = System.currentTimeMillis()
         Thread {
             runCatching {
                 val txt = java.net.URL(APP_MANIFEST_URL).openStream()
