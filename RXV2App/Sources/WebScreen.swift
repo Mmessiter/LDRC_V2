@@ -49,6 +49,7 @@ struct WebScreen: UIViewRepresentable {
         // with no native chrome, so the badge IS the disconnect button.
         cfg.userContentController.add(context.coordinator, name: "rxv2")
         let web = WKWebView(frame: .zero, configuration: cfg)
+        web.uiDelegate = context.coordinator   // alert()/confirm()/prompt() → native dialogs
         web.isOpaque = false
         web.scrollView.contentInsetAdjustmentBehavior = .automatic
         context.coordinator.attach(web)
@@ -86,5 +87,59 @@ struct WebScreen: UIViewRepresentable {
                 DispatchQueue.main.async { self.link.disconnect() }
             }
         }
+    }
+}
+
+// WKWebView implements NONE of the JS dialogs itself — without this
+// delegate, alert() vanishes, confirm() returns false and prompt()
+// returns null (why Setup's Rename did nothing on iOS while Android,
+// whose WebChromeClient provides dialogs, was fine). Every handler must
+// call its completion exactly once, even when nothing can be presented.
+extension WebScreen.Coordinator: WKUIDelegate {
+
+    private func present(_ a: UIAlertController) -> Bool {
+        guard let scene = UIApplication.shared.connectedScenes
+                  .compactMap({ $0 as? UIWindowScene })
+                  .first(where: { $0.activationState == .foregroundActive }),
+              let root = (scene.windows.first(where: { $0.isKeyWindow }) ?? scene.windows.first)?
+                  .rootViewController
+        else { return false }
+        var top = root
+        while let next = top.presentedViewController { top = next }
+        top.present(a, animated: true)
+        return true
+    }
+
+    func webView(_ webView: WKWebView,
+                 runJavaScriptAlertPanelWithMessage message: String,
+                 initiatedByFrame frame: WKFrameInfo,
+                 completionHandler: @escaping () -> Void) {
+        let a = UIAlertController(title: nil, message: message, preferredStyle: .alert)
+        a.addAction(UIAlertAction(title: "OK", style: .default) { _ in completionHandler() })
+        if !present(a) { completionHandler() }
+    }
+
+    func webView(_ webView: WKWebView,
+                 runJavaScriptConfirmPanelWithMessage message: String,
+                 initiatedByFrame frame: WKFrameInfo,
+                 completionHandler: @escaping (Bool) -> Void) {
+        let a = UIAlertController(title: nil, message: message, preferredStyle: .alert)
+        a.addAction(UIAlertAction(title: "Cancel", style: .cancel)  { _ in completionHandler(false) })
+        a.addAction(UIAlertAction(title: "OK", style: .default) { _ in completionHandler(true) })
+        if !present(a) { completionHandler(false) }
+    }
+
+    func webView(_ webView: WKWebView,
+                 runJavaScriptTextInputPanelWithPrompt prompt: String,
+                 defaultText: String?,
+                 initiatedByFrame frame: WKFrameInfo,
+                 completionHandler: @escaping (String?) -> Void) {
+        let a = UIAlertController(title: nil, message: prompt, preferredStyle: .alert)
+        a.addTextField { $0.text = defaultText }
+        a.addAction(UIAlertAction(title: "Cancel", style: .cancel)  { _ in completionHandler(nil) })
+        a.addAction(UIAlertAction(title: "OK", style: .default) { [weak a] _ in
+            completionHandler(a?.textFields?.first?.text ?? "")
+        })
+        if !present(a) { completionHandler(nil) }
     }
 }
