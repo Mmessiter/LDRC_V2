@@ -547,6 +547,36 @@ class MainActivity : AppCompatActivity() {
             val uri = Uri.parse(if (url.startsWith("http")) url else "$ORIGIN$url")
             var pathAndQuery = uri.encodedPath ?: "/"
             if (!uri.encodedQuery.isNullOrEmpty()) pathAndQuery += "?" + uri.encodedQuery
+            // BLE OTA push is handled by the APP, not the receiver — and the
+            // page's fetch() arrives HERE (the JS bridge), not in
+            // shouldInterceptRequest, so it must be answered here too.
+            val p = uri.path ?: "/"
+            if (p == "/app/bleota/start" || p == "/app/bleota/progress") {
+                val json = if (p == "/app/bleota/start") {
+                    val fw = uri.getQueryParameter("fw")
+                    if (fw != null && !demoMode) {
+                        if (otaPhase != "download" && otaPhase != "fw" &&
+                            otaPhase != "fs" && otaPhase != "rebooting") {
+                            val fs = uri.getQueryParameter("fs")
+                            otaPhase = "download"; otaMsg = "Starting…"; otaSent = 0; otaTotal = 0
+                            Thread { runBleOta(fw, fs) }.start()
+                        }
+                        "{\"ok\":true}"
+                    } else "{\"ok\":false}"
+                } else {
+                    val j = JSONObject()
+                    j.put("phase", otaPhase); j.put("msg", otaMsg)
+                    j.put("sent", otaSent); j.put("total", otaTotal)
+                    j.toString()
+                }
+                runOnUiThread {
+                    val w = webView ?: return@runOnUiThread
+                    val b64 = Base64.encodeToString(json.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
+                    w.evaluateJavascript(
+                        "window.__bleResolve($id,200,${JSONObject.quote("application/json")},${JSONObject.quote(b64)})", null)
+                }
+                return
+            }
             val headers = HashMap<String, String>()
             runCatching {
                 val o = JSONObject(headersJson)
