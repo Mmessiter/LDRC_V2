@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.241-ble-retry",
+      "url": "https://messiter.com/rxv2/release/v0.9.241/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.241/littlefs.bin",
+      "notes": ""
+    },
+    {
       "name": "RXV2-0.9.240-ble-verify",
       "url": "https://messiter.com/rxv2/release/v0.9.240/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.240/littlefs.bin",
@@ -65,12 +71,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.230/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.230/littlefs.bin",
       "notes": "SAFETY: the throttle channel (configurable on the Output protocol page, default 3) is held fully LOW (885 us) from power-on until the transmitter is actually heard \u2014 a receiver booted without its TX can no longer put the motor at half stick. Plus: booting with the TX already on now leaves Bluetooth open for 30 s (connect in that window and the link stays); and renaming the receiver from the app now works (inline rename box \u2014 the old popup was silently ignored by app WebViews)."
-    },
-    {
-      "name": "RXV2-0.9.229-vbat-d9-only",
-      "url": "https://messiter.com/rxv2/release/v0.9.229/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.229/littlefs.bin",
-      "notes": "Battery divider: D9 only (GPIO 8 \u2014 the one free pad on 2-radio boards; D4 carries the status LED), auto-detected when FC telemetry is off. IMPORTANT: replaces 0.9.227/228, which used wrong GPIO numbers for the divider pin (raw 9 = the SPI MOSI line!) \u2014 do not use those two versions with a divider."
     }
   ]
 }

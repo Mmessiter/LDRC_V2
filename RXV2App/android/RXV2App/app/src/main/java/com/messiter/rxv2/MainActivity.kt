@@ -305,33 +305,53 @@ class MainActivity : AppCompatActivity() {
         } finally { conn.disconnect() }
     }
 
-    private fun streamImage(type: String, bytes: ByteArray) {
+    private fun otaStatus(): org.json.JSONObject =
+        org.json.JSONObject(String(bleReqSync("GET", "/api/bleota/status").body))
+
+    private fun streamImage(type: String, bytes: ByteArray, base: Long) {
         val begin = bleReqSync("POST", "/api/bleota/begin?type=$type&size=${bytes.size}")
         if (begin.code == 404)
             throw Exception("this receiver's firmware is too old for Bluetooth updates — do this one update over WiFi, then Bluetooth works from now on")
         if (begin.code != 200) throw Exception("begin($type): ${String(begin.body)}")
         val chunkData = ble.otaChunkSize()
         var off = 0
+        // A BLE hiccup mid-stream is NOT fatal: the receiver keeps the
+        // transfer open (it only ever accepts the next in-sequence chunk),
+        // so on any error we re-ask where it got to and carry on from there.
+        // Only give up after several consecutive failures with no progress.
+        var fails = 0
         while (off < bytes.size) {
-            val batch = ArrayList<ByteArray>(128)
-            var o = off
-            while (o < bytes.size && batch.size < 128) {
-                val n = minOf(chunkData, bytes.size - o)
-                val frame = ByteArray(5 + n)
-                frame[0] = 0xA5.toByte()
-                frame[1] = (o and 0xFF).toByte(); frame[2] = ((o shr 8) and 0xFF).toByte()
-                frame[3] = ((o shr 16) and 0xFF).toByte(); frame[4] = ((o shr 24) and 0xFF).toByte()
-                System.arraycopy(bytes, o, frame, 5, n)
-                batch.add(frame); o += n
+            try {
+                val batch = ArrayList<ByteArray>(128)
+                var o = off
+                while (o < bytes.size && batch.size < 128) {
+                    val n = minOf(chunkData, bytes.size - o)
+                    val frame = ByteArray(5 + n)
+                    frame[0] = 0xA5.toByte()
+                    frame[1] = (o and 0xFF).toByte(); frame[2] = ((o shr 8) and 0xFF).toByte()
+                    frame[3] = ((o shr 16) and 0xFF).toByte(); frame[4] = ((o shr 24) and 0xFF).toByte()
+                    System.arraycopy(bytes, o, frame, 5, n)
+                    batch.add(frame); o += n
+                }
+                otaSendSync(batch)
+                // resync: the receiver only accepts in-sequence chunks
+                val st = otaStatus()
+                val err = st.optString("error", "")
+                if (err.isNotEmpty()) throw Exception("receiver: $err")
+                if (!st.optBoolean("active", true))
+                    throw Exception("receiver abandoned the transfer")
+                val got = st.optLong("got", o.toLong()).toInt()
+                fails = if (got > off) 0 else fails + 1
+                if (fails >= 5) throw Exception("no progress after 5 attempts at ${off / 1024} KB")
+                off = got
+                otaSent = base + off
+            } catch (e: Exception) {
+                val m = e.message ?: ""
+                if (m.startsWith("receiver") || m.startsWith("no progress") || m.contains("too old")) throw e
+                if (++fails >= 5) throw e
+                Thread.sleep(1500)   // transient (timeout / stalled batch) — resync and retry
+                runCatching { off = otaStatus().optLong("got", off.toLong()).toInt() }
             }
-            otaSendSync(batch)
-            // resync: the receiver only accepts in-sequence chunks
-            val st = org.json.JSONObject(String(bleReqSync("GET", "/api/bleota/status").body))
-            val err = st.optString("error", "")
-            if (err.isNotEmpty()) throw Exception("receiver: $err")
-            off = st.optLong("got", o.toLong()).toInt()
-            otaSent = otaTotal - (bytes.size - off).toLong().coerceAtLeast(0)
-            if (off == 0 && o > 0) throw Exception("receiver accepted nothing — aborted")
         }
         val end = bleReqSync("POST", "/api/bleota/end")
         if (end.code != 200) throw Exception("end($type): ${String(end.body)}")
@@ -343,11 +363,21 @@ class MainActivity : AppCompatActivity() {
             val fw = httpDownload(fwUrl)
             val fs = fsUrl?.takeIf { it.isNotBlank() }?.let { runCatching { httpDownload(it) }.getOrNull() }
             otaTotal = fw.size.toLong() + (fs?.size ?: 0).toLong()
+            // one clean restart per image: /begin resets the receiver side,
+            // so a transfer that died mid-way gets a second, fresh attempt
+            val sendImage = { type: String, bytes: ByteArray, base: Long, label: String ->
+                try { streamImage(type, bytes, base) } catch (e: Exception) {
+                    if ((e.message ?: "").contains("too old")) throw e
+                    otaMsg = "Bluetooth hiccup — starting the $label again…"
+                    Thread.sleep(2000)
+                    streamImage(type, bytes, base)
+                }
+            }
             otaPhase = "fw"; otaMsg = "Sending firmware over Bluetooth…"
-            streamImage("fw", fw)
+            sendImage("fw", fw, 0L, "firmware")
             if (fs != null) {
                 otaPhase = "fs"; otaMsg = "Sending web pages over Bluetooth…"
-                streamImage("fs", fs)
+                sendImage("fs", fs, fw.size.toLong(), "web pages")
             }
             otaPhase = "rebooting"; otaMsg = "Waiting for the receiver to come back…"
             runCatching { bleReqSync("POST", "/api/bleota/reboot") }   // reply may die with the radio
