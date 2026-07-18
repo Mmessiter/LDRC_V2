@@ -206,6 +206,11 @@ final class BleOta {
         lock.lock(); phase = p; msg = m; lock.unlock()
     }
 
+    private func phaseNow() -> String {
+        lock.lock(); defer { lock.unlock() }
+        return phase
+    }
+
     private func run(fwUrl: String, fsUrl: String?) {
         defer { lock.lock(); running = false; lock.unlock() }
         do {
@@ -213,11 +218,21 @@ final class BleOta {
             var fs: Data? = nil
             if let u = fsUrl, !u.isEmpty { fs = try? download(u) }
             lock.lock(); total = Int64(fw.count + (fs?.count ?? 0)); lock.unlock()
+            // one clean restart per image: /begin resets the receiver side,
+            // so a transfer that died mid-way gets a second, fresh attempt
+            func sendImage(_ type: String, _ bytes: Data, _ base: Int64, _ label: String) throws {
+                do { try streamImage(type: type, bytes: bytes, base: base) } catch {
+                    if error.localizedDescription.contains("too old") { throw error }
+                    set(phaseNow(), "Bluetooth hiccup — starting the \(label) again…")
+                    Thread.sleep(forTimeInterval: 2)
+                    try streamImage(type: type, bytes: bytes, base: base)
+                }
+            }
             set("fw", "Sending firmware over Bluetooth…")
-            try streamImage(type: "fw", bytes: fw, base: 0)
+            try sendImage("fw", fw, 0, "firmware")
             if let fs {
                 set("fs", "Sending web pages over Bluetooth…")
-                try streamImage(type: "fs", bytes: fs, base: Int64(fw.count))
+                try sendImage("fs", fs, Int64(fw.count), "web pages")
             }
             set("rebooting", "Waiting for the receiver to come back…")
             _ = try? reqSync("POST", "/api/bleota/reboot")   // reply may die with the radio
@@ -307,27 +322,46 @@ final class BleOta {
         var chunkData = 64
         DispatchQueue.main.sync { chunkData = self.link.otaChunkSize() }
         var off = 0
-        while off < bytes.count {
-            var frames: [Data] = []
-            var o = off
-            while o < bytes.count && frames.count < 128 {
-                let n = min(chunkData, bytes.count - o)
-                var f = Data([0xA5,
-                              UInt8(o & 0xFF), UInt8((o >> 8) & 0xFF),
-                              UInt8((o >> 16) & 0xFF), UInt8((o >> 24) & 0xFF)])
-                f.append(bytes.subdata(in: o..<o + n))
-                frames.append(f)
-                o += n
-            }
-            try sendSync(frames)
-            // resync: the receiver only accepts in-sequence chunks
+        // A BLE hiccup mid-stream is NOT fatal: the receiver keeps the
+        // transfer open (it only ever accepts the next in-sequence chunk),
+        // so on any error we re-ask where it got to and carry on from there.
+        // Only give up after several consecutive failures with no progress.
+        var fails = 0
+        func status() throws -> [String: Any] {
             let st = try reqSync("GET", "/api/bleota/status")
-            let j = (try? JSONSerialization.jsonObject(with: st.body)) as? [String: Any] ?? [:]
-            if let e = j["error"] as? String, !e.isEmpty { throw fault("receiver: \(e)") }
-            let got = (j["got"] as? NSNumber)?.intValue ?? o
-            if got == 0 && o > 0 { throw fault("receiver accepted nothing — aborted") }
-            off = got
-            lock.lock(); sent = base + Int64(off); lock.unlock()
+            return (try? JSONSerialization.jsonObject(with: st.body)) as? [String: Any] ?? [:]
+        }
+        while off < bytes.count {
+            do {
+                var frames: [Data] = []
+                var o = off
+                while o < bytes.count && frames.count < 128 {
+                    let n = min(chunkData, bytes.count - o)
+                    var f = Data([0xA5,
+                                  UInt8(o & 0xFF), UInt8((o >> 8) & 0xFF),
+                                  UInt8((o >> 16) & 0xFF), UInt8((o >> 24) & 0xFF)])
+                    f.append(bytes.subdata(in: o..<o + n))
+                    frames.append(f)
+                    o += n
+                }
+                try sendSync(frames)
+                // resync: the receiver only accepts in-sequence chunks
+                let j = try status()
+                if let e = j["error"] as? String, !e.isEmpty { throw fault("receiver: \(e)") }
+                if let a = j["active"] as? Bool, !a { throw fault("receiver abandoned the transfer") }
+                let got = (j["got"] as? NSNumber)?.intValue ?? o
+                fails = got > off ? 0 : fails + 1
+                if fails >= 5 { throw fault("no progress after 5 attempts at \(off / 1024) KB") }
+                off = got
+                lock.lock(); sent = base + Int64(off); lock.unlock()
+            } catch {
+                let m = error.localizedDescription
+                if m.hasPrefix("receiver") || m.hasPrefix("no progress") || m.contains("too old") { throw error }
+                fails += 1
+                if fails >= 5 { throw error }
+                Thread.sleep(forTimeInterval: 1.5)   // transient (timeout / stalled batch) — resync and retry
+                if let j = try? status(), let g = (j["got"] as? NSNumber)?.intValue { off = g }
+            }
         }
         let end = try reqSync("POST", "/api/bleota/end")
         guard end.code == 200 else {

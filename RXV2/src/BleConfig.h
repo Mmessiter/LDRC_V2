@@ -288,8 +288,10 @@ class BleReqCallbacks : public NimBLECharacteristicCallbacks {
             size_t n = v.size() - 5;
             if (Update.write((uint8_t *) v.data() + 5, n) == n)
                 bleOtaGot += n;
-            else if (bleOtaError.length() == 0)
+            else if (bleOtaError.length() == 0) {
                 bleOtaError = Update.errorString();
+                events.add((String("BLE OTA write error at ") + (bleOtaGot / 1024) + " KB: " + bleOtaError).c_str());
+            }
             bleOtaLastChunkMs = millis();
             return;
         } else return;
