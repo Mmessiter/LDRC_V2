@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.237-bind-safe",
+      "url": "https://messiter.com/rxv2/release/v0.9.237/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.237/littlefs.bin",
+      "notes": "SAFETY: the propeller could blip during a reboot-into-bind (prop fitted, hands near the model). Two defences: (1) every web-initiated reboot now pushes ~100ms of throttle-low frames and parks the output pin idle-high through the restart, so the converter/FC sees silence instead of noise; (2) the throttle stays pinned low until the link has delivered a stable stream (25 channel packets \u2248 0.5s) \u2014 covering the no-TX boot AND the first moments after binding, when a V1 transmitter in bind mode bypasses its own motor-low overrides."
+    },
+    {
       "name": "RXV2-0.9.236-install-clarity",
       "url": "https://messiter.com/rxv2/release/v0.9.236/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.236/littlefs.bin",
@@ -63,12 +69,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.226/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.226/littlefs.bin",
       "notes": "The update check no longer blocks the receiver: manifest fetches now run in the background, so opening the app's front screen can't pause the servo output (the brief servo twitch with no transmitter connected). Results are cached for 10 minutes."
-    },
-    {
-      "name": "RXV2-0.9.225-fc-telem-switch",
-      "url": "https://messiter.com/rxv2/release/v0.9.225/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.225/littlefs.bin",
-      "notes": "New 'Flight controller on the telemetry line' switch on the Output protocol page. Untick it for plain CRSF-to-PWM servo converters: some echo junk that gets misread as telemetry (phantom current readings / false max-current alarms on the transmitter) \u2014 the receiver then ignores the telemetry line entirely and sends no Rotorflight probes. Default remains ON."
     }
   ]
 }

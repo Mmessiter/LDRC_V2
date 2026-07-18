@@ -349,10 +349,13 @@ inline void sbusTick() {
     // outputs to the saved positions and present them as valid RC.
     static bool inFailsafePosture = false;
     bool everConnected = (lastChannelDataMs != 0);
-    // SAFETY: with no TX ever heard this session, hold the throttle LOW in
-    // every output frame — a no-transmitter boot must never spin the motor
-    // (channels otherwise default to 1500 us = half throttle).
-    if (!everConnected && throttleChannel >= 1 && throttleChannel <= 16)
+    // SAFETY: hold the throttle LOW until the link has produced a STABLE
+    // stream (25 channel packets ≈ half a second) — covers the no-TX boot
+    // (channels default to mid-stick), AND the first moments after binding,
+    // when a V1 TX in bind mode bypasses its own motor-low overrides and the
+    // earliest packets may be junk (the propeller blipped during a field
+    // rebind, prop fitted, hands near the model).
+    if ((!everConnected || channelPacketsRx < 25) && throttleChannel >= 1 && throttleChannel <= 16)
         channelMicros[throttleChannel - 1] = THROTTLE_SAFE_US;
     // Gate is "not CRSF", NOT "not idle-high": IBUS/IBUS2 are idle-high too but
     // have no FC-side failsafe authority (no in-frame loss flag either), so they

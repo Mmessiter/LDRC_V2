@@ -50,6 +50,7 @@ inline uint8_t decompressedSize(uint8_t payloadBytes) {
 // happens at frame build time in Output.h).
 
 inline void decodeChannelData(const uint8_t* payload, uint8_t size) {
+    channelPacketsRx++;
     if (size < 4) return;
     uint16_t mask = (uint16_t)payload[0] | ((uint16_t)payload[1] << 8);
     if (mask == 0) return;                               // parameter packet, not channel data

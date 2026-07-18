@@ -857,6 +857,21 @@ inline String confirmPage(const char* title, const char* body, bool autoReload =
 //  POST /bind — clear bind and reboot
 //*********************************************************************
 
+// A clean restart for a receiver that may have a LIVE MODEL attached:
+// push a burst of throttle-low frames, then park the output UART pin
+// idle-high so the reboot glitch can't feed the converter/FC garbage
+// (the propeller briefly spun during a reboot-into-bind, prop fitted).
+inline void safeOutputParkAndRestart() {
+    if (throttleChannel >= 1 && throttleChannel <= 16)
+        channelMicros[throttleChannel - 1] = THROTTLE_SAFE_US;
+    for (int i = 0; i < 12; ++i) { sbusTick(); delay(8); }     // ~100 ms of throttle-low frames
+    Serial1.flush();
+    Serial1.end();
+    pinMode(PIN_SBUS_TX, INPUT_PULLUP); // idle-HIGH through the restart — silence, not noise
+    delay(50);
+    ESP.restart();
+}
+
 inline void handleBindDo() {
     clearBindNvs();
     String body = confirmPage("Rebooting",
@@ -864,7 +879,7 @@ inline void handleBindDo() {
         "<p><a href='/'>Back to home</a> (reload after the chip is back)</p>");
     server.send(200, "text/html", body);
     delay(400);
-    ESP.restart();
+    safeOutputParkAndRestart();
 }
 
 //*********************************************************************
@@ -890,7 +905,7 @@ inline void handleRollback() {
            "<p><a href='/'>Back to home</a> (reload after the chip is back)</p>";
     server.send(200, "text/html", confirmPage("Rolling back", msg.c_str()));
     delay(400);
-    ESP.restart();
+    safeOutputParkAndRestart();
 }
 
 //*********************************************************************
@@ -1306,7 +1321,7 @@ inline void handleProtocolSet() {
     server.send(200, "text/html", confirmPage("Saved & rebooting",
         "<p>Output protocol updated. The receiver is rebooting to apply.</p>"));
     delay(250);
-    ESP.restart();
+    safeOutputParkAndRestart();
 }
 
 //*********************************************************************
@@ -1325,7 +1340,7 @@ inline void handleSimSet() {
           "computer and it appears as a USB joystick driven by your sticks.</p>"
         : "<p>Simulator-over-USB <b>disabled</b>. The receiver is rebooting back to normal.</p>"));
     delay(250);
-    ESP.restart();
+    safeOutputParkAndRestart();
 }
 
 //*********************************************************************
@@ -1473,7 +1488,7 @@ inline void handleReboot() {
     server.send(200, "text/html", confirmPage("Rebooting",
         "<p>Back in ~5 s.</p>"));
     delay(400);
-    ESP.restart();
+    safeOutputParkAndRestart();
 }
 
 //*********************************************************************
