@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.241-ble-retry";
+constexpr const char* FW_VERSION = "RXV2-0.9.242-bind-front";
 
 //*********************************************************************
 //  Auto-update manifest URLs
