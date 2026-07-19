@@ -115,7 +115,7 @@ loose. Rev-A standardises on ONE lockable family for every panel loom:
 | Switches ×8 loom | **JST-XH** | same family everywhere = one crimper, one housing stock |
 | Trims ×8 loom | **JST-XH** | |
 | Power button + latch | **JST-XH** 2/3-pin | |
-| Nextion display | **JST-XH** 4-pin | Nextion's own pigtail is XH — plugs straight in |
+| Nextion display | **5-pin 0.1" header, V1 order** (GND, skip, 5V, RX, TX) | the V1 loom doubles as the FTDI-upload lead (skip = FTDI CTS, DTR left outside the housing) — deliberate Dupont survivor, do not convert to XH |
 | Battery (2S Li-ion) | **XT30** | polarised, solid, the RC standard for this current class |
 | I2C expansion | **Qwiic (JST-SH 1.0 mm)** + XH 4-pin twin | Qwiic opens the whole plug-and-play sensor ecosystem (INA219 boards included); XH twin for hand-made looms |
 | nRF24 PA/LNA module | 2×4 socket, direct | no loom — module seats on the PCB |
