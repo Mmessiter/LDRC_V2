@@ -160,8 +160,39 @@ occasionally-lying light.
 2. **Radio** — one, as V1.
 3. **Trims** — hardware trims stay, all 8 populated.
 4. **Battery** — 2S Li-ion, external charging, no onboard charger.
+   *(superseded by the 2026-07-19 amendment below, pending sign-off)*
+
+## PROPOSED amendment — on-board USB-C balance charging (2026-07-19)
+
+Replaces decision 4. **BQ25887** (TI, QFN-24) on the main PCB: a
+standalone 2-cell boost charger running from a USB-C 5 V socket —
+CC/CV with termination, ~1.5 A charge, **built-in cell balancing**
+through the pack's centre tap, safety timer, battery OVP, thermal
+shutdown, optional pack NTC. It charges autonomously — no firmware
+involvement needed for safety — so a hung Teensy can never spoil a
+charge.
+
+**The reason it moved on-board (Malcolm's insight):** the BQ25887 has
+I2C + a telemetry ADC. On the shared I2C bus (Teensy pins 18/19, with
+the INA219) the Teensy can read per-cell voltages and charge current
+and show on the Nextion: live cell volts, estimated time to full, and
+a "battery tired — cells won't balance" warning when the cells sit
+persistently apart. The switcher only runs while charging (never in
+flight), so the RF-noise objection evaporates.
+
+Additions to the board: USB-C 16-pin receptacle (charge-only, 5.1 k
+CC pulldowns) facing a case cutout; BQ25887 + 1 uH IHLP-2020 inductor
++ small passives; balance tap = 3rd wire on the battery loom (XT30
+stays for the main pair; centre tap joins the power-button/aux XH loom
+or its own XH-2); amber CHARGE LED next to the USB socket (on =
+charging, off = full, blink = fault) — Nextion shows the detail.
+Circuit lifted from the proven Balancer 5 Click reference (values
+verified against TI datasheet + slua938).
+
+A standalone copy of the same circuit can become a tiny spare-pack
+charger board later — same design, transplanted.
 
 ---
 *rev-A draft 2026-07-06 — written with Claude during the RXV2 BLE
 bring-up session; pin map derived from V1 TransmitterCode main.cpp
-and 1Definitions.h.*
+and 1Definitions.h. Charging amendment drafted 2026-07-19.*
