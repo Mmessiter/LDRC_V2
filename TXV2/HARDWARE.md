@@ -160,9 +160,9 @@ occasionally-lying light.
 2. **Radio** — one, as V1.
 3. **Trims** — hardware trims stay, all 8 populated.
 4. **Battery** — 2S Li-ion, external charging, no onboard charger.
-   *(superseded by the 2026-07-19 amendment below, pending sign-off)*
+   *(superseded by the amendment below — APPROVED by Malcolm 2026-07-19)*
 
-## PROPOSED amendment — on-board USB-C balance charging (2026-07-19)
+## Amendment — on-board USB-C balance charging (APPROVED 2026-07-19)
 
 Replaces decision 4. **BQ25887** (TI, QFN-24) on the main PCB: a
 standalone 2-cell boost charger running from a USB-C 5 V socket —
