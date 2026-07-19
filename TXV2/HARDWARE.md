@@ -38,7 +38,7 @@ not available in a socket, so the budget is edge pins only.
 | 3 | Buzzer / spare PWM | reserved |
 | 4 | **Power-button sense** | V1 pin 33 |
 | 5 | Power-latch OFF (Pololu 2808) | as V1 |
-| 6 | spare | JR-bay PPM dropped 2026-07-19 — module + buddy pins unused on V1, wireless buddy-box replaced them |
+| 6 | Link handshake A | moved from 24; (JR-bay PPM dropped — wireless buddy replaced it) |
 | 7 (RX2) | **ESP32-S3 link RX** | Serial2 @ 2 Mbaud |
 | 8 (TX2) | **ESP32-S3 link TX** | |
 | 9 | nRF24 CE | |
@@ -47,7 +47,7 @@ not available in a socket, so the budget is edge pins only.
 | 14–17 (A0–A3) | Gimbal axes CH1–4 | |
 | 18/19 | I2C SDA/SCL | INA219 battery monitor + expansion header |
 | 20–23 (A6–A9) | Knobs/sliders CH5–8 | |
-| 24 | Link handshake A | ESP32→Teensy "ready/busy" |
+| 24 (A10) | **Battery voltage divider** | 47k/15k from the switched rail (INA219 dropped 2026-07-19) |
 | 25 | Link handshake B | Teensy→ESP32 "attention" |
 | 26–33 | **Switches ×8** | V1 had 25–32; shifted one |
 | 34–41 | **Trim contacts ×8** | populated — hardware trims confirmed |
@@ -99,7 +99,9 @@ tap EN).
   (socketed module) → Teensy VIN + DevKitC 5V.
 - Separate 3.3 V rail for the radios (above); each processor board
   uses its own on-board 3.3 V regulator.
-- **INA219** on I2C measures battery voltage + current (as V1).
+- Battery voltage via **47k/15k divider** from the switched rail into
+  Teensy pin 24/A10 (Malcolm 2026-07-19: INA219 dropped; no current
+  readout — the BQ25887 ADC reports pack/per-cell volts while charging).
 - **2S Li-ion, charged externally** (Malcolm's call): XT30/XT60 or
   barrel input on the case, balance charging outside the transmitter.
   No charger circuitry on the PCB.
@@ -117,7 +119,7 @@ loose. Rev-A standardises on ONE lockable family for every panel loom:
 | Power button + latch | **JST-XH** 2/3-pin | |
 | Nextion display | **5-pin 0.1" header, V1 order** (GND, skip, 5V, RX, TX) | the V1 loom doubles as the FTDI-upload lead (skip = FTDI CTS, DTR left outside the housing) — deliberate Dupont survivor, do not convert to XH |
 | Battery (2S Li-ion) | **XT30** | polarised, solid, the RC standard for this current class |
-| I2C expansion | **Qwiic (JST-SH 1.0 mm)** + XH 4-pin twin | Qwiic opens the whole plug-and-play sensor ecosystem (INA219 boards included); XH twin for hand-made looms |
+| I2C expansion | **Qwiic (JST-SH 1.0 mm)** + XH 4-pin twin | Qwiic opens the whole plug-and-play sensor ecosystem; XH twin for hand-made looms |
 | nRF24 PA/LNA module | 2×4 socket, direct | no loom — module seats on the PCB |
 | Teensy 4.1 / DevKitC | machined-pin sockets | replaceable processors |
 
