@@ -38,7 +38,7 @@ not available in a socket, so the budget is edge pins only.
 | 3 | Buzzer / spare PWM | reserved |
 | 4 | **Power-button sense** | V1 pin 33 |
 | 5 | Power-latch OFF (Pololu 2808) | as V1 |
-| 6 | JR-bay PPM out | reserved, optional bay |
+| 6 | spare | JR-bay PPM dropped 2026-07-19 — module + buddy pins unused on V1, wireless buddy-box replaced them |
 | 7 (RX2) | **ESP32-S3 link RX** | Serial2 @ 2 Mbaud |
 | 8 (TX2) | **ESP32-S3 link TX** | |
 | 9 | nRF24 CE | |
@@ -52,7 +52,7 @@ not available in a socket, so the budget is edge pins only.
 | 26–33 | **Switches ×8** | V1 had 25–32; shifted one |
 | 34–41 | **Trim contacts ×8** | populated — hardware trims confirmed |
 
-Every edge pin allocated; pin 3 is the single spare (buzzer optional).
+Every edge pin allocated; pins 3 and 6 are the spares (buzzer optional).
 
 ## ESP32-S3 pin usage (DevKitC-1U)
 
@@ -120,7 +120,6 @@ loose. Rev-A standardises on ONE lockable family for every panel loom:
 | I2C expansion | **Qwiic (JST-SH 1.0 mm)** + XH 4-pin twin | Qwiic opens the whole plug-and-play sensor ecosystem (INA219 boards included); XH twin for hand-made looms |
 | nRF24 PA/LNA module | 2×4 socket, direct | no loom — module seats on the PCB |
 | Teensy 4.1 / DevKitC | machined-pin sockets | replaceable processors |
-| JR bay | standard JR 5-pin | compatibility with third-party modules |
 
 Premium alternative if positive latching is wanted: **JST-GH**
 (1.25 mm, the Pixhawk standard — pre-crimped cables everywhere).
@@ -151,8 +150,10 @@ occasionally-lying light.
 ## Retained from V1
 
 - **Same Nextion display as V1** (Serial1 @ 921600 — zero display-code
-  changes), built-in SD on the Teensy, sounds via display, JR module
-  bay (PPM reserved on pin 6), I2C expansion for future sensors.
+  changes), built-in SD on the Teensy, sounds via display, I2C
+  expansion for future sensors. NOT retained (2026-07-19): the JR
+  module bay and buddy port — both unused on V1, and buddy-boxing is
+  wireless now.
 
 ## Decisions (Malcolm, 2026-07-06)
 
