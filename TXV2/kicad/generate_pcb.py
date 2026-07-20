@@ -237,7 +237,10 @@ header_top = '''(kicad_pcb
 	(general (thickness 1.6) (legacy_teardrops no))
 	(paper "A3")
 	(layers
-		(0 "F.Cu" signal) (2 "B.Cu" signal)
+		(0 "F.Cu" signal)
+		(4 "In1.Cu" signal)
+		(6 "In2.Cu" signal)
+		(2 "B.Cu" signal)
 		(9 "F.Adhes" user "F.Adhesive") (11 "B.Adhes" user "B.Adhesive")
 		(13 "F.Paste" user) (15 "B.Paste" user)
 		(5 "F.SilkS" user "F.Silkscreen") (7 "B.SilkS" user "B.Silkscreen")
@@ -252,7 +255,7 @@ header_top = '''(kicad_pcb
 		(tenting (front yes) (back yes)))
 '''
 
-body = "\n".join(fps) + "\n" + zone("F.Cu") + "\n" + zone("B.Cu") + "\n" + "\n".join(extras)
+body = "\n".join(fps) + "\n" + zone("F.Cu") + "\n" + zone("B.Cu") + "\n" + zone("In1.Cu") + "\n" + "\n".join(extras)
 netdecl = "\n".join(f'\t(net {i} "{n}")' for n, i in sorted(NETS.items(), key=lambda kv: kv[1]))
 out = header_top + '\t(net 0 "")\n' + netdecl + "\n\t" + body.replace("\n", "\n\t") + "\n)\n"
 open(OUT, "w").write(out)
