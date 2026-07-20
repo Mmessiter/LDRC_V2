@@ -99,8 +99,11 @@ DK_NETS = {str(i + 1): n for i, n in enumerate(DK_J1) if n}
 DK_NETS.update({str(i + 23): n for i, n in enumerate(DK_J3) if n})
 
 NRF_NETS = {"1":"GND","2":"+3V3_RF","3":"NRF_CE","4":"NRF_CSN","5":"SPI_SCK","6":"SPI_MOSI","7":"SPI_MISO"}
-P2808 = {"1":"VBAT_RAW","2":"VBAT_RAW","3":"GND","4":"GND","5":"PWR_ON","6":"LATCH_OFF","7":"CTRL_TP",
-         "8":"VBAT_SW","9":"VBAT_SW","10":"GND","11":"GND"}   # 12=A,13=B unused
+P2808 = {"1":"VBAT_RAW","2":"VBAT_RAW","3":"GND","4":"GND","6":"LATCH_OFF","7":"CTRL_TP",
+         "8":"VBAT_SW","9":"VBAT_SW","10":"GND","11":"GND","12":"PWRBTN"}
+         # V1-matched: pin A(12) -> button -> GND = push-ON-only (brush-proof);
+         # PWRBTN also to Teensy pin4 (digital INPUT_PULLUP, LOW=pressed);
+         # OFF(6) <- Teensy pin5 drives HIGH to power off; ON(5) unused; 13=B unused
 BUCK_M = {"1":"VBAT_SW","2":"GND","3":"+5V"}
 BUCK_N = {"1":"VBAT_SW","2":"GND","3":"+5V_NEXT"}
 BQ = {"23":"VBUS_USB","24":"GND","21":"PMID","22":"PMID","17":"SW_CHG","18":"SW_CHG","12":"BTST",
@@ -192,9 +195,6 @@ P(C08, "C10", "100nF", 110.4, 125.2, 90, {"1":"+3V3_RF","2":"GND"}, "C10", hide_
 P(R08, "R15", "47k", 116, 142, 90, {"1":"VBAT_SW","2":"VBAT_SENSE"}, "R15", hide_ref=True)
 P(R08, "R16", "15k", 119, 142, 90, {"1":"VBAT_SENSE","2":"GND"}, "R16", hide_ref=True)
 P(C08, "C11", "100nF", 122, 142, 90, {"1":"VBAT_SENSE","2":"GND"}, "C11", hide_ref=True)
-# button-press sense divider (PWR_ON -> Teensy pin4), back layer near 2808
-P(R08, "R17", "47k", 116, 166, 90, {"1":"PWR_ON","2":"PWRBTN"}, "R17", hide_ref=True)
-P(R08, "R18", "15k", 116, 170, 90, {"1":"PWRBTN","2":"GND"}, "R18", hide_ref=True)
 
 # mounting holes
 for i, (hx, hy) in enumerate([(103.65,103.7),(179.65,103.7),(103.65,188.0),(179.65,188.0)]):
