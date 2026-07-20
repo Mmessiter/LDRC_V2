@@ -95,10 +95,23 @@ tap EN).
 
 ## Power
 
-- Battery → soft-latch (Pololu 2808 pattern, as V1) → 5 V buck
-  (socketed module) → Teensy VIN + DevKitC 5V.
-- Separate 3.3 V rail for the radios (above); each processor board
-  uses its own on-board 3.3 V regulator.
+- Battery → soft-latch (**Pololu 2808 PSW03C**, 2x7 pin grid) → VBAT_SW.
+- **TWO Pololu buck-boost 5V regulators** (3-pin, 7805 pinout
+  VIN/GND/VOUT; buck-boost so they hold 5 V even as the pack sags
+  below 5 V) fed in parallel from VBAT_SW (Malcolm 2026-07-20):
+  - **Buck-N -> +5V_NEXT: Nextion display ONLY** (isolates display
+    switching noise from the RF/logic supply).
+  - **Buck-M -> +5V: Teensy, DevKitC, servos rail, WS2812, LEDs.**
+- Separate 3.3 V rail for the radio (AMS1117 from +5V); each processor
+  board uses its own on-board 3.3 V regulator.
+
+**Soft-power wiring (2808 PSW03C — CONFIRM against V1 before fab):**
+top row VIN VIN GND GND ON OFF CTRL; bottom row VOUT VOUT GND GND.
+VIN<-VBAT_RAW, VOUT->VBAT_SW, GND. Proposed: button (J_BTN) between
+VBAT_RAW and ON (press = turn on); OFF<-Teensy pin5 LATCH_OFF (MCU
+shutdown); Teensy pin4 senses the button via a 47k/15k divider off the
+ON node; CTRL to a test pad. Row spacing 10.16mm to be confirmed by
+1:1 paper test-fit.
 - Battery voltage via **47k/15k divider** from the switched rail into
   Teensy pin 24/A10 (Malcolm 2026-07-19: INA219 dropped; no current
   readout — the BQ25887 ADC reports pack/per-cell volts while charging).

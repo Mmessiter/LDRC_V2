@@ -59,3 +59,14 @@ footprint("Pololu2808_Socket", "PROVISIONAL - measure the real Pololu 2808 hole 
 # 5V buck module socket — PROVISIONAL 1x4 (VIN GND VOUT EN), verify vs the real module
 pads = [(1, 0, 0), (2, 2.54, 0), (3, 5.08, 0), (4, 7.62, 0)]
 footprint("Buck5V_Socket", "PROVISIONAL - match the chosen buck module (e.g. Pololu D24V22F5) before fab", pads, None)
+
+# ── 3-pin buck-boost regulator (Pololu, 7805-style: VIN GND VOUT inline) ──
+pads = [(1, 0, 0), (2, 2.54, 0), (3, 5.08, 0)]   # VIN, GND, VOUT
+footprint("Buck3pin_VGV", "Pololu buck-boost 3-pin: 1=VIN 2=GND 3=VOUT (7805 pinout)", pads, None)
+
+# ── Pololu 2808 PSW03C: 2 rows x 7, 2.54mm pitch, 10.16mm (0.4in) rows ──
+# TOP row (pins 1-7):  VIN VIN GND GND ON OFF CTRL
+# BOT row (pins 8-14): VOUT VOUT GND GND - - -
+pads = [(i + 1, i * 2.54, 0) for i in range(7)] + \
+       [(i + 8, i * 2.54, 10.16) for i in range(7)]
+footprint("Pololu2808_PSW03C", "Pololu 2808 PSW03C 2x7 - VERIFY ROW SPACING 10.16mm by paper test-fit", pads, None)
