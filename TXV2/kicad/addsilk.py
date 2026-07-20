@@ -78,7 +78,7 @@ for ref, newname in [("J15","ESP32 SPARE GPIO (A)"), ("J16","ESP32 SPARE GPIO (B
 
 # clarify the Pololu is provisional right on the silk
 fp = b.FindFootprintByReference("U4")
-text("PWR LATCH - CHECK PINOUT", fp.GetPosition().x, fp.GetPosition().y + mm(8), 0.8, FS, bold=True)
+text("PWR LATCH (2808)", fp.GetPosition().x, fp.GetPosition().y + mm(8.5), 0.8, FS, bold=True)
 
 pcbnew.SaveBoard('TXV2_MAIN.kicad_pcb', b)
 print("silk added")
