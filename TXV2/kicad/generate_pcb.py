@@ -129,7 +129,7 @@ P("Package_TO_SOT_SMD:SOT-223-3_TabPin2", "U8", "AMS1117-3.3", 116.5, 127, 0,
 P("Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12", "J1", "USB-C", 150, 187.2, 0, USB, "J1", layer="B.Cu")
 P("Connector_PinHeader_2.54mm:PinHeader_1x05_P2.54mm_Vertical", "J2", "NEXTION", 178, 139, 0,
   {"1":"GND","3":"+5V_NEXT","4":"NEXTION_RX","5":"NEXTION_TX"}, "J2")
-P("Connector_AMASS:AMASS_XT30U-M_1x02_P5.0mm_Vertical", "J3", "BATT", 110.5, 186, 0,
+P("Connector_AMASS:AMASS_XT30U-F_1x02_P5.0mm_Vertical", "J3", "BATT", 110.5, 186, 0,
   {"1":"VBAT_RAW","2":"GND"}, "J3")
 P(XH.format(n=2), "J4", "BAL", 115, 178, 0, {"1":"CELL_MID","2":"GND"}, "J4")
 P(XH.format(n=2), "J5", "BTN", 158.4, 187.7, 0, {"1":"PWRBTN","2":"GND"}, "J5")
