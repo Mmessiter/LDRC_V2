@@ -14,8 +14,10 @@ def pad(num, x, y, first=False):
             f'(drill 1.0) (layers "*.Cu" "*.Mask") (remove_unused_layers no) (uuid "{U()}"))')
 
 def footprint(name, descr, pads, outline):
-    x0 = min(p[1] for p in pads) - 1.6; x1 = max(p[1] for p in pads) + 1.6
-    y0 = min(p[2] for p in pads) - 1.6; y1 = max(p[2] for p in pads) + 1.6
+    sx0 = min(p[1] for p in pads) - 1.6; sx1 = max(p[1] for p in pads) + 1.6
+    sy0 = min(p[2] for p in pads) - 1.6; sy1 = max(p[2] for p in pads) + 1.6
+    x0 = min(p[1] for p in pads) - 0.4; x1 = max(p[1] for p in pads) + 0.4
+    y0 = min(p[2] for p in pads) - 0.4; y1 = max(p[2] for p in pads) + 0.4
     ptxt = "\n".join(pad(n, x, y, first=(str(n) == "1")) for n, x, y in pads)
     body = f'''(footprint "{name}"
 	(version 20260206)
@@ -23,13 +25,13 @@ def footprint(name, descr, pads, outline):
 	(generator_version "10.0")
 	(layer "F.Cu")
 	(attr through_hole)
-	(property "Reference" "REF**" (at {round((x0+x1)/2,2)} {y0 - 1.6} 0) (layer "F.SilkS") (uuid "{U()}") (effects (font (size 1 1) (thickness 0.15))))
-	(property "Value" "{name}" (at {round((x0+x1)/2,2)} {y1 + 1.6} 0) (layer "F.Fab") (uuid "{U()}") (effects (font (size 1 1) (thickness 0.15))))
+	(property "Reference" "REF**" (at {round((sx0+sx1)/2,2)} {sy0 - 1.6} 0) (layer "F.SilkS") (uuid "{U()}") (effects (font (size 1 1) (thickness 0.15))))
+	(property "Value" "{name}" (at {round((sx0+sx1)/2,2)} {sy1 + 1.6} 0) (layer "F.Fab") (uuid "{U()}") (effects (font (size 1 1) (thickness 0.15))))
 	(property "Footprint" "" (at 0 0 0) (layer "F.Fab") (hide yes) (uuid "{U()}") (effects (font (size 1.27 1.27))))
 	(property "Datasheet" "" (at 0 0 0) (layer "F.Fab") (hide yes) (uuid "{U()}") (effects (font (size 1.27 1.27))))
 	(property "Description" "{descr}" (at 0 0 0) (layer "F.Fab") (hide yes) (uuid "{U()}") (effects (font (size 1.27 1.27))))
-	(fp_rect (start {round(x0,2)} {round(y0,2)}) (end {round(x1,2)} {round(y1,2)}) (stroke (width 0.12) (type solid)) (fill no) (layer "F.SilkS") (uuid "{U()}"))
-	(fp_rect (start {round(x0-0.25,2)} {round(y0-0.25,2)}) (end {round(x1+0.25,2)} {round(y1+0.25,2)}) (stroke (width 0.05) (type solid)) (fill no) (layer "F.CrtYd") (uuid "{U()}"))
+	(fp_rect (start {round(sx0,2)} {round(sy0,2)}) (end {round(sx1,2)} {round(sy1,2)}) (stroke (width 0.12) (type solid)) (fill no) (layer "F.SilkS") (uuid "{U()}"))
+	(fp_rect (start {round(x0,2)} {round(y0,2)}) (end {round(x1,2)} {round(y1,2)}) (stroke (width 0.05) (type solid)) (fill no) (layer "F.CrtYd") (uuid "{U()}"))
 {ptxt}
 )'''
     open(f"{OUT}/{name}.kicad_mod", "w").write(body)
@@ -64,9 +66,12 @@ footprint("Buck5V_Socket", "PROVISIONAL - match the chosen buck module (e.g. Pol
 pads = [(1, 0, 0), (2, 2.54, 0), (3, 5.08, 0)]   # VIN, GND, VOUT
 footprint("Buck3pin_VGV", "Pololu buck-boost 3-pin: 1=VIN 2=GND 3=VOUT (7805 pinout)", pads, None)
 
-# ── Pololu 2808 PSW03C: 2 rows x 7, 2.54mm pitch, 10.16mm (0.4in) rows ──
-# TOP row (pins 1-7):  VIN VIN GND GND ON OFF CTRL
-# BOT row (pins 8-14): VOUT VOUT GND GND - - -
-pads = [(i + 1, i * 2.54, 0) for i in range(7)] + \
-       [(i + 8, i * 2.54, 10.16) for i in range(7)]
-footprint("Pololu2808_PSW03C", "Pololu 2808 PSW03C 2x7 - VERIFY ROW SPACING 10.16mm by paper test-fit", pads, None)
+# ── Pololu 2808 PSW03C: KEYED 6+7 asymmetric, cols 12.3mm apart, 2.54 pitch ──
+# VIN column (7 holes, pin1 top): VIN VIN GND GND ON OFF CTRL
+# VOUT column (6 holes, NO bottom hole = the reverse-insertion key):
+#                                 VOUT VOUT GND GND A B
+pads = [(1, 12.3, 0), (2, 12.3, 2.54), (3, 12.3, 5.08), (4, 12.3, 7.62),
+        (5, 12.3, 10.16), (6, 12.3, 12.7), (7, 12.3, 15.24),
+        (8, 0, 0), (9, 0, 2.54), (10, 0, 5.08), (11, 0, 7.62),
+        (12, 0, 10.16), (13, 0, 12.7)]   # NO hole at (0,15.24) -> keys orientation
+footprint("Pololu2808_PSW03C", "Pololu 2808 PSW03C - KEYED 6+7 (no VOUT-col bottom hole), 12.3mm cols", pads, None)
