@@ -81,7 +81,7 @@ TEENSY_L = ["GND","NEXTION_TX","NEXTION_RX","WS2812_DATA","BUZZER","PWRBTN","LAT
             "LINK_RX2","LINK_TX2","NRF_CE","NRF_CSN","SPI_MOSI","SPI_MISO","SPI_SCK","+3V3_T",
             "VBAT_SENSE","HANDSHAKE_B","SW1","SW2","SW3","SW4","SW5","SW6"]
 # careful: left column order is GND,0..12,3V3,24..32
-TEENSY_L = ["GND","NEXTION_TX","NEXTION_RX","WS2812_DATA","BUZZER","PWRBTN","LATCH_OFF","HANDSHAKE_A",
+TEENSY_L = ["GND","NEXTION_TX","NEXTION_RX","WS2812_DATA","BUZZER","BTN_SENSE","LATCH_OFF","HANDSHAKE_A",
             "LINK_RX2","LINK_TX2","NRF_CE","NRF_CSN","SPI_MOSI","SPI_MISO","+3V3_T",
             "VBAT_SENSE","HANDSHAKE_B","SW1","SW2","SW3","SW4","SW5","SW6","SW7"]
 TEENSY_R = ["+5V","GND","+3V3_T","KNOB8","KNOB7","KNOB6","KNOB5","I2C_SCL","I2C_SDA","GIMBAL4",
@@ -99,7 +99,7 @@ DK_NETS = {str(i + 1): n for i, n in enumerate(DK_J1) if n}
 DK_NETS.update({str(i + 23): n for i, n in enumerate(DK_J3) if n})
 
 NRF_NETS = {"1":"GND","2":"+3V3_RF","3":"NRF_CE","4":"NRF_CSN","5":"SPI_SCK","6":"SPI_MOSI","7":"SPI_MISO"}
-P2808 = {"1":"VBAT_RAW","2":"VBAT_RAW","3":"GND","4":"GND","6":"LATCH_OFF","7":"CTRL_TP",
+P2808 = {"1":"VBAT_RAW","2":"VBAT_RAW","3":"GND","4":"GND","6":"OFF_2808","7":"CTRL_TP",
          "8":"VBAT_SW","9":"VBAT_SW","10":"GND","11":"GND","12":"PWRBTN"}
          # V1-matched: pin A(12) -> button -> GND = push-ON-only (brush-proof);
          # PWRBTN also to Teensy pin4 (digital INPUT_PULLUP, LOW=pressed);
@@ -195,6 +195,14 @@ P(C08, "C10", "100nF", 110.4, 125.2, 90, {"1":"+3V3_RF","2":"GND"}, "C10", hide_
 P(R08, "R15", "47k", 116, 142, 90, {"1":"VBAT_SW","2":"VBAT_SENSE"}, "R15", hide_ref=True)
 P(R08, "R16", "15k", 119, 142, 90, {"1":"VBAT_SENSE","2":"GND"}, "R16", hide_ref=True)
 P(C08, "C11", "100nF", 122, 142, 90, {"1":"VBAT_SENSE","2":"GND"}, "C11", hide_ref=True)
+
+# soft-power diodes (V1-matched, 1N4001):
+#  D3 sense-protect: anode=BTN_SENSE (Teensy pin4), cathode=PWRBTN (button/2808 pinA)
+#     -> button grounding PWRBTN pulls the sense LOW; blocks any high on pinA from the MCU pin
+#  D4 off-isolate: anode=LATCH_OFF (Teensy pin5), cathode=OFF_2808 (2808 OFF)
+#     -> MCU drives OFF high to power down; blocks back-feed
+P("Diode_SMD:D_SMA", "D3", "1N4001", 154, 132, 0, {"1":"PWRBTN","2":"BTN_SENSE"}, "D3", layer="B.Cu", hide_ref=True)
+P("Diode_SMD:D_SMA", "D4", "1N4001", 154, 128, 0, {"1":"OFF_2808","2":"LATCH_OFF"}, "D4", layer="B.Cu", hide_ref=True)
 
 # mounting holes
 for i, (hx, hy) in enumerate([(103.65,103.7),(179.65,103.7),(103.65,188.0),(179.65,188.0)]):
