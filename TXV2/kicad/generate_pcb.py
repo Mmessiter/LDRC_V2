@@ -99,8 +99,10 @@ DK_NETS = {str(i + 1): n for i, n in enumerate(DK_J1) if n}
 DK_NETS.update({str(i + 23): n for i, n in enumerate(DK_J3) if n})
 
 NRF_NETS = {"1":"GND","2":"+3V3_RF","3":"NRF_CE","4":"NRF_CSN","5":"SPI_SCK","6":"SPI_MOSI","7":"SPI_MISO"}
-P2808 = {"1":"VBAT_RAW","2":"GND","3":"VBAT_SW","4":"PWRBTN","7":"LATCH_OFF"}
-BUCK = {"1":"VBAT_SW","2":"GND","3":"+5V"}
+P2808 = {"1":"VBAT_RAW","2":"VBAT_RAW","3":"GND","4":"GND","5":"PWR_ON","6":"LATCH_OFF","7":"CTRL_TP",
+         "8":"VBAT_SW","9":"VBAT_SW","10":"GND","11":"GND"}   # 12=A,13=B unused
+BUCK_M = {"1":"VBAT_SW","2":"GND","3":"+5V"}
+BUCK_N = {"1":"VBAT_SW","2":"GND","3":"+5V_NEXT"}
 BQ = {"23":"VBUS_USB","24":"GND","21":"PMID","22":"PMID","17":"SW_CHG","18":"SW_CHG","12":"BTST",
       "11":"REGN","4":"I2C_SDA","5":"I2C_SCL","13":"VBAT_RAW","14":"VBAT_RAW","15":"VBAT_RAW",
       "16":"VBAT_RAW","9":"MID_SENSE","10":"CB_PATH","2":"CHG_STAT","7":"CHG_TS","8":"CHG_ILIM",
@@ -115,14 +117,15 @@ P("TXV2:Teensy41_Socket", "U1", "Teensy 4.1", 126, 106, 0, TEENSY_NETS, "U1")
 P("TXV2:DevKitC1_Socket", "U2", "ESP32-S3-DevKitC", 148, 106, 0, DK_NETS, "U2")
 P("TXV2:NRF24_Socket_2x4", "U3", "nRF24 PA/LNA", 109.5, 106, 0, NRF_NETS, "U3")
 P("TXV2:Pololu2808_Socket", "U4", "Pololu 2808", 124, 168.5, 0, P2808, "U4")
-P("TXV2:Buck5V_Socket", "U5", "5V buck", 114, 157, 0, BUCK, "U5")
+P("TXV2:Buck3pin_VGV", "U5", "5V buck MAIN", 111, 164, 90, BUCK_M, "U5")
+P("TXV2:Buck3pin_VGV", "U9", "5V buck NEXT", 111, 172, 90, BUCK_N, "U9")
 P("Package_DFN_QFN:HVQFN-24-1EP_4x4mm_P0.5mm_EP2.6x2.6mm", "U7", "BQ25887",
   132, 140, 0, BQ, "U7", layer="B.Cu")
 P("Package_TO_SOT_SMD:SOT-223-3_TabPin2", "U8", "AMS1117-3.3", 116.5, 127, 0,
   {"1":"GND","2":"+3V3_RF","3":"+5V","4":"+3V3_RF"}, "U8")
 P("Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12", "J1", "USB-C", 150, 187.2, 0, USB, "J1", layer="B.Cu")
 P("Connector_PinHeader_2.54mm:PinHeader_1x05_P2.54mm_Vertical", "J2", "NEXTION", 178, 139, 0,
-  {"1":"GND","3":"+5V","4":"NEXTION_RX","5":"NEXTION_TX"}, "J2")
+  {"1":"GND","3":"+5V_NEXT","4":"NEXTION_RX","5":"NEXTION_TX"}, "J2")
 P("Connector_AMASS:AMASS_XT30U-M_1x02_P5.0mm_Vertical", "J3", "BATT", 110.5, 186, 0,
   {"1":"VBAT_RAW","2":"GND"}, "J3")
 P(XH.format(n=2), "J4", "BAL", 115, 178, 0, {"1":"CELL_MID","2":"GND"}, "J4")
@@ -186,9 +189,12 @@ P("Capacitor_SMD:CP_Elec_6.3x7.7", "C8", "220uF", 119, 136, 0, {"1":"+3V3_RF","2
 P(C12F, "C9", "10uF", 111.5, 120.5, 90, {"1":"+3V3_RF","2":"GND"}, "C9", hide_ref=True)
 P(C08, "C10", "100nF", 110.4, 125.2, 90, {"1":"+3V3_RF","2":"GND"}, "C10", hide_ref=True)
 # battery divider (left field)
-P(R08, "R15", "47k", 121, 142, 90, {"1":"VBAT_SW","2":"VBAT_SENSE"}, "R15", hide_ref=True)
-P(R08, "R16", "15k", 121, 146, 90, {"1":"VBAT_SENSE","2":"GND"}, "R16", hide_ref=True)
-P(C08, "C11", "100nF", 117, 146, 90, {"1":"VBAT_SENSE","2":"GND"}, "C11", hide_ref=True)
+P(R08, "R15", "47k", 116, 142, 90, {"1":"VBAT_SW","2":"VBAT_SENSE"}, "R15", hide_ref=True)
+P(R08, "R16", "15k", 119, 142, 90, {"1":"VBAT_SENSE","2":"GND"}, "R16", hide_ref=True)
+P(C08, "C11", "100nF", 122, 142, 90, {"1":"VBAT_SENSE","2":"GND"}, "C11", hide_ref=True)
+# button-press sense divider (PWR_ON -> Teensy pin4), back layer near 2808
+P(R08, "R17", "47k", 116, 166, 90, {"1":"PWR_ON","2":"PWRBTN"}, "R17", hide_ref=True)
+P(R08, "R18", "15k", 116, 170, 90, {"1":"PWRBTN","2":"GND"}, "R18", hide_ref=True)
 
 # mounting holes
 for i, (hx, hy) in enumerate([(103.65,103.7),(179.65,103.7),(103.65,188.0),(179.65,188.0)]):
