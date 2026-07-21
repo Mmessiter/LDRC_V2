@@ -169,7 +169,9 @@ P("Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12", "J1", "USB-C", 150, 189.2
 P("Connector_PinHeader_2.54mm:PinHeader_1x05_P2.54mm_Vertical", "J2", "NEXTION", 178, 139, 0,
   {"1":"GND","3":"+5V_NEXT","4":"NEXTION_RX","5":"NEXTION_TX"}, "J2", hide_value=True)
 P("Connector_AMASS:AMASS_XT30U-F_1x02_P5.0mm_Vertical", "J3", "BATT", 110.5, 186, 0,
-  {"1":"VBAT_RAW","2":"GND"}, "J3")
+  {"1":"GND","2":"VBAT_RAW"}, "J3")
+  # POLARITY: XT30U-F pad 2 = the keyed '+' slot (lib silk marks it) — caught 2026-07-21,
+  # pad1 had VBAT_RAW = reversed battery. NEVER swap back.
 P(XH.format(n=2), "J4", "BAL", 139, 174, 0, {"1":"CELL_MID","2":"GND"}, "J4")
 P(XH.format(n=2), "J5", "BTN", 158.4, 187.7, 0, {"1":"GND","2":"BTN_NODE"}, "J5")
 P(XH.format(n=4), "J6", "GIMBAL L", 106, 147, 270, {"1":"+3V3_T","2":"GIMBAL1","3":"GIMBAL2","4":"GND"}, "J6", hide_value=True)
