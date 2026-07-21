@@ -4,7 +4,7 @@ mm=pcbnew.FromMM; V=pcbnew.VECTOR2I; FCu,BCu=pcbnew.F_Cu,pcbnew.B_Cu
 snap=json.load(open('label_snapshot.json'))
 OVR={'U4':(119.6,174.85,0.9),'L1':(132,144.3,0.8),'J5':(158.4,183.9,0.9),
      'J13':(132.8,168.5,0.8),'J3':(171.2,179.5,0.9),
-     'J14':(119.5,123.9,0.7),'U3':(121.3,115.2,0.7),'U8':(113.8,131.2,0.7)}
+     'J14':(119.5,123.9,0.7),'U3':(112.6,106.3,0.7),'U8':(113.8,131.2,0.7)}
 SKIP={'J6','J7','J11'}   # names live in board gr_texts, values stay hidden
 for f in b.Footprints():
     r=f.GetReference(); v=f.Value()
@@ -30,10 +30,11 @@ for f in b.Footprints():
     if r in BACKROW and r in snap['values'] and snap['values'][r].get('vis'):
         v=f.Value()
         v.SetPosition(V(f.GetPosition().x,int(mm(snap['values'][r]['y']))))
-def gt(txt,x,y,s=0.5,left=True):
+def gt(txt,x,y,s=0.5,left=True,right=False):
     t=pcbnew.PCB_TEXT(b);t.SetText(txt);t.SetPosition(V(int(mm(x)),int(mm(y))))
     t.SetLayer(pcbnew.F_SilkS);t.SetTextSize(V(int(mm(s)),int(mm(s))));t.SetTextThickness(int(mm(0.1)))
-    if left: t.SetHorizJustify(pcbnew.GR_TEXT_H_ALIGN_LEFT)
+    if right: t.SetHorizJustify(pcbnew.GR_TEXT_H_ALIGN_RIGHT)
+    elif left: t.SetHorizJustify(pcbnew.GR_TEXT_H_ALIGN_LEFT)
     b.Add(t)
 # nRF marker
 gt("square pad = GND",105.2,114.6,0.5)
@@ -41,11 +42,11 @@ gt("square pad = GND",105.2,114.6,0.5)
 for y1,y2,y3 in [(156,153.46,150.92),(164,161.46,158.92)]:
     gt("IN",114.7,y1,0.55); gt("GND",114.7,y2,0.55); gt("OUT",114.7,y3,0.55)
 # per-pin labels — left-edge connectors (labels right of pads at x110.4)
-for y,txt in zip([147,149.5,152,154.5],["3V3","V","H","GND"]): gt(txt,110.4,y,0.5)          # GIMBAL R (J6)
-for i,txt in enumerate(["3V3","5","6","7","8","GND"]): gt(txt,110.4,162+2.5*i,0.5)          # KNOBS
+for y,txt in zip([147,149.5,152,154.5],["3V3","V","H","GND"]): gt(txt,110.3,y,0.5,right=True)   # GIMBAL R (J6)
+for i,txt in enumerate(["3V3","5","6","7","8","GND"]): gt(txt,110.3,162+2.5*i,0.5,right=True)   # KNOBS
 TRIMN=["1L","1R","2U","2D","3U","3D","4R","4L"]
-for i in range(8): gt(TRIMN[i],110.4,120+2.5*i,0.45)                                     # TRIMS by channel
-gt("GND",110.4,140,0.45)                                                                     # TRIMS GND
+for i in range(8): gt(TRIMN[i],110.3,120+2.5*i,0.45,right=True)                          # TRIMS by channel
+gt("GND",110.3,140,0.45,right=True)                                                          # TRIMS GND
 # right-edge connectors (labels left of pads)
 for y,txt in zip([124,126.5,129,131.5],["3V3","V","H","GND"]): gt(txt,172.9,y,0.5)          # GIMBAL L (J7)
 for y,txt in zip([111,113.5,116],["5V","DAT","GND"]): gt(txt,170.5,y,0.5)                   # RGB LED
