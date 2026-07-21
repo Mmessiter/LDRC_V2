@@ -34,7 +34,12 @@ def read_mod(path):
         if os.path.exists(p): return open(p).read()
     raise FileNotFoundError(path)
 
-def place(libref, ref, value, x, y, rot, nets, key, layer="F.Cu", hide_ref=False):
+def model_block(path, off=(0,0,0), rot=(0,0,0), scale=(1,1,1)):
+    return (f'\n\t(model "{path}"\n\t\t(offset (xyz {off[0]} {off[1]} {off[2]}))'
+            f'\n\t\t(scale (xyz {scale[0]} {scale[1]} {scale[2]}))'
+            f'\n\t\t(rotate (xyz {rot[0]} {rot[1]} {rot[2]}))\n\t)')
+
+def place(libref, ref, value, x, y, rot, nets, key, layer="F.Cu", hide_ref=False, hide_value=False, models=None):
     """libref 'Lib:Name' or 'TXV2:Name'; nets: dict pad->netname (missing = none)."""
     lib, name = libref.split(":")
     fp = read_mod(name if lib == "TXV2" else f"{lib}.pretty/{name}")
@@ -48,13 +53,28 @@ def place(libref, ref, value, x, y, rot, nets, key, layer="F.Cu", hide_ref=False
     rr = f" {rot}" if rot else ""
     fp = fp.replace(f'(layer "{layer}")',
                     f'(layer "{layer}")\n\t(uuid "{U()}")\n\t(at {x} {y}{rr})\n\t(path "/{SCH.get(key, U())}")', 1)
+    # Reference (refdes) is ALWAYS hidden — the function name (Value) is shown instead.
     fp = fp.replace('(property "Reference" "REF**"', f'(property "Reference" "{ref}"', 1)
-    if hide_ref:
-        i = fp.index(f'(property "Reference" "{ref}"')
-        j = match_paren(fp, i)
-        blk = fp[i:j].replace('(at ', '(hide yes)\n\t\t(at ', 1)
-        fp = fp[:i] + blk + fp[j:]
+    ri = fp.index(f'(property "Reference" "{ref}"'); rj = match_paren(fp, ri)
+    if '(hide yes)' not in fp[ri:rj]:
+        fp = fp[:ri] + fp[ri:rj].replace('(at ', '(hide yes)\n\t\t(at ', 1) + fp[rj:]
+    # Value carries the USE/function label -> put it on the silk layer, visible.
+    silk = "B.SilkS" if layer == "B.Cu" else "F.SilkS"
     fp = re.sub(r'\(property "Value" "[^"]*"', f'(property "Value" "{value}"', fp, count=1)
+    vi = fp.index(f'(property "Value" "{value}"'); vj = match_paren(fp, vi)
+    vb = fp[vi:vj]
+    if hide_value:
+        if '(hide yes)' not in vb:
+            vb = vb.replace('(at ', '(hide yes)\n\t\t(at ', 1)
+    else:
+        vb = vb.replace('(hide yes)\n\t\t\t', '').replace('(hide yes)\n\t\t', '').replace(' (hide yes)', '')
+        vb = re.sub(r'\(layer "[^"]*"\)', f'(layer "{silk}")', vb, count=1)
+        vb = re.sub(r'\(size [\d.]+ [\d.]+\)', '(size 0.9 0.9)', vb, count=1)
+        if layer == "B.Cu" and 'justify' not in vb:
+            # mirror back-side text so it reads correctly when viewing the back
+            ei = vb.index('(effects'); ej = match_paren(vb, ei)
+            vb = vb[:ej] + ' (justify mirror)' + vb[ej:]
+    fp = fp[:vi] + vb + fp[vj:]
     # rotate pads with footprint rotation (in-board pads carry absolute angle)
     if rot:
         def rot_pad(m):
@@ -71,6 +91,10 @@ def place(libref, ref, value, x, y, rot, nets, key, layer="F.Cu", hide_ref=False
     for a, b, num in reversed(pad_blocks(fp)):
         if num in nets:
             fp = fp[:b] + f'\n\t\t(net {N(nets[num])} "{nets[num]}")\n\t' + fp[b:]
+    if models:
+        fp = fp.rstrip()
+        assert fp.endswith(')')
+        fp = fp[:-1] + "".join(model_block(*m) for m in models) + '\n)'
     return fp
 
 fps = []
@@ -116,42 +140,57 @@ USB = {"A1":"GND","A12":"GND","B1":"GND","B12":"GND","A4":"VBUS_USB","A9":"VBUS_
 XH = "Connector_JST:JST_XH_B{n}B-XH-A_1x{n:02d}_P2.50mm_Vertical"
 
 # ── placement ──────────────────────────────────────────────────────
-P("TXV2:Teensy41_Socket", "U1", "Teensy 4.1", 126, 106, 0, TEENSY_NETS, "U1")
-P("TXV2:DevKitC1_Socket", "U2", "ESP32-S3-DevKitC", 148, 106, 0, DK_NETS, "U2")
-P("TXV2:NRF24_Socket_2x4", "U3", "nRF24 PA/LNA", 109.5, 106, 0, NRF_NETS, "U3")
-P("TXV2:Pololu2808_PSW03C", "U4", "Pololu 2808", 120, 158, 0, P2808, "U4")
-P("TXV2:Buck3pin_VGV", "U5", "5V buck MAIN", 111, 164, 90, BUCK_M, "U5")
-P("TXV2:Buck3pin_VGV", "U9", "5V buck NEXT", 111, 172, 90, BUCK_N, "U9")
+KMOD = "${KICAD10_3DMODEL_DIR}"
+PSOCK = f"{KMOD}/Connector_PinSocket_2.54mm.3dshapes/PinSocket_1x%02d_P2.54mm_Vertical.step"
+PRJ = "${KIPRJMOD}/models"
+# Teensy rotated 180 (Malcolm: try flipping so the microSD/USB end swaps away from the 2808)
+P("TXV2:Teensy41_Socket", "U1", "Teensy 4.1", 141.24, 160.42, 180, TEENSY_NETS, "U1", hide_value=True,
+  models=[(PSOCK % 24, (0, 0, 0)), (PSOCK % 24, (15.24, 0, 0)),
+          (f"{PRJ}/teensy41.wrl", (0, 0, 0))])
+P("TXV2:DevKitC1_Socket", "U2", "ESP32-S3-DevKitC", 148, 102, 0, DK_NETS, "U2", hide_value=True,
+  models=[(PSOCK % 22, (0, 0, 0)), (PSOCK % 22, (22.86, 0, 0)),
+          (f"{PRJ}/devkitc.wrl", (0, 0, 0))])
+P("TXV2:NRF24_Socket_2x4", "U3", "nRF24L01", 109.5, 106, 0, NRF_NETS, "U3",
+  models=[(f"{KMOD}/Connector_PinSocket_2.54mm.3dshapes/PinSocket_2x04_P2.54mm_Vertical.step", (1.27, 3.81, 0)),
+          (f"{PRJ}/nrf24e01.wrl", (0, 0, 0))])
+# 2808 rotated 90 deg + dropped low so it clears the Teensy SD-card end (bottom of U1)
+P("TXV2:Pololu2808_PSW03C", "U4", "Pololu 2808", 112, 181, 90, P2808, "U4",
+  models=[(f"{PRJ}/pololu2808.wrl", (0, 0, 0))])
+# bucks raised clear of the (now wide, low) 2808 so the bottom-left uncrowds
+P("TXV2:Buck3pin_VGV", "U5", "5V buck MAIN", 111, 156, 90, BUCK_M, "U5", hide_value=True,
+  models=[(f"{PRJ}/buck3pin.wrl", (0, 0, 0))])
+P("TXV2:Buck3pin_VGV", "U9", "5V buck NEXT", 111, 164, 90, BUCK_N, "U9", hide_value=True,
+  models=[(f"{PRJ}/buck3pin.wrl", (0, 0, 0))])
 P("Package_DFN_QFN:HVQFN-24-1EP_4x4mm_P0.5mm_EP2.6x2.6mm_ThermalVias", "U7", "BQ25887",
   132, 140, 0, BQ, "U7", layer="B.Cu")
 P("Package_TO_SOT_SMD:SOT-223-3_TabPin2", "U8", "AMS1117-3.3", 116.5, 127, 0,
   {"1":"GND","2":"+3V3_RF","3":"+5V","4":"+3V3_RF"}, "U8")
-P("Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12", "J1", "USB-C", 150, 187.2, 0, USB, "J1", layer="B.Cu")
+P("Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12", "J1", "USB-C", 150, 189.2, 0, USB, "J1", layer="B.Cu")
 P("Connector_PinHeader_2.54mm:PinHeader_1x05_P2.54mm_Vertical", "J2", "NEXTION", 178, 139, 0,
-  {"1":"GND","3":"+5V_NEXT","4":"NEXTION_RX","5":"NEXTION_TX"}, "J2")
+  {"1":"GND","3":"+5V_NEXT","4":"NEXTION_RX","5":"NEXTION_TX"}, "J2", hide_value=True)
 P("Connector_AMASS:AMASS_XT30U-F_1x02_P5.0mm_Vertical", "J3", "BATT", 110.5, 186, 0,
   {"1":"VBAT_RAW","2":"GND"}, "J3")
-P(XH.format(n=2), "J4", "BAL", 115, 178, 0, {"1":"CELL_MID","2":"GND"}, "J4")
+P(XH.format(n=2), "J4", "BAL", 139, 174, 0, {"1":"CELL_MID","2":"GND"}, "J4")
 P(XH.format(n=2), "J5", "BTN", 158.4, 187.7, 0, {"1":"GND","2":"BTN_NODE"}, "J5")
-P(XH.format(n=4), "J6", "GIMBAL L", 106, 147, 270, {"1":"+3V3_T","2":"GIMBAL1","3":"GIMBAL2","4":"GND"}, "J6")
-P(XH.format(n=4), "J7", "GIMBAL R", 178, 124, 270, {"1":"+3V3_T","2":"GIMBAL3","3":"GIMBAL4","4":"GND"}, "J7")
+P(XH.format(n=4), "J6", "GIMBAL L", 106, 147, 270, {"1":"+3V3_T","2":"GIMBAL1","3":"GIMBAL2","4":"GND"}, "J6", hide_value=True)
+P(XH.format(n=4), "J7", "GIMBAL R", 178, 124, 270, {"1":"+3V3_T","2":"GIMBAL3","3":"GIMBAL4","4":"GND"}, "J7", hide_value=True)
 P(XH.format(n=6), "J8", "KNOBS", 106, 162, 270,
-  {"1":"+3V3_T","2":"KNOB5","3":"KNOB6","4":"KNOB7","5":"KNOB8","6":"GND"}, "J8")
+  {"1":"+3V3_T","2":"KNOB5","3":"KNOB6","4":"KNOB7","5":"KNOB8","6":"GND"}, "J8", hide_value=True)
 P(XH.format(n=9), "J9", "SWITCHES", 121.8, 185.8, 0,
   {str(i+1): f"SW{i+1}" for i in range(8)} | {"9":"GND"}, "J9")
 P(XH.format(n=9), "J10", "TRIMS", 106, 120, 270,
-  {str(i+1): f"TRIM{i+1}" for i in range(8)} | {"9":"GND"}, "J10")
-P(XH.format(n=3), "J11", "WS2812", 178, 111, 270, {"1":"+5V","2":"WS2812_OUT","3":"GND"}, "J11")
+  {str(i+1): f"TRIM{i+1}" for i in range(8)} | {"9":"GND"}, "J10", hide_value=True)
+P(XH.format(n=3), "J11", "WS2812", 178, 111, 270, {"1":"+5V","2":"WS2812_OUT","3":"GND"}, "J11", hide_value=True)
 P("Connector_JST:JST_SH_BM04B-SRSS-TB_1x04-1MP_P1.00mm_Vertical", "J12", "QWIIC", 178, 156, 270,
-  {"1":"GND","2":"+3V3_T","3":"I2C_SDA","4":"I2C_SCL","MP":"GND"}, "J12")
-P(XH.format(n=4), "J13", "I2C", 172.8, 172, 270, {"1":"GND","2":"+3V3_T","3":"I2C_SDA","4":"I2C_SCL"}, "J13")
+  {"1":"GND","2":"+3V3_T","3":"I2C_SDA","4":"I2C_SCL","MP":"GND"}, "J12", hide_value=True)
+P(XH.format(n=4), "J13", "I2C", 172.8, 172, 270, {"1":"GND","2":"+3V3_T","3":"I2C_SDA","4":"I2C_SCL"}, "J13", hide_value=True)
 P(XH.format(n=2), "J14", "RTC", 120, 112, 270, {"1":"RTC_VBAT","2":"GND"}, "J14")
 P("Connector_PinHeader_2.54mm:PinHeader_1x12_P2.54mm_Vertical", "J15", "ESP-A", 145.8, 163.05, 90,
   {"1":"ESP_G4","2":"ESP_G5","3":"ESP_G6","4":"ESP_G7","5":"ESP_G15","6":"ESP_G16","7":"ESP_G3",
-   "8":"ESP_G46","9":"ESP_G10","10":"ESP_G11","11":"ESP_G12","12":"ESP_G13"}, "J15")
+   "8":"ESP_G46","9":"ESP_G10","10":"ESP_G11","11":"ESP_G12","12":"ESP_G13"}, "J15", hide_value=True)
 P("Connector_PinHeader_2.54mm:PinHeader_1x12_P2.54mm_Vertical", "J16", "ESP-B", 145.8, 166.75, 90,
   {"1":"ESP_G14","2":"ESP_G1","3":"ESP_G2","4":"ESP_G42","5":"ESP_G41","6":"ESP_G40","7":"ESP_G39",
-   "8":"ESP_G21","9":"ESP_G45","10":"ESP_G47","11":"ESP_G48","12":"ESP_3V3"}, "J16")
+   "8":"ESP_G21","9":"ESP_G45","10":"ESP_G47","11":"ESP_G48","12":"ESP_3V3"}, "J16", hide_value=True)
 P(XH.format(n=2), "J17", "BUZZ", 168.6, 187.7, 0, {"1":"BUZZER","2":"GND"}, "J17")
 P("Battery:Battery_Panasonic_CR2032-VS1N_Vertical_CircularHoles", "BT1", "CR2032", 153, 177, 0,
   {"1":"RTC_VBAT","2":"GND"}, "BT1")
@@ -171,7 +210,7 @@ back = [("C1","1uF",C08,129,122,{"1":"VBUS_USB","2":"GND"}),
         ("C7","4.7uF",C08,135,126,{"1":"REGN","2":"GND"}),
         ("R1","330R",R08,138,133,{"1":"MID_SENSE","2":"CELL_MID"}),
         ("R2","68R",R12F,129,155,{"1":"CB_PATH","2":"CELL_MID"}),
-        ("R3","68R",R12F,132.5,152.5,{"1":"CB_PATH","2":"CELL_MID"}),
+        ("R3","68R",R12F,137.5,150,{"1":"CB_PATH","2":"CELL_MID"}),
         ("R4","5.11k",R08,132,133,{"1":"REGN","2":"CHG_TS"}),
         ("R5","7.5k",R08,135,133,{"1":"CHG_TS","2":"GND"}),
         ("R6","374R",R08,129,133,{"1":"CHG_ILIM","2":"GND"}),
@@ -184,17 +223,17 @@ back = [("C1","1uF",C08,129,122,{"1":"VBUS_USB","2":"GND"}),
         ("R14","330R",R08,174,112,{"1":"WS2812_DATA","2":"WS2812_OUT"})]
 for ref, val, foot, x, y, nets in back:
     P(foot, ref, val, x, y, 90, nets, ref, layer="B.Cu", hide_ref=True)
-# LEDs on TOP near the USB (visible)
-P(LED, "D1", "PWR", 146, 181.2, 90, {"1":"LED_PWR_A","2":"GND"}, "D1")
-P(LED, "D2", "CHG", 149.4, 181.2, 90, {"1":"LED_CHG_A","2":"CHG_STAT"}, "D2")
+# LEDs on TOP near the USB (visible; values hidden — the PWR/CHG extras label them)
+P(LED, "D1", "PWR", 146, 181.2, 90, {"1":"LED_PWR_A","2":"GND"}, "D1", hide_ref=True, hide_value=True)
+P(LED, "D2", "CHG", 149.4, 181.2, 90, {"1":"LED_CHG_A","2":"CHG_STAT"}, "D2", hide_ref=True, hide_value=True)
 # RF rail bulk (top-left, under the elevated nRF module = low parts only)
 P("Capacitor_SMD:CP_Elec_6.3x7.7", "C8", "220uF", 119, 136, 0, {"1":"+3V3_RF","2":"GND"}, "C8")
-P(C12F, "C9", "10uF", 111.5, 120.5, 90, {"1":"+3V3_RF","2":"GND"}, "C9", hide_ref=True)
-P(C08, "C10", "100nF", 110.4, 125.2, 90, {"1":"+3V3_RF","2":"GND"}, "C10", hide_ref=True)
-# battery divider (left field)
-P(R08, "R15", "47k", 116, 142, 90, {"1":"VBAT_SW","2":"VBAT_SENSE"}, "R15", hide_ref=True)
-P(R08, "R16", "15k", 119, 142, 90, {"1":"VBAT_SENSE","2":"GND"}, "R16", hide_ref=True)
-P(C08, "C11", "100nF", 122, 142, 90, {"1":"VBAT_SENSE","2":"GND"}, "C11", hide_ref=True)
+P(C12F, "C9", "10uF", 111.5, 120.5, 90, {"1":"+3V3_RF","2":"GND"}, "C9", hide_ref=True, hide_value=True)
+P(C08, "C10", "100nF", 110.4, 125.2, 90, {"1":"+3V3_RF","2":"GND"}, "C10", hide_ref=True, hide_value=True)
+# battery divider (left field; values hidden — one note labels the trio)
+P(R08, "R15", "47k", 116, 142, 90, {"1":"VBAT_SW","2":"VBAT_SENSE"}, "R15", hide_ref=True, hide_value=True)
+P(R08, "R16", "15k", 119, 142, 90, {"1":"VBAT_SENSE","2":"GND"}, "R16", hide_ref=True, hide_value=True)
+P(C08, "C11", "100nF", 122, 142, 90, {"1":"VBAT_SENSE","2":"GND"}, "C11", hide_ref=True, hide_value=True)
 
 # soft-power diodes (V1-matched, 1N4001):
 #  D3 sense-protect: anode=BTN_SENSE (Teensy pin4), cathode=PWRBTN (button/2808 pinA)
@@ -209,19 +248,39 @@ for i, (hx, hy) in enumerate([(103.65,103.7),(179.65,103.7),(103.65,188.0),(179.
     P("MountingHole:MountingHole_3.2mm_M3", f"H{i+1}", "M3", hx, hy, 0, {}, f"H{i+1}", hide_ref=True)
 
 # ── board text/graphics ────────────────────────────────────────────
-def silk(text, x, y, size=1.0, layer="F.SilkS", mirror=False, rot=0):
-    j = ' (justify mirror)' if mirror else ''
+def silk(text, x, y, size=1.0, layer="F.SilkS", mirror=False, rot=0, justify=None):
+    parts = (['mirror'] if mirror else []) + ([justify] if justify else [])
+    j = f' (justify {" ".join(parts)})' if parts else ''
     return (f'(gr_text "{text}" (at {x} {y} {rot}) (layer "{layer}") (uuid "{U()}") '
             f'(effects (font (size {size} {size}) (thickness 0.15)){j}))')
 
 extras = [
     '(gr_rect (start 100 100) (end 183.3 191.7) (stroke (width 0.1) (type solid)) (fill no) (layer "Edge.Cuts") (uuid "%s"))' % U(),
-    silk("TXV2 rev-A", 141.5, 101.5, 1.5),
+    silk("TXV2 rev-A", 159, 158, 1.1),                 # moved off the crowded top into the gap below the ESP
+    silk("ESP SPARE GPIO (A / B)", 159, 161, 0.7),
+    # MCU names INSIDE the sockets — the module hides them once fitted, but marks which socket is which
+    silk("TEENSY 4.1", 133.6, 131, 1.3),
+    silk("microSD exits ^ (top edge)", 133.6, 105, 0.75),   # SD end now at the clear top edge
+    silk("USB (program) v", 133.6, 157, 0.75),              # USB end now at the bottom
+    silk("ESP32-S3", 159.4, 128, 1.3),
+    silk("< USB end", 159.4, 106.5, 0.9),
+    # edge-connector USE labels, anchored INTERIOR so they never run off the board edge
+    # left-edge connectors: labels run vertically in the clear strip against the board edge
+    silk("TRIMS", 101.5, 130, 0.7, rot=90),
+    silk("GIMBAL L", 101.5, 151, 0.65, rot=90),
+    silk("KNOBS", 101.5, 168, 0.7, rot=90),
+    silk("5V BUCK", 114, 153.5, 0.7, justify='left'),
+    silk("5V BUCK-N", 114, 161.5, 0.7, justify='left'),
+    # right-edge connectors: labels sit in the clear gaps between the bulky XH housings
+    silk("WS2812", 176, 120, 0.6),
+    silk("GIMBAL R", 176, 135.5, 0.6),
+    silk("NEXTION", 175.2, 144, 0.7, rot=90),
+    silk("QWIIC", 174.5, 156, 0.7, rot=90),
+    silk("I2C", 168, 176, 0.75, justify='right'),
+    silk("E01 module + antenna overhang ^", 103.5, 117, 0.55, justify='left'),
+    silk("VBAT divider 47k/15k", 112, 146.2, 0.6, justify='left'),
     silk("USB-C CHARGE (back)", 150, 184.5, 0.8),
     silk("PWR", 146, 179.2, 0.7), silk("CHG", 149.6, 179.2, 0.7),
-    silk("nRF24 module over this area", 112.5, 137.8, 0.7),
-    silk("Teensy USB ^", 133.6, 103, 0.8),
-    silk("ESP32 USB ^", 159.4, 103, 0.8),
 ]
 
 def zone(layer):
