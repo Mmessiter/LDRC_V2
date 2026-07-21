@@ -153,7 +153,7 @@ P("TXV2:DevKitC1_Socket", "U2", "ESP32-S3-DevKitC", 148, 102, 0, DK_NETS, "U2", 
 # ROTATED 180 (Malcolm 2026-07-21): with pin1/GND at top-left the E01 module body
 # collided with the Teensy; pin1 now bottom-right so the module extends up-left off-board.
 # Anchor moved to old pin8 position so the socket occupies the same board area.
-P("TXV2:NRF24_Socket_2x4", "U3", "nRF24L01", 123.6, 112.5, 180, NRF_NETS, "U3",
+P("TXV2:NRF24_Socket_2x4", "U3", "nRF24L01", 121.6, 112.5, 180, NRF_NETS, "U3",
   models=[(f"{KMOD}/Connector_PinSocket_2.54mm.3dshapes/PinSocket_2x04_P2.54mm_Vertical.step", (1.27, 3.81, 0)),
           (f"{PRJ}/nrf24e01.wrl", (0, 0, 0))])
 # 2808 rotated 90 deg + dropped low so it clears the Teensy SD-card end (bottom of U1)
