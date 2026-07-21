@@ -144,7 +144,7 @@ KMOD = "${KICAD10_3DMODEL_DIR}"
 PSOCK = f"{KMOD}/Connector_PinSocket_2.54mm.3dshapes/PinSocket_1x%02d_P2.54mm_Vertical.step"
 PRJ = "${KIPRJMOD}/models"
 # Teensy rotated 180 (Malcolm: try flipping so the microSD/USB end swaps away from the 2808)
-P("TXV2:Teensy41_Socket", "U1", "Teensy 4.1", 141.24, 160.42, 180, TEENSY_NETS, "U1", hide_value=True,
+P("TXV2:Teensy41_Socket", "U1", "Teensy 4.1", 141.99, 160.42, 180, TEENSY_NETS, "U1", hide_value=True,
   models=[(PSOCK % 24, (0, 0, 0)), (PSOCK % 24, (15.24, 0, 0)),
           (f"{PRJ}/teensy41.wrl", (0, 0, 0))])
 P("TXV2:DevKitC1_Socket", "U2", "ESP32-S3-DevKitC", 148, 102, 0, DK_NETS, "U2", hide_value=True,
@@ -153,7 +153,7 @@ P("TXV2:DevKitC1_Socket", "U2", "ESP32-S3-DevKitC", 148, 102, 0, DK_NETS, "U2", 
 # ROTATED 180 (Malcolm 2026-07-21): with pin1/GND at top-left the E01 module body
 # collided with the Teensy; pin1 now bottom-right so the module extends up-left off-board.
 # Anchor moved to old pin8 position so the socket occupies the same board area.
-P("TXV2:NRF24_Socket_2x4", "U3", "nRF24L01", 122.5, 112.5, 180, NRF_NETS, "U3",
+P("TXV2:NRF24_Socket_2x4", "U3", "nRF24L01", 123.6, 112.5, 180, NRF_NETS, "U3",
   models=[(f"{KMOD}/Connector_PinSocket_2.54mm.3dshapes/PinSocket_2x04_P2.54mm_Vertical.step", (1.27, 3.81, 0)),
           (f"{PRJ}/nrf24e01.wrl", (0, 0, 0))])
 # 2808 rotated 90 deg + dropped low so it clears the Teensy SD-card end (bottom of U1)
@@ -182,7 +182,7 @@ P(XH.format(n=4), "J6", "GIMBAL R", 106, 147, 270, {"1":"+3V3_T","2":"GIMBAL1","
 P(XH.format(n=4), "J7", "GIMBAL L", 178, 124, 270, {"1":"+3V3_T","2":"GIMBAL3","3":"GIMBAL4","4":"GND"}, "J7", hide_value=True)
 P(XH.format(n=6), "J8", "KNOBS", 106, 162, 270,
   {"1":"+3V3_T","2":"KNOB5","3":"KNOB6","4":"KNOB7","5":"KNOB8","6":"GND"}, "J8", hide_value=True)
-P(XH.format(n=9), "J9", "SWITCHES", 121.8, 185.8, 0,
+P(XH.format(n=9), "J9", "SWITCHES", 119.8, 187.1, 0,
   {str(i+1): f"SW{i+1}" for i in range(8)} | {"9":"GND"}, "J9")
 P(XH.format(n=9), "J10", "TRIMS", 106, 120, 270,
   {str(i+1): f"TRIM{i+1}" for i in range(8)} | {"9":"GND"}, "J10", hide_value=True)
@@ -190,14 +190,13 @@ P(XH.format(n=3), "J11", "RGB LED", 178, 111, 270, {"1":"+5V","2":"WS2812_OUT","
 P("Connector_JST:JST_SH_BM04B-SRSS-TB_1x04-1MP_P1.00mm_Vertical", "J12", "QWIIC", 178, 156, 270,
   {"1":"GND","2":"+3V3_T","3":"I2C_SDA","4":"I2C_SCL","MP":"GND"}, "J12", hide_value=True)
 P(XH.format(n=4), "J13", "I2C", 132.8, 172.5, 270, {"1":"GND","2":"+3V3_T","3":"I2C_SDA","4":"I2C_SCL"}, "J13", hide_value=True)
-P(XH.format(n=2), "J14", "RTC", 122.5, 117.5, 270, {"1":"RTC_VBAT","2":"GND"}, "J14")
+P(XH.format(n=2), "J14", "RTC", 119.5, 117.5, 270, {"1":"RTC_VBAT","2":"GND"}, "J14")
 P("Connector_PinHeader_2.54mm:PinHeader_1x12_P2.54mm_Vertical", "J15", "ESP-A", 145.8, 163.05, 90,
   {"1":"ESP_G4","2":"ESP_G5","3":"ESP_G6","4":"ESP_G7","5":"ESP_G15","6":"ESP_G16","7":"ESP_G3",
    "8":"ESP_G46","9":"ESP_G10","10":"ESP_G11","11":"ESP_G12","12":"ESP_G13"}, "J15", hide_value=True)
 P("Connector_PinHeader_2.54mm:PinHeader_1x12_P2.54mm_Vertical", "J16", "ESP-B", 145.8, 166.75, 90,
   {"1":"ESP_G14","2":"ESP_G1","3":"ESP_G2","4":"ESP_G42","5":"ESP_G41","6":"ESP_G40","7":"ESP_G39",
    "8":"ESP_G21","9":"ESP_G45","10":"ESP_G47","11":"ESP_G48","12":"ESP_3V3"}, "J16", hide_value=True)
-P(XH.format(n=2), "J17", "BUZZ", 168.6, 187.7, 0, {"1":"BUZZER","2":"GND"}, "J17")
 P("Battery:Battery_Panasonic_CR2032-VS1N_Vertical_CircularHoles", "BT1", "CR2032", 153, 177, 0,
   {"1":"RTC_VBAT","2":"GND"}, "BT1")
 
@@ -207,19 +206,19 @@ LED = "LED_SMD:LED_0805_2012Metric"
 
 # charger cluster (BACK, around U7 at 128,176)
 P("Inductor_SMD:L_Vishay_IHLP-2020", "L1", "1uH", 132, 148.5, 0, {"1":"PMID","2":"SW_CHG"}, "L1", layer="B.Cu")
-back = [("C1","1uF",C08,129,122,{"1":"VBUS_USB","2":"GND"}),
-        ("C2","10uF",C12F,132,122,{"1":"PMID","2":"GND"}),
-        ("C3","10uF",C12F,135,122,{"1":"PMID","2":"GND"}),
-        ("C4","10uF",C12F,138,122,{"1":"VBAT_RAW","2":"GND"}),
-        ("C5","47pF",C08,129,126,{"1":"VBAT_RAW","2":"GND"}),
-        ("C6","47nF",C08,132,126,{"1":"BTST","2":"SW_CHG"}),
-        ("C7","4.7uF",C08,135,126,{"1":"REGN","2":"GND"}),
-        ("R1","330R",R08,138,133,{"1":"MID_SENSE","2":"CELL_MID"}),
-        ("R2","68R",R12F,129,155,{"1":"CB_PATH","2":"CELL_MID"}),
+back = [("C1","1uF",C08,130.4,122,{"1":"VBUS_USB","2":"GND"}),
+        ("C2","10uF",C12F,133.4,122,{"1":"PMID","2":"GND"}),
+        ("C3","10uF",C12F,136.4,122,{"1":"PMID","2":"GND"}),
+        ("C4","10uF",C12F,139.4,122,{"1":"VBAT_RAW","2":"GND"}),
+        ("C5","47pF",C08,130.4,126,{"1":"VBAT_RAW","2":"GND"}),
+        ("C6","47nF",C08,133.4,126,{"1":"BTST","2":"SW_CHG"}),
+        ("C7","4.7uF",C08,136.4,126,{"1":"REGN","2":"GND"}),
+        ("R1","330R",R08,139.4,133,{"1":"MID_SENSE","2":"CELL_MID"}),
+        ("R2","68R",R12F,131.8,155.3,{"1":"CB_PATH","2":"CELL_MID"}),
         ("R3","68R",R12F,137.5,150,{"1":"CB_PATH","2":"CELL_MID"}),
-        ("R4","5.11k",R08,132,133,{"1":"REGN","2":"CHG_TS"}),
-        ("R5","7.5k",R08,135,133,{"1":"CHG_TS","2":"GND"}),
-        ("R6","374R",R08,129,133,{"1":"CHG_ILIM","2":"GND"}),
+        ("R4","5.11k",R08,133.4,133,{"1":"REGN","2":"CHG_TS"}),
+        ("R5","7.5k",R08,136.4,133,{"1":"CHG_TS","2":"GND"}),
+        ("R6","374R",R08,130.4,133,{"1":"CHG_ILIM","2":"GND"}),
         ("R7","5.1k",R08,138,158.5,{"1":"USB_CC1","2":"GND"}),
         ("R8","5.1k",R08,135,159.5,{"1":"USB_CC2","2":"GND"}),
         ("R9","470R",R08,136,155,{"1":"VBUS_USB","2":"LED_PWR_A"}),
@@ -263,11 +262,11 @@ def silk(text, x, y, size=1.0, layer="F.SilkS", mirror=False, rot=0, justify=Non
 extras = [
     '(gr_rect (start 100 100) (end 183.3 191.7) (stroke (width 0.1) (type solid)) (fill no) (layer "Edge.Cuts") (uuid "%s"))' % U(),
     silk("TXV2 rev-A", 159, 158, 1.1),                 # moved off the crowded top into the gap below the ESP
-    silk("ESP SPARE GPIO (A / B)", 159, 161, 0.7),
+    silk("ESP SPARE GPIO", 159, 160.2, 0.6),
     # MCU names INSIDE the sockets — the module hides them once fitted, but marks which socket is which
-    silk("TEENSY 4.1", 133.6, 131, 1.3),
-    silk("microSD exits ^ (top edge)", 133.6, 105, 0.75),   # SD end now at the clear top edge
-    silk("USB (program) v", 133.6, 157, 0.75),              # USB end now at the bottom
+    silk("TEENSY 4.1", 134.35, 131, 1.3),
+    silk("microSD exits ^ (top edge)", 134.35, 105, 0.75),   # SD end now at the clear top edge
+    silk("USB (program) v", 134.35, 157, 0.75),              # USB end now at the bottom
     silk("ESP32-S3", 159.4, 128, 1.3),
     silk("< USB end", 159.4, 106.5, 0.9),
     # edge-connector USE labels, anchored INTERIOR so they never run off the board edge
@@ -281,10 +280,9 @@ extras = [
     silk("RGB LED", 176, 120, 0.6),
     silk("GIMBAL L", 176, 135.5, 0.6),
     silk("NEXTION", 175.2, 144, 0.7, rot=90),
-    silk("QWIIC", 174.5, 156, 0.7, rot=90),
+    silk("QWIIC I2C", 174.5, 156, 0.6, rot=90),
     silk("E01 module + antenna overhang ^", 107, 102.4, 0.55, justify='left'),
     silk("VBAT divider 47k/15k", 112, 146.2, 0.6, justify='left'),
-    silk("USB-C CHARGE (back)", 150, 184.5, 0.8),
     silk("PWR", 146, 179.2, 0.7), silk("CHG", 149.6, 179.2, 0.7),
 ]
 
