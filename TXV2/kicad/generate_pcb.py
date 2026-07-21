@@ -171,7 +171,7 @@ back = [("C1","1uF",C08,129,122,{"1":"VBUS_USB","2":"GND"}),
         ("C7","4.7uF",C08,135,126,{"1":"REGN","2":"GND"}),
         ("R1","330R",R08,138,133,{"1":"MID_SENSE","2":"CELL_MID"}),
         ("R2","68R",R12F,129,155,{"1":"CB_PATH","2":"CELL_MID"}),
-        ("R3","68R",R12F,132.5,155,{"1":"CB_PATH","2":"CELL_MID"}),
+        ("R3","68R",R12F,132.5,152.5,{"1":"CB_PATH","2":"CELL_MID"}),
         ("R4","5.11k",R08,132,133,{"1":"REGN","2":"CHG_TS"}),
         ("R5","7.5k",R08,135,133,{"1":"CHG_TS","2":"GND"}),
         ("R6","374R",R08,129,133,{"1":"CHG_ILIM","2":"GND"}),
@@ -225,10 +225,17 @@ extras = [
 ]
 
 def zone(layer):
+    cp = "(connect_pads yes (clearance 0.3))" if layer == "In1.Cu" else "(connect_pads (clearance 0.4))"
     return f'''(zone (net {N("GND")}) (net_name "GND") (layer "{layer}") (uuid "{U()}")
-	(hatch edge 0.5) (connect_pads (clearance 0.4)) (min_thickness 0.2) (filled_areas_thickness no)
+	(hatch edge 0.5) {cp} (min_thickness 0.2) (filled_areas_thickness no)
 	(fill yes (thermal_gap 0.4) (thermal_bridge_width 0.4))
 	(polygon (pts (xy 100 100) (xy 183.3 100) (xy 183.3 191.7) (xy 100 191.7))))'''
+
+def local_qfn_pour():
+    return f'''(zone (net {N("GND")}) (net_name "GND") (layer "B.Cu") (uuid "{U()}")
+	(hatch edge 0.5) (priority 2) (connect_pads yes (clearance 0.13)) (min_thickness 0.13) (filled_areas_thickness no)
+	(fill yes (thermal_gap 0.13) (thermal_bridge_width 0.2) (island_removal_mode 1))
+	(polygon (pts (xy 129.2 137.2) (xy 134.8 137.2) (xy 134.8 142.8) (xy 129.2 142.8))))'''
 
 header_top = '''(kicad_pcb
 	(version 20260206)
@@ -255,7 +262,7 @@ header_top = '''(kicad_pcb
 		(tenting (front yes) (back yes)))
 '''
 
-body = "\n".join(fps) + "\n" + zone("F.Cu") + "\n" + zone("B.Cu") + "\n" + zone("In1.Cu") + "\n" + "\n".join(extras)
+body = "\n".join(fps) + "\n" + zone("F.Cu") + "\n" + zone("B.Cu") + "\n" + zone("In1.Cu") + "\n" + local_qfn_pour() + "\n" + "\n".join(extras)
 netdecl = "\n".join(f'\t(net {i} "{n}")' for n, i in sorted(NETS.items(), key=lambda kv: kv[1]))
 out = header_top + '\t(net 0 "")\n' + netdecl + "\n\t" + body.replace("\n", "\n\t") + "\n)\n"
 open(OUT, "w").write(out)
