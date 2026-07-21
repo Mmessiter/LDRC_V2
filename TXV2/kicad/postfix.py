@@ -3,8 +3,8 @@ b=pcbnew.LoadBoard('TXV2_MAIN.kicad_pcb')
 mm=pcbnew.FromMM; V=pcbnew.VECTOR2I; FCu,BCu=pcbnew.F_Cu,pcbnew.B_Cu
 snap=json.load(open('label_snapshot.json'))
 OVR={'U4':(119.6,174.85,0.9),'L1':(132,144.3,0.8),'J5':(158.4,183.9,0.9),
-     'J17':(168.6,183.9,0.9),'J13':(132.8,168.5,0.8),'J3':(171.2,179.5,0.9),
-     'J14':(122.6,124.9,0.7),'U3':(119.8,115.0,0.7),'U8':(113.8,131.2,0.7)}
+     'J13':(132.8,168.5,0.8),'J3':(171.2,179.5,0.9),
+     'J14':(119.5,123.9,0.7),'U3':(121.3,115.2,0.7),'U8':(113.8,131.2,0.7)}
 SKIP={'J6','J7','J11'}   # names live in board gr_texts, values stay hidden
 for f in b.Footprints():
     r=f.GetReference(); v=f.Value()
@@ -23,6 +23,13 @@ for f in b.Footprints():
             v.SetTextAngle(pcbnew.EDA_ANGLE(0))
         else:
             v.SetVisible(False)
+# back-cluster labels track their (shifted) parts in x
+BACKROW={'C1','C2','C3','C4','C5','C6','C7','R1','R4','R5','R6'}
+for f in b.Footprints():
+    r=f.GetReference()
+    if r in BACKROW and r in snap['values'] and snap['values'][r].get('vis'):
+        v=f.Value()
+        v.SetPosition(V(f.GetPosition().x,int(mm(snap['values'][r]['y']))))
 def gt(txt,x,y,s=0.5,left=True):
     t=pcbnew.PCB_TEXT(b);t.SetText(txt);t.SetPosition(V(int(mm(x)),int(mm(y))))
     t.SetLayer(pcbnew.F_SilkS);t.SetTextSize(V(int(mm(s)),int(mm(s))));t.SetTextThickness(int(mm(0.1)))
@@ -36,19 +43,28 @@ for y1,y2,y3 in [(156,153.46,150.92),(164,161.46,158.92)]:
 # per-pin labels — left-edge connectors (labels right of pads at x110.4)
 for y,txt in zip([147,149.5,152,154.5],["3V3","V","H","GND"]): gt(txt,110.4,y,0.5)          # GIMBAL R (J6)
 for i,txt in enumerate(["3V3","5","6","7","8","GND"]): gt(txt,110.4,162+2.5*i,0.5)          # KNOBS
-for i in range(8): gt(f"T{i+1}",110.4,120+2.5*i,0.45)                                        # TRIMS T1-T8
+TRIMN=["1L","1R","2U","2D","3U","3D","4R","4L"]
+for i in range(8): gt(TRIMN[i],110.4,120+2.5*i,0.45)                                     # TRIMS by channel
 gt("GND",110.4,140,0.45)                                                                     # TRIMS GND
 # right-edge connectors (labels left of pads)
 for y,txt in zip([124,126.5,129,131.5],["3V3","V","H","GND"]): gt(txt,172.9,y,0.5)          # GIMBAL L (J7)
 for y,txt in zip([111,113.5,116],["5V","DAT","GND"]): gt(txt,170.5,y,0.5)                   # RGB LED
 for y,txt in zip([139,141.54,144.08,146.62,149.16],["GND","-","5V","RX","TX"]): gt(txt,172.6,y,0.5)  # NEXTION
 # SWITCHES pin digits + GND
-for i in range(8): gt(str(i+1),121.6+2.525*i,183.4,0.5)
-gt("G",141.8,183.4,0.5)
+for i in range(8): gt(str(i+1),119.6+2.525*i,183.5,0.45)
+gt("GND",138.9,183.5,0.45)
+# ESP spare GPIO numbers
+GA=["4","5","6","7","15","16","3","46","10","11","12","13"]
+GB=["14","1","2","42","41","40","39","21","45","47","48","3V"]
+for i in range(12):
+    t=pcbnew.PCB_TEXT(b);t.SetText(GA[i]);t.SetPosition(V(int(mm(145.8+2.536*i)),int(mm(161.7))))
+    t.SetLayer(pcbnew.F_SilkS);t.SetTextSize(V(int(mm(0.45)),int(mm(0.45))));t.SetTextThickness(int(mm(0.1)));b.Add(t)
+    t=pcbnew.PCB_TEXT(b);t.SetText(GB[i]);t.SetPosition(V(int(mm(145.8+2.536*i)),int(mm(168.5))))
+    t.SetLayer(pcbnew.F_SilkS);t.SetTextSize(V(int(mm(0.45)),int(mm(0.45))));t.SetTextThickness(int(mm(0.1)));b.Add(t)
 # I2C + BAL + RTC pin marks
 for y,txt in zip([172.5,175,177.5,180],["G","3V","SD","SC"]): gt(txt,134.4,y,0.45)
 gt("MID",139.6,170.6,0.5); gt("GND",142.6,170.6,0.5)
-gt("+",119.9,117.5,0.5)   # RTC pin1 = coin-cell +
+gt("+",117.4,117.5,0.5)   # RTC pin1 = coin-cell +
 # LED anodes
 gt("+",144.8,180.2,0.7); gt("+",150.7,180.2,0.7)
 # QFN thermal drills + islands + back mirror
