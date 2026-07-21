@@ -99,8 +99,8 @@ DK_NETS = {str(i + 1): n for i, n in enumerate(DK_J1) if n}
 DK_NETS.update({str(i + 23): n for i, n in enumerate(DK_J3) if n})
 
 NRF_NETS = {"1":"GND","2":"+3V3_RF","3":"NRF_CE","4":"NRF_CSN","5":"SPI_SCK","6":"SPI_MOSI","7":"SPI_MISO"}
-P2808 = {"1":"VBAT_RAW","2":"VBAT_RAW","3":"GND","4":"GND","6":"OFF_2808","7":"CTRL_TP",
-         "8":"VBAT_SW","9":"VBAT_SW","10":"GND","11":"GND","12":"PWRBTN"}
+P2808 = {"1":"VBAT_RAW","2":"VBAT_RAW","3":"GND","4":"GND","6":"LATCH_OFF","7":"CTRL_TP",
+         "8":"VBAT_SW","9":"VBAT_SW","10":"GND","11":"GND","12":"PWR_A"}
          # V1-matched: pin A(12) -> button -> GND = push-ON-only (brush-proof);
          # PWRBTN also to Teensy pin4 (digital INPUT_PULLUP, LOW=pressed);
          # OFF(6) <- Teensy pin5 drives HIGH to power off; ON(5) unused; 13=B unused
@@ -119,7 +119,7 @@ XH = "Connector_JST:JST_XH_B{n}B-XH-A_1x{n:02d}_P2.50mm_Vertical"
 P("TXV2:Teensy41_Socket", "U1", "Teensy 4.1", 126, 106, 0, TEENSY_NETS, "U1")
 P("TXV2:DevKitC1_Socket", "U2", "ESP32-S3-DevKitC", 148, 106, 0, DK_NETS, "U2")
 P("TXV2:NRF24_Socket_2x4", "U3", "nRF24 PA/LNA", 109.5, 106, 0, NRF_NETS, "U3")
-P("TXV2:Pololu2808_Socket", "U4", "Pololu 2808", 124, 168.5, 0, P2808, "U4")
+P("TXV2:Pololu2808_PSW03C", "U4", "Pololu 2808", 120, 158, 0, P2808, "U4")
 P("TXV2:Buck3pin_VGV", "U5", "5V buck MAIN", 111, 164, 90, BUCK_M, "U5")
 P("TXV2:Buck3pin_VGV", "U9", "5V buck NEXT", 111, 172, 90, BUCK_N, "U9")
 P("Package_DFN_QFN:HVQFN-24-1EP_4x4mm_P0.5mm_EP2.6x2.6mm_ThermalVias", "U7", "BQ25887",
@@ -132,7 +132,7 @@ P("Connector_PinHeader_2.54mm:PinHeader_1x05_P2.54mm_Vertical", "J2", "NEXTION",
 P("Connector_AMASS:AMASS_XT30U-F_1x02_P5.0mm_Vertical", "J3", "BATT", 110.5, 186, 0,
   {"1":"VBAT_RAW","2":"GND"}, "J3")
 P(XH.format(n=2), "J4", "BAL", 115, 178, 0, {"1":"CELL_MID","2":"GND"}, "J4")
-P(XH.format(n=2), "J5", "BTN", 158.4, 187.7, 0, {"1":"PWRBTN","2":"GND"}, "J5")
+P(XH.format(n=2), "J5", "BTN", 158.4, 187.7, 0, {"1":"GND","2":"BTN_NODE"}, "J5")
 P(XH.format(n=4), "J6", "GIMBAL L", 106, 147, 270, {"1":"+3V3_T","2":"GIMBAL1","3":"GIMBAL2","4":"GND"}, "J6")
 P(XH.format(n=4), "J7", "GIMBAL R", 178, 124, 270, {"1":"+3V3_T","2":"GIMBAL3","3":"GIMBAL4","4":"GND"}, "J7")
 P(XH.format(n=6), "J8", "KNOBS", 106, 162, 270,
@@ -201,8 +201,8 @@ P(C08, "C11", "100nF", 122, 142, 90, {"1":"VBAT_SENSE","2":"GND"}, "C11", hide_r
 #     -> button grounding PWRBTN pulls the sense LOW; blocks any high on pinA from the MCU pin
 #  D4 off-isolate: anode=LATCH_OFF (Teensy pin5), cathode=OFF_2808 (2808 OFF)
 #     -> MCU drives OFF high to power down; blocks back-feed
-P("Diode_SMD:D_SMA", "D3", "1N4001", 154, 132, 0, {"1":"PWRBTN","2":"BTN_SENSE"}, "D3", layer="B.Cu", hide_ref=True)
-P("Diode_SMD:D_SMA", "D4", "1N4001", 154, 128, 0, {"1":"OFF_2808","2":"LATCH_OFF"}, "D4", layer="B.Cu", hide_ref=True)
+P("Diode_SMD:D_SMA", "D3", "1N4001", 154, 132, 0, {"1":"BTN_NODE","2":"BTN_SENSE"}, "D3", layer="B.Cu", hide_ref=True)
+P("Diode_SMD:D_SMA", "D4", "1N4001", 154, 128, 0, {"1":"BTN_NODE","2":"PWR_A"}, "D4", layer="B.Cu", hide_ref=True)
 
 # mounting holes
 for i, (hx, hy) in enumerate([(103.65,103.7),(179.65,103.7),(103.65,188.0),(179.65,188.0)]):
