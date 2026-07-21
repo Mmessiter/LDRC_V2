@@ -153,16 +153,16 @@ P("TXV2:DevKitC1_Socket", "U2", "ESP32-S3-DevKitC", 148, 102, 0, DK_NETS, "U2", 
 # ROTATED 180 (Malcolm 2026-07-21): with pin1/GND at top-left the E01 module body
 # collided with the Teensy; pin1 now bottom-right so the module extends up-left off-board.
 # Anchor moved to old pin8 position so the socket occupies the same board area.
-P("TXV2:NRF24_Socket_2x4", "U3", "nRF24L01", 117, 113.62, 180, NRF_NETS, "U3",
+P("TXV2:NRF24_Socket_2x4", "U3", "nRF24L01", 122.5, 112.5, 180, NRF_NETS, "U3",
   models=[(f"{KMOD}/Connector_PinSocket_2.54mm.3dshapes/PinSocket_2x04_P2.54mm_Vertical.step", (1.27, 3.81, 0)),
           (f"{PRJ}/nrf24e01.wrl", (0, 0, 0))])
 # 2808 rotated 90 deg + dropped low so it clears the Teensy SD-card end (bottom of U1)
 P("TXV2:Pololu2808_PSW03C", "U4", "Pololu 2808", 112, 181, 90, P2808, "U4",
   models=[(f"{PRJ}/pololu2808.wrl", (0, 0, 0))])
 # bucks raised clear of the (now wide, low) 2808 so the bottom-left uncrowds
-P("TXV2:Buck3pin_VGV", "U5", "5V buck MAIN", 111, 156, 90, BUCK_M, "U5", hide_value=True,
+P("TXV2:Buck3pin_VGV", "U5", "5V buck MAIN", 113, 156, 90, BUCK_M, "U5", hide_value=True,
   models=[(f"{PRJ}/buck3pin.wrl", (0, 0, 0))])
-P("TXV2:Buck3pin_VGV", "U9", "5V buck NEXT", 111, 164, 90, BUCK_N, "U9", hide_value=True,
+P("TXV2:Buck3pin_VGV", "U9", "5V buck NEXT", 113, 164, 90, BUCK_N, "U9", hide_value=True,
   models=[(f"{PRJ}/buck3pin.wrl", (0, 0, 0))])
 P("Package_DFN_QFN:HVQFN-24-1EP_4x4mm_P0.5mm_EP2.6x2.6mm_ThermalVias", "U7", "BQ25887",
   132, 140, 0, BQ, "U7", layer="B.Cu")
@@ -190,7 +190,7 @@ P(XH.format(n=3), "J11", "RGB LED", 178, 111, 270, {"1":"+5V","2":"WS2812_OUT","
 P("Connector_JST:JST_SH_BM04B-SRSS-TB_1x04-1MP_P1.00mm_Vertical", "J12", "QWIIC", 178, 156, 270,
   {"1":"GND","2":"+3V3_T","3":"I2C_SDA","4":"I2C_SCL","MP":"GND"}, "J12", hide_value=True)
 P(XH.format(n=4), "J13", "I2C", 132.8, 172.5, 270, {"1":"GND","2":"+3V3_T","3":"I2C_SDA","4":"I2C_SCL"}, "J13", hide_value=True)
-P(XH.format(n=2), "J14", "RTC", 122.3, 116, 270, {"1":"RTC_VBAT","2":"GND"}, "J14")
+P(XH.format(n=2), "J14", "RTC", 122.5, 117.5, 270, {"1":"RTC_VBAT","2":"GND"}, "J14")
 P("Connector_PinHeader_2.54mm:PinHeader_1x12_P2.54mm_Vertical", "J15", "ESP-A", 145.8, 163.05, 90,
   {"1":"ESP_G4","2":"ESP_G5","3":"ESP_G6","4":"ESP_G7","5":"ESP_G15","6":"ESP_G16","7":"ESP_G3",
    "8":"ESP_G46","9":"ESP_G10","10":"ESP_G11","11":"ESP_G12","12":"ESP_G13"}, "J15", hide_value=True)
@@ -221,7 +221,7 @@ back = [("C1","1uF",C08,129,122,{"1":"VBUS_USB","2":"GND"}),
         ("R5","7.5k",R08,135,133,{"1":"CHG_TS","2":"GND"}),
         ("R6","374R",R08,129,133,{"1":"CHG_ILIM","2":"GND"}),
         ("R7","5.1k",R08,138,158.5,{"1":"USB_CC1","2":"GND"}),
-        ("R8","5.1k",R08,129,159,{"1":"USB_CC2","2":"GND"}),
+        ("R8","5.1k",R08,135,159.5,{"1":"USB_CC2","2":"GND"}),
         ("R9","470R",R08,136,155,{"1":"VBUS_USB","2":"LED_PWR_A"}),
         ("R10","470R",R08,139,155,{"1":"VBUS_USB","2":"LED_CHG_A"}),
         ("R12","4.7k",R08,152,155,{"1":"+3V3_T","2":"I2C_SDA"}),
@@ -234,8 +234,8 @@ P(LED, "D1", "PWR", 146, 181.2, 90, {"1":"GND","2":"LED_PWR_A"}, "D1", hide_ref=
 P(LED, "D2", "CHG", 149.4, 181.2, 90, {"1":"CHG_STAT","2":"LED_CHG_A"}, "D2", hide_ref=True, hide_value=True)   # pad1=cathode!
 # RF rail bulk (top-left, under the elevated nRF module = low parts only)
 P("Capacitor_SMD:CP_Elec_6.3x7.7", "C8", "220uF", 119, 136, 0, {"1":"+3V3_RF","2":"GND"}, "C8")
-P(C12F, "C9", "10uF", 111.5, 120.5, 90, {"1":"+3V3_RF","2":"GND"}, "C9", hide_ref=True, hide_value=True)
-P(C08, "C10", "100nF", 110.4, 125.2, 90, {"1":"+3V3_RF","2":"GND"}, "C10", hide_ref=True, hide_value=True)
+P(C12F, "C9", "10uF", 112, 117.3, 90, {"1":"+3V3_RF","2":"GND"}, "C9", hide_ref=True, hide_value=True)
+P(C08, "C10", "100nF", 114.6, 117.3, 90, {"1":"+3V3_RF","2":"GND"}, "C10", hide_ref=True, hide_value=True)
 # battery divider (left field; values hidden — one note labels the trio)
 P(R08, "R15", "47k", 116, 142, 90, {"1":"VBAT_SW","2":"VBAT_SENSE"}, "R15", hide_ref=True, hide_value=True)
 P(R08, "R16", "15k", 119, 142, 90, {"1":"VBAT_SENSE","2":"GND"}, "R16", hide_ref=True, hide_value=True)
@@ -273,17 +273,16 @@ extras = [
     # edge-connector USE labels, anchored INTERIOR so they never run off the board edge
     # left-edge connectors: labels run vertically in the clear strip against the board edge
     silk("TRIMS", 101.5, 130, 0.7, rot=90),
-    silk("GIMBAL L", 101.5, 151, 0.65, rot=90),
+    silk("GIMBAL R", 101.5, 151, 0.65, rot=90),   # swapped: board mounts upside-down vs gimbals
     silk("KNOBS", 101.5, 168, 0.7, rot=90),
-    silk("5V BUCK", 116.2, 153.5, 0.7, justify='left'),
-    silk("5V BUCK NEXTION", 116.2, 161.5, 0.7, justify='left'),
+    silk("5V BUCK", 118.4, 153.5, 0.7, justify='left'),
+    silk("5V BUCK NEXTION", 118.4, 161.5, 0.7, justify='left'),
     # right-edge connectors: labels sit in the clear gaps between the bulky XH housings
-    silk("WS2812", 176, 120, 0.6),
-    silk("GIMBAL R", 176, 135.5, 0.6),
+    silk("RGB LED", 176, 120, 0.6),
+    silk("GIMBAL L", 176, 135.5, 0.6),
     silk("NEXTION", 175.2, 144, 0.7, rot=90),
     silk("QWIIC", 174.5, 156, 0.7, rot=90),
-    silk("I2C", 168, 176, 0.75, justify='right'),
-    silk("E01 module + antenna overhang ^", 103.5, 117, 0.55, justify='left'),
+    silk("E01 module + antenna overhang ^", 107, 102.4, 0.55, justify='left'),
     silk("VBAT divider 47k/15k", 112, 146.2, 0.6, justify='left'),
     silk("USB-C CHARGE (back)", 150, 184.5, 0.8),
     silk("PWR", 146, 179.2, 0.7), silk("CHG", 149.6, 179.2, 0.7),

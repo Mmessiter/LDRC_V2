@@ -1,53 +1,63 @@
-import pcbnew, json, math
+import pcbnew, json
 b=pcbnew.LoadBoard('TXV2_MAIN.kicad_pcb')
 mm=pcbnew.FromMM; V=pcbnew.VECTOR2I; FCu,BCu=pcbnew.F_Cu,pcbnew.B_Cu
-gnd=b.GetNetcodeFromNetname('GND')
 snap=json.load(open('label_snapshot.json'))
-# label overrides (Malcolm's latest round) — win over the snapshot
-OVR={'U4':(119.6,174.85,0.9),'J14':(121.4,111.3,0.8),'U3':(115.5,116.3,0.8),'L1':(132,144.3,0.8),'J5':(158.4,183.9,0.9),
-     'J17':(168.6,183.9,0.9),'J13':(132.8,168.5,0.8),'J3':(171.2,179.5,0.9)}
-UNHIDE={'J13'}
+OVR={'U4':(119.6,174.85,0.9),'L1':(132,144.3,0.8),'J5':(158.4,183.9,0.9),
+     'J17':(168.6,183.9,0.9),'J13':(132.8,168.5,0.8),'J3':(171.2,179.5,0.9),
+     'J14':(122.6,124.9,0.7),'U3':(119.8,115.0,0.7),'U8':(113.8,131.2,0.7)}
+SKIP={'J6','J7','J11'}   # names live in board gr_texts, values stay hidden
 for f in b.Footprints():
     r=f.GetReference(); v=f.Value()
+    if r in SKIP: continue
     if r in OVR:
-        x,y,s=OVR[r]; v.SetVisible(True)
+        x,y,s=OVR[r]; v.SetVisible(True); v.SetLayer(pcbnew.F_SilkS)
         v.SetPosition(V(int(mm(x)),int(mm(y))))
         v.SetTextSize(V(int(mm(s)),int(mm(s)))); v.SetTextThickness(int(mm(0.13)))
-        v.SetTextAngle(pcbnew.EDA_ANGLE(-f.GetOrientation().AsDegrees()))
+        v.SetTextAngle(pcbnew.EDA_ANGLE(0))
     elif r in snap['values']:
         sv=snap['values'][r]
         if sv.get('vis'):
             v.SetVisible(True)
             v.SetPosition(V(int(mm(sv['x'])),int(mm(sv['y']))))
             v.SetTextSize(V(int(mm(sv['size'])),int(mm(sv['size'])))); v.SetTextThickness(int(mm(0.13)))
-            v.SetTextAngle(pcbnew.EDA_ANGLE(-f.GetOrientation().AsDegrees()))
+            v.SetTextAngle(pcbnew.EDA_ANGLE(0))
         else:
             v.SetVisible(False)
-# gr_text moves + adds
-for d in b.GetDrawings():
-    if isinstance(d,pcbnew.PCB_TEXT) and 'E01' in d.GetText():
-        d.SetPosition(V(int(mm(107)),int(mm(102.4))))
-def gt(txt,x,y,s=0.55):
+def gt(txt,x,y,s=0.5,left=True):
     t=pcbnew.PCB_TEXT(b);t.SetText(txt);t.SetPosition(V(int(mm(x)),int(mm(y))))
-    t.SetLayer(pcbnew.F_SilkS);t.SetTextSize(V(int(mm(s)),int(mm(s))));t.SetTextThickness(int(mm(0.11)))
-    t.SetHorizJustify(pcbnew.GR_TEXT_H_ALIGN_LEFT); b.Add(t)
-gt("square pad = GND",110.5,118.3)
-gt("3V3",110.2,147); gt("GND",110.2,154.7)      # GIMBAL R (J6) rail ends
-gt("3V3",110.2,162); gt("GND",110.2,174.7)      # KNOBS rail ends
-gt("GND",110.2,140.2)                            # TRIMS GND end
-gt("GND",139.2,183.3,0.5)                        # SWITCHES GND end
-gt("3V3",173.2,124,0.55); gt("GND",173.2,131.7,0.55)  # GIMBAL L (J7) rail ends
-gt("+",144.8,180.2,0.7); gt("+",150.7,180.2,0.7)      # LED anodes (pad 2 side)
+    t.SetLayer(pcbnew.F_SilkS);t.SetTextSize(V(int(mm(s)),int(mm(s))));t.SetTextThickness(int(mm(0.1)))
+    if left: t.SetHorizJustify(pcbnew.GR_TEXT_H_ALIGN_LEFT)
+    b.Add(t)
+# nRF marker
+gt("square pad = GND",105.2,114.6,0.5)
+# buck pin marks (bucks now at x113 -> marks at x114.4)
 for y1,y2,y3 in [(156,153.46,150.92),(164,161.46,158.92)]:
-    gt("IN",112.4,y1); gt("GND",112.4,y2); gt("OUT",112.4,y3)
-# QFN thermal vias to JLC 0.3 + islands
+    gt("IN",114.7,y1,0.55); gt("GND",114.7,y2,0.55); gt("OUT",114.7,y3,0.55)
+# per-pin labels — left-edge connectors (labels right of pads at x110.4)
+for y,txt in zip([147,149.5,152,154.5],["3V3","V","H","GND"]): gt(txt,110.4,y,0.5)          # GIMBAL R (J6)
+for i,txt in enumerate(["3V3","5","6","7","8","GND"]): gt(txt,110.4,162+2.5*i,0.5)          # KNOBS
+for i in range(8): gt(f"T{i+1}",110.4,120+2.5*i,0.45)                                        # TRIMS T1-T8
+gt("GND",110.4,140,0.45)                                                                     # TRIMS GND
+# right-edge connectors (labels left of pads)
+for y,txt in zip([124,126.5,129,131.5],["3V3","V","H","GND"]): gt(txt,172.9,y,0.5)          # GIMBAL L (J7)
+for y,txt in zip([111,113.5,116],["5V","DAT","GND"]): gt(txt,170.5,y,0.5)                   # RGB LED
+for y,txt in zip([139,141.54,144.08,146.62,149.16],["GND","-","5V","RX","TX"]): gt(txt,172.6,y,0.5)  # NEXTION
+# SWITCHES pin digits + GND
+for i in range(8): gt(str(i+1),121.6+2.525*i,183.4,0.5)
+gt("G",141.8,183.4,0.5)
+# I2C + BAL + RTC pin marks
+for y,txt in zip([172.5,175,177.5,180],["G","3V","SD","SC"]): gt(txt,134.4,y,0.45)
+gt("MID",139.6,170.6,0.5); gt("GND",142.6,170.6,0.5)
+gt("+",119.9,117.5,0.5)   # RTC pin1 = coin-cell +
+# LED anodes
+gt("+",144.8,180.2,0.7); gt("+",150.7,180.2,0.7)
+# QFN thermal drills + islands + back mirror
 u7=b.FindFootprintByReference('U7')
 for p in u7.Pads():
     if p.GetNumber()=='25' and p.GetDrillSize().x<mm(0.3):
         p.SetDrillSize(V(int(mm(0.3)),int(mm(0.3))))
         if p.GetSizeX()<mm(0.5): p.SetSize(V(int(mm(0.5)),int(mm(0.5))))
 for z in b.Zones(): z.SetIslandRemovalMode(pcbnew.ISLAND_REMOVAL_MODE_ALWAYS)
-# mirror all back text
 BACK={pcbnew.B_SilkS,pcbnew.B_Fab,pcbnew.B_Cu}
 for f in b.Footprints():
     for it in [f.Reference(),f.Value()]+list(f.GraphicalItems()):
