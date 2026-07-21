@@ -122,7 +122,7 @@ P("TXV2:NRF24_Socket_2x4", "U3", "nRF24 PA/LNA", 109.5, 106, 0, NRF_NETS, "U3")
 P("TXV2:Pololu2808_Socket", "U4", "Pololu 2808", 124, 168.5, 0, P2808, "U4")
 P("TXV2:Buck3pin_VGV", "U5", "5V buck MAIN", 111, 164, 90, BUCK_M, "U5")
 P("TXV2:Buck3pin_VGV", "U9", "5V buck NEXT", 111, 172, 90, BUCK_N, "U9")
-P("Package_DFN_QFN:HVQFN-24-1EP_4x4mm_P0.5mm_EP2.6x2.6mm", "U7", "BQ25887",
+P("Package_DFN_QFN:HVQFN-24-1EP_4x4mm_P0.5mm_EP2.6x2.6mm_ThermalVias", "U7", "BQ25887",
   132, 140, 0, BQ, "U7", layer="B.Cu")
 P("Package_TO_SOT_SMD:SOT-223-3_TabPin2", "U8", "AMS1117-3.3", 116.5, 127, 0,
   {"1":"GND","2":"+3V3_RF","3":"+5V","4":"+3V3_RF"}, "U8")
