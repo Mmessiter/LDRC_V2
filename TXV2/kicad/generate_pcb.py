@@ -150,7 +150,10 @@ P("TXV2:Teensy41_Socket", "U1", "Teensy 4.1", 141.24, 160.42, 180, TEENSY_NETS, 
 P("TXV2:DevKitC1_Socket", "U2", "ESP32-S3-DevKitC", 148, 102, 0, DK_NETS, "U2", hide_value=True,
   models=[(PSOCK % 22, (0, 0, 0)), (PSOCK % 22, (22.86, 0, 0)),
           (f"{PRJ}/devkitc.wrl", (0, 0, 0))])
-P("TXV2:NRF24_Socket_2x4", "U3", "nRF24L01", 109.5, 106, 0, NRF_NETS, "U3",
+# ROTATED 180 (Malcolm 2026-07-21): with pin1/GND at top-left the E01 module body
+# collided with the Teensy; pin1 now bottom-right so the module extends up-left off-board.
+# Anchor moved to old pin8 position so the socket occupies the same board area.
+P("TXV2:NRF24_Socket_2x4", "U3", "nRF24L01", 112.04, 113.62, 180, NRF_NETS, "U3",
   models=[(f"{KMOD}/Connector_PinSocket_2.54mm.3dshapes/PinSocket_2x04_P2.54mm_Vertical.step", (1.27, 3.81, 0)),
           (f"{PRJ}/nrf24e01.wrl", (0, 0, 0))])
 # 2808 rotated 90 deg + dropped low so it clears the Teensy SD-card end (bottom of U1)
@@ -168,11 +171,11 @@ P("Package_TO_SOT_SMD:SOT-223-3_TabPin2", "U8", "AMS1117-3.3", 116.5, 127, 0,
 P("Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12", "J1", "USB-C", 150, 189.2, 0, USB, "J1", layer="B.Cu")
 P("Connector_PinHeader_2.54mm:PinHeader_1x05_P2.54mm_Vertical", "J2", "NEXTION", 178, 139, 0,
   {"1":"GND","3":"+5V_NEXT","4":"NEXTION_RX","5":"NEXTION_TX"}, "J2", hide_value=True)
-P("Connector_AMASS:AMASS_XT30U-F_1x02_P5.0mm_Vertical", "J3", "BATT", 110.5, 186, 0,
-  {"1":"GND","2":"VBAT_RAW"}, "J3")
+P("Connector_AMASS:AMASS_XT30U-F_1x02_P5.0mm_Vertical", "J3", "BATT", 177.5, 179.5, 90,
+  {"1":"GND","2":"VBAT_RAW"}, "J3")   # right edge above M3 — battery sits that side (Malcolm)
   # POLARITY: XT30U-F pad 2 = the keyed '+' slot (lib silk marks it) — caught 2026-07-21,
   # pad1 had VBAT_RAW = reversed battery. NEVER swap back.
-P(XH.format(n=2), "J4", "BAL", 139, 174, 0, {"1":"CELL_MID","2":"GND"}, "J4")
+P(XH.format(n=2), "J4", "BAL", 140.5, 174, 0, {"1":"CELL_MID","2":"GND"}, "J4")
 P(XH.format(n=2), "J5", "BTN", 158.4, 187.7, 0, {"1":"GND","2":"BTN_NODE"}, "J5")
 P(XH.format(n=4), "J6", "GIMBAL L", 106, 147, 270, {"1":"+3V3_T","2":"GIMBAL1","3":"GIMBAL2","4":"GND"}, "J6", hide_value=True)
 P(XH.format(n=4), "J7", "GIMBAL R", 178, 124, 270, {"1":"+3V3_T","2":"GIMBAL3","3":"GIMBAL4","4":"GND"}, "J7", hide_value=True)
@@ -185,7 +188,7 @@ P(XH.format(n=9), "J10", "TRIMS", 106, 120, 270,
 P(XH.format(n=3), "J11", "WS2812", 178, 111, 270, {"1":"+5V","2":"WS2812_OUT","3":"GND"}, "J11", hide_value=True)
 P("Connector_JST:JST_SH_BM04B-SRSS-TB_1x04-1MP_P1.00mm_Vertical", "J12", "QWIIC", 178, 156, 270,
   {"1":"GND","2":"+3V3_T","3":"I2C_SDA","4":"I2C_SCL","MP":"GND"}, "J12", hide_value=True)
-P(XH.format(n=4), "J13", "I2C", 172.8, 172, 270, {"1":"GND","2":"+3V3_T","3":"I2C_SDA","4":"I2C_SCL"}, "J13", hide_value=True)
+P(XH.format(n=4), "J13", "I2C", 132.8, 172.5, 270, {"1":"GND","2":"+3V3_T","3":"I2C_SDA","4":"I2C_SCL"}, "J13", hide_value=True)
 P(XH.format(n=2), "J14", "RTC", 120, 112, 270, {"1":"RTC_VBAT","2":"GND"}, "J14")
 P("Connector_PinHeader_2.54mm:PinHeader_1x12_P2.54mm_Vertical", "J15", "ESP-A", 145.8, 163.05, 90,
   {"1":"ESP_G4","2":"ESP_G5","3":"ESP_G6","4":"ESP_G7","5":"ESP_G15","6":"ESP_G16","7":"ESP_G3",
@@ -271,8 +274,8 @@ extras = [
     silk("TRIMS", 101.5, 130, 0.7, rot=90),
     silk("GIMBAL L", 101.5, 151, 0.65, rot=90),
     silk("KNOBS", 101.5, 168, 0.7, rot=90),
-    silk("5V BUCK", 114, 153.5, 0.7, justify='left'),
-    silk("5V BUCK-N", 114, 161.5, 0.7, justify='left'),
+    silk("5V BUCK", 116.2, 153.5, 0.7, justify='left'),
+    silk("5V BUCK NEXTION", 116.2, 161.5, 0.7, justify='left'),
     # right-edge connectors: labels sit in the clear gaps between the bulky XH housings
     silk("WS2812", 176, 120, 0.6),
     silk("GIMBAL R", 176, 135.5, 0.6),
