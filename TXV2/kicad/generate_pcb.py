@@ -179,9 +179,14 @@ P(XH.format(n=2), "J4", "BAL", 140.5, 174, 0, {"1":"CELL_MID","2":"GND"}, "J4")
 P(XH.format(n=2), "J5", "BTN", 158.4, 187.7, 0, {"1":"GND","2":"BTN_NODE"}, "J5")
 P(XH.format(n=3), "J17", "TX MODULE", 167.9, 187.7, 0, {"1":"SIG","2":"VBAT_SW","3":"GND"}, "J17")
 # ^ JR-bay loom (ELRS/Crossfire etc): PPM from Teensy pin3, battery voltage, GND
-# gimbal labels swapped: board mounts upside-down vs the gimbal housings
-P(XH.format(n=4), "J6", "GIMBAL R", 106, 147, 270, {"1":"+3V3_T","2":"GIMBAL1","3":"GIMBAL2","4":"GND"}, "J6", hide_value=True)
-P(XH.format(n=4), "J7", "GIMBAL L", 178, 124, 270, {"1":"+3V3_T","2":"GIMBAL3","3":"GIMBAL4","4":"GND"}, "J7", hide_value=True)
+# gimbals: JST-PH 3-pin per AXIS — direct plug-in for FrSky M9 looms (identified 2026-07-22).
+# M9 loom FINAL 2026-07-22 (Malcolm CORRECTED + photo agrees: windows-facing, wires down => RED on RIGHT):
+# keyed wall on +y => red/3V3 lands on PAD 1. So: 1=3V3, 2=SIG, 3=GND. VERIFY WITH METER AT FIRST ASSEMBLY.
+PH3 = "Connector_JST:JST_PH_B3B-PH-K_1x03_P2.00mm_Vertical"
+P(PH3, "J6",  "GIM R V", 104.2, 146.5, 0, {"1":"+3V3_T","2":"GIMBAL1","3":"GND"}, "J6",  hide_value=True)
+P(PH3, "J6B", "GIM R H", 104.2, 154.0, 0, {"1":"+3V3_T","2":"GIMBAL2","3":"GND"}, "J6B", hide_value=True)
+P(PH3, "J7",  "GIM L V", 175.4, 122.3, 0, {"1":"+3V3_T","2":"GIMBAL3","3":"GND"}, "J7",  hide_value=True)
+P(PH3, "J7B", "GIM L H", 175.4, 130.2, 0, {"1":"+3V3_T","2":"GIMBAL4","3":"GND"}, "J7B", hide_value=True)
 P(XH.format(n=6), "J8", "KNOBS", 106, 162, 270,
   {"1":"+3V3_T","2":"KNOB5","3":"KNOB6","4":"KNOB7","5":"KNOB8","6":"GND"}, "J8", hide_value=True)
 P(XH.format(n=9), "J9", "SWITCHES", 119.8, 187.1, 0,
