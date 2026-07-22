@@ -105,7 +105,7 @@ TEENSY_L = ["GND","NEXTION_TX","NEXTION_RX","WS2812_DATA","BUZZER","PWRBTN","LAT
             "LINK_RX2","LINK_TX2","NRF_CE","NRF_CSN","SPI_MOSI","SPI_MISO","SPI_SCK","+3V3_T",
             "VBAT_SENSE","HANDSHAKE_B","SW1","SW2","SW3","SW4","SW5","SW6"]
 # careful: left column order is GND,0..12,3V3,24..32
-TEENSY_L = ["GND","NEXTION_TX","NEXTION_RX","WS2812_DATA","BUZZER","BTN_SENSE","LATCH_OFF","HANDSHAKE_A",
+TEENSY_L = ["GND","NEXTION_TX","NEXTION_RX","WS2812_DATA","PPM","BTN_SENSE","LATCH_OFF","HANDSHAKE_A",
             "LINK_RX2","LINK_TX2","NRF_CE","NRF_CSN","SPI_MOSI","SPI_MISO","+3V3_T",
             "VBAT_SENSE","HANDSHAKE_B","SW1","SW2","SW3","SW4","SW5","SW6","SW7"]
 TEENSY_R = ["+5V","GND","+3V3_T","KNOB8","KNOB7","KNOB6","KNOB5","I2C_SCL","I2C_SDA","GIMBAL4",
@@ -177,6 +177,8 @@ P("Connector_AMASS:AMASS_XT30U-F_1x02_P5.0mm_Vertical", "J3", "BATT", 177.5, 179
   # pad1 had VBAT_RAW = reversed battery. NEVER swap back.
 P(XH.format(n=2), "J4", "BAL", 140.5, 174, 0, {"1":"CELL_MID","2":"GND"}, "J4")
 P(XH.format(n=2), "J5", "BTN", 158.4, 187.7, 0, {"1":"GND","2":"BTN_NODE"}, "J5")
+P(XH.format(n=3), "J17", "TX MODULE", 167.9, 187.7, 0, {"1":"PPM","2":"VBAT_SW","3":"GND"}, "J17")
+# ^ JR-bay loom (ELRS/Crossfire etc): PPM from Teensy pin3, battery voltage, GND
 # gimbal labels swapped: board mounts upside-down vs the gimbal housings
 P(XH.format(n=4), "J6", "GIMBAL R", 106, 147, 270, {"1":"+3V3_T","2":"GIMBAL1","3":"GIMBAL2","4":"GND"}, "J6", hide_value=True)
 P(XH.format(n=4), "J7", "GIMBAL L", 178, 124, 270, {"1":"+3V3_T","2":"GIMBAL3","3":"GIMBAL4","4":"GND"}, "J7", hide_value=True)
@@ -218,7 +220,7 @@ back = [("C1","1uF",C08,130.4,122,{"1":"VBUS_USB","2":"GND"}),
         ("R3","68R",R12F,137.5,150,{"1":"CB_PATH","2":"CELL_MID"}),
         ("R4","5.11k",R08,133.4,133,{"1":"REGN","2":"CHG_TS"}),
         ("R5","7.5k",R08,136.4,133,{"1":"CHG_TS","2":"GND"}),
-        ("R6","374R",R08,130.4,133,{"1":"CHG_ILIM","2":"GND"}),
+        ("R6","374R",R08,128.6,143.5,{"1":"GND","2":"CHG_ILIM"}),   # moved under QFN pin8 (unroutable at old spot)
         ("R7","5.1k",R08,138,158.5,{"1":"USB_CC1","2":"GND"}),
         ("R8","5.1k",R08,135,159.5,{"1":"USB_CC2","2":"GND"}),
         ("R9","470R",R08,136,155,{"1":"VBUS_USB","2":"LED_PWR_A"}),
@@ -261,8 +263,9 @@ def silk(text, x, y, size=1.0, layer="F.SilkS", mirror=False, rot=0, justify=Non
 
 extras = [
     '(gr_rect (start 100 100) (end 183.3 191.7) (stroke (width 0.1) (type solid)) (fill no) (layer "Edge.Cuts") (uuid "%s"))' % U(),
-    silk("TXV2 rev-A", 159, 158, 1.1),                 # moved off the crowded top into the gap below the ESP
-    silk("ESP SPARE GPIO", 159, 160.2, 0.6),
+    silk("TXV2 Revision A", 159, 157.8, 0.95),
+    silk("by Claude and Malcolm - July 2026", 159, 159.5, 0.6),
+    silk("ESP SPARE GPIO", 159, 161, 0.6),
     # MCU names INSIDE the sockets — the module hides them once fitted, but marks which socket is which
     silk("TEENSY 4.1", 134.35, 131, 1.3),
     silk("microSD exits ^ (top edge)", 134.35, 105, 0.75),   # SD end now at the clear top edge
@@ -275,7 +278,7 @@ extras = [
     silk("GIMBAL R", 101.5, 151, 0.65, rot=90),   # swapped: board mounts upside-down vs gimbals
     silk("KNOBS", 101.5, 168, 0.7, rot=90),
     silk("5V BUCK", 118.4, 153.5, 0.7, justify='left'),
-    silk("5V BUCK NEXTION", 118.4, 161.5, 0.7, justify='left'),
+    silk("5V BUCK NEXTION", 118.4, 163.2, 0.7, justify='left'),
     # right-edge connectors: labels sit in the clear gaps between the bulky XH housings
     silk("RGB LED", 176, 120, 0.6),
     silk("GIMBAL L", 176, 135.5, 0.6),

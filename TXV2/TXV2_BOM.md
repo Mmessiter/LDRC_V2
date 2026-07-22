@@ -26,7 +26,7 @@
 |---|---|---|
 | 1 | **AMASS XT30U-F** (female, PCB vertical) | battery |
 | 3 | JST-XH 2-pin vertical | BAL · BTN · RTC |
-| 1 | JST-XH 3-pin | RGB LED |
+| 2 | JST-XH 3-pin | RGB LED · TX MODULE (JR bay) |
 | 3 | JST-XH 4-pin | GIMBAL L · GIMBAL R · I2C |
 | 1 | JST-XH 6-pin | KNOBS |
 | 2 | JST-XH 9-pin | SWITCHES · TRIMS |
