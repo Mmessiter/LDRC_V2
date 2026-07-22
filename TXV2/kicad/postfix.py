@@ -2,15 +2,16 @@ import pcbnew, json
 b=pcbnew.LoadBoard('TXV2_MAIN.kicad_pcb')
 mm=pcbnew.FromMM; V=pcbnew.VECTOR2I; FCu,BCu=pcbnew.F_Cu,pcbnew.B_Cu
 snap=json.load(open('label_snapshot.json'))
-OVR={'U4':(119.6,174.85,0.9),'L1':(132,144.3,0.8),'J5':(158.4,183.9,0.9),
+OVR={'U4':(119.6,174.85,0.9),'L1':(127.8,148.5,0.7),'J5':(158.4,183.9,0.9),
      'J13':(132.8,168.5,0.8),'J3':(171.2,179.5,0.9),
-     'J14':(119.5,123.9,0.7),'U3':(112.6,106.3,0.7),'U8':(113.8,131.2,0.7)}
+     'J14':(119.5,123.9,0.7),'U3':(112.6,106.3,0.7),'U8':(113.8,131.2,0.7),'R6':(127.8,146.4,0.6),'U7':(136.9,144.2,0.8),'R14':(174,115.4,0.65),'J17':(170.7,182.8,0.7)}
 SKIP={'J6','J7','J11'}   # names live in board gr_texts, values stay hidden
 for f in b.Footprints():
     r=f.GetReference(); v=f.Value()
     if r in SKIP: continue
     if r in OVR:
-        x,y,s=OVR[r]; v.SetVisible(True); v.SetLayer(pcbnew.F_SilkS)
+        x,y,s=OVR[r]; v.SetVisible(True)
+        v.SetLayer(pcbnew.B_SilkS if f.GetLayer()==pcbnew.B_Cu else pcbnew.F_SilkS)
         v.SetPosition(V(int(mm(x)),int(mm(y))))
         v.SetTextSize(V(int(mm(s)),int(mm(s)))); v.SetTextThickness(int(mm(0.13)))
         v.SetTextAngle(pcbnew.EDA_ANGLE(0))
@@ -49,11 +50,17 @@ for i in range(8): gt(TRIMN[i],110.3,120+2.5*i,0.45,right=True)                 
 gt("GND",110.3,140,0.45,right=True)                                                          # TRIMS GND
 # right-edge connectors (labels left of pads)
 for y,txt in zip([124,126.5,129,131.5],["3V3","V","H","GND"]): gt(txt,172.9,y,0.5)          # GIMBAL L (J7)
-for y,txt in zip([111,113.5,116],["5V","DAT","GND"]): gt(txt,170.5,y,0.5)                   # RGB LED
+for y,txt in zip([111,113.5,116],["5V","DAT","GND"]): gt(txt,174.6,y,0.45,right=True)       # RGB LED
 for y,txt in zip([139,141.54,144.08,146.62,149.16],["GND","-","5V","RX","TX"]): gt(txt,172.6,y,0.5)  # NEXTION
 # SWITCHES pin digits + GND
 for i in range(8): gt(str(i+1),119.6+2.525*i,183.5,0.45)
 gt("GND",138.9,183.5,0.45)
+# C9/C10 + divider values (hidden footprint values -> explicit marks)
+gt("10uF",110.9,117.3,0.5,right=True)
+gt("100n",114.6,120.2,0.5)
+gt("47k",116,144.6,0.55); gt("15k",119,144.6,0.55); gt("100n",122.2,144.6,0.55)
+# TX MODULE pin marks
+gt("PPM",167.9,184.2,0.45); gt("BAT",170.4,184.2,0.45); gt("GND",172.8,184.2,0.45)
 # ESP spare GPIO numbers
 GA=["4","5","6","7","15","16","3","46","10","11","12","13"]
 GB=["14","1","2","42","41","40","39","21","45","47","48","3V"]
