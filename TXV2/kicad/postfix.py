@@ -25,7 +25,7 @@ for f in b.Footprints():
         else:
             v.SetVisible(False)
 # back-cluster labels track their (shifted) parts in x
-BACKROW={'C1','C2','C3','C4','C5','C6','C7','R1','R4','R5','R6'}
+BACKROW={'C1','C2','C3','C4','C5','C6','C7','R1','R4','R5'}  # R6 is OVR-managed
 for f in b.Footprints():
     r=f.GetReference()
     if r in BACKROW and r in snap['values'] and snap['values'][r].get('vis'):
