@@ -57,7 +57,7 @@ for i in range(8): gt(str(i+1),119.6+2.525*i,183.5,0.45)
 gt("GND",138.9,183.5,0.45)
 # C9/C10 + divider values (hidden footprint values -> explicit marks)
 gt("10uF",110.9,117.3,0.5,right=True)
-gt("100n",114.6,120.2,0.5)
+gt("100n",114.6,119.6,0.5,left=False)
 gt("47k",116,144.6,0.55); gt("15k",119,144.6,0.55); gt("100n",122.2,144.6,0.55)
 # TX MODULE pin marks
 gt("SIG",167.9,184.2,0.45); gt("BAT",170.4,184.2,0.45); gt("GND",172.8,184.2,0.45)
