@@ -105,7 +105,7 @@ TEENSY_L = ["GND","NEXTION_TX","NEXTION_RX","WS2812_DATA","BUZZER","PWRBTN","LAT
             "LINK_RX2","LINK_TX2","NRF_CE","NRF_CSN","SPI_MOSI","SPI_MISO","SPI_SCK","+3V3_T",
             "VBAT_SENSE","HANDSHAKE_B","SW1","SW2","SW3","SW4","SW5","SW6"]
 # careful: left column order is GND,0..12,3V3,24..32
-TEENSY_L = ["GND","NEXTION_TX","NEXTION_RX","WS2812_DATA","PPM","BTN_SENSE","LATCH_OFF","HANDSHAKE_A",
+TEENSY_L = ["GND","NEXTION_TX","NEXTION_RX","WS2812_DATA","SIG","BTN_SENSE","LATCH_OFF","HANDSHAKE_A",
             "LINK_RX2","LINK_TX2","NRF_CE","NRF_CSN","SPI_MOSI","SPI_MISO","+3V3_T",
             "VBAT_SENSE","HANDSHAKE_B","SW1","SW2","SW3","SW4","SW5","SW6","SW7"]
 TEENSY_R = ["+5V","GND","+3V3_T","KNOB8","KNOB7","KNOB6","KNOB5","I2C_SCL","I2C_SDA","GIMBAL4",
@@ -177,7 +177,7 @@ P("Connector_AMASS:AMASS_XT30U-F_1x02_P5.0mm_Vertical", "J3", "BATT", 177.5, 179
   # pad1 had VBAT_RAW = reversed battery. NEVER swap back.
 P(XH.format(n=2), "J4", "BAL", 140.5, 174, 0, {"1":"CELL_MID","2":"GND"}, "J4")
 P(XH.format(n=2), "J5", "BTN", 158.4, 187.7, 0, {"1":"GND","2":"BTN_NODE"}, "J5")
-P(XH.format(n=3), "J17", "TX MODULE", 167.9, 187.7, 0, {"1":"PPM","2":"VBAT_SW","3":"GND"}, "J17")
+P(XH.format(n=3), "J17", "TX MODULE", 167.9, 187.7, 0, {"1":"SIG","2":"VBAT_SW","3":"GND"}, "J17")
 # ^ JR-bay loom (ELRS/Crossfire etc): PPM from Teensy pin3, battery voltage, GND
 # gimbal labels swapped: board mounts upside-down vs the gimbal housings
 P(XH.format(n=4), "J6", "GIMBAL R", 106, 147, 270, {"1":"+3V3_T","2":"GIMBAL1","3":"GIMBAL2","4":"GND"}, "J6", hide_value=True)
