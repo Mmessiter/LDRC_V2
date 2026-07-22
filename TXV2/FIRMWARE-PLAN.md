@@ -1,0 +1,42 @@
+# TXV2 Revision A — Firmware Plan
+*by Claude and Malcolm — July 2026 · boards arrive ~29 July*
+
+## The head start (why this goes fast)
+- **V1 TransmitterCode** — the whole radio brain already works: nRF24 protocol, Nextion UI host, model memories, bind flow, telemetry screens, reconnection histogram. Port, don't rewrite.
+- **RXV2 firmware** — proven ESP32 WiFi web config, BLE GATT bridge (the 240-byte chunk lesson learned!), OTA-over-BLE+5G, messiter.com update channel.
+- **RXV2App iOS/Android** — the phone apps already speak our BLE protocol; the TX becomes one more device type.
+
+## Phase 0 — board #1 bring-up (day 1, no firmware needed)
+1. Visual + meter checks BEFORE any modules: 3V3 at gimbal "+" pins, rail shorts, USB-C orientation
+2. Battery on → 2808 latch test with the button (press = on) — no MCUs fitted
+3. Buck outputs: 5V and 5V-NEXT
+4. Fit Teensy alone → USB blink sketch → soft-power test (pin 4 sense, pin 5 latch-off)
+5. Charger: USB-C in → CHG LED, I2C scan finds BQ25887 at 0x6A
+
+## Phase 1 — Teensy core (week 1)
+- Port V1 `main.cpp` wholesale; remap pins (SENSE 33→4, new: WS2812 on 2, SIG on 3, VBAT divider on A10/24)
+- nRF24 loop unchanged (CE 9 / CSN 10 / SPI 11-13) — V1-compatible pipe = TX ID
+- Nextion on Serial1 (pins 0/1) — V1 host code near-verbatim
+- New drivers: BQ25887 (charge state, per-cell volts → telemetry screen), WS2812 status LED (green/red/blue, V1 scheme), VBAT divider calibration (ratio 62/15)
+- Trims as channel-function buttons (1L/1R/2U/2D/3U/3D/4R/4L mapping)
+
+## Phase 2 — ESP32 sidecar (week 2)
+- Link UART to Teensy: 1 Mbaud, length-prefix + CRC framing, HANDSHAKE_A/B flow control
+- BLE GATT bridge (lift from RXV2) → phone app config: model names, settings, telemetry mirror
+- WiFi web UI (lift from RXV2 pages pattern)
+
+## Phase 3 — the OTA trinity (week 3)
+1. **ESP32 self-OTA** — stock ArduinoOTA / BLE fwup (RXV2 pattern, exists)
+2. **Teensy OTA** — FlasherX: ESP streams hex over the link UART, Teensy self-flashes
+3. **Nextion OTA** — ESP → Teensy → Serial1 passthrough of the .tft (upload protocol, baud escalation)
+- All three fetch from messiter.com `/txv2/release/` (stage_website.py + publish_website.sh convention)
+
+## Phase 4 — polish
+- TX MODULE output on SIG: CRSF (ELRS) first, PPM fallback
+- Reconnection histogram screen (port from V1 — it earned its keep)
+- Bind-on-long-press with audible Nextion prompt (V1 timing: 2–5 s window)
+- Charging screen: pack + per-cell volts from BQ25887 while plugged in
+
+## Standing rules
+- Board #1 is the guinea pig; nothing ships to boards 2–100 until OTA works end-to-end
+- Every release published to messiter.com; apps + firmware ship together (one-pass rule)
