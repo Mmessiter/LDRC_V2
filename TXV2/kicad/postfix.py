@@ -43,13 +43,21 @@ gt("square pad = GND",105.2,114.6,0.5)
 for y1,y2,y3 in [(156,153.46,150.92),(164,161.46,158.92)]:
     gt("IN",114.7,y1,0.55); gt("GND",114.7,y2,0.55); gt("OUT",114.7,y3,0.55)
 # per-pin labels — left-edge connectors (labels right of pads at x110.4)
-for y,txt in zip([147,149.5,152,154.5],["3V3","V","H","GND"]): gt(txt,110.3,y,0.5,right=True)   # GIMBAL R (J6)
+# GIMBAL R: two PH-3 axis sockets, pads at x104.2/106.2/108.2
+for x,txt in zip([104.2,106.2,108.2],["+","S","-"]): gt(txt,x,150.1,0.5,left=False)
+for x,txt in zip([104.2,106.2,108.2],["+","S","-"]): gt(txt,x,157.6,0.5,left=False)
+gt("V",109.6,146.5,0.55); gt("H",109.6,154.0,0.55)
+gt("+=3V3 S=SIG -=GND",110.9,148.9,0.45)
 for i,txt in enumerate(["3V3","5","6","7","8","GND"]): gt(txt,110.3,162+2.5*i,0.5,right=True)   # KNOBS
 TRIMN=["1L","1R","2U","2D","3U","3D","4R","4L"]
 for i in range(8): gt(TRIMN[i],110.3,120+2.5*i,0.45,right=True)                          # TRIMS by channel
 gt("GND",110.3,140,0.45,right=True)                                                          # TRIMS GND
 # right-edge connectors (labels left of pads)
-for y,txt in zip([124,126.5,129,131.5],["3V3","V","H","GND"]): gt(txt,172.9,y,0.5)          # GIMBAL L (J7)
+# GIMBAL L: two PH-3 axis sockets, pads at x175.4/177.4/179.4
+for x,txt in zip([175.4,177.4,179.4],["+","S","-"]): gt(txt,x,125.9,0.5,left=False)
+for x,txt in zip([175.4,177.4,179.4],["+","S","-"]): gt(txt,x,133.8,0.5,left=False)
+gt("V",173.4,122.3,0.55,left=False); gt("H",173.4,130.2,0.55,left=False)
+
 for y,txt in zip([111,113.5,116],["5V","DAT","GND"]): gt(txt,174.6,y,0.45,right=True)       # RGB LED
 for y,txt in zip([139,141.54,144.08,146.62,149.16],["GND","-","5V","RX","TX"]): gt(txt,172.6,y,0.5)  # NEXTION
 # SWITCHES pin digits + GND
