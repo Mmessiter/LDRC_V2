@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.246-ring-fix",
+      "url": "https://messiter.com/rxv2/release/v0.9.246/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.246/littlefs.bin",
+      "notes": "Fixes the switch-off gap still showing (the trim ring was flooded by normal packets). Also skips the first seconds of battery sampling to kill a bogus 25V boot spike in the graph."
+    },
+    {
       "name": "RXV2-0.9.245-field-ble",
       "url": "https://messiter.com/rxv2/release/v0.9.245/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.245/littlefs.bin",
@@ -64,12 +70,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.235/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.235/littlefs.bin",
       "notes": "The transmitter's 'send failsafe to receiver' button now works on RXV2 (it was silently ignored): it captures the current channel positions \u2014 trims and subtrims included, since they're baked into the radio stream \u2014 exactly like the web 'Save failsafe' button. And with the FC-telemetry switch OFF (no flight controller, e.g. a PWM converter), the receiver now STREAMS the captured failsafe posture on CRSF after signal loss instead of going silent and letting the converter drift."
-    },
-    {
-      "name": "RXV2-0.9.234-civilised-ota",
-      "url": "https://messiter.com/rxv2/release/v0.9.234/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.234/littlefs.bin",
-      "notes": "Civilised OTA (Malcolm's word): when the connection drops during an install \u2014 routine over Bluetooth, and at the reboot moment on WiFi \u2014 the page no longer cries 'failed'. It says 'Installing\u2026 waiting for the receiver to come back', polls until the receiver reappears, and judges by the version it reports: new version = success (auto-reload), same old version = a real failure, still absent after 5 min = 'reload in a moment'."
     }
   ]
 }

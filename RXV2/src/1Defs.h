@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.245-field-ble";
+constexpr const char* FW_VERSION = "RXV2-0.9.246-ring-fix";
 
 //*********************************************************************
 //  Auto-update manifest URLs
