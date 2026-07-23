@@ -40,3 +40,23 @@
 ## Standing rules
 - Board #1 is the guinea pig; nothing ships to boards 2–100 until OTA works end-to-end
 - Every release published to messiter.com; apps + firmware ship together (one-pass rule)
+
+## Lessons from the 2026-07-23 RXV2 gap hunt (V1 shortcomings to fix in TXV2)
+
+Found while chasing a mystery 1-second link gap that turned out to be the
+V1 transmitter itself:
+
+1. **The connect ritual stalls the RF loop ~1 s** (bind confirm / model-ID
+   before the green light). TXV2: the handshake must not pause the packet
+   stream — stream safe frames throughout, or interleave.
+2. **Blocking Nextion writes create real air gaps** — the telemetry screen's
+   redraws measurably silenced the RF (95 ms + several 32-64 ms gaps at the
+   receiver while the TX's own display showed a perfect zero). TXV2: display
+   I/O must never block the RF path (own task/core, queued writes).
+3. **V1's link stats can't see the TX's own stalls** — gap bookkeeping runs
+   in the same loop that stalls, MinimumGap=50 ms hides everything smaller,
+   and stats are wiped 4-6 s after the green light. TXV2: measure honestly
+   (the RXV2 blackbox is the reference: microsecond gaps, histogram,
+   position-of-longest, handshake grace instead of a stats wipe) — and
+   prefer the RECEIVER's numbers via telemetry, since only the receiving
+   end sees the truth.
