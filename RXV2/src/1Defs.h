@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.254-armed-no-wave";
+constexpr const char* FW_VERSION = "RXV2-0.9.255-save-label";
 
 //*********************************************************************
 //  Auto-update manifest URLs

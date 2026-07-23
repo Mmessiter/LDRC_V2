@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.255-save-label",
+      "url": "https://messiter.com/rxv2/release/v0.9.255/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.255/littlefs.bin",
+      "notes": "The save button on the Output protocol page now tells the truth: it says 'Save' normally and only grows into 'Save & reboot' when you have actually selected a different protocol. Installing this also updates the web pages."
+    },
+    {
       "name": "RXV2-0.9.254-armed-no-wave",
       "url": "https://messiter.com/rxv2/release/v0.9.254/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.254/littlefs.bin",
@@ -65,11 +71,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.244/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.244/littlefs.bin",
       "notes": "Blackbox now works on planes (no flight controller needed): flights record and save using the receiver's own battery divider. Adds radio swap count and per-transceiver time to flight stats. Includes the shutdown-gap trim and BLE aileron wave from 0.9.243."
-    },
-    {
-      "name": "RXV2-0.9.243-tidy-gaps-wave",
-      "url": "https://messiter.com/rxv2/release/v0.9.243/firmware.bin",
-      "notes": "Blackbox: TX switch-off no longer records a misleading final gap in saved flights. New: after the TX goes off, the receiver waves the ailerons when Bluetooth/WiFi become available."
     }
   ]
 }
