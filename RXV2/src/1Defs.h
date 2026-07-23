@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.260-gap-position";
+constexpr const char* FW_VERSION = "RXV2-0.9.261-keep-flights";
 
 //*********************************************************************
 //  Auto-update manifest URLs

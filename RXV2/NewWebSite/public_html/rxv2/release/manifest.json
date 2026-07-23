@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.261-keep-flights",
+      "url": "https://messiter.com/rxv2/release/v0.9.261/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.261/littlefs.bin",
+      "notes": "Saved flights now SURVIVE updates: the three flight recordings are held in memory while the web pages are reflashed and written back afterwards, exactly as Rotorflight backups always were. Updating at the field no longer costs you your flight history. Installing this also updates the web pages."
+    },
+    {
       "name": "RXV2-0.9.260-gap-position",
       "url": "https://messiter.com/rxv2/release/v0.9.260/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.260/littlefs.bin",
@@ -65,12 +71,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.250/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.250/littlefs.bin",
       "notes": "Wave fix: channels that sit at a low value (e.g. a second aileron on ch6, which boots at 500us) now get the FULL wave - previously the wiggle was clipped flat at the servo floor, so only channel 1 appeared to move. Every waved channel also returns EXACTLY to where it started when the wave ends (they were being left at the last wave position). The arming channel is never waved. Installing this also updates the web pages."
-    },
-    {
-      "name": "RXV2-0.9.249-wave-channels",
-      "url": "https://messiter.com/rxv2/release/v0.9.249/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.249/littlefs.bin",
-      "notes": "The Bluetooth-ready wave is now configurable and universal: choose WHICH channels wave on the Output protocol page (e.g. 1,6 for a plane with two aileron servos; the throttle channel never waves), and the wave now fires EVERY time Bluetooth becomes available - power-on included - not just after switching the transmitter off. Also works on models with no captured failsafe. Installing this also updates the web pages."
     }
   ]
 }
