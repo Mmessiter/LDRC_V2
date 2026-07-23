@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.258-handshake-grace",
+      "url": "https://messiter.com/rxv2/release/v0.9.258/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.258/littlefs.bin",
+      "notes": "THE 1-SECOND GAP, SOLVED FOR REAL: it was the V1 transmitter's own connect ritual - bind confirm and model-ID handshake pause its radio for about a second before the green light. The V1 transmitter has always hidden this by wiping its stats just after the green light; the receiver now applies the same wisdom - gap statistics only start once the connection is 2 seconds old. Also: a flight's R1/R2 radio times now stop at the last packet (no more growing on the bench). Installing this also updates the web pages."
+    },
+    {
       "name": "RXV2-0.9.257-ble-preheat",
       "url": "https://messiter.com/rxv2/release/v0.9.257/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.257/littlefs.bin",
@@ -65,12 +71,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.247/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.247/littlefs.bin",
       "notes": "Field updates completed: with the phone app (iPhone 1.35 / Android 1.35), the home page now ANNOUNCES new firmware over Bluetooth at the field (the app fetches the release list with the phone's own internet) and one tap installs it - firmware AND web pages - over Bluetooth. Web pages now always ship with firmware even when installing from an older receiver page. Installing this also updates the web pages."
-    },
-    {
-      "name": "RXV2-0.9.246-ring-fix",
-      "url": "https://messiter.com/rxv2/release/v0.9.246/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.246/littlefs.bin",
-      "notes": "Fixes the switch-off gap still showing (the trim ring was flooded by normal packets). Also skips the first seconds of battery sampling to kill a bogus 25V boot spike in the graph."
     }
   ]
 }

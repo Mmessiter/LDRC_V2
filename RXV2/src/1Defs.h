@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.257-ble-preheat";
+constexpr const char* FW_VERSION = "RXV2-0.9.258-handshake-grace";
 
 //*********************************************************************
 //  Auto-update manifest URLs
