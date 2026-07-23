@@ -349,6 +349,11 @@ inline void sbusTick() {
     // outputs to the saved positions and present them as valid RC.
     static bool inFailsafePosture = false;
     bool everConnected = (lastChannelDataMs != 0);
+    // Expire a pending BLE-ready wave even if the failsafe-posture branch never
+    // runs (CRSF+FC, or no failsafe captured) — it must not stay armed and fire
+    // on some unrelated signal loss days later.
+    if (bleWaveStartMs && (uint32_t)(millis() - bleWaveStartMs) >= BLE_WAVE_MS)
+        bleWaveStartMs = 0;
     // SAFETY: hold the throttle LOW until the link has produced a STABLE
     // stream (25 channel packets ≈ half a second) — covers the no-TX boot
     // (channels default to mid-stick), AND the first moments after binding,
@@ -367,6 +372,22 @@ inline void sbusTick() {
         (currentProtocol != PROTO_CRSF || !fcTelemetryEnabled)) {
         for (uint8_t i = 0; i < 16; ++i) channelMicros[i] = failsafeMicros[i];
         if (!inFailsafePosture) { inFailsafePosture = true; events.add("Signal lost — RX failsafe positions applied"); }
+        // BLE-ready announce (Malcolm 2026-07-23): when the config radios come
+        // back up after the TX went off, wave the AILERONS (ch1) so the user
+        // can SEE the receiver is reachable again — then settle back to the
+        // failsafe posture. Gentle (±150 µs), time-boxed, non-blocking; rides
+        // on top of the failsafe values so it can only ever happen while the
+        // posture is already being driven.
+        if (bleWaveStartMs) {
+            uint32_t t = (uint32_t)(millis() - bleWaveStartMs);
+            if (t >= BLE_WAVE_MS) bleWaveStartMs = 0;
+            else {
+                float ph = (float)t * (2.0f * (float)M_PI * BLE_WAVE_HZ / 1000.0f);
+                int32_t v = (int32_t)failsafeMicros[0] + (int32_t)(BLE_WAVE_AMPL_US * sinf(ph));
+                if (v < 1000) v = 1000; else if (v > 2000) v = 2000;
+                channelMicros[0] = (uint16_t)v;
+            }
+        }
         frameLost = false;
         failsafe  = false;
     } else if (inFailsafePosture) {

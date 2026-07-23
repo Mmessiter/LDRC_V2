@@ -603,6 +603,8 @@ inline void radioPoll() {
                 linkStats.packets  = 0; linkStats.maxGapUs = 0;
                 linkStats.gapSumUs = 0; linkStats.gapCount = 0;
                 for (uint8_t i = 0; i < 6; ++i) linkStats.hist[i] = 0;
+                for (auto &g : linkStats.recent) g = {};
+                linkStats.recentIdx = 0;
             } else {
                 uint32_t gapUs = nowUs - linkStats.lastPktUs;
                 if (gapUs > linkStats.maxGapUs) linkStats.maxGapUs = gapUs;
@@ -610,6 +612,9 @@ inline void radioPoll() {
                 uint32_t gapMs = gapUs / 1000;
                 uint8_t b = gapMs < 4 ? 0 : gapMs < 8 ? 1 : gapMs < 16 ? 2 : gapMs < 32 ? 3 : gapMs < 64 ? 4 : 5;
                 linkStats.hist[b]++;
+                // remember it for the shutdown-artifact trim at save time
+                linkStats.recent[linkStats.recentIdx] = { gapUs, nowMs, b };
+                linkStats.recentIdx = (uint8_t)((linkStats.recentIdx + 1) % 6);
             }
             linkStats.lastPktUs = nowUs;
             linkStats.packets++;
