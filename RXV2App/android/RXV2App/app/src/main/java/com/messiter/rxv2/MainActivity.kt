@@ -713,8 +713,12 @@ class MainActivity : AppCompatActivity() {
             });
           };
           // Classic <form> submit → fetch (WebView drops POST bodies otherwise).
+          // Bubble phase + defaultPrevented check: a page that handles its own
+          // submit calls preventDefault and the shim steps aside — otherwise it
+          // document.writes a raw JSON reply over the page (the black screen).
           document.addEventListener('submit', function(ev){
             var f = ev.target; if(!(f instanceof HTMLFormElement)) return;
+            if (ev.defaultPrevented) return;
             ev.preventDefault();
             var method=(f.method||'GET').toUpperCase();
             var action=f.getAttribute('action')||location.pathname;
@@ -723,7 +727,7 @@ class MainActivity : AppCompatActivity() {
             fetch(action,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:data})
               .then(function(r){return r.text().then(function(t){document.open();document.write(t);document.close();});})
               .catch(function(e){alert('Send failed: '+e);});
-          }, true);
+          }, false);
           // Disconnect hook. The web UI posts to iOS via
           // window.webkit.messageHandlers.rxv2.postMessage('disconnect');
           // shim that same object on Android so the page code is unchanged.

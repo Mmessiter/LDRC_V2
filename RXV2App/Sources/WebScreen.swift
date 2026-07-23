@@ -16,6 +16,12 @@ struct WebScreen: UIViewRepresentable {
     document.addEventListener('submit', function (ev) {
         const f = ev.target;
         if (!(f instanceof HTMLFormElement)) return;
+        // A page that handles its own submit (fetch + in-page feedback) calls
+        // preventDefault — the shim must step aside, or it document.writes a
+        // raw JSON reply over the page (the blank white/black screen on save).
+        // Bubble phase (not capture) so page handlers run first and this flag
+        // is visible here.
+        if (ev.defaultPrevented) return;
         ev.preventDefault();
         const method = (f.method || 'GET').toUpperCase();
         const action = f.getAttribute('action') || location.pathname;
@@ -32,7 +38,7 @@ struct WebScreen: UIViewRepresentable {
             document.open(); document.write(t); document.close();
             if (r.redirected) history.replaceState(null, '', r.url);
         })).catch(e => alert('Send failed: ' + e));
-    }, true);
+    }, false);
     """
 
     func makeCoordinator() -> Coordinator { Coordinator(link: link) }
