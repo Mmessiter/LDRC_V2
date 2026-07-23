@@ -65,7 +65,7 @@
                 </span>
                 <span class=muted style="display:block;margin-top:.5em;font-size:.88em">Throttle is held <b>fully low</b> (885&thinsp;&micro;s) from power-on until the transmitter is heard, so a receiver booted without its TX can never spin the motor (0&nbsp;=&nbsp;off). The arming channel stamps flights: the flight graph saves to flash the moment you <b>disarm</b> after &ge;30&thinsp;s armed (0&nbsp;=&nbsp;off &mdash; saves after link loss instead). Wave channels wiggle briefly whenever Bluetooth becomes available &mdash; power-on included &mdash; so you can SEE the receiver is reachable (comma list, e.g. <code>1,6</code> for two ailerons; blank&nbsp;=&nbsp;no wave; the throttle channel never waves).</span>
             </p>
-            <button class="btn btn-fw" type=submit><span class=ico>&#128190;</span>Save &amp; reboot</button>
+            <button class="btn btn-fw" type=submit id=saveBtn><span class=ico>&#128190;</span>Save</button>
         </form>
     </div>
 
@@ -84,6 +84,22 @@
 </div>
 
 <script>
+// Will THIS save reboot the receiver? Only a protocol change (or a PPM-
+// inversion change while running PPM) does — mirrors the chip's own rule.
+function willReboot(f) {
+    const chosen = f.querySelector('input[name=proto]:checked');
+    const known = !!f.dataset.cur;
+    const protoChanged = known && chosen && chosen.value !== f.dataset.cur;
+    const invChanged = (document.getElementById('ppmInv').checked ? '1' : '0') !== (f.dataset.ppm || '0');
+    return !known || protoChanged || (f.dataset.curname === 'PPM' && invChanged);
+}
+// The save button tells the truth: plain "Save" normally, "Save & reboot"
+// only when the selection actually forces one.
+function paintSaveBtn(f) {
+    const b = document.getElementById('saveBtn');
+    if (b) b.innerHTML = '<span class=ico>&#128190;</span>' + (willReboot(f) ? 'Save &amp; reboot' : 'Save');
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     const s = await LDRC.fetchState();
     if (!s) return;
@@ -111,6 +127,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         f0.dataset.cur     = curOpt ? String(curOpt.id) : '';
         f0.dataset.curname = p.current || '';
         f0.dataset.ppm     = p.ppm_inverted ? '1' : '0';
+        f0.addEventListener('change', () => paintSaveBtn(f0));
+        paintSaveBtn(f0);
     }
 
     document.getElementById('ppmInv').checked = !!p.ppm_inverted;
@@ -145,18 +163,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         const body0 = new URLSearchParams();
         for (const [k, v] of new FormData(f).entries()) body0.append(k, v);
 
-        // Only a PROTOCOL change (or PPM-inversion change while on PPM)
-        // reboots the chip — everything else applies LIVE. The page knows
-        // both sides of that comparison, so decide HERE instead of sniffing
-        // the reply (which proved unreliable over Bluetooth): a live-apply
-        // save stays on the page, full stop — no wait panel to get stuck in.
-        const known        = !!f.dataset.cur;
-        const protoChanged = known && chosen && chosen.value !== f.dataset.cur;
-        const invChanged   = (document.getElementById('ppmInv').checked ? '1' : '0') !== (f.dataset.ppm || '0');
-        const expectReboot = !known || protoChanged || (f.dataset.curname === 'PPM' && invChanged);
-        if (!expectReboot) {
+        // A live-apply save stays on the page, full stop — the wait panel is
+        // only for a genuine protocol change (decided by willReboot, not by
+        // sniffing the reply, which proved unreliable over Bluetooth).
+        if (!willReboot(f)) {
             const btn = f.querySelector('button[type=submit]');
-            const restore = () => { btn.innerHTML = '<span class=ico>&#128190;</span>Save &amp; reboot'; };
+            const restore = () => paintSaveBtn(f);
             try {
                 await fetch('/protocol', { method: 'POST', body: body0 });
                 f.dataset.ppm = document.getElementById('ppmInv').checked ? '1' : '0';
