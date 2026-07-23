@@ -102,6 +102,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     list.innerHTML = html;
 
+    // Remember what the receiver is running NOW, so the submit handler can
+    // tell a live-apply save (stay on the page) from a real protocol change
+    // (reboot + wait panel) WITHOUT sniffing the reply.
+    const f0 = document.getElementById('protoForm');
+    const curOpt = p.available.find(o => o.name === p.current);
+    if (f0) {
+        f0.dataset.cur     = curOpt ? String(curOpt.id) : '';
+        f0.dataset.curname = p.current || '';
+        f0.dataset.ppm     = p.ppm_inverted ? '1' : '0';
+    }
+
     document.getElementById('ppmInv').checked = !!p.ppm_inverted;
     if (p.crsf_hz) document.getElementById('crsfHz').value = String(p.crsf_hz);
     if (p.thr_ch !== undefined) document.getElementById('thrCh').value = String(p.thr_ch);
@@ -131,27 +142,34 @@ document.addEventListener('DOMContentLoaded', async () => {
         const chosen = f.querySelector('input[name=proto]:checked');
         const newProto = chosen ? chosen.parentElement.querySelector('b').textContent.replace(/ \(current\)$/, '') : '';
 
-        // Ask first: settings other than the protocol itself apply LIVE and
-        // the chip answers with JSON instead of rebooting.
         const body0 = new URLSearchParams();
         for (const [k, v] of new FormData(f).entries()) body0.append(k, v);
-        try {
-            const r0 = await fetch('/protocol', { method: 'POST', body: body0 });
-            const ct = (r0.headers.get('content-type') || '');
-            // Over Bluetooth the content-type can get lost in the framing —
-            // judge by the body too, or a live-apply save (no reboot) falls
-            // into the "Rebooting" wait panel for a reboot that never comes.
-            let body = '';
-            try { body = (await r0.clone().text()).trim(); } catch (e2) {}
-            if (r0.ok && (ct.indexOf('json') >= 0 || body.charAt(0) === '{')) {
-                const btn = f.querySelector('button[type=submit]');
-                if (btn) {
-                    btn.innerHTML = '<span class=ico>&#9989;</span>Saved &mdash; applied instantly';
-                    setTimeout(() => { btn.innerHTML = '<span class=ico>&#128190;</span>Save &amp; reboot'; }, 2500);
-                }
-                return;   // no reboot — stay on the page
+
+        // Only a PROTOCOL change (or PPM-inversion change while on PPM)
+        // reboots the chip — everything else applies LIVE. The page knows
+        // both sides of that comparison, so decide HERE instead of sniffing
+        // the reply (which proved unreliable over Bluetooth): a live-apply
+        // save stays on the page, full stop — no wait panel to get stuck in.
+        const known        = !!f.dataset.cur;
+        const protoChanged = known && chosen && chosen.value !== f.dataset.cur;
+        const invChanged   = (document.getElementById('ppmInv').checked ? '1' : '0') !== (f.dataset.ppm || '0');
+        const expectReboot = !known || protoChanged || (f.dataset.curname === 'PPM' && invChanged);
+        if (!expectReboot) {
+            const btn = f.querySelector('button[type=submit]');
+            const restore = () => { btn.innerHTML = '<span class=ico>&#128190;</span>Save &amp; reboot'; };
+            try {
+                await fetch('/protocol', { method: 'POST', body: body0 });
+                f.dataset.ppm = document.getElementById('ppmInv').checked ? '1' : '0';
+                if (btn) { btn.innerHTML = '<span class=ico>&#9989;</span>Saved &mdash; applied instantly'; setTimeout(restore, 2500); }
+            } catch (err) {
+                if (btn) { btn.innerHTML = '<span class=ico>&#9888;&#65039;</span>Not confirmed &mdash; reload &amp; check'; setTimeout(restore, 4000); }
             }
-        } catch (err) { /* chip is rebooting — fall through to the wait panel */ }
+            return;
+        }
+
+        try {
+            await fetch('/protocol', { method: 'POST', body: body0 });
+        } catch (err) { /* chip is rebooting — the wait panel below handles it */ }
         document.querySelector('.container').innerHTML =
             '<h1>Rebooting</h1>' +
             '<div class=card>' +
@@ -172,10 +190,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (r.ok) { location.href = '/'; return; }
                 } catch (err) { /* chip still down */ }
             }
-            if (n >= 60) {
+            if (n >= 120) {
                 const w = document.getElementById('__waitline');
-                if (w) w.innerHTML = "Receiver didn't come back. Try power-cycling it, "
-                    + "or join the chip's WiFi AP and open <code>http://192.168.4.1</code>.";
+                if (w) w.innerHTML = "Receiver didn't come back. In the app: go back and reconnect. "
+                    + "In a browser: power-cycle the receiver, or join its WiFi AP and open <code>http://192.168.4.1</code>.";
                 return;
             }
             n++;
