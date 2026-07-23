@@ -20,7 +20,10 @@
 
     <div class=card>
         <p>Choose what the receiver puts out on the <b>D6</b> pin. Saved to NVS and applied on reboot.</p>
-        <form id=protoForm method=POST action="/protocol">
+        <!-- onsubmit=false: the JS listener does the real (fetch) submit. A
+             NATIVE form POST must never happen — inside the phone app it
+             becomes an unintercepted navigation and kills the page. -->
+        <form id=protoForm method=POST action="/protocol" onsubmit="return false">
             <div id=protoList>loading&hellip;</div>
             <p style="margin:1.2em 0 0;padding:.8em 1em;background:rgba(255,255,255,.55);border-radius:8px;font-size:.92em">
                 <label style="display:flex;align-items:center">
@@ -57,6 +60,8 @@
                     <label style="white-space:nowrap"><b>Wave channels</b>
                         <input type=text name=wave_chs id=waveChs value="1" placeholder="1,6" style="width:5em;font-size:1em;padding:.2em .4em;margin-left:.4em">
                     </label>
+                    <button type=button id=waveTest style="padding:.35em .8em;font-size:.92em;border-radius:8px;border:1px solid #7d9eb0;background:#eaf1f5;cursor:pointer">👋 Test wave</button>
+                    <span id=waveTestMsg class=muted style="font-size:.88em"></span>
                 </span>
                 <span class=muted style="display:block;margin-top:.5em;font-size:.88em">Throttle is held <b>fully low</b> (885&thinsp;&micro;s) from power-on until the transmitter is heard, so a receiver booted without its TX can never spin the motor (0&nbsp;=&nbsp;off). The arming channel stamps flights: the flight graph saves to flash the moment you <b>disarm</b> after &ge;30&thinsp;s armed (0&nbsp;=&nbsp;off &mdash; saves after link loss instead). Wave channels wiggle briefly whenever Bluetooth becomes available &mdash; power-on included &mdash; so you can SEE the receiver is reachable (comma list, e.g. <code>1,6</code> for two ailerons; blank&nbsp;=&nbsp;no wave; the throttle channel never waves).</span>
             </p>
@@ -102,6 +107,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (p.thr_ch !== undefined) document.getElementById('thrCh').value = String(p.thr_ch);
     if (s.rf && s.rf.arming_channel != null) document.getElementById('armCh').value = String(s.rf.arming_channel);
     if (p.wave_chs != null) document.getElementById('waveChs').value = p.wave_chs;
+    // Test-wave button: fires the Bluetooth-ready wave right now. Note it
+    // waves the SAVED channels — save first if you've just edited the list.
+    const wt = document.getElementById('waveTest');
+    if (wt) wt.addEventListener('click', async () => {
+        const m = document.getElementById('waveTestMsg');
+        try {
+            const r = await fetch('/api/wave', { method: 'POST' });
+            if (r.ok) { m.textContent = 'Waving the saved channels…'; }
+            else { m.textContent = 'Blocked — the transmitter link is live.'; }
+        } catch (e) { m.textContent = 'No reply — is the receiver connected?'; }
+        setTimeout(() => { m.textContent = ''; }, 4000);
+    });
     if (p.fc_telem !== undefined) document.getElementById('fcTelem').checked = !!p.fc_telem;
 
     // Intercept submit so the page doesn't sit on a half-loaded reply when
@@ -121,7 +138,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             const r0 = await fetch('/protocol', { method: 'POST', body: body0 });
             const ct = (r0.headers.get('content-type') || '');
-            if (r0.ok && ct.indexOf('json') >= 0) {
+            // Over Bluetooth the content-type can get lost in the framing —
+            // judge by the body too, or a live-apply save (no reboot) falls
+            // into the "Rebooting" wait panel for a reboot that never comes.
+            let body = '';
+            try { body = (await r0.clone().text()).trim(); } catch (e2) {}
+            if (r0.ok && (ct.indexOf('json') >= 0 || body.charAt(0) === '{')) {
                 const btn = f.querySelector('button[type=submit]');
                 if (btn) {
                     btn.innerHTML = '<span class=ico>&#9989;</span>Saved &mdash; applied instantly';

@@ -1,6 +1,18 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.252-wave-visible",
+      "url": "https://messiter.com/rxv2/release/v0.9.252/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.252/littlefs.bin",
+      "notes": "Second-aileron wave now VISIBLE: a channel parked outside servo range (AUX channels rest at 500us before the TX is heard) waves around CENTRE instead of hugging its end-stop, where the movement was real in the data but invisible on the surface. Adds a Test-wave button next to the wave-channels setting, and saving settings from the phone app no longer risks a dead black page. Installing this also updates the web pages."
+    },
+    {
+      "name": "RXV2-0.9.251-wave-api",
+      "url": "https://messiter.com/rxv2/release/v0.9.251/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.251/littlefs.bin",
+      "notes": "Adds POST /api/wave: fire the Bluetooth-ready wave on demand (refused while the transmitter link is live). Bench-test hook and 'which model is this?' finder. Installing this also updates the web pages."
+    },
+    {
       "name": "RXV2-0.9.250-wave-polish",
       "url": "https://messiter.com/rxv2/release/v0.9.250/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.250/littlefs.bin",
@@ -57,18 +69,6 @@
       "name": "RXV2-0.9.241-ble-retry",
       "url": "https://messiter.com/rxv2/release/v0.9.241/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.241/littlefs.bin",
-      "notes": ""
-    },
-    {
-      "name": "RXV2-0.9.240-ble-verify",
-      "url": "https://messiter.com/rxv2/release/v0.9.240/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.240/littlefs.bin",
-      "notes": ""
-    },
-    {
-      "name": "RXV2-0.9.239-ble-push",
-      "url": "https://messiter.com/rxv2/release/v0.9.239/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.239/littlefs.bin",
       "notes": ""
     }
   ]

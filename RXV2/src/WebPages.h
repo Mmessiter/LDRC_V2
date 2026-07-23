@@ -1600,6 +1600,24 @@ inline void handleReboot() {
 }
 
 //*********************************************************************
+//  POST /api/wave — fire the Bluetooth-ready wave on demand ("which
+//  model is this?" finder, and a bench-test hook for the wave itself).
+//  Refused while a TX link is live — never fight the pilot's sticks.
+//*********************************************************************
+inline void handleWaveNow() {
+    bool linkLive = rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 1000;
+    if (linkLive) {
+        server.sendHeader("Cache-Control", "no-store");
+        server.send(409, "application/json", "{\"ok\":false,\"error\":\"transmitter link is live\"}");
+        return;
+    }
+    bleWaveStartMs = millis();
+    events.add("Wave requested from app");
+    server.sendHeader("Cache-Control", "no-store");
+    server.send(200, "application/json", "{\"ok\":true}");
+}
+
+//*********************************************************************
 //  GET /retest — re-run self-test, redirect to /diagnostics
 //*********************************************************************
 
@@ -2087,6 +2105,7 @@ inline void registerWebRoutes() {
     // Misc
     server.on("/retest",      handleRetest);
     server.on("/reboot",      handleReboot);
+    server.on("/api/wave",    HTTP_POST, handleWaveNow);
     server.on("/ping", [](){
         // Tiny endpoint to keep iOS's TCP/WiFi state warm. No allocations.
         server.sendHeader("Cache-Control", "no-store");
