@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.256-gap-hunt";
+constexpr const char* FW_VERSION = "RXV2-0.9.257-ble-preheat";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -391,6 +391,11 @@ struct LinkStats {
     // flight start so the flight record can report this flight's share.
     uint32_t swapsAtStart      = 0;
     uint32_t radioMsAtStart[3] = {0, 0, 0};
+    // Continuously refreshed while the link is LIVE, frozen at signal loss:
+    // per-flight radio time reads (AtLive - AtStart) so the flight's split
+    // stops at the last packet instead of growing while the radios keep
+    // listening on the bench (R1+R2 exceeded the flight duration before).
+    uint32_t radioMsAtLive[3]  = {0, 0, 0};
 };
 inline LinkStats linkStats;
 

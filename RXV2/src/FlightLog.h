@@ -71,7 +71,7 @@ inline void saveFlightToLittleFS(bool rotate = true) {
       h.maxGapUs = tMax; h.avgGapUs = tAvg;
       for (uint8_t i = 0; i < 6; ++i) h.hist[i] = tHist[i]; }
     h.radioSwaps = radioSwaps - linkStats.swapsAtStart;
-    for (uint8_t i = 0; i < 3; ++i) h.radioMs[i] = radioActiveMs[i] - linkStats.radioMsAtStart[i];
+    for (uint8_t i = 0; i < 3; ++i) h.radioMs[i] = linkStats.radioMsAtLive[i] - linkStats.radioMsAtStart[i];
     f.write((const uint8_t*)&h, sizeof(h));
     const uint16_t start = (teleCount < TELE_RING) ? 0 : teleHead;
     size_t wrote = 0;
@@ -211,7 +211,7 @@ inline bool buildFlightJson(uint8_t f, String& j) {
           h.maxGapUs = tMax; h.avgGapUs = tAvg;
           for (uint8_t i = 0; i < 6; ++i) h.hist[i] = tHist[i]; }
         h.radioSwaps = radioSwaps - linkStats.swapsAtStart;
-        for (uint8_t i = 0; i < 3; ++i) h.radioMs[i] = radioActiveMs[i] - linkStats.radioMsAtStart[i];
+        for (uint8_t i = 0; i < 3; ++i) h.radioMs[i] = linkStats.radioMsAtLive[i] - linkStats.radioMsAtStart[i];
         // copy the ring oldest→newest into the load buffer for uniform rendering
         const uint16_t start = (teleCount < TELE_RING) ? 0 : teleHead;
         for (uint16_t i = 0; i < teleCount; ++i) flightLoadBuf[i] = teleRing[(start + i) % TELE_RING];

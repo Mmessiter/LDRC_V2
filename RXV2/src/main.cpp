@@ -358,6 +358,16 @@ void setup() {
     // connect, aborts in the IDF coexistence layer (0.9.207 bootloop).
     //*****************************************************************
     bleInitOnce();
+    // ...and START ADVERTISING now, before any TX link exists. The BT
+    // radio's first keying (one-shot calibration burst) deafens the
+    // nRF24s for ~1 s — done lazily at "TX heard" it landed mid-session
+    // and was every blackbox's mystery 1 s longest gap (convicted by the
+    // gap breadcrumbs, 2026-07-23). Paid here it happens before the
+    // first packet. The boot-window/fly rules are unchanged: netStep
+    // still closes this window 30 s after a TX is heard (bleStop, or
+    // fly-quiet for a connected client), and later bleStart() calls are
+    // no-ops while already advertising.
+    bleStart();
 
     //*****************************************************************
     // Net state machine — RF discovery window unless forced to WiFi
@@ -482,6 +492,11 @@ void loop() {
         uint8_t  a = (uint8_t)(activeRadioIdx - 1);
         if (a < 3) radioActiveMs[a] += (nowTick - lastRadioTickMs);
         lastRadioTickMs = nowTick;
+        // Refresh the per-flight freeze point while the link is live; it
+        // stops at signal loss so the flight's R1/R2 split doesn't keep
+        // growing while the radios listen on the bench afterwards.
+        if (rx.lastMillis && (nowTick - rx.lastMillis) < 1000)
+            for (uint8_t i = 0; i < 3; ++i) linkStats.radioMsAtLive[i] = radioActiveMs[i];
     }
 
     if (!simEnabled) sbusTick();   // no RC output frames at all while in sim mode

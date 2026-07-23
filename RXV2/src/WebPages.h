@@ -1828,9 +1828,9 @@ inline void handleApiState() {
                  (unsigned)dHist[0], (unsigned)dHist[1], (unsigned)dHist[2],
                  (unsigned)dHist[3], (unsigned)dHist[4], (unsigned)dHist[5],
                  (unsigned)(radioSwaps - linkStats.swapsAtStart),
-                 (unsigned)(radioActiveMs[0] - linkStats.radioMsAtStart[0]),
-                 (unsigned)(radioActiveMs[1] - linkStats.radioMsAtStart[1]),
-                 (unsigned)(radioActiveMs[2] - linkStats.radioMsAtStart[2]));
+                 (unsigned)(linkStats.radioMsAtLive[0] - linkStats.radioMsAtStart[0]),
+                 (unsigned)(linkStats.radioMsAtLive[1] - linkStats.radioMsAtStart[1]),
+                 (unsigned)(linkStats.radioMsAtLive[2] - linkStats.radioMsAtStart[2]));
         j += lb;
     }
 
