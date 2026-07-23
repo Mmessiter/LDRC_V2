@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.250-wave-polish",
+      "url": "https://messiter.com/rxv2/release/v0.9.250/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.250/littlefs.bin",
+      "notes": "Wave fix: channels that sit at a low value (e.g. a second aileron on ch6, which boots at 500us) now get the FULL wave - previously the wiggle was clipped flat at the servo floor, so only channel 1 appeared to move. Every waved channel also returns EXACTLY to where it started when the wave ends (they were being left at the last wave position). The arming channel is never waved. Installing this also updates the web pages."
+    },
+    {
       "name": "RXV2-0.9.249-wave-channels",
       "url": "https://messiter.com/rxv2/release/v0.9.249/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.249/littlefs.bin",
@@ -63,12 +69,6 @@
       "name": "RXV2-0.9.239-ble-push",
       "url": "https://messiter.com/rxv2/release/v0.9.239/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.239/littlefs.bin",
-      "notes": ""
-    },
-    {
-      "name": "RXV2-0.9.238-ble-ota",
-      "url": "https://messiter.com/rxv2/release/v0.9.238/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.238/littlefs.bin",
       "notes": ""
     }
   ]

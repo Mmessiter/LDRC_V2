@@ -349,11 +349,6 @@ inline void sbusTick() {
     // outputs to the saved positions and present them as valid RC.
     static bool inFailsafePosture = false;
     bool everConnected = (lastChannelDataMs != 0);
-    // Expire a pending BLE-ready wave even if the failsafe-posture branch never
-    // runs (CRSF+FC, or no failsafe captured) — it must not stay armed and fire
-    // on some unrelated signal loss days later.
-    if (bleWaveStartMs && (uint32_t)(millis() - bleWaveStartMs) >= BLE_WAVE_MS)
-        bleWaveStartMs = 0;
     // SAFETY: hold the throttle LOW until the link has produced a STABLE
     // stream (25 channel packets ≈ half a second) — covers the no-TX boot
     // (channels default to mid-stick), AND the first moments after binding,
@@ -385,12 +380,21 @@ inline void sbusTick() {
     // values, boot defaults, even a live link during the boot BLE window.
     // The THROTTLE channel never waves. Skipped on CRSF with an FC (the FC
     // is channel authority during failsafe).
-    if (bleWaveStartMs && (currentProtocol != PROTO_CRSF || !fcTelemetryEnabled)) {
+    if (bleWaveStartMs) {
+        bool waveAllowed = (currentProtocol != PROTO_CRSF || !fcTelemetryEnabled);
         uint32_t t = (uint32_t)(millis() - bleWaveStartMs);
-        if (t >= BLE_WAVE_MS) bleWaveStartMs = 0;
-        else if (waveChannelMask) {
-            static uint32_t waveEpoch = 0;
-            static uint16_t waveBase[16];
+        static uint32_t waveEpoch = 0;
+        static uint16_t waveBase[16];
+        if (t >= BLE_WAVE_MS) {
+            // Settle every waved channel back EXACTLY where it started — a
+            // boot-default 500 µs AUX must not be left parked at a wave value.
+            if (waveEpoch == bleWaveStartMs && waveAllowed && waveChannelMask)
+                for (uint8_t i = 0; i < 16; ++i)
+                    if ((waveChannelMask & (1u << i)) &&
+                        throttleChannel != i + 1 && armingChannel != i + 1)
+                        channelMicros[i] = waveBase[i];
+            bleWaveStartMs = 0;
+        } else if (waveAllowed && waveChannelMask) {
             if (waveEpoch != bleWaveStartMs) {
                 waveEpoch = bleWaveStartMs;
                 for (uint8_t i = 0; i < 16; ++i) waveBase[i] = channelMicros[i];
@@ -400,14 +404,22 @@ inline void sbusTick() {
             for (uint8_t i = 0; i < 16; ++i) {
                 if (!(waveChannelMask & (1u << i))) continue;
                 if (throttleChannel == i + 1) continue;    // never wave the throttle
-                int32_t v = (int32_t)waveBase[i] + off;
-                if (v < 1000) v = 1000; else if (v > 2000) v = 2000;
-                channelMicros[i] = (uint16_t)v;
+                if (armingChannel   == i + 1) continue;    // never wave the arm switch
+                // Swing around a CLAMPED centre so the wave always gets its
+                // full ±150 µs: a boot-default AUX sits at 500 µs, and a sine
+                // around that clamps flat at the 1000 µs floor — "only
+                // channel 1 waved" (RIOT, 2026-07-23).
+                int32_t ctr = (int32_t)waveBase[i];
+                if (ctr < 1000 + BLE_WAVE_AMPL_US) ctr = 1000 + BLE_WAVE_AMPL_US;
+                else if (ctr > 2000 - BLE_WAVE_AMPL_US) ctr = 2000 - BLE_WAVE_AMPL_US;
+                channelMicros[i] = (uint16_t)(ctr + off);
             }
             // Present valid RC while waving — converters ignore channels
             // flagged as failsafe.
             frameLost = false;
             failsafe  = false;
+        } else {
+            bleWaveStartMs = 0;   // CRSF+FC (or mask empty): FC is authority — no wave
         }
     }
     // Present the frames as valid RC while the posture is being driven.

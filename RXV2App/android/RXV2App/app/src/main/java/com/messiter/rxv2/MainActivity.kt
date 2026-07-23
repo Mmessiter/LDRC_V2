@@ -429,6 +429,17 @@ class MainActivity : AppCompatActivity() {
         w.setBackgroundColor(0xFF0B1220.toInt())
         w.addJavascriptInterface(Bridge(), "AndroidBle")
         w.webViewClient = object : WebViewClient() {
+            // A crashed WebView renderer otherwise leaves a dead BLACK screen
+            // until the app is force-quit (seen on the Fold saving settings,
+            // 2026-07-23). Recreate the WebView and reload the front page.
+            override fun onRenderProcessGone(view: WebView, detail: android.webkit.RenderProcessGoneDetail): Boolean {
+                runOnUiThread {
+                    runCatching { view.destroy() }
+                    webView = null
+                    showWeb()
+                }
+                return true
+            }
             override fun shouldInterceptRequest(view: WebView, req: WebResourceRequest): WebResourceResponse? {
                 // Only GET page/asset loads reach here (fetch is bridged in JS).
                 if (req.url.host != Uri.parse(ORIGIN).host) return null
