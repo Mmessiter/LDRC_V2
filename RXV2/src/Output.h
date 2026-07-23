@@ -394,7 +394,15 @@ inline void sbusTick() {
                         throttleChannel != i + 1 && armingChannel != i + 1)
                         channelMicros[i] = waveBase[i];
             bleWaveStartMs = 0;
-        } else if (waveAllowed && waveChannelMask) {
+        } else if (waveAllowed && waveChannelMask &&
+                   // Never wave while ARMED on a LIVE link: an in-flight
+                   // brownout reboot re-opens the boot BLE window and must
+                   // not wiggle the controls mid-air. Bench reboots with the
+                   // TX on still wave — the model is disarmed. TX-off landing
+                   // waves are unaffected (link dead by then).
+                   !(armingChannel >= 1 && armingChannel <= 16 &&
+                     rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 500 &&
+                     channelMicros[armingChannel - 1] > 1500)) {
             if (waveEpoch != bleWaveStartMs) {
                 waveEpoch = bleWaveStartMs;
                 for (uint8_t i = 0; i < 16; ++i) waveBase[i] = channelMicros[i];
