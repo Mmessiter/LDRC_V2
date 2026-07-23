@@ -405,12 +405,15 @@ inline void sbusTick() {
                 if (!(waveChannelMask & (1u << i))) continue;
                 if (throttleChannel == i + 1) continue;    // never wave the throttle
                 if (armingChannel   == i + 1) continue;    // never wave the arm switch
-                // Swing around a CLAMPED centre so the wave always gets its
-                // full ±150 µs: a boot-default AUX sits at 500 µs, and a sine
-                // around that clamps flat at the 1000 µs floor — "only
-                // channel 1 waved" (RIOT, 2026-07-23).
+                // Swing around a sensible CENTRE. A channel parked OUTSIDE
+                // the real servo range (boot parks AUX at 500 µs) waves
+                // around 1500 — near its parked extreme the surface sits
+                // against its mechanical stop and the wiggle is invisible
+                // (RIOT bench, 2026-07-23: data waved, servo didn't). A
+                // channel HOLDING a genuine in-range value waves close to it.
                 int32_t ctr = (int32_t)waveBase[i];
-                if (ctr < 1000 + BLE_WAVE_AMPL_US) ctr = 1000 + BLE_WAVE_AMPL_US;
+                if (ctr < 1000 || ctr > 2000) ctr = 1500;
+                else if (ctr < 1000 + BLE_WAVE_AMPL_US) ctr = 1000 + BLE_WAVE_AMPL_US;
                 else if (ctr > 2000 - BLE_WAVE_AMPL_US) ctr = 2000 - BLE_WAVE_AMPL_US;
                 channelMicros[i] = (uint16_t)(ctr + off);
             }

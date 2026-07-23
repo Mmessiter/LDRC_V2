@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.250-wave-polish";
+constexpr const char* FW_VERSION = "RXV2-0.9.252-wave-visible";
 
 //*********************************************************************
 //  Auto-update manifest URLs
