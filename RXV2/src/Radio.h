@@ -628,7 +628,14 @@ inline void radioPoll() {
                     linkStats.radioMsAtStart[i] = radioActiveMs[i];
                     linkStats.radioMsAtLive[i]  = radioActiveMs[i];
                 }
-            } else {
+            } else if ((uint32_t)(nowMs - linkStats.connStartMs) >= 2000) {
+                // Gaps only count once the connection is ≥2 s old (Malcolm,
+                // 2026-07-23). The V1 TX 'hesitates' ~1 s right after first
+                // contact — bind confirm / model-ID handshake before its
+                // green light — and V1 itself wipes its stats 4-6 s after
+                // the green light for exactly this reason (main.cpp:
+                // 'clear the long gaps that might occur while binding').
+                // That handshake stall is protocol ritual, not link quality.
                 uint32_t gapUs = nowUs - linkStats.lastPktUs;
                 if (gapUs > linkStats.maxGapUs) linkStats.maxGapUs = gapUs;
                 linkStats.gapSumUs += gapUs; linkStats.gapCount++;
