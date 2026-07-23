@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.257-ble-preheat",
+      "url": "https://messiter.com/rxv2/release/v0.9.257/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.257/littlefs.bin",
+      "notes": "KILLS the mystery 1-second gap (finally - the black box breadcrumbs caught it): the Bluetooth radio's very first transmission does a one-off calibration that deafens the receiver chips for about a second. It used to fire mid-session when the transmitter was on from power-up; Bluetooth now starts at boot, before any link exists, so the deaf moment happens before the first packet. Also: a flight's per-radio times now stop counting at the last packet, so R1+R2 matches the flight duration. Installing this also updates the web pages."
+    },
+    {
       "name": "RXV2-0.9.256-gap-hunt",
       "url": "https://messiter.com/rxv2/release/v0.9.256/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.256/littlefs.bin",
@@ -65,12 +71,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.246/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.246/littlefs.bin",
       "notes": "Fixes the switch-off gap still showing (the trim ring was flooded by normal packets). Also skips the first seconds of battery sampling to kill a bogus 25V boot spike in the graph."
-    },
-    {
-      "name": "RXV2-0.9.245-field-ble",
-      "url": "https://messiter.com/rxv2/release/v0.9.245/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.245/littlefs.bin",
-      "notes": "Field mode is now Bluetooth-only (no more auto AP when home WiFi is absent; AP still available in WiFi settings). Update page explains the Bluetooth app path instead of claiming updates are impossible. Current-flight view no longer shows the TX switch-off as a scary longest gap. Flight graph: missing sensors greyed out, battery noise no longer magnified. Aileron wave now repeats on every landing of a session."
     }
   ]
 }

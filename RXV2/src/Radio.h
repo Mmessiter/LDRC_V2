@@ -624,7 +624,10 @@ inline void radioPoll() {
                 for (auto &g : linkStats.recent) g = {};
                 linkStats.recentIdx = 0;
                 linkStats.swapsAtStart = radioSwaps;
-                for (uint8_t i = 0; i < 3; ++i) linkStats.radioMsAtStart[i] = radioActiveMs[i];
+                for (uint8_t i = 0; i < 3; ++i) {
+                    linkStats.radioMsAtStart[i] = radioActiveMs[i];
+                    linkStats.radioMsAtLive[i]  = radioActiveMs[i];
+                }
             } else {
                 uint32_t gapUs = nowUs - linkStats.lastPktUs;
                 if (gapUs > linkStats.maxGapUs) linkStats.maxGapUs = gapUs;
