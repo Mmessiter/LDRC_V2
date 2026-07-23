@@ -1403,6 +1403,21 @@ inline void handleProtocolSet() {
             prefs.putUChar(NVS_KEY_ARM_CH, armingChannel);
         }
     }
+    if (server.hasArg("wave_chs")) {
+        // Comma list "1,6" → bitmask. Blank = no wave.
+        String ws = server.arg("wave_chs");
+        uint16_t m = 0;
+        int start = 0;
+        while (start < (int)ws.length()) {
+            int comma = ws.indexOf(',', start);
+            if (comma < 0) comma = ws.length();
+            long ch = ws.substring(start, comma).toInt();
+            if (ch >= 1 && ch <= 16) m |= (uint16_t)(1u << (ch - 1));
+            start = comma + 1;
+        }
+        waveChannelMask = m;
+        prefs.putUShort(NVS_KEY_WAVE_CHS, waveChannelMask);
+    }
 
     if (!needReboot) {
         events.add("Output settings applied (no reboot needed)");
@@ -1851,6 +1866,16 @@ inline void handleApiState() {
     j += ",\"crsf_hz\":"; j += crsfRateHz;
     j += ",\"fc_telem\":"; j += (fcTelemetryEnabled ? "true" : "false");
     j += ",\"thr_ch\":"; j += throttleChannel;
+    j += ",\"wave_chs\":\"";
+    {
+        bool first = true;
+        for (uint8_t c = 1; c <= 16; ++c)
+            if (waveChannelMask & (1u << (c - 1))) {
+                if (!first) j += ",";
+                j += c; first = false;
+            }
+    }
+    j += "\"";
     j += ",\"available\":[";
     // Display order — CRSF first (most-used), then the rest in enum order.
     static const Protocol DISPLAY_ORDER[] = { PROTO_CRSF, PROTO_SBUS, PROTO_IBUS, PROTO_PPM };

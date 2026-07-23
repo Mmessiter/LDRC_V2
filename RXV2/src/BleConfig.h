@@ -368,6 +368,9 @@ inline void bleStart() {
     bleInitOnce();                       // normally already done in setup()
     NimBLEDevice::startAdvertising();
     bleStarted = true;
+    // Physical "Bluetooth is ready" cue: wave the chosen servo channels
+    // (Output.h) every time advertising actually starts — power-on included.
+    bleWaveStartMs = millis();
     Serial.printf("[ble] advertising as '%s'\n", g_effectiveName.c_str());
     events.add("BLE config on");
 }

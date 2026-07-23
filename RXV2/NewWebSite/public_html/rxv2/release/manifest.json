@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.249-wave-channels",
+      "url": "https://messiter.com/rxv2/release/v0.9.249/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.249/littlefs.bin",
+      "notes": "The Bluetooth-ready wave is now configurable and universal: choose WHICH channels wave on the Output protocol page (e.g. 1,6 for a plane with two aileron servos; the throttle channel never waves), and the wave now fires EVERY time Bluetooth becomes available - power-on included - not just after switching the transmitter off. Also works on models with no captured failsafe. Installing this also updates the web pages."
+    },
+    {
       "name": "RXV2-0.9.248-wave-fix",
       "url": "https://messiter.com/rxv2/release/v0.9.248/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.248/littlefs.bin",
@@ -64,12 +70,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.238/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.238/littlefs.bin",
       "notes": ""
-    },
-    {
-      "name": "RXV2-0.9.237-bind-safe",
-      "url": "https://messiter.com/rxv2/release/v0.9.237/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.237/littlefs.bin",
-      "notes": "SAFETY: the propeller could blip during a reboot-into-bind (prop fitted, hands near the model). Two defences: (1) every web-initiated reboot now pushes ~100ms of throttle-low frames and parks the output pin idle-high through the restart, so the converter/FC sees silence instead of noise; (2) the throttle stays pinned low until the link has delivered a stable stream (25 channel packets \u2248 0.5s) \u2014 covering the no-TX boot AND the first moments after binding, when a V1 transmitter in bind mode bypasses its own motor-low overrides."
     }
   ]
 }

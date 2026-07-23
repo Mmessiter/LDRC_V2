@@ -377,28 +377,41 @@ inline void sbusTick() {
         inFailsafePosture = false;
         events.add("Link restored — left RX failsafe");
     }
-    // BLE-ready announce (Malcolm 2026-07-23): when the config radios come
-    // back up after the TX went off, wave the AILERONS (ch1) so the user can
-    // SEE the receiver is reachable again — then settle back. Gentle
-    // (±150 µs), time-boxed, non-blocking. Rides on the captured failsafe
-    // posture when one exists, otherwise on the HELD last-good values — a
-    // plane with no captured failsafe must still wave (lodge, 2026-07-23).
-    if (fsAuthority && bleWaveStartMs) {
+    // BLE-ready announce (Malcolm 2026-07-23): wave the chosen channels
+    // (waveChannelMask, default ch1 — his plane is 1+6) whenever Bluetooth
+    // becomes available, POWER-ON INCLUDED, so the user can SEE the receiver
+    // is reachable. Gentle (±150 µs), time-boxed, non-blocking. Rides on
+    // whatever the outputs are doing — failsafe posture, held last-good
+    // values, boot defaults, even a live link during the boot BLE window.
+    // The THROTTLE channel never waves. Skipped on CRSF with an FC (the FC
+    // is channel authority during failsafe).
+    if (bleWaveStartMs && (currentProtocol != PROTO_CRSF || !fcTelemetryEnabled)) {
         uint32_t t = (uint32_t)(millis() - bleWaveStartMs);
         if (t >= BLE_WAVE_MS) bleWaveStartMs = 0;
-        else {
+        else if (waveChannelMask) {
             static uint32_t waveEpoch = 0;
-            static uint16_t waveBase  = 1500;
-            if (waveEpoch != bleWaveStartMs) { waveEpoch = bleWaveStartMs; waveBase = channelMicros[0]; }
-            float ph = (float)t * (2.0f * (float)M_PI * BLE_WAVE_HZ / 1000.0f);
-            int32_t v = (int32_t)waveBase + (int32_t)(BLE_WAVE_AMPL_US * sinf(ph));
-            if (v < 1000) v = 1000; else if (v > 2000) v = 2000;
-            channelMicros[0] = (uint16_t)v;
+            static uint16_t waveBase[16];
+            if (waveEpoch != bleWaveStartMs) {
+                waveEpoch = bleWaveStartMs;
+                for (uint8_t i = 0; i < 16; ++i) waveBase[i] = channelMicros[i];
+            }
+            float   ph  = (float)t * (2.0f * (float)M_PI * BLE_WAVE_HZ / 1000.0f);
+            int32_t off = (int32_t)(BLE_WAVE_AMPL_US * sinf(ph));
+            for (uint8_t i = 0; i < 16; ++i) {
+                if (!(waveChannelMask & (1u << i))) continue;
+                if (throttleChannel == i + 1) continue;    // never wave the throttle
+                int32_t v = (int32_t)waveBase[i] + off;
+                if (v < 1000) v = 1000; else if (v > 2000) v = 2000;
+                channelMicros[i] = (uint16_t)v;
+            }
+            // Present valid RC while waving — converters ignore channels
+            // flagged as failsafe.
+            frameLost = false;
+            failsafe  = false;
         }
     }
-    // Present the frames as valid RC while the posture (or a wave) is being
-    // driven — downstream converters ignore channels flagged as failsafe.
-    if (fsAuthority && (failsafeSet || bleWaveStartMs)) {
+    // Present the frames as valid RC while the posture is being driven.
+    if (fsAuthority && failsafeSet) {
         frameLost = false;
         failsafe  = false;
     }
