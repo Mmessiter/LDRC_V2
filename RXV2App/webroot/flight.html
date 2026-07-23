@@ -68,7 +68,10 @@ function renderLink(lk) {
     lkRows.innerHTML =
         'Duration: <b>' + fmt(lk.conn_ms) + '</b><br>' +
         'Avg frame rate: <b>' + fr.toFixed(0) + ' Hz</b> &nbsp;&middot;&nbsp; Packets: <b>' + lk.packets.toLocaleString() + '</b><br>' +
-        'Avg gap: <b>' + lk.avg_gap_ms.toFixed(2) + ' ms</b> &nbsp;&middot;&nbsp; Longest gap: <b style="color:' + gapCol + '">' + lk.max_gap_ms.toFixed(1) + ' ms</b>' + rsw;
+        'Avg gap: <b>' + lk.avg_gap_ms.toFixed(2) + ' ms</b> &nbsp;&middot;&nbsp; Longest gap: <b style="color:' + gapCol + '">' + lk.max_gap_ms.toFixed(1) + ' ms</b>' +
+        // WHEN it struck (time into the flight) — a gap at 00:00:03 is the
+        // connect ritual's tail; one mid-flight deserves attention.
+        (lk.max_gap_at_ms > 0 ? ' <span class=muted>at ' + fmt(lk.max_gap_at_ms) + '</span>' : '') + rsw;
     const labels = ['&lt;4', '4-8', '8-16', '16-32', '32-64', '&ge;64'];
     const mx = Math.max(1, ...lk.hist);
     let h = '<div style="font-size:.8em;color:#5a6b74;margin-bottom:.2em">Gap distribution (ms)</div>';
