@@ -33,8 +33,12 @@ struct __attribute__((packed)) FlightHeader {
     // figures for THIS flight — how many swaps, and active ms on each slot.
     uint32_t radioSwaps;
     uint32_t radioMs[3];
+    // FLT3 addition (Malcolm 2026-07-23): WHEN the longest gap happened,
+    // as ms since the connection was established (0 = unknown).
+    uint32_t maxGapAtOffsetMs;
 };
-constexpr uint32_t FLIGHT_MAGIC = 0x32544C46;   // "FLT2" (FLT1 files: pre-radio-stats, no longer listed)
+constexpr uint32_t FLIGHT_MAGIC      = 0x33544C46;   // "FLT3"
+constexpr uint32_t FLIGHT_MAGIC_FLT2 = 0x32544C46;   // previous: no gap-position field
 
 // A static scratch buffer for a flight loaded from flash (avoids a huge stack
 // frame; ~8 kB, only used while serving a saved flight).
@@ -66,9 +70,10 @@ inline void saveFlightToLittleFS(bool rotate = true) {
     h.intervalS = 1;
     h.connMs    = (rx.lastMillis > linkStats.connStartMs) ? (rx.lastMillis - linkStats.connStartMs) : 0;
     h.packets   = linkStats.packets;
-    { uint32_t tMax, tAvg, tHist[6];                  // packed fields can't bind by ref
-      gapsForDisplay(tMax, tAvg, tHist);              // shutdown artifact excluded
+    { uint32_t tMax, tAvg, tHist[6], tAt;             // packed fields can't bind by ref
+      gapsForDisplay(tMax, tAvg, tHist, tAt);         // shutdown artifact excluded
       h.maxGapUs = tMax; h.avgGapUs = tAvg;
+      h.maxGapAtOffsetMs = (tAt > linkStats.connStartMs) ? (tAt - linkStats.connStartMs) : 0;
       for (uint8_t i = 0; i < 6; ++i) h.hist[i] = tHist[i]; }
     h.radioSwaps = radioSwaps - linkStats.swapsAtStart;
     for (uint8_t i = 0; i < 3; ++i) h.radioMs[i] = linkStats.radioMsAtLive[i] - linkStats.radioMsAtStart[i];
@@ -183,6 +188,7 @@ inline void renderFlightJson(String& j, const FlightHeader& h, const TeleSample*
     j += ",\"link\":{";
     snprintf(b, sizeof(b), "\"packets\":%u", (unsigned)h.packets); j += b;
     snprintf(b, sizeof(b), ",\"max_gap_ms\":%.1f", h.maxGapUs / 1000.0f); j += b;
+    snprintf(b, sizeof(b), ",\"max_gap_at_ms\":%u", (unsigned)h.maxGapAtOffsetMs); j += b;
     snprintf(b, sizeof(b), ",\"avg_gap_ms\":%.2f", h.avgGapUs / 1000.0f); j += b;
     snprintf(b, sizeof(b), ",\"conn_ms\":%u", (unsigned)h.connMs); j += b;
     snprintf(b, sizeof(b), ",\"hist\":[%u,%u,%u,%u,%u,%u]",
@@ -206,9 +212,10 @@ inline bool buildFlightJson(uint8_t f, String& j) {
         h.magic = FLIGHT_MAGIC; h.count = teleCount; h.intervalS = 1;
         h.connMs   = (rx.lastMillis > linkStats.connStartMs) ? (rx.lastMillis - linkStats.connStartMs) : 0;
         h.packets  = linkStats.packets;
-        { uint32_t tMax, tAvg, tHist[6];              // packed fields can't bind by ref
-          gapsForDisplay(tMax, tAvg, tHist);          // trimmed once link is dead
+        { uint32_t tMax, tAvg, tHist[6], tAt;         // packed fields can't bind by ref
+          gapsForDisplay(tMax, tAvg, tHist, tAt);     // trimmed once link is dead
           h.maxGapUs = tMax; h.avgGapUs = tAvg;
+          h.maxGapAtOffsetMs = (tAt > linkStats.connStartMs) ? (tAt - linkStats.connStartMs) : 0;
           for (uint8_t i = 0; i < 6; ++i) h.hist[i] = tHist[i]; }
         h.radioSwaps = radioSwaps - linkStats.swapsAtStart;
         for (uint8_t i = 0; i < 3; ++i) h.radioMs[i] = linkStats.radioMsAtLive[i] - linkStats.radioMsAtStart[i];
@@ -222,7 +229,12 @@ inline bool buildFlightJson(uint8_t f, String& j) {
     File file = LittleFS.open(flightPath(f - 1), "r");
     if (!file) return false;
     FlightHeader h{};
-    if (file.read((uint8_t*)&h, sizeof(h)) != (int)sizeof(h) || h.magic != FLIGHT_MAGIC) { file.close(); return false; }
+    if (file.read((uint8_t*)&h, sizeof(h)) != (int)sizeof(h) ||
+        (h.magic != FLIGHT_MAGIC && h.magic != FLIGHT_MAGIC_FLT2)) { file.close(); return false; }
+    if (h.magic == FLIGHT_MAGIC_FLT2) {               // older file: header is 4 bytes shorter
+        h.maxGapAtOffsetMs = 0;
+        file.seek(sizeof(FlightHeader) - sizeof(uint32_t));
+    }
     if (h.count > TELE_RING) h.count = TELE_RING;
     for (uint16_t i = 0; i < h.count; ++i) {
         if (file.read((uint8_t*)&flightLoadBuf[i], sizeof(TeleSample)) != (int)sizeof(TeleSample)) { h.count = i; break; }
@@ -245,7 +257,8 @@ inline void buildFlightsListJson(String& j) {
             File file = LittleFS.open(flightPath(f - 1), "r");
             if (!file) continue;
             FlightHeader h{};
-            bool ok = (file.read((uint8_t*)&h, sizeof(h)) == (int)sizeof(h)) && h.magic == FLIGHT_MAGIC;
+            bool ok = (file.read((uint8_t*)&h, sizeof(h)) == (int)sizeof(h)) &&
+                      (h.magic == FLIGHT_MAGIC || h.magic == FLIGHT_MAGIC_FLT2);
             file.close();
             if (!ok) continue;
             snprintf(b, sizeof(b), ",{\"i\":%u,\"count\":%u,\"dur_ms\":%u}", f, (unsigned)h.count, (unsigned)h.connMs);

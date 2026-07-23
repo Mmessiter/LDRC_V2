@@ -618,26 +618,39 @@ inline void radioPoll() {
                 // shows up honestly as the longest gap. (Was >500 ms, which
                 // wiped the whole recording on any brief failsafe/reconnect.)
                 linkStats.connStartMs = nowMs;
-                linkStats.packets  = 0; linkStats.maxGapUs = 0;
+                linkStats.packets  = 0; linkStats.maxGapUs = 0; linkStats.maxGapAtMs = 0;
                 linkStats.gapSumUs = 0; linkStats.gapCount = 0;
                 for (uint8_t i = 0; i < 6; ++i) linkStats.hist[i] = 0;
                 for (auto &g : linkStats.recent) g = {};
                 linkStats.recentIdx = 0;
                 linkStats.swapsAtStart = radioSwaps;
+                linkStats.graceDone    = false;   // baselines re-snap when the handshake grace expires
                 for (uint8_t i = 0; i < 3; ++i) {
                     linkStats.radioMsAtStart[i] = radioActiveMs[i];
                     linkStats.radioMsAtLive[i]  = radioActiveMs[i];
                 }
-            } else if ((uint32_t)(nowMs - linkStats.connStartMs) >= 2000) {
-                // Gaps only count once the connection is ≥2 s old (Malcolm,
-                // 2026-07-23). The V1 TX 'hesitates' ~1 s right after first
-                // contact — bind confirm / model-ID handshake before its
-                // green light — and V1 itself wipes its stats 4-6 s after
-                // the green light for exactly this reason (main.cpp:
-                // 'clear the long gaps that might occur while binding').
-                // That handshake stall is protocol ritual, not link quality.
+            } else if ((uint32_t)(nowMs - linkStats.connStartMs) >= LINK_STATS_GRACE_MS) {
+                // Gaps only count once the connection is 3 s old (Malcolm,
+                // 2026-07-23; 2 s left a 55 ms straggler). The V1 TX
+                // 'hesitates' right after first contact — bind confirm /
+                // model-ID handshake before its green light — and V1 itself
+                // wipes its stats 4-6 s after the green light for exactly
+                // this reason (main.cpp: 'clear the long gaps that might
+                // occur while binding'). Handshake ritual, not link quality.
+                if (!linkStats.graceDone) {
+                    // The flight's stats officially begin HERE: re-baseline
+                    // the swap count and per-radio time so handshake churn
+                    // (the TX pausing makes us hunt across both radios)
+                    // isn't billed to the flight.
+                    linkStats.graceDone     = true;
+                    linkStats.swapsAtStart  = radioSwaps;
+                    for (uint8_t i = 0; i < 3; ++i) {
+                        linkStats.radioMsAtStart[i] = radioActiveMs[i];
+                        linkStats.radioMsAtLive[i]  = radioActiveMs[i];
+                    }
+                }
                 uint32_t gapUs = nowUs - linkStats.lastPktUs;
-                if (gapUs > linkStats.maxGapUs) linkStats.maxGapUs = gapUs;
+                if (gapUs > linkStats.maxGapUs) { linkStats.maxGapUs = gapUs; linkStats.maxGapAtMs = nowMs; }
                 linkStats.gapSumUs += gapUs; linkStats.gapCount++;
                 uint32_t gapMs = gapUs / 1000;
                 uint8_t b = gapMs < 4 ? 0 : gapMs < 8 ? 1 : gapMs < 16 ? 2 : gapMs < 32 ? 3 : gapMs < 64 ? 4 : 5;
