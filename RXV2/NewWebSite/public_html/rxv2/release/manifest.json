@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.245-field-ble",
+      "url": "https://messiter.com/rxv2/release/v0.9.245/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.245/littlefs.bin",
+      "notes": "Field mode is now Bluetooth-only (no more auto AP when home WiFi is absent; AP still available in WiFi settings). Update page explains the Bluetooth app path instead of claiming updates are impossible. Current-flight view no longer shows the TX switch-off as a scary longest gap. Flight graph: missing sensors greyed out, battery noise no longer magnified. Aileron wave now repeats on every landing of a session."
+    },
+    {
       "name": "RXV2-0.9.244-plane-blackbox",
       "url": "https://messiter.com/rxv2/release/v0.9.244/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.244/littlefs.bin",
@@ -64,12 +70,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.234/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.234/littlefs.bin",
       "notes": "Civilised OTA (Malcolm's word): when the connection drops during an install \u2014 routine over Bluetooth, and at the reboot moment on WiFi \u2014 the page no longer cries 'failed'. It says 'Installing\u2026 waiting for the receiver to come back', polls until the receiver reappears, and judges by the version it reports: new version = success (auto-reload), same old version = a real failure, still absent after 5 min = 'reload in a moment'."
-    },
-    {
-      "name": "RXV2-0.9.233-battery-save-dialog",
-      "url": "https://messiter.com/rxv2/release/v0.9.233/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.233/littlefs.bin",
-      "notes": "Fixes the View-channels page broken in 0.9.231/232 (a script error meant Save battery settings did nothing and saved values weren't displayed \u2014 the settings themselves were never lost). Battery save now shows a proper 'Saved' confirmation dialog like the gear-ratio save."
     }
   ]
 }

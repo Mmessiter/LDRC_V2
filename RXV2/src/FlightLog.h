@@ -53,47 +53,8 @@ inline const char* flightPath(uint8_t idx) {
 //                  after landing to inspect) — overwrite flt0 in place, so a
 //                  single battery with several arm/disarm cycles stays ONE
 //                  saved flight instead of cluttering the history with partials.
-// Shutdown-artifact trim (Malcolm 2026-07-23): when the TX is switched off,
-// its power-off routine stalls the RF loop and then emits a few dying packets,
-// recording one or two HUGE gaps in the flight's final seconds. Those are not
-// link quality — a saved flight showing "max gap 1.2 s" from a normal
-// switch-off is worrying and misleading. Called once, just before the flight
-// is written to flash (the link is long dead by then), it removes any
-// failsafe-class gap that landed within the final seconds before the last
-// packet. Genuine mid-flight dropouts — recorded earlier than that window —
-// are untouched: they are exactly what the blackbox exists to show.
-inline void trimShutdownGapsForSave() {
-    bool trimmedMax = false;
-    for (auto &g : linkStats.recent) {
-        if (!g.us) continue;
-        if ((uint32_t)(rx.lastMillis - g.atMs) <= SHUTDOWN_TRIM_WINDOW_MS &&
-            g.us >= SHUTDOWN_TRIM_MIN_US) {
-            if (linkStats.hist[g.bucket]) linkStats.hist[g.bucket]--;
-            if (linkStats.gapCount)       linkStats.gapCount--;
-            linkStats.gapSumUs -= (linkStats.gapSumUs >= g.us) ? g.us : linkStats.gapSumUs;
-            if (g.us == linkStats.maxGapUs) trimmedMax = true;
-            g.us = 0;
-        }
-    }
-    if (trimmedMax) {
-        // The recorded maximum WAS the shutdown artifact. Best remaining
-        // estimate: the largest surviving recent gap; else the ceiling of the
-        // highest still-populated histogram bucket (approximate, and honest —
-        // real >=64 ms gaps are rare enough to almost always be in `recent`).
-        linkStats.maxGapUs = 0;
-        for (auto &g : linkStats.recent)
-            if (g.us > linkStats.maxGapUs) linkStats.maxGapUs = g.us;
-        if (linkStats.maxGapUs == 0) {
-            static const uint32_t ceilUs[6] = {4000, 8000, 16000, 32000, 64000, 64000};
-            for (int8_t b = 5; b >= 0; --b)
-                if (linkStats.hist[b]) { linkStats.maxGapUs = ceilUs[b]; break; }
-        }
-    }
-}
-
 inline void saveFlightToLittleFS(bool rotate = true) {
     if (!littleFsMounted || teleCount < FLIGHT_MIN_SAMPLES) return;
-    trimShutdownGapsForSave();
     // Write the NEW flight to a temp file FIRST — only a successful write may
     // rotate the old ones. (Rotating first meant a failed open/write — e.g.
     // FS full — deleted the oldest saved flight and left no new one.)
@@ -105,9 +66,10 @@ inline void saveFlightToLittleFS(bool rotate = true) {
     h.intervalS = 1;
     h.connMs    = (rx.lastMillis > linkStats.connStartMs) ? (rx.lastMillis - linkStats.connStartMs) : 0;
     h.packets   = linkStats.packets;
-    h.maxGapUs  = linkStats.maxGapUs;
-    h.avgGapUs  = linkStats.gapCount ? (uint32_t)(linkStats.gapSumUs / linkStats.gapCount) : 0;
-    for (uint8_t i = 0; i < 6; ++i) h.hist[i] = linkStats.hist[i];
+    { uint32_t tMax, tAvg, tHist[6];                  // packed fields can't bind by ref
+      gapsForDisplay(tMax, tAvg, tHist);              // shutdown artifact excluded
+      h.maxGapUs = tMax; h.avgGapUs = tAvg;
+      for (uint8_t i = 0; i < 6; ++i) h.hist[i] = tHist[i]; }
     h.radioSwaps = radioSwaps - linkStats.swapsAtStart;
     for (uint8_t i = 0; i < 3; ++i) h.radioMs[i] = radioActiveMs[i] - linkStats.radioMsAtStart[i];
     f.write((const uint8_t*)&h, sizeof(h));
@@ -244,9 +206,10 @@ inline bool buildFlightJson(uint8_t f, String& j) {
         h.magic = FLIGHT_MAGIC; h.count = teleCount; h.intervalS = 1;
         h.connMs   = (rx.lastMillis > linkStats.connStartMs) ? (rx.lastMillis - linkStats.connStartMs) : 0;
         h.packets  = linkStats.packets;
-        h.maxGapUs = linkStats.maxGapUs;
-        h.avgGapUs = linkStats.gapCount ? (uint32_t)(linkStats.gapSumUs / linkStats.gapCount) : 0;
-        for (uint8_t i = 0; i < 6; ++i) h.hist[i] = linkStats.hist[i];
+        { uint32_t tMax, tAvg, tHist[6];              // packed fields can't bind by ref
+          gapsForDisplay(tMax, tAvg, tHist);          // trimmed once link is dead
+          h.maxGapUs = tMax; h.avgGapUs = tAvg;
+          for (uint8_t i = 0; i < 6; ++i) h.hist[i] = tHist[i]; }
         h.radioSwaps = radioSwaps - linkStats.swapsAtStart;
         for (uint8_t i = 0; i < 3; ++i) h.radioMs[i] = radioActiveMs[i] - linkStats.radioMsAtStart[i];
         // copy the ring oldest→newest into the load buffer for uniform rendering

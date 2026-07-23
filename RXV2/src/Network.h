@@ -360,20 +360,20 @@ inline void netStep() {
                 // run a STABLE pure-AP (fixed channel 1). NET_AP re-probes home
                 // WiFi rarely (AP_RECHECK_MS), so a real home comes back on its own.
                 if (staAttempts >= STA_GIVEUP_ATTEMPTS) {
-                    Serial.println("[net] home WiFi not found — auto-enabling AP-only");
-                    { char b[80]; snprintf(b, sizeof(b), "Home WiFi '%s' not found — AP-only auto-enabled", getEffectiveSsid().c_str()); events.add(b); }
-                    // PERSIST it: subsequent power-ups (next flight at the field)
-                    // go straight to a stable AP with no 100 s of hunting for a
-                    // home net that isn't there. apAuto marks it as automatic so
-                    // the front page can say why and the user can undo it at home.
-                    prefs.putBool(NVS_KEY_AP_ONLY, true);
-                    prefs.putBool(NVS_KEY_AP_AUTO, true);
-                    apAutoEnabled = true;
-                    WiFi.disconnect(false, true);
-                    WiFi.mode(WIFI_AP);                                 // drop STA entirely
-                    WiFi.softAP(g_effectiveName.c_str(), nullptr, 1);   // re-pin AP to channel 1
-                    staGaveUp = true;
-                    netMode   = NET_AP;
+                    // Home WiFi is absent — the flying-field case. Bluetooth is
+                    // the field config channel now (Malcolm 2026-07-23), so a
+                    // field AP is redundant: turn WiFi OFF entirely and run
+                    // BLE-only. Quieter RF for the nRF24s, no 100 s STA hunt on
+                    // later boots persisted, nothing for the phone to mis-join.
+                    // An AP is still available where it matters: the explicit
+                    // AP-mode setting, and a fresh chip with no saved creds
+                    // (first-time setup) still boots straight to AP.
+                    Serial.println("[net] home WiFi not found — Bluetooth-only (field mode)");
+                    events.add("No home WiFi — Bluetooth-only (AP available in WiFi settings)");
+                    WiFi.disconnect(true, true);
+                    WiFi.mode(WIFI_OFF);
+                    staGaveUp = true;          // per-boot latch: no more WiFi hunting this session
+                    netMode   = NET_NO_WIFI;   // BLE stays up (started with the AP earlier)
                     break;
                 }
                 { char buf[64]; snprintf(buf, sizeof(buf), "STA retry %u (status=%d)", (unsigned)staAttempts, (int)s); events.add(buf); }
@@ -456,14 +456,22 @@ inline void netStep() {
             // once we've actually had a link (rx.lastMillis != 0).
             if (rx.lastMillis != 0 &&
                 (uint32_t)(millis() - rx.lastMillis) >= WIFI_REENABLE_AFTER_LOST_MS) {
-                Serial.println("[net] TX link lost — bringing WiFi back up");
-                events.add("TX lost — WiFi re-enabled");
-                startWifiStation();   // → AP (+ STA if creds), reachable again
-                // Announce it physically: BLE/WiFi are now reachable — wave the
-                // ailerons so the user knows without watching a screen
-                // (Output.h drives the wave on top of the failsafe posture).
-                bleWaveStartMs = millis();
-                events.add("Config radios up — waving ailerons");
+                // Announce reachability physically: wave the ailerons ONCE per
+                // link-loss episode (keyed on the final packet's timestamp so a
+                // second landing in the same session waves again). Fires whether
+                // or not WiFi is being revived — at the field (staGaveUp) BLE
+                // has been up all along and the wave is the only cue needed.
+                static uint32_t wavedForLoss = 0;
+                if (wavedForLoss != rx.lastMillis) {
+                    wavedForLoss   = rx.lastMillis;
+                    bleWaveStartMs = millis();
+                    events.add("Config link ready — waving ailerons");
+                }
+                if (!staGaveUp) {
+                    Serial.println("[net] TX link lost — bringing WiFi back up");
+                    events.add("TX lost — WiFi re-enabled");
+                    startWifiStation();   // → AP (+ STA if creds), reachable again
+                }
             }
             break;
         }

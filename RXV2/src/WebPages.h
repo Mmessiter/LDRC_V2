@@ -1784,15 +1784,16 @@ inline void handleApiState() {
     // Per-flight link statistics (gaps in ms, frame rate derived on the client).
     {
         uint32_t durMs = (rx.lastMillis > linkStats.connStartMs) ? (rx.lastMillis - linkStats.connStartMs) : 0;
-        uint32_t avgGapUs = linkStats.gapCount ? (uint32_t)(linkStats.gapSumUs / linkStats.gapCount) : 0;
+        uint32_t dMaxUs, dAvgUs, dHist[6];
+        gapsForDisplay(dMaxUs, dAvgUs, dHist);   // shutdown artifact excluded once link is dead
         char lb[300];
         snprintf(lb, sizeof(lb),
                  ",\"link\":{\"conn_ms\":%u,\"packets\":%u,\"max_gap_ms\":%.1f,\"avg_gap_ms\":%.2f,\"hist\":[%u,%u,%u,%u,%u,%u]"
                  ",\"swaps\":%u,\"radio_ms\":[%u,%u,%u]}",
                  (unsigned)durMs, (unsigned)linkStats.packets,
-                 linkStats.maxGapUs / 1000.0f, avgGapUs / 1000.0f,
-                 (unsigned)linkStats.hist[0], (unsigned)linkStats.hist[1], (unsigned)linkStats.hist[2],
-                 (unsigned)linkStats.hist[3], (unsigned)linkStats.hist[4], (unsigned)linkStats.hist[5],
+                 dMaxUs / 1000.0f, dAvgUs / 1000.0f,
+                 (unsigned)dHist[0], (unsigned)dHist[1], (unsigned)dHist[2],
+                 (unsigned)dHist[3], (unsigned)dHist[4], (unsigned)dHist[5],
                  (unsigned)(radioSwaps - linkStats.swapsAtStart),
                  (unsigned)(radioActiveMs[0] - linkStats.radioMsAtStart[0]),
                  (unsigned)(radioActiveMs[1] - linkStats.radioMsAtStart[1]),

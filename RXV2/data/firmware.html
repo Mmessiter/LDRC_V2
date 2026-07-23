@@ -339,7 +339,7 @@ async function check() {
 
     if (!localShown && !publicShown) {
         setStatePill('Both unreachable', 'offline');
-        showMessage("Couldn't reach either update source. Check the receiver's WiFi.");
+        showMessage('No internet over WiFi from here \u2014 that is normal at the field. Use the PHONE APP over Bluetooth to update: it fetches releases through your phone\u2019s own connection and pushes them to the receiver.');
         return;
     }
     if (totalNewer) {

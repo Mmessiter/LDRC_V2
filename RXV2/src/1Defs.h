@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.244-plane-blackbox";
+constexpr const char* FW_VERSION = "RXV2-0.9.245-field-ble";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -396,6 +396,42 @@ inline LinkStats linkStats;
 // death, is treated as the TX switching off rather than flight link quality.
 constexpr uint32_t SHUTDOWN_TRIM_WINDOW_MS = 8000;
 constexpr uint32_t SHUTDOWN_TRIM_MIN_US    = 150000;   // < real jitter never reaches this; failsafe class
+
+// Gap figures with the shutdown artifact removed — non-destructive copies.
+// While the link is LIVE this returns the honest raw stats (an ongoing real
+// dropout must show). Once the link has been dead a few seconds, the trailing
+// failsafe-class gaps (the TX's power-off stall) are excluded, so neither the
+// live "Current" view nor the saved record shows a scary bogus longest-gap
+// (Malcolm's lodge test, 2026-07-23). Single code path for save + display.
+inline void gapsForDisplay(uint32_t& maxUs, uint32_t& avgUs, uint32_t hist[6]) {
+    maxUs = linkStats.maxGapUs;
+    for (uint8_t i = 0; i < 6; ++i) hist[i] = linkStats.hist[i];
+    uint64_t sum = linkStats.gapSumUs;
+    uint32_t cnt = linkStats.gapCount;
+    bool linkDead = rx.lastMillis != 0 && (uint32_t)(millis() - rx.lastMillis) >= 3000;
+    if (linkDead) {
+        bool trimmedMax = false; uint32_t survivorMax = 0;
+        for (const auto &g : linkStats.recent) {
+            if (!g.us) continue;
+            if ((uint32_t)(rx.lastMillis - g.atMs) <= SHUTDOWN_TRIM_WINDOW_MS &&
+                g.us >= SHUTDOWN_TRIM_MIN_US) {
+                if (hist[g.bucket]) hist[g.bucket]--;
+                if (cnt) cnt--;
+                sum -= (sum >= g.us) ? g.us : sum;
+                if (g.us == maxUs) trimmedMax = true;
+            } else if (g.us > survivorMax) survivorMax = g.us;
+        }
+        if (trimmedMax) {
+            maxUs = survivorMax;   // best surviving estimate of the real max
+            if (!maxUs) {          // else: ceiling of the highest populated bucket
+                static const uint32_t ceilUs[6] = {4000, 8000, 16000, 32000, 64000, 64000};
+                for (int8_t b = 5; b >= 0; --b)
+                    if (hist[b]) { maxUs = ceilUs[b]; break; }
+            }
+        }
+    }
+    avgUs = cnt ? (uint32_t)(sum / cnt) : 0;
+}
 
 // BLE-ready servo announce: when the config radios come back up after the TX
 // went quiet, wave the ailerons (ch1) so the user knows — then settle back to
