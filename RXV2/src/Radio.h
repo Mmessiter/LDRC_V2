@@ -548,19 +548,33 @@ inline void telemetrySampleTick() {
     if ((uint32_t)(now - teleLastSampleMs) < 1000) return;
     teleLastSampleMs = now;
     bool connected = (rx.lastMillis != 0) && ((uint32_t)(now - rx.lastMillis) < 2000);
-    if (!connected || !fcTelem.valid) return;     // only log an actual flight with live telemetry
+    if (!connected) return;
+    // A plane with plain servos has NO flight controller, so fcTelem never
+    // goes valid — this sampler used to skip EVERY second of such a flight:
+    // the graph stayed empty and, worse, teleCount stayed 0, so
+    // saveFlightToLittleFS refused to save and the flight list said
+    // "none yet" forever (Malcolm's field session, 2026-07-23). Now we log a
+    // sample every second while connected: FC-only fields go to zero when
+    // absent, and battery volts fall back to the receiver's own divider
+    // (vbatVolts) — planes get a real voltage trace AND saveable flights.
     TeleSample& s = teleRing[teleHead];
-    // ESC temp is a SIGNED deci-degC CRSF field — clamp before the uint8_t
-    // store (negative float → unsigned is UB; a frosty morning must log 0°,
-    // not garbage).
-    float tc = fcTelem.fcEscTempC + 0.5f;
-    s.escC = (tc < 0.0f) ? 0u : (tc > 255.0f) ? 255u : (uint8_t)tc;
-    uint32_t hs = (gearRatio > 0.1f) ? (uint32_t)(fcTelem.fcMotorRPM / gearRatio + 0.5f) : fcTelem.fcMotorRPM;
-    s.headRpm = (hs > 65535u) ? 65535u : (uint16_t)hs;
-    float cv = fcTelem.fcBattVolts * 100.0f + 0.5f;
-    s.cV = (cv > 65535.0f) ? 65535u : (uint16_t)cv;
-    float da = fcTelem.fcBattAmps * 10.0f + 0.5f;
-    s.dA = (da < 0.0f) ? 0u : (da > 65535.0f) ? 65535u : (uint16_t)da;
+    if (fcTelem.valid) {
+        // ESC temp is a SIGNED deci-degC CRSF field — clamp before the uint8_t
+        // store (negative float → unsigned is UB; a frosty morning must log 0°,
+        // not garbage).
+        float tc = fcTelem.fcEscTempC + 0.5f;
+        s.escC = (tc < 0.0f) ? 0u : (tc > 255.0f) ? 255u : (uint8_t)tc;
+        uint32_t hs = (gearRatio > 0.1f) ? (uint32_t)(fcTelem.fcMotorRPM / gearRatio + 0.5f) : fcTelem.fcMotorRPM;
+        s.headRpm = (hs > 65535u) ? 65535u : (uint16_t)hs;
+        float cv = fcTelem.fcBattVolts * 100.0f + 0.5f;
+        s.cV = (cv > 65535.0f) ? 65535u : (uint16_t)cv;
+        float da = fcTelem.fcBattAmps * 10.0f + 0.5f;
+        s.dA = (da < 0.0f) ? 0u : (da > 65535.0f) ? 65535u : (uint16_t)da;
+    } else {
+        s.escC = 0; s.headRpm = 0; s.dA = 0;
+        float cv = vbatVolts * 100.0f + 0.5f;               // RX divider, 0 if none fitted
+        s.cV = (cv <= 0.5f) ? 0u : (cv > 65535.0f) ? 65535u : (uint16_t)cv;
+    }
     teleHead = (uint16_t)((teleHead + 1) % TELE_RING);
     if (teleCount < TELE_RING) teleCount++;
 }
@@ -605,6 +619,8 @@ inline void radioPoll() {
                 for (uint8_t i = 0; i < 6; ++i) linkStats.hist[i] = 0;
                 for (auto &g : linkStats.recent) g = {};
                 linkStats.recentIdx = 0;
+                linkStats.swapsAtStart = radioSwaps;
+                for (uint8_t i = 0; i < 3; ++i) linkStats.radioMsAtStart[i] = radioActiveMs[i];
             } else {
                 uint32_t gapUs = nowUs - linkStats.lastPktUs;
                 if (gapUs > linkStats.maxGapUs) linkStats.maxGapUs = gapUs;

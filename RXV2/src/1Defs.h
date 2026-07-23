@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.243-tidy-gaps-wave";
+constexpr const char* FW_VERSION = "RXV2-0.9.244-plane-blackbox";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -384,6 +384,11 @@ struct LinkStats {
     struct TrailGap { uint32_t us; uint32_t atMs; uint8_t bucket; };
     TrailGap recent[6]   = {};
     uint8_t  recentIdx   = 0;
+    // Per-flight transceiver accounting (Malcolm 2026-07-23): radioSwaps and
+    // radioActiveMs[] accrue for the LIFETIME of the boot — snapshot them at
+    // flight start so the flight record can report this flight's share.
+    uint32_t swapsAtStart      = 0;
+    uint32_t radioMsAtStart[3] = {0, 0, 0};
 };
 inline LinkStats linkStats;
 

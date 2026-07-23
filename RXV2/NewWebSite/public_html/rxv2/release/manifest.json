@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.244-plane-blackbox",
+      "url": "https://messiter.com/rxv2/release/v0.9.244/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.244/littlefs.bin",
+      "notes": "Blackbox now works on planes (no flight controller needed): flights record and save using the receiver's own battery divider. Adds radio swap count and per-transceiver time to flight stats. Includes the shutdown-gap trim and BLE aileron wave from 0.9.243."
+    },
+    {
       "name": "RXV2-0.9.243-tidy-gaps-wave",
       "url": "https://messiter.com/rxv2/release/v0.9.243/firmware.bin",
       "notes": "Blackbox: TX switch-off no longer records a misleading final gap in saved flights. New: after the TX goes off, the receiver waves the ailerons when Bluetooth/WiFi become available."
@@ -64,12 +70,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.233/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.233/littlefs.bin",
       "notes": "Fixes the View-channels page broken in 0.9.231/232 (a script error meant Save battery settings did nothing and saved values weren't displayed \u2014 the settings themselves were never lost). Battery save now shows a proper 'Saved' confirmation dialog like the gear-ratio save."
-    },
-    {
-      "name": "RXV2-0.9.232-live-settings",
-      "url": "https://messiter.com/rxv2/release/v0.9.232/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.232/littlefs.bin",
-      "notes": "Reboot only when it's actually needed: changing the CRSF rate, FC-telemetry switch, throttle channel or arming channel now applies instantly ('Saved \u2014 applied instantly' on the page, no reboot). Only changing the protocol itself (or PPM polarity) still reboots, because the output pin must be reconfigured."
     }
   ]
 }

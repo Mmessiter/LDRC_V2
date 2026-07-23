@@ -57,10 +57,18 @@ function renderLink(lk) {
     }
     const secs = lk.conn_ms / 1000, fr = secs > 0 ? lk.packets / secs : 0;
     const gapCol = lk.max_gap_ms > 100 ? '#c0392b' : lk.max_gap_ms > 30 ? '#c98a4a' : '#2e7d32';
+    // Transceiver failover figures (FLT2 flights; absent on older saves)
+    let rsw = '';
+    if (lk.swaps !== undefined && lk.radio_ms) {
+        rsw = '<br>Radio swaps: <b>' + lk.swaps.toLocaleString() + '</b>';
+        for (let i = 0; i < 3; i++)
+            if (lk.radio_ms[i] > 0)
+                rsw += ' &nbsp;&middot;&nbsp; R' + (i + 1) + ': <b>' + fmt(lk.radio_ms[i]) + '</b>';
+    }
     lkRows.innerHTML =
         'Duration: <b>' + fmt(lk.conn_ms) + '</b><br>' +
         'Avg frame rate: <b>' + fr.toFixed(0) + ' Hz</b> &nbsp;&middot;&nbsp; Packets: <b>' + lk.packets.toLocaleString() + '</b><br>' +
-        'Avg gap: <b>' + lk.avg_gap_ms.toFixed(2) + ' ms</b> &nbsp;&middot;&nbsp; Longest gap: <b style="color:' + gapCol + '">' + lk.max_gap_ms.toFixed(1) + ' ms</b>';
+        'Avg gap: <b>' + lk.avg_gap_ms.toFixed(2) + ' ms</b> &nbsp;&middot;&nbsp; Longest gap: <b style="color:' + gapCol + '">' + lk.max_gap_ms.toFixed(1) + ' ms</b>' + rsw;
     const labels = ['&lt;4', '4-8', '8-16', '16-32', '32-64', '&ge;64'];
     const mx = Math.max(1, ...lk.hist);
     let h = '<div style="font-size:.8em;color:#5a6b74;margin-bottom:.2em">Gap distribution (ms)</div>';
