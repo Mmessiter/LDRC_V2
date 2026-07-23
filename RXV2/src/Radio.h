@@ -549,6 +549,10 @@ inline void telemetrySampleTick() {
     teleLastSampleMs = now;
     bool connected = (rx.lastMillis != 0) && ((uint32_t)(now - rx.lastMillis) < 2000);
     if (!connected) return;
+    // Skip the first moments of a connection: the battery ADC's first reads
+    // after boot/attenuation setup can be wildly high (a 25 V spike on an 11 V
+    // pack graphed at the lodge) — two skipped samples cost nothing.
+    if ((uint32_t)(now - linkStats.connStartMs) < 2500) return;
     // A plane with plain servos has NO flight controller, so fcTelem never
     // goes valid — this sampler used to skip EVERY second of such a flight:
     // the graph stayed empty and, worse, teleCount stayed 0, so
@@ -628,9 +632,15 @@ inline void radioPoll() {
                 uint32_t gapMs = gapUs / 1000;
                 uint8_t b = gapMs < 4 ? 0 : gapMs < 8 ? 1 : gapMs < 16 ? 2 : gapMs < 32 ? 3 : gapMs < 64 ? 4 : 5;
                 linkStats.hist[b]++;
-                // remember it for the shutdown-artifact trim at save time
-                linkStats.recent[linkStats.recentIdx] = { gapUs, nowMs, b };
-                linkStats.recentIdx = (uint8_t)((linkStats.recentIdx + 1) % 6);
+                // Remember NOTABLE gaps for the shutdown-artifact trim. Only
+                // failsafe-class gaps enter the ring: at ~490 packets/s the
+                // TX's few dying packets flood a record-everything ring with
+                // 2 ms entries and push the big stall gap out before the trim
+                // ever sees it (the 1051 ms survivor at the lodge, 0.9.245).
+                if (gapUs >= SHUTDOWN_TRIM_MIN_US) {
+                    linkStats.recent[linkStats.recentIdx] = { gapUs, nowMs, b };
+                    linkStats.recentIdx = (uint8_t)((linkStats.recentIdx + 1) % 6);
+                }
             }
             linkStats.lastPktUs = nowUs;
             linkStats.packets++;
