@@ -696,6 +696,43 @@ inline void snapshotBackupsToRam() {
     }
 }
 
+// Flights are BINARY files — snapshot the three /fltN.bin too, so a pages
+// update doesn't erase the flight history (Malcolm noticed every update
+// tonight wiped it, 2026-07-23). ~7 kB each, heap-buffered around the flash.
+inline uint8_t* g_fsFlights[3]    = {nullptr, nullptr, nullptr};
+inline size_t   g_fsFlightLen[3]  = {0, 0, 0};
+inline const char* g_fltPaths[3]  = {"/flt0.bin", "/flt1.bin", "/flt2.bin"};
+
+inline void snapshotFlightsToRam() {
+    for (uint8_t i = 0; i < 3; ++i) {
+        if (g_fsFlights[i]) { free(g_fsFlights[i]); g_fsFlights[i] = nullptr; }
+        g_fsFlightLen[i] = 0;
+        if (!littleFsMounted || !LittleFS.exists(g_fltPaths[i])) continue;
+        File f = LittleFS.open(g_fltPaths[i], "r");
+        if (!f) continue;
+        size_t n = f.size();
+        if (n > 0 && n <= 16384) {
+            g_fsFlights[i] = (uint8_t*)malloc(n);
+            if (g_fsFlights[i] && f.read(g_fsFlights[i], n) == (int)n) g_fsFlightLen[i] = n;
+            else { free(g_fsFlights[i]); g_fsFlights[i] = nullptr; }
+        }
+        f.close();
+    }
+}
+
+inline int restoreFlightsFromRam() {
+    int restored = 0;
+    for (uint8_t i = 0; i < 3; ++i) {
+        if (!g_fsFlights[i] || !g_fsFlightLen[i]) continue;
+        if (littleFsMounted) {
+            File w = LittleFS.open(g_fltPaths[i], "w");
+            if (w) { if (w.write(g_fsFlights[i], g_fsFlightLen[i]) == g_fsFlightLen[i]) restored++; w.close(); }
+        }
+        free(g_fsFlights[i]); g_fsFlights[i] = nullptr; g_fsFlightLen[i] = 0;
+    }
+    return restored;
+}
+
 inline int restoreBackupsFromRam() {
     int restored = 0;
     if (littleFsMounted && g_fsBackupCount > 0) {
@@ -727,6 +764,7 @@ inline void handleBleOtaBegin() {
     bleOtaCmd = (type == "fs") ? U_SPIFFS : U_FLASH;
     if (bleOtaCmd == U_SPIFFS) {
         snapshotBackupsToRam();      // whole partition is about to be replaced
+        snapshotFlightsToRam();
         LittleFS.end();
         littleFsMounted = false;
     }
@@ -735,6 +773,7 @@ inline void handleBleOtaBegin() {
         if (bleOtaCmd == U_SPIFFS) {
             littleFsMounted = LittleFS.begin(false) || LittleFS.begin(true);
             restoreBackupsFromRam();
+            restoreFlightsFromRam();
         }
         server.send(500, "application/json", String("{\"ok\":false,\"error\":\"") + e + "\"}");
         return;
@@ -771,6 +810,7 @@ inline void handleBleOtaEnd() {
     if (bleOtaCmd == U_SPIFFS) {
         littleFsMounted = LittleFS.begin(false) || LittleFS.begin(true);
         int restored = restoreBackupsFromRam();
+        restoreFlightsFromRam();
         char m[64]; snprintf(m, sizeof(m), "BLE OTA web files: %s (%d backups kept)", ok ? "done" : "FAILED", restored);
         events.add(m);
     } else {
@@ -810,6 +850,7 @@ inline String updateFilesystemKeepingBackups(const String& fsUrl) {
 
     // 1) Snapshot the user's backups (old FS still mounted).
     snapshotBackupsToRam();
+    snapshotFlightsToRam();
     int n = g_fsBackupCount;
 
     // 2) Unmount + flash the new image straight from the open stream.
@@ -824,6 +865,7 @@ inline String updateFilesystemKeepingBackups(const String& fsUrl) {
     bool mounted = LittleFS.begin(false) || LittleFS.begin(true);
     littleFsMounted = mounted;
     int restored = restoreBackupsFromRam();
+    restoreFlightsFromRam();
     char m[96];
     if (err.length())
         snprintf(m, sizeof m, " (web files FAILED: %s; %d/%d backups kept)", err.c_str(), restored, n);
