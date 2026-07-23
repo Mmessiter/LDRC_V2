@@ -514,8 +514,18 @@ void loop() {
     // power-cycle doesn't accumulate toward the 3-trip threshold.
     static bool quickBootReset = false;
     if (!quickBootReset && millis() > QUICK_BOOT_RESET_MS) {
-        prefs.putUChar(NVS_KEY_BOOT_COUNT, 0);
-        quickBootReset = true;
+        // NVS write = flash stall (both cores freeze; worst-case ~1 s with
+        // page housekeeping). Fired at exactly t=5 s it blocked the loop
+        // MID-SESSION whenever the TX was on from boot — the mystery 1 s
+        // link gap in every bench blackbox (2026-07-23). Defer it to a
+        // link-quiet moment: on a normal session that's the landing, when
+        // flash work is harmless.
+        bool linkLive = rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 2000;
+        if (!linkLive) {
+            prefs.putUChar(NVS_KEY_BOOT_COUNT, 0);
+            quickBootReset = true;
+            events.add("Quick-boot counter cleared");
+        }
     }
 
     // Deferred WiFi-off so the response to /fly_arm completes before the radio dies.

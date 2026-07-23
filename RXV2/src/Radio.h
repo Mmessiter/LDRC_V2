@@ -640,6 +640,12 @@ inline void radioPoll() {
                 if (gapUs >= SHUTDOWN_TRIM_MIN_US) {
                     linkStats.recent[linkStats.recentIdx] = { gapUs, nowMs, b };
                     linkStats.recentIdx = (uint8_t)((linkStats.recentIdx + 1) % 6);
+                    // Blackbox breadcrumb: a failsafe-class gap on a LIVE
+                    // link always deserves an explanation — its neighbours
+                    // in the event log show what the chip was doing then.
+                    char gb[32];
+                    snprintf(gb, sizeof(gb), "Link gap %lu ms", (unsigned long)gapMs);
+                    events.add(gb);
                 }
             }
             linkStats.lastPktUs = nowUs;
