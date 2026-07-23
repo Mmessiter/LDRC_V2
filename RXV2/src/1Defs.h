@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.248-wave-fix";
+constexpr const char* FW_VERSION = "RXV2-0.9.249-wave-channels";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -249,6 +249,7 @@ constexpr const char* NVS_KEY_BOARD_ID   = "board_id";   // 6-byte board ID; cap
 constexpr const char* NVS_KEY_FAILSAFE   = "fs";         // 16 x uint16 failsafe channel values (us); absent = not configured
 constexpr const char* NVS_KEY_GEAR_RATIO = "gear";       // float main-gear ratio (motor:head); head speed = motor RPM / gearRatio. 1.0 = direct drive
 constexpr const char* NVS_KEY_ARM_CH     = "armch";      // uint8 arming channel (1..16, 0=off): flight saved on DISARM after a real flight
+constexpr const char* NVS_KEY_WAVE_CHS   = "wavechs";    // uint16 bitmask of channels waved when Bluetooth comes up (bit0=ch1); default ch1, 0=off
 constexpr const char* NVS_KEY_BOOT_COUNT = "qbc";        // quick-boot counter for escape hatch
 constexpr const char* NVS_KEY_PROTO      = "proto";
 constexpr const char* NVS_KEY_PPM_INV    = "ppm_inv";
@@ -319,6 +320,7 @@ inline bool     failsafeSet        = false;
 // / gearRatio. 1.0 = direct drive. User-set on the View-channels page, NVS-backed.
 inline float    gearRatio          = 1.0f;
 inline uint8_t  armingChannel      = 0;    // 1..16 = save the flight on DISARM of this channel; 0 = off (use link-loss save)
+inline uint16_t waveChannelMask    = 0x0001; // channels waved when Bluetooth comes up (bit0=ch1); Malcolm's plane = 1+6
 // Legal decoded-channel range (microseconds), == v1 MINMICROS/MAXMICROS. A
 // decoded frame with any channel outside this isn't real channel data (a
 // bind/MAC/parameter frame misread, or a corrupt decode); decodeChannelData()

@@ -155,6 +155,7 @@ void setup() {
     vbatInit();
     armingChannel = prefs.isKey(NVS_KEY_ARM_CH) ? prefs.getUChar(NVS_KEY_ARM_CH, 0) : 0;
     if (armingChannel > 16) armingChannel = 0;
+    waveChannelMask = prefs.isKey(NVS_KEY_WAVE_CHS) ? prefs.getUShort(NVS_KEY_WAVE_CHS, 1) : 1;
     apAutoEnabled = prefs.isKey(NVS_KEY_AP_AUTO) && prefs.getBool(NVS_KEY_AP_AUTO, false);
     if (gearRatio < 0.1f || gearRatio > 100.0f) gearRatio = 1.0f;
 
