@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.255-save-label";
+constexpr const char* FW_VERSION = "RXV2-0.9.256-gap-hunt";
 
 //*********************************************************************
 //  Auto-update manifest URLs

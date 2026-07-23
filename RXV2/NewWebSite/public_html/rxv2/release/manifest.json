@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.256-gap-hunt",
+      "url": "https://messiter.com/rxv2/release/v0.9.256/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.256/littlefs.bin",
+      "notes": "Hunts the mystery 1-second link gap seen when the transmitter is on from power-up: a flash write fired at exactly t=5s used to freeze the processor mid-session - it now waits for a link-quiet moment. Also, any large gap on a live link is recorded in the event log with a timestamp, so the black box itself explains any future gap. Installing this also updates the web pages."
+    },
+    {
       "name": "RXV2-0.9.255-save-label",
       "url": "https://messiter.com/rxv2/release/v0.9.255/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.255/littlefs.bin",
@@ -65,12 +71,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.245/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.245/littlefs.bin",
       "notes": "Field mode is now Bluetooth-only (no more auto AP when home WiFi is absent; AP still available in WiFi settings). Update page explains the Bluetooth app path instead of claiming updates are impossible. Current-flight view no longer shows the TX switch-off as a scary longest gap. Flight graph: missing sensors greyed out, battery noise no longer magnified. Aileron wave now repeats on every landing of a session."
-    },
-    {
-      "name": "RXV2-0.9.244-plane-blackbox",
-      "url": "https://messiter.com/rxv2/release/v0.9.244/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.244/littlefs.bin",
-      "notes": "Blackbox now works on planes (no flight controller needed): flights record and save using the receiver's own battery divider. Adds radio swap count and per-transceiver time to flight stats. Includes the shutdown-gap trim and BLE aileron wave from 0.9.243."
     }
   ]
 }
