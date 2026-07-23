@@ -29,8 +29,12 @@ struct __attribute__((packed)) FlightHeader {
     uint32_t maxGapUs;     // longest inter-packet gap
     uint32_t avgGapUs;     // average gap
     uint32_t hist[6];      // gap histogram
+    // FLT2 additions (Malcolm 2026-07-23): dual/triple-transceiver failover
+    // figures for THIS flight — how many swaps, and active ms on each slot.
+    uint32_t radioSwaps;
+    uint32_t radioMs[3];
 };
-constexpr uint32_t FLIGHT_MAGIC = 0x31544C46;   // "FLT1"
+constexpr uint32_t FLIGHT_MAGIC = 0x32544C46;   // "FLT2" (FLT1 files: pre-radio-stats, no longer listed)
 
 // A static scratch buffer for a flight loaded from flash (avoids a huge stack
 // frame; ~8 kB, only used while serving a saved flight).
@@ -104,6 +108,8 @@ inline void saveFlightToLittleFS(bool rotate = true) {
     h.maxGapUs  = linkStats.maxGapUs;
     h.avgGapUs  = linkStats.gapCount ? (uint32_t)(linkStats.gapSumUs / linkStats.gapCount) : 0;
     for (uint8_t i = 0; i < 6; ++i) h.hist[i] = linkStats.hist[i];
+    h.radioSwaps = radioSwaps - linkStats.swapsAtStart;
+    for (uint8_t i = 0; i < 3; ++i) h.radioMs[i] = radioActiveMs[i] - linkStats.radioMsAtStart[i];
     f.write((const uint8_t*)&h, sizeof(h));
     const uint16_t start = (teleCount < TELE_RING) ? 0 : teleHead;
     size_t wrote = 0;
@@ -217,9 +223,12 @@ inline void renderFlightJson(String& j, const FlightHeader& h, const TeleSample*
     snprintf(b, sizeof(b), ",\"max_gap_ms\":%.1f", h.maxGapUs / 1000.0f); j += b;
     snprintf(b, sizeof(b), ",\"avg_gap_ms\":%.2f", h.avgGapUs / 1000.0f); j += b;
     snprintf(b, sizeof(b), ",\"conn_ms\":%u", (unsigned)h.connMs); j += b;
-    snprintf(b, sizeof(b), ",\"hist\":[%u,%u,%u,%u,%u,%u]}",
+    snprintf(b, sizeof(b), ",\"hist\":[%u,%u,%u,%u,%u,%u]",
              (unsigned)h.hist[0], (unsigned)h.hist[1], (unsigned)h.hist[2],
              (unsigned)h.hist[3], (unsigned)h.hist[4], (unsigned)h.hist[5]); j += b;
+    snprintf(b, sizeof(b), ",\"swaps\":%u,\"radio_ms\":[%u,%u,%u]}",
+             (unsigned)h.radioSwaps,
+             (unsigned)h.radioMs[0], (unsigned)h.radioMs[1], (unsigned)h.radioMs[2]); j += b;
     j += ",\"esc\":[";  for (uint16_t i = 0; i < h.count; ++i) { if (i) j += ','; j += s[i].escC; }
     j += "],\"head\":["; for (uint16_t i = 0; i < h.count; ++i) { if (i) j += ','; j += s[i].headRpm; }
     j += "],\"v\":[";   for (uint16_t i = 0; i < h.count; ++i) { if (i) j += ','; snprintf(b, sizeof(b), "%.2f", s[i].cV / 100.0f); j += b; }
@@ -238,6 +247,8 @@ inline bool buildFlightJson(uint8_t f, String& j) {
         h.maxGapUs = linkStats.maxGapUs;
         h.avgGapUs = linkStats.gapCount ? (uint32_t)(linkStats.gapSumUs / linkStats.gapCount) : 0;
         for (uint8_t i = 0; i < 6; ++i) h.hist[i] = linkStats.hist[i];
+        h.radioSwaps = radioSwaps - linkStats.swapsAtStart;
+        for (uint8_t i = 0; i < 3; ++i) h.radioMs[i] = radioActiveMs[i] - linkStats.radioMsAtStart[i];
         // copy the ring oldest→newest into the load buffer for uniform rendering
         const uint16_t start = (teleCount < TELE_RING) ? 0 : teleHead;
         for (uint16_t i = 0; i < teleCount; ++i) flightLoadBuf[i] = teleRing[(start + i) % TELE_RING];
