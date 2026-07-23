@@ -42,6 +42,11 @@ class MainActivity : AppCompatActivity() {
     // Where publish_app.sh puts each release (host 301s plain http — keep https).
     private val APP_MANIFEST_URL = "https://www.messiter.com/rxv2app/release/manifest.json"
 
+    // The RECEIVER's public release manifest — fetched by the app on the
+    // pages' behalf (/app/manifest): the phone has internet at the field,
+    // the Bluetooth-only receiver does not.
+    private val RX_MANIFEST_URL = "https://www.messiter.com/rxv2/release/manifest.json"
+
     private val permReq = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
     ) { if (it.values.all { g -> g }) ble.startScan() else showMessage("Bluetooth permission is needed.") }
@@ -361,7 +366,11 @@ class MainActivity : AppCompatActivity() {
         try {
             otaPhase = "download"; otaMsg = "Downloading with the phone's internet…"; otaSent = 0; otaTotal = 0
             val fw = httpDownload(fwUrl)
-            val fs = fsUrl?.takeIf { it.isNotBlank() }?.let { runCatching { httpDownload(it) }.getOrNull() }
+            var fs = fsUrl?.takeIf { it.isNotBlank() }?.let { runCatching { httpDownload(it) }.getOrNull() }
+            // Older on-receiver pages omit &fs= — derive the pages image from
+            // the release-directory convention so web pages always ship too.
+            if (fs == null && fwUrl.endsWith("firmware.bin"))
+                fs = runCatching { httpDownload(fwUrl.removeSuffix("firmware.bin") + "littlefs.bin") }.getOrNull()
             otaTotal = fw.size.toLong() + (fs?.size ?: 0).toLong()
             // one clean restart per image: /begin resets the receiver side,
             // so a transfer that died mid-way gets a second, fresh attempt
@@ -437,6 +446,12 @@ class MainActivity : AppCompatActivity() {
                     j.put("phase", otaPhase); j.put("msg", otaMsg)
                     j.put("sent", otaSent); j.put("total", otaTotal)
                     return jsonResp(j.toString())
+                }
+                if (path == "/app/manifest") {
+                    // runs on a WebView worker thread — blocking download is fine
+                    val json = if (demoMode) "{}"
+                               else runCatching { String(httpDownload(RX_MANIFEST_URL)) }.getOrElse { "{}" }
+                    return jsonResp(json)
                 }
                 val asset = bundled(path)
                 if (asset != null) {
@@ -551,6 +566,21 @@ class MainActivity : AppCompatActivity() {
             // page's fetch() arrives HERE (the JS bridge), not in
             // shouldInterceptRequest, so it must be answered here too.
             val p = uri.path ?: "/"
+            // Public release manifest, fetched with the PHONE's internet on the
+            // pages' behalf (the Bluetooth-only receiver has none at the field).
+            if (p == "/app/manifest") {
+                Thread {
+                    val json = if (demoMode) "{}"
+                               else runCatching { String(httpDownload(RX_MANIFEST_URL)) }.getOrElse { "{}" }
+                    runOnUiThread {
+                        val w = webView ?: return@runOnUiThread
+                        val b64 = Base64.encodeToString(json.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
+                        w.evaluateJavascript(
+                            "window.__bleResolve($id,200,${JSONObject.quote("application/json")},${JSONObject.quote(b64)})", null)
+                    }
+                }.start()
+                return
+            }
             if (p == "/app/bleota/start" || p == "/app/bleota/progress") {
                 val json = if (p == "/app/bleota/start") {
                     val fw = uri.getQueryParameter("fw")

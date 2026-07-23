@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.247-field-updates",
+      "url": "https://messiter.com/rxv2/release/v0.9.247/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.247/littlefs.bin",
+      "notes": "Field updates completed: with the phone app (iPhone 1.35 / Android 1.35), the home page now ANNOUNCES new firmware over Bluetooth at the field (the app fetches the release list with the phone's own internet) and one tap installs it - firmware AND web pages - over Bluetooth. Web pages now always ship with firmware even when installing from an older receiver page. Installing this also updates the web pages."
+    },
+    {
       "name": "RXV2-0.9.246-ring-fix",
       "url": "https://messiter.com/rxv2/release/v0.9.246/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.246/littlefs.bin",
@@ -64,12 +70,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.236/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.236/littlefs.bin",
       "notes": "Two update-flow niceties from Malcolm's hunting-lodge session: (1) trying to install while the receiver isn't on home WiFi now gets a plain explanation (the RECEIVER downloads the image itself, so the phone's internet can't help) instead of a cryptic failure; (2) an elapsed-time ticker during installs \u2014 the chip can't report true progress while flashing, but an honest count beats a frozen screen."
-    },
-    {
-      "name": "RXV2-0.9.235-tx-failsafe",
-      "url": "https://messiter.com/rxv2/release/v0.9.235/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.235/littlefs.bin",
-      "notes": "The transmitter's 'send failsafe to receiver' button now works on RXV2 (it was silently ignored): it captures the current channel positions \u2014 trims and subtrims included, since they're baked into the radio stream \u2014 exactly like the web 'Save failsafe' button. And with the FC-telemetry switch OFF (no flight controller, e.g. a PWM converter), the receiver now STREAMS the captured failsafe posture on CRSF after signal loss instead of going silent and letting the converter drift."
     }
   ]
 }

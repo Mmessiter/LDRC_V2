@@ -282,6 +282,18 @@ async function loadCurrent() {
     }
 }
 
+// The public release manifest, fetched BY THE PHONE APP with its own internet
+// (/app/manifest only exists inside the app; a plain browser 404s → null).
+const PUBLIC_MANIFEST = 'https://messiter.com/rxv2/release/manifest.json';
+async function appManifest() {
+    try {
+        const r = await fetch('/app/manifest', { cache: 'no-store' });
+        if (!r.ok) return null;
+        const m = await r.json();
+        return (m && m.versions && m.versions.length) ? m : null;
+    } catch (e) { return null; }
+}
+
 async function check() {
     setStatePill('Checking…', 'amber');
     showMessage('Asking the local and public manifest servers…');
@@ -315,11 +327,20 @@ async function check() {
     }
 
     if (j.offline) {
-        setStatePill(j.net_mode || 'offline', 'offline');
-        showMessage('The receiver is in <b>' + (j.net_mode || 'AP') + '</b> mode, ' +
-            'so it cannot reach the manifest servers. ' +
-            '<a href="/wifi">Join your home WiFi</a> and come back.');
-        return;
+        // Bluetooth-only field mode: the receiver has no internet, but inside
+        // the app the PHONE does — /app/manifest is the app fetching the
+        // public release manifest with its own connection. Installs then go
+        // over Bluetooth too, so everything works at the field.
+        const mj = await appManifest();
+        if (mj) {
+            j = { public: { ok: true, manifest: mj, manifest_url: PUBLIC_MANIFEST } };
+        } else {
+            setStatePill(j.net_mode || 'offline', 'offline');
+            showMessage('The receiver is in <b>' + (j.net_mode || 'AP') + '</b> mode, ' +
+                'so it cannot reach the manifest servers. ' +
+                '<a href="/wifi">Join your home WiFi</a> and come back.');
+            return;
+        }
     }
 
     if (j.link_active) {
@@ -328,6 +349,13 @@ async function check() {
             'link rock-solid. Turn the transmitter off (or exit Simulator mode), then tap ' +
             '<b>Check again</b>.');
         return;
+    }
+
+    // Chip online but neither source reachable from it \u2014 the app may still
+    // manage with the phone's own connection.
+    if (!(j.local && j.local.ok) && !(j.public && j.public.ok)) {
+        const mj = await appManifest();
+        if (mj) j = { public: { ok: true, manifest: mj, manifest_url: PUBLIC_MANIFEST } };
     }
 
     const localNewer  = renderSource('local',  j.local);

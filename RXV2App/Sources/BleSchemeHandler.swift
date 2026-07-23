@@ -54,6 +54,29 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
                     body: ota.progressJSON)
             return
         }
+        // The pages ask the APP for the public release manifest — the phone
+        // has internet at the field, the receiver (Bluetooth-only) does not.
+        if path == "/app/manifest" {
+            if demo {
+                deliver(task, url: url, code: 404, type: "application/json",
+                        body: Data("{}".utf8))
+                return
+            }
+            var req = URLRequest(url: URL(string: "https://messiter.com/rxv2/release/manifest.json")!)
+            req.cachePolicy = .reloadIgnoringLocalCacheData
+            URLSession.shared.dataTask(with: req) { [weak self] data, resp, _ in
+                DispatchQueue.main.async {
+                    guard let self else { return }
+                    if let data, (resp as? HTTPURLResponse)?.statusCode == 200 {
+                        self.deliver(task, url: url, code: 200, type: "application/json", body: data)
+                    } else {
+                        self.deliver(task, url: url, code: 502, type: "application/json",
+                                     body: Data("{}".utf8))
+                    }
+                }
+            }.resume()
+            return
+        }
 
         // 1) bundle-served static content (GET only). In demo mode the demo
         //    shim is injected into every page: it intercepts fetch() with
@@ -217,6 +240,11 @@ final class BleOta {
             let fw = try download(fwUrl)
             var fs: Data? = nil
             if let u = fsUrl, !u.isEmpty { fs = try? download(u) }
+            // Older on-receiver pages omit &fs= — derive the pages image from
+            // the release-directory convention so web pages always ship too.
+            if fs == nil, fwUrl.hasSuffix("firmware.bin") {
+                fs = try? download(String(fwUrl.dropLast("firmware.bin".count)) + "littlefs.bin")
+            }
             lock.lock(); total = Int64(fw.count + (fs?.count ?? 0)); lock.unlock()
             // one clean restart per image: /begin resets the receiver side,
             // so a transfer that died mid-way gets a second, fresh attempt
