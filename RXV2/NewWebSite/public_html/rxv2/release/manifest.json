@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.248-wave-fix",
+      "url": "https://messiter.com/rxv2/release/v0.9.248/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.248/littlefs.bin",
+      "notes": "The aileron wave after switching off the transmitter now works on models with NO captured failsafe posture (it rides on the held servo positions instead) - previously it silently did nothing on such models. Includes everything from 0.9.247: update announcements and web-page delivery over Bluetooth at the field. Installing this also updates the web pages."
+    },
+    {
       "name": "RXV2-0.9.247-field-updates",
       "url": "https://messiter.com/rxv2/release/v0.9.247/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.247/littlefs.bin",
@@ -64,12 +70,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.237/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.237/littlefs.bin",
       "notes": "SAFETY: the propeller could blip during a reboot-into-bind (prop fitted, hands near the model). Two defences: (1) every web-initiated reboot now pushes ~100ms of throttle-low frames and parks the output pin idle-high through the restart, so the converter/FC sees silence instead of noise; (2) the throttle stays pinned low until the link has delivered a stable stream (25 channel packets \u2248 0.5s) \u2014 covering the no-TX boot AND the first moments after binding, when a V1 transmitter in bind mode bypasses its own motor-low overrides."
-    },
-    {
-      "name": "RXV2-0.9.236-install-clarity",
-      "url": "https://messiter.com/rxv2/release/v0.9.236/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.236/littlefs.bin",
-      "notes": "Two update-flow niceties from Malcolm's hunting-lodge session: (1) trying to install while the receiver isn't on home WiFi now gets a plain explanation (the RECEIVER downloads the image itself, so the phone's internet can't help) instead of a cryptic failure; (2) an elapsed-time ticker during installs \u2014 the chip can't report true progress while flashing, but an honest count beats a frozen screen."
     }
   ]
 }

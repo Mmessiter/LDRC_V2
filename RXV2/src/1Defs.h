@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.247-field-updates";
+constexpr const char* FW_VERSION = "RXV2-0.9.248-wave-fix";
 
 //*********************************************************************
 //  Auto-update manifest URLs
