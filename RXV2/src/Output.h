@@ -368,31 +368,39 @@ inline void sbusTick() {
     // ClaudeFix-16-7-2026 CRSF with the FC-telemetry switch OFF means there is no FC —
     // just a PWM converter — so the receiver IS the failsafe authority there
     // too. (Previously CRSF always went silent and the converter drifted.)
-    if (failsafe && everConnected && failsafeSet &&
-        (currentProtocol != PROTO_CRSF || !fcTelemetryEnabled)) {
+    bool fsAuthority = failsafe && everConnected &&
+                       (currentProtocol != PROTO_CRSF || !fcTelemetryEnabled);
+    if (fsAuthority && failsafeSet) {
         for (uint8_t i = 0; i < 16; ++i) channelMicros[i] = failsafeMicros[i];
         if (!inFailsafePosture) { inFailsafePosture = true; events.add("Signal lost — RX failsafe positions applied"); }
-        // BLE-ready announce (Malcolm 2026-07-23): when the config radios come
-        // back up after the TX went off, wave the AILERONS (ch1) so the user
-        // can SEE the receiver is reachable again — then settle back to the
-        // failsafe posture. Gentle (±150 µs), time-boxed, non-blocking; rides
-        // on top of the failsafe values so it can only ever happen while the
-        // posture is already being driven.
-        if (bleWaveStartMs) {
-            uint32_t t = (uint32_t)(millis() - bleWaveStartMs);
-            if (t >= BLE_WAVE_MS) bleWaveStartMs = 0;
-            else {
-                float ph = (float)t * (2.0f * (float)M_PI * BLE_WAVE_HZ / 1000.0f);
-                int32_t v = (int32_t)failsafeMicros[0] + (int32_t)(BLE_WAVE_AMPL_US * sinf(ph));
-                if (v < 1000) v = 1000; else if (v > 2000) v = 2000;
-                channelMicros[0] = (uint16_t)v;
-            }
-        }
-        frameLost = false;
-        failsafe  = false;
     } else if (inFailsafePosture) {
         inFailsafePosture = false;
         events.add("Link restored — left RX failsafe");
+    }
+    // BLE-ready announce (Malcolm 2026-07-23): when the config radios come
+    // back up after the TX went off, wave the AILERONS (ch1) so the user can
+    // SEE the receiver is reachable again — then settle back. Gentle
+    // (±150 µs), time-boxed, non-blocking. Rides on the captured failsafe
+    // posture when one exists, otherwise on the HELD last-good values — a
+    // plane with no captured failsafe must still wave (lodge, 2026-07-23).
+    if (fsAuthority && bleWaveStartMs) {
+        uint32_t t = (uint32_t)(millis() - bleWaveStartMs);
+        if (t >= BLE_WAVE_MS) bleWaveStartMs = 0;
+        else {
+            static uint32_t waveEpoch = 0;
+            static uint16_t waveBase  = 1500;
+            if (waveEpoch != bleWaveStartMs) { waveEpoch = bleWaveStartMs; waveBase = channelMicros[0]; }
+            float ph = (float)t * (2.0f * (float)M_PI * BLE_WAVE_HZ / 1000.0f);
+            int32_t v = (int32_t)waveBase + (int32_t)(BLE_WAVE_AMPL_US * sinf(ph));
+            if (v < 1000) v = 1000; else if (v > 2000) v = 2000;
+            channelMicros[0] = (uint16_t)v;
+        }
+    }
+    // Present the frames as valid RC while the posture (or a wave) is being
+    // driven — downstream converters ignore channels flagged as failsafe.
+    if (fsAuthority && (failsafeSet || bleWaveStartMs)) {
+        frameLost = false;
+        failsafe  = false;
     }
 
     // Idle-HIGH protocol failsafe handling — detach the UART so the LED
