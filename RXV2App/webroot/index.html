@@ -555,19 +555,27 @@ async function checkFirmware(current) {
         // coming up (the check answers "offline" until it's online), and over
         // Bluetooth the reply itself can be slow — connecting the app quickly
         // used to mean the update offer never appeared at all.
-        let j = null;
+        let j = null, sawOffline = false, appTried = false;
         for (let attempt = 0; attempt < 20 && !j; attempt++) {
             if (attempt) await new Promise(res => setTimeout(res, j === null ? 10000 : 2500));
             try {
                 const r = await fetch('/api/firmware/check', { cache: 'no-store' });
                 if (r.ok) {
                     j = await r.json();
-                    if (j && j.offline) j = null;    // WiFi not up yet — try again shortly
+                    if (j && j.offline) { j = null; sawOffline = true; }   // no internet on the RX
                     if (j && j.checking) { j = null; await new Promise(res => setTimeout(res, 2500)); }
                     // background check running — poll again soon
                 }
             }
             catch (e) { /* transient — retry */ }
+            // "Offline" = Bluetooth-only field mode (the receiver has no
+            // internet). Ask the APP instead — the phone has its own
+            // connection. One shot; a plain browser 404s → keep chip-polling.
+            if (!j && !appTried && (sawOffline || attempt >= 2)) {
+                appTried = true;
+                const mj = await appManifest();
+                if (mj) j = { public: { ok: true, manifest: mj, manifest_url: PUBLIC_MANIFEST } };
+            }
         }
         if (!j) return;
         if (j.link_active) return;        // TX connected — check deferred to keep the radio link stable
@@ -604,6 +612,20 @@ async function checkFirmware(current) {
 
 function vr(n) { return String(n).replace(/^RXV2-/, ''); }
 
+// The public release manifest, fetched BY THE PHONE APP with its own internet
+// (/app/manifest only exists inside the app). This is what makes update
+// announcements work in Bluetooth-only field mode, where the receiver itself
+// never has internet. In a plain browser the fetch 404s on the receiver → null.
+const PUBLIC_MANIFEST = 'https://messiter.com/rxv2/release/manifest.json';
+async function appManifest() {
+    try {
+        const r = await fetch('/app/manifest', { cache: 'no-store' });
+        if (!r.ok) return null;
+        const m = await r.json();
+        return (m && m.versions && m.versions.length) ? m : null;
+    } catch (e) { return null; }
+}
+
 // Proactive "Update now?" dialog — pops automatically on connect when newer
 // firmware exists, and is re-openable by tapping the banner.
 function offerUpdate(current, v) {
@@ -619,7 +641,9 @@ function offerUpdate(current, v) {
 
 // One-tap OTA from the home screen: fire the install, show a waiting card, then
 // poll until the receiver is back on the new firmware and return home.
-function doFirmwareUpdate(url, fsUrl, name) {
+// Inside the app the PHONE downloads and pushes over Bluetooth (the only path
+// that works at the field); outside the app the receiver pulls it itself.
+async function doFirmwareUpdate(url, fsUrl, name) {
     const c = document.querySelector('.container');
     if (c) c.innerHTML = '<h1>Updating firmware</h1>'
       + '<div class=card><p style="font-size:1.15em;font-weight:600">&#9203; Installing ' + vr(name) + ' &mdash; please wait&hellip;</p>'
@@ -631,6 +655,11 @@ function doFirmwareUpdate(url, fsUrl, name) {
     // snap to 100% the instant the receiver answers again. An estimate — exactness doesn't matter.
     const bar = document.getElementById('__bar');
     if (bar) { bar.style.transition = 'width 30s linear'; requestAnimationFrame(() => { bar.style.width = '92%'; }); }
+    try {
+        const r0 = await fetch('/app/bleota/start?fw=' + encodeURIComponent(url) +
+                               (fsUrl ? '&fs=' + encodeURIComponent(fsUrl) : ''), { cache: 'no-store' });
+        if (r0.ok && (await r0.json()).ok) { bleOtaWatch(); return; }
+    } catch (e) { /* not inside the app — chip-pull below */ }
     let q = '/api/firmware/install?url=' + encodeURIComponent(url);
     if (fsUrl) q += '&fs_url=' + encodeURIComponent(fsUrl);
     fetch(q, { method: 'POST' }).catch(() => {});      // device reboots mid-response — expected
@@ -653,6 +682,37 @@ function doFirmwareUpdate(url, fsUrl, name) {
     };
     tick();
     document.addEventListener('visibilitychange', () => { if (!document.hidden) ping().then(r => { if (r.ok) done(); }).catch(() => {}); });
+}
+
+// Follow the app's Bluetooth push with REAL progress (it takes a minute or
+// two, so the 30 s estimated glide would mislead). Mirrors firmware.html.
+function bleOtaWatch() {
+    const b0 = document.getElementById('__bar');
+    if (b0) { b0.style.transition = 'width .5s'; b0.style.width = '3%'; }
+    const t0 = Date.now();
+    const tick = async () => {
+        const bar = document.getElementById('__bar');
+        if (!bar) return;                                     // user navigated away
+        const slow = document.getElementById('__slow');
+        let p = null;
+        try { p = await (await fetch('/app/bleota/progress', { cache: 'no-store' })).json(); } catch (e) {}
+        if (p) {
+            if (p.phase === 'error') {
+                if (slow) slow.textContent = 'Update failed: ' + (p.msg || 'unknown error') + ' — reload and try again.';
+                return;
+            }
+            if (p.phase === 'done') {
+                bar.style.width = '100%';
+                if (slow) slow.textContent = 'Done — ' + (p.msg || 'installed');
+                setTimeout(() => location.replace('/?r=' + Date.now()), 2000);
+                return;
+            }
+            if (slow) slow.textContent = p.msg || '';
+            if (p.total > 0) bar.style.width = Math.max(3, Math.round(100 * p.sent / p.total)) + '%';
+        }
+        if (Date.now() - t0 < 10 * 60 * 1000) setTimeout(tick, 1000);
+    };
+    tick();
 }
 </script>
 <template id=helpContent><h2>About this page</h2>

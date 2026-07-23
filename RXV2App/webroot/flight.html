@@ -57,10 +57,18 @@ function renderLink(lk) {
     }
     const secs = lk.conn_ms / 1000, fr = secs > 0 ? lk.packets / secs : 0;
     const gapCol = lk.max_gap_ms > 100 ? '#c0392b' : lk.max_gap_ms > 30 ? '#c98a4a' : '#2e7d32';
+    // Transceiver failover figures (FLT2 flights; absent on older saves)
+    let rsw = '';
+    if (lk.swaps !== undefined && lk.radio_ms) {
+        rsw = '<br>Radio swaps: <b>' + lk.swaps.toLocaleString() + '</b>';
+        for (let i = 0; i < 3; i++)
+            if (lk.radio_ms[i] > 0)
+                rsw += ' &nbsp;&middot;&nbsp; R' + (i + 1) + ': <b>' + fmt(lk.radio_ms[i]) + '</b>';
+    }
     lkRows.innerHTML =
         'Duration: <b>' + fmt(lk.conn_ms) + '</b><br>' +
         'Avg frame rate: <b>' + fr.toFixed(0) + ' Hz</b> &nbsp;&middot;&nbsp; Packets: <b>' + lk.packets.toLocaleString() + '</b><br>' +
-        'Avg gap: <b>' + lk.avg_gap_ms.toFixed(2) + ' ms</b> &nbsp;&middot;&nbsp; Longest gap: <b style="color:' + gapCol + '">' + lk.max_gap_ms.toFixed(1) + ' ms</b>';
+        'Avg gap: <b>' + lk.avg_gap_ms.toFixed(2) + ' ms</b> &nbsp;&middot;&nbsp; Longest gap: <b style="color:' + gapCol + '">' + lk.max_gap_ms.toFixed(1) + ' ms</b>' + rsw;
     const labels = ['&lt;4', '4-8', '8-16', '16-32', '32-64', '&ge;64'];
     const mx = Math.max(1, ...lk.hist);
     let h = '<div style="font-size:.8em;color:#5a6b74;margin-bottom:.2em">Gap distribution (ms)</div>';
@@ -122,19 +130,36 @@ function drawFlight(d) {
     const gx = W - pad.l - pad.r, gy = H - pad.t - pad.b;
     ctx.strokeStyle = '#cdd7dc'; ctx.lineWidth = 1; ctx.strokeRect(pad.l, pad.t, gx, gy);
     const xat = i => pad.l + gx * i / (n - 1);
+    // minSpan: the smallest y-range a trace is drawn against, so sensor noise
+    // isn't magnified into mountains (a plane's battery idling within ±50 mV
+    // used to fill the whole graph height with jitter).
     const traces = [
-        { key: 'esc',  label: 'ESC temp',   unit: '°C',  col: '#c0392b', dp: 0 },
-        { key: 'head', label: 'Head speed', unit: 'rpm', col: '#2b6cb0', dp: 0 },
-        { key: 'v',    label: 'Battery',    unit: 'V',   col: '#2e8b57', dp: 2 },
-        { key: 'amps', label: 'Current',    unit: 'A',   col: '#e08a1e', dp: 1 },
+        { key: 'esc',  label: 'ESC temp',   unit: '°C',  col: '#c0392b', dp: 0, minSpan: 10  },
+        { key: 'head', label: 'Head speed', unit: 'rpm', col: '#2b6cb0', dp: 0, minSpan: 100 },
+        { key: 'v',    label: 'Battery',    unit: 'V',   col: '#2e8b57', dp: 2, minSpan: 0.8 },
+        { key: 'amps', label: 'Current',    unit: 'A',   col: '#e08a1e', dp: 1, minSpan: 2   },
     ];
     let legHtml = '';
+    let anyDrawn = false;
     for (const t of traces) {
         const a = d[t.key];
         if (!a || a.length < 2) continue;
         const lo = Math.min.apply(null, a), hi = Math.max.apply(null, a);
-        const m = (hi - lo) * 0.08 || 1;                 // small margin (or 1 if flat)
-        const ymin = lo - m, range = (hi - lo + 2 * m) || 1;
+        // All-zero series = the sensor doesn't exist on this model (a plane
+        // with plain servos has no ESC temp / head speed / current). Grey it
+        // out in the key and draw nothing — no misleading flat lines.
+        if (lo === 0 && hi === 0) {
+            legHtml += '<span style="white-space:nowrap;display:inline-block;margin:0 1em .2em 0;color:#a9b7bf">'
+                     + '<span style="font-weight:700">■</span> ' + t.label + ' — no sensor</span>';
+            continue;
+        }
+        anyDrawn = true;
+        let m = (hi - lo) * 0.08 || 1;                   // small margin (or 1 if flat)
+        let ymin = lo - m, range = (hi - lo + 2 * m) || 1;
+        if (t.minSpan && range < t.minSpan) {            // pad tiny ranges: noise stays calm
+            const mid = (hi + lo) / 2;
+            ymin = mid - t.minSpan / 2; range = t.minSpan;
+        }
         ctx.strokeStyle = t.col; ctx.lineWidth = 1.8; ctx.beginPath();
         for (let i = 0; i < n; i++) {
             const x = xat(i), y = pad.t + gy * (1 - (a[i] - ymin) / range);
@@ -150,7 +175,9 @@ function drawFlight(d) {
     ctx.textAlign = 'left';  ctx.fillText('0:00', pad.l, H - 5);
     ctx.textAlign = 'right'; ctx.fillText(fmt(n * iv * 1000), pad.l + gx, H - 5);
     leg.innerHTML = legHtml;
-    note.textContent = 'Each line auto-scaled to its own range (min–max in the key) so the shapes line up — watch ESC temp track head speed & current, and the battery sag under load.';
+    note.textContent = anyDrawn
+        ? 'Each line auto-scaled to its own range (min–max in the key) so the shapes line up — watch ESC temp track head speed & current, and the battery sag under load.'
+        : 'No telemetry sensors on this model — link statistics above are still recorded for every flight.';
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
