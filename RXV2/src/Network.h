@@ -459,6 +459,11 @@ inline void netStep() {
                 Serial.println("[net] TX link lost — bringing WiFi back up");
                 events.add("TX lost — WiFi re-enabled");
                 startWifiStation();   // → AP (+ STA if creds), reachable again
+                // Announce it physically: BLE/WiFi are now reachable — wave the
+                // ailerons so the user knows without watching a screen
+                // (Output.h drives the wave on top of the failsafe posture).
+                bleWaveStartMs = millis();
+                events.add("Config radios up — waving ailerons");
             }
             break;
         }

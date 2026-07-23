@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.242-bind-front";
+constexpr const char* FW_VERSION = "RXV2-0.9.243-tidy-gaps-wave";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -375,8 +375,30 @@ struct LinkStats {
     uint32_t gapCount    = 0;
     // gap histogram (ms buckets): 0:<4  1:4-8  2:8-16  3:16-32  4:32-64  5:>=64
     uint32_t hist[6]     = {0};
+    // Ring of the most recent recorded gaps. The TX's power-off routine stalls
+    // its RF loop (shutdown screen / countdown) and then sends a few dying
+    // packets, which records one or two HUGE gaps in the flight's final
+    // seconds — shutdown artifacts, not link quality. maybeSaveFlight uses
+    // this ring to trim them out of the saved record (Malcolm 2026-07-23:
+    // "the final gap — switching off the transmitter — might be worrying").
+    struct TrailGap { uint32_t us; uint32_t atMs; uint8_t bucket; };
+    TrailGap recent[6]   = {};
+    uint8_t  recentIdx   = 0;
 };
 inline LinkStats linkStats;
+
+// Shutdown-artifact trim: a gap this big, recorded this close to the link's
+// death, is treated as the TX switching off rather than flight link quality.
+constexpr uint32_t SHUTDOWN_TRIM_WINDOW_MS = 8000;
+constexpr uint32_t SHUTDOWN_TRIM_MIN_US    = 150000;   // < real jitter never reaches this; failsafe class
+
+// BLE-ready servo announce: when the config radios come back up after the TX
+// went quiet, wave the ailerons (ch1) so the user knows — then settle back to
+// the failsafe posture. Non-blocking; driven from Output.h.
+inline uint32_t bleWaveStartMs = 0;                    // != 0 → wave in progress
+constexpr uint32_t BLE_WAVE_MS      = 1600;            // total wave duration
+constexpr float    BLE_WAVE_HZ     = 2.5f;             // wiggle rate
+constexpr int16_t  BLE_WAVE_AMPL_US = 150;             // gentle: ±150 µs around failsafe
 
 // Flight telemetry time-series — one sample/second of ESC temp, head speed and
 // battery, into a ring holding the last ~20 min. Reset on a fresh connection so
