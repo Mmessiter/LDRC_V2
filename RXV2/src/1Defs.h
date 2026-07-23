@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.258-handshake-grace";
+constexpr const char* FW_VERSION = "RXV2-0.9.260-gap-position";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -108,6 +108,7 @@ constexpr uint32_t WIFI_CONNECT_MS      = 25000;
 constexpr uint32_t AP_STA_RETRY_MS      = 20000;   // in AP-only WITH saved creds, retry home WiFi this often (self-heal)
 constexpr uint8_t  STA_GIVEUP_ATTEMPTS  = 4;       // after this many failed STA joins (~100 s), assume home WiFi is ABSENT (field) → stable pure-AP
 constexpr uint32_t AP_RECHECK_MS        = 300000;  // once pure-AP (gave up), re-probe home WiFi only this often (one brief attempt) so the field AP stays stable
+constexpr uint32_t LINK_STATS_GRACE_MS  = 3000;    // link stats start when the connection is this old — the V1 TX's bind/model-ID handshake pauses its RF for ~1-2 s after first contact (its own green light does the same)
 constexpr uint32_t LINK_LIVE_MS         = 2000;    // a TX packet within this window = link live (defer blocking web work)
 constexpr uint8_t  WIFI_STA_RETRY_MAX   = 5;
 
@@ -396,6 +397,10 @@ struct LinkStats {
     // stops at the last packet instead of growing while the radios keep
     // listening on the bench (R1+R2 exceeded the flight duration before).
     uint32_t radioMsAtLive[3]  = {0, 0, 0};
+    uint32_t maxGapAtMs = 0;   // millis() when maxGapUs was recorded (0 = unknown)
+    // False until the connection outlives LINK_STATS_GRACE_MS — the V1 TX's
+    // connect handshake pauses its RF, so stats/baselines start after it.
+    bool     graceDone         = false;
 };
 inline LinkStats linkStats;
 
@@ -410,14 +415,15 @@ constexpr uint32_t SHUTDOWN_TRIM_MIN_US    = 150000;   // < real jitter never re
 // failsafe-class gaps (the TX's power-off stall) are excluded, so neither the
 // live "Current" view nor the saved record shows a scary bogus longest-gap
 // (Malcolm's lodge test, 2026-07-23). Single code path for save + display.
-inline void gapsForDisplay(uint32_t& maxUs, uint32_t& avgUs, uint32_t hist[6]) {
-    maxUs = linkStats.maxGapUs;
+inline void gapsForDisplay(uint32_t& maxUs, uint32_t& avgUs, uint32_t hist[6], uint32_t& maxAtMs) {
+    maxUs   = linkStats.maxGapUs;
+    maxAtMs = linkStats.maxGapAtMs;
     for (uint8_t i = 0; i < 6; ++i) hist[i] = linkStats.hist[i];
     uint64_t sum = linkStats.gapSumUs;
     uint32_t cnt = linkStats.gapCount;
     bool linkDead = rx.lastMillis != 0 && (uint32_t)(millis() - rx.lastMillis) >= 3000;
     if (linkDead) {
-        bool trimmedMax = false; uint32_t survivorMax = 0;
+        bool trimmedMax = false; uint32_t survivorMax = 0, survivorAt = 0;
         for (const auto &g : linkStats.recent) {
             if (!g.us) continue;
             if ((uint32_t)(rx.lastMillis - g.atMs) <= SHUTDOWN_TRIM_WINDOW_MS &&
@@ -426,18 +432,54 @@ inline void gapsForDisplay(uint32_t& maxUs, uint32_t& avgUs, uint32_t hist[6]) {
                 if (cnt) cnt--;
                 sum -= (sum >= g.us) ? g.us : sum;
                 if (g.us == maxUs) trimmedMax = true;
-            } else if (g.us > survivorMax) survivorMax = g.us;
+            } else if (g.us > survivorMax) { survivorMax = g.us; survivorAt = g.atMs; }
         }
         if (trimmedMax) {
             maxUs = survivorMax;   // best surviving estimate of the real max
+            maxAtMs = survivorAt;
             if (!maxUs) {          // else: ceiling of the highest populated bucket
                 static const uint32_t ceilUs[6] = {4000, 8000, 16000, 32000, 64000, 64000};
                 for (int8_t b = 5; b >= 0; --b)
                     if (hist[b]) { maxUs = ceilUs[b]; break; }
+                maxAtMs = 0;       // position unknown for a bucket-ceiling estimate
             }
         }
     }
     avgUs = cnt ? (uint32_t)(sum / cnt) : 0;
+}
+
+// Once the link has been dead a few seconds, make the shutdown trim
+// PERMANENT: a quick TX-on again (same flight continuing) would otherwise
+// resurrect the power-off artifact into the live stats — gapsForDisplay
+// only trims while the link is dead. One shot per loss episode; called
+// every loop from main.cpp.
+inline void scrubShutdownGapsTick() {
+    static uint32_t scrubbedForLoss = 0;
+    if (rx.lastMillis == 0 || (uint32_t)(millis() - rx.lastMillis) < 3000) return;
+    if (scrubbedForLoss == rx.lastMillis) return;
+    scrubbedForLoss = rx.lastMillis;
+    bool trimmedMax = false; uint32_t survivorMax = 0, survivorAt = 0;
+    for (auto &g : linkStats.recent) {
+        if (!g.us) continue;
+        if ((uint32_t)(rx.lastMillis - g.atMs) <= SHUTDOWN_TRIM_WINDOW_MS &&
+            g.us >= SHUTDOWN_TRIM_MIN_US) {
+            if (linkStats.hist[g.bucket]) linkStats.hist[g.bucket]--;
+            if (linkStats.gapCount) linkStats.gapCount--;
+            linkStats.gapSumUs -= (linkStats.gapSumUs >= g.us) ? g.us : linkStats.gapSumUs;
+            if (g.us == linkStats.maxGapUs) trimmedMax = true;
+            g = {};                     // gone for good
+        } else if (g.us > survivorMax) { survivorMax = g.us; survivorAt = g.atMs; }
+    }
+    if (trimmedMax) {
+        linkStats.maxGapUs   = survivorMax;
+        linkStats.maxGapAtMs = survivorAt;
+        if (!linkStats.maxGapUs) {
+            static const uint32_t ceilUs[6] = {4000, 8000, 16000, 32000, 64000, 64000};
+            for (int8_t b = 5; b >= 0; --b)
+                if (linkStats.hist[b]) { linkStats.maxGapUs = ceilUs[b]; break; }
+            linkStats.maxGapAtMs = 0;
+        }
+    }
 }
 
 // BLE-ready servo announce: when the config radios come back up after the TX

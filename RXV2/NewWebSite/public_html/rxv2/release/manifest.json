@@ -1,6 +1,18 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.260-gap-position",
+      "url": "https://messiter.com/rxv2/release/v0.9.260/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.260/littlefs.bin",
+      "notes": "The longest gap now says WHEN it struck ('55.1 ms at 00:00:12') so you can tell a connect-ritual tail from a mid-flight dropout at a glance. Also: the transmitter switch-off pause is now scrubbed permanently (turning the TX back on quickly can no longer resurrect it into the stats). Includes the 3-second handshake grace from 0.9.259. Installing this also updates the web pages."
+    },
+    {
+      "name": "RXV2-0.9.259-grace-3s",
+      "url": "https://messiter.com/rxv2/release/v0.9.259/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.259/littlefs.bin",
+      "notes": "Link statistics now start when the connection is 3 seconds old (was 2 - a 55 ms handshake straggler remained), and the radio-swap count and per-radio times are re-baselined at the same moment, so the transmitter's connect ritual no longer inflates any flight figure. Installing this also updates the web pages."
+    },
+    {
       "name": "RXV2-0.9.258-handshake-grace",
       "url": "https://messiter.com/rxv2/release/v0.9.258/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.258/littlefs.bin",
@@ -59,18 +71,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.249/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.249/littlefs.bin",
       "notes": "The Bluetooth-ready wave is now configurable and universal: choose WHICH channels wave on the Output protocol page (e.g. 1,6 for a plane with two aileron servos; the throttle channel never waves), and the wave now fires EVERY time Bluetooth becomes available - power-on included - not just after switching the transmitter off. Also works on models with no captured failsafe. Installing this also updates the web pages."
-    },
-    {
-      "name": "RXV2-0.9.248-wave-fix",
-      "url": "https://messiter.com/rxv2/release/v0.9.248/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.248/littlefs.bin",
-      "notes": "The aileron wave after switching off the transmitter now works on models with NO captured failsafe posture (it rides on the held servo positions instead) - previously it silently did nothing on such models. Includes everything from 0.9.247: update announcements and web-page delivery over Bluetooth at the field. Installing this also updates the web pages."
-    },
-    {
-      "name": "RXV2-0.9.247-field-updates",
-      "url": "https://messiter.com/rxv2/release/v0.9.247/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.247/littlefs.bin",
-      "notes": "Field updates completed: with the phone app (iPhone 1.35 / Android 1.35), the home page now ANNOUNCES new firmware over Bluetooth at the field (the app fetches the release list with the phone's own internet) and one tap installs it - firmware AND web pages - over Bluetooth. Web pages now always ship with firmware even when installing from an older receiver page. Installing this also updates the web pages."
     }
   ]
 }
