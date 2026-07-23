@@ -60,3 +60,23 @@ V1 transmitter itself:
    position-of-longest, handshake grace instead of a stats wipe) — and
    prefer the RECEIVER's numbers via telemetry, since only the receiving
    end sees the truth.
+
+## Full UI mirror on the phone (Malcolm, 2026-07-23 evening)
+
+The Nextion is hard to read in sunshine; a modern phone is not. TXV2 should
+offer the ENTIRE transmitter UI on the phone, so nobody has to struggle
+with the screen at the field.
+
+Architecture (proven end-to-end by RXV2 + RXV2App in July 2026):
+- The transmitter's state lives in ONE place (the main MCU). The Nextion
+  and the phone are two VIEWS of that state — no duplicated logic.
+- The ESP32 sidecar serves the web UI over BLE (HTTP-over-BLE framing,
+  same as RXV2) and WiFi at home; pages bundled in the phone apps load
+  instantly, only small /api calls cross the link.
+- Two-way live sync: a change made on either screen appears on the other.
+- Reuse wholesale from RXV2: BleConfig framing, app shells (iOS + Android),
+  publish/OTA pipeline, update announcements via /app/manifest.
+- Safety rule: configuration writes locked out while a model is armed /
+  link live, same spirit as the RX's fly-mode rules.
+- Bonus once it exists: the phone UI works even with the TX's screen
+  dark/broken, and a future budget TX variant could omit the screen.
