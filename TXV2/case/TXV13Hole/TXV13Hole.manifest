@@ -1,0 +1,10 @@
+{
+    "autodeskProduct": "Fusion360",
+    "type": "script",
+    "author": "Claude and Malcolm",
+    "description": {
+        "": "TXV13: save a copy of the case and cut the USB-C charging slot, located from the TX_Support mounting holes and the TXV2_MAIN PCB design."
+    },
+    "supportedOS": "windows|mac",
+    "editEnabled": true
+}
