@@ -5,7 +5,7 @@
 | Qty | Part | Notes |
 |---|---|---|
 | 1 | **Teensy 4.1** | PJRC — the main MCU |
-| 1 | **ESP32-S3-DevKitC-1** (N16R8) | WiFi / BLE sidecar — OTA + phone config |
+| 1 | **ESP32-S3-DevKitC-1** (N16R8) | WiFi / BLE sidecar — OTA + phone config. **MUST be DevKitC-1 format**: 2×22 pins, rows 22.86 mm apart, board ~25.5 mm — order official Espressif `ESP32-S3-DevKitC-1-N16R8`; some clones are wider and don't fit (verified on the 1:1 print, 2026-07-24) |
 | 1 | **EBYTE E01-ML01DP5** (nRF24L01+ PA/LNA, SMA) | the RF link module you already use |
 | 1 | **Pololu 2808** (PSW03C push-button power switch) | soft power latch |
 | 2 | **Pololu 5V buck-boost regulator** (7805 pinout: VIN/GND/VOUT) | one for Nextion, one for everything else |
