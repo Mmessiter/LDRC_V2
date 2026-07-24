@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.261-keep-flights";
+constexpr const char* FW_VERSION = "RXV2-0.9.262-quick-actions";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -85,6 +85,11 @@ inline uint8_t  staAttempts   = 0;
 // then run a STABLE pure-AP (STA interface dropped, so it stops hopping the
 // radio's channel and disrupting the phone) and only re-probe home WiFi rarely.
 inline bool     staGaveUp     = false;
+// Landing auto-recovery (WiFi/BLE revive 10 s after link loss) is ARMED by a
+// LIVE link. "Fly now" disarms it — pressing it with no TX must not bring the
+// radios (and the wave!) back 10 s later; they return only after a real
+// fly-then-land cycle (or a reboot). Default true so boot paths are unchanged.
+inline bool     wifiRecoveryArmed = true;
 inline bool     apAutoEnabled = false;    // true when AP-only was AUTO-enabled (home net not found) — front page shows a notice; user clears it in WiFi settings
 
 constexpr uint32_t RF_WINDOW_MS         = 1000;    // boot window: if a TX is heard within this 1 s, go RF-only (WiFi off). Short so WiFi comes up fast when there's no TX (dev); means the TX must be ON BEFORE the receiver to suppress WiFi — which is standard RC practice (TX on first) anyway.

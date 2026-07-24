@@ -18,6 +18,7 @@
 // Defined in BleConfig.h (included later in this translation unit).
 // BLE strictly mirrors the WiFi lifecycle: same on switches, same off switch.
 inline void bleStart();
+inline bool bleAdvertising();   // defined in BleConfig.h (true while advertising)
 inline void bleFlyQuiet();
 inline bool bleHasClient();
 inline void bleStop();
@@ -285,6 +286,7 @@ inline void disableWifi() {
     WiFi.disconnect(true);
     WiFi.mode(WIFI_OFF);
     netMode = NET_NO_WIFI;
+    wifiRecoveryArmed = false;   // stay off until a real fly-then-land cycle
     events.add("WiFi off (until reboot)");
 }
 
@@ -454,15 +456,22 @@ inline void netStep() {
             // (landed, or TX switched off), bring WiFi back automatically so the
             // user can reach the receiver again without a power-cycle. Only fires
             // once we've actually had a link (rx.lastMillis != 0).
-            if (rx.lastMillis != 0 &&
+            // A LIVE link (re-)arms the landing recovery: "Fly now" pressed
+            // with no TX stays silent forever, but fly-then-land revives.
+            if (!wifiRecoveryArmed && rx.lastMillis &&
+                (uint32_t)(millis() - rx.lastMillis) < 1000)
+                wifiRecoveryArmed = true;
+            if (wifiRecoveryArmed && rx.lastMillis != 0 &&
                 (uint32_t)(millis() - rx.lastMillis) >= WIFI_REENABLE_AFTER_LOST_MS) {
                 // Announce reachability physically: wave the ailerons ONCE per
                 // link-loss episode (keyed on the final packet's timestamp so a
-                // second landing in the same session waves again). Fires whether
-                // or not WiFi is being revived — at the field (staGaveUp) BLE
-                // has been up all along and the wave is the only cue needed.
+                // second landing in the same session waves again) — but ONLY
+                // when Bluetooth is actually up (field/staGaveUp case, where it
+                // stayed on through the flight). If it's currently off, the
+                // bleStart() below announces the revival itself; waving while
+                // the user just turned the radios OFF was a lie (2026-07-24).
                 static uint32_t wavedForLoss = 0;
-                if (wavedForLoss != rx.lastMillis) {
+                if (bleAdvertising() && wavedForLoss != rx.lastMillis) {
                     wavedForLoss   = rx.lastMillis;
                     bleWaveStartMs = millis();
                     events.add("Config link ready — waving ailerons");

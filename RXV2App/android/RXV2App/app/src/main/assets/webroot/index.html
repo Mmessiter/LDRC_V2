@@ -199,21 +199,33 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Bind — promoted from Setup (it's used far more often). Same guard:
     // re-binding erases the current bind, so a bound receiver asks first.
+    // Bind \u2014 ONE instant confirmation, then it happens right here (no trip
+    // to a second page with another button). The dialog opens immediately;
+    // the receiver reboots into bind mode and this page's amber banner
+    // takes over when it comes back.
     const bbtn = document.getElementById('bindbtn');
-    if (bbtn) bbtn.onclick = async () => {
-        const s2 = await LDRC.fetchState();
-        if (s2 && s2.bind && s2.bind.bound) {
-            const alive = s2.rf && s2.rf.last_pkt_ms >= 0 && s2.rf.last_pkt_ms < 1000;
-            const ok = await LDRC.confirm(
-                (alive ? 'This receiver is connected to a transmitter RIGHT NOW. '
-                       : 'This receiver is already bound to a transmitter. ')
-                + 'Entering bind mode erases the bind and drops the link, then listens for a '
-                + 'transmitter to pair with. Only do this to pair with a DIFFERENT transmitter.',
-                { title: alive ? 'Connected \u2014 re-bind anyway?' : 'Already bound \u2014 re-bind?',
-                  icon: '\u26a0\ufe0f', yes: 'Erase bind & re-bind', kind: 'danger' });
-            if (!ok) return;
-        }
-        location.href = '/bind';
+    if (bbtn) bbtn.onclick = () => {
+        modalCard({
+            icon: '\ud83d\udd17', title: 'Enter bind mode?',
+            body: 'Erases the current pairing (if any) and listens for a transmitter. '
+                + 'Power up your TX in bind mode and the new pairing saves itself in seconds.',
+            okLabel: '\ud83d\udd17 Enter bind mode', okColor: '#d4944a',
+            onOk: () => {
+                fetch('/bind', { method: 'POST' }).catch(() => {});   // chip reboots mid-reply \u2014 expected
+                const c = document.querySelector('.container');
+                if (c) c.innerHTML = '<h1>Entering bind mode</h1><div class=card>'
+                  + '<p style="font-size:1.15em;font-weight:600">&#9203; The receiver is restarting into bind mode&hellip;</p>'
+                  + '<p class=muted>Back in a few seconds &mdash; then power up your transmitter in bind mode.</p></div>';
+                const tick = async () => {
+                    try {
+                        const r = await fetch('/api/state.json', { cache: 'no-store' });
+                        if (r.ok) { location.replace('/?r=' + Date.now()); return; }
+                    } catch (e) {}
+                    setTimeout(tick, 1500);
+                };
+                setTimeout(tick, 4000);
+            }
+        });
     };
 
     // Simulator state — banner + tint the Simulator button green while active.
@@ -383,27 +395,27 @@ function modalCard(o) {
     ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
 }
 
-// "Fly now" — disables WiFi for a clean radio-only link (what the name implies),
-// with a one-tap confirm that also shows the live link state as a quick
-// pre-flight check. WiFi stays off until the next power-cycle.
+// "Fly now" — ONE instant confirmation, then it happens. The dialog opens
+// immediately (no waiting on a state fetch over Bluetooth — the old pause
+// made people press the button again); the live link status fills itself
+// in a moment later as a bonus pre-flight check.
 function showFlyConfirm() {
-    fetch('/api/state.json', { cache: 'no-store' }).then(r => r.json()).then(flyCard).catch(() => flyCard(null));
-}
-function flyCard(s) {
-    let link = 'unknown';
-    if (s && s.bind && s.bind.bound) {
-        const alive = s.rf && s.rf.last_pkt_ms >= 0 && s.rf.last_pkt_ms < 1000;
-        link = alive ? '<span style="color:#2a7d44">connected ✓</span>'
-                     : '<span style="color:#a4242a">bound, no signal</span>';
-    } else if (s) link = '<span style="color:#a4242a">not bound</span>';
     modalCard({
-        icon: '🛫', title: 'Disable WiFi &amp; Bluetooth and fly?',
-        body: 'Link: <b>' + link + '</b><br><br>The receiver runs <b>radio&#8209;only</b> for the cleanest '
-            + 'link — WiFi <b>and Bluetooth</b> both switch off so nothing interferes. '
-            + 'The RC output keeps streaming.',
-        okLabel: '🛫 Turn both off &amp; fly', okColor: '#c97464',
+        icon: '🛫', title: 'Disable WiFi &amp; Bluetooth?',
+        body: 'The receiver goes <b>radio&#8209;only</b> — nothing interferes with the RC link. '
+            + 'Link: <b id=__flylink>checking&hellip;</b>',
+        okLabel: '🛫 Yes — fly', okColor: '#c97464',
         onOk: () => { fetch('/fly_arm', { method: 'POST' }).catch(() => {}); flyDone(); }
     });
+    fetch('/api/state.json', { cache: 'no-store' }).then(r => r.json()).then(s => {
+        const el = document.getElementById('__flylink');
+        if (!el) return;
+        if (s && s.bind && s.bind.bound) {
+            const alive = s.rf && s.rf.last_pkt_ms >= 0 && s.rf.last_pkt_ms < 1000;
+            el.innerHTML = alive ? '<span style="color:#2a7d44">connected ✓</span>'
+                                 : '<span style="color:#a4242a">bound, no signal</span>';
+        } else if (s) el.innerHTML = '<span style="color:#a4242a">not bound</span>';
+    }).catch(() => {});
 }
 function flyDone() {
     const c = document.querySelector('.container');
