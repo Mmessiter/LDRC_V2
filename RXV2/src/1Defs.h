@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.262-quick-actions";
+constexpr const char* FW_VERSION = "RXV2-0.9.263-bind-escape";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -249,6 +249,7 @@ inline uint32_t  g_loopMaxUs     = 0;        // diag: worst single-loop duration
 
 constexpr const char* NVS_NAMESPACE      = "rxv2";
 constexpr const char* NVS_KEY_PIPE       = "pipe";
+constexpr const char* NVS_KEY_PIPE_BAK   = "pipebak";    // stashed pairing while bind mode is active — restored by /api/bind/cancel
 constexpr const char* NVS_KEY_SSID       = "ssid";
 constexpr const char* NVS_KEY_PASS       = "pass";
 constexpr const char* NVS_KEY_BOARD_ID   = "board_id";   // 6-byte board ID; captured first boot, never changes

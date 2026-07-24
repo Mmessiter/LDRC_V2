@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.263-bind-escape",
+      "url": "https://messiter.com/rxv2/release/v0.9.263/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.263/littlefs.bin",
+      "notes": "Bind mode gets an escape hatch: entering bind now puts the current pairing safely aside, and while bind mode is active the Bind button becomes 'Cancel bind - restore previous pairing' - a mistaken tap is fully undoable. Fly now is also truly one-tap-one-confirm: no more separate screen; the menu stays put, a green banner confirms, and the Fly button itself becomes the way back. Installing this also updates the web pages."
+    },
+    {
       "name": "RXV2-0.9.262-quick-actions",
       "url": "https://messiter.com/rxv2/release/v0.9.262/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.262/littlefs.bin",
@@ -65,12 +71,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.252/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.252/littlefs.bin",
       "notes": "Second-aileron wave now VISIBLE: a channel parked outside servo range (AUX channels rest at 500us before the TX is heard) waves around CENTRE instead of hugging its end-stop, where the movement was real in the data but invisible on the surface. Adds a Test-wave button next to the wave-channels setting, and saving settings from the phone app no longer risks a dead black page. Installing this also updates the web pages."
-    },
-    {
-      "name": "RXV2-0.9.251-wave-api",
-      "url": "https://messiter.com/rxv2/release/v0.9.251/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.251/littlefs.bin",
-      "notes": "Adds POST /api/wave: fire the Bluetooth-ready wave on demand (refused while the transmitter link is live). Bench-test hook and 'which model is this?' finder. Installing this also updates the web pages."
     }
   ]
 }
