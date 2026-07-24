@@ -140,6 +140,49 @@ function updateRfButton(s) {
     }
 }
 
+// Shared "receiver is restarting" wait: swap the container, poll until it
+// answers, then reload the home page.
+function waitReboot(title, note) {
+    const c = document.querySelector('.container');
+    if (c) c.innerHTML = '<h1>' + title + '</h1><div class=card>'
+      + '<p style="font-size:1.15em;font-weight:600">&#9203; The receiver is restarting&hellip;</p>'
+      + '<p class=muted>' + note + '</p></div>';
+    const tick = async () => {
+        try {
+            const r = await fetch('/api/state.json', { cache: 'no-store' });
+            if (r.ok) { location.replace('/?r=' + Date.now()); return; }
+        } catch (e) {}
+        setTimeout(tick, 1500);
+    };
+    setTimeout(tick, 4000);
+}
+
+function bindEnterFlow() {
+    modalCard({
+        icon: '\ud83d\udd17', title: 'Enter bind mode?',
+        body: 'Puts the current pairing aside and listens for a transmitter. '
+            + 'Power up your TX in bind mode and the new pairing saves itself in seconds. '
+            + 'Changed your mind? The button becomes <b>Cancel bind</b>.',
+        okLabel: '\ud83d\udd17 Enter bind mode', okColor: '#d4944a',
+        onOk: () => {
+            fetch('/bind', { method: 'POST' }).catch(() => {});   // chip reboots mid-reply — expected
+            waitReboot('Entering bind mode', 'Back in a few seconds — then power up your transmitter in bind mode.');
+        }
+    });
+}
+
+function bindCancelFlow() {
+    modalCard({
+        icon: '\u21a9\ufe0f', title: 'Cancel bind mode?',
+        body: 'Leaves bind mode and restores the previous pairing — as if you never entered it.',
+        okLabel: '\u21a9\ufe0f Restore previous pairing', okColor: '#6cab5e',
+        onOk: () => {
+            fetch('/api/bind/cancel', { method: 'POST' }).catch(() => {});
+            waitReboot('Cancelling bind', 'Restoring the previous pairing.');
+        }
+    });
+}
+
 // Subtitle line + the amber "bind mode" banner, from current state. Called on
 // load AND on a timer so the front screen reflects a completed bind (or a lost
 // link) by itself — no need to navigate away and back.
@@ -160,6 +203,18 @@ function updateBindState(s) {
     LDRC.setHtml('subtitle', subtitle);
     const bb = document.getElementById('bindBanner');
     if (bb) bb.style.display = (s.bind && s.bind.bound) ? 'none' : '';
+    // The Bind button's two personalities (see bindEnterFlow/bindCancelFlow).
+    const bt = document.getElementById('bindbtn');
+    if (bt) {
+        const canCancel = s.bind && !s.bind.bound && s.bind.backup;
+        if (canCancel) {
+            bt.innerHTML = '<span class=ico>\u21a9\ufe0f</span>Cancel bind &mdash; restore previous pairing';
+            bt.onclick = bindCancelFlow;
+        } else {
+            bt.innerHTML = '<span class=ico>&#128279;</span>Bind &mdash; pair with a transmitter';
+            bt.onclick = bindEnterFlow;
+        }
+    }
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -183,50 +238,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     let rfOnlyMenu = false;
     if (s && s.net && s.net.rf_only && window.LDRC && LDRC.viaBle) {
         rfOnlyMenu = true;
-        const fb0 = document.getElementById('flybtn');
-        if (fb0) {
-            fb0.style.background = '#6cab5e';
-            fb0.innerHTML = '<span class=ico>🔄</span>'
-              + '<span style="display:flex;flex-direction:column;align-items:flex-start;text-align:left">'
-              + '<span style="font-weight:700">Re-enable WiFi &amp; Bluetooth</span>'
-              + '<span style="font-size:.62em;font-weight:400;opacity:.9;margin-top:.25em">'
-              + 'radios are OFF for flying — tap to reboot and bring them back</span></span>';
-            fb0.onclick = flyDisarmFlow;
-        }
+        morphRfOnly();
     }
     const fbtn = document.getElementById('flybtn');
     if (fbtn && !rfOnlyMenu) fbtn.onclick = showFlyConfirm;
 
-    // Bind — promoted from Setup (it's used far more often). Same guard:
-    // re-binding erases the current bind, so a bound receiver asks first.
-    // Bind \u2014 ONE instant confirmation, then it happens right here (no trip
-    // to a second page with another button). The dialog opens immediately;
-    // the receiver reboots into bind mode and this page's amber banner
-    // takes over when it comes back.
-    const bbtn = document.getElementById('bindbtn');
-    if (bbtn) bbtn.onclick = () => {
-        modalCard({
-            icon: '\ud83d\udd17', title: 'Enter bind mode?',
-            body: 'Erases the current pairing (if any) and listens for a transmitter. '
-                + 'Power up your TX in bind mode and the new pairing saves itself in seconds.',
-            okLabel: '\ud83d\udd17 Enter bind mode', okColor: '#d4944a',
-            onOk: () => {
-                fetch('/bind', { method: 'POST' }).catch(() => {});   // chip reboots mid-reply \u2014 expected
-                const c = document.querySelector('.container');
-                if (c) c.innerHTML = '<h1>Entering bind mode</h1><div class=card>'
-                  + '<p style="font-size:1.15em;font-weight:600">&#9203; The receiver is restarting into bind mode&hellip;</p>'
-                  + '<p class=muted>Back in a few seconds &mdash; then power up your transmitter in bind mode.</p></div>';
-                const tick = async () => {
-                    try {
-                        const r = await fetch('/api/state.json', { cache: 'no-store' });
-                        if (r.ok) { location.replace('/?r=' + Date.now()); return; }
-                    } catch (e) {}
-                    setTimeout(tick, 1500);
-                };
-                setTimeout(tick, 4000);
-            }
-        });
-    };
+    // Bind — handler is (re)assigned live by updateBindState: the same
+    // button ENTERS bind mode when bound, and CANCELS it (restoring the
+    // stashed pairing) while bind mode is active. One tap, one instant
+    // confirmation, either way.
 
     // Simulator state — banner + tint the Simulator button green while active.
     const simOn = !!s.sim;
@@ -405,7 +425,7 @@ function showFlyConfirm() {
         body: 'The receiver goes <b>radio&#8209;only</b> — nothing interferes with the RC link. '
             + 'Link: <b id=__flylink>checking&hellip;</b>',
         okLabel: '🛫 Yes — fly', okColor: '#c97464',
-        onOk: () => { fetch('/fly_arm', { method: 'POST' }).catch(() => {}); flyDone(); }
+        onOk: () => { fetch('/fly_arm', { method: 'POST' }).catch(() => {}); morphRfOnly(); }
     });
     fetch('/api/state.json', { cache: 'no-store' }).then(r => r.json()).then(s => {
         const el = document.getElementById('__flylink');
@@ -417,6 +437,31 @@ function showFlyConfirm() {
         } else if (s) el.innerHTML = '<span style="color:#a4242a">not bound</span>';
     }).catch(() => {});
 }
+// Radios just went off (or already were): NO separate screen — the menu
+// stays, a green banner confirms, and the Fly button becomes the way back.
+function morphRfOnly() {
+    const fb = document.getElementById('flybtn');
+    if (fb) {
+        fb.style.background = '#6cab5e';
+        fb.innerHTML = '<span class=ico>🔄</span>'
+          + '<span style="display:flex;flex-direction:column;align-items:flex-start;text-align:left">'
+          + '<span style="font-weight:700">Re-enable WiFi &amp; Bluetooth</span>'
+          + '<span style="font-size:.62em;font-weight:400;opacity:.9;margin-top:.25em">'
+          + 'radios are OFF for flying — tap to reboot and bring them back</span></span>';
+        fb.onclick = flyDisarmFlow;
+    }
+    let b = document.getElementById('rfOffBanner');
+    if (!b) {
+        b = document.createElement('div');
+        b.id = 'rfOffBanner';
+        b.style.cssText = 'text-align:center;padding:.8em;border-radius:10px;margin:0 0 1em;'
+                        + 'background:rgba(108,171,94,.95);color:#0e2e08;font-weight:600;line-height:1.4';
+        const menu = document.getElementById('mainMenu');
+        if (menu) menu.prepend(b);
+    }
+    b.innerHTML = '📡 WiFi &amp; Bluetooth are <b>OFF</b> — fly! This quiet Bluetooth link lasts until you close the app.';
+}
+
 function flyDone() {
     const c = document.querySelector('.container');
     if (!c) return;
