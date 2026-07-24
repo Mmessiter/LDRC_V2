@@ -46,9 +46,13 @@ def run(context):
             return
 
         # ---- 1) Save a copy as TXV13 — original untouched -------------------
-        srcName = doc.name
-        ok = doc.saveAs('TXV13', doc.dataFile.parentFolder,
-                        'USB-C charging slot, located from the TXV2_MAIN PCB (by Claude and Malcolm)', '')
+        # (If TXV13 is already the active document — e.g. a previous run made
+        # it before failing — just carry on inside it.)
+        if doc.name.startswith('TXV13'):
+            ok = True
+        else:
+            ok = doc.saveAs('TXV13', doc.dataFile.parentFolder,
+                            'USB-C charging slot, located from the TXV2_MAIN PCB (by Claude and Malcolm)', '')
         if not ok:
             if ui.messageBox('Could not Save-As "TXV13" (name may already exist).\n'
                              'Continue and modify the ACTIVE document instead?',
@@ -63,12 +67,14 @@ def run(context):
             return
 
         # ---- 2) Selections ---------------------------------------------------
+        ui.activeSelections.clear()   # selectEntity errors if anything is pre-selected
         selFace = ui.selectEntity(
             'Click the INNER face of the wall the USB-C plug passes through '
             '(the case wall at the charging edge of the PCB)', 'PlanarFaces')
         face = adsk.fusion.BRepFace.cast(selFace.entity)
 
         def pickHole(prompt):
+            ui.activeSelections.clear()
             sel = ui.selectEntity(prompt, 'Edges')
             edge = adsk.fusion.BRepEdge.cast(sel.entity)
             g = edge.geometry
