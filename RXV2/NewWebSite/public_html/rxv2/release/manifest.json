@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.264-fly-guard",
+      "url": "https://messiter.com/rxv2/release/v0.9.264/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.264/littlefs.bin",
+      "notes": "Fly now is unavailable until a transmitter is actually connected - the button dims and explains itself, and lights up the moment your TX comes on. No more accidentally switching the radios off with nothing to fly. Installing this also updates the web pages."
+    },
+    {
       "name": "RXV2-0.9.263-bind-escape",
       "url": "https://messiter.com/rxv2/release/v0.9.263/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.263/littlefs.bin",
@@ -65,12 +71,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.253/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.253/littlefs.bin",
       "notes": "Saving settings is now civilised: a save that applies instantly (wave channels, throttle/arming channel, CRSF rate, FC-telemetry) says 'Saved - applied instantly' and stays on the page; the reboot-wait screen only appears for a genuine protocol change, and over Bluetooth it waits for the app's automatic reconnection. Installing this also updates the web pages."
-    },
-    {
-      "name": "RXV2-0.9.252-wave-visible",
-      "url": "https://messiter.com/rxv2/release/v0.9.252/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.252/littlefs.bin",
-      "notes": "Second-aileron wave now VISIBLE: a channel parked outside servo range (AUX channels rest at 500us before the TX is heard) waves around CENTRE instead of hugging its end-stop, where the movement was real in the data but invisible on the surface. Adds a Test-wave button next to the wave-channels setting, and saving settings from the phone app no longer risks a dead black page. Installing this also updates the web pages."
     }
   ]
 }
