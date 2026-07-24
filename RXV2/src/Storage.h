@@ -30,6 +30,7 @@ inline void loadBindFromNvs() {
 
 inline void saveBindToNvs() {
     prefs.putBytes(NVS_KEY_PIPE, bindState.pipe, 5);
+    prefs.remove(NVS_KEY_PIPE_BAK);   // a new pairing landed — the stash is obsolete
     Serial.println("[bind] saved to NVS");
 }
 

@@ -1008,12 +1008,40 @@ inline void safeOutputParkAndRestart() {
 }
 
 inline void handleBindDo() {
+    // Stash the current pairing so a mistaken bind entry has a way back
+    // (/api/bind/cancel restores it). Overwritten stash is fine — the
+    // latest real pairing is the one worth restoring.
+    if (bindState.bound)
+        prefs.putBytes(NVS_KEY_PIPE_BAK, bindState.pipe, 5);
     clearBindNvs();
     String body = confirmPage("Rebooting",
         "<p>Bind cleared. The receiver is rebooting and will listen on DefaultPipe within ~5 seconds.</p>"
         "<p><a href='/'>Back to home</a> (reload after the chip is back)</p>");
     server.send(200, "text/html", body);
     delay(400);
+    safeOutputParkAndRestart();
+}
+
+//*********************************************************************
+//  POST /api/bind/cancel — leave bind mode, restore the stashed pairing
+//*********************************************************************
+
+inline void handleBindCancel() {
+    if (bindState.bound || !prefs.isKey(NVS_KEY_PIPE_BAK) ||
+        prefs.getBytesLength(NVS_KEY_PIPE_BAK) != 5) {
+        server.sendHeader("Cache-Control", "no-store");
+        server.send(400, "application/json", "{\"ok\":false,\"error\":\"nothing to restore\"}");
+        return;
+    }
+    uint8_t p[5];
+    prefs.getBytes(NVS_KEY_PIPE_BAK, p, 5);
+    prefs.putBytes(NVS_KEY_PIPE, p, 5);
+    prefs.remove(NVS_KEY_PIPE_BAK);
+    prefs.putUChar(NVS_KEY_CFG_REBOOT, 1);   // come straight back reachable
+    events.add("Bind cancelled — previous pairing restored");
+    server.sendHeader("Cache-Control", "no-store");
+    server.send(200, "application/json", "{\"ok\":true}");
+    delay(300);
     safeOutputParkAndRestart();
 }
 
@@ -1915,6 +1943,7 @@ inline void handleApiState() {
     snprintf(buf, sizeof(buf), ",\"pipe\":\"%02X %02X %02X %02X %02X\"",
              bindState.pipe[0], bindState.pipe[1], bindState.pipe[2], bindState.pipe[3], bindState.pipe[4]);
     j += buf;
+    j += ",\"backup\":"; j += ((!bindState.bound && prefs.isKey(NVS_KEY_PIPE_BAK)) ? "true" : "false");
     j += ",\"bound_s_ago\":";
     if (bindState.bound && bindState.boundMillis) j += (uint32_t)((millis() - bindState.boundMillis) / 1000);
     else j += "0";
@@ -2124,6 +2153,7 @@ inline void registerWebRoutes() {
 
     // POSTs that reboot
     server.on("/bind",        HTTP_POST, handleBindDo);
+    server.on("/api/bind/cancel", HTTP_POST, handleBindCancel);
     server.on("/rollback",    HTTP_POST, handleRollback);
     server.on("/wifi",        HTTP_POST, handleWifiSet);
     // /wifi_reset was the "Forget & reboot" button — removed 2026-05-27
