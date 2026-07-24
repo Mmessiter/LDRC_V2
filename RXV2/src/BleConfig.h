@@ -363,6 +363,8 @@ inline void bleInitOnce() {
     Serial.println("[ble] stack initialised (silent)");
 }
 
+inline bool bleAdvertising() { return bleStarted; }
+
 inline void bleStart() {
     if (bleStarted) return;
     bleInitOnce();                       // normally already done in setup()
