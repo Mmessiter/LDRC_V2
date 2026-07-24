@@ -225,7 +225,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // (FC detection, and bind completing) without needing a page reload.
     setInterval(async () => {
         const s2 = await LDRC.fetchState();
-        if (s2) { updateRfButton(s2); updateBindState(s2); paintApAutoBanner(s2); paintRadioBanner(s2); }
+        if (s2) { updateRfButton(s2); updateBindState(s2); paintApAutoBanner(s2); paintRadioBanner(s2); paintFlyButton(s2); }
     }, 3000);
 
     // Model name — show as the h1, prompt with warning + edit-on-tap.
@@ -240,8 +240,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         rfOnlyMenu = true;
         morphRfOnly();
     }
-    const fbtn = document.getElementById('flybtn');
-    if (fbtn && !rfOnlyMenu) fbtn.onclick = showFlyConfirm;
+    if (!rfOnlyMenu) paintFlyButton(s);
 
     // Bind — handler is (re)assigned live by updateBindState: the same
     // button ENTERS bind mode when bound, and CANCELS it (restoring the
@@ -415,6 +414,22 @@ function modalCard(o) {
     ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
 }
 
+// Fly needs a LIVE link: with no transmitter connected the button dims and
+// explains itself instead of pointlessly killing the radios (repainted on
+// the 3 s state timer, so it enables the moment the TX comes on).
+function paintFlyButton(s) {
+    if (window.__rfMorphed || (s && s.sim)) return;   // morph / sim own the button
+    const fb = document.getElementById('flybtn');
+    if (!fb) return;
+    const alive = s && s.rf && s.rf.last_pkt_ms >= 0 && s.rf.last_pkt_ms < 1000;
+    fb.style.opacity = alive ? '' : '.45';
+    fb.onclick = alive ? showFlyConfirm : () => modalCard({
+        icon: '\ud83d\udce1', title: 'No transmitter connected',
+        body: 'Fly now switches the radios off for flying \u2014 turn your transmitter on first, then tap again.',
+        okLabel: 'OK', okColor: '#6f7e8b', onOk: () => {}
+    });
+}
+
 // "Fly now" — ONE instant confirmation, then it happens. The dialog opens
 // immediately (no waiting on a state fetch over Bluetooth — the old pause
 // made people press the button again); the live link status fills itself
@@ -440,6 +455,7 @@ function showFlyConfirm() {
 // Radios just went off (or already were): NO separate screen — the menu
 // stays, a green banner confirms, and the Fly button becomes the way back.
 function morphRfOnly() {
+    window.__rfMorphed = true;
     const fb = document.getElementById('flybtn');
     if (fb) {
         fb.style.background = '#6cab5e';

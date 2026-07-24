@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.263-bind-escape";
+constexpr const char* FW_VERSION = "RXV2-0.9.264-fly-guard";
 
 //*********************************************************************
 //  Auto-update manifest URLs
