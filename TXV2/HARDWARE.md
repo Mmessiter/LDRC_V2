@@ -212,3 +212,15 @@ charger board later — same design, transplanted.
 *rev-A draft 2026-07-06 — written with Claude during the RXV2 BLE
 bring-up session; pin map derived from V1 TransmitterCode main.cpp
 and 1Definitions.h. Charging amendment drafted 2026-07-19.*
+
+## Rev-A erratum 1 — Pololu 2808 footprint mirrored (2026-07-25)
+
+The 2808 pad grid on Rev-A boards is a mirror image of the real module.
+**Rescue (no respin):** mount the module on the BOARD UNDERSIDE — a mirrored
+footprint is correct from the other side (mirror × mirror = identity), and
+the 6+7 keying admits only the correct orientation there. Solder with plain
+male pins, module flush; its on-board button (facing down) is unused — the
+vandal button on BTN is the power control. Use **6 mm standoffs** (flush
+module needs ~5.5 mm below the board; the USB case slot absorbs the 1 mm
+shift without re-cutting). Before first power-up: continuity-beep VIN/GND
+from the XT30 to the module.
