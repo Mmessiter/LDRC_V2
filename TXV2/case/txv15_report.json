@@ -1,9 +1,9 @@
 {
  "ok": true,
  "steps": [
-  "hole profile bbox (2.51,-7.49)-(2.69,-7.31) area 0.0254",
-  "pinhole cut (d1.8mm, dist -0.35)",
-  "ring marker engraved",
+  "plate top found (155.8 cm2)",
+  "profile area 1.99 cm2",
+  "old pedestal removed (upward box-cut 18 mm)",
   "saved: True"
  ],
  "warnings": [],
