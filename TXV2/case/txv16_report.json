@@ -1,10 +1,36 @@
 {
- "ok": true,
+ "ok": false,
  "steps": [
-  "construction plane at boss-top level",
-  "missing pocket: 1/1, drills: 4/4",
+  "opened TXV16 v6",
+  "planes: top ok, boss ok",
+  "strip wiped (old wall cleared)",
+  "continuous wall built + verified in the gap",
+  "old holes plugged: 4/4",
+  "new bosses: 4/4",
+  "pockets 4/4, drills 4/4",
   "saved: True"
  ],
- "warnings": [],
- "document": "TXV16"
+ "warnings": [
+  "census imperfect"
+ ],
+ "before": {
+  "newBoss": 0,
+  "pocketOpen": 4,
+  "drillOpen": 4,
+  "oldPlugged": 0,
+  "oldBossGone": 4,
+  "wallGapFilled": false,
+  "wallMid": true,
+  "oldWallSeg": true
+ },
+ "after": {
+  "newBoss": 4,
+  "pocketOpen": 4,
+  "drillOpen": 4,
+  "oldPlugged": 4,
+  "oldBossGone": 4,
+  "wallGapFilled": true,
+  "wallMid": true,
+  "oldWallSeg": true
+ }
 }
