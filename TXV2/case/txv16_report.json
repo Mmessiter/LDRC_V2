@@ -1,0 +1,21 @@
+{
+ "ok": true,
+ "steps": [
+  "TXV16 created from TXV12a",
+  "USB slot cut at X -17.05 Z 21.47",
+  "slot rim chamfered",
+  "3 vents cut around X -17.1",
+  "signature engraved",
+  "pinhole at X -55.0",
+  "ring marker engraved",
+  "hook pockets: 2",
+  "hook tabs: 2",
+  "old pedestal removed",
+  "4 new PCB mounting holes (pattern centred)",
+  "counterbores cut (-0.20)",
+  "new pedestal built (top z 33.12 mm - NOMINAL socket 8.5 mm, confirm!)",
+  "cable-tie tunnel cut",
+  "document saved: True"
+ ],
+ "warnings": []
+}
