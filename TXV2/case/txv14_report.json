@@ -1,0 +1,11 @@
+{
+ "ok": true,
+ "steps": [
+  "outer wall found (59.2 cm2)",
+  "text placed",
+  "engraved (negative 0.4 mm)",
+  "saved: True"
+ ],
+ "warnings": [],
+ "document": "TXV14"
+}
