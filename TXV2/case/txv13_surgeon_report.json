@@ -1,0 +1,13 @@
+{
+ "ok": true,
+ "steps": [
+  "wall face resolved: point=[-2.52, -12.95, 2.31] area=58.1cm2",
+  "sketch created",
+  "rectangle drawn",
+  "corners rounded",
+  "profile found, area 0.973 cm2 (expect ~0.973)",
+  "cut (negative through-all) ok, health=0",
+  "document saved: True"
+ ],
+ "document": "TXV13"
+}
