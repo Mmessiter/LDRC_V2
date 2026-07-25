@@ -1,0 +1,8 @@
+{
+    "autodeskProduct": "Fusion360",
+    "type": "script",
+    "author": "Claude and Malcolm",
+    "description": {"": "Dump the TXV13 model structure to a JSON file so Claude can see it."},
+    "supportedOS": "windows|mac",
+    "editEnabled": true
+}
