@@ -1,0 +1,12 @@
+{
+ "ok": true,
+ "steps": [
+  "opened fresh TXV15 (dirty session discarded)",
+  "ridge faces: 2, tongue faces: 2",
+  "pockets cut: 2",
+  "tabs grown: 2",
+  "document saved: True"
+ ],
+ "warnings": [],
+ "startDocument": "TXV15"
+}
