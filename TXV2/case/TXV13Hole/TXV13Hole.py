@@ -1,220 +1,234 @@
-# TXV13Hole — Fusion 360 script, by Claude and Malcolm, July 2026
+# TXV13Hole — Fusion 360 script, by Claude and Malcolm, July 2026 (v3)
 #
-# 1. Saves the ACTIVE design (open TXV12a first!) as a new document "TXV13"
-#    in the same cloud folder — the original is never touched.
-# 2. Asks you to click:
-#       a) the INNER face of the case wall the USB-C plug must pass through
-#          (the wall at the charging edge of the PCB),
-#       b) the edge of the TX_Support mounting hole FARTHER from the XT30
-#          battery corner (the 46.35 mm side),
-#       c) the edge of the mounting hole NEARER the battery corner.
-# 3. Cuts a rounded slot for the USB-C plug, positioned from those two holes
-#    using the real TXV2_MAIN PCB geometry:
-#       46.35 mm along the hole line from hole (b),
-#       plug centreline (standoff − 1.6) mm above the support face,
-#       slot 14 × 7.5 mm, 3 mm corner radius.
+# Cuts the USB-C charging slot in the TXV13 case, located from the two
+# TX_Support mounting holes on the charging edge using the real TXV2_MAIN
+# PCB geometry.
 #
-# If anything looks wrong afterwards, just delete the last two timeline
-# features (sketch + cut) and run again — or close TXV13 without saving.
+# v3: proper command dialog with selection inputs — Fusion's selectEntity()
+# API proved unreliable after a document Save-As (InternalValidationError),
+# so all picking now happens inside one dialog panel:
+#     1. Wall face   — the INNER face the USB-C plug passes through
+#     2. Hole A      — support mounting hole FARTHER from the battery corner
+#     3. Hole B      — support mounting hole NEARER the battery corner
+#     + the numbers (defaults from the PCB; normally just press OK)
+#
+# Run with TXV13 open (it exists — yesterday's run created it). If you run
+# it with TXV12a open instead, it saves a copy as TXV13 first and works there.
+# Wrong result? Delete the last sketch + cut in the timeline and run again.
 
 import adsk.core, adsk.fusion, traceback
 
-# ---- PCB-derived constants (mm) — from TXV2_MAIN.kicad_pcb -----------------
-HOLE_SPAN_MM   = 76.00   # distance between the two support holes on the USB edge
-ALONG_MM       = 46.35   # hole (b)  -> plug centre, along the hole line
-STANDOFF_MM    = 5.0     # M3 standoff height (board sits this far above support)
-PLUG_DROP_MM   = 1.6     # plug centreline sits this far BELOW the board underside
-SLOT_W_MM      = 14.0
-SLOT_H_MM      = 7.5
-SLOT_R_MM      = 3.0
+# ---- PCB-derived constants — from TXV2_MAIN.kicad_pcb (cm: Fusion API unit)
+HOLE_SPAN_CM = 7.600    # the two support holes on the USB edge are 76.00 mm apart
+ALONG_CM     = 4.635    # hole A -> plug centre along the hole line (46.35 mm)
+STANDOFF_CM  = 0.50     # M3 standoff height (5 mm)
+PLUG_DROP_CM = 0.16     # plug centreline below the board underside (1.6 mm)
+SLOT_W_CM    = 1.40
+SLOT_H_CM    = 0.75
+SLOT_R_CM    = 0.30
 
-MM = 0.1  # Fusion API works in cm
+CMD_ID = 'TXV13HoleCmd'
+_app = None
+_ui = None
+_handlers = []          # keep handlers alive for the command's lifetime
 
 
-def vec(a, b):
-    v = a.vectorTo(b)
-    return v
+def cutSlot(face, hFar, plateNormal, hNear, along, standoff, slotW, slotH, slotR):
+    """All lengths in cm. Returns a human summary string."""
+    u = hFar.vectorTo(hNear)
+    u.normalize()
+
+    w = plateNormal.copy()
+    w.normalize()
+    facePt = face.pointOnFace
+    mid = adsk.core.Point3D.create((hFar.x + hNear.x) / 2,
+                                   (hFar.y + hNear.y) / 2,
+                                   (hFar.z + hNear.z) / 2)
+    if w.dotProduct(mid.vectorTo(facePt)) < 0:   # "up" = from plate toward wall middle
+        w.scaleBy(-1.0)
+
+    base = hFar.copy()
+    du = u.copy(); du.scaleBy(along);                    base.translateBy(du)
+    dw = w.copy(); dw.scaleBy(standoff - PLUG_DROP_CM);  base.translateBy(dw)
+
+    plane = adsk.core.Plane.cast(face.geometry)
+    n = plane.normal.copy(); n.normalize()
+    d = base.vectorTo(plane.origin).dotProduct(n)
+    dn = n.copy(); dn.scaleBy(d)
+    centre = base.copy(); centre.translateBy(dn)         # projected onto the wall
+
+    def inPlane(v):
+        r = v.copy()
+        k = n.copy(); k.scaleBy(r.dotProduct(n))
+        r.subtract(k); r.normalize()
+        return r
+    uf = inPlane(u)
+    vf = inPlane(w)
+
+    def corner(su, sv):
+        p = centre.copy()
+        a = uf.copy(); a.scaleBy(su * slotW / 2); p.translateBy(a)
+        b = vf.copy(); b.scaleBy(sv * slotH / 2); p.translateBy(b)
+        return p
+
+    comp = face.body.parentComponent
+    sk = comp.sketches.add(face)
+    sA = sk.modelToSketchSpace(corner(-1, -1))
+    sB = sk.modelToSketchSpace(corner(+1, -1))
+    sC = sk.modelToSketchSpace(corner(+1, +1))
+    rect = sk.sketchCurves.sketchLines.addThreePointRectangle(sA, sB, sC)
+
+    try:                                                  # cosmetic corner rounds
+        lines = [rect.item(i) for i in range(4)]
+        for i in range(4):
+            l1, l2 = lines[i], lines[(i + 1) % 4]
+            sk.sketchCurves.sketchArcs.addFillet(
+                l1, l1.endSketchPoint.geometry,
+                l2, l2.startSketchPoint.geometry, slotR)
+    except Exception:
+        pass
+
+    sCentre = sk.modelToSketchSpace(centre)               # smallest profile at centre
+    best, bestArea = None, 1e9
+    for i in range(sk.profiles.count):
+        pr = sk.profiles.item(i)
+        bb = pr.boundingBox
+        if (bb.minPoint.x - 0.01 <= sCentre.x <= bb.maxPoint.x + 0.01 and
+                bb.minPoint.y - 0.01 <= sCentre.y <= bb.maxPoint.y + 0.01):
+            area = pr.areaProperties().area
+            if area < bestArea:
+                best, bestArea = pr, area
+    if not best:
+        raise Exception('Could not isolate the slot profile — the sketch is in the '
+                        'timeline; finish with Extrude → Cut → Through All by hand.')
+
+    extrudes = comp.features.extrudeFeatures
+    inp = extrudes.createInput(best, adsk.fusion.FeatureOperations.CutFeatureOperation)
+    inp.setAllExtent(adsk.fusion.ExtentDirections.NegativeExtentDirection)
+    inp.participantBodies = [face.body]
+    try:
+        extrudes.add(inp)
+    except Exception:
+        inp2 = extrudes.createInput(best, adsk.fusion.FeatureOperations.CutFeatureOperation)
+        inp2.setAllExtent(adsk.fusion.ExtentDirections.PositiveExtentDirection)
+        inp2.participantBodies = [face.body]
+        extrudes.add(inp2)
+
+    return ('Cut a %.1f x %.1f mm slot, %.2f mm from hole A along the hole line, '
+            'plug centreline %.1f mm above the support face.'
+            % (slotW * 10, slotH * 10, along * 10, (standoff - PLUG_DROP_CM) * 10))
+
+
+class TXV13Created(adsk.core.CommandCreatedEventHandler):
+    def notify(self, args):
+        try:
+            cmd = args.command
+            cmd.isRepeatable = False
+            ins = cmd.commandInputs
+
+            s1 = ins.addSelectionInput('wall', 'Wall face',
+                                       'The INNER face of the wall the USB-C plug passes through')
+            s1.addSelectionFilter('PlanarFaces')
+            s1.setSelectionLimits(1, 1)
+
+            s2 = ins.addSelectionInput('holeA', 'Hole A (far from battery)',
+                                       'Support mounting hole FARTHER from the XT30 battery corner')
+            s2.addSelectionFilter('CircularEdges')
+            s2.setSelectionLimits(1, 1)
+
+            s3 = ins.addSelectionInput('holeB', 'Hole B (near battery)',
+                                       'Support mounting hole NEARER the battery corner')
+            s3.addSelectionFilter('CircularEdges')
+            s3.setSelectionLimits(1, 1)
+
+            vi = adsk.core.ValueInput.createByReal
+            ins.addValueInput('along',    'Hole A → plug centre', 'mm', vi(ALONG_CM))
+            ins.addValueInput('standoff', 'Standoff height',      'mm', vi(STANDOFF_CM))
+            ins.addValueInput('slotW',    'Slot width',           'mm', vi(SLOT_W_CM))
+            ins.addValueInput('slotH',    'Slot height',          'mm', vi(SLOT_H_CM))
+            ins.addValueInput('slotR',    'Corner radius',        'mm', vi(SLOT_R_CM))
+
+            onExec = TXV13Execute()
+            cmd.execute.add(onExec)
+            _handlers.append(onExec)
+            onDestroy = TXV13Destroy()
+            cmd.destroy.add(onDestroy)
+            _handlers.append(onDestroy)
+        except Exception:
+            _ui.messageBox('TXV13Hole dialog failed:\n{}'.format(traceback.format_exc()))
+
+
+class TXV13Execute(adsk.core.CommandEventHandler):
+    def notify(self, args):
+        try:
+            ins = args.command.commandInputs
+            face = adsk.fusion.BRepFace.cast(ins.itemById('wall').selection(0).entity)
+
+            def holeOf(inputId):
+                e = adsk.fusion.BRepEdge.cast(ins.itemById(inputId).selection(0).entity)
+                g = e.geometry
+                return g.center, g.normal
+
+            hFar, plateNormal = holeOf('holeA')
+            hNear, _ = holeOf('holeB')
+
+            span = hFar.distanceTo(hNear)
+            if abs(span - HOLE_SPAN_CM) > 0.10:
+                if _ui.messageBox(
+                        'Holes A and B are %.2f mm apart — the PCB says %.2f mm.\n'
+                        'Continue anyway?' % (span * 10, HOLE_SPAN_CM * 10),
+                        'Hole check', adsk.core.MessageBoxButtonTypes.YesNoButtonType) \
+                        != adsk.core.DialogResults.DialogYes:
+                    return
+
+            summary = cutSlot(face, hFar, plateNormal, hNear,
+                              ins.itemById('along').value,
+                              ins.itemById('standoff').value,
+                              ins.itemById('slotW').value,
+                              ins.itemById('slotH').value,
+                              ins.itemById('slotR').value)
+            _ui.messageBox('Done!\n\n' + summary +
+                           '\n\nIf it looks wrong, delete the last sketch + cut '
+                           'in the timeline and run again.')
+        except Exception:
+            _ui.messageBox('TXV13Hole failed:\n{}'.format(traceback.format_exc()))
+
+
+class TXV13Destroy(adsk.core.CommandEventHandler):
+    def notify(self, args):
+        adsk.terminate()
 
 
 def run(context):
-    app = adsk.core.Application.get()
-    ui = app.userInterface
+    global _app, _ui
+    _app = adsk.core.Application.get()
+    _ui = _app.userInterface
     try:
-        doc = app.activeDocument
+        doc = _app.activeDocument
         if not doc or not doc.dataFile:
-            ui.messageBox('Open TXV12a (saved, cloud) first, then run this script.')
+            _ui.messageBox('Open TXV13 (or TXV12a) first — a saved cloud document.')
             return
 
-        # ---- 1) Save a copy as TXV13 — original untouched -------------------
-        # (If TXV13 is already the active document — e.g. a previous run made
-        # it before failing — just carry on inside it.)
-        if doc.name.startswith('TXV13'):
-            ok = True
-        else:
-            ok = doc.saveAs('TXV13', doc.dataFile.parentFolder,
-                            'USB-C charging slot, located from the TXV2_MAIN PCB (by Claude and Malcolm)', '')
-        if not ok:
-            if ui.messageBox('Could not Save-As "TXV13" (name may already exist).\n'
-                             'Continue and modify the ACTIVE document instead?',
-                             'TXV13', adsk.core.MessageBoxButtonTypes.YesNoButtonType) \
-                    != adsk.core.DialogResults.DialogYes:
+        # Work in TXV13; make it from the active doc if needed (original untouched).
+        if not doc.name.startswith('TXV13'):
+            if not doc.saveAs('TXV13', doc.dataFile.parentFolder,
+                              'USB-C charging slot, located from the TXV2_MAIN PCB '
+                              '(by Claude and Malcolm)', ''):
+                _ui.messageBox('Save-As "TXV13" failed — open TXV13 from the data '
+                               'panel (it exists from the earlier run) and run again.')
                 return
-        adsk.doEvents()
+            adsk.doEvents()
 
-        design = adsk.fusion.Design.cast(app.activeProduct)
-        if not design:
-            ui.messageBox('No active Fusion design.')
-            return
-
-        # ---- 2) Selections ---------------------------------------------------
-        ui.activeSelections.clear()   # selectEntity errors if anything is pre-selected
-        selFace = ui.selectEntity(
-            'Click the INNER face of the wall the USB-C plug passes through '
-            '(the case wall at the charging edge of the PCB)', 'PlanarFaces')
-        face = adsk.fusion.BRepFace.cast(selFace.entity)
-
-        def pickHole(prompt):
-            ui.activeSelections.clear()
-            sel = ui.selectEntity(prompt, 'Edges')
-            edge = adsk.fusion.BRepEdge.cast(sel.entity)
-            g = edge.geometry
-            if g.objectType == adsk.core.Circle3D.classType():
-                return g.center, g.normal
-            if g.objectType == adsk.core.Arc3D.classType():
-                return g.center, g.normal
-            raise Exception('That edge is not circular — click the round rim of the mounting hole.')
-
-        hFar, nrmA = pickHole(
-            'Click the edge of the TX_Support mounting hole FARTHER from the '
-            'battery (XT30) corner — the 46.35 mm side')
-        hNear, nrmB = pickHole(
-            'Click the edge of the mounting hole NEARER the battery corner')
-
-        # ---- 3) Optional overrides ------------------------------------------
-        defaults = '%.2f, %.1f, %.1f, %.1f, %.1f' % (
-            ALONG_MM, STANDOFF_MM, SLOT_W_MM, SLOT_H_MM, SLOT_R_MM)
-        txt, cancelled = ui.inputBox(
-            'along-mm (from first hole), standoff-mm, slot-width, slot-height, corner-radius\n'
-            'Just press OK unless something changed.', 'USB slot numbers', defaults)
-        if cancelled:
-            return
-        try:
-            along, standoff, slotW, slotH, slotR = [float(x) for x in txt.split(',')]
-        except Exception:
-            ui.messageBox('Could not read the numbers — using the defaults.')
-            along, standoff, slotW, slotH, slotR = \
-                ALONG_MM, STANDOFF_MM, SLOT_W_MM, SLOT_H_MM, SLOT_R_MM
-
-        # ---- 4) Geometry (all cm) -------------------------------------------
-        span = hFar.distanceTo(hNear) / MM
-        if abs(span - HOLE_SPAN_MM) > 1.0:
-            if ui.messageBox(
-                    'The two holes you clicked are %.2f mm apart — the PCB says %.2f mm.\n'
-                    'Are these really the two support holes on the charging edge?\n'
-                    'Continue anyway?' % (span, HOLE_SPAN_MM),
-                    'Hole check', adsk.core.MessageBoxButtonTypes.YesNoButtonType) \
-                    != adsk.core.DialogResults.DialogYes:
-                return
-
-        u = hFar.vectorTo(hNear)          # along the hole line, toward battery corner
-        u.normalize()
-
-        w = nrmA.copy()                   # support-plate normal (sign fixed below)
-        w.normalize()
-        facePt = face.pointOnFace
-        mid = adsk.core.Point3D.create((hFar.x + hNear.x) / 2,
-                                       (hFar.y + hNear.y) / 2,
-                                       (hFar.z + hNear.z) / 2)
-        toWall = mid.vectorTo(facePt)
-        if w.dotProduct(toWall) < 0:      # point "up": from the plate toward the wall's middle
-            w.scaleBy(-1.0)
-
-        height = (standoff - PLUG_DROP_MM) * MM
-        base = hFar.copy()
-        du = u.copy(); du.scaleBy(along * MM);  base.translateBy(du)
-        dw = w.copy(); dw.scaleBy(height);      base.translateBy(dw)
-
-        # project the centre onto the wall face plane
-        plane = adsk.core.Plane.cast(face.geometry)
-        n = plane.normal.copy(); n.normalize()
-        po = plane.origin
-        d = base.vectorTo(po).dotProduct(n)     # signed distance base->plane along n
-        dn = n.copy(); dn.scaleBy(d)
-        centre = base.copy(); centre.translateBy(dn)
-
-        # in-plane axes for the slot
-        def inPlane(v):
-            r = v.copy()
-            k = n.copy(); k.scaleBy(r.dotProduct(n))
-            r.subtract(k); r.normalize()
-            return r
-        uf = inPlane(u)
-        vf = inPlane(w)
-
-        def corner(su, sv):
-            p = centre.copy()
-            a = uf.copy(); a.scaleBy(su * slotW / 2 * MM); p.translateBy(a)
-            b = vf.copy(); b.scaleBy(sv * slotH / 2 * MM); p.translateBy(b)
-            return p
-
-        cA = corner(-1, -1)   # three-point rectangle: two adjacent corners + far side
-        cB = corner(+1, -1)
-        cC = corner(+1, +1)
-
-        # ---- 5) Sketch + cut -------------------------------------------------
-        comp = face.body.parentComponent
-        sk = comp.sketches.add(face)
-        sA = sk.modelToSketchSpace(cA)
-        sB = sk.modelToSketchSpace(cB)
-        sC = sk.modelToSketchSpace(cC)
-        rectLines = sk.sketchCurves.sketchLines.addThreePointRectangle(sA, sB, sC)
-
-        # round the corners (cosmetic — carries on square if the API objects)
-        try:
-            lines = [rectLines.item(i) for i in range(4)]
-            for i in range(4):
-                l1 = lines[i]
-                l2 = lines[(i + 1) % 4]
-                sk.sketchCurves.sketchArcs.addFillet(
-                    l1, l1.endSketchPoint.geometry,
-                    l2, l2.startSketchPoint.geometry, slotR * MM)
-        except Exception:
-            pass
-
-        # smallest profile whose bounding box holds the slot centre = our slot
-        sCentre = sk.modelToSketchSpace(centre)
-        best, bestArea = None, 1e9
-        for i in range(sk.profiles.count):
-            pr = sk.profiles.item(i)
-            bb = pr.boundingBox
-            if (bb.minPoint.x - 0.01 <= sCentre.x <= bb.maxPoint.x + 0.01 and
-                    bb.minPoint.y - 0.01 <= sCentre.y <= bb.maxPoint.y + 0.01):
-                area = pr.areaProperties().area
-                if area < bestArea:
-                    best, bestArea = pr, area
-        if not best:
-            ui.messageBox('Could not find the slot profile — the sketch is in the '
-                          'timeline; cut it by hand (Extrude → Cut → Through All).')
-            return
-
-        extrudes = comp.features.extrudeFeatures
-        inp = extrudes.createInput(best, adsk.fusion.FeatureOperations.CutFeatureOperation)
-        inp.setAllExtent(adsk.fusion.ExtentDirections.NegativeExtentDirection)
-        inp.participantBodies = [face.body]
-        try:
-            extrudes.add(inp)
-        except Exception:
-            inp2 = extrudes.createInput(best, adsk.fusion.FeatureOperations.CutFeatureOperation)
-            inp2.setAllExtent(adsk.fusion.ExtentDirections.PositiveExtentDirection)
-            inp2.participantBodies = [face.body]
-            extrudes.add(inp2)
-
-        ui.messageBox('Done!\n\nTXV13 now has a %.1f x %.1f mm USB-C slot, centred '
-                      '%.2f mm from the first hole you clicked and %.1f mm above the '
-                      'support face.\n\nCheck it looks right; if not, delete the last '
-                      'sketch + cut in the timeline and run again.'
-                      % (slotW, slotH, along, standoff - PLUG_DROP_MM))
-
+        cmdDef = _ui.commandDefinitions.itemById(CMD_ID)
+        if cmdDef:
+            cmdDef.deleteMe()
+        cmdDef = _ui.commandDefinitions.addButtonDefinition(
+            CMD_ID, 'TXV13 USB-C slot',
+            'Cut the USB-C charging slot located from the TX_Support holes')
+        onCreated = TXV13Created()
+        cmdDef.commandCreated.add(onCreated)
+        _handlers.append(onCreated)
+        cmdDef.execute()
+        adsk.autoTerminate(False)   # stay alive while the dialog is open
     except Exception:
-        if ui:
-            ui.messageBox('TXV13Hole failed:\n{}'.format(traceback.format_exc()))
+        _ui.messageBox('TXV13Hole failed to start:\n{}'.format(traceback.format_exc()))
