@@ -1,12 +1,11 @@
 {
  "ok": true,
  "steps": [
-  "opened fresh TXV15 (dirty session discarded)",
-  "ridge faces: 2, tongue faces: 2",
-  "pockets cut: 2",
-  "tabs grown: 2",
-  "document saved: True"
+  "hole profile bbox (2.51,-7.49)-(2.69,-7.31) area 0.0254",
+  "pinhole cut (d1.8mm, dist -0.35)",
+  "ring marker engraved",
+  "saved: True"
  ],
  "warnings": [],
- "startDocument": "TXV15"
+ "document": "TXV15"
 }
