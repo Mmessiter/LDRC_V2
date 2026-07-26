@@ -36,9 +36,18 @@ struct __attribute__((packed)) FlightHeader {
     // FLT3 addition (Malcolm 2026-07-23): WHEN the longest gap happened,
     // as ms since the connection was established (0 = unknown).
     uint32_t maxGapAtOffsetMs;
+    // FLT4 addition (Malcolm 2026-07-26): wall-clock save time (unix seconds,
+    // 0 = unknown). The phone supplies the clock via POST /api/time; flights
+    // saved before any phone connected are patched retroactively.
+    uint32_t savedEpochS;
 };
-constexpr uint32_t FLIGHT_MAGIC      = 0x33544C46;   // "FLT3"
-constexpr uint32_t FLIGHT_MAGIC_FLT2 = 0x32544C46;   // previous: no gap-position field
+constexpr uint32_t FLIGHT_MAGIC      = 0x34544C46;   // "FLT4"
+constexpr uint32_t FLIGHT_MAGIC_FLT3 = 0x33544C46;   // previous: no save-time field
+constexpr uint32_t FLIGHT_MAGIC_FLT2 = 0x32544C46;   // older: no gap-position field either
+
+// Slots saved THIS power-up while the clock was still unknown, recorded as
+// millis()-at-save so a later time sync can back-date them (0 = nothing owed).
+inline uint32_t fltPendingStampMs[FLIGHT_KEEP] = { 0, 0, 0 };
 
 // A static scratch buffer for a flight loaded from flash (avoids a huge stack
 // frame; ~8 kB, only used while serving a saved flight).
@@ -77,6 +86,7 @@ inline void saveFlightToLittleFS(bool rotate = true) {
       for (uint8_t i = 0; i < 6; ++i) h.hist[i] = tHist[i]; }
     h.radioSwaps = radioSwaps - linkStats.swapsAtStart;
     for (uint8_t i = 0; i < 3; ++i) h.radioMs[i] = linkStats.radioMsAtLive[i] - linkStats.radioMsAtStart[i];
+    h.savedEpochS = epochNowS();          // 0 until a phone has told us the time
     f.write((const uint8_t*)&h, sizeof(h));
     const uint16_t start = (teleCount < TELE_RING) ? 0 : teleHead;
     size_t wrote = 0;
@@ -101,7 +111,35 @@ inline void saveFlightToLittleFS(bool rotate = true) {
         LittleFS.remove(flightPath(0));   // overwrite the current session's slot only
     }
     LittleFS.rename("/flt.tmp", flightPath(0));
+    // Bookkeeping for retro-dating: rotation shuffles any owed stamps down too.
+    if (rotate) for (int8_t i = FLIGHT_KEEP - 1; i > 0; --i) fltPendingStampMs[i] = fltPendingStampMs[i - 1];
+    fltPendingStampMs[0] = h.savedEpochS ? 0 : millis();
     events.add(rotate ? "Flight saved to flash" : "Flight updated (same session)");
+}
+
+//*********************************************************************
+//  Retro-date flights once the phone tells us the time
+//*********************************************************************
+// Flights usually save 15 s after the TX goes quiet — BEFORE the pilot opens
+// the app. When the first time sync of this power-up arrives, patch the wall
+// clock into any file saved earlier in the session.
+inline void patchFlightEpochs() {
+    if (!epochOffsetMs || !littleFsMounted) return;
+    for (uint8_t i = 0; i < FLIGHT_KEEP; ++i) {
+        if (!fltPendingStampMs[i]) continue;
+        File f = LittleFS.open(flightPath(i), "r+");
+        if (f) {
+            uint32_t magic = 0;
+            f.read((uint8_t*)&magic, sizeof(magic));
+            if (magic == FLIGHT_MAGIC) {
+                const uint32_t epochS = (uint32_t)((epochOffsetMs + (int64_t)fltPendingStampMs[i]) / 1000);
+                f.seek(offsetof(FlightHeader, savedEpochS));
+                f.write((const uint8_t*)&epochS, sizeof(epochS));
+            }
+            f.close();
+        }
+        fltPendingStampMs[i] = 0;
+    }
 }
 
 //*********************************************************************
@@ -194,6 +232,7 @@ inline void renderFlightJson(String& j, const FlightHeader& h, const TeleSample*
     j.reserve((size_t)h.count * 28 + 300);
     snprintf(b, sizeof(b), "{\"count\":%u,\"interval_s\":%u", (unsigned)h.count, (unsigned)h.intervalS); j += b;
     snprintf(b, sizeof(b), ",\"dur_ms\":%u", (unsigned)h.connMs); j += b;
+    snprintf(b, sizeof(b), ",\"saved_at\":%u", (unsigned)h.savedEpochS); j += b;
     j += ",\"link\":{";
     snprintf(b, sizeof(b), "\"packets\":%u", (unsigned)h.packets); j += b;
     snprintf(b, sizeof(b), ",\"max_gap_ms\":%.1f", h.maxGapUs / 1000.0f); j += b;
@@ -239,10 +278,14 @@ inline bool buildFlightJson(uint8_t f, String& j) {
     if (!file) return false;
     FlightHeader h{};
     if (file.read((uint8_t*)&h, sizeof(h)) != (int)sizeof(h) ||
-        (h.magic != FLIGHT_MAGIC && h.magic != FLIGHT_MAGIC_FLT2)) { file.close(); return false; }
-    if (h.magic == FLIGHT_MAGIC_FLT2) {               // older file: header is 4 bytes shorter
-        h.maxGapAtOffsetMs = 0;
+        (h.magic != FLIGHT_MAGIC && h.magic != FLIGHT_MAGIC_FLT3 && h.magic != FLIGHT_MAGIC_FLT2)) { file.close(); return false; }
+    if (h.magic == FLIGHT_MAGIC_FLT3) {               // older file: no save-time field
+        h.savedEpochS = 0;
         file.seek(sizeof(FlightHeader) - sizeof(uint32_t));
+    } else if (h.magic == FLIGHT_MAGIC_FLT2) {        // older still: no gap-position either
+        h.savedEpochS = 0;
+        h.maxGapAtOffsetMs = 0;
+        file.seek(sizeof(FlightHeader) - 2 * sizeof(uint32_t));
     }
     if (h.count > TELE_RING) h.count = TELE_RING;
     for (uint16_t i = 0; i < h.count; ++i) {
@@ -267,10 +310,12 @@ inline void buildFlightsListJson(String& j) {
             if (!file) continue;
             FlightHeader h{};
             bool ok = (file.read((uint8_t*)&h, sizeof(h)) == (int)sizeof(h)) &&
-                      (h.magic == FLIGHT_MAGIC || h.magic == FLIGHT_MAGIC_FLT2);
+                      (h.magic == FLIGHT_MAGIC || h.magic == FLIGHT_MAGIC_FLT3 || h.magic == FLIGHT_MAGIC_FLT2);
             file.close();
             if (!ok) continue;
-            snprintf(b, sizeof(b), ",{\"i\":%u,\"count\":%u,\"dur_ms\":%u}", f, (unsigned)h.count, (unsigned)h.connMs);
+            if (h.magic != FLIGHT_MAGIC) h.savedEpochS = 0;   // shorter header: that field read sample bytes
+            snprintf(b, sizeof(b), ",{\"i\":%u,\"count\":%u,\"dur_ms\":%u,\"saved_at\":%u}",
+                     f, (unsigned)h.count, (unsigned)h.connMs, (unsigned)h.savedEpochS);
             j += b;
         }
     }

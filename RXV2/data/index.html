@@ -218,6 +218,10 @@ function updateBindState(s) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // Tell the receiver the time (it has no clock) — flights get real dates.
+    fetch('/api/time', { method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'epoch_ms=' + Date.now() }).catch(() => {});
     const s = await LDRC.fetchState();
     if (!s) { LDRC.setText('subtitle', 'connection lost — try refresh'); return; }
 
@@ -404,13 +408,15 @@ function postName(v) {
 function modalCard(o) {
     const ov = document.createElement('div');
     ov.className = 'modal';
+    // noCancel: purely-informative cards get ONE button — OK and Cancel
+    // meaning the same thing just makes people wonder what they missed.
     ov.innerHTML = '<div class=mcard><div class=mico>' + o.icon + '</div>'
       + '<h2>' + o.title + '</h2><p>' + o.body + '</p>'
       + '<button class="btn btn-fly" id=__mok style="background:' + (o.okColor || '#6cab5e') + '">' + o.okLabel + '</button>'
-      + '<button class="btn" id=__mcancel style="background:#6f7e8b"><span class=ico>&#10005;</span>' + (o.cancelLabel || 'Cancel') + '</button></div>';
+      + (o.noCancel ? '' : '<button class="btn" id=__mcancel style="background:#6f7e8b"><span class=ico>&#10005;</span>' + (o.cancelLabel || 'Cancel') + '</button>') + '</div>';
     document.body.appendChild(ov);
     ov.querySelector('#__mok').onclick = () => { ov.remove(); if (o.onOk) o.onOk(); };
-    ov.querySelector('#__mcancel').onclick = () => ov.remove();
+    const mc = ov.querySelector('#__mcancel'); if (mc) mc.onclick = () => ov.remove();
     ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
 }
 
@@ -426,7 +432,7 @@ function paintFlyButton(s) {
     fb.onclick = alive ? showFlyConfirm : () => modalCard({
         icon: '\ud83d\udce1', title: 'No transmitter connected',
         body: 'Fly now switches the radios off for flying \u2014 turn your transmitter on first, then tap again.',
-        okLabel: 'OK', okColor: '#6f7e8b', onOk: () => {}
+        okLabel: 'Well of course!', okColor: '#6f7e8b', noCancel: true, onOk: () => {}
     });
 }
 

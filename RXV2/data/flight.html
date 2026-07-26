@@ -86,6 +86,12 @@ function renderLink(lk) {
     document.getElementById('lkNote').textContent = '';
 }
 
+// Tell the receiver the time (it has no clock) so flights get real dates —
+// including any saved before this page opened (stamped retroactively).
+fetch('/api/time', { method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: 'epoch_ms=' + Date.now() }).catch(() => {});
+
 // Populate the flight selector (Current + saved flights) from /api/flights.json.
 async function populateFlightSelector() {
     let list;
@@ -96,8 +102,12 @@ async function populateFlightSelector() {
     let html = '';
     for (const fl of list) {
         let label;
+        // Saved flights carry a wall-clock stamp (from the phone's clock via
+        // /api/time) — show the real date; fall back to relative names.
+        const ds = fl.saved_at ? new Date(fl.saved_at * 1000).toLocaleString([],
+            { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : null;
         if (fl.i === 0) label = 'Current' + (fl.count > 1 ? ' (' + fmt(fl.dur_ms) + ')' : ' — none yet');
-        else label = (fl.i === 1 ? 'Previous' : fl.i + ' flights ago') + ' (' + fmt(fl.dur_ms) + ')';
+        else label = (ds || (fl.i === 1 ? 'Previous' : fl.i + ' flights ago')) + ' (' + fmt(fl.dur_ms) + ')';
         html += '<option value="' + fl.i + '">' + label + '</option>';
     }
     sel.innerHTML = html;

@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.265-flight-fallback";
+constexpr const char* FW_VERSION = "RXV2-0.9.268-flight-dates";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -91,6 +91,14 @@ inline bool     staGaveUp     = false;
 // fly-then-land cycle (or a reboot). Default true so boot paths are unchanged.
 inline bool     wifiRecoveryArmed = true;
 inline bool     apAutoEnabled = false;    // true when AP-only was AUTO-enabled (home net not found) — front page shows a notice; user clears it in WiFi settings
+
+// Wall clock, courtesy of the phone (the RX has no RTC). Every page load
+// POSTs the phone's Date.now() to /api/time; until that happens the clock
+// is simply unknown (0) and flights save undated.
+inline int64_t epochOffsetMs = 0;         // phone epoch_ms minus millis(); 0 = no sync yet
+inline uint32_t epochNowS() {
+    return epochOffsetMs ? (uint32_t)((epochOffsetMs + (int64_t)millis()) / 1000) : 0;
+}
 
 constexpr uint32_t RF_WINDOW_MS         = 1000;    // boot window: if a TX is heard within this 1 s, go RF-only (WiFi off). Short so WiFi comes up fast when there's no TX (dev); means the TX must be ON BEFORE the receiver to suppress WiFi — which is standard RC practice (TX on first) anyway.
 // RF-only "fly mode" auto-recovery: if the TX link then stays lost this long,

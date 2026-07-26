@@ -449,6 +449,21 @@ inline void handleMspApi() {
 //  POST /api/firmware/seturl — store manifest URL in NVS
 //*********************************************************************
 
+//*********************************************************************
+//  POST /api/time — the phone/browser tells us the wall clock
+//*********************************************************************
+// The receiver has no RTC, but every page load posts the phone's Date.now()
+// here — so flights get real dates, including ones saved earlier this
+// power-up (patched retroactively).
+inline void handleTimeSync() {
+    if (!server.hasArg("epoch_ms")) { server.send(400, "text/plain", "missing epoch_ms"); return; }
+    const int64_t epochMs = strtoll(server.arg("epoch_ms").c_str(), nullptr, 10);
+    if (epochMs < 1600000000000LL) { server.send(400, "text/plain", "bad epoch_ms"); return; }
+    epochOffsetMs = epochMs - (int64_t)millis();
+    patchFlightEpochs();
+    server.send(200, "application/json", "{\"ok\":true}");
+}
+
 inline void handleFirmwareSetUrl() {
     if (!server.hasArg("url")) {
         server.send(400, "text/plain", "missing url");
@@ -2123,6 +2138,7 @@ inline void registerWebRoutes() {
     server.on("/api/msp",         HTTP_GET, handleMspApi);
 
     // Auto-update endpoints.
+    server.on("/api/time",             HTTP_POST, handleTimeSync);
     server.on("/api/firmware/seturl",  HTTP_POST, handleFirmwareSetUrl);
     server.on("/api/firmware/check",   HTTP_GET,  handleFirmwareCheck);
     server.on("/api/firmware/install", HTTP_POST, handleFirmwareInstall);
