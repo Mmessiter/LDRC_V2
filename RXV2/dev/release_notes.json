@@ -148,5 +148,8 @@
  "RXV2-0.9.244-plane-blackbox": "Blackbox now works on planes (no flight controller needed): flights record and save using the receiver's own battery divider. Adds radio swap count and per-transceiver time to flight stats. Includes the shutdown-gap trim and BLE aileron wave from 0.9.243.",
  "RXV2-0.9.245-field-ble": "Field mode is now Bluetooth-only (no more auto AP when home WiFi is absent; AP still available in WiFi settings). Update page explains the Bluetooth app path instead of claiming updates are impossible. Current-flight view no longer shows the TX switch-off as a scary longest gap. Flight graph: missing sensors greyed out, battery noise no longer magnified. Aileron wave now repeats on every landing of a session.",
  "RXV2-0.9.246-ring-fix": "Fixes the switch-off gap still showing (the trim ring was flooded by normal packets). Also skips the first seconds of battery sampling to kill a bogus 25V boot spike in the graph.",
- "v0.9.265": "Flights that never touch the arm switch (bench or simulated sessions) now save to flash via the link-dead fallback \u2014 Previous flights finally populate on receivers with an arming channel set."
+ "v0.9.265": "Flights that never touch the arm switch (bench or simulated sessions) now save to flash via the link-dead fallback \u2014 Previous flights finally populate on receivers with an arming channel set.",
+ "v0.9.266": "One-button polish: the No-transmitter-connected notice shows a single OK (OK and Cancel did the same thing).",
+ "v0.9.267": "The no-transmitter notice now has exactly one button: Well of course!",
+ "v0.9.268": "Saved flights are labelled with real date and time \u2014 the phone teaches the receiver the clock on every page visit, and flights saved before you connected are dated retroactively."
 }

@@ -1,6 +1,24 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.268-flight-dates",
+      "url": "https://messiter.com/rxv2/release/v0.9.268/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.268/littlefs.bin",
+      "notes": ""
+    },
+    {
+      "name": "RXV2-0.9.267-well-of-course",
+      "url": "https://messiter.com/rxv2/release/v0.9.267/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.267/littlefs.bin",
+      "notes": ""
+    },
+    {
+      "name": "RXV2-0.9.266-one-button",
+      "url": "https://messiter.com/rxv2/release/v0.9.266/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.266/littlefs.bin",
+      "notes": ""
+    },
+    {
       "name": "RXV2-0.9.265-flight-fallback",
       "url": "https://messiter.com/rxv2/release/v0.9.265/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.265/littlefs.bin",
@@ -53,24 +71,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.257/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.257/littlefs.bin",
       "notes": "KILLS the mystery 1-second gap (finally - the black box breadcrumbs caught it): the Bluetooth radio's very first transmission does a one-off calibration that deafens the receiver chips for about a second. It used to fire mid-session when the transmitter was on from power-up; Bluetooth now starts at boot, before any link exists, so the deaf moment happens before the first packet. Also: a flight's per-radio times now stop counting at the last packet, so R1+R2 matches the flight duration. Installing this also updates the web pages."
-    },
-    {
-      "name": "RXV2-0.9.256-gap-hunt",
-      "url": "https://messiter.com/rxv2/release/v0.9.256/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.256/littlefs.bin",
-      "notes": "Hunts the mystery 1-second link gap seen when the transmitter is on from power-up: a flash write fired at exactly t=5s used to freeze the processor mid-session - it now waits for a link-quiet moment. Also, any large gap on a live link is recorded in the event log with a timestamp, so the black box itself explains any future gap. Installing this also updates the web pages."
-    },
-    {
-      "name": "RXV2-0.9.255-save-label",
-      "url": "https://messiter.com/rxv2/release/v0.9.255/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.255/littlefs.bin",
-      "notes": "The save button on the Output protocol page now tells the truth: it says 'Save' normally and only grows into 'Save & reboot' when you have actually selected a different protocol. Installing this also updates the web pages."
-    },
-    {
-      "name": "RXV2-0.9.254-armed-no-wave",
-      "url": "https://messiter.com/rxv2/release/v0.9.254/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.254/littlefs.bin",
-      "notes": "Safety: the Bluetooth-ready wave is suppressed while the model is ARMED with a live transmitter link, so an in-flight brownout reboot can never wiggle the controls mid-air. Bench reboots with the transmitter on (disarmed) still wave. Includes 0.9.253's civilised save flow: instant-apply saves stay on the page; the reboot-wait screen only appears for a real protocol change. Installing this also updates the web pages."
     }
   ]
 }
