@@ -147,6 +147,7 @@ inline void flightSaveTick() {
     static uint32_t armedSince      = 0;
     static bool     sessionWorth    = false;         // has this session had a real (>=30 s) flight?
     static bool     sessionSaved    = false;         // has this session been written to flt0 yet?
+    static bool     sessionEverArmed = false;        // any arm edge at all this session?
     static uint32_t sessionConnStart = 0xFFFFFFFF;
     const uint32_t now = millis();
 
@@ -157,6 +158,7 @@ inline void flightSaveTick() {
         sessionConnStart = linkStats.connStartMs;
         sessionWorth = false;
         sessionSaved = false;
+        sessionEverArmed = false;
     }
 
     // Armed only counts while the link is actually live — a lost link freezes
@@ -164,13 +166,20 @@ inline void flightSaveTick() {
     const bool linkLive = (rx.lastMillis != 0) && ((uint32_t)(now - rx.lastMillis) < 2000);
     const bool armed    = linkLive && (channelMicros[armingChannel - 1] > 1500);
 
-    if (armed && !wasArmed) armedSince = now;                                   // arm edge
+    if (armed && !wasArmed) { armedSince = now; sessionEverArmed = true; }      // arm edge
     if (armed && (uint32_t)(now - armedSince) >= FLIGHT_ARMED_MIN_MS) sessionWorth = true;
     if (!armed && wasArmed && sessionWorth) {                                   // DISARM edge in a real flight
         saveFlightToLittleFS(!sessionSaved);   // first disarm of the session rotates a new slot; later disarms overwrite it
         sessionSaved = true;                   // (the RAM ring spans the whole session, so each save holds everything so far)
     }
     wasArmed = armed;
+
+    // A session where the arm switch was NEVER touched (bench run, simulated
+    // flight, arming channel misconfigured) would otherwise never save at all
+    // — Malcolm lost a simulated flight exactly this way. Fall back to the
+    // link-dead save for those. Armed-but-short sessions (aborted spool-ups)
+    // stay excluded: they had an arm edge, so the strict rule still applies.
+    if (!sessionEverArmed && !sessionSaved) maybeSaveFlight();
 }
 
 //*********************************************************************

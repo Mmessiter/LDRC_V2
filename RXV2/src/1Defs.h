@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.264-fly-guard";
+constexpr const char* FW_VERSION = "RXV2-0.9.265-flight-fallback";
 
 //*********************************************************************
 //  Auto-update manifest URLs
