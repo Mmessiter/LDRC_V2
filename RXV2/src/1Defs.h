@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.272-rf-only-stats";
+constexpr const char* FW_VERSION = "RXV2-0.9.273-true-frame-rate";
 
 //*********************************************************************
 //  Auto-update manifest URLs

@@ -446,6 +446,13 @@ inline void bleFlyQuiet() {
     if (!bleStarted) return;
     bleStarted = false;
     NimBLEDevice::stopAdvertising();
+    // Stats: the RADIO-on flag clears here so that once the kept-alive phone
+    // link drops (app closed / out of range), bleStatsClientUp goes false in
+    // onDisconnect and the flight's gap/swap stats START RECORDING — without
+    // this, a fly-mode entered with the phone attached would quarantine the
+    // whole flight. While the client is still attached, bleStatsClientUp
+    // keeps the quarantine correctly in force.
+    bleStatsRadioOn = false;
     Serial.println("[ble] fly-quiet: advertising off, live link kept");
     events.add("BLE quiet (fly) — link kept until app closes");
 }
