@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.269-gap-lateness",
+      "url": "https://messiter.com/rxv2/release/v0.9.269/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.269/littlefs.bin",
+      "notes": ""
+    },
+    {
       "name": "RXV2-0.9.268-flight-dates",
       "url": "https://messiter.com/rxv2/release/v0.9.268/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.268/littlefs.bin",
@@ -65,12 +71,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.258/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.258/littlefs.bin",
       "notes": "THE 1-SECOND GAP, SOLVED FOR REAL: it was the V1 transmitter's own connect ritual - bind confirm and model-ID handshake pause its radio for about a second before the green light. The V1 transmitter has always hidden this by wiping its stats just after the green light; the receiver now applies the same wisdom - gap statistics only start once the connection is 2 seconds old. Also: a flight's R1/R2 radio times now stop at the last packet (no more growing on the bench). Installing this also updates the web pages."
-    },
-    {
-      "name": "RXV2-0.9.257-ble-preheat",
-      "url": "https://messiter.com/rxv2/release/v0.9.257/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.257/littlefs.bin",
-      "notes": "KILLS the mystery 1-second gap (finally - the black box breadcrumbs caught it): the Bluetooth radio's very first transmission does a one-off calibration that deafens the receiver chips for about a second. It used to fire mid-session when the transmitter was on from power-up; Bluetooth now starts at boot, before any link exists, so the deaf moment happens before the first packet. Also: a flight's per-radio times now stop counting at the last packet, so R1+R2 matches the flight duration. Installing this also updates the web pages."
     }
   ]
 }

@@ -68,13 +68,18 @@ function renderLink(lk) {
     lkRows.innerHTML =
         'Duration: <b>' + fmt(lk.conn_ms) + '</b><br>' +
         'Avg frame rate: <b>' + fr.toFixed(0) + ' Hz</b> &nbsp;&middot;&nbsp; Packets: <b>' + lk.packets.toLocaleString() + '</b><br>' +
-        'Avg gap: <b>' + lk.avg_gap_ms.toFixed(2) + ' ms</b> &nbsp;&middot;&nbsp; Longest gap: <b style="color:' + gapCol + '">' + lk.max_gap_ms.toFixed(1) + ' ms</b>' +
+        // Gap figures are LATENESS: how much later than the measured packet
+        // spacing (2 ms solo / 4 ms buddy-box, self-calibrated) — on-time
+        // packets are not gaps at all, and lateness below the threshold is
+        // ignored entirely (Malcolm 2026-07-27).
+        'Avg lateness: <b>' + lk.avg_gap_ms.toFixed(2) + ' ms</b> &nbsp;&middot;&nbsp; Worst: <b style="color:' + gapCol + '">' + lk.max_gap_ms.toFixed(1) + ' ms late</b>' +
         // WHEN it struck (time into the flight) — a gap at 00:00:03 is the
         // connect ritual's tail; one mid-flight deserves attention.
         (lk.max_gap_at_ms > 0 ? ' <span class=muted>at ' + fmt(lk.max_gap_at_ms) + '</span>' : '') + rsw;
-    const labels = ['&lt;4', '4-8', '8-16', '16-32', '32-64', '&ge;64'];
+    const labels = ['&lt;8', '8-16', '16-32', '32-64', '64-150', '&ge;150'];
     const mx = Math.max(1, ...lk.hist);
-    let h = '<div style="font-size:.8em;color:#5a6b74;margin-bottom:.2em">Gap distribution (ms)</div>';
+    const spacing = lk.expected_ms ? ' &middot; spacing ' + lk.expected_ms.toFixed(1) + ' ms' : '';
+    let h = '<div style="font-size:.8em;color:#5a6b74;margin-bottom:.2em">Late packets (ms late' + spacing + ')</div>';
     for (let i = 0; i < 6; i++) {
         const w = Math.round(100 * lk.hist[i] / mx);
         h += '<div style="display:flex;align-items:center;gap:.4em;margin:1px 0">' +
@@ -83,7 +88,22 @@ function renderLink(lk) {
              '<span style="width:4.5em;font-size:.78em;color:#5a6b74;text-align:right">' + lk.hist[i].toLocaleString() + '</span></div>';
     }
     lkHist.innerHTML = h;
-    document.getElementById('lkNote').textContent = '';
+    const note = document.getElementById('lkNote');
+    if (lk.gap_min_ms !== undefined) {
+        note.innerHTML = 'Only packets at least <input id=gapMinIn type=number min=1 max=100 value="'
+            + lk.gap_min_ms + '" style="width:3.2em;font-size:1em;text-align:center"> ms late are counted '
+            + '<button onclick=setGapMin() style="font-size:.9em;padding:.1em .6em;border-radius:6px;border:1px solid #b8c7d0;background:#fff">Set</button>';
+    } else note.textContent = '';
+}
+
+async function setGapMin() {
+    const v = document.getElementById('gapMinIn').value;
+    try {
+        await fetch('/api/gapmin', { method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'ms=' + encodeURIComponent(v) });
+    } catch (e) {}
+    loadFlight();
 }
 
 // Tell the receiver the time (it has no clock) so flights get real dates —
