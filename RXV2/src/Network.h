@@ -273,11 +273,13 @@ inline void startApMode() {
 
 inline void disableWifi() {
     Serial.println("[wifi] turning off until reboot");
-    // Fly mode silences BLE too — same rule as WiFi. But when a phone is
-    // connected over BLE right now, keep just that link (no advertising):
-    // its "RF-only" page gets a working return-to-menu button, and the
-    // link drops to full silence the moment the app closes.
-    if (bleHasClient()) bleFlyQuiet(); else bleStop();
+    // Fly mode silences BLE too — same rule as WiFi, INCLUDING a phone
+    // connected right now. We used to keep that one link alive (so fly mode
+    // could be cancelled from the app), but the live BLE connection desenses
+    // the nRF24s — Malcolm 2026-07-27: "the app continues to respond after
+    // Fly now — this needs fixing." Fly now = true radio silence, full stop;
+    // the way back is a power-cycle (or landing auto-recovery).
+    bleStop();
     if (otaStarted) {
         ArduinoOTA.end();
         otaStarted = false;

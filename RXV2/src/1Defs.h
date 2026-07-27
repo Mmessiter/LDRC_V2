@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.273-true-frame-rate";
+constexpr const char* FW_VERSION = "RXV2-0.9.274-fly-means-silence";
 
 //*********************************************************************
 //  Auto-update manifest URLs
