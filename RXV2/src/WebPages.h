@@ -1934,7 +1934,7 @@ inline void handleApiState() {
                  (unsigned)dHist[0], (unsigned)dHist[1], (unsigned)dHist[2],
                  (unsigned)dHist[3], (unsigned)dHist[4], (unsigned)dHist[5],
                  linkStats.expectedGapUs / 1000.0f, (unsigned)gapMinMs,
-                 (unsigned)(linkStats.swapsAtLive - linkStats.swapsAtStart),
+                 (unsigned)linkStats.flightSwaps,
                  (unsigned)(linkStats.radioMsAtLive[0] - linkStats.radioMsAtStart[0]),
                  (unsigned)(linkStats.radioMsAtLive[1] - linkStats.radioMsAtStart[1]),
                  (unsigned)(linkStats.radioMsAtLive[2] - linkStats.radioMsAtStart[2]));
