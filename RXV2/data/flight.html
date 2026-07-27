@@ -55,7 +55,12 @@ function renderLink(lk) {
         lkRows.textContent = 'No flight recorded yet.'; lkHist.innerHTML = '';
         document.getElementById('lkNote').textContent = ''; return;
     }
-    const secs = lk.conn_ms / 1000, fr = secs > 0 ? lk.packets / secs : 0;
+    // Frame rate: prefer the MEASURED packet spacing (1000/expected_ms) —
+    // it reads the true link rate (~500 Hz) even when Bluetooth desense ate
+    // some packets; packets÷duration understates it (Malcolm: 'TX says over
+    // 500, RX says 480'). Saved flights (no expected_ms) keep the average.
+    const secs = lk.conn_ms / 1000;
+    const fr = lk.expected_ms ? 1000 / lk.expected_ms : (secs > 0 ? lk.packets / secs : 0);
     const gapCol = lk.max_gap_ms > 100 ? '#c0392b' : lk.max_gap_ms > 30 ? '#c98a4a' : '#2e7d32';
     // Transceiver failover figures (FLT2 flights; absent on older saves)
     let rsw = '';
