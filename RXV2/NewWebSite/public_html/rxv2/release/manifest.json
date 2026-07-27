@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.274-fly-means-silence",
+      "url": "https://messiter.com/rxv2/release/v0.9.274/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.274/littlefs.bin",
+      "notes": ""
+    },
+    {
       "name": "RXV2-0.9.273-true-frame-rate",
       "url": "https://messiter.com/rxv2/release/v0.9.273/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.273/littlefs.bin",
@@ -65,12 +71,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.263/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.263/littlefs.bin",
       "notes": "Bind mode gets an escape hatch: entering bind now puts the current pairing safely aside, and while bind mode is active the Bind button becomes 'Cancel bind - restore previous pairing' - a mistaken tap is fully undoable. Fly now is also truly one-tap-one-confirm: no more separate screen; the menu stays put, a green banner confirms, and the Fly button itself becomes the way back. Installing this also updates the web pages."
-    },
-    {
-      "name": "RXV2-0.9.262-quick-actions",
-      "url": "https://messiter.com/rxv2/release/v0.9.262/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.262/littlefs.bin",
-      "notes": "FLY NOW and BIND are now one tap + one instant confirmation ('Disable WiFi & Bluetooth?' / 'Enter bind mode?') - the dialogs open immediately instead of pausing while data loads, and Bind no longer detours through a second page. Also: the aileron wave can no longer fire while you are turning the radios OFF, and pressing Fly now with no transmitter keeps the radios off instead of quietly reviving them 10 seconds later. Installing this also updates the web pages."
     }
   ]
 }

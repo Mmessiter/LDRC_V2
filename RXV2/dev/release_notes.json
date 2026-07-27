@@ -156,5 +156,6 @@
  "v0.9.270": "Radio-swap count freezes at signal loss, exactly like the per-radio times \u2014 bench hunting while the transmitter is off is no longer billed to the flight.",
  "v0.9.271": "BLE quarantine for the black box: while a phone is connected over Bluetooth (or briefly around connect/disconnect), gaps and swaps are not billed to the RF link \u2014 the ESP32 BT radio desenses the nRF24s centimetres away, which never happens in real flight. Bench stats with the app attached now reflect the link, not the phone.",
  "v0.9.272": "Gap and swap statistics count ONLY when Bluetooth is fully off (fly mode) - nobody flies with Bluetooth on, so figures recorded with it running were never useful.",
- "v0.9.273": "Frame rate now reads the TRUE link rate from the measured packet spacing (matches the transmitter, ~500 Hz) instead of packets-divided-by-time; and a flight entered with the phone attached starts recording stats the moment the phone link drops."
+ "v0.9.273": "Frame rate now reads the TRUE link rate from the measured packet spacing (matches the transmitter, ~500 Hz) instead of packets-divided-by-time; and a flight entered with the phone attached starts recording stats the moment the phone link drops.",
+ "v0.9.274": "Fly now means true radio silence: the phone link is dropped too (it used to stay alive so fly mode could be cancelled from the app, but a live Bluetooth link desenses the RC radios). The way back is a power-cycle or landing auto-recovery."
 }
