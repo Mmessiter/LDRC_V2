@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.271-ble-quarantine";
+constexpr const char* FW_VERSION = "RXV2-0.9.272-rf-only-stats";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -391,9 +391,15 @@ inline RxStats rx;
 // link quality, and never occur in real flight (fly mode kills BLE). While
 // quarantined, gaps and swaps are not billed to the flight.
 inline volatile bool bleStatsClientUp   = false;  // mirrors BLE client attach (set in BleConfig.h)
-inline uint32_t      bleStatsQuietUntilMs = 0;    // covers connect/disconnect/start bursts
+inline volatile bool bleStatsRadioOn    = false;  // mirrors BLE advertising/on (set in BleConfig.h)
+inline uint32_t      bleStatsQuietUntilMs = 0;    // covers connect/disconnect/start/stop bursts
+// Malcolm 2026-07-27 round 2: "nobody flies with Bluetooth switched on —
+// that would be nuts." If the BT radio is on AT ALL, gap/swap figures are
+// hearsay — don't count them, full stop. Stats accumulate only in genuine
+// RF-only (fly-mode) conditions, which is the only regime that matters.
 inline bool bleStatsQuarantine() {
-    return bleStatsClientUp || (int32_t)(bleStatsQuietUntilMs - millis()) > 0;
+    return bleStatsRadioOn || bleStatsClientUp ||
+           (int32_t)(bleStatsQuietUntilMs - millis()) > 0;
 }
 
 // Per-connection (per-flight) link statistics — inter-packet gaps, frame rate,
