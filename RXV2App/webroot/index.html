@@ -446,7 +446,7 @@ function showFlyConfirm() {
         body: 'The receiver goes <b>radio&#8209;only</b> — nothing interferes with the RC link. '
             + 'Link: <b id=__flylink>checking&hellip;</b>',
         okLabel: '🛫 Yes — fly', okColor: '#c97464',
-        onOk: () => { fetch('/fly_arm', { method: 'POST' }).catch(() => {}); morphRfOnly(); }
+        onOk: () => { fetch('/fly_arm', { method: 'POST' }).catch(() => {}); morphRfOnly(true); }
     });
     fetch('/api/state.json', { cache: 'no-store' }).then(r => r.json()).then(s => {
         const el = document.getElementById('__flylink');
@@ -459,18 +459,36 @@ function showFlyConfirm() {
     }).catch(() => {});
 }
 // Radios just went off (or already were): NO separate screen — the menu
-// stays, a green banner confirms, and the Fly button becomes the way back.
-function morphRfOnly() {
+// stays and a green banner confirms.
+//   goodbye=true  : the user JUST pressed Fly — the receiver is dropping
+//                   this Bluetooth link right now (0.9.274: fly means true
+//                   silence), so no buttons that can't work — just the
+//                   honest instruction to close the app.
+//   goodbye=false : we RECONNECTED (landing auto-recovery) while WiFi is
+//                   still off — the link is live, so the Fly slot becomes
+//                   a working "bring the radios back" button.
+function morphRfOnly(goodbye) {
     window.__rfMorphed = true;
     const fb = document.getElementById('flybtn');
     if (fb) {
-        fb.style.background = '#6cab5e';
-        fb.innerHTML = '<span class=ico>🔄</span>'
-          + '<span style="display:flex;flex-direction:column;align-items:flex-start;text-align:left">'
-          + '<span style="font-weight:700">Re-enable WiFi &amp; Bluetooth</span>'
-          + '<span style="font-size:.62em;font-weight:400;opacity:.9;margin-top:.25em">'
-          + 'radios are OFF for flying — tap to reboot and bring them back</span></span>';
-        fb.onclick = flyDisarmFlow;
+        if (goodbye) {
+            fb.style.background = '#9aa7ae';
+            fb.style.opacity = '.75';
+            fb.innerHTML = '<span class=ico>📡</span>'
+              + '<span style="display:flex;flex-direction:column;align-items:flex-start;text-align:left">'
+              + '<span style="font-weight:700">Radio-only — flying</span>'
+              + '<span style="font-size:.62em;font-weight:400;opacity:.9;margin-top:.25em">'
+              + 'Bluetooth returns after you land (or power-cycle)</span></span>';
+            fb.onclick = null;
+        } else {
+            fb.style.background = '#6cab5e';
+            fb.innerHTML = '<span class=ico>🔄</span>'
+              + '<span style="display:flex;flex-direction:column;align-items:flex-start;text-align:left">'
+              + '<span style="font-weight:700">Re-enable WiFi &amp; Bluetooth</span>'
+              + '<span style="font-size:.62em;font-weight:400;opacity:.9;margin-top:.25em">'
+              + 'radios are OFF for flying — tap to reboot and bring them back</span></span>';
+            fb.onclick = flyDisarmFlow;
+        }
     }
     let b = document.getElementById('rfOffBanner');
     if (!b) {
@@ -481,7 +499,10 @@ function morphRfOnly() {
         const menu = document.getElementById('mainMenu');
         if (menu) menu.prepend(b);
     }
-    b.innerHTML = '📡 WiFi &amp; Bluetooth are <b>OFF</b> — fly! This quiet Bluetooth link lasts until you close the app.';
+    b.innerHTML = goodbye
+        ? '📡 Radios <b>OFF</b> — fly! The receiver has closed this Bluetooth connection. '
+          + 'Please <b>close the app</b>; it reconnects by itself after you land.'
+        : '📡 WiFi is <b>OFF</b> (fly mode) — you are on the post-landing Bluetooth link.';
 }
 
 function flyDone() {
@@ -493,21 +514,11 @@ function flyDone() {
       + '<p class=muted>Running radio&#8209;only for the strongest link. Both come back when you '
       + 'power&#8209;cycle the receiver.</p>';
     if (window.LDRC && LDRC.viaBle) {
-        // Over Bluetooth this one connection is quietly kept alive (no
-        // advertising), so the way back is one tap — the receiver reboots,
-        // radios return, and the app reconnects by itself.
-        html += '<p class=muted>Close the app and fly — this last Bluetooth link goes quiet the '
-              + 'moment you do. Changed your mind?</p>'
-              + '<button class=btn id=__flyback style="background:#6cab5e"><span class=ico>🔄</span>'
-              + '<span style="display:flex;flex-direction:column;align-items:flex-start;text-align:left">'
-              + '<span style="font-weight:700">Turn WiFi &amp; Bluetooth back ON</span>'
-              + '<span style="font-size:.72em;font-weight:400;opacity:.9;margin-top:.25em">'
-              + 'reboots the receiver and returns to the menu</span></span></button>'
-              + '<button class=btn id=__flymenu style="background:#7d9eb0"><span class=ico>📋</span>'
-              + '<span style="display:flex;flex-direction:column;align-items:flex-start;text-align:left">'
-              + '<span>Return to menu</span>'
-              + '<span style="font-size:.72em;font-weight:400;opacity:.9;margin-top:.25em">'
-              + 'keeps WiFi &amp; Bluetooth off</span></span></button>';
+        // 0.9.274: fly means TRUE silence — the receiver closes this
+        // Bluetooth connection immediately. No buttons that can't work.
+        html += '<p class=muted>The receiver has closed this Bluetooth connection. '
+              + '<b>Close the app</b> and fly — it reconnects by itself after you land '
+              + '(or power-cycle the receiver).</p>';
     } else {
         html += '<p class=muted>You can close this page.</p>';
     }

@@ -661,11 +661,15 @@ inline void radioPoll() {
                     }
                 }
                 uint32_t gapUs = nowUs - linkStats.lastPktUs;
-                // Self-calibrating expected spacing: EMA over NORMAL intervals
-                // only (~2 ms solo, ~4 ms buddy-box). Measured, never assumed.
-                if (gapUs < 10000) {
-                    if (!linkStats.expectedGapUs) linkStats.expectedGapUs = gapUs;
-                    else linkStats.expectedGapUs +=
+                // Self-calibrating expected SLOT spacing (~2 ms solo, ~4 ms
+                // buddy-box). Once seeded, only intervals within 1.5x of the
+                // estimate feed the EMA: a missed-slot gap (2x, 3x spacing)
+                // must NOT inflate it — averaging those in read 483 Hz on a
+                // link whose TX counted >500 acks/s (Malcolm, lodge test).
+                if (!linkStats.expectedGapUs) {
+                    if (gapUs < 10000) linkStats.expectedGapUs = gapUs;
+                } else if (gapUs < linkStats.expectedGapUs + linkStats.expectedGapUs / 2) {
+                    linkStats.expectedGapUs +=
                         ((int32_t)gapUs - (int32_t)linkStats.expectedGapUs) / 64;
                 }
                 // A packet is only LATE by the part beyond the expected
@@ -684,14 +688,15 @@ inline void radioPoll() {
                     uint32_t lateMs = lateUs / 1000;
                     uint8_t b = lateMs < 8 ? 0 : lateMs < 16 ? 1 : lateMs < 32 ? 2 : lateMs < 64 ? 3 : lateMs < 150 ? 4 : 5;
                     linkStats.hist[b]++;
-                    // Remember NOTABLE gaps for the shutdown-artifact trim. Only
-                    // failsafe-class gaps enter the ring: at ~490 packets/s the
-                    // TX's few dying packets flood a record-everything ring with
-                    // 2 ms entries and push the big stall gap out before the trim
-                    // ever sees it (the 1051 ms survivor at the lodge, 0.9.245).
+                    // EVERY counted gap enters the ring so the shutdown trim
+                    // can drop trailing artifacts of ANY size — the V1 TX's
+                    // power-off ritual also produces sub-150 ms hesitations
+                    // (52 ms at 00:00:54 in Malcolm's lodge flight). Since
+                    // only >=threshold lateness is recorded at all now, the
+                    // old flood-of-2ms-entries problem cannot recur.
+                    linkStats.recent[linkStats.recentIdx] = { lateUs, nowMs, b };
+                    linkStats.recentIdx = (uint8_t)((linkStats.recentIdx + 1) % 6);
                     if (lateUs >= SHUTDOWN_TRIM_MIN_US) {
-                        linkStats.recent[linkStats.recentIdx] = { lateUs, nowMs, b };
-                        linkStats.recentIdx = (uint8_t)((linkStats.recentIdx + 1) % 6);
                         // Blackbox breadcrumb: a failsafe-class gap on a LIVE
                         // link always deserves an explanation — its neighbours
                         // in the event log show what the chip was doing then.
