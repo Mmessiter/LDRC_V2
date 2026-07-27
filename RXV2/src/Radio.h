@@ -620,6 +620,7 @@ inline void radioPoll() {
                 linkStats.connStartMs = nowMs;
                 linkStats.packets  = 0; linkStats.maxGapUs = 0; linkStats.maxGapAtMs = 0;
                 linkStats.gapSumUs = 0; linkStats.gapCount = 0;
+                linkStats.expectedGapUs = 0;   // re-learn the spacing (solo vs buddy-box may have changed)
                 for (uint8_t i = 0; i < 6; ++i) linkStats.hist[i] = 0;
                 for (auto &g : linkStats.recent) g = {};
                 linkStats.recentIdx = 0;
@@ -650,25 +651,41 @@ inline void radioPoll() {
                     }
                 }
                 uint32_t gapUs = nowUs - linkStats.lastPktUs;
-                if (gapUs > linkStats.maxGapUs) { linkStats.maxGapUs = gapUs; linkStats.maxGapAtMs = nowMs; }
-                linkStats.gapSumUs += gapUs; linkStats.gapCount++;
-                uint32_t gapMs = gapUs / 1000;
-                uint8_t b = gapMs < 4 ? 0 : gapMs < 8 ? 1 : gapMs < 16 ? 2 : gapMs < 32 ? 3 : gapMs < 64 ? 4 : 5;
-                linkStats.hist[b]++;
-                // Remember NOTABLE gaps for the shutdown-artifact trim. Only
-                // failsafe-class gaps enter the ring: at ~490 packets/s the
-                // TX's few dying packets flood a record-everything ring with
-                // 2 ms entries and push the big stall gap out before the trim
-                // ever sees it (the 1051 ms survivor at the lodge, 0.9.245).
-                if (gapUs >= SHUTDOWN_TRIM_MIN_US) {
-                    linkStats.recent[linkStats.recentIdx] = { gapUs, nowMs, b };
-                    linkStats.recentIdx = (uint8_t)((linkStats.recentIdx + 1) % 6);
-                    // Blackbox breadcrumb: a failsafe-class gap on a LIVE
-                    // link always deserves an explanation — its neighbours
-                    // in the event log show what the chip was doing then.
-                    char gb[32];
-                    snprintf(gb, sizeof(gb), "Link gap %lu ms", (unsigned long)gapMs);
-                    events.add(gb);
+                // Self-calibrating expected spacing: EMA over NORMAL intervals
+                // only (~2 ms solo, ~4 ms buddy-box). Measured, never assumed.
+                if (gapUs < 10000) {
+                    if (!linkStats.expectedGapUs) linkStats.expectedGapUs = gapUs;
+                    else linkStats.expectedGapUs +=
+                        ((int32_t)gapUs - (int32_t)linkStats.expectedGapUs) / 64;
+                }
+                // A packet is only LATE by the part beyond the expected
+                // spacing — an 8 ms wait at 2 ms spacing is a 6 ms lateness,
+                // and ordinary on-time packets are not "gaps" at all
+                // (Malcolm 2026-07-27: the <4 ms bucket was just counting
+                // every normal packet). Below gapMinMs late: not recorded.
+                uint32_t lateUs = (linkStats.expectedGapUs && gapUs > linkStats.expectedGapUs)
+                                  ? gapUs - linkStats.expectedGapUs : 0;
+                if (lateUs >= (uint32_t)gapMinMs * 1000UL) {
+                    if (lateUs > linkStats.maxGapUs) { linkStats.maxGapUs = lateUs; linkStats.maxGapAtMs = nowMs; }
+                    linkStats.gapSumUs += lateUs; linkStats.gapCount++;
+                    uint32_t lateMs = lateUs / 1000;
+                    uint8_t b = lateMs < 8 ? 0 : lateMs < 16 ? 1 : lateMs < 32 ? 2 : lateMs < 64 ? 3 : lateMs < 150 ? 4 : 5;
+                    linkStats.hist[b]++;
+                    // Remember NOTABLE gaps for the shutdown-artifact trim. Only
+                    // failsafe-class gaps enter the ring: at ~490 packets/s the
+                    // TX's few dying packets flood a record-everything ring with
+                    // 2 ms entries and push the big stall gap out before the trim
+                    // ever sees it (the 1051 ms survivor at the lodge, 0.9.245).
+                    if (lateUs >= SHUTDOWN_TRIM_MIN_US) {
+                        linkStats.recent[linkStats.recentIdx] = { lateUs, nowMs, b };
+                        linkStats.recentIdx = (uint8_t)((linkStats.recentIdx + 1) % 6);
+                        // Blackbox breadcrumb: a failsafe-class gap on a LIVE
+                        // link always deserves an explanation — its neighbours
+                        // in the event log show what the chip was doing then.
+                        char gb[32];
+                        snprintf(gb, sizeof(gb), "Link late %lu ms", (unsigned long)lateMs);
+                        events.add(gb);
+                    }
                 }
             }
             linkStats.lastPktUs = nowUs;

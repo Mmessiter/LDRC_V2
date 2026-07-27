@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.268-flight-dates";
+constexpr const char* FW_VERSION = "RXV2-0.9.269-gap-lateness";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -264,6 +264,7 @@ constexpr const char* NVS_KEY_BOARD_ID   = "board_id";   // 6-byte board ID; cap
 constexpr const char* NVS_KEY_FAILSAFE   = "fs";         // 16 x uint16 failsafe channel values (us); absent = not configured
 constexpr const char* NVS_KEY_GEAR_RATIO = "gear";       // float main-gear ratio (motor:head); head speed = motor RPM / gearRatio. 1.0 = direct drive
 constexpr const char* NVS_KEY_ARM_CH     = "armch";      // uint8 arming channel (1..16, 0=off): flight saved on DISARM after a real flight
+constexpr const char* NVS_KEY_GAP_MIN    = "gapmin";     // uint8 ms: a packet must be at least this LATE (beyond expected spacing) to count as a gap
 constexpr const char* NVS_KEY_WAVE_CHS   = "wavechs";    // uint16 bitmask of channels waved when Bluetooth comes up (bit0=ch1); default ch1, 0=off
 constexpr const char* NVS_KEY_BOOT_COUNT = "qbc";        // quick-boot counter for escape hatch
 constexpr const char* NVS_KEY_PROTO      = "proto";
@@ -335,6 +336,11 @@ inline bool     failsafeSet        = false;
 // / gearRatio. 1.0 = direct drive. User-set on the View-channels page, NVS-backed.
 inline float    gearRatio          = 1.0f;
 inline uint8_t  armingChannel      = 0;    // 1..16 = save the flight on DISARM of this channel; 0 = off (use link-loss save)
+// Gap accounting is LATENESS-based (Malcolm 2026-07-27): every packet arrives
+// ~2 ms after the last (4 ms buddy-boxing) — that spacing is measured, not a
+// gap. A packet only counts as a gap when it's at least this many ms LATER
+// than the measured spacing, and it's billed only for the late part.
+inline uint8_t  gapMinMs           = 5;    // definable via POST /api/gapmin
 inline uint16_t waveChannelMask    = 0x0001; // channels waved when Bluetooth comes up (bit0=ch1); Malcolm's plane = 1+6
 // Legal decoded-channel range (microseconds), == v1 MINMICROS/MAXMICROS. A
 // decoded frame with any channel outside this isn't real channel data (a
@@ -387,10 +393,13 @@ struct LinkStats {
     uint32_t connStartMs = 0;    // when this connection began
     uint32_t packets     = 0;    // packets received this connection
     uint32_t lastPktUs   = 0;    // micros() of the last packet
-    uint32_t maxGapUs    = 0;    // longest inter-packet gap
-    uint64_t gapSumUs    = 0;    // sum of gaps (for the average)
+    uint32_t maxGapUs    = 0;    // longest LATENESS (interval minus expected spacing)
+    uint64_t gapSumUs    = 0;    // sum of counted lateness (for the average)
     uint32_t gapCount    = 0;
-    // gap histogram (ms buckets): 0:<4  1:4-8  2:8-16  3:16-32  4:32-64  5:>=64
+    // Self-calibrating expected packet spacing (EMA of normal intervals):
+    // ~2 ms solo, ~4 ms buddy-boxing — measured per connection, not assumed.
+    uint32_t expectedGapUs = 0;
+    // lateness histogram (ms buckets): 0:<8  1:8-16  2:16-32  3:32-64  4:64-150  5:>=150
     uint32_t hist[6]     = {0};
     // Ring of the most recent recorded gaps. The TX's power-off routine stalls
     // its RF loop (shutdown screen / countdown) and then sends a few dying
@@ -452,7 +461,7 @@ inline void gapsForDisplay(uint32_t& maxUs, uint32_t& avgUs, uint32_t hist[6], u
             maxUs = survivorMax;   // best surviving estimate of the real max
             maxAtMs = survivorAt;
             if (!maxUs) {          // else: ceiling of the highest populated bucket
-                static const uint32_t ceilUs[6] = {4000, 8000, 16000, 32000, 64000, 64000};
+                static const uint32_t ceilUs[6] = {8000, 16000, 32000, 64000, 150000, 150000};
                 for (int8_t b = 5; b >= 0; --b)
                     if (hist[b]) { maxUs = ceilUs[b]; break; }
                 maxAtMs = 0;       // position unknown for a bucket-ceiling estimate
@@ -488,7 +497,7 @@ inline void scrubShutdownGapsTick() {
         linkStats.maxGapUs   = survivorMax;
         linkStats.maxGapAtMs = survivorAt;
         if (!linkStats.maxGapUs) {
-            static const uint32_t ceilUs[6] = {4000, 8000, 16000, 32000, 64000, 64000};
+            static const uint32_t ceilUs[6] = {8000, 16000, 32000, 64000, 150000, 150000};
             for (int8_t b = 5; b >= 0; --b)
                 if (linkStats.hist[b]) { linkStats.maxGapUs = ceilUs[b]; break; }
             linkStats.maxGapAtMs = 0;

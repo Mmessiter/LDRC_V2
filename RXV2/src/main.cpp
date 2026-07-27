@@ -154,6 +154,7 @@ void setup() {
     if (vbatPin != 0 && vbatPin != 9) vbatPin = 0;   // D9 only — the sole free pad (D4 is the status LED)
     vbatInit();
     armingChannel = prefs.isKey(NVS_KEY_ARM_CH) ? prefs.getUChar(NVS_KEY_ARM_CH, 0) : 0;
+    gapMinMs = prefs.isKey(NVS_KEY_GAP_MIN) ? prefs.getUChar(NVS_KEY_GAP_MIN, 5) : 5;
     if (armingChannel > 16) armingChannel = 0;
     waveChannelMask = prefs.isKey(NVS_KEY_WAVE_CHS) ? prefs.getUShort(NVS_KEY_WAVE_CHS, 1) : 1;
     apAutoEnabled = prefs.isKey(NVS_KEY_AP_AUTO) && prefs.getBool(NVS_KEY_AP_AUTO, false);

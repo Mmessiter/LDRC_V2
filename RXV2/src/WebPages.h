@@ -455,6 +455,25 @@ inline void handleMspApi() {
 // The receiver has no RTC, but every page load posts the phone's Date.now()
 // here — so flights get real dates, including ones saved earlier this
 // power-up (patched retroactively).
+//*********************************************************************
+//  POST /api/gapmin — lateness threshold for the gap statistics
+//*********************************************************************
+// A packet must be at least this many ms LATER than the measured spacing
+// to count as a gap (Malcolm 2026-07-27: normal 2 ms intervals are not
+// gaps; buddy-box 4 ms self-calibrates via linkStats.expectedGapUs).
+inline void handleGapMin() {
+    if (server.hasArg("ms")) {
+        long v = server.arg("ms").toInt();
+        if (v < 1 || v > 100) { server.send(400, "text/plain", "1..100 ms"); return; }
+        gapMinMs = (uint8_t)v;
+        prefs.putUChar(NVS_KEY_GAP_MIN, gapMinMs);
+        events.add("Gap threshold changed");
+    }
+    char b[48];
+    snprintf(b, sizeof(b), "{\"ok\":true,\"gap_min_ms\":%u}", (unsigned)gapMinMs);
+    server.send(200, "application/json", b);
+}
+
 inline void handleTimeSync() {
     if (!server.hasArg("epoch_ms")) { server.send(400, "text/plain", "missing epoch_ms"); return; }
     const int64_t epochMs = strtoll(server.arg("epoch_ms").c_str(), nullptr, 10);
@@ -1908,11 +1927,13 @@ inline void handleApiState() {
         char lb[300];
         snprintf(lb, sizeof(lb),
                  ",\"link\":{\"conn_ms\":%u,\"packets\":%u,\"max_gap_ms\":%.1f,\"avg_gap_ms\":%.2f,\"max_gap_at_ms\":%u,\"hist\":[%u,%u,%u,%u,%u,%u]"
+                 ",\"expected_ms\":%.2f,\"gap_min_ms\":%u"
                  ",\"swaps\":%u,\"radio_ms\":[%u,%u,%u]}",
                  (unsigned)durMs, (unsigned)linkStats.packets,
                  dMaxUs / 1000.0f, dAvgUs / 1000.0f, (unsigned)dAtOff,
                  (unsigned)dHist[0], (unsigned)dHist[1], (unsigned)dHist[2],
                  (unsigned)dHist[3], (unsigned)dHist[4], (unsigned)dHist[5],
+                 linkStats.expectedGapUs / 1000.0f, (unsigned)gapMinMs,
                  (unsigned)(radioSwaps - linkStats.swapsAtStart),
                  (unsigned)(linkStats.radioMsAtLive[0] - linkStats.radioMsAtStart[0]),
                  (unsigned)(linkStats.radioMsAtLive[1] - linkStats.radioMsAtStart[1]),
@@ -2139,6 +2160,7 @@ inline void registerWebRoutes() {
 
     // Auto-update endpoints.
     server.on("/api/time",             HTTP_POST, handleTimeSync);
+    server.on("/api/gapmin",           HTTP_POST, handleGapMin);
     server.on("/api/firmware/seturl",  HTTP_POST, handleFirmwareSetUrl);
     server.on("/api/firmware/check",   HTTP_GET,  handleFirmwareCheck);
     server.on("/api/firmware/install", HTTP_POST, handleFirmwareInstall);
