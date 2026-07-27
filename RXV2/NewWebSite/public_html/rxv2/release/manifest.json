@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.272-rf-only-stats",
+      "url": "https://messiter.com/rxv2/release/v0.9.272/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.272/littlefs.bin",
+      "notes": ""
+    },
+    {
       "name": "RXV2-0.9.271-ble-quarantine",
       "url": "https://messiter.com/rxv2/release/v0.9.271/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.271/littlefs.bin",
@@ -65,12 +71,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.261/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.261/littlefs.bin",
       "notes": "Saved flights now SURVIVE updates: the three flight recordings are held in memory while the web pages are reflashed and written back afterwards, exactly as Rotorflight backups always were. Updating at the field no longer costs you your flight history. Installing this also updates the web pages."
-    },
-    {
-      "name": "RXV2-0.9.260-gap-position",
-      "url": "https://messiter.com/rxv2/release/v0.9.260/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.260/littlefs.bin",
-      "notes": "The longest gap now says WHEN it struck ('55.1 ms at 00:00:12') so you can tell a connect-ritual tail from a mid-flight dropout at a glance. Also: the transmitter switch-off pause is now scrubbed permanently (turning the TX back on quickly can no longer resurrect it into the stats). Includes the 3-second handshake grace from 0.9.259. Installing this also updates the web pages."
     }
   ]
 }

@@ -374,6 +374,7 @@ inline void bleStart() {
     bleInitOnce();                       // normally already done in setup()
     NimBLEDevice::startAdvertising();
     bleStarted = true;
+    bleStatsRadioOn = true;                   // gap/swap stats pause while BT is on at all
     bleStatsQuietUntilMs = millis() + 2500;   // the BT radio's first-keying burst desenses the nRF24s
     // Physical "Bluetooth is ready" cue: wave the chosen servo channels
     // (Output.h) every time advertising actually starts — power-on included.
@@ -394,6 +395,9 @@ inline void bleStop() {
         }
     }
     bleClientConnected = false;
+    bleStatsClientUp   = false;
+    bleStatsRadioOn    = false;
+    bleStatsQuietUntilMs = millis() + 2000;   // teardown burst; stats resume cleanly after
     bleReqReady = false;
     blePumping  = false;
     Serial.println("[ble] off");
