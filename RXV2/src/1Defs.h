@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.270-swap-freeze";
+constexpr const char* FW_VERSION = "RXV2-0.9.271-ble-quarantine";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -384,6 +384,18 @@ struct RxStats {
 };
 inline RxStats rx;
 
+// BLE-interference quarantine for the link statistics (Malcolm 2026-07-27,
+// lodge test: TX-side perfect at 1 m, RX blackbox pessimistic). The ESP32's
+// BT radio — a phone attached over BLE, or the connect/disconnect bursts —
+// desenses the nRF24s centimetres away. Those deaf spells are OUR doing, not
+// link quality, and never occur in real flight (fly mode kills BLE). While
+// quarantined, gaps and swaps are not billed to the flight.
+inline volatile bool bleStatsClientUp   = false;  // mirrors BLE client attach (set in BleConfig.h)
+inline uint32_t      bleStatsQuietUntilMs = 0;    // covers connect/disconnect/start bursts
+inline bool bleStatsQuarantine() {
+    return bleStatsClientUp || (int32_t)(bleStatsQuietUntilMs - millis()) > 0;
+}
+
 // Per-connection (per-flight) link statistics — inter-packet gaps, frame rate,
 // and a gap histogram. Reset when a fresh connection starts (a >500 ms gap), so
 // after landing these hold the just-completed flight's figures — post-flight
@@ -424,6 +436,11 @@ struct LinkStats {
     // (and swap) endlessly while the TX is off — those bench swaps must not
     // be billed to the flight. Refreshed while live, frozen at signal loss.
     uint32_t swapsAtLive       = 0;
+    // The flight's OWN swap counter (same day, round 2): incremented at the
+    // swap site only when the link is live, grace has passed, and we're not
+    // in BLE quarantine — so bench hunting AND BLE-desense swaps never land
+    // in the flight record at all.
+    uint32_t flightSwaps       = 0;
     uint32_t maxGapAtMs = 0;   // millis() when maxGapUs was recorded (0 = unknown)
     // False until the connection outlives LINK_STATS_GRACE_MS — the V1 TX's
     // connect handshake pauses its RF, so stats/baselines start after it.

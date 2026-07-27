@@ -181,6 +181,12 @@ inline void swapRadios() {
     loadNextAck();
 
     radioSwaps++;
+    // Bill the FLIGHT for this swap only if it happened on a live link,
+    // after the connect grace, and outside BLE quarantine — bench hunting
+    // and phone-induced desense are not the flight's fault.
+    if (rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 1000 &&
+        linkStats.graceDone && !bleStatsQuarantine())
+        linkStats.flightSwaps++;
     lastRadioSwapMs = millis();
     // Only log genuine failovers (a packet arrived within the last ~2 s, so the
     // link was live and this swap is a real response to a glitch). Dead-link
@@ -626,6 +632,7 @@ inline void radioPoll() {
                 linkStats.recentIdx = 0;
                 linkStats.swapsAtStart = radioSwaps;
                 linkStats.swapsAtLive  = radioSwaps;
+                linkStats.flightSwaps  = 0;
                 linkStats.graceDone    = false;   // baselines re-snap when the handshake grace expires
                 for (uint8_t i = 0; i < 3; ++i) {
                     linkStats.radioMsAtStart[i] = radioActiveMs[i];
@@ -647,6 +654,7 @@ inline void radioPoll() {
                     linkStats.graceDone     = true;
                     linkStats.swapsAtStart  = radioSwaps;
                     linkStats.swapsAtLive   = radioSwaps;
+                    linkStats.flightSwaps   = 0;
                     for (uint8_t i = 0; i < 3; ++i) {
                         linkStats.radioMsAtStart[i] = radioActiveMs[i];
                         linkStats.radioMsAtLive[i]  = radioActiveMs[i];
@@ -667,7 +675,10 @@ inline void radioPoll() {
                 // every normal packet). Below gapMinMs late: not recorded.
                 uint32_t lateUs = (linkStats.expectedGapUs && gapUs > linkStats.expectedGapUs)
                                   ? gapUs - linkStats.expectedGapUs : 0;
-                if (lateUs >= (uint32_t)gapMinMs * 1000UL) {
+                // BLE quarantine: while a phone is attached (or just around
+                // connect/disconnect), deaf spells are OUR BT radio desensing
+                // the nRF24s — never billed to the RF link.
+                if (lateUs >= (uint32_t)gapMinMs * 1000UL && !bleStatsQuarantine()) {
                     if (lateUs > linkStats.maxGapUs) { linkStats.maxGapUs = lateUs; linkStats.maxGapAtMs = nowMs; }
                     linkStats.gapSumUs += lateUs; linkStats.gapCount++;
                     uint32_t lateMs = lateUs / 1000;
