@@ -152,5 +152,6 @@
  "v0.9.266": "One-button polish: the No-transmitter-connected notice shows a single OK (OK and Cancel did the same thing).",
  "v0.9.267": "The no-transmitter notice now has exactly one button: Well of course!",
  "v0.9.268": "Saved flights are labelled with real date and time \u2014 the phone teaches the receiver the clock on every page visit, and flights saved before you connected are dated retroactively.",
- "v0.9.269": "Honest gap statistics: the receiver measures its own packet spacing (2 ms solo, 4 ms buddy-box) and counts only packets meaningfully LATE (default 5 ms or more, adjustable on the flight page) \u2014 and bills them only for the late part. The histogram now shows real anomalies, not every normal packet."
+ "v0.9.269": "Honest gap statistics: the receiver measures its own packet spacing (2 ms solo, 4 ms buddy-box) and counts only packets meaningfully LATE (default 5 ms or more, adjustable on the flight page) \u2014 and bills them only for the late part. The histogram now shows real anomalies, not every normal packet.",
+ "v0.9.270": "Radio-swap count freezes at signal loss, exactly like the per-radio times \u2014 bench hunting while the transmitter is off is no longer billed to the flight."
 }

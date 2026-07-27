@@ -84,7 +84,7 @@ inline void saveFlightToLittleFS(bool rotate = true) {
       h.maxGapUs = tMax; h.avgGapUs = tAvg;
       h.maxGapAtOffsetMs = (tAt > linkStats.connStartMs) ? (tAt - linkStats.connStartMs) : 0;
       for (uint8_t i = 0; i < 6; ++i) h.hist[i] = tHist[i]; }
-    h.radioSwaps = radioSwaps - linkStats.swapsAtStart;
+    h.radioSwaps = linkStats.swapsAtLive - linkStats.swapsAtStart;
     for (uint8_t i = 0; i < 3; ++i) h.radioMs[i] = linkStats.radioMsAtLive[i] - linkStats.radioMsAtStart[i];
     h.savedEpochS = epochNowS();          // 0 until a phone has told us the time
     f.write((const uint8_t*)&h, sizeof(h));
@@ -265,7 +265,7 @@ inline bool buildFlightJson(uint8_t f, String& j) {
           h.maxGapUs = tMax; h.avgGapUs = tAvg;
           h.maxGapAtOffsetMs = (tAt > linkStats.connStartMs) ? (tAt - linkStats.connStartMs) : 0;
           for (uint8_t i = 0; i < 6; ++i) h.hist[i] = tHist[i]; }
-        h.radioSwaps = radioSwaps - linkStats.swapsAtStart;
+        h.radioSwaps = linkStats.swapsAtLive - linkStats.swapsAtStart;
         for (uint8_t i = 0; i < 3; ++i) h.radioMs[i] = linkStats.radioMsAtLive[i] - linkStats.radioMsAtStart[i];
         // copy the ring oldest→newest into the load buffer for uniform rendering
         const uint16_t start = (teleCount < TELE_RING) ? 0 : teleHead;

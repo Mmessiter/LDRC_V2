@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.270-swap-freeze",
+      "url": "https://messiter.com/rxv2/release/v0.9.270/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.270/littlefs.bin",
+      "notes": ""
+    },
+    {
       "name": "RXV2-0.9.269-gap-lateness",
       "url": "https://messiter.com/rxv2/release/v0.9.269/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.269/littlefs.bin",
@@ -65,12 +71,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.259/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.259/littlefs.bin",
       "notes": "Link statistics now start when the connection is 3 seconds old (was 2 - a 55 ms handshake straggler remained), and the radio-swap count and per-radio times are re-baselined at the same moment, so the transmitter's connect ritual no longer inflates any flight figure. Installing this also updates the web pages."
-    },
-    {
-      "name": "RXV2-0.9.258-handshake-grace",
-      "url": "https://messiter.com/rxv2/release/v0.9.258/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.258/littlefs.bin",
-      "notes": "THE 1-SECOND GAP, SOLVED FOR REAL: it was the V1 transmitter's own connect ritual - bind confirm and model-ID handshake pause its radio for about a second before the green light. The V1 transmitter has always hidden this by wiping its stats just after the green light; the receiver now applies the same wisdom - gap statistics only start once the connection is 2 seconds old. Also: a flight's R1/R2 radio times now stop at the last packet (no more growing on the bench). Installing this also updates the web pages."
     }
   ]
 }

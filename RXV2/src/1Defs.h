@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.269-gap-lateness";
+constexpr const char* FW_VERSION = "RXV2-0.9.270-swap-freeze";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -420,6 +420,10 @@ struct LinkStats {
     // stops at the last packet instead of growing while the radios keep
     // listening on the bench (R1+R2 exceeded the flight duration before).
     uint32_t radioMsAtLive[3]  = {0, 0, 0};
+    // Same freeze for the SWAP count (Malcolm 2026-07-27): the radios hunt
+    // (and swap) endlessly while the TX is off — those bench swaps must not
+    // be billed to the flight. Refreshed while live, frozen at signal loss.
+    uint32_t swapsAtLive       = 0;
     uint32_t maxGapAtMs = 0;   // millis() when maxGapUs was recorded (0 = unknown)
     // False until the connection outlives LINK_STATS_GRACE_MS — the V1 TX's
     // connect handshake pauses its RF, so stats/baselines start after it.
