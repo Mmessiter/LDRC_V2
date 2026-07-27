@@ -496,8 +496,10 @@ void loop() {
         // Refresh the per-flight freeze point while the link is live; it
         // stops at signal loss so the flight's R1/R2 split doesn't keep
         // growing while the radios listen on the bench afterwards.
-        if (rx.lastMillis && (nowTick - rx.lastMillis) < 1000)
+        if (rx.lastMillis && (nowTick - rx.lastMillis) < 1000) {
             for (uint8_t i = 0; i < 3; ++i) linkStats.radioMsAtLive[i] = radioActiveMs[i];
+            linkStats.swapsAtLive = radioSwaps;   // swap count freezes at loss too
+        }
     }
 
     if (!simEnabled) sbusTick();   // no RC output frames at all while in sim mode
