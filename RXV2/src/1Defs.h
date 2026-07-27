@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.274-fly-means-silence";
+constexpr const char* FW_VERSION = "RXV2-0.9.275-true-slot-rate";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -476,8 +476,10 @@ inline void gapsForDisplay(uint32_t& maxUs, uint32_t& avgUs, uint32_t hist[6], u
         bool trimmedMax = false; uint32_t survivorMax = 0, survivorAt = 0;
         for (const auto &g : linkStats.recent) {
             if (!g.us) continue;
-            if ((uint32_t)(rx.lastMillis - g.atMs) <= SHUTDOWN_TRIM_WINDOW_MS &&
-                g.us >= SHUTDOWN_TRIM_MIN_US) {
+            // ANY counted gap in the trailing window is a shutdown artifact
+            // candidate — the V1 TX's power-off ritual also hesitates in the
+            // tens-of-ms class, not just the failsafe class (0.9.275).
+            if ((uint32_t)(rx.lastMillis - g.atMs) <= SHUTDOWN_TRIM_WINDOW_MS) {
                 if (hist[g.bucket]) hist[g.bucket]--;
                 if (cnt) cnt--;
                 sum -= (sum >= g.us) ? g.us : sum;
@@ -511,8 +513,10 @@ inline void scrubShutdownGapsTick() {
     bool trimmedMax = false; uint32_t survivorMax = 0, survivorAt = 0;
     for (auto &g : linkStats.recent) {
         if (!g.us) continue;
-        if ((uint32_t)(rx.lastMillis - g.atMs) <= SHUTDOWN_TRIM_WINDOW_MS &&
-            g.us >= SHUTDOWN_TRIM_MIN_US) {
+        // ANY counted gap in the trailing window is a shutdown artifact
+        // candidate — the V1 TX's power-off ritual also hesitates in the
+        // tens-of-ms class, not just the failsafe class (0.9.275).
+        if ((uint32_t)(rx.lastMillis - g.atMs) <= SHUTDOWN_TRIM_WINDOW_MS) {
             if (linkStats.hist[g.bucket]) linkStats.hist[g.bucket]--;
             if (linkStats.gapCount) linkStats.gapCount--;
             linkStats.gapSumUs -= (linkStats.gapSumUs >= g.us) ? g.us : linkStats.gapSumUs;

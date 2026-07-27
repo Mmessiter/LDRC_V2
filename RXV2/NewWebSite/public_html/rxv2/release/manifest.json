@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.275-true-slot-rate",
+      "url": "https://messiter.com/rxv2/release/v0.9.275/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.275/littlefs.bin",
+      "notes": ""
+    },
+    {
       "name": "RXV2-0.9.274-fly-means-silence",
       "url": "https://messiter.com/rxv2/release/v0.9.274/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.274/littlefs.bin",
@@ -65,12 +71,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.264/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.264/littlefs.bin",
       "notes": "Fly now is unavailable until a transmitter is actually connected - the button dims and explains itself, and lights up the moment your TX comes on. No more accidentally switching the radios off with nothing to fly. Installing this also updates the web pages."
-    },
-    {
-      "name": "RXV2-0.9.263-bind-escape",
-      "url": "https://messiter.com/rxv2/release/v0.9.263/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.263/littlefs.bin",
-      "notes": "Bind mode gets an escape hatch: entering bind now puts the current pairing safely aside, and while bind mode is active the Bind button becomes 'Cancel bind - restore previous pairing' - a mistaken tap is fully undoable. Fly now is also truly one-tap-one-confirm: no more separate screen; the menu stays put, a green banner confirms, and the Fly button itself becomes the way back. Installing this also updates the web pages."
     }
   ]
 }
