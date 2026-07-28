@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.279-battery-guardian",
+      "url": "https://messiter.com/rxv2/release/v0.9.279/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.279/littlefs.bin",
+      "notes": ""
+    },
+    {
       "name": "RXV2-0.9.278-zero-at-fly",
       "url": "https://messiter.com/rxv2/release/v0.9.278/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.278/littlefs.bin",
@@ -64,12 +70,6 @@
       "name": "RXV2-0.9.268-flight-dates",
       "url": "https://messiter.com/rxv2/release/v0.9.268/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.268/littlefs.bin",
-      "notes": ""
-    },
-    {
-      "name": "RXV2-0.9.267-well-of-course",
-      "url": "https://messiter.com/rxv2/release/v0.9.267/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.267/littlefs.bin",
       "notes": ""
     }
   ]

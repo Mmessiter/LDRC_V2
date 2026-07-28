@@ -406,6 +406,56 @@ void setup() {
 //  loop() — main service loop
 //*********************************************************************
 
+//*********************************************************************
+//  Low-battery guardian (Malcolm 2026-07-28, after the supper-and-a-film
+//  pack fatality: the buck-boost kept the RX alive while the LiPo sank
+//  beyond rescue). Two stages, crash-safety first:
+//    <= 3.50 V/cell : the app shows a MASSIVE warning (page-side, from
+//                     the vbat figures already in state.json).
+//    <= 3.30 V/cell : IF the model is provably forgotten — channels
+//                     dead-still for 2 minutes, not being flown, not
+//                     armed — save the flight and DEEP SLEEP. A flying
+//                     model always moves its channels, so sleep can
+//                     never fire mid-air; wake = power-cycle.
+//*********************************************************************
+constexpr float    BATT_SLEEP_PER_CELL = 3.30f;
+constexpr uint32_t BATT_STILL_MS       = 120000;   // channels still this long = forgotten
+constexpr uint16_t BATT_MOVE_US        = 12;       // movement threshold per channel
+
+static void batteryGuardTick() {
+    static uint16_t snap[16] = {0};
+    static uint32_t lastMoveMs = 0;
+    static uint32_t belowSinceMs = 0;
+    const uint32_t now = millis();
+
+    bool moved = false;
+    for (uint8_t i = 0; i < 16; ++i) {
+        uint16_t v = channelMicros[i];
+        if ((v > snap[i] ? v - snap[i] : snap[i] - v) > BATT_MOVE_US) { moved = true; snap[i] = v; }
+    }
+    if (moved || !lastMoveMs) lastMoveMs = now;
+
+    if (vbatVolts < 3.0f) { belowSinceMs = 0; return; }   // no/implausible sensor
+    uint8_t cells = vbatCellsCfg ? vbatCellsCfg
+                                 : (uint8_t)constrain((int)((vbatVolts + 1.9f) / 3.8f), 1, 6);
+    float perCell = vbatVolts / cells;
+
+    // The armed check reuses the flight-save definition of armed.
+    bool armed = (armingChannel >= 1 && armingChannel <= 16) &&
+                 (channelMicros[armingChannel - 1] > 1500);
+    bool still = (uint32_t)(now - lastMoveMs) >= BATT_STILL_MS;
+
+    if (perCell <= BATT_SLEEP_PER_CELL && still && !beingFlown && !armed) {
+        if (!belowSinceMs) belowSinceMs = now;
+        if ((uint32_t)(now - belowSinceMs) >= 10000) {     // sustained, not a sag blip
+            events.add("Battery guardian: deep sleep to save the pack");
+            saveFlightToLittleFS();                        // keep the record (no-op if trivial)
+            delay(50);
+            esp_deep_sleep_start();                        // wake = power-cycle
+        }
+    } else belowSinceMs = 0;
+}
+
 void loop() {
     // Diagnostic: loop frequency + worst-case iteration time, so we can tell a CPU /
     // servicing stall (low Hz, or a big max) from an RF problem (high Hz, frames just
@@ -460,6 +510,7 @@ void loop() {
     vbatPoll();                // battery divider ADC (5 Hz, no-op when off)
     telemetrySampleTick();     // 1 Hz flight telemetry log (ESC temp / head speed / battery)
     flightSaveTick();          // save the flight to flash on DISARM — safe, on the ground (arming-channel idea)
+    batteryGuardTick();        // low-battery warning + forgotten-model deep sleep (Malcolm 2026-07-28)
 
     // Dual-radio redundancy: if we've not received a packet on the active
     // radio for a while AND a swap cooldown has elapsed AND we have a second
