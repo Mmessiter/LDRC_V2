@@ -627,6 +627,8 @@ inline void radioPoll() {
                 linkStats.packets  = 0; linkStats.maxGapUs = 0; linkStats.maxGapAtMs = 0;
                 linkStats.gapSumUs = 0; linkStats.gapCount = 0;
                 linkStats.expectedGapUs = 0;   // re-learn the spacing (solo vs buddy-box may have changed)
+                linkStats.secWindowStartMs = 0;
+                linkStats.secWindowCount   = 0;
                 for (uint8_t i = 0; i < 6; ++i) linkStats.hist[i] = 0;
                 for (auto &g : linkStats.recent) g = {};
                 linkStats.recentIdx = 0;
@@ -661,21 +663,34 @@ inline void radioPoll() {
                     }
                 }
                 uint32_t gapUs = nowUs - linkStats.lastPktUs;
-                // Self-calibrating expected SLOT spacing (~2 ms solo, ~4 ms
-                // buddy-box) — a FLOOR tracker, not a mean: retried packets
-                // arrive 0.3-0.5 ms late and a mean-EMA absorbed them (read
-                // 493 Hz vs the TX's 503 ack/s — Malcolm, lodge round 3).
-                // Follow shorter intervals quickly (the true slot), relax
-                // upward only very slowly (oscillator drift / buddy-box);
-                // missed-slot gaps (>=1.5x) never touch it.
-                if (!linkStats.expectedGapUs) {
-                    if (gapUs < 10000) linkStats.expectedGapUs = gapUs;
-                } else if (gapUs < linkStats.expectedGapUs) {
-                    linkStats.expectedGapUs -=
-                        ((int32_t)linkStats.expectedGapUs - (int32_t)gapUs) / 16;
-                } else if (gapUs < linkStats.expectedGapUs + linkStats.expectedGapUs / 2) {
-                    linkStats.expectedGapUs +=
-                        ((int32_t)gapUs - (int32_t)linkStats.expectedGapUs) / 256 + 1;
+                // Expected slot spacing, measured THE V1 WAY (Malcolm): count
+                // packets across ~1-second windows and divide — exactly how
+                // his TX computes its ack rate, so the two ends must agree.
+                // Interval statistics failed twice here: a mean-EMA absorbed
+                // retry delays (483 vs 503), a floor tracker collapsed into
+                // FIFO read-bursts (two packets drained in one loop pass
+                // look microseconds apart). Counting is immune to all of it.
+                // Windows pause during BLE quarantine — desense-eaten packets
+                // must not dilute the rate.
+                if (bleStatsQuarantine()) {
+                    linkStats.secWindowStartMs = 0;
+                    linkStats.secWindowCount   = 0;
+                } else if (!linkStats.secWindowStartMs) {
+                    linkStats.secWindowStartMs = nowMs;
+                    linkStats.secWindowCount   = 1;
+                } else {
+                    linkStats.secWindowCount++;
+                    uint32_t elapsed = nowMs - linkStats.secWindowStartMs;
+                    if (elapsed >= 1000) {
+                        if (linkStats.secWindowCount >= 100) {
+                            uint32_t est = (uint32_t)((uint64_t)elapsed * 1000ULL
+                                                      / linkStats.secWindowCount);
+                            linkStats.expectedGapUs = linkStats.expectedGapUs
+                                ? (linkStats.expectedGapUs * 3 + est) / 4 : est;
+                        }
+                        linkStats.secWindowStartMs = nowMs;
+                        linkStats.secWindowCount   = 0;
+                    }
                 }
                 // A packet is only LATE by the part beyond the expected
                 // spacing — an 8 ms wait at 2 ms spacing is a 6 ms lateness,

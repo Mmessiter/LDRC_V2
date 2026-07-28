@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.277-count-like-v1",
+      "url": "https://messiter.com/rxv2/release/v0.9.277/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.277/littlefs.bin",
+      "notes": ""
+    },
+    {
       "name": "RXV2-0.9.276-slot-floor",
       "url": "https://messiter.com/rxv2/release/v0.9.276/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.276/littlefs.bin",
@@ -64,12 +70,6 @@
       "name": "RXV2-0.9.266-one-button",
       "url": "https://messiter.com/rxv2/release/v0.9.266/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.266/littlefs.bin",
-      "notes": ""
-    },
-    {
-      "name": "RXV2-0.9.265-flight-fallback",
-      "url": "https://messiter.com/rxv2/release/v0.9.265/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.265/littlefs.bin",
       "notes": ""
     }
   ]
