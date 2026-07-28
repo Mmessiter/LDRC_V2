@@ -551,5 +551,21 @@ void loop() {
         flyArmRequested = false;
         delay(300);
         disableWifi();
+        statsZeroAtMs = millis() + 3000;   // Malcolm: zero EVERYTHING ~3 s after Fly now
+    }
+
+    // Fly-now stats zero (Malcolm 2026-07-28): the REAL flight starts a few
+    // seconds after Fly — bench time, the BLE era and its dying bursts are
+    // prehistory. Wipe the whole flight record: link stats AND the telemetry
+    // graph ring. A fresh connStart means the arm-based save treats what
+    // follows as its own session (its own saved slot), and the normal 3 s
+    // grace re-baselines swaps/radio-times through the existing machinery.
+    if (statsZeroAtMs && (int32_t)(millis() - statsZeroAtMs) >= 0) {
+        statsZeroAtMs = 0;
+        linkStats = LinkStats{};
+        linkStats.connStartMs = millis();
+        teleCount = 0;
+        teleHead  = 0;
+        events.add("Flight record zeroed (fly mode)");
     }
 }

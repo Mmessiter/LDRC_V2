@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.277-count-like-v1";
+constexpr const char* FW_VERSION = "RXV2-0.9.278-zero-at-fly";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -401,6 +401,10 @@ inline bool bleStatsQuarantine() {
     return bleStatsRadioOn || bleStatsClientUp ||
            (int32_t)(bleStatsQuietUntilMs - millis()) > 0;
 }
+// Fly-now stats zero (Malcolm 2026-07-28): set by the fly_arm path, fired
+// from loop() ~3 s later — the flight record restarts once the radios are
+// truly quiet, so the flight begins at Fly, not at the bench.
+inline uint32_t statsZeroAtMs = 0;
 
 // Per-connection (per-flight) link statistics — inter-packet gaps, frame rate,
 // and a gap histogram. Reset when a fresh connection starts (a >500 ms gap), so
