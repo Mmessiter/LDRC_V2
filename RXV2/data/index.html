@@ -229,8 +229,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // (FC detection, and bind completing) without needing a page reload.
     setInterval(async () => {
         const s2 = await LDRC.fetchState();
-        if (s2) { updateRfButton(s2); updateBindState(s2); paintApAutoBanner(s2); paintRadioBanner(s2); paintFlyButton(s2); }
+        if (s2) { updateRfButton(s2); updateBindState(s2); paintApAutoBanner(s2); paintRadioBanner(s2); paintFlyButton(s2); paintBattWarn(s2); }
     }, 3000);
+    paintBattWarn(s);
 
     // Model name — show as the h1, prompt with warning + edit-on-tap.
     paintModelName(s);
@@ -458,6 +459,34 @@ function showFlyConfirm() {
         } else if (s) el.innerHTML = '<span style="color:#a4242a">not bound</span>';
     }).catch(() => {});
 }
+// Low-battery klaxon (Malcolm 2026-07-28): at 3.5 V/cell a MASSIVE warning;
+// at 3.3 the receiver itself deep-sleeps if the model is provably forgotten
+// (channels dead-still 2 min, not flying, not armed) — the pack that died
+// during supper-and-a-film shall have no successors.
+function paintBattWarn(s) {
+    const vb = s && s.rf && s.rf.vbat;
+    let b = document.getElementById('battWarn');
+    if (!vb || !vb.volts || vb.volts < 3) { if (b) b.remove(); return; }
+    const cells = vb.cells || Math.min(6, Math.max(1, Math.round((vb.volts + 1.9) / 3.8)));
+    const per = vb.volts / cells;
+    if (per > 3.5) { if (b) b.remove(); return; }
+    if (!b) {
+        b = document.createElement('div');
+        b.id = 'battWarn';
+        b.style.cssText = 'text-align:center;padding:1em;border-radius:10px;margin:0 0 1em;'
+            + 'background:#c0392b;color:#fff;font-weight:800;font-size:1.25em;line-height:1.35;'
+            + 'animation:battpulse 1s infinite alternate';
+        const st = document.createElement('style');
+        st.textContent = '@keyframes battpulse{from{opacity:1}to{opacity:.55}}';
+        document.head.appendChild(st);
+        const menu = document.getElementById('mainMenu');
+        (menu || document.querySelector('.container') || document.body).prepend(b);
+    }
+    b.innerHTML = '🪫 BATTERY LOW — <b>' + per.toFixed(2) + ' V/cell!</b><br>'
+        + '<span style="font-size:.75em;font-weight:600">Disconnect the flight battery NOW.'
+        + (per <= 3.35 ? '<br>Receiver will deep-sleep shortly if left untouched.' : '') + '</span>';
+}
+
 // Radios just went off (or already were): NO separate screen — the menu
 // stays and a green banner confirms.
 //   goodbye=true  : the user JUST pressed Fly — the receiver is dropping

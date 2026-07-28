@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.278-zero-at-fly";
+constexpr const char* FW_VERSION = "RXV2-0.9.279-battery-guardian";
 
 //*********************************************************************
 //  Auto-update manifest URLs
