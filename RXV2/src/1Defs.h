@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.275-true-slot-rate";
+constexpr const char* FW_VERSION = "RXV2-0.9.276-slot-floor";
 
 //*********************************************************************
 //  Auto-update manifest URLs

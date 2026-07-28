@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.276-slot-floor",
+      "url": "https://messiter.com/rxv2/release/v0.9.276/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.276/littlefs.bin",
+      "notes": ""
+    },
+    {
       "name": "RXV2-0.9.275-true-slot-rate",
       "url": "https://messiter.com/rxv2/release/v0.9.275/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.275/littlefs.bin",
@@ -65,12 +71,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.265/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.265/littlefs.bin",
       "notes": ""
-    },
-    {
-      "name": "RXV2-0.9.264-fly-guard",
-      "url": "https://messiter.com/rxv2/release/v0.9.264/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.264/littlefs.bin",
-      "notes": "Fly now is unavailable until a transmitter is actually connected - the button dims and explains itself, and lights up the moment your TX comes on. No more accidentally switching the radios off with nothing to fly. Installing this also updates the web pages."
     }
   ]
 }

@@ -305,7 +305,7 @@ class BleServerCallbacks : public NimBLEServerCallbacks {
     void onConnect(NimBLEServer* s, NimBLEConnInfo& info) override {
         bleClientConnected = true;
         bleStatsClientUp   = true;                          // link stats: quarantine BLE desense
-        bleStatsQuietUntilMs = millis() + 2000;
+        bleStatsQuietUntilMs = millis() + 4000;
         bleConnMtu = 23;                                    // until the MTU exchange
         events.add("BLE app connected");
         // Ask for fast-ish connection parameters: good throughput, still polite.
@@ -317,7 +317,7 @@ class BleServerCallbacks : public NimBLEServerCallbacks {
     void onDisconnect(NimBLEServer* s, NimBLEConnInfo& info, int reason) override {
         bleClientConnected = false;
         bleStatsClientUp   = false;
-        bleStatsQuietUntilMs = millis() + 2000;             // the disconnect burst desenses too
+        bleStatsQuietUntilMs = millis() + 4000;             // the disconnect burst desenses too
         bleConnMtu = 23;
         bleReqReady = false;
         blePumping  = false;
@@ -375,7 +375,7 @@ inline void bleStart() {
     NimBLEDevice::startAdvertising();
     bleStarted = true;
     bleStatsRadioOn = true;                   // gap/swap stats pause while BT is on at all
-    bleStatsQuietUntilMs = millis() + 2500;   // the BT radio's first-keying burst desenses the nRF24s
+    bleStatsQuietUntilMs = millis() + 4000;   // the BT radio's first-keying burst desenses the nRF24s
     // Physical "Bluetooth is ready" cue: wave the chosen servo channels
     // (Output.h) every time advertising actually starts — power-on included.
     bleWaveStartMs = millis();
@@ -397,7 +397,7 @@ inline void bleStop() {
     bleClientConnected = false;
     bleStatsClientUp   = false;
     bleStatsRadioOn    = false;
-    bleStatsQuietUntilMs = millis() + 2000;   // teardown burst; stats resume cleanly after
+    bleStatsQuietUntilMs = millis() + 4000;   // teardown burst; stats resume cleanly after
     bleReqReady = false;
     blePumping  = false;
     Serial.println("[ble] off");

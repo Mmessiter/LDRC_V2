@@ -662,15 +662,20 @@ inline void radioPoll() {
                 }
                 uint32_t gapUs = nowUs - linkStats.lastPktUs;
                 // Self-calibrating expected SLOT spacing (~2 ms solo, ~4 ms
-                // buddy-box). Once seeded, only intervals within 1.5x of the
-                // estimate feed the EMA: a missed-slot gap (2x, 3x spacing)
-                // must NOT inflate it — averaging those in read 483 Hz on a
-                // link whose TX counted >500 acks/s (Malcolm, lodge test).
+                // buddy-box) — a FLOOR tracker, not a mean: retried packets
+                // arrive 0.3-0.5 ms late and a mean-EMA absorbed them (read
+                // 493 Hz vs the TX's 503 ack/s — Malcolm, lodge round 3).
+                // Follow shorter intervals quickly (the true slot), relax
+                // upward only very slowly (oscillator drift / buddy-box);
+                // missed-slot gaps (>=1.5x) never touch it.
                 if (!linkStats.expectedGapUs) {
                     if (gapUs < 10000) linkStats.expectedGapUs = gapUs;
+                } else if (gapUs < linkStats.expectedGapUs) {
+                    linkStats.expectedGapUs -=
+                        ((int32_t)linkStats.expectedGapUs - (int32_t)gapUs) / 16;
                 } else if (gapUs < linkStats.expectedGapUs + linkStats.expectedGapUs / 2) {
                     linkStats.expectedGapUs +=
-                        ((int32_t)gapUs - (int32_t)linkStats.expectedGapUs) / 64;
+                        ((int32_t)gapUs - (int32_t)linkStats.expectedGapUs) / 256 + 1;
                 }
                 // A packet is only LATE by the part beyond the expected
                 // spacing — an 8 ms wait at 2 ms spacing is a 6 ms lateness,
