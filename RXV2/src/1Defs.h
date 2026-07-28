@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.276-slot-floor";
+constexpr const char* FW_VERSION = "RXV2-0.9.277-count-like-v1";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -414,9 +414,15 @@ struct LinkStats {
     uint32_t maxGapUs    = 0;    // longest LATENESS (interval minus expected spacing)
     uint64_t gapSumUs    = 0;    // sum of counted lateness (for the average)
     uint32_t gapCount    = 0;
-    // Self-calibrating expected packet spacing (EMA of normal intervals):
-    // ~2 ms solo, ~4 ms buddy-boxing — measured per connection, not assumed.
+    // Expected packet spacing (~2 ms solo, ~4 ms buddy-box), derived the
+    // V1 TX's way: packets counted over ~1-second windows (Malcolm's
+    // design — his TX counts acks per second). Interval-based estimators
+    // failed twice: a mean absorbed retry delays (read 483 on a 503 link)
+    // and a floor tracker collapsed into FIFO read-bursts (near-0 "gaps"
+    // when the loop drains two packets in one gulp).
     uint32_t expectedGapUs = 0;
+    uint32_t secWindowStartMs = 0;   // rate window opened (0 = not counting)
+    uint16_t secWindowCount   = 0;   // packets in the current window
     // lateness histogram (ms buckets): 0:<8  1:8-16  2:16-32  3:32-64  4:64-150  5:>=150
     uint32_t hist[6]     = {0};
     // Ring of the most recent recorded gaps. The TX's power-off routine stalls
