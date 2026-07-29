@@ -1268,6 +1268,7 @@ inline void handleNameSet() {
                   "new name takes effect across the WiFi AP, mDNS, and "
                   "page titles.</p>";
     server.send(200, "text/html", confirmPage("Name saved", body.c_str()));
+    bleEarlyPump();               // over BLE: give the reply a chance to leave before the reboot
     prefs.putUChar(NVS_KEY_CFG_REBOOT, 1);   // config reboot: come straight back to WiFi even if a TX is on
     delay(500);
     ESP.restart();
