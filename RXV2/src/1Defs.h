@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.280-graceful-rename";
+constexpr const char* FW_VERSION = "RXV2-0.9.281-exit-and-reload";
 
 //*********************************************************************
 //  Auto-update manifest URLs

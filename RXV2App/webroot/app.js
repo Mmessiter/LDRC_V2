@@ -17,10 +17,12 @@
         state: null,
         events: null,
 
-        // True when this page is being served through the iPhone app's
-        // Bluetooth bridge (custom ble:// scheme) rather than WiFi/HTTP.
-        // Pages use it to adapt wording; app.js shows the link badge.
-        viaBle: location.protocol === 'ble:',
+        // True when this page is served through an app's Bluetooth bridge
+        // rather than WiFi/HTTP. iOS uses a custom ble:// scheme; ANDROID
+        // masquerades as https://rxv2.local — checking only the scheme left
+        // every viaBle branch taking the WiFi path inside the Android app
+        // (found 2026-07-29 via the rename white-screen saga).
+        viaBle: location.protocol === 'ble:' || location.hostname === 'rxv2.local',
 
         async fetchState() {
             try {
