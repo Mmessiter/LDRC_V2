@@ -412,15 +412,15 @@ function postName(v) {
         const c = document.querySelector('.container');
         if (!c) return;
         const ble = window.LDRC && LDRC.viaBle;
+        // Malcolm's wording: a new name needs a fresh start, so say so —
+        // no 'refresh' suggestions that can't work over a dead link, and
+        // no auto-redirect (the old hostname is gone too).
         c.innerHTML = '<h1>Name saved</h1><div class=card>'
           + '<p style="font-size:1.15em;font-weight:600">✅ This receiver is rebooting as <b>'
           + shown + '</b>.</p>'
-          + (ble
-             ? '<p class=muted>The Bluetooth link drops during the reboot — go back and '
-               + 'reconnect from the scanner, where it will appear under its new name.</p>'
-             : '<p class=muted>This page will find it again in a few seconds&hellip;</p>')
+          + '<p style="font-weight:700">Please exit and reload'
+          + (ble ? ' the app' : ' this page') + ' — the receiver reappears under its new name.</p>'
           + '</div>';
-        if (!ble) setTimeout(() => location.replace('/'), 8000);
     }, 900);
 }
 
