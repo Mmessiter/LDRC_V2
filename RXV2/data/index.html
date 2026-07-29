@@ -396,13 +396,32 @@ function paintModelName(s) {
 function postName(v) {
     const fd = new URLSearchParams();
     fd.set('name', v);
+    // NEVER render the reply of a rebooting save: over Bluetooth the reboot
+    // cuts the reply mid-transfer, and document.write of a truncated/empty
+    // body is a blank white page (Malcolm renamed to 'Simulator' and got
+    // 'a white screen with nothing on it for ages'). Deterministic local
+    // farewell instead; the reply is only consulted for validation errors
+    // (a 400 arrives instantly because invalid names don't reboot).
+    let rejected = false;
     fetch('/api/name', { method: 'POST', body: fd })
-      .then(r => r.text()).then(html => {
-          document.open();
-          document.write(html);
-          document.close();
-      })
-      .catch(() => alert('Could not save — try again.'));
+      .then(r => { if (!r.ok) return r.text().then(t => { rejected = true; alert(t); }); })
+      .catch(() => {});
+    setTimeout(() => {
+        if (rejected) return;
+        const shown = v || 'RXV2';
+        const c = document.querySelector('.container');
+        if (!c) return;
+        const ble = window.LDRC && LDRC.viaBle;
+        c.innerHTML = '<h1>Name saved</h1><div class=card>'
+          + '<p style="font-size:1.15em;font-weight:600">✅ This receiver is rebooting as <b>'
+          + shown + '</b>.</p>'
+          + (ble
+             ? '<p class=muted>The Bluetooth link drops during the reboot — go back and '
+               + 'reconnect from the scanner, where it will appear under its new name.</p>'
+             : '<p class=muted>This page will find it again in a few seconds&hellip;</p>')
+          + '</div>';
+        if (!ble) setTimeout(() => location.replace('/'), 8000);
+    }, 900);
 }
 
 // Generic confirmation card in the app style (Fly now / WiFi off / updates).

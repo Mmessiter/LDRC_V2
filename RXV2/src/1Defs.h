@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.279-battery-guardian";
+constexpr const char* FW_VERSION = "RXV2-0.9.280-graceful-rename";
 
 //*********************************************************************
 //  Auto-update manifest URLs
