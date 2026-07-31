@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.281-exit-and-reload";
+constexpr const char* FW_VERSION = "RXV2-0.9.282-heli-wave";
 
 //*********************************************************************
 //  Auto-update manifest URLs

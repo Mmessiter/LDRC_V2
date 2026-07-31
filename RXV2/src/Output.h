@@ -381,7 +381,16 @@ inline void sbusTick() {
     // The THROTTLE channel never waves. Skipped on CRSF with an FC (the FC
     // is channel authority during failsafe).
     if (bleWaveStartMs) {
-        bool waveAllowed = (currentProtocol != PROTO_CRSF || !fcTelemetryEnabled);
+        // FC models (CRSF + FC telemetry) wave too now — Malcolm's field
+        // report 2026-07-31: the announce never showed on the repaired heli.
+        // After landing the FC is DISARMED and passes cyclic straight to the
+        // swash, so the wave is visible and safe (throttle and the arming
+        // channel never wave). FC-model guard: only when there is NO live
+        // TX — never inject wiggles into an armed, flying FC (the
+        // brownout-reboot boot window case).
+        bool linkQuiet = (rx.lastMillis == 0) ||
+                         (uint32_t)(millis() - rx.lastMillis) > 2000;
+        bool waveAllowed = (currentProtocol != PROTO_CRSF || !fcTelemetryEnabled) || linkQuiet;
         uint32_t t = (uint32_t)(millis() - bleWaveStartMs);
         static uint32_t waveEpoch = 0;
         static uint16_t waveBase[16];
