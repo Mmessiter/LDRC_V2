@@ -78,6 +78,10 @@ inline const char* flightPath(uint8_t idx) {
 //                  saved flight instead of cluttering the history with partials.
 inline void saveFlightToLittleFS(bool rotate = true) {
     if (!littleFsMounted || teleCount < FLIGHT_MIN_SAMPLES) return;
+    // Flash writes + up to 20 rotation renames stall the loop (~1 s): tell
+    // the link statistics to look away — this is ground housekeeping, not
+    // link quality (an 808 ms 'gap' was billed exactly at disarm).
+    statsSelfStallUntilMs = millis() + 5000;
     // Write the NEW flight to a temp file FIRST — only a successful write may
     // rotate the old ones. (Rotating first meant a failed open/write — e.g.
     // FS full — deleted the oldest saved flight and left no new one.)
