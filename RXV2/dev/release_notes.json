@@ -164,5 +164,6 @@
  "v0.9.278": "Fly now zeroes the whole flight record 3 seconds later (Malcolm) - link stats AND the telemetry graph restart once the radios are truly quiet, so a flight begins at Fly, not at the bench.",
  "v0.9.279": "The battery guardian: at 3.5 V/cell the app shows a massive pulsing warning; at 3.3 V/cell - only if the channels have been dead-still for 2 minutes and the model is not armed or flying - the receiver saves the flight and deep-sleeps to spare the pack. A flying model always moves its channels, so sleep can never fire mid-air. Wake = power-cycle.",
  "v0.9.280": "Renaming the receiver over Bluetooth no longer strands you on a white page - the app shows a clear rebooting-as-NewName screen and tells you to reconnect from the scanner.",
- "v0.9.281": "After a rename the screen now says exactly what to do - exit and reload, the receiver reappears under its new name. Also fixed: the Android app was taking WiFi-flavoured wording everywhere (its Bluetooth disguise was not recognised)."
+ "v0.9.281": "After a rename the screen now says exactly what to do - exit and reload, the receiver reappears under its new name. Also fixed: the Android app was taking WiFi-flavoured wording everywhere (its Bluetooth disguise was not recognised).",
+ "v0.9.282": "The Bluetooth-ready wave now shows on flight-controller models too (the disarmed FC passes cyclic to the swash, so you can see it) - with an extra guard: FC models only wave when no transmitter is live, so a mid-air reboot can never wiggle a flying machine."
 }
