@@ -371,6 +371,21 @@ class MainActivity : AppCompatActivity() {
             // the release-directory convention so web pages always ship too.
             if (fs == null && fwUrl.endsWith("firmware.bin"))
                 fs = runCatching { httpDownload(fwUrl.removeSuffix("firmware.bin") + "littlefs.bin") }.getOrNull()
+            // Fingerprint skip (2026-07-31): identical pages image already on
+            // the receiver (info.fs_md5) → don't rewrite the filesystem; the
+            // 20 saved flights + Rotorflight backups stay untouched.
+            if (fs != null) runCatching {
+                val st = org.json.JSONObject(String(bleReqSync("GET", "/api/state.json").body))
+                val have = st.optJSONObject("info")?.optString("fs_md5") ?: ""
+                if (have.length == 32) {
+                    val md = java.security.MessageDigest.getInstance("MD5").digest(fs)
+                    val mine = md.joinToString("") { "%02x".format(it) }
+                    if (mine == have.lowercase()) {
+                        fs = null
+                        otaMsg = "Web pages unchanged — keeping flights…"
+                    }
+                }
+            }
             otaTotal = fw.size.toLong() + (fs?.size ?: 0).toLong()
             // one clean restart per image: /begin resets the receiver side,
             // so a transfer that died mid-way gets a second, fresh attempt

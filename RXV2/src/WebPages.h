@@ -740,6 +740,11 @@ inline void snapshotFlightsToRam() {
     for (uint8_t i = 0; i < FLIGHT_KEEP; ++i) {
         if (g_fsFlights[i]) { free(g_fsFlights[i]); g_fsFlights[i] = nullptr; }
         g_fsFlightLen[i] = 0;
+    }
+    for (uint8_t i = 0; i < FLIGHT_KEEP; ++i) {
+        // Newest-first within a heap budget: an fs update needs working RAM
+        // (TLS or BLE buffers), so stop lifeboating before we starve it.
+        if (ESP.getFreeHeap() < 60000) break;
         if (!littleFsMounted || !LittleFS.exists(flightPath(i))) continue;
         File f = LittleFS.open(flightPath(i), "r");
         if (!f) continue;
@@ -841,6 +846,7 @@ inline void handleBleOtaEnd() {
     String err = ok ? "" : (bleOtaError.length() ? bleOtaError : String(Update.errorString()));
     if (!ok) Update.abort();
     if (bleOtaCmd == U_SPIFFS) {
+        if (ok) prefs.putString(NVS_KEY_FS_MD5, Update.md5String());   // fingerprint for the skip
         littleFsMounted = LittleFS.begin(false) || LittleFS.begin(true);
         int restored = restoreBackupsFromRam();
         restoreFlightsFromRam();
@@ -892,6 +898,7 @@ inline String updateFilesystemKeepingBackups(const String& fsUrl) {
               && Update.writeStream(*http.getStreamPtr()) == (size_t)len
               && Update.end(true);
     String err = ok ? String("") : String(Update.errorString());
+    if (ok) prefs.putString(NVS_KEY_FS_MD5, Update.md5String());   // fingerprint: identical future images skip
     http.end();
 
     // 3) Re-mount (format only if the freshly-written image won't mount), restore backups.
@@ -948,7 +955,17 @@ inline void handleFirmwareInstall() {
     //    it makes the web UI travel with the firmware — even on a jump up from an
     //    old version — while preserving the user's Rotorflight backups.
     String fsNote = "";
-    if (fsUrl.length() && (fsUrl.startsWith("http://") || isHttpsUrl(fsUrl))) {
+    // fs fingerprint skip (2026-07-31): when the client passes the release's
+    // fs_md5 and it matches the image we already flashed, the web files are
+    // identical — do not rewrite the filesystem. Saved flights (now 20) and
+    // Rotorflight backups survive untouched, and field updates get faster.
+    String wantMd5 = server.hasArg("fs_md5") ? server.arg("fs_md5") : String("");
+    wantMd5.toLowerCase(); wantMd5.trim();
+    String haveMd5 = prefs.getString(NVS_KEY_FS_MD5, ""); haveMd5.toLowerCase();
+    if (wantMd5.length() == 32 && wantMd5 == haveMd5) {
+        fsNote = " (web files identical — kept, flights preserved)";
+        events.add("FS update skipped: image unchanged");
+    } else if (fsUrl.length() && (fsUrl.startsWith("http://") || isHttpsUrl(fsUrl))) {
         fsNote = updateFilesystemKeepingBackups(fsUrl);
     }
     events.add((String("Firmware installed via auto-update") + fsNote + " — rebooting").c_str());
@@ -1842,6 +1859,7 @@ inline void handleApiState() {
     j += ",\"build_date\":\""; j += __DATE__; j += ' '; j += __TIME__; j += "\"";
     j += ",\"name\":\""; jsonEsc(g_effectiveName); j += "\"";
     j += ",\"name_custom\":"; j += (nameIsCustom() ? "true" : "false");
+    { String fm = prefs.getString(NVS_KEY_FS_MD5, ""); j += ",\"fs_md5\":\""; j += fm; j += "\""; }
     j += ",\"hostname\":\""; j += g_hostname; j += "\"";
     j += ",\"ip\":\""; j += WiFi.localIP().toString(); j += "\"";
     j += ",\"mac\":\""; j += WiFi.macAddress(); j += "\"";

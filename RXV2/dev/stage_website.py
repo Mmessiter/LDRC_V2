@@ -82,6 +82,10 @@ def main() -> int:
         }
         if (vdir / "littlefs.bin").exists():
             entry["fs_url"] = f"{SITE}/{PRODUCT}/release/{tag}/littlefs.bin"
+            # fs fingerprint: receivers skip flashing an identical image, so
+            # fw-only releases leave saved flights + backups untouched.
+            import hashlib
+            entry["fs_md5"] = hashlib.md5((vdir / "littlefs.bin").read_bytes()).hexdigest()
         entry["notes"] = note_by_ver.get(v) or new_notes.get(entry["name"], "")
         entry["_v"] = v
         versions.append(entry)

@@ -13,6 +13,12 @@
 
 import Foundation
 import WebKit
+import CryptoKit
+
+// md5 hex of a downloaded image — used for the receiver-side fingerprint skip.
+func md5Hex(_ d: Data) -> String {
+    Insecure.MD5.hash(data: d).map { String(format: "%02x", $0) }.joined()
+}
 
 final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
     private let link: BleLink
@@ -244,6 +250,19 @@ final class BleOta {
             // the release-directory convention so web pages always ship too.
             if fs == nil, fwUrl.hasSuffix("firmware.bin") {
                 fs = try? download(String(fwUrl.dropLast("firmware.bin".count)) + "littlefs.bin")
+            }
+            // Fingerprint skip (2026-07-31): if the receiver reports it already
+            // runs an identical pages image (info.fs_md5 in state.json), don't
+            // rewrite the filesystem — the 20 saved flights and Rotorflight
+            // backups stay untouched and the update is much faster.
+            if let f = fs,
+               let st = try? reqSync("GET", "/api/state.json"),
+               let obj = (try? JSONSerialization.jsonObject(with: st.body)) as? [String: Any],
+               let info = obj["info"] as? [String: Any],
+               let have = info["fs_md5"] as? String, have.count == 32,
+               md5Hex(f) == have.lowercased() {
+                fs = nil
+                set("download", "Web pages unchanged — keeping flights…")
             }
             lock.lock(); total = Int64(fw.count + (fs?.count ?? 0)); lock.unlock()
             // one clean restart per image: /begin resets the receiver side,

@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.283-eight-flights";
+constexpr const char* FW_VERSION = "RXV2-0.9.284-flight-diary";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -271,6 +271,7 @@ constexpr const char* NVS_KEY_PROTO      = "proto";
 constexpr const char* NVS_KEY_PPM_INV    = "ppm_inv";
 constexpr const char* NVS_KEY_FW_MANIFEST = "fwurl";   // URL of dev firmware server's manifest.json
 constexpr const char* NVS_KEY_MODEL_NAME  = "nm";      // user-set model name (e.g. "Goblin 700"); empty = use default
+constexpr const char* NVS_KEY_FS_MD5      = "fsmd5";   // md5 of the last-flashed littlefs image: identical-release fs updates are SKIPPED (flights survive untouched)
 constexpr const char* NVS_KEY_SIM         = "sim";     // 1 = drive flight simulator over USB (HID joystick)
 constexpr const char* NVS_KEY_SIM_MAP     = "simmap";  // 8-byte map: which RX channel (0..15) feeds each sim output
 constexpr const char* NVS_KEY_SIM_REV     = "simrev";  // 8-byte per-output reverse flags (0/1)

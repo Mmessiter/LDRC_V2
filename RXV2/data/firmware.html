@@ -214,6 +214,7 @@ function makeVersionRow(v, sourceKey, srcManifestUrl) {
     btn.textContent = verb + (src ? ' · ' + src.short : '');
     const url = resolveUrl(v.url, srcManifestUrl);
     const fsUrl = v.fs_url ? resolveUrl(v.fs_url, srcManifestUrl) : '';
+    const fsMd5 = v.fs_md5 || '';
     btn.addEventListener('click', () => doInstall(v, sourceKey, url, fsUrl, btn));
     wrap.appendChild(btn);
 
@@ -486,7 +487,8 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
 
     try {
         const r = await fetch('/api/firmware/install?url=' + encodeURIComponent(url) +
-                              (fsUrl ? '&fs_url=' + encodeURIComponent(fsUrl) : ''),
+                              (fsUrl ? '&fs_url=' + encodeURIComponent(fsUrl) : '') +
+                              (fsMd5 ? '&fs_md5=' + encodeURIComponent(fsMd5) : ''),
                               { method: 'POST' });
         if (r.ok) {
             clearInterval(instTick);

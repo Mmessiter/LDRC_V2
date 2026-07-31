@@ -1,75 +1,87 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.284-flight-diary",
+      "url": "https://messiter.com/rxv2/release/v0.9.284/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.284/littlefs.bin",
+      "fs_md5": "0db28317db7aac8defce9d37e4dc3e32",
+      "notes": ""
+    },
+    {
       "name": "RXV2-0.9.283-eight-flights",
       "url": "https://messiter.com/rxv2/release/v0.9.283/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.283/littlefs.bin",
+      "fs_md5": "8b8a1563dc33a27c7369510fcbb2d1a5",
       "notes": ""
     },
     {
       "name": "RXV2-0.9.282-heli-wave",
       "url": "https://messiter.com/rxv2/release/v0.9.282/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.282/littlefs.bin",
+      "fs_md5": "3d8f74dc1c55e19f940706453e3a2d8f",
       "notes": ""
     },
     {
       "name": "RXV2-0.9.281-exit-and-reload",
       "url": "https://messiter.com/rxv2/release/v0.9.281/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.281/littlefs.bin",
+      "fs_md5": "3bdbc38ef3f8c989914fbbed81ddbe4d",
       "notes": ""
     },
     {
       "name": "RXV2-0.9.280-graceful-rename",
       "url": "https://messiter.com/rxv2/release/v0.9.280/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.280/littlefs.bin",
+      "fs_md5": "c1c75b86dd9f857ef1fd159c95cf7827",
       "notes": ""
     },
     {
       "name": "RXV2-0.9.279-battery-guardian",
       "url": "https://messiter.com/rxv2/release/v0.9.279/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.279/littlefs.bin",
+      "fs_md5": "4f122e7e5738cab35cbe145f74c82ee7",
       "notes": ""
     },
     {
       "name": "RXV2-0.9.278-zero-at-fly",
       "url": "https://messiter.com/rxv2/release/v0.9.278/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.278/littlefs.bin",
+      "fs_md5": "bc84d69403af6417f10e898ce7a92f90",
       "notes": ""
     },
     {
       "name": "RXV2-0.9.277-count-like-v1",
       "url": "https://messiter.com/rxv2/release/v0.9.277/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.277/littlefs.bin",
+      "fs_md5": "9e911beb22100700b10f07c2d9aa37f1",
       "notes": ""
     },
     {
       "name": "RXV2-0.9.276-slot-floor",
       "url": "https://messiter.com/rxv2/release/v0.9.276/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.276/littlefs.bin",
+      "fs_md5": "9587e6723dc0451fe14432408eca39ae",
       "notes": ""
     },
     {
       "name": "RXV2-0.9.275-true-slot-rate",
       "url": "https://messiter.com/rxv2/release/v0.9.275/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.275/littlefs.bin",
+      "fs_md5": "92b69cf6954cecb4795bc4d1ec795fdd",
       "notes": ""
     },
     {
       "name": "RXV2-0.9.274-fly-means-silence",
       "url": "https://messiter.com/rxv2/release/v0.9.274/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.274/littlefs.bin",
+      "fs_md5": "dc7790f47f9643489b0eb8657c061394",
       "notes": ""
     },
     {
       "name": "RXV2-0.9.273-true-frame-rate",
       "url": "https://messiter.com/rxv2/release/v0.9.273/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.273/littlefs.bin",
-      "notes": ""
-    },
-    {
-      "name": "RXV2-0.9.272-rf-only-stats",
-      "url": "https://messiter.com/rxv2/release/v0.9.272/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.272/littlefs.bin",
+      "fs_md5": "76490e8e316ce171a80355e97af8b418",
       "notes": ""
     }
   ]

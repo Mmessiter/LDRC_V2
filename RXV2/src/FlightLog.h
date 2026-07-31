@@ -18,11 +18,14 @@
 // FLIGHT_SAVE_AFTER_MS lives in 1Defs.h — Radio.h shares it as its new-flight
 // reset threshold, so the save boundary and the reset boundary can never drift.
 constexpr uint16_t FLIGHT_MIN_SAMPLES   = 10;     // don't bother saving a trivial run
-// 8 slots (was 3, 2026-07-31): ground tests save too since 0.9.265, so two
-// bench wiggles after a field day rotated a real flight out of history —
-// Malcolm's 9m36s post-repair beauty fell off the end. ~7 kB per flight:
-// cheap in flash, and the OTA RAM snapshot degrades gracefully per-slot.
-constexpr uint8_t  FLIGHT_KEEP          = 8;      // /flt0..7.bin
+// 20 slots (3→8→20 on 2026-07-31): ground tests save too since 0.9.265, so
+// bench wiggles rotated real flights out of a short history. ~7 kB per
+// flight. Space came from shrinking flying-field.jpg (468→177 kB) — the fs
+// partition is only 1.5 MB and the pages fill most of it. Across fs-OTAs
+// the RAM lifeboat preserves newest-first within a heap budget; but with
+// the fs_md5 skip (same release) most updates no longer touch the fs at
+// all, so the full 20 normally survive untouched.
+constexpr uint8_t  FLIGHT_KEEP          = 20;     // /flt0..19.bin
 
 struct __attribute__((packed)) FlightHeader {
     uint32_t magic;        // 'FLT1'
@@ -58,9 +61,11 @@ inline uint32_t fltPendingStampMs[FLIGHT_KEEP] = { 0, 0, 0 };
 inline TeleSample flightLoadBuf[TELE_RING];
 
 inline const char* flightPath(uint8_t idx) {
-    static const char* names[FLIGHT_KEEP] = { "/flt0.bin", "/flt1.bin", "/flt2.bin", "/flt3.bin",
-                                              "/flt4.bin", "/flt5.bin", "/flt6.bin", "/flt7.bin" };
-    return (idx < FLIGHT_KEEP) ? names[idx] : names[FLIGHT_KEEP - 1];
+    static char names[FLIGHT_KEEP][12] = {};
+    if (!names[0][0])
+        for (uint8_t i = 0; i < FLIGHT_KEEP; ++i)
+            snprintf(names[i], sizeof(names[i]), "/flt%u.bin", i);
+    return names[idx < FLIGHT_KEEP ? idx : FLIGHT_KEEP - 1];
 }
 
 //*********************************************************************
@@ -150,6 +155,12 @@ inline void patchFlightEpochs() {
 //*********************************************************************
 //  Flight-end detector — call from loop()
 //*********************************************************************
+// Brief ground tests are not flights (Malcolm 2026-07-31): an UNARMED
+// session under a minute is a wiggle-check, and saving those rotated real
+// flights out of history. The arm-based save keeps its own rule (>=30 s
+// ARMED) — a deliberate short armed hop still saves.
+constexpr uint32_t FLIGHT_FALLBACK_MIN_MS = 60000;
+
 inline void maybeSaveFlight() {
     static uint32_t armedConnStart = 0;   // the connStart of a flight awaiting save
     const uint32_t now = millis();
@@ -160,8 +171,10 @@ inline void maybeSaveFlight() {
     }
     if (armedConnStart != 0 && armedConnStart == linkStats.connStartMs &&
         rx.lastMillis != 0 && (uint32_t)(now - rx.lastMillis) > FLIGHT_SAVE_AFTER_MS) {
-        saveFlightToLittleFS();
-        armedConnStart = 0;                        // saved; re-arms on the next connection
+        const uint32_t durMs = (rx.lastMillis > linkStats.connStartMs)
+                               ? rx.lastMillis - linkStats.connStartMs : 0;
+        if (durMs >= FLIGHT_FALLBACK_MIN_MS) saveFlightToLittleFS();
+        armedConnStart = 0;                        // handled; re-arms on the next connection
     }
 }
 
