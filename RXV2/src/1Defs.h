@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.287-y-scale";
+constexpr const char* FW_VERSION = "RXV2-0.9.288-save-stall-quiet";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -398,9 +398,17 @@ inline uint32_t      bleStatsQuietUntilMs = 0;    // covers connect/disconnect/s
 // that would be nuts." If the BT radio is on AT ALL, gap/swap figures are
 // hearsay — don't count them, full stop. Stats accumulate only in genuine
 // RF-only (fly-mode) conditions, which is the only regime that matters.
+// Self-stall quarantine (Malcolm's field find 2026-07-31): the disarm-edge
+// flight save writes flash from loop() — with 20 slots the save + rotation
+// stalls the loop ~1 s, the nRF FIFO overflows, and the next packet was
+// billed 808 ms late AT THE DISARM. Deliberate on-ground housekeeping must
+// not be measured as link quality: the save announces itself here first.
+inline uint32_t statsSelfStallUntilMs = 0;
+
 inline bool bleStatsQuarantine() {
     return bleStatsRadioOn || bleStatsClientUp ||
-           (int32_t)(bleStatsQuietUntilMs - millis()) > 0;
+           (int32_t)(bleStatsQuietUntilMs   - millis()) > 0 ||
+           (int32_t)(statsSelfStallUntilMs  - millis()) > 0;
 }
 // Fly-now stats zero (Malcolm 2026-07-28): set by the fly_arm path, fired
 // from loop() ~3 s later — the flight record restarts once the radios are

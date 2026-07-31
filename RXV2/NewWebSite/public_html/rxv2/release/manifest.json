@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.288-save-stall-quiet",
+      "url": "https://messiter.com/rxv2/release/v0.9.288/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.288/littlefs.bin",
+      "fs_md5": "af56b09d0c6d30660fd5cef1ea79b21e",
+      "notes": ""
+    },
+    {
       "name": "RXV2-0.9.287-y-scale",
       "url": "https://messiter.com/rxv2/release/v0.9.287/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.287/littlefs.bin",
@@ -75,13 +82,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.277/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.277/littlefs.bin",
       "fs_md5": "9e911beb22100700b10f07c2d9aa37f1",
-      "notes": ""
-    },
-    {
-      "name": "RXV2-0.9.276-slot-floor",
-      "url": "https://messiter.com/rxv2/release/v0.9.276/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.276/littlefs.bin",
-      "fs_md5": "9587e6723dc0451fe14432408eca39ae",
       "notes": ""
     }
   ]
