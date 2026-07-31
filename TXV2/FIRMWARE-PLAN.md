@@ -80,3 +80,12 @@ Architecture (proven end-to-end by RXV2 + RXV2App in July 2026):
   link live, same spirit as the RX's fly-mode rules.
 - Bonus once it exists: the phone UI works even with the TX's screen
   dark/broken, and a future budget TX variant could omit the screen.
+
+## Flight archive on the TX (Malcolm, 2026-07-31)
+After landing, the RX streams the just-saved flight record (~7 kB, FLT4)
+to the TX over the ack-payload side channel (the TxParams lane) — a
+couple of seconds at ~500 pkt/s. The Teensy 4.1 stores it on the 32 GB
+microSD as /flights/<model>/<date>_<time>.flt (timestamp already in the
+header via the phone clock sync). RX 20-slot diary = field cache; TX SD
+= permanent library (7 kB × 10 flights/day × 50 years ≈ 1% of the card).
+Later: browse years of flights from the TX screen or the phone.
