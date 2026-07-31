@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.283-eight-flights",
+      "url": "https://messiter.com/rxv2/release/v0.9.283/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.283/littlefs.bin",
+      "notes": ""
+    },
+    {
       "name": "RXV2-0.9.282-heli-wave",
       "url": "https://messiter.com/rxv2/release/v0.9.282/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.282/littlefs.bin",
@@ -64,12 +70,6 @@
       "name": "RXV2-0.9.272-rf-only-stats",
       "url": "https://messiter.com/rxv2/release/v0.9.272/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.272/littlefs.bin",
-      "notes": ""
-    },
-    {
-      "name": "RXV2-0.9.271-ble-quarantine",
-      "url": "https://messiter.com/rxv2/release/v0.9.271/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.271/littlefs.bin",
       "notes": ""
     }
   ]
