@@ -10,6 +10,13 @@
 <title>Flight analysis &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=133">
 <script src="/app.js?v=133" defer></script>
+<style>
+/* Landscape = reading mode (Malcolm 2026-07-31): the page widens and the
+   graph grows to occupy most of the screen instead of a slim centre column. */
+@media (orientation: landscape) {
+    .container { max-width: 96vw; }
+}
+</style>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -111,6 +118,9 @@ async function setGapMin() {
     loadFlight();
 }
 
+// Rotating the phone re-lays-out the graph (landscape = big reading mode).
+addEventListener('resize', () => { if (drawFlight.last) drawFlight(drawFlight.last); });
+
 // Tell the receiver the time (it has no clock) so flights get real dates —
 // including any saved before this page opened (stamped retroactively).
 fetch('/api/time', { method: 'POST',
@@ -153,8 +163,23 @@ async function loadFlight() {
 function drawFlight(d) {
     const cv = document.getElementById('flChart');
     if (!cv) return;
+    drawFlight.last = d;   // redrawn on rotate/resize
+    // Size the canvas to its real on-screen box (landscape: ~2/3 of the
+    // screen height), with a devicePixelRatio-scaled backing store so the
+    // lines stay crisp. All drawing below is in CSS-pixel coordinates.
+    const land = matchMedia('(orientation: landscape)').matches;
+    const cssW = cv.parentElement.clientWidth;
+    const cssH = land ? Math.max(220, Math.round(window.innerHeight * 0.62))
+                      : Math.round(cssW * 0.38);
+    cv.style.height = cssH + 'px';
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    if (cv.width !== Math.round(cssW * dpr) || cv.height !== Math.round(cssH * dpr)) {
+        cv.width  = Math.round(cssW * dpr);
+        cv.height = Math.round(cssH * dpr);
+    }
     const ctx = cv.getContext('2d');
-    const W = cv.width, H = cv.height;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const W = cssW, H = cssH;
     ctx.clearRect(0, 0, W, H);
     const n = d.count || 0;
     const note = document.getElementById('flNote'), leg = document.getElementById('flLegend');
