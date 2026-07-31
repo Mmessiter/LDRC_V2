@@ -181,12 +181,23 @@ inline void swapRadios() {
     loadNextAck();
 
     radioSwaps++;
-    // Bill the FLIGHT for this swap only if it happened on a live link,
-    // after the connect grace, and outside BLE quarantine — bench hunting
-    // and phone-induced desense are not the flight's fault.
-    if (rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 1000 &&
-        linkStats.graceDone && !bleStatsQuarantine())
-        linkStats.flightSwaps++;
+    // Bill the FLIGHT for this swap only if it happened on a recently-live
+    // link, after the connect grace, and outside BLE quarantine — bench
+    // hunting and phone-induced desense are not the flight's fault. 2.5 s
+    // horizon (was 1 s): matches the 'genuine failover' definition below —
+    // Malcolm's 9m36s flight handed over R1→R2 yet billed ZERO swaps.
+    // Unbilled-but-recent swaps leave a breadcrumb naming the reason.
+    {
+        uint32_t sinceLive = rx.lastMillis ? (uint32_t)(millis() - rx.lastMillis) : 0xFFFFFFFF;
+        if (sinceLive < 2500 && linkStats.graceDone && !bleStatsQuarantine())
+            linkStats.flightSwaps++;
+        else if (sinceLive < 8000) {
+            char ub[40];
+            snprintf(ub, sizeof(ub), "Swap unbilled (%s)",
+                     !linkStats.graceDone ? "grace" : bleStatsQuarantine() ? "BT" : "stale link");
+            events.add(ub);
+        }
+    }
     lastRadioSwapMs = millis();
     // Only log genuine failovers (a packet arrived within the last ~2 s, so the
     // link was live and this swap is a real response to a glitch). Dead-link

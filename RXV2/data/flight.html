@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Flight analysis &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=132">
-<script src="/app.js?v=132" defer></script>
+<link rel=stylesheet href="/style.css?v=133">
+<script src="/app.js?v=133" defer></script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -168,6 +168,24 @@ function drawFlight(d) {
     const gx = W - pad.l - pad.r, gy = H - pad.t - pad.b;
     ctx.strokeStyle = '#cdd7dc'; ctx.lineWidth = 1; ctx.strokeRect(pad.l, pad.t, gx, gy);
     const xat = i => pad.l + gx * i / (n - 1);
+    // Scale indication (Malcolm 2026-07-31): dotted gridlines at quarter
+    // heights (each line auto-scales, so a gridline = ¼ of THAT line's own
+    // min–max range from the key), plus a dotted line + label every minute.
+    ctx.save();
+    ctx.strokeStyle = 'rgba(90,107,116,.22)'; ctx.lineWidth = 1; ctx.setLineDash([3, 4]);
+    for (const f of [0.25, 0.5, 0.75]) {
+        const y = pad.t + gy * f;
+        ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(pad.l + gx, y); ctx.stroke();
+    }
+    const totalS = n * iv;
+    ctx.fillStyle = '#8199a8'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+    for (let s = 60; s < totalS - 30; s += 60) {
+        const x = pad.l + gx * (s / totalS);
+        ctx.beginPath(); ctx.moveTo(x, pad.t); ctx.lineTo(x, pad.t + gy); ctx.stroke();
+        if (totalS < 1500 || (s % 300) === 0)   // label each minute; every 5 on long flights
+            ctx.fillText((s / 60) + 'm', x, H - 5);
+    }
+    ctx.restore();
     // minSpan: the smallest y-range a trace is drawn against, so sensor noise
     // isn't magnified into mountains (a plane's battery idling within ±50 mV
     // used to fill the whole graph height with jitter).

@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.285-graph-scales",
+      "url": "https://messiter.com/rxv2/release/v0.9.285/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.285/littlefs.bin",
+      "fs_md5": "26d4532a7282ab8de572d0dd1813abf6",
+      "notes": ""
+    },
+    {
       "name": "RXV2-0.9.284-flight-diary",
       "url": "https://messiter.com/rxv2/release/v0.9.284/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.284/littlefs.bin",
@@ -75,13 +82,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.274/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.274/littlefs.bin",
       "fs_md5": "dc7790f47f9643489b0eb8657c061394",
-      "notes": ""
-    },
-    {
-      "name": "RXV2-0.9.273-true-frame-rate",
-      "url": "https://messiter.com/rxv2/release/v0.9.273/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.273/littlefs.bin",
-      "fs_md5": "76490e8e316ce171a80355e97af8b418",
       "notes": ""
     }
   ]

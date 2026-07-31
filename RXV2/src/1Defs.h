@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.284-flight-diary";
+constexpr const char* FW_VERSION = "RXV2-0.9.285-graph-scales";
 
 //*********************************************************************
 //  Auto-update manifest URLs
