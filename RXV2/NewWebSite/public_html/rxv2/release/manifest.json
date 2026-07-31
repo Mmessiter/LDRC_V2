@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.286-landscape-graph",
+      "url": "https://messiter.com/rxv2/release/v0.9.286/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.286/littlefs.bin",
+      "fs_md5": "0bc5c9c150ccad6a0eaccfc148de2c63",
+      "notes": ""
+    },
+    {
       "name": "RXV2-0.9.285-graph-scales",
       "url": "https://messiter.com/rxv2/release/v0.9.285/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.285/littlefs.bin",
@@ -75,13 +82,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.275/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.275/littlefs.bin",
       "fs_md5": "92b69cf6954cecb4795bc4d1ec795fdd",
-      "notes": ""
-    },
-    {
-      "name": "RXV2-0.9.274-fly-means-silence",
-      "url": "https://messiter.com/rxv2/release/v0.9.274/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.274/littlefs.bin",
-      "fs_md5": "dc7790f47f9643489b0eb8657c061394",
       "notes": ""
     }
   ]

@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.285-graph-scales";
+constexpr const char* FW_VERSION = "RXV2-0.9.286-landscape-graph";
 
 //*********************************************************************
 //  Auto-update manifest URLs
