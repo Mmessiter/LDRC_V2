@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.287-y-scale",
+      "url": "https://messiter.com/rxv2/release/v0.9.287/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.287/littlefs.bin",
+      "fs_md5": "24aa02d17cd22e26f0bf5df723a06160",
+      "notes": ""
+    },
+    {
       "name": "RXV2-0.9.286-landscape-graph",
       "url": "https://messiter.com/rxv2/release/v0.9.286/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.286/littlefs.bin",
@@ -75,13 +82,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.276/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.276/littlefs.bin",
       "fs_md5": "9587e6723dc0451fe14432408eca39ae",
-      "notes": ""
-    },
-    {
-      "name": "RXV2-0.9.275-true-slot-rate",
-      "url": "https://messiter.com/rxv2/release/v0.9.275/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.275/littlefs.bin",
-      "fs_md5": "92b69cf6954cecb4795bc4d1ec795fdd",
       "notes": ""
     }
   ]

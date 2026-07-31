@@ -14,7 +14,8 @@
 /* Landscape = reading mode (Malcolm 2026-07-31): the page widens and the
    graph grows to occupy most of the screen instead of a slim centre column. */
 @media (orientation: landscape) {
-    .container { max-width: 96vw; }
+    /* Side padding keeps the floating home/help buttons off the cards. */
+    .container { max-width: 96vw; padding: 0 3.6em; }
 }
 </style>
 </head>
@@ -222,6 +223,7 @@ function drawFlight(d) {
     ];
     let legHtml = '';
     let anyDrawn = false;
+    const drawn = [];   // per-trace scale info for the Y gridline numbers
     for (const t of traces) {
         const a = d[t.key];
         if (!a || a.length < 2) continue;
@@ -241,6 +243,7 @@ function drawFlight(d) {
             const mid = (hi + lo) / 2;
             ymin = mid - t.minSpan / 2; range = t.minSpan;
         }
+        drawn.push({ t, ymin, range });
         ctx.strokeStyle = t.col; ctx.lineWidth = 1.8; ctx.beginPath();
         for (let i = 0; i < n; i++) {
             const x = xat(i), y = pad.t + gy * (1 - (a[i] - ymin) / range);
@@ -251,6 +254,24 @@ function drawFlight(d) {
                  + '<span style="color:' + t.col + ';font-weight:700">■</span> '
                  + t.label + ' <b>' + a[n-1].toFixed(t.dp) + ' ' + t.unit + '</b>'
                  + ' <span style="color:#8199a8">(' + lo.toFixed(t.dp) + '–' + hi.toFixed(t.dp) + ')</span></span>';
+    }
+    // Y scale (Malcolm 2026-07-31): each trace has its OWN scale, so each
+    // gridline is labelled with every trace's value AT that height, in the
+    // trace's colour — read the number that matches the line's colour.
+    // Landscape only: there's room there, and portrait stays uncluttered.
+    if (land && drawn.length) {
+        ctx.font = '10px sans-serif'; ctx.textAlign = 'left';
+        for (const f of [0, 0.25, 0.5, 0.75, 1]) {
+            const y  = pad.t + gy * f;
+            const ty = f === 0 ? y + 12 : y - 4;
+            let x = pad.l + 5;
+            for (const s of drawn) {
+                const txt = (s.ymin + s.range * (1 - f)).toFixed(s.t.dp);
+                ctx.fillStyle = s.t.col;
+                ctx.fillText(txt, x, ty);
+                x += ctx.measureText(txt).width + 12;
+            }
+        }
     }
     ctx.fillStyle = '#5a6b74'; ctx.font = '11px sans-serif';
     ctx.textAlign = 'left';  ctx.fillText('0:00', pad.l, H - 5);
