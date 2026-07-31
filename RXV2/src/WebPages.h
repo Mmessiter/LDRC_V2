@@ -733,16 +733,15 @@ inline void snapshotBackupsToRam() {
 // Flights are BINARY files — snapshot the three /fltN.bin too, so a pages
 // update doesn't erase the flight history (Malcolm noticed every update
 // tonight wiped it, 2026-07-23). ~7 kB each, heap-buffered around the flash.
-inline uint8_t* g_fsFlights[3]    = {nullptr, nullptr, nullptr};
-inline size_t   g_fsFlightLen[3]  = {0, 0, 0};
-inline const char* g_fltPaths[3]  = {"/flt0.bin", "/flt1.bin", "/flt2.bin"};
+inline uint8_t* g_fsFlights[FLIGHT_KEEP]   = {nullptr};
+inline size_t   g_fsFlightLen[FLIGHT_KEEP] = {0};
 
 inline void snapshotFlightsToRam() {
-    for (uint8_t i = 0; i < 3; ++i) {
+    for (uint8_t i = 0; i < FLIGHT_KEEP; ++i) {
         if (g_fsFlights[i]) { free(g_fsFlights[i]); g_fsFlights[i] = nullptr; }
         g_fsFlightLen[i] = 0;
-        if (!littleFsMounted || !LittleFS.exists(g_fltPaths[i])) continue;
-        File f = LittleFS.open(g_fltPaths[i], "r");
+        if (!littleFsMounted || !LittleFS.exists(flightPath(i))) continue;
+        File f = LittleFS.open(flightPath(i), "r");
         if (!f) continue;
         size_t n = f.size();
         if (n > 0 && n <= 16384) {
@@ -756,10 +755,10 @@ inline void snapshotFlightsToRam() {
 
 inline int restoreFlightsFromRam() {
     int restored = 0;
-    for (uint8_t i = 0; i < 3; ++i) {
+    for (uint8_t i = 0; i < FLIGHT_KEEP; ++i) {
         if (!g_fsFlights[i] || !g_fsFlightLen[i]) continue;
         if (littleFsMounted) {
-            File w = LittleFS.open(g_fltPaths[i], "w");
+            File w = LittleFS.open(flightPath(i), "w");
             if (w) { if (w.write(g_fsFlights[i], g_fsFlightLen[i]) == g_fsFlightLen[i]) restored++; w.close(); }
         }
         free(g_fsFlights[i]); g_fsFlights[i] = nullptr; g_fsFlightLen[i] = 0;

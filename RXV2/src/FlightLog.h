@@ -18,7 +18,11 @@
 // FLIGHT_SAVE_AFTER_MS lives in 1Defs.h — Radio.h shares it as its new-flight
 // reset threshold, so the save boundary and the reset boundary can never drift.
 constexpr uint16_t FLIGHT_MIN_SAMPLES   = 10;     // don't bother saving a trivial run
-constexpr uint8_t  FLIGHT_KEEP          = 3;      // /flt0..2.bin
+// 8 slots (was 3, 2026-07-31): ground tests save too since 0.9.265, so two
+// bench wiggles after a field day rotated a real flight out of history —
+// Malcolm's 9m36s post-repair beauty fell off the end. ~7 kB per flight:
+// cheap in flash, and the OTA RAM snapshot degrades gracefully per-slot.
+constexpr uint8_t  FLIGHT_KEEP          = 8;      // /flt0..7.bin
 
 struct __attribute__((packed)) FlightHeader {
     uint32_t magic;        // 'FLT1'
@@ -54,7 +58,8 @@ inline uint32_t fltPendingStampMs[FLIGHT_KEEP] = { 0, 0, 0 };
 inline TeleSample flightLoadBuf[TELE_RING];
 
 inline const char* flightPath(uint8_t idx) {
-    static const char* names[FLIGHT_KEEP] = { "/flt0.bin", "/flt1.bin", "/flt2.bin" };
+    static const char* names[FLIGHT_KEEP] = { "/flt0.bin", "/flt1.bin", "/flt2.bin", "/flt3.bin",
+                                              "/flt4.bin", "/flt5.bin", "/flt6.bin", "/flt7.bin" };
     return (idx < FLIGHT_KEEP) ? names[idx] : names[FLIGHT_KEEP - 1];
 }
 
