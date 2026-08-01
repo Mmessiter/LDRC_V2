@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.290-ten-ms-doctrine",
+      "url": "https://messiter.com/rxv2/release/v0.9.290/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.290/littlefs.bin",
+      "fs_md5": "f6bb6d4e7accef197dac638e693aac8f",
+      "notes": ""
+    },
+    {
       "name": "RXV2-0.9.289-quiet-moment-save",
       "url": "https://messiter.com/rxv2/release/v0.9.289/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.289/littlefs.bin",
@@ -75,13 +82,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.279/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.279/littlefs.bin",
       "fs_md5": "4f122e7e5738cab35cbe145f74c82ee7",
-      "notes": ""
-    },
-    {
-      "name": "RXV2-0.9.278-zero-at-fly",
-      "url": "https://messiter.com/rxv2/release/v0.9.278/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.278/littlefs.bin",
-      "fs_md5": "bc84d69403af6417f10e898ce7a92f90",
       "notes": ""
     }
   ]

@@ -87,6 +87,11 @@ inline uint8_t fltPhys(uint8_t logical) {
 //                  after landing to inspect) — overwrite flt0 in place, so a
 //                  single battery with several arm/disarm cycles stays ONE
 //                  saved flight instead of cluttering the history with partials.
+// Synchronous writer — used ONLY where a stall cannot matter (the battery
+// guardian, immediately before deep sleep). Normal saves go through the
+// ASYNC writer below (Malcolm's 10 ms doctrine, 2026-08-01: any operation
+// longer than ~10 ms must be certain the flight is over — so ordinary saves
+// never do anything long at all).
 inline void saveFlightToLittleFS(bool rotate = true) {
     if (!littleFsMounted || teleCount < FLIGHT_MIN_SAMPLES) return;
     // Flash writes + up to 20 rotation renames stall the loop (~1 s): tell
@@ -136,6 +141,79 @@ inline void saveFlightToLittleFS(bool rotate = true) {
 }
 
 //*********************************************************************
+//  ASYNC flight writer — spreads the save across loop() passes
+//*********************************************************************
+// The one-shot save stalled loop() long enough for the TX to notice (a
+// ~250 ms ack gap at the end of Malcolm's third August flight — his TX
+// logged it, ours politely didn't). Here the samples are captured into a
+// private buffer in microseconds, then written ~64 samples per loop pass:
+// no single pass exceeds a flash-block erase (~10-30 ms), invisible to
+// both ends of the link.
+inline TeleSample   svBuf[TELE_RING];
+inline FlightHeader svHdr;
+inline File         svFile;
+inline uint8_t      svState   = 0;        // 0 idle, 1 writing, 2 commit
+inline uint16_t     svWritten = 0;
+inline bool         svRotate  = true;
+inline bool         svOk      = true;
+
+inline void startFlightSaveAsync(bool rotate) {
+    if (svState) return;                                 // one save at a time
+    if (!littleFsMounted || teleCount < FLIGHT_MIN_SAMPLES) return;
+    statsSelfStallUntilMs = millis() + 2000;
+    svFile = LittleFS.open("/flt.tmp", "w");
+    if (!svFile) return;
+    svHdr = FlightHeader{};
+    svHdr.magic     = FLIGHT_MAGIC;
+    svHdr.count     = teleCount;
+    svHdr.intervalS = 1;
+    svHdr.connMs    = (rx.lastMillis > linkStats.connStartMs) ? (rx.lastMillis - linkStats.connStartMs) : 0;
+    svHdr.packets   = linkStats.packets;
+    { uint32_t tMax, tAvg, tHist[6], tAt;
+      gapsForDisplay(tMax, tAvg, tHist, tAt);
+      svHdr.maxGapUs = tMax; svHdr.avgGapUs = tAvg;
+      svHdr.maxGapAtOffsetMs = (tAt > linkStats.connStartMs) ? (tAt - linkStats.connStartMs) : 0;
+      for (uint8_t i = 0; i < 6; ++i) svHdr.hist[i] = tHist[i]; }
+    svHdr.radioSwaps = linkStats.flightSwaps;
+    for (uint8_t i = 0; i < 3; ++i) svHdr.radioMs[i] = linkStats.radioMsAtLive[i] - linkStats.radioMsAtStart[i];
+    svHdr.savedEpochS = epochNowS();
+    // Snapshot the ring NOW (a ~7 kB memcpy, microseconds) so sampling can
+    // continue while the write trickles out.
+    const uint16_t start = (teleCount < TELE_RING) ? 0 : teleHead;
+    for (uint16_t i = 0; i < svHdr.count; ++i) svBuf[i] = teleRing[(start + i) % TELE_RING];
+    svOk = svFile.write((const uint8_t*)&svHdr, sizeof(svHdr)) == sizeof(svHdr);
+    svWritten = 0; svRotate = rotate; svState = 1;
+}
+
+inline void flightSaveAsyncTick() {
+    if (!svState) return;
+    statsSelfStallUntilMs = millis() + 2000;             // stats look away until done
+    if (svState == 1) {
+        uint16_t n = svHdr.count - svWritten; if (n > 64) n = 64;
+        if (n && svOk) {
+            size_t want = (size_t)n * sizeof(TeleSample);
+            if (svFile.write((const uint8_t*)&svBuf[svWritten], want) != want) svOk = false;
+            svWritten += n;
+        }
+        if (!svOk || svWritten >= svHdr.count) { svFile.close(); svState = 2; }
+        return;                                          // one chunk per pass
+    }
+    if (!svOk) {
+        LittleFS.remove("/flt.tmp");
+        events.add("Flight save FAILED (flash full?)");
+        svState = 0;
+        return;
+    }
+    const uint8_t target = svRotate ? (uint8_t)((fltHead + 1) % FLIGHT_KEEP) : fltHead;
+    LittleFS.remove(flightPath(target));
+    LittleFS.rename("/flt.tmp", flightPath(target));
+    if (svRotate) { fltHead = target; prefs.putUChar(NVS_KEY_FLT_HEAD, fltHead); }
+    fltPendingStampMs[target] = svHdr.savedEpochS ? 0 : millis();
+    events.add(svRotate ? "Flight saved to flash" : "Flight updated (same session)");
+    svState = 0;
+}
+
+//*********************************************************************
 //  Retro-date flights once the phone tells us the time
 //*********************************************************************
 // Flights usually save 15 s after the TX goes quiet — BEFORE the pilot opens
@@ -181,7 +259,7 @@ inline void maybeSaveFlight() {
         rx.lastMillis != 0 && (uint32_t)(now - rx.lastMillis) > FLIGHT_SAVE_AFTER_MS) {
         const uint32_t durMs = (rx.lastMillis > linkStats.connStartMs)
                                ? rx.lastMillis - linkStats.connStartMs : 0;
-        if (durMs >= FLIGHT_FALLBACK_MIN_MS) saveFlightToLittleFS();
+        if (durMs >= FLIGHT_FALLBACK_MIN_MS) startFlightSaveAsync(true);
         armedConnStart = 0;                        // handled; re-arms on the next connection
     }
 }
@@ -248,7 +326,7 @@ inline void flightSaveTick() {
         const bool sticksStill = lastChMoveMs && (uint32_t)(now - lastChMoveMs) >= 2000;
         const bool linkDead    = rx.lastMillis && (uint32_t)(now - rx.lastMillis) > 3000;
         if (sticksStill || linkDead) {
-            saveFlightToLittleFS(!sessionSaved);
+            startFlightSaveAsync(!sessionSaved);
             sessionSaved = true;               // (the RAM ring spans the whole session, so each save holds everything so far)
             savePending  = false;
         }

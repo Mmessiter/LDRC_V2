@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.289-quiet-moment-save";
+constexpr const char* FW_VERSION = "RXV2-0.9.290-ten-ms-doctrine";
 
 //*********************************************************************
 //  Auto-update manifest URLs
