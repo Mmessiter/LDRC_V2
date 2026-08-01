@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.288-save-stall-quiet";
+constexpr const char* FW_VERSION = "RXV2-0.9.289-quiet-moment-save";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -264,7 +264,8 @@ constexpr const char* NVS_KEY_BOARD_ID   = "board_id";   // 6-byte board ID; cap
 constexpr const char* NVS_KEY_FAILSAFE   = "fs";         // 16 x uint16 failsafe channel values (us); absent = not configured
 constexpr const char* NVS_KEY_GEAR_RATIO = "gear";       // float main-gear ratio (motor:head); head speed = motor RPM / gearRatio. 1.0 = direct drive
 constexpr const char* NVS_KEY_ARM_CH     = "armch";      // uint8 arming channel (1..16, 0=off): flight saved on DISARM after a real flight
-constexpr const char* NVS_KEY_GAP_MIN    = "gapmin";     // uint8 ms: a packet must be at least this LATE (beyond expected spacing) to count as a gap
+constexpr const char* NVS_KEY_GAP_MIN    = "gapmin";
+constexpr const char* NVS_KEY_FLT_HEAD   = "flthead";    // ring head: physical slot of the NEWEST saved flight (kills the 20-file rotation storm)     // uint8 ms: a packet must be at least this LATE (beyond expected spacing) to count as a gap
 constexpr const char* NVS_KEY_WAVE_CHS   = "wavechs";    // uint16 bitmask of channels waved when Bluetooth comes up (bit0=ch1); default ch1, 0=off
 constexpr const char* NVS_KEY_BOOT_COUNT = "qbc";        // quick-boot counter for escape hatch
 constexpr const char* NVS_KEY_PROTO      = "proto";
@@ -404,6 +405,11 @@ inline uint32_t      bleStatsQuietUntilMs = 0;    // covers connect/disconnect/s
 // billed 808 ms late AT THE DISARM. Deliberate on-ground housekeeping must
 // not be measured as link quality: the save announces itself here first.
 inline uint32_t statsSelfStallUntilMs = 0;
+
+// millis() of the last channel MOVEMENT (any channel changed >12 us).
+// Shared by the battery guardian and the flight save: 'sticks still' means
+// the pilot is provably not flying (an autorotation is never hands-still).
+inline uint32_t lastChMoveMs = 0;
 
 inline bool bleStatsQuarantine() {
     return bleStatsRadioOn || bleStatsClientUp ||
