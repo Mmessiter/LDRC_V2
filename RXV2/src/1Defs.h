@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.290-ten-ms-doctrine";
+constexpr const char* FW_VERSION = "RXV2-0.9.291-flight-eraser";
 
 //*********************************************************************
 //  Auto-update manifest URLs

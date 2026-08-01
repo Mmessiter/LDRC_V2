@@ -35,6 +35,11 @@
         <div id=lkRows class=muted style="font-size:.92em;line-height:1.9">&hellip;</div>
         <div id=lkHist style="margin-top:.5em"></div>
         <p id=lkNote class=muted style="font-size:.82em;margin-top:.4em"></p>
+        <!-- Prune the diary (Malcolm 2026-08-01): brief boring tests can go.
+             Two-tap confirm — dialogs are silent no-ops in the app WebView. -->
+        <button id=delBtn style="display:none;margin-top:.6em;padding:.45em 1em;font-size:.9em;
+                border-radius:8px;border:1px solid #c98a8a;background:#fff;color:#a4242a;cursor:pointer">
+            🗑 Delete this flight</button>
     </div>
 
     <div class=card>
@@ -154,11 +159,43 @@ async function populateFlightSelector() {
 async function loadFlight() {
     const sel = document.getElementById('flSel');
     const f = sel ? (+sel.value || 0) : 0;
+    paintDelBtn(f);
     let d;
     try { d = await (await fetch('/api/flightlog.json?f=' + f, { cache: 'no-store' })).json(); } catch (e) { return; }
     renderLink(d.link);
     drawFlight(d);
 }
+
+// Delete button: only for SAVED flights (never Current). First tap arms it
+// (red, 3 s window), second tap deletes and returns to Current.
+function paintDelBtn(f) {
+    const b = document.getElementById('delBtn');
+    if (!b) return;
+    b.style.display = f > 0 ? '' : 'none';
+    b.textContent = '🗑 Delete this flight';
+    b.style.background = '#fff'; b.style.color = '#a4242a';
+    b.dataset.armed = '';
+}
+document.getElementById('delBtn').addEventListener('click', async function () {
+    const sel = document.getElementById('flSel');
+    const f = sel ? (+sel.value || 0) : 0;
+    if (!f) return;
+    if (!this.dataset.armed) {
+        this.dataset.armed = '1';
+        this.textContent = '⚠️ Tap again to delete — cannot be undone';
+        this.style.background = '#c0392b'; this.style.color = '#fff';
+        setTimeout(() => paintDelBtn((+sel.value || 0)), 3000);
+        return;
+    }
+    try {
+        await fetch('/api/flight/delete', { method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'i=' + f });
+    } catch (e) {}
+    await populateFlightSelector();
+    if (sel) sel.value = '0';
+    loadFlight();
+});
 
 // --- Flight graph: multiple traces vs time, each auto-scaled to its own range ---
 function drawFlight(d) {

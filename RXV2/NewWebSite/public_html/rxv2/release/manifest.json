@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.291-flight-eraser",
+      "url": "https://messiter.com/rxv2/release/v0.9.291/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.291/littlefs.bin",
+      "fs_md5": "d1bf77f825647b5f7ddde2f15fa379c8",
+      "notes": ""
+    },
+    {
       "name": "RXV2-0.9.290-ten-ms-doctrine",
       "url": "https://messiter.com/rxv2/release/v0.9.290/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.290/littlefs.bin",
@@ -75,13 +82,6 @@
       "url": "https://messiter.com/rxv2/release/v0.9.280/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.280/littlefs.bin",
       "fs_md5": "c1c75b86dd9f857ef1fd159c95cf7827",
-      "notes": ""
-    },
-    {
-      "name": "RXV2-0.9.279-battery-guardian",
-      "url": "https://messiter.com/rxv2/release/v0.9.279/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.279/littlefs.bin",
-      "fs_md5": "4f122e7e5738cab35cbe145f74c82ee7",
       "notes": ""
     }
   ]
