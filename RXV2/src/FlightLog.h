@@ -68,6 +68,17 @@ inline const char* flightPath(uint8_t idx) {
     return names[idx < FLIGHT_KEEP ? idx : FLIGHT_KEEP - 1];
 }
 
+// RING head (2026-08-01): the physical slot holding the NEWEST flight.
+// The old design renamed up to 20 files at every save — that storm stalled
+// loop() long enough for the TX to declare the link lost at Malcolm's
+// landing. Now a save writes exactly ONE slot and advances the head.
+// Loaded from NVS at boot (legacy rotation layouts are migrated there too).
+inline uint8_t fltHead = 0;
+// logical index (0 = newest saved flight) -> physical slot number
+inline uint8_t fltPhys(uint8_t logical) {
+    return (uint8_t)((fltHead + FLIGHT_KEEP - (logical % FLIGHT_KEEP)) % FLIGHT_KEEP);
+}
+
 //*********************************************************************
 //  Save the current RAM flight to flash
 //*********************************************************************
@@ -114,20 +125,13 @@ inline void saveFlightToLittleFS(bool rotate = true) {
         events.add("Flight save FAILED (flash full?)");
         return;
     }
-    // Success — commit. A new flight shuffles the history down; an update of the
-    // current session just replaces flt0 (no rotation), keeping one slot per flight.
-    if (rotate) {
-        LittleFS.remove(flightPath(FLIGHT_KEEP - 1));
-        for (int8_t i = FLIGHT_KEEP - 2; i >= 0; --i) {
-            if (LittleFS.exists(flightPath(i))) LittleFS.rename(flightPath(i), flightPath(i + 1));
-        }
-    } else {
-        LittleFS.remove(flightPath(0));   // overwrite the current session's slot only
-    }
-    LittleFS.rename("/flt.tmp", flightPath(0));
-    // Bookkeeping for retro-dating: rotation shuffles any owed stamps down too.
-    if (rotate) for (int8_t i = FLIGHT_KEEP - 1; i > 0; --i) fltPendingStampMs[i] = fltPendingStampMs[i - 1];
-    fltPendingStampMs[0] = h.savedEpochS ? 0 : millis();
+    // Success — commit to ONE ring slot (no rename storm). A new flight
+    // advances the head; a same-session update overwrites the head slot.
+    const uint8_t target = rotate ? (uint8_t)((fltHead + 1) % FLIGHT_KEEP) : fltHead;
+    LittleFS.remove(flightPath(target));
+    LittleFS.rename("/flt.tmp", flightPath(target));
+    if (rotate) { fltHead = target; prefs.putUChar(NVS_KEY_FLT_HEAD, fltHead); }
+    fltPendingStampMs[target] = h.savedEpochS ? 0 : millis();   // slots are stable: no shifting
     events.add(rotate ? "Flight saved to flash" : "Flight updated (same session)");
 }
 
@@ -208,6 +212,7 @@ inline void flightSaveTick() {
     static bool     sessionWorth    = false;         // has this session had a real (>=30 s) flight?
     static bool     sessionSaved    = false;         // has this session been written to flt0 yet?
     static bool     sessionEverArmed = false;        // any arm edge at all this session?
+    static bool     savePending     = false;         // disarm seen; write when it's QUIET
     static uint32_t sessionConnStart = 0xFFFFFFFF;
     const uint32_t now = millis();
 
@@ -219,6 +224,7 @@ inline void flightSaveTick() {
         sessionWorth = false;
         sessionSaved = false;
         sessionEverArmed = false;
+        savePending = false;
     }
 
     // Armed only counts while the link is actually live — a lost link freezes
@@ -228,11 +234,25 @@ inline void flightSaveTick() {
 
     if (armed && !wasArmed) { armedSince = now; sessionEverArmed = true; }      // arm edge
     if (armed && (uint32_t)(now - armedSince) >= FLIGHT_ARMED_MIN_MS) sessionWorth = true;
-    if (!armed && wasArmed && sessionWorth) {                                   // DISARM edge in a real flight
-        saveFlightToLittleFS(!sessionSaved);   // first disarm of the session rotates a new slot; later disarms overwrite it
-        sessionSaved = true;                   // (the RAM ring spans the whole session, so each save holds everything so far)
-    }
+    if (!armed && wasArmed && sessionWorth) savePending = true;                 // DISARM edge in a real flight
     wasArmed = armed;
+
+    // The WRITE waits for a provably-quiet moment (Malcolm 2026-08-01: the
+    // disarm-edge save stalled the loop long enough that his TX announced a
+    // reconnect right after landing — and if the arming switch doubles as
+    // motor-hold, an AUTOROTATION could have fired that stall MID-AIR).
+    // Quiet = disarmed AND sticks still for 2 s (a pilot flying is never
+    // hands-still), or the TX is off. First save of the session advances the
+    // ring; later saves overwrite the same slot (one flight per battery).
+    if (savePending && !armed) {
+        const bool sticksStill = lastChMoveMs && (uint32_t)(now - lastChMoveMs) >= 2000;
+        const bool linkDead    = rx.lastMillis && (uint32_t)(now - rx.lastMillis) > 3000;
+        if (sticksStill || linkDead) {
+            saveFlightToLittleFS(!sessionSaved);
+            sessionSaved = true;               // (the RAM ring spans the whole session, so each save holds everything so far)
+            savePending  = false;
+        }
+    }
 
     // A session where the arm switch was NEVER touched (bench run, simulated
     // flight, arming channel misconfigured) would otherwise never save at all
@@ -296,7 +316,7 @@ inline bool buildFlightJson(uint8_t f, String& j) {
         return true;
     }
     if (!littleFsMounted || f > FLIGHT_KEEP) return false;
-    File file = LittleFS.open(flightPath(f - 1), "r");
+    File file = LittleFS.open(flightPath(fltPhys(f - 1)), "r");
     if (!file) return false;
     FlightHeader h{};
     if (file.read((uint8_t*)&h, sizeof(h)) != (int)sizeof(h) ||
@@ -328,7 +348,7 @@ inline void buildFlightsListJson(String& j) {
     j += b;
     if (littleFsMounted) {
         for (uint8_t f = 1; f <= FLIGHT_KEEP; ++f) {
-            File file = LittleFS.open(flightPath(f - 1), "r");
+            File file = LittleFS.open(flightPath(fltPhys(f - 1)), "r");
             if (!file) continue;
             FlightHeader h{};
             bool ok = (file.read((uint8_t*)&h, sizeof(h)) == (int)sizeof(h)) &&

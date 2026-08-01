@@ -201,6 +201,26 @@ void setup() {
         littleFsMounted = true;
         Serial.printf("[fs] LittleFS mounted, %u/%u bytes used\n",
                       (unsigned)LittleFS.usedBytes(), (unsigned)LittleFS.totalBytes());
+        // Flight-ring head (2026-08-01). First boot on ring firmware migrates
+        // the legacy rotation layout (flt0=newest, fltN older) into ring
+        // positions for head=0 (older flights live at 19,18,...). Boot-time
+        // renames are harmless — no link exists yet.
+        if (prefs.isKey(NVS_KEY_FLT_HEAD)) {
+            fltHead = prefs.getUChar(NVS_KEY_FLT_HEAD, 0) % FLIGHT_KEEP;
+        } else {
+            for (uint8_t i = 1; i < FLIGHT_KEEP; ++i) {
+                char mig[16]; snprintf(mig, sizeof(mig), "/mig%u.bin", i);
+                if (LittleFS.exists(flightPath(i))) LittleFS.rename(flightPath(i), mig);
+            }
+            for (uint8_t i = 1; i < FLIGHT_KEEP; ++i) {
+                char mig[16]; snprintf(mig, sizeof(mig), "/mig%u.bin", i);
+                if (LittleFS.exists(mig))
+                    LittleFS.rename(mig, flightPath((uint8_t)(FLIGHT_KEEP - i)));
+            }
+            fltHead = 0;
+            prefs.putUChar(NVS_KEY_FLT_HEAD, fltHead);
+            Serial.println("[fs] flight slots migrated to ring layout");
+        }
     } else {
         littleFsMounted = false;
         Serial.println("[fs] LittleFS mount failed — using embedded fallback assets");
@@ -424,7 +444,6 @@ constexpr uint16_t BATT_MOVE_US        = 12;       // movement threshold per cha
 
 static void batteryGuardTick() {
     static uint16_t snap[16] = {0};
-    static uint32_t lastMoveMs = 0;
     static uint32_t belowSinceMs = 0;
     const uint32_t now = millis();
 
@@ -433,7 +452,7 @@ static void batteryGuardTick() {
         uint16_t v = channelMicros[i];
         if ((v > snap[i] ? v - snap[i] : snap[i] - v) > BATT_MOVE_US) { moved = true; snap[i] = v; }
     }
-    if (moved || !lastMoveMs) lastMoveMs = now;
+    if (moved || !lastChMoveMs) lastChMoveMs = now;   // shared: battery guardian + quiet-moment flight save
 
     if (vbatVolts < 3.0f) { belowSinceMs = 0; return; }   // no/implausible sensor
     uint8_t cells = vbatCellsCfg ? vbatCellsCfg
@@ -443,7 +462,7 @@ static void batteryGuardTick() {
     // The armed check reuses the flight-save definition of armed.
     bool armed = (armingChannel >= 1 && armingChannel <= 16) &&
                  (channelMicros[armingChannel - 1] > 1500);
-    bool still = (uint32_t)(now - lastMoveMs) >= BATT_STILL_MS;
+    bool still = (uint32_t)(now - lastChMoveMs) >= BATT_STILL_MS;
 
     if (perCell <= BATT_SLEEP_PER_CELL && still && !beingFlown && !armed) {
         if (!belowSinceMs) belowSinceMs = now;
