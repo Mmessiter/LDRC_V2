@@ -461,6 +461,27 @@ inline void handleMspApi() {
 // A packet must be at least this many ms LATER than the measured spacing
 // to count as a gap (Malcolm 2026-07-27: normal 2 ms intervals are not
 // gaps; buddy-box 4 ms self-calibrates via linkStats.expectedGapUs).
+//*********************************************************************
+//  POST /api/flight/delete?i=<1..20> — delete the saved flight in view
+//*********************************************************************
+// Malcolm 2026-08-01: with 20 slots the diary collects brief boring tests
+// too — let the user prune them. Ring stays consistent: a deleted slot is
+// simply skipped by the listing, and the head is untouched.
+inline void handleFlightDelete() {
+    long i = server.hasArg("i") ? server.arg("i").toInt() : 0;
+    if (i < 1 || i > FLIGHT_KEEP || !littleFsMounted) {
+        server.send(400, "text/plain", "bad flight index");
+        return;
+    }
+    statsSelfStallUntilMs = millis() + 2000;   // flash op: stats look away
+    const uint8_t phys = fltPhys((uint8_t)(i - 1));
+    const bool existed = LittleFS.exists(flightPath(phys));
+    if (existed) LittleFS.remove(flightPath(phys));
+    fltPendingStampMs[phys] = 0;
+    if (existed) events.add("Flight deleted from flash");
+    server.send(200, "application/json", existed ? "{\"ok\":true}" : "{\"ok\":false}");
+}
+
 inline void handleGapMin() {
     if (server.hasArg("ms")) {
         long v = server.arg("ms").toInt();
@@ -2179,6 +2200,7 @@ inline void registerWebRoutes() {
     // Auto-update endpoints.
     server.on("/api/time",             HTTP_POST, handleTimeSync);
     server.on("/api/gapmin",           HTTP_POST, handleGapMin);
+    server.on("/api/flight/delete",    HTTP_POST, handleFlightDelete);
     server.on("/api/firmware/seturl",  HTTP_POST, handleFirmwareSetUrl);
     server.on("/api/firmware/check",   HTTP_GET,  handleFirmwareCheck);
     server.on("/api/firmware/install", HTTP_POST, handleFirmwareInstall);
