@@ -305,6 +305,19 @@ inline void netStep() {
         if (bleHasClient()) bleFlyQuiet(); else bleStop();
         events.add("Bluetooth boot window closed");
     }
+    // Malcolm 2026-08-01: "whenever the receiver turns WiFi off it should
+    // also turn Bluetooth off" — he flew a whole flight with BLE advertising
+    // (field mode keeps BLE when home WiFi is absent). With WiFi already OFF,
+    // no phone attached, and the link live for 30 s, we are FLYING: silence
+    // BLE too. Landing auto-recovery brings it back after the flight. Bench
+    // use is untouched (home WiFi up), and a phone mid-configuration is
+    // grandfathered until it disconnects.
+    if (netMode == NET_NO_WIFI && bleAdvertising() && !bleHasClient() &&
+        rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 1000 &&
+        (uint32_t)(millis() - linkStats.connStartMs) >= 30000) {
+        bleStop();
+        events.add("Bluetooth off (flying) — back after landing");
+    }
     // Non-blocking WiFi re-begin: a STA retry used to do WiFi.disconnect() +
     // delay(200) + WiFi.begin() inline, which BLOCKED the main loop for ~208 ms
     // every retry — long enough to pause CRSF/SBUS output and starve radioPoll,
