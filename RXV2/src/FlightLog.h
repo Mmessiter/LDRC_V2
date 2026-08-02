@@ -343,7 +343,9 @@ inline void flightSaveTick() {
 //*********************************************************************
 //  JSON rendering (shared by the current RAM flight and saved flights)
 //*********************************************************************
-inline void renderFlightJson(String& j, const FlightHeader& h, const TeleSample* s) {
+// paramOps: Rotorflight edits via the TX this session (live flight only) —
+// the page shows a friendly note so tuning-session gaps don't alarm anyone.
+inline void renderFlightJson(String& j, const FlightHeader& h, const TeleSample* s, uint32_t paramOps = 0) {
     char b[96];
     // ~28 bytes/sample worst case across the four arrays (esc 4 + head 6 +
     // v 6 + amps 7 + commas). Under-reserving forced several ~30 kB reallocs
@@ -362,9 +364,10 @@ inline void renderFlightJson(String& j, const FlightHeader& h, const TeleSample*
     snprintf(b, sizeof(b), ",\"hist\":[%u,%u,%u,%u,%u,%u]",
              (unsigned)h.hist[0], (unsigned)h.hist[1], (unsigned)h.hist[2],
              (unsigned)h.hist[3], (unsigned)h.hist[4], (unsigned)h.hist[5]); j += b;
-    snprintf(b, sizeof(b), ",\"swaps\":%u,\"radio_ms\":[%u,%u,%u]}",
+    snprintf(b, sizeof(b), ",\"swaps\":%u,\"radio_ms\":[%u,%u,%u]",
              (unsigned)h.radioSwaps,
              (unsigned)h.radioMs[0], (unsigned)h.radioMs[1], (unsigned)h.radioMs[2]); j += b;
+    snprintf(b, sizeof(b), ",\"param_ops\":%u}", (unsigned)paramOps); j += b;
     j += ",\"esc\":[";  for (uint16_t i = 0; i < h.count; ++i) { if (i) j += ','; j += s[i].escC; }
     j += "],\"head\":["; for (uint16_t i = 0; i < h.count; ++i) { if (i) j += ','; j += s[i].headRpm; }
     j += "],\"v\":[";   for (uint16_t i = 0; i < h.count; ++i) { if (i) j += ','; snprintf(b, sizeof(b), "%.2f", s[i].cV / 100.0f); j += b; }
@@ -391,7 +394,7 @@ inline bool buildFlightJson(uint8_t f, String& j) {
         // copy the ring oldest→newest into the load buffer for uniform rendering
         const uint16_t start = (teleCount < TELE_RING) ? 0 : teleHead;
         for (uint16_t i = 0; i < teleCount; ++i) flightLoadBuf[i] = teleRing[(start + i) % TELE_RING];
-        renderFlightJson(j, h, flightLoadBuf);
+        renderFlightJson(j, h, flightLoadBuf, linkStats.paramOps);
         return true;
     }
     if (!littleFsMounted || f > FLIGHT_KEEP) return false;
