@@ -254,6 +254,19 @@
         dirty: false,
         markDirty()  { this.dirty = true;  },
         clearDirty() { this.dirty = false; },
+
+        // Tell the receiver the wall-clock time (it has no clock of its own).
+        // Rate-limited so status pages can call it from their poll loops when
+        // they notice the clock is unset (receiver rebooted underneath them).
+        _teachTimeAt: 0,
+        teachTime() {
+            const now = Date.now();
+            if (now - this._teachTimeAt < 10000) return;
+            this._teachTimeAt = now;
+            fetch('/api/time', { method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'epoch_ms=' + now + '&tz_min=' + (-new Date().getTimezoneOffset()) }).catch(() => {});
+        },
         async confirmLoseChanges(action) {
             if (!this.dirty) return true;
             const msg = action
@@ -280,6 +293,11 @@
     // /api/state.json was queuing nav requests on the chip's single-client
     // WebServer for the iOS keep-alive socket).
     document.addEventListener('DOMContentLoaded', () => {
+        // Teach the receiver the time from EVERY page (it has no clock and
+        // reboots wipe it). It was only the front + flight pages — sit on the
+        // Black box page across a receiver reboot and the clock stayed unset
+        // (Malcolm, 2026-08-02). Fire-and-forget; the RX ignores duplicates.
+        LDRC.teachTime();
         LDRC.mountFooter();
         // Fixed "front screen" button, top-left on every page EXCEPT the home
         // page itself — so returning to the menu is one tap, no scrolling to the

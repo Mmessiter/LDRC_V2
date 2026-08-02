@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.305-every-page-teaches-time",
+      "url": "https://messiter.com/rxv2/release/v0.9.305/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.305/littlefs.bin",
+      "fs_md5": "96661ecd492eb5f40665f41bd4dc6d2d",
+      "notes": "Every page now teaches the receiver the time, and the Black box page re-teaches it the moment it notices the clock is unset - so sitting on one screen through a receiver reboot no longer leaves it ignorant of the date until you happen to navigate. One shared, rate-limited helper replaces the per-page copies."
+    },
+    {
       "name": "RXV2-0.9.304-field-telemetry",
       "url": "https://messiter.com/rxv2/release/v0.9.304/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.304/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.294/littlefs.bin",
       "fs_md5": "98a3ae91756fd9cdc4b7f7880e42f1ad",
       "notes": "Trust, but verify: saving settings from the transmitter used to fire commands at the flight controller and hope - and on a busy wire the crucial save-to-memory command could vanish, quietly reverting your edit. Every write is now acknowledged, read back, compared and retried until confirmed; the governor reboot only fires once the save is proven. One press of Save now means exactly one save."
-    },
-    {
-      "name": "RXV2-0.9.293-no-zero-latch",
-      "url": "https://messiter.com/rxv2/release/v0.9.293/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.293/littlefs.bin",
-      "fs_md5": "36b689dcb28ffc073ac3d03e534b9885",
-      "notes": "Case closed: the transmitter's global governor screen showed zeros because the receiver kept broadcasting empty parameter slots while the transmitter's request was still in flight - the screen latched the zeros and stopped listening a tenth of a second before the real values arrived. Now, like V1, those slots stay silent unless there is genuinely something to say."
     }
   ]
 }
