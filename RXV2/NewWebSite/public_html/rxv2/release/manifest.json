@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.293-no-zero-latch",
+      "url": "https://messiter.com/rxv2/release/v0.9.293/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.293/littlefs.bin",
+      "fs_md5": "36b689dcb28ffc073ac3d03e534b9885",
+      "notes": "Case closed: the transmitter's global governor screen showed zeros because the receiver kept broadcasting empty parameter slots while the transmitter's request was still in flight - the screen latched the zeros and stopped listening a tenth of a second before the real values arrived. Now, like V1, those slots stay silent unless there is genuinely something to say."
+    },
+    {
       "name": "RXV2-0.9.292-govcfg-tracer",
       "url": "https://messiter.com/rxv2/release/v0.9.292/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.292/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.282/littlefs.bin",
       "fs_md5": "3d8f74dc1c55e19f940706453e3a2d8f",
       "notes": "The Bluetooth-ready wave now shows on flight-controller models too (the disarmed FC passes cyclic to the swash, so you can see it) - with an extra guard: FC models only wave when no transmitter is live, so a mid-air reboot can never wiggle a flying machine."
-    },
-    {
-      "name": "RXV2-0.9.281-exit-and-reload",
-      "url": "https://messiter.com/rxv2/release/v0.9.281/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.281/littlefs.bin",
-      "fs_md5": "3bdbc38ef3f8c989914fbbed81ddbe4d",
-      "notes": "After a rename the screen now says exactly what to do - exit and reload, the receiver reappears under its new name. Also fixed: the Android app was taking WiFi-flavoured wording everywhere (its Bluetooth disguise was not recognised)."
     }
   ]
 }

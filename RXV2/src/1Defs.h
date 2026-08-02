@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.292-govcfg-tracer";
+constexpr const char* FW_VERSION = "RXV2-0.9.293-no-zero-latch";
 
 //*********************************************************************
 //  Auto-update manifest URLs
