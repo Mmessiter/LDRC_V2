@@ -857,13 +857,17 @@ function bleOtaWatch() {
 <p>This is the receiver's home screen. It tells you whether the receiver is bound to a transmitter, and the boxes at the top show each fitted transceiver <b>live</b>: a green pulsing <b>receiving</b> box is the slot carrying your transmitter's signal right now, <b>standby</b> is its healthy partner ready to take over, and <b>listening…</b> means no transmitter is on the air. Switch your transmitter on and off and watch them change.</p>
 <h3>Buttons</h3>
 <ul>
-<li><b>Fly now</b> — the only button to press immediately before flying; it shuts WiFi down so the radio link is uninterrupted.</li>
+<li><b>Fly now</b> — shuts WiFi and Bluetooth down before flying. You normally do NOT need it: switch the transmitter on <i>before</i> powering the model and the receiver does it all by itself (see Flying, below). The button covers the other order — model powered first, transmitter second.</li>
 <li><b>Rotorflight config</b> — appears when a Rotorflight flight controller is connected: rates, PIDs, governor and backups, from your phone.</li>
 <li><b>Black box log</b> — battery, link statistics, the flight graph and the event log.</li>
 <li><b>Bind</b> — pair the receiver with your transmitter. If it's already bound you'll be asked first, because re-binding erases the current pairing.</li>
 <li><b>Simulator</b> — fly a PC simulator over USB with your real transmitter.</li>
 <li><b>Setup</b> — output protocol, view channels, WiFi, firmware and renaming. One-time configuration lives there so this screen stays simple.</li>
 </ul>
+<h3>Flying — it's automatic</h3>
+<p>Follow normal RC practice — <b>transmitter on first, then power the model</b> — and the receiver handles the radios itself: hearing your transmitter at boot it never starts WiFi, keeps Bluetooth open for just 30&thinsp;seconds (in case you want this app), then switches that off too. After landing, when the transmitter goes quiet for ~10&thinsp;seconds, WiFi and Bluetooth return by themselves so you can check the flight. No buttons, no ritual.</p>
+<h3>The clock</h3>
+<p>The receiver has no clock of its own, but learns the time from your phone whenever this app connects — and from the transmitter's built-in clock on phone-free days (the transmitter's clock is itself corrected automatically whenever a phone is about). Flights are dated with it in the flight diary.</p>
 <h3>Tips</h3>
 <p>The green/amber banner at the top tells you which transceiver slots (1, 2, 3) were detected at boot. A banner at the bottom offers newer firmware when available.</p>
 </template>
