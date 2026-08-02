@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.301-clock-on-screen";
+constexpr const char* FW_VERSION = "RXV2-0.9.302-phone-teaches-tx";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -228,7 +228,7 @@ constexpr uint8_t  HOP_TIME_MS         = 8;   // v1 HOPTIME → ~100 Hz FHSS
 constexpr uint16_t MAC_ACK_THRESHOLD   = 200; // MAC on the first N acks of each connection (dense, a half per ack), then telemetry. v1 used 20; bumped so both MAC halves land reliably even if a radio swap fires during the opening burst, while still handing over to telemetry within ~0.4 s so the TX never starves (see loadNextAck)
 constexpr uint16_t MAC_STICK_DEADBAND  = 200;
 constexpr uint8_t  MAC_MOVE_CONFIRM    = 3;    // a channel must exceed the deadband on this many packets before "being flown" latches (rejects single-packet glitches)  // 12-bit counts a channel must move from its settled baseline to count as "being flown" → end ID broadcast (well above gimbal jitter, well below a real stick move)
-constexpr uint8_t  MAX_TELEMETRY_ITEM  = 36;  // bumped from 35 to make room for case 36 = RX3 active time
+constexpr uint8_t  MAX_TELEMETRY_ITEM  = 37;  // 36 = RX3 active time; 37 = phone-true local time for the TX RTC
 
 // v1 channel 82 lives at index 14 of FHSS_CHANNELS. We bind there, then increment.
 constexpr uint8_t  CHAN82_INDEX        = 14;
