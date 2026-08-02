@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Home &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=135">
-<script src="/app.js?v=135" defer></script>
+<link rel=stylesheet href="/style.css?v=136">
+<script src="/app.js?v=136" defer></script>
 <style>
 /* Friendly confirmation card (replaces the browser's utilitarian confirm()) */
 .modal{position:fixed;inset:0;background:rgba(16,38,58,.55);backdrop-filter:blur(2px);
@@ -218,10 +218,7 @@ function updateBindState(s) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // Tell the receiver the time (it has no clock) — flights get real dates.
-    fetch('/api/time', { method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: 'epoch_ms=' + Date.now() + '&tz_min=' + (-new Date().getTimezoneOffset()) }).catch(() => {});
+    // Time-teaching now lives in app.js (LDRC.teachTime, every page).
     const s = await LDRC.fetchState();
     if (!s) { LDRC.setText('subtitle', 'connection lost — try refresh'); return; }
 

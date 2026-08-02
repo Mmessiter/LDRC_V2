@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.304-field-telemetry";
+constexpr const char* FW_VERSION = "RXV2-0.9.305-every-page-teaches-time";
 
 //*********************************************************************
 //  Auto-update manifest URLs

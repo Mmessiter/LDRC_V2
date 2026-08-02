@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Flight analysis &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=135">
-<script src="/app.js?v=135" defer></script>
+<link rel=stylesheet href="/style.css?v=136">
+<script src="/app.js?v=136" defer></script>
 <style>
 /* Landscape = reading mode (Malcolm 2026-07-31): the page widens and the
    graph grows to occupy most of the screen instead of a slim centre column. */
@@ -146,9 +146,7 @@ addEventListener('resize', () => { if (drawFlight.last) drawFlight(drawFlight.la
 
 // Tell the receiver the time (it has no clock) so flights get real dates —
 // including any saved before this page opened (stamped retroactively).
-fetch('/api/time', { method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: 'epoch_ms=' + Date.now() + '&tz_min=' + (-new Date().getTimezoneOffset()) }).catch(() => {});
+LDRC.teachTime();
 
 // Populate the flight selector (Current + saved flights) from /api/flights.json.
 async function populateFlightSelector() {
