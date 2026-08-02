@@ -221,7 +221,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Tell the receiver the time (it has no clock) — flights get real dates.
     fetch('/api/time', { method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: 'epoch_ms=' + Date.now() }).catch(() => {});
+        body: 'epoch_ms=' + Date.now() + '&tz_min=' + (-new Date().getTimezoneOffset()) }).catch(() => {});
     const s = await LDRC.fetchState();
     if (!s) { LDRC.setText('subtitle', 'connection lost — try refresh'); return; }
 
