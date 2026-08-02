@@ -224,3 +224,41 @@ vandal button on BTN is the power control. Use **6 mm standoffs** (flush
 module needs ~5.5 mm below the board; the USB case slot absorbs the 1 mm
 shift without re-cutting). Before first power-up: continuity-beep VIN/GND
 from the XT30 to the module.
+
+## Rev-A erratum 2 — ESP32 "< USB end" silkscreen is BACKWARDS (2026-07-25)
+
+Full footprint mirror audit (prompted by erratum 1) of every socket on
+Rev-A, each checked against its official pin card / datasheet drawing:
+
+| Part | Verdict |
+|---|---|
+| Teensy 4.1 socket (U1) | ✅ CORRECT — matches PJRC card; silk arrows ("USB v", "microSD ^") right |
+| ESP32-S3-DevKitC socket (U2) | ⚠️ pads/nets CORRECT, **silk arrow WRONG** — see below |
+| nRF24 E01-ML01DP5 socket (U3) | ✅ CORRECT — matches EBYTE mechanical drawing; square pad = GND, antenna exits LEFT |
+| Pololu 2808 (U4) | erratum 1 (underside mount rescue) |
+| 2× 3-pin bucks (U5/U9) | ✅ IN/GND/OUT silk labels match nets; insert per labels |
+| XT30 (J3) | ✅ pad 2 = keyed '+' = VBAT_RAW (the 2026-07-21 fix is in the fabbed file; no stray polarity silk) |
+| BQ25887 / USB-C / AMS1117 (back side) | ✅ standard KiCad library footprints — cannot be hand-mirrored |
+
+**The erratum:** the fabbed silk near the TOP of the ESP32 socket reads
+"< USB end". That is BACKWARDS. Pad 1 (top, y102 end, next to the nRF
+corner) carries 3V3 — and on the real DevKitC-1 the 3V3/RST pins are at
+the **ANTENNA** end (official Espressif pin layout, verified against the
+v1.1 figure). The 5V + GND pins are at the USB end.
+
+**Correct insertion: ANTENNA toward the board's top edge (same edge the
+E01 overhangs), the two USB-C connectors toward the Teensy.** If inserted
+per the silk, +5V lands on GPIO43 (TX) and the module's 3V3 pins are
+grounded — likely fatal to the DevKitC.
+
+Assembly-day safeguards:
+1. Scratch out / sharpie over the "< USB end" text; write "ANTENNA ^".
+2. Before seating the module, meter socket pad 21 (left column, 2nd from
+   bottom, net +5V) and confirm it will meet the module pin silk-labelled
+   "5V" (2nd from bottom on the module's 3V3-row side… i.e. simply: the
+   module's 5V pin must be at the BOTTOM end).
+3. nRF24 quick check after insertion: SMA shell ↔ socket square pad
+   (pin 1) must beep (both GND).
+
+Rev-B: fix the silk text in generate_pcb.py (move "USB end" to the y155
+end or replace with "ANTENNA" at y102).

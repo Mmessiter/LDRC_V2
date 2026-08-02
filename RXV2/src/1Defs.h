@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.291-flight-eraser";
+constexpr const char* FW_VERSION = "RXV2-0.9.292-govcfg-tracer";
 
 //*********************************************************************
 //  Auto-update manifest URLs

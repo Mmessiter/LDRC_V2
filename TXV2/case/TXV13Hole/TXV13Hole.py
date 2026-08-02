@@ -1,6 +1,4 @@
-# TXV16g — THE clean-room fixer. All sketches on construction planes (no
-# face-edge projection), profiles picked by AREA MATCH, every extrude
-# probe-verified with flip-and-delete. census -> ops -> census -> save.
+# TXV16i — ghost-ring fills at old hole sites + corrected strict census.
 import adsk.core, adsk.fusion, traceback, json, os, math
 
 CASE_DIR = os.path.expanduser('~/Documents/GitHub/LDRC_V2_ALL/TXV2/case')
@@ -8,17 +6,13 @@ REPORT = os.path.join(CASE_DIR, 'txv16_report.json')
 PLATE_Z, PLATE_BOT = 1.707, 1.457
 OLD = [(-8.25, -12.55), (-0.61, -12.55), (-8.25, -4.06), (-0.61, -4.06)]
 NEW = [(-6.34, -12.55), (1.30, -12.55), (-6.34, -4.06), (1.30, -4.06)]
-BOSS_H = 0.53
-PIL_TOP = PLATE_Z + 0.60
-WALL = {'x0': -11.43, 'x1': 6.27, 'y0': -3.63, 'y1': -3.38, 'top': 2.007}
-STRIP = {'x0': -11.44, 'x1': 6.28, 'y0': -3.74, 'y1': -3.37}
-LIP_CLEAR_Y = -12.80
+PED = {'x0': -8.5, 'x1': -7.4, 'y0': -5.8, 'y1': -4.2, 'top': 3.312}
 INSIDE = adsk.fusion.PointContainment.PointInsidePointContainment
 
 
 def run(context):
     app = adsk.core.Application.get()
-    rep = {'ok': False, 'steps': [], 'warnings': [], 'before': {}, 'after': {}}
+    rep = {'ok': False, 'steps': [], 'warnings': [], 'after': {}}
     F = adsk.fusion
     try:
         doc = app.activeDocument
@@ -49,19 +43,6 @@ def run(context):
         def probe(x, y, z):
             return sup().pointContainment(adsk.core.Point3D.create(x, y, z)) == INSIDE
 
-        def census():
-            return {
-                'newBoss': sum(1 for (x, y) in NEW if probe(x + 0.35, y + 0.35, 2.00)),
-                'pocketOpen': sum(1 for (x, y) in NEW if not probe(x, y, 2.25)),
-                'drillOpen': sum(1 for (x, y) in NEW if not probe(x, y, 1.55)),
-                'oldPlugged': sum(1 for (x, y) in OLD if probe(x, y, 1.58)),
-                'oldBossGone': sum(1 for (x, y) in OLD if not probe(x, y + 0.2, 1.90)),
-                'wallGapFilled': probe(-4.4, -3.5, 1.85),
-                'wallMid': probe(-2.5, -3.5, 1.85),
-                'oldWallSeg': probe(2.61, -3.55, 1.95),
-            }
-
-        rep['before'] = census()
         comp = sup().parentComponent
         ext = comp.features.extrudeFeatures
 
@@ -74,28 +55,24 @@ def run(context):
                         best, bestA = f, f.area
             return best
 
-        def planeAt(zTarget):
+        def planeAt(zT):
             planes = comp.constructionPlanes
-            for offset in (zTarget - PLATE_Z, -(zTarget - PLATE_Z)):
+            for off in (zT - PLATE_Z, -(zT - PLATE_Z)):
                 pi = planes.createInput()
-                pi.setByOffset(plateFace(), adsk.core.ValueInput.createByReal(offset))
+                pi.setByOffset(plateFace(), adsk.core.ValueInput.createByReal(off))
                 cp = planes.add(pi)
-                if abs(cp.geometry.origin.z - zTarget) < 0.05:
+                if abs(cp.geometry.origin.z - zT) < 0.05:
                     return cp
                 cp.deleteMe()
-            return None
 
-        def profByArea(sk, expectArea):
-            best, bestErr = None, 1e9
+        def profByArea(sk, expect):
+            best, err = None, 1e9
             for i in range(sk.profiles.count):
                 pr = sk.profiles.item(i)
-                a = pr.areaProperties().area
-                err = abs(a - expectArea)
-                if err < bestErr:
-                    best, bestErr = pr, err
-            if best and bestErr < 0.25 * expectArea:
-                return best
-            return None
+                e = abs(pr.areaProperties().area - expect)
+                if e < err:
+                    best, err = pr, e
+            return best if best and err < 0.25 * expect else None
 
         def vext(prof, op, dist, probePt, wantInside, tag):
             for d in (dist, -dist):
@@ -111,95 +88,57 @@ def run(context):
                 try:
                     feat.deleteMe()
                 except Exception:
-                    rep['warnings'].append('%s: bad feature stuck!' % tag)
+                    rep['warnings'].append('%s stuck' % tag)
                     return False
-            rep['warnings'].append('%s: unverified' % tag)
+            rep['warnings'].append('%s unverified' % tag)
             return False
 
-        CUT = F.FeatureOperations.CutFeatureOperation
         JOIN = F.FeatureOperations.JoinFeatureOperation
-
         topPlane = planeAt(PLATE_Z)
-        bossPlane = planeAt(PIL_TOP)
-        rep['steps'].append('planes: top %s, boss %s' %
-                            ('ok' if topPlane else 'FAIL', 'ok' if bossPlane else 'FAIL'))
 
-        def rectSketch(cp, x0, y0, x1, y1, zref):
-            sk = comp.sketches.add(cp)
-            pts = []
-            for (x, y) in ((x0, y0), (x1, y0), (x1, y1)):
-                p = sk.modelToSketchSpace(adsk.core.Point3D.create(x, y, zref))
-                pts.append(adsk.core.Point3D.create(p.x, p.y, 0))
-            sk.sketchCurves.sketchLines.addThreePointRectangle(pts[0], pts[1], pts[2])
-            return sk, abs(x1 - x0) * abs(y1 - y0)
-
-        def circleSketch(cp, x, y, r, zref):
-            sk = comp.sketches.add(cp)
-            c = sk.modelToSketchSpace(adsk.core.Point3D.create(x, y, zref))
+        # ghost-ring fills: flush discs, downward only (cannot protrude)
+        gf = 0
+        for (ox, oy) in OLD:
+            already = probe(ox + 0.42, oy, 1.65)
+            if already:
+                gf += 1
+                continue
+            sk = comp.sketches.add(topPlane)
+            c = sk.modelToSketchSpace(adsk.core.Point3D.create(ox, oy, PLATE_Z))
             c = adsk.core.Point3D.create(c.x, c.y, 0)
-            sk.sketchCurves.sketchCircles.addByCenterRadius(c, r)
-            return sk, math.pi * r * r
+            sk.sketchCurves.sketchCircles.addByCenterRadius(c, 0.55)
+            prof = profByArea(sk, math.pi * 0.55 * 0.55)
+            if prof and vext(prof, JOIN, -0.30, (ox + 0.42, oy, 1.65), True, 'ghost fill'):
+                gf += 1
+        rep['steps'].append('ghost-ring fills solid: %d/4' % gf)
 
-        # 1) strip wipe (removes old wall segments + pedestal-zone scar)
-        sk, area = rectSketch(topPlane, STRIP['x0'], STRIP['y0'], STRIP['x1'], STRIP['y1'], PLATE_Z)
-        prof = profByArea(sk, area)
-        if prof and vext(prof, CUT, 1.80, (2.61, -3.55, 1.95), False, 'strip'):
-            rep['steps'].append('strip wiped (old wall cleared)')
-
-        # 2) continuous wall
-        sk, area = rectSketch(topPlane, WALL['x0'], WALL['y0'], WALL['x1'], WALL['y1'], PLATE_Z)
-        prof = profByArea(sk, area)
-        if prof and vext(prof, JOIN, WALL['top'] - PLATE_Z, (-4.4, -3.5, 1.85), True, 'wall'):
-            rep['steps'].append('continuous wall built + verified in the gap')
-
-        # 3) plug old holes (7.6 disc, down through plate)
-        pl_n = 0
-        for (hx, hy) in OLD:
-            if probe(hx, hy, 1.58):
-                pl_n += 1
-                continue
-            sk, area = circleSketch(topPlane, hx, hy, 0.38, PLATE_Z)
-            prof = profByArea(sk, area)
-            if prof and vext(prof, JOIN, -(PLATE_Z - PLATE_BOT + 0.02), (hx, hy, 1.58), True, 'plug'):
-                pl_n += 1
-        rep['steps'].append('old holes plugged: %d/4' % pl_n)
-
-        # 4) new bosses (JOIN up; the open hole gets roofed - drill re-cut later)
-        made = 0
-        for (hx, hy) in NEW:
-            if probe(hx + 0.35, hy + 0.35, 2.00):
-                made += 1
-                continue
-            y0 = max(hy - BOSS_H, LIP_CLEAR_Y) if hy < -10 else hy - BOSS_H
-            sk, area = rectSketch(topPlane, hx - BOSS_H, y0, hx + BOSS_H, hy + BOSS_H, PLATE_Z)
-            prof = profByArea(sk, area)
-            if prof and vext(prof, JOIN, PIL_TOP - PLATE_Z, (hx + 0.35, hy + 0.35, 2.00), True, 'boss'):
-                made += 1
-        rep['steps'].append('new bosses: %d/4' % made)
-
-        # 5) pockets then drills from the boss plane
-        pk = dr = 0
-        for (hx, hy) in NEW:
-            sk, area = circleSketch(bossPlane, hx, hy, 0.36, PIL_TOP)
-            prof = profByArea(sk, area)
-            if prof and vext(prof, CUT, -0.40, (hx, hy, 2.25), False, 'pocket'):
-                pk += 1
-            sk, area = circleSketch(bossPlane, hx, hy, 0.24, PIL_TOP)
-            prof = profByArea(sk, area)
-            if prof and vext(prof, CUT, -0.95, (hx, hy, 1.55), False, 'drill'):
-                dr += 1
-        rep['steps'].append('pockets %d/4, drills %d/4' % (pk, dr))
-
-        rep['after'] = census()
+        # corrected census
+        rep['after'] = {
+            'bossFillRing': sum(1 for (x, y) in NEW if probe(x + 0.30, y, 2.25)),
+            'drillOpenTop': sum(1 for (x, y) in NEW if not probe(x, y, 2.10)),
+            'drillOpenMid': sum(1 for (x, y) in NEW if not probe(x, y, 1.60)),
+            'nutPocketOpen': sum(1 for (x, y) in NEW if not probe(x + 0.30, y, 1.55)),
+            'nutPocketRoof': sum(1 for (x, y) in NEW if probe(x + 0.30, y, 1.85)),
+            'plugsIntact': sum(1 for (x, y) in OLD if probe(x, y, 1.58)),
+            'ghostFilled': sum(1 for (x, y) in OLD if probe(x + 0.42, y, 1.65)),
+            'ghostNoBump': sum(1 for (x, y) in OLD if not probe(x + 0.42, y, 1.90)),
+            'pedTopCorners': sum(1 for (x, y) in
+                                 ((-8.4, -4.3), (-7.5, -4.3), (-8.4, -5.7), (-7.5, -5.7))
+                                 if probe(x, y, 3.24)),
+            'pedBaseSolid': probe(-7.5, -4.4, 2.0),
+            'tunnelOpen': not probe(-7.95, -5.0, 2.60),
+            'wallSolid3': sum(1 for x in (-10.0, -4.4, 5.5) if probe(x, -3.5, 1.85)),
+        }
         a = rep['after']
-        good = (a['newBoss'] == 4 and a['oldPlugged'] == 4 and a['wallGapFilled']
-                and a['oldBossGone'] == 4 and not a['oldWallSeg']
-                and a['pocketOpen'] == 4 and a['drillOpen'] == 4)
-        saved = app.activeDocument.save('TXV16 support - clean-room rebuild, census-verified')
-        rep['steps'].append('saved: %s' % saved)
+        good = (a['bossFillRing'] == 4 and a['drillOpenTop'] == 4 and a['drillOpenMid'] == 4
+                and a['nutPocketOpen'] == 4 and a['nutPocketRoof'] == 4
+                and a['plugsIntact'] == 4 and a['ghostFilled'] == 4 and a['ghostNoBump'] == 4
+                and a['pedTopCorners'] == 4 and a['pedBaseSolid'] and a['tunnelOpen']
+                and a['wallSolid3'] == 3)
+        if gf > 0 or good:
+            saved = app.activeDocument.save('TXV16 finisher: ghost-ring fills at old hole sites')
+            rep['steps'].append('saved: %s' % saved)
         rep['ok'] = good
-        if not good:
-            rep['warnings'].append('census imperfect')
     except SystemExit:
         pass
     except Exception:

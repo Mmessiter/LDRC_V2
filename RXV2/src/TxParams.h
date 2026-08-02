@@ -233,7 +233,21 @@ inline void buildGovProfileFromMsp(const uint8_t* p, uint16_t len) {
 // so accept any response that reaches byte 32 — RF 2.3 may report a different
 // total length than V1's 42, and a strict ==42 check left the global screen blank.
 inline void buildGovConfigFromMsp(const uint8_t* p, uint16_t len) {
-    if (len < 33) return;
+    if (len < 33) {
+        static uint32_t lastShortLog = 0;
+        if ((uint32_t)(millis() - lastShortLog) > 2000) {
+            lastShortLog = millis();
+            char m[64];
+            snprintf(m, sizeof(m), "GovCfg: MSP reply too short (%u < 33)", (unsigned)len);
+            events.add(m);
+        }
+        return;
+    }
+    if (!govConfigValid) {
+        char m[64];
+        snprintf(m, sizeof(m), "GovCfg: MSP reply ok (%u bytes) - serving", (unsigned)len);
+        events.add(m);
+    }
     govAck[18] = p[0];                          // Gov_Mode
     govAck[19] = p[19];                         // Handover_Throttle
     govAck[20] = p[1];  govAck[21] = p[2];      // Startup
@@ -350,12 +364,27 @@ inline void readExtraParameters(const uint8_t* payload, uint8_t size) {
             break;
 
         // ---- GOVERNOR (RF 2.3+ only) ----
-        case PID_SEND_GOV_PROFILE:              // 27 — read governor profile
+        case PID_SEND_GOV_PROFILE: {            // 27 — read governor profile
+            static uint32_t lastReqLog27 = 0;
+            if ((uint32_t)(millis() - lastReqLog27) > 2000) {
+                lastReqLog27 = millis();
+                events.add("GovProf: TX request received");
+            }
             if (govSupported() && w[1] == 321) { paramSend = PSEND_GOV_PROFILE; paramSendUntil = millis() + w[2]; lastParamFetchMs = 0; }
             break;
-        case PID_SEND_GOV_CONFIG:               // 28 — read governor config
+        }
+        case PID_SEND_GOV_CONFIG: {             // 28 — read governor config
+            static uint32_t lastReqLog = 0;
+            if ((uint32_t)(millis() - lastReqLog) > 2000) {
+                lastReqLog = millis();
+                char m[72];
+                snprintf(m, sizeof(m), "GovCfg: TX request w1=%u dur=%u rfv=%u",
+                         (unsigned)w[1], (unsigned)w[2], (unsigned)rotorflightTxVersion());
+                events.add(m);
+            }
             if (govSupported() && w[1] == 321) { paramSend = PSEND_GOV_CONFIG;  paramSendUntil = millis() + w[2]; lastParamFetchMs = 0; }
             break;
+        }
         case PID_GOV_WR_PROFILE1:               // 29 — profile bytes 1..11
             if (govSupported()) for (uint8_t i = 0; i < 11; ++i) govWrite[i + 1] = (uint8_t)w[i + 1];
             break;
@@ -531,6 +560,13 @@ inline void txParamsLoop() {
                 else if (mspAsyncFunc == MSP_GOVERNOR_CONFIG)  buildGovConfigFromMsp(mspAsyncBuf, mspAsyncLen);
                 mspAsyncFunc = 0xFF; pmState = PM_IDLE; txParamBusy = false;
             } else if ((int32_t)(now - pmStateAt) > 250) {   // missed round-trip → retry quickly
+                if (mspAsyncFunc == MSP_GOVERNOR_CONFIG) {
+                    static uint32_t lastToLog = 0;
+                    if ((uint32_t)(now - lastToLog) > 2000) {
+                        lastToLog = now;
+                        events.add("GovCfg: FC did not answer MSP 142 (250ms)");
+                    }
+                }
                 mspAsyncFunc = 0xFF; pmState = PM_IDLE; txParamBusy = false;
             }
             break;
