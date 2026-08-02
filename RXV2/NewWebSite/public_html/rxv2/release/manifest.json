@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.296-dated-flights",
+      "url": "https://messiter.com/rxv2/release/v0.9.296/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.296/littlefs.bin",
+      "fs_md5": "7c3a98c1a2a3193523643502ce340db6",
+      "notes": "Every flight now says when it happened: the Flight analysis card leads with the date and time (learned quietly from your phone's clock each time the app connects), not just the position in the list. Flights saved before the receiver ever knew the time say so honestly."
+    },
+    {
       "name": "RXV2-0.9.295-honest-warnings",
       "url": "https://messiter.com/rxv2/release/v0.9.295/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.295/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.285/littlefs.bin",
       "fs_md5": "26d4532a7282ab8de572d0dd1813abf6",
       "notes": "Flight-page polish from field review: the graph gains quarter-height gridlines and per-minute time marks (each trace still auto-scales to its own min-max shown in the key); the page title no longer hides behind the corner buttons; and a radio handover is now correctly billed to the flight (a 9-minute flight showed both radios busy yet zero swaps) - unbilled swaps leave a note in the events log saying why."
-    },
-    {
-      "name": "RXV2-0.9.284-flight-diary",
-      "url": "https://messiter.com/rxv2/release/v0.9.284/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.284/littlefs.bin",
-      "fs_md5": "0db28317db7aac8defce9d37e4dc3e32",
-      "notes": "The flight diary: keeps the last TWENTY flights; unarmed sessions under a minute are wiggle-checks and no longer saved at all; and updates now skip rewriting the web filesystem when it is unchanged (fingerprint match) - so saved flights survive every firmware-only update untouched and field updates get much faster. Background photo slimmed to make room."
     }
   ]
 }
