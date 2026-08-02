@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.293-no-zero-latch";
+constexpr const char* FW_VERSION = "RXV2-0.9.294-verified-writes";
 
 //*********************************************************************
 //  Auto-update manifest URLs

@@ -136,6 +136,19 @@ inline uint8_t govWrite[46]    = {0};
 inline bool    govProfileValid = false;
 inline bool    govConfigValid  = false;
 
+// The V1 TX sends every parameter packet several times for reliability
+// (LIFO queue repeats) — each repeat of a write-TRIGGER packet used to raise
+// the request again, giving one Save two full write+reboot cycles. Debounce:
+// repeats of the same trigger within 1s are one Save. (The repeats still
+// re-stage their data bytes — that part is idempotent.)
+inline uint32_t lastWriteTrigMs[6] = {0};   // rates, ratesAdv, pid, pidAdv, govProf, govCfg
+inline bool writeTrigFresh(uint8_t idx) {
+    uint32_t now = millis();
+    if (lastWriteTrigMs[idx] && (uint32_t)(now - lastWriteTrigMs[idx]) < 1000) return false;
+    lastWriteTrigMs[idx] = now;
+    return true;
+}
+
 // write requests raised by the packet parser, serviced by txParamsLoop()
 inline bool ratesWriteReq    = false;   // basic rates only (ID 14, word[7]==0)
 inline bool ratesAdvWriteReq = false;   // advanced (ID 16); + basic too if basicRatesPending
@@ -151,7 +164,13 @@ inline bool govConfigWriteReq  = false; // governor config (ID 33)
 //*********************************************************************
 //  Async MSP state machine
 //*********************************************************************
-enum ParamMspState : uint8_t { PM_IDLE, PM_READ, PM_WRITE_ORIG, PM_WRITE_EEPROM };
+// Write cycle is fully ACK-verified: the CRSF MSP wire drops frames under
+// load (bench-measured ~50% on 2026-08-02), and a lost fire-and-forget
+// EEPROM_WRITE silently reverted a governor-config save. Every step now
+// awaits the FC's response and resends on loss; the block is read back and
+// compared before EEPROM save; the config reboot fires only after the save
+// is confirmed.
+enum ParamMspState : uint8_t { PM_IDLE, PM_READ, PM_WRITE_ORIG, PM_SET_WAIT, PM_VERIFY_WAIT, PM_EEPROM_WAIT };
 enum WriteKind     : uint8_t { WK_NONE, WK_RATES, WK_RATES_ADV, WK_PID, WK_PID_ADV, WK_GOV_PROFILE, WK_GOV_CONFIG };
 
 inline ParamMspState pmState     = PM_IDLE;
@@ -160,6 +179,8 @@ inline uint32_t      pmStateAt   = 0;
 inline uint8_t       pmScratch[64] = {0};
 inline uint16_t      pmScratchLen  = 0;
 inline uint8_t       pmWriteRetries = 0;   // one automatic retry when the pre-write GET times out
+inline uint8_t       pmOpTries      = 0;   // per-step resend counter (lossy wire)
+inline uint8_t       pmVerifyLoops  = 0;   // SET → readback-mismatch → SET again loops
 inline uint32_t      lastParamFetchMs = 0;     // last read re-poll (continuous refresh)
 
 inline bool txParamMspFree() {
@@ -326,7 +347,7 @@ inline void readExtraParameters(const uint8_t* payload, uint8_t size) {
             wYaw[0]  = (uint8_t)w[1]; wYaw[1]  = (uint8_t)w[2]; wYaw[2]  = (uint8_t)w[3];
             wColl[0] = (uint8_t)w[4]; wColl[1] = (uint8_t)w[5]; wColl[2] = (uint8_t)w[6];
             basicRatesPending = true;
-            if (!w[7]) ratesWriteReq = true;
+            if (!w[7] && writeTrigFresh(0)) ratesWriteReq = true;
             break;
 
         // ---- ADVANCED RATES write: FIRST_7=ID17, SECOND_8=ID16 (16 triggers combined write) ----
@@ -339,7 +360,7 @@ inline void readExtraParameters(const uint8_t* payload, uint8_t size) {
             wBoostCutoff[0] = (uint8_t)w[2]; wBoostCutoff[1] = (uint8_t)w[3];
             wBoostCutoff[2] = (uint8_t)w[4]; wBoostCutoff[3] = (uint8_t)w[5];
             wYawDyn[0] = (uint8_t)w[6]; wYawDyn[1] = (uint8_t)w[7]; wYawDyn[2] = (uint8_t)w[8];
-            ratesAdvWriteReq = true;
+            if (writeTrigFresh(1)) ratesAdvWriteReq = true;
             break;
 
         // ---- PID write: FIRST_6=ID10, SECOND_11=ID11 (11 triggers write). 16-bit values. ----
@@ -348,7 +369,7 @@ inline void readExtraParameters(const uint8_t* payload, uint8_t size) {
             break;
         case PID_PID_SECOND11:                  // 11 — All_PIDs[6..16], then write
             for (uint8_t i = 0; i < 11; ++i) wPid[i + 6] = w[i + 1];
-            pidWriteReq = true;
+            if (writeTrigFresh(2)) pidWriteReq = true;
             break;
 
         // ---- ADVANCED PID write: 3 batches into wAdvPid[26]; ID 21 triggers ----
@@ -360,7 +381,7 @@ inline void readExtraParameters(const uint8_t* payload, uint8_t size) {
             break;
         case PID_PID_ADV_THIRD8:                // 21 — bytes 18..25, then write
             for (uint8_t i = 0; i < 8; ++i) wAdvPid[i + 18] = (uint8_t)w[i + 1];
-            advPidWriteReq = true;
+            if (writeTrigFresh(3)) advPidWriteReq = true;
             break;
 
         // ---- GOVERNOR (RF 2.3+ only) ----
@@ -389,7 +410,7 @@ inline void readExtraParameters(const uint8_t* payload, uint8_t size) {
             if (govSupported()) for (uint8_t i = 0; i < 11; ++i) govWrite[i + 1] = (uint8_t)w[i + 1];
             break;
         case PID_GOV_WR_PROFILE2:               // 30 — profile bytes 12..17, then write
-            if (govSupported()) { for (uint8_t i = 0; i < 6; ++i) govWrite[i + 12] = (uint8_t)w[i + 1]; govProfileWriteReq = true; }
+            if (govSupported()) { for (uint8_t i = 0; i < 6; ++i) govWrite[i + 12] = (uint8_t)w[i + 1]; if (writeTrigFresh(4)) govProfileWriteReq = true; }
             break;
         case PID_GOV_WR_CONFIG1:                // 31 — config bytes 18..28
             if (govSupported()) for (uint8_t i = 0; i < 11; ++i) govWrite[i + 18] = (uint8_t)w[i + 1];
@@ -398,7 +419,7 @@ inline void readExtraParameters(const uint8_t* payload, uint8_t size) {
             if (govSupported()) for (uint8_t i = 0; i < 11; ++i) govWrite[i + 29] = (uint8_t)w[i + 1];
             break;
         case PID_GOV_WR_CONFIG3:                // 33 — config bytes 40..45, then write
-            if (govSupported()) { for (uint8_t i = 0; i < 6; ++i) govWrite[i + 40] = (uint8_t)w[i + 1]; govConfigWriteReq = true; }
+            if (govSupported()) { for (uint8_t i = 0; i < 6; ++i) govWrite[i + 40] = (uint8_t)w[i + 1]; if (writeTrigFresh(5)) govConfigWriteReq = true; }
             break;
 
         default:
@@ -498,6 +519,28 @@ inline uint8_t writeGetFn() {
     return MSP_RC_TUNING;
 }
 
+// End a write cycle (success or failure) — reset every counter and flag.
+inline void pmCycleEnd() {
+    pmWriteRetries = 0; pmOpTries = 0; pmVerifyLoops = 0;
+    basicRatesPending = false;
+    pmWriteKind = WK_NONE;
+    mspAsyncFunc = 0xFF;
+    pmState = PM_IDLE; txParamBusy = false;
+}
+
+// After a VERIFIED write, refresh the TX-facing cache from the verified
+// payload so the transmitter's next read shows the new values immediately —
+// the FC may be rebooting (gov config) and unable to answer re-polls, which
+// is how a read-back once showed stale pre-write values.
+inline void pmUpdateCacheFromScratch() {
+    if      (pmWriteKind == WK_RATES ||
+             pmWriteKind == WK_RATES_ADV)   buildRatesFromMsp(pmScratch, pmScratchLen);
+    else if (pmWriteKind == WK_PID)         buildPidsFromMsp(pmScratch, pmScratchLen);
+    else if (pmWriteKind == WK_PID_ADV)     buildAdvPidFromMsp(pmScratch, pmScratchLen);
+    else if (pmWriteKind == WK_GOV_PROFILE) buildGovProfileFromMsp(pmScratch, pmScratchLen);
+    else if (pmWriteKind == WK_GOV_CONFIG)  buildGovConfigFromMsp(pmScratch, pmScratchLen);
+}
+
 //*********************************************************************
 //  Loop-driven async MSP state machine  (V1 CheckMSPSerial, non-blocking)
 //*********************************************************************
@@ -587,9 +630,12 @@ inline void txParamsLoop() {
                     break;
                 }
                 pmWriteRetries = 0;
-                basicRatesPending = false;       // staged basic consumed; next advanced-only edit preserves the FC's basic
+                // NB basicRatesPending stays set until pmCycleEnd() — the verify
+                // pass re-runs applyWriteToScratch and must see the same flags.
+                mspAsyncFunc = writeSetFn(); mspAsyncReady = false;   // await the FC's SET echo
                 mspSendRequest(writeSetFn(), pmScratch, (uint8_t)pmScratchLen);
-                pmState = PM_WRITE_EEPROM; pmStateAt = now;
+                pmOpTries = 0; pmVerifyLoops = 0;
+                pmState = PM_SET_WAIT; pmStateAt = now;
             } else if ((int32_t)(now - pmStateAt) > 500) {
                 // GET never answered. The request flag was consumed at PM_IDLE,
                 // so without re-raising it the user's edit would vanish silently
@@ -615,24 +661,95 @@ inline void txParamsLoop() {
             }
             break;
 
-        case PM_WRITE_EEPROM:
-            if ((int32_t)(now - pmStateAt) > 120) {
-                mspSendRequest(MSP_EEPROM_WRITE);
-                // Governor CONFIG needs an FC restart to take effect (matches V1
-                // RestartRotorflight). NB this reboots the FC — fine on the bench
-                // while configuring; the RC link drops and re-establishes.
-                if (pmWriteKind == WK_GOV_CONFIG) mspSendRequest(MSP_REBOOT);
-                // Do NOT invalidate the cache here — the continuous re-poll picks
-                // up the freshly-saved values within ~50ms. Blanking it would just
-                // flash zeros to the TX until the next poll.
-                events.add(pmWriteKind == WK_PID ? "TX edit: PIDs -> FC"
-                         : pmWriteKind == WK_PID_ADV ? "TX edit: adv PID -> FC"
-                         : pmWriteKind == WK_GOV_PROFILE ? "TX edit: gov profile -> FC"
-                         : pmWriteKind == WK_GOV_CONFIG ? "TX edit: gov config -> FC (reboot)"
-                         : pmWriteKind == WK_RATES_ADV ? "TX edit: RATES+adv -> FC"
-                         : "TX edit: RATES -> FC");
-                pmWriteKind = WK_NONE;
-                pmState = PM_IDLE; txParamBusy = false;
+        case PM_SET_WAIT:
+            if (mspAsyncReady) {              // FC echoed the SET — values are in FC RAM
+                mspAsyncFunc = writeGetFn(); mspAsyncReady = false;
+                mspSendRequest(writeGetFn());  // read the block back to verify
+                pmOpTries = 0;
+                pmState = PM_VERIFY_WAIT; pmStateAt = now;
+            } else if ((int32_t)(now - pmStateAt) > 400) {
+                if (pmOpTries < 2) {           // lossy wire — resend the SET
+                    pmOpTries++;
+                    mspAsyncFunc = writeSetFn(); mspAsyncReady = false;
+                    mspSendRequest(writeSetFn(), pmScratch, (uint8_t)pmScratchLen);
+                    pmStateAt = now;
+                } else {
+                    events.add("TX edit: FC ignored SET - save FAILED");
+                    pmCycleEnd();
+                }
+            }
+            break;
+
+        case PM_VERIFY_WAIT:
+            if (mspAsyncReady) {
+                // Re-derive the expected payload from the FRESH read + staged
+                // edits; if the FC's block matches byte-for-byte, the SET landed.
+                uint8_t  fresh[sizeof(pmScratch)];
+                uint16_t freshLen = (mspAsyncLen > sizeof(pmScratch)) ? sizeof(pmScratch) : mspAsyncLen;
+                memcpy(fresh, mspAsyncBuf, freshLen);
+                mspAsyncFunc = 0xFF;
+                pmScratchLen = freshLen;
+                memcpy(pmScratch, fresh, freshLen);
+                bool match = applyWriteToScratch() && memcmp(pmScratch, fresh, freshLen) == 0;
+                if (match) {
+                    mspAsyncFunc = MSP_EEPROM_WRITE; mspAsyncReady = false;
+                    mspSendRequest(MSP_EEPROM_WRITE);
+                    pmOpTries = 0;
+                    pmState = PM_EEPROM_WAIT; pmStateAt = now;
+                } else if (pmVerifyLoops < 2) {   // FC shows different bytes — SET again
+                    pmVerifyLoops++;              // (pmScratch now holds the corrected payload)
+                    mspAsyncFunc = writeSetFn(); mspAsyncReady = false;
+                    mspSendRequest(writeSetFn(), pmScratch, (uint8_t)pmScratchLen);
+                    pmOpTries = 0;
+                    pmState = PM_SET_WAIT; pmStateAt = now;
+                } else {
+                    events.add("TX edit: FC readback mismatch - save FAILED");
+                    pmCycleEnd();
+                }
+            } else if ((int32_t)(now - pmStateAt) > 400) {
+                if (pmOpTries < 2) {           // verify read lost — ask again
+                    pmOpTries++;
+                    mspAsyncFunc = writeGetFn(); mspAsyncReady = false;
+                    mspSendRequest(writeGetFn());
+                    pmStateAt = now;
+                } else {
+                    events.add("TX edit: verify read unanswered - save FAILED");
+                    pmCycleEnd();
+                }
+            }
+            break;
+
+        case PM_EEPROM_WAIT:
+            if (mspAsyncReady) {              // FC acked EEPROM_WRITE — persisted
+                mspAsyncFunc = 0xFF;
+                pmUpdateCacheFromScratch();   // TX read-back shows the new values NOW
+                events.add(pmWriteKind == WK_PID ? "TX edit: PIDs -> FC (verified+saved)"
+                         : pmWriteKind == WK_PID_ADV ? "TX edit: adv PID -> FC (verified+saved)"
+                         : pmWriteKind == WK_GOV_PROFILE ? "TX edit: gov profile -> FC (verified+saved)"
+                         : pmWriteKind == WK_GOV_CONFIG ? "TX edit: gov config -> FC (verified+saved, reboot)"
+                         : pmWriteKind == WK_RATES_ADV ? "TX edit: RATES+adv -> FC (verified+saved)"
+                         : "TX edit: RATES -> FC (verified+saved)");
+                if (pmWriteKind == WK_GOV_CONFIG) {
+                    // Config needs an FC restart to take effect (V1
+                    // RestartRotorflight). Fire twice — a lost single reboot
+                    // frame left a saved config silently not yet active.
+                    mspSendRequest(MSP_REBOOT);
+                    mspSendRequest(MSP_REBOOT);
+                }
+                pmCycleEnd();
+            } else if ((int32_t)(now - pmStateAt) > 600) {
+                if (pmOpTries < 2) {           // ack (or command) lost — resend; a
+                    pmOpTries++;               // double EEPROM write is harmless
+                    mspAsyncFunc = MSP_EEPROM_WRITE; mspAsyncReady = false;
+                    mspSendRequest(MSP_EEPROM_WRITE);
+                    pmStateAt = now;
+                } else {
+                    // Values are in FC RAM but the save was never confirmed. Do
+                    // NOT reboot a gov config here — rebooting an unsaved config
+                    // is exactly the silent revert this machine exists to stop.
+                    events.add("TX edit: EEPROM save unconfirmed - NOT saved");
+                    pmCycleEnd();
+                }
             }
             break;
 
