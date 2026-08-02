@@ -156,6 +156,8 @@ void setup() {
     armingChannel = prefs.isKey(NVS_KEY_ARM_CH) ? prefs.getUChar(NVS_KEY_ARM_CH, 0) : 0;
     gapMinMs = prefs.isKey(NVS_KEY_GAP_MIN) ? prefs.getUChar(NVS_KEY_GAP_MIN, 5) : 5;
     tzOffsetMin = prefs.isKey(NVS_KEY_TZ_MIN) ? prefs.getShort(NVS_KEY_TZ_MIN, 0) : 0;
+    txClockOffKnown = prefs.isKey(NVS_KEY_TX_OFF_S);
+    txClockOffS     = txClockOffKnown ? prefs.getInt(NVS_KEY_TX_OFF_S, 0) : 0;
     if (armingChannel > 16) armingChannel = 0;
     waveChannelMask = prefs.isKey(NVS_KEY_WAVE_CHS) ? prefs.getUShort(NVS_KEY_WAVE_CHS, 1) : 1;
     apAutoEnabled = prefs.isKey(NVS_KEY_AP_AUTO) && prefs.getBool(NVS_KEY_AP_AUTO, false);

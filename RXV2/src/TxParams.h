@@ -357,13 +357,13 @@ inline void readExtraParameters(const uint8_t* payload, uint8_t size) {
         // test undiagnosable — with the phone connected the TX time is
         // outranked, and nothing said the packet had even arrived.
         static uint32_t lastTimeLog = 0;
-        const bool logOk = (uint32_t)(millis() - lastTimeLog) > 60000;
+        const bool logOk = (lastTimeLog == 0) || (uint32_t)(millis() - lastTimeLog) > 60000;
         if (w[7] != 321) return;                      // magic guards a corrupt packet
         int y = (int)w[1]; if (y < 100) y += 2000;    // TX RTC year is 2-digit
         char stamp[32];
         snprintf(stamp, sizeof(stamp), "%04d-%02u-%02u %02u:%02u:%02u",
                  y, (unsigned)w[2], (unsigned)w[3], (unsigned)w[4], (unsigned)w[5], (unsigned)w[6]);
-        char m[80];
+        char m[96];
         if (y < 2024 || y > 2120 || w[2] < 1 || w[2] > 12 || w[3] < 1 || w[3] > 31 ||
             w[4] > 23 || w[5] > 59 || w[6] > 59) {
             if (logOk) { lastTimeLog = millis();
@@ -371,19 +371,37 @@ inline void readExtraParameters(const uint8_t* payload, uint8_t size) {
                 events.add(m); }
             return;
         }
-        if (epochFromPhone) {                         // phone is the fresher source
+        // The TX clock face, read naively as if it were UTC. What it REALLY
+        // holds (UTC, local, or drifted anything) is calibrated away below.
+        const int64_t txNaiveS = daysFromCivil(y, w[2], w[3]) * 86400
+                               + (int64_t)w[4] * 3600 + (int64_t)w[5] * 60 + w[6];
+        if (epochFromPhone) {
+            // Phone rules the clock — but this is our calibration moment:
+            // LEARN the TX clock's offset from true UTC and remember it, so
+            // phone-free field days get accurate stamps. Malcolm's TX face
+            // turned out to be UTC+6min drift, not local time — never assume.
+            const int32_t off = (int32_t)(txNaiveS - (int64_t)epochNowS());
+            if (!txClockOffKnown || abs(off - txClockOffS) > 90) {
+                txClockOffS = off; txClockOffKnown = true;
+                prefs.putInt(NVS_KEY_TX_OFF_S, txClockOffS);
+                snprintf(m, sizeof(m), "TX clock offset learned: %+d s vs UTC", (int)off);
+                events.add(m);
+            }
             if (logOk) { lastTimeLog = millis();
                 snprintf(m, sizeof(m), "TX clock heard (phone rules): %s", stamp);
                 events.add(m); }
             return;
         }
-        int64_t epochS = daysFromCivil(y, w[2], w[3]) * 86400
-                       + (int64_t)w[4] * 3600 + (int64_t)w[5] * 60 + w[6]
-                       - (int64_t)tzOffsetMin * 60;
+        // No phone this boot — apply the TX clock, corrected by the learned
+        // offset (fallback: the phone-taught timezone, assuming a local face).
+        const int64_t epochS = txClockOffKnown ? (txNaiveS - txClockOffS)
+                                               : (txNaiveS - (int64_t)tzOffsetMin * 60);
         epochOffsetMs = epochS * 1000 - (int64_t)millis();
         patchFlightEpochs();                          // date any flights saved earlier this boot
         if (logOk) { lastTimeLog = millis();
-            snprintf(m, sizeof(m), "Clock set by TX: %s (tz %+d min)", stamp, (int)tzOffsetMin);
+            snprintf(m, sizeof(m), "Clock set by TX: %s (%s %+d s)", stamp,
+                     txClockOffKnown ? "learned off" : "tz fallback",
+                     (int)(txClockOffKnown ? txClockOffS : tzOffsetMin * 60));
             events.add(m); }
         return;
     }
