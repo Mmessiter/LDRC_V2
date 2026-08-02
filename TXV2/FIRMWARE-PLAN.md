@@ -89,3 +89,14 @@ microSD as /flights/<model>/<date>_<time>.flt (timestamp already in the
 header via the phone clock sync). RX 20-slot diary = field cache; TX SD
 = permanent library (7 kB × 10 flights/day × 50 years ≈ 1% of the card).
 Later: browse years of flights from the TX screen or the phone.
+
+## TX clock → RX (parameter ID 34, shipped in V1 2026-08-02)
+
+The transmitter's battery-backed RTC dates the receiver's flight logs:
+parameter ID 34 = [Gyear(2-digit), Gmonth, Gday, Ghour, Gmin, Gsec, 321
+magic], queued in SendInitialSetupParams just after connect. RX (0.9.297+)
+converts the TX's LOCAL wall time to UTC epoch using a phone-taught
+timezone offset (NVS "tzmin", refreshed on every phone connect so DST
+self-heals; phone sync outranks TX for the boot). V1 receivers ignore the
+ID. TXV2 must keep this: same ID, same layout — its RTC (or GPS) is the
+primary field timekeeper, phones optional.
