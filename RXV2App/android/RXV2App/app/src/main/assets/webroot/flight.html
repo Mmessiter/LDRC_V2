@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Flight analysis &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=136">
-<script src="/app.js?v=136" defer></script>
+<link rel=stylesheet href="/style.css?v=137">
+<script src="/app.js?v=137" defer></script>
 <style>
 /* Landscape = reading mode (Malcolm 2026-07-31): the page widens and the
    graph grows to occupy most of the screen instead of a slim centre column. */
@@ -121,6 +121,15 @@ function renderLink(lk, savedAt, fIdx) {
              '<span style="width:3em;text-align:right;font-size:.78em;color:#5a6b74">' + labels[i] + '</span>' +
              '<span style="flex:1;background:#e3e9ec;border-radius:3px;overflow:hidden;height:12px"><span style="display:block;height:100%;width:' + w + '%;background:' + (i >= 3 ? '#c98a4a' : '#5fa099') + '"></span></span>' +
              '<span style="width:4.5em;font-size:.78em;color:#5a6b74;text-align:right">' + lk.hist[i].toLocaleString() + '</span></div>';
+    }
+    // Friendly explanation (Malcolm 2026-08-02): tuning sessions produce
+    // bigger gaps because the TRANSMITTER pauses briefly for each parameter
+    // read/save — honest numbers, but alarming without context.
+    if (lk.param_ops > 0) {
+        h += '<div style="margin-top:.5em;padding:.55em .8em;border-radius:8px;background:rgba(255,210,120,.55);' +
+             'color:#5c3a00;font-size:.85em;line-height:1.45">&#128295; Rotorflight settings were edited from the ' +
+             'transmitter during this session — each read or save briefly pauses its transmission, so larger ' +
+             'gaps and radio swaps here are expected, not a link problem.</div>';
     }
     lkHist.innerHTML = h;
     const note = document.getElementById('lkNote');

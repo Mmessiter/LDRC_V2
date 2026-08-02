@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.305-every-page-teaches-time";
+constexpr const char* FW_VERSION = "RXV2-0.9.306-tuning-notes";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -444,6 +444,7 @@ inline uint32_t statsZeroAtMs = 0;
 // resolution the ~500 Hz frame needs; a flight is well under the ~71 min wrap).
 struct LinkStats {
     uint32_t connStartMs = 0;    // when this connection began
+    uint32_t paramOps = 0;       // Rotorflight edits/reads via the TX this session — explains bigger gaps
     uint32_t packets     = 0;    // packets received this connection
     uint32_t lastPktUs   = 0;    // micros() of the last packet
     uint32_t maxGapUs    = 0;    // longest LATENESS (interval minus expected spacing)

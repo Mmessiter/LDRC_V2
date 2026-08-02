@@ -665,6 +665,7 @@ inline void radioPoll() {
                 for (uint8_t i = 0; i < 6; ++i) linkStats.hist[i] = 0;
                 for (auto &g : linkStats.recent) g = {};
                 linkStats.recentIdx = 0;
+                linkStats.paramOps = 0;
                 linkStats.swapsAtStart = radioSwaps;
                 linkStats.swapsAtLive  = radioSwaps;
                 linkStats.flightSwaps  = 0;

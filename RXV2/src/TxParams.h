@@ -410,16 +410,16 @@ inline void readExtraParameters(const uint8_t* payload, uint8_t size) {
     switch (id) {
         // ---- reads: "send block now" (word[1]==321, word[2]=duration ms) ----
         case PID_SEND_RATES:
-            if (w[1] == 321) { paramSend = PSEND_RATES;     paramSendUntil = millis() + w[2]; lastParamFetchMs = 0; }
+            if (w[1] == 321) { linkStats.paramOps++; paramSend = PSEND_RATES;     paramSendUntil = millis() + w[2]; lastParamFetchMs = 0; }
             break;
         case PID_SEND_RATES_ADV:
-            if (w[1] == 321) { paramSend = PSEND_RATES_ADV; paramSendUntil = millis() + w[2]; lastParamFetchMs = 0; }
+            if (w[1] == 321) { linkStats.paramOps++; paramSend = PSEND_RATES_ADV; paramSendUntil = millis() + w[2]; lastParamFetchMs = 0; }
             break;
         case PID_SEND_PID:
-            if (w[1] == 321) { paramSend = PSEND_PID;       paramSendUntil = millis() + w[2]; lastParamFetchMs = 0; }
+            if (w[1] == 321) { linkStats.paramOps++; paramSend = PSEND_PID;       paramSendUntil = millis() + w[2]; lastParamFetchMs = 0; }
             break;
         case PID_SEND_PID_ADV:
-            if (w[1] == 321) { paramSend = PSEND_PID_ADV;   paramSendUntil = millis() + w[2]; lastParamFetchMs = 0; }
+            if (w[1] == 321) { linkStats.paramOps++; paramSend = PSEND_PID_ADV;   paramSendUntil = millis() + w[2]; lastParamFetchMs = 0; }
             break;
 
         // ---- RATES write ----
@@ -433,7 +433,7 @@ inline void readExtraParameters(const uint8_t* payload, uint8_t size) {
             wYaw[0]  = (uint8_t)w[1]; wYaw[1]  = (uint8_t)w[2]; wYaw[2]  = (uint8_t)w[3];
             wColl[0] = (uint8_t)w[4]; wColl[1] = (uint8_t)w[5]; wColl[2] = (uint8_t)w[6];
             basicRatesPending = true;
-            if (!w[7] && writeTrigFresh(0)) ratesWriteReq = true;
+            if (!w[7] && writeTrigFresh(0)) { ratesWriteReq = true; linkStats.paramOps++; }
             break;
 
         // ---- ADVANCED RATES write: FIRST_7=ID17, SECOND_8=ID16 (16 triggers combined write) ----
@@ -446,7 +446,7 @@ inline void readExtraParameters(const uint8_t* payload, uint8_t size) {
             wBoostCutoff[0] = (uint8_t)w[2]; wBoostCutoff[1] = (uint8_t)w[3];
             wBoostCutoff[2] = (uint8_t)w[4]; wBoostCutoff[3] = (uint8_t)w[5];
             wYawDyn[0] = (uint8_t)w[6]; wYawDyn[1] = (uint8_t)w[7]; wYawDyn[2] = (uint8_t)w[8];
-            if (writeTrigFresh(1)) ratesAdvWriteReq = true;
+            if (writeTrigFresh(1)) { ratesAdvWriteReq = true; linkStats.paramOps++; }
             break;
 
         // ---- PID write: FIRST_6=ID10, SECOND_11=ID11 (11 triggers write). 16-bit values. ----
@@ -455,7 +455,7 @@ inline void readExtraParameters(const uint8_t* payload, uint8_t size) {
             break;
         case PID_PID_SECOND11:                  // 11 — All_PIDs[6..16], then write
             for (uint8_t i = 0; i < 11; ++i) wPid[i + 6] = w[i + 1];
-            if (writeTrigFresh(2)) pidWriteReq = true;
+            if (writeTrigFresh(2)) { pidWriteReq = true; linkStats.paramOps++; }
             break;
 
         // ---- ADVANCED PID write: 3 batches into wAdvPid[26]; ID 21 triggers ----
@@ -467,7 +467,7 @@ inline void readExtraParameters(const uint8_t* payload, uint8_t size) {
             break;
         case PID_PID_ADV_THIRD8:                // 21 — bytes 18..25, then write
             for (uint8_t i = 0; i < 8; ++i) wAdvPid[i + 18] = (uint8_t)w[i + 1];
-            if (writeTrigFresh(3)) advPidWriteReq = true;
+            if (writeTrigFresh(3)) { advPidWriteReq = true; linkStats.paramOps++; }
             break;
 
         // ---- GOVERNOR (RF 2.3+ only) ----
@@ -477,7 +477,7 @@ inline void readExtraParameters(const uint8_t* payload, uint8_t size) {
                 lastReqLog27 = millis();
                 events.add("GovProf: TX request received");
             }
-            if (govSupported() && w[1] == 321) { paramSend = PSEND_GOV_PROFILE; paramSendUntil = millis() + w[2]; lastParamFetchMs = 0; }
+            if (govSupported() && w[1] == 321) { linkStats.paramOps++; paramSend = PSEND_GOV_PROFILE; paramSendUntil = millis() + w[2]; lastParamFetchMs = 0; }
             break;
         }
         case PID_SEND_GOV_CONFIG: {             // 28 — read governor config
@@ -489,14 +489,14 @@ inline void readExtraParameters(const uint8_t* payload, uint8_t size) {
                          (unsigned)w[1], (unsigned)w[2], (unsigned)rotorflightTxVersion());
                 events.add(m);
             }
-            if (govSupported() && w[1] == 321) { paramSend = PSEND_GOV_CONFIG;  paramSendUntil = millis() + w[2]; lastParamFetchMs = 0; }
+            if (govSupported() && w[1] == 321) { linkStats.paramOps++; paramSend = PSEND_GOV_CONFIG;  paramSendUntil = millis() + w[2]; lastParamFetchMs = 0; }
             break;
         }
         case PID_GOV_WR_PROFILE1:               // 29 — profile bytes 1..11
             if (govSupported()) for (uint8_t i = 0; i < 11; ++i) govWrite[i + 1] = (uint8_t)w[i + 1];
             break;
         case PID_GOV_WR_PROFILE2:               // 30 — profile bytes 12..17, then write
-            if (govSupported()) { for (uint8_t i = 0; i < 6; ++i) govWrite[i + 12] = (uint8_t)w[i + 1]; if (writeTrigFresh(4)) govProfileWriteReq = true; }
+            if (govSupported()) { for (uint8_t i = 0; i < 6; ++i) govWrite[i + 12] = (uint8_t)w[i + 1]; if (writeTrigFresh(4)) { govProfileWriteReq = true; linkStats.paramOps++; } }
             break;
         case PID_GOV_WR_CONFIG1:                // 31 — config bytes 18..28
             if (govSupported()) for (uint8_t i = 0; i < 11; ++i) govWrite[i + 18] = (uint8_t)w[i + 1];
@@ -505,7 +505,7 @@ inline void readExtraParameters(const uint8_t* payload, uint8_t size) {
             if (govSupported()) for (uint8_t i = 0; i < 11; ++i) govWrite[i + 29] = (uint8_t)w[i + 1];
             break;
         case PID_GOV_WR_CONFIG3:                // 33 — config bytes 40..45, then write
-            if (govSupported()) { for (uint8_t i = 0; i < 6; ++i) govWrite[i + 40] = (uint8_t)w[i + 1]; if (writeTrigFresh(5)) govConfigWriteReq = true; }
+            if (govSupported()) { for (uint8_t i = 0; i < 6; ++i) govWrite[i + 40] = (uint8_t)w[i + 1]; if (writeTrigFresh(5)) { govConfigWriteReq = true; linkStats.paramOps++; } }
             break;
 
         default:
