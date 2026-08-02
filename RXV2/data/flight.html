@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Flight analysis &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=133">
-<script src="/app.js?v=133" defer></script>
+<link rel=stylesheet href="/style.css?v=134">
+<script src="/app.js?v=134" defer></script>
 <style>
 /* Landscape = reading mode (Malcolm 2026-07-31): the page widens and the
    graph grows to occupy most of the screen instead of a slim centre column. */
@@ -62,11 +62,22 @@ function fmt(ms) {
 }
 
 // Link statistics for a chosen flight (from the flightlog's `link` object).
-function renderLink(lk) {
+// savedAt (epoch seconds, from the phone's clock via /api/time) and fIdx let
+// the card lead with WHEN the flight happened — the selector alone wasn't
+// enough to place a flight in time.
+function renderLink(lk, savedAt, fIdx) {
     const lkRows = document.getElementById('lkRows'), lkHist = document.getElementById('lkHist');
     if (!lk || !lk.packets) {
         lkRows.textContent = 'No flight recorded yet.'; lkHist.innerHTML = '';
         document.getElementById('lkNote').textContent = ''; return;
+    }
+    let when = '';
+    if (fIdx > 0) {
+        when = savedAt
+            ? 'Flown: <b>' + new Date(savedAt * 1000).toLocaleString([],
+                { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric',
+                  hour: '2-digit', minute: '2-digit' }) + '</b><br>'
+            : 'Flown: <b>date unknown</b> <span class=muted>(saved before the receiver was told the time)</span><br>';
     }
     // Frame rate: prefer the MEASURED packet spacing (1000/expected_ms) —
     // it reads the true link rate (~500 Hz) even when Bluetooth desense ate
@@ -84,6 +95,7 @@ function renderLink(lk) {
                 rsw += ' &nbsp;&middot;&nbsp; R' + (i + 1) + ': <b>' + fmt(lk.radio_ms[i]) + '</b>';
     }
     lkRows.innerHTML =
+        when +
         'Duration: <b>' + fmt(lk.conn_ms) + '</b><br>' +
         'Avg frame rate: <b>' + fr.toFixed(0) + ' Hz</b> &nbsp;&middot;&nbsp; Packets: <b>' + lk.packets.toLocaleString() + '</b><br>' +
         // Gap figures are LATENESS: how much later than the measured packet
@@ -162,7 +174,7 @@ async function loadFlight() {
     paintDelBtn(f);
     let d;
     try { d = await (await fetch('/api/flightlog.json?f=' + f, { cache: 'no-store' })).json(); } catch (e) { return; }
-    renderLink(d.link);
+    renderLink(d.link, d.saved_at, f);
     drawFlight(d);
 }
 
