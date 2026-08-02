@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.300-clock-calibration",
+      "url": "https://messiter.com/rxv2/release/v0.9.300/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.300/littlefs.bin",
+      "fs_md5": "d529205d491f61ffc1e0adc1be9ef51f",
+      "notes": "Version 300! The transmitter's clock turned out to show UTC plus six minutes of drift, not local time - never assume. The receiver now calibrates it against the phone whenever both are present (every bench session), remembers the offset, and applies it on phone-free field days. Flight stamps come out right no matter what the transmitter's clock face believes."
+    },
+    {
       "name": "RXV2-0.9.299-param-trace",
       "url": "https://messiter.com/rxv2/release/v0.9.299/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.299/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.289/littlefs.bin",
       "fs_md5": "4ec6bc7678bbc81b89bc0db5fefbda9a",
       "notes": "Landing no longer makes the transmitter blink: the flight save now writes ONE ring slot instead of shuffling twenty files, and it waits for a provably quiet moment - disarmed with sticks still for two seconds (or transmitter off). A pilot flying an autorotation is never hands-still, so the save can never stall the link mid-air."
-    },
-    {
-      "name": "RXV2-0.9.288-save-stall-quiet",
-      "url": "https://messiter.com/rxv2/release/v0.9.288/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.288/littlefs.bin",
-      "fs_md5": "af56b09d0c6d30660fd5cef1ea79b21e",
-      "notes": "Malcolm caught the receiver blaming the air for its own housekeeping: saving the flight at disarm stalls the loop (~1s with the 20-slot rotation) and an 808ms gap was billed exactly at arming-off. Saves now announce themselves and the statistics look away - self-inflicted stalls are never recorded as link quality."
     }
   ]
 }

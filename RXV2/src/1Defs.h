@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.299-param-trace";
+constexpr const char* FW_VERSION = "RXV2-0.9.300-clock-calibration";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -106,6 +106,13 @@ inline uint32_t epochNowS() {
 // are UTC epoch) — remembered in NVS so field days work in local time too.
 inline bool    epochFromPhone = false;    // a phone has synced this boot → ignore TX time
 inline int16_t tzOffsetMin    = 0;        // local = UTC + tzOffsetMin (phone-taught, NVS "tzmin")
+// What the TX's clock face actually holds is anyone's guess — Malcolm's reads
+// UTC plus six minutes of drift (set in winter, never adjusted). So we LEARN
+// its offset from true UTC whenever a phone sync and a TX time packet occur in
+// the same boot (every bench session), remember it in NVS, and apply it on
+// phone-free field days. Self-calibrating: drift and DST both wash out.
+inline int32_t txClockOffS     = 0;       // TX clock face minus true UTC, seconds (NVS "txoffs")
+inline bool    txClockOffKnown = false;
 
 constexpr uint32_t RF_WINDOW_MS         = 1000;    // boot window: if a TX is heard within this 1 s, go RF-only (WiFi off). Short so WiFi comes up fast when there's no TX (dev); means the TX must be ON BEFORE the receiver to suppress WiFi — which is standard RC practice (TX on first) anyway.
 // RF-only "fly mode" auto-recovery: if the TX link then stays lost this long,
@@ -273,6 +280,7 @@ constexpr const char* NVS_KEY_GEAR_RATIO = "gear";       // float main-gear rati
 constexpr const char* NVS_KEY_ARM_CH     = "armch";      // uint8 arming channel (1..16, 0=off): flight saved on DISARM after a real flight
 constexpr const char* NVS_KEY_GAP_MIN    = "gapmin";
 constexpr const char* NVS_KEY_TZ_MIN     = "tzmin";     // minutes local is ahead of UTC (phone-taught)
+constexpr const char* NVS_KEY_TX_OFF_S   = "txoffs";    // TX clock face minus true UTC, seconds (learned)
 constexpr const char* NVS_KEY_FLT_HEAD   = "flthead";    // ring head: physical slot of the NEWEST saved flight (kills the 20-file rotation storm)     // uint8 ms: a packet must be at least this LATE (beyond expected spacing) to count as a gap
 constexpr const char* NVS_KEY_WAVE_CHS   = "wavechs";    // uint16 bitmask of channels waved when Bluetooth comes up (bit0=ch1); default ch1, 0=off
 constexpr const char* NVS_KEY_BOOT_COUNT = "qbc";        // quick-boot counter for escape hatch
