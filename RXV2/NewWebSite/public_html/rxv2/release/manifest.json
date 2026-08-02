@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.301-clock-on-screen",
+      "url": "https://messiter.com/rxv2/release/v0.9.301/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.301/littlefs.bin",
+      "fs_md5": "8e619c346d3e164565b82333f740e00f",
+      "notes": "The clock steps on stage: the Black box status card now shows the receiver's date and time and who taught it (phone or transmitter, with the calibration figure), and the current flight's card says when the session started - so you can see at a glance that the timekeeping is alive, not just trust the event log."
+    },
+    {
       "name": "RXV2-0.9.300-clock-calibration",
       "url": "https://messiter.com/rxv2/release/v0.9.300/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.300/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.290/littlefs.bin",
       "fs_md5": "f6bb6d4e7accef197dac638e693aac8f",
       "notes": "The 10ms doctrine: flight saves now trickle out a few hundred bytes per loop pass - no single pause the transmitter can even see (it logged the old save as a 250ms gap the receiver politely did not). And when WiFi is off with no phone attached and the link has been live 30 seconds, Bluetooth switches off too - nobody flies with Bluetooth on; it returns by itself after landing."
-    },
-    {
-      "name": "RXV2-0.9.289-quiet-moment-save",
-      "url": "https://messiter.com/rxv2/release/v0.9.289/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.289/littlefs.bin",
-      "fs_md5": "4ec6bc7678bbc81b89bc0db5fefbda9a",
-      "notes": "Landing no longer makes the transmitter blink: the flight save now writes ONE ring slot instead of shuffling twenty files, and it waits for a provably quiet moment - disarmed with sticks still for two seconds (or transmitter off). A pilot flying an autorotation is never hands-still, so the save can never stall the link mid-air."
     }
   ]
 }

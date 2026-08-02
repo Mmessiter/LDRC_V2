@@ -1897,6 +1897,15 @@ inline void handleApiState() {
     j += ",\"ip\":\""; j += WiFi.localIP().toString(); j += "\"";
     j += ",\"mac\":\""; j += WiFi.macAddress(); j += "\"";
     j += ",\"rssi\":"; j += (netMode == NET_WIFI_UP ? (int)WiFi.RSSI() : 0);
+    // The receiver's notion of wall-clock time and where it came from —
+    // Malcolm: "the RX is getting the TX time but not putting it on the
+    // black box screen". epoch_s is UTC; the page renders it locally.
+    j += ",\"epoch_s\":"; j += epochNowS();
+    j += ",\"clock_src\":\"";
+    j += (epochOffsetMs == 0 ? "none" : (epochFromPhone ? "phone" : "tx"));
+    j += "\"";
+    j += ",\"tx_off_known\":"; j += (txClockOffKnown ? "true" : "false");
+    j += ",\"tx_off_s\":"; j += txClockOffS;
     j += ",\"uptime_s\":"; j += (uint32_t)((millis() - bootMillis) / 1000);
     j += ",\"uptime_str\":\""; j += uptimeString(); j += "\"";
     j += ",\"free_heap\":"; j += ESP.getFreeHeap();

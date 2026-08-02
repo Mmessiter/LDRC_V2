@@ -378,6 +378,7 @@ inline bool buildFlightJson(uint8_t f, String& j) {
     if (f == 0) {
         FlightHeader h{};
         h.magic = FLIGHT_MAGIC; h.count = teleCount; h.intervalS = 1;
+        h.savedEpochS = epochNowS();   // "now" — lets the page show the live flight's start time
         h.connMs   = (rx.lastMillis > linkStats.connStartMs) ? (rx.lastMillis - linkStats.connStartMs) : 0;
         h.packets  = linkStats.packets;
         { uint32_t tMax, tAvg, tHist[6], tAt;         // packed fields can't bind by ref
