@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.299-param-trace",
+      "url": "https://messiter.com/rxv2/release/v0.9.299/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.299/littlefs.bin",
+      "fs_md5": "597a7ddcc569ace451964898081a1e94",
+      "notes": "Detective's notebook: the receiver now logs every kind of parameter packet the transmitter sends, once per power-on - so 'did the time packet even arrive?' is answered by a glance at the event log. Pairs with a transmitter update that re-sends its clock every minute instead of trusting one fragile moment at connect."
+    },
+    {
       "name": "RXV2-0.9.298-clock-candour",
       "url": "https://messiter.com/rxv2/release/v0.9.298/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.298/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.288/littlefs.bin",
       "fs_md5": "af56b09d0c6d30660fd5cef1ea79b21e",
       "notes": "Malcolm caught the receiver blaming the air for its own housekeeping: saving the flight at disarm stalls the loop (~1s with the 20-slot rotation) and an 808ms gap was billed exactly at arming-off. Saves now announce themselves and the statistics look away - self-inflicted stalls are never recorded as link quality."
-    },
-    {
-      "name": "RXV2-0.9.287-y-scale",
-      "url": "https://messiter.com/rxv2/release/v0.9.287/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.287/littlefs.bin",
-      "fs_md5": "24aa02d17cd22e26f0bf5df723a06160",
-      "notes": "In landscape, every gridline now carries the actual VALUES - one number per trace, printed in that traces colour (each line has its own scale, so read the number that matches the colour). Also the corner buttons no longer sit on top of the cards in landscape."
     }
   ]
 }

@@ -320,6 +320,19 @@ inline void readExtraParameters(const uint8_t* payload, uint8_t size) {
     uint16_t w[24] = {0};                       // w[0]=ID, w[1..11]=words
     decompress(w, compressed, decompressedSize(size));
     const uint16_t id = w[0];
+    // Diagnostic: log each parameter ID once per boot. The TX's initial-setup
+    // burst proved impossible to debug blind (2026-08-02: the time packet
+    // vanished — sent? dropped? refused by the TX's own queue?). One line per
+    // distinct ID per boot answers that forever.
+    if (id >= 1 && id <= 63) {
+        static uint64_t seenIds = 0;
+        if (!(seenIds & (1ULL << id))) {
+            seenIds |= (1ULL << id);
+            char pm[40];
+            snprintf(pm, sizeof(pm), "TX param ID %u first seen", (unsigned)id);
+            events.add(pm);
+        }
+    }
     if (id < 1 || id > PARAM_MAX_ID) return;
 
     // v1 FAILSAFE_SETTINGS (ID 1): the TX's "send failsafe to receiver"
