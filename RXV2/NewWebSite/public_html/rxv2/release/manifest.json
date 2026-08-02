@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.295-honest-warnings",
+      "url": "https://messiter.com/rxv2/release/v0.9.295/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.295/littlefs.bin",
+      "fs_md5": "8c327a4a9eeb1e924c086178941573bd",
+      "notes": "No more crying wolf: saving the global governor from the phone cleared its 'unsaved changes' flag only after the flight controller had rebooted and been re-read - leave the page during those ten seconds and it warned you the save was lost when it wasn't. The flag now clears the instant the save is confirmed in flash, and the after-reboot check patiently retries instead of declaring failure on one slow reply."
+    },
+    {
       "name": "RXV2-0.9.294-verified-writes",
       "url": "https://messiter.com/rxv2/release/v0.9.294/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.294/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.284/littlefs.bin",
       "fs_md5": "0db28317db7aac8defce9d37e4dc3e32",
       "notes": "The flight diary: keeps the last TWENTY flights; unarmed sessions under a minute are wiggle-checks and no longer saved at all; and updates now skip rewriting the web filesystem when it is unchanged (fingerprint match) - so saved flights survive every firmware-only update untouched and field updates get much faster. Background photo slimmed to make room."
-    },
-    {
-      "name": "RXV2-0.9.283-eight-flights",
-      "url": "https://messiter.com/rxv2/release/v0.9.283/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.283/littlefs.bin",
-      "fs_md5": "8b8a1563dc33a27c7369510fcbb2d1a5",
-      "notes": "The black box now keeps the last EIGHT flights (was three) - a couple of bench tests can no longer push a real flight out of history. Updates still preserve all saved flights."
     }
   ]
 }
