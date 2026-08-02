@@ -645,6 +645,11 @@ inline void txParamsLoop() {
 //*********************************************************************
 //  Ack-payload fill for parameter slots  (called from loadNextAck)
 //*********************************************************************
+// True while a TX "send block now" read window is open. Serving param
+// slots outside the window (or before the block's bytes are valid) is
+// how the TX ends up latching zeros — see the idle-skip in loadNextAck.
+inline bool paramReadWindowOpen() { return (int32_t)(millis() - paramSendUntil) < 0; }
+
 inline bool fillParamAck(uint8_t item, uint8_t* ack) {
     if (paramSend == PSEND_RATES && ratesAckValid) {
         switch (item) {

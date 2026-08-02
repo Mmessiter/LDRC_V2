@@ -295,6 +295,20 @@ inline void loadNextAck() {
         // only after the MAC window, by which point a TX that has our model
         // saved has matched and stopped reading slots 0/1 as the MAC.
         if (++telemetryItem > MAX_TELEMETRY_ITEM) telemetryItem = 0;
+        // V1 idle-skip (LoadAckPayload): 25-30/32-34 are MSP param slots. The
+        // TX starts reading the moment its screen opens — BEFORE its "send
+        // now" request has reached us — and the global-governor screen latches
+        // whatever arrives (an all-zero slot counts as "received") then stops
+        // listening, so the real bytes moments later are ignored. V1 never
+        // emits these slots unless actively serving; neither may we. Gate on
+        // the read window being open AND the requested block having valid
+        // bytes; otherwise fall through to 31 / 35 exactly like V1.
+        if ((telemetryItem >= 25 && telemetryItem <= 30) ||
+            (telemetryItem >= 32 && telemetryItem <= 34)) {
+            uint8_t probe[ACK_PAYLOAD_BYTES] = {0};
+            if (!paramReadWindowOpen() || !fillParamAck(telemetryItem, probe))
+                telemetryItem = (telemetryItem <= 30) ? 31 : 35;
+        }
         ack[0] = telemetryItem;
         bool versionCase = false;
 
