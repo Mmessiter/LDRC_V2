@@ -100,3 +100,13 @@ timezone offset (NVS "tzmin", refreshed on every phone connect so DST
 self-heals; phone sync outranks TX for the boot). V1 receivers ignore the
 ID. TXV2 must keep this: same ID, same layout — its RTC (or GPS) is the
 primary field timekeeper, phones optional.
+
+### TXV2 timekeeping hierarchy (Malcolm, 2026-08-02 siesta musing)
+1. Teensy 4.1 built-in RTC (32 kHz crystal, coin cell on VBAT) — ±20-30 ppm,
+   better than V1's DS1307 but still ~a minute/month.
+2. NTP via the on-board ESP32 whenever home WiFi is in range — the primary
+   corrector; silent, exact, no user action. Do this.
+3. GPS from any model that carries one, over the link (V1 scheme kept).
+   Model mounting: sky view, away from ESC/motor/BEC wiring and the tail
+   dipole V — tailboom top forward of the fin, or non-carbon canopy top.
+4. RX-side learned-offset calibration (0.9.300) stays as the safety net.
