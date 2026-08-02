@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.303-help-catches-up";
+constexpr const char* FW_VERSION = "RXV2-0.9.304-field-telemetry";
 
 //*********************************************************************
 //  Auto-update manifest URLs

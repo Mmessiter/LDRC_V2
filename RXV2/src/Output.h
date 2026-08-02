@@ -468,7 +468,14 @@ inline void sbusTick() {
         // and WiFi auto-re-enables. NB auto-WiFi also comes up ~10 s after an
         // IN-FLIGHT signal loss, re-attaching this UART — the "silence while
         // failsafe" guard below the detach block is what keeps that safe.
-        bool wifiConfigUp  = (netMode == NET_WIFI_UP || netMode == NET_AP);
+        // NET_WIFI_CONNECTING counts too (2026-08-02, field report): at the
+        // flying field the STA retries can last ~2 minutes before AP fallback,
+        // and the detach starved MSP the whole time — Black box showed "no
+        // flight-controller telemetry" with the battery plugged in. Safety
+        // unchanged: the silence-while-failsafe guard below already covers
+        // auto-WiFi coming up after an IN-FLIGHT loss (same as NET_WIFI_UP).
+        bool wifiConfigUp  = (netMode == NET_WIFI_UP || netMode == NET_AP ||
+                              netMode == NET_WIFI_CONNECTING);
         bool wantDetach    = everConnected && failsafe && !wifiConfigUp;
         if (wantDetach && !outputDetachedForFailsafe) {
             Serial1.end();
