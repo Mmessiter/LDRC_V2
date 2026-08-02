@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.302-phone-teaches-tx";
+constexpr const char* FW_VERSION = "RXV2-0.9.303-help-catches-up";
 
 //*********************************************************************
 //  Auto-update manifest URLs
