@@ -340,23 +340,38 @@ inline void readExtraParameters(const uint8_t* payload, uint8_t size) {
     // phone sync this boot outranks us (it is the fresher, absolute source).
     // Not Rotorflight-gated: dates matter on FC-less models too.
     if (id == PID_TX_TIME) {
-        if (w[7] != 321 || epochFromPhone) return;    // magic guards a corrupt packet
+        // Log EVERY outcome (rate-limited): a silent return here made a field
+        // test undiagnosable — with the phone connected the TX time is
+        // outranked, and nothing said the packet had even arrived.
+        static uint32_t lastTimeLog = 0;
+        const bool logOk = (uint32_t)(millis() - lastTimeLog) > 60000;
+        if (w[7] != 321) return;                      // magic guards a corrupt packet
         int y = (int)w[1]; if (y < 100) y += 2000;    // TX RTC year is 2-digit
+        char stamp[32];
+        snprintf(stamp, sizeof(stamp), "%04d-%02u-%02u %02u:%02u:%02u",
+                 y, (unsigned)w[2], (unsigned)w[3], (unsigned)w[4], (unsigned)w[5], (unsigned)w[6]);
+        char m[80];
         if (y < 2024 || y > 2120 || w[2] < 1 || w[2] > 12 || w[3] < 1 || w[3] > 31 ||
-            w[4] > 23 || w[5] > 59 || w[6] > 59) return;
+            w[4] > 23 || w[5] > 59 || w[6] > 59) {
+            if (logOk) { lastTimeLog = millis();
+                snprintf(m, sizeof(m), "TX clock REJECTED (bad fields): %s", stamp);
+                events.add(m); }
+            return;
+        }
+        if (epochFromPhone) {                         // phone is the fresher source
+            if (logOk) { lastTimeLog = millis();
+                snprintf(m, sizeof(m), "TX clock heard (phone rules): %s", stamp);
+                events.add(m); }
+            return;
+        }
         int64_t epochS = daysFromCivil(y, w[2], w[3]) * 86400
                        + (int64_t)w[4] * 3600 + (int64_t)w[5] * 60 + w[6]
                        - (int64_t)tzOffsetMin * 60;
         epochOffsetMs = epochS * 1000 - (int64_t)millis();
         patchFlightEpochs();                          // date any flights saved earlier this boot
-        static uint32_t lastTimeLog = 0;
-        if ((uint32_t)(millis() - lastTimeLog) > 60000) {
-            lastTimeLog = millis();
-            char m[64];
-            snprintf(m, sizeof(m), "Clock set by TX: %04d-%02u-%02u %02u:%02u:%02u (tz %+d min)",
-                     y, (unsigned)w[2], (unsigned)w[3], (unsigned)w[4], (unsigned)w[5], (unsigned)w[6], (int)tzOffsetMin);
-            events.add(m);
-        }
+        if (logOk) { lastTimeLog = millis();
+            snprintf(m, sizeof(m), "Clock set by TX: %s (tz %+d min)", stamp, (int)tzOffsetMin);
+            events.add(m); }
         return;
     }
     if (!fcIsRotorflightConfigCapable()) return;

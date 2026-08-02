@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.298-clock-candour",
+      "url": "https://messiter.com/rxv2/release/v0.9.298/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.298/littlefs.bin",
+      "fs_md5": "072e438ccddf81c8f537baa0e3204bcc",
+      "notes": "The transmitter-clock feature now narrates itself: every time packet from the TX is logged with its fate - applied ('Clock set by TX'), outranked ('TX clock heard - phone rules', normal whenever the phone is connected), or rejected with the raw values. No more silent mysteries when testing at the bench."
+    },
+    {
       "name": "RXV2-0.9.297-tx-clock",
       "url": "https://messiter.com/rxv2/release/v0.9.297/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.297/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.287/littlefs.bin",
       "fs_md5": "24aa02d17cd22e26f0bf5df723a06160",
       "notes": "In landscape, every gridline now carries the actual VALUES - one number per trace, printed in that traces colour (each line has its own scale, so read the number that matches the colour). Also the corner buttons no longer sit on top of the cards in landscape."
-    },
-    {
-      "name": "RXV2-0.9.286-landscape-graph",
-      "url": "https://messiter.com/rxv2/release/v0.9.286/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.286/littlefs.bin",
-      "fs_md5": "0bc5c9c150ccad6a0eaccfc148de2c63",
-      "notes": "Turn the phone sideways on the flight page and the graph grows to fill most of the screen - landscape is reading mode, with a crisp high-resolution redraw on every rotation."
     }
   ]
 }
