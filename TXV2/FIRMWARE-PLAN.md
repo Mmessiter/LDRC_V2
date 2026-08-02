@@ -110,3 +110,8 @@ primary field timekeeper, phones optional.
    Model mounting: sky view, away from ESC/motor/BEC wiring and the tail
    dipole V — tailboom top forward of the fin, or non-carbon canopy top.
 4. RX-side learned-offset calibration (0.9.300) stays as the safety net.
+
+Note (2026-08-02): V1's "Delta GMT" display-offset setting is retired — with
+phone-corrected local time in the RTC it must stay 0 (Malcolm set it so).
+TXV2 has NO manual timezone/DST setting: the clock holds local time, taught
+by phone (tz included) / NTP / GPS, and DST changes heal themselves.
