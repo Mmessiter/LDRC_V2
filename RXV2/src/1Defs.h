@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.296-dated-flights";
+constexpr const char* FW_VERSION = "RXV2-0.9.297-tx-clock";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -99,6 +99,13 @@ inline int64_t epochOffsetMs = 0;         // phone epoch_ms minus millis(); 0 = 
 inline uint32_t epochNowS() {
     return epochOffsetMs ? (uint32_t)((epochOffsetMs + (int64_t)millis()) / 1000) : 0;
 }
+// The V1 transmitter's battery-backed RTC also tells us the time (param ID 34)
+// so flights get dated with no phone present at all. The phone remains the
+// better source when available: it outranks the TX for the rest of the boot,
+// and it teaches us the timezone (the TX clock shows LOCAL wall time; stamps
+// are UTC epoch) — remembered in NVS so field days work in local time too.
+inline bool    epochFromPhone = false;    // a phone has synced this boot → ignore TX time
+inline int16_t tzOffsetMin    = 0;        // local = UTC + tzOffsetMin (phone-taught, NVS "tzmin")
 
 constexpr uint32_t RF_WINDOW_MS         = 1000;    // boot window: if a TX is heard within this 1 s, go RF-only (WiFi off). Short so WiFi comes up fast when there's no TX (dev); means the TX must be ON BEFORE the receiver to suppress WiFi — which is standard RC practice (TX on first) anyway.
 // RF-only "fly mode" auto-recovery: if the TX link then stays lost this long,
@@ -265,6 +272,7 @@ constexpr const char* NVS_KEY_FAILSAFE   = "fs";         // 16 x uint16 failsafe
 constexpr const char* NVS_KEY_GEAR_RATIO = "gear";       // float main-gear ratio (motor:head); head speed = motor RPM / gearRatio. 1.0 = direct drive
 constexpr const char* NVS_KEY_ARM_CH     = "armch";      // uint8 arming channel (1..16, 0=off): flight saved on DISARM after a real flight
 constexpr const char* NVS_KEY_GAP_MIN    = "gapmin";
+constexpr const char* NVS_KEY_TZ_MIN     = "tzmin";     // minutes local is ahead of UTC (phone-taught)
 constexpr const char* NVS_KEY_FLT_HEAD   = "flthead";    // ring head: physical slot of the NEWEST saved flight (kills the 20-file rotation storm)     // uint8 ms: a packet must be at least this LATE (beyond expected spacing) to count as a gap
 constexpr const char* NVS_KEY_WAVE_CHS   = "wavechs";    // uint16 bitmask of channels waved when Bluetooth comes up (bit0=ch1); default ch1, 0=off
 constexpr const char* NVS_KEY_BOOT_COUNT = "qbc";        // quick-boot counter for escape hatch

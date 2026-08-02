@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.297-tx-clock",
+      "url": "https://messiter.com/rxv2/release/v0.9.297/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.297/littlefs.bin",
+      "fs_md5": "272cae89247047180cd4a8412487407f",
+      "notes": "The transmitter becomes the timekeeper: its battery-backed, GPS-synchronised clock now tells the receiver the time just after every connection - so flights get proper dates even on phone-free field days, and a battery swap no longer wipes the receiver's sense of time. The phone still teaches the timezone (remembered forever) and takes precedence when connected. Requires the matching transmitter update."
+    },
+    {
       "name": "RXV2-0.9.296-dated-flights",
       "url": "https://messiter.com/rxv2/release/v0.9.296/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.296/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.286/littlefs.bin",
       "fs_md5": "0bc5c9c150ccad6a0eaccfc148de2c63",
       "notes": "Turn the phone sideways on the flight page and the graph grows to fill most of the screen - landscape is reading mode, with a crisp high-resolution redraw on every rotation."
-    },
-    {
-      "name": "RXV2-0.9.285-graph-scales",
-      "url": "https://messiter.com/rxv2/release/v0.9.285/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.285/littlefs.bin",
-      "fs_md5": "26d4532a7282ab8de572d0dd1813abf6",
-      "notes": "Flight-page polish from field review: the graph gains quarter-height gridlines and per-minute time marks (each trace still auto-scales to its own min-max shown in the key); the page title no longer hides behind the corner buttons; and a radio handover is now correctly billed to the flight (a 9-minute flight showed both radios busy yet zero swaps) - unbilled swaps leave a note in the events log saying why."
     }
   ]
 }

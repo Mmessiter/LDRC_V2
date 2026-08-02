@@ -500,6 +500,18 @@ inline void handleTimeSync() {
     const int64_t epochMs = strtoll(server.arg("epoch_ms").c_str(), nullptr, 10);
     if (epochMs < 1600000000000LL) { server.send(400, "text/plain", "bad epoch_ms"); return; }
     epochOffsetMs = epochMs - (int64_t)millis();
+    epochFromPhone = true;                 // phone outranks the TX clock this boot
+    // The page also teaches us the phone's UTC offset. It converts the V1
+    // TX's LOCAL wall-clock time (param ID 34) to UTC epoch, so field days
+    // with no phone still stamp flights in the right timezone. Persisted —
+    // the phone refreshes it each connect (DST changes heal themselves).
+    if (server.hasArg("tz_min")) {
+        int tz = server.arg("tz_min").toInt();
+        if (tz >= -720 && tz <= 840 && tz != tzOffsetMin) {
+            tzOffsetMin = (int16_t)tz;
+            prefs.putShort(NVS_KEY_TZ_MIN, tzOffsetMin);
+        }
+    }
     patchFlightEpochs();
     server.send(200, "application/json", "{\"ok\":true}");
 }
