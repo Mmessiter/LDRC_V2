@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.298-clock-candour";
+constexpr const char* FW_VERSION = "RXV2-0.9.299-param-trace";
 
 //*********************************************************************
 //  Auto-update manifest URLs
