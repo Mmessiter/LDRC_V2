@@ -57,8 +57,21 @@ enum ParamId : uint8_t {
     PID_GOV_WR_CONFIG1      = 31,
     PID_GOV_WR_CONFIG2      = 32,
     PID_GOV_WR_CONFIG3      = 33,
+    PID_TX_TIME             = 34,   // V1 TX's RTC: Y,M,D,h,m,s + 321 magic (added 2026-08-02)
     PARAM_MAX_ID            = 34,
 };
+
+inline void patchFlightEpochs();   // FlightLog.h (included after Radio.h) — used by the TX-time handler
+
+// Howard Hinnant's days-from-civil: days since 1970-01-01 for a Y/M/D.
+inline int64_t daysFromCivil(int y, unsigned m, unsigned d) {
+    y -= m <= 2;
+    const int      era = (y >= 0 ? y : y - 399) / 400;
+    const unsigned yoe = (unsigned)(y - era * 400);
+    const unsigned doy = (153 * (m + (m > 2 ? -3 : 9)) + 2) / 5 + d - 1;
+    const unsigned doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    return (int64_t)era * 146097 + (int64_t)doe - 719468;
+}
 
 // Which block the ack-payload is currently streaming back to the TX (V1
 // SendRotorFlightParametresNow). Cleared when the read window expires.
@@ -317,6 +330,33 @@ inline void readExtraParameters(const uint8_t* payload, uint8_t size) {
     if (id == 1) {
         saveFailsafeToNvs();
         events.add("Failsafe captured (transmitter command)");
+        return;
+    }
+
+    // v1 TX TIME (ID 34): the transmitter's battery-backed (GPS-synced) RTC,
+    // sent just after connect — so flights get dated with no phone anywhere
+    // near the field. The TX clock shows LOCAL wall time; tzOffsetMin (taught
+    // by the phone, NVS) converts to the UTC epoch the flight stamps use. A
+    // phone sync this boot outranks us (it is the fresher, absolute source).
+    // Not Rotorflight-gated: dates matter on FC-less models too.
+    if (id == PID_TX_TIME) {
+        if (w[7] != 321 || epochFromPhone) return;    // magic guards a corrupt packet
+        int y = (int)w[1]; if (y < 100) y += 2000;    // TX RTC year is 2-digit
+        if (y < 2024 || y > 2120 || w[2] < 1 || w[2] > 12 || w[3] < 1 || w[3] > 31 ||
+            w[4] > 23 || w[5] > 59 || w[6] > 59) return;
+        int64_t epochS = daysFromCivil(y, w[2], w[3]) * 86400
+                       + (int64_t)w[4] * 3600 + (int64_t)w[5] * 60 + w[6]
+                       - (int64_t)tzOffsetMin * 60;
+        epochOffsetMs = epochS * 1000 - (int64_t)millis();
+        patchFlightEpochs();                          // date any flights saved earlier this boot
+        static uint32_t lastTimeLog = 0;
+        if ((uint32_t)(millis() - lastTimeLog) > 60000) {
+            lastTimeLog = millis();
+            char m[64];
+            snprintf(m, sizeof(m), "Clock set by TX: %04d-%02u-%02u %02u:%02u:%02u (tz %+d min)",
+                     y, (unsigned)w[2], (unsigned)w[3], (unsigned)w[4], (unsigned)w[5], (unsigned)w[6], (int)tzOffsetMin);
+            events.add(m);
+        }
         return;
     }
     if (!fcIsRotorflightConfigCapable()) return;
