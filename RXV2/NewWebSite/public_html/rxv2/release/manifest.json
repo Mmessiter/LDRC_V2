@@ -5,84 +5,84 @@
       "url": "https://messiter.com/rxv2/release/v0.9.292/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.292/littlefs.bin",
       "fs_md5": "4ce04705f777f14bc2161b03b5a430d6",
-      "notes": ""
+      "notes": "Detective work: the transmitter's global governor screen stays blank while the phone reads the same settings fine. This build adds breadcrumbs to the events log at every step of that path - open the screen on the transmitter once, and the log will point at the guilty stage."
     },
     {
       "name": "RXV2-0.9.291-flight-eraser",
       "url": "https://messiter.com/rxv2/release/v0.9.291/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.291/littlefs.bin",
       "fs_md5": "d1bf77f825647b5f7ddde2f15fa379c8",
-      "notes": ""
+      "notes": "The flight diary gains an eraser: a Delete button appears when viewing any saved flight (never the live one) - tap twice to confirm, and a brief boring test vanishes to free its slot."
     },
     {
       "name": "RXV2-0.9.290-ten-ms-doctrine",
       "url": "https://messiter.com/rxv2/release/v0.9.290/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.290/littlefs.bin",
       "fs_md5": "f6bb6d4e7accef197dac638e693aac8f",
-      "notes": ""
+      "notes": "The 10ms doctrine: flight saves now trickle out a few hundred bytes per loop pass - no single pause the transmitter can even see (it logged the old save as a 250ms gap the receiver politely did not). And when WiFi is off with no phone attached and the link has been live 30 seconds, Bluetooth switches off too - nobody flies with Bluetooth on; it returns by itself after landing."
     },
     {
       "name": "RXV2-0.9.289-quiet-moment-save",
       "url": "https://messiter.com/rxv2/release/v0.9.289/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.289/littlefs.bin",
       "fs_md5": "4ec6bc7678bbc81b89bc0db5fefbda9a",
-      "notes": ""
+      "notes": "Landing no longer makes the transmitter blink: the flight save now writes ONE ring slot instead of shuffling twenty files, and it waits for a provably quiet moment - disarmed with sticks still for two seconds (or transmitter off). A pilot flying an autorotation is never hands-still, so the save can never stall the link mid-air."
     },
     {
       "name": "RXV2-0.9.288-save-stall-quiet",
       "url": "https://messiter.com/rxv2/release/v0.9.288/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.288/littlefs.bin",
       "fs_md5": "af56b09d0c6d30660fd5cef1ea79b21e",
-      "notes": ""
+      "notes": "Malcolm caught the receiver blaming the air for its own housekeeping: saving the flight at disarm stalls the loop (~1s with the 20-slot rotation) and an 808ms gap was billed exactly at arming-off. Saves now announce themselves and the statistics look away - self-inflicted stalls are never recorded as link quality."
     },
     {
       "name": "RXV2-0.9.287-y-scale",
       "url": "https://messiter.com/rxv2/release/v0.9.287/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.287/littlefs.bin",
       "fs_md5": "24aa02d17cd22e26f0bf5df723a06160",
-      "notes": ""
+      "notes": "In landscape, every gridline now carries the actual VALUES - one number per trace, printed in that traces colour (each line has its own scale, so read the number that matches the colour). Also the corner buttons no longer sit on top of the cards in landscape."
     },
     {
       "name": "RXV2-0.9.286-landscape-graph",
       "url": "https://messiter.com/rxv2/release/v0.9.286/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.286/littlefs.bin",
       "fs_md5": "0bc5c9c150ccad6a0eaccfc148de2c63",
-      "notes": ""
+      "notes": "Turn the phone sideways on the flight page and the graph grows to fill most of the screen - landscape is reading mode, with a crisp high-resolution redraw on every rotation."
     },
     {
       "name": "RXV2-0.9.285-graph-scales",
       "url": "https://messiter.com/rxv2/release/v0.9.285/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.285/littlefs.bin",
       "fs_md5": "26d4532a7282ab8de572d0dd1813abf6",
-      "notes": ""
+      "notes": "Flight-page polish from field review: the graph gains quarter-height gridlines and per-minute time marks (each trace still auto-scales to its own min-max shown in the key); the page title no longer hides behind the corner buttons; and a radio handover is now correctly billed to the flight (a 9-minute flight showed both radios busy yet zero swaps) - unbilled swaps leave a note in the events log saying why."
     },
     {
       "name": "RXV2-0.9.284-flight-diary",
       "url": "https://messiter.com/rxv2/release/v0.9.284/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.284/littlefs.bin",
       "fs_md5": "0db28317db7aac8defce9d37e4dc3e32",
-      "notes": ""
+      "notes": "The flight diary: keeps the last TWENTY flights; unarmed sessions under a minute are wiggle-checks and no longer saved at all; and updates now skip rewriting the web filesystem when it is unchanged (fingerprint match) - so saved flights survive every firmware-only update untouched and field updates get much faster. Background photo slimmed to make room."
     },
     {
       "name": "RXV2-0.9.283-eight-flights",
       "url": "https://messiter.com/rxv2/release/v0.9.283/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.283/littlefs.bin",
       "fs_md5": "8b8a1563dc33a27c7369510fcbb2d1a5",
-      "notes": ""
+      "notes": "The black box now keeps the last EIGHT flights (was three) - a couple of bench tests can no longer push a real flight out of history. Updates still preserve all saved flights."
     },
     {
       "name": "RXV2-0.9.282-heli-wave",
       "url": "https://messiter.com/rxv2/release/v0.9.282/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.282/littlefs.bin",
       "fs_md5": "3d8f74dc1c55e19f940706453e3a2d8f",
-      "notes": ""
+      "notes": "The Bluetooth-ready wave now shows on flight-controller models too (the disarmed FC passes cyclic to the swash, so you can see it) - with an extra guard: FC models only wave when no transmitter is live, so a mid-air reboot can never wiggle a flying machine."
     },
     {
       "name": "RXV2-0.9.281-exit-and-reload",
       "url": "https://messiter.com/rxv2/release/v0.9.281/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.281/littlefs.bin",
       "fs_md5": "3bdbc38ef3f8c989914fbbed81ddbe4d",
-      "notes": ""
+      "notes": "After a rename the screen now says exactly what to do - exit and reload, the receiver reappears under its new name. Also fixed: the Android app was taking WiFi-flavoured wording everywhere (its Bluetooth disguise was not recognised)."
     }
   ]
 }
