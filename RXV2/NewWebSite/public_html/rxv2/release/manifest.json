@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.304-field-telemetry",
+      "url": "https://messiter.com/rxv2/release/v0.9.304/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.304/littlefs.bin",
+      "fs_md5": "09ade3cae2a10c6b46b6b0f5b551aa58",
+      "notes": "Field fix from today's three test flights: after landing away from home WiFi, the receiver kept the flight controller cut off during its ~2 minutes of hopeful WiFi retries - so the Black box showed 'no telemetry' with the battery plugged in. The flight-controller line now stays connected throughout, and the battery card fills in seconds at the field, just as it does at home."
+    },
+    {
       "name": "RXV2-0.9.303-help-catches-up",
       "url": "https://messiter.com/rxv2/release/v0.9.303/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.303/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.293/littlefs.bin",
       "fs_md5": "36b689dcb28ffc073ac3d03e534b9885",
       "notes": "Case closed: the transmitter's global governor screen showed zeros because the receiver kept broadcasting empty parameter slots while the transmitter's request was still in flight - the screen latched the zeros and stopped listening a tenth of a second before the real values arrived. Now, like V1, those slots stay silent unless there is genuinely something to say."
-    },
-    {
-      "name": "RXV2-0.9.292-govcfg-tracer",
-      "url": "https://messiter.com/rxv2/release/v0.9.292/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.292/littlefs.bin",
-      "fs_md5": "4ce04705f777f14bc2161b03b5a430d6",
-      "notes": "Detective work: the transmitter's global governor screen stays blank while the phone reads the same settings fine. This build adds breadcrumbs to the events log at every step of that path - open the screen on the transmitter once, and the log will point at the guilty stage."
     }
   ]
 }
