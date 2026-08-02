@@ -455,6 +455,11 @@ async function save() {
     try {
         await LDRC.msp(143, bytesToHex(bytes));   // SET_GOVERNOR_CONFIG
         await LDRC.msp(250);                       // EEPROM_WRITE
+        // The edits are PERSISTED from this point — the reboot + read-back
+        // below are verification, not saving. Clear the un-saved-edits flag
+        // NOW, so leaving the page during the ~10 s reboot wait doesn't
+        // raise a false "changes will be lost" warning.
+        LDRC.clearDirty();
         // MSP_REBOOT (68) — needed because gov config is a Parameter Group;
         // EEPROM_WRITE persists to flash but the running governor still
         // uses the values it loaded at boot. Reboot makes the FC re-read.
@@ -466,7 +471,16 @@ async function save() {
         // Wait for FC firmware to come back up, then re-verify by reload.
         await new Promise(r => setTimeout(r, 7000));
         setStatus('info', 'Re-reading from flight controller after reboot…');
-        const check = hexToBytes(await LDRC.msp(142));
+        // A slow FC boot (or a BLE hiccup) shouldn't turn a good save into a
+        // scary "Save failed" — give the read-back a few patient attempts.
+        let check = null;
+        for (let attempt = 0; attempt < 3 && !check; attempt++) {
+            try { check = hexToBytes(await LDRC.msp(142)); }
+            catch (e) {
+                if (attempt === 2) throw e;
+                await new Promise(r => setTimeout(r, 3000));
+            }
+        }
         const diffs = [];
         for (let i = 0; i < bytes.length && i < check.length; i++) {
             if (bytes[i] !== check[i]) diffs.push('byte ' + i + ': sent ' + bytes[i] + ' got ' + check[i]);
