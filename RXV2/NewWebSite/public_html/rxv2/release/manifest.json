@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.302-phone-teaches-tx",
+      "url": "https://messiter.com/rxv2/release/v0.9.302/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.302/littlefs.bin",
+      "fs_md5": "1f0ec3955b42be50914e931eea88d7f5",
+      "notes": "The circle closes: whenever the receiver's clock came from a phone, it now offers that true time back to the transmitter over the radio link (ack item 37) - and the updated transmitter quietly corrects its own drifty clock from it. Most models never carry GPS, but every model meets a phone; now every phone connection keeps the whole fleet's clocks honest. Needs the matching transmitter update."
+    },
+    {
       "name": "RXV2-0.9.301-clock-on-screen",
       "url": "https://messiter.com/rxv2/release/v0.9.301/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.301/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.291/littlefs.bin",
       "fs_md5": "d1bf77f825647b5f7ddde2f15fa379c8",
       "notes": "The flight diary gains an eraser: a Delete button appears when viewing any saved flight (never the live one) - tap twice to confirm, and a brief boring test vanishes to free its slot."
-    },
-    {
-      "name": "RXV2-0.9.290-ten-ms-doctrine",
-      "url": "https://messiter.com/rxv2/release/v0.9.290/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.290/littlefs.bin",
-      "fs_md5": "f6bb6d4e7accef197dac638e693aac8f",
-      "notes": "The 10ms doctrine: flight saves now trickle out a few hundred bytes per loop pass - no single pause the transmitter can even see (it logged the old save as a 250ms gap the receiver politely did not). And when WiFi is off with no phone attached and the link has been live 30 seconds, Bluetooth switches off too - nobody flies with Bluetooth on; it returns by itself after landing."
     }
   ]
 }

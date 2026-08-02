@@ -309,6 +309,11 @@ inline void loadNextAck() {
             if (!paramReadWindowOpen() || !fillParamAck(telemetryItem, probe))
                 telemetryItem = (telemetryItem <= 30) ? 31 : 35;
         }
+        // Item 37 carries phone-true LOCAL time so the TX can correct its own
+        // RTC (Malcolm's idea: most models never carry GPS, but every model
+        // meets a phone). ONLY when this boot's clock came from a phone —
+        // never echo back time we learned from the TX itself.
+        if (telemetryItem == 37 && !epochFromPhone) telemetryItem = 0;
         ack[0] = telemetryItem;
         bool versionCase = false;
 
@@ -392,6 +397,9 @@ inline void loadNextAck() {
                 }
                 break;
             case 35:  packU32(ack, buildDays);                      break;  // BuildAge in days since 2020-01-01
+            case 37:  // phone-true LOCAL wall time (epoch s) — TX corrects its RTC from this
+                packU32(ack, (uint32_t)((int64_t)epochNowS() + (int64_t)tzOffsetMin * 60));
+                break;
             default:  break;
         }
         if (hopThisAck) {
