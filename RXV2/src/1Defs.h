@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.300-clock-calibration";
+constexpr const char* FW_VERSION = "RXV2-0.9.301-clock-on-screen";
 
 //*********************************************************************
 //  Auto-update manifest URLs

@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Black box &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=134">
-<script src="/app.js?v=134" defer></script>
+<link rel=stylesheet href="/style.css?v=135">
+<script src="/app.js?v=135" defer></script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -94,6 +94,21 @@ async function refreshStatus() {
               + (rf.esc_temp_c != null ? (+rf.esc_temp_c).toFixed(0) : '—') + ' &deg;C</b>';
         if (fc.flight_mode) rows += '<br>Mode: <b>' + fc.flight_mode.replace(/</g, '&lt;') + '</b>';
     }
+    // The receiver's clock — proof at a glance that the time has arrived
+    // (from the phone, or the transmitter's calibrated RTC on phone-free days).
+    const inf = s.info || {};
+    let clk;
+    if (inf.epoch_s) {
+        const srcTxt = inf.clock_src === 'tx' ? 'transmitter' : 'phone';
+        clk = 'Receiver clock: <b>' + new Date(inf.epoch_s * 1000).toLocaleString([],
+            { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+            + '</b> <span style="color:#5a6b74">(set by ' + srcTxt + ')</span>';
+    } else {
+        clk = 'Receiver clock: <b>not set</b> <span style="color:#5a6b74">— arrives from the transmitter or a phone</span>';
+    }
+    if (inf.tx_off_known) clk += '<br><span style="color:#5a6b74;font-size:.85em">TX clock calibrated: '
+        + (inf.tx_off_s >= 0 ? '+' : '') + inf.tx_off_s + ' s vs UTC</span>';
+    rows += (rows ? '<br>' : '') + clk;
     document.getElementById('stRows').innerHTML = rows;
     document.getElementById('stNote').textContent = telemLive
         ? '% is a resting-voltage estimate (reads low under load). Cell count auto-detected. Store at 3.80 V/cell (~40%).'
