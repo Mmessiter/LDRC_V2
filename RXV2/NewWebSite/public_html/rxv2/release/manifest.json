@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.307-seaworthy-lifeboat",
+      "url": "https://messiter.com/rxv2/release/v0.9.307/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.307/littlefs.bin",
+      "fs_md5": "8e8c4c516e46bc4365c4c5adc81985db",
+      "notes": "A sad discovery and its fix: the lifeboat that carries saved flights across page updates was boarding passengers in the wrong order - under memory pressure it saved arbitrary old flights and lost the newest, which is how yesterday's first dated field flights drowned. It now boards newest-first, uses the board's big PSRAM when available (the whole 20-flight diary fits), and the event log honestly reports 'N of M flights aboard' at every crossing."
+    },
+    {
       "name": "RXV2-0.9.306-tuning-notes",
       "url": "https://messiter.com/rxv2/release/v0.9.306/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.306/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.296/littlefs.bin",
       "fs_md5": "7c3a98c1a2a3193523643502ce340db6",
       "notes": "Every flight now says when it happened: the Flight analysis card leads with the date and time (learned quietly from your phone's clock each time the app connects), not just the position in the list. Flights saved before the receiver ever knew the time say so honestly."
-    },
-    {
-      "name": "RXV2-0.9.295-honest-warnings",
-      "url": "https://messiter.com/rxv2/release/v0.9.295/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.295/littlefs.bin",
-      "fs_md5": "8c327a4a9eeb1e924c086178941573bd",
-      "notes": "No more crying wolf: saving the global governor from the phone cleared its 'unsaved changes' flag only after the flight controller had rebooted and been re-read - leave the page during those ten seconds and it warned you the save was lost when it wasn't. The flag now clears the instant the save is confirmed in flash, and the after-reboot check patiently retries instead of declaring failure on one slow reply."
     }
   ]
 }
