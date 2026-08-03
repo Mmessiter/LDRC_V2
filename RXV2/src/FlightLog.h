@@ -157,12 +157,16 @@ inline uint16_t     svWritten = 0;
 inline bool         svRotate  = true;
 inline bool         svOk      = true;
 
+// Ack item 38: "pardon the next N ms" — sent a couple of dozen times before
+// the save's file operations so the TX can exclude the flash-erase stall from
+// its gap statistics (Malcolm 2026-08-03: the only >100 ms gap in his log was
+// the save, right after motor-off — honest, but it polluted the averages).
+inline uint32_t svAnnounceStartMs = 0;
+
 inline void startFlightSaveAsync(bool rotate) {
     if (svState) return;                                 // one save at a time
     if (!littleFsMounted || teleCount < FLIGHT_MIN_SAMPLES) return;
     statsSelfStallUntilMs = millis() + 2000;
-    svFile = LittleFS.open("/flt.tmp", "w");
-    if (!svFile) return;
     svHdr = FlightHeader{};
     svHdr.magic     = FLIGHT_MAGIC;
     svHdr.count     = teleCount;
@@ -181,13 +185,35 @@ inline void startFlightSaveAsync(bool rotate) {
     // continue while the write trickles out.
     const uint16_t start = (teleCount < TELE_RING) ? 0 : teleHead;
     for (uint16_t i = 0; i < svHdr.count; ++i) svBuf[i] = teleRing[(start + i) % TELE_RING];
+    svWritten = 0; svRotate = rotate;
+    // ANNOUNCE first (svState 3): the tmp-file open below can trigger a flash
+    // erase — the very stall we are pardoning — so the pardon must be on the
+    // TX's side of the air before any file work begins.
+    fltPardonAnnounceLeft = 25;                          // ~50 ms of acks at 500 Hz
+    svAnnounceStartMs = millis();
+    svState = 3;
+}
+
+// Announce complete (or timed out — TX off means nobody consumes acks):
+// open the file and write the header, then hand over to the chunked writer.
+inline void flightSaveAsyncBeginFile() {
+    svFile = LittleFS.open("/flt.tmp", "w");
+    if (!svFile) { svState = 0; return; }
     svOk = svFile.write((const uint8_t*)&svHdr, sizeof(svHdr)) == sizeof(svHdr);
-    svWritten = 0; svRotate = rotate; svState = 1;
+    svState = 1;
 }
 
 inline void flightSaveAsyncTick() {
     if (!svState) return;
     statsSelfStallUntilMs = millis() + 2000;             // stats look away until done
+    if (svState == 3) {                                  // pardon-announce phase
+        if (fltPardonAnnounceLeft == 0 ||
+            (uint32_t)(millis() - svAnnounceStartMs) > 500) {
+            fltPardonAnnounceLeft = 0;
+            flightSaveAsyncBeginFile();
+        }
+        return;
+    }
     if (svState == 1) {
         uint16_t n = svHdr.count - svWritten; if (n > 64) n = 64;
         if (n && svOk) {
