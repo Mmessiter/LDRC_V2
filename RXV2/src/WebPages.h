@@ -1871,6 +1871,11 @@ inline void handleApiFlightLog() {
     server.send(200, "application/json", j);
 }
 inline void handleApiFlights() {
+    // Asking for the flight list ends any save's quiet-moment wait — the
+    // pilot is demonstrably on the ground, phone in hand (Malcolm 2026-08-03).
+    // The async writer does the actual work over the next loop passes; the
+    // page's 5 s refresh then shows the freshly saved flight.
+    fltSaveAsapMs = millis();
     String j; buildFlightsListJson(j);
     server.sendHeader("Cache-Control", "no-store");
     server.send(200, "application/json", j);

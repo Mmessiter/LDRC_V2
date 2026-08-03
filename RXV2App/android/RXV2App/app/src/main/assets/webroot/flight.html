@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Flight analysis &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=137">
-<script src="/app.js?v=137" defer></script>
+<link rel=stylesheet href="/style.css?v=138">
+<script src="/app.js?v=138" defer></script>
 <style>
 /* Landscape = reading mode (Malcolm 2026-07-31): the page widens and the
    graph grows to occupy most of the screen instead of a slim centre column. */
@@ -172,7 +172,8 @@ async function populateFlightSelector() {
         // /api/time) — show the real date; fall back to relative names.
         const ds = fl.saved_at ? new Date(fl.saved_at * 1000).toLocaleString([],
             { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : null;
-        if (fl.i === 0) label = 'Current' + (fl.count > 1 ? ' (' + fmt(fl.dur_ms) + ')' : ' — none yet');
+        if (fl.i === 0) label = 'Current' + (fl.saving ? ' — saving the last flight, a moment…'
+                                            : fl.count > 1 ? ' (' + fmt(fl.dur_ms) + ')' : ' — none yet');
         else label = (ds || (fl.i === 1 ? 'Previous' : fl.i + ' flights ago')) + ' (' + fmt(fl.dur_ms) + ')';
         html += '<option value="' + fl.i + '">' + label + '</option>';
     }
