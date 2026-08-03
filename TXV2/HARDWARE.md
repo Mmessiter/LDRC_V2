@@ -216,14 +216,23 @@ and 1Definitions.h. Charging amendment drafted 2026-07-19.*
 ## Rev-A erratum 1 — Pololu 2808 footprint mirrored (2026-07-25)
 
 The 2808 pad grid on Rev-A boards is a mirror image of the real module.
-**Rescue (no respin):** mount the module on the BOARD UNDERSIDE — a mirrored
-footprint is correct from the other side (mirror × mirror = identity), and
-the 6+7 keying admits only the correct orientation there. Solder with plain
-male pins, module flush; its on-board button (facing down) is unused — the
-vandal button on BTN is the power control. Use **6 mm standoffs** (flush
-module needs ~5.5 mm below the board; the USB case slot absorbs the 1 mm
-shift without re-cutting). Before first power-up: continuity-beep VIN/GND
-from the XT30 to the module.
+**Two equivalent rescues (no respin)** — a mirror is cured either by the
+board's other face or by flipping the module; both are the same reflection:
+
+**A (preferred, Malcolm 2026-08-03): TOP side, module UPSIDE-DOWN on
+headers.** The 6+7 keying still admits only the correct orientation (the
+flipped-on-top presentation is geometrically identical to right-side-up
+underneath). Components hang downward with ~8 mm header clearance — nothing
+touches. The on-board switch/button faces the PCB and is inaccessible: set
+it ON before installation (the vandal button on BTN is the power control).
+Bonus: the board underside stays flat — **no 6 mm standoffs needed**.
+
+**B (original): board UNDERSIDE, right-side-up**, flush on plain male pins;
+requires the 6 mm standoffs (~5.5 mm module below the board; the USB case
+slot absorbs the 1 mm shift).
+
+Either way, before first power-up: continuity-beep VIN/GND from the XT30 to
+the module — the ten-second test that beats every mirror.
 
 ## Rev-A erratum 2 — ESP32 "< USB end" silkscreen is BACKWARDS (2026-07-25)
 
