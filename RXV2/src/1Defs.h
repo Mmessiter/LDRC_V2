@@ -110,8 +110,9 @@ inline int16_t tzOffsetMin    = 0;        // local = UTC + tzOffsetMin (phone-ta
 // Flight-save gap pardon (ack item 38): FlightLog sets the counter before its
 // flash work; Radio.h's ack loader consumes it. In 1Defs because Radio.h is
 // compiled before FlightLog.h.
-constexpr uint32_t FLT_PARDON_MS = 3000;
-inline uint8_t fltPardonAnnounceLeft = 0;
+constexpr uint32_t FLT_PARDON_MS = 3000;   // safety ceiling — auto-expires even if the cancel is lost
+inline uint8_t  fltPardonAnnounceLeft = 0;
+inline uint32_t fltPardonMsToSend = FLT_PARDON_MS;   // 0 = "unignore now" (Malcolm's explicit end)
 // What the TX's clock face actually holds is anyone's guess — Malcolm's reads
 // UTC plus six minutes of drift (set in winter, never adjusted). So we LEARN
 // its offset from true UTC whenever a phone sync and a TX time packet occur in
