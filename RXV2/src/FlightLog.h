@@ -246,6 +246,18 @@ inline void patchFlightEpochs() {
 // flights out of history. The arm-based save keeps its own rule (>=30 s
 // ARMED) — a deliberate short armed hop still saves.
 constexpr uint32_t FLIGHT_FALLBACK_MIN_MS = 60000;
+// Malcolm's idea (2026-08-03): a REQUEST for the flight list is itself proof
+// the pilot is on the ground looking at a phone — so it may end the save's
+// quiet-moment wait immediately. Set to millis() by the /api/flights.json
+// handler; treated as active for 5 s (auto-expires, nothing to clear).
+inline uint32_t fltSaveAsapMs = 0;
+inline bool fltSaveAsapActive() {
+    return fltSaveAsapMs && (uint32_t)(millis() - fltSaveAsapMs) < 5000;
+}
+// Lifted out of flightSaveTick so the flights-list JSON can say "saving".
+inline bool fltSavePending = false;
+inline bool fltSessionSaved = false;
+
 
 inline void maybeSaveFlight() {
     static uint32_t armedConnStart = 0;   // the connStart of a flight awaiting save
@@ -255,8 +267,9 @@ inline void maybeSaveFlight() {
         armedConnStart = linkStats.connStartMs;   // a flight is running; arm it
         return;
     }
+    const uint32_t waitMs = fltSaveAsapActive() ? 3000 : FLIGHT_SAVE_AFTER_MS;
     if (armedConnStart != 0 && armedConnStart == linkStats.connStartMs &&
-        rx.lastMillis != 0 && (uint32_t)(now - rx.lastMillis) > FLIGHT_SAVE_AFTER_MS) {
+        rx.lastMillis != 0 && (uint32_t)(now - rx.lastMillis) > waitMs) {
         const uint32_t durMs = (rx.lastMillis > linkStats.connStartMs)
                                ? rx.lastMillis - linkStats.connStartMs : 0;
         if (durMs >= FLIGHT_FALLBACK_MIN_MS) startFlightSaveAsync(true);
@@ -280,6 +293,7 @@ inline void maybeSaveFlight() {
 // 0 (unset) we fall back to the old link-loss save so nothing regresses.
 constexpr uint32_t FLIGHT_ARMED_MIN_MS = 30000;   // armed at least this long = a real flight
 
+
 inline void flightSaveTick() {
     if (armingChannel < 1 || armingChannel > 16) {   // feature off → keep the old behaviour
         maybeSaveFlight();
@@ -288,9 +302,7 @@ inline void flightSaveTick() {
     static bool     wasArmed        = false;
     static uint32_t armedSince      = 0;
     static bool     sessionWorth    = false;         // has this session had a real (>=30 s) flight?
-    static bool     sessionSaved    = false;         // has this session been written to flt0 yet?
     static bool     sessionEverArmed = false;        // any arm edge at all this session?
-    static bool     savePending     = false;         // disarm seen; write when it's QUIET
     static uint32_t sessionConnStart = 0xFFFFFFFF;
     const uint32_t now = millis();
 
@@ -300,9 +312,9 @@ inline void flightSaveTick() {
     if (linkStats.connStartMs != sessionConnStart) {
         sessionConnStart = linkStats.connStartMs;
         sessionWorth = false;
-        sessionSaved = false;
+        fltSessionSaved = false;
         sessionEverArmed = false;
-        savePending = false;
+        fltSavePending = false;
     }
 
     // Armed only counts while the link is actually live — a lost link freezes
@@ -312,7 +324,7 @@ inline void flightSaveTick() {
 
     if (armed && !wasArmed) { armedSince = now; sessionEverArmed = true; }      // arm edge
     if (armed && (uint32_t)(now - armedSince) >= FLIGHT_ARMED_MIN_MS) sessionWorth = true;
-    if (!armed && wasArmed && sessionWorth) savePending = true;                 // DISARM edge in a real flight
+    if (!armed && wasArmed && sessionWorth) fltSavePending = true;                 // DISARM edge in a real flight
     wasArmed = armed;
 
     // The WRITE waits for a provably-quiet moment (Malcolm 2026-08-01: the
@@ -322,13 +334,13 @@ inline void flightSaveTick() {
     // Quiet = disarmed AND sticks still for 2 s (a pilot flying is never
     // hands-still), or the TX is off. First save of the session advances the
     // ring; later saves overwrite the same slot (one flight per battery).
-    if (savePending && !armed) {
+    if (fltSavePending && !armed) {
         const bool sticksStill = lastChMoveMs && (uint32_t)(now - lastChMoveMs) >= 2000;
         const bool linkDead    = rx.lastMillis && (uint32_t)(now - rx.lastMillis) > 3000;
-        if (sticksStill || linkDead) {
-            startFlightSaveAsync(!sessionSaved);
-            sessionSaved = true;               // (the RAM ring spans the whole session, so each save holds everything so far)
-            savePending  = false;
+        if (sticksStill || linkDead || fltSaveAsapActive()) {   // a data request ends the wait
+            startFlightSaveAsync(!fltSessionSaved);
+            fltSessionSaved = true;            // (the RAM ring spans the whole session, so each save holds everything so far)
+            fltSavePending  = false;
         }
     }
 
@@ -337,7 +349,7 @@ inline void flightSaveTick() {
     // — Malcolm lost a simulated flight exactly this way. Fall back to the
     // link-dead save for those. Armed-but-short sessions (aborted spool-ups)
     // stay excluded: they had an arm edge, so the strict rule still applies.
-    if (!sessionEverArmed && !sessionSaved) maybeSaveFlight();
+    if (!sessionEverArmed && !fltSessionSaved) maybeSaveFlight();
 }
 
 //*********************************************************************
@@ -424,9 +436,10 @@ inline bool buildFlightJson(uint8_t f, String& j) {
 inline void buildFlightsListJson(String& j) {
     char b[64];
     j += "[";
-    snprintf(b, sizeof(b), "{\"i\":0,\"count\":%u,\"dur_ms\":%u,\"live\":true}",
+    snprintf(b, sizeof(b), "{\"i\":0,\"count\":%u,\"dur_ms\":%u,\"live\":true,\"saving\":%s}",
              (unsigned)teleCount,
-             (unsigned)((rx.lastMillis > linkStats.connStartMs) ? (rx.lastMillis - linkStats.connStartMs) : 0));
+             (unsigned)((rx.lastMillis > linkStats.connStartMs) ? (rx.lastMillis - linkStats.connStartMs) : 0),
+             (fltSavePending || svState) ? "true" : "false");
     j += b;
     if (littleFsMounted) {
         for (uint8_t f = 1; f <= FLIGHT_KEEP; ++f) {

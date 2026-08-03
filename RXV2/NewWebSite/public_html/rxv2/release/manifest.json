@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.309-ask-and-receive",
+      "url": "https://messiter.com/rxv2/release/v0.9.309/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.309/littlefs.bin",
+      "fs_md5": "1695ef36780f2976aa8d24c5f0e2a7d5",
+      "notes": "Ask and receive (Malcolm's idea): opening the flight list is itself proof the pilot is on the ground - so it now ends the save's polite waiting immediately, and while the write completes the selector says 'saving the last flight, a moment...' instead of leaving you wondering. The safety rules are untouched: saves still never run while armed."
+    },
+    {
       "name": "RXV2-0.9.308-flight-page-fix",
       "url": "https://messiter.com/rxv2/release/v0.9.308/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.308/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.298/littlefs.bin",
       "fs_md5": "072e438ccddf81c8f537baa0e3204bcc",
       "notes": "The transmitter-clock feature now narrates itself: every time packet from the TX is logged with its fate - applied ('Clock set by TX'), outranked ('TX clock heard - phone rules', normal whenever the phone is connected), or rejected with the raw values. No more silent mysteries when testing at the bench."
-    },
-    {
-      "name": "RXV2-0.9.297-tx-clock",
-      "url": "https://messiter.com/rxv2/release/v0.9.297/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.297/littlefs.bin",
-      "fs_md5": "272cae89247047180cd4a8412487407f",
-      "notes": "The transmitter becomes the timekeeper: its battery-backed, GPS-synchronised clock now tells the receiver the time just after every connection - so flights get proper dates even on phone-free field days, and a battery swap no longer wipes the receiver's sense of time. The phone still teaches the timezone (remembered forever) and takes precedence when connected. Requires the matching transmitter update."
     }
   ]
 }

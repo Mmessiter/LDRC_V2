@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.308-flight-page-fix";
+constexpr const char* FW_VERSION = "RXV2-0.9.309-ask-and-receive";
 
 //*********************************************************************
 //  Auto-update manifest URLs
