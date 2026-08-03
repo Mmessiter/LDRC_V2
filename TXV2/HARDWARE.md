@@ -112,6 +112,15 @@ VBAT_RAW and ON (press = turn on); OFF<-Teensy pin5 LATCH_OFF (MCU
 shutdown); Teensy pin4 senses the button via a 47k/15k divider off the
 ON node; CTRL to a test pad. Row spacing 10.16mm to be confirmed by
 1:1 paper test-fit.
+- **Crash-proof power-off (Malcolm 2026-08-03):** the graceful off runs
+  through the Teensy, so a crashed program strands the vandal button (and
+  the 2808's own hardware button is buried by the flip-mount). Fit a small
+  RECESSED pinhole button on the case wired to the 2808's **A/B button
+  pads** — a pure-hardware power toggle, code not consulted. Recessing
+  (pen-tip access) makes accidental in-flight presses impossible. Hierarchy:
+  vandal press = graceful software off with countdown; hung code = watchdog
+  reboot (DelayWithDog); all else = the pinhole. Add 1x miniature momentary
+  button to the shopping list.
 - Battery voltage via **47k/15k divider** from the switched rail into
   Teensy pin 24/A10 (Malcolm 2026-07-19: INA219 dropped; no current
   readout — the BQ25887 ADC reports pack/per-cell volts while charging).
