@@ -189,6 +189,7 @@ inline void startFlightSaveAsync(bool rotate) {
     // ANNOUNCE first (svState 3): the tmp-file open below can trigger a flash
     // erase — the very stall we are pardoning — so the pardon must be on the
     // TX's side of the air before any file work begins.
+    fltPardonMsToSend = FLT_PARDON_MS;
     fltPardonAnnounceLeft = 25;                          // ~50 ms of acks at 500 Hz
     svAnnounceStartMs = millis();
     svState = 3;
@@ -228,6 +229,10 @@ inline void flightSaveAsyncTick() {
         LittleFS.remove("/flt.tmp");
         events.add("Flight save FAILED (flash full?)");
         svState = 0;
+        // Save finished — send Malcolm's explicit "unignore" (item 38, value
+        // 0) so the TX's pardon ends NOW rather than at the 3 s safety ceiling.
+        fltPardonMsToSend = 0;
+        fltPardonAnnounceLeft = 10;
         return;
     }
     const uint8_t target = svRotate ? (uint8_t)((fltHead + 1) % FLIGHT_KEEP) : fltHead;

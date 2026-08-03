@@ -323,7 +323,7 @@ inline void loadNextAck() {
             // Old transmitters ignore the item (default case).
             fltPardonAnnounceLeft--;
             ack[0] = 38;
-            packU32(ack, FLT_PARDON_MS);
+            packU32(ack, fltPardonMsToSend);   // 3000 = pardon; 0 = save done, unignore
         }
         else switch (telemetryItem) {
             case 0:
