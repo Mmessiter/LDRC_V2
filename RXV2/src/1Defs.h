@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.307-seaworthy-lifeboat";
+constexpr const char* FW_VERSION = "RXV2-0.9.308-flight-page-fix";
 
 //*********************************************************************
 //  Auto-update manifest URLs
