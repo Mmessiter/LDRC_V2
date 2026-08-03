@@ -115,3 +115,18 @@ Note (2026-08-02): V1's "Delta GMT" display-offset setting is retired — with
 phone-corrected local time in the RTC it must stay 0 (Malcolm set it so).
 TXV2 has NO manual timezone/DST setting: the clock holds local time, taught
 by phone (tz included) / NTP / GPS, and DST changes heal themselves.
+
+### Timezone architecture — worldwide-correct (Malcolm, 2026-08-03)
+V1's phone-corrects-clock stores LOCAL time in the RTC (workaround; fine for
+one pilot, one country). TXV2 does it properly:
+1. ALL clocks store UTC — Teensy RTC, RX epoch, flight stamps. GPS (UTC)
+   then never conflicts with anything, anywhere on Earth.
+2. Localisation ONLY at display, via a signed minutes offset (handles -5,
+   +7, +5:45 — not just whole hours).
+3. The offset is TAUGHT, never typed: the phone knows zone + DST and already
+   sends tz_min to the RX; relay it to the TX (alongside the time item) and
+   the manual "Hours from GMT" setting retires. DST self-heals worldwide.
+V1 caveat to remember: a GPS-equipped model re-syncs the V1 RTC to UTC
+(SynchRTCwithGPSTime), momentarily fighting the local-face convention until
+the next phone calibration — acceptable for now, dissolved entirely by the
+UTC-everywhere design.
