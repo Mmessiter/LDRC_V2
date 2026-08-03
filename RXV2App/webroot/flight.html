@@ -155,7 +155,8 @@ addEventListener('resize', () => { if (drawFlight.last) drawFlight(drawFlight.la
 
 // Tell the receiver the time (it has no clock) so flights get real dates —
 // including any saved before this page opened (stamped retroactively).
-LDRC.teachTime();
+// (time-teaching runs from app.js on every page — a top-level LDRC call
+// here ran BEFORE deferred app.js defined LDRC and killed this whole script)
 
 // Populate the flight selector (Current + saved flights) from /api/flights.json.
 async function populateFlightSelector() {

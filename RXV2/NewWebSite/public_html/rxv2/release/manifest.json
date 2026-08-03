@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.308-flight-page-fix",
+      "url": "https://messiter.com/rxv2/release/v0.9.308/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.308/littlefs.bin",
+      "fs_md5": "949ec73f796fdf458e5f8ece301775ca",
+      "notes": "Emergency repair: yesterday's tidy-up left one line on the Flight analysis page running before the shared library existed - the error silently killed the whole page, which is why it showed no flights at all despite the diary being intact. One line removed; every saved flight reappears."
+    },
+    {
       "name": "RXV2-0.9.307-seaworthy-lifeboat",
       "url": "https://messiter.com/rxv2/release/v0.9.307/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.307/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.297/littlefs.bin",
       "fs_md5": "272cae89247047180cd4a8412487407f",
       "notes": "The transmitter becomes the timekeeper: its battery-backed, GPS-synchronised clock now tells the receiver the time just after every connection - so flights get proper dates even on phone-free field days, and a battery swap no longer wipes the receiver's sense of time. The phone still teaches the timezone (remembered forever) and takes precedence when connected. Requires the matching transmitter update."
-    },
-    {
-      "name": "RXV2-0.9.296-dated-flights",
-      "url": "https://messiter.com/rxv2/release/v0.9.296/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.296/littlefs.bin",
-      "fs_md5": "7c3a98c1a2a3193523643502ce340db6",
-      "notes": "Every flight now says when it happened: the Flight analysis card leads with the date and time (learned quietly from your phone's clock each time the app connects), not just the position in the list. Flights saved before the receiver ever knew the time say so honestly."
     }
   ]
 }
