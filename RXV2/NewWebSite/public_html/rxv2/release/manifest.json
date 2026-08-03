@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.310-pardon-the-pause",
+      "url": "https://messiter.com/rxv2/release/v0.9.310/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.310/littlefs.bin",
+      "fs_md5": "86593ccb6339c1b560da423e2b22fcb8",
+      "notes": "Malcolm noticed the only >100ms gap in his transmitter's log was the flight being saved to flash just after motor-off - honest, but it polluted the averages. Now the receiver announces the pause before it happens ('pardon the next 3 seconds', ack item 38), and the updated transmitter excludes those gaps from every statistic, logging 'Gap excused (RX saving flight)' instead. The link's numbers now describe the link, and nothing else."
+    },
+    {
       "name": "RXV2-0.9.309-ask-and-receive",
       "url": "https://messiter.com/rxv2/release/v0.9.309/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.309/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.299/littlefs.bin",
       "fs_md5": "597a7ddcc569ace451964898081a1e94",
       "notes": "Detective's notebook: the receiver now logs every kind of parameter packet the transmitter sends, once per power-on - so 'did the time packet even arrive?' is answered by a glance at the event log. Pairs with a transmitter update that re-sends its clock every minute instead of trusting one fragile moment at connect."
-    },
-    {
-      "name": "RXV2-0.9.298-clock-candour",
-      "url": "https://messiter.com/rxv2/release/v0.9.298/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.298/littlefs.bin",
-      "fs_md5": "072e438ccddf81c8f537baa0e3204bcc",
-      "notes": "The transmitter-clock feature now narrates itself: every time packet from the TX is logged with its fate - applied ('Clock set by TX'), outranked ('TX clock heard - phone rules', normal whenever the phone is connected), or rejected with the raw values. No more silent mysteries when testing at the bench."
     }
   ]
 }

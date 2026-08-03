@@ -317,7 +317,15 @@ inline void loadNextAck() {
         ack[0] = telemetryItem;
         bool versionCase = false;
 
-        switch (telemetryItem) {
+        if (fltPardonAnnounceLeft > 0) {
+            // Flight-save imminent: override the rotation with item 38 so the
+            // pardon reaches the TX BEFORE the flash-erase stall it excuses.
+            // Old transmitters ignore the item (default case).
+            fltPardonAnnounceLeft--;
+            ack[0] = 38;
+            packU32(ack, FLT_PARDON_MS);
+        }
+        else switch (telemetryItem) {
             case 0:
                 // Mirror v1's SendVersionNumberToAckPayload: byte 1 = active
                 // transceiver, then the firmware version, so the TX shows both.

@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.309-ask-and-receive";
+constexpr const char* FW_VERSION = "RXV2-0.9.310-pardon-the-pause";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -106,6 +106,12 @@ inline uint32_t epochNowS() {
 // are UTC epoch) — remembered in NVS so field days work in local time too.
 inline bool    epochFromPhone = false;    // a phone has synced this boot → ignore TX time
 inline int16_t tzOffsetMin    = 0;        // local = UTC + tzOffsetMin (phone-taught, NVS "tzmin")
+
+// Flight-save gap pardon (ack item 38): FlightLog sets the counter before its
+// flash work; Radio.h's ack loader consumes it. In 1Defs because Radio.h is
+// compiled before FlightLog.h.
+constexpr uint32_t FLT_PARDON_MS = 3000;
+inline uint8_t fltPardonAnnounceLeft = 0;
 // What the TX's clock face actually holds is anyone's guess — Malcolm's reads
 // UTC plus six minutes of drift (set in winter, never adjusted). So we LEARN
 // its offset from true UTC whenever a phone sync and a TX time packet occur in
