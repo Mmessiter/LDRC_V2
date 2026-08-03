@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.306-tuning-notes";
+constexpr const char* FW_VERSION = "RXV2-0.9.307-seaworthy-lifeboat";
 
 //*********************************************************************
 //  Auto-update manifest URLs

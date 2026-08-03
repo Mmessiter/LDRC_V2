@@ -774,21 +774,32 @@ inline void snapshotFlightsToRam() {
         if (g_fsFlights[i]) { free(g_fsFlights[i]); g_fsFlights[i] = nullptr; }
         g_fsFlightLen[i] = 0;
     }
-    for (uint8_t i = 0; i < FLIGHT_KEEP; ++i) {
-        // Newest-first within a heap budget: an fs update needs working RAM
-        // (TLS or BLE buffers), so stop lifeboating before we starve it.
-        if (ESP.getFreeHeap() < 60000) break;
-        if (!littleFsMounted || !LittleFS.exists(flightPath(i))) continue;
-        File f = LittleFS.open(flightPath(i), "r");
+    // GENUINELY newest-first this time (2026-08-02 the loop walked PHYSICAL
+    // slot order despite its comment, so under heap pressure it lifeboated
+    // arbitrary OLD flights and drowned the new — Malcolm's first dated field
+    // flights were lost to exactly that). Walk logical order via fltPhys so
+    // whatever survives is the newest. Buffers go to PSRAM when the board has
+    // it (8 MB on the XIAO S3 — the whole diary fits); heap is the fallback,
+    // guarded so the fs update keeps working RAM (TLS / BLE buffers).
+    uint8_t kept = 0, present = 0;
+    for (uint8_t logical = 0; logical < FLIGHT_KEEP; ++logical) {
+        const uint8_t phys = fltPhys(logical);
+        if (!littleFsMounted || !LittleFS.exists(flightPath(phys))) continue;
+        present++;
+        File f = LittleFS.open(flightPath(phys), "r");
         if (!f) continue;
         size_t n = f.size();
         if (n > 0 && n <= 16384) {
-            g_fsFlights[i] = (uint8_t*)malloc(n);
-            if (g_fsFlights[i] && f.read(g_fsFlights[i], n) == (int)n) g_fsFlightLen[i] = n;
-            else { free(g_fsFlights[i]); g_fsFlights[i] = nullptr; }
+            uint8_t* buf = (uint8_t*)heap_caps_malloc(n, MALLOC_CAP_SPIRAM);
+            if (!buf && ESP.getFreeHeap() > 60000) buf = (uint8_t*)malloc(n);
+            if (buf && f.read(buf, n) == (int)n) { g_fsFlights[phys] = buf; g_fsFlightLen[phys] = n; kept++; }
+            else if (buf) free(buf);
         }
         f.close();
     }
+    char m[56];
+    snprintf(m, sizeof(m), "Lifeboat: %u of %u flights aboard", kept, present);
+    events.add(m);
 }
 
 inline int restoreFlightsFromRam() {
@@ -801,6 +812,9 @@ inline int restoreFlightsFromRam() {
         }
         free(g_fsFlights[i]); g_fsFlights[i] = nullptr; g_fsFlightLen[i] = 0;
     }
+    char m[48];
+    snprintf(m, sizeof(m), "Lifeboat: %d flights ashore", restored);
+    events.add(m);
     return restored;
 }
 
