@@ -22,6 +22,7 @@ struct RXV2App: App {
 struct RootView: View {
     @EnvironmentObject var link: BleLink
     @State private var demoMode = false
+    @State private var reviewMode = false
 
     var body: some View {
         NavigationStack {
@@ -34,11 +35,27 @@ struct RootView: View {
                     .ignoresSafeArea()
                     .toolbar(.hidden, for: .navigationBar)
             default:
-                ScannerView(demoMode: $demoMode)
+                ScannerView(demoMode: $demoMode, reviewMode: $reviewMode)
             }
         }
         // No receiver? Let anyone play: canned data from a real receiver,
         // with animated channels.
+        // Armchair review (Malcolm's lodge idea): the recorded last session
+        // served to the same pages — receiver asleep in its case.
+        .fullScreenCover(isPresented: $reviewMode) {
+            ZStack(alignment: .topTrailing) {
+                WebScreen(link: link, replay: true)
+                    .ignoresSafeArea()
+                Button {
+                    reviewMode = false
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(.secondary)
+                        .padding(10)
+                }
+            }
+        }
         .fullScreenCover(isPresented: $demoMode) {
             ZStack(alignment: .topTrailing) {
                 WebScreen(link: link, demo: true)
@@ -59,9 +76,23 @@ struct RootView: View {
 struct ScannerView: View {
     @EnvironmentObject var link: BleLink
     @Binding var demoMode: Bool
+    @Binding var reviewMode: Bool
 
     var body: some View {
         List {
+            if SessionCache.shared.available {
+                Section {
+                    Button {
+                        reviewMode = true
+                    } label: {
+                        Label("Review last session:  \(SessionCache.shared.label)",
+                              systemImage: "clock.arrow.circlepath")
+                    }
+                } footer: {
+                    Text("Flight data and Rotorflight settings recorded during the "
+                       + "last connection — browse them with everything switched off.")
+                }
+            }
             // a real receiver in sight → the demo offer just muddies the water
             if link.found.isEmpty {
                 Section {

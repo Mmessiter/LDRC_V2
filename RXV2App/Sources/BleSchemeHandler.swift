@@ -23,12 +23,14 @@ func md5Hex(_ d: Data) -> String {
 final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
     private let link: BleLink
     private let demo: Bool
+    private let replay: Bool   // "Review last session" — serve SessionCache, never touch BLE
     private var live = Set<ObjectIdentifier>()
     private lazy var ota = BleOta(link: link)
 
-    init(link: BleLink, demo: Bool = false) {
+    init(link: BleLink, demo: Bool = false, replay: Bool = false) {
         self.link = link
         self.demo = demo
+        self.replay = replay
     }
 
     private static let mime: [String: String] = [
@@ -98,6 +100,23 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
             deliver(task, url: url, code: 404, type: "text/plain", body: Data())
             return
         }
+        if replay { // armchair review: the recording answers, the radio sleeps
+            var pathAndQuery = path
+            if let q = url.query, !q.isEmpty { pathAndQuery += "?\(q)" }
+            if method == "GET", let hit = SessionCache.shared.lookup(pathAndQuery: pathAndQuery) {
+                deliver(task, url: url, code: 200, type: hit.type, body: hit.body)
+                return
+            }
+            if method == "POST", path == "/api/time" {   // pages teach the time; nod politely
+                deliver(task, url: url, code: 200, type: "application/json",
+                        body: Data("{\"ok\":true}".utf8))
+                return
+            }
+            let code = method == "GET" ? 404 : 409
+            deliver(task, url: url, code: code, type: "application/json",
+                    body: Data("{\"ok\":false,\"error\":\"receiver offline — reviewing the last session\"}".utf8))
+            return
+        }
 
         // 2) everything else goes over Bluetooth
         var pathAndQuery = path
@@ -111,6 +130,13 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
             guard let self else { return }
             switch result {
             case .success(let resp):
+                // Armchair-review recorder: tee every successful read so the
+                // session can be replayed after the receiver is switched off.
+                if method == "GET", (resp.code == 0 || resp.code == 200),
+                   SessionCache.cacheable(path: path, query: url.query) {
+                    SessionCache.shared.record(pathAndQuery: pathAndQuery, path: path,
+                                               type: resp.contentType, body: resp.body)
+                }
                 self.deliver(task, url: url, code: resp.code == 0 ? 200 : resp.code,
                              type: resp.contentType, body: resp.body)
             case .failure(let err):
