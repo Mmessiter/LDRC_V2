@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.317-honest-save";
+constexpr const char* FW_VERSION = "RXV2-0.9.318-flight-list-fix";
 
 //*********************************************************************
 //  Auto-update manifest URLs
