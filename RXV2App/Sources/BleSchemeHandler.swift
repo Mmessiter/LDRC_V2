@@ -51,7 +51,7 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
             let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems
             let fw = items?.first(where: { $0.name == "fw" })?.value
             let fs = items?.first(where: { $0.name == "fs" })?.value
-            let ok = (fw != nil && !demo)
+            let ok = (fw != nil && !demo && !replay)
             if ok { ota.start(fw: fw!, fs: fs) }
             deliver(task, url: url, code: 200, type: "application/json",
                     body: Data("{\"ok\":\(ok)}".utf8))
@@ -80,7 +80,9 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
         // The pages ask the APP for the public release manifest — the phone
         // has internet at the field, the receiver (Bluetooth-only) does not.
         if path == "/app/manifest" {
-            if demo {
+            // Review mode must NEVER offer updates — there is no receiver to
+            // update (Malcolm 2026-08-04: offered one offline, it 'failed').
+            if demo || replay {
                 deliver(task, url: url, code: 404, type: "application/json",
                         body: Data("{}".utf8))
                 return
