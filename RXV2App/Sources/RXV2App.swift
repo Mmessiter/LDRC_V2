@@ -24,6 +24,7 @@ struct RootView: View {
     @State private var demoMode = false
     @State private var reviewMode = false
     @State private var sessionStarted = false
+    @State private var txOnNoticeShown = false
     @State private var showPendingOffer = false
     @State private var pendingSummary = ""
     @State private var pendingEdits: [SessionCache.PendingEdit] = []
@@ -123,11 +124,18 @@ extension RootView {
                     // Malcolm 2026-08-04: TX on → never offered; edits are
                     // DISCARDED with a clear notice (no stale-edit limbo).
                     if txLive {
-                        SessionCache.savePending(model: "", edits: [])
-                        pendingEdits = []
+                        // Malcolm 2026-08-04: keep the edits — they stay until
+                        // overwritten by a newer offline edit (or sent later).
+                        // Un-latch so a TX-off reconnect still gets the offer;
+                        // the notice itself shows once per launch (no nagging
+                        // on every between-flights reconnect).
+                        sessionStarted = false
+                        guard !txOnNoticeShown else { return }
+                        txOnNoticeShown = true
+                        pendingEdits = []   // no Send button in this alert
                         pendingSummary = "Your offline edits (\(what)) cannot be sent "
-                            + "because the transmitter is on — they have been discarded.\n\n"
-                            + "To send offline edits, connect with the transmitter off."
+                            + "because the transmitter is on.\n\nThey are kept — "
+                            + "connect with the transmitter off to send them."
                         showPendingOffer = true
                         return
                     }

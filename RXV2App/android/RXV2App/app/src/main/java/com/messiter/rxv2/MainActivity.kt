@@ -533,6 +533,7 @@ class MainActivity : AppCompatActivity() {
 
     // ── Armchair-review refinements (Malcolm 2026-08-04) ────────────
     private var sessionStartedFor = ""
+    private var txOnNoticeShown = false
 
     private fun onConnectedSession(name: String) {
         SessionCache.init(this)
@@ -558,13 +559,19 @@ class MainActivity : AppCompatActivity() {
                 // Malcolm 2026-08-04: TX on → never offered; edits DISCARDED
                 // with a clear notice (no stale-edit limbo).
                 if (txLive) {
-                    SessionCache.savePending("", emptyList())
+                    // Malcolm 2026-08-04: keep the edits — they stay until
+                    // overwritten by a newer offline edit (or sent later).
+                    // Un-latch so a TX-off reconnect still gets the offer; the
+                    // notice shows once per launch (no between-flights nagging).
+                    sessionStartedFor = ""
+                    if (txOnNoticeShown) return@Thread
+                    txOnNoticeShown = true
                     runOnUiThread {
                         android.app.AlertDialog.Builder(this)
-                            .setTitle("Offline edits discarded")
+                            .setTitle("Offline edits kept")
                             .setMessage("Your offline edits ($what) cannot be sent because " +
-                                "the transmitter is on — they have been discarded.\n\n" +
-                                "To send offline edits, connect with the transmitter off.")
+                                "the transmitter is on.\n\nThey are kept — connect with " +
+                                "the transmitter off to send them.")
                             .setPositiveButton("OK", null)
                             .show()
                     }

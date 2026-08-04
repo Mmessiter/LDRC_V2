@@ -42,6 +42,14 @@
     <!-- App-only (Malcolm 2026-08-04): explicit, verifiable snapshot of the
          whole session to the phone for the offline armchair review. -->
     <button id=saveSnapBtn class="btn" style="display:none;background:#5fa099"><span class=ico>&#128190;</span>Save session to phone</button>
+    <!-- Solid progress panel (Malcolm 2026-08-04: no translucent text, and a
+         real progress bar while the session saves). -->
+    <div id=snapProg style="display:none;background:#f2f6f8;border-radius:14px;padding:1em 1.2em;margin:.7em 0;box-shadow:0 2px 6px rgba(0,0,0,.12)">
+        <div id=snapLab style="font-weight:600;color:#2c3e50;margin-bottom:.6em">Saving session&hellip;</div>
+        <div style="background:#d5dde4;border-radius:8px;height:14px;overflow:hidden">
+            <div id=snapFill style="background:#5fa099;height:100%;width:0%;border-radius:8px;transition:width .4s"></div>
+        </div>
+    </div>
 
     <div class=footer></div>
 </div>
@@ -131,29 +139,41 @@ document.addEventListener('DOMContentLoaded', () => {
             .then(r => r.json())
             .then(p => { if (p.phase !== 'replay') snap.style.display = ''; })
             .catch(() => {});
-        let timer = null;
+        // Progress lives in its own SOLID panel with a bar — the button
+        // itself never dims (a disabled button goes translucent = unreadable).
+        const prog = document.getElementById('snapProg');
+        const lab = document.getElementById('snapLab');
+        const fill = document.getElementById('snapFill');
+        let timer = null, saving = false;
+        function finish(msg, delayMs) {
+            lab.textContent = msg;
+            setTimeout(() => { prog.style.display = 'none'; snap.style.display = '';
+                               saving = false; }, delayMs);
+        }
         snap.addEventListener('click', async () => {
-            snap.disabled = true;
-            snap.innerHTML = '<span class=ico>&#8987;</span>Saving session…';
+            if (saving) return;
+            saving = true;
+            snap.style.display = 'none';
+            prog.style.display = '';
+            lab.textContent = 'Saving session…';
+            fill.style.width = '0%';
             try {
                 const r = await (await fetch('/app/snapshot/start', { cache: 'no-store' })).json();
                 if (!r.ok) throw new Error(r.error || 'not available now');
             } catch (e) {
-                snap.innerHTML = '<span class=ico>&#9888;&#65039;</span>' + e.message;
-                setTimeout(() => { snap.disabled = false;
-                    snap.innerHTML = '<span class=ico>&#128190;</span>Save session to phone'; }, 4000);
+                finish('⚠️ ' + e.message, 4000);
                 return;
             }
             timer = setInterval(async () => {
                 try {
                     const p = await (await fetch('/app/snapshot/progress', { cache: 'no-store' })).json();
                     if (p.phase === 'running') {
-                        snap.innerHTML = '<span class=ico>&#8987;</span>Saving… ' + p.done + ' / ' + p.total;
+                        lab.textContent = 'Saving… ' + p.done + ' / ' + p.total;
+                        if (p.total > 0) fill.style.width = Math.min(100, Math.round(100 * p.done / p.total)) + '%';
                     } else if (p.phase === 'done') {
                         clearInterval(timer);
-                        snap.innerHTML = '<span class=ico>&#9989;</span>All saved!  (' + p.done + ' items on the phone)';
-                        setTimeout(() => { snap.disabled = false;
-                            snap.innerHTML = '<span class=ico>&#128190;</span>Save session to phone'; }, 6000);
+                        fill.style.width = '100%';
+                        finish('✅ All saved!  (' + p.done + ' items on the phone)', 6000);
                     }
                 } catch (e) { /* transient — keep polling */ }
             }, 700);

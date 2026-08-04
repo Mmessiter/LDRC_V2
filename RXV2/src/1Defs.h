@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.315-solid-text";
+constexpr const char* FW_VERSION = "RXV2-0.9.316-progress-bar";
 
 //*********************************************************************
 //  Auto-update manifest URLs
