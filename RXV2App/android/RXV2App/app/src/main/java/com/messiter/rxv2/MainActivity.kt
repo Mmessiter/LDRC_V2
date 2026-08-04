@@ -595,23 +595,60 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun sendPendingEdits(edits: List<SessionCache.PendingEdit>) {
+        // Solid progress dialog (Malcolm 2026-08-04: "I did not know when
+        // the upload had finished") — bar per radio step, then a done tick.
+        val steps = edits.fold(0) { a, e -> a + if (e.bank != null) 2 else 1 } +
+                    1 + (if (edits.any { it.fn == 143 }) 1 else 0)
+        val lab = android.widget.TextView(this).apply {
+            text = "Sending edits… 0 / $steps"
+            textSize = 16f
+            setPadding(60, 50, 60, 10)
+        }
+        val bar = android.widget.ProgressBar(this, null,
+            android.R.attr.progressBarStyleHorizontal).apply {
+            max = steps
+            setPadding(50, 0, 50, 30)
+        }
+        val box = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            addView(lab); addView(bar)
+        }
+        val dlg = android.app.AlertDialog.Builder(this)
+            .setView(box).setCancelable(false).create()
+        dlg.show()
+        var doneSteps = 0
+        fun step() {
+            doneSteps++
+            runOnUiThread {
+                bar.progress = doneSteps
+                lab.text = "Sending edits… $doneSteps / $steps"
+            }
+        }
         Thread {
             for (e in edits) {
                 // Land each edit in the bank it was made in (fn=210 select
                 // first, 0x80|idx = rate bank); gov global goes bankless.
                 e.bank?.let {
                     bleSyncQuiet("/api/msp?fn=210&data=%02X".format(it))
-                    Thread.sleep(300)
+                    step(); Thread.sleep(300)
                 }
                 bleSyncQuiet("/api/msp?fn=${e.fn}&data=${e.hex}")
-                Thread.sleep(400)
+                step(); Thread.sleep(400)
             }
             bleSyncQuiet("/api/msp?fn=250")                    // save to EEPROM
+            step()
             if (edits.any { it.fn == 143 }) {
                 Thread.sleep(300)
                 bleSyncQuiet("/api/msp?fn=68")                 // gov config needs an FC reboot
+                step()
             }
             SessionCache.savePending("", emptyList())
+            runOnUiThread {
+                lab.text = "✅ Edits sent to the model!"
+                bar.visibility = android.view.View.GONE
+            }
+            Thread.sleep(3000)
+            runOnUiThread { dlg.dismiss() }
         }.start()
     }
 
