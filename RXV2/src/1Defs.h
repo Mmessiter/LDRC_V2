@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.310-pardon-the-pause";
+constexpr const char* FW_VERSION = "RXV2-0.9.312-one-wave-per-landing";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -118,12 +118,14 @@ inline uint8_t  fltPardonAnnounceLeft = 0;
 // state machine each triggered one). Automatic wave sites debounce through
 // this; the app's explicit wave request bypasses it (a human asking always
 // gets an answer).
-inline uint32_t lastAutoWaveMs = 0;
-inline bool autoWaveAllowed() {
-    if (lastAutoWaveMs && (uint32_t)(millis() - lastAutoWaveMs) < 30000) return false;
-    lastAutoWaveMs = millis();
-    return true;
-}
+// Deferred Fly-now teardown: the WiFi/BLE shutdown stalls the loop ~700 ms
+// (measured LOOP-STALL 707ms, 2026-08-04 — Malcolm felt the servo twitch).
+// The pardon (item 38) must be on the air BEFORE the stall, and acks only
+// flow while the loop runs — so Fly-now schedules the teardown ~300 ms out
+// instead of delay()ing into it.
+inline uint32_t flyTeardownAtMs = 0;
+
+inline bool autoWaveAllowed();   // defined below rx (needs rx.lastMillis)
 inline uint32_t fltPardonMsToSend = FLT_PARDON_MS;   // 0 = "unignore now" (Malcolm's explicit end)
 // What the TX's clock face actually holds is anyone's guess — Malcolm's reads
 // UTC plus six minutes of drift (set in winter, never adjusted). So we LEARN
@@ -420,6 +422,19 @@ struct RxStats {
     uint32_t acksWritten   = 0;
 };
 inline RxStats rx;
+
+// Keyed to the LANDING, not the clock: Malcolm reports the spurious second
+// wave can come 1-2 MINUTES later (the field's STA-retry -> AP-fallback
+// transition re-announces BLE after ~100-125s of hopeful WiFi retries), so a
+// time window is the wrong tool. rx.lastMillis freezes at the last packet of
+// a landing — a unique per-landing key. One wave per landing, unlimited
+// flights per day, and internal WiFi/BLE restarts stay silent.
+inline uint32_t lastWaveLinkEpoch = 1;   // rx.lastMillis we last waved for (1 = never)
+inline bool autoWaveAllowed() {
+    if (rx.lastMillis == lastWaveLinkEpoch) return false;
+    lastWaveLinkEpoch = rx.lastMillis;
+    return true;
+}
 
 // BLE-interference quarantine for the link statistics (Malcolm 2026-07-27,
 // lodge test: TX-side perfect at 1 m, RX blackbox pessimistic). The ESP32's

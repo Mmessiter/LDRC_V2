@@ -1,6 +1,20 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.312-one-wave-per-landing",
+      "url": "https://messiter.com/rxv2/release/v0.9.312/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.312/littlefs.bin",
+      "fs_md5": "ad61b882720b99498805161b1483c5e7",
+      "notes": "Refinement from the bench session: the spurious second tail-wave could arrive a minute or two after the first (the field's WiFi giving up on home and starting its hotspot re-announced Bluetooth), so the debounce is now keyed to the LANDING itself rather than any clock - one wave per landing, unlimited flights per day, and the WiFi machinery's internal restarts stay properly silent. Includes 0.9.311's pardoned teardowns: radio shutdowns announce themselves to the transmitter and can never fire while armed."
+    },
+    {
+      "name": "RXV2-0.9.311-pardoned-teardowns",
+      "url": "https://messiter.com/rxv2/release/v0.9.311/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.311/littlefs.bin",
+      "fs_md5": "ddf44f090febdb72761953df5349948f",
+      "notes": "Bench detective work with Malcolm solved the mystery 536ms field gap: switching the radios off (Fly now, or Bluetooth's silence-while-flying) stalls the processor ~0.7s - real, deliberate, and previously billed as a link gap. Now the receiver announces the pardon before any intentional radio shutdown (the transmitter excludes it by name), the shutdown waits politely for its announcement to arrive, and - the safety heart of it - automatic radio teardowns can never fire while the model is ARMED. Plus: the Bluetooth tail-wave announces a revival once, not twice."
+    },
+    {
       "name": "RXV2-0.9.310-pardon-the-pause",
       "url": "https://messiter.com/rxv2/release/v0.9.310/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.310/littlefs.bin",
@@ -69,20 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.301/littlefs.bin",
       "fs_md5": "8e619c346d3e164565b82333f740e00f",
       "notes": "The clock steps on stage: the Black box status card now shows the receiver's date and time and who taught it (phone or transmitter, with the calibration figure), and the current flight's card says when the session started - so you can see at a glance that the timekeeping is alive, not just trust the event log."
-    },
-    {
-      "name": "RXV2-0.9.300-clock-calibration",
-      "url": "https://messiter.com/rxv2/release/v0.9.300/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.300/littlefs.bin",
-      "fs_md5": "d529205d491f61ffc1e0adc1be9ef51f",
-      "notes": "Version 300! The transmitter's clock turned out to show UTC plus six minutes of drift, not local time - never assume. The receiver now calibrates it against the phone whenever both are present (every bench session), remembers the offset, and applies it on phone-free field days. Flight stamps come out right no matter what the transmitter's clock face believes."
-    },
-    {
-      "name": "RXV2-0.9.299-param-trace",
-      "url": "https://messiter.com/rxv2/release/v0.9.299/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.299/littlefs.bin",
-      "fs_md5": "597a7ddcc569ace451964898081a1e94",
-      "notes": "Detective's notebook: the receiver now logs every kind of parameter packet the transmitter sends, once per power-on - so 'did the time packet even arrive?' is answered by a glance at the event log. Pairs with a transmitter update that re-sends its clock every minute instead of trusting one fragile moment at connect."
     }
   ]
 }
