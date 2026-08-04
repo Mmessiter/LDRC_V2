@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.321-steady-hand";
+constexpr const char* FW_VERSION = "RXV2-0.9.322-straight-slopes";
 
 //*********************************************************************
 //  Auto-update manifest URLs
