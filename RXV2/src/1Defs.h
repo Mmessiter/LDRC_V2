@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.319-fool-armour";
+constexpr const char* FW_VERSION = "RXV2-0.9.320-smooth-curves";
 
 //*********************************************************************
 //  Auto-update manifest URLs

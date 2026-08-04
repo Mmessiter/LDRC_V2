@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>PID+ &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=143">
-<script src="/app.js?v=143" defer></script>
+<link rel=stylesheet href="/style.css?v=144">
+<script src="/app.js?v=144" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;
         padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -84,7 +84,7 @@
     </div>
 
     <button class="btn btn-fly" id=saveBtn onclick="save()" style="background:#6cab5e"><span class=ico>&#128190;</span>Save to Flight Controller</button>
-    <button class="btn btn-fw" onclick="load()"><span class=ico>&#8635;</span>Reload from flight controller</button>
+    <button class="btn btn-fw" id=reloadBtn onclick="load()"><span class=ico>&#8635;</span>Reload from flight controller</button>
 
     <div class=card>
         <h2>Copy to Profile (Bank) &hellip;</h2>
@@ -151,7 +151,8 @@ async function selectProfile(idx) {
 }
 
 async function load() {
-    setStatus('info', 'Reading PID profile from flight controller…');
+    await LDRC.replayReady;
+    setStatus('info', LDRC.replay ? 'Reading from the phone…' : 'Reading PID profile from flight controller…');
     LDRC.markStale();
     try {
         // Force FC to the profile our page is showing, so Configurator matches.
@@ -165,7 +166,7 @@ async function load() {
             else el.value = bytes[off];
         }
         LDRC.clearStale();
-        setStatus('good', '✓ Loaded from flight controller (profile ' + (currentProfile + 1) + ')');
+        setStatus('good', (LDRC.replay ? '✓ Loaded from the phone (profile ' : '✓ Loaded from flight controller (profile ') + (currentProfile + 1) + ')');
         LDRC.clearDirty();
     } catch (e) { setStatus('bad', 'Read failed: ' + e.message); }
 }
