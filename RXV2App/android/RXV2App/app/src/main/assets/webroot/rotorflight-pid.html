@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>PIDs &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=141">
-<script src="/app.js?v=141" defer></script>
+<link rel=stylesheet href="/style.css?v=142">
+<script src="/app.js?v=142" defer></script>
 <style>
 table.pids{width:100%;border-collapse:separate;border-spacing:.3em}
 table.pids th{text-align:center;color:#3a5165;font-weight:600;padding:.4em 0}
@@ -189,14 +189,19 @@ function buildPayload() {
 }
 
 async function save() {
-    if (!(await LDRC.confirm('Write these PIDs to the flight controller EEPROM?',
-        {title:'Save PIDs', icon:'💾', yes:'Save to flight controller'}))) return;
+    if (!(await LDRC.confirm(LDRC.replay
+            ? 'Save these PIDs on the phone? They will be offered for sending to the model at the next connection.'
+            : 'Write these PIDs to the flight controller EEPROM?',
+        {title:'Save PIDs', icon:'💾',
+         yes: LDRC.replay ? 'Save to phone' : 'Save to flight controller'}))) return;
     setStatus('info', 'Writing PIDs…');
     const bytes = buildPayload();
     try {
         await LDRC.msp(202, bytesToHex(bytes));   // SET_PID
         await LDRC.msp(250);                       // EEPROM_WRITE
-        setStatus('good', '✓ Saved to flight controller EEPROM');
+        setStatus('good', LDRC.replay
+            ? '✓ Saved on the phone — ready to send at the next connection'
+            : '✓ Saved to flight controller EEPROM');
         LDRC.clearDirty();
     } catch (e) {
         setStatus('bad', 'Save failed: ' + e.message);
@@ -217,7 +222,9 @@ async function copyTo(destIdx) {
         localStorage.setItem('rfPidProfile', String(destIdx));
         paintProfileButtons();
         await load();
-        setStatus('good', '✓ Copied to profile ' + (destIdx + 1) + ' (now editing it)');
+        setStatus('good', LDRC.replay
+            ? '✓ Copied on the phone — will be sent to profile ' + (destIdx + 1) + ' at the next connection'
+            : '✓ Copied to profile ' + (destIdx + 1) + ' (now editing it)');
     } catch (e) { setStatus('bad', 'Copy failed: ' + e.message); }
 }
 

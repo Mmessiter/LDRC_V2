@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.317-honest-save",
+      "url": "https://messiter.com/rxv2/release/v0.9.317/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.317/littlefs.bin",
+      "fs_md5": "5822854de6ab9641d7a40af3363c1184",
+      "notes": "When reviewing offline in the app, the Rotorflight save buttons now tell the truth: 'Save to phone', with matching confirmations and '\u2713 Saved on the phone \u2014 ready to send at the next connection' messages (copy-to-profile too). The governor page no longer pretends to reboot a flight controller that isn't there."
+    },
+    {
       "name": "RXV2-0.9.316-progress-bar",
       "url": "https://messiter.com/rxv2/release/v0.9.316/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.316/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.306/littlefs.bin",
       "fs_md5": "564509fc4fcd852b9efa0ecb9870a29b",
       "notes": "Malcolm's suggestion after an evening of governor tuning: when Rotorflight settings were edited from the transmitter during a session, the flight statistics now carry a friendly amber note explaining that the transmitter pauses briefly for each read or save - so the larger gaps and radio swaps it causes are expected, not a link problem. No more alarming numbers without context."
-    },
-    {
-      "name": "RXV2-0.9.305-every-page-teaches-time",
-      "url": "https://messiter.com/rxv2/release/v0.9.305/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.305/littlefs.bin",
-      "fs_md5": "96661ecd492eb5f40665f41bd4dc6d2d",
-      "notes": "Every page now teaches the receiver the time, and the Black box page re-teaches it the moment it notices the clock is unset - so sitting on one screen through a receiver reboot no longer leaves it ignorant of the date until you happen to navigate. One shared, rate-limited helper replaces the per-page copies."
     }
   ]
 }

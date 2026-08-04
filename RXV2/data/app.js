@@ -24,6 +24,11 @@
         // (found 2026-07-29 via the rename white-screen saga).
         viaBle: location.protocol === 'ble:' || location.hostname === 'rxv2.local',
 
+        // True in the app's "Review last session" (receiver off, edits go to
+        // the phone). Set asynchronously just below — resolved long before
+        // any user tap; pages branch their save wording on it.
+        replay: false,
+
         async fetchState() {
             try {
                 const r = await fetch('/api/state.json', { cache: 'no-store' });
@@ -299,6 +304,27 @@
         // (Malcolm, 2026-08-02). Fire-and-forget; the RX ignores duplicates.
         LDRC.teachTime();
         LDRC.mountFooter();
+        // Review mode? The app answers instantly (local stub, no radio).
+        // Any save button then tells the truth: edits go to the PHONE
+        // (Malcolm 2026-08-04: "when offline this should say save to phone").
+        if (LDRC.viaBle) {
+            fetch('/app/snapshot/progress', { cache: 'no-store' })
+                .then(r => r.json())
+                .then(p => {
+                    if (p.phase !== 'replay') return;
+                    LDRC.replay = true;
+                    // Only the Rotorflight tuning pages capture edits to the
+                    // phone in review — other pages' saves genuinely fail
+                    // offline, so their buttons must keep their labels.
+                    const captured = ['/rotorflight-pid', '/rotorflight-pidplus',
+                                      '/rotorflight-rates', '/rotorflight-gov-global',
+                                      '/rotorflight-gov-profile'];
+                    if (!captured.includes(location.pathname)) return;
+                    const b = document.getElementById('saveBtn');
+                    if (b) b.innerHTML = '<span class=ico>&#128190;</span>Save to phone';
+                })
+                .catch(() => {});
+        }
         // Fixed "front screen" button, top-left on every page EXCEPT the home
         // page itself — so returning to the menu is one tap, no scrolling to the
         // bottom. It's a normal <a href="/">, so the click interceptor below

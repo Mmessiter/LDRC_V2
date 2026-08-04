@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>PID+ &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=141">
-<script src="/app.js?v=141" defer></script>
+<link rel=stylesheet href="/style.css?v=142">
+<script src="/app.js?v=142" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;
         padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -83,7 +83,7 @@
         <div class=fldRow><label>Inertia precomp cutoff</label><input type=number id=f_iPC></div>
     </div>
 
-    <button class="btn btn-fly" onclick="save()" style="background:#6cab5e"><span class=ico>&#128190;</span>Save to Flight Controller</button>
+    <button class="btn btn-fly" id=saveBtn onclick="save()" style="background:#6cab5e"><span class=ico>&#128190;</span>Save to Flight Controller</button>
     <button class="btn btn-fw" onclick="load()"><span class=ico>&#8635;</span>Reload from flight controller</button>
 
     <div class=card>
@@ -182,14 +182,19 @@ function buildPayload() {
 
 async function save() {
     if (!cachedRaw) { setStatus('bad', 'Read flight controller first'); return; }
-    if (!(await LDRC.confirm('Write these advanced PIDs to the flight controller EEPROM?',
-        {title:'Save PID +', icon:'💾', yes:'Save to flight controller'}))) return;
+    if (!(await LDRC.confirm(LDRC.replay
+            ? 'Save these advanced PIDs on the phone? They will be offered for sending to the model at the next connection.'
+            : 'Write these advanced PIDs to the flight controller EEPROM?',
+        {title:'Save PID +', icon:'💾',
+         yes: LDRC.replay ? 'Save to phone' : 'Save to flight controller'}))) return;
     setStatus('info', 'Writing PID profile…');
     const bytes = buildPayload();
     try {
         await LDRC.msp(95, bytesToHex(bytes));   // SET_PID_PROFILE
         await LDRC.msp(250);                      // EEPROM_WRITE
-        setStatus('good', '✓ Saved to flight controller EEPROM');
+        setStatus('good', LDRC.replay
+            ? '✓ Saved on the phone — ready to send at the next connection'
+            : '✓ Saved to flight controller EEPROM');
         cachedRaw = bytes;
         LDRC.clearDirty();
     } catch (e) { setStatus('bad', 'Save failed: ' + e.message); }
@@ -210,7 +215,9 @@ async function copyTo(destIdx) {
         localStorage.setItem('rfPidProfile', String(destIdx));
         paintProfileButtons();
         await load();
-        setStatus('good', '✓ Copied to profile ' + (destIdx + 1) + ' (now editing it)');
+        setStatus('good', LDRC.replay
+            ? '✓ Copied on the phone — will be sent to profile ' + (destIdx + 1) + ' at the next connection'
+            : '✓ Copied to profile ' + (destIdx + 1) + ' (now editing it)');
     } catch (e) { setStatus('bad', 'Copy failed: ' + e.message); }
 }
 

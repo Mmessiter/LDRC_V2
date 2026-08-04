@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Governor (global) &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=141">
-<script src="/app.js?v=141" defer></script>
+<link rel=stylesheet href="/style.css?v=142">
+<script src="/app.js?v=142" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;
         padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -447,14 +447,24 @@ function buildPayload() {
 async function save() {
     if (!editable) { setStatus('bad', 'Disabled on this firmware version'); return; }
     if (!cachedRaw) { setStatus('bad', 'Read flight controller first'); return; }
-    if (!(await LDRC.confirm(
-        'Global governor settings are only applied at flight-controller startup, so the flight controller must reboot after saving. Motors will stop briefly. Save and reboot now?',
-        {title:'Save & reboot flight controller', icon:'🔄', yes:'Save & reboot', kind:'warn'}))) return;
+    if (!(await LDRC.confirm(LDRC.replay
+            ? 'Save these governor settings on the phone? They will be offered for sending to the model at the next connection.'
+            : 'Global governor settings are only applied at flight-controller startup, so the flight controller must reboot after saving. Motors will stop briefly. Save and reboot now?',
+        LDRC.replay
+            ? {title:'Save governor settings', icon:'💾', yes:'Save to phone'}
+            : {title:'Save & reboot flight controller', icon:'🔄', yes:'Save & reboot', kind:'warn'}))) return;
     setStatus('info', 'Writing governor config…');
     const bytes = buildPayload();
     try {
         await LDRC.msp(143, bytesToHex(bytes));   // SET_GOVERNOR_CONFIG
         await LDRC.msp(250);                       // EEPROM_WRITE
+        if (LDRC.replay) {
+            // Phone capture — there is no FC to reboot or verify against.
+            LDRC.clearDirty();
+            cachedRaw = bytes;
+            setStatus('good', '✓ Saved on the phone — ready to send at the next connection');
+            return;
+        }
         // The edits are PERSISTED from this point — the reboot + read-back
         // below are verification, not saving. Clear the un-saved-edits flag
         // NOW, so leaving the page during the ~10 s reboot wait doesn't
