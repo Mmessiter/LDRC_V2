@@ -40,9 +40,17 @@ struct RootView: View {
                     .toolbar(.hidden, for: .navigationBar)
                     .onAppear { onConnected(name) }
                     .alert("Settings edited offline", isPresented: $showPendingOffer) {
-                        Button("Send to model") { sendPendingEdits() }
-                        Button("Discard offline edits", role: .destructive) {
-                            SessionCache.savePending(model: "", edits: [])
+                        if pendingEdits.isEmpty {
+                            Button("OK") { }                      // TX on: informational only
+                            Button("Discard offline edits", role: .destructive) {
+                                SessionCache.savePending(model: "", edits: [])
+                            }
+                        } else {
+                            Button("Send to model") { sendPendingEdits() }
+                            Button("Discard offline edits", role: .destructive) {
+                                SessionCache.savePending(model: "", edits: [])
+                            }
+                            Button("Not now", role: .cancel) { }  // keep them for a TX-off visit
                         }
                     } message: {
                         Text(pendingSummary)
@@ -95,15 +103,38 @@ extension RootView {
         sessionStarted = true
         let (model, edits) = SessionCache.loadPending()
         if !edits.isEmpty && model == name {
-            pendingEdits = edits
-            let what = edits.map(\.label).joined(separator: ", ")
-            pendingSummary = "While offline you edited: \(what).\n\n"
-                + "Send these to the model now, or discard them and keep what "
-                + "the model already has?\n\nIMPORTANT: make sure the bank/"
-                + "profile switch is in the SAME position as when you edited."
-            showPendingOffer = true
-        } else if !edits.isEmpty {
-            // Edits belong to a different model — never offer them here.
+            // Malcolm's rule (2026-08-04): send ONLY when the transmitter is
+            // OFF — then the app controls the bank, so edits land in the
+            // right place. With the TX live, the physical switch owns the
+            // bank and a send could hit the wrong profile.
+            link.request(method: "GET", path: "/api/state.json", headers: [:], body: nil) { result in
+                var txLive = false
+                if case .success(let resp) = result,
+                   let obj = try? JSONSerialization.jsonObject(with: resp.body) as? [String: Any],
+                   let rf = obj["rf"] as? [String: Any],
+                   let info = obj["info"] as? [String: Any],
+                   let lastPkt = rf["last_pkt_ms"] as? Double,
+                   let upS = info["uptime_s"] as? Double {
+                    txLive = lastPkt > 0 && (upS * 1000 - lastPkt) < 3000
+                }
+                DispatchQueue.main.async {
+                    let what = edits.map(\.label).joined(separator: ", ")
+                    if txLive {
+                        pendingEdits = []
+                        pendingSummary = "Offline edits are waiting (\(what)) — but the "
+                            + "transmitter is ON, so its switch owns the bank. To send them "
+                            + "to the right place: switch the transmitter OFF and reconnect."
+                    } else {
+                        pendingEdits = edits
+                        pendingSummary = "While offline you edited: \(what).\n\n"
+                            + "The transmitter is off, so the app controls the bank — if the "
+                            + "edits belong to a particular bank, select it on the Rotorflight "
+                            + "pages first.\n\nSend the edits to the model now, or discard "
+                            + "them and keep what the model already has?"
+                    }
+                    showPendingOffer = true
+                }
+            }
         }
         SessionPrefetcher.run(link: link)
     }
