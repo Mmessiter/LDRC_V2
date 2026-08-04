@@ -103,6 +103,27 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
         if replay { // armchair review: the recording answers, the radio sleeps
             var pathAndQuery = path
             if let q = url.query, !q.isEmpty { pathAndQuery += "?\(q)" }
+            // Offline Rotorflight EDITS: capture supported MSP writes for the
+            // reconnect offer; EEPROM/reboot get polite empty echoes so the
+            // pages' save flows complete naturally.
+            if path == "/api/msp" {
+                let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems
+                let fn = Int(items?.first(where: { $0.name == "fn" })?.value ?? "") ?? -1
+                let dataHex = items?.first(where: { $0.name == "data" })?.value
+                if let hex = dataHex, !hex.isEmpty {
+                    if SessionCache.shared.captureOfflineWrite(fn: fn, dataHex: hex) {
+                        deliver(task, url: url, code: 200, type: "text/plain", body: Data())
+                    } else {
+                        deliver(task, url: url, code: 409, type: "text/plain",
+                                body: Data("receiver offline — this change cannot be made in review".utf8))
+                    }
+                    return
+                }
+                if fn == 250 || fn == 68 {   // EEPROM save / reboot: nod politely
+                    deliver(task, url: url, code: 200, type: "text/plain", body: Data())
+                    return
+                }
+            }
             if method == "GET", let hit = SessionCache.shared.lookup(pathAndQuery: pathAndQuery) {
                 deliver(task, url: url, code: 200, type: hit.type, body: hit.body)
                 return
