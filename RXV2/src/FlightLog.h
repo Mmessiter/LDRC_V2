@@ -465,7 +465,11 @@ inline bool buildFlightJson(uint8_t f, String& j) {
 
 // Small listing of available flights for the selector: [{i,count,dur_ms},...]
 inline void buildFlightsListJson(String& j) {
-    char b[64];
+    // 128, not 64: a dated entry is ~68 chars ({"i","count","dur_ms",
+    // 10-digit "saved_at","phys"}) — at 64 the JSON truncated mid-field and
+    // the whole list became unparseable (2026-08-04: "all the flights are
+    // gone" — they weren't; only this list was broken).
+    char b[128];
     j += "[";
     snprintf(b, sizeof(b), "{\"i\":0,\"count\":%u,\"dur_ms\":%u,\"live\":true,\"saving\":%s}",
              (unsigned)teleCount,
