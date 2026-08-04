@@ -33,7 +33,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var root: FrameLayout
     private var webView: WebView? = null
     private var demoMode = false
+    private var reviewMode = false   // armchair review of the recorded last session
     private var demoBtn: TextView? = null
+    private var reviewBtn: TextView? = null
 
     // Fake same-origin the WebView believes it is talking to. Every request
     // to this host is intercepted; the network is never actually touched.
@@ -73,7 +75,7 @@ class MainActivity : AppCompatActivity() {
 
         ble.onState = { st ->
             when (st) {
-                is Rxv2Ble.State.Ready -> { demoMode = false; showWeb() }
+                is Rxv2Ble.State.Ready -> { demoMode = false; reviewMode = false; showWeb() }
                 is Rxv2Ble.State.Failed -> { showScanner(); showMessage(st.msg) }
                 is Rxv2Ble.State.Idle -> showScanner()
                 else -> {}
@@ -99,11 +101,17 @@ class MainActivity : AppCompatActivity() {
         else permReq.launch(needed)   // callback starts the scan on grant
     }
 
+    override fun onPause() {
+        super.onPause()
+        SessionCache.saveIfDirty()   // recording survives app switches / kills
+    }
+
     override fun onBackPressed() {
         val w = webView
         if (w != null && w.canGoBack()) w.goBack()
         else if (w != null) {
             if (demoMode) { demoMode = false; showScanner() }
+            else if (reviewMode) { reviewMode = false; SessionCache.saveIfDirty(); showScanner() }
             else ble.disconnect()               // Ready → back = disconnect
         }
         else super.onBackPressed()
@@ -147,6 +155,17 @@ class MainActivity : AppCompatActivity() {
             setOnClickListener { demoMode = true; showWeb() }
         }
         col.addView(demoBtn)
+        // Armchair review (Malcolm's lodge idea 2026-08-04): the recorded
+        // last session, browsable with everything switched off.
+        SessionCache.init(this)
+        reviewBtn = TextView(this).apply {
+            text = "🕰  Review last session:  " + SessionCache.label
+            textSize = 15f; setPadding(40, 28, 40, 28)
+            setBackgroundColor(0xFF14532D.toInt()); setTextColor(0xFF86EFAC.toInt())
+            visibility = if (SessionCache.available) View.VISIBLE else View.GONE
+            setOnClickListener { reviewMode = true; showWeb() }
+        }
+        col.addView(reviewBtn)
         root.addView(col)
         startScanIfPermitted()
         checkAppUpdate(col)
@@ -475,7 +494,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 if (path == "/app/manifest") {
                     // runs on a WebView worker thread — blocking download is fine
-                    val json = if (demoMode) "{}"
+                    val json = if (demoMode || reviewMode) "{}"
                                else runCatching { String(httpDownload(RX_MANIFEST_URL)) }.getOrElse { "{}" }
                     return jsonResp(json)
                 }
@@ -564,8 +583,35 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+        if (reviewMode) {   // armchair review: recording answers, radio sleeps
+            val bare = pathAndQuery.substringBefore("?")
+            val q = pathAndQuery.substringAfter("?", "")
+            if (method == "GET") {
+                val hit = SessionCache.lookup(pathAndQuery)
+                if (hit != null) {
+                    cb(kotlin.Result.success(Rxv2Ble.Response(200, hit.first, "", hit.second)))
+                    return
+                }
+            }
+            if (method == "POST" && bare == "/api/time") {
+                cb(kotlin.Result.success(Rxv2Ble.Response(200, "application/json", "",
+                    "{\"ok\":true}".toByteArray())))
+                return
+            }
+            val code = if (method == "GET") 404 else 409
+            cb(kotlin.Result.success(Rxv2Ble.Response(code, "application/json", "",
+                "{\"ok\":false,\"error\":\"receiver offline — reviewing the last session\"}".toByteArray())))
+            return
+        }
         ble.request(method, pathAndQuery, headers, body) { result ->
             val resp = result.getOrNull()
+            // Armchair-review recorder: tee every successful read.
+            if (resp != null && method == "GET" && (resp.code == 0 || resp.code == 200)) {
+                val bare = pathAndQuery.substringBefore("?")
+                val q = if (pathAndQuery.contains("?")) pathAndQuery.substringAfter("?") else null
+                if (SessionCache.cacheable(bare, q))
+                    SessionCache.record(pathAndQuery, bare, resp.contentType, resp.body)
+            }
             if (resp != null && resp.code in 300..399 && resp.location.isNotEmpty() && hops < 3) {
                 val loc = if (resp.location.startsWith("/")) resp.location else "/" + resp.location
                 val bare = loc.substringBefore("?")
@@ -596,7 +642,7 @@ class MainActivity : AppCompatActivity() {
             // pages' behalf (the Bluetooth-only receiver has none at the field).
             if (p == "/app/manifest") {
                 Thread {
-                    val json = if (demoMode) "{}"
+                    val json = if (demoMode || reviewMode) "{}"
                                else runCatching { String(httpDownload(RX_MANIFEST_URL)) }.getOrElse { "{}" }
                     runOnUiThread {
                         val w = webView ?: return@runOnUiThread
@@ -610,7 +656,7 @@ class MainActivity : AppCompatActivity() {
             if (p == "/app/bleota/start" || p == "/app/bleota/progress") {
                 val json = if (p == "/app/bleota/start") {
                     val fw = uri.getQueryParameter("fw")
-                    if (fw != null && !demoMode) {
+                    if (fw != null && !demoMode && !reviewMode) {
                         if (otaPhase != "download" && otaPhase != "fw" &&
                             otaPhase != "fs" && otaPhase != "rebooting") {
                             val fs = uri.getQueryParameter("fs")
@@ -658,7 +704,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         @JavascriptInterface
-        fun disconnect() { runOnUiThread { ble.disconnect() } }
+        fun disconnect() { runOnUiThread { SessionCache.saveIfDirty(); ble.disconnect() } }
     }
 
     // Runs on the main thread already (Rxv2Ble posts onStreamFrame there).
