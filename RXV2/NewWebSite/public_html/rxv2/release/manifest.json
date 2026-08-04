@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.321-steady-hand",
+      "url": "https://messiter.com/rxv2/release/v0.9.321/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.321/littlefs.bin",
+      "fs_md5": "1614162d36d2ebcbb0ecb1204b601923",
+      "notes": "Graph refinement: a governed head speed now draws truly FLAT \u2014 small sensor jitter (a few rpm, hundredths of a volt) is treated as steadiness rather than continuous change, especially visible on short flights. Real changes still slope exactly as before."
+    },
+    {
       "name": "RXV2-0.9.320-smooth-curves",
       "url": "https://messiter.com/rxv2/release/v0.9.320/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.320/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.310/littlefs.bin",
       "fs_md5": "461e664bbb3551b6c2da3e29dfe01b3f",
       "notes": "Malcolm noticed the only >100ms gap in his transmitter's log was the flight being saved to flash just after motor-off - honest, but it polluted the averages. Now the receiver announces the pause before it happens ('pardon the next 3 seconds', ack item 38), and the updated transmitter excludes those gaps from every statistic, logging 'Gap excused (RX saving flight)' instead. The link's numbers now describe the link, and nothing else."
-    },
-    {
-      "name": "RXV2-0.9.309-ask-and-receive",
-      "url": "https://messiter.com/rxv2/release/v0.9.309/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.309/littlefs.bin",
-      "fs_md5": "1695ef36780f2976aa8d24c5f0e2a7d5",
-      "notes": "Ask and receive (Malcolm's idea): opening the flight list is itself proof the pilot is on the ground - so it now ends the save's polite waiting immediately, and while the write completes the selector says 'saving the last flight, a moment...' instead of leaving you wondering. The safety rules are untouched: saves still never run while armed."
     }
   ]
 }
