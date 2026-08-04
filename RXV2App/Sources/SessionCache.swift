@@ -26,16 +26,51 @@ final class SessionCache {
     private(set) var modelName: String = ""
     private(set) var savedAt: Date?
 
-    private let fileURL: URL = {
-        let docs = FileManager.default.urls(for: .documentDirectory,
-                                            in: .userDomainMask)[0]
-        return docs.appendingPathComponent("lastSession.json")
-    }()
+    // Per-model session files (Malcolm 2026-08-04: connecting another model
+    // must never erase this one's recording): session-<model>.json each.
+    private static var docs: URL {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+    }
+    private static func sessionURL(for model: String) -> URL {
+        let safe = model.isEmpty ? "last"
+            : String(model.map { $0.isLetter || $0.isNumber ? $0 : "_" })
+        return docs.appendingPathComponent("session-\(safe).json")
+    }
+    private var fileURL: URL { Self.sessionURL(for: modelName) }
 
     private struct FileShape: Codable {
         var model: String
         var savedAt: Date
         var entries: [String: Entry]
+    }
+
+    /// All saved sessions, newest first — one per model.
+    static func savedSessions() -> [(model: String, savedAt: Date)] {
+        let files = (try? FileManager.default.contentsOfDirectory(
+            at: docs, includingPropertiesForKeys: nil)) ?? []
+        var out: [(String, Date)] = []
+        for f in files where f.lastPathComponent.hasPrefix("session-") {
+            if let d = try? Data(contentsOf: f),
+               let s = try? JSONDecoder().decode(FileShape.self, from: d),
+               !s.entries.isEmpty {
+                out.append((s.model, s.savedAt))
+            }
+        }
+        return out.sorted { $0.1 > $1.1 }
+    }
+
+    /// Load a saved model's recording as the active one (for review).
+    func activate(model: String) {
+        guard model != modelName else { return }
+        saveNow()   // persist whatever is in memory first
+        entries = [:]
+        modelName = model
+        savedAt = nil
+        if let d = try? Data(contentsOf: Self.sessionURL(for: model)),
+           let s = try? JSONDecoder().decode(FileShape.self, from: d) {
+            entries = s.entries
+            savedAt = s.savedAt
+        }
     }
 
     private var saveScheduled = false
@@ -100,9 +135,18 @@ final class SessionCache {
            let info = obj["info"] as? [String: Any],
            let name = info["name"] as? String, !name.isEmpty {
             if name != modelName && !modelName.isEmpty {
-                // Different receiver — the old recording is another model's;
-                // start fresh so the review is never a chimera of two crafts.
-                entries = [pathAndQuery: Entry(type: type, body: body)]
+                // Different receiver: park the old model's recording in its
+                // own file and RESUME the new model's (never a chimera, and
+                // never an erasure — Malcolm 2026-08-04).
+                let keep = entries[keyFor(pathAndQuery)]
+                saveNow()
+                entries = [:]
+                modelName = name
+                if let d = try? Data(contentsOf: fileURL),
+                   let s = try? JSONDecoder().decode(FileShape.self, from: d) {
+                    entries = s.entries
+                }
+                if let keep { entries[keyFor(pathAndQuery)] = keep }
             }
             modelName = name
         }
@@ -133,7 +177,17 @@ final class SessionCache {
     }
 
     private func load() {
-        guard let data = try? Data(contentsOf: fileURL),
+        // One-time migration: the old single lastSession.json becomes that
+        // model's own session file.
+        let legacy = Self.docs.appendingPathComponent("lastSession.json")
+        if let data = try? Data(contentsOf: legacy),
+           let shape = try? JSONDecoder().decode(FileShape.self, from: data) {
+            try? data.write(to: Self.sessionURL(for: shape.model), options: .atomic)
+            try? FileManager.default.removeItem(at: legacy)
+        }
+        // Wake up with the newest model's session active.
+        guard let newest = Self.savedSessions().first,
+              let data = try? Data(contentsOf: Self.sessionURL(for: newest.model)),
               let shape = try? JSONDecoder().decode(FileShape.self, from: data)
         else { return }
         entries = shape.entries
@@ -286,24 +340,39 @@ final class SessionPrefetcher {
             // live TX. The FC's current banks come from MSP_STATUS (fn=101,
             // bytes 24/26 — verified on the RAW420 by switching and reading
             // back) and are restored exactly after the sweep.
+            // A foolish-user guard (Malcolm 2026-08-04): if the transmitter
+            // comes ON mid-sweep, stop switching banks IMMEDIATELY and put
+            // the FC back on its own banks — never fly on a sweep leftover.
+            func txAppeared() -> Bool {
+                guard let st = req("/api/state.json"),
+                      let obj = (try? JSONSerialization.jsonObject(with: st)) as? [String: Any],
+                      let lastPkt = ((obj["rf"] as? [String: Any])?["last_pkt_ms"] as? NSNumber)?.int64Value
+                else { return false }
+                return lastPkt >= 0 && lastPkt < 3000
+            }
             if !txLive, let st = req("/api/msp?fn=101"),
                let hex = String(data: st, encoding: .utf8), hex.count >= 54,
                let origPid = Int(hex.dropFirst(48).prefix(2), radix: 16),
                let origRate = Int(hex.dropFirst(52).prefix(2), radix: 16) {
-                total += 1 + 4 * 4 + 4 * 2 + 2   // 142 + pid sweep + rate sweep + restores
+                total += 1 + 4 * 5 + 4 * 3 + 2   // 142 + pid sweep + rate sweep + restores
                 _ = req("/api/msp?fn=142")       // governor global — bankless
+                var aborted = false
                 for b in 0...3 {
+                    if txAppeared() { aborted = true; break }
                     selectBank(b)
                     _ = req("/api/msp?fn=112")
                     _ = req("/api/msp?fn=94")
                     _ = req("/api/msp?fn=148")
                 }
-                for r in 0...3 {
-                    selectBank(0x80 | r)
-                    _ = req("/api/msp?fn=111")
+                if !aborted {
+                    for r in 0...3 {
+                        if txAppeared() { aborted = true; break }
+                        selectBank(0x80 | r)
+                        _ = req("/api/msp?fn=111")
+                    }
                 }
-                selectBank(origPid)              // put the FC back exactly
-                selectBank(0x80 | origRate)
+                selectBank(origPid)              // put the FC back exactly —
+                selectBank(0x80 | origRate)      // always, aborted or not
             }
             total += flightPaths.count
             for p in flightPaths { _ = req(p) }

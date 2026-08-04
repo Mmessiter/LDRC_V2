@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.319-fool-armour",
+      "url": "https://messiter.com/rxv2/release/v0.9.319/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.319/littlefs.bin",
+      "fs_md5": "e4a04013a8c1b8b0335547261736ee4c",
+      "notes": "Guard rails for busy fingers: the save-to-phone panel warns not to switch the transmitter on or the model off mid-save, and the apps now abort bank switching instantly (restoring the model's own banks) if the transmitter appears mid-save. Sending offline edits re-checks the transmitter at the moment you press Send, shows what to keep on/off, and NEVER loses edits if a step fails \u2014 they are kept for another try. Plus: the app now keeps a separate recorded session PER MODEL; connecting a different model no longer erases the previous one's."
+    },
+    {
       "name": "RXV2-0.9.318-flight-list-fix",
       "url": "https://messiter.com/rxv2/release/v0.9.318/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.318/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.308/littlefs.bin",
       "fs_md5": "949ec73f796fdf458e5f8ece301775ca",
       "notes": "Emergency repair: yesterday's tidy-up left one line on the Flight analysis page running before the shared library existed - the error silently killed the whole page, which is why it showed no flights at all despite the diary being intact. One line removed; every saved flight reappears."
-    },
-    {
-      "name": "RXV2-0.9.307-seaworthy-lifeboat",
-      "url": "https://messiter.com/rxv2/release/v0.9.307/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.307/littlefs.bin",
-      "fs_md5": "8e8c4c516e46bc4365c4c5adc81985db",
-      "notes": "A sad discovery and its fix: the lifeboat that carries saved flights across page updates was boarding passengers in the wrong order - under memory pressure it saved arbitrary old flights and lost the newest, which is how yesterday's first dated field flights drowned. It now boards newest-first, uses the board's big PSRAM when available (the whole 20-flight diary fits), and the event log honestly reports 'N of M flights aboard' at every crossing."
     }
   ]
 }

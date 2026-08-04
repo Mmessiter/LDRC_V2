@@ -35,7 +35,6 @@ class MainActivity : AppCompatActivity() {
     private var demoMode = false
     private var reviewMode = false   // armchair review of the recorded last session
     private var demoBtn: TextView? = null
-    private var reviewBtn: TextView? = null
 
     // Fake same-origin the WebView believes it is talking to. Every request
     // to this host is intercepted; the network is never actually touched.
@@ -158,17 +157,23 @@ class MainActivity : AppCompatActivity() {
             setOnClickListener { demoMode = true; showWeb() }
         }
         col.addView(demoBtn)
-        // Armchair review (Malcolm's lodge idea 2026-08-04): the recorded
-        // last session, browsable with everything switched off.
+        // Armchair review (Malcolm's lodge idea 2026-08-04): each MODEL's
+        // recorded session, browsable with everything switched off —
+        // connecting another model never erases the previous one's.
         SessionCache.init(this)
-        reviewBtn = TextView(this).apply {
-            text = "🕰  Review last session:  " + SessionCache.label
-            textSize = 15f; setPadding(40, 28, 40, 28)
-            setBackgroundColor(0xFF14532D.toInt()); setTextColor(0xFF86EFAC.toInt())
-            visibility = if (SessionCache.available) View.VISIBLE else View.GONE
-            setOnClickListener { reviewMode = true; showWeb() }
+        for ((model, atMs) in SessionCache.savedSessions()) {
+            val t = if (atMs > 0)
+                " — " + android.text.format.DateFormat.format("HH:mm", atMs) else ""
+            col.addView(TextView(this).apply {
+                text = "🕰  Review:  $model$t"
+                textSize = 15f; setPadding(40, 28, 40, 28)
+                setBackgroundColor(0xFF14532D.toInt()); setTextColor(0xFF86EFAC.toInt())
+                setOnClickListener {
+                    SessionCache.activate(model)
+                    reviewMode = true; showWeb()
+                }
+            })
         }
-        col.addView(reviewBtn)
         root.addView(col)
         startScanIfPermitted()
         checkAppUpdate(col)
@@ -583,7 +588,8 @@ class MainActivity : AppCompatActivity() {
                         .setCancelable(false)
                         .setMessage("While offline you edited: $what.\n\n" +
                             "Send the edits to the model now, or discard them and keep " +
-                            "what the model already has?")
+                            "what the model already has?\n\n" +
+                            "While sending, keep the transmitter OFF and the model powered.")
                         .setPositiveButton("Send to model") { _, _ -> sendPendingEdits(edits) }
                         .setNegativeButton("Discard offline edits") { _, _ ->
                             SessionCache.savePending("", emptyList()) }
@@ -617,38 +623,64 @@ class MainActivity : AppCompatActivity() {
             .setView(box).setCancelable(false).create()
         dlg.show()
         var doneSteps = 0
-        fun step() {
+        var failures = 0
+        fun step(ok: Boolean) {
             doneSteps++
+            if (!ok) failures++
             runOnUiThread {
                 bar.progress = doneSteps
-                lab.text = "Sending edits… $doneSteps / $steps"
+                lab.text = "Sending edits… $doneSteps / $steps\n" +
+                           "Keep the transmitter OFF and the model ON."
             }
         }
+        fun finish(msg: String, holdMs: Long) {
+            runOnUiThread {
+                lab.text = msg
+                bar.visibility = android.view.View.GONE
+            }
+            Thread.sleep(holdMs)
+            runOnUiThread { dlg.dismiss() }
+        }
         Thread {
+            // Foolish-user guard: the offer may have sat open a while —
+            // re-check the transmitter at PRESS time.
+            var txLive = false
+            bleSyncQuiet("/api/state.json")?.let { body ->
+                runCatching {
+                    val lastPkt = org.json.JSONObject(String(body))
+                        .getJSONObject("rf").optLong("last_pkt_ms", -1)
+                    txLive = lastPkt in 0..2999
+                }
+            }
+            if (txLive) {
+                finish("⚠️ The transmitter came on — nothing was sent.\n" +
+                       "The edits are kept; try again with the transmitter off.", 6000)
+                return@Thread
+            }
             for (e in edits) {
                 // Land each edit in the bank it was made in (fn=210 select
                 // first, 0x80|idx = rate bank); gov global goes bankless.
                 e.bank?.let {
-                    bleSyncQuiet("/api/msp?fn=210&data=%02X".format(it))
-                    step(); Thread.sleep(300)
+                    step(bleSyncQuiet("/api/msp?fn=210&data=%02X".format(it)) != null)
+                    Thread.sleep(300)
                 }
-                bleSyncQuiet("/api/msp?fn=${e.fn}&data=${e.hex}")
-                step(); Thread.sleep(400)
+                step(bleSyncQuiet("/api/msp?fn=${e.fn}&data=${e.hex}") != null)
+                Thread.sleep(400)
             }
-            bleSyncQuiet("/api/msp?fn=250")                    // save to EEPROM
-            step()
+            step(bleSyncQuiet("/api/msp?fn=250") != null)      // save to EEPROM
             if (edits.any { it.fn == 143 }) {
                 Thread.sleep(300)
-                bleSyncQuiet("/api/msp?fn=68")                 // gov config needs an FC reboot
-                step()
+                step(bleSyncQuiet("/api/msp?fn=68") != null)   // gov config needs an FC reboot
             }
-            SessionCache.savePending("", emptyList())
-            runOnUiThread {
-                lab.text = "✅ Edits sent to the model!"
-                bar.visibility = android.view.View.GONE
+            if (failures == 0) {
+                SessionCache.savePending("", emptyList())
+                finish("✅ Edits sent to the model!", 3000)
+            } else {
+                // A step never arrived (model off? radio drop?) — the edits
+                // are NOT lost; the offer returns next time.
+                finish("⚠️ $failures step(s) didn't arrive — the edits are kept.\n" +
+                       "Check the model is powered and try again (transmitter off).", 6000)
             }
-            Thread.sleep(3000)
-            runOnUiThread { dlg.dismiss() }
         }.start()
     }
 
@@ -702,23 +734,37 @@ class MainActivity : AppCompatActivity() {
             // ONLY with the transmitter off (never switch a bank under a
             // live TX). Current banks from MSP_STATUS fn=101 bytes 24/26
             // (verified on the RAW420); restored exactly afterwards.
+            // Foolish-user guard (Malcolm 2026-08-04): if the transmitter
+            // comes ON mid-sweep, stop switching banks IMMEDIATELY and put
+            // the FC back on its own banks — never fly on a sweep leftover.
+            fun txAppeared(): Boolean {
+                val body = req("/api/state.json") ?: return false
+                return runCatching {
+                    val lastPkt = org.json.JSONObject(String(body))
+                        .getJSONObject("rf").optLong("last_pkt_ms", -1)
+                    lastPkt in 0..2999
+                }.getOrDefault(false)
+            }
             if (!txLive) {
                 val st = req("/api/msp?fn=101")?.let { String(it) } ?: ""
                 val origPid = if (st.length >= 54) st.substring(48, 50).toIntOrNull(16) else null
                 val origRate = if (st.length >= 54) st.substring(52, 54).toIntOrNull(16) else null
                 if (origPid != null && origRate != null) {
-                    snapTotal += 1 + 4 * 4 + 4 * 2 + 2
+                    snapTotal += 1 + 4 * 5 + 4 * 3 + 2
                     req("/api/msp?fn=142")       // governor global — bankless
+                    var aborted = false
                     for (b in 0..3) {
+                        if (txAppeared()) { aborted = true; break }
                         selectBank(b)
                         req("/api/msp?fn=112"); req("/api/msp?fn=94"); req("/api/msp?fn=148")
                     }
-                    for (r in 0..3) {
+                    if (!aborted) for (r in 0..3) {
+                        if (txAppeared()) break
                         selectBank(0x80 or r)
                         req("/api/msp?fn=111")
                     }
-                    selectBank(origPid)          // put the FC back exactly
-                    selectBank(0x80 or origRate)
+                    selectBank(origPid)          // put the FC back exactly —
+                    selectBank(0x80 or origRate) // always, aborted or not
                 }
             }
             snapTotal += flightPaths.size

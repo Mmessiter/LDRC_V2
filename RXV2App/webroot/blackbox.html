@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Black box &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=142">
-<script src="/app.js?v=142" defer></script>
+<link rel=stylesheet href="/style.css?v=143">
+<script src="/app.js?v=143" defer></script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -48,6 +48,9 @@
         <div id=snapLab style="font-weight:600;color:#2c3e50;margin-bottom:.6em">Saving session&hellip;</div>
         <div style="background:#d5dde4;border-radius:8px;height:14px;overflow:hidden">
             <div id=snapFill style="background:#5fa099;height:100%;width:0%;border-radius:8px;transition:width .4s"></div>
+        </div>
+        <div id=snapWarn style="margin-top:.6em;font-size:.85em;color:#5c3a1a;background:#ffc88c;border-radius:8px;padding:.45em .7em">
+            &#9888;&#65039; Don't switch the transmitter ON or the model OFF until this finishes.
         </div>
     </div>
 
@@ -145,8 +148,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const lab = document.getElementById('snapLab');
         const fill = document.getElementById('snapFill');
         let timer = null, saving = false;
+        const warn = document.getElementById('snapWarn');
         function finish(msg, delayMs) {
             lab.textContent = msg;
+            warn.style.display = 'none';
             setTimeout(() => { prog.style.display = 'none'; snap.style.display = '';
                                saving = false; }, delayMs);
         }
@@ -155,6 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
             saving = true;
             snap.style.display = 'none';
             prog.style.display = '';
+            warn.style.display = '';
             lab.textContent = 'Saving session…';
             fill.style.width = '0%';
             try {

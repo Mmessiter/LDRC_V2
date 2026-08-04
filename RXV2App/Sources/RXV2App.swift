@@ -33,7 +33,7 @@ struct RootView: View {
     @State private var sendShowing = false
     @State private var sendDone = 0
     @State private var sendTotal = 0
-    @State private var sendFinished = false
+    @State private var sendResult: String? = nil   // nil while sending
 
     var body: some View {
         NavigationStack {
@@ -65,16 +65,21 @@ struct RootView: View {
                     .overlay {
                         if sendShowing {
                             VStack(spacing: 12) {
-                                Text(sendFinished ? "✅ Edits sent to the model!"
-                                                  : "Sending edits… \(sendDone) / \(sendTotal)")
+                                Text(sendResult ?? "Sending edits… \(sendDone) / \(sendTotal)")
                                     .font(.headline)
-                                if !sendFinished {
+                                    .multilineTextAlignment(.center)
+                                if sendResult == nil {
                                     ProgressView(value: Double(sendDone),
                                                  total: Double(max(sendTotal, 1)))
                                         .frame(width: 220)
+                                    Text("Keep the transmitter OFF and the model ON until this finishes.")
+                                        .font(.footnote)
+                                        .foregroundStyle(.secondary)
+                                        .multilineTextAlignment(.center)
                                 }
                             }
                             .padding(24)
+                            .frame(maxWidth: 300)
                             .background(RoundedRectangle(cornerRadius: 16)
                                 .fill(Color(.systemBackground))
                                 .shadow(radius: 12))
@@ -168,7 +173,9 @@ extension RootView {
                     pendingEdits = edits
                     pendingSummary = "While offline you edited: \(what).\n\n"
                         + "Send the edits to the model now, or discard them and "
-                        + "keep what the model already has?"
+                        + "keep what the model already has?\n\n"
+                        + "While sending, keep the transmitter OFF and the "
+                        + "model powered."
                     showPendingOffer = true
                 }
             }
@@ -193,22 +200,60 @@ extension RootView {
         }
         sendTotal = queue.count
         sendDone = 0
-        sendFinished = false
+        sendResult = nil
         sendShowing = true
+        var failures = 0
+        func finish(_ msg: String, keepEdits: Bool) {
+            if !keepEdits { SessionCache.savePending(model: "", edits: []) }
+            sendResult = msg
+            DispatchQueue.main.asyncAfter(deadline: .now() + (keepEdits ? 6 : 3)) {
+                sendShowing = false
+            }
+        }
         func next() {
             guard !queue.isEmpty else {
-                SessionCache.savePending(model: "", edits: [])
-                sendFinished = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 3) { sendShowing = false }
+                if failures == 0 {
+                    finish("✅ Edits sent to the model!", keepEdits: false)
+                } else {
+                    // A step never arrived (model off? radio drop?) — the
+                    // edits are NOT lost; offer again next time.
+                    finish("⚠️ \(failures) step(s) didn't arrive — the edits are "
+                         + "kept. Check the model is powered and try again "
+                         + "(transmitter off).", keepEdits: true)
+                }
                 return
             }
             let p = queue.removeFirst()
-            link.request(method: "GET", path: p, headers: [:], body: nil) { _ in
+            link.request(method: "GET", path: p, headers: [:], body: nil) { result in
+                if case .success(let resp) = result, resp.code == 0 || resp.code == 200 {
+                    // step landed
+                } else {
+                    failures += 1
+                }
                 sendDone += 1
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { next() }
             }
         }
-        next()
+        // Foolish-user guard: the offer dialog may have sat open a while —
+        // re-check the transmitter at PRESS time, not just at connect time.
+        link.request(method: "GET", path: "/api/state.json", headers: [:], body: nil) { result in
+            var txLive = false
+            if case .success(let resp) = result,
+               let obj = try? JSONSerialization.jsonObject(with: resp.body) as? [String: Any],
+               let rf = obj["rf"] as? [String: Any],
+               let lastPkt = rf["last_pkt_ms"] as? Double {
+                txLive = lastPkt >= 0 && lastPkt < 3000
+            }
+            DispatchQueue.main.async {
+                if txLive {
+                    finish("⚠️ The transmitter came on — nothing was sent. The "
+                         + "edits are kept; try again with the transmitter off.",
+                           keepEdits: true)
+                } else {
+                    next()
+                }
+            }
+        }
     }
 }
 
@@ -219,17 +264,24 @@ struct ScannerView: View {
 
     var body: some View {
         List {
-            if SessionCache.shared.available {
+            // One recording per MODEL (Malcolm 2026-08-04): connecting a
+            // different model parks this one's session, never erases it.
+            let sessions = SessionCache.savedSessions()
+            if !sessions.isEmpty {
                 Section {
-                    Button {
-                        reviewMode = true
-                    } label: {
-                        Label("Review last session:  \(SessionCache.shared.label)",
-                              systemImage: "clock.arrow.circlepath")
+                    ForEach(sessions, id: \.model) { s in
+                        Button {
+                            SessionCache.shared.activate(model: s.model)
+                            reviewMode = true
+                        } label: {
+                            Label("Review:  \(s.model) — \(s.savedAt.formatted(date: .omitted, time: .shortened))",
+                                  systemImage: "clock.arrow.circlepath")
+                        }
                     }
                 } footer: {
-                    Text("Flight data and Rotorflight settings recorded during the "
-                       + "last connection — browse them with everything switched off.")
+                    Text("Flight data and Rotorflight settings recorded during each "
+                       + "model's last connection — browse them with everything "
+                       + "switched off.")
                 }
             }
             // a real receiver in sight → the demo offer just muddies the water

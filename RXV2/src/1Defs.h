@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.318-flight-list-fix";
+constexpr const char* FW_VERSION = "RXV2-0.9.319-fool-armour";
 
 //*********************************************************************
 //  Auto-update manifest URLs
