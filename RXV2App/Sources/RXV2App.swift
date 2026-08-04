@@ -28,6 +28,12 @@ struct RootView: View {
     @State private var showPendingOffer = false
     @State private var pendingSummary = ""
     @State private var pendingEdits: [SessionCache.PendingEdit] = []
+    // Send-progress panel (Malcolm 2026-08-04: "I did not know when the
+    // upload had finished"): solid overlay with a bar, then a done tick.
+    @State private var sendShowing = false
+    @State private var sendDone = 0
+    @State private var sendTotal = 0
+    @State private var sendFinished = false
 
     var body: some View {
         NavigationStack {
@@ -55,6 +61,24 @@ struct RootView: View {
                         }
                     } message: {
                         Text(pendingSummary)
+                    }
+                    .overlay {
+                        if sendShowing {
+                            VStack(spacing: 12) {
+                                Text(sendFinished ? "✅ Edits sent to the model!"
+                                                  : "Sending edits… \(sendDone) / \(sendTotal)")
+                                    .font(.headline)
+                                if !sendFinished {
+                                    ProgressView(value: Double(sendDone),
+                                                 total: Double(max(sendTotal, 1)))
+                                        .frame(width: 220)
+                                }
+                            }
+                            .padding(24)
+                            .background(RoundedRectangle(cornerRadius: 16)
+                                .fill(Color(.systemBackground))
+                                .shadow(radius: 12))
+                        }
                     }
             default:
                 ScannerView(demoMode: $demoMode, reviewMode: $reviewMode)
@@ -167,13 +191,20 @@ extension RootView {
         if edits.contains(where: { $0.fn == 143 }) {
             queue.append("/api/msp?fn=68")                    // gov config needs an FC reboot
         }
+        sendTotal = queue.count
+        sendDone = 0
+        sendFinished = false
+        sendShowing = true
         func next() {
             guard !queue.isEmpty else {
                 SessionCache.savePending(model: "", edits: [])
+                sendFinished = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) { sendShowing = false }
                 return
             }
             let p = queue.removeFirst()
             link.request(method: "GET", path: p, headers: [:], body: nil) { _ in
+                sendDone += 1
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { next() }
             }
         }
