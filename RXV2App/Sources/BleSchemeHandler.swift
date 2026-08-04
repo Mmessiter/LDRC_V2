@@ -57,6 +57,18 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
                     body: Data("{\"ok\":\(ok)}".utf8))
             return
         }
+        if path == "/app/snapshot/start" {
+            let ok = !demo && !replay
+            if ok { SessionPrefetcher.run(link: link, fast: true) }
+            deliver(task, url: url, code: 200, type: "application/json",
+                    body: Data("{\"ok\":\(ok)\(ok ? "" : ",\"error\":\"connect to the receiver first\"")}".utf8))
+            return
+        }
+        if path == "/app/snapshot/progress" {
+            deliver(task, url: url, code: 200, type: "application/json",
+                    body: SessionPrefetcher.progressJSON)
+            return
+        }
         if path == "/app/bleota/progress" {
             deliver(task, url: url, code: 200, type: "application/json",
                     body: ota.progressJSON)

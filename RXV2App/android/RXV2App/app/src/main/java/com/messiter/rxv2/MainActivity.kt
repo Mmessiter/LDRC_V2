@@ -605,14 +605,19 @@ class MainActivity : AppCompatActivity() {
     /** Record EVERYTHING, not just what was viewed: walk the flight list and
      *  the tuning reads in the background, gently paced. */
     @Volatile private var prefetchRunning = false
-    private fun prefetchSession() {
+    @Volatile private var snapPhase = "idle"   // idle | running | done
+    @Volatile private var snapDone = 0
+    @Volatile private var snapTotal = 0
+    private fun prefetchSession(fast: Boolean = false) {
         if (prefetchRunning) return
         prefetchRunning = true
+        snapPhase = "running"; snapDone = 0
         Thread {
-            Thread.sleep(6000)   // let the front page settle first
+            Thread.sleep(if (fast) 100 else 6000)   // manual = at once; auto = settle first
             val base = mutableListOf("/api/state.json", "/api/flights.json", "/api/events.json",
                 "/api/msp?fn=111", "/api/msp?fn=112", "/api/msp?fn=94",
                 "/api/msp?fn=142", "/api/msp?fn=148")
+            snapTotal = base.size
             var i = 0
             while (i < base.size) {
                 val p = base[i]; i++
@@ -623,13 +628,15 @@ class MainActivity : AppCompatActivity() {
                         for (k in 0 until arr.length()) {
                             val f = arr.getJSONObject(k)
                             val idx = f.optInt("i", 0)
-                            if (idx > 0) base.add("/api/flightlog.json?f=$idx")
+                            if (idx > 0) { base.add("/api/flightlog.json?f=$idx"); snapTotal++ }
                         }
                     }
                 }
-                Thread.sleep(400)
+                snapDone++
+                Thread.sleep(if (fast) 150 else 400)
             }
             SessionCache.saveIfDirty()
+            snapPhase = "done"
             prefetchRunning = false
         }.start()
     }
@@ -790,6 +797,21 @@ class MainActivity : AppCompatActivity() {
                             "window.__bleResolve($id,200,${JSONObject.quote("application/json")},${JSONObject.quote(b64)})", null)
                     }
                 }.start()
+                return
+            }
+            if (p == "/app/snapshot/start" || p == "/app/snapshot/progress") {
+                val json = if (p == "/app/snapshot/start") {
+                    if (!demoMode && !reviewMode) { prefetchSession(fast = true); "{\"ok\":true}" }
+                    else "{\"ok\":false,\"error\":\"connect to the receiver first\"}"
+                } else {
+                    "{\"phase\":\"$snapPhase\",\"done\":$snapDone,\"total\":$snapTotal}"
+                }
+                runOnUiThread {
+                    val w = webView ?: return@runOnUiThread
+                    val b64 = Base64.encodeToString(json.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
+                    w.evaluateJavascript(
+                        "window.__bleResolve($id,200,${JSONObject.quote("application/json")},${JSONObject.quote(b64)})", null)
+                }
                 return
             }
             if (p == "/app/bleota/start" || p == "/app/bleota/progress") {

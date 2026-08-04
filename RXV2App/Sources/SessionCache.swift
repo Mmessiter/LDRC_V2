@@ -178,17 +178,29 @@ extension SessionCache {
 
 final class SessionPrefetcher {
     private static var running = false
-    static func run(link: BleLink) {
+    // Progress for the "Save session to phone" button (Malcolm 2026-08-04):
+    // explicit and verifiable — press save, watch the count, read "done".
+    static var phase = "idle"      // idle | running | done
+    static var done = 0
+    static var total = 0
+    static var progressJSON: Data {
+        Data("{\"phase\":\"\(phase)\",\"done\":\(done),\"total\":\(total)}".utf8)
+    }
+
+    static func run(link: BleLink, fast: Bool = false) {
         // Re-run on EVERY (re)connection — an OTA reboot or a walk-away cut
         // the first attempt short (Malcolm 2026-08-04: "could not view this
         // morning's data"); recording is idempotent, so repeats are free.
         guard !running else { return }
         running = true
+        phase = "running"; done = 0
         var paths = ["/api/state.json", "/api/flights.json", "/api/events.json",
                      "/api/msp?fn=111", "/api/msp?fn=112", "/api/msp?fn=94",
                      "/api/msp?fn=142", "/api/msp?fn=148"]
+        total = paths.count
+        let pace = fast ? 0.15 : 0.4
         func next() {
-            guard !paths.isEmpty else { running = false; return }
+            guard !paths.isEmpty else { running = false; phase = "done"; return }
             let p = paths.removeFirst()
             link.request(method: "GET", path: p, headers: [:], body: nil) { result in
                 if case .success(let resp) = result, resp.code == 0 || resp.code == 200 {
@@ -204,14 +216,17 @@ final class SessionPrefetcher {
                         for f in arr {
                             if let i = f["i"] as? Int, i > 0 {
                                 paths.append("/api/flightlog.json?f=\(i)")
+                                total += 1
                             }
                         }
                     }
                 }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { next() }
+                done += 1
+                DispatchQueue.main.asyncAfter(deadline: .now() + pace) { next() }
             }
         }
-        // Let the front page settle first; then record the world.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 6) { next() }
+        // The manual button starts at once; the automatic run lets the front
+        // page settle first, then records the world.
+        DispatchQueue.main.asyncAfter(deadline: .now() + (fast ? 0.1 : 6)) { next() }
     }
 }

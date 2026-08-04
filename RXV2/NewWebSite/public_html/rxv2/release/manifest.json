@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.314-save-to-phone",
+      "url": "https://messiter.com/rxv2/release/v0.9.314/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.314/littlefs.bin",
+      "fs_md5": "dd2f927a20a108ad40282189bc5c9fa0",
+      "notes": "Malcolm's suggestion made flesh: a 'Save session to phone' button on the Black box page (visible in the app) explicitly records everything - flights, graphs, events, Rotorflight settings - with a live count and a proud 'All saved!' at the end. The armchair review is now something you can deliberately pack in your pocket before switching off, not just hope the background recorder caught."
+    },
+    {
       "name": "RXV2-0.9.313-steadfast-delete",
       "url": "https://messiter.com/rxv2/release/v0.9.313/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.313/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.303/littlefs.bin",
       "fs_md5": "d519d0ccebc843a4556f6549d66bb287",
       "notes": "The help screens catch up with reality: flying needs no buttons (transmitter on first and the radios manage themselves - explained on the front page), the flight diary holds twenty dated flights with a delete button and landscape mode, and the Black box help explains the self-tending clocks. Written down so nobody has to remember - not even the author."
-    },
-    {
-      "name": "RXV2-0.9.302-phone-teaches-tx",
-      "url": "https://messiter.com/rxv2/release/v0.9.302/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.302/littlefs.bin",
-      "fs_md5": "1f0ec3955b42be50914e931eea88d7f5",
-      "notes": "The circle closes: whenever the receiver's clock came from a phone, it now offers that true time back to the transmitter over the radio link (ack item 37) - and the updated transmitter quietly corrects its own drifty clock from it. Most models never carry GPS, but every model meets a phone; now every phone connection keeps the whole fleet's clocks honest. Needs the matching transmitter update."
     }
   ]
 }

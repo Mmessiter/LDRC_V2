@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Black box &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=139">
-<script src="/app.js?v=139" defer></script>
+<link rel=stylesheet href="/style.css?v=140">
+<script src="/app.js?v=140" defer></script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -39,6 +39,9 @@
 
     <a class="btn" href="/flight" style="background:#4a90c9"><span class=ico>&#128200;</span>Flight analysis &mdash; graph &amp; link stats</a>
     <a class="btn" href="/events" style="background:#6f7e8b"><span class=ico>&#128209;</span>Event log</a>
+    <!-- App-only (Malcolm 2026-08-04): explicit, verifiable snapshot of the
+         whole session to the phone for the offline armchair review. -->
+    <button id=saveSnapBtn class="btn" style="display:none;background:#5fa099"><span class=ico>&#128190;</span>Save session to phone</button>
 
     <div class=footer></div>
 </div>
@@ -119,6 +122,38 @@ async function refreshStatus() {
 document.addEventListener('DOMContentLoaded', () => {
     refreshStatus();                       // LDRC (deferred app.js) is loaded by now
     setInterval(refreshStatus, 2000);
+    // "Save session to phone" — only inside the app (the phone IS the store).
+    const snap = document.getElementById('saveSnapBtn');
+    if (LDRC.viaBle && snap) {
+        snap.style.display = '';
+        let timer = null;
+        snap.addEventListener('click', async () => {
+            snap.disabled = true;
+            snap.innerHTML = '<span class=ico>&#8987;</span>Saving session…';
+            try {
+                const r = await (await fetch('/app/snapshot/start', { cache: 'no-store' })).json();
+                if (!r.ok) throw new Error(r.error || 'not available now');
+            } catch (e) {
+                snap.innerHTML = '<span class=ico>&#9888;&#65039;</span>' + e.message;
+                setTimeout(() => { snap.disabled = false;
+                    snap.innerHTML = '<span class=ico>&#128190;</span>Save session to phone'; }, 4000);
+                return;
+            }
+            timer = setInterval(async () => {
+                try {
+                    const p = await (await fetch('/app/snapshot/progress', { cache: 'no-store' })).json();
+                    if (p.phase === 'running') {
+                        snap.innerHTML = '<span class=ico>&#8987;</span>Saving… ' + p.done + ' / ' + p.total;
+                    } else if (p.phase === 'done') {
+                        clearInterval(timer);
+                        snap.innerHTML = '<span class=ico>&#9989;</span>All saved!  (' + p.done + ' items on the phone)';
+                        setTimeout(() => { snap.disabled = false;
+                            snap.innerHTML = '<span class=ico>&#128190;</span>Save session to phone'; }, 6000);
+                    }
+                } catch (e) { /* transient — keep polling */ }
+            }, 700);
+        });
+    }
 });
 </script>
 <template id=helpContent><h2>Black box</h2>
