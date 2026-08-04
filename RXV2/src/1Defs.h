@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.313-steadfast-delete";
+constexpr const char* FW_VERSION = "RXV2-0.9.314-save-to-phone";
 
 //*********************************************************************
 //  Auto-update manifest URLs
