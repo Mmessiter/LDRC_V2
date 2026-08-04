@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.316-progress-bar",
+      "url": "https://messiter.com/rxv2/release/v0.9.316/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.316/littlefs.bin",
+      "fs_md5": "fac5fc3b5e7c053aa25f9d5fb562d2df",
+      "notes": "Saving the session to the phone now shows a solid, readable progress panel with a real progress bar. Offline edits made in review are no longer discarded when you connect with the transmitter on \u2014 they are kept until sent (transmitter off) or overwritten by newer edits."
+    },
+    {
       "name": "RXV2-0.9.315-solid-text",
       "url": "https://messiter.com/rxv2/release/v0.9.315/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.315/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.305/littlefs.bin",
       "fs_md5": "96661ecd492eb5f40665f41bd4dc6d2d",
       "notes": "Every page now teaches the receiver the time, and the Black box page re-teaches it the moment it notices the clock is unset - so sitting on one screen through a receiver reboot no longer leaves it ignorant of the date until you happen to navigate. One shared, rate-limited helper replaces the per-page copies."
-    },
-    {
-      "name": "RXV2-0.9.304-field-telemetry",
-      "url": "https://messiter.com/rxv2/release/v0.9.304/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.304/littlefs.bin",
-      "fs_md5": "09ade3cae2a10c6b46b6b0f5b551aa58",
-      "notes": "Field fix from today's three test flights: after landing away from home WiFi, the receiver kept the flight controller cut off during its ~2 minutes of hopeful WiFi retries - so the Black box showed 'no telemetry' with the battery plugged in. The flight-controller line now stays connected throughout, and the battery card fills in seconds at the field, just as it does at home."
     }
   ]
 }
