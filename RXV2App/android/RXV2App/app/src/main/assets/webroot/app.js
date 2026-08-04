@@ -25,9 +25,11 @@
         viaBle: location.protocol === 'ble:' || location.hostname === 'rxv2.local',
 
         // True in the app's "Review last session" (receiver off, edits go to
-        // the phone). Set asynchronously just below — resolved long before
-        // any user tap; pages branch their save wording on it.
+        // the phone). Resolved via LDRC.replayReady (set at the bottom of
+        // this file) — pages that need the answer during their FIRST load
+        // `await LDRC.replayReady` before wording their messages.
         replay: false,
+        replayReady: Promise.resolve(false),
 
         async fetchState() {
             try {
@@ -293,6 +295,17 @@
         }
     };
 
+    // Ask the app whether we're in "Review last session" (the stub answers
+    // locally, no radio). Kicked off at script time — deferred scripts run
+    // BEFORE DOMContentLoaded, so pages that `await LDRC.replayReady` in
+    // their first load() always get the true answer.
+    if (LDRC.viaBle) {
+        LDRC.replayReady = fetch('/app/snapshot/progress', { cache: 'no-store' })
+            .then(r => r.json())
+            .then(p => { LDRC.replay = (p.phase === 'replay'); return LDRC.replay; })
+            .catch(() => false);
+    }
+
     // Footer FW version. Defer the fetch by 200 ms so it can't block the
     // first paint, and never await it on DOMContentLoaded (a stalled
     // /api/state.json was queuing nav requests on the chip's single-client
@@ -304,27 +317,21 @@
         // (Malcolm, 2026-08-02). Fire-and-forget; the RX ignores duplicates.
         LDRC.teachTime();
         LDRC.mountFooter();
-        // Review mode? The app answers instantly (local stub, no radio).
-        // Any save button then tells the truth: edits go to the PHONE
-        // (Malcolm 2026-08-04: "when offline this should say save to phone").
-        if (LDRC.viaBle) {
-            fetch('/app/snapshot/progress', { cache: 'no-store' })
-                .then(r => r.json())
-                .then(p => {
-                    if (p.phase !== 'replay') return;
-                    LDRC.replay = true;
-                    // Only the Rotorflight tuning pages capture edits to the
-                    // phone in review — other pages' saves genuinely fail
-                    // offline, so their buttons must keep their labels.
-                    const captured = ['/rotorflight-pid', '/rotorflight-pidplus',
-                                      '/rotorflight-rates', '/rotorflight-gov-global',
-                                      '/rotorflight-gov-profile'];
-                    if (!captured.includes(location.pathname)) return;
-                    const b = document.getElementById('saveBtn');
-                    if (b) b.innerHTML = '<span class=ico>&#128190;</span>Save to phone';
-                })
-                .catch(() => {});
-        }
+        // Review mode? Buttons tell the truth: edits go to / come from the
+        // PHONE (Malcolm 2026-08-04). Only the Rotorflight tuning pages
+        // capture edits in review — other pages' saves genuinely fail
+        // offline, so their buttons keep their labels.
+        LDRC.replayReady.then(isReplay => {
+            if (!isReplay) return;
+            const captured = ['/rotorflight-pid', '/rotorflight-pidplus',
+                              '/rotorflight-rates', '/rotorflight-gov-global',
+                              '/rotorflight-gov-profile'];
+            if (!captured.includes(location.pathname)) return;
+            const b = document.getElementById('saveBtn');
+            if (b) b.innerHTML = '<span class=ico>&#128190;</span>Save to phone';
+            const r = document.getElementById('reloadBtn');
+            if (r) r.innerHTML = '<span class=ico>&#8635;</span>Reload from phone';
+        });
         // Fixed "front screen" button, top-left on every page EXCEPT the home
         // page itself — so returning to the menu is one tap, no scrolling to the
         // bottom. It's a normal <a href="/">, so the click interceptor below

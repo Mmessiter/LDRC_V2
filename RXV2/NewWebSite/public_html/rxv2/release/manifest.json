@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.320-smooth-curves",
+      "url": "https://messiter.com/rxv2/release/v0.9.320/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.320/littlefs.bin",
+      "fs_md5": "e8e772da3b19b7cc8b9f523dc0e76e84",
+      "notes": "The flight graph now draws real slopes instead of staircases: each sensor's discrete steps are turned back into the smooth curve the quantity actually followed. And when reviewing offline, the tuning pages now honestly say 'Loaded from the phone' / 'Reload from phone'."
+    },
+    {
       "name": "RXV2-0.9.319-fool-armour",
       "url": "https://messiter.com/rxv2/release/v0.9.319/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.319/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.309/littlefs.bin",
       "fs_md5": "1695ef36780f2976aa8d24c5f0e2a7d5",
       "notes": "Ask and receive (Malcolm's idea): opening the flight list is itself proof the pilot is on the ground - so it now ends the save's polite waiting immediately, and while the write completes the selector says 'saving the last flight, a moment...' instead of leaving you wondering. The safety rules are untouched: saves still never run while armed."
-    },
-    {
-      "name": "RXV2-0.9.308-flight-page-fix",
-      "url": "https://messiter.com/rxv2/release/v0.9.308/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.308/littlefs.bin",
-      "fs_md5": "949ec73f796fdf458e5f8ece301775ca",
-      "notes": "Emergency repair: yesterday's tidy-up left one line on the Flight analysis page running before the shared library existed - the error silently killed the whole page, which is why it showed no flights at all despite the diary being intact. One line removed; every saved flight reappears."
     }
   ]
 }
