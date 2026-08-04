@@ -547,10 +547,11 @@ class MainActivity : AppCompatActivity() {
                 var txLive = false
                 bleSyncQuiet("/api/state.json")?.let { body ->
                     runCatching {
-                        val o = org.json.JSONObject(String(body))
-                        val lastPkt = o.getJSONObject("rf").optLong("last_pkt_ms", 0)
-                        val upMs = o.getJSONObject("info").optLong("uptime_s", 0) * 1000
-                        txLive = lastPkt > 0 && (upMs - lastPkt) < 3000
+                        // last_pkt_ms is an AGE in ms (-1 = no TX heard yet),
+                        // not a timestamp (bug found 2026-08-04).
+                        val lastPkt = org.json.JSONObject(String(body))
+                            .getJSONObject("rf").optLong("last_pkt_ms", -1)
+                        txLive = lastPkt in 0..2999
                     }
                 }
                 val what = edits.joinToString(", ") { it.label }
@@ -561,9 +562,9 @@ class MainActivity : AppCompatActivity() {
                     runOnUiThread {
                         android.app.AlertDialog.Builder(this)
                             .setTitle("Offline edits discarded")
-                            .setMessage("Offline edits ($what) were DISCARDED — the transmitter " +
-                                "is on, and sending is only safe with it off. To keep offline " +
-                                "edits, reconnect with the transmitter off first.")
+                            .setMessage("Your offline edits ($what) cannot be sent because " +
+                                "the transmitter is on — they have been discarded.\n\n" +
+                                "To send offline edits, connect with the transmitter off.")
                             .setPositiveButton("OK", null)
                             .show()
                     }
@@ -573,10 +574,9 @@ class MainActivity : AppCompatActivity() {
                     android.app.AlertDialog.Builder(this)
                         .setTitle("Settings edited offline")
                         .setCancelable(false)
-                        .setMessage("While offline you edited: $what.\n\nThe transmitter is " +
-                            "off, so the app controls the bank — if the edits belong to a " +
-                            "particular bank, select it on the Rotorflight pages first.\n\n" +
-                            "Send the edits to the model now, or discard them?")
+                        .setMessage("While offline you edited: $what.\n\n" +
+                            "Send the edits to the model now, or discard them and keep " +
+                            "what the model already has?")
                         .setPositiveButton("Send to model") { _, _ -> sendPendingEdits(edits) }
                         .setNegativeButton("Discard offline edits") { _, _ ->
                             SessionCache.savePending("", emptyList()) }
@@ -636,10 +636,11 @@ class MainActivity : AppCompatActivity() {
             var txLive = false
             req("/api/state.json")?.let { body ->
                 runCatching {
-                    val o = org.json.JSONObject(String(body))
-                    val lastPkt = o.getJSONObject("rf").optLong("last_pkt_ms", 0)
-                    val upMs = o.getJSONObject("info").optLong("uptime_s", 0) * 1000
-                    txLive = lastPkt > 0 && (upMs - lastPkt) < 3000
+                    // AGE in ms, -1 = never — the bank sweep must NEVER run
+                    // when this is small (TX live).
+                    val lastPkt = org.json.JSONObject(String(body))
+                        .getJSONObject("rf").optLong("last_pkt_ms", -1)
+                    txLive = lastPkt in 0..2999
                 }
             }
             val flightPaths = mutableListOf<String>()
