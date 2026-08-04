@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Black box &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=140">
-<script src="/app.js?v=140" defer></script>
+<link rel=stylesheet href="/style.css?v=141">
+<script src="/app.js?v=141" defer></script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -125,7 +125,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // "Save session to phone" — only inside the app (the phone IS the store).
     const snap = document.getElementById('saveSnapBtn');
     if (LDRC.viaBle && snap) {
-        snap.style.display = '';
+        // In "Review last session" the phone IS the data source — saving is
+        // meaningless there, so the app answers phase:"replay" and we hide.
+        fetch('/app/snapshot/progress', { cache: 'no-store' })
+            .then(r => r.json())
+            .then(p => { if (p.phase !== 'replay') snap.style.display = ''; })
+            .catch(() => {});
         let timer = null;
         snap.addEventListener('click', async () => {
             snap.disabled = true;

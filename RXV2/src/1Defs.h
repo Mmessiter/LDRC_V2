@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.314-save-to-phone";
+constexpr const char* FW_VERSION = "RXV2-0.9.315-solid-text";
 
 //*********************************************************************
 //  Auto-update manifest URLs

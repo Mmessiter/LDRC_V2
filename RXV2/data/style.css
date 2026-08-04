@@ -63,20 +63,28 @@ body{
 
 .container{max-width:500px;margin:0 auto;position:relative;z-index:1}
 
+/* Headings sit straight on the background photo — give them a SOLID chip
+ * (Malcolm 2026-08-04: translucent text is very hard to read in sunlight). */
 h1{
     text-align:center;
     color:#2c3e50;
     font-weight:300;
     letter-spacing:.08em;
     font-size:1.9em;
-    margin:.3em 0 .15em;
-    text-shadow:0 1px 2px rgba(255,255,255,.5)
+    margin:.3em auto .15em;
+    background:#f2f6f8;
+    border-radius:12px;
+    padding:.12em .5em;
+    width:fit-content;
+    box-shadow:0 2px 6px rgba(0,0,0,.08)
 }
 
 /* Side padding keeps title + subtitle clear of the floating home/help
    buttons (Malcolm 2026-07-31: subtitle text hid behind them). */
-h1{padding:0 2.2em}
-.subtitle{text-align:center;color:#5d7a8c;margin:0 0 1.8em;font-size:.9em;padding:0 3.2em}
+h1{max-width:calc(100% - 4.4em)}
+.subtitle{text-align:center;color:#4a6577;margin:0 auto 1.8em;font-size:.9em;
+    background:#f2f6f8;border-radius:10px;padding:.35em .8em;width:fit-content;
+    max-width:calc(100% - 6.4em)}
 
 /* Buttons -------------------------------------------------------------- */
 .btn{
@@ -116,7 +124,7 @@ h1{padding:0 2.2em}
     top:max(0.7em, env(safe-area-inset-top, 0.7em));
     right:max(0.7em, env(safe-area-inset-right, 0.7em));
     width:3em;height:3em;border-radius:50%;
-    background:rgba(255,255,255,.85);color:#3a5165;
+    background:#f4f7f9;color:#3a5165;
     font:700 1.5em/1 -apple-system,BlinkMacSystemFont,sans-serif;
     border:1.5px solid rgba(125,158,176,.5);cursor:pointer;
     z-index:50;box-shadow:0 2px 6px rgba(0,0,0,.15);padding:0;
@@ -131,7 +139,7 @@ h1{padding:0 2.2em}
     left:max(0.7em, env(safe-area-inset-left, 0.7em));
     width:3em;height:3em;border-radius:50%;
     display:flex;align-items:center;justify-content:center;
-    background:rgba(255,255,255,.85);
+    background:#f4f7f9;
     font-size:1.55em;line-height:1;text-decoration:none;
     border:1.5px solid rgba(125,158,176,.5);cursor:pointer;
     z-index:50;box-shadow:0 2px 6px rgba(0,0,0,.15);padding:0;
@@ -165,7 +173,7 @@ h1{padding:0 2.2em}
 
 /* Cards ---------------------------------------------------------------- */
 .card{
-    background:rgba(255,255,255,.65);
+    background:#f2f6f8;   /* SOLID — translucent cards were unreadable in sunlight */
     border-radius:14px;
     padding:1.2em 1.4em;
     margin:.8em 0;
@@ -185,7 +193,9 @@ code{
 }
 
 /* Footer --------------------------------------------------------------- */
-.footer{text-align:center;margin-top:2em;color:#5d7a8c;font-size:.85em}
+.footer{text-align:center;margin:2em auto 0;color:#4a6577;font-size:.85em;
+    background:#f2f6f8;border-radius:10px;padding:.45em .8em;width:fit-content}
+.footer:empty{background:none;padding:0}
 .footer a{color:#5d7a8c;text-decoration:none;margin:0 .5em}
 
 /* Misc helpers --------------------------------------------------------- */
@@ -201,8 +211,8 @@ code{
     box-shadow:0 4px 14px rgba(0,0,0,.08);
     transition:background .3s
 }
-.status-card.up  {background:rgba(168,210,154,.85)}
-.status-card.down{background:rgba(220,160,140,.85)}
+.status-card.up  {background:#a8d29a}
+.status-card.down{background:#dca08c}
 
 /* Confirm modal (LDRC.confirm) --------------------------------------- */
 .modalOverlay{
@@ -270,7 +280,7 @@ button:disabled{opacity:.35;cursor:not-allowed;filter:grayscale(.6)}
 /* Channel grid (Diagnostics + Fly) ----------------------------------- */
 .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:.4em;margin:1em 0}
 .ch{
-    background:rgba(255,255,255,.7);
+    background:#f2f6f8;
     border-radius:8px;
     padding:.45em;
     text-align:center;

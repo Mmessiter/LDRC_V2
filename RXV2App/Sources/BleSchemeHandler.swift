@@ -65,8 +65,11 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
             return
         }
         if path == "/app/snapshot/progress" {
+            // In review the phone IS the store — the page hides its save
+            // button when it sees phase:"replay".
             deliver(task, url: url, code: 200, type: "application/json",
-                    body: SessionPrefetcher.progressJSON)
+                    body: replay ? Data("{\"phase\":\"replay\",\"done\":0,\"total\":0}".utf8)
+                                 : SessionPrefetcher.progressJSON)
             return
         }
         if path == "/app/bleota/progress" {
@@ -123,7 +126,8 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
                 let fn = Int(items?.first(where: { $0.name == "fn" })?.value ?? "") ?? -1
                 let dataHex = items?.first(where: { $0.name == "data" })?.value
                 if fn == 210 {   // bank select is part of the pages' READ flow —
-                    // nod politely; review shows the RECORDED bank's values.
+                    // note it (the cache keys banked reads by it), nod politely.
+                    if let hex = dataHex { SessionCache.shared.noteBankSelect(dataHex: hex) }
                     deliver(task, url: url, code: 200, type: "text/plain", body: Data())
                     return
                 }
@@ -168,6 +172,12 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
             guard let self else { return }
             switch result {
             case .success(let resp):
+                // Bank selects steer the recorder's keys for banked MSP reads.
+                if path == "/api/msp", let q = url.query, q.contains("fn=210"),
+                   (resp.code == 0 || resp.code == 200),
+                   let d = q.split(separator: "&").first(where: { $0.hasPrefix("data=") }) {
+                    SessionCache.shared.noteBankSelect(dataHex: String(d.dropFirst(5)))
+                }
                 // Armchair-review recorder: tee every successful read so the
                 // session can be replayed after the receiver is switched off.
                 if method == "GET", (resp.code == 0 || resp.code == 200),

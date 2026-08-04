@@ -590,6 +590,12 @@ class MainActivity : AppCompatActivity() {
     private fun sendPendingEdits(edits: List<SessionCache.PendingEdit>) {
         Thread {
             for (e in edits) {
+                // Land each edit in the bank it was made in (fn=210 select
+                // first, 0x80|idx = rate bank); gov global goes bankless.
+                e.bank?.let {
+                    bleSyncQuiet("/api/msp?fn=210&data=%02X".format(it))
+                    Thread.sleep(300)
+                }
                 bleSyncQuiet("/api/msp?fn=${e.fn}&data=${e.hex}")
                 Thread.sleep(400)
             }
@@ -614,27 +620,64 @@ class MainActivity : AppCompatActivity() {
         snapPhase = "running"; snapDone = 0
         Thread {
             Thread.sleep(if (fast) 100 else 6000)   // manual = at once; auto = settle first
-            val base = mutableListOf("/api/state.json", "/api/flights.json", "/api/events.json",
-                "/api/msp?fn=111", "/api/msp?fn=112", "/api/msp?fn=94",
-                "/api/msp?fn=142", "/api/msp?fn=148")
-            snapTotal = base.size
-            var i = 0
-            while (i < base.size) {
-                val p = base[i]; i++
-                val body = bleSyncQuiet(p)   // followFetch records automatically
-                if (p == "/api/flights.json" && body != null) {
-                    runCatching {
-                        val arr = org.json.JSONArray(String(body))
-                        for (k in 0 until arr.length()) {
-                            val f = arr.getJSONObject(k)
-                            val idx = f.optInt("i", 0)
-                            if (idx > 0) { base.add("/api/flightlog.json?f=$idx"); snapTotal++ }
-                        }
+            val pace = if (fast) 150L else 400L
+            fun req(p: String): ByteArray? {   // followFetch records automatically
+                val body = bleSyncQuiet(p)
+                snapDone++
+                Thread.sleep(pace)
+                return body
+            }
+            fun selectBank(byte: Int) {
+                val hex = "%02X".format(byte)
+                SessionCache.noteBankSelect(hex)
+                req("/api/msp?fn=210&data=$hex")
+            }
+            snapTotal = 3
+            var txLive = false
+            req("/api/state.json")?.let { body ->
+                runCatching {
+                    val o = org.json.JSONObject(String(body))
+                    val lastPkt = o.getJSONObject("rf").optLong("last_pkt_ms", 0)
+                    val upMs = o.getJSONObject("info").optLong("uptime_s", 0) * 1000
+                    txLive = lastPkt > 0 && (upMs - lastPkt) < 3000
+                }
+            }
+            val flightPaths = mutableListOf<String>()
+            req("/api/flights.json")?.let { body ->
+                runCatching {
+                    val arr = org.json.JSONArray(String(body))
+                    for (k in 0 until arr.length()) {
+                        val idx = arr.getJSONObject(k).optInt("i", 0)
+                        if (idx > 0) flightPaths.add("/api/flightlog.json?f=$idx")
                     }
                 }
-                snapDone++
-                Thread.sleep(if (fast) 150 else 400)
             }
+            req("/api/events.json")
+            // Rotorflight reads — all 4 PID-side banks + all 4 rate banks,
+            // ONLY with the transmitter off (never switch a bank under a
+            // live TX). Current banks from MSP_STATUS fn=101 bytes 24/26
+            // (verified on the RAW420); restored exactly afterwards.
+            if (!txLive) {
+                val st = req("/api/msp?fn=101")?.let { String(it) } ?: ""
+                val origPid = if (st.length >= 54) st.substring(48, 50).toIntOrNull(16) else null
+                val origRate = if (st.length >= 54) st.substring(52, 54).toIntOrNull(16) else null
+                if (origPid != null && origRate != null) {
+                    snapTotal += 1 + 4 * 4 + 4 * 2 + 2
+                    req("/api/msp?fn=142")       // governor global — bankless
+                    for (b in 0..3) {
+                        selectBank(b)
+                        req("/api/msp?fn=112"); req("/api/msp?fn=94"); req("/api/msp?fn=148")
+                    }
+                    for (r in 0..3) {
+                        selectBank(0x80 or r)
+                        req("/api/msp?fn=111")
+                    }
+                    selectBank(origPid)          // put the FC back exactly
+                    selectBank(0x80 or origRate)
+                }
+            }
+            snapTotal += flightPaths.size
+            for (p in flightPaths) req(p)
             SessionCache.saveIfDirty()
             snapPhase = "done"
             prefetchRunning = false
@@ -715,7 +758,9 @@ class MainActivity : AppCompatActivity() {
                 val u = Uri.parse("$ORIGIN$pathAndQuery")
                 val fn = u.getQueryParameter("fn")?.toIntOrNull() ?: -1
                 val dataHex = u.getQueryParameter("data")
-                if (fn == 210) {   // bank select = part of the READ flow: nod politely
+                if (fn == 210) {   // bank select = part of the READ flow:
+                    // note it (banked reads key by it), nod politely.
+                    if (!dataHex.isNullOrEmpty()) SessionCache.noteBankSelect(dataHex)
                     cb(kotlin.Result.success(Rxv2Ble.Response(200, "text/plain", "", ByteArray(0))))
                     return
                 }
@@ -751,6 +796,12 @@ class MainActivity : AppCompatActivity() {
         }
         ble.request(method, pathAndQuery, headers, body) { result ->
             val resp = result.getOrNull()
+            // Bank selects steer the recorder's keys for banked MSP reads.
+            if (resp != null && (resp.code == 0 || resp.code == 200)
+                && pathAndQuery.startsWith("/api/msp") && pathAndQuery.contains("fn=210")) {
+                Uri.parse("$ORIGIN$pathAndQuery").getQueryParameter("data")
+                    ?.let { SessionCache.noteBankSelect(it) }
+            }
             // Armchair-review recorder: tee every successful read.
             if (resp != null && method == "GET" && (resp.code == 0 || resp.code == 200)) {
                 val bare = pathAndQuery.substringBefore("?")
@@ -804,7 +855,9 @@ class MainActivity : AppCompatActivity() {
                     if (!demoMode && !reviewMode) { prefetchSession(fast = true); "{\"ok\":true}" }
                     else "{\"ok\":false,\"error\":\"connect to the receiver first\"}"
                 } else {
-                    "{\"phase\":\"$snapPhase\",\"done\":$snapDone,\"total\":$snapTotal}"
+                    // Review: phone IS the store — the page hides its save button.
+                    if (reviewMode) "{\"phase\":\"replay\",\"done\":0,\"total\":0}"
+                    else "{\"phase\":\"$snapPhase\",\"done\":$snapDone,\"total\":$snapTotal}"
                 }
                 runOnUiThread {
                     val w = webView ?: return@runOnUiThread

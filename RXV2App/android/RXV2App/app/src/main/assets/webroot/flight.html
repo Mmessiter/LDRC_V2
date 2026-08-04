@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Flight analysis &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=140">
-<script src="/app.js?v=140" defer></script>
+<link rel=stylesheet href="/style.css?v=141">
+<script src="/app.js?v=141" defer></script>
 <style>
 /* Landscape = reading mode (Malcolm 2026-07-31): the page widens and the
    graph grows to occupy most of the screen instead of a slim centre column. */
@@ -126,7 +126,7 @@ function renderLink(lk, savedAt, fIdx) {
     // bigger gaps because the TRANSMITTER pauses briefly for each parameter
     // read/save — honest numbers, but alarming without context.
     if (lk.param_ops > 0) {
-        h += '<div style="margin-top:.5em;padding:.55em .8em;border-radius:8px;background:rgba(255,210,120,.55);' +
+        h += '<div style="margin-top:.5em;padding:.55em .8em;border-radius:8px;background:#ffdf9e;' +
              'color:#5c3a00;font-size:.85em;line-height:1.45">&#128295; Rotorflight settings were edited from the ' +
              'transmitter during this session — each read or save briefly pauses its transmission, so larger ' +
              'gaps and radio swaps here are expected, not a link problem.</div>';
