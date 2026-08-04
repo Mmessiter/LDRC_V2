@@ -112,3 +112,100 @@ final class SessionCache {
         savedAt = shape.savedAt
     }
 }
+
+// MARK: - Offline Rotorflight edits (Malcolm 2026-08-04, refinement 2)
+//
+// In review mode the tuning pages may SAVE. The write is captured here (and
+// the cached read image updated so the page's own verification passes) — then
+// on the next connection to the SAME model the user chooses: send the edits
+// to the model, or discard them and keep what the model already has.
+
+extension SessionCache {
+    static let writeToRead: [Int: Int] = [204: 111, 202: 112, 95: 94, 143: 142, 149: 148]
+    static let writeLabels: [Int: String] = [204: "rates", 202: "PIDs", 95: "advanced PIDs",
+                                             143: "governor (global)", 149: "governor profile"]
+
+    struct PendingEdit: Codable {
+        let fn: Int
+        let hex: String
+        let label: String
+    }
+
+    private static var pendingKey: String { "pendingEdits.json" }
+    private static var pendingURL: URL {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent(pendingKey)
+    }
+    private struct PendingShape: Codable { var model: String; var edits: [PendingEdit] }
+
+    static func loadPending() -> (model: String, edits: [PendingEdit]) {
+        guard let d = try? Data(contentsOf: pendingURL),
+              let s = try? JSONDecoder().decode(PendingShape.self, from: d)
+        else { return ("", []) }
+        return (s.model, s.edits)
+    }
+
+    static func savePending(model: String, edits: [PendingEdit]) {
+        if edits.isEmpty { try? FileManager.default.removeItem(at: pendingURL); return }
+        if let d = try? JSONEncoder().encode(PendingShape(model: model, edits: edits)) {
+            try? d.write(to: pendingURL, options: .atomic)
+        }
+    }
+
+    /// Capture an offline MSP write: remember it for the reconnect offer, and
+    /// update the cached READ so the page's own read-back verification passes.
+    /// Returns true when the write is a supported offline edit.
+    func captureOfflineWrite(fn: Int, dataHex: String) -> Bool {
+        guard let readFn = Self.writeToRead[fn] else { return false }
+        var (model, edits) = Self.loadPending()
+        if model != modelName { edits = [] }               // stale edits for another model
+        edits.removeAll { $0.fn == fn }                    // newest edit of a kind wins
+        edits.append(Self.PendingEdit(fn: fn, hex: dataHex,
+                                      label: Self.writeLabels[fn] ?? "settings"))
+        Self.savePending(model: modelName, edits: edits)
+        // The pages read back exactly what they wrote (symmetric MSP layouts).
+        record(pathAndQuery: "/api/msp?fn=\(readFn)", path: "/api/msp",
+               type: "text/plain", body: Data(dataHex.uppercased().utf8))
+        return true
+    }
+}
+
+// MARK: - Whole-session prefetch (Malcolm 2026-08-04, refinement 1)
+//
+// Record EVERYTHING, not just what the user happened to view: shortly after
+// connecting, walk the flight list and the tuning reads in the background,
+// paced gently so the user's own page loads keep priority on the one radio.
+
+final class SessionPrefetcher {
+    static func run(link: BleLink) {
+        var paths = ["/api/state.json", "/api/flights.json", "/api/events.json",
+                     "/api/msp?fn=111", "/api/msp?fn=112", "/api/msp?fn=94",
+                     "/api/msp?fn=142", "/api/msp?fn=148"]
+        func next() {
+            guard !paths.isEmpty else { return }
+            let p = paths.removeFirst()
+            link.request(method: "GET", path: p, headers: [:], body: nil) { result in
+                if case .success(let resp) = result, resp.code == 0 || resp.code == 200 {
+                    let bare = p.split(separator: "?").first.map(String.init) ?? p
+                    let q = p.contains("?") ? String(p.split(separator: "?")[1]) : nil
+                    if SessionCache.cacheable(path: bare, query: q) {
+                        SessionCache.shared.record(pathAndQuery: p, path: bare,
+                                                   type: resp.contentType, body: resp.body)
+                    }
+                    // The flight list seeds one fetch per saved flight.
+                    if p == "/api/flights.json",
+                       let arr = try? JSONSerialization.jsonObject(with: resp.body) as? [[String: Any]] {
+                        for f in arr {
+                            if let i = f["i"] as? Int, i > 0 {
+                                paths.append("/api/flightlog.json?f=\(i)")
+                            }
+                        }
+                    }
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { next() }
+            }
+        }
+        // Let the front page settle first; then record the world.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 6) { next() }
+    }
+}

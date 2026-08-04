@@ -75,7 +75,10 @@ class MainActivity : AppCompatActivity() {
 
         ble.onState = { st ->
             when (st) {
-                is Rxv2Ble.State.Ready -> { demoMode = false; reviewMode = false; showWeb() }
+                is Rxv2Ble.State.Ready -> {
+                    demoMode = false; reviewMode = false; showWeb()
+                    onConnectedSession(st.name)
+                }
                 is Rxv2Ble.State.Failed -> { showScanner(); showMessage(st.msg) }
                 is Rxv2Ble.State.Idle -> showScanner()
                 else -> {}
@@ -528,6 +531,86 @@ class MainActivity : AppCompatActivity() {
         w.loadUrl("$ORIGIN/")
     }
 
+    // ── Armchair-review refinements (Malcolm 2026-08-04) ────────────
+    private var sessionStartedFor = ""
+
+    private fun onConnectedSession(name: String) {
+        if (sessionStartedFor == name) return
+        sessionStartedFor = name
+        SessionCache.init(this)
+        val (model, edits) = SessionCache.loadPending()
+        if (edits.isNotEmpty() && model == name) {
+            val what = edits.joinToString(", ") { it.label }
+            android.app.AlertDialog.Builder(this)
+                .setTitle("Settings edited offline")
+                .setMessage("While offline you edited: $what.\n\nSend these to the " +
+                    "model now, or discard them and keep what the model already has?\n\n" +
+                    "IMPORTANT: make sure the bank/profile switch is in the SAME " +
+                    "position as when you edited.")
+                .setPositiveButton("Send to model") { _, _ -> sendPendingEdits(edits) }
+                .setNegativeButton("Discard offline edits") { _, _ ->
+                    SessionCache.savePending("", emptyList()) }
+                .setCancelable(false)
+                .show()
+        }
+        prefetchSession()
+    }
+
+    private fun sendPendingEdits(edits: List<SessionCache.PendingEdit>) {
+        Thread {
+            for (e in edits) {
+                bleSyncQuiet("/api/msp?fn=${e.fn}&data=${e.hex}")
+                Thread.sleep(400)
+            }
+            bleSyncQuiet("/api/msp?fn=250")                    // save to EEPROM
+            if (edits.any { it.fn == 143 }) {
+                Thread.sleep(300)
+                bleSyncQuiet("/api/msp?fn=68")                 // gov config needs an FC reboot
+            }
+            SessionCache.savePending("", emptyList())
+        }.start()
+    }
+
+    /** Record EVERYTHING, not just what was viewed: walk the flight list and
+     *  the tuning reads in the background, gently paced. */
+    private fun prefetchSession() {
+        Thread {
+            Thread.sleep(6000)   // let the front page settle first
+            val base = mutableListOf("/api/state.json", "/api/flights.json", "/api/events.json",
+                "/api/msp?fn=111", "/api/msp?fn=112", "/api/msp?fn=94",
+                "/api/msp?fn=142", "/api/msp?fn=148")
+            var i = 0
+            while (i < base.size) {
+                val p = base[i]; i++
+                val body = bleSyncQuiet(p)   // followFetch records automatically
+                if (p == "/api/flights.json" && body != null) {
+                    runCatching {
+                        val arr = org.json.JSONArray(String(body))
+                        for (k in 0 until arr.length()) {
+                            val f = arr.getJSONObject(k)
+                            val idx = f.optInt("i", 0)
+                            if (idx > 0) base.add("/api/flightlog.json?f=$idx")
+                        }
+                    }
+                }
+                Thread.sleep(400)
+            }
+            SessionCache.saveIfDirty()
+        }.start()
+    }
+
+    /** Blocking GET through followFetch (which does the recording); null on failure. */
+    private fun bleSyncQuiet(pathAndQuery: String): ByteArray? {
+        val latch = java.util.concurrent.CountDownLatch(1)
+        var out: ByteArray? = null
+        followFetch("GET", pathAndQuery, emptyMap(), null, 0) { res ->
+            out = res.getOrNull()?.takeIf { it.code == 0 || it.code == 200 }?.body
+            latch.countDown()
+        }
+        latch.await(20, java.util.concurrent.TimeUnit.SECONDS)
+        return out
+    }
+
     // Prepend the bridge shim so it runs before any of the page's scripts.
     // In demo mode the DEMO shim is injected instead: it intercepts fetch()
     // with canned receiver data, so nothing ever touches Bluetooth.
@@ -586,6 +669,23 @@ class MainActivity : AppCompatActivity() {
         if (reviewMode) {   // armchair review: recording answers, radio sleeps
             val bare = pathAndQuery.substringBefore("?")
             val q = pathAndQuery.substringAfter("?", "")
+            if (bare == "/api/msp") {
+                val u = Uri.parse("$ORIGIN$pathAndQuery")
+                val fn = u.getQueryParameter("fn")?.toIntOrNull() ?: -1
+                val dataHex = u.getQueryParameter("data")
+                if (!dataHex.isNullOrEmpty()) {   // offline EDIT: capture for the reconnect offer
+                    if (SessionCache.captureOfflineWrite(fn, dataHex))
+                        cb(kotlin.Result.success(Rxv2Ble.Response(200, "text/plain", "", ByteArray(0))))
+                    else
+                        cb(kotlin.Result.success(Rxv2Ble.Response(409, "text/plain", "",
+                            "receiver offline — this change cannot be made in review".toByteArray())))
+                    return
+                }
+                if (fn == 250 || fn == 68) {   // EEPROM save / reboot: nod politely
+                    cb(kotlin.Result.success(Rxv2Ble.Response(200, "text/plain", "", ByteArray(0))))
+                    return
+                }
+            }
             if (method == "GET") {
                 val hit = SessionCache.lookup(pathAndQuery)
                 if (hit != null) {

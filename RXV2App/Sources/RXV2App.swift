@@ -23,19 +23,33 @@ struct RootView: View {
     @EnvironmentObject var link: BleLink
     @State private var demoMode = false
     @State private var reviewMode = false
+    @State private var sessionStarted = false
+    @State private var showPendingOffer = false
+    @State private var pendingSummary = ""
+    @State private var pendingEdits: [SessionCache.PendingEdit] = []
 
     var body: some View {
         NavigationStack {
             switch link.state {
-            case .ready, .reconnecting:
+            case .ready(let name), .reconnecting(let name):
                 // Full-screen, like the web UI added to the home screen: no
                 // navigation bar. Disconnect lives on the page's Bluetooth
                 // badge (bottom-right), via the rxv2 JS message bridge.
                 WebScreen(link: link)
                     .ignoresSafeArea()
                     .toolbar(.hidden, for: .navigationBar)
+                    .onAppear { onConnected(name) }
+                    .alert("Settings edited offline", isPresented: $showPendingOffer) {
+                        Button("Send to model") { sendPendingEdits() }
+                        Button("Discard offline edits", role: .destructive) {
+                            SessionCache.savePending(model: "", edits: [])
+                        }
+                    } message: {
+                        Text(pendingSummary)
+                    }
             default:
                 ScannerView(demoMode: $demoMode, reviewMode: $reviewMode)
+                    .onAppear { sessionStarted = false }
             }
         }
         // No receiver? Let anyone play: canned data from a real receiver,
@@ -70,6 +84,48 @@ struct RootView: View {
                 }
             }
         }
+    }
+}
+
+extension RootView {
+    /// Once per connection: offer any offline edits (SAME model only), then
+    /// prefetch the whole session in the background (Malcolm's refinement 1).
+    func onConnected(_ name: String) {
+        guard !sessionStarted else { return }
+        sessionStarted = true
+        let (model, edits) = SessionCache.loadPending()
+        if !edits.isEmpty && model == name {
+            pendingEdits = edits
+            let what = edits.map(\.label).joined(separator: ", ")
+            pendingSummary = "While offline you edited: \(what).\n\n"
+                + "Send these to the model now, or discard them and keep what "
+                + "the model already has?\n\nIMPORTANT: make sure the bank/"
+                + "profile switch is in the SAME position as when you edited."
+            showPendingOffer = true
+        } else if !edits.isEmpty {
+            // Edits belong to a different model — never offer them here.
+        }
+        SessionPrefetcher.run(link: link)
+    }
+
+    func sendPendingEdits() {
+        let edits = pendingEdits
+        var queue: [String] = edits.map { "/api/msp?fn=\($0.fn)&data=\($0.hex)" }
+        queue.append("/api/msp?fn=250")                       // save to EEPROM
+        if edits.contains(where: { $0.fn == 143 }) {
+            queue.append("/api/msp?fn=68")                    // gov config needs an FC reboot
+        }
+        func next() {
+            guard !queue.isEmpty else {
+                SessionCache.savePending(model: "", edits: [])
+                return
+            }
+            let p = queue.removeFirst()
+            link.request(method: "GET", path: p, headers: [:], body: nil) { _ in
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { next() }
+            }
+        }
+        next()
     }
 }
 

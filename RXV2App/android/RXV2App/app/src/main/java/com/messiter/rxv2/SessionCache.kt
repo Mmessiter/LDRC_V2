@@ -20,7 +20,9 @@ object SessionCache {
     private var dirty = false
 
     fun init(ctx: Context) {
+        if (file != null) return
         file = File(ctx.filesDir, "lastSession.json")
+        pendingFile = File(ctx.filesDir, "pendingEdits.json")
         load()
     }
 
@@ -86,6 +88,63 @@ object SessionCache {
             root.put("entries", es)
             f.writeText(root.toString())
         }
+    }
+
+    // ── Offline Rotorflight edits (refinement 2) ────────────────────
+    val writeToRead = mapOf(204 to 111, 202 to 112, 95 to 94, 143 to 142, 149 to 148)
+    private val writeLabels = mapOf(204 to "rates", 202 to "PIDs", 95 to "advanced PIDs",
+                                    143 to "governor (global)", 149 to "governor profile")
+    private var pendingFile: File? = null
+
+    data class PendingEdit(val fn: Int, val hex: String, val label: String)
+
+    fun loadPending(): Pair<String, List<PendingEdit>> {
+        val f = pendingFile ?: return Pair("", emptyList())
+        if (!f.exists()) return Pair("", emptyList())
+        return runCatching {
+            val root = JSONObject(f.readText())
+            val model = root.optString("model", "")
+            val arr = root.getJSONArray("edits")
+            val out = ArrayList<PendingEdit>()
+            for (i in 0 until arr.length()) {
+                val e = arr.getJSONObject(i)
+                out.add(PendingEdit(e.getInt("fn"), e.getString("hex"), e.getString("label")))
+            }
+            Pair(model, out as List<PendingEdit>)
+        }.getOrDefault(Pair("", emptyList()))
+    }
+
+    fun savePending(model: String, edits: List<PendingEdit>) {
+        val f = pendingFile ?: return
+        if (edits.isEmpty()) { f.delete(); return }
+        runCatching {
+            val root = JSONObject()
+            root.put("model", model)
+            val arr = org.json.JSONArray()
+            for (e in edits) {
+                val o = JSONObject()
+                o.put("fn", e.fn); o.put("hex", e.hex); o.put("label", e.label)
+                arr.put(o)
+            }
+            root.put("edits", arr)
+            f.writeText(root.toString())
+        }
+    }
+
+    /** Capture an offline MSP write; update the cached read so the page's
+     *  own read-back verification passes. True when supported. */
+    @Synchronized
+    fun captureOfflineWrite(fn: Int, dataHex: String): Boolean {
+        val readFn = writeToRead[fn] ?: return false
+        var (model, edits) = loadPending()
+        val list = ArrayList(if (model == modelName) edits else emptyList())
+        list.removeAll { it.fn == fn }
+        list.add(PendingEdit(fn, dataHex, writeLabels[fn] ?: "settings"))
+        savePending(modelName, list)
+        record("/api/msp?fn=$readFn", "/api/msp", "text/plain",
+               dataHex.uppercase().toByteArray())
+        saveIfDirty()
+        return true
     }
 
     private fun load() {
