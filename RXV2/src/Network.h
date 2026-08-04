@@ -312,11 +312,27 @@ inline void netStep() {
     // BLE too. Landing auto-recovery brings it back after the flight. Bench
     // use is untouched (home WiFi up), and a phone mid-configuration is
     // grandfathered until it disconnects.
+    static uint32_t bleFlyOffAtMs = 0;
+    const bool armedNow = (armingChannel >= 1 && armingChannel <= 16 &&
+                           rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 1000 &&
+                           channelMicros[armingChannel - 1] > 1500);
     if (netMode == NET_NO_WIFI && bleAdvertising() && !bleHasClient() &&
         rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 1000 &&
-        (uint32_t)(millis() - linkStats.connStartMs) >= 30000) {
-        bleStop();
-        events.add("Bluetooth off (flying) — back after landing");
+        (uint32_t)(millis() - linkStats.connStartMs) >= 30000 &&
+        !armedNow &&                       // NEVER stall the loop while armed — wait for disarm
+        !bleFlyOffAtMs) {
+        // Pardon first (the stop can stall the loop), then stop ~300 ms later.
+        fltPardonMsToSend = FLT_PARDON_MS;
+        fltPardonAnnounceLeft = 25;
+        bleFlyOffAtMs = millis() + 300;
+    }
+    if (bleFlyOffAtMs && (int32_t)(millis() - bleFlyOffAtMs) >= 0) {
+        bleFlyOffAtMs = 0;
+        if (armedNow) { /* armed in the window — try again next quiet moment */ }
+        else {
+            bleStop();
+            events.add("Bluetooth off (flying) — back after landing");
+        }
     }
     // Non-blocking WiFi re-begin: a STA retry used to do WiFi.disconnect() +
     // delay(200) + WiFi.begin() inline, which BLOCKED the main loop for ~208 ms

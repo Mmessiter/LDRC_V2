@@ -620,10 +620,20 @@ void loop() {
         }
     }
 
-    // Deferred WiFi-off so the response to /fly_arm completes before the radio dies.
+    // Deferred WiFi-off so the response to /fly_arm completes before the radio
+    // dies — AND so the gap pardon reaches the TX first. delay(300) used to
+    // block here, which stopped radioPoll and with it the very acks carrying
+    // the pardon; now the loop keeps running for the 300 ms instead.
     if (flyArmRequested) {
         flyArmRequested = false;
-        delay(300);
+        if (rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 1000) {
+            fltPardonMsToSend = FLT_PARDON_MS;     // the ~700 ms teardown stall
+            fltPardonAnnounceLeft = 25;            // ~50 ms of acks at 500 Hz
+        }
+        flyTeardownAtMs = millis() + 300;
+    }
+    if (flyTeardownAtMs && (int32_t)(millis() - flyTeardownAtMs) >= 0) {
+        flyTeardownAtMs = 0;
         disableWifi();
         statsZeroAtMs = millis() + 3000;   // Malcolm: zero EVERYTHING ~3 s after Fly now
     }
