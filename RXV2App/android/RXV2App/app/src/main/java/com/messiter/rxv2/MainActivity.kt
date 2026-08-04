@@ -552,10 +552,22 @@ class MainActivity : AppCompatActivity() {
                         txLive = lastPkt > 0 && (upMs - lastPkt) < 3000
                     }
                 }
-                // Malcolm 2026-08-04: TX on → NOT OFFERED AT ALL (too much
-                // scope for user error). Edits wait silently for a TX-off visit.
-                if (txLive) return@Thread
                 val what = edits.joinToString(", ") { it.label }
+                // Malcolm 2026-08-04: TX on → never offered; edits DISCARDED
+                // with a clear notice (no stale-edit limbo).
+                if (txLive) {
+                    SessionCache.savePending("", emptyList())
+                    runOnUiThread {
+                        android.app.AlertDialog.Builder(this)
+                            .setTitle("Offline edits discarded")
+                            .setMessage("Offline edits ($what) were DISCARDED — the transmitter " +
+                                "is on, and sending is only safe with it off. To keep offline " +
+                                "edits, reconnect with the transmitter off first.")
+                            .setPositiveButton("OK", null)
+                            .show()
+                    }
+                    return@Thread
+                }
                 runOnUiThread {
                     android.app.AlertDialog.Builder(this)
                         .setTitle("Settings edited offline")

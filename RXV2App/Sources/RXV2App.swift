@@ -40,11 +40,15 @@ struct RootView: View {
                     .toolbar(.hidden, for: .navigationBar)
                     .onAppear { onConnected(name) }
                     .alert("Settings edited offline", isPresented: $showPendingOffer) {
-                        Button("Send to model") { sendPendingEdits() }
-                        Button("Discard offline edits", role: .destructive) {
-                            SessionCache.savePending(model: "", edits: [])
+                        if pendingEdits.isEmpty {
+                            Button("OK") { }                      // discard notice (TX was on)
+                        } else {
+                            Button("Send to model") { sendPendingEdits() }
+                            Button("Discard offline edits", role: .destructive) {
+                                SessionCache.savePending(model: "", edits: [])
+                            }
+                            Button("Not now", role: .cancel) { }  // keep them for later
                         }
-                        Button("Not now", role: .cancel) { }      // keep them for later
                     } message: {
                         Text(pendingSummary)
                     }
@@ -111,11 +115,18 @@ extension RootView {
                     txLive = lastPkt > 0 && (upS * 1000 - lastPkt) < 3000
                 }
                 DispatchQueue.main.async {
-                    // Malcolm 2026-08-04: TX on → NOT OFFERED AT ALL (too much
-                    // scope for user error). The edits simply wait, silently,
-                    // for a reconnection with the transmitter off.
-                    guard !txLive else { return }
                     let what = edits.map(\.label).joined(separator: ", ")
+                    // Malcolm 2026-08-04: TX on → never offered; edits are
+                    // DISCARDED with a clear notice (no stale-edit limbo).
+                    if txLive {
+                        SessionCache.savePending(model: "", edits: [])
+                        pendingEdits = []
+                        pendingSummary = "Offline edits (\(what)) were DISCARDED — the "
+                            + "transmitter is on, and sending is only safe with it off. "
+                            + "To keep offline edits, reconnect with the transmitter off first."
+                        showPendingOffer = true
+                        return
+                    }
                     pendingEdits = edits
                     pendingSummary = "While offline you edited: \(what).\n\n"
                         + "The transmitter is off, so the app controls the bank — if the "
