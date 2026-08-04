@@ -39,6 +39,9 @@ struct RootView: View {
                     .ignoresSafeArea()
                     .toolbar(.hidden, for: .navigationBar)
                     .onAppear { onConnected(name) }
+                    .onChange(of: link.state) { st in
+                        if case .ready = st { SessionPrefetcher.run(link: link) }
+                    }
                     .alert("Settings edited offline", isPresented: $showPendingOffer) {
                         if pendingEdits.isEmpty {
                             Button("OK") { }                      // discard notice (TX was on)

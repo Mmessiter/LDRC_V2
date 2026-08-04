@@ -110,6 +110,11 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
                 let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems
                 let fn = Int(items?.first(where: { $0.name == "fn" })?.value ?? "") ?? -1
                 let dataHex = items?.first(where: { $0.name == "data" })?.value
+                if fn == 210 {   // bank select is part of the pages' READ flow —
+                    // nod politely; review shows the RECORDED bank's values.
+                    deliver(task, url: url, code: 200, type: "text/plain", body: Data())
+                    return
+                }
                 if let hex = dataHex, !hex.isEmpty {
                     if SessionCache.shared.captureOfflineWrite(fn: fn, dataHex: hex) {
                         deliver(task, url: url, code: 200, type: "text/plain", body: Data())
