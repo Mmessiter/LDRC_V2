@@ -486,7 +486,7 @@ inline void netStep() {
                 // bleStart() below announces the revival itself; waving while
                 // the user just turned the radios OFF was a lie (2026-07-24).
                 static uint32_t wavedForLoss = 0;
-                if (bleAdvertising() && wavedForLoss != rx.lastMillis) {
+                if (bleAdvertising() && wavedForLoss != rx.lastMillis && autoWaveAllowed()) {
                     wavedForLoss   = rx.lastMillis;
                     bleWaveStartMs = millis();
                     events.add("Config link ready — waving ailerons");
