@@ -268,9 +268,10 @@ final class SessionPrefetcher {
             var txLive = false
             if let st = req("/api/state.json"),
                let obj = (try? JSONSerialization.jsonObject(with: st)) as? [String: Any] {
-                let lastPkt = ((obj["rf"] as? [String: Any])?["last_pkt_ms"] as? NSNumber)?.int64Value ?? 0
-                let upMs = (((obj["info"] as? [String: Any])?["uptime_s"] as? NSNumber)?.int64Value ?? 0) * 1000
-                txLive = lastPkt > 0 && (upMs - lastPkt) < 3000
+                // last_pkt_ms is an AGE in ms (-1 = no TX heard yet), not a
+                // timestamp — the sweep must NEVER run when this is small.
+                let lastPkt = ((obj["rf"] as? [String: Any])?["last_pkt_ms"] as? NSNumber)?.int64Value ?? -1
+                txLive = lastPkt >= 0 && lastPkt < 3000
             }
             if let fl = req("/api/flights.json"),
                let arr = (try? JSONSerialization.jsonObject(with: fl)) as? [[String: Any]] {

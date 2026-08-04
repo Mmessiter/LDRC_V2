@@ -112,10 +112,11 @@ extension RootView {
                 if case .success(let resp) = result,
                    let obj = try? JSONSerialization.jsonObject(with: resp.body) as? [String: Any],
                    let rf = obj["rf"] as? [String: Any],
-                   let info = obj["info"] as? [String: Any],
-                   let lastPkt = rf["last_pkt_ms"] as? Double,
-                   let upS = info["uptime_s"] as? Double {
-                    txLive = lastPkt > 0 && (upS * 1000 - lastPkt) < 3000
+                   let lastPkt = rf["last_pkt_ms"] as? Double {
+                    // last_pkt_ms is an AGE (ms since the last TX packet;
+                    // -1 = never) — NOT a timestamp. Bug found 2026-08-04:
+                    // uptime-minus-age made the TX always look off.
+                    txLive = lastPkt >= 0 && lastPkt < 3000
                 }
                 DispatchQueue.main.async {
                     let what = edits.map(\.label).joined(separator: ", ")
@@ -124,18 +125,18 @@ extension RootView {
                     if txLive {
                         SessionCache.savePending(model: "", edits: [])
                         pendingEdits = []
-                        pendingSummary = "Offline edits (\(what)) were DISCARDED — the "
-                            + "transmitter is on, and sending is only safe with it off. "
-                            + "To keep offline edits, reconnect with the transmitter off first."
+                        pendingSummary = "Your offline edits (\(what)) cannot be sent "
+                            + "because the transmitter is on — they have been discarded.\n\n"
+                            + "To send offline edits, connect with the transmitter off."
                         showPendingOffer = true
                         return
                     }
+                    // Banks are handled automatically (each edit remembers its
+                    // own) — the user needs no bank talk here.
                     pendingEdits = edits
                     pendingSummary = "While offline you edited: \(what).\n\n"
-                        + "The transmitter is off, so the app controls the bank — if the "
-                        + "edits belong to a particular bank, select it on the Rotorflight "
-                        + "pages first.\n\nSend the edits to the model now, or discard "
-                        + "them and keep what the model already has?"
+                        + "Send the edits to the model now, or discard them and "
+                        + "keep what the model already has?"
                     showPendingOffer = true
                 }
             }
