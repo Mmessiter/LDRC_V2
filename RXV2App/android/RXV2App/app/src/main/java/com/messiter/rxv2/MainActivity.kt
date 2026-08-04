@@ -535,9 +535,10 @@ class MainActivity : AppCompatActivity() {
     private var sessionStartedFor = ""
 
     private fun onConnectedSession(name: String) {
+        SessionCache.init(this)
+        prefetchSession()   // EVERY (re)connection — an OTA reboot can cut the walk short
         if (sessionStartedFor == name) return
         sessionStartedFor = name
-        SessionCache.init(this)
         val (model, edits) = SessionCache.loadPending()
         if (edits.isNotEmpty() && model == name) {
             // Malcolm's rule (2026-08-04): send ONLY with the transmitter OFF —
@@ -584,7 +585,6 @@ class MainActivity : AppCompatActivity() {
                 }
             }.start()
         }
-        prefetchSession()
     }
 
     private fun sendPendingEdits(edits: List<SessionCache.PendingEdit>) {
@@ -604,7 +604,10 @@ class MainActivity : AppCompatActivity() {
 
     /** Record EVERYTHING, not just what was viewed: walk the flight list and
      *  the tuning reads in the background, gently paced. */
+    @Volatile private var prefetchRunning = false
     private fun prefetchSession() {
+        if (prefetchRunning) return
+        prefetchRunning = true
         Thread {
             Thread.sleep(6000)   // let the front page settle first
             val base = mutableListOf("/api/state.json", "/api/flights.json", "/api/events.json",
@@ -627,6 +630,7 @@ class MainActivity : AppCompatActivity() {
                 Thread.sleep(400)
             }
             SessionCache.saveIfDirty()
+            prefetchRunning = false
         }.start()
     }
 
@@ -704,6 +708,10 @@ class MainActivity : AppCompatActivity() {
                 val u = Uri.parse("$ORIGIN$pathAndQuery")
                 val fn = u.getQueryParameter("fn")?.toIntOrNull() ?: -1
                 val dataHex = u.getQueryParameter("data")
+                if (fn == 210) {   // bank select = part of the READ flow: nod politely
+                    cb(kotlin.Result.success(Rxv2Ble.Response(200, "text/plain", "", ByteArray(0))))
+                    return
+                }
                 if (!dataHex.isNullOrEmpty()) {   // offline EDIT: capture for the reconnect offer
                     if (SessionCache.captureOfflineWrite(fn, dataHex))
                         cb(kotlin.Result.success(Rxv2Ble.Response(200, "text/plain", "", ByteArray(0))))

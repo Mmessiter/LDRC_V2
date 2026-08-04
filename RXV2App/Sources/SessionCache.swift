@@ -177,12 +177,18 @@ extension SessionCache {
 // paced gently so the user's own page loads keep priority on the one radio.
 
 final class SessionPrefetcher {
+    private static var running = false
     static func run(link: BleLink) {
+        // Re-run on EVERY (re)connection — an OTA reboot or a walk-away cut
+        // the first attempt short (Malcolm 2026-08-04: "could not view this
+        // morning's data"); recording is idempotent, so repeats are free.
+        guard !running else { return }
+        running = true
         var paths = ["/api/state.json", "/api/flights.json", "/api/events.json",
                      "/api/msp?fn=111", "/api/msp?fn=112", "/api/msp?fn=94",
                      "/api/msp?fn=142", "/api/msp?fn=148"]
         func next() {
-            guard !paths.isEmpty else { return }
+            guard !paths.isEmpty else { running = false; return }
             let p = paths.removeFirst()
             link.request(method: "GET", path: p, headers: [:], body: nil) { result in
                 if case .success(let resp) = result, resp.code == 0 || resp.code == 200 {
