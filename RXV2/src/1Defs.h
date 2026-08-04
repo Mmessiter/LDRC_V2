@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.322-straight-slopes";
+constexpr const char* FW_VERSION = "RXV2-0.9.323-square-events";
 
 //*********************************************************************
 //  Auto-update manifest URLs
