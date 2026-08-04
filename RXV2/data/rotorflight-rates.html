@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rates &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=141">
-<script src="/app.js?v=141" defer></script>
+<link rel=stylesheet href="/style.css?v=142">
+<script src="/app.js?v=142" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -99,7 +99,7 @@ table.dyn-yaw td input{width:6em;padding:.4em;font-size:.95em;text-align:right;
         </table>
     </div>
 
-    <button class="btn btn-fly" onclick="save()" style="background:#6cab5e"><span class=ico>&#128190;</span>Save to Flight Controller</button>
+    <button class="btn btn-fly" id=saveBtn onclick="save()" style="background:#6cab5e"><span class=ico>&#128190;</span>Save to Flight Controller</button>
     <button class="btn btn-fw" onclick="load()"><span class=ico>&#8635;</span>Reload from flight controller</button>
 
     <div class=card>
@@ -456,14 +456,19 @@ function buildPayload() {
 
 async function save() {
     if (!cachedRaw) { setStatus('bad', 'Read flight controller first'); return; }
-    if (!(await LDRC.confirm('Write these rates to the flight controller EEPROM?',
-        {title:'Save Rates', icon:'💾', yes:'Save to flight controller'}))) return;
+    if (!(await LDRC.confirm(LDRC.replay
+            ? 'Save these rates on the phone? They will be offered for sending to the model at the next connection.'
+            : 'Write these rates to the flight controller EEPROM?',
+        {title:'Save Rates', icon:'💾',
+         yes: LDRC.replay ? 'Save to phone' : 'Save to flight controller'}))) return;
     setStatus('info', 'Writing rates…');
     const bytes = buildPayload();
     try {
         await LDRC.msp(204, bytesToHex(bytes));   // SET_RC_TUNING
         await LDRC.msp(250);                       // EEPROM_WRITE
-        setStatus('good', '✓ Saved to flight controller EEPROM');
+        setStatus('good', LDRC.replay
+            ? '✓ Saved on the phone — ready to send at the next connection'
+            : '✓ Saved to flight controller EEPROM');
         cachedRaw = bytes;
         LDRC.clearDirty();
     } catch (e) { setStatus('bad', 'Save failed: ' + e.message); }
@@ -484,7 +489,9 @@ async function copyTo(destIdx) {
         localStorage.setItem('rfRatesProfile', String(destIdx));
         paintProfileButtons();
         await load();
-        setStatus('good', '✓ Copied to profile ' + (destIdx + 1) + ' (now editing it)');
+        setStatus('good', LDRC.replay
+            ? '✓ Copied on the phone — will be sent to profile ' + (destIdx + 1) + ' at the next connection'
+            : '✓ Copied to profile ' + (destIdx + 1) + ' (now editing it)');
     } catch (e) { setStatus('bad', 'Copy failed: ' + e.message); }
 }
 

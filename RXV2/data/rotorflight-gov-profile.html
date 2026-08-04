@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Governor (profile) &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=141">
-<script src="/app.js?v=141" defer></script>
+<link rel=stylesheet href="/style.css?v=142">
+<script src="/app.js?v=142" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;
         padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -229,8 +229,11 @@ function buildPayload() {
 async function save() {
     if (!editable) { setStatus('bad', 'Disabled on this firmware version'); return; }
     if (!cachedRaw) { setStatus('bad', 'Read flight controller first'); return; }
-    if (!(await LDRC.confirm('Write this governor profile to the flight controller EEPROM?',
-        {title:'Save governor profile', icon:'💾', yes:'Save to flight controller'}))) return;
+    if (!(await LDRC.confirm(LDRC.replay
+            ? 'Save this governor profile on the phone? It will be offered for sending to the model at the next connection.'
+            : 'Write this governor profile to the flight controller EEPROM?',
+        {title:'Save governor profile', icon:'💾',
+         yes: LDRC.replay ? 'Save to phone' : 'Save to flight controller'}))) return;
     setStatus('info', 'Writing governor profile…');
     const bytes = buildPayload();
     try {
@@ -244,7 +247,9 @@ async function save() {
             if (bytes[i] !== check[i]) diffs.push('byte ' + i + ': sent ' + bytes[i] + ' got ' + check[i]);
         }
         if (diffs.length === 0) {
-            setStatus('good', '✓ Saved & verified by flight controller read-back');
+            setStatus('good', LDRC.replay
+                ? '✓ Saved on the phone — ready to send at the next connection'
+                : '✓ Saved & verified by flight controller read-back');
             cachedRaw = bytes;
             LDRC.clearDirty();
         } else {
@@ -271,7 +276,9 @@ async function copyTo(destIdx) {
         localStorage.setItem('rfPidProfile', String(destIdx));
         paintProfileButtons();
         await load();
-        setStatus('good', '✓ Copied to profile ' + (destIdx + 1) + ' (now editing it)');
+        setStatus('good', LDRC.replay
+            ? '✓ Copied on the phone — will be sent to profile ' + (destIdx + 1) + ' at the next connection'
+            : '✓ Copied to profile ' + (destIdx + 1) + ' (now editing it)');
     } catch (e) { setStatus('bad', 'Copy failed: ' + e.message); }
 }
 
