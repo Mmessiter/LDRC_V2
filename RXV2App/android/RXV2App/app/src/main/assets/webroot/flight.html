@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Flight analysis &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=144">
-<script src="/app.js?v=144" defer></script>
+<link rel=stylesheet href="/style.css?v=145">
+<script src="/app.js?v=145" defer></script>
 <style>
 /* Landscape = reading mode (Malcolm 2026-07-31): the page widens and the
    graph grows to occupy most of the screen instead of a slim centre column. */
@@ -283,11 +283,15 @@ function drawFlight(d) {
     // minSpan: the smallest y-range a trace is drawn against, so sensor noise
     // isn't magnified into mountains (a plane's battery idling within ±50 mV
     // used to fill the whole graph height with jitter).
+    // eps: sensor jitter to IGNORE when de-staircasing (Malcolm 2026-08-04:
+    // a governed head speed is truly steady — ±a few rpm of sensor noise
+    // must not draw as continuous change on a short flight). Samples within
+    // eps of a run's start belong to the run; the run plots at its mean.
     const traces = [
-        { key: 'esc',  label: 'ESC temp',   unit: '°C',  col: '#c0392b', dp: 0, minSpan: 10  },
-        { key: 'head', label: 'Head speed', unit: 'rpm', col: '#2b6cb0', dp: 0, minSpan: 100 },
-        { key: 'v',    label: 'Battery',    unit: 'V',   col: '#2e8b57', dp: 2, minSpan: 0.8 },
-        { key: 'amps', label: 'Current',    unit: 'A',   col: '#e08a1e', dp: 1, minSpan: 2   },
+        { key: 'esc',  label: 'ESC temp',   unit: '°C',  col: '#c0392b', dp: 0, minSpan: 10,  eps: 0    },
+        { key: 'head', label: 'Head speed', unit: 'rpm', col: '#2b6cb0', dp: 0, minSpan: 100, eps: 5    },
+        { key: 'v',    label: 'Battery',    unit: 'V',   col: '#2e8b57', dp: 2, minSpan: 0.8, eps: 0.02 },
+        { key: 'amps', label: 'Current',    unit: 'A',   col: '#e08a1e', dp: 1, minSpan: 2,   eps: 0.2  },
     ];
     let legHtml = '';
     let anyDrawn = false;
@@ -319,9 +323,16 @@ function drawFlight(d) {
         // and draw a gently smoothed line through the nodes. Fast-moving
         // series (every sample different) reduce to the original points.
         const nodes = [];
-        let s0 = 0;
+        const eps = t.eps || 0;
+        let s0 = 0, sum = a[0];
         for (let i = 1; i <= n; i++) {
-            if (i === n || a[i] !== a[s0]) { nodes.push([(s0 + i - 1) / 2, a[s0]]); s0 = i; }
+            if (i === n || Math.abs(a[i] - a[s0]) > eps) {
+                nodes.push([(s0 + i - 1) / 2, sum / (i - s0)]);   // run centre, run MEAN
+                s0 = i;
+                sum = i < n ? a[i] : 0;
+            } else {
+                sum += a[i];
+            }
         }
         if (nodes[0][0] > 0) nodes.unshift([0, a[0]]);
         if (nodes[nodes.length - 1][0] < n - 1) nodes.push([n - 1, a[n - 1]]);
