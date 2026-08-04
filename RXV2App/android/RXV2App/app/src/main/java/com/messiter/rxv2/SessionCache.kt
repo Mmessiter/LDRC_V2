@@ -16,14 +16,58 @@ object SessionCache {
     private val entries = HashMap<String, Pair<String, ByteArray>>() // pathAndQuery -> (type, body)
     var modelName: String = ""; private set
     var savedAtMs: Long = 0; private set
-    private var file: File? = null
+    private var dir: File? = null
     private var dirty = false
 
+    // Per-model session files (Malcolm 2026-08-04: connecting another model
+    // must never erase this one's recording).
+    private fun fileFor(model: String): File? {
+        val d = dir ?: return null
+        val safe = if (model.isEmpty()) "last"
+                   else model.map { if (it.isLetterOrDigit()) it else '_' }.joinToString("")
+        return File(d, "session-$safe.json")
+    }
+
     fun init(ctx: Context) {
-        if (file != null) return
-        file = File(ctx.filesDir, "lastSession.json")
+        if (dir != null) return
+        dir = ctx.filesDir
         pendingFile = File(ctx.filesDir, "pendingEdits.json")
+        // One-time migration: the old single lastSession.json becomes that
+        // model's own session file.
+        val legacy = File(ctx.filesDir, "lastSession.json")
+        if (legacy.exists()) {
+            runCatching {
+                val model = JSONObject(legacy.readText()).optString("model", "")
+                fileFor(model)?.let { legacy.copyTo(it, overwrite = true) }
+            }
+            legacy.delete()
+        }
         load()
+    }
+
+    /** All saved sessions, newest first — one per model. */
+    fun savedSessions(): List<Pair<String, Long>> {
+        val d = dir ?: return emptyList()
+        val out = ArrayList<Pair<String, Long>>()
+        d.listFiles { f -> f.name.startsWith("session-") }?.forEach { f ->
+            runCatching {
+                val root = JSONObject(f.readText())
+                if (root.getJSONObject("entries").length() > 0)
+                    out.add(Pair(root.optString("model", ""), root.optLong("savedAtMs", 0)))
+            }
+        }
+        return out.sortedByDescending { it.second }
+    }
+
+    /** Load a saved model's recording as the active one (for review). */
+    @Synchronized
+    fun activate(model: String) {
+        if (model == modelName) return
+        saveIfDirty()
+        entries.clear()
+        modelName = model
+        savedAtMs = 0
+        loadFile(fileFor(model))
     }
 
     val available: Boolean get() = entries.isNotEmpty()
@@ -74,10 +118,16 @@ object SessionCache {
                 val name = JSONObject(String(body)).getJSONObject("info").getString("name")
                 if (name.isNotEmpty()) {
                     if (modelName.isNotEmpty() && name != modelName) {
-                        // Different receiver — never blend two models' recordings.
-                        val keep = entries[pathAndQuery]!!
+                        // Different receiver: park the old model's recording
+                        // in its own file and RESUME the new model's (never a
+                        // chimera, never an erasure — Malcolm 2026-08-04).
+                        val keep = entries[keyFor(pathAndQuery)]!!
+                        dirty = true
+                        saveIfDirty()
                         entries.clear()
-                        entries[pathAndQuery] = keep
+                        modelName = name
+                        loadFile(fileFor(name))
+                        entries[keyFor(pathAndQuery)] = keep
                     }
                     modelName = name
                 }
@@ -93,7 +143,7 @@ object SessionCache {
     /** Called opportunistically (on disconnect / app background). */
     @Synchronized
     fun saveIfDirty() {
-        val f = file ?: return
+        val f = fileFor(modelName) ?: return
         if (!dirty) return
         dirty = false
         runCatching {
@@ -180,11 +230,17 @@ object SessionCache {
     }
 
     private fun load() {
-        val f = file ?: return
-        if (!f.exists()) return
+        // Wake up with the newest model's session active.
+        val newest = savedSessions().firstOrNull() ?: return
+        modelName = newest.first
+        loadFile(fileFor(newest.first))
+    }
+
+    private fun loadFile(f: File?) {
+        if (f == null || !f.exists()) return
         runCatching {
             val root = JSONObject(f.readText())
-            modelName = root.optString("model", "")
+            modelName = root.optString("model", modelName)
             savedAtMs = root.optLong("savedAtMs", 0)
             val es = root.getJSONObject("entries")
             es.keys().forEach { k ->
