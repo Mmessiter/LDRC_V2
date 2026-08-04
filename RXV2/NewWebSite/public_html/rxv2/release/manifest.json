@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.313-steadfast-delete",
+      "url": "https://messiter.com/rxv2/release/v0.9.313/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.313/littlefs.bin",
+      "fs_md5": "7698b5bc91a8343d85ad629f3330317a",
+      "notes": "The reluctant flight, explained: deleting several flights in quick succession shifted the list's numbering under the page, so a delete could aim at an already-empty slot and appear to do nothing. Deletions now target the flight's permanent storage slot, which never moves - every delete lands exactly where you pointed, however fast you prune."
+    },
+    {
       "name": "RXV2-0.9.312-one-wave-per-landing",
       "url": "https://messiter.com/rxv2/release/v0.9.312/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.312/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.302/littlefs.bin",
       "fs_md5": "1f0ec3955b42be50914e931eea88d7f5",
       "notes": "The circle closes: whenever the receiver's clock came from a phone, it now offers that true time back to the transmitter over the radio link (ack item 37) - and the updated transmitter quietly corrects its own drifty clock from it. Most models never carry GPS, but every model meets a phone; now every phone connection keeps the whole fleet's clocks honest. Needs the matching transmitter update."
-    },
-    {
-      "name": "RXV2-0.9.301-clock-on-screen",
-      "url": "https://messiter.com/rxv2/release/v0.9.301/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.301/littlefs.bin",
-      "fs_md5": "8e619c346d3e164565b82333f740e00f",
-      "notes": "The clock steps on stage: the Black box status card now shows the receiver's date and time and who taught it (phone or transmitter, with the calibration figure), and the current flight's card says when the session started - so you can see at a glance that the timekeeping is alive, not just trust the event log."
     }
   ]
 }

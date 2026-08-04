@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.312-one-wave-per-landing";
+constexpr const char* FW_VERSION = "RXV2-0.9.313-steadfast-delete";
 
 //*********************************************************************
 //  Auto-update manifest URLs

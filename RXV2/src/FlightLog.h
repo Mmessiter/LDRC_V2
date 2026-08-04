@@ -482,8 +482,9 @@ inline void buildFlightsListJson(String& j) {
             file.close();
             if (!ok) continue;
             if (h.magic != FLIGHT_MAGIC) h.savedEpochS = 0;   // shorter header: that field read sample bytes
-            snprintf(b, sizeof(b), ",{\"i\":%u,\"count\":%u,\"dur_ms\":%u,\"saved_at\":%u}",
-                     f, (unsigned)h.count, (unsigned)h.connMs, (unsigned)h.savedEpochS);
+            snprintf(b, sizeof(b), ",{\"i\":%u,\"count\":%u,\"dur_ms\":%u,\"saved_at\":%u,\"phys\":%u}",
+                     f, (unsigned)h.count, (unsigned)h.connMs, (unsigned)h.savedEpochS,
+                     (unsigned)fltPhys(f - 1));
             j += b;
         }
     }
