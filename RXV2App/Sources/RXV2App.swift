@@ -145,7 +145,15 @@ extension RootView {
 
     func sendPendingEdits() {
         let edits = pendingEdits
-        var queue: [String] = edits.map { "/api/msp?fn=\($0.fn)&data=\($0.hex)" }
+        // Each edit lands in the bank it was made in: select first (fn=210,
+        // 0x80|idx for rates), then write. Bankless edits (gov global) go bare.
+        var queue: [String] = []
+        for e in edits {
+            if let b = e.bank {
+                queue.append("/api/msp?fn=210&data=" + String(format: "%02X", b))
+            }
+            queue.append("/api/msp?fn=\(e.fn)&data=\(e.hex)")
+        }
         queue.append("/api/msp?fn=250")                       // save to EEPROM
         if edits.contains(where: { $0.fn == 143 }) {
             queue.append("/api/msp?fn=68")                    // gov config needs an FC reboot

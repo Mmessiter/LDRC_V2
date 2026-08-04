@@ -44,6 +44,35 @@ final class SessionCache {
 
     var available: Bool { !entries.isEmpty }
 
+    // MARK: bank-aware keys (Malcolm 2026-08-04: "the PID values fail to
+    // differ by bank"). Rotorflight keeps 4 PID-side banks (fn=210, byte
+    // 0-3) and 4 rate banks (fn=210, byte 0x80|idx); the reads 112/94/148
+    // follow the PID bank and 111 the rate bank, so the cache must key
+    // those reads by the bank that was selected when they were made.
+    private(set) var pidBank = 0
+    private(set) var rateBank = 0
+
+    /// Every fn=210 select that passes the app — live, replay or prefetch —
+    /// lands here so the cache always knows which bank a read belongs to.
+    func noteBankSelect(dataHex: String) {
+        guard let b = Int(dataHex.prefix(2), radix: 16) else { return }
+        if b & 0x80 != 0 { rateBank = b & 0x7f } else { pidBank = b }
+    }
+
+    private static let pidBankFns: Set<String> = ["112", "94", "148"]
+
+    private func keyFor(_ pathAndQuery: String) -> String {
+        guard pathAndQuery.hasPrefix("/api/msp?"), !pathAndQuery.contains("data=") else {
+            return pathAndQuery
+        }
+        let q = String(pathAndQuery.dropFirst("/api/msp?".count))
+        let fn = q.split(separator: "&")
+            .first(where: { $0.hasPrefix("fn=") })?.dropFirst(3) ?? ""
+        if Self.pidBankFns.contains(String(fn)) { return pathAndQuery + "&bank=\(pidBank)" }
+        if fn == "111" { return pathAndQuery + "&bank=\(rateBank)" }
+        return pathAndQuery
+    }
+
     /// Human label for the review button: "RAW420MCM — 13:05" style.
     var label: String {
         let name = modelName.isEmpty ? "last receiver" : modelName
@@ -65,7 +94,7 @@ final class SessionCache {
     }
 
     func record(pathAndQuery: String, path: String, type: String, body: Data) {
-        entries[pathAndQuery] = Entry(type: type, body: body)
+        entries[keyFor(pathAndQuery)] = Entry(type: type, body: body)
         if path == "/api/state.json",
            let obj = try? JSONSerialization.jsonObject(with: body) as? [String: Any],
            let info = obj["info"] as? [String: Any],
@@ -81,7 +110,7 @@ final class SessionCache {
         scheduleSave()
     }
 
-    func lookup(pathAndQuery: String) -> Entry? { entries[pathAndQuery] }
+    func lookup(pathAndQuery: String) -> Entry? { entries[keyFor(pathAndQuery)] }
 
     // MARK: persistence (debounced — recording fires on every poll tick)
 
@@ -129,6 +158,10 @@ extension SessionCache {
         let fn: Int
         let hex: String
         let label: String
+        // fn=210 select byte to send BEFORE this write (0x80|idx for rates),
+        // so each edit lands in the bank it was made in. nil = bankless
+        // (governor global). Optional so pre-bank recordings still decode.
+        let bank: Int?
     }
 
     private static var pendingKey: String { "pendingEdits.json" }
@@ -157,11 +190,15 @@ extension SessionCache {
     /// Returns true when the write is a supported offline edit.
     func captureOfflineWrite(fn: Int, dataHex: String) -> Bool {
         guard let readFn = Self.writeToRead[fn] else { return false }
+        // Which bank does this edit belong to? Rates follow the rate bank,
+        // gov global has none, everything else follows the PID-side bank.
+        let bank: Int? = fn == 143 ? nil : (fn == 204 ? 0x80 | rateBank : pidBank)
+        var label = Self.writeLabels[fn] ?? "settings"
+        if let b = bank { label += " (bank \((b & 0x7f) + 1))" }
         var (model, edits) = Self.loadPending()
         if model != modelName { edits = [] }               // stale edits for another model
-        edits.removeAll { $0.fn == fn }                    // newest edit of a kind wins
-        edits.append(Self.PendingEdit(fn: fn, hex: dataHex,
-                                      label: Self.writeLabels[fn] ?? "settings"))
+        edits.removeAll { $0.fn == fn && $0.bank == bank } // newest edit of a kind+bank wins
+        edits.append(Self.PendingEdit(fn: fn, hex: dataHex, label: label, bank: bank))
         Self.savePending(model: modelName, edits: edits)
         // The pages read back exactly what they wrote (symmetric MSP layouts).
         record(pathAndQuery: "/api/msp?fn=\(readFn)", path: "/api/msp",
@@ -193,40 +230,84 @@ final class SessionPrefetcher {
         // morning's data"); recording is idempotent, so repeats are free.
         guard !running else { return }
         running = true
-        phase = "running"; done = 0
-        var paths = ["/api/state.json", "/api/flights.json", "/api/events.json",
-                     "/api/msp?fn=111", "/api/msp?fn=112", "/api/msp?fn=94",
-                     "/api/msp?fn=142", "/api/msp?fn=148"]
-        total = paths.count
+        phase = "running"; done = 0; total = 3
         let pace = fast ? 0.15 : 0.4
-        func next() {
-            guard !paths.isEmpty else { running = false; phase = "done"; return }
-            let p = paths.removeFirst()
-            link.request(method: "GET", path: p, headers: [:], body: nil) { result in
-                if case .success(let resp) = result, resp.code == 0 || resp.code == 200 {
-                    let bare = p.split(separator: "?").first.map(String.init) ?? p
-                    let q = p.contains("?") ? String(p.split(separator: "?")[1]) : nil
-                    if SessionCache.cacheable(path: bare, query: q) {
-                        SessionCache.shared.record(pathAndQuery: p, path: bare,
-                                                   type: resp.contentType, body: resp.body)
-                    }
-                    // The flight list seeds one fetch per saved flight.
-                    if p == "/api/flights.json",
-                       let arr = try? JSONSerialization.jsonObject(with: resp.body) as? [[String: Any]] {
-                        for f in arr {
-                            if let i = f["i"] as? Int, i > 0 {
-                                paths.append("/api/flightlog.json?f=\(i)")
-                                total += 1
-                            }
+
+        // Blocking GET on this background thread; tees into the recording.
+        func req(_ p: String) -> Data? {
+            let sem = DispatchSemaphore(value: 0)
+            var body: Data?
+            DispatchQueue.main.async {
+                link.request(method: "GET", path: p, headers: [:], body: nil) { result in
+                    if case .success(let resp) = result, resp.code == 0 || resp.code == 200 {
+                        body = resp.body
+                        let bare = p.split(separator: "?").first.map(String.init) ?? p
+                        let q = p.contains("?") ? String(p.split(separator: "?")[1]) : nil
+                        if SessionCache.cacheable(path: bare, query: q) {
+                            SessionCache.shared.record(pathAndQuery: p, path: bare,
+                                                       type: resp.contentType, body: resp.body)
                         }
                     }
+                    sem.signal()
                 }
-                done += 1
-                DispatchQueue.main.asyncAfter(deadline: .now() + pace) { next() }
             }
+            _ = sem.wait(timeout: .now() + 20)
+            done += 1
+            Thread.sleep(forTimeInterval: pace)
+            return body
         }
-        // The manual button starts at once; the automatic run lets the front
-        // page settle first, then records the world.
-        DispatchQueue.main.asyncAfter(deadline: .now() + (fast ? 0.1 : 6)) { next() }
+        func selectBank(_ byte: Int) {
+            let hex = String(format: "%02X", byte)
+            SessionCache.shared.noteBankSelect(dataHex: hex)
+            _ = req("/api/msp?fn=210&data=\(hex)")
+        }
+
+        DispatchQueue.global(qos: .utility).async {
+            Thread.sleep(forTimeInterval: fast ? 0.1 : 6)
+            var flightPaths: [String] = []
+            var txLive = false
+            if let st = req("/api/state.json"),
+               let obj = (try? JSONSerialization.jsonObject(with: st)) as? [String: Any] {
+                let lastPkt = ((obj["rf"] as? [String: Any])?["last_pkt_ms"] as? NSNumber)?.int64Value ?? 0
+                let upMs = (((obj["info"] as? [String: Any])?["uptime_s"] as? NSNumber)?.int64Value ?? 0) * 1000
+                txLive = lastPkt > 0 && (upMs - lastPkt) < 3000
+            }
+            if let fl = req("/api/flights.json"),
+               let arr = (try? JSONSerialization.jsonObject(with: fl)) as? [[String: Any]] {
+                for f in arr {
+                    if let i = f["i"] as? Int, i > 0 { flightPaths.append("/api/flightlog.json?f=\(i)") }
+                }
+            }
+            _ = req("/api/events.json")
+            // Rotorflight reads — banked (Malcolm 2026-08-04: each of the 4
+            // PID-side banks and 4 rate banks is its own set of values).
+            // ONLY with the transmitter off: never switch a bank under a
+            // live TX. The FC's current banks come from MSP_STATUS (fn=101,
+            // bytes 24/26 — verified on the RAW420 by switching and reading
+            // back) and are restored exactly after the sweep.
+            if !txLive, let st = req("/api/msp?fn=101"),
+               let hex = String(data: st, encoding: .utf8), hex.count >= 54,
+               let origPid = Int(hex.dropFirst(48).prefix(2), radix: 16),
+               let origRate = Int(hex.dropFirst(52).prefix(2), radix: 16) {
+                total += 1 + 4 * 4 + 4 * 2 + 2   // 142 + pid sweep + rate sweep + restores
+                _ = req("/api/msp?fn=142")       // governor global — bankless
+                for b in 0...3 {
+                    selectBank(b)
+                    _ = req("/api/msp?fn=112")
+                    _ = req("/api/msp?fn=94")
+                    _ = req("/api/msp?fn=148")
+                }
+                for r in 0...3 {
+                    selectBank(0x80 | r)
+                    _ = req("/api/msp?fn=111")
+                }
+                selectBank(origPid)              // put the FC back exactly
+                selectBank(0x80 | origRate)
+            }
+            total += flightPaths.count
+            for p in flightPaths { _ = req(p) }
+            running = false
+            phase = "done"
+        }
     }
 }

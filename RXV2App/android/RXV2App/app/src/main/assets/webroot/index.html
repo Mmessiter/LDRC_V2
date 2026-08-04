@@ -8,13 +8,13 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Home &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=140">
-<script src="/app.js?v=140" defer></script>
+<link rel=stylesheet href="/style.css?v=141">
+<script src="/app.js?v=141" defer></script>
 <style>
 /* Friendly confirmation card (replaces the browser's utilitarian confirm()) */
 .modal{position:fixed;inset:0;background:rgba(16,38,58,.55);backdrop-filter:blur(2px);
  display:flex;align-items:center;justify-content:center;z-index:50;padding:1em}
-.modal .mcard{background:rgba(255,255,255,.97);border-radius:18px;max-width:430px;width:100%;
+.modal .mcard{background:#ffffff;border-radius:18px;max-width:430px;width:100%;
  padding:1.2em 1.2em 1em;box-shadow:0 12px 40px rgba(0,0,0,.4);text-align:center;
  animation:mpop .18s ease-out}
 @keyframes mpop{from{transform:scale(.92);opacity:.4}to{transform:scale(1);opacity:1}}
@@ -37,7 +37,7 @@
          user pick a name first. Predictable RXV2.local default for
          discoverability + forced unique naming on first connection so
          multi-receiver setups stop colliding on mDNS. -->
-    <div id=nameGate class=card style="display:none;background:rgba(255,247,217,.96);border:2px solid rgba(212,148,74,.6)">
+    <div id=nameGate class=card style="display:none;background:#fff7d9;border:2px solid rgba(212,148,74,.6)">
         <h2 style="margin-top:.2em;color:#5c3a00;text-align:center">Welcome — let's set this receiver up</h2>
         <p style="color:#5c3a00;margin:.4em 0 1em;text-align:center">Give the receiver a unique name and (optionally) your home WiFi details. Filling both in here saves an extra reboot.</p>
 
@@ -82,7 +82,7 @@
     <div id=mainMenu>
         <!-- Big "simulator mode" sign — shown only while sim mode is on. -->
         <div id=simBanner style="display:none;text-align:center;padding:1em;border-radius:12px;margin:0 0 1em;
-             background:rgba(108,171,94,.95);color:#0e2e08;font-weight:700;box-shadow:0 3px 12px rgba(108,171,94,.45)">
+             background:#6cab5e;color:#0e2e08;font-weight:700;box-shadow:0 3px 12px rgba(108,171,94,.45)">
             <div style="font-size:1.3em;letter-spacing:.05em">🎮 SIMULATOR MODE ON</div>
             <div style="font-weight:500;font-size:.9em;line-height:1.4;margin-top:.3em">Driving the PC simulator over USB &mdash; flight-controller output is OFF.</div>
         </div>
@@ -92,13 +92,13 @@
              found (flying field). Tells the user why and links to WiFi settings
              so they can re-enable home WiFi when back home. -->
         <a id=apAutoBanner href="/wifi" style="display:none;text-decoration:none;text-align:center;padding:.8em 1em;border-radius:10px;margin:0 0 1em;
-             background:rgba(255,210,120,.95);color:#5c3a00;font-weight:600;line-height:1.4"></a>
+             background:#ffd278;color:#5c3a00;font-weight:600;line-height:1.4"></a>
 
         <!-- Bind-mode banner. Shown only when the receiver is unbound,
              so the user always knows at a glance why the LED is blinking
              and what the chip is waiting for. -->
         <div id=bindBanner style="display:none;text-align:center;padding:1em 1em;border-radius:12px;margin:0 0 1em;
-             background:rgba(212,148,74,.95);color:#3a1f00;font-weight:700;font-size:1.05em;
+             background:#d4944a;color:#3a1f00;font-weight:700;font-size:1.05em;
              box-shadow:0 3px 10px rgba(212,148,74,.35);animation:bindPulse 1s ease-in-out infinite alternate">
             <div style="font-size:1.15em;letter-spacing:.04em;margin-bottom:.25em">🔗  BIND MODE</div>
             <div style="font-weight:500;font-size:.92em;line-height:1.4">
@@ -540,7 +540,7 @@ function morphRfOnly(goodbye) {
         b = document.createElement('div');
         b.id = 'rfOffBanner';
         b.style.cssText = 'text-align:center;padding:.8em;border-radius:10px;margin:0 0 1em;'
-                        + 'background:rgba(108,171,94,.95);color:#0e2e08;font-weight:600;line-height:1.4';
+                        + 'background:#6cab5e;color:#0e2e08;font-weight:600;line-height:1.4';
         const menu = document.getElementById('mainMenu');
         if (menu) menu.prepend(b);
     }

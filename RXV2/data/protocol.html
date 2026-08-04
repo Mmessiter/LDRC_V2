@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Output protocol &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=140">
-<script src="/app.js?v=140" defer></script>
+<link rel=stylesheet href="/style.css?v=141">
+<script src="/app.js?v=141" defer></script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -25,13 +25,13 @@
              becomes an unintercepted navigation and kills the page. -->
         <form id=protoForm method=POST action="/protocol" onsubmit="return false">
             <div id=protoList>loading&hellip;</div>
-            <p style="margin:1.2em 0 0;padding:.8em 1em;background:rgba(255,255,255,.55);border-radius:8px;font-size:.92em">
+            <p style="margin:1.2em 0 0;padding:.8em 1em;background:#f2f6f8;border-radius:8px;font-size:.92em">
                 <label style="display:flex;align-items:center">
                     <input type=checkbox name=ppm_inv value=1 id=ppmInv style="margin-right:.6em;transform:scale(1.2)">
                     <span>Invert PPM polarity (idle HIGH, negative-going pulses) &mdash; try this if your simulator or flight controller doesn't pick up PPM</span>
                 </label>
             </p>
-            <p id=crsfRateBox style="margin:1.2em 0 0;padding:.8em 1em;background:rgba(255,255,255,.55);border-radius:8px;font-size:.92em">
+            <p id=crsfRateBox style="margin:1.2em 0 0;padding:.8em 1em;background:#f2f6f8;border-radius:8px;font-size:.92em">
                 <label style="display:flex;align-items:center">
                     <span style="margin-right:.7em"><b>CRSF frame rate</b></span>
                     <select name=crsf_hz id=crsfHz style="font-size:1em;padding:.2em .4em">
@@ -42,14 +42,14 @@
                 </label>
                 <span class=muted style="display:block;margin-top:.5em;font-size:.88em">Lower this to 100&thinsp;Hz for CRSF&rarr;PWM servo converters &mdash; some of their firmwares misbehave above ~100&thinsp;Hz. Flight controllers are happiest at 250&thinsp;Hz.</span>
             </p>
-            <p style="margin:1.2em 0 0;padding:.8em 1em;background:rgba(255,255,255,.55);border-radius:8px;font-size:.92em">
+            <p style="margin:1.2em 0 0;padding:.8em 1em;background:#f2f6f8;border-radius:8px;font-size:.92em">
                 <label style="display:flex;align-items:flex-start">
                     <input type=checkbox name=fc_telem value=1 id=fcTelem checked style="margin:.25em .6em 0 0;transform:scale(1.2)">
                     <span><b>Flight controller on the telemetry line</b> (Rotorflight support &amp; CRSF telemetry)<br>
                     <span class=muted style="font-size:.88em">Untick for plain CRSF&rarr;PWM servo converters &mdash; some echo junk that gets misread as telemetry (phantom current readings, false alarms).</span></span>
                 </label>
             </p>
-            <p style="margin:1.2em 0 0;padding:.8em 1em;background:rgba(255,255,255,.55);border-radius:8px;font-size:.92em">
+            <p style="margin:1.2em 0 0;padding:.8em 1em;background:#f2f6f8;border-radius:8px;font-size:.92em">
                 <span style="display:flex;flex-wrap:wrap;gap:.6em 1.4em;align-items:center">
                     <label style="white-space:nowrap"><b>Throttle channel</b>
                         <input type=number name=thr_ch id=thrCh step=1 min=0 max=16 value=3 style="width:4em;font-size:1em;padding:.2em .4em;margin-left:.4em">

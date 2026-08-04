@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.315-solid-text",
+      "url": "https://messiter.com/rxv2/release/v0.9.315/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.315/littlefs.bin",
+      "fs_md5": "244455a96bca9561c7f949fa99b2e58d",
+      "notes": "Solid, readable text everywhere: cards, banners, titles and messages now sit on solid backgrounds (no more translucency washing out in sunlight). Rotorflight settings are now saved and reviewed PER BANK (all 4 PID banks + 4 rate banks, transmitter off), offline edits remember their bank, and the Save-session button no longer appears while reviewing."
+    },
+    {
       "name": "RXV2-0.9.314-save-to-phone",
       "url": "https://messiter.com/rxv2/release/v0.9.314/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.314/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.304/littlefs.bin",
       "fs_md5": "09ade3cae2a10c6b46b6b0f5b551aa58",
       "notes": "Field fix from today's three test flights: after landing away from home WiFi, the receiver kept the flight controller cut off during its ~2 minutes of hopeful WiFi retries - so the Black box showed 'no telemetry' with the battery plugged in. The flight-controller line now stays connected throughout, and the battery card fills in seconds at the field, just as it does at home."
-    },
-    {
-      "name": "RXV2-0.9.303-help-catches-up",
-      "url": "https://messiter.com/rxv2/release/v0.9.303/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.303/littlefs.bin",
-      "fs_md5": "d519d0ccebc843a4556f6549d66bb287",
-      "notes": "The help screens catch up with reality: flying needs no buttons (transmitter on first and the radios manage themselves - explained on the front page), the flight diary holds twenty dated flights with a delete button and landscape mode, and the Black box help explains the self-tending clocks. Written down so nobody has to remember - not even the author."
     }
   ]
 }

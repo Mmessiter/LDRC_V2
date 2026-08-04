@@ -28,6 +28,28 @@ object SessionCache {
 
     val available: Boolean get() = entries.isNotEmpty()
 
+    // Bank-aware keys (Malcolm 2026-08-04: "the PID values fail to differ by
+    // bank"). Reads 112/94/148 follow the PID-side bank, 111 the rate bank
+    // (fn=210 select, 0x80 flag = rates) — key them by the selected bank.
+    @Volatile var pidBank = 0; private set
+    @Volatile var rateBank = 0; private set
+
+    fun noteBankSelect(dataHex: String) {
+        val b = dataHex.take(2).toIntOrNull(16) ?: return
+        if (b and 0x80 != 0) rateBank = b and 0x7f else pidBank = b
+    }
+
+    private val pidBankFns = setOf("112", "94", "148")
+
+    private fun keyFor(pathAndQuery: String): String {
+        if (!pathAndQuery.startsWith("/api/msp?") || pathAndQuery.contains("data=")) return pathAndQuery
+        val fn = pathAndQuery.substringAfter("?").split("&")
+            .firstOrNull { it.startsWith("fn=") }?.removePrefix("fn=") ?: ""
+        if (fn in pidBankFns) return "$pathAndQuery&bank=$pidBank"
+        if (fn == "111") return "$pathAndQuery&bank=$rateBank"
+        return pathAndQuery
+    }
+
     val label: String
         get() {
             val name = if (modelName.isEmpty()) "last receiver" else modelName
@@ -46,7 +68,7 @@ object SessionCache {
 
     @Synchronized
     fun record(pathAndQuery: String, path: String, type: String, body: ByteArray) {
-        entries[pathAndQuery] = Pair(type, body)
+        entries[keyFor(pathAndQuery)] = Pair(type, body)
         if (path == "/api/state.json") {
             runCatching {
                 val name = JSONObject(String(body)).getJSONObject("info").getString("name")
@@ -66,7 +88,7 @@ object SessionCache {
     }
 
     @Synchronized
-    fun lookup(pathAndQuery: String): Pair<String, ByteArray>? = entries[pathAndQuery]
+    fun lookup(pathAndQuery: String): Pair<String, ByteArray>? = entries[keyFor(pathAndQuery)]
 
     /** Called opportunistically (on disconnect / app background). */
     @Synchronized
@@ -96,7 +118,10 @@ object SessionCache {
                                     143 to "governor (global)", 149 to "governor profile")
     private var pendingFile: File? = null
 
-    data class PendingEdit(val fn: Int, val hex: String, val label: String)
+    // bank = fn=210 select byte to send BEFORE this write (0x80|idx for
+    // rates); null = bankless (governor global).
+    data class PendingEdit(val fn: Int, val hex: String, val label: String,
+                           val bank: Int? = null)
 
     fun loadPending(): Pair<String, List<PendingEdit>> {
         val f = pendingFile ?: return Pair("", emptyList())
@@ -108,7 +133,8 @@ object SessionCache {
             val out = ArrayList<PendingEdit>()
             for (i in 0 until arr.length()) {
                 val e = arr.getJSONObject(i)
-                out.add(PendingEdit(e.getInt("fn"), e.getString("hex"), e.getString("label")))
+                out.add(PendingEdit(e.getInt("fn"), e.getString("hex"), e.getString("label"),
+                    if (e.has("bank")) e.getInt("bank") else null))
             }
             Pair(model, out as List<PendingEdit>)
         }.getOrDefault(Pair("", emptyList()))
@@ -124,6 +150,7 @@ object SessionCache {
             for (e in edits) {
                 val o = JSONObject()
                 o.put("fn", e.fn); o.put("hex", e.hex); o.put("label", e.label)
+                e.bank?.let { o.put("bank", it) }
                 arr.put(o)
             }
             root.put("edits", arr)
@@ -136,10 +163,15 @@ object SessionCache {
     @Synchronized
     fun captureOfflineWrite(fn: Int, dataHex: String): Boolean {
         val readFn = writeToRead[fn] ?: return false
-        var (model, edits) = loadPending()
+        // Rates follow the rate bank, gov global has none, the rest follow
+        // the PID-side bank (mirrors the iOS SessionCache).
+        val bank: Int? = when (fn) { 143 -> null; 204 -> 0x80 or rateBank; else -> pidBank }
+        var label = writeLabels[fn] ?: "settings"
+        if (bank != null) label += " (bank ${(bank and 0x7f) + 1})"
+        val (model, edits) = loadPending()
         val list = ArrayList(if (model == modelName) edits else emptyList())
-        list.removeAll { it.fn == fn }
-        list.add(PendingEdit(fn, dataHex, writeLabels[fn] ?: "settings"))
+        list.removeAll { it.fn == fn && it.bank == bank }
+        list.add(PendingEdit(fn, dataHex, label, bank))
         savePending(modelName, list)
         record("/api/msp?fn=$readFn", "/api/msp", "text/plain",
                dataHex.uppercase().toByteArray())
