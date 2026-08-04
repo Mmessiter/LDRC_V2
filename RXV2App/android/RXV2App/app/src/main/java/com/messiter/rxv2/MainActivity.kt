@@ -540,18 +540,43 @@ class MainActivity : AppCompatActivity() {
         SessionCache.init(this)
         val (model, edits) = SessionCache.loadPending()
         if (edits.isNotEmpty() && model == name) {
-            val what = edits.joinToString(", ") { it.label }
-            android.app.AlertDialog.Builder(this)
-                .setTitle("Settings edited offline")
-                .setMessage("While offline you edited: $what.\n\nSend these to the " +
-                    "model now, or discard them and keep what the model already has?\n\n" +
-                    "IMPORTANT: make sure the bank/profile switch is in the SAME " +
-                    "position as when you edited.")
-                .setPositiveButton("Send to model") { _, _ -> sendPendingEdits(edits) }
-                .setNegativeButton("Discard offline edits") { _, _ ->
-                    SessionCache.savePending("", emptyList()) }
-                .setCancelable(false)
-                .show()
+            // Malcolm's rule (2026-08-04): send ONLY with the transmitter OFF —
+            // then the app controls the bank and edits land in the right place.
+            Thread {
+                var txLive = false
+                bleSyncQuiet("/api/state.json")?.let { body ->
+                    runCatching {
+                        val o = org.json.JSONObject(String(body))
+                        val lastPkt = o.getJSONObject("rf").optLong("last_pkt_ms", 0)
+                        val upMs = o.getJSONObject("info").optLong("uptime_s", 0) * 1000
+                        txLive = lastPkt > 0 && (upMs - lastPkt) < 3000
+                    }
+                }
+                val what = edits.joinToString(", ") { it.label }
+                runOnUiThread {
+                    val b = android.app.AlertDialog.Builder(this)
+                        .setTitle("Settings edited offline")
+                        .setCancelable(false)
+                    if (txLive) {
+                        b.setMessage("Offline edits are waiting ($what) — but the transmitter " +
+                            "is ON, so its switch owns the bank. To send them to the right " +
+                            "place: switch the transmitter OFF and reconnect.")
+                         .setPositiveButton("OK", null)
+                         .setNegativeButton("Discard offline edits") { _, _ ->
+                             SessionCache.savePending("", emptyList()) }
+                    } else {
+                        b.setMessage("While offline you edited: $what.\n\nThe transmitter is " +
+                            "off, so the app controls the bank — if the edits belong to a " +
+                            "particular bank, select it on the Rotorflight pages first.\n\n" +
+                            "Send the edits to the model now, or discard them?")
+                         .setPositiveButton("Send to model") { _, _ -> sendPendingEdits(edits) }
+                         .setNegativeButton("Discard offline edits") { _, _ ->
+                             SessionCache.savePending("", emptyList()) }
+                         .setNeutralButton("Not now", null)
+                    }
+                    b.show()
+                }
+            }.start()
         }
         prefetchSession()
     }
