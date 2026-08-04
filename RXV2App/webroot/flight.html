@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Flight analysis &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=138">
-<script src="/app.js?v=138" defer></script>
+<link rel=stylesheet href="/style.css?v=139">
+<script src="/app.js?v=139" defer></script>
 <style>
 /* Landscape = reading mode (Malcolm 2026-07-31): the page widens and the
    graph grows to occupy most of the screen instead of a slim centre column. */
@@ -175,7 +175,7 @@ async function populateFlightSelector() {
         if (fl.i === 0) label = 'Current' + (fl.saving ? ' — saving the last flight, a moment…'
                                             : fl.count > 1 ? ' (' + fmt(fl.dur_ms) + ')' : ' — none yet');
         else label = (ds || (fl.i === 1 ? 'Previous' : fl.i + ' flights ago')) + ' (' + fmt(fl.dur_ms) + ')';
-        html += '<option value="' + fl.i + '">' + label + '</option>';
+        html += '<option value="' + fl.i + '" data-phys="' + (fl.phys !== undefined ? fl.phys : '') + '">' + label + '</option>';
     }
     sel.innerHTML = html;
     if (cur && sel.querySelector('option[value="' + cur + '"]')) sel.value = cur;
@@ -214,9 +214,14 @@ document.getElementById('delBtn').addEventListener('click', async function () {
         return;
     }
     try {
+        // Delete by the STABLE physical slot when known: quick successive
+        // deletions shift the logical numbering under the page (the
+        // "reluctant" flight, 2026-08-04); the phys slot never moves.
+        const opt = sel && sel.selectedOptions[0];
+        const phys = opt ? opt.dataset.phys : undefined;
         await fetch('/api/flight/delete', { method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: 'i=' + f });
+            body: (phys !== undefined && phys !== '') ? ('phys=' + phys) : ('i=' + f) });
     } catch (e) {}
     await populateFlightSelector();
     if (sel) sel.value = '0';

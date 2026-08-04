@@ -468,13 +468,20 @@ inline void handleMspApi() {
 // too — let the user prune them. Ring stays consistent: a deleted slot is
 // simply skipped by the listing, and the head is untouched.
 inline void handleFlightDelete() {
+    // Prefer the STABLE physical slot (Malcolm 2026-08-04: quick successive
+    // deletions over BLE shifted the logical numbering under the page — one
+    // flight seemed "reluctant" because the delete aimed at a hole). Logical
+    // `i` kept for old pages.
+    long physArg = server.hasArg("phys") ? server.arg("phys").toInt() : -1;
     long i = server.hasArg("i") ? server.arg("i").toInt() : 0;
-    if (i < 1 || i > FLIGHT_KEEP || !littleFsMounted) {
+    if (!littleFsMounted ||
+        (physArg < 0 && (i < 1 || i > FLIGHT_KEEP)) ||
+        (physArg >= 0 && physArg >= FLIGHT_KEEP)) {
         server.send(400, "text/plain", "bad flight index");
         return;
     }
     statsSelfStallUntilMs = millis() + 2000;   // flash op: stats look away
-    const uint8_t phys = fltPhys((uint8_t)(i - 1));
+    const uint8_t phys = (physArg >= 0) ? (uint8_t)physArg : fltPhys((uint8_t)(i - 1));
     const bool existed = LittleFS.exists(flightPath(phys));
     if (existed) LittleFS.remove(flightPath(phys));
     fltPendingStampMs[phys] = 0;
