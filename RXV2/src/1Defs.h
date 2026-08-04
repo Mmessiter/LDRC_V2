@@ -112,6 +112,18 @@ inline int16_t tzOffsetMin    = 0;        // local = UTC + tzOffsetMin (phone-ta
 // compiled before FlightLog.h.
 constexpr uint32_t FLT_PARDON_MS = 3000;   // safety ceiling — auto-expires even if the cancel is lost
 inline uint8_t  fltPardonAnnounceLeft = 0;
+
+// One wave per revival (Malcolm 2026-08-04: the tail announced Bluetooth,
+// then announced it AGAIN seconds later — the landing recovery and the WiFi
+// state machine each triggered one). Automatic wave sites debounce through
+// this; the app's explicit wave request bypasses it (a human asking always
+// gets an answer).
+inline uint32_t lastAutoWaveMs = 0;
+inline bool autoWaveAllowed() {
+    if (lastAutoWaveMs && (uint32_t)(millis() - lastAutoWaveMs) < 30000) return false;
+    lastAutoWaveMs = millis();
+    return true;
+}
 inline uint32_t fltPardonMsToSend = FLT_PARDON_MS;   // 0 = "unignore now" (Malcolm's explicit end)
 // What the TX's clock face actually holds is anyone's guess — Malcolm's reads
 // UTC plus six minutes of drift (set in winter, never adjusted). So we LEARN
