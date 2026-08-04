@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.322-straight-slopes",
+      "url": "https://messiter.com/rxv2/release/v0.9.322/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.322/littlefs.bin",
+      "fs_md5": "921727e2aeb9f6bba9032bd323091c7f",
+      "notes": "Graph lines are now straight slopes with gently rounded corners instead of sweeping curves \u2014 sparse data no longer swoops like a sine wave."
+    },
+    {
       "name": "RXV2-0.9.321-steady-hand",
       "url": "https://messiter.com/rxv2/release/v0.9.321/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.321/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.311/littlefs.bin",
       "fs_md5": "ddf44f090febdb72761953df5349948f",
       "notes": "Bench detective work with Malcolm solved the mystery 536ms field gap: switching the radios off (Fly now, or Bluetooth's silence-while-flying) stalls the processor ~0.7s - real, deliberate, and previously billed as a link gap. Now the receiver announces the pardon before any intentional radio shutdown (the transmitter excludes it by name), the shutdown waits politely for its announcement to arrive, and - the safety heart of it - automatic radio teardowns can never fire while the model is ARMED. Plus: the Bluetooth tail-wave announces a revival once, not twice."
-    },
-    {
-      "name": "RXV2-0.9.310-pardon-the-pause",
-      "url": "https://messiter.com/rxv2/release/v0.9.310/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.310/littlefs.bin",
-      "fs_md5": "461e664bbb3551b6c2da3e29dfe01b3f",
-      "notes": "Malcolm noticed the only >100ms gap in his transmitter's log was the flight being saved to flash just after motor-off - honest, but it polluted the averages. Now the receiver announces the pause before it happens ('pardon the next 3 seconds', ack item 38), and the updated transmitter excludes those gaps from every statistic, logging 'Gap excused (RX saving flight)' instead. The link's numbers now describe the link, and nothing else."
     }
   ]
 }
