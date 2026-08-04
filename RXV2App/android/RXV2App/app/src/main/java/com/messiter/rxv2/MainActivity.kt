@@ -552,29 +552,23 @@ class MainActivity : AppCompatActivity() {
                         txLive = lastPkt > 0 && (upMs - lastPkt) < 3000
                     }
                 }
+                // Malcolm 2026-08-04: TX on → NOT OFFERED AT ALL (too much
+                // scope for user error). Edits wait silently for a TX-off visit.
+                if (txLive) return@Thread
                 val what = edits.joinToString(", ") { it.label }
                 runOnUiThread {
-                    val b = android.app.AlertDialog.Builder(this)
+                    android.app.AlertDialog.Builder(this)
                         .setTitle("Settings edited offline")
                         .setCancelable(false)
-                    if (txLive) {
-                        b.setMessage("Offline edits are waiting ($what) — but the transmitter " +
-                            "is ON, so its switch owns the bank. To send them to the right " +
-                            "place: switch the transmitter OFF and reconnect.")
-                         .setPositiveButton("OK", null)
-                         .setNegativeButton("Discard offline edits") { _, _ ->
-                             SessionCache.savePending("", emptyList()) }
-                    } else {
-                        b.setMessage("While offline you edited: $what.\n\nThe transmitter is " +
+                        .setMessage("While offline you edited: $what.\n\nThe transmitter is " +
                             "off, so the app controls the bank — if the edits belong to a " +
                             "particular bank, select it on the Rotorflight pages first.\n\n" +
                             "Send the edits to the model now, or discard them?")
-                         .setPositiveButton("Send to model") { _, _ -> sendPendingEdits(edits) }
-                         .setNegativeButton("Discard offline edits") { _, _ ->
-                             SessionCache.savePending("", emptyList()) }
-                         .setNeutralButton("Not now", null)
-                    }
-                    b.show()
+                        .setPositiveButton("Send to model") { _, _ -> sendPendingEdits(edits) }
+                        .setNegativeButton("Discard offline edits") { _, _ ->
+                            SessionCache.savePending("", emptyList()) }
+                        .setNeutralButton("Not now", null)
+                        .show()
                 }
             }.start()
         }

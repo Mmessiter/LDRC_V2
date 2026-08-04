@@ -40,18 +40,11 @@ struct RootView: View {
                     .toolbar(.hidden, for: .navigationBar)
                     .onAppear { onConnected(name) }
                     .alert("Settings edited offline", isPresented: $showPendingOffer) {
-                        if pendingEdits.isEmpty {
-                            Button("OK") { }                      // TX on: informational only
-                            Button("Discard offline edits", role: .destructive) {
-                                SessionCache.savePending(model: "", edits: [])
-                            }
-                        } else {
-                            Button("Send to model") { sendPendingEdits() }
-                            Button("Discard offline edits", role: .destructive) {
-                                SessionCache.savePending(model: "", edits: [])
-                            }
-                            Button("Not now", role: .cancel) { }  // keep them for a TX-off visit
+                        Button("Send to model") { sendPendingEdits() }
+                        Button("Discard offline edits", role: .destructive) {
+                            SessionCache.savePending(model: "", edits: [])
                         }
+                        Button("Not now", role: .cancel) { }      // keep them for later
                     } message: {
                         Text(pendingSummary)
                     }
@@ -118,20 +111,17 @@ extension RootView {
                     txLive = lastPkt > 0 && (upS * 1000 - lastPkt) < 3000
                 }
                 DispatchQueue.main.async {
+                    // Malcolm 2026-08-04: TX on → NOT OFFERED AT ALL (too much
+                    // scope for user error). The edits simply wait, silently,
+                    // for a reconnection with the transmitter off.
+                    guard !txLive else { return }
                     let what = edits.map(\.label).joined(separator: ", ")
-                    if txLive {
-                        pendingEdits = []
-                        pendingSummary = "Offline edits are waiting (\(what)) — but the "
-                            + "transmitter is ON, so its switch owns the bank. To send them "
-                            + "to the right place: switch the transmitter OFF and reconnect."
-                    } else {
-                        pendingEdits = edits
-                        pendingSummary = "While offline you edited: \(what).\n\n"
-                            + "The transmitter is off, so the app controls the bank — if the "
-                            + "edits belong to a particular bank, select it on the Rotorflight "
-                            + "pages first.\n\nSend the edits to the model now, or discard "
-                            + "them and keep what the model already has?"
-                    }
+                    pendingEdits = edits
+                    pendingSummary = "While offline you edited: \(what).\n\n"
+                        + "The transmitter is off, so the app controls the bank — if the "
+                        + "edits belong to a particular bank, select it on the Rotorflight "
+                        + "pages first.\n\nSend the edits to the model now, or discard "
+                        + "them and keep what the model already has?"
                     showPendingOffer = true
                 }
             }
