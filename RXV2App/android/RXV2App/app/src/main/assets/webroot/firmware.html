@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Check for Update &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=149">
-<script src="/app.js?v=149" defer></script>
+<link rel=stylesheet href="/style.css?v=150">
+<script src="/app.js?v=150" defer></script>
 <style>
 /* --- Currently-installed card -------------------------------------- */
 .installed-card .row{
@@ -427,11 +427,22 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
     showMessage('<b>Installing</b> <code>' + ver + '</code> from <b>' +
         (SOURCE_LABEL[sourceKey]?.long || 'this source') + '</b>… ' +
         '<span class=muted>(<span id=instSecs>0</span> s elapsed — typically 30–90 s, longer over Bluetooth. The receiver reboots when done.)</span>');
-    // FIRST CHOICE inside the app: native Bluetooth push — the PHONE
-    // downloads the images (WiFi or 5G) and streams them over BLE, so no
-    // receiver-side internet is needed (hello, hunting lodge). On WiFi (or
-    // an older app) the /app/ probe 404s and we fall through to chip-pull.
+    // FASTEST FIRST (Malcolm 2026-08-05): if the receiver's own WiFi is up
+    // (STA joined a network → internet), skip the slow Bluetooth stream and
+    // let the chip PULL the images itself at WiFi speed — the tiny install
+    // request still travels over whatever link this page is on. Only the
+    // genuinely offline field case pays the Bluetooth price.
+    let chipHasInternet = false;
     try {
+        const st = await (await fetch('/api/state.json', { cache: 'no-store' })).json();
+        chipHasInternet = !!(st.net && st.net.mode === 'WiFi up');
+    } catch (e) {}
+    // Inside the app WITHOUT receiver WiFi: native Bluetooth push — the
+    // PHONE downloads the images (WiFi or 5G) and streams them over BLE, so
+    // no receiver-side internet is needed (hello, hunting lodge). On WiFi
+    // (or an older app) the /app/ probe 404s and we fall to chip-pull.
+    try {
+        if (chipHasInternet) throw new Error('receiver WiFi is faster');
         const r0 = await fetch('/app/bleota/start?fw=' + encodeURIComponent(url) +
                                (fsUrl ? '&fs=' + encodeURIComponent(fsUrl) : ''), { cache: 'no-store' });
         if (r0.ok && ((await r0.json()).ok)) {

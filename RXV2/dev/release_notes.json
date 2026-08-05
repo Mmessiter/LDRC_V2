@@ -208,5 +208,6 @@
   "RXV2-0.9.322-straight-slopes": "Graph lines are now straight slopes with gently rounded corners instead of sweeping curves \u2014 sparse data no longer swoops like a sine wave.",
   "RXV2-0.9.323-square-events": "Graph: real events (motor on/off, battery plugged in) now draw square \u2014 the flat holds its full length and the change is steep at the moment it happened. Only gentle one-unit sensor steps are smoothed into slopes.",
   "RXV2-0.9.324-current-lag-note": "Flight-analysis help now explains why current seems to lag head speed on spool-up: the ESC smooths and reports current more slowly than RPM \u2014 the reporting lags, not the motor.",
-  "RXV2-0.9.325-gear-field-fix": "The gear-ratio box no longer fights your typing \u2014 the page's background refresh was rewriting it mid-keystroke. Type, save, done."
+  "RXV2-0.9.325-gear-field-fix": "The gear-ratio box no longer fights your typing \u2014 the page's background refresh was rewriting it mid-keystroke. Type, save, done.",
+  "RXV2-0.9.326-fast-lane-update": "Updates take the fastest road automatically: when the receiver's own WiFi is connected, installs download at WiFi speed even when you're using the app over Bluetooth (30-90 s instead of minutes). Bluetooth streaming remains the automatic fallback at the field."
 }

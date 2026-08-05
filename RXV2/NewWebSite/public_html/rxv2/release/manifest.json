@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.326-fast-lane-update",
+      "url": "https://messiter.com/rxv2/release/v0.9.326/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.326/littlefs.bin",
+      "fs_md5": "a73ccd6c9f2097092c3e9d3f9a584890",
+      "notes": "Updates take the fastest road automatically: when the receiver's own WiFi is connected, installs download at WiFi speed even when you're using the app over Bluetooth (30-90 s instead of minutes). Bluetooth streaming remains the automatic fallback at the field."
+    },
+    {
       "name": "RXV2-0.9.325-gear-field-fix",
       "url": "https://messiter.com/rxv2/release/v0.9.325/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.325/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.315/littlefs.bin",
       "fs_md5": "244455a96bca9561c7f949fa99b2e58d",
       "notes": "Solid, readable text everywhere: cards, banners, titles and messages now sit on solid backgrounds (no more translucency washing out in sunlight). Rotorflight settings are now saved and reviewed PER BANK (all 4 PID banks + 4 rate banks, transmitter off), offline edits remember their bank, and the Save-session button no longer appears while reviewing."
-    },
-    {
-      "name": "RXV2-0.9.314-save-to-phone",
-      "url": "https://messiter.com/rxv2/release/v0.9.314/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.314/littlefs.bin",
-      "fs_md5": "dd2f927a20a108ad40282189bc5c9fa0",
-      "notes": "Malcolm's suggestion made flesh: a 'Save session to phone' button on the Black box page (visible in the app) explicitly records everything - flights, graphs, events, Rotorflight settings - with a live count and a proud 'All saved!' at the end. The armchair review is now something you can deliberately pack in your pocket before switching off, not just hope the background recorder caught."
     }
   ]
 }

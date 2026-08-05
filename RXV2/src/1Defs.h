@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.325-gear-field-fix";
+constexpr const char* FW_VERSION = "RXV2-0.9.326-fast-lane-update";
 
 //*********************************************************************
 //  Auto-update manifest URLs
