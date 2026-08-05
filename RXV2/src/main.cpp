@@ -253,6 +253,7 @@ void setup() {
     //*****************************************************************
     // Recovers cleanly from a protocol selection that's crashing the chip in
     // a reboot loop.
+    bool protoSafeBoot = false;
     if (!cfgReboot) {
         uint8_t cnt = prefs.isKey(NVS_KEY_BOOT_COUNT) ? prefs.getUChar(NVS_KEY_BOOT_COUNT, 0) : 0;
         cnt++;
@@ -260,9 +261,14 @@ void setup() {
         if (cnt >= QUICK_BOOT_THRESHOLD) {
             forceWifiMode = true;
             prefs.putUChar(NVS_KEY_BOOT_COUNT, 0);
-            prefs.putUChar(NVS_KEY_PROTO, (uint8_t)PROTO_SBUS);   // safety reset
-            Serial.printf("[boot] %u quick boots — forcing WiFi + SBUS protocol\n", cnt);
-            events.add("Recovery: forced WiFi + SBUS protocol");
+            // RAM-ONLY safe protocol for THIS boot — never rewrite the user's
+            // saved choice (Malcolm 2026-08-05: bench battery-pulls added up
+            // to a silent CRSF→SBUS flip on Black-Thunder-2). If a protocol
+            // driver truly crash-loops, every boot re-trips this and stays
+            // usable; a false alarm costs one odd boot, not a setting.
+            protoSafeBoot = true;
+            Serial.printf("[boot] %u quick boots — WiFi forced, SBUS this boot (saved protocol kept)\n", cnt);
+            events.add("Recovery: WiFi forced, SBUS this boot (saved protocol kept)");
         } else {
             Serial.printf("[boot] quick-boot counter: %u/%u\n", cnt, QUICK_BOOT_THRESHOLD);
         }
@@ -274,6 +280,7 @@ void setup() {
     {
         uint8_t p = prefs.isKey(NVS_KEY_PROTO) ? prefs.getUChar(NVS_KEY_PROTO, PROTO_DEFAULT) : PROTO_DEFAULT;
         if (p > PROTO_MAX) p = PROTO_DEFAULT;
+        if (protoSafeBoot) p = PROTO_SBUS;   // recovery: safe driver in RAM only
         currentProtocol = (Protocol)p;
         ppmInverted = prefs.isKey(NVS_KEY_PPM_INV) ? (prefs.getUChar(NVS_KEY_PPM_INV, 0) != 0) : false;
         uint8_t chz = prefs.isKey(NVS_KEY_CRSF_HZ) ? prefs.getUChar(NVS_KEY_CRSF_HZ, 250) : 250;
@@ -605,18 +612,41 @@ void loop() {
     // After 5 s of stable running, clear the quick-boot counter so an isolated
     // power-cycle doesn't accumulate toward the 3-trip threshold.
     static bool quickBootReset = false;
+    static uint32_t qbcClearAtMs = 0;
     if (!quickBootReset && millis() > QUICK_BOOT_RESET_MS) {
         // NVS write = flash stall (both cores freeze; worst-case ~1 s with
         // page housekeeping). Fired at exactly t=5 s it blocked the loop
         // MID-SESSION whenever the TX was on from boot — the mystery 1 s
-        // link gap in every bench blackbox (2026-07-23). Defer it to a
-        // link-quiet moment: on a normal session that's the landing, when
-        // flash work is harmless.
+        // link gap in every bench blackbox (2026-07-23). Link quiet → write
+        // at once. Link LIVE → the old code waited for a quiet moment that a
+        // battery-pull-with-TX-on never provides, so bench sessions banked
+        // "quick boots" until the third one tripped recovery and flipped the
+        // protocol (Malcolm 2026-08-05, Black-Thunder-2). Now: disarmed with
+        // the link up = healthy by definition — announce a gap pardon, then
+        // clear ~300 ms later. NEVER while armed (the stall stops output).
         bool linkLive = rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 2000;
+        const bool armedNow = (armingChannel >= 1 && armingChannel <= 16 &&
+                               rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 1000 &&
+                               channelMicros[armingChannel - 1] > 1500);
         if (!linkLive) {
             prefs.putUChar(NVS_KEY_BOOT_COUNT, 0);
             quickBootReset = true;
             events.add("Quick-boot counter cleared");
+        } else if (!armedNow && !qbcClearAtMs) {
+            fltPardonMsToSend = FLT_PARDON_MS;
+            fltPardonAnnounceLeft = 25;
+            qbcClearAtMs = millis() + 300;
+        }
+    }
+    if (qbcClearAtMs && (int32_t)(millis() - qbcClearAtMs) >= 0) {
+        qbcClearAtMs = 0;   // re-schedules itself if armed slipped in
+        const bool armedNow = (armingChannel >= 1 && armingChannel <= 16 &&
+                               rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 1000 &&
+                               channelMicros[armingChannel - 1] > 1500);
+        if (!armedNow && !quickBootReset) {
+            prefs.putUChar(NVS_KEY_BOOT_COUNT, 0);
+            quickBootReset = true;
+            events.add("Quick-boot counter cleared (pardoned)");
         }
     }
 
