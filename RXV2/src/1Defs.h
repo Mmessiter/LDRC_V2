@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.329-fc-cell-count";
+constexpr const char* FW_VERSION = "RXV2-0.9.330-even-cells";
 
 //*********************************************************************
 //  Auto-update manifest URLs
