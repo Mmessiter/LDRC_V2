@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.323-square-events";
+constexpr const char* FW_VERSION = "RXV2-0.9.324-current-lag-note";
 
 //*********************************************************************
 //  Auto-update manifest URLs

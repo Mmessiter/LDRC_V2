@@ -206,5 +206,6 @@
   "RXV2-0.9.320-smooth-curves": "The flight graph now draws real slopes instead of staircases: each sensor's discrete steps are turned back into the smooth curve the quantity actually followed. And when reviewing offline, the tuning pages now honestly say 'Loaded from the phone' / 'Reload from phone'.",
   "RXV2-0.9.321-steady-hand": "Graph refinement: a governed head speed now draws truly FLAT \u2014 small sensor jitter (a few rpm, hundredths of a volt) is treated as steadiness rather than continuous change, especially visible on short flights. Real changes still slope exactly as before.",
   "RXV2-0.9.322-straight-slopes": "Graph lines are now straight slopes with gently rounded corners instead of sweeping curves \u2014 sparse data no longer swoops like a sine wave.",
-  "RXV2-0.9.323-square-events": "Graph: real events (motor on/off, battery plugged in) now draw square \u2014 the flat holds its full length and the change is steep at the moment it happened. Only gentle one-unit sensor steps are smoothed into slopes."
+  "RXV2-0.9.323-square-events": "Graph: real events (motor on/off, battery plugged in) now draw square \u2014 the flat holds its full length and the change is steep at the moment it happened. Only gentle one-unit sensor steps are smoothed into slopes.",
+  "RXV2-0.9.324-current-lag-note": "Flight-analysis help now explains why current seems to lag head speed on spool-up: the ESC smooths and reports current more slowly than RPM \u2014 the reporting lags, not the motor."
 }
