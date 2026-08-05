@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.330-even-cells",
+      "url": "https://messiter.com/rxv2/release/v0.9.330/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.330/littlefs.bin",
+      "fs_md5": "b3ba8ab0a732af95dfe65f733fb9b0d2",
+      "notes": "Cell-count guessing got wiser: packs above 4S only come in even counts (6S, 8S, 12S \u2014 never 11S), so the voltage fallback now rounds odd guesses up. The flight controller's own answer still wins when available."
+    },
+    {
       "name": "RXV2-0.9.329-fc-cell-count",
       "url": "https://messiter.com/rxv2/release/v0.9.329/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.329/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.319/littlefs.bin",
       "fs_md5": "e4a04013a8c1b8b0335547261736ee4c",
       "notes": "Guard rails for busy fingers: the save-to-phone panel warns not to switch the transmitter on or the model off mid-save, and the apps now abort bank switching instantly (restoring the model's own banks) if the transmitter appears mid-save. Sending offline edits re-checks the transmitter at the moment you press Send, shows what to keep on/off, and NEVER loses edits if a step fails \u2014 they are kept for another try. Plus: the app now keeps a separate recorded session PER MODEL; connecting a different model no longer erases the previous one's."
-    },
-    {
-      "name": "RXV2-0.9.318-flight-list-fix",
-      "url": "https://messiter.com/rxv2/release/v0.9.318/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.318/littlefs.bin",
-      "fs_md5": "6628f9c2938314ba54882f9f24875978",
-      "notes": "Fixes 'all my flights are gone': the flight LIST broke the moment flights gained real dates (a 64-byte line buffer truncated the JSON) \u2014 the flight data itself was always safe on the receiver. All saved flights reappear."
     }
   ]
 }
