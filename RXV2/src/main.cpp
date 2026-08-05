@@ -267,8 +267,8 @@ void setup() {
             // driver truly crash-loops, every boot re-trips this and stays
             // usable; a false alarm costs one odd boot, not a setting.
             protoSafeBoot = true;
-            Serial.printf("[boot] %u quick boots — WiFi forced, SBUS this boot (saved protocol kept)\n", cnt);
-            events.add("Recovery: WiFi forced, SBUS this boot (saved protocol kept)");
+            Serial.printf("[boot] %u quick boots — WiFi forced, CRSF this boot (saved protocol kept)\n", cnt);
+            events.add("Recovery: WiFi forced, CRSF this boot (saved protocol kept)");
         } else {
             Serial.printf("[boot] quick-boot counter: %u/%u\n", cnt, QUICK_BOOT_THRESHOLD);
         }
@@ -280,7 +280,10 @@ void setup() {
     {
         uint8_t p = prefs.isKey(NVS_KEY_PROTO) ? prefs.getUChar(NVS_KEY_PROTO, PROTO_DEFAULT) : PROTO_DEFAULT;
         if (p > PROTO_MAX) p = PROTO_DEFAULT;
-        if (protoSafeBoot) p = PROTO_SBUS;   // recovery: safe driver in RAM only
+        // Recovery boot: RAM-only fall-back to the DEFAULT protocol — CRSF,
+        // the fleet's language (Malcolm 2026-08-05: "the ultimate default
+        // should be CRSF"). WiFi being forced up is the actual rescue.
+        if (protoSafeBoot) p = PROTO_DEFAULT;
         currentProtocol = (Protocol)p;
         ppmInverted = prefs.isKey(NVS_KEY_PPM_INV) ? (prefs.getUChar(NVS_KEY_PPM_INV, 0) != 0) : false;
         uint8_t chz = prefs.isKey(NVS_KEY_CRSF_HZ) ? prefs.getUChar(NVS_KEY_CRSF_HZ, 250) : 250;
