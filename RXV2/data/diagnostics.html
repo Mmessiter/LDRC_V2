@@ -8,7 +8,7 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>View channels &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=148">
+<link rel=stylesheet href="/style.css?v=149">
 <style>
 .container{max-width:min(96vw,1100px)}
 .chTable{display:grid;grid-template-columns:auto auto 1fr auto;gap:6px 10px;align-items:center;font-variant-numeric:tabular-nums}
@@ -41,7 +41,7 @@
 .heliReadout{position:absolute;bottom:6px;left:10px;font-size:.78em;color:#556;font-variant-numeric:tabular-nums;background:#f2f6f8;padding:3px 8px;border-radius:4px;z-index:2}
 .heliStale #heli3D{opacity:.35;filter:grayscale(.4)}
 </style>
-<script src="/app.js?v=148" defer></script>
+<script src="/app.js?v=149" defer></script>
 <script src="/three.min.js" defer></script>
 </head>
 <body>
@@ -761,7 +761,10 @@ async function refreshFsStatus() {
     _lastFsFetch = now;
     try { const s = await (await fetch('/api/state.json', { cache: 'no-store' })).json();
           setFsStatus(!!(s.rf && s.rf.failsafe_set));
-          if (s.rf && s.rf.gear_ratio != null) document.getElementById('gearField').value = s.rf.gear_ratio;
+          // Never clobber the field while the user is typing (Malcolm
+          // 2026-08-05: "it keeps backspacing!") — same guard as vbat.
+          if (s.rf && s.rf.gear_ratio != null && !gearTouched)
+              document.getElementById('gearField').value = s.rf.gear_ratio;
           if (s.rf && s.rf.vbat) {
               const v = s.rf.vbat;
               if (!vbatTouched) {
@@ -799,10 +802,13 @@ document.getElementById('vbatSave').addEventListener('click', async () => {
                                    { title: 'Error', icon: '\u26a0\ufe0f', kind: 'danger' }); }
 });
 setInterval(refreshFsStatus, 1000);   // live armed indicator
+let gearTouched = false;
+document.getElementById('gearField').addEventListener('input', () => { gearTouched = true; });
 document.getElementById('gearSave').addEventListener('click', async () => {
     const r = parseFloat(document.getElementById('gearField').value || '1');
     try {
         const j = await (await fetch('/api/gear?ratio=' + encodeURIComponent(r), { method: 'POST' })).json();
+        gearTouched = false;
         document.getElementById('gearField').value = j.gear_ratio;
         await LDRC.alert('Gear ratio = ' + j.gear_ratio + ' saved!', { title: 'Saved', icon: '⚙️' });
     } catch (e) { await LDRC.alert('Gear ratio save failed.', { title: 'Error', icon: '⚠️', kind: 'danger' }); }

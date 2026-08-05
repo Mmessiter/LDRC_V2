@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.325-gear-field-fix",
+      "url": "https://messiter.com/rxv2/release/v0.9.325/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.325/littlefs.bin",
+      "fs_md5": "5b980abb35cf024527bee0ccc79d7195",
+      "notes": "The gear-ratio box no longer fights your typing \u2014 the page's background refresh was rewriting it mid-keystroke. Type, save, done."
+    },
+    {
       "name": "RXV2-0.9.324-current-lag-note",
       "url": "https://messiter.com/rxv2/release/v0.9.324/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.324/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.314/littlefs.bin",
       "fs_md5": "dd2f927a20a108ad40282189bc5c9fa0",
       "notes": "Malcolm's suggestion made flesh: a 'Save session to phone' button on the Black box page (visible in the app) explicitly records everything - flights, graphs, events, Rotorflight settings - with a live count and a proud 'All saved!' at the end. The armchair review is now something you can deliberately pack in your pocket before switching off, not just hope the background recorder caught."
-    },
-    {
-      "name": "RXV2-0.9.313-steadfast-delete",
-      "url": "https://messiter.com/rxv2/release/v0.9.313/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.313/littlefs.bin",
-      "fs_md5": "7698b5bc91a8343d85ad629f3330317a",
-      "notes": "The reluctant flight, explained: deleting several flights in quick succession shifted the list's numbering under the page, so a delete could aim at an already-empty slot and appear to do nothing. Deletions now target the flight's permanent storage slot, which never moves - every delete lands exactly where you pointed, however fast you prune."
     }
   ]
 }
