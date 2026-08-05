@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Flight analysis &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=147">
-<script src="/app.js?v=147" defer></script>
+<link rel=stylesheet href="/style.css?v=148">
+<script src="/app.js?v=148" defer></script>
 <style>
 /* Landscape = reading mode (Malcolm 2026-07-31): the page widens and the
    graph grows to occupy most of the screen instead of a slim centre column. */
@@ -428,6 +428,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 </ul>
 <h3>Tips</h3>
 <p>Watch ESC temperature track head speed and current, and the battery sag under load. A brief signal dropout shows up honestly as the longest gap — the recording carries straight on through it.</p>
+<p><b>Why current seems to lag head speed:</b> on a spool-up the graph often shows head speed rising before current — in reality the current rises first (torque before acceleration). The ESC smooths its current reading internally and reports it more slowly than RPM, so the current trace arrives a second or two late. It's the reporting that lags, not the motor.</p>
 </template>
 </body>
 </html>

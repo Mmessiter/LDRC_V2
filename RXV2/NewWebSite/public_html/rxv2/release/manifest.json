@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.324-current-lag-note",
+      "url": "https://messiter.com/rxv2/release/v0.9.324/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.324/littlefs.bin",
+      "fs_md5": "56d91e939d2c61ce3e072f732e42c15b",
+      "notes": "Flight-analysis help now explains why current seems to lag head speed on spool-up: the ESC smooths and reports current more slowly than RPM \u2014 the reporting lags, not the motor."
+    },
+    {
       "name": "RXV2-0.9.323-square-events",
       "url": "https://messiter.com/rxv2/release/v0.9.323/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.323/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.313/littlefs.bin",
       "fs_md5": "7698b5bc91a8343d85ad629f3330317a",
       "notes": "The reluctant flight, explained: deleting several flights in quick succession shifted the list's numbering under the page, so a delete could aim at an already-empty slot and appear to do nothing. Deletions now target the flight's permanent storage slot, which never moves - every delete lands exactly where you pointed, however fast you prune."
-    },
-    {
-      "name": "RXV2-0.9.312-one-wave-per-landing",
-      "url": "https://messiter.com/rxv2/release/v0.9.312/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.312/littlefs.bin",
-      "fs_md5": "ad61b882720b99498805161b1483c5e7",
-      "notes": "Refinement from the bench session: the spurious second tail-wave could arrive a minute or two after the first (the field's WiFi giving up on home and starting its hotspot re-announced Bluetooth), so the debounce is now keyed to the LANDING itself rather than any clock - one wave per landing, unlimited flights per day, and the WiFi machinery's internal restarts stay properly silent. Includes 0.9.311's pardoned teardowns: radio shutdowns announce themselves to the transmitter and can never fire while armed."
     }
   ]
 }
