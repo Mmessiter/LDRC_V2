@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.329-fc-cell-count",
+      "url": "https://messiter.com/rxv2/release/v0.9.329/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.329/littlefs.bin",
+      "fs_md5": "4583edee6212aa6bf4fd6f95b90f7566",
+      "notes": "Battery cell count now comes from the flight controller itself (MSP battery state) instead of being guessed from voltage \u2014 a 12S pack at 45 V no longer masquerades as an 11S. The guess remains only as a fallback for models without an FC answer."
+    },
+    {
       "name": "RXV2-0.9.328-crsf-everywhere",
       "url": "https://messiter.com/rxv2/release/v0.9.328/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.328/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.318/littlefs.bin",
       "fs_md5": "6628f9c2938314ba54882f9f24875978",
       "notes": "Fixes 'all my flights are gone': the flight LIST broke the moment flights gained real dates (a 64-byte line buffer truncated the JSON) \u2014 the flight data itself was always safe on the receiver. All saved flights reappear."
-    },
-    {
-      "name": "RXV2-0.9.317-honest-save",
-      "url": "https://messiter.com/rxv2/release/v0.9.317/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.317/littlefs.bin",
-      "fs_md5": "5822854de6ab9641d7a40af3363c1184",
-      "notes": "When reviewing offline in the app, the Rotorflight save buttons now tell the truth: 'Save to phone', with matching confirmations and '\u2713 Saved on the phone \u2014 ready to send at the next connection' messages (copy-to-profile too). The governor page no longer pretends to reboot a flight controller that isn't there."
     }
   ]
 }

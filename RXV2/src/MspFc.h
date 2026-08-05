@@ -47,6 +47,7 @@ constexpr uint8_t MSP_GOVERNOR_CONFIG = 142;
 constexpr uint8_t MSP_SET_GOVERNOR_CONFIG = 143;
 constexpr uint8_t MSP_GOVERNOR_PROFILE = 148;
 constexpr uint8_t MSP_SET_GOVERNOR_PROFILE = 149;
+constexpr uint8_t MSP_BATTERY_STATE  = 130;   // byte 0 = cell count (the FC KNOWS — no more guessing 11S vs 12S from volts)
 constexpr uint8_t MSP_EEPROM_WRITE   = 250;
 constexpr uint8_t MSP_REBOOT         = 68;    // FC restart (governor config write needs it to apply, like V1)
 
@@ -178,6 +179,13 @@ inline void mspParseResponse(const uint8_t* body, uint8_t bodyLen) {
                 fcInfo.apiMinor = payload[2];
             }
             break;
+        case MSP_BATTERY_STATE:
+            // 45.1 V is 11S nearly-full AND 12S at storage — voltage alone
+            // can never decide (Malcolm 2026-08-05, Black-Thunder-2 shown
+            // as 11S). The FC's configured/auto-detected count settles it.
+            if (size >= 1 && payload[0] > 0 && payload[0] <= 14)
+                fcInfo.cells = payload[0];
+            break;
         default:
             break;
     }
@@ -271,10 +279,11 @@ inline void mspFcPoll() {
     // Cycle through the three requests on successive probes so we eventually
     // get all three pieces of info even if some responses are dropped.
     static uint8_t which = 0;
-    switch (which++ % 3) {
-        case 0: mspSendRequest(MSP_FC_VARIANT);  break;
-        case 1: mspSendRequest(MSP_FC_VERSION);  break;
-        case 2: mspSendRequest(MSP_API_VERSION); break;
+    switch (which++ % 4) {
+        case 0: mspSendRequest(MSP_FC_VARIANT);   break;
+        case 1: mspSendRequest(MSP_FC_VERSION);   break;
+        case 2: mspSendRequest(MSP_API_VERSION);  break;
+        case 3: mspSendRequest(MSP_BATTERY_STATE); break;   // cell count
     }
     fcInfo.probesSent++;
 
