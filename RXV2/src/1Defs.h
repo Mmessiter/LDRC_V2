@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.328-crsf-everywhere";
+constexpr const char* FW_VERSION = "RXV2-0.9.329-fc-cell-count";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -855,6 +855,7 @@ struct FcInfo {
     uint8_t  mspProto         = 0;       // MSP protocol version
     uint8_t  apiMajor         = 0;       // MSP API version (separate from fw version)
     uint8_t  apiMinor         = 0;
+    uint8_t  cells            = 0;       // battery cell count from MSP_BATTERY_STATE (0 = unknown)
     uint32_t probesSent       = 0;
     uint32_t lastProbeMs      = 0;
     uint32_t lastResponseMs   = 0;

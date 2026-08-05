@@ -87,7 +87,10 @@ async function refreshStatus() {
     const packEl = document.getElementById('stPack');
     const fill = document.getElementById('battFill');
     if (v != null && v > 0.5) {
-        const cells = Math.max(1, Math.ceil(v / 4.3));      // auto-detect cell count
+        // Cell count: the FC's own answer when it gives one (45.1 V is 11S
+        // nearly-full AND 12S at storage — volts alone cannot decide), else
+        // the old guess.
+        const cells = (fc.cells > 0) ? fc.cells : Math.max(1, Math.ceil(v / 4.3));
         const per = v / cells;
         const soc = lipoPct(per);                            // resting state-of-charge
         const col = soc >= 50 ? '#2e7d32' : soc >= 20 ? '#d99a3a' : '#c0392b';  // green / amber / red

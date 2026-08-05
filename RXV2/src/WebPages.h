@@ -2116,9 +2116,10 @@ inline void handleApiState() {
     if (fcTelem.lastFrameMs) j += (uint32_t)(millis() - fcTelem.lastFrameMs); else j += "-1";
 
     if (fcTelem.valid) {
-        snprintf(buf, sizeof(buf), ",\"v\":%.2f,\"a\":%.2f,\"mah\":%u,\"pct\":%u",
+        snprintf(buf, sizeof(buf), ",\"v\":%.2f,\"a\":%.2f,\"mah\":%u,\"pct\":%u,\"cells\":%u",
                  fcTelem.fcBattVolts, fcTelem.fcBattAmps,
-                 (unsigned)fcTelem.fcBattMah, (unsigned)fcTelem.fcBattPct);
+                 (unsigned)fcTelem.fcBattMah, (unsigned)fcTelem.fcBattPct,
+                 (unsigned)fcInfo.cells);   // 0 = unknown → page falls back to its guess
         j += buf;
         snprintf(buf, sizeof(buf), ",\"rssi\":%d,\"lq\":%u,\"snr\":%d",
                  (int)fcTelem.fcUplinkRssi, (unsigned)fcTelem.fcUplinkLq, (int)fcTelem.fcUplinkSnr);
