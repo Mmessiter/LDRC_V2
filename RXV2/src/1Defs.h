@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.326-fast-lane-update";
+constexpr const char* FW_VERSION = "RXV2-0.9.327-no-silent-sbus";
 
 //*********************************************************************
 //  Auto-update manifest URLs
