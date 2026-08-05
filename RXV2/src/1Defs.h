@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.327-no-silent-sbus";
+constexpr const char* FW_VERSION = "RXV2-0.9.328-crsf-everywhere";
 
 //*********************************************************************
 //  Auto-update manifest URLs

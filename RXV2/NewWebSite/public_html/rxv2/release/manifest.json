@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.328-crsf-everywhere",
+      "url": "https://messiter.com/rxv2/release/v0.9.328/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.328/littlefs.bin",
+      "fs_md5": "26fd9735d9d653d572705544f8b7300e",
+      "notes": "CRSF is now the default in every corner: even a crash-recovery boot speaks CRSF (the fleet's language) instead of SBUS, so a rescued receiver still talks to its Rotorflight FC. Saved settings remain untouched by recovery."
+    },
+    {
       "name": "RXV2-0.9.327-no-silent-sbus",
       "url": "https://messiter.com/rxv2/release/v0.9.327/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.327/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.317/littlefs.bin",
       "fs_md5": "5822854de6ab9641d7a40af3363c1184",
       "notes": "When reviewing offline in the app, the Rotorflight save buttons now tell the truth: 'Save to phone', with matching confirmations and '\u2713 Saved on the phone \u2014 ready to send at the next connection' messages (copy-to-profile too). The governor page no longer pretends to reboot a flight controller that isn't there."
-    },
-    {
-      "name": "RXV2-0.9.316-progress-bar",
-      "url": "https://messiter.com/rxv2/release/v0.9.316/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.316/littlefs.bin",
-      "fs_md5": "fac5fc3b5e7c053aa25f9d5fb562d2df",
-      "notes": "Saving the session to the phone now shows a solid, readable progress panel with a real progress bar. Offline edits made in review are no longer discarded when you connect with the transmitter on \u2014 they are kept until sent (transmitter off) or overwritten by newer edits."
     }
   ]
 }
