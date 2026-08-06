@@ -21,6 +21,8 @@ struct RXV2App: App {
 
 struct RootView: View {
     @EnvironmentObject var link: BleLink
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var backgroundedAt: Date? = nil
     @State private var demoMode = false
     @State private var reviewMode = false
     @State private var sessionStarted = false
@@ -94,6 +96,27 @@ struct RootView: View {
         // with animated channels.
         // Armchair review (Malcolm's lodge idea): the recorded last session
         // served to the same pages — receiver asleep in its case.
+        // Fresh start after a real absence (Malcolm 2026-08-06: on reopening
+        // "usually I want to connect to a different model"): away >1 min with
+        // a live link → drop it and land on the model list. Quick app-switches
+        // keep the connection; demo and armchair review are left alone.
+        .onChange(of: scenePhase) { phase in
+            switch phase {
+            case .background:
+                backgroundedAt = Date()
+            case .active:
+                if let at = backgroundedAt,
+                   Date().timeIntervalSince(at) > 60,
+                   !demoMode, !reviewMode {
+                    switch link.state {
+                    case .ready, .reconnecting: link.disconnect()
+                    default: break
+                    }
+                }
+                backgroundedAt = nil
+            default: break
+            }
+        }
         .fullScreenCover(isPresented: $reviewMode) {
             ZStack(alignment: .topTrailing) {
                 WebScreen(link: link, replay: true)
