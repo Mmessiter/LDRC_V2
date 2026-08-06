@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.336-phone-restore",
+      "url": "https://messiter.com/rxv2/release/v0.9.336/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.336/littlefs.bin",
+      "fs_md5": "e7e7a16098e67d659e9db04fb08543fd",
+      "notes": "The confused pilot's parachute: 'Restore settings from phone' on the Rotorflight page writes back EVERY recorded setting \u2014 PIDs, advanced PIDs, rates and governor, all four banks \u2014 from the app's session recording, even if no backup was ever made. Transmitter must be off; every item is verified by read-back."
+    },
+    {
       "name": "RXV2-0.9.335-bank-assert",
       "url": "https://messiter.com/rxv2/release/v0.9.335/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.335/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.325/littlefs.bin",
       "fs_md5": "5b980abb35cf024527bee0ccc79d7195",
       "notes": "The gear-ratio box no longer fights your typing \u2014 the page's background refresh was rewriting it mid-keystroke. Type, save, done."
-    },
-    {
-      "name": "RXV2-0.9.324-current-lag-note",
-      "url": "https://messiter.com/rxv2/release/v0.9.324/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.324/littlefs.bin",
-      "fs_md5": "56d91e939d2c61ce3e072f732e42c15b",
-      "notes": "Flight-analysis help now explains why current seems to lag head speed on spool-up: the ESC smooths and reports current more slowly than RPM \u2014 the reporting lags, not the motor."
     }
   ]
 }

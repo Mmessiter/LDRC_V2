@@ -261,6 +261,104 @@ extension SessionCache {
     }
 }
 
+// MARK: - Restore-from-recording (Malcolm 2026-08-06)
+//
+// The confused pilot's parachute: the recording holds every bank's tuning
+// reads in exactly the byte layout the SET commands accept, so the whole
+// lot can be written back — even when no Rotorflight backup was ever made.
+
+extension SessionCache {
+    struct RestoreItem {
+        let selectByte: Int?   // fn=210 payload to send first (nil = bankless)
+        let writeFn: Int
+        let readFn: Int        // for post-write verification
+        let hex: String
+    }
+
+    /// Everything restorable from the recording, in write order.
+    func restoreItems() -> [RestoreItem] {
+        var out: [RestoreItem] = []
+        func hexAt(_ key: String) -> String? {
+            guard let e = entries[key],
+                  let s = String(data: e.body, encoding: .utf8),
+                  s.count >= 2, s.allSatisfy({ $0.isHexDigit }) else { return nil }
+            return s.uppercased()
+        }
+        for b in 0...3 {
+            if let h = hexAt("/api/msp?fn=112&bank=\(b)") { out.append(RestoreItem(selectByte: b, writeFn: 202, readFn: 112, hex: h)) }
+            if let h = hexAt("/api/msp?fn=94&bank=\(b)")  { out.append(RestoreItem(selectByte: b, writeFn: 95,  readFn: 94,  hex: h)) }
+            if let h = hexAt("/api/msp?fn=148&bank=\(b)") { out.append(RestoreItem(selectByte: b, writeFn: 149, readFn: 148, hex: h)) }
+        }
+        for r in 0...3 {
+            if let h = hexAt("/api/msp?fn=111&bank=\(r)") { out.append(RestoreItem(selectByte: 0x80 | r, writeFn: 204, readFn: 111, hex: h)) }
+        }
+        if let h = hexAt("/api/msp?fn=142") { out.append(RestoreItem(selectByte: nil, writeFn: 143, readFn: 142, hex: h)) }
+        return out
+    }
+}
+
+final class RestoreRunner {
+    private static var running = false
+    static var phase = "idle"      // idle | running | done
+    static var done = 0
+    static var total = 0
+    static var failures = 0
+    static var progressJSON: Data {
+        Data("{\"phase\":\"\(phase)\",\"done\":\(done),\"total\":\(total),\"failures\":\(failures)}".utf8)
+    }
+
+    static func run(link: BleLink) {
+        guard !running else { return }
+        running = true
+        phase = "running"; done = 0; failures = 0
+        let items = SessionCache.shared.restoreItems()
+        total = items.count + 1   // + EEPROM save
+
+        func req(_ p: String) -> (ok: Bool, body: String) {
+            let sem = DispatchSemaphore(value: 0)
+            var ok = false, body = ""
+            DispatchQueue.main.async {
+                // The restore's bank selects must never interleave with the sweep's.
+                SessionPrefetcher.lastPageMspMs = Date().timeIntervalSince1970 * 1000
+                link.request(method: "GET", path: p, headers: [:], body: nil) { result in
+                    if case .success(let resp) = result, resp.code == 0 || resp.code == 200 {
+                        ok = true
+                        body = String(data: resp.body, encoding: .utf8) ?? ""
+                    }
+                    sem.signal()
+                }
+            }
+            _ = sem.wait(timeout: .now() + 20)
+            Thread.sleep(forTimeInterval: 0.25)
+            return (ok, body)
+        }
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            var wroteGov = false
+            for it in items {
+                var itemOk = true
+                if let b = it.selectByte {
+                    itemOk = req("/api/msp?fn=210&data=" + String(format: "%02X", b)).ok
+                }
+                if itemOk { itemOk = req("/api/msp?fn=\(it.writeFn)&data=\(it.hex)").ok }
+                // Verify: read back and compare (reply may be longer — prefix match).
+                if itemOk {
+                    let back = req("/api/msp?fn=\(it.readFn)").body.uppercased()
+                    itemOk = back.hasPrefix(it.hex) || it.hex.hasPrefix(back) && !back.isEmpty
+                }
+                if !itemOk { failures += 1 }
+                if it.writeFn == 143 && itemOk { wroteGov = true }
+                done += 1
+            }
+            _ = req("/api/msp?fn=250")                     // save to EEPROM
+            if wroteGov { _ = req("/api/msp?fn=68") }      // gov config needs FC reboot
+            done += 1
+            phase = "done"
+            running = false
+        }
+    }
+}
+
 // MARK: - Whole-session prefetch (Malcolm 2026-08-04, refinement 1)
 //
 // Record EVERYTHING, not just what the user happened to view: shortly after

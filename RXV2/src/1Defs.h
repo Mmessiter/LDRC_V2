@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.335-bank-assert";
+constexpr const char* FW_VERSION = "RXV2-0.9.336-phone-restore";
 
 //*********************************************************************
 //  Auto-update manifest URLs

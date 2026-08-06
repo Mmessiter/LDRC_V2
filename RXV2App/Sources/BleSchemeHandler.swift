@@ -72,6 +72,57 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
                                  : SessionPrefetcher.progressJSON)
             return
         }
+        // Restore-from-recording (Malcolm 2026-08-06): the phone's session
+        // becomes a full-settings parachute for pilots with no backups.
+        if path == "/app/restore/info" {
+            let cache = SessionCache.shared
+            var connName = cache.modelName
+            if case .ready(let n) = link.state { connName = n }
+            let avail = !demo && !replay && !cache.restoreItems().isEmpty
+                     && cache.modelName == connName
+            var when = ""
+            if let at = cache.savedAt {
+                let f = DateFormatter(); f.dateStyle = .short; f.timeStyle = .short
+                when = f.string(from: at)
+            }
+            deliver(task, url: url, code: 200, type: "application/json",
+                    body: Data("{\"available\":\(avail),\"when\":\"\(when)\"}".utf8))
+            return
+        }
+        if path == "/app/restore/start" {
+            if demo || replay {
+                deliver(task, url: url, code: 200, type: "application/json",
+                        body: Data("{\"ok\":false,\"error\":\"connect to the receiver first\"}".utf8))
+                return
+            }
+            // Foolish-user guard: refuse outright with the transmitter on.
+            link.request(method: "GET", path: "/api/state.json", headers: [:], body: nil) { [weak self] result in
+                guard let self else { return }
+                var txLive = false
+                if case .success(let resp) = result,
+                   let obj = try? JSONSerialization.jsonObject(with: resp.body) as? [String: Any],
+                   let rf = obj["rf"] as? [String: Any],
+                   let lastPkt = rf["last_pkt_ms"] as? Double {
+                    txLive = lastPkt >= 0 && lastPkt < 3000
+                }
+                DispatchQueue.main.async {
+                    if txLive {
+                        self.deliver(task, url: url, code: 200, type: "application/json",
+                                     body: Data("{\"ok\":false,\"error\":\"switch the transmitter OFF first\"}".utf8))
+                    } else {
+                        RestoreRunner.run(link: self.link)
+                        self.deliver(task, url: url, code: 200, type: "application/json",
+                                     body: Data("{\"ok\":true}".utf8))
+                    }
+                }
+            }
+            return
+        }
+        if path == "/app/restore/progress" {
+            deliver(task, url: url, code: 200, type: "application/json",
+                    body: RestoreRunner.progressJSON)
+            return
+        }
         if path == "/app/bleota/progress" {
             deliver(task, url: url, code: 200, type: "application/json",
                     body: ota.progressJSON)

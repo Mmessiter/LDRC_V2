@@ -75,7 +75,9 @@ class MainActivity : AppCompatActivity() {
         ble.onState = { st ->
             when (st) {
                 is Rxv2Ble.State.Ready -> {
-                    demoMode = false; reviewMode = false; showWeb()
+                    demoMode = false; reviewMode = false
+                    connectedName = st.name
+                    showWeb()
                     onConnectedSession(st.name)
                 }
                 is Rxv2Ble.State.Failed -> { showScanner(); showMessage(st.msg) }
@@ -702,6 +704,49 @@ class MainActivity : AppCompatActivity() {
 
     /** Record EVERYTHING, not just what was viewed: walk the flight list and
      *  the tuning reads in the background, gently paced. */
+    @Volatile private var connectedName = ""
+
+    // ── Restore-from-recording (Malcolm 2026-08-06): the parachute ──
+    @Volatile private var restPhase = "idle"   // idle | running | done
+    @Volatile private var restDone = 0
+    @Volatile private var restTotal = 0
+    @Volatile private var restFailures = 0
+    @Volatile private var restRunning = false
+
+    private fun runRestore() {
+        if (restRunning) return
+        restRunning = true
+        restPhase = "running"; restDone = 0; restFailures = 0
+        val items = SessionCache.restoreItems()
+        restTotal = items.size + 1
+        Thread {
+            fun req(p: String): Pair<Boolean, String> {
+                lastPageMspMs = System.currentTimeMillis()   // sweep yields to us
+                val body = bleSyncQuiet(p)
+                Thread.sleep(250)
+                return Pair(body != null, body?.let { String(it) } ?: "")
+            }
+            var wroteGov = false
+            for (it in items) {
+                var ok = true
+                it.selectByte?.let { b -> ok = req("/api/msp?fn=210&data=%02X".format(b)).first }
+                if (ok) ok = req("/api/msp?fn=${it.writeFn}&data=${it.hex}").first
+                if (ok) {
+                    val back = req("/api/msp?fn=${it.readFn}").second.uppercase()
+                    ok = back.isNotEmpty() && (back.startsWith(it.hex) || it.hex.startsWith(back))
+                }
+                if (!ok) restFailures++
+                if (it.writeFn == 143 && ok) wroteGov = true
+                restDone++
+            }
+            req("/api/msp?fn=250")                    // save to EEPROM
+            if (wroteGov) req("/api/msp?fn=68")       // gov config needs FC reboot
+            restDone++
+            restPhase = "done"
+            restRunning = false
+        }.start()
+    }
+
     // Page MSP traffic stamps this; the sweep's bank switching yields to it
     // (Malcolm 2026-08-06: interleaved selects showed the WRONG bank's values).
     @Volatile private var lastPageMspMs = 0L
@@ -965,6 +1010,42 @@ class MainActivity : AppCompatActivity() {
                             "window.__bleResolve($id,200,${JSONObject.quote("application/json")},${JSONObject.quote(b64)})", null)
                     }
                 }.start()
+                return
+            }
+            if (p == "/app/restore/info" || p == "/app/restore/start" || p == "/app/restore/progress") {
+                fun answer(json: String) = runOnUiThread {
+                    val w = webView ?: return@runOnUiThread
+                    val b64 = Base64.encodeToString(json.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
+                    w.evaluateJavascript(
+                        "window.__bleResolve($id,200,${JSONObject.quote("application/json")},${JSONObject.quote(b64)})", null)
+                }
+                when (p) {
+                    "/app/restore/info" -> {
+                        val avail = !demoMode && !reviewMode && SessionCache.restoreItems().isNotEmpty() &&
+                                    SessionCache.modelName == connectedName
+                        val whenTxt = if (SessionCache.savedAtMs > 0)
+                            android.text.format.DateFormat.format("d MMM HH:mm", SessionCache.savedAtMs) else ""
+                        answer("{\"available\":$avail,\"when\":${JSONObject.quote(whenTxt.toString())}}")
+                    }
+                    "/app/restore/start" -> {
+                        if (demoMode || reviewMode) {
+                            answer("{\"ok\":false,\"error\":\"connect to the receiver first\"}")
+                        } else Thread {
+                            // Foolish-user guard: refuse outright with the TX on.
+                            var txLive = false
+                            bleSyncQuiet("/api/state.json")?.let { body ->
+                                runCatching {
+                                    val lastPkt = org.json.JSONObject(String(body))
+                                        .getJSONObject("rf").optLong("last_pkt_ms", -1)
+                                    txLive = lastPkt in 0..2999
+                                }
+                            }
+                            if (txLive) answer("{\"ok\":false,\"error\":\"switch the transmitter OFF first\"}")
+                            else { runRestore(); answer("{\"ok\":true}") }
+                        }.start()
+                    }
+                    else -> answer("{\"phase\":\"$restPhase\",\"done\":$restDone,\"total\":$restTotal,\"failures\":$restFailures}")
+                }
                 return
             }
             if (p == "/app/snapshot/start" || p == "/app/snapshot/progress") {
