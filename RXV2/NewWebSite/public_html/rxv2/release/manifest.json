@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.332-switch-model",
+      "url": "https://messiter.com/rxv2/release/v0.9.332/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.332/littlefs.bin",
+      "fs_md5": "c2a733ac81b6542ff755d9bd66d07384",
+      "notes": "New front-screen button in the app: 'Load another model' \u2014 drops back to the receiver list to pick a different craft, no more force-quitting the app to change models."
+    },
+    {
       "name": "RXV2-0.9.331-tuning-polish",
       "url": "https://messiter.com/rxv2/release/v0.9.331/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.331/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.321/littlefs.bin",
       "fs_md5": "1614162d36d2ebcbb0ecb1204b601923",
       "notes": "Graph refinement: a governed head speed now draws truly FLAT \u2014 small sensor jitter (a few rpm, hundredths of a volt) is treated as steadiness rather than continuous change, especially visible on short flights. Real changes still slope exactly as before."
-    },
-    {
-      "name": "RXV2-0.9.320-smooth-curves",
-      "url": "https://messiter.com/rxv2/release/v0.9.320/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.320/littlefs.bin",
-      "fs_md5": "e8e772da3b19b7cc8b9f523dc0e76e84",
-      "notes": "The flight graph now draws real slopes instead of staircases: each sensor's discrete steps are turned back into the smooth curve the quantity actually followed. And when reviewing offline, the tuning pages now honestly say 'Loaded from the phone' / 'Reload from phone'."
     }
   ]
 }
