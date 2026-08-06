@@ -321,6 +321,24 @@
         // PHONE (Malcolm 2026-08-04). Only the Rotorflight tuning pages
         // capture edits in review — other pages' saves genuinely fail
         // offline, so their buttons keep their labels.
+        // Keyboard vs floating bar (Malcolm 2026-08-06: "the floating
+        // buttons sink behind it!"): the on-screen keyboard shrinks the
+        // VISUAL viewport but position:fixed still anchors to the layout
+        // viewport underneath it. Ride the visual viewport instead — the
+        // bar translates up to sit just above the keyboard while editing.
+        const fab = document.querySelector('.fabBar');
+        if (fab && window.visualViewport) {
+            const vv = window.visualViewport;
+            const place = () => {
+                const lift = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+                fab.style.transition = 'transform .15s';
+                fab.style.transform = lift ? 'translateY(-' + lift + 'px)' : '';
+            };
+            vv.addEventListener('resize', place);
+            vv.addEventListener('scroll', place);
+            place();
+        }
+
         LDRC.replayReady.then(isReplay => {
             if (!isReplay) return;
             const captured = ['/rotorflight-pid', '/rotorflight-pidplus',
