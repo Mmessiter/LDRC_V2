@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rotorflight &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=159">
-<script src="/app.js?v=159" defer></script>
+<link rel=stylesheet href="/style.css?v=160">
+<script src="/app.js?v=160" defer></script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -24,10 +24,21 @@
     <a class="btn btn-fw" href="/rotorflight-rates"      style="background:#8e6cab"><span class=ico>&#9881;&#65039;</span>Rates &amp; Dynamics</a>
     <a class="btn btn-fw" href="/rotorflight-gov-profile" id=govProf style="display:none;background:#5fa099"><span class=ico>&#9881;&#65039;</span>Governor (profile)</a>
     <a class="btn btn-fw" href="/rotorflight-gov-global"  id=govGlob style="display:none;background:#5fa099"><span class=ico>&#9881;&#65039;</span>Governor (global)</a>
-    <a class="btn btn-fw" href="/rotorflight-backups"     style="background:#d4944a"><span class=ico>&#128190;</span>Backups &amp; restore</a>
-    <!-- The confused pilot's parachute (Malcolm 2026-08-06): the phone's
-         recorded session holds EVERY bank's settings — restore them all
-         even when no Rotorflight backup was ever made. App only. -->
+    <!-- ONE backup system (Malcolm 2026-08-06: "ditch the earlier one"):
+         the phone's recorded session IS the backup. Save freezes a restore
+         point of every bank's settings; Restore writes it all back,
+         verified. Both app-only. The old receiver-side named backups
+         (rotorflight-backups.html) retired — git remembers it. -->
+    <button id=phoneSaveBtn class="btn" style="display:none;background:#d4944a" onclick="phoneSave()"><span class=ico>&#128190;</span>Back up settings to phone</button>
+    <div id=savProg style="display:none;background:#f2f6f8;border-radius:14px;padding:1em 1.2em;margin:.7em 0;box-shadow:0 2px 6px rgba(0,0,0,.12)">
+        <div id=savLab style="font-weight:600;color:#2c3e50;margin-bottom:.6em">Backing up&hellip;</div>
+        <div style="background:#d5dde4;border-radius:8px;height:14px;overflow:hidden">
+            <div id=savFill style="background:#d4944a;height:100%;width:0%;border-radius:8px;transition:width .4s"></div>
+        </div>
+        <div style="margin-top:.6em;font-size:.85em;color:#5c3a1a;background:#ffc88c;border-radius:8px;padding:.45em .7em">
+            &#9888;&#65039; Don't switch the transmitter ON or the model OFF until this finishes.
+        </div>
+    </div>
     <button id=phoneRestoreBtn class="btn" style="display:none;background:#ab6c8e" onclick="phoneRestore()"><span class=ico>&#128225;</span>Restore settings from phone<br><span id=phoneRestoreSub style="font-size:.68em;font-weight:400;opacity:.85"></span></button>
     <div id=restProg style="display:none;background:#f2f6f8;border-radius:14px;padding:1em 1.2em;margin:.7em 0;box-shadow:0 2px 6px rgba(0,0,0,.12)">
         <div id=restLab style="font-weight:600;color:#2c3e50;margin-bottom:.6em">Restoring&hellip;</div>
@@ -43,6 +54,53 @@
 </div>
 
 <script>
+// Back up: the same whole-session save as the Black box page — all banks'
+// settings AND flights; completing it freezes the restore point.
+async function phoneSave() {
+    const btn = document.getElementById('phoneSaveBtn');
+    const prog = document.getElementById('savProg');
+    const lab = document.getElementById('savLab');
+    const fill = document.getElementById('savFill');
+    btn.style.display = 'none';
+    prog.style.display = '';
+    lab.textContent = 'Backing up…';
+    fill.style.width = '0%';
+    let r0 = null;
+    try { r0 = await (await fetch('/app/snapshot/start', { cache: 'no-store' })).json(); } catch (e) {}
+    if (!r0 || !r0.ok) {
+        lab.textContent = '⚠️ ' + ((r0 && r0.error) || 'connect to the receiver first');
+        setTimeout(() => { prog.style.display = 'none'; btn.style.display = ''; }, 5000);
+        return;
+    }
+    const timer = setInterval(async () => {
+        let p = null;
+        try { p = await (await fetch('/app/snapshot/progress', { cache: 'no-store' })).json(); } catch (e) { return; }
+        if (p.phase === 'running') {
+            lab.textContent = 'Backing up… ' + p.done + ' / ' + p.total;
+            if (p.total > 0) fill.style.width = Math.min(100, Math.round(100 * p.done / p.total)) + '%';
+        } else if (p.phase === 'done') {
+            clearInterval(timer);
+            fill.style.width = '100%';
+            lab.textContent = '✅ Backed up to the phone!';
+            setTimeout(() => { prog.style.display = 'none'; btn.style.display = '';
+                               paintRestoreBtn(); }, 5000);
+        }
+    }, 700);
+}
+
+// Refresh the restore button's little date line (e.g. after a fresh backup).
+function paintRestoreBtn() {
+    fetch('/app/restore/info', { cache: 'no-store' })
+        .then(r => r.json())
+        .then(i => {
+            if (!i.available) return;
+            document.getElementById('phoneRestoreBtn').style.display = '';
+            document.getElementById('phoneRestoreSub').textContent =
+                'backed up ' + (i.when || 'earlier') + ' — all banks';
+        })
+        .catch(() => {});
+}
+
 // Restore every recorded setting (all banks) from the phone's session
 // recording — the parachute for a pilot who never made a backup.
 async function phoneRestore() {
@@ -89,18 +147,12 @@ async function phoneRestore() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // Offer the phone-recording restore only inside the app, and only when
-    // a recording for THIS model exists (the app checks the name).
+    // Backup + restore live only inside the app (the phone IS the store);
+    // restore appears only when a backup for THIS model exists.
+    await LDRC.replayReady;
     if (window.LDRC && LDRC.viaBle && !LDRC.replay) {
-        fetch('/app/restore/info', { cache: 'no-store' })
-            .then(r => r.json())
-            .then(i => {
-                if (!i.available) return;
-                document.getElementById('phoneRestoreBtn').style.display = '';
-                document.getElementById('phoneRestoreSub').textContent =
-                    'recorded ' + (i.when || 'earlier') + ' — all banks';
-            })
-            .catch(() => {});
+        document.getElementById('phoneSaveBtn').style.display = '';
+        paintRestoreBtn();
     }
     const s = await LDRC.fetchState();
     if (!s) return;
@@ -127,8 +179,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 <p>Tap any of the sub-pages. Each one talks directly to the flight controller; values you change are written to the FC immediately, in real time.</p>
 <h3>Requirements</h3>
 <p>This page needs the protocol set to <b>CRSF</b> and a Rotorflight-compatible FC connected. If the FC isn't responding, sub-pages show clear timeout messages instead of hanging.</p>
-<h3>Tip — snapshot before tuning</h3>
-<p>The <b>Backups</b> sub-page lets you save the FC's current state by name and restore it later. Always snapshot a known-good config before experimenting.</p>
+<h3>Backup &amp; restore (in the app)</h3>
+<p><b>Back up settings to phone</b> saves everything — every bank's PIDs, advanced PIDs, rates and governor, plus the flight recordings — onto your phone. <b>Restore settings from phone</b> writes the whole lot back, each item verified, with the transmitter off. A backup is also frozen automatically when you connect, so even a pilot who never presses Back&nbsp;up has one. Always back up a known-good setup before experimenting.</p>
 </template>
 </body>
 </html>

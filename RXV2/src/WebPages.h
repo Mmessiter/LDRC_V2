@@ -249,9 +249,12 @@ inline void handleRotorflightGovGlobal() {
     server.send(503, "text/plain", "/rotorflight-gov-global.html missing — uploadfs the data/ folder");
 }
 
+// The receiver-side named-backups PAGE retired 2026-08-06 (Malcolm: one
+// backup system — the app's phone backup/restore). The /api/backup*
+// endpoints below survive: dev tooling (preserve_backups.py) uses them.
 inline void handleRotorflightBackups() {
-    if (serveLittleFsFile("/rotorflight-backups.html", "text/html")) return;
-    server.send(503, "text/plain", "/rotorflight-backups.html missing — uploadfs the data/ folder");
+    server.sendHeader("Location", "/rotorflight");
+    server.send(303, "text/plain", "moved");
 }
 
 //*********************************************************************
