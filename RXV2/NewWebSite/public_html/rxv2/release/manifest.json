@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.334-keyboard-buttons",
+      "url": "https://messiter.com/rxv2/release/v0.9.334/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.334/littlefs.bin",
+      "fs_md5": "abe0e6318180fa5997295c55c0c5047c",
+      "notes": "The floating Save/Back bar now rides up above the on-screen keyboard while you edit a value, instead of sinking behind it."
+    },
+    {
       "name": "RXV2-0.9.333-fast-lane-banner",
       "url": "https://messiter.com/rxv2/release/v0.9.333/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.333/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.323/littlefs.bin",
       "fs_md5": "3f98a38a9f1449365ba52e2ac0ea2311",
       "notes": "Graph: real events (motor on/off, battery plugged in) now draw square \u2014 the flat holds its full length and the change is steep at the moment it happened. Only gentle one-unit sensor steps are smoothed into slopes."
-    },
-    {
-      "name": "RXV2-0.9.322-straight-slopes",
-      "url": "https://messiter.com/rxv2/release/v0.9.322/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.322/littlefs.bin",
-      "fs_md5": "921727e2aeb9f6bba9032bd323091c7f",
-      "notes": "Graph lines are now straight slopes with gently rounded corners instead of sweeping curves \u2014 sparse data no longer swoops like a sine wave."
     }
   ]
 }

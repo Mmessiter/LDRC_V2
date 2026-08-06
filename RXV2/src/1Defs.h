@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.333-fast-lane-banner";
+constexpr const char* FW_VERSION = "RXV2-0.9.334-keyboard-buttons";
 
 //*********************************************************************
 //  Auto-update manifest URLs
