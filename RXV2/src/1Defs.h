@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.334-keyboard-buttons";
+constexpr const char* FW_VERSION = "RXV2-0.9.335-bank-assert";
 
 //*********************************************************************
 //  Auto-update manifest URLs

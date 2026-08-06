@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.335-bank-assert",
+      "url": "https://messiter.com/rxv2/release/v0.9.335/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.335/littlefs.bin",
+      "fs_md5": "949097f770a39f6cb3f7d945f601bbee",
+      "notes": "Every save now re-selects its own bank at the exact moment of writing \u2014 no possibility of values landing in a different bank, no matter what else is talking to the flight controller. Combined with read-back verification, saves are now bank-proof end to end."
+    },
+    {
       "name": "RXV2-0.9.334-keyboard-buttons",
       "url": "https://messiter.com/rxv2/release/v0.9.334/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.334/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.324/littlefs.bin",
       "fs_md5": "56d91e939d2c61ce3e072f732e42c15b",
       "notes": "Flight-analysis help now explains why current seems to lag head speed on spool-up: the ESC smooths and reports current more slowly than RPM \u2014 the reporting lags, not the motor."
-    },
-    {
-      "name": "RXV2-0.9.323-square-events",
-      "url": "https://messiter.com/rxv2/release/v0.9.323/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.323/littlefs.bin",
-      "fs_md5": "3f98a38a9f1449365ba52e2ac0ea2311",
-      "notes": "Graph: real events (motor on/off, battery plugged in) now draw square \u2014 the flat holds its full length and the change is steep at the moment it happened. Only gentle one-unit sensor steps are smoothed into slopes."
     }
   ]
 }
