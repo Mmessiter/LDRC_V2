@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.331-tuning-polish";
+constexpr const char* FW_VERSION = "RXV2-0.9.332-switch-model";
 
 //*********************************************************************
 //  Auto-update manifest URLs
