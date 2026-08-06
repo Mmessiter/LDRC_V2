@@ -395,6 +395,7 @@ final class RestoreRunner {
                 origPid = p; origRate = r
             }
             var wroteGov = false
+            var curPid = origPid, curRate = origRate
             for it in items {
                 // TWO attempts — a single radio hiccup among ~50 sequential
                 // MSP ops must not fail the parachute (Malcolm 2026-08-06:
@@ -402,8 +403,15 @@ final class RestoreRunner {
                 var itemOk = false
                 for attempt in 1...2 {
                     var ok = true
+                    // Skip selects that are already true — each one stalls
+                    // the FC on a flash write (the swash twitch).
                     if let b = it.selectByte {
-                        ok = req("/api/msp?fn=210&data=" + String(format: "%02X", b)).ok
+                        let isRate = (b & 0x80) != 0
+                        let target = b & 0x7f
+                        if (isRate ? curRate : curPid) != target {
+                            ok = req("/api/msp?fn=210&data=" + String(format: "%02X", b)).ok
+                            if ok { if isRate { curRate = target } else { curPid = target } }
+                        }
                     }
                     if ok { ok = req("/api/msp?fn=\(it.writeFn)&data=\(it.hex)").ok }
                     if ok {
@@ -419,8 +427,8 @@ final class RestoreRunner {
                 done += 1
             }
             // Put the FC back on its own banks BEFORE the EEPROM save.
-            _ = req("/api/msp?fn=210&data=" + String(format: "%02X", origPid))
-            _ = req("/api/msp?fn=210&data=" + String(format: "%02X", 0x80 | origRate))
+            if curPid != origPid { _ = req("/api/msp?fn=210&data=" + String(format: "%02X", origPid)) }
+            if curRate != origRate { _ = req("/api/msp?fn=210&data=" + String(format: "%02X", 0x80 | origRate)) }
             _ = req("/api/msp?fn=250")                     // save to EEPROM
             if wroteGov { _ = req("/api/msp?fn=68") }      // gov config needs FC reboot
             done += 1
@@ -540,10 +548,15 @@ final class SessionPrefetcher {
                let origRate = Int(hex.dropFirst(52).prefix(2), radix: 16) {
                 total += 1 + 4 * 5 + 4 * 3 + 2   // 142 + pid sweep + rate sweep + restores
                 _ = req("/api/msp?fn=142")       // governor global — bankless
+                // Every bank select makes the FC write flash — a brief servo
+                // stall (the swash twitch Malcolm noticed 2026-08-06). Skip
+                // selects that are already true.
+                var curPid = origPid, curRate = origRate
                 var aborted = false
                 for b in 0...3 {
                     if txAppeared() { aborted = true; break }
-                    selectBank(b)
+                    if b != curPid { selectBank(b); curPid = b }
+                    else { SessionCache.shared.noteBankSelect(dataHex: String(format: "%02X", b)) }
                     _ = req("/api/msp?fn=112")
                     _ = req("/api/msp?fn=94")
                     _ = req("/api/msp?fn=148")
@@ -551,12 +564,13 @@ final class SessionPrefetcher {
                 if !aborted {
                     for r in 0...3 {
                         if txAppeared() { aborted = true; break }
-                        selectBank(0x80 | r)
+                        if r != curRate { selectBank(0x80 | r); curRate = r }
+                        else { SessionCache.shared.noteBankSelect(dataHex: String(format: "%02X", 0x80 | r)) }
                         _ = req("/api/msp?fn=111")
                     }
                 }
-                selectBank(origPid)              // put the FC back exactly —
-                selectBank(0x80 | origRate)      // always, aborted or not
+                if curPid != origPid { selectBank(origPid) }          // put the FC back
+                if curRate != origRate { selectBank(0x80 | origRate) } // exactly — always
                 sweepOK = !aborted
             }
             // Full sweep completed → freeze the restore point (the rolling

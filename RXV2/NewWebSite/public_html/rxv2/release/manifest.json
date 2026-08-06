@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.341-fewer-twitches",
+      "url": "https://messiter.com/rxv2/release/v0.9.341/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.341/littlefs.bin",
+      "fs_md5": "e84872d07c7f4fa2fc06c3bdb7522364",
+      "notes": "The little swashplate twitch during bank changes and saves is the flight controller pausing to write its memory (the official Configurator does it too) \u2014 harmless, now explained in the help. The app also skips unnecessary bank changes during backup and restore, so it happens less."
+    },
+    {
       "name": "RXV2-0.9.340-backup-help",
       "url": "https://messiter.com/rxv2/release/v0.9.340/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.340/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.330/littlefs.bin",
       "fs_md5": "b3ba8ab0a732af95dfe65f733fb9b0d2",
       "notes": "Cell-count guessing got wiser: packs above 4S only come in even counts (6S, 8S, 12S \u2014 never 11S), so the voltage fallback now rounds odd guesses up. The flight controller's own answer still wins when available."
-    },
-    {
-      "name": "RXV2-0.9.329-fc-cell-count",
-      "url": "https://messiter.com/rxv2/release/v0.9.329/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.329/littlefs.bin",
-      "fs_md5": "4583edee6212aa6bf4fd6f95b90f7566",
-      "notes": "Battery cell count now comes from the flight controller itself (MSP battery state) instead of being guessed from voltage \u2014 a 12S pack at 45 V no longer masquerades as an 11S. The guess remains only as a fallback for models without an FC answer."
     }
   ]
 }
