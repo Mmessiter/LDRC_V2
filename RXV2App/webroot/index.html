@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Home &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=153">
-<script src="/app.js?v=153" defer></script>
+<link rel=stylesheet href="/style.css?v=154">
+<script src="/app.js?v=154" defer></script>
 <style>
 /* Friendly confirmation card (replaces the browser's utilitarian confirm()) */
 .modal{position:fixed;inset:0;background:rgba(16,38,58,.55);backdrop-filter:blur(2px);
@@ -805,11 +805,22 @@ async function doFirmwareUpdate(url, fsUrl, name) {
     // snap to 100% the instant the receiver answers again. An estimate — exactness doesn't matter.
     const bar = document.getElementById('__bar');
     if (bar) { bar.style.transition = 'width 30s linear'; requestAnimationFrame(() => { bar.style.width = '92%'; }); }
+    // FASTEST FIRST (Malcolm 2026-08-06: "Still bluetooth!!" — this banner
+    // path missed the fast lane that firmware.html got): receiver WiFi up →
+    // chip-pull at WiFi speed; only genuinely offline pays Bluetooth.
+    let chipHasInternet = false;
     try {
+        const st = await (await fetch('/api/state.json', { cache: 'no-store' })).json();
+        chipHasInternet = !!(st.net && st.net.mode === 'WiFi up');
+    } catch (e) {}
+    try {
+        if (chipHasInternet) throw new Error('receiver WiFi is faster');
         const r0 = await fetch('/app/bleota/start?fw=' + encodeURIComponent(url) +
                                (fsUrl ? '&fs=' + encodeURIComponent(fsUrl) : ''), { cache: 'no-store' });
         if (r0.ok && (await r0.json()).ok) { bleOtaWatch(); return; }
     } catch (e) { /* not inside the app — chip-pull below */ }
+    { const sl = document.getElementById('__slow');
+      if (sl && chipHasInternet) sl.textContent = 'Downloading over the receiver’s WiFi (fast)…'; }
     let q = '/api/firmware/install?url=' + encodeURIComponent(url);
     if (fsUrl) q += '&fs_url=' + encodeURIComponent(fsUrl);
     fetch(q, { method: 'POST' }).catch(() => {});      // device reboots mid-response — expected

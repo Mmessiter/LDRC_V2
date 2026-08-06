@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.332-switch-model";
+constexpr const char* FW_VERSION = "RXV2-0.9.333-fast-lane-banner";
 
 //*********************************************************************
 //  Auto-update manifest URLs
