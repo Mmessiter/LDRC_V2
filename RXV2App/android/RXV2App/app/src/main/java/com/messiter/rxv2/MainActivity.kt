@@ -726,6 +726,14 @@ class MainActivity : AppCompatActivity() {
                 Thread.sleep(250)
                 return Pair(body != null, body?.let { String(it) } ?: "")
             }
+            // Note the FC's own banks first — the walk ends on bank 3, and
+            // the EEPROM save would persist that as the boot profile.
+            var origPid = 0; var origRate = 0
+            val st0 = req("/api/msp?fn=101").second
+            if (st0.length >= 54) {
+                st0.substring(48, 50).toIntOrNull(16)?.let { origPid = it }
+                st0.substring(52, 54).toIntOrNull(16)?.let { origRate = it }
+            }
             var wroteGov = false
             for (it in items) {
                 var ok = true
@@ -739,6 +747,9 @@ class MainActivity : AppCompatActivity() {
                 if (it.writeFn == 143 && ok) wroteGov = true
                 restDone++
             }
+            // Put the FC back on its own banks BEFORE the EEPROM save.
+            req("/api/msp?fn=210&data=%02X".format(origPid))
+            req("/api/msp?fn=210&data=%02X".format(0x80 or origRate))
             req("/api/msp?fn=250")                    // save to EEPROM
             if (wroteGov) req("/api/msp?fn=68")       // gov config needs FC reboot
             restDone++

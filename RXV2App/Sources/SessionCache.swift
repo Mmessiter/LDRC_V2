@@ -381,6 +381,16 @@ final class RestoreRunner {
         }
 
         DispatchQueue.global(qos: .userInitiated).async {
+            // Note the FC's own banks first — the walk ends on bank 3, and
+            // the EEPROM save would PERSIST that as the boot profile
+            // (Malcolm's re-test: everything identical except 'profile 3').
+            var origPid = 0, origRate = 0
+            let st = req("/api/msp?fn=101").body
+            if st.count >= 54,
+               let p = Int(st.dropFirst(48).prefix(2), radix: 16),
+               let r = Int(st.dropFirst(52).prefix(2), radix: 16) {
+                origPid = p; origRate = r
+            }
             var wroteGov = false
             for it in items {
                 var itemOk = true
@@ -397,6 +407,9 @@ final class RestoreRunner {
                 if it.writeFn == 143 && itemOk { wroteGov = true }
                 done += 1
             }
+            // Put the FC back on its own banks BEFORE the EEPROM save.
+            _ = req("/api/msp?fn=210&data=" + String(format: "%02X", origPid))
+            _ = req("/api/msp?fn=210&data=" + String(format: "%02X", 0x80 | origRate))
             _ = req("/api/msp?fn=250")                     // save to EEPROM
             if wroteGov { _ = req("/api/msp?fn=68") }      // gov config needs FC reboot
             done += 1
