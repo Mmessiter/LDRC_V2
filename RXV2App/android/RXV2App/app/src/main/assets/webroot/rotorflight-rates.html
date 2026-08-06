@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rates &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=158">
-<script src="/app.js?v=158" defer></script>
+<link rel=stylesheet href="/style.css?v=159">
+<script src="/app.js?v=159" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -216,12 +216,32 @@ function applyModel(model) {
     for (const ax of AXES) {
         body += '<tr><td class="lab ' + ax.cls + '">' + ax.k + '</td>';
         for (let i = 0; i < model.cols.length; i++) {
-            const ro = model.cols[i].ro ? ' readonly tabindex=-1' : '';
-            body += '<td><input type=number id=r_' + ax.k + '_' + i + ' oninput=drawCurves()' + ro + '></td>';
+            // Every column is editable (Malcolm 2026-08-06: "when I click
+            // Max Vel it doesn't bring up the keyboard"). Columns sharing a
+            // stored slot (Max Vel = Rate) keep each other in sync instead.
+            body += '<td><input type=number id=r_' + ax.k + '_' + i +
+                    ' oninput="syncCell(\'' + ax.k + '\',' + i + ')"></td>';
         }
         body += '</tr>';
     }
     document.getElementById('ratesBody').innerHTML = body;
+}
+
+// Editing any cell mirrors its value into every other column that shares
+// the same stored slot (e.g. Max Vel ↔ Rate — one byte, two views), each
+// scaled to its own display units.
+function syncCell(axKey, ci) {
+    const src = MODEL.cols[ci];
+    const el = document.getElementById('r_' + axKey + '_' + ci);
+    const v = parseFloat(el.value);
+    if (isNaN(v)) { drawCurves(); return; }
+    const ax = AXES.find(a => a.k === axKey);
+    for (let j = 0; j < MODEL.cols.length; j++) {
+        if (j === ci || MODEL.cols[j].slot !== src.slot) continue;
+        const disp = v * axScale(ax, MODEL.cols[j]) / axScale(ax, src);
+        document.getElementById('r_' + axKey + '_' + j).value = +disp.toFixed(3);
+    }
+    drawCurves();
 }
 
 // Fill the per-axis inputs from cachedRaw using the active MODEL.
