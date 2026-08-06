@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.339-one-backup-system";
+constexpr const char* FW_VERSION = "RXV2-0.9.340-backup-help";
 
 //*********************************************************************
 //  Auto-update manifest URLs
