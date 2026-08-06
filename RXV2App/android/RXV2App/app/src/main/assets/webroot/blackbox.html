@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Black box &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=160">
-<script src="/app.js?v=160" defer></script>
+<link rel=stylesheet href="/style.css?v=161">
+<script src="/app.js?v=161" defer></script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -201,6 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <ul>
 <li><b>Flight analysis</b> &mdash; the telemetry graph (ESC temp, head speed, battery, current vs time) and the radio-link statistics for the current and the last three saved flights.</li>
 <li><b>Event log</b> &mdash; a one-line entry for every interesting moment since boot: WiFi up/down, bind, radio swaps, TX edits.</li>
+<li><b>Save session to phone</b> (app only) &mdash; copies <b>everything</b> to your phone: all the Black box data (every saved flight and the event log) <b>and</b> every bank's Rotorflight settings. Afterwards the whole model can be reviewed offline ("Review" on the receiver list), and the settings can be restored from the Rotorflight page — the phone becomes a complete backup.</li>
 </ul>
 <h3>The receiver clock</h3>
 <p>The status card shows the receiver's date and time and who taught it: your <b>phone</b> (whenever this app connects) or the <b>transmitter</b>'s built-in clock (on phone-free days). The transmitter's clock is calibrated against the phone automatically — the figure shown — and is itself corrected over the radio link, so all the clocks agree without you ever setting one.</p>
