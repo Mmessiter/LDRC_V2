@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.337-named-verify";
+constexpr const char* FW_VERSION = "RXV2-0.9.338-maxvel-editable";
 
 //*********************************************************************
 //  Auto-update manifest URLs

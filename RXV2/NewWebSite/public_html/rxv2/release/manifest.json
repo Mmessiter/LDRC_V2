@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.338-maxvel-editable",
+      "url": "https://messiter.com/rxv2/release/v0.9.338/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.338/littlefs.bin",
+      "fs_md5": "fb8d8cf3f24abea8ed496d8a5b3fc29d",
+      "notes": "Rates page: Max Vel is now editable (it shares one stored value with Rate \u2014 editing either keeps the other in step, matching the official Configurator)."
+    },
+    {
       "name": "RXV2-0.9.337-named-verify",
       "url": "https://messiter.com/rxv2/release/v0.9.337/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.337/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.327/littlefs.bin",
       "fs_md5": "6f2e81b1260204c6afa9b165d047d9a8",
       "notes": "Fixes the mystery CRSF-to-SBUS reverts: quick bench sessions ending with a battery pull (transmitter still on) were counted as crash reboots, and the third one silently reset the protocol. The healthy-boot counter now clears even with the transmitter on (never while armed, gap pardoned), and crash recovery no longer rewrites your saved protocol at all - it just uses SBUS for that one boot."
-    },
-    {
-      "name": "RXV2-0.9.326-fast-lane-update",
-      "url": "https://messiter.com/rxv2/release/v0.9.326/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.326/littlefs.bin",
-      "fs_md5": "a73ccd6c9f2097092c3e9d3f9a584890",
-      "notes": "Updates take the fastest road automatically: when the receiver's own WiFi is connected, installs download at WiFi speed even when you're using the app over Bluetooth (30-90 s instead of minutes). Bluetooth streaming remains the automatic fallback at the field."
     }
   ]
 }
