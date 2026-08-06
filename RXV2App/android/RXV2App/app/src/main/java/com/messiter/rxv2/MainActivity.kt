@@ -736,13 +736,23 @@ class MainActivity : AppCompatActivity() {
                 st0.substring(52, 54).toIntOrNull(16)?.let { origRate = it }
             }
             var wroteGov = false
+            var curPid = origPid; var curRate = origRate
             for (it in items) {
                 // TWO attempts — one radio hiccup among ~50 sequential MSP
                 // ops must not fail the parachute.
                 var itemOk = false
                 for (attempt in 1..2) {
                     var ok = true
-                    it.selectByte?.let { b -> ok = req("/api/msp?fn=210&data=%02X".format(b)).first }
+                    // Skip selects that are already true — each one stalls
+                    // the FC on a flash write (the swash twitch).
+                    it.selectByte?.let { b ->
+                        val isRate = (b and 0x80) != 0
+                        val target = b and 0x7f
+                        if ((if (isRate) curRate else curPid) != target) {
+                            ok = req("/api/msp?fn=210&data=%02X".format(b)).first
+                            if (ok) { if (isRate) curRate = target else curPid = target }
+                        }
+                    }
                     if (ok) ok = req("/api/msp?fn=${it.writeFn}&data=${it.hex}").first
                     if (ok) {
                         val back = req("/api/msp?fn=${it.readFn}").second.uppercase()
@@ -756,8 +766,8 @@ class MainActivity : AppCompatActivity() {
                 restDone++
             }
             // Put the FC back on its own banks BEFORE the EEPROM save.
-            req("/api/msp?fn=210&data=%02X".format(origPid))
-            req("/api/msp?fn=210&data=%02X".format(0x80 or origRate))
+            if (curPid != origPid) req("/api/msp?fn=210&data=%02X".format(origPid))
+            if (curRate != origRate) req("/api/msp?fn=210&data=%02X".format(0x80 or origRate))
             req("/api/msp?fn=250")                    // save to EEPROM
             if (wroteGov) req("/api/msp?fn=68")       // gov config needs FC reboot
             restDone++
@@ -842,19 +852,24 @@ class MainActivity : AppCompatActivity() {
                 if (origPid != null && origRate != null) {
                     snapTotal += 1 + 4 * 5 + 4 * 3 + 2
                     req("/api/msp?fn=142")       // governor global — bankless
+                    // Every bank select makes the FC write flash — a brief
+                    // servo stall (the swash twitch). Skip no-op selects.
+                    var curPid = origPid; var curRate = origRate
                     var aborted = false
                     for (b in 0..3) {
                         if (txAppeared()) { aborted = true; break }
-                        selectBank(b)
+                        if (b != curPid) { selectBank(b); curPid = b }
+                        else SessionCache.noteBankSelect("%02X".format(b))
                         req("/api/msp?fn=112"); req("/api/msp?fn=94"); req("/api/msp?fn=148")
                     }
                     if (!aborted) for (r in 0..3) {
                         if (txAppeared()) { aborted = true; break }
-                        selectBank(0x80 or r)
+                        if (r != curRate) { selectBank(0x80 or r); curRate = r }
+                        else SessionCache.noteBankSelect("%02X".format(0x80 or r))
                         req("/api/msp?fn=111")
                     }
-                    selectBank(origPid)          // put the FC back exactly —
-                    selectBank(0x80 or origRate) // always, aborted or not
+                    if (curPid != origPid) selectBank(origPid)            // put the FC back
+                    if (curRate != origRate) selectBank(0x80 or origRate) // exactly — always
                     // Full sweep completed → freeze the restore point (the
                     // rolling cache keeps updating; this copy never follows
                     // the pilot's later edits).

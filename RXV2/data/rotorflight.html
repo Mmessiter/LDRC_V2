@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rotorflight &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=161">
-<script src="/app.js?v=161" defer></script>
+<link rel=stylesheet href="/style.css?v=162">
+<script src="/app.js?v=162" defer></script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -177,6 +177,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 <p>The gateway to live Rotorflight configuration over the receiver's MSP bridge. From here you reach PID tuning, rate curves, governor settings, and saved snapshots.</p>
 <h3>How to use it</h3>
 <p>Tap any of the sub-pages. Each one talks directly to the flight controller; values you change are written to the FC immediately, in real time.</p>
+<h3>Why the swashplate may twitch</h3>
+<p>Changing banks and saving make the flight controller write to its internal memory, and it pauses its servo outputs for a few milliseconds while it does — so the swashplate can give a brief jump. It is <b>harmless</b> (the official Rotorflight Configurator causes exactly the same twitch) and only happens on the ground, disarmed. The app avoids unnecessary bank changes to keep it to a minimum.</p>
 <h3>Requirements</h3>
 <p>This page needs the protocol set to <b>CRSF</b> and a Rotorflight-compatible FC connected. If the FC isn't responding, sub-pages show clear timeout messages instead of hanging.</p>
 <h3>Backup &amp; restore (in the app)</h3>

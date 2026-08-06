@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.340-backup-help";
+constexpr const char* FW_VERSION = "RXV2-0.9.341-fewer-twitches";
 
 //*********************************************************************
 //  Auto-update manifest URLs
