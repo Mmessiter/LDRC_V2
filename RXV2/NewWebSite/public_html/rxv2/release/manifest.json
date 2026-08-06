@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.331-tuning-polish",
+      "url": "https://messiter.com/rxv2/release/v0.9.331/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.331/littlefs.bin",
+      "fs_md5": "65dd7a14a740d6b4e7f09eaebbf9f846",
+      "notes": "Tuning pages polished: Save and Back now float at the bottom of the screen (no more scrolling); every save reads BACK from the flight controller and announces 'Written & verified!' right on the button; and the app's background recording now waits its turn so pages never show another bank's values. The update page also says up front whether an install will use WiFi (fast) or Bluetooth, and why."
+    },
+    {
       "name": "RXV2-0.9.330-even-cells",
       "url": "https://messiter.com/rxv2/release/v0.9.330/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.330/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.320/littlefs.bin",
       "fs_md5": "e8e772da3b19b7cc8b9f523dc0e76e84",
       "notes": "The flight graph now draws real slopes instead of staircases: each sensor's discrete steps are turned back into the smooth curve the quantity actually followed. And when reviewing offline, the tuning pages now honestly say 'Loaded from the phone' / 'Reload from phone'."
-    },
-    {
-      "name": "RXV2-0.9.319-fool-armour",
-      "url": "https://messiter.com/rxv2/release/v0.9.319/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.319/littlefs.bin",
-      "fs_md5": "e4a04013a8c1b8b0335547261736ee4c",
-      "notes": "Guard rails for busy fingers: the save-to-phone panel warns not to switch the transmitter on or the model off mid-save, and the apps now abort bank switching instantly (restoring the model's own banks) if the transmitter appears mid-save. Sending offline edits re-checks the transmitter at the moment you press Send, shows what to keep on/off, and NEVER loses edits if a step fails \u2014 they are kept for another try. Plus: the app now keeps a separate recorded session PER MODEL; connecting a different model no longer erases the previous one's."
     }
   ]
 }

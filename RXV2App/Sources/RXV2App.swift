@@ -224,6 +224,8 @@ extension RootView {
                 return
             }
             let p = queue.removeFirst()
+            // The send's bank selects must not interleave with the sweep's.
+            SessionPrefetcher.lastPageMspMs = Date().timeIntervalSince1970 * 1000
             link.request(method: "GET", path: p, headers: [:], body: nil) { result in
                 if case .success(let resp) = result, resp.code == 0 || resp.code == 200 {
                     // step landed

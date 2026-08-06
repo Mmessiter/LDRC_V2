@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rates &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=151">
-<script src="/app.js?v=151" defer></script>
+<link rel=stylesheet href="/style.css?v=152">
+<script src="/app.js?v=152" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -38,7 +38,7 @@ table.dyn-yaw td input{width:6em;padding:.4em;font-size:.95em;text-align:right;
                        border:1px solid #b8c7d0;border-radius:6px}
 </style>
 </head>
-<body>
+<body class=hasFab>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
 <div class=bg-photo aria-hidden=true></div>
 <div class=bg-wash  aria-hidden=true></div>
@@ -98,8 +98,6 @@ table.dyn-yaw td input{width:6em;padding:.4em;font-size:.95em;text-align:right;
             <tr><td class=lab>Dynamic deadband filter</td><td><input type=number id=a_yddf></td></tr>
         </table>
     </div>
-
-    <button class="btn btn-fly" id=saveBtn onclick="save()" style="background:#6cab5e"><span class=ico>&#128190;</span>Save to Flight Controller</button>
     <button class="btn btn-fw" id=reloadBtn onclick="load()"><span class=ico>&#8635;</span>Reload from flight controller</button>
 
     <div class=card>
@@ -112,7 +110,10 @@ table.dyn-yaw td input{width:6em;padding:.4em;font-size:.95em;text-align:right;
         </div>
     </div>
 
-    <a class="btn btn-back" href="/rotorflight"><span class=ico>&#8617;</span>Back</a>
+    <div class=fabBar>
+        <a class="btn btn-back" href="/rotorflight" style="flex:.55;margin:0"><span class=ico>&#8617;</span>Back</a>
+        <button class="btn btn-fly" id=saveBtn onclick="save()" style="background:#6cab5e;margin:0"><span class=ico>&#128190;</span>Save to Flight Controller</button>
+    </div>
     <div class=footer></div>
 </div>
 
@@ -130,6 +131,17 @@ let currentProfile = parseInt(localStorage.getItem('rfRatesProfile') || '0');
 let cachedRaw = null;
 let hasAdvanced = false;
 
+
+// Result flashes ON the floating Save button — always in view (the top
+// banner scrolls away; Malcolm 2026-08-06: "one doesn't know how long
+// to wait").
+function flashSave(html, ms) {
+    const b = document.getElementById('saveBtn');
+    if (!b) return;
+    const old = b.innerHTML;
+    b.innerHTML = html;
+    setTimeout(() => { b.innerHTML = old; }, ms || 4000);
+}
 function paintProfileButtons() {
     for (let i = 0; i < 4; i++) {
         document.getElementById('pb' + i).classList.toggle('active', i === currentProfile);
@@ -467,10 +479,27 @@ async function save() {
     try {
         await LDRC.msp(204, bytesToHex(bytes));   // SET_RC_TUNING
         await LDRC.msp(250);                       // EEPROM_WRITE
-        setStatus('good', LDRC.replay
-            ? '✓ Saved on the phone — ready to send at the next connection'
-            : '✓ Saved to flight controller EEPROM');
         cachedRaw = bytes;
+        if (LDRC.replay) {
+            setStatus('good', '✓ Saved on the phone — ready to send at the next connection');
+            flashSave('<span class=ico>&#9989;</span>Saved on the phone!');
+            LDRC.clearDirty();
+            return;
+        }
+        setStatus('info', 'Verifying — reading back from flight controller…');
+        flashSave('<span class=ico>&#8987;</span>Verifying…', 6000);
+        await LDRC.msp(210, (0x80 | currentProfile).toString(16).padStart(2,'0'));
+        const check = hexToBytes(await LDRC.msp(111));
+        let diffs = 0;
+        for (let i = 0; i < bytes.length && i < check.length; i++)
+            if (bytes[i] !== check[i]) diffs++;
+        if (diffs === 0) {
+            setStatus('good', '✓ Written & verified — the flight controller read back exactly what was saved');
+            flashSave('<span class=ico>&#9989;</span>Written &amp; verified!', 5000);
+        } else {
+            setStatus('bad', '⚠ ' + diffs + ' byte(s) differ on read-back — reload and check');
+            flashSave('<span class=ico>&#9888;&#65039;</span>Differs on read-back!', 6000);
+        }
         LDRC.clearDirty();
     } catch (e) { setStatus('bad', 'Save failed: ' + e.message); }
 }

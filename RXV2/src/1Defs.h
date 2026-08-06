@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.330-even-cells";
+constexpr const char* FW_VERSION = "RXV2-0.9.331-tuning-polish";
 
 //*********************************************************************
 //  Auto-update manifest URLs

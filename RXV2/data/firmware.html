@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Check for Update &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=151">
-<script src="/app.js?v=151" defer></script>
+<link rel=stylesheet href="/style.css?v=152">
+<script src="/app.js?v=152" defer></script>
 <style>
 /* --- Currently-installed card -------------------------------------- */
 .installed-card .row{
@@ -119,6 +119,7 @@
     </div>
 
     <p id=message class=note hidden></p>
+    <p id=laneNote class=note hidden></p>
 
     <section id=local-section class=source-section hidden>
         <h2>Local server</h2>
@@ -562,7 +563,27 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
 }
 
 $('check').addEventListener('click', check);
-document.addEventListener('DOMContentLoaded', () => { loadCurrent().then(check); });
+document.addEventListener('DOMContentLoaded', () => {
+    loadCurrent().then(check);
+    // Which lane will an install take? Say so up front (Malcolm 2026-08-06:
+    // a Bluetooth install surprised him while "WiFi was available" — the
+    // receiver keeps its OWN WiFi off while the transmitter is on).
+    if (LDRC.viaBle) {
+        fetch('/api/state.json', { cache: 'no-store' })
+            .then(r => r.json())
+            .then(st => {
+                const ln = document.getElementById('laneNote');
+                if (!st || !st.net) return;
+                if (st.net.mode === 'WiFi up') {
+                    ln.innerHTML = '&#9889; Installs will download over the receiver\u2019s <b>WiFi</b> (fast \u2014 30\u201390 s).';
+                } else {
+                    ln.innerHTML = '&#128246; Installs will stream over <b>Bluetooth</b> (slower). The receiver keeps its WiFi off while the transmitter is on \u2014 switch the transmitter OFF, wait ~15 s and reopen this page to use the WiFi fast lane.';
+                }
+                ln.hidden = false;
+            })
+            .catch(() => {});
+    }
+});
 </script>
 <template id=helpContent><h2>Firmware update</h2>
 <p>Updates the receiver's firmware over the air, either from a local dev server on your home network (if one is running) or from the public messiter.com mirror.</p>

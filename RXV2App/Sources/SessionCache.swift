@@ -269,6 +269,15 @@ extension SessionCache {
 
 final class SessionPrefetcher {
     private static var running = false
+    // A tuning page mid-read must never interleave with the sweep's bank
+    // selects — the page would show ANOTHER bank's values (Malcolm
+    // 2026-08-06: "occasionally it reads the wrong values"). The scheme
+    // handler stamps this on every page-originated MSP call; the sweep's
+    // MSP section waits for a 10 s quiet gap (bounded, then skips).
+    static var lastPageMspMs: Double = 0
+    private static func pageMspQuiet() -> Bool {
+        Date().timeIntervalSince1970 * 1000 - lastPageMspMs > 10_000
+    }
     // Progress for the "Save session to phone" button (Malcolm 2026-08-04):
     // explicit and verifiable — press save, watch the count, read "done".
     static var phase = "idle"      // idle | running | done
@@ -350,7 +359,12 @@ final class SessionPrefetcher {
                 else { return false }
                 return lastPkt >= 0 && lastPkt < 3000
             }
-            if !txLive, let st = req("/api/msp?fn=101"),
+            // Yield to the user's tuning pages: wait (up to 2 min) for a
+            // 10 s gap in page MSP traffic before ANY bank switching; if the
+            // user keeps reading, skip the MSP sweep entirely this run.
+            var waited = 0.0
+            while !pageMspQuiet() && waited < 120 { Thread.sleep(forTimeInterval: 2); waited += 2 }
+            if !txLive, pageMspQuiet(), let st = req("/api/msp?fn=101"),
                let hex = String(data: st, encoding: .utf8), hex.count >= 54,
                let origPid = Int(hex.dropFirst(48).prefix(2), radix: 16),
                let origRate = Int(hex.dropFirst(52).prefix(2), radix: 16) {

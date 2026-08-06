@@ -660,6 +660,8 @@ class MainActivity : AppCompatActivity() {
             for (e in edits) {
                 // Land each edit in the bank it was made in (fn=210 select
                 // first, 0x80|idx = rate bank); gov global goes bankless.
+                // Stamp so the background sweep's bank selects yield to ours.
+                lastPageMspMs = System.currentTimeMillis()
                 e.bank?.let {
                     step(bleSyncQuiet("/api/msp?fn=210&data=%02X".format(it)) != null)
                     Thread.sleep(300)
@@ -686,6 +688,11 @@ class MainActivity : AppCompatActivity() {
 
     /** Record EVERYTHING, not just what was viewed: walk the flight list and
      *  the tuning reads in the background, gently paced. */
+    // Page MSP traffic stamps this; the sweep's bank switching yields to it
+    // (Malcolm 2026-08-06: interleaved selects showed the WRONG bank's values).
+    @Volatile private var lastPageMspMs = 0L
+    private fun pageMspQuiet() = System.currentTimeMillis() - lastPageMspMs > 10_000
+
     @Volatile private var prefetchRunning = false
     @Volatile private var snapPhase = "idle"   // idle | running | done
     @Volatile private var snapDone = 0
@@ -745,7 +752,12 @@ class MainActivity : AppCompatActivity() {
                     lastPkt in 0..2999
                 }.getOrDefault(false)
             }
-            if (!txLive) {
+            // Yield to the user's tuning pages: wait (≤2 min) for a 10 s gap
+            // in page MSP traffic before ANY bank switching; still busy →
+            // skip the MSP sweep this run.
+            var waited = 0L
+            while (!pageMspQuiet() && waited < 120_000) { Thread.sleep(2000); waited += 2000 }
+            if (!txLive && pageMspQuiet()) {
                 val st = req("/api/msp?fn=101")?.let { String(it) } ?: ""
                 val origPid = if (st.length >= 54) st.substring(48, 50).toIntOrNull(16) else null
                 val origRate = if (st.length >= 54) st.substring(52, 54).toIntOrNull(16) else null
@@ -984,6 +996,9 @@ class MainActivity : AppCompatActivity() {
                 }
                 return
             }
+            // Page-originated MSP: stamp it so the background sweep yields —
+            // interleaved bank selects showed pages the WRONG bank's values.
+            if (p == "/api/msp") lastPageMspMs = System.currentTimeMillis()
             val headers = HashMap<String, String>()
             runCatching {
                 val o = JSONObject(headersJson)
