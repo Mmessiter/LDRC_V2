@@ -830,12 +830,16 @@ class MainActivity : AppCompatActivity() {
                         req("/api/msp?fn=112"); req("/api/msp?fn=94"); req("/api/msp?fn=148")
                     }
                     if (!aborted) for (r in 0..3) {
-                        if (txAppeared()) break
+                        if (txAppeared()) { aborted = true; break }
                         selectBank(0x80 or r)
                         req("/api/msp?fn=111")
                     }
                     selectBank(origPid)          // put the FC back exactly —
                     selectBank(0x80 or origRate) // always, aborted or not
+                    // Full sweep completed → freeze the restore point (the
+                    // rolling cache keeps updating; this copy never follows
+                    // the pilot's later edits).
+                    if (!aborted) SessionCache.snapshotRestorePoint()
                 }
             }
             snapTotal += flightPaths.size
@@ -1023,8 +1027,9 @@ class MainActivity : AppCompatActivity() {
                     "/app/restore/info" -> {
                         val avail = !demoMode && !reviewMode && SessionCache.restoreItems().isNotEmpty() &&
                                     SessionCache.modelName == connectedName
-                        val whenTxt = if (SessionCache.savedAtMs > 0)
-                            android.text.format.DateFormat.format("d MMM HH:mm", SessionCache.savedAtMs) else ""
+                        val rpAt = SessionCache.restorePointAtMs()
+                        val whenTxt = if (rpAt > 0)
+                            android.text.format.DateFormat.format("d MMM HH:mm", rpAt) else ""
                         answer("{\"available\":$avail,\"when\":${JSONObject.quote(whenTxt.toString())}}")
                     }
                     "/app/restore/start" -> {

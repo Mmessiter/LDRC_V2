@@ -275,11 +275,58 @@ extension SessionCache {
         let hex: String
     }
 
-    /// Everything restorable from the recording, in write order.
+    // The rolling recording tees EVERY read — including the read-backs of
+    // the very edits a confused pilot wants to undo (Malcolm's closed-loop
+    // test caught this: the restore faithfully re-wrote the random edits).
+    // The parachute therefore restores from a FROZEN restore point, written
+    // only when a full TX-off sweep completes — at connection (before any
+    // editing) and on each explicit "Save session to phone".
+    private static func restoreURL(for model: String) -> URL {
+        let safe = model.isEmpty ? "last"
+            : String(model.map { $0.isLetter || $0.isNumber ? $0 : "_" })
+        return docs.appendingPathComponent("restore-\(safe).json")
+    }
+    private struct RestoreShape: Codable {
+        var model: String
+        var savedAt: Date
+        var entries: [String: Entry]
+    }
+
+    private static let restoreKeyPrefixes =
+        ["/api/msp?fn=112&bank=", "/api/msp?fn=94&bank=",
+         "/api/msp?fn=148&bank=", "/api/msp?fn=111&bank="]
+
+    /// Freeze the tuning reads currently in the rolling cache.
+    func snapshotRestorePoint() {
+        var keep: [String: Entry] = [:]
+        for (k, v) in entries {
+            if Self.restoreKeyPrefixes.contains(where: { k.hasPrefix($0) }) || k == "/api/msp?fn=142" {
+                keep[k] = v
+            }
+        }
+        guard !keep.isEmpty else { return }
+        let shape = RestoreShape(model: modelName, savedAt: Date(), entries: keep)
+        if let d = try? JSONEncoder().encode(shape) {
+            try? d.write(to: Self.restoreURL(for: modelName), options: .atomic)
+        }
+    }
+
+    /// When was the current model's restore point frozen? nil = none.
+    func restorePointDate() -> Date? {
+        guard let d = try? Data(contentsOf: Self.restoreURL(for: modelName)),
+              let s = try? JSONDecoder().decode(RestoreShape.self, from: d) else { return nil }
+        return s.savedAt
+    }
+
+    /// Everything restorable from the FROZEN restore point, in write order.
     func restoreItems() -> [RestoreItem] {
+        guard let d = try? Data(contentsOf: Self.restoreURL(for: modelName)),
+              let shape = try? JSONDecoder().decode(RestoreShape.self, from: d)
+        else { return [] }
+        let frozen = shape.entries
         var out: [RestoreItem] = []
         func hexAt(_ key: String) -> String? {
-            guard let e = entries[key],
+            guard let e = frozen[key],
                   let s = String(data: e.body, encoding: .utf8),
                   s.count >= 2, s.allSatisfy({ $0.isHexDigit }) else { return nil }
             return s.uppercased()
@@ -462,6 +509,7 @@ final class SessionPrefetcher {
             // user keeps reading, skip the MSP sweep entirely this run.
             var waited = 0.0
             while !pageMspQuiet() && waited < 120 { Thread.sleep(forTimeInterval: 2); waited += 2 }
+            var sweepOK = false
             if !txLive, pageMspQuiet(), let st = req("/api/msp?fn=101"),
                let hex = String(data: st, encoding: .utf8), hex.count >= 54,
                let origPid = Int(hex.dropFirst(48).prefix(2), radix: 16),
@@ -485,7 +533,11 @@ final class SessionPrefetcher {
                 }
                 selectBank(origPid)              // put the FC back exactly —
                 selectBank(0x80 | origRate)      // always, aborted or not
+                sweepOK = !aborted
             }
+            // Full sweep completed → freeze the restore point (the rolling
+            // cache keeps updating; this copy never follows the edits).
+            if sweepOK { SessionCache.shared.snapshotRestorePoint() }
             total += flightPaths.count
             for p in flightPaths { _ = req(p) }
             running = false
