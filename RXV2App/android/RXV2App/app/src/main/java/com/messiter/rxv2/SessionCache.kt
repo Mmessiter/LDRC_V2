@@ -232,7 +232,7 @@ object SessionCache {
     // ── Restore-from-recording (Malcolm 2026-08-06) ─────────────────
     // The confused pilot's parachute: every recorded bank's tuning read is
     // byte-symmetric with its SET command — write the whole lot back.
-    data class RestoreItem(val selectByte: Int?, val writeFn: Int, val readFn: Int, val hex: String)
+    data class RestoreItem(val selectByte: Int?, val writeFn: Int, val readFn: Int, val hex: String, val label: String)
 
     // The rolling recording tees EVERY read — including read-backs of the
     // very edits a confused pilot wants to undo (Malcolm's closed-loop test
@@ -295,14 +295,14 @@ object SessionCache {
             return s.uppercase()
         }
         for (b in 0..3) {
-            hexAt("/api/msp?fn=112&bank=$b")?.let { out.add(RestoreItem(b, 202, 112, it)) }
-            hexAt("/api/msp?fn=94&bank=$b")?.let  { out.add(RestoreItem(b, 95,  94,  it)) }
-            hexAt("/api/msp?fn=148&bank=$b")?.let { out.add(RestoreItem(b, 149, 148, it)) }
+            hexAt("/api/msp?fn=112&bank=$b")?.let { out.add(RestoreItem(b, 202, 112, it, "PIDs bank ${b + 1}")) }
+            hexAt("/api/msp?fn=94&bank=$b")?.let  { out.add(RestoreItem(b, 95,  94,  it, "advanced PIDs bank ${b + 1}")) }
+            hexAt("/api/msp?fn=148&bank=$b")?.let { out.add(RestoreItem(b, 149, 148, it, "governor profile bank ${b + 1}")) }
         }
         for (r in 0..3) {
-            hexAt("/api/msp?fn=111&bank=$r")?.let { out.add(RestoreItem(0x80 or r, 204, 111, it)) }
+            hexAt("/api/msp?fn=111&bank=$r")?.let { out.add(RestoreItem(0x80 or r, 204, 111, it, "rates bank ${r + 1}")) }
         }
-        hexAt("/api/msp?fn=142")?.let { out.add(RestoreItem(null, 143, 142, it)) }
+        hexAt("/api/msp?fn=142")?.let { out.add(RestoreItem(null, 143, 142, it, "governor global")) }
         return out
     }
 

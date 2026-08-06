@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.336-phone-restore";
+constexpr const char* FW_VERSION = "RXV2-0.9.337-named-verify";
 
 //*********************************************************************
 //  Auto-update manifest URLs

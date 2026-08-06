@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.337-named-verify",
+      "url": "https://messiter.com/rxv2/release/v0.9.337/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.337/littlefs.bin",
+      "fs_md5": "c36e1bf44900aa35085c38a6361126b7",
+      "notes": "Phone-restore polish: each item now gets a second attempt if a radio hiccup interrupts it, and anything that still fails to verify is named ('rates bank 2') instead of counted \u2014 so you know exactly what to check."
+    },
+    {
       "name": "RXV2-0.9.336-phone-restore",
       "url": "https://messiter.com/rxv2/release/v0.9.336/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.336/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.326/littlefs.bin",
       "fs_md5": "a73ccd6c9f2097092c3e9d3f9a584890",
       "notes": "Updates take the fastest road automatically: when the receiver's own WiFi is connected, installs download at WiFi speed even when you're using the app over Bluetooth (30-90 s instead of minutes). Bluetooth streaming remains the automatic fallback at the field."
-    },
-    {
-      "name": "RXV2-0.9.325-gear-field-fix",
-      "url": "https://messiter.com/rxv2/release/v0.9.325/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.325/littlefs.bin",
-      "fs_md5": "5b980abb35cf024527bee0ccc79d7195",
-      "notes": "The gear-ratio box no longer fights your typing \u2014 the page's background refresh was rewriting it mid-keystroke. Type, save, done."
     }
   ]
 }
