@@ -106,7 +106,14 @@ class MainActivity : AppCompatActivity() {
     override fun onPause() {
         super.onPause()
         SessionCache.saveIfDirty()   // recording survives app switches / kills
+        pausedAtMs = System.currentTimeMillis()
     }
+
+    // Fresh start after a real absence (Malcolm 2026-08-06: "on reloading
+    // the app… usually I want to connect to a different model"): away for
+    // over a minute → drop the old link and land on the model list. A quick
+    // app-switch (checking a message) keeps the connection.
+    private var pausedAtMs = 0L
 
     override fun onBackPressed() {
         val w = webView
@@ -262,6 +269,13 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Away >1 min with a live/reconnecting link → fresh start on the
+        // model list (demo and armchair review are deliberate — left alone).
+        if (pausedAtMs > 0 && System.currentTimeMillis() - pausedAtMs > 60_000 &&
+            webView != null && !demoMode && !reviewMode) {
+            ble.disconnect()   // state callback lands us on the scanner
+        }
+        pausedAtMs = 0
         // Back from the Settings permission screen — resume the update.
         pendingUpdate?.let { (url, name) ->
             if (packageManager.canRequestPackageInstalls()) {
