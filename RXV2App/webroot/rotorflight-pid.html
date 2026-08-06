@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>PIDs &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=151">
-<script src="/app.js?v=151" defer></script>
+<link rel=stylesheet href="/style.css?v=152">
+<script src="/app.js?v=152" defer></script>
 <style>
 table.pids{width:100%;border-collapse:separate;border-spacing:.3em}
 table.pids th{text-align:center;color:#3a5165;font-weight:600;padding:.4em 0}
@@ -25,7 +25,7 @@ table.pids td input{width:100%;padding:.5em;font-size:1em;border:1px solid #b8c7
 .profBtn.active{background:#6cab5e;color:#fff}
 </style>
 </head>
-<body>
+<body class=hasFab>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
 <div class=bg-photo aria-hidden=true></div>
 <div class=bg-wash  aria-hidden=true></div>
@@ -83,8 +83,6 @@ table.pids td input{width:100%;padding:.5em;font-size:1em;border:1px solid #b8c7
             </tbody>
         </table>
     </div>
-
-    <button class="btn btn-fly" id=saveBtn onclick="save()" style="background:#6cab5e"><span class=ico>&#128190;</span>Save to Flight Controller</button>
     <button class="btn btn-fw" id=reloadBtn onclick="load()"><span class=ico>&#8635;</span>Reload from flight controller</button>
 
     <div class=card>
@@ -97,7 +95,10 @@ table.pids td input{width:100%;padding:.5em;font-size:1em;border:1px solid #b8c7
         </div>
     </div>
 
-    <a class="btn btn-back" href="/rotorflight"><span class=ico>&#8617;</span>Back</a>
+    <div class=fabBar>
+        <a class="btn btn-back" href="/rotorflight" style="flex:.55;margin:0"><span class=ico>&#8617;</span>Back</a>
+        <button class="btn btn-fly" id=saveBtn onclick="save()" style="background:#6cab5e;margin:0"><span class=ico>&#128190;</span>Save to Flight Controller</button>
+    </div>
     <div class=footer></div>
 </div>
 
@@ -177,6 +178,17 @@ async function load() {
     }
 }
 
+
+// Result flashes ON the floating Save button — always in view (the top
+// banner scrolls away; Malcolm 2026-08-06: "one doesn't know how long
+// to wait").
+function flashSave(html, ms) {
+    const b = document.getElementById('saveBtn');
+    if (!b) return;
+    const old = b.innerHTML;
+    b.innerHTML = html;
+    setTimeout(() => { b.innerHTML = old; }, ms || 4000);
+}
 function buildPayload() {
     const ids = ['r_P','r_I','r_D','r_F','p_P','p_I','p_D','p_F','y_P','y_I','y_D','y_F',
                  'b_R','b_P','b_Y','h_R','h_P'];
@@ -200,9 +212,27 @@ async function save() {
     try {
         await LDRC.msp(202, bytesToHex(bytes));   // SET_PID
         await LDRC.msp(250);                       // EEPROM_WRITE
-        setStatus('good', LDRC.replay
-            ? '✓ Saved on the phone — ready to send at the next connection'
-            : '✓ Saved to flight controller EEPROM');
+        if (LDRC.replay) {
+            setStatus('good', '✓ Saved on the phone — ready to send at the next connection');
+            flashSave('<span class=ico>&#9989;</span>Saved on the phone!');
+            LDRC.clearDirty();
+            return;
+        }
+        // Read back and VERIFY — seeing is believing (Malcolm 2026-08-06).
+        setStatus('info', 'Verifying — reading back from flight controller…');
+        flashSave('<span class=ico>&#8987;</span>Verifying…', 6000);
+        await LDRC.msp(210, currentProfile.toString(16).padStart(2,'0'));
+        const check = hexToBytes(await LDRC.msp(112));
+        let diffs = 0;
+        for (let i = 0; i < bytes.length && i < check.length; i++)
+            if (bytes[i] !== check[i]) diffs++;
+        if (diffs === 0) {
+            setStatus('good', '✓ Written & verified — the flight controller read back exactly what was saved');
+            flashSave('<span class=ico>&#9989;</span>Written &amp; verified!', 5000);
+        } else {
+            setStatus('bad', '⚠ ' + diffs + ' byte(s) differ on read-back — reload and check');
+            flashSave('<span class=ico>&#9888;&#65039;</span>Differs on read-back!', 6000);
+        }
         LDRC.clearDirty();
     } catch (e) {
         setStatus('bad', 'Save failed: ' + e.message);

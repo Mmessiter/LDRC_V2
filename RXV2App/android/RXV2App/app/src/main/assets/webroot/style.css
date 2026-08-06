@@ -311,3 +311,18 @@ body.stale-values td input{
     from { box-shadow: 0 3px 10px rgba(212,148,74,.35); transform: scale(1); }
     to   { box-shadow: 0 3px 18px rgba(212,148,74,.70); transform: scale(1.015); }
 }
+
+/* Floating action bar (Malcolm 2026-08-06): Save + Back always in view on
+ * the Rotorflight tuning pages — no more scrolling to the bottom. Solid
+ * background per the no-translucency rule. */
+.fabBar{
+    position:fixed;left:0;right:0;bottom:0;z-index:55;
+    display:flex;gap:.6em;align-items:stretch;
+    padding:.55em max(.8em, env(safe-area-inset-right, .8em))
+            calc(.55em + env(safe-area-inset-bottom, 0px))
+            max(.8em, env(safe-area-inset-left, .8em));
+    background:#e7edf1;
+    box-shadow:0 -3px 12px rgba(0,0,0,.18);
+}
+.fabBar .btn{flex:1;margin:0;padding:.85em .6em;font-size:1.02em;justify-content:center}
+body.hasFab{padding-bottom:8em}

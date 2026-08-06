@@ -163,6 +163,11 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
         }
 
         // 2) everything else goes over Bluetooth
+        // Page-originated MSP: stamp it so the background sweep yields —
+        // interleaved bank selects made pages read the WRONG bank's values.
+        if path == "/api/msp" {
+            SessionPrefetcher.lastPageMspMs = Date().timeIntervalSince1970 * 1000
+        }
         var pathAndQuery = path
         if let q = url.query, !q.isEmpty { pathAndQuery += "?\(q)" }
         var headers: [String: String] = [:]

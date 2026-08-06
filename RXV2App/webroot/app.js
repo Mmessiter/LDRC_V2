@@ -477,8 +477,10 @@
         b.id = 'linkBadge';
         b.type = bridge ? 'button' : undefined;
         b.textContent = ble ? '🔵 Bluetooth' : '🛜 WiFi';
+        // Above the floating Save/Back bar on the tuning pages.
+        const fabLift = document.querySelector('.fabBar') ? ' + 4.6em' : '';
         b.style.cssText =
-            'position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));'
+            'position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px)' + fabLift + ');'
             + 'z-index:60;padding:.5em 1em;border-radius:999px;font-size:.95em;font-weight:600;'
             + 'letter-spacing:.03em;user-select:none;border:0;font-family:inherit;'
             + (bridge ? 'pointer-events:auto;cursor:pointer;' : 'pointer-events:none;')

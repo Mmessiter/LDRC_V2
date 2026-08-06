@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Governor (global) &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=151">
-<script src="/app.js?v=151" defer></script>
+<link rel=stylesheet href="/style.css?v=152">
+<script src="/app.js?v=152" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;
         padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -33,7 +33,7 @@
 input:disabled,select:disabled{background:#eee;color:#999}
 </style>
 </head>
-<body>
+<body class=hasFab>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
 <div class=bg-photo aria-hidden=true></div>
 <div class=bg-wash  aria-hidden=true></div>
@@ -99,11 +99,12 @@ input:disabled,select:disabled{background:#eee;color:#999}
             Drag points up/down on the chart, or type values below. In 5-point mode the in-between values are auto-interpolated as midpoints, matching Configurator.
         </p>
     </div>
-
-    <button class="btn btn-fly" id=saveBtn onclick="save()" style="background:#5fa099"><span class=ico>&#128190;</span>Save to Flight Controller</button>
     <button class="btn btn-fw" id=reloadBtn onclick="load()"><span class=ico>&#8635;</span>Reload from flight controller</button>
 
-    <a class="btn btn-back" href="/rotorflight"><span class=ico>&#8617;</span>Back</a>
+    <div class=fabBar>
+        <a class="btn btn-back" href="/rotorflight" style="flex:.55;margin:0"><span class=ico>&#8617;</span>Back</a>
+        <button class="btn btn-fly" id=saveBtn onclick="save()" style="background:#5fa099;margin:0"><span class=ico>&#128190;</span>Save to Flight Controller</button>
+    </div>
     <div class=footer></div>
 </div>
 
@@ -139,6 +140,14 @@ const CONFIG_BYTES = 42;
 let cachedRaw = null;
 let editable = false;
 
+
+function flashSave(html, ms) {
+    const b = document.getElementById('saveBtn');
+    if (!b) return;
+    const old = b.innerHTML;
+    b.innerHTML = html;
+    setTimeout(() => { b.innerHTML = old; }, ms || 4000);
+}
 function setStatus(kind, msg) {
     const b = document.getElementById('status');
     b.className = 'banner ' + kind;
@@ -464,6 +473,7 @@ async function save() {
             LDRC.clearDirty();
             cachedRaw = bytes;
             setStatus('good', '✓ Saved on the phone — ready to send at the next connection');
+            flashSave('<span class=ico>&#9989;</span>Saved on the phone!');
             return;
         }
         // The edits are PERSISTED from this point — the reboot + read-back
@@ -498,6 +508,7 @@ async function save() {
         }
         if (diffs.length === 0) {
             setStatus('good', '✓ Saved, rebooted & verified by flight controller read-back');
+            flashSave('<span class=ico>&#9989;</span>Written &amp; verified!', 5000);
             cachedRaw = bytes;
             LDRC.clearDirty();
             await load();
