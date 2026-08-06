@@ -81,7 +81,7 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
             let avail = !demo && !replay && !cache.restoreItems().isEmpty
                      && cache.modelName == connName
             var when = ""
-            if let at = cache.savedAt {
+            if let at = cache.restorePointDate() {
                 let f = DateFormatter(); f.dateStyle = .short; f.timeStyle = .short
                 when = f.string(from: at)
             }

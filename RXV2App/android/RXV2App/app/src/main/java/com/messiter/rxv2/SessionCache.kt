@@ -234,12 +234,63 @@ object SessionCache {
     // byte-symmetric with its SET command — write the whole lot back.
     data class RestoreItem(val selectByte: Int?, val writeFn: Int, val readFn: Int, val hex: String)
 
+    // The rolling recording tees EVERY read — including read-backs of the
+    // very edits a confused pilot wants to undo (Malcolm's closed-loop test
+    // caught the restore re-writing the random edits). The parachute uses a
+    // FROZEN restore point: written only when a full TX-off sweep completes.
+    private fun restoreFileFor(model: String): File? {
+        val d = dir ?: return null
+        val safe = if (model.isEmpty()) "last"
+                   else model.map { if (it.isLetterOrDigit()) it else '_' }.joinToString("")
+        return File(d, "restore-$safe.json")
+    }
+    private val restoreKeyPrefixes = listOf(
+        "/api/msp?fn=112&bank=", "/api/msp?fn=94&bank=",
+        "/api/msp?fn=148&bank=", "/api/msp?fn=111&bank=")
+
+    @Synchronized
+    fun snapshotRestorePoint() {
+        val f = restoreFileFor(modelName) ?: return
+        val keep = entries.filterKeys { k ->
+            restoreKeyPrefixes.any { k.startsWith(it) } || k == "/api/msp?fn=142"
+        }
+        if (keep.isEmpty()) return
+        runCatching {
+            val root = JSONObject()
+            root.put("model", modelName)
+            root.put("savedAtMs", System.currentTimeMillis())
+            val es = JSONObject()
+            for ((k, v) in keep) {
+                val e = JSONObject()
+                e.put("type", v.first)
+                e.put("b64", Base64.encodeToString(v.second, Base64.NO_WRAP))
+                es.put(k, e)
+            }
+            root.put("entries", es)
+            f.writeText(root.toString())
+        }
+    }
+
+    fun restorePointAtMs(): Long {
+        val f = restoreFileFor(modelName) ?: return 0
+        if (!f.exists()) return 0
+        return runCatching { JSONObject(f.readText()).optLong("savedAtMs", 0) }.getOrDefault(0)
+    }
+
     @Synchronized
     fun restoreItems(): List<RestoreItem> {
         val out = ArrayList<RestoreItem>()
+        val f = restoreFileFor(modelName) ?: return out
+        if (!f.exists()) return out
+        val frozen = HashMap<String, String>()
+        runCatching {
+            val es = JSONObject(f.readText()).getJSONObject("entries")
+            es.keys().forEach { k ->
+                frozen[k] = String(Base64.decode(es.getJSONObject(k).getString("b64"), Base64.NO_WRAP))
+            }
+        }
         fun hexAt(key: String): String? {
-            val e = entries[key] ?: return null
-            val s = String(e.second)
+            val s = frozen[key] ?: return null
             if (s.length < 2 || !s.all { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }) return null
             return s.uppercase()
         }
