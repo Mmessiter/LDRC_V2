@@ -273,6 +273,7 @@ extension SessionCache {
         let writeFn: Int
         let readFn: Int        // for post-write verification
         let hex: String
+        let label: String      // named in the UI if it fails to verify
     }
 
     // The rolling recording tees EVERY read — including the read-backs of
@@ -332,14 +333,14 @@ extension SessionCache {
             return s.uppercased()
         }
         for b in 0...3 {
-            if let h = hexAt("/api/msp?fn=112&bank=\(b)") { out.append(RestoreItem(selectByte: b, writeFn: 202, readFn: 112, hex: h)) }
-            if let h = hexAt("/api/msp?fn=94&bank=\(b)")  { out.append(RestoreItem(selectByte: b, writeFn: 95,  readFn: 94,  hex: h)) }
-            if let h = hexAt("/api/msp?fn=148&bank=\(b)") { out.append(RestoreItem(selectByte: b, writeFn: 149, readFn: 148, hex: h)) }
+            if let h = hexAt("/api/msp?fn=112&bank=\(b)") { out.append(RestoreItem(selectByte: b, writeFn: 202, readFn: 112, hex: h, label: "PIDs bank \(b + 1)")) }
+            if let h = hexAt("/api/msp?fn=94&bank=\(b)")  { out.append(RestoreItem(selectByte: b, writeFn: 95,  readFn: 94,  hex: h, label: "advanced PIDs bank \(b + 1)")) }
+            if let h = hexAt("/api/msp?fn=148&bank=\(b)") { out.append(RestoreItem(selectByte: b, writeFn: 149, readFn: 148, hex: h, label: "governor profile bank \(b + 1)")) }
         }
         for r in 0...3 {
-            if let h = hexAt("/api/msp?fn=111&bank=\(r)") { out.append(RestoreItem(selectByte: 0x80 | r, writeFn: 204, readFn: 111, hex: h)) }
+            if let h = hexAt("/api/msp?fn=111&bank=\(r)") { out.append(RestoreItem(selectByte: 0x80 | r, writeFn: 204, readFn: 111, hex: h, label: "rates bank \(r + 1)")) }
         }
-        if let h = hexAt("/api/msp?fn=142") { out.append(RestoreItem(selectByte: nil, writeFn: 143, readFn: 142, hex: h)) }
+        if let h = hexAt("/api/msp?fn=142") { out.append(RestoreItem(selectByte: nil, writeFn: 143, readFn: 142, hex: h, label: "governor global")) }
         return out
     }
 }
@@ -350,14 +351,16 @@ final class RestoreRunner {
     static var done = 0
     static var total = 0
     static var failures = 0
+    static var failedLabels: [String] = []
     static var progressJSON: Data {
-        Data("{\"phase\":\"\(phase)\",\"done\":\(done),\"total\":\(total),\"failures\":\(failures)}".utf8)
+        let names = failedLabels.map { "\"\($0)\"" }.joined(separator: ",")
+        return Data("{\"phase\":\"\(phase)\",\"done\":\(done),\"total\":\(total),\"failures\":\(failures),\"failed\":[\(names)]}".utf8)
     }
 
     static func run(link: BleLink) {
         guard !running else { return }
         running = true
-        phase = "running"; done = 0; failures = 0
+        phase = "running"; done = 0; failures = 0; failedLabels = []
         let items = SessionCache.shared.restoreItems()
         total = items.count + 1   // + EEPROM save
 
@@ -393,17 +396,25 @@ final class RestoreRunner {
             }
             var wroteGov = false
             for it in items {
-                var itemOk = true
-                if let b = it.selectByte {
-                    itemOk = req("/api/msp?fn=210&data=" + String(format: "%02X", b)).ok
+                // TWO attempts — a single radio hiccup among ~50 sequential
+                // MSP ops must not fail the parachute (Malcolm 2026-08-06:
+                // "One was not verified I see").
+                var itemOk = false
+                for attempt in 1...2 {
+                    var ok = true
+                    if let b = it.selectByte {
+                        ok = req("/api/msp?fn=210&data=" + String(format: "%02X", b)).ok
+                    }
+                    if ok { ok = req("/api/msp?fn=\(it.writeFn)&data=\(it.hex)").ok }
+                    if ok {
+                        // Verify: read back, compare (reply may be longer — prefix).
+                        let back = req("/api/msp?fn=\(it.readFn)").body.uppercased()
+                        ok = back.hasPrefix(it.hex) || it.hex.hasPrefix(back) && !back.isEmpty
+                    }
+                    if ok { itemOk = true; break }
+                    if attempt == 1 { Thread.sleep(forTimeInterval: 0.6) }
                 }
-                if itemOk { itemOk = req("/api/msp?fn=\(it.writeFn)&data=\(it.hex)").ok }
-                // Verify: read back and compare (reply may be longer — prefix match).
-                if itemOk {
-                    let back = req("/api/msp?fn=\(it.readFn)").body.uppercased()
-                    itemOk = back.hasPrefix(it.hex) || it.hex.hasPrefix(back) && !back.isEmpty
-                }
-                if !itemOk { failures += 1 }
+                if !itemOk { failures += 1; failedLabels.append(it.label) }
                 if it.writeFn == 143 && itemOk { wroteGov = true }
                 done += 1
             }

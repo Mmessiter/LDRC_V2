@@ -711,12 +711,13 @@ class MainActivity : AppCompatActivity() {
     @Volatile private var restDone = 0
     @Volatile private var restTotal = 0
     @Volatile private var restFailures = 0
+    @Volatile private var restFailed = ArrayList<String>()
     @Volatile private var restRunning = false
 
     private fun runRestore() {
         if (restRunning) return
         restRunning = true
-        restPhase = "running"; restDone = 0; restFailures = 0
+        restPhase = "running"; restDone = 0; restFailures = 0; restFailed = ArrayList()
         val items = SessionCache.restoreItems()
         restTotal = items.size + 1
         Thread {
@@ -736,15 +737,22 @@ class MainActivity : AppCompatActivity() {
             }
             var wroteGov = false
             for (it in items) {
-                var ok = true
-                it.selectByte?.let { b -> ok = req("/api/msp?fn=210&data=%02X".format(b)).first }
-                if (ok) ok = req("/api/msp?fn=${it.writeFn}&data=${it.hex}").first
-                if (ok) {
-                    val back = req("/api/msp?fn=${it.readFn}").second.uppercase()
-                    ok = back.isNotEmpty() && (back.startsWith(it.hex) || it.hex.startsWith(back))
+                // TWO attempts — one radio hiccup among ~50 sequential MSP
+                // ops must not fail the parachute.
+                var itemOk = false
+                for (attempt in 1..2) {
+                    var ok = true
+                    it.selectByte?.let { b -> ok = req("/api/msp?fn=210&data=%02X".format(b)).first }
+                    if (ok) ok = req("/api/msp?fn=${it.writeFn}&data=${it.hex}").first
+                    if (ok) {
+                        val back = req("/api/msp?fn=${it.readFn}").second.uppercase()
+                        ok = back.isNotEmpty() && (back.startsWith(it.hex) || it.hex.startsWith(back))
+                    }
+                    if (ok) { itemOk = true; break }
+                    if (attempt == 1) Thread.sleep(600)
                 }
-                if (!ok) restFailures++
-                if (it.writeFn == 143 && ok) wroteGov = true
+                if (!itemOk) { restFailures++; restFailed.add(it.label) }
+                if (it.writeFn == 143 && itemOk) wroteGov = true
                 restDone++
             }
             // Put the FC back on its own banks BEFORE the EEPROM save.
@@ -1060,7 +1068,10 @@ class MainActivity : AppCompatActivity() {
                             else { runRestore(); answer("{\"ok\":true}") }
                         }.start()
                     }
-                    else -> answer("{\"phase\":\"$restPhase\",\"done\":$restDone,\"total\":$restTotal,\"failures\":$restFailures}")
+                    else -> {
+                        val names = restFailed.joinToString(",") { JSONObject.quote(it) }
+                        answer("{\"phase\":\"$restPhase\",\"done\":$restDone,\"total\":$restTotal,\"failures\":$restFailures,\"failed\":[$names]}")
+                    }
                 }
                 return
             }

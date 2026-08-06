@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rotorflight &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=157">
-<script src="/app.js?v=157" defer></script>
+<link rel=stylesheet href="/style.css?v=158">
+<script src="/app.js?v=158" defer></script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -79,7 +79,9 @@ async function phoneRestore() {
             clearInterval(timer);
             fill.style.width = '100%';
             lab.textContent = p.failures > 0
-                ? '⚠️ Done with ' + p.failures + ' item(s) unverified — reload the tuning pages and check'
+                ? '⚠️ Could not verify: ' + ((p.failed && p.failed.length)
+                    ? p.failed.join(', ') : p.failures + ' item(s)')
+                  + ' — open that page and check (or run the restore again)'
                 : '✅ All settings restored & verified!';
             setTimeout(() => { prog.style.display = 'none'; btn.style.display = ''; }, 8000);
         }
