@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Governor (profile) &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=155">
-<script src="/app.js?v=155" defer></script>
+<link rel=stylesheet href="/style.css?v=156">
+<script src="/app.js?v=156" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;
         padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -247,6 +247,8 @@ async function save() {
     setStatus('info', 'Writing governor profile…');
     const bytes = buildPayload();
     try {
+        // Re-assert OUR profile at the instant of writing.
+        await LDRC.msp(210, currentProfile.toString(16).padStart(2,'0'));
         await LDRC.msp(149, bytesToHex(bytes));   // SET_GOVERNOR_PROFILE
         await LDRC.msp(250);                       // EEPROM_WRITE
         // Read-back verification
