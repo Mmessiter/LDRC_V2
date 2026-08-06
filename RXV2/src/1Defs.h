@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.338-maxvel-editable";
+constexpr const char* FW_VERSION = "RXV2-0.9.339-one-backup-system";
 
 //*********************************************************************
 //  Auto-update manifest URLs
