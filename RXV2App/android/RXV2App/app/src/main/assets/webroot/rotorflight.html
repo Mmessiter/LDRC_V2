@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rotorflight &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=156">
-<script src="/app.js?v=156" defer></script>
+<link rel=stylesheet href="/style.css?v=157">
+<script src="/app.js?v=157" defer></script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -25,12 +25,81 @@
     <a class="btn btn-fw" href="/rotorflight-gov-profile" id=govProf style="display:none;background:#5fa099"><span class=ico>&#9881;&#65039;</span>Governor (profile)</a>
     <a class="btn btn-fw" href="/rotorflight-gov-global"  id=govGlob style="display:none;background:#5fa099"><span class=ico>&#9881;&#65039;</span>Governor (global)</a>
     <a class="btn btn-fw" href="/rotorflight-backups"     style="background:#d4944a"><span class=ico>&#128190;</span>Backups &amp; restore</a>
+    <!-- The confused pilot's parachute (Malcolm 2026-08-06): the phone's
+         recorded session holds EVERY bank's settings — restore them all
+         even when no Rotorflight backup was ever made. App only. -->
+    <button id=phoneRestoreBtn class="btn" style="display:none;background:#ab6c8e" onclick="phoneRestore()"><span class=ico>&#128225;</span>Restore settings from phone<br><span id=phoneRestoreSub style="font-size:.68em;font-weight:400;opacity:.85"></span></button>
+    <div id=restProg style="display:none;background:#f2f6f8;border-radius:14px;padding:1em 1.2em;margin:.7em 0;box-shadow:0 2px 6px rgba(0,0,0,.12)">
+        <div id=restLab style="font-weight:600;color:#2c3e50;margin-bottom:.6em">Restoring&hellip;</div>
+        <div style="background:#d5dde4;border-radius:8px;height:14px;overflow:hidden">
+            <div id=restFill style="background:#ab6c8e;height:100%;width:0%;border-radius:8px;transition:width .4s"></div>
+        </div>
+        <div style="margin-top:.6em;font-size:.85em;color:#5c3a1a;background:#ffc88c;border-radius:8px;padding:.45em .7em">
+            &#9888;&#65039; Keep the transmitter OFF and the model ON until this finishes.
+        </div>
+    </div>
 
     <div class=footer></div>
 </div>
 
 <script>
+// Restore every recorded setting (all banks) from the phone's session
+// recording — the parachute for a pilot who never made a backup.
+async function phoneRestore() {
+    let info = null;
+    try { info = await (await fetch('/app/restore/info', { cache: 'no-store' })).json(); } catch (e) {}
+    if (!info || !info.available) {
+        await LDRC.alert('No matching recording on the phone for this model.', { title: 'Nothing to restore', icon: '📡' });
+        return;
+    }
+    if (!(await LDRC.confirm(
+        'Overwrite ALL Rotorflight tuning on this model (PIDs, advanced PIDs, rates and governor — every bank) with the phone recording' +
+        (info.when ? ' from ' + info.when : '') + '?\n\nKeep the transmitter OFF and the model powered while it runs.',
+        { title: 'Restore from phone', icon: '📡', yes: 'Restore everything', kind: 'warn' }))) return;
+    const btn = document.getElementById('phoneRestoreBtn');
+    const prog = document.getElementById('restProg');
+    const lab = document.getElementById('restLab');
+    const fill = document.getElementById('restFill');
+    btn.style.display = 'none';
+    prog.style.display = '';
+    let r0 = null;
+    try { r0 = await (await fetch('/app/restore/start', { cache: 'no-store' })).json(); } catch (e) {}
+    if (!r0 || !r0.ok) {
+        lab.textContent = '⚠️ ' + ((r0 && r0.error) || 'could not start');
+        setTimeout(() => { prog.style.display = 'none'; btn.style.display = ''; }, 5000);
+        return;
+    }
+    const timer = setInterval(async () => {
+        let p = null;
+        try { p = await (await fetch('/app/restore/progress', { cache: 'no-store' })).json(); } catch (e) { return; }
+        if (p.phase === 'running') {
+            lab.textContent = 'Restoring… ' + p.done + ' / ' + p.total;
+            if (p.total > 0) fill.style.width = Math.min(100, Math.round(100 * p.done / p.total)) + '%';
+        } else if (p.phase === 'done') {
+            clearInterval(timer);
+            fill.style.width = '100%';
+            lab.textContent = p.failures > 0
+                ? '⚠️ Done with ' + p.failures + ' item(s) unverified — reload the tuning pages and check'
+                : '✅ All settings restored & verified!';
+            setTimeout(() => { prog.style.display = 'none'; btn.style.display = ''; }, 8000);
+        }
+    }, 700);
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
+    // Offer the phone-recording restore only inside the app, and only when
+    // a recording for THIS model exists (the app checks the name).
+    if (window.LDRC && LDRC.viaBle && !LDRC.replay) {
+        fetch('/app/restore/info', { cache: 'no-store' })
+            .then(r => r.json())
+            .then(i => {
+                if (!i.available) return;
+                document.getElementById('phoneRestoreBtn').style.display = '';
+                document.getElementById('phoneRestoreSub').textContent =
+                    'recorded ' + (i.when || 'earlier') + ' — all banks';
+            })
+            .catch(() => {});
+    }
     const s = await LDRC.fetchState();
     if (!s) return;
     const fc = s.fcinfo || {};

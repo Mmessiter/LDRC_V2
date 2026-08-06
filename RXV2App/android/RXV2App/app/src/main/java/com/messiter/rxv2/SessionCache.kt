@@ -229,6 +229,32 @@ object SessionCache {
         return true
     }
 
+    // ── Restore-from-recording (Malcolm 2026-08-06) ─────────────────
+    // The confused pilot's parachute: every recorded bank's tuning read is
+    // byte-symmetric with its SET command — write the whole lot back.
+    data class RestoreItem(val selectByte: Int?, val writeFn: Int, val readFn: Int, val hex: String)
+
+    @Synchronized
+    fun restoreItems(): List<RestoreItem> {
+        val out = ArrayList<RestoreItem>()
+        fun hexAt(key: String): String? {
+            val e = entries[key] ?: return null
+            val s = String(e.second)
+            if (s.length < 2 || !s.all { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }) return null
+            return s.uppercase()
+        }
+        for (b in 0..3) {
+            hexAt("/api/msp?fn=112&bank=$b")?.let { out.add(RestoreItem(b, 202, 112, it)) }
+            hexAt("/api/msp?fn=94&bank=$b")?.let  { out.add(RestoreItem(b, 95,  94,  it)) }
+            hexAt("/api/msp?fn=148&bank=$b")?.let { out.add(RestoreItem(b, 149, 148, it)) }
+        }
+        for (r in 0..3) {
+            hexAt("/api/msp?fn=111&bank=$r")?.let { out.add(RestoreItem(0x80 or r, 204, 111, it)) }
+        }
+        hexAt("/api/msp?fn=142")?.let { out.add(RestoreItem(null, 143, 142, it)) }
+        return out
+    }
+
     private fun load() {
         // Wake up with the newest model's session active.
         val newest = savedSessions().firstOrNull() ?: return
