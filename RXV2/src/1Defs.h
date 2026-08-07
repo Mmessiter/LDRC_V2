@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.343-telem-watchdog";
+constexpr const char* FW_VERSION = "RXV2-0.9.344-event-afterlife";
 
 //*********************************************************************
 //  Auto-update manifest URLs

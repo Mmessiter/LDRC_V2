@@ -510,6 +510,7 @@ inline void netStep() {
                 if (!staGaveUp) {
                     Serial.println("[net] TX link lost — bringing WiFi back up");
                     events.add("TX lost — WiFi re-enabled");
+                    eventsPersist();      // forensics BEFORE the revival attempt
                     startWifiStation();   // → AP (+ STA if creds), reachable again
                 }
             }
@@ -517,6 +518,25 @@ inline void netStep() {
         }
         case NET_INIT:
             break;
+    }
+
+    // Belt-and-braces revival watchdog (Malcolm 2026-08-07: after flight 2,
+    // no wave and no Bluetooth — a reboot was needed. Whatever silenced the
+    // first revival, KEEP TRYING): link quiet well past the recovery
+    // threshold, recovery armed, yet Bluetooth neither advertising nor
+    // serving a client → force it back up, every 30 s, with a logged and
+    // flash-persisted trail.
+    {
+        static uint32_t lastReviveTryMs = 0;
+        const bool longQuiet = wifiRecoveryArmed && rx.lastMillis &&
+            (uint32_t)(millis() - rx.lastMillis) >= WIFI_REENABLE_AFTER_LOST_MS + 30000;
+        if (longQuiet && !bleAdvertising() && !bleHasClient() &&
+            (uint32_t)(millis() - lastReviveTryMs) > 30000) {
+            lastReviveTryMs = millis();
+            events.add("Watchdog: Bluetooth still down after landing — reviving");
+            eventsPersist();
+            bleStart();
+        }
     }
 }
 
