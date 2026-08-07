@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.343-telem-watchdog",
+      "url": "https://messiter.com/rxv2/release/v0.9.343/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.343/littlefs.bin",
+      "fs_md5": "091e4c7976a16a8903ee291ff5d129a9",
+      "notes": "Chasing the field telemetry dropout: the event log now records exactly WHEN flight-controller telemetry stops and when it resumes (with durations), and the battery-cell-count query stops pestering flight controllers that never answer it."
+    },
+    {
       "name": "RXV2-0.9.342-proven-tune-nudge",
       "url": "https://messiter.com/rxv2/release/v0.9.342/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.342/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.332/littlefs.bin",
       "fs_md5": "c2a733ac81b6542ff755d9bd66d07384",
       "notes": "New front-screen button in the app: 'Load another model' \u2014 drops back to the receiver list to pick a different craft, no more force-quitting the app to change models."
-    },
-    {
-      "name": "RXV2-0.9.331-tuning-polish",
-      "url": "https://messiter.com/rxv2/release/v0.9.331/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.331/littlefs.bin",
-      "fs_md5": "65dd7a14a740d6b4e7f09eaebbf9f846",
-      "notes": "Tuning pages polished: Save and Back now float at the bottom of the screen (no more scrolling); every save reads BACK from the flight controller and announces 'Written & verified!' right on the button; and the app's background recording now waits its turn so pages never show another bank's values. The update page also says up front whether an install will use WiFi (fast) or Bluetooth, and why."
     }
   ]
 }
