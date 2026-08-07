@@ -355,17 +355,28 @@ extension BleLink: CBCentralManagerDelegate, CBPeripheralDelegate {
         cleanupConnection(message: nil)
     }
 
+    // A disconnect is only worth RIDING THROUGH when the receiver is known
+    // to be rebooting deliberately (firmware install, protocol/name/WiFi
+    // save, fly-mode). Anything else means the model was switched off —
+    // and the pilot wants the model list, not a hopeful spinner (Malcolm
+    // 2026-08-07). The scheme handler stamps this on reboot-ish traffic.
+    static var rebootishUntil = Date.distantPast
+    static func noteRebootish(seconds: TimeInterval) {
+        let until = Date().addingTimeInterval(seconds)
+        if until > rebootishUntil { rebootishUntil = until }
+    }
+
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral,
                         error: Error?) {
         cleanupConnection(message: "Receiver disconnected")
-        // Unexpected drop while in use (e.g. reboot after a firmware
-        // install) — retry quietly for 90 s; the page keeps polling and
-        // completes when the receiver is back.
+        // Unexpected drop while in use — retry quietly for 90 s ONLY if a
+        // deliberate reboot is plausibly in progress; otherwise the model
+        // was switched off: straight back to the scanner.
         let wasActive: Bool
         if case .ready = state { wasActive = true }
         else if case .reconnecting = state { wasActive = true }
         else { wasActive = false }
-        if !userDisconnect && wasActive {
+        if !userDisconnect && wasActive && Date() < Self.rebootishUntil {
             if case .ready = state { reconnectUntil = Date().addingTimeInterval(90) }
             if let until = reconnectUntil, Date() < until {
                 self.peripheral = peripheral          // cleanup nilled it

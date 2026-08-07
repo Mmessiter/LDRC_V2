@@ -143,6 +143,16 @@ class Rxv2Ble(private val context: Context) {
     private var connName = "RXV2"   // scan-time name; g.device.name is a stale cache
     private var lastDevice: BluetoothDevice? = null
     private var userDisconnect = false
+
+    // A disconnect is only worth riding through when the receiver is known
+    // to be rebooting deliberately (install / config save / fly). Plain
+    // browsing never arms this — a disconnect then = model switched off →
+    // straight back to the scanner (Malcolm 2026-08-07).
+    @Volatile var rebootishUntil = 0L
+    fun noteRebootish(ms: Long) {
+        val until = System.currentTimeMillis() + ms
+        if (until > rebootishUntil) rebootishUntil = until
+    }
     private var reconnectUntil = 0L
 
     fun connect(d: Discovered) {
@@ -359,7 +369,8 @@ class Rxv2Ble(private val context: Context) {
                 bg.post {
                     cleanup("Receiver disconnected")
                     g.close(); gatt = null
-                    if (!userDisconnect && state is State.Ready) {
+                    if (!userDisconnect && state is State.Ready &&
+                        System.currentTimeMillis() < rebootishUntil) {
                         reconnectUntil = System.currentTimeMillis() + 90_000
                         state = State.Reconnecting(connName)
                         bg.postDelayed({ tryReconnect() }, 2000)

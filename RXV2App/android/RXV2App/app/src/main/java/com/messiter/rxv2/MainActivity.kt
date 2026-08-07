@@ -1112,6 +1112,7 @@ class MainActivity : AppCompatActivity() {
                 val json = if (p == "/app/bleota/start") {
                     val fw = uri.getQueryParameter("fw")
                     if (fw != null && !demoMode && !reviewMode) {
+                        ble.noteRebootish(600_000)
                         if (otaPhase != "download" && otaPhase != "fw" &&
                             otaPhase != "fs" && otaPhase != "rebooting") {
                             val fs = uri.getQueryParameter("fs")
@@ -1137,6 +1138,9 @@ class MainActivity : AppCompatActivity() {
             // Page-originated MSP: stamp it so the background sweep yields —
             // interleaved bank selects showed pages the WRONG bank's values.
             if (p == "/api/msp") lastPageMspMs = System.currentTimeMillis()
+            // Reboot-ish traffic keeps the ride-through reconnect armed;
+            // plain browsing doesn't — a disconnect then = model off.
+            if (method.uppercase() == "POST" && p != "/api/time") ble.noteRebootish(180_000)
             val headers = HashMap<String, String>()
             runCatching {
                 val o = JSONObject(headersJson)

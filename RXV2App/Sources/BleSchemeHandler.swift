@@ -52,7 +52,7 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
             let fw = items?.first(where: { $0.name == "fw" })?.value
             let fs = items?.first(where: { $0.name == "fs" })?.value
             let ok = (fw != nil && !demo && !replay)
-            if ok { ota.start(fw: fw!, fs: fs) }
+            if ok { BleLink.noteRebootish(seconds: 600); ota.start(fw: fw!, fs: fs) }
             deliver(task, url: url, code: 200, type: "application/json",
                     body: Data("{\"ok\":\(ok)}".utf8))
             return
@@ -218,6 +218,12 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
         // interleaved bank selects made pages read the WRONG bank's values.
         if path == "/api/msp" {
             SessionPrefetcher.lastPageMspMs = Date().timeIntervalSince1970 * 1000
+        }
+        // Reboot-ish traffic (anything that can restart or silence the
+        // receiver deliberately): keep the ride-through reconnect armed.
+        // Plain browsing never arms it — a disconnect then = model off.
+        if method == "POST" && path != "/api/time" {
+            BleLink.noteRebootish(seconds: 180)
         }
         var pathAndQuery = path
         if let q = url.query, !q.isEmpty { pathAndQuery += "?\(q)" }
