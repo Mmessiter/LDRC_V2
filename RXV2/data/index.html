@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Home &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=162">
-<script src="/app.js?v=162" defer></script>
+<link rel=stylesheet href="/style.css?v=163">
+<script src="/app.js?v=163" defer></script>
 <style>
 /* Friendly confirmation card (replaces the browser's utilitarian confirm()) */
 .modal{position:fixed;inset:0;background:rgba(16,38,58,.55);backdrop-filter:blur(2px);
@@ -244,6 +244,30 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (s2) { updateRfButton(s2); updateBindState(s2); paintApAutoBanner(s2); paintRadioBanner(s2); paintFlyButton(s2); paintBattWarn(s2); }
     }, 3000);
     paintBattWarn(s);
+
+    // Proven-tune nudge (Malcolm 2026-08-07): tuning edits followed by six
+    // or more flights with NO further edits = a tune worth immortalising.
+    // Gentle banner, once per tune-generation per model, app only.
+    await LDRC.replayReady;
+    if (LDRC.viaBle && !LDRC.replay && s.tune && s.tune.flights >= 6 && s.tune.gen > 0) {
+        const nudgeKey = 'tuneNudge-' + ((s.info && s.info.name) || '') + '-' + s.tune.gen;
+        if (!localStorage.getItem(nudgeKey)) {
+            const mm = document.getElementById('mainMenu');
+            if (mm) {
+                const d = document.createElement('div');
+                d.style.cssText = 'display:flex;align-items:center;gap:.6em;padding:.8em 1em;' +
+                    'border-radius:12px;margin:0 0 1em;background:#a8d29a;color:#1e3d14;' +
+                    'font-weight:600;box-shadow:0 3px 10px rgba(108,171,94,.35)';
+                d.innerHTML = '<a href="/rotorflight" style="flex:1;color:inherit;text-decoration:none">' +
+                    '\ud83c\udfc6 This tune has flown ' + s.tune.flights +
+                    ' flights unchanged \u2014 worth backing up! \ud83d\udcbe</a>' +
+                    '<button style="border:0;background:#87b979;color:#1e3d14;border-radius:8px;' +
+                    'padding:.35em .7em;font-weight:700;cursor:pointer">\u2715</button>';
+                d.querySelector('button').onclick = () => { localStorage.setItem(nudgeKey, '1'); d.remove(); };
+                mm.insertBefore(d, mm.firstElementChild);
+            }
+        }
+    }
 
     // Model name — show as the h1, prompt with warning + edit-on-tap.
     paintModelName(s);

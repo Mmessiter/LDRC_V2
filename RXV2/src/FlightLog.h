@@ -54,6 +54,24 @@ constexpr uint32_t FLIGHT_MAGIC_FLT2 = 0x32544C46;   // older: no gap-position f
 
 // Slots saved THIS power-up while the clock was still unknown, recorded as
 // millis()-at-save so a later time sync can back-date them (0 = nothing owed).
+
+// Proven-tune counter — called ONLY when a NEW flight slot is written
+// (updates of the same session don't recount). Runs inside the flight
+// save's already-pardoned flash window, so the NVS writes cost nothing
+// extra in the logs.
+inline void tuneCountFlight(bool rotated) {
+    if (!rotated) return;
+    if (tuneEditsPending) {
+        tuneEditsPending = false;
+        tuneEditGen++;
+        tuneFlightsSince = 1;
+        prefs.putUShort(NVS_KEY_EDIT_GEN, tuneEditGen);
+    } else {
+        tuneFlightsSince++;
+    }
+    prefs.putULong(NVS_KEY_FLT_SINCE_EDIT, tuneFlightsSince);
+}
+
 inline uint32_t fltPendingStampMs[FLIGHT_KEEP] = { 0, 0, 0 };
 
 // A static scratch buffer for a flight loaded from flash (avoids a huge stack
@@ -137,6 +155,7 @@ inline void saveFlightToLittleFS(bool rotate = true) {
     LittleFS.rename("/flt.tmp", flightPath(target));
     if (rotate) { fltHead = target; prefs.putUChar(NVS_KEY_FLT_HEAD, fltHead); }
     fltPendingStampMs[target] = h.savedEpochS ? 0 : millis();   // slots are stable: no shifting
+    tuneCountFlight(rotate);
     events.add(rotate ? "Flight saved to flash" : "Flight updated (same session)");
 }
 
@@ -240,6 +259,7 @@ inline void flightSaveAsyncTick() {
     LittleFS.rename("/flt.tmp", flightPath(target));
     if (svRotate) { fltHead = target; prefs.putUChar(NVS_KEY_FLT_HEAD, fltHead); }
     fltPendingStampMs[target] = svHdr.savedEpochS ? 0 : millis();
+    tuneCountFlight(svRotate);
     events.add(svRotate ? "Flight saved to flash" : "Flight updated (same session)");
     svState = 0;
 }

@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.342-proven-tune-nudge",
+      "url": "https://messiter.com/rxv2/release/v0.9.342/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.342/littlefs.bin",
+      "fs_md5": "b21d70ee6a9a960576327736db7f83e1",
+      "notes": "The receiver now notices when a tune has PROVEN itself: after Rotorflight edits followed by six or more flights with no further changes, the app's front page gently suggests backing the tune up to the phone \u2014 once per tune, dismissable. Works across battery cycles and counts transmitter edits too."
+    },
+    {
       "name": "RXV2-0.9.341-fewer-twitches",
       "url": "https://messiter.com/rxv2/release/v0.9.341/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.341/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.331/littlefs.bin",
       "fs_md5": "65dd7a14a740d6b4e7f09eaebbf9f846",
       "notes": "Tuning pages polished: Save and Back now float at the bottom of the screen (no more scrolling); every save reads BACK from the flight controller and announces 'Written & verified!' right on the button; and the app's background recording now waits its turn so pages never show another bank's values. The update page also says up front whether an install will use WiFi (fast) or Bluetooth, and why."
-    },
-    {
-      "name": "RXV2-0.9.330-even-cells",
-      "url": "https://messiter.com/rxv2/release/v0.9.330/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.330/littlefs.bin",
-      "fs_md5": "b3ba8ab0a732af95dfe65f733fb9b0d2",
-      "notes": "Cell-count guessing got wiser: packs above 4S only come in even counts (6S, 8S, 12S \u2014 never 11S), so the voltage fallback now rounds odd guesses up. The flight controller's own answer still wins when available."
     }
   ]
 }

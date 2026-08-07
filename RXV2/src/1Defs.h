@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.341-fewer-twitches";
+constexpr const char* FW_VERSION = "RXV2-0.9.342-proven-tune-nudge";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -134,6 +134,18 @@ inline uint32_t fltPardonMsToSend = FLT_PARDON_MS;   // 0 = "unignore now" (Malc
 // phone-free field days. Self-calibrating: drift and DST both wash out.
 inline int32_t txClockOffS     = 0;       // TX clock face minus true UTC, seconds (NVS "txoffs")
 inline bool    txClockOffKnown = false;
+
+// Proven-tune nudge (Malcolm 2026-08-07): a tune that has flown several
+// flights with NO further edits has earned a deliberate backup. Any tuning
+// write (app or TX) sets the RAM flag; each NEW flight save consumes it
+// (gen++, counter reset) or increments the counter — persisted inside the
+// flight save's already-pardoned flash window. state.json exposes both;
+// the app's front page nudges at >= 6 flights, once per gen.
+inline bool     tuneEditsPending = false;   // RAM only
+inline uint16_t tuneEditGen      = 0;       // NVS "egen"
+inline uint32_t tuneFlightsSince = 0;       // NVS "fse"
+constexpr const char* NVS_KEY_EDIT_GEN       = "egen";
+constexpr const char* NVS_KEY_FLT_SINCE_EDIT = "fse";
 
 constexpr uint32_t RF_WINDOW_MS         = 1000;    // boot window: if a TX is heard within this 1 s, go RF-only (WiFi off). Short so WiFi comes up fast when there's no TX (dev); means the TX must be ON BEFORE the receiver to suppress WiFi — which is standard RC practice (TX on first) anyway.
 // RF-only "fly mode" auto-recovery: if the TX link then stays lost this long,
