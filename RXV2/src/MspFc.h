@@ -278,12 +278,21 @@ inline void mspFcPoll() {
 
     // Cycle through the three requests on successive probes so we eventually
     // get all three pieces of info even if some responses are dropped.
+    // Rotorflight has never answered MSP_BATTERY_STATE on our FCs (cells
+    // stays 0) — stop asking after a few silent tries rather than knock on
+    // a door that never opens (2026-08-07, while chasing the field
+    // telemetry dropout).
+    static uint8_t batteryTries = 0;
+    const bool askBattery = (fcInfo.cells == 0 && batteryTries < 6) || fcInfo.cells > 0;
     static uint8_t which = 0;
     switch (which++ % 4) {
         case 0: mspSendRequest(MSP_FC_VARIANT);   break;
         case 1: mspSendRequest(MSP_FC_VERSION);   break;
         case 2: mspSendRequest(MSP_API_VERSION);  break;
-        case 3: mspSendRequest(MSP_BATTERY_STATE); break;   // cell count
+        case 3:
+            if (askBattery) { mspSendRequest(MSP_BATTERY_STATE); if (fcInfo.cells == 0) batteryTries++; }
+            else            { mspSendRequest(MSP_FC_VARIANT); }
+            break;
     }
     fcInfo.probesSent++;
 
@@ -294,6 +303,34 @@ inline void mspFcPoll() {
         fcInfo.versionKnown = false;
         events.add("FC lost — no MSP response in 10s");
     }
+}
+
+//*********************************************************************
+//  FC-telemetry watchdog (Malcolm 2026-08-07: "couldn't see voltage at
+//  the end" at the field, cause unknown — give the dropout a voice).
+//  Logs WHEN the CRSF telemetry stream stops and when it resumes, with
+//  durations, so the event log pinpoints it relative to the landing.
+//*********************************************************************
+
+inline void fcTelemWatch() {
+    static bool wasLive = false;
+    static uint32_t stopLoggedAt = 0;
+    const bool live = fcTelem.lastFrameMs &&
+                      (uint32_t)(millis() - fcTelem.lastFrameMs) < 5000;
+    if (wasLive && !live) {
+        char b[72];
+        snprintf(b, sizeof(b), "FC telemetry STOPPED (no frame for 5 s, proto=%s)",
+                 protocolName(currentProtocol));
+        events.add(b);
+        stopLoggedAt = millis();
+    } else if (!wasLive && live && stopLoggedAt) {
+        char b[64];
+        snprintf(b, sizeof(b), "FC telemetry resumed after %lu s",
+                 (unsigned long)((millis() - stopLoggedAt) / 1000));
+        events.add(b);
+        stopLoggedAt = 0;
+    }
+    wasLive = live;
 }
 
 //*********************************************************************

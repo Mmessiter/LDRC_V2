@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.342-proven-tune-nudge";
+constexpr const char* FW_VERSION = "RXV2-0.9.343-telem-watchdog";
 
 //*********************************************************************
 //  Auto-update manifest URLs

@@ -538,7 +538,8 @@ void loop() {
     } else {
         protocolRx();          // pull any telemetry/MSP bytes the FC has sent back on D5
         mspBridgePoll();       // TCP/5760 ↔ FC for wireless Rotorflight config
-        mspFcPoll();           // periodic FC-variant / FC-version discovery
+        mspFcPoll();
+    fcTelemWatch();           // periodic FC-variant / FC-version discovery
         txParamsLoop();        // TX Rotorflight edits: async MSP read/write state machine
     }
     vbatPoll();                // battery divider ADC (5 Hz, no-op when off)
