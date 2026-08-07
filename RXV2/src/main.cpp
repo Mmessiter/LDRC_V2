@@ -210,6 +210,11 @@ void setup() {
         // the legacy rotation layout (flt0=newest, fltN older) into ring
         // positions for head=0 (older flights live at 19,18,...). Boot-time
         // renames are harmless — no link exists yet.
+        // Previous boot's persisted event tail becomes /evprev.txt.
+        if (LittleFS.exists("/evcur.txt")) {
+            LittleFS.remove("/evprev.txt");
+            LittleFS.rename("/evcur.txt", "/evprev.txt");
+        }
         if (prefs.isKey(NVS_KEY_FLT_HEAD)) {
             fltHead = prefs.getUChar(NVS_KEY_FLT_HEAD, 0) % FLIGHT_KEEP;
         } else {

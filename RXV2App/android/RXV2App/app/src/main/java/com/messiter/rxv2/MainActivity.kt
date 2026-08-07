@@ -825,6 +825,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             req("/api/events.json")
+            req("/api/events-prev.json")   // previous boot's persisted tail
             // Rotorflight reads — all 4 PID-side banks + all 4 rate banks,
             // ONLY with the transmitter off (never switch a bank under a
             // live TX). Current banks from MSP_STATUS fn=101 bytes 24/26

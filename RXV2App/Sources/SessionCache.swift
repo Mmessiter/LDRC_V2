@@ -520,6 +520,7 @@ final class SessionPrefetcher {
                 }
             }
             _ = req("/api/events.json")
+            _ = req("/api/events-prev.json")   // previous boot's persisted tail
             // Rotorflight reads — banked (Malcolm 2026-08-04: each of the 4
             // PID-side banks and 4 rate banks is its own set of values).
             // ONLY with the transmitter off: never switch a bank under a

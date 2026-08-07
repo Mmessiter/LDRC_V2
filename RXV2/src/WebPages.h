@@ -1839,6 +1839,42 @@ inline void handleApiEvents() {
 }
 
 //*********************************************************************
+//  /api/events-prev.json — the PREVIOUS boot's persisted event tail
+//*********************************************************************
+// Written by eventsPersist() at stall-pardoned moments; rotated to
+// /evprev.txt at boot. The reboot-destroys-the-evidence problem
+// (Malcolm 2026-08-07) ends here: the app's session save captures this.
+
+inline void handleApiEventsPrev() {
+    String j;
+    j.reserve(4096);
+    j += '[';
+    File f = littleFsMounted ? LittleFS.open("/evprev.txt", "r") : File();
+    bool first = true;
+    if (f) {
+        while (f.available()) {
+            String line = f.readStringUntil('\n');
+            if (!line.length()) continue;
+            int sp = line.indexOf(' ');
+            if (sp <= 0) continue;
+            if (!first) j += ',';
+            first = false;
+            j += "{\"t\":"; j += line.substring(0, sp);
+            j += ",\"msg\":\"";
+            for (size_t i = (size_t)sp + 1; i < line.length(); ++i) {
+                char c = line[i];
+                if (c == '"' || c == '\\') j += '\\';
+                if (c >= 32) j += c;
+            }
+            j += "\"}";
+        }
+        f.close();
+    }
+    j += ']';
+    server.send(200, "application/json", j);
+}
+
+//*********************************************************************
 //  /api/channels.json — tiny endpoint just for the live channel viewer
 //*********************************************************************
 // Polled at ~10 Hz by data/diagnostics.html. Returns the 16 decoded
@@ -2283,6 +2319,7 @@ inline void registerWebRoutes() {
     server.on("/api/flightlog.json", handleApiFlightLog);
     server.on("/api/flights.json",   handleApiFlights);
     server.on("/api/events.json",   handleApiEvents);
+    server.on("/api/events-prev.json", handleApiEventsPrev);
     server.on("/map",               handleMap);          // sim channel-remap page
     server.on("/api/simmap.json",   handleApiSimMap);    // current sim channel map
     server.on("/simctl",               handleSimCtl);       // sim-function buttons page

@@ -108,9 +108,13 @@ struct RootView: View {
                 if let at = backgroundedAt,
                    Date().timeIntervalSince(at) > 60,
                    !demoMode, !reviewMode {
+                    // Robust: any non-idle state drops to the scanner
+                    // (Malcolm 2026-08-07: "sometimes didn't return to the
+                    // model selection page" — a .connecting/.failed limbo
+                    // slipped through the old .ready/.reconnecting cases).
                     switch link.state {
-                    case .ready, .reconnecting: link.disconnect()
-                    default: break
+                    case .idle: break
+                    default: link.disconnect()
                     }
                 }
                 backgroundedAt = nil

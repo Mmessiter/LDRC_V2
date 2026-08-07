@@ -55,6 +55,25 @@ constexpr uint32_t FLIGHT_MAGIC_FLT2 = 0x32544C46;   // older: no gap-position f
 // Slots saved THIS power-up while the clock was still unknown, recorded as
 // millis()-at-save so a later time sync can back-date them (0 = nothing owed).
 
+
+// Post-mortem event persistence (Malcolm 2026-08-07: Bluetooth dead after
+// landing — TWICE — and the reboot destroyed the RAM event log both times).
+// The ring is copied to flash at moments that are already stall-pardoned;
+// at boot the previous copy becomes /evprev.txt, served in
+// /api/events.json as "prev" (and captured by the phone's session save).
+inline void eventsPersist() {
+    if (!littleFsMounted) return;
+    File f = LittleFS.open("/evcur.txt", "w");
+    if (!f) return;
+    size_t n = events.count;
+    size_t start = (events.head + EventLog::SIZE - n) % EventLog::SIZE;
+    for (size_t i = 0; i < n; ++i) {
+        size_t idx = (start + i) % EventLog::SIZE;
+        f.printf("%lu %s\n", (unsigned long)events.when[idx], events.msgs[idx]);
+    }
+    f.close();
+}
+
 // Proven-tune counter — called ONLY when a NEW flight slot is written
 // (updates of the same session don't recount). Runs inside the flight
 // save's already-pardoned flash window, so the NVS writes cost nothing
@@ -156,6 +175,7 @@ inline void saveFlightToLittleFS(bool rotate = true) {
     if (rotate) { fltHead = target; prefs.putUChar(NVS_KEY_FLT_HEAD, fltHead); }
     fltPendingStampMs[target] = h.savedEpochS ? 0 : millis();   // slots are stable: no shifting
     tuneCountFlight(rotate);
+    eventsPersist();
     events.add(rotate ? "Flight saved to flash" : "Flight updated (same session)");
 }
 
@@ -260,6 +280,7 @@ inline void flightSaveAsyncTick() {
     if (svRotate) { fltHead = target; prefs.putUChar(NVS_KEY_FLT_HEAD, fltHead); }
     fltPendingStampMs[target] = svHdr.savedEpochS ? 0 : millis();
     tuneCountFlight(svRotate);
+    eventsPersist();
     events.add(svRotate ? "Flight saved to flash" : "Flight updated (same session)");
     svState = 0;
 }
