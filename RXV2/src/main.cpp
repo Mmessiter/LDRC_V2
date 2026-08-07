@@ -156,6 +156,8 @@ void setup() {
     armingChannel = prefs.isKey(NVS_KEY_ARM_CH) ? prefs.getUChar(NVS_KEY_ARM_CH, 0) : 0;
     gapMinMs = prefs.isKey(NVS_KEY_GAP_MIN) ? prefs.getUChar(NVS_KEY_GAP_MIN, 5) : 5;
     tzOffsetMin = prefs.isKey(NVS_KEY_TZ_MIN) ? prefs.getShort(NVS_KEY_TZ_MIN, 0) : 0;
+    tuneEditGen      = prefs.isKey(NVS_KEY_EDIT_GEN) ? prefs.getUShort(NVS_KEY_EDIT_GEN, 0) : 0;
+    tuneFlightsSince = prefs.isKey(NVS_KEY_FLT_SINCE_EDIT) ? prefs.getULong(NVS_KEY_FLT_SINCE_EDIT, 0) : 0;
     txClockOffKnown = prefs.isKey(NVS_KEY_TX_OFF_S);
     txClockOffS     = txClockOffKnown ? prefs.getInt(NVS_KEY_TX_OFF_S, 0) : 0;
     if (armingChannel > 16) armingChannel = 0;

@@ -436,6 +436,10 @@ inline void handleMspApi() {
     // probe response is mid-flight on the wire.)
     bool ok = mspRequestAndWait(fn, reqBuf, reqLen, respBuf, &respLen, 400);
     if (!ok) { server.send(504, "text/plain", "flight controller did not respond within 400 ms"); return; }
+    // Proven-tune tracking: any successful tuning write restarts the
+    // flights-since-edit count (consumed at the next flight save).
+    if (reqLen > 0 && (fn == 202 || fn == 204 || fn == 95 || fn == 143 || fn == 149))
+        tuneEditsPending = true;
 
     String s;
     s.reserve(respLen * 2 + 4);
@@ -2106,6 +2110,11 @@ inline void handleApiState() {
 
     // --- sim (drive simulator over USB) ------------------------------
     j += ",\"sim\":"; j += (simEnabled ? "true" : "false");
+
+    // --- proven-tune nudge (Malcolm 2026-08-07) -----------------------
+    snprintf(buf, sizeof(buf), ",\"tune\":{\"gen\":%u,\"flights\":%u}",
+             (unsigned)tuneEditGen, (unsigned)tuneFlightsSince);
+    j += buf;
 
     // --- fc telemetry ------------------------------------------------
     j += ",\"fc\":{";
