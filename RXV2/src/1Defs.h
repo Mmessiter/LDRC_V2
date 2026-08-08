@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.344-event-afterlife";
+constexpr const char* FW_VERSION = "RXV2-0.9.345-instant-check";
 
 //*********************************************************************
 //  Auto-update manifest URLs

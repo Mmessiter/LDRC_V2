@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.345-instant-check",
+      "url": "https://messiter.com/rxv2/release/v0.9.345/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.345/littlefs.bin",
+      "fs_md5": "1df72dcc4118e5a8ba2f79e023c1a2a7",
+      "notes": "The manual Check-for-Update page is now as instant as the automatic prompt: inside the app it reads the release list with the PHONE's internet (like the front-page banner always did) instead of asking the receiver to fetch web pages over its own WiFi \u2014 which was slow at best and impossible with the transmitter on."
+    },
+    {
       "name": "RXV2-0.9.344-event-afterlife",
       "url": "https://messiter.com/rxv2/release/v0.9.344/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.344/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.334/littlefs.bin",
       "fs_md5": "abe0e6318180fa5997295c55c0c5047c",
       "notes": "The floating Save/Back bar now rides up above the on-screen keyboard while you edit a value, instead of sinking behind it."
-    },
-    {
-      "name": "RXV2-0.9.333-fast-lane-banner",
-      "url": "https://messiter.com/rxv2/release/v0.9.333/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.333/littlefs.bin",
-      "fs_md5": "81a3daaaf0ad45d20bac2a6fcfed8c05",
-      "notes": "The front-page update banner now takes the WiFi fast lane too \u2014 the earlier fix only covered the Check-for-Update page, so banner installs still streamed over Bluetooth even with the receiver on WiFi."
     }
   ]
 }
