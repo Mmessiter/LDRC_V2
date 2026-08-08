@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Flight analysis &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=164">
-<script src="/app.js?v=164" defer></script>
+<link rel=stylesheet href="/style.css?v=165">
+<script src="/app.js?v=165" defer></script>
 <style>
 /* Landscape = reading mode (Malcolm 2026-07-31): the page widens and the
    graph grows to occupy most of the screen instead of a slim centre column. */
@@ -400,7 +400,7 @@ function drawFlight(d) {
     ctx.textAlign = 'right'; ctx.fillText(fmt(n * iv * 1000), pad.l + gx, H - 5);
     leg.innerHTML = legHtml;
     note.textContent = anyDrawn
-        ? 'Each line auto-scaled to its own range (min–max in the key) so the shapes line up — watch ESC temp track head speed & current, and the battery sag under load.'
+        ? 'Each line auto-scaled to its own range (min–max in the key).'
         : 'No telemetry sensors on this model — link statistics above are still recorded for every flight.';
 }
 

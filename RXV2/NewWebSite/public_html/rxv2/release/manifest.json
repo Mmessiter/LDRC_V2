@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.346-short-caption",
+      "url": "https://messiter.com/rxv2/release/v0.9.346/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.346/littlefs.bin",
+      "fs_md5": "4f118ea5dff9449164ea1a205208a77d",
+      "notes": "Shorter, calmer graph caption: 'Each line auto-scaled to its own range (min-max in the key).' The tutorial sentence moved out of the way."
+    },
+    {
       "name": "RXV2-0.9.345-instant-check",
       "url": "https://messiter.com/rxv2/release/v0.9.345/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.345/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.335/littlefs.bin",
       "fs_md5": "949097f770a39f6cb3f7d945f601bbee",
       "notes": "Every save now re-selects its own bank at the exact moment of writing \u2014 no possibility of values landing in a different bank, no matter what else is talking to the flight controller. Combined with read-back verification, saves are now bank-proof end to end."
-    },
-    {
-      "name": "RXV2-0.9.334-keyboard-buttons",
-      "url": "https://messiter.com/rxv2/release/v0.9.334/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.334/littlefs.bin",
-      "fs_md5": "abe0e6318180fa5997295c55c0c5047c",
-      "notes": "The floating Save/Back bar now rides up above the on-screen keyboard while you edit a value, instead of sinking behind it."
     }
   ]
 }
