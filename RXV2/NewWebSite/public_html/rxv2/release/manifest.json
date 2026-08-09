@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.347-rename-returns",
+      "url": "https://messiter.com/rxv2/release/v0.9.347/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.347/littlefs.bin",
+      "fs_md5": "41d678380a170f49c83b47edb0dd4d3c",
+      "notes": "After renaming a receiver (or finishing first-run setup) in the app, you're taken straight back to the model list, where it reappears under its new name \u2014 no more force-quitting to reconnect."
+    },
+    {
       "name": "RXV2-0.9.346-short-caption",
       "url": "https://messiter.com/rxv2/release/v0.9.346/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.346/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.336/littlefs.bin",
       "fs_md5": "e7e7a16098e67d659e9db04fb08543fd",
       "notes": "The confused pilot's parachute: 'Restore settings from phone' on the Rotorflight page writes back EVERY recorded setting \u2014 PIDs, advanced PIDs, rates and governor, all four banks \u2014 from the app's session recording, even if no backup was ever made. Transmitter must be off; every item is verified by read-back."
-    },
-    {
-      "name": "RXV2-0.9.335-bank-assert",
-      "url": "https://messiter.com/rxv2/release/v0.9.335/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.335/littlefs.bin",
-      "fs_md5": "949097f770a39f6cb3f7d945f601bbee",
-      "notes": "Every save now re-selects its own bank at the exact moment of writing \u2014 no possibility of values landing in a different bank, no matter what else is talking to the flight controller. Combined with read-back verification, saves are now bank-proof end to end."
     }
   ]
 }
