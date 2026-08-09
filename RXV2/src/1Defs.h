@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.350-deterministic-install";
+constexpr const char* FW_VERSION = "RXV2-0.9.351-install-post-fires";
 
 //*********************************************************************
 //  Auto-update manifest URLs

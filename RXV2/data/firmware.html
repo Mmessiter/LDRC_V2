@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Check for Update &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=169">
-<script src="/app.js?v=169" defer></script>
+<link rel=stylesheet href="/style.css?v=170">
+<script src="/app.js?v=170" defer></script>
 <style>
 /* --- Currently-installed card -------------------------------------- */
 .installed-card .row{
@@ -434,6 +434,10 @@ async function check() {
 async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
     if (installing) return;
     const { ver } = splitName(v.name);
+    // fsMd5 lives HERE, not in the card builder's scope — referencing the
+    // builder's copy threw a ReferenceError that killed every manual
+    // install before its POST ever fired (all three stuck screens).
+    const fsMd5 = v.fs_md5 || '';
     if (!(await LDRC.confirm(
             'Install ' + ver + ' from ' + (SOURCE_LABEL[sourceKey]?.long || 'this source') +
             '? The receiver will reboot.',
