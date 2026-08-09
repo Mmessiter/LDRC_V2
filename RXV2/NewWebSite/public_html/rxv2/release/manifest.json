@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.351-install-post-fires",
+      "url": "https://messiter.com/rxv2/release/v0.9.351/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.351/littlefs.bin",
+      "fs_md5": "682a420c81178bd018c9ab6631219ffb",
+      "notes": "Fixes the stuck manual-install screen for real: a scope bug meant the install command was never actually sent to the receiver \u2014 the page then waited forever for an update that never started. The command now fires (proven by an automated page test), the seconds counter runs, and the page returns you to the model list if Bluetooth hasn't re-linked by ~100 s."
+    },
+    {
       "name": "RXV2-0.9.350-deterministic-install",
       "url": "https://messiter.com/rxv2/release/v0.9.350/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.350/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.340/littlefs.bin",
       "fs_md5": "13ab90584c51356608162c3f1e2e663a",
       "notes": "Help screens now spell out that backing up to the phone captures ALL the Black box data (every saved flight and the event log) as well as every bank's Rotorflight settings \u2014 the phone becomes a complete backup of the model."
-    },
-    {
-      "name": "RXV2-0.9.339-one-backup-system",
-      "url": "https://messiter.com/rxv2/release/v0.9.339/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.339/littlefs.bin",
-      "fs_md5": "8f52b9683ac964d93d0e052f8a1159f9",
-      "notes": "One backup system: the Rotorflight page now carries 'Back up settings to phone' and 'Restore settings from phone' side by side (the phone recording covers every bank, verified on restore). The old receiver-side named-backups page is retired."
     }
   ]
 }
