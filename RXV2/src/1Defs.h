@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.352-reinstall-aware";
+constexpr const char* FW_VERSION = "RXV2-0.9.353-install-progress-bar";
 
 //*********************************************************************
 //  Auto-update manifest URLs

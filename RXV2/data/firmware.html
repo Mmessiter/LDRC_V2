@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Check for Update &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=171">
-<script src="/app.js?v=171" defer></script>
+<link rel=stylesheet href="/style.css?v=172">
+<script src="/app.js?v=172" defer></script>
 <style>
 /* --- Currently-installed card -------------------------------------- */
 .installed-card .row{
@@ -543,8 +543,19 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
         setStatePill('Installing…', 'amber');
         const before2 = currentFw;
         const t2 = Date.now();
-        showMessage('<b>Installing</b> <code>' + ver + '</code> — the receiver downloads over its WiFi, then reboots. ' +
-            '<span class=muted>(<span id=__wsecs>0</span> s — reconnects automatically; if not back by ~100 s you\'ll be returned to the model list, with the update already installed.)</span>');
+        // Estimated glide (same idea as the front-page banner): fill to ~94%
+        // over ~75 s, snap to 100% on confirmation. Malcolm 2026-08-09: "a
+        // long wait will make users give up" — the bar is the reassurance.
+        const ibar = pct =>
+            '<div style="background:rgba(125,158,176,.28);border-radius:9px;height:16px;overflow:hidden;margin:.9em 0 .2em">' +
+            '<div id=__ibar style="height:100%;width:' + pct + '%;background:#6cab5e;border-radius:9px"></div></div>';
+        showMessage('<b>Installing</b> <code>' + ver + '</code> — <span id=__iphase>downloading over the receiver\'s WiFi…</span> ' +
+            '<span class=muted>(<span id=__wsecs>0</span> s — reconnects automatically; if not back by ~100 s you\'ll be returned to the model list, with the update already installed.)</span>' +
+            ibar(0));
+        setTimeout(() => {
+            const b = document.getElementById('__ibar');
+            if (b) { b.style.transition = 'width 75s linear'; b.style.width = '94%'; }
+        }, 60);
         // Success = the receiver reports the TARGET version after the install
         // cycle. "Version changed" alone can't judge a same-version REINSTALL
         // (Malcolm hit this within the hour of 0.9.351 shipping): there the
@@ -552,6 +563,10 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
         // flashes, so polls failing and then the target answering IS the
         // completed cycle.
         let answered2 = false, sawSilence = false;
+        const markFlashing = () => {
+            const p = document.getElementById('__iphase');
+            if (p) p.textContent = 'flashing + rebooting…';
+        };
         while (Date.now() - t2 < 150000) {
             await new Promise(res => setTimeout(res, 2500));
             const we = document.getElementById('__wsecs');
@@ -559,20 +574,20 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
             if (!answered2 && Date.now() - t2 > 100000) break;   // rescue below
             try {
                 const rs = await fetch('/api/state.json', { cache: 'no-store' });
-                if (!rs.ok) { sawSilence = true; continue; }
+                if (!rs.ok) { sawSilence = true; markFlashing(); continue; }
                 const st = await rs.json();
                 const now = (st.info && st.info.fw_version) ? st.info.fw_version : '';
-                if (!now) { sawSilence = true; continue; }
+                if (!now) { sawSilence = true; markFlashing(); continue; }
                 answered2 = true;
                 if (now === v.name && (now !== before2 || sawSilence)) {
                     setStatePill('Installed', 'good');
                     showMessage('<b>\u2713 ' + (before2 === v.name ? 'Reinstalled' : 'Updated') +
-                        '</b> \u2014 now running <code>' + now + '</code>. Page reloads in 5\u2009s.');
+                        '</b> \u2014 now running <code>' + now + '</code>. Page reloads in 5\u2009s.' + ibar(100));
                     setTimeout(() => location.href = '/', 5000);
                     return;
                 }
                 if (Date.now() - t2 > 120000) break;   // answering but never completed
-            } catch (e2) { sawSilence = true; /* rebooting */ }
+            } catch (e2) { sawSilence = true; markFlashing(); /* rebooting */ }
         }
         if (answered2) {
             setStatePill('Failed', 'bad');
