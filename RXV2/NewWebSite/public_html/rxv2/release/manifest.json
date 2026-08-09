@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.349-one-rename",
+      "url": "https://messiter.com/rxv2/release/v0.9.349/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.349/littlefs.bin",
+      "fs_md5": "23fe1353872d9b43c4cbc5416723f373",
+      "notes": "One way to rename: the duplicate rename card on the WiFi page (which misbehaved over Bluetooth) is retired \u2014 tap the model name on the front screen instead."
+    },
+    {
       "name": "RXV2-0.9.348-no-stuck-waits",
       "url": "https://messiter.com/rxv2/release/v0.9.348/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.348/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.338/littlefs.bin",
       "fs_md5": "fb8d8cf3f24abea8ed496d8a5b3fc29d",
       "notes": "Rates page: Max Vel is now editable (it shares one stored value with Rate \u2014 editing either keeps the other in step, matching the official Configurator)."
-    },
-    {
-      "name": "RXV2-0.9.337-named-verify",
-      "url": "https://messiter.com/rxv2/release/v0.9.337/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.337/littlefs.bin",
-      "fs_md5": "c36e1bf44900aa35085c38a6361126b7",
-      "notes": "Phone-restore polish: each item now gets a second attempt if a radio hiccup interrupts it, and anything that still fails to verify is named ('rates bank 2') instead of counted \u2014 so you know exactly what to check."
     }
   ]
 }

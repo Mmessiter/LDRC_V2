@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.348-no-stuck-waits";
+constexpr const char* FW_VERSION = "RXV2-0.9.349-one-rename";
 
 //*********************************************************************
 //  Auto-update manifest URLs
