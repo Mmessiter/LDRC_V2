@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.350-deterministic-install",
+      "url": "https://messiter.com/rxv2/release/v0.9.350/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.350/littlefs.bin",
+      "fs_md5": "faa02b9b0a2a77727857afdc7c7b4659",
+      "notes": "The manual install now uses exactly the strategy that made the automatic prompt reliable: fire the install, ignore its doomed reply, and judge only by the receiver's version changing \u2014 with a visible seconds counter and a guaranteed return to the model list if Bluetooth hasn't re-linked by ~100 s (the update is installed either way). No stuck screens, by construction."
+    },
+    {
       "name": "RXV2-0.9.349-one-rename",
       "url": "https://messiter.com/rxv2/release/v0.9.349/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.349/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.339/littlefs.bin",
       "fs_md5": "8f52b9683ac964d93d0e052f8a1159f9",
       "notes": "One backup system: the Rotorflight page now carries 'Back up settings to phone' and 'Restore settings from phone' side by side (the phone recording covers every bank, verified on restore). The old receiver-side named-backups page is retired."
-    },
-    {
-      "name": "RXV2-0.9.338-maxvel-editable",
-      "url": "https://messiter.com/rxv2/release/v0.9.338/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.338/littlefs.bin",
-      "fs_md5": "fb8d8cf3f24abea8ed496d8a5b3fc29d",
-      "notes": "Rates page: Max Vel is now editable (it shares one stored value with Rate \u2014 editing either keeps the other in step, matching the official Configurator)."
     }
   ]
 }
