@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.346-short-caption";
+constexpr const char* FW_VERSION = "RXV2-0.9.347-rename-returns";
 
 //*********************************************************************
 //  Auto-update manifest URLs

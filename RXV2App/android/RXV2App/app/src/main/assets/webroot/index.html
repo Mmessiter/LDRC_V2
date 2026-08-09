@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Home &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=165">
-<script src="/app.js?v=165" defer></script>
+<link rel=stylesheet href="/style.css?v=166">
+<script src="/app.js?v=166" defer></script>
 <style>
 /* Friendly confirmation card (replaces the browser's utilitarian confirm()) */
 .modal{position:fixed;inset:0;background:rgba(16,38,58,.55);backdrop-filter:blur(2px);
@@ -395,6 +395,22 @@ function paintModelName(s) {
                     fd.set('pass', pass ? pass.value : '');
                 }
                 if (err) err.style.display = 'none';
+                if (window.LDRC && LDRC.viaBle) {
+                    // The reboot cuts the reply mid-transfer over Bluetooth —
+                    // deterministic local farewell, then back to the model
+                    // list where the newly named receiver reappears.
+                    fetch('/api/firstrun', { method: 'POST', body: fd }).catch(() => {});
+                    setTimeout(() => {
+                        const c = document.querySelector('.container');
+                        if (c) c.innerHTML = '<h1>Welcome aboard</h1><div class=card>'
+                            + '<p style="font-size:1.15em;font-weight:600">✅ Rebooting as <b>' + v + '</b>.</p>'
+                            + '<p style="font-weight:700">Returning to the model list — it reappears there under its new name in a few seconds…</p></div>';
+                        setTimeout(() => {
+                            try { window.webkit.messageHandlers.rxv2.postMessage('disconnect'); } catch (e) {}
+                        }, 1500);
+                    }, 900);
+                    return;
+                }
                 fetch('/api/firstrun', { method: 'POST', body: fd })
                   .then(r => r.text()).then(html => {
                       document.open(); document.write(html); document.close();
@@ -448,15 +464,19 @@ function postName(v) {
         const c = document.querySelector('.container');
         if (!c) return;
         const ble = window.LDRC && LDRC.viaBle;
-        // Malcolm's wording: a new name needs a fresh start, so say so —
-        // no 'refresh' suggestions that can't work over a dead link, and
-        // no auto-redirect (the old hostname is gone too).
+        // In the APP: a renamed model is a NEW identity — return to the
+        // model list automatically, where it reappears under its new name
+        // (Malcolm 2026-08-08: "after renaming... I had to exit the app").
         c.innerHTML = '<h1>Name saved</h1><div class=card>'
           + '<p style="font-size:1.15em;font-weight:600">✅ This receiver is rebooting as <b>'
           + shown + '</b>.</p>'
-          + '<p style="font-weight:700">Please exit and reload'
-          + (ble ? ' the app' : ' this page') + ' — the receiver reappears under its new name.</p>'
+          + (ble
+              ? '<p style="font-weight:700">Returning to the model list — it reappears there under its new name in a few seconds…</p>'
+              : '<p style="font-weight:700">Please exit and reload this page — the receiver reappears under its new name.</p>')
           + '</div>';
+        if (ble) setTimeout(() => {
+            try { window.webkit.messageHandlers.rxv2.postMessage('disconnect'); } catch (e) {}
+        }, 1500);
     }, 900);
 }
 
