@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.349-one-rename";
+constexpr const char* FW_VERSION = "RXV2-0.9.350-deterministic-install";
 
 //*********************************************************************
 //  Auto-update manifest URLs
