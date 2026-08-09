@@ -387,6 +387,15 @@ extension BleLink: CBCentralManagerDelegate, CBPeripheralDelegate {
                           let p = self.peripheral else { return }
                     self.central.connect(p, options: nil)
                 }
+                // Deadline watchdog: a pending connect to a POWERED-OFF
+                // board never calls back on iOS, so .reconnecting could
+                // last forever. When the window closes, give up cleanly.
+                let grace = max(2, (until.timeIntervalSinceNow) + 2)
+                DispatchQueue.main.asyncAfter(deadline: .now() + grace) { [weak self] in
+                    guard let self, case .reconnecting = self.state else { return }
+                    if let p = self.peripheral { self.central.cancelPeripheralConnection(p) }
+                    self.state = .idle
+                }
                 return
             }
         }
