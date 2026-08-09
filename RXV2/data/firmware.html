@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Check for Update &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=170">
-<script src="/app.js?v=170" defer></script>
+<link rel=stylesheet href="/style.css?v=171">
+<script src="/app.js?v=171" defer></script>
 <style>
 /* --- Currently-installed card -------------------------------------- */
 .installed-card .row{
@@ -545,7 +545,13 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
         const t2 = Date.now();
         showMessage('<b>Installing</b> <code>' + ver + '</code> — the receiver downloads over its WiFi, then reboots. ' +
             '<span class=muted>(<span id=__wsecs>0</span> s — reconnects automatically; if not back by ~100 s you\'ll be returned to the model list, with the update already installed.)</span>');
-        let answered2 = false;
+        // Success = the receiver reports the TARGET version after the install
+        // cycle. "Version changed" alone can't judge a same-version REINSTALL
+        // (Malcolm hit this within the hour of 0.9.351 shipping): there the
+        // proof is silence-then-return \u2014 the chip can't answer while it
+        // flashes, so polls failing and then the target answering IS the
+        // completed cycle.
+        let answered2 = false, sawSilence = false;
         while (Date.now() - t2 < 150000) {
             await new Promise(res => setTimeout(res, 2500));
             const we = document.getElementById('__wsecs');
@@ -553,23 +559,26 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
             if (!answered2 && Date.now() - t2 > 100000) break;   // rescue below
             try {
                 const rs = await fetch('/api/state.json', { cache: 'no-store' });
-                if (!rs.ok) continue;
+                if (!rs.ok) { sawSilence = true; continue; }
                 const st = await rs.json();
                 const now = (st.info && st.info.fw_version) ? st.info.fw_version : '';
-                if (!now) continue;
+                if (!now) { sawSilence = true; continue; }
                 answered2 = true;
-                if (now !== before2) {
+                if (now === v.name && (now !== before2 || sawSilence)) {
                     setStatePill('Installed', 'good');
-                    showMessage('<b>\u2713 Updated</b> \u2014 now running <code>' + now + '</code>. Page reloads in 5\u2009s.');
+                    showMessage('<b>\u2713 ' + (before2 === v.name ? 'Reinstalled' : 'Updated') +
+                        '</b> \u2014 now running <code>' + now + '</code>. Page reloads in 5\u2009s.');
                     setTimeout(() => location.href = '/', 5000);
                     return;
                 }
-                if (Date.now() - t2 > 120000) break;   // answering but old version
-            } catch (e2) { /* rebooting */ }
+                if (Date.now() - t2 > 120000) break;   // answering but never completed
+            } catch (e2) { sawSilence = true; /* rebooting */ }
         }
         if (answered2) {
             setStatePill('Failed', 'bad');
-            showMessage('The receiver came back still on <code>' + splitName(before2).ver + '</code> \u2014 the install did not complete. Try again.');
+            showMessage(before2 === v.name
+                ? 'The receiver kept answering on <code>' + splitName(before2).ver + '</code> without a reboot cycle \u2014 the reinstall may not have run. Try again.'
+                : 'The receiver came back still on <code>' + splitName(before2).ver + '</code> \u2014 the install did not complete. Try again.');
             installing = false; $('check').disabled = false;
             document.querySelectorAll('.ver-btn').forEach(b => b.disabled = false);
         } else {

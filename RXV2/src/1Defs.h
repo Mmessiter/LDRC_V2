@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.351-install-post-fires";
+constexpr const char* FW_VERSION = "RXV2-0.9.352-reinstall-aware";
 
 //*********************************************************************
 //  Auto-update manifest URLs
