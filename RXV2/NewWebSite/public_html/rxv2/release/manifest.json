@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.353-install-progress-bar",
+      "url": "https://messiter.com/rxv2/release/v0.9.353/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.353/littlefs.bin",
+      "fs_md5": "5843899e2e4a91d76abbf79e90d03508",
+      "notes": "The manual install screen now shows a moving progress bar (like the front-page update prompt) with a phase note that switches to 'flashing + rebooting' when the receiver goes quiet \u2014 no more bare seconds counter during the wait."
+    },
+    {
       "name": "RXV2-0.9.352-reinstall-aware",
       "url": "https://messiter.com/rxv2/release/v0.9.352/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.352/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.342/littlefs.bin",
       "fs_md5": "b21d70ee6a9a960576327736db7f83e1",
       "notes": "The receiver now notices when a tune has PROVEN itself: after Rotorflight edits followed by six or more flights with no further changes, the app's front page gently suggests backing the tune up to the phone \u2014 once per tune, dismissable. Works across battery cycles and counts transmitter edits too."
-    },
-    {
-      "name": "RXV2-0.9.341-fewer-twitches",
-      "url": "https://messiter.com/rxv2/release/v0.9.341/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.341/littlefs.bin",
-      "fs_md5": "e84872d07c7f4fa2fc06c3bdb7522364",
-      "notes": "The little swashplate twitch during bank changes and saves is the flight controller pausing to write its memory (the official Configurator does it too) \u2014 harmless, now explained in the help. The app also skips unnecessary bank changes during backup and restore, so it happens less."
     }
   ]
 }
