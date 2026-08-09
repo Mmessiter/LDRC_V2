@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Home &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=166">
-<script src="/app.js?v=166" defer></script>
+<link rel=stylesheet href="/style.css?v=167">
+<script src="/app.js?v=167" defer></script>
 <style>
 /* Friendly confirmation card (replaces the browser's utilitarian confirm()) */
 .modal{position:fixed;inset:0;background:rgba(16,38,58,.55);backdrop-filter:blur(2px);
@@ -882,6 +882,14 @@ async function doFirmwareUpdate(url, fsUrl, name) {
         }
         // Rare hang only: after ~75 s, say so in plain text (no button — just reload).
         if (n === 75) { const sl = document.getElementById('__slow'); if (sl) sl.textContent = 'Taking longer than usual — you can reload the page.'; }
+        // In the APP: never wait forever — after ~100 s return to the model
+        // list and reconnect there (Malcolm 2026-08-08).
+        if (n === 100 && ok === 0 && window.LDRC && LDRC.viaBle) {
+            const sl = document.getElementById('__slow');
+            if (sl) sl.textContent = 'The receiver has rebooted with the update — returning to the model list…';
+            setTimeout(() => { try { window.webkit.messageHandlers.rxv2.postMessage('disconnect'); } catch (e) {} }, 2500);
+            return;
+        }
         if (n >= 180) return;
         n++; setTimeout(tick, 1000);
     };

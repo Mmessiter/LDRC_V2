@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Check for Update &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=166">
-<script src="/app.js?v=166" defer></script>
+<link rel=stylesheet href="/style.css?v=167">
+<script src="/app.js?v=167" defer></script>
 <style>
 /* --- Currently-installed card -------------------------------------- */
 .installed-card .row{
@@ -555,11 +555,21 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
         const before = currentFw;
         const t0 = Date.now();
         let verdict = '';
+        let answered = false;
         while (Date.now() - t0 < 300000) {
             await new Promise(res => setTimeout(res, 2500));
+            // In the APP: never wait forever (Malcolm 2026-08-08, 'it sticks
+            // at the screen') — if Bluetooth hasn't reconnected ~100 s after
+            // the reboot, the install has certainly finished on the receiver;
+            // return to the model list and confirm the version there.
+            if (!answered && window.LDRC && LDRC.viaBle && Date.now() - t0 > 100000) {
+                verdict = 'scanner';
+                break;
+            }
             try {
                 const rs = await fetch('/api/state.json', { cache: 'no-store' });
                 if (!rs.ok) continue;
+                answered = true;
                 const st = await rs.json();
                 const now = (st.info && st.info.fw_version) ? st.info.fw_version : '';
                 if (!now) continue;
@@ -574,6 +584,12 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
             setStatePill('Installed', 'good');
             showMessage('<b>\u2713 Updated</b> \u2014 now running <code>' + verdict + '</code>. Page reloads in 5\u2009s.');
             setTimeout(() => location.href = '/', 5000);
+            return;
+        }
+        if (verdict === 'scanner') {
+            setStatePill('Installed', 'good');
+            showMessage('<b>The receiver has rebooted with the update.</b> Returning to the model list — reconnect there to confirm the new version…');
+            setTimeout(() => { try { window.webkit.messageHandlers.rxv2.postMessage('disconnect'); } catch (e) {} }, 2500);
             return;
         }
         if (verdict === 'same') {
