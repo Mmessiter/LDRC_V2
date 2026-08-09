@@ -1140,7 +1140,8 @@ class MainActivity : AppCompatActivity() {
             if (p == "/api/msp") lastPageMspMs = System.currentTimeMillis()
             // Reboot-ish traffic keeps the ride-through reconnect armed;
             // plain browsing doesn't — a disconnect then = model off.
-            if (method.uppercase() == "POST" && p != "/api/time") ble.noteRebootish(180_000)
+            if (method.uppercase() == "POST" && p != "/api/time")
+                ble.noteRebootish(if (p == "/api/firmware/install") 300_000 else 15_000)
             val headers = HashMap<String, String>()
             runCatching {
                 val o = JSONObject(headersJson)

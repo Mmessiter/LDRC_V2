@@ -222,8 +222,12 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
         // Reboot-ish traffic (anything that can restart or silence the
         // receiver deliberately): keep the ride-through reconnect armed.
         // Plain browsing never arms it — a disconnect then = model off.
+        // A config-save reboot drops the link within ~3 s of its POST, so
+        // 15 s suffices; only a firmware install disconnects minutes later
+        // (Malcolm 2026-08-08: power-off after setting up a NEW receiver
+        // sat in the old 180 s window instead of jumping to the scanner).
         if method == "POST" && path != "/api/time" {
-            BleLink.noteRebootish(seconds: 180)
+            BleLink.noteRebootish(seconds: path == "/api/firmware/install" ? 300 : 15)
         }
         var pathAndQuery = path
         if let q = url.query, !q.isEmpty { pathAndQuery += "?\(q)" }
