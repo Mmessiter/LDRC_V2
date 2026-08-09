@@ -335,6 +335,19 @@ extension BleLink: CBCentralManagerDelegate, CBPeripheralDelegate {
                         advertisementData: [String: Any], rssi RSSI: NSNumber) {
         let name = (advertisementData[CBAdvertisementDataLocalNameKey] as? String)
                  ?? peripheral.name ?? "RXV2"
+        // Reconnect via fresh discovery: the rebooted receiver reappears
+        // here first — grab it the same way a manual tap would.
+        if case .reconnecting(let wanted) = state,
+           peripheral.identifier == self.peripheral?.identifier || name == wanted {
+            central.stopScan()
+            if let old = self.peripheral, old !== peripheral {
+                central.cancelPeripheralConnection(old)
+            }
+            self.peripheral = peripheral
+            peripheral.delegate = self
+            central.connect(peripheral, options: nil)
+            return
+        }
         if let i = found.firstIndex(where: { $0.id == peripheral.identifier }) {
             found[i] = Discovered(id: peripheral.identifier, name: name,
                                   rssi: RSSI.intValue, peripheral: peripheral)
@@ -387,12 +400,19 @@ extension BleLink: CBCentralManagerDelegate, CBPeripheralDelegate {
                           let p = self.peripheral else { return }
                     self.central.connect(p, options: nil)
                 }
+                // Scan-assisted reconnect (Malcolm 2026-08-08: the manual
+                // install stuck at 'waiting for it to come back'): a blind
+                // pending connect can miss a rebooted stack, but a FRESH
+                // discovery + connect is exactly the manual-tap path that
+                // always works. didDiscover completes it.
+                central.scanForPeripherals(withServices: [Self.serviceUUID], options: nil)
                 // Deadline watchdog: a pending connect to a POWERED-OFF
                 // board never calls back on iOS, so .reconnecting could
                 // last forever. When the window closes, give up cleanly.
                 let grace = max(2, (until.timeIntervalSinceNow) + 2)
                 DispatchQueue.main.asyncAfter(deadline: .now() + grace) { [weak self] in
                     guard let self, case .reconnecting = self.state else { return }
+                    self.central.stopScan()
                     if let p = self.peripheral { self.central.cancelPeripheralConnection(p) }
                     self.state = .idle
                 }
