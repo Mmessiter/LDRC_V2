@@ -56,12 +56,15 @@ input:disabled{background:#eee;color:#999}
         <h2>Calibration (gains)</h2>
         <div class=fldRow><label>Collective gain (%)</label> <input type=number id=t_gColl step=1 min=0 max=500></div>
         <div class=fldRow><label>Cyclic gain (%)</label>     <input type=number id=t_gCyc  step=1 min=0 max=500></div>
+        <div class=fldRow><label>Geo correction</label>      <input type=number id=t_geo   step=0.2 min=-25 max=25></div>
         <p class=cardNote>These make the degrees MEAN degrees: the gain scales how far the swash
         really moves per commanded degree. If a pitch gauge reads less than the limit says
         (e.g. 6&deg; real when 14&deg; is commanded), multiply the gain by the ratio
         (here &times;14/6). Direction is preserved — only the amount changes. Re-measure after
         saving; if the reading stops growing, the servo travel is the ceiling — stop and
-        investigate before forcing it.</p>
+        investigate before forcing it. <b>Geo correction</b> evens up unequal positive vs
+        negative collective (linkage geometry): if up reads less than down, step it one way,
+        re-measure, and reverse if the gap widens.</p>
     </div>
 
     <div class=card>
@@ -199,6 +202,9 @@ async function load() {
         // Gains — rate magnitude in 0.1 % (sign = direction, preserved on save).
         document.getElementById('t_gColl').value = Math.round(Math.abs(s16At(cachedInputs, inOff(4,0))) / 10);
         document.getElementById('t_gCyc').value  = Math.round(Math.abs(s16At(cachedInputs, inOff(1,0))) / 10);
+        // Geo correction — s8 at cfg[18], UI = raw/5 (0.2 steps, ±25).
+        const geoRaw = cachedCfg[18] > 127 ? cachedCfg[18] - 256 : cachedCfg[18];
+        document.getElementById('t_geo').value = d1(geoRaw / 5);
         document.getElementById('t_total').value = d1((cachedCfg[9] | (cachedCfg[10]<<8)) * 12/1000);
         // Trims (0.1 deg raw).
         document.getElementById('t_trR').value = d1(s16At(cachedCfg,11) * 0.1);
@@ -231,6 +237,9 @@ function buildPayloads() {
     putS16(cfg, 15, clamp(Math.round(num('t_trC') * 10), -1000, 1000));
     const ts = tailScale();
     putS16(cfg, 3, clamp(Math.round(num('t_tailCtr') * ts), -1000, 1000));
+    // Geo correction: UI ±25 in 0.2 steps → s8 raw = ui×5, two's complement.
+    let geo = clamp(Math.round(num('t_geo') * 5), -125, 125);
+    cfg[18] = geo < 0 ? geo + 256 : geo;
 
     const ins = new Uint8Array(cachedInputs);
     const collRaw = clamp(Math.round(num('t_coll') * 1000/12), 0, 2500);
@@ -293,7 +302,7 @@ async function save() {
         const diffs = [];
         // Only judge the fields this page owns; the FC may legitimately
         // adjust swash_pitch_limit upward (it enforces collective + 6°).
-        const ownCfg = [3,4,9,10,11,12,13,14,15,16];   // tail_center_trim, pitch_limit, trims
+        const ownCfg = [3,4,9,10,11,12,13,14,15,16,18];   // tail_center_trim, pitch_limit, trims, geo
         for (const o of ownCfg) if (cfg[o] !== ckCfg[o]) diffs.push('cfg[' + o + ']');
         for (const idx of [1,2,3,4]) for (let f=0; f<=2; f++) {
             if (idx === 3 && f === 0) continue;   // tail rate never written

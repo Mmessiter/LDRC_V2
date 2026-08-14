@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.357-travel-gains";
+constexpr const char* FW_VERSION = "RXV2-0.9.358-geo-correction";
 
 //*********************************************************************
 //  Auto-update manifest URLs
