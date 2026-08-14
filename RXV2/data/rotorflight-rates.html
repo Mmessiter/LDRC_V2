@@ -88,14 +88,14 @@ table.dyn-yaw td input{width:6em;padding:.4em;font-size:.95em;text-align:right;
     <div id=advCard class=card style="display:none">
         <h2>Dynamics</h2>
         <table class=rt>
-            <thead><tr><th></th><th>Setpoint boost gain</th><th>Setpoint boost cutoff</th></tr></thead>
+            <thead><tr><th></th><th>Stick sharpening (setpoint boost gain)</th><th>Sharpening smoothing (cutoff)</th></tr></thead>
             <tbody id=boostBody></tbody>
         </table>
         <h2 style="margin-top:1em">Yaw dynamics</h2>
         <table class=dyn-yaw>
-            <tr><td class=lab>Dynamic ceiling gain</td>   <td><input type=number id=a_ydcg></td></tr>
-            <tr><td class=lab>Dynamic deadband gain</td>  <td><input type=number id=a_yddg></td></tr>
-            <tr><td class=lab>Dynamic deadband filter</td><td><input type=number id=a_yddf></td></tr>
+            <tr><td class=lab>Fast-move headroom (dynamic ceiling gain)</td>   <td><input type=number id=a_ydcg></td></tr>
+            <tr><td class=lab>Stick-centre quieting (dynamic deadband gain)</td>  <td><input type=number id=a_yddg></td></tr>
+            <tr><td class=lab>Quieting smoothing (dynamic deadband filter)</td><td><input type=number id=a_yddf></td></tr>
         </table>
     </div>
     <button class="btn btn-fw" id=reloadBtn onclick="load()"><span class=ico>&#8635;</span>Reload from flight controller</button>

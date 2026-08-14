@@ -62,22 +62,22 @@ input:disabled{background:#eee;color:#999}
 
     <div class=card>
         <h2>Tail-torque assist</h2>
-        <div class=fldRow><label>TTA gain</label>                 <input type=number id=g_ttag></div>
-        <div class=fldRow><label>TTA limit (%)</label>            <input type=number id=g_ttal></div>
+        <div class=fldRow><label>Tail-torque assist strength (TTA gain)</label>                 <input type=number id=g_ttag></div>
+        <div class=fldRow><label>Tail-torque assist limit % (TTA limit)</label>            <input type=number id=g_ttal></div>
     </div>
 
     <div class=card>
-        <h2>Feed-forward weights (%)</h2>
-        <div class=fldRow><label>Yaw weight</label>               <input type=number id=g_yw></div>
-        <div class=fldRow><label>Cyclic weight</label>            <input type=number id=g_cw></div>
-        <div class=fldRow><label>Collective weight</label>        <input type=number id=g_colw></div>
+        <h2>Throttle anticipation (feed-forward weights, %)</h2>
+        <div class=fldRow><label>Anticipate yaw moves (yaw weight)</label>               <input type=number id=g_yw></div>
+        <div class=fldRow><label>Anticipate cyclic moves (cyclic weight)</label>            <input type=number id=g_cw></div>
+        <div class=fldRow><label>Anticipate collective moves (collective weight)</label>        <input type=number id=g_colw></div>
     </div>
 
     <div class=card>
         <h2>Throttle limits (%)</h2>
         <div class=fldRow><label>Max throttle</label>             <input type=number id=g_maxt></div>
         <div class=fldRow><label>Min throttle</label>             <input type=number id=g_mint></div>
-        <div class=fldRow><label>Fall-back drop</label>           <input type=number id=g_fbd></div>
+        <div class=fldRow><label>Throttle drop if RPM signal lost (fall-back drop)</label>           <input type=number id=g_fbd></div>
     </div>
     <button class="btn btn-fw" id=reloadBtn onclick="load()"><span class=ico>&#8635;</span>Reload from flight controller</button>
 
