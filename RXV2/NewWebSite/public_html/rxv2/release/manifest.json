@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.361-bench-measure",
+      "url": "https://messiter.com/rxv2/release/v0.9.361/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.361/littlefs.bin",
+      "fs_md5": "2dd3367ca9b08c570cfc1df180cd9e59",
+      "notes": "Bench measure on Travel extents: hold the swash at an exact angle with the gyros bypassed (Rotorflight's mixer override) so a pitch gauge can calibrate CYCLIC gain from the phone \u2014 no laptop. Pick Roll/Pitch/Collective and an angle, 'Hold this angle', measure the PEAK reading while rotating the head, then gain = current x commanded/peak. Guarded: refuses while armed, the FC refuses to arm while held, released on leaving the page and by a 5-minute auto-release. A step toward the full phone setup wizard."
+    },
+    {
       "name": "RXV2-0.9.360-plain-english",
       "url": "https://messiter.com/rxv2/release/v0.9.360/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.360/littlefs.bin",
@@ -74,13 +81,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.350/littlefs.bin",
       "fs_md5": "faa02b9b0a2a77727857afdc7c7b4659",
       "notes": "The manual install now uses exactly the strategy that made the automatic prompt reliable: fire the install, ignore its doomed reply, and judge only by the receiver's version changing \u2014 with a visible seconds counter and a guaranteed return to the model list if Bluetooth hasn't re-linked by ~100 s (the update is installed either way). No stuck screens, by construction."
-    },
-    {
-      "name": "RXV2-0.9.349-one-rename",
-      "url": "https://messiter.com/rxv2/release/v0.9.349/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.349/littlefs.bin",
-      "fs_md5": "23fe1353872d9b43c4cbc5416723f373",
-      "notes": "One way to rename: the duplicate rename card on the WiFi page (which misbehaved over Bluetooth) is retired \u2014 tap the model name on the front screen instead."
     }
   ]
 }
