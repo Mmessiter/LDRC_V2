@@ -125,11 +125,15 @@ function renderLink(lk, savedAt, fIdx) {
     // Friendly explanation (Malcolm 2026-08-02): tuning sessions produce
     // bigger gaps because the TRANSMITTER pauses briefly for each parameter
     // read/save — honest numbers, but alarming without context.
+    // Wording: param_ops counts READS as well as writes — merely opening a
+    // Rotorflight screen on the TX fires a read, so "were edited" claimed
+    // edits the user never made (Malcolm 2026-08-14, Black Thunder II's
+    // first flights: "I made no Rotorflight edits").
     if (lk.param_ops > 0) {
         h += '<div style="margin-top:.5em;padding:.55em .8em;border-radius:8px;background:#ffdf9e;' +
-             'color:#5c3a00;font-size:.85em;line-height:1.45">&#128295; Rotorflight settings were edited from the ' +
-             'transmitter during this session — each read or save briefly pauses its transmission, so larger ' +
-             'gaps and radio swaps here are expected, not a link problem.</div>';
+             'color:#5c3a00;font-size:.85em;line-height:1.45">&#128295; Rotorflight screens were viewed (or ' +
+             'settings edited) from the transmitter during this session — each read or save briefly pauses its ' +
+             'transmission, so larger gaps and radio swaps here are expected, not a link problem.</div>';
     }
     lkHist.innerHTML = h;
     const note = document.getElementById('lkNote');

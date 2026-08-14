@@ -82,7 +82,14 @@ async function refreshStatus() {
     if (!s) return;
     const fc = s.fc || {}, rf = s.rf || {};
     const telemLive = (typeof fc.last_frame_ms === 'number' && fc.last_frame_ms >= 0 && fc.last_frame_ms < 3000);
-    const v = telemLive ? +fc.v : null;
+    // After the model powers down, keep showing the LAST-KNOWN voltage
+    // (greyed, with its age) instead of a blank — that post-flight moment is
+    // exactly when Malcolm checks "did I land the packs at 3.80 V/cell?"
+    // (2026-08-14). fc.v is the receiver's cached last reading; a reboot
+    // clears it, so a stale figure can never outlive the session it came from.
+    const vStale = (!telemLive && typeof fc.last_frame_ms === 'number' &&
+                    fc.last_frame_ms >= 3000 && +fc.v > 0.5) ? +fc.v : null;
+    const v = telemLive ? +fc.v : vStale;
     const cellEl = document.getElementById('stCell');
     const packEl = document.getElementById('stPack');
     const fill = document.getElementById('battFill');
@@ -98,10 +105,16 @@ async function refreshStatus() {
         const soc = lipoPct(per);                            // resting state-of-charge
         const col = soc >= 50 ? '#2e7d32' : soc >= 20 ? '#d99a3a' : '#c0392b';  // green / amber / red
         cellEl.textContent = per.toFixed(2);
-        cellEl.style.color = col;
-        packEl.innerHTML = cells + 'S &middot; ' + v.toFixed(2) + ' V &middot; ~' + soc + '%';
+        cellEl.style.color = telemLive ? col : '#5a6b74';    // grey when it's a last-known reading
+        let packLine = cells + 'S &middot; ' + v.toFixed(2) + ' V &middot; ~' + soc + '%';
+        if (!telemLive) {
+            const ageS = Math.round(fc.last_frame_ms / 1000);
+            const ageTxt = ageS < 90 ? ageS + ' s' : Math.round(ageS / 60) + ' min';
+            packLine += ' <span style="color:#5a6b74">&middot; last seen ' + ageTxt + ' ago</span>';
+        }
+        packEl.innerHTML = packLine;
         fill.setAttribute('width', Math.max(0, Math.round(50 * soc / 100)));   // 50 = full inner width
-        fill.setAttribute('fill', col);
+        fill.setAttribute('fill', telemLive ? col : '#9aa7ad');
     } else {
         cellEl.textContent = '—'; cellEl.style.color = '';
         packEl.textContent = '';
@@ -133,7 +146,9 @@ async function refreshStatus() {
     document.getElementById('stRows').innerHTML = rows;
     document.getElementById('stNote').textContent = telemLive
         ? '% is a resting-voltage estimate (reads low under load). Cell count auto-detected. Store at 3.80 V/cell (~40%).'
-        : 'No flight-controller telemetry — is the model powered and on CRSF?';
+        : (vStale != null
+            ? 'Model powered down — showing the last reading from this session. Store at 3.80 V/cell (~40%).'
+            : 'No flight-controller telemetry — is the model powered and on CRSF?');
 }
 
 document.addEventListener('DOMContentLoaded', () => {
