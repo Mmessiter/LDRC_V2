@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.355-travel-extents",
+      "url": "https://messiter.com/rxv2/release/v0.9.355/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.355/littlefs.bin",
+      "fs_md5": "db4edadfc4ada233ff2543ee4bec087a",
+      "notes": "NEW: 'Travel extents' screen in the Rotorflight menu \u2014 born at the field when Black Thunder II's first hover showed nowhere near enough collective pitch. Edit the collective pitch limit, cyclic pitch limit, total swash limit, swashplate trims and tail travel (Rotorflight 2.3 mixer limits) right from the phone. Changes apply immediately (no reboot), are saved to the flight controller's memory, and are verified by read-back. Always check new extents on the bench before flying."
+    },
+    {
       "name": "RXV2-0.9.354-honest-flight-notes",
       "url": "https://messiter.com/rxv2/release/v0.9.354/firmware.bin",
       "notes": "Two flight-screen fixes from Black Thunder II's first flights: the yellow note now says Rotorflight screens were VIEWED (or edited) from the transmitter \u2014 just browsing screens fires parameter reads, so it no longer claims edits you never made. And the Black box status keeps showing the battery's LAST-KNOWN voltage (greyed, with its age) after the model powers down \u2014 exactly when you check the packs landed at 3.80 V/cell \u2014 instead of going blank."
@@ -74,13 +81,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.344/littlefs.bin",
       "fs_md5": "2ee9d5aed8b2f733ec116ed5a047d4e7",
       "notes": "Chasing the Bluetooth-dead-after-landing bug: the event log now SURVIVES reboots (persisted to flash at safe moments, previous boot readable afterwards and captured by session saves), and a watchdog keeps re-trying the post-landing Bluetooth revival every 30 s instead of leaving you to reboot."
-    },
-    {
-      "name": "RXV2-0.9.343-telem-watchdog",
-      "url": "https://messiter.com/rxv2/release/v0.9.343/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.343/littlefs.bin",
-      "fs_md5": "091e4c7976a16a8903ee291ff5d129a9",
-      "notes": "Chasing the field telemetry dropout: the event log now records exactly WHEN flight-controller telemetry stops and when it resumes (with durations), and the battery-cell-count query stops pestering flight controllers that never answer it."
     }
   ]
 }

@@ -249,6 +249,14 @@ inline void handleRotorflightGovGlobal() {
     server.send(503, "text/plain", "/rotorflight-gov-global.html missing — uploadfs the data/ folder");
 }
 
+// Travel extents (Malcolm 2026-08-14, after Black Thunder II's first flight):
+// RF 2.3 mixer limits — collective/cyclic/total swash pitch, swash trims,
+// tail travel — editable over the link. Spec: TRAVEL-EXTENTS-MSP-SPEC.md.
+inline void handleRotorflightTravel() {
+    if (serveLittleFsFile("/rotorflight-travel.html", "text/html")) return;
+    server.send(503, "text/plain", "/rotorflight-travel.html missing — uploadfs the data/ folder");
+}
+
 // The receiver-side named-backups PAGE retired 2026-08-06 (Malcolm: one
 // backup system — the app's phone backup/restore). The /api/backup*
 // endpoints below survive: dev tooling (preserve_backups.py) uses them.
@@ -2286,6 +2294,7 @@ inline void registerWebRoutes() {
     server.on("/rotorflight-rates",        handleRotorflightRates);
     server.on("/rotorflight-gov-profile",  handleRotorflightGovProfile);
     server.on("/rotorflight-gov-global",   handleRotorflightGovGlobal);
+    server.on("/rotorflight-travel",       handleRotorflightTravel);
     server.on("/rotorflight-backups",      handleRotorflightBackups);
     server.on("/api/backup/list",          HTTP_GET,  handleBackupList);
     server.on("/api/backup/load",          HTTP_GET,  handleBackupLoad);
