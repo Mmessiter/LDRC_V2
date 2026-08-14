@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.353-install-progress-bar";
+constexpr const char* FW_VERSION = "RXV2-0.9.354-honest-flight-notes";
 
 //*********************************************************************
 //  Auto-update manifest URLs
