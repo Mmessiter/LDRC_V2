@@ -55,7 +55,7 @@ input:disabled,select:disabled{background:#eee;color:#999}
                 <option value=3>3 — ELECTRIC</option>
                 <option value=4>4 — NITRO</option>
             </select></div>
-        <div class=fldRow><label>Handover throttle (%)</label>    <input type=number id=g_hand></div>
+        <div class=fldRow><label>Governor takes over above (handover throttle, %)</label>    <input type=number id=g_hand></div>
         <div class=fldRow><label>Throttle type</label>            <input type=number id=g_ttype></div>
         <div class=fldRow><label>Idle throttle (%)</label>        <input type=number id=g_idle></div>
         <div class=fldRow><label>Auto throttle (%)</label>        <input type=number id=g_auto></div>
@@ -66,18 +66,18 @@ input:disabled,select:disabled{background:#eee;color:#999}
         <div class=fldRow><label>Startup time</label>             <input type=number id=g_start></div>
         <div class=fldRow><label>Spool-up time</label>            <input type=number id=g_spool></div>
         <div class=fldRow><label>Spool-down time</label>          <input type=number id=g_spdwn></div>
-        <div class=fldRow><label>Tracking time</label>            <input type=number id=g_track></div>
-        <div class=fldRow><label>Recovery time</label>            <input type=number id=g_recov></div>
+        <div class=fldRow><label>Speed-change time (tracking time)</label>            <input type=number id=g_track></div>
+        <div class=fldRow><label>Quick-restart time (recovery time)</label>            <input type=number id=g_recov></div>
         <div class=fldRow><label>Throttle-hold timeout</label>    <input type=number id=g_hold></div>
         <div class=fldRow><label>Autorotation timeout</label>     <input type=number id=g_auto_to></div>
     </div>
 
     <div class=card>
-        <h2>Filter cutoffs (Hz)</h2>
+        <h2>Signal smoothing (filter cutoffs, Hz)</h2>
         <div class=fldRow><label>Power filter</label>             <input type=number id=g_fpwr></div>
         <div class=fldRow><label>RPM filter</label>               <input type=number id=g_frpm></div>
-        <div class=fldRow><label>TTA filter</label>               <input type=number id=g_ftta></div>
-        <div class=fldRow><label>FF filter</label>                <input type=number id=g_fff></div>
+        <div class=fldRow><label>Tail-torque assist filter (TTA)</label>               <input type=number id=g_ftta></div>
+        <div class=fldRow><label>Feed-forward filter (FF)</label>                <input type=number id=g_fff></div>
         <div class=fldRow><label>D filter</label>                 <input type=number id=g_fd></div>
     </div>
 

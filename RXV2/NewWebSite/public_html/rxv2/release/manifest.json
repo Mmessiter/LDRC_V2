@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.360-plain-english",
+      "url": "https://messiter.com/rxv2/release/v0.9.360/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.360/littlefs.bin",
+      "fs_md5": "8c7a60431a1acd5cd7601b56b11bf404",
+      "notes": "Plain English across ALL Rotorflight screens (Malcolm: brilliant technicians were frequently simply not taught good English!). Every cryptic label now says what it does, with Rotorflight's own term kept in brackets for cross-reference: 'Hold cyclic true in pirouettes (piro comp)', 'Roll wind-up relief (I-term relax cutoff)', 'Stick sharpening (setpoint boost gain)', 'Tail-torque assist strength (TTA gain)', 'Throttle anticipation (feed-forward weights)', 'Quick-restart time (recovery time)', and friends \u2014 45 labels in all."
+    },
+    {
       "name": "RXV2-0.9.359-plain-names",
       "url": "https://messiter.com/rxv2/release/v0.9.359/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.359/littlefs.bin",
@@ -74,13 +81,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.349/littlefs.bin",
       "fs_md5": "23fe1353872d9b43c4cbc5416723f373",
       "notes": "One way to rename: the duplicate rename card on the WiFi page (which misbehaved over Bluetooth) is retired \u2014 tap the model name on the front screen instead."
-    },
-    {
-      "name": "RXV2-0.9.348-no-stuck-waits",
-      "url": "https://messiter.com/rxv2/release/v0.9.348/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.348/littlefs.bin",
-      "fs_md5": "c47476f2d654814bb6562f15b184ab63",
-      "notes": "No more stuck 'waiting for it to come back' screens: after an install the app reconnects via a fresh Bluetooth discovery (the reliable path), and if reconnection still hasn't happened ~100 s after the reboot, both install screens return you to the model list to reconnect there \u2014 the update itself is already safely installed."
     }
   ]
 }
