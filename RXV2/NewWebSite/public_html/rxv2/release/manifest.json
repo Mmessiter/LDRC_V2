@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.356-travel-extents-2",
+      "url": "https://messiter.com/rxv2/release/v0.9.356/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.356/littlefs.bin",
+      "fs_md5": "b4bd355141d6f056fadee347e7d3d826",
+      "notes": "Travel extents fixes: mixer inputs are now read one at a time (the bulk read could never fit through the radio link, which is why the first version failed to load), and the status message is sticky at the top of the screen so it stays visible next to the Reload/Save buttons."
+    },
+    {
       "name": "RXV2-0.9.355-travel-extents",
       "url": "https://messiter.com/rxv2/release/v0.9.355/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.355/littlefs.bin",
@@ -74,13 +81,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.345/littlefs.bin",
       "fs_md5": "1df72dcc4118e5a8ba2f79e023c1a2a7",
       "notes": "The manual Check-for-Update page is now as instant as the automatic prompt: inside the app it reads the release list with the PHONE's internet (like the front-page banner always did) instead of asking the receiver to fetch web pages over its own WiFi \u2014 which was slow at best and impossible with the transmitter on."
-    },
-    {
-      "name": "RXV2-0.9.344-event-afterlife",
-      "url": "https://messiter.com/rxv2/release/v0.9.344/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.344/littlefs.bin",
-      "fs_md5": "2ee9d5aed8b2f733ec116ed5a047d4e7",
-      "notes": "Chasing the Bluetooth-dead-after-landing bug: the event log now SURVIVES reboots (persisted to flash at safe moments, previous boot readable afterwards and captured by session saves), and a watchdog keeps re-trying the post-landing Bluetooth revival every 30 s instead of leaving you to reboot."
     }
   ]
 }
