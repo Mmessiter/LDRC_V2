@@ -56,15 +56,16 @@ input:disabled{background:#eee;color:#999}
         <h2>Calibration (gains)</h2>
         <div class=fldRow><label>Collective gain (%)</label> <input type=number id=t_gColl step=1 min=0 max=500></div>
         <div class=fldRow><label>Cyclic gain (%)</label>     <input type=number id=t_gCyc  step=1 min=0 max=500></div>
-        <div class=fldRow><label>Geo correction</label>      <input type=number id=t_geo   step=0.2 min=-25 max=25></div>
+        <div class=fldRow><label>Collective up/down balance</label> <input type=number id=t_geo step=0.2 min=-25 max=25></div>
         <p class=cardNote>These make the degrees MEAN degrees: the gain scales how far the swash
         really moves per commanded degree. If a pitch gauge reads less than the limit says
         (e.g. 6&deg; real when 14&deg; is commanded), multiply the gain by the ratio
         (here &times;14/6). Direction is preserved — only the amount changes. Re-measure after
         saving; if the reading stops growing, the servo travel is the ceiling — stop and
-        investigate before forcing it. <b>Geo correction</b> evens up unequal positive vs
-        negative collective (linkage geometry): if up reads less than down, step it one way,
-        re-measure, and reverse if the gap widens.</p>
+        investigate before forcing it. <b>Collective up/down balance</b> evens up unequal
+        positive vs negative collective (linkage geometry): if up reads less than down, step it
+        one way, re-measure, and reverse if the gap widens. <i>(Rotorflight calls this
+        &ldquo;geo correction&rdquo; — nothing to do with GPS.)</i></p>
     </div>
 
     <div class=card>

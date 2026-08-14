@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.359-plain-names",
+      "url": "https://messiter.com/rxv2/release/v0.9.359/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.359/littlefs.bin",
+      "fs_md5": "cc93358c5ccc8a193d8cb4476bfc6e1c",
+      "notes": "Plainer words on Travel extents (Malcolm: Rotorflight's own names make it impenetrable \u2014 'geo correction' sounds like GPS!): the field is now 'Collective up/down balance', with a note giving Rotorflight's name for cross-reference with their docs."
+    },
+    {
       "name": "RXV2-0.9.358-geo-correction",
       "url": "https://messiter.com/rxv2/release/v0.9.358/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.358/littlefs.bin",
@@ -74,13 +81,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.348/littlefs.bin",
       "fs_md5": "c47476f2d654814bb6562f15b184ab63",
       "notes": "No more stuck 'waiting for it to come back' screens: after an install the app reconnects via a fresh Bluetooth discovery (the reliable path), and if reconnection still hasn't happened ~100 s after the reboot, both install screens return you to the model list to reconnect there \u2014 the update itself is already safely installed."
-    },
-    {
-      "name": "RXV2-0.9.347-rename-returns",
-      "url": "https://messiter.com/rxv2/release/v0.9.347/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.347/littlefs.bin",
-      "fs_md5": "41d678380a170f49c83b47edb0dd4d3c",
-      "notes": "After renaming a receiver (or finishing first-run setup) in the app, you're taken straight back to the model list, where it reappears under its new name \u2014 no more force-quitting to reconnect."
     }
   ]
 }

@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.358-geo-correction";
+constexpr const char* FW_VERSION = "RXV2-0.9.359-plain-names";
 
 //*********************************************************************
 //  Auto-update manifest URLs
