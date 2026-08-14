@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name=theme-color content="#c98a4a">
+<meta name=apple-mobile-web-app-capable content=yes>
+<meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
+<meta name=apple-mobile-web-app-title content="LDRC RX V2">
+<title>Travel extents &middot; LDRC RX V2</title>
+<link rel=stylesheet href="/style.css?v=172">
+<script src="/app.js?v=172" defer></script>
+<style>
+.fldRow{display:flex;justify-content:space-between;align-items:center;
+        padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
+.fldRow label{flex:1;color:#3a5165;font-size:.95em}
+.fldRow input[type=number]{width:7em;padding:.4em;font-size:.95em;text-align:right;
+        border:1px solid #b8c7d0;border-radius:6px;background:#fff}
+.banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
+.banner.info{background:#c8d2dc;color:#3a5165}
+.banner.good{background:#a8d29a;color:#2a4d1f}
+.banner.bad {background:#dca08c;color:#5c2a1a}
+.banner.warn{background:#ffc88c;color:#5c3a1a;font-size:1.05em;padding:1em}
+.cardNote{font-size:.8em;color:#5a6b74;margin:.4em .2em 0;line-height:1.4}
+input:disabled{background:#eee;color:#999}
+</style>
+</head>
+<body class=hasFab>
+<button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
+<div class=bg-photo aria-hidden=true></div>
+<div class=bg-wash  aria-hidden=true></div>
+<div class=container>
+    <h1>Travel extents</h1>
+    <div id=verBanner class="banner warn" style="display:none">
+        <strong>Requires Rotorflight 2.3</strong><br>
+        <span id=verBannerMsg>You are running an older firmware. Editing travel extents is disabled. Please upgrade your flight controller to Rotorflight 2.3 to use this page.</span>
+    </div>
+    <div id=status class="banner info">loading&hellip;</div>
+
+    <div class=card>
+        <h2>Swash extents (degrees)</h2>
+        <div class=fldRow><label>Collective pitch limit (&plusmn;&deg;)</label> <input type=number id=t_coll  step=0.1 min=0 max=30></div>
+        <div class=fldRow><label>Cyclic pitch limit (&plusmn;&deg;)</label>     <input type=number id=t_cyc   step=0.1 min=0 max=30></div>
+        <div class=fldRow><label>Total pitch limit (&deg;, 0 = off)</label>     <input type=number id=t_total step=0.1 min=0 max=36></div>
+        <p class=cardNote>Collective is how much pitch the blades get at full stick — the fix for
+        &ldquo;nowhere near enough collective&rdquo;. The total limit caps cyclic&nbsp;+&nbsp;collective
+        combined; the flight controller keeps it at least 6&deg; above the collective limit, so it may
+        adjust your number on save.</p>
+    </div>
+
+    <div class=card>
+        <h2>Swash trims (degrees)</h2>
+        <div class=fldRow><label>Roll trim</label>       <input type=number id=t_trR step=0.1 min=-25 max=25></div>
+        <div class=fldRow><label>Pitch trim</label>      <input type=number id=t_trP step=0.1 min=-25 max=25></div>
+        <div class=fldRow><label>Collective trim</label> <input type=number id=t_trC step=0.1 min=-25 max=25></div>
+        <p class=cardNote>Small levelling corrections for the swashplate — use to cure a steady hover
+        drift after mechanical setup is close.</p>
+    </div>
+
+    <div class=card>
+        <h2>Tail travel</h2>
+        <div class=fldRow><label id=lblTailNeg>Yaw travel &minus; (left)</label>  <input type=number id=t_tailMin step=0.1 min=0 max=60></div>
+        <div class=fldRow><label id=lblTailPos>Yaw travel + (right)</label>       <input type=number id=t_tailMax step=0.1 min=0 max=60></div>
+        <div class=fldRow><label id=lblTailCtr>Tail centre trim</label>           <input type=number id=t_tailCtr step=0.1 min=-24 max=24></div>
+        <p class=cardNote id=tailNote>Degrees of tail-blade pitch each way, and the centre offset.</p>
+    </div>
+    <button class="btn btn-fw" id=reloadBtn onclick="load()"><span class=ico>&#8635;</span>Reload from flight controller</button>
+
+    <div class=fabBar>
+        <a class="btn btn-back" href="/rotorflight" style="flex:.55;margin:0"><span class=ico>&#8617;</span>Back</a>
+        <button class="btn btn-fly" id=saveBtn onclick="save()" style="background:#c98a4a;margin:0"><span class=ico>&#128190;</span>Save to Flight Controller</button>
+    </div>
+    <div class=footer></div>
+</div>
+
+<script>
+// Travel extents — Rotorflight 2.3 mixer limits over MSP.
+// Born at the flying field 2026-08-14: Black Thunder II's first flight showed
+// "nowhere near enough collective pitch", and none of the existing screens
+// could change it. Wire spec: RXV2/TRAVEL-EXTENTS-MSP-SPEC.md (extracted from
+// rotorflight-firmware release/4.6.0 + configurator release/2.3.0).
+//
+// MSP_MIXER_CONFIG (42) — 21 bytes:
+//   [0] u8 main_rotor_dir  [1] u8 tail_rotor_mode (0=VARIABLE,1=MOTORIZED,2=BIDIR)
+//   [2] u8 tail_motor_idle  [3..4] s16 tail_center_trim
+//   [5] u8 swash_type  [6] u8 swash_ring  [7..8] s16 swash_phase
+//   [9..10] u16 swash_pitch_limit (deg = raw*12/1000, 0 = off)
+//   [11..16] s16 swash_trim[3] (0.1 deg)  [17] u8 tta_precomp
+//   [18] s8 geo_correction  [19] s8 tilt_corr_pos  [20] s8 tilt_corr_neg
+// MSP_MIXER_INPUTS (170) — 29 × { rate s16, min s16, max s16 } = 174 bytes.
+//   Index 1 = stab roll, 2 = stab pitch, 3 = stab yaw, 4 = stab collective.
+//   Cyclic/collective: deg = raw*12/1000.  Yaw: deg = raw*24/1000.
+// Writes: SET_MIXER_CONFIG (43, full 21 B), SET_MIXER_INPUT (171, ONE input
+// per 7-byte frame: idx u8 + rate/min/max s16 — rate preserved, we never
+// touch gains), then EEPROM_WRITE (250). No reboot needed — we never change
+// swash_type or tail_rotor_mode (the only reboot-gated fields).
+const CFG_BYTES = 21;
+const INPUTS_BYTES = 174;
+let cachedCfg = null;      // Uint8Array(21) — unknown fields preserved verbatim
+let cachedInputs = null;   // Uint8Array(174)
+let editable = false;
+
+function hexToBytes(h) { const o = new Uint8Array(h.length/2); for (let i=0;i<o.length;i++) o[i]=parseInt(h.substr(i*2,2),16); return o; }
+function bytesToHex(b) { let s=''; for (let i=0;i<b.length;i++) s += b[i].toString(16).padStart(2,'0').toUpperCase(); return s; }
+function s16At(b,o){ const v = b[o] | (b[o+1]<<8); return v > 32767 ? v - 65536 : v; }
+function putS16(b,o,v){ v = Math.round(v); if (v < 0) v += 65536; b[o]=v&0xff; b[o+1]=(v>>8)&0xff; }
+const inOff = (idx, field) => idx*6 + field*2;   // field 0=rate 1=min 2=max
+
+function setStatus(kind, msg) {
+    const el = document.getElementById('status');
+    el.className = 'banner ' + kind;
+    el.textContent = msg;
+}
+function paintEditable() {
+    document.querySelectorAll('input[type=number]')
+            .forEach(el => el.disabled = !editable);
+    document.getElementById('saveBtn').disabled = !editable;
+}
+function tailIsMotor() { return cachedCfg && cachedCfg[1] === 1; }
+function tailScale()  { return tailIsMotor() ? 10 : (1000/24); }   // UI unit → raw
+
+function applyTailLabels() {
+    const motor = tailIsMotor();
+    document.getElementById('lblTailNeg').textContent = motor ? 'Tail motor min (%)' : 'Yaw travel − (left)';
+    document.getElementById('lblTailPos').textContent = motor ? 'Tail motor max (%)' : 'Yaw travel + (right)';
+    document.getElementById('lblTailCtr').textContent = motor ? 'Tail centre trim (%)' : 'Tail centre trim (°)';
+    document.getElementById('tailNote').textContent = motor
+        ? 'Motorised tail: throttle percentages instead of blade angles.'
+        : 'Degrees of tail-blade pitch each way, and the centre offset.';
+}
+
+async function load() {
+    await LDRC.replayReady;
+    try {
+        const stateR = await fetch('/api/state.json', { cache: 'no-store' });
+        const st = await stateR.json();
+        const api = (st.fcinfo.api_major * 100) + st.fcinfo.api_minor;
+        editable = (api >= 1209);
+        const newer = LDRC.rfVersionAlert(api);
+        const banner = document.getElementById('verBanner');
+        const msg    = document.getElementById('verBannerMsg');
+        if (!editable && st.fcinfo.rf_major > 0) {
+            banner.className = 'banner warn';
+            banner.style.display = '';
+            msg.textContent = 'You are running Rotorflight ' + st.fcinfo.rf_major + '.' +
+                st.fcinfo.rf_minor + '. Editing travel extents is disabled — please upgrade to Rotorflight 2.3.';
+        } else if (newer) {
+            banner.className = 'banner warn';
+            banner.style.display = '';
+            msg.textContent = newer;
+        } else {
+            banner.style.display = 'none';
+        }
+    } catch (e) {}
+
+    setStatus('info', LDRC.replay ? 'Reading from the phone…' : 'Reading mixer limits from flight controller…');
+    LDRC.markStale();
+    try {
+        const cfg = hexToBytes(await LDRC.msp(42));
+        if (cfg.length < CFG_BYTES) throw new Error('short mixer config: ' + cfg.length + ' (need ' + CFG_BYTES + ', is flight controller on Rotorflight 2.3?)');
+        const ins = hexToBytes(await LDRC.msp(170));
+        if (ins.length < INPUTS_BYTES) throw new Error('short mixer inputs: ' + ins.length + ' (need ' + INPUTS_BYTES + ')');
+        cachedCfg = cfg.slice(0, CFG_BYTES);
+        cachedInputs = ins.slice(0, INPUTS_BYTES);
+
+        const d1 = v => (Math.round(v*10)/10).toFixed(1);
+        // Limits — configurator convention: symmetric, read the max side.
+        document.getElementById('t_coll').value  = d1(s16At(cachedInputs, inOff(4,2)) * 12/1000);
+        document.getElementById('t_cyc').value   = d1(s16At(cachedInputs, inOff(2,2)) * 12/1000);
+        document.getElementById('t_total').value = d1((cachedCfg[9] | (cachedCfg[10]<<8)) * 12/1000);
+        // Trims (0.1 deg raw).
+        document.getElementById('t_trR').value = d1(s16At(cachedCfg,11) * 0.1);
+        document.getElementById('t_trP').value = d1(s16At(cachedCfg,13) * 0.1);
+        document.getElementById('t_trC').value = d1(s16At(cachedCfg,15) * 0.1);
+        // Tail (variable pitch: deg ×24/1000; motorised: 0.1 %).
+        applyTailLabels();
+        const ts = tailScale();
+        document.getElementById('t_tailMin').value = d1(Math.abs(s16At(cachedInputs, inOff(3,1))) / ts);
+        document.getElementById('t_tailMax').value = d1(s16At(cachedInputs, inOff(3,2)) / ts);
+        document.getElementById('t_tailCtr').value = d1(s16At(cachedCfg,3) / ts);
+        LDRC.clearStale();
+        setStatus('good', LDRC.replay ? '✓ Loaded from the phone (recorded session)' : '✓ Loaded from flight controller');
+        paintEditable();
+        LDRC.clearDirty();
+    } catch (e) { setStatus('bad', 'Read failed: ' + e.message); }
+}
+
+// Patch ONLY the fields this page owns into copies of the cached raw blocks —
+// every byte we don't edit goes back exactly as it was read.
+function buildPayloads() {
+    const num = (id) => parseFloat(document.getElementById(id).value || '0') || 0;
+    const cfg = new Uint8Array(cachedCfg);
+    const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+    const totalRaw = clamp(Math.round(num('t_total') * 1000/12), 0, 3000);
+    cfg[9] = totalRaw & 0xff; cfg[10] = (totalRaw >> 8) & 0xff;
+    putS16(cfg, 11, clamp(Math.round(num('t_trR') * 10), -1000, 1000));
+    putS16(cfg, 13, clamp(Math.round(num('t_trP') * 10), -1000, 1000));
+    putS16(cfg, 15, clamp(Math.round(num('t_trC') * 10), -1000, 1000));
+    const ts = tailScale();
+    putS16(cfg, 3, clamp(Math.round(num('t_tailCtr') * ts), -1000, 1000));
+
+    const ins = new Uint8Array(cachedInputs);
+    const collRaw = clamp(Math.round(num('t_coll') * 1000/12), 0, 2500);
+    const cycRaw  = clamp(Math.round(num('t_cyc')  * 1000/12), 0, 2500);
+    putS16(ins, inOff(4,1), -collRaw); putS16(ins, inOff(4,2), collRaw);
+    putS16(ins, inOff(1,1), -cycRaw);  putS16(ins, inOff(1,2), cycRaw);
+    putS16(ins, inOff(2,1), -cycRaw);  putS16(ins, inOff(2,2), cycRaw);
+    const tMin = clamp(Math.round(num('t_tailMin') * ts), 0, 2500);
+    const tMax = clamp(Math.round(num('t_tailMax') * ts), 0, 2500);
+    putS16(ins, inOff(3,1), -tMin);    putS16(ins, inOff(3,2), tMax);
+    return { cfg, ins };
+}
+
+// One 7-byte SET_MIXER_INPUT frame: index + rate/min/max (rate preserved).
+function inputFrame(ins, idx) {
+    const f = new Uint8Array(7);
+    f[0] = idx;
+    for (let i = 0; i < 6; i++) f[1+i] = ins[idx*6 + i];
+    return f;
+}
+
+async function save() {
+    if (!editable) { setStatus('bad', 'Disabled on this firmware version'); return; }
+    if (!cachedCfg || !cachedInputs) { setStatus('bad', 'Read flight controller first'); return; }
+    if (!(await LDRC.confirm(LDRC.replay
+            ? 'Save these travel extents on the phone? They will be offered for sending to the model at the next connection.'
+            : 'Save travel extents to the flight controller?\n\nThese change how FAR the swash and tail can move. Check the new extents ON THE BENCH (blades off or held clear) before flying.',
+        LDRC.replay
+            ? {title:'Save travel extents', icon:'💾', yes:'Save to phone'}
+            : {title:'Save travel extents', icon:'📐', yes:'Save', kind:'warn'}))) return;
+    setStatus('info', 'Writing mixer limits…');
+    const { cfg, ins } = buildPayloads();
+    try {
+        await LDRC.msp(43, bytesToHex(cfg));                       // SET_MIXER_CONFIG
+        for (const idx of [1, 2, 3, 4]) {                          // SET_MIXER_INPUT — one frame each
+            await LDRC.msp(171, bytesToHex(inputFrame(ins, idx)));
+        }
+        await LDRC.msp(250);                                       // EEPROM_WRITE
+        if (LDRC.replay) {
+            LDRC.clearDirty();
+            cachedCfg = cfg; cachedInputs = ins;
+            setStatus('good', '✓ Saved on the phone — ready to send at the next connection');
+            return;
+        }
+        LDRC.clearDirty();
+        // Verify by read-back — no reboot needed, mixer limits apply live.
+        setStatus('info', 'Re-reading from flight controller…');
+        const ckCfg = hexToBytes(await LDRC.msp(42));
+        const ckIns = hexToBytes(await LDRC.msp(170));
+        const diffs = [];
+        // Only judge the fields this page owns; the FC may legitimately
+        // adjust swash_pitch_limit upward (it enforces collective + 6°).
+        const ownCfg = [3,4,9,10,11,12,13,14,15,16];   // tail_center_trim, pitch_limit, trims
+        for (const o of ownCfg) if (cfg[o] !== ckCfg[o]) diffs.push('cfg[' + o + ']');
+        for (const idx of [1,2,3,4]) for (let f=1; f<=2; f++) {
+            const o = inOff(idx,f);
+            if (s16At(ins,o) !== s16At(ckIns,o)) diffs.push('input ' + idx + (f===1?' min':' max'));
+        }
+        const sentTotal = cfg[9] | (cfg[10]<<8);
+        const gotTotal  = ckCfg[9] | (ckCfg[10]<<8);
+        if (diffs.length === 0) {
+            setStatus('good', '✓ Saved & verified by flight controller read-back — extents apply immediately');
+            cachedCfg = ckCfg.slice(0, CFG_BYTES); cachedInputs = ckIns.slice(0, INPUTS_BYTES);
+            await load();
+        } else if (gotTotal !== sentTotal &&
+                   diffs.every(d => d === 'cfg[9]' || d === 'cfg[10]')) {
+            setStatus('good', '✓ Saved — the flight controller raised the total pitch limit to '
+                + (gotTotal*12/1000).toFixed(1) + '° (it keeps 6° of cyclic above collective)');
+            await load();
+        } else {
+            setStatus('bad', '⚠ Differences on read-back: ' + diffs.slice(0,4).join(', ') + ' — reloaded actual values');
+            await load();
+        }
+    } catch (e) { setStatus('bad', 'Save failed: ' + e.message); }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('input', e => {
+        if (e.target.matches('input')) LDRC.markDirty();
+    });
+    load();
+});
+</script>
+<template id=helpContent><h2>Travel extents</h2>
+<p>How far everything can move: collective and cyclic pitch limits, the total swash limit, swashplate trims, and tail travel. These are the numbers you discover on a model's first hover — most famously &ldquo;nowhere near enough collective&rdquo;.</p>
+<h3>How to use it</h3>
+<p>Change the limits, tap <b>Save</b>. They apply immediately — no reboot. Then check the real blade angles on the bench with a pitch gauge before flying.</p>
+<h3>What the numbers mean</h3>
+<p><b>Collective pitch limit</b> — blade pitch at full collective stick, each way. <b>Cyclic pitch limit</b> — cyclic authority each way. <b>Total pitch limit</b> — cap on cyclic + collective combined (the flight controller keeps it at least 6&deg; above collective). <b>Swash trims</b> — fine levelling. <b>Tail travel</b> — tail-blade pitch each way (or throttle range on a motorised tail).</p>
+<h3>Safety</h3>
+<p>Bigger extents mean bigger forces. After changing them, always confirm on the bench that nothing binds at the ends of travel.</p>
+</template>
+</body>
+</html>
