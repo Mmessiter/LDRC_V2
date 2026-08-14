@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.354-honest-flight-notes";
+constexpr const char* FW_VERSION = "RXV2-0.9.355-travel-extents";
 
 //*********************************************************************
 //  Auto-update manifest URLs
