@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.357-travel-gains",
+      "url": "https://messiter.com/rxv2/release/v0.9.357/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.357/littlefs.bin",
+      "fs_md5": "be757cc2a2395592afcf314eb50eed31",
+      "notes": "Travel extents gains: new 'Calibration (gains)' card with collective and cyclic gain (%) \u2014 the scale that makes commanded degrees equal REAL measured degrees. Malcolm's first live read showed the FC commanding 14 deg while the blades reached only 5-7: raise the gain by the measured ratio (direction is always preserved \u2014 only the amount changes), use collective trim to centre a non-zero mid-stick, then re-measure."
+    },
+    {
       "name": "RXV2-0.9.356-travel-extents-2",
       "url": "https://messiter.com/rxv2/release/v0.9.356/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.356/littlefs.bin",
@@ -74,13 +81,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.346/littlefs.bin",
       "fs_md5": "4f118ea5dff9449164ea1a205208a77d",
       "notes": "Shorter, calmer graph caption: 'Each line auto-scaled to its own range (min-max in the key).' The tutorial sentence moved out of the way."
-    },
-    {
-      "name": "RXV2-0.9.345-instant-check",
-      "url": "https://messiter.com/rxv2/release/v0.9.345/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.345/littlefs.bin",
-      "fs_md5": "1df72dcc4118e5a8ba2f79e023c1a2a7",
-      "notes": "The manual Check-for-Update page is now as instant as the automatic prompt: inside the app it reads the release list with the PHONE's internet (like the front-page banner always did) instead of asking the receiver to fetch web pages over its own WiFi \u2014 which was slow at best and impossible with the transmitter on."
     }
   ]
 }

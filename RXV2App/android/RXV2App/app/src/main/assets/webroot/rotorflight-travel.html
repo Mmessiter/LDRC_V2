@@ -53,6 +53,18 @@ input:disabled{background:#eee;color:#999}
     </div>
 
     <div class=card>
+        <h2>Calibration (gains)</h2>
+        <div class=fldRow><label>Collective gain (%)</label> <input type=number id=t_gColl step=1 min=0 max=500></div>
+        <div class=fldRow><label>Cyclic gain (%)</label>     <input type=number id=t_gCyc  step=1 min=0 max=500></div>
+        <p class=cardNote>These make the degrees MEAN degrees: the gain scales how far the swash
+        really moves per commanded degree. If a pitch gauge reads less than the limit says
+        (e.g. 6&deg; real when 14&deg; is commanded), multiply the gain by the ratio
+        (here &times;14/6). Direction is preserved — only the amount changes. Re-measure after
+        saving; if the reading stops growing, the servo travel is the ceiling — stop and
+        investigate before forcing it.</p>
+    </div>
+
+    <div class=card>
         <h2>Swash trims (degrees)</h2>
         <div class=fldRow><label>Roll trim</label>       <input type=number id=t_trR step=0.1 min=-25 max=25></div>
         <div class=fldRow><label>Pitch trim</label>      <input type=number id=t_trP step=0.1 min=-25 max=25></div>
@@ -184,6 +196,9 @@ async function load() {
         // Limits — configurator convention: symmetric, read the max side.
         document.getElementById('t_coll').value  = d1(s16At(cachedInputs, inOff(4,2)) * 12/1000);
         document.getElementById('t_cyc').value   = d1(s16At(cachedInputs, inOff(2,2)) * 12/1000);
+        // Gains — rate magnitude in 0.1 % (sign = direction, preserved on save).
+        document.getElementById('t_gColl').value = Math.round(Math.abs(s16At(cachedInputs, inOff(4,0))) / 10);
+        document.getElementById('t_gCyc').value  = Math.round(Math.abs(s16At(cachedInputs, inOff(1,0))) / 10);
         document.getElementById('t_total').value = d1((cachedCfg[9] | (cachedCfg[10]<<8)) * 12/1000);
         // Trims (0.1 deg raw).
         document.getElementById('t_trR').value = d1(s16At(cachedCfg,11) * 0.1);
@@ -223,6 +238,16 @@ function buildPayloads() {
     putS16(ins, inOff(4,1), -collRaw); putS16(ins, inOff(4,2), collRaw);
     putS16(ins, inOff(1,1), -cycRaw);  putS16(ins, inOff(1,2), cycRaw);
     putS16(ins, inOff(2,1), -cycRaw);  putS16(ins, inOff(2,2), cycRaw);
+    // Gains: magnitude from the UI, DIRECTION (sign) preserved from the read
+    // — a flipped sign would reverse a control, so only the amount is
+    // editable here. Cyclic gain drives inputs 1 AND 2, each keeping its own
+    // sign. A zero stored rate (pathological) defaults to positive.
+    const gSign = (idx) => (s16At(cachedInputs, inOff(idx,0)) < 0 ? -1 : 1);
+    const gCollRaw = clamp(Math.round(num('t_gColl') * 10), 0, 10000);
+    const gCycRaw  = clamp(Math.round(num('t_gCyc')  * 10), 0, 10000);
+    putS16(ins, inOff(4,0), gSign(4) * gCollRaw);
+    putS16(ins, inOff(1,0), gSign(1) * gCycRaw);
+    putS16(ins, inOff(2,0), gSign(2) * gCycRaw);
     const tMin = clamp(Math.round(num('t_tailMin') * ts), 0, 2500);
     const tMax = clamp(Math.round(num('t_tailMax') * ts), 0, 2500);
     putS16(ins, inOff(3,1), -tMin);    putS16(ins, inOff(3,2), tMax);
@@ -270,9 +295,10 @@ async function save() {
         // adjust swash_pitch_limit upward (it enforces collective + 6°).
         const ownCfg = [3,4,9,10,11,12,13,14,15,16];   // tail_center_trim, pitch_limit, trims
         for (const o of ownCfg) if (cfg[o] !== ckCfg[o]) diffs.push('cfg[' + o + ']');
-        for (const idx of [1,2,3,4]) for (let f=1; f<=2; f++) {
+        for (const idx of [1,2,3,4]) for (let f=0; f<=2; f++) {
+            if (idx === 3 && f === 0) continue;   // tail rate never written
             const o = inOff(idx,f);
-            if (s16At(ins,o) !== s16At(ckIns,o)) diffs.push('input ' + idx + (f===1?' min':' max'));
+            if (s16At(ins,o) !== s16At(ckIns,o)) diffs.push('input ' + idx + (f===0?' rate':f===1?' min':' max'));
         }
         const sentTotal = cfg[9] | (cfg[10]<<8);
         const gotTotal  = ckCfg[9] | (ckCfg[10]<<8);
@@ -304,7 +330,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <h3>How to use it</h3>
 <p>Change the limits, tap <b>Save</b>. They apply immediately — no reboot. Then check the real blade angles on the bench with a pitch gauge before flying.</p>
 <h3>What the numbers mean</h3>
-<p><b>Collective pitch limit</b> — blade pitch at full collective stick, each way. <b>Cyclic pitch limit</b> — cyclic authority each way. <b>Total pitch limit</b> — cap on cyclic + collective combined (the flight controller keeps it at least 6&deg; above collective). <b>Swash trims</b> — fine levelling. <b>Tail travel</b> — tail-blade pitch each way (or throttle range on a motorised tail).</p>
+<p><b>Collective pitch limit</b> — blade pitch at full collective stick, each way. <b>Cyclic pitch limit</b> — cyclic authority each way. <b>Total pitch limit</b> — cap on cyclic + collective combined (the flight controller keeps it at least 6&deg; above collective). <b>Gains</b> — the calibration that makes commanded degrees equal real, measured degrees: if the gauge reads less than the limit says, raise the gain by that ratio. <b>Swash trims</b> — fine levelling (collective trim also centres a blade pitch that isn't 0&deg; at mid-stick). <b>Tail travel</b> — tail-blade pitch each way (or throttle range on a motorised tail).</p>
 <h3>Safety</h3>
 <p>Bigger extents mean bigger forces. After changing them, always confirm on the bench that nothing binds at the ends of travel.</p>
 </template>
