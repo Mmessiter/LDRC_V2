@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.358-geo-correction",
+      "url": "https://messiter.com/rxv2/release/v0.9.358/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.358/littlefs.bin",
+      "fs_md5": "d40849e8acbcc3b6cd1851c02b3a81aa",
+      "notes": "Travel extents: new Geo correction field \u2014 Rotorflight's knob for unequal positive vs negative collective (Black Thunder II read +12.6 up but -14.9 down after gain calibration). Step it one way, re-measure, reverse if the gap widens; direction of every control is still preserved."
+    },
+    {
       "name": "RXV2-0.9.357-travel-gains",
       "url": "https://messiter.com/rxv2/release/v0.9.357/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.357/littlefs.bin",
@@ -74,13 +81,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.347/littlefs.bin",
       "fs_md5": "41d678380a170f49c83b47edb0dd4d3c",
       "notes": "After renaming a receiver (or finishing first-run setup) in the app, you're taken straight back to the model list, where it reappears under its new name \u2014 no more force-quitting to reconnect."
-    },
-    {
-      "name": "RXV2-0.9.346-short-caption",
-      "url": "https://messiter.com/rxv2/release/v0.9.346/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.346/littlefs.bin",
-      "fs_md5": "4f118ea5dff9449164ea1a205208a77d",
-      "notes": "Shorter, calmer graph caption: 'Each line auto-scaled to its own range (min-max in the key).' The tutorial sentence moved out of the way."
     }
   ]
 }
