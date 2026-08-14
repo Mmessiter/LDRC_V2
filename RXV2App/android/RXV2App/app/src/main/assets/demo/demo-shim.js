@@ -7,7 +7,7 @@
 (function () {
   "use strict";
   const _fetch = window.fetch.bind(window);
-  const CANNED = {"/api/state.json": {"info": {"fw_version": "RXV2-demo", "build_date": "Jul  9 2026 10:01:30", "name": "Demo RXV2", "name_custom": true, "hostname": "demo", "ip": "0.0.0.0", "mac": "DE:MO:DE:MO:DE:MO", "rssi": -59, "uptime_s": 191, "uptime_str": "0h 3m 11s", "free_heap": 132720, "chip": "ESP32-S3", "chip_rev": 0, "littlefs": true, "ap_ssid": "LDRC_RX", "ap_ip": "192.168.4.1", "partition_running": "app1", "partition_other": "app0", "partition_other_kb": 3264}, "net": {"mode": "WiFi up", "ssid": "(demo)", "ssid_custom": true, "ap_only": false, "ap_auto": false}, "rf": {"packets": 0, "acks_written": 3, "mac_acks_sent": 3, "mac_ack_threshold": 200, "last_pkt_ms": -1, "radios_count": 2, "radios_present": [true, true, false], "loop_hz": 998, "loop_max_us": 1846, "radios_dual": true, "active_radio": 1, "radio_swaps": 0, "fhss_enabled": false, "fhss_idx": 14, "fhss_channel": 82, "telemetry_item": 0, "id_broadcasting": true, "being_flown": false, "sbus_frames_out": 47407, "failsafe_set": false, "gear_ratio": 1.0, "arming_channel": 0, "armed": false, "head_speed": 0, "esc_temp_c": 0.0, "last_channel_ms": -1, "link": {"conn_ms": 0, "packets": 0, "max_gap_ms": 0.0, "avg_gap_ms": 0.0, "hist": [0, 0, 0, 0, 0, 0]}, "board_mac": "E072A1FA5324", "last_payload_len": 0, "last_payload": "", "max_payload_len": 0, "max_payload": "", "self_test": {"verdict": "PASS \u2014 radio responds, registers writable, ready to receive", "begin_ok": true, "chip_connected": true, "channel_ok": true, "data_rate_ok": true, "channel_read": 76, "data_rate_name": "250 kbps"}}, "bind": {"bound": true, "attempts": 0, "pipe": "94 9E 79 E3 E9", "bound_s_ago": 191}, "protocol": {"current": "CRSF", "ppm_inverted": false, "available": [{"id": 1, "name": "CRSF", "desc": "Crossfire/ELRS, 420 kbaud 8N1, ~250 Hz"}, {"id": 0, "name": "SBUS", "desc": "FrSky/Futaba, 100 kbaud 8E2 inverted, ~71 Hz"}, {"id": 2, "name": "IBUS", "desc": "FlySky, 115200 8N1, ~140 Hz"}, {"id": 3, "name": "PPM", "desc": "Single-pin pulse train, 8 ch, ~45 Hz (RMT)"}]}, "sim": false, "fc": {"valid": true, "raw_total": 513, "bytes": 513, "frames": 42, "crc_err": 0, "responses": 0, "last_frame_ms": 813, "v": 0.0, "a": 0.0, "mah": 0, "pct": 0, "rssi": 0, "lq": 0, "snr": 0, "pitch": 0, "roll": 0, "yaw": 0, "flight_mode": "", "raw_dump": "00 0C 08 CB C8 0B 7B EA C8 3F 04 02 52 54 46 4C E7 C8 0A 7B EA C8 30 03 03 04 05 01 59 C8 0A 7B EA C8 31 03 01 00 0C 08 97 C8 0B 7B EA C8 32 04 02 52 54 46 4C 02 C8 0A 7B EA C8 33 03 03 04 05 01 24 C8 0A 7B EA C8 34 03 01 00 0C 08 10 C8 0B 7B EA C8 35 04 02 52 54 46 4C 44 C8 0A 7B EA C8 36 03 03 04 05 01 A3 C8 0A 7B EA C8 37 03 01 00 0C 08 6D C8 0B 7B EA C8 38 04 02 52 54 46 4C A1 "}, "fw": {"manifest_url": ""}, "msp": {"started": true, "active": false, "port": 5760, "bytes_in": 0, "bytes_out": 0, "connections": 0}, "fcinfo": {"detected": true, "variant": "RTFL", "version_known": true, "fw_major": 4, "fw_minor": 6, "fw_patch": 0, "msp_proto": 0, "api_major": 12, "api_minor": 9, "probes_sent": 43, "last_response_ms": 814, "rotorflight_capable": true, "rf_major": 2, "rf_minor": 3}, "channels": [1500, 1500, 1500, 1500, 1500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500]}, "/api/events.json": [{"t": 60000, "msg": "Free heap: 137148 B (was 4294967295)"}, {"t": 14774, "msg": "DIAG LOOP-STALL 1117ms"}, {"t": 12344, "msg": "BLE app connected"}, {"t": 4020, "msg": "WiFi up: 192.168.1.204"}, {"t": 1950, "msg": "BLE config on"}, {"t": 1948, "msg": "Trying STA WiFi 'Home network' (AP also up)"}, {"t": 1941, "msg": "MSP bridge listening :5760"}, {"t": 1905, "msg": "No TX at boot \u2014 WiFi on"}, {"t": 905, "msg": "Boot window: listening for TX..."}, {"t": 856, "msg": "Radios detected: 2 (1:ok 2:ok 3:-)"}, {"t": 706, "msg": "Restored bind 94 9E 79 E3 E9 from NVS"}, {"t": 488, "msg": "NVS: ssid=Home network pass=yes bind=yes"}, {"t": 467, "msg": "Boot (power-on)"}], "/api/flights.json": [{"i": 0, "count": 0, "dur_ms": 0, "live": true}, {"i": 1, "count": 26, "dur_ms": 24428}], "/api/channels.json": {"ch": [1500, 1500, 1500, 1500, 1500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500], "age_ms": -1}, "/api/simmap.json": {"map": [0, 1, 2, 3, 4, 5, 6, 7], "rev": [0, 0, 0, 0, 0, 0, 0, 0]}, "/api/sim/buttons.json": {"btn": [0, 0, 0, 0, 0, 0, 0, 0], "ch": [500, 500, 500, 500, 500, 500, 500, 500]}, "/api/backup/list": {"names": [], "max": 20, "free_bytes": 20480}, "/api/flightlog.json": {"count": 0, "interval_s": 1, "dur_ms": 0, "link": {"packets": 0, "max_gap_ms": 0.0, "avg_gap_ms": 0.0, "conn_ms": 0, "hist": [0, 0, 0, 0, 0, 0]}, "esc": [], "head": [], "v": [], "amps": []}};
+  const CANNED = {"/api/state.json": {"info": {"fw_version": "RXV2-demo", "build_date": "Jul  9 2026 10:01:30", "name": "Demo RXV2", "name_custom": true, "hostname": "demo", "ip": "0.0.0.0", "mac": "DE:MO:DE:MO:DE:MO", "rssi": -59, "uptime_s": 191, "uptime_str": "0h 3m 11s", "free_heap": 132720, "chip": "ESP32-S3", "chip_rev": 0, "littlefs": true, "ap_ssid": "LDRC_RX", "ap_ip": "192.168.4.1", "partition_running": "app1", "partition_other": "app0", "partition_other_kb": 3264}, "net": {"mode": "WiFi up", "ssid": "(demo)", "ssid_custom": true, "ap_only": false, "ap_auto": false}, "rf": {"packets": 0, "acks_written": 3, "mac_acks_sent": 3, "mac_ack_threshold": 200, "last_pkt_ms": -1, "radios_count": 2, "radios_present": [true, true, false], "loop_hz": 998, "loop_max_us": 1846, "radios_dual": true, "active_radio": 1, "radio_swaps": 0, "fhss_enabled": false, "fhss_idx": 14, "fhss_channel": 82, "telemetry_item": 0, "id_broadcasting": true, "being_flown": false, "sbus_frames_out": 47407, "failsafe_set": false, "gear_ratio": 1.0, "arming_channel": 0, "armed": false, "head_speed": 1852, "esc_temp_c": 43.5, "last_channel_ms": -1, "link": {"conn_ms": 0, "packets": 0, "max_gap_ms": 0.0, "avg_gap_ms": 0.0, "hist": [0, 0, 0, 0, 0, 0]}, "board_mac": "E072A1FA5324", "last_payload_len": 0, "last_payload": "", "max_payload_len": 0, "max_payload": "", "self_test": {"verdict": "PASS \u2014 radio responds, registers writable, ready to receive", "begin_ok": true, "chip_connected": true, "channel_ok": true, "data_rate_ok": true, "channel_read": 76, "data_rate_name": "250 kbps"}}, "bind": {"bound": true, "attempts": 0, "pipe": "94 9E 79 E3 E9", "bound_s_ago": 191}, "protocol": {"current": "CRSF", "ppm_inverted": false, "available": [{"id": 1, "name": "CRSF", "desc": "Crossfire/ELRS, 420 kbaud 8N1, ~250 Hz"}, {"id": 0, "name": "SBUS", "desc": "FrSky/Futaba, 100 kbaud 8E2 inverted, ~71 Hz"}, {"id": 2, "name": "IBUS", "desc": "FlySky, 115200 8N1, ~140 Hz"}, {"id": 3, "name": "PPM", "desc": "Single-pin pulse train, 8 ch, ~45 Hz (RMT)"}]}, "sim": false, "fc": {"valid": true, "raw_total": 513, "bytes": 513, "frames": 42, "crc_err": 0, "responses": 0, "last_frame_ms": 813, "v": 25.21, "a": 14.2, "mah": 862, "pct": 62, "rssi": -58, "lq": 100, "snr": 9, "pitch": -2, "roll": 1, "yaw": 118, "flight_mode": "NORMAL", "raw_dump": "00 0C 08 CB C8 0B 7B EA C8 3F 04 02 52 54 46 4C E7 C8 0A 7B EA C8 30 03 03 04 05 01 59 C8 0A 7B EA C8 31 03 01 00 0C 08 97 C8 0B 7B EA C8 32 04 02 52 54 46 4C 02 C8 0A 7B EA C8 33 03 03 04 05 01 24 C8 0A 7B EA C8 34 03 01 00 0C 08 10 C8 0B 7B EA C8 35 04 02 52 54 46 4C 44 C8 0A 7B EA C8 36 03 03 04 05 01 A3 C8 0A 7B EA C8 37 03 01 00 0C 08 6D C8 0B 7B EA C8 38 04 02 52 54 46 4C A1 "}, "fw": {"manifest_url": ""}, "msp": {"started": true, "active": false, "port": 5760, "bytes_in": 0, "bytes_out": 0, "connections": 0}, "fcinfo": {"detected": true, "variant": "RTFL", "version_known": true, "fw_major": 4, "fw_minor": 6, "fw_patch": 0, "msp_proto": 0, "api_major": 12, "api_minor": 9, "probes_sent": 43, "last_response_ms": 814, "rotorflight_capable": true, "rf_major": 2, "rf_minor": 3}, "channels": [1500, 1500, 1500, 1500, 1500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500]}, "/api/events.json": [{"t": 60000, "msg": "Free heap: 137148 B (was 4294967295)"}, {"t": 14774, "msg": "DIAG LOOP-STALL 1117ms"}, {"t": 12344, "msg": "BLE app connected"}, {"t": 4020, "msg": "WiFi up: 192.168.1.204"}, {"t": 1950, "msg": "BLE config on"}, {"t": 1948, "msg": "Trying STA WiFi 'Home network' (AP also up)"}, {"t": 1941, "msg": "MSP bridge listening :5760"}, {"t": 1905, "msg": "No TX at boot \u2014 WiFi on"}, {"t": 905, "msg": "Boot window: listening for TX..."}, {"t": 856, "msg": "Radios detected: 2 (1:ok 2:ok 3:-)"}, {"t": 706, "msg": "Restored bind 94 9E 79 E3 E9 from NVS"}, {"t": 488, "msg": "NVS: ssid=Home network pass=yes bind=yes"}, {"t": 467, "msg": "Boot (power-on)"}], "/api/flights.json": [{"i": 0, "count": 0, "dur_ms": 0, "live": true}, {"i": 1, "count": 820, "dur_ms": 820000}, {"i": 2, "count": 475, "dur_ms": 475000}], "/api/channels.json": {"ch": [1500, 1500, 1500, 1500, 1500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500], "age_ms": -1}, "/api/simmap.json": {"map": [0, 1, 2, 3, 4, 5, 6, 7], "rev": [0, 0, 0, 0, 0, 0, 0, 0]}, "/api/sim/buttons.json": {"btn": [0, 0, 0, 0, 0, 0, 0, 0], "ch": [500, 500, 500, 500, 500, 500, 500, 500]}, "/api/backup/list": {"names": [], "max": 20, "free_bytes": 20480}, "/api/flightlog.json": {"count": 0, "interval_s": 1, "dur_ms": 0, "link": {"packets": 0, "max_gap_ms": 0.0, "avg_gap_ms": 0.0, "conn_ms": 0, "hist": [0, 0, 0, 0, 0, 0]}, "esc": [], "head": [], "v": [], "amps": []}};
 
   // ── Synthesised live channels: gentle stick exercise ────────────
   const t0 = Date.now();
@@ -87,11 +87,24 @@
     })(),
     // MSP_GOVERNOR_PROFILE (148): 17 bytes — headspeed 2100 etc.
     148: [2100 & 0xff, (2100 >> 8) & 0xff, 40, 40, 50, 10, 15, 20, 20, 30, 10, 100, 100, 0,0,0,0],
+    // MSP_MIXER_CONFIG (42): 21 bytes — 120° swash, total limit 21°
+    // (raw 1750 = 21×1000/12), up/down balance +20.0 (raw s8 100). The
+    // Travel extents page reads this + per-input frames below.
+    42: [0, 0, 0, 0,0, 2, 0, 0,0, 0xD6,0x06, 0,0, 0,0, 0,0, 0, 100, 0, 0],
   };
+  // MSP_GET_MIXER_INPUT (174) per-index defaults: rate,min,max as s16 LE.
+  // Index 1/2 cyclic (gain 86 %, ±14° = ±1167), 3 yaw (100 %, ±40° = ±1667),
+  // 4 collective (gain 230 %, ±14°) — Black Thunder II's real numbers.
+  const MIXER_IN_DEFAULTS = (function () {
+    const s16 = (v) => { if (v < 0) v += 65536; return [v & 0xff, (v >> 8) & 0xff]; };
+    const mk = (rate, min, max) => [].concat(s16(rate), s16(min), s16(max));
+    return { 1: mk(860, -1167, 1167), 2: mk(860, -1167, 1167),
+             3: mk(1000, -1667, 1667), 4: mk(2300, -1167, 1167) };
+  })();
   // write-code → [read-code, profile-space]  ("rate" | "pid" | null)
   const MSP_SET = { 204: [111, "rate"], 202: [112, "pid"], 95: [94, "pid"],
-                    143: [142, null],   149: [148, "pid"] };
-  const MSP_READ_SPACE = { 111: "rate", 112: "pid", 94: "pid", 142: null, 148: "pid" };
+                    143: [142, null],   149: [148, "pid"], 43: [42, null] };
+  const MSP_READ_SPACE = { 111: "rate", 112: "pid", 94: "pid", 142: null, 148: "pid", 42: null };
   const mspStore = (function () {
     try { return JSON.parse(localStorage.getItem("rxv2DemoMsp") || "{}"); }
     catch (e) { return {}; }
@@ -114,6 +127,17 @@
     if (fn === 210 && data) {               // select rate / PID profile
       const v = parseInt(data.slice(0, 2), 16);
       if (v & 0x80) rateProfile = v & 0x0f; else pidProfile = v & 0x0f;
+      return T("");
+    }
+    if (fn === 174 && data) {               // read one mixer input by index
+      const idx = parseInt(data.slice(0, 2), 16);
+      const stored = mspStore["174/" + idx];
+      return T(stored || toHex(MIXER_IN_DEFAULTS[idx] || [0,0,0,0,0,0]));
+    }
+    if (fn === 171 && data) {               // write one mixer input: idx + 6 bytes
+      const idx = parseInt(data.slice(0, 2), 16);
+      mspStore["174/" + idx] = data.slice(2).toLowerCase();
+      try { localStorage.setItem("rxv2DemoMsp", JSON.stringify(mspStore)); } catch (e) {}
       return T("");
     }
     if (fn in MSP_SET && data) {            // write: persist for the paired read
@@ -148,6 +172,45 @@
     }));
   }
 
+  // ── Synthesised saved flights ─────────────────────────────────────
+  // The Flight-analysis page was blank in demo (Malcolm 2026-08-14:
+  // "newer demo screens lack imaginary data"). Deterministic per index so
+  // the graphs look the same on every visit: flight 1 is a 13½-minute
+  // hover with occasional climbs; flight 2 a shorter tuning session whose
+  // param_ops > 0 shows the friendly "screens were viewed" note.
+  function synthFlight(f) {
+    const n = f === 2 ? 475 : 820;                   // samples at 1 s
+    const esc = [], head = [], v = [], amps = [];
+    let temp = 24, volts = 25.2;
+    for (let i = 0; i < n; i++) {
+      const spool = Math.min(1, i / 18);             // 18 s spool-up
+      const land  = i > n - 25 ? (n - i) / 25 : 1;   // spool-down at the end
+      const wob   = Math.sin(i / 7) * 12 + Math.sin(i / 23) * 18;
+      const climb = (Math.sin(i / 41) > 0.82) ? 1 : 0;
+      const rpm   = Math.round((1850 + wob - climb * 45) * spool * land);
+      const a     = +(0.3 + spool * land * (7.5 + climb * 11 + Math.sin(i / 13) * 1.4)).toFixed(1);
+      volts -= a * 0.00012;                          // pack drains with load
+      temp  += (spool * land * (30 + climb * 10) + 24 - temp) * 0.01;
+      esc.push(Math.round(temp));
+      head.push(Math.max(0, rpm));
+      v.push(+(volts - a * 0.008).toFixed(2));       // droop under current
+      amps.push(a);
+    }
+    const durMs = n * 1000;
+    return {
+      count: n, interval_s: 1, dur_ms: durMs,
+      saved_at: Math.floor(Date.now() / 1000) - (f === 2 ? 86400 : 3600),
+      link: { packets: durMs / 2, max_gap_ms: f === 2 ? 61.2 : 26.4,
+              max_gap_at_ms: Math.round(durMs * 0.37), avg_gap_ms: 0.92,
+              conn_ms: durMs,
+              hist: f === 2 ? [214, 41, 2, 6, 1, 0] : [92, 18, 0, 2, 0, 0],
+              swaps: f === 2 ? 9 : 3,
+              radio_ms: [Math.round(durMs * 0.6), Math.round(durMs * 0.4), 0],
+              param_ops: f === 2 ? 4 : 0 },
+      esc, head, v, amps,
+    };
+  }
+
   window.fetch = function (input, init) {
     const url = (typeof input === "string") ? input : (input && input.url) || "";
     const q = url.indexOf("?");
@@ -168,8 +231,11 @@
       case "/api/channels.stream":
         armStream(parseInt(args.get("ms") || "50", 10));
         return J({ ok: true });
-      case "/api/flightlog.json":
-        return J(CANNED["/api/flightlog.json"]);
+      case "/api/flightlog.json": {
+        const f = parseInt(args.get("f") || "0", 10);
+        if (f > 0) return J(synthFlight(f));
+        return J(CANNED["/api/flightlog.json"]);   // live flight: none in demo
+      }
       case "/api/firmware/check":
         // "offline" makes the page skip the update offer quietly.
         return J({ current: "RXV2-demo", offline: true, net_mode: "demo" });
