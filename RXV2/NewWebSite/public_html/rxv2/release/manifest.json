@@ -1,6 +1,11 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.354-honest-flight-notes",
+      "url": "https://messiter.com/rxv2/release/v0.9.354/firmware.bin",
+      "notes": "Two flight-screen fixes from Black Thunder II's first flights: the yellow note now says Rotorflight screens were VIEWED (or edited) from the transmitter \u2014 just browsing screens fires parameter reads, so it no longer claims edits you never made. And the Black box status keeps showing the battery's LAST-KNOWN voltage (greyed, with its age) after the model powers down \u2014 exactly when you check the packs landed at 3.80 V/cell \u2014 instead of going blank."
+    },
+    {
       "name": "RXV2-0.9.353-install-progress-bar",
       "url": "https://messiter.com/rxv2/release/v0.9.353/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.353/littlefs.bin",
@@ -76,13 +81,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.343/littlefs.bin",
       "fs_md5": "091e4c7976a16a8903ee291ff5d129a9",
       "notes": "Chasing the field telemetry dropout: the event log now records exactly WHEN flight-controller telemetry stops and when it resumes (with durations), and the battery-cell-count query stops pestering flight controllers that never answer it."
-    },
-    {
-      "name": "RXV2-0.9.342-proven-tune-nudge",
-      "url": "https://messiter.com/rxv2/release/v0.9.342/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.342/littlefs.bin",
-      "fs_md5": "b21d70ee6a9a960576327736db7f83e1",
-      "notes": "The receiver now notices when a tune has PROVEN itself: after Rotorflight edits followed by six or more flights with no further changes, the app's front page gently suggests backing the tune up to the phone \u2014 once per tune, dismissable. Works across battery cycles and counts transmitter edits too."
     }
   ]
 }
