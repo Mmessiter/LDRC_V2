@@ -397,14 +397,32 @@ final class BleOta {
             // runs an identical pages image (info.fs_md5 in state.json), don't
             // rewrite the filesystem — the 20 saved flights and Rotorflight
             // backups stay untouched and the update is much faster.
+            //
+            // EXCEPTION (Malcolm 2026-08-14): reinstalling the version that is
+            // ALREADY RUNNING is the user's "something's wrong — reflash
+            // everything" gesture, so the skip must never apply then. The
+            // fs_md5 stamp is only a record of the last image we SENT — if a
+            // frozen/failed install left the stamp ahead of reality, the skip
+            // would otherwise block the pages forever (the missing Travel
+            // extents button: fw 0.9.355 running, pages stale, every
+            // reinstall skipped the fs on a lying stamp).
             if let f = fs,
                let st = try? reqSync("GET", "/api/state.json"),
                let obj = (try? JSONSerialization.jsonObject(with: st.body)) as? [String: Any],
-               let info = obj["info"] as? [String: Any],
-               let have = info["fs_md5"] as? String, have.count == 32,
-               md5Hex(f) == have.lowercased() {
-                fs = nil
-                set("download", "Web pages unchanged — keeping flights…")
+               let info = obj["info"] as? [String: Any] {
+                var isReinstall = false
+                if let cur = info["fw_version"] as? String,
+                   let tagRange = fwUrl.range(of: #"v\d+\.\d+\.\d+"#, options: .regularExpression) {
+                    let tag = String(fwUrl[tagRange].dropFirst())   // "0.9.355"
+                    isReinstall = cur.contains(tag)
+                }
+                if isReinstall {
+                    set("download", "Reinstall — rewriting the web pages too…")
+                } else if let have = info["fs_md5"] as? String, have.count == 32,
+                          md5Hex(f) == have.lowercased() {
+                    fs = nil
+                    set("download", "Web pages unchanged — keeping flights…")
+                }
             }
             lock.lock(); total = Int64(fw.count + (fs?.count ?? 0)); lock.unlock()
             // one clean restart per image: /begin resets the receiver side,
