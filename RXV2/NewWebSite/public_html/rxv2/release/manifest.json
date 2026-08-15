@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.362-bench-zeroed",
+      "url": "https://messiter.com/rxv2/release/v0.9.362/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.362/littlefs.bin",
+      "fs_md5": "765bb61f5d1512415d3ee51c0d5016a2",
+      "notes": "Bench measure fix (Malcolm's own diagnosis, first try: 8 deg roll measured -24!): while holding one axis, the OTHER swash axes are now held at ZERO instead of following the live mixer \u2014 with no transmitter, collective was sitting at full-low underneath the measurement. A pure 8 deg roll now measures as just that."
+    },
+    {
       "name": "RXV2-0.9.361-bench-measure",
       "url": "https://messiter.com/rxv2/release/v0.9.361/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.361/littlefs.bin",
@@ -74,13 +81,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.351/littlefs.bin",
       "fs_md5": "682a420c81178bd018c9ab6631219ffb",
       "notes": "Fixes the stuck manual-install screen for real: a scope bug meant the install command was never actually sent to the receiver \u2014 the page then waited forever for an update that never started. The command now fires (proven by an automated page test), the seconds counter runs, and the page returns you to the model list if Bluetooth hasn't re-linked by ~100 s."
-    },
-    {
-      "name": "RXV2-0.9.350-deterministic-install",
-      "url": "https://messiter.com/rxv2/release/v0.9.350/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.350/littlefs.bin",
-      "fs_md5": "faa02b9b0a2a77727857afdc7c7b4659",
-      "notes": "The manual install now uses exactly the strategy that made the automatic prompt reliable: fire the install, ignore its doomed reply, and judge only by the receiver's version changing \u2014 with a visible seconds counter and a guaranteed return to the model list if Bluetooth hasn't re-linked by ~100 s (the update is installed either way). No stuck screens, by construction."
     }
   ]
 }

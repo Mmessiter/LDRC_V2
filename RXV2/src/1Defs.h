@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.361-bench-measure";
+constexpr const char* FW_VERSION = "RXV2-0.9.362-bench-zeroed";
 
 //*********************************************************************
 //  Auto-update manifest URLs
