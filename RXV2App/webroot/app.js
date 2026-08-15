@@ -494,10 +494,17 @@
         }
         b.id = 'linkBadge';
         b.type = bridge ? 'button' : undefined;
-        // Just a dot (Malcolm 2026-08-15: "we know by now, and it's in the
-        // way") — the full '🔵 Bluetooth' pill covered page content. The dot
-        // is still the Disconnect button in the app: tap → confirm.
-        b.textContent = ble ? '🔵' : '🛜';
+        // A literal blue TOOTH (Malcolm 2026-08-15: "an icon that looks
+        // like a blue tooth!?") — the pun Harald deserved. Still the
+        // Disconnect button in the app: tap → confirm. WiFi keeps its dot.
+        if (ble) {
+            b.innerHTML = '<svg viewBox="0 0 24 24" style="width:1.5em;height:1.5em;display:block">'
+                + '<path fill="#eaf3ff" d="M12 2C7.6 2 5 4.8 5 8c0 2.6 1.3 3.7 1.9 5.5'
+                + 'c.6 1.9.6 8.5 2.6 8.5 1.6 0 1.1-4.2 2.5-4.2s.9 4.2 2.5 4.2'
+                + 'c2 0 2-6.6 2.6-8.5C17.7 11.7 19 10.6 19 8c0-3.2-2.6-6-7-6z"/></svg>';
+        } else {
+            b.textContent = '🛜';
+        }
         b.title = ble ? 'Bluetooth — tap to disconnect' : 'WiFi';
         // Above the floating Save/Back bar on the tuning pages.
         const fabLift = document.querySelector('.fabBar') ? ' + 4.6em' : '';
