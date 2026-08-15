@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.364-bench-polish",
+      "url": "https://messiter.com/rxv2/release/v0.9.364/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.364/littlefs.bin",
+      "fs_md5": "677b68bf8ee371d9eb8ac2c735c8c5da",
+      "notes": "Travel extents polish: tail travel renamed to 'nose left / nose right' (a tail swinging left sends the NOSE right \u2014 plain left/right labels mislead), and the bench buttons grey out when meaningless: Hold is disabled while that exact hold is already active, Release is disabled when nothing is held."
+    },
+    {
       "name": "RXV2-0.9.363-bench-official",
       "url": "https://messiter.com/rxv2/release/v0.9.363/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.363/littlefs.bin",
@@ -74,13 +81,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.353/littlefs.bin",
       "fs_md5": "5843899e2e4a91d76abbf79e90d03508",
       "notes": "The manual install screen now shows a moving progress bar (like the front-page update prompt) with a phase note that switches to 'flashing + rebooting' when the receiver goes quiet \u2014 no more bare seconds counter during the wait."
-    },
-    {
-      "name": "RXV2-0.9.352-reinstall-aware",
-      "url": "https://messiter.com/rxv2/release/v0.9.352/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.352/littlefs.bin",
-      "fs_md5": "1cf593d34854de90a9ab5a984d2a727b",
-      "notes": "Reinstalling the SAME version no longer confuses the install screen: success is now judged by the receiver going quiet (flashing) and coming back on the target version, which works for updates and reinstalls alike. Both paths proven by automated page tests."
     }
   ]
 }
