@@ -250,5 +250,7 @@
   "RXV2-0.9.364-bench-polish": "Travel extents polish: tail travel renamed to 'nose left / nose right' (a tail swinging left sends the NOSE right — plain left/right labels mislead), and the bench buttons grey out when meaningless: Hold is disabled while that exact hold is already active, Release is disabled when nothing is held.",
   "RXV2-0.9.365-stick-frame-tail": "Tail travel is now named by the RUDDER STICK — 'stick left / stick right' (Malcolm's suggestion), bound to the direction each field really limits on these transmitters as verified on the bench. Stick-left listed first, as a hand would expect.",
   "RXV2-0.9.366-keyboard-aware-save": "The bottom Save/Back bar now rides up above the iOS keyboard instead of hiding underneath it (Malcolm: 'I have to scroll to find Save to Flight Controller'). Works on every tuning page - the bar follows the visual viewport whenever a number field opens the keyboard.",
-  "RXV2-0.9.367-saved-flash": "Travel extents: the Save button itself briefly flashes 'Saved!' after a successful, verified save - same friendly confirmation the governor pages have."
+  "RXV2-0.9.367-saved-flash": "Travel extents: the Save button itself briefly flashes 'Saved!' after a successful, verified save - same friendly confirmation the governor pages have.",
+  "RXV2-0.9.368-keyboard-exact": "Save bar now clears the keyboard exactly: the keyboard swallows the home-indicator safe area but the bar's padding still reserved it, leaving the buttons half-hidden - reclaimed while raised.",
+  "RXV2-0.9.369-badge-dot": "The Bluetooth/WiFi pill shrinks to a small dot - it was covering page content, and by now everyone knows how they're connected. In the app the dot is still the disconnect button: tap it, confirm."
 }
