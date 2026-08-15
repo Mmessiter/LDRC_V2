@@ -72,8 +72,9 @@ input:disabled{background:#eee;color:#999}
         <h2>Bench measure (swash calibration)</h2>
         <p class=cardNote style="margin:.1em .2em .6em"><b style="color:#c0392b">Motor off / blades clear.</b>
         Drives the swash to an exact angle with the gyros bypassed, so a pitch gauge can check the
-        real geometry. The flight controller refuses to arm while this is on, and the swash is
-        released automatically when you leave this page (or after 5 minutes).</p>
+        real geometry — the other swash axes are held at <b>zero</b> while you measure. The flight
+        controller refuses to arm while this is on, and the swash is released automatically when
+        you leave this page (or after 5 minutes).</p>
         <div class=fldRow><label>Axis</label>
             <select id=bm_axis style="width:9em;padding:.4em;font-size:.95em;border:1px solid #b8c7d0;border-radius:6px;background:#fff">
                 <option value=1>Roll (aileron)</option>
@@ -384,7 +385,11 @@ async function benchApply() {
     deg = Math.max(-12, Math.min(12, deg));
     const raw = Math.round(deg * 1000 / 12);
     try {
-        await ovSet({ [idx]: raw });
+        // Hold the measured axis at the angle and the OTHER swash axes at
+        // ZERO — leaving them un-overridden let them follow the live mixer,
+        // so with no transmitter the collective sat at full-low and Malcolm's
+        // 8° roll measured −24° (2026-08-15, first bench test).
+        await ovSet({ 1: idx === 1 ? raw : 0, 2: idx === 2 ? raw : 0, 4: idx === 4 ? raw : 0 });
         const axisName = idx === 1 ? 'Roll' : idx === 2 ? 'Pitch' : 'Collective';
         setStatus('warn', '🛠 SWASH HELD — ' + axisName + ' at ' + deg.toFixed(1) +
                           '° (gyros bypassed). Measure, then Release. Auto-release in 5 min.');
