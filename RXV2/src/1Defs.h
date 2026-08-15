@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.364-bench-polish";
+constexpr const char* FW_VERSION = "RXV2-0.9.365-stick-frame-tail";
 
 //*********************************************************************
 //  Auto-update manifest URLs

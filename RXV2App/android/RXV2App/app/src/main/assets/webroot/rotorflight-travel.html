@@ -106,12 +106,12 @@ input:disabled{background:#eee;color:#999}
 
     <div class=card>
         <h2>Tail travel</h2>
-        <div class=fldRow><label id=lblTailNeg>Yaw travel &mdash; nose left</label>  <input type=number id=t_tailMin step=0.1 min=0 max=60></div>
-        <div class=fldRow><label id=lblTailPos>Yaw travel &mdash; nose right</label>       <input type=number id=t_tailMax step=0.1 min=0 max=60></div>
+        <div class=fldRow><label id=lblTailPos>Tail travel &mdash; stick left</label>  <input type=number id=t_tailMax step=0.1 min=0 max=60></div>
+        <div class=fldRow><label id=lblTailNeg>Tail travel &mdash; stick right</label> <input type=number id=t_tailMin step=0.1 min=0 max=60></div>
         <div class=fldRow><label id=lblTailCtr>Tail centre trim</label>           <input type=number id=t_tailCtr step=0.1 min=-24 max=24></div>
-        <p class=cardNote id=tailNote>Degrees of tail authority each way — named by where the
-        <b>nose</b> goes (a tail swinging left sends the nose right, which is why plain
-        left/right labels mislead). If these still seem swapped on your model, say so.</p>
+        <p class=cardNote id=tailNote>Degrees of tail authority each way, named by the
+        <b>rudder stick</b> — matched to how these transmitters are rigged (verified on the
+        bench, 2026-08-15). If a differently-rigged model reads swapped, say so.</p>
     </div>
     <button class="btn btn-fw" id=reloadBtn onclick="load()"><span class=ico>&#8635;</span>Reload from flight controller</button>
 
@@ -173,8 +173,8 @@ function tailScale()  { return tailIsMotor() ? 10 : (1000/24); }   // UI unit �
 
 function applyTailLabels() {
     const motor = tailIsMotor();
-    document.getElementById('lblTailNeg').textContent = motor ? 'Tail motor min (%)' : 'Yaw travel — nose left';
-    document.getElementById('lblTailPos').textContent = motor ? 'Tail motor max (%)' : 'Yaw travel — nose right';
+    document.getElementById('lblTailNeg').textContent = motor ? 'Tail motor min (%)' : 'Tail travel — stick right';
+    document.getElementById('lblTailPos').textContent = motor ? 'Tail motor max (%)' : 'Tail travel — stick left';
     document.getElementById('lblTailCtr').textContent = motor ? 'Tail centre trim (%)' : 'Tail centre trim (°)';
     document.getElementById('tailNote').textContent = motor
         ? 'Motorised tail: throttle percentages instead of blade angles.'
