@@ -163,6 +163,15 @@ function setStatus(kind, msg) {
     el.className = 'banner ' + kind;
     el.textContent = msg;
 }
+// Brief "Saved!" on the button itself (Malcolm 2026-08-15) — same pattern
+// as the governor pages; the sticky banner carries the detail.
+function flashSave(html, ms) {
+    const b = document.getElementById('saveBtn');
+    if (!b) return;
+    const old = b.innerHTML;
+    b.innerHTML = html;
+    setTimeout(() => { b.innerHTML = old; }, ms || 4000);
+}
 function paintEditable() {
     document.querySelectorAll('input[type=number]')
             .forEach(el => el.disabled = !editable);
@@ -322,6 +331,7 @@ async function save() {
             LDRC.clearDirty();
             cachedCfg = cfg; cachedInputs = ins;
             setStatus('good', '✓ Saved on the phone — ready to send at the next connection');
+            flashSave('<span class=ico>&#9989;</span>Saved on the phone!', 4000);
             return;
         }
         LDRC.clearDirty();
@@ -343,12 +353,14 @@ async function save() {
         const gotTotal  = ckCfg[9] | (ckCfg[10]<<8);
         if (diffs.length === 0) {
             setStatus('good', '✓ Saved & verified by flight controller read-back — extents apply immediately');
+            flashSave('<span class=ico>&#9989;</span>Saved!', 4000);
             cachedCfg = ckCfg.slice(0, CFG_BYTES); cachedInputs = ckIns.slice(0, INPUTS_BYTES);
             await load();
         } else if (gotTotal !== sentTotal &&
                    diffs.every(d => d === 'cfg[9]' || d === 'cfg[10]')) {
             setStatus('good', '✓ Saved — the flight controller raised the total pitch limit to '
                 + (gotTotal*12/1000).toFixed(1) + '° (it keeps 6° of cyclic above collective)');
+            flashSave('<span class=ico>&#9989;</span>Saved!', 4000);
             await load();
         } else {
             setStatus('bad', '⚠ Differences on read-back: ' + diffs.slice(0,4).join(', ') + ' — reloaded actual values');
