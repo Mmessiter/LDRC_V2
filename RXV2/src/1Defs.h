@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.370-blue-tooth";
+constexpr const char* FW_VERSION = "RXV2-0.9.371-genmoji-tooth";
 
 //*********************************************************************
 //  Auto-update manifest URLs

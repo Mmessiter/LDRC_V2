@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.371-genmoji-tooth",
+      "url": "https://messiter.com/rxv2/release/v0.9.371/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.371/littlefs.bin",
+      "fs_md5": "b77f907efeb3fc78a977f1a2dc79df19",
+      "notes": "The Bluetooth badge is now Malcolm's own Genmoji: a glossy blue tooth with signal waves on the enamel, drawn on his iPhone. Still tap-to-disconnect."
+    },
+    {
       "name": "RXV2-0.9.370-blue-tooth",
       "url": "https://messiter.com/rxv2/release/v0.9.370/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.370/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.360/littlefs.bin",
       "fs_md5": "8c7a60431a1acd5cd7601b56b11bf404",
       "notes": "Plain English across ALL Rotorflight screens (Malcolm: brilliant technicians were frequently simply not taught good English!). Every cryptic label now says what it does, with Rotorflight's own term kept in brackets for cross-reference: 'Hold cyclic true in pirouettes (piro comp)', 'Roll wind-up relief (I-term relax cutoff)', 'Stick sharpening (setpoint boost gain)', 'Tail-torque assist strength (TTA gain)', 'Throttle anticipation (feed-forward weights)', 'Quick-restart time (recovery time)', and friends \u2014 45 labels in all."
-    },
-    {
-      "name": "RXV2-0.9.359-plain-names",
-      "url": "https://messiter.com/rxv2/release/v0.9.359/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.359/littlefs.bin",
-      "fs_md5": "cc93358c5ccc8a193d8cb4476bfc6e1c",
-      "notes": "Plainer words on Travel extents (Malcolm: Rotorflight's own names make it impenetrable \u2014 'geo correction' sounds like GPS!): the field is now 'Collective up/down balance', with a note giving Rotorflight's name for cross-reference with their docs."
     }
   ]
 }
