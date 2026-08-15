@@ -253,5 +253,6 @@
   "RXV2-0.9.367-saved-flash": "Travel extents: the Save button itself briefly flashes 'Saved!' after a successful, verified save - same friendly confirmation the governor pages have.",
   "RXV2-0.9.368-keyboard-exact": "Save bar now clears the keyboard exactly: the keyboard swallows the home-indicator safe area but the bar's padding still reserved it, leaving the buttons half-hidden - reclaimed while raised.",
   "RXV2-0.9.369-badge-dot": "The Bluetooth/WiFi pill shrinks to a small dot - it was covering page content, and by now everyone knows how they're connected. In the app the dot is still the disconnect button: tap it, confirm.",
-  "RXV2-0.9.370-blue-tooth": "The Bluetooth badge is now a literal blue TOOTH (Malcolm's pun, irresistible) - a little molar on the blue dot, still the tap-to-disconnect button."
+  "RXV2-0.9.370-blue-tooth": "The Bluetooth badge is now a literal blue TOOTH (Malcolm's pun, irresistible) - a little molar on the blue dot, still the tap-to-disconnect button.",
+  "RXV2-0.9.371-genmoji-tooth": "The Bluetooth badge is now Malcolm's own Genmoji: a glossy blue tooth with signal waves on the enamel, drawn on his iPhone. Still tap-to-disconnect."
 }
