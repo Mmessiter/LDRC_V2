@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.370-blue-tooth",
+      "url": "https://messiter.com/rxv2/release/v0.9.370/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.370/littlefs.bin",
+      "fs_md5": "a82ac0269fa1eff903d1db51e99bf358",
+      "notes": "The Bluetooth badge is now a literal blue TOOTH (Malcolm's pun, irresistible) - a little molar on the blue dot, still the tap-to-disconnect button."
+    },
+    {
       "name": "RXV2-0.9.369-badge-dot",
       "url": "https://messiter.com/rxv2/release/v0.9.369/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.369/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.359/littlefs.bin",
       "fs_md5": "cc93358c5ccc8a193d8cb4476bfc6e1c",
       "notes": "Plainer words on Travel extents (Malcolm: Rotorflight's own names make it impenetrable \u2014 'geo correction' sounds like GPS!): the field is now 'Collective up/down balance', with a note giving Rotorflight's name for cross-reference with their docs."
-    },
-    {
-      "name": "RXV2-0.9.358-geo-correction",
-      "url": "https://messiter.com/rxv2/release/v0.9.358/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.358/littlefs.bin",
-      "fs_md5": "d40849e8acbcc3b6cd1851c02b3a81aa",
-      "notes": "Travel extents: new Geo correction field \u2014 Rotorflight's knob for unequal positive vs negative collective (Black Thunder II read +12.6 up but -14.9 down after gain calibration). Step it one way, re-measure, reverse if the gap widens; direction of every control is still preserved."
     }
   ]
 }
