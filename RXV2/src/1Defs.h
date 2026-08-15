@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.367-saved-flash";
+constexpr const char* FW_VERSION = "RXV2-0.9.369-badge-dot";
 
 //*********************************************************************
 //  Auto-update manifest URLs

@@ -494,16 +494,21 @@
         }
         b.id = 'linkBadge';
         b.type = bridge ? 'button' : undefined;
-        b.textContent = ble ? '🔵 Bluetooth' : '🛜 WiFi';
+        // Just a dot (Malcolm 2026-08-15: "we know by now, and it's in the
+        // way") — the full '🔵 Bluetooth' pill covered page content. The dot
+        // is still the Disconnect button in the app: tap → confirm.
+        b.textContent = ble ? '🔵' : '🛜';
+        b.title = ble ? 'Bluetooth — tap to disconnect' : 'WiFi';
         // Above the floating Save/Back bar on the tuning pages.
         const fabLift = document.querySelector('.fabBar') ? ' + 4.6em' : '';
         b.style.cssText =
-            'position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px)' + fabLift + ');'
-            + 'z-index:60;padding:.5em 1em;border-radius:999px;font-size:.95em;font-weight:600;'
-            + 'letter-spacing:.03em;user-select:none;border:0;font-family:inherit;'
+            'position:fixed;right:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px)' + fabLift + ');'
+            + 'z-index:60;width:2.1em;height:2.1em;padding:0;border-radius:50%;font-size:1em;'
+            + 'display:flex;align-items:center;justify-content:center;'
+            + 'user-select:none;border:0;font-family:inherit;'
             + (bridge ? 'pointer-events:auto;cursor:pointer;' : 'pointer-events:none;')
-            + (ble ? 'background:rgba(74,122,201,.92);color:#eaf3ff;box-shadow:0 3px 10px rgba(30,70,140,.40)'
-                   : 'background:rgba(95,160,153,.88);color:#eafff9;box-shadow:0 3px 10px rgba(40,100,90,.35)');
+            + (ble ? 'background:rgba(74,122,201,.92);box-shadow:0 2px 7px rgba(30,70,140,.40)'
+                   : 'background:rgba(95,160,153,.88);box-shadow:0 2px 7px rgba(40,100,90,.35)');
         if (bridge) {
             b.onclick = async () => {
                 const ok = await LDRC.confirm(
@@ -527,7 +532,17 @@
         const bar = document.querySelector('.fabBar');
         if (!bar) return;
         const covered = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-        bar.style.transform = covered > 40 ? 'translateY(-' + covered + 'px)' : '';
+        if (covered > 40) {
+            bar.style.transform = 'translateY(-' + covered + 'px)';
+            // The keyboard swallows the home-indicator safe area, but the
+            // bar's bottom padding still reserved it — reclaim it while
+            // raised or the buttons sit half-under the keyboard's accessory
+            // strip (Malcolm 2026-08-15: "Nearly!").
+            bar.style.paddingBottom = '.55em';
+        } else {
+            bar.style.transform = '';
+            bar.style.paddingBottom = '';
+        }
     }
     vv.addEventListener('resize', adjust);
     vv.addEventListener('scroll', adjust);

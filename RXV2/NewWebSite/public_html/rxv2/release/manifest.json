@@ -1,6 +1,20 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.369-badge-dot",
+      "url": "https://messiter.com/rxv2/release/v0.9.369/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.369/littlefs.bin",
+      "fs_md5": "ddf1680ef0d36a2ebcc6dba931cb64de",
+      "notes": "The Bluetooth/WiFi pill shrinks to a small dot - it was covering page content, and by now everyone knows how they're connected. In the app the dot is still the disconnect button: tap it, confirm."
+    },
+    {
+      "name": "RXV2-0.9.368-keyboard-exact",
+      "url": "https://messiter.com/rxv2/release/v0.9.368/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.368/littlefs.bin",
+      "fs_md5": "5fa1be55941598f7cd557aa9a2b4a3f9",
+      "notes": "Save bar now clears the keyboard exactly: the keyboard swallows the home-indicator safe area but the bar's padding still reserved it, leaving the buttons half-hidden - reclaimed while raised."
+    },
+    {
       "name": "RXV2-0.9.367-saved-flash",
       "url": "https://messiter.com/rxv2/release/v0.9.367/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.367/littlefs.bin",
@@ -69,20 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.358/littlefs.bin",
       "fs_md5": "d40849e8acbcc3b6cd1851c02b3a81aa",
       "notes": "Travel extents: new Geo correction field \u2014 Rotorflight's knob for unequal positive vs negative collective (Black Thunder II read +12.6 up but -14.9 down after gain calibration). Step it one way, re-measure, reverse if the gap widens; direction of every control is still preserved."
-    },
-    {
-      "name": "RXV2-0.9.357-travel-gains",
-      "url": "https://messiter.com/rxv2/release/v0.9.357/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.357/littlefs.bin",
-      "fs_md5": "be757cc2a2395592afcf314eb50eed31",
-      "notes": "Travel extents gains: new 'Calibration (gains)' card with collective and cyclic gain (%) \u2014 the scale that makes commanded degrees equal REAL measured degrees. Malcolm's first live read showed the FC commanding 14 deg while the blades reached only 5-7: raise the gain by the measured ratio (direction is always preserved \u2014 only the amount changes), use collective trim to centre a non-zero mid-stick, then re-measure."
-    },
-    {
-      "name": "RXV2-0.9.356-travel-extents-2",
-      "url": "https://messiter.com/rxv2/release/v0.9.356/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.356/littlefs.bin",
-      "fs_md5": "b4bd355141d6f056fadee347e7d3d826",
-      "notes": "Travel extents fixes: mixer inputs are now read one at a time (the bulk read could never fit through the radio link, which is why the first version failed to load), and the status message is sticky at the top of the screen so it stays visible next to the Reload/Save buttons."
     }
   ]
 }
