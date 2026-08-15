@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.365-stick-frame-tail",
+      "url": "https://messiter.com/rxv2/release/v0.9.365/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.365/littlefs.bin",
+      "fs_md5": "87ee9c00f6d9d80200c76926f770e9b2",
+      "notes": "Tail travel is now named by the RUDDER STICK \u2014 'stick left / stick right' (Malcolm's suggestion), bound to the direction each field really limits on these transmitters as verified on the bench. Stick-left listed first, as a hand would expect."
+    },
+    {
       "name": "RXV2-0.9.364-bench-polish",
       "url": "https://messiter.com/rxv2/release/v0.9.364/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.364/littlefs.bin",
@@ -74,13 +81,6 @@
       "name": "RXV2-0.9.354-honest-flight-notes",
       "url": "https://messiter.com/rxv2/release/v0.9.354/firmware.bin",
       "notes": "Two flight-screen fixes from Black Thunder II's first flights: the yellow note now says Rotorflight screens were VIEWED (or edited) from the transmitter \u2014 just browsing screens fires parameter reads, so it no longer claims edits you never made. And the Black box status keeps showing the battery's LAST-KNOWN voltage (greyed, with its age) after the model powers down \u2014 exactly when you check the packs landed at 3.80 V/cell \u2014 instead of going blank."
-    },
-    {
-      "name": "RXV2-0.9.353-install-progress-bar",
-      "url": "https://messiter.com/rxv2/release/v0.9.353/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.353/littlefs.bin",
-      "fs_md5": "5843899e2e4a91d76abbf79e90d03508",
-      "notes": "The manual install screen now shows a moving progress bar (like the front-page update prompt) with a phase note that switches to 'flashing + rebooting' when the receiver goes quiet \u2014 no more bare seconds counter during the wait."
     }
   ]
 }
