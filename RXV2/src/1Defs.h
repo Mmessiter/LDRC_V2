@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.365-stick-frame-tail";
+constexpr const char* FW_VERSION = "RXV2-0.9.366-keyboard-aware-save";
 
 //*********************************************************************
 //  Auto-update manifest URLs

@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.366-keyboard-aware-save",
+      "url": "https://messiter.com/rxv2/release/v0.9.366/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.366/littlefs.bin",
+      "fs_md5": "f68528e13c02811af9756b1713037495",
+      "notes": "The bottom Save/Back bar now rides up above the iOS keyboard instead of hiding underneath it (Malcolm: 'I have to scroll to find Save to Flight Controller'). Works on every tuning page - the bar follows the visual viewport whenever a number field opens the keyboard."
+    },
+    {
       "name": "RXV2-0.9.365-stick-frame-tail",
       "url": "https://messiter.com/rxv2/release/v0.9.365/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.365/littlefs.bin",
@@ -76,11 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.355/littlefs.bin",
       "fs_md5": "db4edadfc4ada233ff2543ee4bec087a",
       "notes": "NEW: 'Travel extents' screen in the Rotorflight menu \u2014 born at the field when Black Thunder II's first hover showed nowhere near enough collective pitch. Edit the collective pitch limit, cyclic pitch limit, total swash limit, swashplate trims and tail travel (Rotorflight 2.3 mixer limits) right from the phone. Changes apply immediately (no reboot), are saved to the flight controller's memory, and are verified by read-back. Always check new extents on the bench before flying."
-    },
-    {
-      "name": "RXV2-0.9.354-honest-flight-notes",
-      "url": "https://messiter.com/rxv2/release/v0.9.354/firmware.bin",
-      "notes": "Two flight-screen fixes from Black Thunder II's first flights: the yellow note now says Rotorflight screens were VIEWED (or edited) from the transmitter \u2014 just browsing screens fires parameter reads, so it no longer claims edits you never made. And the Black box status keeps showing the battery's LAST-KNOWN voltage (greyed, with its age) after the model powers down \u2014 exactly when you check the packs landed at 3.80 V/cell \u2014 instead of going blank."
     }
   ]
 }

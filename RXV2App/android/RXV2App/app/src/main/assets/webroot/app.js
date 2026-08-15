@@ -515,3 +515,22 @@
         document.body.appendChild(b);
     })();
 })();
+
+// ── Keyboard-aware action bar (Malcolm 2026-08-15: "the keyboard hides
+// Save to Flight Controller"). On iOS the on-screen keyboard overlays a
+// position:fixed bottom bar; the visualViewport API tells us how much of
+// the layout viewport it covers, and the bar rides up by exactly that.
+(function () {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    function adjust() {
+        const bar = document.querySelector('.fabBar');
+        if (!bar) return;
+        const covered = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+        bar.style.transform = covered > 40 ? 'translateY(-' + covered + 'px)' : '';
+    }
+    vv.addEventListener('resize', adjust);
+    vv.addEventListener('scroll', adjust);
+    addEventListener('focusin',  () => setTimeout(adjust, 60));
+    addEventListener('focusout', () => setTimeout(adjust, 250));
+})();
