@@ -106,10 +106,12 @@ input:disabled{background:#eee;color:#999}
 
     <div class=card>
         <h2>Tail travel</h2>
-        <div class=fldRow><label id=lblTailNeg>Yaw travel &minus; (left)</label>  <input type=number id=t_tailMin step=0.1 min=0 max=60></div>
-        <div class=fldRow><label id=lblTailPos>Yaw travel + (right)</label>       <input type=number id=t_tailMax step=0.1 min=0 max=60></div>
+        <div class=fldRow><label id=lblTailNeg>Yaw travel &mdash; nose left</label>  <input type=number id=t_tailMin step=0.1 min=0 max=60></div>
+        <div class=fldRow><label id=lblTailPos>Yaw travel &mdash; nose right</label>       <input type=number id=t_tailMax step=0.1 min=0 max=60></div>
         <div class=fldRow><label id=lblTailCtr>Tail centre trim</label>           <input type=number id=t_tailCtr step=0.1 min=-24 max=24></div>
-        <p class=cardNote id=tailNote>Degrees of tail-blade pitch each way, and the centre offset.</p>
+        <p class=cardNote id=tailNote>Degrees of tail authority each way — named by where the
+        <b>nose</b> goes (a tail swinging left sends the nose right, which is why plain
+        left/right labels mislead). If these still seem swapped on your model, say so.</p>
     </div>
     <button class="btn btn-fw" id=reloadBtn onclick="load()"><span class=ico>&#8635;</span>Reload from flight controller</button>
 
@@ -171,8 +173,8 @@ function tailScale()  { return tailIsMotor() ? 10 : (1000/24); }   // UI unit �
 
 function applyTailLabels() {
     const motor = tailIsMotor();
-    document.getElementById('lblTailNeg').textContent = motor ? 'Tail motor min (%)' : 'Yaw travel − (left)';
-    document.getElementById('lblTailPos').textContent = motor ? 'Tail motor max (%)' : 'Yaw travel + (right)';
+    document.getElementById('lblTailNeg').textContent = motor ? 'Tail motor min (%)' : 'Yaw travel — nose left';
+    document.getElementById('lblTailPos').textContent = motor ? 'Tail motor max (%)' : 'Yaw travel — nose right';
     document.getElementById('lblTailCtr').textContent = motor ? 'Tail centre trim (%)' : 'Tail centre trim (°)';
     document.getElementById('tailNote').textContent = motor
         ? 'Motorised tail: throttle percentages instead of blade angles.'
@@ -362,6 +364,23 @@ async function save() {
 // on a 5-minute dead-man timer. Only indices 1/2/4 are ever touched.
 const OV_OFF = 2501;
 let benchTimer = null;
+// Button truthfulness (Malcolm 2026-08-15): Hold is meaningless when the
+// exact same hold is already active; Release is meaningless when nothing is
+// held. benchHeld tracks the active hold ({idx, raw} or null).
+let benchHeld = null;
+function paintBench() {
+    const apply = document.getElementById('bmApply');
+    const off   = document.getElementById('bmOff');
+    if (!apply || !off) return;
+    const idx = parseInt(document.getElementById('bm_axis').value, 10);
+    let deg = parseFloat(document.getElementById('bm_deg').value || '0') || 0;
+    deg = Math.max(-12, Math.min(12, deg));
+    const raw = Math.round(deg * 1000 / 12);
+    apply.disabled = !!benchHeld && benchHeld.idx === idx && benchHeld.raw === raw;
+    off.disabled   = !benchHeld;
+    apply.style.opacity = apply.disabled ? 0.45 : 1;
+    off.style.opacity   = off.disabled   ? 0.45 : 1;
+}
 function ovFrame(idx, val) {
     const f = new Uint8Array(3);
     f[0] = idx;
@@ -392,6 +411,8 @@ async function benchApply() {
         // so with no transmitter the collective sat at full-low and Malcolm's
         // 8° roll measured −24° (2026-08-15, first bench test).
         await ovSet({ 1: idx === 1 ? raw : 0, 2: idx === 2 ? raw : 0, 4: idx === 4 ? raw : 0 });
+        benchHeld = { idx: idx, raw: raw };
+        paintBench();
         const axisName = idx === 1 ? 'Roll' : idx === 2 ? 'Pitch' : 'Collective';
         setStatus('warn', '🛠 SWASH HELD — ' + axisName + ' at ' + deg.toFixed(1) +
                           '° (gyros bypassed). Measure, then Release. Auto-release in 5 min.');
@@ -403,15 +424,17 @@ async function benchRelease(auto) {
     if (benchTimer) { clearTimeout(benchTimer); benchTimer = null; }
     try {
         await ovSet({});
+        benchHeld = null;
+        paintBench();
         setStatus('good', auto === true ? 'Swash released (5-minute auto-release)' : 'Swash released — normal control restored');
     } catch (e) { setStatus('bad', 'Release failed: ' + e.message + ' — power-cycling the model also clears it'); }
 }
 // Best-effort release when the user leaves the page mid-measurement; the
 // FC's refuse-to-arm + the RAM-only nature of overrides are the real guards.
 document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState !== 'visible' && benchTimer) benchRelease();
+    if (document.visibilityState !== 'visible' && benchHeld) benchRelease();
 });
-addEventListener('pagehide', () => { if (benchTimer) benchRelease(); });
+addEventListener('pagehide', () => { if (benchHeld) benchRelease(); });
 
 document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('input', e => {
@@ -419,7 +442,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // and are never "saved", so they must not raise the unsaved-changes
         // warning.
         if (e.target.matches('input') && !e.target.id.startsWith('bm_')) LDRC.markDirty();
+        if (e.target.id && e.target.id.startsWith('bm_')) paintBench();
     });
+    document.getElementById('bm_axis').addEventListener('change', paintBench);
+    paintBench();
     load();
     // Safety sweep: if a previous visit (or crash) left an override active,
     // clear 1/2/4 quietly once the page is up. Fire-and-forget.
