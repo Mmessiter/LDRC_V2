@@ -123,7 +123,13 @@ final class SessionCache {
     /// replaying its success echo would fake a save).
     static func cacheable(path: String, query: String?) -> Bool {
         guard path.hasPrefix("/api/") else { return false }
-        if path == "/api/msp", let q = query, q.contains("data=") { return false }
+        if path == "/api/msp", let q = query, q.contains("data=") {
+            // fn=174 (GET_MIXER_INPUT) is the one READ whose parameter — the
+            // input index — rides in data=. Without this exception the
+            // Travel-extents reads were never recorded, so backup/restore
+            // silently forgot the mixer (Malcolm 2026-08-15, 6 am in bed).
+            if !q.contains("fn=174") { return false }
+        }
         if path == "/api/firmware/check" { return false }   // no update offers offline
         return true
     }
@@ -272,8 +278,13 @@ extension SessionCache {
         let selectByte: Int?   // fn=210 payload to send first (nil = bankless)
         let writeFn: Int
         let readFn: Int        // for post-write verification
-        let hex: String
+        let hex: String        // the WRITE payload
         let label: String      // named in the UI if it fails to verify
+        // Mixer inputs (171/174): the read needs the input index as data=,
+        // and the write payload carries a leading index byte the read-back
+        // won't echo — so the verify compares against verifyHex instead.
+        var readData: String? = nil
+        var verifyHex: String? = nil
     }
 
     // The rolling recording tees EVERY read — including the read-backs of
@@ -295,13 +306,15 @@ extension SessionCache {
 
     private static let restoreKeyPrefixes =
         ["/api/msp?fn=112&bank=", "/api/msp?fn=94&bank=",
-         "/api/msp?fn=148&bank=", "/api/msp?fn=111&bank="]
+         "/api/msp?fn=148&bank=", "/api/msp?fn=111&bank=",
+         "/api/msp?fn=174&data="]   // mixer inputs (Travel extents)
 
     /// Freeze the tuning reads currently in the rolling cache.
     func snapshotRestorePoint() {
         var keep: [String: Entry] = [:]
         for (k, v) in entries {
-            if Self.restoreKeyPrefixes.contains(where: { k.hasPrefix($0) }) || k == "/api/msp?fn=142" {
+            if Self.restoreKeyPrefixes.contains(where: { k.hasPrefix($0) })
+                || k == "/api/msp?fn=142" || k == "/api/msp?fn=42" {
                 keep[k] = v
             }
         }
@@ -341,6 +354,18 @@ extension SessionCache {
             if let h = hexAt("/api/msp?fn=111&bank=\(r)") { out.append(RestoreItem(selectByte: 0x80 | r, writeFn: 204, readFn: 111, hex: h, label: "rates bank \(r + 1)")) }
         }
         if let h = hexAt("/api/msp?fn=142") { out.append(RestoreItem(selectByte: nil, writeFn: 143, readFn: 142, hex: h, label: "governor global")) }
+        // Mixer (Travel extents, bankless): config block, then each input —
+        // 171 takes ONE input per frame (index byte + rate/min/max).
+        if let h = hexAt("/api/msp?fn=42") { out.append(RestoreItem(selectByte: nil, writeFn: 43, readFn: 42, hex: h, label: "mixer limits & trims")) }
+        let axisNames = [1: "roll", 2: "pitch", 3: "yaw", 4: "collective"]
+        for i in [1, 2, 3, 4] {
+            let key = String(format: "%02X", i)
+            if let h = hexAt("/api/msp?fn=174&data=\(key)") {
+                out.append(RestoreItem(selectByte: nil, writeFn: 171, readFn: 174,
+                                       hex: key + h, label: "mixer input — \(axisNames[i]!)",
+                                       readData: key, verifyHex: h))
+            }
+        }
         return out
     }
 }
@@ -416,8 +441,13 @@ final class RestoreRunner {
                     if ok { ok = req("/api/msp?fn=\(it.writeFn)&data=\(it.hex)").ok }
                     if ok {
                         // Verify: read back, compare (reply may be longer — prefix).
-                        let back = req("/api/msp?fn=\(it.readFn)").body.uppercased()
-                        ok = back.hasPrefix(it.hex) || it.hex.hasPrefix(back) && !back.isEmpty
+                        // Mixer inputs read with their index in data= and are
+                        // compared against verifyHex (write payload minus the
+                        // leading index byte the read never echoes).
+                        let rq = "/api/msp?fn=\(it.readFn)" + (it.readData.map { "&data=\($0)" } ?? "")
+                        let want = it.verifyHex ?? it.hex
+                        let back = req(rq).body.uppercased()
+                        ok = back.hasPrefix(want) || want.hasPrefix(back) && !back.isEmpty
                     }
                     if ok { itemOk = true; break }
                     if attempt == 1 { Thread.sleep(forTimeInterval: 0.6) }
@@ -547,8 +577,13 @@ final class SessionPrefetcher {
                let hex = String(data: st, encoding: .utf8), hex.count >= 54,
                let origPid = Int(hex.dropFirst(48).prefix(2), radix: 16),
                let origRate = Int(hex.dropFirst(52).prefix(2), radix: 16) {
-                total += 1 + 4 * 5 + 4 * 3 + 2   // 142 + pid sweep + rate sweep + restores
+                total += 6 + 4 * 5 + 4 * 3 + 2   // 142 + mixer(5) + pid sweep + rate sweep + restores
                 _ = req("/api/msp?fn=142")       // governor global — bankless
+                // Mixer — Travel extents' blocks, bankless (Malcolm
+                // 2026-08-15: the backup must not forget yesterday's
+                // additions). Config + one read per input 1..4.
+                _ = req("/api/msp?fn=42")
+                for i in 1...4 { _ = req(String(format: "/api/msp?fn=174&data=%02X", i)) }
                 // Every bank select makes the FC write flash — a brief servo
                 // stall (the swash twitch Malcolm noticed 2026-08-06). Skip
                 // selects that are already true.

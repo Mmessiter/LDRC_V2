@@ -105,7 +105,13 @@ object SessionCache {
     /** Reads only; never MSP writes (data= payload) and never firmware/check. */
     fun cacheable(path: String, query: String?): Boolean {
         if (!path.startsWith("/api/")) return false
-        if (path == "/api/msp" && (query ?: "").contains("data=")) return false
+        if (path == "/api/msp" && (query ?: "").contains("data=")) {
+            // fn=174 (GET_MIXER_INPUT) is the one READ whose parameter — the
+            // input index — rides in data=; without this exception the
+            // Travel-extents reads were never recorded and backup/restore
+            // silently forgot the mixer (Malcolm 2026-08-15).
+            if (!(query ?: "").contains("fn=174")) return false
+        }
         if (path == "/api/firmware/check") return false
         return true
     }
@@ -232,7 +238,10 @@ object SessionCache {
     // ── Restore-from-recording (Malcolm 2026-08-06) ─────────────────
     // The confused pilot's parachute: every recorded bank's tuning read is
     // byte-symmetric with its SET command — write the whole lot back.
-    data class RestoreItem(val selectByte: Int?, val writeFn: Int, val readFn: Int, val hex: String, val label: String)
+    // readData/verifyHex: mixer inputs (171/174) read with their index in
+    // data= and verify against the payload minus its leading index byte.
+    data class RestoreItem(val selectByte: Int?, val writeFn: Int, val readFn: Int, val hex: String, val label: String,
+                           val readData: String? = null, val verifyHex: String? = null)
 
     // The rolling recording tees EVERY read — including read-backs of the
     // very edits a confused pilot wants to undo (Malcolm's closed-loop test
@@ -246,13 +255,14 @@ object SessionCache {
     }
     private val restoreKeyPrefixes = listOf(
         "/api/msp?fn=112&bank=", "/api/msp?fn=94&bank=",
-        "/api/msp?fn=148&bank=", "/api/msp?fn=111&bank=")
+        "/api/msp?fn=148&bank=", "/api/msp?fn=111&bank=",
+        "/api/msp?fn=174&data=")   // mixer inputs (Travel extents)
 
     @Synchronized
     fun snapshotRestorePoint() {
         val f = restoreFileFor(modelName) ?: return
         val keep = entries.filterKeys { k ->
-            restoreKeyPrefixes.any { k.startsWith(it) } || k == "/api/msp?fn=142"
+            restoreKeyPrefixes.any { k.startsWith(it) } || k == "/api/msp?fn=142" || k == "/api/msp?fn=42"
         }
         if (keep.isEmpty()) return
         runCatching {
@@ -303,6 +313,17 @@ object SessionCache {
             hexAt("/api/msp?fn=111&bank=$r")?.let { out.add(RestoreItem(0x80 or r, 204, 111, it, "rates bank ${r + 1}")) }
         }
         hexAt("/api/msp?fn=142")?.let { out.add(RestoreItem(null, 143, 142, it, "governor global")) }
+        // Mixer (Travel extents, bankless): config block, then each input —
+        // 171 takes ONE input per frame (index byte + rate/min/max).
+        hexAt("/api/msp?fn=42")?.let { out.add(RestoreItem(null, 43, 42, it, "mixer limits & trims")) }
+        val axisNames = mapOf(1 to "roll", 2 to "pitch", 3 to "yaw", 4 to "collective")
+        for (i in 1..4) {
+            val key = "%02X".format(i)
+            hexAt("/api/msp?fn=174&data=$key")?.let {
+                out.add(RestoreItem(null, 171, 174, key + it, "mixer input — ${axisNames[i]}",
+                                    readData = key, verifyHex = it))
+            }
+        }
         return out
     }
 
