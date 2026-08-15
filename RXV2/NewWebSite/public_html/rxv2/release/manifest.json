@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.367-saved-flash",
+      "url": "https://messiter.com/rxv2/release/v0.9.367/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.367/littlefs.bin",
+      "fs_md5": "098b5f19f0388f3e13e7dabfd1d99043",
+      "notes": "Travel extents: the Save button itself briefly flashes 'Saved!' after a successful, verified save - same friendly confirmation the governor pages have."
+    },
+    {
       "name": "RXV2-0.9.366-keyboard-aware-save",
       "url": "https://messiter.com/rxv2/release/v0.9.366/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.366/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.356/littlefs.bin",
       "fs_md5": "b4bd355141d6f056fadee347e7d3d826",
       "notes": "Travel extents fixes: mixer inputs are now read one at a time (the bulk read could never fit through the radio link, which is why the first version failed to load), and the status message is sticky at the top of the screen so it stays visible next to the Reload/Save buttons."
-    },
-    {
-      "name": "RXV2-0.9.355-travel-extents",
-      "url": "https://messiter.com/rxv2/release/v0.9.355/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.355/littlefs.bin",
-      "fs_md5": "db4edadfc4ada233ff2543ee4bec087a",
-      "notes": "NEW: 'Travel extents' screen in the Rotorflight menu \u2014 born at the field when Black Thunder II's first hover showed nowhere near enough collective pitch. Edit the collective pitch limit, cyclic pitch limit, total swash limit, swashplate trims and tail travel (Rotorflight 2.3 mixer limits) right from the phone. Changes apply immediately (no reboot), are saved to the flight controller's memory, and are verified by read-back. Always check new extents on the bench before flying."
     }
   ]
 }

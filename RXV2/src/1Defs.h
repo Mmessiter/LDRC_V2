@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.366-keyboard-aware-save";
+constexpr const char* FW_VERSION = "RXV2-0.9.367-saved-flash";
 
 //*********************************************************************
 //  Auto-update manifest URLs
