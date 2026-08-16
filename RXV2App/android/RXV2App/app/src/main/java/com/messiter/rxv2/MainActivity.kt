@@ -86,6 +86,8 @@ class MainActivity : AppCompatActivity() {
             }
         }
         ble.onFound = { list ->
+            latestFound = list
+            maybeArmAuto()
             scannerAdapter?.submit(list)
             // a real receiver in sight → the demo offer just muddies the water
             demoBtn?.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
@@ -123,13 +125,46 @@ class MainActivity : AppCompatActivity() {
         else if (w != null) {
             if (demoMode) { demoMode = false; showScanner() }
             else if (reviewMode) { reviewMode = false; SessionCache.saveIfDirty(); showScanner() }
-            else ble.disconnect()               // Ready → back = disconnect
+            else { autoDone = true; ble.disconnect() }   // Ready → back = disconnect (chosen)
         }
         else super.onBackPressed()
     }
 
     // ── Scanner list ────────────────────────────────────────────────
     private var scannerAdapter: ScannerAdapter? = null
+    // Auto-connect to the receiver used last time (Malcolm 2026-08-16):
+    // once per arming, cancellable, never after a deliberate disconnect.
+    private var autoDone = false
+    private var autoPending: Runnable? = null
+    private var autoBanner: TextView? = null
+    private var latestFound: List<Rxv2Ble.Discovered> = emptyList()
+
+    private fun cancelAuto() {
+        autoPending?.let { root.removeCallbacks(it) }
+        autoPending = null
+        autoBanner?.visibility = View.GONE
+    }
+
+    private fun maybeArmAuto() {
+        if (autoDone || autoPending != null) return
+        val last = getSharedPreferences("scanner", MODE_PRIVATE).getString("last", "") ?: ""
+        if (last.isEmpty()) return
+        if (latestFound.none { it.name == last }) return
+        autoBanner?.apply {
+            text = "⚡ Connecting to $last… tap another receiver to choose it, or tap here to stay"
+            visibility = View.VISIBLE
+            setOnClickListener { autoDone = true; cancelAuto() }
+        }
+        val r = Runnable {
+            autoPending = null
+            if (autoDone) return@Runnable
+            autoDone = true
+            autoBanner?.visibility = View.GONE
+            latestFound.firstOrNull { it.name == last }?.let { ble.connect(it) }
+        }
+        autoPending = r
+        root.postDelayed(r, 1400)
+    }
 
     private fun showScanner() {
         webView?.let { it.stopLoading(); it.destroy() }; webView = null
@@ -146,10 +181,21 @@ class MainActivity : AppCompatActivity() {
             text = "Power the receiver with the transmitter OFF so its config radio comes up. The WiFi web interface still works exactly as before."
             setPadding(40, 0, 40, 20); alpha = 0.7f; textSize = 13f
         })
+        autoBanner = TextView(this).apply {
+            visibility = View.GONE
+            textSize = 14f; setPadding(40, 24, 40, 24)
+            setBackgroundColor(0xFF3B2F14.toInt()); setTextColor(0xFFFFD966.toInt())
+        }
+        col.addView(autoBanner)
         val list = ListView(this)
         scannerAdapter = ScannerAdapter()
         list.adapter = scannerAdapter
-        list.setOnItemClickListener { _, _, pos, _ -> ble.connect(scannerAdapter!!.item(pos)) }
+        list.setOnItemClickListener { _, _, pos, _ ->
+            cancelAuto(); autoDone = true
+            val d = scannerAdapter!!.item(pos)
+            getSharedPreferences("scanner", MODE_PRIVATE).edit().putString("last", d.name).apply()
+            ble.connect(d)
+        }
         col.addView(list, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
         val hint = TextView(this).apply {
@@ -275,6 +321,7 @@ class MainActivity : AppCompatActivity() {
         // model list (demo and armchair review are deliberate — left alone).
         if (pausedAtMs > 0 && System.currentTimeMillis() - pausedAtMs > 60_000 &&
             webView != null && !demoMode && !reviewMode) {
+            autoDone = false   // idle timeout is not a chosen parting — re-arm auto
             ble.disconnect()   // state callback lands us on the scanner
         }
         pausedAtMs = 0
@@ -1177,7 +1224,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         @JavascriptInterface
-        fun disconnect() { runOnUiThread { SessionCache.saveIfDirty(); ble.disconnect() } }
+        fun disconnect() { runOnUiThread { autoDone = true; SessionCache.saveIfDirty(); ble.disconnect() } }
     }
 
     // Runs on the main thread already (Rxv2Ble posts onStreamFrame there).

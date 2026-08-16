@@ -92,6 +92,10 @@ final class BleLink: NSObject, ObservableObject {
     private var userDisconnect = false
     private var reconnectUntil: Date?
 
+    // Scanner auto-connect (Malcolm 2026-08-16): fire at most once per app
+    // launch, never after a deliberate disconnect.
+    var scannerAutoDone = false
+
     func connect(_ d: Discovered) {
         stopScan()
         lastName = d.name
@@ -104,6 +108,7 @@ final class BleLink: NSObject, ObservableObject {
 
     func disconnect() {
         userDisconnect = true
+        scannerAutoDone = true   // returning to the scanner MEANS "let me choose"
         if let p = peripheral { central.cancelPeripheralConnection(p) }
         cleanupConnection(message: nil)
         state = .idle
