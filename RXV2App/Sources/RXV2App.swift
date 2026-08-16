@@ -290,9 +290,47 @@ struct ScannerView: View {
     @EnvironmentObject var link: BleLink
     @Binding var demoMode: Bool
     @Binding var reviewMode: Bool
+    // Auto-connect to the receiver used last time (Malcolm 2026-08-16):
+    // short cancellable countdown once it appears; the list stays live so a
+    // different model can be chosen instead.
+    @AppStorage("lastDeviceName") private var lastUsedName = ""
+    @State private var autoTarget: String? = nil
+    @State private var autoWork: DispatchWorkItem? = nil
+
+    private func cancelAuto() {
+        autoWork?.cancel(); autoWork = nil; autoTarget = nil
+        link.scannerAutoDone = true
+    }
+    private func maybeArmAuto(_ list: [BleLink.Discovered]) {
+        guard !link.scannerAutoDone, autoWork == nil, !lastUsedName.isEmpty,
+              let d = list.first(where: { $0.name == lastUsedName }) else { return }
+        autoTarget = d.name
+        let work = DispatchWorkItem { [weak link] in
+            guard let link, !link.scannerAutoDone else { return }
+            link.scannerAutoDone = true
+            autoTarget = nil
+            if let fresh = link.found.first(where: { $0.name == lastUsedName }) {
+                link.connect(fresh)
+            }
+        }
+        autoWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.4, execute: work)
+    }
 
     var body: some View {
         List {
+            if let t = autoTarget {
+                Section {
+                    HStack {
+                        Image(systemName: "bolt.fill").foregroundStyle(.yellow)
+                        Text("Connecting to **\(t)**… tap another receiver to choose it instead")
+                            .font(.subheadline)
+                        Spacer()
+                        Button("Not now") { cancelAuto() }
+                            .font(.subheadline.bold())
+                    }
+                }
+            }
             // One recording per MODEL (Malcolm 2026-08-04): connecting a
             // different model parks this one's session, never erases it.
             let sessions = SessionCache.savedSessions()
@@ -327,6 +365,8 @@ struct ScannerView: View {
             Section {
                 ForEach(link.found) { d in
                     Button {
+                        cancelAuto()
+                        lastUsedName = d.name
                         link.connect(d)
                     } label: {
                         HStack {
@@ -337,6 +377,11 @@ struct ScannerView: View {
                                 Text("Signal \(d.rssi) dBm")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
+                            }
+                            if d.name == lastUsedName {
+                                Image(systemName: "clock.arrow.circlepath")
+                                    .foregroundStyle(.secondary)
+                                    .accessibilityLabel("used last time")
                             }
                             Spacer()
                             Image(systemName: "chevron.right")
@@ -354,6 +399,7 @@ struct ScannerView: View {
             }
         }
         .navigationTitle("RXV2 Receivers")
+        .onReceive(link.$found) { maybeArmAuto($0) }
         .overlay {
             if link.found.isEmpty {
                 VStack(spacing: 12) {
