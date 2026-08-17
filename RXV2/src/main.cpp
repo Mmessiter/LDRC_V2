@@ -309,6 +309,12 @@ void setup() {
     // nothing is ever configured or sent on the D6 output pin. Read the flag
     // here, before any output init, so the decision is made once.
     simEnabled = prefs.isKey(NVS_KEY_SIM) ? (prefs.getUChar(NVS_KEY_SIM, 0) != 0) : false;
+    simSpoolEnabled  = prefs.isKey(NVS_KEY_SIM_SPOOL)   ? (prefs.getUChar(NVS_KEY_SIM_SPOOL, 0) != 0) : false;
+    simSpoolSeconds  = prefs.isKey(NVS_KEY_SIM_SPOOL_S) ? prefs.getUChar(NVS_KEY_SIM_SPOOL_S, 8) : 8;
+    simTorqueUs      = prefs.isKey(NVS_KEY_SIM_TORQUE)  ? prefs.getShort(NVS_KEY_SIM_TORQUE, -120) : -120;
+    simRudderChannel = prefs.isKey(NVS_KEY_SIM_RUD_CH)  ? prefs.getUChar(NVS_KEY_SIM_RUD_CH, 4) : 4;
+    if (simSpoolSeconds < 1) simSpoolSeconds = 1;
+    if (simSpoolSeconds > 60) simSpoolSeconds = 60;
     if (simEnabled) {
         Serial.println("[sim] simulator mode — flight-controller output DISABLED (D6 stays silent)");
         events.add("Sim mode: FC output disabled");
@@ -560,7 +566,49 @@ void loop() {
                 events.add("Link restored — sim left failsafe posture");
             }
         }
-        SimUSB::sendChannels(channelMicros);
+        // Spool-up realism (Malcolm 2026-08-17, for neXt autorotation
+        // practice — "Klaus would be impressed"): leaving the throttle-hold
+        // bank must not snap the sim to full head speed with infinite
+        // acceleration and no torque. Throttle RISES are rate-limited like
+        // a real governor; drops stay instant (entering the auto is
+        // unchanged). While the head is accelerating, the rudder gets a
+        // torque stab (signed, so it works for either rotor direction),
+        // fading out over the last stretch of the spool as the governor
+        // "catches up". All of it lives on a private copy — the real
+        // channel data is untouched.
+        static uint16_t simTx[16];
+        for (uint8_t i = 0; i < 16; ++i) simTx[i] = channelMicros[i];
+        if (simSpoolEnabled && throttleChannel >= 1 && throttleChannel <= 16) {
+            static float    spoolThr    = -1.0f;    // -1 = take first commanded value
+            static uint32_t lastSpoolMs = 0;
+            uint32_t nowMs = millis();
+            float dt = lastSpoolMs ? (uint32_t)(nowMs - lastSpoolMs) / 1000.0f : 0.0f;
+            if (dt > 0.25f) dt = 0.25f;             // clamp across stalls/boot
+            lastSpoolMs = nowMs;
+            float cmd = (float)simTx[throttleChannel - 1];
+            if (spoolThr < 0.0f) spoolThr = cmd;
+            bool ramping = false;
+            if (cmd <= spoolThr) {
+                spoolThr = cmd;                     // chop = instant (throttle hold)
+            } else {
+                float step = (1000.0f / simSpoolSeconds) * dt;   // µs this tick
+                if (spoolThr + step >= cmd) spoolThr = cmd;
+                else { spoolThr += step; ramping = true; }
+            }
+            simTx[throttleChannel - 1] = (uint16_t)(spoolThr + 0.5f);
+            if (ramping && simTorqueUs != 0 &&
+                simRudderChannel >= 1 && simRudderChannel <= 16 &&
+                simRudderChannel != throttleChannel) {
+                float deficit = cmd - spoolThr;                   // µs still to spool
+                float k = deficit / 200.0f; if (k > 1.0f) k = 1.0f;   // fade near the top
+                int32_t r = (int32_t)simTx[simRudderChannel - 1]
+                          + (int32_t)((float)simTorqueUs * k);
+                if (r < 1000) r = 1000;
+                if (r > 2000) r = 2000;
+                simTx[simRudderChannel - 1] = (uint16_t)r;
+            }
+        }
+        SimUSB::sendChannels(simTx);
         SimUSB::keyboardTick();   // send any pending camera/view keystroke (non-blocking)
     } else {
         protocolRx();          // pull any telemetry/MSP bytes the FC has sent back on D5
