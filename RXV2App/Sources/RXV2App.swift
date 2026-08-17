@@ -302,35 +302,20 @@ struct ScannerView: View {
         link.scannerAutoDone = true
     }
     private func maybeArmAuto(_ list: [BleLink.Discovered]) {
-        guard !link.scannerAutoDone, autoWork == nil, !lastUsedName.isEmpty,
+        // Instant (Malcolm 2026-08-17: "straight to the front screen without
+        // going round the houses") — the moment the remembered receiver is
+        // spotted, connect. No countdown, no banner. Choosing a different
+        // model is still easy: disconnect returns here with auto-connect
+        // disarmed for the rest of the launch (scannerAutoDone).
+        guard !link.scannerAutoDone, !lastUsedName.isEmpty,
               let d = list.first(where: { $0.name == lastUsedName }) else { return }
-        autoTarget = d.name
-        let work = DispatchWorkItem { [weak link] in
-            guard let link, !link.scannerAutoDone else { return }
-            link.scannerAutoDone = true
-            autoTarget = nil
-            if let fresh = link.found.first(where: { $0.name == lastUsedName }) {
-                link.connect(fresh)
-            }
-        }
-        autoWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.4, execute: work)
+        link.scannerAutoDone = true
+        autoTarget = nil
+        link.connect(d)
     }
 
     var body: some View {
         List {
-            if let t = autoTarget {
-                Section {
-                    HStack {
-                        Image(systemName: "bolt.fill").foregroundStyle(.yellow)
-                        Text("Connecting to **\(t)**… tap another receiver to choose it instead")
-                            .font(.subheadline)
-                        Spacer()
-                        Button("Not now") { cancelAuto() }
-                            .font(.subheadline.bold())
-                    }
-                }
-            }
             // One recording per MODEL (Malcolm 2026-08-04): connecting a
             // different model parks this one's session, never erases it.
             let sessions = SessionCache.savedSessions()

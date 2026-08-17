@@ -146,24 +146,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun maybeArmAuto() {
-        if (autoDone || autoPending != null) return
+        // Instant (Malcolm 2026-08-17: "straight to the front screen without
+        // going round the houses"). Choosing another receiver stays easy:
+        // back/disconnect returns to the scanner with auto-connect disarmed.
+        if (autoDone) return
         val last = getSharedPreferences("scanner", MODE_PRIVATE).getString("last", "") ?: ""
         if (last.isEmpty()) return
-        if (latestFound.none { it.name == last }) return
-        autoBanner?.apply {
-            text = "⚡ Connecting to $last… tap another receiver to choose it, or tap here to stay"
-            visibility = View.VISIBLE
-            setOnClickListener { autoDone = true; cancelAuto() }
-        }
-        val r = Runnable {
-            autoPending = null
-            if (autoDone) return@Runnable
-            autoDone = true
-            autoBanner?.visibility = View.GONE
-            latestFound.firstOrNull { it.name == last }?.let { ble.connect(it) }
-        }
-        autoPending = r
-        root.postDelayed(r, 1400)
+        val d = latestFound.firstOrNull { it.name == last } ?: return
+        autoDone = true
+        autoBanner?.visibility = View.GONE
+        ble.connect(d)
     }
 
     private fun showScanner() {
