@@ -83,6 +83,7 @@ final class BleLink: NSObject, ObservableObject {
         found = []
         guard central.state == .poweredOn else { state = .scanning; return }
         state = .scanning
+        if fastConnect() { return }   // instant reconnect to last device — no advert wait
         central.scanForPeripherals(withServices: [Self.serviceUUID], options: nil)
     }
 
@@ -98,12 +99,61 @@ final class BleLink: NSObject, ObservableObject {
 
     func connect(_ d: Discovered) {
         stopScan()
+        // A fastConnect may still be pending toward a different peripheral
+        // (machine off) — cancel it so the two never race.
+        if let old = peripheral, old !== d.peripheral {
+            central.cancelPeripheralConnection(old)
+        }
         lastName = d.name
         userDisconnect = false
         state = .connecting(d.name)
         peripheral = d.peripheral
         d.peripheral.delegate = self
+        // Remember the CoreBluetooth identifier so the NEXT launch can
+        // connect directly (fastConnect) without waiting ~1.5 s for a fresh
+        // advertisement to be scanned (Malcolm 2026-08-17).
+        UserDefaults.standard.set(d.peripheral.identifier.uuidString,
+                                  forKey: "lastDeviceId")
         central.connect(d.peripheral, options: nil)
+    }
+
+    // Instant auto-connect: retrieve the last session's peripheral by its
+    // stored identifier and connect WITHOUT scanning. iOS completes the
+    // connection as soon as the radio hears the device — typically well
+    // before a scan would have delivered an advertisement to the app.
+    // Returns false when there's nothing stored or Bluetooth isn't up yet
+    // (the caller falls back to scan + discovery auto-connect).
+    @discardableResult
+    func fastConnect() -> Bool {
+        guard !scannerAutoDone, central.state == .poweredOn else { return false }
+        switch state { case .idle, .scanning: break; default: return false }
+        let defaults = UserDefaults.standard
+        guard let name = defaults.string(forKey: "lastDeviceName"), !name.isEmpty,
+              let idStr = defaults.string(forKey: "lastDeviceId"),
+              let uuid = UUID(uuidString: idStr),
+              let p = central.retrievePeripherals(withIdentifiers: [uuid]).first
+        else { return false }
+        scannerAutoDone = true
+        stopScan()
+        lastName = name
+        userDisconnect = false
+        state = .connecting(name)
+        peripheral = p
+        p.delegate = self
+        central.connect(p, options: nil)
+        // If the machine is off / out of range the pending connect would wait
+        // forever with the UI saying "connecting". After 4 s, surface the
+        // scanner (scan + list) while the pending connect keeps waiting in
+        // the background — it still completes the moment the device appears.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) { [weak self] in
+            guard let self else { return }
+            if case .connecting = self.state, self.peripheral === p,
+               p.state != .connected {
+                self.state = .scanning
+                self.central.scanForPeripherals(withServices: [Self.serviceUUID], options: nil)
+            }
+        }
+        return true
     }
 
     func disconnect() {
@@ -328,6 +378,10 @@ final class BleLink: NSObject, ObservableObject {
 extension BleLink: CBCentralManagerDelegate, CBPeripheralDelegate {
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
         if central.state == .poweredOn, case .scanning = state {
+            // Instant path first: connect by stored identifier, skipping the
+            // advertisement wait entirely. Falls through to a normal scan
+            // (with discovery auto-connect) when nothing is stored.
+            if fastConnect() { return }
             central.scanForPeripherals(withServices: [Self.serviceUUID], options: nil)
         } else if central.state == .unauthorized {
             state = .failed("Bluetooth permission denied — enable it in Settings")

@@ -161,7 +161,27 @@ class Rxv2Ble(private val context: Context) {
         lastDevice = d.device
         userDisconnect = false
         state = State.Connecting(d.name)
+        // Remember the MAC so the NEXT launch can connect directly
+        // (fastConnect) without waiting for a scan to hear an advert.
+        context.getSharedPreferences("scanner", android.content.Context.MODE_PRIVATE)
+            .edit().putString("lastAddr", d.device.address).apply()
         gatt = d.device.connectGatt(context, false, gattCb, BluetoothDevice.TRANSPORT_LE)
+    }
+
+    // Instant auto-connect (Malcolm 2026-08-17): connect straight to the
+    // stored MAC, skipping the advertisement wait. Returns false when
+    // nothing is stored or Bluetooth is unavailable — caller falls back to
+    // the scan (which keeps running anyway so the list still populates).
+    fun fastConnect(name: String, addr: String): Boolean {
+        val a = adapter ?: return false
+        if (!a.isEnabled) return false
+        val dev = runCatching { a.getRemoteDevice(addr) }.getOrNull() ?: return false
+        connName = name
+        lastDevice = dev
+        userDisconnect = false
+        state = State.Connecting(name)
+        gatt = dev.connectGatt(context, false, gattCb, BluetoothDevice.TRANSPORT_LE)
+        return true
     }
 
     fun disconnect() {
