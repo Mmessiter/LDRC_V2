@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.375-motor-ch";
+constexpr const char* FW_VERSION = "RXV2-0.9.378-torque-curve";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -332,6 +332,8 @@ constexpr const char* NVS_KEY_SIM_SPOOL   = "simspool";  // uint8 1 = spool-up r
 constexpr const char* NVS_KEY_SIM_SPOOL_S = "simspls";   // uint8 seconds for a full 1000→2000 µs spool (1..60, default 8)
 constexpr const char* NVS_KEY_SIM_TORQUE  = "simtorq";   // int16 rudder stab in µs while spooling (signed for direction, default -120)
 constexpr const char* NVS_KEY_SIM_RUD_CH  = "simrudch";  // uint8 rudder channel 1..16 (default 4)
+constexpr const char* NVS_KEY_SIM_MOT_INV = "simmotinv"; // uint8 1 = high µs means motor OFF (inverted channel)
+constexpr const char* NVS_KEY_SIM_MOT_CH  = "simmotch";  // uint8 MOTOR/governor channel 1..16 (0 = not set → feature inert). NEVER default to the throttle STICK: on a heli that is the collective (2026-08-17 hotfix — enabling spool froze Malcolm's collective)
 constexpr const char* NVS_KEY_SIM_MAP     = "simmap";  // 8-byte map: which RX channel (0..15) feeds each sim output
 constexpr const char* NVS_KEY_SIM_REV     = "simrev";  // 8-byte per-output reverse flags (0/1)
 constexpr const char* NVS_KEY_AP_ONLY     = "aponly";  // 1 = skip home-WiFi STA, run AP-only (flying field: no waiting on an out-of-range home network)
@@ -384,6 +386,10 @@ inline uint8_t simSpoolSeconds  = 8;        // full 1000→2000 µs spool time
 inline int16_t simTorqueUs      = -120;     // rudder stab while spooling (signed)
 inline uint8_t simRudderChannel = 4;
 inline uint8_t simMotorChannel  = 0;        // 0 = unset: spool-up does nothing until chosen
+inline bool    simMotorInverted = false;    // true = HIGH µs means motor OFF (Malcolm's ch6)
+inline volatile uint16_t simSpoolDbgRaw  = 0;   // live: raw motor-channel µs in
+inline volatile uint16_t simSpoolDbgOut  = 0;   // live: µs actually sent to the sim
+inline volatile bool     simSpoolDbgRamp = false;
 constexpr uint16_t THROTTLE_SAFE_US = 885;  // well below 900: any ESC reads this as motor OFF    // pin was found by the sniffer, not set by the user   // NVS_KEY_FC_TELEM: false = ignore telemetry-line input + no Rotorflight/MSP probes            // user-configurable (NVS_KEY_CRSF_HZ): 250 native, 100/50 for fussy CRSF-to-PWM converters
 constexpr uint32_t IBUS_PERIOD_MS = 7;      // ~140 Hz
 constexpr uint32_t PPM_PERIOD_MS  = 25;     // 40 Hz — leaves 2-3 ms over the ~22 ms frame

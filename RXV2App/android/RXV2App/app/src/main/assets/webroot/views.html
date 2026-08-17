@@ -128,12 +128,21 @@
                 <input type=checkbox id=spOn style="width:1.3em;height:1.3em"> Enable
             </label>
             <div style="display:grid;grid-template-columns:1fr auto;gap:.45em .8em;align-items:center;font-size:.92em">
+                <span><b>Motor / governor channel</b> <span class=muted>(NOT the collective stick! 0 = off)</span></span>
+                <input type=number id=spMot min=0 max=16 step=1 style="width:4.5em;text-align:center">
+                <span>High = motor OFF <span class=muted>(inverted channel)</span></span>
+                <input type=checkbox id=spInv style="width:1.3em;height:1.3em;justify-self:center">
                 <span>Spool-up time, motor off &rarr; full <span class=muted>(seconds)</span></span>
                 <input type=number id=spSec min=1 max=60 step=1 style="width:4.5em;text-align:center">
                 <span>Tail stab while spooling <span class=muted>(&micro;s, minus = other way)</span></span>
                 <input type=number id=spTorq min=-400 max=400 step=10 style="width:4.5em;text-align:center">
                 <span>Rudder channel</span>
                 <input type=number id=spRud min=1 max=16 step=1 style="width:4.5em;text-align:center">
+            </div>
+            <div class=muted style="font-size:.78em;line-height:1.45;margin-top:.5em">
+                <b>Which channel is the motor?</b> Open <i>View channels</i>, flip in and out of
+                your autorotation bank, and watch which bar jumps between low and high &mdash; that&rsquo;s
+                the one. It must be the channel neXt&rsquo;s motor follows, never the collective stick.
             </div>
             <button class="btn btn-fly" type=button id=spSave style="margin-top:.7em;width:100%">Save spool-up settings</button>
             <div id=spMsg class=muted style="text-align:center;font-size:.85em;margin-top:.35em;min-height:1.2em"></div>
@@ -365,6 +374,8 @@ async function spLoad() {
         const sp = await (await fetch('/api/sim/spool.json', { cache: 'no-store' })).json();
         $('spOn').checked = !!sp.on;
         $('spSec').value = sp.seconds; $('spTorq').value = sp.torque_us; $('spRud').value = sp.rudder_ch;
+        $('spMot').value = (typeof sp.motor_ch === 'number') ? sp.motor_ch : 0;
+        $('spInv').checked = !!sp.motor_inv;
     } catch (e) { $('spMsg').textContent = 'Needs receiver firmware 0.9.373+'; }
 }
 document.addEventListener('DOMContentLoaded', () => {
@@ -376,11 +387,15 @@ document.addEventListener('DOMContentLoaded', () => {
         body.append('seconds', $('spSec').value || '8');
         body.append('torque_us', $('spTorq').value || '0');
         body.append('rudder_ch', $('spRud').value || '4');
+        body.append('motor_ch', $('spMot').value || '0');
+        body.append('motor_inv', $('spInv').checked ? '1' : '0');
         try {
             const r = await (await fetch('/api/sim/spool', { method: 'POST', body })).json();
-            $('spMsg').textContent = r.on
-                ? '✅ Saved — spool-up realism is ON (' + r.seconds + ' s, tail ' + r.torque_us + ' µs)'
-                : '✅ Saved — spool-up realism is off';
+            $('spMsg').textContent = !r.on
+                ? '✅ Saved — spool-up realism is off'
+                : (!r.motor_ch
+                    ? '⚠️ Saved, but INERT — set the motor/governor channel first'
+                    : '✅ Saved — ON (motor ch' + r.motor_ch + ', ' + r.seconds + ' s, tail ' + r.torque_us + ' µs)');
         } catch (e) { $('spMsg').textContent = '⚠️ Could not save — try again'; }
         setTimeout(() => { $('spMsg').textContent = ''; }, 6000);
     });

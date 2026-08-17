@@ -1648,9 +1648,13 @@ inline void handleSimSet() {
 inline void handleSimSpoolGet() {
     char b[128];
     snprintf(b, sizeof(b),
-        "{\"on\":%s,\"seconds\":%u,\"torque_us\":%d,\"rudder_ch\":%u}",
+        "{\"on\":%s,\"seconds\":%u,\"torque_us\":%d,\"rudder_ch\":%u,\"motor_ch\":%u,\"motor_inv\":%s,"
+        "\"live\":{\"raw\":%u,\"out\":%u,\"ramping\":%s}}",
         simSpoolEnabled ? "true" : "false",
-        (unsigned)simSpoolSeconds, (int)simTorqueUs, (unsigned)simRudderChannel);
+        (unsigned)simSpoolSeconds, (int)simTorqueUs, (unsigned)simRudderChannel,
+        (unsigned)simMotorChannel, simMotorInverted ? "true" : "false",
+        (unsigned)simSpoolDbgRaw, (unsigned)simSpoolDbgOut,
+        simSpoolDbgRamp ? "true" : "false");
     server.sendHeader("Cache-Control", "no-store");
     server.send(200, "application/json", b);
 }
@@ -1674,10 +1678,18 @@ inline void handleSimSpoolSet() {
         long c = server.arg("rudder_ch").toInt();
         if (c >= 1 && c <= 16) simRudderChannel = (uint8_t)c;
     }
+    if (server.hasArg("motor_ch")) {
+        long c = server.arg("motor_ch").toInt();
+        if (c >= 0 && c <= 16) simMotorChannel = (uint8_t)c;   // 0 = unset (inert)
+    }
+    if (server.hasArg("motor_inv"))
+        simMotorInverted = server.arg("motor_inv").toInt() != 0;
     prefs.putUChar(NVS_KEY_SIM_SPOOL,   simSpoolEnabled ? 1 : 0);
     prefs.putUChar(NVS_KEY_SIM_SPOOL_S, simSpoolSeconds);
     prefs.putShort(NVS_KEY_SIM_TORQUE,  simTorqueUs);
     prefs.putUChar(NVS_KEY_SIM_RUD_CH,  simRudderChannel);
+    prefs.putUChar(NVS_KEY_SIM_MOT_CH,  simMotorChannel);
+    prefs.putUChar(NVS_KEY_SIM_MOT_INV, simMotorInverted ? 1 : 0);
     events.add(simSpoolEnabled ? "Sim spool-up realism ON" : "Sim spool-up realism off");
     handleSimSpoolGet();
 }
