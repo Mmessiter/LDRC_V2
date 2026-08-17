@@ -313,6 +313,8 @@ void setup() {
     simSpoolSeconds  = prefs.isKey(NVS_KEY_SIM_SPOOL_S) ? prefs.getUChar(NVS_KEY_SIM_SPOOL_S, 8) : 8;
     simTorqueUs      = prefs.isKey(NVS_KEY_SIM_TORQUE)  ? prefs.getShort(NVS_KEY_SIM_TORQUE, -120) : -120;
     simRudderChannel = prefs.isKey(NVS_KEY_SIM_RUD_CH)  ? prefs.getUChar(NVS_KEY_SIM_RUD_CH, 4) : 4;
+    simMotorChannel  = prefs.isKey(NVS_KEY_SIM_MOT_CH)  ? prefs.getUChar(NVS_KEY_SIM_MOT_CH, 0) : 0;
+    simMotorInverted = prefs.isKey(NVS_KEY_SIM_MOT_INV) ? (prefs.getUChar(NVS_KEY_SIM_MOT_INV, 0) != 0) : false;
     if (simSpoolSeconds < 1) simSpoolSeconds = 1;
     if (simSpoolSeconds > 60) simSpoolSeconds = 60;
     if (simEnabled) {
@@ -578,35 +580,56 @@ void loop() {
         // channel data is untouched.
         static uint16_t simTx[16];
         for (uint8_t i = 0; i < 16; ++i) simTx[i] = channelMicros[i];
-        if (simSpoolEnabled && throttleChannel >= 1 && throttleChannel <= 16) {
+        if (simSpoolEnabled && simMotorChannel >= 1 && simMotorChannel <= 16) {
             static float    spoolThr    = -1.0f;    // -1 = take first commanded value
             static uint32_t lastSpoolMs = 0;
             uint32_t nowMs = millis();
             float dt = lastSpoolMs ? (uint32_t)(nowMs - lastSpoolMs) / 1000.0f : 0.0f;
             if (dt > 0.25f) dt = 0.25f;             // clamp across stalls/boot
             lastSpoolMs = nowMs;
-            float cmd = (float)simTx[throttleChannel - 1];
+            // Work in POWER space: on an inverted channel (high µs = motor
+            // OFF, Malcolm's ch6) leaving the hold is a FALL — mirroring via
+            // (3000 - µs) makes "more power" always an increase here.
+            float raw = (float)simTx[simMotorChannel - 1];
+            float cmd = simMotorInverted ? (3000.0f - raw) : raw;
             if (spoolThr < 0.0f) spoolThr = cmd;
             bool ramping = false;
+            // LDRC channels span 500-2500 µs (not 1000-2000): "seconds" means
+            // the FULL 2000 µs swing, and the rudder clamp matches the range.
             if (cmd <= spoolThr) {
-                spoolThr = cmd;                     // chop = instant (throttle hold)
+                spoolThr = cmd;                     // power cut = instant (throttle hold)
             } else {
-                float step = (1000.0f / simSpoolSeconds) * dt;   // µs this tick
+                float step = (2000.0f / simSpoolSeconds) * dt;   // µs this tick
                 if (spoolThr + step >= cmd) spoolThr = cmd;
                 else { spoolThr += step; ramping = true; }
             }
-            simTx[throttleChannel - 1] = (uint16_t)(spoolThr + 0.5f);
+            float outUs = simMotorInverted ? (3000.0f - spoolThr) : spoolThr;
+            simTx[simMotorChannel - 1] = (uint16_t)(outUs + 0.5f);
             if (ramping && simTorqueUs != 0 &&
                 simRudderChannel >= 1 && simRudderChannel <= 16 &&
-                simRudderChannel != throttleChannel) {
+                simRudderChannel != simMotorChannel) {
+                // Malcolm's physics (2026-08-17 bedtime note): the kick is
+                // LARGEST at the start — the main blades' mass is accelerating
+                // while the tail rotor is still too slow to fight back — and
+                // dies away tangentially as the head approaches its stable
+                // speed and tail authority grows with rpm². Quadratic in the
+                // remaining spool: full stab at the bottom, flattening
+                // asymptotically to zero at the top.
                 float deficit = cmd - spoolThr;                   // µs still to spool
-                float k = deficit / 200.0f; if (k > 1.0f) k = 1.0f;   // fade near the top
+                float prog = deficit / 2000.0f;
+                if (prog > 1.0f) prog = 1.0f;
+                float k = prog * prog;
                 int32_t r = (int32_t)simTx[simRudderChannel - 1]
                           + (int32_t)((float)simTorqueUs * k);
-                if (r < 1000) r = 1000;
-                if (r > 2000) r = 2000;
+                if (r < 500)  r = 500;
+                if (r > 2500) r = 2500;
                 simTx[simRudderChannel - 1] = (uint16_t)r;
             }
+            // Live window for diagnosis (spool.json "live"): what the ramp
+            // sees and what it is sending, updated every loop.
+            simSpoolDbgRaw  = (uint16_t)raw;
+            simSpoolDbgOut  = simTx[simMotorChannel - 1];
+            simSpoolDbgRamp = ramping;
         }
         SimUSB::sendChannels(simTx);
         SimUSB::keyboardTick();   // send any pending camera/view keystroke (non-blocking)

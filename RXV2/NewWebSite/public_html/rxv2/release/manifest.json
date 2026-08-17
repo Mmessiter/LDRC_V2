@@ -1,6 +1,34 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.378-torque-curve",
+      "url": "https://messiter.com/rxv2/release/v0.9.378/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.378/littlefs.bin",
+      "fs_md5": "0650685479976c9b0ff0279a853dcc53",
+      "notes": "Spool-up tail stab now follows real physics (Malcolm's observation): largest at the moment power returns - main-blade mass accelerating against a still-slow tail rotor - then dying away tangentially as the head reaches stable speed and tail authority builds."
+    },
+    {
+      "name": "RXV2-0.9.377-spool-debug",
+      "url": "https://messiter.com/rxv2/release/v0.9.377/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.377/littlefs.bin",
+      "fs_md5": "babd37b43933ee22ecc1e2acfcdfa69b",
+      "notes": "Spool-up tuned for LDRC's true 500-2500 channel range (times and tail clamp were sized for 1000-2000) plus a live diagnosis window in the API."
+    },
+    {
+      "name": "RXV2-0.9.376-motor-inv",
+      "url": "https://messiter.com/rxv2/release/v0.9.376/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.376/littlefs.bin",
+      "fs_md5": "f1f038a6bb96c66424af173c9ae5dd44",
+      "notes": "Spool-up realism: added the 'High = motor OFF' switch for inverted motor channels (like Malcolm's ch6, where maximum means motor off). The governor ramp now works in power terms whichever way round your channel runs."
+    },
+    {
+      "name": "RXV2-0.9.375-motor-ch",
+      "url": "https://messiter.com/rxv2/release/v0.9.375/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.375/littlefs.bin",
+      "fs_md5": "cc5741f5aba2e17fdb74a477a41a13e9",
+      "notes": "HOTFIX for spool-up realism: it was slowing the throttle STICK channel, which on a helicopter is the COLLECTIVE - enabling it froze collective control. The spool now acts only on a dedicated Motor/governor channel you choose on the card (0 = off until set). Tip: open View channels and flip in/out of your autorotation bank - the bar that jumps is your motor channel."
+    },
+    {
       "name": "RXV2-0.9.374-spool-next",
       "url": "https://messiter.com/rxv2/release/v0.9.374/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.374/littlefs.bin",
@@ -55,34 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.367/littlefs.bin",
       "fs_md5": "098b5f19f0388f3e13e7dabfd1d99043",
       "notes": "Travel extents: the Save button itself briefly flashes 'Saved!' after a successful, verified save - same friendly confirmation the governor pages have."
-    },
-    {
-      "name": "RXV2-0.9.366-keyboard-aware-save",
-      "url": "https://messiter.com/rxv2/release/v0.9.366/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.366/littlefs.bin",
-      "fs_md5": "f68528e13c02811af9756b1713037495",
-      "notes": "The bottom Save/Back bar now rides up above the iOS keyboard instead of hiding underneath it (Malcolm: 'I have to scroll to find Save to Flight Controller'). Works on every tuning page - the bar follows the visual viewport whenever a number field opens the keyboard."
-    },
-    {
-      "name": "RXV2-0.9.365-stick-frame-tail",
-      "url": "https://messiter.com/rxv2/release/v0.9.365/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.365/littlefs.bin",
-      "fs_md5": "87ee9c00f6d9d80200c76926f770e9b2",
-      "notes": "Tail travel is now named by the RUDDER STICK \u2014 'stick left / stick right' (Malcolm's suggestion), bound to the direction each field really limits on these transmitters as verified on the bench. Stick-left listed first, as a hand would expect."
-    },
-    {
-      "name": "RXV2-0.9.364-bench-polish",
-      "url": "https://messiter.com/rxv2/release/v0.9.364/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.364/littlefs.bin",
-      "fs_md5": "677b68bf8ee371d9eb8ac2c735c8c5da",
-      "notes": "Travel extents polish: tail travel renamed to 'nose left / nose right' (a tail swinging left sends the NOSE right \u2014 plain left/right labels mislead), and the bench buttons grey out when meaningless: Hold is disabled while that exact hold is already active, Release is disabled when nothing is held."
-    },
-    {
-      "name": "RXV2-0.9.363-bench-official",
-      "url": "https://messiter.com/rxv2/release/v0.9.363/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.363/littlefs.bin",
-      "fs_md5": "f71071a7071afcfe035faa59cc293560",
-      "notes": "Verified against the Rotorflight source: the Bench measure IS Rotorflight's own official calibration method (their configurator sends the identical command). Collective removed from the bench axis picker \u2014 on this fleet it is calibrated the direct full-stick way, because the transmitter channel span is part of that story. Swash trims relabelled to % (Rotorflight's actual unit \u2014 they were mislabelled degrees)."
     }
   ]
 }
