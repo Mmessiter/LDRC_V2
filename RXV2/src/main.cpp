@@ -538,6 +538,28 @@ void loop() {
         // Sim mode: the ONLY output is the USB composite device. Skip ALL flight-
         // controller work — no RC output frames, no telemetry, no MSP — so a real
         // model can't be flown from sim mode, and the loop stays lean.
+        //
+        // Failsafe posture must be applied HERE: sbusTick() — the only other
+        // place the captured positions are driven — never runs in sim mode, so
+        // the sim previously froze at the last stick values when the TX went
+        // off (which looked exactly like "failsafe never saved"). Same
+        // link-age rule as sbusTick, same everConnected gate (a no-TX boot
+        // keeps the disarmed-safe defaults, never the captured posture).
+        {
+            static bool simFsPosture = false;
+            uint32_t linkRef = (bindState.bound && rx.lastMillis) ? rx.lastMillis
+                                                                  : lastChannelDataMs;
+            bool lost = (lastChannelDataMs != 0) &&
+                        (uint32_t)(millis() - linkRef) > OUTPUT_FAILSAFE_MS;
+            if (lost && failsafeSet) {
+                for (uint8_t i = 0; i < 16; ++i) channelMicros[i] = failsafeMicros[i];
+                if (!simFsPosture) { simFsPosture = true;
+                    events.add("Signal lost — sim driven to failsafe positions"); }
+            } else if (simFsPosture && !lost) {
+                simFsPosture = false;
+                events.add("Link restored — sim left failsafe posture");
+            }
+        }
         SimUSB::sendChannels(channelMicros);
         SimUSB::keyboardTick();   // send any pending camera/view keystroke (non-blocking)
     } else {
