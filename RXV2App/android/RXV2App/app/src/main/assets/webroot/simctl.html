@@ -58,27 +58,6 @@
         <a class="simBtn menu" href="/"><span class=lbl>&#8617; Return to menu</span></a>
     </div>
 
-    <div style="background:#fff;border-radius:14px;padding:14px 16px;margin-top:10px;box-shadow:0 1px 6px rgba(0,0,0,.12)">
-        <div style="font-weight:800;font-size:1.05em;margin-bottom:2px">Realistic spool-up (helicopters)</div>
-        <div style="font-size:.82em;opacity:.75;line-height:1.45;margin-bottom:8px">
-            When the motor comes back on (e.g. leaving your autorotation bank), the head speed
-            builds gradually like a real governor &mdash; with a stab of tail while it accelerates &mdash;
-            instead of snapping instantly to full speed. Cutting the motor stays instant.
-        </div>
-        <label style="display:flex;align-items:center;gap:.5em;font-weight:700;margin:.3em 0">
-            <input type=checkbox id=spOn style="width:1.3em;height:1.3em"> Enable
-        </label>
-        <div style="display:grid;grid-template-columns:1fr auto;gap:.45em .8em;align-items:center;font-size:.92em">
-            <span>Spool-up time, motor off &rarr; full <span style="opacity:.6">(seconds)</span></span>
-            <input type=number id=spSec min=1 max=60 step=1 style="width:4.5em;text-align:center">
-            <span>Tail stab while spooling <span style="opacity:.6">(&micro;s, minus = other way)</span></span>
-            <input type=number id=spTorq min=-400 max=400 step=10 style="width:4.5em;text-align:center">
-            <span>Rudder channel</span>
-            <input type=number id=spRud min=1 max=16 step=1 style="width:4.5em;text-align:center">
-        </div>
-        <button id=spSave style="margin-top:.7em;width:100%;padding:.55em;border:0;border-radius:9px;background:#4a7d4a;color:#fff;font-weight:800;font-size:1em">Save spool-up settings</button>
-        <div id=spMsg style="text-align:center;font-size:.85em;margin-top:.35em;min-height:1.2em"></div>
-    </div>
     <div class=footer></div>
 </div>
 
@@ -130,26 +109,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     // Gentle nudge if sim mode is off (the buttons still pulse, but nothing's listening).
     try { const s = await LDRC.fetchState(); if (s && !s.sim) $('offNote').style.display = ''; } catch (e) {}
-    // Spool-up realism card
-    try {
-        const sp = await (await fetch('/api/sim/spool.json', { cache: 'no-store' })).json();
-        $('spOn').checked = !!sp.on;
-        $('spSec').value = sp.seconds; $('spTorq').value = sp.torque_us; $('spRud').value = sp.rudder_ch;
-    } catch (e) {}
-    $('spSave').addEventListener('click', async () => {
-        const body = new URLSearchParams();
-        body.append('on', $('spOn').checked ? '1' : '0');
-        body.append('seconds', $('spSec').value || '8');
-        body.append('torque_us', $('spTorq').value || '0');
-        body.append('rudder_ch', $('spRud').value || '4');
-        try {
-            const r = await (await fetch('/api/sim/spool', { method: 'POST', body })).json();
-            $('spMsg').textContent = r.on
-                ? '✅ Saved — spool-up realism is ON (' + r.seconds + ' s, tail ' + r.torque_us + ' µs)'
-                : '✅ Saved — spool-up realism is off';
-        } catch (e) { $('spMsg').textContent = '⚠️ Could not save — try again'; }
-        setTimeout(() => { $('spMsg').textContent = ''; }, 6000);
-    });
     setTimeout(poll, 120);
 });
 </script>

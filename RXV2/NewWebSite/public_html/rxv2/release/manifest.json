@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.374-spool-next",
+      "url": "https://messiter.com/rxv2/release/v0.9.374/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.374/littlefs.bin",
+      "fs_md5": "9428f1676fd41a287dcdb296634af9de",
+      "notes": "Realistic spool-up moved to its proper home: the neXt controls & views page (RealFlight simulates its own governor, so the card only shows for neXt). Same feature as 0.9.373."
+    },
+    {
       "name": "RXV2-0.9.373-spool-up",
       "url": "https://messiter.com/rxv2/release/v0.9.373/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.373/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.363/littlefs.bin",
       "fs_md5": "f71071a7071afcfe035faa59cc293560",
       "notes": "Verified against the Rotorflight source: the Bench measure IS Rotorflight's own official calibration method (their configurator sends the identical command). Collective removed from the bench axis picker \u2014 on this fleet it is calibrated the direct full-stick way, because the transmitter channel span is part of that story. Swash trims relabelled to % (Rotorflight's actual unit \u2014 they were mislabelled degrees)."
-    },
-    {
-      "name": "RXV2-0.9.362-bench-zeroed",
-      "url": "https://messiter.com/rxv2/release/v0.9.362/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.362/littlefs.bin",
-      "fs_md5": "765bb61f5d1512415d3ee51c0d5016a2",
-      "notes": "Bench measure fix (Malcolm's own diagnosis, first try: 8 deg roll measured -24!): while holding one axis, the OTHER swash axes are now held at ZERO instead of following the live mixer \u2014 with no transmitter, collective was sitting at full-low underneath the measurement. A pure 8 deg roll now measures as just that."
     }
   ]
 }
