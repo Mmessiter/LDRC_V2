@@ -114,6 +114,30 @@
         <div class=secHdr id=viewsHdr>Camera / view</div>
         <div class=card><div class=vGrid id=grid>loading&hellip;</div></div>
         <button class="btn editKeys" type=button id=editBtn style="margin-top:.5em">&#9998; Edit view keys</button>
+
+        <!-- neXt only (Malcolm 2026-08-17): RealFlight models its own spool-up,
+             so the card lives with the neXt keys where it belongs. -->
+        <div class=card id=spCard style="display:none">
+            <div style="font-weight:800;font-size:1.05em;margin-bottom:2px">Realistic spool-up (helicopters)</div>
+            <div class=muted style="font-size:.82em;line-height:1.45;margin-bottom:8px">
+                When the motor comes back on (e.g. leaving your autorotation bank), the head speed
+                builds gradually like a real governor &mdash; with a stab of tail while it accelerates &mdash;
+                instead of snapping instantly to full speed. Cutting the motor stays instant.
+            </div>
+            <label style="display:flex;align-items:center;gap:.5em;font-weight:700;margin:.3em 0">
+                <input type=checkbox id=spOn style="width:1.3em;height:1.3em"> Enable
+            </label>
+            <div style="display:grid;grid-template-columns:1fr auto;gap:.45em .8em;align-items:center;font-size:.92em">
+                <span>Spool-up time, motor off &rarr; full <span class=muted>(seconds)</span></span>
+                <input type=number id=spSec min=1 max=60 step=1 style="width:4.5em;text-align:center">
+                <span>Tail stab while spooling <span class=muted>(&micro;s, minus = other way)</span></span>
+                <input type=number id=spTorq min=-400 max=400 step=10 style="width:4.5em;text-align:center">
+                <span>Rudder channel</span>
+                <input type=number id=spRud min=1 max=16 step=1 style="width:4.5em;text-align:center">
+            </div>
+            <button class="btn btn-fly" type=button id=spSave style="margin-top:.7em;width:100%">Save spool-up settings</button>
+            <div id=spMsg class=muted style="text-align:center;font-size:.85em;margin-top:.35em;min-height:1.2em"></div>
+        </div>
     </div>
 
     <!-- EDIT mode -->
@@ -325,9 +349,42 @@ function paintProf() {
     // neXt has nothing to bind them to, so hide that whole section for neXt.
     $('ctlCard').style.display = isNext ? 'none' : '';
     $('hint').style.display = isNext ? 'none' : '';
+    // Spool-up realism is neXt-only: RealFlight simulates its own governor.
+    const sp = $('spCard');
+    if (sp) { sp.style.display = isNext ? '' : 'none'; if (isNext) spLoad(); }
     const hc = document.getElementById('helpContent');
     if (hc) hc.innerHTML = isNext ? HELP_NEXT : HELP_RF;
 }
+
+// ── Spool-up realism card (neXt) — GET/POST /api/sim/spool ─────────
+let spLoaded = false;
+async function spLoad() {
+    if (spLoaded) return;
+    spLoaded = true;
+    try {
+        const sp = await (await fetch('/api/sim/spool.json', { cache: 'no-store' })).json();
+        $('spOn').checked = !!sp.on;
+        $('spSec').value = sp.seconds; $('spTorq').value = sp.torque_us; $('spRud').value = sp.rudder_ch;
+    } catch (e) { $('spMsg').textContent = 'Needs receiver firmware 0.9.373+'; }
+}
+document.addEventListener('DOMContentLoaded', () => {
+    const b = $('spSave');
+    if (!b) return;
+    b.addEventListener('click', async () => {
+        const body = new URLSearchParams();
+        body.append('on', $('spOn').checked ? '1' : '0');
+        body.append('seconds', $('spSec').value || '8');
+        body.append('torque_us', $('spTorq').value || '0');
+        body.append('rudder_ch', $('spRud').value || '4');
+        try {
+            const r = await (await fetch('/api/sim/spool', { method: 'POST', body })).json();
+            $('spMsg').textContent = r.on
+                ? '✅ Saved — spool-up realism is ON (' + r.seconds + ' s, tail ' + r.torque_us + ' µs)'
+                : '✅ Saved — spool-up realism is off';
+        } catch (e) { $('spMsg').textContent = '⚠️ Could not save — try again'; }
+        setTimeout(() => { $('spMsg').textContent = ''; }, 6000);
+    });
+});
 
 // One colour per button slot (stable — a favourite keeps its colour even if others
 // are hidden or relabelled). Mid-tone hues so the white text always reads.

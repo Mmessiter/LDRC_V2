@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.373-spool-up";
+constexpr const char* FW_VERSION = "RXV2-0.9.375-motor-ch";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -383,6 +383,7 @@ inline bool    simSpoolEnabled  = false;
 inline uint8_t simSpoolSeconds  = 8;        // full 1000→2000 µs spool time
 inline int16_t simTorqueUs      = -120;     // rudder stab while spooling (signed)
 inline uint8_t simRudderChannel = 4;
+inline uint8_t simMotorChannel  = 0;        // 0 = unset: spool-up does nothing until chosen
 constexpr uint16_t THROTTLE_SAFE_US = 885;  // well below 900: any ESC reads this as motor OFF    // pin was found by the sniffer, not set by the user   // NVS_KEY_FC_TELEM: false = ignore telemetry-line input + no Rotorflight/MSP probes            // user-configurable (NVS_KEY_CRSF_HZ): 250 native, 100/50 for fussy CRSF-to-PWM converters
 constexpr uint32_t IBUS_PERIOD_MS = 7;      // ~140 Hz
 constexpr uint32_t PPM_PERIOD_MS  = 25;     // 40 Hz — leaves 2-3 ms over the ~22 ms frame
