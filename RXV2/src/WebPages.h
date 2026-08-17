@@ -1642,6 +1642,47 @@ inline void handleSimSet() {
 }
 
 //*********************************************************************
+//  Spool-up realism — GET /api/sim/spool.json, POST /api/sim/spool
+//*********************************************************************
+// Live-applied (no reboot): the sim loop reads the globals every tick.
+inline void handleSimSpoolGet() {
+    char b[128];
+    snprintf(b, sizeof(b),
+        "{\"on\":%s,\"seconds\":%u,\"torque_us\":%d,\"rudder_ch\":%u}",
+        simSpoolEnabled ? "true" : "false",
+        (unsigned)simSpoolSeconds, (int)simTorqueUs, (unsigned)simRudderChannel);
+    server.sendHeader("Cache-Control", "no-store");
+    server.send(200, "application/json", b);
+}
+
+inline void handleSimSpoolSet() {
+    if (server.hasArg("on"))
+        simSpoolEnabled = server.arg("on").toInt() != 0;
+    if (server.hasArg("seconds")) {
+        long s = server.arg("seconds").toInt();
+        if (s < 1) s = 1;
+        if (s > 60) s = 60;
+        simSpoolSeconds = (uint8_t)s;
+    }
+    if (server.hasArg("torque_us")) {
+        long t = server.arg("torque_us").toInt();
+        if (t < -400) t = -400;
+        if (t >  400) t =  400;
+        simTorqueUs = (int16_t)t;
+    }
+    if (server.hasArg("rudder_ch")) {
+        long c = server.arg("rudder_ch").toInt();
+        if (c >= 1 && c <= 16) simRudderChannel = (uint8_t)c;
+    }
+    prefs.putUChar(NVS_KEY_SIM_SPOOL,   simSpoolEnabled ? 1 : 0);
+    prefs.putUChar(NVS_KEY_SIM_SPOOL_S, simSpoolSeconds);
+    prefs.putShort(NVS_KEY_SIM_TORQUE,  simTorqueUs);
+    prefs.putUChar(NVS_KEY_SIM_RUD_CH,  simRudderChannel);
+    events.add(simSpoolEnabled ? "Sim spool-up realism ON" : "Sim spool-up realism off");
+    handleSimSpoolGet();
+}
+
+//*********************************************************************
 //  Simulator channel remap — GET /map page, GET current map, POST new map
 //*********************************************************************
 // The map decides which received channel (0..15) feeds each of the 8 USB sim
@@ -2354,6 +2395,8 @@ inline void registerWebRoutes() {
     server.on("/api/armch",          HTTP_POST, handleArmChSet);
     server.on("/protocol",    HTTP_POST, handleProtocolSet);
     server.on("/api/sim",     HTTP_POST, handleSimSet);
+    server.on("/api/sim/spool.json", HTTP_GET,  handleSimSpoolGet);
+    server.on("/api/sim/spool",      HTTP_POST, handleSimSpoolSet);
     server.on("/api/map",     HTTP_POST, handleMapSave);   // save sim channel map (applies live, no reboot)
     server.on("/api/sim/button", HTTP_POST, handleSimButton); // pulse a sim-function button (1..8)
     server.on("/api/sim/key",    HTTP_POST, handleSimKey);    // send a camera/view keystroke

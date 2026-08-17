@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.372-sim-failsafe";
+constexpr const char* FW_VERSION = "RXV2-0.9.373-spool-up";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -323,6 +323,15 @@ constexpr const char* NVS_KEY_FW_MANIFEST = "fwurl";   // URL of dev firmware se
 constexpr const char* NVS_KEY_MODEL_NAME  = "nm";      // user-set model name (e.g. "Goblin 700"); empty = use default
 constexpr const char* NVS_KEY_FS_MD5      = "fsmd5";   // md5 of the last-flashed littlefs image: identical-release fs updates are SKIPPED (flights survive untouched)
 constexpr const char* NVS_KEY_SIM         = "sim";     // 1 = drive flight simulator over USB (HID joystick)
+// Spool-up realism (Malcolm 2026-08-17, for neXt autorotation practice):
+// leaving the throttle-hold bank must NOT snap the sim to full head speed
+// with infinite acceleration and no torque. The dongle rate-limits throttle
+// RISES like a real governor (drops stay instant — entering the auto is
+// unchanged) and stabs the rudder while the head is accelerating.
+constexpr const char* NVS_KEY_SIM_SPOOL   = "simspool";  // uint8 1 = spool-up realism on (default 0)
+constexpr const char* NVS_KEY_SIM_SPOOL_S = "simspls";   // uint8 seconds for a full 1000→2000 µs spool (1..60, default 8)
+constexpr const char* NVS_KEY_SIM_TORQUE  = "simtorq";   // int16 rudder stab in µs while spooling (signed for direction, default -120)
+constexpr const char* NVS_KEY_SIM_RUD_CH  = "simrudch";  // uint8 rudder channel 1..16 (default 4)
 constexpr const char* NVS_KEY_SIM_MAP     = "simmap";  // 8-byte map: which RX channel (0..15) feeds each sim output
 constexpr const char* NVS_KEY_SIM_REV     = "simrev";  // 8-byte per-output reverse flags (0/1)
 constexpr const char* NVS_KEY_AP_ONLY     = "aponly";  // 1 = skip home-WiFi STA, run AP-only (flying field: no waiting on an out-of-range home network)
@@ -369,6 +378,11 @@ inline float   vbatVolts    = 0.0f;     // smoothed pack voltage (V)
 inline uint32_t channelPacketsRx = 0;   // CHANNEL packets decoded this session (throttle stays pinned until a stable stream)
 inline bool    vbatAuto     = false;
 inline uint8_t throttleChannel = 3;         // NVS_KEY_THR_CH — boot-safe low until the TX is heard
+// Spool-up realism state (sim mode only — see NVS_KEY_SIM_SPOOL)
+inline bool    simSpoolEnabled  = false;
+inline uint8_t simSpoolSeconds  = 8;        // full 1000→2000 µs spool time
+inline int16_t simTorqueUs      = -120;     // rudder stab while spooling (signed)
+inline uint8_t simRudderChannel = 4;
 constexpr uint16_t THROTTLE_SAFE_US = 885;  // well below 900: any ESC reads this as motor OFF    // pin was found by the sniffer, not set by the user   // NVS_KEY_FC_TELEM: false = ignore telemetry-line input + no Rotorflight/MSP probes            // user-configurable (NVS_KEY_CRSF_HZ): 250 native, 100/50 for fussy CRSF-to-PWM converters
 constexpr uint32_t IBUS_PERIOD_MS = 7;      // ~140 Hz
 constexpr uint32_t PPM_PERIOD_MS  = 25;     // 40 Hz — leaves 2-3 ms over the ~22 ms frame
