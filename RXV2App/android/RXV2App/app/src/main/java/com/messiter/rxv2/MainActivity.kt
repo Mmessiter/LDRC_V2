@@ -332,8 +332,21 @@ class MainActivity : AppCompatActivity() {
         val perms = if (Build.VERSION.SDK_INT >= 31)
             arrayOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT)
         else arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
-        if (perms.all { checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED })
+        if (perms.all { checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED }) {
             ble.startScan()
+            // Instant path: go straight for the remembered receiver by MAC.
+            // The scan keeps running underneath, so if this device is off the
+            // list still fills and a manual choice (or discovery auto-connect
+            // for the same name) takes over.
+            if (!autoDone) {
+                val sp = getSharedPreferences("scanner", MODE_PRIVATE)
+                val last = sp.getString("last", "") ?: ""
+                val addr = sp.getString("lastAddr", "") ?: ""
+                if (last.isNotEmpty() && addr.isNotEmpty() && ble.fastConnect(last, addr)) {
+                    autoDone = true
+                }
+            }
+        }
     }
 
     inner class ScannerAdapter : BaseAdapter() {
