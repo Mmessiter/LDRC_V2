@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.372-sim-failsafe",
+      "url": "https://messiter.com/rxv2/release/v0.9.372/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.372/littlefs.bin",
+      "fs_md5": "aceb057974ccc061d1c968db67c31779",
+      "notes": "Simulator mode now obeys your saved failsafe positions: when the transmitter goes quiet, the sim's controls move to the posture you saved (Save failsafe on the View-channels page) instead of freezing at the last stick positions. Saving always worked - the sim just never applied it."
+    },
+    {
       "name": "RXV2-0.9.371-genmoji-tooth",
       "url": "https://messiter.com/rxv2/release/v0.9.371/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.371/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.361/littlefs.bin",
       "fs_md5": "2dd3367ca9b08c570cfc1df180cd9e59",
       "notes": "Bench measure on Travel extents: hold the swash at an exact angle with the gyros bypassed (Rotorflight's mixer override) so a pitch gauge can calibrate CYCLIC gain from the phone \u2014 no laptop. Pick Roll/Pitch/Collective and an angle, 'Hold this angle', measure the PEAK reading while rotating the head, then gain = current x commanded/peak. Guarded: refuses while armed, the FC refuses to arm while held, released on leaving the page and by a 5-minute auto-release. A step toward the full phone setup wizard."
-    },
-    {
-      "name": "RXV2-0.9.360-plain-english",
-      "url": "https://messiter.com/rxv2/release/v0.9.360/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.360/littlefs.bin",
-      "fs_md5": "8c7a60431a1acd5cd7601b56b11bf404",
-      "notes": "Plain English across ALL Rotorflight screens (Malcolm: brilliant technicians were frequently simply not taught good English!). Every cryptic label now says what it does, with Rotorflight's own term kept in brackets for cross-reference: 'Hold cyclic true in pirouettes (piro comp)', 'Roll wind-up relief (I-term relax cutoff)', 'Stick sharpening (setpoint boost gain)', 'Tail-torque assist strength (TTA gain)', 'Throttle anticipation (feed-forward weights)', 'Quick-restart time (recovery time)', and friends \u2014 45 labels in all."
     }
   ]
 }

@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.371-genmoji-tooth";
+constexpr const char* FW_VERSION = "RXV2-0.9.372-sim-failsafe";
 
 //*********************************************************************
 //  Auto-update manifest URLs
