@@ -1646,7 +1646,9 @@ inline void handleSimSet() {
 //*********************************************************************
 // Live-applied (no reboot): the sim loop reads the globals every tick.
 inline void handleSimSpoolGet() {
-    char b[128];
+    // 192: the live{} block pushed the JSON past the old 128 and TRUNCATED it
+    // (caught 2026-08-18 — clients saw broken JSON and silently failed).
+    char b[192];
     snprintf(b, sizeof(b),
         "{\"on\":%s,\"seconds\":%u,\"torque_us\":%d,\"rudder_ch\":%u,\"motor_ch\":%u,\"motor_inv\":%s,"
         "\"live\":{\"raw\":%u,\"out\":%u,\"ramping\":%s}}",
