@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.379-json-fix",
+      "url": "https://messiter.com/rxv2/release/v0.9.379/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.379/littlefs.bin",
+      "fs_md5": "25b888cfd5f7c6761093c44dc5685c8a",
+      "notes": "Fixes truncated spool-up status JSON (buffer was one size too small once the live diagnosis window was added) - the card could fail to load its settings on 0.9.377/378."
+    },
+    {
       "name": "RXV2-0.9.378-torque-curve",
       "url": "https://messiter.com/rxv2/release/v0.9.378/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.378/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.368/littlefs.bin",
       "fs_md5": "5fa1be55941598f7cd557aa9a2b4a3f9",
       "notes": "Save bar now clears the keyboard exactly: the keyboard swallows the home-indicator safe area but the bar's padding still reserved it, leaving the buttons half-hidden - reclaimed while raised."
-    },
-    {
-      "name": "RXV2-0.9.367-saved-flash",
-      "url": "https://messiter.com/rxv2/release/v0.9.367/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.367/littlefs.bin",
-      "fs_md5": "098b5f19f0388f3e13e7dabfd1d99043",
-      "notes": "Travel extents: the Save button itself briefly flashes 'Saved!' after a successful, verified save - same friendly confirmation the governor pages have."
     }
   ]
 }

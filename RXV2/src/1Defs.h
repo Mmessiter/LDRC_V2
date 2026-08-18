@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.378-torque-curve";
+constexpr const char* FW_VERSION = "RXV2-0.9.379-json-fix";
 
 //*********************************************************************
 //  Auto-update manifest URLs
