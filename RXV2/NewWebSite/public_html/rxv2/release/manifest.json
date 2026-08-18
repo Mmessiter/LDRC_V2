@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.381-no-pause",
+      "url": "https://messiter.com/rxv2/release/v0.9.381/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.381/littlefs.bin",
+      "fs_md5": "f78617ba71f2ff00b3a47eff20d08073",
+      "notes": "Spool-up now starts the INSTANT the motor comes back (Malcolm's report: 'a pause before it starts to move'). The USB joystick only shows the middle slice of the channel; the ramp was wasting seconds in the invisible saturated zones. It now jumps those instantly and spends the whole configured time in the visible sweep the simulator follows."
+    },
+    {
       "name": "RXV2-0.9.380-two-speed",
       "url": "https://messiter.com/rxv2/release/v0.9.380/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.380/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.370/littlefs.bin",
       "fs_md5": "a82ac0269fa1eff903d1db51e99bf358",
       "notes": "The Bluetooth badge is now a literal blue TOOTH (Malcolm's pun, irresistible) - a little molar on the blue dot, still the tap-to-disconnect button."
-    },
-    {
-      "name": "RXV2-0.9.369-badge-dot",
-      "url": "https://messiter.com/rxv2/release/v0.9.369/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.369/littlefs.bin",
-      "fs_md5": "ddf1680ef0d36a2ebcc6dba931cb64de",
-      "notes": "The Bluetooth/WiFi pill shrinks to a small dot - it was covering page content, and by now everyone knows how they're connected. In the app the dot is still the disconnect button: tap it, confirm."
     }
   ]
 }
