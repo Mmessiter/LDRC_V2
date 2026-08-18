@@ -1,4 +1,5 @@
 {
+ "RXV2-0.9.380-two-speed": "Two-speed spool-up (Malcolm's field report): a brief motor cut - bailing out of an autorotation mid-air - recovers on a fast governor rate (quarter of the ground time); a long cut (landed, sitting in the hold) restarts on the full slow ground spool. Chosen automatically from how long the power was off.",
  "RXV2-0.9.379-json-fix": "Fixes truncated spool-up status JSON (buffer was one size too small once the live diagnosis window was added) - the card could fail to load its settings on 0.9.377/378.",
  "RXV2-0.9.378-torque-curve": "Spool-up tail stab now follows real physics (Malcolm's observation): largest at the moment power returns - main-blade mass accelerating against a still-slow tail rotor - then dying away tangentially as the head reaches stable speed and tail authority builds.",
  "RXV2-0.9.377-spool-debug": "Spool-up tuned for LDRC's true 500-2500 channel range (times and tail clamp were sized for 1000-2000) plus a live diagnosis window in the API.",
