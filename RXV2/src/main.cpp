@@ -603,6 +603,16 @@ void loop() {
                 spoolThr = cmd;                     // power cut = instant (throttle hold)
                 spoolRateUs = 0.0f;                 // next rise picks its speed fresh
             } else {
+                // The USB gamepad axis SATURATES outside 1500±512 µs
+                // (usToAxis) — only 988..2012 is visible to the sim. Ramping
+                // through the pegged zones produced Malcolm's "pause before
+                // it starts to move" (2026-08-18): ~3 s of invisible ramping
+                // from 2500 before the axis stirred. So the ramp JUMPS the
+                // invisible zones instantly and spends the whole configured
+                // time inside the window the sim can actually see. (The
+                // window is symmetric about 1500, so it is the same span in
+                // power space whichever way the channel is inverted.)
+                const float WIN_LO = 988.0f, WIN_HI = 2012.0f;
                 // Two-speed governor (Malcolm 2026-08-18): a BRIEF cut — the
                 // mid-air autorotation bail-out — recovers on the fast rate
                 // (real governors have a bail-out mode); a LONG cut (landed,
@@ -615,12 +625,15 @@ void loop() {
                     bool bailout = cutStartMs && offMs < 8000;   // <8 s off = mid-air
                     float secs = bailout ? (simSpoolSeconds / 4.0f) : (float)simSpoolSeconds;
                     if (secs < 0.5f) secs = 0.5f;
-                    spoolRateUs = 2000.0f / secs;
+                    spoolRateUs = (WIN_HI - WIN_LO) / secs;      // whole time = VISIBLE sweep
                     cutStartMs = 0;
                 }
-                float step = spoolRateUs * dt;      // µs this tick
-                if (spoolThr + step >= cmd) spoolThr = cmd;
-                else { spoolThr += step; ramping = true; }
+                if (spoolThr < WIN_LO) spoolThr = WIN_LO;        // skip the pegged bottom
+                float target = (cmd < WIN_HI) ? cmd : WIN_HI;
+                float step = spoolRateUs * dt;                   // µs this tick
+                if (spoolThr + step >= target) {
+                    spoolThr = cmd;                              // snap the pegged top too
+                } else { spoolThr += step; ramping = true; }
             }
             float outUs = simMotorInverted ? (3000.0f - spoolThr) : spoolThr;
             simTx[simMotorChannel - 1] = (uint16_t)(outUs + 0.5f);
@@ -635,7 +648,7 @@ void loop() {
                 // remaining spool: full stab at the bottom, flattening
                 // asymptotically to zero at the top.
                 float deficit = cmd - spoolThr;                   // µs still to spool
-                float prog = deficit / 2000.0f;
+                float prog = deficit / 1024.0f;                   // vs the VISIBLE sweep
                 if (prog > 1.0f) prog = 1.0f;
                 float k = prog * prog;
                 int32_t r = (int32_t)simTx[simRudderChannel - 1]
