@@ -583,6 +583,8 @@ void loop() {
         if (simSpoolEnabled && simMotorChannel >= 1 && simMotorChannel <= 16) {
             static float    spoolThr    = -1.0f;    // -1 = take first commanded value
             static uint32_t lastSpoolMs = 0;
+            static uint32_t cutStartMs  = 0;        // when the power was chopped (0 = not cut)
+            static float    spoolRateUs = 0.0f;     // µs/s chosen when THIS spool began
             uint32_t nowMs = millis();
             float dt = lastSpoolMs ? (uint32_t)(nowMs - lastSpoolMs) / 1000.0f : 0.0f;
             if (dt > 0.25f) dt = 0.25f;             // clamp across stalls/boot
@@ -597,9 +599,26 @@ void loop() {
             // LDRC channels span 500-2500 µs (not 1000-2000): "seconds" means
             // the FULL 2000 µs swing, and the rudder clamp matches the range.
             if (cmd <= spoolThr) {
+                if (cmd < spoolThr && !cutStartMs) cutStartMs = nowMs;   // chop begins
                 spoolThr = cmd;                     // power cut = instant (throttle hold)
+                spoolRateUs = 0.0f;                 // next rise picks its speed fresh
             } else {
-                float step = (2000.0f / simSpoolSeconds) * dt;   // µs this tick
+                // Two-speed governor (Malcolm 2026-08-18): a BRIEF cut — the
+                // mid-air autorotation bail-out — recovers on the fast rate
+                // (real governors have a bail-out mode); a LONG cut (landed,
+                // sat in the hold) restarts on the slow ground spool. The
+                // choice is made ONCE, when the rise begins, from how long
+                // the power had been off; simSpoolSeconds is the GROUND
+                // time, the bail-out recovery runs 4× quicker.
+                if (spoolRateUs <= 0.0f) {
+                    uint32_t offMs = cutStartMs ? (nowMs - cutStartMs) : 0;
+                    bool bailout = cutStartMs && offMs < 8000;   // <8 s off = mid-air
+                    float secs = bailout ? (simSpoolSeconds / 4.0f) : (float)simSpoolSeconds;
+                    if (secs < 0.5f) secs = 0.5f;
+                    spoolRateUs = 2000.0f / secs;
+                    cutStartMs = 0;
+                }
+                float step = spoolRateUs * dt;      // µs this tick
                 if (spoolThr + step >= cmd) spoolThr = cmd;
                 else { spoolThr += step; ramping = true; }
             }
