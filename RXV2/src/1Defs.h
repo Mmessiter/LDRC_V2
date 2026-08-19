@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.383-msp-chunks";
+constexpr const char* FW_VERSION = "RXV2-0.9.384-msp-wait";
 
 //*********************************************************************
 //  Auto-update manifest URLs

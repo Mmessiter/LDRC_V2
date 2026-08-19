@@ -442,8 +442,11 @@ inline void handleMspApi() {
     // (mspFcPoll is now blocked while a sync wait is in flight, but this
     // also handles the case where the user starts a new wait while a
     // probe response is mid-flight on the wire.)
-    bool ok = mspRequestAndWait(fn, reqBuf, reqLen, respBuf, &respLen, 400);
-    if (!ok) { server.send(504, "text/plain", "flight controller did not respond within 400 ms"); return; }
+    // 1200 ms: a CHUNKED response (e.g. servo config, 65 B over multiple
+    // CRSF frames) needs several telemetry frame slots — 400 ms cut it off
+    // mid-reassembly (2026-08-19, first fn-120 read).
+    bool ok = mspRequestAndWait(fn, reqBuf, reqLen, respBuf, &respLen, 1200);
+    if (!ok) { server.send(504, "text/plain", "flight controller did not respond within 1200 ms"); return; }
     // Proven-tune tracking: any successful tuning write restarts the
     // flights-since-edit count (consumed at the next flight save).
     if (reqLen > 0 && (fn == 202 || fn == 204 || fn == 95 || fn == 143 || fn == 149))
