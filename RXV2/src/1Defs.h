@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.381-no-pause";
+constexpr const char* FW_VERSION = "RXV2-0.9.382-fc-hint";
 
 //*********************************************************************
 //  Auto-update manifest URLs

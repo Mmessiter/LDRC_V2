@@ -111,6 +111,12 @@
              five calm buttons instead of twelve. -->
         <button class="btn btn-fly"  type=button id=flybtn><span class=ico>&#128641;&#9992;&#65039;</span><span style="display:flex;flex-direction:column;align-items:flex-start;text-align:left"><span>Fly now</span><span style="font-size:.62em;font-weight:400;opacity:.85;margin-top:.25em">turns off WiFi &amp; Bluetooth</span></span></button>
         <a class="btn btn-bb"   href="/rotorflight" id=rfbtn style="display:none;background:#8e6cab"><span class=ico>&#129357;</span>Rotorflight config &mdash; <span id=fcver>&hellip;</span></a>
+        <div id=fcHint class=muted style="display:none;font-size:.85em;line-height:1.5;text-align:center;padding:.3em .8em">
+            &#128161; Model responding but no flight controller detected? On the flight
+            controller, check <b>TELEMETRY</b> is enabled (Rotorflight &rarr; Configuration)
+            &mdash; without it the FC obeys silently and can&rsquo;t be seen. Then check the
+            telemetry wire to D5.
+        </div>
         <a class="btn btn-bb"   href="/blackbox"><span class=ico>&#128209;</span>Black box log</a>
         <button class="btn btn-bind" type=button id=bindbtn><span class=ico>&#128279;</span>Bind &mdash; pair with a transmitter</button>
         <a class="btn" href="/sim" id=simpg style="background:#4a90c9"><span class=ico>&#127918;</span><span id=simpglbl>Simulator</span></a>
@@ -140,6 +146,20 @@ function updateRfButton(s) {
         LDRC.setText('fcver', (fc.rf_major > 0)
             ? ('Rotorflight ' + fc.rf_major + '.' + fc.rf_minor)
             : 'Flight controller connected');
+    }
+    // The silent-FC hint (Malcolm 2026-08-19, the Nexus hunt): a fresh FC
+    // with TELEMETRY disabled obeys channels but never talks, so it cannot
+    // be detected — the user needs a nudge, not a mystery. Shown only when
+    // it's plausibly that: CRSF with FC telemetry expected, a LIVE TX link
+    // (so the model is powered and flying-ready), and still no FC heard.
+    const hint = document.getElementById('fcHint');
+    if (hint) {
+        const p = s && s.protocol;
+        const linkLive = s && s.rf && typeof s.rf.last_pkt_ms === 'number'
+                       && s.rf.last_pkt_ms >= 0 && s.rf.last_pkt_ms < 5000;
+        const silent = !!(s && !s.sim && p && p.current === 'CRSF' && p.fc_telem
+                       && linkLive && (!s.fcinfo || !s.fcinfo.detected));
+        hint.style.display = silent ? '' : 'none';
     }
 }
 
