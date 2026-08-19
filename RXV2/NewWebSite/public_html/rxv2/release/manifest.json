@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.384-msp-wait",
+      "url": "https://messiter.com/rxv2/release/v0.9.384/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.384/littlefs.bin",
+      "fs_md5": "474082d02ebb3f034a8e3a38ceb2637f",
+      "notes": "MSP wait window 400ms to 1200ms - chunked responses span several telemetry frames."
+    },
+    {
       "name": "RXV2-0.9.383-msp-chunks",
       "url": "https://messiter.com/rxv2/release/v0.9.383/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.383/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.373/littlefs.bin",
       "fs_md5": "7c603036dff89a8bfbf0d66e9c0b0d11",
       "notes": "NEW for simulator pilots: Realistic spool-up (on the Sim controls page). When the motor comes back after an autorotation (or any throttle-hold), the head speed builds gradually like a real governor - adjustable 1-60 seconds - with an adjustable stab of tail while it accelerates, instead of the sim snapping instantly to full speed. Cutting the throttle stays instant, so entering autos is unchanged. Off by default; live-adjustable, no reboot."
-    },
-    {
-      "name": "RXV2-0.9.372-sim-failsafe",
-      "url": "https://messiter.com/rxv2/release/v0.9.372/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.372/littlefs.bin",
-      "fs_md5": "aceb057974ccc061d1c968db67c31779",
-      "notes": "Simulator mode now obeys your saved failsafe positions: when the transmitter goes quiet, the sim's controls move to the posture you saved (Save failsafe on the View-channels page) instead of freezing at the last stick positions. Saving always worked - the sim just never applied it."
     }
   ]
 }

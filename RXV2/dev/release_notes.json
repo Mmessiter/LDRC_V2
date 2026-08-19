@@ -1,4 +1,5 @@
 {
+ "RXV2-0.9.384-msp-wait": "MSP wait window 400ms to 1200ms - chunked responses span several telemetry frames.",
  "RXV2-0.9.383-msp-chunks": "Groundwork for the Servos screen (and everything after): the receiver now reassembles chunked MSP responses from the flight controller, so replies bigger than one radio frame (like the full servo configuration) arrive intact instead of being silently dropped.",
  "RXV2-0.9.382-fc-hint": "Home page now hints when a flight controller is obeying but silent: 'check TELEMETRY is enabled in Rotorflight' - a fresh FC with telemetry off cannot be detected (it obeys channels but never speaks), which cost Malcolm a hunt on two new builds.",
  "RXV2-0.9.381-no-pause": "Spool-up now starts the INSTANT the motor comes back (Malcolm's report: 'a pause before it starts to move'). The USB joystick only shows the middle slice of the channel; the ramp was wasting seconds in the invisible saturated zones. It now jumps those instantly and spends the whole configured time in the visible sweep the simulator follows.",
