@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.385-servos",
+      "url": "https://messiter.com/rxv2/release/v0.9.385/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.385/littlefs.bin",
+      "fs_md5": "37c27f12a8545690aa2d3b6210e8e10b",
+      "notes": "NEW: Servos screen (Rotorflight menu) - each servo's centre (subtrim), travel limits, throw scale, direction, swash geometry correction, update rate and slow-motion time, read from and written to the flight controller with every save verified byte-for-byte. The crash-repair screen: swap a servo at the field, re-centre, set throws, fly."
+    },
+    {
       "name": "RXV2-0.9.384-msp-wait",
       "url": "https://messiter.com/rxv2/release/v0.9.384/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.384/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.374/littlefs.bin",
       "fs_md5": "9428f1676fd41a287dcdb296634af9de",
       "notes": "Realistic spool-up moved to its proper home: the neXt controls & views page (RealFlight simulates its own governor, so the card only shows for neXt). Same feature as 0.9.373."
-    },
-    {
-      "name": "RXV2-0.9.373-spool-up",
-      "url": "https://messiter.com/rxv2/release/v0.9.373/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.373/littlefs.bin",
-      "fs_md5": "7c603036dff89a8bfbf0d66e9c0b0d11",
-      "notes": "NEW for simulator pilots: Realistic spool-up (on the Sim controls page). When the motor comes back after an autorotation (or any throttle-hold), the head speed builds gradually like a real governor - adjustable 1-60 seconds - with an adjustable stab of tail while it accelerates, instead of the sim snapping instantly to full speed. Cutting the throttle stays instant, so entering autos is unchanged. Off by default; live-adjustable, no reboot."
     }
   ]
 }
