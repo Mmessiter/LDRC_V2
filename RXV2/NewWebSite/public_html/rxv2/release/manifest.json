@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.382-fc-hint",
+      "url": "https://messiter.com/rxv2/release/v0.9.382/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.382/littlefs.bin",
+      "fs_md5": "eb37a16005984ef2544e4e2b9e571e4a",
+      "notes": "Home page now hints when a flight controller is obeying but silent: 'check TELEMETRY is enabled in Rotorflight' - a fresh FC with telemetry off cannot be detected (it obeys channels but never speaks), which cost Malcolm a hunt on two new builds."
+    },
+    {
       "name": "RXV2-0.9.381-no-pause",
       "url": "https://messiter.com/rxv2/release/v0.9.381/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.381/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.371/littlefs.bin",
       "fs_md5": "b77f907efeb3fc78a977f1a2dc79df19",
       "notes": "The Bluetooth badge is now Malcolm's own Genmoji: a glossy blue tooth with signal waves on the enamel, drawn on his iPhone. Still tap-to-disconnect."
-    },
-    {
-      "name": "RXV2-0.9.370-blue-tooth",
-      "url": "https://messiter.com/rxv2/release/v0.9.370/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.370/littlefs.bin",
-      "fs_md5": "a82ac0269fa1eff903d1db51e99bf358",
-      "notes": "The Bluetooth badge is now a literal blue TOOTH (Malcolm's pun, irresistible) - a little molar on the blue dot, still the tap-to-disconnect button."
     }
   ]
 }
