@@ -67,8 +67,11 @@ function buildCards() {
     let h = '';
     for (let i = 0; i < servos.length; i++) {
         const n = i + 1;
-        h += '<div class=card><h2>Servo ' + n + (n <= 3 ? ' <span style="font-weight:400;font-size:.75em;color:#5d7a8c">(swashplate)</span>'
-                                                        : ' <span style="font-weight:400;font-size:.75em;color:#5d7a8c">(tail / other)</span>') + '</h2>'
+        // Rotorflight's allocation is fixed: S1-S3 = swashplate cyclics,
+        // S4 = the tail (when servo-driven). Malcolm 2026-08-19: say so.
+        const role = (n <= 3) ? 'swashplate' : (n === 4 ? 'TAIL servo' : 'other');
+        h += '<div class=card><h2>Servo ' + n
+           + ' <span style="font-weight:400;font-size:.75em;color:#5d7a8c">(' + role + ')</span></h2>'
            + '<div class=sGrid>'
            + fieldRow('s'+i+'_mid',  'Centre (subtrim)', 'where the arm sits at zero input, µs', 1000, 2000)
            + fieldRow('s'+i+'_min',  'Travel limit, low side', 'how far it may move one way (µs from centre)', -1000, 0)
