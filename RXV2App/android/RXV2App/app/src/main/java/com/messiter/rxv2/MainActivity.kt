@@ -908,12 +908,14 @@ class MainActivity : AppCompatActivity() {
                 val origPid = if (st.length >= 54) st.substring(48, 50).toIntOrNull(16) else null
                 val origRate = if (st.length >= 54) st.substring(52, 54).toIntOrNull(16) else null
                 if (origPid != null && origRate != null) {
-                    snapTotal += 6 + 4 * 5 + 4 * 3 + 2   // 142 + mixer(5) + sweeps
+                    snapTotal += 7 + 4 * 5 + 4 * 3 + 2   // 142 + mixer(5) + servos + sweeps
                     req("/api/msp?fn=142")       // governor global — bankless
                     // Mixer — Travel extents' blocks, bankless (Malcolm
                     // 2026-08-15: the backup must not forget yesterday's
                     // additions). Config + one read per input 1..4.
                     req("/api/msp?fn=42")
+                    // Servos — bankless bulk read (chunked; RX 0.9.383+).
+                    req("/api/msp?fn=120")
                     for (i in 1..4) req("/api/msp?fn=174&data=%02X".format(i))
                     // Every bank select makes the FC write flash — a brief
                     // servo stall (the swash twitch). Skip no-op selects.

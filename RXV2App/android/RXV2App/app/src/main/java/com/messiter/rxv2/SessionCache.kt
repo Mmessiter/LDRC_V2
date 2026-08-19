@@ -262,7 +262,7 @@ object SessionCache {
     fun snapshotRestorePoint() {
         val f = restoreFileFor(modelName) ?: return
         val keep = entries.filterKeys { k ->
-            restoreKeyPrefixes.any { k.startsWith(it) } || k == "/api/msp?fn=142" || k == "/api/msp?fn=42"
+            restoreKeyPrefixes.any { k.startsWith(it) } || k == "/api/msp?fn=142" || k == "/api/msp?fn=42" || k == "/api/msp?fn=120"
         }
         if (keep.isEmpty()) return
         runCatching {
@@ -322,6 +322,25 @@ object SessionCache {
             hexAt("/api/msp?fn=174&data=$key")?.let {
                 out.add(RestoreItem(null, 171, 174, key + it, "mixer input — ${axisNames[i]}",
                                     readData = key, verifyHex = it))
+            }
+        }
+        // Servos (bankless): stored fn-120 image = count(1B) + 16 B/servo;
+        // fn 212 writes one servo (index + 16 B). Structural verify for all
+        // but the LAST servo (mid-restore the fn-120 read-back mixes old and
+        // new), then the last item compares the whole image byte-for-byte.
+        hexAt("/api/msp?fn=120")?.let { full ->
+            val count = full.take(2).toIntOrNull(16) ?: 0
+            if (count > 0 && full.length >= 2 + count * 32) {
+                val roles = listOf("swash 1", "swash 2", "swash 3", "TAIL", "5", "6", "7", "8")
+                for (i in 0 until count) {
+                    val slice = full.substring(2 + i * 32, 2 + i * 32 + 32)
+                    val idx = "%02X".format(i)
+                    val last = i == count - 1
+                    out.add(RestoreItem(null, 212, 120, idx + slice,
+                                        "servo ${i + 1} (${roles[minOf(i, 7)]})",
+                                        readData = null,
+                                        verifyHex = if (last) full else full.take(2)))
+                }
             }
         }
         return out

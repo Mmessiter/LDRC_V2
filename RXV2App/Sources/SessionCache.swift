@@ -314,7 +314,8 @@ extension SessionCache {
         var keep: [String: Entry] = [:]
         for (k, v) in entries {
             if Self.restoreKeyPrefixes.contains(where: { k.hasPrefix($0) })
-                || k == "/api/msp?fn=142" || k == "/api/msp?fn=42" {
+                || k == "/api/msp?fn=142" || k == "/api/msp?fn=42"
+                || k == "/api/msp?fn=120" {
                 keep[k] = v
             }
         }
@@ -364,6 +365,28 @@ extension SessionCache {
                 out.append(RestoreItem(selectByte: nil, writeFn: 171, readFn: 174,
                                        hex: key + h, label: "mixer input — \(axisNames[i]!)",
                                        readData: key, verifyHex: h))
+            }
+        }
+        // Servos (bankless): the stored fn-120 image is count(1B) + 16 B per
+        // servo; fn 212 writes ONE servo (index byte + its 16 B). Verify is
+        // structural for all but the last servo (the fn-120 read-back mixes
+        // written and not-yet-written servos mid-restore), then the LAST
+        // item compares the whole image byte-for-byte.
+        if let full = hexAt("/api/msp?fn=120"), full.count >= 2,
+           let count = Int(full.prefix(2), radix: 16), count > 0,
+           full.count >= 2 + count * 32 {
+            let roles = ["swash 1", "swash 2", "swash 3", "TAIL", "5", "6", "7", "8"]
+            for i in 0..<count {
+                let start = full.index(full.startIndex, offsetBy: 2 + i * 32)
+                let end = full.index(start, offsetBy: 32)
+                let slice = String(full[start..<end])
+                let idx = String(format: "%02X", i)
+                let last = (i == count - 1)
+                out.append(RestoreItem(selectByte: nil, writeFn: 212, readFn: 120,
+                                       hex: idx + slice,
+                                       label: "servo \(i + 1) (\(roles[min(i, 7)]))",
+                                       readData: nil,
+                                       verifyHex: last ? full : String(full.prefix(2))))
             }
         }
         return out
@@ -577,13 +600,16 @@ final class SessionPrefetcher {
                let hex = String(data: st, encoding: .utf8), hex.count >= 54,
                let origPid = Int(hex.dropFirst(48).prefix(2), radix: 16),
                let origRate = Int(hex.dropFirst(52).prefix(2), radix: 16) {
-                total += 6 + 4 * 5 + 4 * 3 + 2   // 142 + mixer(5) + pid sweep + rate sweep + restores
+                total += 7 + 4 * 5 + 4 * 3 + 2   // 142 + mixer(5) + servos + pid sweep + rate sweep + restores
                 _ = req("/api/msp?fn=142")       // governor global — bankless
                 // Mixer — Travel extents' blocks, bankless (Malcolm
                 // 2026-08-15: the backup must not forget yesterday's
                 // additions). Config + one read per input 1..4.
                 _ = req("/api/msp?fn=42")
                 for i in 1...4 { _ = req(String(format: "/api/msp?fn=174&data=%02X", i)) }
+                // Servos — bankless, one bulk read (chunked; RX 0.9.383+).
+                // Malcolm 2026-08-19: the backup must include the new screen.
+                _ = req("/api/msp?fn=120")
                 // Every bank select makes the FC write flash — a brief servo
                 // stall (the swash twitch Malcolm noticed 2026-08-06). Skip
                 // selects that are already true.
