@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.385-servos";
+constexpr const char* FW_VERSION = "RXV2-0.9.386-tail-label";
 
 //*********************************************************************
 //  Auto-update manifest URLs
