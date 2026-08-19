@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.384-msp-wait";
+constexpr const char* FW_VERSION = "RXV2-0.9.385-servos";
 
 //*********************************************************************
 //  Auto-update manifest URLs
