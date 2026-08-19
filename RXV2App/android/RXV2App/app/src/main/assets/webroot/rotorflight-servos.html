@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name=theme-color content="#5fa099">
+<meta name=apple-mobile-web-app-capable content=yes>
+<meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
+<meta name=apple-mobile-web-app-title content="LDRC RX V2">
+<title>Servos &middot; LDRC RX V2</title>
+<link rel=stylesheet href="/style.css?v=172">
+<script src="/app.js?v=177" defer></script>
+<style>
+.banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
+.banner.info{background:#c8d2dc;color:#3a5165}
+.banner.good{background:#a8d29a;color:#2a4d1f}
+.banner.bad {background:#dca08c;color:#5c2a1a}
+.sGrid{display:grid;grid-template-columns:1fr auto;gap:.5em .8em;align-items:center;font-size:.95em}
+.sGrid input[type=number]{width:6em;padding:.5em;font-size:1em;border:1px solid #b8c7d0;border-radius:6px;text-align:center}
+.sGrid .lab b{display:block}
+.sGrid .lab span{font-size:.8em;color:#5d7a8c}
+.chkRow{display:flex;gap:1.5em;margin:.5em 0 .2em}
+.chkRow label{display:flex;align-items:center;gap:.4em;font-weight:600}
+.chkRow input{width:1.25em;height:1.25em}
+.saveBtn{width:100%;margin-top:.6em;padding:.7em;border:0;border-radius:10px;
+         background:#6cab5e;color:#fff;font-size:1.05em;font-weight:700;cursor:pointer}
+.saveBtn:disabled{opacity:.5}
+.sMsg{text-align:center;font-size:.85em;min-height:1.2em;margin-top:.3em;color:#3a5165;font-weight:600}
+</style>
+</head>
+<body class=hasFab>
+<button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
+<div class=bg-photo aria-hidden=true></div>
+<div class=bg-wash  aria-hidden=true></div>
+<div class=container>
+    <h1>Servos</h1>
+    <div id=status class="banner info">loading&hellip;</div>
+    <div id=cards></div>
+    <a class="btn btn-bb" href="/rotorflight" style="margin-top:.8em"><span class=ico>&#11013;&#65039;</span>Back to Rotorflight</a>
+    <div class=footer></div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+function hexToBytes(h) {
+    const out = new Uint8Array(h.length / 2);
+    for (let i = 0; i < out.length; i++) out[i] = parseInt(h.substr(i * 2, 2), 16);
+    return out;
+}
+function bytesToHex(b) {
+    return Array.from(b).map(x => x.toString(16).padStart(2, '0')).join('');
+}
+const rdU16 = (b, o) => b[o] | (b[o + 1] << 8);
+const rdS16 = (b, o) => { const v = rdU16(b, o); return v > 32767 ? v - 65536 : v; };
+const wrU16 = (b, o, v) => { v = v & 0xFFFF; b[o] = v & 0xFF; b[o + 1] = (v >> 8) & 0xFF; };
+
+// One servo = 16 bytes: mid,min,max,rneg,rpos,rate,speed,flags (all U16 LE).
+// flags: bit0 = reversed, bit1 = swash geometry correction (RF servos.h).
+let servos = [];      // array of {mid,min,max,rneg,rpos,rate,speed,flags}
+
+function fieldRow(id, title, hint, min, max, step) {
+    return '<div class=lab><b>' + title + '</b><span>' + hint + '</span></div>'
+         + '<input id=' + id + ' type=number min=' + min + ' max=' + max + ' step=' + (step || 1) + '>';
+}
+
+function buildCards() {
+    let h = '';
+    for (let i = 0; i < servos.length; i++) {
+        const n = i + 1;
+        h += '<div class=card><h2>Servo ' + n + (n <= 3 ? ' <span style="font-weight:400;font-size:.75em;color:#5d7a8c">(swashplate)</span>'
+                                                        : ' <span style="font-weight:400;font-size:.75em;color:#5d7a8c">(tail / other)</span>') + '</h2>'
+           + '<div class=sGrid>'
+           + fieldRow('s'+i+'_mid',  'Centre (subtrim)', 'where the arm sits at zero input, µs', 1000, 2000)
+           + fieldRow('s'+i+'_min',  'Travel limit, low side', 'how far it may move one way (µs from centre)', -1000, 0)
+           + fieldRow('s'+i+'_max',  'Travel limit, high side', 'how far it may move the other way (µs from centre)', 0, 1000)
+           + fieldRow('s'+i+'_rneg', 'Throw for full input, low side (scale −)', 'µs of arm movement asked for at full stick', 100, 1000)
+           + fieldRow('s'+i+'_rpos', 'Throw for full input, high side (scale +)', 'usually the same as the low side', 100, 1000)
+           + fieldRow('s'+i+'_rate', 'Update rate (Hz)', 'how often the servo is refreshed — check its spec', 50, 5000)
+           + fieldRow('s'+i+'_speed','Slow-motion time (ms)', '0 = move at full speed (normal)', 0, 60000)
+           + '</div>'
+           + '<div class=chkRow>'
+           + '<label><input type=checkbox id=s'+i+'_rev> Reversed</label>'
+           + '<label><input type=checkbox id=s'+i+'_geo> Swash geometry correction</label>'
+           + '</div>'
+           + '<button class=saveBtn id=s'+i+'_save onclick="saveServo('+i+')">Save servo '+n+'</button>'
+           + '<div class=sMsg id=s'+i+'_msg></div>'
+           + '</div>';
+    }
+    $('cards').innerHTML = h;
+    for (let i = 0; i < servos.length; i++) paint(i);
+}
+
+function paint(i) {
+    const s = servos[i];
+    $('s'+i+'_mid').value  = s.mid;
+    $('s'+i+'_min').value  = s.min;
+    $('s'+i+'_max').value  = s.max;
+    $('s'+i+'_rneg').value = s.rneg;
+    $('s'+i+'_rpos').value = s.rpos;
+    $('s'+i+'_rate').value = s.rate;
+    $('s'+i+'_speed').value= s.speed;
+    $('s'+i+'_rev').checked = !!(s.flags & 1);
+    $('s'+i+'_geo').checked = !!(s.flags & 2);
+}
+
+function gather(i) {
+    const g = id => parseInt($('s'+i+'_'+id).value, 10) || 0;
+    return {
+        mid: g('mid'), min: g('min'), max: g('max'),
+        rneg: g('rneg'), rpos: g('rpos'), rate: g('rate'), speed: g('speed'),
+        flags: ($('s'+i+'_rev').checked ? 1 : 0) | ($('s'+i+'_geo').checked ? 2 : 0),
+    };
+}
+
+function pack16(s) {
+    const b = new Uint8Array(16);
+    wrU16(b, 0, s.mid); wrU16(b, 2, s.min); wrU16(b, 4, s.max);
+    wrU16(b, 6, s.rneg); wrU16(b, 8, s.rpos); wrU16(b, 10, s.rate);
+    wrU16(b, 12, s.speed); wrU16(b, 14, s.flags);
+    return b;
+}
+
+async function load() {
+    try {
+        const hex = await LDRC.msp(120);              // MSP_SERVO_CONFIGURATIONS (chunked — needs RX 0.9.383+)
+        const b = hexToBytes(hex);
+        const n = b[0];
+        servos = [];
+        for (let i = 0; i < n; i++) {
+            const o = 1 + i * 16;
+            servos.push({ mid: rdU16(b,o), min: rdS16(b,o+2), max: rdS16(b,o+4),
+                          rneg: rdU16(b,o+6), rpos: rdU16(b,o+8), rate: rdU16(b,o+10),
+                          speed: rdU16(b,o+12), flags: rdU16(b,o+14) });
+        }
+        buildCards();
+        $('status').className = 'banner good';
+        $('status').textContent = n + ' servos read from the flight controller';
+    } catch (e) {
+        $('status').className = 'banner bad';
+        $('status').textContent = 'Could not read servos — is the flight controller connected? (Receiver firmware 0.9.384+ needed.)';
+    }
+}
+
+async function saveServo(i) {
+    const btn = $('s'+i+'_save'), msg = $('s'+i+'_msg');
+    btn.disabled = true; msg.textContent = 'writing…';
+    try {
+        const s = gather(i);
+        const body = new Uint8Array(17);
+        body[0] = i;
+        body.set(pack16(s), 1);
+        await LDRC.msp(212, bytesToHex(body));        // MSP_SET_SERVO_CONFIGURATION
+        await LDRC.msp(250);                          // save to the FC's memory
+        // Verify: read everything back and byte-compare this servo.
+        const check = hexToBytes(await LDRC.msp(120));
+        const o = 1 + i * 16;
+        const want = pack16(s);
+        let ok = check.length >= o + 16;
+        for (let k = 0; ok && k < 16; k++) if (check[o + k] !== want[k]) ok = false;
+        if (ok) {
+            servos[i] = s;
+            msg.textContent = '✅ Saved & verified';
+        } else {
+            msg.textContent = '⚠️ The flight controller adjusted the values — re-reading';
+            await load();
+        }
+    } catch (e) {
+        msg.textContent = '⚠️ Write failed — try again';
+    }
+    btn.disabled = false;
+    setTimeout(() => { msg.textContent = ''; }, 6000);
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    if (window.LDRC && LDRC.replayReady) await LDRC.replayReady;
+    load();
+});
+</script>
+<template id=helpContent><h2>Servos</h2>
+<p>The mechanical setup of each servo, straight from the flight controller. Servos 1&ndash;3 are
+usually the swashplate; servo 4 the tail (if it isn&rsquo;t on the motor).</p>
+<ul>
+<li><b>Centre (subtrim)</b> &mdash; where the arm sits with sticks at zero. Adjust so linkages are level.</li>
+<li><b>Travel limits</b> &mdash; the mechanical stops: the servo will never be driven past these, whatever the sticks ask.</li>
+<li><b>Throw for full input (scale)</b> &mdash; how much movement a full stick asks for. Bigger = more throw.</li>
+<li><b>Reversed</b> &mdash; flips the direction, same as a servo-reverse switch.</li>
+<li><b>Swash geometry correction</b> &mdash; evens out swashplate tilt when the arms travel through an arc (firmware calls it geo correction).</li>
+<li><b>Update rate</b> &mdash; must not exceed what your servo supports; too fast can overheat it.</li>
+</ul>
+<p>Each <b>Save</b> writes that one servo, stores it in the flight controller&rsquo;s memory, reads
+it back, and confirms the bytes match &mdash; you&rsquo;ll see <b>Saved &amp; verified</b>.</p>
+</template>
+</body>
+</html>
