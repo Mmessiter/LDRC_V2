@@ -120,9 +120,11 @@
         <div class=card id=spCard style="display:none">
             <div style="font-weight:800;font-size:1.05em;margin-bottom:2px">Realistic spool-up (helicopters)</div>
             <div class=muted style="font-size:.82em;line-height:1.45;margin-bottom:8px">
-                When the motor comes back on (e.g. leaving your autorotation bank), the head speed
-                builds gradually like a real governor &mdash; with a stab of tail while it accelerates &mdash;
-                instead of snapping instantly to full speed. Cutting the motor stays instant.
+                When the motor comes back on, the head speed builds like a real governor &mdash; with
+                a stab of tail while it accelerates. Two speeds, chosen automatically: a <b>brief</b> cut
+                (bailing out of an auto mid-air) recovers quickly (&frac14; of the time below); after a
+                <b>long</b> cut (landed, sitting in the hold) you get the full slow ground spool.
+                Cutting the motor stays instant.
             </div>
             <label style="display:flex;align-items:center;gap:.5em;font-weight:700;margin:.3em 0">
                 <input type=checkbox id=spOn style="width:1.3em;height:1.3em"> Enable
@@ -132,7 +134,7 @@
                 <input type=number id=spMot min=0 max=16 step=1 style="width:4.5em;text-align:center">
                 <span>High = motor OFF <span class=muted>(inverted channel)</span></span>
                 <input type=checkbox id=spInv style="width:1.3em;height:1.3em;justify-self:center">
-                <span>Spool-up time, motor off &rarr; full <span class=muted>(seconds)</span></span>
+                <span>Ground spool-up time <span class=muted>(seconds; brief cuts recover in &frac14; of this)</span></span>
                 <input type=number id=spSec min=1 max=60 step=1 style="width:4.5em;text-align:center">
                 <span>Tail stab while spooling <span class=muted>(&micro;s, minus = other way)</span></span>
                 <input type=number id=spTorq min=-400 max=400 step=10 style="width:4.5em;text-align:center">
