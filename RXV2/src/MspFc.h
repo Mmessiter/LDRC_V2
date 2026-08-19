@@ -120,16 +120,19 @@ inline void mspSendRequest(uint8_t function, const uint8_t* payload = nullptr, u
 // is the count from dest through last MSP byte (exclusive of CRC — caller has
 // already verified that). Layout: dest(1) src(1) status(1) mspBody(N).
 
+// Deliver a COMPLETE MSP response (however many CRSF frames it took) to the
+// waiters and the passive-info switch below. Split out of mspParseResponse
+// when chunk reassembly arrived (2026-08-19, the Servos screen: RF's bulk
+// MSP_SERVO_CONFIGURATIONS is 65 bytes — more than one ~57-byte CRSF frame
+// can carry, and the FC answers in CHUNKS we previously threw away).
+inline void mspDeliverResponse(uint8_t func, const uint8_t* payload, uint8_t size);
+
 inline void mspParseResponse(const uint8_t* body, uint8_t bodyLen) {
-    if (bodyLen < 3 + 2) return;                     // dest+src+status + minimal MSP (size+func)
+    if (bodyLen < 3 + 1) return;                     // dest+src+status + at least 1 MSP byte
     // body[0] = dest, body[1] = src, body[2] = status
+    const uint8_t status = body[2];
     const uint8_t* msp = &body[3];
     uint8_t mspLen = (uint8_t)(bodyLen - 3);
-    if (mspLen < 2) return;
-    uint8_t size = msp[0];
-    uint8_t func = msp[1];
-    if ((uint16_t)(2 + size) > mspLen) return;       // payload doesn't fit (no inner CRC)
-    const uint8_t* payload = &msp[2];
 
     fcInfo.lastResponseMs = millis();                // even an error reply proves the FC is alive
 
@@ -137,7 +140,60 @@ inline void mspParseResponse(const uint8_t* body, uint8_t bodyLen) {
     // response: its size is 0, and treating it as data used to hand empty
     // buffers to the waiters — the TX-param write machine would then send a
     // zero-length SET followed by EEPROM_WRITE. Let waiters time out + retry.
-    if (body[2] & 0x80) return;
+    if (status & 0x80) return;
+
+    // ---- CRSF MSP chunking (status bits: 0-3 sequence, 4 start-of-frame) ----
+    // A response bigger than one CRSF frame arrives as SoF (carrying MSP
+    // size+func+first data) followed by continuation frames (pure data,
+    // sequence incrementing mod 16). Reassemble; deliver when complete.
+    static uint8_t  reBuf[256];
+    static uint16_t reExpected = 0;   // total payload bytes we are waiting for
+    static uint16_t reGot      = 0;
+    static uint8_t  reFunc     = 0;
+    static uint8_t  reSeq      = 0;
+    static bool     reActive   = false;
+
+    const uint8_t seq = status & 0x0F;
+    const bool    sof = (status & 0x10) != 0;
+
+    if (sof) {
+        if (mspLen < 2) { reActive = false; return; }
+        uint8_t size = msp[0];
+        uint8_t func = msp[1];
+        const uint8_t* data = &msp[2];
+        uint8_t dataLen = (uint8_t)(mspLen - 2);
+        if (dataLen >= size) {
+            // Whole response in one frame — the common fast path.
+            reActive = false;
+            mspDeliverResponse(func, data, size);
+            return;
+        }
+        // Chunked: start reassembly.
+        reActive   = true;
+        reExpected = size;
+        reFunc     = func;
+        reSeq      = seq;
+        reGot      = (uint16_t)dataLen;
+        memcpy(reBuf, data, dataLen);
+        return;
+    }
+
+    // Continuation frame.
+    if (!reActive) return;
+    if (seq != (uint8_t)((reSeq + 1) & 0x0F)) { reActive = false; return; }   // lost a chunk
+    reSeq = seq;
+    uint16_t take = mspLen;
+    if (reGot + take > sizeof(reBuf)) { reActive = false; return; }
+    memcpy(&reBuf[reGot], msp, take);
+    reGot += take;
+    if (reGot >= reExpected) {
+        reActive = false;
+        mspDeliverResponse(reFunc, reBuf, (uint8_t)reExpected);
+    }
+    return;
+}
+
+inline void mspDeliverResponse(uint8_t func, const uint8_t* payload, uint8_t size) {
 
     // If a synchronous request is waiting for this function code, capture it.
     if (func == mspWaitFunction && !mspWaitRespReady) {

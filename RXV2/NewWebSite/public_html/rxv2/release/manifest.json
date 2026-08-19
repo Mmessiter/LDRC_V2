@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.383-msp-chunks",
+      "url": "https://messiter.com/rxv2/release/v0.9.383/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.383/littlefs.bin",
+      "fs_md5": "83d567ba68b8bce4adce8214e8572987",
+      "notes": "Groundwork for the Servos screen (and everything after): the receiver now reassembles chunked MSP responses from the flight controller, so replies bigger than one radio frame (like the full servo configuration) arrive intact instead of being silently dropped."
+    },
+    {
       "name": "RXV2-0.9.382-fc-hint",
       "url": "https://messiter.com/rxv2/release/v0.9.382/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.382/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.372/littlefs.bin",
       "fs_md5": "aceb057974ccc061d1c968db67c31779",
       "notes": "Simulator mode now obeys your saved failsafe positions: when the transmitter goes quiet, the sim's controls move to the posture you saved (Save failsafe on the View-channels page) instead of freezing at the last stick positions. Saving always worked - the sim just never applied it."
-    },
-    {
-      "name": "RXV2-0.9.371-genmoji-tooth",
-      "url": "https://messiter.com/rxv2/release/v0.9.371/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.371/littlefs.bin",
-      "fs_md5": "b77f907efeb3fc78a977f1a2dc79df19",
-      "notes": "The Bluetooth badge is now Malcolm's own Genmoji: a glossy blue tooth with signal waves on the enamel, drawn on his iPhone. Still tap-to-disconnect."
     }
   ]
 }
