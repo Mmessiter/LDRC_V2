@@ -1,4 +1,5 @@
 {
+ "RXV2-0.9.388-tx-guard": "Back up and Restore now refuse to run while the transmitter is ON, with a clear explanation - a backup taken under a live TX silently skipped the bank walk and saved less than everything (Malcolm's catch).",
  "RXV2-0.9.387-nav-dedup": "Tidier navigation (Malcolm's suggestion): the bottom 'Back to front screen' button is gone - the top-left Home button already does that job. Sub-pages keep their one-level-up Back button (e.g. WiFi back to Setup), which Home can't do.",
  "RXV2-0.9.386-tail-label": "Servos screen: servo 4 is now labelled TAIL servo (Rotorflight's fixed allocation: servos 1-3 swashplate, 4 tail).",
  "RXV2-0.9.385-servos": "NEW: Servos screen (Rotorflight menu) - each servo's centre (subtrim), travel limits, throw scale, direction, swash geometry correction, update rate and slow-motion time, read from and written to the flight controller with every save verified byte-for-byte. The crash-repair screen: swap a servo at the field, re-centre, set throws, fly.",

@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.387-nav-dedup";
+constexpr const char* FW_VERSION = "RXV2-0.9.388-tx-guard";
 
 //*********************************************************************
 //  Auto-update manifest URLs

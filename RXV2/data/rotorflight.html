@@ -59,6 +59,18 @@
 // Back up: the same whole-session save as the Black box page — all banks'
 // settings AND flights; completing it freezes the restore point.
 async function phoneSave() {
+    // TX-on guard (Malcolm 2026-08-20): the bank walk is skipped under a
+    // live transmitter, so a backup taken then would be HOLLOW. Warn and
+    // refuse instead of quietly saving less than everything.
+    try {
+        const s = await LDRC.fetchState();
+        const age = s && s.rf && s.rf.last_pkt_ms;
+        if (typeof age === 'number' && age >= 0 && age < 3000) {
+            await LDRC.alert('The transmitter is ON.\n\nA backup has to walk through all the banks, which must never happen under a live transmitter. Switch the transmitter OFF, then tap Back up again.',
+                             { title: 'Transmitter is on', icon: '📻' });
+            return;
+        }
+    } catch (e) { /* state unreadable — the sweep has its own guards */ }
     const btn = document.getElementById('phoneSaveBtn');
     const prog = document.getElementById('savProg');
     const lab = document.getElementById('savLab');
@@ -106,6 +118,17 @@ function paintRestoreBtn() {
 // Restore every recorded setting (all banks) from the phone's session
 // recording — the parachute for a pilot who never made a backup.
 async function phoneRestore() {
+    // Same TX-on guard as backup: the restore switches banks and writes
+    // flash — never under a live transmitter.
+    try {
+        const s = await LDRC.fetchState();
+        const age = s && s.rf && s.rf.last_pkt_ms;
+        if (typeof age === 'number' && age >= 0 && age < 3000) {
+            await LDRC.alert('The transmitter is ON.\n\nRestoring writes every bank, which must never happen under a live transmitter. Switch the transmitter OFF, then tap Restore again.',
+                             { title: 'Transmitter is on', icon: '📻' });
+            return;
+        }
+    } catch (e) { /* state unreadable — fall through to the existing checks */ }
     let info = null;
     try { info = await (await fetch('/app/restore/info', { cache: 'no-store' })).json(); } catch (e) {}
     if (!info || !info.available) {
