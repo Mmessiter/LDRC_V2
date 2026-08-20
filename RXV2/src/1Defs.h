@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.386-tail-label";
+constexpr const char* FW_VERSION = "RXV2-0.9.387-nav-dedup";
 
 //*********************************************************************
 //  Auto-update manifest URLs

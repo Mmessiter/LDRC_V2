@@ -383,14 +383,20 @@
                 '/sim': 'Simulator', '/rotorflight': 'Rotorflight'
             };
             const parent = PARENTS[location.pathname] || '/';
-            const back = document.createElement('a');
-            back.href = parent;
-            back.className = 'btn';
-            back.style.background = '#6f7e8b';
-            back.innerHTML = '<span class=ico>&#11013;&#65039;</span>Back to ' + (LABELS[parent] || 'menu');
-            const foot = document.querySelector('.footer');
-            if (foot && foot.parentNode) foot.parentNode.insertBefore(back, foot);
-            else { const c = document.querySelector('.container'); if (c) c.appendChild(back); }
+            // Only sub-pages get the bottom back button — it goes one level UP
+            // (WiFi → Setup), which 🏠 can't do. When the parent IS the front
+            // screen it would just duplicate 🏠, so it's skipped (Malcolm
+            // 2026-08-20: "unnecessary and could be removed").
+            if (parent !== '/') {
+                const back = document.createElement('a');
+                back.href = parent;
+                back.className = 'btn';
+                back.style.background = '#6f7e8b';
+                back.innerHTML = '<span class=ico>&#11013;&#65039;</span>Back to ' + (LABELS[parent] || 'menu');
+                const foot = document.querySelector('.footer');
+                if (foot && foot.parentNode) foot.parentNode.insertBefore(back, foot);
+                else { const c = document.querySelector('.container'); if (c) c.appendChild(back); }
+            }
         }
         setTimeout(() => {
             LDRC.fetchState().then(() => {
