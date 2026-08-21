@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.389-vbat-smooth";
+constexpr const char* FW_VERSION = "RXV2-0.9.390-tx-vbat-slow";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -376,7 +376,8 @@ inline bool    fcTelemetryEnabled = true;
 inline uint8_t vbatPin      = 0;        // battery-divider ADC GPIO (0 = feature off)
 inline float   vbatRatio    = 23.0f;    // divider ratio
 inline uint8_t vbatCellsCfg = 0;        // user-set cell count (0 = unset)
-inline float   vbatVolts    = 0.0f;     // smoothed pack voltage (V)
+inline float   vbatVolts    = 0.0f;     // smoothed pack voltage (V) — app + blackbox
+inline float   vbatVoltsTx  = 0.0f;     // EXTRA-slow (~7 s) copy — ONLY the V1 TX screen (Malcolm 2026-08-21)
 inline uint32_t channelPacketsRx = 0;   // CHANNEL packets decoded this session (throttle stays pinned until a stable stream)
 inline bool    vbatAuto     = false;
 inline uint8_t throttleChannel = 3;         // NVS_KEY_THR_CH — boot-safe low until the TX is heard

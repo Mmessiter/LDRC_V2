@@ -1468,7 +1468,7 @@ inline void handleVbatSet() {
         vbatPin  = (uint8_t)pn;
         vbatAuto = false;
         prefs.putUChar(NVS_KEY_VBAT_PIN, vbatPin);
-        vbatVolts = 0.0f;          // restart smoothing on the new pin
+        vbatVolts = 0.0f; vbatVoltsTx = 0.0f;          // restart smoothing on the new pin
         vbatInit();
     }
     if (server.hasArg("ratio")) {
@@ -1481,7 +1481,7 @@ inline void handleVbatSet() {
         if (r < 1.0f)  r = 1.0f;
         if (r > 50.0f) r = 50.0f;
         vbatRatio = r;
-        vbatVolts = 0.0f;
+        vbatVolts = 0.0f; vbatVoltsTx = 0.0f;
         prefs.putFloat(NVS_KEY_VBAT_RATIO, vbatRatio);
     }
     if (server.hasArg("cells")) {
