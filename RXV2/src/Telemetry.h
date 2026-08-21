@@ -313,6 +313,7 @@ inline void vbatSniff() {
         vbatPin  = 9;          // pad number, not GPIO
         vbatAuto = true;
         vbatVolts = 0.0f;
+        vbatVoltsTx = 0.0f;
         vbatInit();
         char b[64];
         snprintf(b, sizeof(b), "Battery divider detected on D9: %.1f V", v);
@@ -337,6 +338,11 @@ inline void vbatPoll() {     // self-limits to 5 Hz; cheap enough for loop()
     // Gentle EWMA on top (time constant ~2 s): a rock-steady DISPLAY that
     // still follows a real change within a couple of seconds.
     vbatVolts = (vbatVolts <= 0.01f) ? v : (vbatVolts * 0.9f + v * 0.1f);
+    // A MUCH slower copy (~7 s, alpha 0.03 at 5 Hz) used ONLY for the V1
+    // transmitter's on-screen number, so it sits dead-still up there. The
+    // app and the flight-log trace read vbatVolts above and are unaffected.
+    vbatVoltsTx = (vbatVoltsTx <= 0.01f) ? vbatVolts
+                                         : (vbatVoltsTx * 0.97f + vbatVolts * 0.03f);
 }
 
 #endif // _SRC_TELEMETRY_H

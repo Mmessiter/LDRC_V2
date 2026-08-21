@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.390-tx-vbat-slow",
+      "url": "https://messiter.com/rxv2/release/v0.9.390/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.390/littlefs.bin",
+      "fs_md5": "74fad0ace23e60459da55c3b62396b0f",
+      "notes": "The battery number on the V1 transmitter's screen now gets its own extra-slow (~7 s) averaging so it sits dead-still up there, while the phone app and the flight-log voltage trace keep the quicker, more responsive reading. Best of both."
+    },
+    {
       "name": "RXV2-0.9.389-vbat-smooth",
       "url": "https://messiter.com/rxv2/release/v0.9.389/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.389/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.379/littlefs.bin",
       "fs_md5": "25b888cfd5f7c6761093c44dc5685c8a",
       "notes": "Fixes truncated spool-up status JSON (buffer was one size too small once the live diagnosis window was added) - the card could fail to load its settings on 0.9.377/378."
-    },
-    {
-      "name": "RXV2-0.9.378-torque-curve",
-      "url": "https://messiter.com/rxv2/release/v0.9.378/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.378/littlefs.bin",
-      "fs_md5": "0650685479976c9b0ff0279a853dcc53",
-      "notes": "Spool-up tail stab now follows real physics (Malcolm's observation): largest at the moment power returns - main-blade mass accelerating against a still-slow tail rotor - then dying away tangentially as the head reaches stable speed and tail authority builds."
     }
   ]
 }

@@ -350,7 +350,10 @@ inline void loadNextAck() {
                 constexpr float V_6S_MAX = 25.2f;        // 6 × 4.2 V
                 // Prefer the receiver's own divider (wired deliberately) over
                 // FC-reported volts; fall back to the FC, then 0.
-                float v = (vbatGpio() && vbatVolts > 0.5f) ? vbatVolts
+                // The V1 TX screen gets the EXTRA-slow copy (vbatVoltsTx) so
+                // the number sits still up there; the app/blackbox use the
+                // responsive vbatVolts elsewhere (Malcolm 2026-08-21).
+                float v = (vbatGpio() && vbatVoltsTx > 0.5f) ? vbatVoltsTx
                           : ((fcTelem.valid && fcTelem.fcBattVolts > 0.1f) ? fcTelem.fcBattVolts : 0.0f);
                 float vTx = (v > V_6S_MAX) ? (v * 0.5f) : v;
                 packF32(ack, vTx);
