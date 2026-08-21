@@ -325,10 +325,18 @@ inline void vbatPoll() {     // self-limits to 5 Hz; cheap enough for loop()
     static uint32_t last = 0;
     if ((uint32_t)(millis() - last) < 200) return;
     last = millis();
+    // Heavy oversampling (Malcolm 2026-08-21: the reading wandered once the
+    // 100n filter cap was removed from the divider). 32 reads average out the
+    // ESP32-S3 ADC's per-sample noise AT THE SOURCE — steadier than a slow
+    // filter alone and, crucially, WITHOUT the lag that would smear the
+    // in-flight voltage trace or hide battery sag. ~3-4 ms every 200 ms, so
+    // no meaningful loop stall.
     uint32_t mv = 0;
-    for (int i = 0; i < 4; ++i) mv += analogReadMilliVolts(vbatGpio());
-    float v = (mv / 4.0f) / 1000.0f * vbatRatio;
-    vbatVolts = (vbatVolts <= 0.01f) ? v : (vbatVolts * 0.8f + v * 0.2f);
+    for (int i = 0; i < 32; ++i) mv += analogReadMilliVolts(vbatGpio());
+    float v = (mv / 32.0f) / 1000.0f * vbatRatio;
+    // Gentle EWMA on top (time constant ~2 s): a rock-steady DISPLAY that
+    // still follows a real change within a couple of seconds.
+    vbatVolts = (vbatVolts <= 0.01f) ? v : (vbatVolts * 0.9f + v * 0.1f);
 }
 
 #endif // _SRC_TELEMETRY_H

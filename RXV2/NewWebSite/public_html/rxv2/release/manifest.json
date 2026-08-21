@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.389-vbat-smooth",
+      "url": "https://messiter.com/rxv2/release/v0.9.389/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.389/littlefs.bin",
+      "fs_md5": "176cb673e7fdfb027b7ed418a193297c",
+      "notes": "Steadier battery-voltage reading: the divider ADC now oversamples 32x per update (was 4x) plus a gentle 2-second smoothing, so the number sits rock-still even without the divider's filter capacitor - while still following real changes quickly enough for the flight voltage trace."
+    },
+    {
       "name": "RXV2-0.9.388-tx-guard",
       "url": "https://messiter.com/rxv2/release/v0.9.388/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.388/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.378/littlefs.bin",
       "fs_md5": "0650685479976c9b0ff0279a853dcc53",
       "notes": "Spool-up tail stab now follows real physics (Malcolm's observation): largest at the moment power returns - main-blade mass accelerating against a still-slow tail rotor - then dying away tangentially as the head reaches stable speed and tail authority builds."
-    },
-    {
-      "name": "RXV2-0.9.377-spool-debug",
-      "url": "https://messiter.com/rxv2/release/v0.9.377/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.377/littlefs.bin",
-      "fs_md5": "babd37b43933ee22ecc1e2acfcdfa69b",
-      "notes": "Spool-up tuned for LDRC's true 500-2500 channel range (times and tail clamp were sized for 1000-2000) plus a live diagnosis window in the API."
     }
   ]
 }

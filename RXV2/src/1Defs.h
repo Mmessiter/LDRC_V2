@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.388-tx-guard";
+constexpr const char* FW_VERSION = "RXV2-0.9.389-vbat-smooth";
 
 //*********************************************************************
 //  Auto-update manifest URLs
