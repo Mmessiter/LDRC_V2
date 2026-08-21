@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.393-gear-ratio-label",
+      "url": "https://messiter.com/rxv2/release/v0.9.393/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.393/littlefs.bin",
+      "fs_md5": "964b8387161f1f5de4e1838150d72085",
+      "notes": "Wording: the Setup button now reads 'failsafe, battery, gear ratio' (was 'gear')."
+    },
+    {
       "name": "RXV2-0.9.392-settings-moved",
       "url": "https://messiter.com/rxv2/release/v0.9.392/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.392/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.382/littlefs.bin",
       "fs_md5": "eb37a16005984ef2544e4e2b9e571e4a",
       "notes": "Home page now hints when a flight controller is obeying but silent: 'check TELEMETRY is enabled in Rotorflight' - a fresh FC with telemetry off cannot be detected (it obeys channels but never speaks), which cost Malcolm a hunt on two new builds."
-    },
-    {
-      "name": "RXV2-0.9.381-no-pause",
-      "url": "https://messiter.com/rxv2/release/v0.9.381/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.381/littlefs.bin",
-      "fs_md5": "f78617ba71f2ff00b3a47eff20d08073",
-      "notes": "Spool-up now starts the INSTANT the motor comes back (Malcolm's report: 'a pause before it starts to move'). The USB joystick only shows the middle slice of the channel; the ramp was wasting seconds in the invisible saturated zones. It now jumps those instantly and spends the whole configured time in the visible sweep the simulator follows."
     }
   ]
 }
