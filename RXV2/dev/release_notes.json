@@ -1,4 +1,5 @@
 {
+ "RXV2-0.9.391-diag-sections": "Tidier View-channels page: the live channel bars and the three unrelated settings (gear ratio, battery voltage divider, failsafe) are now grouped under clear 'Live channels' and 'Settings' section headings, each setting with its own subheading.",
  "RXV2-0.9.390-tx-vbat-slow": "The battery number on the V1 transmitter's screen now gets its own extra-slow (~7 s) averaging so it sits dead-still up there, while the phone app and the flight-log voltage trace keep the quicker, more responsive reading. Best of both.",
  "RXV2-0.9.389-vbat-smooth": "Steadier battery-voltage reading: the divider ADC now oversamples 32x per update (was 4x) plus a gentle 2-second smoothing, so the number sits rock-still even without the divider's filter capacitor - while still following real changes quickly enough for the flight voltage trace.",
  "RXV2-0.9.388-tx-guard": "Back up and Restore now refuse to run while the transmitter is ON, with a clear explanation - a backup taken under a live TX silently skipped the bank walk and saved less than everything (Malcolm's catch).",

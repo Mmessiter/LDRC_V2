@@ -23,6 +23,11 @@
 .statusOK{color:#3a7}
 .statusBad{color:#b54}
 
+/* Section dividers — group the unrelated settings clearly (Malcolm 2026-08-21). */
+.secHdr{margin:1.5em 0 .5em;font-size:.85em;font-weight:700;color:#3a5165;
+        letter-spacing:.05em;text-transform:uppercase;opacity:.7;
+        border-bottom:1px solid rgba(120,140,160,.3);padding-bottom:.3em}
+
 /* Helicopter preview ---------------------------------------------------- */
 .heliCard{margin-top:14px;padding:0;overflow:hidden}
 .heliCard h2{margin:0;padding:8px 14px;background:#3a4248;color:#e8edef;font-size:1em;font-weight:600;letter-spacing:.02em}
@@ -52,12 +57,15 @@
     <h1>View channels</h1>
     <p class=status id=status>Connecting&hellip;</p>
 
+    <h2 class=secHdr>Live channels</h2>
     <div class=card>
         <div class=chTable id=chTable></div>
     </div>
 
+    <h2 class=secHdr>Settings</h2>
+
     <div class=card>
-        <h2>Head speed gear ratio</h2>
+        <h2>Head-speed gear ratio</h2>
         <p class=muted style="font-size:.85em;line-height:1.5">Motor turns per rotor turn. Head-speed telemetry = motor&nbsp;RPM &divide; this. <b>1.0</b> = direct drive.</p>
         <p style="margin:.3em 0"><label>Gear ratio
             <input type=number id=gearField step=0.01 min=0.1 max=100 style="width:6em;padding:.4em;font-size:1em;border-radius:8px;border:1px solid #b8c7d0;margin-left:.5em">
@@ -66,7 +74,7 @@
     </div>
 
     <div class=card>
-        <h2>Receiver battery voltage <span id=vbatLive style="font-weight:400;font-size:.8em;margin-left:.4em" class=muted></span></h2>
+        <h2>Battery voltage (voltage divider) <span id=vbatLive style="font-weight:400;font-size:.8em;margin-left:.4em" class=muted></span></h2>
         <p class=muted style="font-size:.85em;line-height:1.5">Measures the pack through a divider on <b>D9</b> (GPIO 8), the spare pad on 2-radio boards. <b>220&thinsp;k&Omega; over 10&thinsp;k&Omega;</b> = ratio 23.0, good to 12S; 100&thinsp;k/10&thinsp;k = 11.0, good to 6S. Add 100&thinsp;nF pin&rarr;GND. Volts go to the transmitter as telemetry. With FC&nbsp;telemetry switched off, the receiver <b>finds the divider by itself on D9</b> &mdash; the one free pad on 2-radio boards (D4 carries the status LED).</p>
         <p style="margin:.3em 0;display:flex;flex-wrap:wrap;gap:.6em 1.1em;align-items:center">
             <label style="white-space:nowrap">Pin
