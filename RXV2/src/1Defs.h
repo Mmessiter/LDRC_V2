@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.391-diag-sections";
+constexpr const char* FW_VERSION = "RXV2-0.9.392-settings-moved";
 
 //*********************************************************************
 //  Auto-update manifest URLs

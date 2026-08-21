@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.392-settings-moved",
+      "url": "https://messiter.com/rxv2/release/v0.9.392/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.392/littlefs.bin",
+      "fs_md5": "7ff54024383c4802df983e4e7152836f",
+      "notes": "View channels is now just that - viewing channels. The gear ratio, battery voltage divider and failsafe settings have moved up to their own 'Receiver settings' page under Setup, where they belong."
+    },
+    {
       "name": "RXV2-0.9.391-diag-sections",
       "url": "https://messiter.com/rxv2/release/v0.9.391/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.391/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.381/littlefs.bin",
       "fs_md5": "f78617ba71f2ff00b3a47eff20d08073",
       "notes": "Spool-up now starts the INSTANT the motor comes back (Malcolm's report: 'a pause before it starts to move'). The USB joystick only shows the middle slice of the channel; the ramp was wasting seconds in the invisible saturated zones. It now jumps those instantly and spends the whole configured time in the visible sweep the simulator follows."
-    },
-    {
-      "name": "RXV2-0.9.380-two-speed",
-      "url": "https://messiter.com/rxv2/release/v0.9.380/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.380/littlefs.bin",
-      "fs_md5": "13df66e7697ac8e9ba278b19a994931a",
-      "notes": "Two-speed spool-up (Malcolm's field report): a brief motor cut - bailing out of an autorotation mid-air - recovers on a fast governor rate (quarter of the ground time); a long cut (landed, sitting in the hold) restarts on the full slow ground spool. Chosen automatically from how long the power was off."
     }
   ]
 }
