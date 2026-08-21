@@ -372,7 +372,7 @@
             const PARENTS = {
                 '/flight': '/blackbox', '/events': '/blackbox',
                 '/bind': '/setup', '/protocol': '/setup', '/diagnostics': '/setup',
-                '/wifi': '/setup', '/firmware': '/setup',
+                '/wifi': '/setup', '/firmware': '/setup', '/rxsettings': '/setup',
                 '/map': '/sim', '/views': '/sim', '/simctl': '/sim',
                 '/rotorflight-rates': '/rotorflight', '/rotorflight-pid': '/rotorflight',
                 '/rotorflight-pidplus': '/rotorflight', '/rotorflight-gov-profile': '/rotorflight',
