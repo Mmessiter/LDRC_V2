@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.391-diag-sections",
+      "url": "https://messiter.com/rxv2/release/v0.9.391/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.391/littlefs.bin",
+      "fs_md5": "af30ed78f3cc1cd18ab19a1f1c265383",
+      "notes": "Tidier View-channels page: the live channel bars and the three unrelated settings (gear ratio, battery voltage divider, failsafe) are now grouped under clear 'Live channels' and 'Settings' section headings, each setting with its own subheading."
+    },
+    {
       "name": "RXV2-0.9.390-tx-vbat-slow",
       "url": "https://messiter.com/rxv2/release/v0.9.390/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.390/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.380/littlefs.bin",
       "fs_md5": "13df66e7697ac8e9ba278b19a994931a",
       "notes": "Two-speed spool-up (Malcolm's field report): a brief motor cut - bailing out of an autorotation mid-air - recovers on a fast governor rate (quarter of the ground time); a long cut (landed, sitting in the hold) restarts on the full slow ground spool. Chosen automatically from how long the power was off."
-    },
-    {
-      "name": "RXV2-0.9.379-json-fix",
-      "url": "https://messiter.com/rxv2/release/v0.9.379/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.379/littlefs.bin",
-      "fs_md5": "25b888cfd5f7c6761093c44dc5685c8a",
-      "notes": "Fixes truncated spool-up status JSON (buffer was one size too small once the live diagnosis window was added) - the card could fail to load its settings on 0.9.377/378."
     }
   ]
 }
