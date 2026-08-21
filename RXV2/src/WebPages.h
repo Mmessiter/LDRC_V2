@@ -174,6 +174,11 @@ inline void handleDiagnostics() {
     server.send(503, "text/plain", "/diagnostics.html missing — uploadfs the data/ folder");
 }
 
+inline void handleRxSettings() {
+    if (serveLittleFsFile("/rxsettings.html", "text/html")) return;
+    server.send(503, "text/plain", "/rxsettings.html missing — uploadfs the data/ folder");
+}
+
 inline void handleBlackbox() {
     if (serveLittleFsFile("/blackbox.html", "text/html")) return;
     server.send(503, "text/plain", "/blackbox.html missing — uploadfs the data/ folder");
@@ -2342,6 +2347,7 @@ inline void registerWebRoutes() {
     server.on("/fly",         handleFly);
     server.on("/fly_disarm",   HTTP_POST, handleFlyDisarm);
     server.on("/diagnostics", handleDiagnostics);
+    server.on("/rxsettings",  handleRxSettings);
     server.on("/blackbox",    handleBlackbox);
     server.on("/bind",        HTTP_GET,  handleBind);
     server.on("/firmware",    handleFirmware);
