@@ -33,6 +33,9 @@
     </div>
 
     <button class="btn" type=button id=simbtn><span class=ico>&#127918;</span><span id=simlbl>&hellip;</span></button>
+    <!-- Bind is on the home page too, but a sim user lives HERE — so give a
+         discoverable bind path in sim mode (Malcolm 2026-08-22). -->
+    <button class="btn btn-bind" type=button id=simBindBtn style="display:none"><span class=ico>&#128279;</span>Bind to a transmitter</button>
     <a class="btn" href="/map" id=mapbtn style="display:none;background:#c98a4a"><span class=ico>&#128256;</span>Remap channels</a>
     <a class="btn" href="/views?sim=rf" id=ctlbtn style="display:none;background:#4a90c9"><span class=ico>&#128377;&#65039;</span>RealFlight &mdash; controls &amp; views</a>
     <a class="btn" href="/views?sim=next" id=nextbtn style="display:none;background:#6c8eb0"><span class=ico>&#128641;</span>neXt &mdash; controls &amp; views</a>
@@ -54,6 +57,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         const e = document.getElementById(id); if (e) e.style.display = simOn ? '' : 'none';
     });
 
+    // Bind — shown only in sim mode (a sim receiver still binds normally; the
+    // radio keeps listening even as a USB joystick). Reboots into bind and
+    // stays in sim mode.
+    const bindBtn = document.getElementById('simBindBtn');
+    if (bindBtn) {
+        bindBtn.style.display = simOn ? '' : 'none';
+        bindBtn.onclick = async () => {
+            const ok = await LDRC.confirm(
+                'The receiver reboots and listens for a transmitter in bind mode; power up your TX '
+              + 'in bind mode and the new pairing saves itself in a few seconds. Simulator mode stays on.',
+                { title: 'Bind to a transmitter', icon: '🔗',
+                  yes: '🔗 Enter bind mode', kind: 'go' });
+            if (ok) bindReboot();
+        };
+    }
+
     const sb = document.getElementById('simbtn');
     if (sb) {
         sb.style.background = simOn ? '#c97464' : '#6cab5e';
@@ -73,6 +92,34 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
     }
 });
+
+// Enter bind mode (POST /bind) with the same reboot-proof wait as the sim
+// toggle, then land on the home page so the "BIND MODE" banner is visible.
+function bindReboot() {
+    const c = document.querySelector('.container');
+    if (c) c.innerHTML =
+        '<h1>Entering bind mode</h1>'
+      + '<div class=card><p style="font-size:1.15em;font-weight:600">&#9203; Rebooting &mdash; please wait&hellip;</p>'
+      + '<p class=muted>The receiver will listen for a transmitter in bind mode. Power up your TX in bind mode now.</p></div>'
+      + '<div class=footer></div>';
+    fetch('/bind', { method: 'POST' }).catch(() => {});   // reply dies mid-reboot — expected
+    let n = 0, ok = 0;
+    const ping = () => {
+        let sg;
+        try { sg = AbortSignal.timeout(2000); }
+        catch (e) { const a = new AbortController(); setTimeout(() => a.abort(), 2000); sg = a.signal; }
+        return fetch('/api/state.json', { cache: 'no-store', signal: sg });
+    };
+    const tick = async () => {
+        if (n >= 3) {
+            try { const r = await ping(); if (r.ok) { if (++ok >= 2) { location.replace('/?r=' + Date.now()); return; } } else ok = 0; }
+            catch (e) { ok = 0; }
+        }
+        if (n >= 120) return;
+        n++; setTimeout(tick, 1000);
+    };
+    tick();
+}
 
 // Toggle + reboot flow, white-screen-proof: draw the "rebooting" card FIRST,
 // fire the toggle (its reply usually dies mid-reboot — fine), then poll until

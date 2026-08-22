@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.394-sim-bind",
+      "url": "https://messiter.com/rxv2/release/v0.9.394/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.394/littlefs.bin",
+      "fs_md5": "656b91ea7e69f205752bfb091a955eb8",
+      "notes": "You can now bind a receiver while it's in simulator mode: a 'Bind to a transmitter' button appears on the Simulator page. (A sim receiver's radio keeps listening, so it binds normally; the button was only ever on the home page before.)"
+    },
+    {
       "name": "RXV2-0.9.393-gear-ratio-label",
       "url": "https://messiter.com/rxv2/release/v0.9.393/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.393/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.383/littlefs.bin",
       "fs_md5": "83d567ba68b8bce4adce8214e8572987",
       "notes": "Groundwork for the Servos screen (and everything after): the receiver now reassembles chunked MSP responses from the flight controller, so replies bigger than one radio frame (like the full servo configuration) arrive intact instead of being silently dropped."
-    },
-    {
-      "name": "RXV2-0.9.382-fc-hint",
-      "url": "https://messiter.com/rxv2/release/v0.9.382/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.382/littlefs.bin",
-      "fs_md5": "eb37a16005984ef2544e4e2b9e571e4a",
-      "notes": "Home page now hints when a flight controller is obeying but silent: 'check TELEMETRY is enabled in Rotorflight' - a fresh FC with telemetry off cannot be detected (it obeys channels but never speaks), which cost Malcolm a hunt on two new builds."
     }
   ]
 }
