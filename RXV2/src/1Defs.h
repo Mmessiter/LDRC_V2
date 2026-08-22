@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.393-gear-ratio-label";
+constexpr const char* FW_VERSION = "RXV2-0.9.394-sim-bind";
 
 //*********************************************************************
 //  Auto-update manifest URLs

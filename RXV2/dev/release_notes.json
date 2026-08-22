@@ -1,4 +1,5 @@
 {
+ "RXV2-0.9.394-sim-bind": "You can now bind a receiver while it's in simulator mode: a 'Bind to a transmitter' button appears on the Simulator page. (A sim receiver's radio keeps listening, so it binds normally; the button was only ever on the home page before.)",
  "RXV2-0.9.393-gear-ratio-label": "Wording: the Setup button now reads 'failsafe, battery, gear ratio' (was 'gear').",
  "RXV2-0.9.392-settings-moved": "View channels is now just that - viewing channels. The gear ratio, battery voltage divider and failsafe settings have moved up to their own 'Receiver settings' page under Setup, where they belong.",
  "RXV2-0.9.391-diag-sections": "Tidier View-channels page: the live channel bars and the three unrelated settings (gear ratio, battery voltage divider, failsafe) are now grouped under clear 'Live channels' and 'Settings' section headings, each setting with its own subheading.",
