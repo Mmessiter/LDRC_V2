@@ -296,6 +296,7 @@ struct ScannerView: View {
     @AppStorage("lastDeviceName") private var lastUsedName = ""
     @State private var autoTarget: String? = nil
     @State private var autoWork: DispatchWorkItem? = nil
+    @State private var sessionRev = 0   // bump to refresh the saved-session list after a delete
 
     private func cancelAuto() {
         autoWork?.cancel(); autoWork = nil; autoTarget = nil
@@ -318,6 +319,7 @@ struct ScannerView: View {
         List {
             // One recording per MODEL (Malcolm 2026-08-04): connecting a
             // different model parks this one's session, never erases it.
+            let _ = sessionRev   // touch so a delete forces this list to recompute
             let sessions = SessionCache.savedSessions()
             if !sessions.isEmpty {
                 Section {
@@ -328,6 +330,18 @@ struct ScannerView: View {
                         } label: {
                             Label("Review:  \(s.model) — \(s.savedAt.formatted(date: .omitted, time: .shortened))",
                                   systemImage: "clock.arrow.circlepath")
+                        }
+                        // Swipe left to delete an old review (Malcolm
+                        // 2026-08-22). allowsFullSwipe:false so it takes a
+                        // deliberate tap on Delete, not an accidental flick —
+                        // these hold flight recordings.
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button(role: .destructive) {
+                                SessionCache.deleteSession(model: s.model)
+                                sessionRev += 1
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
                         }
                     }
                 } footer: {

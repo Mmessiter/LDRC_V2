@@ -219,6 +219,20 @@ class MainActivity : AppCompatActivity() {
                     SessionCache.activate(model)
                     reviewMode = true; showWeb()
                 }
+                // Long-press to delete an old review (Android's swipe-to-
+                // delete equivalent for this simple list). Confirm first —
+                // these hold flight recordings.
+                setOnLongClickListener {
+                    android.app.AlertDialog.Builder(this@MainActivity)
+                        .setTitle("Delete review?")
+                        .setMessage("Remove the saved recording for \"$model\"?")
+                        .setPositiveButton("Delete") { _, _ ->
+                            SessionCache.deleteSession(model); showScanner()
+                        }
+                        .setNegativeButton("Cancel", null)
+                        .show()
+                    true
+                }
             })
         }
         root.addView(col)
