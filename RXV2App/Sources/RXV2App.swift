@@ -287,6 +287,18 @@ extension RootView {
 }
 
 struct ScannerView: View {
+    // Friendly "when" for the saved reviews: Today / Yesterday keep the time
+    // alone, older ones gain a short date (Malcolm 2026-08-22 — several were
+    // days old and time alone was ambiguous).
+    static func friendlyWhen(_ d: Date) -> String {
+        let cal = Calendar.current
+        let time = d.formatted(date: .omitted, time: .shortened)
+        if cal.isDateInToday(d)     { return "Today \(time)" }
+        if cal.isDateInYesterday(d) { return "Yesterday \(time)" }
+        let day = d.formatted(.dateTime.day().month(.abbreviated))
+        return "\(day), \(time)"
+    }
+
     @EnvironmentObject var link: BleLink
     @Binding var demoMode: Bool
     @Binding var reviewMode: Bool
@@ -328,7 +340,7 @@ struct ScannerView: View {
                             SessionCache.shared.activate(model: s.model)
                             reviewMode = true
                         } label: {
-                            Label("Review:  \(s.model) — \(s.savedAt.formatted(date: .omitted, time: .shortened))",
+                            Label("Review:  \(s.model) — \(Self.friendlyWhen(s.savedAt))",
                                   systemImage: "clock.arrow.circlepath")
                         }
                         // Swipe left to delete an old review (Malcolm

@@ -158,6 +158,21 @@ class MainActivity : AppCompatActivity() {
         ble.connect(d)
     }
 
+    // Friendly "when" for saved reviews (Malcolm 2026-08-22): Today/Yesterday
+    // keep just the time, older ones gain a short date.
+    private fun friendlyWhen(ms: Long): String {
+        val time = android.text.format.DateFormat.format("HH:mm", ms).toString()
+        val now = java.util.Calendar.getInstance()
+        val then = java.util.Calendar.getInstance().apply { timeInMillis = ms }
+        fun sameDay(a: java.util.Calendar, b: java.util.Calendar) =
+            a.get(java.util.Calendar.YEAR) == b.get(java.util.Calendar.YEAR) &&
+            a.get(java.util.Calendar.DAY_OF_YEAR) == b.get(java.util.Calendar.DAY_OF_YEAR)
+        if (sameDay(now, then)) return "Today $time"
+        now.add(java.util.Calendar.DAY_OF_YEAR, -1)
+        if (sameDay(now, then)) return "Yesterday $time"
+        return android.text.format.DateFormat.format("d MMM, HH:mm", ms).toString()
+    }
+
     private fun showScanner() {
         webView?.let { it.stopLoading(); it.destroy() }; webView = null
         root.removeAllViews()
@@ -209,8 +224,7 @@ class MainActivity : AppCompatActivity() {
         // connecting another model never erases the previous one's.
         SessionCache.init(this)
         for ((model, atMs) in SessionCache.savedSessions()) {
-            val t = if (atMs > 0)
-                " — " + android.text.format.DateFormat.format("HH:mm", atMs) else ""
+            val t = if (atMs > 0) " — " + friendlyWhen(atMs) else ""
             col.addView(TextView(this).apply {
                 text = "🕰  Review:  $model$t"
                 textSize = 15f; setPadding(40, 28, 40, 28)
