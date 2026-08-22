@@ -61,6 +61,13 @@ object SessionCache {
 
     /** Load a saved model's recording as the active one (for review). */
     @Synchronized
+    // Delete a saved model's recording + restore point (Malcolm 2026-08-22:
+    // long-press a review row to remove it, so they don't pile up).
+    fun deleteSession(model: String) {
+        fileFor(model)?.delete()
+        restoreFileFor(model)?.delete()
+    }
+
     fun activate(model: String) {
         if (model == modelName) return
         saveIfDirty()

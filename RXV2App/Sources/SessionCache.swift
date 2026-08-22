@@ -59,6 +59,14 @@ final class SessionCache {
         return out.sorted { $0.1 > $1.1 }
     }
 
+    /// Delete a saved model's recording + its restore point (Malcolm
+    /// 2026-08-22: "otherwise they accumulate rather excessively!").
+    /// Swipe-to-delete on the scanner list calls this.
+    static func deleteSession(model: String) {
+        try? FileManager.default.removeItem(at: sessionURL(for: model))
+        try? FileManager.default.removeItem(at: restoreURL(for: model))
+    }
+
     /// Load a saved model's recording as the active one (for review).
     func activate(model: String) {
         guard model != modelName else { return }
