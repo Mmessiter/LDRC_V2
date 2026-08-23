@@ -49,6 +49,15 @@
     </div>
 
     <div class=card>
+        <h2>Automatic fly mode</h2>
+        <p class=muted style="font-size:.85em;line-height:1.5">The safety net for forgetting <b>Fly now</b>: when the model is <b>armed and the sticks have been moving for 5 seconds</b>, the receiver switches its WiFi and Bluetooth off by itself &mdash; nothing interferes with the radio link. Everything comes back automatically after landing (transmitter quiet for a few seconds), exactly as with Fly now. Needs the arming channel set (Output protocol page).</p>
+        <label style="display:flex;align-items:center;gap:.6em;font-weight:700;margin:.3em 0">
+            <input type=checkbox id=afOn style="width:1.3em;height:1.3em"> Radios off automatically when flying starts
+        </label>
+        <p class=muted id=afMsg style="font-size:.85em;min-height:1.1em"></p>
+    </div>
+
+    <div class=card>
         <h2>Failsafe positions (signal loss)</h2>
         <p class=muted id=fsStatus>&hellip;</p>
         <p class=muted style="font-size:.85em;line-height:1.5">Used when the transmitter link is <b>lost in flight</b>: the receiver drives every channel to the positions you save here. Set the model where you want it on signal loss (motor off / disarmed), then tap <b>Save</b>. <b>Note:</b> on <b>CRSF</b> the flight-controller (e.g. Rotorflight) runs its <i>own</i> failsafe and overrules this &mdash; set that in its Failsafe tab. This applies on <b>SBUS / FBUS / IBUS / PPM</b> models. To capture positions, first open <b>View channels</b> and set the sticks/switches, then come here and save. <i>(A no-transmitter power-up is always disarmed-safe regardless.)</i></p>
@@ -134,6 +143,23 @@ $('fsClear').addEventListener('click', async () => {
         { title: 'Clear failsafe', icon: '❌', yes: 'Clear', kind: 'warn' }))) return;
     try { const r = await (await fetch('/api/failsafe/clear', { method: 'POST' })).json(); setFsStatus(!!r.failsafe_set); } catch (e) {}
 });
+
+// Automatic fly mode — instant-apply toggle.
+(async () => {
+    try {
+        const j = await (await fetch('/api/autofly', { cache: 'no-store' })).json();
+        $('afOn').checked = !!j.on;
+    } catch (e) {}
+    $('afOn').addEventListener('change', async () => {
+        try {
+            const j = await (await fetch('/api/autofly?on=' + ($('afOn').checked ? '1' : '0'),
+                                         { method: 'POST' })).json();
+            $('afMsg').textContent = j.on ? '✅ On — radios switch off by themselves when a flight starts.'
+                                          : 'Off — only the Fly now button switches the radios off.';
+            setTimeout(() => { $('afMsg').textContent = ''; }, 6000);
+        } catch (e) { $('afMsg').textContent = '⚠️ Could not save — try again'; }
+    });
+})();
 
 refresh();
 setInterval(refresh, 2000);

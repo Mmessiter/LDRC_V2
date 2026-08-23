@@ -1,4 +1,5 @@
 {
+ "RXV2-0.9.404-auto-fly": "NEW: Automatic fly mode (Receiver settings, ON by default) - for everyone who forgets Fly now. When the model is armed and the sticks have been moving for 5 seconds, the receiver switches WiFi and Bluetooth off by itself so nothing interferes with the radio link; everything returns automatically after landing. Needs the arming channel set.",
  "RXV2-0.9.403-add-picker": "Switches page: 'Add a switch action' now first asks WHAT the switch should do (a drop-down of all the functions), then creates the row with that choice ready.",
  "RXV2-0.9.402-drag-handles": "Switches page polish: the blue zone's round ends can now be DRAGGED with a finger to set the range (numbers follow along, snapped to 5 µs), and the live channel marker is a slim red line (green inside the zone).",
  "RXV2-0.9.401-range-bars": "Switches page: each row now shows the configurator-style range bar - the blue zone is where the function is ON, and a LIVE dot shows the channel's actual position (green when inside the zone). Flick a switch and watch it work.",

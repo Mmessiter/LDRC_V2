@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.403-add-picker";
+constexpr const char* FW_VERSION = "RXV2-0.9.404-auto-fly";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -332,6 +332,7 @@ constexpr const char* NVS_KEY_SIM_SPOOL   = "simspool";  // uint8 1 = spool-up r
 constexpr const char* NVS_KEY_SIM_SPOOL_S = "simspls";   // uint8 seconds for a full 1000→2000 µs spool (1..60, default 8)
 constexpr const char* NVS_KEY_SIM_TORQUE  = "simtorq";   // int16 rudder stab in µs while spooling (signed for direction, default -120)
 constexpr const char* NVS_KEY_SIM_RUD_CH  = "simrudch";  // uint8 rudder channel 1..16 (default 4)
+constexpr const char* NVS_KEY_AUTOFLY     = "autofly";   // uint8 1 = auto fly mode: radios off when armed+flying detected (default ON)
 constexpr const char* NVS_KEY_SIM_MOT_INV = "simmotinv"; // uint8 1 = high µs means motor OFF (inverted channel)
 constexpr const char* NVS_KEY_SIM_MOT_CH  = "simmotch";  // uint8 MOTOR/governor channel 1..16 (0 = not set → feature inert). NEVER default to the throttle STICK: on a heli that is the collective (2026-08-17 hotfix — enabling spool froze Malcolm's collective)
 constexpr const char* NVS_KEY_SIM_MAP     = "simmap";  // 8-byte map: which RX channel (0..15) feeds each sim output
@@ -386,6 +387,7 @@ inline bool    simSpoolEnabled  = false;
 inline uint8_t simSpoolSeconds  = 8;        // full 1000→2000 µs spool time
 inline int16_t simTorqueUs      = -120;     // rudder stab while spooling (signed)
 inline uint8_t simRudderChannel = 4;
+inline bool autoFlyEnabled = true;   // radios off automatically once armed + flying (Malcolm 2026-08-24)
 inline uint8_t simMotorChannel  = 0;        // 0 = unset: spool-up does nothing until chosen
 inline bool    simMotorInverted = false;    // true = HIGH µs means motor OFF (Malcolm's ch6)
 inline volatile uint16_t simSpoolDbgRaw  = 0;   // live: raw motor-channel µs in

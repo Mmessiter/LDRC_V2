@@ -154,6 +154,7 @@ void setup() {
     if (vbatPin != 0 && vbatPin != 9) vbatPin = 0;   // D9 only — the sole free pad (D4 is the status LED)
     vbatInit();
     armingChannel = prefs.isKey(NVS_KEY_ARM_CH) ? prefs.getUChar(NVS_KEY_ARM_CH, 0) : 0;
+    autoFlyEnabled = prefs.isKey(NVS_KEY_AUTOFLY) ? (prefs.getUChar(NVS_KEY_AUTOFLY, 1) != 0) : true;
     gapMinMs = prefs.isKey(NVS_KEY_GAP_MIN) ? prefs.getUChar(NVS_KEY_GAP_MIN, 5) : 5;
     tzOffsetMin = prefs.isKey(NVS_KEY_TZ_MIN) ? prefs.getShort(NVS_KEY_TZ_MIN, 0) : 0;
     tuneEditGen      = prefs.isKey(NVS_KEY_EDIT_GEN) ? prefs.getUShort(NVS_KEY_EDIT_GEN, 0) : 0;
@@ -783,6 +784,32 @@ void loop() {
             prefs.putUChar(NVS_KEY_BOOT_COUNT, 0);
             quickBootReset = true;
             events.add("Quick-boot counter cleared (pardoned)");
+        }
+    }
+
+    // Auto fly mode (Malcolm 2026-08-24: "there will be people, including
+    // me, who forget to hit Fly now"). ARMED + sustained stick movement for
+    // 5 s straight is unmistakably a flight in progress — enter RF-only
+    // automatically, exactly as if Fly now had been pressed. The existing
+    // landing recovery brings WiFi/Bluetooth back after the flight; the
+    // switch lives on the Receiver-settings page (default ON).
+    if (autoFlyEnabled && !simEnabled && !flyArmRequested && !flyTeardownAtMs) {
+        static uint32_t flyingSinceMs = 0;
+        const bool radiosUp = (netMode != NET_NO_WIFI) || bleAdvertising() || bleHasClient();
+        const bool linkLive = rx.lastMillis &&
+                              (uint32_t)(millis() - rx.lastMillis) < 1000;
+        const bool armedNow = armingChannel >= 1 && armingChannel <= 16 &&
+                              linkLive && channelMicros[armingChannel - 1] > 1500;
+        if (radiosUp && armedNow && beingFlown) {
+            if (!flyingSinceMs) flyingSinceMs = millis();
+            else if ((uint32_t)(millis() - flyingSinceMs) > 5000) {
+                flyingSinceMs = 0;
+                events.add("AUTO fly mode: armed + flying — radios off");
+                eventsPersist();
+                flyArmRequested = true;
+            }
+        } else {
+            flyingSinceMs = 0;
         }
     }
 
