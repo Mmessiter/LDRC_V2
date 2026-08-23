@@ -26,6 +26,14 @@
 .armWarn{font-size:.8em;color:#b5442a;font-weight:600;margin-top:.3em}
 .addBtn{width:100%;padding:.75em;border:0;border-radius:10px;background:#5f8fab;color:#fff;font-size:1.05em;font-weight:700;cursor:pointer;margin-top:.4em}
 .modeCard.highlight{box-shadow:0 0 0 3px #d4944a}
+/* Configurator-style range bar (Malcolm 2026-08-23): full track = 875-2125 µs,
+   blue zone = where the function is ON, dot = the channel's LIVE position. */
+.rTrack{position:relative;height:18px;background:#dfe5ea;border-radius:9px;margin:.55em 0 .1em;overflow:visible}
+.rZone{position:absolute;top:0;bottom:0;background:#4a90c9;border-radius:9px;opacity:.85}
+.rDot{position:absolute;top:-4px;width:8px;height:26px;border-radius:4px;background:#8a949c;
+      transform:translateX(-50%);transition:left .15s linear,background .15s}
+.rDot.in{background:#2e7d32}
+.rScale{display:flex;justify-content:space-between;font-size:.7em;color:#7a8b95;margin-bottom:.2em}
 </style>
 </head>
 <body class=hasFab>
@@ -105,11 +113,49 @@ function rowCard(slotIdx, s){
       + '<div><label>Active from (&micro;s)</label><input id=lo'+slotIdx+' type=number min=875 max=2125 step=5 value='+s.lo+'></div>'
       + '<div><label>Active to (&micro;s)</label><input id=hi'+slotIdx+' type=number min=875 max=2125 step=5 value='+s.hi+'></div>'
       + '</div>'
+      + '<div class=rTrack id=tr'+slotIdx+'><div class=rZone id=zn'+slotIdx+'></div>'
+      + '<div class=rDot id=dot'+slotIdx+' style="display:none"></div></div>'
+      + '<div class=rScale><span>875</span><span>1500</span><span>2125&nbsp;&micro;s</span></div>'
       + (m.warn?'<div class=armWarn>&#9888; This is the ARM switch — get the range wrong and the motor can arm unexpectedly. Change with the model unpowered.</div>':'')
       + '<div class=mBtns>'
       + '<button class=mSave onclick="saveRow('+slotIdx+')">&#128190; Save</button>'
       + '<button class=mDel onclick="delRow('+slotIdx+')">&#128465; Remove</button>'
       + '</div><div class=mMsg id=msg'+slotIdx+'></div></div>';
+}
+
+const RMIN=875, RMAX=2125;
+const pct = u => Math.max(0, Math.min(100, (u - RMIN) / (RMAX - RMIN) * 100));
+function paintZone(i){
+    const zn=$('zn'+i); if(!zn)return;
+    const lo=parseInt($('lo'+i).value||'1500'), hi=parseInt($('hi'+i).value||'1500');
+    zn.style.left=pct(lo)+'%';
+    zn.style.width=Math.max(0,pct(hi)-pct(lo))+'%';
+}
+function wireZone(i){
+    ['lo','hi'].forEach(k=>{const e=$(k+i); if(e)e.addEventListener('input',()=>paintZone(i));});
+    paintZone(i);
+}
+
+// Live channel positions — MSP_RC (fn 105): U16LE per channel, the flight
+// controller's OWN view, so the dot sits on the same scale as the ranges.
+// Gentle ~2.5 Hz, paused while the page is hidden.
+let rcTimer=null;
+async function pollRc(){
+    if(document.hidden){ rcTimer=setTimeout(pollRc,800); return; }
+    try{
+        const b=hexToBytes(await LDRC.msp(105));
+        for(let i=0;i<slots.length;i++){
+            const dot=$('dot'+i); if(!dot)continue;
+            const chIdx=parseInt($('c'+i).value)+4;        // aux0 = channel 5 = index 4
+            if(b.length<(chIdx+1)*2){ dot.style.display='none'; continue; }
+            const us=b[chIdx*2]|(b[chIdx*2+1]<<8);
+            dot.style.display='';
+            dot.style.left=pct(us)+'%';
+            const lo=parseInt($('lo'+i).value||'1500'), hi=parseInt($('hi'+i).value||'1500');
+            dot.classList.toggle('in', us>=lo && us<hi);
+        }
+    }catch(e){ /* transient */ }
+    rcTimer=setTimeout(pollRc,400);
 }
 
 function paint(){
@@ -124,6 +170,7 @@ function paint(){
         const el=document.querySelector('.modeCard[data-perm="53"]');
         if(el){el.classList.add('highlight');el.scrollIntoView({behavior:'smooth',block:'center'});}
     }
+    for(let i=0;i<slots.length;i++) if($('tr'+i)) wireZone(i);
 }
 
 async function load(){
@@ -188,7 +235,7 @@ function addRow(){
     setStatus('info','New action added — choose the mode, channel and range, then Save');
 }
 
-document.addEventListener('DOMContentLoaded', load);
+document.addEventListener('DOMContentLoaded', ()=>{ load().then(()=>{ if(!LDRC.replay) pollRc(); }); });
 </script>
 <template id=helpContent><h2>Switches</h2>
 <p>This is where transmitter switches get their jobs <i>(Rotorflight calls it the Modes tab)</i>. Each row says: when <b>this channel</b> is between <b>these values</b>, do <b>this</b>.</p>
@@ -196,6 +243,7 @@ document.addEventListener('DOMContentLoaded', load);
 <li><b>Arm</b> is the big one — the motor can only run while its switch is in range. Every model needs one.</li>
 <li><b>Rescue</b> — the safety-net switch; the Rescue page shows its settings.</li>
 <li>Ranges are in Rotorflight&rsquo;s 900&ndash;2100&nbsp;µs scale. A switch typically sits near 1100 (low), 1500 (middle) and 1900 (high) — so &ldquo;1700&ndash;2100&rdquo; means &ldquo;switch high&rdquo;.</li>
+<li>The <b>bar</b> under each row is the full 875&ndash;2125&nbsp;&micro;s travel; the <b>blue zone</b> is where the function is ON, and the <b>moving dot</b> is the channel&rsquo;s live position &mdash; flick the switch and watch the dot enter the zone (it turns green inside).</li>
 <li>Check which channel a switch moves on <b>View channels</b>.</li>
 </ul>
 <p>Every <b>Save</b> writes the slot, stores it, reads it back and confirms the bytes match. Be especially careful with <b>Arm</b> — change it with the model unpowered.</p>

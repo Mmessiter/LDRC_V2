@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.401-range-bars",
+      "url": "https://messiter.com/rxv2/release/v0.9.401/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.401/littlefs.bin",
+      "fs_md5": "b2869868a2650c9b2ecca354248f3c09",
+      "notes": "Switches page: each row now shows the configurator-style range bar - the blue zone is where the function is ON, and a LIVE dot shows the channel's actual position (green when inside the zone). Flick a switch and watch it work."
+    },
+    {
       "name": "RXV2-0.9.400-rf-steps",
       "url": "https://messiter.com/rxv2/release/v0.9.400/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.400/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.390/littlefs.bin",
       "fs_md5": "74fad0ace23e60459da55c3b62396b0f",
       "notes": "The battery number on the V1 transmitter's screen now gets its own extra-slow (~7 s) averaging so it sits dead-still up there, while the phone app and the flight-log voltage trace keep the quicker, more responsive reading. Best of both."
-    },
-    {
-      "name": "RXV2-0.9.389-vbat-smooth",
-      "url": "https://messiter.com/rxv2/release/v0.9.389/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.389/littlefs.bin",
-      "fs_md5": "176cb673e7fdfb027b7ed418a193297c",
-      "notes": "Steadier battery-voltage reading: the divider ADC now oversamples 32x per update (was 4x) plus a gentle 2-second smoothing, so the number sits rock-still even without the divider's filter capacitor - while still following real changes quickly enough for the flight voltage trace."
     }
   ]
 }
