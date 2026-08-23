@@ -90,7 +90,7 @@ object SessionCache {
         if (b and 0x80 != 0) rateBank = b and 0x7f else pidBank = b
     }
 
-    private val pidBankFns = setOf("112", "94", "148")
+    private val pidBankFns = setOf("112", "94", "148", "146")
 
     private fun keyFor(pathAndQuery: String): String {
         if (!pathAndQuery.startsWith("/api/msp?") || pathAndQuery.contains("data=")) return pathAndQuery
@@ -262,7 +262,7 @@ object SessionCache {
     }
     private val restoreKeyPrefixes = listOf(
         "/api/msp?fn=112&bank=", "/api/msp?fn=94&bank=",
-        "/api/msp?fn=148&bank=", "/api/msp?fn=111&bank=",
+        "/api/msp?fn=148&bank=", "/api/msp?fn=146&bank=", "/api/msp?fn=111&bank=",
         "/api/msp?fn=174&data=")   // mixer inputs (Travel extents)
 
     @Synchronized
@@ -315,6 +315,7 @@ object SessionCache {
             hexAt("/api/msp?fn=112&bank=$b")?.let { out.add(RestoreItem(b, 202, 112, it, "PIDs bank ${b + 1}")) }
             hexAt("/api/msp?fn=94&bank=$b")?.let  { out.add(RestoreItem(b, 95,  94,  it, "advanced PIDs bank ${b + 1}")) }
             hexAt("/api/msp?fn=148&bank=$b")?.let { out.add(RestoreItem(b, 149, 148, it, "governor profile bank ${b + 1}")) }
+            hexAt("/api/msp?fn=146&bank=$b")?.let { out.add(RestoreItem(b, 147, 146, it, "rescue bank ${b + 1}")) }
         }
         for (r in 0..3) {
             hexAt("/api/msp?fn=111&bank=$r")?.let { out.add(RestoreItem(0x80 or r, 204, 111, it, "rates bank ${r + 1}")) }

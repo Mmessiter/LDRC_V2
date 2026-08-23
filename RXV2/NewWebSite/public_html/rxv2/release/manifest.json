@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.395-rescue",
+      "url": "https://messiter.com/rxv2/release/v0.9.395/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.395/littlefs.bin",
+      "fs_md5": "b6ba4cf638f32286094ca25e837caa7e",
+      "notes": "NEW: Rescue screen (Rotorflight menu) - the safety net. Set per bank what happens when you flick the rescue switch: level & climb (or hold height), flip upright if inverted, the stage timings, collective bite and a hard collective ceiling - all in plain English, read from and written to the flight controller with every save verified. Included in phone backup & restore."
+    },
+    {
       "name": "RXV2-0.9.394-sim-bind",
       "url": "https://messiter.com/rxv2/release/v0.9.394/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.394/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.384/littlefs.bin",
       "fs_md5": "474082d02ebb3f034a8e3a38ceb2637f",
       "notes": "MSP wait window 400ms to 1200ms - chunked responses span several telemetry frames."
-    },
-    {
-      "name": "RXV2-0.9.383-msp-chunks",
-      "url": "https://messiter.com/rxv2/release/v0.9.383/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.383/littlefs.bin",
-      "fs_md5": "83d567ba68b8bce4adce8214e8572987",
-      "notes": "Groundwork for the Servos screen (and everything after): the receiver now reassembles chunked MSP responses from the flight controller, so replies bigger than one radio frame (like the full servo configuration) arrive intact instead of being silently dropped."
     }
   ]
 }
