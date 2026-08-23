@@ -110,7 +110,7 @@
              lives under Setup, everything sim under Simulator — a new user sees
              five calm buttons instead of twelve. -->
         <button class="btn btn-fly"  type=button id=flybtn><span class=ico>&#128641;&#9992;&#65039;</span><span style="display:flex;flex-direction:column;align-items:flex-start;text-align:left"><span>Fly now</span><span style="font-size:.62em;font-weight:400;opacity:.85;margin-top:.25em">turns off WiFi &amp; Bluetooth</span></span></button>
-        <a class="btn btn-bb"   href="/rotorflight" id=rfbtn style="display:none;background:#8e6cab"><span class=ico>&#129357;</span>Rotorflight config &mdash; <span id=fcver>&hellip;</span></a>
+        <a class="btn btn-bb"   href="/rotorflight" id=rfbtn style="display:none;background:#8e6cab"><span class=ico>&#129357;</span>Rotorflight config</a>
         <div id=fcHint class=muted style="display:none;font-size:.85em;line-height:1.5;text-align:center;padding:.3em .8em">
             &#128161; Model responding but no flight controller detected? On the flight
             controller, check <b>TELEMETRY</b> is enabled (Rotorflight &rarr; Configuration)
@@ -125,14 +125,13 @@
         try{
             const h=JSON.parse(localStorage.getItem('frontHints')||'{}');
             if(h.flyHidden)document.getElementById('flybtn').style.display='none';
-            if(h.rfShow){ document.getElementById('rfbtn').style.display='';
-                          if(h.fcver)document.getElementById('fcver').textContent=h.fcver; }
+            if(h.rfShow)document.getElementById('rfbtn').style.display='';
         }catch(e){}
         </script>
         <a class="btn btn-bb"   href="/blackbox"><span class=ico>&#128209;</span>Black box log</a>
-        <button class="btn btn-bind" type=button id=bindbtn><span class=ico>&#128279;</span>Bind &mdash; pair with a transmitter</button>
+        <button class="btn btn-bind" type=button id=bindbtn><span class=ico>&#128279;</span>Bind</button>
         <a class="btn" href="/sim" id=simpg style="background:#4a90c9"><span class=ico>&#127918;</span><span id=simpglbl>Simulator</span></a>
-        <a class="btn" href="/setup" style="background:#6f7e8b"><span class=ico>&#9881;&#65039;</span>Setup &mdash; protocol, WiFi&hellip;</a>
+        <a class="btn" href="/setup" style="background:#6f7e8b"><span class=ico>&#9881;&#65039;</span>Setup</a>
         <!-- App only (Malcolm 2026-08-06): straight back to the scanner to
              pick another model — no more force-quitting to change craft. -->
         <button id=switchModelBtn class="btn" style="display:none;background:#8a7dab" onclick="switchModel()"><span class=ico>&#128260;</span>Load another model</button>
@@ -158,14 +157,6 @@ function updateRfButton(s) {
     const show = !!(s && !s.sim && s.fcinfo && s.fcinfo.rotorflight_capable);
     rfb.style.display = show ? '' : 'none';
     saveFrontHint('rfShow', show);
-    if (show) {
-        const fc = s.fcinfo;
-        const label = (fc.rf_major > 0)
-            ? ('Rotorflight ' + fc.rf_major + '.' + fc.rf_minor)
-            : 'Flight controller connected';
-        LDRC.setText('fcver', label);
-        saveFrontHint('fcver', label);
-    }
     // The silent-FC hint (Malcolm 2026-08-19, the Nexus hunt): a fresh FC
     // with TELEMETRY disabled obeys channels but never talks, so it cannot
     // be detected — the user needs a nudge, not a mystery. Shown only when
@@ -253,7 +244,7 @@ function updateBindState(s) {
             bt.innerHTML = '<span class=ico>\u21a9\ufe0f</span>Cancel bind &mdash; restore previous pairing';
             bt.onclick = bindCancelFlow;
         } else {
-            bt.innerHTML = '<span class=ico>&#128279;</span>Bind &mdash; pair with a transmitter';
+            bt.innerHTML = '<span class=ico>&#128279;</span>Bind';
             bt.onclick = bindEnterFlow;
         }
     }
@@ -550,20 +541,8 @@ function paintFlyButton(s) {
     const autoCovered = !!(s && s.rf && s.rf.autofly && s.rf.arming_channel >= 1);
     fb.style.display = autoCovered ? 'none' : '';
     saveFrontHint('flyHidden', autoCovered);
-    let afn = document.getElementById('autoflyNote');
-    if (autoCovered) {
-        if (!afn) {
-            afn = document.createElement('p');
-            afn.id = 'autoflyNote';
-            afn.className = 'muted';
-            afn.style.cssText = 'font-size:.8em;margin:.2em 0 .4em';
-            afn.innerHTML = '\u2708\uFE0F Radios go off by themselves when you arm, back on when you disarm \u2014 automatic fly mode.';
-            fb.parentNode.insertBefore(afn, fb);
-        }
-        afn.style.display = '';
-        return;
-    }
-    if (afn) afn.style.display = 'none';
+    if (autoCovered) return;   // auto fly mode covers it — no note needed
+                               // (explained on the Receiver settings page)
     const alive = s && s.rf && s.rf.last_pkt_ms >= 0 && s.rf.last_pkt_ms < 1000;
     fb.style.opacity = alive ? '' : '.45';
     fb.onclick = alive ? showFlyConfirm : () => modalCard({
