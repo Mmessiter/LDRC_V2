@@ -7,7 +7,7 @@
 <meta name=apple-mobile-web-app-capable content=yes>
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
-<title>New helicopter &middot; LDRC RX V2</title>
+<title>Tuning &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=172">
 <script src="/app.js?v=177" defer></script>
 <style>
@@ -33,9 +33,9 @@
 <div class=bg-photo aria-hidden=true></div>
 <div class=bg-wash  aria-hidden=true></div>
 <div class=container>
-    <h1>New helicopter</h1>
-    <div class="banner warn">&#9888;&#65039; <b>Take the main and tail blades OFF</b> (or unplug the motor) until the last step says otherwise.</div>
-    <p class=muted style="font-size:.9em;line-height:1.5;margin:.2em 0 .6em">Set up a helicopter with a Rotorflight flight controller from scratch, one step at a time &mdash; entirely from this phone. Tick each step as you finish it; progress is remembered <b>per model</b>, so a fleet of new helicopters each gets its own checklist.</p>
+    <h1>Tuning</h1>
+    <div class="banner warn">&#128336; One thing at a time: change <b>one</b> value, fly, judge, repeat. Land before every edit.</div>
+    <p class=muted style="font-size:.9em;line-height:1.5;margin:.2em 0 .6em">The field checklist for after the build: tune a freshly set-up helicopter to fly beautifully, in the right order. Progress is remembered per model.</p>
     <div class=prog id=modelName style="color:#4a7a5f"></div>
     <div class=prog id=prog></div>
     <div id=steps></div>
@@ -46,27 +46,25 @@
 
 <script>
 const STEPS=[
- {k:'fw',    t:'Latest Rotorflight firmware (optional)', d:'A new flight controller comes with Rotorflight already on it \u2014 fine to fly. To install the very latest first, use the Rotorflight Configurator on a computer (USB); flashing can\u2019t be done from the phone. A desktop version of this wizard that flashes too is planned.'},
- {k:'wire',  t:'Wire it up & first contact', d:'Receiver to a spare UART (CRSF), ESC to its motor pad + telemetry pad. When this app shows the Rotorflight buttons, the link is alive.', href:'/rotorflight'},
- {k:'basics',t:'First-time basics', d:'Level calibration, governor & telemetry on, ESC protocol & poles, gear ratios, battery, channel order.', href:'/rotorflight-firsttime'},
- {k:'servos',t:'Servos', d:'Centre each servo, set travel and direction — swash level and square.', href:'/rotorflight-servos'},
- {k:'travel',t:'Travel extents', d:'Collective and cyclic throws, swash limits and trims — with the bench-measure tool.', href:'/rotorflight-travel'},
- {k:'switch',t:'Switches', d:'Which transmitter switch arms, which selects banks — and check the ranges with the live marker.', href:'/rotorflight-modes'},
- {k:'rescue',t:'Rescue', d:'The safety net: set the rescue switch and how firmly it saves the model.', href:'/rotorflight-rescue'},
- {k:'gov',   t:'Governor', d:'Head speeds per bank and spool-up behaviour.', href:'/rotorflight-gov-profile'},
- {k:'rates', t:'Rates & PIDs', d:'How fast it turns and how firmly it holds — proven starting values are fine for a first flight.', href:'/rotorflight-rates'},
- {k:'backup',t:'Back up to the phone', d:'One tap saves the whole setup — restorable any time, even at the field.', href:'/setup'},
+ {k:'backup0',t:'Back up the fresh setup first', d:'One tap before any tuning — whatever happens next, today’s working setup is safe on the phone.', href:'/setup'},
+ {k:'hover',  t:'First hovers — mechanics check', d:'Hover at eye height: controls correct, tail holds, nothing shakes or smells hot. A vibration or twitch here is a MECHANICAL job (blades, bearings, links) — fix it before touching any tuning value.'},
+ {k:'gov',    t:'Governor — rock-steady head speed', d:'Head speed true against telemetry, spool-up comfortable, no sag on hard collective pulls (raise gain/precomp a little at a time).', href:'/rotorflight-gov-profile'},
+ {k:'tail',   t:'Tail — holds and stops', d:'Fast stab stops without bounce, no drift in climbs. Raise tail response (yaw P/D) until it wiggles, back off a touch; collective pulls kicking the tail = precomp.', href:'/rotorflight-pid'},
+ {k:'cyclic', t:'Cyclic — crisp and wobble-free', d:'Raise roll/pitch response (P/D) until a fast stop shows a small wobble, then back off. Slow drift in hard moves = a little more hold (I).', href:'/rotorflight-pid'},
+ {k:'feel',   t:'Feel — rates & expo to taste', d:'How fast it rolls and flips, how gentle the middle of the stick feels. Pure preference — no wrong answers.', href:'/rotorflight-rates'},
+ {k:'fine',   t:'Fine touches (advanced)', d:'Wind-up relief, cyclic cross-coupling, boost — only if something still niggles after the steps above.', href:'/rotorflight-pidplus'},
+ {k:'rescue', t:'Prove Rescue — up high', d:'Three mistakes high: flick the rescue switch upright AND inverted. It must climb, level, and hold. Adjust strength/collective until it saves without drama.', href:'/rotorflight-rescue'},
+ {k:'backup1',t:'Back up the proven tune', d:'The tune you trust, saved on the phone — restorable at the field forever.', href:'/setup'},
 ];
 const $=id=>document.getElementById(id);
-// Ticks are per MODEL (receiver name), not per phone — Malcolm is setting up
-// a dozen helicopters and each must start its checklist fresh (2026-08-23).
-let KEY='rfNewHeli.';
+// Per-model ticks, same scheme as the New-helicopter checklist.
+let KEY='rfTuning.';
 async function bindModel(){
     try{
         if (window.LDRC && LDRC.replayReady) await LDRC.replayReady;
         const st=await (await fetch('/api/state.json',{cache:'no-store'})).json();
         const n=(st.info&&st.info.name)||'';
-        if(n){ KEY='rfNewHeli.'+n+'.'; $('modelName').textContent='Setting up: '+n; }
+        if(n){ KEY='rfTuning.'+n+'.'; $('modelName').textContent='Tuning: '+n; }
     }catch(e){}
     paint();
 }
@@ -87,25 +85,25 @@ function paint(){
         host.appendChild(div);
     });
     $('prog').textContent = done===STEPS.length
-        ? '🚁 All '+STEPS.length+' steps done — blades on, fly it in, then open Tuning for the polish!'
+        ? '🏆 Tuned, proven and backed up — go enjoy it!'
         : done+' of '+STEPS.length+' steps done';
 }
 async function resetAll(){
-    if(!(await LDRC.confirm('Clear all the ticks and start the checklist again?',
+    if(!(await LDRC.confirm('Clear all the ticks and start tuning again?',
         {title:'Start over',icon:'🔄',yes:'Clear ticks',kind:'warn'})))return;
     STEPS.forEach(s=>localStorage.removeItem(KEY+s.k)); paint();
 }
-paint();      // instant paint with the generic key…
-bindModel();  // …then rebind to this model's own ticks when the name arrives
+paint();
+bindModel();
 </script>
-<template id=helpContent><h2>New helicopter</h2>
-<p>The from-scratch setup checklist for a Rotorflight helicopter &mdash; the same ground the configurator covers, but step by step on the phone, in plain English.</p>
+<template id=helpContent><h2>Tuning</h2>
+<p>The after-the-build checklist: from &ldquo;it flies&rdquo; to &ldquo;it flies beautifully&rdquo;, in the order that works.</p>
 <ul>
-<li>Work top to bottom. Each <b>Open</b> button goes to the right page; come back and tick the step off.</li>
-<li>Ticks are remembered per model (by its receiver name), so every new helicopter starts a fresh checklist.</li>
-<li><b>Blades off</b> (or motor unplugged) until the very end &mdash; several steps move the servos, and one spins the motor if you let it.</li>
+<li><b>Why this order?</b> Each step assumes the one before it: gains are meaningless on a shaking airframe, cyclic feel is judged against a steady head speed, and rates are set last because they are pure taste.</li>
+<li><b>One change per flight.</b> Change one value, fly, judge. Two changes at once and you won&rsquo;t know which one did it.</li>
+<li><b>Back up first and last.</b> The first backup protects the working setup; the last one banks the tune you proved.</li>
+<li>Ticks are remembered per model, so each helicopter in the fleet has its own tuning card.</li>
 </ul>
-<p>Already-set-up models don&rsquo;t need this page &mdash; it exists for the first hour of a new build.</p>
 </template>
 </body>
 </html>
