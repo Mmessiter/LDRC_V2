@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.407-arm-self-taught",
+      "url": "https://messiter.com/rxv2/release/v0.9.407/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.407/littlefs.bin",
+      "fs_md5": "7f555557ea22ca960231165bb0963754",
+      "notes": "Rotorflight takes over Fly now completely: the receiver reads the ARM switch channel straight from the flight controller (MSP mode ranges) - no setup needed. Fly now then hides itself and the arming switch does it all: arm = radios off (3 s, on the ground), disarm = radios back. A manually set arming channel still wins; non-Rotorflight models are unchanged."
+    },
+    {
       "name": "RXV2-0.9.406-arm-cycle",
       "url": "https://messiter.com/rxv2/release/v0.9.406/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.406/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.395/littlefs.bin",
       "fs_md5": "b6ba4cf638f32286094ca25e837caa7e",
       "notes": "NEW: Rescue screen (Rotorflight menu) - the safety net. Set per bank what happens when you flick the rescue switch: level & climb (or hold height), flip upright if inverted, the stage timings, collective bite and a hard collective ceiling - all in plain English, read from and written to the flight controller with every save verified. Included in phone backup & restore."
-    },
-    {
-      "name": "RXV2-0.9.394-sim-bind",
-      "url": "https://messiter.com/rxv2/release/v0.9.394/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.394/littlefs.bin",
-      "fs_md5": "656b91ea7e69f205752bfb091a955eb8",
-      "notes": "You can now bind a receiver while it's in simulator mode: a 'Bind to a transmitter' button appears on the Simulator page. (A sim receiver's radio keeps listening, so it binds normally; the button was only ever on the home page before.)"
     }
   ]
 }

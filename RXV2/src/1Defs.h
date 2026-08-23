@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.406-arm-cycle";
+constexpr const char* FW_VERSION = "RXV2-0.9.407-arm-self-taught";
 
 //*********************************************************************
 //  Auto-update manifest URLs

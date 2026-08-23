@@ -787,6 +787,61 @@ void loop() {
         }
     }
 
+    // Learn the arming channel from Rotorflight itself (Malcolm 2026-08-23:
+    // "Fly now should not appear if Rotorflight is detected because the
+    // arming switch takes over its function"). With RF confirmed over MSP
+    // and no channel configured, read the FC's mode ranges (MSP 34) and
+    // adopt the ARM range's AUX channel — RAM only, never written to NVS,
+    // so a user-set channel always wins and non-RF models are untouched.
+    // Everything keyed on armingChannel follows for free: auto fly mode,
+    // disarm revival, arm-based flight saves, and the front page hiding
+    // the now-redundant Fly now button.
+    {
+        static uint32_t armLearnNextMs = 0;
+        static bool     armLearnPending = false;
+        static bool     armLearned = false;
+        const bool rfConfirmed = fcInfo.detected && fcInfo.versionKnown &&
+                                 strncmp(fcInfo.variant, "RTFL", 4) == 0;
+        if (!armLearned && !armingChannel && rfConfirmed &&
+            (int32_t)(millis() - armLearnNextMs) >= 0) {
+            if (!armLearnPending) {
+                if (txParamMspFree() && !txParamBusy && mspAsyncFunc == 0xFF) {
+                    mspAsyncFunc = 34; mspAsyncReady = false;   // MSP_MODE_RANGES
+                    mspSendRequest(34);
+                    armLearnPending = true;
+                    armLearnNextMs  = millis() + 1500;          // response window
+                }
+            } else {
+                // window expired without a reply — release the slot, retry
+                if (mspAsyncFunc == 34) mspAsyncFunc = 0xFF;
+                armLearnPending = false;
+                armLearnNextMs  = millis() + 10000;
+            }
+        }
+        if (armLearnPending && mspAsyncReady && mspAsyncFunc == 34) {
+            for (uint16_t o = 0; o + 3 < mspAsyncLen; o += 4) {
+                // slot: permanentId, auxChannel, startStep, endStep — unused
+                // slots read id 0 with an EMPTY range, so ARM (id 0) must
+                // also have start != end to count.
+                if (mspAsyncBuf[o] == 0 && mspAsyncBuf[o + 2] != mspAsyncBuf[o + 3]) {
+                    uint8_t ch = mspAsyncBuf[o + 1] + 5;        // aux0 = channel 5
+                    if (ch <= 16) {
+                        armingChannel = ch;                     // RAM only — not NVS
+                        armLearned = true;
+                        char m[64];
+                        snprintf(m, sizeof(m), "Arming channel found from Rotorflight: ch%u (AUX%u)",
+                                 ch, ch - 4);
+                        events.add(m);
+                    }
+                    break;
+                }
+            }
+            mspAsyncFunc = 0xFF;
+            armLearnPending = false;
+            if (!armLearned) armLearnNextMs = millis() + 30000; // no ARM range yet — retry
+        }
+    }
+
     // Auto fly mode (Malcolm 2026-08-24: "there will be people, including
     // me, who forget to hit Fly now"). Triggered by ARMING, sustained 3 s —
     // deliberately BEFORE takeoff, not on flying detection: the WiFi/BLE

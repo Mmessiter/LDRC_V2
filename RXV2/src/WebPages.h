@@ -2140,6 +2140,7 @@ inline void handleApiState() {
                             vbatPin, vbatVolts, vbatRatio, vbatCellsCfg, vbatAuto ? "true" : "false"); j += vb; }
     j += ",\"arming_channel\":"; j += armingChannel;
     j += ",\"autofly\":"; j += (autoFlyEnabled ? "true" : "false");
+    j += ",\"arm_auto\":"; j += ((armingChannel && !prefs.getUChar(NVS_KEY_ARM_CH, 0)) ? "true" : "false");
     // live armed state (so the config page can confirm the channel is right)
     { bool live = (rx.lastMillis != 0) && ((uint32_t)(millis() - rx.lastMillis) < 2000);
       bool armed = live && armingChannel >= 1 && armingChannel <= 16 && channelMicros[armingChannel - 1] > 1500;
