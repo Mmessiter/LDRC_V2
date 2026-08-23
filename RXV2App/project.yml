@@ -24,8 +24,8 @@ targets:
       path: Info.plist
       properties:
         ITSAppUsesNonExemptEncryption: false
-        CFBundleShortVersionString: "2.89"
-        CFBundleVersion: "152"
+        CFBundleShortVersionString: "2.90"
+        CFBundleVersion: "153"
         CFBundleDisplayName: RXV2
         UILaunchScreen: {}
         NSBluetoothAlwaysUsageDescription: >-
