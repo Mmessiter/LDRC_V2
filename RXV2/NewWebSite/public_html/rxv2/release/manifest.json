@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.429-wire-step",
+      "url": "https://messiter.com/rxv2/release/v0.9.429/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.429/littlefs.bin",
+      "fs_md5": "87dfe351b95eae5a365aa1377d5ec731",
+      "notes": "Wizard's 'Wire it up & first contact' step no longer has an Open button that led oddly back to the menu - it is a check, not a page: proof of life is the Rotorflight config button appearing on the front screen by itself."
+    },
+    {
       "name": "RXV2-0.9.428-fewer-words",
       "url": "https://messiter.com/rxv2/release/v0.9.428/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.428/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.418/littlefs.bin",
       "fs_md5": "b20ad4fe6df572871b609fbf365b28af",
       "notes": "A la carte is now the COMPLETE catalogue: Transmitter channels and First-time basics appear there too, so everything the wizards walk through can also be reached on its own. The Wizards menu stays clean with just the two guides."
-    },
-    {
-      "name": "RXV2-0.9.417-more-functions",
-      "url": "https://messiter.com/rxv2/release/v0.9.417/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.417/littlefs.bin",
-      "fs_md5": "ece80e19026c200dd129a814970f0803",
-      "notes": "Transmitter channels grows 'Add another function' - black box, beeper, self-level, governor overrides, user switches and more, each detectable by wiggle and written as a verified switch range. Two functions may share one switch; sticks and Arm may never be shared. The Wizards menu is now just the two guides - Transmitter channels and First-time basics live inside the New-helicopter wizard as its steps 3 and 4."
     }
   ]
 }
