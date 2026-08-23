@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.423-no-collisions",
+      "url": "https://messiter.com/rxv2/release/v0.9.423/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.423/littlefs.bin",
+      "fs_md5": "89dc8ac884dba29c204a37d539a0c4ff",
+      "notes": "Two field-driven fixes on Transmitter channels: (1) taken channels are simply not offered in the other dropdowns any more (switch functions may still share with each other - only sticks and Arm are exclusive); (2) the Rescue switch can be removed entirely (X sets None and clears any saved rescue from the flight controller - some models just don't have one), and saving with Rescue=None also wipes a stale saved rescue."
+    },
+    {
       "name": "RXV2-0.9.422-erasable",
       "url": "https://messiter.com/rxv2/release/v0.9.422/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.422/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.412/littlefs.bin",
       "fs_md5": "e1d8a280e242770954e81eadcc7b0c26",
       "notes": "Transmitter first! New wizard step + page: set the model up on your transmitter, then tell the wizard which channel is which - or tap Detect and wiggle each control (the receiver spots the moving channel). Saving writes the flight controller's channel order (rcmap) and puts Arm & Rescue on your chosen switches (Modes, 1600-2100us), all verified by read-back. Your layout is remembered as the default for the next helicopter."
-    },
-    {
-      "name": "RXV2-0.9.411-tuning-wizard",
-      "url": "https://messiter.com/rxv2/release/v0.9.411/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.411/littlefs.bin",
-      "fs_md5": "537c674b661f96012dfca0cc2e5d3b4b",
-      "notes": "Second wizard: TUNING - the after-the-build field checklist, in the order that works: back up first, mechanics check in the hover, governor, tail, cyclic, rates/expo to taste, fine touches, prove Rescue up high, back up the proven tune. One change per flight; ticks per model, like the New-helicopter checklist."
     }
   ]
 }

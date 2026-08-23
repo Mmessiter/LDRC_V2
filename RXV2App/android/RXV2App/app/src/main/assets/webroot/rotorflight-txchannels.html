@@ -112,7 +112,9 @@ function renderExtras(){
     const host=$('xrows'); host.innerHTML='';
     extras.forEach((x,i)=>{
         const modeName=(EXTRA_MODES.find(m=>m.id===x.perm)||{name:'function'}).name;
-        let co=''; for(let c=1;c<=16;c++) co+='<option value='+c+(c===x.ch?' selected':'')+'>Ch '+c+'</option>';
+        const xtaken=new Set();
+        for(const f of FUNCS)if(f.stick||f.k==='arm'){const c=curOf(f);if(c>=1)xtaken.add(c);}
+        const co=chOptions(x.ch,xtaken,false);
         const div=document.createElement('div'); div.id='row_x'+i;
         if(x.editing){
             div.className='xRow';
@@ -129,7 +131,7 @@ function renderExtras(){
             $('m_x'+i).addEventListener('change',()=>{extras[i].perm=parseInt($('m_x'+i).value);saveExtras();});
             $('n_x'+i).addEventListener('keydown',ev=>{if(ev.key==='Enter')$('n_x'+i).blur();});
             $('n_x'+i).addEventListener('blur',commit);
-            $('s_x'+i).addEventListener('change',()=>{extras[i].ch=parseInt($('s_x'+i).value);saveExtras();});
+            $('s_x'+i).addEventListener('change',()=>{extras[i].ch=parseInt($('s_x'+i).value);saveExtras();renderFixed();});
             $('d_x'+i).addEventListener('click',()=>detect(extraFuncs()[i]));
             $('r_x'+i).addEventListener('click',()=>removeExtra(i));
             setTimeout(()=>{const n=$('n_x'+i);if(n&&n.focus)n.focus();},50);
@@ -144,7 +146,7 @@ function renderExtras(){
                 +'<button class=delBtn id=r_x'+i+' title=Remove>&#10006;</button>';
             host.appendChild(div);
             $('e_x'+i).addEventListener('click',()=>{extras[i].editing=true;renderExtras();});
-            $('s_x'+i).addEventListener('change',()=>{extras[i].ch=parseInt($('s_x'+i).value);saveExtras();});
+            $('s_x'+i).addEventListener('change',()=>{extras[i].ch=parseInt($('s_x'+i).value);saveExtras();renderFixed();});
             $('d_x'+i).addEventListener('click',()=>detect(extraFuncs()[i]));
             $('r_x'+i).addEventListener('click',()=>removeExtra(i));
         }
@@ -178,25 +180,72 @@ async function removeExtra(i){
 }
 function addExtra(){ extras.push({perm:40,ch:7,editing:true}); saveExtras(); renderExtras(); }
 
-function buildRows(){
-    const host=$('rows');
-    FUNCS.forEach(f=>{
-        const saved=parseInt(localStorage.getItem(LS+f.k)??'NaN');
-        const cur=Number.isInteger(saved)?saved:f.def;
-        const div=document.createElement('div'); div.className='fnRow'; div.id='row_'+f.k;
-        let opts=f.optional?'<option value=0>None</option>':'';
-        for(let c=1;c<=16;c++) opts+='<option value='+c+(c===cur?' selected':'')+'>Ch '+c+'</option>';
-        div.innerHTML='<div class=lab><b>'+f.t+'</b></div>'
-            +'<select id=s_'+f.k+'>'+opts+'</select>'
-            +'<span class=live id=l_'+f.k+'></span>'
-            +'<button class=detBtn id=d_'+f.k+'>Detect</button>';
-        host.appendChild(div);
-        $('s_'+f.k).addEventListener('change',()=>{localStorage.setItem(LS+f.k,$('s_'+f.k).value);preview();});
-        $('d_'+f.k).addEventListener('click',()=>detect(f));
-        if(f.optional&&!Number.isInteger(saved))$('s_'+f.k).value='0';
-    });
-    preview();
+function curOf(f){
+    const saved=parseInt(localStorage.getItem(LS+f.k)??'NaN');
+    return Number.isInteger(saved)?saved:f.def;
 }
+// Channels already given to other functions disappear from each dropdown
+// (Malcolm 2026-08-24: "make sure the channels offered do not include any
+// already taken"). Switch functions may still share with each other — only
+// sticks and Arm are exclusive. A row always keeps its own current value.
+function takenFor(k){
+    const t=new Set();
+    const stickish=FUNCS.some(f=>f.k===k&&(f.stick||k==='arm'));
+    for(const f of FUNCS){
+        if(f.k===k)continue;
+        const c=curOf(f);
+        if(c<1)continue;
+        if(f.stick||f.k==='arm')t.add(c);                 // sticks+Arm exclude everyone
+        else if(stickish||k==='arm')t.add(c);             // rescue excludes sticks/arm only
+    }
+    if(stickish||k==='arm')for(const x of extras)if(x.ch>=1)t.add(x.ch);
+    return t;
+}
+function chOptions(cur,taken,optional){
+    let o=optional?'<option value=0'+(cur===0?' selected':'')+'>None</option>':'';
+    for(let c=1;c<=16;c++){
+        if(taken.has(c)&&c!==cur)continue;
+        o+='<option value='+c+(c===cur?' selected':'')+'>Ch '+c+'</option>';
+    }
+    return o;
+}
+function renderFixed(){
+    const host=$('rows'); host.innerHTML='';
+    FUNCS.forEach(f=>{
+        const cur=curOf(f);
+        const div=document.createElement('div');
+        div.className='fnRow'+(f.optional&&cur>=1?' x5':''); div.id='row_'+f.k;
+        div.innerHTML='<div class=lab><b>'+f.t+'</b></div>'
+            +'<select id=s_'+f.k+'>'+chOptions(cur,takenFor(f.k),f.optional)+'</select>'
+            +'<span class=live id=l_'+f.k+'></span>'
+            +'<button class=detBtn id=d_'+f.k+'>Detect</button>'
+            +(f.optional&&cur>=1?'<button class=delBtn id=r_'+f.k+' title="No '+f.t.toLowerCase()+'">&#10006;</button>':'');
+        host.appendChild(div);
+        $('s_'+f.k).addEventListener('change',()=>{localStorage.setItem(LS+f.k,$('s_'+f.k).value);renderAll();});
+        $('d_'+f.k).addEventListener('click',()=>detect(f));
+        if(f.optional&&cur>=1)$('r_'+f.k).addEventListener('click',()=>clearOptional(f));
+    });
+}
+// "Some will not want a rescue switch at all": the ✕ sets None AND clears
+// any saved rescue range from the flight controller.
+async function clearOptional(f){
+    if(!(await LDRC.confirm('No '+f.t.toLowerCase()+' on this model? Any saved rescue switch range is cleared from the flight controller too.',
+        {title:f.t,icon:'🗑️',yes:'Remove',kind:'warn'})))return;
+    localStorage.setItem(LS+f.k,'0'); renderAll();
+    try{
+        const modes=hexToBytes(await LDRC.msp(34));
+        let cleared=0;
+        for(let sl=0;sl*4+3<modes.length;sl++){const o=sl*4;
+            if(modes[o]===53&&modes[o+2]!==modes[o+3]){
+                await LDRC.msp(35,[sl,0,0,usStep(1500),usStep(1500)]
+                    .map(v=>v.toString(16).padStart(2,'0')).join(''));
+                cleared++;
+            }}
+        if(cleared){ await LDRC.msp(250); flash('✅ Removed — cleared from the flight controller too'); }
+        else flash('✅ Removed (nothing saved on the flight controller)');
+    }catch(e){ flash('Removed here — could not reach the flight controller to clear it'); }
+}
+function renderAll(){ renderFixed(); renderExtras(); preview(); }
 function chosen(k){return parseInt($('s_'+k).value);}
 function preview(){
     // Show the resulting order as letters against transmitter channels 1-8.
@@ -256,7 +305,7 @@ function finishDetect(){
         $('s_'+f.k).value=String(best+1);
         if(f.extra){ extras[f.idx].ch=best+1; saveExtras(); }
         else localStorage.setItem(LS+f.k,String(best+1));
-        preview();
+        renderAll();
         setStatus('good','✓ '+f.t+' = channel '+(best+1)+' (moved '+span+'µs)');
     }else setStatus('bad','Nothing moved enough — try again with a bigger movement.');
 }
@@ -334,6 +383,14 @@ async function saveAll(){
         }
         await writeMode(0,armFc);                    // ARM
         if(rscFc)await writeMode(53,rscFc);          // RESCUE
+        else for(let sl=0;sl<slotCount;sl++){        // Rescue = None: clear stale saved rescue
+            const o=sl*4;
+            if(modes[o]===53&&modes[o+2]!==modes[o+3]&&!used.has(sl)){
+                used.add(sl);
+                await LDRC.msp(35,[sl,0,0,usStep(1500),usStep(1500)]
+                    .map(v=>v.toString(16).padStart(2,'0')).join(''));
+            }
+        }
         for(const x of xw)await writeMode(x.perm,x.fc);
         await LDRC.msp(250);
         // 3. verify all of it by read-back
@@ -352,8 +409,7 @@ async function saveAll(){
     }catch(err){ setStatus('bad','Write failed: '+err.message); }
 }
 
-buildRows();
-renderExtras();
+renderAll();
 poll(); setInterval(poll, 200);
 </script>
 <template id=helpContent><h2>Transmitter channels</h2>
@@ -363,7 +419,7 @@ poll(); setInterval(poll, 200);
 <li><b>Detect</b> &mdash; tap it, then waggle that stick or flick that switch for a few seconds. The receiver spots which channel moved.</li>
 </ul>
 <p><b>Save</b> writes it all to the flight controller and verifies by read-back: the channel order <i>(rcmap)</i>, the <b>Arm</b> switch and the <b>Rescue</b> switch <i>(Modes, active 1600&ndash;2100&thinsp;&micro;s)</i>. Fine-tune the switch ranges on the Switches page with its live marker.</p>
-<p><b>Add another function</b> covers everything else &mdash; black box, beeper, self-level, governor overrides, user switches &mdash; each written as a switch range too. Give each one <b>your own name</b> (a User switch might really be &ldquo;Lower undercarriage&rdquo;); the name lives in the app, the flight controller sees the function. Two functions may share one switch; a stick or the Arm channel may not be shared. The <b>&#10006;</b> removes a function &mdash; and clears its switch range from the flight controller too, so experiments leave no trace.</p>
+<p><b>Add another function</b> covers everything else &mdash; black box, beeper, self-level, governor overrides, user switches &mdash; each written as a switch range too. Give each one <b>your own name</b> (a User switch might really be &ldquo;Lower undercarriage&rdquo;); the name lives in the app, the flight controller sees the function. Two functions may share one switch; a stick or the Arm channel may not be shared. The <b>&#10006;</b> removes a function (Rescue included, for models without one) &mdash; and clears its switch range from the flight controller too, so experiments leave no trace. Channels already taken are simply not offered in the other dropdowns.</p>
 <p>The five sticks must live on channels 1&ndash;8; switches can use any channel from 5 up. Choices are remembered on the phone as defaults for the next helicopter.</p>
 </template>
 </body>
