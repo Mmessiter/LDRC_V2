@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.410-fleet-ticks",
+      "url": "https://messiter.com/rxv2/release/v0.9.410/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.410/littlefs.bin",
+      "fs_md5": "c114cf6e902bc3f5a28cdc3d8b176d7e",
+      "notes": "New-helicopter checklist is now PER MODEL: ticks are keyed by the receiver's name, so a whole fleet of new helicopters each starts its own fresh checklist ('Setting up: <name>' shown at the top)."
+    },
+    {
       "name": "RXV2-0.9.409-fw-note",
       "url": "https://messiter.com/rxv2/release/v0.9.409/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.409/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.398/littlefs.bin",
       "fs_md5": "4f89d907242038bcacc0794912c3ebf0",
       "notes": "NEW: Switches page (Rotorflight menu) - what each transmitter switch makes the flight controller do (Rotorflight's Modes tab, in plain English). See, change, add and remove switch actions - Arm, Rescue, self-level, governor and more - each save verified. The Rescue page's switch card now links straight to the right row here."
-    },
-    {
-      "name": "RXV2-0.9.397-rescue-switch",
-      "url": "https://messiter.com/rxv2/release/v0.9.397/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.397/littlefs.bin",
-      "fs_md5": "e2ccd2bdcf6891845f8fbf1e4b61581e",
-      "notes": "Rescue screen now shows WHICH transmitter channel triggers rescue (read from the flight controller's Modes table), with the active range - and a loud warning if NO switch is assigned, because then rescue can never fire (Malcolm: 'it's critical')."
     }
   ]
 }
