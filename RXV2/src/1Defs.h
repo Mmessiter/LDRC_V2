@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.416-wizard-steps";
+constexpr const char* FW_VERSION = "RXV2-0.9.417-more-functions";
 
 //*********************************************************************
 //  Auto-update manifest URLs

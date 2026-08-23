@@ -41,6 +41,8 @@ h2 .hint{font-weight:400;font-size:.7em;color:#5d7a8c;display:block;margin-top:.
     <div class=card>
         <h2>Which channel does what? <span class=hint>pick each one, or tap Detect and move that stick/switch</span></h2>
         <div id=rows></div>
+        <div id=xrows></div>
+        <button class=detBtn style="width:100%;margin:.4em 0;background:#7a8a5f" onclick="addExtra()">&#10133; Add another function&hellip;</button>
         <div class=preview id=preview></div>
         <button class=saveBtn onclick="saveAll()">Save to flight controller</button>
         <div id=sMsg class=sMsg></div>
@@ -71,6 +73,45 @@ const FUNCS=[
  {k:'rsc', t:'Rescue switch',         letter:'',  def:0, stick:false, optional:true},
 ];
 const LS='rfTxCh.';
+// More functions, same catalogue as the Switches page (Arm & Rescue have
+// their own fixed rows above). Each becomes a mode range on its switch.
+const EXTRA_MODES=[
+ {id:1,name:'Self-level (ANGLE)'},{id:2,name:'Self-level, blended (HORIZON)'},
+ {id:3,name:'Altitude hold (ALTHOLD)'},{id:47,name:'Acro trainer (TRAINER)'},
+ {id:46,name:'GPS rescue (GPS RESCUE)'},{id:27,name:'Failsafe test (FAILSAFE)'},
+ {id:13,name:'Beeper on (BEEPER)'},{id:52,name:'Beeper mute (BEEPER MUTE)'},
+ {id:26,name:'Black box recording (BLACKBOX)'},{id:31,name:'Black box erase (BLACKBOX ERASE)'},
+ {id:36,name:'Pre-arm safety (PREARM)'},{id:45,name:'Lock the model — anti-tamper (PARALYZE)'},
+ {id:55,name:'Governor fallback (GOVERNOR FALLBACK)'},{id:56,name:'Governor suspend (GOVERNOR SUSPEND)'},
+ {id:57,name:'Governor bypass (GOVERNOR BYPASS)'},{id:17,name:'Calibrate (CALIB)'},
+ {id:20,name:'Telemetry on/off (TELEMETRY)'},{id:51,name:'Stick commands off (STICK COMMANDS DISABLE)'},
+ {id:40,name:'User switch 1 (USER1)'},{id:41,name:'User switch 2 (USER2)'},
+ {id:42,name:'User switch 3 (USER3)'},{id:43,name:'User switch 4 (USER4)'},
+];
+let extras=[];                                   // [{perm, ch}]
+try{ extras=JSON.parse(localStorage.getItem(LS+'extras')||'[]'); }catch(e){ extras=[]; }
+function saveExtras(){ localStorage.setItem(LS+'extras', JSON.stringify(extras)); }
+function extraFuncs(){ return extras.map((x,i)=>({k:'x'+i,
+    t:(EXTRA_MODES.find(m=>m.id===x.perm)||{name:'function'}).name, extra:true, idx:i})); }
+function renderExtras(){
+    const host=$('xrows'); host.innerHTML='';
+    extras.forEach((x,i)=>{
+        const div=document.createElement('div'); div.className='fnRow'; div.id='row_x'+i;
+        let mo=''; for(const m of EXTRA_MODES) mo+='<option value='+m.id+(m.id===x.perm?' selected':'')+'>'+m.name+'</option>';
+        let co=''; for(let c=1;c<=16;c++) co+='<option value='+c+(c===x.ch?' selected':'')+'>Ch '+c+'</option>';
+        div.innerHTML='<div class=lab><select id=m_x'+i+' style="max-width:100%">'+mo+'</select></div>'
+            +'<select id=s_x'+i+'>'+co+'</select>'
+            +'<span class=live id=l_x'+i+'></span>'
+            +'<span style="white-space:nowrap"><button class=detBtn id=d_x'+i+'>Detect</button> '
+            +'<button class=detBtn style="background:#b06a6a" id=r_x'+i+'>&#10006;</button></span>';
+        host.appendChild(div);
+        $('m_x'+i).addEventListener('change',()=>{extras[i].perm=parseInt($('m_x'+i).value);saveExtras();renderExtras();});
+        $('s_x'+i).addEventListener('change',()=>{extras[i].ch=parseInt($('s_x'+i).value);saveExtras();});
+        $('d_x'+i).addEventListener('click',()=>detect(extraFuncs()[i]));
+        $('r_x'+i).addEventListener('click',()=>{extras.splice(i,1);saveExtras();renderExtras();});
+    });
+}
+function addExtra(){ extras.push({perm:40,ch:7}); saveExtras(); renderExtras(); }
 
 function buildRows(){
     const host=$('rows');
@@ -111,8 +152,9 @@ async function poll(){
     try{
         const d=await (await fetch('/api/channels.json',{cache:'no-store'})).json();
         lastCh=d.ch;
-        for(const f of FUNCS){
+        for(const f of [...FUNCS,...extraFuncs()]){
             const c=chosen(f.k), el=$('l_'+f.k);
+            if(!el)continue;
             el.textContent=(c>=1&&c<=16&&d.age_ms>=0&&d.age_ms<1500)?d.ch[c-1]+'µs':'';
         }
         if(detTarget&&d.age_ms>=0&&d.age_ms<1500){
@@ -139,7 +181,7 @@ function finishDetect(){
     $('d_'+f.k).textContent='Detect';
     // Channels already given to OTHER functions are excluded, so wiggling a
     // stick that shares a mix can't steal an assigned channel.
-    const taken=new Set(FUNCS.filter(x=>x.k!==f.k).map(x=>chosen(x.k)));
+    const taken=new Set([...FUNCS,...extraFuncs()].filter(x=>x.k!==f.k).map(x=>chosen(x.k)));
     let best=-1,span=0;
     for(let i=0;i<16;i++){
         const s=detSamples[i].max-detSamples[i].min;
@@ -147,7 +189,9 @@ function finishDetect(){
     }
     if(best>=0&&span>=80){
         $('s_'+f.k).value=String(best+1);
-        localStorage.setItem(LS+f.k,String(best+1)); preview();
+        if(f.extra){ extras[f.idx].ch=best+1; saveExtras(); }
+        else localStorage.setItem(LS+f.k,String(best+1));
+        preview();
         setStatus('good','✓ '+f.t+' = channel '+(best+1)+' (moved '+span+'µs)');
     }else setStatus('bad','Nothing moved enough — try again with a bigger movement.');
 }
@@ -180,11 +224,22 @@ async function saveAll(){
         rscFc=fcChannelOf(rscTx,map);
         if(rscFc<5||rscFc>16){ flash('⚠️ Rescue must end up on channel 5 or higher'); return; }
     }
+    // Extra functions: may share a switch with each other or with Rescue
+    // (two jobs on one switch is legitimate) — never with a stick or Arm.
+    const xw=[];
+    for(const x of extras){
+        if(x.ch<1)continue;
+        if(map.slice(0,5).includes(x.ch-1)||x.ch===armTx){ flash('⚠️ An added function shares a channel with a stick or Arm'); return; }
+        const fc=fcChannelOf(x.ch,map);
+        if(fc<5||fc>16){ flash('⚠️ Added functions must end up on channel 5 or higher'); return; }
+        xw.push({perm:x.perm,fc,name:(EXTRA_MODES.find(m=>m.id===x.perm)||{name:'function'}).name});
+    }
     if(!(await LDRC.confirm(
         'Write to the flight controller:\n'
         +'• channel order '+map.slice(0,5).map(x=>x+1).join(',')+' (AERCT)\n'
         +'• ARM on channel '+armFc+' (active 1600–2100µs)\n'
         +(rscFc?'• RESCUE on channel '+rscFc+' (active 1600–2100µs)\n':'')
+        +xw.map(x=>'• '+x.name+' on channel '+x.fc+'\n').join('')
         +'Blades off / motor unplugged?',
         {title:'Save channels',icon:'🎛️',yes:'Write & verify'})))return;
     setStatus('info','Writing…');
@@ -213,6 +268,7 @@ async function saveAll(){
         }
         await writeMode(0,armFc);                    // ARM
         if(rscFc)await writeMode(53,rscFc);          // RESCUE
+        for(const x of xw)await writeMode(x.perm,x.fc);
         await LDRC.msp(250);
         // 3. verify all of it by read-back
         const mchk=hexToBytes(await LDRC.msp(64));
@@ -222,6 +278,7 @@ async function saveAll(){
             if(schk[o]===perm&&schk[o+1]===aux&&schk[o+2]!==schk[o+3])return true;return false;};
         if(ok)ok=hasMode(0,armFc-5);
         if(ok&&rscFc)ok=hasMode(53,rscFc-5);
+        for(const x of xw)if(ok)ok=hasMode(x.perm,x.fc-5);
         if(ok){
             setStatus('good','✓ Saved & verified — now flick the switches and watch them on the <a href="/rotorflight-modes">Switches page</a>.');
             flash('✅ Saved & verified');
@@ -230,6 +287,7 @@ async function saveAll(){
 }
 
 buildRows();
+renderExtras();
 poll(); setInterval(poll, 200);
 </script>
 <template id=helpContent><h2>Transmitter channels</h2>
@@ -239,6 +297,7 @@ poll(); setInterval(poll, 200);
 <li><b>Detect</b> &mdash; tap it, then waggle that stick or flick that switch for a few seconds. The receiver spots which channel moved.</li>
 </ul>
 <p><b>Save</b> writes it all to the flight controller and verifies by read-back: the channel order <i>(rcmap)</i>, the <b>Arm</b> switch and the <b>Rescue</b> switch <i>(Modes, active 1600&ndash;2100&thinsp;&micro;s)</i>. Fine-tune the switch ranges on the Switches page with its live marker.</p>
+<p><b>Add another function</b> covers everything else &mdash; black box, beeper, self-level, governor overrides, user switches &mdash; each written as a switch range too. Two functions may share one switch; a stick or the Arm channel may not be shared.</p>
 <p>The five sticks must live on channels 1&ndash;8; switches can use any channel from 5 up. Choices are remembered on the phone as defaults for the next helicopter.</p>
 </template>
 </body>
