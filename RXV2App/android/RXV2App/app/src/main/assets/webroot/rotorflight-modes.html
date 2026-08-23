@@ -30,9 +30,16 @@
    blue zone = where the function is ON, dot = the channel's LIVE position. */
 .rTrack{position:relative;height:18px;background:#dfe5ea;border-radius:9px;margin:.55em 0 .1em;overflow:visible}
 .rZone{position:absolute;top:0;bottom:0;background:#4a90c9;border-radius:9px;opacity:.85}
-.rDot{position:absolute;top:-4px;width:8px;height:26px;border-radius:4px;background:#8a949c;
-      transform:translateX(-50%);transition:left .15s linear,background .15s}
+.rDot{position:absolute;top:-4px;width:4px;height:26px;border-radius:2px;background:#c0392b;
+      transform:translateX(-50%);transition:left .15s linear,background .15s;pointer-events:none}
 .rDot.in{background:#2e7d32}
+/* Draggable round ends of the blue zone (Malcolm 2026-08-24): grab and slide.
+   touch-action:pan-y keeps vertical page scrolling alive; horizontal drags
+   are ours. */
+.rHandle{position:absolute;top:50%;width:22px;height:22px;border-radius:50%;
+         background:#2b568f;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);
+         transform:translate(-50%,-50%);cursor:grab;touch-action:pan-y;z-index:2}
+.rHandle:active{cursor:grabbing;background:#1d3f6e}
 .rScale{display:flex;justify-content:space-between;font-size:.7em;color:#7a8b95;margin-bottom:.2em}
 </style>
 </head>
@@ -114,7 +121,8 @@ function rowCard(slotIdx, s){
       + '<div><label>Active to (&micro;s)</label><input id=hi'+slotIdx+' type=number min=875 max=2125 step=5 value='+s.hi+'></div>'
       + '</div>'
       + '<div class=rTrack id=tr'+slotIdx+'><div class=rZone id=zn'+slotIdx+'></div>'
-      + '<div class=rDot id=dot'+slotIdx+' style="display:none"></div></div>'
+      + '<div class=rDot id=dot'+slotIdx+' style="display:none"></div>'
+      + '<div class=rHandle id=hlo'+slotIdx+'></div><div class=rHandle id=hhi'+slotIdx+'></div></div>'
       + '<div class=rScale><span>875</span><span>1500</span><span>2125&nbsp;&micro;s</span></div>'
       + (m.warn?'<div class=armWarn>&#9888; This is the ARM switch — get the range wrong and the motor can arm unexpectedly. Change with the model unpowered.</div>':'')
       + '<div class=mBtns>'
@@ -130,9 +138,40 @@ function paintZone(i){
     const lo=parseInt($('lo'+i).value||'1500'), hi=parseInt($('hi'+i).value||'1500');
     zn.style.left=pct(lo)+'%';
     zn.style.width=Math.max(0,pct(hi)-pct(lo))+'%';
+    const hl=$('hlo'+i), hh=$('hhi'+i);
+    if(hl) hl.style.left=pct(lo)+'%';
+    if(hh) hh.style.left=pct(hi)+'%';
+}
+// Finger-drag the round ends: pointer capture, position → µs snapped to 5,
+// written straight into the lo/hi inputs so numbers and bar stay in step.
+function wireHandle(i, which){
+    const h=$((which==='lo'?'hlo':'hhi')+i); if(!h)return;
+    const track=$('tr'+i);
+    h.addEventListener('pointerdown', e=>{
+        e.preventDefault();
+        h.setPointerCapture(e.pointerId);
+        const move=ev=>{
+            const r=track.getBoundingClientRect();
+            let us=RMIN+(ev.clientX-r.left)/r.width*(RMAX-RMIN);
+            us=Math.max(RMIN,Math.min(RMAX,Math.round(us/5)*5));
+            const lo=$('lo'+i), hi=$('hi'+i);
+            if(which==='lo') lo.value=Math.min(us,parseInt(hi.value||'2125')-5);
+            else             hi.value=Math.max(us,parseInt(lo.value||'875')+5);
+            dirty=true;
+            paintZone(i);
+        };
+        const up=()=>{ try{h.releasePointerCapture(e.pointerId);}catch(_){ }
+                       h.removeEventListener('pointermove',move);
+                       h.removeEventListener('pointerup',up);
+                       h.removeEventListener('pointercancel',up); };
+        h.addEventListener('pointermove',move);
+        h.addEventListener('pointerup',up);
+        h.addEventListener('pointercancel',up);
+    });
 }
 function wireZone(i){
     ['lo','hi'].forEach(k=>{const e=$(k+i); if(e)e.addEventListener('input',()=>paintZone(i));});
+    wireHandle(i,'lo'); wireHandle(i,'hi');
     paintZone(i);
 }
 
@@ -243,7 +282,7 @@ document.addEventListener('DOMContentLoaded', ()=>{ load().then(()=>{ if(!LDRC.r
 <li><b>Arm</b> is the big one — the motor can only run while its switch is in range. Every model needs one.</li>
 <li><b>Rescue</b> — the safety-net switch; the Rescue page shows its settings.</li>
 <li>Ranges are in Rotorflight&rsquo;s 900&ndash;2100&nbsp;µs scale. A switch typically sits near 1100 (low), 1500 (middle) and 1900 (high) — so &ldquo;1700&ndash;2100&rdquo; means &ldquo;switch high&rdquo;.</li>
-<li>The <b>bar</b> under each row is the full 875&ndash;2125&nbsp;&micro;s travel; the <b>blue zone</b> is where the function is ON, and the <b>moving dot</b> is the channel&rsquo;s live position &mdash; flick the switch and watch the dot enter the zone (it turns green inside).</li>
+<li>The <b>bar</b> under each row is the full 875&ndash;2125&nbsp;&micro;s travel; the <b>blue zone</b> is where the function is ON, and <b>drag the round ends</b> with a finger to set the range, and the thin <b>red line</b> is the channel&rsquo;s live position &mdash; flick the switch and watch it enter the zone (it turns green inside).</li>
 <li>Check which channel a switch moves on <b>View channels</b>.</li>
 </ul>
 <p>Every <b>Save</b> writes the slot, stores it, reads it back and confirms the bytes match. Be especially careful with <b>Arm</b> — change it with the model unpowered.</p>
