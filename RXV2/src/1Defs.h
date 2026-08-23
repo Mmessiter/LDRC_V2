@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.424-strict-channels";
+constexpr const char* FW_VERSION = "RXV2-0.9.425-arming-plain";
 
 //*********************************************************************
 //  Auto-update manifest URLs
