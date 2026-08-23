@@ -45,6 +45,7 @@
 
 <script>
 const STEPS=[
+ {k:'fw',    t:'Latest Rotorflight firmware (optional)', d:'A new flight controller comes with Rotorflight already on it \u2014 fine to fly. To install the very latest first, use the Rotorflight Configurator on a computer (USB); flashing can\u2019t be done from the phone. A desktop version of this wizard that flashes too is planned.'},
  {k:'wire',  t:'Wire it up & first contact', d:'Receiver to a spare UART (CRSF), ESC to its motor pad + telemetry pad. When this app shows the Rotorflight buttons, the link is alive.', href:'/rotorflight'},
  {k:'basics',t:'First-time basics', d:'Level calibration, governor & telemetry on, ESC protocol & poles, gear ratios, battery, channel order.', href:'/rotorflight-firsttime'},
  {k:'servos',t:'Servos', d:'Centre each servo, set travel and direction — swash level and square.', href:'/rotorflight-servos'},
@@ -66,7 +67,7 @@ function paint(){
         div.className='step'+(isDone?' done':'');
         div.innerHTML='<div class=num>'+(isDone?'✓':(i+1))+'</div>'
             +'<div class=tit><b>'+s.t+'</b><span>'+s.d+'</span></div>'
-            +'<a class=go href="'+s.href+'">Open</a>'
+            +(s.href?'<a class=go href="'+s.href+'">Open</a>':'<div></div>')
             +'<div class=tick><input type=checkbox '+(isDone?'checked':'')+' aria-label="done"></div><div></div><div></div>';
         div.querySelector('input').addEventListener('change',ev=>{
             localStorage.setItem(KEY+s.k, ev.target.checked?'1':'0'); paint();
