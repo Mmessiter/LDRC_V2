@@ -208,7 +208,8 @@ async function loadRescueSwitch(){
         const hits=[];
         for(let o=0;o+3<b.length;o+=4){
             if(b[o]!==53)continue;
-            const lo=900+25*b[o+2], hi=900+25*b[o+3];
+            const sg=v=>v>127?v-256:v;                 // RF: signed 5 µs steps about 1500
+            const lo=1500+5*sg(b[o+2]), hi=1500+5*sg(b[o+3]);
             if(hi<=lo)continue;                       // empty range = unused slot
             hits.push({ch:b[o+1]+5,aux:b[o+1]+1,lo,hi});
         }
