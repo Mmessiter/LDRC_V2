@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.428-fewer-words",
+      "url": "https://messiter.com/rxv2/release/v0.9.428/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.428/littlefs.bin",
+      "fs_md5": "4976e6c43e9f376999c3887b57e9fa06",
+      "notes": "Fewer words look clearer (Malcolm's doctrine, applied to the front screen): the automatic-fly-mode note line is gone (Receiver settings explains it), 'Bind' stands alone, 'Rotorflight config' drops the version number (it lives on the Rotorflight page), and 'Setup' loses its trailing list."
+    },
+    {
       "name": "RXV2-0.9.427-steady-front",
       "url": "https://messiter.com/rxv2/release/v0.9.427/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.427/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.417/littlefs.bin",
       "fs_md5": "ece80e19026c200dd129a814970f0803",
       "notes": "Transmitter channels grows 'Add another function' - black box, beeper, self-level, governor overrides, user switches and more, each detectable by wiggle and written as a verified switch range. Two functions may share one switch; sticks and Arm may never be shared. The Wizards menu is now just the two guides - Transmitter channels and First-time basics live inside the New-helicopter wizard as its steps 3 and 4."
-    },
-    {
-      "name": "RXV2-0.9.416-wizard-steps",
-      "url": "https://messiter.com/rxv2/release/v0.9.416/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.416/littlefs.bin",
-      "fs_md5": "bbf728241096f857a17a5fdce5fdcd54",
-      "notes": "Transmitter channels and First-time basics moved to the Wizards page where they belong - they are the build wizard's two big steps, listed there for a straight jump. A la carte now holds only the individual tuning/setup pages."
     }
   ]
 }
