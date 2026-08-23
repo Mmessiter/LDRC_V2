@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.419-esc-words";
+constexpr const char* FW_VERSION = "RXV2-0.9.420-named-switches";
 
 //*********************************************************************
 //  Auto-update manifest URLs
