@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.415-three-doors",
+      "url": "https://messiter.com/rxv2/release/v0.9.415/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.415/littlefs.bin",
+      "fs_md5": "dbf45feaefafbe7c17e20f83f82374f9",
+      "notes": "The Rotorflight page is now just three doors (Malcolm's words): WIZARDS (new helicopter, tuning), A LA CARTE (straight to any single setting), and BACKUP & RESTORE on its own page. Every page is where it was - only the front door changed."
+    },
+    {
       "name": "RXV2-0.9.414-tidy-hub",
       "url": "https://messiter.com/rxv2/release/v0.9.414/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.414/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.403/littlefs.bin",
       "fs_md5": "0cd35e7c60d468857d00197c8e6ed913",
       "notes": "Switches page: 'Add a switch action' now first asks WHAT the switch should do (a drop-down of all the functions), then creates the row with that choice ready."
-    },
-    {
-      "name": "RXV2-0.9.402-drag-handles",
-      "url": "https://messiter.com/rxv2/release/v0.9.402/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.402/littlefs.bin",
-      "fs_md5": "f1ead0c6e8eea1ad250e353d1b2b0897",
-      "notes": "Switches page polish: the blue zone's round ends can now be DRAGGED with a finger to set the range (numbers follow along, snapped to 5 \u00b5s), and the live channel marker is a slim red line (green inside the zone)."
     }
   ]
 }

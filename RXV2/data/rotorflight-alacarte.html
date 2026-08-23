@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name=theme-color content="#5fa099">
+<meta name=apple-mobile-web-app-capable content=yes>
+<meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
+<meta name=apple-mobile-web-app-title content="LDRC RX V2">
+<title>&Agrave; la carte &middot; LDRC RX V2</title>
+<link rel=stylesheet href="/style.css?v=172">
+<script src="/app.js?v=177" defer></script>
+</head>
+<body>
+<button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
+<div class=bg-photo aria-hidden=true></div>
+<div class=bg-wash  aria-hidden=true></div>
+<div class=container>
+    <h1>&Agrave; la carte</h1>
+    <p class=subtitle>Straight to one setting, when you know what you want. Roughly in setup order.</p>
+    <a class="btn btn-fw" href="/rotorflight-txchannels" style="background:#4a7a9a"><span class=ico>&#127899;&#65039;</span>Transmitter channels</a>
+    <a class="btn btn-fw" href="/rotorflight-firsttime"  style="background:#4a7a9a"><span class=ico>&#128295;</span>First-time basics</a>
+    <a class="btn btn-fw" href="/rotorflight-servos"     style="background:#c98a4a"><span class=ico>&#128295;</span>Servos</a>
+    <a class="btn btn-fw" href="/rotorflight-travel"     style="background:#c98a4a"><span class=ico>&#128208;</span>Travel extents</a>
+    <a class="btn btn-fw" href="/rotorflight-modes"      style="background:#8a7f4a"><span class=ico>&#127899;&#65039;</span>Switches &mdash; what each one does (Modes)</a>
+    <a class="btn btn-fw" href="/rotorflight-rescue"     style="background:#c0603c"><span class=ico>&#128678;</span>Rescue &mdash; the safety net</a>
+    <a class="btn btn-fw" href="/rotorflight-gov-profile" id=govProf style="display:none;background:#5fa099"><span class=ico>&#9881;&#65039;</span>Governor (profile)</a>
+    <a class="btn btn-fw" href="/rotorflight-gov-global"  id=govGlob style="display:none;background:#5fa099"><span class=ico>&#9881;&#65039;</span>Governor (global)</a>
+    <a class="btn btn-fw" href="/rotorflight-rates"      style="background:#8e6cab"><span class=ico>&#9881;&#65039;</span>Rates &amp; Dynamics</a>
+    <a class="btn btn-fw" href="/rotorflight-pid"        style="background:#8e6cab"><span class=ico>&#9881;&#65039;</span>PIDs</a>
+    <a class="btn btn-fw" href="/rotorflight-pidplus"    style="background:#8e6cab"><span class=ico>&#9881;&#65039;</span>PID + (advanced)</a>
+    <a class="btn btn-bb" href="/rotorflight" style="margin-top:.8em"><span class=ico>&#11013;&#65039;</span>Back to Rotorflight</a>
+    <div class=footer></div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+    const s = await LDRC.fetchState();
+    if (!s) return;
+    const fc = s.fcinfo || {};
+    // Governor pages need Rotorflight 2.3 (API 12.9+), as on V1.
+    const api100 = (fc.api_major || 0) * 100 + (fc.api_minor || 0);
+    const govOk = api100 >= 1209;
+    for (const id of ['govProf', 'govGlob']) {
+        const b = document.getElementById(id);
+        if (b) b.style.display = govOk ? '' : 'none';
+    }
+});
+</script>
+<template id=helpContent><h2>&Agrave; la carte</h2>
+<p>Every Rotorflight setting the app can edit, one page per subject, listed roughly in the order a new model needs them. Each page talks to the flight controller live and verifies what it writes.</p>
+<p>The Governor pages appear when the flight controller runs Rotorflight 2.3 or newer.</p>
+</template>
+</body>
+</html>
