@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.417-more-functions",
+      "url": "https://messiter.com/rxv2/release/v0.9.417/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.417/littlefs.bin",
+      "fs_md5": "ece80e19026c200dd129a814970f0803",
+      "notes": "Transmitter channels grows 'Add another function' - black box, beeper, self-level, governor overrides, user switches and more, each detectable by wiggle and written as a verified switch range. Two functions may share one switch; sticks and Arm may never be shared. The Wizards menu is now just the two guides - Transmitter channels and First-time basics live inside the New-helicopter wizard as its steps 3 and 4."
+    },
+    {
       "name": "RXV2-0.9.416-wizard-steps",
       "url": "https://messiter.com/rxv2/release/v0.9.416/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.416/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.406/littlefs.bin",
       "fs_md5": "e8b51ac389fe327e59c0ceac0176085c",
       "notes": "Automatic fly mode, full cycle: radios switch OFF by themselves 3 s after ARMING (on the ground, during spool-up - never mid-air) and back ON when you DISARM. Only WiFi/Bluetooth are touched; the RC link and flight-controller output never stop. With an arming channel set, the front-page Fly now button hides itself - it is no longer needed (models without arming keep it)."
-    },
-    {
-      "name": "RXV2-0.9.404-auto-fly",
-      "url": "https://messiter.com/rxv2/release/v0.9.404/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.404/littlefs.bin",
-      "fs_md5": "a1e67c72016530691ffc4253ab80fc3e",
-      "notes": "NEW: Automatic fly mode (Receiver settings, ON by default) - for everyone who forgets Fly now. When the model is armed and the sticks have been moving for 5 seconds, the receiver switches WiFi and Bluetooth off by itself so nothing interferes with the radio link; everything returns automatically after landing. Needs the arming channel set."
     }
   ]
 }
