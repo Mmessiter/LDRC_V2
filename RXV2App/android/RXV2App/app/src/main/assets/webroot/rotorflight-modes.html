@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name=theme-color content="#5fa099">
+<meta name=apple-mobile-web-app-capable content=yes>
+<meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
+<meta name=apple-mobile-web-app-title content="LDRC RX V2">
+<title>Switches &middot; LDRC RX V2</title>
+<link rel=stylesheet href="/style.css?v=172">
+<script src="/app.js?v=177" defer></script>
+<style>
+.banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
+.banner.info{background:#c8d2dc;color:#3a5165}
+.banner.good{background:#a8d29a;color:#2a4d1f}
+.banner.bad {background:#dca08c;color:#5c2a1a}
+.mRow{display:grid;grid-template-columns:1fr 1fr;gap:.5em .8em;align-items:center;margin:.35em 0}
+.mRow label{font-size:.85em;color:#5d7a8c;font-weight:600}
+.mRow select,.mRow input{width:100%;padding:.5em;font-size:1em;border:1px solid #b8c7d0;border-radius:6px;box-sizing:border-box}
+.mBtns{display:flex;gap:.6em;margin-top:.6em}
+.mSave{flex:1;padding:.6em;border:0;border-radius:9px;background:#6cab5e;color:#fff;font-weight:700;cursor:pointer}
+.mDel{flex:.4;padding:.6em;border:0;border-radius:9px;background:#b06a6a;color:#fff;font-weight:700;cursor:pointer}
+.mSave:disabled,.mDel:disabled{opacity:.5}
+.mMsg{text-align:center;font-size:.85em;min-height:1.1em;margin-top:.3em;font-weight:600;color:#3a5165}
+.armWarn{font-size:.8em;color:#b5442a;font-weight:600;margin-top:.3em}
+.addBtn{width:100%;padding:.75em;border:0;border-radius:10px;background:#5f8fab;color:#fff;font-size:1.05em;font-weight:700;cursor:pointer;margin-top:.4em}
+.modeCard.highlight{box-shadow:0 0 0 3px #d4944a}
+</style>
+</head>
+<body class=hasFab>
+<button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
+<div class=bg-photo aria-hidden=true></div>
+<div class=bg-wash  aria-hidden=true></div>
+<div class=container>
+    <h1>Switches</h1>
+    <p class=subtitle>what each transmitter switch makes the flight controller do <i>(Rotorflight: Modes)</i></p>
+    <div id=status class="banner info">loading&hellip;</div>
+    <div id=rows></div>
+    <button class=addBtn id=addBtn onclick="addRow()">&#10133; Add a switch action</button>
+    <a class="btn btn-bb" href="/rotorflight" style="margin-top:.8em"><span class=ico>&#11013;&#65039;</span>Back to Rotorflight</a>
+    <div class=footer></div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const SLOTS = 20;              // MAX_MODE_ACTIVATION_CONDITION_COUNT
+const stepUs = s => 900 + 25 * s;
+const usStep = u => Math.max(0, Math.min(48, Math.round((u - 900) / 25)));
+
+// Curated Rotorflight modes — plain English first, RF's name in brackets.
+const MODES = [
+    { id: 0,  name: 'Arm — motor enable (ARM)', warn: true },
+    { id: 53, name: 'Rescue — the safety net (RESCUE)' },
+    { id: 1,  name: 'Self-level (ANGLE)' },
+    { id: 2,  name: 'Self-level, blended (HORIZON)' },
+    { id: 3,  name: 'Altitude hold (ALTHOLD)' },
+    { id: 47, name: 'Acro trainer (TRAINER)' },
+    { id: 46, name: 'GPS rescue (GPS RESCUE)' },
+    { id: 27, name: 'Failsafe test (FAILSAFE)' },
+    { id: 13, name: 'Beeper on (BEEPER)' },
+    { id: 52, name: 'Beeper mute (BEEPER MUTE)' },
+    { id: 26, name: 'Black box recording (BLACKBOX)' },
+    { id: 31, name: 'Black box erase (BLACKBOX ERASE)' },
+    { id: 36, name: 'Pre-arm safety (PREARM)' },
+    { id: 45, name: 'Lock the model — anti-tamper (PARALYZE)' },
+    { id: 55, name: 'Governor fallback (GOVERNOR FALLBACK)' },
+    { id: 56, name: 'Governor suspend (GOVERNOR SUSPEND)' },
+    { id: 57, name: 'Governor bypass (GOVERNOR BYPASS)' },
+    { id: 17, name: 'Calibrate (CALIB)' },
+    { id: 20, name: 'Telemetry on/off (TELEMETRY)' },
+    { id: 51, name: 'Stick commands off (STICK COMMANDS DISABLE)' },
+    { id: 40, name: 'User switch 1 (USER1)' },
+    { id: 41, name: 'User switch 2 (USER2)' },
+    { id: 42, name: 'User switch 3 (USER3)' },
+    { id: 43, name: 'User switch 4 (USER4)' },
+];
+const modeName = id => (MODES.find(m => m.id === id) || {}).name || ('Mode ' + id);
+
+let slots = [];   // [{perm, aux, lo, hi}] all 20, straight from the FC
+
+function hexToBytes(h){const o=new Uint8Array(h.length/2);for(let i=0;i<o.length;i++)o[i]=parseInt(h.substr(i*2,2),16);return o;}
+function setStatus(k,t){const s=$('status');s.className='banner '+k;s.textContent=t;}
+
+function chOptions(sel){
+    let h='';
+    for(let a=0;a<12;a++){const ch=a+5;h+='<option value='+a+(a===sel?' selected':'')+'>Channel '+ch+' (AUX '+(a+1)+')</option>';}
+    return h;
+}
+function modeOptions(sel){
+    return MODES.map(m=>'<option value='+m.id+(m.id===sel?' selected':'')+'>'+m.name+'</option>').join('');
+}
+
+function rowCard(slotIdx, s){
+    const m=MODES.find(x=>x.id===s.perm)||{};
+    return '<div class="card modeCard" id=slot'+slotIdx+' data-perm='+s.perm+'>'
+      + '<div class=mRow>'
+      + '<div><label>What the switch does</label><select id=m'+slotIdx+'>'+modeOptions(s.perm)+'</select></div>'
+      + '<div><label>Which channel</label><select id=c'+slotIdx+'>'+chOptions(s.aux)+'</select></div>'
+      + '<div><label>Active from (&micro;s)</label><input id=lo'+slotIdx+' type=number min=900 max=2100 step=25 value='+s.lo+'></div>'
+      + '<div><label>Active to (&micro;s)</label><input id=hi'+slotIdx+' type=number min=900 max=2100 step=25 value='+s.hi+'></div>'
+      + '</div>'
+      + (m.warn?'<div class=armWarn>&#9888; This is the ARM switch — get the range wrong and the motor can arm unexpectedly. Change with the model unpowered.</div>':'')
+      + '<div class=mBtns>'
+      + '<button class=mSave onclick="saveRow('+slotIdx+')">&#128190; Save</button>'
+      + '<button class=mDel onclick="delRow('+slotIdx+')">&#128465; Remove</button>'
+      + '</div><div class=mMsg id=msg'+slotIdx+'></div></div>';
+}
+
+function paint(){
+    let h='';
+    for(let i=0;i<slots.length;i++){
+        const s=slots[i];
+        if(s.hi>s.lo) h+=rowCard(i,s);        // only ACTIVE slots get a card
+    }
+    $('rows').innerHTML = h || '<div class=card><p class=muted>No switch actions assigned yet — tap <b>Add a switch action</b> below. (At minimum every model needs an <b>Arm</b> switch.)</p></div>';
+    // Anchor: /rotorflight-modes#rescue scrolls+highlights the rescue row.
+    if(location.hash==='#rescue'){
+        const el=document.querySelector('.modeCard[data-perm="53"]');
+        if(el){el.classList.add('highlight');el.scrollIntoView({behavior:'smooth',block:'center'});}
+    }
+}
+
+async function load(){
+    if (window.LDRC && LDRC.replayReady) await LDRC.replayReady;
+    setStatus('info', LDRC.replay?'Reading from the phone…':'Reading switch assignments from the flight controller…');
+    try{
+        const b=hexToBytes(await LDRC.msp(34));
+        if(b.length<SLOTS*4) throw new Error('short response '+b.length);
+        slots=[];
+        for(let i=0;i<SLOTS;i++){
+            const o=i*4;
+            slots.push({perm:b[o],aux:b[o+1],lo:stepUs(b[o+2]),hi:stepUs(b[o+3])});
+        }
+        paint();
+        setStatus('good','✓ Loaded — '+slots.filter(s=>s.hi>s.lo).length+' switch actions assigned');
+    }catch(e){ setStatus('bad','Read failed: '+e.message); }
+}
+
+async function writeSlot(slotIdx, perm, aux, lo, hi){
+    const payload=[slotIdx,perm,aux,usStep(lo),usStep(hi)]
+        .map(v=>v.toString(16).padStart(2,'0')).join('');
+    await LDRC.msp(35, payload);              // MSP_SET_MODE_RANGE
+    await LDRC.msp(250);                       // EEPROM_WRITE
+    const chk=hexToBytes(await LDRC.msp(34));
+    const o=slotIdx*4;
+    return chk[o]===perm && chk[o+1]===aux && chk[o+2]===usStep(lo) && chk[o+3]===usStep(hi);
+}
+
+async function saveRow(i){
+    const perm=parseInt($('m'+i).value), aux=parseInt($('c'+i).value);
+    let lo=parseInt($('lo'+i).value||'900'), hi=parseInt($('hi'+i).value||'900');
+    if(hi<=lo){ $('msg'+i).textContent='⚠ "Active to" must be greater than "Active from"'; return; }
+    const m=MODES.find(x=>x.id===perm)||{};
+    if(!(await LDRC.confirm('Save: '+(m.name||'mode')+' on channel '+(aux+5)+', active '+lo+'–'+hi+' µs?'
+        +(m.warn?'\n\n⚠ This is the ARM switch — be certain the model is safe.':''),
+        {title:'Save switch action',icon:'🎚️',yes:'Save',kind:m.warn?'warn':'go'})))return;
+    $('msg'+i).textContent='writing…';
+    try{
+        const ok=await writeSlot(i,perm,aux,lo,hi);
+        if(ok){ slots[i]={perm,aux,lo,hi}; $('msg'+i).textContent='✅ Saved & verified'; setTimeout(()=>{const e=$('msg'+i);if(e)e.textContent='';},5000); }
+        else { $('msg'+i).textContent='⚠ Flight controller adjusted it — re-reading'; await load(); }
+    }catch(e){ $('msg'+i).textContent='⚠ Write failed — try again'; }
+}
+
+async function delRow(i){
+    if(!(await LDRC.confirm('Remove this switch action? The mode will no longer be controllable from the transmitter.',
+        {title:'Remove switch action',icon:'🗑️',yes:'Remove',kind:'warn'})))return;
+    try{
+        const ok=await writeSlot(i,0,0,900,900);   // empty range = slot unused
+        if(ok){ slots[i]={perm:0,aux:0,lo:900,hi:900}; paint(); setStatus('good','✓ Removed'); }
+        else { setStatus('bad','Remove not confirmed — re-reading'); await load(); }
+    }catch(e){ setStatus('bad','Remove failed: '+e.message); }
+}
+
+function addRow(){
+    const free=slots.findIndex(s=>s.hi<=s.lo);
+    if(free<0){ setStatus('bad','All '+SLOTS+' switch slots are in use'); return; }
+    slots[free]={perm:53,aux:0,lo:1700,hi:2100};   // sensible defaults; user edits then Saves
+    paint();
+    const el=$('slot'+free);
+    if(el){ el.classList.add('highlight'); el.scrollIntoView({behavior:'smooth',block:'center'}); }
+    setStatus('info','New action added — choose the mode, channel and range, then Save');
+}
+
+document.addEventListener('DOMContentLoaded', load);
+</script>
+<template id=helpContent><h2>Switches</h2>
+<p>This is where transmitter switches get their jobs <i>(Rotorflight calls it the Modes tab)</i>. Each row says: when <b>this channel</b> is between <b>these values</b>, do <b>this</b>.</p>
+<ul>
+<li><b>Arm</b> is the big one — the motor can only run while its switch is in range. Every model needs one.</li>
+<li><b>Rescue</b> — the safety-net switch; the Rescue page shows its settings.</li>
+<li>Ranges are in Rotorflight&rsquo;s 900&ndash;2100&nbsp;µs scale. A switch typically sits near 1100 (low), 1500 (middle) and 1900 (high) — so &ldquo;1700&ndash;2100&rdquo; means &ldquo;switch high&rdquo;.</li>
+<li>Check which channel a switch moves on <b>View channels</b>.</li>
+</ul>
+<p>Every <b>Save</b> writes the slot, stores it, reads it back and confirms the bytes match. Be especially careful with <b>Arm</b> — change it with the model unpowered.</p>
+</template>
+</body>
+</html>

@@ -376,7 +376,9 @@
                 '/map': '/sim', '/views': '/sim', '/simctl': '/sim',
                 '/rotorflight-rates': '/rotorflight', '/rotorflight-pid': '/rotorflight',
                 '/rotorflight-pidplus': '/rotorflight', '/rotorflight-gov-profile': '/rotorflight',
-                '/rotorflight-gov-global': '/rotorflight', '/rotorflight-backups': '/rotorflight'
+                '/rotorflight-gov-global': '/rotorflight', '/rotorflight-backups': '/rotorflight',
+                '/rotorflight-modes': '/rotorflight', '/rotorflight-rescue': '/rotorflight',
+                '/rotorflight-servos': '/rotorflight', '/rotorflight-travel': '/rotorflight'
             };
             const LABELS = {
                 '/': 'front screen', '/blackbox': 'Black box', '/setup': 'Setup',

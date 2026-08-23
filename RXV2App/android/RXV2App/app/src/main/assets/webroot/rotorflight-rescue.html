@@ -214,13 +214,14 @@ async function loadRescueSwitch(){
         }
         if(hits.length===0){
             el.innerHTML='<b style="color:#b5442a">⚠ NO SWITCH ASSIGNED — rescue can never trigger!</b><br>'
-              +'Assign <b>RESCUE</b> to a switch in Rotorflight Configurator → <b>Modes</b> tab, or rescue will not work however good the settings below are.';
+              +'Rescue will not work however good the settings below are. '
+              +'<a href="/rotorflight-modes#rescue" style="font-weight:700">Assign a rescue switch now →</a>';
         } else {
             el.innerHTML=hits.map(h=>
                 '✅ <b>Channel '+h.ch+'</b> (AUX '+h.aux+') — rescue is ON when between <b>'
                 +h.lo+'–'+h.hi+' µs</b> (Rotorflight scale)').join('<br>')
               +'<br><span style="font-size:.8em">Check it: flick your rescue switch and watch channel '
-              +hits[0].ch+' on View channels.</span>';
+              +hits[0].ch+' on View channels &middot; <a href="/rotorflight-modes#rescue">change it on the Switches page →</a></span>';
         }
     }catch(e){ el.textContent='Could not read the Modes table ('+e.message+')'; }
 }
