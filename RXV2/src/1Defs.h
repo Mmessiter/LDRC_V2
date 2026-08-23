@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.411-tuning-wizard";
+constexpr const char* FW_VERSION = "RXV2-0.9.412-tx-first";
 
 //*********************************************************************
 //  Auto-update manifest URLs

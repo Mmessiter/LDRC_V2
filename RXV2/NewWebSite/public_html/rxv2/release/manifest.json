@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.412-tx-first",
+      "url": "https://messiter.com/rxv2/release/v0.9.412/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.412/littlefs.bin",
+      "fs_md5": "e1d8a280e242770954e81eadcc7b0c26",
+      "notes": "Transmitter first! New wizard step + page: set the model up on your transmitter, then tell the wizard which channel is which - or tap Detect and wiggle each control (the receiver spots the moving channel). Saving writes the flight controller's channel order (rcmap) and puts Arm & Rescue on your chosen switches (Modes, 1600-2100us), all verified by read-back. Your layout is remembered as the default for the next helicopter."
+    },
+    {
       "name": "RXV2-0.9.411-tuning-wizard",
       "url": "https://messiter.com/rxv2/release/v0.9.411/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.411/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.400/littlefs.bin",
       "fs_md5": "4c2fdd223716f59f315a93d50389884c",
       "notes": "Switches + Rescue-switch card: ranges now decode with Rotorflight's own encoding (signed 5 \u00b5s steps about 1500 - range 875-2125), fixing impossible values like ARM showing 3900 \u00b5s. Thanks to Malcolm's sharp eye."
-    },
-    {
-      "name": "RXV2-0.9.399-single-back",
-      "url": "https://messiter.com/rxv2/release/v0.9.399/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.399/littlefs.bin",
-      "fs_md5": "4436a2f016fdf65c8aea98615a3f2c45",
-      "notes": "Fixed the twin 'Back to Rotorflight' buttons on the Rotorflight pages - each page keeps exactly one."
     }
   ]
 }

@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name=theme-color content="#5fa099">
+<meta name=apple-mobile-web-app-capable content=yes>
+<meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
+<meta name=apple-mobile-web-app-title content="LDRC RX V2">
+<title>Transmitter channels &middot; LDRC RX V2</title>
+<link rel=stylesheet href="/style.css?v=172">
+<script src="/app.js?v=177" defer></script>
+<style>
+.banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
+.banner.info{background:#c8d2dc;color:#3a5165}
+.banner.good{background:#a8d29a;color:#2a4d1f}
+.banner.bad {background:#dca08c;color:#5c2a1a}
+.fnRow{display:grid;grid-template-columns:1fr auto auto auto;gap:.4em .6em;align-items:center;
+       background:#e7edf2;border-radius:10px;padding:.55em .7em;margin:.4em 0}
+.fnRow.det{background:#f0e6c8}
+.fnRow .lab b{display:block;font-size:1em;color:#2e4356}
+.fnRow .lab span{font-size:.78em;color:#5d7a8c}
+.fnRow select{padding:.45em;font-size:1em;border:1px solid #b8c7d0;border-radius:6px}
+.fnRow .live{font-size:.8em;color:#5d7a8c;min-width:4.2em;text-align:right;font-variant-numeric:tabular-nums}
+.fnRow .live.hot{color:#c0392b;font-weight:700}
+.detBtn{border:0;border-radius:8px;background:#5f8fab;color:#fff;font-weight:700;padding:.5em .7em;cursor:pointer;font-size:.85em}
+.saveBtn{width:100%;margin-top:.6em;padding:.75em;border:0;border-radius:10px;background:#6cab5e;color:#fff;font-size:1.05em;font-weight:700;cursor:pointer}
+.sMsg{text-align:center;font-size:.85em;min-height:1.2em;margin-top:.3em;font-weight:600}
+.preview{font-weight:700;text-align:center;margin:.5em 0;color:#2e4356}
+h2 .hint{font-weight:400;font-size:.7em;color:#5d7a8c;display:block;margin-top:.1em}
+</style>
+</head>
+<body class=hasFab>
+<button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
+<div class=bg-photo aria-hidden=true></div>
+<div class=bg-wash  aria-hidden=true></div>
+<div class=container>
+    <h1>Transmitter channels</h1>
+    <div id=status class="banner info">Set up the model on your <b>transmitter first</b> &mdash; one channel per function &mdash; then tell the wizard which is which here.</div>
+
+    <div class=card>
+        <h2>Which channel does what? <span class=hint>pick each one, or tap Detect and move that stick/switch</span></h2>
+        <div id=rows></div>
+        <div class=preview id=preview></div>
+        <button class=saveBtn onclick="saveAll()">Save to flight controller</button>
+        <div id=sMsg class=sMsg></div>
+        <p class=muted style="font-size:.8em;line-height:1.5;margin-top:.6em">Saving writes the flight controller&rsquo;s <b>channel order</b> <i>(rcmap)</i> and puts <b>Arm</b> &mdash; and <b>Rescue</b> if chosen &mdash; on the right switches <i>(Modes, active 1600&ndash;2100&thinsp;&micro;s)</i>. Check them afterwards with the live marker on the Switches page.</p>
+    </div>
+
+    <a class="btn btn-bb" href="/rotorflight-newheli" style="margin-top:.8em"><span class=ico>&#11013;&#65039;</span>Back to New helicopter</a>
+    <div class=footer></div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+function hexToBytes(h){const o=new Uint8Array(h.length/2);for(let i=0;i<o.length;i++)o[i]=parseInt(h.substr(i*2,2),16);return o;}
+const usStep = u => (Math.max(-125, Math.min(125, Math.round((u - 1500) / 5))) + 256) & 0xFF;
+function setStatus(k,t){const s=$('status');s.className='banner '+k;s.innerHTML=t;}
+function flash(t){$('sMsg').textContent=t;setTimeout(()=>$('sMsg').textContent='',8000);}
+
+// Function list: the five sticks feed the channel order (rcmap); Arm and
+// Rescue become mode ranges on their switches. Defaults = Malcolm's own
+// transmitter layout — every field is editable.
+const FUNCS=[
+ {k:'ail', t:'Aileron (roll)',        letter:'A', def:1, stick:true},
+ {k:'ele', t:'Elevator (pitch)',      letter:'E', def:2, stick:true},
+ {k:'col', t:'Collective (pitch lever)',letter:'C', def:3, stick:true},
+ {k:'rud', t:'Rudder (tail)',         letter:'R', def:4, stick:true},
+ {k:'thr', t:'Throttle',              letter:'T', def:5, stick:true},
+ {k:'arm', t:'Arming switch',         letter:'',  def:6, stick:false},
+ {k:'rsc', t:'Rescue switch',         letter:'',  def:0, stick:false, optional:true},
+];
+const LS='rfTxCh.';
+
+function buildRows(){
+    const host=$('rows');
+    FUNCS.forEach(f=>{
+        const saved=parseInt(localStorage.getItem(LS+f.k)??'NaN');
+        const cur=Number.isInteger(saved)?saved:f.def;
+        const div=document.createElement('div'); div.className='fnRow'; div.id='row_'+f.k;
+        let opts=f.optional?'<option value=0>None</option>':'';
+        for(let c=1;c<=16;c++) opts+='<option value='+c+(c===cur?' selected':'')+'>Ch '+c+'</option>';
+        div.innerHTML='<div class=lab><b>'+f.t+'</b></div>'
+            +'<select id=s_'+f.k+'>'+opts+'</select>'
+            +'<span class=live id=l_'+f.k+'></span>'
+            +'<button class=detBtn id=d_'+f.k+'>Detect</button>';
+        host.appendChild(div);
+        $('s_'+f.k).addEventListener('change',()=>{localStorage.setItem(LS+f.k,$('s_'+f.k).value);preview();});
+        $('d_'+f.k).addEventListener('click',()=>detect(f));
+        if(f.optional&&!Number.isInteger(saved))$('s_'+f.k).value='0';
+    });
+    preview();
+}
+function chosen(k){return parseInt($('s_'+k).value);}
+function preview(){
+    // Show the resulting order as letters against transmitter channels 1-8.
+    const buf=Array(8).fill('·');
+    let ok=true;
+    for(const f of FUNCS){ if(!f.stick)continue;
+        const c=chosen(f.k);
+        if(c<1||c>8){ok=false;continue;}
+        if(buf[c-1]!=='·')ok=false; else buf[c-1]=f.letter;
+    }
+    $('preview').textContent='Your order: '+buf.join('')+(ok?'':'  ⚠ sticks must be on channels 1–8, no doubles');
+}
+
+// ---- live values + wiggle detection (raw receiver channels, pre-mapping) ----
+let lastCh=null, detTarget=null, detSamples=null, detUntil=0;
+async function poll(){
+    if(document.hidden)return;
+    try{
+        const d=await (await fetch('/api/channels.json',{cache:'no-store'})).json();
+        lastCh=d.ch;
+        for(const f of FUNCS){
+            const c=chosen(f.k), el=$('l_'+f.k);
+            el.textContent=(c>=1&&c<=16&&d.age_ms>=0&&d.age_ms<1500)?d.ch[c-1]+'µs':'';
+        }
+        if(detTarget&&d.age_ms>=0&&d.age_ms<1500){
+            for(let i=0;i<16;i++){
+                detSamples[i].min=Math.min(detSamples[i].min,d.ch[i]);
+                detSamples[i].max=Math.max(detSamples[i].max,d.ch[i]);
+            }
+            if(Date.now()>detUntil)finishDetect();
+        }
+    }catch(e){}
+}
+function detect(f){
+    if(detTarget)return;
+    if(!lastCh){flash('⚠️ No transmitter signal — switch the transmitter on');return;}
+    detTarget=f; detSamples=Array.from({length:16},()=>({min:99999,max:0}));
+    detUntil=Date.now()+4000;
+    $('row_'+f.k).classList.add('det');
+    $('d_'+f.k).textContent='Move it!';
+    setStatus('info','<b>Move the '+f.t+'</b> back and forth now (4 seconds)…');
+}
+function finishDetect(){
+    const f=detTarget; detTarget=null;
+    $('row_'+f.k).classList.remove('det');
+    $('d_'+f.k).textContent='Detect';
+    // Channels already given to OTHER functions are excluded, so wiggling a
+    // stick that shares a mix can't steal an assigned channel.
+    const taken=new Set(FUNCS.filter(x=>x.k!==f.k).map(x=>chosen(x.k)));
+    let best=-1,span=0;
+    for(let i=0;i<16;i++){
+        const s=detSamples[i].max-detSamples[i].min;
+        if(s>span&&!taken.has(i+1)){span=s;best=i;}
+    }
+    if(best>=0&&span>=80){
+        $('s_'+f.k).value=String(best+1);
+        localStorage.setItem(LS+f.k,String(best+1)); preview();
+        setStatus('good','✓ '+f.t+' = channel '+(best+1)+' (moved '+span+'µs)');
+    }else setStatus('bad','Nothing moved enough — try again with a bigger movement.');
+}
+
+// ---- save: rcmap (65) + Arm/Rescue mode ranges (35) ----
+function buildMap(){
+    // rcmap[function]=input index; function order A,E,R,C,T then aux.
+    const a=chosen('ail'),e=chosen('ele'),c=chosen('col'),r=chosen('rud'),t=chosen('thr');
+    const sticks=[a,e,c,r,t];
+    if(sticks.some(x=>x<1||x>8))throw new Error('stick channels must be 1–8');
+    if(new Set(sticks).size!==5)throw new Error('two functions share one channel');
+    const map=[a-1,e-1,r-1,c-1,t-1];              // A E R C T
+    for(let ch=0;ch<8;ch++) if(!map.includes(ch)) map.push(ch);
+    return map;
+}
+function fcChannelOf(txCh,map){                     // where a TX channel lands after mapping
+    const f=map.indexOf(txCh-1);
+    return f>=0?f+1:txCh;                           // beyond the map: unchanged
+}
+async function saveAll(){
+    let map;
+    try{ map=buildMap(); }catch(err){ flash('⚠️ '+err.message); return; }
+    const armTx=chosen('arm'), rscTx=chosen('rsc');
+    if(map.slice(0,5).includes(armTx-1)&&armTx>=1){ flash('⚠️ The arming switch shares a channel with a stick'); return; }
+    const armFc=fcChannelOf(armTx,map);
+    if(armFc<5||armFc>16){ flash('⚠️ Arming must end up on channel 5 or higher (it is a switch, not a stick)'); return; }
+    let rscFc=0;
+    if(rscTx>=1){
+        if(rscTx===armTx||map.slice(0,5).includes(rscTx-1)){ flash('⚠️ Rescue shares a channel with another function'); return; }
+        rscFc=fcChannelOf(rscTx,map);
+        if(rscFc<5||rscFc>16){ flash('⚠️ Rescue must end up on channel 5 or higher'); return; }
+    }
+    if(!(await LDRC.confirm(
+        'Write to the flight controller:\n'
+        +'• channel order '+map.slice(0,5).map(x=>x+1).join(',')+' (AERCT)\n'
+        +'• ARM on channel '+armFc+' (active 1600–2100µs)\n'
+        +(rscFc?'• RESCUE on channel '+rscFc+' (active 1600–2100µs)\n':'')
+        +'Blades off / motor unplugged?',
+        {title:'Save channels',icon:'🎛️',yes:'Write & verify'})))return;
+    setStatus('info','Writing…');
+    try{
+        // 1. channel order
+        await LDRC.msp(65, map.map(v=>v.toString(16).padStart(2,'0')).join(''));
+        // 2. mode slots: reuse the existing slot for a mode if it has one,
+        //    else take the first empty (permanentId 0 with an EMPTY range).
+        const modes=hexToBytes(await LDRC.msp(34));
+        const slotCount=Math.floor(modes.length/4);
+        const used=new Set();
+        function findSlot(perm){
+            for(let i=0;i<slotCount;i++){const o=i*4;
+                if(modes[o]===perm&&(perm!==0?true:modes[o+2]!==modes[o+3])&&!used.has(i))return i;}
+            for(let i=0;i<slotCount;i++){const o=i*4;
+                if(modes[o]===0&&modes[o+2]===modes[o+3]&&!used.has(i))return i;}
+            return -1;
+        }
+        async function writeMode(perm,fcCh){
+            const slot=findSlot(perm);
+            if(slot<0)throw new Error('no free mode slot');
+            used.add(slot);
+            const payload=[slot,perm,fcCh-5,usStep(1600),usStep(2100)]
+                .map(v=>v.toString(16).padStart(2,'0')).join('');
+            await LDRC.msp(35,payload);
+        }
+        await writeMode(0,armFc);                    // ARM
+        if(rscFc)await writeMode(53,rscFc);          // RESCUE
+        await LDRC.msp(250);
+        // 3. verify all of it by read-back
+        const mchk=hexToBytes(await LDRC.msp(64));
+        let ok=mchk.length>=8; for(let i=0;ok&&i<8;i++)if(mchk[i]!==map[i])ok=false;
+        const schk=hexToBytes(await LDRC.msp(34));
+        const hasMode=(perm,aux)=>{for(let o=0;o+3<schk.length;o+=4)
+            if(schk[o]===perm&&schk[o+1]===aux&&schk[o+2]!==schk[o+3])return true;return false;};
+        if(ok)ok=hasMode(0,armFc-5);
+        if(ok&&rscFc)ok=hasMode(53,rscFc-5);
+        if(ok){
+            setStatus('good','✓ Saved & verified — now flick the switches and watch them on the <a href="/rotorflight-modes">Switches page</a>.');
+            flash('✅ Saved & verified');
+        }else setStatus('bad','⚠ The flight controller adjusted something — check the Switches page.');
+    }catch(err){ setStatus('bad','Write failed: '+err.message); }
+}
+
+buildRows();
+poll(); setInterval(poll, 200);
+</script>
+<template id=helpContent><h2>Transmitter channels</h2>
+<p>Set the model up on your transmitter <b>first</b> &mdash; one channel per function &mdash; then tell the wizard which is which. Two ways:</p>
+<ul>
+<li><b>Pick from the lists</b> &mdash; the live &micro;s value next to each row confirms your choice moves when you move that control.</li>
+<li><b>Detect</b> &mdash; tap it, then waggle that stick or flick that switch for a few seconds. The receiver spots which channel moved.</li>
+</ul>
+<p><b>Save</b> writes it all to the flight controller and verifies by read-back: the channel order <i>(rcmap)</i>, the <b>Arm</b> switch and the <b>Rescue</b> switch <i>(Modes, active 1600&ndash;2100&thinsp;&micro;s)</i>. Fine-tune the switch ranges on the Switches page with its live marker.</p>
+<p>The five sticks must live on channels 1&ndash;8; switches can use any channel from 5 up. Choices are remembered on the phone as defaults for the next helicopter.</p>
+</template>
+</body>
+</html>
