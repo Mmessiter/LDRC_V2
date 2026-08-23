@@ -50,7 +50,7 @@
 
     <div class=card>
         <h2>Automatic fly mode</h2>
-        <p class=muted style="font-size:.85em;line-height:1.5">The safety net for forgetting <b>Fly now</b>: when the model is <b>armed and the sticks have been moving for 5 seconds</b>, the receiver switches its WiFi and Bluetooth off by itself &mdash; nothing interferes with the radio link. Everything comes back automatically after landing (transmitter quiet for a few seconds), exactly as with Fly now. Needs the arming channel set (Output protocol page).</p>
+        <p class=muted style="font-size:.85em;line-height:1.5">The safety net for forgetting <b>Fly now</b>: <b>3 seconds after the model is armed</b> &mdash; still on the ground, during spool-up &mdash; the receiver switches its WiFi and Bluetooth off by itself &mdash; nothing interferes with the radio link. <b>Disarming brings everything back</b> (so does switching the transmitter off after landing). With this on, the front page hides the Fly now button &mdash; not needed any more. Needs the arming channel set (Output protocol page).</p>
         <label style="display:flex;align-items:center;gap:.6em;font-weight:700;margin:.3em 0">
             <input type=checkbox id=afOn style="width:1.3em;height:1.3em"> Radios off automatically when flying starts
         </label>
@@ -154,7 +154,7 @@ $('fsClear').addEventListener('click', async () => {
         try {
             const j = await (await fetch('/api/autofly?on=' + ($('afOn').checked ? '1' : '0'),
                                          { method: 'POST' })).json();
-            $('afMsg').textContent = j.on ? '✅ On — radios switch off by themselves when a flight starts.'
+            $('afMsg').textContent = j.on ? '✅ On — radios off when you arm, back on when you disarm.'
                                           : 'Off — only the Fly now button switches the radios off.';
             setTimeout(() => { $('afMsg').textContent = ''; }, 6000);
         } catch (e) { $('afMsg').textContent = '⚠️ Could not save — try again'; }

@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.404-auto-fly";
+constexpr const char* FW_VERSION = "RXV2-0.9.406-arm-cycle";
 
 //*********************************************************************
 //  Auto-update manifest URLs

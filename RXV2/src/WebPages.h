@@ -2139,6 +2139,7 @@ inline void handleApiState() {
     { char vb[112]; snprintf(vb, sizeof(vb), ",\"vbat\":{\"pin\":%u,\"volts\":%.2f,\"ratio\":%.2f,\"cells\":%u,\"auto\":%s}",
                             vbatPin, vbatVolts, vbatRatio, vbatCellsCfg, vbatAuto ? "true" : "false"); j += vb; }
     j += ",\"arming_channel\":"; j += armingChannel;
+    j += ",\"autofly\":"; j += (autoFlyEnabled ? "true" : "false");
     // live armed state (so the config page can confirm the channel is right)
     { bool live = (rx.lastMillis != 0) && ((uint32_t)(millis() - rx.lastMillis) < 2000);
       bool armed = live && armingChannel >= 1 && armingChannel <= 16 && channelMicros[armingChannel - 1] > 1500;
