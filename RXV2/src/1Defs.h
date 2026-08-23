@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.422-erasable";
+constexpr const char* FW_VERSION = "RXV2-0.9.423-no-collisions";
 
 //*********************************************************************
 //  Auto-update manifest URLs
