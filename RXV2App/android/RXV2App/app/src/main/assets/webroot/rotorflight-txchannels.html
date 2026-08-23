@@ -73,13 +73,13 @@ function flash(t){$('sMsg').textContent=t;setTimeout(()=>$('sMsg').textContent='
 // Rescue become mode ranges on their switches. Defaults = Malcolm's own
 // transmitter layout — every field is editable.
 const FUNCS=[
- {k:'ail', t:'Aileron (roll)',        letter:'A', def:1, stick:true},
- {k:'ele', t:'Elevator (pitch)',      letter:'E', def:2, stick:true},
- {k:'col', t:'Collective (pitch lever)',letter:'C', def:3, stick:true},
- {k:'rud', t:'Rudder (tail)',         letter:'R', def:4, stick:true},
- {k:'thr', t:'Throttle',              letter:'T', def:5, stick:true},
- {k:'arm', t:'Arming switch',         letter:'',  def:6, stick:false},
- {k:'rsc', t:'Rescue switch',         letter:'',  def:0, stick:false, optional:true},
+ {k:'ail', t:'Aileron',        letter:'A', def:1, stick:true},
+ {k:'ele', t:'Elevator',      letter:'E', def:2, stick:true},
+ {k:'col', t:'Collective',    letter:'C', def:3, stick:true},
+ {k:'rud', t:'Rudder',        letter:'R', def:4, stick:true},
+ {k:'thr', t:'Throttle',      letter:'T', def:5, stick:true},
+ {k:'arm', t:'Arming switch', letter:'',  def:6, stick:false},
+ {k:'rsc', t:'Rescue switch', letter:'',  def:0, stick:false, optional:true},
 ];
 const LS='rfTxCh.';
 // More functions, same catalogue as the Switches page (Arm & Rescue have
@@ -112,9 +112,7 @@ function renderExtras(){
     const host=$('xrows'); host.innerHTML='';
     extras.forEach((x,i)=>{
         const modeName=(EXTRA_MODES.find(m=>m.id===x.perm)||{name:'function'}).name;
-        const xtaken=new Set();
-        for(const f of FUNCS)if(f.stick||f.k==='arm'){const c=curOf(f);if(c>=1)xtaken.add(c);}
-        const co=chOptions(x.ch,xtaken,false);
+        const co=chOptions(x.ch,takenFor('x'+i),'Choose\u2026');
         const div=document.createElement('div'); div.id='row_x'+i;
         if(x.editing){
             div.className='xRow';
@@ -178,36 +176,48 @@ async function removeExtra(i){
         else flash('✅ Removed (nothing saved on the flight controller)');
     }catch(e){ flash('Removed here — could not reach the flight controller to clear it'); }
 }
-function addExtra(){ extras.push({perm:40,ch:7,editing:true}); saveExtras(); renderExtras(); }
+function addExtra(){ extras.push({perm:40,ch:0,editing:true}); saveExtras(); renderExtras(); }
 
 function curOf(f){
     const saved=parseInt(localStorage.getItem(LS+f.k)??'NaN');
     return Number.isInteger(saved)?saved:f.def;
 }
-// Channels already given to other functions disappear from each dropdown
-// (Malcolm 2026-08-24: "make sure the channels offered do not include any
-// already taken"). Switch functions may still share with each other — only
-// sticks and Arm are exclusive. A row always keeps its own current value.
+// STRICT one-channel-one-function (Malcolm 2026-08-24, round two: "they
+// were both taken and should not be available"): every assigned channel is
+// excluded from every other dropdown, no sharing at all. A row keeps its own
+// value; conflicts inherited from before are resolved at load.
 function takenFor(k){
     const t=new Set();
-    const stickish=FUNCS.some(f=>f.k===k&&(f.stick||k==='arm'));
-    for(const f of FUNCS){
-        if(f.k===k)continue;
-        const c=curOf(f);
-        if(c<1)continue;
-        if(f.stick||f.k==='arm')t.add(c);                 // sticks+Arm exclude everyone
-        else if(stickish||k==='arm')t.add(c);             // rescue excludes sticks/arm only
-    }
-    if(stickish||k==='arm')for(const x of extras)if(x.ch>=1)t.add(x.ch);
+    for(const f of FUNCS){ if(f.k===k)continue; const c=curOf(f); if(c>=1)t.add(c); }
+    extras.forEach((x,i)=>{ if('x'+i!==k&&x.ch>=1)t.add(x.ch); });
     return t;
 }
-function chOptions(cur,taken,optional){
-    let o=optional?'<option value=0'+(cur===0?' selected':'')+'>None</option>':'';
+function chOptions(cur,taken,noneLabel){
+    let o=noneLabel?'<option value=0'+(cur===0?' selected':'')+'>'+noneLabel+'</option>':'';
     for(let c=1;c<=16;c++){
         if(taken.has(c)&&c!==cur)continue;
         o+='<option value='+c+(c===cur?' selected':'')+'>Ch '+c+'</option>';
     }
     return o;
+}
+// Repair any pre-existing double-bookings: first claimant keeps the channel,
+// the later one is reset (optional rows and extras go to "Choose…").
+function resolveConflicts(){
+    const claimed=new Set();
+    for(const f of FUNCS){
+        let c=curOf(f);
+        if(c>=1&&claimed.has(c)){
+            if(f.optional){ localStorage.setItem(LS+f.k,'0'); c=0; }
+            else { let n=1; while(claimed.has(n))n++; localStorage.setItem(LS+f.k,String(n)); c=n; }
+        }
+        if(c>=1)claimed.add(c);
+    }
+    let changed=false;
+    extras.forEach(x=>{
+        if(x.ch>=1&&claimed.has(x.ch)){ x.ch=0; changed=true; }
+        else if(x.ch>=1)claimed.add(x.ch);
+    });
+    if(changed)saveExtras();
 }
 function renderFixed(){
     const host=$('rows'); host.innerHTML='';
@@ -216,7 +226,7 @@ function renderFixed(){
         const div=document.createElement('div');
         div.className='fnRow'+(f.optional&&cur>=1?' x5':''); div.id='row_'+f.k;
         div.innerHTML='<div class=lab><b>'+f.t+'</b></div>'
-            +'<select id=s_'+f.k+'>'+chOptions(cur,takenFor(f.k),f.optional)+'</select>'
+            +'<select id=s_'+f.k+'>'+chOptions(cur,takenFor(f.k),f.optional?'None':null)+'</select>'
             +'<span class=live id=l_'+f.k+'></span>'
             +'<button class=detBtn id=d_'+f.k+'>Detect</button>'
             +(f.optional&&cur>=1?'<button class=delBtn id=r_'+f.k+' title="No '+f.t.toLowerCase()+'">&#10006;</button>':'');
@@ -338,12 +348,12 @@ async function saveAll(){
         rscFc=fcChannelOf(rscTx,map);
         if(rscFc<5||rscFc>16){ flash('⚠️ Rescue must end up on channel 5 or higher'); return; }
     }
-    // Extra functions: may share a switch with each other or with Rescue
-    // (two jobs on one switch is legitimate) — never with a stick or Arm.
-    const xw=[];
+    // Strictly one channel per function — added ones included.
+    const xw=[], xTaken=new Set([armTx,rscTx,...map.slice(0,5).map(v=>v+1)]);
     for(const x of extras){
         if(x.ch<1)continue;
-        if(map.slice(0,5).includes(x.ch-1)||x.ch===armTx){ flash('⚠️ An added function shares a channel with a stick or Arm'); return; }
+        if(xTaken.has(x.ch)){ flash('⚠️ Two functions are on one channel — every function needs its own'); return; }
+        xTaken.add(x.ch);
         const fc=fcChannelOf(x.ch,map);
         if(fc<5||fc>16){ flash('⚠️ Added functions must end up on channel 5 or higher'); return; }
         const base=(EXTRA_MODES.find(m=>m.id===x.perm)||{name:'function'}).name;
@@ -409,6 +419,7 @@ async function saveAll(){
     }catch(err){ setStatus('bad','Write failed: '+err.message); }
 }
 
+resolveConflicts();
 renderAll();
 poll(); setInterval(poll, 200);
 </script>
@@ -419,7 +430,7 @@ poll(); setInterval(poll, 200);
 <li><b>Detect</b> &mdash; tap it, then waggle that stick or flick that switch for a few seconds. The receiver spots which channel moved.</li>
 </ul>
 <p><b>Save</b> writes it all to the flight controller and verifies by read-back: the channel order <i>(rcmap)</i>, the <b>Arm</b> switch and the <b>Rescue</b> switch <i>(Modes, active 1600&ndash;2100&thinsp;&micro;s)</i>. Fine-tune the switch ranges on the Switches page with its live marker.</p>
-<p><b>Add another function</b> covers everything else &mdash; black box, beeper, self-level, governor overrides, user switches &mdash; each written as a switch range too. Give each one <b>your own name</b> (a User switch might really be &ldquo;Lower undercarriage&rdquo;); the name lives in the app, the flight controller sees the function. Two functions may share one switch; a stick or the Arm channel may not be shared. The <b>&#10006;</b> removes a function (Rescue included, for models without one) &mdash; and clears its switch range from the flight controller too, so experiments leave no trace. Channels already taken are simply not offered in the other dropdowns.</p>
+<p><b>Add another function</b> covers everything else &mdash; black box, beeper, self-level, governor overrides, user switches &mdash; each written as a switch range too. Give each one <b>your own name</b> (a User switch might really be &ldquo;Lower undercarriage&rdquo;); the name lives in the app, the flight controller sees the function. Every function needs its own channel &mdash; taken channels are simply not offered in the other dropdowns. The <b>&#10006;</b> removes a function (Rescue included, for models without one) &mdash; and clears its switch range from the flight controller too, so experiments leave no trace.</p>
 <p>The five sticks must live on channels 1&ndash;8; switches can use any channel from 5 up. Choices are remembered on the phone as defaults for the next helicopter.</p>
 </template>
 </body>

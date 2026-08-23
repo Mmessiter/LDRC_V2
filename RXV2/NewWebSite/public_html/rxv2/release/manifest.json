@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.424-strict-channels",
+      "url": "https://messiter.com/rxv2/release/v0.9.424/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.424/littlefs.bin",
+      "fs_md5": "e86415761bdedc6998fbdefcb4131c2f",
+      "notes": "Strictly one channel per function now: taken channels vanish from every other dropdown (no sharing at all), existing double-bookings are repaired on load (the later claimant resets to 'Choose...', keeping its name), and the stick labels lose their bracketed words - just Aileron, Elevator, Collective, Rudder, Throttle."
+    },
+    {
       "name": "RXV2-0.9.423-no-collisions",
       "url": "https://messiter.com/rxv2/release/v0.9.423/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.423/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.413/littlefs.bin",
       "fs_md5": "f0c57fbb5041d74f4e86ed0b72638307",
       "notes": "First-time basics gains 'Which way round is it mounted?' - the only two real Nexus positions: connections to the FRONT (standard) or to the BACK (yaw 180, board_align_yaw). Set FIRST, above level calibration, since level depends on it; applies after the in-page FC restart. Odd angles are reported as custom (configurator territory). Verified writes as always."
-    },
-    {
-      "name": "RXV2-0.9.412-tx-first",
-      "url": "https://messiter.com/rxv2/release/v0.9.412/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.412/littlefs.bin",
-      "fs_md5": "e1d8a280e242770954e81eadcc7b0c26",
-      "notes": "Transmitter first! New wizard step + page: set the model up on your transmitter, then tell the wizard which channel is which - or tap Detect and wiggle each control (the receiver spots the moving channel). Saving writes the flight controller's channel order (rcmap) and puts Arm & Rescue on your chosen switches (Modes, 1600-2100us), all verified by read-back. Your layout is remembered as the default for the next helicopter."
     }
   ]
 }
