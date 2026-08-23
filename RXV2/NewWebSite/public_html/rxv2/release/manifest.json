@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.399-single-back",
+      "url": "https://messiter.com/rxv2/release/v0.9.399/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.399/littlefs.bin",
+      "fs_md5": "4436a2f016fdf65c8aea98615a3f2c45",
+      "notes": "Fixed the twin 'Back to Rotorflight' buttons on the Rotorflight pages - each page keeps exactly one."
+    },
+    {
       "name": "RXV2-0.9.398-modes",
       "url": "https://messiter.com/rxv2/release/v0.9.398/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.398/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.388/littlefs.bin",
       "fs_md5": "75217bb486b250e73630d0de9efab79f",
       "notes": "Back up and Restore now refuse to run while the transmitter is ON, with a clear explanation - a backup taken under a live TX silently skipped the bank walk and saved less than everything (Malcolm's catch)."
-    },
-    {
-      "name": "RXV2-0.9.387-nav-dedup",
-      "url": "https://messiter.com/rxv2/release/v0.9.387/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.387/littlefs.bin",
-      "fs_md5": "f3c59338f999bdbdb8949df27bd49947",
-      "notes": "Tidier navigation (Malcolm's suggestion): the bottom 'Back to front screen' button is gone - the top-left Home button already does that job. Sub-pages keep their one-level-up Back button (e.g. WiFi back to Setup), which Home can't do."
     }
   ]
 }

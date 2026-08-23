@@ -1,4 +1,5 @@
 {
+ "RXV2-0.9.399-single-back": "Fixed the twin 'Back to Rotorflight' buttons on the Rotorflight pages - each page keeps exactly one.",
  "RXV2-0.9.398-modes": "NEW: Switches page (Rotorflight menu) - what each transmitter switch makes the flight controller do (Rotorflight's Modes tab, in plain English). See, change, add and remove switch actions - Arm, Rescue, self-level, governor and more - each save verified. The Rescue page's switch card now links straight to the right row here.",
  "RXV2-0.9.397-rescue-switch": "Rescue screen now shows WHICH transmitter channel triggers rescue (read from the flight controller's Modes table), with the active range - and a loud warning if NO switch is assigned, because then rescue can never fire (Malcolm: 'it's critical').",
  "RXV2-0.9.396-rescue-xref": "Rescue screen: every label now also shows Rotorflight's own name for it in brackets (e.g. Levelling strength = Level gain), so you can cross-reference the configurator with no guesswork.",
