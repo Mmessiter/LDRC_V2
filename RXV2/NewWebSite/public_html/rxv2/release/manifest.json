@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.402-drag-handles",
+      "url": "https://messiter.com/rxv2/release/v0.9.402/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.402/littlefs.bin",
+      "fs_md5": "f1ead0c6e8eea1ad250e353d1b2b0897",
+      "notes": "Switches page polish: the blue zone's round ends can now be DRAGGED with a finger to set the range (numbers follow along, snapped to 5 \u00b5s), and the live channel marker is a slim red line (green inside the zone)."
+    },
+    {
       "name": "RXV2-0.9.401-range-bars",
       "url": "https://messiter.com/rxv2/release/v0.9.401/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.401/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.391/littlefs.bin",
       "fs_md5": "af30ed78f3cc1cd18ab19a1f1c265383",
       "notes": "Tidier View-channels page: the live channel bars and the three unrelated settings (gear ratio, battery voltage divider, failsafe) are now grouped under clear 'Live channels' and 'Settings' section headings, each setting with its own subheading."
-    },
-    {
-      "name": "RXV2-0.9.390-tx-vbat-slow",
-      "url": "https://messiter.com/rxv2/release/v0.9.390/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.390/littlefs.bin",
-      "fs_md5": "74fad0ace23e60459da55c3b62396b0f",
-      "notes": "The battery number on the V1 transmitter's screen now gets its own extra-slow (~7 s) averaging so it sits dead-still up there, while the phone app and the flight-log voltage trace keep the quicker, more responsive reading. Best of both."
     }
   ]
 }
