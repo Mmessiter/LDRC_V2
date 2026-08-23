@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.419-esc-words",
+      "url": "https://messiter.com/rxv2/release/v0.9.419/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.419/littlefs.bin",
+      "fs_md5": "5a23729c5afc335bddf20e68d6e8c051",
+      "notes": "Clearer ESC wording after Malcolm went looking for Scorpion under ESC signal: the SIGNAL row now says heli ESCs (Scorpion, Kontronik, YGE, Hobbywing) use Normal PWM and DShot is for drone-style ESCs; the TELEMETRY row now says that is where the brand goes."
+    },
+    {
       "name": "RXV2-0.9.418-complete-menu",
       "url": "https://messiter.com/rxv2/release/v0.9.418/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.418/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.408/littlefs.bin",
       "fs_md5": "f1e5bf8dfe504bafe2228980ab71e961",
       "notes": "The NEW HELICOPTER wizard begins: a step-by-step from-scratch setup checklist (blades off!) plus the new First-time basics page - level calibration (accelerometer), governor/telemetry/ESC-sensor features, ESC protocol + motor poles + gear ratios, ESC telemetry brand, battery cells/capacity/voltage sources, and one-tap standard channel order (AERCT123). All writes verified by read-back; restart-to-apply handled in-page."
-    },
-    {
-      "name": "RXV2-0.9.407-arm-self-taught",
-      "url": "https://messiter.com/rxv2/release/v0.9.407/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.407/littlefs.bin",
-      "fs_md5": "7f555557ea22ca960231165bb0963754",
-      "notes": "Rotorflight takes over Fly now completely: the receiver reads the ARM switch channel straight from the flight controller (MSP mode ranges) - no setup needed. Fly now then hides itself and the arming switch does it all: arm = radios off (3 s, on the ground), disarm = radios back. A manually set arming channel still wins; non-Rotorflight models are unchanged."
     }
   ]
 }

@@ -75,9 +75,9 @@ h2 .hint{font-weight:400;font-size:.7em;color:#5d7a8c;display:block;margin-top:.
 
     <div class=card id=motor>
         <h2>Motor &amp; ESC <span class=hint>how the flight controller talks to the ESC (Motor)</span></h2>
-        <div class=fRow><div class=lab><b>ESC signal</b><span>DShot600 for most modern ESCs <i>(motor_pwm_protocol)</i></span></div>
+        <div class=fRow><div class=lab><b>ESC signal</b><span>how the throttle is sent, not the brand: heli ESCs (Scorpion, Kontronik, YGE, Hobbywing&hellip;) use <b>Normal PWM</b>; DShot is for drone-style ESCs <i>(motor_pwm_protocol)</i></span></div>
             <select id=m_proto>
-                <option value=0>Normal PWM</option><option value=1>OneShot125</option>
+                <option value=0>Normal PWM (most heli ESCs)</option><option value=1>OneShot125</option>
                 <option value=5>DShot150</option><option value=6>DShot300</option>
                 <option value=7>DShot600</option><option value=10>Off (disabled)</option>
             </select></div>
@@ -88,7 +88,7 @@ h2 .hint{font-weight:400;font-size:.7em;color:#5d7a8c;display:block;margin-top:.
         <div class=fRow><div class=lab><b>Tail gear ratio</b><span>tail drive : main shaft <i>(tail_rotor_gear_ratio)</i></span></div>
             <span style="white-space:nowrap"><input id=m_tgN type=number min=1 max=50000 style="width:4.5em"> : <input id=m_tgD type=number min=1 max=50000 style="width:4.5em"></span></div>
         <h2 style="margin-top:.8em">ESC telemetry wire <span class=hint>which brand&rsquo;s telemetry language the ESC speaks (ESC sensor)</span></h2>
-        <div class=fRow><div class=lab><b>ESC telemetry protocol</b><span><i>(esc_sensor_protocol)</i></span></div>
+        <div class=fRow><div class=lab><b>ESC telemetry protocol</b><span>this is where your ESC&rsquo;s <b>brand</b> goes &mdash; Scorpion, Kontronik&hellip; <i>(esc_sensor_protocol)</i></span></div>
             <select id=e_proto>
                 <option value=0>None</option><option value=1>BLHeli32</option>
                 <option value=2>Hobbywing V4</option><option value=3>Hobbywing V5</option>
@@ -360,7 +360,7 @@ load();
 <li><b>Mounting direction</b> &mdash; connectors to the front (standard) or to the back (yaw 180&deg;). Set it FIRST: level calibration and every gyro reaction depend on it. Applies after a restart.</li>
 <li><b>Level calibration</b> &mdash; sit the model flat and still, tap the button. Roll/pitch above should then read near 0&deg;.</li>
 <li><b>What the flight controller uses</b> &mdash; the big on/off switches. Governor and ESC telemetry are the usual ones for an electric heli. The receiver link is locked on &mdash; it is how this page talks to the flight controller. Changes apply after a restart (a button appears).</li>
-<li><b>Motor &amp; ESC</b> &mdash; how the ESC is driven (DShot600 for most modern ESCs), the motor pole count and gear ratios (needed for true head speed), and which brand of ESC telemetry to listen for.</li>
+<li><b>Motor &amp; ESC</b> &mdash; two different questions: the <b>signal</b> (how throttle is sent &mdash; Normal PWM for most heli ESCs like Scorpion, Kontronik or YGE; DShot for drone-style ESCs) and the <b>telemetry protocol</b> (your ESC&rsquo;s brand). Plus motor poles and gear ratios, needed for true head speed.</li>
 <li><b>Battery</b> &mdash; cells, capacity and where volts/amps are measured, so warnings mean something.</li>
 <li><b>Channel order</b> &mdash; should read AERCT123 with this receiver. Fix it with one tap if not.</li>
 </ul>
