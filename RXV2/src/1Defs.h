@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.425-arming-plain";
+constexpr const char* FW_VERSION = "RXV2-0.9.426-rescue-plain";
 
 //*********************************************************************
 //  Auto-update manifest URLs
