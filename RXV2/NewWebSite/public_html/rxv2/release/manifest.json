@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.414-tidy-hub",
+      "url": "https://messiter.com/rxv2/release/v0.9.414/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.414/littlefs.bin",
+      "fs_md5": "a54f38207bbcff898003a8889d3a2cc9",
+      "notes": "The Rotorflight page, tidied into three groups now that it has grown: STEP-BY-STEP GUIDES (New helicopter, Tuning), INDIVIDUAL SETTINGS (transmitter channels through PIDs, roughly in setup order), and BACKUP & RESTORE with its own heading. Nothing moved pages - just a calmer front door."
+    },
+    {
       "name": "RXV2-0.9.413-mounting",
       "url": "https://messiter.com/rxv2/release/v0.9.413/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.413/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.402/littlefs.bin",
       "fs_md5": "f1ead0c6e8eea1ad250e353d1b2b0897",
       "notes": "Switches page polish: the blue zone's round ends can now be DRAGGED with a finger to set the range (numbers follow along, snapped to 5 \u00b5s), and the live channel marker is a slim red line (green inside the zone)."
-    },
-    {
-      "name": "RXV2-0.9.401-range-bars",
-      "url": "https://messiter.com/rxv2/release/v0.9.401/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.401/littlefs.bin",
-      "fs_md5": "b2869868a2650c9b2ecca354248f3c09",
-      "notes": "Switches page: each row now shows the configurator-style range bar - the blue zone is where the function is ON, and a LIVE dot shows the channel's actual position (green when inside the zone). Flick a switch and watch it work."
     }
   ]
 }
