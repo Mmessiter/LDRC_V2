@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.409-fw-note",
+      "url": "https://messiter.com/rxv2/release/v0.9.409/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.409/littlefs.bin",
+      "fs_md5": "c027d824ee1adebf5577499a5292d822",
+      "notes": "New-helicopter checklist gains step 1: a note that a fresh flight controller already has Rotorflight on it (fine to fly), and that installing the very latest firmware first is a one-time USB job with the Rotorflight Configurator on a computer - flashing cannot be done from the phone. A desktop wizard that flashes too is planned."
+    },
+    {
       "name": "RXV2-0.9.408-new-heli",
       "url": "https://messiter.com/rxv2/release/v0.9.408/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.408/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.397/littlefs.bin",
       "fs_md5": "e2ccd2bdcf6891845f8fbf1e4b61581e",
       "notes": "Rescue screen now shows WHICH transmitter channel triggers rescue (read from the flight controller's Modes table), with the active range - and a loud warning if NO switch is assigned, because then rescue can never fire (Malcolm: 'it's critical')."
-    },
-    {
-      "name": "RXV2-0.9.396-rescue-xref",
-      "url": "https://messiter.com/rxv2/release/v0.9.396/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.396/littlefs.bin",
-      "fs_md5": "357fba4768f5f7d5265f54d94c9e2cba",
-      "notes": "Rescue screen: every label now also shows Rotorflight's own name for it in brackets (e.g. Levelling strength = Level gain), so you can cross-reference the configurator with no guesswork."
     }
   ]
 }

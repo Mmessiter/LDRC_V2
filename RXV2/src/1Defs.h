@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.408-new-heli";
+constexpr const char* FW_VERSION = "RXV2-0.9.409-fw-note";
 
 //*********************************************************************
 //  Auto-update manifest URLs
