@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.401-range-bars";
+constexpr const char* FW_VERSION = "RXV2-0.9.402-drag-handles";
 
 //*********************************************************************
 //  Auto-update manifest URLs
