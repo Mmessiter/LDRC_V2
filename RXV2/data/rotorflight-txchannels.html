@@ -78,7 +78,7 @@ const FUNCS=[
  {k:'col', t:'Collective',    letter:'C', def:3, stick:true},
  {k:'rud', t:'Rudder',        letter:'R', def:4, stick:true},
  {k:'thr', t:'Throttle',      letter:'T', def:5, stick:true},
- {k:'arm', t:'Arming switch', letter:'',  def:6, stick:false},
+ {k:'arm', t:'Arming',        letter:'',  def:6, stick:false},
  {k:'rsc', t:'Rescue switch', letter:'',  def:0, stick:false, optional:true},
 ];
 const LS='rfTxCh.';
@@ -339,7 +339,7 @@ async function saveAll(){
     let map;
     try{ map=buildMap(); }catch(err){ flash('⚠️ '+err.message); return; }
     const armTx=chosen('arm'), rscTx=chosen('rsc');
-    if(map.slice(0,5).includes(armTx-1)&&armTx>=1){ flash('⚠️ The arming switch shares a channel with a stick'); return; }
+    if(map.slice(0,5).includes(armTx-1)&&armTx>=1){ flash('⚠️ Arming shares a channel with a stick'); return; }
     const armFc=fcChannelOf(armTx,map);
     if(armFc<5||armFc>16){ flash('⚠️ Arming must end up on channel 5 or higher (it is a switch, not a stick)'); return; }
     let rscFc=0;
