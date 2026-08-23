@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.397-rescue-switch";
+constexpr const char* FW_VERSION = "RXV2-0.9.398-modes";
 
 //*********************************************************************
 //  Auto-update manifest URLs
