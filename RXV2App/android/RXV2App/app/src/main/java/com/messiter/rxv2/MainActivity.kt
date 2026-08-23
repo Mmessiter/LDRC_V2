@@ -936,7 +936,7 @@ class MainActivity : AppCompatActivity() {
                 val origPid = if (st.length >= 54) st.substring(48, 50).toIntOrNull(16) else null
                 val origRate = if (st.length >= 54) st.substring(52, 54).toIntOrNull(16) else null
                 if (origPid != null && origRate != null) {
-                    snapTotal += 7 + 4 * 5 + 4 * 3 + 2   // 142 + mixer(5) + servos + sweeps
+                    snapTotal += 7 + 4 * 6 + 4 * 3 + 2   // 142 + mixer(5) + servos + rescue + sweeps
                     req("/api/msp?fn=142")       // governor global — bankless
                     // Mixer — Travel extents' blocks, bankless (Malcolm
                     // 2026-08-15: the backup must not forget yesterday's
@@ -953,7 +953,7 @@ class MainActivity : AppCompatActivity() {
                         if (txAppeared()) { aborted = true; break }
                         if (b != curPid) { selectBank(b); curPid = b }
                         else SessionCache.noteBankSelect("%02X".format(b))
-                        req("/api/msp?fn=112"); req("/api/msp?fn=94"); req("/api/msp?fn=148")
+                        req("/api/msp?fn=112"); req("/api/msp?fn=94"); req("/api/msp?fn=148"); req("/api/msp?fn=146")
                     }
                     if (!aborted) for (r in 0..3) {
                         if (txAppeared()) { aborted = true; break }

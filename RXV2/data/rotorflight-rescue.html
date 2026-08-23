@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name=theme-color content="#5fa099">
+<meta name=apple-mobile-web-app-capable content=yes>
+<meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
+<meta name=apple-mobile-web-app-title content="LDRC RX V2">
+<title>Rescue &middot; LDRC RX V2</title>
+<link rel=stylesheet href="/style.css?v=172">
+<script src="/app.js?v=177" defer></script>
+<style>
+.banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
+.banner.info{background:#c8d2dc;color:#3a5165}
+.banner.good{background:#a8d29a;color:#2a4d1f}
+.banner.bad {background:#dca08c;color:#5c2a1a}
+.banner.warn{background:#e8cf8f;color:#5c4a1a}
+.profRow{display:flex;gap:.5em;margin:.3em 0}
+.profBtn{flex:1;padding:.7em;border:0;border-radius:10px;font-size:1.1em;font-weight:600;background:#cdd6df;color:#3a5165;cursor:pointer}
+.profBtn.active{background:#5fa099;color:#fff}
+.fRow{display:grid;grid-template-columns:1fr auto;gap:.5em .8em;align-items:center;margin:.35em 0}
+.fRow .lab b{display:block}.fRow .lab span{font-size:.8em;color:#5d7a8c}
+.fRow input[type=number]{width:6em;padding:.5em;font-size:1em;border:1px solid #b8c7d0;border-radius:6px;text-align:center}
+.fRow select{padding:.5em;font-size:1em;border:1px solid #b8c7d0;border-radius:6px}
+.saveBtn{width:100%;margin-top:.6em;padding:.75em;border:0;border-radius:10px;background:#6cab5e;color:#fff;font-size:1.05em;font-weight:700;cursor:pointer}
+.saveBtn:disabled{opacity:.5}
+.sMsg{text-align:center;font-size:.85em;min-height:1.2em;margin-top:.3em;font-weight:600}
+h2 .hint{font-weight:400;font-size:.7em;color:#5d7a8c;display:block;margin-top:.1em}
+</style>
+</head>
+<body class=hasFab>
+<button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
+<div class=bg-photo aria-hidden=true></div>
+<div class=bg-wash  aria-hidden=true></div>
+<div class=container>
+    <h1>Rescue</h1>
+    <div id=verBanner class="banner warn" style="display:none"><span id=verBannerMsg></span></div>
+    <div id=status class="banner info">loading&hellip;</div>
+
+    <div class=card>
+        <h2>Bank</h2>
+        <div class=profRow>
+            <button class=profBtn onclick="selectBank(0)" id=pb0>1</button>
+            <button class=profBtn onclick="selectBank(1)" id=pb1>2</button>
+            <button class=profBtn onclick="selectBank(2)" id=pb2>3</button>
+            <button class=profBtn onclick="selectBank(3)" id=pb3>4</button>
+        </div>
+    </div>
+
+    <div class=card>
+        <h2>What Rescue does</h2>
+        <div class=fRow>
+            <div class=lab><b>Rescue mode</b><span>what happens when you flick the rescue switch</span></div>
+            <select id=r_mode>
+                <option value=0>Off</option>
+                <option value=1>Level &amp; climb</option>
+                <option value=2>Level &amp; hold height</option>
+            </select>
+        </div>
+        <div class=fRow>
+            <div class=lab><b>Flip upright if inverted</b><span>roll the model level-side-up before climbing</span></div>
+            <select id=r_flip><option value=0>Off</option><option value=1>On</option></select>
+        </div>
+        <div class=fRow><div class=lab><b>Flip strength</b><span>how hard it rolls upright (5&ndash;250)</span></div><input id=r_flipg type=number min=5 max=250></div>
+        <div class=fRow><div class=lab><b>Levelling strength</b><span>how firmly it levels the model (5&ndash;250)</span></div><input id=r_levelg type=number min=5 max=250></div>
+    </div>
+
+    <div class=card>
+        <h2>Timing <span class=hint>how long each stage lasts, in seconds</span></h2>
+        <div class=fRow><div class=lab><b>Pull-up time</b><span>brief hard pull-up to arrest a dive first</span></div><input id=r_put type=number min=0 max=25 step=0.1></div>
+        <div class=fRow><div class=lab><b>Climb time</b><span>0 = climb until you release rescue</span></div><input id=r_ct type=number min=0 max=25 step=0.1></div>
+        <div class=fRow><div class=lab><b>Flip time</b><span>time allowed to flip upright</span></div><input id=r_ft type=number min=0 max=25 step=0.1></div>
+        <div class=fRow><div class=lab><b>Exit time</b><span>gentle hand-back when you release rescue</span></div><input id=r_et type=number min=0 max=25 step=0.1></div>
+    </div>
+
+    <div class=card>
+        <h2>Collective <span class=hint>Rotorflight units, 0&ndash;1000 &mdash; higher = more blade pitch</span></h2>
+        <div class=fRow><div class=lab><b>Pull-up collective</b><span>bite during the initial pull-up</span></div><input id=r_puc type=number min=0 max=1000></div>
+        <div class=fRow><div class=lab><b>Climb collective</b><span>how hard it climbs away</span></div><input id=r_cc type=number min=0 max=1000></div>
+        <div class=fRow><div class=lab><b>Hover collective</b><span>bite to hold a hover (height-hold mode)</span></div><input id=r_hc type=number min=0 max=1000></div>
+        <div class=fRow><div class=lab><b>Maximum collective</b><span>a ceiling rescue will never exceed (1&ndash;1000)</span></div><input id=r_maxc type=number min=1 max=1000></div>
+    </div>
+
+    <div class=card>
+        <h2>Hold height <span class=hint>only used in &ldquo;Level &amp; hold height&rdquo; mode (needs an altitude sensor)</span></h2>
+        <div class=fRow><div class=lab><b>Hold height</b><span>metres above the point rescue engaged (0&ndash;100)</span></div><input id=r_ha type=number min=0 max=100 step=0.1></div>
+        <div class=fRow><div class=lab><b>Height hold &mdash; P</b><span>how strongly it corrects height error</span></div><input id=r_ap type=number min=0 max=10000></div>
+        <div class=fRow><div class=lab><b>Height hold &mdash; I</b><span>trims out steady height offset</span></div><input id=r_ai type=number min=0 max=10000></div>
+        <div class=fRow><div class=lab><b>Height hold &mdash; D</b><span>damps height overshoot</span></div><input id=r_ad type=number min=0 max=10000></div>
+    </div>
+
+    <div class=card>
+        <h2>Advanced <span class=hint>how sharply rescue is allowed to move the model</span></h2>
+        <div class=fRow><div class=lab><b>Max turn rate</b><span>deg/s cap while levelling (1&ndash;1000)</span></div><input id=r_msr type=number min=1 max=1000></div>
+        <div class=fRow><div class=lab><b>Max turn acceleration</b><span>how fast it may build that rate (1&ndash;10000)</span></div><input id=r_msa type=number min=1 max=10000></div>
+    </div>
+
+    <button class=saveBtn id=saveBtn onclick="save()">Save to flight controller</button>
+    <div id=sMsg class=sMsg></div>
+    <a class="btn btn-bb" href="/rotorflight" style="margin-top:.8em"><span class=ico>&#11013;&#65039;</span>Back to Rotorflight</a>
+    <div class=footer></div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const PROFILE_BYTES = 28;
+let currentBank = parseInt(localStorage.getItem('rfPidProfile') || '0', 10) || 0;
+let editable = true, cachedRaw = null, dirty = false;
+
+function hexToBytes(h){const o=new Uint8Array(h.length/2);for(let i=0;i<o.length;i++)o[i]=parseInt(h.substr(i*2,2),16);return o;}
+function bytesToHex(b){return Array.from(b).map(x=>x.toString(16).padStart(2,'0')).join('');}
+const rdU16=(b,o)=>b[o]|(b[o+1]<<8);
+const wrU16=(b,o,v)=>{v=Math.max(0,Math.min(65535,Math.round(v)));b[o]=v&0xff;b[o+1]=(v>>8)&0xff;};
+function setStatus(k,t){const s=$('status');s.className='banner '+k;s.textContent=t;}
+function paintBankButtons(){for(let i=0;i<4;i++)$('pb'+i).classList.toggle('active',i===currentBank);}
+
+async function selectBank(idx){
+    if(idx===currentBank)return;
+    if(dirty && !(await LDRC.confirm('Discard unsaved changes and switch bank?',{title:'Unsaved changes',icon:'⚠️',yes:'Discard & switch',kind:'warn'})))return;
+    try{ await LDRC.msp(210, idx.toString(16).padStart(2,'0')); currentBank=idx;
+         localStorage.setItem('rfPidProfile',String(idx)); paintBankButtons(); await load(); }
+    catch(e){ setStatus('bad','Bank switch failed: '+e.message); }
+}
+
+async function load(){
+    if (window.LDRC && LDRC.replayReady) await LDRC.replayReady;
+    try{
+        const st=await (await fetch('/api/state.json',{cache:'no-store'})).json();
+        const api=(st.fcinfo.api_major*100)+st.fcinfo.api_minor;
+        editable=(api>=1209);
+        if(!editable && st.fcinfo.rf_major>0){
+            $('verBanner').style.display='';
+            $('verBannerMsg').textContent='Rotorflight '+st.fcinfo.rf_major+'.'+st.fcinfo.rf_minor+' — editing Rescue needs Rotorflight 2.3.';
+        } else $('verBanner').style.display='none';
+    }catch(e){}
+    setStatus('info', LDRC.replay?'Reading from the phone…':'Reading Rescue from the flight controller…');
+    try{
+        await LDRC.msp(210, currentBank.toString(16).padStart(2,'0'));
+        const b=hexToBytes(await LDRC.msp(146));
+        if(b.length<PROFILE_BYTES) throw new Error('short response '+b.length+' (need '+PROFILE_BYTES+' — is the FC on Rotorflight 2.3?)');
+        cachedRaw=b.slice(0,PROFILE_BYTES);
+        $('r_mode').value=b[0]; $('r_flip').value=b[1]; $('r_flipg').value=b[2]; $('r_levelg').value=b[3];
+        $('r_put').value=b[4]/10; $('r_ct').value=b[5]/10; $('r_ft').value=b[6]/10; $('r_et').value=b[7]/10;
+        $('r_puc').value=rdU16(b,8); $('r_cc').value=rdU16(b,10); $('r_hc').value=rdU16(b,12);
+        $('r_ha').value=rdU16(b,14)/100;
+        $('r_ap').value=rdU16(b,16); $('r_ai').value=rdU16(b,18); $('r_ad').value=rdU16(b,20);
+        $('r_maxc').value=rdU16(b,22); $('r_msr').value=rdU16(b,24); $('r_msa').value=rdU16(b,26);
+        $('saveBtn').disabled=!editable;
+        document.querySelectorAll('.fRow input,.fRow select').forEach(el=>el.disabled=!editable);
+        dirty=false; paintBankButtons();
+        setStatus('good', (LDRC.replay?'✓ Loaded from the phone (bank ':'✓ Loaded from flight controller (bank ')+(currentBank+1)+')');
+    }catch(e){ setStatus('bad','Read failed: '+e.message); }
+}
+
+function buildPayload(){
+    const b=new Uint8Array(cachedRaw);
+    const u8=(id,mn,mx)=>Math.max(mn,Math.min(mx,parseInt($(id).value||'0')));
+    const t10=(id)=>Math.max(0,Math.min(250,Math.round(parseFloat($(id).value||'0')*10)));
+    b[0]=u8('r_mode',0,2); b[1]=u8('r_flip',0,1); b[2]=u8('r_flipg',5,250); b[3]=u8('r_levelg',5,250);
+    b[4]=t10('r_put'); b[5]=t10('r_ct'); b[6]=t10('r_ft'); b[7]=t10('r_et');
+    wrU16(b,8,u8('r_puc',0,1000)); wrU16(b,10,u8('r_cc',0,1000)); wrU16(b,12,u8('r_hc',0,1000));
+    wrU16(b,14,Math.round(parseFloat($('r_ha').value||'0')*100));
+    wrU16(b,16,u8('r_ap',0,10000)); wrU16(b,18,u8('r_ai',0,10000)); wrU16(b,20,u8('r_ad',0,10000));
+    wrU16(b,22,u8('r_maxc',1,1000)); wrU16(b,24,u8('r_msr',1,1000)); wrU16(b,26,u8('r_msa',1,10000));
+    return b;
+}
+
+async function save(){
+    if(!editable){ setStatus('bad','Disabled on this firmware version'); return; }
+    if(!cachedRaw){ setStatus('bad','Read the flight controller first'); return; }
+    if(!(await LDRC.confirm(LDRC.replay
+        ? 'Save this Rescue setup on the phone? It will be offered for sending at the next connection.'
+        : 'Write this Rescue setup to the flight controller (bank '+(currentBank+1)+')?',
+        {title:'Save Rescue',icon:'🛟',yes:LDRC.replay?'Save to phone':'Save to flight controller'})))return;
+    setStatus('info','Writing Rescue…');
+    const bytes=buildPayload();
+    try{
+        await LDRC.msp(210, currentBank.toString(16).padStart(2,'0'));
+        await LDRC.msp(147, bytesToHex(bytes));   // MSP_SET_RESCUE_PROFILE
+        await LDRC.msp(250);                       // EEPROM_WRITE
+        await LDRC.msp(210, currentBank.toString(16).padStart(2,'0'));
+        const chk=hexToBytes(await LDRC.msp(146));
+        let ok=chk.length>=PROFILE_BYTES;
+        for(let i=0;ok&&i<PROFILE_BYTES;i++) if(bytes[i]!==chk[i]) ok=false;
+        if(ok){ cachedRaw=bytes; dirty=false;
+            setStatus('good', LDRC.replay?'✓ Saved on the phone':'✓ Saved & verified by read-back');
+            $('sMsg').textContent='✅ Saved & verified'; setTimeout(()=>$('sMsg').textContent='',6000);
+        } else {
+            setStatus('bad','⚠ Flight controller adjusted the values — re-reading'); await load();
+        }
+    }catch(e){ setStatus('bad','Write failed: '+e.message); }
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+    document.querySelectorAll('.fRow input,.fRow select').forEach(el=>el.addEventListener('input',()=>{dirty=true;}));
+    load();
+});
+</script>
+<template id=helpContent><h2>Rescue</h2>
+<p>Rescue is your safety net: flick a switch and the flight controller takes over &mdash; it levels the model and climbs away, so a disorientating moment doesn&rsquo;t become a crash. Set it per <b>bank</b> (flight mode).</p>
+<ul>
+<li><b>Rescue mode</b> &mdash; <i>Level &amp; climb</i> levels then climbs on gyros alone; <i>Level &amp; hold height</i> also holds altitude (needs an altitude sensor).</li>
+<li><b>Flip upright</b> &mdash; if you were inverted, roll level-side-up first.</li>
+<li><b>Timing</b> &mdash; the length of each stage, in seconds. Climb time <b>0</b> means climb until you let go of the rescue switch.</li>
+<li><b>Collective</b> &mdash; how much blade pitch (bite) rescue uses at each stage, in Rotorflight&rsquo;s 0&ndash;1000 units. <b>Maximum collective</b> is a hard ceiling.</li>
+<li><b>Hold height</b> &mdash; only for the height-hold mode.</li>
+</ul>
+<p>Every <b>Save</b> writes this bank, stores it in the flight controller&rsquo;s memory, reads it back and confirms the bytes match. Test rescue at a <b>safe height</b> before trusting it low down.</p>
+</template>
+</body>
+</html>

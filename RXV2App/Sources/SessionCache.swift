@@ -102,7 +102,7 @@ final class SessionCache {
         if b & 0x80 != 0 { rateBank = b & 0x7f } else { pidBank = b }
     }
 
-    private static let pidBankFns: Set<String> = ["112", "94", "148"]
+    private static let pidBankFns: Set<String> = ["112", "94", "148", "146"]
 
     private func keyFor(_ pathAndQuery: String) -> String {
         guard pathAndQuery.hasPrefix("/api/msp?"), !pathAndQuery.contains("data=") else {
@@ -314,7 +314,7 @@ extension SessionCache {
 
     private static let restoreKeyPrefixes =
         ["/api/msp?fn=112&bank=", "/api/msp?fn=94&bank=",
-         "/api/msp?fn=148&bank=", "/api/msp?fn=111&bank=",
+         "/api/msp?fn=148&bank=", "/api/msp?fn=146&bank=", "/api/msp?fn=111&bank=",
          "/api/msp?fn=174&data="]   // mixer inputs (Travel extents)
 
     /// Freeze the tuning reads currently in the rolling cache.
@@ -358,6 +358,7 @@ extension SessionCache {
             if let h = hexAt("/api/msp?fn=112&bank=\(b)") { out.append(RestoreItem(selectByte: b, writeFn: 202, readFn: 112, hex: h, label: "PIDs bank \(b + 1)")) }
             if let h = hexAt("/api/msp?fn=94&bank=\(b)")  { out.append(RestoreItem(selectByte: b, writeFn: 95,  readFn: 94,  hex: h, label: "advanced PIDs bank \(b + 1)")) }
             if let h = hexAt("/api/msp?fn=148&bank=\(b)") { out.append(RestoreItem(selectByte: b, writeFn: 149, readFn: 148, hex: h, label: "governor profile bank \(b + 1)")) }
+            if let h = hexAt("/api/msp?fn=146&bank=\(b)") { out.append(RestoreItem(selectByte: b, writeFn: 147, readFn: 146, hex: h, label: "rescue bank \(b + 1)")) }
         }
         for r in 0...3 {
             if let h = hexAt("/api/msp?fn=111&bank=\(r)") { out.append(RestoreItem(selectByte: 0x80 | r, writeFn: 204, readFn: 111, hex: h, label: "rates bank \(r + 1)")) }
@@ -608,7 +609,7 @@ final class SessionPrefetcher {
                let hex = String(data: st, encoding: .utf8), hex.count >= 54,
                let origPid = Int(hex.dropFirst(48).prefix(2), radix: 16),
                let origRate = Int(hex.dropFirst(52).prefix(2), radix: 16) {
-                total += 7 + 4 * 5 + 4 * 3 + 2   // 142 + mixer(5) + servos + pid sweep + rate sweep + restores
+                total += 7 + 4 * 6 + 4 * 3 + 2   // 142 + mixer(5) + servos + pid sweep + rate sweep + restores
                 _ = req("/api/msp?fn=142")       // governor global — bankless
                 // Mixer — Travel extents' blocks, bankless (Malcolm
                 // 2026-08-15: the backup must not forget yesterday's
@@ -630,6 +631,7 @@ final class SessionPrefetcher {
                     _ = req("/api/msp?fn=112")
                     _ = req("/api/msp?fn=94")
                     _ = req("/api/msp?fn=148")
+                    _ = req("/api/msp?fn=146")   // Rescue (per bank)
                 }
                 if !aborted {
                     for r in 0...3 {
