@@ -1830,6 +1830,21 @@ inline void handleSimKey() {
 //  POST /fly_arm — disable WiFi until next reboot
 //*********************************************************************
 
+//*********************************************************************
+//  GET/POST /api/autofly — the automatic fly-mode switch
+//*********************************************************************
+inline void handleAutoFlyGet() {
+    server.sendHeader("Cache-Control", "no-store");
+    server.send(200, "application/json",
+        autoFlyEnabled ? "{\"on\":true}" : "{\"on\":false}");
+}
+inline void handleAutoFlySet() {
+    if (server.hasArg("on")) autoFlyEnabled = server.arg("on").toInt() != 0;
+    prefs.putUChar(NVS_KEY_AUTOFLY, autoFlyEnabled ? 1 : 0);
+    events.add(autoFlyEnabled ? "Auto fly mode ON" : "Auto fly mode off");
+    handleAutoFlyGet();
+}
+
 inline void handleFlyArm() {
     // Opt out of confirmPage's auto-reload — WiFi is about to be cut on
     // purpose, polling /api/state.json forever would just confuse the
@@ -2442,6 +2457,8 @@ inline void registerWebRoutes() {
     server.on("/api/sim/button", HTTP_POST, handleSimButton); // pulse a sim-function button (1..8)
     server.on("/api/sim/key",    HTTP_POST, handleSimKey);    // send a camera/view keystroke
     server.on("/fly_arm",     HTTP_POST, handleFlyArm);
+    server.on("/api/autofly", HTTP_GET,  handleAutoFlyGet);
+    server.on("/api/autofly", HTTP_POST, handleAutoFlySet);
 
     // Misc
     server.on("/retest",      handleRetest);

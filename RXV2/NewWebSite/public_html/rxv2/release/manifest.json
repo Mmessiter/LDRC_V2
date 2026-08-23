@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.404-auto-fly",
+      "url": "https://messiter.com/rxv2/release/v0.9.404/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.404/littlefs.bin",
+      "fs_md5": "a1e67c72016530691ffc4253ab80fc3e",
+      "notes": "NEW: Automatic fly mode (Receiver settings, ON by default) - for everyone who forgets Fly now. When the model is armed and the sticks have been moving for 5 seconds, the receiver switches WiFi and Bluetooth off by itself so nothing interferes with the radio link; everything returns automatically after landing. Needs the arming channel set."
+    },
+    {
       "name": "RXV2-0.9.403-add-picker",
       "url": "https://messiter.com/rxv2/release/v0.9.403/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.403/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.393/littlefs.bin",
       "fs_md5": "964b8387161f1f5de4e1838150d72085",
       "notes": "Wording: the Setup button now reads 'failsafe, battery, gear ratio' (was 'gear')."
-    },
-    {
-      "name": "RXV2-0.9.392-settings-moved",
-      "url": "https://messiter.com/rxv2/release/v0.9.392/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.392/littlefs.bin",
-      "fs_md5": "7ff54024383c4802df983e4e7152836f",
-      "notes": "View channels is now just that - viewing channels. The gear ratio, battery voltage divider and failsafe settings have moved up to their own 'Receiver settings' page under Setup, where they belong."
     }
   ]
 }
