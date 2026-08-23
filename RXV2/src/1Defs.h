@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.418-complete-menu";
+constexpr const char* FW_VERSION = "RXV2-0.9.419-esc-words";
 
 //*********************************************************************
 //  Auto-update manifest URLs
