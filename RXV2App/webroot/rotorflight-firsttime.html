@@ -43,6 +43,16 @@ h2 .hint{font-weight:400;font-size:.7em;color:#5d7a8c;display:block;margin-top:.
     <div id=rbBanner class="banner warn" style="display:none">Some saved changes only take effect after a flight-controller restart.
         <button class=rbBtn onclick="rebootFc()">&#128260; Restart flight controller now</button></div>
 
+    <div class=card id=mount>
+        <h2>Which way round is it mounted? <span class=hint>set this FIRST &mdash; level calibration relies on it (Board alignment)</span></h2>
+        <p class=muted style="font-size:.85em;line-height:1.5">Nexus flight controllers are nearly always mounted flat, with the connectors to the <b>front</b> or to the <b>back</b>. Pick yours. <i>(Any other angle: use the configurator&rsquo;s board-alignment tab.)</i></p>
+        <div style="display:flex;gap:.6em">
+            <button class=calBtn id=mountF onclick="setMount(0)" style="flex:1">&#11014;&#65039; Connections to the FRONT<br><span style="font-weight:400;font-size:.8em">(standard, yaw 0&deg;)</span></button>
+            <button class=calBtn id=mountB onclick="setMount(180)" style="flex:1">&#11015;&#65039; Connections to the BACK<br><span style="font-weight:400;font-size:.8em">(yaw 180&deg;)</span></button>
+        </div>
+        <div id=mountMsg class=sMsg></div>
+    </div>
+
     <div class=card id=cal>
         <h2>Level calibration <span class=hint>teach the flight controller which way is level (accelerometer calibration)</span></h2>
         <p class=muted style="font-size:.85em;line-height:1.5">Put the helicopter on a <b>flat, level surface</b> and keep it perfectly still. Takes about 2 seconds.</p>
@@ -145,6 +155,43 @@ async function armCheck(){
     try{ const st=await (await fetch('/api/state.json',{cache:'no-store'})).json();
          armed=!!(st.rf&&st.rf.armed); }catch(e){}
     return armed;
+}
+
+// ---- Mounting direction (board alignment 38/39: 3xU16 roll,pitch,yaw deg).
+// The rotation matrix is only built at FC boot (init.c initBoardAlignment),
+// so a change needs the restart banner. Only the two real-world Nexus
+// positions are offered (Malcolm 2026-08-24) — anything else stays custom.
+let mountRaw=null;
+function paintMount(){
+    if(!mountRaw)return;
+    const r=rdS16(mountRaw,0),p=rdS16(mountRaw,2),y=rdS16(mountRaw,4);
+    const front=(r===0&&p===0&&y===0), back=(r===0&&p===0&&(y===180||y===-180));
+    $('mountF').style.opacity=front?'':'0.55'; $('mountB').style.opacity=back?'':'0.55';
+    $('mountF').style.background=front?'#4a8a5f':'#5f8fab';
+    $('mountB').style.background=back ?'#4a8a5f':'#5f8fab';
+    if(!front&&!back)
+        $('mountMsg').textContent='Currently a custom angle (roll '+r+'° pitch '+p+'° yaw '+y+'°) — set in the configurator';
+}
+async function loadMount(){
+    const b=hexToBytes(await LDRC.msp(38));
+    if(b.length<6)throw new Error('board alignment short ('+b.length+'B)');
+    mountRaw=b.slice(0,6); paintMount();
+}
+async function setMount(yaw){
+    if(await armCheck()){ flash('mountMsg','⚠️ Refused — the model is ARMED'); return; }
+    const r=rdS16(mountRaw,0),p=rdS16(mountRaw,2),cy=rdS16(mountRaw,4);
+    if(r===0&&p===0&&(cy===yaw||(yaw===180&&cy===-180))){ flash('mountMsg','✓ Already set'); return; }
+    if(!(await LDRC.confirm(yaw?'Connections to the BACK (yaw 180°)?':'Connections to the FRONT (standard)?',
+        {title:'Mounting direction',icon:'🧭',yes:'Save'})))return;
+    const b=new Uint8Array(6); wrU16(b,0,0); wrU16(b,2,0); wrU16(b,4,yaw);
+    try{
+        await LDRC.msp(39,bytesToHex(b)); await LDRC.msp(250);
+        await loadMount();
+        const ny=rdS16(mountRaw,4);
+        const ok=(ny===yaw)&&rdS16(mountRaw,0)===0&&rdS16(mountRaw,2)===0;
+        flash('mountMsg', ok?'✅ Saved & verified — restart to apply, then calibrate level':'⚠️ FC adjusted the values');
+        needReboot();
+    }catch(e){ flash('mountMsg','⚠️ Failed: '+e.message); }
 }
 
 // ---- Level calibration (MSP 205 + live attitude 108) ----
@@ -299,7 +346,7 @@ async function load(){
         armed=!!(st.rf&&st.rf.armed);
     }catch(e){}
     try{
-        await loadFeatures(); await loadMotor(); await loadEsc(); await loadBattery(); await loadMap();
+        await loadMount(); await loadFeatures(); await loadMotor(); await loadEsc(); await loadBattery(); await loadMap();
         setStatus('good','✓ Loaded from flight controller');
     }catch(e){ setStatus('bad','Read failed: '+e.message); }
     await pollAttitude();
@@ -310,6 +357,7 @@ load();
 <template id=helpContent><h2>First-time basics</h2>
 <p>The one-off settings for a brand-new flight controller, in plain English (Rotorflight&rsquo;s name for each is in brackets):</p>
 <ul>
+<li><b>Mounting direction</b> &mdash; connectors to the front (standard) or to the back (yaw 180&deg;). Set it FIRST: level calibration and every gyro reaction depend on it. Applies after a restart.</li>
 <li><b>Level calibration</b> &mdash; sit the model flat and still, tap the button. Roll/pitch above should then read near 0&deg;.</li>
 <li><b>What the flight controller uses</b> &mdash; the big on/off switches. Governor and ESC telemetry are the usual ones for an electric heli. The receiver link is locked on &mdash; it is how this page talks to the flight controller. Changes apply after a restart (a button appears).</li>
 <li><b>Motor &amp; ESC</b> &mdash; how the ESC is driven (DShot600 for most modern ESCs), the motor pole count and gear ratios (needed for true head speed), and which brand of ESC telemetry to listen for.</li>
