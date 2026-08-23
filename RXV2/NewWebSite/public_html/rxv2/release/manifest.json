@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.396-rescue-xref",
+      "url": "https://messiter.com/rxv2/release/v0.9.396/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.396/littlefs.bin",
+      "fs_md5": "357fba4768f5f7d5265f54d94c9e2cba",
+      "notes": "Rescue screen: every label now also shows Rotorflight's own name for it in brackets (e.g. Levelling strength = Level gain), so you can cross-reference the configurator with no guesswork."
+    },
+    {
       "name": "RXV2-0.9.395-rescue",
       "url": "https://messiter.com/rxv2/release/v0.9.395/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.395/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.385/littlefs.bin",
       "fs_md5": "37c27f12a8545690aa2d3b6210e8e10b",
       "notes": "NEW: Servos screen (Rotorflight menu) - each servo's centre (subtrim), travel limits, throw scale, direction, swash geometry correction, update rate and slow-motion time, read from and written to the flight controller with every save verified byte-for-byte. The crash-repair screen: swap a servo at the field, re-centre, set throws, fly."
-    },
-    {
-      "name": "RXV2-0.9.384-msp-wait",
-      "url": "https://messiter.com/rxv2/release/v0.9.384/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.384/littlefs.bin",
-      "fs_md5": "474082d02ebb3f034a8e3a38ceb2637f",
-      "notes": "MSP wait window 400ms to 1200ms - chunked responses span several telemetry frames."
     }
   ]
 }
