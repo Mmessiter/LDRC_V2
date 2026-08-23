@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.416-wizard-steps",
+      "url": "https://messiter.com/rxv2/release/v0.9.416/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.416/littlefs.bin",
+      "fs_md5": "bbf728241096f857a17a5fdce5fdcd54",
+      "notes": "Transmitter channels and First-time basics moved to the Wizards page where they belong - they are the build wizard's two big steps, listed there for a straight jump. A la carte now holds only the individual tuning/setup pages."
+    },
+    {
       "name": "RXV2-0.9.415-three-doors",
       "url": "https://messiter.com/rxv2/release/v0.9.415/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.415/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.404/littlefs.bin",
       "fs_md5": "a1e67c72016530691ffc4253ab80fc3e",
       "notes": "NEW: Automatic fly mode (Receiver settings, ON by default) - for everyone who forgets Fly now. When the model is armed and the sticks have been moving for 5 seconds, the receiver switches WiFi and Bluetooth off by itself so nothing interferes with the radio link; everything returns automatically after landing. Needs the arming channel set."
-    },
-    {
-      "name": "RXV2-0.9.403-add-picker",
-      "url": "https://messiter.com/rxv2/release/v0.9.403/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.403/littlefs.bin",
-      "fs_md5": "0cd35e7c60d468857d00197c8e6ed913",
-      "notes": "Switches page: 'Add a switch action' now first asks WHAT the switch should do (a drop-down of all the functions), then creates the row with that choice ready."
     }
   ]
 }
