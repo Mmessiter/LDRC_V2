@@ -97,32 +97,56 @@ const EXTRA_MODES=[
 ];
 let extras=[];                                   // [{perm, ch}]
 try{ extras=JSON.parse(localStorage.getItem(LS+'extras')||'[]'); }catch(e){ extras=[]; }
+extras.forEach(x=>{delete x.editing;});          // saved rows always start collapsed
 function saveExtras(){ localStorage.setItem(LS+'extras', JSON.stringify(extras)); }
 function extraFuncs(){ return extras.map((x,i)=>({k:'x'+i,
     t:x.label||(EXTRA_MODES.find(m=>m.id===x.perm)||{name:'function'}).name, extra:true, idx:i})); }
 function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
+// Extra rows have two states: EDITING (function picker + name field) while
+// being set up, then — on return or tapping away — they collapse into a row
+// styled exactly like the fixed ones above (Malcolm 2026-08-24: "it should
+// appear the same as the ones above"). Tap the name to edit again.
 function renderExtras(){
     const host=$('xrows'); host.innerHTML='';
     extras.forEach((x,i)=>{
-        const div=document.createElement('div'); div.className='xRow'; div.id='row_x'+i;
-        let mo=''; for(const m of EXTRA_MODES) mo+='<option value='+m.id+(m.id===x.perm?' selected':'')+'>'+m.name+'</option>';
+        const modeName=(EXTRA_MODES.find(m=>m.id===x.perm)||{name:'function'}).name;
         let co=''; for(let c=1;c<=16;c++) co+='<option value='+c+(c===x.ch?' selected':'')+'>Ch '+c+'</option>';
-        div.innerHTML='<select id=m_x'+i+' style="width:100%">'+mo+'</select>'
-            +'<div class=xLine><input class=xName id=n_x'+i+' maxlength=28 placeholder="Your name for it &mdash; e.g. Lower undercarriage" value="'+esc(x.label||'')+'"></div>'
-            +'<div class=xLine><select id=s_x'+i+'>'+co+'</select>'
-            +'<span class=xLive id=l_x'+i+'></span>'
-            +'<span style="flex:1"></span>'
-            +'<button class=detBtn id=d_x'+i+'>Detect</button>'
-            +'<button class=detBtn style="background:#b06a6a" id=r_x'+i+'>&#10006;</button></div>';
-        host.appendChild(div);
-        $('m_x'+i).addEventListener('change',()=>{extras[i].perm=parseInt($('m_x'+i).value);saveExtras();renderExtras();});
-        $('n_x'+i).addEventListener('input',()=>{extras[i].label=$('n_x'+i).value;saveExtras();});
-        $('s_x'+i).addEventListener('change',()=>{extras[i].ch=parseInt($('s_x'+i).value);saveExtras();});
-        $('d_x'+i).addEventListener('click',()=>detect(extraFuncs()[i]));
-        $('r_x'+i).addEventListener('click',()=>{extras.splice(i,1);saveExtras();renderExtras();});
+        const div=document.createElement('div'); div.id='row_x'+i;
+        if(x.editing){
+            div.className='xRow';
+            let mo=''; for(const m of EXTRA_MODES) mo+='<option value='+m.id+(m.id===x.perm?' selected':'')+'>'+m.name+'</option>';
+            div.innerHTML='<select id=m_x'+i+' style="width:100%">'+mo+'</select>'
+                +'<div class=xLine><input class=xName id=n_x'+i+' maxlength=28 placeholder="Your name for it &mdash; e.g. Lower undercarriage" value="'+esc(x.label||'')+'"></div>'
+                +'<div class=xLine><select id=s_x'+i+'>'+co+'</select>'
+                +'<span class=xLive id=l_x'+i+'></span>'
+                +'<span style="flex:1"></span>'
+                +'<button class=detBtn id=d_x'+i+'>Detect</button>'
+                +'<button class=detBtn style="background:#b06a6a" id=r_x'+i+'>&#10006;</button></div>';
+            host.appendChild(div);
+            const commit=()=>{extras[i].label=$('n_x'+i).value.trim();extras[i].editing=false;saveExtras();renderExtras();};
+            $('m_x'+i).addEventListener('change',()=>{extras[i].perm=parseInt($('m_x'+i).value);saveExtras();});
+            $('n_x'+i).addEventListener('keydown',ev=>{if(ev.key==='Enter')$('n_x'+i).blur();});
+            $('n_x'+i).addEventListener('blur',commit);
+            $('s_x'+i).addEventListener('change',()=>{extras[i].ch=parseInt($('s_x'+i).value);saveExtras();});
+            $('d_x'+i).addEventListener('click',()=>detect(extraFuncs()[i]));
+            $('r_x'+i).addEventListener('click',()=>{extras.splice(i,1);saveExtras();renderExtras();});
+            setTimeout(()=>{const n=$('n_x'+i);if(n&&n.focus)n.focus();},50);
+        }else{
+            div.className='fnRow';
+            const shortMode=modeName.replace(/ \(.*/,'');
+            div.innerHTML='<div class=lab id=e_x'+i+' style="cursor:pointer"><b>'+esc(x.label||modeName)+'</b>'
+                +'<span>'+(x.label?esc(shortMode)+' &mdash; ':'')+'tap to edit</span></div>'
+                +'<select id=s_x'+i+'>'+co+'</select>'
+                +'<span class=live id=l_x'+i+'></span>'
+                +'<button class=detBtn id=d_x'+i+'>Detect</button>';
+            host.appendChild(div);
+            $('e_x'+i).addEventListener('click',()=>{extras[i].editing=true;renderExtras();});
+            $('s_x'+i).addEventListener('change',()=>{extras[i].ch=parseInt($('s_x'+i).value);saveExtras();});
+            $('d_x'+i).addEventListener('click',()=>detect(extraFuncs()[i]));
+        }
     });
 }
-function addExtra(){ extras.push({perm:40,ch:7}); saveExtras(); renderExtras(); }
+function addExtra(){ extras.push({perm:40,ch:7,editing:true}); saveExtras(); renderExtras(); }
 
 function buildRows(){
     const host=$('rows');

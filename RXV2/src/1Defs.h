@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.420-named-switches";
+constexpr const char* FW_VERSION = "RXV2-0.9.421-settled-rows";
 
 //*********************************************************************
 //  Auto-update manifest URLs
