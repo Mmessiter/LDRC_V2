@@ -117,6 +117,18 @@
             &mdash; without it the FC obeys silently and can&rsquo;t be seen. Then check the
             telemetry wire to D5.
         </div>
+        <script>
+        // First-paint from memory (Malcolm 2026-08-24: "the Fly now button
+        // appears, and after a second it's replaced — every time"): apply the
+        // LAST KNOWN front-screen layout synchronously, before any state
+        // arrives. The live answer later repaints only if something changed.
+        try{
+            const h=JSON.parse(localStorage.getItem('frontHints')||'{}');
+            if(h.flyHidden)document.getElementById('flybtn').style.display='none';
+            if(h.rfShow){ document.getElementById('rfbtn').style.display='';
+                          if(h.fcver)document.getElementById('fcver').textContent=h.fcver; }
+        }catch(e){}
+        </script>
         <a class="btn btn-bb"   href="/blackbox"><span class=ico>&#128209;</span>Black box log</a>
         <button class="btn btn-bind" type=button id=bindbtn><span class=ico>&#128279;</span>Bind &mdash; pair with a transmitter</button>
         <a class="btn" href="/sim" id=simpg style="background:#4a90c9"><span class=ico>&#127918;</span><span id=simpglbl>Simulator</span></a>
@@ -136,16 +148,23 @@
 // load AND on a timer so the button appears by itself the moment the receiver
 // confirms the flight controller (and hides again if the FC goes away) — no
 // page reload needed.
+function saveFrontHint(k,v){
+    try{ const h=JSON.parse(localStorage.getItem('frontHints')||'{}');
+         if(h[k]===v)return; h[k]=v; localStorage.setItem('frontHints',JSON.stringify(h)); }catch(e){}
+}
 function updateRfButton(s) {
     const rfb = document.getElementById('rfbtn');
     if (!rfb) return;
     const show = !!(s && !s.sim && s.fcinfo && s.fcinfo.rotorflight_capable);
     rfb.style.display = show ? '' : 'none';
+    saveFrontHint('rfShow', show);
     if (show) {
         const fc = s.fcinfo;
-        LDRC.setText('fcver', (fc.rf_major > 0)
+        const label = (fc.rf_major > 0)
             ? ('Rotorflight ' + fc.rf_major + '.' + fc.rf_minor)
-            : 'Flight controller connected');
+            : 'Flight controller connected';
+        LDRC.setText('fcver', label);
+        saveFrontHint('fcver', label);
     }
     // The silent-FC hint (Malcolm 2026-08-19, the Nexus hunt): a fresh FC
     // with TELEMETRY disabled obeys channels but never talks, so it cannot
@@ -324,6 +343,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (simOn) {
         const fb = document.getElementById('flybtn');
         if (fb) {
+            fb.style.display = '';
             fb.innerHTML = '<span class=ico>&#128244;</span>Turn off WiFi &mdash; less interference';
             fb.onclick = showSimWifiOff;
         }
@@ -529,6 +549,7 @@ function paintFlyButton(s) {
     // the button (Malcolm 2026-08-23).
     const autoCovered = !!(s && s.rf && s.rf.autofly && s.rf.arming_channel >= 1);
     fb.style.display = autoCovered ? 'none' : '';
+    saveFrontHint('flyHidden', autoCovered);
     let afn = document.getElementById('autoflyNote');
     if (autoCovered) {
         if (!afn) {

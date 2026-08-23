@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.427-steady-front",
+      "url": "https://messiter.com/rxv2/release/v0.9.427/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.427/littlefs.bin",
+      "fs_md5": "66fee9abd475bb23480ae5e7d7ce1151",
+      "notes": "No more front-screen shuffle: the app remembers the last known layout (Fly now hidden? Rotorflight present, and which version?) and paints it instantly at launch, before the receiver has even answered. The live state then only repaints if something actually changed - so on a Rotorflight model the right buttons are simply there from the first frame."
+    },
+    {
       "name": "RXV2-0.9.426-rescue-plain",
       "url": "https://messiter.com/rxv2/release/v0.9.426/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.426/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.416/littlefs.bin",
       "fs_md5": "bbf728241096f857a17a5fdce5fdcd54",
       "notes": "Transmitter channels and First-time basics moved to the Wizards page where they belong - they are the build wizard's two big steps, listed there for a straight jump. A la carte now holds only the individual tuning/setup pages."
-    },
-    {
-      "name": "RXV2-0.9.415-three-doors",
-      "url": "https://messiter.com/rxv2/release/v0.9.415/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.415/littlefs.bin",
-      "fs_md5": "dbf45feaefafbe7c17e20f83f82374f9",
-      "notes": "The Rotorflight page is now just three doors (Malcolm's words): WIZARDS (new helicopter, tuning), A LA CARTE (straight to any single setting), and BACKUP & RESTORE on its own page. Every page is where it was - only the front door changed."
     }
   ]
 }
