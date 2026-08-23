@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.410-fleet-ticks";
+constexpr const char* FW_VERSION = "RXV2-0.9.411-tuning-wizard";
 
 //*********************************************************************
 //  Auto-update manifest URLs

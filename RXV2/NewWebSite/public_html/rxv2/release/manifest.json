@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.411-tuning-wizard",
+      "url": "https://messiter.com/rxv2/release/v0.9.411/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.411/littlefs.bin",
+      "fs_md5": "537c674b661f96012dfca0cc2e5d3b4b",
+      "notes": "Second wizard: TUNING - the after-the-build field checklist, in the order that works: back up first, mechanics check in the hover, governor, tail, cyclic, rates/expo to taste, fine touches, prove Rescue up high, back up the proven tune. One change per flight; ticks per model, like the New-helicopter checklist."
+    },
+    {
       "name": "RXV2-0.9.410-fleet-ticks",
       "url": "https://messiter.com/rxv2/release/v0.9.410/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.410/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.399/littlefs.bin",
       "fs_md5": "4436a2f016fdf65c8aea98615a3f2c45",
       "notes": "Fixed the twin 'Back to Rotorflight' buttons on the Rotorflight pages - each page keeps exactly one."
-    },
-    {
-      "name": "RXV2-0.9.398-modes",
-      "url": "https://messiter.com/rxv2/release/v0.9.398/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.398/littlefs.bin",
-      "fs_md5": "4f89d907242038bcacc0794912c3ebf0",
-      "notes": "NEW: Switches page (Rotorflight menu) - what each transmitter switch makes the flight controller do (Rotorflight's Modes tab, in plain English). See, change, add and remove switch actions - Arm, Rescue, self-level, governor and more - each save verified. The Rescue page's switch card now links straight to the right row here."
     }
   ]
 }
