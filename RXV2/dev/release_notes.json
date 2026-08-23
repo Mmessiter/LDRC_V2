@@ -1,4 +1,5 @@
 {
+ "RXV2-0.9.397-rescue-switch": "Rescue screen now shows WHICH transmitter channel triggers rescue (read from the flight controller's Modes table), with the active range - and a loud warning if NO switch is assigned, because then rescue can never fire (Malcolm: 'it's critical').",
  "RXV2-0.9.396-rescue-xref": "Rescue screen: every label now also shows Rotorflight's own name for it in brackets (e.g. Levelling strength = Level gain), so you can cross-reference the configurator with no guesswork.",
  "RXV2-0.9.395-rescue": "NEW: Rescue screen (Rotorflight menu) - the safety net. Set per bank what happens when you flick the rescue switch: level & climb (or hold height), flip upright if inverted, the stage timings, collective bite and a hard collective ceiling - all in plain English, read from and written to the flight controller with every save verified. Included in phone backup & restore.",
  "RXV2-0.9.394-sim-bind": "You can now bind a receiver while it's in simulator mode: a 'Bind to a transmitter' button appears on the Simulator page. (A sim receiver's radio keeps listening, so it binds normally; the button was only ever on the home page before.)",

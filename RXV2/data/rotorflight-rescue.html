@@ -49,6 +49,11 @@ h2 .hint{font-weight:400;font-size:.7em;color:#5d7a8c;display:block;margin-top:.
     </div>
 
     <div class=card>
+        <h2>Rescue switch <span class=hint>which transmitter channel triggers rescue &mdash; set in the configurator&rsquo;s Modes tab</span></h2>
+        <div id=swInfo class=muted style="font-size:.95em;line-height:1.5">checking&hellip;</div>
+    </div>
+
+    <div class=card>
         <h2>What Rescue does</h2>
         <div class=fRow>
             <div class=lab><b>Rescue mode</b><span>what happens when you flick the rescue switch <i>(Rotorflight: Enable Rescue / rescue_mode)</i></span></div>
@@ -192,9 +197,37 @@ async function save(){
     }catch(e){ setStatus('bad','Write failed: '+e.message); }
 }
 
+// Which switch fires rescue? MSP_MODE_RANGES (fn 34): per slot
+// permanentId(U8) auxChannel(U8) startStep(U8) endStep(U8);
+// µs = 900 + 25×step (Rotorflight's scale). RESCUE permanent id = 53.
+// Bankless and read-only — display only, edited in the configurator.
+async function loadRescueSwitch(){
+    const el=$('swInfo'); if(!el)return;
+    try{
+        const b=hexToBytes(await LDRC.msp(34));
+        const hits=[];
+        for(let o=0;o+3<b.length;o+=4){
+            if(b[o]!==53)continue;
+            const lo=900+25*b[o+2], hi=900+25*b[o+3];
+            if(hi<=lo)continue;                       // empty range = unused slot
+            hits.push({ch:b[o+1]+5,aux:b[o+1]+1,lo,hi});
+        }
+        if(hits.length===0){
+            el.innerHTML='<b style="color:#b5442a">⚠ NO SWITCH ASSIGNED — rescue can never trigger!</b><br>'
+              +'Assign <b>RESCUE</b> to a switch in Rotorflight Configurator → <b>Modes</b> tab, or rescue will not work however good the settings below are.';
+        } else {
+            el.innerHTML=hits.map(h=>
+                '✅ <b>Channel '+h.ch+'</b> (AUX '+h.aux+') — rescue is ON when between <b>'
+                +h.lo+'–'+h.hi+' µs</b> (Rotorflight scale)').join('<br>')
+              +'<br><span style="font-size:.8em">Check it: flick your rescue switch and watch channel '
+              +hits[0].ch+' on View channels.</span>';
+        }
+    }catch(e){ el.textContent='Could not read the Modes table ('+e.message+')'; }
+}
+
 document.addEventListener('DOMContentLoaded',()=>{
     document.querySelectorAll('.fRow input,.fRow select').forEach(el=>el.addEventListener('input',()=>{dirty=true;}));
-    load();
+    load().then(loadRescueSwitch);
 });
 </script>
 <template id=helpContent><h2>Rescue</h2>
@@ -206,6 +239,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 <li><b>Collective</b> &mdash; how much blade pitch (bite) rescue uses at each stage, in Rotorflight&rsquo;s 0&ndash;1000 units. <b>Maximum collective</b> is a hard ceiling.</li>
 <li><b>Hold height</b> &mdash; only for the height-hold mode.</li>
 </ul>
+<p><b>Rescue switch</b> &mdash; the top card shows which transmitter channel triggers rescue (assigned in the configurator&rsquo;s Modes tab). If it says no switch is assigned, rescue cannot fire at all.</p>
 <p>Every <b>Save</b> writes this bank, stores it in the flight controller&rsquo;s memory, reads it back and confirms the bytes match. Test rescue at a <b>safe height</b> before trusting it low down.</p>
 </template>
 </body>
