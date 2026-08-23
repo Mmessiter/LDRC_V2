@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.397-rescue-switch",
+      "url": "https://messiter.com/rxv2/release/v0.9.397/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.397/littlefs.bin",
+      "fs_md5": "e2ccd2bdcf6891845f8fbf1e4b61581e",
+      "notes": "Rescue screen now shows WHICH transmitter channel triggers rescue (read from the flight controller's Modes table), with the active range - and a loud warning if NO switch is assigned, because then rescue can never fire (Malcolm: 'it's critical')."
+    },
+    {
       "name": "RXV2-0.9.396-rescue-xref",
       "url": "https://messiter.com/rxv2/release/v0.9.396/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.396/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.386/littlefs.bin",
       "fs_md5": "0f7e5eb4ce70e3b0c54f69a7c1d86ec7",
       "notes": "Servos screen: servo 4 is now labelled TAIL servo (Rotorflight's fixed allocation: servos 1-3 swashplate, 4 tail)."
-    },
-    {
-      "name": "RXV2-0.9.385-servos",
-      "url": "https://messiter.com/rxv2/release/v0.9.385/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.385/littlefs.bin",
-      "fs_md5": "37c27f12a8545690aa2d3b6210e8e10b",
-      "notes": "NEW: Servos screen (Rotorflight menu) - each servo's centre (subtrim), travel limits, throw scale, direction, swash geometry correction, update rate and slow-motion time, read from and written to the flight controller with every save verified byte-for-byte. The crash-repair screen: swap a servo at the field, re-centre, set throws, fly."
     }
   ]
 }
