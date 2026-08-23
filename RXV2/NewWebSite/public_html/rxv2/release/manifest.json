@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.403-add-picker",
+      "url": "https://messiter.com/rxv2/release/v0.9.403/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.403/littlefs.bin",
+      "fs_md5": "0cd35e7c60d468857d00197c8e6ed913",
+      "notes": "Switches page: 'Add a switch action' now first asks WHAT the switch should do (a drop-down of all the functions), then creates the row with that choice ready."
+    },
+    {
       "name": "RXV2-0.9.402-drag-handles",
       "url": "https://messiter.com/rxv2/release/v0.9.402/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.402/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.392/littlefs.bin",
       "fs_md5": "7ff54024383c4802df983e4e7152836f",
       "notes": "View channels is now just that - viewing channels. The gear ratio, battery voltage divider and failsafe settings have moved up to their own 'Receiver settings' page under Setup, where they belong."
-    },
-    {
-      "name": "RXV2-0.9.391-diag-sections",
-      "url": "https://messiter.com/rxv2/release/v0.9.391/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.391/littlefs.bin",
-      "fs_md5": "af30ed78f3cc1cd18ab19a1f1c265383",
-      "notes": "Tidier View-channels page: the live channel bars and the three unrelated settings (gear ratio, battery voltage divider, failsafe) are now grouped under clear 'Live channels' and 'Settings' section headings, each setting with its own subheading."
     }
   ]
 }

@@ -1,4 +1,5 @@
 {
+ "RXV2-0.9.403-add-picker": "Switches page: 'Add a switch action' now first asks WHAT the switch should do (a drop-down of all the functions), then creates the row with that choice ready.",
  "RXV2-0.9.402-drag-handles": "Switches page polish: the blue zone's round ends can now be DRAGGED with a finger to set the range (numbers follow along, snapped to 5 µs), and the live channel marker is a slim red line (green inside the zone).",
  "RXV2-0.9.401-range-bars": "Switches page: each row now shows the configurator-style range bar - the blue zone is where the function is ON, and a LIVE dot shows the channel's actual position (green when inside the zone). Flick a switch and watch it work.",
  "RXV2-0.9.400-rf-steps": "Switches + Rescue-switch card: ranges now decode with Rotorflight's own encoding (signed 5 µs steps about 1500 - range 875-2125), fixing impossible values like ARM showing 3900 µs. Thanks to Malcolm's sharp eye.",
