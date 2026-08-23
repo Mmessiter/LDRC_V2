@@ -254,6 +254,21 @@ inline void handleRotorflightNewHeli() {
     server.send(503, "text/plain", "/rotorflight-newheli.html missing — uploadfs the data/ folder");
 }
 
+inline void handleRotorflightWizards() {
+    if (serveLittleFsFile("/rotorflight-wizards.html", "text/html")) return;
+    server.send(503, "text/plain", "/rotorflight-wizards.html missing — uploadfs the data/ folder");
+}
+
+inline void handleRotorflightAlaCarte() {
+    if (serveLittleFsFile("/rotorflight-alacarte.html", "text/html")) return;
+    server.send(503, "text/plain", "/rotorflight-alacarte.html missing — uploadfs the data/ folder");
+}
+
+inline void handleRotorflightBackupPage() {
+    if (serveLittleFsFile("/rotorflight-backup.html", "text/html")) return;
+    server.send(503, "text/plain", "/rotorflight-backup.html missing — uploadfs the data/ folder");
+}
+
 inline void handleRotorflightTxChannels() {
     if (serveLittleFsFile("/rotorflight-txchannels.html", "text/html")) return;
     server.send(503, "text/plain", "/rotorflight-txchannels.html missing — uploadfs the data/ folder");
@@ -2413,6 +2428,9 @@ inline void registerWebRoutes() {
     server.on("/rotorflight-newheli",   handleRotorflightNewHeli);
     server.on("/rotorflight-tuning",    handleRotorflightTuning);
     server.on("/rotorflight-txchannels", handleRotorflightTxChannels);
+    server.on("/rotorflight-wizards",   handleRotorflightWizards);
+    server.on("/rotorflight-alacarte",  handleRotorflightAlaCarte);
+    server.on("/rotorflight-backup",    handleRotorflightBackupPage);
     server.on("/rotorflight-pidplus", handleRotorflightPidPlus);
     server.on("/rotorflight-rates",        handleRotorflightRates);
     server.on("/rotorflight-gov-profile",  handleRotorflightGovProfile);

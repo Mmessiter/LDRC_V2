@@ -10,11 +10,6 @@
 <title>Rotorflight &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=172">
 <script src="/app.js?v=177" defer></script>
-<style>
-.secHead{font-size:.85em;letter-spacing:.08em;text-transform:uppercase;color:#eef4f2;
-         text-shadow:0 1px 3px rgba(0,0,0,.45);margin:1.1em 0 .35em;font-weight:800}
-.secHead:first-of-type{margin-top:.3em}
-</style>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -24,209 +19,35 @@
     <h1>Rotorflight</h1>
     <p class=subtitle id=fcInfo>&hellip;</p>
 
-    <h2 class=secHead>Step-by-step guides</h2>
-    <a class="btn btn-fw" href="/rotorflight-newheli"    style="background:#4a8a5f"><span class=ico>&#127881;</span>New helicopter &mdash; the build, from scratch</a>
-    <a class="btn btn-fw" href="/rotorflight-tuning"     style="background:#7a6a9a"><span class=ico>&#127942;</span>Tuning &mdash; after the build</a>
-
-    <h2 class=secHead>Individual settings</h2>
-    <a class="btn btn-fw" href="/rotorflight-txchannels" style="background:#4a7a9a"><span class=ico>&#127899;&#65039;</span>Transmitter channels</a>
-    <a class="btn btn-fw" href="/rotorflight-firsttime"  style="background:#4a7a9a"><span class=ico>&#128295;</span>First-time basics</a>
-    <a class="btn btn-fw" href="/rotorflight-servos"     style="background:#c98a4a"><span class=ico>&#128295;</span>Servos</a>
-    <a class="btn btn-fw" href="/rotorflight-travel"     style="background:#c98a4a"><span class=ico>&#128208;</span>Travel extents</a>
-    <a class="btn btn-fw" href="/rotorflight-modes"      style="background:#8a7f4a"><span class=ico>&#127899;&#65039;</span>Switches &mdash; what each one does (Modes)</a>
-    <a class="btn btn-fw" href="/rotorflight-rescue"     style="background:#c0603c"><span class=ico>&#128678;</span>Rescue &mdash; the safety net</a>
-    <a class="btn btn-fw" href="/rotorflight-gov-profile" id=govProf style="display:none;background:#5fa099"><span class=ico>&#9881;&#65039;</span>Governor (profile)</a>
-    <a class="btn btn-fw" href="/rotorflight-gov-global"  id=govGlob style="display:none;background:#5fa099"><span class=ico>&#9881;&#65039;</span>Governor (global)</a>
-    <a class="btn btn-fw" href="/rotorflight-rates"      style="background:#8e6cab"><span class=ico>&#9881;&#65039;</span>Rates &amp; Dynamics</a>
-    <a class="btn btn-fw" href="/rotorflight-pid"        style="background:#8e6cab"><span class=ico>&#9881;&#65039;</span>PIDs</a>
-    <a class="btn btn-fw" href="/rotorflight-pidplus"    style="background:#8e6cab"><span class=ico>&#9881;&#65039;</span>PID + (advanced)</a>
-
-    <h2 class=secHead id=burHead style="display:none">Backup &amp; restore</h2>
-    <!-- ONE backup system (Malcolm 2026-08-06: "ditch the earlier one"):
-         the phone's recorded session IS the backup. Save freezes a restore
-         point of every bank's settings; Restore writes it all back,
-         verified. Both app-only. The old receiver-side named backups
-         (rotorflight-backups.html) retired — git remembers it. -->
-    <button id=phoneSaveBtn class="btn" style="display:none;background:#d4944a" onclick="phoneSave()"><span class=ico>&#128190;</span>Back up settings to phone</button>
-    <div id=savProg style="display:none;background:#f2f6f8;border-radius:14px;padding:1em 1.2em;margin:.7em 0;box-shadow:0 2px 6px rgba(0,0,0,.12)">
-        <div id=savLab style="font-weight:600;color:#2c3e50;margin-bottom:.6em">Backing up&hellip;</div>
-        <div style="background:#d5dde4;border-radius:8px;height:14px;overflow:hidden">
-            <div id=savFill style="background:#d4944a;height:100%;width:0%;border-radius:8px;transition:width .4s"></div>
-        </div>
-        <div style="margin-top:.6em;font-size:.85em;color:#5c3a1a;background:#ffc88c;border-radius:8px;padding:.45em .7em">
-            &#9888;&#65039; Don't switch the transmitter ON or the model OFF until this finishes.
-        </div>
-    </div>
-    <button id=phoneRestoreBtn class="btn" style="display:none;background:#ab6c8e" onclick="phoneRestore()"><span class=ico>&#128225;</span>Restore settings from phone<br><span id=phoneRestoreSub style="font-size:.68em;font-weight:400;opacity:.85"></span></button>
-    <div id=restProg style="display:none;background:#f2f6f8;border-radius:14px;padding:1em 1.2em;margin:.7em 0;box-shadow:0 2px 6px rgba(0,0,0,.12)">
-        <div id=restLab style="font-weight:600;color:#2c3e50;margin-bottom:.6em">Restoring&hellip;</div>
-        <div style="background:#d5dde4;border-radius:8px;height:14px;overflow:hidden">
-            <div id=restFill style="background:#ab6c8e;height:100%;width:0%;border-radius:8px;transition:width .4s"></div>
-        </div>
-        <div style="margin-top:.6em;font-size:.85em;color:#5c3a1a;background:#ffc88c;border-radius:8px;padding:.45em .7em">
-            &#9888;&#65039; Keep the transmitter OFF and the model ON until this finishes.
-        </div>
-    </div>
+    <a class="btn btn-fw" href="/rotorflight-wizards"  style="background:#4a8a5f"><span class=ico>&#129497;</span><span style="display:flex;flex-direction:column;align-items:flex-start;text-align:left"><span>Wizards</span><span style="font-size:.62em;font-weight:400;opacity:.85;margin-top:.25em">step-by-step: new helicopter &amp; tuning</span></span></a>
+    <a class="btn btn-fw" href="/rotorflight-alacarte" style="background:#8e6cab"><span class=ico>&#127860;</span><span style="display:flex;flex-direction:column;align-items:flex-start;text-align:left"><span>&Agrave; la carte</span><span style="font-size:.62em;font-weight:400;opacity:.85;margin-top:.25em">straight to one setting</span></span></a>
+    <a class="btn btn-fw" href="/rotorflight-backup"   style="background:#d4944a"><span class=ico>&#128190;</span><span style="display:flex;flex-direction:column;align-items:flex-start;text-align:left"><span>Backup &amp; restore</span><span style="font-size:.62em;font-weight:400;opacity:.85;margin-top:.25em">the whole setup, safe on the phone</span></span></a>
 
     <div class=footer></div>
 </div>
 
 <script>
-// Back up: the same whole-session save as the Black box page — all banks'
-// settings AND flights; completing it freezes the restore point.
-async function phoneSave() {
-    // TX-on guard (Malcolm 2026-08-20): the bank walk is skipped under a
-    // live transmitter, so a backup taken then would be HOLLOW. Warn and
-    // refuse instead of quietly saving less than everything.
-    try {
-        const s = await LDRC.fetchState();
-        const age = s && s.rf && s.rf.last_pkt_ms;
-        if (typeof age === 'number' && age >= 0 && age < 3000) {
-            await LDRC.alert('The transmitter is ON.\n\nA backup has to walk through all the banks, which must never happen under a live transmitter. Switch the transmitter OFF, then tap Back up again.',
-                             { title: 'Transmitter is on', icon: '📻' });
-            return;
-        }
-    } catch (e) { /* state unreadable — the sweep has its own guards */ }
-    const btn = document.getElementById('phoneSaveBtn');
-    const prog = document.getElementById('savProg');
-    const lab = document.getElementById('savLab');
-    const fill = document.getElementById('savFill');
-    btn.style.display = 'none';
-    prog.style.display = '';
-    lab.textContent = 'Backing up…';
-    fill.style.width = '0%';
-    let r0 = null;
-    try { r0 = await (await fetch('/app/snapshot/start', { cache: 'no-store' })).json(); } catch (e) {}
-    if (!r0 || !r0.ok) {
-        lab.textContent = '⚠️ ' + ((r0 && r0.error) || 'connect to the receiver first');
-        setTimeout(() => { prog.style.display = 'none'; btn.style.display = ''; }, 5000);
-        return;
-    }
-    const timer = setInterval(async () => {
-        let p = null;
-        try { p = await (await fetch('/app/snapshot/progress', { cache: 'no-store' })).json(); } catch (e) { return; }
-        if (p.phase === 'running') {
-            lab.textContent = 'Backing up… ' + p.done + ' / ' + p.total;
-            if (p.total > 0) fill.style.width = Math.min(100, Math.round(100 * p.done / p.total)) + '%';
-        } else if (p.phase === 'done') {
-            clearInterval(timer);
-            fill.style.width = '100%';
-            lab.textContent = '✅ Backed up to the phone!';
-            setTimeout(() => { prog.style.display = 'none'; btn.style.display = '';
-                               paintRestoreBtn(); }, 5000);
-        }
-    }, 700);
-}
-
-// Refresh the restore button's little date line (e.g. after a fresh backup).
-function paintRestoreBtn() {
-    fetch('/app/restore/info', { cache: 'no-store' })
-        .then(r => r.json())
-        .then(i => {
-            if (!i.available) return;
-            document.getElementById('phoneRestoreBtn').style.display = '';
-            document.getElementById('phoneRestoreSub').textContent =
-                'backed up ' + (i.when || 'earlier') + ' — all banks';
-        })
-        .catch(() => {});
-}
-
-// Restore every recorded setting (all banks) from the phone's session
-// recording — the parachute for a pilot who never made a backup.
-async function phoneRestore() {
-    // Same TX-on guard as backup: the restore switches banks and writes
-    // flash — never under a live transmitter.
-    try {
-        const s = await LDRC.fetchState();
-        const age = s && s.rf && s.rf.last_pkt_ms;
-        if (typeof age === 'number' && age >= 0 && age < 3000) {
-            await LDRC.alert('The transmitter is ON.\n\nRestoring writes every bank, which must never happen under a live transmitter. Switch the transmitter OFF, then tap Restore again.',
-                             { title: 'Transmitter is on', icon: '📻' });
-            return;
-        }
-    } catch (e) { /* state unreadable — fall through to the existing checks */ }
-    let info = null;
-    try { info = await (await fetch('/app/restore/info', { cache: 'no-store' })).json(); } catch (e) {}
-    if (!info || !info.available) {
-        await LDRC.alert('No matching recording on the phone for this model.', { title: 'Nothing to restore', icon: '📡' });
-        return;
-    }
-    if (!(await LDRC.confirm(
-        'Overwrite ALL Rotorflight tuning on this model (PIDs, advanced PIDs, rates and governor — every bank) with the phone recording' +
-        (info.when ? ' from ' + info.when : '') + '?\n\nKeep the transmitter OFF and the model powered while it runs.',
-        { title: 'Restore from phone', icon: '📡', yes: 'Restore everything', kind: 'warn' }))) return;
-    const btn = document.getElementById('phoneRestoreBtn');
-    const prog = document.getElementById('restProg');
-    const lab = document.getElementById('restLab');
-    const fill = document.getElementById('restFill');
-    btn.style.display = 'none';
-    prog.style.display = '';
-    let r0 = null;
-    try { r0 = await (await fetch('/app/restore/start', { cache: 'no-store' })).json(); } catch (e) {}
-    if (!r0 || !r0.ok) {
-        lab.textContent = '⚠️ ' + ((r0 && r0.error) || 'could not start');
-        setTimeout(() => { prog.style.display = 'none'; btn.style.display = ''; }, 5000);
-        return;
-    }
-    const timer = setInterval(async () => {
-        let p = null;
-        try { p = await (await fetch('/app/restore/progress', { cache: 'no-store' })).json(); } catch (e) { return; }
-        if (p.phase === 'running') {
-            lab.textContent = 'Restoring… ' + p.done + ' / ' + p.total;
-            if (p.total > 0) fill.style.width = Math.min(100, Math.round(100 * p.done / p.total)) + '%';
-        } else if (p.phase === 'done') {
-            clearInterval(timer);
-            fill.style.width = '100%';
-            lab.textContent = p.failures > 0
-                ? '⚠️ Could not verify: ' + ((p.failed && p.failed.length)
-                    ? p.failed.join(', ') : p.failures + ' item(s)')
-                  + ' — open that page and check (or run the restore again)'
-                : '✅ All settings restored & verified!';
-            setTimeout(() => { prog.style.display = 'none'; btn.style.display = ''; }, 8000);
-        }
-    }, 700);
-}
-
 document.addEventListener('DOMContentLoaded', async () => {
-    // Backup + restore live only inside the app (the phone IS the store);
-    // restore appears only when a backup for THIS model exists.
-    await LDRC.replayReady;
-    if (window.LDRC && LDRC.viaBle && !LDRC.replay) {
-        document.getElementById('burHead').style.display = '';
-        document.getElementById('phoneSaveBtn').style.display = '';
-        paintRestoreBtn();
-    }
     const s = await LDRC.fetchState();
     if (!s) return;
     const fc = s.fcinfo || {};
     const label = (fc.rf_major > 0)
-        ? ('Rotorflight ' + fc.rf_major + '.' + fc.rf_minor + ' (BetaFlight ' + fc.fw_major + '.' + fc.fw_minor + '.' + fc.fw_patch + ' • API ' + fc.api_major + '.' + fc.api_minor + ')')
+        ? ('Rotorflight ' + fc.rf_major + '.' + fc.rf_minor + ' (BetaFlight ' + fc.fw_major + '.' + fc.fw_minor + '.' + fc.fw_patch + ' \u2022 API ' + fc.api_major + '.' + fc.api_minor + ')')
         : (fc.detected ? fc.variant : 'Flight controller connected (version pending)');
     LDRC.setText('fcInfo', label);
-
-    // The Governor pages need Rotorflight 2.3 (MSP governor commands, API 12.9+).
-    // On RF 2.2 (API 12.8) show everything EXCEPT the two governor buttons —
-    // exactly as V1 does (api100 >= 1209 gate).
-    const api100 = (fc.api_major || 0) * 100 + (fc.api_minor || 0);
-    const govOk = api100 >= 1209;
-    for (const id of ['govProf', 'govGlob']) {
-        const b = document.getElementById(id);
-        if (b) b.style.display = govOk ? '' : 'none';
-    }
 });
 </script>
 <template id=helpContent><h2>Rotorflight</h2>
-<p>The gateway to live Rotorflight configuration over the receiver's MSP bridge. From here you reach PID tuning, rate curves, governor settings, and saved snapshots.</p>
-<h3>How it is organised</h3>
-<p><b>Step-by-step guides</b> hold your hand through a whole job in order &mdash; building a new helicopter, or tuning one afterwards. <b>Individual settings</b> go straight to one thing when you know what you want. <b>Backup &amp; restore</b> keeps the whole setup safe on the phone.</p>
-<h3>How to use it</h3>
-<p>Tap any of the sub-pages. Each one talks directly to the flight controller; values you change are written to the FC immediately, in real time.</p>
+<p>Three doors:</p>
+<ul>
+<li><b>Wizards</b> &mdash; step-by-step guides that take you through a whole job in order: building a new helicopter, or tuning one afterwards.</li>
+<li><b>&Agrave; la carte</b> &mdash; straight to any single setting when you know what you want.</li>
+<li><b>Backup &amp; restore</b> &mdash; the whole setup saved on the phone, restorable any time.</li>
+</ul>
 <h3>Why the swashplate may twitch</h3>
-<p>Changing banks and saving make the flight controller write to its internal memory, and it pauses its servo outputs for a few milliseconds while it does — so the swashplate can give a brief jump. It is <b>harmless</b> (the official Rotorflight Configurator causes exactly the same twitch) and only happens on the ground, disarmed. The app avoids unnecessary bank changes to keep it to a minimum.</p>
+<p>Changing banks and saving make the flight controller pause its servo outputs for a few milliseconds &mdash; a brief, harmless jump, on the ground only (the official configurator does the same).</p>
 <h3>Requirements</h3>
-<p>This page needs the protocol set to <b>CRSF</b> and a Rotorflight-compatible FC connected. If the FC isn't responding, sub-pages show clear timeout messages instead of hanging.</p>
-<h3>Backup &amp; restore (in the app)</h3>
-<p><b>Back up settings to phone</b> saves everything to your phone: every bank's PIDs, advanced PIDs, rates and governor settings — <b>and all the Black box data too</b> (every saved flight recording and the event log), so the whole model can be reviewed offline afterwards. <b>Restore settings from phone</b> writes all the settings back, each item verified, with the transmitter off. A backup is also frozen automatically when you connect, so even a pilot who never presses Back&nbsp;up has one. Always back up a known-good setup before experimenting.</p>
+<p>Protocol set to <b>CRSF</b> and a Rotorflight flight controller connected.</p>
 </template>
 </body>
 </html>
