@@ -788,28 +788,33 @@ void loop() {
     }
 
     // Auto fly mode (Malcolm 2026-08-24: "there will be people, including
-    // me, who forget to hit Fly now"). ARMED + sustained stick movement for
-    // 5 s straight is unmistakably a flight in progress — enter RF-only
-    // automatically, exactly as if Fly now had been pressed. The existing
-    // landing recovery brings WiFi/Bluetooth back after the flight; the
-    // switch lives on the Receiver-settings page (default ON).
+    // me, who forget to hit Fly now"). Triggered by ARMING, sustained 3 s —
+    // deliberately BEFORE takeoff, not on flying detection: the WiFi/BLE
+    // teardown stalls the loop ~700 ms (measured 707 ms, 2026-08-04), which
+    // must land harmlessly during ground spool-up and NEVER mid-air with
+    // frozen controls ("doubly sure the disabled functions ARE NOT THE
+    // CONTROL FUNCTIONS" — Malcolm, quite rightly, 2026-08-24). Only the
+    // config radios are touched; the nRF24 control link, channel decode and
+    // FC output are a separate path and keep running throughout. The
+    // existing landing recovery revives WiFi/Bluetooth after the flight;
+    // the switch lives on the Receiver-settings page (default ON).
     if (autoFlyEnabled && !simEnabled && !flyArmRequested && !flyTeardownAtMs) {
-        static uint32_t flyingSinceMs = 0;
+        static uint32_t armedSinceMs = 0;
         const bool radiosUp = (netMode != NET_NO_WIFI) || bleAdvertising() || bleHasClient();
         const bool linkLive = rx.lastMillis &&
                               (uint32_t)(millis() - rx.lastMillis) < 1000;
         const bool armedNow = armingChannel >= 1 && armingChannel <= 16 &&
                               linkLive && channelMicros[armingChannel - 1] > 1500;
-        if (radiosUp && armedNow && beingFlown) {
-            if (!flyingSinceMs) flyingSinceMs = millis();
-            else if ((uint32_t)(millis() - flyingSinceMs) > 5000) {
-                flyingSinceMs = 0;
-                events.add("AUTO fly mode: armed + flying — radios off");
+        if (radiosUp && armedNow) {
+            if (!armedSinceMs) armedSinceMs = millis();
+            else if ((uint32_t)(millis() - armedSinceMs) > 3000) {
+                armedSinceMs = 0;
+                events.add("AUTO fly mode: armed — radios off before takeoff");
                 eventsPersist();
                 flyArmRequested = true;
             }
         } else {
-            flyingSinceMs = 0;
+            armedSinceMs = 0;
         }
     }
 

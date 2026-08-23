@@ -514,6 +514,30 @@ inline void netStep() {
                     startWifiStation();   // → AP (+ STA if creds), reachable again
                 }
             }
+            // Auto fly mode DETRIGGER (Malcolm 2026-08-23): disarming brings
+            // the radios back — no need to switch the transmitter off. Only
+            // with auto fly mode on and an arming channel set: disarmed for
+            // 5 s straight with the link still live = safely on the ground
+            // (the bring-up stall is harmless there). Re-arming triggers the
+            // 3 s auto teardown again — clean per-flight cycles.
+            {
+                static uint32_t disarmSinceMs = 0;
+                const bool armLink = rx.lastMillis &&
+                                     (uint32_t)(millis() - rx.lastMillis) < 1000;
+                const bool disarmedNow = autoFlyEnabled &&
+                    armingChannel >= 1 && armingChannel <= 16 && armLink &&
+                    channelMicros[armingChannel - 1] < 1500;
+                if (disarmedNow) {
+                    if (!disarmSinceMs) disarmSinceMs = millis();
+                    else if ((uint32_t)(millis() - disarmSinceMs) > 5000) {
+                        disarmSinceMs = 0;
+                        events.add("AUTO fly mode: disarmed — radios back on");
+                        eventsPersist();
+                        if (!bleAdvertising() && !bleHasClient()) bleStart();
+                        if (!staGaveUp) startWifiStation();
+                    }
+                } else disarmSinceMs = 0;
+            }
             break;
         }
         case NET_INIT:

@@ -523,6 +523,26 @@ function paintFlyButton(s) {
     if (window.__rfMorphed || (s && s.sim)) return;   // morph / sim own the button
     const fb = document.getElementById('flybtn');
     if (!fb) return;
+    // Automatic fly mode + an arming channel = the button is redundant
+    // (radios switch off by themselves 3 s after arming, back on at
+    // disarm) — hide it and say so. Models with no arming function keep
+    // the button (Malcolm 2026-08-23).
+    const autoCovered = !!(s && s.rf && s.rf.autofly && s.rf.arming_channel >= 1);
+    fb.style.display = autoCovered ? 'none' : '';
+    let afn = document.getElementById('autoflyNote');
+    if (autoCovered) {
+        if (!afn) {
+            afn = document.createElement('p');
+            afn.id = 'autoflyNote';
+            afn.className = 'muted';
+            afn.style.cssText = 'font-size:.8em;margin:.2em 0 .4em';
+            afn.innerHTML = '\u2708\uFE0F Radios go off by themselves when you arm, back on when you disarm \u2014 automatic fly mode.';
+            fb.parentNode.insertBefore(afn, fb);
+        }
+        afn.style.display = '';
+        return;
+    }
+    if (afn) afn.style.display = 'none';
     const alive = s && s.rf && s.rf.last_pkt_ms >= 0 && s.rf.last_pkt_ms < 1000;
     fb.style.opacity = alive ? '' : '.45';
     fb.onclick = alive ? showFlyConfirm : () => modalCard({
