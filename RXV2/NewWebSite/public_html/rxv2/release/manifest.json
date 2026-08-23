@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.413-mounting",
+      "url": "https://messiter.com/rxv2/release/v0.9.413/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.413/littlefs.bin",
+      "fs_md5": "f0c57fbb5041d74f4e86ed0b72638307",
+      "notes": "First-time basics gains 'Which way round is it mounted?' - the only two real Nexus positions: connections to the FRONT (standard) or to the BACK (yaw 180, board_align_yaw). Set FIRST, above level calibration, since level depends on it; applies after the in-page FC restart. Odd angles are reported as custom (configurator territory). Verified writes as always."
+    },
+    {
       "name": "RXV2-0.9.412-tx-first",
       "url": "https://messiter.com/rxv2/release/v0.9.412/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.412/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.401/littlefs.bin",
       "fs_md5": "b2869868a2650c9b2ecca354248f3c09",
       "notes": "Switches page: each row now shows the configurator-style range bar - the blue zone is where the function is ON, and a LIVE dot shows the channel's actual position (green when inside the zone). Flick a switch and watch it work."
-    },
-    {
-      "name": "RXV2-0.9.400-rf-steps",
-      "url": "https://messiter.com/rxv2/release/v0.9.400/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.400/littlefs.bin",
-      "fs_md5": "4c2fdd223716f59f315a93d50389884c",
-      "notes": "Switches + Rescue-switch card: ranges now decode with Rotorflight's own encoding (signed 5 \u00b5s steps about 1500 - range 875-2125), fixing impossible values like ARM showing 3900 \u00b5s. Thanks to Malcolm's sharp eye."
     }
   ]
 }
