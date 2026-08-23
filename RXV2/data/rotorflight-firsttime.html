@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name=theme-color content="#5fa099">
+<meta name=apple-mobile-web-app-capable content=yes>
+<meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
+<meta name=apple-mobile-web-app-title content="LDRC RX V2">
+<title>First-time basics &middot; LDRC RX V2</title>
+<link rel=stylesheet href="/style.css?v=172">
+<script src="/app.js?v=177" defer></script>
+<style>
+.banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
+.banner.info{background:#c8d2dc;color:#3a5165}
+.banner.good{background:#a8d29a;color:#2a4d1f}
+.banner.bad {background:#dca08c;color:#5c2a1a}
+.banner.warn{background:#e8cf8f;color:#5c4a1a}
+.fRow{display:grid;grid-template-columns:1fr auto;gap:.5em .8em;align-items:center;margin:.35em 0}
+.fRow .lab b{display:block}.fRow .lab span{font-size:.8em;color:#5d7a8c}
+.fRow input[type=number]{width:6em;padding:.5em;font-size:1em;border:1px solid #b8c7d0;border-radius:6px;text-align:center}
+.fRow select{padding:.5em;font-size:1em;border:1px solid #b8c7d0;border-radius:6px;max-width:11em}
+.fRow input[type=checkbox]{width:1.4em;height:1.4em}
+.saveBtn{width:100%;margin-top:.6em;padding:.75em;border:0;border-radius:10px;background:#6cab5e;color:#fff;font-size:1.05em;font-weight:700;cursor:pointer}
+.saveBtn:disabled{opacity:.5}
+.calBtn{width:100%;margin-top:.6em;padding:.75em;border:0;border-radius:10px;background:#5f8fab;color:#fff;font-size:1.05em;font-weight:700;cursor:pointer}
+.rbBtn{width:100%;margin-top:.6em;padding:.75em;border:0;border-radius:10px;background:#c98a4a;color:#fff;font-size:1.05em;font-weight:700;cursor:pointer}
+.sMsg{text-align:center;font-size:.85em;min-height:1.2em;margin-top:.3em;font-weight:600}
+h2 .hint{font-weight:400;font-size:.7em;color:#5d7a8c;display:block;margin-top:.1em}
+.att{font-size:1.3em;font-weight:700;text-align:center;margin:.4em 0;color:#3a5165}
+.att.level{color:#2a4d1f}
+.lockRow{background:#dfe6ec;border-radius:8px;padding:.4em .6em;font-size:.85em;color:#3a5165;margin:.35em 0}
+</style>
+</head>
+<body class=hasFab>
+<button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
+<div class=bg-photo aria-hidden=true></div>
+<div class=bg-wash  aria-hidden=true></div>
+<div class=container>
+    <h1>First-time basics</h1>
+    <div id=verBanner class="banner warn" style="display:none"><span id=verBannerMsg></span></div>
+    <div id=status class="banner info">loading&hellip;</div>
+    <div id=rbBanner class="banner warn" style="display:none">Some saved changes only take effect after a flight-controller restart.
+        <button class=rbBtn onclick="rebootFc()">&#128260; Restart flight controller now</button></div>
+
+    <div class=card id=cal>
+        <h2>Level calibration <span class=hint>teach the flight controller which way is level (accelerometer calibration)</span></h2>
+        <p class=muted style="font-size:.85em;line-height:1.5">Put the helicopter on a <b>flat, level surface</b> and keep it perfectly still. Takes about 2 seconds.</p>
+        <div class=att id=attNow>&hellip;</div>
+        <button class=calBtn id=calBtn onclick="calibrate()">&#128207; Calibrate level now</button>
+        <div id=calMsg class=sMsg></div>
+    </div>
+
+    <div class=card id=feat>
+        <h2>What the flight controller uses <span class=hint>major functions on or off (Features)</span></h2>
+        <div class=lockRow>&#128274; <b>Receiver link (RX_SERIAL)</b> is always on &mdash; turning it off would cut this very connection.</div>
+        <div class=fRow><div class=lab><b>Governor</b><span>Rotorflight holds the head speed for you <i>(GOVERNOR)</i></span></div><input type=checkbox id=f26></div>
+        <div class=fRow><div class=lab><b>ESC telemetry</b><span>volts, amps, temperature and RPM from the ESC <i>(ESC_SENSOR)</i></span></div><input type=checkbox id=f27></div>
+        <div class=fRow><div class=lab><b>RPM wire input</b><span>only for a separate RPM signal wire &mdash; not needed with ESC telemetry <i>(FREQ_SENSOR)</i></span></div><input type=checkbox id=f28></div>
+        <div class=fRow><div class=lab><b>Vibration filter</b><span>automatic notch filter that follows vibrations <i>(DYN_NOTCH)</i></span></div><input type=checkbox id=f29></div>
+        <div class=fRow><div class=lab><b>Telemetry out</b><span>flight data back to the transmitter <i>(TELEMETRY)</i></span></div><input type=checkbox id=f10></div>
+        <button class=saveBtn id=featSave onclick="saveFeatures()">Save features</button>
+        <div id=featMsg class=sMsg></div>
+    </div>
+
+    <div class=card id=motor>
+        <h2>Motor &amp; ESC <span class=hint>how the flight controller talks to the ESC (Motor)</span></h2>
+        <div class=fRow><div class=lab><b>ESC signal</b><span>DShot600 for most modern ESCs <i>(motor_pwm_protocol)</i></span></div>
+            <select id=m_proto>
+                <option value=0>Normal PWM</option><option value=1>OneShot125</option>
+                <option value=5>DShot150</option><option value=6>DShot300</option>
+                <option value=7>DShot600</option><option value=10>Off (disabled)</option>
+            </select></div>
+        <div class=fRow><div class=lab><b>Motor pole count</b><span>magnets in the motor bell &mdash; needed for true RPM <i>(motor_poles)</i></span></div><input id=m_poles type=number min=2 max=64 step=2></div>
+        <div class=fRow><div class=lab><b>DShot RPM telemetry</b><span>RPM straight from the ESC signal wire <i>(dshot_bidir)</i></span></div><input type=checkbox id=m_bidir></div>
+        <div class=fRow><div class=lab><b>Main gear ratio</b><span>motor pinion teeth : main gear teeth <i>(main_rotor_gear_ratio)</i></span></div>
+            <span style="white-space:nowrap"><input id=m_mgN type=number min=1 max=50000 style="width:4.5em"> : <input id=m_mgD type=number min=1 max=50000 style="width:4.5em"></span></div>
+        <div class=fRow><div class=lab><b>Tail gear ratio</b><span>tail drive : main shaft <i>(tail_rotor_gear_ratio)</i></span></div>
+            <span style="white-space:nowrap"><input id=m_tgN type=number min=1 max=50000 style="width:4.5em"> : <input id=m_tgD type=number min=1 max=50000 style="width:4.5em"></span></div>
+        <h2 style="margin-top:.8em">ESC telemetry wire <span class=hint>which brand&rsquo;s telemetry language the ESC speaks (ESC sensor)</span></h2>
+        <div class=fRow><div class=lab><b>ESC telemetry protocol</b><span><i>(esc_sensor_protocol)</i></span></div>
+            <select id=e_proto>
+                <option value=0>None</option><option value=1>BLHeli32</option>
+                <option value=2>Hobbywing V4</option><option value=3>Hobbywing V5</option>
+                <option value=4>Scorpion</option><option value=5>Kontronik</option>
+                <option value=6>OMP Hobby</option><option value=7>ZTW</option>
+                <option value=8>APD</option><option value=9>OpenYGE</option>
+                <option value=10>FLYROTOR</option><option value=11>Graupner</option>
+                <option value=12>XDFly</option><option value=13>Record</option>
+            </select></div>
+        <button class=saveBtn id=motorSave onclick="saveMotor()">Save motor &amp; ESC</button>
+        <div id=motorMsg class=sMsg></div>
+    </div>
+
+    <div class=card id=batt>
+        <h2>Battery <span class=hint>so warnings and telemetry read true (Battery)</span></h2>
+        <div class=fRow><div class=lab><b>Cell count</b><span>0 = work it out automatically <i>(battery_cell_count)</i></span></div><input id=b_cells type=number min=0 max=24></div>
+        <div class=fRow><div class=lab><b>Capacity</b><span>mAh, 0 = not set <i>(battery_capacity)</i></span></div><input id=b_cap type=number min=0 max=20000 step=50></div>
+        <div class=fRow><div class=lab><b>Voltage comes from</b><span><i>(vbat_meter_source)</i></span></div>
+            <select id=b_vsrc><option value=0>Nowhere</option><option value=1>FC pads (ADC)</option><option value=2>ESC telemetry</option></select></div>
+        <div class=fRow><div class=lab><b>Current comes from</b><span><i>(current_meter_source)</i></span></div>
+            <select id=b_isrc><option value=0>Nowhere</option><option value=1>FC pads (ADC)</option><option value=2>ESC telemetry</option></select></div>
+        <div class=fRow><div class=lab><b>Full cell voltage</b><span>V per cell, fresh off the charger <i>(vbat_full_cell_voltage)</i></span></div><input id=b_full type=number min=2 max=5 step=0.01></div>
+        <div class=fRow><div class=lab><b>Warning voltage</b><span>V per cell &mdash; time to land <i>(vbat_warning_cell_voltage)</i></span></div><input id=b_warn type=number min=2 max=5 step=0.01></div>
+        <div class=fRow><div class=lab><b>Empty cell voltage</b><span>V per cell, absolute floor <i>(vbat_min_cell_voltage)</i></span></div><input id=b_min type=number min=2 max=5 step=0.01></div>
+        <button class=saveBtn id=battSave onclick="saveBattery()">Save battery</button>
+        <div id=battMsg class=sMsg></div>
+    </div>
+
+    <div class=card id=map>
+        <h2>Channel order <span class=hint>which stick arrives on which channel (Channel map)</span></h2>
+        <p class=muted style="font-size:.85em;line-height:1.5">With this receiver the standard Rotorflight order is right: <b>A</b>ileron, <b>E</b>levator, <b>R</b>udder, <b>C</b>ollective, <b>T</b>hrottle. Only change this if the sticks move the wrong things.</p>
+        <div class=att id=mapNow>&hellip;</div>
+        <button class=saveBtn id=mapBtn onclick="setStdMap()" style="background:#5f8fab">Set standard order (AERCT123)</button>
+        <div id=mapMsg class=sMsg></div>
+    </div>
+
+    <a class="btn btn-bb" href="/rotorflight-newheli" style="margin-top:.8em"><span class=ico>&#11013;&#65039;</span>Back to New helicopter</a>
+    <div class=footer></div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+function hexToBytes(h){const o=new Uint8Array(h.length/2);for(let i=0;i<o.length;i++)o[i]=parseInt(h.substr(i*2,2),16);return o;}
+function bytesToHex(b){return Array.from(b).map(x=>x.toString(16).padStart(2,'0')).join('');}
+const rdU16=(b,o)=>b[o]|(b[o+1]<<8);
+const rdS16=(b,o)=>{const v=rdU16(b,o);return v>32767?v-65536:v;};
+const wrU16=(b,o,v)=>{v=Math.max(0,Math.min(65535,Math.round(v)));b[o]=v&0xff;b[o+1]=(v>>8)&0xff;};
+function setStatus(k,t){const s=$('status');s.className='banner '+k;s.textContent=t;}
+function flash(id,t){$(id).textContent=t;setTimeout(()=>$(id).textContent='',6000);}
+let armed=false, motorRaw=null, escRaw=null, battRaw=null, featMask=0;
+
+function needReboot(){ $('rbBanner').style.display=''; }
+async function rebootFc(){
+    if(!(await LDRC.confirm('Restart the flight controller now? Motors stop briefly; the link returns in a few seconds.',
+        {title:'Restart flight controller',icon:'🔄',yes:'Restart',kind:'warn'})))return;
+    // retries=1: the FC reboots before answering — a retry would reboot it twice.
+    try{ await LDRC.msp(68,'',1); }catch(e){}
+    $('rbBanner').style.display='none';
+    setStatus('info','Flight controller restarting — back in a few seconds…');
+    setTimeout(load, 8000);
+}
+
+async function armCheck(){
+    try{ const st=await (await fetch('/api/state.json',{cache:'no-store'})).json();
+         armed=!!(st.rf&&st.rf.armed); }catch(e){}
+    return armed;
+}
+
+// ---- Level calibration (MSP 205 + live attitude 108) ----
+let attTimer=null;
+async function pollAttitude(){
+    if(document.hidden)return;
+    try{
+        const b=hexToBytes(await LDRC.msp(108,'',1));
+        if(b.length>=4){
+            const r=rdS16(b,0)/10, p=rdS16(b,2)/10;
+            const lvl=Math.abs(r)<2&&Math.abs(p)<2;
+            const el=$('attNow'); el.className='att'+(lvl?' level':'');
+            el.textContent='Roll '+r.toFixed(1)+'°  ·  Pitch '+p.toFixed(1)+'°'+(lvl?'  ✓ level':'');
+        }
+    }catch(e){}
+}
+async function calibrate(){
+    if(await armCheck()){ flash('calMsg','⚠️ Refused — the model is ARMED'); return; }
+    if(!(await LDRC.confirm('Is the helicopter sitting flat, level and perfectly still?',
+        {title:'Level calibration',icon:'📏',yes:'Yes — calibrate'})))return;
+    try{
+        await LDRC.msp(205);           // MSP_ACC_CALIBRATION — FC ignores it if armed
+        flash('calMsg','⏳ Calibrating — keep it still…');
+        setTimeout(async()=>{ await LDRC.msp(250); await pollAttitude();
+                              flash('calMsg','✅ Done — roll/pitch above should read near 0°'); },2500);
+    }catch(e){ flash('calMsg','⚠️ Failed: '+e.message); }
+}
+
+// ---- Features (36/37, U32 mask; write REPLACES the whole mask) ----
+const FEAT_BITS=[26,27,28,29,10];
+async function loadFeatures(){
+    const b=hexToBytes(await LDRC.msp(36));
+    featMask=(b[0]|(b[1]<<8)|(b[2]<<16)|(b[3]<<24))>>>0;
+    for(const bit of FEAT_BITS) $('f'+bit).checked=!!(featMask&(1<<bit));
+}
+async function saveFeatures(){
+    if(await armCheck()){ flash('featMsg','⚠️ Refused — the model is ARMED'); return; }
+    let m=featMask;
+    for(const bit of FEAT_BITS){ if($('f'+bit).checked)m=(m|(1<<bit))>>>0; else m=(m&~(1<<bit))>>>0; }
+    m=(m|(1<<3))>>>0;                                  // RX_SERIAL stays ON, always
+    const b=new Uint8Array([m&0xff,(m>>8)&0xff,(m>>16)&0xff,(m>>24)&0xff]);
+    try{
+        await LDRC.msp(37,bytesToHex(b)); await LDRC.msp(250);
+        await loadFeatures();
+        let ok=true; for(const bit of FEAT_BITS) if($('f'+bit).checked!==!!(m&(1<<bit)))ok=false;
+        flash('featMsg', ok?'✅ Saved & verified — restart to apply':'⚠️ FC adjusted the values');
+        needReboot();
+    }catch(e){ flash('featMsg','⚠️ Failed: '+e.message); }
+}
+
+// ---- Motor (131 read 29B / 222 write 28B: write drops the motorCount byte) ----
+async function loadMotor(){
+    const b=hexToBytes(await LDRC.msp(131));
+    if(b.length<29)throw new Error('motor config short ('+b.length+'B)');
+    motorRaw=b.slice(0,29);
+    $('m_bidir').checked=!!b[8]; $('m_proto').value=b[9];
+    $('m_poles').value=b[13];
+    $('m_mgN').value=rdU16(b,21); $('m_mgD').value=rdU16(b,23);
+    $('m_tgN').value=rdU16(b,25); $('m_tgD').value=rdU16(b,27);
+    if(![0,1,5,6,7,10].includes(b[9])){ const o=document.createElement('option');o.value=b[9];o.textContent='Protocol '+b[9];$('m_proto').appendChild(o);$('m_proto').value=b[9]; }
+}
+async function loadEsc(){
+    const b=hexToBytes(await LDRC.msp(123));
+    if(b.length<14)throw new Error('ESC sensor config short ('+b.length+'B)');
+    escRaw=b.slice(0,14);
+    $('e_proto').value=b[0]<=13?b[0]:0;
+}
+async function saveMotor(){
+    if(await armCheck()){ flash('motorMsg','⚠️ Refused — the model is ARMED'); return; }
+    if(!motorRaw||!escRaw){ flash('motorMsg','⚠️ Read failed — reload the page'); return; }
+    const r=motorRaw, w=new Uint8Array(28);
+    w.set(r.slice(0,6),0);            // min/max throttle + mincommand unchanged
+    w[6]=r[7];                        // compat pole byte (FC skips it)
+    w[7]=$('m_bidir').checked?1:0;
+    w[8]=parseInt($('m_proto').value);
+    w[9]=r[10]; w[10]=r[11];          // pwm rate unchanged
+    w[11]=r[12];                      // unsynced unchanged
+    const poles=Math.max(2,Math.min(64,parseInt($('m_poles').value||'2')));
+    w[12]=poles; w[13]=r[14]; w[14]=r[15]; w[15]=r[16];
+    w.set(r.slice(17,21),16);         // rpm LPFs unchanged
+    wrU16(w,20,parseInt($('m_mgN').value||'1')); wrU16(w,22,parseInt($('m_mgD').value||'1'));
+    wrU16(w,24,parseInt($('m_tgN').value||'1')); wrU16(w,26,parseInt($('m_tgD').value||'1'));
+    const e=new Uint8Array(escRaw); e[0]=parseInt($('e_proto').value);
+    const wantProto=w[8], wantPoles=w[12], wantEsc=e[0];
+    try{
+        await LDRC.msp(222,bytesToHex(w));
+        await LDRC.msp(216,bytesToHex(e));
+        await LDRC.msp(250);
+        await loadMotor(); await loadEsc();
+        const ok = motorRaw[9]===wantProto && motorRaw[13]===wantPoles && escRaw[0]===wantEsc;
+        flash('motorMsg', ok?'✅ Saved & verified — restart to apply':'⚠️ FC adjusted the values — re-read');
+        needReboot();
+    }catch(e2){ flash('motorMsg','⚠️ Failed: '+e2.message); }
+}
+
+// ---- Battery (32 read / 33 write, 15B) ----
+async function loadBattery(){
+    const b=hexToBytes(await LDRC.msp(32));
+    if(b.length<15)throw new Error('battery config short ('+b.length+'B)');
+    battRaw=b.slice(0,15);
+    $('b_cap').value=rdU16(b,0); $('b_cells').value=b[2];
+    $('b_vsrc').value=b[3]; $('b_isrc').value=b[4];
+    $('b_min').value=(rdU16(b,5)/100).toFixed(2);
+    $('b_full').value=(rdU16(b,9)/100).toFixed(2);
+    $('b_warn').value=(rdU16(b,11)/100).toFixed(2);
+}
+async function saveBattery(){
+    if(!battRaw){ flash('battMsg','⚠️ Read failed — reload the page'); return; }
+    const b=new Uint8Array(battRaw);
+    wrU16(b,0,parseInt($('b_cap').value||'0'));
+    b[2]=Math.max(0,Math.min(24,parseInt($('b_cells').value||'0')));
+    b[3]=parseInt($('b_vsrc').value); b[4]=parseInt($('b_isrc').value);
+    const cv=(id)=>Math.round(Math.max(2,Math.min(5,parseFloat($(id).value||'3')))*100);
+    wrU16(b,5,cv('b_min')); wrU16(b,11,cv('b_warn')); wrU16(b,9,cv('b_full'));
+    try{
+        await LDRC.msp(33,bytesToHex(b)); await LDRC.msp(250);
+        const chk=hexToBytes(await LDRC.msp(32));
+        let ok=chk.length>=15; for(let i=0;ok&&i<15;i++)if(b[i]!==chk[i])ok=false;
+        battRaw=chk.slice(0,15);
+        flash('battMsg', ok?'✅ Saved & verified':'⚠️ FC adjusted the values');
+    }catch(e){ flash('battMsg','⚠️ Failed: '+e.message); }
+}
+
+// ---- Channel map (64/65, 8 bytes; letters AERCT123, buf[map[i]]=letter[i]) ----
+const MAP_LETTERS='AERCT123';
+async function loadMap(){
+    const b=hexToBytes(await LDRC.msp(64));
+    const buf=Array(8).fill('?');
+    for(let i=0;i<8&&i<b.length;i++) if(b[i]<8)buf[b[i]]=MAP_LETTERS[i];
+    const s=buf.join('');
+    $('mapNow').textContent='Current order: '+s+(s==='AERCT123'?'  ✓ standard':'  — not standard');
+    $('mapNow').className='att'+(s==='AERCT123'?' level':'');
+}
+async function setStdMap(){
+    if(await armCheck()){ flash('mapMsg','⚠️ Refused — the model is ARMED'); return; }
+    if(!(await LDRC.confirm('Set the standard Rotorflight channel order (AERCT123)?',
+        {title:'Channel order',icon:'🔀',yes:'Set standard'})))return;
+    try{
+        await LDRC.msp(65,'0001020304050607'); await LDRC.msp(250); await loadMap();
+        flash('mapMsg','✅ Standard order set');
+    }catch(e){ flash('mapMsg','⚠️ Failed: '+e.message); }
+}
+
+async function load(){
+    if (window.LDRC && LDRC.replayReady) await LDRC.replayReady;
+    setStatus('info','Reading from the flight controller…');
+    try{
+        const st=await (await fetch('/api/state.json',{cache:'no-store'})).json();
+        const api=(st.fcinfo.api_major*100)+st.fcinfo.api_minor;
+        const alert=LDRC.rfVersionAlert&&LDRC.rfVersionAlert(api);
+        if(alert){ $('verBanner').style.display=''; $('verBannerMsg').textContent=alert; }
+        armed=!!(st.rf&&st.rf.armed);
+    }catch(e){}
+    try{
+        await loadFeatures(); await loadMotor(); await loadEsc(); await loadBattery(); await loadMap();
+        setStatus('good','✓ Loaded from flight controller');
+    }catch(e){ setStatus('bad','Read failed: '+e.message); }
+    await pollAttitude();
+    if(!attTimer) attTimer=setInterval(pollAttitude, 1500);
+}
+load();
+</script>
+<template id=helpContent><h2>First-time basics</h2>
+<p>The one-off settings for a brand-new flight controller, in plain English (Rotorflight&rsquo;s name for each is in brackets):</p>
+<ul>
+<li><b>Level calibration</b> &mdash; sit the model flat and still, tap the button. Roll/pitch above should then read near 0&deg;.</li>
+<li><b>What the flight controller uses</b> &mdash; the big on/off switches. Governor and ESC telemetry are the usual ones for an electric heli. The receiver link is locked on &mdash; it is how this page talks to the flight controller. Changes apply after a restart (a button appears).</li>
+<li><b>Motor &amp; ESC</b> &mdash; how the ESC is driven (DShot600 for most modern ESCs), the motor pole count and gear ratios (needed for true head speed), and which brand of ESC telemetry to listen for.</li>
+<li><b>Battery</b> &mdash; cells, capacity and where volts/amps are measured, so warnings mean something.</li>
+<li><b>Channel order</b> &mdash; should read AERCT123 with this receiver. Fix it with one tap if not.</li>
+</ul>
+<p>Nothing here is flight tuning &mdash; that lives in the other Rotorflight pages.</p>
+</template>
+</body>
+</html>

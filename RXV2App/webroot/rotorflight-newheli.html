@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name=theme-color content="#5fa099">
+<meta name=apple-mobile-web-app-capable content=yes>
+<meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
+<meta name=apple-mobile-web-app-title content="LDRC RX V2">
+<title>New helicopter &middot; LDRC RX V2</title>
+<link rel=stylesheet href="/style.css?v=172">
+<script src="/app.js?v=177" defer></script>
+<style>
+.banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
+.banner.warn{background:#e8cf8f;color:#5c4a1a}
+.step{display:grid;grid-template-columns:auto 1fr auto;gap:.6em .8em;align-items:center;
+      background:#e7edf2;border-radius:12px;padding:.7em .8em;margin:.5em 0}
+.step.done{background:#d7e8cf}
+.step .num{font-size:1.25em;font-weight:800;color:#5d7a8c;min-width:1.3em;text-align:center}
+.step.done .num{color:#4a7d38}
+.step .tit b{display:block;font-size:1.02em;color:#2e4356}
+.step .tit span{font-size:.8em;color:#5d7a8c;line-height:1.35;display:block}
+.step a.go{background:#5fa099;color:#fff;border-radius:9px;padding:.55em .9em;font-weight:700;
+           text-decoration:none;white-space:nowrap;font-size:.95em}
+.step .tick{grid-column:1;justify-self:center}
+.step input[type=checkbox]{width:1.5em;height:1.5em}
+.prog{font-weight:700;text-align:center;margin:.4em 0;color:#2e4356}
+.resetBtn{width:100%;margin-top:.8em;padding:.6em;border:0;border-radius:10px;background:#b06a6a;color:#fff;font-weight:700;cursor:pointer}
+</style>
+</head>
+<body class=hasFab>
+<button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
+<div class=bg-photo aria-hidden=true></div>
+<div class=bg-wash  aria-hidden=true></div>
+<div class=container>
+    <h1>New helicopter</h1>
+    <div class="banner warn">&#9888;&#65039; <b>Take the main and tail blades OFF</b> (or unplug the motor) until the last step says otherwise.</div>
+    <p class=muted style="font-size:.9em;line-height:1.5;margin:.2em 0 .6em">Set up a helicopter with a Rotorflight flight controller from scratch, one step at a time &mdash; entirely from this phone. Tick each step as you finish it; your progress is remembered.</p>
+    <div class=prog id=prog></div>
+    <div id=steps></div>
+    <button class=resetBtn onclick="resetAll()">Start over (clear all ticks)</button>
+    <a class="btn btn-bb" href="/rotorflight" style="margin-top:.8em"><span class=ico>&#11013;&#65039;</span>Back to Rotorflight</a>
+    <div class=footer></div>
+</div>
+
+<script>
+const STEPS=[
+ {k:'wire',  t:'Wire it up & first contact', d:'Receiver to a spare UART (CRSF), ESC to its motor pad + telemetry pad. When this app shows the Rotorflight buttons, the link is alive.', href:'/rotorflight'},
+ {k:'basics',t:'First-time basics', d:'Level calibration, governor & telemetry on, ESC protocol & poles, gear ratios, battery, channel order.', href:'/rotorflight-firsttime'},
+ {k:'servos',t:'Servos', d:'Centre each servo, set travel and direction — swash level and square.', href:'/rotorflight-servos'},
+ {k:'travel',t:'Travel extents', d:'Collective and cyclic throws, swash limits and trims — with the bench-measure tool.', href:'/rotorflight-travel'},
+ {k:'switch',t:'Switches', d:'Which transmitter switch arms, which selects banks — and check the ranges with the live marker.', href:'/rotorflight-modes'},
+ {k:'rescue',t:'Rescue', d:'The safety net: set the rescue switch and how firmly it saves the model.', href:'/rotorflight-rescue'},
+ {k:'gov',   t:'Governor', d:'Head speeds per bank and spool-up behaviour.', href:'/rotorflight-gov-profile'},
+ {k:'rates', t:'Rates & PIDs', d:'How fast it turns and how firmly it holds — proven starting values are fine for a first flight.', href:'/rotorflight-rates'},
+ {k:'backup',t:'Back up to the phone', d:'One tap saves the whole setup — restorable any time, even at the field.', href:'/setup'},
+];
+const $=id=>document.getElementById(id);
+const KEY='rfNewHeli.';
+function paint(){
+    const host=$('steps'); host.innerHTML='';
+    let done=0;
+    STEPS.forEach((s,i)=>{
+        const isDone=localStorage.getItem(KEY+s.k)==='1'; if(isDone)done++;
+        const div=document.createElement('div');
+        div.className='step'+(isDone?' done':'');
+        div.innerHTML='<div class=num>'+(isDone?'✓':(i+1))+'</div>'
+            +'<div class=tit><b>'+s.t+'</b><span>'+s.d+'</span></div>'
+            +'<a class=go href="'+s.href+'">Open</a>'
+            +'<div class=tick><input type=checkbox '+(isDone?'checked':'')+' aria-label="done"></div><div></div><div></div>';
+        div.querySelector('input').addEventListener('change',ev=>{
+            localStorage.setItem(KEY+s.k, ev.target.checked?'1':'0'); paint();
+        });
+        host.appendChild(div);
+    });
+    $('prog').textContent = done===STEPS.length
+        ? '🚁 All '+STEPS.length+' steps done — blades on, check everything once more, and fly!'
+        : done+' of '+STEPS.length+' steps done';
+}
+async function resetAll(){
+    if(!(await LDRC.confirm('Clear all the ticks and start the checklist again?',
+        {title:'Start over',icon:'🔄',yes:'Clear ticks',kind:'warn'})))return;
+    STEPS.forEach(s=>localStorage.removeItem(KEY+s.k)); paint();
+}
+paint();
+</script>
+<template id=helpContent><h2>New helicopter</h2>
+<p>The from-scratch setup checklist for a Rotorflight helicopter &mdash; the same ground the configurator covers, but step by step on the phone, in plain English.</p>
+<ul>
+<li>Work top to bottom. Each <b>Open</b> button goes to the right page; come back and tick the step off.</li>
+<li>Ticks are remembered on this phone (per browser), not on the model.</li>
+<li><b>Blades off</b> (or motor unplugged) until the very end &mdash; several steps move the servos, and one spins the motor if you let it.</li>
+</ul>
+<p>Already-set-up models don&rsquo;t need this page &mdash; it exists for the first hour of a new build.</p>
+</template>
+</body>
+</html>

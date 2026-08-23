@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.407-arm-self-taught";
+constexpr const char* FW_VERSION = "RXV2-0.9.408-new-heli";
 
 //*********************************************************************
 //  Auto-update manifest URLs

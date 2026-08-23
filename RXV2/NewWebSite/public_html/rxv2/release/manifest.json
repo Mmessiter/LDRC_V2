@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.408-new-heli",
+      "url": "https://messiter.com/rxv2/release/v0.9.408/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.408/littlefs.bin",
+      "fs_md5": "f1e5bf8dfe504bafe2228980ab71e961",
+      "notes": "The NEW HELICOPTER wizard begins: a step-by-step from-scratch setup checklist (blades off!) plus the new First-time basics page - level calibration (accelerometer), governor/telemetry/ESC-sensor features, ESC protocol + motor poles + gear ratios, ESC telemetry brand, battery cells/capacity/voltage sources, and one-tap standard channel order (AERCT123). All writes verified by read-back; restart-to-apply handled in-page."
+    },
+    {
       "name": "RXV2-0.9.407-arm-self-taught",
       "url": "https://messiter.com/rxv2/release/v0.9.407/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.407/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.396/littlefs.bin",
       "fs_md5": "357fba4768f5f7d5265f54d94c9e2cba",
       "notes": "Rescue screen: every label now also shows Rotorflight's own name for it in brackets (e.g. Levelling strength = Level gain), so you can cross-reference the configurator with no guesswork."
-    },
-    {
-      "name": "RXV2-0.9.395-rescue",
-      "url": "https://messiter.com/rxv2/release/v0.9.395/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.395/littlefs.bin",
-      "fs_md5": "b6ba4cf638f32286094ca25e837caa7e",
-      "notes": "NEW: Rescue screen (Rotorflight menu) - the safety net. Set per bank what happens when you flick the rescue switch: level & climb (or hold height), flip upright if inverted, the stage timings, collective bite and a hard collective ceiling - all in plain English, read from and written to the flight controller with every save verified. Included in phone backup & restore."
     }
   ]
 }
