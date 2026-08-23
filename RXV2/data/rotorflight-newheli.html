@@ -35,7 +35,8 @@
 <div class=container>
     <h1>New helicopter</h1>
     <div class="banner warn">&#9888;&#65039; <b>Take the main and tail blades OFF</b> (or unplug the motor) until the last step says otherwise.</div>
-    <p class=muted style="font-size:.9em;line-height:1.5;margin:.2em 0 .6em">Set up a helicopter with a Rotorflight flight controller from scratch, one step at a time &mdash; entirely from this phone. Tick each step as you finish it; your progress is remembered.</p>
+    <p class=muted style="font-size:.9em;line-height:1.5;margin:.2em 0 .6em">Set up a helicopter with a Rotorflight flight controller from scratch, one step at a time &mdash; entirely from this phone. Tick each step as you finish it; progress is remembered <b>per model</b>, so a fleet of new helicopters each gets its own checklist.</p>
+    <div class=prog id=modelName style="color:#4a7a5f"></div>
     <div class=prog id=prog></div>
     <div id=steps></div>
     <button class=resetBtn onclick="resetAll()">Start over (clear all ticks)</button>
@@ -57,7 +58,18 @@ const STEPS=[
  {k:'backup',t:'Back up to the phone', d:'One tap saves the whole setup — restorable any time, even at the field.', href:'/setup'},
 ];
 const $=id=>document.getElementById(id);
-const KEY='rfNewHeli.';
+// Ticks are per MODEL (receiver name), not per phone — Malcolm is setting up
+// a dozen helicopters and each must start its checklist fresh (2026-08-23).
+let KEY='rfNewHeli.';
+async function bindModel(){
+    try{
+        if (window.LDRC && LDRC.replayReady) await LDRC.replayReady;
+        const st=await (await fetch('/api/state.json',{cache:'no-store'})).json();
+        const n=(st.info&&st.info.name)||'';
+        if(n){ KEY='rfNewHeli.'+n+'.'; $('modelName').textContent='Setting up: '+n; }
+    }catch(e){}
+    paint();
+}
 function paint(){
     const host=$('steps'); host.innerHTML='';
     let done=0;
@@ -83,13 +95,14 @@ async function resetAll(){
         {title:'Start over',icon:'🔄',yes:'Clear ticks',kind:'warn'})))return;
     STEPS.forEach(s=>localStorage.removeItem(KEY+s.k)); paint();
 }
-paint();
+paint();      // instant paint with the generic key…
+bindModel();  // …then rebind to this model's own ticks when the name arrives
 </script>
 <template id=helpContent><h2>New helicopter</h2>
 <p>The from-scratch setup checklist for a Rotorflight helicopter &mdash; the same ground the configurator covers, but step by step on the phone, in plain English.</p>
 <ul>
 <li>Work top to bottom. Each <b>Open</b> button goes to the right page; come back and tick the step off.</li>
-<li>Ticks are remembered on this phone (per browser), not on the model.</li>
+<li>Ticks are remembered per model (by its receiver name), so every new helicopter starts a fresh checklist.</li>
 <li><b>Blades off</b> (or motor unplugged) until the very end &mdash; several steps move the servos, and one spins the motor if you let it.</li>
 </ul>
 <p>Already-set-up models don&rsquo;t need this page &mdash; it exists for the first hour of a new build.</p>
