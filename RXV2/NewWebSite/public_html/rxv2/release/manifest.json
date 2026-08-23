@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.418-complete-menu",
+      "url": "https://messiter.com/rxv2/release/v0.9.418/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.418/littlefs.bin",
+      "fs_md5": "b20ad4fe6df572871b609fbf365b28af",
+      "notes": "A la carte is now the COMPLETE catalogue: Transmitter channels and First-time basics appear there too, so everything the wizards walk through can also be reached on its own. The Wizards menu stays clean with just the two guides."
+    },
+    {
       "name": "RXV2-0.9.417-more-functions",
       "url": "https://messiter.com/rxv2/release/v0.9.417/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.417/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.407/littlefs.bin",
       "fs_md5": "7f555557ea22ca960231165bb0963754",
       "notes": "Rotorflight takes over Fly now completely: the receiver reads the ARM switch channel straight from the flight controller (MSP mode ranges) - no setup needed. Fly now then hides itself and the arming switch does it all: arm = radios off (3 s, on the ground), disarm = radios back. A manually set arming channel still wins; non-Rotorflight models are unchanged."
-    },
-    {
-      "name": "RXV2-0.9.406-arm-cycle",
-      "url": "https://messiter.com/rxv2/release/v0.9.406/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.406/littlefs.bin",
-      "fs_md5": "e8b51ac389fe327e59c0ceac0176085c",
-      "notes": "Automatic fly mode, full cycle: radios switch OFF by themselves 3 s after ARMING (on the ground, during spool-up - never mid-air) and back ON when you DISARM. Only WiFi/Bluetooth are touched; the RC link and flight-controller output never stop. With an arming channel set, the front-page Fly now button hides itself - it is no longer needed (models without arming keep it)."
     }
   ]
 }
