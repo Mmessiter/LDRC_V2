@@ -17,6 +17,8 @@
 .banner.bad {background:#dca08c;color:#5c2a1a}
 .fnRow{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:.4em .6em;align-items:center;
        background:#e7edf2;border-radius:10px;padding:.55em .7em;margin:.4em 0;min-width:0}
+.fnRow.x5{grid-template-columns:minmax(0,1fr) auto auto auto auto}
+.delBtn{border:0;border-radius:8px;background:#b06a6a;color:#fff;font-weight:700;padding:.5em .6em;cursor:pointer;font-size:.85em}
 .fnRow select{max-width:100%;min-width:0}
 .xRow{background:#e7edf2;border-radius:10px;padding:.55em .7em;margin:.4em 0}
 .xRow.det{background:#f0e6c8}
@@ -129,22 +131,50 @@ function renderExtras(){
             $('n_x'+i).addEventListener('blur',commit);
             $('s_x'+i).addEventListener('change',()=>{extras[i].ch=parseInt($('s_x'+i).value);saveExtras();});
             $('d_x'+i).addEventListener('click',()=>detect(extraFuncs()[i]));
-            $('r_x'+i).addEventListener('click',()=>{extras.splice(i,1);saveExtras();renderExtras();});
+            $('r_x'+i).addEventListener('click',()=>removeExtra(i));
             setTimeout(()=>{const n=$('n_x'+i);if(n&&n.focus)n.focus();},50);
         }else{
-            div.className='fnRow';
+            div.className='fnRow x5';
             const shortMode=modeName.replace(/ \(.*/,'');
             div.innerHTML='<div class=lab id=e_x'+i+' style="cursor:pointer"><b>'+esc(x.label||modeName)+'</b>'
                 +'<span>'+(x.label?esc(shortMode)+' &mdash; ':'')+'tap to edit</span></div>'
                 +'<select id=s_x'+i+'>'+co+'</select>'
                 +'<span class=live id=l_x'+i+'></span>'
-                +'<button class=detBtn id=d_x'+i+'>Detect</button>';
+                +'<button class=detBtn id=d_x'+i+'>Detect</button>'
+                +'<button class=delBtn id=r_x'+i+' title=Remove>&#10006;</button>';
             host.appendChild(div);
             $('e_x'+i).addEventListener('click',()=>{extras[i].editing=true;renderExtras();});
             $('s_x'+i).addEventListener('change',()=>{extras[i].ch=parseInt($('s_x'+i).value);saveExtras();});
             $('d_x'+i).addEventListener('click',()=>detect(extraFuncs()[i]));
+            $('r_x'+i).addEventListener('click',()=>removeExtra(i));
         }
     });
+}
+// Removing an extra also clears its switch range from the flight controller
+// if it was already saved — otherwise an experiment would live on invisibly.
+async function removeExtra(i){
+    const x=extras[i];
+    const nm=x.label||(EXTRA_MODES.find(m=>m.id===x.perm)||{name:'this function'}).name;
+    if(!(await LDRC.confirm('Remove "'+nm+'"? If it was saved, its switch range is cleared from the flight controller too.',
+        {title:'Remove function',icon:'🗑️',yes:'Remove',kind:'warn'})))return;
+    extras.splice(i,1); saveExtras(); renderExtras();
+    try{
+        const mapB=hexToBytes(await LDRC.msp(64));
+        const f=Array.from(mapB.slice(0,8)).indexOf(x.ch-1);
+        const fcCh=f>=0?f+1:x.ch;
+        const modes=hexToBytes(await LDRC.msp(34));
+        let cleared=0;
+        for(let sl=0;sl*4+3<modes.length;sl++){
+            const o=sl*4;
+            if(modes[o]===x.perm&&modes[o+1]===fcCh-5&&modes[o+2]!==modes[o+3]){
+                await LDRC.msp(35,[sl,0,0,usStep(1500),usStep(1500)]
+                    .map(v=>v.toString(16).padStart(2,'0')).join(''));
+                cleared++;
+            }
+        }
+        if(cleared){ await LDRC.msp(250); flash('✅ Removed — cleared from the flight controller too'); }
+        else flash('✅ Removed (nothing saved on the flight controller)');
+    }catch(e){ flash('Removed here — could not reach the flight controller to clear it'); }
 }
 function addExtra(){ extras.push({perm:40,ch:7,editing:true}); saveExtras(); renderExtras(); }
 
@@ -333,7 +363,7 @@ poll(); setInterval(poll, 200);
 <li><b>Detect</b> &mdash; tap it, then waggle that stick or flick that switch for a few seconds. The receiver spots which channel moved.</li>
 </ul>
 <p><b>Save</b> writes it all to the flight controller and verifies by read-back: the channel order <i>(rcmap)</i>, the <b>Arm</b> switch and the <b>Rescue</b> switch <i>(Modes, active 1600&ndash;2100&thinsp;&micro;s)</i>. Fine-tune the switch ranges on the Switches page with its live marker.</p>
-<p><b>Add another function</b> covers everything else &mdash; black box, beeper, self-level, governor overrides, user switches &mdash; each written as a switch range too. Give each one <b>your own name</b> (a User switch might really be &ldquo;Lower undercarriage&rdquo;); the name lives in the app, the flight controller sees the function. Two functions may share one switch; a stick or the Arm channel may not be shared.</p>
+<p><b>Add another function</b> covers everything else &mdash; black box, beeper, self-level, governor overrides, user switches &mdash; each written as a switch range too. Give each one <b>your own name</b> (a User switch might really be &ldquo;Lower undercarriage&rdquo;); the name lives in the app, the flight controller sees the function. Two functions may share one switch; a stick or the Arm channel may not be shared. The <b>&#10006;</b> removes a function &mdash; and clears its switch range from the flight controller too, so experiments leave no trace.</p>
 <p>The five sticks must live on channels 1&ndash;8; switches can use any channel from 5 up. Choices are remembered on the phone as defaults for the next helicopter.</p>
 </template>
 </body>

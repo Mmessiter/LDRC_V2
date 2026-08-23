@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.422-erasable",
+      "url": "https://messiter.com/rxv2/release/v0.9.422/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.422/littlefs.bin",
+      "fs_md5": "7a72e160d805b1ce4b2817cfb06a9c38",
+      "notes": "Added functions can now be deleted cleanly: the X on each row (after a confirm) removes it AND clears its switch range from the flight controller if it had been saved - experiments and mistakes leave no trace. Only the exact function-on-that-switch is cleared; everything else is untouched."
+    },
+    {
       "name": "RXV2-0.9.421-settled-rows",
       "url": "https://messiter.com/rxv2/release/v0.9.421/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.421/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.411/littlefs.bin",
       "fs_md5": "537c674b661f96012dfca0cc2e5d3b4b",
       "notes": "Second wizard: TUNING - the after-the-build field checklist, in the order that works: back up first, mechanics check in the hover, governor, tail, cyclic, rates/expo to taste, fine touches, prove Rescue up high, back up the proven tune. One change per flight; ticks per model, like the New-helicopter checklist."
-    },
-    {
-      "name": "RXV2-0.9.410-fleet-ticks",
-      "url": "https://messiter.com/rxv2/release/v0.9.410/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.410/littlefs.bin",
-      "fs_md5": "c114cf6e902bc3f5a28cdc3d8b176d7e",
-      "notes": "New-helicopter checklist is now PER MODEL: ticks are keyed by the receiver's name, so a whole fleet of new helicopters each starts its own fresh checklist ('Setting up: <name>' shown at the top)."
     }
   ]
 }
