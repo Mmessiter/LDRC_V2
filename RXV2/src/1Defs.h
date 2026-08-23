@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.402-drag-handles";
+constexpr const char* FW_VERSION = "RXV2-0.9.403-add-picker";
 
 //*********************************************************************
 //  Auto-update manifest URLs
