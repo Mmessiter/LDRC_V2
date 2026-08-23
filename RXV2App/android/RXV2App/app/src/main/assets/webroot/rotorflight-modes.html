@@ -45,8 +45,13 @@
 <script>
 const $ = id => document.getElementById(id);
 const SLOTS = 20;              // MAX_MODE_ACTIVATION_CONDITION_COUNT
-const stepUs = s => 900 + 25 * s;
-const usStep = u => Math.max(0, Math.min(48, Math.round((u - 900) / 25)));
+// Rotorflight (unlike Betaflight!) stores mode ranges as SIGNED steps of
+// 5 µs about 1500: µs = 1500 + 5×step, step −125..+125 → 875..2125 µs.
+// (rc_modes.h STEP_TO_CHANNEL_VALUE — found when ARM decoded as 3900 µs,
+// Malcolm's screenshot 2026-08-23.)
+const sgn8 = b => b > 127 ? b - 256 : b;
+const stepUs = b => 1500 + 5 * sgn8(b);
+const usStep = u => (Math.max(-125, Math.min(125, Math.round((u - 1500) / 5))) + 256) & 0xFF;
 
 // Curated Rotorflight modes — plain English first, RF's name in brackets.
 const MODES = [
@@ -97,8 +102,8 @@ function rowCard(slotIdx, s){
       + '<div class=mRow>'
       + '<div><label>What the switch does</label><select id=m'+slotIdx+'>'+modeOptions(s.perm)+'</select></div>'
       + '<div><label>Which channel</label><select id=c'+slotIdx+'>'+chOptions(s.aux)+'</select></div>'
-      + '<div><label>Active from (&micro;s)</label><input id=lo'+slotIdx+' type=number min=900 max=2100 step=25 value='+s.lo+'></div>'
-      + '<div><label>Active to (&micro;s)</label><input id=hi'+slotIdx+' type=number min=900 max=2100 step=25 value='+s.hi+'></div>'
+      + '<div><label>Active from (&micro;s)</label><input id=lo'+slotIdx+' type=number min=875 max=2125 step=5 value='+s.lo+'></div>'
+      + '<div><label>Active to (&micro;s)</label><input id=hi'+slotIdx+' type=number min=875 max=2125 step=5 value='+s.hi+'></div>'
       + '</div>'
       + (m.warn?'<div class=armWarn>&#9888; This is the ARM switch — get the range wrong and the motor can arm unexpectedly. Change with the model unpowered.</div>':'')
       + '<div class=mBtns>'
@@ -149,7 +154,7 @@ async function writeSlot(slotIdx, perm, aux, lo, hi){
 
 async function saveRow(i){
     const perm=parseInt($('m'+i).value), aux=parseInt($('c'+i).value);
-    let lo=parseInt($('lo'+i).value||'900'), hi=parseInt($('hi'+i).value||'900');
+    let lo=parseInt($('lo'+i).value||'1500'), hi=parseInt($('hi'+i).value||'1500');
     if(hi<=lo){ $('msg'+i).textContent='⚠ "Active to" must be greater than "Active from"'; return; }
     const m=MODES.find(x=>x.id===perm)||{};
     if(!(await LDRC.confirm('Save: '+(m.name||'mode')+' on channel '+(aux+5)+', active '+lo+'–'+hi+' µs?'
@@ -167,7 +172,7 @@ async function delRow(i){
     if(!(await LDRC.confirm('Remove this switch action? The mode will no longer be controllable from the transmitter.',
         {title:'Remove switch action',icon:'🗑️',yes:'Remove',kind:'warn'})))return;
     try{
-        const ok=await writeSlot(i,0,0,900,900);   // empty range = slot unused
+        const ok=await writeSlot(i,0,0,1500,1500);   // empty range = slot unused
         if(ok){ slots[i]={perm:0,aux:0,lo:900,hi:900}; paint(); setStatus('good','✓ Removed'); }
         else { setStatus('bad','Remove not confirmed — re-reading'); await load(); }
     }catch(e){ setStatus('bad','Remove failed: '+e.message); }

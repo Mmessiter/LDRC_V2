@@ -373,12 +373,10 @@
                 '/flight': '/blackbox', '/events': '/blackbox',
                 '/bind': '/setup', '/protocol': '/setup', '/diagnostics': '/setup',
                 '/wifi': '/setup', '/firmware': '/setup', '/rxsettings': '/setup',
-                '/map': '/sim', '/views': '/sim', '/simctl': '/sim',
-                '/rotorflight-rates': '/rotorflight', '/rotorflight-pid': '/rotorflight',
-                '/rotorflight-pidplus': '/rotorflight', '/rotorflight-gov-profile': '/rotorflight',
-                '/rotorflight-gov-global': '/rotorflight', '/rotorflight-backups': '/rotorflight',
-                '/rotorflight-modes': '/rotorflight', '/rotorflight-rescue': '/rotorflight',
-                '/rotorflight-servos': '/rotorflight', '/rotorflight-travel': '/rotorflight'
+                '/map': '/sim', '/views': '/sim', '/simctl': '/sim'
+                // Rotorflight sub-pages are NOT listed: every one carries its
+                // own Back-to-Rotorflight button, so listing them here
+                // injected a DUPLICATE (Malcolm spotted the twins, 2026-08-23).
             };
             const LABELS = {
                 '/': 'front screen', '/blackbox': 'Black box', '/setup': 'Setup',
