@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.431-armed-lockout";
+constexpr const char* FW_VERSION = "RXV2-0.9.432-armed-banner";
 
 //*********************************************************************
 //  Auto-update manifest URLs

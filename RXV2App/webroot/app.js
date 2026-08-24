@@ -564,3 +564,44 @@
     addEventListener('focusin',  () => setTimeout(adjust, 60));
     addEventListener('focusout', () => setTimeout(adjust, 250));
 })();
+
+// ARMED banner (Malcolm 2026-08-24, after the crash: "make this clear to the
+// user — even the naive user will notice!"). Every page watches the armed
+// state; the moment arming comes on with auto fly mode active, a full-screen
+// banner explains what is about to happen — so the radios going silent three
+// seconds later reads as the safety feature it is, never as a fault. The
+// banner deliberately survives the disconnection (the page is dead by then
+// anyway) and disappears only when the link returns disarmed.
+(function () {
+    let overlay = null;
+    function showArmedBanner() {
+        if (overlay) return;
+        overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:#c0392b;color:#fff;' +
+            'display:flex;flex-direction:column;align-items:center;justify-content:center;' +
+            'text-align:center;padding:2em;gap:.7em';
+        overlay.innerHTML =
+            '<div style="font-size:3.2em">⚠️</div>' +
+            '<div style="font-size:1.7em;font-weight:800;letter-spacing:.02em">ARMED!</div>' +
+            '<div style="font-size:1.15em;font-weight:600;line-height:1.55">WiFi &amp; Bluetooth are switching OFF for flying.<br>The app disconnects in 3 seconds.</div>' +
+            '<div style="font-size:.95em;opacity:.92">Disarm the model to get it back.</div>';
+        document.body.appendChild(overlay);
+    }
+    function hideArmedBanner() {
+        if (!overlay) return;
+        overlay.remove();
+        overlay = null;
+    }
+    async function tick() {
+        if (document.hidden) return;
+        if (window.LDRC && LDRC.replay) return;          // recordings can't arm anything
+        try {
+            const s = await (await fetch('/api/state.json', { cache: 'no-store' })).json();
+            if (s && s.rf && s.rf.armed && s.rf.autofly) showArmedBanner();
+            else if (overlay && s && s.rf && !s.rf.armed) hideArmedBanner();
+        } catch (e) { /* link gone — keep the banner up, it explains why */ }
+    }
+    if (document.readyState === 'loading')
+        document.addEventListener('DOMContentLoaded', () => setInterval(tick, 1200));
+    else setInterval(tick, 1200);
+})();
