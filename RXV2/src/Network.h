@@ -316,7 +316,13 @@ inline void netStep() {
     const bool armedNow = (armingChannel >= 1 && armingChannel <= 16 &&
                            rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 1000 &&
                            channelMicros[armingChannel - 1] > 1500);
-    if (netMode == NET_NO_WIFI && bleAdvertising() && !bleHasClient() &&
+    // With an arming channel known, ARMED is the definition of flying and
+    // the arm/disarm cycle owns the radios — this link-age heuristic must
+    // stand down or it fights the disarm revival in an endless 5 s flap
+    // (Malcolm's bench log, 2026-08-25). It remains for models with no
+    // arming function, where link-age is the only flying signal we have.
+    if (armingChannel == 0 &&
+        netMode == NET_NO_WIFI && bleAdvertising() && !bleHasClient() &&
         rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 1000 &&
         (uint32_t)(millis() - linkStats.connStartMs) >= 30000 &&
         !armedNow &&                       // NEVER stall the loop while armed — wait for disarm

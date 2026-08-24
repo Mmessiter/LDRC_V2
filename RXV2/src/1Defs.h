@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.432-armed-banner";
+constexpr const char* FW_VERSION = "RXV2-0.9.433-clocked-events";
 
 //*********************************************************************
 //  Auto-update manifest URLs

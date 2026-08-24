@@ -1988,6 +1988,10 @@ inline void handleApiEvents() {
         for (size_t k = 0; k < n; ++k) {
             if (k) j += ',';
             j += "{\"t\":"; j += events.when[idx];
+            if (epochOffsetMs) {           // clock known → stamp time-of-day too
+                j += ",\"e\":";
+                j += (uint32_t)((epochOffsetMs + (int64_t)events.when[idx]) / 1000);
+            }
             j += ",\"msg\":\"";
             // Minimal JSON escaping
             const char* m = events.msgs[idx];

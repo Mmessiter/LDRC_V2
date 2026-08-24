@@ -48,7 +48,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ev is already newest-first from the server.
     let html = '';
     for (const e of ev) {
-        html += '<dt>' + fmt(e.t) + '</dt><dd>' + e.msg.replace(/</g, '&lt;') + '</dd>';
+        // Time of day when the receiver's clock is synced (any phone visit
+        // teaches it); time-since-boot otherwise.
+        const when = e.e ? new Date(e.e * 1000).toLocaleTimeString() : fmt(e.t);
+        html += '<dt>' + when + '</dt><dd>' + e.msg.replace(/</g, '&lt;') + '</dd>';
     }
     list.innerHTML = html;
 });
@@ -56,7 +59,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 <template id=helpContent><h2>Event log</h2>
 <p>The in-RAM event log. The receiver writes a one-line entry for every interesting moment — boot, WiFi up/down, bind, radio swap, TX edits, flight saves — newest first.</p>
 <h3>How to use it</h3>
-<p>Read it when something unexpected has happened: a WiFi drop, a failed bind, a sudden mode change. Timestamps are time-since-boot.</p>
+<p>Read it when something unexpected has happened: a WiFi drop, a failed bind, a sudden mode change. Timestamps show the <b>time of day</b> once a phone has connected (it teaches the receiver the clock); before that, time-since-boot.</p>
 <h3>Tips</h3>
 <p>The log clears on every reboot — there's nothing to delete or rotate.</p>
 <p>The <code>NVS: ssid=… pass=… bind=…</code> line near the top tells you at a glance whether your saved credentials really survived the last reboot. If <code>pass=NO</code> after an update, that's worth knowing.</p>
