@@ -452,6 +452,28 @@ inline uint8_t hexNibble(char c) {
 }
 
 inline void handleMspApi() {
+    // ARMED = configuration locked, instantly (Malcolm 2026-08-24, after the
+    // crash: "if arming is switched on, go directly to fly mode — without
+    // passing Go"). A blocking MSP wait while flying starves the CRSF stream
+    // and Rotorflight cuts the motor as failsafe. Auto fly mode kills the
+    // radios ~3 s after arming; this closes the door for those 3 seconds
+    // and for every other path: no config request touches the FC while the
+    // model is armed with a live transmitter.
+    {
+        const bool armLink = rx.lastMillis &&
+                             (uint32_t)(millis() - rx.lastMillis) < 1000;
+        if (armLink && armingChannel >= 1 && armingChannel <= 16 &&
+            channelMicros[armingChannel - 1] > 1500) {
+            static uint32_t lastArmRefuseLog = 0;
+            if ((uint32_t)(millis() - lastArmRefuseLog) > 10000) {
+                lastArmRefuseLog = millis();
+                events.add("Config refused: model is ARMED");
+            }
+            server.sendHeader("Cache-Control", "no-store");
+            server.send(409, "text/plain", "ARMED - configuration is locked in flight. Disarm first.");
+            return;
+        }
+    }
     if (!server.hasArg("fn")) { server.send(400, "text/plain", "missing fn"); return; }
     uint8_t fn = (uint8_t)server.arg("fn").toInt();
 

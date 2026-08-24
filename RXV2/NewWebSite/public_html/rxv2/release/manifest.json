@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.431-armed-lockout",
+      "url": "https://messiter.com/rxv2/release/v0.9.431/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.431/littlefs.bin",
+      "fs_md5": "136e25c4286d2889601f3a96764e3b91",
+      "notes": "Completing the crash response: the moment the model is ARMED with a live transmitter, ALL configuration traffic to the flight controller is refused instantly ('ARMED - configuration is locked in flight. Disarm first.') - closing the 3-second window before auto fly mode kills the radios, and every other path. The stall-starves-CRSF-and-the-motor-cuts mechanism is now impossible at both ends."
+    },
+    {
       "name": "RXV2-0.9.430-autofly-locked",
       "url": "https://messiter.com/rxv2/release/v0.9.430/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.430/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.420/littlefs.bin",
       "fs_md5": "7fe103a77a7441f6dd380ae8ee1c92af",
       "notes": "Added functions on Transmitter channels are now tidy stacked cards that fit the phone screen (the old row overflowed sideways), and each can be given YOUR OWN NAME - a User switch might really be 'Lower undercarriage'. The name lives in the app; the flight controller sees the function."
-    },
-    {
-      "name": "RXV2-0.9.419-esc-words",
-      "url": "https://messiter.com/rxv2/release/v0.9.419/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.419/littlefs.bin",
-      "fs_md5": "5a23729c5afc335bddf20e68d6e8c051",
-      "notes": "Clearer ESC wording after Malcolm went looking for Scorpion under ESC signal: the SIGNAL row now says heli ESCs (Scorpion, Kontronik, YGE, Hobbywing) use Normal PWM and DShot is for drone-style ESCs; the TELEMETRY row now says that is where the brand goes."
     }
   ]
 }
