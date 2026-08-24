@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.430-autofly-locked",
+      "url": "https://messiter.com/rxv2/release/v0.9.430/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.430/littlefs.bin",
+      "fs_md5": "55664675cfbde9551aae2f1575acd4b5",
+      "notes": "SAFETY (after the 2026-08-24 crash): with Rotorflight present, automatic fly mode is FORCED ON and cannot be switched off - flying with the config link alive lets a blocking config request starve the CRSF stream, which Rotorflight reads as signal loss and cuts the motor. The Receiver-settings switch shows a lock; non-Rotorflight models keep the choice."
+    },
+    {
       "name": "RXV2-0.9.429-wire-step",
       "url": "https://messiter.com/rxv2/release/v0.9.429/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.429/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.419/littlefs.bin",
       "fs_md5": "5a23729c5afc335bddf20e68d6e8c051",
       "notes": "Clearer ESC wording after Malcolm went looking for Scorpion under ESC signal: the SIGNAL row now says heli ESCs (Scorpion, Kontronik, YGE, Hobbywing) use Normal PWM and DShot is for drone-style ESCs; the TELEMETRY row now says that is where the brand goes."
-    },
-    {
-      "name": "RXV2-0.9.418-complete-menu",
-      "url": "https://messiter.com/rxv2/release/v0.9.418/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.418/littlefs.bin",
-      "fs_md5": "b20ad4fe6df572871b609fbf365b28af",
-      "notes": "A la carte is now the COMPLETE catalogue: Transmitter channels and First-time basics appear there too, so everything the wizards walk through can also be reached on its own. The Wizards menu stays clean with just the two guides."
     }
   ]
 }
