@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.432-armed-banner",
+      "url": "https://messiter.com/rxv2/release/v0.9.432/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.432/littlefs.bin",
+      "fs_md5": "cc949839613bb25159409caa80d759a5",
+      "notes": "The loud goodbye: the moment arming comes on, every app page shows a full-screen red banner - 'ARMED! WiFi & Bluetooth are switching OFF for flying. The app disconnects in 3 seconds. Disarm the model to get it back.' The banner survives the disconnection (that IS the message) and clears when the link returns disarmed. Even the most enthusiastic, absent-minded pilot will notice."
+    },
+    {
       "name": "RXV2-0.9.431-armed-lockout",
       "url": "https://messiter.com/rxv2/release/v0.9.431/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.431/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.421/littlefs.bin",
       "fs_md5": "a9886c78bcafd3ee6c6040355d451282",
       "notes": "Added functions now settle in: name one (e.g. 'Sally'), hit return, and the row collapses to look exactly like the fixed rows above - name on the left, channel, live value, Detect. Tap the name to edit it again. New rows open in editing form with the keyboard ready."
-    },
-    {
-      "name": "RXV2-0.9.420-named-switches",
-      "url": "https://messiter.com/rxv2/release/v0.9.420/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.420/littlefs.bin",
-      "fs_md5": "7fe103a77a7441f6dd380ae8ee1c92af",
-      "notes": "Added functions on Transmitter channels are now tidy stacked cards that fit the phone screen (the old row overflowed sideways), and each can be given YOUR OWN NAME - a User switch might really be 'Lower undercarriage'. The name lives in the app; the flight controller sees the function."
     }
   ]
 }
