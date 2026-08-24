@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.433-clocked-events";
+constexpr const char* FW_VERSION = "RXV2-0.9.434-nudge-manners";
 
 //*********************************************************************
 //  Auto-update manifest URLs

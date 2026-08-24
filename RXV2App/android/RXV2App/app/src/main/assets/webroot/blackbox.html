@@ -201,6 +201,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         clearInterval(timer);
                         fill.style.width = '100%';
                         finish('✅ All saved!  (' + p.done + ' items on the phone)', 6000);
+                        // A completed backup signs off the tune generation —
+                        // the proven-tune nudge goes away until settings change.
+                        try {
+                            const st = await LDRC.fetchState();
+                            if (st && st.tune && st.tune.gen > 0)
+                                localStorage.setItem('tuneNudge-' + ((st.info && st.info.name) || '') + '-' + st.tune.gen, '1');
+                        } catch (e) {}
                     }
                 } catch (e) { /* transient — keep polling */ }
             }, 700);
