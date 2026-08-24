@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.433-clocked-events",
+      "url": "https://messiter.com/rxv2/release/v0.9.433/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.433/littlefs.bin",
+      "fs_md5": "58c7e25cbf34ad8a73613d1149766bda",
+      "notes": "Two from Malcolm's bench log: (1) BUG FIX - with an arming channel known, the old 'link live 30s = flying' rule fought the new disarm revival, flapping the radios every 5 seconds on the bench with the transmitter on; ARMED is now the only definition of flying on such models (the old rule remains for models without arming). (2) The event log now shows the TIME OF DAY for every event once a phone has taught the receiver the clock - retroactively for events logged before the sync; time-since-boot before that."
+    },
+    {
       "name": "RXV2-0.9.432-armed-banner",
       "url": "https://messiter.com/rxv2/release/v0.9.432/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.432/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.422/littlefs.bin",
       "fs_md5": "7a72e160d805b1ce4b2817cfb06a9c38",
       "notes": "Added functions can now be deleted cleanly: the X on each row (after a confirm) removes it AND clears its switch range from the flight controller if it had been saved - experiments and mistakes leave no trace. Only the exact function-on-that-switch is cleared; everything else is untouched."
-    },
-    {
-      "name": "RXV2-0.9.421-settled-rows",
-      "url": "https://messiter.com/rxv2/release/v0.9.421/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.421/littlefs.bin",
-      "fs_md5": "a9886c78bcafd3ee6c6040355d451282",
-      "notes": "Added functions now settle in: name one (e.g. 'Sally'), hit return, and the row collapses to look exactly like the fixed rows above - name on the left, channel, live value, Detect. Tap the name to edit it again. New rows open in editing form with the keyboard ready."
     }
   ]
 }
