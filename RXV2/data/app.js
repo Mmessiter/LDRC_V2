@@ -225,7 +225,9 @@
                 try {
                     const r = await fetch(url, { cache: 'no-store' });
                     if (r.ok) return (await r.text()).trim();
-                    lastErr = new Error('HTTP ' + r.status + ': ' + (await r.text()));
+                    lastErr = new Error(r.status === 409 ? (await r.text())
+                                        : 'HTTP ' + r.status + ': ' + (await r.text()));
+                    if (r.status === 409) break;   // armed — final, retrying is pointless
                 } catch (e) { lastErr = e; }
                 if (attempt < retries - 1) await new Promise(rs => setTimeout(rs, 200));
             }

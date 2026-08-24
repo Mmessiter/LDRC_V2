@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.430-autofly-locked";
+constexpr const char* FW_VERSION = "RXV2-0.9.431-armed-lockout";
 
 //*********************************************************************
 //  Auto-update manifest URLs
