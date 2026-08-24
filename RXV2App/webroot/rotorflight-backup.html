@@ -47,6 +47,18 @@
 <script>
 // Back up: the same whole-session save as the Black box page — all banks'
 // settings AND flights; completing it freezes the restore point.
+// A COMPLETED backup signs off the current tune generation, so the
+// proven-tune nudge disappears and stays away until settings change again
+// (Malcolm 2026-08-25: "if no change is made it should never return; if a
+// change is made, return after six flights, go away when backed up").
+async function signOffTuneNudge() {
+    try {
+        const s = await LDRC.fetchState();
+        if (s && s.tune && s.tune.gen > 0)
+            localStorage.setItem('tuneNudge-' + ((s.info && s.info.name) || '') + '-' + s.tune.gen, '1');
+    } catch (e) {}
+}
+
 async function phoneSave() {
     // TX-on guard (Malcolm 2026-08-20): the bank walk is skipped under a
     // live transmitter, so a backup taken then would be HOLLOW. Warn and
@@ -85,6 +97,7 @@ async function phoneSave() {
             clearInterval(timer);
             fill.style.width = '100%';
             lab.textContent = '✅ Backed up to the phone!';
+            signOffTuneNudge();
             setTimeout(() => { prog.style.display = 'none'; btn.style.display = '';
                                paintRestoreBtn(); }, 5000);
         }

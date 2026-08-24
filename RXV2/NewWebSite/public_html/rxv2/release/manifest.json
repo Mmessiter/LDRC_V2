@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.434-nudge-manners",
+      "url": "https://messiter.com/rxv2/release/v0.9.434/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.434/littlefs.bin",
+      "fs_md5": "a6faeb65729f0dd2f669fa6d04e73793",
+      "notes": "The back-up-your-tune reminder now has manners: completing a backup (from either the Backup page or Black box) signs off the current tune generation, so the banner goes away and STAYS away until a setting actually changes - then it returns after six unchanged flights, exactly as before."
+    },
+    {
       "name": "RXV2-0.9.433-clocked-events",
       "url": "https://messiter.com/rxv2/release/v0.9.433/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.433/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.423/littlefs.bin",
       "fs_md5": "89dc8ac884dba29c204a37d539a0c4ff",
       "notes": "Two field-driven fixes on Transmitter channels: (1) taken channels are simply not offered in the other dropdowns any more (switch functions may still share with each other - only sticks and Arm are exclusive); (2) the Rescue switch can be removed entirely (X sets None and clears any saved rescue from the flight controller - some models just don't have one), and saving with Rescue=None also wipes a stale saved rescue."
-    },
-    {
-      "name": "RXV2-0.9.422-erasable",
-      "url": "https://messiter.com/rxv2/release/v0.9.422/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.422/littlefs.bin",
-      "fs_md5": "7a72e160d805b1ce4b2817cfb06a9c38",
-      "notes": "Added functions can now be deleted cleanly: the X on each row (after a confirm) removes it AND clears its switch range from the flight controller if it had been saved - experiments and mistakes leave no trace. Only the exact function-on-that-switch is cleared; everything else is untouched."
     }
   ]
 }
