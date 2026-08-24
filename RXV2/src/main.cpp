@@ -853,7 +853,8 @@ void loop() {
     // FC output are a separate path and keep running throughout. The
     // existing landing recovery revives WiFi/Bluetooth after the flight;
     // the switch lives on the Receiver-settings page (default ON).
-    if (autoFlyEnabled && !simEnabled && !flyArmRequested && !flyTeardownAtMs) {
+    autoFlyForcedNow = fcIsRotorflightConfigCapable();   // RF present = no opt-out
+    if (autoFlyActive() && !simEnabled && !flyArmRequested && !flyTeardownAtMs) {
         static uint32_t armedSinceMs = 0;
         const bool radiosUp = (netMode != NET_NO_WIFI) || bleAdvertising() || bleHasClient();
         const bool linkLive = rx.lastMillis &&

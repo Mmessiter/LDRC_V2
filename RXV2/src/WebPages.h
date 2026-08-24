@@ -1870,13 +1870,20 @@ inline void handleSimKey() {
 //*********************************************************************
 inline void handleAutoFlyGet() {
     server.sendHeader("Cache-Control", "no-store");
-    server.send(200, "application/json",
-        autoFlyEnabled ? "{\"on\":true}" : "{\"on\":false}");
+    char b[64];
+    snprintf(b, sizeof(b), "{\"on\":%s,\"forced\":%s}",
+             autoFlyActive() ? "true" : "false",
+             autoFlyForcedNow ? "true" : "false");
+    server.send(200, "application/json", b);
 }
 inline void handleAutoFlySet() {
+    // With Rotorflight present the switch is locked ON — the preference is
+    // still stored for non-RF models, but the effective state stays true.
     if (server.hasArg("on")) autoFlyEnabled = server.arg("on").toInt() != 0;
     prefs.putUChar(NVS_KEY_AUTOFLY, autoFlyEnabled ? 1 : 0);
-    events.add(autoFlyEnabled ? "Auto fly mode ON" : "Auto fly mode off");
+    events.add(autoFlyActive() ? (autoFlyForcedNow ? "Auto fly mode ON (locked: Rotorflight)"
+                                                   : "Auto fly mode ON")
+                               : "Auto fly mode off");
     handleAutoFlyGet();
 }
 
@@ -2174,7 +2181,7 @@ inline void handleApiState() {
     { char vb[112]; snprintf(vb, sizeof(vb), ",\"vbat\":{\"pin\":%u,\"volts\":%.2f,\"ratio\":%.2f,\"cells\":%u,\"auto\":%s}",
                             vbatPin, vbatVolts, vbatRatio, vbatCellsCfg, vbatAuto ? "true" : "false"); j += vb; }
     j += ",\"arming_channel\":"; j += armingChannel;
-    j += ",\"autofly\":"; j += (autoFlyEnabled ? "true" : "false");
+    j += ",\"autofly\":"; j += (autoFlyActive() ? "true" : "false");
     j += ",\"arm_auto\":"; j += ((armingChannel && !prefs.getUChar(NVS_KEY_ARM_CH, 0)) ? "true" : "false");
     // live armed state (so the config page can confirm the channel is right)
     { bool live = (rx.lastMillis != 0) && ((uint32_t)(millis() - rx.lastMillis) < 2000);

@@ -524,7 +524,7 @@ inline void netStep() {
                 static uint32_t disarmSinceMs = 0;
                 const bool armLink = rx.lastMillis &&
                                      (uint32_t)(millis() - rx.lastMillis) < 1000;
-                const bool disarmedNow = autoFlyEnabled &&
+                const bool disarmedNow = autoFlyActive() &&
                     armingChannel >= 1 && armingChannel <= 16 && armLink &&
                     channelMicros[armingChannel - 1] < 1500;
                 if (disarmedNow) {

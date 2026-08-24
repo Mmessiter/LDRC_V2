@@ -50,7 +50,7 @@
 
     <div class=card>
         <h2>Automatic fly mode</h2>
-        <p class=muted style="font-size:.85em;line-height:1.5">The safety net for forgetting <b>Fly now</b>: <b>3 seconds after the model is armed</b> &mdash; still on the ground, during spool-up &mdash; the receiver switches its WiFi and Bluetooth off by itself &mdash; nothing interferes with the radio link. <b>Disarming brings everything back</b> (so does switching the transmitter off after landing). With this on, the front page hides the Fly now button &mdash; not needed any more. On Rotorflight the arming channel is found <b>automatically</b> from the flight controller; for other setups, set it on the Output protocol page.</p>
+        <p class=muted style="font-size:.85em;line-height:1.5"><b>&#128274; Always on when Rotorflight is present &mdash; not switchable.</b> The safety net for forgetting <b>Fly now</b>: <b>3 seconds after the model is armed</b> &mdash; still on the ground, during spool-up &mdash; the receiver switches its WiFi and Bluetooth off by itself &mdash; nothing interferes with the radio link. <b>Disarming brings everything back</b> (so does switching the transmitter off after landing). With this on, the front page hides the Fly now button &mdash; not needed any more. On Rotorflight the arming channel is found <b>automatically</b> from the flight controller; for other setups, set it on the Output protocol page.</p>
         <label style="display:flex;align-items:center;gap:.6em;font-weight:700;margin:.3em 0">
             <input type=checkbox id=afOn style="width:1.3em;height:1.3em"> Radios off automatically when flying starts
         </label>
@@ -149,6 +149,10 @@ $('fsClear').addEventListener('click', async () => {
     try {
         const j = await (await fetch('/api/autofly', { cache: 'no-store' })).json();
         $('afOn').checked = !!j.on;
+        if (j.forced) {
+            $('afOn').disabled = true;
+            $('afMsg').textContent = '🔒 Always on with Rotorflight — this is what keeps the radios off in flight.';
+        }
     } catch (e) {}
     $('afOn').addEventListener('change', async () => {
         try {

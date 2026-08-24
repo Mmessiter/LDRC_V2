@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.429-wire-step";
+constexpr const char* FW_VERSION = "RXV2-0.9.430-autofly-locked";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -388,6 +388,12 @@ inline uint8_t simSpoolSeconds  = 8;        // full 1000→2000 µs spool time
 inline int16_t simTorqueUs      = -120;     // rudder stab while spooling (signed)
 inline uint8_t simRudderChannel = 4;
 inline bool autoFlyEnabled = true;   // radios off automatically once armed + flying (Malcolm 2026-08-24)
+// With Rotorflight present, auto fly mode is FORCED on — not switchable.
+// Born of the 2026-08-24 crash: flying with the config link alive lets a
+// blocking MSP wait starve the CRSF stream; Rotorflight reads the silence
+// as signal loss and cuts the motor. Updated every loop from FC detection.
+inline bool autoFlyForcedNow = false;
+inline bool autoFlyActive() { return autoFlyEnabled || autoFlyForcedNow; }
 inline uint8_t simMotorChannel  = 0;        // 0 = unset: spool-up does nothing until chosen
 inline bool    simMotorInverted = false;    // true = HIGH µs means motor OFF (Malcolm's ch6)
 inline volatile uint16_t simSpoolDbgRaw  = 0;   // live: raw motor-channel µs in
