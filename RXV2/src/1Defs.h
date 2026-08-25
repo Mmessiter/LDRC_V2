@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.434-nudge-manners";
+constexpr const char* FW_VERSION = "RXV2-0.9.435-pulse-spool";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -334,6 +334,8 @@ constexpr const char* NVS_KEY_SIM_TORQUE  = "simtorq";   // int16 rudder stab in
 constexpr const char* NVS_KEY_SIM_RUD_CH  = "simrudch";  // uint8 rudder channel 1..16 (default 4)
 constexpr const char* NVS_KEY_AUTOFLY     = "autofly";   // uint8 1 = auto fly mode: radios off when armed+flying detected (default ON)
 constexpr const char* NVS_KEY_SIM_MOT_INV = "simmotinv"; // uint8 1 = high µs means motor OFF (inverted channel)
+constexpr const char* NVS_KEY_SIM_PULSE   = "simsplp";   // uint8 1 = pulse (PWM) mode while spooling
+constexpr const char* NVS_KEY_SIM_PULSEMS = "simsplpms"; // uint16 PWM period ms (50..1000, default 250)
 constexpr const char* NVS_KEY_SIM_MOT_CH  = "simmotch";  // uint8 MOTOR/governor channel 1..16 (0 = not set → feature inert). NEVER default to the throttle STICK: on a heli that is the collective (2026-08-17 hotfix — enabling spool froze Malcolm's collective)
 constexpr const char* NVS_KEY_SIM_MAP     = "simmap";  // 8-byte map: which RX channel (0..15) feeds each sim output
 constexpr const char* NVS_KEY_SIM_REV     = "simrev";  // 8-byte per-output reverse flags (0/1)
@@ -395,6 +397,14 @@ inline bool autoFlyEnabled = true;   // radios off automatically once armed + fl
 inline bool autoFlyForcedNow = false;
 inline bool autoFlyActive() { return autoFlyEnabled || autoFlyForcedNow; }
 inline uint8_t simMotorChannel  = 0;        // 0 = unset: spool-up does nothing until chosen
+// Pulse mode (Malcolm 2026-08-25, "manual PWM — is my plan nuts?!" — it is
+// not): neXt thresholds the motor channel to pure on/off, so a ramped LEVEL
+// is invisible to it. Pulsing the channel between full off and full on with
+// a rising duty cycle uses the sim's own rotor inertia (its spool-down IS
+// realistic) as the averaging filter — head speed then climbs through the
+// spool like a real governor. The ramp's progress becomes the duty.
+inline bool     simSpoolPulse    = false;    // pulse (PWM) the motor channel while spooling
+inline uint16_t simSpoolPulseMs  = 250;      // PWM period in ms (50..1000)
 inline bool    simMotorInverted = false;    // true = HIGH µs means motor OFF (Malcolm's ch6)
 inline volatile uint16_t simSpoolDbgRaw  = 0;   // live: raw motor-channel µs in
 inline volatile uint16_t simSpoolDbgOut  = 0;   // live: µs actually sent to the sim

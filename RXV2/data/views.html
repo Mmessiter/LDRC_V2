@@ -140,6 +140,10 @@
                 <input type=number id=spTorq min=-400 max=400 step=10 style="width:4.5em;text-align:center">
                 <span>Rudder channel</span>
                 <input type=number id=spRud min=1 max=16 step=1 style="width:4.5em;text-align:center">
+                <span><b>Pulse mode</b> <span class=muted>(Malcolm&rsquo;s manual PWM: blips the motor on/off with a rising on-share, so neXt&rsquo;s own rotor inertia turns it into a real head-speed climb &mdash; for sims that treat the motor as a pure switch)</span></span>
+                <input type=checkbox id=spPulse style="width:1.3em;height:1.3em;justify-self:center">
+                <span>Pulse period <span class=muted>(ms &mdash; shorter = smoother, longer = chunkier; try 250)</span></span>
+                <input type=number id=spPulseMs min=50 max=1000 step=50 style="width:4.5em;text-align:center">
             </div>
             <div class=muted style="font-size:.78em;line-height:1.45;margin-top:.5em">
                 <b>Which channel is the motor?</b> Open <i>View channels</i>, flip in and out of
@@ -378,6 +382,8 @@ async function spLoad() {
         $('spSec').value = sp.seconds; $('spTorq').value = sp.torque_us; $('spRud').value = sp.rudder_ch;
         $('spMot').value = (typeof sp.motor_ch === 'number') ? sp.motor_ch : 0;
         $('spInv').checked = !!sp.motor_inv;
+        $('spPulse').checked = !!sp.pulse;
+        $('spPulseMs').value = sp.pulse_ms || 250;
     } catch (e) { $('spMsg').textContent = 'Needs receiver firmware 0.9.373+'; }
 }
 document.addEventListener('DOMContentLoaded', () => {
@@ -391,6 +397,8 @@ document.addEventListener('DOMContentLoaded', () => {
         body.append('rudder_ch', $('spRud').value || '4');
         body.append('motor_ch', $('spMot').value || '0');
         body.append('motor_inv', $('spInv').checked ? '1' : '0');
+        body.append('pulse', $('spPulse').checked ? '1' : '0');
+        body.append('pulse_ms', $('spPulseMs').value || '250');
         try {
             const r = await (await fetch('/api/sim/spool', { method: 'POST', body })).json();
             $('spMsg').textContent = !r.on
