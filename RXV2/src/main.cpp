@@ -316,6 +316,10 @@ void setup() {
     simRudderChannel = prefs.isKey(NVS_KEY_SIM_RUD_CH)  ? prefs.getUChar(NVS_KEY_SIM_RUD_CH, 4) : 4;
     simMotorChannel  = prefs.isKey(NVS_KEY_SIM_MOT_CH)  ? prefs.getUChar(NVS_KEY_SIM_MOT_CH, 0) : 0;
     simMotorInverted = prefs.isKey(NVS_KEY_SIM_MOT_INV) ? (prefs.getUChar(NVS_KEY_SIM_MOT_INV, 0) != 0) : false;
+    simSpoolPulse    = prefs.isKey(NVS_KEY_SIM_PULSE)   ? (prefs.getUChar(NVS_KEY_SIM_PULSE, 0) != 0) : false;
+    simSpoolPulseMs  = prefs.isKey(NVS_KEY_SIM_PULSEMS) ? prefs.getUShort(NVS_KEY_SIM_PULSEMS, 250) : 250;
+    if (simSpoolPulseMs < 50)   simSpoolPulseMs = 50;
+    if (simSpoolPulseMs > 1000) simSpoolPulseMs = 1000;
     if (simSpoolSeconds < 1) simSpoolSeconds = 1;
     if (simSpoolSeconds > 60) simSpoolSeconds = 60;
     if (simEnabled) {
@@ -636,7 +640,22 @@ void loop() {
                     spoolThr = cmd;                              // snap the pegged top too
                 } else { spoolThr += step; ramping = true; }
             }
-            float outUs = simMotorInverted ? (3000.0f - spoolThr) : spoolThr;
+            float sendThr = spoolThr;
+            if (simSpoolPulse && ramping) {
+                // Malcolm's manual PWM: while spooling, the channel is
+                // either FULL ON (the pilot's command) or FULL OFF, with
+                // the ON share of each period equal to the ramp's progress
+                // through the visible window. neXt's threshold sees clean
+                // on/off; its rotor inertia averages the rest into a climb.
+                const float WIN_LO = 988.0f, WIN_HI = 2012.0f;
+                float p = (spoolThr - WIN_LO) / (WIN_HI - WIN_LO);
+                if (p < 0.0f) p = 0.0f;
+                if (p > 1.0f) p = 1.0f;
+                uint32_t period = simSpoolPulseMs;
+                uint32_t phase  = nowMs % period;
+                sendThr = (phase < (uint32_t)(p * period)) ? cmd : 500.0f;
+            }
+            float outUs = simMotorInverted ? (3000.0f - sendThr) : sendThr;
             simTx[simMotorChannel - 1] = (uint16_t)(outUs + 0.5f);
             if (ramping && simTorqueUs != 0 &&
                 simRudderChannel >= 1 && simRudderChannel <= 16 &&

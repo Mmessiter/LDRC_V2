@@ -1728,13 +1728,15 @@ inline void handleSimSet() {
 inline void handleSimSpoolGet() {
     // 192: the live{} block pushed the JSON past the old 128 and TRUNCATED it
     // (caught 2026-08-18 — clients saw broken JSON and silently failed).
-    char b[192];
+    char b[256];
     snprintf(b, sizeof(b),
         "{\"on\":%s,\"seconds\":%u,\"torque_us\":%d,\"rudder_ch\":%u,\"motor_ch\":%u,\"motor_inv\":%s,"
+        "\"pulse\":%s,\"pulse_ms\":%u,"
         "\"live\":{\"raw\":%u,\"out\":%u,\"ramping\":%s}}",
         simSpoolEnabled ? "true" : "false",
         (unsigned)simSpoolSeconds, (int)simTorqueUs, (unsigned)simRudderChannel,
         (unsigned)simMotorChannel, simMotorInverted ? "true" : "false",
+        simSpoolPulse ? "true" : "false", (unsigned)simSpoolPulseMs,
         (unsigned)simSpoolDbgRaw, (unsigned)simSpoolDbgOut,
         simSpoolDbgRamp ? "true" : "false");
     server.sendHeader("Cache-Control", "no-store");
@@ -1766,6 +1768,16 @@ inline void handleSimSpoolSet() {
     }
     if (server.hasArg("motor_inv"))
         simMotorInverted = server.arg("motor_inv").toInt() != 0;
+    if (server.hasArg("pulse"))
+        simSpoolPulse = server.arg("pulse").toInt() != 0;
+    if (server.hasArg("pulse_ms")) {
+        long m = server.arg("pulse_ms").toInt();
+        if (m < 50)   m = 50;
+        if (m > 1000) m = 1000;
+        simSpoolPulseMs = (uint16_t)m;
+    }
+    prefs.putUChar(NVS_KEY_SIM_PULSE,   simSpoolPulse ? 1 : 0);
+    prefs.putUShort(NVS_KEY_SIM_PULSEMS, simSpoolPulseMs);
     prefs.putUChar(NVS_KEY_SIM_SPOOL,   simSpoolEnabled ? 1 : 0);
     prefs.putUChar(NVS_KEY_SIM_SPOOL_S, simSpoolSeconds);
     prefs.putShort(NVS_KEY_SIM_TORQUE,  simTorqueUs);

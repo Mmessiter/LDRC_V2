@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.435-pulse-spool",
+      "url": "https://messiter.com/rxv2/release/v0.9.435/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.435/littlefs.bin",
+      "fs_md5": "f5df5d702f351e1a054c9d6348d06be1",
+      "notes": "Malcolm's 'manual PWM' idea for neXt spool-up, built: PULSE MODE on the spool-up card - while spooling, the motor channel blips between full off and full on with a rising on-share (period adjustable, try 250 ms), so the sim's own rotor inertia averages it into a genuine head-speed climb even though neXt treats the motor as a pure switch. Two-speed bailout, torque stab and all existing behaviour unchanged; pulse off = exactly the old ramp."
+    },
+    {
       "name": "RXV2-0.9.434-nudge-manners",
       "url": "https://messiter.com/rxv2/release/v0.9.434/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.434/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.424/littlefs.bin",
       "fs_md5": "e86415761bdedc6998fbdefcb4131c2f",
       "notes": "Strictly one channel per function now: taken channels vanish from every other dropdown (no sharing at all), existing double-bookings are repaired on load (the later claimant resets to 'Choose...', keeping its name), and the stick labels lose their bracketed words - just Aileron, Elevator, Collective, Rudder, Throttle."
-    },
-    {
-      "name": "RXV2-0.9.423-no-collisions",
-      "url": "https://messiter.com/rxv2/release/v0.9.423/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.423/littlefs.bin",
-      "fs_md5": "89dc8ac884dba29c204a37d539a0c4ff",
-      "notes": "Two field-driven fixes on Transmitter channels: (1) taken channels are simply not offered in the other dropdowns any more (switch functions may still share with each other - only sticks and Arm are exclusive); (2) the Rescue switch can be removed entirely (X sets None and clears any saved rescue from the flight controller - some models just don't have one), and saving with Rescue=None also wipes a stale saved rescue."
     }
   ]
 }
