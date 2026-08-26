@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.435-pulse-spool";
+constexpr const char* FW_VERSION = "RXV2-0.9.436-rf-never-forgotten";
 
 //*********************************************************************
 //  Auto-update manifest URLs

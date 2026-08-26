@@ -154,7 +154,15 @@ function saveFrontHint(k,v){
 function updateRfButton(s) {
     const rfb = document.getElementById('rfbtn');
     if (!rfb) return;
-    const show = !!(s && !s.sim && s.fcinfo && s.fcinfo.rotorflight_capable);
+    let show = !!(s && !s.sim && s.fcinfo && s.fcinfo.rotorflight_capable);
+    // Sticky per model (Malcolm 2026-08-25: the button must never be
+    // forgotten): once Rotorflight is seen on a model, the button survives
+    // detection flickers and early polls. Sim still hides it; a model with
+    // no FC never sets the marker.
+    const mName = (s && s.info && s.info.name) || '';
+    if (show && mName) localStorage.setItem('rfSeen-' + mName, '1');
+    if (!show && s && !s.sim && mName && localStorage.getItem('rfSeen-' + mName) === '1')
+        show = true;
     rfb.style.display = show ? '' : 'none';
     saveFrontHint('rfShow', show);
     // The silent-FC hint (Malcolm 2026-08-19, the Nexus hunt): a fresh FC

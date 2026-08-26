@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.436-rf-never-forgotten",
+      "url": "https://messiter.com/rxv2/release/v0.9.436/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.436/littlefs.bin",
+      "fs_md5": "dcf9b161638f9b58f9a432dd3e35bb73",
+      "notes": "Three field reports from Malcolm's test day: (1) the Rotorflight options can no longer be forgotten - once Rotorflight is seen it STAYS seen (latched in the receiver for the whole boot, and remembered per model in the app) so detection flickers never hide the button; (2) the app's demo now carries full servo/rescue/switches/first-time data (no more 'undefined servos'); (3) the wave-test message explains that on a Rotorflight heli a rudder wave is invisible (yaw is a rate command the FC ignores while disarmed) - use ch1 aileron."
+    },
+    {
       "name": "RXV2-0.9.435-pulse-spool",
       "url": "https://messiter.com/rxv2/release/v0.9.435/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.435/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.425/littlefs.bin",
       "fs_md5": "625a63461eaabd27526efab1927cf059",
       "notes": "'Arming switch' is now simply 'Arming' - it is a channel, not necessarily a switch: some radios drive it from a safety switch or mix among other functions. (Malcolm's precision, gladly accepted.)"
-    },
-    {
-      "name": "RXV2-0.9.424-strict-channels",
-      "url": "https://messiter.com/rxv2/release/v0.9.424/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.424/littlefs.bin",
-      "fs_md5": "e86415761bdedc6998fbdefcb4131c2f",
-      "notes": "Strictly one channel per function now: taken channels vanish from every other dropdown (no sharing at all), existing double-bookings are repaired on load (the later claimant resets to 'Choose...', keeping its name), and the stick labels lose their bracketed words - just Aileron, Elevator, Collective, Rudder, Throttle."
     }
   ]
 }

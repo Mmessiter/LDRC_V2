@@ -103,8 +103,31 @@
   })();
   // write-code → [read-code, profile-space]  ("rate" | "pid" | null)
   const MSP_SET = { 204: [111, "rate"], 202: [112, "pid"], 95: [94, "pid"],
-                    143: [142, null],   149: [148, "pid"], 43: [42, null] };
-  const MSP_READ_SPACE = { 111: "rate", 112: "pid", 94: "pid", 142: null, 148: "pid", 42: null };
+                    143: [142, null],   149: [148, "pid"], 43: [42, null],
+                    147: [146, "pid"],  216: [123, null],  222: [131, null],
+                    33:  [32, null],    65:  [64, null],   39:  [38, null],
+                    37:  [36, null] };
+  const MSP_READ_SPACE = { 111: "rate", 112: "pid", 94: "pid", 142: null, 148: "pid", 42: null,
+                           146: "pid", 123: null, 131: null, 32: null, 64: null, 38: null, 36: null,
+                           34: null, 105: null, 108: null, 120: null };
+  // Canned answers for the wizard-era pages (servos, rescue, switches,
+  // first-time basics) so the demo shows realistic data instead of
+  // "undefined servos" (Malcolm's screenshot, 2026-08-25).
+  const u16 = v => { v = ((v % 65536) + 65536) % 65536; return [v & 0xff, (v >> 8) & 0xff]; };
+  const SERVO_DEF = [].concat(u16(1500), u16(-700), u16(700), u16(500), u16(500), u16(333), u16(0), u16(0));
+  MSP_DEFAULTS[120] = [4].concat(SERVO_DEF, SERVO_DEF, SERVO_DEF, SERVO_DEF);
+  MSP_DEFAULTS[146] = [1,1,120,80, 10,25,25,10].concat(u16(650), u16(450), u16(350), u16(500),
+                       u16(200), u16(50), u16(20), u16(480), u16(250), u16(2000));
+  MSP_DEFAULTS[34]  = [0,1,0x14,0x78, 53,5,0x14,0x78].concat(new Array(18*4).fill(0));
+  MSP_DEFAULTS[36]  = [0x08,0x04,0x00,0x0c];
+  MSP_DEFAULTS[131] = [].concat(u16(1000), u16(2000), u16(1000), [1,28,1,0], u16(480), [0],
+                       [28,28,0,0], [4,4,4,4], u16(11), u16(110), u16(20), u16(90));
+  MSP_DEFAULTS[123] = [4,0].concat(u16(400), u16(0), [0,0,0,0], [0,0,0,0]);
+  MSP_DEFAULTS[32]  = [].concat(u16(4500), [6,2,2], u16(330), u16(430), u16(420), u16(350), [50,35]);
+  MSP_DEFAULTS[64]  = [0,1,2,3,4,5,6,7];
+  MSP_DEFAULTS[38]  = [0,0,0,0,0,0];
+  MSP_DEFAULTS[108] = [0,0,0,0,0,0];
+  MSP_DEFAULTS[105] = [].concat(u16(1500),u16(1500),u16(1500),u16(1500),u16(1500),u16(1700),u16(1500),u16(1500));
   const mspStore = (function () {
     try { return JSON.parse(localStorage.getItem("rxv2DemoMsp") || "{}"); }
     catch (e) { return {}; }
@@ -139,6 +162,17 @@
       mspStore["174/" + idx] = data.slice(2).toLowerCase();
       try { localStorage.setItem("rxv2DemoMsp", JSON.stringify(mspStore)); } catch (e) {}
       return T("");
+    }
+    if (fn === 212 && data) {               // write one servo: idx + 16 bytes
+      const idx = parseInt(data.slice(0, 2), 16);
+      mspStore["120s/" + idx] = data.slice(2).toLowerCase();
+      try { localStorage.setItem("rxv2DemoMsp", JSON.stringify(mspStore)); } catch (e) {}
+      return T("");
+    }
+    if (fn === 120) {                       // assemble servo config from stored edits
+      let out = "04";
+      for (let i = 0; i < 4; i++) out += mspStore["120s/" + i] || toHex(SERVO_DEF);
+      return T(out);
     }
     if (fn in MSP_SET && data) {            // write: persist for the paired read
       const [readFn, space] = MSP_SET[fn];
