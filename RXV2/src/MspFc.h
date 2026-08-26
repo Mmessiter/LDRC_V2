@@ -420,11 +420,20 @@ inline uint8_t rotorflightTxVersion() {
     return 0;
 }
 
+// Once Rotorflight has been seen this boot, it STAYS seen (Malcolm
+// 2026-08-25: "the app sometimes does not give me access to the Rotorflight
+// options at all — it seems to forget they are there"). Detection naturally
+// flickers — the probe answers late, telemetry pauses — and no consumer of
+// this flag (front-screen button, auto-fly forcing) may flap with it. An FC
+// does not un-become Rotorflight without a reboot.
+inline bool rfSeenThisBoot = false;
 inline bool fcIsRotorflightConfigCapable() {
+    if (rfSeenThisBoot) return true;
     // Strict check: only if MSP probe confirmed Rotorflight 2.2+.
     if (fcInfo.detected && fcInfo.versionKnown &&
         strncmp(fcInfo.variant, "RTFL", 4) == 0 &&
         rotorflightMajor() >= 2) {
+        rfSeenThisBoot = true;
         return true;
     }
     // Fallback: in CRSF mode, if telemetry is actively flowing from the FC,
@@ -434,6 +443,7 @@ inline bool fcIsRotorflightConfigCapable() {
         fcTelem.framesParsed > 5 &&
         fcTelem.lastFrameMs != 0 &&
         (uint32_t)(millis() - fcTelem.lastFrameMs) < 2000) {
+        rfSeenThisBoot = true;
         return true;
     }
     return false;

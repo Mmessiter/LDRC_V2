@@ -143,7 +143,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const m = document.getElementById('waveTestMsg');
         try {
             const r = await fetch('/api/wave', { method: 'POST' });
-            if (r.ok) { m.textContent = 'Waving the saved channels…'; }
+            if (r.ok) { m.textContent = 'Waving the saved channels… (on a Rotorflight heli use ch1 aileron — a rudder wave is invisible: yaw is a rate command the FC ignores while disarmed)'; }
             else { m.textContent = 'Blocked — the transmitter link is live.'; }
         } catch (e) { m.textContent = 'No reply — is the receiver connected?'; }
         setTimeout(() => { m.textContent = ''; }, 4000);
