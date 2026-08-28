@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.441-default-port";
+constexpr const char* FW_VERSION = "RXV2-0.9.442-fw-recommended";
 
 //*********************************************************************
 //  Auto-update manifest URLs
