@@ -35,7 +35,7 @@
 <div class=container>
     <h1>New helicopter</h1>
     <div class="banner warn">&#9888;&#65039; <b>Take the main and tail blades OFF</b> (or unplug the motor) until the last step says otherwise.</div>
-    <p class=muted style="font-size:.9em;line-height:1.5;margin:.2em 0 .6em">Set up a helicopter with a Rotorflight flight controller from scratch, one step at a time &mdash; entirely from this phone. Tick each step as you finish it; progress is remembered <b>per model</b>, so a fleet of new helicopters each gets its own checklist.</p>
+    <p class=muted style="font-size:.9em;line-height:1.5;margin:.2em 0 .6em">Work top to bottom, tick as you go. Each model keeps its own list.</p>
     <div class=prog id=modelName style="color:#4a7a5f"></div>
     <div class=prog id=prog></div>
     <div id=steps></div>
@@ -46,17 +46,17 @@
 
 <script>
 const STEPS=[
- {k:'fw',    t:'Latest Rotorflight firmware (optional)', d:'A new flight controller comes with Rotorflight already on it \u2014 fine to fly. To install the very latest first, use the Rotorflight Configurator on a computer (USB); flashing can\u2019t be done from the phone. A desktop version of this wizard that flashes too is planned.'},
- {k:'wire',  t:'Wire it up & first contact', d:'Receiver to a spare UART (CRSF), ESC to its motor pad + telemetry pad. Proof of life: the Rotorflight config button appears on the front screen by itself.'},
- {k:'tx',    t:'Transmitter first', d:'Set the model up on your transmitter — one channel per function — then tell the wizard which channel is which (it can detect them as you wiggle each control). Writes the channel order and the Arm & Rescue switches.', href:'/rotorflight-txchannels'},
- {k:'basics',t:'First-time basics', d:'Level calibration, governor & telemetry on, ESC protocol & poles, gear ratios, battery, channel order.', href:'/rotorflight-firsttime'},
- {k:'servos',t:'Servos', d:'Centre each servo, set travel and direction — swash level and square.', href:'/rotorflight-servos'},
- {k:'travel',t:'Travel extents', d:'Collective and cyclic throws, swash limits and trims — with the bench-measure tool.', href:'/rotorflight-travel'},
- {k:'switch',t:'Switches', d:'Which transmitter switch arms, which selects banks — and check the ranges with the live marker.', href:'/rotorflight-modes'},
- {k:'rescue',t:'Rescue', d:'The safety net: set the rescue switch and how firmly it saves the model.', href:'/rotorflight-rescue'},
- {k:'gov',   t:'Governor', d:'Head speeds per bank and spool-up behaviour.', href:'/rotorflight-gov-profile'},
- {k:'rates', t:'Rates & PIDs', d:'How fast it turns and how firmly it holds — proven starting values are fine for a first flight.', href:'/rotorflight-rates'},
- {k:'backup',t:'Back up to the phone', d:'One tap saves the whole setup — restorable any time, even at the field.', href:'/setup'},
+ {k:'fw',    t:'Firmware (optional)', d:'New boards fly as delivered. Updating needs the computer Configurator.'},
+ {k:'wire',  t:'Wire it up', d:'Receiver \u2192 spare UART (CRSF). ESC \u2192 motor + telemetry pads. Done when the Rotorflight button appears on the front screen.'},
+ {k:'tx',    t:'Transmitter first', d:'Make the model on your transmitter, then match each channel here.', href:'/rotorflight-txchannels'},
+ {k:'basics',t:'First-time basics', d:'Level calibration, governor, ESC, gears, battery.', href:'/rotorflight-firsttime'},
+ {k:'servos',t:'Servos', d:'Centre each servo, set travel and direction.', href:'/rotorflight-servos'},
+ {k:'travel',t:'Travel extents', d:'Collective and cyclic throws, swash limits, trims.', href:'/rotorflight-travel'},
+ {k:'switch',t:'Switches', d:'Pick the Arm and bank switches. Check with the live marker.', href:'/rotorflight-modes'},
+ {k:'rescue',t:'Rescue', d:'Set the rescue switch and how firmly it saves.', href:'/rotorflight-rescue'},
+ {k:'gov',   t:'Governor', d:'Head speed per bank, spool-up speed.', href:'/rotorflight-gov-profile'},
+ {k:'rates', t:'Rates & PIDs', d:'Starting values are fine for a first flight.', href:'/rotorflight-rates'},
+ {k:'backup',t:'Back up', d:'One tap saves the whole setup to the phone.', href:'/setup'},
 ];
 const $=id=>document.getElementById(id);
 // Ticks are per MODEL (receiver name), not per phone — Malcolm is setting up

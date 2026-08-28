@@ -45,7 +45,7 @@ h2 .hint{font-weight:400;font-size:.7em;color:#5d7a8c;display:block;margin-top:.
 
     <div class=card id=mount>
         <h2>Which way round is it mounted? <span class=hint>set this FIRST &mdash; level calibration relies on it (Board alignment)</span></h2>
-        <p class=muted style="font-size:.85em;line-height:1.5">Nexus flight controllers are nearly always mounted flat, with the connectors to the <b>front</b> or to the <b>back</b>. Pick yours. <i>(Any other angle: use the configurator&rsquo;s board-alignment tab.)</i></p>
+        <p class=muted style="font-size:.85em;line-height:1.5">Connectors to the <b>front</b> or the <b>back</b>? Pick yours. <i>(Any other angle: configurator.)</i></p>
         <div style="display:flex;gap:.6em">
             <button class=calBtn id=mountF onclick="setMount(0)" style="flex:1">&#11014;&#65039; Connections to the FRONT<br><span style="font-weight:400;font-size:.8em">(standard, yaw 0&deg;)</span></button>
             <button class=calBtn id=mountB onclick="setMount(180)" style="flex:1">&#11015;&#65039; Connections to the BACK<br><span style="font-weight:400;font-size:.8em">(yaw 180&deg;)</span></button>
@@ -55,7 +55,7 @@ h2 .hint{font-weight:400;font-size:.7em;color:#5d7a8c;display:block;margin-top:.
 
     <div class=card id=cal>
         <h2>Level calibration <span class=hint>teach the flight controller which way is level (accelerometer calibration)</span></h2>
-        <p class=muted style="font-size:.85em;line-height:1.5">Put the helicopter on a <b>flat, level surface</b> and keep it perfectly still. Takes about 2 seconds.</p>
+        <p class=muted style="font-size:.85em;line-height:1.5">Sit the model <b>flat and still</b>, then tap. Takes 2 seconds.</p>
         <div class=att id=attNow>&hellip;</div>
         <button class=calBtn id=calBtn onclick="calibrate()">&#128207; Calibrate level now</button>
         <div id=calMsg class=sMsg></div>
@@ -119,7 +119,7 @@ h2 .hint{font-weight:400;font-size:.7em;color:#5d7a8c;display:block;margin-top:.
 
     <div class=card id=map>
         <h2>Channel order <span class=hint>which stick arrives on which channel (Channel map)</span></h2>
-        <p class=muted style="font-size:.85em;line-height:1.5">With this receiver the standard Rotorflight order is right: <b>A</b>ileron, <b>E</b>levator, <b>R</b>udder, <b>C</b>ollective, <b>T</b>hrottle. Only change this if the sticks move the wrong things &mdash; or better, set your own layout on the <a href="/rotorflight-txchannels">Transmitter channels</a> page.</p>
+        <p class=muted style="font-size:.85em;line-height:1.5">The standard order is right for this receiver. Change it only if sticks move the wrong things &mdash; or use <a href="/rotorflight-txchannels">Transmitter channels</a>.</p>
         <div class=att id=mapNow>&hellip;</div>
         <button class=saveBtn id=mapBtn onclick="setStdMap()" style="background:#5f8fab">Set standard order (AERCT123)</button>
         <div id=mapMsg class=sMsg></div>

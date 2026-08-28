@@ -1,6 +1,11 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.437-lean-wizard",
+      "url": "https://messiter.com/rxv2/release/v0.9.437/firmware.bin",
+      "notes": "The wizards on a diet (Malcolm: easier to follow, dyslexia-friendly): every checklist step and intro is now one short action-first line - New helicopter, Tuning, First-time basics, Transmitter channels. All the detail still lives behind each page's ? button."
+    },
+    {
       "name": "RXV2-0.9.436-rf-never-forgotten",
       "url": "https://messiter.com/rxv2/release/v0.9.436/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.436/littlefs.bin",
@@ -76,13 +81,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.426/littlefs.bin",
       "fs_md5": "e06e7139521b02a6de42c18eebc74516",
       "notes": "'Rescue switch' is now simply 'Rescue', for the same reason as Arming: it is a channel, and what drives it is the radio's business."
-    },
-    {
-      "name": "RXV2-0.9.425-arming-plain",
-      "url": "https://messiter.com/rxv2/release/v0.9.425/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.425/littlefs.bin",
-      "fs_md5": "625a63461eaabd27526efab1927cf059",
-      "notes": "'Arming switch' is now simply 'Arming' - it is a channel, not necessarily a switch: some radios drive it from a safety switch or mix among other functions. (Malcolm's precision, gladly accepted.)"
     }
   ]
 }
