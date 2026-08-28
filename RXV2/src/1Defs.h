@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.444-imu-first";
+constexpr const char* FW_VERSION = "RXV2-0.9.445-plain-features";
 
 //*********************************************************************
 //  Auto-update manifest URLs
