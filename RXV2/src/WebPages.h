@@ -254,6 +254,11 @@ inline void handleRotorflightNewHeli() {
     server.send(503, "text/plain", "/rotorflight-newheli.html missing — uploadfs the data/ folder");
 }
 
+inline void handleRotorflightWiring() {
+    if (serveLittleFsFile("/rotorflight-wiring.html", "text/html")) return;
+    server.send(503, "text/plain", "/rotorflight-wiring.html missing — uploadfs the data/ folder");
+}
+
 inline void handleRotorflightWizards() {
     if (serveLittleFsFile("/rotorflight-wizards.html", "text/html")) return;
     server.send(503, "text/plain", "/rotorflight-wizards.html missing — uploadfs the data/ folder");
@@ -2471,6 +2476,7 @@ inline void registerWebRoutes() {
     server.on("/rotorflight-modes",   handleRotorflightModes);
     server.on("/rotorflight-firsttime", handleRotorflightFirstTime);
     server.on("/rotorflight-newheli",   handleRotorflightNewHeli);
+    server.on("/rotorflight-wiring",    handleRotorflightWiring);
     server.on("/rotorflight-tuning",    handleRotorflightTuning);
     server.on("/rotorflight-txchannels", handleRotorflightTxChannels);
     server.on("/rotorflight-wizards",   handleRotorflightWizards);

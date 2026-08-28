@@ -1,6 +1,11 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.439-wiring-page",
+      "url": "https://messiter.com/rxv2/release/v0.9.439/firmware.bin",
+      "notes": "New Wiring page inside the New-helicopter wizard (Malcolm's spec): every plug on one line - S1 = the front-or-back servo then clockwise round the swash, tail on S4, ESC throttle lead, the one-wire telemetry to TLM, the RPM wire if your ESC has one, and the receiver's UART (CRSF). Head speed must arrive by telemetry or RPM wire, or the governor has nothing to govern."
+    },
+    {
       "name": "RXV2-0.9.438-visible-text",
       "url": "https://messiter.com/rxv2/release/v0.9.438/firmware.bin",
       "notes": "Readability pass (Malcolm's suggestions): the Back button is now bright green - findable at a glance instead of blending into the meadow; and every loose line of text sits on its own solid panel, no more faint words straight on the background photo."
@@ -72,13 +77,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.428/littlefs.bin",
       "fs_md5": "4976e6c43e9f376999c3887b57e9fa06",
       "notes": "Fewer words look clearer (Malcolm's doctrine, applied to the front screen): the automatic-fly-mode note line is gone (Receiver settings explains it), 'Bind' stands alone, 'Rotorflight config' drops the version number (it lives on the Rotorflight page), and 'Setup' loses its trailing list."
-    },
-    {
-      "name": "RXV2-0.9.427-steady-front",
-      "url": "https://messiter.com/rxv2/release/v0.9.427/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.427/littlefs.bin",
-      "fs_md5": "66fee9abd475bb23480ae5e7d7ce1151",
-      "notes": "No more front-screen shuffle: the app remembers the last known layout (Fly now hidden? Rotorflight present, and which version?) and paints it instantly at launch, before the receiver has even answered. The live state then only repaints if something actually changed - so on a Rotorflight model the right buttons are simply there from the first frame."
     }
   ]
 }
