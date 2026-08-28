@@ -1,6 +1,11 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.443-model-memory",
+      "url": "https://messiter.com/rxv2/release/v0.9.443/firmware.bin",
+      "notes": "Wizard step 3: 'Create a new model memory on your transmitter' - the proper term."
+    },
+    {
       "name": "RXV2-0.9.442-fw-recommended",
       "url": "https://messiter.com/rxv2/release/v0.9.442/firmware.bin",
       "notes": "Wizard step 1 is now 'Firmware update (recommended)' - update via the computer Configurator before you begin (new boards do fly as delivered)."
@@ -64,13 +69,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.432/littlefs.bin",
       "fs_md5": "cc949839613bb25159409caa80d759a5",
       "notes": "The loud goodbye: the moment arming comes on, every app page shows a full-screen red banner - 'ARMED! WiFi & Bluetooth are switching OFF for flying. The app disconnects in 3 seconds. Disarm the model to get it back.' The banner survives the disconnection (that IS the message) and clears when the link returns disarmed. Even the most enthusiastic, absent-minded pilot will notice."
-    },
-    {
-      "name": "RXV2-0.9.431-armed-lockout",
-      "url": "https://messiter.com/rxv2/release/v0.9.431/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.431/littlefs.bin",
-      "fs_md5": "136e25c4286d2889601f3a96764e3b91",
-      "notes": "Completing the crash response: the moment the model is ARMED with a live transmitter, ALL configuration traffic to the flight controller is refused instantly ('ARMED - configuration is locked in flight. Disarm first.') - closing the 3-second window before auto fly mode kills the radios, and every other path. The stall-starves-CRSF-and-the-motor-cuts mechanism is now impossible at both ends."
     }
   ]
 }

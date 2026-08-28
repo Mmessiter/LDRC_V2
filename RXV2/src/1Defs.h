@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.442-fw-recommended";
+constexpr const char* FW_VERSION = "RXV2-0.9.443-model-memory";
 
 //*********************************************************************
 //  Auto-update manifest URLs
