@@ -110,7 +110,10 @@ h1{max-width:calc(100% - 4.4em)}
 .btn-bind{background:#d4944a}
 .btn-fw  {background:#7d9eb0}
 .btn-diag{background:#5fa099}
-.btn-bb  {background:#9aaf7d}
+/* Bright green, NOT the sage that vanished into the meadow photo
+ * (Malcolm 2026-08-28: "the back button is needed quite a lot and
+ * should be found swiftly"). */
+.btn-bb  {background:#1fae4e}
 .btn-fly {background:#6cab5e;font-weight:600;font-size:1.3em;padding:1.4em 1.2em}
 .btn-back{background:#7d9eb0;margin-top:1.5em}
 .danger  {background:#c97464}
@@ -199,7 +202,14 @@ code{
 .footer a{color:#5d7a8c;text-decoration:none;margin:0 .5em}
 
 /* Misc helpers --------------------------------------------------------- */
-.muted{color:#7a8b95;font-size:.88em}
+.muted{color:#55676f;font-size:.88em}
+/* Loose text (outside cards) gets its own SOLID chip — Malcolm
+ * 2026-08-28: faint text straight on the photo is hard to read; every
+ * line sits on a solid contrasting panel, same family as h1/.subtitle.
+ * Cards and steps already carry their own solid backgrounds. */
+.container>p, .container>p.muted, .container>.prog{
+    background:#f2f6f8;border-radius:10px;padding:.45em .7em;
+    box-shadow:0 2px 6px rgba(0,0,0,.08)}
 .big{font-size:2.4em;font-weight:300;line-height:1.1;margin:.15em 0}
 
 /* Status card (Fly page) ---------------------------------------------- */
