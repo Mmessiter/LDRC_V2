@@ -1,6 +1,11 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.447-no-preset-map",
+      "url": "https://messiter.com/rxv2/release/v0.9.447/firmware.bin",
+      "notes": "Channel order no longer offers a 'standard' preset - it links straight to Transmitter channels, where each channel is chosen (or detected) properly."
+    },
+    {
       "name": "RXV2-0.9.446-help-sync",
       "url": "https://messiter.com/rxv2/release/v0.9.446/firmware.bin",
       "notes": "Help text matches the new Features wording (receiver reference gone there too)."
@@ -56,13 +61,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.436/littlefs.bin",
       "fs_md5": "dcf9b161638f9b58f9a432dd3e35bb73",
       "notes": "Three field reports from Malcolm's test day: (1) the Rotorflight options can no longer be forgotten - once Rotorflight is seen it STAYS seen (latched in the receiver for the whole boot, and remembered per model in the app) so detection flickers never hide the button; (2) the app's demo now carries full servo/rescue/switches/first-time data (no more 'undefined servos'); (3) the wave-test message explains that on a Rotorflight heli a rudder wave is invisible (yaw is a rate command the FC ignores while disarmed) - use ch1 aileron."
-    },
-    {
-      "name": "RXV2-0.9.435-pulse-spool",
-      "url": "https://messiter.com/rxv2/release/v0.9.435/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.435/littlefs.bin",
-      "fs_md5": "f5df5d702f351e1a054c9d6348d06be1",
-      "notes": "Malcolm's 'manual PWM' idea for neXt spool-up, built: PULSE MODE on the spool-up card - while spooling, the motor channel blips between full off and full on with a rising on-share (period adjustable, try 250 ms), so the sim's own rotor inertia averages it into a genuine head-speed climb even though neXt treats the motor as a pure switch. Two-speed bailout, torque stab and all existing behaviour unchanged; pulse off = exactly the old ramp."
     }
   ]
 }
