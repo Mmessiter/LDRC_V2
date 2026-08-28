@@ -1,6 +1,11 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.442-fw-recommended",
+      "url": "https://messiter.com/rxv2/release/v0.9.442/firmware.bin",
+      "notes": "Wizard step 1 is now 'Firmware update (recommended)' - update via the computer Configurator before you begin (new boards do fly as delivered)."
+    },
+    {
       "name": "RXV2-0.9.441-default-port",
       "url": "https://messiter.com/rxv2/release/v0.9.441/firmware.bin",
       "notes": "Wiring page: the port rule stated plainly - plug into the default receiver port (ELRS/RX) and it just works; any other port needs one configurator visit first."
@@ -66,13 +71,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.431/littlefs.bin",
       "fs_md5": "136e25c4286d2889601f3a96764e3b91",
       "notes": "Completing the crash response: the moment the model is ARMED with a live transmitter, ALL configuration traffic to the flight controller is refused instantly ('ARMED - configuration is locked in flight. Disarm first.') - closing the 3-second window before auto fly mode kills the radios, and every other path. The stall-starves-CRSF-and-the-motor-cuts mechanism is now impossible at both ends."
-    },
-    {
-      "name": "RXV2-0.9.430-autofly-locked",
-      "url": "https://messiter.com/rxv2/release/v0.9.430/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.430/littlefs.bin",
-      "fs_md5": "55664675cfbde9551aae2f1575acd4b5",
-      "notes": "SAFETY (after the 2026-08-24 crash): with Rotorflight present, automatic fly mode is FORCED ON and cannot be switched off - flying with the config link alive lets a blocking config request starve the CRSF stream, which Rotorflight reads as signal loss and cuts the motor. The Receiver-settings switch shows a lock; non-Rotorflight models keep the choice."
     }
   ]
 }
