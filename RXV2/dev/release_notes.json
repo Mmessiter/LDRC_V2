@@ -327,5 +327,6 @@
  "RXV2-0.9.442-fw-recommended": "Wizard step 1 is now 'Firmware update (recommended)' - update via the computer Configurator before you begin (new boards do fly as delivered).",
  "RXV2-0.9.443-model-memory": "Wizard step 3: 'Create a new model memory on your transmitter' - the proper term.",
  "RXV2-0.9.444-imu-first": "First-time basics reordered per Malcolm: 'Calibrate the flight controller' (IMU) is now the FIRST card - best done flat on a desk before the board goes in (the helicopter may not sit level), and front-or-back mounting does not affect it (the old 'set mounting first' note was wrong for flat boards). Wizard step 4 renamed to match.",
- "RXV2-0.9.445-plain-features": "First-time basics: the Features card now simply says 'Tick the functions you plan to use'; the receiver-link row is gone (it goes without saying - and the save still quietly keeps it on)."
+ "RXV2-0.9.445-plain-features": "First-time basics: the Features card now simply says 'Tick the functions you plan to use'; the receiver-link row is gone (it goes without saying - and the save still quietly keeps it on).",
+ "RXV2-0.9.446-help-sync": "Help text matches the new Features wording (receiver reference gone there too)."
 }

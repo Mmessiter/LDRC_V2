@@ -1,6 +1,11 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.446-help-sync",
+      "url": "https://messiter.com/rxv2/release/v0.9.446/firmware.bin",
+      "notes": "Help text matches the new Features wording (receiver reference gone there too)."
+    },
+    {
       "name": "RXV2-0.9.445-plain-features",
       "url": "https://messiter.com/rxv2/release/v0.9.445/firmware.bin",
       "notes": "First-time basics: the Features card now simply says 'Tick the functions you plan to use'; the receiver-link row is gone (it goes without saying - and the save still quietly keeps it on)."
@@ -58,13 +63,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.435/littlefs.bin",
       "fs_md5": "f5df5d702f351e1a054c9d6348d06be1",
       "notes": "Malcolm's 'manual PWM' idea for neXt spool-up, built: PULSE MODE on the spool-up card - while spooling, the motor channel blips between full off and full on with a rising on-share (period adjustable, try 250 ms), so the sim's own rotor inertia averages it into a genuine head-speed climb even though neXt treats the motor as a pure switch. Two-speed bailout, torque stab and all existing behaviour unchanged; pulse off = exactly the old ramp."
-    },
-    {
-      "name": "RXV2-0.9.434-nudge-manners",
-      "url": "https://messiter.com/rxv2/release/v0.9.434/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.434/littlefs.bin",
-      "fs_md5": "a6faeb65729f0dd2f669fa6d04e73793",
-      "notes": "The back-up-your-tune reminder now has manners: completing a backup (from either the Backup page or Black box) signs off the current tune generation, so the banner goes away and STAYS away until a setting actually changes - then it returns after six unchanged flights, exactly as before."
     }
   ]
 }
