@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.439-wiring-page";
+constexpr const char* FW_VERSION = "RXV2-0.9.440-rx-port";
 
 //*********************************************************************
 //  Auto-update manifest URLs
