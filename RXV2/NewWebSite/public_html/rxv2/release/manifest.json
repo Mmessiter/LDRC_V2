@@ -1,6 +1,11 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.445-plain-features",
+      "url": "https://messiter.com/rxv2/release/v0.9.445/firmware.bin",
+      "notes": "First-time basics: the Features card now simply says 'Tick the functions you plan to use'; the receiver-link row is gone (it goes without saying - and the save still quietly keeps it on)."
+    },
+    {
       "name": "RXV2-0.9.444-imu-first",
       "url": "https://messiter.com/rxv2/release/v0.9.444/firmware.bin",
       "notes": "First-time basics reordered per Malcolm: 'Calibrate the flight controller' (IMU) is now the FIRST card - best done flat on a desk before the board goes in (the helicopter may not sit level), and front-or-back mounting does not affect it (the old 'set mounting first' note was wrong for flat boards). Wizard step 4 renamed to match."
@@ -60,13 +65,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.434/littlefs.bin",
       "fs_md5": "a6faeb65729f0dd2f669fa6d04e73793",
       "notes": "The back-up-your-tune reminder now has manners: completing a backup (from either the Backup page or Black box) signs off the current tune generation, so the banner goes away and STAYS away until a setting actually changes - then it returns after six unchanged flights, exactly as before."
-    },
-    {
-      "name": "RXV2-0.9.433-clocked-events",
-      "url": "https://messiter.com/rxv2/release/v0.9.433/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.433/littlefs.bin",
-      "fs_md5": "58c7e25cbf34ad8a73613d1149766bda",
-      "notes": "Two from Malcolm's bench log: (1) BUG FIX - with an arming channel known, the old 'link live 30s = flying' rule fought the new disarm revival, flapping the radios every 5 seconds on the bench with the transmitter on; ARMED is now the only definition of flying on such models (the old rule remains for models without arming). (2) The event log now shows the TIME OF DAY for every event once a phone has taught the receiver the clock - retroactively for events logged before the sync; time-since-boot before that."
     }
   ]
 }
