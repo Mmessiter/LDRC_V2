@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.438-visible-text";
+constexpr const char* FW_VERSION = "RXV2-0.9.439-wiring-page";
 
 //*********************************************************************
 //  Auto-update manifest URLs
