@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.445-plain-features";
+constexpr const char* FW_VERSION = "RXV2-0.9.446-help-sync";
 
 //*********************************************************************
 //  Auto-update manifest URLs
