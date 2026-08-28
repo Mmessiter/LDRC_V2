@@ -324,5 +324,6 @@
  "RXV2-0.9.439-wiring-page": "New Wiring page inside the New-helicopter wizard (Malcolm's spec): every plug on one line - S1 = the front-or-back servo then clockwise round the swash, tail on S4, ESC throttle lead, the one-wire telemetry to TLM, the RPM wire if your ESC has one, and the receiver's UART (CRSF). Head speed must arrive by telemetry or RPM wire, or the governor has nothing to govern.",
  "RXV2-0.9.440-rx-port": "Wiring page: which UART, answered - use the port labelled for the receiver (ELRS/RX), pre-configured for CRSF out of the box, nothing to declare. Any other UART is a chicken-and-egg that needs one configurator visit on USB.",
  "RXV2-0.9.441-default-port": "Wiring page: the port rule stated plainly - plug into the default receiver port (ELRS/RX) and it just works; any other port needs one configurator visit first.",
- "RXV2-0.9.442-fw-recommended": "Wizard step 1 is now 'Firmware update (recommended)' - update via the computer Configurator before you begin (new boards do fly as delivered)."
+ "RXV2-0.9.442-fw-recommended": "Wizard step 1 is now 'Firmware update (recommended)' - update via the computer Configurator before you begin (new boards do fly as delivered).",
+ "RXV2-0.9.443-model-memory": "Wizard step 3: 'Create a new model memory on your transmitter' - the proper term."
 }
