@@ -63,9 +63,9 @@
     </div>
 
     <div class=wcard>
-        <h2><span class=pad>UART</span>This receiver</h2>
-        <p>Receiver to a <b>spare UART</b>: TX&rarr;RX, RX&rarr;TX, plus power. Protocol <b>CRSF</b>.</p>
-        <p class=why>Done when the Rotorflight button appears on the front screen by itself.</p>
+        <h2><span class=pad>RX</span>This receiver</h2>
+        <p>Receiver to the port <b>labelled for the receiver</b> (ELRS&thinsp;/&thinsp;RX): TX&rarr;RX, RX&rarr;TX, plus power. Protocol <b>CRSF</b>.</p>
+        <p class=why>That port already listens for CRSF out of the box &mdash; nothing to declare. Done when the Rotorflight button appears on the front screen. (A different UART needs one visit to the configurator.)</p>
     </div>
 
     <a class="btn btn-bb" href="/rotorflight-newheli" style="margin-top:.8em"><span class=ico>&#11013;&#65039;</span>Back to New helicopter</a>
@@ -78,7 +78,8 @@
 <li><b>Tail:</b> S4 &mdash; unless the tail is on a motor, in which case S4 stays empty and the tail motor is configured in the configurator.</li>
 <li><b>ESC:</b> three possible connections &mdash; the throttle lead (always), the one-wire telemetry (strongly recommended: battery + head speed data), and a dedicated RPM wire (only if your ESC provides one and its telemetry doesn&rsquo;t already carry RPM).</li>
 <li><b>Head speed must arrive somehow</b> &mdash; telemetry wire or RPM wire &mdash; or the governor has nothing to govern.</li>
-<li>Crossed TX/RX on the receiver UART is the classic no-contact cause &mdash; if the Rotorflight button never appears, swap them first.</li>
+<li><b>Which UART?</b> The labelled receiver port (ELRS&thinsp;/&thinsp;RX) is pre-configured for CRSF, so no computer is needed. Any other UART is a chicken-and-egg: the flight controller can&rsquo;t be told which port to listen on <i>over</i> a link it isn&rsquo;t listening to yet &mdash; that one change needs the configurator on USB, once.</li>
+<li>Crossed TX/RX on the receiver port is the classic no-contact cause &mdash; if the Rotorflight button never appears, swap them first.</li>
 </ul>
 </template>
 </body>

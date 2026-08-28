@@ -1,6 +1,11 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.440-rx-port",
+      "url": "https://messiter.com/rxv2/release/v0.9.440/firmware.bin",
+      "notes": "Wiring page: which UART, answered - use the port labelled for the receiver (ELRS/RX), pre-configured for CRSF out of the box, nothing to declare. Any other UART is a chicken-and-egg that needs one configurator visit on USB."
+    },
+    {
       "name": "RXV2-0.9.439-wiring-page",
       "url": "https://messiter.com/rxv2/release/v0.9.439/firmware.bin",
       "notes": "New Wiring page inside the New-helicopter wizard (Malcolm's spec): every plug on one line - S1 = the front-or-back servo then clockwise round the swash, tail on S4, ESC throttle lead, the one-wire telemetry to TLM, the RPM wire if your ESC has one, and the receiver's UART (CRSF). Head speed must arrive by telemetry or RPM wire, or the governor has nothing to govern."
@@ -70,13 +75,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.429/littlefs.bin",
       "fs_md5": "87dfe351b95eae5a365aa1377d5ec731",
       "notes": "Wizard's 'Wire it up & first contact' step no longer has an Open button that led oddly back to the menu - it is a check, not a page: proof of life is the Rotorflight config button appearing on the front screen by itself."
-    },
-    {
-      "name": "RXV2-0.9.428-fewer-words",
-      "url": "https://messiter.com/rxv2/release/v0.9.428/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.428/littlefs.bin",
-      "fs_md5": "4976e6c43e9f376999c3887b57e9fa06",
-      "notes": "Fewer words look clearer (Malcolm's doctrine, applied to the front screen): the automatic-fly-mode note line is gone (Receiver settings explains it), 'Bind' stands alone, 'Rotorflight config' drops the version number (it lives on the Rotorflight page), and 'Setup' loses its trailing list."
     }
   ]
 }
