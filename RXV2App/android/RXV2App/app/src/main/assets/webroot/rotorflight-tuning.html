@@ -35,7 +35,7 @@
 <div class=container>
     <h1>Tuning</h1>
     <div class="banner warn">&#128336; One thing at a time: change <b>one</b> value, fly, judge, repeat. Land before every edit.</div>
-    <p class=muted style="font-size:.9em;line-height:1.5;margin:.2em 0 .6em">The field checklist for after the build: tune a freshly set-up helicopter to fly beautifully, in the right order. Progress is remembered per model.</p>
+    <p class=muted style="font-size:.9em;line-height:1.5;margin:.2em 0 .6em">After the build: make it fly beautifully, in the right order. One change per flight.</p>
     <div class=prog id=modelName style="color:#4a7a5f"></div>
     <div class=prog id=prog></div>
     <div id=steps></div>
@@ -46,15 +46,15 @@
 
 <script>
 const STEPS=[
- {k:'backup0',t:'Back up the fresh setup first', d:'One tap before any tuning — whatever happens next, today’s working setup is safe on the phone.', href:'/setup'},
- {k:'hover',  t:'First hovers — mechanics check', d:'Hover at eye height: controls correct, tail holds, nothing shakes or smells hot. A vibration or twitch here is a MECHANICAL job (blades, bearings, links) — fix it before touching any tuning value.'},
- {k:'gov',    t:'Governor — rock-steady head speed', d:'Head speed true against telemetry, spool-up comfortable, no sag on hard collective pulls (raise gain/precomp a little at a time).', href:'/rotorflight-gov-profile'},
- {k:'tail',   t:'Tail — holds and stops', d:'Fast stab stops without bounce, no drift in climbs. Raise tail response (yaw P/D) until it wiggles, back off a touch; collective pulls kicking the tail = precomp.', href:'/rotorflight-pid'},
- {k:'cyclic', t:'Cyclic — crisp and wobble-free', d:'Raise roll/pitch response (P/D) until a fast stop shows a small wobble, then back off. Slow drift in hard moves = a little more hold (I).', href:'/rotorflight-pid'},
- {k:'feel',   t:'Feel — rates & expo to taste', d:'How fast it rolls and flips, how gentle the middle of the stick feels. Pure preference — no wrong answers.', href:'/rotorflight-rates'},
- {k:'fine',   t:'Fine touches (advanced)', d:'Wind-up relief, cyclic cross-coupling, boost — only if something still niggles after the steps above.', href:'/rotorflight-pidplus'},
- {k:'rescue', t:'Prove Rescue — up high', d:'Three mistakes high: flick the rescue switch upright AND inverted. It must climb, level, and hold. Adjust strength/collective until it saves without drama.', href:'/rotorflight-rescue'},
- {k:'backup1',t:'Back up the proven tune', d:'The tune you trust, saved on the phone — restorable at the field forever.', href:'/setup'},
+ {k:'backup0',t:'Back up first', d:'One tap — today’s working setup stays safe.', href:'/setup'},
+ {k:'hover',  t:'First hovers', d:'Hover at eye height. Shakes or twitches = mechanics, not tuning.'},
+ {k:'gov',    t:'Governor', d:'Steady head speed, no sag on hard pulls (raise gain/precomp gently).', href:'/rotorflight-gov-profile'},
+ {k:'tail',   t:'Tail', d:'Raise response until it wiggles, back off a touch. Pulls kicking the tail = precomp.', href:'/rotorflight-pid'},
+ {k:'cyclic', t:'Cyclic', d:'Raise until a fast stop just wobbles, back off. Drift = more hold (I).', href:'/rotorflight-pid'},
+ {k:'feel',   t:'Feel — rates & expo', d:'Roll rate and stick softness. Pure taste.', href:'/rotorflight-rates'},
+ {k:'fine',   t:'Fine touches', d:'Only if something still niggles.', href:'/rotorflight-pidplus'},
+ {k:'rescue', t:'Prove Rescue', d:'Three mistakes high: flick it upright AND inverted.', href:'/rotorflight-rescue'},
+ {k:'backup1',t:'Back up the tune', d:'Save the tune you now trust.', href:'/setup'},
 ];
 const $=id=>document.getElementById(id);
 // Per-model ticks, same scheme as the New-helicopter checklist.

@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.436-rf-never-forgotten";
+constexpr const char* FW_VERSION = "RXV2-0.9.437-lean-wizard";
 
 //*********************************************************************
 //  Auto-update manifest URLs
