@@ -254,6 +254,36 @@ inline void handleRotorflightNewHeli() {
     server.send(503, "text/plain", "/rotorflight-newheli.html missing — uploadfs the data/ folder");
 }
 
+// POST /api/fc/wake — wake a FACTORY-FRESH flight controller whose CRSF
+// telemetry is off (Malcolm's first real Nexus X, 2026-08-29: with
+// telemetry disabled the FC never transmits, so it cannot even be
+// discovered — configurator chicken-and-egg). The FC still LISTENS, so we
+// blind-write: feature mask = RX_SERIAL|TELEMETRY, save, reboot. REFUSED
+// while an FC is already talking — a blind mask write would strip a
+// configured board's features (the wizard's Features card re-ticks the
+// rest on a fresh board anyway).
+inline void handleFcWake() {
+    if (currentProtocol != PROTO_CRSF) {
+        server.send(409, "application/json", "{\"ok\":false,\"err\":\"protocol is not CRSF\"}");
+        return;
+    }
+    if (fcInfo.detected ||
+        (fcTelem.lastFrameMs && (uint32_t)(millis() - fcTelem.lastFrameMs) < 3000)) {
+        server.send(409, "application/json",
+            "{\"ok\":false,\"err\":\"a flight controller is already talking — wake is only for silent factory-fresh boards\"}");
+        return;
+    }
+    const uint8_t mask[4] = { 0x08, 0x04, 0x00, 0x00 };   // RX_SERIAL | TELEMETRY, LE
+    mspSendRequest(MSP_SET_FEATURE_CFG, mask, 4);
+    delay(40);
+    mspSendRequest(MSP_EEPROM_WRITE);
+    delay(60);
+    mspSendRequest(MSP_REBOOT);
+    events.add("FC wake sent (telemetry on + save + reboot)");
+    server.send(200, "application/json",
+        "{\"ok\":true,\"message\":\"wake sent — watch for the Rotorflight button in ~10 s\"}");
+}
+
 inline void handleRotorflightWiring() {
     if (serveLittleFsFile("/rotorflight-wiring.html", "text/html")) return;
     server.send(503, "text/plain", "/rotorflight-wiring.html missing — uploadfs the data/ folder");
@@ -2477,6 +2507,7 @@ inline void registerWebRoutes() {
     server.on("/rotorflight-firsttime", handleRotorflightFirstTime);
     server.on("/rotorflight-newheli",   handleRotorflightNewHeli);
     server.on("/rotorflight-wiring",    handleRotorflightWiring);
+    server.on("/api/fc/wake", HTTP_POST, handleFcWake);
     server.on("/rotorflight-tuning",    handleRotorflightTuning);
     server.on("/rotorflight-txchannels", handleRotorflightTxChannels);
     server.on("/rotorflight-wizards",   handleRotorflightWizards);

@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.447-no-preset-map";
+constexpr const char* FW_VERSION = "RXV2-0.9.448-fc-wake";
 
 //*********************************************************************
 //  Auto-update manifest URLs

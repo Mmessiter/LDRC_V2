@@ -48,6 +48,7 @@ constexpr uint8_t MSP_SET_GOVERNOR_CONFIG = 143;
 constexpr uint8_t MSP_GOVERNOR_PROFILE = 148;
 constexpr uint8_t MSP_SET_GOVERNOR_PROFILE = 149;
 constexpr uint8_t MSP_BATTERY_STATE  = 130;   // byte 0 = cell count (the FC KNOWS — no more guessing 11S vs 12S from volts)
+constexpr uint8_t MSP_SET_FEATURE_CFG = 37;   // write the 32-bit feature mask
 constexpr uint8_t MSP_EEPROM_WRITE   = 250;
 constexpr uint8_t MSP_REBOOT         = 68;    // FC restart (governor config write needs it to apply, like V1)
 

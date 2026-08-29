@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.448-fc-wake",
+      "url": "https://messiter.com/rxv2/release/v0.9.448/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.448/littlefs.bin",
+      "fs_md5": "b5d15d4cbc51e47bc493e139ed250b34",
+      "notes": "Wake a brand-new flight controller (Malcolm's first real Nexus X setup): factory boards ship with telemetry OFF and sit silent - undiscoverable. The Wiring page now offers (and has a button for) a one-tap Wake: the receiver blind-writes telemetry ON + save + restart over CRSF (the board listens even when mute). Protected: refused whenever a flight controller is already talking, so it can never touch a configured model."
+    },
+    {
       "name": "RXV2-0.9.447-no-preset-map",
       "url": "https://messiter.com/rxv2/release/v0.9.447/firmware.bin",
       "notes": "Channel order no longer offers a 'standard' preset - it links straight to Transmitter channels, where each channel is chosen (or detected) properly."
@@ -54,13 +61,6 @@
       "name": "RXV2-0.9.437-lean-wizard",
       "url": "https://messiter.com/rxv2/release/v0.9.437/firmware.bin",
       "notes": "The wizards on a diet (Malcolm: easier to follow, dyslexia-friendly): every checklist step and intro is now one short action-first line - New helicopter, Tuning, First-time basics, Transmitter channels. All the detail still lives behind each page's ? button."
-    },
-    {
-      "name": "RXV2-0.9.436-rf-never-forgotten",
-      "url": "https://messiter.com/rxv2/release/v0.9.436/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.436/littlefs.bin",
-      "fs_md5": "dcf9b161638f9b58f9a432dd3e35bb73",
-      "notes": "Three field reports from Malcolm's test day: (1) the Rotorflight options can no longer be forgotten - once Rotorflight is seen it STAYS seen (latched in the receiver for the whole boot, and remembered per model in the app) so detection flickers never hide the button; (2) the app's demo now carries full servo/rescue/switches/first-time data (no more 'undefined servos'); (3) the wave-test message explains that on a Rotorflight heli a rudder wave is invisible (yaw is a rate command the FC ignores while disarmed) - use ch1 aileron."
     }
   ]
 }
