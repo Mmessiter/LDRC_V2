@@ -284,6 +284,11 @@ inline void handleFcWake() {
         "{\"ok\":true,\"message\":\"wake sent — watch for the Rotorflight button in ~10 s\"}");
 }
 
+inline void handleRotorflightComputer() {
+    if (serveLittleFsFile("/rotorflight-computer.html", "text/html")) return;
+    server.send(503, "text/plain", "/rotorflight-computer.html missing — uploadfs the data/ folder");
+}
+
 inline void handleRotorflightWiring() {
     if (serveLittleFsFile("/rotorflight-wiring.html", "text/html")) return;
     server.send(503, "text/plain", "/rotorflight-wiring.html missing — uploadfs the data/ folder");
@@ -2507,6 +2512,7 @@ inline void registerWebRoutes() {
     server.on("/rotorflight-firsttime", handleRotorflightFirstTime);
     server.on("/rotorflight-newheli",   handleRotorflightNewHeli);
     server.on("/rotorflight-wiring",    handleRotorflightWiring);
+    server.on("/rotorflight-computer",  handleRotorflightComputer);
     server.on("/api/fc/wake", HTTP_POST, handleFcWake);
     server.on("/rotorflight-tuning",    handleRotorflightTuning);
     server.on("/rotorflight-txchannels", handleRotorflightTxChannels);

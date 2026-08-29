@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.451-before-you-start",
+      "url": "https://messiter.com/rxv2/release/v0.9.451/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.451/littlefs.bin",
+      "fs_md5": "7d0e493f9f154c5b520c01a77209c36f",
+      "notes": "New 'Before you start' page (Malcolm's wording): the one USB session per new helicopter, as three numbered cards - update the firmware; check the serial port on the Configuration tab matches where the receiver is plugged; enable Telemetry on the Receiver tab then Save & Reboot (bottom right). Wizard step 1 opens it."
+    },
+    {
       "name": "RXV2-0.9.450-computer-session-first",
       "url": "https://messiter.com/rxv2/release/v0.9.450/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.450/littlefs.bin",
@@ -60,11 +67,6 @@
       "name": "RXV2-0.9.440-rx-port",
       "url": "https://messiter.com/rxv2/release/v0.9.440/firmware.bin",
       "notes": "Wiring page: which UART, answered - use the port labelled for the receiver (ELRS/RX), pre-configured for CRSF out of the box, nothing to declare. Any other UART is a chicken-and-egg that needs one configurator visit on USB."
-    },
-    {
-      "name": "RXV2-0.9.439-wiring-page",
-      "url": "https://messiter.com/rxv2/release/v0.9.439/firmware.bin",
-      "notes": "New Wiring page inside the New-helicopter wizard (Malcolm's spec): every plug on one line - S1 = the front-or-back servo then clockwise round the swash, tail on S4, ESC throttle lead, the one-wire telemetry to TLM, the RPM wire if your ESC has one, and the receiver's UART (CRSF). Head speed must arrive by telemetry or RPM wire, or the governor has nothing to govern."
     }
   ]
 }
