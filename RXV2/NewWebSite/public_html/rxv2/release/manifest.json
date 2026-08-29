@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.450-computer-session-first",
+      "url": "https://messiter.com/rxv2/release/v0.9.450/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.450/littlefs.bin",
+      "fs_md5": "419429ebc321971e2e5cc44c3557c21d",
+      "notes": "Wizard step 1 is now the one-time computer session, right at the top: turn Telemetry ON and set the serial input to the UART you are using (Save restarts the board); update firmware too while you're there. Everything after is phone-only."
+    },
+    {
       "name": "RXV2-0.9.449-honest-first-contact",
       "url": "https://messiter.com/rxv2/release/v0.9.449/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.449/littlefs.bin",
@@ -58,11 +65,6 @@
       "name": "RXV2-0.9.439-wiring-page",
       "url": "https://messiter.com/rxv2/release/v0.9.439/firmware.bin",
       "notes": "New Wiring page inside the New-helicopter wizard (Malcolm's spec): every plug on one line - S1 = the front-or-back servo then clockwise round the swash, tail on S4, ESC throttle lead, the one-wire telemetry to TLM, the RPM wire if your ESC has one, and the receiver's UART (CRSF). Head speed must arrive by telemetry or RPM wire, or the governor has nothing to govern."
-    },
-    {
-      "name": "RXV2-0.9.438-visible-text",
-      "url": "https://messiter.com/rxv2/release/v0.9.438/firmware.bin",
-      "notes": "Readability pass (Malcolm's suggestions): the Back button is now bright green - findable at a glance instead of blending into the meadow; and every loose line of text sits on its own solid panel, no more faint words straight on the background photo."
     }
   ]
 }
