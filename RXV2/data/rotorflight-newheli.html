@@ -46,7 +46,7 @@
 
 <script>
 const STEPS=[
- {k:'fw',    t:'Firmware update (recommended)', d:'Update via the computer Configurator before you begin. (New boards do fly as delivered.)'},
+ {k:'fw',    t:'One computer session first (Configurator)', d:'Turn Telemetry ON and set the serial input to the UART you are using \u2014 Save restarts the board. Update firmware too (recommended).'},
  {k:'wire',  t:'Wire it up', d:'S1 = front-or-back servo, then clockwise. Tail = S4. ESC, telemetry, RPM \u2014 each plug explained.', href:'/rotorflight-wiring'},
  {k:'tx',    t:'Transmitter first', d:'Create a new model memory on your transmitter, then match each channel here.', href:'/rotorflight-txchannels'},
  {k:'basics',t:'First-time basics', d:'Calibrate the flight controller, governor, ESC, gears, battery.', href:'/rotorflight-firsttime'},
@@ -102,6 +102,7 @@ bindModel();  // …then rebind to this model's own ticks when the name arrives
 <template id=helpContent><h2>New helicopter</h2>
 <p>The from-scratch setup checklist for a Rotorflight helicopter &mdash; the same ground the configurator covers, but step by step on the phone, in plain English.</p>
 <ul>
+<li><b>Step 1 is the only computer step:</b> a brand-new board is mute until Telemetry is ON, and it listens only on the serial input set in the configurator &mdash; do both in one USB session (Save restarts it). Everything after is phone-only.</li>
 <li>Work top to bottom. Each <b>Open</b> button goes to the right page; come back and tick the step off.</li>
 <li>Ticks are remembered per model (by its receiver name), so every new helicopter starts a fresh checklist.</li>
 <li><b>Blades off</b> (or motor unplugged) until the very end &mdash; several steps move the servos, and one spins the motor if you let it.</li>

@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.449-honest-first-contact";
+constexpr const char* FW_VERSION = "RXV2-0.9.450-computer-session-first";
 
 //*********************************************************************
 //  Auto-update manifest URLs
