@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.450-computer-session-first";
+constexpr const char* FW_VERSION = "RXV2-0.9.451-before-you-start";
 
 //*********************************************************************
 //  Auto-update manifest URLs
