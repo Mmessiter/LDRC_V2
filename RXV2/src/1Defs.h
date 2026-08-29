@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.451-before-you-start";
+constexpr const char* FW_VERSION = "RXV2-0.9.452-tidy-wiring";
 
 //*********************************************************************
 //  Auto-update manifest URLs

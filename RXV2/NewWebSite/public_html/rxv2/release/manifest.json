@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.452-tidy-wiring",
+      "url": "https://messiter.com/rxv2/release/v0.9.452/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.452/littlefs.bin",
+      "fs_md5": "ebf0333f6456ac4ea845aca32eb51f73",
+      "notes": "Wiring page tidied: the brand-new-board card is gone - that story now lives on the Before-you-start page (wizard step 1)."
+    },
+    {
       "name": "RXV2-0.9.451-before-you-start",
       "url": "https://messiter.com/rxv2/release/v0.9.451/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.451/littlefs.bin",
@@ -62,11 +69,6 @@
       "name": "RXV2-0.9.441-default-port",
       "url": "https://messiter.com/rxv2/release/v0.9.441/firmware.bin",
       "notes": "Wiring page: the port rule stated plainly - plug into the default receiver port (ELRS/RX) and it just works; any other port needs one configurator visit first."
-    },
-    {
-      "name": "RXV2-0.9.440-rx-port",
-      "url": "https://messiter.com/rxv2/release/v0.9.440/firmware.bin",
-      "notes": "Wiring page: which UART, answered - use the port labelled for the receiver (ELRS/RX), pre-configured for CRSF out of the box, nothing to declare. Any other UART is a chicken-and-egg that needs one configurator visit on USB."
     }
   ]
 }
