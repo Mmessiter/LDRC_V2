@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.452-tidy-wiring";
+constexpr const char* FW_VERSION = "RXV2-0.9.453-esc-port-truth";
 
 //*********************************************************************
 //  Auto-update manifest URLs

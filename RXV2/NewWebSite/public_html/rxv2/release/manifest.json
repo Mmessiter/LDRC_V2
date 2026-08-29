@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.453-esc-port-truth",
+      "url": "https://messiter.com/rxv2/release/v0.9.453/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.453/littlefs.bin",
+      "fs_md5": "43cf3b26fb9a35a2411039239a0495b6",
+      "notes": "Before-you-start gains task 4 (found on the first real build): ESC telemetry cannot be fully enabled from the phone - the Ports tab must name which UART the ESC's data wire uses. The First-time basics tick now says so too."
+    },
+    {
       "name": "RXV2-0.9.452-tidy-wiring",
       "url": "https://messiter.com/rxv2/release/v0.9.452/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.452/littlefs.bin",
@@ -64,11 +71,6 @@
       "name": "RXV2-0.9.442-fw-recommended",
       "url": "https://messiter.com/rxv2/release/v0.9.442/firmware.bin",
       "notes": "Wizard step 1 is now 'Firmware update (recommended)' - update via the computer Configurator before you begin (new boards do fly as delivered)."
-    },
-    {
-      "name": "RXV2-0.9.441-default-port",
-      "url": "https://messiter.com/rxv2/release/v0.9.441/firmware.bin",
-      "notes": "Wiring page: the port rule stated plainly - plug into the default receiver port (ELRS/RX) and it just works; any other port needs one configurator visit first."
     }
   ]
 }
