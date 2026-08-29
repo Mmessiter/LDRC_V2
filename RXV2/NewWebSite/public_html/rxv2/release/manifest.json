@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.454-restart-to-apply",
+      "url": "https://messiter.com/rxv2/release/v0.9.454/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.454/littlefs.bin",
+      "fs_md5": "f425b21323f5884f26fdc226a04194c8",
+      "notes": "ESC telemetry verdict (proven live: 40.0C flowing on the Goblin770): the wizard could do it all along - features simply apply at BOOT. Saving features now offers the flight-controller restart on the spot, and Before-you-start is back to its three honest tasks (the Ports-tab task was a wrong diagnosis, withdrawn)."
+    },
+    {
       "name": "RXV2-0.9.453-esc-port-truth",
       "url": "https://messiter.com/rxv2/release/v0.9.453/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.453/littlefs.bin",
@@ -66,11 +73,6 @@
       "name": "RXV2-0.9.443-model-memory",
       "url": "https://messiter.com/rxv2/release/v0.9.443/firmware.bin",
       "notes": "Wizard step 3: 'Create a new model memory on your transmitter' - the proper term."
-    },
-    {
-      "name": "RXV2-0.9.442-fw-recommended",
-      "url": "https://messiter.com/rxv2/release/v0.9.442/firmware.bin",
-      "notes": "Wizard step 1 is now 'Firmware update (recommended)' - update via the computer Configurator before you begin (new boards do fly as delivered)."
     }
   ]
 }

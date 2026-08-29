@@ -27,7 +27,7 @@
 <div class=bg-wash  aria-hidden=true></div>
 <div class=container>
     <h1>Before you start</h1>
-    <p class=subtitle>One USB session on a computer &mdash; four tasks the receiver cannot do.</p>
+    <p class=subtitle>One USB session on a computer &mdash; three tasks the receiver cannot do.</p>
     <p>Connect a <b>USB lead from the flight controller to your computer</b> and run the <b>Rotorflight Configurator</b>. Then:</p>
 
     <div class=wcard>
@@ -48,12 +48,6 @@
         <p class=why>Without telemetry the board is mute &mdash; it cannot even be discovered.</p>
     </div>
 
-    <div class=wcard>
-        <h2><span class=num>4</span>Enable ESC telemetry</h2>
-        <p>On the <b>Ports</b> tab: set <b>ESC Sensor</b> on the port where the ESC&rsquo;s telemetry wire is plugged.</p>
-        <p class=why>The wizard&rsquo;s feature tick alone is not enough &mdash; the port must be named here (tested on the first real build).</p>
-    </div>
-
     <p>After that reboot, the <b>Rotorflight button appears</b> on this phone &mdash; and everything else is done from here. The computer can go away.</p>
 
     <a class="btn btn-bb" href="/rotorflight-newheli" style="margin-top:.8em"><span class=ico>&#11013;&#65039;</span>Back to New helicopter</a>
@@ -64,7 +58,7 @@
 <ul>
 <li><b>Firmware flashing</b> needs the board in bootloader mode over USB &mdash; no radio link exists yet.</li>
 <li><b>The serial port</b> is a chicken-and-egg: the board cannot be told which port to listen on <i>over</i> a link it is not listening to.</li>
-<li><b>ESC telemetry</b> is the same family: the feature switch can be ticked from the phone, but naming WHICH port the ESC&rsquo;s data wire uses is a Ports-tab job.</li>
+<li><b>ESC telemetry</b> is NOT on this list (tested on the first real build): the wizard&rsquo;s tick + a flight-controller restart is enough &mdash; features apply at boot.</li>
 <li><b>Telemetry off</b> makes the board completely mute on its receiver port &mdash; it neither speaks nor listens there (tested!), so nothing can reach it until the configurator switches telemetry on and reboots it.</li>
 </ul>
 <p>Once the Rotorflight button appears, the wizard handles every remaining step from the phone.</p>

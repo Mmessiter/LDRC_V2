@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.453-esc-port-truth";
+constexpr const char* FW_VERSION = "RXV2-0.9.454-restart-to-apply";
 
 //*********************************************************************
 //  Auto-update manifest URLs
