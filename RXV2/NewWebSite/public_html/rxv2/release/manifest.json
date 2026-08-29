@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.449-honest-first-contact",
+      "url": "https://messiter.com/rxv2/release/v0.9.449/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.449/littlefs.bin",
+      "fs_md5": "2c787d629878cd8c93038a0707897b33",
+      "notes": "First-contact truth (tested live on the Goblin770's Nexus X): a factory-mute flight controller ignores incoming CRSF commands too, so it cannot be woken from the receiver side. The Wiring page now says the honest thing: one one-time computer step (Configurator - enable Telemetry - Save, it restarts) and the phone does everything after."
+    },
+    {
       "name": "RXV2-0.9.448-fc-wake",
       "url": "https://messiter.com/rxv2/release/v0.9.448/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.448/littlefs.bin",
@@ -56,11 +63,6 @@
       "name": "RXV2-0.9.438-visible-text",
       "url": "https://messiter.com/rxv2/release/v0.9.438/firmware.bin",
       "notes": "Readability pass (Malcolm's suggestions): the Back button is now bright green - findable at a glance instead of blending into the meadow; and every loose line of text sits on its own solid panel, no more faint words straight on the background photo."
-    },
-    {
-      "name": "RXV2-0.9.437-lean-wizard",
-      "url": "https://messiter.com/rxv2/release/v0.9.437/firmware.bin",
-      "notes": "The wizards on a diet (Malcolm: easier to follow, dyslexia-friendly): every checklist step and intro is now one short action-first line - New helicopter, Tuning, First-time basics, Transmitter channels. All the detail still lives behind each page's ? button."
     }
   ]
 }

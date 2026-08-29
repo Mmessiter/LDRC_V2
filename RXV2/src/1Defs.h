@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.448-fc-wake";
+constexpr const char* FW_VERSION = "RXV2-0.9.449-honest-first-contact";
 
 //*********************************************************************
 //  Auto-update manifest URLs
