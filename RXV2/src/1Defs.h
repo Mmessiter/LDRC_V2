@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.455-wizard-logo";
+constexpr const char* FW_VERSION = "RXV2-0.9.456-bank-rate-switches";
 
 //*********************************************************************
 //  Auto-update manifest URLs

@@ -80,6 +80,14 @@ const FUNCS=[
  {k:'thr', t:'Throttle',      letter:'T', def:5, stick:true},
  {k:'arm', t:'Arming',        letter:'',  def:6, stick:false},
  {k:'rsc', t:'Rescue',        letter:'',  def:0, stick:false, optional:true},
+ // Profile selectors (Malcolm 2026-08-29): 4-position switches. Both may
+ // SHARE one channel (share group) — Rotorflight runs them as two
+ // adjustment ranges pointing at the same channel. Written to slots 40/41
+ // (of 42; the configurator fills from 0 so the top is free) as ABSOLUTE
+ // adjustments: channel 875–2125 µs → value 1..4 (proven live on Goblin770:
+ // top position → PID profile 4).
+ {k:'bank', t:'Bank (PID profile)', letter:'', def:7, stick:false, optional:true, share:'prof', adj:2, slot:40},
+ {k:'rate', t:'Rates',              letter:'', def:7, stick:false, optional:true, share:'prof', adj:1, slot:41},
 ];
 const LS='rfTxCh.';
 // More functions, same catalogue as the Switches page (Arm & Rescue have
@@ -188,7 +196,10 @@ function curOf(f){
 // value; conflicts inherited from before are resolved at load.
 function takenFor(k){
     const t=new Set();
-    for(const f of FUNCS){ if(f.k===k)continue; const c=curOf(f); if(c>=1)t.add(c); }
+    const me=FUNCS.find(f=>f.k===k);
+    for(const f of FUNCS){ if(f.k===k)continue;
+        if(me&&me.share&&f.share===me.share)continue;       // profile selectors may share
+        const c=curOf(f); if(c>=1)t.add(c); }
     extras.forEach((x,i)=>{ if('x'+i!==k&&x.ch>=1)t.add(x.ch); });
     return t;
 }
@@ -204,13 +215,15 @@ function chOptions(cur,taken,noneLabel){
 // the later one is reset (optional rows and extras go to "Choose…").
 function resolveConflicts(){
     const claimed=new Set();
+    const shared=new Set();                                   // channels held by share-group rows
     for(const f of FUNCS){
         let c=curOf(f);
+        if(f.share&&c>=1&&shared.has(c)){ continue; }        // sharing is allowed
         if(c>=1&&claimed.has(c)){
             if(f.optional){ localStorage.setItem(LS+f.k,'0'); c=0; }
             else { let n=1; while(claimed.has(n))n++; localStorage.setItem(LS+f.k,String(n)); c=n; }
         }
-        if(c>=1)claimed.add(c);
+        if(c>=1){ claimed.add(c); if(f.share)shared.add(c); }
     }
     let changed=false;
     extras.forEach(x=>{
@@ -359,12 +372,23 @@ async function saveAll(){
         const base=(EXTRA_MODES.find(m=>m.id===x.perm)||{name:'function'}).name;
         xw.push({perm:x.perm,fc,name:x.label?x.label+' ('+base.replace(/ \(.*/,'')+')':base});
     }
+    // Profile selectors: 4-position switches, may share one channel.
+    const prof=[];
+    for(const f of FUNCS.filter(x=>x.adj)){
+        const tx=chosen(f.k);
+        if(tx<1){ prof.push({f,fc:0}); continue; }
+        if(map.slice(0,5).includes(tx-1)||tx===armTx||tx===rscTx){ flash('⚠️ '+f.t+' shares a channel with a stick or the Arm/Rescue switch'); return; }
+        const fc=fcChannelOf(tx,map);
+        if(fc<5||fc>16){ flash('⚠️ '+f.t+' must end up on channel 5 or higher'); return; }
+        prof.push({f,fc});
+    }
     if(!(await LDRC.confirm(
         'Write to the flight controller:\n'
         +'• channel order '+map.slice(0,5).map(x=>x+1).join(',')+' (AERCT)\n'
         +'• ARM on channel '+armFc+' (active 1600–2100µs)\n'
         +(rscFc?'• RESCUE on channel '+rscFc+' (active 1600–2100µs)\n':'')
         +xw.map(x=>'• '+x.name+' on channel '+x.fc+'\n').join('')
+        +prof.filter(p=>p.fc).map(p=>'• '+p.f.t+' on channel '+p.fc+' (4 positions)\n').join('')
         +'Blades off / motor unplugged?',
         {title:'Save channels',icon:'🎛️',yes:'Write & verify'})))return;
     setStatus('info','Writing…');
@@ -402,6 +426,15 @@ async function saveAll(){
             }
         }
         for(const x of xw)await writeMode(x.perm,x.fc);
+        // 3. profile selectors → adjustment ranges (MSP 53, 14 bytes:
+        //    idx, function, enaCh 0xFF=always, enaRange 0,0, adjCh,
+        //    range1 875..2125, range2 unused, min 1, max 4, step 0=absolute)
+        for(const p of prof){
+            const payload=[p.f.slot, p.fc?p.f.adj:0, 0xFF, 0,0, p.fc?p.fc-5:0,
+                usStep(875), usStep(2125), usStep(1500), usStep(1500), 1,0, 4,0, 0]
+                .map(v=>v.toString(16).padStart(2,'0')).join('');
+            await LDRC.msp(53,payload);
+        }
         await LDRC.msp(250);
         // 3. verify all of it by read-back
         const mchk=hexToBytes(await LDRC.msp(64));

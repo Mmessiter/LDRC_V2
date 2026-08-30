@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.456-bank-rate-switches",
+      "url": "https://messiter.com/rxv2/release/v0.9.456/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.456/littlefs.bin",
+      "fs_md5": "5f73894094559e3fc394bd3de60e3e45",
+      "notes": "Bank (PID profile) and Rates selectors, 4 positions each, from the phone: pick their channels on Transmitter channels (they may share one channel), Save writes them as Rotorflight adjustment ranges (proven live on the Goblin770 - top position = bank 4); the Switches page shows four blue zones with the live red marker AND the flight controller's own answer ('Flight controller: Bank 3') as you flip."
+    },
+    {
       "name": "RXV2-0.9.455-wizard-logo",
       "url": "https://messiter.com/rxv2/release/v0.9.455/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.455/littlefs.bin",
@@ -70,11 +77,6 @@
       "name": "RXV2-0.9.445-plain-features",
       "url": "https://messiter.com/rxv2/release/v0.9.445/firmware.bin",
       "notes": "First-time basics: the Features card now simply says 'Tick the functions you plan to use'; the receiver-link row is gone (it goes without saying - and the save still quietly keeps it on)."
-    },
-    {
-      "name": "RXV2-0.9.444-imu-first",
-      "url": "https://messiter.com/rxv2/release/v0.9.444/firmware.bin",
-      "notes": "First-time basics reordered per Malcolm: 'Calibrate the flight controller' (IMU) is now the FIRST card - best done flat on a desk before the board goes in (the helicopter may not sit level), and front-or-back mounting does not affect it (the old 'set mounting first' note was wrong for flat boards). Wizard step 4 renamed to match."
     }
   ]
 }
