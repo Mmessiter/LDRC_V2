@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.471-selectors-local",
+      "url": "https://messiter.com/rxv2/release/v0.9.471/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.471/littlefs.bin",
+      "fs_md5": "2ac0cc501eeb04578866cf6be61f686e",
+      "notes": "Switches page shows the Bank & Rates bars from this phone's choices even before a Save (marked as such), and the heading no longer runs together. Transmitter channels remembers its defaults."
+    },
+    {
       "name": "RXV2-0.9.470-one-button-cal",
       "url": "https://messiter.com/rxv2/release/v0.9.470/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.470/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.460/littlefs.bin",
       "fs_md5": "7fd24a46ba2992b474e7548dd183b061",
       "notes": "Bank & Rates selectors, refined (Malcolm): the bar now shows the live red tick with its microsecond value; the junctions between sections can be DRAGGED to resize them; and there are six sections (Rotorflight's six profiles) - sections 5 and 6 start zero-width at the top, drag them open if you need them. Under the hood each section is its own adjustment ('inside this section, profile = N'), so any widths are honoured exactly."
-    },
-    {
-      "name": "RXV2-0.9.459-one-bar",
-      "url": "https://messiter.com/rxv2/release/v0.9.459/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.459/littlefs.bin",
-      "fs_md5": "6c6489f10f093bfe3803a3606fb89fb6",
-      "notes": "Bank and Rates rows on Transmitter channels now carry ONE bar divided into four sections (Malcolm: Rotorflight's three-bar adjustments are baffling) with the live red line and the current section lit green."
     }
   ]
 }
