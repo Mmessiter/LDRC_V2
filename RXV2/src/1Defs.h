@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.468-plug-battery";
+constexpr const char* FW_VERSION = "RXV2-0.9.469-selectors-visible";
 
 //*********************************************************************
 //  Auto-update manifest URLs

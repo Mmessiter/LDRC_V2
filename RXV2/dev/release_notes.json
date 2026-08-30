@@ -350,5 +350,6 @@
  "RXV2-0.9.465-unstick-handles": "Selector bars: junctions pushed together (e.g. to the far right) can be dragged apart again - a leftward drag takes the leftmost of the stack, rightward the rightmost.",
  "RXV2-0.9.466-tribunus-tip": "ESC page help: Scorpion Tribunus only accepts Sproto in its first seconds after power-up (click Connect, then plug the battery); a firmware update resets it to defaults - re-check governor, telemetry and throttle range.",
  "RXV2-0.9.467-esc-calibration": "ESC throttle calibration FROM THE PHONE (Malcolm's ask): the ESC page holds the motor channel at full throttle (renewed every half second, lapses by itself a second after the phone stops), you plug the battery, the ESC beeps, tap to drop to minimum, beeps again, done - the configurator's Motors-tab procedure without the computer. Guards: transmitter must be off, model disarmed, blades-off confirmation.",
- "RXV2-0.9.468-plug-battery": "ESC calibration (proven on a Tribunus!): the 'NOW PLUG THE FLIGHT BATTERY' instruction is a big orange banner - the one thing you must not miss."
+ "RXV2-0.9.468-plug-battery": "ESC calibration (proven on a Tribunus!): the 'NOW PLUG THE FLIGHT BATTERY' instruction is a big orange banner - the one thing you must not miss.",
+ "RXV2-0.9.469-selectors-visible": "Switches page: the Bank & Rates selectors card is always present - it says 'not set up yet' with a link to Transmitter channels until a Save has recorded them, then shows the bars and the flight controller's live answer."
 }
