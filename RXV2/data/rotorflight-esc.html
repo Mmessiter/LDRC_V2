@@ -45,13 +45,7 @@
         <h2><span class=num style="background:#d4944a">&#9889;</span>Throttle calibration &mdash; from here</h2>
         <div class="banner warn" style="margin:.4em 0 .6em">&#9888;&#65039; <b>Blades OFF or pinion out. Flight pack UNPLUGGED. Flight controller on USB power. Transmitter OFF.</b></div>
         <p>The phone holds the motor channel at <b>full throttle</b>; you plug the battery; the ESC learns the top; then the phone drops to <b>minimum</b> and it learns the bottom. The hold renews every half second and lapses by itself a second after the phone stops &mdash; it cannot get stuck on.</p>
-        <div id=calSteps>
-            <button class=calBtn id=cal1 onclick="escCal(1)" style="width:100%;padding:.7em;border:0;border-radius:10px;background:#d4944a;color:#fff;font-weight:700;font-size:1em;cursor:pointer">1 &middot; Hold full throttle</button>
-            <button class=calBtn id=cal2 onclick="escCal(2)" style="display:none;width:100%;padding:.7em;border:0;border-radius:10px;background:#5f8fab;color:#fff;font-weight:700;font-size:1em;cursor:pointer;margin-top:.5em">2 &middot; Heard the beeps &mdash; go to minimum</button>
-            <button class=calBtn id=cal3 onclick="escCal(3)" style="display:none;width:100%;padding:.7em;border:0;border-radius:10px;background:#4a8a5f;color:#fff;font-weight:700;font-size:1em;cursor:pointer;margin-top:.5em">3 &middot; Heard the beeps again &mdash; done</button>
-            <button id=cal0 onclick="escCal(0)" style="display:none;width:100%;padding:.55em;border:0;border-radius:10px;background:#b06a6a;color:#fff;font-weight:700;cursor:pointer;margin-top:.5em">Stop &mdash; release the throttle</button>
-        </div>
-        <div id=calBig style="display:none;margin-top:.6em;padding:.9em;border-radius:12px;background:#d4944a;color:#fff;font-size:1.25em;font-weight:800;text-align:center;line-height:1.35"></div>
+        <button id=calBtn onclick="escCal()" style="width:100%;margin-top:.6em;padding:.9em;border:0;border-radius:12px;background:#d4944a;color:#fff;font-size:1.2em;font-weight:800;line-height:1.35;cursor:pointer">&#9889; Start &mdash; hold full throttle</button>
         <p id=calMsg style="font-weight:700;color:#2e4356;min-height:1.4em;margin-top:.5em"></p>
     </div>
 
@@ -93,17 +87,18 @@
 // renews it every 400 ms and simply stopping releases the motor.
 const $=id=>document.getElementById(id);
 let calTimer=null, calPhase=0;
-function calShow(){
-    $('cal1').style.display = calPhase===0 ? '' : 'none';
-    $('cal2').style.display = calPhase===1 ? '' : 'none';
-    $('cal3').style.display = calPhase===2 ? '' : 'none';
-    $('cal0').style.display = calPhase===1||calPhase===2 ? '' : 'none';
-}
+const CAL_LABELS=[
+    '&#9889; Start &mdash; hold full throttle',
+    '&#128267; NOW PLUG THE FLIGHT BATTERY<br><span style="font-size:.75em;font-weight:600">wait for the ESC\u2019s beeps, then tap here</span>',
+    '&#128066; WAIT FOR THE CONFIRMATION BEEPS<br><span style="font-size:.75em;font-weight:600">throttle is at minimum &mdash; then tap here</span>',
+    '&#9989; CALIBRATED &mdash; UNPLUG THE BATTERY<br><span style="font-size:.75em;font-weight:600">tap to start again</span>',
+];
+function calShow(){ $('calBtn').innerHTML=CAL_LABELS[calPhase]; $('calBtn').style.background = calPhase===3 ? '#4a8a5f' : '#d4944a'; }
 async function holdFull(){
     try{ await LDRC.msp(195,'00e803'); }catch(e){ $('calMsg').textContent='⚠️ Lost the flight controller — '+e.message; }
 }
-async function escCal(step){
-    if(step===1){
+async function escCal(){
+    if(calPhase===0){
         // Foolish-user guards: never with the transmitter on, never armed.
         let st=null; try{ st=await LDRC.fetchState(); }catch(e){}
         const age=st&&st.rf&&st.rf.last_pkt_ms;
@@ -114,28 +109,22 @@ async function escCal(step){
         calPhase=1; calShow();
         await holdFull();
         calTimer=setInterval(holdFull,400);
-        $('calBig').style.display=''; $('calBig').innerHTML='&#128267; NOW PLUG THE FLIGHT BATTERY<br><span style="font-size:.75em;font-weight:600">then wait for the ESC\u2019s beeps (a few seconds)</span>';
-        $('calMsg').textContent='Full throttle is being held for you.';
+        $('calMsg').textContent='Full throttle is being held for you. (Unplug the battery at any time to abandon.)';
         return;
     }
-    if(step===2){
+    if(calPhase===1){
         if(calTimer){ clearInterval(calTimer); calTimer=null; }
         try{ await LDRC.msp(195,'000000'); }catch(e){}
-        calPhase=2; calShow();
-        $('calBig').innerHTML='&#128066; WAIT FOR THE CONFIRMATION BEEPS<br><span style="font-size:.75em;font-weight:600">throttle is now at minimum</span>';
-        $('calMsg').textContent='';
+        calPhase=2; calShow(); $('calMsg').textContent='';
         return;
     }
-    if(step===3||step===0){
-        if(calTimer){ clearInterval(calTimer); calTimer=null; }
+    if(calPhase===2){
         try{ await LDRC.msp(195,'000000'); }catch(e){}
-        $('calBig').style.display = step===3 ? '' : 'none';
-        if(step===3) $('calBig').innerHTML='&#9989; CALIBRATED \u2014 UNPLUG THE BATTERY';
-        $('calMsg').textContent = step===3
-            ? 'The ESC now knows 1000\u20132000 \u00b5s as its full range.'
-            : 'Released. The throttle is back at minimum.';
-        calPhase=0; calShow();
+        calPhase=3; calShow();
+        $('calMsg').textContent='The ESC now knows 1000\u20132000 \u00b5s as its full range.';
+        return;
     }
+    calPhase=0; calShow(); $('calMsg').textContent='';
 }
 window.addEventListener('pagehide',()=>{ if(calTimer){ clearInterval(calTimer); calTimer=null; } });
 </script>
