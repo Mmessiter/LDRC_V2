@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.460-six-sections",
+      "url": "https://messiter.com/rxv2/release/v0.9.460/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.460/littlefs.bin",
+      "fs_md5": "7fd24a46ba2992b474e7548dd183b061",
+      "notes": "Bank & Rates selectors, refined (Malcolm): the bar now shows the live red tick with its microsecond value; the junctions between sections can be DRAGGED to resize them; and there are six sections (Rotorflight's six profiles) - sections 5 and 6 start zero-width at the top, drag them open if you need them. Under the hood each section is its own adjustment ('inside this section, profile = N'), so any widths are honoured exactly."
+    },
+    {
       "name": "RXV2-0.9.459-one-bar",
       "url": "https://messiter.com/rxv2/release/v0.9.459/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.459/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.449/littlefs.bin",
       "fs_md5": "2c787d629878cd8c93038a0707897b33",
       "notes": "First-contact truth (tested live on the Goblin770's Nexus X): a factory-mute flight controller ignores incoming CRSF commands too, so it cannot be woken from the receiver side. The Wiring page now says the honest thing: one one-time computer step (Configurator - enable Telemetry - Save, it restarts) and the phone does everything after."
-    },
-    {
-      "name": "RXV2-0.9.448-fc-wake",
-      "url": "https://messiter.com/rxv2/release/v0.9.448/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.448/littlefs.bin",
-      "fs_md5": "b5d15d4cbc51e47bc493e139ed250b34",
-      "notes": "Wake a brand-new flight controller (Malcolm's first real Nexus X setup): factory boards ship with telemetry OFF and sit silent - undiscoverable. The Wiring page now offers (and has a button for) a one-tap Wake: the receiver blind-writes telemetry ON + save + restart over CRSF (the board listens even when mute). Protected: refused whenever a flight controller is already talking, so it can never touch a configured model."
     }
   ]
 }
