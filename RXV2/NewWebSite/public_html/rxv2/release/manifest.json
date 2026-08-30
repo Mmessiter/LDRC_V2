@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.474-selectors-verified",
+      "url": "https://messiter.com/rxv2/release/v0.9.474/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.474/littlefs.bin",
+      "fs_md5": "8e9a6c56c2d2012814a5ac92a23964ef",
+      "notes": "Selector maths verified against Rotorflight's own formula for even, quarter, uneven and two-section layouts (zero mismatches over the whole switch travel); sections near the top of travel use a mirrored window so nothing is lost at 2125. Re-save the selectors once."
+    },
+    {
       "name": "RXV2-0.9.473-selectors-bite",
       "url": "https://messiter.com/rxv2/release/v0.9.473/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.473/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.463/littlefs.bin",
       "fs_md5": "95c766ca85d9edf9c28d4f1d3a815e58",
       "notes": "Transmitter channels: footer and help explain the Bank/Rates selector bars (sections, dragging, sharing a channel, why the app remembers them). Backup files are now dated."
-    },
-    {
-      "name": "RXV2-0.9.462-six-even",
-      "url": "https://messiter.com/rxv2/release/v0.9.462/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.462/littlefs.bin",
-      "fs_md5": "5f616fa4a00d6707bca36ab1b5f72089",
-      "notes": "Selector bars start with all SIX sections evenly spaced (Malcolm: you then see the possibility and drag away the ones you don't need)."
     }
   ]
 }
