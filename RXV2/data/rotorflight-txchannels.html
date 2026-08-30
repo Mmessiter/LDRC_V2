@@ -284,8 +284,17 @@ function wireJunction(f,j){
             let us=QMIN+(ev.clientX-r.left)/r.width*(QMAX-QMIN);
             us=Math.max(QMIN,Math.min(QMAX,Math.round(us/5)*5));
             const b=boundsOf(f);
-            us=Math.max(b[j-1],Math.min(b[j+1],us));
-            b[j]=us; saveBounds(f,b); paintSections(f);
+            // Stacked junctions (e.g. two pushed to the far right) all sit at
+            // one value and the top one captures the finger — locked between
+            // twins. Pick the member of the stack that can actually move in
+            // the drag direction: leftward → the leftmost, rightward → the
+            // rightmost (Malcolm 2026-08-30: "cannot drag it back").
+            const v=b[j]; let lo=j, hi=j;
+            while(lo>1 && b[lo-1]===v) lo--;
+            while(hi<5 && b[hi+1]===v) hi++;
+            const jj = us<v ? lo : (us>v ? hi : j);
+            us=Math.max(b[jj-1],Math.min(b[jj+1],us));
+            b[jj]=us; saveBounds(f,b); paintSections(f);
         };
         const up=()=>{ try{h.releasePointerCapture(e.pointerId);}catch(_){}
             h.removeEventListener('pointermove',move); h.removeEventListener('pointerup',up); h.removeEventListener('pointercancel',up); };
