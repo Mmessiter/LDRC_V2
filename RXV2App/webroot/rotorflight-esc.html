@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name=theme-color content="#5fa099">
+<meta name=apple-mobile-web-app-capable content=yes>
+<meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
+<meta name=apple-mobile-web-app-title content="LDRC RX V2">
+<title>ESC setup &middot; LDRC RX V2</title>
+<link rel=stylesheet href="/style.css?v=173">
+<script src="/app.js?v=178" defer></script>
+<style>
+.wcard{background:#f2f6f8;border-radius:12px;padding:.8em .9em;margin:.6em 0;box-shadow:0 2px 6px rgba(0,0,0,.08)}
+.wcard h2{margin:.1em 0 .35em;font-size:1.05em;color:#2e4356}
+.wcard h2 .num{background:#5fa099;color:#fff;border-radius:50%;display:inline-block;width:1.5em;height:1.5em;text-align:center;line-height:1.5em;font-size:.95em;margin-right:.45em}
+.wcard p{margin:.25em 0;font-size:.92em;color:#3a4d5c;line-height:1.5}
+.wcard .why{font-size:.8em;color:#6a7c88}
+.banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
+.banner.warn{background:#e8cf8f;color:#5c4a1a}
+</style>
+</head>
+<body>
+<button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
+<div class=bg-photo aria-hidden=true></div>
+<div class=bg-wash  aria-hidden=true></div>
+<div class=container>
+    <h1>ESC setup</h1>
+    <p class=subtitle>In the ESC&rsquo;s own app, box or card &mdash; the flight controller cannot change these.</p>
+    <div class="banner warn">&#9888;&#65039; <b>Blades off / motor unplugged</b> while programming.</div>
+
+    <div class=wcard>
+        <h2><span class=num>1</span>Governor: let Rotorflight do it</h2>
+        <p>Set the ESC&rsquo;s governor to <b>OFF</b> / <b>external governor</b>. Rotorflight&rsquo;s governor holds the head speed.</p>
+        <p class=why>Two governors fighting = surging head speed. One governor only. (Prefer the ESC&rsquo;s? Then turn Rotorflight&rsquo;s off in the Governor step.)</p>
+    </div>
+
+    <div class=wcard>
+        <h2><span class=num>2</span>Throttle range</h2>
+        <p>Rotorflight drives the ESC with a <b>1000&ndash;2000&nbsp;&micro;s</b> throttle. Set the ESC to that fixed range, or run its throttle calibration once with the FC&rsquo;s throttle at 0% and 100%.</p>
+        <p class=why>Wrong range = motor never starts, or never reaches full head speed.</p>
+    </div>
+
+    <div class=wcard>
+        <h2><span class=num>3</span>Telemetry ON</h2>
+        <p>Enable the ESC&rsquo;s telemetry output and pick the protocol that matches the brand you choose in <b>First-time basics</b> (Scorpion, Hobbywing, YGE&hellip;).</p>
+        <p class=why>Voltage, current, temperature and head speed all ride this one wire. Head speed is what the governor governs.</p>
+    </div>
+
+    <div class=wcard>
+        <h2><span class=num>4</span>Spool-up</h2>
+        <p>Set the ESC&rsquo;s <b>soft start short</b> (or off). Rotorflight&rsquo;s governor manages the gentle spool-up.</p>
+        <p class=why>A long ESC soft start on top of the governor&rsquo;s ramp makes spool-up sluggish and confuses the head-speed loop.</p>
+    </div>
+
+    <div class=wcard>
+        <h2><span class=num>5</span>BEC voltage</h2>
+        <p>Set the BEC to what your <b>servos</b> are rated for (6.0&nbsp;V, 7.4&nbsp;V or 8.4&nbsp;V).</p>
+        <p class=why>Too high cooks servos; too low makes them slow. The flight controller runs happily on any of these.</p>
+    </div>
+
+    <div class=wcard>
+        <h2><span class=num>6</span>Motor timing &amp; brake</h2>
+        <p>Timing per your motor maker&rsquo;s advice (usually <b>auto</b> or <b>low</b>). Brake <b>off</b>.</p>
+        <p class=why>Then note the motor&rsquo;s pole count &mdash; First-time basics needs it for the head-speed maths.</p>
+    </div>
+
+    <p>Done? Back in the wizard, First-time basics picks the ESC&rsquo;s brand for telemetry, and the Governor step sets the head speeds.</p>
+
+    <a class="btn btn-bb" href="/rotorflight-newheli" style="margin-top:.8em"><span class=ico>&#11013;&#65039;</span>Back to New helicopter</a>
+    <div class=footer></div>
+</div>
+<template id=helpContent><h2>ESC setup</h2>
+<p>Helicopter ESCs keep their own settings inside themselves, and only their own programmer can change them &mdash; Scorpion (Sproto / phone app), Hobbywing (LCD box / app), YGE (USB adapter), Kontronik (ProgDisc / app). Rotorflight can read the ESC&rsquo;s telemetry and drive its throttle, but cannot reach inside it. So this is the one step that happens in a different app.</p>
+<ul>
+<li><b>One governor only.</b> Rotorflight&rsquo;s governor is excellent and lives in the tuning wizard; the ESC&rsquo;s must then be off / external. Choose the ESC&rsquo;s instead and Rotorflight&rsquo;s must be off.</li>
+<li><b>Telemetry protocol</b> in the ESC and the <b>brand</b> chosen in First-time basics must match, or the data wire stays silent.</li>
+<li><b>Throttle range</b>: Rotorflight&rsquo;s motor output is 1000&ndash;2000 &micro;s by default.</li>
+</ul>
+</template>
+</body>
+</html>

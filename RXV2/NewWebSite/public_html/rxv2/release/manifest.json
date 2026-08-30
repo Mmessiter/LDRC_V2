@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.464-esc-setup",
+      "url": "https://messiter.com/rxv2/release/v0.9.464/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.464/littlefs.bin",
+      "fs_md5": "d73850670b8e36c4c3cde37f91f2d48c",
+      "notes": "New wizard step 3, 'ESC setup (its own app)' (Malcolm): the six things the flight controller CANNOT set and the ESC's own programmer must - governor off/external (one governor only), throttle range 1000-2000, telemetry ON with the matching protocol, soft start short, BEC voltage for the servos, timing/brake + pole count."
+    },
+    {
       "name": "RXV2-0.9.463-selector-help",
       "url": "https://messiter.com/rxv2/release/v0.9.463/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.463/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.453/littlefs.bin",
       "fs_md5": "43cf3b26fb9a35a2411039239a0495b6",
       "notes": "Before-you-start gains task 4 (found on the first real build): ESC telemetry cannot be fully enabled from the phone - the Ports tab must name which UART the ESC's data wire uses. The First-time basics tick now says so too."
-    },
-    {
-      "name": "RXV2-0.9.452-tidy-wiring",
-      "url": "https://messiter.com/rxv2/release/v0.9.452/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.452/littlefs.bin",
-      "fs_md5": "ebf0333f6456ac4ea845aca32eb51f73",
-      "notes": "Wiring page tidied: the brand-new-board card is gone - that story now lives on the Before-you-start page (wizard step 1)."
     }
   ]
 }
