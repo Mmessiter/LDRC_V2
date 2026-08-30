@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.475-aux-off-by-one",
+      "url": "https://messiter.com/rxv2/release/v0.9.475/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.475/littlefs.bin",
+      "fs_md5": "9026ba5100455588b14350e3ac8b5710",
+      "notes": "IMPORTANT: switch channels were written ONE channel high to the flight controller. Rotorflight has five control channels (collective included), so its AUX1 is channel 6 - the pages used the channel-5 convention, so Arm, Rescue, added functions AND the bank/rates selectors all landed one channel above where you chose. Fixed on Switches and Transmitter channels. RE-SAVE on Transmitter channels once, then confirm with the live marker."
+    },
+    {
       "name": "RXV2-0.9.474-selectors-verified",
       "url": "https://messiter.com/rxv2/release/v0.9.474/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.474/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.464/littlefs.bin",
       "fs_md5": "d73850670b8e36c4c3cde37f91f2d48c",
       "notes": "New wizard step 3, 'ESC setup (its own app)' (Malcolm): the six things the flight controller CANNOT set and the ESC's own programmer must - governor off/external (one governor only), throttle range 1000-2000, telemetry ON with the matching protocol, soft start short, BEC voltage for the servos, timing/brake + pole count."
-    },
-    {
-      "name": "RXV2-0.9.463-selector-help",
-      "url": "https://messiter.com/rxv2/release/v0.9.463/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.463/littlefs.bin",
-      "fs_md5": "95c766ca85d9edf9c28d4f1d3a815e58",
-      "notes": "Transmitter channels: footer and help explain the Bank/Rates selector bars (sections, dragging, sharing a channel, why the app remembers them). Backup files are now dated."
     }
   ]
 }

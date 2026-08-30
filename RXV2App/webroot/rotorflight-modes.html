@@ -115,7 +115,8 @@ function setStatus(k,t){const s=$('status');s.className='banner '+k;s.textConten
 
 function chOptions(sel){
     let h='';
-    for(let a=0;a<12;a++){const ch=a+5;h+='<option value='+a+(a===sel?' selected':'')+'>Channel '+ch+' (AUX '+(a+1)+')</option>';}
+    // Rotorflight: AUX1 = channel 6 (five control channels incl. collective) — index a ↔ channel a+6
+    for(let a=0;a<11;a++){const ch=a+6;h+='<option value='+a+(a===sel?' selected':'')+'>Channel '+ch+' (AUX '+(a+1)+')</option>';}
     return h;
 }
 function modeOptions(sel){
@@ -198,7 +199,7 @@ async function pollRc(){
             pollProf(b, st); }
         for(let i=0;i<slots.length;i++){
             const dot=$('dot'+i); if(!dot)continue;
-            const chIdx=parseInt($('c'+i).value)+4;        // aux0 = channel 5 = index 4
+            const chIdx=parseInt($('c'+i).value)+5;        // MSP_RC is rcInput: [0..4] = A,E,R,C,T, aux0 = channel 6 = index 5
             if(b.length<(chIdx+1)*2){ dot.style.display='none'; continue; }
             const us=b[chIdx*2]|(b[chIdx*2+1]<<8);
             dot.style.display='';
@@ -225,7 +226,7 @@ let PROF=[];
 function localProf(){
     const out=[];
     for(const p of [{k:'bank',t:'Bank (PID profile)',sb:23,base:30,adj:2},{k:'rate',t:'Rates',sb:25,base:36,adj:1}]){
-        const tx=parseInt(localStorage.getItem('rfTxCh.'+p.k)||'0'); if(tx<5||tx>16)continue;
+        const tx=parseInt(localStorage.getItem('rfTxCh.'+p.k)||'0'); if(tx<6||tx>16)continue;
         let b=null; try{ b=JSON.parse(localStorage.getItem('rfTxCh.'+p.k+'.bounds')||'null'); }catch(e){}
         if(!Array.isArray(b)||b.length!==7) b=[875,1085,1290,1500,1710,1915,2125];
         const secs=[]; for(let n=0;n<6;n++) if(b[n+1]-b[n]>=5) secs.push({n:n+1,lo:b[n],hi:b[n+1]});
@@ -244,7 +245,7 @@ async function loadDeclared(){
                 const h=d['adj'+(p.base+n-1)]; if(typeof h!=='string'||h.length<30)continue;
                 const fn=parseInt(h.substr(2,2),16); if(!fn)continue;
                 if(fn!==(p.k==='bank'?2:1))continue;   // stale single-slot record from an older version
-                tx=parseInt(h.substr(4,2),16)+5;
+                tx=parseInt(h.substr(4,2),16)+6;
                 secs.push({n, lo:stepUsQ(parseInt(h.substr(6,2),16)), hi:stepUsQ(parseInt(h.substr(8,2),16))});
             }
             if(secs.length){
@@ -330,7 +331,7 @@ async function saveProf(k){
         for(let n=1;n<=6;n++){
             const slot=p.base+n-1, lo=b[n-1], hi=b[n], active=(hi-lo)>=5;
             const payload=hx(active
-                ? sectionPayload(slot, p.adj, tx-5, lo, hi, n, usStepQ)
+                ? sectionPayload(slot, p.adj, tx-6, lo, hi, n, usStepQ)
                 : [slot, 0, 0, 0,0, 0, 0,0, 0,0, 0,0, 0,0, 0]);
             await LDRC.msp(53,payload);
             try{ fetch('/app/declare?key=adj'+slot+'&hex='+payload,{cache:'no-store'}); }catch(e){}
@@ -350,7 +351,7 @@ function paintProf(){
     for(const p of PROF){
         let z=''; for(let n=1;n<=6;n++) z+='<div class=qZone id=q_'+p.k+n+'></div>';
         let hs=''; for(let j=1;j<=5;j++) hs+='<div class=qHandle id=qh_'+p.k+j+'></div>';
-        let co=''; for(let c=5;c<=16;c++) co+='<option value='+c+(c===p.tx?' selected':'')+'>Channel '+c+' (AUX '+(c-4)+')</option>';
+        let co=''; for(let c=6;c<=16;c++) co+='<option value='+c+(c===p.tx?' selected':'')+'>Channel '+c+' (AUX '+(c-5)+')</option>';
         h+='<div class="card modeCard"><div class=pRow><div><label>'+p.t+'</label><b id=ptitle_'+p.k+' style="display:block;margin:.15em 0 .3em">Channel '+p.tx+' &middot; '+p.secs.length+' sections</b></div>'
           +'<div><label>Which channel</label><select id=pc_'+p.k+' onchange="document.getElementById(\'pmsg_'+p.k+'\').textContent=\'changed — tap Save\'">'+co+'</select></div></div>'
           +(p.src==='local'?'<div class=muted style="font-size:.8em;margin:.3em 0">From this phone\u2019s choices &mdash; tap Save to write them to the flight controller.</div>':'')
@@ -419,7 +420,7 @@ async function saveRow(i){
     let lo=parseInt($('lo'+i).value||'1500'), hi=parseInt($('hi'+i).value||'1500');
     if(hi<=lo){ $('msg'+i).textContent='⚠ "Active to" must be greater than "Active from"'; return; }
     const m=MODES.find(x=>x.id===perm)||{};
-    if(!(await LDRC.confirm('Save: '+(m.name||'mode')+' on channel '+(aux+5)+', active '+lo+'–'+hi+' µs?'
+    if(!(await LDRC.confirm('Save: '+(m.name||'mode')+' on channel '+(aux+6)+', active '+lo+'–'+hi+' µs?'
         +(m.warn?'\n\n⚠ This is the ARM switch — be certain the model is safe.':''),
         {title:'Save switch action',icon:'🎚️',yes:'Save',kind:m.warn?'warn':'go'})))return;
     $('msg'+i).textContent='writing…';

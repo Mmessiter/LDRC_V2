@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.474-selectors-verified";
+constexpr const char* FW_VERSION = "RXV2-0.9.475-aux-off-by-one";
 
 //*********************************************************************
 //  Auto-update manifest URLs
