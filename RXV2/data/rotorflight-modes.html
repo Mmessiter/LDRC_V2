@@ -299,6 +299,19 @@ function wireProfJunction(p,j){
         h.addEventListener('pointermove',move); h.addEventListener('pointerup',up); h.addEventListener('pointercancel',up);
     });
 }
+
+// Per-section adjustment payload (Malcolm 2026-08-30, live-debugged: Rotorflight
+// SKIPS a mapped adjustment whose min == max — "valueWidth > 0" — so a plain
+// "profile = N" is inert). Use min N, max N+1 and a value window one section
+// wide centred on the section: adjval = N + floor(((ch-centre) + W/2)/W) = N
+// for every ch inside [lo-5, hi+5); the ENABLE range (the section) gates it.
+function sectionPayload(slot, func, aux, lo, hi, n, usStepFn){
+    const w = hi - lo, centre = Math.round((lo + hi) / 2), W = w + 10;
+    const r1lo = centre, r1hi = Math.min(2125, centre + W);
+    return [slot, func, aux, usStepFn(lo), usStepFn(hi), aux, usStepFn(r1lo), usStepFn(r1hi),
+            usStepFn(1500), usStepFn(1500), n, 0, n + 1, 0, 0];
+}
+
 async function saveProf(k){
     const p=PROF.find(x=>x.k===k); if(!p)return;
     const tx=parseInt($('pc_'+k).value); localStorage.setItem('rfTxCh.'+k,String(tx));
@@ -308,7 +321,7 @@ async function saveProf(k){
         for(let n=1;n<=6;n++){
             const slot=p.base+n-1, lo=b[n-1], hi=b[n], active=(hi-lo)>=5;
             const payload=hx(active
-                ? [slot, p.adj, tx-5, usStepQ(lo), usStepQ(hi), tx-5, usStepQ(lo), usStepQ(hi), usStepQ(1500), usStepQ(1500), n,0, n,0, 0]
+                ? sectionPayload(slot, p.adj, tx-5, lo, hi, n, usStepQ)
                 : [slot, 0, 0, 0,0, 0, 0,0, 0,0, 0,0, 0,0, 0]);
             await LDRC.msp(53,payload);
             try{ fetch('/app/declare?key=adj'+slot+'&hex='+payload,{cache:'no-store'}); }catch(e){}
