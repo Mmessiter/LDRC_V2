@@ -1182,7 +1182,8 @@ class MainActivity : AppCompatActivity() {
                         else {
                             val safe = SessionCache.modelName.map { if (it.isLetterOrDigit()) it else '_' }.joinToString("").ifEmpty { "model" }
                             val dir = java.io.File(cacheDir, "backups").apply { mkdirs() }
-                            val f = java.io.File(dir, "$safe-LDRC-backup.json").apply { writeText(json) }
+                            val day = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
+                            val f = java.io.File(dir, "$safe-LDRC-backup-$day.json").apply { writeText(json) }
                             val u = androidx.core.content.FileProvider.getUriForFile(this@MainActivity, "$packageName.fileprovider", f)
                             val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                                 type = "application/json"

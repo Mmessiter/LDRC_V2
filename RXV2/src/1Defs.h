@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.462-six-even";
+constexpr const char* FW_VERSION = "RXV2-0.9.463-selector-help";
 
 //*********************************************************************
 //  Auto-update manifest URLs

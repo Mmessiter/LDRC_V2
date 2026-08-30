@@ -144,8 +144,9 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
                 return
             }
             let safe = SessionCache.shared.modelName.map { $0.isLetter || $0.isNumber ? $0 : "_" }
+            let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"
             let file = FileManager.default.temporaryDirectory
-                .appendingPathComponent("\(String(safe).isEmpty ? "model" : String(safe))-LDRC-backup.json")
+                .appendingPathComponent("\(String(safe).isEmpty ? "model" : String(safe))-LDRC-backup-\(df.string(from: Date())).json")
             try? json.write(to: file, options: .atomic)
             DispatchQueue.main.async {
                 let av = UIActivityViewController(activityItems: [file], applicationActivities: nil)
