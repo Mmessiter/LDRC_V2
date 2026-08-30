@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.472-edit-selectors",
+      "url": "https://messiter.com/rxv2/release/v0.9.472/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.472/littlefs.bin",
+      "fs_md5": "19b86bbf26007cf06e6095b9987bee2a",
+      "notes": "Switches page: the Bank & Rates selectors are editable in place - channel picker, draggable section junctions, Save writes them to the flight controller (one truth shared with Transmitter channels)."
+    },
+    {
       "name": "RXV2-0.9.471-selectors-local",
       "url": "https://messiter.com/rxv2/release/v0.9.471/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.471/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.461/littlefs.bin",
       "fs_md5": "c4d4800a7cf2ec2023e8190a267f03c1",
       "notes": "Selector bars: the live red tick now actually shows (a display bug hid it); bigger junction handles that claim the touch so iOS can't turn a drag into a scroll."
-    },
-    {
-      "name": "RXV2-0.9.460-six-sections",
-      "url": "https://messiter.com/rxv2/release/v0.9.460/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.460/littlefs.bin",
-      "fs_md5": "7fd24a46ba2992b474e7548dd183b061",
-      "notes": "Bank & Rates selectors, refined (Malcolm): the bar now shows the live red tick with its microsecond value; the junctions between sections can be DRAGGED to resize them; and there are six sections (Rotorflight's six profiles) - sections 5 and 6 start zero-width at the top, drag them open if you need them. Under the hood each section is its own adjustment ('inside this section, profile = N'), so any widths are honoured exactly."
     }
   ]
 }

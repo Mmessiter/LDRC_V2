@@ -47,6 +47,10 @@
        color:#fff;font-size:.72em;font-weight:700;text-align:center;line-height:18px}
 .qZone.on{background:#2e7d32}
 .pAns{font-size:.9em;font-weight:700;color:#2e4356;margin-top:.2em}
+.qHandle{position:absolute;top:50%;width:28px;height:28px;border-radius:50%;background:#2b568f;border:3px solid #fff;
+         box-shadow:0 1px 4px rgba(0,0,0,.35);transform:translate(-50%,-50%);cursor:grab;touch-action:none;z-index:2;-webkit-user-select:none;user-select:none}
+.pSave{width:100%;margin-top:.5em;padding:.6em;border:0;border-radius:10px;background:#4a8a5f;color:#fff;font-weight:700;cursor:pointer}
+.pRow{display:grid;grid-template-columns:1fr auto;gap:.6em;align-items:end}
 </style>
 </head>
 <body class=hasFab>
@@ -220,7 +224,7 @@ const stepUsQ=s=>1500+5*((s&0x80)?s-256:s);
 let PROF=[];
 function localProf(){
     const out=[];
-    for(const p of [{k:'bank',t:'Bank (PID profile)',sb:23,base:30},{k:'rate',t:'Rates',sb:25,base:36}]){
+    for(const p of [{k:'bank',t:'Bank (PID profile)',sb:23,base:30,adj:2},{k:'rate',t:'Rates',sb:25,base:36,adj:1}]){
         const tx=parseInt(localStorage.getItem('rfTxCh.'+p.k)||'0'); if(tx<5||tx>16)continue;
         let b=null; try{ b=JSON.parse(localStorage.getItem('rfTxCh.'+p.k+'.bounds')||'null'); }catch(e){}
         if(!Array.isArray(b)||b.length!==7) b=[875,1085,1290,1500,1710,1915,2125];
@@ -234,7 +238,7 @@ async function loadDeclared(){
     try{
         const d=await (await fetch('/app/declared',{cache:'no-store'})).json();
         const out=[];
-        for(const p of [{k:'bank',t:'Bank (PID profile)',sb:23,base:30},{k:'rate',t:'Rates',sb:25,base:36}]){
+        for(const p of [{k:'bank',t:'Bank (PID profile)',sb:23,base:30,adj:2},{k:'rate',t:'Rates',sb:25,base:36,adj:1}]){
             const secs=[]; let tx=0;
             for(let n=1;n<=6;n++){
                 const h=d['adj'+(p.base+n-1)]; if(typeof h!=='string'||h.length<30)continue;
@@ -243,32 +247,99 @@ async function loadDeclared(){
                 tx=parseInt(h.substr(4,2),16)+5;
                 secs.push({n, lo:stepUsQ(parseInt(h.substr(6,2),16)), hi:stepUsQ(parseInt(h.substr(8,2),16))});
             }
-            if(secs.length) out.push({...p,tx,secs,src:'fc'});
+            if(secs.length){
+                // seed the shared bounds from what the FC was told
+                const b=[875,2125,2125,2125,2125,2125,2125];
+                for(const s of secs){ b[s.n-1]=s.lo; b[s.n]=s.hi; }
+                for(let n=1;n<=6;n++) if(b[n]<b[n-1]) b[n]=b[n-1];
+                localStorage.setItem('rfTxCh.'+p.k+'.bounds',JSON.stringify(b)); localStorage.setItem('rfTxCh.'+p.k,String(tx));
+                out.push({...p,tx,secs,src:'fc'});
+            }
             else { const l=PROF.find(x=>x.k===p.k); if(l) out.push(l); }
         }
         if(out.length) PROF=out;
     }catch(e){ /* WiFi browser / old app: local view stands */ }
 }
+// Bounds live in the SAME localStorage keys the Transmitter channels page
+// uses (rfTxCh.<k> = channel, rfTxCh.<k>.bounds = 7 edges), so both pages
+// edit one truth. Editing here (Malcolm 2026-08-30): channel picker,
+// draggable junctions, Save writes the per-section adjustment slots.
+const usStepQ = u => (Math.max(-125, Math.min(125, Math.round((u - 1500) / 5))) + 256) & 0xFF;
+function boundsFor(k){
+    try{ const b=JSON.parse(localStorage.getItem('rfTxCh.'+k+'.bounds')||'null'); if(Array.isArray(b)&&b.length===7) return b; }catch(e){}
+    return [875,1085,1290,1500,1710,1915,2125];
+}
+function secsFromBounds(b){ const s=[]; for(let n=0;n<6;n++) if(b[n+1]-b[n]>=5) s.push({n:n+1,lo:b[n],hi:b[n+1]}); return s; }
+function paintProfBar(p){
+    const b=boundsFor(p.k); p.secs=secsFromBounds(b);
+    for(let n=1;n<=6;n++){ const z=$('q_'+p.k+n); if(!z)continue;
+        const l=qpct(b[n-1]), w=qpct(b[n])-l;
+        z.style.left=(l+0.3)+'%'; z.style.width=Math.max(0,w-0.6)+'%'; z.textContent = w>5?String(n):''; }
+    for(let j=1;j<=5;j++){ const h=$('qh_'+p.k+j); if(h) h.style.left=qpct(b[j])+'%'; }
+}
+function wireProfJunction(p,j){
+    const h=$('qh_'+p.k+j), track=$('qt_'+p.k); if(!h||!track)return;
+    h.addEventListener('pointerdown',e=>{
+        e.preventDefault(); e.stopPropagation();
+        try{ h.setPointerCapture(e.pointerId); }catch(_){}
+        const move=ev=>{
+            const r=track.getBoundingClientRect();
+            let us=RMINQ+(ev.clientX-r.left)/r.width*(RMAXQ-RMINQ);
+            us=Math.max(RMINQ,Math.min(RMAXQ,Math.round(us/5)*5));
+            const b=boundsFor(p.k);
+            const v=b[j]; let lo=j, hi=j;
+            while(lo>1&&b[lo-1]===v) lo--; while(hi<5&&b[hi+1]===v) hi++;
+            const jj = us<v?lo:(us>v?hi:j);
+            us=Math.max(b[jj-1],Math.min(b[jj+1],us));
+            b[jj]=us; localStorage.setItem('rfTxCh.'+p.k+'.bounds',JSON.stringify(b));
+            paintProfBar(p); $('pmsg_'+p.k).textContent='changed — tap Save';
+        };
+        const up=()=>{ try{h.releasePointerCapture(e.pointerId);}catch(_){}
+            h.removeEventListener('pointermove',move); h.removeEventListener('pointerup',up); h.removeEventListener('pointercancel',up); };
+        h.addEventListener('pointermove',move); h.addEventListener('pointerup',up); h.addEventListener('pointercancel',up);
+    });
+}
+async function saveProf(k){
+    const p=PROF.find(x=>x.k===k); if(!p)return;
+    const tx=parseInt($('pc_'+k).value); localStorage.setItem('rfTxCh.'+k,String(tx));
+    const b=boundsFor(k), hx=a=>a.map(v=>v.toString(16).padStart(2,'0')).join('');
+    const msg=$('pmsg_'+k); msg.textContent='Writing…';
+    try{
+        for(let n=1;n<=6;n++){
+            const slot=p.base+n-1, lo=b[n-1], hi=b[n], active=(hi-lo)>=5;
+            const payload=hx(active
+                ? [slot, p.adj, tx-5, usStepQ(lo), usStepQ(hi), tx-5, usStepQ(lo), usStepQ(hi), usStepQ(1500), usStepQ(1500), n,0, n,0, 0]
+                : [slot, 0, 0, 0,0, 0, 0,0, 0,0, 0,0, 0,0, 0]);
+            await LDRC.msp(53,payload);
+            try{ fetch('/app/declare?key=adj'+slot+'&hex='+payload,{cache:'no-store'}); }catch(e){}
+        }
+        await LDRC.msp(250);
+        p.tx=tx; p.src='fc'; msg.textContent='✅ Saved — flip the switch and watch the flight controller line';
+        $('ptitle_'+k).textContent='Channel '+tx+' · '+secsFromBounds(b).length+' sections';
+    }catch(e){ msg.textContent='⚠️ '+e.message; }
+}
 function paintProf(){
     let h='';
     if(!PROF.length){
-        // Nothing recorded yet — say so instead of showing nothing
-        // (Malcolm 2026-08-30: "the bank and rates switches are not there").
         h='<div class="card modeCard"><label style="display:block">Bank &amp; Rates selectors</label><b style="display:block;margin:.15em 0 .3em">Not set up yet on this phone</b>'
          +'<p class=muted style="margin:.4em 0 .2em">Choose their channels and section widths on the <a href="/rotorflight-txchannels">Transmitter channels</a> page and tap Save &mdash; the bars appear here, with the flight controller&rsquo;s live answer.</p></div>';
         $('profRows').innerHTML=h; return;
     }
     for(const p of PROF){
-        let z='';
-        for(const s of p.secs){ const l=qpct(s.lo), w=qpct(s.hi)-l;
-            z+='<div class=qZone id=q_'+p.k+s.n+' style="left:'+(l+0.3)+'%;width:'+Math.max(0,w-0.6)+'%">'+(w>5?s.n:'')+'</div>'; }
-        h+='<div class="card modeCard"><label style="display:block">'+p.t+'</label><b style="display:block;margin:.15em 0 .3em">Channel '+p.tx+' &middot; '+p.secs.length+' sections</b>'
-          +(p.src==='local'?'<div class=muted style="font-size:.8em;margin-bottom:.3em">From this phone\u2019s choices &mdash; tap <b>Save</b> on Transmitter channels to write them to the flight controller.</div>':'')
-          +'<div class=rTrack>'+z+'<div class=rDot id=dot_'+p.k+' style="display:none"></div></div>'
+        let z=''; for(let n=1;n<=6;n++) z+='<div class=qZone id=q_'+p.k+n+'></div>';
+        let hs=''; for(let j=1;j<=5;j++) hs+='<div class=qHandle id=qh_'+p.k+j+'></div>';
+        let co=''; for(let c=5;c<=16;c++) co+='<option value='+c+(c===p.tx?' selected':'')+'>Channel '+c+' (AUX '+(c-4)+')</option>';
+        h+='<div class="card modeCard"><div class=pRow><div><label>'+p.t+'</label><b id=ptitle_'+p.k+' style="display:block;margin:.15em 0 .3em">Channel '+p.tx+' &middot; '+p.secs.length+' sections</b></div>'
+          +'<div><label>Which channel</label><select id=pc_'+p.k+' onchange="document.getElementById(\'pmsg_'+p.k+'\').textContent=\'changed — tap Save\'">'+co+'</select></div></div>'
+          +(p.src==='local'?'<div class=muted style="font-size:.8em;margin:.3em 0">From this phone\u2019s choices &mdash; tap Save to write them to the flight controller.</div>':'')
+          +'<div class=rTrack id=qt_'+p.k+' style="margin-top:1.2em">'+z+hs+'<div class=rDot id=dot_'+p.k+' style="display:none"></div></div>'
           +'<div class=rScale><span>875</span><span>1500</span><span>2125&nbsp;&micro;s</span></div>'
-          +'<div class=pAns id=ans_'+p.k+'>Flight controller: &hellip;</div></div>';
+          +'<div class=pAns id=ans_'+p.k+'>Flight controller: &hellip;</div>'
+          +'<button class=pSave onclick="saveProf(\''+p.k+'\')">&#128190; Save</button>'
+          +'<div class=mMsg id=pmsg_'+p.k+'></div></div>';
     }
     $('profRows').innerHTML=h;
+    for(const p of PROF){ paintProfBar(p); for(let j=1;j<=5;j++) wireProfJunction(p,j); }
 }
 function pollProf(b, st){
     for(const p of PROF){
