@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.478-configurator-note",
+      "url": "https://messiter.com/rxv2/release/v0.9.478/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.478/littlefs.bin",
+      "fs_md5": "80ae8b99f863cbc86045cdaf70872e26",
+      "notes": "Selector cards and help now say where to find them in the configurator: Adjustments rows 31 (Bank) and 37 (Rates) - scroll a long way down."
+    },
+    {
       "name": "RXV2-0.9.477-bar-scale-fix",
       "url": "https://messiter.com/rxv2/release/v0.9.477/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.477/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.467/littlefs.bin",
       "fs_md5": "e658d4f790e67027e1999ab55daaeae2",
       "notes": "ESC throttle calibration FROM THE PHONE (Malcolm's ask): the ESC page holds the motor channel at full throttle (renewed every half second, lapses by itself a second after the phone stops), you plug the battery, the ESC beeps, tap to drop to minimum, beeps again, done - the configurator's Motors-tab procedure without the computer. Guards: transmitter must be off, model disarmed, blades-off confirmation."
-    },
-    {
-      "name": "RXV2-0.9.466-tribunus-tip",
-      "url": "https://messiter.com/rxv2/release/v0.9.466/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.466/littlefs.bin",
-      "fs_md5": "2750731f4bfb155bfd71020729aaf207",
-      "notes": "ESC page help: Scorpion Tribunus only accepts Sproto in its first seconds after power-up (click Connect, then plug the battery); a firmware update resets it to defaults - re-check governor, telemetry and throttle range."
     }
   ]
 }

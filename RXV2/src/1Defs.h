@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.477-bar-scale-fix";
+constexpr const char* FW_VERSION = "RXV2-0.9.478-configurator-note";
 
 //*********************************************************************
 //  Auto-update manifest URLs
