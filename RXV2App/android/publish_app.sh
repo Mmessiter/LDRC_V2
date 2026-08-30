@@ -35,6 +35,11 @@ ROOT="$(dirname "$(dirname "$HERE")")"
 rm -rf "$APP/app/src/main/assets/webroot" "$(dirname "$HERE")/webroot"
 cp -R "$ROOT/RXV2/data" "$APP/app/src/main/assets/webroot"
 cp -R "$ROOT/RXV2/data" "$(dirname "$HERE")/webroot"
+# The device keeps big assets gzipped (LittleFS headroom); the apps serve
+# bundled files as-is, so unpack any .gz twin into a plain copy here.
+for W in "$APP/app/src/main/assets/webroot" "$(dirname "$HERE")/webroot"; do
+  for G in "$W"/*.gz; do [ -f "$G" ] && gunzip -f "$G"; done
+done
 mkdir -p "$APP/app/src/main/assets/demo" "$(dirname "$HERE")/demo"
 cp "$(dirname "$HERE")/demo/"* "$APP/app/src/main/assets/demo/"
 echo "── Synced webroot + demo from masters (android + ios)"

@@ -68,9 +68,16 @@ Re-flash the filesystem with <code>pio run -e xiao_ota -t uploadfs</code> from a
 
 inline bool serveLittleFsFile(const char* path, const char* mime) {
     if (!littleFsMounted) return false;
-    if (!LittleFS.exists(path)) return false;
-    File f = LittleFS.open(path, "r");
+    // Pre-compressed twin (2026-08-29): big static assets live as
+    // "<name>.gz" in LittleFS — three.min.js went 668 KB → 166 KB, which is
+    // what let the wizard pages + logo fit. Browsers decode
+    // Content-Encoding: gzip natively; the apps bundle plain copies.
+    String gzPath = String(path) + ".gz";
+    bool gz = LittleFS.exists(gzPath);
+    if (!gz && !LittleFS.exists(path)) return false;
+    File f = LittleFS.open(gz ? gzPath.c_str() : path, "r");
     if (!f) return false;
+    if (gz) server.sendHeader("Content-Encoding", "gzip");
     // ETag revalidation. mklittlefs bakes each host file's mtime into the FS
     // image, so size+mtime uniquely identifies the exact build of every asset.
     // When the browser's copy matches we answer 304 (~100 B) instead of
