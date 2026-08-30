@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.466-tribunus-tip",
+      "url": "https://messiter.com/rxv2/release/v0.9.466/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.466/littlefs.bin",
+      "fs_md5": "2750731f4bfb155bfd71020729aaf207",
+      "notes": "ESC page help: Scorpion Tribunus only accepts Sproto in its first seconds after power-up (click Connect, then plug the battery); a firmware update resets it to defaults - re-check governor, telemetry and throttle range."
+    },
+    {
       "name": "RXV2-0.9.465-unstick-handles",
       "url": "https://messiter.com/rxv2/release/v0.9.465/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.465/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.455/littlefs.bin",
       "fs_md5": "b5a7e2fc30212708745e2f682e6aec4d",
       "notes": "The wizard has a face: Malcolm's light-hearted wizard-with-helicopter logo now heads the Wizards hub and the New-helicopter checklist."
-    },
-    {
-      "name": "RXV2-0.9.454-restart-to-apply",
-      "url": "https://messiter.com/rxv2/release/v0.9.454/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.454/littlefs.bin",
-      "fs_md5": "f425b21323f5884f26fdc226a04194c8",
-      "notes": "ESC telemetry verdict (proven live: 40.0C flowing on the Goblin770): the wizard could do it all along - features simply apply at BOOT. Saving features now offers the flight-controller restart on the spot, and Before-you-start is back to its three honest tasks (the Ports-tab task was a wrong diagnosis, withdrawn)."
     }
   ]
 }

@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.465-unstick-handles";
+constexpr const char* FW_VERSION = "RXV2-0.9.466-tribunus-tip";
 
 //*********************************************************************
 //  Auto-update manifest URLs
