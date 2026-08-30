@@ -227,10 +227,8 @@ function localProf(){
     const out=[];
     for(const p of [{k:'bank',t:'Bank (PID profile)',sb:23,base:30,adj:2},{k:'rate',t:'Rates',sb:25,base:36,adj:1}]){
         const tx=parseInt(localStorage.getItem('rfTxCh.'+p.k)||'0'); if(tx<6||tx>16)continue;
-        let b=null; try{ b=JSON.parse(localStorage.getItem('rfTxCh.'+p.k+'.bounds')||'null'); }catch(e){}
-        if(!Array.isArray(b)||b.length!==7) b=[875,1085,1290,1500,1710,1915,2125];
-        const secs=[]; for(let n=0;n<6;n++) if(b[n+1]-b[n]>=5) secs.push({n:n+1,lo:b[n],hi:b[n+1]});
-        out.push({...p,tx,secs,src:'local'});
+        const b=selBounds('rfTxCh.'+p.k+'.bounds');
+        out.push({...p,tx,b,secs:profSecs(b),src:'local'});
     }
     return out;
 }
@@ -240,46 +238,56 @@ async function loadDeclared(){
         const d=await (await fetch('/app/declared',{cache:'no-store'})).json();
         const out=[];
         for(const p of [{k:'bank',t:'Bank (PID profile)',sb:23,base:30,adj:2},{k:'rate',t:'Rates',sb:25,base:36,adj:1}]){
-            const secs=[]; let tx=0;
-            for(let n=1;n<=6;n++){
-                const h=d['adj'+(p.base+n-1)]; if(typeof h!=='string'||h.length<30)continue;
-                const fn=parseInt(h.substr(2,2),16); if(!fn)continue;
-                if(fn!==(p.k==='bank'?2:1))continue;   // stale single-slot record from an older version
-                tx=parseInt(h.substr(4,2),16)+6;
-                secs.push({n, lo:stepUsQ(parseInt(h.substr(6,2),16)), hi:stepUsQ(parseInt(h.substr(8,2),16))});
+            const h=d['adj'+p.base];
+            if(typeof h==='string'&&h.length>=30&&parseInt(h.substr(2,2),16)===p.adj){
+                const tx=parseInt(h.substr(10,2),16)+6;
+                const b={lo:stepUsQ(parseInt(h.substr(12,2),16)), hi:stepUsQ(parseInt(h.substr(14,2),16)), k:parseInt(h.substr(24,2),16)};
+                if(b.k>=2&&b.hi>b.lo){ localStorage.setItem('rfTxCh.'+p.k+'.bounds',JSON.stringify(b)); localStorage.setItem('rfTxCh.'+p.k,String(tx));
+                    out.push({...p,tx,b,secs:profSecs(b),src:'fc'}); continue; }
             }
-            if(secs.length){
-                // seed the shared bounds from what the FC was told
-                const b=[875,2125,2125,2125,2125,2125,2125];
-                for(const s of secs){ b[s.n-1]=s.lo; b[s.n]=s.hi; }
-                for(let n=1;n<=6;n++) if(b[n]<b[n-1]) b[n]=b[n-1];
-                localStorage.setItem('rfTxCh.'+p.k+'.bounds',JSON.stringify(b)); localStorage.setItem('rfTxCh.'+p.k,String(tx));
-                out.push({...p,tx,secs,src:'fc'});
-            }
-            else { const l=PROF.find(x=>x.k===p.k); if(l) out.push(l); }
+            const l=PROF.find(x=>x.k===p.k); if(l) out.push(l);
         }
         if(out.length) PROF=out;
     }catch(e){ /* WiFi browser / old app: local view stands */ }
 }
-// Bounds live in the SAME localStorage keys the Transmitter channels page
-// uses (rfTxCh.<k> = channel, rfTxCh.<k>.bounds = 7 edges), so both pages
-// edit one truth. Editing here (Malcolm 2026-08-30): channel picker,
-// draggable junctions, Save writes the per-section adjustment slots.
+
+// ONE Rotorflight adjustment per selector (Malcolm 2026-08-30, from the
+// firmware source): each adjustment remembers its last value and fires only
+// when THAT changes, and disabled ranges are skipped — so per-section
+// adjustments jam on re-entry. Rotorflight's own model: the switch travel
+// between two end-points maps linearly onto profiles 1..K (equal sections).
+// Bounds = {lo, hi, k}; the FC's formula: k = 1 + floor(((ch-lo)*(K-1) + W/2)/W).
+function selBounds(key){
+    try{ const b=JSON.parse(localStorage.getItem(key)||'null');
+        if(b&&typeof b==='object'&&!Array.isArray(b)&&b.k>=2) return b;
+        if(Array.isArray(b)&&b.length===7){ const secs=[]; for(let n=0;n<6;n++) if(b[n+1]-b[n]>=5) secs.push(n);
+            return {lo:b[0], hi:b[secs.length], k:Math.max(2,secs.length)}; }
+    }catch(e){}
+    return {lo:875, hi:2125, k:4};
+}
+function selSection(b, us){
+    const W=b.hi-b.lo; if(W<=0) return 1;
+    return Math.max(1, Math.min(b.k, 1+Math.floor(((us-b.lo)*(b.k-1)+Math.floor(W/2))/W)));
+}
+function selPayload(slot, func, aux, b, usStepFn){
+    return [slot, func, 0xFF, 0,0, aux, usStepFn(b.lo), usStepFn(b.hi), usStepFn(1500), usStepFn(1500), 1,0, b.k,0, 0];
+}
 const usStepQ = u => (Math.max(-125, Math.min(125, Math.round((u - 1500) / 5))) + 256) & 0xFF;
-function boundsFor(k){
-    try{ const b=JSON.parse(localStorage.getItem('rfTxCh.'+k+'.bounds')||'null'); if(Array.isArray(b)&&b.length===7) return b; }catch(e){}
-    return [875,1085,1290,1500,1710,1915,2125];
+function profSecs(b){
+    const W=b.hi-b.lo, s=[];
+    for(let q=0;q<b.k;q++){ const sLo=q===0?b.lo:b.lo+W*(q-0.5)/(b.k-1), sHi=q===b.k-1?b.hi:b.lo+W*(q+0.5)/(b.k-1); s.push({n:q+1,lo:sLo,hi:sHi}); }
+    return s;
 }
-function secsFromBounds(b){ const s=[]; for(let n=0;n<6;n++) if(b[n+1]-b[n]>=5) s.push({n:n+1,lo:b[n],hi:b[n+1]}); return s; }
 function paintProfBar(p){
-    const b=boundsFor(p.k); p.secs=secsFromBounds(b);
+    const b=selBounds('rfTxCh.'+p.k+'.bounds'); p.b=b; p.secs=profSecs(b);
     for(let n=1;n<=6;n++){ const z=$('q_'+p.k+n); if(!z)continue;
-        const l=qpct(b[n-1]), w=qpct(b[n])-l;
+        if(n>b.k){ z.style.display='none'; continue; } z.style.display='';
+        const s=p.secs[n-1], l=qpct(s.lo), w=qpct(s.hi)-l;
         z.style.left=(l+0.3)+'%'; z.style.width=Math.max(0,w-0.6)+'%'; z.textContent = w>5?String(n):''; }
-    for(let j=1;j<=5;j++){ const h=$('qh_'+p.k+j); if(h) h.style.left=qpct(b[j])+'%'; }
+    const hl=$('qh_'+p.k+'lo'), hh=$('qh_'+p.k+'hi'); if(hl) hl.style.left=qpct(b.lo)+'%'; if(hh) hh.style.left=qpct(b.hi)+'%';
 }
-function wireProfJunction(p,j){
-    const h=$('qh_'+p.k+j), track=$('qt_'+p.k); if(!h||!track)return;
+function wireProfEnd(p,which){
+    const h=$('qh_'+p.k+which), track=$('qt_'+p.k); if(!h||!track)return;
     h.addEventListener('pointerdown',e=>{
         e.preventDefault(); e.stopPropagation();
         try{ h.setPointerCapture(e.pointerId); }catch(_){}
@@ -287,89 +295,66 @@ function wireProfJunction(p,j){
             const r=track.getBoundingClientRect();
             let us=RMINQ+(ev.clientX-r.left)/r.width*(RMAXQ-RMINQ);
             us=Math.max(RMINQ,Math.min(RMAXQ,Math.round(us/5)*5));
-            const b=boundsFor(p.k);
-            const v=b[j]; let lo=j, hi=j;
-            while(lo>1&&b[lo-1]===v) lo--; while(hi<5&&b[hi+1]===v) hi++;
-            const jj = us<v?lo:(us>v?hi:j);
-            us=Math.max(b[jj-1],Math.min(b[jj+1],us));
-            b[jj]=us; localStorage.setItem('rfTxCh.'+p.k+'.bounds',JSON.stringify(b));
-            paintProfBar(p); $('pmsg_'+p.k).textContent='changed — tap Save';
+            const b=selBounds('rfTxCh.'+p.k+'.bounds');
+            if(which==='lo') b.lo=Math.min(us,b.hi-50); else b.hi=Math.max(us,b.lo+50);
+            localStorage.setItem('rfTxCh.'+p.k+'.bounds',JSON.stringify(b)); paintProfBar(p); $('pmsg_'+p.k).textContent='changed — tap Save';
         };
         const up=()=>{ try{h.releasePointerCapture(e.pointerId);}catch(_){}
             h.removeEventListener('pointermove',move); h.removeEventListener('pointerup',up); h.removeEventListener('pointercancel',up); };
         h.addEventListener('pointermove',move); h.addEventListener('pointerup',up); h.addEventListener('pointercancel',up);
     });
 }
-
-// Per-section adjustment payload (Malcolm 2026-08-30, live-debugged: Rotorflight
-// SKIPS a mapped adjustment whose min == max — "valueWidth > 0" — so a plain
-// "profile = N" is inert). Use min N, max N+1 and a value window one section
-// wide centred on the section: adjval = N + floor(((ch-centre) + W/2)/W) = N
-// for every ch inside [lo-5, hi+5); the ENABLE range (the section) gates it.
-function sectionPayload(slot, func, aux, lo, hi, n, usStepFn){
-    // Rotorflight skips min==max ("valueWidth > 0"), so each section uses a
-    // one-step value range and a window one section wide (+10 µs) whose
-    // plateau covers [lo-5, hi+5). Right-hand window: min N, max N+1, value
-    // range [centre, centre+W] → adjval = N there. Near the top of travel that
-    // range would clamp at 2125 and shrink the plateau, so mirror it: min
-    // N-1, max N, value range [centre-W, centre] → adjval = N on the same
-    // plateau. The ENABLE range (the section itself) gates either way.
-    const w = hi - lo, centre = Math.round((lo + hi) / 2), W = w + 10;
-    let r1lo, r1hi, mn, mx;
-    if (centre + W <= 2125) { r1lo = centre;     r1hi = centre + W; mn = n;     mx = n + 1; }
-    else                    { r1lo = centre - W; r1hi = centre;     mn = n - 1; mx = n;     }
-    return [slot, func, aux, usStepFn(lo), usStepFn(hi), aux, usStepFn(r1lo), usStepFn(r1hi),
-            usStepFn(1500), usStepFn(1500), mn & 0xFF, (mn >> 8) & 0xFF, mx & 0xFF, (mx >> 8) & 0xFF, 0];
-}
-
 async function saveProf(k){
     const p=PROF.find(x=>x.k===k); if(!p)return;
     const tx=parseInt($('pc_'+k).value); localStorage.setItem('rfTxCh.'+k,String(tx));
-    const b=boundsFor(k), hx=a=>a.map(v=>v.toString(16).padStart(2,'0')).join('');
+    const b=selBounds('rfTxCh.'+k+'.bounds'), hx=a=>a.map(v=>v.toString(16).padStart(2,'0')).join('');
     const msg=$('pmsg_'+k); msg.textContent='Writing…';
     try{
         for(let n=1;n<=6;n++){
-            const slot=p.base+n-1, lo=b[n-1], hi=b[n], active=(hi-lo)>=5;
-            const payload=hx(active
-                ? sectionPayload(slot, p.adj, tx-6, lo, hi, n, usStepQ)
-                : [slot, 0, 0, 0,0, 0, 0,0, 0,0, 0,0, 0,0, 0]);
+            const slot=p.base+n-1;
+            const payload=hx(n===1 ? selPayload(slot, p.adj, tx-6, b, usStepQ) : [slot, 0, 0, 0,0, 0, 0,0, 0,0, 0,0, 0,0, 0]);
             await LDRC.msp(53,payload);
             try{ fetch('/app/declare?key=adj'+slot+'&hex='+payload,{cache:'no-store'}); }catch(e){}
         }
         await LDRC.msp(250);
         p.tx=tx; p.src='fc'; msg.textContent='✅ Saved — flip the switch and watch the flight controller line';
-        $('ptitle_'+k).textContent='Channel '+tx+' · '+secsFromBounds(b).length+' sections';
+        $('ptitle_'+k).textContent='Channel '+tx+' · '+b.k+' positions';
     }catch(e){ msg.textContent='⚠️ '+e.message; }
 }
+
 function paintProf(){
     let h='';
     if(!PROF.length){
         h='<div class="card modeCard"><label style="display:block">Bank &amp; Rates selectors</label><b style="display:block;margin:.15em 0 .3em">Not set up yet on this phone</b>'
-         +'<p class=muted style="margin:.4em 0 .2em">Choose their channels and section widths on the <a href="/rotorflight-txchannels">Transmitter channels</a> page and tap Save &mdash; the bars appear here, with the flight controller&rsquo;s live answer.</p></div>';
+         +'<p class=muted style="margin:.4em 0 .2em">Choose their channels on the <a href="/rotorflight-txchannels">Transmitter channels</a> page and tap Save &mdash; the bars appear here, with the flight controller&rsquo;s live answer.</p></div>';
         $('profRows').innerHTML=h; return;
     }
     for(const p of PROF){
+        const b=selBounds('rfTxCh.'+p.k+'.bounds');
         let z=''; for(let n=1;n<=6;n++) z+='<div class=qZone id=q_'+p.k+n+'></div>';
-        let hs=''; for(let j=1;j<=5;j++) hs+='<div class=qHandle id=qh_'+p.k+j+'></div>';
         let co=''; for(let c=6;c<=16;c++) co+='<option value='+c+(c===p.tx?' selected':'')+'>Channel '+c+' (AUX '+(c-5)+')</option>';
-        h+='<div class="card modeCard"><div class=pRow><div><label>'+p.t+'</label><b id=ptitle_'+p.k+' style="display:block;margin:.15em 0 .3em">Channel '+p.tx+' &middot; '+p.secs.length+' sections</b></div>'
+        let ko=''; for(let k=2;k<=6;k++) ko+='<option value='+k+(k===b.k?' selected':'')+'>'+k+' positions</option>';
+        h+='<div class="card modeCard"><div class=pRow><div><label>'+p.t+'</label><b id=ptitle_'+p.k+' style="display:block;margin:.15em 0 .3em">Channel '+p.tx+' &middot; '+b.k+' positions</b></div>'
           +'<div><label>Which channel</label><select id=pc_'+p.k+' onchange="document.getElementById(\'pmsg_'+p.k+'\').textContent=\'changed — tap Save\'">'+co+'</select></div></div>'
           +(p.src==='local'?'<div class=muted style="font-size:.8em;margin:.3em 0">From this phone\u2019s choices &mdash; tap Save to write them to the flight controller.</div>':'')
-          +'<div class=rTrack id=qt_'+p.k+' style="margin-top:1.2em">'+z+hs+'<div class=rDot id=dot_'+p.k+' style="display:none"></div></div>'
+          +'<div class=rTrack id=qt_'+p.k+' style="margin-top:1.2em">'+z+'<div class=qHandle id=qh_'+p.k+'lo></div><div class=qHandle id=qh_'+p.k+'hi></div><div class=rDot id=dot_'+p.k+' style="display:none"></div></div>'
           +'<div class=rScale><span>875</span><span>1500</span><span>2125&nbsp;&micro;s</span></div>'
+          +'<div style="display:flex;gap:.6em;align-items:center;font-size:.85em;color:#5d7a8c;margin:.2em 0"><select id=qk_'+p.k+'>'+ko+'</select><span>equal sections between the ends &mdash; drag the ends to the switch&rsquo;s lowest and highest positions</span></div>'
           +'<div class=pAns id=ans_'+p.k+'>Flight controller: &hellip;</div>'
           +'<button class=pSave onclick="saveProf(\''+p.k+'\')">&#128190; Save</button>'
           +'<div class=mMsg id=pmsg_'+p.k+'></div></div>';
     }
     $('profRows').innerHTML=h;
-    for(const p of PROF){ paintProfBar(p); for(let j=1;j<=5;j++) wireProfJunction(p,j); }
+    for(const p of PROF){ paintProfBar(p); wireProfEnd(p,'lo'); wireProfEnd(p,'hi');
+        $('qk_'+p.k).addEventListener('change',()=>{ const b=selBounds('rfTxCh.'+p.k+'.bounds'); b.k=parseInt($('qk_'+p.k).value); localStorage.setItem('rfTxCh.'+p.k+'.bounds',JSON.stringify(b)); paintProfBar(p); $('pmsg_'+p.k).textContent='changed — tap Save'; }); }
 }
 function pollProf(b, st){
     for(const p of PROF){
-        const dot=$('dot_'+p.k); if(!dot)continue;
+        const dot=$('dot_'+p.k); if(!dot||!p.b)continue;
         const i=(p.tx-1)*2;
         if(b.length>=i+2){ const us=b[i]|(b[i+1]<<8); dot.style.display=''; dot.style.left=qpct(us)+'%';
-            for(const s of p.secs){ const z=$('q_'+p.k+s.n); if(z) z.classList.toggle('on', us>=s.lo && us<s.hi); } }
+            const sec=selSection(p.b,us);
+            for(let n=1;n<=6;n++){ const z=$('q_'+p.k+n); if(z) z.classList.toggle('on', n===sec); } }
         if(st&&st.length>p.sb){ const idx=st[p.sb]; $('ans_'+p.k).textContent='Flight controller: '+(p.k==='bank'?'Bank ':'Rates ')+(idx+1); }
     }
 }

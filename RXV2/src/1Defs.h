@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.475-aux-off-by-one";
+constexpr const char* FW_VERSION = "RXV2-0.9.476-one-adjustment";
 
 //*********************************************************************
 //  Auto-update manifest URLs

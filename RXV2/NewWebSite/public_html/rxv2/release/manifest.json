@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.476-one-adjustment",
+      "url": "https://messiter.com/rxv2/release/v0.9.476/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.476/littlefs.bin",
+      "fs_md5": "58f9deec4902d0032bc3bdba14b6e360",
+      "notes": "Selectors rebuilt on Rotorflight's own model: ONE adjustment per selector, equal sections between two draggable END points, with a positions count (2-6). Why: each Rotorflight adjustment remembers its last value and only fires when that changes, so per-section adjustments jam on re-entry (the 'stuck on profile 4'). Re-save once; drag the ends to your switch's lowest and highest positions."
+    },
+    {
       "name": "RXV2-0.9.475-aux-off-by-one",
       "url": "https://messiter.com/rxv2/release/v0.9.475/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.475/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.465/littlefs.bin",
       "fs_md5": "eaa81d3e2b0b0e2e867a9ccda90cfc0d",
       "notes": "Selector bars: junctions pushed together (e.g. to the far right) can be dragged apart again - a leftward drag takes the leftmost of the stack, rightward the rightmost."
-    },
-    {
-      "name": "RXV2-0.9.464-esc-setup",
-      "url": "https://messiter.com/rxv2/release/v0.9.464/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.464/littlefs.bin",
-      "fs_md5": "d73850670b8e36c4c3cde37f91f2d48c",
-      "notes": "New wizard step 3, 'ESC setup (its own app)' (Malcolm): the six things the flight controller CANNOT set and the ESC's own programmer must - governor off/external (one governor only), throttle range 1000-2000, telemetry ON with the matching protocol, soft start short, BEC voltage for the servos, timing/brake + pole count."
     }
   ]
 }
