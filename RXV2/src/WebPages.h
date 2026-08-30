@@ -563,7 +563,7 @@ inline void handleMspApi() {
         }
     }
 
-    uint8_t  respBuf[256];
+    uint8_t  respBuf[640];   // jumbo-capable
     uint16_t respLen = 0;
     // 400 ms timeout: was 150 ms but read-failed too often. FC normally
     // responds in <50 ms, but if a periodic mspFcPoll probe queued behind
