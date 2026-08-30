@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.461-tick-fix",
+      "url": "https://messiter.com/rxv2/release/v0.9.461/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.461/littlefs.bin",
+      "fs_md5": "c4d4800a7cf2ec2023e8190a267f03c1",
+      "notes": "Selector bars: the live red tick now actually shows (a display bug hid it); bigger junction handles that claim the touch so iOS can't turn a drag into a scroll."
+    },
+    {
       "name": "RXV2-0.9.460-six-sections",
       "url": "https://messiter.com/rxv2/release/v0.9.460/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.460/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.450/littlefs.bin",
       "fs_md5": "419429ebc321971e2e5cc44c3557c21d",
       "notes": "Wizard step 1 is now the one-time computer session, right at the top: turn Telemetry ON and set the serial input to the UART you are using (Save restarts the board); update firmware too while you're there. Everything after is phone-only."
-    },
-    {
-      "name": "RXV2-0.9.449-honest-first-contact",
-      "url": "https://messiter.com/rxv2/release/v0.9.449/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.449/littlefs.bin",
-      "fs_md5": "2c787d629878cd8c93038a0707897b33",
-      "notes": "First-contact truth (tested live on the Goblin770's Nexus X): a factory-mute flight controller ignores incoming CRSF commands too, so it cannot be woken from the receiver side. The Wiring page now says the honest thing: one one-time computer step (Configurator - enable Telemetry - Save, it restarts) and the phone does everything after."
     }
   ]
 }

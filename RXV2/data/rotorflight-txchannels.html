@@ -43,8 +43,10 @@
 .qZone.on{background:#2e7d32}
 .qDot{position:absolute;top:-6px;width:4px;height:30px;border-radius:2px;background:#c0392b;transform:translateX(-50%);transition:left .15s linear;display:none;z-index:3}
 .qVal{position:absolute;top:-1.55em;font-size:.72em;color:#c0392b;font-weight:700;transform:translateX(-50%);white-space:nowrap;display:none}
-.qHandle{position:absolute;top:50%;width:20px;height:20px;border-radius:50%;background:#2b568f;border:3px solid #fff;
-         box-shadow:0 1px 4px rgba(0,0,0,.35);transform:translate(-50%,-50%);cursor:grab;touch-action:pan-y;z-index:2}
+.qHandle{position:absolute;top:50%;width:28px;height:28px;border-radius:50%;background:#2b568f;border:3px solid #fff;
+         box-shadow:0 1px 4px rgba(0,0,0,.35);transform:translate(-50%,-50%);cursor:grab;touch-action:none;z-index:2;
+         -webkit-user-select:none;user-select:none}
+.qTrack{touch-action:pan-y}
 .qHandle:active{cursor:grabbing}
 .qTrack{margin-top:1.4em}
 .saveBtn{width:100%;margin-top:.6em;padding:.75em;border:0;border-radius:10px;background:#6cab5e;color:#fff;font-size:1.05em;font-weight:700;cursor:pointer}
@@ -273,7 +275,8 @@ function paintSections(f){
 function wireJunction(f,j){
     const h=$('qh_'+f.k+j), track=$('qt_'+f.k); if(!h||!track)return;
     h.addEventListener('pointerdown',e=>{
-        e.preventDefault(); h.setPointerCapture(e.pointerId);
+        e.preventDefault(); e.stopPropagation();
+        try{ h.setPointerCapture(e.pointerId); }catch(_){}
         const move=ev=>{
             const r=track.getBoundingClientRect();
             let us=QMIN+(ev.clientX-r.left)/r.width*(QMAX-QMIN);
@@ -362,8 +365,8 @@ async function poll(){
             if(dot){
                 if(live){
                     const us=Math.max(988,Math.min(2012,d.ch[c-1]));
-                    dot.style.display=''; dot.style.left=qpct(us)+'%';
-                    if(val){ val.style.display=''; val.style.left=qpct(us)+'%'; val.textContent=us+'µs'; }
+                    dot.style.display='block'; dot.style.left=qpct(us)+'%';
+                    if(val){ val.style.display='block'; val.style.left=qpct(us)+'%'; val.textContent=us+'µs'; }
                     const q=sectionOf(f,us);
                     for(let k=0;k<6;k++){const zz=$('qz_'+f.k+k); if(zz)zz.classList.toggle('on',k===q);}
                 }else{ dot.style.display='none'; if(val)val.style.display='none'; for(let k=0;k<6;k++){const zz=$('qz_'+f.k+k); if(zz)zz.classList.remove('on');} }
