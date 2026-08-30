@@ -51,6 +51,7 @@
             <button class=calBtn id=cal3 onclick="escCal(3)" style="display:none;width:100%;padding:.7em;border:0;border-radius:10px;background:#4a8a5f;color:#fff;font-weight:700;font-size:1em;cursor:pointer;margin-top:.5em">3 &middot; Heard the beeps again &mdash; done</button>
             <button id=cal0 onclick="escCal(0)" style="display:none;width:100%;padding:.55em;border:0;border-radius:10px;background:#b06a6a;color:#fff;font-weight:700;cursor:pointer;margin-top:.5em">Stop &mdash; release the throttle</button>
         </div>
+        <div id=calBig style="display:none;margin-top:.6em;padding:.9em;border-radius:12px;background:#d4944a;color:#fff;font-size:1.25em;font-weight:800;text-align:center;line-height:1.35"></div>
         <p id=calMsg style="font-weight:700;color:#2e4356;min-height:1.4em;margin-top:.5em"></p>
     </div>
 
@@ -113,21 +114,25 @@ async function escCal(step){
         calPhase=1; calShow();
         await holdFull();
         calTimer=setInterval(holdFull,400);
-        $('calMsg').textContent='Full throttle held. Now plug the flight battery and wait for the ESC\u2019s beeps (a few seconds).';
+        $('calBig').style.display=''; $('calBig').innerHTML='&#128267; NOW PLUG THE FLIGHT BATTERY<br><span style="font-size:.75em;font-weight:600">then wait for the ESC\u2019s beeps (a few seconds)</span>';
+        $('calMsg').textContent='Full throttle is being held for you.';
         return;
     }
     if(step===2){
         if(calTimer){ clearInterval(calTimer); calTimer=null; }
         try{ await LDRC.msp(195,'000000'); }catch(e){}
         calPhase=2; calShow();
-        $('calMsg').textContent='Minimum. Wait for the confirmation beeps.';
+        $('calBig').innerHTML='&#128066; WAIT FOR THE CONFIRMATION BEEPS<br><span style="font-size:.75em;font-weight:600">throttle is now at minimum</span>';
+        $('calMsg').textContent='';
         return;
     }
     if(step===3||step===0){
         if(calTimer){ clearInterval(calTimer); calTimer=null; }
         try{ await LDRC.msp(195,'000000'); }catch(e){}
+        $('calBig').style.display = step===3 ? '' : 'none';
+        if(step===3) $('calBig').innerHTML='&#9989; CALIBRATED \u2014 UNPLUG THE BATTERY';
         $('calMsg').textContent = step===3
-            ? '✅ Calibrated. Unplug the battery. The ESC now knows 1000\u20132000 \u00b5s as its full range.'
+            ? 'The ESC now knows 1000\u20132000 \u00b5s as its full range.'
             : 'Released. The throttle is back at minimum.';
         calPhase=0; calShow();
     }
