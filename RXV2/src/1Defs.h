@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.461-tick-fix";
+constexpr const char* FW_VERSION = "RXV2-0.9.462-six-even";
 
 //*********************************************************************
 //  Auto-update manifest URLs
