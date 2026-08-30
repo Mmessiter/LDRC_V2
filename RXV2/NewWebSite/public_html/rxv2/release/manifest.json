@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.469-selectors-visible",
+      "url": "https://messiter.com/rxv2/release/v0.9.469/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.469/littlefs.bin",
+      "fs_md5": "3bb923e15b32268c292081fa2ac523a2",
+      "notes": "Switches page: the Bank & Rates selectors card is always present - it says 'not set up yet' with a link to Transmitter channels until a Save has recorded them, then shows the bars and the flight controller's live answer."
+    },
+    {
       "name": "RXV2-0.9.468-plug-battery",
       "url": "https://messiter.com/rxv2/release/v0.9.468/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.468/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.458/littlefs.bin",
       "fs_md5": "5737af24abad8988d63914153c8c38dd",
       "notes": "Backups travel (Malcolm's idea): Share backup file hands the whole setup to the phone's share sheet - email or AirDrop it to another phone, or to a friend with the same helicopter; Import a backup file adopts it as the model's restore point, then Restore writes it. The file carries everything, including the bank/rates switch selectors the flight controller cannot read back (now declared to the app when saved, restored verbatim). Needs app 3.21 / 3.13."
-    },
-    {
-      "name": "RXV2-0.9.457-jumbo-msp",
-      "url": "https://messiter.com/rxv2/release/v0.9.457/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.457/littlefs.bin",
-      "fs_md5": "5f73894094559e3fc394bd3de60e3e45",
-      "notes": "Big flight-controller replies now arrive whole: MSP jumbo frames (0xFF + 16-bit length) reassembled into 640-byte buffers - the 588-byte adjustment table (bank/rates selectors) can be read back and verified, not just written."
     }
   ]
 }
