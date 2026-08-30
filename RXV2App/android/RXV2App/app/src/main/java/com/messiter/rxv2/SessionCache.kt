@@ -269,7 +269,7 @@ object SessionCache {
     fun snapshotRestorePoint() {
         val f = restoreFileFor(modelName) ?: return
         val keep = entries.filterKeys { k ->
-            restoreKeyPrefixes.any { k.startsWith(it) } || k == "/api/msp?fn=142" || k == "/api/msp?fn=42" || k == "/api/msp?fn=120"
+            restoreKeyPrefixes.any { k.startsWith(it) } || k == "/api/msp?fn=142" || k == "/api/msp?fn=42" || k == "/api/msp?fn=120" || k.startsWith("/app/declared/")
         }
         if (keep.isEmpty()) return
         runCatching {
@@ -351,7 +351,73 @@ object SessionCache {
                 }
             }
         }
+        // Declared items (Malcolm 2026-08-30): write-only settings the FC can't
+        // read back — the bank/rates selector adjustment ranges (MSP 53).
+        // readFn 0 = no read-back possible.
+        for ((k, v) in frozen) {
+            if (!k.startsWith("/app/declared/adj")) continue
+            if (v.length < 4 || !v.all { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }) continue
+            val label = when { k.endsWith("adj40") -> "bank selector switch"
+                               k.endsWith("adj41") -> "rates selector switch"
+                               else -> "declared $k" }
+            out.add(RestoreItem(null, 53, 0, v.uppercase(), label))
+        }
         return out
+    }
+
+    // ── Declared items, export & import (Malcolm 2026-08-30) ──
+    @Synchronized
+    fun declare(key: String, hex: String) {
+        val k = "/app/declared/$key"
+        entries[k] = Pair("text/plain", hex.toByteArray(Charsets.UTF_8))
+        savedAtMs = System.currentTimeMillis(); dirty = true; saveIfDirty()
+        val f = restoreFileFor(modelName) ?: return
+        runCatching {
+            val root = if (f.exists()) JSONObject(f.readText()) else JSONObject().put("model", modelName).put("entries", JSONObject())
+            val es = root.optJSONObject("entries") ?: JSONObject().also { root.put("entries", it) }
+            es.put(k, JSONObject().put("type", "text/plain").put("b64", Base64.encodeToString(hex.toByteArray(), Base64.NO_WRAP)))
+            root.put("savedAtMs", System.currentTimeMillis())
+            f.writeText(root.toString())
+        }
+    }
+
+    @Synchronized
+    fun declared(): Map<String, String> {
+        val out = HashMap<String, String>()
+        restoreFileFor(modelName)?.takeIf { it.exists() }?.let { f ->
+            runCatching {
+                val es = JSONObject(f.readText()).getJSONObject("entries")
+                es.keys().forEach { k -> if (k.startsWith("/app/declared/"))
+                    out[k.removePrefix("/app/declared/")] = String(Base64.decode(es.getJSONObject(k).getString("b64"), Base64.NO_WRAP)) }
+            }
+        }
+        for ((k, v) in entries) if (k.startsWith("/app/declared/")) out[k.removePrefix("/app/declared/")] = String(v.second)
+        return out
+    }
+
+    /** Portable backup file (same shape as iOS): the frozen restore point. */
+    fun exportRestoreJson(): String? {
+        val f = restoreFileFor(modelName)?.takeIf { it.exists() } ?: return null
+        return runCatching {
+            val root = JSONObject(f.readText())
+            if (root.getJSONObject("entries").length() == 0) return null
+            root.put("format", "rxv2-backup-1")
+            root.toString(2)
+        }.getOrNull()
+    }
+
+    /** Adopt a backup file as the restore point for the CONNECTED model. */
+    fun importRestore(json: String, forModel: String): Triple<Boolean, String, Int> {
+        return runCatching {
+            val root = JSONObject(json)
+            if (root.optString("format") != "rxv2-backup-1") return Triple(false, "", 0)
+            val es = root.getJSONObject("entries")
+            if (es.length() == 0) return Triple(false, "", 0)
+            val f = restoreFileFor(forModel) ?: return Triple(false, "", 0)
+            val out = JSONObject().put("model", forModel).put("savedAtMs", System.currentTimeMillis()).put("entries", es)
+            f.writeText(out.toString())
+            Triple(true, root.optString("model", ""), es.length())
+        }.getOrDefault(Triple(false, "", 0))
     }
 
     private fun load() {

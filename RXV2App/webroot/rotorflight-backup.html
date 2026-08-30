@@ -39,6 +39,9 @@
         </div>
     </div>
 
+    <button id=shareBtn class="btn" style="display:none;background:#5f8fab" onclick="shareBackup()"><span class=ico>&#128228;</span>Share backup file&hellip;<br><span style="font-size:.68em;font-weight:400;opacity:.85">email / AirDrop it &mdash; another phone, or a friend with the same helicopter</span></button>
+    <button id=importBtn class="btn" style="display:none;background:#7a6a9a" onclick="importBackup()"><span class=ico>&#128229;</span>Import a backup file&hellip;<br><span style="font-size:.68em;font-weight:400;opacity:.85">then tap Restore to write it to this model</span></button>
+    <div id=impMsg class=muted style="display:none;font-size:.9em;margin:.4em 0"></div>
     <div id=burNote class=card style="display:none"><p class=muted style="font-size:.9em;line-height:1.5">Backup lives <b>in the app</b> (over Bluetooth) &mdash; the phone is where the backup is kept. Open this page from the LDRC app to use it.</p></div>
     <a class="btn btn-bb" href="/rotorflight" style="margin-top:.8em"><span class=ico>&#11013;&#65039;</span>Back to Rotorflight</a>
     <div class=footer></div>
@@ -173,10 +176,45 @@ async function phoneRestore() {
     }, 700);
 }
 
+// Portable backups (Malcolm 2026-08-30): the frozen restore point as a
+// file — including the declared, write-only items (bank/rates selectors).
+async function shareBackup() {
+    let r = null;
+    try { r = await (await fetch('/app/backup/export', { cache: 'no-store' })).json(); } catch (e) {}
+    if (!r || !r.ok) await LDRC.alert((r && r.error) || 'Could not export — back up to the phone first.', { title: 'Nothing to share', icon: '📤' });
+}
+async function importBackup() {
+    let model = '';
+    try { const s = await LDRC.fetchState(); model = (s && s.info && s.info.name) || ''; } catch (e) {}
+    if (!(await LDRC.confirm(
+        'Choose a backup file to adopt for ' + (model || 'this model') + '.\n\nIt becomes the restore point on this phone — nothing is written to the flight controller until you tap Restore.\n\nFrom a friend\u2019s helicopter? The electronics transfer (rates, PIDs, governor, switches, rescue); servo centres, travel and level calibration stay yours — redo those wizard steps after restoring.',
+        { title: 'Import a backup', icon: '📥', yes: 'Choose file' }))) return;
+    let r = null;
+    try { r = await (await fetch('/app/backup/import', { cache: 'no-store' })).json(); } catch (e) {}
+    if (!r || !r.ok) { await LDRC.alert((r && r.error) || 'Could not open the file picker.', { title: 'Import', icon: '📥' }); return; }
+    const msg = document.getElementById('impMsg'); msg.style.display = ''; msg.textContent = 'Choose the backup file…';
+    const t0 = Date.now();
+    const timer = setInterval(async () => {
+        let st = null;
+        try { st = await (await fetch('/app/backup/import/status', { cache: 'no-store' })).json(); } catch (e) { return; }
+        if (st.phase === 'done') {
+            clearInterval(timer);
+            msg.textContent = '✅ Imported ' + (st.model ? st.model + '\u2019s' : 'the') + ' setup (' + st.count + ' items) as the restore point for ' + (model || 'this model') + '. Tap Restore to write it.';
+            paintRestoreBtn();
+        } else if (st.phase === 'failed') {
+            clearInterval(timer); msg.textContent = '⚠️ That file is not an LDRC backup.';
+        } else if (st.phase === 'idle' || Date.now() - t0 > 120000) {
+            clearInterval(timer); msg.style.display = 'none';
+        }
+    }, 800);
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     await LDRC.replayReady;
     if (window.LDRC && LDRC.viaBle && !LDRC.replay) {
         document.getElementById('phoneSaveBtn').style.display = '';
+        document.getElementById('shareBtn').style.display = '';
+        document.getElementById('importBtn').style.display = '';
         paintRestoreBtn();
     } else {
         document.getElementById('burNote').style.display = '';
@@ -184,6 +222,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 </script>
 <template id=helpContent><h2>Backup &amp; restore</h2>
+<p><b>Share backup file</b> hands the backup to the phone&rsquo;s share sheet &mdash; email or AirDrop it to another phone, or to a friend with the same helicopter; <b>Import a backup file</b> adopts one as this model&rsquo;s restore point (then Restore writes it). The file carries everything, including the switch selectors the flight controller cannot read back.</p>
 <p><b>Back up settings to phone</b> saves everything: every bank's PIDs, advanced PIDs, rates and governor settings &mdash; and all the Black box data too. <b>Restore settings from phone</b> writes it all back, each item verified, with the transmitter off. A backup is also frozen automatically when you connect &mdash; even a pilot who never presses Back&nbsp;up has one. Always back up a known-good setup before experimenting.</p>
 </template>
 </body>

@@ -209,9 +209,26 @@ async function pollRc(){
 // Profile selectors (set on the Transmitter channels page; remembered there).
 // Four equal zones of 875–2125 µs = Rotorflight's absolute mapping to 1..4;
 // the FC's live profile (MSP_STATUS bytes 23 / 25) is the proof.
-const PROF=[{k:'bank',t:'Bank (PID profile)',sb:23},{k:'rate',t:'Rates',sb:25}]
+let PROF=[{k:'bank',t:'Bank (PID profile)',sb:23,slot:40},{k:'rate',t:'Rates',sb:25,slot:41}]
     .map(p=>({...p,tx:parseInt(localStorage.getItem('rfTxCh.'+p.k)||'0')}))
     .filter(p=>p.tx>=5&&p.tx<=16);
+// Prefer the app's DECLARED selectors (survive a new phone / an imported
+// backup): payload byte 1 = function (0 = none), byte 5 = aux index.
+async function loadDeclared(){
+    try{
+        const d=await (await fetch('/app/declared',{cache:'no-store'})).json();
+        const all=[{k:'bank',t:'Bank (PID profile)',sb:23,slot:40},{k:'rate',t:'Rates',sb:25,slot:41}];
+        const out=[];
+        for(const p of all){
+            const h=d['adj'+p.slot];
+            if(typeof h==='string'&&h.length>=12){
+                const fn=parseInt(h.substr(2,2),16), aux=parseInt(h.substr(10,2),16);
+                if(fn>0) out.push({...p,tx:aux+5});
+            } else { const l=PROF.find(x=>x.k===p.k); if(l) out.push(l); }
+        }
+        PROF=out;
+    }catch(e){ /* WiFi browser / old app: localStorage view stands */ }
+}
 function paintProf(){
     let h='';
     for(const p of PROF){
@@ -236,7 +253,7 @@ function pollProf(b, st){
     }
 }
 function paint(){
-    paintProf();
+    loadDeclared().then(paintProf);
     let h='';
     for(let i=0;i<slots.length;i++){
         const s=slots[i];

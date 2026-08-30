@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.457-jumbo-msp";
+constexpr const char* FW_VERSION = "RXV2-0.9.458-portable-backups";
 
 //*********************************************************************
 //  Auto-update manifest URLs

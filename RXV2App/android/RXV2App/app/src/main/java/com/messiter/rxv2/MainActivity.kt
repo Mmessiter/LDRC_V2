@@ -48,6 +48,23 @@ class MainActivity : AppCompatActivity() {
     // the Bluetooth-only receiver does not.
     private val RX_MANIFEST_URL = "https://www.messiter.com/rxv2/release/manifest.json"
 
+    // Backup file import (Malcolm 2026-08-30): pick a .json backup, adopt it
+    // as the restore point for the CONNECTED model, narrate via
+    // /app/backup/import/status.
+    @Volatile private var importPhase = "idle"; @Volatile private var importModel = ""; @Volatile private var importCount = 0
+    private var importFor = ""
+    private val importPick = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri == null) { importPhase = "idle"; return@registerForActivityResult }
+        Thread {
+            val text = runCatching { contentResolver.openInputStream(uri)?.use { String(it.readBytes()) } }.getOrNull()
+            if (text == null) { importPhase = "failed"; return@Thread }
+            val r = SessionCache.importRestore(text, importFor)
+            importModel = r.second; importCount = r.third
+            importPhase = if (r.first) "done" else "failed"
+        }.start()
+    }
     private val permReq = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
     ) { if (it.values.all { g -> g }) ble.startScan() else showMessage("Bluetooth permission is needed.") }
@@ -834,7 +851,7 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                     if (ok) ok = req("/api/msp?fn=${it.writeFn}&data=${it.hex}").first
-                    if (ok) {
+                    if (ok && it.readFn != 0) {   // readFn 0 = declared item, no read-back exists
                         // Mixer inputs read with their index in data= and
                         // verify against verifyHex (payload minus the leading
                         // index byte the read never echoes).
@@ -1141,6 +1158,52 @@ class MainActivity : AppCompatActivity() {
                             "window.__bleResolve($id,200,${JSONObject.quote("application/json")},${JSONObject.quote(b64)})", null)
                     }
                 }.start()
+                return
+            }
+            if (p == "/app/declare" || p == "/app/declared" || p == "/app/backup/export" ||
+                p == "/app/backup/import" || p == "/app/backup/import/status") {
+                fun answer(json: String) = runOnUiThread {
+                    val w = webView ?: return@runOnUiThread
+                    val b64 = Base64.encodeToString(json.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
+                    w.evaluateJavascript(
+                        "window.__bleResolve($id,200,${JSONObject.quote("application/json")},${JSONObject.quote(b64)})", null)
+                }
+                when (p) {
+                    "/app/declare" -> {
+                        val key = uri.getQueryParameter("key") ?: ""; val hex = uri.getQueryParameter("hex") ?: ""
+                        val ok = key.isNotEmpty() && hex.isNotEmpty() && !demoMode && !reviewMode
+                        if (ok) SessionCache.declare(key, hex)
+                        answer("{\"ok\":$ok}")
+                    }
+                    "/app/declared" -> answer(JSONObject(SessionCache.declared() as Map<*, *>).toString())
+                    "/app/backup/export" -> {
+                        val json = SessionCache.exportRestoreJson()
+                        if (json == null) answer("{\"ok\":false,\"error\":\"no backup on this phone for this model yet\"}")
+                        else {
+                            val safe = SessionCache.modelName.map { if (it.isLetterOrDigit()) it else '_' }.joinToString("").ifEmpty { "model" }
+                            val dir = java.io.File(cacheDir, "backups").apply { mkdirs() }
+                            val f = java.io.File(dir, "$safe-LDRC-backup.json").apply { writeText(json) }
+                            val u = androidx.core.content.FileProvider.getUriForFile(this@MainActivity, "$packageName.fileprovider", f)
+                            val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                type = "application/json"
+                                putExtra(android.content.Intent.EXTRA_STREAM, u)
+                                putExtra(android.content.Intent.EXTRA_SUBJECT, "LDRC backup — ${SessionCache.modelName}")
+                                addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            runOnUiThread { startActivity(android.content.Intent.createChooser(send, "Share backup")) }
+                            answer("{\"ok\":true}")
+                        }
+                    }
+                    "/app/backup/import" -> {
+                        if (demoMode || reviewMode || connectedName.isEmpty()) answer("{\"ok\":false,\"error\":\"connect to the receiver first\"}")
+                        else {
+                            importFor = connectedName; importPhase = "picking"; importModel = ""; importCount = 0
+                            runOnUiThread { importPick.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) }
+                            answer("{\"ok\":true}")
+                        }
+                    }
+                    else -> answer("{\"phase\":\"$importPhase\",\"model\":${JSONObject.quote(importModel)},\"count\":$importCount}")
+                }
                 return
             }
             if (p == "/app/restore/info" || p == "/app/restore/start" || p == "/app/restore/progress") {

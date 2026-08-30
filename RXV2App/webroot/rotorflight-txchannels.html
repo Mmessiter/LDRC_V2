@@ -434,6 +434,9 @@ async function saveAll(){
                 usStep(875), usStep(2125), usStep(1500), usStep(1500), 1,0, 4,0, 0]
                 .map(v=>v.toString(16).padStart(2,'0')).join('');
             await LDRC.msp(53,payload);
+            // Declare it to the app (write-only — the FC can't read it back):
+            // backup/restore and the Switches page carry it from here.
+            try{ fetch('/app/declare?key=adj'+p.f.slot+'&hex='+payload,{cache:'no-store'}); }catch(e){}
         }
         await LDRC.msp(250);
         // 3. verify all of it by read-back
