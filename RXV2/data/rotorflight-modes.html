@@ -41,6 +41,12 @@
          transform:translate(-50%,-50%);cursor:grab;touch-action:pan-y;z-index:2}
 .rHandle:active{cursor:grabbing;background:#1d3f6e}
 .rScale{display:flex;justify-content:space-between;font-size:.7em;color:#7a8b95;margin-bottom:.2em}
+/* 4-position selector bar (bank / rates): four blue zones with a gap, the
+   live red line, and the flight controller's OWN answer underneath. */
+.qZone{position:absolute;top:0;bottom:0;background:#4a90c9;opacity:.85;border-radius:6px;
+       color:#fff;font-size:.72em;font-weight:700;text-align:center;line-height:18px}
+.qZone.on{background:#2e7d32}
+.pAns{font-size:.9em;font-weight:700;color:#2e4356;margin-top:.2em}
 </style>
 </head>
 <body class=hasFab>
@@ -51,6 +57,7 @@
     <h1>Switches</h1>
     <p class=subtitle>what each transmitter switch makes the flight controller do <i>(Rotorflight: Modes)</i></p>
     <div id=status class="banner info">loading&hellip;</div>
+    <div id=profRows></div>
     <div id=rows></div>
     <button class=addBtn id=addBtn onclick="addRow()">&#10133; Add a switch action</button>
     <a class="btn btn-bb" href="/rotorflight" style="margin-top:.8em"><span class=ico>&#11013;&#65039;</span>Back to Rotorflight</a>
@@ -183,6 +190,8 @@ async function pollRc(){
     if(document.hidden){ rcTimer=setTimeout(pollRc,800); return; }
     try{
         const b=hexToBytes(await LDRC.msp(105));
+        if(PROF.length){ let st=null; try{ st=hexToBytes(await LDRC.msp(101)); }catch(_){}
+            pollProf(b, st); }
         for(let i=0;i<slots.length;i++){
             const dot=$('dot'+i); if(!dot)continue;
             const chIdx=parseInt($('c'+i).value)+4;        // aux0 = channel 5 = index 4
@@ -197,7 +206,37 @@ async function pollRc(){
     rcTimer=setTimeout(pollRc,400);
 }
 
+// Profile selectors (set on the Transmitter channels page; remembered there).
+// Four equal zones of 875–2125 µs = Rotorflight's absolute mapping to 1..4;
+// the FC's live profile (MSP_STATUS bytes 23 / 25) is the proof.
+const PROF=[{k:'bank',t:'Bank (PID profile)',sb:23},{k:'rate',t:'Rates',sb:25}]
+    .map(p=>({...p,tx:parseInt(localStorage.getItem('rfTxCh.'+p.k)||'0')}))
+    .filter(p=>p.tx>=5&&p.tx<=16);
+function paintProf(){
+    let h='';
+    for(const p of PROF){
+        let z='';
+        for(let q=0;q<4;q++){ const l=q*25+0.4, w=25-0.8;
+            z+='<div class=qZone id=q_'+p.k+q+' style="left:'+l+'%;width:'+w+'%">'+(q+1)+'</div>'; }
+        h+='<div class="card modeCard"><div class=mRow><div><label>'+p.t+'</label><b>Channel '+p.tx+' &middot; 4 positions</b></div></div>'
+          +'<div class=rTrack>'+z+'<div class=rDot id=dot_'+p.k+' style="display:none"></div></div>'
+          +'<div class=rScale><span>875</span><span>1500</span><span>2125&nbsp;&micro;s</span></div>'
+          +'<div class=pAns id=ans_'+p.k+'>Flight controller: &hellip;</div></div>';
+    }
+    $('profRows').innerHTML=h;
+}
+function pollProf(b, st){
+    for(const p of PROF){
+        const dot=$('dot_'+p.k); if(!dot)continue;
+        const i=(p.tx-1)*2;
+        if(b.length>=i+2){ const us=b[i]|(b[i+1]<<8); dot.style.display=''; dot.style.left=pct(us)+'%';
+            const q=Math.max(0,Math.min(3,Math.floor((us-875)/312.5)));
+            for(let k=0;k<4;k++)$('q_'+p.k+k).classList.toggle('on',k===q); }
+        if(st&&st.length>p.sb){ const idx=st[p.sb]; $('ans_'+p.k).textContent='Flight controller: '+(p.k==='bank'?'Bank ':'Rates ')+(idx+1); }
+    }
+}
 function paint(){
+    paintProf();
     let h='';
     for(let i=0;i<slots.length;i++){
         const s=slots[i];
