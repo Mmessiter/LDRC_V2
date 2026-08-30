@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.468-plug-battery",
+      "url": "https://messiter.com/rxv2/release/v0.9.468/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.468/littlefs.bin",
+      "fs_md5": "cfa9e4ea5d57da44dd9eef734a8dc64c",
+      "notes": "ESC calibration (proven on a Tribunus!): the 'NOW PLUG THE FLIGHT BATTERY' instruction is a big orange banner - the one thing you must not miss."
+    },
+    {
       "name": "RXV2-0.9.467-esc-calibration",
       "url": "https://messiter.com/rxv2/release/v0.9.467/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.467/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.457/littlefs.bin",
       "fs_md5": "5f73894094559e3fc394bd3de60e3e45",
       "notes": "Big flight-controller replies now arrive whole: MSP jumbo frames (0xFF + 16-bit length) reassembled into 640-byte buffers - the 588-byte adjustment table (bank/rates selectors) can be read back and verified, not just written."
-    },
-    {
-      "name": "RXV2-0.9.456-bank-rate-switches",
-      "url": "https://messiter.com/rxv2/release/v0.9.456/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.456/littlefs.bin",
-      "fs_md5": "5f73894094559e3fc394bd3de60e3e45",
-      "notes": "Bank (PID profile) and Rates selectors, 4 positions each, from the phone: pick their channels on Transmitter channels (they may share one channel), Save writes them as Rotorflight adjustment ranges (proven live on the Goblin770 - top position = bank 4); the Switches page shows four blue zones with the live red marker AND the flight controller's own answer ('Flight controller: Bank 3') as you flip."
     }
   ]
 }

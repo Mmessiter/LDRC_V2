@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.467-esc-calibration";
+constexpr const char* FW_VERSION = "RXV2-0.9.468-plug-battery";
 
 //*********************************************************************
 //  Auto-update manifest URLs
