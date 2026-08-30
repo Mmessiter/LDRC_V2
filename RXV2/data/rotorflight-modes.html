@@ -209,33 +209,52 @@ async function pollRc(){
 // Profile selectors (set on the Transmitter channels page; remembered there).
 // Four equal zones of 875–2125 µs = Rotorflight's absolute mapping to 1..4;
 // the FC's live profile (MSP_STATUS bytes 23 / 25) is the proof.
-let PROF=[{k:'bank',t:'Bank (PID profile)',sb:23,slot:40},{k:'rate',t:'Rates',sb:25,slot:41}]
-    .map(p=>({...p,tx:parseInt(localStorage.getItem('rfTxCh.'+p.k)||'0')}))
-    .filter(p=>p.tx>=5&&p.tx<=16);
-// Prefer the app's DECLARED selectors (survive a new phone / an imported
-// backup): payload byte 1 = function (0 = none), byte 5 = aux index.
+// Profile selectors (set on the Transmitter channels page). Each selector
+// is up to SIX adjustment slots (bank 30-35, rates 36-41), one per section:
+// enable range = the section, value = the profile number. Read them back
+// from the app's declared items (survive a new phone / an imported backup);
+// fall back to the phone's own remembered boundaries.
+const RMINQ=875, RMAXQ=2125;
+const qpct=u=>Math.max(0,Math.min(100,(u-RMINQ)/(RMAXQ-RMINQ)*100));
+const stepUsQ=s=>1500+5*((s&0x80)?s-256:s);
+let PROF=[];
+function localProf(){
+    const out=[];
+    for(const p of [{k:'bank',t:'Bank (PID profile)',sb:23,base:30},{k:'rate',t:'Rates',sb:25,base:36}]){
+        const tx=parseInt(localStorage.getItem('rfTxCh.'+p.k)||'0'); if(tx<5||tx>16)continue;
+        let b=null; try{ b=JSON.parse(localStorage.getItem('rfTxCh.'+p.k+'.bounds')||'null'); }catch(e){}
+        if(!Array.isArray(b)||b.length!==7) b=[875,1187.5,1500,1812.5,2125,2125,2125];
+        const secs=[]; for(let n=0;n<6;n++) if(b[n+1]-b[n]>=5) secs.push({n:n+1,lo:b[n],hi:b[n+1]});
+        out.push({...p,tx,secs});
+    }
+    return out;
+}
 async function loadDeclared(){
+    PROF=localProf();
     try{
         const d=await (await fetch('/app/declared',{cache:'no-store'})).json();
-        const all=[{k:'bank',t:'Bank (PID profile)',sb:23,slot:40},{k:'rate',t:'Rates',sb:25,slot:41}];
         const out=[];
-        for(const p of all){
-            const h=d['adj'+p.slot];
-            if(typeof h==='string'&&h.length>=12){
-                const fn=parseInt(h.substr(2,2),16), aux=parseInt(h.substr(10,2),16);
-                if(fn>0) out.push({...p,tx:aux+5});
-            } else { const l=PROF.find(x=>x.k===p.k); if(l) out.push(l); }
+        for(const p of [{k:'bank',t:'Bank (PID profile)',sb:23,base:30},{k:'rate',t:'Rates',sb:25,base:36}]){
+            const secs=[]; let tx=0;
+            for(let n=1;n<=6;n++){
+                const h=d['adj'+(p.base+n-1)]; if(typeof h!=='string'||h.length<30)continue;
+                const fn=parseInt(h.substr(2,2),16); if(!fn)continue;
+                tx=parseInt(h.substr(4,2),16)+5;
+                secs.push({n, lo:stepUsQ(parseInt(h.substr(6,2),16)), hi:stepUsQ(parseInt(h.substr(8,2),16))});
+            }
+            if(secs.length) out.push({...p,tx,secs});
+            else { const l=PROF.find(x=>x.k===p.k); if(l) out.push(l); }
         }
-        PROF=out;
-    }catch(e){ /* WiFi browser / old app: localStorage view stands */ }
+        if(out.length) PROF=out;
+    }catch(e){ /* WiFi browser / old app: local view stands */ }
 }
 function paintProf(){
     let h='';
     for(const p of PROF){
         let z='';
-        for(let q=0;q<4;q++){ const l=q*25+0.4, w=25-0.8;
-            z+='<div class=qZone id=q_'+p.k+q+' style="left:'+l+'%;width:'+w+'%">'+(q+1)+'</div>'; }
-        h+='<div class="card modeCard"><div class=mRow><div><label>'+p.t+'</label><b>Channel '+p.tx+' &middot; 4 positions</b></div></div>'
+        for(const s of p.secs){ const l=qpct(s.lo), w=qpct(s.hi)-l;
+            z+='<div class=qZone id=q_'+p.k+s.n+' style="left:'+(l+0.3)+'%;width:'+Math.max(0,w-0.6)+'%">'+(w>5?s.n:'')+'</div>'; }
+        h+='<div class="card modeCard"><div class=mRow><div><label>'+p.t+'</label><b>Channel '+p.tx+' &middot; '+p.secs.length+' sections</b></div></div>'
           +'<div class=rTrack>'+z+'<div class=rDot id=dot_'+p.k+' style="display:none"></div></div>'
           +'<div class=rScale><span>875</span><span>1500</span><span>2125&nbsp;&micro;s</span></div>'
           +'<div class=pAns id=ans_'+p.k+'>Flight controller: &hellip;</div></div>';
@@ -246,9 +265,8 @@ function pollProf(b, st){
     for(const p of PROF){
         const dot=$('dot_'+p.k); if(!dot)continue;
         const i=(p.tx-1)*2;
-        if(b.length>=i+2){ const us=b[i]|(b[i+1]<<8); dot.style.display=''; dot.style.left=pct(us)+'%';
-            const q=Math.max(0,Math.min(3,Math.floor((us-875)/312.5)));
-            for(let k=0;k<4;k++)$('q_'+p.k+k).classList.toggle('on',k===q); }
+        if(b.length>=i+2){ const us=b[i]|(b[i+1]<<8); dot.style.display=''; dot.style.left=qpct(us)+'%';
+            for(const s of p.secs){ const z=$('q_'+p.k+s.n); if(z) z.classList.toggle('on', us>=s.lo && us<s.hi); } }
         if(st&&st.length>p.sb){ const idx=st[p.sb]; $('ans_'+p.k).textContent='Flight controller: '+(p.k==='bank'?'Bank ':'Rates ')+(idx+1); }
     }
 }

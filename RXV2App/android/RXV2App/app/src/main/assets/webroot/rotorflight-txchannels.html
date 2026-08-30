@@ -41,7 +41,12 @@
 .qTrack{position:relative;height:18px;background:#dfe5ea;border-radius:9px;margin:.15em .2em .55em;grid-column:1 / -1}
 .qZone{position:absolute;top:0;bottom:0;background:#4a90c9;opacity:.85;border-radius:6px;color:#fff;font-size:.72em;font-weight:700;text-align:center;line-height:18px}
 .qZone.on{background:#2e7d32}
-.qDot{position:absolute;top:-4px;width:4px;height:26px;border-radius:2px;background:#c0392b;transform:translateX(-50%);transition:left .15s linear;display:none}
+.qDot{position:absolute;top:-6px;width:4px;height:30px;border-radius:2px;background:#c0392b;transform:translateX(-50%);transition:left .15s linear;display:none;z-index:3}
+.qVal{position:absolute;top:-1.55em;font-size:.72em;color:#c0392b;font-weight:700;transform:translateX(-50%);white-space:nowrap;display:none}
+.qHandle{position:absolute;top:50%;width:20px;height:20px;border-radius:50%;background:#2b568f;border:3px solid #fff;
+         box-shadow:0 1px 4px rgba(0,0,0,.35);transform:translate(-50%,-50%);cursor:grab;touch-action:pan-y;z-index:2}
+.qHandle:active{cursor:grabbing}
+.qTrack{margin-top:1.4em}
 .saveBtn{width:100%;margin-top:.6em;padding:.75em;border:0;border-radius:10px;background:#6cab5e;color:#fff;font-size:1.05em;font-weight:700;cursor:pointer}
 .sMsg{text-align:center;font-size:.85em;min-height:1.2em;margin-top:.3em;font-weight:600}
 .preview{font-weight:700;text-align:center;margin:.5em 0;color:#2e4356}
@@ -95,8 +100,12 @@ const FUNCS=[
  // (of 42; the configurator fills from 0 so the top is free) as ABSOLUTE
  // adjustments: channel 875–2125 µs → value 1..4 (proven live on Goblin770:
  // top position → PID profile 4).
- {k:'bank', t:'Bank (PID profile)', letter:'', def:7, stick:false, optional:true, share:'prof', adj:2, slot:40},
- {k:'rate', t:'Rates',              letter:'', def:7, stick:false, optional:true, share:'prof', adj:1, slot:41},
+ // Six sections (Rotorflight supports six profiles), ONE adjustment slot per
+ // section (bank 30-35, rates 36-41): "while the switch is inside this
+ // section, profile = N" — so the section boundaries can be dragged freely
+ // (Malcolm 2026-08-30). Sections 5-6 default to zero width at the top.
+ {k:'bank', t:'Bank (PID profile)', letter:'', def:7, stick:false, optional:true, share:'prof', adj:2, base:30},
+ {k:'rate', t:'Rates',              letter:'', def:7, stick:false, optional:true, share:'prof', adj:1, base:36},
 ];
 const LS='rfTxCh.';
 // More functions, same catalogue as the Switches page (Arm & Rescue have
@@ -241,6 +250,44 @@ function resolveConflicts(){
     });
     if(changed)saveExtras();
 }
+// Section boundaries per selector: 7 values on the FC's 875–2125 µs scale
+// (b[0]=875, b[6]=2125). Default: four equal sections, 5 and 6 zero-width.
+const QMIN=875, QMAX=2125;
+const qpct=u=>Math.max(0,Math.min(100,(u-QMIN)/(QMAX-QMIN)*100));
+function boundsOf(f){
+    try{ const b=JSON.parse(localStorage.getItem(LS+f.k+'.bounds')||'null'); if(Array.isArray(b)&&b.length===7) return b; }catch(e){}
+    return [875,1187.5,1500,1812.5,2125,2125,2125];
+}
+function saveBounds(f,b){ localStorage.setItem(LS+f.k+'.bounds', JSON.stringify(b)); }
+function paintSections(f){
+    const b=boundsOf(f);
+    for(let q=0;q<6;q++){ const z=$('qz_'+f.k+q); if(!z)continue;
+        const l=qpct(b[q]), w=qpct(b[q+1])-l;
+        z.style.left=(l+0.3)+'%'; z.style.width=Math.max(0,w-0.6)+'%';
+        z.textContent = w>5 ? String(q+1) : '';
+    }
+    for(let j=1;j<=5;j++){ const h=$('qh_'+f.k+j); if(h) h.style.left=qpct(b[j])+'%'; }
+}
+// Drag a junction between two sections (same finger-drag as the Switches
+// page): snapped to 5 µs, kept in order with its neighbours.
+function wireJunction(f,j){
+    const h=$('qh_'+f.k+j), track=$('qt_'+f.k); if(!h||!track)return;
+    h.addEventListener('pointerdown',e=>{
+        e.preventDefault(); h.setPointerCapture(e.pointerId);
+        const move=ev=>{
+            const r=track.getBoundingClientRect();
+            let us=QMIN+(ev.clientX-r.left)/r.width*(QMAX-QMIN);
+            us=Math.max(QMIN,Math.min(QMAX,Math.round(us/5)*5));
+            const b=boundsOf(f);
+            us=Math.max(b[j-1],Math.min(b[j+1],us));
+            b[j]=us; saveBounds(f,b); paintSections(f);
+        };
+        const up=()=>{ try{h.releasePointerCapture(e.pointerId);}catch(_){}
+            h.removeEventListener('pointermove',move); h.removeEventListener('pointerup',up); h.removeEventListener('pointercancel',up); };
+        h.addEventListener('pointermove',move); h.addEventListener('pointerup',up); h.addEventListener('pointercancel',up);
+    });
+}
+function sectionOf(f,us){ const b=boundsOf(f); for(let q=0;q<6;q++) if(us>=b[q]&&us<b[q+1]) return q; return us>=b[6]?5:-1; }
 function renderFixed(){
     const host=$('rows'); host.innerHTML='';
     FUNCS.forEach(f=>{
@@ -253,10 +300,12 @@ function renderFixed(){
             +'<button class=detBtn id=d_'+f.k+'>Detect</button>'
             +(f.optional&&cur>=1?'<button class=delBtn id=r_'+f.k+' title="No '+f.t.toLowerCase()+'">&#10006;</button>':'');
         if(f.adj&&cur>=1){
-            let z=''; for(let q=0;q<4;q++) z+='<div class=qZone id=qz_'+f.k+q+' style="left:'+(q*25+0.4)+'%;width:'+(25-0.8)+'%">'+(q+1)+'</div>';
-            div.innerHTML+='<div class=qTrack>'+z+'<div class=qDot id=qd_'+f.k+'></div></div>';
+            let z=''; for(let q=0;q<6;q++) z+='<div class=qZone id=qz_'+f.k+q+'>'+(q+1)+'</div>';
+            let hs=''; for(let j=1;j<=5;j++) hs+='<div class=qHandle id=qh_'+f.k+j+'></div>';
+            div.innerHTML+='<div class=qTrack id=qt_'+f.k+'>'+z+hs+'<div class=qVal id=qv_'+f.k+'></div><div class=qDot id=qd_'+f.k+'></div></div>';
         }
         host.appendChild(div);
+        if(f.adj&&cur>=1){ paintSections(f); for(let j=1;j<=5;j++) wireJunction(f,j); }
         $('s_'+f.k).addEventListener('change',()=>{localStorage.setItem(LS+f.k,$('s_'+f.k).value);renderAll();});
         $('d_'+f.k).addEventListener('click',()=>detect(f));
         if(f.optional&&cur>=1)$('r_'+f.k).addEventListener('click',()=>clearOptional(f));
@@ -309,14 +358,15 @@ async function poll(){
             el.textContent=live?d.ch[c-1]+'µs':'';
             // Selector bar: the FC sees this channel clamped to CRSF's
             // 988–2012 µs, so place the line on that scale (875–2125 track).
-            const dot=$('qd_'+f.k);
+            const dot=$('qd_'+f.k), val=$('qv_'+f.k);
             if(dot){
                 if(live){
                     const us=Math.max(988,Math.min(2012,d.ch[c-1]));
-                    dot.style.display=''; dot.style.left=((us-875)/1250*100)+'%';
-                    const q=Math.max(0,Math.min(3,Math.floor((us-875)/312.5)));
-                    for(let k=0;k<4;k++){const zz=$('qz_'+f.k+k); if(zz)zz.classList.toggle('on',k===q);}
-                }else{ dot.style.display='none'; for(let k=0;k<4;k++){const zz=$('qz_'+f.k+k); if(zz)zz.classList.remove('on');} }
+                    dot.style.display=''; dot.style.left=qpct(us)+'%';
+                    if(val){ val.style.display=''; val.style.left=qpct(us)+'%'; val.textContent=us+'µs'; }
+                    const q=sectionOf(f,us);
+                    for(let k=0;k<6;k++){const zz=$('qz_'+f.k+k); if(zz)zz.classList.toggle('on',k===q);}
+                }else{ dot.style.display='none'; if(val)val.style.display='none'; for(let k=0;k<6;k++){const zz=$('qz_'+f.k+k); if(zz)zz.classList.remove('on');} }
             }
         }
         if(detTarget&&d.age_ms>=0&&d.age_ms<1500){
@@ -413,7 +463,7 @@ async function saveAll(){
         +'• ARM on channel '+armFc+' (active 1600–2100µs)\n'
         +(rscFc?'• RESCUE on channel '+rscFc+' (active 1600–2100µs)\n':'')
         +xw.map(x=>'• '+x.name+' on channel '+x.fc+'\n').join('')
-        +prof.filter(p=>p.fc).map(p=>'• '+p.f.t+' on channel '+p.fc+' (4 positions)\n').join('')
+        +prof.filter(p=>p.fc).map(p=>'• '+p.f.t+' on channel '+p.fc+' ('+boundsOf(p.f).slice(0,6).filter((v,i,a)=>boundsOf(p.f)[i+1]-v>=5).length+' sections)\n').join('')
         +'Blades off / motor unplugged?',
         {title:'Save channels',icon:'🎛️',yes:'Write & verify'})))return;
     setStatus('info','Writing…');
@@ -454,15 +504,28 @@ async function saveAll(){
         // 3. profile selectors → adjustment ranges (MSP 53, 14 bytes:
         //    idx, function, enaCh 0xFF=always, enaRange 0,0, adjCh,
         //    range1 875..2125, range2 unused, min 1, max 4, step 0=absolute)
+        // One adjustment slot per SECTION: enable range = value range = the
+        // section, min = max = its profile number (absolute mode, step 0), so
+        // "inside section N → profile N" whatever the section widths.
+        // Zero-width sections (and a removed selector) clear their slot.
+        const hx=a=>a.map(v=>v.toString(16).padStart(2,'0')).join('');
         for(const p of prof){
-            const payload=[p.f.slot, p.fc?p.f.adj:0, 0xFF, 0,0, p.fc?p.fc-5:0,
-                usStep(875), usStep(2125), usStep(1500), usStep(1500), 1,0, 4,0, 0]
-                .map(v=>v.toString(16).padStart(2,'0')).join('');
-            await LDRC.msp(53,payload);
-            // Declare it to the app (write-only — the FC can't read it back):
-            // backup/restore and the Switches page carry it from here.
-            try{ fetch('/app/declare?key=adj'+p.f.slot+'&hex='+payload,{cache:'no-store'}); }catch(e){}
+            const b=boundsOf(p.f);
+            for(let n=1;n<=6;n++){
+                const slot=p.f.base+n-1, lo=b[n-1], hi=b[n];
+                const active=p.fc && (hi-lo)>=5;
+                const payload=hx(active
+                    ? [slot, p.f.adj, p.fc-5, usStep(lo), usStep(hi), p.fc-5, usStep(lo), usStep(hi), usStep(1500), usStep(1500), n,0, n,0, 0]
+                    : [slot, 0, 0, 0,0, 0, 0,0, 0,0, 0,0, 0,0, 0]);
+                await LDRC.msp(53,payload);
+                // Declare to the app (write-only — the FC can't read it back):
+                // backup/restore and the Switches page carry it from here.
+                try{ fetch('/app/declare?key=adj'+slot+'&hex='+payload,{cache:'no-store'}); }catch(e){}
+            }
         }
+        // Retire the earlier single-slot selectors (0.9.456–459 wrote 40/41).
+        for(const slot of [40,41]){ const payload=hx([slot,0,0,0,0,0,0,0,0,0,0,0,0,0,0]); await LDRC.msp(53,payload);
+            try{ fetch('/app/declare?key=adj'+slot+'&hex='+payload,{cache:'no-store'}); }catch(e){} }
         await LDRC.msp(250);
         // 3. verify all of it by read-back
         const mchk=hexToBytes(await LDRC.msp(64));
