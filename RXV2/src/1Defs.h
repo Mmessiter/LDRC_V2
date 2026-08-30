@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.454-restart-to-apply";
+constexpr const char* FW_VERSION = "RXV2-0.9.455-wizard-logo";
 
 //*********************************************************************
 //  Auto-update manifest URLs

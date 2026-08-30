@@ -284,6 +284,11 @@ inline void handleFcWake() {
         "{\"ok\":true,\"message\":\"wake sent — watch for the Rotorflight button in ~10 s\"}");
 }
 
+inline void handleWizardJpg() {
+    if (serveLittleFsFile("/wizard.jpg", "image/jpeg")) return;
+    server.send(404, "text/plain", "/wizard.jpg missing");
+}
+
 inline void handleRotorflightComputer() {
     if (serveLittleFsFile("/rotorflight-computer.html", "text/html")) return;
     server.send(503, "text/plain", "/rotorflight-computer.html missing — uploadfs the data/ folder");
@@ -2549,6 +2554,7 @@ inline void registerWebRoutes() {
     server.on("/three.min.js",      handleThreeJs);
     server.on("/flying-field.svg",  handleFlyingFieldSvg);
     server.on("/flying-field.jpg",  handleFlyingFieldJpg);
+    server.on("/wizard.jpg",        handleWizardJpg);
 
     // JSON APIs
     server.on("/api/state.json",    handleApiState);
