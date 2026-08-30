@@ -57,7 +57,7 @@ constexpr uint8_t MSP_REBOOT         = 68;    // FC restart (governor config wri
 //*********************************************************************
 
 inline volatile uint8_t  mspWaitFunction = 0xFF;     // 0xFF = nothing pending
-inline uint8_t           mspWaitRespBuf[256] = {0};
+inline uint8_t           mspWaitRespBuf[640] = {0};   // jumbo-capable (MSP_ADJUSTMENT_RANGES = 588 B)
 inline volatile uint16_t mspWaitRespLen = 0;
 inline volatile bool     mspWaitRespReady = false;
 
@@ -69,7 +69,7 @@ inline volatile bool     mspWaitRespReady = false;
 // on the normal CRSF RX path. Matched by function code, so an interleaved probe
 // response (e.g. FC_VERSION) can't be mistaken for the awaited block.
 inline volatile uint8_t  mspAsyncFunc  = 0xFF;       // function TxParams is awaiting (0xFF = none)
-inline uint8_t           mspAsyncBuf[256] = {0};
+inline uint8_t           mspAsyncBuf[640] = {0};
 inline volatile uint16_t mspAsyncLen   = 0;
 inline volatile bool     mspAsyncReady = false;
 // Set by TxParams while a parameter MSP op is in flight, so mspFcPoll yields
@@ -126,7 +126,7 @@ inline void mspSendRequest(uint8_t function, const uint8_t* payload = nullptr, u
 // when chunk reassembly arrived (2026-08-19, the Servos screen: RF's bulk
 // MSP_SERVO_CONFIGURATIONS is 65 bytes — more than one ~57-byte CRSF frame
 // can carry, and the FC answers in CHUNKS we previously threw away).
-inline void mspDeliverResponse(uint8_t func, const uint8_t* payload, uint8_t size);
+inline void mspDeliverResponse(uint8_t func, const uint8_t* payload, uint16_t size);
 
 inline void mspParseResponse(const uint8_t* body, uint8_t bodyLen) {
     if (bodyLen < 3 + 1) return;                     // dest+src+status + at least 1 MSP byte
@@ -147,7 +147,7 @@ inline void mspParseResponse(const uint8_t* body, uint8_t bodyLen) {
     // A response bigger than one CRSF frame arrives as SoF (carrying MSP
     // size+func+first data) followed by continuation frames (pure data,
     // sequence incrementing mod 16). Reassemble; deliver when complete.
-    static uint8_t  reBuf[256];
+    static uint8_t  reBuf[640];
     static uint16_t reExpected = 0;   // total payload bytes we are waiting for
     static uint16_t reGot      = 0;
     static uint8_t  reFunc     = 0;
@@ -159,10 +159,24 @@ inline void mspParseResponse(const uint8_t* body, uint8_t bodyLen) {
 
     if (sof) {
         if (mspLen < 2) { reActive = false; return; }
-        uint8_t size = msp[0];
-        uint8_t func = msp[1];
-        const uint8_t* data = &msp[2];
-        uint8_t dataLen = (uint8_t)(mspLen - 2);
+        // MSP v1 JUMBO (Rotorflight telemetry/msp_shared.c sendMspReply): a
+        // reply of >= 255 bytes is sent as [0xFF][cmd][size u16 LE][data...].
+        // MSP_ADJUSTMENT_RANGES (42 x 14 = 588 B) needs this — without it the
+        // profile-selector table could only be written, never read back
+        // (Malcolm 2026-08-29: "use the buffer several times").
+        uint16_t size;
+        uint8_t  func = msp[1];
+        const uint8_t* data;
+        if (msp[0] == 0xFF) {
+            if (mspLen < 4) { reActive = false; return; }
+            size = (uint16_t)msp[2] | ((uint16_t)msp[3] << 8);
+            data = &msp[4];
+        } else {
+            size = msp[0];
+            data = &msp[2];
+        }
+        if (size > sizeof(reBuf)) { reActive = false; return; }     // beyond our capacity — drop
+        uint16_t dataLen = (uint16_t)(mspLen - (data - msp));
         if (dataLen >= size) {
             // Whole response in one frame — the common fast path.
             reActive = false;
@@ -189,25 +203,24 @@ inline void mspParseResponse(const uint8_t* body, uint8_t bodyLen) {
     reGot += take;
     if (reGot >= reExpected) {
         reActive = false;
-        mspDeliverResponse(reFunc, reBuf, (uint8_t)reExpected);
+        mspDeliverResponse(reFunc, reBuf, reExpected);
     }
     return;
 }
 
-inline void mspDeliverResponse(uint8_t func, const uint8_t* payload, uint8_t size) {
+inline void mspDeliverResponse(uint8_t func, const uint8_t* payload, uint16_t size) {
 
     // If a synchronous request is waiting for this function code, capture it.
     if (func == mspWaitFunction && !mspWaitRespReady) {
+        if (size > sizeof(mspWaitRespBuf)) size = sizeof(mspWaitRespBuf);
         mspWaitRespLen = size;
-        if (size > 0 && size <= sizeof(mspWaitRespBuf)) {
-            memcpy(mspWaitRespBuf, payload, size);
-        }
+        if (size > 0) memcpy(mspWaitRespBuf, payload, size);
         mspWaitRespReady = true;
     }
 
     // Async capture for the non-blocking TX-parameter state machine (TxParams.h).
-    // `size` is a uint8_t (0..255) so it always fits mspAsyncBuf[256].
     if (func == mspAsyncFunc && !mspAsyncReady) {
+        if (size > sizeof(mspAsyncBuf)) size = sizeof(mspAsyncBuf);
         mspAsyncLen = size;
         if (size > 0) memcpy(mspAsyncBuf, payload, size);
         mspAsyncReady = true;

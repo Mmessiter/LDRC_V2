@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.456-bank-rate-switches";
+constexpr const char* FW_VERSION = "RXV2-0.9.457-jumbo-msp";
 
 //*********************************************************************
 //  Auto-update manifest URLs

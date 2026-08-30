@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.457-jumbo-msp",
+      "url": "https://messiter.com/rxv2/release/v0.9.457/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.457/littlefs.bin",
+      "fs_md5": "5f73894094559e3fc394bd3de60e3e45",
+      "notes": "Big flight-controller replies now arrive whole: MSP jumbo frames (0xFF + 16-bit length) reassembled into 640-byte buffers - the 588-byte adjustment table (bank/rates selectors) can be read back and verified, not just written."
+    },
+    {
       "name": "RXV2-0.9.456-bank-rate-switches",
       "url": "https://messiter.com/rxv2/release/v0.9.456/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.456/littlefs.bin",
@@ -72,11 +79,6 @@
       "name": "RXV2-0.9.446-help-sync",
       "url": "https://messiter.com/rxv2/release/v0.9.446/firmware.bin",
       "notes": "Help text matches the new Features wording (receiver reference gone there too)."
-    },
-    {
-      "name": "RXV2-0.9.445-plain-features",
-      "url": "https://messiter.com/rxv2/release/v0.9.445/firmware.bin",
-      "notes": "First-time basics: the Features card now simply says 'Tick the functions you plan to use'; the receiver-link row is gone (it goes without saying - and the save still quietly keeps it on)."
     }
   ]
 }
