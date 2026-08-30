@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.464-esc-setup";
+constexpr const char* FW_VERSION = "RXV2-0.9.465-unstick-handles";
 
 //*********************************************************************
 //  Auto-update manifest URLs
