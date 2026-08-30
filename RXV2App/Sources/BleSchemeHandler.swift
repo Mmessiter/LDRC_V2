@@ -13,6 +13,8 @@
 
 import Foundation
 import WebKit
+import UIKit
+import UniformTypeIdentifiers
 import CryptoKit
 
 // md5 hex of a downloaded image — used for the receiver-side fingerprint skip.
@@ -116,6 +118,60 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
                     }
                 }
             }
+            return
+        }
+        // Declared write-only settings + portable backup files
+        // (Malcolm 2026-08-30).
+        if path == "/app/declare" {
+            let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems
+            let key = items?.first(where: { $0.name == "key" })?.value ?? ""
+            let hex = items?.first(where: { $0.name == "hex" })?.value ?? ""
+            let ok = !key.isEmpty && !hex.isEmpty && !demo && !replay
+            if ok { SessionCache.shared.declare(key: key, hex: hex) }
+            deliver(task, url: url, code: 200, type: "application/json", body: Data("{\"ok\":\(ok)}".utf8))
+            return
+        }
+        if path == "/app/declared" {
+            let d = SessionCache.shared.declared()
+            let body = (try? JSONSerialization.data(withJSONObject: d)) ?? Data("{}".utf8)
+            deliver(task, url: url, code: 200, type: "application/json", body: body)
+            return
+        }
+        if path == "/app/backup/export" {
+            guard let json = SessionCache.shared.exportRestoreJSON() else {
+                deliver(task, url: url, code: 200, type: "application/json",
+                        body: Data("{\"ok\":false,\"error\":\"no backup on this phone for this model yet\"}".utf8))
+                return
+            }
+            let safe = SessionCache.shared.modelName.map { $0.isLetter || $0.isNumber ? $0 : "_" }
+            let file = FileManager.default.temporaryDirectory
+                .appendingPathComponent("\(String(safe).isEmpty ? "model" : String(safe))-LDRC-backup.json")
+            try? json.write(to: file, options: .atomic)
+            DispatchQueue.main.async {
+                let av = UIActivityViewController(activityItems: [file], applicationActivities: nil)
+                if let top = BackupFilePicker.topViewController() {
+                    av.popoverPresentationController?.sourceView = top.view
+                    av.popoverPresentationController?.sourceRect = CGRect(x: top.view.bounds.midX, y: top.view.bounds.midY, width: 1, height: 1)
+                    top.present(av, animated: true)
+                }
+            }
+            deliver(task, url: url, code: 200, type: "application/json", body: Data("{\"ok\":true}".utf8))
+            return
+        }
+        if path == "/app/backup/import" {
+            var connName = SessionCache.shared.modelName
+            if case .ready(let n) = link.state { connName = n }
+            if demo || replay || connName.isEmpty {
+                deliver(task, url: url, code: 200, type: "application/json",
+                        body: Data("{\"ok\":false,\"error\":\"connect to the receiver first\"}".utf8))
+                return
+            }
+            BackupFilePicker.shared.pick(forModel: connName)
+            deliver(task, url: url, code: 200, type: "application/json", body: Data("{\"ok\":true}".utf8))
+            return
+        }
+        if path == "/app/backup/import/status" {
+            deliver(task, url: url, code: 200, type: "application/json", body: BackupFilePicker.shared.statusJSON)
             return
         }
         if path == "/app/restore/progress" {
@@ -575,4 +631,46 @@ final class BleOta {
             throw fault("end(\(type)): \(String(data: end.body, encoding: .utf8) ?? "")")
         }
     }
+}
+
+
+// MARK: - Backup file import picker (Malcolm 2026-08-30: "email the setup to a
+// friend who has exactly the same helicopter"). Presents the document picker,
+// adopts the chosen file as the restore point for the CONNECTED model, and
+// reports through /app/backup/import/status for the page to narrate.
+final class BackupFilePicker: NSObject, UIDocumentPickerDelegate {
+    static let shared = BackupFilePicker()
+    private var forModel = ""
+    private var phase = "idle"        // idle | picking | done | failed
+    private var fileModel = ""
+    private var count = 0
+    var statusJSON: Data {
+        Data("{\"phase\":\"\(phase)\",\"model\":\"\(fileModel)\",\"count\":\(count)}".utf8)
+    }
+    static func topViewController() -> UIViewController? {
+        guard let scene = UIApplication.shared.connectedScenes
+                  .compactMap({ $0 as? UIWindowScene })
+                  .first(where: { $0.activationState == .foregroundActive }),
+              let root = (scene.windows.first(where: { $0.isKeyWindow }) ?? scene.windows.first)?
+                  .rootViewController else { return nil }
+        var top = root
+        while let next = top.presentedViewController { top = next }
+        return top
+    }
+    func pick(forModel model: String) {
+        forModel = model; phase = "picking"; fileModel = ""; count = 0
+        DispatchQueue.main.async {
+            let p = UIDocumentPickerViewController(forOpeningContentTypes: [.json, .plainText, .data], asCopy: true)
+            p.delegate = self
+            p.allowsMultipleSelection = false
+            Self.topViewController()?.present(p, animated: true)
+        }
+    }
+    func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+        guard let u = urls.first, let d = try? Data(contentsOf: u) else { phase = "failed"; return }
+        let r = SessionCache.shared.importRestore(json: d, forModel: forModel)
+        fileModel = r.fileModel; count = r.count
+        phase = r.ok ? "done" : "failed"
+    }
+    func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) { phase = "idle" }
 }

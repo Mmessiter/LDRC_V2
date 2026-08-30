@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.458-portable-backups",
+      "url": "https://messiter.com/rxv2/release/v0.9.458/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.458/littlefs.bin",
+      "fs_md5": "5737af24abad8988d63914153c8c38dd",
+      "notes": "Backups travel (Malcolm's idea): Share backup file hands the whole setup to the phone's share sheet - email or AirDrop it to another phone, or to a friend with the same helicopter; Import a backup file adopts it as the model's restore point, then Restore writes it. The file carries everything, including the bank/rates switch selectors the flight controller cannot read back (now declared to the app when saved, restored verbatim). Needs app 3.21 / 3.13."
+    },
+    {
       "name": "RXV2-0.9.457-jumbo-msp",
       "url": "https://messiter.com/rxv2/release/v0.9.457/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.457/littlefs.bin",
@@ -74,11 +81,6 @@
       "name": "RXV2-0.9.447-no-preset-map",
       "url": "https://messiter.com/rxv2/release/v0.9.447/firmware.bin",
       "notes": "Channel order no longer offers a 'standard' preset - it links straight to Transmitter channels, where each channel is chosen (or detected) properly."
-    },
-    {
-      "name": "RXV2-0.9.446-help-sync",
-      "url": "https://messiter.com/rxv2/release/v0.9.446/firmware.bin",
-      "notes": "Help text matches the new Features wording (receiver reference gone there too)."
     }
   ]
 }

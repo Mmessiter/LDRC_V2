@@ -323,7 +323,7 @@ extension SessionCache {
         for (k, v) in entries {
             if Self.restoreKeyPrefixes.contains(where: { k.hasPrefix($0) })
                 || k == "/api/msp?fn=142" || k == "/api/msp?fn=42"
-                || k == "/api/msp?fn=120" {
+                || k == "/api/msp?fn=120" || k.hasPrefix("/app/declared/") {
                 keep[k] = v
             }
         }
@@ -398,7 +398,88 @@ extension SessionCache {
                                        verifyHex: last ? full : String(full.prefix(2))))
             }
         }
+        // Declared items (Malcolm 2026-08-30): settings the FC cannot read
+        // back over the radio — the bank/rates selector adjustment ranges
+        // (MSP 53, ~590-byte table vs the FC's 320-byte telemetry buffer).
+        // Restored verbatim, readFn 0 = "no verify possible".
+        for (k, e) in frozen where k.hasPrefix("/app/declared/adj") {
+            guard let h = String(data: e.body, encoding: .utf8), h.count >= 4,
+                  h.allSatisfy({ $0.isHexDigit }) else { continue }
+            let label = k.hasSuffix("adj40") ? "bank selector switch"
+                      : k.hasSuffix("adj41") ? "rates selector switch" : "declared \(k)"
+            out.append(RestoreItem(selectByte: nil, writeFn: 53, readFn: 0, hex: h.uppercased(), label: label))
+        }
         return out
+    }
+
+    // MARK: - Declared items, export & import (Malcolm 2026-08-30: "store in
+    // our backup ALL the data, even though some of it had to be derived
+    // locally — then restore to another phone, or email it to a friend").
+
+    /// Record a write-only setting (e.g. adjustment range slot 40) so backup
+    /// and restore carry it. Patched straight into the frozen restore point
+    /// too, so a declaration made AFTER the sweep is never lost.
+    func declare(key: String, hex: String) {
+        let k = "/app/declared/" + key
+        let e = Entry(type: "text/plain", body: Data(hex.utf8))
+        entries[k] = e
+        savedAt = Date()
+        if let d = try? JSONEncoder().encode(FileShape(model: modelName, savedAt: Date(), entries: entries)) {
+            try? d.write(to: fileURL, options: .atomic)
+        }
+        var shape = (try? Data(contentsOf: Self.restoreURL(for: modelName)))
+            .flatMap { try? JSONDecoder().decode(RestoreShape.self, from: $0) }
+            ?? RestoreShape(model: modelName, savedAt: Date(), entries: [:])
+        shape.entries[k] = e
+        if let d = try? JSONEncoder().encode(shape) {
+            try? d.write(to: Self.restoreURL(for: modelName), options: .atomic)
+        }
+    }
+
+    /// key → hex of every declared item known for this model.
+    func declared() -> [String: String] {
+        var out: [String: String] = [:]
+        if let d = try? Data(contentsOf: Self.restoreURL(for: modelName)),
+           let shape = try? JSONDecoder().decode(RestoreShape.self, from: d) {
+            for (k, e) in shape.entries where k.hasPrefix("/app/declared/") {
+                out[String(k.dropFirst("/app/declared/".count))] = String(data: e.body, encoding: .utf8) ?? ""
+            }
+        }
+        for (k, e) in entries where k.hasPrefix("/app/declared/") {
+            out[String(k.dropFirst("/app/declared/".count))] = String(data: e.body, encoding: .utf8) ?? ""
+        }
+        return out
+    }
+
+    /// Portable backup file (same shape on Android): the frozen restore point.
+    func exportRestoreJSON() -> Data? {
+        guard let d = try? Data(contentsOf: Self.restoreURL(for: modelName)),
+              let shape = try? JSONDecoder().decode(RestoreShape.self, from: d),
+              !shape.entries.isEmpty else { return nil }
+        var es: [String: Any] = [:]
+        for (k, e) in shape.entries { es[k] = ["type": e.type, "b64": e.body.base64EncodedString()] }
+        let root: [String: Any] = ["format": "rxv2-backup-1", "model": shape.model,
+                                   "savedAtMs": Int(shape.savedAt.timeIntervalSince1970 * 1000),
+                                   "entries": es]
+        return try? JSONSerialization.data(withJSONObject: root, options: [.prettyPrinted, .sortedKeys])
+    }
+
+    /// Adopt a backup file as the restore point for `model` (the connected
+    /// receiver). Returns the file's own model name and item count.
+    func importRestore(json: Data, forModel model: String) -> (ok: Bool, fileModel: String, count: Int) {
+        guard let root = try? JSONSerialization.jsonObject(with: json) as? [String: Any],
+              (root["format"] as? String) == "rxv2-backup-1",
+              let es = root["entries"] as? [String: [String: Any]], !es.isEmpty else { return (false, "", 0) }
+        var entries: [String: Entry] = [:]
+        for (k, v) in es {
+            guard let b64 = v["b64"] as? String, let body = Data(base64Encoded: b64) else { continue }
+            entries[k] = Entry(type: (v["type"] as? String) ?? "text/plain", body: body)
+        }
+        guard !entries.isEmpty else { return (false, "", 0) }
+        let shape = RestoreShape(model: model, savedAt: Date(), entries: entries)
+        guard let d = try? JSONEncoder().encode(shape) else { return (false, "", 0) }
+        try? d.write(to: Self.restoreURL(for: model), options: .atomic)
+        return (true, (root["model"] as? String) ?? "", entries.count)
     }
 }
 
@@ -471,7 +552,7 @@ final class RestoreRunner {
                         }
                     }
                     if ok { ok = req("/api/msp?fn=\(it.writeFn)&data=\(it.hex)").ok }
-                    if ok {
+                    if ok && it.readFn != 0 {      // readFn 0 = declared item, no read-back exists
                         // Verify: read back, compare (reply may be longer — prefix).
                         // Mixer inputs read with their index in data= and are
                         // compared against verifyHex (write payload minus the
