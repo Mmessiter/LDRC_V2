@@ -37,8 +37,21 @@
 
     <div class=wcard>
         <h2><span class=num>2</span>Throttle range</h2>
-        <p>Rotorflight drives the ESC with a <b>1000&ndash;2000&nbsp;&micro;s</b> throttle. Set the ESC to that fixed range, or run its throttle calibration once with the FC&rsquo;s throttle at 0% and 100%.</p>
-        <p class=why>Wrong range = motor never starts, or never reaches full head speed.</p>
+        <p>Rotorflight drives the ESC with a <b>1000&ndash;2000&nbsp;&micro;s</b> throttle. Teach the ESC that range with the <b>calibration below</b> &mdash; from this phone, no computer.</p>
+        <p class=why>Wrong range = motor never starts, or never reaches full head speed. (Scorpion shows the learned values read-only in Sproto: about 1.00 / 1.00 / 2.00 ms when done.)</p>
+    </div>
+
+    <div class=wcard style="background:#fff3e0">
+        <h2><span class=num style="background:#d4944a">&#9889;</span>Throttle calibration &mdash; from here</h2>
+        <div class="banner warn" style="margin:.4em 0 .6em">&#9888;&#65039; <b>Blades OFF or pinion out. Flight pack UNPLUGGED. Flight controller on USB power. Transmitter OFF.</b></div>
+        <p>The phone holds the motor channel at <b>full throttle</b>; you plug the battery; the ESC learns the top; then the phone drops to <b>minimum</b> and it learns the bottom. The hold renews every half second and lapses by itself a second after the phone stops &mdash; it cannot get stuck on.</p>
+        <div id=calSteps>
+            <button class=calBtn id=cal1 onclick="escCal(1)" style="width:100%;padding:.7em;border:0;border-radius:10px;background:#d4944a;color:#fff;font-weight:700;font-size:1em;cursor:pointer">1 &middot; Hold full throttle</button>
+            <button class=calBtn id=cal2 onclick="escCal(2)" style="display:none;width:100%;padding:.7em;border:0;border-radius:10px;background:#5f8fab;color:#fff;font-weight:700;font-size:1em;cursor:pointer;margin-top:.5em">2 &middot; Heard the beeps &mdash; go to minimum</button>
+            <button class=calBtn id=cal3 onclick="escCal(3)" style="display:none;width:100%;padding:.7em;border:0;border-radius:10px;background:#4a8a5f;color:#fff;font-weight:700;font-size:1em;cursor:pointer;margin-top:.5em">3 &middot; Heard the beeps again &mdash; done</button>
+            <button id=cal0 onclick="escCal(0)" style="display:none;width:100%;padding:.55em;border:0;border-radius:10px;background:#b06a6a;color:#fff;font-weight:700;cursor:pointer;margin-top:.5em">Stop &mdash; release the throttle</button>
+        </div>
+        <p id=calMsg style="font-weight:700;color:#2e4356;min-height:1.4em;margin-top:.5em"></p>
     </div>
 
     <div class=wcard>
@@ -70,12 +83,63 @@
     <a class="btn btn-bb" href="/rotorflight-newheli" style="margin-top:.8em"><span class=ico>&#11013;&#65039;</span>Back to New helicopter</a>
     <div class=footer></div>
 </div>
+<script>
+// ESC throttle calibration from the phone (Malcolm 2026-08-30: "can we do
+// the calibration in our wizard?"). Rotorflight's MSP_SET_MOTOR_OVERRIDE
+// (195: u8 motor, u16 value 0..1000 = 0..100%) — the same command behind
+// the configurator's Motors tab. Only honoured while DISARMED, and it
+// EXPIRES 1 s after the last write (MOTOR_OVERRIDE_TIMEOUT), so the phone
+// renews it every 400 ms and simply stopping releases the motor.
+const $=id=>document.getElementById(id);
+let calTimer=null, calPhase=0;
+function calShow(){
+    $('cal1').style.display = calPhase===0 ? '' : 'none';
+    $('cal2').style.display = calPhase===1 ? '' : 'none';
+    $('cal3').style.display = calPhase===2 ? '' : 'none';
+    $('cal0').style.display = calPhase===1||calPhase===2 ? '' : 'none';
+}
+async function holdFull(){
+    try{ await LDRC.msp(195,'00e803'); }catch(e){ $('calMsg').textContent='⚠️ Lost the flight controller — '+e.message; }
+}
+async function escCal(step){
+    if(step===1){
+        // Foolish-user guards: never with the transmitter on, never armed.
+        let st=null; try{ st=await LDRC.fetchState(); }catch(e){}
+        const age=st&&st.rf&&st.rf.last_pkt_ms;
+        if(typeof age==='number'&&age>=0&&age<3000){ await LDRC.alert('Switch the transmitter OFF first.',{title:'Transmitter is on',icon:'📻'}); return; }
+        if(st&&st.rf&&st.rf.armed){ await LDRC.alert('The model is ARMED. Disarm it first.',{title:'Armed',icon:'⚠️'}); return; }
+        if(!(await LDRC.confirm('Blades OFF or pinion out?\nFlight pack UNPLUGGED?\nFlight controller on USB power?\n\nThe motor channel goes to FULL throttle now.',
+            {title:'Throttle calibration',icon:'⚡',yes:'Hold full throttle',kind:'warn'}))) return;
+        calPhase=1; calShow();
+        await holdFull();
+        calTimer=setInterval(holdFull,400);
+        $('calMsg').textContent='Full throttle held. Now plug the flight battery and wait for the ESC\u2019s beeps (a few seconds).';
+        return;
+    }
+    if(step===2){
+        if(calTimer){ clearInterval(calTimer); calTimer=null; }
+        try{ await LDRC.msp(195,'000000'); }catch(e){}
+        calPhase=2; calShow();
+        $('calMsg').textContent='Minimum. Wait for the confirmation beeps.';
+        return;
+    }
+    if(step===3||step===0){
+        if(calTimer){ clearInterval(calTimer); calTimer=null; }
+        try{ await LDRC.msp(195,'000000'); }catch(e){}
+        $('calMsg').textContent = step===3
+            ? '✅ Calibrated. Unplug the battery. The ESC now knows 1000\u20132000 \u00b5s as its full range.'
+            : 'Released. The throttle is back at minimum.';
+        calPhase=0; calShow();
+    }
+}
+window.addEventListener('pagehide',()=>{ if(calTimer){ clearInterval(calTimer); calTimer=null; } });
+</script>
 <template id=helpContent><h2>ESC setup</h2>
 <p>Helicopter ESCs keep their own settings inside themselves, and only their own programmer can change them &mdash; Scorpion (Sproto / phone app), Hobbywing (LCD box / app), YGE (USB adapter), Kontronik (ProgDisc / app). Rotorflight can read the ESC&rsquo;s telemetry and drive its throttle, but cannot reach inside it. So this is the one step that happens in a different app.</p>
 <ul>
 <li><b>One governor only.</b> Rotorflight&rsquo;s governor is excellent and lives in the tuning wizard; the ESC&rsquo;s must then be off / external. Choose the ESC&rsquo;s instead and Rotorflight&rsquo;s must be off.</li>
 <li><b>Telemetry protocol</b> in the ESC and the <b>brand</b> chosen in First-time basics must match, or the data wire stays silent.</li>
-<li><b>Throttle range</b>: Rotorflight&rsquo;s motor output is 1000&ndash;2000 &micro;s by default.</li>
+<li><b>Throttle range</b>: Rotorflight&rsquo;s motor output is 1000&ndash;2000 &micro;s by default. The calibration card teaches it to the ESC from the phone: the flight controller must be powered by USB (a power bank) so the battery can be plugged in <i>after</i> full throttle is set &mdash; exactly the configurator&rsquo;s Motors-tab procedure, without the computer. The hold lapses by itself a second after the phone stops sending, so nothing can stay stuck at full throttle.</li>
 <li><b>Scorpion Tribunus won&rsquo;t connect to Sproto?</b> It only listens for the programmer in its <b>first few seconds after power-up</b> &mdash; once telemetry is streaming it ignores Sproto. Open Sproto, plug the cable, click Connect, <i>then</i> plug the battery. (Bit us twice, both times right after a firmware update.) A fresh firmware load also resets the ESC to factory defaults &mdash; re-check governor mode, telemetry protocol and the throttle range afterwards.</li>
 </ul>
 </template>
