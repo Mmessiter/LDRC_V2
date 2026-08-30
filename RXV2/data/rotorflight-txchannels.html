@@ -557,6 +557,9 @@ async function saveAll(){
     }catch(err){ setStatus('bad','Write failed: '+err.message); }
 }
 
+// Persist defaults once, so the Switches page can show the selectors
+// from this phone's choices even before a Save (Malcolm 2026-08-30).
+for(const f of FUNCS) if(localStorage.getItem(LS+f.k)==null) localStorage.setItem(LS+f.k,String(f.def));
 resolveConflicts();
 renderAll();
 poll(); setInterval(poll, 200);

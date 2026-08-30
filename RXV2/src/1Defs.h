@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.470-one-button-cal";
+constexpr const char* FW_VERSION = "RXV2-0.9.471-selectors-local";
 
 //*********************************************************************
 //  Auto-update manifest URLs

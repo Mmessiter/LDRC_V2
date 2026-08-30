@@ -225,7 +225,7 @@ function localProf(){
         let b=null; try{ b=JSON.parse(localStorage.getItem('rfTxCh.'+p.k+'.bounds')||'null'); }catch(e){}
         if(!Array.isArray(b)||b.length!==7) b=[875,1085,1290,1500,1710,1915,2125];
         const secs=[]; for(let n=0;n<6;n++) if(b[n+1]-b[n]>=5) secs.push({n:n+1,lo:b[n],hi:b[n+1]});
-        out.push({...p,tx,secs});
+        out.push({...p,tx,secs,src:'local'});
     }
     return out;
 }
@@ -243,7 +243,7 @@ async function loadDeclared(){
                 tx=parseInt(h.substr(4,2),16)+5;
                 secs.push({n, lo:stepUsQ(parseInt(h.substr(6,2),16)), hi:stepUsQ(parseInt(h.substr(8,2),16))});
             }
-            if(secs.length) out.push({...p,tx,secs});
+            if(secs.length) out.push({...p,tx,secs,src:'fc'});
             else { const l=PROF.find(x=>x.k===p.k); if(l) out.push(l); }
         }
         if(out.length) PROF=out;
@@ -254,7 +254,7 @@ function paintProf(){
     if(!PROF.length){
         // Nothing recorded yet — say so instead of showing nothing
         // (Malcolm 2026-08-30: "the bank and rates switches are not there").
-        h='<div class="card modeCard"><div class=mRow><div><label>Bank &amp; Rates selectors</label><b>Not set up yet on this phone</b></div></div>'
+        h='<div class="card modeCard"><label style="display:block">Bank &amp; Rates selectors</label><b style="display:block;margin:.15em 0 .3em">Not set up yet on this phone</b>'
          +'<p class=muted style="margin:.4em 0 .2em">Choose their channels and section widths on the <a href="/rotorflight-txchannels">Transmitter channels</a> page and tap Save &mdash; the bars appear here, with the flight controller&rsquo;s live answer.</p></div>';
         $('profRows').innerHTML=h; return;
     }
@@ -262,7 +262,8 @@ function paintProf(){
         let z='';
         for(const s of p.secs){ const l=qpct(s.lo), w=qpct(s.hi)-l;
             z+='<div class=qZone id=q_'+p.k+s.n+' style="left:'+(l+0.3)+'%;width:'+Math.max(0,w-0.6)+'%">'+(w>5?s.n:'')+'</div>'; }
-        h+='<div class="card modeCard"><div class=mRow><div><label>'+p.t+'</label><b>Channel '+p.tx+' &middot; '+p.secs.length+' sections</b></div></div>'
+        h+='<div class="card modeCard"><label style="display:block">'+p.t+'</label><b style="display:block;margin:.15em 0 .3em">Channel '+p.tx+' &middot; '+p.secs.length+' sections</b>'
+          +(p.src==='local'?'<div class=muted style="font-size:.8em;margin-bottom:.3em">From this phone\u2019s choices &mdash; tap <b>Save</b> on Transmitter channels to write them to the flight controller.</div>':'')
           +'<div class=rTrack>'+z+'<div class=rDot id=dot_'+p.k+' style="display:none"></div></div>'
           +'<div class=rScale><span>875</span><span>1500</span><span>2125&nbsp;&micro;s</span></div>'
           +'<div class=pAns id=ans_'+p.k+'>Flight controller: &hellip;</div></div>';
