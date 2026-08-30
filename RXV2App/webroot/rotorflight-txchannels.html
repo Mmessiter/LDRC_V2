@@ -194,7 +194,7 @@ async function removeExtra(i){
         let cleared=0;
         for(let sl=0;sl*4+3<modes.length;sl++){
             const o=sl*4;
-            if(modes[o]===x.perm&&modes[o+1]===fcCh-5&&modes[o+2]!==modes[o+3]){
+            if(modes[o]===x.perm&&modes[o+1]===fcCh-6&&modes[o+2]!==modes[o+3]){
                 await LDRC.msp(35,[sl,0,0,usStep(1500),usStep(1500)]
                     .map(v=>v.toString(16).padStart(2,'0')).join(''));
                 cleared++;
@@ -465,12 +465,12 @@ async function saveAll(){
     const armTx=chosen('arm'), rscTx=chosen('rsc');
     if(map.slice(0,5).includes(armTx-1)&&armTx>=1){ flash('⚠️ Arming shares a channel with a stick'); return; }
     const armFc=fcChannelOf(armTx,map);
-    if(armFc<5||armFc>16){ flash('⚠️ Arming must end up on channel 5 or higher (it is a switch, not a stick)'); return; }
+    if(armFc<6||armFc>16){ flash('⚠️ Arming must end up on channel 6 or higher (channels 1–5 are the sticks and throttle)'); return; }
     let rscFc=0;
     if(rscTx>=1){
         if(rscTx===armTx||map.slice(0,5).includes(rscTx-1)){ flash('⚠️ Rescue shares a channel with another function'); return; }
         rscFc=fcChannelOf(rscTx,map);
-        if(rscFc<5||rscFc>16){ flash('⚠️ Rescue must end up on channel 5 or higher'); return; }
+        if(rscFc<6||rscFc>16){ flash('⚠️ Rescue must end up on channel 6 or higher'); return; }
     }
     // Strictly one channel per function — added ones included.
     const xw=[], xTaken=new Set([armTx,rscTx,...map.slice(0,5).map(v=>v+1)]);
@@ -479,7 +479,7 @@ async function saveAll(){
         if(xTaken.has(x.ch)){ flash('⚠️ Two functions are on one channel — every function needs its own'); return; }
         xTaken.add(x.ch);
         const fc=fcChannelOf(x.ch,map);
-        if(fc<5||fc>16){ flash('⚠️ Added functions must end up on channel 5 or higher'); return; }
+        if(fc<6||fc>16){ flash('⚠️ Added functions must end up on channel 6 or higher'); return; }
         const base=(EXTRA_MODES.find(m=>m.id===x.perm)||{name:'function'}).name;
         xw.push({perm:x.perm,fc,name:x.label?x.label+' ('+base.replace(/ \(.*/,'')+')':base});
     }
@@ -490,7 +490,7 @@ async function saveAll(){
         if(tx<1){ prof.push({f,fc:0}); continue; }
         if(map.slice(0,5).includes(tx-1)||tx===armTx||tx===rscTx){ flash('⚠️ '+f.t+' shares a channel with a stick or the Arm/Rescue switch'); return; }
         const fc=fcChannelOf(tx,map);
-        if(fc<5||fc>16){ flash('⚠️ '+f.t+' must end up on channel 5 or higher'); return; }
+        if(fc<6||fc>16){ flash('⚠️ '+f.t+' must end up on channel 6 or higher'); return; }
         prof.push({f,fc});
     }
     if(!(await LDRC.confirm(
@@ -522,7 +522,8 @@ async function saveAll(){
             const slot=findSlot(perm);
             if(slot<0)throw new Error('no free mode slot');
             used.add(slot);
-            const payload=[slot,perm,fcCh-5,usStep(1600),usStep(2100)]
+            // Rotorflight aux index = channel-6 (AUX1 = ch6: five control channels incl. collective)
+            const payload=[slot,perm,fcCh-6,usStep(1600),usStep(2100)]
                 .map(v=>v.toString(16).padStart(2,'0')).join('');
             await LDRC.msp(35,payload);
         }
@@ -551,7 +552,7 @@ async function saveAll(){
                 const slot=p.f.base+n-1, lo=b[n-1], hi=b[n];
                 const active=p.fc && (hi-lo)>=5;
                 const payload=hx(active
-                    ? sectionPayload(slot, p.f.adj, p.fc-5, lo, hi, n, usStep)
+                    ? sectionPayload(slot, p.f.adj, p.fc-6, lo, hi, n, usStep)
                     : [slot, 0, 0, 0,0, 0, 0,0, 0,0, 0,0, 0,0, 0]);
                 await LDRC.msp(53,payload);
                 // Declare to the app (write-only — the FC can't read it back):
@@ -569,9 +570,9 @@ async function saveAll(){
         const schk=hexToBytes(await LDRC.msp(34));
         const hasMode=(perm,aux)=>{for(let o=0;o+3<schk.length;o+=4)
             if(schk[o]===perm&&schk[o+1]===aux&&schk[o+2]!==schk[o+3])return true;return false;};
-        if(ok)ok=hasMode(0,armFc-5);
-        if(ok&&rscFc)ok=hasMode(53,rscFc-5);
-        for(const x of xw)if(ok)ok=hasMode(x.perm,x.fc-5);
+        if(ok)ok=hasMode(0,armFc-6);
+        if(ok&&rscFc)ok=hasMode(53,rscFc-6);
+        for(const x of xw)if(ok)ok=hasMode(x.perm,x.fc-6);
         if(ok){
             setStatus('good','✓ Saved & verified — now flick the switches and watch them on the <a href="/rotorflight-modes">Switches page</a>.');
             flash('✅ Saved & verified');
