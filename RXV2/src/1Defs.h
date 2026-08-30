@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.472-edit-selectors";
+constexpr const char* FW_VERSION = "RXV2-0.9.473-selectors-bite";
 
 //*********************************************************************
 //  Auto-update manifest URLs

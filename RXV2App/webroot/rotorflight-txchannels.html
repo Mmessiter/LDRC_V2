@@ -302,6 +302,19 @@ function wireJunction(f,j){
     });
 }
 function sectionOf(f,us){ const b=boundsOf(f); for(let q=0;q<6;q++) if(us>=b[q]&&us<b[q+1]) return q; return us>=b[6]?5:-1; }
+
+// Per-section adjustment payload (Malcolm 2026-08-30, live-debugged: Rotorflight
+// SKIPS a mapped adjustment whose min == max — "valueWidth > 0" — so a plain
+// "profile = N" is inert). Use min N, max N+1 and a value window one section
+// wide centred on the section: adjval = N + floor(((ch-centre) + W/2)/W) = N
+// for every ch inside [lo-5, hi+5); the ENABLE range (the section) gates it.
+function sectionPayload(slot, func, aux, lo, hi, n, usStepFn){
+    const w = hi - lo, centre = Math.round((lo + hi) / 2), W = w + 10;
+    const r1lo = centre, r1hi = Math.min(2125, centre + W);
+    return [slot, func, aux, usStepFn(lo), usStepFn(hi), aux, usStepFn(r1lo), usStepFn(r1hi),
+            usStepFn(1500), usStepFn(1500), n, 0, n + 1, 0, 0];
+}
+
 function renderFixed(){
     const host=$('rows'); host.innerHTML='';
     FUNCS.forEach(f=>{
@@ -529,7 +542,7 @@ async function saveAll(){
                 const slot=p.f.base+n-1, lo=b[n-1], hi=b[n];
                 const active=p.fc && (hi-lo)>=5;
                 const payload=hx(active
-                    ? [slot, p.f.adj, p.fc-5, usStep(lo), usStep(hi), p.fc-5, usStep(lo), usStep(hi), usStep(1500), usStep(1500), n,0, n,0, 0]
+                    ? sectionPayload(slot, p.f.adj, p.fc-5, lo, hi, n, usStep)
                     : [slot, 0, 0, 0,0, 0, 0,0, 0,0, 0,0, 0,0, 0]);
                 await LDRC.msp(53,payload);
                 // Declare to the app (write-only — the FC can't read it back):

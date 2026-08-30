@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.473-selectors-bite",
+      "url": "https://messiter.com/rxv2/release/v0.9.473/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.473/littlefs.bin",
+      "fs_md5": "f0bfd45862fc37e9df6c7b7ada2fc641",
+      "notes": "Bank/Rates selectors now actually switch profiles: Rotorflight silently ignores a mapped adjustment whose min equals max, so each section is now written as N..N+1 with its mapping window centred on the section - the whole section lands on N. Re-save the selectors (Switches or Transmitter channels page) and flip the switch."
+    },
+    {
       "name": "RXV2-0.9.472-edit-selectors",
       "url": "https://messiter.com/rxv2/release/v0.9.472/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.472/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.462/littlefs.bin",
       "fs_md5": "5f616fa4a00d6707bca36ab1b5f72089",
       "notes": "Selector bars start with all SIX sections evenly spaced (Malcolm: you then see the possibility and drag away the ones you don't need)."
-    },
-    {
-      "name": "RXV2-0.9.461-tick-fix",
-      "url": "https://messiter.com/rxv2/release/v0.9.461/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.461/littlefs.bin",
-      "fs_md5": "c4d4800a7cf2ec2023e8190a267f03c1",
-      "notes": "Selector bars: the live red tick now actually shows (a display bug hid it); bigger junction handles that claim the touch so iOS can't turn a drag into a scroll."
     }
   ]
 }
