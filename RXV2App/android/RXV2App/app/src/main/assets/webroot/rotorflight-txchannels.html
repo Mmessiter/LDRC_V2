@@ -258,7 +258,9 @@ const QMIN=875, QMAX=2125;
 const qpct=u=>Math.max(0,Math.min(100,(u-QMIN)/(QMAX-QMIN)*100));
 function boundsOf(f){
     try{ const b=JSON.parse(localStorage.getItem(LS+f.k+'.bounds')||'null'); if(Array.isArray(b)&&b.length===7) return b; }catch(e){}
-    return [875,1187.5,1500,1812.5,2125,2125,2125];
+    // Six EVEN sections by default (Malcolm 2026-08-30: seeing all six makes
+    // the possibility obvious; drag the spare ones away). Snapped to 5 µs.
+    return [875,1085,1290,1500,1710,1915,2125];
 }
 function saveBounds(f,b){ localStorage.setItem(LS+f.k+'.bounds', JSON.stringify(b)); }
 function paintSections(f){

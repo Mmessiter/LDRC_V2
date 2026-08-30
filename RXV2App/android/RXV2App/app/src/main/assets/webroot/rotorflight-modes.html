@@ -223,7 +223,7 @@ function localProf(){
     for(const p of [{k:'bank',t:'Bank (PID profile)',sb:23,base:30},{k:'rate',t:'Rates',sb:25,base:36}]){
         const tx=parseInt(localStorage.getItem('rfTxCh.'+p.k)||'0'); if(tx<5||tx>16)continue;
         let b=null; try{ b=JSON.parse(localStorage.getItem('rfTxCh.'+p.k+'.bounds')||'null'); }catch(e){}
-        if(!Array.isArray(b)||b.length!==7) b=[875,1187.5,1500,1812.5,2125,2125,2125];
+        if(!Array.isArray(b)||b.length!==7) b=[875,1085,1290,1500,1710,1915,2125];
         const secs=[]; for(let n=0;n<6;n++) if(b[n+1]-b[n]>=5) secs.push({n:n+1,lo:b[n],hi:b[n+1]});
         out.push({...p,tx,secs});
     }
