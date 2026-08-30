@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.467-esc-calibration",
+      "url": "https://messiter.com/rxv2/release/v0.9.467/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.467/littlefs.bin",
+      "fs_md5": "e658d4f790e67027e1999ab55daaeae2",
+      "notes": "ESC throttle calibration FROM THE PHONE (Malcolm's ask): the ESC page holds the motor channel at full throttle (renewed every half second, lapses by itself a second after the phone stops), you plug the battery, the ESC beeps, tap to drop to minimum, beeps again, done - the configurator's Motors-tab procedure without the computer. Guards: transmitter must be off, model disarmed, blades-off confirmation."
+    },
+    {
       "name": "RXV2-0.9.466-tribunus-tip",
       "url": "https://messiter.com/rxv2/release/v0.9.466/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.466/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.456/littlefs.bin",
       "fs_md5": "5f73894094559e3fc394bd3de60e3e45",
       "notes": "Bank (PID profile) and Rates selectors, 4 positions each, from the phone: pick their channels on Transmitter channels (they may share one channel), Save writes them as Rotorflight adjustment ranges (proven live on the Goblin770 - top position = bank 4); the Switches page shows four blue zones with the live red marker AND the flight controller's own answer ('Flight controller: Bank 3') as you flip."
-    },
-    {
-      "name": "RXV2-0.9.455-wizard-logo",
-      "url": "https://messiter.com/rxv2/release/v0.9.455/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.455/littlefs.bin",
-      "fs_md5": "b5a7e2fc30212708745e2f682e6aec4d",
-      "notes": "The wizard has a face: Malcolm's light-hearted wizard-with-helicopter logo now heads the Wizards hub and the New-helicopter checklist."
     }
   ]
 }
