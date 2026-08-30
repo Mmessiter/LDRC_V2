@@ -259,6 +259,8 @@ function resolveConflicts(){
 // adjustments jam on re-entry. Rotorflight's own model: the switch travel
 // between two end-points maps linearly onto profiles 1..K (equal sections).
 // Bounds = {lo, hi, k}; the FC's formula: k = 1 + floor(((ch-lo)*(K-1) + W/2)/W).
+const QMIN=875, QMAX=2125;
+const qpct=u=>Math.max(0,Math.min(100,(u-QMIN)/(QMAX-QMIN)*100));
 function selBounds(key){
     try{ const b=JSON.parse(localStorage.getItem(key)||'null');
         if(b&&typeof b==='object'&&!Array.isArray(b)&&b.k>=2) return b;

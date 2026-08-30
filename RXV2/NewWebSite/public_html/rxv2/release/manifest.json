@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.477-bar-scale-fix",
+      "url": "https://messiter.com/rxv2/release/v0.9.477/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.477/littlefs.bin",
+      "fs_md5": "2c1e6392b05588a0218a194df25bd45d",
+      "notes": "Transmitter channels: the selector bars draw again (a missing scale constant crashed the Bank row and hid the Rates row)."
+    },
+    {
       "name": "RXV2-0.9.476-one-adjustment",
       "url": "https://messiter.com/rxv2/release/v0.9.476/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.476/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.466/littlefs.bin",
       "fs_md5": "2750731f4bfb155bfd71020729aaf207",
       "notes": "ESC page help: Scorpion Tribunus only accepts Sproto in its first seconds after power-up (click Connect, then plug the battery); a firmware update resets it to defaults - re-check governor, telemetry and throttle range."
-    },
-    {
-      "name": "RXV2-0.9.465-unstick-handles",
-      "url": "https://messiter.com/rxv2/release/v0.9.465/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.465/littlefs.bin",
-      "fs_md5": "eaa81d3e2b0b0e2e867a9ccda90cfc0d",
-      "notes": "Selector bars: junctions pushed together (e.g. to the far right) can be dragged apart again - a leftward drag takes the leftmost of the stack, rightward the rightmost."
     }
   ]
 }
