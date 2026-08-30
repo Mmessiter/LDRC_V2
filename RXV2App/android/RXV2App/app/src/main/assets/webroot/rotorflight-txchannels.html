@@ -33,6 +33,15 @@
 .fnRow .live{font-size:.8em;color:#5d7a8c;min-width:4.2em;text-align:right;font-variant-numeric:tabular-nums}
 .fnRow .live.hot{color:#c0392b;font-weight:700}
 .detBtn{border:0;border-radius:8px;background:#5f8fab;color:#fff;font-weight:700;padding:.5em .7em;cursor:pointer;font-size:.85em}
+/* ONE bar, four sections (Malcolm 2026-08-30: Rotorflight's three-bar
+   adjustments are baffling; a switch selector needs one bar divided into
+   its positions). Sections = the flight controller's 875–2125 µs travel in
+   quarters, exactly how the adjustment maps to profiles 1–4; the red line
+   is the live switch position. */
+.qTrack{position:relative;height:18px;background:#dfe5ea;border-radius:9px;margin:.15em .2em .55em;grid-column:1 / -1}
+.qZone{position:absolute;top:0;bottom:0;background:#4a90c9;opacity:.85;border-radius:6px;color:#fff;font-size:.72em;font-weight:700;text-align:center;line-height:18px}
+.qZone.on{background:#2e7d32}
+.qDot{position:absolute;top:-4px;width:4px;height:26px;border-radius:2px;background:#c0392b;transform:translateX(-50%);transition:left .15s linear;display:none}
 .saveBtn{width:100%;margin-top:.6em;padding:.75em;border:0;border-radius:10px;background:#6cab5e;color:#fff;font-size:1.05em;font-weight:700;cursor:pointer}
 .sMsg{text-align:center;font-size:.85em;min-height:1.2em;margin-top:.3em;font-weight:600}
 .preview{font-weight:700;text-align:center;margin:.5em 0;color:#2e4356}
@@ -243,6 +252,10 @@ function renderFixed(){
             +'<span class=live id=l_'+f.k+'></span>'
             +'<button class=detBtn id=d_'+f.k+'>Detect</button>'
             +(f.optional&&cur>=1?'<button class=delBtn id=r_'+f.k+' title="No '+f.t.toLowerCase()+'">&#10006;</button>':'');
+        if(f.adj&&cur>=1){
+            let z=''; for(let q=0;q<4;q++) z+='<div class=qZone id=qz_'+f.k+q+' style="left:'+(q*25+0.4)+'%;width:'+(25-0.8)+'%">'+(q+1)+'</div>';
+            div.innerHTML+='<div class=qTrack>'+z+'<div class=qDot id=qd_'+f.k+'></div></div>';
+        }
         host.appendChild(div);
         $('s_'+f.k).addEventListener('change',()=>{localStorage.setItem(LS+f.k,$('s_'+f.k).value);renderAll();});
         $('d_'+f.k).addEventListener('click',()=>detect(f));
@@ -292,7 +305,19 @@ async function poll(){
         for(const f of [...FUNCS,...extraFuncs()]){
             const c=chosen(f.k), el=$('l_'+f.k);
             if(!el)continue;
-            el.textContent=(c>=1&&c<=16&&d.age_ms>=0&&d.age_ms<1500)?d.ch[c-1]+'µs':'';
+            const live=(c>=1&&c<=16&&d.age_ms>=0&&d.age_ms<1500);
+            el.textContent=live?d.ch[c-1]+'µs':'';
+            // Selector bar: the FC sees this channel clamped to CRSF's
+            // 988–2012 µs, so place the line on that scale (875–2125 track).
+            const dot=$('qd_'+f.k);
+            if(dot){
+                if(live){
+                    const us=Math.max(988,Math.min(2012,d.ch[c-1]));
+                    dot.style.display=''; dot.style.left=((us-875)/1250*100)+'%';
+                    const q=Math.max(0,Math.min(3,Math.floor((us-875)/312.5)));
+                    for(let k=0;k<4;k++){const zz=$('qz_'+f.k+k); if(zz)zz.classList.toggle('on',k===q);}
+                }else{ dot.style.display='none'; for(let k=0;k<4;k++){const zz=$('qz_'+f.k+k); if(zz)zz.classList.remove('on');} }
+            }
         }
         if(detTarget&&d.age_ms>=0&&d.age_ms<1500){
             for(let i=0;i<16;i++){
