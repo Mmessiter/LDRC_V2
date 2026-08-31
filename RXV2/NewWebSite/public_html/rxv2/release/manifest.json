@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.493-rescue-bar",
+      "url": "https://messiter.com/rxv2/release/v0.9.493/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.493/littlefs.bin",
+      "fs_md5": "b350da96e8a9832674fe9fb38d049574",
+      "notes": "Transmitter channels: Rescue gets the same blue bar as Bank/Rates showing its OFF and ON zones (drag the ends; ON above the middle); 'Bank (PID profile)' renamed 'Bank (Profile)'."
+    },
+    {
       "name": "RXV2-0.9.492-title-fits",
       "url": "https://messiter.com/rxv2/release/v0.9.492/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.492/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.482/littlefs.bin",
       "fs_md5": "6cd84c5e5ddaa84a008cf7e567ba85a3",
       "notes": "Travel extents gains a 'Collective reversed' switch (Malcolm's new build): flips collective alone via the mixer input's sign - roll, pitch and the servos untouched; applies immediately, no reboot."
-    },
-    {
-      "name": "RXV2-0.9.481-swash-copy",
-      "url": "https://messiter.com/rxv2/release/v0.9.481/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.481/littlefs.bin",
-      "fs_md5": "462a09f2ae9b404c6ad4e145f4523888",
-      "notes": "Servos: 'Copy to servos 2 & 3 & save' on servo 1 (Malcolm) - copies travel, throw, rate, slow-motion and geometry to the other swash servos in one tap; each keeps its own centre (mechanical levelling) and its own Reversed flag (mounting)."
     }
   ]
 }
