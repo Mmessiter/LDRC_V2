@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.482-collective-reverse",
+      "url": "https://messiter.com/rxv2/release/v0.9.482/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.482/littlefs.bin",
+      "fs_md5": "6cd84c5e5ddaa84a008cf7e567ba85a3",
+      "notes": "Travel extents gains a 'Collective reversed' switch (Malcolm's new build): flips collective alone via the mixer input's sign - roll, pitch and the servos untouched; applies immediately, no reboot."
+    },
+    {
       "name": "RXV2-0.9.481-swash-copy",
       "url": "https://messiter.com/rxv2/release/v0.9.481/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.481/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.471/littlefs.bin",
       "fs_md5": "2ac0cc501eeb04578866cf6be61f686e",
       "notes": "Switches page shows the Bank & Rates bars from this phone's choices even before a Save (marked as such), and the heading no longer runs together. Transmitter channels remembers its defaults."
-    },
-    {
-      "name": "RXV2-0.9.470-one-button-cal",
-      "url": "https://messiter.com/rxv2/release/v0.9.470/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.470/littlefs.bin",
-      "fs_md5": "4c1395ef1571450697633a371fbcb7e7",
-      "notes": "ESC throttle calibration is now ONE big button whose words change with the stage (Start - PLUG THE BATTERY, wait for beeps, tap - WAIT FOR CONFIRMATION BEEPS, tap - CALIBRATED, unplug). No abort button: unplugging the battery is the abort, and the throttle hold lapses by itself."
     }
   ]
 }
