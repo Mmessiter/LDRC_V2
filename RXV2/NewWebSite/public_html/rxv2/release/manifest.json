@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.490-uniform-switch-cards",
+      "url": "https://messiter.com/rxv2/release/v0.9.490/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.490/littlefs.bin",
+      "fs_md5": "1591a453164c56523eb4512f1b928c0e",
+      "notes": "Bank and Rates selector cards now share the exact layout of the other switch cards - same labelled pickers, bar and Save."
+    },
+    {
       "name": "RXV2-0.9.489-tx-on-note",
       "url": "https://messiter.com/rxv2/release/v0.9.489/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.489/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.479/littlefs.bin",
       "fs_md5": "a07dd1a8ee9589af951c93c0e7405aa7",
       "notes": "First-time basics gains 'Telemetry to the transmitter' (Malcolm's find, ex-configurator-only): seven plain-English toggles - Flight mode, Battery, Head speed, Temperature, Attitude, Altitude, GPS - written to Rotorflight's 40-slot sensor list with everything else preserved; Save verifies by read-back and offers the required restart."
-    },
-    {
-      "name": "RXV2-0.9.478-configurator-note",
-      "url": "https://messiter.com/rxv2/release/v0.9.478/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.478/littlefs.bin",
-      "fs_md5": "80ae8b99f863cbc86045cdaf70872e26",
-      "notes": "Selector cards and help now say where to find them in the configurator: Adjustments rows 31 (Bank) and 37 (Rates) - scroll a long way down."
     }
   ]
 }

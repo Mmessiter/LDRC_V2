@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.489-tx-on-note";
+constexpr const char* FW_VERSION = "RXV2-0.9.490-uniform-switch-cards";
 
 //*********************************************************************
 //  Auto-update manifest URLs
