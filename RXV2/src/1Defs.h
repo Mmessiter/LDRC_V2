@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.481-swash-copy";
+constexpr const char* FW_VERSION = "RXV2-0.9.482-collective-reverse";
 
 //*********************************************************************
 //  Auto-update manifest URLs

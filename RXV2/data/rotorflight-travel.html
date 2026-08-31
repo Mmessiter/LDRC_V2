@@ -55,6 +55,7 @@ input:disabled{background:#eee;color:#999}
     <div class=card>
         <h2>Calibration (gains)</h2>
         <div class=fldRow><label>Collective gain (%)</label> <input type=number id=t_gColl step=1 min=0 max=500></div>
+        <div class=fldRow><label>Collective reversed <span style="font-weight:400;font-size:.85em">(stick up gives pitch DOWN? tick to fix &mdash; only collective changes)</span></label> <input type=checkbox id=t_gCollRev style="width:1.25em;height:1.25em"></div>
         <div class=fldRow><label>Cyclic gain (%)</label>     <input type=number id=t_gCyc  step=1 min=0 max=500></div>
         <div class=fldRow><label>Collective up/down balance</label> <input type=number id=t_geo step=0.2 min=-25 max=25></div>
         <p class=cardNote>These make the degrees MEAN degrees: the gain scales how far the swash
@@ -240,6 +241,7 @@ async function load() {
         document.getElementById('t_cyc').value   = d1(s16At(cachedInputs, inOff(2,2)) * 12/1000);
         // Gains — rate magnitude in 0.1 % (sign = direction, preserved on save).
         document.getElementById('t_gColl').value = Math.round(Math.abs(s16At(cachedInputs, inOff(4,0))) / 10);
+        document.getElementById('t_gCollRev').checked = s16At(cachedInputs, inOff(4,0)) < 0;
         document.getElementById('t_gCyc').value  = Math.round(Math.abs(s16At(cachedInputs, inOff(1,0))) / 10);
         // Geo correction — s8 at cfg[18], UI = raw/5 (0.2 steps, ±25).
         const geoRaw = cachedCfg[18] > 127 ? cachedCfg[18] - 256 : cachedCfg[18];
@@ -293,7 +295,11 @@ function buildPayloads() {
     const gSign = (idx) => (s16At(cachedInputs, inOff(idx,0)) < 0 ? -1 : 1);
     const gCollRaw = clamp(Math.round(num('t_gColl') * 10), 0, 10000);
     const gCycRaw  = clamp(Math.round(num('t_gCyc')  * 10), 0, 10000);
-    putS16(ins, inOff(4,0), gSign(4) * gCollRaw);
+    // Collective direction is the ONE deliberate sign control (Malcolm
+    // 2026-08-31: new build with collective backwards, servos correct) —
+    // reversing the mixer input flips collective alone, roll/pitch untouched.
+    const collSign = document.getElementById('t_gCollRev').checked ? -1 : 1;
+    putS16(ins, inOff(4,0), collSign * gCollRaw);
     putS16(ins, inOff(1,0), gSign(1) * gCycRaw);
     putS16(ins, inOff(2,0), gSign(2) * gCycRaw);
     const tMin = clamp(Math.round(num('t_tailMin') * ts), 0, 2500);
