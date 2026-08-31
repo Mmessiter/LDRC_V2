@@ -86,6 +86,10 @@ function buildCards() {
            + '<label><input type=checkbox id=s'+i+'_geo> Swash geometry correction</label>'
            + '</div>'
            + '<button class=saveBtn id=s'+i+'_save onclick="saveServo('+i+')">Save servo '+n+'</button>'
+           + (i === 0 && servos.length >= 3
+               ? '<button class=saveBtn style="background:#5f8fab;margin-top:.4em" onclick="copyToSwash()">Copy to servos 2 &amp; 3 &amp; save</button>'
+                 + '<div class=muted style="font-size:.78em;margin-top:.25em">Copies travel, throw, rate, slow-motion and geometry &mdash; each servo keeps its own centre and its own Reversed setting.</div>'
+               : '')
            + '<div class=sMsg id=s'+i+'_msg></div>'
            + '</div>';
     }
@@ -143,6 +147,23 @@ async function load() {
         $('status').textContent = 'Could not read servos — is the flight controller connected? (Receiver firmware 0.9.384+ needed.)';
     }
 }
+
+// Three identical swash servos → set up once (Malcolm 2026-08-31): copy
+// servo 1's CHARACTER (travel limits, throws, update rate, slow-motion,
+// geometry correction) to servos 2 and 3 and save them. Each servo keeps
+// its own centre (that is its mechanical levelling) and its own Reversed
+// flag (depends on how it is mounted).
+async function copyToSwash() {
+    for (const j of [1, 2]) {
+        for (const f of ['min','max','rneg','rpos','rate','speed'])
+            $('s'+j+'_'+f).value = $('s0_'+f).value;
+        $('s'+j+'_geo').checked = $('s0_geo').checked;
+    }
+    await saveServo(1);
+    await saveServo(2);
+    flashMsg(0, '✅ Copied to servos 2 & 3 and saved (centres and Reversed kept)');
+}
+function flashMsg(i, t){ const m=$('s'+i+'_msg'); if(m){ m.textContent=t; setTimeout(()=>{ m.textContent=''; }, 6000); } }
 
 async function saveServo(i) {
     const btn = $('s'+i+'_save'), msg = $('s'+i+'_msg');
