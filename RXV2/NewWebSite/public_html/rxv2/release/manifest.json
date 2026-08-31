@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.507-banner-visible",
+      "url": "https://messiter.com/rxv2/release/v0.9.507/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.507/littlefs.bin",
+      "fs_md5": "2394852b964f4cd4146e1fd1920a5ec1",
+      "notes": "Travel page's sticky status banner (SWASH HELD etc.) now sticks below the floating buttons instead of hiding behind them."
+    },
+    {
       "name": "RXV2-0.9.506-cyclic-balance",
       "url": "https://messiter.com/rxv2/release/v0.9.506/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.506/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.496/littlefs.bin",
       "fs_md5": "049f403aa3a3c53fcea7da2ceab4648c",
       "notes": "Bank/Rates bars on both screens lose their end blobs - the travel is pinned to CRSF's known 988-2012 us, so there was nothing to drag."
-    },
-    {
-      "name": "RXV2-0.9.495-one-divider",
-      "url": "https://messiter.com/rxv2/release/v0.9.495/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.495/littlefs.bin",
-      "fs_md5": "6b6b024008daeb971c39585357dee765",
-      "notes": "Arming and Rescue bars: the useless end blobs are gone - ONE draggable divider sits on the OFF/ON threshold."
     }
   ]
 }

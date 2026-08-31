@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.506-cyclic-balance";
+constexpr const char* FW_VERSION = "RXV2-0.9.507-banner-visible";
 
 //*********************************************************************
 //  Auto-update manifest URLs

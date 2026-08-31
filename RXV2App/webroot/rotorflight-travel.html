@@ -20,7 +20,9 @@
    Reload / Save buttons — they were a full screen apart (Malcolm
    2026-08-14: "cannot be seen simultaneously"). */
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em;
-        position:sticky;top:env(safe-area-inset-top,0px);z-index:50}
+        /* stick BELOW the floating home/back/help row - at the very top it
+           hid behind them (Malcolm 2026-08-31: SWASH HELD was unreadable) */
+        position:sticky;top:calc(env(safe-area-inset-top,0px) + 5.8rem);z-index:50}
 .banner.info{background:#c8d2dc;color:#3a5165}
 .banner.good{background:#a8d29a;color:#2a4d1f}
 .banner.bad {background:#dca08c;color:#5c2a1a}
