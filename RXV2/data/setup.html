@@ -21,7 +21,7 @@
 
     <a class="btn btn-diag" href="/protocol" id=protobtn><span class=ico>&#128225;</span>Output protocol &mdash; <span id=protoname>&hellip;</span></a>
     <a class="btn btn-diag" href="/diagnostics"><span class=ico>&#127916;</span>View channels</a>
-    <a class="btn btn-diag" href="/rxsettings"><span class=ico>&#9881;&#65039;</span>Receiver settings &mdash; failsafe, battery, gear ratio</a>
+    <a class="btn btn-diag" href="/rxsettings"><span class=ico>&#9881;&#65039;</span>Receiver settings &mdash; failsafe, battery</a>
     <a class="btn btn-fw"   href="/wifi" id=wifibtn style="display:none"><span class=ico>&#128246;</span>WiFi settings</a>
     <a class="btn btn-fw"   href="/firmware"><span class=ico>&#128229;</span>Update or roll back firmware</a>
     <button class="btn" type=button id=renamebtn style="background:#6f7e8b"><span class=ico>&#127991;&#65039;</span>Rename receiver &mdash; <span id=curname>&hellip;</span></button>
@@ -64,7 +64,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 <h3>Buttons</h3>
 <ul>
 <li><b>Output protocol</b> &mdash; what the receiver sends to your flight controller on D6 (CRSF for Rotorflight, SBUS, IBUS or PPM). The current choice is shown on the button.</li>
-<li><b>View channels</b> &mdash; live channel bars, plus capturing your failsafe positions and setting the head-speed gear ratio.</li>
+<li><b>View channels</b> &mdash; live channel bars, plus capturing your failsafe positions.</li>
 <li><b>WiFi settings</b> &mdash; home network details and the &ldquo;AP mode only&rdquo; field setting.</li>
 <li><b>Update firmware</b> &mdash; install newer firmware or roll back.</li>
 <li><b>Rename receiver</b> &mdash; the name is also the WiFi network name and the <code>.local</code> address.</li>
