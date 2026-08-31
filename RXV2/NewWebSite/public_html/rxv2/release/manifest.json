@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.505-blades-on-step",
+      "url": "https://messiter.com/rxv2/release/v0.9.505/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.505/littlefs.bin",
+      "fs_md5": "0c2eda2be796d566a6c2dce8e4a47510",
+      "notes": "New wizard step before Back up: blades back on, check main and tail pitch with a gauge, sweep full travel for mechanical issues."
+    },
+    {
       "name": "RXV2-0.9.504-servo-power-warning",
       "url": "https://messiter.com/rxv2/release/v0.9.504/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.504/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.494/littlefs.bin",
       "fs_md5": "5889a2d7c2a991fef8c13619da3ab460",
       "notes": "Arming gets the same OFF/ON bar as Rescue (you can now SEE when the threshold is crossed); Rates carries a note that sharing Bank's channel is fine and popular."
-    },
-    {
-      "name": "RXV2-0.9.493-rescue-bar",
-      "url": "https://messiter.com/rxv2/release/v0.9.493/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.493/littlefs.bin",
-      "fs_md5": "b350da96e8a9832674fe9fb38d049574",
-      "notes": "Transmitter channels: Rescue gets the same blue bar as Bank/Rates showing its OFF and ON zones (drag the ends; ON above the middle); 'Bank (PID profile)' renamed 'Bank (Profile)'."
     }
   ]
 }
