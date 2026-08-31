@@ -278,7 +278,33 @@ function selPayload(slot, func, aux, b, usStepFn){
 }
 
 
+function paintSw2(f){
+    const t=sw2Boundary(f.k), h=$('qh_'+f.k+'b');
+    const z0=$('qz_'+f.k+'0'), z1=$('qz_'+f.k+'1');
+    if(z0){ z0.style.left='0.3%'; z0.style.width=Math.max(0,qpct(t)-0.6)+'%'; z0.textContent='OFF'; }
+    if(z1){ z1.style.left=(qpct(t)+0.3)+'%'; z1.style.width=Math.max(0,100-qpct(t)-0.6)+'%'; z1.textContent='ON'; }
+    if(h) h.style.left=qpct(t)+'%';
+}
+// ONE draggable divider for a two-state switch (Malcolm 2026-08-31: the end
+// blobs achieved nothing — the threshold is the only thing worth moving).
+function wireThr(f){
+    const h=$('qh_'+f.k+'b'), track=$('qt_'+f.k); if(!h||!track)return;
+    h.addEventListener('pointerdown',e=>{
+        e.preventDefault(); e.stopPropagation();
+        try{ h.setPointerCapture(e.pointerId); }catch(_){}
+        const move=ev=>{
+            const r=track.getBoundingClientRect();
+            let us=QMIN+(ev.clientX-r.left)/r.width*(QMAX-QMIN);
+            us=Math.max(950,Math.min(2050,Math.round(us/5)*5));
+            localStorage.setItem(LS+f.k+'.thr',String(us)); paintSw2(f);
+        };
+        const up=()=>{ try{h.releasePointerCapture(e.pointerId);}catch(_){}
+            h.removeEventListener('pointermove',move); h.removeEventListener('pointerup',up); h.removeEventListener('pointercancel',up); };
+        h.addEventListener('pointermove',move); h.addEventListener('pointerup',up); h.addEventListener('pointercancel',up);
+    });
+}
 function paintSections(f){
+    if(f.sw2){ paintSw2(f); return; }
     const b=selBounds(LS+f.k+'.bounds'), W=b.hi-b.lo;
     for(let q=0;q<6;q++){ const z=$('qz_'+f.k+q); if(!z)continue;
         if(q>=b.k){ z.style.display='none'; continue; }
@@ -287,7 +313,7 @@ function paintSections(f){
         const sLo = q===0 ? b.lo : b.lo + W*(q-0.5)/(b.k-1);
         const sHi = q===b.k-1 ? b.hi : b.lo + W*(q+0.5)/(b.k-1);
         const l=qpct(sLo), w=qpct(sHi)-l;
-        z.style.left=(l+0.3)+'%'; z.style.width=Math.max(0,w-0.6)+'%'; z.textContent = w>5?(f.sw2?(q?'ON':'OFF'):String(q+1)):''; }
+        z.style.left=(l+0.3)+'%'; z.style.width=Math.max(0,w-0.6)+'%'; z.textContent = w>5?String(q+1):''; }
     const hl=$('qh_'+f.k+'lo'), hh=$('qh_'+f.k+'hi'); if(hl) hl.style.left=qpct(b.lo)+'%'; if(hh) hh.style.left=qpct(b.hi)+'%';
 }
 function wireEnd(f,which){
@@ -308,9 +334,14 @@ function wireEnd(f,which){
         h.addEventListener('pointermove',move); h.addEventListener('pointerup',up); h.addEventListener('pointercancel',up);
     });
 }
-function sectionOf(f,us){ return selSection(selBounds(LS+f.k+'.bounds'), us)-1; }
-// A two-state switch's OFF|ON split: midpoint of its drawn ends, snapped to 5 µs.
-function sw2Boundary(k){ const b=selBounds(LS+k+'.bounds'); return Math.round((b.lo+b.hi)/2/5)*5; }
+function sectionOf(f,us){ if(f.sw2) return us>=sw2Boundary(f.k)?1:0; return selSection(selBounds(LS+f.k+'.bounds'), us)-1; }
+// A two-state switch's OFF|ON threshold: one stored value (drag the divider).
+function sw2Boundary(k){
+    const v=parseInt(localStorage.getItem(LS+k+'.thr')||'0');
+    if(v>=950&&v<=2050) return v;
+    const b=selBounds(LS+k+'.bounds');            // migrate the old two-end model
+    return Math.max(950,Math.min(2050,Math.round((b.lo+b.hi)/2/5)*5));
+}
 
 function renderFixed(){
     const host=$('rows'); host.innerHTML='';
@@ -323,19 +354,21 @@ function renderFixed(){
             +'<span class=live id=l_'+f.k+'></span>'
             +'<button class=detBtn id=d_'+f.k+'>Detect</button>'
             +(f.optional&&cur>=1?'<button class=delBtn id=r_'+f.k+' title="No '+f.t.toLowerCase()+'">&#10006;</button>':'');
-        if((f.adj||f.sw2)&&cur>=1){
-            if(f.sw2){ const fb=selBounds(LS+f.k+'.bounds'); fb.k=2; localStorage.setItem(LS+f.k+'.bounds',JSON.stringify(fb)); }
+        if(f.sw2&&cur>=1){
+            div.innerHTML+='<div class=qTrack id=qt_'+f.k+'><div class=qZone id=qz_'+f.k+'0>OFF</div><div class=qZone id=qz_'+f.k+'1>ON</div><div class=qHandle id=qh_'+f.k+'b></div><div class=qVal id=qv_'+f.k+'></div><div class=qDot id=qd_'+f.k+'></div></div>'
+                +'<div style="grid-column:1 / -1;font-size:.85em;color:#5d7a8c">drag the divider &mdash; the switch is ON to its right</div>';
+        }
+        else if(f.adj&&cur>=1){
             const b=selBounds(LS+f.k+'.bounds');
-            let z=''; for(let q=0;q<6;q++) z+='<div class=qZone id=qz_'+f.k+q+'>'+(f.sw2?(q?'ON':'OFF'):(q+1))+'</div>';
+            let z=''; for(let q=0;q<6;q++) z+='<div class=qZone id=qz_'+f.k+q+'>'+(q+1)+'</div>';
             let ko=''; for(let k=2;k<=6;k++) ko+='<option value='+k+(k===b.k?' selected':'')+'>'+k+' positions</option>';
             div.innerHTML+='<div class=qTrack id=qt_'+f.k+'>'+z+'<div class=qHandle id=qh_'+f.k+'lo></div><div class=qHandle id=qh_'+f.k+'hi></div><div class=qVal id=qv_'+f.k+'></div><div class=qDot id=qd_'+f.k+'></div></div>'
-                +(f.sw2
-                  ?'<div style="grid-column:1 / -1;font-size:.85em;color:#5d7a8c">left = OFF, right = ON &mdash; drag the ends to your switch&rsquo;s two positions</div>'
-                  :'<div style="grid-column:1 / -1;display:flex;gap:.6em;align-items:center;font-size:.85em;color:#5d7a8c"><select id=qk_'+f.k+'>'+ko+'</select><span>equal sections between the two ends &mdash; drag the ends to your switch&rsquo;s lowest and highest positions</span></div>')
+                +'<div style="grid-column:1 / -1;display:flex;gap:.6em;align-items:center;font-size:.85em;color:#5d7a8c"><select id=qk_'+f.k+'>'+ko+'</select><span>equal sections between the two ends &mdash; drag the ends to your switch&rsquo;s lowest and highest positions</span></div>'
                 +(f.k==='rate'?'<div style="grid-column:1 / -1;font-size:.8em;color:#5d7a8c">Using the <b>same channel as Bank</b> is fine &mdash; many pilots prefer one switch for both.</div>':'');
         }
         host.appendChild(div);
-        if((f.adj||f.sw2)&&cur>=1){ paintSections(f); wireEnd(f,'lo'); wireEnd(f,'hi');
+        if(f.sw2&&cur>=1){ paintSw2(f); wireThr(f); }
+        else if(f.adj&&cur>=1){ paintSections(f); wireEnd(f,'lo'); wireEnd(f,'hi');
             const qk=$('qk_'+f.k);
             if(qk)qk.addEventListener('change',()=>{ const b=selBounds(LS+f.k+'.bounds'); b.k=parseInt(qk.value); localStorage.setItem(LS+f.k+'.bounds',JSON.stringify(b)); paintSections(f); }); }
         $('s_'+f.k).addEventListener('change',()=>{localStorage.setItem(LS+f.k,$('s_'+f.k).value);renderAll();});
