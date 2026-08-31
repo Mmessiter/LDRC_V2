@@ -373,5 +373,6 @@
  "RXV2-0.9.490-uniform-switch-cards": "Bank and Rates selector cards now share the exact layout of the other switch cards - same labelled pickers, bar and Save.",
  "RXV2-0.9.491-arm-stays": "The Arm switch card no longer offers Remove - Rotorflight requires an arm switch.",
  "RXV2-0.9.492-title-fits": "Page titles on back-arrow pages sit below the button row at full width - no more 'Switch / es' squeeze.",
- "RXV2-0.9.493-rescue-bar": "Transmitter channels: Rescue gets the same blue bar as Bank/Rates showing its OFF and ON zones (drag the ends; ON above the middle); 'Bank (PID profile)' renamed 'Bank (Profile)'."
+ "RXV2-0.9.493-rescue-bar": "Transmitter channels: Rescue gets the same blue bar as Bank/Rates showing its OFF and ON zones (drag the ends; ON above the middle); 'Bank (PID profile)' renamed 'Bank (Profile)'.",
+ "RXV2-0.9.494-arm-bar": "Arming gets the same OFF/ON bar as Rescue (you can now SEE when the threshold is crossed); Rates carries a note that sharing Bank's channel is fine and popular."
 }
