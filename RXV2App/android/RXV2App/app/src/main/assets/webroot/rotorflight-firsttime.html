@@ -43,14 +43,6 @@ h2 .hint{font-weight:400;font-size:.7em;color:#5d7a8c;display:block;margin-top:.
     <div id=rbBanner class="banner warn" style="display:none">Some saved changes only take effect after a flight-controller restart.
         <button class=rbBtn onclick="rebootFc()">&#128260; Restart flight controller now</button></div>
 
-    <div class=card id=cal>
-        <h2>Calibrate the flight controller <span class=hint>teach it which way is level (IMU / accelerometer calibration)</span></h2>
-        <p class=muted style="font-size:.85em;line-height:1.5">Best done <b>flat on a desk, before the board goes in</b> &mdash; the helicopter may not sit level. Keep it still; takes 2 seconds. Front-or-back mounting does <b>not</b> affect it.</p>
-        <div class=att id=attNow>&hellip;</div>
-        <button class=calBtn id=calBtn onclick="calibrate()">&#128207; Calibrate now</button>
-        <div id=calMsg class=sMsg></div>
-    </div>
-
     <div class=card id=mount>
         <h2>Which way round is it mounted? <span class=hint>flat, connectors front or back (Board alignment)</span></h2>
         <p class=muted style="font-size:.85em;line-height:1.5">Connectors to the <b>front</b> or the <b>back</b>? Pick yours. <i>(Any other angle: configurator.)</i></p>
@@ -200,35 +192,9 @@ async function setMount(yaw){
         await loadMount();
         const ny=rdS16(mountRaw,4);
         const ok=(ny===yaw)&&rdS16(mountRaw,0)===0&&rdS16(mountRaw,2)===0;
-        flash('mountMsg', ok?'✅ Saved & verified — restart to apply, then calibrate level':'⚠️ FC adjusted the values');
+        flash('mountMsg', ok?'✅ Saved & verified — restart to apply':'⚠️ FC adjusted the values');
         needReboot();
     }catch(e){ flash('mountMsg','⚠️ Failed: '+e.message); }
-}
-
-// ---- Level calibration (MSP 205 + live attitude 108) ----
-let attTimer=null;
-async function pollAttitude(){
-    if(document.hidden)return;
-    try{
-        const b=hexToBytes(await LDRC.msp(108,'',1));
-        if(b.length>=4){
-            const r=rdS16(b,0)/10, p=rdS16(b,2)/10;
-            const lvl=Math.abs(r)<2&&Math.abs(p)<2;
-            const el=$('attNow'); el.className='att'+(lvl?' level':'');
-            el.textContent='Roll '+r.toFixed(1)+'°  ·  Pitch '+p.toFixed(1)+'°'+(lvl?'  ✓ level':'');
-        }
-    }catch(e){}
-}
-async function calibrate(){
-    if(await armCheck()){ flash('calMsg','⚠️ Refused — the model is ARMED'); return; }
-    if(!(await LDRC.confirm('Is the helicopter sitting flat, level and perfectly still?',
-        {title:'Level calibration',icon:'📏',yes:'Yes — calibrate'})))return;
-    try{
-        await LDRC.msp(205);           // MSP_ACC_CALIBRATION — FC ignores it if armed
-        flash('calMsg','⏳ Calibrating — keep it still…');
-        setTimeout(async()=>{ await LDRC.msp(250); await pollAttitude();
-                              flash('calMsg','✅ Done — roll/pitch above should read near 0°'); },2500);
-    }catch(e){ flash('calMsg','⚠️ Failed: '+e.message); }
 }
 
 // ---- Features (36/37, U32 mask; write REPLACES the whole mask) ----
@@ -401,16 +367,16 @@ async function load(){
         await loadMount(); await loadFeatures(); await loadMotor(); await loadEsc(); await loadTelemSensors(); await loadBattery(); await loadMap();
         setStatus('good','✓ Loaded from flight controller');
     }catch(e){ setStatus('bad','Read failed: '+e.message); }
-    await pollAttitude();
-    if(!attTimer) attTimer=setInterval(pollAttitude, 1500);
 }
-load();
+// DOMContentLoaded, never top-level: deferred app.js must define LDRC first
+// (the demo's instant cache exposed the race - "Can't find variable: LDRC",
+// Malcolm 2026-08-31).
+document.addEventListener('DOMContentLoaded', load);
 </script>
 <template id=helpContent><h2>First-time basics</h2>
 <p>The one-off settings for a brand-new flight controller, in plain English (Rotorflight&rsquo;s name for each is in brackets):</p>
 <ul>
 <li><b>Mounting direction</b> &mdash; connectors to the front (standard) or to the back (yaw 180&deg;). Applies after a restart. (A flat board&rsquo;s front-or-back choice does NOT affect level calibration &mdash; gravity sits on the same axis either way.)</li>
-<li><b>Level calibration</b> &mdash; sit the model flat and still, tap the button. Roll/pitch above should then read near 0&deg;.</li>
 <li><b>Tick the functions you plan to use</b> &mdash; Governor and ESC telemetry are the usual ones for an electric heli. Telemetry to the transmitter: Battery, Head speed and Temperature feed the app&rsquo;s live displays and warnings &mdash; keep those ON; a restart applies them. </li>
 <li><b>Motor &amp; ESC</b> &mdash; two different questions: the <b>signal</b> (how throttle is sent &mdash; Normal PWM for most heli ESCs like Scorpion, Kontronik or YGE; DShot for drone-style ESCs) and the <b>telemetry protocol</b> (your ESC&rsquo;s brand). Plus motor poles and gear ratios, needed for true head speed.</li>
 <li><b>Battery</b> &mdash; cells, capacity and where volts/amps are measured, so warnings mean something.</li>

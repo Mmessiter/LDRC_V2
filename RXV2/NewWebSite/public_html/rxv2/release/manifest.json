@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.501-calibrate-first",
+      "url": "https://messiter.com/rxv2/release/v0.9.501/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.501/littlefs.bin",
+      "fs_md5": "13c5bbb44e3da4f8cdb3119e51c647d2",
+      "notes": "Flight-controller calibration is now wizard step 2 with its own page (on the desk, before mounting) and an A-la-carte entry; also fixes the 'Can't find variable: LDRC' race on First-time basics."
+    },
+    {
       "name": "RXV2-0.9.500-gear-mentions-gone",
       "url": "https://messiter.com/rxv2/release/v0.9.500/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.500/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.490/littlefs.bin",
       "fs_md5": "1591a453164c56523eb4512f1b928c0e",
       "notes": "Bank and Rates selector cards now share the exact layout of the other switch cards - same labelled pickers, bar and Save."
-    },
-    {
-      "name": "RXV2-0.9.489-tx-on-note",
-      "url": "https://messiter.com/rxv2/release/v0.9.489/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.489/littlefs.bin",
-      "fs_md5": "e6e2a4af77792170ffd9191d13e1b04a",
-      "notes": "Switches and Transmitter-channels pages now remind you to have the transmitter ON - the live red tick needs it."
     }
   ]
 }
