@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.486-one-true-back";
+constexpr const char* FW_VERSION = "RXV2-0.9.487-simpler-switches";
 
 //*********************************************************************
 //  Auto-update manifest URLs
