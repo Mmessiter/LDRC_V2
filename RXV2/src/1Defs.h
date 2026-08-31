@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.497-selectors-stay";
+constexpr const char* FW_VERSION = "RXV2-0.9.498-governor-why";
 
 //*********************************************************************
 //  Auto-update manifest URLs

@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.498-governor-why",
+      "url": "https://messiter.com/rxv2/release/v0.9.498/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.498/littlefs.bin",
+      "fs_md5": "dca9e5e739558d7ff5b6c39433088b47",
+      "notes": "ESC page now explains WHY Rotorflight's governor wins: it feeds throttle the instant collective demands it, before head speed sags - an ESC governor only reacts after the RPM drop."
+    },
+    {
       "name": "RXV2-0.9.497-selectors-stay",
       "url": "https://messiter.com/rxv2/release/v0.9.497/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.497/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.487/littlefs.bin",
       "fs_md5": "cf88383783a04b655c8ccad88fdd00fc",
       "notes": "Switch cards on the Switches page lose the two microsecond number boxes - just the bar, the draggable ends and the live red tick."
-    },
-    {
-      "name": "RXV2-0.9.486-one-true-back",
-      "url": "https://messiter.com/rxv2/release/v0.9.486/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.486/littlefs.bin",
-      "fs_md5": "831159a0ce25a8308525c7c4c03c99d2",
-      "notes": "Model-name chip fits again (width only narrows on pages with the back arrow); every page's embedded back button removed - the floating arrow now knows its own destination."
     }
   ]
 }
