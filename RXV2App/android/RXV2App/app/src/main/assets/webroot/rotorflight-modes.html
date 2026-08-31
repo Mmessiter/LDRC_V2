@@ -138,7 +138,8 @@ function rowCard(slotIdx, s){
       + (m.warn?'<div class=armWarn>&#9888; This is the ARM switch — get the range wrong and the motor can arm unexpectedly. Change with the model unpowered.</div>':'')
       + '<div class=mBtns>'
       + '<button class=mSave onclick="saveRow('+slotIdx+')">&#128190; Save</button>'
-      + '<button class=mDel onclick="delRow('+slotIdx+')">&#128465; Remove</button>'
+      // Rotorflight REQUIRES an ARM switch — nobody ever removes it (Malcolm 2026-08-31)
+      + (s.perm===0?'':'<button class=mDel onclick="delRow('+slotIdx+')">&#128465; Remove</button>')
       + '</div><div class=mMsg id=msg'+slotIdx+'></div></div>';
 }
 

@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.490-uniform-switch-cards";
+constexpr const char* FW_VERSION = "RXV2-0.9.491-arm-stays";
 
 //*********************************************************************
 //  Auto-update manifest URLs
