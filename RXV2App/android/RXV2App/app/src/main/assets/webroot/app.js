@@ -400,7 +400,9 @@
             };
             const LABELS = {
                 '/': 'front screen', '/blackbox': 'Black box', '/setup': 'Setup',
-                '/sim': 'Simulator', '/rotorflight': 'Rotorflight'
+                '/sim': 'Simulator', '/rotorflight': 'Rotorflight',
+                '/rotorflight-alacarte': 'À la carte', '/rotorflight-wizards': 'Wizards',
+                '/rotorflight-newheli': 'New helicopter', '/rotorflight-tuning': 'Tuning'
             };
             // Floating ⬅️ beside 🏠 (Malcolm 2026-08-31: the bottom back button
             // "often needs a long scroll to find" — now it's always in reach).
@@ -412,10 +414,19 @@
             // screen's Rotorflight/Black box — hiding the whole class
             // vaporised them, Malcolm 2026-08-31), so identify a true back
             // button by its "Back to …" wording and hide only that one.
-            // This map is the ONLY source of a page's parent: the pages carry
-            // no back buttons of their own any more (Malcolm 2026-08-31 --
-            // one mechanism, less complexity two years down the line).
-            const parent = PARENTS[location.pathname] || '/';
+            // This map is the ONLY static source of a page's parent: the
+            // pages carry no back buttons of their own any more (Malcolm
+            // 2026-08-31 -- one mechanism). If we arrived FROM one of the
+            // menu hubs, that hub wins (a page can be reached from both the
+            // wizard and A la carte); the map is the fallback for reloads
+            // and deep links.
+            const HUBS = new Set(['/', '/rotorflight', '/rotorflight-alacarte',
+                '/rotorflight-wizards', '/rotorflight-newheli', '/rotorflight-tuning',
+                '/setup', '/sim', '/blackbox']);
+            let from = null;
+            try{ from = sessionStorage.getItem('ldrc.from'); }catch(_){}
+            const parent = (HUBS.has(from) && from !== location.pathname ? from : null)
+                || PARENTS[location.pathname] || '/';
             if (parent !== '/') {
                 document.body.classList.add('hasBack');
                 const back = document.createElement('a');
@@ -461,6 +472,10 @@
             if (!(await LDRC.confirmLoseChanges('leaving this page'))) return;
         }
         _navigating = true;
+        // Breadcrumb for the floating back arrow: pages reachable from BOTH
+        // the wizard and A la carte need to go back to the menu actually
+        // used (Malcolm 2026-08-31).
+        try{ sessionStorage.setItem('ldrc.from', location.pathname); }catch(_){}
         LDRC.showLoading();
         setTimeout(() => { location.href = a.href; }, 50);
     }, true);

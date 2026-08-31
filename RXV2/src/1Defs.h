@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.510-rescue-floating-save";
+constexpr const char* FW_VERSION = "RXV2-0.9.511-back-remembers";
 
 //*********************************************************************
 //  Auto-update manifest URLs
