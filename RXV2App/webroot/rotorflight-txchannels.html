@@ -95,7 +95,7 @@ const FUNCS=[
  {k:'rud', t:'Rudder',        letter:'R', def:4, stick:true},
  {k:'thr', t:'Throttle',      letter:'T', def:5, stick:true},
  {k:'arm', t:'Arming',        letter:'',  def:6, stick:false},
- {k:'rsc', t:'Rescue',        letter:'',  def:0, stick:false, optional:true},
+ {k:'rsc', t:'Rescue',        letter:'',  def:0, stick:false, optional:true, sw2:true},
  // Profile selectors (Malcolm 2026-08-29): 4-position switches. Both may
  // SHARE one channel (share group) — Rotorflight runs them as two
  // adjustment ranges pointing at the same channel. Written to slots 40/41
@@ -106,7 +106,7 @@ const FUNCS=[
  // section (bank 30-35, rates 36-41): "while the switch is inside this
  // section, profile = N" — so the section boundaries can be dragged freely
  // (Malcolm 2026-08-30). Sections 5-6 default to zero width at the top.
- {k:'bank', t:'Bank (PID profile)', letter:'', def:7, stick:false, optional:true, share:'prof', adj:2, base:30},
+ {k:'bank', t:'Bank (Profile)', letter:'', def:7, stick:false, optional:true, share:'prof', adj:2, base:30},
  {k:'rate', t:'Rates',              letter:'', def:7, stick:false, optional:true, share:'prof', adj:1, base:36},
 ];
 const LS='rfTxCh.';
@@ -287,7 +287,7 @@ function paintSections(f){
         const sLo = q===0 ? b.lo : b.lo + W*(q-0.5)/(b.k-1);
         const sHi = q===b.k-1 ? b.hi : b.lo + W*(q+0.5)/(b.k-1);
         const l=qpct(sLo), w=qpct(sHi)-l;
-        z.style.left=(l+0.3)+'%'; z.style.width=Math.max(0,w-0.6)+'%'; z.textContent = w>5?String(q+1):''; }
+        z.style.left=(l+0.3)+'%'; z.style.width=Math.max(0,w-0.6)+'%'; z.textContent = w>5?(f.sw2?(q?'ON':'OFF'):String(q+1)):''; }
     const hl=$('qh_'+f.k+'lo'), hh=$('qh_'+f.k+'hi'); if(hl) hl.style.left=qpct(b.lo)+'%'; if(hh) hh.style.left=qpct(b.hi)+'%';
 }
 function wireEnd(f,which){
@@ -309,6 +309,8 @@ function wireEnd(f,which){
     });
 }
 function sectionOf(f,us){ return selSection(selBounds(LS+f.k+'.bounds'), us)-1; }
+// Rescue's OFF|ON split: midpoint of its two drawn ends, snapped to 5 µs.
+function rscBoundary(){ const b=selBounds(LS+'rsc.bounds'); return Math.round((b.lo+b.hi)/2/5)*5; }
 
 function renderFixed(){
     const host=$('rows'); host.innerHTML='';
@@ -321,16 +323,20 @@ function renderFixed(){
             +'<span class=live id=l_'+f.k+'></span>'
             +'<button class=detBtn id=d_'+f.k+'>Detect</button>'
             +(f.optional&&cur>=1?'<button class=delBtn id=r_'+f.k+' title="No '+f.t.toLowerCase()+'">&#10006;</button>':'');
-        if(f.adj&&cur>=1){
+        if((f.adj||f.sw2)&&cur>=1){
+            if(f.sw2){ const fb=selBounds(LS+f.k+'.bounds'); fb.k=2; localStorage.setItem(LS+f.k+'.bounds',JSON.stringify(fb)); }
             const b=selBounds(LS+f.k+'.bounds');
-            let z=''; for(let q=0;q<6;q++) z+='<div class=qZone id=qz_'+f.k+q+'>'+(q+1)+'</div>';
+            let z=''; for(let q=0;q<6;q++) z+='<div class=qZone id=qz_'+f.k+q+'>'+(f.sw2?(q?'ON':'OFF'):(q+1))+'</div>';
             let ko=''; for(let k=2;k<=6;k++) ko+='<option value='+k+(k===b.k?' selected':'')+'>'+k+' positions</option>';
             div.innerHTML+='<div class=qTrack id=qt_'+f.k+'>'+z+'<div class=qHandle id=qh_'+f.k+'lo></div><div class=qHandle id=qh_'+f.k+'hi></div><div class=qVal id=qv_'+f.k+'></div><div class=qDot id=qd_'+f.k+'></div></div>'
-                +'<div style="grid-column:1 / -1;display:flex;gap:.6em;align-items:center;font-size:.85em;color:#5d7a8c"><select id=qk_'+f.k+'>'+ko+'</select><span>equal sections between the two ends &mdash; drag the ends to your switch&rsquo;s lowest and highest positions</span></div>';
+                +(f.sw2
+                  ?'<div style="grid-column:1 / -1;font-size:.85em;color:#5d7a8c">left = OFF, right = ON &mdash; drag the ends to your switch&rsquo;s two positions</div>'
+                  :'<div style="grid-column:1 / -1;display:flex;gap:.6em;align-items:center;font-size:.85em;color:#5d7a8c"><select id=qk_'+f.k+'>'+ko+'</select><span>equal sections between the two ends &mdash; drag the ends to your switch&rsquo;s lowest and highest positions</span></div>');
         }
         host.appendChild(div);
-        if(f.adj&&cur>=1){ paintSections(f); wireEnd(f,'lo'); wireEnd(f,'hi');
-            $('qk_'+f.k).addEventListener('change',()=>{ const b=selBounds(LS+f.k+'.bounds'); b.k=parseInt($('qk_'+f.k).value); localStorage.setItem(LS+f.k+'.bounds',JSON.stringify(b)); paintSections(f); }); }
+        if((f.adj||f.sw2)&&cur>=1){ paintSections(f); wireEnd(f,'lo'); wireEnd(f,'hi');
+            const qk=$('qk_'+f.k);
+            if(qk)qk.addEventListener('change',()=>{ const b=selBounds(LS+f.k+'.bounds'); b.k=parseInt(qk.value); localStorage.setItem(LS+f.k+'.bounds',JSON.stringify(b)); paintSections(f); }); }
         $('s_'+f.k).addEventListener('change',()=>{localStorage.setItem(LS+f.k,$('s_'+f.k).value);renderAll();});
         $('d_'+f.k).addEventListener('click',()=>detect(f));
         if(f.optional&&cur>=1)$('r_'+f.k).addEventListener('click',()=>clearOptional(f));
@@ -486,7 +492,7 @@ async function saveAll(){
         'Write to the flight controller:\n'
         +'• channel order '+map.slice(0,5).map(x=>x+1).join(',')+' (AERCT)\n'
         +'• ARM on channel '+armFc+' (active 1600–2100µs)\n'
-        +(rscFc?'• RESCUE on channel '+rscFc+' (active 1600–2100µs)\n':'')
+        +(rscFc?'• RESCUE on channel '+rscFc+' (ON above '+rscBoundary()+'µs)\n':'')
         +xw.map(x=>'• '+x.name+' on channel '+x.fc+'\n').join('')
         +prof.filter(p=>p.fc).map(p=>'• '+p.f.t+' on channel '+p.fc+' ('+selBounds(LS+p.f.k+'.bounds').k+' positions)\n').join('')
         +'Blades off / motor unplugged?',
@@ -507,17 +513,17 @@ async function saveAll(){
                 if(modes[o]===0&&modes[o+2]===modes[o+3]&&!used.has(i))return i;}
             return -1;
         }
-        async function writeMode(perm,fcCh){
+        async function writeMode(perm,fcCh,lo=1600,hi=2100){
             const slot=findSlot(perm);
             if(slot<0)throw new Error('no free mode slot');
             used.add(slot);
             // Rotorflight aux index = channel-6 (AUX1 = ch6: five control channels incl. collective)
-            const payload=[slot,perm,fcCh-6,usStep(1600),usStep(2100)]
+            const payload=[slot,perm,fcCh-6,usStep(lo),usStep(hi)]
                 .map(v=>v.toString(16).padStart(2,'0')).join('');
             await LDRC.msp(35,payload);
         }
         await writeMode(0,armFc);                    // ARM
-        if(rscFc)await writeMode(53,rscFc);          // RESCUE
+        if(rscFc)await writeMode(53,rscFc,rscBoundary(),2125);   // RESCUE: ON above the drawn boundary
         else for(let sl=0;sl<slotCount;sl++){        // Rescue = None: clear stale saved rescue
             const o=sl*4;
             if(modes[o]===53&&modes[o+2]!==modes[o+3]&&!used.has(sl)){

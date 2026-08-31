@@ -226,7 +226,7 @@ const stepUsQ=s=>1500+5*((s&0x80)?s-256:s);
 let PROF=[];
 function localProf(){
     const out=[];
-    for(const p of [{k:'bank',t:'Bank (PID profile)',sb:23,base:30,adj:2},{k:'rate',t:'Rates',sb:25,base:36,adj:1}]){
+    for(const p of [{k:'bank',t:'Bank (Profile)',sb:23,base:30,adj:2},{k:'rate',t:'Rates',sb:25,base:36,adj:1}]){
         const tx=parseInt(localStorage.getItem('rfTxCh.'+p.k)||'0'); if(tx<6||tx>16)continue;
         const b=selBounds('rfTxCh.'+p.k+'.bounds');
         out.push({...p,tx,b,secs:profSecs(b),src:'local'});
@@ -238,7 +238,7 @@ async function loadDeclared(){
     try{
         const d=await (await fetch('/app/declared',{cache:'no-store'})).json();
         const out=[];
-        for(const p of [{k:'bank',t:'Bank (PID profile)',sb:23,base:30,adj:2},{k:'rate',t:'Rates',sb:25,base:36,adj:1}]){
+        for(const p of [{k:'bank',t:'Bank (Profile)',sb:23,base:30,adj:2},{k:'rate',t:'Rates',sb:25,base:36,adj:1}]){
             const h=d['adj'+p.base];
             if(typeof h==='string'&&h.length>=30&&parseInt(h.substr(2,2),16)===p.adj){
                 const tx=parseInt(h.substr(10,2),16)+6;
