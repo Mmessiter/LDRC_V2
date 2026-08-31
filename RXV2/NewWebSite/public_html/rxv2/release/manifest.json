@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.483-control-sense",
+      "url": "https://messiter.com/rxv2/release/v0.9.483/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.483/littlefs.bin",
+      "fs_md5": "3ec7fd7adc109b7c3462efe1c23e18fa",
+      "notes": "Travel extents gains a Control sense area (Malcolm): tick to reverse Aileron, Elevator or Collective - one control at a time, no negative numbers, servos untouched; applies on Save, no reboot."
+    },
+    {
       "name": "RXV2-0.9.482-collective-reverse",
       "url": "https://messiter.com/rxv2/release/v0.9.482/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.482/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.472/littlefs.bin",
       "fs_md5": "19b86bbf26007cf06e6095b9987bee2a",
       "notes": "Switches page: the Bank & Rates selectors are editable in place - channel picker, draggable section junctions, Save writes them to the flight controller (one truth shared with Transmitter channels)."
-    },
-    {
-      "name": "RXV2-0.9.471-selectors-local",
-      "url": "https://messiter.com/rxv2/release/v0.9.471/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.471/littlefs.bin",
-      "fs_md5": "2ac0cc501eeb04578866cf6be61f686e",
-      "notes": "Switches page shows the Bank & Rates bars from this phone's choices even before a Save (marked as such), and the heading no longer runs together. Transmitter channels remembers its defaults."
     }
   ]
 }

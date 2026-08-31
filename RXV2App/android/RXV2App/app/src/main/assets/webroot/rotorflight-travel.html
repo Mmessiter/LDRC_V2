@@ -55,7 +55,13 @@ input:disabled{background:#eee;color:#999}
     <div class=card>
         <h2>Calibration (gains)</h2>
         <div class=fldRow><label>Collective gain (%)</label> <input type=number id=t_gColl step=1 min=0 max=500></div>
-        <div class=fldRow><label>Collective reversed <span style="font-weight:400;font-size:.85em">(stick up gives pitch DOWN? tick to fix &mdash; only collective changes)</span></label> <input type=checkbox id=t_gCollRev style="width:1.25em;height:1.25em"></div>
+        <div style="margin-top:.6em;padding:.6em .7em;background:#e7edf2;border-radius:10px">
+            <b style="font-size:.95em;color:#2e4356">Control sense</b>
+            <div style="font-size:.8em;color:#5d7a8c;margin:.15em 0 .35em">Moves the wrong way? Tick to reverse just that control &mdash; servos and the others stay untouched.</div>
+            <div class=fldRow><label>Aileron reversed</label> <input type=checkbox id=t_revAil style="width:1.25em;height:1.25em"></div>
+            <div class=fldRow><label>Elevator reversed</label> <input type=checkbox id=t_revEle style="width:1.25em;height:1.25em"></div>
+            <div class=fldRow><label>Collective reversed</label> <input type=checkbox id=t_revColl style="width:1.25em;height:1.25em"></div>
+        </div>
         <div class=fldRow><label>Cyclic gain (%)</label>     <input type=number id=t_gCyc  step=1 min=0 max=500></div>
         <div class=fldRow><label>Collective up/down balance</label> <input type=number id=t_geo step=0.2 min=-25 max=25></div>
         <p class=cardNote>These make the degrees MEAN degrees: the gain scales how far the swash
@@ -241,7 +247,9 @@ async function load() {
         document.getElementById('t_cyc').value   = d1(s16At(cachedInputs, inOff(2,2)) * 12/1000);
         // Gains — rate magnitude in 0.1 % (sign = direction, preserved on save).
         document.getElementById('t_gColl').value = Math.round(Math.abs(s16At(cachedInputs, inOff(4,0))) / 10);
-        document.getElementById('t_gCollRev').checked = s16At(cachedInputs, inOff(4,0)) < 0;
+        document.getElementById('t_revAil').checked  = s16At(cachedInputs, inOff(1,0)) < 0;
+        document.getElementById('t_revEle').checked  = s16At(cachedInputs, inOff(2,0)) < 0;
+        document.getElementById('t_revColl').checked = s16At(cachedInputs, inOff(4,0)) < 0;
         document.getElementById('t_gCyc').value  = Math.round(Math.abs(s16At(cachedInputs, inOff(1,0))) / 10);
         // Geo correction — s8 at cfg[18], UI = raw/5 (0.2 steps, ±25).
         const geoRaw = cachedCfg[18] > 127 ? cachedCfg[18] - 256 : cachedCfg[18];
@@ -288,20 +296,16 @@ function buildPayloads() {
     putS16(ins, inOff(4,1), -collRaw); putS16(ins, inOff(4,2), collRaw);
     putS16(ins, inOff(1,1), -cycRaw);  putS16(ins, inOff(1,2), cycRaw);
     putS16(ins, inOff(2,1), -cycRaw);  putS16(ins, inOff(2,2), cycRaw);
-    // Gains: magnitude from the UI, DIRECTION (sign) preserved from the read
-    // — a flipped sign would reverse a control, so only the amount is
-    // editable here. Cyclic gain drives inputs 1 AND 2, each keeping its own
-    // sign. A zero stored rate (pathological) defaults to positive.
-    const gSign = (idx) => (s16At(cachedInputs, inOff(idx,0)) < 0 ? -1 : 1);
+    // Gains: magnitude from the UI; DIRECTION comes from the plain-English
+    // Control-sense ticks (Malcolm 2026-08-31: "reverse aileron, elevator
+    // or collective without negative numbers") — the sign of each mixer
+    // input's rate, one control at a time, servos untouched.
+    const sign = (id) => (document.getElementById(id).checked ? -1 : 1);
     const gCollRaw = clamp(Math.round(num('t_gColl') * 10), 0, 10000);
     const gCycRaw  = clamp(Math.round(num('t_gCyc')  * 10), 0, 10000);
-    // Collective direction is the ONE deliberate sign control (Malcolm
-    // 2026-08-31: new build with collective backwards, servos correct) —
-    // reversing the mixer input flips collective alone, roll/pitch untouched.
-    const collSign = document.getElementById('t_gCollRev').checked ? -1 : 1;
-    putS16(ins, inOff(4,0), collSign * gCollRaw);
-    putS16(ins, inOff(1,0), gSign(1) * gCycRaw);
-    putS16(ins, inOff(2,0), gSign(2) * gCycRaw);
+    putS16(ins, inOff(4,0), sign('t_revColl') * gCollRaw);
+    putS16(ins, inOff(1,0), sign('t_revAil')  * gCycRaw);
+    putS16(ins, inOff(2,0), sign('t_revEle')  * gCycRaw);
     const tMin = clamp(Math.round(num('t_tailMin') * ts), 0, 2500);
     const tMax = clamp(Math.round(num('t_tailMax') * ts), 0, 2500);
     putS16(ins, inOff(3,1), -tMin);    putS16(ins, inOff(3,2), tMax);
