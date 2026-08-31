@@ -94,7 +94,7 @@ const FUNCS=[
  {k:'col', t:'Collective',    letter:'C', def:3, stick:true},
  {k:'rud', t:'Rudder',        letter:'R', def:4, stick:true},
  {k:'thr', t:'Throttle',      letter:'T', def:5, stick:true},
- {k:'arm', t:'Arming',        letter:'',  def:6, stick:false},
+ {k:'arm', t:'Arming',        letter:'',  def:6, stick:false, sw2:true},
  {k:'rsc', t:'Rescue',        letter:'',  def:0, stick:false, optional:true, sw2:true},
  // Profile selectors (Malcolm 2026-08-29): 4-position switches. Both may
  // SHARE one channel (share group) — Rotorflight runs them as two
@@ -309,8 +309,8 @@ function wireEnd(f,which){
     });
 }
 function sectionOf(f,us){ return selSection(selBounds(LS+f.k+'.bounds'), us)-1; }
-// Rescue's OFF|ON split: midpoint of its two drawn ends, snapped to 5 µs.
-function rscBoundary(){ const b=selBounds(LS+'rsc.bounds'); return Math.round((b.lo+b.hi)/2/5)*5; }
+// A two-state switch's OFF|ON split: midpoint of its drawn ends, snapped to 5 µs.
+function sw2Boundary(k){ const b=selBounds(LS+k+'.bounds'); return Math.round((b.lo+b.hi)/2/5)*5; }
 
 function renderFixed(){
     const host=$('rows'); host.innerHTML='';
@@ -331,7 +331,8 @@ function renderFixed(){
             div.innerHTML+='<div class=qTrack id=qt_'+f.k+'>'+z+'<div class=qHandle id=qh_'+f.k+'lo></div><div class=qHandle id=qh_'+f.k+'hi></div><div class=qVal id=qv_'+f.k+'></div><div class=qDot id=qd_'+f.k+'></div></div>'
                 +(f.sw2
                   ?'<div style="grid-column:1 / -1;font-size:.85em;color:#5d7a8c">left = OFF, right = ON &mdash; drag the ends to your switch&rsquo;s two positions</div>'
-                  :'<div style="grid-column:1 / -1;display:flex;gap:.6em;align-items:center;font-size:.85em;color:#5d7a8c"><select id=qk_'+f.k+'>'+ko+'</select><span>equal sections between the two ends &mdash; drag the ends to your switch&rsquo;s lowest and highest positions</span></div>');
+                  :'<div style="grid-column:1 / -1;display:flex;gap:.6em;align-items:center;font-size:.85em;color:#5d7a8c"><select id=qk_'+f.k+'>'+ko+'</select><span>equal sections between the two ends &mdash; drag the ends to your switch&rsquo;s lowest and highest positions</span></div>')
+                +(f.k==='rate'?'<div style="grid-column:1 / -1;font-size:.8em;color:#5d7a8c">Using the <b>same channel as Bank</b> is fine &mdash; many pilots prefer one switch for both.</div>':'');
         }
         host.appendChild(div);
         if((f.adj||f.sw2)&&cur>=1){ paintSections(f); wireEnd(f,'lo'); wireEnd(f,'hi');
@@ -491,8 +492,8 @@ async function saveAll(){
     if(!(await LDRC.confirm(
         'Write to the flight controller:\n'
         +'• channel order '+map.slice(0,5).map(x=>x+1).join(',')+' (AERCT)\n'
-        +'• ARM on channel '+armFc+' (active 1600–2100µs)\n'
-        +(rscFc?'• RESCUE on channel '+rscFc+' (ON above '+rscBoundary()+'µs)\n':'')
+        +'• ARM on channel '+armFc+' (ON above '+sw2Boundary('arm')+'µs)\n'
+        +(rscFc?'• RESCUE on channel '+rscFc+' (ON above '+sw2Boundary('rsc')+'µs)\n':'')
         +xw.map(x=>'• '+x.name+' on channel '+x.fc+'\n').join('')
         +prof.filter(p=>p.fc).map(p=>'• '+p.f.t+' on channel '+p.fc+' ('+selBounds(LS+p.f.k+'.bounds').k+' positions)\n').join('')
         +'Blades off / motor unplugged?',
@@ -522,8 +523,8 @@ async function saveAll(){
                 .map(v=>v.toString(16).padStart(2,'0')).join('');
             await LDRC.msp(35,payload);
         }
-        await writeMode(0,armFc);                    // ARM
-        if(rscFc)await writeMode(53,rscFc,rscBoundary(),2125);   // RESCUE: ON above the drawn boundary
+        await writeMode(0,armFc,sw2Boundary('arm'),2125);           // ARM: ON above the drawn boundary
+        if(rscFc)await writeMode(53,rscFc,sw2Boundary('rsc'),2125); // RESCUE: ON above the drawn boundary
         else for(let sl=0;sl<slotCount;sl++){        // Rescue = None: clear stale saved rescue
             const o=sl*4;
             if(modes[o]===53&&modes[o+2]!==modes[o+3]&&!used.has(sl)){

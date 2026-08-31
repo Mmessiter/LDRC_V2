@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.494-arm-bar",
+      "url": "https://messiter.com/rxv2/release/v0.9.494/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.494/littlefs.bin",
+      "fs_md5": "5889a2d7c2a991fef8c13619da3ab460",
+      "notes": "Arming gets the same OFF/ON bar as Rescue (you can now SEE when the threshold is crossed); Rates carries a note that sharing Bank's channel is fine and popular."
+    },
+    {
       "name": "RXV2-0.9.493-rescue-bar",
       "url": "https://messiter.com/rxv2/release/v0.9.493/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.493/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.483/littlefs.bin",
       "fs_md5": "3ec7fd7adc109b7c3462efe1c23e18fa",
       "notes": "Travel extents gains a Control sense area (Malcolm): tick to reverse Aileron, Elevator or Collective - one control at a time, no negative numbers, servos untouched; applies on Save, no reboot."
-    },
-    {
-      "name": "RXV2-0.9.482-collective-reverse",
-      "url": "https://messiter.com/rxv2/release/v0.9.482/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.482/littlefs.bin",
-      "fs_md5": "6cd84c5e5ddaa84a008cf7e567ba85a3",
-      "notes": "Travel extents gains a 'Collective reversed' switch (Malcolm's new build): flips collective alone via the mixer input's sign - roll, pitch and the servos untouched; applies immediately, no reboot."
     }
   ]
 }
