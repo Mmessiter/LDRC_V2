@@ -81,10 +81,10 @@ h1{
 
 /* Side padding keeps title + subtitle clear of the floating home/help
    buttons (Malcolm 2026-07-31: subtitle text hid behind them). */
-h1{max-width:calc(100% - 4.4em)}
+h1{max-width:calc(100% - 8.6em)}
 .subtitle{text-align:center;color:#4a6577;margin:0 auto 1.8em;font-size:.9em;
     background:#f2f6f8;border-radius:10px;padding:.35em .8em;width:fit-content;
-    max-width:calc(100% - 6.4em)}
+    max-width:calc(100% - 8.6em)}
 
 /* Buttons -------------------------------------------------------------- */
 .btn{
@@ -148,6 +148,21 @@ h1{max-width:calc(100% - 4.4em)}
     z-index:50;box-shadow:0 2px 6px rgba(0,0,0,.15);padding:0;
 }
 .homeBtn:active{transform:scale(.95)}
+/* Floating ⬅️ back button, beside 🏠 (Malcolm 2026-08-31) — one level up,
+   always in reach; the old bottom "Back to …" buttons are hidden below. */
+.backBtn{
+    position:fixed;
+    top:max(0.7em, env(safe-area-inset-top, 0.7em));
+    left:calc(max(0.7em, env(safe-area-inset-left, 0.7em)) + 3.5em);
+    width:3em;height:3em;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:#f4f7f9;
+    font-size:1.55em;line-height:1;text-decoration:none;
+    border:1.5px solid rgba(125,158,176,.5);cursor:pointer;
+    z-index:50;box-shadow:0 2px 6px rgba(0,0,0,.15);padding:0;
+}
+.backBtn:active{transform:scale(.95)}
+a.btn-bb{display:none !important}
 .helpModal{
     position:fixed;inset:0;z-index:100;
     background:rgba(46,68,90,.55);
