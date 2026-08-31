@@ -128,9 +128,10 @@ function rowCard(slotIdx, s){
       + '<div class=mRow>'
       + '<div><label>What the switch does</label><select id=m'+slotIdx+'>'+modeOptions(s.perm)+'</select></div>'
       + '<div><label>Which channel</label><select id=c'+slotIdx+'>'+chOptions(s.aux)+'</select></div>'
-      + '<div><label>Active from (&micro;s)</label><input id=lo'+slotIdx+' type=number min=875 max=2125 step=5 value='+s.lo+'></div>'
-      + '<div><label>Active to (&micro;s)</label><input id=hi'+slotIdx+' type=number min=875 max=2125 step=5 value='+s.hi+'></div>'
       + '</div>'
+      // The µs numbers stay out of sight (Malcolm 2026-08-31: boxes = needless
+      // complexity) — hidden fields keep the drag/save/paint plumbing intact.
+      + '<input type=hidden id=lo'+slotIdx+' value='+s.lo+'><input type=hidden id=hi'+slotIdx+' value='+s.hi+'>'
       + '<div class=rTrack id=tr'+slotIdx+'><div class=rZone id=zn'+slotIdx+'></div>'
       + '<div class=rDot id=dot'+slotIdx+' style="display:none"></div>'
       + '<div class=rHandle id=hlo'+slotIdx+'></div><div class=rHandle id=hhi'+slotIdx+'></div></div>'
@@ -403,7 +404,7 @@ async function writeSlot(slotIdx, perm, aux, lo, hi){
 async function saveRow(i){
     const perm=parseInt($('m'+i).value), aux=parseInt($('c'+i).value);
     let lo=parseInt($('lo'+i).value||'1500'), hi=parseInt($('hi'+i).value||'1500');
-    if(hi<=lo){ $('msg'+i).textContent='⚠ "Active to" must be greater than "Active from"'; return; }
+    if(hi<=lo){ $('msg'+i).textContent='⚠ The active zone has no width — drag its ends apart'; return; }
     const m=MODES.find(x=>x.id===perm)||{};
     if(!(await LDRC.confirm('Save: '+(m.name||'mode')+' on channel '+(aux+6)+', active '+lo+'–'+hi+' µs?'
         +(m.warn?'\n\n⚠ This is the ARM switch — be certain the model is safe.':''),

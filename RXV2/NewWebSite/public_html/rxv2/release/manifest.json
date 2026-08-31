@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.487-simpler-switches",
+      "url": "https://messiter.com/rxv2/release/v0.9.487/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.487/littlefs.bin",
+      "fs_md5": "cf88383783a04b655c8ccad88fdd00fc",
+      "notes": "Switch cards on the Switches page lose the two microsecond number boxes - just the bar, the draggable ends and the live red tick."
+    },
+    {
       "name": "RXV2-0.9.486-one-true-back",
       "url": "https://messiter.com/rxv2/release/v0.9.486/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.486/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.476/littlefs.bin",
       "fs_md5": "58f9deec4902d0032bc3bdba14b6e360",
       "notes": "Selectors rebuilt on Rotorflight's own model: ONE adjustment per selector, equal sections between two draggable END points, with a positions count (2-6). Why: each Rotorflight adjustment remembers its last value and only fires when that changes, so per-section adjustments jam on re-entry (the 'stuck on profile 4'). Re-save once; drag the ends to your switch's lowest and highest positions."
-    },
-    {
-      "name": "RXV2-0.9.475-aux-off-by-one",
-      "url": "https://messiter.com/rxv2/release/v0.9.475/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.475/littlefs.bin",
-      "fs_md5": "9026ba5100455588b14350e3ac8b5710",
-      "notes": "IMPORTANT: switch channels were written ONE channel high to the flight controller. Rotorflight has five control channels (collective included), so its AUX1 is channel 6 - the pages used the channel-5 convention, so Arm, Rescue, added functions AND the bank/rates selectors all landed one channel above where you chose. Fixed on Switches and Transmitter channels. RE-SAVE on Transmitter channels once, then confirm with the live marker."
     }
   ]
 }
