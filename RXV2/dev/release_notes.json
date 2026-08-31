@@ -390,5 +390,6 @@
  "RXV2-0.9.507-banner-visible": "Travel page's sticky status banner (SWASH HELD etc.) now sticks below the floating buttons instead of hiding behind them.",
  "RXV2-0.9.508-gain-beside-hold": "The Bench-measure card now carries the current axis's cyclic gain in a green box beside the Hold button (same value as Calibration, kept in step both ways) - measure and adjust on one screen.",
  "RXV2-0.9.509-protocol-diet": "Throttle/arming channels leave the Protocol page (the Transmitter-channels save now tells the receiver too); wave channels move to Receiver settings with their Test button.",
- "RXV2-0.9.510-rescue-floating-save": "Rescue page's Save button floats at the bottom of the screen (same bar as Travel extents) - no more scrolling to save."
+ "RXV2-0.9.510-rescue-floating-save": "Rescue page's Save button floats at the bottom of the screen (same bar as Travel extents) - no more scrolling to save.",
+ "RXV2-0.9.511-back-remembers": "The floating back arrow now returns to the menu you actually came from (A la carte vs wizard) - it remembers the hub you navigated through."
 }

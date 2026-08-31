@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.511-back-remembers",
+      "url": "https://messiter.com/rxv2/release/v0.9.511/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.511/littlefs.bin",
+      "fs_md5": "60ff7aa55a27fb20dd52a42ce84b3dd9",
+      "notes": "The floating back arrow now returns to the menu you actually came from (A la carte vs wizard) - it remembers the hub you navigated through."
+    },
+    {
       "name": "RXV2-0.9.510-rescue-floating-save",
       "url": "https://messiter.com/rxv2/release/v0.9.510/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.510/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.500/littlefs.bin",
       "fs_md5": "754dab4c4c3fd190933e56201a38941a",
       "notes": "Setup-page button and help texts no longer mention gear ratio (it lives in the Rotorflight area now); dead gear code removed from Diagnostics."
-    },
-    {
-      "name": "RXV2-0.9.499-gear-in-wizard",
-      "url": "https://messiter.com/rxv2/release/v0.9.499/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.499/littlefs.bin",
-      "fs_md5": "bc39d244009c074d9fc501de53a8398d",
-      "notes": "Gear ratio moves into the Rotorflight area: editable card in the wizard's ESC step, its own page in A la carte (with live head speed), removed from Receiver settings."
     }
   ]
 }
