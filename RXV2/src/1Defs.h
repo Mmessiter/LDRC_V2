@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.500-gear-mentions-gone";
+constexpr const char* FW_VERSION = "RXV2-0.9.501-calibrate-first";
 
 //*********************************************************************
 //  Auto-update manifest URLs

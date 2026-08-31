@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name=theme-color content="#5fa099">
+<meta name=apple-mobile-web-app-capable content=yes>
+<meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
+<meta name=apple-mobile-web-app-title content="LDRC RX V2">
+<title>Calibrate &middot; LDRC RX V2</title>
+<link rel=stylesheet href="/style.css?v=177">
+<script src="/app.js?v=182" defer></script>
+<style>
+.calBtn{width:100%;margin-top:.6em;padding:.75em;border:0;border-radius:10px;background:#5f8fab;color:#fff;font-size:1.05em;font-weight:700;cursor:pointer}
+.sMsg{text-align:center;font-size:.85em;min-height:1.2em;margin-top:.3em;font-weight:600;color:#3a5165}
+.att{font-size:1.3em;font-weight:700;text-align:center;margin:.4em 0;color:#3a5165}
+.att.level{color:#2a4d1f}
+</style>
+</head>
+<body>
+<button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
+<div class=bg-photo aria-hidden=true></div>
+<div class=bg-wash  aria-hidden=true></div>
+<div class=container>
+    <h1>Calibrate</h1>
+    <p class=subtitle>teach the flight controller which way is level (IMU / accelerometer)</p>
+    <div class=card>
+        <p style="margin:.2em 0;font-size:.92em;color:#3a4d5c;line-height:1.5">Best done <b>flat on a desk, BEFORE the board goes into the model</b> &mdash; the helicopter may not sit level. Keep it perfectly still; takes 2 seconds. Front-or-back mounting does <b>not</b> affect it.</p>
+        <div class=att id=attNow>&hellip;</div>
+        <button class=calBtn id=calBtn onclick="calibrate()">&#128207; Calibrate now</button>
+        <div id=calMsg class=sMsg></div>
+    </div>
+    <div class=footer></div>
+</div>
+<template id=helpContent><h2>Calibrate the flight controller</h2>
+<p>Level (accelerometer) calibration &mdash; the board learns which way gravity points.</p>
+<ul>
+<li>Do it on a flat desk before installation; a mounted helicopter rarely sits truly level.</li>
+<li>The live roll/pitch above should read near 0&deg; afterwards.</li>
+<li>Flat mounting with connectors front or back does not change the result &mdash; gravity sits on the same axis either way. Any tilted mounting needs the configurator&rsquo;s board-alignment angles.</li>
+<li>Refused while armed, and harmless to repeat.</li>
+</ul>
+</template>
+<script>
+const $=id=>document.getElementById(id);
+function hexToBytes(h){const o=new Uint8Array(h.length/2);for(let i=0;i<o.length;i++)o[i]=parseInt(h.substr(i*2,2),16);return o;}
+const rdS16=(b,o)=>{const v=b[o]|(b[o+1]<<8);return (v&0x8000)?v-0x10000:v;};
+function flash(id,t){$(id).textContent=t;setTimeout(()=>$(id).textContent='',6000);}
+async function pollAttitude(){
+    if(document.hidden)return;
+    try{
+        const b=hexToBytes(await LDRC.msp(108,'',1));
+        if(b.length>=4){
+            const r=rdS16(b,0)/10, p=rdS16(b,2)/10;
+            const lvl=Math.abs(r)<2&&Math.abs(p)<2;
+            const el=$('attNow'); el.className='att'+(lvl?' level':'');
+            el.textContent='Roll '+r.toFixed(1)+'°  ·  Pitch '+p.toFixed(1)+'°'+(lvl?'  ✓ level':'');
+        }
+    }catch(e){}
+}
+async function calibrate(){
+    try{ const st=await (await fetch('/api/state.json',{cache:'no-store'})).json();
+         if(st.rf&&st.rf.armed){ flash('calMsg','⚠️ Refused — the model is ARMED'); return; } }catch(e){}
+    if(!(await LDRC.confirm('Is the board (or helicopter) sitting flat, level and perfectly still?',
+        {title:'Level calibration',icon:'📏',yes:'Yes — calibrate'})))return;
+    try{
+        await LDRC.msp(205);           // MSP_ACC_CALIBRATION — FC ignores it if armed
+        flash('calMsg','⏳ Calibrating — keep it still…');
+        setTimeout(async()=>{ await LDRC.msp(250); await pollAttitude();
+                              flash('calMsg','✅ Done — roll/pitch above should read near 0°'); },2500);
+    }catch(e){ flash('calMsg','⚠️ Failed: '+e.message); }
+}
+// DOMContentLoaded, never top-level: deferred app.js must define LDRC first
+// (top-level start caused "Can't find variable: LDRC", Malcolm 2026-08-31).
+document.addEventListener('DOMContentLoaded',()=>{ pollAttitude(); setInterval(pollAttitude,1500); });
+</script>
+</body>
+</html>

@@ -395,7 +395,8 @@
                 '/rotorflight-pidplus': '/rotorflight',
                 '/rotorflight-gov-global': '/rotorflight',
                 '/rotorflight-gov-profile': '/rotorflight',
-                '/rotorflight-gear': '/rotorflight'
+                '/rotorflight-gear': '/rotorflight',
+                '/rotorflight-calibrate': '/rotorflight-newheli'
             };
             const LABELS = {
                 '/': 'front screen', '/blackbox': 'Black box', '/setup': 'Setup',
