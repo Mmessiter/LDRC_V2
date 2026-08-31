@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.506-cyclic-balance",
+      "url": "https://messiter.com/rxv2/release/v0.9.506/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.506/littlefs.bin",
+      "fs_md5": "5c0afc5012f265cca7d7220cb9832254",
+      "notes": "Travel extents: cyclic gain split into separate roll and pitch gains so the two axes can be balanced against the pitch gauge (8 vs 10 degrees is now fixable)."
+    },
+    {
       "name": "RXV2-0.9.505-blades-on-step",
       "url": "https://messiter.com/rxv2/release/v0.9.505/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.505/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.495/littlefs.bin",
       "fs_md5": "6b6b024008daeb971c39585357dee765",
       "notes": "Arming and Rescue bars: the useless end blobs are gone - ONE draggable divider sits on the OFF/ON threshold."
-    },
-    {
-      "name": "RXV2-0.9.494-arm-bar",
-      "url": "https://messiter.com/rxv2/release/v0.9.494/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.494/littlefs.bin",
-      "fs_md5": "5889a2d7c2a991fef8c13619da3ab460",
-      "notes": "Arming gets the same OFF/ON bar as Rescue (you can now SEE when the threshold is crossed); Rates carries a note that sharing Bank's channel is fine and popular."
     }
   ]
 }
