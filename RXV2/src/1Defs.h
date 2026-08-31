@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.504-servo-power-warning";
+constexpr const char* FW_VERSION = "RXV2-0.9.505-blades-on-step";
 
 //*********************************************************************
 //  Auto-update manifest URLs
