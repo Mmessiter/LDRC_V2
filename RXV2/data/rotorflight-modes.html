@@ -258,13 +258,15 @@ async function loadDeclared(){
 // adjustments jam on re-entry. Rotorflight's own model: the switch travel
 // between two end-points maps linearly onto profiles 1..K (equal sections).
 // Bounds = {lo, hi, k}; the FC's formula: k = 1 + floor(((ch-lo)*(K-1) + W/2)/W).
+// CRSF clamps every channel to 988-2012 us: travel ends are KNOWN, nothing
+// to drag (Malcolm 2026-08-31). Only the position count is remembered.
 function selBounds(key){
+    let k=4;
     try{ const b=JSON.parse(localStorage.getItem(key)||'null');
-        if(b&&typeof b==='object'&&!Array.isArray(b)&&b.k>=2) return b;
-        if(Array.isArray(b)&&b.length===7){ const secs=[]; for(let n=0;n<6;n++) if(b[n+1]-b[n]>=5) secs.push(n);
-            return {lo:b[0], hi:b[secs.length], k:Math.max(2,secs.length)}; }
+        if(b&&typeof b==='object'&&!Array.isArray(b)&&b.k>=2) k=b.k;
+        else if(Array.isArray(b)&&b.length===7){ let n=0; for(let i=0;i<6;i++) if(b[i+1]-b[i]>=5) n++; k=Math.max(2,n); }
     }catch(e){}
-    return {lo:875, hi:2125, k:4};
+    return {lo:988, hi:2012, k};
 }
 function selSection(b, us){
     const W=b.hi-b.lo; if(W<=0) return 1;
@@ -285,25 +287,6 @@ function paintProfBar(p){
         if(n>b.k){ z.style.display='none'; continue; } z.style.display='';
         const s=p.secs[n-1], l=qpct(s.lo), w=qpct(s.hi)-l;
         z.style.left=(l+0.3)+'%'; z.style.width=Math.max(0,w-0.6)+'%'; z.textContent = w>5?String(n):''; }
-    const hl=$('qh_'+p.k+'lo'), hh=$('qh_'+p.k+'hi'); if(hl) hl.style.left=qpct(b.lo)+'%'; if(hh) hh.style.left=qpct(b.hi)+'%';
-}
-function wireProfEnd(p,which){
-    const h=$('qh_'+p.k+which), track=$('qt_'+p.k); if(!h||!track)return;
-    h.addEventListener('pointerdown',e=>{
-        e.preventDefault(); e.stopPropagation();
-        try{ h.setPointerCapture(e.pointerId); }catch(_){}
-        const move=ev=>{
-            const r=track.getBoundingClientRect();
-            let us=RMINQ+(ev.clientX-r.left)/r.width*(RMAXQ-RMINQ);
-            us=Math.max(RMINQ,Math.min(RMAXQ,Math.round(us/5)*5));
-            const b=selBounds('rfTxCh.'+p.k+'.bounds');
-            if(which==='lo') b.lo=Math.min(us,b.hi-50); else b.hi=Math.max(us,b.lo+50);
-            localStorage.setItem('rfTxCh.'+p.k+'.bounds',JSON.stringify(b)); paintProfBar(p); $('pmsg_'+p.k).textContent='changed — tap Save';
-        };
-        const up=()=>{ try{h.releasePointerCapture(e.pointerId);}catch(_){}
-            h.removeEventListener('pointermove',move); h.removeEventListener('pointerup',up); h.removeEventListener('pointercancel',up); };
-        h.addEventListener('pointermove',move); h.addEventListener('pointerup',up); h.addEventListener('pointercancel',up);
-    });
 }
 async function saveProf(k){
     const p=PROF.find(x=>x.k===k); if(!p)return;
@@ -344,16 +327,16 @@ function paintProf(){
           +'<div></div>'
           +'</div>'
           +(p.src==='local'?'<div class=muted style="font-size:.8em;margin:.3em 0">From this phone\u2019s choices &mdash; tap Save to write them to the flight controller.</div>':'')
-          +'<div class=rTrack id=qt_'+p.k+' style="margin-top:1.2em">'+z+'<div class=qHandle id=qh_'+p.k+'lo></div><div class=qHandle id=qh_'+p.k+'hi></div><div class=rDot id=dot_'+p.k+' style="display:none"></div></div>'
+          +'<div class=rTrack id=qt_'+p.k+' style="margin-top:1.2em">'+z+'<div class=rDot id=dot_'+p.k+' style="display:none"></div></div>'
           +'<div class=rScale><span>875</span><span>1500</span><span>2125&nbsp;&micro;s</span></div>'
-          +'<div class=muted style="font-size:.8em;margin:.2em 0">Equal sections between the ends &mdash; drag the ends to the switch&rsquo;s lowest and highest positions.</div>'
+          +'<div class=muted style="font-size:.8em;margin:.2em 0">Equal sections across the switch&rsquo;s travel.</div>'
           +'<div class=pAns id=ans_'+p.k+'>Flight controller: &hellip;</div>'
           +'<div class=muted style="font-size:.78em;margin-top:.25em">In the configurator this is Adjustments row '+(p.base+1)+' &mdash; scroll a long way down.</div>'
           +'<div class=mBtns><button class=mSave onclick="saveProf(\''+p.k+'\')">&#128190; Save</button></div>'
           +'<div class=mMsg id=pmsg_'+p.k+'></div></div>';
     }
     $('profRows').innerHTML=h;
-    for(const p of PROF){ paintProfBar(p); wireProfEnd(p,'lo'); wireProfEnd(p,'hi');
+    for(const p of PROF){ paintProfBar(p);
         $('qk_'+p.k).addEventListener('change',()=>{ const b=selBounds('rfTxCh.'+p.k+'.bounds'); b.k=parseInt($('qk_'+p.k).value); localStorage.setItem('rfTxCh.'+p.k+'.bounds',JSON.stringify(b)); paintProfBar(p); $('pmsg_'+p.k).textContent='changed — tap Save'; }); }
 }
 function pollProf(b, st){

@@ -261,13 +261,16 @@ function resolveConflicts(){
 // Bounds = {lo, hi, k}; the FC's formula: k = 1 + floor(((ch-lo)*(K-1) + W/2)/W).
 const QMIN=875, QMAX=2125;
 const qpct=u=>Math.max(0,Math.min(100,(u-QMIN)/(QMAX-QMIN)*100));
+// CRSF clamps every channel to 988-2012 us, so a switch's travel ends are
+// KNOWN - nothing to drag (Malcolm 2026-08-31: the end blobs achieved
+// nothing). Only the position count is remembered.
 function selBounds(key){
+    let k=4;
     try{ const b=JSON.parse(localStorage.getItem(key)||'null');
-        if(b&&typeof b==='object'&&!Array.isArray(b)&&b.k>=2) return b;
-        if(Array.isArray(b)&&b.length===7){ const secs=[]; for(let n=0;n<6;n++) if(b[n+1]-b[n]>=5) secs.push(n);
-            return {lo:b[0], hi:b[secs.length], k:Math.max(2,secs.length)}; }
+        if(b&&typeof b==='object'&&!Array.isArray(b)&&b.k>=2) k=b.k;
+        else if(Array.isArray(b)&&b.length===7){ let n=0; for(let i=0;i<6;i++) if(b[i+1]-b[i]>=5) n++; k=Math.max(2,n); }
     }catch(e){}
-    return {lo:875, hi:2125, k:4};
+    return {lo:988, hi:2012, k};
 }
 function selSection(b, us){
     const W=b.hi-b.lo; if(W<=0) return 1;
@@ -314,25 +317,6 @@ function paintSections(f){
         const sHi = q===b.k-1 ? b.hi : b.lo + W*(q+0.5)/(b.k-1);
         const l=qpct(sLo), w=qpct(sHi)-l;
         z.style.left=(l+0.3)+'%'; z.style.width=Math.max(0,w-0.6)+'%'; z.textContent = w>5?String(q+1):''; }
-    const hl=$('qh_'+f.k+'lo'), hh=$('qh_'+f.k+'hi'); if(hl) hl.style.left=qpct(b.lo)+'%'; if(hh) hh.style.left=qpct(b.hi)+'%';
-}
-function wireEnd(f,which){
-    const h=$('qh_'+f.k+which), track=$('qt_'+f.k); if(!h||!track)return;
-    h.addEventListener('pointerdown',e=>{
-        e.preventDefault(); e.stopPropagation();
-        try{ h.setPointerCapture(e.pointerId); }catch(_){}
-        const move=ev=>{
-            const r=track.getBoundingClientRect();
-            let us=QMIN+(ev.clientX-r.left)/r.width*(QMAX-QMIN);
-            us=Math.max(QMIN,Math.min(QMAX,Math.round(us/5)*5));
-            const b=selBounds(LS+f.k+'.bounds');
-            if(which==='lo') b.lo=Math.min(us,b.hi-50); else b.hi=Math.max(us,b.lo+50);
-            localStorage.setItem(LS+f.k+'.bounds',JSON.stringify(b)); paintSections(f);
-        };
-        const up=()=>{ try{h.releasePointerCapture(e.pointerId);}catch(_){}
-            h.removeEventListener('pointermove',move); h.removeEventListener('pointerup',up); h.removeEventListener('pointercancel',up); };
-        h.addEventListener('pointermove',move); h.addEventListener('pointerup',up); h.addEventListener('pointercancel',up);
-    });
 }
 function sectionOf(f,us){ if(f.sw2) return us>=sw2Boundary(f.k)?1:0; return selSection(selBounds(LS+f.k+'.bounds'), us)-1; }
 // A two-state switch's OFF|ON threshold: one stored value (drag the divider).
@@ -362,13 +346,13 @@ function renderFixed(){
             const b=selBounds(LS+f.k+'.bounds');
             let z=''; for(let q=0;q<6;q++) z+='<div class=qZone id=qz_'+f.k+q+'>'+(q+1)+'</div>';
             let ko=''; for(let k=2;k<=6;k++) ko+='<option value='+k+(k===b.k?' selected':'')+'>'+k+' positions</option>';
-            div.innerHTML+='<div class=qTrack id=qt_'+f.k+'>'+z+'<div class=qHandle id=qh_'+f.k+'lo></div><div class=qHandle id=qh_'+f.k+'hi></div><div class=qVal id=qv_'+f.k+'></div><div class=qDot id=qd_'+f.k+'></div></div>'
-                +'<div style="grid-column:1 / -1;display:flex;gap:.6em;align-items:center;font-size:.85em;color:#5d7a8c"><select id=qk_'+f.k+'>'+ko+'</select><span>equal sections between the two ends &mdash; drag the ends to your switch&rsquo;s lowest and highest positions</span></div>'
+            div.innerHTML+='<div class=qTrack id=qt_'+f.k+'>'+z+'<div class=qVal id=qv_'+f.k+'></div><div class=qDot id=qd_'+f.k+'></div></div>'
+                +'<div style="grid-column:1 / -1;display:flex;gap:.6em;align-items:center;font-size:.85em;color:#5d7a8c"><select id=qk_'+f.k+'>'+ko+'</select><span>equal sections across the switch&rsquo;s travel</span></div>'
                 +(f.k==='rate'?'<div style="grid-column:1 / -1;font-size:.8em;color:#5d7a8c">Using the <b>same channel as Bank</b> is fine &mdash; many pilots prefer one switch for both.</div>':'');
         }
         host.appendChild(div);
         if(f.sw2&&cur>=1){ paintSw2(f); wireThr(f); }
-        else if(f.adj&&cur>=1){ paintSections(f); wireEnd(f,'lo'); wireEnd(f,'hi');
+        else if(f.adj&&cur>=1){ paintSections(f);
             const qk=$('qk_'+f.k);
             if(qk)qk.addEventListener('change',()=>{ const b=selBounds(LS+f.k+'.bounds'); b.k=parseInt(qk.value); localStorage.setItem(LS+f.k+'.bounds',JSON.stringify(b)); paintSections(f); }); }
         $('s_'+f.k).addEventListener('change',()=>{localStorage.setItem(LS+f.k,$('s_'+f.k).value);renderAll();});
