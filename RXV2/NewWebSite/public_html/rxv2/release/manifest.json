@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.502-computer-notes",
+      "url": "https://messiter.com/rxv2/release/v0.9.502/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.502/littlefs.bin",
+      "fs_md5": "d3d8f58856e72de55927ea5ccbd21505",
+      "notes": "Step 1 notes the receiver need not be connected and that the post-flash 'calibration needed' warning can be ignored (or calibrate right there); step 2 opens with 'from here on everything is done from the receiver'."
+    },
+    {
       "name": "RXV2-0.9.501-calibrate-first",
       "url": "https://messiter.com/rxv2/release/v0.9.501/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.501/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.491/littlefs.bin",
       "fs_md5": "e6700099956f6f280a0fc11d1d1aba57",
       "notes": "The Arm switch card no longer offers Remove - Rotorflight requires an arm switch."
-    },
-    {
-      "name": "RXV2-0.9.490-uniform-switch-cards",
-      "url": "https://messiter.com/rxv2/release/v0.9.490/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.490/littlefs.bin",
-      "fs_md5": "1591a453164c56523eb4512f1b928c0e",
-      "notes": "Bank and Rates selector cards now share the exact layout of the other switch cards - same labelled pickers, bar and Save."
     }
   ]
 }
