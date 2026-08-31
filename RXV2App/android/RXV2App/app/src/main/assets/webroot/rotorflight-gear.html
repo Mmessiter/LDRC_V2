@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name=theme-color content="#5fa099">
+<meta name=apple-mobile-web-app-capable content=yes>
+<meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
+<meta name=apple-mobile-web-app-title content="LDRC RX V2">
+<title>Gear ratio &middot; LDRC RX V2</title>
+<link rel=stylesheet href="/style.css?v=177">
+<script src="/app.js?v=182" defer></script>
+</head>
+<body>
+<button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
+<div class=bg-photo aria-hidden=true></div>
+<div class=bg-wash  aria-hidden=true></div>
+<div class=container>
+    <h1>Gear ratio</h1>
+    <p class=subtitle>so the transmitter shows head speed, not motor RPM</p>
+    <div class=card>
+        <p style="margin:.2em 0;font-size:.92em;color:#3a4d5c;line-height:1.5">Motor turns per one rotor turn (e.g. <b>10.2</b>). The receiver divides motor RPM by this before sending head speed to the transmitter. <b>1.0</b> = direct drive.</p>
+        <p style="margin:.5em 0"><label>Gear ratio
+            <input type=number id=gearField step=0.01 min=0.1 max=100 style="width:6em;padding:.4em;font-size:1em;border-radius:8px;border:1px solid #b8c7d0;margin-left:.5em">
+        </label></p>
+        <button class="btn btn-fw" id=gearSave style="background:#5f8fab"><span class=ico>&#128190;</span>Save gear ratio</button>
+        <p class=muted id=liveLine style="font-size:.85em;margin:.5em 0 .1em"></p>
+    </div>
+    <div class=footer></div>
+</div>
+<template id=helpContent><h2>Gear ratio</h2>
+<p>Rotorflight sends the receiver <b>motor</b> RPM. The receiver divides it by this ratio so the transmitter displays <b>head speed</b>.</p>
+<ul>
+<li>Find it in the model&rsquo;s manual, or compute main-gear teeth &divide; pinion teeth (times any intermediate stage).</li>
+<li>Set Rotorflight&rsquo;s own gear ratio too (Governor step) &mdash; that one feeds the governor; this one feeds the transmitter display. Same number in both.</li>
+<li>Wrong or unset ratio = head speed shown far too high (raw motor RPM).</li>
+</ul>
+</template>
+<script>
+const $=id=>document.getElementById(id);
+let gearTouched=false;
+$('gearField').addEventListener('input',()=>{gearTouched=true;});
+$('gearSave').addEventListener('click',async()=>{
+    const r=parseFloat($('gearField').value||'1');
+    try{
+        const j=await (await fetch('/api/gear?ratio='+encodeURIComponent(r),{method:'POST'})).json();
+        gearTouched=false; $('gearField').value=j.gear_ratio;
+        await LDRC.alert('Gear ratio = '+j.gear_ratio+' saved!',{title:'Saved',icon:'⚙️'});
+    }catch(e){ await LDRC.alert('Gear ratio save failed.',{title:'Error',icon:'⚠️',kind:'danger'}); }
+});
+async function tick(){
+    try{
+        const s=await (await fetch('/api/state.json',{cache:'no-store'})).json();
+        if(s.rf){
+            if(s.rf.gear_ratio!=null&&!gearTouched) $('gearField').value=s.rf.gear_ratio;
+            if(s.rf.head_speed!=null&&s.rf.head_speed>0) $('liveLine').textContent='Head speed now: '+s.rf.head_speed+' RPM';
+            else $('liveLine').textContent='';
+        }
+    }catch(e){}
+    setTimeout(tick,1500);
+}
+document.addEventListener('DOMContentLoaded',tick);
+</script>
+</body>
+</html>
