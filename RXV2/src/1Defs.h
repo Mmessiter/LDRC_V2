@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.495-one-divider";
+constexpr const char* FW_VERSION = "RXV2-0.9.496-no-end-blobs";
 
 //*********************************************************************
 //  Auto-update manifest URLs

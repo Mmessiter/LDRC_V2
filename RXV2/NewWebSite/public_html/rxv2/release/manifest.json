@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.496-no-end-blobs",
+      "url": "https://messiter.com/rxv2/release/v0.9.496/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.496/littlefs.bin",
+      "fs_md5": "049f403aa3a3c53fcea7da2ceab4648c",
+      "notes": "Bank/Rates bars on both screens lose their end blobs - the travel is pinned to CRSF's known 988-2012 us, so there was nothing to drag."
+    },
+    {
       "name": "RXV2-0.9.495-one-divider",
       "url": "https://messiter.com/rxv2/release/v0.9.495/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.495/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.485/littlefs.bin",
       "fs_md5": "bb496e888a309d8db87d689f2ec12e20",
       "notes": "Front screen's Rotorflight and Black box buttons are back (the floating-back change had hidden them by mistake); only genuine 'Back to ...' buttons are now hidden."
-    },
-    {
-      "name": "RXV2-0.9.484-floating-back",
-      "url": "https://messiter.com/rxv2/release/v0.9.484/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.484/littlefs.bin",
-      "fs_md5": "c01fe712c841fba146996bf1a708a147",
-      "notes": "A floating back arrow now sits beside the home button on every sub-page - one level up without scrolling; the old bottom 'Back to ...' buttons are gone."
     }
   ]
 }
