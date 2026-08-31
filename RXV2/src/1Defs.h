@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.491-arm-stays";
+constexpr const char* FW_VERSION = "RXV2-0.9.492-title-fits";
 
 //*********************************************************************
 //  Auto-update manifest URLs

@@ -371,5 +371,6 @@
  "RXV2-0.9.488-stateful-zones": "Switch-card zone edges now live purely in memory - the number boxes are gone completely, not just hidden (less complexity down the road).",
  "RXV2-0.9.489-tx-on-note": "Switches and Transmitter-channels pages now remind you to have the transmitter ON - the live red tick needs it.",
  "RXV2-0.9.490-uniform-switch-cards": "Bank and Rates selector cards now share the exact layout of the other switch cards - same labelled pickers, bar and Save.",
- "RXV2-0.9.491-arm-stays": "The Arm switch card no longer offers Remove - Rotorflight requires an arm switch."
+ "RXV2-0.9.491-arm-stays": "The Arm switch card no longer offers Remove - Rotorflight requires an arm switch.",
+ "RXV2-0.9.492-title-fits": "Page titles on back-arrow pages sit below the button row at full width - no more 'Switch / es' squeeze."
 }

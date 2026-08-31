@@ -82,7 +82,12 @@ h1{
 /* Side padding keeps title + subtitle clear of the floating home/help
    buttons (Malcolm 2026-07-31: subtitle text hid behind them). */
 h1{max-width:calc(100% - 4.4em);overflow-wrap:anywhere}
-body.hasBack h1,body.hasBack .subtitle{max-width:calc(100% - 8.6em)}
+/* With the back arrow there is no room BESIDE the buttons, so the title
+   drops BELOW the fixed button row instead of squeezing. (The old squeeze
+   was 8.6em measured in h1's 1.9x font = ~260px - it strangled the chip
+   and mid-word-wrapped "Switches", Malcolm 2026-08-31.) */
+body.hasBack h1{margin-top:5.6rem;max-width:calc(100% - 1rem)}
+body.hasBack .subtitle{max-width:calc(100% - 1rem)}
 .subtitle{text-align:center;color:#4a6577;margin:0 auto 1.8em;font-size:.9em;
     background:#f2f6f8;border-radius:10px;padding:.35em .8em;width:fit-content;
     max-width:calc(100% - 6.4em)}

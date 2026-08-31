@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.492-title-fits",
+      "url": "https://messiter.com/rxv2/release/v0.9.492/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.492/littlefs.bin",
+      "fs_md5": "0f441caf49913efe6149a862a41fa64e",
+      "notes": "Page titles on back-arrow pages sit below the button row at full width - no more 'Switch / es' squeeze."
+    },
+    {
       "name": "RXV2-0.9.491-arm-stays",
       "url": "https://messiter.com/rxv2/release/v0.9.491/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.491/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.481/littlefs.bin",
       "fs_md5": "462a09f2ae9b404c6ad4e145f4523888",
       "notes": "Servos: 'Copy to servos 2 & 3 & save' on servo 1 (Malcolm) - copies travel, throw, rate, slow-motion and geometry to the other swash servos in one tap; each keeps its own centre (mechanical levelling) and its own Reversed flag (mounting)."
-    },
-    {
-      "name": "RXV2-0.9.480-telemetry-sensors-fixed",
-      "url": "https://messiter.com/rxv2/release/v0.9.480/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.480/littlefs.bin",
-      "fs_md5": "f5e80950b94564319e30457433d1fd47",
-      "notes": "'Telemetry to the transmitter' in First-time basics: seven plain-English toggles (Flight mode, Battery, Head speed, Temperature, Attitude, Altitude, GPS) written into Rotorflight's sensor list, everything else preserved; Save verifies by read-back and offers the required restart. (Replaces 0.9.479, which mis-read the reply by one byte.)"
     }
   ]
 }
