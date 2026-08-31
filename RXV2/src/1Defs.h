@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.505-blades-on-step";
+constexpr const char* FW_VERSION = "RXV2-0.9.506-cyclic-balance";
 
 //*********************************************************************
 //  Auto-update manifest URLs

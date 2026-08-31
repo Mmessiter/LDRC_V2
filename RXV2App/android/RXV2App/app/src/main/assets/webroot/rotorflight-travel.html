@@ -62,7 +62,8 @@ input:disabled{background:#eee;color:#999}
             <div class=fldRow><label>Elevator reversed</label> <input type=checkbox id=t_revEle style="width:1.25em;height:1.25em"></div>
             <div class=fldRow><label>Collective reversed</label> <input type=checkbox id=t_revColl style="width:1.25em;height:1.25em"></div>
         </div>
-        <div class=fldRow><label>Cyclic gain (%)</label>     <input type=number id=t_gCyc  step=1 min=0 max=500></div>
+        <div class=fldRow><label>Cyclic gain &mdash; roll (aileron) (%)</label>     <input type=number id=t_gCycR  step=1 min=0 max=500></div>
+        <div class=fldRow><label>Cyclic gain &mdash; pitch (elevator) (%)</label>     <input type=number id=t_gCycP  step=1 min=0 max=500></div>
         <div class=fldRow><label>Collective up/down balance</label> <input type=number id=t_geo step=0.2 min=-25 max=25></div>
         <p class=cardNote>These make the degrees MEAN degrees: the gain scales how far the swash
         really moves per commanded degree. If a pitch gauge reads less than the limit says
@@ -249,7 +250,8 @@ async function load() {
         document.getElementById('t_revAil').checked  = s16At(cachedInputs, inOff(1,0)) < 0;
         document.getElementById('t_revEle').checked  = s16At(cachedInputs, inOff(2,0)) < 0;
         document.getElementById('t_revColl').checked = s16At(cachedInputs, inOff(4,0)) < 0;
-        document.getElementById('t_gCyc').value  = Math.round(Math.abs(s16At(cachedInputs, inOff(1,0))) / 10);
+        document.getElementById('t_gCycR').value = Math.round(Math.abs(s16At(cachedInputs, inOff(1,0))) / 10);
+        document.getElementById('t_gCycP').value = Math.round(Math.abs(s16At(cachedInputs, inOff(2,0))) / 10);
         // Geo correction — s8 at cfg[18], UI = raw/5 (0.2 steps, ±25).
         const geoRaw = cachedCfg[18] > 127 ? cachedCfg[18] - 256 : cachedCfg[18];
         document.getElementById('t_geo').value = d1(geoRaw / 5);
@@ -301,10 +303,13 @@ function buildPayloads() {
     // input's rate, one control at a time, servos untouched.
     const sign = (id) => (document.getElementById(id).checked ? -1 : 1);
     const gCollRaw = clamp(Math.round(num('t_gColl') * 10), 0, 10000);
-    const gCycRaw  = clamp(Math.round(num('t_gCyc')  * 10), 0, 10000);
+    // Roll and pitch gains are separate (Malcolm 2026-08-31: gauge read
+    // 8 deg roll but 10 deg pitch - one shared gain could not balance them).
+    const gCycR = clamp(Math.round(num('t_gCycR') * 10), 0, 10000);
+    const gCycP = clamp(Math.round(num('t_gCycP') * 10), 0, 10000);
     putS16(ins, inOff(4,0), sign('t_revColl') * gCollRaw);
-    putS16(ins, inOff(1,0), sign('t_revAil')  * gCycRaw);
-    putS16(ins, inOff(2,0), sign('t_revEle')  * gCycRaw);
+    putS16(ins, inOff(1,0), sign('t_revAil')  * gCycR);
+    putS16(ins, inOff(2,0), sign('t_revEle')  * gCycP);
     const tMin = clamp(Math.round(num('t_tailMin') * ts), 0, 2500);
     const tMax = clamp(Math.round(num('t_tailMax') * ts), 0, 2500);
     putS16(ins, inOff(3,1), -tMin);    putS16(ins, inOff(3,2), tMax);
@@ -478,7 +483,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <h3>How to use it</h3>
 <p>Change the limits, tap <b>Save</b>. They apply immediately — no reboot. Then check the real blade angles on the bench with a pitch gauge before flying.</p>
 <h3>What the numbers mean</h3>
-<p><b>Collective pitch limit</b> — blade pitch at full collective stick, each way. <b>Cyclic pitch limit</b> — cyclic authority each way. <b>Total pitch limit</b> — cap on cyclic + collective combined (the flight controller keeps it at least 6&deg; above collective). <b>Gains</b> — the calibration that makes commanded degrees equal real, measured degrees: if the gauge reads less than the limit says, raise the gain by that ratio. <b>Swash trims</b> — fine levelling (collective trim also centres a blade pitch that isn't 0&deg; at mid-stick). <b>Tail travel</b> — tail-blade pitch each way (or throttle range on a motorised tail).</p>
+<p><b>Collective pitch limit</b> — blade pitch at full collective stick, each way. <b>Cyclic pitch limit</b> — cyclic authority each way. <b>Total pitch limit</b> — cap on cyclic + collective combined (the flight controller keeps it at least 6&deg; above collective). <b>Gains</b> — the calibration that makes commanded degrees equal real, measured degrees: if the gauge reads less than the limit says, raise the gain by that ratio. Roll and pitch cyclic gains are separate so you can <b>balance the two axes</b>: gauge reads 8&deg; roll but 10&deg; pitch? Lower the pitch gain by 8&frasl;10 (or raise roll by 10&frasl;8) until both match. <b>Swash trims</b> — fine levelling (collective trim also centres a blade pitch that isn't 0&deg; at mid-stick). <b>Tail travel</b> — tail-blade pitch each way (or throttle range on a motorised tail).</p>
 <h3>Safety</h3>
 <p>Bigger extents mean bigger forces. After changing them, always confirm on the bench that nothing binds at the ends of travel.</p>
 </template>
