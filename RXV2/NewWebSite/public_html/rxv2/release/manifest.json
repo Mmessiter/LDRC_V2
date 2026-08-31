@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.485-buttons-restored",
+      "url": "https://messiter.com/rxv2/release/v0.9.485/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.485/littlefs.bin",
+      "fs_md5": "bb496e888a309d8db87d689f2ec12e20",
+      "notes": "Front screen's Rotorflight and Black box buttons are back (the floating-back change had hidden them by mistake); only genuine 'Back to ...' buttons are now hidden."
+    },
+    {
       "name": "RXV2-0.9.484-floating-back",
       "url": "https://messiter.com/rxv2/release/v0.9.484/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.484/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.474/littlefs.bin",
       "fs_md5": "8e9a6c56c2d2012814a5ac92a23964ef",
       "notes": "Selector maths verified against Rotorflight's own formula for even, quarter, uneven and two-section layouts (zero mismatches over the whole switch travel); sections near the top of travel use a mirrored window so nothing is lost at 2125. Re-save the selectors once."
-    },
-    {
-      "name": "RXV2-0.9.473-selectors-bite",
-      "url": "https://messiter.com/rxv2/release/v0.9.473/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.473/littlefs.bin",
-      "fs_md5": "f0bfd45862fc37e9df6c7b7ada2fc641",
-      "notes": "Bank/Rates selectors now actually switch profiles: Rotorflight silently ignores a mapped adjustment whose min equals max, so each section is now written as N..N+1 with its mapping window centred on the section - the whole section lands on N. Re-save the selectors (Switches or Transmitter channels page) and flip the switch."
     }
   ]
 }

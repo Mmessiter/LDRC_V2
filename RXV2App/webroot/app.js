@@ -390,7 +390,13 @@
             // Rotorflight pages carry .btn-bb with the right target), else the
             // PARENTS map; when the parent IS the front screen, 🏠 already
             // covers it. The old bottom buttons are hidden by style.css.
-            const ownBack = document.querySelector('a.btn-bb');
+            // btn-bb is ALSO used for ordinary menu buttons (the front
+            // screen's Rotorflight/Black box — hiding the whole class
+            // vaporised them, Malcolm 2026-08-31), so identify a true back
+            // button by its "Back to …" wording and hide only that one.
+            const ownBack = Array.from(document.querySelectorAll('a.btn-bb'))
+                .find(x => /back to /i.test(x.textContent));
+            if (ownBack) ownBack.style.display = 'none';
             const parent = (ownBack && ownBack.getAttribute('href')) || PARENTS[location.pathname] || '/';
             if (parent !== '/') {
                 const back = document.createElement('a');
