@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.497-selectors-stay",
+      "url": "https://messiter.com/rxv2/release/v0.9.497/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.497/littlefs.bin",
+      "fs_md5": "89a1417777f483a23acdda1b0048e84b",
+      "notes": "Bank and Rates rows lose their delete (x) button - choosing None in the channel picker already covers the rare case; Rescue keeps its x."
+    },
+    {
       "name": "RXV2-0.9.496-no-end-blobs",
       "url": "https://messiter.com/rxv2/release/v0.9.496/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.496/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.486/littlefs.bin",
       "fs_md5": "831159a0ce25a8308525c7c4c03c99d2",
       "notes": "Model-name chip fits again (width only narrows on pages with the back arrow); every page's embedded back button removed - the floating arrow now knows its own destination."
-    },
-    {
-      "name": "RXV2-0.9.485-buttons-restored",
-      "url": "https://messiter.com/rxv2/release/v0.9.485/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.485/littlefs.bin",
-      "fs_md5": "bb496e888a309d8db87d689f2ec12e20",
-      "notes": "Front screen's Rotorflight and Black box buttons are back (the floating-back change had hidden them by mistake); only genuine 'Back to ...' buttons are now hidden."
     }
   ]
 }
