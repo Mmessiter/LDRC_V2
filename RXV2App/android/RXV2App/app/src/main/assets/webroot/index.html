@@ -110,7 +110,7 @@
              lives under Setup, everything sim under Simulator — a new user sees
              five calm buttons instead of twelve. -->
         <button class="btn btn-fly"  type=button id=flybtn><span class=ico>&#128641;&#9992;&#65039;</span><span style="display:flex;flex-direction:column;align-items:flex-start;text-align:left"><span>Fly now</span><span style="font-size:.62em;font-weight:400;opacity:.85;margin-top:.25em">turns off WiFi &amp; Bluetooth</span></span></button>
-        <a class="btn btn-bb"   href="/rotorflight" id=rfbtn style="display:none;background:#8e6cab"><span class=ico>&#129357;</span>Rotorflight config</a>
+        <a class="btn btn-bb"   href="/rotorflight" id=rfbtn style="display:none;background:#8e6cab"><span class=ico>&#129357;</span>Rotorflight setup and Wizard</a>
         <div id=fcHint class=muted style="display:none;font-size:.85em;line-height:1.5;text-align:center;padding:.3em .8em">
             &#128161; Model responding but no flight controller detected? On the flight
             controller, check <b>TELEMETRY</b> is enabled (Rotorflight &rarr; Configuration)
@@ -981,7 +981,7 @@ function bleOtaWatch() {
 <h3>Buttons</h3>
 <ul>
 <li><b>Fly now</b> — shuts WiFi and Bluetooth down before flying. You normally do NOT need it: switch the transmitter on <i>before</i> powering the model and the receiver does it all by itself (see Flying, below). The button covers the other order — model powered first, transmitter second.</li>
-<li><b>Rotorflight config</b> — appears when a Rotorflight flight controller is connected: rates, PIDs, governor and backups, from your phone.</li>
+<li><b>Rotorflight setup and Wizard</b> — appears when a Rotorflight flight controller is connected: rates, PIDs, governor and backups, from your phone.</li>
 <li><b>Black box log</b> — battery, link statistics, the flight graph and the event log.</li>
 <li><b>Bind</b> — pair the receiver with your transmitter. If it's already bound you'll be asked first, because re-binding erases the current pairing.</li>
 <li><b>Simulator</b> — fly a PC simulator over USB with your real transmitter.</li>

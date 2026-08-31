@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.511-back-remembers";
+constexpr const char* FW_VERSION = "RXV2-0.9.512-rf-button-name";
 
 //*********************************************************************
 //  Auto-update manifest URLs
