@@ -49,22 +49,6 @@
                     <span class=muted style="font-size:.88em">Untick for plain CRSF&rarr;PWM servo converters &mdash; some echo junk that gets misread as telemetry (phantom current readings, false alarms).</span></span>
                 </label>
             </p>
-            <p style="margin:1.2em 0 0;padding:.8em 1em;background:#f2f6f8;border-radius:8px;font-size:.92em">
-                <span style="display:flex;flex-wrap:wrap;gap:.6em 1.4em;align-items:center">
-                    <label style="white-space:nowrap"><b>Throttle channel</b>
-                        <input type=number name=thr_ch id=thrCh step=1 min=0 max=16 value=3 style="width:4em;font-size:1em;padding:.2em .4em;margin-left:.4em">
-                    </label>
-                    <label style="white-space:nowrap"><b>Arming channel</b>
-                        <input type=number name=arm_ch id=armCh step=1 min=0 max=16 value=0 style="width:4em;font-size:1em;padding:.2em .4em;margin-left:.4em">
-                    </label>
-                    <label style="white-space:nowrap"><b>Wave channels</b>
-                        <input type=text name=wave_chs id=waveChs value="1" placeholder="1,6" style="width:5em;font-size:1em;padding:.2em .4em;margin-left:.4em">
-                    </label>
-                    <button type=button id=waveTest style="padding:.35em .8em;font-size:.92em;border-radius:8px;border:1px solid #7d9eb0;background:#eaf1f5;cursor:pointer">👋 Test wave</button>
-                    <span id=waveTestMsg class=muted style="font-size:.88em"></span>
-                </span>
-                <span class=muted style="display:block;margin-top:.5em;font-size:.88em">Throttle is held <b>fully low</b> (885&thinsp;&micro;s) from power-on until the transmitter is heard, so a receiver booted without its TX can never spin the motor (0&nbsp;=&nbsp;off). The arming channel stamps flights: the flight graph saves to flash the moment you <b>disarm</b> after &ge;30&thinsp;s armed (0&nbsp;=&nbsp;off &mdash; saves after link loss instead). Wave channels wiggle briefly whenever Bluetooth becomes available &mdash; power-on included &mdash; so you can SEE the receiver is reachable (comma list, e.g. <code>1,6</code> for two ailerons; blank&nbsp;=&nbsp;no wave; the throttle channel never waves).</span>
-            </p>
             <button class="btn btn-fw" type=submit id=saveBtn><span class=ico>&#128190;</span>Save</button>
         </form>
     </div>
@@ -133,21 +117,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('ppmInv').checked = !!p.ppm_inverted;
     if (p.crsf_hz) document.getElementById('crsfHz').value = String(p.crsf_hz);
-    if (p.thr_ch !== undefined) document.getElementById('thrCh').value = String(p.thr_ch);
-    if (s.rf && s.rf.arming_channel != null) document.getElementById('armCh').value = String(s.rf.arming_channel);
-    if (p.wave_chs != null) document.getElementById('waveChs').value = p.wave_chs;
-    // Test-wave button: fires the Bluetooth-ready wave right now. Note it
-    // waves the SAVED channels — save first if you've just edited the list.
-    const wt = document.getElementById('waveTest');
-    if (wt) wt.addEventListener('click', async () => {
-        const m = document.getElementById('waveTestMsg');
-        try {
-            const r = await fetch('/api/wave', { method: 'POST' });
-            if (r.ok) { m.textContent = 'Waving the saved channels… (on a Rotorflight heli use ch1 aileron — a rudder wave is invisible: yaw is a rate command the FC ignores while disarmed)'; }
-            else { m.textContent = 'Blocked — the transmitter link is live.'; }
-        } catch (e) { m.textContent = 'No reply — is the receiver connected?'; }
-        setTimeout(() => { m.textContent = ''; }, 4000);
-    });
     if (p.fc_telem !== undefined) document.getElementById('fcTelem').checked = !!p.fc_telem;
 
     // Intercept submit so the page doesn't sit on a half-loaded reply when

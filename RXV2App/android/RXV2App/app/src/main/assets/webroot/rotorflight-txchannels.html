@@ -542,6 +542,12 @@ async function saveAll(){
             await LDRC.msp(35,payload);
         }
         await writeMode(0,armFc,sw2Boundary('arm'),2125);           // ARM: ON above the drawn boundary
+        // The RECEIVER's own throttle/arm channel settings (boot-low hold,
+        // flight-graph stamping) follow the same choices — TX-side numbers,
+        // since the receiver sees channels before the FC's map. Was a
+        // separate entry on the Protocol page (Malcolm 2026-08-31).
+        try{ const rb=new URLSearchParams(); rb.append('thr_ch',String(chosen('thr'))); rb.append('arm_ch',String(armTx));
+             await fetch('/protocol',{method:'POST',body:rb}); }catch(e){}
         if(rscFc)await writeMode(53,rscFc,sw2Boundary('rsc'),2125); // RESCUE: ON above the drawn boundary
         else for(let sl=0;sl<slotCount;sl++){        // Rescue = None: clear stale saved rescue
             const o=sl*4;

@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.508-gain-beside-hold";
+constexpr const char* FW_VERSION = "RXV2-0.9.509-protocol-diet";
 
 //*********************************************************************
 //  Auto-update manifest URLs
