@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.481-swash-copy",
+      "url": "https://messiter.com/rxv2/release/v0.9.481/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.481/littlefs.bin",
+      "fs_md5": "462a09f2ae9b404c6ad4e145f4523888",
+      "notes": "Servos: 'Copy to servos 2 & 3 & save' on servo 1 (Malcolm) - copies travel, throw, rate, slow-motion and geometry to the other swash servos in one tap; each keeps its own centre (mechanical levelling) and its own Reversed flag (mounting)."
+    },
+    {
       "name": "RXV2-0.9.480-telemetry-sensors-fixed",
       "url": "https://messiter.com/rxv2/release/v0.9.480/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.480/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.470/littlefs.bin",
       "fs_md5": "4c1395ef1571450697633a371fbcb7e7",
       "notes": "ESC throttle calibration is now ONE big button whose words change with the stage (Start - PLUG THE BATTERY, wait for beeps, tap - WAIT FOR CONFIRMATION BEEPS, tap - CALIBRATED, unplug). No abort button: unplugging the battery is the abort, and the throttle hold lapses by itself."
-    },
-    {
-      "name": "RXV2-0.9.469-selectors-visible",
-      "url": "https://messiter.com/rxv2/release/v0.9.469/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.469/littlefs.bin",
-      "fs_md5": "3bb923e15b32268c292081fa2ac523a2",
-      "notes": "Switches page: the Bank & Rates selectors card is always present - it says 'not set up yet' with a link to Transmitter channels until a Save has recorded them, then shows the bars and the flight controller's live answer."
     }
   ]
 }
