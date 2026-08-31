@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.480-telemetry-sensors-fixed",
+      "url": "https://messiter.com/rxv2/release/v0.9.480/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.480/littlefs.bin",
+      "fs_md5": "f5e80950b94564319e30457433d1fd47",
+      "notes": "'Telemetry to the transmitter' in First-time basics: seven plain-English toggles (Flight mode, Battery, Head speed, Temperature, Attitude, Altitude, GPS) written into Rotorflight's sensor list, everything else preserved; Save verifies by read-back and offers the required restart. (Replaces 0.9.479, which mis-read the reply by one byte.)"
+    },
+    {
       "name": "RXV2-0.9.479-telemetry-sensors",
       "url": "https://messiter.com/rxv2/release/v0.9.479/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.479/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.469/littlefs.bin",
       "fs_md5": "3bb923e15b32268c292081fa2ac523a2",
       "notes": "Switches page: the Bank & Rates selectors card is always present - it says 'not set up yet' with a link to Transmitter channels until a Save has recorded them, then shows the bars and the flight controller's live answer."
-    },
-    {
-      "name": "RXV2-0.9.468-plug-battery",
-      "url": "https://messiter.com/rxv2/release/v0.9.468/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.468/littlefs.bin",
-      "fs_md5": "cfa9e4ea5d57da44dd9eef734a8dc64c",
-      "notes": "ESC calibration (proven on a Tribunus!): the 'NOW PLUG THE FLIGHT BATTERY' instruction is a big orange banner - the one thing you must not miss."
     }
   ]
 }
