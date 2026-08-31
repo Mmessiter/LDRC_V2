@@ -375,10 +375,26 @@
                 '/flight': '/blackbox', '/events': '/blackbox',
                 '/bind': '/setup', '/protocol': '/setup', '/diagnostics': '/setup',
                 '/wifi': '/setup', '/firmware': '/setup', '/rxsettings': '/setup',
-                '/map': '/sim', '/views': '/sim', '/simctl': '/sim'
-                // Rotorflight sub-pages are NOT listed: every one carries its
-                // own Back-to-Rotorflight button, so listing them here
-                // injected a DUPLICATE (Malcolm spotted the twins, 2026-08-23).
+                '/map': '/sim', '/views': '/sim', '/simctl': '/sim',
+                '/rotorflight-wizards': '/rotorflight',
+                '/rotorflight-newheli': '/rotorflight-wizards',
+                '/rotorflight-tuning': '/rotorflight-wizards',
+                '/rotorflight-computer': '/rotorflight-newheli',
+                '/rotorflight-wiring': '/rotorflight-newheli',
+                '/rotorflight-txchannels': '/rotorflight-newheli',
+                '/rotorflight-firsttime': '/rotorflight-newheli',
+                '/rotorflight-esc': '/rotorflight-newheli',
+                '/rotorflight-modes': '/rotorflight',
+                '/rotorflight-alacarte': '/rotorflight',
+                '/rotorflight-backup': '/rotorflight',
+                '/rotorflight-servos': '/rotorflight',
+                '/rotorflight-rescue': '/rotorflight',
+                '/rotorflight-travel': '/rotorflight',
+                '/rotorflight-rates': '/rotorflight',
+                '/rotorflight-pid': '/rotorflight',
+                '/rotorflight-pidplus': '/rotorflight',
+                '/rotorflight-gov-global': '/rotorflight',
+                '/rotorflight-gov-profile': '/rotorflight'
             };
             const LABELS = {
                 '/': 'front screen', '/blackbox': 'Black box', '/setup': 'Setup',
@@ -394,11 +410,12 @@
             // screen's Rotorflight/Black box — hiding the whole class
             // vaporised them, Malcolm 2026-08-31), so identify a true back
             // button by its "Back to …" wording and hide only that one.
-            const ownBack = Array.from(document.querySelectorAll('a.btn-bb'))
-                .find(x => /back to /i.test(x.textContent));
-            if (ownBack) ownBack.style.display = 'none';
-            const parent = (ownBack && ownBack.getAttribute('href')) || PARENTS[location.pathname] || '/';
+            // This map is the ONLY source of a page's parent: the pages carry
+            // no back buttons of their own any more (Malcolm 2026-08-31 --
+            // one mechanism, less complexity two years down the line).
+            const parent = PARENTS[location.pathname] || '/';
             if (parent !== '/') {
+                document.body.classList.add('hasBack');
                 const back = document.createElement('a');
                 back.href = parent;
                 back.className = 'backBtn';

@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.485-buttons-restored";
+constexpr const char* FW_VERSION = "RXV2-0.9.486-one-true-back";
 
 //*********************************************************************
 //  Auto-update manifest URLs
