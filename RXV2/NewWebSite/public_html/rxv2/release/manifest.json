@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.489-tx-on-note",
+      "url": "https://messiter.com/rxv2/release/v0.9.489/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.489/littlefs.bin",
+      "fs_md5": "e6e2a4af77792170ffd9191d13e1b04a",
+      "notes": "Switches and Transmitter-channels pages now remind you to have the transmitter ON - the live red tick needs it."
+    },
+    {
       "name": "RXV2-0.9.488-stateful-zones",
       "url": "https://messiter.com/rxv2/release/v0.9.488/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.488/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.478/littlefs.bin",
       "fs_md5": "80ae8b99f863cbc86045cdaf70872e26",
       "notes": "Selector cards and help now say where to find them in the configurator: Adjustments rows 31 (Bank) and 37 (Rates) - scroll a long way down."
-    },
-    {
-      "name": "RXV2-0.9.477-bar-scale-fix",
-      "url": "https://messiter.com/rxv2/release/v0.9.477/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.477/littlefs.bin",
-      "fs_md5": "2c1e6392b05588a0218a194df25bd45d",
-      "notes": "Transmitter channels: the selector bars draw again (a missing scale constant crashed the Bank row and hid the Rates row)."
     }
   ]
 }

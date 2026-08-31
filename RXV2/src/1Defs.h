@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.488-stateful-zones";
+constexpr const char* FW_VERSION = "RXV2-0.9.489-tx-on-note";
 
 //*********************************************************************
 //  Auto-update manifest URLs
