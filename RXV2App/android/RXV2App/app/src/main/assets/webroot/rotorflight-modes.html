@@ -22,6 +22,7 @@
 .mSave{flex:1;padding:.6em;border:0;border-radius:9px;background:#6cab5e;color:#fff;font-weight:700;cursor:pointer}
 .mDel{flex:.4;padding:.6em;border:0;border-radius:9px;background:#b06a6a;color:#fff;font-weight:700;cursor:pointer}
 .mSave:disabled,.mDel:disabled{opacity:.5}
+.fixedSel{opacity:1 !important;color:#2e4356;-webkit-text-fill-color:#2e4356;background:#eef2f5;appearance:none;-webkit-appearance:none}
 .mMsg{text-align:center;font-size:.85em;min-height:1.1em;margin-top:.3em;font-weight:600;color:#3a5165}
 .armWarn{font-size:.8em;color:#b5442a;font-weight:600;margin-top:.3em}
 .addBtn{width:100%;padding:.75em;border:0;border-radius:10px;background:#5f8fab;color:#fff;font-size:1.05em;font-weight:700;cursor:pointer;margin-top:.4em}
@@ -317,7 +318,6 @@ async function saveProf(k){
         }
         await LDRC.msp(250);
         p.tx=tx; p.src='fc'; msg.textContent='✅ Saved — flip the switch and watch the flight controller line';
-        $('ptitle_'+k).textContent='Channel '+tx+' · '+b.k+' positions';
     }catch(e){ msg.textContent='⚠️ '+e.message; }
 }
 
@@ -333,15 +333,22 @@ function paintProf(){
         let z=''; for(let n=1;n<=6;n++) z+='<div class=qZone id=q_'+p.k+n+'></div>';
         let co=''; for(let c=6;c<=16;c++) co+='<option value='+c+(c===p.tx?' selected':'')+'>Channel '+c+' (AUX '+(c-5)+')</option>';
         let ko=''; for(let k=2;k<=6;k++) ko+='<option value='+k+(k===b.k?' selected':'')+'>'+k+' positions</option>';
-        h+='<div class="card modeCard"><div class=pRow><div><label>'+p.t+'</label><b id=ptitle_'+p.k+' style="display:block;margin:.15em 0 .3em">Channel '+p.tx+' &middot; '+b.k+' positions</b></div>'
-          +'<div><label>Which channel</label><select id=pc_'+p.k+' onchange="document.getElementById(\'pmsg_'+p.k+'\').textContent=\'changed — tap Save\'">'+co+'</select></div></div>'
+        h+='<div class="card modeCard">'
+          +'<div class=mRow>'
+          +'<div><label>What the switch does</label><select disabled class=fixedSel><option>'+p.t+' selector</option></select></div>'
+          +'<div><label>Which channel</label><select id=pc_'+p.k+' onchange="document.getElementById(\'pmsg_'+p.k+'\').textContent=\'changed — tap Save\'">'+co+'</select></div>'
+          +'</div>'
+          +'<div class=mRow>'
+          +'<div><label>How many positions</label><select id=qk_'+p.k+'>'+ko+'</select></div>'
+          +'<div></div>'
+          +'</div>'
           +(p.src==='local'?'<div class=muted style="font-size:.8em;margin:.3em 0">From this phone\u2019s choices &mdash; tap Save to write them to the flight controller.</div>':'')
           +'<div class=rTrack id=qt_'+p.k+' style="margin-top:1.2em">'+z+'<div class=qHandle id=qh_'+p.k+'lo></div><div class=qHandle id=qh_'+p.k+'hi></div><div class=rDot id=dot_'+p.k+' style="display:none"></div></div>'
           +'<div class=rScale><span>875</span><span>1500</span><span>2125&nbsp;&micro;s</span></div>'
-          +'<div style="display:flex;gap:.6em;align-items:center;font-size:.85em;color:#5d7a8c;margin:.2em 0"><select id=qk_'+p.k+'>'+ko+'</select><span>equal sections between the ends &mdash; drag the ends to the switch&rsquo;s lowest and highest positions</span></div>'
+          +'<div class=muted style="font-size:.8em;margin:.2em 0">Equal sections between the ends &mdash; drag the ends to the switch&rsquo;s lowest and highest positions.</div>'
           +'<div class=pAns id=ans_'+p.k+'>Flight controller: &hellip;</div>'
           +'<div class=muted style="font-size:.78em;margin-top:.25em">In the configurator this is Adjustments row '+(p.base+1)+' &mdash; scroll a long way down.</div>'
-          +'<button class=pSave onclick="saveProf(\''+p.k+'\')">&#128190; Save</button>'
+          +'<div class=mBtns><button class=mSave onclick="saveProf(\''+p.k+'\')">&#128190; Save</button></div>'
           +'<div class=mMsg id=pmsg_'+p.k+'></div></div>';
     }
     $('profRows').innerHTML=h;
