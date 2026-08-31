@@ -101,7 +101,7 @@ h2 .hint{font-weight:400;font-size:.7em;color:#5d7a8c;display:block;margin-top:.
         <div class=fRow><div class=lab><b>Max turn acceleration</b><span>how fast it may build that rate, 1&ndash;10000 <i>(Rotorflight: Maximum setpoint acceleration)</i></span></div><input id=r_msa type=number min=1 max=10000></div>
     </div>
 
-    <button class=saveBtn id=saveBtn onclick="save()">Save to flight controller</button>
+    <div class=fabBar><button class="btn btn-fly" id=saveBtn onclick="save()" style="background:#6cab5e;margin:0"><span class=ico>&#128190;</span>Save to flight controller</button></div>
     <div id=sMsg class=sMsg></div>
     <div class=footer></div>
 </div>
