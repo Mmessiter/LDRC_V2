@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.499-gear-in-wizard",
+      "url": "https://messiter.com/rxv2/release/v0.9.499/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.499/littlefs.bin",
+      "fs_md5": "bc39d244009c074d9fc501de53a8398d",
+      "notes": "Gear ratio moves into the Rotorflight area: editable card in the wizard's ESC step, its own page in A la carte (with live head speed), removed from Receiver settings."
+    },
+    {
       "name": "RXV2-0.9.498-governor-why",
       "url": "https://messiter.com/rxv2/release/v0.9.498/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.498/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.488/littlefs.bin",
       "fs_md5": "8a418ac40cb2245b4d85bbff1327c308",
       "notes": "Switch-card zone edges now live purely in memory - the number boxes are gone completely, not just hidden (less complexity down the road)."
-    },
-    {
-      "name": "RXV2-0.9.487-simpler-switches",
-      "url": "https://messiter.com/rxv2/release/v0.9.487/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.487/littlefs.bin",
-      "fs_md5": "cf88383783a04b655c8ccad88fdd00fc",
-      "notes": "Switch cards on the Switches page lose the two microsecond number boxes - just the bar, the draggable ends and the live red tick."
     }
   ]
 }
