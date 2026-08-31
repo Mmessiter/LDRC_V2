@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.501-calibrate-first";
+constexpr const char* FW_VERSION = "RXV2-0.9.502-computer-notes";
 
 //*********************************************************************
 //  Auto-update manifest URLs

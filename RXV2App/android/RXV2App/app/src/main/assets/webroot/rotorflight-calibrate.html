@@ -24,8 +24,10 @@
 <div class=container>
     <h1>Calibrate</h1>
     <p class=subtitle>teach the flight controller which way is level (IMU / accelerometer)</p>
+    <div class="banner" style="background:#a8d29a;color:#2a4d1f;padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 .8em">&#127881; From here on, <b>everything is done from the receiver</b> &mdash; the computer can go away.</div>
     <div class=card>
-        <p style="margin:.2em 0;font-size:.92em;color:#3a4d5c;line-height:1.5">Best done <b>flat on a desk, BEFORE the board goes into the model</b> &mdash; the helicopter may not sit level. Keep it perfectly still; takes 2 seconds. Front-or-back mounting does <b>not</b> affect it.</p>
+        <p style="margin:.2em 0;font-size:.92em;color:#3a4d5c;line-height:1.5">Already calibrated in the configurator? The numbers below should read near 0&deg; &mdash; tick this step and move on.</p>
+        <p style="margin:.5em 0 .2em;font-size:.92em;color:#3a4d5c;line-height:1.5">Best done <b>flat on a desk, BEFORE the board goes into the model</b> &mdash; the helicopter may not sit level. Keep it perfectly still; takes 2 seconds. Front-or-back mounting does <b>not</b> affect it.</p>
         <div class=att id=attNow>&hellip;</div>
         <button class=calBtn id=calBtn onclick="calibrate()">&#128207; Calibrate now</button>
         <div id=calMsg class=sMsg></div>
@@ -35,7 +37,7 @@
 <template id=helpContent><h2>Calibrate the flight controller</h2>
 <p>Level (accelerometer) calibration &mdash; the board learns which way gravity points.</p>
 <ul>
-<li>Do it on a flat desk before installation; a mounted helicopter rarely sits truly level.</li>
+<li>Do it on a flat desk before installation; a mounted helicopter rarely sits truly level. Doing it in the configurator during the computer session is just as good.</li>
 <li>The live roll/pitch above should read near 0&deg; afterwards.</li>
 <li>Flat mounting with connectors front or back does not change the result &mdash; gravity sits on the same axis either way. Any tilted mounting needs the configurator&rsquo;s board-alignment angles.</li>
 <li>Refused while armed, and harmless to repeat.</li>
