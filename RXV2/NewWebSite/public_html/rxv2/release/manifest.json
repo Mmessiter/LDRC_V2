@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.500-gear-mentions-gone",
+      "url": "https://messiter.com/rxv2/release/v0.9.500/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.500/littlefs.bin",
+      "fs_md5": "754dab4c4c3fd190933e56201a38941a",
+      "notes": "Setup-page button and help texts no longer mention gear ratio (it lives in the Rotorflight area now); dead gear code removed from Diagnostics."
+    },
+    {
       "name": "RXV2-0.9.499-gear-in-wizard",
       "url": "https://messiter.com/rxv2/release/v0.9.499/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.499/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.489/littlefs.bin",
       "fs_md5": "e6e2a4af77792170ffd9191d13e1b04a",
       "notes": "Switches and Transmitter-channels pages now remind you to have the transmitter ON - the live red tick needs it."
-    },
-    {
-      "name": "RXV2-0.9.488-stateful-zones",
-      "url": "https://messiter.com/rxv2/release/v0.9.488/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.488/littlefs.bin",
-      "fs_md5": "8a418ac40cb2245b4d85bbff1327c308",
-      "notes": "Switch-card zone edges now live purely in memory - the number boxes are gone completely, not just hidden (less complexity down the road)."
     }
   ]
 }

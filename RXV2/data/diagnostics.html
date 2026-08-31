@@ -64,7 +64,6 @@
     <!-- Gear ratio, battery divider and failsafe MOVED to /rxsettings
          (Setup -> Receiver settings), 2026-08-21. This page views channels. -->
     <div style="display:none">
-        <input type=number id=gearField><button id=gearSave></button>
         <span id=vbatLive></span>
         <select id=vbatPin></select><input id=vbatRatio><input id=vbatCells>
         <button id=vbatSave></button><span id=fsStatus></span>
@@ -737,10 +736,6 @@ async function refreshFsStatus() {
     _lastFsFetch = now;
     try { const s = await (await fetch('/api/state.json', { cache: 'no-store' })).json();
           setFsStatus(!!(s.rf && s.rf.failsafe_set));
-          // Never clobber the field while the user is typing (Malcolm
-          // 2026-08-05: "it keeps backspacing!") — same guard as vbat.
-          if (s.rf && s.rf.gear_ratio != null && !gearTouched)
-              document.getElementById('gearField').value = s.rf.gear_ratio;
           if (s.rf && s.rf.vbat) {
               const v = s.rf.vbat;
               if (!vbatTouched) {
@@ -778,17 +773,6 @@ document.getElementById('vbatSave').addEventListener('click', async () => {
                                    { title: 'Error', icon: '\u26a0\ufe0f', kind: 'danger' }); }
 });
 setInterval(refreshFsStatus, 1000);   // live armed indicator
-let gearTouched = false;
-document.getElementById('gearField').addEventListener('input', () => { gearTouched = true; });
-document.getElementById('gearSave').addEventListener('click', async () => {
-    const r = parseFloat(document.getElementById('gearField').value || '1');
-    try {
-        const j = await (await fetch('/api/gear?ratio=' + encodeURIComponent(r), { method: 'POST' })).json();
-        gearTouched = false;
-        document.getElementById('gearField').value = j.gear_ratio;
-        await LDRC.alert('Gear ratio = ' + j.gear_ratio + ' saved!', { title: 'Saved', icon: '⚙️' });
-    } catch (e) { await LDRC.alert('Gear ratio save failed.', { title: 'Error', icon: '⚠️', kind: 'danger' }); }
-});
 document.getElementById('fsSave').addEventListener('click', async () => {
     if (!(await LDRC.confirm('Save the CURRENT channel positions as the in-flight signal-loss failsafe? Set the model to a safe posture (e.g. motor off) first.',
         { title: 'Save failsafe', icon: '💾', yes: 'Save failsafe' }))) return;

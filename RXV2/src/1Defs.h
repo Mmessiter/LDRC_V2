@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.499-gear-in-wizard";
+constexpr const char* FW_VERSION = "RXV2-0.9.500-gear-mentions-gone";
 
 //*********************************************************************
 //  Auto-update manifest URLs
