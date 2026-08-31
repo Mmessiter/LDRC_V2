@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.502-computer-notes";
+constexpr const char* FW_VERSION = "RXV2-0.9.503-banner-wording";
 
 //*********************************************************************
 //  Auto-update manifest URLs
