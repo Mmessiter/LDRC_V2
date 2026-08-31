@@ -386,5 +386,6 @@
  "RXV2-0.9.503-banner-wording": "Calibrate-page banner reworded: from here on everything is done from your phone via the receiver.",
  "RXV2-0.9.504-servo-power-warning": "Wiring and Servos pages warn: do not power the servos until their frequency/pulse width and the BEC voltage are set - wrong settings can damage them.",
  "RXV2-0.9.505-blades-on-step": "New wizard step before Back up: blades back on, check main and tail pitch with a gauge, sweep full travel for mechanical issues.",
- "RXV2-0.9.506-cyclic-balance": "Travel extents: cyclic gain split into separate roll and pitch gains so the two axes can be balanced against the pitch gauge (8 vs 10 degrees is now fixable)."
+ "RXV2-0.9.506-cyclic-balance": "Travel extents: cyclic gain split into separate roll and pitch gains so the two axes can be balanced against the pitch gauge (8 vs 10 degrees is now fixable).",
+ "RXV2-0.9.507-banner-visible": "Travel page's sticky status banner (SWASH HELD etc.) now sticks below the floating buttons instead of hiding behind them."
 }
