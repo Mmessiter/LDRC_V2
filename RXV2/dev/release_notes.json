@@ -367,5 +367,6 @@
  "RXV2-0.9.484-floating-back": "A floating back arrow now sits beside the home button on every sub-page - one level up without scrolling; the old bottom 'Back to ...' buttons are gone.",
  "RXV2-0.9.485-buttons-restored": "Front screen's Rotorflight and Black box buttons are back (the floating-back change had hidden them by mistake); only genuine 'Back to ...' buttons are now hidden.",
  "RXV2-0.9.486-one-true-back": "Model-name chip fits again (width only narrows on pages with the back arrow); every page's embedded back button removed - the floating arrow now knows its own destination.",
- "RXV2-0.9.487-simpler-switches": "Switch cards on the Switches page lose the two microsecond number boxes - just the bar, the draggable ends and the live red tick."
+ "RXV2-0.9.487-simpler-switches": "Switch cards on the Switches page lose the two microsecond number boxes - just the bar, the draggable ends and the live red tick.",
+ "RXV2-0.9.488-stateful-zones": "Switch-card zone edges now live purely in memory - the number boxes are gone completely, not just hidden (less complexity down the road)."
 }

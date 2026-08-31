@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.488-stateful-zones",
+      "url": "https://messiter.com/rxv2/release/v0.9.488/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.488/littlefs.bin",
+      "fs_md5": "8a418ac40cb2245b4d85bbff1327c308",
+      "notes": "Switch-card zone edges now live purely in memory - the number boxes are gone completely, not just hidden (less complexity down the road)."
+    },
+    {
       "name": "RXV2-0.9.487-simpler-switches",
       "url": "https://messiter.com/rxv2/release/v0.9.487/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.487/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.477/littlefs.bin",
       "fs_md5": "2c1e6392b05588a0218a194df25bd45d",
       "notes": "Transmitter channels: the selector bars draw again (a missing scale constant crashed the Bank row and hid the Rates row)."
-    },
-    {
-      "name": "RXV2-0.9.476-one-adjustment",
-      "url": "https://messiter.com/rxv2/release/v0.9.476/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.476/littlefs.bin",
-      "fs_md5": "58f9deec4902d0032bc3bdba14b6e360",
-      "notes": "Selectors rebuilt on Rotorflight's own model: ONE adjustment per selector, equal sections between two draggable END points, with a positions count (2-6). Why: each Rotorflight adjustment remembers its last value and only fires when that changes, so per-section adjustments jam on re-entry (the 'stuck on profile 4'). Re-save once; drag the ends to your switch's lowest and highest positions."
     }
   ]
 }

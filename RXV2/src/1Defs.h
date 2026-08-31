@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.487-simpler-switches";
+constexpr const char* FW_VERSION = "RXV2-0.9.488-stateful-zones";
 
 //*********************************************************************
 //  Auto-update manifest URLs
