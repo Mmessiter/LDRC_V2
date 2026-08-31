@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.483-control-sense";
+constexpr const char* FW_VERSION = "RXV2-0.9.484-floating-back";
 
 //*********************************************************************
 //  Auto-update manifest URLs

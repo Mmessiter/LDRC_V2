@@ -384,20 +384,22 @@
                 '/': 'front screen', '/blackbox': 'Black box', '/setup': 'Setup',
                 '/sim': 'Simulator', '/rotorflight': 'Rotorflight'
             };
-            const parent = PARENTS[location.pathname] || '/';
-            // Only sub-pages get the bottom back button — it goes one level UP
-            // (WiFi → Setup), which 🏠 can't do. When the parent IS the front
-            // screen it would just duplicate 🏠, so it's skipped (Malcolm
-            // 2026-08-20: "unnecessary and could be removed").
+            // Floating ⬅️ beside 🏠 (Malcolm 2026-08-31: the bottom back button
+            // "often needs a long scroll to find" — now it's always in reach).
+            // Parent: the page's own bottom back link if it has one (the
+            // Rotorflight pages carry .btn-bb with the right target), else the
+            // PARENTS map; when the parent IS the front screen, 🏠 already
+            // covers it. The old bottom buttons are hidden by style.css.
+            const ownBack = document.querySelector('a.btn-bb');
+            const parent = (ownBack && ownBack.getAttribute('href')) || PARENTS[location.pathname] || '/';
             if (parent !== '/') {
                 const back = document.createElement('a');
                 back.href = parent;
-                back.className = 'btn';
-                back.style.background = '#6f7e8b';
-                back.innerHTML = '<span class=ico>&#11013;&#65039;</span>Back to ' + (LABELS[parent] || 'menu');
-                const foot = document.querySelector('.footer');
-                if (foot && foot.parentNode) foot.parentNode.insertBefore(back, foot);
-                else { const c = document.querySelector('.container'); if (c) c.appendChild(back); }
+                back.className = 'backBtn';
+                back.setAttribute('aria-label', 'Back to ' + (LABELS[parent] || 'previous page'));
+                back.title = 'Back';
+                back.textContent = '⬅️';
+                document.body.appendChild(back);
             }
         }
         setTimeout(() => {
