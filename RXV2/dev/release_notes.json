@@ -363,5 +363,5 @@
  "RXV2-0.9.478-configurator-note": "Selector cards and help now say where to find them in the configurator: Adjustments rows 31 (Bank) and 37 (Rates) - scroll a long way down.",
  "RXV2-0.9.480-telemetry-sensors-fixed": "'Telemetry to the transmitter' in First-time basics: seven plain-English toggles (Flight mode, Battery, Head speed, Temperature, Attitude, Altitude, GPS) written into Rotorflight's sensor list, everything else preserved; Save verifies by read-back and offers the required restart. (Replaces 0.9.479, which mis-read the reply by one byte.)",
  "RXV2-0.9.481-swash-copy": "Servos: 'Copy to servos 2 & 3 & save' on servo 1 (Malcolm) - copies travel, throw, rate, slow-motion and geometry to the other swash servos in one tap; each keeps its own centre (mechanical levelling) and its own Reversed flag (mounting).",
- "RXV2-0.9.482-collective-reverse": "Travel extents gains a 'Collective reversed' switch (Malcolm's new build): flips collective alone via the mixer input's sign - roll, pitch and the servos untouched; applies immediately, no reboot."
+ "RXV2-0.9.483-control-sense": "Travel extents gains a Control sense area (Malcolm): tick to reverse Aileron, Elevator or Collective - one control at a time, no negative numbers, servos untouched; applies on Save, no reboot."
 }
