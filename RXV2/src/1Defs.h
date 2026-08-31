@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.479-telemetry-sensors";
+constexpr const char* FW_VERSION = "RXV2-0.9.480-telemetry-sensors-fixed";
 
 //*********************************************************************
 //  Auto-update manifest URLs

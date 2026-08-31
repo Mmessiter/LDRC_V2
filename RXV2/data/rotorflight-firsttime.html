@@ -316,20 +316,20 @@ let telemRaw=null;
 async function loadTelemSensors(){
     try{
         const b=hexToBytes(await LDRC.msp(73));
-        if(b.length<13) throw new Error('short reply '+b.length);
+        if(b.length<12) throw new Error('short reply '+b.length);
         telemRaw=b;
-        const present=new Set(Array.from(b.slice(13)).filter(x=>x>0));
+        const present=new Set(Array.from(b.slice(12)).filter(x=>x>0));
         for(const id of TSENS){ const el=$('t'+id); if(el) el.checked=present.has(id); }
     }catch(e){ flash('telemMsg','⚠️ Could not read: '+e.message); }
 }
 async function saveTelemSensors(){
     if(await armCheck()){ flash('telemMsg','⚠️ Refused — the model is ARMED'); return; }
     if(!telemRaw){ await loadTelemSensors(); if(!telemRaw) return; }
-    const keep=Array.from(telemRaw.slice(13)).filter(x=>x>0&&!TSENS.includes(x));
+    const keep=Array.from(telemRaw.slice(12)).filter(x=>x>0&&!TSENS.includes(x));
     const chosen=TSENS.filter(id=>$('t'+id)&&$('t'+id).checked);
     const slots=[...chosen,...keep].slice(0,40);
     while(slots.length<40) slots.push(0);
-    const out=[...telemRaw.slice(0,13),...slots];
+    const out=[...telemRaw.slice(0,12),...slots];
     try{
         await LDRC.msp(74,bytesToHex(new Uint8Array(out))); await LDRC.msp(250);
         await loadTelemSensors();
