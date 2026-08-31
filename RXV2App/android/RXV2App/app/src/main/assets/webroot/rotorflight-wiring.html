@@ -30,6 +30,7 @@
     <h1>Wiring</h1>
     <p class=subtitle>Each plug, one line. Get these right and everything after is easy.</p>
     <div class="banner warn">&#9888;&#65039; <b>Blades off / motor unplugged</b> while wiring.</div>
+    <div class="banner warn">&#9888;&#65039; <b>Do not power the servos yet</b> (leave them unplugged, or the system unpowered) until the <b>Servos step</b> has set each one&rsquo;s operating frequency and the BEC voltage matches &mdash; wrong settings can damage a servo.</div>
 
     <div class=wcard>
         <h2><span class=pad>S1 S2 S3</span>Swashplate servos</h2>
@@ -80,6 +81,7 @@
 <li><b>ESC:</b> three possible connections &mdash; the throttle lead (always), the one-wire telemetry (strongly recommended: battery + head speed data), and a dedicated RPM wire (only if your ESC provides one and its telemetry doesn&rsquo;t already carry RPM).</li>
 <li><b>Head speed must arrive somehow</b> &mdash; telemetry wire or RPM wire &mdash; or the governor has nothing to govern.</li>
 <li><b>Which UART?</b> The labelled receiver port (ELRS&thinsp;/&thinsp;RX) is pre-configured for CRSF, so no computer is needed. Any other UART is a chicken-and-egg: the flight controller can&rsquo;t be told which port to listen on <i>over</i> a link it isn&rsquo;t listening to yet &mdash; that one change needs the configurator on USB, once.</li>
+<li><b>Servo damage risk:</b> a narrow-pulse or low-frequency servo driven with the wrong signal, or fed the wrong BEC voltage, can burn out in seconds. Wire the plugs by all means, but power the servos only after the Servos step (frequency/width) and the ESC&rsquo;s BEC voltage are set.</li>
 <li>Crossed TX/RX on the receiver port is the classic no-contact cause &mdash; if the Rotorflight button never appears, swap them first.</li>
 <li><b>Brand-new board still silent?</b> Factory boards ship with telemetry OFF &mdash; and a mute board ignores incoming commands too (tested: it can&rsquo;t be woken from this side). The one-time fix is the computer: Configurator &rarr; enable Telemetry &rarr; Save, which restarts the board. Every later step works from the phone.</li>
 </ul>
