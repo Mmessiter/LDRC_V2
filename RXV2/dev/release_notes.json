@@ -383,5 +383,6 @@
  "RXV2-0.9.500-gear-mentions-gone": "Setup-page button and help texts no longer mention gear ratio (it lives in the Rotorflight area now); dead gear code removed from Diagnostics.",
  "RXV2-0.9.501-calibrate-first": "Flight-controller calibration is now wizard step 2 with its own page (on the desk, before mounting) and an A-la-carte entry; also fixes the 'Can't find variable: LDRC' race on First-time basics.",
  "RXV2-0.9.502-computer-notes": "Step 1 notes the receiver need not be connected and that the post-flash 'calibration needed' warning can be ignored (or calibrate right there); step 2 opens with 'from here on everything is done from the receiver'.",
- "RXV2-0.9.503-banner-wording": "Calibrate-page banner reworded: from here on everything is done from your phone via the receiver."
+ "RXV2-0.9.503-banner-wording": "Calibrate-page banner reworded: from here on everything is done from your phone via the receiver.",
+ "RXV2-0.9.504-servo-power-warning": "Wiring and Servos pages warn: do not power the servos until their frequency/pulse width and the BEC voltage are set - wrong settings can damage them."
 }
