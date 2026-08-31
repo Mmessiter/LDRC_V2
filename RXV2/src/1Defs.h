@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.507-banner-visible";
+constexpr const char* FW_VERSION = "RXV2-0.9.508-gain-beside-hold";
 
 //*********************************************************************
 //  Auto-update manifest URLs

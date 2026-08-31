@@ -91,6 +91,7 @@ input:disabled{background:#eee;color:#999}
                 <option value=2>Pitch (elevator)</option>
             </select></div>
         <div class=fldRow><label>Angle (&deg;)</label> <input type=number id=bm_deg step=0.5 min=-12 max=12 value=8.0></div>
+        <div class=fldRow style="background:#e3ecdb;border-radius:8px;padding:.3em .4em"><label id=bmGainLab>Cyclic gain &mdash; roll (%)</label> <input type=number id=bm_gain step=1 min=0 max=500></div>
         <div style="display:flex;gap:.5em;margin:.5em 0 .2em">
             <button class=btn id=bmApply  onclick="benchApply()"  style="flex:1;background:#c98a4a">Hold this angle</button>
             <button class=btn id=bmOff    onclick="benchRelease()" style="flex:1;background:#5a6b74">Release swash</button>
@@ -98,8 +99,8 @@ input:disabled{background:#eee;color:#999}
         <p class=cardNote><b>Measuring cyclic gain:</b> hold 8&deg; of Roll, put the gauge on one
         blade and slowly rotate the head by hand — note the <b>peak</b> reading anywhere round the
         circle (peak-hunting sidesteps swash phasing). Peak 5.6&deg; when 8&deg; is commanded →
-        new cyclic gain = current &times; 8 &divide; 5.6. Release the swash, type the new gain above,
-        Save, re-check. This is Rotorflight's own official calibration method. <b>Collective</b> is
+        new cyclic gain = current &times; 8 &divide; 5.6. The green <b>gain box above follows the
+        chosen axis</b> (same value as in Calibration) &mdash; type the new gain, Save, re-check. This is Rotorflight's own official calibration method. <b>Collective</b> is
         deliberately not here — on this fleet it is calibrated the direct way (full stick, measure,
         scale the gain), because the transmitter's channel span is part of the story.</p>
     </div>
@@ -254,6 +255,7 @@ async function load() {
         document.getElementById('t_revColl').checked = s16At(cachedInputs, inOff(4,0)) < 0;
         document.getElementById('t_gCycR').value = Math.round(Math.abs(s16At(cachedInputs, inOff(1,0))) / 10);
         document.getElementById('t_gCycP').value = Math.round(Math.abs(s16At(cachedInputs, inOff(2,0))) / 10);
+        syncBmGain();
         // Geo correction — s8 at cfg[18], UI = raw/5 (0.2 steps, ±25).
         const geoRaw = cachedCfg[18] > 127 ? cachedCfg[18] - 256 : cachedCfg[18];
         document.getElementById('t_geo').value = d1(geoRaw / 5);
@@ -384,6 +386,19 @@ async function save() {
         }
     } catch (e) { setStatus('bad', 'Save failed: ' + e.message); }
 }
+
+// The bench card carries its own copy of the CURRENT axis's cyclic gain
+// (Malcolm 2026-08-31: gain box and Hold button were a screenful apart) —
+// same value, two boxes, kept in step both ways.
+const bmGainSrc = () => document.getElementById(document.getElementById('bm_axis').value==='2' ? 't_gCycP' : 't_gCycR');
+function syncBmGain(){
+    const ax=document.getElementById('bm_axis').value;
+    document.getElementById('bmGainLab').innerHTML='Cyclic gain &mdash; '+(ax==='2'?'pitch':'roll')+' (%)';
+    document.getElementById('bm_gain').value=bmGainSrc().value;
+}
+document.getElementById('bm_axis').addEventListener('change',syncBmGain);
+document.getElementById('bm_gain').addEventListener('input',()=>{ bmGainSrc().value=document.getElementById('bm_gain').value; });
+for(const id of ['t_gCycR','t_gCycP']) document.getElementById(id).addEventListener('input',syncBmGain);
 
 // ── Bench measure: MSP_SET_MIXER_OVERRIDE (191) ──────────────────────
 // One 3-byte frame per input: idx u8 + value s16. 2501 = override OFF.

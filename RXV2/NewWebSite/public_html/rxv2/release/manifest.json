@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.508-gain-beside-hold",
+      "url": "https://messiter.com/rxv2/release/v0.9.508/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.508/littlefs.bin",
+      "fs_md5": "908ccbde2e33eeafb2c80b8f1e64324c",
+      "notes": "The Bench-measure card now carries the current axis's cyclic gain in a green box beside the Hold button (same value as Calibration, kept in step both ways) - measure and adjust on one screen."
+    },
+    {
       "name": "RXV2-0.9.507-banner-visible",
       "url": "https://messiter.com/rxv2/release/v0.9.507/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.507/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.497/littlefs.bin",
       "fs_md5": "89a1417777f483a23acdda1b0048e84b",
       "notes": "Bank and Rates rows lose their delete (x) button - choosing None in the channel picker already covers the rare case; Rescue keeps its x."
-    },
-    {
-      "name": "RXV2-0.9.496-no-end-blobs",
-      "url": "https://messiter.com/rxv2/release/v0.9.496/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.496/littlefs.bin",
-      "fs_md5": "049f403aa3a3c53fcea7da2ceab4648c",
-      "notes": "Bank/Rates bars on both screens lose their end blobs - the travel is pinned to CRSF's known 988-2012 us, so there was nothing to drag."
     }
   ]
 }
