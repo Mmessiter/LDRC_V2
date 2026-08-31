@@ -332,12 +332,13 @@ function renderFixed(){
     FUNCS.forEach(f=>{
         const cur=curOf(f);
         const div=document.createElement('div');
-        div.className='fnRow'+(f.optional&&cur>=1?' x5':''); div.id='row_'+f.k;
+        const canX=f.optional&&!f.adj&&cur>=1;
+        div.className='fnRow'+(canX?' x5':''); div.id='row_'+f.k;
         div.innerHTML='<div class=lab><b>'+f.t+'</b></div>'
             +'<select id=s_'+f.k+'>'+chOptions(cur,takenFor(f.k),f.optional?'None':null)+'</select>'
             +'<span class=live id=l_'+f.k+'></span>'
             +'<button class=detBtn id=d_'+f.k+'>Detect</button>'
-            +(f.optional&&cur>=1?'<button class=delBtn id=r_'+f.k+' title="No '+f.t.toLowerCase()+'">&#10006;</button>':'');
+            +(canX?'<button class=delBtn id=r_'+f.k+' title="No '+f.t.toLowerCase()+'">&#10006;</button>':'');
         if(f.sw2&&cur>=1){
             div.innerHTML+='<div class=qTrack id=qt_'+f.k+'><div class=qZone id=qz_'+f.k+'0>OFF</div><div class=qZone id=qz_'+f.k+'1>ON</div><div class=qHandle id=qh_'+f.k+'b></div><div class=qVal id=qv_'+f.k+'></div><div class=qDot id=qd_'+f.k+'></div></div>'
                 +'<div style="grid-column:1 / -1;font-size:.85em;color:#5d7a8c">drag the divider &mdash; the switch is ON to its right</div>';
@@ -357,7 +358,7 @@ function renderFixed(){
             if(qk)qk.addEventListener('change',()=>{ const b=selBounds(LS+f.k+'.bounds'); b.k=parseInt(qk.value); localStorage.setItem(LS+f.k+'.bounds',JSON.stringify(b)); paintSections(f); }); }
         $('s_'+f.k).addEventListener('change',()=>{localStorage.setItem(LS+f.k,$('s_'+f.k).value);renderAll();});
         $('d_'+f.k).addEventListener('click',()=>detect(f));
-        if(f.optional&&cur>=1)$('r_'+f.k).addEventListener('click',()=>clearOptional(f));
+        if(canX)$('r_'+f.k).addEventListener('click',()=>clearOptional(f));
     });
 }
 // "Some will not want a rescue switch at all": the ✕ sets None AND clears
