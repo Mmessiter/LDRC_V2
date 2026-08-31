@@ -81,10 +81,11 @@ h1{
 
 /* Side padding keeps title + subtitle clear of the floating home/help
    buttons (Malcolm 2026-07-31: subtitle text hid behind them). */
-h1{max-width:calc(100% - 8.6em)}
+h1{max-width:calc(100% - 4.4em);overflow-wrap:anywhere}
+body.hasBack h1,body.hasBack .subtitle{max-width:calc(100% - 8.6em)}
 .subtitle{text-align:center;color:#4a6577;margin:0 auto 1.8em;font-size:.9em;
     background:#f2f6f8;border-radius:10px;padding:.35em .8em;width:fit-content;
-    max-width:calc(100% - 8.6em)}
+    max-width:calc(100% - 6.4em)}
 
 /* Buttons -------------------------------------------------------------- */
 .btn{
