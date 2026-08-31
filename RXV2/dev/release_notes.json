@@ -377,5 +377,6 @@
  "RXV2-0.9.494-arm-bar": "Arming gets the same OFF/ON bar as Rescue (you can now SEE when the threshold is crossed); Rates carries a note that sharing Bank's channel is fine and popular.",
  "RXV2-0.9.495-one-divider": "Arming and Rescue bars: the useless end blobs are gone - ONE draggable divider sits on the OFF/ON threshold.",
  "RXV2-0.9.496-no-end-blobs": "Bank/Rates bars on both screens lose their end blobs - the travel is pinned to CRSF's known 988-2012 us, so there was nothing to drag.",
- "RXV2-0.9.497-selectors-stay": "Bank and Rates rows lose their delete (x) button - choosing None in the channel picker already covers the rare case; Rescue keeps its x."
+ "RXV2-0.9.497-selectors-stay": "Bank and Rates rows lose their delete (x) button - choosing None in the channel picker already covers the rare case; Rescue keeps its x.",
+ "RXV2-0.9.498-governor-why": "ESC page now explains WHY Rotorflight's governor wins: it feeds throttle the instant collective demands it, before head speed sags - an ESC governor only reacts after the RPM drop."
 }
