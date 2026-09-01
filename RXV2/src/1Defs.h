@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.530-scorpion-readout";
+constexpr const char* FW_VERSION = "RXV2-0.9.531-escprog-link";
 
 //*********************************************************************
 //  Auto-update manifest URLs

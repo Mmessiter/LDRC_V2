@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.531-escprog-link",
+      "url": "https://messiter.com/rxv2/release/v0.9.531/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.531/littlefs.bin",
+      "fs_md5": "ecd315bdf3208107a22b8274556fadc1",
+      "notes": "The wizard's ESC page now links straight to the Scorpion readout (beta) - it was only in A la carte."
+    },
+    {
       "name": "RXV2-0.9.530-scorpion-readout",
       "url": "https://messiter.com/rxv2/release/v0.9.530/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.530/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.520/littlefs.bin",
       "fs_md5": "96a7d218a1fe8a00e57161b5436be820",
       "notes": "The help-bubble explanation moves from the wizard to the Rotorflight front page - it applies to everything Rotorflight."
-    },
-    {
-      "name": "RXV2-0.9.519-clean-checklist",
-      "url": "https://messiter.com/rxv2/release/v0.9.519/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.519/littlefs.bin",
-      "fs_md5": "3a4ad6276ef8bd98008fc53aeb1ba7eb",
-      "notes": "Wizard checklist decluttered: each step is just its underlined title - press and hold for a fuller explanation than the old subtext ever gave."
     }
   ]
 }
