@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.516-timeout-bubbles",
+      "url": "https://messiter.com/rxv2/release/v0.9.516/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.516/littlefs.bin",
+      "fs_md5": "0d757b3967b2fdb49aa0dda4e7c26e11",
+      "notes": "Throttle-hold vs autorotation timeout bubbles now spell out the difference: ordinary throttle chop vs deliberate auto with bail-out."
+    },
+    {
       "name": "RXV2-0.9.515-bubble-above",
       "url": "https://messiter.com/rxv2/release/v0.9.515/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.515/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.505/littlefs.bin",
       "fs_md5": "0c2eda2be796d566a6c2dce8e4a47510",
       "notes": "New wizard step before Back up: blades back on, check main and tail pitch with a gauge, sweep full travel for mechanical issues."
-    },
-    {
-      "name": "RXV2-0.9.504-servo-power-warning",
-      "url": "https://messiter.com/rxv2/release/v0.9.504/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.504/littlefs.bin",
-      "fs_md5": "172ec137a734f767128178bcc060dfd9",
-      "notes": "Wiring and Servos pages warn: do not power the servos until their frequency/pulse width and the BEC voltage are set - wrong settings can damage them."
     }
   ]
 }

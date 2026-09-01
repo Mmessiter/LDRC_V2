@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.515-bubble-above";
+constexpr const char* FW_VERSION = "RXV2-0.9.516-timeout-bubbles";
 
 //*********************************************************************
 //  Auto-update manifest URLs

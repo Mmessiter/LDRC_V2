@@ -68,8 +68,8 @@ input:disabled,select:disabled{background:#eee;color:#999}
         <div class=fldRow><label data-help="Time to wind the rotor down when you lower the throttle switch, in tenths of a second.">Spool-down time</label>          <input type=number id=g_spdwn></div>
         <div class=fldRow><label data-help="How quickly the governor moves between two head speeds (e.g. on a bank change), in tenths of a second.">Speed-change time (tracking time)</label>            <input type=number id=g_track></div>
         <div class=fldRow><label data-help="The fast spool-up used when the rotor is still turning (after a brief throttle hold), in tenths of a second.">Quick-restart time (recovery time)</label>            <input type=number id=g_recov></div>
-        <div class=fldRow><label data-help="How long after entering throttle hold the fast quick-restart stays available, in tenths of a second (50 = 5 s). Wait longer than this and the governor does a full, slow spool-up instead — a safety choice, since a stopped rotor may be near people.">Throttle-hold timeout</label>    <input type=number id=g_hold></div>
-        <div class=fldRow><label data-help="How long an autorotation may last and still earn the fast recovery spool-up, in tenths of a second.">Autorotation timeout</label>     <input type=number id=g_auto_to></div>
+        <div class=fldRow><label data-help="For an ORDINARY throttle chop (throttle hold): the fast quick-restart stays available for this long, in tenths of a second (50 = 5 s). Beyond it the governor insists on a full, slow spool-up — the rotor has slowed too much for a safe snap back.">Throttle-hold timeout</label>    <input type=number id=g_hold></div>
+        <div class=fldRow><label data-help="For a DELIBERATE autorotation with bail-out enabled (Auto throttle above 0): the auto may last this long, in tenths of a second, and still get the instant bail-out power. Usually set longer than the throttle-hold timeout — the rotor keeps its speed in an auto.">Autorotation timeout</label>     <input type=number id=g_auto_to></div>
     </div>
 
     <div class=card>
