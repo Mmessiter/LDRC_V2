@@ -47,7 +47,7 @@ input:disabled,select:disabled{background:#eee;color:#999}
 
     <div class=card>
         <h2>Mode &amp; throttle</h2>
-        <div class=fldRow><label data-help="Which governor runs. OFF = throttle curve only. PASSTHROUGH = transmitter throttle straight to the ESC. STANDARD = holds the head speed for you (right for most electric helis). MODE1/MODE2 = advanced variants.">Governor mode</label>
+        <div class=fldRow><label data-help="Which governor runs. OFF = your throttle curve only. LIMIT = throttle passed through with ramps and limits only. DIRECT = governed by calculation, for models with NO usable RPM signal. ELECTRIC = the full closed-loop governor for electric helis - holds the per-bank head speed (the right choice here). NITRO = the same for engines.">Governor mode</label>
             <select id=g_mode>
                 <option value=0>0 — OFF</option>
                 <option value=1>1 — LIMIT</option>
