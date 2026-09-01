@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.519-clean-checklist";
+constexpr const char* FW_VERSION = "RXV2-0.9.520-hint-on-hub";
 
 //*********************************************************************
 //  Auto-update manifest URLs
