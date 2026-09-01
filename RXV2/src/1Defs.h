@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.521-tidy-rows";
+constexpr const char* FW_VERSION = "RXV2-0.9.522-gear-dedup";
 
 //*********************************************************************
 //  Auto-update manifest URLs

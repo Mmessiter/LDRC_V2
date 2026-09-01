@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.522-gear-dedup",
+      "url": "https://messiter.com/rxv2/release/v0.9.522/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.522/littlefs.bin",
+      "fs_md5": "59bc80d1851e801486b36a6d21115712",
+      "notes": "Gear-ratio pages lose the paragraph that duplicated the label's help bubble."
+    },
+    {
       "name": "RXV2-0.9.521-tidy-rows",
       "url": "https://messiter.com/rxv2/release/v0.9.521/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.521/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.511/littlefs.bin",
       "fs_md5": "60ff7aa55a27fb20dd52a42ce84b3dd9",
       "notes": "The floating back arrow now returns to the menu you actually came from (A la carte vs wizard) - it remembers the hub you navigated through."
-    },
-    {
-      "name": "RXV2-0.9.510-rescue-floating-save",
-      "url": "https://messiter.com/rxv2/release/v0.9.510/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.510/littlefs.bin",
-      "fs_md5": "75538ce6e507d6774aee041694d9d201",
-      "notes": "Rescue page's Save button floats at the bottom of the screen (same bar as Travel extents) - no more scrolling to save."
     }
   ]
 }
