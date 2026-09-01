@@ -55,31 +55,31 @@ h2 .hint{font-weight:400;font-size:.7em;color:#5d7a8c;display:block;margin-top:.
 
     <div class=card id=feat>
         <h2>Tick the functions you plan to use <span class=hint>(Features)</span></h2>
-        <div class=fRow><div class=lab><b>Governor</b><span>Rotorflight holds the head speed for you <i>(GOVERNOR)</i></span></div><input type=checkbox id=f26></div>
-        <div class=fRow><div class=lab><b>ESC telemetry</b><span>volts, amps, temperature and RPM from the ESC &mdash; restart to apply <i>(ESC_SENSOR)</i></span></div><input type=checkbox id=f27></div>
-        <div class=fRow><div class=lab><b>RPM wire input</b><span>only for a separate RPM signal wire &mdash; not needed with ESC telemetry <i>(FREQ_SENSOR)</i></span></div><input type=checkbox id=f28></div>
-        <div class=fRow><div class=lab><b>Vibration filter</b><span>automatic notch filter that follows vibrations <i>(DYN_NOTCH)</i></span></div><input type=checkbox id=f29></div>
-        <div class=fRow><div class=lab><b>Telemetry out</b><span>flight data back to the transmitter <i>(TELEMETRY)</i></span></div><input type=checkbox id=f10></div>
+        <div class=fRow><div class=lab><b data-help="Rotorflight holds the head speed steady for you, adding power the instant collective demands it. Almost always ON for electric helis. (Rotorflight: GOVERNOR)">Governor</b></div><input type=checkbox id=f26></div>
+        <div class=fRow><div class=lab><b data-help="Volts, amps, temperature and RPM arrive from the ESC over its one telemetry wire. Pick the brand below, and restart the flight controller to apply. (Rotorflight: ESC_SENSOR)">ESC telemetry</b></div><input type=checkbox id=f27></div>
+        <div class=fRow><div class=lab><b data-help="Only for ESCs with a separate dedicated RPM wire. Not needed when ESC telemetry already carries RPM - leave OFF in that case. (Rotorflight: FREQ_SENSOR)">RPM wire input</b></div><input type=checkbox id=f28></div>
+        <div class=fRow><div class=lab><b data-help="An automatic notch filter that follows the rotor vibrations wherever they move. Usually ON - it keeps the gyros clean without hand-tuning. (Rotorflight: DYN_NOTCH)">Vibration filter</b></div><input type=checkbox id=f29></div>
+        <div class=fRow><div class=lab><b data-help="Sends flight data back to the transmitter over the radio link - head speed, voltage and more on your transmitter screen. (Rotorflight: TELEMETRY)">Telemetry out</b></div><input type=checkbox id=f10></div>
         <button class=saveBtn id=featSave onclick="saveFeatures()">Save features</button>
         <div id=featMsg class=sMsg></div>
     </div>
 
     <div class=card id=motor>
         <h2>Motor &amp; ESC <span class=hint>how the flight controller talks to the ESC (Motor)</span></h2>
-        <div class=fRow><div class=lab><b>ESC signal</b><span>how the throttle is sent, not the brand: heli ESCs (Scorpion, Kontronik, YGE, Hobbywing&hellip;) use <b>Normal PWM</b>; DShot is for drone-style ESCs <i>(motor_pwm_protocol)</i></span></div>
+        <div class=fRow><div class=lab><b data-help="How the throttle is SENT, not the brand: helicopter ESCs (Scorpion, Kontronik, YGE, Hobbywing) use Normal PWM; DShot is for drone-style ESCs. (Rotorflight: motor_pwm_protocol)">ESC signal</b></div>
             <select id=m_proto>
                 <option value=0>Normal PWM (most heli ESCs)</option><option value=1>OneShot125</option>
                 <option value=5>DShot150</option><option value=6>DShot300</option>
                 <option value=7>DShot600</option><option value=10>Off (disabled)</option>
             </select></div>
-        <div class=fRow><div class=lab><b>Motor pole count</b><span>magnets in the motor bell &mdash; needed for true RPM <i>(motor_poles)</i></span></div><input id=m_poles type=number min=2 max=64 step=2></div>
-        <div class=fRow><div class=lab><b>DShot RPM telemetry</b><span>RPM straight from the ESC signal wire <i>(dshot_bidir)</i></span></div><input type=checkbox id=m_bidir></div>
-        <div class=fRow><div class=lab><b>Main gear ratio</b><span>motor pinion teeth : main gear teeth <i>(main_rotor_gear_ratio)</i></span></div>
+        <div class=fRow><div class=lab><b data-help="The number of magnets in the motor bell - the flight controller needs it to turn electrical RPM into true motor RPM. Count them or check the motor spec sheet. (Rotorflight: motor_poles)">Motor pole count</b></div><input id=m_poles type=number min=2 max=64 step=2></div>
+        <div class=fRow><div class=lab><b data-help="RPM carried straight back on the ESC signal wire - DShot ESCs only. (Rotorflight: dshot_bidir)">DShot RPM telemetry</b></div><input type=checkbox id=m_bidir></div>
+        <div class=fRow><div class=lab><b data-help="Motor pinion teeth to main gear teeth - together with pole count this gives the true head speed the governor governs. (Rotorflight: main_rotor_gear_ratio)">Main gear ratio</b></div>
             <span style="white-space:nowrap"><input id=m_mgN type=number min=1 max=50000 style="width:4.5em"> : <input id=m_mgD type=number min=1 max=50000 style="width:4.5em"></span></div>
-        <div class=fRow><div class=lab><b>Tail gear ratio</b><span>tail drive : main shaft <i>(tail_rotor_gear_ratio)</i></span></div>
+        <div class=fRow><div class=lab><b data-help="Tail drive to main shaft ratio - lets the flight controller know the tail rotor speed. (Rotorflight: tail_rotor_gear_ratio)">Tail gear ratio</b></div>
             <span style="white-space:nowrap"><input id=m_tgN type=number min=1 max=50000 style="width:4.5em"> : <input id=m_tgD type=number min=1 max=50000 style="width:4.5em"></span></div>
         <h2 style="margin-top:.8em">ESC telemetry wire <span class=hint>which brand&rsquo;s telemetry language the ESC speaks (ESC sensor)</span></h2>
-        <div class=fRow><div class=lab><b>ESC telemetry protocol</b><span>this is where your ESC&rsquo;s <b>brand</b> goes &mdash; Scorpion, Kontronik&hellip; <i>(esc_sensor_protocol)</i></span></div>
+        <div class=fRow><div class=lab><b data-help="This is where your ESC BRAND goes: Scorpion, Kontronik, Hobbywing, YGE and so on - each speaks its own telemetry language on the one wire. (Rotorflight: esc_sensor_protocol)">ESC telemetry protocol</b></div>
             <select id=e_proto>
                 <option value=0>None</option><option value=1>BLHeli32</option>
                 <option value=2>Hobbywing V4</option><option value=3>Hobbywing V5</option>
@@ -95,28 +95,28 @@ h2 .hint{font-weight:400;font-size:.7em;color:#5d7a8c;display:block;margin-top:.
 
     <div class=card id=telem>
         <h2>Telemetry to the transmitter <span class=hint>which readings are sent back over the radio (Telemetry sensors)</span></h2>
-        <div class=fRow><div class=lab><b>Flight mode</b><span>NORMAL / RESCUE etc. on the transmitter</span></div><input type=checkbox id=t89></div>
-        <div class=fRow><div class=lab><b>Battery</b><span>volts, amps and fuel used &mdash; the app&rsquo;s battery display needs this</span></div><input type=checkbox id=t2></div>
-        <div class=fRow><div class=lab><b>Head speed (RPM)</b><span>the governor&rsquo;s number, shown live &mdash; recommended ON</span></div><input type=checkbox id=t108></div>
-        <div class=fRow><div class=lab><b>Temperature</b><span>ESC temperature warnings &mdash; recommended ON</span></div><input type=checkbox id=t109></div>
-        <div class=fRow><div class=lab><b>Attitude</b><span>pitch / roll / yaw angles (hi-res)</span></div><input type=checkbox id=t64></div>
-        <div class=fRow><div class=lab><b>Altitude</b><span>needs a barometer</span></div><input type=checkbox id=t58></div>
-        <div class=fRow><div class=lab><b>GPS</b><span>needs a GPS module</span></div><input type=checkbox id=t72></div>
+        <div class=fRow><div class=lab><b data-help="Shows NORMAL, RESCUE and friends on the transmitter display, so you always know which mode the flight controller is in.">Flight mode</b></div><input type=checkbox id=t89></div>
+        <div class=fRow><div class=lab><b data-help="Volts, amps and fuel used, sent to the transmitter. The app battery display needs this ON.">Battery</b></div><input type=checkbox id=t2></div>
+        <div class=fRow><div class=lab><b data-help="The governed head speed, live on your transmitter. Recommended ON - it is the single most useful number in flight.">Head speed (RPM)</b></div><input type=checkbox id=t108></div>
+        <div class=fRow><div class=lab><b data-help="ESC temperature to the transmitter, so overheating warns you before it hurts. Recommended ON.">Temperature</b></div><input type=checkbox id=t109></div>
+        <div class=fRow><div class=lab><b data-help="Pitch, roll and yaw angles in high resolution - useful for logging and apps.">Attitude</b></div><input type=checkbox id=t64></div>
+        <div class=fRow><div class=lab><b data-help="Height above the take-off point. Needs a barometer on the flight controller.">Altitude</b></div><input type=checkbox id=t58></div>
+        <div class=fRow><div class=lab><b data-help="Position and speed. Needs a GPS module fitted.">GPS</b></div><input type=checkbox id=t72></div>
         <button class=saveBtn id=telemSave onclick="saveTelemSensors()">Save telemetry sensors</button>
         <div id=telemMsg class=sMsg></div>
     </div>
 
     <div class=card id=batt>
         <h2>Battery <span class=hint>so warnings and telemetry read true (Battery)</span></h2>
-        <div class=fRow><div class=lab><b>Cell count</b><span>0 = work it out automatically <i>(battery_cell_count)</i></span></div><input id=b_cells type=number min=0 max=24></div>
-        <div class=fRow><div class=lab><b>Capacity</b><span>mAh, 0 = not set <i>(battery_capacity)</i></span></div><input id=b_cap type=number min=0 max=20000 step=50></div>
-        <div class=fRow><div class=lab><b>Voltage comes from</b><span><i>(vbat_meter_source)</i></span></div>
+        <div class=fRow><div class=lab><b data-help="How many cells the flight pack has. 0 = work it out automatically from the voltage (rounds to even counts above 4S). (Rotorflight: battery_cell_count)">Cell count</b></div><input id=b_cells type=number min=0 max=24></div>
+        <div class=fRow><div class=lab><b data-help="The pack capacity in mAh, used for the fuel gauge. 0 = not set. (Rotorflight: battery_capacity)">Capacity</b></div><input id=b_cap type=number min=0 max=20000 step=50></div>
+        <div class=fRow><div class=lab><b data-help="Which sensor supplies the battery voltage - usually the ESC via its telemetry wire. (Rotorflight: vbat_meter_source)">Voltage comes from</b></div>
             <select id=b_vsrc><option value=0>Nowhere</option><option value=1>FC pads (ADC)</option><option value=2>ESC telemetry</option></select></div>
-        <div class=fRow><div class=lab><b>Current comes from</b><span><i>(current_meter_source)</i></span></div>
+        <div class=fRow><div class=lab><b data-help="Which sensor supplies the current reading - usually the ESC. (Rotorflight: current_meter_source)">Current comes from</b></div>
             <select id=b_isrc><option value=0>Nowhere</option><option value=1>FC pads (ADC)</option><option value=2>ESC telemetry</option></select></div>
-        <div class=fRow><div class=lab><b>Full cell voltage</b><span>V per cell, fresh off the charger <i>(vbat_full_cell_voltage)</i></span></div><input id=b_full type=number min=2 max=5 step=0.01></div>
-        <div class=fRow><div class=lab><b>Warning voltage</b><span>V per cell &mdash; time to land <i>(vbat_warning_cell_voltage)</i></span></div><input id=b_warn type=number min=2 max=5 step=0.01></div>
-        <div class=fRow><div class=lab><b>Empty cell voltage</b><span>V per cell, absolute floor <i>(vbat_min_cell_voltage)</i></span></div><input id=b_min type=number min=2 max=5 step=0.01></div>
+        <div class=fRow><div class=lab><b data-help="Volts per cell fresh off the charger - 4.20 for normal LiPo. (Rotorflight: vbat_full_cell_voltage)">Full cell voltage</b></div><input id=b_full type=number min=2 max=5 step=0.01></div>
+        <div class=fRow><div class=lab><b data-help="Volts per cell where the warning fires - time to land. 3.5 is a common choice. (Rotorflight: vbat_warning_cell_voltage)">Warning voltage</b></div><input id=b_warn type=number min=2 max=5 step=0.01></div>
+        <div class=fRow><div class=lab><b data-help="Volts per cell treated as absolutely empty - the floor of the fuel gauge. (Rotorflight: vbat_min_cell_voltage)">Empty cell voltage</b></div><input id=b_min type=number min=2 max=5 step=0.01></div>
         <button class=saveBtn id=battSave onclick="saveBattery()">Save battery</button>
         <div id=battMsg class=sMsg></div>
     </div>

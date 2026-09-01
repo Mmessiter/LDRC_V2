@@ -59,7 +59,8 @@ const wrU16 = (b, o, v) => { v = v & 0xFFFF; b[o] = v & 0xFF; b[o + 1] = (v >> 8
 let servos = [];      // array of {mid,min,max,rneg,rpos,rate,speed,flags}
 
 function fieldRow(id, title, hint, min, max, step) {
-    return '<div class=lab><b>' + title + '</b><span>' + hint + '</span></div>'
+    // hint lives in a press-and-hold bubble (Malcolm 2026-09-01: cleaner page)
+    return '<div class=lab><b data-help="' + hint + '">' + title + '</b></div>'
          + '<input id=' + id + ' type=number min=' + min + ' max=' + max + ' step=' + (step || 1) + '>';
 }
 

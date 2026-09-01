@@ -56,7 +56,7 @@ h2 .hint{font-weight:400;font-size:.7em;color:#5d7a8c;display:block;margin-top:.
     <div class=card>
         <h2>What Rescue does</h2>
         <div class=fRow>
-            <div class=lab><b>Rescue mode</b><span>what happens when you flick the rescue switch <i>(Rotorflight: Enable Rescue / rescue_mode)</i></span></div>
+            <div class=lab><b data-help="What happens when you flick the rescue switch: level the model, or level it AND climb, or level and hold height. The safety net for a disorienting moment. (Rotorflight: rescue_mode)">Rescue mode</b></div>
             <select id=r_mode>
                 <option value=0>Off</option>
                 <option value=1>Level &amp; climb</option>
@@ -64,41 +64,41 @@ h2 .hint{font-weight:400;font-size:.7em;color:#5d7a8c;display:block;margin-top:.
             </select>
         </div>
         <div class=fRow>
-            <div class=lab><b>Flip upright if inverted</b><span>roll the model level-side-up before climbing <i>(Rotorflight: Flip to upright)</i></span></div>
+            <div class=lab><b data-help="If the model is upside down when rescue engages, it first rolls level-side-up before climbing. Recommended ON. (Rotorflight: Flip to upright)">Flip upright if inverted</b></div>
             <select id=r_flip><option value=0>Off</option><option value=1>On</option></select>
         </div>
-        <div class=fRow><div class=lab><b>Flip strength</b><span>how hard it rolls upright, 5&ndash;250 <i>(Rotorflight: Flip gain)</i></span></div><input id=r_flipg type=number min=5 max=250></div>
-        <div class=fRow><div class=lab><b>Levelling strength</b><span>how firmly it levels the model, 5&ndash;250 <i>(Rotorflight: Level gain)</i></span></div><input id=r_levelg type=number min=5 max=250></div>
+        <div class=fRow><div class=lab><b data-help="How hard it rolls the model upright, 5-250. Too low and the flip stalls; too high and it overshoots. (Rotorflight: Flip gain)">Flip strength</b></div><input id=r_flipg type=number min=5 max=250></div>
+        <div class=fRow><div class=lab><b data-help="How firmly it holds the model level once upright, 5-250. (Rotorflight: Level gain)">Levelling strength</b></div><input id=r_levelg type=number min=5 max=250></div>
     </div>
 
     <div class=card>
         <h2>Timing <span class=hint>how long each stage lasts, in seconds</span></h2>
-        <div class=fRow><div class=lab><b>Pull-up time</b><span>brief hard pull-up to arrest a dive first</span></div><input id=r_put type=number min=0 max=25 step=0.1></div>
-        <div class=fRow><div class=lab><b>Climb time</b><span>0 = climb until you release rescue</span></div><input id=r_ct type=number min=0 max=25 step=0.1></div>
-        <div class=fRow><div class=lab><b>Flip time</b><span>time allowed to flip upright</span></div><input id=r_ft type=number min=0 max=25 step=0.1></div>
-        <div class=fRow><div class=lab><b>Exit time</b><span>gentle hand-back when you release rescue</span></div><input id=r_et type=number min=0 max=25 step=0.1></div>
+        <div class=fRow><div class=lab><b data-help="A brief, hard pull-up first, to arrest a dive before anything else happens. In seconds.">Pull-up time</b></div><input id=r_put type=number min=0 max=25 step=0.1></div>
+        <div class=fRow><div class=lab><b data-help="How long the climb-away lasts, seconds. 0 = keep climbing until you release the rescue switch.">Climb time</b></div><input id=r_ct type=number min=0 max=25 step=0.1></div>
+        <div class=fRow><div class=lab><b data-help="Time allowed for the roll-upright. If it cannot flip within this, rescue aborts the flip.">Flip time</b></div><input id=r_ft type=number min=0 max=25 step=0.1></div>
+        <div class=fRow><div class=lab><b data-help="How gently control is handed back to you when you release rescue, seconds - avoids a jolt.">Exit time</b></div><input id=r_et type=number min=0 max=25 step=0.1></div>
     </div>
 
     <div class=card>
         <h2>Collective <span class=hint>Rotorflight units, 0&ndash;1000 &mdash; higher = more blade pitch</span></h2>
-        <div class=fRow><div class=lab><b>Pull-up collective</b><span>bite during the initial pull-up</span></div><input id=r_puc type=number min=0 max=1000></div>
-        <div class=fRow><div class=lab><b>Climb collective</b><span>how hard it climbs away</span></div><input id=r_cc type=number min=0 max=1000></div>
-        <div class=fRow><div class=lab><b>Hover collective</b><span>bite to hold a hover (height-hold mode)</span></div><input id=r_hc type=number min=0 max=1000></div>
-        <div class=fRow><div class=lab><b>Maximum collective</b><span>a ceiling rescue will never exceed (1&ndash;1000)</span></div><input id=r_maxc type=number min=1 max=1000></div>
+        <div class=fRow><div class=lab><b data-help="Collective bite during the initial pull-up - how hard it grabs the air to stop a descent.">Pull-up collective</b></div><input id=r_puc type=number min=0 max=1000></div>
+        <div class=fRow><div class=lab><b data-help="Collective used to climb away - how hard the rescue climbs.">Climb collective</b></div><input id=r_cc type=number min=0 max=1000></div>
+        <div class=fRow><div class=lab><b data-help="Collective used to hold a hover in height-hold mode - roughly your hover pitch.">Hover collective</b></div><input id=r_hc type=number min=0 max=1000></div>
+        <div class=fRow><div class=lab><b data-help="A ceiling rescue will never exceed, 1-1000 - protects the drivetrain from a full-power snatch.">Maximum collective</b></div><input id=r_maxc type=number min=1 max=1000></div>
     </div>
 
     <div class=card>
         <h2>Hold height <span class=hint>only used in &ldquo;Level &amp; hold height&rdquo; mode (needs an altitude sensor)</span></h2>
-        <div class=fRow><div class=lab><b>Hold height</b><span>metres above the point rescue engaged, 0&ndash;100 <i>(Rotorflight: Hover altitude)</i></span></div><input id=r_ha type=number min=0 max=100 step=0.1></div>
-        <div class=fRow><div class=lab><b>Height hold &mdash; P</b><span>how strongly it corrects height error <i>(Rotorflight: Altitude P gain)</i></span></div><input id=r_ap type=number min=0 max=10000></div>
-        <div class=fRow><div class=lab><b>Height hold &mdash; I</b><span>trims out steady height offset <i>(Rotorflight: Altitude I gain)</i></span></div><input id=r_ai type=number min=0 max=10000></div>
-        <div class=fRow><div class=lab><b>Height hold &mdash; D</b><span>damps height overshoot <i>(Rotorflight: Altitude D gain)</i></span></div><input id=r_ad type=number min=0 max=10000></div>
+        <div class=fRow><div class=lab><b data-help="Metres above the point where rescue engaged, 0-100 - only used in level-and-hold-height mode, and it needs an altitude sensor. (Rotorflight: Hover altitude)">Hold height</b></div><input id=r_ha type=number min=0 max=100 step=0.1></div>
+        <div class=fRow><div class=lab><b data-help="How strongly it corrects a height error right now. (Rotorflight: Altitude P gain)">Height hold &mdash; P</b></div><input id=r_ap type=number min=0 max=10000></div>
+        <div class=fRow><div class=lab><b data-help="Trims out a steady height offset over time. (Rotorflight: Altitude I gain)">Height hold &mdash; I</b></div><input id=r_ai type=number min=0 max=10000></div>
+        <div class=fRow><div class=lab><b data-help="Damps height overshoot and bounce. (Rotorflight: Altitude D gain)">Height hold &mdash; D</b></div><input id=r_ad type=number min=0 max=10000></div>
     </div>
 
     <div class=card>
         <h2>Advanced <span class=hint>how sharply rescue is allowed to move the model</span></h2>
-        <div class=fRow><div class=lab><b>Max turn rate</b><span>deg/s cap while levelling, 1&ndash;1000 <i>(Rotorflight: Maximum setpoint rate)</i></span></div><input id=r_msr type=number min=1 max=1000></div>
-        <div class=fRow><div class=lab><b>Max turn acceleration</b><span>how fast it may build that rate, 1&ndash;10000 <i>(Rotorflight: Maximum setpoint acceleration)</i></span></div><input id=r_msa type=number min=1 max=10000></div>
+        <div class=fRow><div class=lab><b data-help="Cap on how fast rescue may rotate the model while levelling, degrees per second, 1-1000. (Rotorflight: Maximum setpoint rate)">Max turn rate</b></div><input id=r_msr type=number min=1 max=1000></div>
+        <div class=fRow><div class=lab><b data-help="How quickly rescue may build up to that rotation rate, 1-10000. (Rotorflight: Maximum setpoint acceleration)">Max turn acceleration</b></div><input id=r_msa type=number min=1 max=10000></div>
     </div>
 
     <div class=fabBar><button class="btn btn-fly" id=saveBtn onclick="save()" style="background:#6cab5e;margin:0"><span class=ico>&#128190;</span>Save to flight controller</button></div>

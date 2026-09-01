@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.521-tidy-rows",
+      "url": "https://messiter.com/rxv2/release/v0.9.521/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.521/littlefs.bin",
+      "fs_md5": "188b624e0efad4e2c3a75eb033f2533e",
+      "notes": "First-time basics, Rescue and Servos pages decluttered: every row is just its underlined title - press for a fuller explanation (43 rows converted)."
+    },
+    {
       "name": "RXV2-0.9.520-hint-on-hub",
       "url": "https://messiter.com/rxv2/release/v0.9.520/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.520/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.510/littlefs.bin",
       "fs_md5": "75538ce6e507d6774aee041694d9d201",
       "notes": "Rescue page's Save button floats at the bottom of the screen (same bar as Travel extents) - no more scrolling to save."
-    },
-    {
-      "name": "RXV2-0.9.509-protocol-diet",
-      "url": "https://messiter.com/rxv2/release/v0.9.509/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.509/littlefs.bin",
-      "fs_md5": "46dc6cda4d94495587ee2f88d387f8ca",
-      "notes": "Throttle/arming channels leave the Protocol page (the Transmitter-channels save now tells the receiver too); wave channels move to Receiver settings with their Test button."
     }
   ]
 }
