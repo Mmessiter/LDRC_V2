@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.529-timings-in-seconds",
+      "url": "https://messiter.com/rxv2/release/v0.9.529/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.529/littlefs.bin",
+      "fs_md5": "954569c831e9ba13d9a968efb8c63b56",
+      "notes": "Governor timings now displayed in SECONDS (converted to Rotorflight's tenths on the wire) - the tenths trap caused a 40-second spool-up on the Goblin's second flight."
+    },
+    {
       "name": "RXV2-0.9.528-govmode-bubble",
       "url": "https://messiter.com/rxv2/release/v0.9.528/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.528/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.518/littlefs.bin",
       "fs_md5": "6772b738857fe5473acc702e4482f4ac",
       "notes": "Wizard opens with a self-demonstrating note: underlined term? Put your finger on it for an explanation - and the note's own underline is a live example."
-    },
-    {
-      "name": "RXV2-0.9.517-bailout-findable",
-      "url": "https://messiter.com/rxv2/release/v0.9.517/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.517/littlefs.bin",
-      "fs_md5": "50cd0c2f68f3ac73368fd23f938fb849",
-      "notes": "Governor page now says plainly: bail-out is enabled by Auto throttle above 0 - there is no separate switch (note beside the autorotation timeout + a fuller bubble)."
     }
   ]
 }
