@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.525-help-audit";
+constexpr const char* FW_VERSION = "RXV2-0.9.526-fourth-task";
 
 //*********************************************************************
 //  Auto-update manifest URLs
