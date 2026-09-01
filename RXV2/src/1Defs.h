@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.531-escprog-link";
+constexpr const char* FW_VERSION = "RXV2-0.9.532-no-starve";
 
 //*********************************************************************
 //  Auto-update manifest URLs

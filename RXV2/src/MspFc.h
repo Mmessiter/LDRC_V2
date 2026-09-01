@@ -271,12 +271,20 @@ inline void mspDeliverResponse(uint8_t func, const uint8_t* payload, uint16_t si
 inline bool mspRequestAndWait(uint8_t function, const uint8_t* req, uint8_t reqLen,
                               uint8_t* outBuf, uint16_t* outLen, uint32_t timeoutMs) {
     extern void protocolRx();   // defined in Telemetry.h
+    extern void sbusTick();     // defined in Output.h
+    extern void radioPoll();    // defined in Radio.h
     mspWaitFunction  = function;
     mspWaitRespReady = false;
     mspWaitRespLen   = 0;
     mspSendRequest(function, req, reqLen);
     uint32_t deadline = millis() + timeoutMs;
     while (!mspWaitRespReady && (int32_t)(deadline - millis()) > 0) {
+        // Keep FLYING while we wait (Malcolm 2026-09-01: an erroring ESC-
+        // programming poll made the swash twitch every ~2 s — this wait
+        // starved the channel stream and the FC flickered into failsafe).
+        // The radio keeps channels fresh, sbusTick keeps frames flowing.
+        radioPoll();
+        sbusTick();
         protocolRx();
         delay(1);
     }

@@ -558,6 +558,8 @@ inline void handleMspApi() {
     {
         uint32_t busyDeadline = millis() + 300;
         while (txParamBusy && (int32_t)(busyDeadline - millis()) > 0) {
+            radioPoll();        // keep channels fresh
+            sbusTick();         // keep frames flowing to the FC (no failsafe flicker)
             protocolRx();       // feed CRSF RX so the async response can land
             txParamsLoop();     // advance the TX-param machine
             delay(1);
