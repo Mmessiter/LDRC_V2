@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.517-bailout-findable",
+      "url": "https://messiter.com/rxv2/release/v0.9.517/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.517/littlefs.bin",
+      "fs_md5": "50cd0c2f68f3ac73368fd23f938fb849",
+      "notes": "Governor page now says plainly: bail-out is enabled by Auto throttle above 0 - there is no separate switch (note beside the autorotation timeout + a fuller bubble)."
+    },
+    {
       "name": "RXV2-0.9.516-timeout-bubbles",
       "url": "https://messiter.com/rxv2/release/v0.9.516/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.516/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.506/littlefs.bin",
       "fs_md5": "5c0afc5012f265cca7d7220cb9832254",
       "notes": "Travel extents: cyclic gain split into separate roll and pitch gains so the two axes can be balanced against the pitch gauge (8 vs 10 degrees is now fixable)."
-    },
-    {
-      "name": "RXV2-0.9.505-blades-on-step",
-      "url": "https://messiter.com/rxv2/release/v0.9.505/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.505/littlefs.bin",
-      "fs_md5": "0c2eda2be796d566a6c2dce8e4a47510",
-      "notes": "New wizard step before Back up: blades back on, check main and tail pitch with a gauge, sweep full travel for mechanical issues."
     }
   ]
 }
