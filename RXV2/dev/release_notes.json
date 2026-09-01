@@ -401,5 +401,6 @@
  "RXV2-0.9.518-bubble-hint": "Wizard opens with a self-demonstrating note: underlined term? Put your finger on it for an explanation - and the note's own underline is a live example.",
  "RXV2-0.9.519-clean-checklist": "Wizard checklist decluttered: each step is just its underlined title - press and hold for a fuller explanation than the old subtext ever gave.",
  "RXV2-0.9.520-hint-on-hub": "The help-bubble explanation moves from the wizard to the Rotorflight front page - it applies to everything Rotorflight.",
- "RXV2-0.9.521-tidy-rows": "First-time basics, Rescue and Servos pages decluttered: every row is just its underlined title - press for a fuller explanation (43 rows converted)."
+ "RXV2-0.9.521-tidy-rows": "First-time basics, Rescue and Servos pages decluttered: every row is just its underlined title - press for a fuller explanation (43 rows converted).",
+ "RXV2-0.9.522-gear-dedup": "Gear-ratio pages lose the paragraph that duplicated the label's help bubble."
 }
