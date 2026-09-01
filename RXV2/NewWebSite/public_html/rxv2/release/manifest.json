@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.519-clean-checklist",
+      "url": "https://messiter.com/rxv2/release/v0.9.519/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.519/littlefs.bin",
+      "fs_md5": "3a4ad6276ef8bd98008fc53aeb1ba7eb",
+      "notes": "Wizard checklist decluttered: each step is just its underlined title - press and hold for a fuller explanation than the old subtext ever gave."
+    },
+    {
       "name": "RXV2-0.9.518-bubble-hint",
       "url": "https://messiter.com/rxv2/release/v0.9.518/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.518/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.508/littlefs.bin",
       "fs_md5": "908ccbde2e33eeafb2c80b8f1e64324c",
       "notes": "The Bench-measure card now carries the current axis's cyclic gain in a green box beside the Hold button (same value as Calibration, kept in step both ways) - measure and adjust on one screen."
-    },
-    {
-      "name": "RXV2-0.9.507-banner-visible",
-      "url": "https://messiter.com/rxv2/release/v0.9.507/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.507/littlefs.bin",
-      "fs_md5": "2394852b964f4cd4146e1fd1920a5ec1",
-      "notes": "Travel page's sticky status banner (SWASH HELD etc.) now sticks below the floating buttons instead of hiding behind them."
     }
   ]
 }

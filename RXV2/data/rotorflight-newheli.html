@@ -47,20 +47,20 @@
 
 <script>
 const STEPS=[
- {k:'fw',    t:'Before you start (computer, once)', d:'USB to the Configurator: firmware, serial port, Telemetry ON. Three tasks the receiver cannot do.', href:'/rotorflight-computer'},
- {k:'cal',   t:'Calibrate the flight controller', d:'On the desk, flat and perfectly still, BEFORE it goes into the model \u2014 two seconds.', href:'/rotorflight-calibrate'},
- {k:'wire',  t:'Wire it up', d:'S1 = front-or-back servo, then clockwise. Tail = S4. ESC, telemetry, RPM \u2014 each plug explained.', href:'/rotorflight-wiring'},
- {k:'esc',   t:'ESC setup (its own app)', d:'Governor off/external, throttle 1000\u20132000, telemetry ON, soft start short, BEC voltage. The FC cannot do these.', href:'/rotorflight-esc'},
- {k:'tx',    t:'Transmitter first', d:'Create a new model memory on your transmitter, then match each channel here.', href:'/rotorflight-txchannels'},
- {k:'basics',t:'First-time basics', d:'Mounting direction, functions to use, telemetry, ESC brand, battery.', href:'/rotorflight-firsttime'},
- {k:'servos',t:'Servos', d:'Centre each servo, set travel and direction.', href:'/rotorflight-servos'},
- {k:'travel',t:'Travel extents', d:'Collective and cyclic throws, swash limits, trims.', href:'/rotorflight-travel'},
- {k:'switch',t:'Switches', d:'Pick the Arm and bank switches. Check with the live marker.', href:'/rotorflight-modes'},
- {k:'rescue',t:'Rescue', d:'Set the rescue switch and how firmly it saves.', href:'/rotorflight-rescue'},
- {k:'gov',   t:'Governor', d:'Head speed per bank, spool-up speed.', href:'/rotorflight-gov-profile'},
- {k:'rates', t:'Rates & PIDs', d:'Starting values are fine for a first flight.', href:'/rotorflight-rates'},
- {k:'blades',t:'Blades on \u2014 pitch & travel check', d:'Put the main and tail blades back on. Check main and tail pitch with a pitch gauge, and sweep full travel slowly, looking for anything that binds or touches.'},
- {k:'backup',t:'Back up', d:'One tap saves the whole setup to the phone.', href:'/setup'},
+ {k:'fw',    t:'Before you start (computer, once)', d:'Connect the flight controller to your computer by USB and run the Rotorflight Configurator for three one-time tasks: flash the latest firmware, check the serial receiver port, and turn Telemetry ON (Save and Reboot). These are the only things that cannot be done from the phone - and the receiver need not even be connected yet.', href:'/rotorflight-computer'},
+ {k:'cal',   t:'Calibrate the flight controller', d:'Teach the flight controller which way is level (accelerometer calibration). Do it on the desk, flat and perfectly still, BEFORE the board goes into the model - a mounted helicopter rarely sits truly level. It takes two seconds, and front-or-back mounting does not affect it.', href:'/rotorflight-calibrate'},
+ {k:'wire',  t:'Wire it up', d:'Every plug explained: S1 is the front-or-back servo, then go clockwise round the swashplate; the tail servo is S4; the ESC has its throttle lead, its one-wire telemetry and an RPM wire. Important: do not power the servos until their settings are made in the Servos step.', href:'/rotorflight-wiring'},
+ {k:'esc',   t:'ESC setup (its own app)', d:'Set up the ESC in its own app, box or card: governor OFF / external, telemetry ON, short soft start, BEC voltage and motor timing - then calibrate its 1000-2000 microsecond throttle range straight from this phone. The head-speed gear ratio for your transmitter display lives here too.', href:'/rotorflight-esc'},
+ {k:'tx',    t:'Transmitter first', d:'Create a new model memory on your transmitter, then tell the wizard which channel does what - pick from the lists, or tap Detect and wiggle that stick or switch. The Arm and Rescue switches and the Bank/Rates selectors are set here too, each with a live bar.', href:'/rotorflight-txchannels'},
+ {k:'basics',t:'First-time basics', d:'The one-screen essentials: which way round the board is mounted, the functions you plan to use, which telemetry readings go to your transmitter, the brand of ESC on the telemetry wire, and the battery.', href:'/rotorflight-firsttime'},
+ {k:'servos',t:'Servos', d:'Centre each servo so the arms sit level, then set travel limits and direction. One tap copies servo 1 settings to servos 2 and 3. Do this BEFORE mechanical linkage fine-tuning.', href:'/rotorflight-servos'},
+ {k:'travel',t:'Travel extents', d:'Set collective and cyclic blade-pitch limits, calibrate the gains against a pitch gauge (a bench-hold drives the swash to exact angles for you), fix any control that moves the wrong way, and set the tail travel.', href:'/rotorflight-travel'},
+ {k:'switch',t:'Switches', d:'Prove every switch does what you chose: flip each one and watch its live red tick, and see which Bank and Rates profile the flight controller says it has actually selected.', href:'/rotorflight-modes'},
+ {k:'rescue',t:'Rescue', d:'Choose what the rescue switch does - flip upright, level, pull up, climb - and how firmly. Set it up now, prove it high in the air later: it is the safety net for a disorienting moment.', href:'/rotorflight-rescue'},
+ {k:'gov',   t:'Governor', d:'Set the target head speed for each bank and how gently the rotor spools up. Rotorflight governs the head speed and adds power the instant collective demands it - before the RPM can sag.', href:'/rotorflight-gov-profile'},
+ {k:'rates', t:'Rates & PIDs', d:'How fast the model rotates at full stick, and how soft the feel is around centre. The starting values are fine for a first flight - tune later with the Tuning wizard.', href:'/rotorflight-rates'},
+ {k:'blades',t:'Blades on \u2014 pitch & travel check', d:'Put the main and tail blades back on. Check main and tail pitch with a pitch gauge, and sweep full travel slowly, looking for anything that binds or touches. The last job before flying.'},
+ {k:'backup',t:'Back up', d:'One tap saves the whole flight-controller setup to your phone. Restore it after any mishap - or use it as the starting point for your next helicopter.', href:'/setup'},
 ];
 const $=id=>document.getElementById(id);
 // Ticks are per MODEL (receiver name), not per phone — Malcolm is setting up
@@ -83,7 +83,7 @@ function paint(){
         const div=document.createElement('div');
         div.className='step'+(isDone?' done':'');
         div.innerHTML='<div class=num>'+(isDone?'✓':(i+1))+'</div>'
-            +'<div class=tit><b>'+s.t+'</b><span>'+s.d+'</span></div>'
+            +'<div class=tit><b data-help="'+s.d+'">'+s.t+'</b></div>'
             +(s.href?'<a class=go href="'+s.href+'">Open</a>':'<div></div>')
             +'<div class=tick><input type=checkbox '+(isDone?'checked':'')+' aria-label="done"></div><div></div><div></div>';
         div.querySelector('input').addEventListener('change',ev=>{
