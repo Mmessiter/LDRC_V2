@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Servos &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=177">
-<script src="/app.js?v=183" defer></script>
+<link rel=stylesheet href="/style.css?v=178">
+<script src="/app.js?v=184" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -82,8 +82,8 @@ function buildCards() {
            + fieldRow('s'+i+'_speed','Slow-motion time (ms)', '0 = move at full speed (normal)', 0, 60000)
            + '</div>'
            + '<div class=chkRow>'
-           + '<label><input type=checkbox id=s'+i+'_rev> Reversed</label>'
-           + '<label><input type=checkbox id=s'+i+'_geo> Swash geometry correction</label>'
+           + '<label data-help="Flips this servo\'s direction, like a servo-reverse switch. Use it for mechanical direction only — control senses (aileron/elevator/collective) are set on the Travel page."><input type=checkbox id=s'+i+'_rev> Reversed</label>'
+           + '<label data-help="Compensates for the arc a servo arm sweeps, so equal commanded degrees give equal swash movement up and down. Usually ON for the three swashplate servos."><input type=checkbox id=s'+i+'_geo> Swash geometry correction</label>'
            + '</div>'
            + '<button class=saveBtn id=s'+i+'_save onclick="saveServo('+i+')">Save servo '+n+'</button>'
            + (i === 0 && servos.length >= 3

@@ -448,6 +448,31 @@
         }, 200);
     });
 
+    // Press-and-hold help bubbles (Malcolm 2026-09-01: "he puts his finger
+    // on those words and a bubble appears"). Elements carry their text in
+    // data-help; the bubble lives while the pointer is down and never
+    // steals presses aimed at a control inside the label.
+    let _hb = null;
+    const _hbHide = () => { if (_hb) { _hb.remove(); _hb = null; } };
+    document.addEventListener('pointerdown', e => {
+        const t = e.target.closest('[data-help]');
+        if (!t || e.target.closest('input,select,button,a,textarea')) return;
+        e.preventDefault();
+        _hbHide();
+        const b = document.createElement('div');
+        b.className = 'helpBubble';
+        b.textContent = t.getAttribute('data-help');
+        document.body.appendChild(b);
+        const r = t.getBoundingClientRect();
+        b.style.left = Math.max(8, Math.min(window.innerWidth - 8 - b.offsetWidth, r.left)) + 'px';
+        b.style.top = (r.top > window.innerHeight / 2)
+            ? (r.top - b.offsetHeight - 10) + 'px'
+            : (r.bottom + 10) + 'px';
+        _hb = b;
+    }, { passive: false });
+    for (const ev of ['pointerup', 'pointercancel']) document.addEventListener(ev, _hbHide);
+    window.addEventListener('scroll', _hbHide, true);
+
     // Click interceptor — ported from the Reed remaking-machine project,
     // where this pattern gives near-instant nav on iOS Safari:
     //   - e.preventDefault() then JS-initiated location.href = a.href

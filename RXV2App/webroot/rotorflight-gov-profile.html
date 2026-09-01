@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Governor (profile) &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=177">
-<script src="/app.js?v=183" defer></script>
+<link rel=stylesheet href="/style.css?v=178">
+<script src="/app.js?v=184" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;
         padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -52,32 +52,32 @@ input:disabled{background:#eee;color:#999}
 
     <div class=card>
         <h2>Setpoint &amp; gains</h2>
-        <div class=fldRow><label>Headspeed (rpm)</label>          <input type=number id=g_hs></div>
-        <div class=fldRow><label>Master gain</label>              <input type=number id=g_gain></div>
-        <div class=fldRow><label>P gain</label>                   <input type=number id=g_p></div>
-        <div class=fldRow><label>I gain</label>                   <input type=number id=g_i></div>
-        <div class=fldRow><label>D gain</label>                   <input type=number id=g_d></div>
-        <div class=fldRow><label>F gain (feed-forward)</label>    <input type=number id=g_f></div>
+        <div class=fldRow><label data-help="The target head speed for this bank — real rotor RPM. This is the number the governor holds.">Headspeed (rpm)</label>          <input type=number id=g_hs></div>
+        <div class=fldRow><label data-help="Overall governor strength. Raise it if head speed sags or wanders; lower it if the head speed surges or pulses.">Master gain</label>              <input type=number id=g_gain></div>
+        <div class=fldRow><label data-help="Reacts to the head-speed error happening right now. Too high = fast surging or throttle pulsing.">P gain</label>                   <input type=number id=g_p></div>
+        <div class=fldRow><label data-help="Trims away slow, steady head-speed error. Too high = slow hunting up and down.">I gain</label>                   <input type=number id=g_i></div>
+        <div class=fldRow><label data-help="Reacts to how fast the head speed is changing — catches sudden dips early. Too high = rough, jittery throttle.">D gain</label>                   <input type=number id=g_d></div>
+        <div class=fldRow><label data-help="Adds throttle with collective BEFORE the head speed can sag — the pre-emptive part. Raise until sag on hard collective almost disappears.">F gain (feed-forward)</label>    <input type=number id=g_f></div>
     </div>
 
     <div class=card>
         <h2>Tail-torque assist</h2>
-        <div class=fldRow><label>Tail-torque assist strength (TTA gain)</label>                 <input type=number id=g_ttag></div>
-        <div class=fldRow><label>Tail-torque assist limit % (TTA limit)</label>            <input type=number id=g_ttal></div>
+        <div class=fldRow><label data-help="Briefly raises head speed when the tail needs extra bite (Tail Torque Assist). 0 = off — the usual choice.">Tail-torque assist strength (TTA gain)</label>                 <input type=number id=g_ttag></div>
+        <div class=fldRow><label data-help="Cap on how much extra head speed TTA may add, in percent.">Tail-torque assist limit % (TTA limit)</label>            <input type=number id=g_ttal></div>
     </div>
 
     <div class=card>
         <h2>Throttle anticipation (feed-forward weights, %)</h2>
-        <div class=fldRow><label>Anticipate yaw moves (yaw weight)</label>               <input type=number id=g_yw></div>
-        <div class=fldRow><label>Anticipate cyclic moves (cyclic weight)</label>            <input type=number id=g_cw></div>
-        <div class=fldRow><label>Anticipate collective moves (collective weight)</label>        <input type=number id=g_colw></div>
+        <div class=fldRow><label data-help="How much a yaw demand pre-adds throttle before the head speed can sag.">Anticipate yaw moves (yaw weight)</label>               <input type=number id=g_yw></div>
+        <div class=fldRow><label data-help="How much a cyclic demand pre-adds throttle before the head speed can sag.">Anticipate cyclic moves (cyclic weight)</label>            <input type=number id=g_cw></div>
+        <div class=fldRow><label data-help="How much a collective demand pre-adds throttle — the main anticipation. Part of what makes Rotorflight better than an ESC governor.">Anticipate collective moves (collective weight)</label>        <input type=number id=g_colw></div>
     </div>
 
     <div class=card>
         <h2>Throttle limits (%)</h2>
-        <div class=fldRow><label>Max throttle</label>             <input type=number id=g_maxt></div>
-        <div class=fldRow><label>Min throttle</label>             <input type=number id=g_mint></div>
-        <div class=fldRow><label>Throttle drop if RPM signal lost (fall-back drop)</label>           <input type=number id=g_fbd></div>
+        <div class=fldRow><label data-help="Ceiling the governor may ever use, %.">Max throttle</label>             <input type=number id=g_maxt></div>
+        <div class=fldRow><label data-help="Floor while governed, %.">Min throttle</label>             <input type=number id=g_mint></div>
+        <div class=fldRow><label data-help="If the RPM signal disappears in flight, throttle drops by this much and holds steady — keeps you flying while protecting the drivetrain.">Throttle drop if RPM signal lost (fall-back drop)</label>           <input type=number id=g_fbd></div>
     </div>
     <button class="btn btn-fw" id=reloadBtn onclick="load()"><span class=ico>&#8635;</span>Reload from flight controller</button>
 

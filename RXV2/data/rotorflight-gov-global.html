@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Governor (global) &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=177">
-<script src="/app.js?v=183" defer></script>
+<link rel=stylesheet href="/style.css?v=178">
+<script src="/app.js?v=184" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;
         padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -47,7 +47,7 @@ input:disabled,select:disabled{background:#eee;color:#999}
 
     <div class=card>
         <h2>Mode &amp; throttle</h2>
-        <div class=fldRow><label>Governor mode</label>
+        <div class=fldRow><label data-help="Which governor runs. OFF = throttle curve only. PASSTHROUGH = transmitter throttle straight to the ESC. STANDARD = holds the head speed for you (right for most electric helis). MODE1/MODE2 = advanced variants.">Governor mode</label>
             <select id=g_mode>
                 <option value=0>0 — OFF</option>
                 <option value=1>1 — LIMIT</option>
@@ -55,35 +55,35 @@ input:disabled,select:disabled{background:#eee;color:#999}
                 <option value=3>3 — ELECTRIC</option>
                 <option value=4>4 — NITRO</option>
             </select></div>
-        <div class=fldRow><label>Governor takes over above (handover throttle, %)</label>    <input type=number id=g_hand></div>
-        <div class=fldRow><label>Throttle type</label>            <input type=number id=g_ttype></div>
-        <div class=fldRow><label>Idle throttle (%)</label>        <input type=number id=g_idle></div>
-        <div class=fldRow><label>Auto throttle (%)</label>        <input type=number id=g_auto></div>
+        <div class=fldRow><label data-help="Below this throttle the governor idles; above it, it takes control and spools toward the target head speed.">Governor takes over above (handover throttle, %)</label>    <input type=number id=g_hand></div>
+        <div class=fldRow><label data-help="How the governor shapes its throttle output. Leave at the default unless your ESC maker says otherwise.">Throttle type</label>            <input type=number id=g_ttype></div>
+        <div class=fldRow><label data-help="Throttle sent while the governor is idling (below handover) — keeps the motor barely turning without spooling up.">Idle throttle (%)</label>        <input type=number id=g_idle></div>
+        <div class=fldRow><label data-help="Throttle kept ready during an autorotation so the motor can recover quickly if you bail out.">Auto throttle (%)</label>        <input type=number id=g_auto></div>
     </div>
 
     <div class=card>
         <h2>Timings (tenths of a second)</h2>
-        <div class=fldRow><label>Startup time</label>             <input type=number id=g_start></div>
-        <div class=fldRow><label>Spool-up time</label>            <input type=number id=g_spool></div>
-        <div class=fldRow><label>Spool-down time</label>          <input type=number id=g_spdwn></div>
-        <div class=fldRow><label>Speed-change time (tracking time)</label>            <input type=number id=g_track></div>
-        <div class=fldRow><label>Quick-restart time (recovery time)</label>            <input type=number id=g_recov></div>
-        <div class=fldRow><label>Throttle-hold timeout</label>    <input type=number id=g_hold></div>
-        <div class=fldRow><label>Autorotation timeout</label>     <input type=number id=g_auto_to></div>
+        <div class=fldRow><label data-help="How gently the motor first starts turning from standstill, in tenths of a second. Bigger = softer start.">Startup time</label>             <input type=number id=g_start></div>
+        <div class=fldRow><label data-help="Time to ramp from idle to full head speed, in tenths of a second (100 = 10 s). Bigger = gentler spool-up.">Spool-up time</label>            <input type=number id=g_spool></div>
+        <div class=fldRow><label data-help="Time to wind the rotor down when you lower the throttle switch, in tenths of a second.">Spool-down time</label>          <input type=number id=g_spdwn></div>
+        <div class=fldRow><label data-help="How quickly the governor moves between two head speeds (e.g. on a bank change), in tenths of a second.">Speed-change time (tracking time)</label>            <input type=number id=g_track></div>
+        <div class=fldRow><label data-help="The fast spool-up used when the rotor is still turning (after a brief throttle hold), in tenths of a second.">Quick-restart time (recovery time)</label>            <input type=number id=g_recov></div>
+        <div class=fldRow><label data-help="How long after entering throttle hold the fast quick-restart stays available, in tenths of a second (50 = 5 s). Wait longer than this and the governor does a full, slow spool-up instead — a safety choice, since a stopped rotor may be near people.">Throttle-hold timeout</label>    <input type=number id=g_hold></div>
+        <div class=fldRow><label data-help="How long an autorotation may last and still earn the fast recovery spool-up, in tenths of a second.">Autorotation timeout</label>     <input type=number id=g_auto_to></div>
     </div>
 
     <div class=card>
         <h2>Signal smoothing (filter cutoffs, Hz)</h2>
-        <div class=fldRow><label>Power filter</label>             <input type=number id=g_fpwr></div>
-        <div class=fldRow><label>RPM filter</label>               <input type=number id=g_frpm></div>
-        <div class=fldRow><label>Tail-torque assist filter (TTA)</label>               <input type=number id=g_ftta></div>
-        <div class=fldRow><label>Feed-forward filter (FF)</label>                <input type=number id=g_fff></div>
-        <div class=fldRow><label>D filter</label>                 <input type=number id=g_fd></div>
+        <div class=fldRow><label data-help="Smoothing of the battery voltage/current the governor watches, Hz. Lower = smoother but slower to react.">Power filter</label>             <input type=number id=g_fpwr></div>
+        <div class=fldRow><label data-help="Smoothing of the head-speed signal, Hz. Lower it if RPM readings are jumpy; too low makes the governor sluggish.">RPM filter</label>               <input type=number id=g_frpm></div>
+        <div class=fldRow><label data-help="Smoothing of the tail-torque-assist signal, Hz.">Tail-torque assist filter (TTA)</label>               <input type=number id=g_ftta></div>
+        <div class=fldRow><label data-help="Smoothing of the anticipation signal (collective/cyclic demands adding throttle early), Hz.">Feed-forward filter (FF)</label>                <input type=number id=g_fff></div>
+        <div class=fldRow><label data-help="Smoothing of the governor D-term, Hz. 0 = off.">D filter</label>                 <input type=number id=g_fd></div>
     </div>
 
     <div class=card>
         <h2>Bypass throttle curve (%)</h2>
-        <div class=fldRow><label>Points</label>
+        <div class=fldRow><label data-help="How many points define the bypass throttle curve below.">Points</label>
             <select id=g_bypPoints>
                 <option value=5>5</option>
                 <option value=9>9</option>
