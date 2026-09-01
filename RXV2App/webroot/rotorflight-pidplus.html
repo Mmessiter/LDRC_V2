@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>PID+ &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=177">
-<script src="/app.js?v=183" defer></script>
+<link rel=stylesheet href="/style.css?v=178">
+<script src="/app.js?v=184" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;
         padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -47,40 +47,40 @@
 
     <div class=card>
         <h2>Filters &amp; limits</h2>
-        <div class=fldRow><label>Hold cyclic true in pirouettes (piro comp)</label><input type=checkbox id=f_piro></div>
-        <div class=fldRow><label>Relax corrections on the ground (error decay)</label><input type=number id=f_ged></div>
-        <div class=fldRow><label>Roll wind-up relief (I-term relax cutoff)</label><input type=number id=f_cR></div>
-        <div class=fldRow><label>Pitch wind-up relief (I-term relax cutoff)</label><input type=number id=f_cP></div>
-        <div class=fldRow><label>Yaw wind-up relief (I-term relax cutoff)</label><input type=number id=f_cY></div>
-        <div class=fldRow><label>Roll correction cap (error limit)</label><input type=number id=f_eR></div>
-        <div class=fldRow><label>Pitch correction cap (error limit)</label><input type=number id=f_eP></div>
-        <div class=fldRow><label>Yaw correction cap (error limit)</label><input type=number id=f_eY></div>
-        <div class=fldRow><label>Roll high-speed trim cap (HSI offset limit)</label><input type=number id=f_hoR></div>
-        <div class=fldRow><label>Pitch high-speed trim cap (HSI offset limit)</label><input type=number id=f_hoP></div>
-        <div class=fldRow><label>Roll response speed (bandwidth)</label><input type=number id=f_bwR></div>
-        <div class=fldRow><label>Pitch response speed (bandwidth)</label><input type=number id=f_bwP></div>
-        <div class=fldRow><label>Yaw response speed (bandwidth)</label><input type=number id=f_bwY></div>
+        <div class=fldRow><label data-help="Keeps the cyclic pointing the same way in space while the model pirouettes, so a flat piro stays flat. Normally ON.">Hold cyclic true in pirouettes (piro comp)</label><input type=checkbox id=f_piro></div>
+        <div class=fldRow><label data-help="On the ground the flight controller quietly lets built-up corrections drain away, so it never fights the ground or leans the swash before take-off.">Relax corrections on the ground (error decay)</label><input type=number id=f_ged></div>
+        <div class=fldRow><label data-help="During fast roll moves the slow-trim (I) is held back so it cannot wind up and snap back after the move. Lower = more relief.">Roll wind-up relief (I-term relax cutoff)</label><input type=number id=f_cR></div>
+        <div class=fldRow><label data-help="During fast pitch moves the slow-trim (I) is held back so it cannot wind up and snap back after the move. Lower = more relief.">Pitch wind-up relief (I-term relax cutoff)</label><input type=number id=f_cP></div>
+        <div class=fldRow><label data-help="During fast yaw moves the slow-trim (I) is held back so it cannot wind up and snap back after the move. Lower = more relief.">Yaw wind-up relief (I-term relax cutoff)</label><input type=number id=f_cY></div>
+        <div class=fldRow><label data-help="The biggest roll error, in degrees, the controller will try to wind away.">Roll correction cap (error limit)</label><input type=number id=f_eR></div>
+        <div class=fldRow><label data-help="The biggest pitch error, in degrees, the controller will try to wind away.">Pitch correction cap (error limit)</label><input type=number id=f_eP></div>
+        <div class=fldRow><label data-help="The biggest yaw error, in degrees, the controller will try to wind away.">Yaw correction cap (error limit)</label><input type=number id=f_eY></div>
+        <div class=fldRow><label data-help="Cap on the automatic trim applied in fast forward flight, degrees.">Roll high-speed trim cap (HSI offset limit)</label><input type=number id=f_hoR></div>
+        <div class=fldRow><label data-help="Cap on the automatic trim applied in fast forward flight, degrees.">Pitch high-speed trim cap (HSI offset limit)</label><input type=number id=f_hoP></div>
+        <div class=fldRow><label data-help="Overall quickness of the roll controller, Hz. Higher = crisper but more sensitive to vibration.">Roll response speed (bandwidth)</label><input type=number id=f_bwR></div>
+        <div class=fldRow><label data-help="Overall quickness of the pitch controller, Hz. Higher = crisper but more sensitive to vibration.">Pitch response speed (bandwidth)</label><input type=number id=f_bwP></div>
+        <div class=fldRow><label data-help="Overall quickness of the yaw controller, Hz. Higher = crisper but more sensitive to vibration.">Yaw response speed (bandwidth)</label><input type=number id=f_bwY></div>
     </div>
 
     <div class=card>
         <h2>Smoothing (D &amp; B term cutoffs)</h2>
-        <div class=fldRow><label>Roll D smoothing (D-term cutoff)</label><input type=number id=f_dR></div>
-        <div class=fldRow><label>Pitch D smoothing (D-term cutoff)</label><input type=number id=f_dP></div>
-        <div class=fldRow><label>Yaw D smoothing (D-term cutoff)</label><input type=number id=f_dY></div>
-        <div class=fldRow><label>Roll boost smoothing (B-term cutoff)</label><input type=number id=f_bR></div>
-        <div class=fldRow><label>Pitch boost smoothing (B-term cutoff)</label><input type=number id=f_bP></div>
-        <div class=fldRow><label>Yaw boost smoothing (B-term cutoff)</label><input type=number id=f_bY></div>
+        <div class=fldRow><label data-help="Filter on the roll damping term, Hz. Lower if servos run hot or buzz; higher for sharper damping.">Roll D smoothing (D-term cutoff)</label><input type=number id=f_dR></div>
+        <div class=fldRow><label data-help="Filter on the pitch damping term, Hz. Lower if servos run hot or buzz; higher for sharper damping.">Pitch D smoothing (D-term cutoff)</label><input type=number id=f_dP></div>
+        <div class=fldRow><label data-help="Filter on the yaw damping term, Hz. Lower if the tail servo buzzes; higher for sharper damping.">Yaw D smoothing (D-term cutoff)</label><input type=number id=f_dY></div>
+        <div class=fldRow><label data-help="Filter on the roll boost (extra kick on fast stick moves), Hz.">Roll boost smoothing (B-term cutoff)</label><input type=number id=f_bR></div>
+        <div class=fldRow><label data-help="Filter on the pitch boost (extra kick on fast stick moves), Hz.">Pitch boost smoothing (B-term cutoff)</label><input type=number id=f_bP></div>
+        <div class=fldRow><label data-help="Filter on the yaw boost (extra kick on fast stick moves), Hz.">Yaw boost smoothing (B-term cutoff)</label><input type=number id=f_bY></div>
     </div>
 
     <div class=card>
         <h2>Yaw &amp; feed-forward</h2>
-        <div class=fldRow><label>Yaw stop firmness, clockwise (CW stop gain)</label><input type=number id=f_cwS></div>
-        <div class=fldRow><label>Yaw stop firmness, anticlockwise (CCW stop gain)</label><input type=number id=f_ccwS></div>
-        <div class=fldRow><label>Yaw pre-correction smoothing (precomp cutoff)</label><input type=number id=f_yPC></div>
-        <div class=fldRow><label>Yaw push from cyclic load (cyclic FF gain)</label><input type=number id=f_cFF></div>
-        <div class=fldRow><label>Yaw push from collective load (collective FF gain)</label><input type=number id=f_coFF></div>
-        <div class=fldRow><label>Yaw push from rotor speed-ups (inertia precomp gain)</label><input type=number id=f_iPG></div>
-        <div class=fldRow><label>Rotor speed-up push smoothing (inertia precomp cutoff)</label><input type=number id=f_iPC></div>
+        <div class=fldRow><label data-help="How firmly a clockwise yaw stops when you centre the stick. Raise the side that wags or bounces.">Yaw stop firmness, clockwise (CW stop gain)</label><input type=number id=f_cwS></div>
+        <div class=fldRow><label data-help="How firmly an anticlockwise yaw stops when you centre the stick. Raise the side that wags or bounces.">Yaw stop firmness, anticlockwise (CCW stop gain)</label><input type=number id=f_ccwS></div>
+        <div class=fldRow><label data-help="Smoothing of all the yaw pre-corrections below, Hz.">Yaw pre-correction smoothing (precomp cutoff)</label><input type=number id=f_yPC></div>
+        <div class=fldRow><label data-help="Adds tail as cyclic load rises, before the nose can swing.">Yaw push from cyclic load (cyclic FF gain)</label><input type=number id=f_cFF></div>
+        <div class=fldRow><label data-help="Adds tail as collective load rises — the main tail pre-correction. Raise it if the nose swings on hard collective.">Yaw push from collective load (collective FF gain)</label><input type=number id=f_coFF></div>
+        <div class=fldRow><label data-help="Adds tail while the rotor is accelerating or braking (torque changes twist the body).">Yaw push from rotor speed-ups (inertia precomp gain)</label><input type=number id=f_iPG></div>
+        <div class=fldRow><label data-help="Smoothing of the rotor speed-up push, Hz.">Rotor speed-up push smoothing (inertia precomp cutoff)</label><input type=number id=f_iPC></div>
     </div>
     <button class="btn btn-fw" id=reloadBtn onclick="load()"><span class=ico>&#8635;</span>Reload from flight controller</button>
 

@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.512-rf-button-name";
+constexpr const char* FW_VERSION = "RXV2-0.9.513-help-bubbles";
 
 //*********************************************************************
 //  Auto-update manifest URLs

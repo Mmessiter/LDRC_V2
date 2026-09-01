@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.513-help-bubbles",
+      "url": "https://messiter.com/rxv2/release/v0.9.513/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.513/littlefs.bin",
+      "fs_md5": "572e240584dbc357600a0ee7cd4def89",
+      "notes": "Press-and-hold help bubbles: touch any dotted-underlined label (governor, PIDs, rates, travel, servos - about 90 so far) and a plain-English explanation appears; lift your finger and it goes."
+    },
+    {
       "name": "RXV2-0.9.512-rf-button-name",
       "url": "https://messiter.com/rxv2/release/v0.9.512/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.512/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.502/littlefs.bin",
       "fs_md5": "d3d8f58856e72de55927ea5ccbd21505",
       "notes": "Step 1 notes the receiver need not be connected and that the post-flash 'calibration needed' warning can be ignored (or calibrate right there); step 2 opens with 'from here on everything is done from the receiver'."
-    },
-    {
-      "name": "RXV2-0.9.501-calibrate-first",
-      "url": "https://messiter.com/rxv2/release/v0.9.501/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.501/littlefs.bin",
-      "fs_md5": "13c5bbb44e3da4f8cdb3119e51c647d2",
-      "notes": "Flight-controller calibration is now wizard step 2 with its own page (on the desk, before mounting) and an A-la-carte entry; also fixes the 'Can't find variable: LDRC' race on First-time basics."
     }
   ]
 }

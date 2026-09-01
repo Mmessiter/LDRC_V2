@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Travel extents &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=177">
-<script src="/app.js?v=183" defer></script>
+<link rel=stylesheet href="/style.css?v=178">
+<script src="/app.js?v=184" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;
         padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -45,9 +45,9 @@ input:disabled{background:#eee;color:#999}
 
     <div class=card>
         <h2>Swash extents (degrees)</h2>
-        <div class=fldRow><label>Collective pitch limit (&plusmn;&deg;)</label> <input type=number id=t_coll  step=0.1 min=0 max=30></div>
-        <div class=fldRow><label>Cyclic pitch limit (&plusmn;&deg;)</label>     <input type=number id=t_cyc   step=0.1 min=0 max=30></div>
-        <div class=fldRow><label>Total pitch limit (&deg;, 0 = off)</label>     <input type=number id=t_total step=0.1 min=0 max=36></div>
+        <div class=fldRow><label data-help="Blade pitch at full collective stick, each way, in degrees. ±10–12° suits most flying.">Collective pitch limit (&plusmn;&deg;)</label> <input type=number id=t_coll  step=0.1 min=0 max=30></div>
+        <div class=fldRow><label data-help="Cyclic blade pitch at full roll/pitch stick, in degrees. 8–10° is typical.">Cyclic pitch limit (&plusmn;&deg;)</label>     <input type=number id=t_cyc   step=0.1 min=0 max=30></div>
+        <div class=fldRow><label data-help="Cap on cyclic + collective combined so the swash can never over-travel. 0 = off; the FC keeps it at least 6° above collective.">Total pitch limit (&deg;, 0 = off)</label>     <input type=number id=t_total step=0.1 min=0 max=36></div>
         <p class=cardNote>Collective is how much pitch the blades get at full stick — the fix for
         &ldquo;nowhere near enough collective&rdquo;. The total limit caps cyclic&nbsp;+&nbsp;collective
         combined; the flight controller keeps it at least 6&deg; above the collective limit, so it may
@@ -56,17 +56,17 @@ input:disabled{background:#eee;color:#999}
 
     <div class=card>
         <h2>Calibration (gains)</h2>
-        <div class=fldRow><label>Collective gain (%)</label> <input type=number id=t_gColl step=1 min=0 max=500></div>
+        <div class=fldRow><label data-help="Calibration so commanded collective degrees equal measured degrees. Gauge reads low? Raise by the same ratio.">Collective gain (%)</label> <input type=number id=t_gColl step=1 min=0 max=500></div>
         <div style="margin-top:.6em;padding:.6em .7em;background:#e7edf2;border-radius:10px">
             <b style="font-size:.95em;color:#2e4356">Control sense</b>
             <div style="font-size:.8em;color:#5d7a8c;margin:.15em 0 .35em">Moves the wrong way? Tick to reverse just that control &mdash; servos and the others stay untouched.</div>
-            <div class=fldRow><label>Aileron reversed</label> <input type=checkbox id=t_revAil style="width:1.25em;height:1.25em"></div>
-            <div class=fldRow><label>Elevator reversed</label> <input type=checkbox id=t_revEle style="width:1.25em;height:1.25em"></div>
-            <div class=fldRow><label>Collective reversed</label> <input type=checkbox id=t_revColl style="width:1.25em;height:1.25em"></div>
+            <div class=fldRow><label data-help="Tick if roll moves the wrong way. Reverses only this control — the servos and other controls stay untouched.">Aileron reversed</label> <input type=checkbox id=t_revAil style="width:1.25em;height:1.25em"></div>
+            <div class=fldRow><label data-help="Tick if pitch moves the wrong way. Reverses only this control — the servos and other controls stay untouched.">Elevator reversed</label> <input type=checkbox id=t_revEle style="width:1.25em;height:1.25em"></div>
+            <div class=fldRow><label data-help="Tick if collective moves the wrong way. Reverses only this control — the servos and other controls stay untouched.">Collective reversed</label> <input type=checkbox id=t_revColl style="width:1.25em;height:1.25em"></div>
         </div>
-        <div class=fldRow><label>Cyclic gain &mdash; roll (aileron) (%)</label>     <input type=number id=t_gCycR  step=1 min=0 max=500></div>
-        <div class=fldRow><label>Cyclic gain &mdash; pitch (elevator) (%)</label>     <input type=number id=t_gCycP  step=1 min=0 max=500></div>
-        <div class=fldRow><label>Collective up/down balance</label> <input type=number id=t_geo step=0.2 min=-25 max=25></div>
+        <div class=fldRow><label data-help="Calibration for the roll axis: makes commanded degrees equal measured degrees. Measure with Bench measure below.">Cyclic gain &mdash; roll (aileron) (%)</label>     <input type=number id=t_gCycR  step=1 min=0 max=500></div>
+        <div class=fldRow><label data-help="Calibration for the pitch axis: makes commanded degrees equal measured degrees. Balance it against roll so both read the same on the gauge.">Cyclic gain &mdash; pitch (elevator) (%)</label>     <input type=number id=t_gCycP  step=1 min=0 max=500></div>
+        <div class=fldRow><label data-help="Evens up unequal positive vs negative collective caused by linkage geometry (Rotorflight: geo correction — nothing to do with GPS).">Collective up/down balance</label> <input type=number id=t_geo step=0.2 min=-25 max=25></div>
         <p class=cardNote>These make the degrees MEAN degrees: the gain scales how far the swash
         really moves per commanded degree. If a pitch gauge reads less than the limit says
         (e.g. 6&deg; real when 14&deg; is commanded), multiply the gain by the ratio
@@ -85,12 +85,12 @@ input:disabled{background:#eee;color:#999}
         real geometry — the other swash axes are held at <b>zero</b> while you measure. The flight
         controller refuses to arm while this is on, and the swash is released automatically when
         you leave this page (or after 5 minutes).</p>
-        <div class=fldRow><label>Axis</label>
+        <div class=fldRow><label data-help="Which swash axis the bench hold drives while you measure — the others are held at zero.">Axis</label>
             <select id=bm_axis style="width:9em;padding:.4em;font-size:.95em;border:1px solid #b8c7d0;border-radius:6px;background:#fff">
                 <option value=1 selected>Roll (aileron)</option>
                 <option value=2>Pitch (elevator)</option>
             </select></div>
-        <div class=fldRow><label>Angle (&deg;)</label> <input type=number id=bm_deg step=0.5 min=-12 max=12 value=8.0></div>
+        <div class=fldRow><label data-help="The exact angle the swash is held at, for the pitch gauge to check.">Angle (&deg;)</label> <input type=number id=bm_deg step=0.5 min=-12 max=12 value=8.0></div>
         <div class=fldRow style="background:#e3ecdb;border-radius:8px;padding:.3em .4em"><label id=bmGainLab>Cyclic gain &mdash; roll (%)</label> <input type=number id=bm_gain step=1 min=0 max=500></div>
         <div style="display:flex;gap:.5em;margin:.5em 0 .2em">
             <button class=btn id=bmApply  onclick="benchApply()"  style="flex:1;background:#c98a4a">Hold this angle</button>
@@ -107,9 +107,9 @@ input:disabled{background:#eee;color:#999}
 
     <div class=card>
         <h2>Swash trims (%)</h2>
-        <div class=fldRow><label>Roll trim (%)</label>       <input type=number id=t_trR step=0.1 min=-25 max=25></div>
-        <div class=fldRow><label>Pitch trim (%)</label>      <input type=number id=t_trP step=0.1 min=-25 max=25></div>
-        <div class=fldRow><label>Collective trim (%)</label> <input type=number id=t_trC step=0.1 min=-25 max=25></div>
+        <div class=fldRow><label data-help="Fine swash levelling at centre stick — tips the swash a touch left/right.">Roll trim (%)</label>       <input type=number id=t_trR step=0.1 min=-25 max=25></div>
+        <div class=fldRow><label data-help="Fine swash levelling at centre stick — tips the swash a touch fore/aft.">Pitch trim (%)</label>      <input type=number id=t_trP step=0.1 min=-25 max=25></div>
+        <div class=fldRow><label data-help="Centres a blade pitch that is not exactly 0° at mid-stick.">Collective trim (%)</label> <input type=number id=t_trC step=0.1 min=-25 max=25></div>
         <p class=cardNote>Small levelling corrections for the swashplate, in percent of servo throw
         (Rotorflight's own unit for these — they were mislabelled degrees here at first). Use to cure
         a steady hover drift after mechanical setup is close.</p>

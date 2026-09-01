@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rates &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=177">
-<script src="/app.js?v=183" defer></script>
+<link rel=stylesheet href="/style.css?v=178">
+<script src="/app.js?v=184" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -88,7 +88,7 @@ table.dyn-yaw td input{width:6em;padding:.4em;font-size:.95em;text-align:right;
     <div id=advCard class=card style="display:none">
         <h2>Dynamics</h2>
         <table class=rt>
-            <thead><tr><th></th><th>Stick sharpening (setpoint boost gain)</th><th>Sharpening smoothing (cutoff)</th></tr></thead>
+            <thead><tr><th></th><th data-help="Boosts fast stick movements for a crisper feel without changing the basic rates. 0 = off.">Stick sharpening (setpoint boost gain)</th><th data-help="Smoothing of the sharpening, Hz. Lower = softer.">Sharpening smoothing (cutoff)</th></tr></thead>
             <tbody id=boostBody></tbody>
         </table>
         <h2 style="margin-top:1em">Yaw dynamics</h2>
@@ -170,10 +170,10 @@ function modelForType(t) {
         return {
             curve: 'rotorflight', peak: 0, expo: 2, centre: null,
             cols: [
-                { h:'Rate',    slot:0, sc:5, scC:0.125 },
-                { h:'Shape',   slot:2, sc:1, scC:1     },
-                { h:'Expo',    slot:1, sc:1, scC:1     },
-                { h:'Max Vel', slot:0, sc:5, scC:0.125, ro:true },
+                { h:'Rate',    hh:'Top rotation speed at full stick, degrees per second (Collective: degrees of pitch).', slot:0, sc:5, scC:0.125 },
+                { h:'Shape',   hh:'Curve shape: how the response builds from centre stick to full stick.', slot:2, sc:1, scC:1     },
+                { h:'Expo',    hh:'Softens the feel around centre stick without changing the full-stick rate.', slot:1, sc:1, scC:1     },
+                { h:'Max Vel', hh:'Read-only: the resulting top rotation speed (equals Rate for this rates type).', slot:0, sc:5, scC:0.125, ro:true },
             ],
         };
     }
@@ -181,10 +181,10 @@ function modelForType(t) {
         return {
             curve: 'actual', peak: 1, expo: 2, centre: 0,
             cols: [
-                { h:'Centre',   slot:0, sc:10, scC:0.25 },   // Center Sensitivity
-                { h:'Max Rate', slot:2, sc:10, scC:0.25 },   // Max Rate (= Max Vel)
-                { h:'Expo',     slot:1, sc:1,  scC:1     },
-                { h:'Max Vel',  slot:2, sc:10, scC:0.25, ro:true },
+                { h:'Centre',   hh:'How lively the response is around centre stick.', slot:0, sc:10, scC:0.25 },   // Center Sensitivity
+                { h:'Max Rate', hh:'Top rotation speed at full stick, degrees per second.', slot:2, sc:10, scC:0.25 },   // Max Rate (= Max Vel)
+                { h:'Expo',     hh:'Softens the feel around centre stick without changing the full-stick rate.', slot:1, sc:1,  scC:1     },
+                { h:'Max Vel',  hh:'Read-only: the resulting top rotation speed.', slot:2, sc:10, scC:0.25, ro:true },
             ],
         };
     }
@@ -192,11 +192,11 @@ function modelForType(t) {
     return {
         curve: 'actual', peak: 2, expo: 1, centre: 0,
         cols: [
-            { h:'Centre', slot:0, sc:10, scC:0.25 },
-            { h:'Expo',   slot:1, sc:1,  scC:1    },
-            { h:'Max',    slot:2, sc:10, scC:0.25 },
-            { h:'Resp',   slot:3, sc:1,  scC:1    },
-            { h:'Accel',  slot:'accel', sc:1, scC:1 },
+            { h:'Centre', hh:'How lively the response is around centre stick.', slot:0, sc:10, scC:0.25 },
+            { h:'Expo',   hh:'Softens the feel around centre stick without changing the full-stick rate.', slot:1, sc:1,  scC:1    },
+            { h:'Max',    hh:'Top rotation speed at full stick, degrees per second.', slot:2, sc:10, scC:0.25 },
+            { h:'Resp',   hh:'Response smoothing: bigger = softer, more filtered stick feel.', slot:3, sc:1,  scC:1    },
+            { h:'Accel',  hh:'Limit on how fast the rotation rate may build. 0 = unlimited.', slot:'accel', sc:1, scC:1 },
         ],
     };
 }
@@ -209,7 +209,7 @@ function rawAt(bytes, o, col) {
 function applyModel(model) {
     MODEL = model;
     let head = '<tr><th></th>';
-    for (const c of model.cols) head += '<th>' + c.h + '</th>';
+    for (const c of model.cols) head += '<th' + (c.hh ? ' data-help="' + c.hh + '"' : '') + '>' + c.h + '</th>';
     document.getElementById('ratesHead').innerHTML = head + '</tr>';
     let body = '';
     for (const ax of AXES) {
