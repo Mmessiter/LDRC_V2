@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.526-fourth-task";
+constexpr const char* FW_VERSION = "RXV2-0.9.527-unbrickable";
 
 //*********************************************************************
 //  Auto-update manifest URLs
