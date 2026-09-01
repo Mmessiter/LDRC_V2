@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.532-no-starve",
+      "url": "https://messiter.com/rxv2/release/v0.9.532/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.532/littlefs.bin",
+      "fs_md5": "988f5cda10721af273386194319eba5a",
+      "notes": "FLIGHT-SAFETY: MSP waits (web/BLE config requests) now keep the radio and channel output running - an erroring request could starve the FC into rhythmic failsafe twitches (found live during the first Scorpion read attempt)."
+    },
+    {
       "name": "RXV2-0.9.531-escprog-link",
       "url": "https://messiter.com/rxv2/release/v0.9.531/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.531/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.521/littlefs.bin",
       "fs_md5": "188b624e0efad4e2c3a75eb033f2533e",
       "notes": "First-time basics, Rescue and Servos pages decluttered: every row is just its underlined title - press for a fuller explanation (43 rows converted)."
-    },
-    {
-      "name": "RXV2-0.9.520-hint-on-hub",
-      "url": "https://messiter.com/rxv2/release/v0.9.520/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.520/littlefs.bin",
-      "fs_md5": "96a7d218a1fe8a00e57161b5436be820",
-      "notes": "The help-bubble explanation moves from the wizard to the Rotorflight front page - it applies to everything Rotorflight."
     }
   ]
 }
