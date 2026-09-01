@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.517-bailout-findable";
+constexpr const char* FW_VERSION = "RXV2-0.9.518-bubble-hint";
 
 //*********************************************************************
 //  Auto-update manifest URLs
