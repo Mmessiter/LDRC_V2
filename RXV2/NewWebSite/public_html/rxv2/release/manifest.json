@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.524-alpha-subtitle",
+      "url": "https://messiter.com/rxv2/release/v0.9.524/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.524/littlefs.bin",
+      "fs_md5": "79f9f87c7230d8ee767c21410718b736",
+      "notes": "A la carte subtitle says 'In alphabetical order' (the old 'roughly in setup order' was no longer true)."
+    },
+    {
       "name": "RXV2-0.9.523-alacarte-alpha",
       "url": "https://messiter.com/rxv2/release/v0.9.523/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.523/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.513/littlefs.bin",
       "fs_md5": "572e240584dbc357600a0ee7cd4def89",
       "notes": "Press-and-hold help bubbles: touch any dotted-underlined label (governor, PIDs, rates, travel, servos - about 90 so far) and a plain-English explanation appears; lift your finger and it goes."
-    },
-    {
-      "name": "RXV2-0.9.512-rf-button-name",
-      "url": "https://messiter.com/rxv2/release/v0.9.512/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.512/littlefs.bin",
-      "fs_md5": "d108e649ce3c0ace3627a5c58439f778",
-      "notes": "Front-screen button renamed: Rotorflight setup and Wizard."
     }
   ]
 }
