@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Transmitter channels &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=178">
-<script src="/app.js?v=184" defer></script>
+<link rel=stylesheet href="/style.css?v=179">
+<script src="/app.js?v=185" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -89,13 +89,13 @@ function flash(t){$('sMsg').textContent=t;setTimeout(()=>$('sMsg').textContent='
 // Rescue become mode ranges on their switches. Defaults = Malcolm's own
 // transmitter layout — every field is editable.
 const FUNCS=[
- {k:'ail', t:'Aileron',        letter:'A', def:1, stick:true},
- {k:'ele', t:'Elevator',      letter:'E', def:2, stick:true},
- {k:'col', t:'Collective',    letter:'C', def:3, stick:true},
- {k:'rud', t:'Rudder',        letter:'R', def:4, stick:true},
- {k:'thr', t:'Throttle',      letter:'T', def:5, stick:true},
- {k:'arm', t:'Arming',        letter:'',  def:6, stick:false, sw2:true},
- {k:'rsc', t:'Rescue',        letter:'',  def:0, stick:false, optional:true, sw2:true},
+ {k:'ail', t:'Aileron', hh:'The transmitter channel that rolls the model left and right.',        letter:'A', def:1, stick:true},
+ {k:'ele', t:'Elevator', hh:'The transmitter channel that pitches the nose up and down.',      letter:'E', def:2, stick:true},
+ {k:'col', t:'Collective', hh:'The transmitter channel for climb and descent — collective blade pitch.',    letter:'C', def:3, stick:true},
+ {k:'rud', t:'Rudder', hh:'The transmitter channel that yaws the nose (the tail).',        letter:'R', def:4, stick:true},
+ {k:'thr', t:'Throttle', hh:'The transmitter channel for motor power. Held safely low until the transmitter is heard.',      letter:'T', def:5, stick:true},
+ {k:'arm', t:'Arming', hh:'The switch channel that enables the motor. The bar below shows where it turns ON.',        letter:'',  def:6, stick:false, sw2:true},
+ {k:'rsc', t:'Rescue', hh:'The switch channel that triggers the rescue safety net (auto-level and climb).',        letter:'',  def:0, stick:false, optional:true, sw2:true},
  // Profile selectors (Malcolm 2026-08-29): 4-position switches. Both may
  // SHARE one channel (share group) — Rotorflight runs them as two
  // adjustment ranges pointing at the same channel. Written to slots 40/41
@@ -106,8 +106,8 @@ const FUNCS=[
  // section (bank 30-35, rates 36-41): "while the switch is inside this
  // section, profile = N" — so the section boundaries can be dragged freely
  // (Malcolm 2026-08-30). Sections 5-6 default to zero width at the top.
- {k:'bank', t:'Bank (Profile)', letter:'', def:7, stick:false, optional:true, share:'prof', adj:2, base:30},
- {k:'rate', t:'Rates',              letter:'', def:7, stick:false, optional:true, share:'prof', adj:1, base:36},
+ {k:'bank', t:'Bank (Profile)', hh:'The selector channel that chooses the PID profile (bank) 1–6.', letter:'', def:7, stick:false, optional:true, share:'prof', adj:2, base:30},
+ {k:'rate', t:'Rates', hh:'The selector channel that chooses the rates profile 1–6.',              letter:'', def:7, stick:false, optional:true, share:'prof', adj:1, base:36},
 ];
 const LS='rfTxCh.';
 // More functions, same catalogue as the Switches page (Arm & Rescue have
@@ -334,7 +334,7 @@ function renderFixed(){
         const div=document.createElement('div');
         const canX=f.optional&&!f.adj&&cur>=1;
         div.className='fnRow'+(canX?' x5':''); div.id='row_'+f.k;
-        div.innerHTML='<div class=lab><b>'+f.t+'</b></div>'
+        div.innerHTML='<div class=lab><b'+(f.hh?' data-help="'+f.hh+'"':'')+'>'+f.t+'</b></div>'
             +'<select id=s_'+f.k+'>'+chOptions(cur,takenFor(f.k),f.optional?'None':null)+'</select>'
             +'<span class=live id=l_'+f.k+'></span>'
             +'<button class=detBtn id=d_'+f.k+'>Detect</button>'

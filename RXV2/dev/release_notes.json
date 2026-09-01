@@ -393,5 +393,6 @@
  "RXV2-0.9.510-rescue-floating-save": "Rescue page's Save button floats at the bottom of the screen (same bar as Travel extents) - no more scrolling to save.",
  "RXV2-0.9.511-back-remembers": "The floating back arrow now returns to the menu you actually came from (A la carte vs wizard) - it remembers the hub you navigated through.",
  "RXV2-0.9.512-rf-button-name": "Front-screen button renamed: Rotorflight setup and Wizard.",
- "RXV2-0.9.513-help-bubbles": "Press-and-hold help bubbles: touch any dotted-underlined label (governor, PIDs, rates, travel, servos - about 90 so far) and a plain-English explanation appears; lift your finger and it goes."
+ "RXV2-0.9.513-help-bubbles": "Press-and-hold help bubbles: touch any dotted-underlined label (governor, PIDs, rates, travel, servos - about 90 so far) and a plain-English explanation appears; lift your finger and it goes.",
+ "RXV2-0.9.514-bubble-polish": "Help bubbles: no more iOS drag-ghost on finger movement, bubbles sit well clear of the finger, and ~20 more added (tail travel, battery divider, gear ratio, switch cards, every Transmitter-channels row)."
 }

@@ -171,7 +171,7 @@ body.hasBack .subtitle{max-width:calc(100% - 1rem)}
 /* Press-and-hold help bubbles (Malcolm 2026-09-01): any element with
    data-help shows a solid bubble while the finger is down. The dotted
    underline is the "press me" cue. */
-[data-help]{text-decoration:underline dotted rgba(125,158,176,.9);text-decoration-thickness:2px;
+[data-help]{-webkit-user-drag:none;text-decoration:underline dotted rgba(125,158,176,.9);text-decoration-thickness:2px;
     text-underline-offset:3px;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;cursor:help}
 .helpBubble{position:fixed;z-index:90;max-width:min(86vw,26em);background:#2e4356;color:#fff;
     padding:.65em .8em;border-radius:10px;font-size:.9em;line-height:1.45;font-weight:500;

@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Switches &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=178">
-<script src="/app.js?v=184" defer></script>
+<link rel=stylesheet href="/style.css?v=179">
+<script src="/app.js?v=185" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -128,8 +128,8 @@ function rowCard(slotIdx, s){
     const m=MODES.find(x=>x.id===s.perm)||{};
     return '<div class="card modeCard" id=slot'+slotIdx+' data-perm='+s.perm+'>'
       + '<div class=mRow>'
-      + '<div><label>What the switch does</label><select id=m'+slotIdx+'>'+modeOptions(s.perm)+'</select></div>'
-      + '<div><label>Which channel</label><select id=c'+slotIdx+'>'+chOptions(s.aux)+'</select></div>'
+      + '<div><label data-help="Which flight-controller function this switch drives. The blue zone on the bar is where it is ON.">What the switch does</label><select id=m'+slotIdx+'>'+modeOptions(s.perm)+'</select></div>'
+      + '<div><label data-help="The transmitter channel this switch arrives on. Flip the switch and watch the red tick to find it.">Which channel</label><select id=c'+slotIdx+'>'+chOptions(s.aux)+'</select></div>'
       + '</div>'
       + '<div class=rTrack id=tr'+slotIdx+'><div class=rZone id=zn'+slotIdx+'></div>'
       + '<div class=rDot id=dot'+slotIdx+' style="display:none"></div>'
@@ -319,11 +319,11 @@ function paintProf(){
         let ko=''; for(let k=2;k<=6;k++) ko+='<option value='+k+(k===b.k?' selected':'')+'>'+k+' positions</option>';
         h+='<div class="card modeCard">'
           +'<div class=mRow>'
-          +'<div><label>What the switch does</label><select disabled class=fixedSel><option>'+p.t+' selector</option></select></div>'
-          +'<div><label>Which channel</label><select id=pc_'+p.k+' onchange="document.getElementById(\'pmsg_'+p.k+'\').textContent=\'changed — tap Save\'">'+co+'</select></div>'
+          +'<div><label data-help="This selector chooses which numbered profile is active — the live section lights up as you move the switch.">What the switch does</label><select disabled class=fixedSel><option>'+p.t+' selector</option></select></div>'
+          +'<div><label data-help="The transmitter channel this selector switch arrives on. Bank and Rates may share one channel.">Which channel</label><select id=pc_'+p.k+' onchange="document.getElementById(\'pmsg_'+p.k+'\').textContent=\'changed — tap Save\'">'+co+'</select></div>'
           +'</div>'
           +'<div class=mRow>'
-          +'<div><label>How many positions</label><select id=qk_'+p.k+'>'+ko+'</select></div>'
+          +'<div><label data-help="How many positions your physical switch has (2–6). The bar divides into that many equal sections.">How many positions</label><select id=qk_'+p.k+'>'+ko+'</select></div>'
           +'<div></div>'
           +'</div>'
           +(p.src==='local'?'<div class=muted style="font-size:.8em;margin:.3em 0">From this phone\u2019s choices &mdash; tap Save to write them to the flight controller.</div>':'')

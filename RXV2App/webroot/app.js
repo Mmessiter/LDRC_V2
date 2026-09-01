@@ -465,10 +465,20 @@
         document.body.appendChild(b);
         const r = t.getBoundingClientRect();
         b.style.left = Math.max(8, Math.min(window.innerWidth - 8 - b.offsetWidth, r.left)) + 'px';
-        b.style.top = (r.top > window.innerHeight / 2)
-            ? (r.top - b.offsetHeight - 10) + 'px'
-            : (r.bottom + 10) + 'px';
+        // Well clear of the pressing finger (Malcolm 2026-09-01: "my finger
+        // often hides it") — prefer well above; drop well below only when
+        // there is no room.
+        const above = r.top - b.offsetHeight - 46;
+        b.style.top = (above > 8 ? above : r.bottom + 60) + 'px';
         _hb = b;
+    }, { passive: false });
+    // Kill iOS's long-press extras on help labels (drag ghost, loupe, text
+    // selection): pointerdown's preventDefault is not enough — the touch
+    // event's default must go too (Malcolm 2026-09-01, screenshot of a
+    // floating card ghost).
+    document.addEventListener('touchstart', e => {
+        const t = e.target.closest('[data-help]');
+        if (t && !e.target.closest('input,select,button,a,textarea')) e.preventDefault();
     }, { passive: false });
     for (const ev of ['pointerup', 'pointercancel']) document.addEventListener(ev, _hbHide);
     window.addEventListener('scroll', _hbHide, true);

@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.514-bubble-polish",
+      "url": "https://messiter.com/rxv2/release/v0.9.514/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.514/littlefs.bin",
+      "fs_md5": "f853596657e69b9ddf32cf8e5fd880f7",
+      "notes": "Help bubbles: no more iOS drag-ghost on finger movement, bubbles sit well clear of the finger, and ~20 more added (tail travel, battery divider, gear ratio, switch cards, every Transmitter-channels row)."
+    },
+    {
       "name": "RXV2-0.9.513-help-bubbles",
       "url": "https://messiter.com/rxv2/release/v0.9.513/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.513/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.503/littlefs.bin",
       "fs_md5": "51fb904ee3890cc9167edb6c3dde4300",
       "notes": "Calibrate-page banner reworded: from here on everything is done from your phone via the receiver."
-    },
-    {
-      "name": "RXV2-0.9.502-computer-notes",
-      "url": "https://messiter.com/rxv2/release/v0.9.502/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.502/littlefs.bin",
-      "fs_md5": "d3d8f58856e72de55927ea5ccbd21505",
-      "notes": "Step 1 notes the receiver need not be connected and that the post-flash 'calibration needed' warning can be ignored (or calibrate right there); step 2 opens with 'from here on everything is done from the receiver'."
     }
   ]
 }
