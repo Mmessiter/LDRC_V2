@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.523-alacarte-alpha",
+      "url": "https://messiter.com/rxv2/release/v0.9.523/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.523/littlefs.bin",
+      "fs_md5": "43ff46922552e3b2e78f2e8fa14426eb",
+      "notes": "A la carte menu sorted alphabetically - random-access choices are easiest to find in ABC order."
+    },
+    {
       "name": "RXV2-0.9.522-gear-dedup",
       "url": "https://messiter.com/rxv2/release/v0.9.522/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.522/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.512/littlefs.bin",
       "fs_md5": "d108e649ce3c0ace3627a5c58439f778",
       "notes": "Front-screen button renamed: Rotorflight setup and Wizard."
-    },
-    {
-      "name": "RXV2-0.9.511-back-remembers",
-      "url": "https://messiter.com/rxv2/release/v0.9.511/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.511/littlefs.bin",
-      "fs_md5": "60ff7aa55a27fb20dd52a42ce84b3dd9",
-      "notes": "The floating back arrow now returns to the menu you actually came from (A la carte vs wizard) - it remembers the hub you navigated through."
     }
   ]
 }

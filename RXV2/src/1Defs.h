@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.522-gear-dedup";
+constexpr const char* FW_VERSION = "RXV2-0.9.523-alacarte-alpha";
 
 //*********************************************************************
 //  Auto-update manifest URLs
