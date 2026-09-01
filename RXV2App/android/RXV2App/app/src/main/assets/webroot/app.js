@@ -465,11 +465,10 @@
         document.body.appendChild(b);
         const r = t.getBoundingClientRect();
         b.style.left = Math.max(8, Math.min(window.innerWidth - 8 - b.offsetWidth, r.left)) + 'px';
-        // Well clear of the pressing finger (Malcolm 2026-09-01: "my finger
-        // often hides it") — prefer well above; drop well below only when
-        // there is no room.
-        const above = r.top - b.offsetHeight - 46;
-        b.style.top = (above > 8 ? above : r.bottom + 60) + 'px';
+        // ALWAYS above the finger, never below — the finger approaches from
+        // below and hides anything under it (Malcolm 2026-09-01). Near the
+        // top of the screen the bubble pins to the top edge instead.
+        b.style.top = Math.max(8, r.top - b.offsetHeight - 46) + 'px';
         _hb = b;
     }, { passive: false });
     // Kill iOS's long-press extras on help labels (drag ghost, loupe, text

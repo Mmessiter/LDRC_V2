@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.515-bubble-above",
+      "url": "https://messiter.com/rxv2/release/v0.9.515/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.515/littlefs.bin",
+      "fs_md5": "52e6b32897f906f54866f9bb18befa4c",
+      "notes": "Help bubbles always appear ABOVE the finger (pinned to the top edge when the label is high on the screen) - never below."
+    },
+    {
       "name": "RXV2-0.9.514-bubble-polish",
       "url": "https://messiter.com/rxv2/release/v0.9.514/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.514/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.504/littlefs.bin",
       "fs_md5": "172ec137a734f767128178bcc060dfd9",
       "notes": "Wiring and Servos pages warn: do not power the servos until their frequency/pulse width and the BEC voltage are set - wrong settings can damage them."
-    },
-    {
-      "name": "RXV2-0.9.503-banner-wording",
-      "url": "https://messiter.com/rxv2/release/v0.9.503/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.503/littlefs.bin",
-      "fs_md5": "51fb904ee3890cc9167edb6c3dde4300",
-      "notes": "Calibrate-page banner reworded: from here on everything is done from your phone via the receiver."
     }
   ]
 }
