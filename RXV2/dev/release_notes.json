@@ -399,5 +399,6 @@
  "RXV2-0.9.516-timeout-bubbles": "Throttle-hold vs autorotation timeout bubbles now spell out the difference: ordinary throttle chop vs deliberate auto with bail-out.",
  "RXV2-0.9.517-bailout-findable": "Governor page now says plainly: bail-out is enabled by Auto throttle above 0 - there is no separate switch (note beside the autorotation timeout + a fuller bubble).",
  "RXV2-0.9.518-bubble-hint": "Wizard opens with a self-demonstrating note: underlined term? Put your finger on it for an explanation - and the note's own underline is a live example.",
- "RXV2-0.9.519-clean-checklist": "Wizard checklist decluttered: each step is just its underlined title - press and hold for a fuller explanation than the old subtext ever gave."
+ "RXV2-0.9.519-clean-checklist": "Wizard checklist decluttered: each step is just its underlined title - press and hold for a fuller explanation than the old subtext ever gave.",
+ "RXV2-0.9.520-hint-on-hub": "The help-bubble explanation moves from the wizard to the Rotorflight front page - it applies to everything Rotorflight."
 }

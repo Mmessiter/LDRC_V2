@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.520-hint-on-hub",
+      "url": "https://messiter.com/rxv2/release/v0.9.520/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.520/littlefs.bin",
+      "fs_md5": "96a7d218a1fe8a00e57161b5436be820",
+      "notes": "The help-bubble explanation moves from the wizard to the Rotorflight front page - it applies to everything Rotorflight."
+    },
+    {
       "name": "RXV2-0.9.519-clean-checklist",
       "url": "https://messiter.com/rxv2/release/v0.9.519/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.519/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.509/littlefs.bin",
       "fs_md5": "46dc6cda4d94495587ee2f88d387f8ca",
       "notes": "Throttle/arming channels leave the Protocol page (the Transmitter-channels save now tells the receiver too); wave channels move to Receiver settings with their Test button."
-    },
-    {
-      "name": "RXV2-0.9.508-gain-beside-hold",
-      "url": "https://messiter.com/rxv2/release/v0.9.508/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.508/littlefs.bin",
-      "fs_md5": "908ccbde2e33eeafb2c80b8f1e64324c",
-      "notes": "The Bench-measure card now carries the current axis's cyclic gain in a green box beside the Hold button (same value as Calibration, kept in step both ways) - measure and adjust on one screen."
     }
   ]
 }
