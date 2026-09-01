@@ -396,7 +396,8 @@
                 '/rotorflight-gov-global': '/rotorflight',
                 '/rotorflight-gov-profile': '/rotorflight',
                 '/rotorflight-gear': '/rotorflight',
-                '/rotorflight-calibrate': '/rotorflight-newheli'
+                '/rotorflight-calibrate': '/rotorflight-newheli',
+                '/rotorflight-escprog': '/rotorflight'
             };
             const LABELS = {
                 '/': 'front screen', '/blackbox': 'Black box', '/setup': 'Setup',

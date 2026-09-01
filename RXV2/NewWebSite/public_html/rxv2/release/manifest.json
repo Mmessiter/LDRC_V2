@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.530-scorpion-readout",
+      "url": "https://messiter.com/rxv2/release/v0.9.530/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.530/littlefs.bin",
+      "fs_md5": "f35815ade219bd839180e6c4a223388e",
+      "notes": "NEW (beta): ESC settings page reads a Scorpion Tribunus through the flight controller - every setting in plain English, no cables, no Windows. Read-only until hardware-verified; Release button reboots the ESC so telemetry returns."
+    },
+    {
       "name": "RXV2-0.9.529-timings-in-seconds",
       "url": "https://messiter.com/rxv2/release/v0.9.529/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.529/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.519/littlefs.bin",
       "fs_md5": "3a4ad6276ef8bd98008fc53aeb1ba7eb",
       "notes": "Wizard checklist decluttered: each step is just its underlined title - press and hold for a fuller explanation than the old subtext ever gave."
-    },
-    {
-      "name": "RXV2-0.9.518-bubble-hint",
-      "url": "https://messiter.com/rxv2/release/v0.9.518/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.518/littlefs.bin",
-      "fs_md5": "6772b738857fe5473acc702e4482f4ac",
-      "notes": "Wizard opens with a self-demonstrating note: underlined term? Put your finger on it for an explanation - and the note's own underline is a live example."
     }
   ]
 }

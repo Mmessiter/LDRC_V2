@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.529-timings-in-seconds";
+constexpr const char* FW_VERSION = "RXV2-0.9.530-scorpion-readout";
 
 //*********************************************************************
 //  Auto-update manifest URLs

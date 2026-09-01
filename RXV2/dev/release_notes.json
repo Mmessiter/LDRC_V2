@@ -409,5 +409,6 @@
  "RXV2-0.9.526-fourth-task": "The computer session now lists FOUR tasks: firmware, serial port, select CRSF (new - without it there is no communication), Telemetry ON.",
  "RXV2-0.9.527-unbrickable": "Computer page gains the stuck-flash rescue card: BOOT button + USB = DFU, full chip erase, flash again - and the charge-only-cable trap explained.",
  "RXV2-0.9.528-govmode-bubble": "Governor-mode bubble corrected to RF 2.3's real modes (OFF/LIMIT/DIRECT/ELECTRIC/NITRO) - ELECTRIC is the right choice for electric helis; the old text used RF1 names.",
- "RXV2-0.9.529-timings-in-seconds": "Governor timings now displayed in SECONDS (converted to Rotorflight's tenths on the wire) - the tenths trap caused a 40-second spool-up on the Goblin's second flight."
+ "RXV2-0.9.529-timings-in-seconds": "Governor timings now displayed in SECONDS (converted to Rotorflight's tenths on the wire) - the tenths trap caused a 40-second spool-up on the Goblin's second flight.",
+ "RXV2-0.9.530-scorpion-readout": "NEW (beta): ESC settings page reads a Scorpion Tribunus through the flight controller - every setting in plain English, no cables, no Windows. Read-only until hardware-verified; Release button reboots the ESC so telemetry returns."
 }
