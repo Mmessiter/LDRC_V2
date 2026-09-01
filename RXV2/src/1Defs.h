@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.527-unbrickable";
+constexpr const char* FW_VERSION = "RXV2-0.9.528-govmode-bubble";
 
 //*********************************************************************
 //  Auto-update manifest URLs

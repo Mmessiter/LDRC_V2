@@ -407,5 +407,6 @@
  "RXV2-0.9.524-alpha-subtitle": "A la carte subtitle says 'In alphabetical order' (the old 'roughly in setup order' was no longer true).",
  "RXV2-0.9.525-help-audit": "Help screens audited against the current behaviour: wizard step numbers, alphabetical A la carte, selector bars with nothing to drag, divider-based Arm/Rescue, no x on Bank/Rates, Hello-wave in Receiver settings, selector cards on Switches.",
  "RXV2-0.9.526-fourth-task": "The computer session now lists FOUR tasks: firmware, serial port, select CRSF (new - without it there is no communication), Telemetry ON.",
- "RXV2-0.9.527-unbrickable": "Computer page gains the stuck-flash rescue card: BOOT button + USB = DFU, full chip erase, flash again - and the charge-only-cable trap explained."
+ "RXV2-0.9.527-unbrickable": "Computer page gains the stuck-flash rescue card: BOOT button + USB = DFU, full chip erase, flash again - and the charge-only-cable trap explained.",
+ "RXV2-0.9.528-govmode-bubble": "Governor-mode bubble corrected to RF 2.3's real modes (OFF/LIMIT/DIRECT/ELECTRIC/NITRO) - ELECTRIC is the right choice for electric helis; the old text used RF1 names."
 }

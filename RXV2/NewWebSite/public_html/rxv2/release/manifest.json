@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.528-govmode-bubble",
+      "url": "https://messiter.com/rxv2/release/v0.9.528/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.528/littlefs.bin",
+      "fs_md5": "c9b1c15526724c9bd1a1f37df7479a41",
+      "notes": "Governor-mode bubble corrected to RF 2.3's real modes (OFF/LIMIT/DIRECT/ELECTRIC/NITRO) - ELECTRIC is the right choice for electric helis; the old text used RF1 names."
+    },
+    {
       "name": "RXV2-0.9.527-unbrickable",
       "url": "https://messiter.com/rxv2/release/v0.9.527/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.527/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.517/littlefs.bin",
       "fs_md5": "50cd0c2f68f3ac73368fd23f938fb849",
       "notes": "Governor page now says plainly: bail-out is enabled by Auto throttle above 0 - there is no separate switch (note beside the autorotation timeout + a fuller bubble)."
-    },
-    {
-      "name": "RXV2-0.9.516-timeout-bubbles",
-      "url": "https://messiter.com/rxv2/release/v0.9.516/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.516/littlefs.bin",
-      "fs_md5": "0d757b3967b2fdb49aa0dda4e7c26e11",
-      "notes": "Throttle-hold vs autorotation timeout bubbles now spell out the difference: ordinary throttle chop vs deliberate auto with bail-out."
     }
   ]
 }
