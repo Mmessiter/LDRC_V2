@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.524-alpha-subtitle";
+constexpr const char* FW_VERSION = "RXV2-0.9.525-help-audit";
 
 //*********************************************************************
 //  Auto-update manifest URLs

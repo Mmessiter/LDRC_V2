@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.525-help-audit",
+      "url": "https://messiter.com/rxv2/release/v0.9.525/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.525/littlefs.bin",
+      "fs_md5": "69f5ebc12571c7859c49d91874a16bba",
+      "notes": "Help screens audited against the current behaviour: wizard step numbers, alphabetical A la carte, selector bars with nothing to drag, divider-based Arm/Rescue, no x on Bank/Rates, Hello-wave in Receiver settings, selector cards on Switches."
+    },
+    {
       "name": "RXV2-0.9.524-alpha-subtitle",
       "url": "https://messiter.com/rxv2/release/v0.9.524/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.524/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.514/littlefs.bin",
       "fs_md5": "f853596657e69b9ddf32cf8e5fd880f7",
       "notes": "Help bubbles: no more iOS drag-ghost on finger movement, bubbles sit well clear of the finger, and ~20 more added (tail travel, battery divider, gear ratio, switch cards, every Transmitter-channels row)."
-    },
-    {
-      "name": "RXV2-0.9.513-help-bubbles",
-      "url": "https://messiter.com/rxv2/release/v0.9.513/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.513/littlefs.bin",
-      "fs_md5": "572e240584dbc357600a0ee7cd4def89",
-      "notes": "Press-and-hold help bubbles: touch any dotted-underlined label (governor, PIDs, rates, travel, servos - about 90 so far) and a plain-English explanation appears; lift your finger and it goes."
     }
   ]
 }
