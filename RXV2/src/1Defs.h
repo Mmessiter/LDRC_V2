@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.528-govmode-bubble";
+constexpr const char* FW_VERSION = "RXV2-0.9.529-timings-in-seconds";
 
 //*********************************************************************
 //  Auto-update manifest URLs

@@ -62,14 +62,14 @@ input:disabled,select:disabled{background:#eee;color:#999}
     </div>
 
     <div class=card>
-        <h2>Timings (tenths of a second)</h2>
-        <div class=fldRow><label data-help="How gently the motor first starts turning from standstill, in tenths of a second. Bigger = softer start.">Startup time</label>             <input type=number id=g_start></div>
-        <div class=fldRow><label data-help="Time to ramp from idle to full head speed, in tenths of a second (100 = 10 s). Bigger = gentler spool-up.">Spool-up time</label>            <input type=number id=g_spool></div>
-        <div class=fldRow><label data-help="Time to wind the rotor down when you lower the throttle switch, in tenths of a second.">Spool-down time</label>          <input type=number id=g_spdwn></div>
-        <div class=fldRow><label data-help="How quickly the governor moves between two head speeds (e.g. on a bank change), in tenths of a second.">Speed-change time (tracking time)</label>            <input type=number id=g_track></div>
-        <div class=fldRow><label data-help="The fast spool-up used when the rotor is still turning (after a brief throttle hold), in tenths of a second.">Quick-restart time (recovery time)</label>            <input type=number id=g_recov></div>
-        <div class=fldRow><label data-help="For an ORDINARY throttle chop (throttle hold): the fast quick-restart stays available for this long, in tenths of a second (50 = 5 s). Beyond it the governor insists on a full, slow spool-up — the rotor has slowed too much for a safe snap back.">Throttle-hold timeout</label>    <input type=number id=g_hold></div>
-        <div class=fldRow><label data-help="For a DELIBERATE autorotation with bail-out enabled (Auto throttle above 0): the auto may last this long, in tenths of a second, and still get the instant bail-out power. Usually set longer than the throttle-hold timeout — the rotor keeps its speed in an auto.">Autorotation timeout</label>     <input type=number id=g_auto_to></div>
+        <h2>Timings (seconds)</h2>
+        <div class=fldRow><label data-help="How gently the motor first starts turning from standstill, in seconds. Bigger = softer start.">Startup time</label>             <input type=number id=g_start step=0.1 min=0 max=600></div>
+        <div class=fldRow><label data-help="Time to ramp from idle to full head speed, in seconds. 10 is typical - bigger = gentler spool-up.">Spool-up time</label>            <input type=number id=g_spool step=0.1 min=0 max=600></div>
+        <div class=fldRow><label data-help="Time to wind the rotor down when you lower the throttle switch, in seconds.">Spool-down time</label>          <input type=number id=g_spdwn step=0.1 min=0 max=600></div>
+        <div class=fldRow><label data-help="How quickly the governor moves between two head speeds (e.g. on a bank change), in seconds. 2 is typical.">Speed-change time (tracking time)</label>            <input type=number id=g_track step=0.1 min=0 max=600></div>
+        <div class=fldRow><label data-help="The fast spool-up used when the rotor is still turning (after a brief throttle hold), in seconds.">Quick-restart time (recovery time)</label>            <input type=number id=g_recov step=0.1 min=0 max=600></div>
+        <div class=fldRow><label data-help="For an ORDINARY throttle chop (throttle hold): the fast quick-restart stays available for this long, in seconds. Beyond it the governor insists on a full, slow spool-up — the rotor has slowed too much for a safe snap back.">Throttle-hold timeout</label>    <input type=number id=g_hold step=0.1 min=0 max=600></div>
+        <div class=fldRow><label data-help="For a DELIBERATE autorotation with bail-out enabled (Auto throttle above 0): the auto may last this long, in seconds, and still get the instant bail-out power. Usually set longer than the throttle-hold timeout — the rotor keeps its speed in an auto.">Autorotation timeout</label>     <input type=number id=g_auto_to step=0.1 min=0 max=600></div>
         <p class=muted style="font-size:.8em;margin:.3em 0 0">Bail-out is enabled by <b>Auto throttle</b> (above 0) in the card above &mdash; there is no separate switch.</p>
     </div>
 
@@ -382,19 +382,19 @@ async function load() {
         cachedRaw = bytes.slice(0, CONFIG_BYTES);
         const u16 = (o) => bytes[o] | (bytes[o+1] << 8);
         document.getElementById('g_mode').value   = bytes[0];
-        document.getElementById('g_start').value  = u16(1);
-        document.getElementById('g_spool').value  = u16(3);
-        document.getElementById('g_track').value  = u16(5);
-        document.getElementById('g_recov').value  = u16(7);
-        document.getElementById('g_hold').value   = u16(9);
-        document.getElementById('g_auto_to').value= u16(13);
+        document.getElementById('g_start').value  = u16(1) / 10;
+        document.getElementById('g_spool').value  = u16(3) / 10;
+        document.getElementById('g_track').value  = u16(5) / 10;
+        document.getElementById('g_recov').value  = u16(7) / 10;
+        document.getElementById('g_hold').value   = u16(9) / 10;
+        document.getElementById('g_auto_to').value= u16(13) / 10;
         document.getElementById('g_hand').value   = bytes[19];
         document.getElementById('g_fpwr').value   = bytes[20];
         document.getElementById('g_frpm').value   = bytes[21];
         document.getElementById('g_ftta').value   = bytes[22];
         document.getElementById('g_fff').value    = bytes[23];
         document.getElementById('g_fd').value     = bytes[25];
-        document.getElementById('g_spdwn').value  = u16(26);
+        document.getElementById('g_spdwn').value  = u16(26) / 10;
         document.getElementById('g_ttype').value  = bytes[28];
         document.getElementById('g_idle').value   = bytes[31];
         document.getElementById('g_auto').value   = bytes[32];
@@ -424,13 +424,14 @@ function buildPayload() {
     const u16 = (id) => Math.max(0, Math.min(65535, parseInt(document.getElementById(id).value || '0')));
     const putU16 = (o, v) => { bytes[o] = v & 0xff; bytes[o+1] = (v >> 8) & 0xff; };
     bytes[0]  = u8('g_mode');
-    putU16(1,  u16('g_start'));
-    putU16(3,  u16('g_spool'));
-    putU16(5,  u16('g_track'));
-    putU16(7,  u16('g_recov'));
-    putU16(9,  u16('g_hold'));
+    const secs = (id) => Math.max(0, Math.min(65535, Math.round(parseFloat(document.getElementById(id).value || '0') * 10)));
+    putU16(1,  secs('g_start'));
+    putU16(3, secs('g_spool'));
+    putU16(5, secs('g_track'));
+    putU16(7, secs('g_recov'));
+    putU16(9, secs('g_hold'));
     // bytes 11-12 (reserved) preserved
-    putU16(13, u16('g_auto_to'));
+    putU16(13, secs('g_auto_to'));
     // bytes 15-18 (reserved) preserved
     bytes[19] = u8('g_hand');
     bytes[20] = u8('g_fpwr');
@@ -439,7 +440,7 @@ function buildPayload() {
     bytes[23] = u8('g_fff');
     // byte 24 (reserved) preserved
     bytes[25] = u8('g_fd');
-    putU16(26, u16('g_spdwn'));
+    putU16(26, secs('g_spdwn'));
     bytes[28] = u8('g_ttype');
     // bytes 29-30 (i8 reserved) preserved
     bytes[31] = u8('g_idle');
