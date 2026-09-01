@@ -27,7 +27,7 @@
 <div class=bg-wash  aria-hidden=true></div>
 <div class=container>
     <h1>Before you start</h1>
-    <p class=subtitle>One USB session on a computer &mdash; three tasks the receiver cannot do.</p>
+    <p class=subtitle>One USB session on a computer &mdash; four tasks the receiver cannot do.</p>
     <p>Connect a <b>USB lead from the flight controller to your computer</b> and run the <b>Rotorflight Configurator</b>. The receiver need not be connected yet. Then:</p>
 
     <div class=wcard>
@@ -43,7 +43,13 @@
     </div>
 
     <div class=wcard>
-        <h2><span class=num>3</span>Enable Telemetry</h2>
+        <h2><span class=num>3</span>Select CRSF</h2>
+        <p>On the <b>Receiver</b> tab: Receiver Mode <b>Serial</b>, Provider <b>CRSF</b>.</p>
+        <p class=why>CRSF is the language this receiver speaks &mdash; with any other choice there is no communication at all.</p>
+    </div>
+
+    <div class=wcard>
+        <h2><span class=num>4</span>Enable Telemetry</h2>
         <p>On the <b>Receiver</b> tab: turn <b>Telemetry ON</b>, then <b>Save &amp; Reboot</b> (button, bottom right).</p>
         <p class=why>Without telemetry the board is mute &mdash; it cannot even be discovered.</p>
     </div>
@@ -53,9 +59,10 @@
     <div class=footer></div>
 </div>
 <template id=helpContent><h2>Before you start</h2>
-<p>The one computer session per new helicopter. Why these three cannot be done from the phone:</p>
+<p>The one computer session per new helicopter. Why these four cannot be done from the phone:</p>
 <ul>
 <li><b>Firmware flashing</b> needs the board in bootloader mode over USB &mdash; no radio link exists yet.</li>
+<li><b>CRSF</b> must be selected on the Receiver tab &mdash; it is the protocol this receiver speaks; anything else and the two boards cannot talk.</li>
 <li><b>The serial port</b> is a chicken-and-egg: the board cannot be told which port to listen on <i>over</i> a link it is not listening to.</li>
 <li><b>ESC telemetry</b> is NOT on this list (tested on the first real build): the wizard&rsquo;s tick + a flight-controller restart is enough &mdash; features apply at boot.</li>
 <li><b>Telemetry off</b> makes the board completely mute on its receiver port &mdash; it neither speaks nor listens there (tested!), so nothing can reach it until the configurator switches telemetry on and reboots it.</li>

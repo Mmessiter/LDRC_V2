@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.526-fourth-task",
+      "url": "https://messiter.com/rxv2/release/v0.9.526/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.526/littlefs.bin",
+      "fs_md5": "5585f014310cb4107280f9c91dcf9a98",
+      "notes": "The computer session now lists FOUR tasks: firmware, serial port, select CRSF (new - without it there is no communication), Telemetry ON."
+    },
+    {
       "name": "RXV2-0.9.525-help-audit",
       "url": "https://messiter.com/rxv2/release/v0.9.525/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.525/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.515/littlefs.bin",
       "fs_md5": "52e6b32897f906f54866f9bb18befa4c",
       "notes": "Help bubbles always appear ABOVE the finger (pinned to the top edge when the label is high on the screen) - never below."
-    },
-    {
-      "name": "RXV2-0.9.514-bubble-polish",
-      "url": "https://messiter.com/rxv2/release/v0.9.514/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.514/littlefs.bin",
-      "fs_md5": "f853596657e69b9ddf32cf8e5fd880f7",
-      "notes": "Help bubbles: no more iOS drag-ghost on finger movement, bubbles sit well clear of the finger, and ~20 more added (tail travel, battery divider, gear ratio, switch cards, every Transmitter-channels row)."
     }
   ]
 }

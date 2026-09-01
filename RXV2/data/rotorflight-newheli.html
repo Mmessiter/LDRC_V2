@@ -46,7 +46,7 @@
 
 <script>
 const STEPS=[
- {k:'fw',    t:'Before you start (computer, once)', d:'Connect the flight controller to your computer by USB and run the Rotorflight Configurator for three one-time tasks: flash the latest firmware, check the serial receiver port, and turn Telemetry ON (Save and Reboot). These are the only things that cannot be done from the phone - and the receiver need not even be connected yet.', href:'/rotorflight-computer'},
+ {k:'fw',    t:'Before you start (computer, once)', d:'Connect the flight controller to your computer by USB and run the Rotorflight Configurator for four one-time tasks: flash the latest firmware, check the serial receiver port, select CRSF as the receiver protocol, and turn Telemetry ON (Save and Reboot). These are the only things that cannot be done from the phone - and the receiver need not even be connected yet.', href:'/rotorflight-computer'},
  {k:'cal',   t:'Calibrate the flight controller', d:'Teach the flight controller which way is level (accelerometer calibration). Do it on the desk, flat and perfectly still, BEFORE the board goes into the model - a mounted helicopter rarely sits truly level. It takes two seconds, and front-or-back mounting does not affect it.', href:'/rotorflight-calibrate'},
  {k:'wire',  t:'Wire it up', d:'Every plug explained: S1 is the front-or-back servo, then go clockwise round the swashplate; the tail servo is S4; the ESC has its throttle lead, its one-wire telemetry and an RPM wire. Important: do not power the servos until their settings are made in the Servos step.', href:'/rotorflight-wiring'},
  {k:'esc',   t:'ESC setup (its own app)', d:'Set up the ESC in its own app, box or card: governor OFF / external, telemetry ON, short soft start, BEC voltage and motor timing - then calibrate its 1000-2000 microsecond throttle range straight from this phone. The head-speed gear ratio for your transmitter display lives here too.', href:'/rotorflight-esc'},
@@ -105,7 +105,7 @@ bindModel();  // …then rebind to this model's own ticks when the name arrives
 <template id=helpContent><h2>New helicopter</h2>
 <p>The from-scratch setup checklist for a Rotorflight helicopter &mdash; the same ground the configurator covers, but step by step on the phone, in plain English.</p>
 <ul>
-<li><b>Step 1 is the only computer step:</b> a brand-new board is mute until Telemetry is ON, and it listens only on the serial input set in the configurator &mdash; do both in one USB session (Save restarts it). Everything after is phone-only.</li>
+<li><b>Step 1 is the only computer step:</b> a brand-new board is mute until Telemetry is ON, it listens only on the serial input set in the configurator, and it must be told to speak CRSF &mdash; do it all in one USB session (Save restarts it). Everything after is phone-only.</li>
 <li>Work top to bottom. Each <b>Open</b> button goes to the right page; come back and tick the step off.</li>
 <li>Ticks are remembered per model (by its receiver name), so every new helicopter starts a fresh checklist.</li>
 <li><b>Blades off</b> (or motor unplugged) until the very end &mdash; several steps move the servos, and one spins the motor if you let it.</li>
