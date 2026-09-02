@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.544-ota-resume";
+constexpr const char* FW_VERSION = "RXV2-0.9.545-release-in-view";
 
 //*********************************************************************
 //  Auto-update manifest URLs
