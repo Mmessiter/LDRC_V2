@@ -1014,43 +1014,125 @@ inline void handleFirmwareCheck() {
 // completes (or fails), then the chip reboots. Accepts both http:// and
 // https:// URLs (https:// is required for the messiter.com mirror).
 
-// Download `url` and flash it to the given Update target — U_FLASH (the app/OTA
-// slot) or U_SPIFFS (the LittleFS data partition). Returns "" on success, else a
-// short error string. Streamed: nothing is committed unless the full image lands.
-inline String flashStreamToPartition(const String& url, int command) {
-    HTTPClient       http;
-    WiFiClient       plain;
-    WiFiClientSecure secure;
+// ---- Resume (2026-09-02) ----------------------------------------------------
+// Three messiter.com installs in a row died with "download stalled" while the
+// receiver's WiFi crawled at ~2 KB/s (kitchen, ping 500-700 ms). One stall used to
+// throw the whole image away. Now a stalled or dropped connection is reopened with
+// `Range: bytes=<got>-` and the download carries on where it stopped (LiteSpeed
+// answers 206; a server that ignores Range sends 200 + the whole file and we skip
+// the part we already hold). Only attempts that moved the download forward earn
+// another go, so a dead link still gives up after ~two stall periods.
+constexpr int OTA_RESUME_MAX = 8;   // reconnects per image (each must make progress)
+
+// Open `url` for reading from byte `from`. Fills `total` (image size, learnt on the
+// first open) and `skip` (bytes of this response to discard because the server
+// sent the whole file again). Returns "" or a short reason; caller ends `http`.
+inline String otaOpen(HTTPClient& http, WiFiClient& plain, WiFiClientSecure& secure,
+                      const String& url, size_t from, int& total, size_t& skip) {
     // Generous timeouts — a slow messiter.com TLS handshake on a weak WiFi link
     // can take a few seconds before the first bytes flow.
     http.setConnectTimeout(8000);
     http.setTimeout(15000);
     if (!httpBeginAny(http, plain, secure, url)) return "begin failed";
+    if (from) {
+        char r[40]; snprintf(r, sizeof r, "bytes=%u-", (unsigned)from);
+        http.addHeader("Range", r);
+    }
     int code = http.GET();
-    if (code != HTTP_CODE_OK) {
-        http.end();
+    int len  = http.getSize();
+    skip = 0;
+    if (from && code == HTTP_CODE_PARTIAL_CONTENT) {
+        if (len != total - (int)from) return "resume size mismatch";
+    } else if (code == HTTP_CODE_OK) {
+        if (from) {
+            if (len != total) return "resume size mismatch";   // file changed under us
+            skip = from;                                       // Range ignored: re-sent from 0
+        } else {
+            total = len;
+        }
+    } else {
         char m[40]; snprintf(m, sizeof m, "HTTP %d", code);
         return String(m);
     }
-    int len = http.getSize();
-    if (len <= 0) { http.end(); return "no content-length"; }
-    if (!Update.begin((size_t)len, command)) { String e = Update.errorString(); http.end(); return e; }
-    uint32_t t0 = millis();
-    String err = httpStreamBounded(http, len, [](const uint8_t* b, size_t n) { return Update.write((uint8_t*)b, n) == n; });
+    if (total <= 0) return "no content-length";
+    return "";
+}
+
+// Download `url` into the given Update target — U_FLASH (the app/OTA slot) or
+// U_SPIFFS (the LittleFS data partition) — resuming across stalls. `beforeFlash`
+// runs once, after the first response is confirmed and before the partition is
+// touched (the FS path unmounts LittleFS there). Returns "" on success (image
+// committed by Update.end) or a short reason (Update aborted, nothing committed).
+template <typename BeforeFlash>
+inline String downloadToUpdate(const String& url, int command, BeforeFlash beforeFlash) {
+    const char* what = command == U_FLASH ? "firmware" : "web files";
+    int      total = 0;
+    size_t   got   = 0;
+    int      idle  = 0;          // consecutive attempts that delivered nothing
+    uint32_t t0    = millis();
+    String   err;
+    for (int attempt = 0;; attempt++) {
+        HTTPClient       http;
+        WiFiClient       plain;
+        WiFiClientSecure secure;
+        size_t           skip = 0;
+        err = otaOpen(http, plain, secure, url, got, total, skip);
+        if (err.length()) {
+            http.end();
+            // Reopening on a bad link can itself time out ("HTTP -11"): give it the
+            // same patience as a stall, but only once the download has been moving.
+            bool retry = got && err.startsWith("HTTP -") && ++idle < 2 && attempt < OTA_RESUME_MAX;
+            if (!retry) break;
+            char m[EventLog::MSG_LEN];
+            snprintf(m, sizeof m, "%s: reopen failed (%s) at %u KB — retrying", what, err.c_str(), (unsigned)(got / 1024));
+            events.add(m);
+            esp_task_wdt_reset();
+            continue;
+        }
+        if (attempt == 0) {
+            beforeFlash();
+            if (!Update.begin((size_t)total, command)) { err = Update.errorString(); http.end(); break; }
+        }
+        size_t before = got;
+        err = httpStreamBounded(http, http.getSize(), [&](const uint8_t* b, size_t n) {
+            if (skip) {                       // server re-sent from 0: drop what we already wrote
+                size_t s = n < skip ? n : skip;
+                skip -= s; b += s; n -= s;
+                if (!n) return true;
+            }
+            if (Update.write((uint8_t*)b, n) != n) return false;
+            got += n;
+            return true;
+        });
+        http.end();
+        if (err.isEmpty()) break;
+        if (err == "write failed") { err = Update.errorString(); break; }
+        bool transient = err.startsWith("download stalled") || err.startsWith("connection lost");
+        idle = got > before ? 0 : idle + 1;
+        if (!transient || idle >= 2 || attempt >= OTA_RESUME_MAX) break;
+        char m[EventLog::MSG_LEN];
+        snprintf(m, sizeof m, "%s: %s — resuming (RSSI %d)", what, err.c_str(), (int)WiFi.RSSI());
+        events.add(m);
+        esp_task_wdt_reset();
+    }
     if (err.length()) {
-        if (err == "write failed") err = Update.errorString();
-        Update.abort(); http.end();
-        char m[64]; snprintf(m, sizeof m, "%s: %s", command == U_FLASH ? "firmware" : "web files", err.c_str());
+        Update.abort();
+        char m[EventLog::MSG_LEN]; snprintf(m, sizeof m, "%s: %s", what, err.c_str());
         events.add(m);
         return err;
     }
-    if (!Update.end(true)) { String e = Update.errorString(); http.end(); return e; }
-    http.end();
-    char m[64];
+    if (!Update.end(true)) return Update.errorString();
+    char m[EventLog::MSG_LEN];
     snprintf(m, sizeof m, "%s downloaded: %d KB in %lu s", command == U_FLASH ? "Firmware" : "Web files",
-             len / 1024, (unsigned long)((millis() - t0) / 1000));
+             total / 1024, (unsigned long)((millis() - t0) / 1000));
     events.add(m);
     return "";
+}
+
+// Firmware image -> the OTA app slot. Streamed: nothing is committed unless the
+// full image lands.
+inline String flashStreamToPartition(const String& url, int command) {
+    return downloadToUpdate(url, command, [] {});
 }
 
 // One preserved Rotorflight backup (held in RAM across a filesystem flash).
@@ -1237,44 +1319,22 @@ inline void handleBleOtaReboot() {
 // and write them back. Non-fatal: the firmware is already in place, so whatever
 // happens here we still reboot. Returns a short status note for the reply/log.
 inline String updateFilesystemKeepingBackups(const String& fsUrl) {
-    // Open the FS image and confirm it's really there BEFORE touching anything — so
+    // The FS image is confirmed to be really there BEFORE anything is touched — so
     // a release that ships no littlefs.bin (404) is a clean no-op that never disturbs
     // the live filesystem or the backups. (This is what makes deriving the URL safe.)
-    HTTPClient       http;
-    WiFiClient       plain;
-    WiFiClientSecure secure;
-    http.setConnectTimeout(8000);
-    http.setTimeout(15000);
-    if (!httpBeginAny(http, plain, secure, fsUrl)) return "";
-    if (http.GET() != HTTP_CODE_OK) { http.end(); return ""; }   // no FS for this release
-    int len = http.getSize();
-    if (len <= 0) { http.end(); return ""; }
-
-    // 1) Snapshot the user's backups (old FS still mounted).
-    snapshotBackupsToRam();
-    snapshotFlightsToRam();
-    int n = g_fsBackupCount;
-
-    // 2) Unmount + flash the new image straight from the open stream (bounded:
-    //    a stalled download gives up instead of holding loop() hostage).
-    LittleFS.end();
-    uint32_t t0 = millis();
-    String err;
-    if (!Update.begin((size_t)len, U_SPIFFS)) err = Update.errorString();
-    else {
-        err = httpStreamBounded(http, len, [](const uint8_t* b, size_t n) { return Update.write((uint8_t*)b, n) == n; });
-        if (err == "write failed") err = Update.errorString();
-        if (err.length()) Update.abort();
-        else if (!Update.end(true)) err = Update.errorString();
-    }
-    bool ok = err.length() == 0;
-    if (ok) {
-        prefs.putString(NVS_KEY_FS_MD5, Update.md5String());   // fingerprint: identical future images skip
-        char m[64];
-        snprintf(m, sizeof m, "Web files downloaded: %d KB in %lu s", len / 1024, (unsigned long)((millis() - t0) / 1000));
-        events.add(m);
-    }
-    http.end();
+    bool touched = false;
+    int  n       = 0;
+    String err = downloadToUpdate(fsUrl, U_SPIFFS, [&] {
+        // 1) First response confirmed: snapshot the user's backups (old FS still mounted).
+        snapshotBackupsToRam();
+        snapshotFlightsToRam();
+        n = g_fsBackupCount;
+        // 2) Unmount; the image is flashed straight from the stream (bounded + resumed).
+        LittleFS.end();
+        touched = true;
+    });
+    if (!touched) return "";   // no FS for this release (404 / unreachable): nothing changed
+    if (err.isEmpty()) prefs.putString(NVS_KEY_FS_MD5, Update.md5String());   // fingerprint: identical future images skip
 
     // 3) Re-mount (format only if the freshly-written image won't mount), restore backups.
     bool mounted = LittleFS.begin(false) || LittleFS.begin(true);

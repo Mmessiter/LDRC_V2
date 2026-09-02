@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.544-ota-resume",
+      "url": "https://messiter.com/rxv2/release/v0.9.544/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.544/littlefs.bin",
+      "fs_md5": "4c637f8ff37b2f1ac9c4ef0aaa79d786",
+      "notes": "OTA download resumes after a stall: a dropped or frozen connection is reopened and the update carries on from where it stopped, instead of throwing the whole image away. Same web pages as 0.9.543."
+    },
+    {
       "name": "RXV2-0.9.543-esc-catch-hardening",
       "url": "https://messiter.com/rxv2/release/v0.9.543/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.543/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.533/littlefs.bin",
       "fs_md5": "6dcc5ab19d8a66928c1ead05ff214d5a",
       "notes": "Scorpion ESC settings can now be CHANGED from the phone (beta): edit any field, Save writes only what changed and reads the ESC back to verify; Release reboots ESC + FC. Fixes: long MSP writes (84-byte ESC blob) were silently dropped (now chunked over CRSF); FC \"MSP error\" replies fail fast (502) instead of a 1.2 s timeout; battery-ritual guidance for the ESC listen window."
-    },
-    {
-      "name": "RXV2-0.9.532-no-starve",
-      "url": "https://messiter.com/rxv2/release/v0.9.532/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.532/littlefs.bin",
-      "fs_md5": "988f5cda10721af273386194319eba5a",
-      "notes": "FLIGHT-SAFETY: MSP waits (web/BLE config requests) now keep the radio and channel output running - an erroring request could starve the FC into rhythmic failsafe twitches (found live during the first Scorpion read attempt)."
     }
   ]
 }

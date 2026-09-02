@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.543-esc-catch-hardening";
+constexpr const char* FW_VERSION = "RXV2-0.9.544-ota-resume";
 
 //*********************************************************************
 //  Auto-update manifest URLs
