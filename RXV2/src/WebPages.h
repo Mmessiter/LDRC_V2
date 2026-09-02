@@ -297,23 +297,41 @@ inline void handleFcWake() {
 // "settings captured" the moment it reconnects.
 // POST /api/esc/catch          → arm for the next power-on
 // POST /api/esc/catch?arm=0    → cancel (page's "Cancel" on the battery card)
+// POST /api/esc/catch?got=0    → forget "FC holds the settings" (the page sends
+//                                this after Release: the FC reboots, cache gone)
 inline void handleEscCatchArm() {
+    if (server.hasArg("got") && server.arg("got") == "0") {
+        escCatchGot = false;
+        escCatchResult = "none";
+    }
+    if (server.hasArg("got") && !server.hasArg("arm")) {
+        server.sendHeader("Cache-Control", "no-store");
+        server.send(200, "application/json", "{\"ok\":true}");
+        return;
+    }
     const bool arm = !(server.hasArg("arm") && server.arg("arm") == "0");
     prefs.putUChar(NVS_KEY_ESC_CATCH, arm ? 1 : 0);
-    if (!arm) escCatchArmed = false;
+    if (!arm) { escCatchArmed = false; escCatchResult = "cancelled"; }
+    else escCatchResult = "none";
     events.add(arm ? "ESC catcher armed for next power-on" : "ESC catcher cancelled");
     server.sendHeader("Cache-Control", "no-store");
     server.send(200, "application/json", "{\"ok\":true}");
 }
 
 // pending = the NVS flag (survives software reboots; consumed by a power-on),
-// armed/got = this boot's live state.
+// armed/got = this boot's live state, result = how the last catch ended
+// (captured | nothing | tx | cancelled | none), poweron = this boot restarted
+// the ESC too (a software restart leaves the ESC's listen window untouched).
 inline void handleEscCatchStatus() {
-    char buf[112];
+    char buf[160];
     const bool pending = prefs.isKey(NVS_KEY_ESC_CATCH) && prefs.getUChar(NVS_KEY_ESC_CATCH, 0);
-    snprintf(buf, sizeof(buf), "{\"armed\":%s,\"got\":%s,\"pending\":%s,\"uptime_ms\":%lu}",
+    const esp_reset_reason_t rr = esp_reset_reason();
+    const bool poweron = (rr == ESP_RST_POWERON || rr == ESP_RST_BROWNOUT || rr == ESP_RST_UNKNOWN);
+    snprintf(buf, sizeof(buf),
+             "{\"armed\":%s,\"got\":%s,\"pending\":%s,\"uptime_ms\":%lu,\"result\":\"%s\",\"poweron\":%s}",
              escCatchArmed ? "true" : "false", escCatchGot ? "true" : "false",
-             pending ? "true" : "false", (unsigned long)millis());
+             pending ? "true" : "false", (unsigned long)millis(), escCatchResult,
+             poweron ? "true" : "false");
     server.sendHeader("Cache-Control", "no-store");
     server.send(200, "application/json", buf);
 }
