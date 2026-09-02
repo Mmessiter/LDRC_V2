@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.547-two-stage-gear-help";
+constexpr const char* FW_VERSION = "RXV2-0.9.548-rotor-motor-labels";
 
 //*********************************************************************
 //  Auto-update manifest URLs

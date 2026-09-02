@@ -10,7 +10,7 @@
 <title>ESC setup &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=179">
 <script src="/app.js?v=187" defer></script>
-<script src="/gear.js?v=2" defer></script>
+<script src="/gear.js?v=3" defer></script>
 <style>
 .wcard{background:#f2f6f8;border-radius:12px;padding:.8em .9em;margin:.6em 0;box-shadow:0 2px 6px rgba(0,0,0,.08)}
 .wcard h2{margin:.1em 0 .35em;font-size:1.05em;color:#2e4356}
@@ -76,9 +76,9 @@
 
     <div class=wcard>
         <h2><span class=num>7</span>Gear ratio &mdash; true head speed</h2>
-        <p><b>Enter the teeth counts, pinion (or motor pulley) first, then the main gear.</b> Rotorflight turns motor RPM into head speed with this &mdash; the governor holds it and the transmitter shows it. Belt + gear two-stage drive (SAB Goblin, RAW, Black Thunder): multiply the stages &mdash; motor pulley &times; drive pinion : big pulley &times; main gear (Goblin 770 = 21&times;19 : 60&times;68 = <b>399 : 4080</b>; tail 25&times;19 : 37&times;68 = <b>475 : 2516</b>).</p>
+        <p><b>Rotor : motor &mdash; how many turns each makes</b>, e.g. 1 : 10.2, or the teeth counts (pinion 10 : main gear 102).</p>
         <div id=gearBox></div>
-        <p class=why>Backwards (&ldquo;10 : 1&rdquo; instead of 10 : 102) makes Rotorflight believe the head is doing 70,000 rpm: the governor sits at minimum throttle, every bank gives the same speed and the vibration filters miss. The line under the boxes says which way round it is.</p>
+        <p class=why>Backwards (10 : 1) tells the governor the head is doing 70,000 rpm &mdash; it sits at minimum throttle and every bank gives the same speed. The line under the boxes says which way round it is.</p>
     </div>
 
     <a class="btn btn-fw" href="/rotorflight-escprog" style="background:#b3703c"><span class=ico>&#128268;</span>Read &amp; change the ESC from here (Scorpion, beta) &mdash; no cables</a>
