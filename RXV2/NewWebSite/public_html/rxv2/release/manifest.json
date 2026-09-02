@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.547-two-stage-gear-help",
+      "url": "https://messiter.com/rxv2/release/v0.9.547/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.547/littlefs.bin",
+      "fs_md5": "d68fec16c442732b81b07963efa5eb36",
+      "notes": "Gear-ratio help for two-stage drives (belt to a big pulley, then pinion into the main gear - every SAB Goblin, RAW and Black Thunder): multiply the stages. Main = motor pulley x drive pinion : big pulley x main gear (Goblin 770 = 21x19 : 60x68 = 399 : 4080). Tail = tail pulley x drive pinion : front tail pulley x main gear (Goblin 770 = 25x19 : 37x68 = 475 : 2516). Shown on the Gear-ratio page, ESC-setup step 7 and the First-time basics hints. No firmware behaviour change."
+    },
+    {
       "name": "RXV2-0.9.546-gear-ratio-on-the-fc",
       "url": "https://messiter.com/rxv2/release/v0.9.546/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.546/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.536/littlefs.bin",
       "fs_md5": "a7f1782235fa42473a19d74f27d4bbdc",
       "notes": "Scorpion ESC editor: the receiver now catches the ESC by itself. A Scorpion only listens for a programmer in its first 10 s after power-up, so when the editor sees no answer it arms the receiver; pull the battery, wait 5 s, plug in, and the receiver asks the flight controller for the ESC settings during those first seconds - the phone only has to reconnect. First live read + verified write on the Goblin 770 (Tribunus II 14S-200A)."
-    },
-    {
-      "name": "RXV2-0.9.535-esc-wire-switches",
-      "url": "https://messiter.com/rxv2/release/v0.9.535/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.535/littlefs.bin",
-      "fs_md5": "5477a3bc1c61fc7a53de883f0a24c7b8",
-      "notes": "First-time basics: new Two-way ESC talk (half-duplex) and ESC pin swap switches next to the ESC telemetry protocol - the Scorpion editor needs both on a Nexus X (its ESC pad is the UART RX pin). Verified-write like the rest of the page."
     }
   ]
 }

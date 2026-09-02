@@ -10,7 +10,7 @@
 <title>Gear ratio &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=179">
 <script src="/app.js?v=187" defer></script>
-<script src="/gear.js?v=1" defer></script>
+<script src="/gear.js?v=2" defer></script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -20,7 +20,7 @@
     <h1>Gear ratio</h1>
     <p class=subtitle>so the governor and the transmitter know the true head speed</p>
     <div class=card>
-        <p style="margin:.2em 0 .6em"><b>Enter the teeth counts: motor pinion (or pulley) : main gear (or pulley).</b> Rotorflight turns motor RPM into head speed with this &mdash; the governor holds that number and the transmitter shows it.</p>
+        <p style="margin:.2em 0 .6em"><b>Enter the teeth counts: motor pinion (or pulley) : main gear (or pulley).</b> Rotorflight turns motor RPM into head speed with this &mdash; the governor holds that number and the transmitter shows it. Belt + gear two-stage drive (SAB Goblin, RAW, Black Thunder): multiply the stages &mdash; motor pulley &times; drive pinion : big pulley &times; main gear (Goblin 770 = 21&times;19 : 60&times;68 = <b>399 : 4080</b>; tail = tail pulley &times; pinion : front tail pulley &times; main gear = 25&times;19 : 37&times;68 = <b>475 : 2516</b>).</p>
         <div id=gearBox></div>
     </div>
     <div class=footer></div>
@@ -28,9 +28,10 @@
 <template id=helpContent><h2>Gear ratio</h2>
 <p>Rotorflight multiplies motor RPM by <b>pinion &divide; main gear</b> to get head speed. The governor holds that head speed and the receiver passes it to the transmitter, so <b>one ratio, entered here, feeds both</b>.</p>
 <ul>
-<li><b>Teeth counts, pinion first</b> &mdash; e.g. 11 : 110 (a 10 : 1 heli), 21 : 214 or 10 : 102 (a 10.2 : 1 belt drive). Two-stage drives: multiply the stages (12&times;20 : 60&times;110 &rarr; 240 : 6600).</li>
+<li><b>Teeth counts, pinion first</b> &mdash; e.g. 11 : 110 (a 10 : 1 heli), 21 : 214 or 10 : 102 (a 10.2 : 1 belt drive).</li>
+<li><b>Two-stage drives</b> (belt to a big pulley on an intermediate shaft, then a pinion into the main gear &mdash; every SAB Goblin, RAW and Black Thunder): multiply the stages. Main = motor pulley &times; drive pinion : big pulley &times; main gear. Tail (belt off that intermediate shaft) = tail pulley &times; drive pinion : front tail pulley &times; main gear. Goblin 770 with the 21T motor pulley: 21&times;19 : 60&times;68 = 399 : 4080 (1 : 10.23) and 25&times;19 : 37&times;68 = 475 : 2516 (tail 5.3&times;). The counts are in the kit manual&rsquo;s parts list; a 24T tail pulley makes the tail 456 : 2516.</li>
 <li><b>Backwards is the classic mistake</b>: entering &ldquo;10 : 1&rdquo; tells Rotorflight the head turns ten times <i>faster</i> than the motor. The governor then believes the head is doing 70,000 rpm, sits at its minimum throttle, every bank gives the same speed, and the RPM vibration filters sit ten times too high. The readout under the boxes says it in plain English &mdash; a red line means swap the numbers.</li>
-<li><b>Tail ratio</b> is head : tail &mdash; how many turns the tail makes per rotor turn (usually 4&ndash;5). Only the tail-speed readout and tail vibration filters use it.</li>
+<li><b>Tail ratio</b> is head : tail &mdash; how many turns the tail makes per rotor turn (usually 4&ndash;5.5). Only the tail-speed readout and tail vibration filters use it.</li>
 <li><b>Restart after saving</b>: Rotorflight only reads the ratio at power-up. The button appears after a save; do it with the motor stopped.</li>
 <li><b>Older receivers</b> had their own divisor to hide raw motor RPM from the transmitter. Saving here resets it to 1 &mdash; with the flight controller&rsquo;s ratio right, dividing again would show a tenth of the real speed.</li>
 <li><b>Check</b>: spool up with the blades off; the transmitter&rsquo;s head speed should match the bank&rsquo;s target and change when you change bank.</li>

@@ -10,7 +10,7 @@
 <title>First-time basics &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=179">
 <script src="/app.js?v=187" defer></script>
-<script src="/gear.js?v=1" defer></script>
+<script src="/gear.js?v=2" defer></script>
 <style>
 .gHintRow{font-size:.84em;line-height:1.35;margin:-.15em 0 .45em}
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
@@ -76,10 +76,10 @@ h2 .hint{font-weight:400;font-size:.7em;color:#5d7a8c;display:block;margin-top:.
             </select></div>
         <div class=fRow><div class=lab><b data-help="The number of magnets in the motor bell - the flight controller needs it to turn electrical RPM into true motor RPM. Count them or check the motor spec sheet. (Rotorflight: motor_poles)">Motor pole count</b></div><input id=m_poles type=number min=2 max=64 step=2></div>
         <div class=fRow><div class=lab><b data-help="RPM carried straight back on the ESC signal wire - DShot ESCs only. (Rotorflight: dshot_bidir)">DShot RPM telemetry</b></div><input type=checkbox id=m_bidir></div>
-        <div class=fRow><div class=lab><b data-help="Motor pinion (or pulley) teeth : main gear (or pulley) teeth, pinion FIRST - e.g. 10 : 102. Together with the pole count this gives the true head speed the governor holds and the transmitter shows. Backwards (10 : 1) and the governor sits at minimum throttle. (Rotorflight: main_rotor_gear_ratio)">Main gear ratio</b><span>pinion : main gear</span></div>
+        <div class=fRow><div class=lab><b data-help="Motor pinion (or pulley) teeth : main gear (or pulley) teeth, pinion FIRST - e.g. 10 : 102. Together with the pole count this gives the true head speed the governor holds and the transmitter shows. Backwards (10 : 1) and the governor sits at minimum throttle. Two-stage belt + gear drive (SAB Goblin, RAW, Black Thunder): multiply the stages - motor pulley x drive pinion : big pulley x main gear, e.g. Goblin 770 = 21x19 : 60x68 = 399 : 4080. (Rotorflight: main_rotor_gear_ratio)">Main gear ratio</b><span>pinion : main gear</span></div>
             <span style="white-space:nowrap"><input id=m_mgN type=number min=1 max=50000 style="width:4.5em"> : <input id=m_mgD type=number min=1 max=50000 style="width:4.5em"></span></div>
         <div class=gHintRow id=m_mgHint></div>
-        <div class=fRow><div class=lab><b data-help="Head : tail - how many turns the tail rotor makes per one main-rotor turn, usually 4 to 5 (e.g. 1 : 4 or 10 : 47). Only the tail-speed readout and tail vibration filters use it. (Rotorflight: tail_rotor_gear_ratio)">Tail gear ratio</b><span>head : tail</span></div>
+        <div class=fRow><div class=lab><b data-help="Head : tail - how many turns the tail rotor makes per one main-rotor turn, usually 4 to 5.5 (e.g. 1 : 4 or 10 : 47). Two-stage (SAB): tail pulley x drive pinion : front tail pulley x main gear, e.g. Goblin 770 = 25x19 : 37x68 = 475 : 2516. Only the tail-speed readout and tail vibration filters use it. (Rotorflight: tail_rotor_gear_ratio)">Tail gear ratio</b><span>head : tail</span></div>
             <span style="white-space:nowrap"><input id=m_tgN type=number min=1 max=50000 style="width:4.5em"> : <input id=m_tgD type=number min=1 max=50000 style="width:4.5em"></span></div>
         <div class=gHintRow id=m_tgHint></div>
         <h2 style="margin-top:.8em">ESC telemetry wire <span class=hint>which brand&rsquo;s telemetry language the ESC speaks (ESC sensor)</span></h2>
