@@ -15,9 +15,10 @@
 .banner.info{background:#c8d2dc;color:#3a5165}
 .banner.good{background:#a8d29a;color:#2a4d1f}
 .banner.bad {background:#dca08c;color:#5c2a1a}
-.banner.warn{background:#e8cf8f;color:#5c4a1a}
-.banner.rule{background:#dde8ee;color:#2e4356;text-align:left;font-weight:500}
-#btnNote{text-align:center;margin:.45em 0 0;min-height:1.2em}
+/* One patch of text: WHAT TO DO (bold line) first, WHY after (Malcolm 2026-09-02:
+   "three areas of text… condensed into one"). Verdicts stay centred + bold. */
+.banner.guide{text-align:left;font-weight:500}
+.banner.guide b{display:block;font-weight:700;margin-bottom:.35em}
 .fldRow{display:flex;justify-content:space-between;align-items:center;gap:.8em;
         background:#f2f6f8;border-radius:8px;padding:.45em .7em;margin:.25em 0}
 .fldRow label{color:#3a5165;font-size:.95em}
@@ -52,25 +53,14 @@
 <div class=container>
     <h1>ESC settings</h1>
     <p class=subtitle>read and change your Scorpion through the flight controller &mdash; no cables, no Windows <i>(beta)</i></p>
-    <div id=status class="banner info">Checking the ESC&hellip;</div>
-    <div class="banner warn">&#9888;&#65039; <b>Blades off / motor unplugged.</b> The ESC must be <b>powered</b> (it answers through its telemetry wire). While programming, the ESC&rsquo;s telemetry <b>freezes</b> until it is rebooted &mdash; the Release button below does that for you.</div>
-    <div class="banner rule">&#9201;&#65039; <b>A Scorpion only listens for 10 seconds after power-up</b>, then it is deaf until the next battery plug-in. This page checks which state it is in, and the button offers only what will work. When a battery restart is needed the <b>receiver catches those 10 seconds for you</b> &mdash; nothing to race.</div>
+    <div id=status class="banner guide info"><b>Checking the ESC&hellip;</b></div>
     <button class=goBtn id=connBtn onclick="connectEsc()" disabled>&#128268; Read the ESC</button>
-    <p class=ro id=btnNote>Checking&hellip;</p>
 
     <div class="card ritual" id=ritual style="display:none">
-        <h2>Wake the ESC up</h2>
-        <p>The ESC is running and no longer listening. The receiver is now <b>armed to catch it</b> at its next power-up &mdash; give the ESC a fresh start:</p>
-        <ol>
-            <li><b>Unplug the flight battery.</b></li>
-            <li>Wait <b>5 seconds</b>.</li>
-            <li><b>Plug it back in</b> and leave this page open.</li>
-        </ol>
-        <p class=ro id=ritualNote>The receiver reboots with the battery and asks the flight controller for the ESC settings itself during those first 10 seconds, so this page only has to reconnect (10&ndash;60 s) &mdash; no need to hurry. If the page cannot reconnect, re-join the receiver&rsquo;s WiFi; the settings stay available until the flight controller restarts.</p>
-        <p id=ritualLive style="font-weight:700;margin:.5em 0">Armed &mdash; waiting for the battery restart&hellip;</p>
-        <button class=goBtn id=cancelBtn onclick="cancelCatch()" style="background:#8a8a8a">&#10005; Cancel &mdash; don&rsquo;t catch the ESC</button>
+        <p id=ritualLive style="font-weight:700;margin:.2em 0 .6em">Prepared &mdash; waiting for the battery restart&hellip;</p>
+        <button class=goBtn id=cancelBtn onclick="cancelCatch()" style="background:#8a8a8a">&#10005; Cancel &mdash; don&rsquo;t read the ESC</button>
     </div>
-    <div class="banner info" id=pendingNote style="display:none">The receiver is still <b>armed to catch the ESC</b> at its next power-up (from an earlier attempt). Pull the battery for 5 s to read it, or <a href="#" onclick="cancelCatch();return false">cancel</a>. A transmitter that is on at power-up cancels it automatically.</div>
+    <div class="banner info" id=pendingNote style="display:none">The receiver is still <b>prepared to read the ESC</b> at its next power-up (from an earlier attempt). Restart the flight battery to read it, or <a href="#" onclick="cancelCatch();return false">cancel</a>. A transmitter that is on at power-up cancels it automatically.</div>
 
     <div id=fields style="display:none">
         <div class=card>
@@ -119,7 +109,7 @@
 <p>Rotorflight can talk to the ESC through the telemetry wire that is already connected &mdash; the same trick its transmitter scripts use. This page reads every setting, lets you change it, writes it back and checks the ESC really took it.</p>
 <ul>
 <li><b>Press and hold any label</b> for a plain-English explanation of that setting.</li>
-<li><b>Read</b>: a Scorpion only listens in its first 10 seconds after power-up, then it is deaf until the next battery plug-in. The page checks (safely, through the ESC&rsquo;s live telemetry) whether the ESC is listening, deaf, or already read, and the button says what will work. Nobody can command a deaf ESC to restart, so when it is deaf the button becomes <b>Restart the battery to read the ESC</b>: it arms the receiver, you unplug and re-plug the battery, and the receiver catches the settings during those 10 seconds itself &mdash; this page only has to reconnect.</li>
+<li><b>Read</b>: a Scorpion only listens in its first 10 seconds after power-up, then it is deaf until the next battery plug-in. The page checks (safely, through the ESC&rsquo;s live telemetry) whether the ESC is listening, deaf, or already read, and the text above the button always says what to do first and why second. Nobody can command a deaf ESC to restart, so when it is deaf the button becomes <b>Prepare the receiver to read the ESC on reboot</b>: press it, then unplug and re-plug the battery &mdash; the receiver reads the settings during those 10 seconds itself and this page only has to reconnect.</li>
 <li>The button is greyed only when a read cannot work: no flight-controller link, or while the receiver is busy catching the ESC.</li>
 <li><b>Save to ESC</b>: only the fields you changed are written. The page then reads the ESC back and confirms every value &mdash; a value the ESC refused is shown in red.</li>
 <li><b>Release</b>: while programming, the ESC stops sending telemetry (RPM, volts freeze). <b>Always finish with Release</b> &mdash; it reboots the ESC (telemetry returns) and the flight controller, ready for the next session.</li>
@@ -133,6 +123,13 @@ const $=id=>document.getElementById(id);
 // (below) must not paint over a verdict the user has not read yet.
 let statusLockUntil=0;
 function setStatus(k,t,lockMs){const s=$('status');s.className='banner '+k;s.textContent=t;statusLockUntil=Date.now()+(lockMs||0);}
+// The one patch of guidance text: what to DO (bold line) first, WHY after.
+const escHtml=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function setGuide(k,doText,whyText){
+    const s=$('status'); s.className='banner guide '+k;
+    s.innerHTML='<b>'+escHtml(doText)+'</b>'+(whyText?escHtml(whyText):'');
+    statusLockUntil=0;
+}
 // Same verdict, shown above the Save bar (where the eyes are) for a few seconds.
 let toastTimer=null;
 function toast(k,t,ms){
@@ -272,7 +269,7 @@ async function tryRead(){
         // The FC answers at once when it holds the settings; ~3 s of silence
         // means the ESC has to be restarted — hand over to the receiver's catcher.
         stopPolling();
-        setStatus('info','No answer yet — the ESC needs a fresh start (see below). Keep this page open.');
+        setStatus('info','No answer — the ESC needs a battery restart. Preparing the receiver…');
         armAndWait();
     }
 }
@@ -283,10 +280,11 @@ async function tryRead(){
 async function armAndWait(){
     let ok=false;
     try{ ok=(await fetch('/api/esc/catch',{method:'POST'})).ok; }catch(e){}
-    if(!ok){ setStatus('bad','Could not arm the receiver (no connection). Check the link to the receiver and press the button again.',60000); endRead(); return; }
-    $('ritualLive').textContent='Armed — waiting for the battery restart…';
+    if(!ok){ setStatus('bad','Could not prepare the receiver (no connection). Check the link to the receiver and press the button again.',60000); endRead(); return; }
+    $('ritualLive').textContent='Prepared — waiting for the battery restart…';
     $('ritual').style.display='';
-    setStatus('info','Armed. Now unplug the flight battery, wait 5 s and plug it back in — keep this page open.');
+    setGuide('info','Now unplug the flight battery, wait 5 seconds, plug it back in and leave this page open.',
+        'The receiver is prepared: it restarts with the battery, reads the ESC itself during the first 10 seconds, and this page reconnects (10–60 s) — no need to hurry. If the page cannot reconnect, re-join the receiver’s WiFi; the settings stay available until the flight controller restarts.');
     await waitForCatch();
 }
 async function waitForCatch(){
@@ -298,7 +296,7 @@ async function waitForCatch(){
         if(Date.now()-t0>5*60000){
             fetch('/api/esc/catch?arm=0',{method:'POST'}).catch(()=>{});   // don't leave a stale arm behind
             $('ritual').style.display='none';
-            setStatus('bad','No battery restart seen in 5 minutes — the receiver is no longer armed. Press the button to try again.',60000);
+            setStatus('bad','No battery restart seen in 5 minutes — the receiver is no longer prepared. Press the button to try again.',60000);
             endRead(); return;
         }
         const c=await catchStatus();
@@ -319,7 +317,7 @@ async function waitForCatch(){
             endRead(); return;
         }
         if(c.armed){ note('Power-up seen — the receiver is asking the flight controller for the settings…'); continue; }
-        if(c.pending){ note('Armed — waiting for the battery restart…'); continue; }
+        if(c.pending){ note('Prepared — waiting for the battery restart…'); continue; }
         // Not armed, not pending, nothing caught: the catch ran and ended empty.
         $('ritual').style.display='none';
         if(c.result==='tx')
@@ -327,7 +325,7 @@ async function waitForCatch(){
         else if(c.result==='nothing'||c.result==='captured')
             setStatus('bad','The receiver restarted, but the flight controller never published the ESC settings. Is the ESC wired to the TLM pad, set to Scorpion telemetry with two-way talk and pin swap on (First-time basics)? Press the button to try again.',60000);
         else
-            setStatus('info','The receiver is no longer armed. Press the button to try again.',60000);
+            setStatus('info','The receiver is no longer prepared. Press the button to try again.',60000);
         endRead(); return;
     }
 }
@@ -335,7 +333,7 @@ async function waitForCatch(){
 async function cancelCatch(){
     stopPolling(); $('ritual').style.display='none'; $('pendingNote').style.display='none';
     try{ await fetch('/api/esc/catch?arm=0',{method:'POST'}); }catch(e){}
-    setStatus('info','Cancelled — the receiver will not catch the ESC. Press the button to start again.',30000);
+    setStatus('info','Cancelled — the receiver will not read the ESC. Press the button to start again.',30000);
     endRead();
 }
 
@@ -357,31 +355,37 @@ async function escTelem(){
     try{ const b=hexToBytes(await LDRC.msp(139,'',1)); return b.length>=9 ? (b[7]|(b[8]<<8))/1000 : 0; }
     catch(e){ return null; }
 }
-function setButton(label,enabled,noteText){
-    const b=$('connBtn'); b.textContent=label; b.disabled=!enabled;
-    $('btnNote').textContent=noteText||'';
-}
+function setButton(label,enabled){ const b=$('connBtn'); b.textContent=label; b.disabled=!enabled; }
+// The why-part shared by every state in which a read can start.
+const WHY_10S='A Scorpion listens only for 10 seconds after power-up. ';
+const WHY_FREEZE='While programming, the ESC’s telemetry (RPM, volts) freezes until Release reboots it — always finish with Release.';
 function applyState(state,arg){
-    // The banner follows state CHANGES (and the listening countdown); a verdict
+    // The guide follows state CHANGES (and the listening countdown); a verdict
     // that is still locked on screen is left alone while the state holds.
     const changed=state!==escState; escState=state;
     const locked=Date.now()<statusLockUntil;
-    const say=(k,t)=>{ if(changed||(state==='listening'&&!locked)) setStatus(k,t); };
+    const say=(k,d,w)=>{ if(changed||(state==='listening'&&!locked)) setGuide(k,d,w); };
     switch(state){
-    case 'norx':      setButton('🔌 Read the ESC',false,'waiting for the receiver');
+    case 'norx':      setButton('🔌 Read the ESC',false);
                       say('info','Connecting to the receiver…'); break;
-    case 'nolink':    setButton('🔌 Read the ESC',false,'no flight-controller link');
-                      say('bad','The flight controller is not answering. Check the CRSF link (Rotorflight page) — this button wakes up by itself when it does.'); break;
-    case 'catching':  setButton('⏳ Receiver is catching the ESC…',false,'power-up seen — up to 14 s');
-                      say('info','Power-up seen — the receiver is asking the flight controller for the ESC settings. Hold on.'); break;
-    case 'cached':    setButton('🔌 Read the ESC',true,'the flight controller holds the settings');
-                      say('good','✓ The flight controller holds the ESC settings — press Read.'); break;
-    case 'listening': setButton('🔌 Read the ESC — listening now!',true,'about '+arg+' s left');
-                      say('good','The ESC has just powered up and is listening for about '+arg+' s more — press Read now.'); break;
-    case 'deaf':      setButton('🔋 Restart the battery to read the ESC',true,'the ESC is running and no longer listening');
-                      say('info','The ESC is running and no longer listening (it only listens for 10 s after power-up). Press the button, then unplug the flight battery, wait 5 s and plug it in — the receiver catches the settings for you.'); break;
-    default:          setButton('🔌 Read the ESC',true,'');
-                      say('info','Press Read the ESC to start.'); break;
+    case 'nolink':    setButton('🔌 Read the ESC',false);
+                      say('bad','Check the link to the flight controller (Rotorflight page).',
+                          'The flight controller is not answering, so nothing here can work yet. The button wakes up by itself when the link is back.'); break;
+    case 'catching':  setButton('⏳ Receiver is reading the ESC…',false);
+                      say('info','Hold on — the receiver is reading the ESC (up to 14 s).',
+                          'It saw the power-up and is asking the flight controller for the settings.'); break;
+    case 'cached':    setButton('🔌 Read the ESC',true);
+                      say('good','Press Read the ESC — the flight controller already holds its settings. Blades off / motor unplugged.',
+                          WHY_FREEZE); break;
+    case 'listening': setButton('🔌 Read the ESC — listening now!',true);
+                      say('good','Press Read the ESC now — it is listening for about '+arg+' s more. Blades off / motor unplugged.',
+                          WHY_10S+WHY_FREEZE); break;
+    case 'deaf':      setButton('🔋 Prepare the receiver to read the ESC on reboot…',true);
+                      say('info','Blades off / motor unplugged. Press the button, then unplug the flight battery, wait 5 seconds, plug it back in and leave this page open — the receiver reads the ESC for you.',
+                          WHY_10S+'This one is already running, so it is deaf until the next plug-in; the receiver catches those 10 seconds itself — nothing to race. '+WHY_FREEZE); break;
+    default:          setButton('🔌 Read the ESC',true);
+                      say('info','Press Read the ESC. Blades off / motor unplugged.',
+                          'If the ESC does not answer within a few seconds you will be walked through a battery restart — a Scorpion listens only for 10 seconds after power-up. '+WHY_FREEZE); break;
     }
 }
 async function probe(){
@@ -419,8 +423,8 @@ async function connectEsc(){
     // to restart, so the button IS the battery step — arm the catcher first.
     const deaf = escState==='deaf' && !blob;
     const ok = deaf
-        ? await LDRC.confirm('The ESC is running and no longer listening. Arm the receiver to catch its settings at the next power-up, then restart the flight battery.\n\nBlades off / motor free to be safe.',
-            {title:'Restart the battery',icon:'🔋',yes:'Arm'})
+        ? await LDRC.confirm('Prepare the receiver to read the ESC at its next power-up? Afterwards unplug the flight battery, wait 5 seconds and plug it back in.\n\nBlades off / motor free to be safe.',
+            {title:'Prepare the receiver',icon:'🔋',yes:'Prepare'})
         : await LDRC.confirm('Read the ESC now? Its telemetry (RPM, volts) will FREEZE until it is released/rebooted afterwards. Blades off / motor free to be safe.',
             {title:'Read the ESC',icon:'🔌',yes:'Read'});
     if(!ok) return;
@@ -500,7 +504,7 @@ async function releaseEsc(){
     await sleep(1500);
     try{ await LDRC.msp(68,'',1); }catch(e){}   // FC reboot: one programming session per FC boot (it reboots before it can answer)
     fetch('/api/esc/catch?got=0',{method:'POST'}).catch(()=>{});   // the FC's settings cache dies with its reboot
-    setStatus('good','✓ Released'+back+'. The flight controller is rebooting (≈10 s). To program again, press the button below and follow the battery steps.',120000);
+    setStatus('good','✓ Released'+back+'. The flight controller is rebooting (≈10 s). To program again, press the button below and follow its steps.',120000);
     busy=false; $('relBtn').disabled=false;
     // Telemetry back = the ESC is running normally = deaf again: show the
     // battery button now, keep the verdict, let the probe take over after the reboot.

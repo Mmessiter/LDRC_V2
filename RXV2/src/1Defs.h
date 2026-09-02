@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.541-esc-read-honest-button";
+constexpr const char* FW_VERSION = "RXV2-0.9.542-esc-page-one-text";
 
 //*********************************************************************
 //  Auto-update manifest URLs
