@@ -743,9 +743,77 @@ inline bool httpBeginAny(HTTPClient& http,
                          const String& url) {
     if (isHttpsUrl(url)) {
         secure.setInsecure();
+        secure.setHandshakeTimeout(20);   // default is 120 s — far too long for a blocked loop()
         return http.begin(secure, url);
     }
     return http.begin(plain, url);
+}
+
+// ---- Download guard (2026-09-02) -------------------------------------------
+// The Goblin receiver went DEAF for 8 minutes mid-update: no TX, no app, no
+// failsafe frames, HTTP connections reset — then it rebooted on its own with the
+// update complete. Cause: every download here runs inside the HTTP handler with
+// loop() blocked, and the framework never gives up — Update.writeStream retries a
+// stalled stream 300× (≈75 min at our 15 s socket timeout) and getString() has no
+// stall limit at all. Two layers now:
+//   1) httpStreamBounded() copies the body itself and gives up after OTA_STALL_MS
+//      without a byte (a partial firmware image is harmless — the OTA slot only
+//      switches when Update.end() completes);
+//   2) the loop task wears the task watchdog for the whole install — if anything
+//      else wedges (DNS, handshake, LittleFS) the chip panics and reboots into the
+//      firmware it already has, and the boot log says why (NVS_KEY_OTA_BUSY).
+constexpr uint32_t OTA_WDT_S    = 60;      // > the longest single blocking call (TLS handshake 20 s + socket 15 s)
+constexpr uint32_t OTA_STALL_MS = 25000;   // no bytes for this long = give up (≈2 socket timeouts)
+
+inline void otaGuardBegin() {
+    prefs.putUChar(NVS_KEY_OTA_BUSY, 1);
+    esp_task_wdt_init(OTA_WDT_S, true);    // reconfigures the running TWDT (idle task on CPU0 stays subscribed)
+    esp_task_wdt_add(NULL);
+    esp_task_wdt_reset();
+}
+inline void otaGuardEnd() {
+    esp_task_wdt_delete(NULL);
+    esp_task_wdt_init(CONFIG_ESP_TASK_WDT_TIMEOUT_S, true);
+    prefs.putUChar(NVS_KEY_OTA_BUSY, 0);
+}
+
+// Copy an open HTTP response body into `sink(buf, n)` (returns false to abort).
+// `len` = Content-Length, or -1 to read until the server closes. Feeds the task
+// watchdog every pass and returns "" on success or a short reason. NOTE: on a
+// TLS stream available()/connected() each block up to the 15 s socket timeout
+// when nothing arrives, so the stall is judged by wall clock, not by call count.
+template <typename Sink>
+inline String httpStreamBounded(HTTPClient& http, int len, Sink sink) {
+    WiFiClient* s = http.getStreamPtr();
+    if (!s) return "no stream";
+    static uint8_t buf[2048];
+    int got = 0;
+    uint32_t lastData = millis();
+    while (len < 0 || got < len) {
+        esp_task_wdt_reset();
+        int avail = s->available();
+        if (avail <= 0) {
+            if (!s->connected()) {
+                if (len < 0) break;                       // unknown length: EOF is the end
+                char m[48]; snprintf(m, sizeof m, "connection lost at %d/%d", got, len);
+                return String(m);
+            }
+            if (millis() - lastData > OTA_STALL_MS) {
+                char m[48]; snprintf(m, sizeof m, "download stalled at %d/%d", got, len);
+                return String(m);
+            }
+            delay(10);
+            continue;
+        }
+        int want = avail < (int)sizeof buf ? avail : (int)sizeof buf;
+        if (len >= 0 && want > len - got) want = len - got;
+        int n = s->read(buf, want);
+        if (n <= 0) { delay(10); continue; }
+        if (!sink(buf, (size_t)n)) return "write failed";
+        got += n;
+        lastData = millis();
+    }
+    return "";
 }
 
 // Fetch a manifest URL and append a `{"manifest_url":..., ...}` chunk
@@ -777,16 +845,37 @@ inline void fetchManifestInto(String& out, const String& url, uint32_t timeoutMs
         http.end();
         return;
     }
-    String body = http.getString();
-    http.end();
     // Guard against an oversized manifest. Versions accumulate, and proxying two
     // full manifests (~95 entries each, with notes = 76 KB) choked the response —
     // blocking the single-threaded server and failing the check. Skip a manifest
     // that's still too big rather than try to build a giant JSON. (Keep manifests
     // trimmed to recent versions — see dev/stage_website.py / firmware_server.py.)
-    if (body.length() > 18000) {
+    // Bounded read (not getString(), which loops forever on a silent server) —
+    // it stops at the cap, so an oversized manifest is refused without buffering it.
+    constexpr size_t MANIFEST_MAX = 18000;
+    String body;
+    bool   tooBig = false;
+    int    len    = http.getSize();
+    if (len > (int)MANIFEST_MAX) tooBig = true;
+    else {
+        if (len > 0) body.reserve(len);
+        String rerr = httpStreamBounded(http, len, [&](const uint8_t* b, size_t n) {
+            if (body.length() + n > MANIFEST_MAX) { tooBig = true; return false; }
+            body.concat((const char*)b, n);
+            return true;
+        });
+        if (rerr.length() && !tooBig) {
+            http.end();
+            out += ",\"ok\":false,\"error\":\"manifest ";
+            out += rerr;
+            out += "\"}";
+            return;
+        }
+    }
+    http.end();
+    if (tooBig) {
         out += ",\"ok\":false,\"error\":\"manifest too large (";
-        out += (int)body.length();
+        out += len > 0 ? len : (int)body.length();
         out += " bytes); trim it to recent versions\"}";
         return;
     }
@@ -922,14 +1011,21 @@ inline String flashStreamToPartition(const String& url, int command) {
     int len = http.getSize();
     if (len <= 0) { http.end(); return "no content-length"; }
     if (!Update.begin((size_t)len, command)) { String e = Update.errorString(); http.end(); return e; }
-    size_t written = Update.writeStream(*http.getStreamPtr());
-    if (written != (size_t)len) {
-        Update.end(); http.end();
-        char m[48]; snprintf(m, sizeof m, "short write %u/%d", (unsigned)written, len);
-        return String(m);
+    uint32_t t0 = millis();
+    String err = httpStreamBounded(http, len, [](const uint8_t* b, size_t n) { return Update.write((uint8_t*)b, n) == n; });
+    if (err.length()) {
+        if (err == "write failed") err = Update.errorString();
+        Update.abort(); http.end();
+        char m[64]; snprintf(m, sizeof m, "%s: %s", command == U_FLASH ? "firmware" : "web files", err.c_str());
+        events.add(m);
+        return err;
     }
     if (!Update.end(true)) { String e = Update.errorString(); http.end(); return e; }
     http.end();
+    char m[64];
+    snprintf(m, sizeof m, "%s downloaded: %d KB in %lu s", command == U_FLASH ? "Firmware" : "Web files",
+             len / 1024, (unsigned long)((millis() - t0) / 1000));
+    events.add(m);
     return "";
 }
 
@@ -1135,13 +1231,25 @@ inline String updateFilesystemKeepingBackups(const String& fsUrl) {
     snapshotFlightsToRam();
     int n = g_fsBackupCount;
 
-    // 2) Unmount + flash the new image straight from the open stream.
+    // 2) Unmount + flash the new image straight from the open stream (bounded:
+    //    a stalled download gives up instead of holding loop() hostage).
     LittleFS.end();
-    bool ok = Update.begin((size_t)len, U_SPIFFS)
-              && Update.writeStream(*http.getStreamPtr()) == (size_t)len
-              && Update.end(true);
-    String err = ok ? String("") : String(Update.errorString());
-    if (ok) prefs.putString(NVS_KEY_FS_MD5, Update.md5String());   // fingerprint: identical future images skip
+    uint32_t t0 = millis();
+    String err;
+    if (!Update.begin((size_t)len, U_SPIFFS)) err = Update.errorString();
+    else {
+        err = httpStreamBounded(http, len, [](const uint8_t* b, size_t n) { return Update.write((uint8_t*)b, n) == n; });
+        if (err == "write failed") err = Update.errorString();
+        if (err.length()) Update.abort();
+        else if (!Update.end(true)) err = Update.errorString();
+    }
+    bool ok = err.length() == 0;
+    if (ok) {
+        prefs.putString(NVS_KEY_FS_MD5, Update.md5String());   // fingerprint: identical future images skip
+        char m[64];
+        snprintf(m, sizeof m, "Web files downloaded: %d KB in %lu s", len / 1024, (unsigned long)((millis() - t0) / 1000));
+        events.add(m);
+    }
     http.end();
 
     // 3) Re-mount (format only if the freshly-written image won't mount), restore backups.
@@ -1187,9 +1295,13 @@ inline void handleFirmwareInstall() {
     }
 
     // 1) Application firmware -> OTA app slot. A mid-stream failure just leaves the
-    //    current firmware bootable, so report it and DON'T reboot.
+    //    current firmware bootable, so report it and DON'T reboot. The whole
+    //    install runs under the download guard (see otaGuardBegin) so a stalled
+    //    server can no longer hold loop() — and the receiver — hostage.
+    otaGuardBegin();
     String err = flashStreamToPartition(url, U_FLASH);
     if (err.length()) {
+        otaGuardEnd();
         server.send(502, "text/plain", "firmware: " + err);
         return;
     }
@@ -1212,6 +1324,7 @@ inline void handleFirmwareInstall() {
         fsNote = updateFilesystemKeepingBackups(fsUrl);
     }
     events.add((String("Firmware installed via auto-update") + fsNote + " — rebooting").c_str());
+    otaGuardEnd();
     server.send(200, "text/plain", String("ok — rebooting") + fsNote);
     bleEarlyPump();               // over BLE: deliver the reply before the reboot kills the link
     delay(300);

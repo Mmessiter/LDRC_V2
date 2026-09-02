@@ -255,6 +255,15 @@ void setup() {
         forceWifiMode = true;
         Serial.println("[boot] config reboot — bringing WiFi up immediately (no RF window)");
     }
+    // A WiFi update that never finished (download stalled → task watchdog
+    // reboot, or the power went mid-download) leaves this flag set. The OTA
+    // slot only switches on a completed Update.end(), so we are still on the
+    // previous firmware — say so in the blackbox instead of a bare "CRASH".
+    if (prefs.getUChar(NVS_KEY_OTA_BUSY, 0)) {
+        prefs.putUChar(NVS_KEY_OTA_BUSY, 0);
+        events.add("Last WiFi update did not finish (stalled or interrupted) — firmware unchanged");
+        Serial.println("[boot] previous WiFi update did not finish — firmware unchanged");
+    }
     // One-shot Scorpion catcher (armed by the ESC settings page before a
     // battery pull): the receiver polls MSP 217 itself during the ESC's
     // post-power-on listen window, so the phone's WiFi rejoin speed no

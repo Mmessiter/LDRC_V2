@@ -26,12 +26,13 @@
 #include <Update.h>
 #include <HTTPClient.h>
 #include <WiFiClientSecure.h>
+#include <esp_task_wdt.h>
 
 //*********************************************************************
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.538-esc-catcher-safe-wifi-first";
+constexpr const char* FW_VERSION = "RXV2-0.9.539-install-watchdog";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -342,6 +343,7 @@ constexpr const char* NVS_KEY_SIM_REV     = "simrev";  // 8-byte per-output reve
 constexpr const char* NVS_KEY_AP_ONLY     = "aponly";  // 1 = skip home-WiFi STA, run AP-only (flying field: no waiting on an out-of-range home network)
 constexpr const char* NVS_KEY_AP_AUTO     = "apauto";  // 1 = the AP-only above was set AUTOMATICALLY (home net not found), so the UI shows a notice + the user can undo it
 constexpr const char* NVS_KEY_CFG_REBOOT  = "cfgrb";
+constexpr const char* NVS_KEY_OTA_BUSY    = "otabusy";  // 1 while a WiFi update is downloading; still set at boot = the update stalled and the watchdog rebooted us
 constexpr const char* NVS_KEY_ESC_CATCH   = "esccatch"; // 1 = one-shot: poll MSP 217 for the first ~14 s of the next boot (Scorpion settings capture)
 constexpr const char* NVS_KEY_CRSF_HZ     = "crsfhz";
 constexpr const char* NVS_KEY_FC_TELEM    = "fctelem";

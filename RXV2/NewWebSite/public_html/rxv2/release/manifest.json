@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.539-install-watchdog",
+      "url": "https://messiter.com/rxv2/release/v0.9.539/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.539/littlefs.bin",
+      "fs_md5": "b4044bc0400a4afbc81f9326254be75e",
+      "notes": "Update safety: the receiver no longer goes deaf if a WiFi download stalls. A download that stops for 25 s is abandoned (firmware unchanged), a task watchdog reboots the receiver if anything else wedges during an install, and the events log now records each download's size and time. Handshake timeout trimmed to 20 s."
+    },
+    {
       "name": "RXV2-0.9.538-esc-catcher-safe-wifi-first",
       "url": "https://messiter.com/rxv2/release/v0.9.538/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.538/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.528/littlefs.bin",
       "fs_md5": "c9b1c15526724c9bd1a1f37df7479a41",
       "notes": "Governor-mode bubble corrected to RF 2.3's real modes (OFF/LIMIT/DIRECT/ELECTRIC/NITRO) - ELECTRIC is the right choice for electric helis; the old text used RF1 names."
-    },
-    {
-      "name": "RXV2-0.9.527-unbrickable",
-      "url": "https://messiter.com/rxv2/release/v0.9.527/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.527/littlefs.bin",
-      "fs_md5": "ad8ee1f3ff5e7c3f8ea40f17997fad6e",
-      "notes": "Computer page gains the stuck-flash rescue card: BOOT button + USB = DFU, full chip erase, flash again - and the charge-only-cable trap explained."
     }
   ]
 }
