@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.545-release-in-view",
+      "url": "https://messiter.com/rxv2/release/v0.9.545/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.545/littlefs.bin",
+      "fs_md5": "4e090929c94eaa324352919d937e4318",
+      "notes": "ESC settings: the Release ESC button now floats next to Save (always in view) and pulses when it is the next step; a forgotten session shows a red do-not-fly warning; every verdict says to finish with Release ESC before you fly."
+    },
+    {
       "name": "RXV2-0.9.544-ota-resume",
       "url": "https://messiter.com/rxv2/release/v0.9.544/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.544/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.534/littlefs.bin",
       "fs_md5": "6dcc5ab19d8a66928c1ead05ff214d5a",
       "notes": "Fix: the ESC settings page was never routed on the receiver itself (404 since 0.9.530 - only the phone apps served it). Ships the same Scorpion editor as 0.9.533."
-    },
-    {
-      "name": "RXV2-0.9.533-esc-write",
-      "url": "https://messiter.com/rxv2/release/v0.9.533/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.533/littlefs.bin",
-      "fs_md5": "6dcc5ab19d8a66928c1ead05ff214d5a",
-      "notes": "Scorpion ESC settings can now be CHANGED from the phone (beta): edit any field, Save writes only what changed and reads the ESC back to verify; Release reboots ESC + FC. Fixes: long MSP writes (84-byte ESC blob) were silently dropped (now chunked over CRSF); FC \"MSP error\" replies fail fast (502) instead of a 1.2 s timeout; battery-ritual guidance for the ESC listen window."
     }
   ]
 }
