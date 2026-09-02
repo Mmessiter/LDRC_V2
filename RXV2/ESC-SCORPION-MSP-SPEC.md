@@ -121,12 +121,22 @@ Any other cmd value → `tribParamCommit`/`pl5ParamCommit` returns false → MSP
   talks into the RPM pin and the ESC never hears it (that was yesterday's silent failure).
   Rotorflight's own Nexus Scorpion preset is exactly protocol 4 + halfduplex 1 + pinswap 1.
   MSP 123 on the Goblin now reads `0401C80000000000000001000000`.
-- **ESC listen window**: once the ESC is streaming UNC telemetry the FC's pending settings
-  read is only re-sent after >1200 ms of silence (UNC frames arrive ~1 Hz), so the FC
-  effectively never gets into the Scorpion's power-up listen window unless the ESC is
-  power-cycled while the FC is already asking. The ritual: FC on USB (or just the
-  flight battery), unplug the battery, wait 5 s, plug it back in — the page keeps
-  polling 217 for 2 minutes and shows these steps after ~5 s of no answer.
+- **ESC listen window** (authoritative: rotorflight-firmware issue #108, bob01's design
+  notes; matches the code): the Tribunus listens for requests for **~10 s after power-on**;
+  if it gets a READ_STATUS in that window it never enters UNC mode (until reset).
+  Undisturbed, it enters UNC mode, streams telemetry and **stops answering requests**.
+  FC side: 4 s boot delay, then the settings reads (answered in the window, cached in
+  ~100 ms) → `PARAMSREADY`; the crank only sends the READ_STATUS when `paramMspActive`
+  (any MSP 217 poll, even one that errors — `escGetParamFullBufferLength` sets it) AND
+  `now < rrfsmFrameTimestamp + 4000` — i.e. **the 217 poll must reach the FC within
+  ~4 s of the last settings read, ≈ FC-time 4–8 s**. Later polls send the READ_STATUS
+  into a UNC-mode ESC that ignores it → `ABORTUNC` forever, 217 keeps erroring.
+  "Option is available only at startup" (bob01). Rebooting only the FC (MSP 68) never
+  helps: the ESC stays in UNC mode. So the ritual is: **poll 217 continuously first,
+  then power-cycle the ESC** (battery out, 5 s, in). On the Goblin the RX and FC are
+  BEC-powered so they reboot too; the RX has WiFi ~4 s after power-on, which just fits
+  the window — poll fast (≤400 ms) and from something that reconnects instantly (the Mac
+  `blob_catcher.sh`, or an RX-side boot catcher — see TODO in §6).
 - **ESC liveness probe**: MSP 139 (MOTOR_TELEMETRY) → u8 count, per motor u32 rpm,
   u16 errRatio, u16 escVoltage mV, u16 escCurrent, u16 mAh, u16 temp ×0.1 °C, u16 temp2.
   Voltage 0 = ESC data stale (telemetry frozen / wrong pin); ~49.6 V + rising temp = alive.
@@ -408,3 +418,14 @@ timeout 200 ms, keep-alive ping every 480 ms (timeout 1600 ms).
   power-cycle) on session exit. HW5: reboot is automatic after save.
 - Gate the whole feature on: disarmed, RX link idle-safe, esc_sensor_protocol ∈ {3, 4},
   halfduplex on.
+- RX-side boot catcher (DONE 0.9.536): the Scorpion's 4–8 s window is too tight for a
+  phone re-joining WiFi. The page's "Wake the ESC up" card POSTs `/api/esc/catch`, which
+  sets the one-shot NVS flag `esccatch`; on the next boot `escCatchTick()` (MspFc.h)
+  polls 217 every 250 ms from t=2.5 s until the FC answers or t=14 s, then clears
+  itself and logs "ESC catcher: settings captured by the FC" (GET `/api/esc/catch` →
+  `{armed,got,uptime_ms}`). Only ever runs with the flag — an un-armed 217 poll aborts
+  UNC mode and kills in-flight telemetry.
+- First live results (Goblin 770, Tribunus II 14S-200A fw v61, 2026-09-02): Mac poller at
+  250 ms + battery pull → blob 7 s after the RX came back (RX WiFi up at t=3.5 s). Blob
+  byte1 = 0x80 (reset-capable, writable). Round-trip write test (Power-up beeps flip →
+  verify → restore → verify) passed byte-exact, readback 1.3 s after each 218.

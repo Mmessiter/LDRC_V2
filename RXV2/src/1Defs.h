@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.535-esc-wire-switches";
+constexpr const char* FW_VERSION = "RXV2-0.9.536-esc-boot-catcher";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -342,6 +342,7 @@ constexpr const char* NVS_KEY_SIM_REV     = "simrev";  // 8-byte per-output reve
 constexpr const char* NVS_KEY_AP_ONLY     = "aponly";  // 1 = skip home-WiFi STA, run AP-only (flying field: no waiting on an out-of-range home network)
 constexpr const char* NVS_KEY_AP_AUTO     = "apauto";  // 1 = the AP-only above was set AUTOMATICALLY (home net not found), so the UI shows a notice + the user can undo it
 constexpr const char* NVS_KEY_CFG_REBOOT  = "cfgrb";
+constexpr const char* NVS_KEY_ESC_CATCH   = "esccatch"; // 1 = one-shot: poll MSP 217 for the first ~14 s of the next boot (Scorpion settings capture)
 constexpr const char* NVS_KEY_CRSF_HZ     = "crsfhz";
 constexpr const char* NVS_KEY_FC_TELEM    = "fctelem";
 constexpr const char* NVS_KEY_VBAT_PIN    = "vbatpin";  // uint8 GPIO of the battery divider (0=off; 6=D4, 9=D9 — the free radio-3 pins on 2-radio boards)

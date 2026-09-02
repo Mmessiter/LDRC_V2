@@ -48,13 +48,13 @@
 
     <div class="card ritual" id=ritual style="display:none">
         <h2>Wake the ESC up</h2>
-        <p>A Scorpion only listens for a programmer in its <b>first seconds after power-up</b>. The flight controller is now asking every 200 ms &mdash; give the ESC a fresh start:</p>
+        <p>A Scorpion only listens for a programmer in its <b>first 10 seconds after power-up</b>, then it goes deaf until the next power-up. The receiver is now <b>armed to catch it</b> on its next boot &mdash; give the ESC a fresh start:</p>
         <ol>
             <li><b>Unplug the flight battery.</b></li>
             <li>Wait <b>5 seconds</b>.</li>
             <li><b>Plug it back in</b> and leave this page open.</li>
         </ol>
-        <p class=ro>If the flight controller is on USB it keeps asking while the ESC boots. On battery only, it reboots too &mdash; that usually works as well, it just takes 10&ndash;15 s longer.</p>
+        <p class=ro id=ritualNote>The receiver reboots with the battery and asks the flight controller for the ESC settings itself during those first seconds, so this page only has to reconnect (10&ndash;20 s). If the page cannot reconnect, re-join the receiver&rsquo;s WiFi and press Read again &mdash; the settings stay available until the flight controller restarts.</p>
     </div>
 
     <div id=fields style="display:none">
@@ -230,9 +230,15 @@ async function tryRead(){
             setStatus('bad','An ESC answered, but not a Scorpion (signature '+b[0]+'). Hobbywing support is coming next.');
             $('connBtn').disabled=false; busy=false; return; }
     }catch(e){ /* expected until the FC has cached the params */ }
-    if(polls===6){ setStatus('info','No answer yet — the ESC needs a fresh start (see below). Keep this page open.'); $('ritual').style.display=''; }
-    if(polls>=150){ stopPolling(); $('ritual').style.display='none';
-        setStatus('bad','No answer from the ESC after 2 minutes. Is it powered, wired to the TLM pad, set to Scorpion telemetry with two-way talk on?');
+    if(polls===6){
+        // Arm the receiver's one-shot boot catcher: after the battery pull it
+        // polls MSP 217 itself inside the Scorpion's listen window, so the
+        // phone's WiFi rejoin speed no longer matters.
+        fetch('/api/esc/catch',{method:'POST'}).catch(()=>{});
+        setStatus('info','No answer yet — the ESC needs a fresh start (see below). Keep this page open.'); $('ritual').style.display='';
+    }
+    if(polls>=400){ stopPolling(); $('ritual').style.display='none';
+        setStatus('bad','No answer from the ESC after 3 minutes. Is it powered, wired to the TLM pad, set to Scorpion telemetry with two-way talk and pin swap on (First-time basics)?');
         $('connBtn').disabled=false; busy=false; }
 }
 async function connectEsc(){
@@ -246,7 +252,7 @@ async function connectEsc(){
     setStatus('info','Checking the flight controller…');
     if(!(await checkWiring())){ busy=false; $('connBtn').disabled=false; return; }
     setStatus('info','Asking the flight controller for the ESC settings…');
-    tryRead(); pollTimer=setInterval(tryRead,800);
+    tryRead(); pollTimer=setInterval(tryRead,450);
 }
 
 async function save(){
