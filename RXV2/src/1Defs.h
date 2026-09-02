@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.539-install-watchdog";
+constexpr const char* FW_VERSION = "RXV2-0.9.540-save-toast-visible";
 
 //*********************************************************************
 //  Auto-update manifest URLs
