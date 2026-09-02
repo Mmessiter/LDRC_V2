@@ -127,9 +127,11 @@ function setStatus(k,t){const s=$('status');s.className='banner '+k;s.textConten
 // Same verdict, shown above the Save bar (where the eyes are) for a few seconds.
 let toastTimer=null;
 function toast(k,t,ms){
-    const e=$('toast'); e.className='toast '+k; e.textContent=t; e.style.display='';
+    // display:'block' — NOT '' (that hands control back to the stylesheet's
+    // display:none, and the toast never showed; Malcolm 2026-09-02).
+    const e=$('toast'); e.className='toast '+k; e.textContent=t; e.style.display='block';
     if(toastTimer) clearTimeout(toastTimer);
-    toastTimer=setTimeout(()=>{ e.style.display='none'; },ms||6000);
+    toastTimer=setTimeout(()=>{ e.style.display='none'; },ms||8000);
 }
 function hexToBytes(h){const o=new Uint8Array(h.length/2);for(let i=0;i<o.length;i++)o[i]=parseInt(h.substr(i*2,2),16);return o;}
 function bytesToHex(b){let s='';for(let i=0;i<b.length;i++)s+=b[i].toString(16).padStart(2,'0');return s;}
