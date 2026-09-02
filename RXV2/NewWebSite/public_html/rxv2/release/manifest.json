@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.548-rotor-motor-labels",
+      "url": "https://messiter.com/rxv2/release/v0.9.548/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.548/littlefs.bin",
+      "fs_md5": "634d5f5cd99f6300797b6b5238971be6",
+      "notes": "Gear-ratio boxes are now labelled rotor : motor (and rotor : tail) so which way round is obvious at a glance (Malcolm's suggestion after the Goblin's backwards entry); the pinion/main-gear sub-labels and most of the explanatory text are gone - one line: rotor : motor, how many turns each makes, e.g. 1 : 10.2, or the teeth counts. Decimals are accepted and stored as the whole-number pair Rotorflight keeps (1 : 10.2 -> 10 : 102). Same on ESC-setup step 7 and First-time basics; shorter Backwards readouts. No firmware behaviour change."
+    },
+    {
       "name": "RXV2-0.9.547-two-stage-gear-help",
       "url": "https://messiter.com/rxv2/release/v0.9.547/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.547/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.537/littlefs.bin",
       "fs_md5": "647400682a853987da0512a697019164",
       "notes": "Scorpion ESC editor: Release now judges itself by effect - it retries the reset write and waits for the ESC's telemetry to come back (up to 20 s), reporting the live voltage - a lost acknowledgement no longer reads as a failed release. Idle status reads \"Press Read the ESC to start\"."
-    },
-    {
-      "name": "RXV2-0.9.536-esc-boot-catcher",
-      "url": "https://messiter.com/rxv2/release/v0.9.536/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.536/littlefs.bin",
-      "fs_md5": "a7f1782235fa42473a19d74f27d4bbdc",
-      "notes": "Scorpion ESC editor: the receiver now catches the ESC by itself. A Scorpion only listens for a programmer in its first 10 s after power-up, so when the editor sees no answer it arms the receiver; pull the battery, wait 5 s, plug in, and the receiver asks the flight controller for the ESC settings during those first seconds - the phone only has to reconnect. First live read + verified write on the Goblin 770 (Tribunus II 14S-200A)."
     }
   ]
 }
