@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.542-esc-page-one-text";
+constexpr const char* FW_VERSION = "RXV2-0.9.543-esc-catch-hardening";
 
 //*********************************************************************
 //  Auto-update manifest URLs

@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.543-esc-catch-hardening",
+      "url": "https://messiter.com/rxv2/release/v0.9.543/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.543/littlefs.bin",
+      "fs_md5": "4c637f8ff37b2f1ac9c4ef0aaa79d786",
+      "notes": "Scorpion ESC editor hardening (coffee-break review): preparing the receiver now forgets a stale 'flight controller holds the settings' flag (firmware), and the page only trusts that flag once the receiver has actually restarted since you pressed the button; a single silent flight-controller answer no longer flashes 'no link' (the FC reboots after Release); MSP settings polls are strictly one at a time so a silent FC cannot pile requests up on the receiver; the idle readiness probe can no longer run twice after the page is re-shown."
+    },
+    {
       "name": "RXV2-0.9.542-esc-page-one-text",
       "url": "https://messiter.com/rxv2/release/v0.9.542/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.542/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.532/littlefs.bin",
       "fs_md5": "988f5cda10721af273386194319eba5a",
       "notes": "FLIGHT-SAFETY: MSP waits (web/BLE config requests) now keep the radio and channel output running - an erroring request could starve the FC into rhythmic failsafe twitches (found live during the first Scorpion read attempt)."
-    },
-    {
-      "name": "RXV2-0.9.531-escprog-link",
-      "url": "https://messiter.com/rxv2/release/v0.9.531/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.531/littlefs.bin",
-      "fs_md5": "ecd315bdf3208107a22b8274556fadc1",
-      "notes": "The wizard's ESC page now links straight to the Scorpion readout (beta) - it was only in A la carte."
     }
   ]
 }
