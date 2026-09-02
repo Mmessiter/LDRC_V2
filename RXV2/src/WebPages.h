@@ -295,17 +295,25 @@ inline void handleFcWake() {
 // MspFc.h). The page calls this right before telling the user to pull the
 // battery; GET reports whether the last catch worked so the page can say
 // "settings captured" the moment it reconnects.
+// POST /api/esc/catch          → arm for the next power-on
+// POST /api/esc/catch?arm=0    → cancel (page's "Cancel" on the battery card)
 inline void handleEscCatchArm() {
-    prefs.putUChar(NVS_KEY_ESC_CATCH, 1);
-    events.add("ESC catcher armed for next boot");
+    const bool arm = !(server.hasArg("arm") && server.arg("arm") == "0");
+    prefs.putUChar(NVS_KEY_ESC_CATCH, arm ? 1 : 0);
+    if (!arm) escCatchArmed = false;
+    events.add(arm ? "ESC catcher armed for next power-on" : "ESC catcher cancelled");
     server.sendHeader("Cache-Control", "no-store");
     server.send(200, "application/json", "{\"ok\":true}");
 }
 
+// pending = the NVS flag (survives software reboots; consumed by a power-on),
+// armed/got = this boot's live state.
 inline void handleEscCatchStatus() {
-    char buf[96];
-    snprintf(buf, sizeof(buf), "{\"armed\":%s,\"got\":%s,\"uptime_ms\":%lu}",
-             escCatchArmed ? "true" : "false", escCatchGot ? "true" : "false", (unsigned long)millis());
+    char buf[112];
+    const bool pending = prefs.isKey(NVS_KEY_ESC_CATCH) && prefs.getUChar(NVS_KEY_ESC_CATCH, 0);
+    snprintf(buf, sizeof(buf), "{\"armed\":%s,\"got\":%s,\"pending\":%s,\"uptime_ms\":%lu}",
+             escCatchArmed ? "true" : "false", escCatchGot ? "true" : "false",
+             pending ? "true" : "false", (unsigned long)millis());
     server.sendHeader("Cache-Control", "no-store");
     server.send(200, "application/json", buf);
 }
@@ -2273,6 +2281,11 @@ inline void handleApiState() {
     j += ",\"ssid_custom\":"; j += (wifiCredsAreCustom() ? "true" : "false");
     j += ",\"ap_only\":"; j += ((prefs.isKey(NVS_KEY_AP_ONLY) && prefs.getBool(NVS_KEY_AP_ONLY, false)) ? "true" : "false");
     j += ",\"ap_auto\":"; j += (apAutoEnabled ? "true" : "false");   // AP-only was auto-enabled (home net not found)
+    // Raw STA status while joining (wl_status_t): 1 = home SSID not in
+    // range (the field) → the update pages stop waiting for WiFi and go
+    // straight to Bluetooth; 6 = seen but not admitted yet → worth waiting.
+    snprintf(buf, sizeof(buf), ",\"sta_status\":%d", netMode == NET_WIFI_CONNECTING ? (int)WiFi.status() : -1);
+    j += buf;
     j += "}";
 
     // --- rf -----------------------------------------------------------

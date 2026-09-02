@@ -1,6 +1,20 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.538-esc-catcher-safe-wifi-first",
+      "url": "https://messiter.com/rxv2/release/v0.9.538/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.538/littlefs.bin",
+      "fs_md5": "b4044bc0400a4afbc81f9326254be75e",
+      "notes": "Scorpion ESC editor: Save now confirms right above the button (\"Saved - read back from the ESC and confirmed\"). Boot catcher made safe: a stale arm survives software reboots but a transmitter heard at power-up cancels it (never freezes ESC telemetry at the field); Cancel button on the battery card. Updates prefer the receiver's own WiFi: if it is still joining, the app waits (up to 45 s) instead of pushing over Bluetooth - unless the home network is out of range."
+    },
+    {
+      "name": "RXV2-0.9.537-esc-release-by-effect",
+      "url": "https://messiter.com/rxv2/release/v0.9.537/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.537/littlefs.bin",
+      "fs_md5": "647400682a853987da0512a697019164",
+      "notes": "Scorpion ESC editor: Release now judges itself by effect - it retries the reset write and waits for the ESC's telemetry to come back (up to 20 s), reporting the live voltage - a lost acknowledgement no longer reads as a failed release. Idle status reads \"Press Read the ESC to start\"."
+    },
+    {
       "name": "RXV2-0.9.536-esc-boot-catcher",
       "url": "https://messiter.com/rxv2/release/v0.9.536/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.536/littlefs.bin",
@@ -69,20 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.527/littlefs.bin",
       "fs_md5": "ad8ee1f3ff5e7c3f8ea40f17997fad6e",
       "notes": "Computer page gains the stuck-flash rescue card: BOOT button + USB = DFU, full chip erase, flash again - and the charge-only-cable trap explained."
-    },
-    {
-      "name": "RXV2-0.9.526-fourth-task",
-      "url": "https://messiter.com/rxv2/release/v0.9.526/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.526/littlefs.bin",
-      "fs_md5": "5585f014310cb4107280f9c91dcf9a98",
-      "notes": "The computer session now lists FOUR tasks: firmware, serial port, select CRSF (new - without it there is no communication), Telemetry ON."
-    },
-    {
-      "name": "RXV2-0.9.525-help-audit",
-      "url": "https://messiter.com/rxv2/release/v0.9.525/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.525/littlefs.bin",
-      "fs_md5": "69f5ebc12571c7859c49d91874a16bba",
-      "notes": "Help screens audited against the current behaviour: wizard step numbers, alphabetical A la carte, selector bars with nothing to drag, divider-based Arm/Rescue, no x on Bank/Rates, Hello-wave in Receiver settings, selector cards on Switches."
     }
   ]
 }

@@ -900,10 +900,30 @@ async function doFirmwareUpdate(url, fsUrl, name) {
     // FASTEST FIRST (Malcolm 2026-08-06: "Still bluetooth!!" — this banner
     // path missed the fast lane that firmware.html got): receiver WiFi up →
     // chip-pull at WiFi speed; only genuinely offline pays Bluetooth.
+    // Still joining its network (just powered up, router slow to re-admit it)?
+    // Wait for it — up to 45 s is still far quicker than a Bluetooth push
+    // (Malcolm 2026-09-02: "over Bluetooth – but it should be Wi-Fi, of course").
     let chipHasInternet = false;
     try {
-        const st = await (await fetch('/api/state.json', { cache: 'no-store' })).json();
-        chipHasInternet = !!(st.net && st.net.mode === 'WiFi up');
+        const t0 = Date.now();
+        let misses = 0;
+        for (;;) {
+            // One dropped status read must not send a WiFi-capable receiver
+            // down the Bluetooth path (Malcolm 2026-09-02: "sometimes go over
+            // BLE when they could easily go over Wi-Fi") — retry a few times.
+            let st = null;
+            try { st = await (await fetch('/api/state.json', { cache: 'no-store' })).json(); } catch (e) {}
+            if (!st) { if (++misses >= 4) break; await new Promise(r => setTimeout(r, 1500)); continue; }
+            misses = 0;
+            const mode = st.net ? st.net.mode : '';
+            chipHasInternet = mode === 'WiFi up';
+            // sta_status 1 = home network not in range (the field): don't wait.
+            const joining = (mode === 'connecting WiFi' && st.net.sta_status !== 1) || mode === 'waiting for TX' || mode === 'init';
+            if (chipHasInternet || !joining || Date.now() - t0 > 45000) break;
+            const sl = document.getElementById('__slow');
+            if (sl) sl.textContent = 'Waiting for the receiver’s WiFi (' + Math.round((Date.now() - t0) / 1000) + ' s) — faster than Bluetooth…';
+            await new Promise(r => setTimeout(r, 2000));
+        }
     } catch (e) {}
     try {
         if (chipHasInternet) throw new Error('receiver WiFi is faster');
