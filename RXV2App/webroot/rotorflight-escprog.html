@@ -170,7 +170,7 @@ const FIELDS=[
     {id:'govi', off:72, kind:'num', div:100,  min:1.5, max:2.5,  dp:2, label:'Governor trim (I)', wide:true},
 ];
 let blob=null, orig={}, pollTimer=null, polls=0, busy=false;
-let escState='probing', probeTimer=null, probeHoldUntil=0;
+let escState='probing', probeTimer=null, probeHoldUntil=0, fcMisses=0;
 
 function fieldWire(f,b){ return f.wide?u32(b,f.off):u16(b,f.off); }
 function fieldText(f,wire){ return f.kind==='sel' ? (f.opts[wire]||('value '+wire)) : (wire/f.div).toFixed(f.dp)+(f.unit||''); }
@@ -258,13 +258,20 @@ function notScorpion(b){
     setStatus('bad','An ESC answered, but not a Scorpion (signature '+b[0]+'). Hobbywing support is coming next.',60000);
     endRead();
 }
+let reading=false;
 async function tryRead(){
-    polls++;
+    // One request in flight at a time: a silent FC makes each ask take up to
+    // ~1.2 s, and the 450 ms interval would otherwise pile requests up on
+    // the receiver (it serves them one by one, stalling everything else).
+    if(reading) return;
+    reading=true; polls++;
     try{
         const b=hexToBytes(await LDRC.msp(217,'',1));
         if(b.length>=84&&b[0]===0x53){ gotBlob(b); return; }
         if(b.length&&b[0]!==0x53){ notScorpion(b); return; }
     }catch(e){ /* expected until the FC has cached the params */ }
+    finally{ reading=false; }
+    if(!busy) return;                                       // cancelled / finished meanwhile
     if(polls>=6){
         // The FC answers at once when it holds the settings; ~3 s of silence
         // means the ESC has to be restarted — hand over to the receiver's catcher.
@@ -302,7 +309,11 @@ async function waitForCatch(){
         const c=await catchStatus();
         if(!busy) return;
         if(!c){ note('Receiver restarting — waiting for it to come back (10–60 s)…'); continue; }
-        if(c.got){                                          // the FC holds the settings — fetch them
+        // "FC holds the settings" only counts once the receiver has restarted
+        // since we started waiting (its uptime is shorter than our wait) — a
+        // flag left over from an earlier session must not trigger a read now.
+        const restarted=c.uptime_ms<Date.now()-t0;
+        if(c.got&&restarted){                               // the FC holds the settings — fetch them
             $('ritual').style.display='none';
             setStatus('info','Caught — reading the settings…');
             for(let i=0;i<10&&busy;i++){
@@ -317,7 +328,7 @@ async function waitForCatch(){
             endRead(); return;
         }
         if(c.armed){ note('Power-up seen — the receiver is asking the flight controller for the settings…'); continue; }
-        if(c.pending){ note('Prepared — waiting for the battery restart…'); continue; }
+        if(c.pending||c.got){ note('Prepared — waiting for the battery restart…'); continue; }   // (got here = stale flag)
         // Not armed, not pending, nothing caught: the catch ran and ended empty.
         $('ritual').style.display='none';
         if(c.result==='tx')
@@ -350,7 +361,8 @@ async function catchStatus(){
     try{ const r=await fetch('/api/esc/catch',{cache:'no-store'}); if(!r.ok) return null; return await r.json(); }
     catch(e){ return null; }
 }
-// MSP 139: null = the FC did not answer; else volts (0 = telemetry frozen / none yet)
+// MSP_MOTOR_TELEMETRY (139): u8 count, then per motor u32 rpm, u16 error, u16 volts (mV) …
+// null = the FC did not answer; else volts (0 = telemetry frozen / none yet)
 async function escTelem(){
     try{ const b=hexToBytes(await LDRC.msp(139,'',1)); return b.length>=9 ? (b[7]|(b[8]<<8))/1000 : 0; }
     catch(e){ return null; }
@@ -397,7 +409,10 @@ async function probe(){
     if(c.armed){ applyState('catching'); return; }
     const v=await escTelem();
     if(busy||blob) return;
-    if(v===null){ applyState('nolink'); return; }
+    // One silent answer is not a lost link (the FC reboots after Release; a
+    // busy FC skips a request) — say "no link" only when it stays silent.
+    if(v===null){ if(++fcMisses>=2) applyState('nolink'); return; }
+    fcMisses=0;
     if(v>5){
         if(c.poweron&&c.uptime_ms<10000) applyState('listening',Math.max(1,Math.ceil((10000-c.uptime_ms)/1000)));
         else applyState('deaf');
@@ -405,15 +420,19 @@ async function probe(){
     }
     applyState(c.got?'cached':'ready');
 }
-async function probeLoop(){
+// One loop at a time: a loop whose probe is still in flight when the page is
+// re-shown (or a read ends) must not be joined by a second one — the
+// generation number retires it.
+let probeGen=0;
+async function probeLoop(gen){
     probeTimer=null;
     if(!document.hidden) await probe();
-    if(busy||blob) return;
+    if(gen!==probeGen||busy||blob) return;
     const fast=escState==='catching'||escState==='listening';
-    probeTimer=setTimeout(probeLoop,fast?1000:4000);
+    probeTimer=setTimeout(()=>probeLoop(gen),fast?1000:4000);
 }
-function startProbing(){ stopProbing(); probeLoop(); }
-function stopProbing(){ if(probeTimer){ clearTimeout(probeTimer); probeTimer=null; } }
+function startProbing(){ stopProbing(); probeLoop(probeGen); }
+function stopProbing(){ probeGen++; if(probeTimer){ clearTimeout(probeTimer); probeTimer=null; } }
 
 async function connectEsc(){
     if(busy) return;
@@ -476,11 +495,8 @@ async function save(){
     }
 }
 
-// MSP_MOTOR_TELEMETRY (139): u8 count, then per motor u32 rpm, u16 error, u16 volts (mV) …
-async function escVolts(){
-    try{ const b=hexToBytes(await LDRC.msp(139,'',1)); return b.length>=9 ? (b[7]|(b[8]<<8))/1000 : 0; }
-    catch(e){ return 0; }
-}
+// Volts from the live ESC telemetry (0 when frozen or the FC is silent).
+async function escVolts(){ return (await escTelem())||0; }
 async function releaseEsc(){
     if(busy||!blob){ if(!blob) setStatus('bad','Nothing read yet.'); return; }
     if(LDRC.dirty && !(await LDRC.confirmLoseChanges('releasing the ESC'))) return;

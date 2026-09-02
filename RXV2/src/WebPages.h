@@ -312,7 +312,13 @@ inline void handleEscCatchArm() {
     const bool arm = !(server.hasArg("arm") && server.arg("arm") == "0");
     prefs.putUChar(NVS_KEY_ESC_CATCH, arm ? 1 : 0);
     if (!arm) { escCatchArmed = false; escCatchResult = "cancelled"; }
-    else escCatchResult = "none";
+    else {
+        // A fresh catch starts clean: a "FC holds the settings" flag left
+        // over from an earlier session (FC rebooted without Release) would
+        // otherwise make the page read 217 before the battery restart.
+        escCatchResult = "none";
+        escCatchGot = false;
+    }
     events.add(arm ? "ESC catcher armed for next power-on" : "ESC catcher cancelled");
     server.sendHeader("Cache-Control", "no-store");
     server.send(200, "application/json", "{\"ok\":true}");
