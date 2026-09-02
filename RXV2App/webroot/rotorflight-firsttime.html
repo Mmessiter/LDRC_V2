@@ -89,6 +89,8 @@ h2 .hint{font-weight:400;font-size:.7em;color:#5d7a8c;display:block;margin-top:.
                 <option value=10>FLYROTOR</option><option value=11>Graupner</option>
                 <option value=12>XDFly</option><option value=13>Record</option>
             </select></div>
+        <div class=fRow><div class=lab><b data-help="Lets the flight controller TALK to the ESC on the telemetry wire as well as listen - needed to read and change Scorpion settings from this app. Harmless to leave on. (Rotorflight: esc_sensor_halfduplex)">Two-way ESC talk (half-duplex)</b></div><input type=checkbox id=e_half></div>
+        <div class=fRow><div class=lab><b data-help="On boards whose ESC telemetry pad is the UART's RX pin (Nexus X, for one) the flight controller must send on that same pin. Turn on if two-way talk is on but the ESC never answers. (Rotorflight: esc_sensor_pinswap)">ESC pin swap</b></div><input type=checkbox id=e_swap></div>
         <button class=saveBtn id=motorSave onclick="saveMotor()">Save motor &amp; ESC</button>
         <div id=motorMsg class=sMsg></div>
     </div>
@@ -240,6 +242,7 @@ async function loadEsc(){
     if(b.length<14)throw new Error('ESC sensor config short ('+b.length+'B)');
     escRaw=b.slice(0,14);
     $('e_proto').value=b[0]<=13?b[0]:0;
+    $('e_half').checked=!!b[1]; $('e_swap').checked=!!b[10];
 }
 async function saveMotor(){
     if(await armCheck()){ flash('motorMsg','⚠️ Refused — the model is ARMED'); return; }
@@ -257,13 +260,15 @@ async function saveMotor(){
     wrU16(w,20,parseInt($('m_mgN').value||'1')); wrU16(w,22,parseInt($('m_mgD').value||'1'));
     wrU16(w,24,parseInt($('m_tgN').value||'1')); wrU16(w,26,parseInt($('m_tgD').value||'1'));
     const e=new Uint8Array(escRaw); e[0]=parseInt($('e_proto').value);
-    const wantProto=w[8], wantPoles=w[12], wantEsc=e[0];
+    e[1]=$('e_half').checked?1:0; e[10]=$('e_swap').checked?1:0;
+    const wantProto=w[8], wantPoles=w[12], wantEsc=e[0], wantHalf=e[1], wantSwap=e[10];
     try{
         await LDRC.msp(222,bytesToHex(w));
         await LDRC.msp(216,bytesToHex(e));
         await LDRC.msp(250);
         await loadMotor(); await loadEsc();
-        const ok = motorRaw[9]===wantProto && motorRaw[13]===wantPoles && escRaw[0]===wantEsc;
+        const ok = motorRaw[9]===wantProto && motorRaw[13]===wantPoles && escRaw[0]===wantEsc
+                   && escRaw[1]===wantHalf && escRaw[10]===wantSwap;
         flash('motorMsg', ok?'✅ Saved & verified — restart to apply':'⚠️ FC adjusted the values — re-read');
         needReboot();
     }catch(e2){ flash('motorMsg','⚠️ Failed: '+e2.message); }

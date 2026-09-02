@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.535-esc-wire-switches",
+      "url": "https://messiter.com/rxv2/release/v0.9.535/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.535/littlefs.bin",
+      "fs_md5": "5477a3bc1c61fc7a53de883f0a24c7b8",
+      "notes": "First-time basics: new Two-way ESC talk (half-duplex) and ESC pin swap switches next to the ESC telemetry protocol - the Scorpion editor needs both on a Nexus X (its ESC pad is the UART RX pin). Verified-write like the rest of the page."
+    },
+    {
       "name": "RXV2-0.9.534-escprog-route",
       "url": "https://messiter.com/rxv2/release/v0.9.534/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.534/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.524/littlefs.bin",
       "fs_md5": "79f9f87c7230d8ee767c21410718b736",
       "notes": "A la carte subtitle says 'In alphabetical order' (the old 'roughly in setup order' was no longer true)."
-    },
-    {
-      "name": "RXV2-0.9.523-alacarte-alpha",
-      "url": "https://messiter.com/rxv2/release/v0.9.523/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.523/littlefs.bin",
-      "fs_md5": "43ff46922552e3b2e78f2e8fa14426eb",
-      "notes": "A la carte menu sorted alphabetically - random-access choices are easiest to find in ABC order."
     }
   ]
 }

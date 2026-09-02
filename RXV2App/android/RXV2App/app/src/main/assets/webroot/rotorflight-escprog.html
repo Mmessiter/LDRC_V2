@@ -205,7 +205,7 @@ function sameBytes(a,b){ if(a.length!==b.length)return false; for(let i=0;i<a.le
 async function isArmed(){ let st=null; try{ st=await LDRC.fetchState(); }catch(e){} return !!(st&&st.rf&&st.rf.armed); }
 
 async function checkWiring(){
-    // MSP 123: protocol, halfDuplex, ... pinSwap at byte 9. Two-way talk is a must.
+    // MSP 123: protocol, halfDuplex, u16 hz, u16 offset, u32 legacy, pinSwap at byte 10. Two-way talk is a must.
     try{
         const b=hexToBytes(await LDRC.msp(123,'',2));
         if(b.length>=2){

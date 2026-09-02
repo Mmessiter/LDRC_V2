@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.534-escprog-route";
+constexpr const char* FW_VERSION = "RXV2-0.9.535-esc-wire-switches";
 
 //*********************************************************************
 //  Auto-update manifest URLs
