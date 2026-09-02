@@ -10,7 +10,9 @@
 <title>First-time basics &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=179">
 <script src="/app.js?v=187" defer></script>
+<script src="/gear.js?v=1" defer></script>
 <style>
+.gHintRow{font-size:.84em;line-height:1.35;margin:-.15em 0 .45em}
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
 .banner.good{background:#a8d29a;color:#2a4d1f}
@@ -74,10 +76,12 @@ h2 .hint{font-weight:400;font-size:.7em;color:#5d7a8c;display:block;margin-top:.
             </select></div>
         <div class=fRow><div class=lab><b data-help="The number of magnets in the motor bell - the flight controller needs it to turn electrical RPM into true motor RPM. Count them or check the motor spec sheet. (Rotorflight: motor_poles)">Motor pole count</b></div><input id=m_poles type=number min=2 max=64 step=2></div>
         <div class=fRow><div class=lab><b data-help="RPM carried straight back on the ESC signal wire - DShot ESCs only. (Rotorflight: dshot_bidir)">DShot RPM telemetry</b></div><input type=checkbox id=m_bidir></div>
-        <div class=fRow><div class=lab><b data-help="Motor pinion teeth to main gear teeth - together with pole count this gives the true head speed the governor governs. (Rotorflight: main_rotor_gear_ratio)">Main gear ratio</b></div>
+        <div class=fRow><div class=lab><b data-help="Motor pinion (or pulley) teeth : main gear (or pulley) teeth, pinion FIRST - e.g. 10 : 102. Together with the pole count this gives the true head speed the governor holds and the transmitter shows. Backwards (10 : 1) and the governor sits at minimum throttle. (Rotorflight: main_rotor_gear_ratio)">Main gear ratio</b><span>pinion : main gear</span></div>
             <span style="white-space:nowrap"><input id=m_mgN type=number min=1 max=50000 style="width:4.5em"> : <input id=m_mgD type=number min=1 max=50000 style="width:4.5em"></span></div>
-        <div class=fRow><div class=lab><b data-help="Tail drive to main shaft ratio - lets the flight controller know the tail rotor speed. (Rotorflight: tail_rotor_gear_ratio)">Tail gear ratio</b></div>
+        <div class=gHintRow id=m_mgHint></div>
+        <div class=fRow><div class=lab><b data-help="Head : tail - how many turns the tail rotor makes per one main-rotor turn, usually 4 to 5 (e.g. 1 : 4 or 10 : 47). Only the tail-speed readout and tail vibration filters use it. (Rotorflight: tail_rotor_gear_ratio)">Tail gear ratio</b><span>head : tail</span></div>
             <span style="white-space:nowrap"><input id=m_tgN type=number min=1 max=50000 style="width:4.5em"> : <input id=m_tgD type=number min=1 max=50000 style="width:4.5em"></span></div>
+        <div class=gHintRow id=m_tgHint></div>
         <h2 style="margin-top:.8em">ESC telemetry wire <span class=hint>which brand&rsquo;s telemetry language the ESC speaks (ESC sensor)</span></h2>
         <div class=fRow><div class=lab><b data-help="This is where your ESC BRAND goes: Scorpion, Kontronik, Hobbywing, YGE and so on - each speaks its own telemetry language on the one wire. (Rotorflight: esc_sensor_protocol)">ESC telemetry protocol</b></div>
             <select id=e_proto>
@@ -144,6 +148,7 @@ const wrU16=(b,o,v)=>{v=Math.max(0,Math.min(65535,Math.round(v)));b[o]=v&0xff;b[
 function setStatus(k,t){const s=$('status');s.className='banner '+k;s.textContent=t;}
 function flash(id,t){$(id).textContent=t;setTimeout(()=>$(id).textContent='',6000);}
 let armed=false, motorRaw=null, escRaw=null, battRaw=null, featMask=0;
+let gearHintM=null, gearHintT=null;   // repaint functions from LDRCGear.attachHint
 
 function needReboot(){ $('rbBanner').style.display=''; }
 async function rebootFc(){
@@ -235,6 +240,7 @@ async function loadMotor(){
     $('m_poles').value=b[13];
     $('m_mgN').value=rdU16(b,21); $('m_mgD').value=rdU16(b,23);
     $('m_tgN').value=rdU16(b,25); $('m_tgD').value=rdU16(b,27);
+    if(gearHintM)gearHintM(); if(gearHintT)gearHintT();
     if(![0,1,5,6,7,10].includes(b[9])){ const o=document.createElement('option');o.value=b[9];o.textContent='Protocol '+b[9];$('m_proto').appendChild(o);$('m_proto').value=b[9]; }
 }
 async function loadEsc(){
@@ -247,6 +253,13 @@ async function loadEsc(){
 async function saveMotor(){
     if(await armCheck()){ flash('motorMsg','⚠️ Refused — the model is ARMED'); return; }
     if(!motorRaw||!escRaw){ flash('motorMsg','⚠️ Read failed — reload the page'); return; }
+    // Backwards gear ratio = governor at minimum throttle (the Goblin, 2026-09-02). Say so before writing it.
+    if(window.LDRCGear){
+        const vm=LDRCGear.verdict('main',$('m_mgN').value,$('m_mgD').value);
+        if(vm.bad && !(await LDRC.confirm(vm.text+'\n\nSave it anyway?',{title:'Gear ratio looks wrong',icon:'⚠️',yes:'Save anyway',kind:'warn'}))) return;
+        const vt=LDRCGear.verdict('tail',$('m_tgN').value,$('m_tgD').value);
+        if(vt.bad && !(await LDRC.confirm(vt.text+'\n\nSave it anyway?',{title:'Tail ratio looks wrong',icon:'⚠️',yes:'Save anyway',kind:'warn'}))) return;
+    }
     const r=motorRaw, w=new Uint8Array(28);
     w.set(r.slice(0,6),0);            // min/max throttle + mincommand unchanged
     w[6]=r[7];                        // compat pole byte (FC skips it)
@@ -269,6 +282,9 @@ async function saveMotor(){
         await loadMotor(); await loadEsc();
         const ok = motorRaw[9]===wantProto && motorRaw[13]===wantPoles && escRaw[0]===wantEsc
                    && escRaw[1]===wantHalf && escRaw[10]===wantSwap;
+        // The FC now sends true head speed — an old receiver-side divisor would divide it again.
+        try{ const st=await LDRC.fetchState();
+             if(st&&st.rf&&st.rf.gear_ratio!=null&&Math.abs(st.rf.gear_ratio-1)>0.001) await fetch('/api/gear?ratio=1',{method:'POST'}); }catch(e){}
         flash('motorMsg', ok?'✅ Saved & verified — restart to apply':'⚠️ FC adjusted the values — re-read');
         needReboot();
     }catch(e2){ flash('motorMsg','⚠️ Failed: '+e2.message); }
@@ -376,7 +392,13 @@ async function load(){
 // DOMContentLoaded, never top-level: deferred app.js must define LDRC first
 // (the demo's instant cache exposed the race - "Can't find variable: LDRC",
 // Malcolm 2026-08-31).
-document.addEventListener('DOMContentLoaded', load);
+document.addEventListener('DOMContentLoaded', ()=>{
+    if(window.LDRCGear){                 // plain-English readouts under the ratio boxes (gear.js)
+        gearHintM=LDRCGear.attachHint('m_mgN','m_mgD','m_mgHint','main');
+        gearHintT=LDRCGear.attachHint('m_tgN','m_tgD','m_tgHint','tail');
+    }
+    load();
+});
 </script>
 <template id=helpContent><h2>First-time basics</h2>
 <p>The one-off settings for a brand-new flight controller, in plain English (Rotorflight&rsquo;s name for each is in brackets):</p>

@@ -352,6 +352,20 @@ inline void handleRotorflightEsc() {
     server.send(503, "text/plain", "/rotorflight-esc.html missing — uploadfs the data/ folder");
 }
 
+// Gear ratio — edits the FC's own main/tail ratio (MSP 131/222) via gear.js.
+// The page existed in data/ since 0.9.5xx but never had a route: the
+// à-la-carte link 404'd on the receiver (found 2026-09-02, the Goblin's
+// backwards-ratio day).
+inline void handleRotorflightGear() {
+    if (serveLittleFsFile("/rotorflight-gear.html", "text/html")) return;
+    server.send(503, "text/plain", "/rotorflight-gear.html missing — uploadfs the data/ folder");
+}
+
+inline void handleGearJs() {
+    if (serveLittleFsFile("/gear.js", "application/javascript")) return;
+    server.send(503, "text/plain", "/gear.js not in LittleFS — uploadfs the data/ folder");
+}
+
 inline void handleRotorflightComputer() {
     if (serveLittleFsFile("/rotorflight-computer.html", "text/html")) return;
     server.send(503, "text/plain", "/rotorflight-computer.html missing — uploadfs the data/ folder");
@@ -1818,7 +1832,8 @@ inline void handleFailsafeClear() {
 }
 
 //*********************************************************************
-//  POST /api/gear?ratio=<float>  — set the head-speed gear ratio
+//  POST /api/gear?ratio=<float>  — extra head-speed divisor (normally 1:
+//  Rotorflight already sends head speed; gear.js resets this to 1 on save)
 //*********************************************************************
 inline void handleVbatSet() {
     if (server.hasArg("pin")) {
@@ -2770,6 +2785,7 @@ inline void registerWebRoutes() {
     server.on("/rotorflight-wiring",    handleRotorflightWiring);
     server.on("/rotorflight-computer",  handleRotorflightComputer);
     server.on("/rotorflight-esc",       handleRotorflightEsc);
+    server.on("/rotorflight-gear",      handleRotorflightGear);
     server.on("/rotorflight-escprog",   handleRotorflightEscProg);
     server.on("/api/fc/wake", HTTP_POST, handleFcWake);
     server.on("/api/esc/catch", HTTP_POST, handleEscCatchArm);
@@ -2806,6 +2822,7 @@ inline void registerWebRoutes() {
     // Shared assets
     server.on("/style.css",         handleStyleCss);
     server.on("/app.js",            handleAppJs);
+    server.on("/gear.js",           handleGearJs);
     server.on("/three.min.js",      handleThreeJs);
     server.on("/flying-field.svg",  handleFlyingFieldSvg);
     server.on("/flying-field.jpg",  handleFlyingFieldJpg);

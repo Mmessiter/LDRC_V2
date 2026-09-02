@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.546-gear-ratio-on-the-fc",
+      "url": "https://messiter.com/rxv2/release/v0.9.546/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.546/littlefs.bin",
+      "fs_md5": "2ab6bfc3e9b66c639f22f04dd14b4415",
+      "notes": "Gear ratio now lives on the flight controller: the Gear-ratio page and ESC-setup step 7 edit Rotorflight's own main/tail ratio (pinion : main gear, with a plain-English readout that turns red when it is backwards), save + read back, offer the restart Rotorflight needs, and reset the receiver's old divisor to 1. First-time basics gets the same readout and a warning before saving a backwards ratio. Found on the Goblin: 10 : 1 entered backwards made the governor sit at minimum throttle (every bank the same speed)."
+    },
+    {
       "name": "RXV2-0.9.545-release-in-view",
       "url": "https://messiter.com/rxv2/release/v0.9.545/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.545/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.535/littlefs.bin",
       "fs_md5": "5477a3bc1c61fc7a53de883f0a24c7b8",
       "notes": "First-time basics: new Two-way ESC talk (half-duplex) and ESC pin swap switches next to the ESC telemetry protocol - the Scorpion editor needs both on a Nexus X (its ESC pad is the UART RX pin). Verified-write like the rest of the page."
-    },
-    {
-      "name": "RXV2-0.9.534-escprog-route",
-      "url": "https://messiter.com/rxv2/release/v0.9.534/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.534/littlefs.bin",
-      "fs_md5": "6dcc5ab19d8a66928c1ead05ff214d5a",
-      "notes": "Fix: the ESC settings page was never routed on the receiver itself (404 since 0.9.530 - only the phone apps served it). Ships the same Scorpion editor as 0.9.533."
     }
   ]
 }
