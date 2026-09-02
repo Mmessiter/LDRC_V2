@@ -82,7 +82,7 @@
         <p class=why>Without it the transmitter shows raw motor RPM &mdash; about ten times too high. (Rotorflight&rsquo;s own gear ratio is separate and feeds the governor; set both.)</p>
     </div>
 
-    <a class="btn btn-fw" href="/rotorflight-escprog" style="background:#b3703c"><span class=ico>&#128268;</span>Read the ESC from here (Scorpion, beta) &mdash; no cables</a>
+    <a class="btn btn-fw" href="/rotorflight-escprog" style="background:#b3703c"><span class=ico>&#128268;</span>Read &amp; change the ESC from here (Scorpion, beta) &mdash; no cables</a>
 
     <p>Done? Back in the wizard, First-time basics picks the ESC&rsquo;s brand for telemetry, and the Governor step sets the head speeds.</p>
 
@@ -156,7 +156,7 @@ document.getElementById('gearSave').addEventListener('click',async()=>{
 }catch(e){} })();
 </script>
 <template id=helpContent><h2>ESC setup</h2>
-<p>Helicopter ESCs keep their own settings inside themselves, and only their own programmer can change them &mdash; Scorpion (Sproto / phone app), Hobbywing (LCD box / app), YGE (USB adapter), Kontronik (ProgDisc / app). Rotorflight can read the ESC&rsquo;s telemetry and drive its throttle, but cannot reach inside it. So this is the one step that happens in a different app.</p>
+<p>Helicopter ESCs keep their own settings inside themselves, and only their own programmer can change them &mdash; Scorpion (Sproto / phone app), Hobbywing (LCD box / app), YGE (USB adapter), Kontronik (ProgDisc / app). Rotorflight can read the ESC&rsquo;s telemetry and drive its throttle. For a <b>Scorpion Tribunus</b> it can also reach inside through the telemetry wire &mdash; the <b>Read &amp; change the ESC</b> button below does that with no cables. Other brands still need their own programmer.</p>
 <ul>
 <li><b>One governor only.</b> Rotorflight&rsquo;s governor is excellent and lives in the tuning wizard; the ESC&rsquo;s must then be off / external. Choose the ESC&rsquo;s instead and Rotorflight&rsquo;s must be off.</li>
 <li><b>Telemetry protocol</b> in the ESC and the <b>brand</b> chosen in First-time basics must match, or the data wire stays silent.</li>
