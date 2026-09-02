@@ -115,6 +115,34 @@ Any other cmd value → `tribParamCommit`/`pl5ParamCommit` returns false → MSP
 - ESC must be powered and its telemetry link alive. FC-side boot delays before any ESC
   comms: Scorpion 4 s (`TRIB_REQ_BOOT_DELAY 4000`, line 2757), HW5 5 s
   (`PL5_BOOT_DELAY 5000`, line 2313).
+- **Nexus X wiring (verified on the Goblin 770, 2026-09-02)**: the ESC telemetry pad is
+  **UART2 RX** (A03); UART2 TX (A02) is the RPM/FREQ input with no TX resource, so the
+  half-duplex single wire MUST use `esc_sensor_pinswap = ON` (MSP 123 byte 9) or the FC
+  talks into the RPM pin and the ESC never hears it (that was yesterday's silent failure).
+  Rotorflight's own Nexus Scorpion preset is exactly protocol 4 + halfduplex 1 + pinswap 1.
+  MSP 123 on the Goblin now reads `0401C80000000000000001000000`.
+- **ESC listen window**: once the ESC is streaming UNC telemetry the FC's pending settings
+  read is only re-sent after >1200 ms of silence (UNC frames arrive ~1 Hz), so the FC
+  effectively never gets into the Scorpion's power-up listen window unless the ESC is
+  power-cycled while the FC is already asking. The ritual: FC on USB (or just the
+  flight battery), unplug the battery, wait 5 s, plug it back in — the page keeps
+  polling 217 for 2 minutes and shows these steps after ~5 s of no answer.
+- **ESC liveness probe**: MSP 139 (MOTOR_TELEMETRY) → u8 count, per motor u32 rpm,
+  u16 errRatio, u16 escVoltage mV, u16 escCurrent, u16 mAh, u16 temp ×0.1 °C, u16 temp2.
+  Voltage 0 = ESC data stale (telemetry frozen / wrong pin); ~49.6 V + rising temp = alive.
+- **One programming session per FC boot**: the reset command (218, 0x80) clears
+  `paramMspActive`, `tribInvalidParams`, `tribDirtyParams` and puts the UNC state machine
+  back to INACTIVE but leaves `paramPayloadLength` set — 217 keeps answering the stale
+  cache and a later 218 save never executes (no ranges are ever re-read). The page's
+  Release therefore sends 218/0x80, waits 1.5 s, then MSP 68 (FC reboot).
+- **RXV2 transport**: an MSP request body longer than one CRSF frame (57 bytes) must be
+  chunked exactly as `handleMspFrame` expects — first frame status `0x30` (v1 + start,
+  seq 0) with size+cmd+data, later frames status `0x20|seq` with data only. RXV2 <0.9.533
+  silently dropped any payload over 62 bytes, so the 84-byte 218 never left the receiver.
+  The FC's CRSF MSP inbox is 128 bytes (2 chunks of the 84-byte blob fit, 90 bytes).
+- **FC "MSP error" replies** come back as `[status|0x80][1][cmd][2]`; RXV2 ≥0.9.533
+  returns 502 "rejected fn N" in ~100 ms instead of a 1200 ms 504 timeout — a 1 Hz
+  erroring 217 poll used to starve the channel stream (swash twitch, 0.9.532 fix).
 
 ---
 
@@ -222,6 +250,13 @@ telemetry poll `TRIB_FRAME_PERIOD 100` ms.
 - `paramMspActive` never times out (only the reset command clears it). Once the app has
   touched 217, Scorpion telemetry stays frozen until ESC reset/power-cycle — always
   finish a programming session with the reset command or tell the user to power-cycle.
+- On a save (218 cmd 0) with any dirty range the FC sets `paramPayloadLength = 0` until
+  every range has been written and re-read — 217 errors during the write, then answers
+  again with the ESC's real values. The page polls 217 for up to 25 s and flags any field
+  the ESC quietly kept (out-of-range clamps happen inside the ESC).
+- Editor UI ranges (page `rotorflight-escprog.html`): delay 0–5 s, min V 0–70, max T
+  0–400 °C, max A 0–300, cut-off 0–100 %, max Ah 0–60, soft/run-up 0–60 s, bail-out
+  0–65.5 s, gov P 0.30–1.80, gov I 1.50–2.50. Telemetry protocol is display-only.
 
 ---
 

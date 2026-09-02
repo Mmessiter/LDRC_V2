@@ -60,6 +60,7 @@ inline volatile uint8_t  mspWaitFunction = 0xFF;     // 0xFF = nothing pending
 inline uint8_t           mspWaitRespBuf[640] = {0};   // jumbo-capable (MSP_ADJUSTMENT_RANGES = 588 B)
 inline volatile uint16_t mspWaitRespLen = 0;
 inline volatile bool     mspWaitRespReady = false;
+inline volatile bool     mspWaitRespError = false;   // FC answered "MSP error" for the awaited function
 
 // Async response capture for the non-blocking TX-parameter state machine
 // (TxParams.h). Unlike mspRequestAndWait (which blocks), the TX-param path
@@ -89,29 +90,46 @@ constexpr uint8_t CRSF_TYPE_MSP_RSP = 0x7B;
 //  Build + send an MSP v1 request, wrapped in CRSF type 0x7A
 //*********************************************************************
 
-inline void mspSendRequest(uint8_t function, const uint8_t* payload = nullptr, uint8_t payloadLen = 0) {
-    // MSP v1 body inside CRSF is just: size(1) function(1) payload(N).
-    // The inner XOR checksum is NOT transmitted — CRSF's CRC8 protects it.
-    uint8_t mspBody[64];
-    if (payloadLen > sizeof(mspBody) - 2) return;
-    mspBody[0] = payloadLen;
-    mspBody[1] = function;
-    for (uint8_t i = 0; i < payloadLen; ++i) mspBody[2 + i] = payload[i];
-    uint8_t mspBodyLen = 2 + payloadLen;
-
-    // CRSF wrapper. Status byte 0x30 = SoF (bit 4) + MSP version 1 (bits 6-5 = 01).
-    // length covers: type + dest + src + status + mspBody + crc.
-    uint8_t crsf[80];
+// One CRSF 0x7A frame: status byte + up to 57 MSP-body bytes (length byte ≤ 62).
+inline void mspSendCrsfChunk(uint8_t status, const uint8_t* data, uint8_t dataLen) {
+    uint8_t crsf[64];
     crsf[0] = CRSF_ADDR_FC;                  // sync
-    crsf[1] = 4 + mspBodyLen + 1;            // length byte
+    crsf[1] = 5 + dataLen;                   // type + dest + src + status + data + crc
     crsf[2] = CRSF_TYPE_MSP_REQ;
     crsf[3] = CRSF_ADDR_FC;                  // dest = FC
     crsf[4] = CRSF_ADDR_HANDSET;             // src  = handset (us)
-    crsf[5] = 0x30;                          // status: SoF + version v1
-    memcpy(&crsf[6], mspBody, mspBodyLen);
-    uint8_t crsfTotal = 6 + mspBodyLen;      // up to and including last MSP byte
-    crsf[crsfTotal] = crsfCrc8(&crsf[2], (uint8_t)(crsfTotal - 2));
-    Serial1.write(crsf, (size_t)(crsfTotal + 1));
+    crsf[5] = status;
+    memcpy(&crsf[6], data, dataLen);
+    uint8_t n = 6 + dataLen;                 // up to and including last MSP byte
+    crsf[n] = crsfCrc8(&crsf[2], (uint8_t)(n - 2));
+    Serial1.write(crsf, (size_t)(n + 1));
+}
+
+inline void mspSendRequest(uint8_t function, const uint8_t* payload = nullptr, uint8_t payloadLen = 0) {
+    // MSP v1 body inside CRSF is just: size(1) function(1) payload(N).
+    // The inner XOR checksum is NOT transmitted — CRSF's CRC8 protects it.
+    // A body longer than one CRSF frame (57 bytes) goes as chunks the FC
+    // reassembles (msp_shared.c): the first carries the start bit and the
+    // full MSP header, each later one carries seq+1 and the next bytes.
+    // Silently dropping long payloads here is what made the 84-byte
+    // Scorpion ESC write (fn 218) vanish (2026-09-02).
+    if (payloadLen == 0xFF) return;          // 0xFF size = MSP jumbo marker, never send it
+    uint8_t body[2 + 255];
+    body[0] = payloadLen;
+    body[1] = function;
+    if (payloadLen) memcpy(&body[2], payload, payloadLen);
+    const uint16_t bodyLen = 2 + payloadLen;
+    constexpr uint8_t CHUNK = 57;
+    uint16_t pos = 0;
+    uint8_t seq = 0;
+    while (pos < bodyLen) {
+        uint8_t n = (uint8_t)((bodyLen - pos > CHUNK) ? CHUNK : (bodyLen - pos));
+        // bits 6-5 = 01 (MSP v1), bit 4 = start of frame (first chunk only), bits 3-0 = sequence
+        uint8_t status = (uint8_t)(0x20 | (seq & 0x0F) | (pos == 0 ? 0x10 : 0));
+        mspSendCrsfChunk(status, &body[pos], n);
+        pos += n;
+        seq++;
+    }
 }
 
 //*********************************************************************
@@ -141,7 +159,16 @@ inline void mspParseResponse(const uint8_t* body, uint8_t bodyLen) {
     // response: its size is 0, and treating it as data used to hand empty
     // buffers to the waiters — the TX-param write machine would then send a
     // zero-length SET followed by EEPROM_WRITE. Let waiters time out + retry.
-    if (status & 0x80) return;
+    // Rotorflight's error reply still names the command ([size][cmd][err]),
+    // so a SYNCHRONOUS waiter for that command is told at once instead of
+    // burning its full timeout: ESC-programming pages poll MSP 217 and the
+    // FC answers "error" until the ESC has been cached — 1.2 s per poll of
+    // blocked loop() was the price before (2026-09-02).
+    if (status & 0x80) {
+        if ((status & 0x10) && mspLen >= 2 && msp[1] == mspWaitFunction && !mspWaitRespReady)
+            mspWaitRespError = true;
+        return;
+    }
 
     // ---- CRSF MSP chunking (status bits: 0-3 sequence, 4 start-of-frame) ----
     // A response bigger than one CRSF frame arrives as SoF (carrying MSP
@@ -275,10 +302,11 @@ inline bool mspRequestAndWait(uint8_t function, const uint8_t* req, uint8_t reqL
     extern void radioPoll();    // defined in Radio.h
     mspWaitFunction  = function;
     mspWaitRespReady = false;
+    mspWaitRespError = false;
     mspWaitRespLen   = 0;
     mspSendRequest(function, req, reqLen);
     uint32_t deadline = millis() + timeoutMs;
-    while (!mspWaitRespReady && (int32_t)(deadline - millis()) > 0) {
+    while (!mspWaitRespReady && !mspWaitRespError && (int32_t)(deadline - millis()) > 0) {
         // Keep FLYING while we wait (Malcolm 2026-09-01: an erroring ESC-
         // programming poll made the swash twitch every ~2 s — this wait
         // starved the channel stream and the FC flickered into failsafe).

@@ -17,37 +17,97 @@
 .banner.bad {background:#dca08c;color:#5c2a1a}
 .banner.warn{background:#e8cf8f;color:#5c4a1a}
 .fldRow{display:flex;justify-content:space-between;align-items:center;gap:.8em;
-        background:#fff;border-radius:8px;padding:.5em .7em;margin:.35em 0}
+        background:#f2f6f8;border-radius:8px;padding:.45em .7em;margin:.25em 0}
 .fldRow label{color:#3a5165;font-size:.95em}
 .fldRow b{color:#2e4356;white-space:nowrap}
+.fldRow input[type=number],.fldRow select{width:7.5em;padding:.4em;font-size:.95em;text-align:right;
+        border:1px solid #b8c7d0;border-radius:6px;background:#fff;color:#2e4356}
+.fldRow select{width:auto;max-width:11em;text-align:left}
+.fldRow input.changed,.fldRow select.changed{border-color:#c0603c;background:#fff3ec}
 .goBtn{width:100%;padding:.85em;border:0;border-radius:10px;background:#c0603c;color:#fff;
        font-size:1.05em;font-weight:700;cursor:pointer;margin-top:.4em}
 .goBtn.alt{background:#5f8fab}
+.goBtn:disabled{opacity:.55;cursor:default}
+.ritual{background:#fff6dc;color:#5c4a1a}
+.ritual ol{margin:.4em 0 0 1.2em;padding:0}
+.ritual li{margin:.3em 0}
+.ro{color:#6d7f8c;font-size:.85em}
+#_mMsg{white-space:pre-line;text-align:left}
 </style>
 </head>
-<body>
+<body class=hasFab>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
 <div class=bg-photo aria-hidden=true></div>
 <div class=bg-wash  aria-hidden=true></div>
 <div class=container>
     <h1>ESC settings</h1>
-    <p class=subtitle>read your Scorpion through the flight controller &mdash; no cables, no Windows <i>(beta, read-only)</i></p>
+    <p class=subtitle>read and change your Scorpion through the flight controller &mdash; no cables, no Windows <i>(beta)</i></p>
     <div id=status class="banner info">Not connected to the ESC yet.</div>
-    <div class="banner warn">&#9888;&#65039; <b>Blades off / motor unplugged.</b> The ESC must be <b>powered</b> (it answers through its telemetry wire). While reading, the ESC&rsquo;s telemetry <b>freezes</b> until it is rebooted &mdash; the Release button below does that for you.</div>
+    <div class="banner warn">&#9888;&#65039; <b>Blades off / motor unplugged.</b> The ESC must be <b>powered</b> (it answers through its telemetry wire). While programming, the ESC&rsquo;s telemetry <b>freezes</b> until it is rebooted &mdash; the Release button below does that for you.</div>
     <button class=goBtn id=connBtn onclick="connectEsc()">&#128268; Read the ESC</button>
+
+    <div class="card ritual" id=ritual style="display:none">
+        <h2>Wake the ESC up</h2>
+        <p>A Scorpion only listens for a programmer in its <b>first seconds after power-up</b>. The flight controller is now asking every 200 ms &mdash; give the ESC a fresh start:</p>
+        <ol>
+            <li><b>Unplug the flight battery.</b></li>
+            <li>Wait <b>5 seconds</b>.</li>
+            <li><b>Plug it back in</b> and leave this page open.</li>
+        </ol>
+        <p class=ro>If the flight controller is on USB it keeps asking while the ESC boots. On battery only, it reboots too &mdash; that usually works as well, it just takes 10&ndash;15 s longer.</p>
+    </div>
+
     <div id=fields style="display:none">
-        <div class=card id=escCard></div>
+        <div class=card>
+            <h2 id=escName>Scorpion</h2>
+            <div class=fldRow><label data-help="The ESC's own serial number, read from the ESC. Cannot be changed.">Serial number</label><b id=v_serial></b></div>
+            <div class=fldRow><label data-help="The firmware version running inside the ESC. Cannot be changed from here — use Sproto to update ESC firmware.">ESC firmware</label><b id=v_fw></b></div>
+        </div>
+
+        <div class=card>
+            <h2>Governor &amp; throttle</h2>
+            <div class=fldRow><label data-help="Who holds the head speed. 'External Governor' lets Rotorflight's governor drive the ESC (recommended with this receiver). 'Heli Governor' is the ESC's own governor. VBar = ESC governor talking to a VBar. Airplane / Boat / Quad = no governor at all.">Flight mode (ESC mode)</label><select id=f_mode></select></div>
+            <div class=fldRow><label data-help="How gently the motor starts turning from zero — the time to reach the throttle you gave it. Longer = softer spool from a standstill. Seconds.">Soft start (s)</label><input type=number id=f_soft step=0.1 min=0 max=60></div>
+            <div class=fldRow><label data-help="How long the ESC takes to bring the head from idle up to governed speed. Longer = slower, gentler spool-up. Seconds. Only the ESC's own governor modes use this.">Run-up time (s)</label><input type=number id=f_runup step=0.1 min=0 max=60></div>
+            <div class=fldRow><label data-help="After a throttle-hold (autorotation), how fast the ESC is allowed to spool back up — a quick 'bail-out' instead of a full slow run-up. Seconds. ESC governor modes only.">Bail-out spool-up (s)</label><input type=number id=f_bail step=0.1 min=0 max=65.5></div>
+            <div class=fldRow><label data-help="Strength of the ESC governor's immediate correction (P gain). Higher = holds head speed harder but can surge. 0.30–1.80. ESC governor modes only.">Governor strength (P gain)</label><input type=number id=f_govp step=0.01 min=0.3 max=1.8></div>
+            <div class=fldRow><label data-help="How hard the ESC governor trims away slow, steady head-speed error (I gain). Higher = less sag under load but can hunt. 1.50–2.50. ESC governor modes only.">Governor trim (I gain)</label><input type=number id=f_govi step=0.01 min=1.5 max=2.5></div>
+        </div>
+
+        <div class=card>
+            <h2>Protection</h2>
+            <div class=fldRow><label data-help="How long a limit (voltage, temperature, current) must be exceeded before the ESC reacts. Seconds. Stops a momentary spike from cutting power.">Protection delay (s)</label><input type=number id=f_delay step=0.1 min=0 max=5></div>
+            <div class=fldRow><label data-help="Battery voltage below which the ESC starts protecting the pack. 0 = off. For a 12S pack, about 3.3 V per cell = 39.6 V. Volts (whole pack, not per cell).">Minimum voltage (V)</label><input type=number id=f_minv step=0.1 min=0 max=70></div>
+            <div class=fldRow><label data-help="ESC temperature above which it starts protecting itself. Degrees C. Scorpion's default is around 100 °C.">Maximum temperature (&deg;C)</label><input type=number id=f_maxt step=1 min=0 max=400></div>
+            <div class=fldRow><label data-help="Current above which the ESC starts protecting itself. Amps. Set at or below the ESC's rating.">Maximum current (A)</label><input type=number id=f_maxa step=1 min=0 max=300></div>
+            <div class=fldRow><label data-help="What the ESC does when a limit is reached: the percentage of power it drops back to. 100 % = warn only, keep full power. 0 % = cut the motor. Something like 70 % lets you land under power.">Cut-off power level (%)</label><input type=number id=f_cut step=1 min=0 max=100></div>
+            <div class=fldRow><label data-help="Capacity used (amp-hours) after which the ESC starts protecting the pack. 0 = off. Amp-hours: 1.00 Ah = 1000 mAh.">Maximum capacity used (Ah)</label><input type=number id=f_maxah step=0.1 min=0 max=60></div>
+        </div>
+
+        <div class=card>
+            <h2>Hardware</h2>
+            <div class=fldRow><label data-help="The voltage the ESC's built-in BEC feeds to the flight controller and servos. Match what your servos are rated for. 'Disabled' = you power them separately.">BEC voltage</label><select id=f_bec></select></div>
+            <div class=fldRow><label data-help="Which way the motor turns. Change this if the main rotor spins the wrong way — same effect as swapping two motor wires.">Motor rotation</label><select id=f_rot></select></div>
+            <div class=fldRow><label data-help="The musical beeps the motor plays when the ESC powers up. Off = silent power-up.">Power-up beeps</label><select id=f_snd></select></div>
+            <div class=fldRow><label data-help="The telemetry format the ESC sends on its wire. Must stay on the setting the flight controller is expecting — changing it can cut the link, so this page shows it read-only. Change it in Sproto if you must.">Telemetry protocol <span class=ro>(read-only)</span></label><b id=v_telem></b></div>
+        </div>
+
         <button class="goBtn alt" id=relBtn onclick="releaseEsc()">&#128260; Release ESC (reboots it, telemetry returns)</button>
+    </div>
+    <div class=fabBar id=fab style="display:none">
+        <button class="btn btn-fly" id=saveBtn onclick="save()" style="background:#5fa099;margin:0"><span class=ico>&#128190;</span>Save to ESC</button>
     </div>
     <div class=footer></div>
 </div>
 <template id=helpContent><h2>ESC settings (Scorpion)</h2>
-<p>Rotorflight can talk to the ESC through the telemetry wire that is already connected &mdash; the same trick its transmitter scripts use. This page reads every setting and shows it in plain English.</p>
+<p>Rotorflight can talk to the ESC through the telemetry wire that is already connected &mdash; the same trick its transmitter scripts use. This page reads every setting, lets you change it, writes it back and checks the ESC really took it.</p>
 <ul>
-<li><b>Read-only for now</b>: editing arrives after this readout is verified against Sproto on real hardware.</li>
-<li>The ESC answers only when powered. If reading times out, <b>power-cycle the ESC</b> and try again &mdash; the flight controller needs a few seconds after ESC power-up to cache the settings.</li>
-<li>While in programming mode the ESC stops sending telemetry (RPM, volts freeze). <b>Always finish with Release</b> &mdash; it reboots the ESC and telemetry returns.</li>
-<li>Requires the ESC telemetry protocol set to Scorpion in First-time basics, and the ESC wired to the TLM pad.</li>
+<li><b>Press and hold any label</b> for a plain-English explanation of that setting.</li>
+<li><b>Read</b>: the ESC only listens in its first seconds after power-up. If it does not answer within a few seconds you will be asked to unplug the flight battery, wait 5 s and plug it back in &mdash; leave this page open, it keeps trying.</li>
+<li><b>Save to ESC</b>: only the fields you changed are written. The page then reads the ESC back and confirms every value &mdash; a value the ESC refused is shown in red.</li>
+<li><b>Release</b>: while programming, the ESC stops sending telemetry (RPM, volts freeze). <b>Always finish with Release</b> &mdash; it reboots the ESC (telemetry returns) and the flight controller, ready for the next session.</li>
+<li>The telemetry protocol is shown but never written &mdash; changing it can sever the link between ESC and flight controller.</li>
+<li>Needs the ESC telemetry protocol set to Scorpion with two-way talk on (First-time basics &rarr; ESC), and the ESC wired to the flight controller&rsquo;s TLM pad.</li>
 </ul>
 </template>
 <script>
@@ -57,74 +117,188 @@ function hexToBytes(h){const o=new Uint8Array(h.length/2);for(let i=0;i<o.length
 function bytesToHex(b){let s='';for(let i=0;i<b.length;i++)s+=b[i].toString(16).padStart(2,'0');return s;}
 const u16=(b,o)=>b[o]|(b[o+1]<<8);
 const u32=(b,o)=>(b[o]|(b[o+1]<<8)|(b[o+2]<<16)|(b[o+3]<<24))>>>0;
+function putU16(b,o,v){b[o]=v&255;b[o+1]=(v>>8)&255;}
+function putU32(b,o,v){b[o]=v&255;b[o+1]=(v>>>8)&255;b[o+2]=(v>>>16)&255;b[o+3]=(v>>>24)&255;}
 const MODES=['Heli Governor','Heli Governor (stored)','VBar Governor','External Governor','Airplane','Boat','Quad'];
 const BEC=['5.1 V','6.1 V','7.3 V','8.3 V','Disabled'];
+const ROT=['Anticlockwise (CCW)','Clockwise (CW)'];
+const SND=['On','Off'];
 const TELEM=['Standard','VBar','Jeti Exbus','Unsolicited','Futaba SBUS'];
-let blob=null, pollTimer=null, polls=0;
+// Every editable field: where it lives in the 84-byte blob and how it is scaled.
+// 'sel' = enum in a u16; 'num' = wire value / div shown with dp decimals.
+const FIELDS=[
+    {id:'mode', off:34, kind:'sel', opts:MODES, label:'Flight mode'},
+    {id:'bec',  off:36, kind:'sel', opts:BEC,   label:'BEC voltage'},
+    {id:'rot',  off:38, kind:'sel', opts:ROT,   label:'Motor rotation'},
+    {id:'delay',off:42, kind:'num', div:1000, min:0,   max:5,    dp:1, label:'Protection delay', unit:' s'},
+    {id:'minv', off:44, kind:'num', div:100,  min:0,   max:70,   dp:2, label:'Minimum voltage', unit:' V'},
+    {id:'maxt', off:46, kind:'num', div:100,  min:0,   max:400,  dp:0, label:'Maximum temperature', unit:' °C'},
+    {id:'maxa', off:48, kind:'num', div:100,  min:0,   max:300,  dp:0, label:'Maximum current', unit:' A'},
+    {id:'cut',  off:50, kind:'num', div:100,  min:0,   max:100,  dp:0, label:'Cut-off power level', unit:' %'},
+    {id:'maxah',off:52, kind:'num', div:100,  min:0,   max:60,   dp:2, label:'Maximum capacity used', unit:' Ah'},
+    {id:'snd',  off:54, kind:'sel', opts:SND,   label:'Power-up beeps'},
+    {id:'soft', off:62, kind:'num', div:1000, min:0,   max:60,   dp:1, label:'Soft start', unit:' s'},
+    {id:'runup',off:64, kind:'num', div:1000, min:0,   max:60,   dp:1, label:'Run-up time', unit:' s'},
+    {id:'bail', off:66, kind:'num', div:1000, min:0,   max:65.5, dp:1, label:'Bail-out spool-up', unit:' s'},
+    {id:'govp', off:68, kind:'num', div:100,  min:0.3, max:1.8,  dp:2, label:'Governor strength (P)', wide:true},
+    {id:'govi', off:72, kind:'num', div:100,  min:1.5, max:2.5,  dp:2, label:'Governor trim (I)', wide:true},
+];
+let blob=null, orig={}, pollTimer=null, polls=0, busy=false;
 
-function row(l,v){return '<div class=fldRow><label>'+l+'</label><b>'+v+'</b></div>';}
+function fieldWire(f,b){ return f.wide?u32(b,f.off):u16(b,f.off); }
+function fieldText(f,wire){ return f.kind==='sel' ? (f.opts[wire]||('value '+wire)) : (wire/f.div).toFixed(f.dp)+(f.unit||''); }
+function ctl(f){ return $('f_'+f.id); }
+
+function buildSelects(){
+    FIELDS.filter(f=>f.kind==='sel').forEach(f=>{
+        const s=ctl(f); s.innerHTML='';
+        f.opts.forEach((o,i)=>{const op=document.createElement('option');op.value=i;op.textContent=o;s.appendChild(op);});
+    });
+    document.querySelectorAll('.fldRow input, .fldRow select').forEach(el=>{
+        el.addEventListener('input',onEdit); el.addEventListener('change',onEdit);
+    });
+}
+function onEdit(e){
+    const el=e.target; el.classList.toggle('changed', el.value!==orig[el.id]);
+    const any=Object.keys(orig).some(id=>$(id).value!==orig[id]);
+    if(any) LDRC.markDirty(); else LDRC.clearDirty();
+    $('saveBtn').disabled=!any;
+}
 function paint(b){
     let name=''; for(let i=2;i<34&&b[i];i++) name+=String.fromCharCode(b[i]);
-    let h='<h2>'+name.replace(/[<>&]/g,'')+'</h2>';
-    h+=row('Flight mode', MODES[u16(b,34)]||('mode '+u16(b,34)));
-    h+=row('BEC voltage', BEC[u16(b,36)]||u16(b,36));
-    h+=row('Rotation', u16(b,38)?'Clockwise':'Anticlockwise');
-    h+=row('Telemetry protocol', TELEM[u16(b,40)]||u16(b,40));
-    h+=row('Protection delay', (u16(b,42)/1000).toFixed(1)+' s');
-    h+=row('Minimum voltage', (u16(b,44)/100).toFixed(2)+' V');
-    h+=row('Maximum temperature', (u16(b,46)/100).toFixed(0)+' &deg;C');
-    h+=row('Maximum current', (u16(b,48)/100).toFixed(0)+' A');
-    h+=row('Cutoff handling', (u16(b,50)/100).toFixed(0)+' %');
-    h+=row('Maximum used', (u16(b,52)/100).toFixed(2)+' Ah');
-    h+=row('Startup sound', u16(b,54)===0?'On':'Off');
-    h+=row('Soft start', (u16(b,62)/1000).toFixed(1)+' s');
-    h+=row('Run-up time', (u16(b,64)/1000).toFixed(1)+' s');
-    h+=row('Bail-out', (u16(b,66)/1000).toFixed(1)+' s');
-    h+=row('Governor P', (u32(b,68)/100).toFixed(2));
-    h+=row('Governor I', (u32(b,72)/100).toFixed(2));
-    h+=row('Serial number', u32(b,56).toString(16).toUpperCase().padStart(8,'0'));
-    h+=row('ESC firmware', 'v'+u16(b,60));
-    $('escCard').innerHTML=h;
-    $('fields').style.display='';
+    $('escName').textContent=name||'Scorpion';
+    $('v_serial').textContent=u32(b,56).toString(16).toUpperCase().padStart(8,'0');
+    $('v_fw').textContent='v'+u16(b,60);
+    $('v_telem').textContent=TELEM[u16(b,40)]||('value '+u16(b,40));
+    orig={};
+    FIELDS.forEach(f=>{
+        const el=ctl(f), wire=fieldWire(f,b);
+        if(f.kind==='sel'){
+            if(!f.opts[wire]){const op=document.createElement('option');op.value=wire;op.textContent='value '+wire;el.appendChild(op);}
+            el.value=String(wire);
+        } else el.value=(wire/f.div).toFixed(f.dp);
+        orig[el.id]=el.value; el.classList.remove('changed');
+    });
+    LDRC.clearDirty();
+    $('saveBtn').disabled=true;
+    $('fields').style.display=''; $('fab').style.display='';
 }
+// Copy of the blob with only the edited fields changed (everything else echoed byte-exact).
+function collect(){
+    const w=new Uint8Array(blob); const changes=[];
+    FIELDS.forEach(f=>{
+        const el=ctl(f); if(el.value===orig[el.id]) return;
+        let wire;
+        if(f.kind==='sel') wire=parseInt(el.value,10);
+        else{
+            let v=parseFloat(el.value); if(isNaN(v)) v=parseFloat(orig[el.id]);
+            v=Math.min(f.max,Math.max(f.min,v));
+            wire=Math.round(v*f.div);
+        }
+        if(f.wide) putU32(w,f.off,wire); else putU16(w,f.off,wire);
+        changes.push({f, from:fieldText(f,fieldWire(f,blob)), to:fieldText(f,wire)});
+    });
+    return {w,changes};
+}
+function sameBytes(a,b){ if(a.length!==b.length)return false; for(let i=0;i<a.length;i++) if(i!==1&&a[i]!==b[i]) return false; return true; }
+
+async function isArmed(){ let st=null; try{ st=await LDRC.fetchState(); }catch(e){} return !!(st&&st.rf&&st.rf.armed); }
+
+async function checkWiring(){
+    // MSP 123: protocol, halfDuplex, ... pinSwap at byte 9. Two-way talk is a must.
+    try{
+        const b=hexToBytes(await LDRC.msp(123,'',2));
+        if(b.length>=2){
+            if(b[0]!==4){ setStatus('bad','ESC telemetry protocol is not Scorpion — set it in First-time basics → ESC first.'); return false; }
+            if(b[1]!==1){ setStatus('bad','Two-way ESC talk (half-duplex) is OFF on the flight controller — turn it on in First-time basics → ESC, then come back.'); return false; }
+        }
+    }catch(e){ /* older FC or busy — let the read decide */ }
+    return true;
+}
+function stopPolling(){ if(pollTimer){clearInterval(pollTimer);pollTimer=null;} }
 async function tryRead(){
     polls++;
     try{
         const b=hexToBytes(await LDRC.msp(217,'',1));
         if(b.length>=84&&b[0]===0x53){
-            blob=b.slice(0,84);
-            clearInterval(pollTimer); pollTimer=null;
-            setStatus('good','✓ Read '+b.length+' bytes from the Scorpion');
-            paint(blob); $('connBtn').disabled=false; return;
+            blob=b.slice(0,84); stopPolling();
+            $('ritual').style.display='none';
+            setStatus('good','✓ Read '+b.length+' bytes from the Scorpion — change what you like, then Save.');
+            paint(blob); $('connBtn').disabled=false; busy=false; return;
         }
-        if(b.length&&b[0]!==0x53){ clearInterval(pollTimer); pollTimer=null;
+        if(b.length&&b[0]!==0x53){ stopPolling(); $('ritual').style.display='none';
             setStatus('bad','An ESC answered, but not a Scorpion (signature '+b[0]+'). Hobbywing support is coming next.');
-            $('connBtn').disabled=false; return; }
+            $('connBtn').disabled=false; busy=false; return; }
     }catch(e){ /* expected until the FC has cached the params */ }
-    if(polls===6) setStatus('info','Still waiting… if the ESC has been on a while, POWER-CYCLE it now and keep waiting.');
-    if(polls>=40){ clearInterval(pollTimer); pollTimer=null;
-        setStatus('bad','No answer from the ESC after 30 s. Is it powered, wired to TLM, and set to Scorpion telemetry?');
-        $('connBtn').disabled=false; }
+    if(polls===6){ setStatus('info','No answer yet — the ESC needs a fresh start (see below). Keep this page open.'); $('ritual').style.display=''; }
+    if(polls>=150){ stopPolling(); $('ritual').style.display='none';
+        setStatus('bad','No answer from the ESC after 2 minutes. Is it powered, wired to the TLM pad, set to Scorpion telemetry with two-way talk on?');
+        $('connBtn').disabled=false; busy=false; }
 }
 async function connectEsc(){
-    let st=null; try{ st=await LDRC.fetchState(); }catch(e){}
-    if(st&&st.rf&&st.rf.armed){ setStatus('bad','Refused — the model is ARMED'); return; }
+    if(busy) return;
+    if(await isArmed()){ setStatus('bad','Refused — the model is ARMED'); return; }
+    if(LDRC.dirty && !(await LDRC.confirmLoseChanges('re-reading the ESC'))) return;
     if(!(await LDRC.confirm('Read the ESC now? Its telemetry (RPM, volts) will FREEZE until it is released/rebooted afterwards. Blades off / motor free to be safe.',
         {title:'Read the ESC',icon:'🔌',yes:'Read'})))return;
-    $('connBtn').disabled=true; polls=0; blob=null;
+    busy=true; $('connBtn').disabled=true; polls=0; blob=null;
+    $('fields').style.display='none'; $('fab').style.display='none';
+    setStatus('info','Checking the flight controller…');
+    if(!(await checkWiring())){ busy=false; $('connBtn').disabled=false; return; }
     setStatus('info','Asking the flight controller for the ESC settings…');
     tryRead(); pollTimer=setInterval(tryRead,800);
 }
+
+async function save(){
+    if(busy||!blob) return;
+    if(await isArmed()){ setStatus('bad','Refused — the model is ARMED'); return; }
+    const {w,changes}=collect();
+    if(!changes.length||sameBytes(w,blob)){ setStatus('info','Nothing changed — nothing to save.'); return; }
+    const list=changes.map(c=>'• '+c.f.label+': '+c.from+' → '+c.to).join('\n');
+    if(!(await LDRC.confirm('Write these to the ESC?\n\n'+list+'\n\nThe motor must not be able to turn. The ESC keeps them after a reboot.',
+        {title:'Save to ESC',icon:'💾',yes:'Write'}))) return;
+    busy=true; $('saveBtn').disabled=true; $('relBtn').disabled=true; $('connBtn').disabled=true;
+    w[1]=0x00;                                   // command: save settings
+    setStatus('info','Writing '+changes.length+' setting'+(changes.length>1?'s':'')+' to the ESC…');
+    try{ await LDRC.msp(218,bytesToHex(w),1); }
+    catch(e){ setStatus('bad','The flight controller refused the write ('+e.message+'). Press Read to start again.');
+        busy=false; $('saveBtn').disabled=false; $('relBtn').disabled=false; $('connBtn').disabled=false; return; }
+    // The FC drops its cache while it writes the changed ranges, then re-reads
+    // them from the ESC — poll until it answers again and compare.
+    setStatus('info','Written — waiting for the ESC to confirm…');
+    let back=null;
+    for(let i=0;i<40;i++){
+        await new Promise(r=>setTimeout(r,600));
+        try{ const b=hexToBytes(await LDRC.msp(217,'',1)); if(b.length>=84&&b[0]===0x53){ back=b.slice(0,84); break; } }catch(e){}
+    }
+    busy=false; $('relBtn').disabled=false; $('connBtn').disabled=false;
+    if(!back){ setStatus('bad','No confirmation from the ESC within 25 s. Press Read to see what it holds now.'); $('saveBtn').disabled=false; return; }
+    blob=back;
+    const refused=changes.filter(c=>fieldWire(c.f,back)!==fieldWire(c.f,w));
+    paint(back);
+    if(refused.length){
+        refused.forEach(c=>ctl(c.f).classList.add('changed'));
+        setStatus('bad','Saved, but the ESC kept its own value for: '+refused.map(c=>c.f.label+' ('+fieldText(c.f,fieldWire(c.f,back))+')').join(', '));
+    } else setStatus('good','✓ Saved and verified — the ESC reads back exactly what you set. Press Release when you are done.');
+}
+
 async function releaseEsc(){
-    if(!blob){ setStatus('bad','Nothing read yet.'); return; }
+    if(busy||!blob){ if(!blob) setStatus('bad','Nothing read yet.'); return; }
+    if(LDRC.dirty && !(await LDRC.confirmLoseChanges('releasing the ESC'))) return;
+    busy=true; $('relBtn').disabled=true; $('saveBtn').disabled=true;
     const w=new Uint8Array(blob); w[1]=0x80;      // echo everything, command = reset ESC
     try{
-        await LDRC.msp(218,bytesToHex(w));
-        setStatus('good','✓ ESC rebooting — telemetry returns in a few seconds.');
-        $('fields').style.display='none'; blob=null;
-    }catch(e){ setStatus('bad','Release failed: '+e.message+' — power-cycle the ESC instead.'); }
+        await LDRC.msp(218,bytesToHex(w),1);
+        setStatus('good','✓ ESC rebooting — telemetry returns in a few seconds. Rebooting the flight controller so the next session starts clean…');
+        $('fields').style.display='none'; $('fab').style.display='none'; blob=null; LDRC.clearDirty();
+        await new Promise(r=>setTimeout(r,1500));
+        try{ await LDRC.msp(68,'',1); }catch(e){}   // FC reboot: one programming session per FC boot
+        setStatus('good','✓ Released. Telemetry is back once the flight controller has rebooted (≈10 s). To program again, press Read and follow the battery steps.');
+    }catch(e){ setStatus('bad','Release failed: '+e.message+' — power-cycle the ESC instead (unplug the battery, wait 5 s, plug in).'); }
+    busy=false; $('relBtn').disabled=false;
 }
-window.addEventListener('pagehide',()=>{ if(pollTimer)clearInterval(pollTimer); });
+window.addEventListener('pagehide',()=>{ stopPolling(); });
+document.addEventListener('DOMContentLoaded',buildSelects);
 </script>
 </body>
 </html>

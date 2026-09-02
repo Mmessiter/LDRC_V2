@@ -1,6 +1,20 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.534-escprog-route",
+      "url": "https://messiter.com/rxv2/release/v0.9.534/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.534/littlefs.bin",
+      "fs_md5": "6dcc5ab19d8a66928c1ead05ff214d5a",
+      "notes": "Fix: the ESC settings page was never routed on the receiver itself (404 since 0.9.530 - only the phone apps served it). Ships the same Scorpion editor as 0.9.533."
+    },
+    {
+      "name": "RXV2-0.9.533-esc-write",
+      "url": "https://messiter.com/rxv2/release/v0.9.533/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.533/littlefs.bin",
+      "fs_md5": "6dcc5ab19d8a66928c1ead05ff214d5a",
+      "notes": "Scorpion ESC settings can now be CHANGED from the phone (beta): edit any field, Save writes only what changed and reads the ESC back to verify; Release reboots ESC + FC. Fixes: long MSP writes (84-byte ESC blob) were silently dropped (now chunked over CRSF); FC \"MSP error\" replies fail fast (502) instead of a 1.2 s timeout; battery-ritual guidance for the ESC listen window."
+    },
+    {
       "name": "RXV2-0.9.532-no-starve",
       "url": "https://messiter.com/rxv2/release/v0.9.532/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.532/littlefs.bin",
@@ -69,20 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.523/littlefs.bin",
       "fs_md5": "43ff46922552e3b2e78f2e8fa14426eb",
       "notes": "A la carte menu sorted alphabetically - random-access choices are easiest to find in ABC order."
-    },
-    {
-      "name": "RXV2-0.9.522-gear-dedup",
-      "url": "https://messiter.com/rxv2/release/v0.9.522/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.522/littlefs.bin",
-      "fs_md5": "59bc80d1851e801486b36a6d21115712",
-      "notes": "Gear-ratio pages lose the paragraph that duplicated the label's help bubble."
-    },
-    {
-      "name": "RXV2-0.9.521-tidy-rows",
-      "url": "https://messiter.com/rxv2/release/v0.9.521/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.521/littlefs.bin",
-      "fs_md5": "188b624e0efad4e2c3a75eb033f2533e",
-      "notes": "First-time basics, Rescue and Servos pages decluttered: every row is just its underlined title - press for a fuller explanation (43 rows converted)."
     }
   ]
 }

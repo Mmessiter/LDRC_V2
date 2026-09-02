@@ -351,6 +351,11 @@ inline void handleRotorflightRates() {
     server.send(503, "text/plain", "/rotorflight-rates.html missing — uploadfs the data/ folder");
 }
 
+inline void handleRotorflightEscProg() {
+    if (serveLittleFsFile("/rotorflight-escprog.html", "text/html")) return;
+    server.send(503, "text/plain", "/rotorflight-escprog.html missing — uploadfs the data/ folder");
+}
+
 inline void handleRotorflightGovProfile() {
     if (serveLittleFsFile("/rotorflight-gov-profile.html", "text/html")) return;
     server.send(503, "text/plain", "/rotorflight-gov-profile.html missing — uploadfs the data/ folder");
@@ -582,7 +587,10 @@ inline void handleMspApi() {
     // CRSF frames) needs several telemetry frame slots — 400 ms cut it off
     // mid-reassembly (2026-08-19, first fn-120 read).
     bool ok = mspRequestAndWait(fn, reqBuf, reqLen, respBuf, &respLen, 1200);
-    if (!ok) { server.send(504, "text/plain", "flight controller did not respond within 1200 ms"); return; }
+    if (!ok) {
+        if (mspWaitRespError) { server.send(502, "text/plain", "flight controller rejected fn " + String(fn)); return; }
+        server.send(504, "text/plain", "flight controller did not respond within 1200 ms"); return;
+    }
     // Proven-tune tracking: any successful tuning write restarts the
     // flights-since-edit count (consumed at the next flight save).
     if (reqLen > 0 && (fn == 202 || fn == 204 || fn == 95 || fn == 143 || fn == 149))
@@ -2533,6 +2541,7 @@ inline void registerWebRoutes() {
     server.on("/rotorflight-wiring",    handleRotorflightWiring);
     server.on("/rotorflight-computer",  handleRotorflightComputer);
     server.on("/rotorflight-esc",       handleRotorflightEsc);
+    server.on("/rotorflight-escprog",   handleRotorflightEscProg);
     server.on("/api/fc/wake", HTTP_POST, handleFcWake);
     server.on("/rotorflight-tuning",    handleRotorflightTuning);
     server.on("/rotorflight-txchannels", handleRotorflightTxChannels);
