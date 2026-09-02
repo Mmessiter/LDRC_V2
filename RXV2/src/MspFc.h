@@ -64,6 +64,7 @@ inline volatile bool     mspWaitRespReady = false;
 inline volatile bool     mspWaitRespError = false;   // FC answered "MSP error" for the awaited function
 inline bool              escCatchArmed = false;      // Scorpion boot catcher (see escCatchTick)
 inline bool              escCatchGot   = false;
+inline const char*       escCatchResult = "none";    // how the last catch ended: captured | nothing | tx | cancelled | none
 
 // Async response capture for the non-blocking TX-parameter state machine
 // (TxParams.h). Unlike mspRequestAndWait (which blocks), the TX-param path
@@ -439,12 +440,14 @@ inline void escCatchTick() {
     if (netMode == NET_WAITING_RF || netMode == NET_INIT) return;
     if (rx.packets > 0 || netMode == NET_NO_WIFI) {
         escCatchArmed = false;
+        escCatchResult = "tx";
         events.add("ESC catcher: TX heard — cancelled");
         return;
     }
     if (now < 2500) return;
     if (escCatchGot || now > 14000) {
         escCatchArmed = false;
+        escCatchResult = escCatchGot ? "captured" : "nothing";
         events.add(escCatchGot ? "ESC catcher: settings captured by the FC"
                                : "ESC catcher: FC never published ESC settings");
         return;

@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.540-save-toast-visible";
+constexpr const char* FW_VERSION = "RXV2-0.9.541-esc-read-honest-button";
 
 //*********************************************************************
 //  Auto-update manifest URLs
