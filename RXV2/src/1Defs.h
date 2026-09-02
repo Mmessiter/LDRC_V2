@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.545-release-in-view";
+constexpr const char* FW_VERSION = "RXV2-0.9.546-gear-ratio-on-the-fc";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -310,7 +310,7 @@ constexpr const char* NVS_KEY_SSID       = "ssid";
 constexpr const char* NVS_KEY_PASS       = "pass";
 constexpr const char* NVS_KEY_BOARD_ID   = "board_id";   // 6-byte board ID; captured first boot, never changes
 constexpr const char* NVS_KEY_FAILSAFE   = "fs";         // 16 x uint16 failsafe channel values (us); absent = not configured
-constexpr const char* NVS_KEY_GEAR_RATIO = "gear";       // float main-gear ratio (motor:head); head speed = motor RPM / gearRatio. 1.0 = direct drive
+constexpr const char* NVS_KEY_GEAR_RATIO = "gear";       // float extra head-speed divisor; normally 1.0 — Rotorflight's 0x0C frame already carries HEAD speed (see gearRatio)
 constexpr const char* NVS_KEY_ARM_CH     = "armch";      // uint8 arming channel (1..16, 0=off): flight saved on DISARM after a real flight
 constexpr const char* NVS_KEY_GAP_MIN    = "gapmin";
 constexpr const char* NVS_KEY_TZ_MIN     = "tzmin";     // minutes local is ahead of UTC (phone-taught)
@@ -426,8 +426,13 @@ inline uint32_t lastChannelDataMs = 0;
 // the generic safe default (ch1-5=1500, aux low) instead.
 inline uint16_t failsafeMicros[16] = {0};
 inline bool     failsafeSet        = false;
-// Main-gear ratio (motor turns : head turns). Head speed telemetry = motor RPM
-// / gearRatio. 1.0 = direct drive. User-set on the View-channels page, NVS-backed.
+// Extra head-speed divisor applied to the FC's RPM telemetry before it goes to
+// the TX. Rotorflight's CRSF 0x0C frame already carries HEAD speed (motor RPM ×
+// its own main_rotor_gear_ratio), so this stays 1.0; the gear-ratio page
+// (gear.js) edits the FC's ratio instead and resets this to 1 on save. It only
+// still exists for a FC that reports raw motor RPM. NVS-backed (POST /api/gear).
+// History: 2026-09-02 the Goblin had 10.2 here AND a backwards 10:1 on the FC —
+// the two cancelled on the TX display while the governor sat at min throttle.
 inline float    gearRatio          = 1.0f;
 inline uint8_t  armingChannel      = 0;    // 1..16 = save the flight on DISARM of this channel; 0 = off (use link-loss save)
 // Gap accounting is LATENESS-based (Malcolm 2026-07-27): every packet arrives
@@ -800,7 +805,7 @@ struct FcTelem {
     int16_t  attitudePitch  = 0;        // mrad
     int16_t  attitudeRoll   = 0;
     int16_t  attitudeYaw    = 0;
-    uint32_t fcMotorRPM     = 0;        // first value of the CRSF RPM frame (0x0C) — motor/rotor RPM from the FC
+    uint32_t fcMotorRPM     = 0;        // first value of the CRSF RPM frame (0x0C) — Rotorflight sends HEAD speed here (motor RPM × main gear ratio), not motor RPM
     float    fcEscTempC     = 0.0f;     // first value of the CRSF temperature frame (0x0D), deci-°C/10 — ESC temp
     char     flightMode[16] = {0};
     uint32_t framesParsed   = 0;

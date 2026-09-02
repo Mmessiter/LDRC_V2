@@ -146,7 +146,7 @@
   }
   function mspHandle(args) {
     const fn = parseInt(args.get("fn") || "0", 10);
-    const data = args.get("data") || "";
+    let data = args.get("data") || "";
     if (fn === 210 && data) {               // select rate / PID profile
       const v = parseInt(data.slice(0, 2), 16);
       if (v & 0x80) rateProfile = v & 0x0f; else pidProfile = v & 0x0f;
@@ -173,6 +173,9 @@
       let out = "04";
       for (let i = 0; i < 4; i++) out += mspStore["120s/" + i] || toHex(SERVO_DEF);
       return T(out);
+    }
+    if (fn === 222 && data) {               // motor config: the 28-B write lacks the motorCount byte the 29-B read has at [6]
+      data = data.slice(0, 12) + "01" + data.slice(12);
     }
     if (fn in MSP_SET && data) {            // write: persist for the paired read
       const [readFn, space] = MSP_SET[fn];
@@ -273,6 +276,12 @@
       case "/api/firmware/check":
         // "offline" makes the page skip the update offer quietly.
         return J({ current: "RXV2-demo", offline: true, net_mode: "demo" });
+      case "/api/gear": {                    // receiver head-speed divisor (gear.js resets it to 1)
+        const r = parseFloat(args.get("ratio") || "1");
+        demoState.gear = (r > 0.1 && r <= 100) ? r : 1;
+        saveDemoState();
+        return J({ ok: true, gear_ratio: demoState.gear });
+      }
       case "/api/name":
         if (args.get("name")) { demoState.name = args.get("name"); saveDemoState(); }
         return J({ ok: true, name: demoState.name ||
@@ -302,6 +311,7 @@
       st.net.rf_only = !!demoState.rfOnly;
       if (demoState.rfOnly) st.net.mode = "RF only (radios off)";
       if (demoState.name) { st.info.name = demoState.name; st.info.hostname = demoState.name; }
+      if (demoState.gear != null) st.rf.gear_ratio = demoState.gear;
       return J(st);
     }
 
