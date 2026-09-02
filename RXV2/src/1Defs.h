@@ -31,7 +31,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.536-esc-boot-catcher";
+constexpr const char* FW_VERSION = "RXV2-0.9.538-esc-catcher-safe-wifi-first";
 
 //*********************************************************************
 //  Auto-update manifest URLs

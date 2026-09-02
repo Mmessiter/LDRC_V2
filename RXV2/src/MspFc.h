@@ -433,6 +433,15 @@ inline void escCatchTick() {
     if (!escCatchArmed) return;
     const uint32_t now = millis();
     if (currentProtocol != PROTO_CRSF) { escCatchArmed = false; return; }
+    // A transmitter on at boot means the user is at the field, not at the
+    // phone — a stale flag must never freeze the ESC's telemetry for a
+    // flight. Wait for the boot window's verdict before the first poll.
+    if (netMode == NET_WAITING_RF || netMode == NET_INIT) return;
+    if (rx.packets > 0 || netMode == NET_NO_WIFI) {
+        escCatchArmed = false;
+        events.add("ESC catcher: TX heard — cancelled");
+        return;
+    }
     if (now < 2500) return;
     if (escCatchGot || now > 14000) {
         escCatchArmed = false;

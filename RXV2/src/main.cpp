@@ -258,14 +258,24 @@ void setup() {
     // One-shot Scorpion catcher (armed by the ESC settings page before a
     // battery pull): the receiver polls MSP 217 itself during the ESC's
     // post-power-on listen window, so the phone's WiFi rejoin speed no
-    // longer decides whether the settings appear. Also skip the RF window —
-    // the user is at the phone, not flying.
+    // longer decides whether the settings appear.
+    // Only a POWER boot consumes the flag: a software restart (OTA, config
+    // reboot) doesn't restart the ESC, so polling then would just waste the
+    // one shot — the flag stays pending for the real battery pull. The RF
+    // window is NOT skipped: a transmitter heard at boot cancels the catcher
+    // (escCatchTick), so a stale flag can never freeze the ESC's telemetry
+    // at a field power-up.
     if (prefs.isKey(NVS_KEY_ESC_CATCH) && prefs.getUChar(NVS_KEY_ESC_CATCH, 0)) {
-        prefs.putUChar(NVS_KEY_ESC_CATCH, 0);
-        escCatchArmed = true;
-        forceWifiMode = true;
-        Serial.println("[boot] ESC catcher armed — polling MSP 217 until ~14 s");
-        events.add("ESC catcher armed (one-shot)");
+        esp_reset_reason_t rr = esp_reset_reason();
+        if (rr == ESP_RST_POWERON || rr == ESP_RST_BROWNOUT || rr == ESP_RST_UNKNOWN) {
+            prefs.putUChar(NVS_KEY_ESC_CATCH, 0);
+            escCatchArmed = true;
+            Serial.println("[boot] ESC catcher armed — polling MSP 217 until ~14 s");
+            events.add("ESC catcher armed (one-shot)");
+        } else {
+            Serial.println("[boot] ESC catcher: not a power-on — kept for the next one");
+            events.add("ESC catcher: kept for the next power-on");
+        }
     }
 
     //*****************************************************************

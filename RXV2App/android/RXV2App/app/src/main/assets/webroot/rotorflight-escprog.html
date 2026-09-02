@@ -28,6 +28,14 @@
        font-size:1.05em;font-weight:700;cursor:pointer;margin-top:.4em}
 .goBtn.alt{background:#5f8fab}
 .goBtn:disabled{opacity:.55;cursor:default}
+/* Result toast: sits just above the Save bar so the answer appears where the
+   thumb is, not in the status banner scrolled off the top (Malcolm 2026-09-02). */
+.toast{position:fixed;left:.8em;right:.8em;bottom:calc(4.6em + env(safe-area-inset-bottom,0px));z-index:56;
+       padding:.8em 1em;border-radius:10px;text-align:center;font-weight:700;font-size:1.05em;
+       box-shadow:0 3px 12px rgba(0,0,0,.25);display:none}
+.toast.info{background:#c8d2dc;color:#3a5165}
+.toast.good{background:#a8d29a;color:#2a4d1f}
+.toast.bad{background:#dca08c;color:#5c2a1a}
 .ritual{background:#fff6dc;color:#5c4a1a}
 .ritual ol{margin:.4em 0 0 1.2em;padding:0}
 .ritual li{margin:.3em 0}
@@ -42,7 +50,7 @@
 <div class=container>
     <h1>ESC settings</h1>
     <p class=subtitle>read and change your Scorpion through the flight controller &mdash; no cables, no Windows <i>(beta)</i></p>
-    <div id=status class="banner info">Not connected to the ESC yet.</div>
+    <div id=status class="banner info">Press Read the ESC to start.</div>
     <div class="banner warn">&#9888;&#65039; <b>Blades off / motor unplugged.</b> The ESC must be <b>powered</b> (it answers through its telemetry wire). While programming, the ESC&rsquo;s telemetry <b>freezes</b> until it is rebooted &mdash; the Release button below does that for you.</div>
     <button class=goBtn id=connBtn onclick="connectEsc()">&#128268; Read the ESC</button>
 
@@ -55,7 +63,9 @@
             <li><b>Plug it back in</b> and leave this page open.</li>
         </ol>
         <p class=ro id=ritualNote>The receiver reboots with the battery and asks the flight controller for the ESC settings itself during those first seconds, so this page only has to reconnect (10&ndash;20 s). If the page cannot reconnect, re-join the receiver&rsquo;s WiFi and press Read again &mdash; the settings stay available until the flight controller restarts.</p>
+        <button class=goBtn id=cancelBtn onclick="cancelCatch()" style="background:#8a8a8a">&#10005; Cancel &mdash; don&rsquo;t catch the ESC</button>
     </div>
+    <div class="banner info" id=pendingNote style="display:none">The receiver is still <b>armed to catch the ESC</b> at its next power-up (from an earlier attempt). Pull the battery for 5 s to read it, or <a href="#" onclick="cancelCatch();return false">cancel</a>. A transmitter that is on at power-up cancels it automatically.</div>
 
     <div id=fields style="display:none">
         <div class=card>
@@ -94,6 +104,7 @@
 
         <button class="goBtn alt" id=relBtn onclick="releaseEsc()">&#128260; Release ESC (reboots it, telemetry returns)</button>
     </div>
+    <div class=toast id=toast></div>
     <div class=fabBar id=fab style="display:none">
         <button class="btn btn-fly" id=saveBtn onclick="save()" style="background:#5fa099;margin:0"><span class=ico>&#128190;</span>Save to ESC</button>
     </div>
@@ -113,6 +124,13 @@
 <script>
 const $=id=>document.getElementById(id);
 function setStatus(k,t){const s=$('status');s.className='banner '+k;s.textContent=t;}
+// Same verdict, shown above the Save bar (where the eyes are) for a few seconds.
+let toastTimer=null;
+function toast(k,t,ms){
+    const e=$('toast'); e.className='toast '+k; e.textContent=t; e.style.display='';
+    if(toastTimer) clearTimeout(toastTimer);
+    toastTimer=setTimeout(()=>{ e.style.display='none'; },ms||6000);
+}
 function hexToBytes(h){const o=new Uint8Array(h.length/2);for(let i=0;i<o.length;i++)o[i]=parseInt(h.substr(i*2,2),16);return o;}
 function bytesToHex(b){let s='';for(let i=0;i<b.length;i++)s+=b[i].toString(16).padStart(2,'0');return s;}
 const u16=(b,o)=>b[o]|(b[o+1]<<8);
@@ -238,9 +256,23 @@ async function tryRead(){
         setStatus('info','No answer yet — the ESC needs a fresh start (see below). Keep this page open.'); $('ritual').style.display='';
     }
     if(polls>=400){ stopPolling(); $('ritual').style.display='none';
-        setStatus('bad','No answer from the ESC after 3 minutes. Is it powered, wired to the TLM pad, set to Scorpion telemetry with two-way talk and pin swap on (First-time basics)?');
+        fetch('/api/esc/catch?arm=0',{method:'POST'}).catch(()=>{});   // don't leave a stale arm behind
+        setStatus('bad','No answer from the ESC after 3 minutes. Is it powered, wired to the TLM pad, set to Scorpion telemetry with two-way talk and pin swap on (First-time basics)? Press Read to try again.');
         $('connBtn').disabled=false; busy=false; }
 }
+// Cancel the battery step: stop waiting and disarm the receiver's catcher.
+async function cancelCatch(){
+    stopPolling(); $('ritual').style.display='none'; $('pendingNote').style.display='none';
+    try{ await fetch('/api/esc/catch?arm=0',{method:'POST'}); }catch(e){}
+    busy=false; $('connBtn').disabled=false;
+    setStatus('info','Cancelled — the receiver will not catch the ESC. Press Read the ESC to start again.');
+}
+// A stale arm from an earlier attempt (page closed before the battery pull):
+// say so, with a way out. Harmless at the field — a TX heard at boot cancels it.
+(async()=>{
+    try{ const c=await (await fetch('/api/esc/catch',{cache:'no-store'})).json();
+         if(c&&c.pending) $('pendingNote').style.display=''; }catch(e){}
+})();
 async function connectEsc(){
     if(busy) return;
     if(await isArmed()){ setStatus('bad','Refused — the model is ARMED'); return; }
@@ -248,7 +280,7 @@ async function connectEsc(){
     if(!(await LDRC.confirm('Read the ESC now? Its telemetry (RPM, volts) will FREEZE until it is released/rebooted afterwards. Blades off / motor free to be safe.',
         {title:'Read the ESC',icon:'🔌',yes:'Read'})))return;
     busy=true; $('connBtn').disabled=true; polls=0; blob=null;
-    $('fields').style.display='none'; $('fab').style.display='none';
+    $('fields').style.display='none'; $('fab').style.display='none'; $('pendingNote').style.display='none';
     setStatus('info','Checking the flight controller…');
     if(!(await checkWiring())){ busy=false; $('connBtn').disabled=false; return; }
     setStatus('info','Asking the flight controller for the ESC settings…');
@@ -271,36 +303,56 @@ async function save(){
         busy=false; $('saveBtn').disabled=false; $('relBtn').disabled=false; $('connBtn').disabled=false; return; }
     // The FC drops its cache while it writes the changed ranges, then re-reads
     // them from the ESC — poll until it answers again and compare.
-    setStatus('info','Written — waiting for the ESC to confirm…');
+    setStatus('info','Written — reading it back to confirm…'); toast('info','Written — reading it back to confirm…',30000);
     let back=null;
     for(let i=0;i<40;i++){
         await new Promise(r=>setTimeout(r,600));
         try{ const b=hexToBytes(await LDRC.msp(217,'',1)); if(b.length>=84&&b[0]===0x53){ back=b.slice(0,84); break; } }catch(e){}
     }
     busy=false; $('relBtn').disabled=false; $('connBtn').disabled=false;
-    if(!back){ setStatus('bad','No confirmation from the ESC within 25 s. Press Read to see what it holds now.'); $('saveBtn').disabled=false; return; }
+    if(!back){ setStatus('bad','Written, but no read-back from the ESC within 25 s. Press Read to see what it holds now.');
+        toast('bad','Written — but could not read it back. Press Read to check.'); $('saveBtn').disabled=false; return; }
     blob=back;
     const refused=changes.filter(c=>fieldWire(c.f,back)!==fieldWire(c.f,w));
     paint(back);
     if(refused.length){
         refused.forEach(c=>ctl(c.f).classList.add('changed'));
-        setStatus('bad','Saved, but the ESC kept its own value for: '+refused.map(c=>c.f.label+' ('+fieldText(c.f,fieldWire(c.f,back))+')').join(', '));
-    } else setStatus('good','✓ Saved and verified — the ESC reads back exactly what you set. Press Release when you are done.');
+        const m='Saved, but the ESC kept its own value for: '+refused.map(c=>c.f.label+' ('+fieldText(c.f,fieldWire(c.f,back))+')').join(', ');
+        setStatus('bad',m); toast('bad',m,9000);
+    } else {
+        setStatus('good','✓ Saved — read back from the ESC and confirmed. Press Release when you are done.');
+        toast('good','✓ Saved — read back from the ESC and confirmed.');
+    }
 }
 
+// MSP_MOTOR_TELEMETRY (139): u8 count, then per motor u32 rpm, u16 error, u16 volts (mV) …
+async function escVolts(){
+    try{ const b=hexToBytes(await LDRC.msp(139,'',1)); return b.length>=9 ? (b[7]|(b[8]<<8))/1000 : 0; }
+    catch(e){ return 0; }
+}
 async function releaseEsc(){
     if(busy||!blob){ if(!blob) setStatus('bad','Nothing read yet.'); return; }
     if(LDRC.dirty && !(await LDRC.confirmLoseChanges('releasing the ESC'))) return;
     busy=true; $('relBtn').disabled=true; $('saveBtn').disabled=true;
     const w=new Uint8Array(blob); w[1]=0x80;      // echo everything, command = reset ESC
-    try{
-        await LDRC.msp(218,bytesToHex(w),1);
-        setStatus('good','✓ ESC rebooting — telemetry returns in a few seconds. Rebooting the flight controller so the next session starts clean…');
-        $('fields').style.display='none'; $('fab').style.display='none'; blob=null; LDRC.clearDirty();
-        await new Promise(r=>setTimeout(r,1500));
-        try{ await LDRC.msp(68,'',1); }catch(e){}   // FC reboot: one programming session per FC boot
-        setStatus('good','✓ Released. Telemetry is back once the flight controller has rebooted (≈10 s). To program again, press Read and follow the battery steps.');
-    }catch(e){ setStatus('bad','Release failed: '+e.message+' — power-cycle the ESC instead (unplug the battery, wait 5 s, plug in).'); }
+    // Judged by EFFECT: the ESC's telemetry (frozen while programming) comes back
+    // within ~15 s of a real reboot. A lost ACK on the write is not a failed
+    // release (the reset is harmless to repeat); no ACK AND no telemetry is.
+    let acked=false, err=null;
+    for(let i=0;i<3&&!acked;i++){ try{ await LDRC.msp(218,bytesToHex(w),1); acked=true; }catch(e){ err=e; } }
+    setStatus('info','Resetting the ESC — waiting for its telemetry to come back…');
+    let volts=0; const t0=Date.now();
+    while(Date.now()-t0<20000 && !(volts>5)){ await new Promise(r=>setTimeout(r,1500)); volts=await escVolts(); }
+    if(!acked && !(volts>5)){
+        setStatus('bad','Release failed: '+err.message+' — power-cycle the ESC instead (unplug the battery, wait 5 s, plug in).');
+        busy=false; $('relBtn').disabled=false; $('saveBtn').disabled=!LDRC.dirty; return;
+    }
+    const back = volts>5 ? ' — ESC telemetry is back ('+volts.toFixed(1)+' V)' : '';
+    setStatus('good','✓ ESC rebooted'+back+'. Rebooting the flight controller so the next session starts clean…');
+    $('fields').style.display='none'; $('fab').style.display='none'; blob=null; LDRC.clearDirty();
+    await new Promise(r=>setTimeout(r,1500));
+    try{ await LDRC.msp(68,'',1); }catch(e){}   // FC reboot: one programming session per FC boot (it reboots before it can answer)
+    setStatus('good','✓ Released'+back+'. The flight controller is rebooting (≈10 s). To program again, press Read and follow the battery steps.');
     busy=false; $('relBtn').disabled=false;
 }
 window.addEventListener('pagehide',()=>{ stopPolling(); });
