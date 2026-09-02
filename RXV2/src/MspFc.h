@@ -51,6 +51,7 @@ constexpr uint8_t MSP_BATTERY_STATE  = 130;   // byte 0 = cell count (the FC KNO
 constexpr uint8_t MSP_SET_FEATURE_CFG = 37;   // write the 32-bit feature mask
 constexpr uint8_t MSP_EEPROM_WRITE   = 250;
 constexpr uint8_t MSP_REBOOT         = 68;    // FC restart (governor config write needs it to apply, like V1)
+constexpr uint8_t MSP_ESC_PARAMETERS = 217;   // ESC settings blob (Scorpion/Hobbywing forward programming)
 
 //*********************************************************************
 //  Sync-wait state for mspRequestAndWait()
@@ -61,6 +62,8 @@ inline uint8_t           mspWaitRespBuf[640] = {0};   // jumbo-capable (MSP_ADJU
 inline volatile uint16_t mspWaitRespLen = 0;
 inline volatile bool     mspWaitRespReady = false;
 inline volatile bool     mspWaitRespError = false;   // FC answered "MSP error" for the awaited function
+inline bool              escCatchArmed = false;      // Scorpion boot catcher (see escCatchTick)
+inline bool              escCatchGot   = false;
 
 // Async response capture for the non-blocking TX-parameter state machine
 // (TxParams.h). Unlike mspRequestAndWait (which blocks), the TX-param path
@@ -283,6 +286,9 @@ inline void mspDeliverResponse(uint8_t func, const uint8_t* payload, uint16_t si
             if (size >= 1 && payload[0] > 0 && payload[0] <= 14)
                 fcInfo.cells = payload[0];
             break;
+        case MSP_ESC_PARAMETERS:
+            if (size >= 2) escCatchGot = true;   // FC now holds the ESC's settings
+            break;
         default:
             break;
     }
@@ -409,6 +415,36 @@ inline void mspFcPoll() {
         fcInfo.versionKnown = false;
         events.add("FC lost — no MSP response in 10s");
     }
+}
+
+//*********************************************************************
+//  Scorpion boot catcher — one-shot, armed by the ESC settings page
+//*********************************************************************
+// A Tribunus answers settings requests only for ~10 s after ITS power-on,
+// then streams telemetry and goes deaf. Rotorflight reads the settings at
+// FC-time 4 s but only publishes them (MSP 217) if it sees MSP activity
+// within ~4 s of that read — a phone re-joining WiFi after the battery pull
+// usually misses that window. So the page arms this flag, the user pulls
+// the battery, and the receiver itself polls 217 from t≈2.5 s to t≈14 s.
+// Never runs un-armed: a 217 poll aborts the ESC's telemetry mode.
+// (escCatchArmed / escCatchGot are declared with the sync-wait state above.)
+
+inline void escCatchTick() {
+    if (!escCatchArmed) return;
+    const uint32_t now = millis();
+    if (currentProtocol != PROTO_CRSF) { escCatchArmed = false; return; }
+    if (now < 2500) return;
+    if (escCatchGot || now > 14000) {
+        escCatchArmed = false;
+        events.add(escCatchGot ? "ESC catcher: settings captured by the FC"
+                               : "ESC catcher: FC never published ESC settings");
+        return;
+    }
+    if (mspBridgeActive || txParamBusy || mspWaitFunction != 0xFF) return;
+    static uint32_t last = 0;
+    if ((uint32_t)(now - last) < 250) return;
+    last = now;
+    mspSendRequest(MSP_ESC_PARAMETERS);
 }
 
 //*********************************************************************

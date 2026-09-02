@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.536-esc-boot-catcher",
+      "url": "https://messiter.com/rxv2/release/v0.9.536/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.536/littlefs.bin",
+      "fs_md5": "a7f1782235fa42473a19d74f27d4bbdc",
+      "notes": "Scorpion ESC editor: the receiver now catches the ESC by itself. A Scorpion only listens for a programmer in its first 10 s after power-up, so when the editor sees no answer it arms the receiver; pull the battery, wait 5 s, plug in, and the receiver asks the flight controller for the ESC settings during those first seconds - the phone only has to reconnect. First live read + verified write on the Goblin 770 (Tribunus II 14S-200A)."
+    },
+    {
       "name": "RXV2-0.9.535-esc-wire-switches",
       "url": "https://messiter.com/rxv2/release/v0.9.535/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.535/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.525/littlefs.bin",
       "fs_md5": "69f5ebc12571c7859c49d91874a16bba",
       "notes": "Help screens audited against the current behaviour: wizard step numbers, alphabetical A la carte, selector bars with nothing to drag, divider-based Arm/Rescue, no x on Bank/Rates, Hello-wave in Receiver settings, selector cards on Switches."
-    },
-    {
-      "name": "RXV2-0.9.524-alpha-subtitle",
-      "url": "https://messiter.com/rxv2/release/v0.9.524/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.524/littlefs.bin",
-      "fs_md5": "79f9f87c7230d8ee767c21410718b736",
-      "notes": "A la carte subtitle says 'In alphabetical order' (the old 'roughly in setup order' was no longer true)."
     }
   ]
 }

@@ -291,6 +291,25 @@ inline void handleFcWake() {
         "{\"ok\":true,\"message\":\"wake sent — watch for the Rotorflight button in ~10 s\"}");
 }
 
+// Arm the one-shot Scorpion catcher for the next boot (see escCatchTick in
+// MspFc.h). The page calls this right before telling the user to pull the
+// battery; GET reports whether the last catch worked so the page can say
+// "settings captured" the moment it reconnects.
+inline void handleEscCatchArm() {
+    prefs.putUChar(NVS_KEY_ESC_CATCH, 1);
+    events.add("ESC catcher armed for next boot");
+    server.sendHeader("Cache-Control", "no-store");
+    server.send(200, "application/json", "{\"ok\":true}");
+}
+
+inline void handleEscCatchStatus() {
+    char buf[96];
+    snprintf(buf, sizeof(buf), "{\"armed\":%s,\"got\":%s,\"uptime_ms\":%lu}",
+             escCatchArmed ? "true" : "false", escCatchGot ? "true" : "false", (unsigned long)millis());
+    server.sendHeader("Cache-Control", "no-store");
+    server.send(200, "application/json", buf);
+}
+
 inline void handleWizardJpg() {
     if (serveLittleFsFile("/wizard.jpg", "image/jpeg")) return;
     server.send(404, "text/plain", "/wizard.jpg missing");
@@ -2543,6 +2562,8 @@ inline void registerWebRoutes() {
     server.on("/rotorflight-esc",       handleRotorflightEsc);
     server.on("/rotorflight-escprog",   handleRotorflightEscProg);
     server.on("/api/fc/wake", HTTP_POST, handleFcWake);
+    server.on("/api/esc/catch", HTTP_POST, handleEscCatchArm);
+    server.on("/api/esc/catch", HTTP_GET,  handleEscCatchStatus);
     server.on("/rotorflight-tuning",    handleRotorflightTuning);
     server.on("/rotorflight-txchannels", handleRotorflightTxChannels);
     server.on("/rotorflight-wizards",   handleRotorflightWizards);

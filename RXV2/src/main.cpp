@@ -255,6 +255,18 @@ void setup() {
         forceWifiMode = true;
         Serial.println("[boot] config reboot — bringing WiFi up immediately (no RF window)");
     }
+    // One-shot Scorpion catcher (armed by the ESC settings page before a
+    // battery pull): the receiver polls MSP 217 itself during the ESC's
+    // post-power-on listen window, so the phone's WiFi rejoin speed no
+    // longer decides whether the settings appear. Also skip the RF window —
+    // the user is at the phone, not flying.
+    if (prefs.isKey(NVS_KEY_ESC_CATCH) && prefs.getUChar(NVS_KEY_ESC_CATCH, 0)) {
+        prefs.putUChar(NVS_KEY_ESC_CATCH, 0);
+        escCatchArmed = true;
+        forceWifiMode = true;
+        Serial.println("[boot] ESC catcher armed — polling MSP 217 until ~14 s");
+        events.add("ESC catcher armed (one-shot)");
+    }
 
     //*****************************************************************
     // Quick-boot escape hatch — three quick reboots forces WiFi + SBUS
@@ -689,6 +701,7 @@ void loop() {
         protocolRx();          // pull any telemetry/MSP bytes the FC has sent back on D5
         mspBridgePoll();       // TCP/5760 ↔ FC for wireless Rotorflight config
         mspFcPoll();
+        escCatchTick();        // one-shot Scorpion settings capture after a battery pull
     fcTelemWatch();           // periodic FC-variant / FC-version discovery
         txParamsLoop();        // TX Rotorflight edits: async MSP read/write state machine
     }
