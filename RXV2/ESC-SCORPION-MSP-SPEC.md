@@ -117,7 +117,7 @@ Any other cmd value → `tribParamCommit`/`pl5ParamCommit` returns false → MSP
   (`PL5_BOOT_DELAY 5000`, line 2313).
 - **Nexus X wiring (verified on the Goblin 770, 2026-09-02)**: the ESC telemetry pad is
   **UART2 RX** (A03); UART2 TX (A02) is the RPM/FREQ input with no TX resource, so the
-  half-duplex single wire MUST use `esc_sensor_pinswap = ON` (MSP 123 byte 9) or the FC
+  half-duplex single wire MUST use `esc_sensor_pinswap = ON` (MSP 123 byte 10, after the legacy u32) or the FC
   talks into the RPM pin and the ESC never hears it (that was yesterday's silent failure).
   Rotorflight's own Nexus Scorpion preset is exactly protocol 4 + halfduplex 1 + pinswap 1.
   MSP 123 on the Goblin now reads `0401C80000000000000001000000`.

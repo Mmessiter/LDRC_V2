@@ -414,5 +414,6 @@
  "RXV2-0.9.531-escprog-link": "The wizard's ESC page now links straight to the Scorpion readout (beta) - it was only in A la carte.",
  "RXV2-0.9.532-no-starve": "FLIGHT-SAFETY: MSP waits (web/BLE config requests) now keep the radio and channel output running - an erroring request could starve the FC into rhythmic failsafe twitches (found live during the first Scorpion read attempt).",
  "RXV2-0.9.533-esc-write": "Scorpion ESC settings can now be CHANGED from the phone (beta): edit any field, Save writes only what changed and reads the ESC back to verify; Release reboots ESC + FC. Fixes: long MSP writes (84-byte ESC blob) were silently dropped (now chunked over CRSF); FC \"MSP error\" replies fail fast (502) instead of a 1.2 s timeout; battery-ritual guidance for the ESC listen window.",
- "RXV2-0.9.534-escprog-route": "Fix: the ESC settings page was never routed on the receiver itself (404 since 0.9.530 - only the phone apps served it). Ships the same Scorpion editor as 0.9.533."
+ "RXV2-0.9.534-escprog-route": "Fix: the ESC settings page was never routed on the receiver itself (404 since 0.9.530 - only the phone apps served it). Ships the same Scorpion editor as 0.9.533.",
+ "RXV2-0.9.535-esc-wire-switches": "First-time basics: new Two-way ESC talk (half-duplex) and ESC pin swap switches next to the ESC telemetry protocol - the Scorpion editor needs both on a Nexus X (its ESC pad is the UART RX pin). Verified-write like the rest of the page."
 }
