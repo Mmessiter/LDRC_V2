@@ -58,10 +58,10 @@ function mount(host,opts){
     if(!el) return null;
     el.classList.add('gw');
     el.innerHTML=
-      '<div class=gRow><b data-help="Motor pinion (or pulley) teeth : main gear (or pulley) teeth. Rotorflight turns motor RPM into head speed with this &mdash; the governor and the transmitter both depend on it. (Rotorflight: main_rotor_gear_ratio)">Main gear ratio</b>'+
+      '<div class=gRow><b data-help="Motor pinion (or pulley) teeth : main gear (or pulley) teeth. Rotorflight turns motor RPM into head speed with this &mdash; the governor and the transmitter both depend on it. Belt + gear two-stage drive (SAB Goblin, RAW, Black Thunder): multiply the stages &mdash; motor pulley &times; drive pinion : big pulley &times; main gear, e.g. Goblin 770 = 21&times;19 : 60&times;68 = 399 : 4080. (Rotorflight: main_rotor_gear_ratio)">Main gear ratio</b>'+
       '<span style="white-space:nowrap"><input type=number id=gwMn min=1 max=50000 step=1 inputmode=numeric> : <input type=number id=gwMd min=1 max=50000 step=1 inputmode=numeric></span> <span class=muted>pinion : main gear</span></div>'+
       '<p class=gHint id=gwMh></p>'+
-      (opts.tail===false?'':'<div class=gRow><b data-help="Head : tail &mdash; how many turns the tail rotor makes per one main-rotor turn (belt or shaft drive). Only for the tail-speed readout and tail vibration filters. (Rotorflight: tail_rotor_gear_ratio)">Tail ratio</b>'+
+      (opts.tail===false?'':'<div class=gRow><b data-help="Head : tail &mdash; how many turns the tail rotor makes per one main-rotor turn (belt or shaft drive). Only for the tail-speed readout and tail vibration filters. Tail belt off the intermediate shaft (SAB): tail pulley &times; drive pinion : front tail pulley &times; main gear, e.g. Goblin 770 = 25&times;19 : 37&times;68 = 475 : 2516. (Rotorflight: tail_rotor_gear_ratio)">Tail ratio</b>'+
       '<span style="white-space:nowrap"><input type=number id=gwTn min=1 max=50000 step=1 inputmode=numeric> : <input type=number id=gwTd min=1 max=50000 step=1 inputmode=numeric></span> <span class=muted>head : tail</span></div>'+
       '<p class=gHint id=gwTh></p>')+
       '<button class="btn btn-fw" id=gwSave style="background:#5f8fab;margin:.2em 0 0"><span class=ico>&#128190;</span>Save to flight controller</button>'+

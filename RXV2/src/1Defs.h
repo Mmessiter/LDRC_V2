@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.546-gear-ratio-on-the-fc";
+constexpr const char* FW_VERSION = "RXV2-0.9.547-two-stage-gear-help";
 
 //*********************************************************************
 //  Auto-update manifest URLs
