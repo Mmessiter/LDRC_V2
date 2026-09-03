@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.555-copybank-route",
+      "url": "https://messiter.com/rxv2/release/v0.9.555/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.555/littlefs.bin",
+      "fs_md5": "02ed682a6e36bddcd90e2b9b672594f6",
+      "notes": "Fix: the Copy-a-bank page (Rotorflight > Copy a bank) opened fine in the app but gave 'not found' in a web browser on the receiver's own pages - the firmware was missing the link for it. Firmware only - pages unchanged."
+    },
+    {
       "name": "RXV2-0.9.554-fs-wipe-on-fail",
       "url": "https://messiter.com/rxv2/release/v0.9.554/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.554/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.544/littlefs.bin",
       "fs_md5": "4c637f8ff37b2f1ac9c4ef0aaa79d786",
       "notes": "OTA download resumes after a stall: a dropped or frozen connection is reopened and the update carries on from where it stopped, instead of throwing the whole image away. Same web pages as 0.9.543."
-    },
-    {
-      "name": "RXV2-0.9.543-esc-catch-hardening",
-      "url": "https://messiter.com/rxv2/release/v0.9.543/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.543/littlefs.bin",
-      "fs_md5": "4c637f8ff37b2f1ac9c4ef0aaa79d786",
-      "notes": "Scorpion ESC editor hardening (coffee-break review): preparing the receiver now forgets a stale 'flight controller holds the settings' flag (firmware), and the page only trusts that flag once the receiver has actually restarted since you pressed the button; a single silent flight-controller answer no longer flashes 'no link' (the FC reboots after Release); MSP settings polls are strictly one at a time so a silent FC cannot pile requests up on the receiver; the idle readiness probe can no longer run twice after the page is re-shown."
     }
   ]
 }

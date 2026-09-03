@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.554-fs-wipe-on-fail";
+constexpr const char* FW_VERSION = "RXV2-0.9.555-copybank-route";
 
 //*********************************************************************
 //  Auto-update manifest URLs
