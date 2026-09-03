@@ -1085,11 +1085,14 @@ inline String otaOpen(HTTPClient& http, WiFiClient& plain, WiFiClientSecure& sec
 // runs once, after the first response is confirmed and before the partition is
 // touched (the FS path unmounts LittleFS there). Returns "" on success (image
 // committed by Update.end) or a short reason (Update aborted, nothing committed).
+inline size_t g_otaWritten = 0;   // bytes the last downloadToUpdate() handed to Update — a failed fs image with any is HALF WRITTEN (see fsFlashEnded)
+
 template <typename BeforeFlash>
 inline String downloadToUpdate(const String& url, int command, BeforeFlash beforeFlash) {
     const char* what = command == U_FLASH ? "firmware" : "web files";
     int      total = 0;
     size_t   got   = 0;
+    g_otaWritten   = 0;
     int      idle  = 0;          // consecutive attempts that delivered nothing
     uint32_t t0    = millis();
     String   err;
@@ -1137,8 +1140,9 @@ inline String downloadToUpdate(const String& url, int command, BeforeFlash befor
         events.add(m);
         esp_task_wdt_reset();
     }
+    g_otaWritten = got;
     if (err.length()) {
-        Update.abort();
+        Update.abort();          // NOTE: keeps every byte already flashed — the fs caller wipes a half image
         char m[EventLog::MSG_LEN]; snprintf(m, sizeof m, "%s: %s", what, err.c_str());
         events.add(m);
         return err;
@@ -1251,6 +1255,31 @@ inline int restoreBackupsFromRam() {
     return restored;
 }
 
+// A web-files (LittleFS) flash that starts but does not finish leaves the
+// partition HALF NEW, HALF OLD: the new superblock mounts fine, its directory
+// names files whose data blocks are still the old image's, and the first
+// read of one of those hung loop() for good — HTTP dead, ping alive, no
+// watchdog, only a power cycle (Goblin 2026-09-03: the fs download stalled at
+// 638 KB of 1.5 MB on RSSI -73, and Update.abort() keeps every byte already
+// written). So: an NVS flag goes in BEFORE the first byte and comes out only
+// once Update.end() has committed; boot finds it set → the partition is
+// formatted before it is mounted (main.cpp); a failure the firmware sees
+// itself formats right away and puts the lifeboat (backups + flights) ashore
+// in the clean, page-less filesystem. Pages-less but alive beats deaf — the
+// apps carry their own pages, and the next update restores the receiver's.
+inline void fsFlashBegan() { prefs.putUChar(NVS_KEY_FS_DIRTY, 1); }
+
+inline void fsFlashEnded(bool ok, size_t written) {
+    if (ok) {
+        prefs.putString(NVS_KEY_FS_MD5, Update.md5String());   // fingerprint: identical future images skip
+    } else if (written) {
+        LittleFS.format();                 // a half image must never be mountable
+        prefs.remove(NVS_KEY_FS_MD5);      // no fingerprint → the next update flashes the pages again
+        events.add("Web files: half-written image wiped — pages return with the next update");
+    }
+    prefs.putUChar(NVS_KEY_FS_DIRTY, 0);
+}
+
 inline void safeOutputParkAndRestart();   // defined below (bind section)
 
 //*********************************************************************
@@ -1270,12 +1299,14 @@ inline void handleBleOtaBegin() {
     if (bleOtaCmd == U_SPIFFS) {
         snapshotBackupsToRam();      // whole partition is about to be replaced
         snapshotFlightsToRam();
+        fsFlashBegan();              // NVS flag: a half-written image is wiped, never mounted
         LittleFS.end();
         littleFsMounted = false;
     }
     if (!Update.begin(size, bleOtaCmd)) {
         String e = Update.errorString();
         if (bleOtaCmd == U_SPIFFS) {
+            fsFlashEnded(false, 0);  // nothing written: the old pages are intact, just clear the flag
             littleFsMounted = LittleFS.begin(false) || LittleFS.begin(true);
             restoreBackupsFromRam();
             restoreFlightsFromRam();
@@ -1313,11 +1344,11 @@ inline void handleBleOtaEnd() {
     String err = ok ? "" : (bleOtaError.length() ? bleOtaError : String(Update.errorString()));
     if (!ok) Update.abort();
     if (bleOtaCmd == U_SPIFFS) {
-        if (ok) prefs.putString(NVS_KEY_FS_MD5, Update.md5String());   // fingerprint for the skip
+        fsFlashEnded(ok, bleOtaGot);   // done: md5 fingerprint; failed: wipe the half image before mounting
         littleFsMounted = LittleFS.begin(false) || LittleFS.begin(true);
         int restored = restoreBackupsFromRam();
         restoreFlightsFromRam();
-        char m[64]; snprintf(m, sizeof(m), "BLE OTA web files: %s (%d backups kept)", ok ? "done" : "FAILED", restored);
+        char m[96]; snprintf(m, sizeof(m), "BLE OTA web files: %s (%d backups kept)", ok ? "done" : (bleOtaGot ? "FAILED — half image wiped" : "FAILED"), restored);
         events.add(m);
     } else {
         events.add(ok ? "BLE OTA firmware: flashed OK" : "BLE OTA firmware: FAILED");
@@ -1351,21 +1382,24 @@ inline String updateFilesystemKeepingBackups(const String& fsUrl) {
         snapshotBackupsToRam();
         snapshotFlightsToRam();
         n = g_fsBackupCount;
+        fsFlashBegan();            // NVS flag: a half-written image is wiped, never mounted (boot checks it too)
         // 2) Unmount; the image is flashed straight from the stream (bounded + resumed).
         LittleFS.end();
         touched = true;
     });
     if (!touched) return "";   // no FS for this release (404 / unreachable): nothing changed
-    if (err.isEmpty()) prefs.putString(NVS_KEY_FS_MD5, Update.md5String());   // fingerprint: identical future images skip
+    fsFlashEnded(err.isEmpty(), g_otaWritten);   // committed: fingerprint; died mid-image: format first
 
     // 3) Re-mount (format only if the freshly-written image won't mount), restore backups.
     bool mounted = LittleFS.begin(false) || LittleFS.begin(true);
     littleFsMounted = mounted;
     int restored = restoreBackupsFromRam();
     restoreFlightsFromRam();
-    char m[96];
+    char m[160];
     if (err.length())
-        snprintf(m, sizeof m, " (web files FAILED: %s; %d/%d backups kept)", err.c_str(), restored, n);
+        snprintf(m, sizeof m, " (web files FAILED: %s — %s; %d/%d backups kept)", err.c_str(),
+                 g_otaWritten ? "half image wiped, run the update again for the pages" : "old pages kept",
+                 restored, n);
     else
         snprintf(m, sizeof m, " + web files (%d backups preserved)", restored);
     return String(m);

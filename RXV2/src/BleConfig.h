@@ -89,6 +89,11 @@ inline volatile uint32_t bleOtaSize = 0;
 inline volatile uint32_t bleOtaGot  = 0;
 inline volatile uint32_t bleOtaLastChunkMs = 0;
 inline String            bleOtaError;
+// Defined in WebPages.h (included after this header): the web-files lifeboat
+// + the half-image wipe, shared with the stall watchdog in blePoll().
+inline void fsFlashEnded(bool ok, size_t written);
+inline int  restoreBackupsFromRam();
+inline int  restoreFlightsFromRam();
 
 // captured response
 inline bool    bleActive   = false; // a handler is running against BLE
@@ -559,7 +564,17 @@ inline void blePoll() {
         Update.abort();
         bleOtaActive = false;
         bleOtaError = "transfer stalled";
-        events.add("BLE OTA stalled — aborted (old firmware intact)");
+        if (bleOtaCmd == U_SPIFFS) {
+            // Web files: the partition may be half written and LittleFS is
+            // unmounted since begin — wipe rather than ever mount a half image
+            // (fsFlashEnded, WebPages.h), remount, put the lifeboat ashore.
+            fsFlashEnded(false, bleOtaGot);
+            littleFsMounted = LittleFS.begin(false) || LittleFS.begin(true);
+            restoreBackupsFromRam();
+            restoreFlightsFromRam();
+            events.add(bleOtaGot ? "BLE OTA web files stalled — aborted, half image wiped"
+                                 : "BLE OTA web files stalled — aborted (old pages intact)");
+        } else events.add("BLE OTA stalled — aborted (old firmware intact)");
     }
     // Keep serving while a client is CONNECTED even when advertising is
     // off (fly-quiet mode keeps the one live phone link) — otherwise the

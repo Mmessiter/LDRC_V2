@@ -210,6 +210,18 @@ void setup() {
     //*****************************************************************
     // Mount LittleFS so web pages can serve assets from /data
     //*****************************************************************
+    // A web-files flash that never finished (power lost, link died mid-image)
+    // leaves a half-new/half-old partition that MOUNTS — and hangs loop() for
+    // good on the first page read (Goblin 2026-09-03). The flag was set before
+    // the first byte went in and is cleared only once the image committed
+    // (fsFlashBegan/fsFlashEnded, WebPages.h): set here means wipe, don't mount.
+    if (prefs.getUChar(NVS_KEY_FS_DIRTY, 0)) {
+        LittleFS.format();
+        prefs.remove(NVS_KEY_FS_MD5);      // no fingerprint → the next update flashes the pages again
+        prefs.putUChar(NVS_KEY_FS_DIRTY, 0);
+        Serial.println("[fs] half-written LittleFS image wiped (update never finished)");
+        events.add("Web files were half-written at the last update — wiped; update again for the pages");
+    }
     if (LittleFS.begin(true)) {     // formatOnFail=true — wipes & formats if corrupt
         littleFsMounted = true;
         Serial.printf("[fs] LittleFS mounted, %u/%u bytes used\n",
