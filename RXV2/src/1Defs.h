@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.550-field-landing-ble";
+constexpr const char* FW_VERSION = "RXV2-0.9.551-throttle-parked";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -306,6 +306,34 @@ inline bool      simEnabled      = false;    // "Drive simulator over USB" — p
 inline uint32_t  g_loopHz        = 0;        // diag: main-loop iterations/sec (radioPoll runs once per loop)
 inline uint32_t  g_loopMaxUs     = 0;        // diag: worst single-loop duration in the last second (µs)
 
+// Stall forensics (0.9.551, after the Goblin's "little jump every minute or
+// two at the table"): every loop() call that can block is timed, and the
+// slowest one of the current iteration is remembered by NAME. When the
+// stall detector fires it names the culprit in the event ("DIAG LOOP-STALL
+// 312ms (flightSave 305ms)") instead of leaving us to guess from the
+// timing. Cheap: two micros() reads per call.
+inline const char* g_stallOpName   = "";     // slowest timed call in the CURRENT iteration
+inline uint32_t    g_stallOpUs     = 0;
+inline const char* g_loopMaxOpName = "";     // ...and of the worst iteration in the last second (state.json)
+inline uint32_t    g_loopMaxOpUs   = 0;
+struct StallScope {
+    const char* name;
+    uint32_t    t0;
+    explicit StallScope(const char* n) : name(n), t0(micros()) {}
+    ~StallScope() {
+        uint32_t dt = micros() - t0;
+        if (dt > g_stallOpUs) { g_stallOpUs = dt; g_stallOpName = name; }
+    }
+};
+
+// Governor throttle watch (0.9.551, Goblin 770 2026-09-03: "stable but far
+// too slow" in bank 1 — the V1 still sent 50 % throttle from the ESC-governor
+// days, and Rotorflight's governor never takes over below ~99 % of the target
+// head speed). The verdict of the last long armed spell, kept in NVS so the
+// governor pages can nag until a flight reaches full throttle.
+inline uint8_t   govThrParkedPct = 0;        // NVS_KEY_GOV_THR_PARKED: 0 = fine, else the % the throttle sat at
+inline uint8_t   govThrMaxPct    = 0;        // NVS_KEY_GOV_THR_MAX: highest throttle % seen in that spell
+
 //*********************************************************************
 //  NVS keys (Preferences namespace = "rxv2")
 //*********************************************************************
@@ -357,6 +385,10 @@ constexpr const char* NVS_KEY_FC_TELEM    = "fctelem";
 constexpr const char* NVS_KEY_VBAT_PIN    = "vbatpin";  // uint8 GPIO of the battery divider (0=off; 6=D4, 9=D9 — the free radio-3 pins on 2-radio boards)
 constexpr const char* NVS_KEY_VBAT_RATIO  = "vbatrat";  // float divider ratio ((Rtop+Rbot)/Rbot): 23.0 for 220k/10k (12S), 11.0 for 100k/10k (6S)
 constexpr const char* NVS_KEY_VBAT_CELLS  = "vbatcel";
+constexpr const char* NVS_KEY_FC_THR_CH   = "fcthrch";  // uint8 the FC's OWN throttle channel (1..16) learned from MSP_RX_MAP — what Rotorflight's governor reads
+constexpr const char* NVS_KEY_FC_GOV_MODE = "fcgovmd";  // uint8 Rotorflight governor mode (MSP 142 byte 0: 0 off, 1 passthrough, 2 standard, 3 electric, 4 nitro; 255 unknown)
+constexpr const char* NVS_KEY_GOV_THR_PARKED = "govthrpk"; // uint8 verdict of the last long armed spell: 0 = throttle reached full, else the % it sat at
+constexpr const char* NVS_KEY_GOV_THR_MAX = "govthrmx"; // uint8 highest throttle % seen in that spell
 constexpr const char* NVS_KEY_THR_CH      = "thrch";    // uint8 throttle channel (1..16, 0=off); held at THROTTLE_SAFE_US until the TX is first heard  // uint8 cell count for per-cell display (0 = not set, show pack volts only)  // uint8 1=expect FC on telemetry line (default); 0=ignore it (plain PWM converters echo junk that parses as telemetry)  // uint8 CRSF frame rate in Hz (50/100/250); some CRSF-to-PWM converters misbehave above ~100 Hz   // one-shot: web-initiated reboot to apply a setting → next boot skips the RF window, WiFi comes straight back
 
 // A flight "ends" (and is saved to flash) after the link has been gone this
@@ -863,6 +895,7 @@ struct EventLog {
     uint32_t when[SIZE]          = {};
     size_t   head                = 0;
     size_t   count               = 0;
+    uint32_t added               = 0;   // every add() ever, so eventsPersist() can append just the new lines (0.9.551)
 
     void add(const char* msg) {
         when[head] = millis();
@@ -870,6 +903,7 @@ struct EventLog {
         msgs[head][MSG_LEN - 1] = '\0';
         head = (head + 1) % SIZE;
         if (count < SIZE) count++;
+        added++;
     }
 };
 inline EventLog events;
@@ -923,11 +957,19 @@ struct FcInfo {
     uint8_t  apiMajor         = 0;       // MSP API version (separate from fw version)
     uint8_t  apiMinor         = 0;
     uint8_t  cells            = 0;       // battery cell count from MSP_BATTERY_STATE (0 = unknown)
+    // 0.9.551 — what Rotorflight's governor actually listens to. Learned
+    // once from MSP_RX_MAP / MSP_GOVERNOR_CONFIG, kept in NVS (a TX-on
+    // boot never gets to ask), refreshed whenever a page reads them.
+    uint8_t  throttleCh       = 0;       // FC's throttle channel 1..16 (0 = unknown)
+    uint8_t  govMode          = 0xFF;    // MSP 142 byte 0 (3 electric / 4 nitro = governed; 0xFF = unknown)
+    uint8_t  rxMapTries       = 0;       // silent-probe caps so an unhelpful FC can't hold the latch open
+    uint8_t  govTries         = 0;
     uint32_t probesSent       = 0;
     uint32_t lastProbeMs      = 0;
     uint32_t lastResponseMs   = 0;
 };
 inline FcInfo fcInfo;
+inline bool   fcInfoNvsDirty = false;   // throttleCh/govMode changed in RAM; written to NVS at the next quiet moment
 
 //*********************************************************************
 //  Cross-module forward declarations

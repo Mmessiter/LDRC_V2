@@ -9,7 +9,7 @@
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Governor (profile) &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=179">
-<script src="/app.js?v=187" defer></script>
+<script src="/app.js?v=188" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;
         padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -26,6 +26,7 @@
          background:#cdd6df;color:#3a5165;cursor:pointer}
 .profBtn.active{background:#5fa099;color:#fff}
 input:disabled{background:#eee;color:#999}
+.fldRow input[type=checkbox]{width:1.4em;height:1.4em;flex:0 0 auto}
 </style>
 </head>
 <body class=hasFab>
@@ -38,6 +39,7 @@ input:disabled{background:#eee;color:#999}
         <strong>Requires Rotorflight 2.3</strong><br>
         <span id=verBannerMsg>You are running an older firmware. Editing the governor is disabled. Please upgrade your flight controller to Rotorflight 2.3 to use this page.</span>
     </div>
+    <div id=thrBanner class="banner warn" style="display:none"></div>
     <div id=status class="banner info">loading&hellip;</div>
 
     <div class=card>
@@ -79,6 +81,11 @@ input:disabled{background:#eee;color:#999}
         <div class=fldRow><label data-help="Floor while governed, %.">Min throttle</label>             <input type=number id=g_mint></div>
         <div class=fldRow><label data-help="If the RPM signal disappears in flight, throttle drops by this much and holds steady — keeps you flying while protecting the drivetrain.">Throttle drop if RPM signal lost (fall-back drop)</label>           <input type=number id=g_fbd></div>
     </div>
+
+    <div class=card>
+        <h2>Spool-up</h2>
+        <div class=fldRow><label data-help="ON: the governor ramps the head speed itself, using its own gains, so the spool-up ends exactly at this bank's head speed. OFF (the default): it simply passes your transmitter throttle through while spooling and only takes control once the head is within about 1 % of the target — so a throttle that is not fully up leaves the head running slow, with no governor at all.">Governor controls the spool-up (PID spool-up)</label> <input type=checkbox id=g_pidsp></div>
+    </div>
     <button class="btn btn-fw" id=reloadBtn onclick="load()"><span class=ico>&#8635;</span>Reload from flight controller</button>
 
     <div class=card>
@@ -114,7 +121,7 @@ input:disabled{background:#eee;color:#999}
 //   [12]    u8   max_throttle (%)
 //   [13]    u8   min_throttle (%)
 //   [14]    u8   fallback_drop (%)
-//   [15..16] u16 flags (bitfield — preserved verbatim from read; UI doesn't expose)
+//   [15..16] u16 flags (bitfield — bit 4 = PID spool-up exposed as a checkbox; all other bits preserved verbatim from read)
 const PROFILE_BYTES = 17;
 
 let currentProfile = parseInt(localStorage.getItem('rfPidProfile') || '0');
@@ -166,6 +173,7 @@ async function load() {
         const stateR = await fetch('/api/state.json', { cache: 'no-store' });
         const st = await stateR.json();
         const api = (st.fcinfo.api_major * 100) + st.fcinfo.api_minor;
+        LDRC.govThrottleBanner(st, 'thrBanner');   // 0.9.551: throttle parked below full on the last flight?
         editable = (api >= 1209);
         const newer = LDRC.rfVersionAlert(api);
         const banner = document.getElementById('verBanner');
@@ -205,6 +213,7 @@ async function load() {
         document.getElementById('g_maxt').value = bytes[12];
         document.getElementById('g_mint').value = bytes[13];
         document.getElementById('g_fbd').value  = bytes[14];
+        document.getElementById('g_pidsp').checked = !!((bytes[15] | (bytes[16] << 8)) & 0x10);   // GOV_FLAG_PID_SPOOLUP
         LDRC.clearStale();
         setStatus('good', (LDRC.replay ? '✓ Loaded from the phone (profile ' : '✓ Loaded from flight controller (profile ') + (currentProfile + 1) + ')');
         paintProfileButtons();
@@ -231,7 +240,11 @@ function buildPayload() {
     bytes[12] = u8('g_maxt');
     bytes[13] = u8('g_mint');
     bytes[14] = u8('g_fbd');
-    // bytes 15-16 (flags) preserved from cachedRaw
+    // bytes 15-16 (flags): only bit 4 (PID spool-up) is ours; the rest stay as read
+    let flags = bytes[15] | (bytes[16] << 8);
+    flags = document.getElementById('g_pidsp').checked ? (flags | 0x10) : (flags & ~0x10);
+    bytes[15] = flags & 0xff;
+    bytes[16] = (flags >> 8) & 0xff;
     return bytes;
 }
 

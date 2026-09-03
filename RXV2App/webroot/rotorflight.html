@@ -9,7 +9,7 @@
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rotorflight &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=179">
-<script src="/app.js?v=187" defer></script>
+<script src="/app.js?v=188" defer></script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -18,6 +18,7 @@
 <div class=container>
     <h1>Rotorflight</h1>
     <p class=subtitle id=fcInfo>&hellip;</p>
+    <div id=thrBanner class="banner" style="display:none"></div>
 
     <div class="banner" style="background:#c8d2dc;color:#3a5165;padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 .8em">&#128161; Don&rsquo;t understand a term? If it&rsquo;s <span data-help="Exactly like this! Lift your finger and the explanation disappears.">underlined like this</span>, simply put your finger on it to see an explanation.</div>
     <a class="btn btn-fw" href="/rotorflight-wizards"  style="background:#4a8a5f"><span class=ico>&#129497;</span><span style="display:flex;flex-direction:column;align-items:flex-start;text-align:left"><span>Wizards</span><span style="font-size:.62em;font-weight:400;opacity:.85;margin-top:.25em">step-by-step: new helicopter &amp; tuning</span></span></a>
@@ -36,6 +37,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         ? ('Rotorflight ' + fc.rf_major + '.' + fc.rf_minor + ' (BetaFlight ' + fc.fw_major + '.' + fc.fw_minor + '.' + fc.fw_patch + ' \u2022 API ' + fc.api_major + '.' + fc.api_minor + ')')
         : (fc.detected ? fc.variant : 'Flight controller connected (version pending)');
     LDRC.setText('fcInfo', label);
+    LDRC.govThrottleBanner(s, 'thrBanner');   // 0.9.551: nag until a flight reaches full throttle
 });
 </script>
 <template id=helpContent><h2>Rotorflight</h2>

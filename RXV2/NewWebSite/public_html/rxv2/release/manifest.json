@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.551-throttle-parked",
+      "url": "https://messiter.com/rxv2/release/v0.9.551/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.551/littlefs.bin",
+      "fs_md5": "c67c81b16d36aa0bd329fe4f466a3a7b",
+      "notes": "Governor pages now warn when the transmitter throttle sat below 100 % while armed (the head runs stable but slow and bank changes do nothing) - the receiver learns the throttle channel and governor mode from Rotorflight itself. New 'Governor controls the spool-up (PID spool-up)' switch in the governor profile. No more swash twitches: the event log is saved append-only and never while armed. Loop stalls now name the call that caused them."
+    },
+    {
       "name": "RXV2-0.9.550-field-landing-ble",
       "url": "https://messiter.com/rxv2/release/v0.9.550/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.550/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.540/littlefs.bin",
       "fs_md5": "4bef21786e8df35102dbd94cff2577fa",
       "notes": "Scorpion ESC editor: the 'Saved - read back from the ESC and confirmed' message now actually appears above the Save button (it was written but never displayed)."
-    },
-    {
-      "name": "RXV2-0.9.539-install-watchdog",
-      "url": "https://messiter.com/rxv2/release/v0.9.539/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.539/littlefs.bin",
-      "fs_md5": "b4044bc0400a4afbc81f9326254be75e",
-      "notes": "Update safety: the receiver no longer goes deaf if a WiFi download stalls. A download that stops for 25 s is abandoned (firmware unchanged), a task watchdog reboots the receiver if anything else wedges during an install, and the events log now records each download's size and time. Handshake timeout trimmed to 20 s."
     }
   ]
 }

@@ -2522,6 +2522,8 @@ inline void handleApiState() {
     j += "]";
     j += ",\"loop_hz\":";     j += g_loopHz;       // diag: loop rate (radioPoll/sec)
     j += ",\"loop_max_us\":"; j += g_loopMaxUs;    // diag: worst loop stall last second
+    j += ",\"loop_max_op\":\""; j += g_loopMaxOpName; j += "\"";   // diag (0.9.551): slowest timed call inside that iteration
+    j += ",\"loop_max_op_us\":"; j += g_loopMaxOpUs;
     // Legacy field — kept for any older diagnostics page that reads it.
     j += ",\"radios_dual\":"; j += (numRadiosPresent >= 2 ? "true" : "false");
     j += ",\"active_radio\":"; j += activeRadioIdx;
@@ -2744,6 +2746,12 @@ inline void handleApiState() {
     j += ",\"rotorflight_capable\":"; j += (fcIsRotorflightConfigCapable() ? "true" : "false");
     j += ",\"rf_major\":"; j += rotorflightMajor();
     j += ",\"rf_minor\":"; j += rotorflightMinor();
+    // Governor throttle watch (0.9.551): what the FC's governor listens to
+    // and the verdict of the last long armed spell (0 = fine).
+    j += ",\"throttle_ch\":"; j += fcInfo.throttleCh;
+    j += ",\"gov_mode\":"; j += fcInfo.govMode;
+    j += ",\"gov_thr_parked\":"; j += govThrParkedPct;
+    j += ",\"gov_thr_max\":"; j += govThrMaxPct;
     j += "}";
 
     // --- channels ----------------------------------------------------
