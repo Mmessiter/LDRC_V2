@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.549-blackbox-setup",
+      "url": "https://messiter.com/rxv2/release/v0.9.549/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.549/littlefs.bin",
+      "fs_md5": "90109d17dc544287a954c982f7c31d2f",
+      "notes": "New wizard step 13, Flight recorder: sets up Rotorflight's own onboard black box in plain English - when to record (whenever armed, no switch needed; or by the Blackbox switch, with a warning if no switch is assigned), where (flight-controller memory, SD card, serial), how often (as samples per second worked out from the control-loop rate), seconds to keep recording after disarm, overwrite-oldest-when-full, and which fields (Recommended set = Rotorflight's defaults + ESC + Governor, so head-speed problems show up). Shows the memory used and erases it with one red-confirmed tap, watching until the flight controller reports empty. Every save is read back and compared, so a flight controller that is busy recording (it silently ignores edits then) is reported honestly; rate or device changes offer the restart they need. Refused while armed. Also in A la carte. Firmware: route only."
+    },
+    {
       "name": "RXV2-0.9.548-rotor-motor-labels",
       "url": "https://messiter.com/rxv2/release/v0.9.548/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.548/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.538/littlefs.bin",
       "fs_md5": "b4044bc0400a4afbc81f9326254be75e",
       "notes": "Scorpion ESC editor: Save now confirms right above the button (\"Saved - read back from the ESC and confirmed\"). Boot catcher made safe: a stale arm survives software reboots but a transmitter heard at power-up cancels it (never freezes ESC telemetry at the field); Cancel button on the battery card. Updates prefer the receiver's own WiFi: if it is still joining, the app waits (up to 45 s) instead of pushing over Bluetooth - unless the home network is out of range."
-    },
-    {
-      "name": "RXV2-0.9.537-esc-release-by-effect",
-      "url": "https://messiter.com/rxv2/release/v0.9.537/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.537/littlefs.bin",
-      "fs_md5": "647400682a853987da0512a697019164",
-      "notes": "Scorpion ESC editor: Release now judges itself by effect - it retries the reset write and waits for the ESC's telemetry to come back (up to 20 s), reporting the live voltage - a lost acknowledgement no longer reads as a failed release. Idle status reads \"Press Read the ESC to start\"."
     }
   ]
 }

@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.548-rotor-motor-labels";
+constexpr const char* FW_VERSION = "RXV2-0.9.549-blackbox-setup";
 
 //*********************************************************************
 //  Auto-update manifest URLs

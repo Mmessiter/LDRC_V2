@@ -106,10 +106,10 @@
                     143: [142, null],   149: [148, "pid"], 43: [42, null],
                     147: [146, "pid"],  216: [123, null],  222: [131, null],
                     33:  [32, null],    65:  [64, null],   39:  [38, null],
-                    37:  [36, null] };
+                    37:  [36, null],    81:  [80, null] };
   const MSP_READ_SPACE = { 111: "rate", 112: "pid", 94: "pid", 142: null, 148: "pid", 42: null,
                            146: "pid", 123: null, 131: null, 32: null, 64: null, 38: null, 36: null,
-                           34: null, 105: null, 108: null, 120: null };
+                           34: null, 105: null, 108: null, 120: null, 80: null, 70: null, 101: null };
   // Canned answers for the wizard-era pages (servos, rescue, switches,
   // first-time basics) so the demo shows realistic data instead of
   // "undefined servos" (Malcolm's screenshot, 2026-08-25).
@@ -128,6 +128,17 @@
   MSP_DEFAULTS[38]  = [0,0,0,0,0,0];
   MSP_DEFAULTS[108] = [0,0,0,0,0,0];
   MSP_DEFAULTS[105] = [].concat(u16(1500),u16(1500),u16(1500),u16(1500),u16(1500),u16(1700),u16(1500),u16(1500));
+  // Flight recorder page (Rotorflight Blackbox): MSP 80 config — supported,
+  // device FLASH, mode NORMAL, denom 8, RF's default field set 0x7EE7F,
+  // initial-erase 0, rolling 0, grace 5 s. MSP 70 flash summary — flags
+  // supported+ready, 256 sectors, 16 MB total, 2.1 MB used. MSP 101 status —
+  // PID loop 1000 µs (→ 125 samples/s at 1-in-8), profile bytes patched live.
+  MSP_DEFAULTS[80]  = [1, 1, 1].concat(u16(8), [0x7f, 0xee, 0x07, 0x00], u16(0), [0, 5]);
+  const FLASH_TOTAL = 16 * 1024 * 1024, FLASH_USED = 2228224;
+  const u32 = v => [v & 0xff, (v >>> 8) & 0xff, (v >>> 16) & 0xff, (v >>> 24) & 0xff];
+  MSP_DEFAULTS[70]  = [3].concat(u32(256), u32(FLASH_TOTAL), u32(FLASH_USED));
+  MSP_DEFAULTS[101] = [].concat(u16(1000), u16(125), u16(0x21), [0,0,0,0], [0], u16(300), u16(180), [0],
+                       [26], [0,0,0,0], [0, 2], [0, 6, 0, 6], [1, 4, 1]);
   const mspStore = (function () {
     try { return JSON.parse(localStorage.getItem("rxv2DemoMsp") || "{}"); }
     catch (e) { return {}; }
@@ -176,6 +187,18 @@
     }
     if (fn === 222 && data) {               // motor config: the 28-B write lacks the motorCount byte the 29-B read has at [6]
       data = data.slice(0, 12) + "01" + data.slice(12);
+    }
+    if (fn === 81 && data) {                // blackbox config: the 12-B write lacks the "supported" byte the 13-B read leads with
+      data = "01" + data;
+    }
+    if (fn === 72) {                        // erase the (pretend) dataflash: used bytes → 0
+      mspStore["70/0"] = toHex([3].concat(u32(256), u32(FLASH_TOTAL), u32(0)));
+      try { localStorage.setItem("rxv2DemoMsp", JSON.stringify(mspStore)); } catch (e) {}
+      return T("");
+    }
+    if (fn === 101) {                       // status: current PID / rate profile indexes
+      const b = MSP_DEFAULTS[101].slice(); b[23] = pidProfile; b[25] = rateProfile;
+      return T(toHex(b));
     }
     if (fn in MSP_SET && data) {            // write: persist for the paired read
       const [readFn, space] = MSP_SET[fn];
