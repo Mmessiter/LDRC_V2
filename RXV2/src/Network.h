@@ -221,6 +221,7 @@ inline void onWifiConnected() {
     events.add(buf);
     staAttempts = 0;
     staGaveUp   = false;   // home WiFi is here after all → back to normal AP+STA retry cadence
+    staConnectedThisBoot = true;   // post-flight revival may bring WiFi back: home is proven
     netMode = NET_WIFI_UP;
     ledOff();
 
@@ -513,11 +514,22 @@ inline void netStep() {
                     bleWaveStartMs = millis();
                     events.add("Config link ready — waving ailerons");
                 }
-                if (!staGaveUp) {
+                if (!staGaveUp && staConnectedThisBoot) {
                     Serial.println("[net] TX link lost — bringing WiFi back up");
                     events.add("TX lost — WiFi re-enabled");
                     eventsPersist();      // forensics BEFORE the revival attempt
                     startWifiStation();   // → AP (+ STA if creds), reachable again
+                } else {
+                    // Field (RF-only boot, or home WiFi already proved absent):
+                    // Bluetooth only — a STA hunt now would swamp the phone's
+                    // link (Goblin 2026-09-03). Once per link-loss episode.
+                    static uint32_t revivedForLoss = 0;
+                    if (revivedForLoss != rx.lastMillis) {
+                        revivedForLoss = rx.lastMillis;
+                        events.add("TX lost — Bluetooth back (field: no WiFi hunt)");
+                        eventsPersist();
+                        if (!bleAdvertising() && !bleHasClient()) bleStart();
+                    }
                 }
             }
             // Auto fly mode DETRIGGER (Malcolm 2026-08-23): disarming brings
@@ -536,11 +548,22 @@ inline void netStep() {
                 if (disarmedNow) {
                     if (!disarmSinceMs) disarmSinceMs = millis();
                     else if ((uint32_t)(millis() - disarmSinceMs) > 5000) {
-                        disarmSinceMs = 0;
-                        events.add("AUTO fly mode: disarmed — radios back on");
-                        eventsPersist();
-                        if (!bleAdvertising() && !bleHasClient()) bleStart();
-                        if (!staGaveUp) startWifiStation();
+                        // Re-checked every 5 s while disarmed, but SILENT once
+                        // the radios are up (used to log + flash-persist every
+                        // 5 s at the field, where WiFi never comes back).
+                        disarmSinceMs = millis();
+                        const bool bleDown    = !bleAdvertising() && !bleHasClient();
+                        // WiFi only where home WiFi is PROVEN this boot. A field
+                        // landing revives Bluetooth alone: the STA hunt swamped
+                        // the phone's link (Goblin 2026-09-03, "nothing came").
+                        const bool wifiWanted = !staGaveUp && staConnectedThisBoot;
+                        if (bleDown || wifiWanted) {
+                            events.add(wifiWanted ? "AUTO fly mode: disarmed — radios back on"
+                                                  : "AUTO fly mode: disarmed — Bluetooth back (field: no WiFi hunt)");
+                            eventsPersist();
+                            if (bleDown)    bleStart();
+                            if (wifiWanted) startWifiStation();
+                        }
                     }
                 } else disarmSinceMs = 0;
             }

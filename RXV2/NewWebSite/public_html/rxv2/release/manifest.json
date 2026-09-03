@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.550-field-landing-ble",
+      "url": "https://messiter.com/rxv2/release/v0.9.550/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.550/littlefs.bin",
+      "fs_md5": "90109d17dc544287a954c982f7c31d2f",
+      "notes": "Field landing fix: after a flight the receiver used to switch Bluetooth back on AND start a 100-second hunt for your home WiFi - which it cannot find at the field. That hunt swamped the phone's Bluetooth link, so the app connected but pages never loaded until a reboot (Goblin, 3 Sep). Now a receiver that never joined home WiFi this power-up revives Bluetooth only after landing; WiFi comes back only where home WiFi was actually joined. Also stops the 'disarmed - radios back on' log entry repeating every 5 seconds at the field, and logs a 'BLE reply stalled' event when Bluetooth replies are being refused, so this kind of fault shows up in the receiver's event log."
+    },
+    {
       "name": "RXV2-0.9.549-blackbox-setup",
       "url": "https://messiter.com/rxv2/release/v0.9.549/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.549/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.539/littlefs.bin",
       "fs_md5": "b4044bc0400a4afbc81f9326254be75e",
       "notes": "Update safety: the receiver no longer goes deaf if a WiFi download stalls. A download that stops for 25 s is abandoned (firmware unchanged), a task watchdog reboots the receiver if anything else wedges during an install, and the events log now records each download's size and time. Handshake timeout trimmed to 20 s."
-    },
-    {
-      "name": "RXV2-0.9.538-esc-catcher-safe-wifi-first",
-      "url": "https://messiter.com/rxv2/release/v0.9.538/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.538/littlefs.bin",
-      "fs_md5": "b4044bc0400a4afbc81f9326254be75e",
-      "notes": "Scorpion ESC editor: Save now confirms right above the button (\"Saved - read back from the ESC and confirmed\"). Boot catcher made safe: a stale arm survives software reboots but a transmitter heard at power-up cancels it (never freezes ESC telemetry at the field); Cancel button on the battery card. Updates prefer the receiver's own WiFi: if it is still joining, the app waits (up to 45 s) instead of pushing over Bluetooth - unless the home network is out of range."
     }
   ]
 }
