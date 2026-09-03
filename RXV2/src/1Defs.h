@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.549-blackbox-setup";
+constexpr const char* FW_VERSION = "RXV2-0.9.550-field-landing-ble";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -86,6 +86,13 @@ inline uint8_t  staAttempts   = 0;
 // then run a STABLE pure-AP (STA interface dropped, so it stops hopping the
 // radio's channel and disrupting the phone) and only re-probe home WiFi rarely.
 inline bool     staGaveUp     = false;
+// True once the STA has joined home WiFi THIS boot. The post-flight radio
+// revival only brings WiFi back when this is set: a receiver that booted
+// RF-only (TX on first — the field) has never proved home WiFi is here, and
+// a 100 s STA hunt next to a live Bluetooth session swamps it — the app
+// connects but replies never arrive (Goblin, 2026-09-03: "nothing came"
+// until a reboot). Field landing = Bluetooth only, like the field boot.
+inline bool     staConnectedThisBoot = false;
 // Landing auto-recovery (WiFi/BLE revive 10 s after link loss) is ARMED by a
 // LIVE link. "Fly now" disarms it — pressing it with no TX must not bring the
 // radios (and the wave!) back 10 s later; they return only after a real

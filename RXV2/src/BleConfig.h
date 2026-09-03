@@ -583,20 +583,34 @@ inline void blePoll() {
     if (chunk > 240) chunk = 240;
     size_t sentThisCall = 0;
 
+    // Forensics: a reply whose notifies keep being refused for 3 s is logged
+    // ONCE (radio congested — WiFi hunting? — or the phone never subscribed).
+    // "The app connects but nothing comes" is otherwise invisible in the log.
+    static uint32_t stallSinceMs = 0;
+    auto refused = [&]() {
+        if (!stallSinceMs) stallSinceMs = millis();
+        else if ((uint32_t)(millis() - stallSinceMs) > 3000) {
+            stallSinceMs = 0;                            // re-arm: logs again after another 3 s
+            events.add("BLE reply stalled 3 s — notifies refused (radio busy?)");
+        }
+    };
+
     // header frame first (fits one chunk by construction of our short types)
     if (bleTxOffset == 0 && bleHeaderFrame.length()) {
-        if (!bleRespChr->notify((const uint8_t*)bleHeaderFrame.c_str(), bleHeaderFrame.length())) return;
+        if (!bleRespChr->notify((const uint8_t*)bleHeaderFrame.c_str(), bleHeaderFrame.length())) { refused(); return; }
         bleHeaderFrame = "";
         sentThisCall += chunk;
     }
     while (bleTxOffset < bleBody.length() && sentThisCall < BLE_PUMP_BUDGET) {
         size_t n = min(chunk, bleBody.length() - bleTxOffset);
         if (!bleRespChr->notify((const uint8_t*)bleBody.c_str() + bleTxOffset, n)) {
+            refused();
             return;                                      // stack congested — retry next loop
         }
         bleTxOffset  += n;
         sentThisCall += n;
     }
+    stallSinceMs = 0;
     if (bleTxOffset >= bleBody.length() && bleHeaderFrame.length() == 0) {
         blePumping = false;
         bleBody = "";
