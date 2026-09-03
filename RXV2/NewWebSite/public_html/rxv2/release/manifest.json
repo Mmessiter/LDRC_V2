@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.554-fs-wipe-on-fail",
+      "url": "https://messiter.com/rxv2/release/v0.9.554/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.554/littlefs.bin",
+      "fs_md5": "02ed682a6e36bddcd90e2b9b672594f6",
+      "notes": "Safer updates: if the web-files (pages) download dies part-way (weak WiFi, power lost), the receiver now wipes the half-written pages instead of booting on them - a half-written page store hung the Goblin's receiver until a power cycle (2026-09-03). A wiped receiver still works fully from the app; run the update again to put its pages back. Backups and flights are carried across as before. Firmware only - pages unchanged."
+    },
+    {
       "name": "RXV2-0.9.553-copy-bank",
       "url": "https://messiter.com/rxv2/release/v0.9.553/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.553/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.543/littlefs.bin",
       "fs_md5": "4c637f8ff37b2f1ac9c4ef0aaa79d786",
       "notes": "Scorpion ESC editor hardening (coffee-break review): preparing the receiver now forgets a stale 'flight controller holds the settings' flag (firmware), and the page only trusts that flag once the receiver has actually restarted since you pressed the button; a single silent flight-controller answer no longer flashes 'no link' (the FC reboots after Release); MSP settings polls are strictly one at a time so a silent FC cannot pile requests up on the receiver; the idle readiness probe can no longer run twice after the page is re-shown."
-    },
-    {
-      "name": "RXV2-0.9.542-esc-page-one-text",
-      "url": "https://messiter.com/rxv2/release/v0.9.542/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.542/littlefs.bin",
-      "fs_md5": "5e464c355de2ae965f2df874f30f2efb",
-      "notes": "Scorpion ESC editor: the three text areas on the start screen are now ONE patch of text that says what to do first and why second (Blades off, press the button, restart the battery\u2026 \u2014 then the 10-second rule and the telemetry-freeze note). The deaf-ESC button reads 'Prepare the receiver to read the ESC on reboot\u2026'; the note under the button is gone. Page-only change."
     }
   ]
 }

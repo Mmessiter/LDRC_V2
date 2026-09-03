@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.553-copy-bank";
+constexpr const char* FW_VERSION = "RXV2-0.9.554-fs-wipe-on-fail";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -358,6 +358,7 @@ constexpr const char* NVS_KEY_PPM_INV    = "ppm_inv";
 constexpr const char* NVS_KEY_FW_MANIFEST = "fwurl";   // URL of dev firmware server's manifest.json
 constexpr const char* NVS_KEY_MODEL_NAME  = "nm";      // user-set model name (e.g. "Goblin 700"); empty = use default
 constexpr const char* NVS_KEY_FS_MD5      = "fsmd5";   // md5 of the last-flashed littlefs image: identical-release fs updates are SKIPPED (flights survive untouched)
+constexpr const char* NVS_KEY_FS_DIRTY    = "fsdirty"; // 1 = a littlefs flash began and never committed: boot FORMATS the partition instead of mounting a half image (Goblin 2026-09-03)
 constexpr const char* NVS_KEY_SIM         = "sim";     // 1 = drive flight simulator over USB (HID joystick)
 // Spool-up realism (Malcolm 2026-08-17, for neXt autorotation practice):
 // leaving the throttle-hold bank must NOT snap the sim to full head speed
