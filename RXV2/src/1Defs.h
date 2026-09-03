@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.555-copybank-route";
+constexpr const char* FW_VERSION = "RXV2-0.9.556-telemetry-guard";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -965,6 +965,17 @@ struct FcInfo {
     uint8_t  govMode          = 0xFF;    // MSP 142 byte 0 (3 electric / 4 nitro = governed; 0xFF = unknown)
     uint8_t  rxMapTries       = 0;       // silent-probe caps so an unhelpful FC can't hold the latch open
     uint8_t  govTries         = 0;
+    // 0.9.556 — the FC's CRSF telemetry setup (MSP 73), read once after
+    // detection. Rotorflight 4.6 sends ONLY the sensors in this list, so an
+    // emptied list makes a perfectly healthy FC mute (Goblin 770, 2026-09-03:
+    // no volts/RPM on the transmitter, list and link rate all zero, cause
+    // unknown). Watched so the pages can shout and offer the one-tap fix.
+    bool     telemCfgKnown    = false;
+    uint8_t  telemCfgTries    = 0;
+    uint8_t  telemMode        = 0;       // 0 native / 1 custom
+    uint16_t telemRate        = 0;       // link rate (Rotorflight default 250)
+    uint16_t telemRatio       = 0;       // link ratio (default 8)
+    uint8_t  telemSensors     = 0;       // populated slots of the 40
     uint32_t probesSent       = 0;
     uint32_t lastProbeMs      = 0;
     uint32_t lastResponseMs   = 0;
