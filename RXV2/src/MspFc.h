@@ -48,6 +48,7 @@ constexpr uint8_t MSP_SET_GOVERNOR_CONFIG = 143;
 constexpr uint8_t MSP_GOVERNOR_PROFILE = 148;
 constexpr uint8_t MSP_SET_GOVERNOR_PROFILE = 149;
 constexpr uint8_t MSP_BATTERY_STATE  = 130;   // byte 0 = cell count (the FC KNOWS — no more guessing 11S vs 12S from volts)
+constexpr uint8_t MSP_RX_MAP         = 64;    // Rotorflight channel map: byte i = RX channel (0-based) feeding FC function i, functions in A E R C T order → [4] = throttle
 constexpr uint8_t MSP_SET_FEATURE_CFG = 37;   // write the 32-bit feature mask
 constexpr uint8_t MSP_EEPROM_WRITE   = 250;
 constexpr uint8_t MSP_REBOOT         = 68;    // FC restart (governor config write needs it to apply, like V1)
@@ -290,8 +291,118 @@ inline void mspDeliverResponse(uint8_t func, const uint8_t* payload, uint16_t si
         case MSP_ESC_PARAMETERS:
             if (size >= 2) escCatchGot = true;   // FC now holds the ESC's settings
             break;
+        // Governor throttle watch inputs (0.9.551). These arrive from our own
+        // probe AND from any page that reads them via /api/msp, so the values
+        // track edits made on the phone. RAM only here — the probe may run
+        // in the air (TX-on boot) and an NVS write is a flash stall, so the
+        // watch tick commits them at the next quiet moment.
+        case MSP_RX_MAP:
+            if (size >= 5 && payload[4] < 16) {
+                uint8_t ch = payload[4] + 1;
+                if (ch != fcInfo.throttleCh) {
+                    fcInfo.throttleCh = ch;
+                    fcInfoNvsDirty = true;
+                    char m[64];
+                    snprintf(m, sizeof(m), "Throttle channel found from Rotorflight: ch%u", ch);
+                    events.add(m);
+                }
+            }
+            break;
+        case MSP_GOVERNOR_CONFIG:
+            if (size >= 1 && payload[0] != fcInfo.govMode) {
+                fcInfo.govMode = payload[0];
+                fcInfoNvsDirty = true;
+            }
+            break;
         default:
             break;
+    }
+}
+
+//*********************************************************************
+//  Governor throttle watch — call from loop(), self-paced at 1 Hz
+//*********************************************************************
+// Goblin 770, 2026-09-03: bank 1 "stable but far too slow", banks changed
+// nothing, and after a visit to bank 3 the RPM "would not drop". The FC was
+// fine — the V1 transmitter was still sending the ESC-governor-era throttle
+// values (50 % in bank 1). Rotorflight's ELECTRIC governor uses the throttle
+// only as permission: below ~99 % of the target head speed (or 95 %
+// throttle) it sits in spool-up FOREVER, feeding the ESC whatever the TX
+// sends. The receiver sees the throttle channel every frame, so it can catch
+// this itself: a long armed spell in which the throttle never reached full
+// gets a verdict on disarm, written to NVS at the next quiet moment, and the
+// governor pages nag until a flight reaches 100 %. Only judged when the FC
+// runs a real governor (electric/nitro) and told us its throttle channel.
+inline bool govThrottleGoverned() { return fcInfo.govMode == 3 || fcInfo.govMode == 4; }
+
+inline void govThrottleWatchTick() {
+    static uint32_t lastMs = 0;
+    static bool     wasArmed = false;
+    static uint16_t armedS = 0, parkedS = 0;
+    static uint32_t parkedPctSum = 0;
+    static uint8_t  maxPct = 0;
+    static bool     verdictDirty = false;    // govThrParkedPct/govThrMaxPct changed, NVS not yet written
+    const uint32_t now = millis();
+    if ((uint32_t)(now - lastMs) < 1000) return;
+    lastMs = now;
+
+    const bool linkLive = rx.lastMillis && (uint32_t)(now - rx.lastMillis) < 2000;
+    const bool armed = linkLive && armingChannel >= 1 && armingChannel <= 16 &&
+                       channelMicros[armingChannel - 1] > 1500;
+    if (armed && !wasArmed) { armedS = parkedS = 0; parkedPctSum = 0; maxPct = 0; }
+    if (armed) {
+        armedS++;
+        if (fcInfo.throttleCh >= 1 && fcInfo.throttleCh <= 16) {
+            // Rotorflight reads throttle as (µs − 1000) / 10 %; our CRSF
+            // output hands the FC the same µs the TX sent (988..2012 clamp).
+            int pct = ((int)channelMicros[fcInfo.throttleCh - 1] - 1000) / 10;
+            if (pct < 0) pct = 0;
+            if (pct > 100) pct = 100;
+            if (pct > maxPct) maxPct = (uint8_t)pct;
+            if (pct >= 30 && pct <= 94) { parkedS++; parkedPctSum += pct; }
+        }
+    } else if (wasArmed && armedS >= 20 && fcInfo.throttleCh && govThrottleGoverned()) {
+        // End of a real armed spell: judge it. ≥15 s between 30 and 94 % and
+        // never full = parked. Reaching ≥95 % at any point clears an old
+        // verdict — that is a governed flight. Anything else (a 0 % spell,
+        // the ESC-off bank test) says nothing and changes nothing.
+        uint8_t verdict = 0xFF;
+        if (maxPct <= 94 && parkedS >= 15) {
+            verdict = (uint8_t)(parkedPctSum / parkedS);
+            char m[EventLog::MSG_LEN];
+            snprintf(m, sizeof(m), "Throttle sat at %u%% while armed: governor never took over (needs 100%%)", verdict);
+            events.add(m);
+        } else if (maxPct >= 95) {
+            if (govThrParkedPct) events.add("Throttle reached full while armed — governor check cleared");
+            verdict = 0;
+        }
+        if (verdict != 0xFF) {
+            govThrParkedPct = verdict;
+            govThrMaxPct    = maxPct;
+            verdictDirty    = true;
+        }
+    }
+    wasArmed = armed;
+
+    // NVS writes are flash stalls: only in a provably-quiet moment (the
+    // flight-save doctrine — disarmed with sticks still 2 s, or TX off).
+    // Also commits the throttle channel / governor mode the probe learned,
+    // which may have arrived mid-flight on a TX-on boot.
+    if ((verdictDirty || fcInfoNvsDirty) && !armed) {
+        const bool sticksStill = lastChMoveMs && (uint32_t)(now - lastChMoveMs) >= 2000;
+        const bool linkDead    = !rx.lastMillis || (uint32_t)(now - rx.lastMillis) > 3000;
+        if (sticksStill || linkDead) {
+            if (verdictDirty) {
+                prefs.putUChar(NVS_KEY_GOV_THR_PARKED, govThrParkedPct);
+                prefs.putUChar(NVS_KEY_GOV_THR_MAX, govThrMaxPct);
+                verdictDirty = false;
+            }
+            if (fcInfoNvsDirty) {
+                prefs.putUChar(NVS_KEY_FC_THR_CH, fcInfo.throttleCh);
+                prefs.putUChar(NVS_KEY_FC_GOV_MODE, fcInfo.govMode);
+                fcInfoNvsDirty = false;
+            }
+        }
     }
 }
 
@@ -376,8 +487,15 @@ inline void mspFcPoll() {
     // ONCE even while flying, then latch and stay quiet for the rest of the flight.
     // The API value persists (not cleared on the FC-lost timeout), so governor
     // stays available after landing.
+    // 0.9.551: the identity now includes what the governor watch needs —
+    // the FC's throttle channel (MSP_RX_MAP) and governor mode (MSP 142),
+    // Rotorflight only. Capped tries, so an FC that stays silent on either
+    // can't hold the latch open for a whole flight.
     static bool fcIdLatched = false;
-    if (fcInfo.versionKnown && fcInfo.apiMajor != 0) fcIdLatched = true;
+    const bool isRf = strncmp(fcInfo.variant, "RTFL", 4) == 0;
+    const bool wantRxMap = isRf && fcInfo.throttleCh == 0 && fcInfo.rxMapTries < 6;
+    const bool wantGov   = isRf && fcInfo.govMode == 0xFF && fcInfo.govTries < 6;
+    if (fcInfo.versionKnown && fcInfo.apiMajor != 0 && !wantRxMap && !wantGov) fcIdLatched = true;
     bool flying = (rx.lastMillis != 0) && ((uint32_t)(millis() - rx.lastMillis) < 500);
     if (flying && fcIdLatched) return;
 
@@ -398,13 +516,23 @@ inline void mspFcPoll() {
     static uint8_t batteryTries = 0;
     const bool askBattery = (fcInfo.cells == 0 && batteryTries < 6) || fcInfo.cells > 0;
     static uint8_t which = 0;
-    switch (which++ % 4) {
+    switch (which++ % 6) {
         case 0: mspSendRequest(MSP_FC_VARIANT);   break;
         case 1: mspSendRequest(MSP_FC_VERSION);   break;
         case 2: mspSendRequest(MSP_API_VERSION);  break;
         case 3:
             if (askBattery) { mspSendRequest(MSP_BATTERY_STATE); if (fcInfo.cells == 0) batteryTries++; }
             else            { mspSendRequest(MSP_FC_VARIANT); }
+            break;
+        // Governor watch inputs (0.9.551) — asked until answered, then never
+        // again (a page reading them via /api/msp keeps them fresh).
+        case 4:
+            if (wantRxMap) { mspSendRequest(MSP_RX_MAP); fcInfo.rxMapTries++; }
+            else           { mspSendRequest(MSP_FC_VERSION); }
+            break;
+        case 5:
+            if (wantGov)   { mspSendRequest(MSP_GOVERNOR_CONFIG); fcInfo.govTries++; }
+            else           { mspSendRequest(MSP_API_VERSION); }
             break;
     }
     fcInfo.probesSent++;

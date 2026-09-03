@@ -9,7 +9,7 @@
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Governor (global) &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=179">
-<script src="/app.js?v=187" defer></script>
+<script src="/app.js?v=188" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;
         padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -43,6 +43,7 @@ input:disabled,select:disabled{background:#eee;color:#999}
         <strong>Requires Rotorflight 2.3</strong><br>
         <span id=verBannerMsg>You are running an older firmware. Editing the governor is disabled. Please upgrade your flight controller to Rotorflight 2.3 to use this page.</span>
     </div>
+    <div id=thrBanner class="banner warn" style="display:none"></div>
     <div id=status class="banner info">loading&hellip;</div>
 
     <div class=card>
@@ -356,6 +357,7 @@ async function load() {
         const stateR = await fetch('/api/state.json', { cache: 'no-store' });
         const st = await stateR.json();
         const api = (st.fcinfo.api_major * 100) + st.fcinfo.api_minor;
+        LDRC.govThrottleBanner(st, 'thrBanner');   // 0.9.551: throttle parked below full on the last flight?
         editable = (api >= 1209);
         const newer = LDRC.rfVersionAlert(api);
         const banner = document.getElementById('verBanner');

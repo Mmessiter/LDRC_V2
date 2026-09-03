@@ -61,17 +61,42 @@ constexpr uint32_t FLIGHT_MAGIC_FLT2 = 0x32544C46;   // older: no gap-position f
 // The ring is copied to flash at moments that are already stall-pardoned;
 // at boot the previous copy becomes /evprev.txt, served in
 // /api/events.json as "prev" (and captured by the phone's session save).
+//
+// 0.9.551 (Goblin "little jump every minute or two at the table"): the old
+// version rewrote the WHOLE ring every time — up to ~10 kB, two or three
+// flash blocks erased and programmed, plus LittleFS's allocator scan on a
+// full filesystem: seconds of frozen loop, no CRSF frames, a swash twitch.
+// Now only the lines added since the last persist are APPENDED (usually a
+// handful — one block copy), nothing at all is written when there is
+// nothing new, and a full rewrite happens only when the file is missing,
+// the ring has lapped the file, or the file has grown past its cap.
+inline uint32_t eventsPersistedUpTo = 0;   // events.added the /evcur.txt tail reflects (0 = never)
+constexpr size_t EVENTS_FILE_CAP = 24 * 1024;   // /api/events-prev.json reads the whole file into RAM
+
 inline void eventsPersist() {
     if (!littleFsMounted) return;
-    File f = LittleFS.open("/evcur.txt", "w");
+    const uint32_t added = events.added;
+    if (added == eventsPersistedUpTo) return;                 // nothing new — not one flash byte
+    uint32_t missing = added - eventsPersistedUpTo;
+    bool rewrite = eventsPersistedUpTo == 0 || missing >= EventLog::SIZE ||
+                   !LittleFS.exists("/evcur.txt");
+    File f;
+    if (!rewrite) {
+        f = LittleFS.open("/evcur.txt", "a");
+        if (f && f.size() > EVENTS_FILE_CAP) { f.close(); rewrite = true; }
+    }
+    if (rewrite) {
+        missing = events.count;                               // the whole ring
+        f = LittleFS.open("/evcur.txt", "w");
+    }
     if (!f) return;
-    size_t n = events.count;
-    size_t start = (events.head + EventLog::SIZE - n) % EventLog::SIZE;
-    for (size_t i = 0; i < n; ++i) {
+    size_t start = (events.head + EventLog::SIZE - missing) % EventLog::SIZE;
+    for (size_t i = 0; i < missing; ++i) {
         size_t idx = (start + i) % EventLog::SIZE;
         f.printf("%lu %s\n", (unsigned long)events.when[idx], events.msgs[idx]);
     }
     f.close();
+    eventsPersistedUpTo = added;
 }
 
 // Proven-tune counter — called ONLY when a NEW flight slot is written

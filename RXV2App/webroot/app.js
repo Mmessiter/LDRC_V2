@@ -254,6 +254,32 @@
                    'will show what the flight controller actually accepted.';
         },
 
+        // Governor throttle check (0.9.551 — Goblin 770, 2026-09-03: "stable
+        // but far too slow" in bank 1 because the transmitter still sent
+        // 50 % throttle from the ESC-governor days). The receiver watches
+        // the FC's throttle channel while armed; fcinfo.gov_thr_parked is
+        // the % it sat at on the last long armed spell (0 = fine). One patch
+        // of text: what to do first, then why. Returns true when shown.
+        govThrottleBanner(st, elId) {
+            const el = document.getElementById(elId);
+            if (!el) return false;
+            const fc = (st && st.fcinfo) || {};
+            const pct = fc.gov_thr_parked | 0;
+            if (!pct) { el.style.display = 'none'; return false; }
+            const max = fc.gov_thr_max | 0;
+            // Self-styled (solid colours, doctrine) — the hub page has no .banner.warn rule.
+            el.style.cssText = 'display:block;background:#ffc88c;color:#5c3a1a;padding:1em;' +
+                               'border-radius:10px;margin:0 0 1em;text-align:left;font-size:1.05em';
+            el.innerHTML = '<b>Set the transmitter throttle to 100&nbsp;% in every bank.</b><br>' +
+                'Last time it sat at ' + pct + '&nbsp;% while armed' +
+                (max > pct ? ' and never went above ' + max + '&nbsp;%' : '') +
+                '. Rotorflight’s governor only takes over near the bank’s target head speed — ' +
+                'below that it simply passes your throttle through, so the head runs stable but slow ' +
+                'and bank changes do nothing. Each bank’s head speed is set here in the governor profiles; ' +
+                'the throttle switch just needs to be fully up. This notice clears itself after a flight at full throttle.';
+            return true;
+        },
+
         // Dirty-tracking: tuning pages call markDirty() on any user input
         // (via a delegated 'input' listener) and clearDirty() after a
         // successful load() or save(). confirmLoseChanges() shows a

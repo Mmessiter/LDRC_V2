@@ -154,6 +154,13 @@ void setup() {
     if (vbatPin != 0 && vbatPin != 9) vbatPin = 0;   // D9 only — the sole free pad (D4 is the status LED)
     vbatInit();
     armingChannel = prefs.isKey(NVS_KEY_ARM_CH) ? prefs.getUChar(NVS_KEY_ARM_CH, 0) : 0;
+    // Governor throttle watch (0.9.551): what the FC told us last time, so a
+    // TX-on boot (never allowed to probe) can still judge the flight.
+    fcInfo.throttleCh = prefs.isKey(NVS_KEY_FC_THR_CH)   ? prefs.getUChar(NVS_KEY_FC_THR_CH, 0)      : 0;
+    fcInfo.govMode    = prefs.isKey(NVS_KEY_FC_GOV_MODE) ? prefs.getUChar(NVS_KEY_FC_GOV_MODE, 0xFF) : 0xFF;
+    govThrParkedPct   = prefs.isKey(NVS_KEY_GOV_THR_PARKED) ? prefs.getUChar(NVS_KEY_GOV_THR_PARKED, 0) : 0;
+    govThrMaxPct      = prefs.isKey(NVS_KEY_GOV_THR_MAX) ? prefs.getUChar(NVS_KEY_GOV_THR_MAX, 0)    : 0;
+    if (fcInfo.throttleCh > 16) fcInfo.throttleCh = 0;
     autoFlyEnabled = prefs.isKey(NVS_KEY_AUTOFLY) ? (prefs.getUChar(NVS_KEY_AUTOFLY, 1) != 0) : true;
     gapMinMs = prefs.isKey(NVS_KEY_GAP_MIN) ? prefs.getUChar(NVS_KEY_GAP_MIN, 5) : 5;
     tzOffsetMin = prefs.isKey(NVS_KEY_TZ_MIN) ? prefs.getShort(NVS_KEY_TZ_MIN, 0) : 0;
@@ -545,39 +552,54 @@ void loop() {
     // not arriving). Folded into g_loopHz / g_loopMaxUs once a second.
     {
         static uint32_t loopCount = 0, lastRateMs = 0, lastLoopUs = 0, maxUs = 0;
+        static const char* maxOpName = "";
+        static uint32_t maxOpUs = 0;
         uint32_t nowUs = micros();
         if (lastLoopUs) {
             uint32_t dt = nowUs - lastLoopUs;
-            if (dt > maxUs) maxUs = dt;
+            // g_stallOp* describe the iteration that just ENDED (reset below).
+            if (dt > maxUs) { maxUs = dt; maxOpName = g_stallOpName; maxOpUs = g_stallOpUs; }
             // DIAG (0.9.145): a single loop iteration >50ms means the loop was
             // blocked (e.g. WiFi reconnect) — long enough to pause CRSF/SBUS
             // output and make the FC see RX-loss (the flash). Logged with the
             // duration so we can line it up against "WiFi dropped" etc.
+            // 0.9.551: ...and with the NAME of the slowest timed call, so the
+            // culprit is in the log rather than a guessing game (Goblin's
+            // "little jump every minute or two at the table").
             if (dt > 50000) {
-                char b[48];
-                snprintf(b, sizeof(b), "DIAG LOOP-STALL %lums", (unsigned long)(dt / 1000));
+                char b[EventLog::MSG_LEN];
+                if (g_stallOpUs >= 5000)
+                    snprintf(b, sizeof(b), "DIAG LOOP-STALL %lums (%s %lums)",
+                             (unsigned long)(dt / 1000), g_stallOpName,
+                             (unsigned long)(g_stallOpUs / 1000));
+                else
+                    snprintf(b, sizeof(b), "DIAG LOOP-STALL %lums (outside timed calls: WiFi/BLE task or flash)",
+                             (unsigned long)(dt / 1000));
                 events.add(b);
             }
         }
+        g_stallOpUs = 0; g_stallOpName = "";      // fresh slate for this iteration
         lastLoopUs = nowUs;
         loopCount++;
         if ((uint32_t)(millis() - lastRateMs) >= 1000) {
             g_loopHz = loopCount; g_loopMaxUs = maxUs;
-            loopCount = 0; maxUs = 0; lastRateMs = millis();
+            g_loopMaxOpName = maxOpName; g_loopMaxOpUs = maxOpUs;
+            loopCount = 0; maxUs = 0; maxOpName = ""; maxOpUs = 0; lastRateMs = millis();
         }
     }
 
-    if (otaStarted) ArduinoOTA.handle();
+    if (otaStarted) { StallScope s("ota"); ArduinoOTA.handle(); }
     // Server runs whenever the HTTP listener is bound, regardless of
     // STA state. From v0.9.51 the chip runs AP+STA in parallel, so
     // the web UI is reachable via the soft-AP even while STA is still
     // (re)connecting to home WiFi.
     if (httpServerStarted) {
+        StallScope s("http");
         server.handleClient();
     }
-    blePoll();   // execute + stream any pending BLE config request (same task as HTTP)
+    { StallScope s("ble"); blePoll(); }   // execute + stream any pending BLE config request (same task as HTTP)
 
-    radioPoll();
+    { StallScope s("radio"); radioPoll(); }
     if (simEnabled) {
         // Sim mode: the ONLY output is the USB composite device. Skip ALL flight-
         // controller work — no RC output frames, no telemetry, no MSP — so a real
@@ -717,18 +739,19 @@ void loop() {
         SimUSB::sendChannels(simTx);
         SimUSB::keyboardTick();   // send any pending camera/view keystroke (non-blocking)
     } else {
-        protocolRx();          // pull any telemetry/MSP bytes the FC has sent back on D5
-        mspBridgePoll();       // TCP/5760 ↔ FC for wireless Rotorflight config
-        mspFcPoll();
-        escCatchTick();        // one-shot Scorpion settings capture after a battery pull
-    fcTelemWatch();           // periodic FC-variant / FC-version discovery
-        txParamsLoop();        // TX Rotorflight edits: async MSP read/write state machine
+        { StallScope s("protocolRx"); protocolRx(); }      // pull any telemetry/MSP bytes the FC has sent back on D5
+        { StallScope s("mspBridge");  mspBridgePoll(); }   // TCP/5760 ↔ FC for wireless Rotorflight config
+        { StallScope s("mspFcPoll");  mspFcPoll(); }
+        { StallScope s("escCatch");   escCatchTick(); }    // one-shot Scorpion settings capture after a battery pull
+        { StallScope s("fcTelemWatch"); fcTelemWatch(); }  // periodic FC-variant / FC-version discovery
+        { StallScope s("txParams");   txParamsLoop(); }    // TX Rotorflight edits: async MSP read/write state machine
+        { StallScope s("govThrWatch"); govThrottleWatchTick(); }   // "throttle parked" verdict + deferred NVS commits (0.9.551)
     }
-    vbatPoll();                // battery divider ADC (5 Hz, no-op when off)
-    telemetrySampleTick();     // 1 Hz flight telemetry log (ESC temp / head speed / battery)
-    flightSaveTick();          // save the flight to flash on DISARM — safe, on the ground (arming-channel idea)
-    flightSaveAsyncTick();     // trickle any in-progress save out, ~64 samples per pass (10 ms doctrine)
-    batteryGuardTick();        // low-battery warning + forgotten-model deep sleep (Malcolm 2026-07-28)
+    { StallScope s("vbat");        vbatPoll(); }              // battery divider ADC (5 Hz, no-op when off)
+    { StallScope s("teleSample");  telemetrySampleTick(); }   // 1 Hz flight telemetry log (ESC temp / head speed / battery)
+    { StallScope s("flightSave");  flightSaveTick(); }        // save the flight to flash on DISARM — safe, on the ground (arming-channel idea)
+    { StallScope s("flightAsync"); flightSaveAsyncTick(); }   // trickle any in-progress save out, ~64 samples per pass (10 ms doctrine)
+    { StallScope s("battGuard");   batteryGuardTick(); }      // low-battery warning + forgotten-model deep sleep (Malcolm 2026-07-28)
 
     // Dual-radio redundancy: if we've not received a packet on the active
     // radio for a while AND a swap cooldown has elapsed AND we have a second
@@ -747,7 +770,7 @@ void loop() {
         bool triedAllRadios = (triesSincePkt >= numRadiosPresent);
         bool deadProbeDue   = (uint32_t)(millis() - lastRadioSwapMs) >= RADIO_SWAP_DEAD_RETRY_MS;
         if (!triedAllRadios || deadProbeDue) {
-            swapRadios();
+            { StallScope s("swapRadios"); swapRadios(); }
             pktsAtLastSwap = rx.packets;
             triesSincePkt++;
         }
@@ -771,10 +794,10 @@ void loop() {
         }
     }
 
-    if (!simEnabled) sbusTick();   // no RC output frames at all while in sim mode
-    heartbeat();
-    statusLedTick();    // D4 connection-status LED (2-radio boards)
-    netStep();
+    if (!simEnabled) { StallScope s("sbusTick"); sbusTick(); }   // no RC output frames at all while in sim mode
+    { StallScope s("heartbeat"); heartbeat(); }
+    { StallScope s("statusLed"); statusLedTick(); }    // D4 connection-status LED (2-radio boards)
+    { StallScope s("netStep");   netStep(); }
 
     // Periodic free-heap snapshot to the event log so we can spot leaks
     // (every 60 s; logs only when value drops to track downward trend).
@@ -917,7 +940,10 @@ void loop() {
             else if ((uint32_t)(millis() - armedSinceMs) > 3000) {
                 armedSinceMs = 0;
                 events.add("AUTO fly mode: armed — radios off before takeoff");
-                eventsPersist();
+                // The events reach flash inside the teardown below — the
+                // one stall the TX is already pardoning. Writing them HERE
+                // (0.9.549/550) put an unpardoned flash write on the wire
+                // while armed, during spool-up.
                 flyArmRequested = true;
             }
         } else {
@@ -939,7 +965,11 @@ void loop() {
     }
     if (flyTeardownAtMs && (int32_t)(millis() - flyTeardownAtMs) >= 0) {
         flyTeardownAtMs = 0;
-        disableWifi();
+        { StallScope s("wifiOff"); disableWifi(); }
+        // Post-mortem copy of the events (Malcolm 2026-08-07: a landing
+        // reboot destroyed the RAM log twice). Append-only since 0.9.551,
+        // so this is a few lines inside the already-pardoned teardown gap.
+        { StallScope s("evPersist"); eventsPersist(); }
         statsZeroAtMs = millis() + 3000;   // Malcolm: zero EVERYTHING ~3 s after Fly now
     }
 
