@@ -200,6 +200,17 @@
       const b = MSP_DEFAULTS[101].slice(); b[23] = pidProfile; b[25] = rateProfile;
       return T(toHex(b));
     }
+    if (fn === 183 && data.length >= 6) {   // MSP_COPY_PROFILE [type, dst, src] (Copy-a-bank page)
+      const type = parseInt(data.slice(0, 2), 16), dst = parseInt(data.slice(2, 4), 16) & 0x0f,
+            src  = parseInt(data.slice(4, 6), 16) & 0x0f;
+      const fns = type === 0 ? [112, 94, 148, 146] : [111];   // PID profile carries the governor + rescue
+      for (const f of fns) {
+        const v = mspStore[f + "/" + src];
+        if (v) mspStore[f + "/" + dst] = v; else delete mspStore[f + "/" + dst];
+      }
+      try { localStorage.setItem("rxv2DemoMsp", JSON.stringify(mspStore)); } catch (e) {}
+      return T("");
+    }
     if (fn in MSP_SET && data) {            // write: persist for the paired read
       const [readFn, space] = MSP_SET[fn];
       mspStore[mspKey(readFn, space)] = data.toLowerCase();

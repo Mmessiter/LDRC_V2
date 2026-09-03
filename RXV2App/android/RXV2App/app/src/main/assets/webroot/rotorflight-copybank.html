@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name=theme-color content="#5fa099">
+<meta name=apple-mobile-web-app-capable content=yes>
+<meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
+<meta name=apple-mobile-web-app-title content="LDRC RX V2">
+<title>Copy a bank &middot; LDRC RX V2</title>
+<link rel=stylesheet href="/style.css?v=179">
+<script src="/app.js?v=188" defer></script>
+<style>
+.fldRow{display:flex;justify-content:space-between;align-items:center;gap:.6em;
+        padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
+.fldRow label{flex:1;color:#3a5165;font-size:.95em}
+.fldRow input[type=checkbox]{width:1.4em;height:1.4em;flex:0 0 auto}
+.banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
+.banner.info{background:#c8d2dc;color:#3a5165}
+.banner.good{background:#a8d29a;color:#2a4d1f}
+.banner.bad {background:#dca08c;color:#5c2a1a}
+.banner.warn{background:#ffc88c;color:#5c3a1a;font-size:1.05em;padding:1em}
+.profRow{display:flex;gap:.5em;margin:.3em 0}
+.profBtn{flex:1;padding:.7em;border:0;border-radius:10px;font-size:1.1em;font-weight:600;
+         background:#cdd6df;color:#3a5165;cursor:pointer}
+.profBtn.active{background:#5fa099;color:#fff}
+.profBtn.to.active{background:#d4944a;color:#fff}
+.profBtn:disabled{background:#e4e8ec;color:#a5adb5;cursor:default}
+.guide{background:#c8d2dc;color:#3a5165;padding:1em;border-radius:10px;margin:0 0 1em;text-align:left;font-size:1.02em}
+.sub{color:#5f7385;font-size:.85em;margin:.2em 0 0}
+</style>
+</head>
+<body class=hasFab>
+<button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
+<div class=bg-photo aria-hidden=true></div>
+<div class=bg-wash  aria-hidden=true></div>
+<div class=container>
+    <h1>Copy a bank</h1>
+    <div id=status class="banner info">loading&hellip;</div>
+
+    <div class=guide><b>Pick the bank to copy from, the bank to copy to, then tap Copy.</b><br>
+    Everything ticked below is written to the flight controller, saved, and read back to verify &mdash; no re-typing, no travelling between pages. The bank switch on your transmitter still chooses which bank flies.</div>
+
+    <div class=card>
+        <h2>From bank</h2>
+        <div class=profRow>
+            <button class=profBtn onclick="setFrom(0)" id=fb0>1</button>
+            <button class=profBtn onclick="setFrom(1)" id=fb1>2</button>
+            <button class=profBtn onclick="setFrom(2)" id=fb2>3</button>
+            <button class=profBtn onclick="setFrom(3)" id=fb3>4</button>
+        </div>
+        <p class=sub id=fromNote></p>
+    </div>
+
+    <div class=card>
+        <h2>To bank</h2>
+        <div class=profRow>
+            <button class="profBtn to" onclick="setTo(0)" id=tb0>1</button>
+            <button class="profBtn to" onclick="setTo(1)" id=tb1>2</button>
+            <button class="profBtn to" onclick="setTo(2)" id=tb2>3</button>
+            <button class="profBtn to" onclick="setTo(3)" id=tb3>4</button>
+        </div>
+        <p class=sub>This bank&rsquo;s ticked settings are overwritten.</p>
+    </div>
+
+    <div class=card>
+        <h2>What to copy</h2>
+        <div class=fldRow><label data-help="The whole flight-tuning profile: the PIDs page, the PID + page and the Rescue page, plus the bank's name.">Flight tuning (PIDs, PID +, rescue)</label> <input type=checkbox id=c_flight checked></div>
+        <div class=fldRow><label data-help="The Rates &amp; Dynamics page for this bank.">Rates &amp; dynamics</label> <input type=checkbox id=c_rates checked></div>
+        <div class=fldRow><label data-help="The Governor (profile) page: master/P/I/D/F gains, tail-torque assist, anticipation weights, throttle limits and the spool-up switch.">Governor gains</label> <input type=checkbox id=c_gov checked></div>
+        <div class=fldRow><label data-help="Normally OFF: each bank keeps its own head speed — that is usually the whole point of having banks. Tick it only if you want the target bank to spin at the same speed.">Head speed too</label> <input type=checkbox id=c_hs></div>
+        <p class=sub id=govNote></p>
+    </div>
+
+    <div class=fabBar>
+        <button class="btn btn-fly" id=copyBtn onclick="copyBank()" style="background:#d4944a;margin:0" disabled><span class=ico>&#128203;</span>Copy</button>
+    </div>
+    <div class=footer></div>
+</div>
+
+<script>
+// Whole-bank copy in one tap (Malcolm 2026-09-03: "copy current settings
+// into another bank — that would save a lot of travelling, which is a
+// little error prone").
+//
+// Bank N = Rotorflight PID profile N + rate profile N. The flight controller
+// does the heavy lifting with MSP_COPY_PROFILE (183: [type, dst, src],
+// type 0 = PID profile, 1 = rate profile) — the PID profile carries the
+// PIDs, PID + (advanced), rescue AND the governor profile, so the governor
+// bytes are put back the way the pilot asked (head speed kept by default)
+// with a read-modify-write of MSP 148/149 afterwards. Then EEPROM save,
+// then every copied block is read back byte-for-byte from the target bank
+// (seeing is believing), and the FC is returned to the bank it was on.
+const BANKS = 4;
+let fromBank = 0, toBank = -1, fcPid = 0, fcRate = 0, busy = false, live = false, govOk = false;
+
+function setStatus(kind, msg) {
+    const b = document.getElementById('status');
+    b.className = 'banner ' + kind;
+    b.textContent = msg;
+}
+function hexToBytes(h) {
+    const out = new Uint8Array(h.length / 2);
+    for (let i = 0; i < out.length; i++) out[i] = parseInt(h.substr(i*2, 2), 16);
+    return out;
+}
+function bytesToHex(b) {
+    let s = '';
+    for (let i = 0; i < b.length; i++) s += b[i].toString(16).padStart(2, '0');
+    return s;
+}
+const P = i => i.toString(16).padStart(2, '0');            // select PID profile i
+const R = i => (0x80 | i).toString(16).padStart(2, '0');   // select rate profile i
+
+function paint() {
+    for (let i = 0; i < BANKS; i++) {
+        const fb = document.getElementById('fb' + i), tb = document.getElementById('tb' + i);
+        fb.classList.toggle('active', i === fromBank);
+        fb.disabled = busy || !live;
+        tb.classList.toggle('active', i === toBank);
+        tb.disabled = busy || !live || i === fromBank;
+    }
+    const btn = document.getElementById('copyBtn');
+    btn.disabled = busy || !live || toBank < 0 || toBank === fromBank;
+    btn.innerHTML = '<span class=ico>&#128203;</span>' +
+        (toBank < 0 ? 'Copy bank ' + (fromBank + 1) + ' to &hellip;'
+                    : 'Copy bank ' + (fromBank + 1) + ' &rarr; bank ' + (toBank + 1));
+    document.getElementById('fromNote').textContent =
+        live ? 'The flight controller is on bank ' + (fcPid + 1) + ' now.' : '';
+}
+function setFrom(i) { if (busy) return; fromBank = i; if (toBank === i) toBank = -1; paint(); }
+function setTo(i)   { if (busy || i === fromBank) return; toBank = i; paint(); }
+
+async function readWhereFcIs() {
+    // MSP_STATUS (101): byte 23 = PID profile, byte 25 = rate profile (RF 4.6).
+    const b = hexToBytes(await LDRC.msp(101));
+    if (b.length > 25) { fcPid = b[23] & 0x0f; fcRate = b[25] & 0x0f; }
+}
+async function putFcBack() {
+    await LDRC.msp(210, P(fcPid));
+    await LDRC.msp(210, R(fcRate));
+}
+
+async function init() {
+    await LDRC.replayReady;
+    if (LDRC.replay) {
+        setStatus('warn', 'Connect to the model first — copying a bank needs the flight controller live.');
+        paint(); return;
+    }
+    try {
+        const st = await LDRC.fetchState();
+        const fc = (st && st.fcinfo) || {};
+        if (!fc.detected) { setStatus('bad', 'No flight controller answering — check the model is powered and the protocol is CRSF.'); paint(); return; }
+        if (!fc.rotorflight_capable) { setStatus('bad', 'This needs Rotorflight (found ' + (fc.variant || 'unknown') + ').'); paint(); return; }
+        // The 17-byte governor profile (MSP 148/149) is Rotorflight 2.3 (API 12.9);
+        // on older firmware the governor simply travels with the flight tuning.
+        govOk = ((fc.api_major * 100) + fc.api_minor) >= 1209;
+        if (!govOk) {
+            for (const id of ['c_gov', 'c_hs']) { const c = document.getElementById(id); c.checked = false; c.disabled = true; }
+            document.getElementById('govNote').textContent =
+                'Rotorflight ' + fc.rf_major + '.' + fc.rf_minor + ': the governor (head speed included) is copied as part of the flight tuning.';
+        }
+        await readWhereFcIs();
+        fromBank = Math.min(fcPid, BANKS - 1);
+        live = true;
+        setStatus('info', 'Ready. Nothing is written until you tap Copy.');
+    } catch (e) {
+        setStatus('bad', 'Read failed: ' + e.message);
+    }
+    paint();
+}
+
+async function copyBank() {
+    if (busy || !live || toBank < 0 || toBank === fromBank) return;
+    const doFlight = document.getElementById('c_flight').checked;
+    const doRates  = document.getElementById('c_rates').checked;
+    const doGov    = govOk && document.getElementById('c_gov').checked;
+    const doHs     = govOk && document.getElementById('c_hs').checked;
+    const touchGov = govOk && (doFlight || doGov);   // governor block needs putting right afterwards
+    if (!doFlight && !doRates && !doGov) { setStatus('bad', 'Tick at least one thing to copy.'); return; }
+    const what = [doFlight && (govOk ? 'flight tuning' : 'flight tuning incl. governor'),
+                  doRates  && 'rates',
+                  doGov    && (doHs ? 'governor incl. head speed' : 'governor gains (head speed kept)')]
+                 .filter(Boolean).join(', ');
+    const from = fromBank + 1, to = toBank + 1;
+    if (!(await LDRC.confirm('Copy ' + what + ' from bank ' + from + ' to bank ' + to +
+            '? Bank ' + to + '’s own values for these are overwritten.',
+            {title: 'Copy bank ' + from + ' → ' + to, icon: '📋', yes: 'Copy + verify', kind: 'warn'}))) return;
+    busy = true; paint();
+    try {
+        await readWhereFcIs();                       // so we can put it back afterwards
+
+        // 1. Read the source bank — the yardstick for the read-back check.
+        setStatus('info', 'Reading bank ' + from + '…');
+        await LDRC.msp(210, P(fromBank));
+        const srcPid  = doFlight ? (await LDRC.msp(112)).toLowerCase() : null;
+        const srcAdv  = doFlight ? (await LDRC.msp(94)).toLowerCase()  : null;
+        const srcResc = doFlight ? (await LDRC.msp(146)).toLowerCase() : null;
+        const srcGov  = touchGov ? hexToBytes(await LDRC.msp(148)) : null;
+        let srcRates = null;
+        if (doRates) { await LDRC.msp(210, R(fromBank)); srcRates = (await LDRC.msp(111)).toLowerCase(); }
+        if (srcGov && srcGov.length < 17) throw new Error('governor profile too short (' + srcGov.length + ' bytes)');
+
+        // 2. Read the target's governor — its head speed is kept unless asked,
+        //    and the whole block is put back if governor gains are unticked.
+        let dstGov = null;
+        if (touchGov) {
+            await LDRC.msp(210, P(toBank));
+            dstGov = hexToBytes(await LDRC.msp(148));
+            if (dstGov.length < 17) throw new Error('governor profile too short (' + dstGov.length + ' bytes)');
+        }
+
+        // 3. Copy.
+        setStatus('info', 'Copying to bank ' + to + '…');
+        if (doFlight) await LDRC.msp(183, '00' + P(toBank) + P(fromBank));
+        let expGov = null;
+        if (touchGov) {
+            if (doGov) {
+                expGov = Uint8Array.from(srcGov);
+                if (!doHs) { expGov[0] = dstGov[0]; expGov[1] = dstGov[1]; }
+            } else {
+                // Flight tuning brought the source's governor along — put the target's own back.
+                expGov = Uint8Array.from(dstGov);
+            }
+            await LDRC.msp(210, P(toBank));
+            await LDRC.msp(149, bytesToHex(expGov));
+        }
+        if (doRates) await LDRC.msp(183, '01' + P(toBank) + P(fromBank));
+        setStatus('info', 'Saving…');
+        await LDRC.msp(250);
+
+        // 4. Read the target back and compare byte-for-byte.
+        setStatus('info', 'Verifying — reading bank ' + to + ' back…');
+        const bad = [];
+        await LDRC.msp(210, P(toBank));
+        if (doFlight) {
+            if ((await LDRC.msp(112)).toLowerCase() !== srcPid)  bad.push('PIDs');
+            if ((await LDRC.msp(94)).toLowerCase()  !== srcAdv)  bad.push('PID +');
+            if ((await LDRC.msp(146)).toLowerCase() !== srcResc) bad.push('rescue');
+        }
+        if (expGov) {
+            const got = hexToBytes(await LDRC.msp(148));
+            if (bytesToHex(got.slice(0, 17)) !== bytesToHex(expGov.slice(0, 17))) bad.push('governor');
+        }
+        if (doRates) {
+            await LDRC.msp(210, R(toBank));
+            if ((await LDRC.msp(111)).toLowerCase() !== srcRates) bad.push('rates');
+        }
+
+        // 5. Back to the bank the flight controller was on.
+        await putFcBack();
+
+        if (bad.length) {
+            setStatus('bad', '⚠ Copied, but ' + bad.join(', ') + ' read back differently — open that page on bank ' + to + ' and check.');
+        } else {
+            const hs = expGov ? (expGov[0] | (expGov[1] << 8)) : null;
+            setStatus('good', '✓ Bank ' + from + ' copied to bank ' + to + ' and verified: ' + what +
+                (hs !== null ? '. Bank ' + to + ' head speed is ' + hs + ' rpm.' : '.'));
+        }
+    } catch (e) {
+        setStatus('bad', 'Copy failed: ' + e.message + '. Nothing was saved unless it got as far as Saving — if in doubt, open bank ' + to + '’s pages and look.');
+        try { await putFcBack(); } catch (_) {}
+    }
+    busy = false; paint();
+}
+
+document.addEventListener('DOMContentLoaded', () => { paint(); init(); });
+</script>
+<template id=helpContent><h2>Copy a bank</h2>
+<p>Copies a whole bank to another in one go &mdash; instead of visiting the PIDs, PID +, Rates, Rescue and Governor pages one by one and copying each.</p>
+<h3>What a bank is</h3>
+<p>Bank N is Rotorflight&rsquo;s PID profile N together with rate profile N &mdash; the same numbering the other pages use and the bank switch on your transmitter selects.</p>
+<h3>What gets copied</h3>
+<ul>
+<li><b>Flight tuning</b> &mdash; everything on the PIDs, PID + and Rescue pages (and a few Rotorflight settings only the CLI shows).</li>
+<li><b>Rates &amp; dynamics</b> &mdash; the rate profile.</li>
+<li><b>Governor gains</b> &mdash; the Governor (profile) page. The target bank <b>keeps its own head speed</b> unless you tick &ldquo;Head speed too&rdquo;.</li>
+</ul>
+<h3>Safety</h3>
+<ul>
+<li>Refused while the model is armed. Do it on the ground, blades off.</li>
+<li>Every copied block is read back from the target bank and compared byte for byte before it says done.</li>
+<li>The flight controller is returned to the bank it was on. The swashplate may twitch once or twice while banks switch &mdash; harmless, on the ground only.</li>
+</ul>
+</template>
+</body>
+</html>

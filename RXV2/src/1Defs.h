@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.552-quiet-landing";
+constexpr const char* FW_VERSION = "RXV2-0.9.553-copy-bank";
 
 //*********************************************************************
 //  Auto-update manifest URLs
