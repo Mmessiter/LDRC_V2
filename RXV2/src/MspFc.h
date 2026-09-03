@@ -53,6 +53,17 @@ constexpr uint8_t MSP_SET_FEATURE_CFG = 37;   // write the 32-bit feature mask
 constexpr uint8_t MSP_EEPROM_WRITE   = 250;
 constexpr uint8_t MSP_REBOOT         = 68;    // FC restart (governor config write needs it to apply, like V1)
 constexpr uint8_t MSP_ESC_PARAMETERS = 217;   // ESC settings blob (Scorpion/Hobbywing forward programming)
+constexpr uint8_t MSP_TELEMETRY_CONFIG     = 73;   // RF 4.6: 12-byte header (inverted, halfDuplex, u32, pinSwap, mode, rate u16, ratio u16) + 40 sensor-ID slots
+constexpr uint8_t MSP_SET_TELEMETRY_CONFIG = 74;   // same layout; sensors apply at the next FC boot
+
+// The FC's telemetry setup as read by MSP 73 — "bad" means Rotorflight will
+// send no volts/RPM/attitude no matter how healthy everything else is:
+// native mode schedules only the listed sensors, and a zero link rate or
+// ratio starves the rate limiter (crsf.c, verified on the 4.6.0 source).
+inline bool fcTelemCfgBad() {
+    return fcInfo.telemCfgKnown &&
+           (fcInfo.telemSensors == 0 || fcInfo.telemRate == 0 || fcInfo.telemRatio == 0);
+}
 
 //*********************************************************************
 //  Sync-wait state for mspRequestAndWait()
@@ -314,6 +325,30 @@ inline void mspDeliverResponse(uint8_t func, const uint8_t* payload, uint16_t si
                 fcInfoNvsDirty = true;
             }
             break;
+        // Telemetry setup (0.9.556) — from our probe or a page's read; a
+        // reply shorter than the 12-byte header is an older layout, ignored.
+        case MSP_TELEMETRY_CONFIG:
+            if (size >= 12) {
+                const bool wasBad = fcTelemCfgBad();
+                uint8_t n = 0;
+                for (uint16_t i = 12; i < size; i++) if (payload[i]) n++;
+                fcInfo.telemMode     = payload[7];
+                fcInfo.telemRate     = (uint16_t)(payload[8] | (payload[9] << 8));
+                fcInfo.telemRatio    = (uint16_t)(payload[10] | (payload[11] << 8));
+                fcInfo.telemSensors  = n;
+                fcInfo.telemCfgKnown = true;
+                if (fcTelemCfgBad() && !wasBad) {
+                    char m[128];
+                    snprintf(m, sizeof(m), "Rotorflight telemetry setup is EMPTY (%u sensors, link rate %u/%u) - "
+                             "the FC sends no volts/RPM. Restore it from the Rotorflight page", n, fcInfo.telemRate, fcInfo.telemRatio);
+                    events.add(m);
+                } else if (!fcTelemCfgBad() && wasBad) {
+                    char m[80];
+                    snprintf(m, sizeof(m), "Rotorflight telemetry setup OK again (%u sensors)", n);
+                    events.add(m);
+                }
+            }
+            break;
         default:
             break;
     }
@@ -495,7 +530,11 @@ inline void mspFcPoll() {
     const bool isRf = strncmp(fcInfo.variant, "RTFL", 4) == 0;
     const bool wantRxMap = isRf && fcInfo.throttleCh == 0 && fcInfo.rxMapTries < 6;
     const bool wantGov   = isRf && fcInfo.govMode == 0xFF && fcInfo.govTries < 6;
-    if (fcInfo.versionKnown && fcInfo.apiMajor != 0 && !wantRxMap && !wantGov) fcIdLatched = true;
+    // 0.9.556: the telemetry setup too (MSP 73) — an emptied sensor list
+    // is the one FC fault that looks exactly like a dead ESC or a broken
+    // wire from the transmitter's side.
+    const bool wantTelem = isRf && !fcInfo.telemCfgKnown && fcInfo.telemCfgTries < 6;
+    if (fcInfo.versionKnown && fcInfo.apiMajor != 0 && !wantRxMap && !wantGov && !wantTelem) fcIdLatched = true;
     bool flying = (rx.lastMillis != 0) && ((uint32_t)(millis() - rx.lastMillis) < 500);
     if (flying && fcIdLatched) return;
 
@@ -523,7 +562,7 @@ inline void mspFcPoll() {
     static uint8_t batteryTries = 0;
     const bool askBattery = (fcInfo.cells == 0 && batteryTries < 6) || fcInfo.cells > 0;
     static uint8_t which = 0;
-    switch (which++ % 6) {
+    switch (which++ % 7) {
         case 0: mspSendRequest(MSP_FC_VARIANT);   break;
         case 1: mspSendRequest(MSP_FC_VERSION);   break;
         case 2: mspSendRequest(MSP_API_VERSION);  break;
@@ -540,6 +579,10 @@ inline void mspFcPoll() {
         case 5:
             if (wantGov)   { mspSendRequest(MSP_GOVERNOR_CONFIG); fcInfo.govTries++; }
             else           { mspSendRequest(MSP_API_VERSION); }
+            break;
+        case 6:
+            if (wantTelem) { mspSendRequest(MSP_TELEMETRY_CONFIG); fcInfo.telemCfgTries++; }
+            else           { mspSendRequest(MSP_FC_VARIANT); }
             break;
     }
     fcInfo.probesSent++;

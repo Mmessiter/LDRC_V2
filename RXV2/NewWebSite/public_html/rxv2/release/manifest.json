@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.556-telemetry-guard",
+      "url": "https://messiter.com/rxv2/release/v0.9.556/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.556/littlefs.bin",
+      "fs_md5": "40ed4dbc24fbd612c6104247380e1b18",
+      "notes": "Fix + safeguard: after a bank copy the transmitter showed no volts and no RPM - the flight controller's telemetry sensor list and link rate had been wiped (all zero; cause still unknown - the receiver did not write them). Rotorflight only sends the sensors on that list, so an empty list makes a healthy FC mute. The receiver now reads that list after it finds the FC, and if it is empty the Home and Rotorflight pages show a red notice with a one-tap 'Restore telemetry sensors' button (transmitter off - the FC restarts). Copy a bank: the result now pops up so it cannot be missed, and the 'from' caption leads with the bank you picked instead of the bank the FC is on. Pages changed - apps 4.11 / 4.03 carry the same."
+    },
+    {
       "name": "RXV2-0.9.555-copybank-route",
       "url": "https://messiter.com/rxv2/release/v0.9.555/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.555/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.545/littlefs.bin",
       "fs_md5": "4e090929c94eaa324352919d937e4318",
       "notes": "ESC settings: the Release ESC button now floats next to Save (always in view) and pulses when it is the next step; a forgotten session shows a red do-not-fly warning; every verdict says to finish with Release ESC before you fly."
-    },
-    {
-      "name": "RXV2-0.9.544-ota-resume",
-      "url": "https://messiter.com/rxv2/release/v0.9.544/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.544/littlefs.bin",
-      "fs_md5": "4c637f8ff37b2f1ac9c4ef0aaa79d786",
-      "notes": "OTA download resumes after a stall: a dropped or frozen connection is reopened and the update carries on from where it stopped, instead of throwing the whole image away. Same web pages as 0.9.543."
     }
   ]
 }

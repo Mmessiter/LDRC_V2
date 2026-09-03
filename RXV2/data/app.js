@@ -280,6 +280,54 @@
             return true;
         },
 
+        // Telemetry setup check (0.9.556 — Goblin 770, 2026-09-03: after a
+        // bank copy the transmitter showed no volts and no RPM; the FC's
+        // sensor list and link rate were all zero, cause unknown).
+        // Rotorflight sends ONLY the sensors in that list, so the receiver
+        // reads it (MSP 73) and fcinfo.telem_cfg_bad flags an empty one.
+        // One patch of text: what to do, then why, then the button that
+        // does it (POST /api/fc/telemetry/restore — refused with the
+        // transmitter on, because the FC restarts). Returns true when shown.
+        fcTelemBanner(st, elId) {
+            const el = document.getElementById(elId);
+            if (!el) return false;
+            const fc = (st && st.fcinfo) || {};
+            const doneAt = +el.dataset.telemDone || 0;
+            if (doneAt && Date.now() - doneAt < 25000) return true;   // let the "restored" note be read
+            if (!fc.telem_cfg_bad || this.replay) { el.style.display = 'none'; delete el.dataset.telemShown; return false; }
+            if (el.dataset.telemShown === '1') return true;   // keep the button's state while it works
+            el.dataset.telemShown = '1';
+            el.style.cssText = 'display:block;background:#f2b8a8;color:#5a1e12;padding:1em;' +
+                               'border-radius:10px;margin:0 0 1em;text-align:left;font-size:1.05em';
+            el.innerHTML = '<b>Restore the flight controller’s telemetry sensors — the transmitter shows no volts or RPM until you do.</b><br>' +
+                'Rotorflight’s list of sensors to send is empty (' + (fc.telem_sensors | 0) + ' sensors, link rate ' +
+                (fc.telem_rate | 0) + '/' + (fc.telem_ratio | 0) + '), so it sends nothing even though everything else works. ' +
+                'Restoring puts back flight mode, battery, RPM, temperature, attitude and altitude, then restarts the flight controller. ' +
+                'Transmitter OFF, blades off.<br>' +
+                '<button class="btn" style="background:#b8432b;color:#fff;margin:.7em 0 0;width:100%" id=telemRestoreBtn>' +
+                '<span class=ico>🔧</span>Restore telemetry sensors</button>';
+            const btn = document.getElementById('telemRestoreBtn');
+            btn.onclick = async () => {
+                btn.disabled = true; btn.textContent = 'Restoring…';
+                let r = null, msg = '';
+                try {
+                    const resp = await fetch('/api/fc/telemetry/restore', {method: 'POST', cache: 'no-store'});
+                    r = await resp.json();
+                    msg = r.message || r.err || ('HTTP ' + resp.status);
+                } catch (e) { msg = e.message; }
+                if (r && r.ok) {
+                    el.dataset.telemDone = Date.now(); delete el.dataset.telemShown;
+                    el.innerHTML = '<b>✓ Telemetry sensors restored — the flight controller is restarting.</b><br>' +
+                        'Give it 10 seconds, then turn the transmitter on and check volts and RPM show on the screen before any spool-up.';
+                } else {
+                    btn.disabled = false;
+                    btn.innerHTML = '<span class=ico>🔧</span>Restore telemetry sensors';
+                    await this.alert(msg, {title: 'Not restored', icon: '⚠️', kind: 'danger'});
+                }
+            };
+            return true;
+        },
+
         // Dirty-tracking: tuning pages call markDirty() on any user input
         // (via a delegated 'input' listener) and clearDirty() after a
         // successful load() or save(). confirmLoseChanges() shows a

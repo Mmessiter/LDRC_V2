@@ -9,7 +9,7 @@
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Home &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=179">
-<script src="/app.js?v=188" defer></script>
+<script src="/app.js?v=189" defer></script>
 <style>
 /* Friendly confirmation card (replaces the browser's utilitarian confirm()) */
 .modal{position:fixed;inset:0;background:rgba(16,38,58,.55);backdrop-filter:blur(2px);
@@ -86,6 +86,7 @@
             <div style="font-size:1.3em;letter-spacing:.05em">🎮 SIMULATOR MODE ON</div>
             <div style="font-weight:500;font-size:.9em;line-height:1.4;margin-top:.3em">Driving the PC simulator over USB &mdash; flight-controller output is OFF.</div>
         </div>
+        <div id=telemBanner style="display:none"></div>
         <div id=radioBanner style="display:none;text-align:center;padding:.7em;border-radius:10px;margin:0 0 1em;font-weight:600"></div>
 
         <!-- Shown when AP-only was auto-enabled because the home network wasn't
@@ -279,9 +280,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // (FC detection, and bind completing) without needing a page reload.
     setInterval(async () => {
         const s2 = await LDRC.fetchState();
-        if (s2) { updateRfButton(s2); updateBindState(s2); paintApAutoBanner(s2); paintRadioBanner(s2); paintFlyButton(s2); paintBattWarn(s2); }
+        if (s2) { updateRfButton(s2); updateBindState(s2); paintApAutoBanner(s2); paintRadioBanner(s2); paintFlyButton(s2); paintBattWarn(s2); LDRC.fcTelemBanner(s2, 'telemBanner'); }
     }, 3000);
     paintBattWarn(s);
+    LDRC.fcTelemBanner(s, 'telemBanner');   // 0.9.556: FC sensor list wiped = no volts/RPM on the TX
 
     // Proven-tune nudge (Malcolm 2026-08-07): tuning edits followed by six
     // or more flights with NO further edits = a tune worth immortalising.

@@ -291,6 +291,55 @@ inline void handleFcWake() {
         "{\"ok\":true,\"message\":\"wake sent — watch for the Rotorflight button in ~10 s\"}");
 }
 
+// POST /api/fc/telemetry/restore — put Rotorflight's telemetry setup back
+// (Goblin 770, 2026-09-03: the FC's sensor list and link rate were found
+// all-zero after a bank copy — cause unknown — so the transmitter showed
+// no volts and no RPM while every config page worked). Writes MSP 74 with
+// the Rotorflight defaults (native mode, link rate 250/8) and the seven
+// native CRSF sensors the first-time page ticks, saves, and restarts the FC
+// (sensors only apply at boot). Bench-only: refused while a transmitter is
+// talking (the FC restart would happen under a live model) or the model
+// is armed.
+inline void handleFcTelemRestore() {
+    if (currentProtocol != PROTO_CRSF) {
+        server.send(409, "application/json", "{\"ok\":false,\"err\":\"protocol is not CRSF\"}");
+        return;
+    }
+    if (!fcInfo.detected || strncmp(fcInfo.variant, "RTFL", 4) != 0 ||
+        (fcInfo.apiMajor * 100 + fcInfo.apiMinor) < 1209) {
+        server.send(409, "application/json",
+            "{\"ok\":false,\"err\":\"needs a Rotorflight 2.3 flight controller answering\"}");
+        return;
+    }
+    const bool txLive = rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 3000;
+    if (txLive) {
+        server.send(409, "application/json",
+            "{\"ok\":false,\"err\":\"turn the transmitter off first - the flight controller restarts to apply the sensors\"}");
+        return;
+    }
+    if (escCatchArmed) {
+        server.send(409, "application/json",
+            "{\"ok\":false,\"err\":\"the ESC settings page is waiting for a power-up - finish or cancel that first\"}");
+        return;
+    }
+    // 12-byte header: inverted 0, halfDuplex 1, legacy u32, pinSwap 0,
+    // mode 0 (native), rate 250, ratio 8 — Rotorflight's own defaults.
+    // Then the 40 sensor slots: flight mode, battery, RPM, temperature,
+    // attitude, altitude, GPS (crsf.c's native table, IDs from tsensors.h).
+    uint8_t cfg[52] = { 0x00, 0x01, 0, 0, 0, 0, 0x00, 0x00, 0xFA, 0x00, 0x08, 0x00,
+                        89, 2, 108, 109, 64, 58, 72 };
+    mspSendRequest(MSP_SET_TELEMETRY_CONFIG, cfg, sizeof(cfg));
+    delay(40);
+    mspSendRequest(MSP_EEPROM_WRITE);
+    delay(60);
+    mspSendRequest(MSP_REBOOT);
+    fcInfo.telemCfgKnown = false;      // re-read once the FC is back
+    fcInfo.telemCfgTries = 0;
+    events.add("Rotorflight telemetry setup restored (7 sensors, link rate 250/8) - FC restarting");
+    server.send(200, "application/json",
+        "{\"ok\":true,\"message\":\"telemetry sensors restored - the flight controller is restarting; volts and RPM should be back in ~10 s\"}");
+}
+
 // Arm the one-shot Scorpion catcher for the next boot (see escCatchTick in
 // MspFc.h). The page calls this right before telling the user to pull the
 // battery; GET reports whether the last catch worked so the page can say
@@ -629,6 +678,17 @@ inline void handleMspApi() {
             if (hi == 0xFF || lo == 0xFF) { server.send(400, "text/plain", "bad hex"); return; }
             reqBuf[reqLen++] = (uint8_t)((hi << 4) | lo);
         }
+    }
+    // Who writes the telemetry setup? Logged with its header so the next
+    // "all zeros" (2026-09-03) has a suspect; and the FC's copy changed, so
+    // the watch re-reads it.
+    if (fn == MSP_SET_TELEMETRY_CONFIG) {
+        char m[110];
+        snprintf(m, sizeof(m), "MSP 74 (telemetry setup) written from a page: %u bytes, hdr %02X%02X..%02X %02X %02X%02X %02X%02X",
+                 reqLen, reqBuf[0], reqBuf[1], reqBuf[6], reqBuf[7], reqBuf[8], reqBuf[9], reqBuf[10], reqBuf[11]);
+        events.add(m);
+        fcInfo.telemCfgKnown = false;
+        fcInfo.telemCfgTries = 0;
     }
 
     // Yield to the TX-param state machine first. It runs a multi-step MSP
@@ -2791,6 +2851,13 @@ inline void handleApiState() {
     j += ",\"gov_mode\":"; j += fcInfo.govMode;
     j += ",\"gov_thr_parked\":"; j += govThrParkedPct;
     j += ",\"gov_thr_max\":"; j += govThrMaxPct;
+    // Telemetry setup watch (0.9.556): what MSP 73 said, and the verdict.
+    j += ",\"telem_cfg_known\":"; j += (fcInfo.telemCfgKnown ? "true" : "false");
+    j += ",\"telem_cfg_bad\":";   j += (fcTelemCfgBad() ? "true" : "false");
+    j += ",\"telem_sensors\":";   j += fcInfo.telemSensors;
+    j += ",\"telem_mode\":";      j += fcInfo.telemMode;
+    j += ",\"telem_rate\":";      j += fcInfo.telemRate;
+    j += ",\"telem_ratio\":";     j += fcInfo.telemRatio;
     j += "}";
 
     // --- channels ----------------------------------------------------
@@ -2844,6 +2911,7 @@ inline void registerWebRoutes() {
     server.on("/rotorflight-blackbox",  handleRotorflightBlackbox);
     server.on("/rotorflight-escprog",   handleRotorflightEscProg);
     server.on("/api/fc/wake", HTTP_POST, handleFcWake);
+    server.on("/api/fc/telemetry/restore", HTTP_POST, handleFcTelemRestore);
     server.on("/api/esc/catch", HTTP_POST, handleEscCatchArm);
     server.on("/api/esc/catch", HTTP_GET,  handleEscCatchStatus);
     server.on("/rotorflight-tuning",    handleRotorflightTuning);
