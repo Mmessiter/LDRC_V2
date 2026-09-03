@@ -192,10 +192,17 @@ inline void swapRadios() {
         if (sinceLive < 2500 && linkStats.graceDone && !bleStatsQuarantine())
             linkStats.flightSwaps++;
         else if (sinceLive < 8000) {
-            char ub[40];
-            snprintf(ub, sizeof(ub), "Swap unbilled (%s)",
-                     !linkStats.graceDone ? "grace" : bleStatsQuarantine() ? "BT" : "stale link");
-            events.add(ub);
+            // One breadcrumb per 5 s: the dead-link hunt swaps once a second
+            // for the whole 8 s window, which wrote 7 identical lines after
+            // every TX-off (seen 0.9.551) — noise a pilot would read as a fault.
+            static uint32_t lastCrumbMs = 0;
+            if ((uint32_t)(millis() - lastCrumbMs) >= 5000) {
+                lastCrumbMs = millis();
+                char ub[40];
+                snprintf(ub, sizeof(ub), "Swap unbilled (%s)",
+                         !linkStats.graceDone ? "grace" : bleStatsQuarantine() ? "BT" : "stale link");
+                events.add(ub);
+            }
         }
     }
     lastRadioSwapMs = millis();

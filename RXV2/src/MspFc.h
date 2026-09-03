@@ -505,6 +505,13 @@ inline void mspFcPoll() {
     // API probes aren't slowed to 5 s right after the variant arrives.
     uint32_t interval = fcIdLatched ? PROBE_HEARTBEAT_MS : PROBE_INTERVAL_MS;
     if ((uint32_t)(now - fcInfo.lastProbeMs) < interval) return;
+    // A paused probe (flying, bridge client, TX params) is not a silent FC:
+    // after a pause longer than the timeout, the FC gets a fresh 10 s to
+    // answer the probes actually sent — otherwise every landing logged a
+    // false "FC lost" (seen 0.9.551, ~6 s after the radios came back).
+    static uint32_t probeResumedMs = 0;
+    if (fcInfo.lastProbeMs != 0 && (uint32_t)(now - fcInfo.lastProbeMs) > PROBE_TIMEOUT_MS)
+        probeResumedMs = now;
     fcInfo.lastProbeMs = now;
 
     // Cycle through the three requests on successive probes so we eventually
@@ -537,9 +544,12 @@ inline void mspFcPoll() {
     }
     fcInfo.probesSent++;
 
-    // Detect timeout — if we were detected but responses have stopped.
+    // Detect timeout — if we were detected but responses have stopped
+    // (counting from the probe resume, if that is more recent than the reply).
+    uint32_t silentSince = fcInfo.lastResponseMs;
+    if ((int32_t)(probeResumedMs - silentSince) > 0) silentSince = probeResumedMs;
     if (fcInfo.detected && fcInfo.lastResponseMs != 0 &&
-        (uint32_t)(now - fcInfo.lastResponseMs) > PROBE_TIMEOUT_MS) {
+        (uint32_t)(now - silentSince) > PROBE_TIMEOUT_MS) {
         fcInfo.detected     = false;
         fcInfo.versionKnown = false;
         events.add("FC lost — no MSP response in 10s");
