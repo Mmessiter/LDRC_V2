@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name=theme-color content="#5fa099">
+<meta name=apple-mobile-web-app-capable content=yes>
+<meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
+<meta name=apple-mobile-web-app-title content="LDRC RX V2">
+<title>Flight recorder &middot; LDRC RX V2</title>
+<link rel=stylesheet href="/style.css?v=179">
+<script src="/app.js?v=187" defer></script>
+<style>
+.banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
+.banner.info{background:#c8d2dc;color:#3a5165}
+.banner.good{background:#a8d29a;color:#2a4d1f}
+.banner.bad {background:#dca08c;color:#5c2a1a}
+.banner.warn{background:#e8cf8f;color:#5c4a1a}
+.do{margin:.2em 0 .6em;line-height:1.4}
+.fRow{display:grid;grid-template-columns:1fr auto;gap:.5em .8em;align-items:center;margin:.35em 0}
+.fRow .lab b{display:block}.fRow .lab span{font-size:.8em;color:#5d7a8c}
+.fRow input[type=number]{width:5em;padding:.5em;font-size:1em;border:1px solid #b8c7d0;border-radius:6px;text-align:center}
+.fRow select{padding:.5em;font-size:1em;border:1px solid #b8c7d0;border-radius:6px;max-width:12.5em}
+.fRow input[type=checkbox]{width:1.4em;height:1.4em}
+.saveBtn{width:100%;margin-top:.6em;padding:.75em;border:0;border-radius:10px;background:#6cab5e;color:#fff;font-size:1.05em;font-weight:700;cursor:pointer}
+.saveBtn:disabled{opacity:.5}
+.calBtn{flex:1;margin-top:.6em;padding:.6em;border:0;border-radius:10px;background:#5f8fab;color:#fff;font-size:.95em;font-weight:700;cursor:pointer}
+.rbBtn{width:100%;margin-top:.6em;padding:.75em;border:0;border-radius:10px;background:#c98a4a;color:#fff;font-size:1.05em;font-weight:700;cursor:pointer}
+.eraseBtn{background:#c0603c}
+.sMsg{text-align:center;font-size:.85em;min-height:1.2em;margin-top:.3em;font-weight:600}
+h2 .hint{font-weight:400;font-size:.7em;color:#5d7a8c;display:block;margin-top:.1em}
+.att{font-size:1.1em;font-weight:700;text-align:center;margin:.3em 0;color:#3a5165}
+.lockRow{background:#e8cf8f;color:#5c4a1a;border-radius:8px;padding:.5em .7em;font-size:.88em;margin:.5em 0;line-height:1.4}
+.lockRow a{color:#5c4a1a;font-weight:700}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:.3em .5em;margin:.4em 0}
+.fields label{display:flex;align-items:center;gap:.45em;font-size:.86em;line-height:1.2;background:#e6edf2;border-radius:8px;padding:.45em .5em;color:#2f4452}
+.fields label span{font-size:.8em;color:#5d7a8c}
+.fields input{width:1.25em;height:1.25em;flex:none;margin:0}
+.bar{height:1.1em;background:#dfe6ec;border-radius:6px;overflow:hidden;margin:.5em 0 .3em}
+.bar i{display:block;height:100%;background:#5f8fab;transition:width .4s}
+</style>
+</head>
+<body>
+<button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
+<div class=bg-photo aria-hidden=true></div>
+<div class=bg-wash  aria-hidden=true></div>
+<div class=container>
+    <h1>Flight recorder</h1>
+    <p class=subtitle>Rotorflight&rsquo;s own black box, kept on the flight controller (Blackbox)</p>
+    <div id=verBanner class="banner warn" style="display:none"><span id=verBannerMsg></span></div>
+    <div id=status class="banner info">loading&hellip;</div>
+    <div id=rbBanner class="banner warn" style="display:none">The new rate or place to record only starts after a flight-controller restart.
+        <button class=rbBtn onclick="rebootFc()">&#128260; Restart flight controller now</button></div>
+
+    <div class=card id=rec>
+        <h2>When to record <span class=hint>(Blackbox mode, device, rate)</span></h2>
+        <p class=do><b>Record whenever the motor is armed, to the flight controller&rsquo;s memory, 1 loop in 8.</b> No switch needed &mdash; every flight is kept until you erase.</p>
+        <div class=fRow><div class=lab><b data-help="Whenever armed: records every flight, no switch needed. The switch choices need a Blackbox switch from the Switches page. Armed + switch: starts when both are true, and the switch then pauses and resumes it. (Rotorflight: blackbox_mode)">When</b></div><select id=mode></select></div>
+        <div class=fRow><div class=lab><b data-help="The flight controller's own memory chip is the usual place (16 MB on most boards). Changing this takes effect after a restart. (Rotorflight: blackbox_device)">Where</b></div><select id=dev></select></div>
+        <div class=fRow><div class=lab><b data-help="How many control loops between samples. 1 in 8 (Rotorflight's default) is plenty for tuning and governor problems; every loop or 1 in 2 for vibration hunting, but the memory fills that much faster. Takes effect after a restart. (Rotorflight: blackbox_rate_denom)">How often</b><span id=rateNote>of the control loop</span></div><select id=denom></select></div>
+        <div class=fRow><div class=lab><b data-help="Seconds of recording after you disarm, so the landing and anything that happens just after is in the log. 0 to 60. (Rotorflight: blackbox_grace_period)">Keep recording after disarm</b><span>seconds</span></div><input id=grace type=number min=0 max=60></div>
+        <div class=fRow><div class=lab><b data-help="ON: when the memory is full, keep recording by wiping the oldest flight. OFF: stop recording when full, so nothing is ever lost until you erase. (Rotorflight: blackbox_rolling_erase)">Overwrite the oldest when full</b><span>off = stops when full</span></div><input id=roll type=checkbox></div>
+        <div id=swWarn class=lockRow style="display:none">&#9888;&#65039; No <b>Blackbox switch</b> is set up, so this choice would never record. <a href="/rotorflight-modes">Set one on the Switches page &rarr;</a></div>
+        <button class=saveBtn id=recSave onclick="save('recMsg')">Save recorder settings</button>
+        <div id=recMsg class=sMsg></div>
+    </div>
+
+    <div class=card id=what>
+        <h2>What to record <span class=hint>(Blackbox fields)</span></h2>
+        <p class=do><b>Tap Recommended set, then Save.</b> That is Rotorflight&rsquo;s usual fields plus ESC and Governor, so head-speed problems show up. Compass and GPS only if fitted.</p>
+        <div class=fields id=fields></div>
+        <div style="display:flex;gap:.5em"><button class=calBtn onclick="preset(REC_FIELDS)">Recommended set</button><button class=calBtn onclick="preset(ALL_FIELDS)">Everything</button></div>
+        <button class=saveBtn id=whatSave onclick="save('whatMsg')">Save fields</button>
+        <div id=whatMsg class=sMsg></div>
+    </div>
+
+    <div class=card id=mem>
+        <h2>Memory <span class=hint>flight logs stored on the flight controller (Dataflash)</span></h2>
+        <div class=bar><i id=barFill style="width:0"></i></div>
+        <div class=att id=memText>&hellip;</div>
+        <p class=do><b>Erase before a test session</b>, so the new flights are easy to find and the memory cannot fill mid-flight. Logs are read with the Rotorflight Blackbox Explorer over USB &mdash; erasing deletes them for good.</p>
+        <button class="saveBtn eraseBtn" id=eraseBtn onclick="erase()">Erase all flight logs</button>
+        <div id=memMsg class=sMsg></div>
+    </div>
+
+    <div class=footer></div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+function hexToBytes(h){const o=new Uint8Array(h.length/2);for(let i=0;i<o.length;i++)o[i]=parseInt(h.substr(i*2,2),16);return o;}
+function bytesToHex(b){return Array.from(b).map(x=>x.toString(16).padStart(2,'0')).join('');}
+const rdU16=(b,o)=>b[o]|(b[o+1]<<8);
+const rdU32=(b,o)=>(b[o]|(b[o+1]<<8)|(b[o+2]<<16)|(b[o+3]<<24))>>>0;
+const wrU16=(b,o,v)=>{v=Math.max(0,Math.min(65535,Math.round(v)));b[o]=v&0xff;b[o+1]=(v>>8)&0xff;};
+const wrU32=(b,o,v)=>{v=Math.max(0,Math.round(v))>>>0;b[o]=v&0xff;b[o+1]=(v>>>8)&0xff;b[o+2]=(v>>>16)&0xff;b[o+3]=(v>>>24)&0xff;};
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function setStatus(k,t){const s=$('status');s.className='banner '+k;s.textContent=t;}
+function flash(id,t){$(id).textContent=t;setTimeout(()=>{ if($(id).textContent===t)$(id).textContent=''; },8000);}
+const mb=n=>n>=1048576?(n/1048576).toFixed(1)+' MB':n>=1024?Math.round(n/1024)+' kB':n+' B';
+
+// ---- Rotorflight 4.6 (RF 2.3) Blackbox, byte-exact (src/main/msp/msp.c):
+//  MSP 80 BLACKBOX_CONFIG reply, 13 B: u8 supported, u8 device, u8 mode,
+//    u16 denom, u32 fields, u16 initialEraseKiB, u8 rollingErase, u8 grace.
+//  MSP 81 SET_BLACKBOX_CONFIG, 12 B: the same minus the supported byte.
+//    The FC silently IGNORES it while logging or erasing
+//    (blackboxMayEditConfig) — so every save is re-read and compared.
+//  MSP 70 DATAFLASH_SUMMARY, 13 B: u8 flags (1 supported, 2 ready),
+//    u32 sectors, u32 total bytes, u32 used bytes.  MSP 72 = erase (async).
+//  MSP 101 STATUS: first u16 = PID loop period µs → log rate = 1e6/µs/denom.
+//  denom and device are only read at boot (blackboxInit) → restart banner.
+const FIELDS=[
+ [0,'Stick positions','Command'],      [1,'Requested rates','Setpoint'],
+ [2,'Mixer outputs','Mixer'],          [3,'Control loop P I D F','PID'],
+ [4,'Pitch, roll, heading','Attitude'],[5,'Gyro before filtering','Gyro raw'],
+ [6,'Gyro after filtering','Gyro'],    [7,'Accelerometer','Acc'],
+ [8,'Compass','Mag'],                  [9,'Altitude & climb','Alt'],
+ [10,'Battery volts & amps','Battery'],[11,'Radio signal','RSSI'],
+ [12,'GPS','GPS'],                     [13,'Head speed & motor RPM','RPM'],
+ [14,'Throttle to the ESC','Motor'],   [15,'Servo outputs','Servo'],
+ [16,'BEC voltage','VBEC'],            [17,'Bus voltage','VBUS'],
+ [18,'Temperatures','Temp'],           [19,'ESC telemetry','ESC'],
+ [20,'BEC telemetry','BEC'],           [21,'Second ESC','ESC2'],
+ [22,'Governor','Gov'] ];
+const DEF_FIELDS=0x7EE7F;                          // Rotorflight's own default set
+const REC_FIELDS=DEF_FIELDS|(1<<19)|(1<<22);       // + ESC + Governor (head-speed diagnosis)
+const ALL_FIELDS=0x7FFFFF;
+const MODES=[[2,'Whenever the motor is armed'],[3,'While the Blackbox switch is on'],[1,'Armed + switch on'],[0,'Never']];
+const DEVS=[[1,'Flight-controller memory'],[2,'SD card'],[3,'Serial port (external logger)'],[0,'Nowhere']];
+const DENOMS=[1,2,4,8,16,32,64,128];
+let armed=false, loaded=null, pidUs=0, swSet=null;   // swSet: null unknown, true/false = Blackbox switch assigned
+
+function decode(b){ return {device:b[1],mode:b[2],denom:rdU16(b,3),fields:rdU32(b,5),ie:rdU16(b,9),roll:b[11],grace:b[12]}; }
+function encode(o){ const w=new Uint8Array(12); w[0]=o.device; w[1]=o.mode; wrU16(w,2,o.denom); wrU32(w,4,o.fields); wrU16(w,8,o.ie); w[10]=o.roll; w[11]=o.grace; return w; }
+
+function fillSelect(id,list,cur,fmt){
+    const s=$(id); s.innerHTML='';
+    let seen=false;
+    for(const [v,t] of list){ const o=document.createElement('option'); o.value=v; o.textContent=fmt?fmt(v,t):t; if(v===cur)seen=true; s.appendChild(o); }
+    if(!seen&&cur!==undefined){ const o=document.createElement('option'); o.value=cur; o.textContent='Custom ('+cur+')'; s.appendChild(o); }
+    s.value=cur;
+}
+function rateLabel(d){
+    const hz=pidUs?Math.round(1e6/pidUs/d):0;
+    return (d===1?'Every loop':'1 in '+d)+(d===8?' (recommended)':'')+(hz?' — '+hz+' per second':'');
+}
+function paintDenom(){
+    const cur=loaded?loaded.denom:8;
+    const list=DENOMS.slice(); if(cur&&!list.includes(cur)){ list.push(cur); list.sort((a,b)=>a-b); }
+    fillSelect('denom',list.map(d=>[d,'']),cur,(v)=>rateLabel(v));
+    $('rateNote').textContent=pidUs?'control loop runs '+Math.round(1e6/pidUs)+' times a second':'of the control loop';
+}
+function paintFields(mask){
+    const box=$('fields'); box.innerHTML='';
+    for(const [bit,name,rf] of FIELDS){
+        const l=document.createElement('label');
+        l.innerHTML='<input type=checkbox id=fld'+bit+'> '+name+' <span>('+rf+')</span>';
+        box.appendChild(l);
+        l.firstChild.checked=!!(mask&(1<<bit));
+        l.firstChild.addEventListener('change',()=>LDRC.markDirty&&LDRC.markDirty());
+    }
+}
+function fieldsMask(){ let m=0; for(const [bit] of FIELDS) if($('fld'+bit).checked) m|=(1<<bit); return m>>>0; }
+function preset(mask){ for(const [bit] of FIELDS) $('fld'+bit).checked=!!(mask&(1<<bit)); LDRC.markDirty&&LDRC.markDirty(); }
+function paintCfg(){
+    fillSelect('mode',MODES,loaded.mode); fillSelect('dev',DEVS,loaded.device);
+    $('grace').value=loaded.grace; $('roll').checked=!!loaded.roll;
+    paintFields(loaded.fields); paintSwitchWarn();
+}
+function paintSwitchWarn(){
+    const m=+$('mode').value;
+    $('swWarn').style.display=(swSet===false&&(m===1||m===3))?'':'none';
+}
+function fromUi(){
+    return { device:+$('dev').value, mode:+$('mode').value, denom:+$('denom').value||8, fields:fieldsMask(),
+             ie:loaded.ie, roll:$('roll').checked?1:0, grace:Math.max(0,Math.min(60,Math.round(+$('grace').value||0))) };
+}
+
+function needReboot(){ $('rbBanner').style.display=''; }
+async function rebootFc(){
+    if(!(await LDRC.confirm('Restart the flight controller now? Motors stop briefly; the link returns in a few seconds.',
+        {title:'Restart flight controller',icon:'🔄',yes:'Restart',kind:'warn'})))return;
+    // retries=1: the FC reboots before answering — a retry would reboot it twice.
+    try{ await LDRC.msp(68,'',1); }catch(e){}
+    $('rbBanner').style.display='none';
+    setStatus('info','Flight controller restarting — back in a few seconds…');
+    setTimeout(load, 8000);
+}
+async function armCheck(){
+    try{ const st=await (await fetch('/api/state.json',{cache:'no-store'})).json();
+         armed=!!(st.rf&&st.rf.armed); }catch(e){}
+    return armed;
+}
+
+async function save(msgId){
+    if(!loaded){ flash(msgId,'Nothing loaded yet'); return; }
+    if(await armCheck()){ flash(msgId,'⚠️ Refused — the model is ARMED'); return; }
+    const o=fromUi();
+    if(o.mode!==0&&o.device===0){ flash(msgId,'Choose where to record (or set When to Never)'); return; }
+    try{
+        await LDRC.msp(81,bytesToHex(encode(o)));
+        await LDRC.msp(250);
+        const b=hexToBytes(await LDRC.msp(80));
+        if(b.length<13) throw new Error('verify read short ('+b.length+'B)');
+        const got=decode(b);
+        const ok=['device','mode','denom','fields','roll','grace'].every(k=>got[k]===o[k]);
+        const restart=got.denom!==loaded.denom||got.device!==loaded.device;
+        loaded=got;                       // what the FC really holds now
+        if(!ok){ flash(msgId,'⚠️ Not accepted — the flight controller is recording or erasing right now. Wait a few seconds and try again.'); return; }  // keep the edits on screen for the retry
+        paintCfg(); paintDenom();
+        LDRC.clearDirty&&LDRC.clearDirty();
+        flash(msgId,'✓ Saved and verified'); if(restart) needReboot();
+    }catch(e){ flash(msgId,'✗ '+e.message); }
+}
+
+async function loadFlash(){
+    const b=hexToBytes(await LDRC.msp(70));
+    if(b.length<13) throw new Error('memory summary short ('+b.length+'B)');
+    const f={flags:b[0],total:rdU32(b,5),used:rdU32(b,9)};
+    f.ok=!!(f.flags&1); f.ready=!!(f.flags&2);
+    if(!f.ok){ $('barFill').style.width='0'; $('memText').textContent='No memory chip on this board — SD card or serial logger only.'; $('eraseBtn').disabled=true; return f; }
+    const pct=f.total?Math.round(f.used*100/f.total):0;
+    $('barFill').style.width=pct+'%';
+    $('barFill').style.background=pct>85?'#c0603c':pct>60?'#c98a4a':'#5f8fab';
+    $('memText').textContent=(f.ready?'':'Busy — ')+mb(f.used)+' of '+mb(f.total)+' used ('+pct+'%)';
+    $('eraseBtn').disabled=!f.ready;
+    return f;
+}
+async function erase(){
+    if(await armCheck()){ flash('memMsg','⚠️ Refused — the model is ARMED'); return; }
+    if(!(await LDRC.confirm('Erase every flight log on the flight controller? They cannot be recovered.',
+        {title:'Erase flight logs',icon:'🗑️',yes:'Erase',kind:'danger'})))return;
+    $('eraseBtn').disabled=true; $('memMsg').textContent='Erasing…';
+    // retries=1: a repeated MSP 72 restarts the erase and doubles the wait.
+    // A lost reply still means it probably started, so poll regardless.
+    try{ await LDRC.msp(72,'',1); }catch(e){}
+    const t0=Date.now();
+    for(;;){
+        await sleep(1500);
+        let f=null; try{ f=await loadFlash(); }catch(e){}
+        const s=Math.round((Date.now()-t0)/1000);
+        if(f&&f.ready&&f.used===0){ flash('memMsg','✓ Erased in '+s+' s — ready to record'); LDRC.clearDirty&&LDRC.clearDirty(); return; }
+        $('memMsg').textContent='Erasing… '+s+' s'+(f&&!f.ready?'':' (waiting for the flight controller)');
+        if(s>=120){ flash('memMsg','⚠️ Still not erased after 2 minutes — is Where set to the flight-controller memory, and restarted since?'); $('eraseBtn').disabled=false; return; }
+    }
+}
+async function loadSwitch(){
+    // MSP 34 MODE_RANGES: 20 × [permanentId, aux, startStep, endStep]; BLACKBOX = 26.
+    const b=hexToBytes(await LDRC.msp(34)); swSet=false;
+    for(let i=0;i+3<b.length;i+=4) if(b[i]===26&&b[i+3]>b[i+2]) swSet=true;
+    paintSwitchWarn();
+}
+
+async function load(){
+    if (window.LDRC && LDRC.replayReady) await LDRC.replayReady;
+    setStatus('info','Reading from the flight controller…');
+    try{
+        const st=await (await fetch('/api/state.json',{cache:'no-store'})).json();
+        const api=(st.fcinfo.api_major*100)+st.fcinfo.api_minor;
+        const alert=LDRC.rfVersionAlert&&LDRC.rfVersionAlert(api);
+        if(alert){ $('verBanner').style.display=''; $('verBannerMsg').textContent=alert; }
+        armed=!!(st.rf&&st.rf.armed);
+    }catch(e){}
+    try{
+        const b=hexToBytes(await LDRC.msp(80));
+        if(b.length<13) throw new Error('blackbox config short ('+b.length+'B)');
+        if(!b[0]) throw new Error('this Rotorflight build has no Blackbox');
+        loaded=decode(b); paintCfg();
+        try{ const s=hexToBytes(await LDRC.msp(101)); if(s.length>=2) pidUs=rdU16(s,0); }catch(e){}
+        paintDenom();
+        try{ await loadFlash(); }catch(e){ $('memText').textContent='Memory: '+e.message; $('eraseBtn').disabled=true; }
+        try{ await loadSwitch(); }catch(e){}
+        setStatus('good','✓ Loaded from flight controller');
+    }catch(e){ setStatus('bad','Read failed: '+e.message); }
+}
+// DOMContentLoaded, never top-level: deferred app.js must define LDRC first.
+document.addEventListener('DOMContentLoaded', ()=>{
+    for(const id of ['mode','dev','denom','grace','roll']) $(id).addEventListener('change',()=>{ LDRC.markDirty&&LDRC.markDirty(); paintSwitchWarn(); });
+    load();
+});
+</script>
+<template id=helpContent><h2>Flight recorder</h2>
+<p>Rotorflight&rsquo;s Blackbox writes the flight controller&rsquo;s insides &mdash; sticks, gyro, servos, governor, ESC &mdash; hundreds of times a second into the flight controller&rsquo;s own memory. Afterwards the Rotorflight Blackbox Explorer (computer, USB) shows exactly what happened. <b>Not the receiver&rsquo;s Black box log</b> on the front page: that records the radio link and telemetry a few times a second and is read here on the phone.</p>
+<ul>
+<li><b>When</b> &mdash; <i>Whenever armed</i> needs no switch and never forgets. The two switch choices need a Blackbox switch (Switches page); <i>Armed and the switch on</i> starts when both are true and the switch then pauses and resumes it.</li>
+<li><b>How often</b> &mdash; 1 in 8 loops is plenty for tuning and governor problems. Every loop or 1 in 2 for vibration hunting, and the memory fills that much faster. Applies after a restart.</li>
+<li><b>Keep recording after disarm</b> &mdash; the seconds after you disarm, so the landing is in the log.</li>
+<li><b>Overwrite the oldest</b> &mdash; full memory wipes the oldest flight and keeps going; off = stops recording when full.</li>
+<li><b>What to record</b> &mdash; the recommended set plus ESC and Governor covers head-speed problems. Compass and GPS only if fitted.</li>
+<li><b>Erase</b> &mdash; the flight controller beeps while erasing (10&ndash;60 s). Download first with the Configurator if you want to keep anything.</li>
+<li>The flight controller <b>ignores changes while it is recording</b> (armed, or the switch on) &mdash; the page tells you if that happened.</li>
+</ul>
+</template>
+</body>
+</html>

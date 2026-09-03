@@ -361,6 +361,14 @@ inline void handleRotorflightGear() {
     server.send(503, "text/plain", "/rotorflight-gear.html missing — uploadfs the data/ folder");
 }
 
+// Flight recorder — Rotorflight's onboard Blackbox (MSP 70/72/80/81) in
+// plain English: when/where/how often to log, which fields, flash usage and
+// erase. Last wizard step before "blades on" (Malcolm 2026-09-03).
+inline void handleRotorflightBlackbox() {
+    if (serveLittleFsFile("/rotorflight-blackbox.html", "text/html")) return;
+    server.send(503, "text/plain", "/rotorflight-blackbox.html missing — uploadfs the data/ folder");
+}
+
 inline void handleGearJs() {
     if (serveLittleFsFile("/gear.js", "application/javascript")) return;
     server.send(503, "text/plain", "/gear.js not in LittleFS — uploadfs the data/ folder");
@@ -2786,6 +2794,7 @@ inline void registerWebRoutes() {
     server.on("/rotorflight-computer",  handleRotorflightComputer);
     server.on("/rotorflight-esc",       handleRotorflightEsc);
     server.on("/rotorflight-gear",      handleRotorflightGear);
+    server.on("/rotorflight-blackbox",  handleRotorflightBlackbox);
     server.on("/rotorflight-escprog",   handleRotorflightEscProg);
     server.on("/api/fc/wake", HTTP_POST, handleFcWake);
     server.on("/api/esc/catch", HTTP_POST, handleEscCatchArm);
