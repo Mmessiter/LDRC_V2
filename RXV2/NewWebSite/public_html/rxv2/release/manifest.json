@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.553-copy-bank",
+      "url": "https://messiter.com/rxv2/release/v0.9.553/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.553/littlefs.bin",
+      "fs_md5": "02ed682a6e36bddcd90e2b9b672594f6",
+      "notes": "New 'Copy a bank' page (Rotorflight hub 4th door + A la carte): PIDs, PID+, rescue, rates and governor gains from one bank to another in ONE tap, saved, read back and verified byte for byte; each bank keeps its own head speed unless you tick 'Head speed too'; refused while armed; flight controller returned to the bank it was on. (Per-page 'Copy to Profile (Bank)' at the bottom of the PIDs / PID+ / Rates / Governor pages is unchanged.) Pages only - firmware behaviour unchanged."
+    },
+    {
       "name": "RXV2-0.9.552-quiet-landing",
       "url": "https://messiter.com/rxv2/release/v0.9.552/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.552/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.542/littlefs.bin",
       "fs_md5": "5e464c355de2ae965f2df874f30f2efb",
       "notes": "Scorpion ESC editor: the three text areas on the start screen are now ONE patch of text that says what to do first and why second (Blades off, press the button, restart the battery\u2026 \u2014 then the 10-second rule and the telemetry-freeze note). The deaf-ESC button reads 'Prepare the receiver to read the ESC on reboot\u2026'; the note under the button is gone. Page-only change."
-    },
-    {
-      "name": "RXV2-0.9.541-esc-read-honest-button",
-      "url": "https://messiter.com/rxv2/release/v0.9.541/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.541/littlefs.bin",
-      "fs_md5": "66f5373650edaf21c41ca22db91b466a",
-      "notes": "Scorpion ESC editor: the start screen now explains the 10-second rule (a Scorpion only listens for 10 s after power-up) and checks, safely through the ESC's live telemetry, whether a read can work. The button says what will work: 'Read the ESC' when the flight controller already holds the settings or the ESC has just powered up, 'Restart the battery to read the ESC' when the ESC is deaf (it arms the receiver's catcher first, then waits for your battery restart), greyed only when there is no flight-controller link or the receiver is busy catching. Honest end-of-catch messages (transmitter on at power-up, nothing published). Release now shows the battery button straight away. Catch status API gains result/poweron and ?got=0."
     }
   ]
 }
