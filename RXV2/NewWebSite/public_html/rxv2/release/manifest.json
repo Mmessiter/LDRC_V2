@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.552-quiet-landing",
+      "url": "https://messiter.com/rxv2/release/v0.9.552/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.552/littlefs.bin",
+      "fs_md5": "c67c81b16d36aa0bd329fe4f466a3a7b",
+      "notes": "Quieter event log: no false 'FC lost' after every flight (the FC probe pauses in the air; it now gets a fresh 10 s after landing) and one 'Swap unbilled' breadcrumb per 5 s instead of seven after every TX-off. Firmware only - pages unchanged."
+    },
+    {
       "name": "RXV2-0.9.551-throttle-parked",
       "url": "https://messiter.com/rxv2/release/v0.9.551/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.551/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.541/littlefs.bin",
       "fs_md5": "66f5373650edaf21c41ca22db91b466a",
       "notes": "Scorpion ESC editor: the start screen now explains the 10-second rule (a Scorpion only listens for 10 s after power-up) and checks, safely through the ESC's live telemetry, whether a read can work. The button says what will work: 'Read the ESC' when the flight controller already holds the settings or the ESC has just powered up, 'Restart the battery to read the ESC' when the ESC is deaf (it arms the receiver's catcher first, then waits for your battery restart), greyed only when there is no flight-controller link or the receiver is busy catching. Honest end-of-catch messages (transmitter on at power-up, nothing published). Release now shows the battery button straight away. Catch status API gains result/poweron and ?got=0."
-    },
-    {
-      "name": "RXV2-0.9.540-save-toast-visible",
-      "url": "https://messiter.com/rxv2/release/v0.9.540/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.540/littlefs.bin",
-      "fs_md5": "4bef21786e8df35102dbd94cff2577fa",
-      "notes": "Scorpion ESC editor: the 'Saved - read back from the ESC and confirmed' message now actually appears above the Save button (it was written but never displayed)."
     }
   ]
 }

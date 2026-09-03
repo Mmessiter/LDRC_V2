@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.551-throttle-parked";
+constexpr const char* FW_VERSION = "RXV2-0.9.552-quiet-landing";
 
 //*********************************************************************
 //  Auto-update manifest URLs
