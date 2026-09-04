@@ -183,7 +183,11 @@ inline bool govConfigWriteReq  = false; // governor config (ID 33)
 // awaits the FC's response and resends on loss; the block is read back and
 // compared before EEPROM save; the config reboot fires only after the save
 // is confirmed.
-enum ParamMspState : uint8_t { PM_IDLE, PM_READ, PM_WRITE_ORIG, PM_SET_WAIT, PM_VERIFY_WAIT, PM_EEPROM_WAIT };
+// PM_TELEM_CHECK / PM_TELEM_FIX (0.9.563): before the EEPROM save, the FC's
+// telemetry setup (MSP 73) is read and, if it has turned up empty, the
+// receiver's cached good copy is written back (MSP 74) — so a transmitter
+// edit can never carry the empty setup into flash (Goblin 770, 2026-09-03).
+enum ParamMspState : uint8_t { PM_IDLE, PM_READ, PM_WRITE_ORIG, PM_SET_WAIT, PM_VERIFY_WAIT, PM_TELEM_CHECK, PM_TELEM_FIX, PM_EEPROM_WAIT };
 enum WriteKind     : uint8_t { WK_NONE, WK_RATES, WK_RATES_ADV, WK_PID, WK_PID_ADV, WK_GOV_PROFILE, WK_GOV_CONFIG };
 
 inline ParamMspState pmState     = PM_IDLE;
@@ -194,10 +198,13 @@ inline uint16_t      pmScratchLen  = 0;
 inline uint8_t       pmWriteRetries = 0;   // one automatic retry when the pre-write GET times out
 inline uint8_t       pmOpTries      = 0;   // per-step resend counter (lossy wire)
 inline uint8_t       pmVerifyLoops  = 0;   // SET → readback-mismatch → SET again loops
+inline uint8_t       pmTelemFixes   = 0;   // telemetry put-backs this cycle (one, then give up)
 inline uint32_t      lastParamFetchMs = 0;     // last read re-poll (continuous refresh)
 
 inline bool txParamMspFree() {
-    return currentProtocol == PROTO_CRSF && !mspBridgeActive && mspWaitFunction == 0xFF;
+    // ...and not over a heartbeat probe still waiting for its answer (0.9.563):
+    // the FC keeps one request and drops the one behind it.
+    return currentProtocol == PROTO_CRSF && !mspBridgeActive && mspWaitFunction == 0xFF && !mspProbeOutstanding();
 }
 
 // MSP "get" function for the active read window.
@@ -778,10 +785,11 @@ inline void txParamsLoop() {
                 memcpy(pmScratch, fresh, freshLen);
                 bool match = applyWriteToScratch() && memcmp(pmScratch, fresh, freshLen) == 0;
                 if (match) {
-                    mspAsyncFunc = MSP_EEPROM_WRITE; mspAsyncReady = false;
-                    mspSendRequest(MSP_EEPROM_WRITE);
-                    pmOpTries = 0;
-                    pmState = PM_EEPROM_WAIT; pmStateAt = now;
+                    // Before the save: one look at the telemetry setup (0.9.563).
+                    mspAsyncFunc = MSP_TELEMETRY_CONFIG; mspAsyncReady = false;
+                    mspSendRequest(MSP_TELEMETRY_CONFIG);
+                    pmOpTries = 0; pmTelemFixes = 0;
+                    pmState = PM_TELEM_CHECK; pmStateAt = now;
                 } else if (pmVerifyLoops < 2) {   // FC shows different bytes — SET again
                     pmVerifyLoops++;              // (pmScratch now holds the corrected payload)
                     mspAsyncFunc = writeSetFn(); mspAsyncReady = false;
@@ -805,6 +813,67 @@ inline void txParamsLoop() {
             }
             break;
 
+        case PM_TELEM_CHECK:
+            if (mspAsyncReady) {
+                // The passive switch in mspDeliverResponse has already digested
+                // this reply (cache, watch state). Good → save. Empty → put the
+                // cached good copy back first; nothing to put back → the edit
+                // stays in FC RAM but is NOT saved (a save would carry the
+                // empty setup into flash: no volts, no RPM until restored).
+                const bool good = telemImageGood(mspAsyncBuf, mspAsyncLen);
+                mspAsyncFunc = 0xFF;
+                if (good) {
+                    mspAsyncFunc = MSP_EEPROM_WRITE; mspAsyncReady = false;
+                    mspSendRequest(MSP_EEPROM_WRITE);
+                    pmOpTries = 0;
+                    pmState = PM_EEPROM_WAIT; pmStateAt = now;
+                } else if (fcInfo.telemGoodValid && fcInfo.telemRepairs < 5 && pmTelemFixes < 1) {
+                    pmTelemFixes++;
+                    fcInfo.telemRepairs++;
+                    mspAsyncFunc = MSP_SET_TELEMETRY_CONFIG; mspAsyncReady = false;
+                    mspSendRequest(MSP_SET_TELEMETRY_CONFIG, fcInfo.telemGood, 52);
+                    events.add("TX edit: telemetry setup EMPTY before save - putting the good copy back");
+                    pmOpTries = 0;
+                    pmState = PM_TELEM_FIX; pmStateAt = now;
+                } else {
+                    events.add("TX edit: telemetry setup EMPTY, nothing to put back - NOT saved");
+                    pmCycleEnd();
+                }
+            } else if ((int32_t)(now - pmStateAt) > 400) {
+                if (pmOpTries < 2) {           // read lost — ask again
+                    pmOpTries++;
+                    mspAsyncFunc = MSP_TELEMETRY_CONFIG; mspAsyncReady = false;
+                    mspSendRequest(MSP_TELEMETRY_CONFIG);
+                    pmStateAt = now;
+                } else {                       // a busy FC is not an empty one — save
+                    events.add("TX edit: telemetry check unanswered - saving anyway");
+                    mspAsyncFunc = MSP_EEPROM_WRITE; mspAsyncReady = false;
+                    mspSendRequest(MSP_EEPROM_WRITE);
+                    pmOpTries = 0;
+                    pmState = PM_EEPROM_WAIT; pmStateAt = now;
+                }
+            }
+            break;
+
+        case PM_TELEM_FIX:
+            if (mspAsyncReady) {              // FC echoed the put-back — read it again to be sure
+                mspAsyncFunc = MSP_TELEMETRY_CONFIG; mspAsyncReady = false;
+                mspSendRequest(MSP_TELEMETRY_CONFIG);
+                pmOpTries = 0;
+                pmState = PM_TELEM_CHECK; pmStateAt = now;
+            } else if ((int32_t)(now - pmStateAt) > 400) {
+                if (pmOpTries < 2) {           // echo lost — send it again
+                    pmOpTries++;
+                    mspAsyncFunc = MSP_SET_TELEMETRY_CONFIG; mspAsyncReady = false;
+                    mspSendRequest(MSP_SET_TELEMETRY_CONFIG, fcInfo.telemGood, 52);
+                    pmStateAt = now;
+                } else {
+                    events.add("TX edit: telemetry put-back unanswered - NOT saved");
+                    pmCycleEnd();
+                }
+            }
+            break;
+
         case PM_EEPROM_WAIT:
             if (mspAsyncReady) {              // FC acked EEPROM_WRITE — persisted
                 mspAsyncFunc = 0xFF;
@@ -822,6 +891,9 @@ inline void txParamsLoop() {
                     // frame left a saved config silently not yet active.
                     mspSendRequest(MSP_REBOOT);
                     mspSendRequest(MSP_REBOOT);
+                    fcInfo.telemCfgKnown = false;   // re-read the telemetry setup once it is back
+                    fcInfo.telemCfgTries = 0;
+                    fcInfo.telemRecheck  = true;
                 }
                 pmCycleEnd();
             } else if ((int32_t)(now - pmStateAt) > 600) {

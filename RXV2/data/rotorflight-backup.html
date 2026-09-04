@@ -9,7 +9,7 @@
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Backup &amp; restore &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=179">
-<script src="/app.js?v=189" defer></script>
+<script src="/app.js?v=191" defer></script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -150,7 +150,7 @@ async function phoneRestore() {
     }
     if (!(await LDRC.confirm(
         'Overwrite this model\u2019s Rotorflight setup with the phone backup' +
-        (info.when ? ' from ' + info.when : '') + '?\n\nWrites back the whole setup: PIDs, advanced PIDs, rates, governor & rescue (every bank); mixer, servos, motor & gear ratio; arming switch & modes, channel map, receiver & failsafe; battery & meters, filters, alignment, telemetry, black box; the bank and rates switches. Only what differs is written, each item verified.\n\nNot in the backup, left as they are: ESC parameters, serial ports, LED / OSD / GPS, the receiver’s own settings.\n\nKeep the transmitter OFF and the model powered while it runs.',
+        (info.when ? ' from ' + info.when : '') + '?\n\nWrites back the whole setup: PIDs, advanced PIDs, rates, governor & rescue (every bank); mixer, servos, motor & gear ratio; arming switch & modes, channel map, receiver & failsafe; battery & meters, filters, alignment, telemetry, black box; the bank and rates switches. Only what differs is written, each item verified.\n\nNot in the backup, left as they are: ESC parameters, serial ports, LED / OSD / GPS, the telemetry speed, the receiver’s own settings.\n\nKeep the transmitter OFF and the model powered while it runs.',
         { title: 'Restore from phone', icon: '📡', yes: 'Restore everything', kind: 'warn' }))) return;
     const btn = document.getElementById('phoneRestoreBtn');
     const prog = document.getElementById('restProg');
@@ -235,8 +235,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 </script>
 <template id=helpContent><h2>Backup &amp; restore</h2>
-<p><b>Share backup file</b> hands the backup to the phone&rsquo;s share sheet &mdash; email or AirDrop it to another phone, or to a friend with the same helicopter; <b>Import a backup file</b> adopts one as this model&rsquo;s restore point (then Restore writes it). The file carries everything, including the switch selectors the flight controller cannot read back.</p>
-<p><b>Back up settings to phone</b> saves the whole Rotorflight setup: every bank's PIDs, advanced PIDs, rates, governor and rescue; the governor's global settings; mixer, servos, motor &amp; gear ratio; arming switch &amp; modes, channel map, receiver &amp; failsafe; battery &amp; meters, filters, board &amp; gyro alignment, telemetry, black box setup, the flight controller's name; the bank and rates switch assignments &mdash; and all the Black box flight data too. <b>Restore settings from phone</b> writes back only what differs, each item verified, with the transmitter off, then saves it in the flight controller (and restarts it when the governor or motor block changed).</p>
+<p><b>Share backup file</b> hands the backup to the phone&rsquo;s share sheet &mdash; email or AirDrop it to another phone, or to a friend with the same helicopter; <b>Import a backup file</b> adopts one as this model&rsquo;s restore point (then Restore writes it). The file carries everything, including the bank and rates switch selectors, which the receiver never reads back from the flight controller (Rotorflight 4.6 wipes its own telemetry setup answering that list over the receiver link &mdash; a Rotorflight bug the receiver steps around).</p>
+<p><b>Back up settings to phone</b> saves the whole Rotorflight setup: every bank's PIDs, advanced PIDs, rates, governor and rescue; the governor's global settings; mixer, servos, motor &amp; gear ratio; arming switch &amp; modes, channel map, receiver &amp; failsafe; battery &amp; meters, filters, board &amp; gyro alignment, telemetry, black box setup, the flight controller's name; the bank and rates switch assignments &mdash; and all the Black box flight data too. <b>Restore settings from phone</b> writes back only what differs, each item verified, with the transmitter off, then saves it in the flight controller (and restarts it when the governor or motor block changed). The telemetry speed (Rotorflight page) is not part of a backup: a restore keeps whatever speed the flight controller runs.</p>
 <p><b>Not in the backup</b> (left untouched by Restore): ESC parameters (Scorpion programming), serial ports, LED / OSD / GPS and the receiver's own settings.</p>
 <p>A backup is also taken automatically when you connect, so even a pilot who never presses Back&nbsp;up has one &mdash; but your own Back&nbsp;up (or an imported file) is kept until you back up again. Always back up a known-good setup before experimenting.</p>
 </template>

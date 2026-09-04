@@ -1,6 +1,20 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.564-msp52-bug",
+      "url": "https://messiter.com/rxv2/release/v0.9.564/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.564/littlefs.bin",
+      "fs_md5": "93396bd68b5f94f7acdbb2e6779b98a3",
+      "notes": "Fix for the missing volts and RPM after a save: a Rotorflight 4.6 bug - its adjustments list (MSP 52) is too big for its receiver-link buffer and the overflow wipes its own telemetry setup. The receiver now never asks for that list, refuses it from any app or script, spots any oversize answer and puts the saved-good telemetry setup back before any save. Also refused: writes that arrive with no data, factory reset and motor test over the link."
+    },
+    {
+      "name": "RXV2-0.9.563-telemetry-speed",
+      "url": "https://messiter.com/rxv2/release/v0.9.563/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.563/littlefs.bin",
+      "fs_md5": "436c7052c545e211b34f7f05deb889c4",
+      "notes": "Telemetry speed: a new card on the Rotorflight page sets Rotorflight's telemetry link rate to FAST (1000/1, the new default) or standard (250/8). Rotorflight paces its answers to the phone and the transmitter by that rate, so settings reads, backups and restores come back about six times quicker and volts/RPM update sooner. Applying restarts the flight controller (transmitter off). Telemetry-setup guard: the receiver keeps the last good sensor list (also across reboots), re-reads it every 30 s while idle, puts it back into the flight controller's RAM if it turns up empty, and checks it before every save from a page, the phone app or the transmitter - so an emptied list (no volts/RPM) can never be saved into the flight controller again. A restore from a phone backup keeps the flight controller's current telemetry speed. Also: a transmitter edit or arming-channel probe can no longer collide with a heartbeat probe (the FC answers the first request and drops the second), a larger serial buffer for the faster stream, and a restart asked for by a page now answers at once instead of a timeout."
+    },
+    {
       "name": "RXV2-0.9.562-probe-holdoff",
       "url": "https://messiter.com/rxv2/release/v0.9.562/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.562/littlefs.bin",
@@ -69,20 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.551/littlefs.bin",
       "fs_md5": "c67c81b16d36aa0bd329fe4f466a3a7b",
       "notes": "Governor pages now warn when the transmitter throttle sat below 100 % while armed (the head runs stable but slow and bank changes do nothing) - the receiver learns the throttle channel and governor mode from Rotorflight itself. New 'Governor controls the spool-up (PID spool-up)' switch in the governor profile. No more swash twitches: the event log is saved append-only and never while armed. Loop stalls now name the call that caused them."
-    },
-    {
-      "name": "RXV2-0.9.550-field-landing-ble",
-      "url": "https://messiter.com/rxv2/release/v0.9.550/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.550/littlefs.bin",
-      "fs_md5": "90109d17dc544287a954c982f7c31d2f",
-      "notes": "Field landing fix: after a flight the receiver used to switch Bluetooth back on AND start a 100-second hunt for your home WiFi - which it cannot find at the field. That hunt swamped the phone's Bluetooth link, so the app connected but pages never loaded until a reboot (Goblin, 3 Sep). Now a receiver that never joined home WiFi this power-up revives Bluetooth only after landing; WiFi comes back only where home WiFi was actually joined. Also stops the 'disarmed - radios back on' log entry repeating every 5 seconds at the field, and logs a 'BLE reply stalled' event when Bluetooth replies are being refused, so this kind of fault shows up in the receiver's event log."
-    },
-    {
-      "name": "RXV2-0.9.549-blackbox-setup",
-      "url": "https://messiter.com/rxv2/release/v0.9.549/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.549/littlefs.bin",
-      "fs_md5": "90109d17dc544287a954c982f7c31d2f",
-      "notes": "New wizard step 13, Flight recorder: sets up Rotorflight's own onboard black box in plain English - when to record (whenever armed, no switch needed; or by the Blackbox switch, with a warning if no switch is assigned), where (flight-controller memory, SD card, serial), how often (as samples per second worked out from the control-loop rate), seconds to keep recording after disarm, overwrite-oldest-when-full, and which fields (Recommended set = Rotorflight's defaults + ESC + Governor, so head-speed problems show up). Shows the memory used and erases it with one red-confirmed tap, watching until the flight controller reports empty. Every save is read back and compared, so a flight controller that is busy recording (it silently ignores edits then) is reported honestly; rate or device changes offer the restart they need. Refused while armed. Also in A la carte. Firmware: route only."
     }
   ]
 }

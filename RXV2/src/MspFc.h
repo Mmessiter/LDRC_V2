@@ -55,6 +55,54 @@ constexpr uint8_t MSP_REBOOT         = 68;    // FC restart (governor config wri
 constexpr uint8_t MSP_ESC_PARAMETERS = 217;   // ESC settings blob (Scorpion/Hobbywing forward programming)
 constexpr uint8_t MSP_TELEMETRY_CONFIG     = 73;   // RF 4.6: 12-byte header (inverted, halfDuplex, u32, pinSwap, mode, rate u16, ratio u16) + 40 sensor-ID slots
 constexpr uint8_t MSP_SET_TELEMETRY_CONFIG = 74;   // same layout; sensors apply at the next FC boot
+constexpr uint8_t MSP_ADJUSTMENT_RANGES    = 52;   // 42 x 14 = 588 bytes — NEVER asked for, see below
+constexpr uint8_t MSP_RESET_CONF           = 208;  // factory reset — never over the link
+constexpr uint8_t MSP_SET_MOTOR            = 214;  // motor test — never from a phone
+
+//*********************************************************************
+//  Rotorflight 4.6 link-buffer bug (0.9.564) — RXV2/ROTORFLIGHT-MSP52-BUG.md
+//*********************************************************************
+// The FC answers MSP over CRSF out of a 320-byte buffer (msp_shared.c
+// responseBuffer[MSP_TLM_OUTBUF_SIZE], = MSP_PORT_OUTBUF_SIZE_MIN) and the
+// reply writers (sbufWriteU8...) never look at the end of it. The
+// adjustments list, MSP 52, is 588 bytes: the tail spills over whatever
+// the linker put after that buffer — the telemetry setup among it, which
+// comes back ALL ZERO (rate, ratio, sensors, even halfDuplex — the image a
+// defaults reset could never make). Proven on the Goblin 2026-09-04 15:24:
+// FC restart → 73 good; read 120, 34, 172 → still good; read 52 → zero,
+// every time. That was the "telemetry setup EMPTY" mystery of 09-03/09-04:
+// each event followed a read of 52 (Mac-side tests; no page reads it). In
+// RAM only — harmless in the air (crsf.c builds the schedule at boot) but
+// carried into flash by the next save, after which the FC boots mute.
+// So: 52 is never sent (the API refuses it with the reason), and any reply
+// bigger than the FC's buffer — a fn nobody thought of — is logged and the
+// telemetry setup re-checked and repaired at once.
+constexpr uint16_t RF_TLM_OUTBUF_SIZE = 320;
+inline bool mspReplyTooBigForFc(uint8_t fn) { return fn == MSP_ADJUSTMENT_RANGES; }
+// Rotorflight SET functions that read their payload from the request: with
+// NO payload the FC reads whatever its request buffer held before (no
+// bounds check in sbufReadU8) and applies THAT. Never forward such a
+// request — a bare "probe" of fn 173 from the Mac was a 1-byte mixer-rule
+// write (2026-09-04). Payload-less by design: 68 reboot, 72 erase, 205/206
+// calibrations, 250 save.
+inline bool mspSetNeedsPayload(uint8_t fn) {
+    switch (fn) {
+        case 11:  case 13:  case 15:  case 33:  case 35:  case 37:  case 39:  case 41:
+        case 43:  case 45:  case 47:  case 49:  case 51:  case 53:  case 55:  case 57:
+        case 60:  case 62:  case 65:  case 67:  case 74:  case 76:  case 78:  case 81:
+        case 83:  case 85:  case 89:  case 91:  case 93:  case 95:  case 97:  case 99:
+        case 124: case 135: case 136: case 143: case 145: case 147: case 149: case 151:
+        case 153: case 155: case 159: case 171: case 173: case 176: case 181: case 183:
+        case 185: case 186: case 191: case 193: case 195: case 196: case 200: case 201:
+        case 202: case 204: case 210: case 211: case 212: case 213: case 214: case 215:
+        case 216: case 218: case 219: case 220: case 221: case 222: case 223: case 225:
+        case 226: case 227: case 228: case 239: case 244: case 245: case 246: case 248:
+        case 249:
+            return true;
+        default:
+            return false;
+    }
+}
 
 // The FC's telemetry setup as read by MSP 73 — "bad" means Rotorflight will
 // send no volts/RPM/attitude no matter how healthy everything else is:
@@ -81,6 +129,25 @@ inline volatile uint32_t mspWaitChunkMs = 0;
 // millis() of the last reply a synchronous (page/app) request received —
 // holds the heartbeat probe off while a client is reading; see mspFcPoll.
 inline volatile uint32_t mspLastForegroundMs = 0;
+// millis() of a probe (or other fire-and-forget request) the FC has not yet
+// answered, 0 = none outstanding. The other half of the 0.9.562 hold-off:
+// Rotorflight keeps ONE request buffer, so a page read sent while a probe
+// waits in it is thrown away unanswered ("did not respond", 14:21:50 on
+// the Goblin, 2026-09-04). Every FC reply clears it; senders wait for it
+// (bounded — see mspProbeOutstanding).
+inline volatile uint32_t mspProbeSentMs = 0;
+constexpr uint32_t       MSP_PROBE_REPLY_WAIT_MS = 500;
+inline bool mspProbeOutstanding() {
+    return mspProbeSentMs != 0 && (uint32_t)(millis() - mspProbeSentMs) < MSP_PROBE_REPLY_WAIT_MS;
+}
+// Forensics for the telemetry-setup mystery (0.9.563): the last sends to
+// the FC, dumped into the event log the moment MSP 73 comes back empty —
+// if a receiver-side write did it, it is in here with its timing.
+struct MspSendRec { uint32_t ms; uint8_t fn; uint8_t len; };
+constexpr uint8_t MSP_SEND_RING = 24;
+inline MspSendRec mspSendRing[MSP_SEND_RING] = {};
+inline uint8_t    mspSendRingPos = 0;
+inline uint32_t   mspSendCount   = 0;
 inline bool              escCatchArmed = false;      // Scorpion boot catcher (see escCatchTick)
 inline bool              escCatchGot   = false;
 inline const char*       escCatchResult = "none";    // how the last catch ended: captured | nothing | tx | cancelled | none
@@ -137,6 +204,13 @@ inline void mspSendRequest(uint8_t function, const uint8_t* payload = nullptr, u
     // Silently dropping long payloads here is what made the 84-byte
     // Scorpion ESC write (fn 218) vanish (2026-09-02).
     if (payloadLen == 0xFF) return;          // 0xFF size = MSP jumbo marker, never send it
+    if (mspReplyTooBigForFc(function)) {     // last line of defence — the API refuses it earlier, with the reason
+        events.add("MSP 52 (adjustments) NOT sent: its reply overflows Rotorflight's link buffer (RF 4.6 bug)");
+        return;
+    }
+    mspSendRing[mspSendRingPos] = { (uint32_t)millis(), function, payloadLen };
+    mspSendRingPos = (uint8_t)((mspSendRingPos + 1) % MSP_SEND_RING);
+    mspSendCount++;
     uint8_t body[2 + 255];
     body[0] = payloadLen;
     body[1] = function;
@@ -169,6 +243,80 @@ inline void mspSendRequest(uint8_t function, const uint8_t* payload = nullptr, u
 // can carry, and the FC answers in CHUNKS we previously threw away).
 inline void mspDeliverResponse(uint8_t func, const uint8_t* payload, uint16_t size);
 
+//*********************************************************************
+//  Telemetry setup bookkeeping (0.9.563)
+//*********************************************************************
+// The FC's CRSF telemetry setup (MSP 73/74, 52 bytes: 12-byte header + 40
+// sensor slots) has been found all-zero twice on the Goblin with nothing
+// on the receiver writing it. Rotorflight's rate limiter and native sensor
+// schedule are built at BOOT (crsf.c initCrsfTelemetry), so a zeroed copy
+// in RAM changes nothing in the air — it bites only when an EEPROM save
+// carries it into flash and the next power-up runs mute: no volts, no RPM.
+// So the receiver keeps the last good image and puts it back before that
+// can happen (the poll, the pre-save hooks in handleMspApi/TxParams).
+
+// Link speed = header bytes 8-11 (rate u16 LE, ratio u16 LE). Rotorflight's
+// default 250/8 = 31 five-byte slots a second, sized for an ELRS radio.
+// Our UART runs 420 kbaud with nothing else on it: 1000/1 lets the FC
+// answer a page read in ~15 ms instead of ~0.6 s and sends the native
+// sensors ~4x more often (verified on the Goblin, 2026-09-04).
+constexpr uint16_t TELEM_FAST_RATE = 1000, TELEM_FAST_RATIO = 1;
+constexpr uint16_t TELEM_STD_RATE  = 250,  TELEM_STD_RATIO  = 8;
+inline bool telemImageGood(const uint8_t* img, uint16_t size) {
+    if (size < 52) return false;
+    const uint16_t rate  = (uint16_t)(img[8]  | (img[9]  << 8));
+    const uint16_t ratio = (uint16_t)(img[10] | (img[11] << 8));
+    if (rate == 0 || ratio == 0) return false;
+    for (uint16_t i = 12; i < 52; i++) if (img[i]) return true;
+    return false;
+}
+inline bool telemGoodNvsDirty = false;   // fcInfo.telemGood changed; NVS at the next quiet moment
+inline void telemRememberGood(const uint8_t* img, uint16_t size) {
+    if (!telemImageGood(img, size)) return;
+    if (fcInfo.telemGoodValid && memcmp(fcInfo.telemGood, img, 52) == 0) return;
+    memcpy(fcInfo.telemGood, img, 52);
+    fcInfo.telemGoodValid = true;
+    telemGoodNvsDirty = true;
+}
+// The image the repair writes: the cached good one, else Rotorflight's own
+// seven native sensors (flight mode, battery, RPM, temperature, attitude,
+// altitude, GPS — the first-time page's ticks). Speed = the preference.
+inline void telemBuildImage(uint8_t out[52], bool fast) {
+    if (fcInfo.telemGoodValid) memcpy(out, fcInfo.telemGood, 52);
+    else {
+        static const uint8_t dflt[52] = { 0x00, 0x01, 0, 0, 0, 0, 0x00, 0x00, 0xFA, 0x00, 0x08, 0x00,
+                                          89, 2, 108, 109, 64, 58, 72 };
+        memcpy(out, dflt, 52);
+    }
+    const uint16_t rate = fast ? TELEM_FAST_RATE : TELEM_STD_RATE, ratio = fast ? TELEM_FAST_RATIO : TELEM_STD_RATIO;
+    out[8] = (uint8_t)rate;  out[9]  = (uint8_t)(rate >> 8);
+    out[10] = (uint8_t)ratio; out[11] = (uint8_t)(ratio >> 8);
+}
+inline const char* telemSpeedName(uint16_t rate, uint16_t ratio) {
+    if (rate == TELEM_FAST_RATE && ratio == TELEM_FAST_RATIO) return "fast";
+    if (rate == TELEM_STD_RATE  && ratio == TELEM_STD_RATIO)  return "standard";
+    if (rate == 0 || ratio == 0) return "none";
+    return "custom";
+}
+// The last sends to the FC, oldest first, as "fn@-secs" — a few lines.
+inline void mspSendRingDump(const char* why) {
+    char line[EventLog::MSG_LEN];
+    int n = snprintf(line, sizeof(line), "%s - last MSP sends:", why);
+    const uint32_t now = millis();
+    const uint32_t count = mspSendCount < MSP_SEND_RING ? mspSendCount : MSP_SEND_RING;
+    for (uint32_t k = 0; k < count; k++) {
+        const MspSendRec& r = mspSendRing[(mspSendRingPos + MSP_SEND_RING - count + k) % MSP_SEND_RING];
+        char item[24];
+        snprintf(item, sizeof(item), " %u%s@-%lus", r.fn, r.len ? "w" : "", (unsigned long)((now - r.ms) / 1000));
+        if (n + (int)strlen(item) >= (int)sizeof(line) - 1) {
+            events.add(line);
+            n = snprintf(line, sizeof(line), "  ...");
+        }
+        n += snprintf(line + n, sizeof(line) - n, "%s", item);
+    }
+    events.add(line);
+}
+
 inline void mspParseResponse(const uint8_t* body, uint8_t bodyLen) {
     if (bodyLen < 3 + 1) return;                     // dest+src+status + at least 1 MSP byte
     // body[0] = dest, body[1] = src, body[2] = status
@@ -177,6 +325,7 @@ inline void mspParseResponse(const uint8_t* body, uint8_t bodyLen) {
     uint8_t mspLen = (uint8_t)(bodyLen - 3);
 
     fcInfo.lastResponseMs = millis();                // even an error reply proves the FC is alive
+    mspProbeSentMs = 0;                              // whatever was outstanding, the FC's buffer is free again
 
     // Status byte bit 7 = MSP ERROR. Never capture an error frame as a valid
     // response: its size is 0, and treating it as data used to hand empty
@@ -262,6 +411,21 @@ inline void mspParseResponse(const uint8_t* body, uint8_t bodyLen) {
 
 inline void mspDeliverResponse(uint8_t func, const uint8_t* payload, uint16_t size) {
 
+    // Bigger than the FC's own reply buffer = the FC just overwrote part of
+    // its memory to answer us (the MSP 52 bug, see the top of this file).
+    // Never expected now that 52 is refused; if a fn nobody thought of does
+    // it, say so and re-check + repair the telemetry setup straight away.
+    if (size > RF_TLM_OUTBUF_SIZE) {
+        char m[EventLog::MSG_LEN];
+        snprintf(m, sizeof(m), "Rotorflight reply to MSP %u was %u B - more than its %u-byte link buffer: "
+                 "FC memory overwritten (RF 4.6 bug); re-checking the telemetry setup. Restart the FC before flying",
+                 func, size, RF_TLM_OUTBUF_SIZE);
+        events.add(m);
+        fcInfo.telemCfgKnown = false;
+        fcInfo.telemCfgTries = 0;
+        fcInfo.telemRecheck  = true;
+    }
+
     // If a synchronous request is waiting for this function code, capture it.
     if (func == mspWaitFunction && !mspWaitRespReady) {
         if (size > sizeof(mspWaitRespBuf)) size = sizeof(mspWaitRespBuf);
@@ -346,15 +510,29 @@ inline void mspDeliverResponse(uint8_t func, const uint8_t* payload, uint16_t si
                 fcInfo.telemRatio    = (uint16_t)(payload[10] | (payload[11] << 8));
                 fcInfo.telemSensors  = n;
                 fcInfo.telemCfgKnown = true;
+                fcInfo.telemCfgTries = 0;
+                fcInfo.telemRecheck  = false;
+                fcInfo.telemCheckedMs = millis();
+                telemRememberGood(payload, size);
                 if (fcTelemCfgBad() && !wasBad) {
                     char m[128];
                     snprintf(m, sizeof(m), "Rotorflight telemetry setup EMPTY (%u sensors, link rate %u/%u) - "
-                             "no volts/RPM. Restore it from the Rotorflight page", n, fcInfo.telemRate, fcInfo.telemRatio);
+                             "no volts/RPM after a save. Cause: a reply too big for the FC's link buffer (MSP 52, RF 4.6 bug) "
+                             "or a Configurator/Lua write", n, fcInfo.telemRate, fcInfo.telemRatio);
                     events.add(m);
+                    mspSendRingDump("telemetry setup empty");
+                    // Put the cached good image back in RAM at the poll's
+                    // next slot (no restart needed — nothing changes until
+                    // a save, and this makes sure a save carries the good
+                    // one). Capped: a repair the FC keeps losing is a bug
+                    // to report, not a loop to run.
+                    if (fcInfo.telemGoodValid && fcInfo.telemRepairs < 5) fcInfo.telemRepairDue = true;
                 } else if (!fcTelemCfgBad() && wasBad) {
                     char m[80];
-                    snprintf(m, sizeof(m), "Rotorflight telemetry setup OK again (%u sensors)", n);
+                    snprintf(m, sizeof(m), "Rotorflight telemetry setup OK again (%u sensors, link rate %u/%u)",
+                             n, fcInfo.telemRate, fcInfo.telemRatio);
                     events.add(m);
+                    fcInfo.telemRepairDue = false;
                 }
             }
             break;
@@ -432,7 +610,7 @@ inline void govThrottleWatchTick() {
     // flight-save doctrine — disarmed with sticks still 2 s, or TX off).
     // Also commits the throttle channel / governor mode the probe learned,
     // which may have arrived mid-flight on a TX-on boot.
-    if ((verdictDirty || fcInfoNvsDirty) && !armed) {
+    if ((verdictDirty || fcInfoNvsDirty || telemGoodNvsDirty) && !armed) {
         const bool sticksStill = lastChMoveMs && (uint32_t)(now - lastChMoveMs) >= 2000;
         const bool linkDead    = !rx.lastMillis || (uint32_t)(now - rx.lastMillis) > 3000;
         if (sticksStill || linkDead) {
@@ -445,6 +623,10 @@ inline void govThrottleWatchTick() {
                 prefs.putUChar(NVS_KEY_FC_THR_CH, fcInfo.throttleCh);
                 prefs.putUChar(NVS_KEY_FC_GOV_MODE, fcInfo.govMode);
                 fcInfoNvsDirty = false;
+            }
+            if (telemGoodNvsDirty) {                 // the last good telemetry setup (0.9.563)
+                prefs.putBytes(NVS_KEY_FC_TELEM_GOOD, fcInfo.telemGood, 52);
+                telemGoodNvsDirty = false;
             }
         }
     }
@@ -479,6 +661,15 @@ inline bool mspRequestAndWait(uint8_t function, const uint8_t* req, uint8_t reqL
     extern void protocolRx();   // defined in Telemetry.h
     extern void sbusTick();     // defined in Output.h
     extern void radioPoll();    // defined in Radio.h
+    // A probe the FC has not answered yet is sitting in its one request
+    // buffer; ours would land behind it and be thrown away (0.9.563 — the
+    // reverse of the 0.9.562 hold-off). Wait for that reply, bounded.
+    while (mspProbeOutstanding()) {
+        radioPoll();
+        sbusTick();
+        protocolRx();
+        delay(1);
+    }
     mspWaitFunction  = function;
     mspWaitRespReady = false;
     mspWaitRespError = false;
@@ -533,6 +724,120 @@ inline bool mspRequestAndWait(uint8_t function, const uint8_t* req, uint8_t reqL
 }
 
 //*********************************************************************
+//  Telemetry setup — synchronous helpers for the page/app paths (0.9.563)
+//*********************************************************************
+// All of these block like a page read does, so they run only from request
+// handlers (never in flight: /api/msp is refused while armed).
+
+// Fresh MSP 73 image. Returns the bytes copied (0 = no answer); the passive
+// switch in mspDeliverResponse has already digested the reply.
+inline uint16_t telemReadSync(uint8_t out[52]) {
+    static uint8_t buf[640];
+    uint16_t len = 0;
+    if (!mspRequestAndWait(MSP_TELEMETRY_CONFIG, nullptr, 0, buf, &len, 1200)) return 0;
+    if (len > 52) len = 52;
+    memcpy(out, buf, len);
+    return len;
+}
+// The bytes MSP 74 stores and MSP 73 echoes: inverted, halfDuplex, pinSwap,
+// mode, rate, ratio, sensors. Bytes 2-5 are a legacy u32 the FC ignores.
+inline bool telemImageSame(const uint8_t* a, const uint8_t* b) {
+    return a[0] == b[0] && a[1] == b[1] && memcmp(a + 6, b + 6, 46) == 0;
+}
+// Write an image into FC RAM and read it back. True when the FC holds it.
+inline bool telemWriteSync(const uint8_t img[52]) {
+    static uint8_t buf[64];
+    uint16_t len = 0;
+    if (!mspRequestAndWait(MSP_SET_TELEMETRY_CONFIG, img, 52, buf, &len, 1200)) return false;
+    uint8_t back[52] = {0};
+    return telemReadSync(back) >= 52 && telemImageSame(back, img);
+}
+// Before an EEPROM save asked for by a page, the app or the transmitter
+// path: read the FC's RAM copy; if it is the empty one, put the cached good
+// image back first, so the save can never carry the empty one into flash.
+// 0 = fine (or repaired), 1 = empty and nothing to put back / repair
+// failed, 2 = the FC did not answer the read (the save goes ahead — a busy
+// FC is not an empty one; the watch re-checks within 30 s).
+inline uint8_t telemGuardBeforeSave(const char* who) {
+    uint8_t img[52] = {0};
+    const uint16_t n = telemReadSync(img);
+    if (n < 12) return 2;
+    if (telemImageGood(img, n)) return 0;
+    char m[EventLog::MSG_LEN];
+    if (!fcInfo.telemGoodValid || fcInfo.telemRepairs >= 5) {
+        snprintf(m, sizeof(m), "%s: telemetry setup EMPTY before save - nothing to put back", who);
+        events.add(m);
+        return 1;
+    }
+    const bool ok = telemWriteSync(fcInfo.telemGood);
+    fcInfo.telemRepairs++;
+    snprintf(m, sizeof(m), "%s: telemetry setup EMPTY before save - good copy put back %s", who, ok ? "OK" : "FAILED");
+    events.add(m);
+    return ok ? 0 : 1;
+}
+// Save + restart, each confirmed before the next (the FC answers 250; it
+// does not answer 68 — it is gone). False = the save was never confirmed,
+// nothing restarted.
+inline bool telemSaveAndRestartSync() {
+    static uint8_t buf[64];
+    uint16_t len = 0;
+    bool saved = mspRequestAndWait(MSP_EEPROM_WRITE, nullptr, 0, buf, &len, 1500);
+    if (!saved) saved = mspRequestAndWait(MSP_EEPROM_WRITE, nullptr, 0, buf, &len, 1500);
+    if (!saved) return false;
+    // The FC never answers 68 — fire twice (a lost single frame once left
+    // a saved setup silently not yet active), keeping the channels flowing.
+    extern void protocolRx(); extern void sbusTick(); extern void radioPoll();
+    mspSendRequest(MSP_REBOOT);
+    for (uint32_t t0 = millis(); (uint32_t)(millis() - t0) < 100; ) { radioPoll(); sbusTick(); protocolRx(); delay(1); }
+    mspSendRequest(MSP_REBOOT);
+    fcInfo.telemCfgKnown = false;      // re-read once the FC is back
+    fcInfo.telemCfgTries = 0;
+    fcInfo.telemRecheck  = true;
+    fcInfo.telemRepairDue = false;
+    return true;
+}
+// Set the FC's telemetry link speed: read-modify-write of bytes 8-11 only,
+// save, restart (the rate limiter and sensor schedule are built at boot).
+// Returns true when the FC is restarting with the new speed saved; `msg`
+// tells the page what happened either way. `changed` = false means the FC
+// already ran that speed and nothing was written.
+inline bool telemApplySpeedSync(bool fast, bool* changed, char* msg, size_t msgLen) {
+    *changed = false;
+    uint8_t img[52] = {0};
+    uint16_t n = telemReadSync(img);
+    if (n < 52) n = telemReadSync(img);
+    if (n < 52) { snprintf(msg, msgLen, "the flight controller did not answer the telemetry read - try again"); return false; }
+    const uint16_t rate = fast ? TELEM_FAST_RATE : TELEM_STD_RATE, ratio = fast ? TELEM_FAST_RATIO : TELEM_STD_RATIO;
+    if (telemImageGood(img, n) &&
+        (uint16_t)(img[8] | (img[9] << 8)) == rate && (uint16_t)(img[10] | (img[11] << 8)) == ratio) {
+        snprintf(msg, msgLen, "the flight controller already runs %s telemetry - nothing to change", fast ? "fast" : "standard");
+        return true;
+    }
+    if (!telemImageGood(img, n)) {
+        if (!fcInfo.telemGoodValid) {
+            snprintf(msg, msgLen, "the flight controller's telemetry setup is empty and no good copy is cached - "
+                                  "use Restore telemetry sensors first");
+            return false;
+        }
+        memcpy(img, fcInfo.telemGood, 52);   // repair on the way through
+    }
+    img[8]  = (uint8_t)rate;  img[9]  = (uint8_t)(rate >> 8);
+    img[10] = (uint8_t)ratio; img[11] = (uint8_t)(ratio >> 8);
+    if (!telemWriteSync(img)) { snprintf(msg, msgLen, "the flight controller did not take the new setup - nothing saved"); return false; }
+    *changed = true;
+    if (!telemSaveAndRestartSync()) {
+        snprintf(msg, msgLen, "the flight controller did not confirm the save - not restarted, try again");
+        return false;
+    }
+    telemRememberGood(img, 52);
+    char m[EventLog::MSG_LEN];
+    snprintf(m, sizeof(m), "Telemetry speed set to %s (link rate %u/%u), saved - FC restarting", fast ? "FAST" : "standard", rate, ratio);
+    events.add(m);
+    snprintf(msg, msgLen, "%s telemetry saved - the flight controller is restarting (about 10 s)", fast ? "fast" : "standard");
+    return true;
+}
+
+//*********************************************************************
 //  Periodic probe — call from loop(), runs at low rate
 //*********************************************************************
 // While the FC is undetected, send MSP_FC_VARIANT + MSP_FC_VERSION +
@@ -544,6 +849,7 @@ constexpr uint32_t PROBE_INTERVAL_MS    = 1000;   // while seeking
 constexpr uint32_t PROBE_HEARTBEAT_MS   = 5000;   // once detected
 constexpr uint32_t PROBE_TIMEOUT_MS     = 10000;  // declare FC lost after this
 constexpr uint32_t PROBE_HOLDOFF_MS     = 1200;   // no probe this soon after a page/app reply
+constexpr uint32_t TELEM_WATCH_MS       = 30000;  // re-read the telemetry setup (MSP 73) this often while idle
 
 inline void mspFcPoll() {
     if (!fcTelemetryEnabled)
@@ -629,7 +935,28 @@ inline void mspFcPoll() {
     static uint8_t batteryTries = 0;
     const bool askBattery = (fcInfo.cells == 0 && batteryTries < 6) || fcInfo.cells > 0;
     static uint8_t which = 0;
-    switch (which++ % 7) {
+    // 0.9.563 — the telemetry setup takes the slot whenever it is due: the
+    // repair write (cached good image back into FC RAM), a re-read right
+    // after a write or restart, or the 30-s watch (one 52-byte reply — a
+    // zeroed copy is found within a minute instead of at the next flight).
+    // Never in the air: the flying latch above returns before this.
+    const bool telemUrgent = isRf && (!fcInfo.telemCfgKnown || fcInfo.telemRecheck) && fcInfo.telemCfgTries < 6;
+    const bool telemWatch  = isRf && fcInfo.telemCfgKnown && (uint32_t)(now - fcInfo.telemAskedMs) > TELEM_WATCH_MS;
+    if (isRf && fcInfo.telemRepairDue && fcInfo.telemGoodValid) {
+        mspSendRequest(MSP_SET_TELEMETRY_CONFIG, fcInfo.telemGood, 52);
+        fcInfo.telemRepairDue = false;
+        fcInfo.telemRepairs++;
+        fcInfo.telemRecheck = true;      // confirm at the next slot
+        char m[EventLog::MSG_LEN];
+        snprintf(m, sizeof(m), "Telemetry setup: good copy (%u/%u) written back to FC RAM, re-reading",
+                 (unsigned)(fcInfo.telemGood[8] | (fcInfo.telemGood[9] << 8)),
+                 (unsigned)(fcInfo.telemGood[10] | (fcInfo.telemGood[11] << 8)));
+        events.add(m);
+    } else if (telemUrgent || telemWatch) {
+        mspSendRequest(MSP_TELEMETRY_CONFIG);
+        fcInfo.telemAskedMs = now;
+        if (telemUrgent) fcInfo.telemCfgTries++;
+    } else switch (which++ % 7) {
         case 0: mspSendRequest(MSP_FC_VARIANT);   break;
         case 1: mspSendRequest(MSP_FC_VERSION);   break;
         case 2: mspSendRequest(MSP_API_VERSION);  break;
@@ -647,12 +974,10 @@ inline void mspFcPoll() {
             if (wantGov)   { mspSendRequest(MSP_GOVERNOR_CONFIG); fcInfo.govTries++; }
             else           { mspSendRequest(MSP_API_VERSION); }
             break;
-        case 6:
-            if (wantTelem) { mspSendRequest(MSP_TELEMETRY_CONFIG); fcInfo.telemCfgTries++; }
-            else           { mspSendRequest(MSP_FC_VARIANT); }
-            break;
+        case 6: mspSendRequest(MSP_FC_VARIANT);   break;
     }
     fcInfo.probesSent++;
+    mspProbeSentMs = now;                // outstanding until the FC answers (any reply)
 
     // Detect timeout — if we were detected but responses have stopped
     // (counting from the probe resume, if that is more recent than the reply).
@@ -700,11 +1025,12 @@ inline void escCatchTick() {
                                : "ESC catcher: FC never published ESC settings");
         return;
     }
-    if (mspBridgeActive || txParamBusy || mspWaitFunction != 0xFF) return;
+    if (mspBridgeActive || txParamBusy || mspWaitFunction != 0xFF || mspProbeOutstanding()) return;
     static uint32_t last = 0;
     if ((uint32_t)(now - last) < 250) return;
     last = now;
     mspSendRequest(MSP_ESC_PARAMETERS);
+    mspProbeSentMs = now;
 }
 
 //*********************************************************************

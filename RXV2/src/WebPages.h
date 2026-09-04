@@ -281,63 +281,114 @@ inline void handleFcWake() {
         return;
     }
     const uint8_t mask[4] = { 0x08, 0x04, 0x00, 0x00 };   // RX_SERIAL | TELEMETRY, LE
+    // Blind by nature (a silent FC answers nothing), so no ACK waits — but
+    // the gaps between the three frames keep the channel stream flowing
+    // rather than sitting in delay() (0.9.563).
+    auto pump = [](uint32_t ms) {
+        for (uint32_t t0 = millis(); (uint32_t)(millis() - t0) < ms; ) { radioPoll(); sbusTick(); protocolRx(); delay(1); }
+    };
     mspSendRequest(MSP_SET_FEATURE_CFG, mask, 4);
-    delay(40);
+    pump(60);
     mspSendRequest(MSP_EEPROM_WRITE);
-    delay(60);
+    pump(120);
     mspSendRequest(MSP_REBOOT);
     events.add("FC wake sent (telemetry on + save + reboot)");
     server.send(200, "application/json",
         "{\"ok\":true,\"message\":\"wake sent — watch for the Rotorflight button in ~10 s\"}");
 }
 
-// POST /api/fc/telemetry/restore — put Rotorflight's telemetry setup back
-// (Goblin 770, 2026-09-03: the FC's sensor list and link rate were found
-// all-zero after a bank copy — cause unknown — so the transmitter showed
-// no volts and no RPM while every config page worked). Writes MSP 74 with
-// the Rotorflight defaults (native mode, link rate 250/8) and the seven
-// native CRSF sensors the first-time page ticks, saves, and restarts the FC
-// (sensors only apply at boot). Bench-only: refused while a transmitter is
-// talking (the FC restart would happen under a live model) or the model
-// is armed.
-inline void handleFcTelemRestore() {
+// The gates every FC-restarting telemetry action shares: CRSF, a Rotorflight
+// 2.3 FC answering, no transmitter talking (the restart would happen under
+// a live model), no ESC catcher waiting. Sends the refusal itself.
+inline bool fcTelemActionAllowed() {
     if (currentProtocol != PROTO_CRSF) {
         server.send(409, "application/json", "{\"ok\":false,\"err\":\"protocol is not CRSF\"}");
-        return;
+        return false;
     }
     if (!fcInfo.detected || strncmp(fcInfo.variant, "RTFL", 4) != 0 ||
         (fcInfo.apiMajor * 100 + fcInfo.apiMinor) < 1209) {
         server.send(409, "application/json",
             "{\"ok\":false,\"err\":\"needs a Rotorflight 2.3 flight controller answering\"}");
-        return;
+        return false;
     }
     const bool txLive = rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 3000;
     if (txLive) {
         server.send(409, "application/json",
-            "{\"ok\":false,\"err\":\"turn the transmitter off first - the flight controller restarts to apply the sensors\"}");
-        return;
+            "{\"ok\":false,\"err\":\"turn the transmitter off first - the flight controller restarts to apply this\"}");
+        return false;
     }
     if (escCatchArmed) {
         server.send(409, "application/json",
             "{\"ok\":false,\"err\":\"the ESC settings page is waiting for a power-up - finish or cancel that first\"}");
+        return false;
+    }
+    return true;
+}
+
+// POST /api/fc/telemetry/restore — put Rotorflight's telemetry setup back
+// (Goblin 770, 2026-09-03: the FC's sensor list and link rate were found
+// all-zero after a bank copy — cause unknown — so the transmitter showed
+// no volts and no RPM while every config page worked). Writes MSP 74 with
+// the last good image the receiver cached (else Rotorflight's native mode
+// and the seven native CRSF sensors the first-time page ticks) at the
+// chosen telemetry speed, saves, and restarts the FC (sensors only apply
+// at boot). Each step waits for the FC's answer (0.9.563 — the old
+// fire-and-forget with delay() could lose a frame and restart an unsaved
+// FC). Bench-only, see fcTelemActionAllowed.
+inline void handleFcTelemRestore() {
+    if (!fcTelemActionAllowed()) return;
+    uint8_t cfg[52];
+    const bool fast = fcInfo.telemSpeedPref != 0;
+    telemBuildImage(cfg, fast);
+    const bool fromCache = fcInfo.telemGoodValid;
+    if (!telemWriteSync(cfg)) {
+        server.send(504, "application/json",
+            "{\"ok\":false,\"err\":\"the flight controller did not take the telemetry setup - nothing saved, try again\"}");
         return;
     }
-    // 12-byte header: inverted 0, halfDuplex 1, legacy u32, pinSwap 0,
-    // mode 0 (native), rate 250, ratio 8 — Rotorflight's own defaults.
-    // Then the 40 sensor slots: flight mode, battery, RPM, temperature,
-    // attitude, altitude, GPS (crsf.c's native table, IDs from tsensors.h).
-    uint8_t cfg[52] = { 0x00, 0x01, 0, 0, 0, 0, 0x00, 0x00, 0xFA, 0x00, 0x08, 0x00,
-                        89, 2, 108, 109, 64, 58, 72 };
-    mspSendRequest(MSP_SET_TELEMETRY_CONFIG, cfg, sizeof(cfg));
-    delay(40);
-    mspSendRequest(MSP_EEPROM_WRITE);
-    delay(60);
-    mspSendRequest(MSP_REBOOT);
-    fcInfo.telemCfgKnown = false;      // re-read once the FC is back
-    fcInfo.telemCfgTries = 0;
-    events.add("Rotorflight telemetry setup restored (7 sensors, link rate 250/8) - FC restarting");
+    if (!telemSaveAndRestartSync()) {
+        server.send(504, "application/json",
+            "{\"ok\":false,\"err\":\"the flight controller did not confirm the save - not restarted, try again\"}");
+        return;
+    }
+    telemRememberGood(cfg, 52);
+    uint8_t n = 0;
+    for (uint8_t i = 12; i < 52; i++) if (cfg[i]) n++;
+    char m[EventLog::MSG_LEN];
+    snprintf(m, sizeof(m), "Rotorflight telemetry setup restored (%u sensors%s, %s speed) - FC restarting",
+             n, fromCache ? " from the cached copy" : "", fast ? "fast" : "standard");
+    events.add(m);
     server.send(200, "application/json",
         "{\"ok\":true,\"message\":\"telemetry sensors restored - the flight controller is restarting; volts and RPM should be back in ~10 s\"}");
+}
+
+// POST /api/fc/telemetry/speed?mode=fast|standard — the receiver's
+// Telemetry speed setting (0.9.563). Remembered in NVS (default fast) and
+// applied to the FC now when the gates allow: read-modify-write of the
+// link rate/ratio only, save, restart. When the FC cannot be touched
+// right now (transmitter on, no FC), the preference is still saved and
+// the page shows "apply" until the FC matches it. Reply: ok, applied
+// (the FC is restarting with it), message.
+inline void handleFcTelemSpeed() {
+    const String mode = server.hasArg("mode") ? server.arg("mode") : String("");
+    if (mode != "fast" && mode != "standard") {
+        server.send(400, "application/json", "{\"ok\":false,\"err\":\"mode must be fast or standard\"}");
+        return;
+    }
+    const bool fast = (mode == "fast");
+    if ((fcInfo.telemSpeedPref != 0) != fast) {
+        fcInfo.telemSpeedPref = fast ? 1 : 0;
+        prefs.putUChar(NVS_KEY_FC_TELEM_SPEED, fcInfo.telemSpeedPref);   // on the ground: a page request
+        events.add(fast ? "Telemetry speed preference: FAST (1000/1)" : "Telemetry speed preference: standard (250/8)");
+    }
+    if (!fcTelemActionAllowed()) return;      // preference kept; the 409 says why it was not applied
+    char msg[160];
+    bool changed = false;
+    const bool ok = telemApplySpeedSync(fast, &changed, msg, sizeof(msg));
+    String j = "{\"ok\":"; j += ok ? "true" : "false";
+    j += ",\"applied\":"; j += (ok && changed) ? "true" : "false";
+    j += ",\"message\":\""; j += msg; j += "\"}";
+    server.send(ok ? 200 : 504, "application/json", j);
 }
 
 // Arm the one-shot Scorpion catcher for the next boot (see escCatchTick in
@@ -695,18 +746,29 @@ inline void handleMspApi() {
             reqBuf[reqLen++] = (uint8_t)((hi << 4) | lo);
         }
     }
-    // Who writes the telemetry setup? Logged with its header so the next
-    // "all zeros" (2026-09-03) has a suspect; and the FC's copy changed, so
-    // the watch re-reads it.
-    if (fn == MSP_SET_TELEMETRY_CONFIG) {
-        char m[110];
-        snprintf(m, sizeof(m), "MSP 74 (telemetry setup) written from a page: %u bytes, hdr %02X%02X..%02X %02X %02X%02X %02X%02X",
-                 reqLen, reqBuf[0], reqBuf[1], reqBuf[6], reqBuf[7], reqBuf[8], reqBuf[9], reqBuf[10], reqBuf[11]);
-        events.add(m);
-        fcInfo.telemCfgKnown = false;
-        fcInfo.telemCfgTries = 0;
+    // Requests the flight controller must never see (0.9.564, MspFc.h):
+    //  - 52, the adjustments list: its 588-byte reply overflows the FC's
+    //    320-byte link buffer and wipes the telemetry setup (RF 4.6 bug —
+    //    the "no volts/RPM after a save" mystery);
+    //  - a SET with no payload: the FC applies stale bytes from its buffer;
+    //  - factory reset and motor test: never over the link, never from a phone.
+    {
+        const char* why = nullptr;
+        if (mspReplyTooBigForFc(fn))
+            why = "refused: Rotorflight 4.6 cannot send its adjustments list over the receiver link without "
+                  "overwriting its own telemetry setup (588-byte reply, 320-byte buffer). Adjustments: USB configurator only";
+        else if (fn == MSP_RESET_CONF) why = "refused: factory reset is never done over the receiver link";
+        else if (fn == MSP_SET_MOTOR)  why = "refused: motor test is never done from a phone";
+        else if (reqLen == 0 && mspSetNeedsPayload(fn)) why = "refused: that is a write and it came with no data";
+        if (why) {
+            char m[EventLog::MSG_LEN];
+            snprintf(m, sizeof(m), "MSP %u REFUSED (%u B): %.60s", fn, reqLen, why + 9);
+            events.add(m);
+            server.sendHeader("Cache-Control", "no-store");
+            server.send(409, "text/plain", why);
+            return;
+        }
     }
-
     // Yield to the TX-param state machine first. It runs a multi-step MSP
     // transaction (GET → SET → EEPROM_WRITE); barging in mid-cycle puts two
     // outstanding requests on the FC (mutual timeouts), and a web SET landing
@@ -727,6 +789,65 @@ inline void handleMspApi() {
             server.send(503, "text/plain", "receiver busy with a transmitter edit — try again");
             return;
         }
+    }
+
+    // Telemetry setup guards (0.9.563). The FC's sensor list was found
+    // empty twice (2026-09-03/04, cause unknown); the next save would have
+    // carried it into flash. After the yield above — each guard is its own
+    // MSP exchange.
+    if (fn == MSP_SET_TELEMETRY_CONFIG) {
+        // An image that would empty the FC's list is the fault itself.
+        if (reqLen < 52 || !telemImageGood(reqBuf, reqLen)) {
+            char m[EventLog::MSG_LEN];
+            snprintf(m, sizeof(m), "MSP 74 REFUSED from a page: %u bytes, %s", reqLen,
+                     reqLen < 52 ? "short" : "no sensors or zero link rate");
+            events.add(m);
+            server.sendHeader("Cache-Control", "no-store");
+            server.send(409, "text/plain", "refused: that telemetry setup would leave the flight controller with no sensors (no volts, no RPM)");
+            return;
+        }
+        // The link speed (bytes 8-11) belongs to the receiver's Telemetry
+        // speed setting, not to a backup: keep the FC's live values so a
+        // Restore of a backup taken at the old speed cannot drag it back.
+        if (!fcInfo.telemCfgKnown || fcTelemCfgBad()) { uint8_t live[52]; telemReadSync(live); }   // fresh look first
+        if (fcInfo.telemCfgKnown && !fcTelemCfgBad()) {
+            reqBuf[8]  = (uint8_t)fcInfo.telemRate;  reqBuf[9]  = (uint8_t)(fcInfo.telemRate >> 8);
+            reqBuf[10] = (uint8_t)fcInfo.telemRatio; reqBuf[11] = (uint8_t)(fcInfo.telemRatio >> 8);
+        }
+        // Who writes the telemetry setup? Logged with its header so the next
+        // "all zeros" has a suspect; the FC's copy changes, so the watch
+        // re-reads it.
+        char m[EventLog::MSG_LEN];
+        snprintf(m, sizeof(m), "MSP 74 from a page: %u B, hdr %02X%02X..%02X %02X %02X%02X %02X%02X",
+                 reqLen, reqBuf[0], reqBuf[1], reqBuf[6], reqBuf[7], reqBuf[8], reqBuf[9], reqBuf[10], reqBuf[11]);
+        events.add(m);
+        fcInfo.telemCfgKnown = false;
+        fcInfo.telemCfgTries = 0;
+        fcInfo.telemRecheck  = true;
+    }
+    if (fn == MSP_EEPROM_WRITE) {
+        // Never let a save carry the empty setup into flash: fresh read, put
+        // the cached good copy back if needed, refuse only when nothing can.
+        if (telemGuardBeforeSave("page save") == 1) {
+            server.sendHeader("Cache-Control", "no-store");
+            server.send(409, "text/plain", "not saved: the flight controller's telemetry setup is empty - restore telemetry sensors on the Rotorflight page first");
+            return;
+        }
+    }
+    if (fn == MSP_REBOOT) {
+        // The FC never answers 68 — fire twice with the channels kept
+        // flowing (a lost single frame once left a saved setup silently not
+        // yet active), and answer the page at once instead of a 504.
+        mspSendRequest(MSP_REBOOT);
+        for (uint32_t t0 = millis(); (uint32_t)(millis() - t0) < 100; ) { radioPoll(); sbusTick(); protocolRx(); delay(1); }
+        mspSendRequest(MSP_REBOOT);
+        fcInfo.telemCfgKnown = false;      // re-read once the FC is back
+        fcInfo.telemCfgTries = 0;
+        fcInfo.telemRecheck  = true;
+        events.add("Flight controller restart asked for by a page");
+        server.sendHeader("Cache-Control", "no-store");
+        server.send(200, "text/plain", "");
+        return;
     }
 
     uint8_t  respBuf[640];   // jumbo-capable
@@ -2876,6 +2997,14 @@ inline void handleApiState() {
     j += ",\"telem_mode\":";      j += fcInfo.telemMode;
     j += ",\"telem_rate\":";      j += fcInfo.telemRate;
     j += ",\"telem_ratio\":";     j += fcInfo.telemRatio;
+    // Telemetry speed (0.9.563): the receiver's setting vs what the FC runs,
+    // plus the guard's state (a cached good copy, RAM repairs this boot).
+    j += ",\"telem_speed_pref\":\""; j += (fcInfo.telemSpeedPref ? "fast" : "standard"); j += '"';
+    j += ",\"telem_speed_live\":\""; j += (fcInfo.telemCfgKnown ? telemSpeedName(fcInfo.telemRate, fcInfo.telemRatio) : "unknown"); j += '"';
+    j += ",\"telem_good_cached\":"; j += (fcInfo.telemGoodValid ? "true" : "false");
+    j += ",\"telem_repairs\":";    j += fcInfo.telemRepairs;
+    j += ",\"telem_checked_ago\":";
+    if (fcInfo.telemCheckedMs) j += (uint32_t)(millis() - fcInfo.telemCheckedMs); else j += "-1";
     j += "}";
 
     // --- channels ----------------------------------------------------
@@ -2930,6 +3059,7 @@ inline void registerWebRoutes() {
     server.on("/rotorflight-escprog",   handleRotorflightEscProg);
     server.on("/api/fc/wake", HTTP_POST, handleFcWake);
     server.on("/api/fc/telemetry/restore", HTTP_POST, handleFcTelemRestore);
+    server.on("/api/fc/telemetry/speed",   HTTP_POST, handleFcTelemSpeed);
     server.on("/api/esc/catch", HTTP_POST, handleEscCatchArm);
     server.on("/api/esc/catch", HTTP_GET,  handleEscCatchStatus);
     server.on("/rotorflight-tuning",    handleRotorflightTuning);
