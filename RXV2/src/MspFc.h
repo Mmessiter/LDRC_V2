@@ -481,6 +481,13 @@ inline bool mspRequestAndWait(uint8_t function, const uint8_t* req, uint8_t reqL
     mspWaitRespError = false;
     mspWaitRespLen   = 0;
     mspWaitChunkMs   = 0;
+    // The same bucket is drained by whatever the FC just sent us, so right
+    // after a reply (any size) even the FIRST chunk of the next one can take
+    // more than 1.2 s — 0.9.560's first live run: MSP 120 timed out straight
+    // after a 2-chunk MSP 34. A recent MSP reply also proves the FC is alive,
+    // so the longer wait never slows "no flight controller" detection.
+    const uint32_t baseTimeoutMs = timeoutMs;
+    if ((uint32_t)(millis() - fcInfo.lastResponseMs) < 3000) timeoutMs += 1500;
     mspSendRequest(function, req, reqLen);
     const uint32_t start = millis();
     uint32_t deadline  = start + timeoutMs;
@@ -511,7 +518,7 @@ inline bool mspRequestAndWait(uint8_t function, const uint8_t* req, uint8_t reqL
         // Evidence for the log: a reply that only made it thanks to the
         // per-chunk grace (it would have been a 504 before 0.9.560).
         const uint32_t took = millis() - start;
-        if (took > timeoutMs) {
+        if (took > baseTimeoutMs) {
             char b[EventLog::MSG_LEN];
             snprintf(b, sizeof(b), "MSP %u: %u-byte reply took %lu ms (FC telemetry rate limit, chunked)",
                      (unsigned)function, (unsigned)mspWaitRespLen, (unsigned long)took);
