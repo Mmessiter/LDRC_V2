@@ -339,8 +339,8 @@ inline void mspDeliverResponse(uint8_t func, const uint8_t* payload, uint16_t si
                 fcInfo.telemCfgKnown = true;
                 if (fcTelemCfgBad() && !wasBad) {
                     char m[128];
-                    snprintf(m, sizeof(m), "Rotorflight telemetry setup is EMPTY (%u sensors, link rate %u/%u) - "
-                             "the FC sends no volts/RPM. Restore it from the Rotorflight page", n, fcInfo.telemRate, fcInfo.telemRatio);
+                    snprintf(m, sizeof(m), "Rotorflight telemetry setup EMPTY (%u sensors, link rate %u/%u) - "
+                             "no volts/RPM. Restore it from the Rotorflight page", n, fcInfo.telemRate, fcInfo.telemRatio);
                     events.add(m);
                 } else if (!fcTelemCfgBad() && wasBad) {
                     char m[80];

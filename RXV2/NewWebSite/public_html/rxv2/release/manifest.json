@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.557-disarm-ble-fast",
+      "url": "https://messiter.com/rxv2/release/v0.9.557/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.557/littlefs.bin",
+      "fs_md5": "40ed4dbc24fbd612c6104247380e1b18",
+      "notes": "Faster PID tuning at the field (Malcolm's suggestion): Bluetooth now comes back half a second after you DISARM - the old 5-second wait was a leftover from the WiFi bring-up, which stalls the receiver; restarting Bluetooth does not. So the cycle is arm, fly, land, disarm, edit on the phone, arm again. Arming still switches the radios off 3 s later, on the ground, as before. Home WiFi keeps its 5-second wait after disarm. Firmware only - pages unchanged."
+    },
+    {
       "name": "RXV2-0.9.556-telemetry-guard",
       "url": "https://messiter.com/rxv2/release/v0.9.556/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.556/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.546/littlefs.bin",
       "fs_md5": "2ab6bfc3e9b66c639f22f04dd14b4415",
       "notes": "Gear ratio now lives on the flight controller: the Gear-ratio page and ESC-setup step 7 edit Rotorflight's own main/tail ratio (pinion : main gear, with a plain-English readout that turns red when it is backwards), save + read back, offer the restart Rotorflight needs, and reset the receiver's old divisor to 1. First-time basics gets the same readout and a warning before saving a backwards ratio. Found on the Goblin: 10 : 1 entered backwards made the governor sit at minimum throttle (every bank the same speed)."
-    },
-    {
-      "name": "RXV2-0.9.545-release-in-view",
-      "url": "https://messiter.com/rxv2/release/v0.9.545/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.545/littlefs.bin",
-      "fs_md5": "4e090929c94eaa324352919d937e4318",
-      "notes": "ESC settings: the Release ESC button now floats next to Save (always in view) and pulses when it is the next step; a forgotten session shows a red do-not-fly warning; every verdict says to finish with Release ESC before you fly."
     }
   ]
 }
