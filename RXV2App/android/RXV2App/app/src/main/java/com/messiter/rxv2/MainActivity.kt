@@ -854,13 +854,14 @@ class MainActivity : AppCompatActivity() {
     @Volatile private var restWritten = 0      // items written AND verified
     @Volatile private var restSame = 0         // items the FC already held (reads only)
     @Volatile private var restBlind = 0        // of restWritten: declared items with no read-back (the switch assignments)
+    @Volatile private var restWrittenNames = ArrayList<String>()   // the readable items that were written — the page names them
     @Volatile private var restRunning = false
 
     private fun runRestore() {
         if (restRunning) return
         restRunning = true
         restPhase = "running"; restDone = 0; restFailures = 0; restFailed = ArrayList(); restError = ""
-        restWritten = 0; restSame = 0; restBlind = 0
+        restWritten = 0; restSame = 0; restBlind = 0; restWrittenNames = ArrayList()
         val items = SessionCache.restoreItems()
         restTotal = items.size + 1
         Thread {
@@ -973,6 +974,7 @@ class MainActivity : AppCompatActivity() {
                 if (itemOk && !already) {
                     restWritten++
                     if (it.readFn == 0) restBlind++              // declared item: written unseen
+                    else restWrittenNames.add(it.label)
                     if (it.writeFn == 143) wroteGov = true
                     if (it.writeFn == 222) wroteMotor = true   // motor / gear ratio: FC restart needed
                 }
@@ -1447,8 +1449,9 @@ class MainActivity : AppCompatActivity() {
                     }
                     else -> {
                         val names = restFailed.joinToString(",") { JSONObject.quote(it) }
+                        val wnames = restWrittenNames.joinToString(",") { JSONObject.quote(it) }
                         answer("{\"phase\":\"$restPhase\",\"done\":$restDone,\"total\":$restTotal,\"failures\":$restFailures,\"failed\":[$names],\"error\":${JSONObject.quote(restError)}," +
-                               "\"written\":$restWritten,\"same\":$restSame,\"blind\":$restBlind}")
+                               "\"written\":$restWritten,\"same\":$restSame,\"blind\":$restBlind,\"writtenNames\":[$wnames]}")
                     }
                 }
                 return

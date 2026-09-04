@@ -88,7 +88,8 @@ async function phoneSave() {
     try { r0 = await (await fetch('/app/snapshot/start', { cache: 'no-store' })).json(); } catch (e) {}
     if (!r0 || !r0.ok) {
         lab.textContent = '⚠️ ' + ((r0 && r0.error) || 'connect to the receiver first');
-        setTimeout(() => { prog.style.display = 'none'; btn.style.display = ''; }, 5000);
+        note.style.display = 'none';
+        btn.style.display = '';
         return;
     }
     const timer = setInterval(async () => {
@@ -101,17 +102,19 @@ async function phoneSave() {
             clearInterval(timer);
             fill.style.width = '100%';
             note.style.display = 'none';   // finished — the "don't touch" warning is over
+            // The result STAYS on screen until the next run (Malcolm 2026-09-04:
+            // "too slow to catch the screen" when it vanished after 12 s); the
+            // button comes back at once.
+            btn.style.display = '';
             // ok:false (app 4.12+/4.04+) = the sweep did not complete, so the
             // phone kept its PREVIOUS backup — say so instead of a false ✅.
             if (p.ok === false) {
                 lab.textContent = '⚠️ Not backed up — ' + (p.error || 'the sweep did not finish') + '. The earlier backup on the phone is unchanged.';
-                setTimeout(() => { prog.style.display = 'none'; btn.style.display = ''; }, 12000);
                 return;
             }
             lab.textContent = '✅ Backed up to the phone!';
             signOffTuneNudge();
-            setTimeout(() => { prog.style.display = 'none'; btn.style.display = '';
-                               paintRestoreBtn(); }, 5000);
+            paintRestoreBtn();
         }
     }, 700);
 }
@@ -169,7 +172,8 @@ async function phoneRestore() {
     try { r0 = await (await fetch('/app/restore/start', { cache: 'no-store' })).json(); } catch (e) {}
     if (!r0 || !r0.ok) {
         lab.textContent = '⚠️ ' + ((r0 && r0.error) || 'could not start');
-        setTimeout(() => { prog.style.display = 'none'; btn.style.display = ''; }, 5000);
+        note.style.display = 'none';
+        btn.style.display = '';
         return;
     }
     const timer = setInterval(async () => {
@@ -182,6 +186,7 @@ async function phoneRestore() {
             clearInterval(timer);
             fill.style.width = '100%';
             note.style.display = 'none';   // finished — the "transmitter OFF" warning is over
+            btn.style.display = '';        // result stays until the next run; button back at once
             // error (app 4.12+/4.04+) = the run stopped early (transmitter came
             // on, FC bank unreadable); failed = items that never verified.
             // written / same / blind (app 4.17+/4.09+) = what the run actually
@@ -189,6 +194,7 @@ async function phoneRestore() {
             // (Malcolm 2026-09-04: "I thought it was going to skip them all").
             // blind = the bank/rates switch assignments, written every time
             // because Rotorflight cannot send that table over the link.
+            // writtenNames (app 4.18+/4.10+) = the items that were written, by name.
             lab.textContent = p.error
                 ? '⚠️ ' + p.error + (p.failures > 0 ? ' — not written: ' + p.failures + ' item(s)' : '')
                 : p.failures > 0
@@ -196,25 +202,31 @@ async function phoneRestore() {
                     ? p.failed.join(', ') : p.failures + ' item(s)')
                   + ' — open that page and check (or run the restore again)'
                 : restoreDoneText(p);
-            setTimeout(() => { prog.style.display = 'none'; btn.style.display = ''; }, p.error || p.failures > 0 ? 15000 : 12000);
         }
     }, 700);
 }
 
-// The finishing line of a clean restore, from the app's counts.
+// The finishing line of a clean restore, from the app's counts. The 12
+// switch-assignment slots (bank/rates selectors) are written on every run
+// because Rotorflight cannot send that table over the link — they are NOT
+// counted as changes here (Malcolm 2026-09-04: "the explanation about
+// writing the switch assignments every time can be omitted for the sake
+// of simplicity").
 function restoreDoneText(p) {
     if (typeof p.written !== 'number') return '✅ All settings restored & verified!';   // older app: no counts
-    const same = p.same || 0, written = p.written, blind = p.blind || 0;
-    const n = same + written;
+    const same = p.same || 0, blind = p.blind || 0;
+    const real = p.written - blind;                       // items that actually differed
     const plural = (k, w) => k + ' ' + w + (k === 1 ? '' : 's');
-    if (written === 0)
-        return '✅ Checked ' + plural(n, 'setting') + ' — the model already had every one. Nothing was written.';
-    const blindNote = blind > 0
-        ? ' The ' + plural(blind, 'switch assignment') + (blind === 1 ? ' is' : ' are')
-          + ' written every time (Rotorflight cannot read them back).' : '';
-    if (written === blind)
-        return '✅ Checked ' + plural(same, 'setting') + ' — the model already had every one.' + blindNote + ' Saved.';
-    return '✅ Written & verified: ' + plural(written - blind, 'setting') + '. Already matched: ' + same + '. Saved in the flight controller.' + blindNote;
+    if (real <= 0)
+        return '✅ Checked ' + plural(same, 'setting') + ' — the model already had every one. Nothing was changed.';
+    // Name what was written — up to 4 items, then a count (Malcolm 2026-09-04:
+    // "if there are huge numbers of changes, it might be ill-advised to name
+    // each one of them").
+    const names = Array.isArray(p.writtenNames) ? p.writtenNames.filter(x => typeof x === 'string' && x) : [];
+    let what = plural(real, 'setting');
+    if (names.length > 0 && names.length <= 4) what = names.join(', ');
+    else if (names.length > 4) what = plural(names.length, 'setting') + ' (' + names.slice(0, 4).join(', ') + ' and ' + (names.length - 4) + ' more)';
+    return '✅ Written & verified: ' + what + '. Already matched: ' + same + '. Saved in the flight controller.';
 }
 
 // Portable backups (Malcolm 2026-08-30): the frozen restore point as a

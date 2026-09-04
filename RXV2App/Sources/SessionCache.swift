@@ -756,17 +756,19 @@ final class RestoreRunner {
     static var written = 0         // items written AND verified
     static var same = 0            // items the FC already held (reads only)
     static var blind = 0           // of `written`: declared items with no read-back (the switch assignments)
+    static var writtenLabels: [String] = []   // the readable items that were written ("PIDs bank 1") — the page names them
     static var progressJSON: Data {
         let names = failedLabels.map { "\"\($0)\"" }.joined(separator: ",")
+        let wnames = writtenLabels.map { "\"\($0.replacingOccurrences(of: "\"", with: "'"))\"" }.joined(separator: ",")
         let err = error.replacingOccurrences(of: "\"", with: "'")
-        return Data("{\"phase\":\"\(phase)\",\"done\":\(done),\"total\":\(total),\"failures\":\(failures),\"failed\":[\(names)],\"error\":\"\(err)\",\"written\":\(written),\"same\":\(same),\"blind\":\(blind)}".utf8)
+        return Data("{\"phase\":\"\(phase)\",\"done\":\(done),\"total\":\(total),\"failures\":\(failures),\"failed\":[\(names)],\"error\":\"\(err)\",\"written\":\(written),\"same\":\(same),\"blind\":\(blind),\"writtenNames\":[\(wnames)]}".utf8)
     }
 
     static func run(link: BleLink) {
         guard !running else { return }
         running = true
         phase = "running"; done = 0; failures = 0; failedLabels = []; error = ""
-        written = 0; same = 0; blind = 0
+        written = 0; same = 0; blind = 0; writtenLabels = []
         let items = SessionCache.shared.restoreItems()
         total = items.count + 1   // + EEPROM save
 
@@ -894,6 +896,7 @@ final class RestoreRunner {
                 if itemOk && !already {
                     written += 1
                     if it.readFn == 0 { blind += 1 }              // declared item: written unseen
+                    else { writtenLabels.append(it.label) }
                     if it.writeFn == 143 { wroteGov = true }
                     if it.writeFn == 222 { wroteMotor = true }   // motor / gear ratio: FC restart needed
                 }
