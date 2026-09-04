@@ -750,16 +750,23 @@ final class RestoreRunner {
     static var failures = 0
     static var failedLabels: [String] = []
     static var error = ""          // non-empty = the run stopped early; the page shows it
+    // What the run actually did — the page's finishing line is built from
+    // these (Malcolm 2026-09-04, back-up-then-restore: "I thought it was
+    // going to skip them all" — it did, but the page said "restored").
+    static var written = 0         // items written AND verified
+    static var same = 0            // items the FC already held (reads only)
+    static var blind = 0           // of `written`: declared items with no read-back (the switch assignments)
     static var progressJSON: Data {
         let names = failedLabels.map { "\"\($0)\"" }.joined(separator: ",")
         let err = error.replacingOccurrences(of: "\"", with: "'")
-        return Data("{\"phase\":\"\(phase)\",\"done\":\(done),\"total\":\(total),\"failures\":\(failures),\"failed\":[\(names)],\"error\":\"\(err)\"}".utf8)
+        return Data("{\"phase\":\"\(phase)\",\"done\":\(done),\"total\":\(total),\"failures\":\(failures),\"failed\":[\(names)],\"error\":\"\(err)\",\"written\":\(written),\"same\":\(same),\"blind\":\(blind)}".utf8)
     }
 
     static func run(link: BleLink) {
         guard !running else { return }
         running = true
         phase = "running"; done = 0; failures = 0; failedLabels = []; error = ""
+        written = 0; same = 0; blind = 0
         let items = SessionCache.shared.restoreItems()
         total = items.count + 1   // + EEPROM save
 
@@ -883,7 +890,10 @@ final class RestoreRunner {
                     Thread.sleep(forTimeInterval: 0.6)
                 }
                 if !itemOk { failures += 1; failedLabels.append(it.label) }
+                if itemOk && already { same += 1 }
                 if itemOk && !already {
+                    written += 1
+                    if it.readFn == 0 { blind += 1 }              // declared item: written unseen
                     if it.writeFn == 143 { wroteGov = true }
                     if it.writeFn == 222 { wroteMotor = true }   // motor / gear ratio: FC restart needed
                 }

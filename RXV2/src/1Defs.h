@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.564-msp52-bug";
+constexpr const char* FW_VERSION = "RXV2-0.9.565-restore-counts";
 
 //*********************************************************************
 //  Auto-update manifest URLs

@@ -848,12 +848,19 @@ class MainActivity : AppCompatActivity() {
     @Volatile private var restFailures = 0
     @Volatile private var restFailed = ArrayList<String>()
     @Volatile private var restError = ""       // non-empty = the run stopped early; the page shows it
+    // What the run actually did — the page's finishing line is built from
+    // these (Malcolm 2026-09-04, back-up-then-restore: "I thought it was
+    // going to skip them all" — it did, but the page said "restored").
+    @Volatile private var restWritten = 0      // items written AND verified
+    @Volatile private var restSame = 0         // items the FC already held (reads only)
+    @Volatile private var restBlind = 0        // of restWritten: declared items with no read-back (the switch assignments)
     @Volatile private var restRunning = false
 
     private fun runRestore() {
         if (restRunning) return
         restRunning = true
         restPhase = "running"; restDone = 0; restFailures = 0; restFailed = ArrayList(); restError = ""
+        restWritten = 0; restSame = 0; restBlind = 0
         val items = SessionCache.restoreItems()
         restTotal = items.size + 1
         Thread {
@@ -962,7 +969,10 @@ class MainActivity : AppCompatActivity() {
                     Thread.sleep(600)
                 }
                 if (!itemOk) { restFailures++; restFailed.add(it.label) }
+                if (itemOk && already) restSame++
                 if (itemOk && !already) {
+                    restWritten++
+                    if (it.readFn == 0) restBlind++              // declared item: written unseen
                     if (it.writeFn == 143) wroteGov = true
                     if (it.writeFn == 222) wroteMotor = true   // motor / gear ratio: FC restart needed
                 }
@@ -1437,7 +1447,8 @@ class MainActivity : AppCompatActivity() {
                     }
                     else -> {
                         val names = restFailed.joinToString(",") { JSONObject.quote(it) }
-                        answer("{\"phase\":\"$restPhase\",\"done\":$restDone,\"total\":$restTotal,\"failures\":$restFailures,\"failed\":[$names],\"error\":${JSONObject.quote(restError)}}")
+                        answer("{\"phase\":\"$restPhase\",\"done\":$restDone,\"total\":$restTotal,\"failures\":$restFailures,\"failed\":[$names],\"error\":${JSONObject.quote(restError)}," +
+                               "\"written\":$restWritten,\"same\":$restSame,\"blind\":$restBlind}")
                     }
                 }
                 return

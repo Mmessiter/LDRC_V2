@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.565-restore-counts",
+      "url": "https://messiter.com/rxv2/release/v0.9.565/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.565/littlefs.bin",
+      "fs_md5": "0f126350b12738889906ce3d8d054b4d",
+      "notes": "Backup & restore page: the finishing line now says what a restore actually did - 'Checked N settings - the model already had every one. Nothing was written' when nothing differed, or how many were written and verified (needs app 4.17 / Android 4.09 for the counts). The 'keep the transmitter OFF' warning disappears when the run is over."
+    },
+    {
       "name": "RXV2-0.9.564-msp52-bug",
       "url": "https://messiter.com/rxv2/release/v0.9.564/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.564/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.552/littlefs.bin",
       "fs_md5": "c67c81b16d36aa0bd329fe4f466a3a7b",
       "notes": "Quieter event log: no false 'FC lost' after every flight (the FC probe pauses in the air; it now gets a fresh 10 s after landing) and one 'Swap unbilled' breadcrumb per 5 s instead of seven after every TX-off. Firmware only - pages unchanged."
-    },
-    {
-      "name": "RXV2-0.9.551-throttle-parked",
-      "url": "https://messiter.com/rxv2/release/v0.9.551/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.551/littlefs.bin",
-      "fs_md5": "c67c81b16d36aa0bd329fe4f466a3a7b",
-      "notes": "Governor pages now warn when the transmitter throttle sat below 100 % while armed (the head runs stable but slow and bank changes do nothing) - the receiver learns the throttle channel and governor mode from Rotorflight itself. New 'Governor controls the spool-up (PID spool-up)' switch in the governor profile. No more swash twitches: the event log is saved append-only and never while armed. Loop stalls now name the call that caused them."
     }
   ]
 }

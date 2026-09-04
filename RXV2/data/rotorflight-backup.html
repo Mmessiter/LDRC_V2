@@ -24,7 +24,7 @@
         <div style="background:#d5dde4;border-radius:8px;height:14px;overflow:hidden">
             <div id=savFill style="background:#d4944a;height:100%;width:0%;border-radius:8px;transition:width .4s"></div>
         </div>
-        <div style="margin-top:.6em;font-size:.85em;color:#5c3a1a;background:#ffc88c;border-radius:8px;padding:.45em .7em">
+        <div id=savNote style="margin-top:.6em;font-size:.85em;color:#5c3a1a;background:#ffc88c;border-radius:8px;padding:.45em .7em">
             &#9888;&#65039; Don't switch the transmitter ON or the model OFF until this finishes.
         </div>
     </div>
@@ -34,7 +34,7 @@
         <div style="background:#d5dde4;border-radius:8px;height:14px;overflow:hidden">
             <div id=restFill style="background:#ab6c8e;height:100%;width:0%;border-radius:8px;transition:width .4s"></div>
         </div>
-        <div style="margin-top:.6em;font-size:.85em;color:#5c3a1a;background:#ffc88c;border-radius:8px;padding:.45em .7em">
+        <div id=restNote style="margin-top:.6em;font-size:.85em;color:#5c3a1a;background:#ffc88c;border-radius:8px;padding:.45em .7em">
             &#9888;&#65039; Keep the transmitter OFF and the model ON until this finishes.
         </div>
     </div>
@@ -78,8 +78,10 @@ async function phoneSave() {
     const prog = document.getElementById('savProg');
     const lab = document.getElementById('savLab');
     const fill = document.getElementById('savFill');
+    const note = document.getElementById('savNote');
     btn.style.display = 'none';
     prog.style.display = '';
+    note.style.display = '';
     lab.textContent = 'Backing up…';
     fill.style.width = '0%';
     let r0 = null;
@@ -98,6 +100,7 @@ async function phoneSave() {
         } else if (p.phase === 'done') {
             clearInterval(timer);
             fill.style.width = '100%';
+            note.style.display = 'none';   // finished — the "don't touch" warning is over
             // ok:false (app 4.12+/4.04+) = the sweep did not complete, so the
             // phone kept its PREVIOUS backup — say so instead of a false ✅.
             if (p.ok === false) {
@@ -156,8 +159,12 @@ async function phoneRestore() {
     const prog = document.getElementById('restProg');
     const lab = document.getElementById('restLab');
     const fill = document.getElementById('restFill');
+    const note = document.getElementById('restNote');
     btn.style.display = 'none';
     prog.style.display = '';
+    note.style.display = '';
+    lab.textContent = 'Restoring…';
+    fill.style.width = '0%';
     let r0 = null;
     try { r0 = await (await fetch('/app/restore/start', { cache: 'no-store' })).json(); } catch (e) {}
     if (!r0 || !r0.ok) {
@@ -174,18 +181,40 @@ async function phoneRestore() {
         } else if (p.phase === 'done') {
             clearInterval(timer);
             fill.style.width = '100%';
+            note.style.display = 'none';   // finished — the "transmitter OFF" warning is over
             // error (app 4.12+/4.04+) = the run stopped early (transmitter came
             // on, FC bank unreadable); failed = items that never verified.
+            // written / same / blind (app 4.17+/4.09+) = what the run actually
+            // did: an unchanged setup is reads only, and the page must say so
+            // (Malcolm 2026-09-04: "I thought it was going to skip them all").
+            // blind = the bank/rates switch assignments, written every time
+            // because Rotorflight cannot send that table over the link.
             lab.textContent = p.error
                 ? '⚠️ ' + p.error + (p.failures > 0 ? ' — not written: ' + p.failures + ' item(s)' : '')
                 : p.failures > 0
                 ? '⚠️ Could not verify: ' + ((p.failed && p.failed.length)
                     ? p.failed.join(', ') : p.failures + ' item(s)')
                   + ' — open that page and check (or run the restore again)'
-                : '✅ All settings restored & verified!';
-            setTimeout(() => { prog.style.display = 'none'; btn.style.display = ''; }, p.error || p.failures > 0 ? 15000 : 8000);
+                : restoreDoneText(p);
+            setTimeout(() => { prog.style.display = 'none'; btn.style.display = ''; }, p.error || p.failures > 0 ? 15000 : 12000);
         }
     }, 700);
+}
+
+// The finishing line of a clean restore, from the app's counts.
+function restoreDoneText(p) {
+    if (typeof p.written !== 'number') return '✅ All settings restored & verified!';   // older app: no counts
+    const same = p.same || 0, written = p.written, blind = p.blind || 0;
+    const n = same + written;
+    const plural = (k, w) => k + ' ' + w + (k === 1 ? '' : 's');
+    if (written === 0)
+        return '✅ Checked ' + plural(n, 'setting') + ' — the model already had every one. Nothing was written.';
+    const blindNote = blind > 0
+        ? ' The ' + plural(blind, 'switch assignment') + (blind === 1 ? ' is' : ' are')
+          + ' written every time (Rotorflight cannot read them back).' : '';
+    if (written === blind)
+        return '✅ Checked ' + plural(same, 'setting') + ' — the model already had every one.' + blindNote + ' Saved.';
+    return '✅ Written & verified: ' + plural(written - blind, 'setting') + '. Already matched: ' + same + '. Saved in the flight controller.' + blindNote;
 }
 
 // Portable backups (Malcolm 2026-08-30): the frozen restore point as a
