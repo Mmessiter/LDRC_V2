@@ -1,11 +1,11 @@
 {
   "versions": [
     {
-      "name": "RXV2-0.9.560-slow-fc-replies",
-      "url": "https://messiter.com/rxv2/release/v0.9.560/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.560/littlefs.bin",
+      "name": "RXV2-0.9.561-slow-fc-replies",
+      "url": "https://messiter.com/rxv2/release/v0.9.561/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.561/littlefs.bin",
       "fs_md5": "2c49d503071c9e96fb8f66052bda9546",
-      "notes": "Backup fix: the flight controller answers big reads slowly (Rotorflight meters its telemetry, MSP replies included, at about one 58-byte chunk every half second or more), so the receiver now waits for each chunk instead of giving up after 1.2 s - the mixer-rules read that failed the Goblin's first phone backup ('1 read got no answer') and the 588-byte adjustment table now arrive whole. Apps: iOS 4.14, Android 4.06 (wider BLE wait for these reads)."
+      "notes": "Backup fix: the flight controller answers big reads slowly (Rotorflight meters its telemetry, MSP replies included, at about one 58-byte chunk every half second or more), so the receiver now waits for each chunk instead of giving up after 1.2 s, and allows extra time for the first chunk right after a previous reply (the same limit drains) - the mixer-rules read that failed the Goblin's first phone backup ('1 read got no answer') and the 588-byte adjustment table now arrive whole. Apps: iOS 4.14, Android 4.06 (wider BLE wait for these reads)."
     },
     {
       "name": "RXV2-0.9.559-full-backup",
