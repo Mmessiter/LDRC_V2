@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.560-slow-fc-replies",
+      "url": "https://messiter.com/rxv2/release/v0.9.560/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.560/littlefs.bin",
+      "fs_md5": "2c49d503071c9e96fb8f66052bda9546",
+      "notes": "Backup fix: the flight controller answers big reads slowly (Rotorflight meters its telemetry, MSP replies included, at about one 58-byte chunk every half second or more), so the receiver now waits for each chunk instead of giving up after 1.2 s - the mixer-rules read that failed the Goblin's first phone backup ('1 read got no answer') and the 588-byte adjustment table now arrive whole. Apps: iOS 4.14, Android 4.06 (wider BLE wait for these reads)."
+    },
+    {
       "name": "RXV2-0.9.559-full-backup",
       "url": "https://messiter.com/rxv2/release/v0.9.559/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.559/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.549/littlefs.bin",
       "fs_md5": "90109d17dc544287a954c982f7c31d2f",
       "notes": "New wizard step 13, Flight recorder: sets up Rotorflight's own onboard black box in plain English - when to record (whenever armed, no switch needed; or by the Blackbox switch, with a warning if no switch is assigned), where (flight-controller memory, SD card, serial), how often (as samples per second worked out from the control-loop rate), seconds to keep recording after disarm, overwrite-oldest-when-full, and which fields (Recommended set = Rotorflight's defaults + ESC + Governor, so head-speed problems show up). Shows the memory used and erases it with one red-confirmed tap, watching until the flight controller reports empty. Every save is read back and compared, so a flight controller that is busy recording (it silently ignores edits then) is reported honestly; rate or device changes offer the restart they need. Refused while armed. Also in A la carte. Firmware: route only."
-    },
-    {
-      "name": "RXV2-0.9.548-rotor-motor-labels",
-      "url": "https://messiter.com/rxv2/release/v0.9.548/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.548/littlefs.bin",
-      "fs_md5": "634d5f5cd99f6300797b6b5238971be6",
-      "notes": "Gear-ratio boxes are now labelled rotor : motor (and rotor : tail) so which way round is obvious at a glance (Malcolm's suggestion after the Goblin's backwards entry); the pinion/main-gear sub-labels and most of the explanatory text are gone - one line: rotor : motor, how many turns each makes, e.g. 1 : 10.2, or the teeth counts. Decimals are accepted and stored as the whole-number pair Rotorflight keeps (1 : 10.2 -> 10 : 102). Same on ESC-setup step 7 and First-time basics; shorter Backwards readouts. No firmware behaviour change."
     }
   ]
 }

@@ -52,6 +52,7 @@ final class BleLink: NSObject, ObservableObject {
     // single-request pipeline
     private struct Pending {
         let payload: Data
+        let firstByteWindow: TimeInterval
         let completion: (Result<BleResponse, Error>) -> Void
     }
     private var queue: [Pending] = []
@@ -180,7 +181,13 @@ final class BleLink: NSObject, ObservableObject {
         text += "\n"
         var payload = Data(text.utf8)
         if let b = body { payload.append(b) }
-        queue.append(Pending(payload: payload, completion: completion))
+        // First-byte window: 4 s is plenty for pages and polls, but a flight-
+        // controller read through /api/msp can hold the receiver for longer —
+        // Rotorflight meters big replies out at ~0.5-0.8 s per 58-byte chunk
+        // (the 224-byte mixer rules take ~2 s, the 588-byte adjustment table
+        // ~6 s) and the receiver waits up to 12 s for them (fw 0.9.560).
+        let window: TimeInterval = path.hasPrefix("/api/msp") ? 14 : 4
+        queue.append(Pending(payload: payload, firstByteWindow: window, completion: completion))
         pump()
     }
 
@@ -272,7 +279,7 @@ final class BleLink: NSObject, ObservableObject {
                 p.writeValue(cont, for: req, type: .withResponse)
             }
         }
-        armTimeout(4)   // generous first-byte window; each chunk re-arms 3 s
+        armTimeout(next.firstByteWindow)   // generous first-byte window; each chunk re-arms 3 s
     }
 
     // Watchdog: instead of one long dead-air timeout, the timer re-arms on
