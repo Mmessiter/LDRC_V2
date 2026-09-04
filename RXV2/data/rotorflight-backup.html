@@ -17,7 +17,7 @@
 <div class=bg-wash  aria-hidden=true></div>
 <div class=container>
     <h1>Backup &amp; restore</h1>
-    <p class=subtitle id=burSub>The whole setup, safe on the phone.</p>
+    <p class=subtitle id=burSub>Tuning, mechanics and switches &mdash; safe on the phone.</p>
 <button id=phoneSaveBtn class="btn" style="display:none;background:#d4944a" onclick="phoneSave()"><span class=ico>&#128190;</span>Back up settings to phone</button>
     <div id=savProg style="display:none;background:#f2f6f8;border-radius:14px;padding:1em 1.2em;margin:.7em 0;box-shadow:0 2px 6px rgba(0,0,0,.12)">
         <div id=savLab style="font-weight:600;color:#2c3e50;margin-bottom:.6em">Backing up&hellip;</div>
@@ -98,6 +98,13 @@ async function phoneSave() {
         } else if (p.phase === 'done') {
             clearInterval(timer);
             fill.style.width = '100%';
+            // ok:false (app 4.12+/4.04+) = the sweep did not complete, so the
+            // phone kept its PREVIOUS backup — say so instead of a false ✅.
+            if (p.ok === false) {
+                lab.textContent = '⚠️ Not backed up — ' + (p.error || 'the sweep did not finish') + '. The earlier backup on the phone is unchanged.';
+                setTimeout(() => { prog.style.display = 'none'; btn.style.display = ''; }, 12000);
+                return;
+            }
             lab.textContent = '✅ Backed up to the phone!';
             signOffTuneNudge();
             setTimeout(() => { prog.style.display = 'none'; btn.style.display = '';
@@ -113,8 +120,10 @@ function paintRestoreBtn() {
         .then(i => {
             if (!i.available) return;
             document.getElementById('phoneRestoreBtn').style.display = '';
+            // explicit = the pilot's own Back up / an imported file (kept until
+            // the next Back up); otherwise the automatic copy taken at connection.
             document.getElementById('phoneRestoreSub').textContent =
-                'backed up ' + (i.when || 'earlier') + ' — all banks';
+                (i.explicit ? 'your backup of ' : 'auto-saved at connection ') + (i.when || 'earlier');
         })
         .catch(() => {});
 }
@@ -140,8 +149,8 @@ async function phoneRestore() {
         return;
     }
     if (!(await LDRC.confirm(
-        'Overwrite ALL Rotorflight tuning on this model (PIDs, advanced PIDs, rates and governor — every bank) with the phone recording' +
-        (info.when ? ' from ' + info.when : '') + '?\n\nKeep the transmitter OFF and the model powered while it runs.',
+        'Overwrite this model\u2019s Rotorflight setup with the phone backup' +
+        (info.when ? ' from ' + info.when : '') + '?\n\nWrites back: PIDs, advanced PIDs, rates, governor & rescue (every bank); mixer travel, limits & trims; servo centres & travel; the bank and rates switches.\n\nNot in the backup, left as they are: arming switch & modes, channel map, motor / gear ratio, battery, filters, telemetry.\n\nKeep the transmitter OFF and the model powered while it runs.',
         { title: 'Restore from phone', icon: '📡', yes: 'Restore everything', kind: 'warn' }))) return;
     const btn = document.getElementById('phoneRestoreBtn');
     const prog = document.getElementById('restProg');
@@ -165,12 +174,16 @@ async function phoneRestore() {
         } else if (p.phase === 'done') {
             clearInterval(timer);
             fill.style.width = '100%';
-            lab.textContent = p.failures > 0
+            // error (app 4.12+/4.04+) = the run stopped early (transmitter came
+            // on, FC bank unreadable); failed = items that never verified.
+            lab.textContent = p.error
+                ? '⚠️ ' + p.error + (p.failures > 0 ? ' — not written: ' + p.failures + ' item(s)' : '')
+                : p.failures > 0
                 ? '⚠️ Could not verify: ' + ((p.failed && p.failed.length)
                     ? p.failed.join(', ') : p.failures + ' item(s)')
                   + ' — open that page and check (or run the restore again)'
                 : '✅ All settings restored & verified!';
-            setTimeout(() => { prog.style.display = 'none'; btn.style.display = ''; }, 8000);
+            setTimeout(() => { prog.style.display = 'none'; btn.style.display = ''; }, p.error || p.failures > 0 ? 15000 : 8000);
         }
     }, 700);
 }
@@ -186,7 +199,7 @@ async function importBackup() {
     let model = '';
     try { const s = await LDRC.fetchState(); model = (s && s.info && s.info.name) || ''; } catch (e) {}
     if (!(await LDRC.confirm(
-        'Choose a backup file to adopt for ' + (model || 'this model') + '.\n\nIt becomes the restore point on this phone — nothing is written to the flight controller until you tap Restore.\n\nFrom a friend\u2019s helicopter? The electronics transfer (rates, PIDs, governor, switches, rescue); servo centres, travel and level calibration stay yours — redo those wizard steps after restoring.',
+        'Choose a backup file to adopt for ' + (model || 'this model') + '.\n\nIt becomes the restore point on this phone — nothing is written to the flight controller until you tap Restore.\n\nFrom a friend\u2019s helicopter (a different model name)? The electronics transfer — PIDs, rates, governor, rescue, switches. Servo centres, mixer travel & trims stay yours. A file carrying this model\u2019s own name restores everything, servos included.',
         { title: 'Import a backup', icon: '📥', yes: 'Choose file' }))) return;
     let r = null;
     try { r = await (await fetch('/app/backup/import', { cache: 'no-store' })).json(); } catch (e) {}
@@ -198,7 +211,8 @@ async function importBackup() {
         try { st = await (await fetch('/app/backup/import/status', { cache: 'no-store' })).json(); } catch (e) { return; }
         if (st.phase === 'done') {
             clearInterval(timer);
-            msg.textContent = '✅ Imported ' + (st.model ? st.model + '\u2019s' : 'the') + ' setup (' + st.count + ' items) as the restore point for ' + (model || 'this model') + '. Tap Restore to write it.';
+            msg.textContent = '✅ Imported ' + (st.model ? st.model + '\u2019s' : 'the') + ' setup (' + st.count + ' items) as the restore point for ' + (model || 'this model') + '. Tap Restore to write it.'
+                + (st.mechanics === false ? ' Servo centres, mixer travel & trims were left out (different model) — yours stay.' : '');
             paintRestoreBtn();
         } else if (st.phase === 'failed') {
             clearInterval(timer); msg.textContent = '⚠️ That file is not an LDRC backup.';
@@ -222,7 +236,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 </script>
 <template id=helpContent><h2>Backup &amp; restore</h2>
 <p><b>Share backup file</b> hands the backup to the phone&rsquo;s share sheet &mdash; email or AirDrop it to another phone, or to a friend with the same helicopter; <b>Import a backup file</b> adopts one as this model&rsquo;s restore point (then Restore writes it). The file carries everything, including the switch selectors the flight controller cannot read back.</p>
-<p><b>Back up settings to phone</b> saves everything: every bank's PIDs, advanced PIDs, rates and governor settings &mdash; and all the Black box data too. <b>Restore settings from phone</b> writes it all back, each item verified, with the transmitter off. A backup is also frozen automatically when you connect &mdash; even a pilot who never presses Back&nbsp;up has one. Always back up a known-good setup before experimenting.</p>
+<p><b>Back up settings to phone</b> saves the Rotorflight setup the LDRC pages edit: every bank's PIDs, advanced PIDs, rates, governor and rescue; the governor's global settings; mixer travel, limits and trims; servo centres and travel; the bank and rates switch assignments &mdash; and all the Black box data too. <b>Restore settings from phone</b> writes it all back, each item verified, with the transmitter off, then saves it in the flight controller.</p>
+<p><b>Not in the backup</b> (set once in the wizards, left untouched by Restore): arming switch &amp; modes, channel map, motor / gear ratio, battery, filters, telemetry and the receiver's own settings.</p>
+<p>A backup is also taken automatically when you connect, so even a pilot who never presses Back&nbsp;up has one &mdash; but your own Back&nbsp;up (or an imported file) is kept until you back up again. Always back up a known-good setup before experimenting.</p>
 </template>
 </body>
 </html>

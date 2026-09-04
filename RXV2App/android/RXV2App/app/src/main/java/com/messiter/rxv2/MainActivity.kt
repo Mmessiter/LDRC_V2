@@ -52,6 +52,7 @@ class MainActivity : AppCompatActivity() {
     // as the restore point for the CONNECTED model, narrate via
     // /app/backup/import/status.
     @Volatile private var importPhase = "idle"; @Volatile private var importModel = ""; @Volatile private var importCount = 0
+    @Volatile private var importMechanics = true   // false = another model's file: servo/mixer items left out
     private var importFor = ""
     private val importPick = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.OpenDocument()
@@ -61,8 +62,8 @@ class MainActivity : AppCompatActivity() {
             val text = runCatching { contentResolver.openInputStream(uri)?.use { String(it.readBytes()) } }.getOrNull()
             if (text == null) { importPhase = "failed"; return@Thread }
             val r = SessionCache.importRestore(text, importFor)
-            importModel = r.second; importCount = r.third
-            importPhase = if (r.first) "done" else "failed"
+            importModel = r.fileModel; importCount = r.count; importMechanics = r.mechanics
+            importPhase = if (r.ok) "done" else "failed"
         }.start()
     }
     private val permReq = registerForActivityResult(
@@ -809,12 +810,13 @@ class MainActivity : AppCompatActivity() {
     @Volatile private var restTotal = 0
     @Volatile private var restFailures = 0
     @Volatile private var restFailed = ArrayList<String>()
+    @Volatile private var restError = ""       // non-empty = the run stopped early; the page shows it
     @Volatile private var restRunning = false
 
     private fun runRestore() {
         if (restRunning) return
         restRunning = true
-        restPhase = "running"; restDone = 0; restFailures = 0; restFailed = ArrayList()
+        restPhase = "running"; restDone = 0; restFailures = 0; restFailed = ArrayList(); restError = ""
         val items = SessionCache.restoreItems()
         restTotal = items.size + 1
         Thread {
@@ -824,17 +826,28 @@ class MainActivity : AppCompatActivity() {
                 Thread.sleep(250)
                 return Pair(body != null, body?.let { String(it) } ?: "")
             }
+            // The FC's banks right now (null = MSP_STATUS unreadable).
+            fun fcBanks(): Pair<Int, Int>? = SessionCache.fcBanks(req("/api/msp?fn=101").second)
+            // Is a transmitter talking to the receiver? (last_pkt_ms = AGE, -1 = never)
+            fun txLive(): Boolean = runCatching {
+                org.json.JSONObject(req("/api/state.json").second).getJSONObject("rf").optLong("last_pkt_ms", -1) in 0..2999
+            }.getOrDefault(false)
             // Note the FC's own banks first — the walk ends on bank 3, and
             // the EEPROM save would persist that as the boot profile.
-            var origPid = 0; var origRate = 0
-            val st0 = req("/api/msp?fn=101").second
-            if (st0.length >= 54) {
-                st0.substring(48, 50).toIntOrNull(16)?.let { origPid = it }
-                st0.substring(52, 54).toIntOrNull(16)?.let { origRate = it }
+            // Unreadable → nothing is written: without them we could neither
+            // put the FC back nor tell which bank a write landed in.
+            val orig = fcBanks()
+            if (orig == null) {
+                restError = "could not read the flight controller's bank (MSP 101) — nothing was written"
+                restDone = restTotal; restPhase = "done"; restRunning = false
+                return@Thread
             }
+            val origPid = orig.first; val origRate = orig.second
             var wroteGov = false
             var curPid = origPid; var curRate = origRate
+            var stopped = false
             for (it in items) {
+                if (stopped) { restFailures++; restFailed.add(it.label); restDone++; continue }
                 // TWO attempts — one radio hiccup among ~50 sequential MSP
                 // ops must not fail the parachute.
                 var itemOk = false
@@ -860,18 +873,44 @@ class MainActivity : AppCompatActivity() {
                         val back = req(rq).second.uppercase()
                         ok = back.isNotEmpty() && (back.startsWith(want) || want.startsWith(back))
                     }
+                    // Banked item: the FC must STILL be on the bank we chose.
+                    // A transmitter switched on mid-restore drags the FC onto
+                    // its own switch position — the write (and its read-back!)
+                    // would then land in that bank and "verify" perfectly.
+                    val sel = it.selectByte
+                    if (ok && sel != null) {
+                        val isRate = (sel and 0x80) != 0
+                        val now = fcBanks()
+                        if (now == null) ok = false
+                        else {
+                            curPid = now.first; curRate = now.second
+                            if ((if (isRate) now.second else now.first) != (sel and 0x7f)) ok = false
+                        }
+                        if (!ok && txLive()) {
+                            restError = "the transmitter came on — restore stopped (switch it off and run the restore again)"
+                            stopped = true
+                        }
+                    }
                     if (ok) { itemOk = true; break }
-                    if (attempt == 1) Thread.sleep(600)
+                    if (stopped || attempt == 2) break
+                    Thread.sleep(600)
                 }
                 if (!itemOk) { restFailures++; restFailed.add(it.label) }
                 if (it.writeFn == 143 && itemOk) wroteGov = true
                 restDone++
             }
-            // Put the FC back on its own banks BEFORE the EEPROM save.
-            if (curPid != origPid) req("/api/msp?fn=210&data=%02X".format(origPid))
-            if (curRate != origRate) req("/api/msp?fn=210&data=%02X".format(0x80 or origRate))
-            req("/api/msp?fn=250")                    // save to EEPROM
-            if (wroteGov) req("/api/msp?fn=68")       // gov config needs FC reboot
+            // Put the FC back on its own banks BEFORE the EEPROM save — unless
+            // a live transmitter now owns the bank switch.
+            if (!stopped) {
+                if (curPid != origPid) req("/api/msp?fn=210&data=%02X".format(origPid))
+                if (curRate != origRate) req("/api/msp?fn=210&data=%02X".format(0x80 or origRate))
+            }
+            // Save to EEPROM — verified: an unsaved restore evaporates at the
+            // next power-up while the page said "restored".
+            var saved = req("/api/msp?fn=250").first
+            if (!saved) { Thread.sleep(600); saved = req("/api/msp?fn=250").first }
+            if (!saved) { restFailures++; restFailed.add("save to flight controller memory (EEPROM) — run the restore again") }
+            if (wroteGov && saved) req("/api/msp?fn=68")       // gov config needs FC reboot
             restDone++
             restPhase = "done"
             restRunning = false
@@ -887,24 +926,42 @@ class MainActivity : AppCompatActivity() {
     @Volatile private var snapPhase = "idle"   // idle | running | done
     @Volatile private var snapDone = 0
     @Volatile private var snapTotal = 0
-    private fun prefetchSession(fast: Boolean = false) {
+    // ok = this run completed the whole Rotorflight sweep with every read
+    // answered, so the frozen restore point is fresh and complete. Anything
+    // less says why in snapError (the page shows ⚠️ and keeps the old backup).
+    @Volatile private var snapOk = false
+    @Volatile private var snapError = ""
+    /** explicit = the pilot pressed "Back up": the restore point it freezes is
+     *  sticky — later automatic sweeps at connection never overwrite it. */
+    private fun prefetchSession(fast: Boolean = false, explicit: Boolean = false) {
         if (prefetchRunning) return
         prefetchRunning = true
-        snapPhase = "running"; snapDone = 0
+        snapPhase = "running"; snapDone = 0; snapOk = false; snapError = ""
         Thread {
             Thread.sleep(if (fast) 100 else 6000)   // manual = at once; auto = settle first
             val pace = if (fast) 150L else 400L
+            var failures = 0      // MSP reads that never answered (after one retry)
             fun req(p: String): ByteArray? {   // followFetch records automatically
                 val body = bleSyncQuiet(p)
                 snapDone++
                 Thread.sleep(pace)
                 return body
             }
+            // A Rotorflight read the backup depends on: one retry, then it
+            // counts as a failure — a missing answer must never let a stale
+            // value from an earlier session pass as today's backup.
+            fun mspRead(p: String) {
+                if (req(p) != null) return
+                Thread.sleep(500)
+                if (req(p) == null) failures++
+            }
             fun selectBank(byte: Int) {
                 val hex = "%02X".format(byte)
                 SessionCache.noteBankSelect(hex)
                 req("/api/msp?fn=210&data=$hex")
             }
+            // The FC's banks now, from MSP_STATUS bytes 23/25 (null = no answer).
+            fun fcBanks(): Pair<Int, Int>? = req("/api/msp?fn=101")?.let { SessionCache.fcBanks(String(it)) }
             snapTotal = 3
             var txLive = false
             req("/api/state.json")?.let { body ->
@@ -930,8 +987,10 @@ class MainActivity : AppCompatActivity() {
             req("/api/events-prev.json")   // previous boot's persisted tail
             // Rotorflight reads — all 4 PID-side banks + all 4 rate banks,
             // ONLY with the transmitter off (never switch a bank under a
-            // live TX). Current banks from MSP_STATUS fn=101 bytes 24/26
-            // (verified on the RAW420); restored exactly afterwards.
+            // live TX). Current banks from MSP_STATUS fn=101 bytes 23/25 —
+            // bytes 24/26 are the profile COUNTS; the 2026-09-04 review found
+            // the old code reading those, so every sweep parked the FC on
+            // bank 1 instead of putting it back. Restored exactly afterwards.
             // Foolish-user guard (Malcolm 2026-08-04): if the transmitter
             // comes ON mid-sweep, stop switching banks IMMEDIATELY and put
             // the FC back on its own banks — never fly on a sweep leftover.
@@ -943,25 +1002,41 @@ class MainActivity : AppCompatActivity() {
                     lastPkt in 0..2999
                 }.getOrDefault(false)
             }
+            // After a bank's reads: is the FC STILL on that bank? A TX that
+            // came on between the select and the reads drags the FC onto its
+            // switch's bank — the reads would then be another bank's values
+            // filed under this one. null (no answer) counts as not verified.
+            fun stillOn(pid: Int?, rate: Int?): Boolean {
+                val now = fcBanks() ?: return false
+                if (pid != null && now.first != pid) return false
+                if (rate != null && now.second != rate) return false
+                return true
+            }
             // Yield to the user's tuning pages: wait (≤2 min) for a 10 s gap
             // in page MSP traffic before ANY bank switching; still busy →
             // skip the MSP sweep this run.
             var waited = 0L
             while (!pageMspQuiet() && waited < 120_000) { Thread.sleep(2000); waited += 2000 }
-            if (!txLive && pageMspQuiet()) {
-                val st = req("/api/msp?fn=101")?.let { String(it) } ?: ""
-                val origPid = if (st.length >= 54) st.substring(48, 50).toIntOrNull(16) else null
-                val origRate = if (st.length >= 54) st.substring(52, 54).toIntOrNull(16) else null
-                if (origPid != null && origRate != null) {
+            var sweepOK = false
+            if (txLive) {
+                snapError = "the transmitter is on — switch it off, then back up"
+            } else if (!pageMspQuiet()) {
+                snapError = "a Rotorflight page was busy reading — back up again in a moment"
+            } else {
+                val orig = fcBanks()
+                if (orig == null) {
+                    snapError = "could not read the flight controller's bank (MSP 101) — is it powered and connected?"
+                } else {
+                    val origPid = orig.first; val origRate = orig.second
                     snapTotal += 7 + 4 * 6 + 4 * 3 + 2   // 142 + mixer(5) + servos + rescue + sweeps
-                    req("/api/msp?fn=142")       // governor global — bankless
+                    mspRead("/api/msp?fn=142")       // governor global — bankless
                     // Mixer — Travel extents' blocks, bankless (Malcolm
                     // 2026-08-15: the backup must not forget yesterday's
                     // additions). Config + one read per input 1..4.
-                    req("/api/msp?fn=42")
+                    mspRead("/api/msp?fn=42")
                     // Servos — bankless bulk read (chunked; RX 0.9.383+).
-                    req("/api/msp?fn=120")
-                    for (i in 1..4) req("/api/msp?fn=174&data=%02X".format(i))
+                    mspRead("/api/msp?fn=120")
+                    for (i in 1..4) mspRead("/api/msp?fn=174&data=%02X".format(i))
                     // Every bank select makes the FC write flash — a brief
                     // servo stall (the swash twitch). Skip no-op selects.
                     var curPid = origPid; var curRate = origRate
@@ -970,21 +1045,35 @@ class MainActivity : AppCompatActivity() {
                         if (txAppeared()) { aborted = true; break }
                         if (b != curPid) { selectBank(b); curPid = b }
                         else SessionCache.noteBankSelect("%02X".format(b))
-                        req("/api/msp?fn=112"); req("/api/msp?fn=94"); req("/api/msp?fn=148"); req("/api/msp?fn=146")
+                        mspRead("/api/msp?fn=112"); mspRead("/api/msp?fn=94"); mspRead("/api/msp?fn=148"); mspRead("/api/msp?fn=146")
+                        if (!stillOn(b, null)) { aborted = true; break }
                     }
                     if (!aborted) for (r in 0..3) {
                         if (txAppeared()) { aborted = true; break }
                         if (r != curRate) { selectBank(0x80 or r); curRate = r }
                         else SessionCache.noteBankSelect("%02X".format(0x80 or r))
-                        req("/api/msp?fn=111")
+                        mspRead("/api/msp?fn=111")
+                        if (!stillOn(null, r)) { aborted = true; break }
                     }
-                    if (curPid != origPid) selectBank(origPid)            // put the FC back
-                    if (curRate != origRate) selectBank(0x80 or origRate) // exactly — always
-                    // Full sweep completed → freeze the restore point (the
-                    // rolling cache keeps updating; this copy never follows
-                    // the pilot's later edits).
-                    if (!aborted) SessionCache.snapshotRestorePoint()
+                    // Put the FC back exactly — always — unless a live TX now
+                    // owns the bank switch (our select would fight it).
+                    if (!txAppeared()) {
+                        if (curPid != origPid) selectBank(origPid)
+                        if (curRate != origRate) selectBank(0x80 or origRate)
+                    }
+                    if (aborted) snapError = "the transmitter came on (or the flight controller changed bank) mid-backup — switch it off and back up again"
+                    else if (failures > 0) snapError = "$failures read${if (failures == 1) "" else "s"} got no answer — back up again"
+                    sweepOK = !aborted && failures == 0
                 }
+            }
+            // Full sweep completed → freeze the restore point (the rolling
+            // cache keeps updating; this copy never follows the pilot's later
+            // edits). A pilot's own backup (explicit) is sticky: the
+            // automatic sweep at connection must never replace it.
+            if (sweepOK) {
+                val froze = SessionCache.snapshotRestorePoint(explicit)
+                snapOk = froze || !explicit
+                if (!snapOk) snapError = "the backup file could not be written on the phone"
             }
             snapTotal += flightPaths.size
             for (p in flightPaths) req(p)
@@ -1198,12 +1287,12 @@ class MainActivity : AppCompatActivity() {
                     "/app/backup/import" -> {
                         if (demoMode || reviewMode || connectedName.isEmpty()) answer("{\"ok\":false,\"error\":\"connect to the receiver first\"}")
                         else {
-                            importFor = connectedName; importPhase = "picking"; importModel = ""; importCount = 0
+                            importFor = connectedName; importPhase = "picking"; importModel = ""; importCount = 0; importMechanics = true
                             runOnUiThread { importPick.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) }
                             answer("{\"ok\":true}")
                         }
                     }
-                    else -> answer("{\"phase\":\"$importPhase\",\"model\":${JSONObject.quote(importModel)},\"count\":$importCount}")
+                    else -> answer("{\"phase\":\"$importPhase\",\"model\":${JSONObject.quote(importModel)},\"count\":$importCount,\"mechanics\":$importMechanics}")
                 }
                 return
             }
@@ -1221,7 +1310,9 @@ class MainActivity : AppCompatActivity() {
                         val rpAt = SessionCache.restorePointAtMs()
                         val whenTxt = if (rpAt > 0)
                             android.text.format.DateFormat.format("d MMM HH:mm", rpAt) else ""
-                        answer("{\"available\":$avail,\"when\":${JSONObject.quote(whenTxt.toString())}}")
+                        // explicit = the pilot's own "Back up" / an imported file (sticky);
+                        // false = the automatic freeze taken at connection.
+                        answer("{\"available\":$avail,\"when\":${JSONObject.quote(whenTxt.toString())},\"explicit\":${SessionCache.restorePointIsExplicit()}}")
                     }
                     "/app/restore/start" -> {
                         if (demoMode || reviewMode) {
@@ -1242,19 +1333,19 @@ class MainActivity : AppCompatActivity() {
                     }
                     else -> {
                         val names = restFailed.joinToString(",") { JSONObject.quote(it) }
-                        answer("{\"phase\":\"$restPhase\",\"done\":$restDone,\"total\":$restTotal,\"failures\":$restFailures,\"failed\":[$names]}")
+                        answer("{\"phase\":\"$restPhase\",\"done\":$restDone,\"total\":$restTotal,\"failures\":$restFailures,\"failed\":[$names],\"error\":${JSONObject.quote(restError)}}")
                     }
                 }
                 return
             }
             if (p == "/app/snapshot/start" || p == "/app/snapshot/progress") {
                 val json = if (p == "/app/snapshot/start") {
-                    if (!demoMode && !reviewMode) { prefetchSession(fast = true); "{\"ok\":true}" }
+                    if (!demoMode && !reviewMode) { prefetchSession(fast = true, explicit = true); "{\"ok\":true}" }   // the pilot's own backup — sticky
                     else "{\"ok\":false,\"error\":\"connect to the receiver first\"}"
                 } else {
                     // Review: phone IS the store — the page hides its save button.
                     if (reviewMode) "{\"phase\":\"replay\",\"done\":0,\"total\":0}"
-                    else "{\"phase\":\"$snapPhase\",\"done\":$snapDone,\"total\":$snapTotal}"
+                    else "{\"phase\":\"$snapPhase\",\"done\":$snapDone,\"total\":$snapTotal,\"ok\":$snapOk,\"error\":${JSONObject.quote(snapError)}}"
                 }
                 runOnUiThread {
                     val w = webView ?: return@runOnUiThread

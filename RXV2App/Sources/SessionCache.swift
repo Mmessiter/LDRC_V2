@@ -310,6 +310,11 @@ extension SessionCache {
         var model: String
         var savedAt: Date
         var entries: [String: Entry]
+        // true = the pilot pressed "Back up" (or imported a file): STICKY —
+        // the automatic freeze at connection must never overwrite it
+        // (review 2026-09-04: it did, so a deliberate backup lived only
+        // until the next battery). Optional so older files still decode.
+        var explicit: Bool? = nil
     }
 
     private static let restoreKeyPrefixes =
@@ -317,8 +322,32 @@ extension SessionCache {
          "/api/msp?fn=148&bank=", "/api/msp?fn=146&bank=", "/api/msp?fn=111&bank=",
          "/api/msp?fn=174&data="]   // mixer inputs (Travel extents)
 
-    /// Freeze the tuning reads currently in the rolling cache.
-    func snapshotRestorePoint() {
+    /// The mechanical items — servo centres/travel (fn 120) and the mixer's
+    /// limits, trims and input travel (42, 174). A backup from ANOTHER model
+    /// leaves these out on import: they belong to that airframe's linkage.
+    static let mechanicsKeyPrefixes = ["/api/msp?fn=120", "/api/msp?fn=42", "/api/msp?fn=174&data="]
+
+    /// The FC's current banks from MSP_STATUS (fn=101): byte 23 = PID
+    /// profile, byte 25 = rate profile, bytes 24/26 = the profile COUNTS
+    /// (Rotorflight 4.6 — checked against the Goblin's own reply, where
+    /// byte 24 reads 06). The earlier code read 24/26, i.e. the counts, so
+    /// every "put the FC back on its own bank" selected bank 6 → RF clamps
+    /// that to bank 1. nil when the reply doesn't make sense.
+    static func fcBanks(statusHex: String) -> (pid: Int, rate: Int)? {
+        let h = Array(statusHex.uppercased())
+        guard h.count >= 54 else { return nil }
+        func byte(_ i: Int) -> Int? { Int(String(h[(2 * i)..<(2 * i + 2)]), radix: 16) }
+        guard let p = byte(23), let pc = byte(24), let r = byte(25), let rc = byte(26),
+              pc > 0, pc <= 8, rc > 0, rc <= 8, p < pc, r < rc else { return nil }
+        return (p, r)
+    }
+
+    /// Freeze the tuning reads currently in the rolling cache. `explicit` =
+    /// the pilot's own "Back up" tap; an automatic (connection) freeze never
+    /// replaces an explicit one. Returns false when nothing was written.
+    @discardableResult
+    func snapshotRestorePoint(explicit: Bool = false) -> Bool {
+        if !explicit, restorePointIsExplicit() { return false }
         var keep: [String: Entry] = [:]
         for (k, v) in entries {
             if Self.restoreKeyPrefixes.contains(where: { k.hasPrefix($0) })
@@ -327,11 +356,11 @@ extension SessionCache {
                 keep[k] = v
             }
         }
-        guard !keep.isEmpty else { return }
-        let shape = RestoreShape(model: modelName, savedAt: Date(), entries: keep)
-        if let d = try? JSONEncoder().encode(shape) {
-            try? d.write(to: Self.restoreURL(for: modelName), options: .atomic)
-        }
+        guard !keep.isEmpty else { return false }
+        let shape = RestoreShape(model: modelName, savedAt: Date(), entries: keep, explicit: explicit)
+        guard let d = try? JSONEncoder().encode(shape) else { return false }
+        do { try d.write(to: Self.restoreURL(for: modelName), options: .atomic) } catch { return false }
+        return true
     }
 
     /// When was the current model's restore point frozen? nil = none.
@@ -339,6 +368,13 @@ extension SessionCache {
         guard let d = try? Data(contentsOf: Self.restoreURL(for: modelName)),
               let s = try? JSONDecoder().decode(RestoreShape.self, from: d) else { return nil }
         return s.savedAt
+    }
+
+    /// Was the current restore point a deliberate backup (or an import)?
+    func restorePointIsExplicit() -> Bool {
+        guard let d = try? Data(contentsOf: Self.restoreURL(for: modelName)),
+              let s = try? JSONDecoder().decode(RestoreShape.self, from: d) else { return false }
+        return s.explicit ?? false
     }
 
     /// Everything restorable from the FROZEN restore point, in write order.
@@ -465,21 +501,28 @@ extension SessionCache {
     }
 
     /// Adopt a backup file as the restore point for `model` (the connected
-    /// receiver). Returns the file's own model name and item count.
-    func importRestore(json: Data, forModel model: String) -> (ok: Bool, fileModel: String, count: Int) {
+    /// receiver). A file from ANOTHER model (different name) comes without
+    /// its mechanics — servo centres/travel and mixer limits stay this
+    /// airframe's own, as the Import dialog promises. Returns the file's own
+    /// model name, the item count and whether mechanics were kept.
+    func importRestore(json: Data, forModel model: String) -> (ok: Bool, fileModel: String, count: Int, mechanics: Bool) {
         guard let root = try? JSONSerialization.jsonObject(with: json) as? [String: Any],
               (root["format"] as? String) == "rxv2-backup-1",
-              let es = root["entries"] as? [String: [String: Any]], !es.isEmpty else { return (false, "", 0) }
+              let es = root["entries"] as? [String: [String: Any]], !es.isEmpty else { return (false, "", 0, false) }
+        let fileModel = (root["model"] as? String) ?? ""
+        let sameModel = fileModel.trimmingCharacters(in: .whitespaces).lowercased()
+                     == model.trimmingCharacters(in: .whitespaces).lowercased()
         var entries: [String: Entry] = [:]
         for (k, v) in es {
+            if !sameModel, Self.mechanicsKeyPrefixes.contains(where: { k.hasPrefix($0) }) { continue }
             guard let b64 = v["b64"] as? String, let body = Data(base64Encoded: b64) else { continue }
             entries[k] = Entry(type: (v["type"] as? String) ?? "text/plain", body: body)
         }
-        guard !entries.isEmpty else { return (false, "", 0) }
-        let shape = RestoreShape(model: model, savedAt: Date(), entries: entries)
-        guard let d = try? JSONEncoder().encode(shape) else { return (false, "", 0) }
-        try? d.write(to: Self.restoreURL(for: model), options: .atomic)
-        return (true, (root["model"] as? String) ?? "", entries.count)
+        guard !entries.isEmpty else { return (false, fileModel, 0, false) }
+        let shape = RestoreShape(model: model, savedAt: Date(), entries: entries, explicit: true)
+        guard let d = try? JSONEncoder().encode(shape) else { return (false, fileModel, 0, false) }
+        do { try d.write(to: Self.restoreURL(for: model), options: .atomic) } catch { return (false, fileModel, 0, false) }
+        return (true, fileModel, entries.count, sameModel)
     }
 }
 
@@ -490,15 +533,17 @@ final class RestoreRunner {
     static var total = 0
     static var failures = 0
     static var failedLabels: [String] = []
+    static var error = ""          // non-empty = the run stopped early; the page shows it
     static var progressJSON: Data {
         let names = failedLabels.map { "\"\($0)\"" }.joined(separator: ",")
-        return Data("{\"phase\":\"\(phase)\",\"done\":\(done),\"total\":\(total),\"failures\":\(failures),\"failed\":[\(names)]}".utf8)
+        let err = error.replacingOccurrences(of: "\"", with: "'")
+        return Data("{\"phase\":\"\(phase)\",\"done\":\(done),\"total\":\(total),\"failures\":\(failures),\"failed\":[\(names)],\"error\":\"\(err)\"}".utf8)
     }
 
     static func run(link: BleLink) {
         guard !running else { return }
         running = true
-        phase = "running"; done = 0; failures = 0; failedLabels = []
+        phase = "running"; done = 0; failures = 0; failedLabels = []; error = ""
         let items = SessionCache.shared.restoreItems()
         total = items.count + 1   // + EEPROM save
 
@@ -520,21 +565,32 @@ final class RestoreRunner {
             Thread.sleep(forTimeInterval: 0.25)
             return (ok, body)
         }
+        // The FC's banks right now (nil = MSP_STATUS unreadable).
+        func fcBanks() -> (pid: Int, rate: Int)? { SessionCache.fcBanks(statusHex: req("/api/msp?fn=101").body) }
+        // Is a transmitter talking to the receiver? (last_pkt_ms = AGE, -1 = never)
+        func txLive() -> Bool {
+            let st = req("/api/state.json").body
+            guard let obj = try? JSONSerialization.jsonObject(with: Data(st.utf8)) as? [String: Any],
+                  let age = ((obj["rf"] as? [String: Any])?["last_pkt_ms"] as? NSNumber)?.int64Value else { return false }
+            return age >= 0 && age < 3000
+        }
 
         DispatchQueue.global(qos: .userInitiated).async {
             // Note the FC's own banks first — the walk ends on bank 3, and
             // the EEPROM save would PERSIST that as the boot profile
             // (Malcolm's re-test: everything identical except 'profile 3').
-            var origPid = 0, origRate = 0
-            let st = req("/api/msp?fn=101").body
-            if st.count >= 54,
-               let p = Int(st.dropFirst(48).prefix(2), radix: 16),
-               let r = Int(st.dropFirst(52).prefix(2), radix: 16) {
-                origPid = p; origRate = r
+            // Unreadable → nothing is written: without them we could neither
+            // put the FC back nor tell which bank a write landed in.
+            guard let orig = fcBanks() else {
+                error = "could not read the flight controller's bank (MSP 101) — nothing was written"
+                done = total; phase = "done"; running = false
+                return
             }
             var wroteGov = false
-            var curPid = origPid, curRate = origRate
+            var curPid = orig.pid, curRate = orig.rate
+            var stopped = false
             for it in items {
+                if stopped { failures += 1; failedLabels.append(it.label); done += 1; continue }
                 // TWO attempts — a single radio hiccup among ~50 sequential
                 // MSP ops must not fail the parachute (Malcolm 2026-08-06:
                 // "One was not verified I see").
@@ -562,18 +618,41 @@ final class RestoreRunner {
                         let back = req(rq).body.uppercased()
                         ok = back.hasPrefix(want) || want.hasPrefix(back) && !back.isEmpty
                     }
+                    // Banked item: the FC must STILL be on the bank we chose.
+                    // A transmitter switched on mid-restore drags the FC onto
+                    // its own switch position — the write (and its read-back!)
+                    // would then land in that bank and "verify" perfectly.
+                    if ok, let b = it.selectByte {
+                        let isRate = (b & 0x80) != 0
+                        if let now = fcBanks() {
+                            curPid = now.pid; curRate = now.rate
+                            if (isRate ? now.rate : now.pid) != (b & 0x7f) { ok = false }
+                        } else { ok = false }
+                        if !ok && txLive() {
+                            error = "the transmitter came on — restore stopped (switch it off and run the restore again)"
+                            stopped = true
+                        }
+                    }
                     if ok { itemOk = true; break }
-                    if attempt == 1 { Thread.sleep(forTimeInterval: 0.6) }
+                    if stopped || attempt == 2 { break }
+                    Thread.sleep(forTimeInterval: 0.6)
                 }
                 if !itemOk { failures += 1; failedLabels.append(it.label) }
                 if it.writeFn == 143 && itemOk { wroteGov = true }
                 done += 1
             }
-            // Put the FC back on its own banks BEFORE the EEPROM save.
-            if curPid != origPid { _ = req("/api/msp?fn=210&data=" + String(format: "%02X", origPid)) }
-            if curRate != origRate { _ = req("/api/msp?fn=210&data=" + String(format: "%02X", 0x80 | origRate)) }
-            _ = req("/api/msp?fn=250")                     // save to EEPROM
-            if wroteGov { _ = req("/api/msp?fn=68") }      // gov config needs FC reboot
+            // Put the FC back on its own banks BEFORE the EEPROM save — unless
+            // a live transmitter now owns the bank switch.
+            if !stopped {
+                if curPid != orig.pid { _ = req("/api/msp?fn=210&data=" + String(format: "%02X", orig.pid)) }
+                if curRate != orig.rate { _ = req("/api/msp?fn=210&data=" + String(format: "%02X", 0x80 | orig.rate)) }
+            }
+            // Save to EEPROM — verified: an unsaved restore evaporates at the
+            // next power-up while the page said "restored".
+            var saved = req("/api/msp?fn=250").ok
+            if !saved { Thread.sleep(forTimeInterval: 0.6); saved = req("/api/msp?fn=250").ok }
+            if !saved { failures += 1; failedLabels.append("save to flight controller memory (EEPROM) — run the restore again") }
+            if wroteGov && saved { _ = req("/api/msp?fn=68") }      // gov config needs FC reboot
             done += 1
             phase = "done"
             running = false
@@ -603,18 +682,28 @@ final class SessionPrefetcher {
     static var phase = "idle"      // idle | running | done
     static var done = 0
     static var total = 0
+    // ok = this run completed the whole Rotorflight sweep with every read
+    // answered, so the frozen restore point is fresh and complete. Anything
+    // less says why in `error` (the page shows ⚠️ and keeps the old backup).
+    static var ok = false
+    static var error = ""
     static var progressJSON: Data {
-        Data("{\"phase\":\"\(phase)\",\"done\":\(done),\"total\":\(total)}".utf8)
+        let err = error.replacingOccurrences(of: "\"", with: "'")
+        return Data("{\"phase\":\"\(phase)\",\"done\":\(done),\"total\":\(total),\"ok\":\(ok),\"error\":\"\(err)\"}".utf8)
     }
 
-    static func run(link: BleLink, fast: Bool = false) {
+    /// explicit = the pilot pressed "Back up" (or imported a file): the
+    /// restore point it freezes is sticky — later automatic sweeps at
+    /// connection never overwrite it (they still refresh the rolling cache).
+    static func run(link: BleLink, fast: Bool = false, explicit: Bool = false) {
         // Re-run on EVERY (re)connection — an OTA reboot or a walk-away cut
         // the first attempt short (Malcolm 2026-08-04: "could not view this
         // morning's data"); recording is idempotent, so repeats are free.
         guard !running else { return }
         running = true
-        phase = "running"; done = 0; total = 3
+        phase = "running"; done = 0; total = 3; ok = false; error = ""
         let pace = fast ? 0.15 : 0.4
+        var failures = 0      // MSP reads that never answered (after one retry)
 
         // Blocking GET on this background thread; tees into the recording.
         func req(_ p: String) -> Data? {
@@ -639,10 +728,23 @@ final class SessionPrefetcher {
             Thread.sleep(forTimeInterval: pace)
             return body
         }
+        // A Rotorflight read the backup depends on: one retry, then it
+        // counts as a failure — a missing answer must never let a stale
+        // value from an earlier session pass as today's backup.
+        func mspRead(_ p: String) {
+            if req(p) != nil { return }
+            Thread.sleep(forTimeInterval: 0.5)
+            if req(p) == nil { failures += 1 }
+        }
         func selectBank(_ byte: Int) {
             let hex = String(format: "%02X", byte)
             SessionCache.shared.noteBankSelect(dataHex: hex)
             _ = req("/api/msp?fn=210&data=\(hex)")
+        }
+        // The FC's banks now, from MSP_STATUS bytes 23/25 (nil = no answer).
+        func fcBanks() -> (pid: Int, rate: Int)? {
+            guard let st = req("/api/msp?fn=101"), let hex = String(data: st, encoding: .utf8) else { return nil }
+            return SessionCache.fcBanks(statusHex: hex)
         }
 
         DispatchQueue.global(qos: .utility).async {
@@ -668,7 +770,9 @@ final class SessionPrefetcher {
             // PID-side banks and 4 rate banks is its own set of values).
             // ONLY with the transmitter off: never switch a bank under a
             // live TX. The FC's current banks come from MSP_STATUS (fn=101,
-            // bytes 24/26 — verified on the RAW420 by switching and reading
+            // bytes 23/25 = current PID / rate profile; 24/26 are the COUNTS
+            // — the 2026-09-04 review found the old code reading those, so
+            // every sweep parked the FC on bank 1 instead of putting it
             // back) and are restored exactly after the sweep.
             // A foolish-user guard (Malcolm 2026-08-04): if the transmitter
             // comes ON mid-sweep, stop switching banks IMMEDIATELY and put
@@ -680,55 +784,85 @@ final class SessionPrefetcher {
                 else { return false }
                 return lastPkt >= 0 && lastPkt < 3000
             }
+            // After a bank's reads: is the FC STILL on that bank? A TX that
+            // came on between the select and the reads drags the FC onto its
+            // switch's bank — the reads would then be another bank's values
+            // filed under this one. nil (no answer) counts as not verified.
+            func stillOn(pid: Int?, rate: Int?) -> Bool {
+                guard let now = fcBanks() else { return false }
+                if let p = pid, now.pid != p { return false }
+                if let r = rate, now.rate != r { return false }
+                return true
+            }
             // Yield to the user's tuning pages: wait (up to 2 min) for a
             // 10 s gap in page MSP traffic before ANY bank switching; if the
             // user keeps reading, skip the MSP sweep entirely this run.
             var waited = 0.0
             while !pageMspQuiet() && waited < 120 { Thread.sleep(forTimeInterval: 2); waited += 2 }
             var sweepOK = false
-            if !txLive, pageMspQuiet(), let st = req("/api/msp?fn=101"),
-               let hex = String(data: st, encoding: .utf8), hex.count >= 54,
-               let origPid = Int(hex.dropFirst(48).prefix(2), radix: 16),
-               let origRate = Int(hex.dropFirst(52).prefix(2), radix: 16) {
+            if txLive {
+                error = "the transmitter is on — switch it off, then back up"
+            } else if !pageMspQuiet() {
+                error = "a Rotorflight page was busy reading — back up again in a moment"
+            } else if let orig = fcBanks() {
                 total += 7 + 4 * 6 + 4 * 3 + 2   // 142 + mixer(5) + servos + pid sweep + rate sweep + restores
-                _ = req("/api/msp?fn=142")       // governor global — bankless
+                mspRead("/api/msp?fn=142")       // governor global — bankless
                 // Mixer — Travel extents' blocks, bankless (Malcolm
                 // 2026-08-15: the backup must not forget yesterday's
                 // additions). Config + one read per input 1..4.
-                _ = req("/api/msp?fn=42")
-                for i in 1...4 { _ = req(String(format: "/api/msp?fn=174&data=%02X", i)) }
+                mspRead("/api/msp?fn=42")
+                for i in 1...4 { mspRead(String(format: "/api/msp?fn=174&data=%02X", i)) }
                 // Servos — bankless, one bulk read (chunked; RX 0.9.383+).
                 // Malcolm 2026-08-19: the backup must include the new screen.
-                _ = req("/api/msp?fn=120")
+                mspRead("/api/msp?fn=120")
                 // Every bank select makes the FC write flash — a brief servo
                 // stall (the swash twitch Malcolm noticed 2026-08-06). Skip
                 // selects that are already true.
-                var curPid = origPid, curRate = origRate
+                var curPid = orig.pid, curRate = orig.rate
                 var aborted = false
                 for b in 0...3 {
                     if txAppeared() { aborted = true; break }
                     if b != curPid { selectBank(b); curPid = b }
                     else { SessionCache.shared.noteBankSelect(dataHex: String(format: "%02X", b)) }
-                    _ = req("/api/msp?fn=112")
-                    _ = req("/api/msp?fn=94")
-                    _ = req("/api/msp?fn=148")
-                    _ = req("/api/msp?fn=146")   // Rescue (per bank)
+                    mspRead("/api/msp?fn=112")
+                    mspRead("/api/msp?fn=94")
+                    mspRead("/api/msp?fn=148")
+                    mspRead("/api/msp?fn=146")   // Rescue (per bank)
+                    if !stillOn(pid: b, rate: nil) { aborted = true; break }
                 }
                 if !aborted {
                     for r in 0...3 {
                         if txAppeared() { aborted = true; break }
                         if r != curRate { selectBank(0x80 | r); curRate = r }
                         else { SessionCache.shared.noteBankSelect(dataHex: String(format: "%02X", 0x80 | r)) }
-                        _ = req("/api/msp?fn=111")
+                        mspRead("/api/msp?fn=111")
+                        if !stillOn(pid: nil, rate: r) { aborted = true; break }
                     }
                 }
-                if curPid != origPid { selectBank(origPid) }          // put the FC back
-                if curRate != origRate { selectBank(0x80 | origRate) } // exactly — always
-                sweepOK = !aborted
+                // Put the FC back exactly — always — unless a live TX now
+                // owns the bank switch (our select would fight it).
+                if !txAppeared() {
+                    if curPid != orig.pid { selectBank(orig.pid) }
+                    if curRate != orig.rate { selectBank(0x80 | orig.rate) }
+                }
+                if aborted {
+                    error = "the transmitter came on (or the flight controller changed bank) mid-backup — switch it off and back up again"
+                } else if failures > 0 {
+                    error = "\(failures) read\(failures == 1 ? "" : "s") got no answer — back up again"
+                }
+                sweepOK = !aborted && failures == 0
+            } else {
+                error = "could not read the flight controller's bank (MSP 101) — is it powered and connected?"
             }
             // Full sweep completed → freeze the restore point (the rolling
             // cache keeps updating; this copy never follows the edits).
-            if sweepOK { SessionCache.shared.snapshotRestorePoint() }
+            // A pilot's own backup (explicit) is sticky: the automatic sweep
+            // at connection must never replace it with today's values.
+            if sweepOK {
+                let froze = SessionCache.shared.snapshotRestorePoint(explicit: explicit)
+                ok = froze || !explicit
+                if !ok { error = "the backup file could not be written on the phone" }
+            }
             total += flightPaths.count
             for p in flightPaths { _ = req(p) }
             running = false

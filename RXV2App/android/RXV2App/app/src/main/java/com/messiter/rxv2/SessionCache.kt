@@ -265,17 +265,44 @@ object SessionCache {
         "/api/msp?fn=148&bank=", "/api/msp?fn=146&bank=", "/api/msp?fn=111&bank=",
         "/api/msp?fn=174&data=")   // mixer inputs (Travel extents)
 
+    /** The mechanical items — servo centres/travel (fn 120) and the mixer's
+     *  limits, trims and input travel (42, 174). A backup from ANOTHER model
+     *  leaves these out on import: they belong to that airframe's linkage. */
+    val mechanicsKeyPrefixes = listOf("/api/msp?fn=120", "/api/msp?fn=42", "/api/msp?fn=174&data=")
+
+    /** The FC's current banks from MSP_STATUS (fn=101): byte 23 = PID
+     *  profile, byte 25 = rate profile; bytes 24/26 are the profile COUNTS
+     *  (Rotorflight 4.6 — checked against the Goblin's reply, byte 24 = 06).
+     *  The earlier code read 24/26, so every "put the FC back" selected
+     *  bank 6 → RF clamps that to bank 1. null when the reply makes no sense. */
+    fun fcBanks(statusHex: String): Pair<Int, Int>? {
+        val h = statusHex.uppercase()
+        if (h.length < 54) return null
+        fun byte(i: Int) = h.substring(2 * i, 2 * i + 2).toIntOrNull(16)
+        val p = byte(23) ?: return null; val pc = byte(24) ?: return null
+        val r = byte(25) ?: return null; val rc = byte(26) ?: return null
+        if (pc !in 1..8 || rc !in 1..8 || p >= pc || r >= rc) return null
+        return Pair(p, r)
+    }
+
+    /** Freeze the tuning reads currently in the rolling cache. explicit = the
+     *  pilot's own "Back up" (or an import): STICKY — the automatic freeze at
+     *  connection never replaces it (review 2026-09-04: it did, so a deliberate
+     *  backup lived only until the next battery). Returns false when nothing
+     *  was written. */
     @Synchronized
-    fun snapshotRestorePoint() {
-        val f = restoreFileFor(modelName) ?: return
+    fun snapshotRestorePoint(explicit: Boolean = false): Boolean {
+        val f = restoreFileFor(modelName) ?: return false
+        if (!explicit && restorePointIsExplicit()) return false
         val keep = entries.filterKeys { k ->
             restoreKeyPrefixes.any { k.startsWith(it) } || k == "/api/msp?fn=142" || k == "/api/msp?fn=42" || k == "/api/msp?fn=120" || k.startsWith("/app/declared/")
         }
-        if (keep.isEmpty()) return
-        runCatching {
+        if (keep.isEmpty()) return false
+        return runCatching {
             val root = JSONObject()
             root.put("model", modelName)
             root.put("savedAtMs", System.currentTimeMillis())
+            root.put("explicit", explicit)
             val es = JSONObject()
             for ((k, v) in keep) {
                 val e = JSONObject()
@@ -285,13 +312,21 @@ object SessionCache {
             }
             root.put("entries", es)
             f.writeText(root.toString())
-        }
+            true
+        }.getOrDefault(false)
     }
 
     fun restorePointAtMs(): Long {
         val f = restoreFileFor(modelName) ?: return 0
         if (!f.exists()) return 0
         return runCatching { JSONObject(f.readText()).optLong("savedAtMs", 0) }.getOrDefault(0)
+    }
+
+    /** Was the current restore point a deliberate backup (or an import)? */
+    fun restorePointIsExplicit(): Boolean {
+        val f = restoreFileFor(modelName) ?: return false
+        if (!f.exists()) return false
+        return runCatching { JSONObject(f.readText()).optBoolean("explicit", false) }.getOrDefault(false)
     }
 
     @Synchronized
@@ -406,18 +441,35 @@ object SessionCache {
         }.getOrNull()
     }
 
-    /** Adopt a backup file as the restore point for the CONNECTED model. */
-    fun importRestore(json: String, forModel: String): Triple<Boolean, String, Int> {
+    /** Result of importRestore: mechanics = servo/mixer items were kept (same-named model). */
+    data class ImportResult(val ok: Boolean, val fileModel: String, val count: Int, val mechanics: Boolean)
+
+    /** Adopt a backup file as the restore point for the CONNECTED model. A file
+     *  from ANOTHER model (different name) comes without its mechanics — servo
+     *  centres/travel and mixer limits stay this airframe's own, as the Import
+     *  dialog promises. The result is sticky (explicit), so a reconnection's
+     *  automatic freeze cannot replace it before the pilot restores. */
+    fun importRestore(json: String, forModel: String): ImportResult {
         return runCatching {
             val root = JSONObject(json)
-            if (root.optString("format") != "rxv2-backup-1") return Triple(false, "", 0)
+            if (root.optString("format") != "rxv2-backup-1") return ImportResult(false, "", 0, false)
             val es = root.getJSONObject("entries")
-            if (es.length() == 0) return Triple(false, "", 0)
-            val f = restoreFileFor(forModel) ?: return Triple(false, "", 0)
-            val out = JSONObject().put("model", forModel).put("savedAtMs", System.currentTimeMillis()).put("entries", es)
+            val fileModel = root.optString("model", "")
+            val sameModel = fileModel.trim().lowercase() == forModel.trim().lowercase()
+            val keep = JSONObject()
+            es.keys().forEach { k ->
+                if (!sameModel && mechanicsKeyPrefixes.any { k.startsWith(it) }) return@forEach
+                val v = es.optJSONObject(k) ?: return@forEach
+                if (!v.has("b64")) return@forEach
+                keep.put(k, v)
+            }
+            if (keep.length() == 0) return ImportResult(false, fileModel, 0, false)
+            val f = restoreFileFor(forModel) ?: return ImportResult(false, fileModel, 0, false)
+            val out = JSONObject().put("model", forModel).put("savedAtMs", System.currentTimeMillis())
+                .put("explicit", true).put("entries", keep)
             f.writeText(out.toString())
-            Triple(true, root.optString("model", ""), es.length())
-        }.getOrDefault(Triple(false, "", 0))
+            ImportResult(true, fileModel, keep.length(), sameModel)
+        }.getOrDefault(ImportResult(false, "", 0, false))
     }
 
     private fun load() {
