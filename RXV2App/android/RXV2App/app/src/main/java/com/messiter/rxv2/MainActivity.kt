@@ -717,7 +717,10 @@ class MainActivity : AppCompatActivity() {
     private fun sendPendingEdits(edits: List<SessionCache.PendingEdit>) {
         // Solid progress dialog (Malcolm 2026-08-04: "I did not know when
         // the upload had finished") — bar per radio step, then a done tick.
+        val banked = edits.any { it.bank != null }
+        // +2 = the two put-back selects (worst case); the bar just ends early.
         val steps = edits.fold(0) { a, e -> a + if (e.bank != null) 2 else 1 } +
+                    (if (banked) 2 else 0) +
                     1 + (if (edits.any { it.fn == 143 }) 1 else 0)
         val lab = android.widget.TextView(this).apply {
             text = "Sending edits… 0 / $steps"
@@ -771,17 +774,51 @@ class MainActivity : AppCompatActivity() {
                        "The edits are kept; try again with the transmitter off.", 6000)
                 return@Thread
             }
+            // The FC's own banks (MSP_STATUS bytes 23/25) BEFORE any select:
+            // the FC goes back on them before the save, because the EEPROM
+            // save persists the current bank and Rotorflight re-applies the
+            // pilot's switch only when it MOVES (rc_adjustments compares the
+            // channel value with its own last-applied value) — a model saved
+            // on the last edit's bank would fly on that bank with the switch
+            // still saying another. Unreadable → nothing is sent.
+            var orig: Pair<Int, Int>? = null
+            if (banked) {
+                lastPageMspMs = System.currentTimeMillis()
+                orig = bleSyncQuiet("/api/msp?fn=101")?.let { SessionCache.fcBanks(String(it)) }
+                if (orig == null) {
+                    finish("⚠️ Could not read which bank the flight controller is on — " +
+                           "nothing was sent.\nThe edits are kept; check the model is " +
+                           "powered and try again.", 6000)
+                    return@Thread
+                }
+                Thread.sleep(300)
+            }
+            var curPid = orig?.first
+            var curRate = orig?.second
+            fun select(b: Int): Boolean {
+                lastPageMspMs = System.currentTimeMillis()
+                val ok = bleSyncQuiet("/api/msp?fn=210&data=%02X".format(b)) != null
+                Thread.sleep(300)
+                return ok
+            }
             for (e in edits) {
                 // Land each edit in the bank it was made in (fn=210 select
                 // first, 0x80|idx = rate bank); gov global goes bankless.
                 // Stamp so the background sweep's bank selects yield to ours.
                 lastPageMspMs = System.currentTimeMillis()
-                e.bank?.let {
-                    step(bleSyncQuiet("/api/msp?fn=210&data=%02X".format(it)) != null)
-                    Thread.sleep(300)
+                e.bank?.let { b ->
+                    if ((b and 0x80) != 0) {
+                        if (curRate != (b and 0x7F)) { step(select(b)); curRate = b and 0x7F } else step(true)
+                    } else {
+                        if (curPid != b) { step(select(b)); curPid = b } else step(true)
+                    }
                 }
                 step(bleSyncQuiet("/api/msp?fn=${e.fn}&data=${e.hex}") != null)
                 Thread.sleep(400)
+            }
+            orig?.let { o ->
+                if (curPid != o.first) step(select(o.first))
+                if (curRate != o.second) step(select(0x80 or o.second))
             }
             step(bleSyncQuiet("/api/msp?fn=250") != null)      // save to EEPROM
             if (edits.any { it.fn == 143 }) {

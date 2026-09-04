@@ -212,20 +212,38 @@ extension RootView {
 
     func sendPendingEdits() {
         let edits = pendingEdits
+        let banked = edits.contains(where: { $0.bank != nil })
+        func select(_ b: Int) -> String { "/api/msp?fn=210&data=" + String(format: "%02X", b) }
         // Each edit lands in the bank it was made in: select first (fn=210,
         // 0x80|idx for rates), then write. Bankless edits (gov global) go bare.
+        // `orig` = the FC's own banks (MSP 101) noted before the first select:
+        // the FC is put back on them BEFORE the save, because the EEPROM save
+        // persists the current bank and Rotorflight re-applies the pilot's
+        // switch only when it MOVES — a model saved on the last edit's bank
+        // would fly on that bank with the switch still saying another.
         var queue: [String] = []
-        for e in edits {
-            if let b = e.bank {
-                queue.append("/api/msp?fn=210&data=" + String(format: "%02X", b))
+        func buildQueue(orig: (pid: Int, rate: Int)?) {
+            var curPid = orig?.pid, curRate = orig?.rate
+            for e in edits {
+                if let b = e.bank {
+                    if b & 0x80 != 0 {
+                        if curRate != (b & 0x7F) { queue.append(select(b)); curRate = b & 0x7F }
+                    } else if curPid != b {
+                        queue.append(select(b)); curPid = b
+                    }
+                }
+                queue.append("/api/msp?fn=\(e.fn)&data=\(e.hex)")
             }
-            queue.append("/api/msp?fn=\(e.fn)&data=\(e.hex)")
+            if let o = orig {
+                if curPid != o.pid { queue.append(select(o.pid)) }
+                if curRate != o.rate { queue.append(select(0x80 | o.rate)) }
+            }
+            queue.append("/api/msp?fn=250")                       // save to EEPROM
+            if edits.contains(where: { $0.fn == 143 }) {
+                queue.append("/api/msp?fn=68")                    // gov config needs an FC reboot
+            }
         }
-        queue.append("/api/msp?fn=250")                       // save to EEPROM
-        if edits.contains(where: { $0.fn == 143 }) {
-            queue.append("/api/msp?fn=68")                    // gov config needs an FC reboot
-        }
-        sendTotal = queue.count
+        sendTotal = edits.count + 1
         sendDone = 0
         sendResult = nil
         sendShowing = true
@@ -278,8 +296,33 @@ extension RootView {
                     finish("⚠️ The transmitter came on — nothing was sent. The "
                          + "edits are kept; try again with the transmitter off.",
                            keepEdits: true)
-                } else {
+                } else if !banked {
+                    buildQueue(orig: nil)
+                    sendTotal = queue.count
                     next()
+                } else {
+                    // Note the FC's own banks before any select (see buildQueue).
+                    // Unreadable → nothing is sent: we could neither put the FC
+                    // back nor be sure which bank a write landed in.
+                    SessionPrefetcher.lastPageMspMs = Date().timeIntervalSince1970 * 1000
+                    link.request(method: "GET", path: "/api/msp?fn=101", headers: [:], body: nil) { r in
+                        var orig: (pid: Int, rate: Int)? = nil
+                        if case .success(let resp) = r, resp.code == 0 || resp.code == 200,
+                           let hex = String(data: resp.body, encoding: .utf8) {
+                            orig = SessionCache.fcBanks(statusHex: hex)
+                        }
+                        DispatchQueue.main.async {
+                            guard let o = orig else {
+                                finish("⚠️ Could not read which bank the flight controller "
+                                     + "is on — nothing was sent. The edits are kept; check "
+                                     + "the model is powered and try again.", keepEdits: true)
+                                return
+                            }
+                            buildQueue(orig: o)
+                            sendTotal = queue.count
+                            next()
+                        }
+                    }
                 }
             }
         }
