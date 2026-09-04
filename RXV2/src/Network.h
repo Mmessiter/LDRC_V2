@@ -534,36 +534,48 @@ inline void netStep() {
             }
             // Auto fly mode DETRIGGER (Malcolm 2026-08-23): disarming brings
             // the radios back — no need to switch the transmitter off. Only
-            // with auto fly mode on and an arming channel set: disarmed for
-            // 5 s straight with the link still live = safely on the ground
-            // (the bring-up stall is harmless there). Re-arming triggers the
-            // 3 s auto teardown again — clean per-flight cycles.
+            // with auto fly mode on and an arming channel set, link still live.
+            // Re-arming triggers the 3 s auto teardown again — clean
+            // per-flight cycles.
+            //  - Bluetooth comes back 0.5 s after the disarm (Malcolm
+            //    2026-09-04: "that ten-second pause isn't needed and just
+            //    costs time" — field PID tuning is arm / fly / land / edit
+            //    cycles). Restarting the advertising is a few milliseconds
+            //    with no loop stall, so there is nothing to wait for; the
+            //    0.5 s only filters a switch bounce.
+            //  - WiFi (home only) keeps its 5 s: startWifiStation() stalls
+            //    the loop, so "disarmed 5 s straight = safely on the ground"
+            //    still applies to it. Silent once up (used to log +
+            //    flash-persist every 5 s at the field, where WiFi never
+            //    comes back).
             {
                 static uint32_t disarmSinceMs = 0;
+                static uint32_t wifiCheckMs   = 0;
                 const bool armLink = rx.lastMillis &&
                                      (uint32_t)(millis() - rx.lastMillis) < 1000;
                 const bool disarmedNow = autoFlyActive() &&
                     armingChannel >= 1 && armingChannel <= 16 && armLink &&
                     channelMicros[armingChannel - 1] < 1500;
                 if (disarmedNow) {
-                    if (!disarmSinceMs) disarmSinceMs = millis();
-                    else if ((uint32_t)(millis() - disarmSinceMs) > 5000) {
-                        // Re-checked every 5 s while disarmed, but SILENT once
-                        // the radios are up (used to log + flash-persist every
-                        // 5 s at the field, where WiFi never comes back).
-                        disarmSinceMs = millis();
-                        const bool bleDown    = !bleAdvertising() && !bleHasClient();
-                        // WiFi only where home WiFi is PROVEN this boot. A field
-                        // landing revives Bluetooth alone: the STA hunt swamped
-                        // the phone's link (Goblin 2026-09-03, "nothing came").
-                        const bool wifiWanted = !staGaveUp && staConnectedThisBoot;
-                        if (bleDown || wifiWanted) {
-                            events.add(wifiWanted ? "AUTO fly mode: disarmed — radios back on"
-                                                  : "AUTO fly mode: disarmed — Bluetooth back (field: no WiFi hunt)");
-                            eventsPersist();
-                            if (bleDown)    bleStart();
-                            if (wifiWanted) startWifiStation();
-                        }
+                    if (!disarmSinceMs) { disarmSinceMs = millis(); wifiCheckMs = disarmSinceMs; }
+                    const uint32_t disarmedFor = millis() - disarmSinceMs;
+                    // WiFi only where home WiFi is PROVEN this boot. A field
+                    // landing revives Bluetooth alone: the STA hunt swamped
+                    // the phone's link (Goblin 2026-09-03, "nothing came").
+                    const bool wifiWanted = !staGaveUp && staConnectedThisBoot;
+                    const bool bleDown    = !bleAdvertising() && !bleHasClient();
+                    if (bleDown && disarmedFor > 500) {
+                        events.add(wifiWanted ? "AUTO fly mode: disarmed — Bluetooth back (WiFi follows in 5 s)"
+                                              : "AUTO fly mode: disarmed — Bluetooth back (field: no WiFi hunt)");
+                        eventsPersist();
+                        bleStart();
+                    }
+                    if (wifiWanted && disarmedFor > 5000 &&
+                        (uint32_t)(millis() - wifiCheckMs) > 5000) {
+                        wifiCheckMs = millis();
+                        events.add("AUTO fly mode: disarmed — WiFi back on");
+                        eventsPersist();
+                        startWifiStation();      // leaves NET_NO_WIFI: runs once
                     }
                 } else disarmSinceMs = 0;
             }

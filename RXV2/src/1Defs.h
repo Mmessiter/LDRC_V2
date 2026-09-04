@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.556-telemetry-guard";
+constexpr const char* FW_VERSION = "RXV2-0.9.557-disarm-ble-fast";
 
 //*********************************************************************
 //  Auto-update manifest URLs
