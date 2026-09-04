@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.566-restore-names",
+      "url": "https://messiter.com/rxv2/release/v0.9.566/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.566/littlefs.bin",
+      "fs_md5": "e74a476d8c9f7404e91dc67c0ce661eb",
+      "notes": "Restore from phone now names what it wrote (up to four items, then a count) and the Back up / Restore result stays on screen until the next run instead of vanishing after a few seconds. Needs app 4.18 (iPhone) / 4.10 (Android) for the names."
+    },
+    {
       "name": "RXV2-0.9.565-restore-counts",
       "url": "https://messiter.com/rxv2/release/v0.9.565/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.565/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.553/littlefs.bin",
       "fs_md5": "02ed682a6e36bddcd90e2b9b672594f6",
       "notes": "New 'Copy a bank' page (Rotorflight hub 4th door + A la carte): PIDs, PID+, rescue, rates and governor gains from one bank to another in ONE tap, saved, read back and verified byte for byte; each bank keeps its own head speed unless you tick 'Head speed too'; refused while armed; flight controller returned to the bank it was on. (Per-page 'Copy to Profile (Bank)' at the bottom of the PIDs / PID+ / Rates / Governor pages is unchanged.) Pages only - firmware behaviour unchanged."
-    },
-    {
-      "name": "RXV2-0.9.552-quiet-landing",
-      "url": "https://messiter.com/rxv2/release/v0.9.552/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.552/littlefs.bin",
-      "fs_md5": "c67c81b16d36aa0bd329fe4f466a3a7b",
-      "notes": "Quieter event log: no false 'FC lost' after every flight (the FC probe pauses in the air; it now gets a fresh 10 s after landing) and one 'Swap unbilled' breadcrumb per 5 s instead of seven after every TX-off. Firmware only - pages unchanged."
     }
   ]
 }

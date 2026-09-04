@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.565-restore-counts";
+constexpr const char* FW_VERSION = "RXV2-0.9.566-restore-names";
 
 //*********************************************************************
 //  Auto-update manifest URLs
