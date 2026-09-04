@@ -78,6 +78,9 @@ inline volatile bool     mspWaitRespError = false;   // FC answered "MSP error" 
 // yet). Stamped by mspParseResponse; mspRequestAndWait pushes its deadline
 // out on every stamp — see the note there (0.9.560).
 inline volatile uint32_t mspWaitChunkMs = 0;
+// millis() of the last reply a synchronous (page/app) request received —
+// holds the heartbeat probe off while a client is reading; see mspFcPoll.
+inline volatile uint32_t mspLastForegroundMs = 0;
 inline bool              escCatchArmed = false;      // Scorpion boot catcher (see escCatchTick)
 inline bool              escCatchGot   = false;
 inline const char*       escCatchResult = "none";    // how the last catch ended: captured | nothing | tx | cancelled | none
@@ -513,6 +516,7 @@ inline bool mspRequestAndWait(uint8_t function, const uint8_t* req, uint8_t reqL
     bool ok = mspWaitRespReady;
     mspWaitFunction = 0xFF;
     if (ok) {
+        mspLastForegroundMs = millis();
         if (outLen) *outLen = mspWaitRespLen;
         if (outBuf && mspWaitRespLen > 0) memcpy(outBuf, mspWaitRespBuf, mspWaitRespLen);
         // Evidence for the log: a reply that only made it thanks to the
@@ -539,6 +543,7 @@ inline bool mspRequestAndWait(uint8_t function, const uint8_t* req, uint8_t reqL
 constexpr uint32_t PROBE_INTERVAL_MS    = 1000;   // while seeking
 constexpr uint32_t PROBE_HEARTBEAT_MS   = 5000;   // once detected
 constexpr uint32_t PROBE_TIMEOUT_MS     = 10000;  // declare FC lost after this
+constexpr uint32_t PROBE_HOLDOFF_MS     = 1200;   // no probe this soon after a page/app reply
 
 inline void mspFcPoll() {
     if (!fcTelemetryEnabled)
@@ -555,6 +560,18 @@ inline void mspFcPoll() {
     // a competing probe causes the FC to interleave two responses, often
     // making the sync request time out and the page see "Read failed".
     if (mspWaitFunction != 0xFF) return;
+    // ...nor just AFTER one (0.9.562). Rotorflight only looks at its MSP
+    // request buffer when its telemetry rate bucket is back to zero — up to
+    // 0.8 s after the last reply chunk — and if it finds TWO requests there
+    // it answers the first and throws the second away (telemetry/crsf.c
+    // handleCrsfMspFrameBuffer: mspRequestDataLength = 0 once a reply is
+    // queued). A heartbeat probe fired in the gap between two page or app
+    // reads always landed first, so the read behind it simply vanished:
+    // "flight controller did not respond" on 1 in 14 back-to-back fn-120
+    // reads on the Goblin (2026-09-04), and the "spurious" 504s on every
+    // multi-read Rotorflight page before that. The reads prove the FC is
+    // alive, so a probe this soon after a reply has nothing to learn.
+    if (mspLastForegroundMs != 0 && (uint32_t)(millis() - mspLastForegroundMs) < PROBE_HOLDOFF_MS) return;
     // Don't probe the FC while a live RC link is streaming frames to it. Our
     // MSP-over-CRSF request is a second MSP master on the FC's wire; if a
     // Configurator is also polling the FC (its Receiver tab reads RC over MSP),
