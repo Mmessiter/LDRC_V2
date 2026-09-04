@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.559-full-backup";
+constexpr const char* FW_VERSION = "RXV2-0.9.560-slow-fc-replies";
 
 //*********************************************************************
 //  Auto-update manifest URLs

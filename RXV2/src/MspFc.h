@@ -74,6 +74,10 @@ inline uint8_t           mspWaitRespBuf[640] = {0};   // jumbo-capable (MSP_ADJU
 inline volatile uint16_t mspWaitRespLen = 0;
 inline volatile bool     mspWaitRespReady = false;
 inline volatile bool     mspWaitRespError = false;   // FC answered "MSP error" for the awaited function
+// millis() of the last CRSF chunk accepted for the awaited reply (0 = none
+// yet). Stamped by mspParseResponse; mspRequestAndWait pushes its deadline
+// out on every stamp — see the note there (0.9.560).
+inline volatile uint32_t mspWaitChunkMs = 0;
 inline bool              escCatchArmed = false;      // Scorpion boot catcher (see escCatchTick)
 inline bool              escCatchGot   = false;
 inline const char*       escCatchResult = "none";    // how the last catch ended: captured | nothing | tx | cancelled | none
@@ -233,6 +237,7 @@ inline void mspParseResponse(const uint8_t* body, uint8_t bodyLen) {
         reSeq      = seq;
         reGot      = (uint16_t)dataLen;
         memcpy(reBuf, data, dataLen);
+        if (func == mspWaitFunction) mspWaitChunkMs = millis();
         return;
     }
 
@@ -244,6 +249,7 @@ inline void mspParseResponse(const uint8_t* body, uint8_t bodyLen) {
     if (reGot + take > sizeof(reBuf)) { reActive = false; return; }
     memcpy(&reBuf[reGot], msp, take);
     reGot += take;
+    if (reFunc == mspWaitFunction) mspWaitChunkMs = millis();
     if (reGot >= reExpected) {
         reActive = false;
         mspDeliverResponse(reFunc, reBuf, reExpected);
@@ -448,6 +454,23 @@ inline void govThrottleWatchTick() {
 // timeoutMs while pumping Serial1 → CRSF parser → mspParseResponse, which
 // will set mspWaitRespReady=true if the matching function code comes back.
 
+// Big replies dribble (0.9.560). Rotorflight 4.6 meters ALL its CRSF
+// telemetry — MSP chunks included — through a token bucket sized for an
+// ELRS-style link: crsf_telemetry_link_rate / link_ratio (default 250/8)
+// = 31 five-byte slots a second. A 64-byte MSP chunk costs 14 slots, so
+// chunk N+1 follows chunk N only ~0.45-0.8 s later. A 224-byte reply
+// (mixer rules, 4 chunks) takes ~2 s and the 588-byte adjustment table
+// (11 chunks) ~6 s — both used to die at this 1.2 s wait and were blamed
+// on "the FC's output buffer" (0.9.457) and then "1 read got no answer"
+// (the Goblin's first phone backup, 2026-09-04). So: `timeoutMs` is the
+// wait for the FIRST chunk; every accepted chunk of OUR reply earns
+// another MSP_CHUNK_GRACE_MS, under an overall cap. The FC is answering —
+// just slowly — and abandoning a reply midway is worse than waiting: the
+// FC keeps sending the rest anyway and the NEXT request's answer queues
+// behind it (that was the "spurious" 504 on the read after a failed one).
+constexpr uint32_t MSP_CHUNK_GRACE_MS = 1500;    // worst measured gap ~0.8 s (bucket at -25)
+constexpr uint32_t MSP_WAIT_CAP_MS    = 12000;   // 588 B = 11 chunks; never longer than this
+
 inline bool mspRequestAndWait(uint8_t function, const uint8_t* req, uint8_t reqLen,
                               uint8_t* outBuf, uint16_t* outLen, uint32_t timeoutMs) {
     extern void protocolRx();   // defined in Telemetry.h
@@ -457,8 +480,11 @@ inline bool mspRequestAndWait(uint8_t function, const uint8_t* req, uint8_t reqL
     mspWaitRespReady = false;
     mspWaitRespError = false;
     mspWaitRespLen   = 0;
+    mspWaitChunkMs   = 0;
     mspSendRequest(function, req, reqLen);
-    uint32_t deadline = millis() + timeoutMs;
+    const uint32_t start = millis();
+    uint32_t deadline  = start + timeoutMs;
+    uint32_t lastChunk = 0;
     while (!mspWaitRespReady && !mspWaitRespError && (int32_t)(deadline - millis()) > 0) {
         // Keep FLYING while we wait (Malcolm 2026-09-01: an erroring ESC-
         // programming poll made the swash twitch every ~2 s — this wait
@@ -468,12 +494,29 @@ inline bool mspRequestAndWait(uint8_t function, const uint8_t* req, uint8_t reqL
         sbusTick();
         protocolRx();
         delay(1);
+        const uint32_t chunkMs = mspWaitChunkMs;
+        if (chunkMs && chunkMs != lastChunk) {           // a chunk of OUR reply landed
+            lastChunk = chunkMs;
+            uint32_t ext = chunkMs + MSP_CHUNK_GRACE_MS;
+            const uint32_t cap = start + MSP_WAIT_CAP_MS;
+            if ((int32_t)(ext - cap) > 0) ext = cap;
+            if ((int32_t)(ext - deadline) > 0) deadline = ext;
+        }
     }
     bool ok = mspWaitRespReady;
     mspWaitFunction = 0xFF;
     if (ok) {
         if (outLen) *outLen = mspWaitRespLen;
         if (outBuf && mspWaitRespLen > 0) memcpy(outBuf, mspWaitRespBuf, mspWaitRespLen);
+        // Evidence for the log: a reply that only made it thanks to the
+        // per-chunk grace (it would have been a 504 before 0.9.560).
+        const uint32_t took = millis() - start;
+        if (took > timeoutMs) {
+            char b[EventLog::MSG_LEN];
+            snprintf(b, sizeof(b), "MSP %u: %u-byte reply took %lu ms (FC telemetry rate limit, chunked)",
+                     (unsigned)function, (unsigned)mspWaitRespLen, (unsigned long)took);
+            events.add(b);
+        }
     }
     return ok;
 }

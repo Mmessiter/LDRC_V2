@@ -75,7 +75,8 @@ class Rxv2Ble(private val context: Context) {
 
     // ── Single-request pipeline ────────────────────────────────────
     private class Pending(val payload: ByteArray, val cb: (kotlin.Result<Response>) -> Unit,
-                          val rawChunks: List<ByteArray>? = null)
+                          val rawChunks: List<ByteArray>? = null,
+                          val firstByteMs: Long = 12000)
     private val queue = ArrayDeque<Pending>()
     private var inFlight: Pending? = null
     private var rxHeader = ByteArrayOut()
@@ -215,7 +216,12 @@ class Rxv2Ble(private val context: Context) {
                 cb(kotlin.Result.failure(Exception("Not connected")))
                 return@post
             }
-            queue.addLast(Pending(payload, cb))
+            // A flight-controller read through /api/msp can hold the receiver
+            // longer than a page: Rotorflight meters big replies out at
+            // ~0.5-0.8 s per 58-byte chunk (588-byte adjustment table ~6 s)
+            // and the receiver waits up to 12 s for them (fw 0.9.560).
+            val window = if (path.startsWith("/api/msp")) 14000L else 12000L
+            queue.addLast(Pending(payload, cb, firstByteMs = window))
             pump()
         }
     }
@@ -287,7 +293,7 @@ class Rxv2Ble(private val context: Context) {
         }
         // Generous first-byte window: /api/firmware/check blocks the receiver
         // for up to ~8 s of dead air while it fetches manifests over HTTPS.
-        armTimeout(12000)
+        armTimeout(next.firstByteMs)
     }
 
     private fun writeChar(g: BluetoothGatt, c: BluetoothGattCharacteristic,
