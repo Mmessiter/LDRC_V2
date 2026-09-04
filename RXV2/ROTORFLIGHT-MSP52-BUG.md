@@ -17,20 +17,31 @@ it into flash and the FC boots mute.
 
 ## Cause
 
-`telemetry/msp_shared.c`:
+All references are to tag `release/4.6.0` (checked 2026-09-04):
 
-```c
-STATIC_UNIT_TESTED uint8_t responseBuffer[MSP_TLM_OUTBUF_SIZE];   // = MSP_PORT_OUTBUF_SIZE_MIN = 320
-```
+- `src/main/telemetry/msp_shared.c:125` — `STATIC_UNIT_TESTED uint8_t responseBuffer[MSP_TLM_OUTBUF_SIZE];`
+- `src/main/telemetry/msp_shared.h:26` — `#define MSP_TLM_OUTBUF_SIZE MSP_PORT_OUTBUF_SIZE_MIN`
+- `src/main/msp/msp_serial.h:71` — `#define MSP_PORT_OUTBUF_SIZE_MIN 320`
+- `src/main/msp/msp.c:1492-1508` — `case MSP_ADJUSTMENT_RANGES:` loops `MAX_ADJUSTMENT_RANGE_COUNT` times
+  writing 9 × U8 + 2 × U16 + U8 = 14 bytes per entry
+- `src/main/pg/adjustments.h:41` — `#define MAX_ADJUSTMENT_RANGE_COUNT 42` → 588 bytes
+- `src/main/common/streambuf.c:34-46` — `#define SBUFPUSH(dst, val) ((*(dst)->ptr++ = (val)))`;
+  `sbufWriteU8/U16` push without looking at `dst->end`
 
-`MSP_ADJUSTMENT_RANGES` (52) writes `MAX_ADJUSTMENT_RANGE_COUNT (42) x 14 = 588 bytes` with
-`sbufWriteU8/U16`, which never check `dst->end`. The 268 bytes past `responseBuffer` land on
-whatever the linker placed after it — `telemetryConfig` is in that range, and the tail of the
-adjustment table is zeros (unused slots), so the telemetry setup becomes all zero.
+`processMspPacket` (`msp_shared.c:149-153`) sets `responsePacket.buf.end = ARRAYEND(responseBuffer)`
+and calls `mspFcProcessCommand`; the reply builder never consults `end`, so the 268 bytes past
+`responseBuffer` land on whatever the linker placed after it — `telemetryConfig` is in that range,
+and the tail of the adjustment table is zeros (unused slots), so the telemetry setup becomes all zero.
 
-The same reply goes out fine over USB (`MSP_PORT_OUTBUF_SIZE` = 4112 there); only the
-telemetry/CRSF path has the small buffer. `serializeDataflashReadReply` respects the buffer end;
-the other reply builders do not.
+The same reply goes out fine over USB (`MSP_PORT_OUTBUF_SIZE` = dataflash buffer + info, 4112
+bytes, `msp_serial.h:76`); only the telemetry/CRSF path has the 320-byte buffer, which was sized
+for MSP_BOXNAMES (`msp_serial.h:78` comment). `serializeDataflashReadReply` respects the buffer
+end; the other reply builders do not. Any other reply over 320 bytes would do the same — on this
+model every other function the receiver or its apps use answers in ≤ 258 bytes.
+
+The path is the generic telemetry MSP path (`msp_shared.c`), shared by every CRSF/ELRS handset
+script that talks MSP over the link — any such script requesting `MSP_ADJUSTMENT_RANGES` should
+see the same overwrite (not verified here; this receiver was the requester).
 
 ## Reproduction (bench, blades off)
 
