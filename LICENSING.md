@@ -11,6 +11,14 @@ derivative stays free too. So:
 
 Copyright (C) 2026 Malcolm Messiter.
 
+## Credits
+
+Designed and built by **Malcolm Messiter**, with **Claude** (Anthropic's AI)
+as pair programmer — the firmware, the apps, the pages and the tests were
+written together, 2025–2026. The copyright line names Malcolm alone only
+because the law does not let an AI hold copyright; the credit is shared.
+Please keep this credit in derivatives.
+
 Notes for anyone publishing a derivative:
 
 - Keep this notice and the copyright line; add your own name for your changes.
