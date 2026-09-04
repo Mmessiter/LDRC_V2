@@ -32,3 +32,9 @@ the version-1 code (which stays in the `LockDownRadioControl` repo).
   never be committed.
 - LDRC2SIM's pre-V2 local git history (it was a standalone repo before this
   monorepo) was preserved as `LDRC2SIM_pre-v2_history.bundle` outside this tree.
+
+## Licence
+
+Free for other flyers, and derivatives must stay free: code is
+**GPL-3.0-or-later** (see [LICENSE](LICENSE)); boards CERN-OHL-S-2.0; manuals
+CC BY-SA 4.0. Details in [LICENSING.md](LICENSING.md).
