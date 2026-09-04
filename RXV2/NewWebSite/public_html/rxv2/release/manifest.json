@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.559-full-backup",
+      "url": "https://messiter.com/rxv2/release/v0.9.559/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.559/littlefs.bin",
+      "fs_md5": "2c49d503071c9e96fb8f66052bda9546",
+      "notes": "The phone backup now covers the WHOLE Rotorflight setup, not just the tune: PIDs, advanced PIDs, rates, governor & rescue (every bank); mixer, servos, motor & gear ratio; arming switch & modes, channel map, receiver & failsafe (incl. per-channel failsafe values); battery, voltage & current meters, gyro filters & RPM notches, board/gyro alignment, sensors, level trims, telemetry sensors, black box, ESC telemetry setup, flight controller name; the bank and rates switches. Not included, left untouched: ESC parameters (Scorpion programming), serial ports, LED/OSD/GPS and the receiver's own settings. Restore writes back only what differs (an unchanged setup = reads only, no flash stalls) and verifies every item, restarting the flight controller when the governor or motor block changed; a file from a DIFFERENT model transfers the tune only - your own hardware setup stays. Fixed: the 'back up your proven tune' reminder came far too early - every brief switch-on counted as a flight. Now a flight counts only when it lasted over 3 minutes, and any setup edit (phone or transmitter) clears the count at once. Apps: iOS 4.13, Android 4.05."
+    },
+    {
       "name": "RXV2-0.9.558-backup-review",
       "url": "https://messiter.com/rxv2/release/v0.9.558/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.558/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.548/littlefs.bin",
       "fs_md5": "634d5f5cd99f6300797b6b5238971be6",
       "notes": "Gear-ratio boxes are now labelled rotor : motor (and rotor : tail) so which way round is obvious at a glance (Malcolm's suggestion after the Goblin's backwards entry); the pinion/main-gear sub-labels and most of the explanatory text are gone - one line: rotor : motor, how many turns each makes, e.g. 1 : 10.2, or the teeth counts. Decimals are accepted and stored as the whole-number pair Rotorflight keeps (1 : 10.2 -> 10 : 102). Same on ESC-setup step 7 and First-time basics; shorter Backwards readouts. No firmware behaviour change."
-    },
-    {
-      "name": "RXV2-0.9.547-two-stage-gear-help",
-      "url": "https://messiter.com/rxv2/release/v0.9.547/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.547/littlefs.bin",
-      "fs_md5": "d68fec16c442732b81b07963efa5eb36",
-      "notes": "Gear-ratio help for two-stage drives (belt to a big pulley, then pinion into the main gear - every SAB Goblin, RAW and Black Thunder): multiply the stages. Main = motor pulley x drive pinion : big pulley x main gear (Goblin 770 = 21x19 : 60x68 = 399 : 4080). Tail = tail pulley x drive pinion : front tail pulley x main gear (Goblin 770 = 25x19 : 37x68 = 475 : 2516). Shown on the Gear-ratio page, ESC-setup step 7 and the First-time basics hints. No firmware behaviour change."
     }
   ]
 }

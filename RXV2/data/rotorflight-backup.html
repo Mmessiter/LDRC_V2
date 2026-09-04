@@ -17,7 +17,7 @@
 <div class=bg-wash  aria-hidden=true></div>
 <div class=container>
     <h1>Backup &amp; restore</h1>
-    <p class=subtitle id=burSub>Tuning, mechanics and switches &mdash; safe on the phone.</p>
+    <p class=subtitle id=burSub>The whole Rotorflight setup &mdash; safe on the phone.</p>
 <button id=phoneSaveBtn class="btn" style="display:none;background:#d4944a" onclick="phoneSave()"><span class=ico>&#128190;</span>Back up settings to phone</button>
     <div id=savProg style="display:none;background:#f2f6f8;border-radius:14px;padding:1em 1.2em;margin:.7em 0;box-shadow:0 2px 6px rgba(0,0,0,.12)">
         <div id=savLab style="font-weight:600;color:#2c3e50;margin-bottom:.6em">Backing up&hellip;</div>
@@ -150,7 +150,7 @@ async function phoneRestore() {
     }
     if (!(await LDRC.confirm(
         'Overwrite this model\u2019s Rotorflight setup with the phone backup' +
-        (info.when ? ' from ' + info.when : '') + '?\n\nWrites back: PIDs, advanced PIDs, rates, governor & rescue (every bank); mixer travel, limits & trims; servo centres & travel; the bank and rates switches.\n\nNot in the backup, left as they are: arming switch & modes, channel map, motor / gear ratio, battery, filters, telemetry.\n\nKeep the transmitter OFF and the model powered while it runs.',
+        (info.when ? ' from ' + info.when : '') + '?\n\nWrites back the whole setup: PIDs, advanced PIDs, rates, governor & rescue (every bank); mixer, servos, motor & gear ratio; arming switch & modes, channel map, receiver & failsafe; battery & meters, filters, alignment, telemetry, black box; the bank and rates switches. Only what differs is written, each item verified.\n\nNot in the backup, left as they are: ESC parameters, serial ports, LED / OSD / GPS, the receiver’s own settings.\n\nKeep the transmitter OFF and the model powered while it runs.',
         { title: 'Restore from phone', icon: '📡', yes: 'Restore everything', kind: 'warn' }))) return;
     const btn = document.getElementById('phoneRestoreBtn');
     const prog = document.getElementById('restProg');
@@ -199,7 +199,7 @@ async function importBackup() {
     let model = '';
     try { const s = await LDRC.fetchState(); model = (s && s.info && s.info.name) || ''; } catch (e) {}
     if (!(await LDRC.confirm(
-        'Choose a backup file to adopt for ' + (model || 'this model') + '.\n\nIt becomes the restore point on this phone — nothing is written to the flight controller until you tap Restore.\n\nFrom a friend\u2019s helicopter (a different model name)? The electronics transfer — PIDs, rates, governor, rescue, switches. Servo centres, mixer travel & trims stay yours. A file carrying this model\u2019s own name restores everything, servos included.',
+        'Choose a backup file to adopt for ' + (model || 'this model') + '.\n\nIt becomes the restore point on this phone — nothing is written to the flight controller until you tap Restore.\n\nFrom a friend\u2019s helicopter (a different model name)? The tune transfers — PIDs, rates, governor, rescue, filters, stick setup, switches. Your own hardware setup stays: servos, mixer, motor & gear ratio, arming switch & modes, battery & meters, alignment, telemetry. A file carrying this model\u2019s own name restores everything.',
         { title: 'Import a backup', icon: '📥', yes: 'Choose file' }))) return;
     let r = null;
     try { r = await (await fetch('/app/backup/import', { cache: 'no-store' })).json(); } catch (e) {}
@@ -212,7 +212,7 @@ async function importBackup() {
         if (st.phase === 'done') {
             clearInterval(timer);
             msg.textContent = '✅ Imported ' + (st.model ? st.model + '\u2019s' : 'the') + ' setup (' + st.count + ' items) as the restore point for ' + (model || 'this model') + '. Tap Restore to write it.'
-                + (st.mechanics === false ? ' Servo centres, mixer travel & trims were left out (different model) — yours stay.' : '');
+                + (st.mechanics === false ? ' Your hardware setup was left out (different model) — servos, mixer, motor, modes, battery, alignment, telemetry stay yours.' : '');
             paintRestoreBtn();
         } else if (st.phase === 'failed') {
             clearInterval(timer); msg.textContent = '⚠️ That file is not an LDRC backup.';
@@ -236,8 +236,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 </script>
 <template id=helpContent><h2>Backup &amp; restore</h2>
 <p><b>Share backup file</b> hands the backup to the phone&rsquo;s share sheet &mdash; email or AirDrop it to another phone, or to a friend with the same helicopter; <b>Import a backup file</b> adopts one as this model&rsquo;s restore point (then Restore writes it). The file carries everything, including the switch selectors the flight controller cannot read back.</p>
-<p><b>Back up settings to phone</b> saves the Rotorflight setup the LDRC pages edit: every bank's PIDs, advanced PIDs, rates, governor and rescue; the governor's global settings; mixer travel, limits and trims; servo centres and travel; the bank and rates switch assignments &mdash; and all the Black box data too. <b>Restore settings from phone</b> writes it all back, each item verified, with the transmitter off, then saves it in the flight controller.</p>
-<p><b>Not in the backup</b> (set once in the wizards, left untouched by Restore): arming switch &amp; modes, channel map, motor / gear ratio, battery, filters, telemetry and the receiver's own settings.</p>
+<p><b>Back up settings to phone</b> saves the whole Rotorflight setup: every bank's PIDs, advanced PIDs, rates, governor and rescue; the governor's global settings; mixer, servos, motor &amp; gear ratio; arming switch &amp; modes, channel map, receiver &amp; failsafe; battery &amp; meters, filters, board &amp; gyro alignment, telemetry, black box setup, the flight controller's name; the bank and rates switch assignments &mdash; and all the Black box flight data too. <b>Restore settings from phone</b> writes back only what differs, each item verified, with the transmitter off, then saves it in the flight controller (and restarts it when the governor or motor block changed).</p>
+<p><b>Not in the backup</b> (left untouched by Restore): ESC parameters (Scorpion programming), serial ports, LED / OSD / GPS and the receiver's own settings.</p>
 <p>A backup is also taken automatically when you connect, so even a pilot who never presses Back&nbsp;up has one &mdash; but your own Back&nbsp;up (or an imported file) is kept until you back up again. Always back up a known-good setup before experimenting.</p>
 </template>
 </body>

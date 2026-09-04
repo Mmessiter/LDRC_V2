@@ -843,16 +843,20 @@ class MainActivity : AppCompatActivity() {
                 return@Thread
             }
             val origPid = orig.first; val origRate = orig.second
-            var wroteGov = false
+            var wroteGov = false; var wroteMotor = false; var wroteAny = false
             var curPid = origPid; var curRate = origRate
             var stopped = false
+            // The modes' second image (238), read once and again after any
+            // mode write; absent = not read yet.
+            val extraImages = HashMap<Int, String>()
             for (it in items) {
                 if (stopped) { restFailures++; restFailed.add(it.label); restDone++; continue }
                 // TWO attempts — one radio hiccup among ~50 sequential MSP
                 // ops must not fail the parachute.
-                var itemOk = false
+                var itemOk = false; var already = false
                 for (attempt in 1..2) {
                     var ok = true
+                    already = false
                     // Skip selects that are already true — each one stalls
                     // the FC on a flash write (the swash twitch).
                     it.selectByte?.let { b ->
@@ -863,15 +867,38 @@ class MainActivity : AppCompatActivity() {
                             if (ok) { if (isRate) curRate = target else curPid = target }
                         }
                     }
-                    if (ok) ok = req("/api/msp?fn=${it.writeFn}&data=${it.hex}").first
-                    if (ok && it.readFn != 0) {   // readFn 0 = declared item, no read-back exists
-                        // Mixer inputs read with their index in data= and
-                        // verify against verifyHex (payload minus the leading
-                        // index byte the read never echoes).
-                        val rq = "/api/msp?fn=${it.readFn}" + (it.readData?.let { d -> "&data=$d" } ?: "")
-                        val want = it.verifyHex ?: it.hex
-                        val back = req(rq).second.uppercase()
-                        ok = back.isNotEmpty() && (back.startsWith(want) || want.startsWith(back))
+                    // Read first: an item the FC already holds is not written
+                    // again (a restore of an unchanged setup is then reads
+                    // only — no flash stalls, no needless re-inits). Mixer
+                    // inputs and RPM notches read with their index in data=
+                    // and compare against verifyHex (the write payload minus
+                    // its leading index byte); chunk items compare their
+                    // slice of the image.
+                    val rq = if (it.readFn != 0) "/api/msp?fn=${it.readFn}" + (it.readData?.let { d -> "&data=$d" } ?: "") else ""
+                    if (ok && it.readFn != 0) {
+                        val cur = req(rq).second
+                        var extraOk = true
+                        it.extraFn?.let { xf ->
+                            if (!extraImages.containsKey(xf)) extraImages[xf] = req("/api/msp?fn=$xf").second
+                            extraOk = it.extraMatches(extraImages[xf] ?: "")
+                        }
+                        already = it.matches(cur, strict = true) && extraOk
+                    }
+                    if (ok && !already) {
+                        if (it.writeFn == 0) {
+                            ok = false                       // verify-only item that does not match
+                        } else {
+                            wroteAny = true
+                            ok = req("/api/msp?fn=${it.writeFn}&data=${it.hex}").first
+                            // Verify: read back, compare (reply may be longer — prefix).
+                            if (ok && it.readFn != 0) ok = it.matches(req(rq).second)   // readFn 0 = declared item, no read-back exists
+                            // ... and the extra image (mode logic/link bytes) — re-read,
+                            // it changed with the write; a slot the FC ignored fails HERE.
+                            it.extraFn?.let { xf ->
+                                extraImages[xf] = req("/api/msp?fn=$xf").second
+                                if (ok) ok = it.extraMatches(extraImages[xf] ?: "")
+                            }
+                        }
                     }
                     // Banked item: the FC must STILL be on the bank we chose.
                     // A transmitter switched on mid-restore drags the FC onto
@@ -896,7 +923,10 @@ class MainActivity : AppCompatActivity() {
                     Thread.sleep(600)
                 }
                 if (!itemOk) { restFailures++; restFailed.add(it.label) }
-                if (it.writeFn == 143 && itemOk) wroteGov = true
+                if (itemOk && !already) {
+                    if (it.writeFn == 143) wroteGov = true
+                    if (it.writeFn == 222) wroteMotor = true   // motor / gear ratio: FC restart needed
+                }
                 restDone++
             }
             // Put the FC back on its own banks BEFORE the EEPROM save — unless
@@ -906,11 +936,18 @@ class MainActivity : AppCompatActivity() {
                 if (curRate != origRate) req("/api/msp?fn=210&data=%02X".format(0x80 or origRate))
             }
             // Save to EEPROM — verified: an unsaved restore evaporates at the
-            // next power-up while the page said "restored".
-            var saved = req("/api/msp?fn=250").first
-            if (!saved) { Thread.sleep(600); saved = req("/api/msp?fn=250").first }
-            if (!saved) { restFailures++; restFailed.add("save to flight controller memory (EEPROM) — run the restore again") }
-            if (wroteGov && saved) req("/api/msp?fn=68")       // gov config needs FC reboot
+            // next power-up while the page said "restored". Nothing written
+            // (the FC already held it all) → nothing to save, no flash stall.
+            var saved = true
+            if (wroteAny) {
+                saved = req("/api/msp?fn=250").first
+                if (!saved) { Thread.sleep(600); saved = req("/api/msp?fn=250").first }
+                if (!saved) { restFailures++; restFailed.add("save to flight controller memory (EEPROM) — run the restore again") }
+            }
+            // Governor config and the motor block only take effect after an
+            // FC restart — reboot only after a CONFIRMED save (an unsaved
+            // reboot would throw the whole restore away).
+            if ((wroteGov || wroteMotor) && saved) req("/api/msp?fn=68")
             restDone++
             restPhase = "done"
             restRunning = false
@@ -941,19 +978,28 @@ class MainActivity : AppCompatActivity() {
             Thread.sleep(if (fast) 100 else 6000)   // manual = at once; auto = settle first
             val pace = if (fast) 150L else 400L
             var failures = 0      // MSP reads that never answered (after one retry)
-            fun req(p: String): ByteArray? {   // followFetch records automatically
-                val body = bleSyncQuiet(p)
+            fun reqCoded(p: String): Pair<Int, ByteArray?> {   // followFetch records automatically
+                val r = bleSyncCoded(p)
                 snapDone++
                 Thread.sleep(pace)
-                return body
+                return r
             }
+            fun req(p: String): ByteArray? = reqCoded(p).second
             // A Rotorflight read the backup depends on: one retry, then it
             // counts as a failure — a missing answer must never let a stale
-            // value from an earlier session pass as today's backup.
-            fun mspRead(p: String) {
-                if (req(p) != null) return
+            // value from an earlier session pass as today's backup. An
+            // `optional` read the FC rejects (502 — older Rotorflight) is not
+            // a failure: the item is dropped from the recording so the
+            // restore point cannot carry a stale copy of it either.
+            fun mspRead(p: String, optional: Boolean = false) {
+                val first = reqCoded(p)
+                if (first.second != null) return
+                if (optional && first.first == 502) { SessionCache.forget(p); return }
                 Thread.sleep(500)
-                if (req(p) == null) failures++
+                val second = reqCoded(p)
+                if (second.second != null) return
+                if (optional && second.first == 502) { SessionCache.forget(p); return }
+                failures++
             }
             fun selectBank(byte: Int) {
                 val hex = "%02X".format(byte)
@@ -1028,15 +1074,22 @@ class MainActivity : AppCompatActivity() {
                     snapError = "could not read the flight controller's bank (MSP 101) — is it powered and connected?"
                 } else {
                     val origPid = orig.first; val origRate = orig.second
-                    snapTotal += 7 + 4 * 6 + 4 * 3 + 2   // 142 + mixer(5) + servos + rescue + sweeps
-                    mspRead("/api/msp?fn=142")       // governor global — bankless
-                    // Mixer — Travel extents' blocks, bankless (Malcolm
+                    // bankless reads + mixer inputs + RPM notch axes + pid sweep + rate sweep + restores
+                    snapTotal += SessionCache.banklessReadFns.size + 4 + 3 + 4 * 6 + 4 * 3 + 2
+                    // Every bankless setup block (Malcolm 2026-09-04: "cover
+                    // all items") — governor global, mixer, servos, modes,
+                    // channel map, motor & gear, battery & meters, features,
+                    // alignment, filters, telemetry, blackbox, name … the
+                    // catalogue's order. Reads an older Rotorflight rejects
+                    // are optional.
+                    for (fn in SessionCache.banklessReadFns)
+                        mspRead("/api/msp?fn=$fn", optional = fn in SessionCache.optionalReadFns)
+                    // Mixer inputs — Travel extents' blocks (Malcolm
                     // 2026-08-15: the backup must not forget yesterday's
-                    // additions). Config + one read per input 1..4.
-                    mspRead("/api/msp?fn=42")
-                    // Servos — bankless bulk read (chunked; RX 0.9.383+).
-                    mspRead("/api/msp?fn=120")
+                    // additions), one read per input 1..4.
                     for (i in 1..4) mspRead("/api/msp?fn=174&data=%02X".format(i))
+                    // RPM filter notches, one read per axis (roll, pitch, yaw).
+                    for (a in 0..2) mspRead("/api/msp?fn=154&data=%02X".format(a), optional = true)
                     // Every bank select makes the FC write flash — a brief
                     // servo stall (the swash twitch). Skip no-op selects.
                     var curPid = origPid; var curRate = origRate
@@ -1084,15 +1137,27 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** Blocking GET through followFetch (which does the recording); null on failure. */
-    private fun bleSyncQuiet(pathAndQuery: String): ByteArray? {
+    private fun bleSyncQuiet(pathAndQuery: String): ByteArray? = bleSyncCoded(pathAndQuery).second
+
+    /** As bleSyncQuiet, with the receiver's HTTP code too (0 = no answer at
+     *  all, -1 = transport trouble): the receiver says 502 when the FC
+     *  REJECTED the request (an MSP this Rotorflight build lacks), 504 when
+     *  it never answered. The body is null unless the code was 200. */
+    private fun bleSyncCoded(pathAndQuery: String): Pair<Int, ByteArray?> {
         val latch = java.util.concurrent.CountDownLatch(1)
         var out: ByteArray? = null
+        var code = 0
         followFetch("GET", pathAndQuery, emptyMap(), null, 0) { res ->
-            out = res.getOrNull()?.takeIf { it.code == 0 || it.code == 200 }?.body
+            res.fold(
+                onSuccess = { r ->
+                    code = if (r.code == 0) 200 else r.code
+                    if (code == 200) out = r.body
+                },
+                onFailure = { code = -1 })
             latch.countDown()
         }
         latch.await(20, java.util.concurrent.TimeUnit.SECONDS)
-        return out
+        return Pair(code, out)
     }
 
     // Prepend the bridge shim so it runs before any of the page's scripts.

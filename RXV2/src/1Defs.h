@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.558-backup-review";
+constexpr const char* FW_VERSION = "RXV2-0.9.559-full-backup";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -144,16 +144,21 @@ inline int32_t txClockOffS     = 0;       // TX clock face minus true UTC, secon
 inline bool    txClockOffKnown = false;
 
 // Proven-tune nudge (Malcolm 2026-08-07): a tune that has flown several
-// flights with NO further edits has earned a deliberate backup. Any tuning
-// write (app or TX) sets the RAM flag; each NEW flight save consumes it
-// (gen++, counter reset) or increments the counter — persisted inside the
-// flight save's already-pardoned flash window. state.json exposes both;
-// the app's front page nudges at >= 6 flights, once per gen.
-inline bool     tuneEditsPending = false;   // RAM only
+// flights with NO further edits has earned a deliberate backup. Any setup
+// write (app or TX) starts a new generation AT ONCE (gen++, counter 0 —
+// Malcolm 2026-09-04: "clear the flag if any edit is made"); a flight
+// counts once per session and only when the model flew >= 3 min (the
+// old rule counted every brief switch-on, so the nudge came far too
+// early). tuneEditsPending = an NVS write is owed: paid immediately on the
+// ground, deferred past the flight for a transmitter edit (10 ms doctrine).
+// state.json exposes gen + flights; the app's front page nudges at >= 6
+// flights, once per gen.
+inline bool     tuneEditsPending = false;   // RAM: NVS write owed
 inline uint16_t tuneEditGen      = 0;       // NVS "egen"
 inline uint32_t tuneFlightsSince = 0;       // NVS "fse"
 constexpr const char* NVS_KEY_EDIT_GEN       = "egen";
 constexpr const char* NVS_KEY_FLT_SINCE_EDIT = "fse";
+constexpr uint32_t TUNE_FLIGHT_MIN_MS = 180000;   // a flight counts towards the nudge only past 3 min
 
 constexpr uint32_t RF_WINDOW_MS         = 1000;    // boot window: if a TX is heard within this 1 s, go RF-only (WiFi off). Short so WiFi comes up fast when there's no TX (dev); means the TX must be ON BEFORE the receiver to suppress WiFi — which is standard RC practice (TX on first) anyway.
 // RF-only "fly mode" auto-recovery: if the TX link then stays lost this long,
@@ -404,6 +409,27 @@ constexpr uint32_t    QUICK_BOOT_RESET_MS  = 5000;
 
 inline Preferences prefs;
 inline bool forceWifiMode = false;
+
+// Proven-tune bookkeeping (see the tune* variables above). tunePersist is
+// the ONLY writer of the two NVS keys outside boot: a flash write, so it
+// runs on the ground only — immediately for an app/page edit (the MSP API
+// refuses while armed), at the next quiet moment or the flight save for a
+// transmitter edit.
+inline void tunePersist() {
+    if (!tuneEditsPending) return;
+    tuneEditsPending = false;
+    prefs.putUShort(NVS_KEY_EDIT_GEN, tuneEditGen);
+    prefs.putULong(NVS_KEY_FLT_SINCE_EDIT, tuneFlightsSince);
+}
+// A setup edit: this tune is new, nothing has flown it. Edits with no
+// flight in between stay ONE generation (a tuning session is one tune),
+// so the sign-off key in the app keeps working.
+inline void tuneNoteEdit(bool persistNow) {
+    if (tuneFlightsSince > 0 || tuneEditGen == 0) tuneEditGen++;
+    tuneFlightsSince = 0;
+    tuneEditsPending = true;
+    if (persistNow) tunePersist();
+}
 
 // Cached effective name + DNS-safe hostname, computed once in setup()
 // after the board MAC is loaded so the hostname suffix is stable. Used

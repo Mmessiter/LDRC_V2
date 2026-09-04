@@ -640,6 +640,22 @@ inline uint8_t hexNibble(char c) {
     return 0xFF;
 }
 
+// The Rotorflight SET commands that change the model's setup (the phone
+// backup restores exactly these) — the proven-tune counter's definition of
+// "an edit". 218 = ESC parameters (not in the backup, still an edit).
+inline bool isSetupWriteFn(uint8_t fn) {
+    switch (fn) {
+        case 11:  case 33:  case 35:  case 37:  case 39:  case 41:  case 43:  case 45:
+        case 51:  case 53:  case 57:  case 62:  case 65:  case 67:  case 74:  case 76:
+        case 78:  case 81:  case 93:  case 95:  case 97:  case 143: case 147: case 149:
+        case 155: case 171: case 173: case 202: case 204: case 212: case 216: case 218:
+        case 220: case 222: case 239:
+            return true;
+        default:
+            return false;
+    }
+}
+
 inline void handleMspApi() {
     // ARMED = configuration locked, instantly (Malcolm 2026-08-24, after the
     // crash: "if arming is switched on, go directly to fly mode — without
@@ -729,10 +745,12 @@ inline void handleMspApi() {
         if (mspWaitRespError) { server.send(502, "text/plain", "flight controller rejected fn " + String(fn)); return; }
         server.send(504, "text/plain", "flight controller did not respond within 1200 ms"); return;
     }
-    // Proven-tune tracking: any successful tuning write restarts the
-    // flights-since-edit count (consumed at the next flight save).
-    if (reqLen > 0 && (fn == 202 || fn == 204 || fn == 95 || fn == 143 || fn == 149))
-        tuneEditsPending = true;
+    // Proven-tune tracking: any successful SETUP write — every Rotorflight
+    // SET the phone backup covers, plus the ESC's own parameters — starts
+    // a new tune generation at once (Malcolm 2026-09-04: "clear the flag
+    // if any edit is made to the set up"). Not a bank select (210), EEPROM
+    // save (250), reboot (68) or a read that carries its index in data=.
+    if (reqLen > 0 && isSetupWriteFn(fn)) tuneNoteEdit(true);   // armed → refused above, so we are on the ground
 
     String s;
     s.reserve(respLen * 2 + 4);

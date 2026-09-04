@@ -113,14 +113,24 @@ object SessionCache {
     fun cacheable(path: String, query: String?): Boolean {
         if (!path.startsWith("/api/")) return false
         if (path == "/api/msp" && (query ?: "").contains("data=")) {
-            // fn=174 (GET_MIXER_INPUT) is the one READ whose parameter — the
-            // input index — rides in data=; without this exception the
-            // Travel-extents reads were never recorded and backup/restore
-            // silently forgot the mixer (Malcolm 2026-08-15).
-            if (!(query ?: "").contains("fn=174")) return false
+            // fn=174 (GET_MIXER_INPUT) and fn=154 (RPM filter notches, per
+            // axis) are the READS whose parameter — the index — rides in
+            // data=; without this exception the Travel-extents reads were
+            // never recorded and backup/restore silently forgot the mixer
+            // (Malcolm 2026-08-15).
+            val q = query ?: ""
+            if (!q.contains("fn=174") && !q.contains("fn=154")) return false
         }
         if (path == "/api/firmware/check") return false
         return true
+    }
+
+    /** Drop a recorded read — the FC said it does not support a read this
+     *  firmware sends, so a value recorded from an earlier session (another
+     *  FC version) can never be frozen as today's backup. */
+    @Synchronized
+    fun forget(pathAndQuery: String) {
+        if (entries.remove(keyFor(pathAndQuery)) != null) { savedAtMs = System.currentTimeMillis(); dirty = true }
     }
 
     @Synchronized
@@ -247,8 +257,77 @@ object SessionCache {
     // byte-symmetric with its SET command — write the whole lot back.
     // readData/verifyHex: mixer inputs (171/174) read with their index in
     // data= and verify against the payload minus its leading index byte.
+    // writeFn 0 = verify-only (nothing to write, the read must match);
+    // readFn 0 = no read-back exists (declared items).
+    // Chunked images (servos 212, modes 35, rxfail 78, mixer rules 173,
+    // meters 57/41): one FC read holds every chunk, each write sets one —
+    // the chunk's bytes must appear at chunkOffset (hex chars) of the
+    // readFn image: that is both the "already identical, skip" test and
+    // the verify. Modes carry a second image (238: logic + link per slot)
+    // the 35 write also sets; a slot is skipped only when BOTH match.
     data class RestoreItem(val selectByte: Int?, val writeFn: Int, val readFn: Int, val hex: String, val label: String,
-                           val readData: String? = null, val verifyHex: String? = null)
+                           val readData: String? = null, val verifyHex: String? = null,
+                           val chunkOffset: Int? = null, val chunkHex: String? = null,
+                           val extraFn: Int? = null, val extraOffset: Int? = null, val extraHex: String? = null) {
+        /** Does this FC image already carry the item? Prefix semantics for
+         *  whole-image items (a reply may be longer than the write layout);
+         *  strict = the image must hold EVERY wanted byte — the "skip the
+         *  write" decision must never rest on a short reply. */
+        fun matches(image: String, strict: Boolean = false): Boolean {
+            val img = image.uppercase()
+            if (chunkOffset != null && chunkHex != null) {
+                if (img.length < chunkOffset + chunkHex.length) return false
+                return img.substring(chunkOffset, chunkOffset + chunkHex.length) == chunkHex
+            }
+            val want = (verifyHex ?: hex).uppercase()
+            if (strict) return img.startsWith(want)
+            return img.isNotEmpty() && (img.startsWith(want) || want.startsWith(img))
+        }
+        fun extraMatches(image: String): Boolean {
+            val off = extraOffset ?: return true
+            val want = extraHex ?: return true
+            val img = image.uppercase()
+            if (img.length < off + want.length) return false
+            return img.substring(off, off + want.length) == want
+        }
+    }
+
+    // ── The catalogue (Malcolm 2026-09-04: "let's cover all items") ──
+    // Every bankless Rotorflight read the backup freezes. Layouts checked
+    // line by line against Rotorflight 4.6's msp.c: the SET payload is the
+    // GET reply verbatim except motor config (222 = 131 without byte 6, the
+    // motor count) and blackbox (81 = 80 without byte 0, the 'supported'
+    // flag). NOT here, deliberately: ESC parameters (217/218 — Scorpion
+    // programming freezes its telemetry), serial ports (54/55 — the
+    // receiver's own link), LED/OSD/GPS/VTX, and the receiver's NVS.
+    val banklessReadFns = listOf(
+        142, 42, 120,                                   // governor global, mixer, servos
+        10, 36, 38, 61, 240, 96, 126,                   // name, features, board, arming, trims, sensors, alignment
+        64, 44, 66, 75, 77, 50, 73,                     // channel map, receiver, sticks, failsafe, rxfail, RSSI, telemetry
+        80, 92, 32, 123, 131,                           // blackbox, filters, battery, ESC telemetry, motor
+        34, 238, 172, 56, 40)                           // modes (+extras), mixer rules, meters
+    /** Verbatim read → write items, in restore order: (read fn, write fn, label). */
+    private val simpleItems = listOf(
+        Triple(10, 11, "flight controller name"),
+        Triple(36, 37, "features"),
+        Triple(38, 39, "board alignment"),
+        Triple(61, 62, "arming (auto-disarm delay)"),
+        Triple(240, 239, "level trims"),
+        Triple(96, 97, "sensor selection"),
+        Triple(126, 220, "gyro alignment"),
+        Triple(64, 65, "channel map"),
+        Triple(44, 45, "receiver setup"),
+        Triple(66, 67, "stick centre & travel"),
+        Triple(75, 76, "failsafe"),
+        Triple(50, 51, "RSSI"),
+        Triple(73, 74, "telemetry sensors"),
+        Triple(92, 93, "gyro filters"),
+        Triple(32, 33, "battery"),
+        Triple(123, 216, "ESC telemetry setup"))
+    /** Reads the FC may legitimately reject (older Rotorflight builds lack
+     *  them): a 'rejected' answer is not a backup failure, the item is simply
+     *  not in the backup. No answer at all still is. */
+    val optionalReadFns = setOf(123, 154)
 
     // The rolling recording tees EVERY read — including read-backs of the
     // very edits a confused pilot wants to undo (Malcolm's closed-loop test
@@ -263,12 +342,31 @@ object SessionCache {
     private val restoreKeyPrefixes = listOf(
         "/api/msp?fn=112&bank=", "/api/msp?fn=94&bank=",
         "/api/msp?fn=148&bank=", "/api/msp?fn=146&bank=", "/api/msp?fn=111&bank=",
-        "/api/msp?fn=174&data=")   // mixer inputs (Travel extents)
+        "/api/msp?fn=174&data=",   // mixer inputs (Travel extents)
+        "/api/msp?fn=154&data=")   // RPM filter notches, per axis
+    private fun isRestoreKey(k: String): Boolean {
+        if (restoreKeyPrefixes.any { k.startsWith(it) }) return true
+        if (k.startsWith("/app/declared/")) return true
+        return banklessReadFns.any { k == "/api/msp?fn=$it" }
+    }
 
-    /** The mechanical items — servo centres/travel (fn 120) and the mixer's
-     *  limits, trims and input travel (42, 174). A backup from ANOTHER model
-     *  leaves these out on import: they belong to that airframe's linkage. */
-    val mechanicsKeyPrefixes = listOf("/api/msp?fn=120", "/api/msp?fn=42", "/api/msp?fn=174&data=")
+    /** This airframe's OWN items — servos, mixer, motor & gear, board and
+     *  sensor alignment, level trims, features, battery & meters, receiver
+     *  wiring, ESC telemetry, telemetry sensors, blackbox, name, modes,
+     *  per-channel failsafe values, RPM notches. A backup from ANOTHER model
+     *  leaves these out on import: they belong to that helicopter's hardware.
+     *  What transfers is the tune: PIDs, rates, governor, rescue, filters,
+     *  stick setup, failsafe policy, arming delay, RSSI, channel map and the
+     *  bank/rates switches. */
+    val mechanicsKeyPrefixes = listOf(
+        "/api/msp?fn=120", "/api/msp?fn=42", "/api/msp?fn=174&data=", "/api/msp?fn=172",
+        "/api/msp?fn=131", "/api/msp?fn=38", "/api/msp?fn=126", "/api/msp?fn=96", "/api/msp?fn=240",
+        "/api/msp?fn=36", "/api/msp?fn=32", "/api/msp?fn=56", "/api/msp?fn=40",
+        "/api/msp?fn=44", "/api/msp?fn=123", "/api/msp?fn=73", "/api/msp?fn=80", "/api/msp?fn=10",
+        "/api/msp?fn=34", "/api/msp?fn=238", "/api/msp?fn=77", "/api/msp?fn=154&data=")
+    fun isMechanicsKey(k: String): Boolean = mechanicsKeyPrefixes.any { p ->
+        if (p.endsWith("=")) k.startsWith(p) else (k == p || k.startsWith("$p&"))
+    }
 
     /** The FC's current banks from MSP_STATUS (fn=101): byte 23 = PID
      *  profile, byte 25 = rate profile; bytes 24/26 are the profile COUNTS
@@ -294,9 +392,7 @@ object SessionCache {
     fun snapshotRestorePoint(explicit: Boolean = false): Boolean {
         val f = restoreFileFor(modelName) ?: return false
         if (!explicit && restorePointIsExplicit()) return false
-        val keep = entries.filterKeys { k ->
-            restoreKeyPrefixes.any { k.startsWith(it) } || k == "/api/msp?fn=142" || k == "/api/msp?fn=42" || k == "/api/msp?fn=120" || k.startsWith("/app/declared/")
-        }
+        val keep = entries.filterKeys { isRestoreKey(it) }
         if (keep.isEmpty()) return false
         return runCatching {
             val root = JSONObject()
@@ -367,23 +463,95 @@ object SessionCache {
                                     readData = key, verifyHex = it))
             }
         }
+        fun slice(s: String, off: Int, len: Int): String? =
+            if (off < 0 || len <= 0 || s.length < off + len) null else s.substring(off, off + len)
         // Servos (bankless): stored fn-120 image = count(1B) + 16 B/servo;
-        // fn 212 writes one servo (index + 16 B). Structural verify for all
-        // but the LAST servo (mid-restore the fn-120 read-back mixes old and
-        // new), then the last item compares the whole image byte-for-byte.
+        // fn 212 writes ONE servo (index + 16 B), verified as that servo's
+        // 16 B in the fn-120 read-back.
         hexAt("/api/msp?fn=120")?.let { full ->
             val count = full.take(2).toIntOrNull(16) ?: 0
-            if (count > 0 && full.length >= 2 + count * 32) {
+            if (count in 1..8) {
                 val roles = listOf("swash 1", "swash 2", "swash 3", "TAIL", "5", "6", "7", "8")
                 for (i in 0 until count) {
-                    val slice = full.substring(2 + i * 32, 2 + i * 32 + 32)
-                    val idx = "%02X".format(i)
-                    val last = i == count - 1
-                    out.add(RestoreItem(null, 212, 120, idx + slice,
-                                        "servo ${i + 1} (${roles[minOf(i, 7)]})",
-                                        readData = null,
-                                        verifyHex = if (last) full else full.take(2)))
+                    val s = slice(full, 2 + i * 32, 32) ?: break
+                    out.add(RestoreItem(null, 212, 120, "%02X".format(i) + s,
+                                        "servo ${i + 1} (${roles[i]})",
+                                        chunkOffset = 2 + i * 32, chunkHex = s))
                 }
+            }
+        }
+        // Mixer rules (172 → 173, one rule per write: index + 7 B).
+        hexAt("/api/msp?fn=172")?.let { full ->
+            for (i in 0 until full.length / 14) {
+                val s = slice(full, i * 14, 14) ?: break
+                out.add(RestoreItem(null, 173, 172, "%02X".format(i) + s, "mixer rule ${i + 1}",
+                                    chunkOffset = i * 14, chunkHex = s))
+            }
+        }
+        // Motor & gear ratio: 222 takes the 131 reply WITHOUT byte 6 (motor
+        // count) — exactly what the Gear ratio page writes; needs an FC
+        // restart afterwards (the runner reboots after the EEPROM save).
+        hexAt("/api/msp?fn=131")?.let { full ->
+            if (full.length >= 58) {
+                val w = full.take(12) + full.drop(14).take(44)
+                out.add(RestoreItem(null, 222, 131, w, "motor & gear ratio", verifyHex = full))
+            }
+        }
+        // Blackbox: 81 takes the 80 reply WITHOUT byte 0 (the 'supported' flag).
+        hexAt("/api/msp?fn=80")?.let { full ->
+            if (full.length >= 26) out.add(RestoreItem(null, 81, 80, full.drop(2), "blackbox setup", verifyHex = full))
+        }
+        // The verbatim items.
+        for ((readFn, writeFn, label) in simpleItems) {
+            hexAt("/api/msp?fn=$readFn")?.let { out.add(RestoreItem(null, writeFn, readFn, it, label)) }
+        }
+        // RPM filter notches (154 per axis → 155): axis byte + the axis image.
+        for ((a, name) in listOf(0 to "roll", 1 to "pitch", 2 to "yaw")) {
+            val key = "%02X".format(a)
+            hexAt("/api/msp?fn=154&data=$key")?.let {
+                out.add(RestoreItem(null, 155, 154, key + it, "RPM notches — $name", readData = key, verifyHex = it))
+            }
+        }
+        // Voltage (56 → 57) and current (40 → 41) meters: the reply is a
+        // count then frames [len, id, type, values…] — 8 bytes on the wire
+        // for a voltage meter (scale, divider, divmul), 7 for a current
+        // meter (scale, offset); each write is id + values, verified as the
+        // values in the frame.
+        for ((fns, frameLen, name) in listOf(Triple(56 to 57, 8, "voltage meter"), Triple(40 to 41, 7, "current meter"))) {
+            val full = hexAt("/api/msp?fn=${fns.first}") ?: continue
+            val n = full.take(2).toIntOrNull(16) ?: continue
+            if (n !in 1..4) continue
+            for (i in 0 until n) {
+                val f = 2 + i * frameLen * 2
+                val id = slice(full, f + 2, 2) ?: break
+                val vals = slice(full, f + 6, (frameLen - 3) * 2) ?: break
+                out.add(RestoreItem(null, fns.second, fns.first, id + vals, "$name ${i + 1}",
+                                    chunkOffset = f + 6, chunkHex = vals))
+            }
+        }
+        // Modes / arming switch (34 + 238 → 35, one slot per write: index,
+        // box, channel, start, end, logic, link). A slot is skipped only when
+        // both images already match; the 238 image is verified whole at the
+        // end (the 34 read-back verifies each slot's range).
+        val ranges = hexAt("/api/msp?fn=34")
+        val extra = hexAt("/api/msp?fn=238")
+        val nModes = extra?.take(2)?.toIntOrNull(16) ?: 0
+        if (ranges != null && extra != null && nModes in 1..32 && ranges.length >= nModes * 8 && extra.length >= 2 + nModes * 6) {
+            for (i in 0 until nModes) {
+                val r = slice(ranges, i * 8, 8) ?: break
+                val x = slice(extra, 2 + i * 6 + 2, 4) ?: break
+                out.add(RestoreItem(null, 35, 34, "%02X".format(i) + r + x, "mode slot ${i + 1}",
+                                    chunkOffset = i * 8, chunkHex = r,
+                                    extraFn = 238, extraOffset = 2 + i * 6 + 2, extraHex = x))
+            }
+            out.add(RestoreItem(null, 0, 238, extra, "mode logic & links"))
+        }
+        // Per-channel failsafe values (77 → 78: index + mode + value).
+        hexAt("/api/msp?fn=77")?.let { full ->
+            for (i in 0 until minOf(full.length / 6, 18)) {
+                val s = slice(full, i * 6, 6) ?: break
+                out.add(RestoreItem(null, 78, 77, "%02X".format(i) + s, "failsafe value ch${i + 1}",
+                                    chunkOffset = i * 6, chunkHex = s))
             }
         }
         // Declared items (Malcolm 2026-08-30): write-only settings the FC can't
@@ -458,7 +626,7 @@ object SessionCache {
             val sameModel = fileModel.trim().lowercase() == forModel.trim().lowercase()
             val keep = JSONObject()
             es.keys().forEach { k ->
-                if (!sameModel && mechanicsKeyPrefixes.any { k.startsWith(it) }) return@forEach
+                if (!sameModel && isMechanicsKey(k)) return@forEach
                 val v = es.optJSONObject(k) ?: return@forEach
                 if (!v.has("b64")) return@forEach
                 keep.put(k, v)

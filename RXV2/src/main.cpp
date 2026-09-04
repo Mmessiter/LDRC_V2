@@ -763,6 +763,7 @@ void loop() {
     { StallScope s("teleSample");  telemetrySampleTick(); }   // 1 Hz flight telemetry log (ESC temp / head speed / battery)
     { StallScope s("flightSave");  flightSaveTick(); }        // save the flight to flash on DISARM — safe, on the ground (arming-channel idea)
     { StallScope s("flightAsync"); flightSaveAsyncTick(); }   // trickle any in-progress save out, ~64 samples per pass (10 ms doctrine)
+    { StallScope s("tunePersist"); tunePersistTick(); }       // pay a transmitter edit's deferred NVS write once provably on the ground
     { StallScope s("battGuard");   batteryGuardTick(); }      // low-battery warning + forgotten-model deep sleep (Malcolm 2026-07-28)
 
     // Dual-radio redundancy: if we've not received a packet on the active
