@@ -282,7 +282,10 @@
 
         // Telemetry setup check (0.9.556 — Goblin 770, 2026-09-03: after a
         // bank copy the transmitter showed no volts and no RPM; the FC's
-        // sensor list and link rate were all zero, cause unknown).
+        // sensor list and link rate were all zero). Cause found 0.9.564:
+        // Rotorflight 4.6 answers the adjustments list (MSP 52, 588 B) out
+        // of a 320-byte buffer and the overflow wipes its telemetry setup;
+        // the receiver never asks for 52 now, so this should stay hidden.
         // Rotorflight sends ONLY the sensors in that list, so the receiver
         // reads it (MSP 73) and fcinfo.telem_cfg_bad flags an empty one.
         // One patch of text: what to do, then why, then the button that
@@ -302,6 +305,8 @@
             el.innerHTML = '<b>Restore the flight controller’s telemetry sensors — the transmitter shows no volts or RPM until you do.</b><br>' +
                 'Rotorflight’s list of sensors to send is empty (' + (fc.telem_sensors | 0) + ' sensors, link rate ' +
                 (fc.telem_rate | 0) + '/' + (fc.telem_ratio | 0) + '), so it sends nothing even though everything else works. ' +
+                'Usual cause: a Rotorflight 4.6 bug — its adjustments list (from the configurator or a radio script) is too big for its ' +
+                'receiver-link buffer and the overflow wipes this setup; the receiver itself never asks for that list. ' +
                 'Restoring puts back flight mode, battery, RPM, temperature, attitude and altitude, then restarts the flight controller. ' +
                 'Transmitter OFF, blades off.<br>' +
                 '<button class="btn" style="background:#b8432b;color:#fff;margin:.7em 0 0;width:100%" id=telemRestoreBtn>' +
@@ -325,6 +330,83 @@
                     await this.alert(msg, {title: 'Not restored', icon: '⚠️', kind: 'danger'});
                 }
             };
+            return true;
+        },
+
+        // Telemetry speed card (0.9.563). Rotorflight paces everything it
+        // sends on the CRSF wire — sensors AND its answers to the phone and
+        // the transmitter — by the telemetry link rate. Its default (250/8)
+        // answers a settings read in ~0.5 s per chunk; fast (1000/1) is
+        // 6-17× quicker and the volts/RPM readings update sooner. The
+        // receiver remembers the choice (fcinfo.telem_speed_pref) and shows
+        // what the FC actually runs (telem_speed_live). Applying restarts
+        // the FC, so it is refused with the transmitter on.
+        fcTelemSpeedCard(st, elId) {
+            const el = document.getElementById(elId);
+            if (!el) return false;
+            const fc = (st && st.fcinfo) || {};
+            if (this.replay || !fc.detected || !fc.rotorflight_capable) { el.style.display = 'none'; delete el.dataset.speedShown; return false; }
+            const doneAt = +el.dataset.speedDone || 0;
+            if (doneAt && Date.now() - doneAt < 25000) return true;   // let the "saved" note be read
+            const pref = fc.telem_speed_pref || 'fast';
+            const live = fc.telem_speed_live || 'unknown';
+            const key  = pref + '/' + live;
+            if (el.dataset.speedShown === key) return true;             // keep the buttons' state while they work
+            el.dataset.speedShown = key;
+            const matches = (live === pref);
+            const liveText = live === 'fast' ? 'fast (link rate ' + (fc.telem_rate | 0) + '/' + (fc.telem_ratio | 0) + ')'
+                           : live === 'standard' ? 'standard (link rate ' + (fc.telem_rate | 0) + '/' + (fc.telem_ratio | 0) + ')'
+                           : live === 'unknown' ? 'not read yet'
+                           : live === 'none' ? 'nothing (sensors empty)'
+                           : 'a custom link rate ' + (fc.telem_rate | 0) + '/' + (fc.telem_ratio | 0);
+            el.style.cssText = 'display:block;background:' + (matches ? '#d6e9d6' : '#dbe6f2') + ';color:' +
+                               (matches ? '#1f4d24' : '#1d3a56') + ';padding:1em;border-radius:10px;margin:0 0 1em;text-align:left;font-size:1.05em';
+            let html = '';
+            if (matches) {
+                html += '<b>✓ Telemetry speed: ' + liveText + ' — the flight controller runs it.</b><br>';
+                html += pref === 'fast'
+                    ? 'The flight controller answers the phone and the transmitter about six times quicker than Rotorflight’s standard rate, and volts and RPM update sooner.'
+                    : 'Rotorflight’s standard rate. Fast telemetry answers settings reads, backups and restores about six times quicker.';
+            } else {
+                html += '<b>Apply ' + pref + ' telemetry — the flight controller runs ' + liveText + '.</b><br>';
+                html += 'The receiver is set to ' + pref + ' telemetry. ' +
+                    (pref === 'fast' ? 'Fast answers the phone and the transmitter about six times quicker, and volts and RPM update sooner. '
+                                     : 'Standard is Rotorflight’s own default rate. ') +
+                    'Applying it restarts the flight controller: transmitter OFF, blades off.';
+            }
+            const other = pref === 'fast' ? 'standard' : 'fast';
+            html += '<div style="display:flex;gap:.6em;margin:.7em 0 0;flex-wrap:wrap">';
+            if (!matches) html += '<button class="btn" style="background:#2f6fb0;color:#fff;margin:0;flex:2 1 12em" id=telemSpeedApply><span class=ico>⚡</span>Apply ' + pref + ' telemetry</button>';
+            html += '<button class="btn" style="background:' + (matches ? '#5b7a63' : '#6b7c8c') + ';color:#fff;margin:0;flex:1 1 9em" id=telemSpeedOther>Use ' + other + (other === 'fast' ? ' (recommended)' : '') + '</button>';
+            html += '</div>';
+            el.innerHTML = html;
+            const post = async (btn, mode) => {
+                const was = btn.innerHTML;
+                btn.disabled = true; btn.textContent = 'Working…';
+                let r = null, msg = '', status = 0;
+                try {
+                    const resp = await fetch('/api/fc/telemetry/speed?mode=' + mode, {method: 'POST', cache: 'no-store'});
+                    status = resp.status;
+                    r = await resp.json();
+                    msg = r.message || r.err || ('HTTP ' + resp.status);
+                } catch (e) { msg = e.message; }
+                if (r && r.ok && r.applied) {
+                    el.dataset.speedDone = Date.now(); delete el.dataset.speedShown;
+                    el.innerHTML = '<b>✓ ' + (mode === 'fast' ? 'Fast' : 'Standard') + ' telemetry saved — the flight controller is restarting.</b><br>' +
+                        'Give it 10 seconds, then turn the transmitter on and check volts and RPM show on the screen before any spool-up.';
+                } else if (r && r.ok) {
+                    el.dataset.speedDone = Date.now(); delete el.dataset.speedShown;
+                    el.innerHTML = '<b>✓ ' + msg.charAt(0).toUpperCase() + msg.slice(1) + '.</b>';
+                } else {
+                    btn.disabled = false; btn.innerHTML = was;
+                    delete el.dataset.speedShown;     // the preference may have been saved — redraw next tick
+                    await this.alert(msg, {title: status === 409 ? 'Saved, not applied yet' : 'Not applied', icon: '⚠️', kind: 'danger'});
+                }
+            };
+            const a = document.getElementById('telemSpeedApply');
+            if (a) a.onclick = () => post(a, pref);
+            const o = document.getElementById('telemSpeedOther');
+            if (o) o.onclick = () => post(o, other);
             return true;
         },
 

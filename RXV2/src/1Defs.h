@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.562-probe-holdoff";
+constexpr const char* FW_VERSION = "RXV2-0.9.564-msp52-bug";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -395,6 +395,8 @@ constexpr const char* NVS_KEY_FC_THR_CH   = "fcthrch";  // uint8 the FC's OWN th
 constexpr const char* NVS_KEY_FC_GOV_MODE = "fcgovmd";  // uint8 Rotorflight governor mode (MSP 142 byte 0: 0 off, 1 passthrough, 2 standard, 3 electric, 4 nitro; 255 unknown)
 constexpr const char* NVS_KEY_GOV_THR_PARKED = "govthrpk"; // uint8 verdict of the last long armed spell: 0 = throttle reached full, else the % it sat at
 constexpr const char* NVS_KEY_GOV_THR_MAX = "govthrmx"; // uint8 highest throttle % seen in that spell
+constexpr const char* NVS_KEY_FC_TELEM_SPEED = "fctspd";  // uint8 Rotorflight telemetry link speed we keep the FC at: 1 = fast (1000/1, default), 0 = standard (250/8)
+constexpr const char* NVS_KEY_FC_TELEM_GOOD  = "fctgood"; // 52-byte blob: the last GOOD MSP 73 image (mode, rate, ratio, sensor list) — the auto-repair's source
 constexpr const char* NVS_KEY_THR_CH      = "thrch";    // uint8 throttle channel (1..16, 0=off); held at THROTTLE_SAFE_US until the TX is first heard  // uint8 cell count for per-cell display (0 = not set, show pack volts only)  // uint8 1=expect FC on telemetry line (default); 0=ignore it (plain PWM converters echo junk that parses as telemetry)  // uint8 CRSF frame rate in Hz (50/100/250); some CRSF-to-PWM converters misbehave above ~100 Hz   // one-shot: web-initiated reboot to apply a setting → next boot skips the RF window, WiFi comes straight back
 
 // A flight "ends" (and is saved to flash) after the link has been gone this
@@ -1002,6 +1004,18 @@ struct FcInfo {
     uint16_t telemRate        = 0;       // link rate (Rotorflight default 250)
     uint16_t telemRatio       = 0;       // link ratio (default 8)
     uint8_t  telemSensors     = 0;       // populated slots of the 40
+    // 0.9.563 — the FC's setup zeroed itself AGAIN (2026-09-04, 14:00-14:21,
+    // nothing wrote MSP 74 through the receiver), so the receiver keeps the
+    // last GOOD 52-byte image (RAM + NVS) and puts it back in RAM whenever a
+    // re-read finds it empty — it only ever bites if an EEPROM save follows.
+    uint8_t  telemGood[52]    = {0};
+    bool     telemGoodValid   = false;
+    uint8_t  telemSpeedPref   = 1;       // 1 = fast (1000/1), 0 = standard (250/8) — NVS_KEY_FC_TELEM_SPEED
+    bool     telemRecheck     = false;   // the poll re-reads MSP 73 at its next slot (watch, or after a write/reboot)
+    bool     telemRepairDue   = false;   // found empty with a good image cached: the poll writes it back (RAM) at its next slot
+    uint32_t telemCheckedMs   = 0;       // millis() of the last MSP 73 reply
+    uint32_t telemAskedMs     = 0;       // millis() of the last MSP 73 the poll sent (the 30-s watch cadence)
+    uint8_t  telemRepairs     = 0;       // RAM repairs done this boot (capped — a repair that never sticks stops)
     uint32_t probesSent       = 0;
     uint32_t lastProbeMs      = 0;
     uint32_t lastResponseMs   = 0;

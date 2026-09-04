@@ -9,7 +9,7 @@
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rotorflight &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=179">
-<script src="/app.js?v=189" defer></script>
+<script src="/app.js?v=191" defer></script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -27,6 +27,8 @@
     <a class="btn btn-fw" href="/rotorflight-copybank" style="background:#4f7fa0"><span class=ico>&#128203;</span><span style="display:flex;flex-direction:column;align-items:flex-start;text-align:left"><span>Copy a bank</span><span style="font-size:.62em;font-weight:400;opacity:.85;margin-top:.25em">PIDs, rates, governor: one bank to another</span></span></a>
     <a class="btn btn-fw" href="/rotorflight-backup"   style="background:#d4944a"><span class=ico>&#128190;</span><span style="display:flex;flex-direction:column;align-items:flex-start;text-align:left"><span>Backup &amp; restore</span><span style="font-size:.62em;font-weight:400;opacity:.85;margin-top:.25em">the whole setup, safe on the phone</span></span></a>
 
+    <div id=telemSpeed class="banner" style="display:none;margin-top:1em"></div>
+
     <div class=footer></div>
 </div>
 
@@ -41,9 +43,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     LDRC.setText('fcInfo', label);
     LDRC.govThrottleBanner(s, 'thrBanner');   // 0.9.551: nag until a flight reaches full throttle
     LDRC.fcTelemBanner(s, 'telemBanner');     // 0.9.556: FC sensor list wiped = no volts/RPM on the TX
+    LDRC.fcTelemSpeedCard(s, 'telemSpeed');   // 0.9.563: fast (1000/1) vs standard (250/8) telemetry link rate
     setInterval(async () => {
         const s2 = await LDRC.fetchState();
-        if (s2) LDRC.fcTelemBanner(s2, 'telemBanner');
+        if (s2) { LDRC.fcTelemBanner(s2, 'telemBanner'); LDRC.fcTelemSpeedCard(s2, 'telemSpeed'); }
     }, 3000);
 });
 </script>
@@ -55,6 +58,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 <li><b>Copy a bank</b> &mdash; PIDs, PID +, rescue, rates and governor gains from one bank to another in one tap, read back and verified. Each bank keeps its own head speed unless you say otherwise.</li>
 <li><b>Backup &amp; restore</b> &mdash; the whole setup saved on the phone, restorable any time.</li>
 </ul>
+<h3>Telemetry speed</h3>
+<p>Rotorflight paces everything it sends on the receiver wire &mdash; its sensors and its answers to this phone and the transmitter &mdash; by one <b>telemetry link rate</b>. <b>Fast</b> (1000/1) answers about six times quicker than Rotorflight&rsquo;s <b>standard</b> (250/8) and updates volts and RPM sooner; nothing else changes. The receiver remembers your choice and shows what the flight controller actually runs. Applying restarts the flight controller, so it needs the transmitter off. A restore from a phone backup keeps whatever speed the flight controller runs.</p>
 <h3>Why the swashplate may twitch</h3>
 <p>Changing banks and saving make the flight controller pause its servo outputs for a few milliseconds &mdash; a brief, harmless jump, on the ground only (the official configurator does the same).</p>
 <h3>Requirements</h3>

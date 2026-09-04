@@ -268,7 +268,20 @@ object SessionCache {
     data class RestoreItem(val selectByte: Int?, val writeFn: Int, val readFn: Int, val hex: String, val label: String,
                            val readData: String? = null, val verifyHex: String? = null,
                            val chunkOffset: Int? = null, val chunkHex: String? = null,
-                           val extraFn: Int? = null, val extraOffset: Int? = null, val extraHex: String? = null) {
+                           val extraFn: Int? = null, val extraOffset: Int? = null, val extraHex: String? = null,
+                           // Hex chars of the write payload that belong to the FC as it is NOW, not to the
+                           // backup: replaced by the FC's current bytes before the compare and the write.
+                           // Telemetry (73/74): the link rate/ratio (bytes 8-11) is the receiver's Telemetry
+                           // speed setting — a restore of a backup taken at the old speed must not drag it back.
+                           val liveHexRange: IntRange? = null) {
+        /** The item with its live-owned bytes taken from the FC's current image. */
+        fun withLive(image: String): RestoreItem {
+            val r = liveHexRange ?: return this
+            val end = r.last + 1
+            if (image.length < end || hex.length < end) return this
+            val img = image.uppercase()
+            return copy(hex = hex.substring(0, r.first) + img.substring(r.first, end) + hex.substring(end))
+        }
         /** Does this FC image already carry the item? Prefix semantics for
          *  whole-image items (a reply may be longer than the write layout);
          *  strict = the image must hold EVERY wanted byte — the "skip the
@@ -328,6 +341,13 @@ object SessionCache {
      *  them): a 'rejected' answer is not a backup failure, the item is simply
      *  not in the backup. No answer at all still is. */
     val optionalReadFns = setOf(123, 154)
+    /** A telemetry image (MSP 73, 52 bytes) worth restoring: link rate and ratio non-zero
+     *  and at least one sensor in the 40 slots. */
+    fun telemImageGood(hex: String): Boolean {
+        val h = hex.uppercase()
+        if (h.length < 104) return false
+        return h.substring(16, 20) != "0000" && h.substring(20, 24) != "0000" && h.substring(24, 104).any { it != '0' }
+    }
 
     // The rolling recording tees EVERY read — including read-backs of the
     // very edits a confused pilot wants to undo (Malcolm's closed-loop test
@@ -503,7 +523,14 @@ object SessionCache {
         }
         // The verbatim items.
         for ((readFn, writeFn, label) in simpleItems) {
-            hexAt("/api/msp?fn=$readFn")?.let { out.add(RestoreItem(null, writeFn, readFn, it, label)) }
+            hexAt("/api/msp?fn=$readFn")?.let {
+                if (readFn == 73) {
+                    // Telemetry: a backup holding an EMPTY sensor list (the 2026-09-03 fault, caught in a
+                    // backup) must not be put back — the FC's own list stays; the receiver refuses such a
+                    // write anyway. The link speed is live (liveHexRange).
+                    if (telemImageGood(it)) out.add(RestoreItem(null, writeFn, readFn, it, label, liveHexRange = 16 until 24))
+                } else out.add(RestoreItem(null, writeFn, readFn, it, label))
+            }
         }
         // RPM filter notches (154 per axis → 155): axis byte + the axis image.
         for ((a, name) in listOf(0 to "roll", 1 to "pitch", 2 to "yaw")) {

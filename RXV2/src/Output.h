@@ -240,7 +240,13 @@ inline void configureOutputDriver(Protocol p) {
             Serial.printf("[out] SBUS inverted UART on GPIO %d (100 kbaud 8E2)\n", PIN_SBUS_TX);
             break;
         case PROTO_CRSF:
-            // Bidirectional — D6 sends RC, D5 receives FC telemetry + (future) MSP responses.
+            // Bidirectional — D6 sends RC, D5 receives FC telemetry + MSP responses.
+            // 2 KB RX FIFO (0.9.563, default 256 B): at the fast telemetry
+            // link rate (1000/1) the FC sends ~34 frames/s and a jumbo MSP
+            // reply lands as a burst of 64-byte chunks — a loop stall (NVS
+            // write, WiFi join) longer than a few ms overflowed 256 B and
+            // cost a chunk. Must be set before begin() — it is ignored after.
+            Serial1.setRxBufferSize(2048);
             Serial1.begin(420000, SERIAL_8N1, PIN_FC_RX, PIN_SBUS_TX, false);
             Serial.printf("[out] CRSF UART tx=D6 rx=D5 (420 kbaud 8N1)\n");
             break;

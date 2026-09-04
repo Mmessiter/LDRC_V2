@@ -161,6 +161,17 @@ void setup() {
     govThrParkedPct   = prefs.isKey(NVS_KEY_GOV_THR_PARKED) ? prefs.getUChar(NVS_KEY_GOV_THR_PARKED, 0) : 0;
     govThrMaxPct      = prefs.isKey(NVS_KEY_GOV_THR_MAX) ? prefs.getUChar(NVS_KEY_GOV_THR_MAX, 0)    : 0;
     if (fcInfo.throttleCh > 16) fcInfo.throttleCh = 0;
+    // Telemetry speed + the last good telemetry setup (0.9.563): the
+    // preference the pages apply, and the image the guard puts back when the
+    // FC's copy turns up empty (MspFc.h is included after Storage.h, so the
+    // goodness check is repeated here: rate, ratio, at least one sensor).
+    fcInfo.telemSpeedPref = prefs.isKey(NVS_KEY_FC_TELEM_SPEED) ? (prefs.getUChar(NVS_KEY_FC_TELEM_SPEED, 1) ? 1 : 0) : 1;
+    if (prefs.isKey(NVS_KEY_FC_TELEM_GOOD) && prefs.getBytesLength(NVS_KEY_FC_TELEM_GOOD) == 52) {
+        prefs.getBytes(NVS_KEY_FC_TELEM_GOOD, fcInfo.telemGood, 52);
+        bool sensors = false;
+        for (uint8_t i = 12; i < 52; i++) if (fcInfo.telemGood[i]) { sensors = true; break; }
+        fcInfo.telemGoodValid = sensors && (fcInfo.telemGood[8] | fcInfo.telemGood[9]) && (fcInfo.telemGood[10] | fcInfo.telemGood[11]);
+    }
     autoFlyEnabled = prefs.isKey(NVS_KEY_AUTOFLY) ? (prefs.getUChar(NVS_KEY_AUTOFLY, 1) != 0) : true;
     gapMinMs = prefs.isKey(NVS_KEY_GAP_MIN) ? prefs.getUChar(NVS_KEY_GAP_MIN, 5) : 5;
     tzOffsetMin = prefs.isKey(NVS_KEY_TZ_MIN) ? prefs.getShort(NVS_KEY_TZ_MIN, 0) : 0;
@@ -892,9 +903,15 @@ void loop() {
         if (!armLearned && !armingChannel && rfConfirmed &&
             (int32_t)(millis() - armLearnNextMs) >= 0) {
             if (!armLearnPending) {
-                if (txParamMspFree() && !txParamBusy && mspAsyncFunc == 0xFF) {
+                // Same hold-off as the heartbeat probe (0.9.562/563): the FC
+                // keeps one request and drops the one behind it, so never
+                // land this right after a page reply or over a probe.
+                const bool holdOff = mspLastForegroundMs != 0 &&
+                                     (uint32_t)(millis() - mspLastForegroundMs) < PROBE_HOLDOFF_MS;
+                if (txParamMspFree() && !txParamBusy && mspAsyncFunc == 0xFF && !holdOff) {
                     mspAsyncFunc = 34; mspAsyncReady = false;   // MSP_MODE_RANGES
                     mspSendRequest(34);
+                    mspProbeSentMs  = millis();                 // a foreground request waits for the reply
                     armLearnPending = true;
                     armLearnNextMs  = millis() + 1500;          // response window
                 }

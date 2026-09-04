@@ -849,7 +849,8 @@ class MainActivity : AppCompatActivity() {
             // The modes' second image (238), read once and again after any
             // mode write; absent = not read yet.
             val extraImages = HashMap<Int, String>()
-            for (it in items) {
+            for (it0 in items) {
+                var it = it0
                 if (stopped) { restFailures++; restFailed.add(it.label); restDone++; continue }
                 // TWO attempts — one radio hiccup among ~50 sequential MSP
                 // ops must not fail the parachute.
@@ -877,6 +878,7 @@ class MainActivity : AppCompatActivity() {
                     val rq = if (it.readFn != 0) "/api/msp?fn=${it.readFn}" + (it.readData?.let { d -> "&data=$d" } ?: "") else ""
                     if (ok && it.readFn != 0) {
                         val cur = req(rq).second
+                        it = it0.withLive(cur)            // live-owned bytes (telemetry speed) come from the FC
                         var extraOk = true
                         it.extraFn?.let { xf ->
                             if (!extraImages.containsKey(xf)) extraImages[xf] = req("/api/msp?fn=$xf").second

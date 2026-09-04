@@ -299,7 +299,7 @@ extension SessionCache {
         let selectByte: Int?   // fn=210 payload to send first (nil = bankless)
         let writeFn: Int       // 0 = verify-only (nothing to write, the read must match)
         let readFn: Int        // for post-write verification (0 = no read-back exists)
-        let hex: String        // the WRITE payload
+        var hex: String        // the WRITE payload
         let label: String      // named in the UI if it fails to verify
         // Mixer inputs (171/174): the read needs the input index as data=,
         // and the write payload carries a leading index byte the read-back
@@ -318,6 +318,25 @@ extension SessionCache {
         var extraFn: Int? = nil
         var extraOffset: Int? = nil
         var extraHex: String? = nil
+        // Hex chars of the write payload that belong to the FC as it is NOW,
+        // not to the backup: replaced by the FC's current bytes before the
+        // compare and the write. Telemetry (73/74): the link rate/ratio
+        // (bytes 8-11) is the receiver's Telemetry speed setting — a restore
+        // of a backup taken at the old speed must not drag it back.
+        var liveHexRange: Range<Int>? = nil
+
+        /// The item with its live-owned bytes taken from the FC's current image.
+        func withLive(from image: String) -> RestoreItem {
+            guard let r = liveHexRange, image.count >= r.upperBound, hex.count >= r.upperBound else { return self }
+            var copy = self
+            let img = image.uppercased()
+            let s = img.index(img.startIndex, offsetBy: r.lowerBound)
+            let e = img.index(img.startIndex, offsetBy: r.upperBound)
+            let hs = copy.hex.index(copy.hex.startIndex, offsetBy: r.lowerBound)
+            let he = copy.hex.index(copy.hex.startIndex, offsetBy: r.upperBound)
+            copy.hex.replaceSubrange(hs..<he, with: String(img[s..<e]))
+            return copy
+        }
 
         /// Does this FC image already carry the item? (prefix semantics for
         /// whole-image items — a reply may be longer than the write layout.)
@@ -383,6 +402,16 @@ extension SessionCache {
     /// them): a 'rejected' answer is not a backup failure, the item is
     /// simply not in the backup. No answer at all still is.
     static let optionalReadFns: Set<Int> = [123, 154]
+    /// A telemetry image (MSP 73, 52 bytes) worth restoring: link rate and
+    /// ratio non-zero and at least one sensor in the 40 slots.
+    static func telemImageGood(_ hex: String) -> Bool {
+        let h = hex.uppercased()
+        guard h.count >= 104 else { return false }
+        func sub(_ a: Int, _ b: Int) -> Substring {
+            h[h.index(h.startIndex, offsetBy: a)..<h.index(h.startIndex, offsetBy: b)]
+        }
+        return sub(16, 20) != "0000" && sub(20, 24) != "0000" && sub(24, 104).contains { $0 != "0" }
+    }
 
     // The rolling recording tees EVERY read — including the read-backs of
     // the very edits a confused pilot wants to undo (Malcolm's closed-loop
@@ -560,6 +589,16 @@ extension SessionCache {
         // The verbatim items.
         for it in Self.simpleItems {
             if let h = hexAt("/api/msp?fn=\(it.read)") {
+                if it.read == 73 {
+                    // Telemetry: a backup holding an EMPTY sensor list (the
+                    // 2026-09-03 fault, caught in a backup) must not be put
+                    // back — the FC's own list stays; the receiver refuses
+                    // such a write anyway. The link speed is live (above).
+                    guard Self.telemImageGood(h) else { continue }
+                    out.append(RestoreItem(selectByte: nil, writeFn: it.write, readFn: it.read, hex: h, label: it.label,
+                                           liveHexRange: 16..<24))
+                    continue
+                }
                 out.append(RestoreItem(selectByte: nil, writeFn: it.write, readFn: it.read, hex: h, label: it.label))
             }
         }
@@ -769,7 +808,8 @@ final class RestoreRunner {
             // The modes' second image (238), read once and again after any
             // mode write; nil = not read yet.
             var extraImages: [Int: String] = [:]
-            for it in items {
+            for it0 in items {
+                var it = it0
                 if stopped { failures += 1; failedLabels.append(it.label); done += 1; continue }
                 // TWO attempts — a single radio hiccup among ~50 sequential
                 // MSP ops must not fail the parachute (Malcolm 2026-08-06:
@@ -799,6 +839,7 @@ final class RestoreRunner {
                         ? "/api/msp?fn=\(it.readFn)" + (it.readData.map { "&data=\($0)" } ?? "") : ""
                     if ok && it.readFn != 0 {
                         let cur = req(rq).body
+                        it = it0.withLive(from: cur)      // live-owned bytes (telemetry speed) come from the FC
                         var extraOk = true
                         if let xf = it.extraFn {
                             if extraImages[xf] == nil { extraImages[xf] = req("/api/msp?fn=\(xf)").body }
