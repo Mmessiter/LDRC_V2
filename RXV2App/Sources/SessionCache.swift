@@ -132,14 +132,27 @@ final class SessionCache {
     static func cacheable(path: String, query: String?) -> Bool {
         guard path.hasPrefix("/api/") else { return false }
         if path == "/api/msp", let q = query, q.contains("data=") {
-            // fn=174 (GET_MIXER_INPUT) is the one READ whose parameter — the
-            // input index — rides in data=. Without this exception the
-            // Travel-extents reads were never recorded, so backup/restore
-            // silently forgot the mixer (Malcolm 2026-08-15, 6 am in bed).
-            if !q.contains("fn=174") { return false }
+            // fn=174 (GET_MIXER_INPUT) and fn=154 (RPM filter notches, per
+            // axis) are the READS whose parameter — the index — rides in
+            // data=. Without this exception the Travel-extents reads were
+            // never recorded, so backup/restore silently forgot the mixer
+            // (Malcolm 2026-08-15, 6 am in bed).
+            if !q.contains("fn=174") && !q.contains("fn=154") { return false }
         }
         if path == "/api/firmware/check" { return false }   // no update offers offline
         return true
+    }
+
+    /// Drop a recorded read — used when the FC says it does not support a
+    /// read this firmware sends, so a value recorded from an earlier session
+    /// (another FC version) can never be frozen as today's backup.
+    func forget(pathAndQuery: String) {
+        let work = {
+            self.entries[self.keyFor(pathAndQuery)] = nil
+            self.savedAt = Date()
+            self.scheduleSave()
+        }
+        if Thread.isMainThread { work() } else { DispatchQueue.main.sync(execute: work) }   // the recording lives on main
     }
 
     func record(pathAndQuery: String, path: String, type: String, body: Data) {
@@ -284,8 +297,8 @@ extension SessionCache {
 extension SessionCache {
     struct RestoreItem {
         let selectByte: Int?   // fn=210 payload to send first (nil = bankless)
-        let writeFn: Int
-        let readFn: Int        // for post-write verification
+        let writeFn: Int       // 0 = verify-only (nothing to write, the read must match)
+        let readFn: Int        // for post-write verification (0 = no read-back exists)
         let hex: String        // the WRITE payload
         let label: String      // named in the UI if it fails to verify
         // Mixer inputs (171/174): the read needs the input index as data=,
@@ -293,7 +306,83 @@ extension SessionCache {
         // won't echo — so the verify compares against verifyHex instead.
         var readData: String? = nil
         var verifyHex: String? = nil
+        // Chunked images (servos 212, modes 35, rxfail 78, mixer rules 173,
+        // meters 57/41): one FC read holds every chunk, each write sets one.
+        // The chunk's own bytes must appear at chunkOffset (hex chars) of
+        // the readFn image — that is both the "already identical, skip the
+        // write" test and the verify.
+        var chunkOffset: Int? = nil
+        var chunkHex: String? = nil
+        // Modes carry a second image (238: logic + link per slot) that the
+        // 35 write also sets; a slot is skipped only when BOTH match.
+        var extraFn: Int? = nil
+        var extraOffset: Int? = nil
+        var extraHex: String? = nil
+
+        /// Does this FC image already carry the item? (prefix semantics for
+        /// whole-image items — a reply may be longer than the write layout.)
+        /// strict = the image must hold EVERY wanted byte: the "skip the
+        /// write" decision must never rest on a short reply, the post-write
+        /// verify keeps the old lenient rule.
+        func matches(image: String, strict: Bool = false) -> Bool {
+            let img = image.uppercased()
+            if let off = chunkOffset, let want = chunkHex {
+                guard img.count >= off + want.count else { return false }
+                let s = img.index(img.startIndex, offsetBy: off)
+                let e = img.index(s, offsetBy: want.count)
+                return String(img[s..<e]) == want
+            }
+            let want = (verifyHex ?? hex).uppercased()
+            if strict { return img.hasPrefix(want) }
+            return !img.isEmpty && (img.hasPrefix(want) || want.hasPrefix(img))
+        }
+        func extraMatches(image: String) -> Bool {
+            guard let off = extraOffset, let want = extraHex else { return true }
+            let img = image.uppercased()
+            guard img.count >= off + want.count else { return false }
+            let s = img.index(img.startIndex, offsetBy: off)
+            let e = img.index(s, offsetBy: want.count)
+            return String(img[s..<e]) == want
+        }
     }
+
+    // MARK: the catalogue (Malcolm 2026-09-04: "let's cover all items")
+    //
+    // Every bankless Rotorflight read the backup freezes. Layouts checked
+    // line by line against Rotorflight 4.6's msp.c: the SET payload is the
+    // GET reply verbatim except motor config (222 = 131 without byte 6, the
+    // motor count) and blackbox (81 = 80 without byte 0, the 'supported'
+    // flag). NOT here, deliberately: ESC parameters (217/218 — Scorpion
+    // programming freezes its telemetry), serial ports (54/55 — the
+    // receiver's own link), LED/OSD/GPS/VTX, and the receiver's NVS.
+    static let banklessReadFns: [Int] =
+        [142, 42, 120,                                   // governor global, mixer, servos
+         10, 36, 38, 61, 240, 96, 126,                   // name, features, board, arming, trims, sensors, alignment
+         64, 44, 66, 75, 77, 50, 73,                     // channel map, receiver, sticks, failsafe, rxfail, RSSI, telemetry
+         80, 92, 32, 123, 131,                           // blackbox, filters, battery, ESC telemetry, motor
+         34, 238, 172, 56, 40]                           // modes (+extras), mixer rules, meters
+    /// Verbatim read → write items, in restore order: (read fn, write fn, label).
+    static let simpleItems: [(read: Int, write: Int, label: String)] =
+        [(10, 11, "flight controller name"),
+         (36, 37, "features"),
+         (38, 39, "board alignment"),
+         (61, 62, "arming (auto-disarm delay)"),
+         (240, 239, "level trims"),
+         (96, 97, "sensor selection"),
+         (126, 220, "gyro alignment"),
+         (64, 65, "channel map"),
+         (44, 45, "receiver setup"),
+         (66, 67, "stick centre & travel"),
+         (75, 76, "failsafe"),
+         (50, 51, "RSSI"),
+         (73, 74, "telemetry sensors"),
+         (92, 93, "gyro filters"),
+         (32, 33, "battery"),
+         (123, 216, "ESC telemetry setup")]
+    /// Reads the FC may legitimately reject (older Rotorflight builds lack
+    /// them): a 'rejected' answer is not a backup failure, the item is
+    /// simply not in the backup. No answer at all still is.
+    static let optionalReadFns: Set<Int> = [123, 154]
 
     // The rolling recording tees EVERY read — including the read-backs of
     // the very edits a confused pilot wants to undo (Malcolm's closed-loop
@@ -320,12 +409,33 @@ extension SessionCache {
     private static let restoreKeyPrefixes =
         ["/api/msp?fn=112&bank=", "/api/msp?fn=94&bank=",
          "/api/msp?fn=148&bank=", "/api/msp?fn=146&bank=", "/api/msp?fn=111&bank=",
-         "/api/msp?fn=174&data="]   // mixer inputs (Travel extents)
+         "/api/msp?fn=174&data=",   // mixer inputs (Travel extents)
+         "/api/msp?fn=154&data="]   // RPM filter notches, per axis
+    private static func isRestoreKey(_ k: String) -> Bool {
+        if restoreKeyPrefixes.contains(where: { k.hasPrefix($0) }) { return true }
+        if k.hasPrefix("/app/declared/") { return true }
+        return banklessReadFns.contains { k == "/api/msp?fn=\($0)" }
+    }
 
-    /// The mechanical items — servo centres/travel (fn 120) and the mixer's
-    /// limits, trims and input travel (42, 174). A backup from ANOTHER model
-    /// leaves these out on import: they belong to that airframe's linkage.
-    static let mechanicsKeyPrefixes = ["/api/msp?fn=120", "/api/msp?fn=42", "/api/msp?fn=174&data="]
+    /// This airframe's OWN items — servos, mixer, motor & gear, board and
+    /// sensor alignment, level trims, features, battery & meters, receiver
+    /// wiring, ESC telemetry, telemetry sensors, blackbox, name, modes,
+    /// per-channel failsafe values, RPM notches. A backup from ANOTHER model
+    /// leaves these out on import: they belong to that helicopter's hardware.
+    /// What transfers is the tune: PIDs, rates, governor, rescue, filters,
+    /// stick setup, failsafe policy, arming delay, RSSI, channel map and the
+    /// bank/rates switches.
+    static let mechanicsKeyPrefixes =
+        ["/api/msp?fn=120", "/api/msp?fn=42", "/api/msp?fn=174&data=", "/api/msp?fn=172",
+         "/api/msp?fn=131", "/api/msp?fn=38", "/api/msp?fn=126", "/api/msp?fn=96", "/api/msp?fn=240",
+         "/api/msp?fn=36", "/api/msp?fn=32", "/api/msp?fn=56", "/api/msp?fn=40",
+         "/api/msp?fn=44", "/api/msp?fn=123", "/api/msp?fn=73", "/api/msp?fn=80", "/api/msp?fn=10",
+         "/api/msp?fn=34", "/api/msp?fn=238", "/api/msp?fn=77", "/api/msp?fn=154&data="]
+    static func isMechanicsKey(_ k: String) -> Bool {
+        mechanicsKeyPrefixes.contains { p in
+            p.hasSuffix("=") ? k.hasPrefix(p) : (k == p || k.hasPrefix(p + "&"))
+        }
+    }
 
     /// The FC's current banks from MSP_STATUS (fn=101): byte 23 = PID
     /// profile, byte 25 = rate profile, bytes 24/26 = the profile COUNTS
@@ -349,13 +459,7 @@ extension SessionCache {
     func snapshotRestorePoint(explicit: Bool = false) -> Bool {
         if !explicit, restorePointIsExplicit() { return false }
         var keep: [String: Entry] = [:]
-        for (k, v) in entries {
-            if Self.restoreKeyPrefixes.contains(where: { k.hasPrefix($0) })
-                || k == "/api/msp?fn=142" || k == "/api/msp?fn=42"
-                || k == "/api/msp?fn=120" || k.hasPrefix("/app/declared/") {
-                keep[k] = v
-            }
-        }
+        for (k, v) in entries where Self.isRestoreKey(k) { keep[k] = v }
         guard !keep.isEmpty else { return false }
         let shape = RestoreShape(model: modelName, savedAt: Date(), entries: keep, explicit: explicit)
         guard let d = try? JSONEncoder().encode(shape) else { return false }
@@ -412,26 +516,99 @@ extension SessionCache {
                                        readData: key, verifyHex: h))
             }
         }
+        func slice(_ s: String, _ off: Int, _ len: Int) -> String? {
+            guard off >= 0, len > 0, s.count >= off + len else { return nil }
+            let a = s.index(s.startIndex, offsetBy: off)
+            return String(s[a..<s.index(a, offsetBy: len)])
+        }
         // Servos (bankless): the stored fn-120 image is count(1B) + 16 B per
-        // servo; fn 212 writes ONE servo (index byte + its 16 B). Verify is
-        // structural for all but the last servo (the fn-120 read-back mixes
-        // written and not-yet-written servos mid-restore), then the LAST
-        // item compares the whole image byte-for-byte.
+        // servo; fn 212 writes ONE servo (index byte + its 16 B), verified
+        // as that servo's 16 B in the fn-120 read-back.
         if let full = hexAt("/api/msp?fn=120"), full.count >= 2,
-           let count = Int(full.prefix(2), radix: 16), count > 0,
-           full.count >= 2 + count * 32 {
+           let count = Int(full.prefix(2), radix: 16), count > 0, count <= 8 {
             let roles = ["swash 1", "swash 2", "swash 3", "TAIL", "5", "6", "7", "8"]
             for i in 0..<count {
-                let start = full.index(full.startIndex, offsetBy: 2 + i * 32)
-                let end = full.index(start, offsetBy: 32)
-                let slice = String(full[start..<end])
-                let idx = String(format: "%02X", i)
-                let last = (i == count - 1)
+                guard let s = slice(full, 2 + i * 32, 32) else { break }
                 out.append(RestoreItem(selectByte: nil, writeFn: 212, readFn: 120,
-                                       hex: idx + slice,
-                                       label: "servo \(i + 1) (\(roles[min(i, 7)]))",
-                                       readData: nil,
-                                       verifyHex: last ? full : String(full.prefix(2))))
+                                       hex: String(format: "%02X", i) + s,
+                                       label: "servo \(i + 1) (\(roles[i]))",
+                                       chunkOffset: 2 + i * 32, chunkHex: s))
+            }
+        }
+        // Mixer rules (172 → 173, one rule per write: index + 7 B).
+        if let full = hexAt("/api/msp?fn=172") {
+            for i in 0..<(full.count / 14) {
+                guard let s = slice(full, i * 14, 14) else { break }
+                out.append(RestoreItem(selectByte: nil, writeFn: 173, readFn: 172,
+                                       hex: String(format: "%02X", i) + s, label: "mixer rule \(i + 1)",
+                                       chunkOffset: i * 14, chunkHex: s))
+            }
+        }
+        // Motor & gear ratio: 222 takes the 131 reply WITHOUT byte 6 (motor
+        // count) — exactly what the Gear ratio page writes; needs an FC
+        // restart afterwards (the runner reboots after the EEPROM save).
+        if let full = hexAt("/api/msp?fn=131"), full.count >= 58 {
+            let w = String(full.prefix(12)) + String(full.dropFirst(14).prefix(44))
+            out.append(RestoreItem(selectByte: nil, writeFn: 222, readFn: 131, hex: w,
+                                   label: "motor & gear ratio", verifyHex: full))
+        }
+        // Blackbox: 81 takes the 80 reply WITHOUT byte 0 (the 'supported' flag).
+        if let full = hexAt("/api/msp?fn=80"), full.count >= 26 {
+            out.append(RestoreItem(selectByte: nil, writeFn: 81, readFn: 80,
+                                   hex: String(full.dropFirst(2)), label: "blackbox setup", verifyHex: full))
+        }
+        // The verbatim items.
+        for it in Self.simpleItems {
+            if let h = hexAt("/api/msp?fn=\(it.read)") {
+                out.append(RestoreItem(selectByte: nil, writeFn: it.write, readFn: it.read, hex: h, label: it.label))
+            }
+        }
+        // RPM filter notches (154 per axis → 155): axis byte + the axis image.
+        for (a, name) in [(0, "roll"), (1, "pitch"), (2, "yaw")] {
+            let key = String(format: "%02X", a)
+            if let h = hexAt("/api/msp?fn=154&data=\(key)") {
+                out.append(RestoreItem(selectByte: nil, writeFn: 155, readFn: 154, hex: key + h,
+                                       label: "RPM notches — \(name)", readData: key, verifyHex: h))
+            }
+        }
+        // Voltage (56 → 57) and current (40 → 41) meters: the reply is a
+        // count then frames [len, id, type, values…] — 8 bytes on the wire
+        // for a voltage meter (scale, divider, divmul), 7 for a current
+        // meter (scale, offset); each write is id + values, verified as the
+        // values in the frame.
+        for (readFn, writeFn, frameLen, name) in [(56, 57, 8, "voltage meter"), (40, 41, 7, "current meter")] {
+            guard let full = hexAt("/api/msp?fn=\(readFn)"), full.count >= 2,
+                  let n = Int(full.prefix(2), radix: 16), n > 0, n <= 4 else { continue }
+            for i in 0..<n {
+                let f = 2 + i * frameLen * 2
+                guard let id = slice(full, f + 2, 2), let vals = slice(full, f + 6, (frameLen - 3) * 2) else { break }
+                out.append(RestoreItem(selectByte: nil, writeFn: writeFn, readFn: readFn, hex: id + vals,
+                                       label: "\(name) \(i + 1)", chunkOffset: f + 6, chunkHex: vals))
+            }
+        }
+        // Modes / arming switch (34 + 238 → 35, one slot per write: index,
+        // box, channel, start, end, logic, link). A slot is skipped only when
+        // both images already match; the 238 image is verified whole at the
+        // end (the 34 read-back verifies each slot's range).
+        if let ranges = hexAt("/api/msp?fn=34"), let extra = hexAt("/api/msp?fn=238"),
+           let n = Int(extra.prefix(2), radix: 16), n > 0, n <= 32,
+           ranges.count >= n * 8, extra.count >= 2 + n * 6 {
+            for i in 0..<n {
+                guard let r = slice(ranges, i * 8, 8), let x = slice(extra, 2 + i * 6 + 2, 4) else { break }
+                out.append(RestoreItem(selectByte: nil, writeFn: 35, readFn: 34,
+                                       hex: String(format: "%02X", i) + r + x, label: "mode slot \(i + 1)",
+                                       chunkOffset: i * 8, chunkHex: r,
+                                       extraFn: 238, extraOffset: 2 + i * 6 + 2, extraHex: x))
+            }
+            out.append(RestoreItem(selectByte: nil, writeFn: 0, readFn: 238, hex: extra, label: "mode logic & links"))
+        }
+        // Per-channel failsafe values (77 → 78: index + mode + value).
+        if let full = hexAt("/api/msp?fn=77") {
+            for i in 0..<min(full.count / 6, 18) {
+                guard let s = slice(full, i * 6, 6) else { break }
+                out.append(RestoreItem(selectByte: nil, writeFn: 78, readFn: 77,
+                                       hex: String(format: "%02X", i) + s, label: "failsafe value ch\(i + 1)",
+                                       chunkOffset: i * 6, chunkHex: s))
             }
         }
         // Declared items (Malcolm 2026-08-30): settings the FC cannot read
@@ -514,7 +691,7 @@ extension SessionCache {
                      == model.trimmingCharacters(in: .whitespaces).lowercased()
         var entries: [String: Entry] = [:]
         for (k, v) in es {
-            if !sameModel, Self.mechanicsKeyPrefixes.contains(where: { k.hasPrefix($0) }) { continue }
+            if !sameModel, Self.isMechanicsKey(k) { continue }
             guard let b64 = v["b64"] as? String, let body = Data(base64Encoded: b64) else { continue }
             entries[k] = Entry(type: (v["type"] as? String) ?? "text/plain", body: body)
         }
@@ -586,17 +763,21 @@ final class RestoreRunner {
                 done = total; phase = "done"; running = false
                 return
             }
-            var wroteGov = false
+            var wroteGov = false, wroteMotor = false, wroteAny = false
             var curPid = orig.pid, curRate = orig.rate
             var stopped = false
+            // The modes' second image (238), read once and again after any
+            // mode write; nil = not read yet.
+            var extraImages: [Int: String] = [:]
             for it in items {
                 if stopped { failures += 1; failedLabels.append(it.label); done += 1; continue }
                 // TWO attempts — a single radio hiccup among ~50 sequential
                 // MSP ops must not fail the parachute (Malcolm 2026-08-06:
                 // "One was not verified I see").
-                var itemOk = false
+                var itemOk = false, already = false
                 for attempt in 1...2 {
                     var ok = true
+                    already = false
                     // Skip selects that are already true — each one stalls
                     // the FC on a flash write (the swash twitch).
                     if let b = it.selectByte {
@@ -607,16 +788,39 @@ final class RestoreRunner {
                             if ok { if isRate { curRate = target } else { curPid = target } }
                         }
                     }
-                    if ok { ok = req("/api/msp?fn=\(it.writeFn)&data=\(it.hex)").ok }
-                    if ok && it.readFn != 0 {      // readFn 0 = declared item, no read-back exists
-                        // Verify: read back, compare (reply may be longer — prefix).
-                        // Mixer inputs read with their index in data= and are
-                        // compared against verifyHex (write payload minus the
-                        // leading index byte the read never echoes).
-                        let rq = "/api/msp?fn=\(it.readFn)" + (it.readData.map { "&data=\($0)" } ?? "")
-                        let want = it.verifyHex ?? it.hex
-                        let back = req(rq).body.uppercased()
-                        ok = back.hasPrefix(want) || want.hasPrefix(back) && !back.isEmpty
+                    // Read first: an item the FC already holds is not
+                    // written again (a restore of an unchanged setup is
+                    // then reads only — no flash stalls, no needless
+                    // re-inits). Mixer inputs and RPM notches read with
+                    // their index in data= and compare against verifyHex
+                    // (the write payload minus its leading index byte);
+                    // chunk items compare their slice of the image.
+                    let rq = it.readFn != 0
+                        ? "/api/msp?fn=\(it.readFn)" + (it.readData.map { "&data=\($0)" } ?? "") : ""
+                    if ok && it.readFn != 0 {
+                        let cur = req(rq).body
+                        var extraOk = true
+                        if let xf = it.extraFn {
+                            if extraImages[xf] == nil { extraImages[xf] = req("/api/msp?fn=\(xf)").body }
+                            extraOk = it.extraMatches(image: extraImages[xf] ?? "")
+                        }
+                        already = it.matches(image: cur, strict: true) && extraOk
+                    }
+                    if ok && !already {
+                        if it.writeFn == 0 {
+                            ok = false                       // verify-only item that does not match
+                        } else {
+                            wroteAny = true
+                            ok = req("/api/msp?fn=\(it.writeFn)&data=\(it.hex)").ok
+                            // Verify: read back, compare (reply may be longer — prefix).
+                            if ok && it.readFn != 0 { ok = it.matches(image: req(rq).body) }   // readFn 0 = declared item, no read-back exists
+                            // ... and the extra image (mode logic/link bytes) — re-read,
+                            // it changed with the write; a slot the FC ignored fails HERE.
+                            if let xf = it.extraFn {
+                                extraImages[xf] = req("/api/msp?fn=\(xf)").body
+                                if ok { ok = it.extraMatches(image: extraImages[xf] ?? "") }
+                            }
+                        }
                     }
                     // Banked item: the FC must STILL be on the bank we chose.
                     // A transmitter switched on mid-restore drags the FC onto
@@ -638,7 +842,10 @@ final class RestoreRunner {
                     Thread.sleep(forTimeInterval: 0.6)
                 }
                 if !itemOk { failures += 1; failedLabels.append(it.label) }
-                if it.writeFn == 143 && itemOk { wroteGov = true }
+                if itemOk && !already {
+                    if it.writeFn == 143 { wroteGov = true }
+                    if it.writeFn == 222 { wroteMotor = true }   // motor / gear ratio: FC restart needed
+                }
                 done += 1
             }
             // Put the FC back on its own banks BEFORE the EEPROM save — unless
@@ -648,11 +855,18 @@ final class RestoreRunner {
                 if curRate != orig.rate { _ = req("/api/msp?fn=210&data=" + String(format: "%02X", 0x80 | orig.rate)) }
             }
             // Save to EEPROM — verified: an unsaved restore evaporates at the
-            // next power-up while the page said "restored".
-            var saved = req("/api/msp?fn=250").ok
-            if !saved { Thread.sleep(forTimeInterval: 0.6); saved = req("/api/msp?fn=250").ok }
-            if !saved { failures += 1; failedLabels.append("save to flight controller memory (EEPROM) — run the restore again") }
-            if wroteGov && saved { _ = req("/api/msp?fn=68") }      // gov config needs FC reboot
+            // next power-up while the page said "restored". Nothing written
+            // (the FC already held it all) → nothing to save, no flash stall.
+            var saved = true
+            if wroteAny {
+                saved = req("/api/msp?fn=250").ok
+                if !saved { Thread.sleep(forTimeInterval: 0.6); saved = req("/api/msp?fn=250").ok }
+                if !saved { failures += 1; failedLabels.append("save to flight controller memory (EEPROM) — run the restore again") }
+            }
+            // Governor config and the motor block only take effect after an
+            // FC restart — reboot only after a CONFIRMED save (an unsaved
+            // reboot would throw the whole restore away).
+            if (wroteGov || wroteMotor) && saved { _ = req("/api/msp?fn=68") }
             done += 1
             phase = "done"
             running = false
@@ -706,19 +920,29 @@ final class SessionPrefetcher {
         var failures = 0      // MSP reads that never answered (after one retry)
 
         // Blocking GET on this background thread; tees into the recording.
-        func req(_ p: String) -> Data? {
+        // Returns the receiver's HTTP code too (0 = no answer at all): the
+        // receiver says 502 when the FC REJECTED the request (an MSP this
+        // Rotorflight build lacks) and 504 when it never answered.
+        func reqCoded(_ p: String) -> (code: Int, body: Data?) {
             let sem = DispatchSemaphore(value: 0)
             var body: Data?
+            var code = 0
             DispatchQueue.main.async {
                 link.request(method: "GET", path: p, headers: [:], body: nil) { result in
-                    if case .success(let resp) = result, resp.code == 0 || resp.code == 200 {
-                        body = resp.body
-                        let bare = p.split(separator: "?").first.map(String.init) ?? p
-                        let q = p.contains("?") ? String(p.split(separator: "?")[1]) : nil
-                        if SessionCache.cacheable(path: bare, query: q) {
-                            SessionCache.shared.record(pathAndQuery: p, path: bare,
-                                                       type: resp.contentType, body: resp.body)
+                    switch result {
+                    case .success(let resp):
+                        code = resp.code == 0 ? 200 : resp.code
+                        if resp.code == 0 || resp.code == 200 {
+                            body = resp.body
+                            let bare = p.split(separator: "?").first.map(String.init) ?? p
+                            let q = p.contains("?") ? String(p.split(separator: "?")[1]) : nil
+                            if SessionCache.cacheable(path: bare, query: q) {
+                                SessionCache.shared.record(pathAndQuery: p, path: bare,
+                                                           type: resp.contentType, body: resp.body)
+                            }
                         }
+                    case .failure:
+                        code = -1          // transport trouble, not the receiver's verdict
                     }
                     sem.signal()
                 }
@@ -726,15 +950,24 @@ final class SessionPrefetcher {
             _ = sem.wait(timeout: .now() + 20)
             done += 1
             Thread.sleep(forTimeInterval: pace)
-            return body
+            return (code, body)
         }
+        func req(_ p: String) -> Data? { reqCoded(p).body }
         // A Rotorflight read the backup depends on: one retry, then it
         // counts as a failure — a missing answer must never let a stale
-        // value from an earlier session pass as today's backup.
-        func mspRead(_ p: String) {
-            if req(p) != nil { return }
+        // value from an earlier session pass as today's backup. An
+        // `optional` read the FC rejects (502 — older Rotorflight) is not a
+        // failure: the item is dropped from the recording so the restore
+        // point cannot carry a stale copy of it either.
+        func mspRead(_ p: String, optional: Bool = false) {
+            let first = reqCoded(p)
+            if first.body != nil { return }
+            if optional && first.code == 502 { SessionCache.shared.forget(pathAndQuery: p); return }
             Thread.sleep(forTimeInterval: 0.5)
-            if req(p) == nil { failures += 1 }
+            let second = reqCoded(p)
+            if second.body != nil { return }
+            if optional && second.code == 502 { SessionCache.shared.forget(pathAndQuery: p); return }
+            failures += 1
         }
         func selectBank(_ byte: Int) {
             let hex = String(format: "%02X", byte)
@@ -805,16 +1038,22 @@ final class SessionPrefetcher {
             } else if !pageMspQuiet() {
                 error = "a Rotorflight page was busy reading — back up again in a moment"
             } else if let orig = fcBanks() {
-                total += 7 + 4 * 6 + 4 * 3 + 2   // 142 + mixer(5) + servos + pid sweep + rate sweep + restores
-                mspRead("/api/msp?fn=142")       // governor global — bankless
-                // Mixer — Travel extents' blocks, bankless (Malcolm
-                // 2026-08-15: the backup must not forget yesterday's
-                // additions). Config + one read per input 1..4.
-                mspRead("/api/msp?fn=42")
+                // bankless reads + mixer inputs + RPM notch axes + pid sweep + rate sweep + restores
+                total += SessionCache.banklessReadFns.count + 4 + 3 + 4 * 6 + 4 * 3 + 2
+                // Every bankless setup block (Malcolm 2026-09-04: "cover all
+                // items") — governor global, mixer, servos, modes, channel
+                // map, motor & gear, battery & meters, features, alignment,
+                // filters, telemetry, blackbox, name … the catalogue's
+                // order. Reads an older Rotorflight rejects are optional.
+                for fn in SessionCache.banklessReadFns {
+                    mspRead("/api/msp?fn=\(fn)", optional: SessionCache.optionalReadFns.contains(fn))
+                }
+                // Mixer inputs — Travel extents' blocks (Malcolm 2026-08-15:
+                // the backup must not forget yesterday's additions), one read
+                // per input 1..4.
                 for i in 1...4 { mspRead(String(format: "/api/msp?fn=174&data=%02X", i)) }
-                // Servos — bankless, one bulk read (chunked; RX 0.9.383+).
-                // Malcolm 2026-08-19: the backup must include the new screen.
-                mspRead("/api/msp?fn=120")
+                // RPM filter notches, one read per axis (roll, pitch, yaw).
+                for a in 0...2 { mspRead(String(format: "/api/msp?fn=154&data=%02X", a), optional: true) }
                 // Every bank select makes the FC write flash — a brief servo
                 // stall (the swash twitch Malcolm noticed 2026-08-06). Skip
                 // selects that are already true.

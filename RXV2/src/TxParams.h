@@ -809,7 +809,7 @@ inline void txParamsLoop() {
             if (mspAsyncReady) {              // FC acked EEPROM_WRITE — persisted
                 mspAsyncFunc = 0xFF;
                 pmUpdateCacheFromScratch();   // TX read-back shows the new values NOW
-                tuneEditsPending = true;   // proven-tune counter restarts
+                tuneNoteEdit(false);       // new tune generation now; NVS once provably on the ground (tunePersistTick)
                 events.add(pmWriteKind == WK_PID ? "TX edit: PIDs -> FC (verified+saved)"
                          : pmWriteKind == WK_PID_ADV ? "TX edit: adv PID -> FC (verified+saved)"
                          : pmWriteKind == WK_GOV_PROFILE ? "TX edit: gov profile -> FC (verified+saved)"

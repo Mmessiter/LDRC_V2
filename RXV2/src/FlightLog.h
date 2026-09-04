@@ -99,21 +99,43 @@ inline void eventsPersist() {
     eventsPersistedUpTo = added;
 }
 
-// Proven-tune counter — called ONLY when a NEW flight slot is written
-// (updates of the same session don't recount). Runs inside the flight
+// Proven-tune counter — called on every flight save. A session counts
+// ONCE (the first save rotates the ring; later saves of the same session
+// pass rotated=false) and only once the model has flown >= 3 min
+// (Malcolm 2026-09-04: "it regards every brief switch on and switch off
+// as a flight"): flightMs = the session's armed time, or the link time
+// when the arm switch was never used. A short first hop followed by a
+// long second one still counts at the second save. Runs inside the flight
 // save's already-pardoned flash window, so the NVS writes cost nothing
-// extra in the logs.
-inline void tuneCountFlight(bool rotated) {
-    if (!rotated) return;
-    if (tuneEditsPending) {
-        tuneEditsPending = false;
-        tuneEditGen++;
-        tuneFlightsSince = 1;
-        prefs.putUShort(NVS_KEY_EDIT_GEN, tuneEditGen);
-    } else {
-        tuneFlightsSince++;
-    }
+// extra in the logs — which also makes it the safe place to pay a
+// transmitter edit's deferred NVS write.
+inline bool tuneSessionCounted = false;
+inline void tuneCountFlight(bool rotated, uint32_t flightMs) {
+    if (rotated) tuneSessionCounted = false;   // a new flight slot = a new session
+    tunePersist();
+    if (tuneSessionCounted || flightMs < TUNE_FLIGHT_MIN_MS) return;
+    tuneSessionCounted = true;
+    tuneFlightsSince++;
     prefs.putULong(NVS_KEY_FLT_SINCE_EDIT, tuneFlightsSince);
+}
+
+// This session's flying time for the counter above: armed milliseconds
+// (summed over every armed spell) once the arm switch has been used;
+// maintained by flightSaveTick, reset with each new session.
+inline bool     fltSessionEverArmed = false;
+inline uint32_t fltSessionArmedMs   = 0;
+
+// Pay a deferred (transmitter-edit) NVS write at a provably quiet moment:
+// the transmitter is off, or the model is disarmed with the sticks still
+// for 2 s — the flight save's own definition of "on the ground".
+inline void tunePersistTick() {
+    if (!tuneEditsPending) return;
+    const uint32_t now = millis();
+    const bool linkDead = rx.lastMillis && (uint32_t)(now - rx.lastMillis) > 3000;
+    const bool armKnown = armingChannel >= 1 && armingChannel <= 16;
+    const bool armed    = armKnown && !linkDead && channelMicros[armingChannel - 1] > 1500;
+    const bool sticksStill = lastChMoveMs && (uint32_t)(now - lastChMoveMs) >= 2000;
+    if (!armed && (linkDead || (armKnown && sticksStill))) tunePersist();
 }
 
 inline uint32_t fltPendingStampMs[FLIGHT_KEEP] = { 0, 0, 0 };
@@ -199,7 +221,7 @@ inline void saveFlightToLittleFS(bool rotate = true) {
     LittleFS.rename("/flt.tmp", flightPath(target));
     if (rotate) { fltHead = target; prefs.putUChar(NVS_KEY_FLT_HEAD, fltHead); }
     fltPendingStampMs[target] = h.savedEpochS ? 0 : millis();   // slots are stable: no shifting
-    tuneCountFlight(rotate);
+    tuneCountFlight(rotate, fltSessionEverArmed ? fltSessionArmedMs : h.connMs);
     eventsPersist();
     events.add(rotate ? "Flight saved to flash" : "Flight updated (same session)");
 }
@@ -220,6 +242,7 @@ inline uint8_t      svState   = 0;        // 0 idle, 1 writing, 2 commit
 inline uint16_t     svWritten = 0;
 inline bool         svRotate  = true;
 inline bool         svOk      = true;
+inline uint32_t     svFlightMs = 0;       // flying time for the proven-tune counter
 
 // Ack item 38: "pardon the next N ms" — sent a couple of dozen times before
 // the save's file operations so the TX can exclude the flash-erase stall from
@@ -250,6 +273,7 @@ inline void startFlightSaveAsync(bool rotate) {
     const uint16_t start = (teleCount < TELE_RING) ? 0 : teleHead;
     for (uint16_t i = 0; i < svHdr.count; ++i) svBuf[i] = teleRing[(start + i) % TELE_RING];
     svWritten = 0; svRotate = rotate;
+    svFlightMs = fltSessionEverArmed ? fltSessionArmedMs : svHdr.connMs;
     // ANNOUNCE first (svState 3): the tmp-file open below can trigger a flash
     // erase — the very stall we are pardoning — so the pardon must be on the
     // TX's side of the air before any file work begins.
@@ -304,7 +328,7 @@ inline void flightSaveAsyncTick() {
     LittleFS.rename("/flt.tmp", flightPath(target));
     if (svRotate) { fltHead = target; prefs.putUChar(NVS_KEY_FLT_HEAD, fltHead); }
     fltPendingStampMs[target] = svHdr.savedEpochS ? 0 : millis();
-    tuneCountFlight(svRotate);
+    tuneCountFlight(svRotate, svFlightMs);
     eventsPersist();
     events.add(svRotate ? "Flight saved to flash" : "Flight updated (same session)");
     svState = 0;
@@ -401,6 +425,7 @@ inline void flightSaveTick() {
     static bool     sessionWorth    = false;         // has this session had a real (>=30 s) flight?
     static bool     sessionEverArmed = false;        // any arm edge at all this session?
     static uint32_t sessionConnStart = 0xFFFFFFFF;
+    static uint32_t armedMsBefore    = 0;            // armed time of the session's EARLIER spells
     const uint32_t now = millis();
 
     // A NEW session = a new connection (>= 15 s link gap, i.e. a new battery /
@@ -412,6 +437,7 @@ inline void flightSaveTick() {
         fltSessionSaved = false;
         sessionEverArmed = false;
         fltSavePending = false;
+        armedMsBefore = 0; fltSessionArmedMs = 0; fltSessionEverArmed = false;
     }
 
     // Armed only counts while the link is actually live — a lost link freezes
@@ -419,8 +445,10 @@ inline void flightSaveTick() {
     const bool linkLive = (rx.lastMillis != 0) && ((uint32_t)(now - rx.lastMillis) < 2000);
     const bool armed    = linkLive && (channelMicros[armingChannel - 1] > 1500);
 
-    if (armed && !wasArmed) { armedSince = now; sessionEverArmed = true; }      // arm edge
+    if (armed && !wasArmed) { armedSince = now; sessionEverArmed = true; fltSessionEverArmed = true; }   // arm edge
     if (armed && (uint32_t)(now - armedSince) >= FLIGHT_ARMED_MIN_MS) sessionWorth = true;
+    if (armed) fltSessionArmedMs = armedMsBefore + (now - armedSince);            // live total for the proven-tune counter
+    if (!armed && wasArmed) armedMsBefore = fltSessionArmedMs;                     // spell over: bank it
     if (!armed && wasArmed && sessionWorth) fltSavePending = true;                 // DISARM edge in a real flight
     wasArmed = armed;
 
