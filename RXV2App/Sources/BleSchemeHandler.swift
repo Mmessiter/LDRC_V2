@@ -61,7 +61,7 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
         }
         if path == "/app/snapshot/start" {
             let ok = !demo && !replay
-            if ok { SessionPrefetcher.run(link: link, fast: true) }
+            if ok { SessionPrefetcher.run(link: link, fast: true, explicit: true) }   // the pilot's own backup — sticky
             deliver(task, url: url, code: 200, type: "application/json",
                     body: Data("{\"ok\":\(ok)\(ok ? "" : ",\"error\":\"connect to the receiver first\"")}".utf8))
             return
@@ -87,8 +87,10 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
                 let f = DateFormatter(); f.dateStyle = .short; f.timeStyle = .short
                 when = f.string(from: at)
             }
+            // explicit = the pilot's own "Back up" / an imported file (sticky);
+            // false = the automatic freeze taken at connection.
             deliver(task, url: url, code: 200, type: "application/json",
-                    body: Data("{\"available\":\(avail),\"when\":\"\(when)\"}".utf8))
+                    body: Data("{\"available\":\(avail),\"when\":\"\(when)\",\"explicit\":\(cache.restorePointIsExplicit())}".utf8))
             return
         }
         if path == "/app/restore/start" {
@@ -645,8 +647,10 @@ final class BackupFilePicker: NSObject, UIDocumentPickerDelegate {
     private var phase = "idle"        // idle | picking | done | failed
     private var fileModel = ""
     private var count = 0
+    private var mechanics = true     // false = another model's file: servo/mixer items left out
     var statusJSON: Data {
-        Data("{\"phase\":\"\(phase)\",\"model\":\"\(fileModel)\",\"count\":\(count)}".utf8)
+        let m = fileModel.replacingOccurrences(of: "\"", with: "'")
+        return Data("{\"phase\":\"\(phase)\",\"model\":\"\(m)\",\"count\":\(count),\"mechanics\":\(mechanics)}".utf8)
     }
     static func topViewController() -> UIViewController? {
         guard let scene = UIApplication.shared.connectedScenes
@@ -659,7 +663,7 @@ final class BackupFilePicker: NSObject, UIDocumentPickerDelegate {
         return top
     }
     func pick(forModel model: String) {
-        forModel = model; phase = "picking"; fileModel = ""; count = 0
+        forModel = model; phase = "picking"; fileModel = ""; count = 0; mechanics = true
         DispatchQueue.main.async {
             let p = UIDocumentPickerViewController(forOpeningContentTypes: [.json, .plainText, .data], asCopy: true)
             p.delegate = self
@@ -670,7 +674,7 @@ final class BackupFilePicker: NSObject, UIDocumentPickerDelegate {
     func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
         guard let u = urls.first, let d = try? Data(contentsOf: u) else { phase = "failed"; return }
         let r = SessionCache.shared.importRestore(json: d, forModel: forModel)
-        fileModel = r.fileModel; count = r.count
+        fileModel = r.fileModel; count = r.count; mechanics = r.mechanics
         phase = r.ok ? "done" : "failed"
     }
     func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) { phase = "idle" }

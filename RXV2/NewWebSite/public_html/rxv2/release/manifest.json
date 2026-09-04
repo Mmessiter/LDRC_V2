@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.558-backup-review",
+      "url": "https://messiter.com/rxv2/release/v0.9.558/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.558/littlefs.bin",
+      "fs_md5": "985ef783955d012d1b6214514296aeb6",
+      "notes": "Backup & restore double-checked before real use (Malcolm's request). The phone backup covers the tuning (PIDs, advanced PIDs, rates, governor, rescue - every bank, plus the governor's global settings), the mechanics (mixer travel/limits/trims, servo centres/travel) and the bank/rates switch assignments; the page and its help now say exactly that and list what is NOT included (arming switch & modes, channel map, motor/gear ratio, battery, filters, telemetry). Pages: Back up shows a warning instead of a tick when the sweep did not finish (and keeps the earlier backup); Restore shows why it stopped; the restore line says whether the backup is your own or the automatic one from connection; importing a different model's file now really leaves your servo/mixer settings alone. Needs app 4.12 (iOS) / 4.04 (Android) for the new fields - the apps fix the real bugs: the flight controller's bank was read from the wrong bytes, so every backup sweep left it on bank 1 instead of where it was; a deliberate backup was overwritten by the automatic one at the next connection; a read that got no answer still produced a tick; restore now checks the FC stayed on the chosen bank after each item, stops if the transmitter comes on, and verifies the EEPROM save. Firmware itself unchanged apart from the pages."
+    },
+    {
       "name": "RXV2-0.9.557-disarm-ble-fast",
       "url": "https://messiter.com/rxv2/release/v0.9.557/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.557/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.547/littlefs.bin",
       "fs_md5": "d68fec16c442732b81b07963efa5eb36",
       "notes": "Gear-ratio help for two-stage drives (belt to a big pulley, then pinion into the main gear - every SAB Goblin, RAW and Black Thunder): multiply the stages. Main = motor pulley x drive pinion : big pulley x main gear (Goblin 770 = 21x19 : 60x68 = 399 : 4080). Tail = tail pulley x drive pinion : front tail pulley x main gear (Goblin 770 = 25x19 : 37x68 = 475 : 2516). Shown on the Gear-ratio page, ESC-setup step 7 and the First-time basics hints. No firmware behaviour change."
-    },
-    {
-      "name": "RXV2-0.9.546-gear-ratio-on-the-fc",
-      "url": "https://messiter.com/rxv2/release/v0.9.546/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.546/littlefs.bin",
-      "fs_md5": "2ab6bfc3e9b66c639f22f04dd14b4415",
-      "notes": "Gear ratio now lives on the flight controller: the Gear-ratio page and ESC-setup step 7 edit Rotorflight's own main/tail ratio (pinion : main gear, with a plain-English readout that turns red when it is backwards), save + read back, offer the restart Rotorflight needs, and reset the receiver's old divisor to 1. First-time basics gets the same readout and a warning before saving a backwards ratio. Found on the Goblin: 10 : 1 entered backwards made the governor sit at minimum throttle (every bank the same speed)."
     }
   ]
 }
