@@ -1,6 +1,6 @@
 Subject: Rotorflight 4.6 — MSP_ADJUSTMENT_RANGES over CRSF overflows the telemetry reply buffer and wipes the telemetry setup
 
-Hi [name],
+Hi Rob,
 
 I hope you're well. I've found what looks like a genuine bug in Rotorflight 4.6 while developing my own receiver (LDRC RXV2 — an ESP32-S3 talking CRSF to a Nexus X, with MSP over CRSF for a phone configurator). Would you mind passing this on to the Rotorflight team? I'm happy to file it on GitHub instead if they'd prefer — just say.
 

@@ -791,6 +791,10 @@ inline void handleMspApi() {
         }
     }
 
+    // Bank bookkeeping (0.9.567): note the switch's banks before a page's
+    // first select, re-select the page's bank after a put-back. MspFc.h.
+    bankBeforeClientRequest(fn, reqBuf, reqLen);
+
     // Telemetry setup guards (0.9.563). The FC's sensor list was found
     // empty twice (2026-09-03/04, cause unknown); the next save would have
     // carried it into flash. After the yield above — each guard is its own
@@ -862,6 +866,7 @@ inline void handleMspApi() {
     // CRSF frames) needs several telemetry frame slots — 400 ms cut it off
     // mid-reassembly (2026-08-19, first fn-120 read).
     bool ok = mspRequestAndWait(fn, reqBuf, reqLen, respBuf, &respLen, 1200);
+    bankAfterClientRequest(fn, reqBuf, reqLen, ok);
     if (!ok) {
         if (mspWaitRespError) { server.send(502, "text/plain", "flight controller rejected fn " + String(fn)); return; }
         server.send(504, "text/plain", "flight controller did not respond within 1200 ms"); return;
@@ -2991,6 +2996,13 @@ inline void handleApiState() {
     j += ",\"gov_thr_parked\":"; j += govThrParkedPct;
     j += ",\"gov_thr_max\":"; j += govThrMaxPct;
     // Telemetry setup watch (0.9.556): what MSP 73 said, and the verdict.
+    // Bank put-back (0.9.567): where the FC is, what the switch had, held?
+    j += ",\"bank_fc_pid\":";     j += (banks.fcPid  == 0xFF ? -1 : (int)banks.fcPid);
+    j += ",\"bank_fc_rate\":";    j += (banks.fcRate == 0xFF ? -1 : (int)banks.fcRate);
+    j += ",\"bank_switch_pid\":"; j += (banks.switchPid  == 0xFF ? -1 : (int)banks.switchPid);
+    j += ",\"bank_switch_rate\":";j += (banks.switchRate == 0xFF ? -1 : (int)banks.switchRate);
+    j += ",\"bank_hold\":";       j += (bankHeld() ? "true" : "false");
+    j += ",\"bank_put_backs\":";  j += banks.putBacks;
     j += ",\"telem_cfg_known\":"; j += (fcInfo.telemCfgKnown ? "true" : "false");
     j += ",\"telem_cfg_bad\":";   j += (fcTelemCfgBad() ? "true" : "false");
     j += ",\"telem_sensors\":";   j += fcInfo.telemSensors;

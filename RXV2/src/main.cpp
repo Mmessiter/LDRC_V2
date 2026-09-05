@@ -766,6 +766,7 @@ void loop() {
         { StallScope s("mspBridge");  mspBridgePoll(); }   // TCP/5760 ↔ FC for wireless Rotorflight config
         { StallScope s("mspFcPoll");  mspFcPoll(); }
         { StallScope s("escCatch");   escCatchTick(); }    // one-shot Scorpion settings capture after a battery pull
+        { StallScope s("bankPutBack"); bankPutBackTick(); } // the switch's banks back after a phone session (0.9.567)
         { StallScope s("fcTelemWatch"); fcTelemWatch(); }  // periodic FC-variant / FC-version discovery
         { StallScope s("txParams");   txParamsLoop(); }    // TX Rotorflight edits: async MSP read/write state machine
         { StallScope s("govThrWatch"); govThrottleWatchTick(); }   // "throttle parked" verdict + deferred NVS commits (0.9.551)

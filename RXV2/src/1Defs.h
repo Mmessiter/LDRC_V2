@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.566-restore-names";
+constexpr const char* FW_VERSION = "RXV2-0.9.567-bank-putback";
 
 //*********************************************************************
 //  Auto-update manifest URLs

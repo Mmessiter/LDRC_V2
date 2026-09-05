@@ -58,6 +58,7 @@ constexpr uint8_t MSP_SET_TELEMETRY_CONFIG = 74;   // same layout; sensors apply
 constexpr uint8_t MSP_ADJUSTMENT_RANGES    = 52;   // 42 x 14 = 588 bytes — NEVER asked for, see below
 constexpr uint8_t MSP_RESET_CONF           = 208;  // factory reset — never over the link
 constexpr uint8_t MSP_SET_MOTOR            = 214;  // motor test — never from a phone
+constexpr uint8_t MSP_STATUS               = 101;  // bytes 23/25 = the PID / rates bank the FC is on (RF 4.6 msp.c, verified 2026-09-05)
 
 //*********************************************************************
 //  Rotorflight 4.6 link-buffer bug (0.9.564) — RXV2/ROTORFLIGHT-MSP52-BUG.md
@@ -129,6 +130,24 @@ inline volatile uint32_t mspWaitChunkMs = 0;
 // millis() of the last reply a synchronous (page/app) request received —
 // holds the heartbeat probe off while a client is reading; see mspFcPoll.
 inline volatile uint32_t mspLastForegroundMs = 0;
+
+//*********************************************************************
+//  Bank put-back state (0.9.567) — see bankBeforeClientRequest below
+//*********************************************************************
+struct BankState {
+    uint8_t  fcPid = 0xFF, fcRate = 0xFF;          // where the FC is now, as far as we know (0xFF = unknown)
+    uint8_t  pidCount = 6, rateCount = 6;          // from MSP 101 bytes 24/26
+    uint8_t  switchPid = 0xFF, switchRate = 0xFF;  // the switch's banks, noted before a phone's first select (0xFF = no hold)
+    uint8_t  clientPid = 0xFF, clientRate = 0xFF;  // the phone's last selects — kept across a put-back, see the re-select
+    uint8_t  savedPid = 0xFF, savedRate = 0xFF;    // the banks an EEPROM save in this hold made the boot banks (0xFF = none)
+    uint8_t  tries = 0;
+    bool     txWarned = false;
+    uint32_t holdSinceMs = 0, lastClientMs = 0, lastTryMs = 0;
+    uint32_t holds = 0, putBacks = 0;
+};
+inline BankState banks;
+constexpr uint32_t BANK_IDLE_MS       = 5000;     // phone quiet this long → put the switch's banks back
+constexpr uint32_t BANK_CLIENT_TTL_MS = 600000;   // a phone select older than this is not re-selected for a stray read
 // millis() of a probe (or other fire-and-forget request) the FC has not yet
 // answered, 0 = none outstanding. The other half of the 0.9.562 hold-off:
 // Rotorflight keeps ONE request buffer, so a page read sent while a probe
@@ -474,6 +493,16 @@ inline void mspDeliverResponse(uint8_t func, const uint8_t* payload, uint16_t si
             break;
         case MSP_ESC_PARAMETERS:
             if (size >= 2) escCatchGot = true;   // FC now holds the ESC's settings
+            break;
+        // Where the FC is (0.9.567): from our own reads and from any page's.
+        // Rotorflight: bytes 23 = PID bank, 24 = count, 25 = rates bank, 26 = count.
+        case MSP_STATUS:
+            if (size >= 27) {
+                banks.fcPid  = payload[23];
+                banks.fcRate = payload[25];
+                if (payload[24] >= 1 && payload[24] <= 8) banks.pidCount  = payload[24];
+                if (payload[26] >= 1 && payload[26] <= 8) banks.rateCount = payload[26];
+            }
             break;
         // Governor throttle watch inputs (0.9.551). These arrive from our own
         // probe AND from any page that reads them via /api/msp, so the values
@@ -835,6 +864,194 @@ inline bool telemApplySpeedSync(bool fast, bool* changed, char* msg, size_t msgL
     events.add(m);
     snprintf(msg, msgLen, "%s telemetry saved - the flight controller is restarting (about 10 s)", fast ? "fast" : "standard");
     return true;
+}
+
+//*********************************************************************
+//  Bank put-back (0.9.567): the switch's banks come back after a phone session
+//*********************************************************************
+// Rotorflight re-applies a bank (profile) switch only when the switch MOVES:
+// rc_adjustments.c processRcAdjustments calls cfgSet only when the value
+// the channel maps to differs from the value the switch last applied, and a
+// select over MSP 210 never updates that value (verified on 4.6.0,
+// 2026-09-05). Every tuning page selects the bank it shows so the
+// Configurator matches (Malcolm 2026-08-06) — and so the model is FLOWN on
+// the page's bank until the switch moves. Malcolm's TX moves the PID bank
+// at motor-on (bank 4 → 1/2/3); the rates switch does not move, so a rates
+// page could hand the model a different rates bank (2026-09-04).
+//
+// The receiver closes the gap for every page and both apps at once:
+//  - on a phone's first bank select it reads where the FC is — the
+//    switch's banks, the transmitter being off — and holds them;
+//  - once the phone has been quiet for BANK_IDLE_MS, transmitter off and
+//    disarmed, it puts them back, and saves if the session's save had made
+//    another bank the boot bank (so a power-up lands on the switch's too);
+//  - never under a live transmitter: the switch may have moved and
+//    Rotorflight owns the banks then — the hold is dropped, with a note;
+//  - the phone never notices: a bank-dependent request that arrives after
+//    a put-back gets the phone's own bank re-selected first (the app's
+//    restore runner skips selects it believes are already true — a
+//    put-back in a long gap must not send its next write to the wrong
+//    bank), and that re-select opens a new hold.
+// Every exchange here is synchronous like a page's, from loop() only when
+// no other MSP traffic is outstanding (one request at a time at the FC).
+
+inline bool bankFnPidSide(uint8_t fn) {
+    return fn == MSP_PID || fn == MSP_SET_PID || fn == MSP_PID_PROFILE || fn == MSP_SET_PID_PROFILE ||
+           fn == 146 || fn == 147 ||                       // rescue profile read / write
+           fn == MSP_GOVERNOR_PROFILE || fn == MSP_SET_GOVERNOR_PROFILE;
+}
+inline bool bankFnRateSide(uint8_t fn) { return fn == MSP_RC_TUNING || fn == MSP_SET_RC_TUNING; }
+inline bool bankTxLive() { return rx.lastMillis != 0 && (uint32_t)(millis() - rx.lastMillis) < 2000; }
+inline bool bankHeld()   { return banks.switchPid != 0xFF; }
+inline void bankRelease() { banks.switchPid = banks.switchRate = 0xFF; banks.savedPid = banks.savedRate = 0xFF; banks.tries = 0; }
+
+// What the FC does with a 210 byte (msp.c MSP_SELECT_SETTING: bit 7 = rates, out of range → 0).
+inline void bankNoteSelect(uint8_t b) {
+    uint8_t v = (uint8_t)(b & 0x7F);
+    if (b & 0x80) { if (v >= banks.rateCount) v = 0; banks.fcRate = v; banks.clientRate = v; }
+    else          { if (v >= banks.pidCount)  v = 0; banks.fcPid  = v; banks.clientPid  = v; }
+}
+// Fresh MSP 101 — the passive digest fills banks.fcPid/fcRate. False = no usable answer.
+inline bool bankReadSync() {
+    static uint8_t buf[64];
+    uint16_t len = 0;
+    banks.fcPid = banks.fcRate = 0xFF;
+    if (!mspRequestAndWait(MSP_STATUS, nullptr, 0, buf, &len, 1200)) return false;
+    return banks.fcPid != 0xFF;
+}
+inline bool bankSelectSync(uint8_t b) {
+    static uint8_t buf[16];
+    uint16_t len = 0;
+    if (!mspRequestAndWait(MSP_SELECT_SETTING, &b, 1, buf, &len, 1200)) return false;
+    bankNoteSelect(b);
+    return true;
+}
+// Open a hold if none: note the switch's banks before the phone moves them.
+inline void bankOpenHold() {
+    if (bankHeld()) return;
+    if (bankTxLive()) {
+        if (!banks.txWarned) {
+            banks.txWarned = true;
+            events.add("A phone page selected a bank with the transmitter ON: the switch takes its bank back only when moved");
+        }
+        return;
+    }
+    if (!bankReadSync()) {
+        events.add("Phone bank select: the FC did not say which banks it is on (MSP 101) - nothing to put back later");
+        return;
+    }
+    banks.switchPid = banks.fcPid;
+    banks.switchRate = banks.fcRate;
+    banks.holdSinceMs = millis();
+    banks.savedPid = banks.savedRate = 0xFF;
+    banks.tries = 0;
+    banks.holds++;
+    char m[EventLog::MSG_LEN];
+    snprintf(m, sizeof(m), "Phone is selecting banks: the switch had PID bank %u, rates bank %u - back when the phone is quiet",
+             banks.switchPid + 1, banks.switchRate + 1);
+    events.add(m);
+}
+
+// Called by handleMspApi for every page/app request, before it goes to the
+// FC. May run MSP exchanges of its own first (snapshot, re-select).
+inline void bankBeforeClientRequest(uint8_t fn, const uint8_t* data, uint8_t len) {
+    const uint32_t now = millis();
+    if (banks.lastClientMs && (uint32_t)(now - banks.lastClientMs) > BANK_CLIENT_TTL_MS)
+        banks.clientPid = banks.clientRate = 0xFF;          // yesterday's page is not today's
+    banks.lastClientMs = now;
+    if (fn == MSP_REBOOT) { banks.fcPid = banks.fcRate = 0xFF; return; }   // boots on its saved banks
+    if (fn == MSP_SELECT_SETTING) {
+        if (len >= 1) bankOpenHold();
+        return;
+    }
+    const bool pidSide  = bankFnPidSide(fn)  || fn == MSP_EEPROM_WRITE;
+    const bool rateSide = bankFnRateSide(fn) || fn == MSP_EEPROM_WRITE;
+    if (!pidSide && !rateSide) return;
+    // The transparent re-select: the FC is not where this phone last put it
+    // (a put-back, an FC restart) — put it there before the request lands.
+    const bool needPid  = pidSide  && banks.clientPid  != 0xFF && banks.fcPid  != banks.clientPid;
+    const bool needRate = rateSide && banks.clientRate != 0xFF && banks.fcRate != banks.clientRate;
+    if (!needPid && !needRate) return;
+    bankOpenHold();
+    char m[EventLog::MSG_LEN];
+    snprintf(m, sizeof(m), "Bank re-selected for the phone before MSP %u:%s%s", fn,
+             needPid ? " PID" : "", needRate ? " rates" : "");
+    events.add(m);
+    if (needPid)  bankSelectSync(banks.clientPid);
+    if (needRate) bankSelectSync((uint8_t)(0x80 | banks.clientRate));
+}
+// ...and after the FC answered (ok = it did).
+inline void bankAfterClientRequest(uint8_t fn, const uint8_t* data, uint8_t len, bool ok) {
+    if (!ok) return;
+    if (fn == MSP_SELECT_SETTING && len >= 1) bankNoteSelect(data[0]);
+    else if (fn == MSP_EEPROM_WRITE && bankHeld()) { banks.savedPid = banks.fcPid; banks.savedRate = banks.fcRate; }
+}
+
+// From loop(): the put-back itself, when the phone has gone quiet.
+inline void bankPutBackTick() {
+    if (!bankHeld()) return;
+    const uint32_t now = millis();
+    if (currentProtocol != PROTO_CRSF || !fcTelemetryEnabled) { bankRelease(); return; }
+    if (bankTxLive()) {
+        // Rotorflight owns the banks from here; a note says where it was left.
+        char m[EventLog::MSG_LEN];
+        snprintf(m, sizeof(m), "Transmitter on before the banks went back: FC left on PID bank %u, rates bank %u "
+                 "(switch had %u/%u) - it follows the switch once moved",
+                 banks.fcPid == 0xFF ? 0 : banks.fcPid + 1, banks.fcRate == 0xFF ? 0 : banks.fcRate + 1,
+                 banks.switchPid + 1, banks.switchRate + 1);
+        events.add(m);
+        bankRelease();
+        return;
+    }
+    if ((uint32_t)(now - banks.lastClientMs) < BANK_IDLE_MS) return;
+    if (mspBridgeActive || txParamBusy || mspWaitFunction != 0xFF || mspProbeOutstanding()) return;
+    if ((uint32_t)(now - banks.lastTryMs) < 2000) return;
+    banks.lastTryMs = now;
+    if (!bankReadSync()) {
+        if (++banks.tries >= 5) { events.add("Bank put-back given up: the flight controller is not answering"); bankRelease(); }
+        return;
+    }
+    const uint8_t wasPid = banks.fcPid, wasRate = banks.fcRate;
+    bool ok = true;
+    if (banks.fcPid  != banks.switchPid)  ok = bankSelectSync(banks.switchPid) && ok;
+    if (banks.fcRate != banks.switchRate) ok = bankSelectSync((uint8_t)(0x80 | banks.switchRate)) && ok;
+    const bool moved = wasPid != banks.switchPid || wasRate != banks.switchRate;
+    // A save in this session made another bank the boot bank: save again on
+    // the switch's, so a power-up lands there too. TX off, disarmed, phone
+    // quiet — the same ground the page's own save stood on.
+    const bool bootWrong = banks.savedPid != 0xFF && (banks.savedPid != banks.switchPid || banks.savedRate != banks.switchRate);
+    bool saved = false;
+    if (ok && bootWrong) {
+        if (telemGuardBeforeSave("bank put-back") == 1) {
+            events.add("Bank put-back: boot bank not saved - the FC's telemetry setup is empty (see the Rotorflight page)");
+        } else {
+            static uint8_t buf[16];
+            uint16_t len = 0;
+            saved = mspRequestAndWait(MSP_EEPROM_WRITE, nullptr, 0, buf, &len, 1500);
+            if (!saved) saved = mspRequestAndWait(MSP_EEPROM_WRITE, nullptr, 0, buf, &len, 1500);
+            ok = ok && saved;
+        }
+    }
+    if (ok && (moved || saved)) ok = bankReadSync() && banks.fcPid == banks.switchPid && banks.fcRate == banks.switchRate;
+    if (!ok && ++banks.tries < 3) return;                   // once more in 2 s
+    char m[EventLog::MSG_LEN];
+    if (ok) {
+        if (moved || saved) {
+            banks.putBacks++;
+            snprintf(m, sizeof(m), "Banks put back for the switch: PID bank %u, rates bank %u (phone had left %u/%u)%s",
+                     banks.switchPid + 1, banks.switchRate + 1, wasPid + 1, wasRate + 1,
+                     saved ? ", saved as the boot banks" : "");
+            events.add(m);
+        }
+        // else: the phone put them back itself (copy-bank page, the app) — nothing to say
+    } else {
+        snprintf(m, sizeof(m), "Bank put-back FAILED: FC on PID bank %u, rates bank %u, switch had %u/%u - move the switch before flying",
+                 banks.fcPid == 0xFF ? 0 : banks.fcPid + 1, banks.fcRate == 0xFF ? 0 : banks.fcRate + 1,
+                 banks.switchPid + 1, banks.switchRate + 1);
+        events.add(m);
+    }
+    if (bootWrong) { banks.savedPid = banks.switchPid; banks.savedRate = banks.switchRate; }
+    bankRelease();
 }
 
 //*********************************************************************
