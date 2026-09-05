@@ -17,13 +17,17 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>4.20</string>
+	<string>4.21</string>
 	<key>CFBundleVersion</key>
-	<string>282</string>
+	<string>283</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>RXV2 uses Bluetooth to find and configure your LockDown Radio Control receiver.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>RXV2 uses the camera to take a photograph of your helicopter, shown beside its receiver.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>RXV2 shows a photograph of your helicopter beside its receiver.</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UISupportedInterfaceOrientations</key>

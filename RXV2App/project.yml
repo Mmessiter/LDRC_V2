@@ -24,10 +24,12 @@ targets:
       path: Info.plist
       properties:
         ITSAppUsesNonExemptEncryption: false
-        CFBundleShortVersionString: "4.20"
-        CFBundleVersion: "282"
+        CFBundleShortVersionString: "4.21"
+        CFBundleVersion: "283"
         CFBundleDisplayName: RXV2
         UILaunchScreen: {}
+        NSCameraUsageDescription: RXV2 uses the camera to take a photograph of your helicopter, shown beside its receiver.
+        NSPhotoLibraryUsageDescription: RXV2 shows a photograph of your helicopter beside its receiver.
         NSBluetoothAlwaysUsageDescription: >-
           RXV2 uses Bluetooth to find and configure your LockDown Radio
           Control receiver.

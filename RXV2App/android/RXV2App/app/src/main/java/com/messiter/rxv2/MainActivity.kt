@@ -66,6 +66,14 @@ class MainActivity : AppCompatActivity() {
             importPhase = if (r.ok) "done" else "failed"
         }.start()
     }
+    // Model photos (Malcolm 2026-09-05): long-press a receiver → choose /
+    // remove a photograph, shown beside the name so similar names don't muddle.
+    private var photoFor: String? = null
+    private val photoPick = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.GetContent()) { uri: Uri? ->
+        val name = photoFor ?: return@registerForActivityResult
+        if (uri != null) { ModelPhotos.save(this, name, uri); scannerAdapter?.notifyDataSetChanged() }
+    }
     private val permReq = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
     ) { if (it.values.all { g -> g }) ble.startScan() else showMessage("Bluetooth permission is needed.") }
@@ -203,7 +211,7 @@ class MainActivity : AppCompatActivity() {
             setPadding(40, 0, 40, 8); alpha = 0.5f; textSize = 12f
         })
         col.addView(TextView(this).apply {
-            text = "Power the receiver with the transmitter OFF so its config radio comes up. The WiFi web interface still works exactly as before."
+            text = "Power the receiver with the transmitter OFF so its config radio comes up. Press and hold a receiver to give it a photograph. The WiFi web interface still works exactly as before."
             setPadding(40, 0, 40, 20); alpha = 0.7f; textSize = 13f
         })
         autoBanner = TextView(this).apply {
@@ -220,6 +228,18 @@ class MainActivity : AppCompatActivity() {
             val d = scannerAdapter!!.item(pos)
             getSharedPreferences("scanner", MODE_PRIVATE).edit().putString("last", d.name).apply()
             ble.connect(d)
+        }
+        list.setOnItemLongClickListener { _, _, pos, _ ->
+            val d = scannerAdapter!!.item(pos)
+            val has = ModelPhotos.file(this, d.name).exists()
+            val items = if (has) arrayOf("Choose photo…", "Remove photo") else arrayOf("Choose photo…")
+            android.app.AlertDialog.Builder(this)
+                .setTitle(d.name)
+                .setItems(items) { _, which ->
+                    if (which == 0) { photoFor = d.name; photoPick.launch("image/*") }
+                    else { ModelPhotos.remove(this, d.name); scannerAdapter?.notifyDataSetChanged() }
+                }.show()
+            true
         }
         col.addView(list, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
@@ -247,6 +267,10 @@ class MainActivity : AppCompatActivity() {
                 text = "🕰  Review:  $model$t"
                 textSize = 15f; setPadding(40, 28, 40, 28)
                 setBackgroundColor(0xFF14532D.toInt()); setTextColor(0xFF86EFAC.toInt())
+                ModelPhotos.load(this@MainActivity, model, 96)?.let {
+                    setCompoundDrawablesWithIntrinsicBounds(android.graphics.drawable.BitmapDrawable(resources, it), null, null, null)
+                    compoundDrawablePadding = 24
+                }
                 setOnClickListener {
                     SessionCache.activate(model)
                     reviewMode = true; showWeb()
@@ -404,14 +428,22 @@ class MainActivity : AppCompatActivity() {
         override fun getItemId(i: Int) = i.toLong()
         override fun getView(i: Int, convert: View?, parent: ViewGroup?): View {
             val v = convert as? LinearLayout ?: LinearLayout(this@MainActivity).apply {
-                orientation = LinearLayout.VERTICAL; setPadding(40, 28, 40, 28)
+                orientation = LinearLayout.HORIZONTAL; setPadding(40, 28, 40, 28)
+                gravity = android.view.Gravity.CENTER_VERTICAL
             }
             v.removeAllViews()
             val d = items[i]
-            v.addView(TextView(this@MainActivity).apply { text = d.name; textSize = 17f })
-            v.addView(TextView(this@MainActivity).apply {
+            val photo = ModelPhotos.load(this@MainActivity, d.name, 160)
+            v.addView(ImageView(this@MainActivity).apply {
+                if (photo != null) { setImageBitmap(photo); scaleType = ImageView.ScaleType.CENTER_CROP }
+                else setImageResource(android.R.drawable.stat_sys_data_bluetooth)
+            }, LinearLayout.LayoutParams(160, 160).apply { rightMargin = 28 })
+            val texts = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL }
+            texts.addView(TextView(this@MainActivity).apply { text = d.name; textSize = 17f })
+            texts.addView(TextView(this@MainActivity).apply {
                 text = "Signal ${d.rssi} dBm"; alpha = 0.6f; textSize = 12f
             })
+            v.addView(texts, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             return v
         }
     }
@@ -1630,4 +1662,36 @@ class MainActivity : AppCompatActivity() {
         })();
         """
     }
+}
+
+
+// A photograph per receiver, on the phone: files/photos/<name>.jpg, ≤900 px.
+object ModelPhotos {
+    private fun safe(n: String) = n.map { if (it.isLetterOrDigit() || it == '-' || it == '_') it else '_' }.joinToString("")
+    fun file(ctx: android.content.Context, name: String): java.io.File {
+        val d = java.io.File(ctx.filesDir, "photos"); d.mkdirs()
+        return java.io.File(d, safe(name) + ".jpg")
+    }
+    fun load(ctx: android.content.Context, name: String, side: Int): android.graphics.Bitmap? {
+        val f = file(ctx, name); if (!f.exists()) return null
+        val b = android.graphics.BitmapFactory.decodeFile(f.path) ?: return null
+        val s = side.toFloat() / minOf(b.width, b.height)
+        val w = (b.width * s).toInt().coerceAtLeast(1); val h = (b.height * s).toInt().coerceAtLeast(1)
+        val scaled = android.graphics.Bitmap.createScaledBitmap(b, w, h, true)
+        return android.graphics.Bitmap.createBitmap(scaled, (w - side).coerceAtLeast(0) / 2, (h - side).coerceAtLeast(0) / 2, minOf(side, w), minOf(side, h))
+    }
+    fun save(ctx: android.content.Context, name: String, uri: Uri) {
+        try {
+            val opts = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            ctx.contentResolver.openInputStream(uri)?.use { android.graphics.BitmapFactory.decodeStream(it, null, opts) }
+            var sample = 1
+            while (maxOf(opts.outWidth, opts.outHeight) / sample > 1800) sample *= 2
+            val o2 = android.graphics.BitmapFactory.Options().apply { inSampleSize = sample }
+            val b = ctx.contentResolver.openInputStream(uri)?.use { android.graphics.BitmapFactory.decodeStream(it, null, o2) } ?: return
+            val s = minOf(1f, 900f / maxOf(b.width, b.height))
+            val small = if (s < 1f) android.graphics.Bitmap.createScaledBitmap(b, (b.width * s).toInt(), (b.height * s).toInt(), true) else b
+            java.io.FileOutputStream(file(ctx, name)).use { small.compress(android.graphics.Bitmap.CompressFormat.JPEG, 85, it) }
+        } catch (_: Exception) {}
+    }
+    fun remove(ctx: android.content.Context, name: String) { file(ctx, name).delete() }
 }

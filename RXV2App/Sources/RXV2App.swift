@@ -6,6 +6,7 @@
 // configuration engine.
 
 import SwiftUI
+import PhotosUI
 
 @main
 struct RXV2App: App {
@@ -352,6 +353,13 @@ struct ScannerView: View {
     @State private var autoTarget: String? = nil
     @State private var autoWork: DispatchWorkItem? = nil
     @State private var sessionRev = 0   // bump to refresh the saved-session list after a delete
+    // Model photos (Malcolm 2026-09-05): long-press a receiver → choose /
+    // take / remove. photoRev redraws the thumbnails after a change.
+    @State private var photoRev = 0
+    @State private var photoFor: String? = nil
+    @State private var pickerItem: PhotosPickerItem? = nil
+    @State private var showPhotoPicker = false
+    @State private var showCamera = false
 
     private func cancelAuto() {
         autoWork?.cancel(); autoWork = nil; autoTarget = nil
@@ -383,8 +391,14 @@ struct ScannerView: View {
                             SessionCache.shared.activate(model: s.model)
                             reviewMode = true
                         } label: {
-                            Label("Review:  \(s.model) — \(Self.friendlyWhen(s.savedAt))",
-                                  systemImage: "clock.arrow.circlepath")
+                            HStack(spacing: 10) {
+                                let _ = photoRev
+                                ModelThumb(name: s.model, side: 44)
+                                VStack(alignment: .leading) {
+                                    Text("Review:  \(s.model)").font(.headline)
+                                    Text(Self.friendlyWhen(s.savedAt)).font(.caption).foregroundStyle(.secondary)
+                                }
+                            }
                         }
                         // Swipe left to delete an old review (Malcolm
                         // 2026-08-22). allowsFullSwipe:false so it takes a
@@ -424,8 +438,8 @@ struct ScannerView: View {
                         link.connect(d)
                     } label: {
                         HStack {
-                            Image(systemName: "antenna.radiowaves.left.and.right")
-                                .foregroundStyle(.tint)
+                            let _ = photoRev
+                            ModelThumb(name: d.name, side: 60)
                             VStack(alignment: .leading) {
                                 Text(d.name).font(.headline)
                                 Text("Signal \(d.rssi) dBm")
@@ -442,17 +456,43 @@ struct ScannerView: View {
                                 .foregroundStyle(.tertiary)
                         }
                     }
+                    .contextMenu {
+                        Button { photoFor = d.name; showPhotoPicker = true } label: { Label("Choose photo…", systemImage: "photo") }
+                        if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                            Button { photoFor = d.name; showCamera = true } label: { Label("Take photo…", systemImage: "camera") }
+                        }
+                        if ModelPhotos.has(d.name) {
+                            Button(role: .destructive) { ModelPhotos.remove(d.name); photoRev += 1 } label: { Label("Remove photo", systemImage: "trash") }
+                        }
+                    }
                 }
             } header: {
                 Text(headerText)
             } footer: {
                 Text("Power the receiver with the transmitter OFF so its "
                    + "config radios come up (same rule as the WiFi portal). "
+                   + "Press and hold a receiver to give it a photograph. "
                    + "Not everybody has an iPhone — the WiFi web interface "
                    + "still works exactly as before.")
             }
         }
         .navigationTitle("RXV2 Receivers")
+        .photosPicker(isPresented: $showPhotoPicker, selection: $pickerItem, matching: .images)
+        .onChange(of: pickerItem) { item in
+            guard let item, let name = photoFor else { return }
+            Task {
+                if let data = try? await item.loadTransferable(type: Data.self), let img = UIImage(data: data) {
+                    ModelPhotos.save(name, img)
+                    await MainActor.run { photoRev += 1 }
+                }
+                await MainActor.run { pickerItem = nil }
+            }
+        }
+        .sheet(isPresented: $showCamera) {
+            CameraPicker { img in
+                if let name = photoFor { ModelPhotos.save(name, img); photoRev += 1 }
+            }
+        }
         .onReceive(link.$found) { maybeArmAuto($0) }
         .overlay {
             if link.found.isEmpty {
