@@ -1,0 +1,293 @@
+{
+ "_about": "Seed of the ESC database for the Express wizard (Malcolm 2026-09-05 '… and the ESC!'). 'Which ESC?' → Rotorflight ESC telemetry protocol, wiring, half-duplex, ESC-side settings (governor OFF/external — Rotorflight's governor drives the head speed), forward programming from the phone. Protocol names as Rotorflight 2.x shows them. Sources per entry; verified=true when read from Rotorflight docs or the ESC maker.",
+ "_rule": "Every entry: ESC governor OFF / external, throttle range calibrated, ESC telemetry wire (ESC TX → FC UART RX) unless noted. Rotorflight needs motor poles + gear ratio for RPM.",
+ "_not_listed": "Ask: does it have a telemetry wire? (no → protocol NONE, RPM from a sensor or none) — then 'set its governor to OFF / external and calibrate the throttle'.",
+ "escs": [
+  {
+   "brand": "Scorpion",
+   "model": "Tribunus II / III (all sizes)",
+   "protocol": "SCORPION",
+   "halfduplex": true,
+   "wiring": "ESC telemetry (UNSC) wire to FC UART; single wire, half-duplex ON in Rotorflight",
+   "reports": [
+    "volts",
+    "amps",
+    "rpm",
+    "temp",
+    "mAh"
+   ],
+   "esc_settings": "Governor: external; telemetry protocol UNSC (never change it from the phone — the receiver refuses)",
+   "forward_programming": true,
+   "verified": true,
+   "sources": [
+    "https://www.scorpionsystem.com/about/news/FW16_update/",
+    "https://rotorflight.org/docs/next/setup/esc-forward-programming"
+   ],
+   "note": "Malcolm's Goblin 770: esc_sensor_halfduplex had to be ON (2026-09-01); programming freezes telemetry until Release",
+   "protocol_index": 4
+  },
+  {
+   "brand": "Hobbywing",
+   "model": "Platinum V5 (HV 130A / 200A / 320A)",
+   "protocol": "HOBBYWINGV5",
+   "halfduplex": false,
+   "wiring": "ESC telemetry wire (TX) to FC UART RX",
+   "reports": [
+    "volts",
+    "amps",
+    "rpm",
+    "temp",
+    "mAh"
+   ],
+   "esc_settings": "Governor: OFF (external); BEC voltage as required",
+   "forward_programming": true,
+   "verified": true,
+   "sources": [
+    "https://rotorflight.org/docs/2.0.0/Wiki/Tutorial-Setup/ESC-Telemetry"
+   ],
+   "protocol_index": 3
+  },
+  {
+   "brand": "Hobbywing",
+   "model": "Platinum PRO V4 / V4.1, FlyFun V5",
+   "protocol": "HOBBYWINGV4",
+   "halfduplex": false,
+   "wiring": "ESC telemetry wire to FC UART RX",
+   "reports": [
+    "volts",
+    "amps",
+    "rpm",
+    "temp"
+   ],
+   "esc_settings": "Governor: OFF (external)",
+   "forward_programming": false,
+   "verified": true,
+   "sources": [
+    "https://rotorflight.org/docs/2.0.0/Wiki/Tutorial-Setup/ESC-Telemetry"
+   ],
+   "protocol_index": 2
+  },
+  {
+   "brand": "Kontronik",
+   "model": "Kosmik / Kolibri / Jive Pro",
+   "protocol": "KONTRONIK",
+   "halfduplex": false,
+   "wiring": "Kontronik telemetry port to FC UART RX",
+   "reports": [
+    "volts",
+    "amps",
+    "rpm",
+    "temp",
+    "mAh"
+   ],
+   "esc_settings": "Mode: heli with governor OFF (external governor)",
+   "forward_programming": false,
+   "verified": true,
+   "sources": [
+    "https://rotorflight.org/docs/2.0.0/Wiki/Tutorial-Setup/ESC-Telemetry"
+   ],
+   "protocol_index": 5
+  },
+  {
+   "brand": "YGE",
+   "model": "Aureus / Saphir / Opto (OpenYGE)",
+   "protocol": "OPENYGE",
+   "halfduplex": false,
+   "wiring": "YGE telemetry wire to FC UART RX; ESC firmware V1.03547 or newer",
+   "reports": [
+    "volts",
+    "amps",
+    "rpm",
+    "temp",
+    "mAh"
+   ],
+   "esc_settings": "Governor mode: external",
+   "forward_programming": true,
+   "verified": true,
+   "sources": [
+    "https://rotorflight.org/docs/2.0.0/Wiki/Tutorial-Setup/ESC-Telemetry",
+    "https://rotorflight.org/docs/next/setup/esc-forward-programming"
+   ],
+   "protocol_index": 9
+  },
+  {
+   "brand": "Castle Creations",
+   "model": "Phoenix Edge / Talon HV",
+   "protocol": "OFF",
+   "halfduplex": false,
+   "wiring": "Rotorflight 4.6 has no Castle Link telemetry protocol: no ESC telemetry; RPM needs a separate sensor (or fly the governor on an external RPM sensor)",
+   "reports": [
+    "volts",
+    "amps",
+    "rpm",
+    "temp"
+   ],
+   "forward_programming": false,
+   "verified": true,
+   "sources": [
+    "scratchpad rf_settings_460.c lookupTableEscSensorProtocol"
+   ],
+   "note": "Castle Link Live is NOT in RF 4.6's protocol list — do not promise telemetry",
+   "protocol_index": 0,
+   "esc_settings": "Governor: external / fixed endpoints"
+  },
+  {
+   "brand": "OMPHobby",
+   "model": "OMP ESCs (M4 / M7 kits)",
+   "protocol": "OMPHOBBY",
+   "halfduplex": false,
+   "wiring": "telemetry wire to FC UART RX",
+   "reports": [
+    "volts",
+    "amps",
+    "rpm",
+    "temp"
+   ],
+   "esc_settings": "Governor OFF",
+   "forward_programming": false,
+   "verified": true,
+   "sources": [
+    "https://rotorflight.org/docs/2.0.0/Wiki/Tutorial-Setup/ESC-Telemetry"
+   ],
+   "protocol_index": 6
+  },
+  {
+   "brand": "XDFly",
+   "model": "HPRO / XDFly ESCs (Goosky kits)",
+   "protocol": "XDFLY",
+   "halfduplex": false,
+   "wiring": "telemetry wire to FC UART RX",
+   "reports": [
+    "volts",
+    "amps",
+    "rpm",
+    "temp",
+    "mAh"
+   ],
+   "esc_settings": "Governor: external",
+   "forward_programming": true,
+   "verified": false,
+   "sources": [
+    "https://rotorflight.org/docs/next/setup/esc-forward-programming"
+   ],
+   "protocol_index": 12
+  },
+  {
+   "brand": "Flyrotor",
+   "model": "Flyrotor ESCs",
+   "protocol": "FLYROTOR",
+   "halfduplex": false,
+   "wiring": "telemetry wire to FC UART RX",
+   "reports": [
+    "volts",
+    "amps",
+    "rpm",
+    "temp"
+   ],
+   "esc_settings": "Governor: external",
+   "forward_programming": true,
+   "verified": false,
+   "sources": [
+    "https://rotorflight.org/docs/next/setup/esc-forward-programming"
+   ],
+   "protocol_index": 10
+  },
+  {
+   "brand": "ZTW",
+   "model": "Skyhawk",
+   "protocol": "ZTW",
+   "halfduplex": false,
+   "wiring": "telemetry wire to FC UART RX",
+   "reports": [
+    "volts",
+    "amps",
+    "rpm",
+    "temp"
+   ],
+   "esc_settings": "Governor OFF",
+   "forward_programming": false,
+   "verified": true,
+   "sources": [
+    "https://rotorflight.org/docs/2.0.0/Wiki/Tutorial-Setup/ESC-Telemetry"
+   ],
+   "protocol_index": 7
+  },
+  {
+   "brand": "APD",
+   "model": "HV Pro (UART telemetry)",
+   "protocol": "APD",
+   "halfduplex": false,
+   "wiring": "UART telemetry wire to FC UART RX",
+   "reports": [
+    "volts",
+    "amps",
+    "rpm",
+    "temp"
+   ],
+   "esc_settings": "Governor OFF",
+   "forward_programming": false,
+   "verified": true,
+   "sources": [
+    "https://rotorflight.org/docs/2.0.0/Wiki/Tutorial-Setup/ESC-Telemetry"
+   ],
+   "protocol_index": 8
+  },
+  {
+   "brand": "BLHeli32 / KISS",
+   "model": "any BLHeli32 or KISS ESC",
+   "protocol": "BLHELI32",
+   "halfduplex": false,
+   "wiring": "telemetry wire to FC UART RX",
+   "reports": [
+    "volts",
+    "amps",
+    "rpm",
+    "temp"
+   ],
+   "esc_settings": "no governor on these",
+   "forward_programming": false,
+   "verified": true,
+   "sources": [
+    "https://rotorflight.org/docs/2.0.0/Wiki/Tutorial-Setup/ESC-Telemetry"
+   ],
+   "protocol_index": 1
+  },
+  {
+   "brand": "Any",
+   "model": "ESC without telemetry",
+   "protocol": "OFF",
+   "halfduplex": false,
+   "wiring": "none; RPM only from a separate sensor (or no governor: throttle curve)",
+   "reports": [],
+   "esc_settings": "Governor OFF, throttle calibrated",
+   "forward_programming": false,
+   "verified": true,
+   "sources": [],
+   "protocol_index": 0
+  }
+ ],
+ "_todo": [
+  "Graupner",
+  "Which ESCs each kit ships with (kit ↔ ESC pairing for one-tap defaults)",
+  "Graupner (GRAUPNER), FBUS, RECORD entries",
+  "Which ESC each kit ships with (kit ↔ ESC pairing for one-tap defaults)"
+ ],
+ "_rf46_protocols": {
+  "OFF": 0,
+  "BLHELI32": 1,
+  "HOBBYWINGV4": 2,
+  "HOBBYWINGV5": 3,
+  "SCORPION": 4,
+  "KONTRONIK": 5,
+  "OMPHOBBY": 6,
+  "ZTW": 7,
+  "APD": 8,
+  "OPENYGE": 9,
+  "FLYROTOR": 10,
+  "GRAUPNER": 11,
+  "XDFLY": 12,
+  "FBUS": 13,
+  "RECORD": 14
+ },
+ "_rf46_protocols_note": "Exact Rotorflight 4.6.0 esc_sensor_protocol names + index (settings.c lookupTableEscSensorProtocol). NO Castle entry in 4.6 — Castle Link telemetry is not supported; treat Castle as OFF (RPM from a sensor)."
+}
