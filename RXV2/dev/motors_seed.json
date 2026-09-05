@@ -1,0 +1,23 @@
+{
+ "_about": "Seed of the motor database for the Express wizard (Malcolm 2026-09-05): 'which motor?' → poles for Rotorflight's RPM/governor; 'not listed' → ask poles with a hint. Poles = magnets on the bell (Rotorflight counts magnets). Sources per entry; verified=true only when the maker states the pole count.",
+ "_not_listed": "Ask 'how many magnets does your motor have?' with the hint: nearly every 500–800 class outrunner (Scorpion, Xnova, Egodrift, Pyro) has 10; small Align motors have 6; direct-drive motors (OMP M4, Goosky) have many more — count the magnets through the bell slots, or check the ESC's RPM against a tachometer.",
+ "motors": [
+  { "brand": "Scorpion", "model": "HKIV-4020 (all kV)", "class_mm": "400–500", "poles": 10, "verified": true, "sources": ["https://www.scorpionsystem.com/catalog/helicopter/motors_4/hkiv-40/HKIV_4020_1320/"] },
+  { "brand": "Scorpion", "model": "HKIV-4025 (all kV)", "class_mm": "500–600", "poles": 10, "verified": true, "sources": ["https://www.amazon.com/Scorpion-HKIV-4025-520KV-Brushless-Motor-Helicopters/dp/B07RV8MQML"] },
+  { "brand": "Scorpion", "model": "HKIV-4035 (all kV)", "class_mm": "600–700", "poles": 10, "verified": true, "sources": ["https://www.scorpionsystem.com/catalog/helicopter/motors_4/hkiv-40/HKIV_4035_560/"] },
+  { "brand": "Scorpion", "model": "HKIII-4025 / 4035 / 5025 / 5040", "class_mm": "500–800", "poles": 10, "verified": false, "sources": ["https://www.scorpionsystem.com/catalog/helicopter/"], "note": "same family as HKIV — confirm on each product page" },
+  { "brand": "Xnova", "model": "Lightning 4025 (all kV)", "class_mm": "520–600", "poles": 10, "verified": false, "sources": ["https://www.helidirect.com/products/xnova-lightning-outrunner-motor-4025-1120kv-1-5y-for-rc-helicopter-shaft-b"], "note": "12N10P family; product page states slots & poles for 4525/4530 — confirm 4025" },
+  { "brand": "Xnova", "model": "Lightning 4525 (all kV)", "class_mm": "630–700", "poles": 10, "verified": true, "sources": ["https://www.helidirect.com/products/xnova-lightning-outrunner-motor-4525-560kv-for-rc-helicopter-shaft-a"] },
+  { "brand": "Xnova", "model": "Lightning 4530 (all kV)", "class_mm": "700", "poles": 10, "verified": true, "sources": ["https://www.hobbytown.com/xnova-lightning-4530525kv-brushless-motor-shaft-f-xnm-lgt-4530-525-f/p1459876"] },
+  { "brand": "Xnova", "model": "Lightning 4535 (all kV)", "class_mm": "700–800", "poles": 10, "verified": false, "sources": ["https://www.helidirect.com/collections/xnova-motors"] },
+  { "brand": "Egodrift", "model": "Tengu 4525HT / 4530HT (all kV)", "class_mm": "700–800", "poles": 10, "verified": true, "sources": ["https://www.egodrift.com/tengu-4525-ht-550kv-700-helicopter-motor.html"], "note": "12N10P" },
+  { "brand": "Align", "model": "460MX (1800 / 3200 kV)", "class_mm": "450", "poles": 6, "verified": true, "sources": ["https://www.freakware.de/en/p/460mx-brushless-motor-3200kv-align-hml46m02-a91487.htm"] },
+  { "brand": "Align", "model": "470MX", "class_mm": "470", "poles": null, "verified": false, "sources": ["https://www.align.com.tw/index.php/manuals-en/motor/"], "note": "likely 6 like the 460MX — read the manual" },
+  { "brand": "Align", "model": "500MX / 700MX / 850MX", "class_mm": "500–800", "poles": null, "verified": false, "sources": ["https://aligntrexhelis.com/manuals/align-brushless-motor-manuals"], "note": "read the motor manuals (magnet poles listed per motor)" },
+  { "brand": "Kontronik", "model": "Pyro 700 / 750 / 800", "class_mm": "700–800", "poles": null, "verified": false, "sources": [], "note": "to research (kontronik.com datasheets)" },
+  { "brand": "OMPHobby", "model": "M4 direct-drive motor", "class_mm": "380", "poles": 42, "verified": false, "sources": ["https://intofpv.com/t-motor-poles-betaflight-setting"], "note": "forum figure — confirm with OMP; direct drive means gear ratio 1:1" },
+  { "brand": "SAB", "model": "Competition motors (Raw 420 / Fireball Havok HE015)", "class_mm": "280–420", "poles": null, "verified": false, "sources": ["https://goblin-helicopter.com/products/goblin-raw-420"], "note": "Malcolm owns both — count the magnets or read RPM vs tacho" },
+  { "brand": "Goosky", "model": "RS4 / S2 / RS7 Ultra direct-drive motors", "class_mm": "380–700", "poles": null, "verified": false, "sources": ["https://www.helidirect.com/pages/goosky-helicopters"], "note": "direct drive, high pole count — research" }
+ ],
+ "_todo": ["Align 470MX/500MX/700MX/850MX from the Align motor manuals", "Kontronik Pyro", "SAB motors", "Goosky", "Hacker", "KDE", "Pyro-style 'Q' motors", "add kV + shaft where useful for the kit↔motor pairing"]
+}
