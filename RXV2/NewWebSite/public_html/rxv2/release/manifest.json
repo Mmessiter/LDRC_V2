@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.570-arm-fast",
+      "url": "https://messiter.com/rxv2/release/v0.9.570/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.570/littlefs.bin",
+      "fs_md5": "64e007433e5eb1df18d7eda40432fa80",
+      "notes": "Auto fly mode now switches Bluetooth and WiFi off half a second after the arm switch goes on (it was 3 s, which looked as if the motor switch did it). Same half-second bounce filter as the disarm side."
+    },
+    {
       "name": "RXV2-0.9.569-card-wiggle",
       "url": "https://messiter.com/rxv2/release/v0.9.569/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.569/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.557/littlefs.bin",
       "fs_md5": "40ed4dbc24fbd612c6104247380e1b18",
       "notes": "Faster PID tuning at the field (Malcolm's suggestion): Bluetooth now comes back half a second after you DISARM - the old 5-second wait was a leftover from the WiFi bring-up, which stalls the receiver; restarting Bluetooth does not. So the cycle is arm, fly, land, disarm, edit on the phone, arm again. Arming still switches the radios off 3 s later, on the ground, as before. Home WiFi keeps its 5-second wait after disarm. Firmware only - pages unchanged."
-    },
-    {
-      "name": "RXV2-0.9.556-telemetry-guard",
-      "url": "https://messiter.com/rxv2/release/v0.9.556/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.556/littlefs.bin",
-      "fs_md5": "40ed4dbc24fbd612c6104247380e1b18",
-      "notes": "Fix + safeguard: after a bank copy the transmitter showed no volts and no RPM - the flight controller's telemetry sensor list and link rate had been wiped (all zero; cause still unknown - the receiver did not write them). Rotorflight only sends the sensors on that list, so an empty list makes a healthy FC mute. The receiver now reads that list after it finds the FC, and if it is empty the Home and Rotorflight pages show a red notice with a one-tap 'Restore telemetry sensors' button (transmitter off - the FC restarts). Copy a bank: the result now pops up so it cannot be missed, and the 'from' caption leads with the bank you picked instead of the bank the FC is on. Pages changed - apps 4.11 / 4.03 carry the same."
     }
   ]
 }
