@@ -67,6 +67,7 @@ inline void parseCrsfFrame(const uint8_t* buf, uint8_t total) {
                 int32_t rpm = ((int32_t)p[1] << 16) | ((int32_t)p[2] << 8) | p[3];
                 if (rpm & 0x800000) rpm |= ~0xFFFFFF;            // sign-extend 24-bit
                 fcTelem.fcMotorRPM = (rpm < 0) ? 0u : (uint32_t)rpm;
+                fcTelem.rpmMs = millis();
             }
             break;
         case 0x0D:   // CRSF_FRAMETYPE_TEMP — [source_id][temp: int16 BE, deci-degC] x N. First value.

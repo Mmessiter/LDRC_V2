@@ -391,36 +391,63 @@ inline void sbusTick() {
         // report 2026-07-31: the announce never showed on the repaired heli.
         // After landing the FC is DISARMED and passes cyclic straight to the
         // swash, so the wave is visible and safe (throttle and the arming
-        // channel never wave). FC-model guard: only when there is NO live
-        // TX — never inject wiggles into an armed, flying FC (the
-        // brownout-reboot boot window case).
-        bool linkQuiet = (rx.lastMillis == 0) ||
-                         (uint32_t)(millis() - rx.lastMillis) > 2000;
-        bool waveAllowed = (currentProtocol != PROTO_CRSF || !fcTelemetryEnabled) || linkQuiet;
+        // channel never wave).
+        // 0.9.569 (Malcolm 2026-09-05: "when the transmitter becomes
+        // disarmed and Bluetooth and Wi-Fi are re-enabled, the wiggle
+        // should happen immediately to remind the user he can now use his
+        // phone"): an FC model now waves on a LIVE link too — only when the
+        // model is DISARMED and the rotor has STOPPED. "Immediately" is
+        // the moment the head speed reads zero: a tail wiggle on a
+        // coasting rotor yaws the model on its skids. Until then the wave
+        // waits (up to 90 s). Never armed on a live link (the in-flight
+        // brownout-reboot boot window), and never with no arming channel
+        // to tell us — those keep the old rule: FC models wave only once
+        // the TX has gone quiet.
+        const bool fcModel   = (currentProtocol == PROTO_CRSF) && fcTelemetryEnabled;
+        const bool linkQuiet = (rx.lastMillis == 0) ||
+                               (uint32_t)(millis() - rx.lastMillis) > 2000;
+        const bool armKnown  = armingChannel >= 1 && armingChannel <= 16;
+        const bool armedLive = armKnown && rx.lastMillis &&
+                               (uint32_t)(millis() - rx.lastMillis) < 500 &&
+                               channelMicros[armingChannel - 1] > 1500;
+        const bool disarmedLive = armKnown && !linkQuiet && channelMicros[armingChannel - 1] < 1500;
+        // Rotor stopped = head speed zero on FRESH RPM telemetry (a stale
+        // zero could be a dead sensor on a turning rotor); with no RPM
+        // telemetry at all, disarmed 30 s straight (a 770 coasts ~20 s).
+        static uint32_t disarmedSinceMs = 0;
+        if (disarmedLive) { if (!disarmedSinceMs) disarmedSinceMs = millis(); } else disarmedSinceMs = 0;
+        const bool rpmFresh     = fcTelem.rpmMs && (uint32_t)(millis() - fcTelem.rpmMs) < 3000;
+        const bool rotorStopped = rpmFresh ? (fcTelem.fcMotorRPM < 60)
+                                           : (disarmedSinceMs && (uint32_t)(millis() - disarmedSinceMs) > 30000);
+        const bool waveAllowed  = !fcModel || linkQuiet || (disarmedLive && rotorStopped);
+        static uint32_t waveWaitSinceMs = 0;     // waiting for the rotor to stop (0 = not waiting)
         uint32_t t = (uint32_t)(millis() - bleWaveStartMs);
         static uint32_t waveEpoch = 0;
         static uint16_t waveBase[16];
-        if (t >= BLE_WAVE_MS) {
-            // Settle every waved channel back EXACTLY where it started — a
-            // boot-default 500 µs AUX must not be left parked at a wave value.
-            if (waveEpoch == bleWaveStartMs && waveAllowed && waveChannelMask)
+        // Settle every waved channel back EXACTLY where it started — a
+        // boot-default 500 µs AUX must not be left parked at a wave value,
+        // and on a live link a rudder left 150 µs off would FLY that way
+        // until the stick next moved (the TX sends only changed channels).
+        // Also the abort path (armed mid-wave).
+        auto settle = [&]() {
+            if (waveEpoch == bleWaveStartMs && waveChannelMask)
                 for (uint8_t i = 0; i < 16; ++i)
                     if ((waveChannelMask & (1u << i)) &&
                         throttleChannel != i + 1 && armingChannel != i + 1)
                         channelMicros[i] = waveBase[i];
             bleWaveStartMs = 0;
-        } else if (waveAllowed && waveChannelMask &&
-                   // Never wave while ARMED on a LIVE link: an in-flight
-                   // brownout reboot re-opens the boot BLE window and must
-                   // not wiggle the controls mid-air. Bench reboots with the
-                   // TX on still wave — the model is disarmed. TX-off landing
-                   // waves are unaffected (link dead by then).
-                   !(armingChannel >= 1 && armingChannel <= 16 &&
-                     rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 500 &&
-                     channelMicros[armingChannel - 1] > 1500)) {
+            waveWaitSinceMs = 0;
+        };
+        if (t >= BLE_WAVE_MS) {
+            settle();
+        } else if (waveAllowed && waveChannelMask && !armedLive) {
             if (waveEpoch != bleWaveStartMs) {
                 waveEpoch = bleWaveStartMs;
                 for (uint8_t i = 0; i < 16; ++i) waveBase[i] = channelMicros[i];
+                if (fcModel && disarmedLive)
+                    events.add(waveWaitSinceMs ? "Rotor stopped: servo wiggle — the phone can connect now"
+                                               : "Disarmed: servo wiggle — the phone can connect now");
+                waveWaitSinceMs = 0;
             }
             float   ph  = (float)t * (2.0f * (float)M_PI * BLE_WAVE_HZ / 1000.0f);
             int32_t off = (int32_t)(BLE_WAVE_AMPL_US * sinf(ph));
@@ -444,8 +471,19 @@ inline void sbusTick() {
             // flagged as failsafe.
             frameLost = false;
             failsafe  = false;
+        } else if (fcModel && disarmedLive && waveChannelMask && !rotorStopped && waveEpoch != bleWaveStartMs) {
+            // Landed on a live link, rotor still turning: hold the wave for
+            // the stop — the 1.6 s window starts then. Give up after 90 s.
+            if (!waveWaitSinceMs) waveWaitSinceMs = millis();
+            if ((uint32_t)(millis() - waveWaitSinceMs) > 90000) {
+                events.add("Servo wiggle skipped: rotor still turning 90 s after disarming");
+                bleWaveStartMs = 0;
+                waveWaitSinceMs = 0;
+            } else {
+                bleWaveStartMs = millis();   // re-base: t stays ~0 while waiting
+            }
         } else {
-            bleWaveStartMs = 0;   // CRSF+FC (or mask empty): FC is authority — no wave
+            settle();   // armed, no arming channel, mask empty, or a live TX with no verdict: no wave
         }
     }
     // Present the frames as valid RC while the posture is being driven.

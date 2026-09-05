@@ -1,6 +1,20 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.568-bank-putback2",
+      "url": "https://messiter.com/rxv2/release/v0.9.568/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.568/littlefs.bin",
+      "fs_md5": "fbedcb76947338dd82a27c1f03eb895b",
+      "notes": "Bank put-back, bench-proven on the Goblin and polished: a put-back no longer forgets which bank the phone had chosen (so a read arriving after a put-back really does get the phone's bank re-selected first), a save marks the flight controller's bank as unknown until re-read (Rotorflight re-applies the switch by itself right after every save), and the event log now says 'Boot banks saved back for the switch' when only the boot bank needed fixing."
+    },
+    {
+      "name": "RXV2-0.9.567-bank-putback",
+      "url": "https://messiter.com/rxv2/release/v0.9.567/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.567/littlefs.bin",
+      "fs_md5": "8e0573faa680a20aa3c5c3e2b55238a6",
+      "notes": "Banks go back to the transmitter's switch after a phone session. Rotorflight only re-applies a bank switch when the switch moves, so a tuning page that left the flight controller on another bank was flown on that bank until the switch moved. Now the receiver notes the switch's PID and rates banks before a page's first bank select, and 5 s after the phone goes quiet (transmitter off, disarmed) puts them back - and saves them as the boot banks if the session had saved on another bank. Never under a live transmitter (the switch owns the banks then; the event log says where the FC was left). Pages and apps see no difference: a request that arrives after a put-back gets its own bank re-selected first."
+    },
+    {
       "name": "RXV2-0.9.566-restore-names",
       "url": "https://messiter.com/rxv2/release/v0.9.566/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.566/littlefs.bin",
@@ -69,20 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.555/littlefs.bin",
       "fs_md5": "02ed682a6e36bddcd90e2b9b672594f6",
       "notes": "Fix: the Copy-a-bank page (Rotorflight > Copy a bank) opened fine in the app but gave 'not found' in a web browser on the receiver's own pages - the firmware was missing the link for it. Firmware only - pages unchanged."
-    },
-    {
-      "name": "RXV2-0.9.554-fs-wipe-on-fail",
-      "url": "https://messiter.com/rxv2/release/v0.9.554/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.554/littlefs.bin",
-      "fs_md5": "02ed682a6e36bddcd90e2b9b672594f6",
-      "notes": "Safer updates: if the web-files (pages) download dies part-way (weak WiFi, power lost), the receiver now wipes the half-written pages instead of booting on them - a half-written page store hung the Goblin's receiver until a power cycle (2026-09-03). A wiped receiver still works fully from the app; run the update again to put its pages back. Backups and flights are carried across as before. Firmware only - pages unchanged."
-    },
-    {
-      "name": "RXV2-0.9.553-copy-bank",
-      "url": "https://messiter.com/rxv2/release/v0.9.553/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.553/littlefs.bin",
-      "fs_md5": "02ed682a6e36bddcd90e2b9b672594f6",
-      "notes": "New 'Copy a bank' page (Rotorflight hub 4th door + A la carte): PIDs, PID+, rescue, rates and governor gains from one bank to another in ONE tap, saved, read back and verified byte for byte; each bank keeps its own head speed unless you tick 'Head speed too'; refused while armed; flight controller returned to the bank it was on. (Per-page 'Copy to Profile (Bank)' at the bottom of the PIDs / PID+ / Rates / Governor pages is unchanged.) Pages only - firmware behaviour unchanged."
     }
   ]
 }

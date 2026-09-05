@@ -354,25 +354,34 @@
             if (el.dataset.speedShown === key) return true;             // keep the buttons' state while they work
             el.dataset.speedShown = key;
             const matches = (live === pref);
-            const liveText = live === 'fast' ? 'fast (link rate ' + (fc.telem_rate | 0) + '/' + (fc.telem_ratio | 0) + ')'
-                           : live === 'standard' ? 'standard (link rate ' + (fc.telem_rate | 0) + '/' + (fc.telem_ratio | 0) + ')'
+            // One quiet line, the explanations under the finger (Malcolm
+            // 2026-09-05: "simply say telemetry: fast, underlined, to keep
+            // the screen a little more simple"). data-help = press-and-hold
+            // bubble; the link-rate numbers live in there too.
+            const rate = (fc.telem_rate | 0) + '/' + (fc.telem_ratio | 0);
+            const esc = t => t.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+            const helpTelem = 'Rotorflight paces everything it sends on the receiver wire — its sensors and its answers to this phone and the transmitter — by one telemetry link rate. The receiver remembers your choice and shows what the flight controller actually runs.';
+            const helpOf = mode => mode === 'fast'
+                ? 'Fast = link rate 1000/1. The flight controller answers the phone and the transmitter about six times quicker than Rotorflight’s standard rate, and volts and RPM update sooner.'
+                : 'Standard = Rotorflight’s own default link rate, 250/8. Fast answers settings reads, backups and restores about six times quicker.';
+            const liveHelp = live === 'fast' || live === 'standard' ? helpOf(live) + ' The flight controller runs link rate ' + rate + ' now.'
+                           : live === 'unknown' ? 'The receiver has not read the flight controller’s telemetry setup yet.'
+                           : live === 'none' ? 'The flight controller’s telemetry sensor list is empty — no volts or RPM. See the telemetry banner above.'
+                           : 'The flight controller runs a custom link rate, ' + rate + ' — neither fast (1000/1) nor standard (250/8).';
+            const liveWord = live === 'fast' || live === 'standard' ? live
                            : live === 'unknown' ? 'not read yet'
-                           : live === 'none' ? 'nothing (sensors empty)'
-                           : 'a custom link rate ' + (fc.telem_rate | 0) + '/' + (fc.telem_ratio | 0);
+                           : live === 'none' ? 'none — sensors empty'
+                           : 'custom ' + rate;
+            const term = (word, help) => '<span data-help="' + esc(help) + '">' + word + '</span>';
             el.style.cssText = 'display:block;background:' + (matches ? '#d6e9d6' : '#dbe6f2') + ';color:' +
                                (matches ? '#1f4d24' : '#1d3a56') + ';padding:1em;border-radius:10px;margin:0 0 1em;text-align:left;font-size:1.05em';
             let html = '';
             if (matches) {
-                html += '<b>✓ Telemetry speed: ' + liveText + ' — the flight controller runs it.</b><br>';
-                html += pref === 'fast'
-                    ? 'The flight controller answers the phone and the transmitter about six times quicker than Rotorflight’s standard rate, and volts and RPM update sooner.'
-                    : 'Rotorflight’s standard rate. Fast telemetry answers settings reads, backups and restores about six times quicker.';
+                html += '<b>' + term('Telemetry', helpTelem) + ': ' + term(pref, liveHelp) + '</b>';
             } else {
-                html += '<b>Apply ' + pref + ' telemetry — the flight controller runs ' + liveText + '.</b><br>';
-                html += 'The receiver is set to ' + pref + ' telemetry. ' +
-                    (pref === 'fast' ? 'Fast answers the phone and the transmitter about six times quicker, and volts and RPM update sooner. '
-                                     : 'Standard is Rotorflight’s own default rate. ') +
-                    'Applying it restarts the flight controller: transmitter OFF, blades off.';
+                html += '<b>' + term('Telemetry', helpTelem) + ': ' + term(liveWord, liveHelp) + ' — ' +
+                        term(pref, helpOf(pref)) + ' is chosen but not applied yet.</b><br>' +
+                        'Applying restarts the flight controller: transmitter off, blades off.';
             }
             const other = pref === 'fast' ? 'standard' : 'fast';
             html += '<div style="display:flex;gap:.6em;margin:.7em 0 0;flex-wrap:wrap">';

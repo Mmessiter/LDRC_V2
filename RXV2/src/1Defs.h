@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.568-bank-putback2";
+constexpr const char* FW_VERSION = "RXV2-0.9.569-card-wiggle";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -874,6 +874,7 @@ struct FcTelem {
     int16_t  attitudeRoll   = 0;
     int16_t  attitudeYaw    = 0;
     uint32_t fcMotorRPM     = 0;        // first value of the CRSF RPM frame (0x0C) — Rotorflight sends HEAD speed here (motor RPM × main gear ratio), not motor RPM
+    uint32_t rpmMs          = 0;        // millis() of the last RPM frame — 'rotor stopped' needs a FRESH zero (landing wiggle, 0.9.569)
     float    fcEscTempC     = 0.0f;     // first value of the CRSF temperature frame (0x0D), deci-°C/10 — ESC temp
     char     flightMode[16] = {0};
     uint32_t framesParsed   = 0;
