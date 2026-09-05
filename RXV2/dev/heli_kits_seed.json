@@ -1,0 +1,39 @@
+{
+  "_about": "Seed of the helicopter-kit database for the Express wizard (Malcolm 2026-09-05: pick your helicopter from an alphabetical list → size class, gear ratio, blade length come for free). One entry per kit. Gear ratio = main gear teeth / pinion teeth; kits ship one pinion and offer others, so we store the stock pinion + options and the wizard asks 'which pinion?' only when the kit has options. Motor poles belong to the MOTOR, not the kit: stored only for kits sold with a fixed motor. verified=false until read from the maker's manual/spec page. Sources listed per entry.",
+  "_schema": {
+    "brand": "maker", "model": "kit name", "class_mm": "nominal size class (blade length bucket)",
+    "blade_mm": [ "min", "max" ], "main_gear_t": "main gear teeth", "pinion_stock_t": "pinion/pulley shipped",
+    "pinion_options_t": [ "other pinions" ], "ratio_stock": "main ratio with the stock pinion", "ratio_range": [ "min", "max" ],
+    "tail_ratio": "tail drive ratio if published", "drive": "gear|belt|torque-tube", "motor_poles": "only if a fixed motor ships",
+    "verified": "true when read from the maker's spec", "sources": [ "urls" ]
+  },
+  "kits": [
+    { "brand": "Align", "model": "T-Rex 500X", "class_mm": 500, "blade_mm": [470, 470], "main_gear_t": 134, "pinion_stock_t": 12, "ratio_stock": 11.17, "tail_ratio": 3.81, "drive": "belt", "verified": false, "sources": ["https://aligntrexhelis.com/t-rex-helis/500-size/500x-super-combo-belt"] },
+    { "brand": "Align", "model": "T-Rex 550X", "class_mm": 550, "blade_mm": [550, 550], "main_gear_t": 112, "pinion_stock_t": 16, "ratio_stock": 7.0, "tail_ratio": 3.85, "drive": "belt", "verified": false, "sources": ["https://aligntrexhelis.com/t-rex-helis/550-helis/550x-combo"] },
+    { "brand": "Align", "model": "T-Rex 600XN", "class_mm": 600, "blade_mm": [600, 600], "main_gear_t": 62, "ratio_stock": 7.89, "tail_ratio": 5.04, "drive": "belt+gear (nitro)", "verified": false, "sources": ["https://www.helidirect.com/collections/align-kits"] },
+    { "brand": "Align", "model": "T-Rex 800E", "class_mm": 800, "blade_mm": [800, 800], "main_gear_t": 110, "pinion_stock_t": 13, "ratio_stock": 8.46, "tail_ratio": 4.73, "drive": "torque-tube", "verified": false, "sources": ["https://www.amainhobbies.com/align-trex-800e-dfc-flybarless-super-combo-helicopter-kit-w-motor-esc-4-servos-cf-blades-agnrh80e01x/p238518"] },
+    { "brand": "Mikado", "model": "Logo 550 SE", "class_mm": 600, "blade_mm": [600, 600], "main_gear_t": 153, "ratio_range": [8.1, 12.75], "drive": "gear", "verified": false, "sources": ["https://www.hobbytown.com/mikado-logo-550-se-v2-helicopter-kit-mik2102/p503248"] },
+    { "brand": "Mikado", "model": "Logo 550 SX", "class_mm": 550, "blade_mm": [550, 550], "main_gear_t": 153, "ratio_range": [9.56, 12.75], "drive": "gear", "verified": false, "sources": ["https://www.hobbytown.com/mikado-logo-550-sx-v2-helicopter-kit-mik2110/p503249"] },
+    { "brand": "Mikado", "model": "Logo 700 XXtreme", "class_mm": 700, "blade_mm": [700, 750], "main_gear_t": 175, "pinion_stock_t": 13, "pinion_options_t": [14], "ratio_stock": 10.46, "ratio_range": [9.71, 10.46], "drive": "gear", "verified": false, "sources": ["https://shop.mikado-heli.de/LOGO-Helicopters/LOGO-700.htm"] },
+    { "brand": "Mikado", "model": "Logo 800 XXtreme", "class_mm": 800, "blade_mm": [750, 810], "main_gear_t": 175, "pinion_stock_t": 13, "pinion_options_t": [14], "ratio_stock": 10.46, "ratio_range": [9.71, 10.46], "drive": "gear", "verified": false, "sources": ["https://shop.mikado-heli.de/Legacy-LOGOs/LOGO-800-XXTREME.htm"] },
+    { "brand": "OMPHobby", "model": "M4", "class_mm": 380, "blade_mm": [385, 385], "drive": "direct (motor on main shaft)", "ratio_stock": 1.0, "verified": false, "sources": ["https://rchelicopterhub.com/news/20230121-omphobby-m4-detailed/"] },
+    { "brand": "OMPHobby", "model": "M7", "class_mm": 700, "blade_mm": [690, 715], "drive": "gear", "verified": false, "sources": ["https://www.omphobby.com/OMPHOBBY-M7-RC-Helicopter-p4060057.html"] },
+    { "brand": "SAB", "model": "Goblin 500", "class_mm": 500, "blade_mm": [470, 500], "ratio_range": [6.9, 11.0], "drive": "belt", "verified": false, "sources": ["https://goblin-helicopter.com/products/sab-goblin-500-red-white-with-main-and-tail-blades"] },
+    { "brand": "SAB", "model": "Goblin 570", "class_mm": 570, "blade_mm": [550, 575], "drive": "belt", "verified": false, "sources": ["https://goblin-helicopter.com/products/sab-goblin-570-yellow-carbon-with-main-and-tail-blades"] },
+    { "brand": "SAB", "model": "Goblin 630", "class_mm": 630, "blade_mm": [600, 630], "main_gear_t": 68, "pinion_stock_t": 20, "pinion_options_t": [18, 19, 21, 22], "ratio_range": [9.3, 11.3], "drive": "belt", "verified": false, "sources": ["https://goblin-helicopter.com/products/sab-goblin-630-yellow-red-with-main-and-tail-blades"] },
+    { "brand": "SAB", "model": "Goblin 700 Competition", "class_mm": 700, "blade_mm": [690, 710], "ratio_range": [8.6, 11.9], "drive": "belt", "verified": false, "sources": ["https://goblin-helicopter.com/products/sab-goblin-700-competition-yellow-green-with-main-and-tail-blades"] },
+    { "brand": "SAB", "model": "Goblin Raw 700", "class_mm": 700, "blade_mm": [650, 720], "pinion_stock_t": 21, "ratio_stock": 10.1, "tail_ratio": 4.9, "drive": "belt", "verified": false, "sources": ["https://www.hobbytown.com/sab-goblin-raw-700-electric-helicopter-kit-orange-white-sabsg738/p1465614"] },
+    { "brand": "SAB", "model": "Goblin Urukay", "class_mm": 730, "blade_mm": [700, 750], "ratio_range": [8.6, 11.9], "drive": "belt", "verified": false, "sources": ["https://goblin-helicopter.com/products/sab-goblin-urukay-3-blades-red-white-with-black-line-main-and-tail-blades"] },
+    { "brand": "SAB", "model": "Goblin Speed", "class_mm": 720, "blade_mm": [720, 720], "pinion_stock_t": 22, "ratio_stock": 9.8, "ratio_range": [8.5, 11.9], "drive": "belt", "verified": false, "sources": ["https://goblin-helicopter.com/products/sab-goblin-speed-yellow-carbon-with-main-and-tail-blades"] },
+    { "brand": "XLPower", "model": "Specter 700 V2", "class_mm": 700, "blade_mm": [685, 716], "ratio_stock": 9.636, "ratio_range": [8.38, 10.6], "drive": "gear", "verified": false, "sources": ["https://www.manualslib.com/manual/1857677/Xlpower-Specter-700.html"] },
+    { "brand": "XLPower", "model": "Nimbus 550", "class_mm": 550, "blade_mm": [520, 580], "drive": "gear", "verified": false, "sources": ["https://www.manualslib.com/manual/3015321/Xlpower-Nimbus-550.html"] }
+  ],
+  "_todo": [
+    "SAB: Raw 420, Raw 500, Raw 580, Havok, Black Thunder / Black Nitro, Kraken 580/700, Fireball (280), Mini Comet, Goblin 380",
+    "Align: 150, 250, 300X, 450L, 470L, 500XT, 650X, 700X, 760X, 800X / 800 Trekker",
+    "OMPHobby: M1, M2, M4 Max, M7 Max; XLPower: Specter 550/V2, Nimbus 550 V2, XL 380/520/550; Mikado: Logo 480, 550, 600, 690, 700, Logo 800 (non-XXT)",
+    "Others: Compass (Chronos, Warp 360), Gaui (X3/X5/X7/R5), Blade (Fusion 360/480/550/700), KDS (Agile 7.2), Rotortech/Tron (5.5, 7.0), Synergy (516/766), Kraken, Diabolo, Soxos (DB7), Minicopter, Henseleit, Goosky (S1/S2/RS4/RS7), Fly Wing",
+    "Read each maker's manual page for main gear + pinion teeth (ratio derives exactly); mark verified=true with the manual URL",
+    "Decide the class buckets from blade_mm, not from the marketing name (Logo 550 SE flies 600 mm blades)"
+  ]
+}
