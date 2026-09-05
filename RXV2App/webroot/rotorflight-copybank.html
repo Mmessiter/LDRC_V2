@@ -70,6 +70,8 @@
         <div class=fldRow><label data-help="The Governor (profile) page: master/P/I/D/F gains, tail-torque assist, anticipation weights, throttle limits and the spool-up switch.">Governor gains</label> <input type=checkbox id=c_gov checked></div>
         <div class=fldRow><label data-help="Normally OFF: each bank keeps its own head speed — that is usually the whole point of having banks. Tick it only if you want the target bank to spin at the same speed.">Head speed too</label> <input type=checkbox id=c_hs></div>
         <p class=sub id=govNote></p>
+        <div class=fldRow><label data-help="The rotor’s control power grows with head speed squared: a bank tuned at one head speed is too sharp at a faster one and too soft at a slower one. With this ticked, the copied P, I, D, feedforward and boost gains are scaled by the two banks’ head speeds — down fully for a faster bank, up more gently (never more than +25 %) for a slower one. Filters, offsets and the governor are left alone. Tune the middle bank, then copy it outwards.">Adjust gains for the target bank’s head speed</label> <input type=checkbox id=c_hsadj onchange="updateHsNote()"></div>
+        <p class=sub id=hsNote></p>
     </div>
 
     <div class=fabBar>
@@ -109,6 +111,50 @@ function bytesToHex(b) {
     for (let i = 0; i < b.length; i++) s += b[i].toString(16).padStart(2, '0');
     return s;
 }
+// Head-speed scaling of the copied gains (Malcolm 2026-09-05: "tune bank 2
+// first, copy it to 1 and 3, and let the firmware make intelligent
+// reductions / increases for the head speed"). Control power ~ rpm², so
+// the loop gain a tune was made at changes with (hsSrc/hsDst)². Going
+// FASTER we scale down with exponent 1.5 (a shade soft beats a wobble);
+// going SLOWER we scale up with exponent 1 and cap +25 % — too much gain
+// wobbles, too little is only soft. The exponents are the thing Malcolm's
+// flights calibrate. Words: 3 axes × (P,I,D,F), then B ×3, then O ×2
+// (MSP 112, RF 4.6); O is left alone. Gains clamp to Rotorflight's 0–1000.
+function hsScale(hsSrc, hsDst) {
+    if (!(hsSrc > 0) || !(hsDst > 0)) return null;
+    const r = hsSrc / hsDst;
+    let f = r < 1 ? Math.pow(r, 1.5) : Math.min(Math.pow(r, 1.0), 1.25);
+    const pct = Math.round((f - 1) * 100);
+    const speed = Math.round((hsDst / hsSrc - 1) * 100);
+    return { factor: f, pct,
+             text: 'Bank runs ' + Math.abs(speed) + ' % ' + (speed >= 0 ? 'faster' : 'slower') +
+                   ' (' + hsSrc + ' → ' + hsDst + ' rpm): gains ' + (pct >= 0 ? 'up ' : 'down ') + Math.abs(pct) + ' %' };
+}
+function hsScaleWords(words, f) {
+    const out = words.slice();
+    for (let i = 0; i < 15 && i < out.length; i++)          // 0..11 = P,I,D,F ×3 axes, 12..14 = B; 15,16 = O untouched
+        out[i] = Math.max(0, Math.min(1000, Math.round(out[i] * f)));
+    return out;
+}
+const wordsOf = b => { const w = []; for (let i = 0; i + 1 < b.length; i += 2) w.push(b[i] | (b[i+1] << 8)); return w; };
+const bytesOf = w => { const b = new Uint8Array(w.length * 2); w.forEach((v, i) => { b[i*2] = v & 0xff; b[i*2+1] = (v >> 8) & 0xff; }); return b; };
+let hsPreview = null;      // {src, dst} head speeds read for the note
+async function updateHsNote() {
+    const n = document.getElementById('hsNote');
+    const on = document.getElementById('c_hsadj').checked;
+    if (!on || !live || busy || toBank < 0 || !govOk) { n.textContent = on && !govOk ? 'Needs Rotorflight 2.3 (the governor profile carries the head speed).' : ''; return; }
+    try {
+        await readWhereFcIs();
+        await LDRC.msp(210, P(fromBank)); const a = hexToBytes(await LDRC.msp(148));
+        await LDRC.msp(210, P(toBank));   const b = hexToBytes(await LDRC.msp(148));
+        await putFcBack();
+        const hsS = a[0] | (a[1] << 8), hsD = document.getElementById('c_hs').checked ? hsS : (b[0] | (b[1] << 8));
+        const sc = hsScale(hsS, hsD);
+        n.textContent = sc ? 'Bank ' + (toBank + 1) + ' ' + sc.text.charAt(0).toLowerCase() + sc.text.slice(1)
+                           : (hsS === hsD ? 'Both banks run ' + hsS + ' rpm — nothing to adjust.' : 'A bank has no head speed set — gains would be copied unchanged.');
+    } catch (e) { n.textContent = ''; }
+}
+
 const P = i => i.toString(16).padStart(2, '0');            // select PID profile i
 const R = i => (0x80 | i).toString(16).padStart(2, '0');   // select rate profile i
 
@@ -135,8 +181,8 @@ function paint() {
             : 'Copying from bank ' + (fromBank + 1) + '. (Your transmitter’s switch has the flight controller on bank ' +
               (fcPid + 1) + ' right now — this page doesn’t change that.)';
 }
-function setFrom(i) { if (busy) return; fromBank = i; if (toBank === i) toBank = -1; paint(); }
-function setTo(i)   { if (busy || i === fromBank) return; toBank = i; paint(); }
+function setFrom(i) { if (busy) return; fromBank = i; if (toBank === i) toBank = -1; paint(); updateHsNote(); }
+function setTo(i)   { if (busy || i === fromBank) return; toBank = i; paint(); updateHsNote(); }
 
 async function readWhereFcIs() {
     // MSP_STATUS (101): byte 23 = PID profile, byte 25 = rate profile (RF 4.6).
@@ -183,9 +229,10 @@ async function copyBank() {
     const doRates  = document.getElementById('c_rates').checked;
     const doGov    = govOk && document.getElementById('c_gov').checked;
     const doHs     = govOk && document.getElementById('c_hs').checked;
+    const doAdj    = govOk && doFlight && document.getElementById('c_hsadj').checked;
     const touchGov = govOk && (doFlight || doGov);   // governor block needs putting right afterwards
     if (!doFlight && !doRates && !doGov) { setStatus('bad', 'Tick at least one thing to copy.'); return; }
-    const what = [doFlight && (govOk ? 'flight tuning' : 'flight tuning incl. governor'),
+    const what = [doFlight && (govOk ? (doAdj ? 'flight tuning (gains adjusted for head speed)' : 'flight tuning') : 'flight tuning incl. governor'),
                   doRates  && 'rates',
                   doGov    && (doHs ? 'governor incl. head speed' : 'governor gains (head speed kept)')]
                  .filter(Boolean).join(', ');
@@ -233,6 +280,25 @@ async function copyBank() {
             await LDRC.msp(149, bytesToHex(expGov));
         }
         if (doRates) await LDRC.msp(183, '01' + P(toBank) + P(fromBank));
+        // 3b. Head-speed adjustment: scale the copied PIDs by the two head
+        //     speeds (the target's FINAL one — it may just have been copied).
+        let expPid = srcPid, adjText = '';
+        if (doAdj) {
+            const hsS = srcGov ? (srcGov[0] | (srcGov[1] << 8)) : 0;
+            const hsD = expGov ? (expGov[0] | (expGov[1] << 8)) : 0;
+            const sc = hsScale(hsS, hsD);
+            if (sc && sc.pct !== 0) {
+                setStatus('info', 'Adjusting gains for ' + hsD + ' rpm…');
+                await LDRC.msp(210, P(toBank));
+                const w = hsScaleWords(wordsOf(hexToBytes(await LDRC.msp(112))), sc.factor);
+                expPid = bytesToHex(bytesOf(w)).toLowerCase();
+                await LDRC.msp(202, expPid);
+                adjText = ' Gains ' + (sc.pct >= 0 ? 'up ' : 'down ') + Math.abs(sc.pct) + ' % for bank ' + to + '’s ' +
+                          (hsD > hsS ? 'faster' : 'slower') + ' head speed (' + hsS + ' → ' + hsD + ' rpm).';
+            } else {
+                adjText = sc ? ' Both banks run ' + hsS + ' rpm, so the gains are unchanged.' : ' A bank has no head speed set, so the gains are copied unchanged.';
+            }
+        }
         setStatus('info', 'Saving…');
         await LDRC.msp(250);
 
@@ -241,7 +307,7 @@ async function copyBank() {
         const bad = [];
         await LDRC.msp(210, P(toBank));
         if (doFlight) {
-            if ((await LDRC.msp(112)).toLowerCase() !== srcPid)  bad.push('PIDs');
+            if ((await LDRC.msp(112)).toLowerCase() !== expPid)  bad.push('PIDs');
             if ((await LDRC.msp(94)).toLowerCase()  !== srcAdv)  bad.push('PID +');
             if ((await LDRC.msp(146)).toLowerCase() !== srcResc) bad.push('rescue');
         }
@@ -268,7 +334,7 @@ async function copyBank() {
         } else {
             const hs = expGov ? (expGov[0] | (expGov[1] << 8)) : null;
             const msg = 'Bank ' + from + ' copied to bank ' + to + ' and verified: ' + what +
-                (hs !== null ? '. Bank ' + to + ' head speed is ' + hs + ' rpm.' : '.');
+                (hs !== null ? '. Bank ' + to + ' head speed is ' + hs + ' rpm.' : '.') + adjText;
             setStatus('good', '✓ ' + msg);
             await LDRC.alert(msg, {title: 'Copied and verified', icon: '✅'});
         }
