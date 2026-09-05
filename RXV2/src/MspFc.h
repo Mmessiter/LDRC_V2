@@ -885,8 +885,13 @@ inline bool telemApplySpeedSync(bool fast, bool* changed, char* msg, size_t msgL
 //  - once the phone has been quiet for BANK_IDLE_MS, transmitter off and
 //    disarmed, it puts them back, and saves if the session's save had made
 //    another bank the boot bank (so a power-up lands on the switch's too);
-//  - never under a live transmitter: the switch may have moved and
-//    Rotorflight owns the banks then — the hold is dropped, with a note;
+//  - never under a live transmitter: the switch may have moved (or been
+//    moved to the very bank the page shows) and Rotorflight owns the
+//    banks then — the hold is dropped, with a note. A TX-on session keeps
+//    Rotorflight's native behaviour: every save re-loads the config and
+//    re-applies the switch at once (config.c activateConfig →
+//    adjustmentRangeInit), so only a page's post-save re-select can leave
+//    the FC on the page's bank — flip the switch once before flying;
 //  - the phone never notices: a bank-dependent request that arrives after
 //    a put-back gets the phone's own bank re-selected first (the app's
 //    restore runner skips selects it believes are already true — a
@@ -905,11 +910,15 @@ inline bool bankTxLive() { return rx.lastMillis != 0 && (uint32_t)(millis() - rx
 inline bool bankHeld()   { return banks.switchPid != 0xFF; }
 inline void bankRelease() { banks.switchPid = banks.switchRate = 0xFF; banks.savedPid = banks.savedRate = 0xFF; banks.tries = 0; }
 
-// What the FC does with a 210 byte (msp.c MSP_SELECT_SETTING: bit 7 = rates, out of range → 0).
-inline void bankNoteSelect(uint8_t b) {
+// What the FC does with a 210 byte (msp.c MSP_SELECT_SETTING: bit 7 = rates,
+// out of range → 0). Only a PHONE's select is the phone's choice — the
+// receiver's own put-back selects must leave clientPid/clientRate alone,
+// or the re-select below has nothing to re-select (bench, 0.9.567: the
+// put-back overwrote them and a bankless read went to the switch's bank).
+inline void bankNoteSelect(uint8_t b, bool fromPhone) {
     uint8_t v = (uint8_t)(b & 0x7F);
-    if (b & 0x80) { if (v >= banks.rateCount) v = 0; banks.fcRate = v; banks.clientRate = v; }
-    else          { if (v >= banks.pidCount)  v = 0; banks.fcPid  = v; banks.clientPid  = v; }
+    if (b & 0x80) { if (v >= banks.rateCount) v = 0; banks.fcRate = v; if (fromPhone) banks.clientRate = v; }
+    else          { if (v >= banks.pidCount)  v = 0; banks.fcPid  = v; if (fromPhone) banks.clientPid  = v; }
 }
 // Fresh MSP 101 — the passive digest fills banks.fcPid/fcRate. False = no usable answer.
 inline bool bankReadSync() {
@@ -923,7 +932,7 @@ inline bool bankSelectSync(uint8_t b) {
     static uint8_t buf[16];
     uint16_t len = 0;
     if (!mspRequestAndWait(MSP_SELECT_SETTING, &b, 1, buf, &len, 1200)) return false;
-    bankNoteSelect(b);
+    bankNoteSelect(b, false);
     return true;
 }
 // Open a hold if none: note the switch's banks before the phone moves them.
@@ -983,8 +992,18 @@ inline void bankBeforeClientRequest(uint8_t fn, const uint8_t* data, uint8_t len
 // ...and after the FC answered (ok = it did).
 inline void bankAfterClientRequest(uint8_t fn, const uint8_t* data, uint8_t len, bool ok) {
     if (!ok) return;
-    if (fn == MSP_SELECT_SETTING && len >= 1) bankNoteSelect(data[0]);
-    else if (fn == MSP_EEPROM_WRITE && bankHeld()) { banks.savedPid = banks.fcPid; banks.savedRate = banks.fcRate; }
+    if (fn == MSP_SELECT_SETTING && len >= 1) bankNoteSelect(data[0], true);
+    else if (fn == MSP_EEPROM_WRITE) {
+        // The banks selected at the save are now the boot banks. And the
+        // save re-loads the config (config.c readEEPROM → activateConfig →
+        // adjustmentRangeInit): the switch logic restarts from the current
+        // bank and, with the FC receiving frames, re-applies the switch
+        // at once — the FC may have moved by itself (seen on the bench,
+        // 2026-09-05: rates bank 2 + save → FC back on bank 1 unasked).
+        // So where it is now is unknown until the next MSP 101.
+        if (bankHeld()) { banks.savedPid = banks.fcPid; banks.savedRate = banks.fcRate; }
+        banks.fcPid = banks.fcRate = 0xFF;
+    }
 }
 
 // From loop(): the put-back itself, when the phone has gone quiet.
@@ -1036,11 +1055,16 @@ inline void bankPutBackTick() {
     if (!ok && ++banks.tries < 3) return;                   // once more in 2 s
     char m[EventLog::MSG_LEN];
     if (ok) {
-        if (moved || saved) {
+        if (moved) {
             banks.putBacks++;
             snprintf(m, sizeof(m), "Banks put back for the switch: PID bank %u, rates bank %u (phone had left %u/%u)%s",
                      banks.switchPid + 1, banks.switchRate + 1, wasPid + 1, wasRate + 1,
-                     saved ? ", saved as the boot banks" : "");
+                     saved ? ", saved as the boot banks too" : "");
+            events.add(m);
+        } else if (saved) {
+            banks.putBacks++;
+            snprintf(m, sizeof(m), "Boot banks saved back for the switch: PID bank %u, rates bank %u (the phone's save had made %u/%u the boot banks)",
+                     banks.switchPid + 1, banks.switchRate + 1, banks.savedPid + 1, banks.savedRate + 1);
             events.add(m);
         }
         // else: the phone put them back itself (copy-bank page, the app) — nothing to say
