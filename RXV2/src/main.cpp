@@ -948,7 +948,12 @@ void loop() {
     }
 
     // Auto fly mode (Malcolm 2026-08-24: "there will be people, including
-    // me, who forget to hit Fly now"). Triggered by ARMING, sustained 3 s —
+    // me, who forget to hit Fly now"). Triggered by ARMING, sustained 0.5 s
+    // (was 3 s until 0.9.570 — Malcolm 2026-09-05: "the ARM switch should
+    // be enough"; it was, but the motor switch came inside the 3 s and got
+    // the credit. 0.5 s = the same switch-bounce filter the disarm side
+    // uses, and the sooner the better: the teardown must land BEFORE the
+    // spool-up, which the motor switch starts next) —
     // deliberately BEFORE takeoff, not on flying detection: the WiFi/BLE
     // teardown stalls the loop ~700 ms (measured 707 ms, 2026-08-04), which
     // must land harmlessly during ground spool-up and NEVER mid-air with
@@ -968,7 +973,7 @@ void loop() {
                               linkLive && channelMicros[armingChannel - 1] > 1500;
         if (radiosUp && armedNow) {
             if (!armedSinceMs) armedSinceMs = millis();
-            else if ((uint32_t)(millis() - armedSinceMs) > 3000) {
+            else if ((uint32_t)(millis() - armedSinceMs) > 500) {
                 armedSinceMs = 0;
                 events.add("AUTO fly mode: armed — radios off before takeoff");
                 // The events reach flash inside the teardown below — the

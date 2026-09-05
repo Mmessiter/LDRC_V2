@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.569-card-wiggle";
+constexpr const char* FW_VERSION = "RXV2-0.9.570-arm-fast";
 
 //*********************************************************************
 //  Auto-update manifest URLs

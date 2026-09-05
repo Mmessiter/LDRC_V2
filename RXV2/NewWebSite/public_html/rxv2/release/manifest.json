@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.569-card-wiggle",
+      "url": "https://messiter.com/rxv2/release/v0.9.569/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.569/littlefs.bin",
+      "fs_md5": "11f78b5e5a9ca6279826949b2184be38",
+      "notes": "Two of Malcolm's suggestions. (1) The Rotorflight page's telemetry-speed card is now one quiet line - 'Telemetry: fast' - with the explanation under your finger (press and hold the underlined words), the Use standard / Use fast button as before. (2) The servo wiggle that announces 'the phone can connect' now also happens after a landing with the transmitter still on: as soon as the model is disarmed and the head speed reads zero, the chosen channel wiggles (a wiggle on a coasting rotor would yaw the model, so it waits for the stop - up to 90 s; without RPM telemetry, 30 s after disarming). Aborted wiggles now put the channel back exactly where it was."
+    },
+    {
       "name": "RXV2-0.9.568-bank-putback2",
       "url": "https://messiter.com/rxv2/release/v0.9.568/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.568/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.556/littlefs.bin",
       "fs_md5": "40ed4dbc24fbd612c6104247380e1b18",
       "notes": "Fix + safeguard: after a bank copy the transmitter showed no volts and no RPM - the flight controller's telemetry sensor list and link rate had been wiped (all zero; cause still unknown - the receiver did not write them). Rotorflight only sends the sensors on that list, so an empty list makes a healthy FC mute. The receiver now reads that list after it finds the FC, and if it is empty the Home and Rotorflight pages show a red notice with a one-tap 'Restore telemetry sensors' button (transmitter off - the FC restarts). Copy a bank: the result now pops up so it cannot be missed, and the 'from' caption leads with the bank you picked instead of the bank the FC is on. Pages changed - apps 4.11 / 4.03 carry the same."
-    },
-    {
-      "name": "RXV2-0.9.555-copybank-route",
-      "url": "https://messiter.com/rxv2/release/v0.9.555/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.555/littlefs.bin",
-      "fs_md5": "02ed682a6e36bddcd90e2b9b672594f6",
-      "notes": "Fix: the Copy-a-bank page (Rotorflight > Copy a bank) opened fine in the app but gave 'not found' in a web browser on the receiver's own pages - the firmware was missing the link for it. Firmware only - pages unchanged."
     }
   ]
 }
