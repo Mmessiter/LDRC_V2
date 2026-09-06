@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.578-slider-help",
+      "url": "https://messiter.com/rxv2/release/v0.9.578/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.578/littlefs.bin",
+      "fs_md5": "3d3b367d64cbfcd38b701fc1b5fa56b5",
+      "notes": "Press and hold a slider's heading (Easy tuning, Governor, Rates, PIDs pages) to see exactly which numbers it moves and by how much; the Easy tuning help page lists them too."
+    },
+    {
       "name": "RXV2-0.9.577-easy-tuning",
       "url": "https://messiter.com/rxv2/release/v0.9.577/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.577/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.567/littlefs.bin",
       "fs_md5": "8e0573faa680a20aa3c5c3e2b55238a6",
       "notes": "Banks go back to the transmitter's switch after a phone session. Rotorflight only re-applies a bank switch when the switch moves, so a tuning page that left the flight controller on another bank was flown on that bank until the switch moved. Now the receiver notes the switch's PID and rates banks before a page's first bank select, and 5 s after the phone goes quiet (transmitter off, disarmed) puts them back - and saves them as the boot banks if the session had saved on another bank. Never under a live transmitter (the switch owns the banks then; the event log says where the FC was left). Pages and apps see no difference: a request that arrives after a put-back gets its own bank re-selected first."
-    },
-    {
-      "name": "RXV2-0.9.566-restore-names",
-      "url": "https://messiter.com/rxv2/release/v0.9.566/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.566/littlefs.bin",
-      "fs_md5": "e74a476d8c9f7404e91dc67c0ce661eb",
-      "notes": "Restore from phone now names what it wrote (up to four items, then a count) and the Back up / Restore result stays on screen until the next run instead of vanishing after a few seconds. Needs app 4.18 (iPhone) / 4.10 (Android) for the names."
     }
   ]
 }

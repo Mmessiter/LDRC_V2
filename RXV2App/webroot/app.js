@@ -441,6 +441,25 @@
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: 'epoch_ms=' + now + '&tz_min=' + (-new Date().getTimezoneOffset()) }).catch(() => {});
         },
+        // One step of the back-arrow trail. `trail` = pages visited before
+        // this one (oldest first, at most 6). Arriving by the arrow, or at
+        // a page that is already on top of the trail (a swipe back, or a
+        // link that loops), pops back to it; any other arrival pushes the
+        // page we came from. Returns the new trail and the page the arrow
+        // should go to (null = use the hub/map fallback).
+        trailStep(trail, here, from, cameBack) {
+            let t = Array.isArray(trail) ? trail.filter(x => typeof x === 'string') : [];
+            const i = t.lastIndexOf(here);
+            if (cameBack || (t.length && t[t.length - 1] === here)) {
+                if (i >= 0) t = t.slice(0, i);
+            } else if (from && from !== here) {
+                if (i >= 0) t = t.slice(0, i);          // a loop back to an earlier page: shorten the trail to it
+                t.push(from);
+                if (t.length > 6) t = t.slice(-6);
+            }
+            const prev = t.length && t[t.length - 1] !== here ? t[t.length - 1] : null;
+            return { trail: t, prev };
+        },
         async confirmLoseChanges(action) {
             if (!this.dirty) return true;
             const msg = action
@@ -592,7 +611,19 @@
                 '/setup', '/sim', '/blackbox']);
             let from = null;
             try{ from = sessionStorage.getItem('ldrc.from'); }catch(_){}
-            const parent = (HUBS.has(from) && from !== location.pathname ? from : null)
+            // The trail (Malcolm 2026-09-06: "the back button doesn't always
+            // go back to the page I would have expected"): the last few
+            // pages actually visited, so the arrow walks back through what
+            // you were doing. The hub-from and the PARENTS map are the
+            // fallback when the trail is empty (reloads, deep links).
+            let trail = [];
+            try { trail = JSON.parse(sessionStorage.getItem('ldrc.trail') || '[]'); } catch(_) {}
+            let cameBack = false;
+            try { cameBack = sessionStorage.getItem('ldrc.back') === '1'; sessionStorage.removeItem('ldrc.back'); } catch(_) {}
+            const step = LDRC.trailStep(trail, location.pathname, from, cameBack);
+            try { sessionStorage.setItem('ldrc.trail', JSON.stringify(step.trail)); } catch(_) {}
+            const parent = step.prev
+                || (HUBS.has(from) && from !== location.pathname ? from : null)
                 || PARENTS[location.pathname] || '/';
             if (parent !== '/') {
                 document.body.classList.add('hasBack');
@@ -675,8 +706,12 @@
         _navigating = true;
         // Breadcrumb for the floating back arrow: pages reachable from BOTH
         // the wizard and A la carte need to go back to the menu actually
-        // used (Malcolm 2026-08-31).
-        try{ sessionStorage.setItem('ldrc.from', location.pathname); }catch(_){}
+        // used (Malcolm 2026-08-31). The arrow itself marks the hop as a
+        // step BACK so the trail pops instead of growing.
+        try{
+            sessionStorage.setItem('ldrc.from', location.pathname);
+            if (a.classList.contains('backBtn')) sessionStorage.setItem('ldrc.back', '1');
+        }catch(_){}
         LDRC.showLoading();
         setTimeout(() => { location.href = a.href; }, 50);
     }, true);
@@ -689,6 +724,11 @@
             e.returnValue = 'Un-saved changes will be lost.';
             return e.returnValue;
         }
+    });
+    // Whatever way a page is left (a script's location.href, a swipe back,
+    // the arrow), record it as the page we came from.
+    window.addEventListener('pagehide', () => {
+        try{ sessionStorage.setItem('ldrc.from', location.pathname); }catch(_){}
     });
     // bfcache: iOS may restore the page with the overlay still up.
     window.addEventListener('pageshow', () => {
