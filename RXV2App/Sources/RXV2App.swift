@@ -431,6 +431,23 @@ struct ScannerView: View {
                 }
             }
             Section {
+                // "Searching…" lives IN the list, not floating over it: as an
+                // overlay it was drawn centred on the screen, on top of the
+                // Review rows and the demo button (Malcolm 2026-09-06 screenshot).
+                if link.found.isEmpty {
+                    HStack(alignment: .top, spacing: 12) {
+                        ProgressView()
+                            .padding(.top, 2)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Label("Searching…", systemImage: "dot.radiowaves.left.and.right")
+                                .font(.headline)
+                            Text(statusText)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.vertical, 6)
+                }
                 ForEach(link.found) { d in
                     Button {
                         cancelAuto()
@@ -494,20 +511,6 @@ struct ScannerView: View {
             }
         }
         .onReceive(link.$found) { maybeArmAuto($0) }
-        .overlay {
-            if link.found.isEmpty {
-                VStack(spacing: 12) {
-                    ProgressView()
-                    Label("Searching…", systemImage: "dot.radiowaves.left.and.right")
-                        .font(.headline)
-                    Text(statusText)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 32)
-                }
-            }
-        }
         .onAppear { link.startScan() }
         .onDisappear { link.stopScan() }
         .refreshable { link.startScan() }
