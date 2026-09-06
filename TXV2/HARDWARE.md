@@ -302,3 +302,46 @@ must still beep.
 
 Rev-B: move the VBAT_SENSE route (or the C1 ground stub) in
 generate_pcb.py and make `tracks_crossing` a hard stop in the verify step.
+
+## Rev-B (2026-09-06) — the three errata fixed, plus small improvements
+
+Built from the fabbed Rev-A board file by `kicad/revB/make_revb.sh`
+(surgical edits with KiCad's Python API, then DRC-gated track widening,
+export, render). Not a re-route: everything that was proven on Rev-A is
+byte-identical except the items below. DRC clean (the same ten
+cosmetic "starved thermal" notes as Rev-A; no crossings, no clearance
+errors, no unconnected copper). Files: `kicad/revB/TXV2_MAIN_revB.kicad_pcb`,
+`kicad/revB/TXV2_MAIN_revB_gerbers.zip` (JLCPCB: 4-layer, 1.6 mm, same
+outline), renders `revB_top.png` / `revB_bottom.png`.
+
+1. **Erratum 1 fixed — Pololu 2808 (U4) un-mirrored.** The two pin rows
+   swap: the 7-pin row (VIN VIN GND GND ON OFF CTRL) is now the row
+   nearer the board's bottom edge, the 6-pin row (VOUT VOUT GND GND A B)
+   the upper one. **Mount the module right-side-up on the TOP, on
+   headers, VIN row at the bottom (silk says so).** Its own switch and
+   button now face up. Standoffs can go back to ~5 mm. Five nets were
+   re-routed locally: VBAT_RAW, VBAT_SW (via a new In2 climb + one via),
+   PWR_A, LATCH_OFF, and SW2 (its diagonal ran through the new CTRL
+   hole; it now detours south of the row).
+2. **Erratum 3 fixed — VBAT_SENSE no longer crosses C1's ground stub.**
+   The sense track now passes over the top of that ground via (the stub
+   is C1's only ground, fenced in by the sense track and GIMBAL3, so it
+   stays). No cuts needed on Rev-B.
+3. **Erratum 2 fixed — silk.** "ANTENNA end ^" at the DevKitC's pin-1
+   end, "USB end v" at the other. Revision text "TXV2 Revision B 2026-09".
+4. **C12 added: 10 µF (0805, 25 V) input capacitor for the AMS1117**
+   (U8), between its IN (+5V) and GND pins. The RF regulator had none.
+5. **Power tracks widened 0.2 → 0.4 mm where the board allows** —
+   43 of the 108 VBAT_RAW / VBAT_SW / +5V / +5V_NEXT / +3V3_RF segments;
+   the rest stay 0.2 mm where they squeeze past pads (all DRC-clean).
+6. BOM: D3/D4 as SMA Schottky (SS14) rather than 1N4001 type (lower drop
+   on the 2808's A pin); everything else unchanged.
+
+**Case:** TXV16's 6 mm bosses and the pinhole for the 2808's A/B stubs
+were placed for the upside-down/underside module — with the module
+right-side-up on top, re-check the pinhole position and the boss height
+before printing the next case.
+
+Not changed on purpose: the Teensy VBAT (RTC) still needs the flying lead
+from J14; the WS2812 is still driven by 3.3 V logic (a Schottky in its 5 V
+feed cures flicker if seen); gimbal PH-3 order remains +3V3 / signal / GND.

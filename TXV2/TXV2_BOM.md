@@ -46,7 +46,7 @@
 ## Diodes & LEDs
 | Qty | Part | Ref |
 |---|---|---|
-| 2 | 1N4001 in SMA package (e.g. M1/S1A) | D3, D4 — soft-power OR |
+| 2 | **Schottky in SMA package (SS14 / 1N5819W)** — Rev-B choice; 1N4001-type works too | D3, D4 — soft-power OR (low drop on the 2808's A pin) |
 | 2 | 0805 LED (suggest green + amber) | D1 PWR, D2 CHG |
 | 1 | WS2812 RGB LED (panel-mount / breakout with 3-wire lead) | the status light |
 
@@ -55,6 +55,7 @@
 |---|---|---|---|
 | 3 | 10µF 25V | 1206 | C2 C3 C4 (PMID/BAT) |
 | 1 | 10µF | 1206 | C9 (RF rail) |
+| 1 | 10µF 25V | 0805 | **C12 (AMS1117 input) — Rev-B only** |
 | 1 | 1µF | 0805 | C1 (VBUS) |
 | 1 | 4.7µF | 0805 | C7 (REGN) |
 | 1 | 47nF | 0805 | C6 (BTST) |
@@ -84,4 +85,4 @@
 - M3 standoffs ×4 (~5mm) — as V1
 
 ## The board itself
-**JLCPCB: 4-layer, 1.6mm, 83.3 × 91.7mm, qty 100** — upload `TXV2_MAIN_gerbers.zip`, defaults for everything else.
+**JLCPCB: 4-layer, 1.6mm, 83.3 × 91.7mm, qty 100** — upload `TXV2_MAIN_gerbers.zip` (Rev-A, in hand) or `kicad/revB/TXV2_MAIN_revB_gerbers.zip` (Rev-B, 2026-09-06: errata 1-3 fixed, C12 added, power tracks widened), defaults for everything else.
