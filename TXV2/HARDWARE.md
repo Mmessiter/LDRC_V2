@@ -280,3 +280,25 @@ Assembly-day safeguards:
 
 Rev-B: fix the silk text in generate_pcb.py (move "USB end" to the y155
 end or replace with "ANTENNA" at y102).
+
+## Rev-A erratum 3 — VBAT_SENSE shorted to GND on the back copper (found 2026-09-06)
+
+A fresh `kicad-cli pcb drc` on the fabbed `TXV2_MAIN.kicad_pcb` (same
+mtime as the gerbers) reports one **tracks_crossing** error, and the copper
+confirms it: on **B.Cu** the VBAT_SENSE track (Teensy pin 24 → the 47k/15k
+divider) runs along y = 120.25 mm and crosses the short GND stub that
+joins **C1 pad 2** (the 1 µF VBUS cap, at 130.4/121.05) to a GND via at
+130.66/119.55. They intersect at **(130.54, 120.25)** — a hard short. The
+July-22 DRC had the same error; it was missed. Effect: the Teensy would
+read the battery as 0 V forever (nothing burns: 47k to ground).
+
+**Fix on every board before assembly — two scalpel cuts, no wire:** cut
+the GND stub either side of the crossing (at about y = 120.6 and
+y = 119.9, i.e. between C1's ground pad and the crossing, and between the
+crossing and the via). C1 keeps its ground through the zone's thermal
+spokes; the via is a plain stitch via. **Verify:** R16 pad 1 (or Teensy
+socket pad 16 / pin 24) to GND must read ~15 kΩ, not 0 Ω; C1 pad 2 to GND
+must still beep.
+
+Rev-B: move the VBAT_SENSE route (or the C1 ground stub) in
+generate_pcb.py and make `tracks_crossing` a hard stop in the verify step.
