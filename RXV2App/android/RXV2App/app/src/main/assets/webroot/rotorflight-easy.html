@@ -56,7 +56,8 @@
     </div>
 
     <div class=card>
-        <h2>How hard should it start?</h2>
+        <h2 data-help="Moves three numbers on the Governor page and nothing else: Spool-up time (40 s at very gentle, 10 s at very fierce), Handover throttle (10 % to 25 %) and Startup time (always twice the spool-up time). The tick switches on PID spool-up in each bank&rsquo;s governor profile.">How hard should it start?</h2>
+        <p class=sub>Press and hold a heading to see exactly which numbers move.</p>
         <div class=sl><span>Very gentle</span><input type=range id=s_start min=0 max=100 step=5 value=50 oninput="onStart()"><span>Very fierce</span></div>
         <p class=sub id=startNote></p>
         <div class=fldRow><label data-help="Rotorflight's PID spool-up makes the governor ramp the HEAD SPEED itself instead of the throttle, so the torque is even all the way up. It is a per-bank switch; ticked here, saving switches it on in all four banks.">Also switch on PID spool-up in every bank (recommended)</label> <input type=checkbox id=s_pidsp checked onchange="onStart()"></div>
@@ -64,7 +65,7 @@
     </div>
 
     <div class=card id=agileCard>
-        <h2>How agile?</h2>
+        <h2 data-help="Moves the Rate column on the Rates page: roll and pitch from 120 to 500 degrees a second, yaw from 150 to 600. The Stick feel slider moves the Expo column on roll, pitch and yaw, from 70 (softest centre) to 0 (direct). Shape, collective and the dynamics are left alone.">How agile?</h2>
         <div class=sl><span>Docile</span><input type=range id=s_agile min=0 max=100 step=5 value=40 oninput="onAgile()"><span>Acrobatic</span></div>
         <p class=sub id=agileNote></p>
         <div class=sl><span>Soft centre</span><input type=range id=s_expo min=0 max=100 step=5 value=50 oninput="onExpo()"><span>Direct</span></div>
@@ -74,7 +75,7 @@
     </div>
 
     <div class=card>
-        <h2>Feel</h2>
+        <h2 data-help="Cyclic multiplies roll and pitch P, I, D and F on the PIDs page by 0.7 (softest) to 1.3 (sharpest); Tail does the same to yaw. Boost and HSI offsets are left alone. The starting point is what was loaded, or last saved.">Feel</h2>
         <p class=sub><b>Wobbles or shakes &rarr; softer. Sluggish, drifting or mushy &rarr; sharper.</b> Small steps, one flight each.</p>
         <div class=sl><span>Cyclic softer</span><input type=range id=s_cyc min=-30 max=30 step=5 value=0 oninput="onNudge('cyc')"><span>sharper</span></div>
         <p class=sub id=cycNote></p>
@@ -310,6 +311,13 @@ document.addEventListener('DOMContentLoaded', () => { paintBanks(); load(); });
 <h3>How hard should it start?</h3><p>One slider for spool-up time, handover throttle and startup time, the same for every bank. Saving restarts the flight controller, so transmitter off and blades off.</p>
 <h3>How agile?</h3><p>Top rotation speeds at full stick, and how soft the sticks feel around centre. Per bank.</p>
 <h3>Feel</h3><p>Softer or sharper: scales the bank&rsquo;s P, I, D and feedforward together, relative to what the model flew last. Wobbles or shakes &rarr; softer. Sluggish, drifting or mushy &rarr; sharper. Small steps, one flight each; after a save the sliders return to centre.</p>
+<h3>Which numbers move</h3>
+<ul>
+<li><b>Start:</b> Moves three numbers on the Governor page and nothing else: Spool-up time (40 s at very gentle, 10 s at very fierce), Handover throttle (10 % to 25 %) and Startup time (always twice the spool-up time). The tick switches on PID spool-up in each bank&rsquo;s governor profile.</li>
+<li><b>Agility and stick feel:</b> Moves the Rate column on the Rates page: roll and pitch from 120 to 500 degrees a second, yaw from 150 to 600. The Stick feel slider moves the Expo column on roll, pitch and yaw, from 70 (softest centre) to 0 (direct). Shape, collective and the dynamics are left alone.</li>
+<li><b>Feel:</b> Cyclic multiplies roll and pitch P, I, D and F on the PIDs page by 0.7 (softest) to 1.3 (sharpest); Tail does the same to yaw. Boost and HSI offsets are left alone. The starting point is what was loaded, or last saved.</li>
+</ul>
+<p>Everything else on those pages stays byte-for-byte as it was, and an untouched slider never rewrites its numbers.</p>
 </template>
 </body>
 </html>
