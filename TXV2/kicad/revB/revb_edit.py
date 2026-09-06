@@ -119,7 +119,7 @@ for t in list(b.Drawings()):
 ref = [t for t in b.Drawings() if t.GetClass() == 'PCB_TEXT' and t.GetText() == 'ANTENNA end ^'][0]
 nt = pcbnew.PCB_TEXT(b); nt.SetText('USB end v'); nt.SetPosition(P(159.4, 152.0)); nt.SetLayer(layer('F.SilkS'))
 nt.SetTextSize(ref.GetTextSize()); nt.SetTextThickness(ref.GetTextThickness()); b.Add(nt)
-u4t = pcbnew.PCB_TEXT(b); u4t.SetText('2808 right way up, VIN row at the bottom'); u4t.SetPosition(P(119.6, 177.6)); u4t.SetLayer(layer('F.SilkS'))
+u4t = pcbnew.PCB_TEXT(b); u4t.SetText('2808 right way up'); u4t.SetPosition(P(119.6, 177.6)); u4t.SetLayer(layer('F.SilkS'))
 u4t.SetTextSize(VECTOR2I(MM(0.8), MM(0.8))); u4t.SetTextThickness(MM(0.12)); b.Add(u4t)
 
 # ---- 4. C12: 10 uF input cap for the AMS1117 (U8 pin 3 = +5V, pin 1 = GND) ----
@@ -127,13 +127,58 @@ lib = '/Applications/KiCad/KiCad.app/Contents/SharedSupport/footprints/Capacitor
 c12 = pcbnew.FootprintLoad(lib, 'C_0805_2012Metric')
 c12.SetReference('C12'); c12.SetValue('10uF 25V'); c12.SetPosition(P(110.9, 127.0)); c12.SetOrientationDegrees(90)
 b.Add(c12)
-c12.Reference().SetPosition(P(110.9, 124.9)); c12.Reference().SetTextSize(VECTOR2I(MM(0.7), MM(0.7))); c12.Reference().SetTextThickness(MM(0.1))
+c12.Reference().SetVisible(False)
 pads = sorted(c12.Pads(), key=lambda p: p.GetPosition().y)      # rot 90: pad on the smaller y first
 pads[0].SetNet(net('GND')); pads[1].SetNet(net('+5V'))
 pa = (pads[0].GetPosition().x/1e6, pads[0].GetPosition().y/1e6); pb = (pads[1].GetPosition().x/1e6, pads[1].GetPosition().y/1e6)
 seg('GND', 'F.Cu', pa[0], pa[1], 111.9, 125.05); seg('GND', 'F.Cu', 111.9, 125.05, 112.9, 124.9)
 seg('+5V', 'F.Cu', pb[0], pb[1], 111.9, 128.95); seg('+5V', 'F.Cu', 111.9, 128.95, 112.9, 129.1)
 print('C12 pads at', pa, pb)
+
+# ---- 5. silk clarity pass (Malcolm 2026-09-06: "abundantly clear which
+#         component goes where, and which way round") ----
+def text(s, x, y, size=0.6, lay='F.SilkS', mirror=False, thick=0.12):
+    t = pcbnew.PCB_TEXT(b); t.SetText(s); t.SetPosition(P(x, y)); t.SetLayer(layer(lay))
+    t.SetTextSize(VECTOR2I(MM(size), MM(size))); t.SetTextThickness(MM(thick))
+    if mirror: t.SetMirrored(True)
+    b.Add(t); return t
+# 5a. every small silk label: at least 0.6 mm high, 0.12 mm stroke (0.45 mm text at 0.1 mm is a smudge)
+for t in b.Drawings():
+    if t.GetClass() != 'PCB_TEXT' or 'Silk' not in t.GetLayerName(): continue
+    if t.GetTextHeight() < MM(0.6): t.SetTextSize(VECTOR2I(MM(0.6), MM(0.6)))
+    if t.GetTextThickness() < MM(0.12): t.SetTextThickness(MM(0.12))
+    if t.GetText() == 'microSD exits ^ (top edge)': t.SetText('microSD end ^'); t.SetPosition(P(134.35, 105.0))   # the top pads are 2 mm from the edge: sit between the columns instead
+    if t.GetText() == 'GND' and abs(t.GetPosition().x/1e6 - 110.3) < 0.05: t.SetPosition(P(110.8, t.GetPosition().y/1e6))   # 3-char label clipped the connector outline
+    if t.GetText() == 'GND' and abs(t.GetPosition().x/1e6 - 174.6) < 0.05: t.SetPosition(P(175.1, t.GetPosition().y/1e6))
+    if t.GetText() == '+' and abs(t.GetPosition().x/1e6 - 144.8) < 0.05: t.SetPosition(P(144.2, 180.2))   # D1's anode mark sat on the pad
+    if t.GetText() == 'by Claude and Malcolm - July 2026': t.SetText('by Claude and Malcolm - 2026')
+# 5b. the 2808 socket: every pin named on the board, both rows
+for i, name in enumerate(['VIN', 'VIN', 'GND', 'GND', 'ON', 'OFF', 'CTRL']):
+    text(name, 112.0 + 2.54 * i, 179.1, 0.55)
+for i, name in enumerate(['VOUT', 'VOUT', 'GND', 'GND', 'A', 'B']):
+    text(name, 112.0 + 2.54 * i, 170.5, 0.55)
+# 5c. C12: one line, clear of the trims labels and the AMS1117 pad
+text('C12 10uF', 110.9, 123.4, 0.55)
+# 5d. the charger chip's pin 1, spelled out beside the footprint's own corner mark (back side, so mirrored)
+text('1', 129.2, 137.2, 0.6, 'B.SilkS', mirror=True)
+# 5e. D3/D4 are Schottky on Rev-B — say so where the eye lands
+for ref in ('D3', 'D4'):
+    b.FindFootprintByReference(ref).SetValue('SS14')
+# 5f. back-side value labels that sat on a pad edge (they get clipped at the fab): three placed by hand, the rest nudged
+for ref, x, y, rot in (('R3', 137.2, 153.2, 0), ('L1', 132.0, 151.1, 0), ('R10', 140.2, 155.0, 90)):
+    v = b.FindFootprintByReference(ref).Value(); v.SetPosition(P(x, y)); v.SetTextAngleDegrees(rot)
+pads = [(fp.GetReference(), p) for fp in b.GetFootprints() for p in fp.Pads()]
+for ref in ('R7', 'R8', 'C2', 'C3', 'C4'):
+    fp = b.FindFootprintByReference(ref); v = fp.Value(); vp = v.GetPosition()
+    box = v.GetBoundingBox()
+    for pref, pad in pads:
+        pb = pad.GetBoundingBox()
+        if not box.Intersects(pb): continue
+        # push out along the shorter escape
+        dy_up = (pb.GetTop() - box.GetBottom()) / 1e6; dy_dn = (pb.GetBottom() - box.GetTop()) / 1e6
+        shift = dy_up - 0.25 if abs(dy_up) < abs(dy_dn) else dy_dn + 0.25
+        v.SetPosition(VECTOR2I(vp.x, vp.y + MM(shift))); vp = v.GetPosition(); box = v.GetBoundingBox()
+        print('nudged value of', ref, 'by', round(shift, 2), 'mm (was over pad', pad.GetNumber(), 'of', pref + ')')
 
 # ---- zones + save ----
 pcbnew.ZONE_FILLER(b).Fill(b.Zones())

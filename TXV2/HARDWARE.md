@@ -345,3 +345,16 @@ before printing the next case.
 Not changed on purpose: the Teensy VBAT (RTC) still needs the flying lead
 from J14; the WS2812 is still driven by 3.3 V logic (a Schottky in its 5 V
 feed cures flicker if seen); gimbal PH-3 order remains +3V3 / signal / GND.
+
+**Rev-B silkscreen pass (2026-09-06, "abundantly clear which component goes
+where and which way round"):** every small label raised to ≥0.6 mm / 0.12 mm
+stroke (the Rev-A 0.45 mm labels are near the printable limit); the 2808
+socket carries its pin names on both rows (VIN VIN GND GND ON OFF CTRL below,
+VOUT VOUT GND GND A B above) plus "2808 right way up"; C12 labelled "C12
+10uF"; the charger chip's pin 1 spelled out beside the footprint's own
+corner mark; D3/D4 read "SS14"; back-side value labels moved off pad edges
+(no silk-over-copper left); the LED "+" marks confirmed beside the anode
+pads and the CR2032 / 220 µF / RTC "+" marks checked. What silk cannot show:
+the modules' orientation is by text ("ANTENNA end ^", "USB end v", "microSD
+end ^", "USB (program) v", "square pad = GND", "E01 antenna overhang ^") and
+by the square pad-1 on each socket.
