@@ -56,6 +56,23 @@ table.dyn-yaw td input{width:6em;padding:.4em;font-size:.95em;text-align:right;
         </div>
     </div>
 
+    <div class=card id=feelCard style="display:none">
+        <h2>How agile?</h2>
+        <p class=sub>Two sliders set the numbers in the table below; everything stays visible. <b>Agility</b> is the top rotation speed at full stick. <b>Stick feel</b> is how soft the response is around centre stick.</p>
+        <div style="display:flex;align-items:center;gap:.6em;margin:.6em 0">
+            <span style="font-size:.9em;white-space:nowrap">Docile</span>
+            <input type=range id=f_agile min=0 max=100 step=5 value=40 oninput="feelAgile()" style="flex:1;min-width:8em">
+            <span style="font-size:.9em;white-space:nowrap">Acrobatic</span>
+        </div>
+        <p class=sub id=agileNote></p>
+        <div style="display:flex;align-items:center;gap:.6em;margin:.6em 0">
+            <span style="font-size:.9em;white-space:nowrap">Soft centre</span>
+            <input type=range id=f_expo min=0 max=100 step=5 value=50 oninput="feelExpo()" style="flex:1;min-width:8em">
+            <span style="font-size:.9em;white-space:nowrap">Direct</span>
+        </div>
+        <p class=sub id=expoNote></p>
+    </div>
+
     <div class=card>
         <h2>Rates type</h2>
         <select class=typeDD id=ratesType>
@@ -201,6 +218,49 @@ function modelForType(t) {
     };
 }
 let MODEL = modelForType(6);
+
+// "How agile?" (Malcolm 2026-09-06: sliders for people who just want to
+// fly). ROTORFLIGHT rates type only (columns Rate / Shape / Expo):
+//   agility v → roll & pitch rate 120..500 °/s, yaw 150..600 °/s
+//   stick feel v → expo 70 (softest centre) .. 0 (direct), all three axes
+// Collective and Shape are left alone; the table stays editable.
+const feelRate = v => ({ rp: Math.round((120 + 3.8 * v) / 5) * 5, yaw: Math.round((150 + 4.5 * v) / 5) * 5 });
+const feelExpoOf = v => Math.round(70 - 0.7 * v);
+function feelSet(axKey, ci, val) {
+    const el = document.getElementById('r_' + axKey + '_' + ci);
+    if (!el) return;
+    el.value = val;
+    syncCell(axKey, ci);
+}
+function feelAgile() {
+    if (MODEL.curve !== 'rotorflight') return;
+    const r = feelRate(+document.getElementById('f_agile').value);
+    feelSet('Roll', 0, r.rp); feelSet('Pitch', 0, r.rp); feelSet('Yaw', 0, r.yaw);
+    document.getElementById('agileNote').textContent = 'Roll and pitch ' + r.rp + ' °/s, yaw ' + r.yaw + ' °/s at full stick.';
+    LDRC.markDirty(); drawCurves();
+}
+function feelExpo() {
+    if (MODEL.curve !== 'rotorflight') return;
+    const e = feelExpoOf(+document.getElementById('f_expo').value);
+    for (const k of ['Roll', 'Pitch', 'Yaw']) feelSet(k, 2, e);
+    document.getElementById('expoNote').textContent = 'Expo ' + e + ' on roll, pitch and yaw.';
+    LDRC.markDirty(); drawCurves();
+}
+// After a load: show the card for the ROTORFLIGHT type and put the sliders
+// where the bank's numbers are (roll rate and roll expo lead).
+function feelReflect() {
+    const card = document.getElementById('feelCard');
+    const on = MODEL.curve === 'rotorflight';
+    card.style.display = on ? '' : 'none';
+    if (!on) return;
+    const rate = parseFloat((document.getElementById('r_Roll_0') || {}).value);
+    const expo = parseFloat((document.getElementById('r_Roll_2') || {}).value);
+    const clamp = x => Math.max(0, Math.min(100, Math.round(x / 5) * 5));
+    if (!isNaN(rate)) document.getElementById('f_agile').value = clamp((rate - 120) / 3.8);
+    if (!isNaN(expo)) document.getElementById('f_expo').value  = clamp((70 - expo) / 0.7);
+    document.getElementById('agileNote').textContent = '';
+    document.getElementById('expoNote').textContent  = '';
+}
 function axScale(ax, col) { return ax.k === 'Collective' ? col.scC : col.sc; }
 function rawAt(bytes, o, col) {
     return (col.slot === 'accel') ? (bytes[o+4] | (bytes[o+5] << 8)) : bytes[o + col.slot];
@@ -449,6 +509,7 @@ async function load() {
             document.getElementById('a_yddf').value = +(bytes[35] / 10).toFixed(1);   // stored deci-Hz → Hz (Configurator shows 6.0 for 60)
         }
         LDRC.clearStale();
+        feelReflect();
         setStatus('good', (LDRC.replay ? '✓ Loaded from the phone (profile ' : '✓ Loaded from flight controller (profile ') + (currentProfile + 1) + ')');
         drawCurves();
         LDRC.clearDirty();

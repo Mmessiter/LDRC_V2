@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.575-start-slider";
+constexpr const char* FW_VERSION = "RXV2-0.9.576-feel-sliders";
 
 //*********************************************************************
 //  Auto-update manifest URLs

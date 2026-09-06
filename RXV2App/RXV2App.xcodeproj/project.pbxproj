@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		401FD3A2C9F6A4D2A9A87810 /* BleSchemeHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 768FFE82BD28C7F04C99E65F /* BleSchemeHandler.swift */; };
 		415BAB5783EBC1ED3A676E59 /* demo in Resources */ = {isa = PBXBuildFile; fileRef = FDDCB715D750EDF362DB8F99 /* demo */; };
+		4CA87BA26BA9F8385EEE8702 /* ModelPhotos.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13CA58766A611D447EA8070C /* ModelPhotos.swift */; };
 		58E431CD382380C4331765EB /* SessionCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 318FE36186999FBC97EE1F6F /* SessionCache.swift */; };
 		61E5F56CE93DD467BF999C2B /* webroot in Resources */ = {isa = PBXBuildFile; fileRef = F98EE89DF588F895922BB9AF /* webroot */; };
 		671BBE62171960149242B8E3 /* WebScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49DABC3AF434C057351F857E /* WebScreen.swift */; };
@@ -19,6 +20,7 @@
 
 /* Begin PBXFileReference section */
 		01BEA637BFAAA38A6B8A6276 /* RXV2App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RXV2App.swift; sourceTree = "<group>"; };
+		13CA58766A611D447EA8070C /* ModelPhotos.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelPhotos.swift; sourceTree = "<group>"; };
 		318FE36186999FBC97EE1F6F /* SessionCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionCache.swift; sourceTree = "<group>"; };
 		31D9CCE1F50EA255F61EE94E /* BleLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BleLink.swift; sourceTree = "<group>"; };
 		49DABC3AF434C057351F857E /* WebScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebScreen.swift; sourceTree = "<group>"; };
@@ -43,6 +45,7 @@
 			children = (
 				31D9CCE1F50EA255F61EE94E /* BleLink.swift */,
 				768FFE82BD28C7F04C99E65F /* BleSchemeHandler.swift */,
+				13CA58766A611D447EA8070C /* ModelPhotos.swift */,
 				01BEA637BFAAA38A6B8A6276 /* RXV2App.swift */,
 				318FE36186999FBC97EE1F6F /* SessionCache.swift */,
 				49DABC3AF434C057351F857E /* WebScreen.swift */,
@@ -136,6 +139,7 @@
 			files = (
 				9043763AFAD3A29085FDD2FA /* BleLink.swift in Sources */,
 				401FD3A2C9F6A4D2A9A87810 /* BleSchemeHandler.swift in Sources */,
+				4CA87BA26BA9F8385EEE8702 /* ModelPhotos.swift in Sources */,
 				D487ADDBC77ADE4A6E539148 /* RXV2App.swift in Sources */,
 				58E431CD382380C4331765EB /* SessionCache.swift in Sources */,
 				671BBE62171960149242B8E3 /* WebScreen.swift in Sources */,

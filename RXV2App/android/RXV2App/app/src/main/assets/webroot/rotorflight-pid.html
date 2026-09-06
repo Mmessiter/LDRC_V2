@@ -44,6 +44,23 @@ table.pids td input{width:100%;padding:.5em;font-size:1em;border:1px solid #b8c7
     </div>
 
     <div class=card>
+        <h2>Feel</h2>
+        <p class=sub><b>Wobbles or shakes &rarr; slide softer. Sluggish, drifting or mushy &rarr; slide sharper.</b> Small steps, one flight each. Each slider scales this bank&rsquo;s P, I, D and feedforward together; the numbers below follow, and Save writes them.</p>
+        <div style="display:flex;align-items:center;gap:.6em;margin:.6em 0">
+            <span style="font-size:.9em;white-space:nowrap">Cyclic softer</span>
+            <input type=range id=n_cyc min=-30 max=30 step=5 value=0 oninput="nudge('cyc')" style="flex:1;min-width:8em">
+            <span style="font-size:.9em;white-space:nowrap">sharper</span>
+        </div>
+        <p class=sub id=n_cycNote></p>
+        <div style="display:flex;align-items:center;gap:.6em;margin:.6em 0">
+            <span style="font-size:.9em;white-space:nowrap">Tail softer</span>
+            <input type=range id=n_tail min=-30 max=30 step=5 value=0 oninput="nudge('tail')" style="flex:1;min-width:8em">
+            <span style="font-size:.9em;white-space:nowrap">sharper</span>
+        </div>
+        <p class=sub id=n_tailNote></p>
+    </div>
+
+    <div class=card>
         <h2>PIDs</h2>
         <table class=pids>
             <thead><tr><th></th><th data-help="Reacts to error happening right now. Too low = mushy and slow to correct; too high = fast shaking.">P</th><th data-help="Trims away slow, steady error and holds the attitude. Too high = slow wallowing or bounce-back after moves.">I</th><th data-help="Damps quick changes and stops overshoot. Too high = buzzing servos that run hot.">D</th><th data-help="Feed-forward: moves the swash with the stick directly, before any error appears. Higher = more direct, connected feel.">FF</th></tr></thead>
@@ -129,6 +146,31 @@ function bytesToHex(b) {
 
 let currentProfile = parseInt(localStorage.getItem('rfPidProfile') || '0');
 
+// "Feel" nudges (Malcolm 2026-09-06): scale a bank's gains ±30 % without
+// touching the individual numbers. The base is what was loaded (or last
+// saved); the sliders sit at 0 until moved and go back to 0 after a save,
+// so every nudge is relative to what the model actually flew.
+const NUDGE = { cyc: ['r_P','r_I','r_D','r_F','p_P','p_I','p_D','p_F'], tail: ['y_P','y_I','y_D','y_F'] };
+let nudgeBase = {};
+function nudgeCapture() {
+    for (const ids of Object.values(NUDGE)) for (const id of ids) nudgeBase[id] = parseInt(document.getElementById(id).value || '0');
+    for (const w of ['cyc', 'tail']) { document.getElementById('n_' + w).value = 0; document.getElementById('n_' + w + 'Note').textContent = ''; }
+}
+function nudge(which) {
+    const pct = +document.getElementById('n_' + which).value;
+    const f = 1 + pct / 100;
+    const show = [];
+    for (const id of NUDGE[which]) {
+        const b = nudgeBase[id] || 0;
+        const v = Math.max(0, Math.min(1000, Math.round(b * f)));
+        document.getElementById(id).value = v;
+        if (id.endsWith('_P') || id.endsWith('_D')) show.push(id.replace('_', ' ').replace('r ', 'roll ').replace('p ', 'pitch ').replace('y ', 'yaw ') + ' ' + b + '→' + v);
+    }
+    document.getElementById('n_' + which + 'Note').textContent =
+        (pct === 0 ? 'Unchanged.' : (which === 'cyc' ? 'Cyclic' : 'Tail') + ' gains ' + (pct > 0 ? '+' : '') + pct + ' %: ' + show.join(', ') + ' (I and F likewise).');
+    LDRC.markDirty();
+}
+
 function paintProfileButtons() {
     for (let i = 0; i < 4; i++) {
         document.getElementById('pb' + i).classList.toggle('active', i === currentProfile);
@@ -169,6 +211,7 @@ async function load() {
         const ids = ['r_P','r_I','r_D','r_F','p_P','p_I','p_D','p_F','y_P','y_I','y_D','y_F',
                      'b_R','b_P','b_Y','h_R','h_P'];
         ids.forEach((id, i) => document.getElementById(id).value = words[i]);
+        nudgeCapture();
         LDRC.clearStale();
         setStatus('good', LDRC.replay ? '✓ Loaded from the phone (recorded session)' : '✓ Loaded from flight controller');
         LDRC.clearDirty();
@@ -229,6 +272,7 @@ async function save() {
         for (let i = 0; i < bytes.length && i < check.length; i++)
             if (bytes[i] !== check[i]) diffs++;
         if (diffs === 0) {
+            nudgeCapture();           // the saved numbers are the new base; sliders back to centre
             setStatus('good', '✓ Written & verified — the flight controller read back exactly what was saved');
             flashSave('<span class=ico>&#9989;</span>Written &amp; verified!', 5000);
         } else {

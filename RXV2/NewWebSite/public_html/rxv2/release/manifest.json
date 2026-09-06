@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.575-start-slider",
+      "url": "https://messiter.com/rxv2/release/v0.9.575/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.575/littlefs.bin",
+      "fs_md5": "058c9fa1e9206d036f23c9aba7243d14",
+      "notes": "Governor page: a slider 'How hard should it start?' from very gentle to very fierce sets spool-up time, handover throttle and startup time together (gentle = full head speed in 40 s with handover 10 %, fierce = 10 s and 25 %), and saving can switch PID spool-up on in every bank so the torque is even all the way up. The numbers stay visible underneath. Malcolm's idea, 2026-09-06."
+    },
+    {
       "name": "RXV2-0.9.574-noreload",
       "url": "https://messiter.com/rxv2/release/v0.9.574/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.574/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.564/littlefs.bin",
       "fs_md5": "93396bd68b5f94f7acdbb2e6779b98a3",
       "notes": "Fix for the missing volts and RPM after a save: a Rotorflight 4.6 bug - its adjustments list (MSP 52) is too big for its receiver-link buffer and the overflow wipes its own telemetry setup. The receiver now never asks for that list, refuses it from any app or script, spots any oversize answer and puts the saved-good telemetry setup back before any save. Also refused: writes that arrive with no data, factory reset and motor test over the link."
-    },
-    {
-      "name": "RXV2-0.9.563-telemetry-speed",
-      "url": "https://messiter.com/rxv2/release/v0.9.563/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.563/littlefs.bin",
-      "fs_md5": "436c7052c545e211b34f7f05deb889c4",
-      "notes": "Telemetry speed: a new card on the Rotorflight page sets Rotorflight's telemetry link rate to FAST (1000/1, the new default) or standard (250/8). Rotorflight paces its answers to the phone and the transmitter by that rate, so settings reads, backups and restores come back about six times quicker and volts/RPM update sooner. Applying restarts the flight controller (transmitter off). Telemetry-setup guard: the receiver keeps the last good sensor list (also across reboots), re-reads it every 30 s while idle, puts it back into the flight controller's RAM if it turns up empty, and checks it before every save from a page, the phone app or the transmitter - so an emptied list (no volts/RPM) can never be saved into the flight controller again. A restore from a phone backup keeps the flight controller's current telemetry speed. Also: a transmitter edit or arming-channel probe can no longer collide with a heartbeat probe (the FC answers the first request and drops the second), a larger serial buffer for the faster stream, and a restart asked for by a page now answers at once instead of a timeout."
     }
   ]
 }
