@@ -63,6 +63,18 @@ input:disabled,select:disabled{background:#eee;color:#999}
     </div>
 
     <div class=card>
+        <h2>How hard should it start?</h2>
+        <p class=sub>One slider sets the start-up numbers in the next card. <b>Gentle</b>: the head accelerates slowly and the tail has time to hold it. <b>Fierce</b>: up to speed quickly.</p>
+        <div style="display:flex;align-items:center;gap:.6em;margin:.6em 0">
+            <span style="font-size:.9em;white-space:nowrap">Very gentle</span>
+            <input type=range id=g_feel min=0 max=100 step=5 value=50 oninput="feelChanged()" style="flex:1;min-width:8em">
+            <span style="font-size:.9em;white-space:nowrap">Very fierce</span>
+        </div>
+        <p class=sub id=feelNote></p>
+        <div class=fldRow><label data-help="Rotorflight's PID spool-up makes the governor ramp the HEAD SPEED itself instead of the throttle, so the torque is even all the way up rather than hardest when the head is slowest. It is a per-bank switch (Governor profile page); ticked here, saving switches it on in all four banks.">Also switch on PID spool-up in every bank (recommended)</label> <input type=checkbox id=g_feelPid checked></div>
+    </div>
+
+    <div class=card>
         <h2>Timings (seconds)</h2>
         <div class=fldRow><label data-help="How gently the motor first starts turning from standstill, in seconds. Bigger = softer start.">Startup time</label>             <input type=number id=g_start step=0.1 min=0 max=600></div>
         <div class=fldRow><label data-help="Time to ramp from idle to full head speed, in seconds. 10 is typical - bigger = gentler spool-up.">Spool-up time</label>            <input type=number id=g_spool step=0.1 min=0 max=600></div>
@@ -351,6 +363,55 @@ function paintEditable() {
             .forEach(el => el.disabled = !editable);
 }
 
+// "How hard should it start?" (Malcolm 2026-09-06): one slider for the
+// three start-up numbers. Spool-up time is the head's acceleration once
+// PID spool-up is on (full speed in that many seconds); handover is
+// where the governor takes over from the plain throttle ramp; startup
+// time only covers the crawl to 5 % head speed, so it simply follows.
+//   slider 0 (gentle) → spool-up 40 s, handover 10 %, startup 80 s
+//   slider 100 (fierce) → spool-up 10 s, handover 25 %, startup 20 s
+function feelToNumbers(v) {
+    const spool = Math.round(40 - 0.30 * v);
+    return { spool, hand: Math.round(10 + 0.15 * v), start: spool * 2 };
+}
+function numbersToFeel(spool) {
+    return Math.max(0, Math.min(100, Math.round((40 - spool) / 0.30 / 5) * 5));
+}
+function feelChanged() {
+    const n = feelToNumbers(+document.getElementById('g_feel').value);
+    document.getElementById('g_spool').value = n.spool;
+    document.getElementById('g_hand').value  = n.hand;
+    document.getElementById('g_start').value = n.start;
+    LDRC.markDirty();
+    paintFeelNote();
+}
+function paintFeelNote() {
+    const spool = +document.getElementById('g_spool').value || 0;
+    document.getElementById('feelNote').textContent = spool
+        ? 'Full head speed in about ' + spool + ' s. Spool-up ' + spool + ', handover ' + document.getElementById('g_hand').value +
+          ' %, startup ' + document.getElementById('g_start').value + ' — set below, saved with everything else.'
+        : '';
+}
+// Turn PID spool-up on in every bank (governor profile flag bit 4, MSP
+// 148/149), then come back to the bank the FC was on. Read-modify-write,
+// only banks that lack it are written.
+async function pidSpoolupOnAllBanks() {
+    const st = hexToBytes(await LDRC.msp(101));
+    const was = st.length > 23 ? (st[23] & 0x0f) : 0;
+    let changed = 0;
+    for (let b = 0; b < 4; b++) {
+        await LDRC.msp(210, b.toString(16).padStart(2, '0'));
+        const g = hexToBytes(await LDRC.msp(148));
+        if (g.length < 17) continue;
+        if (g[15] & 0x10) continue;
+        g[15] |= 0x10;
+        await LDRC.msp(149, bytesToHex(g));
+        changed++;
+    }
+    await LDRC.msp(210, was.toString(16).padStart(2, '0'));
+    return changed;
+}
+
 async function load() {
     await LDRC.replayReady;
     try {
@@ -398,6 +459,8 @@ async function load() {
         document.getElementById('g_fd').value     = bytes[25];
         document.getElementById('g_spdwn').value  = u16(26) / 10;
         document.getElementById('g_ttype').value  = bytes[28];
+        document.getElementById('g_feel').value   = numbersToFeel(u16(3) / 10);
+        paintFeelNote();
         document.getElementById('g_idle').value   = bytes[31];
         document.getElementById('g_auto').value   = bytes[32];
         for (let i = 0; i < 9; i++) {
@@ -468,9 +531,14 @@ async function save() {
             : {title:'Save & reboot flight controller', icon:'🔄', yes:'Save & reboot', kind:'warn'}))) return;
     setStatus('info', 'Writing governor config…');
     const bytes = buildPayload();
+    let pidBanks = -1;
     try {
+        if (document.getElementById('g_feelPid').checked && !LDRC.replay) {
+            setStatus('info', 'Switching PID spool-up on in every bank…');
+            pidBanks = await pidSpoolupOnAllBanks();
+        }
         await LDRC.msp(143, bytesToHex(bytes));   // SET_GOVERNOR_CONFIG
-        await LDRC.msp(250);                       // EEPROM_WRITE
+        await LDRC.msp(250);                       // EEPROM_WRITE (the bank flags too)
         if (LDRC.replay) {
             // Phone capture — there is no FC to reboot or verify against.
             LDRC.clearDirty();
@@ -510,7 +578,7 @@ async function save() {
             if (bytes[i] !== check[i]) diffs.push('byte ' + i + ': sent ' + bytes[i] + ' got ' + check[i]);
         }
         if (diffs.length === 0) {
-            setStatus('good', '✓ Saved, rebooted & verified by flight controller read-back');
+            setStatus('good', '✓ Saved, rebooted & verified by flight controller read-back' + (pidBanks > 0 ? ' — PID spool-up switched on in ' + pidBanks + ' bank' + (pidBanks === 1 ? '' : 's') : pidBanks === 0 ? ' — PID spool-up already on in every bank' : ''));
             flashSave('<span class=ico>&#9989;</span>Written &amp; verified!', 5000);
             cachedRaw = bytes;
             LDRC.clearDirty();

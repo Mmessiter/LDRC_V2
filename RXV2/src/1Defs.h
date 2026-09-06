@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.574-noreload";
+constexpr const char* FW_VERSION = "RXV2-0.9.575-start-slider";
 
 //*********************************************************************
 //  Auto-update manifest URLs

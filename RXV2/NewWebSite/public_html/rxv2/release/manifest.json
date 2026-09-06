@@ -1,6 +1,20 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.574-noreload",
+      "url": "https://messiter.com/rxv2/release/v0.9.574/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.574/littlefs.bin",
+      "fs_md5": "2ba25c53ead8f1e360afcd7f4ec834b6",
+      "notes": "The PIDs, PID + and Rates pages lose their 'Reload from flight controller' button too (switching banks re-reads). The Governor (global) page keeps its one - it has no banks."
+    },
+    {
+      "name": "RXV2-0.9.573-gov-noreload",
+      "url": "https://messiter.com/rxv2/release/v0.9.573/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.573/littlefs.bin",
+      "fs_md5": "10b38769788ad5dc0416203302597568",
+      "notes": "Governor profile page: the 'Reload from flight controller' button is gone (it sat under the Spool-up card and got hit by mistake); switching banks re-reads the bank anyway."
+    },
+    {
       "name": "RXV2-0.9.572-arm-aux6",
       "url": "https://messiter.com/rxv2/release/v0.9.572/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.572/littlefs.bin",
@@ -69,20 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.563/littlefs.bin",
       "fs_md5": "436c7052c545e211b34f7f05deb889c4",
       "notes": "Telemetry speed: a new card on the Rotorflight page sets Rotorflight's telemetry link rate to FAST (1000/1, the new default) or standard (250/8). Rotorflight paces its answers to the phone and the transmitter by that rate, so settings reads, backups and restores come back about six times quicker and volts/RPM update sooner. Applying restarts the flight controller (transmitter off). Telemetry-setup guard: the receiver keeps the last good sensor list (also across reboots), re-reads it every 30 s while idle, puts it back into the flight controller's RAM if it turns up empty, and checks it before every save from a page, the phone app or the transmitter - so an emptied list (no volts/RPM) can never be saved into the flight controller again. A restore from a phone backup keeps the flight controller's current telemetry speed. Also: a transmitter edit or arming-channel probe can no longer collide with a heartbeat probe (the FC answers the first request and drops the second), a larger serial buffer for the faster stream, and a restart asked for by a page now answers at once instead of a timeout."
-    },
-    {
-      "name": "RXV2-0.9.562-probe-holdoff",
-      "url": "https://messiter.com/rxv2/release/v0.9.562/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.562/littlefs.bin",
-      "fs_md5": "2c49d503071c9e96fb8f66052bda9546",
-      "notes": "Fixes the other cause of \"flight controller did not respond\": the receiver's own 5-second FC heartbeat probe. Rotorflight answers the first request it finds in its buffer and throws the second away, so a probe fired between two page or app reads made the read behind it vanish (about 1 in 14 back-to-back reads). The probe now waits 1.2 s after any page/app reply. Pairs with 0.9.561 (slow chunked replies) - both are now fixed, so Back up, Restore and the Rotorflight pages should read cleanly."
-    },
-    {
-      "name": "RXV2-0.9.559-full-backup",
-      "url": "https://messiter.com/rxv2/release/v0.9.559/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.559/littlefs.bin",
-      "fs_md5": "2c49d503071c9e96fb8f66052bda9546",
-      "notes": "The phone backup now covers the WHOLE Rotorflight setup, not just the tune: PIDs, advanced PIDs, rates, governor & rescue (every bank); mixer, servos, motor & gear ratio; arming switch & modes, channel map, receiver & failsafe (incl. per-channel failsafe values); battery, voltage & current meters, gyro filters & RPM notches, board/gyro alignment, sensors, level trims, telemetry sensors, black box, ESC telemetry setup, flight controller name; the bank and rates switches. Not included, left untouched: ESC parameters (Scorpion programming), serial ports, LED/OSD/GPS and the receiver's own settings. Restore writes back only what differs (an unchanged setup = reads only, no flash stalls) and verifies every item, restarting the flight controller when the governor or motor block changed; a file from a DIFFERENT model transfers the tune only - your own hardware setup stays. Fixed: the 'back up your proven tune' reminder came far too early - every brief switch-on counted as a flight. Now a flight counts only when it lasted over 3 minutes, and any setup edit (phone or transmitter) clears the count at once. Apps: iOS 4.13, Android 4.05."
     }
   ]
 }
