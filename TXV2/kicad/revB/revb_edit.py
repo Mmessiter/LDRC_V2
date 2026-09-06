@@ -151,8 +151,9 @@ for t in b.Drawings():
     if t.GetText() == 'GND' and abs(t.GetPosition().x/1e6 - 110.3) < 0.05: t.SetPosition(P(110.8, t.GetPosition().y/1e6))   # 3-char label clipped the connector outline
     if t.GetText() == 'GND' and abs(t.GetPosition().x/1e6 - 174.6) < 0.05: t.SetPosition(P(175.1, t.GetPosition().y/1e6))
     if t.GetText() == '+' and abs(t.GetPosition().x/1e6 - 144.8) < 0.05: t.SetPosition(P(144.2, 180.2))   # D1's anode mark sat on the pad
-    if t.GetText() == 'by Claude and Malcolm - July 2026': t.SetText('by Claude and Malcolm - 2026')
-    if t.GetText() == 'ESP SPARE GPIO': t.SetPosition(P(159.0, 160.4))
+    if t.GetText() == 'by Claude and Malcolm - July 2026': t.SetText('by Claude and Malcolm - 2026'); t.SetPosition(P(159.0, 159.0))
+    if t.GetText() == 'ESP SPARE GPIO': t.SetPosition(P(159.0, 159.9))
+    if t.GetText() == 'by Claude and Malcolm - 2026': t.SetPosition(P(159.0, 159.0))
     if t.GetText() == '10uF' and abs(t.GetPosition().x/1e6 - 110.9) < 0.05: t.SetPosition(P(110.9, 116.6))
     if t.GetText() == 'RGB LED': t.SetPosition(P(176.0, 118.9))
     # the ESP spare-header pin numbers straddled the header outlines: one row up, one row down
