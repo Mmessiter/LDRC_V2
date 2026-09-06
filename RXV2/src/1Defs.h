@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.572-arm-aux6";
+constexpr const char* FW_VERSION = "RXV2-0.9.573-gov-noreload";
 
 //*********************************************************************
 //  Auto-update manifest URLs

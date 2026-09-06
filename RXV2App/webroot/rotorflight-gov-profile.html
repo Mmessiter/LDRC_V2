@@ -86,7 +86,7 @@ input:disabled{background:#eee;color:#999}
         <h2>Spool-up</h2>
         <div class=fldRow><label data-help="ON: the governor ramps the head speed itself, using its own gains, so the spool-up ends exactly at this bank's head speed. OFF (the default): it simply passes your transmitter throttle through while spooling and only takes control once the head is within about 1 % of the target — so a throttle that is not fully up leaves the head running slow, with no governor at all.">Governor controls the spool-up (PID spool-up)</label> <input type=checkbox id=g_pidsp></div>
     </div>
-    <button class="btn btn-fw" id=reloadBtn onclick="load()"><span class=ico>&#8635;</span>Reload from flight controller</button>
+    <!-- "Reload from flight controller" removed (Malcolm 2026-09-06: hit by mistake; switching banks re-reads anyway) -->
 
     <div class=card>
         <h2>Copy to Profile (Bank) &hellip;</h2>

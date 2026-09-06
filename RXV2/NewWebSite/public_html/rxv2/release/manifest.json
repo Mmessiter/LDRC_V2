@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.572-arm-aux6",
+      "url": "https://messiter.com/rxv2/release/v0.9.572/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.572/littlefs.bin",
+      "fs_md5": "d9999153231a6847b82fabec9f2f903c",
+      "notes": "Arming channel learned from Rotorflight is now right: Rotorflight has five control channels, so its AUX1 is channel 6, not 5. Before this the receiver could pick the throttle channel as the arm switch, so 'armed' meant 'motor on' - radios went off with the motor and the landing wiggle came at motor-off while still armed. Check Receiver settings if you set the arming channel by hand."
+    },
+    {
       "name": "RXV2-0.9.571-copy-hs",
       "url": "https://messiter.com/rxv2/release/v0.9.571/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.571/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.559/littlefs.bin",
       "fs_md5": "2c49d503071c9e96fb8f66052bda9546",
       "notes": "The phone backup now covers the WHOLE Rotorflight setup, not just the tune: PIDs, advanced PIDs, rates, governor & rescue (every bank); mixer, servos, motor & gear ratio; arming switch & modes, channel map, receiver & failsafe (incl. per-channel failsafe values); battery, voltage & current meters, gyro filters & RPM notches, board/gyro alignment, sensors, level trims, telemetry sensors, black box, ESC telemetry setup, flight controller name; the bank and rates switches. Not included, left untouched: ESC parameters (Scorpion programming), serial ports, LED/OSD/GPS and the receiver's own settings. Restore writes back only what differs (an unchanged setup = reads only, no flash stalls) and verifies every item, restarting the flight controller when the governor or motor block changed; a file from a DIFFERENT model transfers the tune only - your own hardware setup stays. Fixed: the 'back up your proven tune' reminder came far too early - every brief switch-on counted as a flight. Now a flight counts only when it lasted over 3 minutes, and any setup edit (phone or transmitter) clears the count at once. Apps: iOS 4.13, Android 4.05."
-    },
-    {
-      "name": "RXV2-0.9.558-backup-review",
-      "url": "https://messiter.com/rxv2/release/v0.9.558/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.558/littlefs.bin",
-      "fs_md5": "985ef783955d012d1b6214514296aeb6",
-      "notes": "Backup & restore double-checked before real use (Malcolm's request). The phone backup covers the tuning (PIDs, advanced PIDs, rates, governor, rescue - every bank, plus the governor's global settings), the mechanics (mixer travel/limits/trims, servo centres/travel) and the bank/rates switch assignments; the page and its help now say exactly that and list what is NOT included (arming switch & modes, channel map, motor/gear ratio, battery, filters, telemetry). Pages: Back up shows a warning instead of a tick when the sweep did not finish (and keeps the earlier backup); Restore shows why it stopped; the restore line says whether the backup is your own or the automatic one from connection; importing a different model's file now really leaves your servo/mixer settings alone. Needs app 4.12 (iOS) / 4.04 (Android) for the new fields - the apps fix the real bugs: the flight controller's bank was read from the wrong bytes, so every backup sweep left it on bank 1 instead of where it was; a deliberate backup was overwritten by the automatic one at the next connection; a read that got no answer still produced a tick; restore now checks the FC stayed on the chosen bank after each item, stops if the transmitter comes on, and verifies the EEPROM save. Firmware itself unchanged apart from the pages."
     }
   ]
 }
