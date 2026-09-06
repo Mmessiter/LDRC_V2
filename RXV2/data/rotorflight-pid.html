@@ -156,6 +156,22 @@ function nudgeCapture() {
     for (const ids of Object.values(NUDGE)) for (const id of ids) nudgeBase[id] = parseInt(document.getElementById(id).value || '0');
     for (const w of ['cyc', 'tail']) { document.getElementById('n_' + w).value = 0; document.getElementById('n_' + w + 'Note').textContent = ''; }
 }
+// The other way round too (Malcolm 2026-09-06): gains typed by hand move
+// the slider to the group's average change against the base.
+document.addEventListener('input', e => {
+    const id = (e.target && e.target.id) || '';
+    for (const which of ['cyc', 'tail']) {
+        if (!NUDGE[which].includes(id)) continue;
+        let sum = 0, n = 0;
+        for (const gid of NUDGE[which]) {
+            const b = nudgeBase[gid] || 0, v = parseInt(document.getElementById(gid).value || '0');
+            if (b > 0) { sum += v / b; n++; }
+        }
+        const pct = n ? Math.max(-30, Math.min(30, Math.round((sum / n - 1) * 100 / 5) * 5)) : 0;
+        document.getElementById('n_' + which).value = pct;
+        document.getElementById('n_' + which + 'Note').textContent = 'Edited by hand — about ' + (pct > 0 ? '+' : '') + pct + ' % on average.';
+    }
+});
 function nudge(which) {
     const pct = +document.getElementById('n_' + which).value;
     const f = 1 + pct / 100;

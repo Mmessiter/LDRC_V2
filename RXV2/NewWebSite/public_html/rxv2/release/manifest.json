@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.576-feel-sliders",
+      "url": "https://messiter.com/rxv2/release/v0.9.576/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.576/littlefs.bin",
+      "fs_md5": "7fa298c169ed46a96b9703aee8806aed",
+      "notes": "Two more plain-English controls, numbers still visible underneath. Rates page: 'How agile?' - a Docile-to-Acrobatic slider sets the top rotation speeds (roll and pitch 120 to 500 deg/s, yaw 150 to 600) and a Soft-centre-to-Direct slider sets the expo on all three axes (Rotorflight rates type). PIDs page: 'Feel' - Cyclic and Tail sliders from softer to sharper scale this bank's P, I, D and feedforward together by up to 30 %, relative to what was loaded; wobbles or shakes = softer, sluggish or mushy = sharper; after a save the sliders return to centre."
+    },
+    {
       "name": "RXV2-0.9.575-start-slider",
       "url": "https://messiter.com/rxv2/release/v0.9.575/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.575/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.565/littlefs.bin",
       "fs_md5": "0f126350b12738889906ce3d8d054b4d",
       "notes": "Backup & restore page: the finishing line now says what a restore actually did - 'Checked N settings - the model already had every one. Nothing was written' when nothing differed, or how many were written and verified (needs app 4.17 / Android 4.09 for the counts). The 'keep the transmitter OFF' warning disappears when the run is over."
-    },
-    {
-      "name": "RXV2-0.9.564-msp52-bug",
-      "url": "https://messiter.com/rxv2/release/v0.9.564/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.564/littlefs.bin",
-      "fs_md5": "93396bd68b5f94f7acdbb2e6779b98a3",
-      "notes": "Fix for the missing volts and RPM after a save: a Rotorflight 4.6 bug - its adjustments list (MSP 52) is too big for its receiver-link buffer and the overflow wipes its own telemetry setup. The receiver now never asks for that list, refuses it from any app or script, spots any oversize answer and puts the saved-good telemetry setup back before any save. Also refused: writes that arrive with no data, factory reset and motor test over the link."
     }
   ]
 }

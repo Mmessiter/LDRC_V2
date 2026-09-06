@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.576-feel-sliders";
+constexpr const char* FW_VERSION = "RXV2-0.9.577-easy-tuning";
 
 //*********************************************************************
 //  Auto-update manifest URLs

@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name=theme-color content="#5fa099">
+<meta name=apple-mobile-web-app-capable content=yes>
+<meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
+<meta name=apple-mobile-web-app-title content="LDRC RX V2">
+<title>Easy tuning &middot; LDRC RX V2</title>
+<link rel=stylesheet href="/style.css?v=179">
+<script src="/app.js?v=191" defer></script>
+<style>
+.fldRow{display:flex;justify-content:space-between;align-items:center;gap:.6em;
+        padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
+.fldRow label{flex:1;color:#3a5165;font-size:.95em}
+.fldRow input[type=checkbox]{width:1.4em;height:1.4em;flex:0 0 auto}
+.banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
+.banner.info{background:#c8d2dc;color:#3a5165}
+.banner.good{background:#a8d29a;color:#2a4d1f}
+.banner.bad {background:#dca08c;color:#5c2a1a}
+.banner.warn{background:#ffc88c;color:#5c3a1a;font-size:1.05em;padding:1em}
+.profRow{display:flex;gap:.5em;margin:.3em 0}
+.profBtn{flex:1;padding:.7em;border:0;border-radius:10px;font-size:1.1em;font-weight:600;
+         background:#cdd6df;color:#3a5165;cursor:pointer}
+.profBtn.active{background:#5fa099;color:#fff}
+.guide{background:#c8d2dc;color:#3a5165;padding:1em;border-radius:10px;margin:0 0 1em;text-align:left;font-size:1.02em}
+.sub{color:#5f7385;font-size:.85em;margin:.2em 0 0}
+.sl{display:flex;align-items:center;gap:.6em;margin:.6em 0}
+.sl span{font-size:.9em;white-space:nowrap}
+.sl input[type=range]{flex:1;min-width:8em}
+.more{display:block;margin:.6em 0 0;color:#2f6fb0;font-size:.9em;text-decoration:none}
+.more:after{content:" \203A"}
+</style>
+</head>
+<body class=hasFab>
+<button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
+<div class=bg-photo aria-hidden=true></div>
+<div class=bg-wash  aria-hidden=true></div>
+<div class=container>
+    <h1>Easy tuning</h1>
+    <div id=status class="banner info">loading&hellip;</div>
+
+    <div class=guide><b>Slide, then Save.</b><br>
+    Every slider drives the real numbers on its own page; the link under each one shows them. Nothing is written until you tap Save.</div>
+
+    <div class=card>
+        <h2>Bank</h2>
+        <div class=profRow>
+            <button class=profBtn onclick="selectBank(0)" id=pb0>1</button>
+            <button class=profBtn onclick="selectBank(1)" id=pb1>2</button>
+            <button class=profBtn onclick="selectBank(2)" id=pb2>3</button>
+            <button class=profBtn onclick="selectBank(3)" id=pb3>4</button>
+        </div>
+        <p class=sub>Agility and Feel belong to the bank; Start is the same for every bank.</p>
+    </div>
+
+    <div class=card>
+        <h2>How hard should it start?</h2>
+        <div class=sl><span>Very gentle</span><input type=range id=s_start min=0 max=100 step=5 value=50 oninput="onStart()"><span>Very fierce</span></div>
+        <p class=sub id=startNote></p>
+        <div class=fldRow><label data-help="Rotorflight's PID spool-up makes the governor ramp the HEAD SPEED itself instead of the throttle, so the torque is even all the way up. It is a per-bank switch; ticked here, saving switches it on in all four banks.">Also switch on PID spool-up in every bank (recommended)</label> <input type=checkbox id=s_pidsp checked onchange="onStart()"></div>
+        <a class=more href="/rotorflight-gov-global">See the numbers on the Governor page</a>
+    </div>
+
+    <div class=card id=agileCard>
+        <h2>How agile?</h2>
+        <div class=sl><span>Docile</span><input type=range id=s_agile min=0 max=100 step=5 value=40 oninput="onAgile()"><span>Acrobatic</span></div>
+        <p class=sub id=agileNote></p>
+        <div class=sl><span>Soft centre</span><input type=range id=s_expo min=0 max=100 step=5 value=50 oninput="onExpo()"><span>Direct</span></div>
+        <p class=sub id=expoNote></p>
+        <p class=sub id=agileOff style="display:none"></p>
+        <a class=more href="/rotorflight-rates">See the numbers on the Rates page</a>
+    </div>
+
+    <div class=card>
+        <h2>Feel</h2>
+        <p class=sub><b>Wobbles or shakes &rarr; softer. Sluggish, drifting or mushy &rarr; sharper.</b> Small steps, one flight each.</p>
+        <div class=sl><span>Cyclic softer</span><input type=range id=s_cyc min=-30 max=30 step=5 value=0 oninput="onNudge('cyc')"><span>sharper</span></div>
+        <p class=sub id=cycNote></p>
+        <div class=sl><span>Tail softer</span><input type=range id=s_tail min=-30 max=30 step=5 value=0 oninput="onNudge('tail')"><span>sharper</span></div>
+        <p class=sub id=tailNote></p>
+        <a class=more href="/rotorflight-pid">See the numbers on the PIDs page</a>
+    </div>
+
+    <div class=fabBar>
+        <button class="btn btn-fly" id=saveBtn onclick="save()" style="background:#6cab5e;margin:0"><span class=ico>&#128190;</span>Save changes</button>
+    </div>
+    <div class=footer></div>
+</div>
+
+<script>
+// Easy tuning (Malcolm 2026-09-06): every plain-English slider in one
+// place — the governor start slider, the agility + stick-feel sliders and
+// the softer/sharper nudges — with a link under each to the page that
+// shows the numbers. The same mappings as those pages; the bytes are
+// read-modify-write of the flight controller's own blobs (MSP 142, 111,
+// 112), so nothing but the slider-owned bytes ever changes.
+const P = i => i.toString(16).padStart(2, '0');
+const R = i => (0x80 | i).toString(16).padStart(2, '0');
+const clamp5 = x => Math.max(0, Math.min(100, Math.round(x / 5) * 5));
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const startNums  = v => { const spool = Math.round(40 - 0.30 * v); return { spool, hand: Math.round(10 + 0.15 * v), start: spool * 2 }; };
+const startFeel  = spool => clamp5((40 - spool) / 0.30);
+const feelRate   = v => ({ rp: Math.round((120 + 3.8 * v) / 5) * 5, yaw: Math.round((150 + 4.5 * v) / 5) * 5 });
+const feelExpoOf = v => Math.round(70 - 0.7 * v);
+const agileFeel  = rate => clamp5((rate - 120) / 3.8);
+const expoFeel   = e => clamp5((70 - e) / 0.7);
+
+let bank = parseInt(localStorage.getItem('rfPidProfile') || '0');
+let govRaw = null, ratesRaw = null, pidRaw = null, pidBase = [];
+let changed = { gov: false, rates: false, pid: false };
+// Which rates slider was actually moved: an untouched one must not rewrite
+// its numbers through the slider's 5-step grid (smoke test caught expo 40 → 39).
+let touched = { agile: false, expo: false };
+let busy = false, live = false;
+
+function setStatus(kind, msg) { const b = document.getElementById('status'); b.className = 'banner ' + kind; b.textContent = msg; }
+function hexToBytes(h) { const o = new Uint8Array(h.length / 2); for (let i = 0; i < o.length; i++) o[i] = parseInt(h.substr(i * 2, 2), 16); return o; }
+function bytesToHex(b) { let s = ''; for (let i = 0; i < b.length; i++) s += b[i].toString(16).padStart(2, '0').toUpperCase(); return s; }
+const $ = id => document.getElementById(id);
+const u16 = (b, o) => b[o] | (b[o + 1] << 8);
+
+function paintBanks() { for (let i = 0; i < 4; i++) $('pb' + i).classList.toggle('active', i === bank); }
+async function selectBank(i) {
+    if (busy || i === bank) return;
+    if (!(await LDRC.confirmLoseChanges('switching to bank ' + (i + 1)))) return;
+    bank = i;
+    localStorage.setItem('rfPidProfile', String(bank));
+    localStorage.setItem('rfRatesProfile', String(bank));
+    paintBanks();
+    load();
+}
+
+// ---- slider handlers: notes + change flags, numbers written at Save ----
+function onStart() {
+    const n = startNums(+$('s_start').value);
+    $('startNote').textContent = 'Full head speed in about ' + n.spool + ' s (spool-up ' + n.spool + ', handover ' + n.hand + ' %, startup ' + n.start + ').';
+    changed.gov = true; LDRC.markDirty();
+}
+function onAgile() {
+    const r = feelRate(+$('s_agile').value);
+    $('agileNote').textContent = 'Roll and pitch ' + r.rp + ' °/s, yaw ' + r.yaw + ' °/s at full stick.';
+    touched.agile = true; changed.rates = true; LDRC.markDirty();
+}
+function onExpo() {
+    $('expoNote').textContent = 'Expo ' + feelExpoOf(+$('s_expo').value) + ' on roll, pitch and yaw.';
+    touched.expo = true; changed.rates = true; LDRC.markDirty();
+}
+const NAMES = ['roll P','roll I','roll D','roll F','pitch P','pitch I','pitch D','pitch F','yaw P','yaw I','yaw D','yaw F'];
+function nudgedWords() {
+    const fc = 1 + (+$('s_cyc').value) / 100, ft = 1 + (+$('s_tail').value) / 100;
+    return pidBase.map((b, i) => i < 12 ? clamp(Math.round(b * (i < 8 ? fc : ft)), 0, 1000) : b);
+}
+function onNudge(which) {
+    const pct = +$('s_' + which).value, w = nudgedWords();
+    const idx = which === 'cyc' ? [0, 2, 4, 6] : [8, 10];
+    $(which + 'Note').textContent = pct === 0 ? 'Unchanged.' :
+        (which === 'cyc' ? 'Cyclic' : 'Tail') + ' gains ' + (pct > 0 ? '+' : '') + pct + ' %: ' +
+        idx.map(i => NAMES[i] + ' ' + pidBase[i] + '→' + w[i]).join(', ') + ' (I and F likewise).';
+    changed.pid = true; LDRC.markDirty();
+}
+
+// ---- where the FC is now → sliders ----
+function reflect() {
+    $('s_start').value = startFeel(u16(govRaw, 3) / 10);
+    $('startNote').textContent = '';
+    const rf = ratesRaw[0] === 6;
+    for (const id of ['s_agile', 's_expo']) $(id).disabled = !rf;
+    $('agileOff').style.display = rf ? 'none' : '';
+    if (rf) {
+        $('s_agile').value = agileFeel(ratesRaw[1] * 5);
+        $('s_expo').value  = expoFeel(ratesRaw[2]);
+    } else {
+        $('agileOff').textContent = 'This bank uses a rates type the sliders do not cover — use the Rates page.';
+    }
+    $('agileNote').textContent = ''; $('expoNote').textContent = '';
+    pidBase = []; for (let i = 0; i < 17; i++) pidBase.push(u16(pidRaw, i * 2));
+    $('s_cyc').value = 0; $('s_tail').value = 0; $('cycNote').textContent = ''; $('tailNote').textContent = '';
+    changed = { gov: false, rates: false, pid: false };
+    touched = { agile: false, expo: false };
+}
+
+async function load() {
+    if (busy) return;
+    busy = true;
+    await LDRC.replayReady;
+    if (LDRC.replay) {
+        setStatus('warn', 'Review mode: the sliders need the model connected. The Governor, Rates and PIDs pages still work on the phone.');
+        $('saveBtn').disabled = true;
+        busy = false; return;
+    }
+    setStatus('info', 'Reading bank ' + (bank + 1) + ' from the flight controller…');
+    LDRC.markStale();
+    try {
+        const st = await LDRC.fetchState();
+        const fc = (st && st.fcinfo) || {};
+        if (!fc.detected) throw new Error('no flight controller answering — check the model is powered and the protocol is CRSF');
+        if (!fc.rotorflight_capable) throw new Error('this needs Rotorflight 2.3');
+        govRaw = hexToBytes(await LDRC.msp(142));
+        if (govRaw.length < 42) throw new Error('governor config too short (' + govRaw.length + ' bytes)');
+        await LDRC.msp(210, R(bank));
+        ratesRaw = hexToBytes(await LDRC.msp(111));
+        if (ratesRaw.length < 25) throw new Error('rates too short (' + ratesRaw.length + ' bytes)');
+        await LDRC.msp(210, P(bank));
+        pidRaw = hexToBytes(await LDRC.msp(112));
+        if (pidRaw.length < 34) throw new Error('PIDs too short (' + pidRaw.length + ' bytes)');
+        reflect();
+        live = true;
+        LDRC.clearStale(); LDRC.clearDirty();
+        setStatus('good', '✓ Bank ' + (bank + 1) + ' loaded — slide, then Save');
+    } catch (e) {
+        setStatus('bad', 'Read failed: ' + e.message);
+    }
+    busy = false;
+}
+
+// ---- the bytes each slider owns, on the FC's own blobs ----
+function pidBytes() {
+    const b = pidRaw.slice(), w = nudgedWords();
+    for (let i = 0; i < 12; i++) { b[i * 2] = w[i] & 0xff; b[i * 2 + 1] = (w[i] >> 8) & 0xff; }
+    return b;
+}
+function ratesBytes() {
+    const b = ratesRaw.slice(), r = feelRate(+$('s_agile').value), e = feelExpoOf(+$('s_expo').value);
+    const set = (o, rate) => {                                        // axis block: rcRate, rcExpo, srate, response, accel16
+        if (touched.agile) b[o] = Math.round(rate / 5);
+        if (touched.expo)  b[o + 1] = e;
+    };
+    set(1, r.rp); set(7, r.rp); set(13, r.yaw);
+    return b;
+}
+function govBytes() {
+    const b = govRaw.slice(), n = startNums(+$('s_start').value);
+    const put = (o, v) => { b[o] = v & 0xff; b[o + 1] = (v >> 8) & 0xff; };
+    put(1, n.start * 10); put(3, n.spool * 10); b[19] = n.hand;
+    return b;
+}
+function same(a, b, n) { for (let i = 0; i < n; i++) if (a[i] !== b[i]) return false; return true; }
+async function pidSpoolupOnAllBanks() {
+    let n = 0;
+    for (let i = 0; i < 4; i++) {
+        await LDRC.msp(210, P(i));
+        const g = hexToBytes(await LDRC.msp(148));
+        if (g.length < 17 || (g[15] & 0x10)) continue;
+        g[15] |= 0x10;
+        await LDRC.msp(149, bytesToHex(g));
+        n++;
+    }
+    await LDRC.msp(210, P(bank));
+    return n;
+}
+
+async function save() {
+    if (busy || !live) return;
+    const what = [changed.pid && 'Feel (PIDs, bank ' + (bank + 1) + ')', changed.rates && 'Agility (rates, bank ' + (bank + 1) + ')', changed.gov && 'Start (governor, restarts the flight controller)'].filter(Boolean);
+    if (!what.length) { setStatus('info', 'Nothing has changed.'); return; }
+    if (!(await LDRC.confirm('Write ' + what.join(', ') + ' to the flight controller?' + (changed.gov ? ' The start settings only apply after a restart: transmitter OFF, blades off.' : ''),
+            { title: 'Save changes', icon: '💾', yes: 'Save', kind: changed.gov ? 'warn' : undefined }))) return;
+    busy = true; $('saveBtn').disabled = true;
+    const done = [], bad = [];
+    try {
+        if (changed.pid) {
+            setStatus('info', 'Writing PIDs…');
+            const b = pidBytes();
+            await LDRC.msp(210, P(bank)); await LDRC.msp(202, bytesToHex(b)); await LDRC.msp(250);
+            await LDRC.msp(210, P(bank));
+            const chk = hexToBytes(await LDRC.msp(112));
+            if (same(b, chk, 34)) { pidRaw = b; done.push('Feel'); } else bad.push('PIDs');
+        }
+        if (changed.rates) {
+            setStatus('info', 'Writing rates…');
+            const b = ratesBytes();
+            await LDRC.msp(210, R(bank)); await LDRC.msp(204, bytesToHex(b)); await LDRC.msp(250);
+            await LDRC.msp(210, R(bank));
+            const chk = hexToBytes(await LDRC.msp(111));
+            if (same(b, chk, b.length)) { ratesRaw = b; done.push('Agility'); } else bad.push('rates');
+        }
+        if (changed.gov) {
+            let banks = -1;
+            if ($('s_pidsp').checked) { setStatus('info', 'Switching PID spool-up on in every bank…'); banks = await pidSpoolupOnAllBanks(); }
+            setStatus('info', 'Writing the start settings…');
+            const b = govBytes();
+            await LDRC.msp(143, bytesToHex(b)); await LDRC.msp(250);
+            setStatus('info', 'Restarting the flight controller… (about 7 s)');
+            try { await LDRC.msp(68, null, 1); } catch (e) {}
+            await new Promise(r => setTimeout(r, 7000));
+            let chk = null;
+            for (let a = 0; a < 3 && !chk; a++) { try { chk = hexToBytes(await LDRC.msp(142)); } catch (e) { if (a === 2) throw e; await new Promise(r => setTimeout(r, 3000)); } }
+            if (same(b, chk, 42)) { govRaw = b; done.push('Start' + (banks > 0 ? ' (PID spool-up on in ' + banks + ' bank' + (banks === 1 ? '' : 's') + ')' : '')); } else bad.push('start settings');
+        }
+        reflect();
+        LDRC.clearDirty();
+        if (bad.length) {
+            setStatus('bad', '⚠ ' + bad.join(', ') + ' read back differently — open that page and check.' + (done.length ? ' Verified: ' + done.join(', ') + '.' : ''));
+        } else {
+            setStatus('good', '✓ Written & verified: ' + done.join(', ') + '.');
+        }
+    } catch (e) {
+        setStatus('bad', 'Save failed: ' + e.message + '. Open the linked pages to see what the flight controller holds.');
+    }
+    busy = false; $('saveBtn').disabled = false;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+document.addEventListener('DOMContentLoaded', () => { paintBanks(); load(); });
+</script>
+<template id=helpContent><h2>Easy tuning</h2>
+<p>All the plain-English sliders in one place. Each one drives the real numbers on its own page (the link under it takes you there), and nothing is written until you tap Save.</p>
+<h3>How hard should it start?</h3><p>One slider for spool-up time, handover throttle and startup time, the same for every bank. Saving restarts the flight controller, so transmitter off and blades off.</p>
+<h3>How agile?</h3><p>Top rotation speeds at full stick, and how soft the sticks feel around centre. Per bank.</p>
+<h3>Feel</h3><p>Softer or sharper: scales the bank&rsquo;s P, I, D and feedforward together, relative to what the model flew last. Wobbles or shakes &rarr; softer. Sluggish, drifting or mushy &rarr; sharper. Small steps, one flight each; after a save the sliders return to centre.</p>
+</template>
+</body>
+</html>

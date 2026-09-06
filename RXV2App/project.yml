@@ -24,8 +24,8 @@ targets:
       path: Info.plist
       properties:
         ITSAppUsesNonExemptEncryption: false
-        CFBundleShortVersionString: "4.25"
-        CFBundleVersion: "287"
+        CFBundleShortVersionString: "4.26"
+        CFBundleVersion: "288"
         CFBundleDisplayName: RXV2
         UILaunchScreen: {}
         NSCameraUsageDescription: RXV2 uses the camera to take a photograph of your helicopter, shown beside its receiver.

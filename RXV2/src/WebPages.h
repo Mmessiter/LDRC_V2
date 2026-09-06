@@ -499,6 +499,11 @@ inline void handleRotorflightBackupPage() {
     server.send(503, "text/plain", "/rotorflight-backup.html missing — uploadfs the data/ folder");
 }
 
+inline void handleRotorflightEasy() {
+    if (serveLittleFsFile("/rotorflight-easy.html", "text/html")) return;
+    server.send(503, "text/plain", "/rotorflight-easy.html missing — uploadfs the data/ folder");
+}
+
 inline void handleRotorflightCopyBank() {
     if (serveLittleFsFile("/rotorflight-copybank.html", "text/html")) return;
     server.send(503, "text/plain", "/rotorflight-copybank.html missing — uploadfs the data/ folder");
@@ -3080,6 +3085,7 @@ inline void registerWebRoutes() {
     server.on("/rotorflight-alacarte",  handleRotorflightAlaCarte);
     server.on("/rotorflight-backup",    handleRotorflightBackupPage);
     server.on("/rotorflight-copybank",  handleRotorflightCopyBank);
+    server.on("/rotorflight-easy",      handleRotorflightEasy);
     server.on("/rotorflight-pidplus", handleRotorflightPidPlus);
     server.on("/rotorflight-rates",        handleRotorflightRates);
     server.on("/rotorflight-gov-profile",  handleRotorflightGovProfile);

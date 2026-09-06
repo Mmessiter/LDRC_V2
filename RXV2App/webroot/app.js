@@ -551,6 +551,7 @@
                 '/rotorflight-esc': '/rotorflight-newheli',
                 '/rotorflight-modes': '/rotorflight',
                 '/rotorflight-alacarte': '/rotorflight',
+                '/rotorflight-easy': '/rotorflight-alacarte',
                 '/rotorflight-backup': '/rotorflight',
                 '/rotorflight-servos': '/rotorflight',
                 '/rotorflight-rescue': '/rotorflight',

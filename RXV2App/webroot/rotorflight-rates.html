@@ -246,6 +246,19 @@ function feelExpo() {
     document.getElementById('expoNote').textContent = 'Expo ' + e + ' on roll, pitch and yaw.';
     LDRC.markDirty(); drawCurves();
 }
+// The other way round too (Malcolm 2026-09-06): a rate or expo typed into
+// the table moves the slider (roll leads; the note names what is set).
+document.addEventListener('input', e => {
+    const id = (e.target && e.target.id) || '';
+    if (MODEL.curve !== 'rotorflight' || !/^r_(Roll|Pitch|Yaw)_[0-3]$/.test(id)) return;
+    const rate = parseFloat(document.getElementById('r_Roll_0').value);
+    const expo = parseFloat(document.getElementById('r_Roll_2').value);
+    const clamp = x => Math.max(0, Math.min(100, Math.round(x / 5) * 5));
+    if (!isNaN(rate)) document.getElementById('f_agile').value = clamp((rate - 120) / 3.8);
+    if (!isNaN(expo)) document.getElementById('f_expo').value  = clamp((70 - expo) / 0.7);
+    document.getElementById('agileNote').textContent = 'From the table: roll ' + document.getElementById('r_Roll_0').value + ', pitch ' + document.getElementById('r_Pitch_0').value + ', yaw ' + document.getElementById('r_Yaw_0').value + ' °/s.';
+    document.getElementById('expoNote').textContent  = 'From the table: expo ' + document.getElementById('r_Roll_2').value + ' / ' + document.getElementById('r_Pitch_2').value + ' / ' + document.getElementById('r_Yaw_2').value + '.';
+});
 // After a load: show the card for the ROTORFLIGHT type and put the sliders
 // where the bank's numbers are (roll rate and roll expo lead).
 function feelReflect() {

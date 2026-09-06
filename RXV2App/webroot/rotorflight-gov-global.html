@@ -385,6 +385,14 @@ function feelChanged() {
     LDRC.markDirty();
     paintFeelNote();
 }
+// The other way round too (Malcolm 2026-09-06): edit spool-up by hand and
+// the slider follows; the note then shows the hand-edited numbers.
+document.addEventListener('input', e => {
+    if (!e.target || !['g_spool', 'g_hand', 'g_start'].includes(e.target.id)) return;
+    const spool = parseFloat(document.getElementById('g_spool').value);
+    if (!isNaN(spool)) document.getElementById('g_feel').value = numbersToFeel(spool);
+    paintFeelNote();
+});
 function paintFeelNote() {
     const spool = +document.getElementById('g_spool').value || 0;
     document.getElementById('feelNote').textContent = spool
