@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.571-copy-hs";
+constexpr const char* FW_VERSION = "RXV2-0.9.572-arm-aux6";
 
 //*********************************************************************
 //  Auto-update manifest URLs

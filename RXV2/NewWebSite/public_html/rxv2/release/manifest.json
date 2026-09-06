@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.571-copy-hs",
+      "url": "https://messiter.com/rxv2/release/v0.9.571/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.571/littlefs.bin",
+      "fs_md5": "3f9b866aa68db508cd024c3ae3a8e226",
+      "notes": "Copy a bank: new tick 'Adjust gains for the target bank's head speed'. Tune the middle bank, copy it outwards, and the copied P, I, D, feedforward and boost gains are scaled by the two banks' head speeds (control power grows with head speed squared): down fully for a faster bank, up more gently and never more than 25 % for a slower one. A note under the tick shows the change before you copy; the result names it afterwards. Malcolm's idea, 2026-09-05."
+    },
+    {
       "name": "RXV2-0.9.570-arm-fast",
       "url": "https://messiter.com/rxv2/release/v0.9.570/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.570/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.558/littlefs.bin",
       "fs_md5": "985ef783955d012d1b6214514296aeb6",
       "notes": "Backup & restore double-checked before real use (Malcolm's request). The phone backup covers the tuning (PIDs, advanced PIDs, rates, governor, rescue - every bank, plus the governor's global settings), the mechanics (mixer travel/limits/trims, servo centres/travel) and the bank/rates switch assignments; the page and its help now say exactly that and list what is NOT included (arming switch & modes, channel map, motor/gear ratio, battery, filters, telemetry). Pages: Back up shows a warning instead of a tick when the sweep did not finish (and keeps the earlier backup); Restore shows why it stopped; the restore line says whether the backup is your own or the automatic one from connection; importing a different model's file now really leaves your servo/mixer settings alone. Needs app 4.12 (iOS) / 4.04 (Android) for the new fields - the apps fix the real bugs: the flight controller's bank was read from the wrong bytes, so every backup sweep left it on bank 1 instead of where it was; a deliberate backup was overwritten by the automatic one at the next connection; a read that got no answer still produced a tick; restore now checks the FC stayed on the chosen bank after each item, stops if the transmitter comes on, and verifies the EEPROM save. Firmware itself unchanged apart from the pages."
-    },
-    {
-      "name": "RXV2-0.9.557-disarm-ble-fast",
-      "url": "https://messiter.com/rxv2/release/v0.9.557/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.557/littlefs.bin",
-      "fs_md5": "40ed4dbc24fbd612c6104247380e1b18",
-      "notes": "Faster PID tuning at the field (Malcolm's suggestion): Bluetooth now comes back half a second after you DISARM - the old 5-second wait was a leftover from the WiFi bring-up, which stalls the receiver; restarting Bluetooth does not. So the cycle is arm, fly, land, disarm, edit on the phone, arm again. Arming still switches the radios off 3 s later, on the ground, as before. Home WiFi keeps its 5-second wait after disarm. Firmware only - pages unchanged."
     }
   ]
 }
