@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.573-gov-noreload";
+constexpr const char* FW_VERSION = "RXV2-0.9.574-noreload";
 
 //*********************************************************************
 //  Auto-update manifest URLs
