@@ -152,6 +152,12 @@ for t in b.Drawings():
     if t.GetText() == 'GND' and abs(t.GetPosition().x/1e6 - 174.6) < 0.05: t.SetPosition(P(175.1, t.GetPosition().y/1e6))
     if t.GetText() == '+' and abs(t.GetPosition().x/1e6 - 144.8) < 0.05: t.SetPosition(P(144.2, 180.2))   # D1's anode mark sat on the pad
     if t.GetText() == 'by Claude and Malcolm - July 2026': t.SetText('by Claude and Malcolm - 2026')
+    if t.GetText() == 'ESP SPARE GPIO': t.SetPosition(P(159.0, 160.4))
+    if t.GetText() == '10uF' and abs(t.GetPosition().x/1e6 - 110.9) < 0.05: t.SetPosition(P(110.9, 116.6))
+    if t.GetText() == 'RGB LED': t.SetPosition(P(176.0, 118.9))
+    # the ESP spare-header pin numbers straddled the header outlines: one row up, one row down
+    if abs(t.GetPosition().y/1e6 - 161.7) < 0.05 and 145 < t.GetPosition().x/1e6 < 175: t.SetPosition(P(t.GetPosition().x/1e6, 161.1))
+    if abs(t.GetPosition().y/1e6 - 168.5) < 0.05 and 145 < t.GetPosition().x/1e6 < 175: t.SetPosition(P(t.GetPosition().x/1e6, 168.9))
 # 5b. the 2808 socket: every pin named on the board, both rows
 for i, name in enumerate(['VIN', 'VIN', 'GND', 'GND', 'ON', 'OFF', 'CTRL']):
     text(name, 112.0 + 2.54 * i, 179.1, 0.55)
@@ -165,7 +171,7 @@ text('1', 129.2, 137.2, 0.6, 'B.SilkS', mirror=True)
 for ref in ('D3', 'D4'):
     b.FindFootprintByReference(ref).SetValue('SS14')
 # 5f. back-side value labels that sat on a pad edge (they get clipped at the fab): three placed by hand, the rest nudged
-for ref, x, y, rot in (('R3', 137.2, 153.2, 0), ('L1', 132.0, 151.1, 0), ('R10', 140.2, 155.0, 90)):
+for ref, x, y, rot in (('R3', 136.2, 150.0, 90), ('L1', 132.0, 152.1, 0), ('R10', 139.4, 152.87, 0)):
     v = b.FindFootprintByReference(ref).Value(); v.SetPosition(P(x, y)); v.SetTextAngleDegrees(rot)
 pads = [(fp.GetReference(), p) for fp in b.GetFootprints() for p in fp.Pads()]
 for ref in ('R7', 'R8', 'C2', 'C3', 'C4'):
