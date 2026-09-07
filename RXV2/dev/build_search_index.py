@@ -38,6 +38,8 @@ class Page(HTMLParser):
         if tag == 'script': self.in_script = True; return
         if self.cap and self.cap[0] in ('h', 'title') and tag in ('span', 'small', 'i', 'em'):
             self.cap[2].append('\x00'); return          # a heading's subtitle is not the heading
+        if self.cap and self.cap[0] == 'tile':
+            self.cap[2].append('\x01'); return          # tile title / subtitle boundary (no space in the markup)
         if tag in ('h1', 'title') and not self.title: self.cap = ('title', a, [])
         elif tag in ('h2', 'h3'): self.cap = ('h', a, [])
         elif tag in ('label', 'b', 'span', 'th') and a.get('data-help') is not None:
@@ -54,7 +56,7 @@ class Page(HTMLParser):
         if tag == 'script': self.in_script = False; return
         if not self.cap: return
         kind, a, text = self.cap
-        t = clean(''.join(x for x in text if x != '\x00'))
+        t = clean(''.join(x for x in text if x not in ('\x00', '\x01')))
         if kind == 'title' and tag in ('h1', 'title'):
             self.title = t.split('·')[0].strip() if t else ''
         elif kind == 'h' and tag in ('h2', 'h3'):
@@ -66,7 +68,11 @@ class Page(HTMLParser):
                 e = {'l': t, 'h': self.heading, 'id': a.get('_id', ''), 'k': hint_of(a['data-help'])}
                 self.entries.append(e); self.pending = None if a.get('_id') else e
         elif kind == 'tile' and tag == 'a':
-            if t: self.entries.append({'l': t[:90], 'h': '', 'id': '', 'k': '', 'href': a['href'], 'tile': True})
+            parts = [clean(x) for x in ''.join(text).split('\x01')]
+            parts = [x for x in parts if x]
+            if parts:
+                self.entries.append({'l': parts[0][:90], 'h': '', 'id': '', 'k': ' '.join(parts[1:])[:100],
+                                     'href': a['href'], 'tile': True})
         else:
             return
         self.cap = None
@@ -150,7 +156,7 @@ for f in sorted(glob.glob(os.path.join(ROOT, '*.html'))):
         if key in seen: continue
         seen.add(key)
         if e.get('tile'):
-            entries.append({'p': e['href'], 'g': title, 'h': 'menu', 'l': e['l'], 'id': '', 'k': ''})
+            entries.append({'p': e['href'], 'g': title, 'h': 'menu', 'l': e['l'], 'id': '', 'k': e.get('k', '')})
         else:
             entries.append({'p': path, 'g': title, 'h': e['h'], 'l': e['l'], 'id': e['id'], 'k': e['k']})
 for p, g, l, i, k in EXTRA:
