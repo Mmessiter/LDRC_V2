@@ -1,6 +1,34 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.582-backup-banks",
+      "url": "https://messiter.com/rxv2/release/v0.9.582/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.582/littlefs.bin",
+      "fs_md5": "9d1686512c9ac37c97b72af6850df2cb",
+      "notes": "Backup fix: 'the flight controller changed bank mid-backup' with the transmitter OFF. The receiver remembered the bank a phone last selected and quietly put the flight controller back on it before the next bank read, even when the phone had since asked the flight controller which bank it was on and started a fresh backup from there. The phone saw the move and gave up, leaving the flight controller on the wrong bank, so the next attempt failed the same way. Now a phone that reads the bank status is taken at its word. Includes 0.9.580 and 0.9.581."
+    },
+    {
+      "name": "RXV2-0.9.581-whole-seconds",
+      "url": "https://messiter.com/rxv2/release/v0.9.581/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.581/littlefs.bin",
+      "fs_md5": "a8abcefc411a3b5375b0449428e6e383",
+      "notes": "On the V1 transmitter the governor timings (spool-up, spool-down, speed-change/tracking, recovery, throttle-hold and autorotation timeouts) are now WHOLE SECONDS: 4 means four seconds. Rotorflight keeps them in tenths, and the transmitter's plain numbers made 4 mean 0.4 s. A half-second value saved from the transmitter rounds to the nearest second. The phone pages were already in seconds. Also corrects the governor-mode help text (DIRECT = throttle passed through with the ramps, for an ESC that governs by itself). Includes 0.9.580: the flight-controller wire stays connected after a field flight with the transmitter off, and the cell count is read from the right byte."
+    },
+    {
+      "name": "RXV2-0.9.580-field-fixes",
+      "url": "https://messiter.com/rxv2/release/v0.9.580/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.580/littlefs.bin",
+      "fs_md5": "51dbafd1f60c02e2b13a009f56bf24ce",
+      "notes": "Two field fixes from the Goblin's first flight-test morning. (1) After a flight away from home WiFi, switching the transmitter off parked the flight-controller wire for the failsafe lamp while the phone was still connected over Bluetooth, so every Rotorflight read answered 'did not respond' until the receiver was rebooted. The wire now stays connected whenever Bluetooth config is up, and a phone request re-attaches it in any case. (2) The cell count read from Rotorflight was taken from the wrong byte (its battery STATE), which showed the 12S pack as '3S \u00b7 15 V/cell' on the Black box; the real count is read now. Also: the RealFlight controls page title no longer hides under the header buttons."
+    },
+    {
+      "name": "RXV2-0.9.579-back-trail",
+      "url": "https://messiter.com/rxv2/release/v0.9.579/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.579/littlefs.bin",
+      "fs_md5": "e1bd160d91ad4b7e3c9df1cb53dd862e",
+      "notes": "The back arrow now walks back through the last few pages you actually visited (up to six), instead of guessing the menu you came from. Going back pops the trail; a link that loops back to an earlier page shortens it."
+    },
+    {
       "name": "RXV2-0.9.578-slider-help",
       "url": "https://messiter.com/rxv2/release/v0.9.578/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.578/littlefs.bin",
@@ -55,34 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.571/littlefs.bin",
       "fs_md5": "3f9b866aa68db508cd024c3ae3a8e226",
       "notes": "Copy a bank: new tick 'Adjust gains for the target bank's head speed'. Tune the middle bank, copy it outwards, and the copied P, I, D, feedforward and boost gains are scaled by the two banks' head speeds (control power grows with head speed squared): down fully for a faster bank, up more gently and never more than 25 % for a slower one. A note under the tick shows the change before you copy; the result names it afterwards. Malcolm's idea, 2026-09-05."
-    },
-    {
-      "name": "RXV2-0.9.570-arm-fast",
-      "url": "https://messiter.com/rxv2/release/v0.9.570/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.570/littlefs.bin",
-      "fs_md5": "64e007433e5eb1df18d7eda40432fa80",
-      "notes": "Auto fly mode now switches Bluetooth and WiFi off half a second after the arm switch goes on (it was 3 s, which looked as if the motor switch did it). Same half-second bounce filter as the disarm side."
-    },
-    {
-      "name": "RXV2-0.9.569-card-wiggle",
-      "url": "https://messiter.com/rxv2/release/v0.9.569/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.569/littlefs.bin",
-      "fs_md5": "11f78b5e5a9ca6279826949b2184be38",
-      "notes": "Two of Malcolm's suggestions. (1) The Rotorflight page's telemetry-speed card is now one quiet line - 'Telemetry: fast' - with the explanation under your finger (press and hold the underlined words), the Use standard / Use fast button as before. (2) The servo wiggle that announces 'the phone can connect' now also happens after a landing with the transmitter still on: as soon as the model is disarmed and the head speed reads zero, the chosen channel wiggles (a wiggle on a coasting rotor would yaw the model, so it waits for the stop - up to 90 s; without RPM telemetry, 30 s after disarming). Aborted wiggles now put the channel back exactly where it was."
-    },
-    {
-      "name": "RXV2-0.9.568-bank-putback2",
-      "url": "https://messiter.com/rxv2/release/v0.9.568/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.568/littlefs.bin",
-      "fs_md5": "fbedcb76947338dd82a27c1f03eb895b",
-      "notes": "Bank put-back, bench-proven on the Goblin and polished: a put-back no longer forgets which bank the phone had chosen (so a read arriving after a put-back really does get the phone's bank re-selected first), a save marks the flight controller's bank as unknown until re-read (Rotorflight re-applies the switch by itself right after every save), and the event log now says 'Boot banks saved back for the switch' when only the boot bank needed fixing."
-    },
-    {
-      "name": "RXV2-0.9.567-bank-putback",
-      "url": "https://messiter.com/rxv2/release/v0.9.567/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.567/littlefs.bin",
-      "fs_md5": "8e0573faa680a20aa3c5c3e2b55238a6",
-      "notes": "Banks go back to the transmitter's switch after a phone session. Rotorflight only re-applies a bank switch when the switch moves, so a tuning page that left the flight controller on another bank was flown on that bank until the switch moved. Now the receiver notes the switch's PID and rates banks before a page's first bank select, and 5 s after the phone goes quiet (transmitter off, disarmed) puts them back - and saves them as the boot banks if the session had saved on another bank. Never under a live transmitter (the switch owns the banks then; the event log says where the FC was left). Pages and apps see no difference: a request that arrives after a put-back gets its own bank re-selected first."
     }
   ]
 }
