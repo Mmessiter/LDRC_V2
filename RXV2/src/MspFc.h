@@ -488,8 +488,16 @@ inline void mspDeliverResponse(uint8_t func, const uint8_t* payload, uint16_t si
             // 45.1 V is 11S nearly-full AND 12S at storage — voltage alone
             // can never decide (Malcolm 2026-08-05, Black-Thunder-2 shown
             // as 11S). The FC's configured/auto-detected count settles it.
-            if (size >= 1 && payload[0] > 0 && payload[0] <= 14)
-                fcInfo.cells = payload[0];
+            // Rotorflight 4.6 (msp.c): [0] battery STATE (0 ok, 1 warning,
+            // 2 critical, 3 not present, 4 init), [1] cell count, [2-3]
+            // capacity, [4-5] used mAh, [6-7] volts 10 mV, [8-9] amps 10 mA,
+            // [10] charge %, [11] profile. Betaflight puts the count in byte
+            // 0 and that is what this read until 0.9.580 — the Goblin's first
+            // answer at power-up (state 3 = not present, before the ESC's
+            // volts arrived) became "3S · 46.10 V · 15.37 V/cell" on the
+            // Black box (Malcolm 2026-09-07), with the FC's real 12 ignored.
+            if (size >= 2 && payload[1] > 0 && payload[1] <= 14)
+                fcInfo.cells = payload[1];
             break;
         case MSP_ESC_PARAMETERS:
             if (size >= 2) escCatchGot = true;   // FC now holds the ESC's settings

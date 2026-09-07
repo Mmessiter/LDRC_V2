@@ -305,6 +305,8 @@ inline bool isIdleHighProto(Protocol p) {
     return (p == PROTO_CRSF) || (p == PROTO_IBUS) || (p == PROTO_IBUS2);
 }
 
+inline bool bleAdvertising();   // BleConfig.h (included later): Bluetooth config up
+inline bool bleHasClient();
 inline bool outputDetachedForFailsafe = false;
 
 inline void sbusTick() {
@@ -520,7 +522,16 @@ inline void sbusTick() {
         // auto-WiFi coming up after an IN-FLIGHT loss (same as NET_WIFI_UP).
         bool wifiConfigUp  = (netMode == NET_WIFI_UP || netMode == NET_AP ||
                               netMode == NET_WIFI_CONNECTING);
-        bool wantDetach    = everConnected && failsafe && !wifiConfigUp;
+        // ...and whenever Bluetooth config is up (0.9.580). A FIELD landing
+        // revives Bluetooth alone (Network.h: no WiFi hunt away from home),
+        // so the transmitter going off after a flight parked this UART with
+        // the phone still connected — every Rotorflight read answered "did
+        // not respond within 1200 ms" until a reboot (Malcolm 2026-09-07,
+        // Goblin 770, first flight-test morning: governor page, first-time
+        // basics). The lamp on this pin is the price: no "no link" LED while
+        // a phone can be talking to the flight controller.
+        bool bleConfigUp   = bleAdvertising() || bleHasClient();
+        bool wantDetach    = everConnected && failsafe && !wifiConfigUp && !bleConfigUp;
         if (wantDetach && !outputDetachedForFailsafe) {
             Serial1.end();
             pinMode(PIN_SBUS_TX, OUTPUT);

@@ -774,6 +774,13 @@ inline void handleMspApi() {
             return;
         }
     }
+    // Belt and braces for the 0.9.580 field fix: a phone request while the
+    // FC UART is parked for failsafe re-attaches it first, whatever parked it.
+    if (outputDetachedForFailsafe) {
+        configureOutputDriver(currentProtocol);
+        outputDetachedForFailsafe = false;
+        events.add("DIAG CRSF-REATTACH for a phone request (UART was parked for failsafe)");
+    }
     // Yield to the TX-param state machine first. It runs a multi-step MSP
     // transaction (GET → SET → EEPROM_WRITE); barging in mid-cycle puts two
     // outstanding requests on the FC (mutual timeouts), and a web SET landing

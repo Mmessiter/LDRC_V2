@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.579-back-trail";
+constexpr const char* FW_VERSION = "RXV2-0.9.580-field-fixes";
 
 //*********************************************************************
 //  Auto-update manifest URLs
