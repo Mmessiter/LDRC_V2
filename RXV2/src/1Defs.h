@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.586-search-spacing";
+constexpr const char* FW_VERSION = "RXV2-0.9.588-slider-centres";
 
 //*********************************************************************
 //  Auto-update manifest URLs

@@ -9,7 +9,7 @@
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Governor (global) &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=181">
-<script src="/app.js?v=193" defer></script>
+<script src="/app.js?v=195" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;
         padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -63,7 +63,7 @@ input:disabled,select:disabled{background:#eee;color:#999}
     </div>
 
     <div class=card>
-        <h2 data-help="Moves three numbers on the Governor page and nothing else: Spool-up time (40 s at very gentle, 10 s at very fierce), Handover throttle (10 % to 25 %) and Startup time (always twice the spool-up time). The tick switches on PID spool-up in each bank&rsquo;s governor profile.">How hard should it start?</h2>
+        <h2 data-help="Moves three numbers on the Governor page and nothing else: Spool-up time, Startup time and Handover throttle. The centre of the slider is what the model had at your last backup: full left makes the two times twice as long and the handover 15 % lower, full right halves the times and raises the handover 15 %. Back up and the slider re-centres on today&rsquo;s numbers. The tick switches on PID spool-up in each bank&rsquo;s governor profile.">How hard should it start?</h2>
         <p class=sub>One slider sets the start-up numbers in the next card. <b>Gentle</b>: the head accelerates slowly and the tail has time to hold it. <b>Fierce</b>: up to speed quickly.</p>
         <div style="display:flex;align-items:center;gap:.6em;margin:.6em 0">
             <span style="font-size:.9em;white-space:nowrap">Very gentle</span>
@@ -370,12 +370,19 @@ function paintEditable() {
 // time only covers the crawl to 5 % head speed, so it simply follows.
 //   slider 0 (gentle) → spool-up 40 s, handover 10 %, startup 80 s
 //   slider 100 (fierce) → spool-up 10 s, handover 25 %, startup 20 s
+// The slider is RELATIVE to a baseline (Malcolm 2026-09-07): its centre is
+// the spool-up / start-up / handover the model had at the last backup
+// (or when this page first saw it). Left = up to twice as slow, right =
+// down to half; handover moves up to 15 % either way. A backup re-centres.
+let feelBase = { spool: 15, hand: 15, start: 30 };
 function feelToNumbers(v) {
-    const spool = Math.round(40 - 0.30 * v);
-    return { spool, hand: Math.round(10 + 0.15 * v), start: spool * 2 };
+    const k = Math.pow(2, (50 - v) / 50);
+    return { spool: Math.max(1, Math.round(feelBase.spool * k)),
+             hand:  Math.max(10, Math.min(50, Math.round(feelBase.hand + (v - 50) * 0.3))),
+             start: Math.max(1, Math.round(feelBase.start * k)) };
 }
 function numbersToFeel(spool) {
-    return Math.max(0, Math.min(100, Math.round((40 - spool) / 0.30 / 5) * 5));
+    return (feelBase.spool > 0 && spool > 0) ? LDRC.clamp5(50 - 50 * Math.log2(spool / feelBase.spool)) : 50;
 }
 function feelChanged() {
     const n = feelToNumbers(+document.getElementById('g_feel').value);
@@ -395,9 +402,10 @@ document.addEventListener('input', e => {
 });
 function paintFeelNote() {
     const spool = +document.getElementById('g_spool').value || 0;
+    const v = +document.getElementById('g_feel').value;
     document.getElementById('feelNote').textContent = spool
         ? 'Full head speed in about ' + spool + ' s. Spool-up ' + spool + ', handover ' + document.getElementById('g_hand').value +
-          ' %, startup ' + document.getElementById('g_start').value + ' — set below, saved with everything else.'
+          ' %, startup ' + document.getElementById('g_start').value + ' — set below, saved with everything else.' + LDRC.endHint(v, 0, 100)
         : '';
 }
 // Turn PID spool-up on in every bank (governor profile flag bit 4, MSP
@@ -467,8 +475,11 @@ async function load() {
         document.getElementById('g_fd').value     = bytes[25];
         document.getElementById('g_spdwn').value  = u16(26) / 10;
         document.getElementById('g_ttype').value  = bytes[28];
+        await LDRC.fetchState();
+        feelBase = LDRC.baseFor('start', null, { spool: u16(3) / 10, hand: bytes[19], start: u16(1) / 10 });
         document.getElementById('g_feel').value   = numbersToFeel(u16(3) / 10);
         paintFeelNote();
+        if (LDRC.baseFresh) document.getElementById('feelNote').textContent = LDRC.baseNotice();
         document.getElementById('g_idle').value   = bytes[31];
         document.getElementById('g_auto').value   = bytes[32];
         for (let i = 0; i < 9; i++) {

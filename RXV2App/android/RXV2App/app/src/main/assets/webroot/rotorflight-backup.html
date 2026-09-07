@@ -9,7 +9,7 @@
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Backup &amp; restore &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=181">
-<script src="/app.js?v=193" defer></script>
+<script src="/app.js?v=195" defer></script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -113,6 +113,9 @@ async function phoneSave() {
                 return;
             }
             lab.textContent = '✅ Backed up to the phone!';
+            // The backup is the new reference point: every slider's centre
+            // becomes today's numbers (Malcolm 2026-09-07). Values untouched.
+            if (LDRC.baseClear && LDRC.baseClear() > 0) lab.textContent += ' The sliders are re-centred on these numbers.';
             signOffTuneNudge();
             paintRestoreBtn();
         }
@@ -202,6 +205,7 @@ async function phoneRestore() {
                     ? p.failed.join(', ') : p.failures + ' item(s)')
                   + ' — open that page and check (or run the restore again)'
                 : restoreDoneText(p);
+            if (!p.error && !(p.failures > 0) && LDRC.baseClear) LDRC.baseClear();   // restored numbers = the new slider centres
         }
     }, 700);
 }

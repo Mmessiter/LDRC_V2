@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.586-search-spacing",
+      "url": "https://messiter.com/rxv2/release/v0.9.586/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.586/littlefs.bin",
+      "fs_md5": "7c1a9a5dc2316419ffc73674a2a85b6c",
+      "notes": "Find a setting: menu entries no longer run their title into their subtitle (\"Backup & restorethe whole setup\"). Otherwise as 0.9.585."
+    },
+    {
       "name": "RXV2-0.9.585-search-everywhere",
       "url": "https://messiter.com/rxv2/release/v0.9.585/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.585/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.575/littlefs.bin",
       "fs_md5": "058c9fa1e9206d036f23c9aba7243d14",
       "notes": "Governor page: a slider 'How hard should it start?' from very gentle to very fierce sets spool-up time, handover throttle and startup time together (gentle = full head speed in 40 s with handover 10 %, fierce = 10 s and 25 %), and saving can switch PID spool-up on in every bank so the torque is even all the way up. The numbers stay visible underneath. Malcolm's idea, 2026-09-06."
-    },
-    {
-      "name": "RXV2-0.9.574-noreload",
-      "url": "https://messiter.com/rxv2/release/v0.9.574/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.574/littlefs.bin",
-      "fs_md5": "2ba25c53ead8f1e360afcd7f4ec834b6",
-      "notes": "The PIDs, PID + and Rates pages lose their 'Reload from flight controller' button too (switching banks re-reads). The Governor (global) page keeps its one - it has no banks."
     }
   ]
 }

@@ -9,7 +9,7 @@
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rates &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=181">
-<script src="/app.js?v=193" defer></script>
+<script src="/app.js?v=195" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -57,7 +57,7 @@ table.dyn-yaw td input{width:6em;padding:.4em;font-size:.95em;text-align:right;
     </div>
 
     <div class=card id=feelCard style="display:none">
-        <h2 data-help="Moves the Rate column on the Rates page: roll and pitch from 120 to 500 degrees a second, yaw from 150 to 600. The Stick feel slider moves the Expo column on roll, pitch and yaw, from 70 (softest centre) to 0 (direct). Shape, collective and the dynamics are left alone.">How agile?</h2>
+        <h2 data-help="Agility moves the Rate column on the Rates page (roll, pitch and yaw together); Stick feel moves the Expo column. The centre of each slider is what this bank had at your last backup: Agility goes from half to double those rates, Stick feel from 35 softer to 35 more direct. Back up and the sliders re-centre on today&rsquo;s numbers. ROTORFLIGHT rate type only.">How agile?</h2>
         <p class=sub>Two sliders set the numbers in the table below; everything stays visible. <b>Agility</b> is the top rotation speed at full stick. <b>Stick feel</b> is how soft the response is around centre stick.</p>
         <div style="display:flex;align-items:center;gap:.6em;margin:.6em 0">
             <span style="font-size:.9em;white-space:nowrap">Docile</span>
@@ -224,8 +224,16 @@ let MODEL = modelForType(6);
 //   agility v → roll & pitch rate 120..500 °/s, yaw 150..600 °/s
 //   stick feel v → expo 70 (softest centre) .. 0 (direct), all three axes
 // Collective and Shape are left alone; the table stays editable.
-const feelRate = v => ({ rp: Math.round((120 + 3.8 * v) / 5) * 5, yaw: Math.round((150 + 4.5 * v) / 5) * 5 });
-const feelExpoOf = v => Math.round(70 - 0.7 * v);
+// Both sliders are RELATIVE to a baseline (Malcolm 2026-09-07): the centre
+// is this bank's rate and expo at the last backup (or when the page first
+// saw them). Agility: half to double the rates. Stick feel: expo 35 softer
+// to 35 more direct. A backup re-centres the sliders on today's numbers.
+let feelBase = { rp: 250, yaw: 300, expo: 40 };
+const r5 = x => Math.max(5, Math.round(x / 5) * 5);
+const feelRate = v => ({ rp: r5(LDRC.relScale(feelBase.rp, v)), yaw: r5(LDRC.relScale(feelBase.yaw, v)) });
+const feelExpoOf = v => Math.max(0, Math.min(100, Math.round(feelBase.expo - (v - 50) * 0.7)));
+const agilePos = rate => LDRC.relPos(feelBase.rp, rate);
+const expoPos  = expo => LDRC.clamp5(50 + (feelBase.expo - expo) / 0.7);
 function feelSet(axKey, ci, val) {
     const el = document.getElementById('r_' + axKey + '_' + ci);
     if (!el) return;
@@ -236,14 +244,14 @@ function feelAgile() {
     if (MODEL.curve !== 'rotorflight') return;
     const r = feelRate(+document.getElementById('f_agile').value);
     feelSet('Roll', 0, r.rp); feelSet('Pitch', 0, r.rp); feelSet('Yaw', 0, r.yaw);
-    document.getElementById('agileNote').textContent = 'Roll and pitch ' + r.rp + ' °/s, yaw ' + r.yaw + ' °/s at full stick.';
+    document.getElementById('agileNote').textContent = 'Roll and pitch ' + r.rp + ' °/s, yaw ' + r.yaw + ' °/s at full stick.' + LDRC.endHint(+document.getElementById('f_agile').value, 0, 100);
     LDRC.markDirty(); drawCurves();
 }
 function feelExpo() {
     if (MODEL.curve !== 'rotorflight') return;
     const e = feelExpoOf(+document.getElementById('f_expo').value);
     for (const k of ['Roll', 'Pitch', 'Yaw']) feelSet(k, 2, e);
-    document.getElementById('expoNote').textContent = 'Expo ' + e + ' on roll, pitch and yaw.';
+    document.getElementById('expoNote').textContent = 'Expo ' + e + ' on roll, pitch and yaw.' + LDRC.endHint(+document.getElementById('f_expo').value, 0, 100);
     LDRC.markDirty(); drawCurves();
 }
 // The other way round too (Malcolm 2026-09-06): a rate or expo typed into
@@ -253,9 +261,8 @@ document.addEventListener('input', e => {
     if (MODEL.curve !== 'rotorflight' || !/^r_(Roll|Pitch|Yaw)_[0-3]$/.test(id)) return;
     const rate = parseFloat(document.getElementById('r_Roll_0').value);
     const expo = parseFloat(document.getElementById('r_Roll_2').value);
-    const clamp = x => Math.max(0, Math.min(100, Math.round(x / 5) * 5));
-    if (!isNaN(rate)) document.getElementById('f_agile').value = clamp((rate - 120) / 3.8);
-    if (!isNaN(expo)) document.getElementById('f_expo').value  = clamp((70 - expo) / 0.7);
+    if (!isNaN(rate)) document.getElementById('f_agile').value = agilePos(rate);
+    if (!isNaN(expo)) document.getElementById('f_expo').value  = expoPos(expo);
     document.getElementById('agileNote').textContent = 'From the table: roll ' + document.getElementById('r_Roll_0').value + ', pitch ' + document.getElementById('r_Pitch_0').value + ', yaw ' + document.getElementById('r_Yaw_0').value + ' °/s.';
     document.getElementById('expoNote').textContent  = 'From the table: expo ' + document.getElementById('r_Roll_2').value + ' / ' + document.getElementById('r_Pitch_2').value + ' / ' + document.getElementById('r_Yaw_2').value + '.';
 });
@@ -267,11 +274,13 @@ function feelReflect() {
     card.style.display = on ? '' : 'none';
     if (!on) return;
     const rate = parseFloat((document.getElementById('r_Roll_0') || {}).value);
+    const yaw  = parseFloat((document.getElementById('r_Yaw_0') || {}).value);
     const expo = parseFloat((document.getElementById('r_Roll_2') || {}).value);
-    const clamp = x => Math.max(0, Math.min(100, Math.round(x / 5) * 5));
-    if (!isNaN(rate)) document.getElementById('f_agile').value = clamp((rate - 120) / 3.8);
-    if (!isNaN(expo)) document.getElementById('f_expo').value  = clamp((70 - expo) / 0.7);
-    document.getElementById('agileNote').textContent = '';
+    if (!isNaN(rate) && !isNaN(expo))
+        feelBase = LDRC.baseFor('rates', currentProfile, { rp: rate, yaw: isNaN(yaw) ? rate * 1.2 : yaw, expo });
+    if (!isNaN(rate)) document.getElementById('f_agile').value = agilePos(rate);
+    if (!isNaN(expo)) document.getElementById('f_expo').value  = expoPos(expo);
+    document.getElementById('agileNote').textContent = LDRC.baseNotice();
     document.getElementById('expoNote').textContent  = '';
 }
 function axScale(ax, col) { return ax.k === 'Collective' ? col.scC : col.sc; }
@@ -522,6 +531,7 @@ async function load() {
             document.getElementById('a_yddf').value = +(bytes[35] / 10).toFixed(1);   // stored deci-Hz → Hz (Configurator shows 6.0 for 60)
         }
         LDRC.clearStale();
+        await LDRC.fetchState();
         feelReflect();
         setStatus('good', (LDRC.replay ? '✓ Loaded from the phone (profile ' : '✓ Loaded from flight controller (profile ') + (currentProfile + 1) + ')');
         drawCurves();

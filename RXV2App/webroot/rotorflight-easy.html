@@ -9,7 +9,7 @@
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Easy tuning &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=181">
-<script src="/app.js?v=193" defer></script>
+<script src="/app.js?v=195" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;gap:.6em;
         padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -56,7 +56,7 @@
     </div>
 
     <div class=card>
-        <h2 data-help="Moves three numbers on the Governor page and nothing else: Spool-up time (40 s at very gentle, 10 s at very fierce), Handover throttle (10 % to 25 %) and Startup time (always twice the spool-up time). The tick switches on PID spool-up in each bank&rsquo;s governor profile.">How hard should it start?</h2>
+        <h2 data-help="Moves three numbers on the Governor page and nothing else: Spool-up time, Startup time and Handover throttle. The centre is what the model had at your last backup: full left doubles the two times and lowers the handover 15 %, full right halves the times and raises it 15 %. Back up and the slider re-centres on today&rsquo;s numbers. The tick switches on PID spool-up in every bank.">How hard should it start?</h2>
         <p class=sub>Press and hold a heading to see exactly which numbers move.</p>
         <div class=sl><span>Very gentle</span><input type=range id=s_start min=0 max=100 step=5 value=50 oninput="onStart()"><span>Very fierce</span></div>
         <p class=sub id=startNote></p>
@@ -65,7 +65,7 @@
     </div>
 
     <div class=card id=agileCard>
-        <h2 data-help="Moves the Rate column on the Rates page: roll and pitch from 120 to 500 degrees a second, yaw from 150 to 600. The Stick feel slider moves the Expo column on roll, pitch and yaw, from 70 (softest centre) to 0 (direct). Shape, collective and the dynamics are left alone.">How agile?</h2>
+        <h2 data-help="Agility moves the Rate column on the Rates page (roll, pitch and yaw together), Stick feel the Expo column. The centre of each slider is what this bank had at your last backup: half to double the rates; expo 35 softer to 35 more direct. Back up and they re-centre on today&rsquo;s numbers.">How agile?</h2>
         <div class=sl><span>Docile</span><input type=range id=s_agile min=0 max=100 step=5 value=40 oninput="onAgile()"><span>Acrobatic</span></div>
         <p class=sub id=agileNote></p>
         <div class=sl><span>Soft centre</span><input type=range id=s_expo min=0 max=100 step=5 value=50 oninput="onExpo()"><span>Direct</span></div>
@@ -75,7 +75,7 @@
     </div>
 
     <div class=card>
-        <h2 data-help="Cyclic multiplies roll and pitch P, I, D and F on the PIDs page by 0.7 (softest) to 1.3 (sharpest); Tail does the same to yaw. Boost and HSI offsets are left alone. The starting point is what was loaded, or last saved.">Feel</h2>
+        <h2 data-help="Cyclic multiplies roll and pitch P, I, D and F on the PIDs page by 0.7 (softest) to 1.3 (sharpest); Tail does the same to yaw. Boost and HSI offsets are left alone. The centre is what this bank had at your last backup, so the slider shows how far you have come since; back up and it re-centres on today&rsquo;s numbers.">Feel</h2>
         <p class=sub><b>Wobbles or shakes &rarr; softer. Sluggish, drifting or mushy &rarr; sharper.</b> Small steps, one flight each.</p>
         <div class=sl><span>Cyclic softer</span><input type=range id=s_cyc min=-30 max=30 step=5 value=0 oninput="onNudge('cyc')"><span>sharper</span></div>
         <p class=sub id=cycNote></p>
@@ -101,12 +101,18 @@ const P = i => i.toString(16).padStart(2, '0');
 const R = i => (0x80 | i).toString(16).padStart(2, '0');
 const clamp5 = x => Math.max(0, Math.min(100, Math.round(x / 5) * 5));
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-const startNums  = v => { const spool = Math.round(40 - 0.30 * v); return { spool, hand: Math.round(10 + 0.15 * v), start: spool * 2 }; };
-const startFeel  = spool => clamp5((40 - spool) / 0.30);
-const feelRate   = v => ({ rp: Math.round((120 + 3.8 * v) / 5) * 5, yaw: Math.round((150 + 4.5 * v) / 5) * 5 });
-const feelExpoOf = v => Math.round(70 - 0.7 * v);
-const agileFeel  = rate => clamp5((rate - 120) / 3.8);
-const expoFeel   = e => clamp5((70 - e) / 0.7);
+// Every slider is RELATIVE to a baseline kept on the phone (Malcolm
+// 2026-09-07): its centre is what the model had at the last backup (or
+// when a page first saw it). The same baselines as the Governor, Rates and
+// PIDs pages, so the two views always agree. A backup re-centres them all.
+let startBase = { spool: 15, hand: 15, start: 30 }, ratesBase = { rp: 250, yaw: 300, expo: 40 };
+const r5 = x => Math.max(5, Math.round(x / 5) * 5);
+const startNums  = v => { const k = Math.pow(2, (50 - v) / 50); return { spool: Math.max(1, Math.round(startBase.spool * k)), hand: clamp(Math.round(startBase.hand + (v - 50) * 0.3), 10, 50), start: Math.max(1, Math.round(startBase.start * k)) }; };
+const startFeel  = spool => (startBase.spool > 0 && spool > 0) ? clamp5(50 - 50 * Math.log2(spool / startBase.spool)) : 50;
+const feelRate   = v => ({ rp: r5(LDRC.relScale(ratesBase.rp, v)), yaw: r5(LDRC.relScale(ratesBase.yaw, v)) });
+const feelExpoOf = v => clamp(Math.round(ratesBase.expo - (v - 50) * 0.7), 0, 100);
+const agileFeel  = rate => LDRC.relPos(ratesBase.rp, rate);
+const expoFeel   = e => clamp5(50 + (ratesBase.expo - e) / 0.7);
 
 let bank = parseInt(localStorage.getItem('rfPidProfile') || '0');
 let govRaw = null, ratesRaw = null, pidRaw = null, pidBase = [];
@@ -136,40 +142,51 @@ async function selectBank(i) {
 // ---- slider handlers: notes + change flags, numbers written at Save ----
 function onStart() {
     const n = startNums(+$('s_start').value);
-    $('startNote').textContent = 'Full head speed in about ' + n.spool + ' s (spool-up ' + n.spool + ', handover ' + n.hand + ' %, startup ' + n.start + ').';
+    $('startNote').textContent = 'Full head speed in about ' + n.spool + ' s (spool-up ' + n.spool + ', handover ' + n.hand + ' %, startup ' + n.start + ').' + LDRC.endHint(+$('s_start').value, 0, 100);
     changed.gov = true; LDRC.markDirty();
 }
 function onAgile() {
     const r = feelRate(+$('s_agile').value);
-    $('agileNote').textContent = 'Roll and pitch ' + r.rp + ' °/s, yaw ' + r.yaw + ' °/s at full stick.';
+    $('agileNote').textContent = 'Roll and pitch ' + r.rp + ' °/s, yaw ' + r.yaw + ' °/s at full stick.' + LDRC.endHint(+$('s_agile').value, 0, 100);
     touched.agile = true; changed.rates = true; LDRC.markDirty();
 }
 function onExpo() {
-    $('expoNote').textContent = 'Expo ' + feelExpoOf(+$('s_expo').value) + ' on roll, pitch and yaw.';
+    $('expoNote').textContent = 'Expo ' + feelExpoOf(+$('s_expo').value) + ' on roll, pitch and yaw.' + LDRC.endHint(+$('s_expo').value, 0, 100);
     touched.expo = true; changed.rates = true; LDRC.markDirty();
 }
 const NAMES = ['roll P','roll I','roll D','roll F','pitch P','pitch I','pitch D','pitch F','yaw P','yaw I','yaw D','yaw F'];
+const PIDKEYS = ['r_P','r_I','r_D','r_F','p_P','p_I','p_D','p_F','y_P','y_I','y_D','y_F'];
+let pidBaseObj = {};
 function nudgedWords() {
     const fc = 1 + (+$('s_cyc').value) / 100, ft = 1 + (+$('s_tail').value) / 100;
-    return pidBase.map((b, i) => i < 12 ? clamp(Math.round(b * (i < 8 ? fc : ft)), 0, 1000) : b);
+    return pidBase.map((b, i) => i < 12 ? clamp(Math.round((pidBaseObj[PIDKEYS[i]] || b) * (i < 8 ? fc : ft)), 0, 1000) : b);
+}
+// Where the bank's gains sit against the base: the sliders' resting places.
+function nudgePos(which) {
+    const idx = which === 'cyc' ? [0, 1, 2, 3, 4, 5, 6, 7] : [8, 9, 10, 11];
+    let sum = 0, n = 0;
+    for (const i of idx) { const b = pidBaseObj[PIDKEYS[i]] || 0; if (b > 0) { sum += pidBase[i] / b; n++; } }
+    return n ? clamp(Math.round((sum / n - 1) * 100 / 5) * 5, -30, 30) : 0;
 }
 function onNudge(which) {
     const pct = +$('s_' + which).value, w = nudgedWords();
     const idx = which === 'cyc' ? [0, 2, 4, 6] : [8, 10];
-    $(which + 'Note').textContent = pct === 0 ? 'Unchanged.' :
+    $(which + 'Note').textContent = pct === 0 ? 'Back at the last backup\u2019s numbers.' :
         (which === 'cyc' ? 'Cyclic' : 'Tail') + ' gains ' + (pct > 0 ? '+' : '') + pct + ' %: ' +
-        idx.map(i => NAMES[i] + ' ' + pidBase[i] + '→' + w[i]).join(', ') + ' (I and F likewise).';
+        idx.map(i => NAMES[i] + ' ' + (pidBaseObj[PIDKEYS[i]] || pidBase[i]) + '→' + w[i]).join(', ') + ' (I and F likewise).' + LDRC.endHint(pct, -30, 30);
     changed.pid = true; LDRC.markDirty();
 }
 
 // ---- where the FC is now → sliders ----
 function reflect() {
+    startBase = LDRC.baseFor('start', null, { spool: u16(govRaw, 3) / 10, hand: govRaw[19], start: u16(govRaw, 1) / 10 });
     $('s_start').value = startFeel(u16(govRaw, 3) / 10);
     $('startNote').textContent = '';
     const rf = ratesRaw[0] === 6;
     for (const id of ['s_agile', 's_expo']) $(id).disabled = !rf;
     $('agileOff').style.display = rf ? 'none' : '';
     if (rf) {
+        ratesBase = LDRC.baseFor('rates', bank, { rp: ratesRaw[1] * 5, yaw: ratesRaw[13] * 5, expo: ratesRaw[2] });
         $('s_agile').value = agileFeel(ratesRaw[1] * 5);
         $('s_expo').value  = expoFeel(ratesRaw[2]);
     } else {
@@ -177,7 +194,10 @@ function reflect() {
     }
     $('agileNote').textContent = ''; $('expoNote').textContent = '';
     pidBase = []; for (let i = 0; i < 17; i++) pidBase.push(u16(pidRaw, i * 2));
-    $('s_cyc').value = 0; $('s_tail').value = 0; $('cycNote').textContent = ''; $('tailNote').textContent = '';
+    const cur = {}; PIDKEYS.forEach((k, i) => cur[k] = pidBase[i]);
+    pidBaseObj = LDRC.baseFor('pid', bank, cur);
+    $('s_cyc').value = nudgePos('cyc'); $('s_tail').value = nudgePos('tail'); $('cycNote').textContent = ''; $('tailNote').textContent = '';
+    $('startNote').textContent = LDRC.baseNotice();
     changed = { gov: false, rates: false, pid: false };
     touched = { agile: false, expo: false };
 }

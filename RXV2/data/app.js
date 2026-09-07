@@ -496,6 +496,35 @@
     // first paint, and never await it on DOMContentLoaded (a stalled
     // /api/state.json was queuing nav requests on the chip's single-client
     // WebServer for the iOS keep-alive socket).
+    // Slider baselines (Malcolm 2026-09-07): a slider's CENTRE means "the
+    // numbers at your last backup". Models vary hugely, so an absolute
+    // scale soon parks a slider at the end of its travel; a backup says
+    // "these are good now" and every slider re-centres on them while the
+    // numbers themselves stay put. Baselines live on the phone per
+    // receiver (its name) and per bank; a page stores today's numbers as
+    // the baseline the first time it sees a slider with none.
+    LDRC.baseRx  = () => (LDRC.state && LDRC.state.info && LDRC.state.info.name) || 'rx';
+    LDRC.baseKey = (slider, bank) => 'ldrc.base.' + LDRC.baseRx() + '.' + slider + (bank === undefined || bank === null ? '' : '.' + bank);
+    LDRC.baseGet = (slider, bank) => { try { const v = localStorage.getItem(LDRC.baseKey(slider, bank)); return v ? JSON.parse(v) : null; } catch (e) { return null; } };
+    LDRC.baseSet = (slider, bank, obj) => { try { localStorage.setItem(LDRC.baseKey(slider, bank), JSON.stringify(obj)); } catch (e) {} };
+    LDRC.baseFresh = false;      // a slider was (re-)centred on this page load - say so, or the pilot wonders where it went (Malcolm 2026-09-07)
+    LDRC.baseFor = (slider, bank, current) => { let b = LDRC.baseGet(slider, bank); if (!b) { LDRC.baseSet(slider, bank, current); b = current; LDRC.baseFresh = true; } return b; };
+    LDRC.baseNotice = () => LDRC.baseFresh ? 'Slider centred on today\u2019s numbers (a backup, restore or bank copy resets the centre). The numbers themselves are unchanged.' : '';
+    LDRC.baseClear = () => {
+        const pre = 'ldrc.base.' + LDRC.baseRx() + '.';
+        try {
+            const ks = [];
+            for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith(pre)) ks.push(k); }
+            ks.forEach(k => localStorage.removeItem(k));
+            return ks.length;
+        } catch (e) { return 0; }
+    };
+    // Relative slider maths: 50 = the baseline; the ends are half and double.
+    LDRC.relScale = (base, v) => base * Math.pow(2, (v - 50) / 50);
+    LDRC.relPos   = (base, val) => (base > 0 && val > 0) ? Math.max(0, Math.min(100, Math.round((50 + 50 * Math.log2(val / base)) / 5) * 5)) : 50;
+    LDRC.clamp5   = x => Math.max(0, Math.min(100, Math.round(x / 5) * 5));
+    LDRC.endHint  = (v, lo, hi) => (v <= lo || v >= hi) ? ' At the end of its travel: back up to the phone and every slider re-centres on today\u2019s numbers.' : '';
+
     // "Find a setting" (Malcolm 2026-09-07): a result link carries
     // ?fid=<input id>&find=<label text>. Light that row up on arrival so a
     // newcomer sees WHERE the setting is. Pages that draw their rows in
