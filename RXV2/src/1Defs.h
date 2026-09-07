@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.583-find-a-setting";
+constexpr const char* FW_VERSION = "RXV2-0.9.584-search-tidy";
 
 //*********************************************************************
 //  Auto-update manifest URLs

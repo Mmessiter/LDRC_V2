@@ -137,7 +137,7 @@ def syn(text):
 entries = []
 for f in sorted(glob.glob(os.path.join(ROOT, '*.html'))):
     name = os.path.basename(f)
-    if name in SKIP: continue
+    if name in SKIP or name.startswith('_'): continue      # _head.html etc. are includes, not pages
     path = '/' if name == 'index.html' else '/' + name[:-5]
     p = Page(path)
     try: p.feed(open(f, encoding='utf-8').read())
