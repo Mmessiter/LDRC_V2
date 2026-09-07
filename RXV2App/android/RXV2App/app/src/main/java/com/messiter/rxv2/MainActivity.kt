@@ -1063,7 +1063,9 @@ class MainActivity : AppCompatActivity() {
             var failures = 0      // MSP reads that never answered (after one retry)
             fun reqCoded(p: String): Pair<Int, ByteArray?> {   // followFetch records automatically
                 val r = bleSyncCoded(p)
-                snapDone++
+                // Progress counts PLANNED items, not requests: bank checks,
+                // selects and retries pushed "done" past "total" (Malcolm
+                // 2026-09-07: "97/90 is beyond 100%").
                 Thread.sleep(pace)
                 return r
             }
@@ -1075,14 +1077,16 @@ class MainActivity : AppCompatActivity() {
             // a failure: the item is dropped from the recording so the
             // restore point cannot carry a stale copy of it either.
             fun mspRead(p: String, optional: Boolean = false) {
-                val first = reqCoded(p)
-                if (first.second != null) return
-                if (optional && first.first == 502) { SessionCache.forget(p); return }
-                Thread.sleep(500)
-                val second = reqCoded(p)
-                if (second.second != null) return
-                if (optional && second.first == 502) { SessionCache.forget(p); return }
-                failures++
+                try {
+                    val first = reqCoded(p)
+                    if (first.second != null) return
+                    if (optional && first.first == 502) { SessionCache.forget(p); return }
+                    Thread.sleep(500)
+                    val second = reqCoded(p)
+                    if (second.second != null) return
+                    if (optional && second.first == 502) { SessionCache.forget(p); return }
+                    failures++
+                } finally { snapDone++ }                 // one planned item, however many tries
             }
             fun selectBank(byte: Int) {
                 val hex = "%02X".format(byte)
@@ -1091,7 +1095,7 @@ class MainActivity : AppCompatActivity() {
             }
             // The FC's banks now, from MSP_STATUS bytes 23/25 (null = no answer).
             fun fcBanks(): Pair<Int, Int>? = req("/api/msp?fn=101")?.let { SessionCache.fcBanks(String(it)) }
-            snapTotal = 3
+            snapTotal = 4                                // state, flights, events x2
             var txLive = false
             req("/api/state.json")?.let { body ->
                 runCatching {
@@ -1102,6 +1106,7 @@ class MainActivity : AppCompatActivity() {
                     txLive = lastPkt in 0..2999
                 }
             }
+            snapDone++
             val flightPaths = mutableListOf<String>()
             req("/api/flights.json")?.let { body ->
                 runCatching {
@@ -1112,8 +1117,9 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             }
-            req("/api/events.json")
-            req("/api/events-prev.json")   // previous boot's persisted tail
+            snapDone++
+            req("/api/events.json"); snapDone++
+            req("/api/events-prev.json"); snapDone++   // previous boot's persisted tail
             // Rotorflight reads — all 4 PID-side banks + all 4 rate banks,
             // ONLY with the transmitter off (never switch a bank under a
             // live TX). Current banks from MSP_STATUS fn=101 bytes 23/25 —
@@ -1157,8 +1163,10 @@ class MainActivity : AppCompatActivity() {
                     snapError = "could not read the flight controller's bank (MSP 101) — is it powered and connected?"
                 } else {
                     val origPid = orig.first; val origRate = orig.second
-                    // bankless reads + mixer inputs + RPM notch axes + pid sweep + rate sweep + restores
-                    snapTotal += SessionCache.banklessReadFns.size + 4 + 3 + 4 * 6 + 4 * 3 + 2
+                    // Exactly the planned reads: bankless + 4 mixer inputs + 3 RPM
+                    // notch axes + 4 reads per PID bank + 1 per rate bank. Bank
+                    // selects, MSP 101 checks and TX checks are not items.
+                    snapTotal += SessionCache.banklessReadFns.size + 4 + 3 + 4 * 4 + 4 * 1
                     // Every bankless setup block (Malcolm 2026-09-04: "cover
                     // all items") — governor global, mixer, servos, modes,
                     // channel map, motor & gear, battery & meters, features,
@@ -1212,7 +1220,8 @@ class MainActivity : AppCompatActivity() {
                 if (!snapOk) snapError = "the backup file could not be written on the phone"
             }
             snapTotal += flightPaths.size
-            for (p in flightPaths) req(p)
+            for (p in flightPaths) { req(p); snapDone++ }
+            if (sweepOK && snapDone < snapTotal) snapDone = snapTotal   // every planned item was attempted
             SessionCache.saveIfDirty()
             snapPhase = "done"
             prefetchRunning = false

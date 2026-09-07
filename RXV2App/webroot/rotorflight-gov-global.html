@@ -48,7 +48,7 @@ input:disabled,select:disabled{background:#eee;color:#999}
 
     <div class=card>
         <h2>Mode &amp; throttle</h2>
-        <div class=fldRow><label data-help="Which governor runs. OFF = your throttle curve only. LIMIT = throttle passed through with ramps and limits only. DIRECT = governed by calculation, for models with NO usable RPM signal. ELECTRIC = the full closed-loop governor for electric helis - holds the per-bank head speed (the right choice here). NITRO = the same for engines.">Governor mode</label>
+        <div class=fldRow><label data-help="Which governor runs. OFF = your throttle goes straight through. LIMIT = throttle passed through with only the min/max limits. DIRECT = throttle passed through with the spool-up, speed-change and spool-down ramps but NO head-speed control - for an ESC that governs by itself (Scorpion or Hobbywing governor modes) or a plain throttle curve; the per-bank head speeds are then not used. ELECTRIC = the full closed-loop governor for electric helis - holds each bank&#39;s head speed (the right choice with the ESC in external-governor mode). NITRO = the same for engines.">Governor mode</label>
             <select id=g_mode>
                 <option value=0>0 — OFF</option>
                 <option value=1>1 — LIMIT</option>

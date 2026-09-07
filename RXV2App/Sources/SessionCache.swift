@@ -969,7 +969,7 @@ final class SessionPrefetcher {
         // morning's data"); recording is idempotent, so repeats are free.
         guard !running else { return }
         running = true
-        phase = "running"; done = 0; total = 3; ok = false; error = ""
+        phase = "running"; done = 0; total = 4; ok = false; error = ""   // state, flights, events x2
         let pace = fast ? 0.15 : 0.4
         var failures = 0      // MSP reads that never answered (after one retry)
 
@@ -1002,7 +1002,9 @@ final class SessionPrefetcher {
                 }
             }
             _ = sem.wait(timeout: .now() + 20)
-            done += 1
+            // Progress counts PLANNED items (below), not requests: the bank
+            // checks, selects and retries used to push "done" past "total"
+            // (Malcolm 2026-09-07: "97/90 is beyond 100%").
             Thread.sleep(forTimeInterval: pace)
             return (code, body)
         }
@@ -1014,6 +1016,7 @@ final class SessionPrefetcher {
         // failure: the item is dropped from the recording so the restore
         // point cannot carry a stale copy of it either.
         func mspRead(_ p: String, optional: Bool = false) {
+            defer { done += 1 }                  // one planned item, however many tries
             let first = reqCoded(p)
             if first.body != nil { return }
             if optional && first.code == 502 { SessionCache.shared.forget(pathAndQuery: p); return }
@@ -1045,14 +1048,16 @@ final class SessionPrefetcher {
                 let lastPkt = ((obj["rf"] as? [String: Any])?["last_pkt_ms"] as? NSNumber)?.int64Value ?? -1
                 txLive = lastPkt >= 0 && lastPkt < 3000
             }
+            done += 1
             if let fl = req("/api/flights.json"),
                let arr = (try? JSONSerialization.jsonObject(with: fl)) as? [[String: Any]] {
                 for f in arr {
                     if let i = f["i"] as? Int, i > 0 { flightPaths.append("/api/flightlog.json?f=\(i)") }
                 }
             }
-            _ = req("/api/events.json")
-            _ = req("/api/events-prev.json")   // previous boot's persisted tail
+            done += 1
+            _ = req("/api/events.json"); done += 1
+            _ = req("/api/events-prev.json"); done += 1   // previous boot's persisted tail
             // Rotorflight reads — banked (Malcolm 2026-08-04: each of the 4
             // PID-side banks and 4 rate banks is its own set of values).
             // ONLY with the transmitter off: never switch a bank under a
@@ -1092,8 +1097,10 @@ final class SessionPrefetcher {
             } else if !pageMspQuiet() {
                 error = "a Rotorflight page was busy reading — back up again in a moment"
             } else if let orig = fcBanks() {
-                // bankless reads + mixer inputs + RPM notch axes + pid sweep + rate sweep + restores
-                total += SessionCache.banklessReadFns.count + 4 + 3 + 4 * 6 + 4 * 3 + 2
+                // Exactly the planned reads: bankless + 4 mixer inputs + 3 RPM
+                // notch axes + 4 reads per PID bank + 1 per rate bank. Bank
+                // selects, MSP 101 checks and TX checks are not items.
+                total += SessionCache.banklessReadFns.count + 4 + 3 + 4 * 4 + 4 * 1
                 // Every bankless setup block (Malcolm 2026-09-04: "cover all
                 // items") — governor global, mixer, servos, modes, channel
                 // map, motor & gear, battery & meters, features, alignment,
@@ -1157,7 +1164,8 @@ final class SessionPrefetcher {
                 if !ok { error = "the backup file could not be written on the phone" }
             }
             total += flightPaths.count
-            for p in flightPaths { _ = req(p) }
+            for p in flightPaths { _ = req(p); done += 1 }
+            if sweepOK && done < total { done = total }   // every planned item was attempted
             running = false
             phase = "done"
         }
