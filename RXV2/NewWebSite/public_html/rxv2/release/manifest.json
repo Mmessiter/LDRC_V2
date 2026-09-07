@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.584-search-tidy",
+      "url": "https://messiter.com/rxv2/release/v0.9.584/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.584/littlefs.bin",
+      "fs_md5": "fe0d88e7b78977fd226de05610a4d626",
+      "notes": "Find a setting: a stray '_head' entry (an include file, not a page) removed from the index. Otherwise as 0.9.583."
+    },
+    {
       "name": "RXV2-0.9.583-find-a-setting",
       "url": "https://messiter.com/rxv2/release/v0.9.583/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.583/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.573/littlefs.bin",
       "fs_md5": "10b38769788ad5dc0416203302597568",
       "notes": "Governor profile page: the 'Reload from flight controller' button is gone (it sat under the Spool-up card and got hit by mistake); switching banks re-reads the bank anyway."
-    },
-    {
-      "name": "RXV2-0.9.572-arm-aux6",
-      "url": "https://messiter.com/rxv2/release/v0.9.572/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.572/littlefs.bin",
-      "fs_md5": "d9999153231a6847b82fabec9f2f903c",
-      "notes": "Arming channel learned from Rotorflight is now right: Rotorflight has five control channels, so its AUX1 is channel 6, not 5. Before this the receiver could pick the throttle channel as the arm switch, so 'armed' meant 'motor on' - radios went off with the motor and the landing wiggle came at motor-off while still armed. Check Receiver settings if you set the arming channel by hand."
     }
   ]
 }

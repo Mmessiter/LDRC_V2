@@ -572,6 +572,19 @@
         // page itself — so returning to the menu is one tap, no scrolling to the
         // bottom. It's a normal <a href="/">, so the click interceptor below
         // gives it the same instant-nav + unsaved-edit guard as any link.
+        // 🔍 Find a setting, beside "?" on EVERY page but its own (Malcolm
+        // 2026-09-07: "search becomes available everywhere"). A plain link,
+        // so the click interceptor gives it instant nav + the unsaved guard.
+        if (!/^\/search(\.html)?$/.test(location.pathname) && document.querySelector('.helpBtn')) {
+            const find = document.createElement('a');
+            find.href = '/search';
+            find.className = 'searchBtn';
+            find.setAttribute('aria-label', 'Find a setting');
+            find.title = 'Find a setting';
+            find.textContent = '🔍';
+            document.body.appendChild(find);
+            document.body.classList.add('hasSearch');
+        }
         if (location.pathname !== '/' && location.pathname !== '/index.html') {
             const home = document.createElement('a');
             home.href = '/';

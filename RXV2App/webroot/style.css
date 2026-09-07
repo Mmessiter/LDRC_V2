@@ -88,6 +88,10 @@ h1{max-width:calc(100% - 4.4em);overflow-wrap:anywhere}
    and mid-word-wrapped "Switches", Malcolm 2026-08-31.) */
 body.hasBack h1{margin-top:5.6rem;max-width:calc(100% - 1rem)}
 body.hasBack .subtitle{max-width:calc(100% - 1rem)}
+/* Two circles on the right now (🔍 and ?), so hub pages get the same
+   below-the-row title as the back-arrow pages: nothing to squeeze past. */
+body.hasSearch h1{margin-top:5.6rem;max-width:calc(100% - 1rem)}
+body.hasSearch .subtitle{max-width:calc(100% - 1rem)}
 .subtitle{text-align:center;color:#4a6577;margin:0 auto 1.8em;font-size:.9em;
     background:#f2f6f8;border-radius:10px;padding:.35em .8em;width:fit-content;
     max-width:calc(100% - 6.4em)}
@@ -139,6 +143,20 @@ body.hasBack .subtitle{max-width:calc(100% - 1rem)}
     z-index:50;box-shadow:0 2px 6px rgba(0,0,0,.15);padding:0;
 }
 .helpBtn:active{transform:scale(.95)}
+/* Fixed 🔍 "Find a setting" button beside "?" on every page (Malcolm
+   2026-09-07: "search becomes available everywhere" - the menu buttons went). */
+.searchBtn{
+    position:fixed;
+    top:max(0.7em, env(safe-area-inset-top, 0.7em));
+    right:calc(max(0.7em, env(safe-area-inset-right, 0.7em)) + 3.5em);
+    width:3em;height:3em;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:#f4f7f9;
+    font-size:1.55em;line-height:1;text-decoration:none;
+    border:1.5px solid rgba(125,158,176,.5);cursor:pointer;
+    z-index:50;box-shadow:0 2px 6px rgba(0,0,0,.15);padding:0;
+}
+.searchBtn:active{transform:scale(.95)}
 /* Fixed "front screen" (home) button — mirrors the help button, top-LEFT.
    Injected by app.js on every page except the home page itself, so returning
    to the menu never needs a scroll to the bottom. */
