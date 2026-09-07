@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.581-whole-seconds";
+constexpr const char* FW_VERSION = "RXV2-0.9.582-backup-banks";
 
 //*********************************************************************
 //  Auto-update manifest URLs

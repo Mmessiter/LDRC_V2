@@ -1001,6 +1001,20 @@ inline void bankBeforeClientRequest(uint8_t fn, const uint8_t* data, uint8_t len
 inline void bankAfterClientRequest(uint8_t fn, const uint8_t* data, uint8_t len, bool ok) {
     if (!ok) return;
     if (fn == MSP_SELECT_SETTING && len >= 1) bankNoteSelect(data[0], true);
+    // A phone that asks MSP_STATUS now BELIEVES the banks it was just told.
+    // Until 0.9.582 the receiver kept the bank of the phone's LAST select
+    // (10-minute TTL) and re-selected it before the next bank-side read -
+    // so a backup sweep that started on the FC's current bank without
+    // selecting it (the app skips a select it thinks is redundant) had the
+    // FC moved under it to a bank left by an earlier, aborted sweep, saw
+    // the move in its own MSP 101 check, and gave up with "the flight
+    // controller changed bank mid-backup" - every time, at home, TX off
+    // (Malcolm 2026-09-07 11:50; the first abort was a Mac script reading
+    // the banks while the app auto-backed up at connection - my fault).
+    else if (fn == MSP_STATUS) {
+        banks.clientPid  = banks.fcPid;
+        banks.clientRate = banks.fcRate;
+    }
     else if (fn == MSP_EEPROM_WRITE) {
         // The banks selected at the save are now the boot banks. And the
         // save re-loads the config (config.c readEEPROM → activateConfig →
