@@ -90,7 +90,11 @@ struct RootView: View {
                     }
             default:
                 ScannerView(demoMode: $demoMode, reviewMode: $reviewMode)
-                    .onAppear { sessionStarted = false }
+                    .onAppear {
+                        sessionStarted = false
+                        // "--demo" launch argument: straight into demo mode (website screenshots)
+                        if ProcessInfo.processInfo.arguments.contains("--demo") { demoMode = true }
+                    }
             }
         }
         // No receiver? Let anyone play: canned data from a real receiver,

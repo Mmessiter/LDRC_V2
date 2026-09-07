@@ -60,7 +60,12 @@ struct WebScreen: UIViewRepresentable {
         web.isOpaque = false
         web.scrollView.contentInsetAdjustmentBehavior = .automatic
         context.coordinator.attach(web)
-        web.load(URLRequest(url: URL(string: "ble://rx/")!))
+        // Launch argument "--page /some-page" opens straight onto that page
+        // (screenshots for the website, 2026-09-07); default is the front page.
+        var path = "/"
+        let args = ProcessInfo.processInfo.arguments
+        if let i = args.firstIndex(of: "--page"), i + 1 < args.count, args[i + 1].hasPrefix("/") { path = args[i + 1] }
+        web.load(URLRequest(url: URL(string: "ble://rx" + path)!))
         return web
     }
 
