@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.582-backup-banks";
+constexpr const char* FW_VERSION = "RXV2-0.9.583-find-a-setting";
 
 //*********************************************************************
 //  Auto-update manifest URLs

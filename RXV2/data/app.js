@@ -496,6 +496,37 @@
     // first paint, and never await it on DOMContentLoaded (a stalled
     // /api/state.json was queuing nav requests on the chip's single-client
     // WebServer for the iOS keep-alive socket).
+    // "Find a setting" (Malcolm 2026-09-07): a result link carries
+    // ?fid=<input id>&find=<label text>. Light that row up on arrival so a
+    // newcomer sees WHERE the setting is. Pages that draw their rows in
+    // JavaScript get a few retries. Nothing is focused - no keyboard pops.
+    LDRC.findOnArrival = function () {
+        let sp;
+        try { sp = new URLSearchParams(location.search); } catch (e) { return; }
+        const fid = sp.get('fid'), find = (sp.get('find') || '').trim().toLowerCase();
+        if (!fid && !find) return;
+        const norm = t => (t || '').replace(/\s+/g, ' ').trim().toLowerCase();
+        const locate = () => {
+            let el = fid ? document.getElementById(fid) : null;
+            if (!el && find) {
+                const cands = document.querySelectorAll('label,b[data-help],h2,h3,th,legend,.lab,a.btn,button.btn');
+                for (const c of cands) { if (norm(c.textContent).startsWith(find)) { el = c; break; } }
+                if (!el) for (const c of cands) { if (norm(c.textContent).includes(find)) { el = c; break; } }
+            }
+            return el;
+        };
+        const tries = [0, 300, 900, 1800, 3200];
+        const attempt = i => {
+            const el = locate();
+            if (!el) { if (i + 1 < tries.length) setTimeout(() => attempt(i + 1), tries[i + 1] - tries[i]); return; }
+            const row = el.closest('.fldRow,.fRow,tr,label,h2,h3,.card,a.btn,button.btn') || el;
+            try { row.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) { row.scrollIntoView(); }
+            row.classList.add('ldrc-found');
+            setTimeout(() => row.classList.remove('ldrc-found'), 6000);
+        };
+        attempt(0);
+    };
+
     document.addEventListener('DOMContentLoaded', () => {
         // Teach the receiver the time from EVERY page (it has no clock and
         // reboots wipe it). It was only the front + flight pages — sit on the
@@ -503,6 +534,7 @@
         // (Malcolm, 2026-08-02). Fire-and-forget; the RX ignores duplicates.
         LDRC.teachTime();
         LDRC.mountFooter();
+        LDRC.findOnArrival();
         // Review mode? Buttons tell the truth: edits go to / come from the
         // PHONE (Malcolm 2026-08-04). Only the Rotorflight tuning pages
         // capture edits in review — other pages' saves genuinely fail
@@ -571,6 +603,7 @@
                 '/rotorflight-modes': '/rotorflight',
                 '/rotorflight-alacarte': '/rotorflight',
                 '/rotorflight-easy': '/rotorflight-alacarte',
+                '/search': '/',
                 '/rotorflight-backup': '/rotorflight',
                 '/rotorflight-servos': '/rotorflight',
                 '/rotorflight-rescue': '/rotorflight',

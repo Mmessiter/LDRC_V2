@@ -503,6 +503,16 @@ inline void handleRotorflightEasy() {
     if (serveLittleFsFile("/rotorflight-easy.html", "text/html")) return;
     server.send(503, "text/plain", "/rotorflight-easy.html missing — uploadfs the data/ folder");
 }
+// "Find a setting" (Malcolm 2026-09-07): the page and its index, built from
+// the pages by dev/build_search_index.py.
+inline void handleSearchPage() {
+    if (serveLittleFsFile("/search.html", "text/html")) return;
+    server.send(503, "text/plain", "/search.html missing — uploadfs the data/ folder");
+}
+inline void handleSearchJs() {
+    if (serveLittleFsFile("/search.js", "application/javascript")) return;
+    server.send(503, "text/plain", "/search.js missing — run dev/build_search_index.py and uploadfs");
+}
 
 inline void handleRotorflightCopyBank() {
     if (serveLittleFsFile("/rotorflight-copybank.html", "text/html")) return;
@@ -3093,6 +3103,8 @@ inline void registerWebRoutes() {
     server.on("/rotorflight-backup",    handleRotorflightBackupPage);
     server.on("/rotorflight-copybank",  handleRotorflightCopyBank);
     server.on("/rotorflight-easy",      handleRotorflightEasy);
+    server.on("/search",                handleSearchPage);
+    server.on("/search.js",             handleSearchJs);
     server.on("/rotorflight-pidplus", handleRotorflightPidPlus);
     server.on("/rotorflight-rates",        handleRotorflightRates);
     server.on("/rotorflight-gov-profile",  handleRotorflightGovProfile);

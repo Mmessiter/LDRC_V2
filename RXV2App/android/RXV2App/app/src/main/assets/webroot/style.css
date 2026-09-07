@@ -364,3 +364,8 @@ body.stale-values td input{
 }
 .fabBar .btn{flex:1;margin:0;padding:.85em .6em;font-size:1.02em;justify-content:center}
 body.hasFab{padding-bottom:8em}
+
+
+/* "Find a setting" arrival glow (2026-09-07): the row the search sent you to. */
+@keyframes ldrcFound{0%{box-shadow:0 0 0 0 rgba(255,196,0,.0);background-color:#fff3b0}60%{box-shadow:0 0 0 6px rgba(255,196,0,.55);background-color:#ffe27a}100%{box-shadow:0 0 0 0 rgba(255,196,0,0)}}
+.ldrc-found{animation:ldrcFound 1.4s ease-in-out 3;border-radius:8px}
