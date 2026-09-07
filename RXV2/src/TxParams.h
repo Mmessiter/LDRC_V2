@@ -269,6 +269,24 @@ inline void buildGovProfileFromMsp(const uint8_t* p, uint16_t len) {
     govProfileValid = true;
 }
 
+// The V1 transmitter shows the governor timings as plain integers (Nextion
+// n17-n22, no decimal point). Rotorflight stores them in TENTHS of a second,
+// so "4" on the transmitter meant 0.4 s (Malcolm 2026-09-07, after a whole
+// morning of "the tracking time makes no difference": make it whole seconds).
+// From 0.9.581 the transmitter sees and edits WHOLE SECONDS: tenths → seconds
+// on the way to it, seconds → tenths on the way back. A value the FC holds in
+// half seconds (2.5 s) becomes the nearest whole second when saved from there.
+inline void govAckSecs(uint8_t* dst, uint8_t i, const uint8_t* p, uint8_t j) {
+    const uint16_t tenths = (uint16_t)(p[j] | (p[j + 1] << 8));
+    const uint16_t secs   = (uint16_t)((tenths + 5) / 10);
+    dst[i] = (uint8_t)secs; dst[i + 1] = (uint8_t)(secs >> 8);
+}
+inline void govScratchTenths(uint8_t* dst, uint8_t i, const uint8_t* w, uint8_t j) {
+    uint32_t tenths = (uint32_t)(w[j] | (w[j + 1] << 8)) * 10;
+    if (tenths > 65535) tenths = 65535;
+    dst[i] = (uint8_t)tenths; dst[i + 1] = (uint8_t)(tenths >> 8);
+}
+
 // MSP_GOVERNOR_CONFIG → govAck[18..41] (V1 order). We only read up to byte 32
 // (Auto_Throttle); the bypass curve at 33+ is preserved on write but not read,
 // so accept any response that reaches byte 32 — RF 2.3 may report a different
@@ -291,13 +309,13 @@ inline void buildGovConfigFromMsp(const uint8_t* p, uint16_t len) {
     }
     govAck[18] = p[0];                          // Gov_Mode
     govAck[19] = p[19];                         // Handover_Throttle
-    govAck[20] = p[1];  govAck[21] = p[2];      // Startup
-    govAck[22] = p[3];  govAck[23] = p[4];      // Spoolup
-    govAck[24] = p[26]; govAck[25] = p[27];     // Spooldown
-    govAck[26] = p[5];  govAck[27] = p[6];      // Tracking
-    govAck[28] = p[7];  govAck[29] = p[8];      // Recovery
-    govAck[30] = p[9];  govAck[31] = p[10];     // Throttle_Hold_Timeout
-    govAck[32] = p[13]; govAck[33] = p[14];     // Autorotation_Timeout
+    govAckSecs(govAck, 20, p, 1);               // Startup            (whole seconds to the TX)
+    govAckSecs(govAck, 22, p, 3);               // Spoolup
+    govAckSecs(govAck, 24, p, 26);              // Spooldown
+    govAckSecs(govAck, 26, p, 5);               // Tracking
+    govAckSecs(govAck, 28, p, 7);               // Recovery
+    govAckSecs(govAck, 30, p, 9);               // Throttle_Hold_Timeout
+    govAckSecs(govAck, 32, p, 13);              // Autorotation_Timeout
     govAck[34] = p[21];                         // Rpm_Filter
     govAck[35] = p[20];                         // Pwr_Filter
     govAck[36] = p[25];                         // D_Filter
@@ -576,19 +594,19 @@ inline bool applyWriteToScratch() {
     } else if (pmWriteKind == WK_GOV_CONFIG) {
         if (pmScratchLen < 33) return false;          // govWrite[18..41] → MSP config order (rest preserved; write keeps the FC's own length)
         pmScratch[0]  = govWrite[18];           // Gov_Mode
-        pmScratch[1]  = govWrite[20]; pmScratch[2]  = govWrite[21]; // Startup
-        pmScratch[3]  = govWrite[22]; pmScratch[4]  = govWrite[23]; // Spoolup
-        pmScratch[5]  = govWrite[26]; pmScratch[6]  = govWrite[27]; // Tracking
-        pmScratch[7]  = govWrite[28]; pmScratch[8]  = govWrite[29]; // Recovery
-        pmScratch[9]  = govWrite[30]; pmScratch[10] = govWrite[31]; // Throttle_Hold_Timeout
-        pmScratch[13] = govWrite[32]; pmScratch[14] = govWrite[33]; // Autorotation_Timeout
+        govScratchTenths(pmScratch, 1,  govWrite, 20); // Startup  (TX whole seconds → FC tenths)
+        govScratchTenths(pmScratch, 3,  govWrite, 22); // Spoolup
+        govScratchTenths(pmScratch, 5,  govWrite, 26); // Tracking
+        govScratchTenths(pmScratch, 7,  govWrite, 28); // Recovery
+        govScratchTenths(pmScratch, 9,  govWrite, 30); // Throttle_Hold_Timeout
+        govScratchTenths(pmScratch, 13, govWrite, 32); // Autorotation_Timeout
         pmScratch[19] = govWrite[19];           // Handover_Throttle
         pmScratch[20] = govWrite[35];           // Pwr_Filter
         pmScratch[21] = govWrite[34];           // Rpm_Filter
         pmScratch[22] = govWrite[38];           // Tta_Filter
         pmScratch[23] = govWrite[37];           // Ff_Filter
         pmScratch[25] = govWrite[36];           // D_Filter
-        pmScratch[26] = govWrite[24]; pmScratch[27] = govWrite[25]; // Spooldown
+        govScratchTenths(pmScratch, 26, govWrite, 24); // Spooldown
         pmScratch[28] = govWrite[39];           // Throttle_Type
         pmScratch[31] = govWrite[40];           // Idle_Throttle
         pmScratch[32] = govWrite[41];           // Auto_Throttle
