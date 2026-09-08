@@ -50,7 +50,7 @@
 (function(){
     const $ = id => document.getElementById(id);
     const norm = s => (s || '').toLowerCase().replace(/[’']/g, '').replace(/[^a-z0-9%+.\/ -]+/g, ' ').replace(/\s+/g, ' ').trim();
-    const POPULAR = ['Head speed', 'Cells', 'Spool-up', 'Tracking', 'Arm', 'Rescue', 'Wiggle', 'Telemetry', 'Backup', 'Bind', 'WiFi', 'Update'];
+    const POPULAR = ['PIDs', 'Head speed', 'Cells', 'Spool-up', 'Tracking', 'Arm', 'Rescue', 'Wiggle', 'Telemetry', 'Backup', 'Bind', 'WiFi', 'Update'];   // PIDs first: Malcolm's most-used (2026-09-08)
     let rows = [];
     function ready() {
         rows = (window.LDRC_SEARCH || []).map(r => ({ p: r[0], g: r[1], h: r[2], l: r[3], id: r[4], k: r[5], s: r[6],
