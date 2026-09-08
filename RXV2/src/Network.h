@@ -553,9 +553,10 @@ inline void netStep() {
                 static uint32_t wifiCheckMs   = 0;
                 const bool armLink = rx.lastMillis &&
                                      (uint32_t)(millis() - rx.lastMillis) < 1000;
-                const bool disarmedNow = autoFlyActive() &&
-                    armingChannel >= 1 && armingChannel <= 16 && armLink &&
-                    channelMicros[armingChannel - 1] < 1500;
+                const bool disarmedNow = autoFlyActive() && (dongleEnabled
+                    ? (fcInfo.detected && !fcInfo.armed && fcInfo.armedMs && (uint32_t)(millis() - fcInfo.armedMs) < 5000)
+                    : (armingChannel >= 1 && armingChannel <= 16 && armLink &&
+                       channelMicros[armingChannel - 1] < 1500));
                 if (disarmedNow) {
                     if (!disarmSinceMs) { disarmSinceMs = millis(); wifiCheckMs = disarmSinceMs; }
                     const uint32_t disarmedFor = millis() - disarmSinceMs;

@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     LDRC.setText('fcInfo', label);
     LDRC.govThrottleBanner(s, 'thrBanner');   // 0.9.551: nag until a flight reaches full throttle
     LDRC.fcTelemBanner(s, 'telemBanner');     // 0.9.556: FC sensor list wiped = no volts/RPM on the TX
-    LDRC.fcTelemSpeedCard(s, 'telemSpeed');   // 0.9.563: fast (1000/1) vs standard (250/8) telemetry link rate
+    if (!s.dongle) LDRC.fcTelemSpeedCard(s, 'telemSpeed');   // 0.9.563: fast (1000/1) vs standard (250/8) telemetry link rate - CRSF only, not for a dongle
     setInterval(async () => {
         const s2 = await LDRC.fetchState();
         if (s2) { LDRC.fcTelemBanner(s2, 'telemBanner'); LDRC.fcTelemSpeedCard(s2, 'telemSpeed'); }

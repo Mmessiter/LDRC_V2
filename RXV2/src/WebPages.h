@@ -731,6 +731,11 @@ inline void handleMspApi() {
     // and for every other path: no config request touches the FC while the
     // model is armed with a live transmitter.
     {
+        if (dongleEnabled && fcInfo.armed && fcInfo.armedMs && (uint32_t)(millis() - fcInfo.armedMs) < 5000) {
+            server.sendHeader("Cache-Control", "no-store");
+            server.send(409, "text/plain", "ARMED - the flight controller says it is armed. Disarm first.");
+            return;
+        }
         const bool armLink = rx.lastMillis &&
                              (uint32_t)(millis() - rx.lastMillis) < 1000;
         if (armLink && armingChannel >= 1 && armingChannel <= 16 &&
@@ -2287,6 +2292,27 @@ inline void handleProtocolSet() {
 // Persists the flag; it takes effect at boot in setup(). USB mode is fixed at
 // compile time, so the HID joystick can only be brought up on a fresh boot —
 // the same reboot-to-apply model the output-protocol setting uses.
+// Rotorflight dongle mode (Malcolm 2026-09-08): POST /api/dongle on=0|1 [baud=N]
+inline void handleDongleSet() {
+    bool on = server.hasArg("on") ? (server.arg("on").toInt() != 0) : false;
+    uint32_t baud = server.hasArg("baud") ? (uint32_t)server.arg("baud").toInt() : dongleBaud;
+    if (baud < 9600 || baud > 2000000) baud = 115200;
+    prefs.putUChar(NVS_KEY_DONGLE, on ? 1 : 0);
+    prefs.putUInt(NVS_KEY_DONGLE_BAUD, baud);
+    prefs.putUChar(NVS_KEY_CFG_REBOOT, 1);   // come straight back to WiFi
+    { char m[80]; snprintf(m, sizeof(m), on ? "Dongle mode enabled (%lu baud)" : "Dongle mode disabled", (unsigned long)baud); events.add(m); }
+    server.send(200, "text/html", confirmPage("Saved & rebooting", on
+        ? "<p>Rotorflight dongle mode <b>enabled</b>. Rebooting. Wire D5 to the flight controller's TX, D6 to its RX, "
+          "5 V and GND, on a UART set to MSP in Rotorflight. No radio is used; any receiver can fly the model.</p>"
+        : "<p>Dongle mode <b>disabled</b>. Rebooting back to a normal receiver.</p>"));
+    delay(250);
+    safeOutputParkAndRestart();
+}
+inline void handleDonglePage() {
+    if (serveLittleFsFile("/dongle.html", "text/html")) return;
+    server.send(503, "text/plain", "/dongle.html missing — uploadfs the data/ folder");
+}
+
 inline void handleSimSet() {
     bool on = server.hasArg("on") ? (server.arg("on").toInt() != 0) : false;
     prefs.putUChar(NVS_KEY_SIM, on ? 1 : 0);
@@ -2915,6 +2941,9 @@ inline void handleApiState() {
 
     // --- sim (drive simulator over USB) ------------------------------
     j += ",\"sim\":"; j += (simEnabled ? "true" : "false");
+    j += ",\"dongle\":"; j += (dongleEnabled ? "true" : "false");
+    { char db[48]; snprintf(db, sizeof(db), ",\"dongle_baud\":%lu,\"fc_armed\":%s", (unsigned long)dongleBaud,
+               (fcInfo.armed && fcInfo.armedMs && (uint32_t)(millis() - fcInfo.armedMs) < 5000) ? "true" : "false"); j += db; }
 
     // --- proven-tune nudge (Malcolm 2026-08-07) -----------------------
     snprintf(buf, sizeof(buf), ",\"tune\":{\"gen\":%u,\"flights\":%u}",
@@ -3171,6 +3200,8 @@ inline void registerWebRoutes() {
     server.on("/api/armch",          HTTP_POST, handleArmChSet);
     server.on("/protocol",    HTTP_POST, handleProtocolSet);
     server.on("/api/sim",     HTTP_POST, handleSimSet);
+    server.on("/api/dongle",  HTTP_POST, handleDongleSet);
+    server.on("/dongle",      HTTP_GET,  handleDonglePage);
     server.on("/api/sim/spool.json", HTTP_GET,  handleSimSpoolGet);
     server.on("/api/sim/spool",      HTTP_POST, handleSimSpoolSet);
     server.on("/api/map",     HTTP_POST, handleMapSave);   // save sim channel map (applies live, no reboot)

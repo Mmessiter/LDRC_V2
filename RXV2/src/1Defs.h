@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.589-slider-centres";
+constexpr const char* FW_VERSION = "RXV2-0.9.590-dongle-mode";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -365,6 +365,8 @@ constexpr const char* NVS_KEY_MODEL_NAME  = "nm";      // user-set model name (e
 constexpr const char* NVS_KEY_FS_MD5      = "fsmd5";   // md5 of the last-flashed littlefs image: identical-release fs updates are SKIPPED (flights survive untouched)
 constexpr const char* NVS_KEY_FS_DIRTY    = "fsdirty"; // 1 = a littlefs flash began and never committed: boot FORMATS the partition instead of mounting a half image (Goblin 2026-09-03)
 constexpr const char* NVS_KEY_SIM         = "sim";     // 1 = drive flight simulator over USB (HID joystick)
+constexpr const char* NVS_KEY_DONGLE      = "dongle";  // 1 = Rotorflight DONGLE: plain MSP on D5/D6 to a spare FC UART, no radio, any receiver flies (2026-09-08)
+constexpr const char* NVS_KEY_DONGLE_BAUD = "dbaud";   // u32 UART baud for dongle mode (115200 default = Rotorflight's MSP port default)
 // Spool-up realism (Malcolm 2026-08-17, for neXt autorotation practice):
 // leaving the throttle-hold bank must NOT snap the sim to full head speed
 // with infinite acceleration and no torque. The dongle rate-limits throttle
@@ -467,6 +469,13 @@ inline bool autoFlyEnabled = true;   // radios off automatically once armed + fl
 // as signal loss and cuts the motor. Updated every loop from FC detection.
 inline bool autoFlyForcedNow = false;
 inline bool autoFlyActive() { return autoFlyEnabled || autoFlyForcedNow; }
+// Dongle mode (Malcolm 2026-09-08: "use our app on a Nexus with other
+// receivers - the dongle is simply the XIAO ESP32-S3"): the board sits on a
+// spare Rotorflight UART set to MSP, speaks plain MSP (MspSerialCore.h)
+// instead of MSP-inside-CRSF, outputs no channels, and takes ARMED from the
+// flight controller's own status. Read once at boot, like sim mode.
+inline bool     dongleEnabled = false;
+inline uint32_t dongleBaud    = 115200;
 inline uint8_t simMotorChannel  = 0;        // 0 = unset: spool-up does nothing until chosen
 // Pulse mode (Malcolm 2026-08-25, "manual PWM — is my plan nuts?!" — it is
 // not): neXt thresholds the motor channel to pure on/off, so a ramped LEVEL
@@ -987,6 +996,8 @@ struct FcInfo {
     uint8_t  apiMajor         = 0;       // MSP API version (separate from fw version)
     uint8_t  apiMinor         = 0;
     uint8_t  cells            = 0;       // battery cell count from MSP_BATTERY_STATE (0 = unknown)
+    bool     armed            = false;   // MSP_STATUS flight-mode flag bit 0 (BOXARM) - the FC's own word, used in dongle mode
+    uint32_t armedMs          = 0;       // millis() of the last MSP_STATUS that set `armed` (0 = never)
     // 0.9.551 — what Rotorflight's governor actually listens to. Learned
     // once from MSP_RX_MAP / MSP_GOVERNOR_CONFIG, kept in NVS (a TX-on
     // boot never gets to ask), refreshed whenever a page reads them.
@@ -1049,6 +1060,7 @@ void     mspBridgeStart();
 void     mspBridgePoll();
 void     mspBridgeOnFcByte(uint8_t b);
 void     mspParseResponse(const uint8_t* body, uint8_t bodyLen);
+void     mspSerialFeed(uint8_t b);                       // dongle mode: plain-MSP byte pump (MspFc.h)
 void     mspFcPoll();
 bool     fcIsRotorflightConfigCapable();
 void     ledOn();

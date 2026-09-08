@@ -24,6 +24,7 @@
     <a class="btn btn-diag" href="/rxsettings"><span class=ico>&#9881;&#65039;</span>Receiver settings &mdash; failsafe, battery, wave</a>
     <a class="btn btn-fw"   href="/wifi" id=wifibtn style="display:none"><span class=ico>&#128246;</span>WiFi settings</a>
     <a class="btn btn-fw"   href="/firmware"><span class=ico>&#128229;</span>Update or roll back firmware</a>
+    <a class="btn btn-diag" href="/dongle" id=donglebtn><span class=ico>&#128268;</span>Rotorflight dongle mode &mdash; <span id=donglestate>&hellip;</span></a>
     <button class="btn" type=button id=renamebtn style="background:#6f7e8b"><span class=ico>&#127991;&#65039;</span>Rename receiver &mdash; <span id=curname>&hellip;</span></button>
 
     <div class=footer></div>
@@ -39,6 +40,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // WiFi settings only make sense when an interface is up to serve the page from.
     const wifiVisible = s.net && (s.net.mode === 'WiFi up' || s.net.mode === 'AP mode');
+    const ds = document.getElementById('donglestate'); if (ds) ds.textContent = s.dongle ? 'ON (no radio)' : 'off';
     const wb = document.getElementById('wifibtn');
     if (wb) wb.style.display = wifiVisible ? '' : 'none';
 

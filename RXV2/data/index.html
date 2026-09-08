@@ -81,6 +81,11 @@
 
     <div id=mainMenu>
         <!-- Big "simulator mode" sign — shown only while sim mode is on. -->
+        <div id=dongleBanner style="display:none;text-align:center;padding:1em;border-radius:12px;margin:0 0 1em;
+             background:#5fa099;color:#0e2e2a;font-weight:700;box-shadow:0 3px 12px rgba(95,160,153,.45)">
+            <div style="font-size:1.3em;letter-spacing:.05em">&#128268; ROTORFLIGHT DONGLE</div>
+            <div style="font-size:.85em;font-weight:400;margin-top:.3em">Plain MSP to the flight controller. Another receiver flies the model. <a href="/dongle" style="color:inherit">Change</a></div>
+        </div>
         <div id=simBanner style="display:none;text-align:center;padding:1em;border-radius:12px;margin:0 0 1em;
              background:#6cab5e;color:#0e2e08;font-weight:700;box-shadow:0 3px 12px rgba(108,171,94,.45)">
             <div style="font-size:1.3em;letter-spacing:.05em">🎮 SIMULATOR MODE ON</div>
@@ -328,6 +333,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     // stashed pairing) while bind mode is active. One tap, one instant
     // confirmation, either way.
 
+    // Dongle mode (2026-09-08): banner, and the radio-only buttons go.
+    const dongleOn = !!s.dongle;
+    const dB = document.getElementById('dongleBanner');
+    if (dB) dB.style.display = dongleOn ? '' : 'none';
+    if (dongleOn) for (const id of ['flybtn', 'bindbtn', 'simpg', 'fcHint']) { const el = document.getElementById(id); if (el) el.style.display = 'none'; }
     // Simulator state — banner + tint the Simulator button green while active.
     const simOn = !!s.sim;
     const simB = document.getElementById('simBanner');

@@ -383,9 +383,18 @@ void setup() {
     if (simSpoolPulseMs > 1000) simSpoolPulseMs = 1000;
     if (simSpoolSeconds < 1) simSpoolSeconds = 1;
     if (simSpoolSeconds > 60) simSpoolSeconds = 60;
+    dongleEnabled = prefs.isKey(NVS_KEY_DONGLE) ? (prefs.getUChar(NVS_KEY_DONGLE, 0) != 0) : false;
+    dongleBaud    = prefs.isKey(NVS_KEY_DONGLE_BAUD) ? prefs.getUInt(NVS_KEY_DONGLE_BAUD, 115200) : 115200;
+    if (dongleBaud < 9600 || dongleBaud > 2000000) dongleBaud = 115200;
     if (simEnabled) {
         Serial.println("[sim] simulator mode — flight-controller output DISABLED (D6 stays silent)");
         events.add("Sim mode: FC output disabled");
+    } else if (dongleEnabled) {
+        // Rotorflight dongle: D5 = FC TX, D6 = FC RX, plain MSP, no channels.
+        Serial1.setRxBufferSize(2048);
+        Serial1.begin(dongleBaud, SERIAL_8N1, PIN_FC_RX, PIN_SBUS_TX, false);
+        Serial.printf("[dongle] Rotorflight dongle mode: plain MSP on D5/D6 at %lu baud, no RC output\n", (unsigned long)dongleBaud);
+        { char m[96]; snprintf(m, sizeof(m), "Dongle mode: plain MSP to the flight controller at %lu baud (no radio, no channel output)", (unsigned long)dongleBaud); events.add(m); }
     } else {
         configureOutputDriver(currentProtocol);
     }
@@ -490,15 +499,15 @@ void setup() {
     if (forceWifiMode) {
         Serial.println("[net] force-WiFi requested, skipping RF window");
         startWifiStation();
-    } else if (DEV_KEEP_WIFI || simEnabled) {
+    } else if (DEV_KEEP_WIFI || simEnabled || dongleEnabled) {
         // Keep WiFi on (skip the RF-detect window) for development (DEV_KEEP_WIFI)
         // OR whenever we're driving a simulator — sim sessions want the web UI
         // reachable the whole time, and the ~5% frame-rate cost of WiFi coexistence
         // doesn't matter on the bench. Real flight (not sim) falls through to the
         // RF window below, so it gets WiFi-off / 501 Hz automatically.
         Serial.printf("[net] %s — skipping RF window, WiFi on\n",
-                      simEnabled ? "sim mode" : "DEV_KEEP_WIFI");
-        events.add(simEnabled ? "Sim mode: WiFi kept on" : "DEV mode: WiFi forced on");
+                      simEnabled ? "sim mode" : dongleEnabled ? "dongle mode" : "DEV_KEEP_WIFI");
+        events.add(simEnabled ? "Sim mode: WiFi kept on" : dongleEnabled ? "Dongle mode: WiFi and Bluetooth on" : "DEV mode: WiFi forced on");
         startWifiStation();
     } else if (numRadiosPresent == 0) {
         // No radios at all (bare chip / dev board / unpopulated PCB): it can
@@ -819,7 +828,8 @@ void loop() {
         }
     }
 
-    if (!simEnabled) { StallScope s("sbusTick"); sbusTick(); }   // no RC output frames at all while in sim mode
+    if (!simEnabled && !dongleEnabled) { StallScope s("sbusTick"); sbusTick(); }   // no RC output frames at all in sim or dongle mode
+    if (dongleEnabled) { StallScope s("dongleStatus"); dongleStatusTick(); }
     { StallScope s("heartbeat"); heartbeat(); }
     { StallScope s("statusLed"); statusLedTick(); }    // D4 connection-status LED (2-radio boards)
     { StallScope s("netStep");   netStep(); }
@@ -976,8 +986,10 @@ void loop() {
         const bool radiosUp = (netMode != NET_NO_WIFI) || bleAdvertising() || bleHasClient();
         const bool linkLive = rx.lastMillis &&
                               (uint32_t)(millis() - rx.lastMillis) < 1000;
-        const bool armedNow = armingChannel >= 1 && armingChannel <= 16 &&
-                              linkLive && channelMicros[armingChannel - 1] > 1500;
+        const bool armedNow = dongleEnabled
+                              ? (fcInfo.armed && fcInfo.armedMs && (uint32_t)(millis() - fcInfo.armedMs) < 5000)   // the FC's own word
+                              : (armingChannel >= 1 && armingChannel <= 16 &&
+                                 linkLive && channelMicros[armingChannel - 1] > 1500);
         if (radiosUp && armedNow) {
             if (!armedSinceMs) armedSinceMs = millis();
             else if ((uint32_t)(millis() - armedSinceMs) > 500) {

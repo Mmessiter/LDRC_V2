@@ -25,6 +25,7 @@
 #define _SRC_MSPFC_H
 
 #include "1Defs.h"
+#include "MspSerialCore.h"
 #include "Output.h"      // crsfCrc8()
 
 //*********************************************************************
@@ -214,6 +215,27 @@ inline void mspSendCrsfChunk(uint8_t status, const uint8_t* data, uint8_t dataLe
     Serial1.write(crsf, (size_t)(n + 1));
 }
 
+// Dongle mode: plain MSP v1 on the UART (MspSerialCore.h), the same
+// mspDeliverResponse() at the far end so waiters, digests and the bank
+// logic never know the difference.
+inline void mspDeliverResponse(uint8_t func, const uint8_t* payload, uint16_t size);   // below
+inline MspSerialParser mspSer;
+inline void mspSerialOnFrame(void*, uint8_t cmd, const uint8_t* p, uint16_t n, bool isError) {
+    fcInfo.lastResponseMs = millis();
+    mspProbeSentMs = 0;
+    if (isError) {
+        if (cmd == mspWaitFunction && !mspWaitRespReady) mspWaitRespError = true;
+        return;
+    }
+    mspDeliverResponse(cmd, p, n);
+}
+inline void mspSerialFeed(uint8_t b) { mspSer.feed(b, mspSerialOnFrame, nullptr); }   // Telemetry.h's byte pump (prototype in 1Defs.h)
+inline void mspSerialSend(uint8_t function, const uint8_t* payload, uint16_t len) {
+    static uint8_t frame[8 + 300];
+    const uint16_t n = mspSerialEncode(frame, sizeof(frame), function, payload, len);
+    if (n) Serial1.write(frame, n);
+}
+
 inline void mspSendRequest(uint8_t function, const uint8_t* payload = nullptr, uint8_t payloadLen = 0) {
     // MSP v1 body inside CRSF is just: size(1) function(1) payload(N).
     // The inner XOR checksum is NOT transmitted — CRSF's CRC8 protects it.
@@ -230,6 +252,7 @@ inline void mspSendRequest(uint8_t function, const uint8_t* payload = nullptr, u
     mspSendRing[mspSendRingPos] = { (uint32_t)millis(), function, payloadLen };
     mspSendRingPos = (uint8_t)((mspSendRingPos + 1) % MSP_SEND_RING);
     mspSendCount++;
+    if (dongleEnabled) { mspSerialSend(function, payload, payloadLen); return; }
     uint8_t body[2 + 255];
     body[0] = payloadLen;
     body[1] = function;
@@ -505,6 +528,9 @@ inline void mspDeliverResponse(uint8_t func, const uint8_t* payload, uint16_t si
         // Where the FC is (0.9.567): from our own reads and from any page's.
         // Rotorflight: bytes 23 = PID bank, 24 = count, 25 = rates bank, 26 = count.
         case MSP_STATUS:
+            // Bytes 6-9 = flight-mode flags, bit 0 = BOXARM: the FC's own
+            // "armed". The dongle has no arm channel of its own (2026-09-08).
+            if (size >= 10) { fcInfo.armed = (payload[6] & 1) != 0; fcInfo.armedMs = millis(); }
             if (size >= 27) {
                 banks.fcPid  = payload[23];
                 banks.fcRate = payload[25];
@@ -914,7 +940,10 @@ inline bool bankFnPidSide(uint8_t fn) {
            fn == MSP_GOVERNOR_PROFILE || fn == MSP_SET_GOVERNOR_PROFILE;
 }
 inline bool bankFnRateSide(uint8_t fn) { return fn == MSP_RC_TUNING || fn == MSP_SET_RC_TUNING; }
-inline bool bankTxLive() { return rx.lastMillis != 0 && (uint32_t)(millis() - rx.lastMillis) < 2000; }
+inline bool bankTxLive() {
+    if (dongleEnabled) return true;          // unknown = assume the model's transmitter may be on: never switch banks unasked
+    return rx.lastMillis != 0 && (uint32_t)(millis() - rx.lastMillis) < 2000;
+}
 inline bool bankHeld()   { return banks.switchPid != 0xFF; }
 inline void bankRelease() { banks.switchPid = banks.switchRate = 0xFF; banks.savedPid = banks.savedRate = 0xFF; banks.tries = 0; }
 
@@ -946,6 +975,13 @@ inline bool bankSelectSync(uint8_t b) {
 // Open a hold if none: note the switch's banks before the phone moves them.
 inline void bankOpenHold() {
     if (bankHeld()) return;
+    if (dongleEnabled) {
+        // The dongle cannot see the model's own transmitter, so it never
+        // puts banks back by itself: a phone's bank stays until the switch
+        // moves (Rotorflight re-applies the switch only on a change).
+        if (!banks.txWarned) { banks.txWarned = true; events.add("Dongle: a phone's bank selection stays until the model's own bank switch is moved"); }
+        return;
+    }
     if (bankTxLive()) {
         if (!banks.txWarned) {
             banks.txWarned = true;
@@ -1113,6 +1149,19 @@ constexpr uint32_t PROBE_HEARTBEAT_MS   = 5000;   // once detected
 constexpr uint32_t PROBE_TIMEOUT_MS     = 10000;  // declare FC lost after this
 constexpr uint32_t PROBE_HOLDOFF_MS     = 1200;   // no probe this soon after a page/app reply
 constexpr uint32_t TELEM_WATCH_MS       = 30000;  // re-read the telemetry setup (MSP 73) this often while idle
+
+// Dongle mode: MSP_STATUS once a second so `armed` is never more than a
+// beat stale - the radios go off when the model arms and come back after
+// it disarms, exactly as auto fly mode does from the receiver's own channel.
+inline void dongleStatusTick() {
+    static uint32_t lastMs = 0;
+    if (!dongleEnabled || !fcInfo.detected) return;
+    if ((uint32_t)(millis() - lastMs) < 1000) return;
+    if (txParamBusy || mspWaitFunction != 0xFF || mspProbeOutstanding()) return;
+    lastMs = millis();
+    mspSendRequest(MSP_STATUS);
+    mspProbeSentMs = millis();
+}
 
 inline void mspFcPoll() {
     if (!fcTelemetryEnabled)
