@@ -1,6 +1,50 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.594-dongle-no-fly",
+      "url": "https://messiter.com/rxv2/release/v0.9.594/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.594/littlefs.bin",
+      "fs_md5": "2daa1167165b7b97e08171e13f85016a",
+      "notes": "A dongle never shows the Fly now button: the 3-second repaint used to bring it back faded once the state arrived (Malcolm 2026-09-09). Radio-only morphing is skipped on a dongle too. Includes 0.9.593."
+    },
+    {
+      "name": "RXV2-0.9.593-dongle-face",
+      "url": "https://messiter.com/rxv2/release/v0.9.593/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.593/littlefs.bin",
+      "fs_md5": "3d0de7da092dbcf4465578dd3c4eb09c",
+      "notes": "A dongle looks like a dongle: the home page says 'Rotorflight dongle' and whether the flight controller is connected, and nothing that needs a transceiver is shown - no bind card, no transceiver warning, no Fly, Bind, Simulator or Black box; Setup hides the output protocol, channel view and receiver settings. Includes 0.9.592 (automatic dongle mode)."
+    },
+    {
+      "name": "RXV2-0.9.592-auto-dongle",
+      "url": "https://messiter.com/rxv2/release/v0.9.592/firmware.bin",
+      "notes": "Dongle mode is now AUTOMATIC (Malcolm's idea): at every power-up the board counts its transceivers - none means it is a Rotorflight dongle, one or more means it is a receiver. A bare XIAO with this firmware is a dongle with no setting at all; the home page says why. The dongle page keeps an override (always a dongle / always a receiver) and the UART speed. Includes 0.9.591."
+    },
+    {
+      "name": "RXV2-0.9.591-dongle-wire",
+      "url": "https://messiter.com/rxv2/release/v0.9.591/firmware.bin",
+      "notes": "Dongle mode: the receiver's status now counts the bytes, frames and CRC errors on the flight-controller wire, so a silent flight controller can be told from a wiring or port-setting mistake. Otherwise as 0.9.590."
+    },
+    {
+      "name": "RXV2-0.9.590-dongle-mode",
+      "url": "https://messiter.com/rxv2/release/v0.9.590/firmware.bin",
+      "notes": "NEW: Rotorflight dongle mode (Setup page). A bare XIAO ESP32-S3 running this firmware, wired to a spare flight-controller UART set to MSP (D5 to its TX, D6 to its RX, 5 V, GND), gives the whole phone app - wizards, sliders, backups, Find a setting - on a model that any other receiver flies. It speaks plain MSP on the wire, outputs no channels, takes ARMED from the flight controller itself (configuration refused and radios off while armed), and leaves bank selections to the model's own switch. Includes 0.9.589 (re-centring sliders, PIDs search chip)."
+    },
+    {
+      "name": "RXV2-0.9.589-slider-centres",
+      "url": "https://messiter.com/rxv2/release/v0.9.589/firmware.bin",
+      "notes": "Sliders that re-centre. Every plain-English slider (start hardness, agility, stick feel, cyclic and tail softer/sharper, on the Governor, Rates, PIDs and Easy tuning pages) now works relative to the numbers the model had at your last backup: the centre is 'what I have now', the ends are half and double (or 35 expo either way, or 30 % on the gains). Back up to the phone and every slider returns to its centre while the numbers stay exactly as they are - so a model that needed the far end of a slider can keep going. A restore or a bank copy re-centres too. The slider's note says when it is at the end of its travel. Each slider page says so when a slider has just been re-centred, so nobody wonders where it went. Find a setting offers PIDs as its first suggestion."
+    },
+    {
+      "name": "RXV2-0.9.588-slider-centres",
+      "url": "https://messiter.com/rxv2/release/v0.9.588/firmware.bin",
+      "notes": ""
+    },
+    {
+      "name": "RXV2-0.9.587-slider-centres",
+      "url": "https://messiter.com/rxv2/release/v0.9.587/firmware.bin",
+      "notes": ""
+    },
+    {
       "name": "RXV2-0.9.586-search-spacing",
       "url": "https://messiter.com/rxv2/release/v0.9.586/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.586/littlefs.bin",
@@ -27,62 +71,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.583/littlefs.bin",
       "fs_md5": "c67cf6948999edb115a5290e62a10d24",
       "notes": "NEW: Find a setting. A search box on the home page and the Rotorflight menu: type a word or two (head speed, cells, spool-up, arm, wiggle, bind...) and every matching setting is listed with the page and card it lives on. Tap one and the page opens with that setting glowing for a few seconds. The index is built from the pages themselves, so it always matches this receiver. Includes 0.9.580-0.9.582."
-    },
-    {
-      "name": "RXV2-0.9.582-backup-banks",
-      "url": "https://messiter.com/rxv2/release/v0.9.582/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.582/littlefs.bin",
-      "fs_md5": "9d1686512c9ac37c97b72af6850df2cb",
-      "notes": "Backup fix: 'the flight controller changed bank mid-backup' with the transmitter OFF. The receiver remembered the bank a phone last selected and quietly put the flight controller back on it before the next bank read, even when the phone had since asked the flight controller which bank it was on and started a fresh backup from there. The phone saw the move and gave up, leaving the flight controller on the wrong bank, so the next attempt failed the same way. Now a phone that reads the bank status is taken at its word. Includes 0.9.580 and 0.9.581."
-    },
-    {
-      "name": "RXV2-0.9.581-whole-seconds",
-      "url": "https://messiter.com/rxv2/release/v0.9.581/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.581/littlefs.bin",
-      "fs_md5": "a8abcefc411a3b5375b0449428e6e383",
-      "notes": "On the V1 transmitter the governor timings (spool-up, spool-down, speed-change/tracking, recovery, throttle-hold and autorotation timeouts) are now WHOLE SECONDS: 4 means four seconds. Rotorflight keeps them in tenths, and the transmitter's plain numbers made 4 mean 0.4 s. A half-second value saved from the transmitter rounds to the nearest second. The phone pages were already in seconds. Also corrects the governor-mode help text (DIRECT = throttle passed through with the ramps, for an ESC that governs by itself). Includes 0.9.580: the flight-controller wire stays connected after a field flight with the transmitter off, and the cell count is read from the right byte."
-    },
-    {
-      "name": "RXV2-0.9.580-field-fixes",
-      "url": "https://messiter.com/rxv2/release/v0.9.580/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.580/littlefs.bin",
-      "fs_md5": "51dbafd1f60c02e2b13a009f56bf24ce",
-      "notes": "Two field fixes from the Goblin's first flight-test morning. (1) After a flight away from home WiFi, switching the transmitter off parked the flight-controller wire for the failsafe lamp while the phone was still connected over Bluetooth, so every Rotorflight read answered 'did not respond' until the receiver was rebooted. The wire now stays connected whenever Bluetooth config is up, and a phone request re-attaches it in any case. (2) The cell count read from Rotorflight was taken from the wrong byte (its battery STATE), which showed the 12S pack as '3S \u00b7 15 V/cell' on the Black box; the real count is read now. Also: the RealFlight controls page title no longer hides under the header buttons."
-    },
-    {
-      "name": "RXV2-0.9.579-back-trail",
-      "url": "https://messiter.com/rxv2/release/v0.9.579/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.579/littlefs.bin",
-      "fs_md5": "e1bd160d91ad4b7e3c9df1cb53dd862e",
-      "notes": "The back arrow now walks back through the last few pages you actually visited (up to six), instead of guessing the menu you came from. Going back pops the trail; a link that loops back to an earlier page shortens it."
-    },
-    {
-      "name": "RXV2-0.9.578-slider-help",
-      "url": "https://messiter.com/rxv2/release/v0.9.578/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.578/littlefs.bin",
-      "fs_md5": "3d3b367d64cbfcd38b701fc1b5fa56b5",
-      "notes": "Press and hold a slider's heading (Easy tuning, Governor, Rates, PIDs pages) to see exactly which numbers it moves and by how much; the Easy tuning help page lists them too."
-    },
-    {
-      "name": "RXV2-0.9.577-easy-tuning",
-      "url": "https://messiter.com/rxv2/release/v0.9.577/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.577/littlefs.bin",
-      "fs_md5": "521c568fd3f40cdd1588c3d4c45d85f5",
-      "notes": "New in \u00c0 la carte: 'Easy tuning' - every plain-English slider in one place (how hard it starts, how agile, softer/sharper feel), a link under each to the page with the numbers, one Save that writes only what changed and verifies it. And the sliders now work backwards on the Governor, Rates and PIDs pages: type a number by hand and the slider moves to match."
-    },
-    {
-      "name": "RXV2-0.9.576-feel-sliders",
-      "url": "https://messiter.com/rxv2/release/v0.9.576/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.576/littlefs.bin",
-      "fs_md5": "7fa298c169ed46a96b9703aee8806aed",
-      "notes": "Two more plain-English controls, numbers still visible underneath. Rates page: 'How agile?' - a Docile-to-Acrobatic slider sets the top rotation speeds (roll and pitch 120 to 500 deg/s, yaw 150 to 600) and a Soft-centre-to-Direct slider sets the expo on all three axes (Rotorflight rates type). PIDs page: 'Feel' - Cyclic and Tail sliders from softer to sharper scale this bank's P, I, D and feedforward together by up to 30 %, relative to what was loaded; wobbles or shakes = softer, sluggish or mushy = sharper; after a save the sliders return to centre."
-    },
-    {
-      "name": "RXV2-0.9.575-start-slider",
-      "url": "https://messiter.com/rxv2/release/v0.9.575/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.575/littlefs.bin",
-      "fs_md5": "058c9fa1e9206d036f23c9aba7243d14",
-      "notes": "Governor page: a slider 'How hard should it start?' from very gentle to very fierce sets spool-up time, handover throttle and startup time together (gentle = full head speed in 40 s with handover 10 %, fierce = 10 s and 25 %), and saving can switch PID spool-up on in every bank so the torque is even all the way up. The numbers stay visible underneath. Malcolm's idea, 2026-09-06."
     }
   ]
 }

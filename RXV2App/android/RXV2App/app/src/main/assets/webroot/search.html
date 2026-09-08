@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name=theme-color content="#5fa099">
+<meta name=apple-mobile-web-app-capable content=yes>
+<meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
+<meta name=apple-mobile-web-app-title content="LDRC RX V2">
+<title>Find a setting &middot; LDRC RX V2</title>
+<link rel=stylesheet href="/style.css?v=181">
+<script src="/app.js?v=195" defer></script>
+<script src="/search.js?v=1" defer></script>
+<style>
+.searchBox{display:flex;align-items:center;gap:.5em;background:#fff;border:2px solid #5fa099;border-radius:14px;padding:.35em .7em;margin:0 0 .8em}
+.searchBox input{flex:1;border:0;outline:0;font-size:1.25em;padding:.4em 0;background:transparent;color:#1e2f3a;min-width:0}
+.searchBox button{border:0;background:#dbe5ea;color:#3a5165;border-radius:10px;padding:.4em .7em;font-size:1em;cursor:pointer}
+.hit{display:block;background:#f2f6f8;border-radius:10px;padding:.6em .8em;margin:.35em 0;text-decoration:none;color:#1e2f3a}
+.hit b{display:block;font-size:1.08em}
+.hit small{display:block;color:#5f7385;margin-top:.15em}
+.hit .where{color:#2f6fb0;font-weight:600}
+.hit mark{background:#ffe27a;color:inherit;padding:0 .05em;border-radius:3px}
+.tip{background:#c8d2dc;color:#3a5165;padding:.8em 1em;border-radius:10px;margin:0 0 .8em;font-size:1.02em}
+.chips{display:flex;flex-wrap:wrap;gap:.4em;margin:.4em 0 1em}
+.chips button{border:0;background:#dbe5ea;color:#3a5165;border-radius:999px;padding:.45em .9em;font-size:.95em;cursor:pointer}
+.none{color:#5f7385;text-align:center;padding:1em}
+</style>
+</head>
+<body>
+<button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
+<div class=bg-photo aria-hidden=true></div>
+<div class=bg-wash  aria-hidden=true></div>
+<div class=container>
+    <h1>Find a setting</h1>
+    <div class=tip><b>Type a word or two.</b> Tap a result and the page opens with that setting lit up.</div>
+    <div class=searchBox>
+        <span aria-hidden=true>&#128269;</span>
+        <input id=q type=search autocomplete=off autocorrect=off autocapitalize=off spellcheck=false placeholder="e.g. head speed, cells, spool-up, arm" aria-label="Search settings">
+        <button id=clr type=button style="display:none" aria-label="Clear">&#10005;</button>
+    </div>
+    <div class=chips id=chips></div>
+    <div id=hits></div>
+</div>
+<template id=helpContent>
+<h2>Find a setting</h2>
+<p>Type part of a setting's name in plain English or in Rotorflight's own words: <i>head speed</i>, <i>cells</i>, <i>tracking</i>, <i>arm</i>, <i>wiggle</i>, <i>bind</i>. Every result names the page and the card it lives on. Tap it: the page opens and that setting glows for a few seconds.</p>
+<p>The index is built from the pages themselves, so it always matches what this receiver has.</p>
+</template>
+<script>
+(function(){
+    const $ = id => document.getElementById(id);
+    const norm = s => (s || '').toLowerCase().replace(/[’']/g, '').replace(/[^a-z0-9%+.\/ -]+/g, ' ').replace(/\s+/g, ' ').trim();
+    const POPULAR = ['PIDs', 'Head speed', 'Cells', 'Spool-up', 'Tracking', 'Arm', 'Rescue', 'Wiggle', 'Telemetry', 'Backup', 'Bind', 'WiFi', 'Update'];   // PIDs first: Malcolm's most-used (2026-09-08)
+    let rows = [];
+    function ready() {
+        rows = (window.LDRC_SEARCH || []).map(r => ({ p: r[0], g: r[1], h: r[2], l: r[3], id: r[4], k: r[5], s: r[6],
+            hay: norm(r[3] + ' ' + r[2] + ' ' + r[1] + ' ' + r[5] + ' ' + r[6]), lab: norm(r[3]), hd: norm(r[2] + ' ' + r[1]) }));
+        const q = new URLSearchParams(location.search).get('q');
+        if (q) { $('q').value = q; run(); } else { chips(); }
+        $('q').addEventListener('input', run);
+        $('clr').addEventListener('click', () => { $('q').value = ''; run(); $('q').focus(); });
+        setTimeout(() => { try { $('q').focus(); } catch (e) {} }, 150);
+    }
+    function chips() {
+        $('chips').innerHTML = POPULAR.map(w => '<button type=button>' + w + '</button>').join('');
+        $('chips').querySelectorAll('button').forEach(b => b.addEventListener('click', () => { $('q').value = b.textContent; run(); }));
+        $('hits').innerHTML = '';
+    }
+    // "cells" finds "Cell count", "rates" finds "rate": compare stems
+    // (a trailing s dropped from words of four letters or more).
+    const stem = w => w.length > 3 ? w.replace(/s$/, '') : w;
+    const pre = (w, t) => w.startsWith(t) || stem(w).startsWith(stem(t));
+    function score(r, toks) {
+        let sc = 0;
+        for (const t of toks) {
+            const words = r.hay.split(' ');
+            let best = 0;
+            if (pre(r.lab, t)) best = 6;
+            else if (r.lab.split(' ').some(w => pre(w, t))) best = 4;
+            else if (r.hd.split(' ').some(w => pre(w, t))) best = 2.5;
+            else if (words.some(w => pre(w, t))) best = 1;
+            else if (t.length >= 4 && r.hay.includes(stem(t))) best = 0.7;
+            if (!best) return 0;
+            sc += best;
+        }
+        if (r.id) sc += 0.5;              // a real setting outranks a page or menu entry
+        if (r.h === 'menu') sc += 0.3;
+        return sc;
+    }
+    function hl(text, toks) {
+        let out = text;
+        for (const t of toks) { if (t.length < 2) continue; out = out.replace(new RegExp('(' + t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'i'), '<mark>$1</mark>'); }
+        return out;
+    }
+    function link(r) {
+        if (r.h === 'menu') return r.p;
+        const u = new URLSearchParams();
+        if (r.id) u.set('fid', r.id);
+        u.set('find', r.l.slice(0, 60));
+        return r.p + (r.p.includes('?') ? '&' : '?') + u.toString();
+    }
+    function run() {
+        const q = norm($('q').value);
+        $('clr').style.display = q ? '' : 'none';
+        if (!q) { chips(); return; }
+        $('chips').innerHTML = '';
+        const toks = q.split(' ').filter(Boolean);
+        const hits = rows.map(r => [score(r, toks), r]).filter(x => x[0] > 0)
+            .sort((a, b) => b[0] - a[0] || a[1].l.length - b[1].l.length).slice(0, 30);
+        if (!hits.length) { $('hits').innerHTML = '<div class=none>Nothing matches. Try another word - or the Rotorflight name in brackets on the page.</div>'; return; }
+        $('hits').innerHTML = hits.map(([s, r]) => {
+            const where = r.h === 'menu' ? r.g + ' menu' : (r.g + (r.h ? ' › ' + r.h : ''));
+            return '<a class=hit href="' + link(r) + '"><b>' + hl(LDRC.escape ? LDRC.escape(r.l) : r.l, toks) + '</b>' +
+                   '<small><span class=where>' + where + '</span>' + (r.k ? ' — ' + hl(r.k, toks) : '') + '</small></a>';
+        }).join('');
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ready); else ready();
+})();
+</script>
+</body>
+</html>

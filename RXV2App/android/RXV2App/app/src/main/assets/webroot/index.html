@@ -336,6 +336,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Dongle mode (2026-09-08): banner, and the radio-only buttons go.
     const dongleOn = !!s.dongle;
+    window.__dongleMode = dongleOn;
     const dB = document.getElementById('dongleBanner');
     if (dB) dB.style.display = dongleOn ? '' : 'none';
     if (dongleOn) {
@@ -558,6 +559,9 @@ function paintFlyButton(s) {
     if (window.__rfMorphed || (s && s.sim)) return;   // morph / sim own the button
     const fb = document.getElementById('flybtn');
     if (!fb) return;
+    // A dongle never flies anything: no Fly button, whatever the link says
+    // (Malcolm 2026-09-09: "Fly now isn't a good plan for the dongle").
+    if (s && s.dongle) { fb.style.display = 'none'; saveFrontHint('flyHidden', true); return; }
     // Automatic fly mode + an arming channel = the button is redundant
     // (radios switch off by themselves 3 s after arming, back on at
     // disarm) — hide it and say so. Models with no arming function keep
@@ -636,6 +640,7 @@ function paintBattWarn(s) {
 //                   still off — the link is live, so the Fly slot becomes
 //                   a working "bring the radios back" button.
 function morphRfOnly(goodbye) {
+    if (window.__dongleMode) return;   // a dongle has no radio-only flying
     window.__rfMorphed = true;
     const fb = document.getElementById('flybtn');
     if (fb) {
