@@ -2942,8 +2942,10 @@ inline void handleApiState() {
     // --- sim (drive simulator over USB) ------------------------------
     j += ",\"sim\":"; j += (simEnabled ? "true" : "false");
     j += ",\"dongle\":"; j += (dongleEnabled ? "true" : "false");
-    { char db[48]; snprintf(db, sizeof(db), ",\"dongle_baud\":%lu,\"fc_armed\":%s", (unsigned long)dongleBaud,
-               (fcInfo.armed && fcInfo.armedMs && (uint32_t)(millis() - fcInfo.armedMs) < 5000) ? "true" : "false"); j += db; }
+    { char db[160]; snprintf(db, sizeof(db), ",\"dongle_baud\":%lu,\"fc_armed\":%s,\"dongle_wire\":{\"bytes_in\":%lu,\"frames\":%lu,\"bad_crc\":%lu,\"dropped\":%lu,\"sends\":%lu}",
+               (unsigned long)dongleBaud,
+               (fcInfo.armed && fcInfo.armedMs && (uint32_t)(millis() - fcInfo.armedMs) < 5000) ? "true" : "false",
+               (unsigned long)mspSerBytes, (unsigned long)mspSer.frames, (unsigned long)mspSer.badCrc, (unsigned long)mspSer.dropped, (unsigned long)mspSendCount); j += db; }
 
     // --- proven-tune nudge (Malcolm 2026-08-07) -----------------------
     snprintf(buf, sizeof(buf), ",\"tune\":{\"gen\":%u,\"flights\":%u}",

@@ -229,7 +229,8 @@ inline void mspSerialOnFrame(void*, uint8_t cmd, const uint8_t* p, uint16_t n, b
     }
     mspDeliverResponse(cmd, p, n);
 }
-inline void mspSerialFeed(uint8_t b) { mspSer.feed(b, mspSerialOnFrame, nullptr); }   // Telemetry.h's byte pump (prototype in 1Defs.h)
+inline uint32_t mspSerBytes = 0;                       // every byte off the wire in dongle mode - the first thing to look at when the FC is silent
+inline void mspSerialFeed(uint8_t b) { mspSerBytes++; mspSer.feed(b, mspSerialOnFrame, nullptr); }   // Telemetry.h's byte pump (prototype in 1Defs.h)
 inline void mspSerialSend(uint8_t function, const uint8_t* payload, uint16_t len) {
     static uint8_t frame[8 + 300];
     const uint16_t n = mspSerialEncode(frame, sizeof(frame), function, payload, len);
