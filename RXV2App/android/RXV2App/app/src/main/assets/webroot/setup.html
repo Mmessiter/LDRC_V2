@@ -40,7 +40,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // WiFi settings only make sense when an interface is up to serve the page from.
     const wifiVisible = s.net && (s.net.mode === 'WiFi up' || s.net.mode === 'AP mode');
-    const ds = document.getElementById('donglestate'); if (ds) ds.textContent = s.dongle ? (s.dongle_auto ? 'dongle (no transceivers)' : 'always a dongle') : (s.dongle_mode == 2 ? 'always a receiver' : 'receiver (automatic)');
+    const ds = document.getElementById('donglestate'); if (ds) ds.textContent = s.dongle ? (s.dongle_auto ? 'dongle (automatic)' : 'always a dongle') : (s.dongle_mode == 2 ? 'always a receiver' : 'receiver (automatic)');
+    if (s.dongle) for (const sel of ['#protobtn', 'a[href="/diagnostics"]', 'a[href="/rxsettings"]']) { const el = document.querySelector(sel); if (el) el.style.display = 'none'; }   // receiver-only
     const wb = document.getElementById('wifibtn');
     if (wb) wb.style.display = wifiVisible ? '' : 'none';
 

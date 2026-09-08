@@ -84,7 +84,7 @@
         <div id=dongleBanner style="display:none;text-align:center;padding:1em;border-radius:12px;margin:0 0 1em;
              background:#5fa099;color:#0e2e2a;font-weight:700;box-shadow:0 3px 12px rgba(95,160,153,.45)">
             <div style="font-size:1.3em;letter-spacing:.05em">&#128268; ROTORFLIGHT DONGLE</div>
-            <div style="font-size:.85em;font-weight:400;margin-top:.3em" id=dongleWhy>Plain MSP to the flight controller. Another receiver flies the model. <a href="/dongle" style="color:inherit">Change</a></div>
+            <div style="font-size:.85em;font-weight:400;margin-top:.3em" id=dongleWhy>Talks to the flight controller for the phone. Any receiver flies the model.</div>
         </div>
         <div id=simBanner style="display:none;text-align:center;padding:1em;border-radius:12px;margin:0 0 1em;
              background:#6cab5e;color:#0e2e08;font-weight:700;box-shadow:0 3px 12px rgba(108,171,94,.45)">
@@ -247,9 +247,10 @@ function updateBindState(s) {
     } else {
         subtitle = 'Bind mode — listening for transmitter';
     }
+    if (s.dongle) subtitle = (s.fcinfo && s.fcinfo.detected) ? 'Flight controller connected' : 'Waiting for the flight controller';
     LDRC.setHtml('subtitle', subtitle);
     const bb = document.getElementById('bindBanner');
-    if (bb) bb.style.display = (s.bind && s.bind.bound) ? 'none' : '';
+    if (bb) bb.style.display = (s.dongle || (s.bind && s.bind.bound)) ? 'none' : '';
     // The Bind button's two personalities (see bindEnterFlow/bindCancelFlow).
     const bt = document.getElementById('bindbtn');
     if (bt) {
@@ -337,8 +338,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const dongleOn = !!s.dongle;
     const dB = document.getElementById('dongleBanner');
     if (dB) dB.style.display = dongleOn ? '' : 'none';
-    if (dongleOn && s.dongle_auto) LDRC.setText('dongleWhy', 'No transceivers found, so this board runs as a Rotorflight dongle: plain MSP to the flight controller, another receiver flies the model. Meant to be a receiver? Check the transceiver solder joints. ');
-    if (dongleOn) for (const id of ['flybtn', 'bindbtn', 'simpg', 'fcHint']) { const el = document.getElementById(id); if (el) el.style.display = 'none'; }
+    if (dongleOn) {
+        for (const id of ['flybtn', 'bindbtn', 'simpg', 'fcHint', 'bindBanner', 'simBanner']) { const el = document.getElementById(id); if (el) el.style.display = 'none'; }
+        document.querySelectorAll('a[href="/blackbox"]').forEach(a => a.style.display = 'none');   // link stats, flights, RC telemetry: all the receiver's
+    }
     // Simulator state — banner + tint the Simulator button green while active.
     const simOn = !!s.sim;
     const simB = document.getElementById('simBanner');
@@ -752,6 +755,7 @@ function paintApAutoBanner(s) {
 function paintRadioBanner(s) {
     const rb = document.getElementById('radioBanner');
     if (!rb) return;
+    if (s.dongle) { rb.style.display = 'none'; return; }   // a dongle has no transceivers by design (Malcolm 2026-09-09: no warnings)
     const rf      = s.rf || {};
     const present = rf.radios_present || [];
     const slots   = [];

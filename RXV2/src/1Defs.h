@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.592-auto-dongle";
+constexpr const char* FW_VERSION = "RXV2-0.9.593-dongle-face";
 
 //*********************************************************************
 //  Auto-update manifest URLs
