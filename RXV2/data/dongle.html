@@ -45,8 +45,13 @@ table.wire td:first-child{font-weight:700;color:#3a5165;white-space:nowrap}
 
     <div class=card>
         <h2>Mode</h2>
-        <div class=fldRow><label data-help="On: this board is a Rotorflight dongle - plain MSP on D5/D6, no radio, no channel output, radios off while the flight controller says it is armed. Off: a normal LockDown receiver. Either way it reboots to apply.">Rotorflight dongle mode</label>
-            <span class=state id=curState>&hellip;</span></div>
+        <div class=fldRow><label data-help="Automatic: a board with no transceivers is a dongle, a board with transceivers is a receiver - decided at every power-up. Always a dongle / Always a receiver override that. A change reboots the board.">What this board is</label>
+            <select id=mode>
+                <option value=0>Automatic (by transceivers)</option>
+                <option value=1>Always a dongle</option>
+                <option value=2>Always a receiver</option>
+            </select></div>
+        <div class=fldRow><label>Right now</label><span class=state id=curState>&hellip;</span></div>
         <div class=fldRow><label data-help="The UART speed Rotorflight uses for its MSP port - 115200 is its default. Both ends must agree.">UART speed (baud)</label>
             <select id=baud>
                 <option value=115200>115200</option>
@@ -58,13 +63,14 @@ table.wire td:first-child{font-weight:700;color:#3a5165;white-space:nowrap}
     </div>
 
     <div class=fabBar>
-        <button class="btn btn-fly" id=toggleBtn onclick="toggle()" style="margin:0"><span class=ico>&#128268;</span><span id=toggleLbl>&hellip;</span></button>
+        <button class="btn btn-fly" id=toggleBtn onclick="apply()" style="margin:0;background:#6cab5e"><span class=ico>&#128190;</span>Save and restart</button>
     </div>
     <div class=footer></div>
 </div>
 <template id=helpContent>
 <h2>Rotorflight dongle</h2>
 <p>A bare XIAO ESP32-S3 running this firmware becomes a configuration dongle: it plugs into any spare UART of a Rotorflight flight controller (set to MSP) and gives the phone app - wizards, sliders, backups, everything - while an ELRS, FrSky or any other receiver flies the model.</p>
+<p><b>Automatic</b> is the normal setting: at every power-up the board counts its transceivers - none means it is a dongle, one or more means it is a receiver. So a bare XIAO with this firmware is a dongle with no setting at all.</p>
 <p><b>Safety:</b> the dongle cannot see the model's transmitter, so it takes ARMED from the flight controller itself: configuration is refused and the radios go quiet while the flight controller reports it is armed, and come back after it disarms. Bank selections made from the phone stay until the model's own bank switch is moved.</p>
 <p>Not available in dongle mode: live channel bars, flight records and telemetry on the transmitter - those belong to the receiver that flies the model.</p>
 </template>
@@ -74,11 +80,12 @@ async function load() {
     try {
         const s = await LDRC.fetchState();
         on = !!s.dongle;
-        document.getElementById('curState').textContent = on ? 'ON' : 'OFF';
+        document.getElementById('mode').value = String(s.dongle_mode || 0);
+        document.getElementById('curState').textContent = on
+            ? ('Rotorflight dongle' + (s.dongle_auto ? ' (no transceivers found)' : ' (set to always)'))
+            : ('LockDown receiver' + (s.dongle_mode == 2 ? ' (set to always)' : ''));
         document.getElementById('curState').style.color = on ? '#2a7a2a' : '#5f7385';
         const b = document.getElementById('baud'); if (s.dongle_baud) b.value = String(s.dongle_baud);
-        document.getElementById('toggleLbl').textContent = on ? 'Switch dongle mode OFF' : 'Switch dongle mode ON';
-        document.getElementById('toggleBtn').style.background = on ? '#8a9aa5' : '#6cab5e';
         const fc = s.fcinfo || {};
         document.getElementById('status').className = 'banner ' + (on ? (fc.detected ? 'good' : 'warn') : 'info');
         document.getElementById('status').textContent = on
@@ -86,12 +93,11 @@ async function load() {
             : 'Normal receiver mode';
     } catch (e) { document.getElementById('status').className = 'banner bad'; document.getElementById('status').textContent = 'Could not read the receiver: ' + e.message; }
 }
-async function toggle() {
-    const want = !on;
-    if (!(await LDRC.confirm(want
-        ? 'Turn this board into a Rotorflight dongle? It stops being a receiver: no radio, no channel output. It reboots now.'
-        : 'Back to a normal receiver? It reboots now.', { okLabel: want ? 'Yes, dongle mode' : 'Yes, receiver mode' }))) return;
-    const fd = new FormData(); fd.append('on', want ? '1' : '0'); fd.append('baud', document.getElementById('baud').value);
+async function apply() {
+    const mode = document.getElementById('mode').value;
+    const what = mode == '1' ? 'always a dongle: no radio, no channel output' : mode == '2' ? 'always a receiver' : 'automatic: a dongle when it has no transceivers, a receiver when it has';
+    if (!(await LDRC.confirm('Set this board to ' + what + '? It restarts now.', { okLabel: 'Yes, restart' }))) return;
+    const fd = new FormData(); fd.append('mode', mode); fd.append('baud', document.getElementById('baud').value);
     document.getElementById('status').className = 'banner info'; document.getElementById('status').textContent = 'Saving and rebooting…';
     try { await fetch('/api/dongle', { method: 'POST', body: fd }); } catch (e) {}
     setTimeout(() => location.href = '/', 9000);

@@ -383,7 +383,16 @@ void setup() {
     if (simSpoolPulseMs > 1000) simSpoolPulseMs = 1000;
     if (simSpoolSeconds < 1) simSpoolSeconds = 1;
     if (simSpoolSeconds > 60) simSpoolSeconds = 60;
-    dongleEnabled = prefs.isKey(NVS_KEY_DONGLE) ? (prefs.getUChar(NVS_KEY_DONGLE, 0) != 0) : false;
+    // Count the transceivers FIRST (moved up from after the bind restore):
+    // Malcolm 2026-09-08 - "on detecting zero transceivers, it puts itself
+    // into dongle mode". A bare XIAO is a dongle by nature; a receiver
+    // whose radios have died cannot fly anyway, and the home page says so.
+    runRadioSelfTest();
+    detectAllRadios();       // probes slots 1/2/3 independently; sets radioPresent[] + numRadiosPresent
+    dongleMode    = prefs.isKey(NVS_KEY_DONGLE) ? prefs.getUChar(NVS_KEY_DONGLE, 0) : 0;
+    if (dongleMode > 2) dongleMode = 0;
+    dongleEnabled = (dongleMode == 1) || (dongleMode == 0 && numRadiosPresent == 0 && !simEnabled);
+    dongleAuto    = dongleEnabled && dongleMode == 0;
     dongleBaud    = prefs.isKey(NVS_KEY_DONGLE_BAUD) ? prefs.getUInt(NVS_KEY_DONGLE_BAUD, 115200) : 115200;
     if (dongleBaud < 9600 || dongleBaud > 2000000) dongleBaud = 115200;
     if (simEnabled) {
@@ -394,7 +403,8 @@ void setup() {
         Serial1.setRxBufferSize(2048);
         Serial1.begin(dongleBaud, SERIAL_8N1, PIN_FC_RX, PIN_SBUS_TX, false);
         Serial.printf("[dongle] Rotorflight dongle mode: plain MSP on D5/D6 at %lu baud, no RC output\n", (unsigned long)dongleBaud);
-        { char m[96]; snprintf(m, sizeof(m), "Dongle mode: plain MSP to the flight controller at %lu baud (no radio, no channel output)", (unsigned long)dongleBaud); events.add(m); }
+        { char m[120]; snprintf(m, sizeof(m), "Dongle mode%s: plain MSP to the flight controller at %lu baud (no radio, no channel output)",
+                                dongleAuto ? " (no transceivers found)" : " (set to always)", (unsigned long)dongleBaud); events.add(m); }
     } else {
         configureOutputDriver(currentProtocol);
     }
@@ -465,8 +475,7 @@ void setup() {
     //*****************************************************************
     // Radio bring-up
     //*****************************************************************
-    runRadioSelfTest();
-    detectAllRadios();       // probes slots 1/2/3 independently; sets radioPresent[]
+    // (radio self-test + detection now run before the dongle decision, above)
     radioBeginListenV1();
     statusLedBegin();        // D4 status LED — only if radio 3 is absent
 

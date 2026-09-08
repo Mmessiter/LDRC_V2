@@ -2294,13 +2294,17 @@ inline void handleProtocolSet() {
 // the same reboot-to-apply model the output-protocol setting uses.
 // Rotorflight dongle mode (Malcolm 2026-09-08): POST /api/dongle on=0|1 [baud=N]
 inline void handleDongleSet() {
-    bool on = server.hasArg("on") ? (server.arg("on").toInt() != 0) : false;
+    // mode=0 automatic (default), 1 always a dongle, 2 always a receiver; `on` kept for older pages
+    uint8_t mode = server.hasArg("mode") ? (uint8_t)server.arg("mode").toInt()
+                 : server.hasArg("on")   ? (server.arg("on").toInt() != 0 ? 1 : 0) : 0;
+    if (mode > 2) mode = 0;
+    const bool on = (mode == 1) || (mode == 0 && numRadiosPresent == 0 && !simEnabled);
     uint32_t baud = server.hasArg("baud") ? (uint32_t)server.arg("baud").toInt() : dongleBaud;
     if (baud < 9600 || baud > 2000000) baud = 115200;
-    prefs.putUChar(NVS_KEY_DONGLE, on ? 1 : 0);
+    prefs.putUChar(NVS_KEY_DONGLE, mode);
     prefs.putUInt(NVS_KEY_DONGLE_BAUD, baud);
     prefs.putUChar(NVS_KEY_CFG_REBOOT, 1);   // come straight back to WiFi
-    { char m[80]; snprintf(m, sizeof(m), on ? "Dongle mode enabled (%lu baud)" : "Dongle mode disabled", (unsigned long)baud); events.add(m); }
+    { char m[96]; snprintf(m, sizeof(m), "Dongle setting: %s (%lu baud)", mode == 0 ? "automatic" : mode == 1 ? "always a dongle" : "always a receiver", (unsigned long)baud); events.add(m); }
     server.send(200, "text/html", confirmPage("Saved & rebooting", on
         ? "<p>Rotorflight dongle mode <b>enabled</b>. Rebooting. Wire D5 to the flight controller's TX, D6 to its RX, "
           "5 V and GND, on a UART set to MSP in Rotorflight. No radio is used; any receiver can fly the model.</p>"
@@ -2942,8 +2946,8 @@ inline void handleApiState() {
     // --- sim (drive simulator over USB) ------------------------------
     j += ",\"sim\":"; j += (simEnabled ? "true" : "false");
     j += ",\"dongle\":"; j += (dongleEnabled ? "true" : "false");
-    { char db[160]; snprintf(db, sizeof(db), ",\"dongle_baud\":%lu,\"fc_armed\":%s,\"dongle_wire\":{\"bytes_in\":%lu,\"frames\":%lu,\"bad_crc\":%lu,\"dropped\":%lu,\"sends\":%lu}",
-               (unsigned long)dongleBaud,
+    { char db[200]; snprintf(db, sizeof(db), ",\"dongle_mode\":%u,\"dongle_auto\":%s,\"dongle_baud\":%lu,\"fc_armed\":%s,\"dongle_wire\":{\"bytes_in\":%lu,\"frames\":%lu,\"bad_crc\":%lu,\"dropped\":%lu,\"sends\":%lu}",
+               (unsigned)dongleMode, dongleAuto ? "true" : "false", (unsigned long)dongleBaud,
                (fcInfo.armed && fcInfo.armedMs && (uint32_t)(millis() - fcInfo.armedMs) < 5000) ? "true" : "false",
                (unsigned long)mspSerBytes, (unsigned long)mspSer.frames, (unsigned long)mspSer.badCrc, (unsigned long)mspSer.dropped, (unsigned long)mspSendCount); j += db; }
 

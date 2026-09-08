@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // WiFi settings only make sense when an interface is up to serve the page from.
     const wifiVisible = s.net && (s.net.mode === 'WiFi up' || s.net.mode === 'AP mode');
-    const ds = document.getElementById('donglestate'); if (ds) ds.textContent = s.dongle ? 'ON (no radio)' : 'off';
+    const ds = document.getElementById('donglestate'); if (ds) ds.textContent = s.dongle ? (s.dongle_auto ? 'dongle (no transceivers)' : 'always a dongle') : (s.dongle_mode == 2 ? 'always a receiver' : 'receiver (automatic)');
     const wb = document.getElementById('wifibtn');
     if (wb) wb.style.display = wifiVisible ? '' : 'none';
 

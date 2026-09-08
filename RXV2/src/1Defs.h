@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.591-dongle-wire";
+constexpr const char* FW_VERSION = "RXV2-0.9.592-auto-dongle";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -474,7 +474,9 @@ inline bool autoFlyActive() { return autoFlyEnabled || autoFlyForcedNow; }
 // spare Rotorflight UART set to MSP, speaks plain MSP (MspSerialCore.h)
 // instead of MSP-inside-CRSF, outputs no channels, and takes ARMED from the
 // flight controller's own status. Read once at boot, like sim mode.
-inline bool     dongleEnabled = false;
+inline bool     dongleEnabled = false;   // what the board IS this boot
+inline uint8_t  dongleMode    = 0;       // NVS: 0 = automatic (no transceivers found = dongle; Malcolm 2026-09-08), 1 = always a dongle, 2 = always a receiver
+inline bool     dongleAuto    = false;   // dongleEnabled came from the automatic rule (banner says so)
 inline uint32_t dongleBaud    = 115200;
 inline uint8_t simMotorChannel  = 0;        // 0 = unset: spool-up does nothing until chosen
 // Pulse mode (Malcolm 2026-08-25, "manual PWM — is my plan nuts?!" — it is
