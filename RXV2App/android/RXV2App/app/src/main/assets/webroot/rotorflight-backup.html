@@ -25,7 +25,7 @@
             <div id=savFill style="background:#d4944a;height:100%;width:0%;border-radius:8px;transition:width .4s"></div>
         </div>
         <div id=savNote style="margin-top:.6em;font-size:.85em;color:#5c3a1a;background:#ffc88c;border-radius:8px;padding:.45em .7em">
-            &#9888;&#65039; Don't switch the transmitter ON or the model OFF until this finishes.
+            <b>Keep the phone close to the model until the backup is complete.</b> Don't switch the transmitter ON or the model OFF.
         </div>
     </div>
     <button id=phoneRestoreBtn class="btn" style="display:none;background:#ab6c8e" onclick="phoneRestore()"><span class=ico>&#128225;</span>Restore settings from phone<br><span id=phoneRestoreSub style="font-size:.68em;font-weight:400;opacity:.85"></span></button>
@@ -96,7 +96,7 @@ async function phoneSave() {
         let p = null;
         try { p = await (await fetch('/app/snapshot/progress', { cache: 'no-store' })).json(); } catch (e) { return; }
         if (p.phase === 'running') {
-            lab.textContent = 'Backing up… ' + p.done + ' / ' + p.total;
+            lab.textContent = 'Backing up… ' + p.done + ' / ' + p.total + ((p.retries || 0) >= 3 ? ' — weak link, move closer' : '');
             if (p.total > 0) fill.style.width = Math.min(100, Math.round(100 * p.done / p.total)) + '%';
         } else if (p.phase === 'done') {
             clearInterval(timer);
