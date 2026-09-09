@@ -15,6 +15,28 @@
 
     window.LDRC = {
         state: null,
+        // Pages that only mean something on a receiver (radio, channel
+        // output, flight records). A dongle shows a one-line note instead
+        // and Find a setting leaves them out (Malcolm 2026-09-10).
+        RX_ONLY: ['/bind', '/blackbox', '/diagnostics', '/flight', '/fly', '/map', '/protocol', '/rxsettings', '/sim', '/simctl', '/views'],
+        async dongleGuard() {
+            const path = location.pathname.replace(/\.html$/, '').replace(/\/index$/, '/');
+            if (!this.RX_ONLY.includes(path)) return false;
+            let s = this.state;
+            if (!s) { try { s = await Promise.race([this.fetchState(), new Promise(r => setTimeout(() => r(null), 2500))]); } catch (e) { s = null; } }
+            if (!s || !s.dongle) return false;
+            const keep = new Set(['searchBtn', 'homeBtn', 'backBtn', 'helpBtn']);
+            for (const el of Array.from(document.body.children)) {
+                if (el.tagName === 'SCRIPT') continue;
+                if (Array.from(el.classList).some(c => keep.has(c))) continue;
+                el.style.display = 'none';
+            }
+            const d = document.createElement('div');
+            d.innerHTML = '<h1>Not on a dongle</h1><div class=card style="text-align:center"><p>This page belongs to a receiver. A dongle has no radio, so there is nothing here to set.</p>'
+                        + '<a class=btn href="/" style="background:#8e6cab;display:inline-block;margin-top:.6em">Home</a></div>';
+            document.body.appendChild(d);
+            return true;
+        },
         events: null,
 
         // True when this page is served through an app's Bluetooth bridge
@@ -568,6 +590,7 @@
         // (Malcolm, 2026-08-02). Fire-and-forget; the RX ignores duplicates.
         LDRC.teachTime();
         LDRC.mountFooter();
+        LDRC.dongleGuard();
         LDRC.findOnArrival();
         // Review mode? Buttons tell the truth: edits go to / come from the
         // PHONE (Malcolm 2026-08-04). Only the Rotorflight tuning pages

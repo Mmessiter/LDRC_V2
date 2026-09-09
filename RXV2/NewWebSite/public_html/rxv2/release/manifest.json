@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.607-dongle-rx-only",
+      "url": "https://messiter.com/rxv2/release/v0.9.607/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.607/littlefs.bin",
+      "fs_md5": "00c3469ba045640cd94292ae51078aea",
+      "notes": "Dongle: the receiver-only pages (output protocol, bind, receiver settings, diagnostics, simulator, flight records, channel map, fly) show a one-line 'Not on a dongle' note with a Home button instead of their controls, and Find a setting leaves them out of its results (Malcolm 2026-09-10: 'protocol selection not needed for dongle'). Includes 0.9.606."
+    },
+    {
       "name": "RXV2-0.9.606-dongle-banner-quiet",
       "url": "https://messiter.com/rxv2/release/v0.9.606/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.606/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.596/littlefs.bin",
       "fs_md5": "b736138e88cba6ff6225b6d3c2201261",
       "notes": "Bluetooth watchdog made flight-safe (Malcolm 2026-09-10: dongle fixes live in the receiver too). On a receiver it stands down whenever a transmitter link is live, pre-flight or in flight; on a dongle whenever the flight controller says armed. Every condition must hold for two consecutive checks (20 s) before it acts. Includes 0.9.595."
-    },
-    {
-      "name": "RXV2-0.9.595-ble-watchdog",
-      "url": "https://messiter.com/rxv2/release/v0.9.595/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.595/littlefs.bin",
-      "fs_md5": "2b4bd21ed4cef78a120bca2fe14025d0",
-      "notes": "Bluetooth watchdog: the dongle ran all night on WiFi but the app could not connect until a reboot (Malcolm 2026-09-10). Every 10 s the receiver now restarts advertising that silently stopped, forgets a phantom client, and drops an app that has been silent for 10 minutes so another phone can connect. state.json gains a 'ble' block (advertising, client, idle time, watchdog counts) and watchdog events are kept through a reboot. Includes 0.9.594."
     }
   ]
 }

@@ -9,7 +9,7 @@
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Find a setting &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=181">
-<script src="/app.js?v=197" defer></script>
+<script src="/app.js?v=198" defer></script>
 <script src="/search.js?v=1" defer></script>
 <style>
 .searchBox{display:flex;align-items:center;gap:.5em;background:#fff;border:2px solid #5fa099;border-radius:14px;padding:.35em .7em;margin:0 0 .8em}
@@ -52,9 +52,15 @@
     const norm = s => (s || '').toLowerCase().replace(/[’']/g, '').replace(/[^a-z0-9%+.\/ -]+/g, ' ').replace(/\s+/g, ' ').trim();
     const POPULAR = ['PIDs', 'Head speed', 'Cells', 'Spool-up', 'Tracking', 'Arm', 'Rescue', 'Wiggle', 'Telemetry', 'Backup', 'Bind', 'WiFi', 'Update'];   // PIDs first: Malcolm's most-used (2026-09-08)
     let rows = [];
-    function ready() {
+    async function ready() {
         rows = (window.LDRC_SEARCH || []).map(r => ({ p: r[0], g: r[1], h: r[2], l: r[3], id: r[4], k: r[5], s: r[6],
             hay: norm(r[3] + ' ' + r[2] + ' ' + r[1] + ' ' + r[5] + ' ' + r[6]), lab: norm(r[3]), hd: norm(r[2] + ' ' + r[1]) }));
+        // A dongle has no radio: leave the receiver-only pages out of the
+        // results (Malcolm 2026-09-10: "protocol selection not needed for dongle").
+        try {
+            const s = await Promise.race([LDRC.fetchState(), new Promise(r => setTimeout(() => r(null), 2500))]);
+            if (s && s.dongle) rows = rows.filter(r => !LDRC.RX_ONLY.includes(r.p));
+        } catch (e) {}
         const q = new URLSearchParams(location.search).get('q');
         if (q) { $('q').value = q; run(); } else { chips(); }
         $('q').addEventListener('input', run);

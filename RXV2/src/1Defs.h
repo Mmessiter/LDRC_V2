@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.606-dongle-banner-quiet";
+constexpr const char* FW_VERSION = "RXV2-0.9.607-dongle-rx-only";
 
 //*********************************************************************
 //  Auto-update manifest URLs
