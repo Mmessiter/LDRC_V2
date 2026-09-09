@@ -1051,12 +1051,13 @@ class MainActivity : AppCompatActivity() {
     // less says why in snapError (the page shows ⚠️ and keeps the old backup).
     @Volatile private var snapOk = false
     @Volatile private var snapError = ""
+    @Volatile private var snapRetries = 0   // reads that needed a second try: a weak link, shown live
     /** explicit = the pilot pressed "Back up": the restore point it freezes is
      *  sticky — later automatic sweeps at connection never overwrite it. */
     private fun prefetchSession(fast: Boolean = false, explicit: Boolean = false) {
         if (prefetchRunning) return
         prefetchRunning = true
-        snapPhase = "running"; snapDone = 0; snapOk = false; snapError = ""
+        snapPhase = "running"; snapDone = 0; snapOk = false; snapError = ""; snapRetries = 0
         Thread {
             Thread.sleep(if (fast) 100 else 6000)   // manual = at once; auto = settle first
             val pace = if (fast) 150L else 400L
@@ -1086,7 +1087,7 @@ class MainActivity : AppCompatActivity() {
                     if (optional && first.first == 502) { SessionCache.forget(p); return }
                     Thread.sleep(500)
                     val second = reqCoded(p)
-                    if (second.second != null) { straightFails = 0; return }
+                    if (second.second != null) { straightFails = 0; snapRetries++; return }
                     if (optional && second.first == 502) { SessionCache.forget(p); return }
                     failures++
                     straightFails++
@@ -1512,7 +1513,7 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     // Review: phone IS the store — the page hides its save button.
                     if (reviewMode) "{\"phase\":\"replay\",\"done\":0,\"total\":0}"
-                    else "{\"phase\":\"$snapPhase\",\"done\":$snapDone,\"total\":$snapTotal,\"ok\":$snapOk,\"error\":${JSONObject.quote(snapError)}}"
+                    else "{\"phase\":\"$snapPhase\",\"done\":$snapDone,\"total\":$snapTotal,\"ok\":$snapOk,\"retries\":$snapRetries,\"error\":${JSONObject.quote(snapError)}}"
                 }
                 runOnUiThread {
                     val w = webView ?: return@runOnUiThread

@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.610-keep-close",
+      "url": "https://messiter.com/rxv2/release/v0.9.610/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.610/littlefs.bin",
+      "fs_md5": "5d2aba876fde72edb7507feb8b9e2081",
+      "notes": "Backup page: 'Keep the phone close to the model until the backup is complete' is the first line while a backup runs, and a struggling link shows live ('weak link, move closer' once three reads have needed a second try; apps 4.52/4.44 report it). Malcolm 2026-09-10. Includes 0.9.609."
+    },
+    {
       "name": "RXV2-0.9.609-rename-dongle",
       "url": "https://messiter.com/rxv2/release/v0.9.609/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.609/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.599/littlefs.bin",
       "fs_md5": "c3189c94d325705fcdb17e67c8627f93",
       "notes": "Dongle: a phone that connects the moment the board is plugged in no longer starves the flight-controller identity probe (the probe's hold-off after phone traffic is a CRSF-link measure and is skipped on a dongle), and any reply from the flight controller marks it connected at once, so the Rotorflight button appears and the arming watch starts straight away (Malcolm 2026-09-10: 'Dongles 3 and 4 do not show the Rotorflight option'). Receivers unchanged. Includes 0.9.598."
-    },
-    {
-      "name": "RXV2-0.9.598-ble-forensics",
-      "url": "https://messiter.com/rxv2/release/v0.9.598/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.598/littlefs.bin",
-      "fs_md5": "1f690a40e3e0b0caf58b793c428689e5",
-      "notes": "Dongle Bluetooth forensics (Malcolm 2026-09-10, twice 'not advertising until I rebooted it'): state.json's ble block now names the connected phone (address, connected-for and silent-for times); a dongle keeps its event log through a power-cycle (persisted on every connect/disconnect and every 5 minutes, disarmed only); a dongle drops a silent app after 3 minutes (receiver: 10) so another phone can connect; with nobody connected for 10 minutes the advertising is re-keyed. Receivers unchanged in flight: nothing runs while a transmitter link is live. Includes 0.9.597."
     }
   ]
 }

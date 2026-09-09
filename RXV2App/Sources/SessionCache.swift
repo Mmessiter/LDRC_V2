@@ -954,10 +954,11 @@ final class SessionPrefetcher {
     // answered, so the frozen restore point is fresh and complete. Anything
     // less says why in `error` (the page shows ⚠️ and keeps the old backup).
     static var ok = false
+    static var retries = 0         // reads that needed a second try: a weak link, shown live
     static var error = ""
     static var progressJSON: Data {
         let err = error.replacingOccurrences(of: "\"", with: "'")
-        return Data("{\"phase\":\"\(phase)\",\"done\":\(done),\"total\":\(total),\"ok\":\(ok),\"error\":\"\(err)\"}".utf8)
+        return Data("{\"phase\":\"\(phase)\",\"done\":\(done),\"total\":\(total),\"ok\":\(ok),\"retries\":\(retries),\"error\":\"\(err)\"}".utf8)
     }
 
     /// explicit = the pilot pressed "Back up" (or imported a file): the
@@ -969,7 +970,7 @@ final class SessionPrefetcher {
         // morning's data"); recording is idempotent, so repeats are free.
         guard !running else { return }
         running = true
-        phase = "running"; done = 0; total = 4; ok = false; error = ""   // state, flights, events x2
+        phase = "running"; done = 0; total = 4; ok = false; error = ""; retries = 0   // state, flights, events x2
         let pace = fast ? 0.15 : 0.4
         var failures = 0      // MSP reads that never answered (after one retry)
         var straightFails = 0 // ...in a row: five means the link is gone, not a hiccup
@@ -1025,7 +1026,7 @@ final class SessionPrefetcher {
             if optional && first.code == 502 { SessionCache.shared.forget(pathAndQuery: p); return }
             Thread.sleep(forTimeInterval: 0.5)
             let second = reqCoded(p)
-            if second.body != nil { straightFails = 0; return }
+            if second.body != nil { straightFails = 0; retries += 1; return }
             if optional && second.code == 502 { SessionCache.shared.forget(pathAndQuery: p); return }
             failures += 1
             straightFails += 1
