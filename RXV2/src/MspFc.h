@@ -227,6 +227,13 @@ inline void mspSerialOnFrame(void*, uint8_t cmd, const uint8_t* p, uint16_t n, b
         if (cmd == mspWaitFunction && !mspWaitRespReady) mspWaitRespError = true;
         return;
     }
+    // Any good reply on the wire IS a flight controller: mark it detected at
+    // once so the 1 s MSP_STATUS poll (arming = radios off) starts from the
+    // first phone request, not only after the identity probe (0.9.599).
+    if (!fcInfo.detected) {
+        fcInfo.detected = true;
+        events.add("Dongle: the flight controller answered - connected");
+    }
     mspDeliverResponse(cmd, p, n);
 }
 inline uint32_t mspSerBytes = 0;                       // every byte off the wire in dongle mode - the first thing to look at when the FC is silent
@@ -1190,7 +1197,13 @@ inline void mspFcPoll() {
     // reads on the Goblin (2026-09-04), and the "spurious" 504s on every
     // multi-read Rotorflight page before that. The reads prove the FC is
     // alive, so a probe this soon after a reply has nothing to learn.
-    if (mspLastForegroundMs != 0 && (uint32_t)(millis() - mspLastForegroundMs) < PROBE_HOLDOFF_MS) return;
+    // Dongle (0.9.599): no hold-off. The FC is on its own UART, every request
+    // gets its own reply in order, and the ring already allows one request at
+    // a time - while a phone that connects the moment the board is plugged
+    // in used to starve the identity probe forever: no Rotorflight button on
+    // the home page and, worse, no MSP_STATUS polling, so arming was never
+    // seen ("Dongle 3 and 4 show no Rotorflight option", Malcolm 2026-09-10).
+    if (!dongleEnabled && mspLastForegroundMs != 0 && (uint32_t)(millis() - mspLastForegroundMs) < PROBE_HOLDOFF_MS) return;
     // Don't probe the FC while a live RC link is streaming frames to it. Our
     // MSP-over-CRSF request is a second MSP master on the FC's wire; if a
     // Configurator is also polling the FC (its Receiver tab reads RC over MSP),

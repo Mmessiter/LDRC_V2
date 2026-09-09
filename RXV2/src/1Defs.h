@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.598-ble-forensics";
+constexpr const char* FW_VERSION = "RXV2-0.9.599-dongle-identity";
 
 //*********************************************************************
 //  Auto-update manifest URLs
