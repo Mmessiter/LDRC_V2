@@ -640,7 +640,12 @@ void loop() {
     }
     { StallScope s("ble"); blePoll(); }   // execute + stream any pending BLE config request (same task as HTTP)
     {
-        StallScope s("blewd"); bleWatchdogTick();
+        // Receiver: hands off while ANY transmitter link is live (pre-flight
+        // or in flight) - the watchdog only works on a bench with the TX off
+        // or at home. Dongle: only while the FC says disarmed.
+        const bool linkLiveNow = rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 1000;
+        const bool wdAllowed = dongleEnabled ? !fcInfo.armed : !linkLiveNow;
+        StallScope s("blewd"); bleWatchdogTick(wdAllowed);
         // A watchdog event is the forensic trail for "would not connect" -
         // keep it through a reboot. Flash write only when nothing is flying
         // (dongle: the FC says disarmed) - the 10 ms doctrine.

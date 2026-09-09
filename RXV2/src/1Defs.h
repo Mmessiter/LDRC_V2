@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.595-ble-watchdog";
+constexpr const char* FW_VERSION = "RXV2-0.9.596-ble-watchdog-safe";
 
 //*********************************************************************
 //  Auto-update manifest URLs

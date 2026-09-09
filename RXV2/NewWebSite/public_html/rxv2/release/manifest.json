@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.596-ble-watchdog-safe",
+      "url": "https://messiter.com/rxv2/release/v0.9.596/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.596/littlefs.bin",
+      "fs_md5": "b736138e88cba6ff6225b6d3c2201261",
+      "notes": "Bluetooth watchdog made flight-safe (Malcolm 2026-09-10: dongle fixes live in the receiver too). On a receiver it stands down whenever a transmitter link is live, pre-flight or in flight; on a dongle whenever the flight controller says armed. Every condition must hold for two consecutive checks (20 s) before it acts. Includes 0.9.595."
+    },
+    {
       "name": "RXV2-0.9.595-ble-watchdog",
       "url": "https://messiter.com/rxv2/release/v0.9.595/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.595/littlefs.bin",
@@ -64,13 +71,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.585/littlefs.bin",
       "fs_md5": "a681329be23e963ac5dd8d09f3cba37c",
       "notes": "Find a setting is now a magnifier button beside the ? on every page, so a search is one tap away wherever you are; the menu buttons for it are gone. Page titles sit below the button row on every page."
-    },
-    {
-      "name": "RXV2-0.9.584-search-tidy",
-      "url": "https://messiter.com/rxv2/release/v0.9.584/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.584/littlefs.bin",
-      "fs_md5": "fe0d88e7b78977fd226de05610a4d626",
-      "notes": "Find a setting: a stray '_head' entry (an include file, not a page) removed from the index. Otherwise as 0.9.583."
     }
   ]
 }

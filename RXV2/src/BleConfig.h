@@ -570,32 +570,50 @@ inline void bleStreamPoll() {
 //   2. advertising that silently stopped with no client is restarted
 //   3. an app silent for 10 min is dropped so another phone can connect
 //      (a suspended phone app keeps its link open but never talks)
-//  Never runs during fly-quiet or after bleStop (bleStarted is false then),
-//  so the flying rules keep the radios. Counters go to state.json "ble".
+//  THIS CODE FLIES IN THE RECEIVER TOO (Malcolm 2026-09-10: a dongle fix
+//  must never interrupt normal receiver functions in flight), so:
+//   - `allowed` is decided by main.cpp: receiver = NO transmitter link on
+//     the air (any TX heard in the last second = hands off, an advertising
+//     restart or a disconnect burst desenses the nRF24s); dongle = the FC
+//     says disarmed. Fly-quiet / bleStop also make bleStarted false.
+//   - every condition must hold on TWO consecutive ticks (20 s) before an
+//     action, so a connect/disconnect race can never be mistaken for a fault.
+//  Counters go to state.json "ble".
 //*********************************************************************
-inline void bleWatchdogTick() {
+inline void bleWatchdogTick(bool allowed) {
     static uint32_t lastMs = 0;
-    if (!bleInited || !bleStarted) return;
+    static uint8_t  phantomSeen = 0, advStoppedSeen = 0, idleSeen = 0;
+    if (!bleInited || !bleStarted || !allowed) { phantomSeen = advStoppedSeen = idleSeen = 0; return; }
     if ((uint32_t)(millis() - lastMs) < 10000) return;
     lastMs = millis();
     NimBLEServer* srv = NimBLEDevice::getServer();
     if (!srv) return;
     const uint8_t conns = srv->getConnectedCount();
-    if (bleClientConnected && conns == 0) {
+
+    const bool phantom = bleClientConnected && conns == 0;
+    phantomSeen = phantom ? phantomSeen + 1 : 0;
+    if (phantomSeen >= 2) {
+        phantomSeen = 0;
         bleClientConnected = false;
         blePhantomClears++;
         events.add("BLE watchdog: phantom client forgotten - advertising again");
         NimBLEDevice::startAdvertising();
         return;
     }
-    if (!bleClientConnected && !NimBLEDevice::getAdvertising()->isAdvertising()) {
+    const bool advStopped = !bleClientConnected && conns == 0 && !NimBLEDevice::getAdvertising()->isAdvertising();
+    advStoppedSeen = advStopped ? advStoppedSeen + 1 : 0;
+    if (advStoppedSeen >= 2) {
+        advStoppedSeen = 0;
         bleAdvRestarts++;
         events.add("BLE watchdog: advertising had stopped - restarted");
         NimBLEDevice::startAdvertising();
         return;
     }
-    if (bleClientConnected && conns > 0 && !bleOtaActive &&
-        (uint32_t)(millis() - bleLastActivityMs) > 10UL * 60UL * 1000UL) {
+    const bool idle = bleClientConnected && conns > 0 && !bleOtaActive &&
+                      (uint32_t)(millis() - bleLastActivityMs) > 10UL * 60UL * 1000UL;
+    idleSeen = idle ? idleSeen + 1 : 0;
+    if (idleSeen >= 2) {
+        idleSeen = 0;
         bleIdleDrops++;
         events.add("BLE watchdog: app silent for 10 min - dropped so a phone can connect");
         srv->disconnect(srv->getPeerInfo(0));          // onDisconnect re-advertises
