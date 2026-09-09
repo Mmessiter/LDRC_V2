@@ -29,6 +29,13 @@ table.wire td:first-child{font-weight:700;color:#3a5165;white-space:nowrap}
     <p class=subtitle>the phone app on a Nexus that another receiver flies</p>
     <div id=status class="banner info">loading&hellip;</div>
 
+    <div class=card id=nameCard style="display:none">
+        <h2>Name</h2>
+        <div class=fldRow><label for=nm data-help="What the app shows in its list of models and dongles. Saving restarts the board.">Shown in the app</label>
+            <input id=nm type=text maxlength=24 autocomplete=off style="flex:1;max-width:14em;font-size:1em;padding:.3em .5em;border:1px solid #c9d3dc;border-radius:6px"></div>
+        <button class="btn" type=button id=renameBtn style="margin:.4em 0 0;background:#6f7e8b"><span class=ico>&#127991;&#65039;</span>Rename</button>
+    </div>
+
     <div class=card>
         <h2>Wiring</h2>
         <table class=wire>
@@ -77,6 +84,18 @@ async function load() {
     try {
         const s = await LDRC.fetchState();
         on = !!s.dongle;
+        // The dongle's name lives here, not on Setup (Malcolm 2026-09-10).
+        const nc = document.getElementById('nameCard'); if (nc) nc.style.display = on ? '' : 'none';
+        const nm = document.getElementById('nm'); if (nm) nm.value = (s.info && s.info.name) || '';
+        const rb = document.getElementById('renameBtn');
+        if (rb) rb.onclick = () => {
+            const v = (nm.value || '').trim();
+            if (!v) { LDRC.alert('Give it a name first.', { title: 'Rename', icon: '🏷️' }); return; }
+            const fd = new URLSearchParams(); fd.set('name', v);
+            fetch('/api/name', { method: 'POST', body: fd })
+              .then(r => r.text()).then(html => { document.open(); document.write(html); document.close(); })
+              .catch(() => LDRC.alert('Could not reach the dongle.', { title: 'Rename', icon: '🏷️' }));
+        };
         document.getElementById('mode').value = String(s.dongle_mode || 0);
         // A dongle has no transceivers and never will: no Mode choice on it,
         // just the port speed (Malcolm 2026-09-10). The choice stays on a

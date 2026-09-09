@@ -31,8 +31,8 @@ targets:
             LSItemContentTypes:
               - public.json
               - public.plain-text
-        CFBundleShortVersionString: "4.55"
-        CFBundleVersion: "317"
+        CFBundleShortVersionString: "4.56"
+        CFBundleVersion: "318"
         CFBundleDisplayName: RXV2
         UILaunchScreen: {}
         NSCameraUsageDescription: RXV2 uses the camera to take a photograph of your helicopter, shown beside its receiver.
