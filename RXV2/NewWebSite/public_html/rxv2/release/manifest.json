@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.608-setup-dongle-hide",
+      "url": "https://messiter.com/rxv2/release/v0.9.608/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.608/littlefs.bin",
+      "fs_md5": "f08e9adfbb1e74f14f4199ded5d9c6db",
+      "notes": "Setup page on a dongle: the Output protocol, View channels and Receiver settings buttons are hidden before the first paint and the state read retries instead of giving up after one miss over Bluetooth (Malcolm 2026-09-10: 'Setup page didn't hide it'). Includes 0.9.607."
+    },
+    {
       "name": "RXV2-0.9.607-dongle-rx-only",
       "url": "https://messiter.com/rxv2/release/v0.9.607/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.607/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.597/littlefs.bin",
       "fs_md5": "69da8fb2a7b5fcec5485c7fe3512c23c",
       "notes": "PIDs page: the row that was called 'HSI off' is the O gain (how strongly the high-speed trim builds up) and is now labelled 'HSI gain (O)'; the PID+ page's 'high-speed trim cap (HSI offset limit)' is the ceiling in degrees. Both help texts now point at each other (Malcolm 2026-09-10: 'their values are different, how do they differ?'). Includes 0.9.596."
-    },
-    {
-      "name": "RXV2-0.9.596-ble-watchdog-safe",
-      "url": "https://messiter.com/rxv2/release/v0.9.596/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.596/littlefs.bin",
-      "fs_md5": "b736138e88cba6ff6225b6d3c2201261",
-      "notes": "Bluetooth watchdog made flight-safe (Malcolm 2026-09-10: dongle fixes live in the receiver too). On a receiver it stands down whenever a transmitter link is live, pre-flight or in flight; on a dongle whenever the flight controller says armed. Every condition must hold for two consecutive checks (20 s) before it acts. Includes 0.9.595."
     }
   ]
 }
