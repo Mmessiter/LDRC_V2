@@ -376,6 +376,11 @@ inline void handleFcTelemSpeed() {
         return;
     }
     const bool fast = (mode == "fast");
+    if (dongleEnabled) {      // 0.9.602: the link speed belongs to the receiver that flies the model
+        server.sendHeader("Cache-Control", "no-store");
+        server.send(403, "application/json", "{\"ok\":false,\"message\":\"not from a dongle - the telemetry link speed belongs to the receiver that flies this model\"}");
+        return;
+    }
     if ((fcInfo.telemSpeedPref != 0) != fast) {
         fcInfo.telemSpeedPref = fast ? 1 : 0;
         prefs.putUChar(NVS_KEY_FC_TELEM_SPEED, fcInfo.telemSpeedPref);   // on the ground: a page request

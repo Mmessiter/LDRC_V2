@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.602-dongle-no-telem-speed",
+      "url": "https://messiter.com/rxv2/release/v0.9.602/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.602/littlefs.bin",
+      "fs_md5": "d08b42b151ddc08fd3dca0fe150c29a2",
+      "notes": "Dongle: the telemetry speed card (fast / standard) is never offered - the 3-second refresh of the Rotorflight page had been drawing it after the first paint - and the receiver refuses the request from a dongle: the telemetry link speed belongs to whatever receiver flies the model (Malcolm 2026-09-10: 'Not applied' after Apply fast telemetry on a dongle). Includes 0.9.601."
+    },
+    {
       "name": "RXV2-0.9.601-telem-why",
       "url": "https://messiter.com/rxv2/release/v0.9.601/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.601/littlefs.bin",
@@ -72,11 +79,6 @@
       "name": "RXV2-0.9.591-dongle-wire",
       "url": "https://messiter.com/rxv2/release/v0.9.591/firmware.bin",
       "notes": "Dongle mode: the receiver's status now counts the bytes, frames and CRC errors on the flight-controller wire, so a silent flight controller can be told from a wiring or port-setting mistake. Otherwise as 0.9.590."
-    },
-    {
-      "name": "RXV2-0.9.590-dongle-mode",
-      "url": "https://messiter.com/rxv2/release/v0.9.590/firmware.bin",
-      "notes": "NEW: Rotorflight dongle mode (Setup page). A bare XIAO ESP32-S3 running this firmware, wired to a spare flight-controller UART set to MSP (D5 to its TX, D6 to its RX, 5 V, GND), gives the whole phone app - wizards, sliders, backups, Find a setting - on a model that any other receiver flies. It speaks plain MSP on the wire, outputs no channels, takes ARMED from the flight controller itself (configuration refused and radios off while armed), and leaves bank selections to the model's own switch. Includes 0.9.589 (re-centring sliders, PIDs search chip)."
     }
   ]
 }
