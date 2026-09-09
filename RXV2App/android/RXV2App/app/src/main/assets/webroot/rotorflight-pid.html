@@ -85,7 +85,7 @@ table.pids td input{width:100%;padding:.5em;font-size:1em;border:1px solid #b8c7
     </div>
 
     <div class=card>
-        <h2>Boost &amp; HSI offsets</h2>
+        <h2>Boost &amp; high-speed trim</h2>
         <table class=pids>
             <thead><tr><th></th><th>Roll</th><th>Pitch</th><th>Yaw</th></tr></thead>
             <tbody>
@@ -93,7 +93,7 @@ table.pids td input{width:100%;padding:.5em;font-size:1em;border:1px solid #b8c7
                     <td><input id=b_R type=number min=0 max=2000></td>
                     <td><input id=b_P type=number min=0 max=2000></td>
                     <td><input id=b_Y type=number min=0 max=2000></td></tr>
-                <tr><th data-help="High-speed trim offset: automatic trim applied in fast forward flight so the model does not need stick pressure.">HSI off</th>
+                <tr><th data-help="How strongly the automatic trim builds up in fast forward flight, so the model does not need stick pressure (the O gain, also called HSI gain). A gain, like P, I and D. How FAR that trim may go is the separate high-speed trim cap (HSI offset limit) on the PID+ page.">HSI gain (O)</th>
                     <td><input id=h_R type=number min=0 max=500></td>
                     <td><input id=h_P type=number min=0 max=500></td>
                     <td>&mdash;</td></tr>
