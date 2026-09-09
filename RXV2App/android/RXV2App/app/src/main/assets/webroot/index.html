@@ -9,8 +9,14 @@
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Home &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=181">
-<script src="/app.js?v=196" defer></script>
+<script src="/app.js?v=197" defer></script>
 <style>
+/* First paint from memory (Malcolm 2026-09-10: the receiver layout flashed
+   before the dongle one): classes set on <html> by the hint script below,
+   before the buttons exist, so the right buttons are the first thing drawn. */
+html.h-dongle #flybtn, html.h-dongle #bindbtn, html.h-dongle #simpg, html.h-dongle #fcHint,
+html.h-dongle #bindBanner, html.h-dongle #simBanner, html.h-dongle a[href="/blackbox"] { display: none !important; }
+html.h-dongle #dongleBanner { display: block !important; }
 /* Friendly confirmation card (replaces the browser's utilitarian confirm()) */
 .modal{position:fixed;inset:0;background:rgba(16,38,58,.55);backdrop-filter:blur(2px);
  display:flex;align-items:center;justify-content:center;z-index:50;padding:1em}
@@ -132,6 +138,9 @@
             const h=JSON.parse(localStorage.getItem('frontHints')||'{}');
             if(h.flyHidden)document.getElementById('flybtn').style.display='none';
             if(h.rfShow)document.getElementById('rfbtn').style.display='';
+            if(h.dongle)document.documentElement.classList.add('h-dongle');
+            if(h.name)document.getElementById('modelName').textContent=h.name;
+            document.getElementById('subtitle').textContent='';   // nothing to say until the receiver answers
         }catch(e){}
         </script>
         <a class="btn btn-bb"   href="/blackbox"><span class=ico>&#128209;</span>Black box log</a>
@@ -337,6 +346,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Dongle mode (2026-09-08): banner, and the radio-only buttons go.
     const dongleOn = !!s.dongle;
     window.__dongleMode = dongleOn;
+    saveFrontHint('dongle', dongleOn);
+    if (!dongleOn) document.documentElement.classList.remove('h-dongle');   // a receiver after a dongle: the live answer wins
     const dB = document.getElementById('dongleBanner');
     if (dB) dB.style.display = dongleOn ? '' : 'none';
     if (dongleOn) {
@@ -406,6 +417,7 @@ function paintModelName(s) {
     const name   = (s.info && s.info.name) || 'RXV2';
     const custom = !!(s.info && s.info.name_custom);
     LDRC.setText('modelName', name);
+    saveFrontHint('name', name);
     document.title = name + ' — LDRC RX V2';
     const gate = document.getElementById('nameGate');
     const menu = document.getElementById('mainMenu');
