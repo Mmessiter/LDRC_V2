@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.609-rename-dongle",
+      "url": "https://messiter.com/rxv2/release/v0.9.609/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.609/littlefs.bin",
+      "fs_md5": "b0ee349c3dd8f3404d22364ebb8fde7a",
+      "notes": ""
+    },
+    {
       "name": "RXV2-0.9.608-setup-dongle-hide",
       "url": "https://messiter.com/rxv2/release/v0.9.608/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.608/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.598/littlefs.bin",
       "fs_md5": "1f690a40e3e0b0caf58b793c428689e5",
       "notes": "Dongle Bluetooth forensics (Malcolm 2026-09-10, twice 'not advertising until I rebooted it'): state.json's ble block now names the connected phone (address, connected-for and silent-for times); a dongle keeps its event log through a power-cycle (persisted on every connect/disconnect and every 5 minutes, disarmed only); a dongle drops a silent app after 3 minutes (receiver: 10) so another phone can connect; with nobody connected for 10 minutes the advertising is re-keyed. Receivers unchanged in flight: nothing runs while a transmitter link is live. Includes 0.9.597."
-    },
-    {
-      "name": "RXV2-0.9.597-hsi-labels",
-      "url": "https://messiter.com/rxv2/release/v0.9.597/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.597/littlefs.bin",
-      "fs_md5": "69da8fb2a7b5fcec5485c7fe3512c23c",
-      "notes": "PIDs page: the row that was called 'HSI off' is the O gain (how strongly the high-speed trim builds up) and is now labelled 'HSI gain (O)'; the PID+ page's 'high-speed trim cap (HSI offset limit)' is the ceiling in degrees. Both help texts now point at each other (Malcolm 2026-09-10: 'their values are different, how do they differ?'). Includes 0.9.596."
     }
   ]
 }

@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.608-setup-dongle-hide";
+constexpr const char* FW_VERSION = "RXV2-0.9.609-rename-dongle";
 
 //*********************************************************************
 //  Auto-update manifest URLs

@@ -19,15 +19,14 @@
 <div class=bg-wash  aria-hidden=true></div>
 <div class=container>
     <h1>Setup</h1>
-    <p class=subtitle>One-time configuration &mdash; output, WiFi, firmware</p>
 
     <a class="btn btn-diag" href="/protocol" id=protobtn><span class=ico>&#128225;</span>Output protocol &mdash; <span id=protoname>&hellip;</span></a>
     <a class="btn btn-diag" href="/diagnostics"><span class=ico>&#127916;</span>View channels</a>
     <a class="btn btn-diag" href="/rxsettings"><span class=ico>&#9881;&#65039;</span>Receiver settings &mdash; failsafe, battery, wave</a>
     <a class="btn btn-fw"   href="/wifi" id=wifibtn style="display:none"><span class=ico>&#128246;</span>WiFi settings</a>
     <a class="btn btn-fw"   href="/firmware"><span class=ico>&#128229;</span>Update or roll back firmware</a>
-    <a class="btn btn-diag" href="/dongle" id=donglebtn><span class=ico>&#128268;</span>Rotorflight dongle mode &mdash; <span id=donglestate>&hellip;</span></a>
-    <button class="btn" type=button id=renamebtn style="background:#6f7e8b"><span class=ico>&#127991;&#65039;</span>Rename receiver &mdash; <span id=curname>&hellip;</span></button>
+    <a class="btn btn-diag" href="/dongle" id=donglebtn><span class=ico>&#128268;</span><span>Rotorflight dongle mode&nbsp;&mdash;&nbsp;<span id=donglestate>&hellip;</span></span></a>
+    <button class="btn" type=button id=renamebtn style="background:#6f7e8b"><span class=ico>&#127991;&#65039;</span><span><span id=renamelbl>Rename receiver</span>&nbsp;&mdash;&nbsp;<span id=curname>&hellip;</span></span></button>
 
     <div class=footer></div>
 </div>
@@ -51,12 +50,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Current name on the rename button.
     LDRC.setText('curname', (s.info && s.info.name) || 'RXV2');
+    LDRC.setText('renamelbl', s.dongle ? 'Rename dongle' : 'Rename receiver');   // Malcolm 2026-09-10
 
     // Rename — same prompt-based flow as tapping the front-screen title.
     const rb = document.getElementById('renamebtn');
     if (rb) rb.onclick = () => {
         const cur = (s.info && s.info.name_custom) ? s.info.name : '';
-        const v = prompt('Rename this receiver (blank = revert to "RXV2"):', cur);
+        const v = prompt((s.dongle ? 'Rename this dongle' : 'Rename this receiver') + ' (blank = revert to "RXV2"):', cur);
         if (v === null) return;
         const fd = new URLSearchParams();
         fd.set('name', v.trim());
