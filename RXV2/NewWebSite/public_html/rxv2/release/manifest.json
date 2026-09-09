@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.613-dongle-name",
+      "url": "https://messiter.com/rxv2/release/v0.9.613/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.613/littlefs.bin",
+      "fs_md5": "ef5893bcb791d56d29959a2ae111cbc5",
+      "notes": "Dongle setup now has the dongle's name at the top (type, Rename); Setup loses its rename button on a dongle (Malcolm 2026-09-10). Includes 0.9.612."
+    },
+    {
       "name": "RXV2-0.9.612-dongle-setup",
       "url": "https://messiter.com/rxv2/release/v0.9.612/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.612/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.602/littlefs.bin",
       "fs_md5": "d08b42b151ddc08fd3dca0fe150c29a2",
       "notes": "Dongle: the telemetry speed card (fast / standard) is never offered - the 3-second refresh of the Rotorflight page had been drawing it after the first paint - and the receiver refuses the request from a dongle: the telemetry link speed belongs to whatever receiver flies the model (Malcolm 2026-09-10: 'Not applied' after Apply fast telemetry on a dongle). Includes 0.9.601."
-    },
-    {
-      "name": "RXV2-0.9.601-telem-why",
-      "url": "https://messiter.com/rxv2/release/v0.9.601/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.601/littlefs.bin",
-      "fs_md5": "f817ba43c45f3164ca5db348b2e8b8ef",
-      "notes": "Telemetry speed: when the flight controller does not take the new setup, the message and the event log now say which step failed (no acknowledgement, a rejected write, a short read-back, or the byte that came back different). Malcolm 2026-09-10: 'Not applied' with no reason. Includes 0.9.600."
     }
   ]
 }
