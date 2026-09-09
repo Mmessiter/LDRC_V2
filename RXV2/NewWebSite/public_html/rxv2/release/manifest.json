@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.597-hsi-labels",
+      "url": "https://messiter.com/rxv2/release/v0.9.597/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.597/littlefs.bin",
+      "fs_md5": "69da8fb2a7b5fcec5485c7fe3512c23c",
+      "notes": "PIDs page: the row that was called 'HSI off' is the O gain (how strongly the high-speed trim builds up) and is now labelled 'HSI gain (O)'; the PID+ page's 'high-speed trim cap (HSI offset limit)' is the ceiling in degrees. Both help texts now point at each other (Malcolm 2026-09-10: 'their values are different, how do they differ?'). Includes 0.9.596."
+    },
+    {
       "name": "RXV2-0.9.596-ble-watchdog-safe",
       "url": "https://messiter.com/rxv2/release/v0.9.596/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.596/littlefs.bin",
@@ -64,13 +71,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.586/littlefs.bin",
       "fs_md5": "7c1a9a5dc2316419ffc73674a2a85b6c",
       "notes": "Find a setting: menu entries no longer run their title into their subtitle (\"Backup & restorethe whole setup\"). Otherwise as 0.9.585."
-    },
-    {
-      "name": "RXV2-0.9.585-search-everywhere",
-      "url": "https://messiter.com/rxv2/release/v0.9.585/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.585/littlefs.bin",
-      "fs_md5": "a681329be23e963ac5dd8d09f3cba37c",
-      "notes": "Find a setting is now a magnifier button beside the ? on every page, so a search is one tap away wherever you are; the menu buttons for it are gone. Page titles sit below the button row on every page."
     }
   ]
 }
