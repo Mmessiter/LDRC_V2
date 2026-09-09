@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.604-first-paint",
+      "url": "https://messiter.com/rxv2/release/v0.9.604/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.604/littlefs.bin",
+      "fs_md5": "c10bcb2ce8fbf7bc8289b688d0547104",
+      "notes": "Home page: no more flash of the wrong layout while the receiver answers (Malcolm 2026-09-10). The page remembers what it showed last time - dongle or receiver buttons, the model's name, the version in the footer - and paints that first; the live answer then changes only what differs. The subtitle stays blank instead of saying 'loading'. Includes 0.9.603."
+    },
+    {
       "name": "RXV2-0.9.603-less-words",
       "url": "https://messiter.com/rxv2/release/v0.9.603/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.603/littlefs.bin",
@@ -76,11 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.593/littlefs.bin",
       "fs_md5": "3d0de7da092dbcf4465578dd3c4eb09c",
       "notes": "A dongle looks like a dongle: the home page says 'Rotorflight dongle' and whether the flight controller is connected, and nothing that needs a transceiver is shown - no bind card, no transceiver warning, no Fly, Bind, Simulator or Black box; Setup hides the output protocol, channel view and receiver settings. Includes 0.9.592 (automatic dongle mode)."
-    },
-    {
-      "name": "RXV2-0.9.592-auto-dongle",
-      "url": "https://messiter.com/rxv2/release/v0.9.592/firmware.bin",
-      "notes": "Dongle mode is now AUTOMATIC (Malcolm's idea): at every power-up the board counts its transceivers - none means it is a Rotorflight dongle, one or more means it is a receiver. A bare XIAO with this firmware is a dongle with no setting at all; the home page says why. The dongle page keeps an override (always a dongle / always a receiver) and the UART speed. Includes 0.9.591."
     }
   ]
 }

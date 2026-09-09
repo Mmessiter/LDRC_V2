@@ -81,8 +81,9 @@
         mountFooter() {
             const f = document.querySelector('.footer');
             if (!f) return;
-            // Populated by first state fetch; show a placeholder for now.
-            if (!f.textContent.trim()) f.textContent = 'loading...';
+            // Populated by the first state fetch; until then show what the
+            // last visit saw (Malcolm 2026-09-10: no 'loading...' flash).
+            if (!f.textContent.trim()) { try { f.textContent = localStorage.getItem('ldrc.footer') || ''; } catch (e) { f.textContent = ''; } }
         },
 
         // Drop-in async replacement for window.confirm — colourful modal.
@@ -720,6 +721,7 @@
                 if (LDRC.state && LDRC.state.info) {
                     const f = document.querySelector('.footer');
                     if (f) f.textContent = LDRC.state.info.fw_version;
+                    try { localStorage.setItem('ldrc.footer', LDRC.state.info.fw_version || ''); } catch (e) {}
                 }
             });
         }, 200);
