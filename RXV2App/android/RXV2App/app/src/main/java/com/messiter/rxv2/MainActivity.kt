@@ -1061,6 +1061,8 @@ class MainActivity : AppCompatActivity() {
             Thread.sleep(if (fast) 100 else 6000)   // manual = at once; auto = settle first
             val pace = if (fast) 150L else 400L
             var failures = 0      // MSP reads that never answered (after one retry)
+            var straightFails = 0 // ...in a row: five means the link is gone, not a hiccup
+            var tooFar = false    // (Malcolm 2026-09-10: "it tried and tried" out of range)
             fun reqCoded(p: String): Pair<Int, ByteArray?> {   // followFetch records automatically
                 val r = bleSyncCoded(p)
                 // Progress counts PLANNED items, not requests: bank checks,
@@ -1078,14 +1080,17 @@ class MainActivity : AppCompatActivity() {
             // restore point cannot carry a stale copy of it either.
             fun mspRead(p: String, optional: Boolean = false) {
                 try {
+                    if (tooFar) return                     // the link is gone: skip the rest, finish fast
                     val first = reqCoded(p)
-                    if (first.second != null) return
+                    if (first.second != null) { straightFails = 0; return }
                     if (optional && first.first == 502) { SessionCache.forget(p); return }
                     Thread.sleep(500)
                     val second = reqCoded(p)
-                    if (second.second != null) return
+                    if (second.second != null) { straightFails = 0; return }
                     if (optional && second.first == 502) { SessionCache.forget(p); return }
                     failures++
+                    straightFails++
+                    if (straightFails >= 5) tooFar = true
                 } finally { snapDone++ }                 // one planned item, however many tries
             }
             fun selectBank(byte: Int) {
@@ -1160,7 +1165,7 @@ class MainActivity : AppCompatActivity() {
             } else {
                 val orig = fcBanks()
                 if (orig == null) {
-                    snapError = "could not read the flight controller's bank (MSP 101) — is it powered and connected?"
+                    snapError = "could not read the flight controller's bank (MSP 101) — is it powered and connected, and are you close enough?"
                 } else {
                     val origPid = orig.first; val origRate = orig.second
                     // Exactly the planned reads: bankless + 4 mixer inputs + 3 RPM
@@ -1186,6 +1191,7 @@ class MainActivity : AppCompatActivity() {
                     var curPid = origPid; var curRate = origRate
                     var aborted = false
                     for (b in 0..3) {
+                        if (tooFar) break
                         if (txAppeared()) { aborted = true; break }
                         if (b != curPid) { selectBank(b); curPid = b }
                         else SessionCache.noteBankSelect("%02X".format(b))
@@ -1193,6 +1199,7 @@ class MainActivity : AppCompatActivity() {
                         if (!stillOn(b, null)) { aborted = true; break }
                     }
                     if (!aborted) for (r in 0..3) {
+                        if (tooFar) break
                         if (txAppeared()) { aborted = true; break }
                         if (r != curRate) { selectBank(0x80 or r); curRate = r }
                         else SessionCache.noteBankSelect("%02X".format(0x80 or r))
@@ -1205,9 +1212,10 @@ class MainActivity : AppCompatActivity() {
                         if (curPid != origPid) selectBank(origPid)
                         if (curRate != origRate) selectBank(0x80 or origRate)
                     }
-                    if (aborted) snapError = "the transmitter came on (or the flight controller changed bank) mid-backup — switch it off and back up again"
+                    if (tooFar) snapError = "too far from the receiver — the link kept dropping. Move within a metre and back up again"
+                    else if (aborted) snapError = "the transmitter came on (or the flight controller changed bank) mid-backup — switch it off and back up again"
                     else if (failures > 0) snapError = "$failures read${if (failures == 1) "" else "s"} got no answer — back up again"
-                    sweepOK = !aborted && failures == 0
+                    sweepOK = !aborted && !tooFar && failures == 0
                 }
             }
             // Full sweep completed → freeze the restore point (the rolling

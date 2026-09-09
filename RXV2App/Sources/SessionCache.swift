@@ -972,6 +972,8 @@ final class SessionPrefetcher {
         phase = "running"; done = 0; total = 4; ok = false; error = ""   // state, flights, events x2
         let pace = fast ? 0.15 : 0.4
         var failures = 0      // MSP reads that never answered (after one retry)
+        var straightFails = 0 // ...in a row: five means the link is gone, not a hiccup
+        var tooFar = false    // (Malcolm 2026-09-10: "it tried and tried" out of range)
 
         // Blocking GET on this background thread; tees into the recording.
         // Returns the receiver's HTTP code too (0 = no answer at all): the
@@ -1017,14 +1019,17 @@ final class SessionPrefetcher {
         // point cannot carry a stale copy of it either.
         func mspRead(_ p: String, optional: Bool = false) {
             defer { done += 1 }                  // one planned item, however many tries
+            if tooFar { return }                 // the link is gone: skip the rest, finish fast
             let first = reqCoded(p)
-            if first.body != nil { return }
+            if first.body != nil { straightFails = 0; return }
             if optional && first.code == 502 { SessionCache.shared.forget(pathAndQuery: p); return }
             Thread.sleep(forTimeInterval: 0.5)
             let second = reqCoded(p)
-            if second.body != nil { return }
+            if second.body != nil { straightFails = 0; return }
             if optional && second.code == 502 { SessionCache.shared.forget(pathAndQuery: p); return }
             failures += 1
+            straightFails += 1
+            if straightFails >= 5 { tooFar = true }
         }
         func selectBank(_ byte: Int) {
             let hex = String(format: "%02X", byte)
@@ -1121,6 +1126,7 @@ final class SessionPrefetcher {
                 var curPid = orig.pid, curRate = orig.rate
                 var aborted = false
                 for b in 0...3 {
+                    if tooFar { break }
                     if txAppeared() { aborted = true; break }
                     if b != curPid { selectBank(b); curPid = b }
                     else { SessionCache.shared.noteBankSelect(dataHex: String(format: "%02X", b)) }
@@ -1132,6 +1138,7 @@ final class SessionPrefetcher {
                 }
                 if !aborted {
                     for r in 0...3 {
+                        if tooFar { break }
                         if txAppeared() { aborted = true; break }
                         if r != curRate { selectBank(0x80 | r); curRate = r }
                         else { SessionCache.shared.noteBankSelect(dataHex: String(format: "%02X", 0x80 | r)) }
@@ -1145,14 +1152,16 @@ final class SessionPrefetcher {
                     if curPid != orig.pid { selectBank(orig.pid) }
                     if curRate != orig.rate { selectBank(0x80 | orig.rate) }
                 }
-                if aborted {
+                if tooFar {
+                    error = "too far from the receiver — the link kept dropping. Move within a metre and back up again"
+                } else if aborted {
                     error = "the transmitter came on (or the flight controller changed bank) mid-backup — switch it off and back up again"
                 } else if failures > 0 {
                     error = "\(failures) read\(failures == 1 ? "" : "s") got no answer — back up again"
                 }
-                sweepOK = !aborted && failures == 0
+                sweepOK = !aborted && !tooFar && failures == 0
             } else {
-                error = "could not read the flight controller's bank (MSP 101) — is it powered and connected?"
+                error = "could not read the flight controller's bank (MSP 101) — is it powered and connected, and are you close enough?"
             }
             // Full sweep completed → freeze the restore point (the rolling
             // cache keeps updating; this copy never follows the edits).
