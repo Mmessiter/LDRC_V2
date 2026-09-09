@@ -78,6 +78,32 @@ class MainActivity : AppCompatActivity() {
         androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
     ) { if (it.values.all { g -> g }) ble.startScan() else showMessage("Bluetooth permission is needed.") }
 
+    // A backup file opened or shared from another app (Malcolm 2026-09-10):
+    // keep it as the restore point for the model named inside it.
+    override fun onNewIntent(intent: android.content.Intent) { super.onNewIntent(intent); setIntent(intent); handleImportIntent(intent) }
+    override fun onStart() { super.onStart(); intent?.let { handleImportIntent(it) } }
+    private fun handleImportIntent(i: android.content.Intent) {
+        if (i.getBooleanExtra("ldrc_handled", false)) return
+        val uri: android.net.Uri? = when (i.action) {
+            android.content.Intent.ACTION_VIEW -> i.data
+            android.content.Intent.ACTION_SEND -> @Suppress("DEPRECATION") (i.getParcelableExtra(android.content.Intent.EXTRA_STREAM) as? android.net.Uri)
+            else -> null
+        } ?: return
+        i.putExtra("ldrc_handled", true)
+        Thread {
+            val text = runCatching { contentResolver.openInputStream(uri!!)?.use { String(it.readBytes()) } }.getOrNull()
+            val root = runCatching { JSONObject(text ?: "") }.getOrNull()
+            val model = root?.optString("model", "")?.trim() ?: ""
+            val msg = if (root == null || root.optString("format") != "rxv2-backup-1" || model.isEmpty()) "That file is not an LDRC backup."
+                      else {
+                          val r = SessionCache.importRestore(text!!, model)
+                          if (r.ok) "Backup for \"$model\" is now on this phone (${r.count} settings). Connect to $model, open Backup & restore, and tap Restore."
+                          else "That backup could not be read."
+                      }
+            runOnUiThread { android.app.AlertDialog.Builder(this).setTitle("Backup file").setMessage(msg).setPositiveButton("OK", null).show() }
+        }.start()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         ble = Rxv2Ble(applicationContext)

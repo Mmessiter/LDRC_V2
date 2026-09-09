@@ -37,6 +37,9 @@ struct RootView: View {
     @State private var sendDone = 0
     @State private var sendTotal = 0
     @State private var sendResult: String? = nil   // nil while sending
+    // A backup file opened from Messages, Mail or Files (Malcolm 2026-09-10:
+    // "I sent a backup to myself over iMessage - how do I get it in?").
+    @State private var importNotice: String? = nil
 
     var body: some View {
         NavigationStack {
@@ -105,6 +108,10 @@ struct RootView: View {
         // "usually I want to connect to a different model"): away >1 min with
         // a live link → drop it and land on the model list. Quick app-switches
         // keep the connection; demo and armchair review are left alone.
+        .onOpenURL { url in importBackupFile(url) }
+        .alert("Backup file", isPresented: Binding(get: { importNotice != nil }, set: { if !$0 { importNotice = nil } })) {
+            Button("OK") { }
+        } message: { Text(importNotice ?? "") }
         .onChange(of: scenePhase) { phase in
             switch phase {
             case .background:
@@ -160,6 +167,23 @@ struct RootView: View {
 extension RootView {
     /// Once per connection: offer any offline edits (SAME model only), then
     /// prefetch the whole session in the background (Malcolm's refinement 1).
+    /// A backup file handed to the app by another app: keep it on the phone
+    /// as the restore point for the model named inside it.
+    private func importBackupFile(_ url: URL) {
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        guard let d = try? Data(contentsOf: url) else { importNotice = "Could not read that file."; return }
+        let root = (try? JSONSerialization.jsonObject(with: d)) as? [String: Any]
+        let model = ((root?["model"] as? String) ?? "").trimmingCharacters(in: .whitespaces)
+        guard (root?["format"] as? String) == "rxv2-backup-1", !model.isEmpty else {
+            importNotice = "That file is not an LDRC backup."; return
+        }
+        let r = SessionCache.shared.importRestore(json: d, forModel: model)
+        importNotice = r.ok
+            ? "Backup for \"\(model)\" is now on this phone (\(r.count) settings). Connect to \(model), open Backup & restore, and tap Restore."
+            : "That backup could not be read."
+    }
+
     func onConnected(_ name: String) {
         guard !sessionStarted else { return }
         sessionStarted = true

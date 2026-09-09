@@ -33,6 +33,20 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- A backup file opened or shared from Messages, Mail or Files (2026-09-10). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" android:mimeType="application/json" />
+                <data android:scheme="file" android:mimeType="application/json" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/json" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
         </activity>
         <!-- Shares exported backup files (cache/backups) via the system share sheet. -->
         <provider
