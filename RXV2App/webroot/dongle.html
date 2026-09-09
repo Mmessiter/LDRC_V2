@@ -41,14 +41,14 @@ table.wire td:first-child{font-weight:700;color:#3a5165;white-space:nowrap}
     </div>
 
     <div class=card>
-        <h2>Mode</h2>
-        <div class=fldRow><label data-help="Automatic: a board with no transceivers is a dongle, a board with transceivers is a receiver - decided at every power-up. Always a dongle / Always a receiver override that. A change reboots the board.">What this board is</label>
+        <h2 id=modeHead>Mode</h2>
+        <div class=fldRow id=modeRow><label data-help="Automatic: a board with no transceivers is a dongle, a board with transceivers is a receiver - decided at every power-up. Always a dongle / Always a receiver override that. A change reboots the board.">What this board is</label>
             <select id=mode>
                 <option value=0>Automatic (by transceivers)</option>
                 <option value=1>Always a dongle</option>
                 <option value=2>Always a receiver</option>
             </select></div>
-        <div class=fldRow><label>Right now</label><span class=state id=curState>&hellip;</span></div>
+        <div class=fldRow id=curRow><label>Right now</label><span class=state id=curState>&hellip;</span></div>
         <div class=fldRow><label data-help="The UART speed Rotorflight uses for its MSP port - 115200 is its default. Both ends must agree.">UART speed (baud)</label>
             <select id=baud>
                 <option value=115200>115200</option>
@@ -56,7 +56,7 @@ table.wire td:first-child{font-weight:700;color:#3a5165;white-space:nowrap}
                 <option value=460800>460800</option>
                 <option value=921600>921600</option>
             </select></div>
-        <p class=sub>Switching off returns the board to being a receiver. Both need a restart, which happens by itself.</p>
+        <p class=sub id=modeNote>Switching off returns the board to being a receiver. Both need a restart, which happens by itself.</p>
     </div>
 
     <div class=fabBar>
@@ -78,6 +78,11 @@ async function load() {
         const s = await LDRC.fetchState();
         on = !!s.dongle;
         document.getElementById('mode').value = String(s.dongle_mode || 0);
+        // A dongle has no transceivers and never will: no Mode choice on it,
+        // just the port speed (Malcolm 2026-09-10). The choice stays on a
+        // receiver, where it decides what a board with dead radios becomes.
+        for (const id of ['modeRow', 'curRow', 'modeNote']) document.getElementById(id).style.display = on ? 'none' : '';
+        document.getElementById('modeHead').textContent = on ? 'Port speed' : 'Mode';
         document.getElementById('curState').textContent = on
             ? ('Rotorflight dongle' + (s.dongle_auto ? ' (no transceivers found)' : ' (set to always)'))
             : ('LockDown receiver' + (s.dongle_mode == 2 ? ' (set to always)' : ''));
