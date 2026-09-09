@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.614-pill-fix",
+      "url": "https://messiter.com/rxv2/release/v0.9.614/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.614/littlefs.bin",
+      "fs_md5": "5945e2955e289cbba223dff927e6a66d",
+      "notes": "Updates page: the status pill no longer offers 'tap to install' while an install is already running. Includes 0.9.613."
+    },
+    {
       "name": "RXV2-0.9.613-dongle-name",
       "url": "https://messiter.com/rxv2/release/v0.9.613/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.613/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.603/littlefs.bin",
       "fs_md5": "f91770ee0473132d273df83d30ae5b67",
       "notes": "Fewer words (Malcolm 2026-09-10: 'keep things simple, avoid stating the obvious'): Copy a bank loses its idle 'Ready' box and its introduction; the Easy tuning and Dongle pages lose theirs; on every Rotorflight page the banner appears only when there is something to say - no more 'Loaded from flight controller' after every read (a recorded session still says it came from the phone). Includes 0.9.602."
-    },
-    {
-      "name": "RXV2-0.9.602-dongle-no-telem-speed",
-      "url": "https://messiter.com/rxv2/release/v0.9.602/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.602/littlefs.bin",
-      "fs_md5": "d08b42b151ddc08fd3dca0fe150c29a2",
-      "notes": "Dongle: the telemetry speed card (fast / standard) is never offered - the 3-second refresh of the Rotorflight page had been drawing it after the first paint - and the receiver refuses the request from a dongle: the telemetry link speed belongs to whatever receiver flies the model (Malcolm 2026-09-10: 'Not applied' after Apply fast telemetry on a dongle). Includes 0.9.601."
     }
   ]
 }

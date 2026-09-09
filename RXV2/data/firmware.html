@@ -185,7 +185,7 @@ function setStatePill(text, kind) {
     // (Malcolm 2026-09-10: "I instinctively pressed it") - same action as
     // the note below it, with a hint so the tap is expected, not a guess.
     const el = $('state'); if (!el) return;
-    if (kind === 'amber' && newestInstall) {
+    if (kind === 'amber' && newestInstall && !installing) {   // not while an install is running (it read 'Installing… — tap to install')
         el.classList.add('tap'); el.onclick = installNewest;
         el.textContent = text + ' \u2014 tap to install';
     } else { el.classList.remove('tap'); el.onclick = null; }
