@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.599-dongle-identity";
+constexpr const char* FW_VERSION = "RXV2-0.9.600-update-pill-tap";
 
 //*********************************************************************
 //  Auto-update manifest URLs
