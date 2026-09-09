@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.605-dongle-banner",
+      "url": "https://messiter.com/rxv2/release/v0.9.605/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.605/littlefs.bin",
+      "fs_md5": "933d96ad67bf7e794470be126e8544ec",
+      "notes": "Dongle home page: the banner now says the one thing a newcomer needs - 'Connect dongle to a spare UART and use configurator to set that port to MSP 115200' (Malcolm 2026-09-10). Includes 0.9.604."
+    },
+    {
       "name": "RXV2-0.9.604-first-paint",
       "url": "https://messiter.com/rxv2/release/v0.9.604/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.604/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.594/littlefs.bin",
       "fs_md5": "2daa1167165b7b97e08171e13f85016a",
       "notes": "A dongle never shows the Fly now button: the 3-second repaint used to bring it back faded once the state arrived (Malcolm 2026-09-09). Radio-only morphing is skipped on a dongle too. Includes 0.9.593."
-    },
-    {
-      "name": "RXV2-0.9.593-dongle-face",
-      "url": "https://messiter.com/rxv2/release/v0.9.593/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.593/littlefs.bin",
-      "fs_md5": "3d0de7da092dbcf4465578dd3c4eb09c",
-      "notes": "A dongle looks like a dongle: the home page says 'Rotorflight dongle' and whether the flight controller is connected, and nothing that needs a transceiver is shown - no bind card, no transceiver warning, no Fly, Bind, Simulator or Black box; Setup hides the output protocol, channel view and receiver settings. Includes 0.9.592 (automatic dongle mode)."
     }
   ]
 }
