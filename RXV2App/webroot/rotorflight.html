@@ -9,7 +9,7 @@
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rotorflight &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=181">
-<script src="/app.js?v=195" defer></script>
+<script src="/app.js?v=196" defer></script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!s.dongle) LDRC.fcTelemSpeedCard(s, 'telemSpeed');   // 0.9.563: fast (1000/1) vs standard (250/8) telemetry link rate - CRSF only, not for a dongle
     setInterval(async () => {
         const s2 = await LDRC.fetchState();
-        if (s2) { LDRC.fcTelemBanner(s2, 'telemBanner'); LDRC.fcTelemSpeedCard(s2, 'telemSpeed'); }
+        if (s2) { LDRC.fcTelemBanner(s2, 'telemBanner'); if (!s2.dongle) LDRC.fcTelemSpeedCard(s2, 'telemSpeed'); }   // the 3 s refresh forgot the dongle guard until 0.9.602
     }, 3000);
 });
 </script>

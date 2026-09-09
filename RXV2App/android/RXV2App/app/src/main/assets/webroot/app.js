@@ -344,6 +344,10 @@
         fcTelemSpeedCard(st, elId) {
             const el = document.getElementById(elId);
             if (!el) return false;
+            // Never on a dongle: the telemetry link speed belongs to whatever
+            // receiver flies the model (Malcolm 2026-09-10: a dongle offered
+            // "Apply fast telemetry" from the 3 s refresh and the write failed).
+            if (st && st.dongle) { el.style.display = 'none'; return false; }
             const fc = (st && st.fcinfo) || {};
             if (this.replay || !fc.detected || !fc.rotorflight_capable) { el.style.display = 'none'; delete el.dataset.speedShown; return false; }
             const doneAt = +el.dataset.speedDone || 0;
