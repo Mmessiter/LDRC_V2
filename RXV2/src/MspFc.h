@@ -816,12 +816,31 @@ inline bool telemImageSame(const uint8_t* a, const uint8_t* b) {
     return a[0] == b[0] && a[1] == b[1] && memcmp(a + 6, b + 6, 46) == 0;
 }
 // Write an image into FC RAM and read it back. True when the FC holds it.
+// telemWriteWhy says which step failed (Malcolm 2026-09-10: "Not applied"
+// on a fast-telemetry apply with no clue why) - shown to the user and logged.
+inline char telemWriteWhy[100] = "";
 inline bool telemWriteSync(const uint8_t img[52]) {
     static uint8_t buf[64];
     uint16_t len = 0;
-    if (!mspRequestAndWait(MSP_SET_TELEMETRY_CONFIG, img, 52, buf, &len, 1200)) return false;
+    telemWriteWhy[0] = 0;
+    if (!mspRequestAndWait(MSP_SET_TELEMETRY_CONFIG, img, 52, buf, &len, 1200)) {
+        snprintf(telemWriteWhy, sizeof telemWriteWhy, mspWaitRespError ? "the flight controller rejected the write (MSP error)"
+                                                                       : "no acknowledgement of the write within 1.2 s");
+        return false;
+    }
     uint8_t back[52] = {0};
-    return telemReadSync(back) >= 52 && telemImageSame(back, img);
+    const uint16_t n = telemReadSync(back);
+    if (n < 52) { snprintf(telemWriteWhy, sizeof telemWriteWhy, "the read-back answered %u bytes, not 52", (unsigned)n); return false; }
+    if (!telemImageSame(back, img)) {
+        int at = -1;
+        if (back[0] != img[0]) at = 0; else if (back[1] != img[1]) at = 1;
+        else for (int i = 6; i < 52; i++) if (back[i] != img[i]) { at = i; break; }
+        snprintf(telemWriteWhy, sizeof telemWriteWhy, "the read-back differs at byte %d (sent %u, FC holds %u)%s",
+                 at, at >= 0 ? img[at] : 0, at >= 0 ? back[at] : 0,
+                 (at >= 8 && at <= 11) ? " - the link rate/ratio was not accepted" : "");
+        return false;
+    }
+    return true;
 }
 // Before an EEPROM save asked for by a page, the app or the transmitter
 // path: read the FC's RAM copy; if it is the empty one, put the cached good
@@ -894,7 +913,11 @@ inline bool telemApplySpeedSync(bool fast, bool* changed, char* msg, size_t msgL
     }
     img[8]  = (uint8_t)rate;  img[9]  = (uint8_t)(rate >> 8);
     img[10] = (uint8_t)ratio; img[11] = (uint8_t)(ratio >> 8);
-    if (!telemWriteSync(img)) { snprintf(msg, msgLen, "the flight controller did not take the new setup - nothing saved"); return false; }
+    if (!telemWriteSync(img)) {
+        snprintf(msg, msgLen, "the flight controller did not take the new setup - nothing saved (%s)", telemWriteWhy);
+        char e[EventLog::MSG_LEN]; snprintf(e, sizeof e, "Telemetry speed NOT applied: %s", telemWriteWhy); events.add(e);
+        return false;
+    }
     *changed = true;
     if (!telemSaveAndRestartSync()) {
         snprintf(msg, msgLen, "the flight controller did not confirm the save - not restarted, try again");

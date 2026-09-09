@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.600-update-pill-tap";
+constexpr const char* FW_VERSION = "RXV2-0.9.601-telem-why";
 
 //*********************************************************************
 //  Auto-update manifest URLs

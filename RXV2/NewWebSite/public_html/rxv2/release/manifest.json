@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.601-telem-why",
+      "url": "https://messiter.com/rxv2/release/v0.9.601/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.601/littlefs.bin",
+      "fs_md5": "f817ba43c45f3164ca5db348b2e8b8ef",
+      "notes": "Telemetry speed: when the flight controller does not take the new setup, the message and the event log now say which step failed (no acknowledgement, a rejected write, a short read-back, or the byte that came back different). Malcolm 2026-09-10: 'Not applied' with no reason. Includes 0.9.600."
+    },
+    {
       "name": "RXV2-0.9.600-update-pill-tap",
       "url": "https://messiter.com/rxv2/release/v0.9.600/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.600/littlefs.bin",
@@ -70,11 +77,6 @@
       "name": "RXV2-0.9.590-dongle-mode",
       "url": "https://messiter.com/rxv2/release/v0.9.590/firmware.bin",
       "notes": "NEW: Rotorflight dongle mode (Setup page). A bare XIAO ESP32-S3 running this firmware, wired to a spare flight-controller UART set to MSP (D5 to its TX, D6 to its RX, 5 V, GND), gives the whole phone app - wizards, sliders, backups, Find a setting - on a model that any other receiver flies. It speaks plain MSP on the wire, outputs no channels, takes ARMED from the flight controller itself (configuration refused and radios off while armed), and leaves bank selections to the model's own switch. Includes 0.9.589 (re-centring sliders, PIDs search chip)."
-    },
-    {
-      "name": "RXV2-0.9.589-slider-centres",
-      "url": "https://messiter.com/rxv2/release/v0.9.589/firmware.bin",
-      "notes": "Sliders that re-centre. Every plain-English slider (start hardness, agility, stick feel, cyclic and tail softer/sharper, on the Governor, Rates, PIDs and Easy tuning pages) now works relative to the numbers the model had at your last backup: the centre is 'what I have now', the ends are half and double (or 35 expo either way, or 30 % on the gains). Back up to the phone and every slider returns to its centre while the numbers stay exactly as they are - so a model that needed the far end of a slider can keep going. A restore or a bank copy re-centres too. The slider's note says when it is at the end of its travel. Each slider page says so when a slider has just been re-centred, so nobody wonders where it went. Find a setting offers PIDs as its first suggestion."
     }
   ]
 }
