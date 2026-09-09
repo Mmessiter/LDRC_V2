@@ -129,6 +129,8 @@ const FIELDS = [
 
 function setStatus(kind, msg) {
     const b = document.getElementById('status');
+    b.style.display = msg ? '' : 'none';   // no banner without a status (Malcolm 2026-09-10)
+    if (!msg) return;
     b.className = 'banner ' + kind;
     b.textContent = msg;
 }
@@ -251,7 +253,7 @@ async function load() {
         await LDRC.fetchState();
         nudgeCapture();
         LDRC.clearStale();
-        setStatus('good', LDRC.replay ? '✓ Loaded from the phone (recorded session)' : '✓ Loaded from flight controller');
+        if (LDRC.replay) setStatus('good', '✓ Loaded from the phone (recorded session)'); else setStatus('', '');
         LDRC.clearDirty();
     } catch (e) {
         setStatus('bad', 'Read failed: ' + e.message);

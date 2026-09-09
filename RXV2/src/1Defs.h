@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.602-dongle-no-telem-speed";
+constexpr const char* FW_VERSION = "RXV2-0.9.603-less-words";
 
 //*********************************************************************
 //  Auto-update manifest URLs

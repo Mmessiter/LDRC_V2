@@ -95,7 +95,7 @@ const rdU32=(b,o)=>(b[o]|(b[o+1]<<8)|(b[o+2]<<16)|(b[o+3]<<24))>>>0;
 const wrU16=(b,o,v)=>{v=Math.max(0,Math.min(65535,Math.round(v)));b[o]=v&0xff;b[o+1]=(v>>8)&0xff;};
 const wrU32=(b,o,v)=>{v=Math.max(0,Math.round(v))>>>0;b[o]=v&0xff;b[o+1]=(v>>>8)&0xff;b[o+2]=(v>>>16)&0xff;b[o+3]=(v>>>24)&0xff;};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-function setStatus(k,t){const s=$('status');s.className='banner '+k;s.textContent=t;}
+function setStatus(k,t){const s=$('status');s.style.display=t?'':'none';if(!t)return;s.className='banner '+k;s.textContent=t;}   // no banner without a status (Malcolm 2026-09-10)
 function flash(id,t){$(id).textContent=t;setTimeout(()=>{ if($(id).textContent===t)$(id).textContent=''; },8000);}
 const mb=n=>n>=1048576?(n/1048576).toFixed(1)+' MB':n>=1024?Math.round(n/1024)+' kB':n+' B';
 
@@ -270,7 +270,7 @@ async function load(){
         paintDenom();
         try{ await loadFlash(); }catch(e){ $('memText').textContent='Memory: '+e.message; $('eraseBtn').disabled=true; }
         try{ await loadSwitch(); }catch(e){}
-        setStatus('good','✓ Loaded from flight controller');
+        setStatus('', '');
     }catch(e){ setStatus('bad','Read failed: '+e.message); }
 }
 // DOMContentLoaded, never top-level: deferred app.js must define LDRC first.
