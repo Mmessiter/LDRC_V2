@@ -47,6 +47,8 @@
 .note.tap{background:#ffd278;color:#5c3a00;cursor:pointer;box-shadow:0 3px 10px rgba(212,148,74,.35)}
 .note.tap .tapHint{display:block;margin-top:.35em;font-size:1.05em}
 .note.tap:active{transform:translateY(1px)}
+.pill.tap{cursor:pointer;background:#ffd278;color:#5c3a00;box-shadow:0 2px 6px rgba(212,148,74,.35)}
+.pill.tap:active{transform:translateY(1px)}
 
 /* --- One source (Local server / Public release) -------------------- */
 .source-section{margin:1.4em 0 .6em}
@@ -177,7 +179,17 @@ function resolveUrl(url, manifestUrl) {
     catch (e) { return url; }
 }
 
-function setStatePill(text, kind) { setPill('state', text, kind); }
+function setStatePill(text, kind) {
+    setPill('state', text, kind);
+    // The amber "Update available" pill doubles as the install button
+    // (Malcolm 2026-09-10: "I instinctively pressed it") - same action as
+    // the note below it, with a hint so the tap is expected, not a guess.
+    const el = $('state'); if (!el) return;
+    if (kind === 'amber' && newestInstall) {
+        el.classList.add('tap'); el.onclick = installNewest;
+        el.textContent = text + ' \u2014 tap to install';
+    } else { el.classList.remove('tap'); el.onclick = null; }
+}
 function setPill(id, text, kind) {
     const el = $(id); if (!el) return;
     el.textContent = text;
