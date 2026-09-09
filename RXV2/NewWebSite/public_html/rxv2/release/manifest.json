@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.611-dongle-no-mode",
+      "url": "https://messiter.com/rxv2/release/v0.9.611/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.611/littlefs.bin",
+      "fs_md5": "094f4f7e6caa0145d47ecada6ebee82b",
+      "notes": "Dongle page on a dongle: the Mode choice (automatic / always a dongle / always a receiver) is gone - a dongle has no transceivers and never will - leaving only the port speed. A receiver keeps the choice (Malcolm 2026-09-10). Includes 0.9.610."
+    },
+    {
       "name": "RXV2-0.9.610-keep-close",
       "url": "https://messiter.com/rxv2/release/v0.9.610/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.610/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.600/littlefs.bin",
       "fs_md5": "54579fae55fa8b8264dd0624b5f355de",
       "notes": "Updates page: the amber 'Update available' status pill now doubles as the install button, and says so (Malcolm 2026-09-10: 'I instinctively pressed it'). The note below it was already tappable. Includes 0.9.599."
-    },
-    {
-      "name": "RXV2-0.9.599-dongle-identity",
-      "url": "https://messiter.com/rxv2/release/v0.9.599/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.599/littlefs.bin",
-      "fs_md5": "c3189c94d325705fcdb17e67c8627f93",
-      "notes": "Dongle: a phone that connects the moment the board is plugged in no longer starves the flight-controller identity probe (the probe's hold-off after phone traffic is a CRSF-link measure and is skipped on a dongle), and any reply from the flight controller marks it connected at once, so the Rotorflight button appears and the arming watch starts straight away (Malcolm 2026-09-10: 'Dongles 3 and 4 do not show the Rotorflight option'). Receivers unchanged. Includes 0.9.598."
     }
   ]
 }
