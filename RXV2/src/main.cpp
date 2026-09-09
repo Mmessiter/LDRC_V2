@@ -645,14 +645,21 @@ void loop() {
         // or at home. Dongle: only while the FC says disarmed.
         const bool linkLiveNow = rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 1000;
         const bool wdAllowed = dongleEnabled ? !fcInfo.armed : !linkLiveNow;
-        StallScope s("blewd"); bleWatchdogTick(wdAllowed);
-        // A watchdog event is the forensic trail for "would not connect" -
-        // keep it through a reboot. Flash write only when nothing is flying
-        // (dongle: the FC says disarmed) - the 10 ms doctrine.
-        static uint32_t wdSeen = 0;
-        const uint32_t wdNow = bleAdvRestarts + blePhantomClears + bleIdleDrops;
-        if (wdNow != wdSeen && dongleEnabled && !fcInfo.armed) { wdSeen = wdNow; StallScope p("evPersist"); eventsPersist(); }
-        else if (wdNow != wdSeen && !dongleEnabled) wdSeen = wdNow;
+        // Dongle: an app left in the background is dropped after 3 min of
+        // silence (a foreground app talks every few seconds); receiver: 10 min.
+        StallScope s("blewd"); bleWatchdogTick(wdAllowed, dongleEnabled ? 3UL * 60UL * 1000UL : 10UL * 60UL * 1000UL);
+        // Dongle forensics (Malcolm 2026-09-10, twice "not advertising until
+        // I rebooted it" with nothing on record): keep the event log through
+        // a power-cycle - persist on every BLE connect/disconnect or watchdog
+        // action, and every 5 min while new events exist. Dongle only, FC
+        // disarmed only (a flash write is ~10 ms) - never on a receiver.
+        static uint32_t evSeen = 0, connSeen = 0, lastPersistMs = 0;
+        const uint32_t wdNow = bleAdvRestarts + blePhantomClears + bleIdleDrops + bleConnEvents;
+        if (dongleEnabled && !fcInfo.armed) {
+            const bool trigger = (wdNow != connSeen) ||
+                                 (events.added != evSeen && (uint32_t)(millis() - lastPersistMs) > 5UL * 60UL * 1000UL);
+            if (trigger) { connSeen = wdNow; evSeen = events.added; lastPersistMs = millis(); StallScope p("evPersist"); eventsPersist(); }
+        }
     }
 
     { StallScope s("radio"); radioPoll(); }

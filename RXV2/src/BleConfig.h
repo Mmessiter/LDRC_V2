@@ -68,6 +68,9 @@ inline uint32_t      bleLastActivityMs  = 0;       // last connect or write from
 inline uint32_t      bleAdvRestarts     = 0;       // watchdog: advertising restarted
 inline uint32_t      blePhantomClears   = 0;       // watchdog: client flag with no connection
 inline uint32_t      bleIdleDrops       = 0;       // watchdog: silent app dropped
+inline uint32_t      bleAdvRefreshes    = 0;       // watchdog: idle advertising re-keyed
+inline uint32_t      bleConnectedAtMs   = 0;       // when the current app connected
+inline uint32_t      bleConnEvents      = 0;       // every connect/disconnect (forensics trigger)
 
 // Continuous channel streaming ("View channels" live bars): when armed, the
 // receiver pushes compact "S|us0,..,us15|age\n" frames on the notify
@@ -315,6 +318,8 @@ class BleServerCallbacks : public NimBLEServerCallbacks {
     void onConnect(NimBLEServer* s, NimBLEConnInfo& info) override {
         bleClientConnected = true;
         bleLastActivityMs  = millis();
+        bleConnectedAtMs   = millis();
+        bleConnEvents++;
         bleStatsClientUp   = true;                          // link stats: quarantine BLE desense
         bleStatsQuietUntilMs = millis() + 4000;
         bleConnMtu = 23;                                    // until the MTU exchange
@@ -333,6 +338,7 @@ class BleServerCallbacks : public NimBLEServerCallbacks {
         bleReqReady = false;
         blePumping  = false;
         events.add("BLE app disconnected");
+        bleConnEvents++;
         if (bleStarted) NimBLEDevice::startAdvertising();   // not when BLE is meant to be off
     }
 };
@@ -580,15 +586,27 @@ inline void bleStreamPoll() {
 //     action, so a connect/disconnect race can never be mistaken for a fault.
 //  Counters go to state.json "ble".
 //*********************************************************************
-inline void bleWatchdogTick(bool allowed) {
-    static uint32_t lastMs = 0;
+inline void bleWatchdogTick(bool allowed, uint32_t idleDropMs) {
+    static uint32_t lastMs = 0, lastRefreshMs = 0;
     static uint8_t  phantomSeen = 0, advStoppedSeen = 0, idleSeen = 0;
-    if (!bleInited || !bleStarted || !allowed) { phantomSeen = advStoppedSeen = idleSeen = 0; return; }
+    if (!bleInited || !bleStarted || !allowed) { phantomSeen = advStoppedSeen = idleSeen = 0; lastRefreshMs = millis(); return; }
     if ((uint32_t)(millis() - lastMs) < 10000) return;
     lastMs = millis();
     NimBLEServer* srv = NimBLEDevice::getServer();
     if (!srv) return;
     const uint8_t conns = srv->getConnectedCount();
+
+    // 4. Belt and braces for a radio that the host THINKS is advertising:
+    //    with nobody connected for 10 min, re-key the advertising (stop +
+    //    start). Silent (counter only) - it is routine, not a fault.
+    if (!bleClientConnected && conns == 0 && (uint32_t)(millis() - lastRefreshMs) > 10UL * 60UL * 1000UL) {
+        lastRefreshMs = millis();
+        NimBLEDevice::stopAdvertising();
+        NimBLEDevice::startAdvertising();
+        bleAdvRefreshes++;
+        return;
+    }
+    if (bleClientConnected) lastRefreshMs = millis();
 
     const bool phantom = bleClientConnected && conns == 0;
     phantomSeen = phantom ? phantomSeen + 1 : 0;
@@ -610,12 +628,14 @@ inline void bleWatchdogTick(bool allowed) {
         return;
     }
     const bool idle = bleClientConnected && conns > 0 && !bleOtaActive &&
-                      (uint32_t)(millis() - bleLastActivityMs) > 10UL * 60UL * 1000UL;
+                      (uint32_t)(millis() - bleLastActivityMs) > idleDropMs;
     idleSeen = idle ? idleSeen + 1 : 0;
     if (idleSeen >= 2) {
         idleSeen = 0;
         bleIdleDrops++;
-        events.add("BLE watchdog: app silent for 10 min - dropped so a phone can connect");
+        char m[120]; snprintf(m, sizeof m, "BLE watchdog: app %s silent for %lu min - dropped so a phone can connect",
+                              srv->getPeerInfo(0).getAddress().toString().c_str(), (unsigned long)(idleDropMs / 60000UL));
+        events.add(m);
         srv->disconnect(srv->getPeerInfo(0));          // onDisconnect re-advertises
         bleLastActivityMs = millis();
     }
@@ -625,12 +645,16 @@ inline void bleWatchdogTick(bool allowed) {
 inline void bleStateJson(String& j) {
     NimBLEServer* srv = bleInited ? NimBLEDevice::getServer() : nullptr;
     const bool adv = bleInited && NimBLEDevice::getAdvertising()->isAdvertising();
-    char b[200];
-    snprintf(b, sizeof(b), ",\"ble\":{\"on\":%s,\"adv\":%s,\"client\":%s,\"conns\":%u,\"idle_s\":%lu,\"adv_restarts\":%lu,\"phantom\":%lu,\"idle_drops\":%lu}",
+    const uint8_t conns = srv ? srv->getConnectedCount() : 0;
+    std::string peer = conns ? srv->getPeerInfo(0).getAddress().toString() : "";
+    char b[300];
+    snprintf(b, sizeof(b), ",\"ble\":{\"on\":%s,\"adv\":%s,\"client\":%s,\"conns\":%u,\"peer\":\"%s\",\"since_s\":%lu,\"idle_s\":%lu,\"adv_restarts\":%lu,\"phantom\":%lu,\"idle_drops\":%lu,\"adv_refresh\":%lu}",
              bleStarted ? "true" : "false", adv ? "true" : "false", bleClientConnected ? "true" : "false",
-             (unsigned)(srv ? srv->getConnectedCount() : 0),
+             (unsigned)conns, peer.c_str(),
+             (unsigned long)((conns && bleConnectedAtMs) ? (millis() - bleConnectedAtMs) / 1000 : 0),
              (unsigned long)((bleLastActivityMs ? (millis() - bleLastActivityMs) : 0) / 1000),
-             (unsigned long)bleAdvRestarts, (unsigned long)blePhantomClears, (unsigned long)bleIdleDrops);
+             (unsigned long)bleAdvRestarts, (unsigned long)blePhantomClears, (unsigned long)bleIdleDrops,
+             (unsigned long)bleAdvRefreshes);
     j += b;
 }
 

@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.597-hsi-labels";
+constexpr const char* FW_VERSION = "RXV2-0.9.598-ble-forensics";
 
 //*********************************************************************
 //  Auto-update manifest URLs

@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.598-ble-forensics",
+      "url": "https://messiter.com/rxv2/release/v0.9.598/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.598/littlefs.bin",
+      "fs_md5": "1f690a40e3e0b0caf58b793c428689e5",
+      "notes": "Dongle Bluetooth forensics (Malcolm 2026-09-10, twice 'not advertising until I rebooted it'): state.json's ble block now names the connected phone (address, connected-for and silent-for times); a dongle keeps its event log through a power-cycle (persisted on every connect/disconnect and every 5 minutes, disarmed only); a dongle drops a silent app after 3 minutes (receiver: 10) so another phone can connect; with nobody connected for 10 minutes the advertising is re-keyed. Receivers unchanged in flight: nothing runs while a transmitter link is live. Includes 0.9.597."
+    },
+    {
       "name": "RXV2-0.9.597-hsi-labels",
       "url": "https://messiter.com/rxv2/release/v0.9.597/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.597/littlefs.bin",
@@ -64,13 +71,6 @@
       "name": "RXV2-0.9.587-slider-centres",
       "url": "https://messiter.com/rxv2/release/v0.9.587/firmware.bin",
       "notes": ""
-    },
-    {
-      "name": "RXV2-0.9.586-search-spacing",
-      "url": "https://messiter.com/rxv2/release/v0.9.586/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.586/littlefs.bin",
-      "fs_md5": "7c1a9a5dc2316419ffc73674a2a85b6c",
-      "notes": "Find a setting: menu entries no longer run their title into their subtitle (\"Backup & restorethe whole setup\"). Otherwise as 0.9.585."
     }
   ]
 }
