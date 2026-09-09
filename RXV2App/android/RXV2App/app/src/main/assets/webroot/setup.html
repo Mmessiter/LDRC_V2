@@ -9,7 +9,9 @@
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Setup &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=181">
-<script src="/app.js?v=197" defer></script>
+<script src="/app.js?v=198" defer></script>
+<style>html.h-dongle #protobtn, html.h-dongle a[href="/diagnostics"], html.h-dongle a[href="/rxsettings"] { display: none !important; }</style>
+<script>try{if(JSON.parse(localStorage.getItem('frontHints')||'{}').dongle)document.documentElement.classList.add('h-dongle');}catch(e){}</script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -32,8 +34,10 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', async () => {
-    const s = await LDRC.fetchState();
+    let s = null;
+    for (let i = 0; i < 6 && !s; i++) { s = await LDRC.fetchState(); if (!s) await new Promise(r => setTimeout(r, 700)); }
     if (!s) return;
+    document.documentElement.classList.toggle('h-dongle', !!s.dongle);   // the live answer wins (Malcolm 2026-09-10: "Setup page didn't hide it")
 
     // Output protocol — show what's selected right on the button.
     LDRC.setText('protoname', s.sim ? 'USB → SIM' : (s.protocol && s.protocol.current) || '…');
