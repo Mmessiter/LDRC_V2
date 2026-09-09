@@ -122,7 +122,7 @@ let changed = { gov: false, rates: false, pid: false };
 let touched = { agile: false, expo: false };
 let busy = false, live = false;
 
-function setStatus(kind, msg) { const b = document.getElementById('status'); b.className = 'banner ' + kind; b.textContent = msg; }
+function setStatus(kind, msg) { const b = document.getElementById('status'); b.style.display = msg ? '' : 'none'; if (!msg) return; b.className = 'banner ' + kind; b.textContent = msg; }   // no banner without a status (Malcolm 2026-09-10)
 function hexToBytes(h) { const o = new Uint8Array(h.length / 2); for (let i = 0; i < o.length; i++) o[i] = parseInt(h.substr(i * 2, 2), 16); return o; }
 function bytesToHex(b) { let s = ''; for (let i = 0; i < b.length; i++) s += b[i].toString(16).padStart(2, '0').toUpperCase(); return s; }
 const $ = id => document.getElementById(id);
@@ -229,7 +229,7 @@ async function load() {
         reflect();
         live = true;
         LDRC.clearStale(); LDRC.clearDirty();
-        setStatus('good', '✓ Bank ' + (bank + 1) + ' loaded — slide, then Save');
+        setStatus('', '');
     } catch (e) {
         setStatus('bad', 'Read failed: ' + e.message);
     }

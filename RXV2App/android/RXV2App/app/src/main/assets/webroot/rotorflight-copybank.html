@@ -36,10 +36,7 @@
 <div class=bg-wash  aria-hidden=true></div>
 <div class=container>
     <h1>Copy a bank</h1>
-    <div id=status class="banner info">loading&hellip;</div>
-
-    <div class=guide><b>Pick the bank to copy from, the bank to copy to, then tap Copy.</b><br>
-    Everything ticked below is written to the flight controller, saved, and read back to verify &mdash; no re-typing, no travelling between pages. The bank switch on your transmitter still chooses which bank flies.</div>
+    <div id=status class="banner info" style="display:none"></div>
 
     <div class=card>
         <h2>From bank</h2>
@@ -98,6 +95,8 @@ let fromBank = 0, toBank = -1, fcPid = 0, fcRate = 0, busy = false, live = false
 
 function setStatus(kind, msg) {
     const b = document.getElementById('status');
+    b.style.display = msg ? '' : 'none';      // no banner until there is a status (Malcolm 2026-09-10)
+    if (!msg) return;
     b.className = 'banner ' + kind;
     b.textContent = msg;
 }
@@ -216,7 +215,7 @@ async function init() {
         await readWhereFcIs();
         fromBank = Math.min(fcPid, BANKS - 1);
         live = true;
-        setStatus('info', 'Ready. Nothing is written until you tap Copy.');
+        setStatus('', '');                 // loaded: nothing to say until Copy is tapped
     } catch (e) {
         setStatus('bad', 'Read failed: ' + e.message);
     }

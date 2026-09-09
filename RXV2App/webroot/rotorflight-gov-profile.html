@@ -138,6 +138,8 @@ function flashSave(html, ms) {
 }
 function setStatus(kind, msg) {
     const b = document.getElementById('status');
+    b.style.display = msg ? '' : 'none';   // no banner without a status (Malcolm 2026-09-10)
+    if (!msg) return;
     b.className = 'banner ' + kind;
     b.textContent = msg;
 }
@@ -215,7 +217,7 @@ async function load() {
         document.getElementById('g_fbd').value  = bytes[14];
         document.getElementById('g_pidsp').checked = !!((bytes[15] | (bytes[16] << 8)) & 0x10);   // GOV_FLAG_PID_SPOOLUP
         LDRC.clearStale();
-        setStatus('good', (LDRC.replay ? '✓ Loaded from the phone (profile ' : '✓ Loaded from flight controller (profile ') + (currentProfile + 1) + ')');
+        if (LDRC.replay) setStatus('good', '✓ Loaded from the phone (profile ' + currentProfile + 1 + ')'); else setStatus('', '');
         paintProfileButtons();
         LDRC.clearDirty();
     } catch (e) { setStatus('bad', 'Read failed: ' + e.message); }

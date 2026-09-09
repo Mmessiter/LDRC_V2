@@ -116,7 +116,7 @@ function hexToBytes(h){const o=new Uint8Array(h.length/2);for(let i=0;i<o.length
 function bytesToHex(b){return Array.from(b).map(x=>x.toString(16).padStart(2,'0')).join('');}
 const rdU16=(b,o)=>b[o]|(b[o+1]<<8);
 const wrU16=(b,o,v)=>{v=Math.max(0,Math.min(65535,Math.round(v)));b[o]=v&0xff;b[o+1]=(v>>8)&0xff;};
-function setStatus(k,t){const s=$('status');s.className='banner '+k;s.textContent=t;}
+function setStatus(k,t){const s=$('status');s.style.display=t?'':'none';if(!t)return;s.className='banner '+k;s.textContent=t;}   // no banner without a status (Malcolm 2026-09-10)
 function paintBankButtons(){for(let i=0;i<4;i++)$('pb'+i).classList.toggle('active',i===currentBank);}
 
 async function selectBank(idx){
@@ -153,7 +153,7 @@ async function load(){
         $('saveBtn').disabled=!editable;
         document.querySelectorAll('.fRow input,.fRow select').forEach(el=>el.disabled=!editable);
         dirty=false; paintBankButtons();
-        setStatus('good', (LDRC.replay?'✓ Loaded from the phone (bank ':'✓ Loaded from flight controller (bank ')+(currentBank+1)+')');
+        if (LDRC.replay) setStatus('good', '✓ Loaded from the phone (bank '+(currentBank+1)+')'); else setStatus('', '');
     }catch(e){ setStatus('bad','Read failed: '+e.message); }
 }
 

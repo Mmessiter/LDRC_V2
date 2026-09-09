@@ -167,6 +167,8 @@ function paintProfileButtons() {
 }
 function setStatus(kind, msg) {
     const b = document.getElementById('status');
+    b.style.display = msg ? '' : 'none';   // no banner without a status (Malcolm 2026-09-10)
+    if (!msg) return;
     b.className = 'banner ' + kind;
     b.textContent = msg;
 }
@@ -533,7 +535,7 @@ async function load() {
         LDRC.clearStale();
         await LDRC.fetchState();
         feelReflect();
-        setStatus('good', (LDRC.replay ? '✓ Loaded from the phone (profile ' : '✓ Loaded from flight controller (profile ') + (currentProfile + 1) + ')');
+        if (LDRC.replay) setStatus('good', '✓ Loaded from the phone (profile ' + currentProfile + 1 + ')'); else setStatus('', '');
         drawCurves();
         LDRC.clearDirty();
     } catch (e) { setStatus('bad', 'Read failed: ' + e.message); }
