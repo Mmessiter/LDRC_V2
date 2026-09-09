@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.612-dongle-setup",
+      "url": "https://messiter.com/rxv2/release/v0.9.612/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.612/littlefs.bin",
+      "fs_md5": "d5d0d0db97d374d47ca1001218e10a99",
+      "notes": "Setup page on a dongle: the dongle button simply says 'Dongle setup' (Malcolm 2026-09-10). Includes 0.9.611."
+    },
+    {
       "name": "RXV2-0.9.611-dongle-no-mode",
       "url": "https://messiter.com/rxv2/release/v0.9.611/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.611/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.601/littlefs.bin",
       "fs_md5": "f817ba43c45f3164ca5db348b2e8b8ef",
       "notes": "Telemetry speed: when the flight controller does not take the new setup, the message and the event log now say which step failed (no acknowledgement, a rejected write, a short read-back, or the byte that came back different). Malcolm 2026-09-10: 'Not applied' with no reason. Includes 0.9.600."
-    },
-    {
-      "name": "RXV2-0.9.600-update-pill-tap",
-      "url": "https://messiter.com/rxv2/release/v0.9.600/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.600/littlefs.bin",
-      "fs_md5": "54579fae55fa8b8264dd0624b5f355de",
-      "notes": "Updates page: the amber 'Update available' status pill now doubles as the install button, and says so (Malcolm 2026-09-10: 'I instinctively pressed it'). The note below it was already tappable. Includes 0.9.599."
     }
   ]
 }
