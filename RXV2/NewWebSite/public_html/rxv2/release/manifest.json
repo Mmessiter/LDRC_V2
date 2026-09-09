@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.606-dongle-banner-quiet",
+      "url": "https://messiter.com/rxv2/release/v0.9.606/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.606/littlefs.bin",
+      "fs_md5": "3c048ba738c39df2081e4d553cce842b",
+      "notes": "Dongle home page: the wiring hint under the banner shows only while no flight controller answers; once connected the banner is just its title (Malcolm 2026-09-10). Includes 0.9.605."
+    },
+    {
       "name": "RXV2-0.9.605-dongle-banner",
       "url": "https://messiter.com/rxv2/release/v0.9.605/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.605/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.595/littlefs.bin",
       "fs_md5": "2b4bd21ed4cef78a120bca2fe14025d0",
       "notes": "Bluetooth watchdog: the dongle ran all night on WiFi but the app could not connect until a reboot (Malcolm 2026-09-10). Every 10 s the receiver now restarts advertising that silently stopped, forgets a phantom client, and drops an app that has been silent for 10 minutes so another phone can connect. state.json gains a 'ble' block (advertising, client, idle time, watchdog counts) and watchdog events are kept through a reboot. Includes 0.9.594."
-    },
-    {
-      "name": "RXV2-0.9.594-dongle-no-fly",
-      "url": "https://messiter.com/rxv2/release/v0.9.594/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.594/littlefs.bin",
-      "fs_md5": "2daa1167165b7b97e08171e13f85016a",
-      "notes": "A dongle never shows the Fly now button: the 3-second repaint used to bring it back faded once the state arrived (Malcolm 2026-09-09). Radio-only morphing is skipped on a dongle too. Includes 0.9.593."
     }
   ]
 }
