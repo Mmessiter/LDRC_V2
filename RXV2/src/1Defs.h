@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.594-dongle-no-fly";
+constexpr const char* FW_VERSION = "RXV2-0.9.595-ble-watchdog";
 
 //*********************************************************************
 //  Auto-update manifest URLs

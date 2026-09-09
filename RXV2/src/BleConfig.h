@@ -64,6 +64,10 @@ constexpr size_t BLE_PUMP_BUDGET  = 6 * 1024;    // max bytes notified per blePo
 inline volatile bool bleClientConnected = false;
 inline bool          bleStarted         = false;   // advertising / accepting connections
 inline bool          bleInited          = false;   // controller+stack up (once, at boot)
+inline uint32_t      bleLastActivityMs  = 0;       // last connect or write from the app
+inline uint32_t      bleAdvRestarts     = 0;       // watchdog: advertising restarted
+inline uint32_t      blePhantomClears   = 0;       // watchdog: client flag with no connection
+inline uint32_t      bleIdleDrops       = 0;       // watchdog: silent app dropped
 
 // Continuous channel streaming ("View channels" live bars): when armed, the
 // receiver pushes compact "S|us0,..,us15|age\n" frames on the notify
@@ -265,6 +269,7 @@ inline ReqRouter g_bleRouter;
 
 class BleReqCallbacks : public NimBLECharacteristicCallbacks {
     void onWrite(NimBLECharacteristic* c, NimBLEConnInfo& connInfo) override {
+        bleLastActivityMs = millis();
         if (bleReqReady) return;                        // one request at a time
         std::string v = c->getValue();
         if (v.empty()) return;
@@ -309,6 +314,7 @@ class BleReqCallbacks : public NimBLECharacteristicCallbacks {
 class BleServerCallbacks : public NimBLEServerCallbacks {
     void onConnect(NimBLEServer* s, NimBLEConnInfo& info) override {
         bleClientConnected = true;
+        bleLastActivityMs  = millis();
         bleStatsClientUp   = true;                          // link stats: quarantine BLE desense
         bleStatsQuietUntilMs = millis() + 4000;
         bleConnMtu = 23;                                    // until the MTU exchange
@@ -554,6 +560,60 @@ inline void bleStreamPoll() {
     int armState = armingChannel ? (armedNow ? 1 : 0) : -1;
     n += snprintf(f + n, sizeof(f) - n, "|%ld|%d\n", age, armState);
     bleRespChr->notify((const uint8_t*)f, (size_t)n);
+}
+
+//*********************************************************************
+//  Bluetooth watchdog (Malcolm 2026-09-10: the dongle ran all night on
+//  WiFi, memory steady, yet the app could not connect until a reboot).
+//  Every 10 s while BLE is meant to be on:
+//   1. a client flag the stack no longer backs is forgotten (advertise again)
+//   2. advertising that silently stopped with no client is restarted
+//   3. an app silent for 10 min is dropped so another phone can connect
+//      (a suspended phone app keeps its link open but never talks)
+//  Never runs during fly-quiet or after bleStop (bleStarted is false then),
+//  so the flying rules keep the radios. Counters go to state.json "ble".
+//*********************************************************************
+inline void bleWatchdogTick() {
+    static uint32_t lastMs = 0;
+    if (!bleInited || !bleStarted) return;
+    if ((uint32_t)(millis() - lastMs) < 10000) return;
+    lastMs = millis();
+    NimBLEServer* srv = NimBLEDevice::getServer();
+    if (!srv) return;
+    const uint8_t conns = srv->getConnectedCount();
+    if (bleClientConnected && conns == 0) {
+        bleClientConnected = false;
+        blePhantomClears++;
+        events.add("BLE watchdog: phantom client forgotten - advertising again");
+        NimBLEDevice::startAdvertising();
+        return;
+    }
+    if (!bleClientConnected && !NimBLEDevice::getAdvertising()->isAdvertising()) {
+        bleAdvRestarts++;
+        events.add("BLE watchdog: advertising had stopped - restarted");
+        NimBLEDevice::startAdvertising();
+        return;
+    }
+    if (bleClientConnected && conns > 0 && !bleOtaActive &&
+        (uint32_t)(millis() - bleLastActivityMs) > 10UL * 60UL * 1000UL) {
+        bleIdleDrops++;
+        events.add("BLE watchdog: app silent for 10 min - dropped so a phone can connect");
+        srv->disconnect(srv->getPeerInfo(0));          // onDisconnect re-advertises
+        bleLastActivityMs = millis();
+    }
+}
+
+// state.json "ble" block - what the watchdog sees
+inline void bleStateJson(String& j) {
+    NimBLEServer* srv = bleInited ? NimBLEDevice::getServer() : nullptr;
+    const bool adv = bleInited && NimBLEDevice::getAdvertising()->isAdvertising();
+    char b[200];
+    snprintf(b, sizeof(b), ",\"ble\":{\"on\":%s,\"adv\":%s,\"client\":%s,\"conns\":%u,\"idle_s\":%lu,\"adv_restarts\":%lu,\"phantom\":%lu,\"idle_drops\":%lu}",
+             bleStarted ? "true" : "false", adv ? "true" : "false", bleClientConnected ? "true" : "false",
+             (unsigned)(srv ? srv->getConnectedCount() : 0),
+             (unsigned long)((bleLastActivityMs ? (millis() - bleLastActivityMs) : 0) / 1000),
+             (unsigned long)bleAdvRestarts, (unsigned long)blePhantomClears, (unsigned long)bleIdleDrops);
+    j += b;
 }
 
 inline void blePoll() {

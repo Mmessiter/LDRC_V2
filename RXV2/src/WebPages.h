@@ -2946,6 +2946,7 @@ inline void handleApiState() {
     // --- sim (drive simulator over USB) ------------------------------
     j += ",\"sim\":"; j += (simEnabled ? "true" : "false");
     j += ",\"dongle\":"; j += (dongleEnabled ? "true" : "false");
+    bleStateJson(j);
     { char db[200]; snprintf(db, sizeof(db), ",\"dongle_mode\":%u,\"dongle_auto\":%s,\"dongle_baud\":%lu,\"fc_armed\":%s,\"dongle_wire\":{\"bytes_in\":%lu,\"frames\":%lu,\"bad_crc\":%lu,\"dropped\":%lu,\"sends\":%lu}",
                (unsigned)dongleMode, dongleAuto ? "true" : "false", (unsigned long)dongleBaud,
                (fcInfo.armed && fcInfo.armedMs && (uint32_t)(millis() - fcInfo.armedMs) < 5000) ? "true" : "false",

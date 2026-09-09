@@ -639,6 +639,16 @@ void loop() {
         server.handleClient();
     }
     { StallScope s("ble"); blePoll(); }   // execute + stream any pending BLE config request (same task as HTTP)
+    {
+        StallScope s("blewd"); bleWatchdogTick();
+        // A watchdog event is the forensic trail for "would not connect" -
+        // keep it through a reboot. Flash write only when nothing is flying
+        // (dongle: the FC says disarmed) - the 10 ms doctrine.
+        static uint32_t wdSeen = 0;
+        const uint32_t wdNow = bleAdvRestarts + blePhantomClears + bleIdleDrops;
+        if (wdNow != wdSeen && dongleEnabled && !fcInfo.armed) { wdSeen = wdNow; StallScope p("evPersist"); eventsPersist(); }
+        else if (wdNow != wdSeen && !dongleEnabled) wdSeen = wdNow;
+    }
 
     { StallScope s("radio"); radioPoll(); }
     if (simEnabled) {

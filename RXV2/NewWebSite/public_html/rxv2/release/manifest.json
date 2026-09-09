@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.595-ble-watchdog",
+      "url": "https://messiter.com/rxv2/release/v0.9.595/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.595/littlefs.bin",
+      "fs_md5": "2b4bd21ed4cef78a120bca2fe14025d0",
+      "notes": "Bluetooth watchdog: the dongle ran all night on WiFi but the app could not connect until a reboot (Malcolm 2026-09-10). Every 10 s the receiver now restarts advertising that silently stopped, forgets a phantom client, and drops an app that has been silent for 10 minutes so another phone can connect. state.json gains a 'ble' block (advertising, client, idle time, watchdog counts) and watchdog events are kept through a reboot. Includes 0.9.594."
+    },
+    {
       "name": "RXV2-0.9.594-dongle-no-fly",
       "url": "https://messiter.com/rxv2/release/v0.9.594/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.594/littlefs.bin",
@@ -64,13 +71,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.584/littlefs.bin",
       "fs_md5": "fe0d88e7b78977fd226de05610a4d626",
       "notes": "Find a setting: a stray '_head' entry (an include file, not a page) removed from the index. Otherwise as 0.9.583."
-    },
-    {
-      "name": "RXV2-0.9.583-find-a-setting",
-      "url": "https://messiter.com/rxv2/release/v0.9.583/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.583/littlefs.bin",
-      "fs_md5": "c67cf6948999edb115a5290e62a10d24",
-      "notes": "NEW: Find a setting. A search box on the home page and the Rotorflight menu: type a word or two (head speed, cells, spool-up, arm, wiggle, bind...) and every matching setting is listed with the page and card it lives on. Tap one and the page opens with that setting glowing for a few seconds. The index is built from the pages themselves, so it always matches this receiver. Includes 0.9.580-0.9.582."
     }
   ]
 }
