@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.627-adj-help",
+      "url": "https://messiter.com/rxv2/release/v0.9.627/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.627/littlefs.bin",
+      "fs_md5": "3905e0af32ddedf47f4613c3be44de27",
+      "notes": "In-flight adjustments: the help screen rewritten - clear and short (Malcolm 2026-09-11). Includes 0.9.626."
+    },
+    {
       "name": "RXV2-0.9.626-which-bank",
       "url": "https://messiter.com/rxv2/release/v0.9.626/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.626/littlefs.bin",
@@ -70,11 +77,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.616/littlefs.bin",
       "fs_md5": "e3558da231445b32c08d26642ad4d680",
       "notes": "Dongle over USB: page requests now get their answers (the waits that pump the UART drain the USB link too). Includes 0.9.615."
-    },
-    {
-      "name": "RXV2-0.9.615-dongle-usb",
-      "url": "https://messiter.com/rxv2/release/v0.9.615/firmware.bin",
-      "notes": "Dongle: MSP over USB. Plug a Rotorflight flight controller's USB-C into the dongle and it is used automatically - no port setting, no wiring; the UART link carries on otherwise (Malcolm 2026-09-11: 'so that nothing is impossible'). The dongle's USB socket is a host while this runs (updates by WiFi/Bluetooth; USB flashing needs the button-held bootloader). Includes 0.9.614."
     }
   ]
 }

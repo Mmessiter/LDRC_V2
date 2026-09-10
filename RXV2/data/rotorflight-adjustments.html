@@ -56,20 +56,19 @@
     <div class=footer></div>
 </div>
 <template id=helpContent><h2>In-flight adjustments</h2>
-<p>An adjustment lets a switch or a knob on your transmitter change one Rotorflight setting while you fly &mdash; the bank switch is the everyday example: it picks the PID bank and the rates bank.</p>
-<h3>Which bank</h3>
-<p>Two settings are special: <b>Which PID bank flies</b> and <b>Which rates bank flies</b> &mdash; their value is the bank number, so that line is your bank switch. Every other setting is changed in whichever bank is active at that moment.</p>
-<h3>Two kinds</h3>
-<p><b>A knob</b>, for continuous adjustment within a range: the knob&rsquo;s position across the blue zone sets the value between the minimum and the maximum. Drag the zone&rsquo;s ends.</p>
-<p><b>A switch</b>, for choosing between settings: one bar for the switch, one divider for a two-position switch or two for a three-position one, and a value for each position. Drag the dividers to where the switch changes over.</p>
-<p>A step-type adjustment made in the configurator is shown greyed and left exactly as it is.</p>
+<p>A knob or a switch on your transmitter changes one setting while you fly.</p>
+<h3>Knob</h3>
+<p>Turning it slides the setting between the two values you give.</p>
+<h3>Switch</h3>
+<p>Each position sets the value you give it. Two or three positions.</p>
 <h3>The bar</h3>
-<p>The bar is the full travel of the channel, 875 to 2125 microseconds. The thin red line is where the channel is right now: move the switch or knob and watch it &mdash; the region it is in lights up green.</p>
+<p>The channel&rsquo;s full travel. Drag the round dividers to where the switch changes over. The red line is the switch now; the lit region is the position it is in.</p>
+<h3>Banks</h3>
+<p>&ldquo;Which PID bank flies&rdquo; and &ldquo;Which rates bank flies&rdquo; choose the bank. Every other setting is changed in the bank flying at the time.</p>
 <h3>Channels</h3>
-<p>Rotorflight counts the switch channels from AUX1, which on a helicopter is channel 6: roll, pitch, yaw, collective and throttle come first.</p>
-<h3>USB, then unplug</h3>
-<p>Setting these up needs the flight controller&rsquo;s USB socket plugged into the dongle, because the list is too big for the radio link. Once saved they live in the flight controller and work from your transmitter with the USB, and the dongle, unplugged.</p>
-<p>Rotorflight itself only knows single zones, so a three-position switch is written as three lines and read back as one.</p>
+<p>AUX1 is channel 6 on a helicopter.</p>
+<h3>Saving</h3>
+<p>Save keeps them in the flight controller. Setting up needs the USB cable; afterwards they work with the USB and the dongle unplugged.</p>
 </template>
 <script>
 const $ = id => document.getElementById(id);
