@@ -257,6 +257,12 @@ function updateBindState(s) {
         subtitle = 'Bind mode — listening for transmitter';
     }
     if (s.dongle) subtitle = (s.fcinfo && s.fcinfo.detected) ? 'Flight controller connected' : 'Waiting for the flight controller';
+    else if (s.usb && s.usb.device) subtitle += ' &mdash; flight controller on USB';   // 0.9.640
+    { // the command line left open keeps Rotorflight from arming: say so until it is closed (0.9.640)
+      const st = document.getElementById('subtitle'); let cb = document.getElementById('cliOpen');
+      if (st && !cb) { cb = document.createElement('div'); cb.id = 'cliOpen'; cb.className = 'banner bad'; cb.style.display = 'none'; st.parentNode.insertBefore(cb, st.nextSibling); }
+      if (cb) { const open = !!(s.usb && s.usb.cli); cb.style.display = open ? '' : 'none';
+                if (open) cb.innerHTML = '<b>Command line open</b> &mdash; the model cannot arm until you Save or Leave it. <a href="/cli">Command line</a>'; } }
     { const dw = document.getElementById('dongleWhy');   // the wiring hint only while nothing answers (Malcolm 2026-09-10)
       if (dw) dw.style.display = (s.dongle && !(s.fcinfo && s.fcinfo.detected)) ? '' : 'none'; }
     LDRC.setHtml('subtitle', subtitle);
