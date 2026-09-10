@@ -73,7 +73,7 @@
 </template>
 <script>
 const $ = id => document.getElementById(id);
-const LABELS = ["(nothing)", "Rates bank in use (1 to 4)", "PID bank in use (1 to 4)", "Led profile", "Battery profile", "Pitch super rate", "Roll super rate", "Yaw super rate", "Pitch rate", "Roll rate", "Yaw rate", "Pitch expo", "Roll expo", "Yaw expo", "Pitch P gain", "Pitch I gain", "Pitch D gain", "Pitch F gain", "Roll P gain", "Roll I gain", "Roll D gain", "Roll F gain", "Yaw P gain", "Yaw I gain", "Yaw D gain", "Yaw F gain", "Yaw clockwise gain", "Yaw anticlockwise gain", "Yaw cyclic feedforward", "Yaw collectiveective feedforward", "Yaw collectiveective dynamic", "Yaw collectiveective decay", "Pitch collectiveective feedforward", "Pitch gyro cutofeedforward", "Roll gyro cutofeedforward", "Yaw gyro cutofeedforward", "Pitch d-term cutofeedforward", "Roll d-term cutofeedforward", "Yaw d-term cutofeedforward", "Rescue climb collectiveective", "Rescue hover collectiveective", "Rescue hover altitudeitude", "Rescue altitude P gain", "Rescue altitude I gain", "Rescue altitude D gain", "Angle level gain", "Horizon level gain", "Acro trainer gain", "Governor gain", "Governor P gain", "Governor I gain", "Governor D gain", "Governor F gain", "Governor tail torque assist gain", "Governor cyclic feedforward", "Governor collectiveective feedforward", "Pitch B gain", "Roll B gain", "Yaw B gain", "Pitch O gain", "Roll O gain", "Cross coupling gain", "Cross coupling ratio", "Cross coupling cutofeedforward", "Level trim pitch", "Level trim roll", "Inertia precomp gain", "Inertia precomp cutofeedforward", "Pitch setpoint boost gain", "Roll setpoint boost gain", "Yaw setpoint boost gain", "Collective setpoint boost gain", "Yaw dynamic ceiling gain", "Yaw dynamic deadband gain", "Yaw dynamic deadband filter", "Yaw precomp cutofeedforward", "Governor idle throttle", "Governor auto throttle", "Governor max throttle", "Governor min throttle", "Governor headspeed", "Governor yaw feedforward"];
+const LABELS = ["(nothing)", "Rates bank in use (1 to 4)", "PID bank in use (1 to 4)", "Led profile", "Battery profile", "Pitch super rate", "Roll super rate", "Yaw super rate", "Pitch rate", "Roll rate", "Yaw rate", "Pitch expo", "Roll expo", "Yaw expo", "Pitch P gain", "Pitch I gain", "Pitch D gain", "Pitch F gain", "Roll P gain", "Roll I gain", "Roll D gain", "Roll F gain", "Yaw P gain", "Yaw I gain", "Yaw D gain", "Yaw F gain", "Yaw clockwise gain", "Yaw anticlockwise gain", "Yaw cyclic feedforward", "Yaw collective feedforward", "Yaw collective dynamic", "Yaw collective decay", "Pitch collective feedforward", "Pitch gyro cutoff", "Roll gyro cutoff", "Yaw gyro cutoff", "Pitch d-term cutoff", "Roll d-term cutoff", "Yaw d-term cutoff", "Rescue climb collective", "Rescue hover collective", "Rescue hover altitude", "Rescue altitude P gain", "Rescue altitude I gain", "Rescue altitude D gain", "Angle level gain", "Horizon level gain", "Acro trainer gain", "Governor gain", "Governor P gain", "Governor I gain", "Governor D gain", "Governor F gain", "Governor tail torque assist gain", "Governor cyclic feedforward", "Governor collective feedforward", "Pitch B gain", "Roll B gain", "Yaw B gain", "Pitch O gain", "Roll O gain", "Cross coupling gain", "Cross coupling ratio", "Cross coupling cutoff", "Level trim pitch", "Level trim roll", "Inertia precomp gain", "Inertia precomp cutoff", "Pitch setpoint boost gain", "Roll setpoint boost gain", "Yaw setpoint boost gain", "Collective setpoint boost gain", "Yaw dynamic ceiling gain", "Yaw dynamic deadband gain", "Yaw dynamic deadband filter", "Yaw precomp cutoff", "Governor idle throttle", "Governor auto throttle", "Governor max throttle", "Governor min throttle", "Governor headspeed", "Governor yaw feedforward"];
 
 // ---------------- model (DOM-free, unit-tested with node) ----------------
 const RMIN = 875, RMAX = 2125, MAXR = 42;
@@ -187,9 +187,17 @@ function chanSel(id, v) {
     for (let a = 0; a < 13; a++) h += '<option value=' + a + (v === a ? ' selected' : '') + '>AUX' + (a + 1) + ' (channel ' + (a + 6) + ')</option>';
     return h + '</select>';
 }
-function fnSel(id, v) {
-    let h = '<select id=' + id + ' class=usbOnly>';
-    LABELS.forEach((l, i) => h += '<option value=' + i + (v === i ? ' selected' : '') + '>' + l + '</option>');
+// The whole choice in one list: 'Yaw P gain in bank 1' ... grouped by bank, then 'in the bank in use'.
+// value = fn + ':' + bank (0 = the bank in use, -1 = a condition set elsewhere, kept as it is)
+function fnSel(id, r, br) {
+    const cur = (r.fn === 1 || r.fn === 2) ? 0 : condToBank(r.cond, br);
+    const opt = (fn, bank, text) => '<option value="' + fn + ':' + bank + '"' + (r.fn === fn && cur === bank ? ' selected' : '') + '>' + text + '</option>';
+    let h = '<select id=' + id + ' class=usbOnly>' + opt(0, 0, LABELS[0]);
+    h += '<optgroup label="Bank switch">' + opt(1, 0, LABELS[1]) + opt(2, 0, LABELS[2]) + '</optgroup>';
+    if (cur === -1) h += opt(r.fn, -1, LABELS[r.fn] + ' with a condition set elsewhere');
+    const banks = br ? [1, 2, 3, 4].filter(v => br.regions[v]) : [];
+    banks.forEach(v => { h += '<optgroup label="In bank ' + v + '">'; for (let fn = 3; fn < LABELS.length; fn++) h += opt(fn, v, LABELS[fn] + ' in bank ' + v); h += '</optgroup>'; });
+    h += '<optgroup label="In the bank in use">'; for (let fn = 3; fn < LABELS.length; fn++) h += opt(fn, 0, LABELS[fn] + ' in the bank in use'); h += '</optgroup>';
     return h + '</select>';
 }
 function regionNames(r) {
@@ -255,16 +263,7 @@ function paint() {
         const kindSel = r.kind === 'nudge'
             ? '<select id=kind' + i + ' disabled><option>a step adjustment from the configurator (kept as it is)</option></select>'
             : '<select id=kind' + i + ' class=usbOnly><option value=knob' + (r.kind === 'knob' ? ' selected' : '') + '>Knob</option><option value=switch' + (r.kind === 'switch' ? ' selected' : '') + '>Switch</option></select>';
-        let bankSel = '';
-        if (r.fn !== 1 && r.fn !== 2 && r.kind !== 'nudge') {
-            const br = bankRegions(rows), cur = condToBank(r.cond, br);
-            let o = '';
-            if (br) for (let v = 1; v <= 4; v++) if (br.regions[v]) o += '<option value=' + v + (cur === v ? ' selected' : '') + '>in bank ' + v + '</option>';
-            o += '<option value=0' + (cur === 0 ? ' selected' : '') + '>in the bank in use</option>';
-            if (cur === -1) o += '<option value=-1 selected>with a condition set elsewhere</option>';
-            bankSel = '<select id=bank' + i + ' class=usbOnly' + (br ? '' : ' disabled') + '>' + o + '</select>';
-        }
-        let h = '<div class=r><label data-help="The Rotorflight setting this line changes, and the bank it changes it in. A line for bank 1 works only while your bank switch has bank 1 in use; another line can serve bank 3 with values that suit it.">What it changes</label>' + fnSel('fn' + i, r.fn) + bankSel + '</div>' +
+        let h = '<div class=r><label data-help="The Rotorflight setting this line changes, and the bank it changes it in. Yaw P gain in bank 1 works only while your bank switch has bank 1 in use; another line can serve bank 3 with values that suit it. Banks need a PID bank line on this page.">What it changes</label>' + fnSel('fn' + i, r, bankRegions(rows)) + '</div>' +
                 '<div class=r><label data-help="Knob: continuous adjustment within a range. Switch: choosing between settings, two or three positions. The help button explains both.">Control</label>' + kindSel + '<label>on</label>' + chanSel('ch' + i, r.ch) + '</div>';
         if (r.kind === 'switch') h += '<div class=r><label data-help="Two positions have one divider, three positions have two.">Positions</label><select id=npos' + i + ' class=usbOnly><option value=2' + (r.t.length === 1 ? ' selected' : '') + '>2</option><option value=3' + (r.t.length === 2 ? ' selected' : '') + '>3</option></select></div>';
         h += '<div class=rScale><span>875</span><span>1500</span><span>2125</span></div><div class=rTrack id=tr' + i + '></div><div class=rLive id=lv' + i + '>&nbsp;</div>';
@@ -296,9 +295,9 @@ function collect() {
     rows.forEach((r, i) => {
         const g = id => document.getElementById(id + i);
         if (!g('fn')) return;
-        r.fn = +g('fn').value; r.ch = +g('ch').value;
-        const bs = g('bank');
-        if (bs && bs.value !== '-1') { const br = bankRegions(rows); r.cond = bankToCond(+bs.value, br); }
+        const [fnS, bankS] = g('fn').value.split(':'); r.fn = +fnS; r.ch = +g('ch').value;
+        if (r.fn === 1 || r.fn === 2) r.cond = null;
+        else if (bankS !== '-1') r.cond = bankToCond(+bankS, bankRegions(rows));
         if (r.kind === 'switch') r.values = r.values.map((v, k) => { const el = document.getElementById('v' + i + '_' + k); return el ? el.value : v; });
         else if (r.kind === 'knob') { r.min = +g('min').value; r.max = +g('max').value; }
         else { /* a configurator step line: untouched */ }
