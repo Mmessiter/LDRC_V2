@@ -69,6 +69,8 @@
 <h3>Banks</h3>
 <p>The switch that picks the bank is set on the Switches page. &ldquo;Yaw P gain in bank 1&rdquo; works only while that switch has bank 1 in use, so its values can suit that bank; another line can serve bank 3.</p>
 <p>The list offers PIDs and rates. &ldquo;Show every setting&rdquo; adds the rest of Rotorflight&rsquo;s adjustments, over 400 entries, including &ldquo;in the bank in use&rdquo;: whichever bank is flying at the time.</p>
+<h3>Rates</h3>
+<p>Rate, Shape and expo use the same numbers as the Rates page.</p>
 <h3>Channels</h3>
 <p>AUX1 is channel 6 on a helicopter.</p>
 <h3>Saving</h3>
@@ -76,7 +78,7 @@
 </template>
 <script>
 const $ = id => document.getElementById(id);
-const LABELS = ["(nothing)", "Rates bank switch (1 to 4)", "PID bank switch (1 to 4)", "Led profile", "Battery profile", "Pitch super rate", "Roll super rate", "Yaw super rate", "Pitch rate", "Roll rate", "Yaw rate", "Pitch expo", "Roll expo", "Yaw expo", "Pitch P gain", "Pitch I gain", "Pitch D gain", "Pitch F gain", "Roll P gain", "Roll I gain", "Roll D gain", "Roll F gain", "Yaw P gain", "Yaw I gain", "Yaw D gain", "Yaw F gain", "Yaw clockwise gain", "Yaw anticlockwise gain", "Yaw cyclic feedforward", "Yaw collective feedforward", "Yaw collective dynamic", "Yaw collective decay", "Pitch collective feedforward", "Pitch gyro cutoff", "Roll gyro cutoff", "Yaw gyro cutoff", "Pitch d-term cutoff", "Roll d-term cutoff", "Yaw d-term cutoff", "Rescue climb collective", "Rescue hover collective", "Rescue hover altitude", "Rescue altitude P gain", "Rescue altitude I gain", "Rescue altitude D gain", "Angle level gain", "Horizon level gain", "Acro trainer gain", "Governor gain", "Governor P gain", "Governor I gain", "Governor D gain", "Governor F gain", "Governor tail torque assist gain", "Governor cyclic feedforward", "Governor collective feedforward", "Pitch B gain", "Roll B gain", "Yaw B gain", "Pitch O gain", "Roll O gain", "Cross coupling gain", "Cross coupling ratio", "Cross coupling cutoff", "Level trim pitch", "Level trim roll", "Inertia precomp gain", "Inertia precomp cutoff", "Pitch setpoint boost gain", "Roll setpoint boost gain", "Yaw setpoint boost gain", "Collective setpoint boost gain", "Yaw dynamic ceiling gain", "Yaw dynamic deadband gain", "Yaw dynamic deadband filter", "Yaw precomp cutoff", "Governor idle throttle", "Governor auto throttle", "Governor max throttle", "Governor min throttle", "Governor headspeed", "Governor yaw feedforward"];
+const LABELS = ["(nothing)", "Rates bank switch (1 to 4)", "PID bank switch (1 to 4)", "Led profile", "Battery profile", "Pitch rate curve shape (Shape)", "Roll rate curve shape (Shape)", "Yaw rate curve shape (Shape)", "Pitch top rotation speed (Rate)", "Roll top rotation speed (Rate)", "Yaw top rotation speed (Rate)", "Pitch expo", "Roll expo", "Yaw expo", "Pitch P gain", "Pitch I gain", "Pitch D gain", "Pitch F gain", "Roll P gain", "Roll I gain", "Roll D gain", "Roll F gain", "Yaw P gain", "Yaw I gain", "Yaw D gain", "Yaw F gain", "Yaw clockwise gain", "Yaw anticlockwise gain", "Yaw cyclic feedforward", "Yaw collective feedforward", "Yaw collective dynamic", "Yaw collective decay", "Pitch collective feedforward", "Pitch gyro cutoff", "Roll gyro cutoff", "Yaw gyro cutoff", "Pitch d-term cutoff", "Roll d-term cutoff", "Yaw d-term cutoff", "Rescue climb collective", "Rescue hover collective", "Rescue hover altitude", "Rescue altitude P gain", "Rescue altitude I gain", "Rescue altitude D gain", "Angle level gain", "Horizon level gain", "Acro trainer gain", "Governor gain", "Governor P gain", "Governor I gain", "Governor D gain", "Governor F gain", "Governor tail torque assist gain", "Governor cyclic feedforward", "Governor collective feedforward", "Pitch B gain", "Roll B gain", "Yaw B gain", "Pitch O gain", "Roll O gain", "Cross coupling gain", "Cross coupling ratio", "Cross coupling cutoff", "Level trim pitch", "Level trim roll", "Inertia precomp gain", "Inertia precomp cutoff", "Pitch setpoint boost gain", "Roll setpoint boost gain", "Yaw setpoint boost gain", "Collective setpoint boost gain", "Yaw dynamic ceiling gain", "Yaw dynamic deadband gain", "Yaw dynamic deadband filter", "Yaw precomp cutoff", "Governor idle throttle", "Governor auto throttle", "Governor max throttle", "Governor min throttle", "Governor headspeed", "Governor yaw feedforward"];
 
 // ---------------- model (DOM-free, unit-tested with node) ----------------
 const RMIN = 875, RMAX = 2125, MAXR = 42;
@@ -331,20 +333,32 @@ async function pollRc() {
     } catch (e) { /* transient */ }
     rcTimer = setTimeout(pollRc, 400);
 }
+let RATE_SCALE = 5;                                      // Rotorflight rates type: Rate on the Rates page = stored x5; older types x10
+const fnScale = fn => (fn >= 8 && fn <= 10) ? RATE_SCALE : 1;
+function scaleRows(rows, k) {                            // k = 1: raw -> page units; k = -1: page -> raw
+    return rows.map(r => {
+        const sc = fnScale(r.fn); if (sc === 1) return r;
+        const f = v => (v === '' || v === undefined || v === null) ? v : Math.round(+v * (k > 0 ? sc : 1 / sc) * 1000) / 1000;
+        const o = Object.assign({}, r);
+        if (r.kind === 'switch') o.values = r.values.map(f); else { o.min = f(r.min); o.max = f(r.max); }
+        return o;
+    });
+}
 async function load() {
     if (!(await usbGate())) { paint(); return; }
     setStatus('info', 'Reading…');
     try {
+        try { const t = hexToBytes((await LDRC.msp(111)).trim()); RATE_SCALE = t[0] === 6 ? 5 : 10; } catch (e) { RATE_SCALE = 5; }
         const r = await fetch('/api/msp?fn=52', { cache: 'no-store' });
         if (!r.ok) { setStatus('bad', await r.text()); return; }
-        rows = linesToRows(parseLines(hexToBytes((await r.text()).trim())));
+        rows = scaleRows(linesToRows(parseLines(hexToBytes((await r.text()).trim()))), 1);
         setStatus('', ''); paint();
     } catch (e) { setStatus('bad', 'no answer'); }
 }
 async function save() {
     if (!(await usbGate())) return;
     collect();
-    const L = rowsToLines(rows);
+    const L = rowsToLines(scaleRows(rows, -1));
     if (rows.some(r => r.fn) && L.filter(l => l.fn).length === 0) { setStatus('bad', 'Give each position a value first'); return; }
     setStatus('info', 'Writing…');
     for (let i = 0; i < L.length; i++) {
