@@ -7,7 +7,7 @@
 <meta name=apple-mobile-web-app-capable content=yes>
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
-<title>Adjustments &middot; LDRC RX V2</title>
+<title>In-flight adjustments &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=181">
 <script src="/app.js?v=198" defer></script>
 <style>
@@ -41,7 +41,7 @@
 <div class=bg-photo aria-hidden=true></div>
 <div class=bg-wash  aria-hidden=true></div>
 <div class=container>
-    <h1>Adjustments</h1>
+    <h1>In-flight adjustments</h1>
     <div id=needUsb class=needUsb style="display:none">Plug the flight controller&rsquo;s USB socket into the dongle. This page needs the USB connection.</div>
     <div id=status class="banner info" style="display:none"></div>
 
@@ -56,12 +56,12 @@
     </div>
     <div class=footer></div>
 </div>
-<template id=helpContent><h2>Adjustments</h2>
+<template id=helpContent><h2>In-flight adjustments</h2>
 <p>An adjustment lets a switch or a knob on your transmitter change one Rotorflight setting while you fly &mdash; the bank switch is the everyday example: it picks the PID bank and the rates bank.</p>
-<h3>Three kinds</h3>
-<p><b>A switch position picks a value.</b> One bar for the switch, one divider for a two-position switch or two for a three-position one, and a value for each position. Drag the dividers to where the switch changes over.</p>
-<p><b>A knob sets it.</b> The knob&rsquo;s position across the blue zone sets the value between the minimum and the maximum. Drag the zone&rsquo;s ends.</p>
-<p><b>A switch nudges it.</b> Below the first divider the value goes down by the step each time; above the second it goes up; between them nothing happens.</p>
+<h3>Two kinds</h3>
+<p><b>A knob</b>, for continuous adjustment within a range: the knob&rsquo;s position across the blue zone sets the value between the minimum and the maximum. Drag the zone&rsquo;s ends.</p>
+<p><b>A switch</b>, for choosing between settings: one bar for the switch, one divider for a two-position switch or two for a three-position one, and a value for each position. Drag the dividers to where the switch changes over.</p>
+<p>A step-type adjustment made in the configurator is shown greyed and left exactly as it is.</p>
 <h3>The bar</h3>
 <p>The bar is the full travel of the channel, 875 to 2125 microseconds. The thin red line is where the channel is right now: move the switch or knob and watch it &mdash; the region it is in lights up green.</p>
 <h3>Channels</h3>
@@ -180,7 +180,7 @@ function drawBar(i) {
     h += '<div class=rDot id=dot' + i + ' style="display:none"></div>';
     dividers.forEach((d, k) => { h += '<div class=rHandle data-d=' + k + ' style="left:' + pct(d) + '%"></div>'; });
     tr.innerHTML = h;
-    tr.querySelectorAll('.rHandle').forEach(hd => wireHandle(i, hd));
+    if (r.kind !== 'nudge') tr.querySelectorAll('.rHandle').forEach(hd => wireHandle(i, hd)); else tr.querySelectorAll('.rHandle').forEach(hd => hd.style.opacity = '.4');
 }
 function wireHandle(i, h) {
     const track = $('tr' + i);
@@ -208,7 +208,9 @@ function paint() {
     const R = $('rows'); R.innerHTML = '';
     rows.forEach((r, i) => {
         const d = document.createElement('div'); d.className = 'rowCard';
-        const kindSel = '<select id=kind' + i + ' class=usbOnly><option value=switch' + (r.kind === 'switch' ? ' selected' : '') + '>a switch position picks a value</option><option value=knob' + (r.kind === 'knob' ? ' selected' : '') + '>a knob sets it</option><option value=nudge' + (r.kind === 'nudge' ? ' selected' : '') + '>a switch nudges it up or down</option></select>';
+        const kindSel = r.kind === 'nudge'
+            ? '<select id=kind' + i + ' disabled><option>a step adjustment from the configurator (kept as it is)</option></select>'
+            : '<select id=kind' + i + ' class=usbOnly><option value=knob' + (r.kind === 'knob' ? ' selected' : '') + '>a knob, continuous within a range</option><option value=switch' + (r.kind === 'switch' ? ' selected' : '') + '>a switch, choosing between settings</option></select>';
         let h = '<div class=r><label data-help="The Rotorflight setting this line changes.">What it changes</label>' + fnSel('fn' + i, r.fn) + '</div>' +
                 '<div class=r><label data-help="How the transmitter control sets the value.">How</label>' + kindSel + '<label>on</label>' + chanSel('ch' + i, r.ch) + '</div>';
         if (r.kind === 'switch') h += '<div class=r><label data-help="Two positions have one divider, three positions have two.">Positions</label><select id=npos' + i + ' class=usbOnly><option value=2' + (r.t.length === 1 ? ' selected' : '') + '>2</option><option value=3' + (r.t.length === 2 ? ' selected' : '') + '>3</option></select></div>';
@@ -218,15 +220,14 @@ function paint() {
         } else if (r.kind === 'knob') {
             h += '<div class=r><label data-help="The value at the left end of the zone and at the right end.">Sets the value from</label><input id=min' + i + ' class=usbOnly type=number min=0 max=65535 value=' + r.min + '><label>to</label><input id=max' + i + ' class=usbOnly type=number min=0 max=65535 value=' + r.max + '></div>';
         } else {
-            h += '<div class=r><label data-help="How much each nudge changes the value, and the limits it may not pass.">By</label><input id=stp' + i + ' class=usbOnly type=number min=1 max=255 value=' + (r.stp || 1) + '><label>between</label><input id=min' + i + ' class=usbOnly type=number min=0 max=65535 value=' + r.min + '><label>and</label><input id=max' + i + ' class=usbOnly type=number min=0 max=65535 value=' + r.max + '></div>';
+            h += '<div class=r><label>Step ' + r.stp + ', between ' + r.min + ' and ' + r.max + ' (change this one in the configurator)</label></div>';
         }
         h += '<div class=r><button type=button class="usbOnly" data-clear=' + i + ' style="margin-left:auto;background:#dca08c;border:0;border-radius:8px;padding:.3em .7em">Remove</button></div>';
         d.innerHTML = h; R.appendChild(d);
         drawBar(i);
-        $('kind' + i).onchange = () => { collect(); const r2 = rows[i]; const k = $('kind' + i).value;
+        if (r.kind !== 'nudge') $('kind' + i).onchange = () => { collect(); const r2 = rows[i]; const k = $('kind' + i).value;
             if (k === 'switch') { r2.kind = 'switch'; r2.t = r2.t && r2.t.length ? r2.t.slice(0, 2) : [1500]; r2.values = r2.values || []; while (r2.values.length < r2.t.length + 1) r2.values.push(''); }
             else if (k === 'knob') { r2.kind = 'knob'; r2.lo = r2.lo ?? RMIN; r2.hi = r2.hi ?? RMAX; r2.min = r2.min ?? 0; r2.max = r2.max ?? 0; }
-            else { r2.kind = 'nudge'; r2.t = (r2.t && r2.t.length === 2) ? r2.t : [1300, 1700]; r2.stp = r2.stp || 1; r2.min = r2.min ?? 0; r2.max = r2.max ?? 0; }
             paint(); };
         const np = $('npos' + i); if (np) np.onchange = () => { collect(); const r2 = rows[i]; const n = +np.value;
             if (n === 3 && r2.t.length === 1) { r2.t = [Math.min(r2.t[0], 1300), Math.max(r2.t[0] + 200, 1700)]; r2.values.push(''); }
@@ -245,7 +246,7 @@ function collect() {
         r.fn = +g('fn').value; r.ch = +g('ch').value;
         if (r.kind === 'switch') r.values = r.values.map((v, k) => { const el = document.getElementById('v' + i + '_' + k); return el ? el.value : v; });
         else if (r.kind === 'knob') { r.min = +g('min').value; r.max = +g('max').value; }
-        else { r.min = +g('min').value; r.max = +g('max').value; r.stp = Math.max(1, +g('stp').value); }
+        else { /* a configurator step line: untouched */ }
     });
 }
 async function pollRc() {
@@ -295,7 +296,7 @@ async function save() {
     await load();
 }
 document.addEventListener('DOMContentLoaded', async () => {
-    $('addBtn').onclick = () => { collect(); rows.push({ kind: 'switch', fn: 2, ch: 1, t: [1300, 1700], values: ['1', '2', '4'] }); paint(); };
+    $('addBtn').onclick = () => { collect(); rows.push({ kind: 'switch', fn: 2, ch: 1, t: [1500], values: ['1', '2'] }); paint(); };
     $('saveBtn').onclick = save;
     await load();
     pollRc();
