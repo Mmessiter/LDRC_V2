@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.622-adjust-bars";
+constexpr const char* FW_VERSION = "RXV2-0.9.623-dividers";
 
 //*********************************************************************
 //  Auto-update manifest URLs

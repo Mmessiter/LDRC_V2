@@ -21,15 +21,20 @@
 .rowCard label{color:#3a5165;font-size:.9em}
 .rowCard select,.rowCard input{font-size:.95em;padding:.25em .35em;border:1px solid #c9d3dc;border-radius:6px;max-width:100%}
 .rowCard input[type=number]{width:4.6em}
-/* Range bar as on the Modes page: full track 875-2125 us, blue zone = ON, red line = the channel's live position */
-.rTrack{position:relative;height:18px;background:#dfe5ea;border-radius:9px;margin:.55em 0 .1em;overflow:visible}
-.rZone{position:absolute;top:0;bottom:0;background:#4a90c9;border-radius:9px;opacity:.85}
-.rDot{position:absolute;top:-4px;width:4px;height:26px;border-radius:2px;background:#c0392b;transform:translateX(-50%);transition:left .15s linear,background .15s;pointer-events:none}
+.rTrack{position:relative;height:22px;background:#dfe5ea;border-radius:9px;margin:.55em 0 .1em;overflow:visible}
+.rReg{position:absolute;top:0;bottom:0;border-radius:9px;opacity:.9;color:#fff;font-size:.72em;font-weight:700;text-align:center;line-height:22px;white-space:nowrap;overflow:hidden}
+.rReg.c0{background:#4a90c9}.rReg.c1{background:#5fa099}.rReg.c2{background:#7a6a9a}.rReg.dead{background:#c9d3dc;color:#5c6b75}
+.rReg.live{outline:3px solid #2e7d32;outline-offset:-3px}
+.rDot{position:absolute;top:-5px;width:4px;height:32px;border-radius:2px;background:#c0392b;transform:translateX(-50%);transition:left .15s linear,background .15s;pointer-events:none;z-index:3}
 .rDot.in{background:#2e7d32}
-.rHandle{position:absolute;top:50%;width:22px;height:22px;border-radius:50%;background:#2b568f;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);transform:translate(-50%,-50%);cursor:grab;touch-action:pan-y;z-index:2;-webkit-user-select:none;user-select:none}
+.rHandle{position:absolute;top:50%;width:24px;height:24px;border-radius:50%;background:#2b568f;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);transform:translate(-50%,-50%);cursor:grab;touch-action:pan-y;z-index:2;-webkit-user-select:none;user-select:none}
 .rScale{display:flex;justify-content:space-between;font-size:.7em;color:#7a8b95;margin-bottom:.2em}
 .rLive{font-size:.8em;color:#5c6b75;margin:.1em 0 .3em}
 .rLive b{color:#2e7d32}
+.vals{display:flex;gap:.5em;margin:.3em 0}
+.vals div{flex:1;text-align:center}
+.vals input{width:5em;text-align:center}
+.vals small{display:block;color:#5c6b75;font-size:.75em}
 </style>
 </head>
 <body>
@@ -41,7 +46,7 @@
     <div id=status class="banner info" style="display:none"></div>
 
     <div class=card>
-        <p class=sub style="margin:0 0 .4em"><b>A switch or knob on your transmitter changes a setting in flight.</b> Drag the round ends of a bar to set a zone; the red line is the switch&rsquo;s live position &mdash; move the switch and watch it turn green inside the zone.</p>
+        <p class=sub style="margin:0 0 .4em"><b>A switch or knob on your transmitter changes a setting in flight.</b> Drag the round dividers to set where the switch changes over; the red line is the switch&rsquo;s live position &mdash; move the switch and watch it.</p>
         <div id=rows></div>
         <button id=addBtn class="btn usbOnly" type=button style="background:#4f7fa0;margin-top:.4em"><span class=ico>&#10133;</span>Add an adjustment</button>
     </div>
@@ -52,32 +57,93 @@
     <div class=footer></div>
 </div>
 <template id=helpContent><h2>Adjustments</h2>
-<p>An adjustment lets a switch or a knob on your transmitter change one Rotorflight setting while you fly &mdash; the bank switch is the everyday example: it changes the PID bank and the rates bank.</p>
-<h3>Each line has three parts</h3>
-<p><b>What it changes</b> &mdash; the setting.</p>
-<p><b>Only while</b> &mdash; a switch that must be in the blue zone for the line to work at all. A zone across the whole bar means &ldquo;always&rdquo;.</p>
-<p><b>How the value is set</b>, one of two ways. <b>A knob sets it</b>: the knob&rsquo;s position across the blue zone sets the value between the minimum and the maximum. A three-position switch works the same way: the whole bar mapped to 1 to 4 gives banks 1, 2 and 4, which is how the bank switch is usually done. <b>A switch nudges it</b>: in one zone the value goes down by the step, in the other it goes up.</p>
-<h3>The bars</h3>
-<p>The bar is the full travel of the channel, 875 to 2125 microseconds. Drag the round ends to set the zone. The thin red line is where the channel is right now: move the switch or knob and watch it &mdash; it turns green inside the zone.</p>
+<p>An adjustment lets a switch or a knob on your transmitter change one Rotorflight setting while you fly &mdash; the bank switch is the everyday example: it picks the PID bank and the rates bank.</p>
+<h3>Three kinds</h3>
+<p><b>A switch position picks a value.</b> One bar for the switch, one divider for a two-position switch or two for a three-position one, and a value for each position. Drag the dividers to where the switch changes over.</p>
+<p><b>A knob sets it.</b> The knob&rsquo;s position across the blue zone sets the value between the minimum and the maximum. Drag the zone&rsquo;s ends.</p>
+<p><b>A switch nudges it.</b> Below the first divider the value goes down by the step each time; above the second it goes up; between them nothing happens.</p>
+<h3>The bar</h3>
+<p>The bar is the full travel of the channel, 875 to 2125 microseconds. The thin red line is where the channel is right now: move the switch or knob and watch it &mdash; the region it is in lights up green.</p>
 <h3>Channels</h3>
 <p>Rotorflight counts the switch channels from AUX1, which on a helicopter is channel 6: roll, pitch, yaw, collective and throttle come first.</p>
-<h3>Saving</h3>
-<p>Save writes every line to the flight controller and keeps them. This page needs the flight controller&rsquo;s USB socket plugged into the dongle: the list is too big for the radio link.</p>
+<h3>Behind the scenes</h3>
+<p>Rotorflight itself only knows single zones, so a three-position switch is written as three lines and read back as one. Save writes every line and keeps them. This page needs the flight controller&rsquo;s USB socket plugged into the dongle: the list is too big for the radio link.</p>
 </template>
 <script>
 const $ = id => document.getElementById(id);
 const LABELS = ["(nothing)", "Rates bank (profile)", "PID bank (profile)", "Led profile", "Battery profile", "Pitch super rate", "Roll super rate", "Yaw super rate", "Pitch rate", "Roll rate", "Yaw rate", "Pitch expo", "Roll expo", "Yaw expo", "Pitch P gain", "Pitch I gain", "Pitch D gain", "Pitch F gain", "Roll P gain", "Roll I gain", "Roll D gain", "Roll F gain", "Yaw P gain", "Yaw I gain", "Yaw D gain", "Yaw F gain", "Yaw clockwise gain", "Yaw anticlockwise gain", "Yaw cyclic feedforward", "Yaw collectiveective feedforward", "Yaw collectiveective dynamic", "Yaw collectiveective decay", "Pitch collectiveective feedforward", "Pitch gyro cutofeedforward", "Roll gyro cutofeedforward", "Yaw gyro cutofeedforward", "Pitch d-term cutofeedforward", "Roll d-term cutofeedforward", "Yaw d-term cutofeedforward", "Rescue climb collectiveective", "Rescue hover collectiveective", "Rescue hover altitudeitude", "Rescue altitude P gain", "Rescue altitude I gain", "Rescue altitude D gain", "Angle level gain", "Horizon level gain", "Acro trainer gain", "Governor gain", "Governor P gain", "Governor I gain", "Governor D gain", "Governor F gain", "Governor tail torque assist gain", "Governor cyclic feedforward", "Governor collectiveective feedforward", "Pitch B gain", "Roll B gain", "Yaw B gain", "Pitch O gain", "Roll O gain", "Cross coupling gain", "Cross coupling ratio", "Cross coupling cutofeedforward", "Level trim pitch", "Level trim roll", "Inertia precomp gain", "Inertia precomp cutofeedforward", "Pitch setpoint boost gain", "Roll setpoint boost gain", "Yaw setpoint boost gain", "Collective setpoint boost gain", "Yaw dynamic ceiling gain", "Yaw dynamic deadband gain", "Yaw dynamic deadband filter", "Yaw precomp cutofeedforward", "Governor idle throttle", "Governor auto throttle", "Governor max throttle", "Governor min throttle", "Governor headspeed", "Governor yaw feedforward"];
-const MAXR = 42, RMIN = 875, RMAX = 2125;
-let ranges = [];        // 42 lines; positions kept in microseconds
-let rcTimer = null, gateOk = false;
+
+// ---------------- model (DOM-free, unit-tested with node) ----------------
+const RMIN = 875, RMAX = 2125, MAXR = 42;
+const us = b => 1500 + 5 * (b > 127 ? b - 256 : b);                 // Rotorflight: signed 5 us steps around 1500
+const step = v => { const st = Math.max(-125, Math.min(125, Math.round((v - 1500) / 5))); return st < 0 ? st + 256 : st; };
+const u16 = (b, o) => b[o] | (b[o + 1] << 8);
+function parseLines(b) {                 // 42 x 14 bytes -> line objects (positions in us)
+    const L = [];
+    for (let i = 0; i < MAXR && (i + 1) * 14 <= b.length; i++) {
+        const o = i * 14;
+        L.push({ fn: b[o], ena: b[o+1], enaLo: us(b[o+2]), enaHi: us(b[o+3]), adj: b[o+4], a1Lo: us(b[o+5]), a1Hi: us(b[o+6]), a2Lo: us(b[o+7]), a2Hi: us(b[o+8]), min: u16(b, o+9), max: u16(b, o+11), stp: b[o+13] });
+    }
+    return L;
+}
+// Rows the page shows: kind 'switch' (dividers t[], one value per position), 'knob' (ends lo/hi, min..max), 'nudge' (dividers t[0]=down below, t[1]=up above)
+function linesToRows(L) {
+    const rows = [], used = new Set();
+    L.forEach((l, i) => {
+        if (used.has(i) || l.fn === 0) return;
+        if (l.stp > 0) { used.add(i); rows.push({ kind: 'nudge', fn: l.fn, ch: l.adj, t: [l.a1Hi, l.a2Lo], min: l.min, max: l.max, stp: l.stp, ena: l.ena, enaLo: l.enaLo, enaHi: l.enaHi }); return; }
+        if (l.min === l.max && l.ena === l.adj) {
+            // a switch position: gather every line with the same setting and switch that is also a fixed value
+            const grp = L.map((m, j) => ({ m, j })).filter(x => !used.has(x.j) && x.m.fn === l.fn && x.m.adj === l.adj && x.m.ena === x.m.adj && x.m.stp === 0 && x.m.min === x.m.max);
+            grp.sort((a, b) => a.m.a1Lo - b.m.a1Lo);
+            grp.forEach(x => used.add(x.j));
+            const t = grp.slice(1).map(x => x.m.a1Lo);
+            rows.push({ kind: 'switch', fn: l.fn, ch: l.adj, t, values: grp.map(x => x.m.min) });
+            return;
+        }
+        used.add(i);
+        rows.push({ kind: 'knob', fn: l.fn, ch: l.adj, lo: l.a1Lo, hi: l.a1Hi, min: l.min, max: l.max, ena: l.ena, enaLo: l.enaLo, enaHi: l.enaHi });
+    });
+    return rows;
+}
+function regions(t) {                    // dividers -> [lo,hi) regions across the whole bar
+    const edges = [RMIN, ...t, RMAX], r = [];
+    for (let i = 0; i + 1 < edges.length; i++) r.push([edges[i], edges[i + 1]]);
+    return r;
+}
+function rowsToLines(rows) {             // -> array of 42 line objects (fn 0 = unused)
+    const L = [];
+    const blank = () => ({ fn: 0, ena: 0, enaLo: 1500, enaHi: 1500, adj: 0, a1Lo: 1500, a1Hi: 1500, a2Lo: 1500, a2Hi: 1500, min: 0, max: 0, stp: 0 });   // Rotorflight's own empty line
+    for (const r of rows) {
+        if (!r.fn) continue;
+        if (r.kind === 'switch') {
+            regions(r.t).forEach(([lo, hi], k) => {
+                const v = r.values[k]; if (v === undefined || v === null || v === '') return;
+                L.push({ fn: r.fn, ena: r.ch, enaLo: lo, enaHi: hi, adj: r.ch, a1Lo: lo, a1Hi: hi, a2Lo: 1500, a2Hi: 1500, min: +v, max: +v, stp: 0 });
+            });
+        } else if (r.kind === 'knob') {
+            L.push({ fn: r.fn, ena: r.ena ?? r.ch, enaLo: r.enaLo ?? RMIN, enaHi: r.enaHi ?? RMAX, adj: r.ch, a1Lo: r.lo, a1Hi: r.hi, a2Lo: 1500, a2Hi: 1500, min: +r.min, max: +r.max, stp: 0 });
+        } else {
+            L.push({ fn: r.fn, ena: r.ena ?? r.ch, enaLo: r.enaLo ?? RMIN, enaHi: r.enaHi ?? RMAX, adj: r.ch, a1Lo: RMIN, a1Hi: r.t[0], a2Lo: r.t[1], a2Hi: RMAX, min: +r.min, max: +r.max, stp: Math.max(1, +r.stp) });
+        }
+    }
+    while (L.length < MAXR) L.push(blank());
+    return L.slice(0, MAXR);
+}
+function encodeLine(i, l) {
+    const b = new Uint8Array(15);
+    b[0] = i; b[1] = l.fn; b[2] = l.ena; b[3] = step(l.enaLo); b[4] = step(l.enaHi); b[5] = l.adj;
+    b[6] = step(l.a1Lo); b[7] = step(l.a1Hi); b[8] = step(l.a2Lo); b[9] = step(l.a2Hi);
+    b[10] = l.min & 255; b[11] = l.min >> 8; b[12] = l.max & 255; b[13] = l.max >> 8; b[14] = l.stp;
+    return b;
+}
+
+// ---------------- page ----------------
+let rows = [], gateOk = false, rcTimer = null;
 function setStatus(kind, msg) { const b = $('status'); b.style.display = msg ? '' : 'none'; if (!msg) return; b.className = 'banner ' + kind; b.textContent = msg; }
 const hexToBytes = h => { const o = new Uint8Array(h.length / 2); for (let i = 0; i < o.length; i++) o[i] = parseInt(h.substr(i * 2, 2), 16); return o; };
 const bytesToHex = b => Array.from(b, x => x.toString(16).padStart(2, '0').toUpperCase()).join('');
-const u16 = (b, o) => b[o] | (b[o + 1] << 8);
-const us = b => 1500 + 5 * (b > 127 ? b - 256 : b);                       // Rotorflight: signed 5 us steps around 1500
-const step = v => { const st = Math.max(-125, Math.min(125, Math.round((v - 1500) / 5))); return st < 0 ? st + 256 : st; };
 const pct = u => Math.max(0, Math.min(100, (u - RMIN) / (RMAX - RMIN) * 100));
-
 async function usbGate() {
     const s = await LDRC.fetchState();
     gateOk = !!(s && s.dongle && s.dongle_link === 'usb');
@@ -85,15 +151,7 @@ async function usbGate() {
     document.querySelectorAll('.usbOnly').forEach(el => { el.disabled = !gateOk; el.style.opacity = gateOk ? '' : '.45'; });
     return gateOk ? s : null;
 }
-function blank() { return { fn: 0, ena: 0, enaLo: 900, enaHi: 2100, adj: 0, a1Lo: 900, a1Hi: 2100, a2Lo: 1500, a2Hi: 2100, min: 0, max: 0, stp: 0 }; }
-function parse(b) {
-    ranges = [];
-    for (let i = 0; i < MAXR && (i + 1) * 14 <= b.length; i++) {
-        const o = i * 14;
-        ranges.push({ fn: b[o], ena: b[o+1], enaLo: us(b[o+2]), enaHi: us(b[o+3]), adj: b[o+4], a1Lo: us(b[o+5]), a1Hi: us(b[o+6]), a2Lo: us(b[o+7]), a2Hi: us(b[o+8]), min: u16(b, o+9), max: u16(b, o+11), stp: b[o+13] });
-    }
-}
-function chanSel(id, v) {                 // Rotorflight AUX index: 0 = AUX1 = channel 6 on a helicopter
+function chanSel(id, v) {
     let h = '<select id=' + id + ' class=usbOnly>';
     for (let a = 0; a < 13; a++) h += '<option value=' + a + (v === a ? ' selected' : '') + '>AUX' + (a + 1) + ' (channel ' + (a + 6) + ')</option>';
     return h + '</select>';
@@ -103,98 +161,110 @@ function fnSel(id, v) {
     LABELS.forEach((l, i) => h += '<option value=' + i + (v === i ? ' selected' : '') + '>' + l + '</option>');
     return h + '</select>';
 }
-// one bar: key = 'ena' | 'a1' | 'a2'; the zone edges live in ranges[i][key+'Lo'/'Hi']
-function bar(i, key, title) {
-    return '<div class=r style="display:block"><label>' + title + '</label>' +
-           '<div class=rScale><span>875</span><span>1500</span><span>2125</span></div>' +
-           '<div class=rTrack id=tr' + key + i + '><div class=rZone id=zn' + key + i + '></div><div class=rDot id=dot' + key + i + ' style="display:none"></div>' +
-           '<div class=rHandle id=hlo' + key + i + '></div><div class=rHandle id=hhi' + key + i + '></div></div>' +
-           '<div class=rLive id=lv' + key + i + '>&nbsp;</div></div>';
+function regionNames(r) {
+    if (r.kind === 'nudge') return ['down', '', 'up'];
+    if (r.kind === 'knob') return ['', 'knob', ''];
+    return r.values.map((v, k) => 'position ' + (k + 1) + (v === '' || v === undefined ? '' : ' = ' + v));
 }
-function paintZone(i, key) {
-    const r = ranges[i], lo = r[key + 'Lo'], hi = r[key + 'Hi'];
-    const zn = $('zn' + key + i); if (!zn) return;
-    zn.style.left = pct(lo) + '%'; zn.style.width = Math.max(0, pct(hi) - pct(lo)) + '%';
-    $('hlo' + key + i).style.left = pct(lo) + '%'; $('hhi' + key + i).style.left = pct(hi) + '%';
+function drawBar(i) {
+    const r = rows[i], tr = $('tr' + i); if (!tr) return;
+    let regs, dividers;
+    if (r.kind === 'knob') { regs = [[RMIN, r.lo], [r.lo, r.hi], [r.hi, RMAX]]; dividers = [r.lo, r.hi]; }
+    else { regs = regions(r.t); dividers = r.t; }
+    const names = regionNames(r);
+    let h = '';
+    regs.forEach(([lo, hi], k) => {
+        const dead = (r.kind === 'knob' && k !== 1) || (r.kind === 'nudge' && k === 1);
+        h += '<div class="rReg ' + (dead ? 'dead' : 'c' + (k % 3)) + '" data-k=' + k + ' style="left:' + pct(lo) + '%;width:' + Math.max(0, pct(hi) - pct(lo)) + '%">' + (names[k] || '') + '</div>';
+    });
+    h += '<div class=rDot id=dot' + i + ' style="display:none"></div>';
+    dividers.forEach((d, k) => { h += '<div class=rHandle data-d=' + k + ' style="left:' + pct(d) + '%"></div>'; });
+    tr.innerHTML = h;
+    tr.querySelectorAll('.rHandle').forEach(hd => wireHandle(i, hd));
 }
-function wireHandle(i, key, which) {
-    const h = $((which === 'lo' ? 'hlo' : 'hhi') + key + i), track = $('tr' + key + i); if (!h || !track) return;
+function wireHandle(i, h) {
+    const track = $('tr' + i);
     h.addEventListener('pointerdown', e => {
         if (!gateOk) return;
         e.preventDefault(); h.setPointerCapture(e.pointerId);
+        const k = +h.dataset.d;
         const move = ev => {
             const rc = track.getBoundingClientRect();
             let u = RMIN + (ev.clientX - rc.left) / rc.width * (RMAX - RMIN);
-            u = Math.max(RMIN, Math.min(RMAX, Math.round(u / 5) * 5));
-            const r = ranges[i];
-            if (which === 'lo') r[key + 'Lo'] = Math.min(u, r[key + 'Hi'] - 5); else r[key + 'Hi'] = Math.max(u, r[key + 'Lo'] + 5);
-            paintZone(i, key);
+            u = Math.max(RMIN + 5, Math.min(RMAX - 5, Math.round(u / 5) * 5));
+            const r = rows[i];
+            if (r.kind === 'knob') { if (k === 0) r.lo = Math.min(u, r.hi - 5); else r.hi = Math.max(u, r.lo + 5); }
+            else { const lo = k > 0 ? r.t[k - 1] + 5 : RMIN + 5, hi = k + 1 < r.t.length ? r.t[k + 1] - 5 : RMAX - 5; r.t[k] = Math.max(lo, Math.min(hi, u)); }
+            // move the regions and this handle without a full repaint (keeps the capture)
+            const regs = r.kind === 'knob' ? [[RMIN, r.lo], [r.lo, r.hi], [r.hi, RMAX]] : regions(r.t);
+            track.querySelectorAll('.rReg').forEach((el, j) => { const [lo2, hi2] = regs[j]; el.style.left = pct(lo2) + '%'; el.style.width = Math.max(0, pct(hi2) - pct(lo2)) + '%'; });
+            h.style.left = pct(r.kind === 'knob' ? (k === 0 ? r.lo : r.hi) : r.t[k]) + '%';
         };
         const up = () => { try { h.releasePointerCapture(e.pointerId); } catch (_) {} h.removeEventListener('pointermove', move); h.removeEventListener('pointerup', up); h.removeEventListener('pointercancel', up); };
         h.addEventListener('pointermove', move); h.addEventListener('pointerup', up); h.addEventListener('pointercancel', up);
     });
 }
-function wireBar(i, key) { wireHandle(i, key, 'lo'); wireHandle(i, key, 'hi'); paintZone(i, key); }
-function modeOf(r) { return r.stp > 0 ? 'nudge' : 'knob'; }
 function paint() {
     const R = $('rows'); R.innerHTML = '';
-    let shown = 0;
-    ranges.forEach((r, i) => {
-        if (r.fn === 0 && !r._new) return;
-        shown++;
-        const mode = modeOf(r);
+    rows.forEach((r, i) => {
         const d = document.createElement('div'); d.className = 'rowCard';
-        d.innerHTML =
-            '<div class=r><label data-help="The Rotorflight setting this line changes.">What it changes</label>' + fnSel('fn' + i, r.fn) + '</div>' +
-            '<div class=r><label data-help="A switch that must be in the blue zone for this line to work. A zone across the whole bar means always.">Only while</label>' + chanSel('ena' + i, r.ena) + '<label>is in the zone</label></div>' +
-            bar(i, 'ena', '') +
-            '<div class=r><label data-help="A knob sets it: the knob position across the blue zone sets the value between min and max. A switch nudges it: one zone lowers the value by the step, the other raises it.">How</label><select id=mode' + i + ' class=usbOnly><option value=knob' + (mode === 'knob' ? ' selected' : '') + '>a knob sets it</option><option value=nudge' + (mode === 'nudge' ? ' selected' : '') + '>a switch nudges it up or down</option></select><label>on</label>' + chanSel('adj' + i, r.adj) + '</div>' +
-            '<div id=knob' + i + (mode === 'knob' ? '' : ' style="display:none"') + '>' + bar(i, 'a1', 'Knob travel used') +
-            '<div class=r><label data-help="The value at the left end of the zone and at the right end.">Sets the value from</label><input id=min' + i + ' class=usbOnly type=number min=0 max=65535 value=' + r.min + '><label>to</label><input id=max' + i + ' class=usbOnly type=number min=0 max=65535 value=' + r.max + '></div></div>' +
-            '<div id=nudge' + i + (mode === 'nudge' ? '' : ' style="display:none"') + '>' + bar(i, 'a1', 'Zone that lowers the value') + bar(i, 'a2', 'Zone that raises the value') +
-            '<div class=r><label data-help="How much each nudge changes the value, and the limits it may not pass.">By</label><input id=stp' + i + ' class=usbOnly type=number min=1 max=255 value=' + (r.stp || 1) + '><label>between</label><input id=nmin' + i + ' class=usbOnly type=number min=0 max=65535 value=' + r.min + '><label>and</label><input id=nmax' + i + ' class=usbOnly type=number min=0 max=65535 value=' + r.max + '></div></div>' +
-            '<div class=r><button type=button class="usbOnly" data-clear=' + i + ' style="margin-left:auto;background:#dca08c;border:0;border-radius:8px;padding:.3em .7em">Remove</button></div>';
-        R.appendChild(d);
-        wireBar(i, 'ena'); wireBar(i, 'a1'); if (mode === 'nudge') wireBar(i, 'a2');
-        const ms = $('mode' + i);
-        ms.onchange = () => { collect(); if (ms.value === 'nudge' && ranges[i].stp === 0) ranges[i].stp = 1; if (ms.value === 'knob') ranges[i].stp = 0; paint(); };
+        const kindSel = '<select id=kind' + i + ' class=usbOnly><option value=switch' + (r.kind === 'switch' ? ' selected' : '') + '>a switch position picks a value</option><option value=knob' + (r.kind === 'knob' ? ' selected' : '') + '>a knob sets it</option><option value=nudge' + (r.kind === 'nudge' ? ' selected' : '') + '>a switch nudges it up or down</option></select>';
+        let h = '<div class=r><label data-help="The Rotorflight setting this line changes.">What it changes</label>' + fnSel('fn' + i, r.fn) + '</div>' +
+                '<div class=r><label data-help="How the transmitter control sets the value.">How</label>' + kindSel + '<label>on</label>' + chanSel('ch' + i, r.ch) + '</div>';
+        if (r.kind === 'switch') h += '<div class=r><label data-help="Two positions have one divider, three positions have two.">Positions</label><select id=npos' + i + ' class=usbOnly><option value=2' + (r.t.length === 1 ? ' selected' : '') + '>2</option><option value=3' + (r.t.length === 2 ? ' selected' : '') + '>3</option></select></div>';
+        h += '<div class=rScale><span>875</span><span>1500</span><span>2125</span></div><div class=rTrack id=tr' + i + '></div><div class=rLive id=lv' + i + '>&nbsp;</div>';
+        if (r.kind === 'switch') {
+            h += '<div class=vals>' + r.values.map((v, k) => '<div><input id=v' + i + '_' + k + ' class=usbOnly type=number min=0 max=65535 value="' + (v ?? '') + '"><small>position ' + (k + 1) + '</small></div>').join('') + '</div>';
+        } else if (r.kind === 'knob') {
+            h += '<div class=r><label data-help="The value at the left end of the zone and at the right end.">Sets the value from</label><input id=min' + i + ' class=usbOnly type=number min=0 max=65535 value=' + r.min + '><label>to</label><input id=max' + i + ' class=usbOnly type=number min=0 max=65535 value=' + r.max + '></div>';
+        } else {
+            h += '<div class=r><label data-help="How much each nudge changes the value, and the limits it may not pass.">By</label><input id=stp' + i + ' class=usbOnly type=number min=1 max=255 value=' + (r.stp || 1) + '><label>between</label><input id=min' + i + ' class=usbOnly type=number min=0 max=65535 value=' + r.min + '><label>and</label><input id=max' + i + ' class=usbOnly type=number min=0 max=65535 value=' + r.max + '></div>';
+        }
+        h += '<div class=r><button type=button class="usbOnly" data-clear=' + i + ' style="margin-left:auto;background:#dca08c;border:0;border-radius:8px;padding:.3em .7em">Remove</button></div>';
+        d.innerHTML = h; R.appendChild(d);
+        drawBar(i);
+        $('kind' + i).onchange = () => { collect(); const r2 = rows[i]; const k = $('kind' + i).value;
+            if (k === 'switch') { r2.kind = 'switch'; r2.t = r2.t && r2.t.length ? r2.t.slice(0, 2) : [1500]; r2.values = r2.values || []; while (r2.values.length < r2.t.length + 1) r2.values.push(''); }
+            else if (k === 'knob') { r2.kind = 'knob'; r2.lo = r2.lo ?? RMIN; r2.hi = r2.hi ?? RMAX; r2.min = r2.min ?? 0; r2.max = r2.max ?? 0; }
+            else { r2.kind = 'nudge'; r2.t = (r2.t && r2.t.length === 2) ? r2.t : [1300, 1700]; r2.stp = r2.stp || 1; r2.min = r2.min ?? 0; r2.max = r2.max ?? 0; }
+            paint(); };
+        const np = $('npos' + i); if (np) np.onchange = () => { collect(); const r2 = rows[i]; const n = +np.value;
+            if (n === 3 && r2.t.length === 1) { r2.t = [Math.min(r2.t[0], 1300), Math.max(r2.t[0] + 200, 1700)]; r2.values.push(''); }
+            if (n === 2 && r2.t.length === 2) { r2.t = [1500]; r2.values = r2.values.slice(0, 2); }
+            paint(); };
+        if (r.kind === 'switch') r.values.forEach((v, k) => { $('v' + i + '_' + k).oninput = () => { rows[i].values[k] = $('v' + i + '_' + k).value; drawBar(i); }; });
     });
-    if (!shown) R.innerHTML = '<p class=sub>No adjustments yet.</p>';
-    R.querySelectorAll('button[data-clear]').forEach(b => b.onclick = () => { ranges[+b.dataset.clear] = blank(); paint(); });
+    if (!rows.length) R.innerHTML = '<p class=sub>No adjustments yet.</p>';
+    R.querySelectorAll('button[data-clear]').forEach(b => b.onclick = () => { collect(); rows.splice(+b.dataset.clear, 1); paint(); });
     document.querySelectorAll('.usbOnly').forEach(el => { el.disabled = !gateOk; el.style.opacity = gateOk ? '' : '.45'; });
 }
 function collect() {
-    ranges.forEach((r, i) => {
+    rows.forEach((r, i) => {
         const g = id => document.getElementById(id + i);
         if (!g('fn')) return;
-        r.fn = +g('fn').value; r.ena = +g('ena').value; r.adj = +g('adj').value;
-        if (g('mode').value === 'knob') { r.min = +g('min').value; r.max = +g('max').value; r.stp = 0; }
-        else { r.min = +g('nmin').value; r.max = +g('nmax').value; r.stp = Math.max(1, +g('stp').value); }
+        r.fn = +g('fn').value; r.ch = +g('ch').value;
+        if (r.kind === 'switch') r.values = r.values.map((v, k) => { const el = document.getElementById('v' + i + '_' + k); return el ? el.value : v; });
+        else if (r.kind === 'knob') { r.min = +g('min').value; r.max = +g('max').value; }
+        else { r.min = +g('min').value; r.max = +g('max').value; r.stp = Math.max(1, +g('stp').value); }
     });
 }
-function encode(i, r) {
-    const b = new Uint8Array(15);
-    b[0] = i; b[1] = r.fn; b[2] = r.ena; b[3] = step(r.enaLo); b[4] = step(r.enaHi); b[5] = r.adj;
-    b[6] = step(r.a1Lo); b[7] = step(r.a1Hi); b[8] = r.stp > 0 ? step(r.a2Lo) : 0; b[9] = r.stp > 0 ? step(r.a2Hi) : 0;
-    b[10] = r.min & 255; b[11] = r.min >> 8; b[12] = r.max & 255; b[13] = r.max >> 8; b[14] = r.stp;
-    return bytesToHex(b);
-}
-// Live positions from the flight controller's own view (MSP_RC, fn 105): index 5 = AUX1 = channel 6.
 async function pollRc() {
     if (document.hidden || !gateOk) { rcTimer = setTimeout(pollRc, 800); return; }
     try {
         const b = hexToBytes(await LDRC.msp(105));
-        ranges.forEach((r, i) => {
-            for (const key of ['ena', 'a1', 'a2']) {
-                const dot = $('dot' + key + i); if (!dot) continue;
-                const chIdx = (key === 'ena' ? r.ena : r.adj) + 5;
-                if (b.length < (chIdx + 1) * 2) { dot.style.display = 'none'; continue; }
-                const u = u16(b, chIdx * 2);
-                dot.style.display = ''; dot.style.left = pct(u) + '%';
-                const inside = u >= r[key + 'Lo'] && u < r[key + 'Hi'];
-                dot.classList.toggle('in', inside);
-                const lv = $('lv' + key + i); if (lv) lv.innerHTML = 'now ' + u + ' &micro;s ' + (inside ? '<b>in the zone</b>' : 'outside');
-            }
+        rows.forEach((r, i) => {
+            const dot = $('dot' + i), tr = $('tr' + i); if (!dot || !tr) return;
+            const chIdx = r.ch + 5;
+            if (b.length < (chIdx + 1) * 2) { dot.style.display = 'none'; return; }
+            const u = u16(b, chIdx * 2);
+            dot.style.display = ''; dot.style.left = pct(u) + '%';
+            const regs = r.kind === 'knob' ? [[RMIN, r.lo], [r.lo, r.hi], [r.hi, RMAX]] : regions(r.t);
+            let inK = -1; regs.forEach(([lo, hi], k) => { if (u >= lo && u < hi) inK = k; });
+            tr.querySelectorAll('.rReg').forEach(el => el.classList.toggle('live', +el.dataset.k === inK));
+            const names = regionNames(r);
+            const live = inK < 0 ? '' : (r.kind === 'switch' ? '<b>' + (names[inK] || 'position ' + (inK + 1)) + '</b>' : (names[inK] ? '<b>' + names[inK] + '</b>' : 'nothing'));
+            const lv = $('lv' + i); if (lv) lv.innerHTML = 'now ' + u + ' &micro;s: ' + live;
+            dot.classList.toggle('in', inK >= 0 && !(r.kind === 'knob' && inK !== 1) && !(r.kind === 'nudge' && inK === 1));
         });
     } catch (e) { /* transient */ }
     rcTimer = setTimeout(pollRc, 400);
@@ -205,16 +275,18 @@ async function load() {
     try {
         const r = await fetch('/api/msp?fn=52', { cache: 'no-store' });
         if (!r.ok) { setStatus('bad', await r.text()); return; }
-        parse(hexToBytes((await r.text()).trim()));
+        rows = linesToRows(parseLines(hexToBytes((await r.text()).trim())));
         setStatus('', ''); paint();
     } catch (e) { setStatus('bad', 'no answer'); }
 }
 async function save() {
     if (!(await usbGate())) return;
     collect();
+    const L = rowsToLines(rows);
+    if (rows.some(r => r.fn) && L.filter(l => l.fn).length === 0) { setStatus('bad', 'Give each position a value first'); return; }
     setStatus('info', 'Writing…');
-    for (let i = 0; i < ranges.length; i++) {
-        const r = await fetch('/api/msp?fn=53&data=' + encode(i, ranges[i]), { cache: 'no-store' });
+    for (let i = 0; i < L.length; i++) {
+        const r = await fetch('/api/msp?fn=53&data=' + bytesToHex(encodeLine(i, L[i])), { cache: 'no-store' });
         if (!r.ok) { setStatus('bad', 'Line ' + (i + 1) + ': ' + await r.text()); return; }
     }
     const s = await fetch('/api/msp?fn=250', { cache: 'no-store' });
@@ -223,7 +295,7 @@ async function save() {
     await load();
 }
 document.addEventListener('DOMContentLoaded', async () => {
-    $('addBtn').onclick = () => { collect(); const i = ranges.findIndex(r => r.fn === 0 && !r._new); if (i < 0) { setStatus('bad', 'All 42 lines are in use'); return; } ranges[i] = blank(); ranges[i]._new = true; paint(); };
+    $('addBtn').onclick = () => { collect(); rows.push({ kind: 'switch', fn: 2, ch: 1, t: [1300, 1700], values: ['1', '2', '4'] }); paint(); };
     $('saveBtn').onclick = save;
     await load();
     pollRc();
