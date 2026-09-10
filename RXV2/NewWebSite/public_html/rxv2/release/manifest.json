@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.632-short-list",
+      "url": "https://messiter.com/rxv2/release/v0.9.632/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.632/littlefs.bin",
+      "fs_md5": "83f41846ef72a18799c3fdea10a5302d",
+      "notes": "In-flight adjustments: by default the list offers only PIDs and rates, each per bank ('Yaw P gain in bank 1'); a 'Show every setting' switch reveals the full Rotorflight set (over 400 entries, including 'in the bank in use'). The bank-switch entries read 'PID bank switch (1 to 4)' / 'Rates bank switch (1 to 4)'. Includes 0.9.631."
+    },
+    {
       "name": "RXV2-0.9.631-bank-list",
       "url": "https://messiter.com/rxv2/release/v0.9.631/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.631/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.621/littlefs.bin",
       "fs_md5": "fa441a280d1efeca912a8654ac56ec87",
       "notes": "Adjustments page: the switch positions are now decoded the way Rotorflight stores them (signed 5-microsecond steps around 1500, so 'whole travel' reads 900 to 2100, not 4175), channels are named AUX1 to AUX13 as in Rotorflight, each line says in plain English whether a knob sets the value or a switch nudges it up and down, and the page has a help screen (Malcolm 2026-09-11: 'slightly mysterious'). Includes 0.9.620."
-    },
-    {
-      "name": "RXV2-0.9.620-usb-clean",
-      "url": "https://messiter.com/rxv2/release/v0.9.620/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.620/littlefs.bin",
-      "fs_md5": "6aa9241f3297dee8fc25c95fcbd30944",
-      "notes": "Dongle over USB: Adjustments and the Command line, proven on a Nexus. The 'reply bigger than the link buffer' alarm no longer fires for legitimate USB replies. Includes 0.9.619."
     }
   ]
 }
