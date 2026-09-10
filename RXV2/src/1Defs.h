@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.633-no-bank-lines";
+constexpr const char* FW_VERSION = "RXV2-0.9.634-rate-units";
 
 //*********************************************************************
 //  Auto-update manifest URLs

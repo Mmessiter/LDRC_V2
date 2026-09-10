@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.634-rate-units",
+      "url": "https://messiter.com/rxv2/release/v0.9.634/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.634/littlefs.bin",
+      "fs_md5": "77424b43ebab887056c5a5122973c7f8",
+      "notes": "In-flight adjustments: the Rate entries now show and save the same numbers as the Rates page (Rotorflight stores Rate/5 for its own rates type, Rate/10 for the older types; the page reads the rates type from the flight controller and converts both ways). Rates entries renamed: 'Pitch rate curve shape (Shape)', 'Pitch top rotation speed (Rate)', 'Pitch expo'. Includes 0.9.633."
+    },
+    {
       "name": "RXV2-0.9.633-no-bank-lines",
       "url": "https://messiter.com/rxv2/release/v0.9.633/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.633/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.623/littlefs.bin",
       "fs_md5": "752803c4c0e59e02d36f1928c5c4e0f9",
       "notes": "Adjustments page: a switch is one bar with draggable dividers - one for a two-position switch, two for a three-position one - and a value for each position (Malcolm 2026-09-11: 'three position switches would allow three possible values'). Underneath, one Rotorflight line per position, read back as one row. Knobs keep draggable ends; nudging has a down zone, a dead zone and an up zone. The red line still shows the switch's live position, and the region it is in lights up. Includes 0.9.622."
-    },
-    {
-      "name": "RXV2-0.9.622-adjust-bars",
-      "url": "https://messiter.com/rxv2/release/v0.9.622/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.622/littlefs.bin",
-      "fs_md5": "ccfcc3f903c4f1741d505f8609154abc",
-      "notes": "Adjustments page: every switch or knob range is a bar you drag by its round ends, with a red line showing the channel's live position that turns green inside the zone - move the switch and watch it (Malcolm 2026-09-11), as on the Modes page. Includes 0.9.621."
     }
   ]
 }
