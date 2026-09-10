@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.635-prefill";
+constexpr const char* FW_VERSION = "RXV2-0.9.636-help";
 
 //*********************************************************************
 //  Auto-update manifest URLs
