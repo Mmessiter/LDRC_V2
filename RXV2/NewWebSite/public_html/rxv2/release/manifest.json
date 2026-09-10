@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.626-which-bank",
+      "url": "https://messiter.com/rxv2/release/v0.9.626/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.626/littlefs.bin",
+      "fs_md5": "003425e7d51a60421a74e6cbe421a6cb",
+      "notes": "In-flight adjustments: the two bank settings now read 'Which PID bank flies (1 to 4)' and 'Which rates bank flies (1 to 4)'; the help says every other setting is changed in the bank active at the time; switching a line from Knob to Switch prefills the positions (banks 1, 2, 3 in order; other settings spread across the knob's range) - Malcolm 2026-09-11. Includes 0.9.625."
+    },
+    {
       "name": "RXV2-0.9.625-knob-switch",
       "url": "https://messiter.com/rxv2/release/v0.9.625/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.625/littlefs.bin",
@@ -68,13 +75,6 @@
       "name": "RXV2-0.9.615-dongle-usb",
       "url": "https://messiter.com/rxv2/release/v0.9.615/firmware.bin",
       "notes": "Dongle: MSP over USB. Plug a Rotorflight flight controller's USB-C into the dongle and it is used automatically - no port setting, no wiring; the UART link carries on otherwise (Malcolm 2026-09-11: 'so that nothing is impossible'). The dongle's USB socket is a host while this runs (updates by WiFi/Bluetooth; USB flashing needs the button-held bootloader). Includes 0.9.614."
-    },
-    {
-      "name": "RXV2-0.9.614-pill-fix",
-      "url": "https://messiter.com/rxv2/release/v0.9.614/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.614/littlefs.bin",
-      "fs_md5": "5945e2955e289cbba223dff927e6a66d",
-      "notes": "Updates page: the status pill no longer offers 'tap to install' while an install is already running. Includes 0.9.613."
     }
   ]
 }
