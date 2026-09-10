@@ -84,6 +84,9 @@ async function load() {
     try {
         const s = await LDRC.fetchState();
         on = !!s.dongle;
+        // USB link (0.9.615): the flight controller is on the dongle's USB socket - no wiring, no port setting.
+        const usb = s.dongle_link === 'usb';
+        document.querySelectorAll('.card').forEach(c => { if (c.querySelector('h2') && c.querySelector('h2').textContent === 'Wiring') c.style.display = usb ? 'none' : ''; });
         // The dongle's name lives here, not on Setup (Malcolm 2026-09-10).
         const nc = document.getElementById('nameCard'); if (nc) nc.style.display = on ? '' : 'none';
         const nm = document.getElementById('nm'); if (nm) nm.value = (s.info && s.info.name) || '';
@@ -110,7 +113,7 @@ async function load() {
         const fc = s.fcinfo || {};
         document.getElementById('status').className = 'banner ' + (on ? (fc.detected ? 'good' : 'warn') : 'info');
         document.getElementById('status').textContent = on
-            ? (fc.detected ? '✓ Dongle mode - flight controller answering' + (s.fc_armed ? ' (ARMED - configuration locked)' : '') : 'Dongle mode - no flight controller answering yet: check the wiring and the UART set to MSP')
+            ? (fc.detected ? '✓ Dongle mode - flight controller answering' + (s.dongle_link === 'usb' ? ' by USB' : '') + (s.fc_armed ? ' (ARMED - configuration locked)' : '') : 'Dongle mode - no flight controller answering yet: check the wiring and the UART set to MSP, or plug the flight controller\'s USB into the dongle')
             : 'Normal receiver mode';
     } catch (e) { document.getElementById('status').className = 'banner bad'; document.getElementById('status').textContent = 'Could not read the receiver: ' + e.message; }
 }
