@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.638-usb-wording",
+      "url": "https://messiter.com/rxv2/release/v0.9.638/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.638/littlefs.bin",
+      "fs_md5": "7c9581d5879880c63a886879128a6465",
+      "notes": "Help on In-flight adjustments and Command line: the USB cable runs from the dongle to the flight controller, not to a laptop (Malcolm: some might assume it needs the laptop). Includes 0.9.637."
+    },
+    {
       "name": "RXV2-0.9.637-help-try",
       "url": "https://messiter.com/rxv2/release/v0.9.637/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.637/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.627/littlefs.bin",
       "fs_md5": "3905e0af32ddedf47f4613c3be44de27",
       "notes": "In-flight adjustments: the help screen rewritten - clear and short (Malcolm 2026-09-11). Includes 0.9.626."
-    },
-    {
-      "name": "RXV2-0.9.626-which-bank",
-      "url": "https://messiter.com/rxv2/release/v0.9.626/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.626/littlefs.bin",
-      "fs_md5": "003425e7d51a60421a74e6cbe421a6cb",
-      "notes": "In-flight adjustments: the two bank settings now read 'Which PID bank flies (1 to 4)' and 'Which rates bank flies (1 to 4)'; the help says every other setting is changed in the bank active at the time; switching a line from Knob to Switch prefills the positions (banks 1, 2, 3 in order; other settings spread across the knob's range) - Malcolm 2026-09-11. Includes 0.9.625."
     }
   ]
 }
