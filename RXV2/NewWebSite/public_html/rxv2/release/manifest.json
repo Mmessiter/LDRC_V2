@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.637-help-try",
+      "url": "https://messiter.com/rxv2/release/v0.9.637/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.637/littlefs.bin",
+      "fs_md5": "57dace4a4db7bc8f69e066e1afcaee1f",
+      "notes": "In-flight adjustments help (Malcolm): after the boxes fill with the current value, change one or two to the values you want to try and leave the first box as it is, so a flick of the switch takes you back. Includes 0.9.636."
+    },
+    {
       "name": "RXV2-0.9.636-help",
       "url": "https://messiter.com/rxv2/release/v0.9.636/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.636/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.626/littlefs.bin",
       "fs_md5": "003425e7d51a60421a74e6cbe421a6cb",
       "notes": "In-flight adjustments: the two bank settings now read 'Which PID bank flies (1 to 4)' and 'Which rates bank flies (1 to 4)'; the help says every other setting is changed in the bank active at the time; switching a line from Knob to Switch prefills the positions (banks 1, 2, 3 in order; other settings spread across the knob's range) - Malcolm 2026-09-11. Includes 0.9.625."
-    },
-    {
-      "name": "RXV2-0.9.625-knob-switch",
-      "url": "https://messiter.com/rxv2/release/v0.9.625/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.625/littlefs.bin",
-      "fs_md5": "08288fe65772acf4cf103587355caa9e",
-      "notes": "In-flight adjustments: the choice reads just Knob or Switch and the page loses its introduction - what they mean is in the help (Malcolm 2026-09-11: 'keep this page as simple as possible'). Includes 0.9.624."
     }
   ]
 }
