@@ -65,6 +65,7 @@
 <p>The channel&rsquo;s full travel. Drag the round dividers to where the switch changes over. The red line is the switch now; the lit region is the position it is in.</p>
 <h3>Banks</h3>
 <p>&ldquo;PID bank in use&rdquo; and &ldquo;Rates bank in use&rdquo; are your bank switch: the value is the bank number, 1 to 4. Every other setting is changed in the bank in use at the time.</p>
+<p><b>Only in</b> ties a line to one bank: it works only while your bank switch has that bank in use, so its values can suit that bank. Another line can serve another bank.</p>
 <h3>Channels</h3>
 <p>AUX1 is channel 6 on a helicopter.</p>
 <h3>Saving</h3>
@@ -93,17 +94,22 @@ function linesToRows(L) {
     L.forEach((l, i) => {
         if (used.has(i) || l.fn === 0) return;
         if (l.stp > 0) { used.add(i); rows.push({ kind: 'nudge', fn: l.fn, ch: l.adj, t: [l.a1Hi, l.a2Lo], min: l.min, max: l.max, stp: l.stp, ena: l.ena, enaLo: l.enaLo, enaHi: l.enaHi }); return; }
-        if (l.min === l.max && l.ena === l.adj) {
-            // a switch position: gather every line with the same setting and switch that is also a fixed value
-            const grp = L.map((m, j) => ({ m, j })).filter(x => !used.has(x.j) && x.m.fn === l.fn && x.m.adj === l.adj && x.m.ena === x.m.adj && x.m.stp === 0 && x.m.min === x.m.max);
+        const selfEna = l.ena === l.adj && l.enaLo === l.a1Lo && l.enaHi === l.a1Hi;   // enabled by its own position = no condition
+        const cond = selfEna || (l.enaLo <= RMIN && l.enaHi >= RMAX) ? null : { ena: l.ena, enaLo: l.enaLo, enaHi: l.enaHi };
+        if (l.min === l.max) {
+            // a switch position: gather every line with the same setting, switch and condition that is also a fixed value
+            const same = m => m.fn === l.fn && m.adj === l.adj && m.stp === 0 && m.min === m.max &&
+                              ((m.ena === m.adj && m.enaLo === m.a1Lo && m.enaHi === m.a1Hi) === selfEna) &&
+                              (selfEna || (m.ena === l.ena && m.enaLo === l.enaLo && m.enaHi === l.enaHi));
+            const grp = L.map((m, j) => ({ m, j })).filter(x => !used.has(x.j) && same(x.m));
             grp.sort((a, b) => a.m.a1Lo - b.m.a1Lo);
             grp.forEach(x => used.add(x.j));
             const t = grp.slice(1).map(x => x.m.a1Lo);
-            rows.push({ kind: 'switch', fn: l.fn, ch: l.adj, t, values: grp.map(x => x.m.min) });
+            rows.push({ kind: 'switch', fn: l.fn, ch: l.adj, t, values: grp.map(x => x.m.min), cond });
             return;
         }
         used.add(i);
-        rows.push({ kind: 'knob', fn: l.fn, ch: l.adj, lo: l.a1Lo, hi: l.a1Hi, min: l.min, max: l.max, ena: l.ena, enaLo: l.enaLo, enaHi: l.enaHi });
+        rows.push({ kind: 'knob', fn: l.fn, ch: l.adj, lo: l.a1Lo, hi: l.a1Hi, min: l.min, max: l.max, cond });
     });
     return rows;
 }
@@ -120,10 +126,12 @@ function rowsToLines(rows) {             // -> array of 42 line objects (fn 0 = 
         if (r.kind === 'switch') {
             regions(r.t).forEach(([lo, hi], k) => {
                 const v = r.values[k]; if (v === undefined || v === null || v === '') return;
-                L.push({ fn: r.fn, ena: r.ch, enaLo: lo, enaHi: hi, adj: r.ch, a1Lo: lo, a1Hi: hi, a2Lo: 1500, a2Hi: 1500, min: +v, max: +v, stp: 0 });
+                const e = r.cond ? r.cond : { ena: r.ch, enaLo: lo, enaHi: hi };
+                L.push({ fn: r.fn, ena: e.ena, enaLo: e.enaLo, enaHi: e.enaHi, adj: r.ch, a1Lo: lo, a1Hi: hi, a2Lo: 1500, a2Hi: 1500, min: +v, max: +v, stp: 0 });
             });
         } else if (r.kind === 'knob') {
-            L.push({ fn: r.fn, ena: r.ena ?? r.ch, enaLo: r.enaLo ?? RMIN, enaHi: r.enaHi ?? RMAX, adj: r.ch, a1Lo: r.lo, a1Hi: r.hi, a2Lo: 1500, a2Hi: 1500, min: +r.min, max: +r.max, stp: 0 });
+            const e = r.cond ? r.cond : { ena: r.ch, enaLo: RMIN, enaHi: RMAX };
+            L.push({ fn: r.fn, ena: e.ena, enaLo: e.enaLo, enaHi: e.enaHi, adj: r.ch, a1Lo: r.lo, a1Hi: r.hi, a2Lo: 1500, a2Hi: 1500, min: +r.min, max: +r.max, stp: 0 });
         } else {
             L.push({ fn: r.fn, ena: r.ena ?? r.ch, enaLo: r.enaLo ?? RMIN, enaHi: r.enaHi ?? RMAX, adj: r.ch, a1Lo: RMIN, a1Hi: r.t[0], a2Lo: r.t[1], a2Hi: RMAX, min: +r.min, max: +r.max, stp: Math.max(1, +r.stp) });
         }
@@ -131,6 +139,28 @@ function rowsToLines(rows) {             // -> array of 42 line objects (fn 0 = 
     while (L.length < MAXR) L.push(blank());
     return L.slice(0, MAXR);
 }
+// Which channel range means "bank N"? Read it off the PID-bank line (fn 2): a knob maps lo..hi to min..max
+// linearly (Rotorflight rounds), a switch gives one region per position.
+function bankRegions(rows) {
+    const b = rows.find(r => r.fn === 2 && r.kind !== 'nudge'); if (!b) return null;
+    const out = {};
+    if (b.kind === 'switch') { regions(b.t).forEach(([lo, hi], k) => { const v = +b.values[k]; if (v >= 1 && v <= 4) out[v] = [lo, hi]; }); }
+    else {
+        const n = +b.max - +b.min; if (n <= 0) return null;
+        for (let v = +b.min; v <= +b.max; v++) {           // value v is chosen where round(min + (u-lo)*n/(hi-lo)) == v
+            const f0 = (v - 0.5 - +b.min) / n, f1 = (v + 0.5 - +b.min) / n;
+            const lo = Math.max(b.lo, Math.round((b.lo + f0 * (b.hi - b.lo)) / 5) * 5), hi = Math.min(b.hi, Math.round((b.lo + f1 * (b.hi - b.lo)) / 5) * 5);
+            out[v] = [v === +b.min ? RMIN : lo, v === +b.max ? RMAX : hi];
+        }
+    }
+    return { ch: b.ch, regions: out };
+}
+function condToBank(cond, br) {           // a stored condition -> bank number, or 0 for 'any'/'other'
+    if (!cond || !br || cond.ena !== br.ch) return 0;
+    for (const v of Object.keys(br.regions)) { const [lo, hi] = br.regions[v]; if (Math.abs(lo - cond.enaLo) <= 5 && Math.abs(hi - cond.enaHi) <= 5) return +v; }
+    return -1;                             // some other range on the bank channel
+}
+function bankToCond(v, br) { if (!v || !br || !br.regions[v]) return null; const [lo, hi] = br.regions[v]; return { ena: br.ch, enaLo: lo, enaHi: hi }; }
 function encodeLine(i, l) {
     const b = new Uint8Array(15);
     b[0] = i; b[1] = l.fn; b[2] = l.ena; b[3] = step(l.enaLo); b[4] = step(l.enaHi); b[5] = l.adj;
@@ -228,6 +258,13 @@ function paint() {
         let h = '<div class=r><label data-help="The Rotorflight setting this line changes.">What it changes</label>' + fnSel('fn' + i, r.fn) + '</div>' +
                 '<div class=r><label data-help="Knob: continuous adjustment within a range. Switch: choosing between settings, two or three positions. The help button explains both.">Control</label>' + kindSel + '<label>on</label>' + chanSel('ch' + i, r.ch) + '</div>';
         if (r.kind === 'switch') h += '<div class=r><label data-help="Two positions have one divider, three positions have two.">Positions</label><select id=npos' + i + ' class=usbOnly><option value=2' + (r.t.length === 1 ? ' selected' : '') + '>2</option><option value=3' + (r.t.length === 2 ? ' selected' : '') + '>3</option></select></div>';
+        if (r.fn !== 1 && r.fn !== 2 && r.kind !== 'nudge') {
+            const br = bankRegions(rows), cur = condToBank(r.cond, br);
+            let o = '<option value=0' + (cur === 0 ? ' selected' : '') + '>any bank</option>';
+            if (br) for (let v = 1; v <= 4; v++) if (br.regions[v]) o += '<option value=' + v + (cur === v ? ' selected' : '') + '>bank ' + v + ' only</option>';
+            if (cur === -1) o += '<option value=-1 selected>a condition set elsewhere (kept)</option>';
+            h += '<div class=r><label data-help="Works only while your bank switch has this bank in use, so the values can suit that bank. Needs a PID bank line on this page to know the switch.">Only in</label><select id=bank' + i + ' class=usbOnly' + (br ? '' : ' disabled') + '>' + o + '</select></div>';
+        }
         h += '<div class=rScale><span>875</span><span>1500</span><span>2125</span></div><div class=rTrack id=tr' + i + '></div><div class=rLive id=lv' + i + '>&nbsp;</div>';
         if (r.kind === 'switch') {
             h += '<div class=vals>' + r.values.map((v, k) => '<div><input id=v' + i + '_' + k + ' class=usbOnly type=number min=0 max=65535 value="' + (v ?? '') + '"><small>position ' + (k + 1) + '</small></div>').join('') + '</div>';
@@ -258,6 +295,8 @@ function collect() {
         const g = id => document.getElementById(id + i);
         if (!g('fn')) return;
         r.fn = +g('fn').value; r.ch = +g('ch').value;
+        const bs = g('bank');
+        if (bs && bs.value !== '-1') { const br = bankRegions(rows); r.cond = bankToCond(+bs.value, br); }
         if (r.kind === 'switch') r.values = r.values.map((v, k) => { const el = document.getElementById('v' + i + '_' + k); return el ? el.value : v; });
         else if (r.kind === 'knob') { r.min = +g('min').value; r.max = +g('max').value; }
         else { /* a configurator step line: untouched */ }

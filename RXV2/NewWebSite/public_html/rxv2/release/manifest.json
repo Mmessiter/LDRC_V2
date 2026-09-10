@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.629-only-in-bank",
+      "url": "https://messiter.com/rxv2/release/v0.9.629/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.629/littlefs.bin",
+      "fs_md5": "346ff3ad350dfb70fe79e82e6e077f41",
+      "notes": "In-flight adjustments: each line can say 'Only in bank N' - it then works only while your bank switch has that bank in use, so a knob or a switch can carry values that suit one bank, and another line can serve another (Malcolm 2026-09-11: '40 and 60 might make sense in bank 3 but in bank 1 they would be far too low'). The bank's switch positions are read off your own PID-bank line. Includes 0.9.628."
+    },
+    {
       "name": "RXV2-0.9.628-bank-in-use",
       "url": "https://messiter.com/rxv2/release/v0.9.628/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.628/littlefs.bin",
@@ -72,11 +79,6 @@
       "name": "RXV2-0.9.618-usb-breadcrumbs",
       "url": "https://messiter.com/rxv2/release/v0.9.618/firmware.bin",
       "notes": "Dongle over USB: after a crash the boot log says which USB step was running (diagnostic build). Includes 0.9.617."
-    },
-    {
-      "name": "RXV2-0.9.617-usb-only-pages",
-      "url": "https://messiter.com/rxv2/release/v0.9.617/firmware.bin",
-      "notes": "What only USB can do (Malcolm 2026-09-11): a Command line page (every Rotorflight setting by name, with Save and Leave buttons) and an Adjustments page (a knob or switch changing a setting in flight - the 588-byte list the radio link could never carry). Both say plainly that they need the flight controller's USB socket plugged into the dongle when it is not. Factory reset is allowed over USB only. Includes 0.9.616."
     }
   ]
 }
