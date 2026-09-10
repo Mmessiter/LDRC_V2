@@ -25,7 +25,7 @@
 <div class=bg-wash  aria-hidden=true></div>
 <div class=container>
     <h1>Command line</h1>
-    <div id=needUsb class=needUsb style="display:none">Plug the flight controller&rsquo;s USB socket into the dongle. This page needs the USB connection.</div>
+    <div id=needUsb class=needUsb style="display:none">Plug the flight controller&rsquo;s USB socket into the dongle or receiver. This page needs the USB connection.</div>
     <div id=status class="banner info" style="display:none"></div>
 
     <div class=card>
@@ -55,7 +55,7 @@
 <h3>Leaving</h3>
 <p><b>Save and restart</b> keeps your changes. <b>Leave without saving</b> drops them. Both restart the flight controller; the other pages come back once it is up. Use the buttons rather than typing save or exit.</p>
 <h3>While it is open</h3>
-<p>The flight controller cannot arm and the other pages are paused. Needs the USB cable from the dongle to the flight controller, not a laptop.</p>
+<p>The flight controller cannot arm and the other pages are paused. Needs the USB cable from the dongle or receiver to the flight controller, not a laptop.</p>
 </template>
     <div class=footer></div>
 </div>
@@ -68,9 +68,12 @@ function print(line, cls) { const o = $('out'); o.textContent += line + '\n'; o.
 // USB only (Malcolm 2026-09-11): say so in one line, and keep the controls off until it is true.
 async function usbGate() {
     const s = await LDRC.fetchState();
-    const ok = !!(s && s.dongle && s.dongle_link === 'usb');
+    const ok = !!(s && s.usb && s.usb.device);           // a flight controller on the USB socket - dongle or receiver (0.9.639)
     const g = document.getElementById('needUsb');
     if (g) g.style.display = ok ? 'none' : '';
+    if (g && !ok && s) g.textContent = s.sim ? 'Simulator mode is using the USB socket. Turn the simulator off (Setup) to reach the flight controller over USB.'
+        : (s.usb && !s.usb.host && !s.dongle) ? 'The USB socket is off. Turn it on in Setup, then plug the flight controller\u2019s USB socket into this receiver.'
+        : 'Plug the flight controller\u2019s USB socket into the ' + (s.dongle ? 'dongle' : 'receiver') + '. This page needs the USB connection.';
     document.querySelectorAll('.usbOnly').forEach(el => { el.disabled = !ok; el.style.opacity = ok ? '' : '.45'; });
     return ok ? s : null;
 }
