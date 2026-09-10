@@ -60,6 +60,7 @@
 </div>
 <template id=helpContent><h2>In-flight adjustments</h2>
 <p>A knob or a switch on your transmitter changes one setting while you fly.</p>
+<p>Choose the setting: the value boxes fill with its current value in that bank, ready to edit.</p>
 <h3>Knob</h3>
 <p>Turning it slides the setting between the two values you give.</p>
 <h3>Switch</h3>
@@ -264,6 +265,55 @@ function prefill(r, n, old, lo, hi) {
     }
     return out;
 }
+// Where each setting's current value can be read: [MSP fn, byte offset, bytes, bank side]. Verified against
+// Rotorflight 4.6 msp.c write order and the getters in rc_rates.c / pid.c / rescue.c / governor.c / setpoint.c.
+function valueSource(fn) {
+    const A = k => [1, 0, 2][k];                                        // adjustment order pitch, roll, yaw -> axis roll 0, pitch 1, yaw 2
+    if (fn >= 5 && fn <= 13) { const k = (fn - 5) % 3, sub = fn <= 7 ? 2 : fn <= 10 ? 0 : 1; return [111, 1 + A(k) * 6 + sub, 1, 'rate']; }
+    if (fn >= 14 && fn <= 25) { const g = (fn - 14) / 4 | 0, t = (fn - 14) % 4; return [112, (A(g) * 4 + t) * 2, 2, 'pid']; }
+    const P = o => [94, o, 1, 'pid'], RS = o => [146, o, 2, 'pid'], GV = (o, n) => [148, o, n || 1, 'pid'], RT = o => [111, o, 1, 'rate'], PW = w => [112, w * 2, 2, 'pid'];
+    return ({
+        26: P(20), 27: P(21), 28: P(23), 29: P(24), 32: P(27),
+        33: P(11), 34: P(10), 35: P(12), 36: P(14), 37: P(13), 38: P(15),
+        39: RS(10), 40: RS(12), 41: RS(14), 42: RS(16), 43: RS(18), 44: RS(20),
+        45: P(28), 46: P(30), 47: P(31),
+        48: GV(2), 49: GV(3), 50: GV(4), 51: GV(5), 52: GV(6), 53: GV(7), 54: GV(10), 55: GV(11),
+        56: PW(13), 57: PW(12), 58: PW(14), 59: PW(16), 60: PW(15),
+        61: P(33), 62: P(34), 63: P(35), 66: P(41), 67: P(42),
+        68: RT(27), 69: RT(25), 70: RT(29), 71: RT(31), 72: RT(33), 73: RT(34), 74: RT(35), 75: P(22),
+        78: GV(12), 79: GV(13), 80: GV(0, 2), 81: GV(9),
+    })[fn] || null;
+}
+// The setting's current value in the line's bank, in page units; null when the page cannot read it.
+// Reads the bank in use from MSP 101 (byte 23 PID bank, 25 rates bank), selects the wanted bank only
+// if it differs, reads, and always puts the bank in use back.
+async function currentValue(r) {
+    const src = valueSource(r.fn); if (!src) return null;
+    const [fn, off, n, side] = src;
+    const want = condToBank(r.cond, bankRegions(rows));                // 1..4, 0 = the bank in use, -1 = other condition
+    const st = hexToBytes(await LDRC.msp(101));
+    const cur = side === 'pid' ? st[23] : st[25];
+    const idx = want >= 1 ? want - 1 : cur;
+    const sel = b => LDRC.msp(210, ((side === 'rate' ? 0x80 : 0) | b).toString(16).padStart(2, '0'));
+    let raw;
+    try {
+        if (idx !== cur) await sel(idx);
+        const b = hexToBytes(await LDRC.msp(fn));
+        if (b.length < off + n) return null;
+        raw = n === 2 ? u16(b, off) : b[off];
+    } finally { if (idx !== cur) await sel(cur); }
+    return Math.round(raw * fnScale(r.fn) * 1000) / 1000;
+}
+// Fill the line's value boxes with the current value: every box when force, else only the empty ones. True = something changed.
+async function fillCurrent(i, force) {
+    const r = rows[i]; if (!r || r.kind === 'nudge') return false;
+    let v; try { v = await currentValue(r); } catch (e) { return false; }
+    if (v === null || v === undefined || rows[i] !== r) return false;
+    let changed = false;
+    if (r.kind === 'switch') r.values = r.values.map(x => { if (force || x === '' || x === undefined || x === null) { changed = changed || String(x) !== String(v); return String(v); } return x; });
+    else if (r.kind === 'knob') { if (force || !+r.min) { changed = changed || +r.min !== v; r.min = v; } if (force || !+r.max) { changed = changed || +r.max !== v; r.max = v; } }
+    return changed;
+}
 function paint() {
     const R = $('rows'); R.innerHTML = '';
     rows.forEach((r, i) => {
@@ -286,14 +336,15 @@ function paint() {
         h += '<div class=r><button type=button class="usbOnly" data-clear=' + i + ' style="margin-left:auto;background:#dca08c;border:0;border-radius:8px;padding:.3em .7em">Remove</button></div>';
         d.innerHTML = h; R.appendChild(d);
         drawBar(i);
+        $('fn' + i).onchange = async () => { collect(); await fillCurrent(i, true); paint(); };
         if (r.kind !== 'nudge') $('kind' + i).onchange = () => { collect(); const r2 = rows[i]; const k = $('kind' + i).value;
             if (k === 'switch') { r2.kind = 'switch'; r2.t = r2.t && r2.t.length ? r2.t.slice(0, 2) : [1500]; r2.values = prefill(r2, r2.t.length + 1, r2.values, r2.min, r2.max); }
             else if (k === 'knob') { r2.kind = 'knob'; r2.lo = r2.lo ?? RMIN; r2.hi = r2.hi ?? RMAX; r2.min = r2.min ?? 0; r2.max = r2.max ?? 0; }
-            paint(); };
+            paint(); fillCurrent(i, false).then(c => { if (c) paint(); }); };
         const np = $('npos' + i); if (np) np.onchange = () => { collect(); const r2 = rows[i]; const n = +np.value;
             if (n === 3 && r2.t.length === 1) { r2.t = [Math.min(r2.t[0], 1300), Math.max(r2.t[0] + 200, 1700)]; r2.values = prefill(r2, 3, r2.values); }
             if (n === 2 && r2.t.length === 2) { r2.t = [1500]; r2.values = prefill(r2, 2, r2.values); }
-            paint(); };
+            paint(); fillCurrent(i, false).then(c => { if (c) paint(); }); };
         if (r.kind === 'switch') r.values.forEach((v, k) => { $('v' + i + '_' + k).oninput = () => { rows[i].values[k] = $('v' + i + '_' + k).value; drawBar(i); }; });
     });
     if (!rows.length) R.innerHTML = '<p class=sub>No adjustments yet.</p>';
@@ -372,7 +423,7 @@ async function save() {
 }
 document.addEventListener('DOMContentLoaded', async () => {
     { const sa = $('showAll'); sa.checked = showAll; sa.onchange = () => { showAll = sa.checked; try { localStorage.setItem('adj.showAll', showAll ? '1' : '0'); } catch (e) {} collect(); paint(); }; }
-    $('addBtn').onclick = () => { collect(); const br = bankRegions(rows); rows.push({ kind: 'switch', fn: 14, ch: 1, t: [1500], values: ['', ''], cond: br ? bankToCond(1, br) : null }); paint(); };
+    $('addBtn').onclick = async () => { collect(); const br = bankRegions(rows); rows.push({ kind: 'switch', fn: 14, ch: 1, t: [1500], values: ['', ''], cond: br ? bankToCond(1, br) : null }); paint(); if (await fillCurrent(rows.length - 1, true)) paint(); };
     $('saveBtn').onclick = save;
     await load();
     pollRc();
