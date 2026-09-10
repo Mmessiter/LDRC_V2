@@ -205,9 +205,23 @@ class MainActivity : AppCompatActivity() {
         val last = getSharedPreferences("scanner", MODE_PRIVATE).getString("last", "") ?: ""
         if (last.isEmpty()) return
         val d = latestFound.firstOrNull { it.name == last } ?: return
-        autoDone = true
-        autoBanner?.visibility = View.GONE
-        ble.connect(d)
+        // More than one receiver in range: show the list and let the pilot choose
+        // (Malcolm 2026-09-11: the app went to the dongle when he wanted Test1).
+        // Alone, connect after a one-second look-around so a second receiver that
+        // advertises a beat later still gets its say.
+        if (latestFound.size > 1) { cancelAuto(); autoDone = true; return }
+        if (autoPending != null) return
+        val r = Runnable {
+            autoPending = null
+            if (autoDone) return@Runnable
+            if (latestFound.size > 1) { autoDone = true; return@Runnable }
+            val now = latestFound.firstOrNull { it.name == last } ?: return@Runnable
+            autoDone = true
+            autoBanner?.visibility = View.GONE
+            ble.connect(now)
+        }
+        autoPending = r
+        root.postDelayed(r, 1000)
     }
 
     // Friendly "when" for saved reviews (Malcolm 2026-08-22): Today/Yesterday

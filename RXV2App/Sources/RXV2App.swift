@@ -401,9 +401,24 @@ struct ScannerView: View {
         // disarmed for the rest of the launch (scannerAutoDone).
         guard !link.scannerAutoDone, !lastUsedName.isEmpty,
               let d = list.first(where: { $0.name == lastUsedName }) else { return }
-        link.scannerAutoDone = true
-        autoTarget = nil
-        link.connect(d)
+        // More than one receiver in range: show the list and let the pilot
+        // choose (Malcolm 2026-09-11: the app went to the dongle when he wanted
+        // Test1). Alone, connect as before - after a one-second look-around so
+        // a second receiver that advertises a beat later still gets its say.
+        if list.count > 1 { cancelAuto(); return }
+        if autoTarget == d.name { return }          // already looking around
+        autoTarget = d.name
+        let name = d.name
+        let work = DispatchWorkItem {
+            guard !link.scannerAutoDone, autoTarget == name else { return }
+            if link.found.count > 1 { cancelAuto(); return }
+            guard let now = link.found.first(where: { $0.name == name }) else { autoTarget = nil; return }
+            link.scannerAutoDone = true
+            autoTarget = nil
+            link.connect(now)
+        }
+        autoWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: work)
     }
 
     var body: some View {
