@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.623-dividers";
+constexpr const char* FW_VERSION = "RXV2-0.9.624-two-kinds";
 
 //*********************************************************************
 //  Auto-update manifest URLs

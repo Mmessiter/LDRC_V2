@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.624-two-kinds",
+      "url": "https://messiter.com/rxv2/release/v0.9.624/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.624/littlefs.bin",
+      "fs_md5": "20759fab292373bb70471e43c527220d",
+      "notes": "In-flight adjustments (renamed): two kinds only - a knob for continuous adjustment within a range, or a switch choosing between settings, two or three positions (Malcolm 2026-09-11). A step-type line set in the configurator is shown but left exactly as it is. Includes 0.9.623."
+    },
+    {
       "name": "RXV2-0.9.623-dividers",
       "url": "https://messiter.com/rxv2/release/v0.9.623/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.623/littlefs.bin",
@@ -68,13 +75,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.613/littlefs.bin",
       "fs_md5": "ef5893bcb791d56d29959a2ae111cbc5",
       "notes": "Dongle setup now has the dongle's name at the top (type, Rename); Setup loses its rename button on a dongle (Malcolm 2026-09-10). Includes 0.9.612."
-    },
-    {
-      "name": "RXV2-0.9.612-dongle-setup",
-      "url": "https://messiter.com/rxv2/release/v0.9.612/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.612/littlefs.bin",
-      "fs_md5": "d5d0d0db97d374d47ca1001218e10a99",
-      "notes": "Setup page on a dongle: the dongle button simply says 'Dongle setup' (Malcolm 2026-09-10). Includes 0.9.611."
     }
   ]
 }
