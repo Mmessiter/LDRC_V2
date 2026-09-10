@@ -67,8 +67,7 @@
 <h3>The bar</h3>
 <p>The channel&rsquo;s full travel. Drag the round dividers to where the switch changes over. The red line is the switch now; the lit region is the position it is in.</p>
 <h3>Banks</h3>
-<p>&ldquo;PID bank switch&rdquo; and &ldquo;Rates bank switch&rdquo; are the switch that picks the bank: the value is the bank number, 1 to 4.</p>
-<p>&ldquo;Yaw P gain in bank 1&rdquo; works only while that switch has bank 1 in use, so its values can suit that bank; another line can serve bank 3.</p>
+<p>The switch that picks the bank is set on the Switches page. &ldquo;Yaw P gain in bank 1&rdquo; works only while that switch has bank 1 in use, so its values can suit that bank; another line can serve bank 3.</p>
 <p>The list offers PIDs and rates. &ldquo;Show every setting&rdquo; adds the rest of Rotorflight&rsquo;s adjustments, over 400 entries, including &ldquo;in the bank in use&rdquo;: whichever bank is flying at the time.</p>
 <h3>Channels</h3>
 <p>AUX1 is channel 6 on a helicopter.</p>
@@ -199,8 +198,7 @@ function fnSel(id, r, br) {
     const cur = (r.fn === 1 || r.fn === 2) ? 0 : condToBank(r.cond, br);
     const fns = []; for (let fn = 3; fn < LABELS.length; fn++) if (showAll || BASIC.has(fn) || fn === r.fn) fns.push(fn);
     const opt = (fn, bank, text) => '<option value="' + fn + ':' + bank + '"' + (r.fn === fn && cur === bank ? ' selected' : '') + '>' + text + '</option>';
-    let h = '<select id=' + id + ' class=usbOnly>' + opt(0, 0, LABELS[0]);
-    h += '<optgroup label="Bank switch">' + opt(1, 0, LABELS[1]) + opt(2, 0, LABELS[2]) + '</optgroup>';
+    let h = '<select id=' + id + ' class=usbOnly>';
     if (cur === -1) h += opt(r.fn, -1, LABELS[r.fn] + ' with a condition set elsewhere');
     const banks = br ? [1, 2, 3, 4].filter(v => br.regions[v]) : [];
     banks.forEach(v => { h += '<optgroup label="In bank ' + v + '">'; fns.forEach(fn => h += opt(fn, v, LABELS[fn] + ' in bank ' + v)); h += '</optgroup>'; });
@@ -267,6 +265,7 @@ function prefill(r, n, old, lo, hi) {
 function paint() {
     const R = $('rows'); R.innerHTML = '';
     rows.forEach((r, i) => {
+        if (r.fn === 1 || r.fn === 2) return;           // the bank switch lines belong to the Switches page (kept as they are)
         const d = document.createElement('div'); d.className = 'rowCard';
         const kindSel = r.kind === 'nudge'
             ? '<select id=kind' + i + ' disabled><option>a step adjustment from the configurator (kept as it is)</option></select>'
@@ -359,7 +358,7 @@ async function save() {
 }
 document.addEventListener('DOMContentLoaded', async () => {
     { const sa = $('showAll'); sa.checked = showAll; sa.onchange = () => { showAll = sa.checked; try { localStorage.setItem('adj.showAll', showAll ? '1' : '0'); } catch (e) {} collect(); paint(); }; }
-    $('addBtn').onclick = () => { collect(); rows.push({ kind: 'switch', fn: 2, ch: 1, t: [1500], values: ['1', '2'] }); paint(); };
+    $('addBtn').onclick = () => { collect(); const br = bankRegions(rows); rows.push({ kind: 'switch', fn: 14, ch: 1, t: [1500], values: ['', ''], cond: br ? bankToCond(1, br) : null }); paint(); };
     $('saveBtn').onclick = save;
     await load();
     pollRc();

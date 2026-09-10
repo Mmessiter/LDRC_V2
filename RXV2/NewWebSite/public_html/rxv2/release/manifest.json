@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.633-no-bank-lines",
+      "url": "https://messiter.com/rxv2/release/v0.9.633/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.633/littlefs.bin",
+      "fs_md5": "bdb364d5dd52552a3de3377f5a6c8f7f",
+      "notes": "In-flight adjustments: the bank-switch lines (PID bank / rates bank selector) are no longer shown or offered here - the Switches page owns them (Malcolm: 'this is defined in another area'). They stay untouched on the flight controller and still tell this page which channel range means bank 1 to 4. No '(nothing)' entry; a new line starts as 'Pitch P gain in bank 1'. Includes 0.9.632."
+    },
+    {
       "name": "RXV2-0.9.632-short-list",
       "url": "https://messiter.com/rxv2/release/v0.9.632/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.632/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.622/littlefs.bin",
       "fs_md5": "ccfcc3f903c4f1741d505f8609154abc",
       "notes": "Adjustments page: every switch or knob range is a bar you drag by its round ends, with a red line showing the channel's live position that turns green inside the zone - move the switch and watch it (Malcolm 2026-09-11), as on the Modes page. Includes 0.9.621."
-    },
-    {
-      "name": "RXV2-0.9.621-adjustments",
-      "url": "https://messiter.com/rxv2/release/v0.9.621/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.621/littlefs.bin",
-      "fs_md5": "fa441a280d1efeca912a8654ac56ec87",
-      "notes": "Adjustments page: the switch positions are now decoded the way Rotorflight stores them (signed 5-microsecond steps around 1500, so 'whole travel' reads 900 to 2100, not 4175), channels are named AUX1 to AUX13 as in Rotorflight, each line says in plain English whether a knob sets the value or a switch nudges it up and down, and the page has a help screen (Malcolm 2026-09-11: 'slightly mysterious'). Includes 0.9.620."
     }
   ]
 }
