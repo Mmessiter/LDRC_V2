@@ -34,7 +34,7 @@
     <div id=status class="banner info" style="display:none"></div>
 
     <div class=card>
-        <p class=sub style="margin:0 0 .4em"><b>A switch or knob on your transmitter changes a setting in flight.</b> Each line: which setting, the switch that enables it (and its position), and the knob that sets the value. Positions are in microseconds, 900 to 2100.</p>
+        <p class=sub style="margin:0 0 .4em"><b>A switch or knob on your transmitter changes a setting in flight.</b> Press and hold any label for what it means; the ? button explains the whole page.</p>
         <div id=rows></div>
         <button id=addBtn class="btn usbOnly" type=button style="background:#4f7fa0;margin-top:.4em"><span class=ico>&#10133;</span>Add an adjustment</button>
     </div>
@@ -44,17 +44,30 @@
     </div>
     <div class=footer></div>
 </div>
+<template id=helpContent><h2>Adjustments</h2>
+<p>An adjustment lets a switch or a knob on your transmitter change one Rotorflight setting while you fly &mdash; the bank switch is the everyday example: it changes the PID bank and the rates bank.</p>
+<h3>Each line has three parts</h3>
+<p><b>What it changes</b> &mdash; the setting.</p>
+<p><b>Only while</b> &mdash; a switch that must be in a given position for the line to work at all. Choose the channel and the position range in microseconds (900 to 2100 is the whole travel, so &ldquo;always&rdquo;).</p>
+<p><b>How the value is set</b>, one of two ways:</p>
+<p><b>A knob sets it</b>: the knob&rsquo;s position between its two ends sets the value between the minimum and the maximum. A three-position switch works the same way: 900 to 2100 mapped to 1 to 4 gives banks 1, 2 and 4 &mdash; which is how the bank switch is usually done.</p>
+<p><b>A switch nudges it</b>: hold the switch one way and the value goes down by the step, hold it the other way and it goes up. Give the two positions and the step size.</p>
+<h3>Channels</h3>
+<p>Rotorflight counts the switch channels from AUX1, which on a helicopter is channel 6: roll, pitch, yaw, collective and throttle come first.</p>
+<h3>Saving</h3>
+<p>Save writes every line to the flight controller and keeps them. This page needs the flight controller&rsquo;s USB socket plugged into the dongle: the list is too big for the radio link.</p>
+</template>
 <script>
 const $ = id => document.getElementById(id);
-const LABELS = ["(none)", "Rate profile", "Pid profile", "Led profile", "Battery profile", "Pitch super rate", "Roll super rate", "Yaw super rate", "Pitch rate", "Roll rate", "Yaw rate", "Pitch expo", "Roll expo", "Yaw expo", "Pitch P gain", "Pitch I gain", "Pitch D gain", "Pitch F gain", "Roll P gain", "Roll I gain", "Roll D gain", "Roll F gain", "Yaw P gain", "Yaw I gain", "Yaw D gain", "Yaw F gain", "Yaw clockwise gain", "Yaw anticlockwise gain", "Yaw cyclic feedforward", "Yaw collectiveective feedforward", "Yaw collectiveective dynamic", "Yaw collectiveective decay", "Pitch collectiveective feedforward", "Pitch gyro cutofeedforward", "Roll gyro cutofeedforward", "Yaw gyro cutofeedforward", "Pitch d-term cutofeedforward", "Roll d-term cutofeedforward", "Yaw d-term cutofeedforward", "Rescue climb collectiveective", "Rescue hover collectiveective", "Rescue hover altitudeitude", "Rescue altitude P gain", "Rescue altitude I gain", "Rescue altitude D gain", "Angle level gain", "Horizon level gain", "Acro trainer gain", "Governor gain", "Governor P gain", "Governor I gain", "Governor D gain", "Governor F gain", "Governor tail torque assist gain", "Governor cyclic feedforward", "Governor collectiveective feedforward", "Pitch B gain", "Roll B gain", "Yaw B gain", "Pitch O gain", "Roll O gain", "Cross coupling gain", "Cross coupling ratio", "Cross coupling cutofeedforward", "Level trim pitch", "Level trim roll", "Inertia precomp gain", "Inertia precomp cutofeedforward", "Pitch setpoint boost gain", "Roll setpoint boost gain", "Yaw setpoint boost gain", "Collective setpoint boost gain", "Yaw dynamic ceiling gain", "Yaw dynamic deadband gain", "Yaw dynamic deadband filter", "Yaw precomp cutofeedforward", "Governor idle throttle", "Governor auto throttle", "Governor max throttle", "Governor min throttle", "Governor headspeed", "Governor yaw feedforward"];
+const LABELS = ["(nothing)", "Rates bank (profile)", "PID bank (profile)", "Led profile", "Battery profile", "Pitch super rate", "Roll super rate", "Yaw super rate", "Pitch rate", "Roll rate", "Yaw rate", "Pitch expo", "Roll expo", "Yaw expo", "Pitch P gain", "Pitch I gain", "Pitch D gain", "Pitch F gain", "Roll P gain", "Roll I gain", "Roll D gain", "Roll F gain", "Yaw P gain", "Yaw I gain", "Yaw D gain", "Yaw F gain", "Yaw clockwise gain", "Yaw anticlockwise gain", "Yaw cyclic feedforward", "Yaw collectiveective feedforward", "Yaw collectiveective dynamic", "Yaw collectiveective decay", "Pitch collectiveective feedforward", "Pitch gyro cutofeedforward", "Roll gyro cutofeedforward", "Yaw gyro cutofeedforward", "Pitch d-term cutofeedforward", "Roll d-term cutofeedforward", "Yaw d-term cutofeedforward", "Rescue climb collectiveective", "Rescue hover collectiveective", "Rescue hover altitudeitude", "Rescue altitude P gain", "Rescue altitude I gain", "Rescue altitude D gain", "Angle level gain", "Horizon level gain", "Acro trainer gain", "Governor gain", "Governor P gain", "Governor I gain", "Governor D gain", "Governor F gain", "Governor tail torque assist gain", "Governor cyclic feedforward", "Governor collectiveective feedforward", "Pitch B gain", "Roll B gain", "Yaw B gain", "Pitch O gain", "Roll O gain", "Cross coupling gain", "Cross coupling ratio", "Cross coupling cutofeedforward", "Level trim pitch", "Level trim roll", "Inertia precomp gain", "Inertia precomp cutofeedforward", "Pitch setpoint boost gain", "Roll setpoint boost gain", "Yaw setpoint boost gain", "Collective setpoint boost gain", "Yaw dynamic ceiling gain", "Yaw dynamic deadband gain", "Yaw dynamic deadband filter", "Yaw precomp cutofeedforward", "Governor idle throttle", "Governor auto throttle", "Governor max throttle", "Governor min throttle", "Governor headspeed", "Governor yaw feedforward"];
 const MAXR = 42;
 let ranges = [];
 function setStatus(kind, msg) { const b = $('status'); b.style.display = msg ? '' : 'none'; if (!msg) return; b.className = 'banner ' + kind; b.textContent = msg; }
 const hexToBytes = h => { const o = new Uint8Array(h.length / 2); for (let i = 0; i < o.length; i++) o[i] = parseInt(h.substr(i * 2, 2), 16); return o; };
 const bytesToHex = b => Array.from(b, x => x.toString(16).padStart(2, '0').toUpperCase()).join('');
 const u16 = (b, o) => b[o] | (b[o + 1] << 8);
-const us = step => 900 + step * 25;
-const step = v => Math.max(0, Math.min(48, Math.round((v - 900) / 25)));
+const us = b => 1500 + 5 * (b > 127 ? b - 256 : b);            // Rotorflight: signed step, 5 us, around 1500
+const step = v => { const st = Math.max(-120, Math.min(120, Math.round((v - 1500) / 5))); return st < 0 ? st + 256 : st; };
 
 // USB only (Malcolm 2026-09-11): say so in one line, and keep the controls off until it is true.
 async function usbGate() {
@@ -66,7 +79,7 @@ async function usbGate() {
     return ok ? s : null;
 }
 
-function blank() { return { fn: 0, ena: 0, enaS: 0, enaE: 0, adj: 0, a1s: 0, a1e: 0, a2s: 0, a2e: 0, min: 0, max: 0, stp: 0 }; }
+function blank() { return { fn: 0, ena: 0, enaS: step(900), enaE: step(2100), adj: 0, a1s: step(900), a1e: step(2100), a2s: 0, a2e: 0, min: 0, max: 0, stp: 0 }; }
 function parse(b) {
     ranges = [];
     for (let i = 0; i < MAXR && (i + 1) * 14 <= b.length; i++) {
@@ -74,9 +87,9 @@ function parse(b) {
         ranges.push({ fn: b[o], ena: b[o+1], enaS: b[o+2], enaE: b[o+3], adj: b[o+4], a1s: b[o+5], a1e: b[o+6], a2s: b[o+7], a2e: b[o+8], min: u16(b, o+9), max: u16(b, o+11), stp: b[o+13] });
     }
 }
-function chanSel(id, v) {
-    let h = '<select id=' + id + ' class=usbOnly><option value=0' + (v === 0 ? ' selected' : '') + '>none</option>';
-    for (let c = 1; c <= 18; c++) h += '<option value=' + c + (v === c ? ' selected' : '') + '>' + (c <= 4 ? ['Roll','Pitch','Throttle','Yaw'][c-1] + ' (' + c + ')' : 'AUX' + (c - 4) + ' (' + c + ')') + '</option>';
+function chanSel(id, v) {                 // Rotorflight AUX index: 0 = AUX1 = channel 6 on a helicopter
+    let h = '<select id=' + id + ' class=usbOnly>';
+    for (let a = 0; a < 13; a++) h += '<option value=' + a + (v === a ? ' selected' : '') + '>AUX' + (a + 1) + ' (channel ' + (a + 6) + ')</option>';
     return h + '</select>';
 }
 function fnSel(id, v) {
@@ -84,20 +97,25 @@ function fnSel(id, v) {
     LABELS.forEach((l, i) => h += '<option value=' + i + (v === i ? ' selected' : '') + '>' + l + '</option>');
     return h + '</select>';
 }
+function modeOf(r) { return r.stp > 0 ? 'nudge' : 'knob'; }
 function paint() {
     const R = $('rows'); R.innerHTML = '';
     let shown = 0;
     ranges.forEach((r, i) => {
         if (r.fn === 0 && !r._new) return;
         shown++;
+        const mode = modeOf(r);
         const d = document.createElement('div'); d.className = 'rowCard';
         d.innerHTML =
-            '<div class=r><label>Setting</label>' + fnSel('fn' + i, r.fn) + '</div>' +
-            '<div class=r><label>Enabled by</label>' + chanSel('ena' + i, r.ena) + '<label>from</label><input id=enaS' + i + ' class=usbOnly type=number min=900 max=2100 step=25 value=' + us(r.enaS) + '><label>to</label><input id=enaE' + i + ' class=usbOnly type=number min=900 max=2100 step=25 value=' + us(r.enaE) + '></div>' +
-            '<div class=r><label>Value from</label>' + chanSel('adj' + i, r.adj) + '<label>min</label><input id=min' + i + ' class=usbOnly type=number min=0 max=65535 value=' + r.min + '><label>max</label><input id=max' + i + ' class=usbOnly type=number min=0 max=65535 value=' + r.max + '><label>step</label><input id=stp' + i + ' class=usbOnly type=number min=0 max=255 value=' + r.stp + '></div>' +
-            '<div class=r><label>Knob range</label><input id=a1s' + i + ' class=usbOnly type=number min=900 max=2100 step=25 value=' + us(r.a1s) + '><label>to</label><input id=a1e' + i + ' class=usbOnly type=number min=900 max=2100 step=25 value=' + us(r.a1e) + '><label>&nbsp; second range</label><input id=a2s' + i + ' class=usbOnly type=number min=900 max=2100 step=25 value=' + us(r.a2s) + '><label>to</label><input id=a2e' + i + ' class=usbOnly type=number min=900 max=2100 step=25 value=' + us(r.a2e) + '>' +
-            '<button type=button class="usbOnly" data-clear=' + i + ' style="margin-left:auto;background:#dca08c;border:0;border-radius:8px;padding:.3em .7em">Clear</button></div>';
+            '<div class=r><label data-help="The Rotorflight setting this line changes.">What it changes</label>' + fnSel('fn' + i, r.fn) + '</div>' +
+            '<div class=r><label data-help="A switch that must be in this position for the line to work. 900 to 2100 is the whole travel, so always on.">Only while</label>' + chanSel('ena' + i, r.ena) + '<label>is between</label><input id=enaS' + i + ' class=usbOnly type=number min=900 max=2100 step=5 value=' + us(r.enaS) + '><label>and</label><input id=enaE' + i + ' class=usbOnly type=number min=900 max=2100 step=5 value=' + us(r.enaE) + '></div>' +
+            '<div class=r><label data-help="A knob sets it: the knob position between its two ends sets the value between min and max. A switch nudges it: one position lowers the value by the step, the other raises it.">How</label><select id=mode' + i + ' class=usbOnly><option value=knob' + (mode === 'knob' ? ' selected' : '') + '>a knob sets it</option><option value=nudge' + (mode === 'nudge' ? ' selected' : '') + '>a switch nudges it up or down</option></select><label>on</label>' + chanSel('adj' + i, r.adj) + '</div>' +
+            '<div class=r id=knob' + i + (mode === 'knob' ? '' : ' style="display:none"') + '><label data-help="The knob travel that is used, in microseconds.">Knob from</label><input id=a1s' + i + ' class=usbOnly type=number min=900 max=2100 step=5 value=' + us(r.a1s) + '><label>to</label><input id=a1e' + i + ' class=usbOnly type=number min=900 max=2100 step=5 value=' + us(r.a1e) + '><label data-help="The value at the two ends of the knob travel.">sets</label><input id=min' + i + ' class=usbOnly type=number min=0 max=65535 value=' + r.min + '><label>to</label><input id=max' + i + ' class=usbOnly type=number min=0 max=65535 value=' + r.max + '></div>' +
+            '<div class=r id=nudge' + i + (mode === 'nudge' ? '' : ' style="display:none"') + '><label data-help="Switch position that lowers the value.">Down between</label><input id=n1s' + i + ' class=usbOnly type=number min=900 max=2100 step=5 value=' + us(r.a1s) + '><label>and</label><input id=n1e' + i + ' class=usbOnly type=number min=900 max=2100 step=5 value=' + us(r.a1e) + '><label data-help="Switch position that raises the value.">up between</label><input id=n2s' + i + ' class=usbOnly type=number min=900 max=2100 step=5 value=' + us(r.a2s) + '><label>and</label><input id=n2e' + i + ' class=usbOnly type=number min=900 max=2100 step=5 value=' + us(r.a2e) + '><label>by</label><input id=stp' + i + ' class=usbOnly type=number min=1 max=255 value=' + (r.stp || 1) + '><label>limits</label><input id=nmin' + i + ' class=usbOnly type=number min=0 max=65535 value=' + r.min + '><label>to</label><input id=nmax' + i + ' class=usbOnly type=number min=0 max=65535 value=' + r.max + '></div>' +
+            '<div class=r><button type=button class="usbOnly" data-clear=' + i + ' style="margin-left:auto;background:#dca08c;border:0;border-radius:8px;padding:.3em .7em">Remove</button></div>';
         R.appendChild(d);
+        const ms = document.getElementById('mode' + i);
+        ms.onchange = () => { const k = ms.value === 'knob'; document.getElementById('knob' + i).style.display = k ? '' : 'none'; document.getElementById('nudge' + i).style.display = k ? 'none' : ''; };
     });
     if (!shown) R.innerHTML = '<p class=sub>No adjustments yet.</p>';
     R.querySelectorAll('button[data-clear]').forEach(b => b.onclick = () => { ranges[+b.dataset.clear] = blank(); paint(); });
@@ -107,8 +125,14 @@ function collect() {
         const g = id => document.getElementById(id + i);
         if (!g('fn')) return;
         r.fn = +g('fn').value; r.ena = +g('ena').value; r.enaS = step(+g('enaS').value); r.enaE = step(+g('enaE').value);
-        r.adj = +g('adj').value; r.a1s = step(+g('a1s').value); r.a1e = step(+g('a1e').value); r.a2s = step(+g('a2s').value); r.a2e = step(+g('a2e').value);
-        r.min = +g('min').value; r.max = +g('max').value; r.stp = +g('stp').value;
+        r.adj = +g('adj').value;
+        if (g('mode').value === 'knob') {
+            r.a1s = step(+g('a1s').value); r.a1e = step(+g('a1e').value); r.a2s = 0; r.a2e = 0;
+            r.min = +g('min').value; r.max = +g('max').value; r.stp = 0;
+        } else {
+            r.a1s = step(+g('n1s').value); r.a1e = step(+g('n1e').value); r.a2s = step(+g('n2s').value); r.a2e = step(+g('n2e').value);
+            r.min = +g('nmin').value; r.max = +g('nmax').value; r.stp = Math.max(1, +g('stp').value);
+        }
     });
 }
 function encode(i, r) {
