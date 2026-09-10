@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.630-in-bank",
+      "url": "https://messiter.com/rxv2/release/v0.9.630/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.630/littlefs.bin",
+      "fs_md5": "abd2317e1998a848e9d23024dd26be11",
+      "notes": "In-flight adjustments: a line now reads as one phrase, 'Yaw P gain in bank 1', with the bank chosen right beside the setting (bank 1 to 4, or the bank in use) - Malcolm 2026-09-11: 'otherwise it is still much too vague'. Includes 0.9.629."
+    },
+    {
       "name": "RXV2-0.9.629-only-in-bank",
       "url": "https://messiter.com/rxv2/release/v0.9.629/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.629/littlefs.bin",
@@ -74,11 +81,6 @@
       "name": "RXV2-0.9.619-usb-jumbo",
       "url": "https://messiter.com/rxv2/release/v0.9.619/firmware.bin",
       "notes": "Dongle over USB: big replies (255 bytes and more, e.g. the adjustments list) are now parsed in Rotorflight's real jumbo-frame order - size, command, then the 16-bit length. Includes 0.9.618."
-    },
-    {
-      "name": "RXV2-0.9.618-usb-breadcrumbs",
-      "url": "https://messiter.com/rxv2/release/v0.9.618/firmware.bin",
-      "notes": "Dongle over USB: after a crash the boot log says which USB step was running (diagnostic build). Includes 0.9.617."
     }
   ]
 }
