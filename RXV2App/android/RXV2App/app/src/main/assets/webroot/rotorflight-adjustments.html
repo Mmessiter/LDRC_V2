@@ -57,6 +57,8 @@
 </div>
 <template id=helpContent><h2>In-flight adjustments</h2>
 <p>An adjustment lets a switch or a knob on your transmitter change one Rotorflight setting while you fly &mdash; the bank switch is the everyday example: it picks the PID bank and the rates bank.</p>
+<h3>Which bank</h3>
+<p>Two settings are special: <b>Which PID bank flies</b> and <b>Which rates bank flies</b> &mdash; their value is the bank number, so that line is your bank switch. Every other setting is changed in whichever bank is active at that moment.</p>
 <h3>Two kinds</h3>
 <p><b>A knob</b>, for continuous adjustment within a range: the knob&rsquo;s position across the blue zone sets the value between the minimum and the maximum. Drag the zone&rsquo;s ends.</p>
 <p><b>A switch</b>, for choosing between settings: one bar for the switch, one divider for a two-position switch or two for a three-position one, and a value for each position. Drag the dividers to where the switch changes over.</p>
@@ -71,7 +73,7 @@
 </template>
 <script>
 const $ = id => document.getElementById(id);
-const LABELS = ["(nothing)", "Rates bank (profile)", "PID bank (profile)", "Led profile", "Battery profile", "Pitch super rate", "Roll super rate", "Yaw super rate", "Pitch rate", "Roll rate", "Yaw rate", "Pitch expo", "Roll expo", "Yaw expo", "Pitch P gain", "Pitch I gain", "Pitch D gain", "Pitch F gain", "Roll P gain", "Roll I gain", "Roll D gain", "Roll F gain", "Yaw P gain", "Yaw I gain", "Yaw D gain", "Yaw F gain", "Yaw clockwise gain", "Yaw anticlockwise gain", "Yaw cyclic feedforward", "Yaw collectiveective feedforward", "Yaw collectiveective dynamic", "Yaw collectiveective decay", "Pitch collectiveective feedforward", "Pitch gyro cutofeedforward", "Roll gyro cutofeedforward", "Yaw gyro cutofeedforward", "Pitch d-term cutofeedforward", "Roll d-term cutofeedforward", "Yaw d-term cutofeedforward", "Rescue climb collectiveective", "Rescue hover collectiveective", "Rescue hover altitudeitude", "Rescue altitude P gain", "Rescue altitude I gain", "Rescue altitude D gain", "Angle level gain", "Horizon level gain", "Acro trainer gain", "Governor gain", "Governor P gain", "Governor I gain", "Governor D gain", "Governor F gain", "Governor tail torque assist gain", "Governor cyclic feedforward", "Governor collectiveective feedforward", "Pitch B gain", "Roll B gain", "Yaw B gain", "Pitch O gain", "Roll O gain", "Cross coupling gain", "Cross coupling ratio", "Cross coupling cutofeedforward", "Level trim pitch", "Level trim roll", "Inertia precomp gain", "Inertia precomp cutofeedforward", "Pitch setpoint boost gain", "Roll setpoint boost gain", "Yaw setpoint boost gain", "Collective setpoint boost gain", "Yaw dynamic ceiling gain", "Yaw dynamic deadband gain", "Yaw dynamic deadband filter", "Yaw precomp cutofeedforward", "Governor idle throttle", "Governor auto throttle", "Governor max throttle", "Governor min throttle", "Governor headspeed", "Governor yaw feedforward"];
+const LABELS = ["(nothing)", "Which rates bank flies (1 to 4)", "Which PID bank flies (1 to 4)", "Led profile", "Battery profile", "Pitch super rate", "Roll super rate", "Yaw super rate", "Pitch rate", "Roll rate", "Yaw rate", "Pitch expo", "Roll expo", "Yaw expo", "Pitch P gain", "Pitch I gain", "Pitch D gain", "Pitch F gain", "Roll P gain", "Roll I gain", "Roll D gain", "Roll F gain", "Yaw P gain", "Yaw I gain", "Yaw D gain", "Yaw F gain", "Yaw clockwise gain", "Yaw anticlockwise gain", "Yaw cyclic feedforward", "Yaw collectiveective feedforward", "Yaw collectiveective dynamic", "Yaw collectiveective decay", "Pitch collectiveective feedforward", "Pitch gyro cutofeedforward", "Roll gyro cutofeedforward", "Yaw gyro cutofeedforward", "Pitch d-term cutofeedforward", "Roll d-term cutofeedforward", "Yaw d-term cutofeedforward", "Rescue climb collectiveective", "Rescue hover collectiveective", "Rescue hover altitudeitude", "Rescue altitude P gain", "Rescue altitude I gain", "Rescue altitude D gain", "Angle level gain", "Horizon level gain", "Acro trainer gain", "Governor gain", "Governor P gain", "Governor I gain", "Governor D gain", "Governor F gain", "Governor tail torque assist gain", "Governor cyclic feedforward", "Governor collectiveective feedforward", "Pitch B gain", "Roll B gain", "Yaw B gain", "Pitch O gain", "Roll O gain", "Cross coupling gain", "Cross coupling ratio", "Cross coupling cutofeedforward", "Level trim pitch", "Level trim roll", "Inertia precomp gain", "Inertia precomp cutofeedforward", "Pitch setpoint boost gain", "Roll setpoint boost gain", "Yaw setpoint boost gain", "Collective setpoint boost gain", "Yaw dynamic ceiling gain", "Yaw dynamic deadband gain", "Yaw dynamic deadband filter", "Yaw precomp cutofeedforward", "Governor idle throttle", "Governor auto throttle", "Governor max throttle", "Governor min throttle", "Governor headspeed", "Governor yaw feedforward"];
 
 // ---------------- model (DOM-free, unit-tested with node) ----------------
 const RMIN = 875, RMAX = 2125, MAXR = 42;
@@ -204,6 +206,19 @@ function wireHandle(i, h) {
         h.addEventListener('pointermove', move); h.addEventListener('pointerup', up); h.addEventListener('pointercancel', up);
     });
 }
+// Sensible starting values for the positions: banks count 1, 2, 3; anything else spreads the old knob range
+function prefill(r, n, old, lo, hi) {
+    const isBank = r.fn === 1 || r.fn === 2;
+    const out = [];
+    for (let k = 0; k < n; k++) {
+        const prev = old && old[k] !== undefined && old[k] !== '' ? old[k] : undefined;
+        if (prev !== undefined) { out.push(prev); continue; }
+        if (isBank) out.push(String(k + 1));
+        else if (lo !== undefined && hi !== undefined && n > 1) out.push(String(Math.round(+lo + (+hi - +lo) * k / (n - 1))));
+        else out.push('');
+    }
+    return out;
+}
 function paint() {
     const R = $('rows'); R.innerHTML = '';
     rows.forEach((r, i) => {
@@ -226,12 +241,12 @@ function paint() {
         d.innerHTML = h; R.appendChild(d);
         drawBar(i);
         if (r.kind !== 'nudge') $('kind' + i).onchange = () => { collect(); const r2 = rows[i]; const k = $('kind' + i).value;
-            if (k === 'switch') { r2.kind = 'switch'; r2.t = r2.t && r2.t.length ? r2.t.slice(0, 2) : [1500]; r2.values = r2.values || []; while (r2.values.length < r2.t.length + 1) r2.values.push(''); }
+            if (k === 'switch') { r2.kind = 'switch'; r2.t = r2.t && r2.t.length ? r2.t.slice(0, 2) : [1500]; r2.values = prefill(r2, r2.t.length + 1, r2.values, r2.min, r2.max); }
             else if (k === 'knob') { r2.kind = 'knob'; r2.lo = r2.lo ?? RMIN; r2.hi = r2.hi ?? RMAX; r2.min = r2.min ?? 0; r2.max = r2.max ?? 0; }
             paint(); };
         const np = $('npos' + i); if (np) np.onchange = () => { collect(); const r2 = rows[i]; const n = +np.value;
-            if (n === 3 && r2.t.length === 1) { r2.t = [Math.min(r2.t[0], 1300), Math.max(r2.t[0] + 200, 1700)]; r2.values.push(''); }
-            if (n === 2 && r2.t.length === 2) { r2.t = [1500]; r2.values = r2.values.slice(0, 2); }
+            if (n === 3 && r2.t.length === 1) { r2.t = [Math.min(r2.t[0], 1300), Math.max(r2.t[0] + 200, 1700)]; r2.values = prefill(r2, 3, r2.values); }
+            if (n === 2 && r2.t.length === 2) { r2.t = [1500]; r2.values = prefill(r2, 2, r2.values); }
             paint(); };
         if (r.kind === 'switch') r.values.forEach((v, k) => { $('v' + i + '_' + k).oninput = () => { rows[i].values[k] = $('v' + i + '_' + k).value; drawBar(i); }; });
     });
