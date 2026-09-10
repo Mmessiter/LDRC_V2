@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.640-usb-guards";
+constexpr const char* FW_VERSION = "RXV2-0.9.641-usb-review";
 
 //*********************************************************************
 //  Auto-update manifest URLs

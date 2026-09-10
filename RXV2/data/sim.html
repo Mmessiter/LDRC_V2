@@ -137,7 +137,7 @@ function postSim(on) {
     if (bar) { bar.style.transition = 'width 9s linear'; requestAnimationFrame(() => { bar.style.width = '92%'; }); }
     const fd = new URLSearchParams();
     fd.set('on', on ? '1' : '0');
-    fetch('/api/sim', { method: 'POST', body: fd }).catch(() => {});
+    fetch('/api/sim', { method: 'POST', body: fd }).then(r => { if (!r.ok) r.text().then(t => { alert(t); location.reload(); }); }).catch(() => {});   // a 409 (transmitter on) is said, not mistaken for a reboot (0.9.641)
     const done = () => {
         const bb = document.getElementById('__bar');
         if (bb) { bb.style.transition = 'width .3s'; bb.style.width = '100%'; }

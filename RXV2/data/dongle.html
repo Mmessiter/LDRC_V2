@@ -123,7 +123,7 @@ async function apply() {
     if (!(await LDRC.confirm('Set this board to ' + what + '? It restarts now.', { okLabel: 'Yes, restart' }))) return;
     const fd = new FormData(); fd.append('mode', mode); fd.append('baud', document.getElementById('baud').value);
     document.getElementById('status').className = 'banner info'; document.getElementById('status').textContent = 'Saving and rebooting…';
-    try { await fetch('/api/dongle', { method: 'POST', body: fd }); } catch (e) {}
+    try { const r = await fetch('/api/dongle', { method: 'POST', body: fd }); if (!r.ok) { document.getElementById('status').className = 'banner bad'; document.getElementById('status').textContent = await r.text(); return; } } catch (e) {}
     setTimeout(() => location.href = '/', 9000);
 }
 document.addEventListener('DOMContentLoaded', load);

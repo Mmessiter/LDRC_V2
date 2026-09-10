@@ -54,7 +54,7 @@ namespace UsbHostMsp {
     inline bool     started   = false;   // host stack up
     inline volatile bool present = false;   // a device has enumerated (new_dev_cb)
     inline volatile bool gone    = false;   // the open device disconnected (event_cb)
-    inline bool     opened    = false;   // CDC link open: MSP goes over USB
+    inline volatile bool opened = false; // CDC link open: MSP goes over USB (set by the usbtx task, read everywhere)
     inline uint16_t vid = 0, pid = 0;
     inline cdc_acm_dev_hdl_t hdl = nullptr;
     inline StreamBufferHandle_t rxbuf = nullptr;
@@ -69,17 +69,59 @@ namespace UsbHostMsp {
     struct TxItem { uint16_t n; uint8_t d[320]; };
     inline QueueHandle_t     txq = nullptr;
     inline SemaphoreHandle_t hdlMutex = nullptr;
+    // Opening and closing the device are the two calls that can wait on the
+    // driver (descriptor fetches, transfer cancels: up to seconds if the
+    // device misbehaves). From 0.9.641 they run on the usbtx task as well -
+    // the main loop only asks (wantOpen/wantClose) and reads the answer
+    // (openResult/closeDone), so it never waits on USB at all.
+    inline void dataCb(uint8_t* data, size_t len, void*);                       // defined below
+    inline void devCb(const cdc_acm_host_dev_event_data_t* e, void*);
+    inline volatile bool wantOpen = false, wantClose = false, closeDone = false;
+    inline volatile int  openResult = 0;                 // 0 pending/none, 1 opened, -1 failed, -2 device gone
     inline void txTask(void*) {
         static TxItem it;
         for (;;) {
-            if (xQueueReceive(txq, &it, portMAX_DELAY) != pdTRUE) continue;
-            if (xSemaphoreTake(hdlMutex, pdMS_TO_TICKS(500)) != pdTRUE) continue;
-            if (opened && hdl) {
-                crumb(5, it.n);
-                if (cdc_acm_host_data_tx_blocking(hdl, it.d, it.n, 200) == ESP_OK) bytesOut += it.n;
-                crumbDone();
+            if (xQueueReceive(txq, &it, pdMS_TO_TICKS(20)) == pdTRUE) {
+                if (xSemaphoreTake(hdlMutex, pdMS_TO_TICKS(500)) == pdTRUE) {
+                    if (opened && hdl) {
+                        crumb(5, it.n);
+                        if (cdc_acm_host_data_tx_blocking(hdl, it.d, it.n, 200) == ESP_OK) bytesOut += it.n;
+                        crumbDone();
+                    }
+                    xSemaphoreGive(hdlMutex);
+                }
             }
-            xSemaphoreGive(hdlMutex);
+            if (wantClose) {
+                if (xSemaphoreTake(hdlMutex, pdMS_TO_TICKS(500)) == pdTRUE) {
+                    opened = false;
+                    if (hdl) { cdc_acm_host_close(hdl); hdl = nullptr; }
+                    xSemaphoreGive(hdlMutex);
+                    wantClose = false; closeDone = true;
+                }
+            }
+            if (wantOpen) {
+                if (xSemaphoreTake(hdlMutex, pdMS_TO_TICKS(500)) == pdTRUE) {
+                    cdc_acm_host_device_config_t cfg = {};
+                    cfg.connection_timeout_ms = 1000;
+                    cfg.out_buffer_size = 512;
+                    cfg.event_cb = devCb;
+                    cfg.data_cb  = dataCb;
+                    cfg.user_arg = nullptr;
+                    crumb(4);
+                    const esp_err_t r = cdc_acm_host_open(vid, pid, 0, &cfg, &hdl);
+                    if (r == ESP_OK) {
+                        cdc_acm_line_coding_t lc = { 115200, 0, 0, 8 };
+                        cdc_acm_host_line_coding_set(hdl, &lc);
+                        cdc_acm_host_set_control_line_state(hdl, true, true);
+                        if (txq) xQueueReset(txq);            // frames meant for the previous device (an FC that restarted) are not fired at this one (0.9.640)
+                        opened = true;
+                    } else hdl = nullptr;
+                    crumbDone();
+                    xSemaphoreGive(hdlMutex);
+                    openResult = (r == ESP_OK) ? 1 : (r == ESP_ERR_NOT_FOUND ? -2 : -1);
+                    wantOpen = false;
+                }
+            }
         }
     }
     inline const char* who() { return dongleEnabled ? "Dongle" : "Receiver"; }
@@ -149,43 +191,35 @@ namespace UsbHostMsp {
     // Main loop: adopt a new device, drop a gone one, drain received bytes.
     inline void poll() {
         if (!started) return;
-        if (gone) {
+        static uint32_t seenAtReset = 0;
+        if (devSeen != seenAtReset) { seenAtReset = devSeen; openFails = 0; }   // a fresh enumeration gets fresh tries (0.9.641)
+        if (gone && !wantClose && !closeDone) {
             opened = false;                                  // at once: MSP falls back to the UART (dongle) or the radio-link tunnel (receiver)
-            if (mayTouchDevice() && xSemaphoreTake(hdlMutex, 0) == pdTRUE) {
-                gone = false;
-                if (hdl) { cdc_acm_host_close(hdl); hdl = nullptr; }
-                xSemaphoreGive(hdlMutex);
-                if (wasOpen) { char m[96]; snprintf(m, sizeof m, "%s: the USB flight controller was unplugged - back to the %s", who(), dongleEnabled ? "UART" : "radio link"); events.add(m); }
-                wasOpen = false;
-                if (devSeen == openedSeen) present = false;   // nothing new enumerated since the device we had: wait for the next plug-in
-            }
+            if (mayTouchDevice()) wantClose = true;          // the usbtx task closes it; a receiver only once the transmitter is quiet
         }
-        if (present && !opened && !gone && mayTouchDevice() && (uint32_t)(millis() - lastOpenTryMs) > 500 && xSemaphoreTake(hdlMutex, 0) == pdTRUE) {
-            lastOpenTryMs = millis();
-            cdc_acm_host_device_config_t cfg = {};
-            cfg.connection_timeout_ms = 1000;
-            cfg.out_buffer_size = 512;
-            cfg.event_cb = devCb;
-            cfg.data_cb  = dataCb;
-            cfg.user_arg = nullptr;
-            crumb(4);
-            const bool ok = cdc_acm_host_open(vid, pid, 0, &cfg, &hdl) == ESP_OK;
-            if (ok) {
-                cdc_acm_line_coding_t lc = { 115200, 0, 0, 8 };
-                cdc_acm_host_line_coding_set(hdl, &lc);
-                cdc_acm_host_set_control_line_state(hdl, true, true);
-                if (txq) xQueueReset(txq);                   // frames meant for the previous device (an FC that restarted) are not fired at this one (0.9.640)
-                opened = true; wasOpen = true; opens++; openedSeen = devSeen;
-            }
-            xSemaphoreGive(hdlMutex);
-            if (ok) {
+        if (closeDone) {
+            closeDone = false; gone = false;
+            if (cliMode) { cliMode = false; cliBuf = ""; events.add("Command line: the flight controller went away - closed, MSP resumes"); }   // never latched by an unplug (0.9.641)
+            if (wasOpen) { char m[96]; snprintf(m, sizeof m, "%s: the USB flight controller was unplugged - back to the %s", who(), dongleEnabled ? "UART" : "radio link"); events.add(m); }
+            wasOpen = false;
+            if (devSeen == openedSeen) present = false;      // nothing new enumerated since the device we had: wait for the next plug-in
+        }
+        if (openResult != 0) {
+            const int r = openResult; openResult = 0;
+            if (r == 1) {
+                wasOpen = true; opens++; openedSeen = devSeen;
                 char m[96]; snprintf(m, sizeof m, "%s: flight controller on USB (%04X:%04X) - MSP over USB, no port setting needed", who(), vid, pid);
                 events.add(m);
             } else {
                 openFails++;
-                if (openFails == 1 || openFails % 20 == 0) { char m[96]; snprintf(m, sizeof m, "USB host: device %04X:%04X is not a serial port (try %lu)", vid, pid, (unsigned long)openFails); events.add(m); }
-                if (openFails >= 40) present = false;      // give up on this device until it re-enumerates
+                if (r == -2) present = false;                // the device left before we opened it: nothing to retry
+                else if (openFails == 1 || openFails % 20 == 0) { char m[96]; snprintf(m, sizeof m, "USB host: device %04X:%04X is not a serial port (try %lu)", vid, pid, (unsigned long)openFails); events.add(m); }
+                if (openFails >= 40) present = false;        // give up on this device until it re-enumerates
             }
+        }
+        if (present && !opened && !gone && !wantOpen && !wantClose && mayTouchDevice() && (uint32_t)(millis() - lastOpenTryMs) > 500) {
+            lastOpenTryMs = millis();
+            wantOpen = true;                                 // the usbtx task opens it and reports back
         }
         if (rxbuf) {
             uint8_t b[128]; size_t n;
