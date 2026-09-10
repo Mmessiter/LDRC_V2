@@ -35,6 +35,8 @@
 .vals div{flex:1;text-align:center}
 .vals input{width:5em;text-align:center}
 .vals small{display:block;color:#5c6b75;font-size:.75em}
+.showAll{display:flex;align-items:center;gap:.5em;margin:.2em 0 .6em;font-size:.95em}
+.showAll input{width:1.3em;height:1.3em}
 </style>
 </head>
 <body>
@@ -46,6 +48,7 @@
     <div id=status class="banner info" style="display:none"></div>
 
     <div class=card>
+        <label class=showAll data-help="Off: only PIDs and rates, each per bank. On: every Rotorflight adjustment in every bank, over 400 entries."><input type=checkbox id=showAll> Show every setting (over 400 entries)</label>
         <div id=rows></div>
         <button id=addBtn class="btn usbOnly" type=button style="background:#4f7fa0;margin-top:.4em"><span class=ico>&#10133;</span>Add an adjustment</button>
     </div>
@@ -64,8 +67,9 @@
 <h3>The bar</h3>
 <p>The channel&rsquo;s full travel. Drag the round dividers to where the switch changes over. The red line is the switch now; the lit region is the position it is in.</p>
 <h3>Banks</h3>
-<p>&ldquo;PID bank in use&rdquo; and &ldquo;Rates bank in use&rdquo; are your bank switch: the value is the bank number, 1 to 4. Every other setting is changed in the bank in use at the time.</p>
-<p>&ldquo;Yaw P gain in bank 1&rdquo; works only while your bank switch has bank 1 in use, so its values can suit that bank; another line can serve bank 3. &ldquo;In the bank in use&rdquo; means whichever bank is flying.</p>
+<p>&ldquo;PID bank switch&rdquo; and &ldquo;Rates bank switch&rdquo; are the switch that picks the bank: the value is the bank number, 1 to 4.</p>
+<p>&ldquo;Yaw P gain in bank 1&rdquo; works only while that switch has bank 1 in use, so its values can suit that bank; another line can serve bank 3.</p>
+<p>The list offers PIDs and rates. &ldquo;Show every setting&rdquo; adds the rest of Rotorflight&rsquo;s adjustments, over 400 entries, including &ldquo;in the bank in use&rdquo;: whichever bank is flying at the time.</p>
 <h3>Channels</h3>
 <p>AUX1 is channel 6 on a helicopter.</p>
 <h3>Saving</h3>
@@ -73,7 +77,7 @@
 </template>
 <script>
 const $ = id => document.getElementById(id);
-const LABELS = ["(nothing)", "Rates bank in use (1 to 4)", "PID bank in use (1 to 4)", "Led profile", "Battery profile", "Pitch super rate", "Roll super rate", "Yaw super rate", "Pitch rate", "Roll rate", "Yaw rate", "Pitch expo", "Roll expo", "Yaw expo", "Pitch P gain", "Pitch I gain", "Pitch D gain", "Pitch F gain", "Roll P gain", "Roll I gain", "Roll D gain", "Roll F gain", "Yaw P gain", "Yaw I gain", "Yaw D gain", "Yaw F gain", "Yaw clockwise gain", "Yaw anticlockwise gain", "Yaw cyclic feedforward", "Yaw collective feedforward", "Yaw collective dynamic", "Yaw collective decay", "Pitch collective feedforward", "Pitch gyro cutoff", "Roll gyro cutoff", "Yaw gyro cutoff", "Pitch d-term cutoff", "Roll d-term cutoff", "Yaw d-term cutoff", "Rescue climb collective", "Rescue hover collective", "Rescue hover altitude", "Rescue altitude P gain", "Rescue altitude I gain", "Rescue altitude D gain", "Angle level gain", "Horizon level gain", "Acro trainer gain", "Governor gain", "Governor P gain", "Governor I gain", "Governor D gain", "Governor F gain", "Governor tail torque assist gain", "Governor cyclic feedforward", "Governor collective feedforward", "Pitch B gain", "Roll B gain", "Yaw B gain", "Pitch O gain", "Roll O gain", "Cross coupling gain", "Cross coupling ratio", "Cross coupling cutoff", "Level trim pitch", "Level trim roll", "Inertia precomp gain", "Inertia precomp cutoff", "Pitch setpoint boost gain", "Roll setpoint boost gain", "Yaw setpoint boost gain", "Collective setpoint boost gain", "Yaw dynamic ceiling gain", "Yaw dynamic deadband gain", "Yaw dynamic deadband filter", "Yaw precomp cutoff", "Governor idle throttle", "Governor auto throttle", "Governor max throttle", "Governor min throttle", "Governor headspeed", "Governor yaw feedforward"];
+const LABELS = ["(nothing)", "Rates bank switch (1 to 4)", "PID bank switch (1 to 4)", "Led profile", "Battery profile", "Pitch super rate", "Roll super rate", "Yaw super rate", "Pitch rate", "Roll rate", "Yaw rate", "Pitch expo", "Roll expo", "Yaw expo", "Pitch P gain", "Pitch I gain", "Pitch D gain", "Pitch F gain", "Roll P gain", "Roll I gain", "Roll D gain", "Roll F gain", "Yaw P gain", "Yaw I gain", "Yaw D gain", "Yaw F gain", "Yaw clockwise gain", "Yaw anticlockwise gain", "Yaw cyclic feedforward", "Yaw collective feedforward", "Yaw collective dynamic", "Yaw collective decay", "Pitch collective feedforward", "Pitch gyro cutoff", "Roll gyro cutoff", "Yaw gyro cutoff", "Pitch d-term cutoff", "Roll d-term cutoff", "Yaw d-term cutoff", "Rescue climb collective", "Rescue hover collective", "Rescue hover altitude", "Rescue altitude P gain", "Rescue altitude I gain", "Rescue altitude D gain", "Angle level gain", "Horizon level gain", "Acro trainer gain", "Governor gain", "Governor P gain", "Governor I gain", "Governor D gain", "Governor F gain", "Governor tail torque assist gain", "Governor cyclic feedforward", "Governor collective feedforward", "Pitch B gain", "Roll B gain", "Yaw B gain", "Pitch O gain", "Roll O gain", "Cross coupling gain", "Cross coupling ratio", "Cross coupling cutoff", "Level trim pitch", "Level trim roll", "Inertia precomp gain", "Inertia precomp cutoff", "Pitch setpoint boost gain", "Roll setpoint boost gain", "Yaw setpoint boost gain", "Collective setpoint boost gain", "Yaw dynamic ceiling gain", "Yaw dynamic deadband gain", "Yaw dynamic deadband filter", "Yaw precomp cutoff", "Governor idle throttle", "Governor auto throttle", "Governor max throttle", "Governor min throttle", "Governor headspeed", "Governor yaw feedforward"];
 
 // ---------------- model (DOM-free, unit-tested with node) ----------------
 const RMIN = 875, RMAX = 2125, MAXR = 42;
@@ -189,15 +193,19 @@ function chanSel(id, v) {
 }
 // The whole choice in one list: 'Yaw P gain in bank 1' ... grouped by bank, then 'in the bank in use'.
 // value = fn + ':' + bank (0 = the bank in use, -1 = a condition set elsewhere, kept as it is)
+const BASIC = new Set([5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]);   // rates + PIDs
+let showAll = false; try { showAll = localStorage.getItem('adj.showAll') === '1'; } catch (e) {}
 function fnSel(id, r, br) {
     const cur = (r.fn === 1 || r.fn === 2) ? 0 : condToBank(r.cond, br);
+    const fns = []; for (let fn = 3; fn < LABELS.length; fn++) if (showAll || BASIC.has(fn) || fn === r.fn) fns.push(fn);
     const opt = (fn, bank, text) => '<option value="' + fn + ':' + bank + '"' + (r.fn === fn && cur === bank ? ' selected' : '') + '>' + text + '</option>';
     let h = '<select id=' + id + ' class=usbOnly>' + opt(0, 0, LABELS[0]);
     h += '<optgroup label="Bank switch">' + opt(1, 0, LABELS[1]) + opt(2, 0, LABELS[2]) + '</optgroup>';
     if (cur === -1) h += opt(r.fn, -1, LABELS[r.fn] + ' with a condition set elsewhere');
     const banks = br ? [1, 2, 3, 4].filter(v => br.regions[v]) : [];
-    banks.forEach(v => { h += '<optgroup label="In bank ' + v + '">'; for (let fn = 3; fn < LABELS.length; fn++) h += opt(fn, v, LABELS[fn] + ' in bank ' + v); h += '</optgroup>'; });
-    h += '<optgroup label="In the bank in use">'; for (let fn = 3; fn < LABELS.length; fn++) h += opt(fn, 0, LABELS[fn] + ' in the bank in use'); h += '</optgroup>';
+    banks.forEach(v => { h += '<optgroup label="In bank ' + v + '">'; fns.forEach(fn => h += opt(fn, v, LABELS[fn] + ' in bank ' + v)); h += '</optgroup>'; });
+    if (showAll || !banks.length) { h += '<optgroup label="In the bank in use">'; fns.forEach(fn => h += opt(fn, 0, LABELS[fn] + ' in the bank in use')); h += '</optgroup>'; }
+    else if (cur === 0 && r.fn > 2) h += opt(r.fn, 0, LABELS[r.fn] + ' in the bank in use');
     return h + '</select>';
 }
 function regionNames(r) {
@@ -350,6 +358,7 @@ async function save() {
     await load();
 }
 document.addEventListener('DOMContentLoaded', async () => {
+    { const sa = $('showAll'); sa.checked = showAll; sa.onchange = () => { showAll = sa.checked; try { localStorage.setItem('adj.showAll', showAll ? '1' : '0'); } catch (e) {} collect(); paint(); }; }
     $('addBtn').onclick = () => { collect(); rows.push({ kind: 'switch', fn: 2, ch: 1, t: [1500], values: ['1', '2'] }); paint(); };
     $('saveBtn').onclick = save;
     await load();
