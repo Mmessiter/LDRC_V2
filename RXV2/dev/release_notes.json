@@ -491,5 +491,7 @@
   "RXV2-0.9.611-dongle-no-mode": "Dongle page on a dongle: the Mode choice (automatic / always a dongle / always a receiver) is gone - a dongle has no transceivers and never will - leaving only the port speed. A receiver keeps the choice (Malcolm 2026-09-10). Includes 0.9.610.",
   "RXV2-0.9.612-dongle-setup": "Setup page on a dongle: the dongle button simply says 'Dongle setup' (Malcolm 2026-09-10). Includes 0.9.611.",
   "RXV2-0.9.613-dongle-name": "Dongle setup now has the dongle's name at the top (type, Rename); Setup loses its rename button on a dongle (Malcolm 2026-09-10). Includes 0.9.612.",
-  "RXV2-0.9.614-pill-fix": "Updates page: the status pill no longer offers 'tap to install' while an install is already running. Includes 0.9.613."
+  "RXV2-0.9.614-pill-fix": "Updates page: the status pill no longer offers 'tap to install' while an install is already running. Includes 0.9.613.",
+  "RXV2-0.9.615-dongle-usb": "Dongle: MSP over USB. Plug a Rotorflight flight controller's USB-C into the dongle and it is used automatically - no port setting, no wiring; the UART link carries on otherwise (Malcolm 2026-09-11: 'so that nothing is impossible'). The dongle's USB socket is a host while this runs (updates by WiFi/Bluetooth; USB flashing needs the button-held bootloader). Includes 0.9.614.",
+  "RXV2-0.9.616-dongle-usb2": "Dongle over USB: page requests now get their answers (the waits that pump the UART drain the USB link too). Includes 0.9.615."
 }

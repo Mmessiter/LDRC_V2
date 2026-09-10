@@ -402,6 +402,7 @@ void setup() {
         // Rotorflight dongle: D5 = FC TX, D6 = FC RX, plain MSP, no channels.
         Serial1.setRxBufferSize(2048);
         Serial1.begin(dongleBaud, SERIAL_8N1, PIN_FC_RX, PIN_SBUS_TX, false);
+        UsbHostMsp::begin();   // 0.9.615: a flight controller on the USB socket is adopted automatically (MSP over USB)
         Serial.printf("[dongle] Rotorflight dongle mode: plain MSP on D5/D6 at %lu baud, no RC output\n", (unsigned long)dongleBaud);
         { char m[120]; snprintf(m, sizeof(m), "Dongle mode%s: plain MSP to the flight controller at %lu baud (no radio, no channel output)",
                                 dongleAuto ? " (no transceivers found)" : " (set to always)", (unsigned long)dongleBaud); events.add(m); }
@@ -860,7 +861,10 @@ void loop() {
     }
 
     if (!simEnabled && !dongleEnabled) { StallScope s("sbusTick"); sbusTick(); }   // no RC output frames at all in sim or dongle mode
-    if (dongleEnabled) { StallScope s("dongleStatus"); dongleStatusTick(); }
+    if (dongleEnabled) {
+        { StallScope s("usbHost"); UsbHostMsp::poll(); }          // adopt/drop a USB flight controller, drain its bytes (0.9.615)
+        { StallScope s("dongleStatus"); dongleStatusTick(); }
+    }
     { StallScope s("heartbeat"); heartbeat(); }
     { StallScope s("statusLed"); statusLedTick(); }    // D4 connection-status LED (2-radio boards)
     { StallScope s("netStep");   netStep(); }

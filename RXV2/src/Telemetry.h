@@ -14,6 +14,7 @@
 #ifndef _SRC_TELEMETRY_H
 #define _SRC_TELEMETRY_H
 
+#include "UsbHostMsp.h"   // dongle: the USB link is drained wherever the UART is (0.9.616)
 #include "1Defs.h"
 #include "Output.h"      // crsfCrc8()
 
@@ -249,6 +250,7 @@ inline void parseIbus2Incoming(uint8_t b) {
 // per-protocol parser if there is one for the current protocol.
 
 inline void protocolRx() {
+    if (dongleEnabled) UsbHostMsp::poll();   // every wait loop that pumps the UART now drains USB too (the 504s on 0.9.615)
     while (Serial1.available()) {
         uint8_t b = (uint8_t)Serial1.read();
         captureRawFcByte(b);

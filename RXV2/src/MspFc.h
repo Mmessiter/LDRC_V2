@@ -26,6 +26,7 @@
 
 #include "1Defs.h"
 #include "MspSerialCore.h"
+#include "UsbHostMsp.h"      // dongle: MSP over USB when a flight controller is on the USB socket (0.9.615)
 #include "Output.h"      // crsfCrc8()
 
 //*********************************************************************
@@ -241,7 +242,9 @@ inline void mspSerialFeed(uint8_t b) { mspSerBytes++; mspSer.feed(b, mspSerialOn
 inline void mspSerialSend(uint8_t function, const uint8_t* payload, uint16_t len) {
     static uint8_t frame[8 + 300];
     const uint16_t n = mspSerialEncode(frame, sizeof(frame), function, payload, len);
-    if (n) Serial1.write(frame, n);
+    if (!n) return;
+    if (UsbHostMsp::active()) { UsbHostMsp::send(frame, n); return; }   // USB first, UART otherwise
+    Serial1.write(frame, n);
 }
 
 inline void mspSendRequest(uint8_t function, const uint8_t* payload = nullptr, uint8_t payloadLen = 0) {

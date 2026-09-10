@@ -1,6 +1,18 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.616-dongle-usb2",
+      "url": "https://messiter.com/rxv2/release/v0.9.616/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.616/littlefs.bin",
+      "fs_md5": "e3558da231445b32c08d26642ad4d680",
+      "notes": "Dongle over USB: page requests now get their answers (the waits that pump the UART drain the USB link too). Includes 0.9.615."
+    },
+    {
+      "name": "RXV2-0.9.615-dongle-usb",
+      "url": "https://messiter.com/rxv2/release/v0.9.615/firmware.bin",
+      "notes": "Dongle: MSP over USB. Plug a Rotorflight flight controller's USB-C into the dongle and it is used automatically - no port setting, no wiring; the UART link carries on otherwise (Malcolm 2026-09-11: 'so that nothing is impossible'). The dongle's USB socket is a host while this runs (updates by WiFi/Bluetooth; USB flashing needs the button-held bootloader). Includes 0.9.614."
+    },
+    {
       "name": "RXV2-0.9.614-pill-fix",
       "url": "https://messiter.com/rxv2/release/v0.9.614/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.614/littlefs.bin",
@@ -69,20 +81,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.605/littlefs.bin",
       "fs_md5": "933d96ad67bf7e794470be126e8544ec",
       "notes": "Dongle home page: the banner now says the one thing a newcomer needs - 'Connect dongle to a spare UART and use configurator to set that port to MSP 115200' (Malcolm 2026-09-10). Includes 0.9.604."
-    },
-    {
-      "name": "RXV2-0.9.604-first-paint",
-      "url": "https://messiter.com/rxv2/release/v0.9.604/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.604/littlefs.bin",
-      "fs_md5": "c10bcb2ce8fbf7bc8289b688d0547104",
-      "notes": "Home page: no more flash of the wrong layout while the receiver answers (Malcolm 2026-09-10). The page remembers what it showed last time - dongle or receiver buttons, the model's name, the version in the footer - and paints that first; the live answer then changes only what differs. The subtitle stays blank instead of saying 'loading'. Includes 0.9.603."
-    },
-    {
-      "name": "RXV2-0.9.603-less-words",
-      "url": "https://messiter.com/rxv2/release/v0.9.603/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.603/littlefs.bin",
-      "fs_md5": "f91770ee0473132d273df83d30ae5b67",
-      "notes": "Fewer words (Malcolm 2026-09-10: 'keep things simple, avoid stating the obvious'): Copy a bank loses its idle 'Ready' box and its introduction; the Easy tuning and Dongle pages lose theirs; on every Rotorflight page the banner appears only when there is something to say - no more 'Loaded from flight controller' after every read (a recorded session still says it came from the phone). Includes 0.9.602."
     }
   ]
 }
