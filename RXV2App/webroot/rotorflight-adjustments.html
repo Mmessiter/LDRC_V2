@@ -40,6 +40,7 @@
 </style>
 </head>
 <body>
+<button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
 <div class=bg-photo aria-hidden=true></div>
 <div class=bg-wash  aria-hidden=true></div>
 <div class=container>
@@ -60,22 +61,25 @@
 </div>
 <template id=helpContent><h2>In-flight adjustments</h2>
 <p>A knob or a switch on your transmitter changes one setting while you fly.</p>
-<p>Choose the setting: the value boxes fill with its current value in that bank, ready to edit.</p>
-<h3>Knob</h3>
-<p>Turning it slides the setting between the two values you give.</p>
+<h3>Setting one up</h3>
+<ol>
+<li><b>What it changes</b>: the setting and the bank, e.g. Yaw P gain in bank 1. The boxes fill with the current value in that bank.</li>
+<li><b>Control</b>: Knob or Switch, and the channel it is on.</li>
+<li>Type the values, then <b>Save to flight controller</b>.</li>
+</ol>
 <h3>Switch</h3>
-<p>Each position sets the value you give it. Two or three positions.</p>
-<h3>The bar</h3>
-<p>The channel&rsquo;s full travel. Drag the round dividers to where the switch changes over. The red line is the switch now; the lit region is the position it is in.</p>
+<p>Each position sets the value you give it, two or three positions. Drag the round dividers to where the switch changes over. Move the switch: the red line follows it and the lit region is the position it is in.</p>
+<h3>Knob</h3>
+<p>Turning it slides the setting between the two values. Drag the round ends to where the knob starts and stops changing it.</p>
 <h3>Banks</h3>
-<p>The switch that picks the bank is set on the Switches page. &ldquo;Yaw P gain in bank 1&rdquo; works only while that switch has bank 1 in use, so its values can suit that bank; another line can serve bank 3.</p>
-<p>The list offers PIDs and rates. &ldquo;Show every setting&rdquo; adds the rest of Rotorflight&rsquo;s adjustments, over 400 entries, including &ldquo;in the bank in use&rdquo;: whichever bank is flying at the time.</p>
-<h3>Rates</h3>
-<p>Rate, Shape and expo use the same numbers as the Rates page.</p>
-<h3>Channels</h3>
-<p>AUX1 is channel 6 on a helicopter.</p>
-<h3>Saving</h3>
-<p>Save keeps them in the flight controller. Setting up needs the USB cable; afterwards they work with the USB and the dongle unplugged.</p>
+<p>A line for bank 1 works only while your bank switch (set on the Switches page) has bank 1 in use. Another line can serve bank 3 with values that suit it.</p>
+<p>The list offers PIDs and rates. <b>Show every setting</b> adds the rest of Rotorflight&rsquo;s adjustments, over 400 entries, including &ldquo;in the bank in use&rdquo;: whichever bank is flying at the time.</p>
+<h3>Numbers</h3>
+<p>Rate, Shape and expo use the same numbers as the Rates page. AUX1 is channel 6 on a helicopter.</p>
+<h3>USB</h3>
+<p>Setting up needs the USB cable. Afterwards the adjustments work with the USB and the dongle unplugged.</p>
+<h3>From the configurator</h3>
+<p>A step adjustment made in the configurator is shown but kept as it is. Change it there.</p>
 </template>
 <script>
 const $ = id => document.getElementById(id);

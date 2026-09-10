@@ -20,6 +20,7 @@
 </style>
 </head>
 <body>
+<button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
 <div class=bg-photo aria-hidden=true></div>
 <div class=bg-wash  aria-hidden=true></div>
 <div class=container>
@@ -42,6 +43,20 @@
         <button id=exitBtn class="btn usbOnly" type=button style="background:#8a8f94"><span class=ico>&#10060;</span>Leave without saving</button>
         <p class=sub style="margin:.6em 0 0">Both restart the flight controller. The other pages are paused while the command line is open.</p>
     </div>
+<template id=helpContent><h2>Command line</h2>
+<p>Rotorflight&rsquo;s own command line: every setting by name, including ones no page covers.</p>
+<h3>Commands</h3>
+<ul>
+<li><b>get gov</b> shows every setting with &ldquo;gov&rdquo; in its name, with its value.</li>
+<li><b>set gov_gain = 40</b> changes one. Nothing is kept until you tap Save and restart.</li>
+<li><b>diff</b> lists everything that differs from Rotorflight&rsquo;s defaults; <b>dump</b> lists everything.</li>
+<li><b>help</b> lists the commands.</li>
+</ul>
+<h3>Leaving</h3>
+<p><b>Save and restart</b> keeps your changes. <b>Leave without saving</b> drops them. Both restart the flight controller; the other pages come back once it is up. Use the buttons rather than typing save or exit.</p>
+<h3>While it is open</h3>
+<p>The flight controller cannot arm and the other pages are paused. Needs the USB cable.</p>
+</template>
     <div class=footer></div>
 </div>
 <script>
