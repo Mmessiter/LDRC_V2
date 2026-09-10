@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.616-dongle-usb2";
+constexpr const char* FW_VERSION = "RXV2-0.9.620-usb-clean";
 
 //*********************************************************************
 //  Auto-update manifest URLs

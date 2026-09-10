@@ -1,6 +1,28 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.620-usb-clean",
+      "url": "https://messiter.com/rxv2/release/v0.9.620/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.620/littlefs.bin",
+      "fs_md5": "6aa9241f3297dee8fc25c95fcbd30944",
+      "notes": "Dongle over USB: Adjustments and the Command line, proven on a Nexus. The 'reply bigger than the link buffer' alarm no longer fires for legitimate USB replies. Includes 0.9.619."
+    },
+    {
+      "name": "RXV2-0.9.619-usb-jumbo",
+      "url": "https://messiter.com/rxv2/release/v0.9.619/firmware.bin",
+      "notes": "Dongle over USB: big replies (255 bytes and more, e.g. the adjustments list) are now parsed in Rotorflight's real jumbo-frame order - size, command, then the 16-bit length. Includes 0.9.618."
+    },
+    {
+      "name": "RXV2-0.9.618-usb-breadcrumbs",
+      "url": "https://messiter.com/rxv2/release/v0.9.618/firmware.bin",
+      "notes": "Dongle over USB: after a crash the boot log says which USB step was running (diagnostic build). Includes 0.9.617."
+    },
+    {
+      "name": "RXV2-0.9.617-usb-only-pages",
+      "url": "https://messiter.com/rxv2/release/v0.9.617/firmware.bin",
+      "notes": "What only USB can do (Malcolm 2026-09-11): a Command line page (every Rotorflight setting by name, with Save and Leave buttons) and an Adjustments page (a knob or switch changing a setting in flight - the 588-byte list the radio link could never carry). Both say plainly that they need the flight controller's USB socket plugged into the dongle when it is not. Factory reset is allowed over USB only. Includes 0.9.616."
+    },
+    {
       "name": "RXV2-0.9.616-dongle-usb2",
       "url": "https://messiter.com/rxv2/release/v0.9.616/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.616/littlefs.bin",
@@ -53,34 +75,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.609/littlefs.bin",
       "fs_md5": "b0ee349c3dd8f3404d22364ebb8fde7a",
       "notes": "Setup page: 'Rename dongle' on a dongle (Malcolm 2026-09-10); the dongle-mode and rename buttons no longer split their text into two columns around the dash; the subtitle that listed the buttons is gone. Includes 0.9.608."
-    },
-    {
-      "name": "RXV2-0.9.608-setup-dongle-hide",
-      "url": "https://messiter.com/rxv2/release/v0.9.608/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.608/littlefs.bin",
-      "fs_md5": "f08e9adfbb1e74f14f4199ded5d9c6db",
-      "notes": "Setup page on a dongle: the Output protocol, View channels and Receiver settings buttons are hidden before the first paint and the state read retries instead of giving up after one miss over Bluetooth (Malcolm 2026-09-10: 'Setup page didn't hide it'). Includes 0.9.607."
-    },
-    {
-      "name": "RXV2-0.9.607-dongle-rx-only",
-      "url": "https://messiter.com/rxv2/release/v0.9.607/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.607/littlefs.bin",
-      "fs_md5": "00c3469ba045640cd94292ae51078aea",
-      "notes": "Dongle: the receiver-only pages (output protocol, bind, receiver settings, diagnostics, simulator, flight records, channel map, fly) show a one-line 'Not on a dongle' note with a Home button instead of their controls, and Find a setting leaves them out of its results (Malcolm 2026-09-10: 'protocol selection not needed for dongle'). Includes 0.9.606."
-    },
-    {
-      "name": "RXV2-0.9.606-dongle-banner-quiet",
-      "url": "https://messiter.com/rxv2/release/v0.9.606/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.606/littlefs.bin",
-      "fs_md5": "3c048ba738c39df2081e4d553cce842b",
-      "notes": "Dongle home page: the wiring hint under the banner shows only while no flight controller answers; once connected the banner is just its title (Malcolm 2026-09-10). Includes 0.9.605."
-    },
-    {
-      "name": "RXV2-0.9.605-dongle-banner",
-      "url": "https://messiter.com/rxv2/release/v0.9.605/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.605/littlefs.bin",
-      "fs_md5": "933d96ad67bf7e794470be126e8544ec",
-      "notes": "Dongle home page: the banner now says the one thing a newcomer needs - 'Connect dongle to a spare UART and use configurator to set that port to MSP 115200' (Malcolm 2026-09-10). Includes 0.9.604."
     }
   ]
 }

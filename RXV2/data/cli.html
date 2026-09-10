@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name=theme-color content="#5fa099">
+<meta name=apple-mobile-web-app-capable content=yes>
+<meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
+<meta name=apple-mobile-web-app-title content="LDRC RX V2">
+<title>Command line &middot; LDRC RX V2</title>
+<link rel=stylesheet href="/style.css?v=181">
+<script src="/app.js?v=198" defer></script>
+<style>
+.banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
+.banner.info{background:#c8d2dc;color:#3a5165}
+.banner.good{background:#a8d29a;color:#2a4d1f}
+.banner.bad{background:#dca08c;color:#5c2a1a}
+.needUsb{background:#ffd278;color:#5c3a00;border-radius:12px;padding:1em;margin:0 0 1em;font-weight:600;text-align:center}
+
+</style>
+</head>
+<body>
+<div class=bg-photo aria-hidden=true></div>
+<div class=bg-wash  aria-hidden=true></div>
+<div class=container>
+    <h1>Command line</h1>
+    <div id=needUsb class=needUsb style="display:none">Plug the flight controller&rsquo;s USB socket into the dongle. This page needs the USB connection.</div>
+    <div id=status class="banner info" style="display:none"></div>
+
+    <div class=card>
+        <p class=sub style="margin:0 0 .6em"><b>Every Rotorflight setting, by name.</b> <code>get gov</code> shows the governor settings, <code>set gov_gain = 40</code> changes one, <code>diff</code> lists everything you have changed. Nothing is kept until you tap <b>Save and restart</b>.</p>
+        <div id=chips style="display:flex;flex-wrap:wrap;gap:.4em;margin:.2em 0 .6em"></div>
+        <div style="display:flex;gap:.5em">
+            <input id=cmd class=usbOnly type=text autocapitalize=off autocorrect=off spellcheck=false placeholder="type a command" style="flex:1;font-family:ui-monospace,Menlo,monospace;font-size:1em;padding:.5em .6em;border:1px solid #c9d3dc;border-radius:8px">
+            <button id=send class="btn usbOnly" type=button style="margin:0;padding:.5em 1em;background:#4f7fa0">Send</button>
+        </div>
+        <pre id=out style="background:#1f2a33;color:#d9e6ee;border-radius:10px;padding:.8em;margin:.7em 0 0;min-height:8em;max-height:50vh;overflow:auto;font-size:.85em;white-space:pre-wrap;word-break:break-word"></pre>
+    </div>
+
+    <div class=card>
+        <button id=saveBtn class="btn usbOnly" type=button style="background:#6cab5e"><span class=ico>&#128190;</span>Save and restart</button>
+        <button id=exitBtn class="btn usbOnly" type=button style="background:#8a8f94"><span class=ico>&#10060;</span>Leave without saving</button>
+        <p class=sub style="margin:.6em 0 0">Both restart the flight controller. The other pages are paused while the command line is open.</p>
+    </div>
+    <div class=footer></div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const QUICK = ['help', 'version', 'status', 'diff', 'get gov', 'get rescue', 'dump'];
+function setStatus(kind, msg) { const b = $('status'); b.style.display = msg ? '' : 'none'; if (!msg) return; b.className = 'banner ' + kind; b.textContent = msg; }
+function print(line, cls) { const o = $('out'); o.textContent += line + '\n'; o.scrollTop = o.scrollHeight; }
+
+// USB only (Malcolm 2026-09-11): say so in one line, and keep the controls off until it is true.
+async function usbGate() {
+    const s = await LDRC.fetchState();
+    const ok = !!(s && s.dongle && s.dongle_link === 'usb');
+    const g = document.getElementById('needUsb');
+    if (g) g.style.display = ok ? 'none' : '';
+    document.querySelectorAll('.usbOnly').forEach(el => { el.disabled = !ok; el.style.opacity = ok ? '' : '.45'; });
+    return ok ? s : null;
+}
+
+async function run(cmd) {
+    cmd = (cmd || $('cmd').value).trim(); if (!cmd) return;
+    print('# ' + cmd);
+    $('send').disabled = true;
+    try {
+        const r = await fetch('/api/cli?cmd=' + encodeURIComponent(cmd), { cache: 'no-store' });
+        const t = await r.text();
+        if (!r.ok) { setStatus('bad', t); print('! ' + t); }
+        else { setStatus('', ''); print(t); }
+    } catch (e) { setStatus('bad', 'no answer from the dongle'); }
+    $('send').disabled = false; $('cmd').value = ''; $('cmd').focus();
+}
+async function leave(save) {
+    const what = save ? 'Save and restart the flight controller?' : 'Leave without saving? Any changes typed here are lost and the flight controller restarts.';
+    if (!(await LDRC.confirm(what, { title: save ? 'Save' : 'Leave', icon: save ? '💾' : '❌', yes: save ? 'Save and restart' : 'Leave', kind: save ? 'go' : 'warn' }))) return;
+    try { const r = await fetch('/api/cli/leave', { method: 'POST', body: new URLSearchParams({ save: save ? '1' : '0' }) }); const t = await r.text(); setStatus(r.ok ? 'good' : 'bad', t); print('# ' + t); }
+    catch (e) { setStatus('bad', 'no answer from the dongle'); }
+}
+document.addEventListener('DOMContentLoaded', async () => {
+    $('chips').innerHTML = QUICK.map(c => '<button type=button class="usbOnly" style="padding:.3em .7em;border-radius:14px;border:0;background:#dfe7ee;color:#2c3e50;font-size:.9em">' + c + '</button>').join('');
+    $('chips').querySelectorAll('button').forEach(b => b.onclick = () => run(b.textContent));
+    $('send').onclick = () => run();
+    $('cmd').addEventListener('keydown', e => { if (e.key === 'Enter') run(); });
+    $('saveBtn').onclick = () => leave(true);
+    $('exitBtn').onclick = () => leave(false);
+    await usbGate();
+    setInterval(usbGate, 4000);
+});
+</script>
+</body>
+</html>

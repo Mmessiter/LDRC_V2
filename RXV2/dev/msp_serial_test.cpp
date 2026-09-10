@@ -10,8 +10,9 @@ static void onFrame(void* ctx, uint8_t cmd, const uint8_t* p, uint16_t n, bool e
 static std::vector<uint8_t> reply(uint8_t cmd, const std::vector<uint8_t>& d, bool err = false) {
     std::vector<uint8_t> f = { '$', 'M', (uint8_t)(err ? '!' : '>') }; uint8_t crc = 0;
     auto put = [&](uint8_t b) { f.push_back(b); crc ^= b; };
-    if (d.size() >= 255) { put(255); put((uint8_t)d.size()); put((uint8_t)(d.size() >> 8)); } else put((uint8_t)d.size());
-    put(cmd); for (uint8_t b : d) put(b); f.push_back(crc); return f;
+    // Rotorflight/Betaflight order (msp_serial.c): jumbo = 255, cmd, u16 length; else size, cmd
+    if (d.size() >= 255) { put(255); put(cmd); put((uint8_t)d.size()); put((uint8_t)(d.size() >> 8)); } else { put((uint8_t)d.size()); put(cmd); }
+    for (uint8_t b : d) put(b); f.push_back(crc); return f;
 }
 int main() {
     uint8_t out[700];

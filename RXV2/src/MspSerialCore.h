@@ -25,9 +25,8 @@ inline uint16_t mspSerialEncode(uint8_t* out, uint16_t outMax, uint8_t fn, const
     out[n++] = '$'; out[n++] = 'M'; out[n++] = '<';
     uint8_t crc = 0;
     auto put = [&](uint8_t b) { out[n++] = b; crc ^= b; };
-    if (jumbo) { put(255); put((uint8_t)len); put((uint8_t)(len >> 8)); }
-    else       { put((uint8_t)len); }
-    put(fn);
+    if (jumbo) { put(255); put(fn); put((uint8_t)len); put((uint8_t)(len >> 8)); }   // RF/BF order: 255, cmd, u16 length
+    else       { put((uint8_t)len); put(fn); }
     for (uint16_t i = 0; i < len; i++) put(payload[i]);
     out[n++] = crc;
     return n;
@@ -35,7 +34,7 @@ inline uint16_t mspSerialEncode(uint8_t* out, uint16_t outMax, uint8_t fn, const
 
 // Byte-at-a-time decoder for what the FC sends back.
 struct MspSerialParser {
-    enum State : uint8_t { S_IDLE, S_M, S_DIR, S_SIZE, S_JLO, S_JHI, S_CMD, S_DATA, S_CRC };
+    enum State : uint8_t { S_IDLE, S_M, S_DIR, S_SIZE, S_JCMD, S_JLO, S_JHI, S_CMD, S_DATA, S_CRC };
     State    state = S_IDLE;
     bool     error = false;
     uint16_t size  = 0, got = 0;
@@ -57,12 +56,14 @@ struct MspSerialParser {
                 break;
             case S_SIZE:
                 crc ^= b;
-                if (b == 255) { state = S_JLO; }
+                if (b == 255) { state = S_JCMD; }                    // jumbo: cmd next, then the u16 length
                 else { size = b; state = S_CMD; }
                 break;
+            case S_JCMD: crc ^= b; cmd = b; state = S_JLO; break;
             case S_JLO:  crc ^= b; size = b; state = S_JHI; break;
-            case S_JHI:  crc ^= b; size |= (uint16_t)b << 8; state = S_CMD;
+            case S_JHI:  crc ^= b; size |= (uint16_t)b << 8; got = 0;
                 if (size > MSP_SERIAL_MAX_PAYLOAD) { dropped++; reset(); }
+                else state = size ? S_DATA : S_CRC;
                 break;
             case S_CMD:  crc ^= b; cmd = b; got = 0; state = size ? S_DATA : S_CRC; break;
             case S_DATA:

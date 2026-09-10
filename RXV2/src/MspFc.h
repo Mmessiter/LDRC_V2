@@ -81,7 +81,7 @@ constexpr uint8_t MSP_STATUS               = 101;  // bytes 23/25 = the PID / ra
 // bigger than the FC's buffer — a fn nobody thought of — is logged and the
 // telemetry setup re-checked and repaired at once.
 constexpr uint16_t RF_TLM_OUTBUF_SIZE = 320;
-inline bool mspReplyTooBigForFc(uint8_t fn) { return fn == MSP_ADJUSTMENT_RANGES; }
+inline bool mspReplyTooBigForFc(uint8_t fn) { return fn == MSP_ADJUSTMENT_RANGES && !UsbHostMsp::active(); }   // over USB the FC's 320-byte link buffer is not in the path (0.9.617)
 // Rotorflight SET functions that read their payload from the request: with
 // NO payload the FC reads whatever its request buffer held before (no
 // bounds check in sbufReadU8) and applies THAT. Never forward such a
@@ -468,7 +468,7 @@ inline void mspDeliverResponse(uint8_t func, const uint8_t* payload, uint16_t si
     // its memory to answer us (the MSP 52 bug, see the top of this file).
     // Never expected now that 52 is refused; if a fn nobody thought of does
     // it, say so and re-check + repair the telemetry setup straight away.
-    if (size > RF_TLM_OUTBUF_SIZE) {
+    if (size > RF_TLM_OUTBUF_SIZE && !UsbHostMsp::active()) {   // over USB a big reply is simply a big reply (0.9.620)
         char m[EventLog::MSG_LEN];
         snprintf(m, sizeof(m), "Rotorflight reply to MSP %u was %u B - more than its %u-byte link buffer: "
                  "FC memory overwritten (RF 4.6 bug); re-checking the telemetry setup. Restart the FC before flying",
@@ -1188,6 +1188,7 @@ constexpr uint32_t TELEM_WATCH_MS       = 30000;  // re-read the telemetry setup
 // beat stale - the radios go off when the model arms and come back after
 // it disarms, exactly as auto fly mode does from the receiver's own channel.
 inline void dongleStatusTick() {
+    if (UsbHostMsp::cliMode) return;                    // the command line owns the port
     static uint32_t lastMs = 0;
     if (!dongleEnabled || !fcInfo.detected) return;
     if ((uint32_t)(millis() - lastMs) < 1000) return;
@@ -1198,6 +1199,7 @@ inline void dongleStatusTick() {
 }
 
 inline void mspFcPoll() {
+    if (UsbHostMsp::cliMode) return;                    // command line open over USB: no MSP until save/exit (0.9.617)
     if (!fcTelemetryEnabled)
         return; // user says there is no FC on this line — don't probe
     // Only meaningful in CRSF mode (D6 is wired as CRSF UART to FC).

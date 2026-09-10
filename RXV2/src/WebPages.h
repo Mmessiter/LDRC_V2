@@ -781,8 +781,9 @@ inline void handleMspApi() {
         const char* why = nullptr;
         if (mspReplyTooBigForFc(fn))
             why = "refused: Rotorflight 4.6 cannot send its adjustments list over the receiver link without "
-                  "overwriting its own telemetry setup (588-byte reply, 320-byte buffer). Adjustments: USB configurator only";
-        else if (fn == MSP_RESET_CONF) why = "refused: factory reset is never done over the receiver link";
+                  "overwriting its own telemetry setup (588-byte reply, 320-byte buffer). Plug the flight controller's USB into the dongle";
+        else if (fn == MSP_RESET_CONF && !UsbHostMsp::active()) why = "refused: factory reset needs the USB connection to the flight controller";
+        else if (UsbHostMsp::cliMode) why = "refused: the command line is open - save or exit it first";
         else if (fn == MSP_SET_MOTOR)  why = "refused: motor test is never done from a phone";
         else if (reqLen == 0 && mspSetNeedsPayload(fn)) why = "refused: that is a write and it came with no data";
         if (why) {
@@ -3098,6 +3099,36 @@ inline void handleApiState() {
 //  Route registration (call from setup())
 //*********************************************************************
 
+// Rotorflight's command line over the dongle's USB link (Malcolm 2026-09-11:
+// "add the options which were not possible without USB"). One command per
+// request; the first request opens the CLI ('#'). Never over a UART or a
+// radio link: the reply would be telemetry-shaped garbage and MSP would die.
+inline void handleCliApi() {
+    server.sendHeader("Cache-Control", "no-store");
+    if (!UsbHostMsp::active()) { server.send(409, "text/plain", "needs the USB connection: plug the flight controller's USB socket into the dongle"); return; }
+    if (fcInfo.armed && fcInfo.armedMs && (uint32_t)(millis() - fcInfo.armedMs) < 5000) { server.send(409, "text/plain", "ARMED - disarm first"); return; }
+    String cmd = server.hasArg("cmd") ? server.arg("cmd") : String("");
+    cmd.trim();
+    if (cmd.length() > 160) { server.send(400, "text/plain", "command too long"); return; }
+    if (cmd.equalsIgnoreCase("save") || cmd.equalsIgnoreCase("exit") || cmd.equalsIgnoreCase("reboot") || cmd.startsWith("dfu") || cmd.startsWith("bl")) {
+        server.send(400, "text/plain", "use the Save / Leave buttons for that"); return;
+    }
+    if (!UsbHostMsp::cliMode && !UsbHostMsp::cliEnter(2500)) { server.send(504, "text/plain", "the flight controller did not open its command line"); return; }
+    if (cmd.length() == 0) { server.send(200, "text/plain", "CLI open"); return; }
+    String out;
+    const bool ok = UsbHostMsp::cliExchange(cmd, out, 6000);
+    if (!ok && out.length() == 0) { server.send(504, "text/plain", "no reply from the flight controller"); return; }
+    server.send(200, "text/plain", out);
+}
+inline void handleCliLeave() {
+    server.sendHeader("Cache-Control", "no-store");
+    if (!UsbHostMsp::cliMode) { server.send(200, "text/plain", "the command line was not open"); return; }
+    const bool save = server.hasArg("save") && server.arg("save") == "1";
+    UsbHostMsp::cliLeave(save);
+    fcInfo.telemCfgKnown = false;  fcInfo.telemCfgTries = 0;   // the FC restarts: fresh look at everything
+    server.send(200, "text/plain", save ? "saved - the flight controller is restarting" : "left without saving - the flight controller is restarting");
+}
+
 inline void registerWebRoutes() {
     // WebServer only captures request headers it's told to collect. Without
     // this, If-None-Match never reaches serveLittleFsFile and the ETag/304
@@ -3142,6 +3173,10 @@ inline void registerWebRoutes() {
     server.on("/rotorflight-txchannels", handleRotorflightTxChannels);
     server.on("/rotorflight-wizards",   handleRotorflightWizards);
     server.on("/rotorflight-alacarte",  handleRotorflightAlaCarte);
+    server.on("/rotorflight-adjustments", []() { if (!serveLittleFsFile("/rotorflight-adjustments.html", "text/html")) server.send(503, "text/plain", "page missing - update the web files"); });
+    server.on("/cli",                   []() { if (!serveLittleFsFile("/cli.html", "text/html")) server.send(503, "text/plain", "page missing - update the web files"); });
+    server.on("/api/cli",               handleCliApi);          // USB only: one Rotorflight command, its printed reply
+    server.on("/api/cli/leave",         HTTP_POST, handleCliLeave);
     server.on("/rotorflight-backup",    handleRotorflightBackupPage);
     server.on("/rotorflight-copybank",  handleRotorflightCopyBank);
     server.on("/rotorflight-easy",      handleRotorflightEasy);

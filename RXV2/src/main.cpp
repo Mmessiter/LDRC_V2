@@ -133,7 +133,12 @@ void setup() {
                        : "other";
         char b[64];
         snprintf(b, sizeof(b), "Boot (%s)", rs);
-        events.add(b);
+        if (rr == ESP_RST_PANIC && usbCrumbMagic == 0x55B0C0DE && usbCrumbPhase) {
+            static const char* PH[] = {"-", "USB data callback", "USB drain", "USB feed to MSP parser", "USB open", "USB send", "USB new device"};
+            snprintf(b, sizeof(b), "CRASH was inside: %s (%lu bytes)", PH[usbCrumbPhase < 7 ? usbCrumbPhase : 0], (unsigned long)usbCrumbLen);
+        }
+        usbCrumbPhase = 0; usbCrumbMagic = 0x55B0C0DE;
+        events.add(b);   // "Boot (…)" or, after a USB-path panic, the step it was in
         Serial.printf("[boot] reset reason: %s (%d)\n", rs, (int)rr);
     }
 
