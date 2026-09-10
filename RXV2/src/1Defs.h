@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.638-usb-wording";
+constexpr const char* FW_VERSION = "RXV2-0.9.639-usb-on-receiver";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -367,6 +367,7 @@ constexpr const char* NVS_KEY_FS_DIRTY    = "fsdirty"; // 1 = a littlefs flash b
 constexpr const char* NVS_KEY_SIM         = "sim";     // 1 = drive flight simulator over USB (HID joystick)
 constexpr const char* NVS_KEY_DONGLE      = "dongle";  // 1 = Rotorflight DONGLE: plain MSP on D5/D6 to a spare FC UART, no radio, any receiver flies (2026-09-08)
 constexpr const char* NVS_KEY_DONGLE_BAUD = "dbaud";   // u32 UART baud for dongle mode (115200 default = Rotorflight's MSP port default)
+constexpr const char* NVS_KEY_USB_FC      = "usbfc";   // uint8 RECEIVER: 1 = the USB socket hosts a flight controller like the dongle (default), 0 = off (0.9.639)
 // Spool-up realism (Malcolm 2026-08-17, for neXt autorotation practice):
 // leaving the throttle-hold bank must NOT snap the sim to full head speed
 // with infinite acceleration and no torque. The dongle rate-limits throttle
@@ -478,6 +479,8 @@ inline bool     dongleEnabled = false;   // what the board IS this boot
 inline uint8_t  dongleMode    = 0;       // NVS: 0 = automatic (no transceivers found = dongle; Malcolm 2026-09-08), 1 = always a dongle, 2 = always a receiver
 inline bool     dongleAuto    = false;   // dongleEnabled came from the automatic rule (banner says so)
 inline uint32_t dongleBaud    = 115200;
+inline uint8_t  usbFcMode     = 1;       // NVS usbfc: 1 = a receiver hosts a flight controller on its USB socket, automatically, like the dongle; 0 = off
+inline bool     usbFcEnabled  = false;   // this boot: the RECEIVER runs the USB host (never in sim mode - the socket is one thing at a time; a dongle hosts regardless)
 inline uint8_t simMotorChannel  = 0;        // 0 = unset: spool-up does nothing until chosen
 // Pulse mode (Malcolm 2026-08-25, "manual PWM — is my plan nuts?!" — it is
 // not): neXt thresholds the motor channel to pure on/off, so a ramped LEVEL

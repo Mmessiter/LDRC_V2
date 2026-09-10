@@ -250,7 +250,7 @@ inline void parseIbus2Incoming(uint8_t b) {
 // per-protocol parser if there is one for the current protocol.
 
 inline void protocolRx() {
-    if (dongleEnabled) UsbHostMsp::poll();   // every wait loop that pumps the UART now drains USB too (the 504s on 0.9.615)
+    UsbHostMsp::poll();                      // dongle or receiver: every wait loop that pumps the UART drains USB too (the 504s on 0.9.615); a no-op unless the host is up
     while (Serial1.available()) {
         uint8_t b = (uint8_t)Serial1.read();
         captureRawFcByte(b);

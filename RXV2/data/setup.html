@@ -10,7 +10,7 @@
 <title>Setup &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=181">
 <script src="/app.js?v=198" defer></script>
-<style>html.h-dongle #protobtn, html.h-dongle a[href="/diagnostics"], html.h-dongle a[href="/rxsettings"], html.h-dongle #renamebtn { display: none !important; }</style>
+<style>html.h-dongle #protobtn, html.h-dongle a[href="/diagnostics"], html.h-dongle a[href="/rxsettings"], html.h-dongle #renamebtn, html.h-dongle #usbfcbtn { display: none !important; }</style>
 <script>try{if(JSON.parse(localStorage.getItem('frontHints')||'{}').dongle)document.documentElement.classList.add('h-dongle');}catch(e){}</script>
 </head>
 <body>
@@ -25,6 +25,7 @@
     <a class="btn btn-diag" href="/rxsettings"><span class=ico>&#9881;&#65039;</span>Receiver settings &mdash; failsafe, battery, wave</a>
     <a class="btn btn-fw"   href="/wifi" id=wifibtn style="display:none"><span class=ico>&#128246;</span>WiFi settings</a>
     <a class="btn btn-fw"   href="/firmware"><span class=ico>&#128229;</span>Update or roll back firmware</a>
+    <button class="btn btn-diag" type=button id=usbfcbtn><span class=ico>&#128268;</span><span>USB socket&nbsp;&mdash;&nbsp;<span id=usbfcstate>&hellip;</span></span></button>
     <a class="btn btn-diag" href="/dongle" id=donglebtn><span class=ico>&#128268;</span><span id=donglelbl>Rotorflight dongle mode&nbsp;&mdash;&nbsp;<span id=donglestate>&hellip;</span></span></a>
     <button class="btn" type=button id=renamebtn style="background:#6f7e8b"><span class=ico>&#127991;&#65039;</span><span><span id=renamelbl>Rename receiver</span>&nbsp;&mdash;&nbsp;<span id=curname>&hellip;</span></span></button>
 
@@ -48,6 +49,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (s.dongle) for (const sel of ['#protobtn', 'a[href="/diagnostics"]', 'a[href="/rxsettings"]']) { const el = document.querySelector(sel); if (el) el.style.display = 'none'; }   // receiver-only
     const wb = document.getElementById('wifibtn');
     if (wb) wb.style.display = wifiVisible ? '' : 'none';
+
+    // USB socket (0.9.639): a receiver hosts the flight controller on it like the dongle; the simulator uses it instead.
+    const ub = document.getElementById('usbfcbtn');
+    if (ub) {
+        if (s.dongle) ub.style.display = 'none';
+        else {
+            const off = s.usb_fc_mode === 0;
+            LDRC.setText('usbfcstate', s.sim ? 'simulator' : off ? 'off' : (s.usb && s.usb.device) ? 'flight controller connected' : 'flight controller');
+            ub.onclick = () => {
+                const on = off || s.sim;
+                const msg = on
+                    ? 'Use the USB socket for the flight controller? A USB-C cable from this receiver to the flight controller then gives the app every Rotorflight setting, like the dongle.' + (s.sim ? ' The simulator is switched off.' : '') + ' The receiver restarts.'
+                    : 'Switch the USB socket off? The flight controller is then reached over the radio link only. The receiver restarts.';
+                if (!confirm(msg)) return;
+                const fd = new URLSearchParams(); fd.set('on', on ? '1' : '0');
+                fetch('/api/usbfc', { method: 'POST', body: fd })
+                  .then(r => r.text()).then(html => { document.open(); document.write(html); document.close(); })
+                  .catch(() => alert('Could not save — try again.'));
+            };
+        }
+    }
 
     // Current name on the rename button.
     LDRC.setText('curname', (s.info && s.info.name) || 'RXV2');
@@ -75,6 +97,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 <li><b>View channels</b> &mdash; live channel bars, plus capturing your failsafe positions.</li>
 <li><b>WiFi settings</b> &mdash; home network details and the &ldquo;AP mode only&rdquo; field setting.</li>
 <li><b>Update firmware</b> &mdash; install newer firmware or roll back.</li>
+<li><b>USB socket</b> &mdash; a USB-C cable from the receiver to the flight controller gives the app every Rotorflight setting, like the dongle. The simulator uses the socket instead, so choosing one switches the other off.</li>
 <li><b>Rename receiver</b> &mdash; the name is also the WiFi network name and the <code>.local</code> address.</li>
 </ul>
 <h3>Tips</h3>

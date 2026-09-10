@@ -233,7 +233,7 @@ inline void mspSerialOnFrame(void*, uint8_t cmd, const uint8_t* p, uint16_t n, b
     // first phone request, not only after the identity probe (0.9.599).
     if (!fcInfo.detected) {
         fcInfo.detected = true;
-        events.add("Dongle: the flight controller answered - connected");
+        events.add(dongleEnabled ? "Dongle: the flight controller answered - connected" : "USB: the flight controller answered - connected");
     }
     mspDeliverResponse(cmd, p, n);
 }
@@ -244,6 +244,7 @@ inline void mspSerialSend(uint8_t function, const uint8_t* payload, uint16_t len
     const uint16_t n = mspSerialEncode(frame, sizeof(frame), function, payload, len);
     if (!n) return;
     if (UsbHostMsp::active()) { UsbHostMsp::send(frame, n); return; }   // USB first, UART otherwise
+    if (!dongleEnabled) return;                                          // a receiver's Serial1 is the CRSF line: never a raw MSP frame on it (0.9.639)
     Serial1.write(frame, n);
 }
 
@@ -263,7 +264,7 @@ inline void mspSendRequest(uint8_t function, const uint8_t* payload = nullptr, u
     mspSendRing[mspSendRingPos] = { (uint32_t)millis(), function, payloadLen };
     mspSendRingPos = (uint8_t)((mspSendRingPos + 1) % MSP_SEND_RING);
     mspSendCount++;
-    if (dongleEnabled) { mspSerialSend(function, payload, payloadLen); return; }
+    if (dongleEnabled || UsbHostMsp::active()) { mspSerialSend(function, payload, payloadLen); return; }   // plain MSP: the dongle's UART, or the USB cable on either (0.9.639)
     uint8_t body[2 + 255];
     body[0] = payloadLen;
     body[1] = function;
@@ -1200,10 +1201,10 @@ inline void dongleStatusTick() {
 
 inline void mspFcPoll() {
     if (UsbHostMsp::cliMode) return;                    // command line open over USB: no MSP until save/exit (0.9.617)
-    if (!fcTelemetryEnabled)
-        return; // user says there is no FC on this line — don't probe
-    // Only meaningful in CRSF mode (D6 is wired as CRSF UART to FC).
-    if (currentProtocol != PROTO_CRSF) return;
+    if (!fcTelemetryEnabled && !UsbHostMsp::active())
+        return; // user says there is no FC on this line — don't probe (unless one is on the USB socket, 0.9.639)
+    // Only meaningful in CRSF mode (D6 is wired as CRSF UART to FC) - or over USB.
+    if (currentProtocol != PROTO_CRSF && !UsbHostMsp::active()) return;
     // Don't fight the bridge — if a Configurator client is talking to the FC
     // we'd just confuse both sides.
     if (mspBridgeActive) return;
@@ -1231,7 +1232,7 @@ inline void mspFcPoll() {
     // in used to starve the identity probe forever: no Rotorflight button on
     // the home page and, worse, no MSP_STATUS polling, so arming was never
     // seen ("Dongle 3 and 4 show no Rotorflight option", Malcolm 2026-09-10).
-    if (!dongleEnabled && mspLastForegroundMs != 0 && (uint32_t)(millis() - mspLastForegroundMs) < PROBE_HOLDOFF_MS) return;
+    if (!dongleEnabled && !UsbHostMsp::active() && mspLastForegroundMs != 0 && (uint32_t)(millis() - mspLastForegroundMs) < PROBE_HOLDOFF_MS) return;   // USB: every request gets its own reply, no hold-off (0.9.639)
     // Don't probe the FC while a live RC link is streaming frames to it. Our
     // MSP-over-CRSF request is a second MSP master on the FC's wire; if a
     // Configurator is also polling the FC (its Receiver tab reads RC over MSP),

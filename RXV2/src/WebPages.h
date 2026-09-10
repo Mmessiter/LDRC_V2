@@ -781,7 +781,7 @@ inline void handleMspApi() {
         const char* why = nullptr;
         if (mspReplyTooBigForFc(fn))
             why = "refused: Rotorflight 4.6 cannot send its adjustments list over the receiver link without "
-                  "overwriting its own telemetry setup (588-byte reply, 320-byte buffer). Plug the flight controller's USB into the dongle";
+                  "overwriting its own telemetry setup (588-byte reply, 320-byte buffer). Plug the flight controller's USB into the dongle or receiver";
         else if (fn == MSP_RESET_CONF && !UsbHostMsp::active()) why = "refused: factory reset needs the USB connection to the flight controller";
         else if (UsbHostMsp::cliMode) why = "refused: the command line is open - save or exit it first";
         else if (fn == MSP_SET_MOTOR)  why = "refused: motor test is never done from a phone";
@@ -2323,6 +2323,24 @@ inline void handleDonglePage() {
     server.send(503, "text/plain", "/dongle.html missing — uploadfs the data/ folder");
 }
 
+// USB socket on a RECEIVER (0.9.639, Malcolm 2026-09-11 "Yes let's do it"): on = host a
+// flight controller on the USB socket like the dongle (the default), off = leave it idle.
+// Turning it on turns the simulator off - the socket is one thing at a time - and
+// choosing the simulator (handleSimSet) wins over it at boot.
+inline void handleUsbFcSet() {
+    const bool on = server.hasArg("on") ? (server.arg("on").toInt() != 0) : true;
+    const bool simWasOn = simEnabled;
+    prefs.putUChar(NVS_KEY_USB_FC, on ? 1 : 0);
+    if (on && simEnabled) prefs.putUChar(NVS_KEY_SIM, 0);
+    prefs.putUChar(NVS_KEY_CFG_REBOOT, 1);   // come straight back to WiFi
+    events.add(on ? (simWasOn ? "USB socket: flight controller (simulator switched off)" : "USB socket: flight controller") : "USB socket: off");
+    server.send(200, "text/html", confirmPage("Saved & rebooting", on
+        ? "<p>The USB socket now hosts the <b>flight controller</b>. Rebooting. A USB-C cable from this receiver to the flight controller gives the app every Rotorflight setting, like the dongle.</p>"
+        : "<p>The USB socket is <b>off</b>. Rebooting. The flight controller is reached over the radio link only.</p>"));
+    delay(250);
+    safeOutputParkAndRestart();
+}
+
 inline void handleSimSet() {
     bool on = server.hasArg("on") ? (server.arg("on").toInt() != 0) : false;
     prefs.putUChar(NVS_KEY_SIM, on ? 1 : 0);
@@ -2953,7 +2971,8 @@ inline void handleApiState() {
     j += ",\"sim\":"; j += (simEnabled ? "true" : "false");
     j += ",\"dongle\":"; j += (dongleEnabled ? "true" : "false");
     bleStateJson(j);
-    UsbHostMsp::stateJson(j);   // dongle_link usb|uart + USB host counters (0.9.615)
+    UsbHostMsp::stateJson(j);   // dongle_link usb|uart, usb_fc, USB host counters (0.9.615/0.9.639)
+    j += ",\"usb_fc_mode\":"; j += (unsigned)usbFcMode;
     { char db[200]; snprintf(db, sizeof(db), ",\"dongle_mode\":%u,\"dongle_auto\":%s,\"dongle_baud\":%lu,\"fc_armed\":%s,\"dongle_wire\":{\"bytes_in\":%lu,\"frames\":%lu,\"bad_crc\":%lu,\"dropped\":%lu,\"sends\":%lu}",
                (unsigned)dongleMode, dongleAuto ? "true" : "false", (unsigned long)dongleBaud,
                (fcInfo.armed && fcInfo.armedMs && (uint32_t)(millis() - fcInfo.armedMs) < 5000) ? "true" : "false",
@@ -3105,7 +3124,7 @@ inline void handleApiState() {
 // radio link: the reply would be telemetry-shaped garbage and MSP would die.
 inline void handleCliApi() {
     server.sendHeader("Cache-Control", "no-store");
-    if (!UsbHostMsp::active()) { server.send(409, "text/plain", "needs the USB connection: plug the flight controller's USB socket into the dongle"); return; }
+    if (!UsbHostMsp::active()) { server.send(409, "text/plain", "needs the USB connection: plug the flight controller's USB socket into the dongle or receiver"); return; }
     if (fcInfo.armed && fcInfo.armedMs && (uint32_t)(millis() - fcInfo.armedMs) < 5000) { server.send(409, "text/plain", "ARMED - disarm first"); return; }
     String cmd = server.hasArg("cmd") ? server.arg("cmd") : String("");
     cmd.trim();
@@ -3248,6 +3267,7 @@ inline void registerWebRoutes() {
     server.on("/api/armch",          HTTP_POST, handleArmChSet);
     server.on("/protocol",    HTTP_POST, handleProtocolSet);
     server.on("/api/sim",     HTTP_POST, handleSimSet);
+    server.on("/api/usbfc",   HTTP_POST, handleUsbFcSet);   // receiver: USB socket hosts the flight controller on/off (0.9.639)
     server.on("/api/dongle",  HTTP_POST, handleDongleSet);
     server.on("/dongle",      HTTP_GET,  handleDonglePage);
     server.on("/api/sim/spool.json", HTTP_GET,  handleSimSpoolGet);
