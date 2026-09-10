@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.621-adjustments",
+      "url": "https://messiter.com/rxv2/release/v0.9.621/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.621/littlefs.bin",
+      "fs_md5": "fa441a280d1efeca912a8654ac56ec87",
+      "notes": "Adjustments page: the switch positions are now decoded the way Rotorflight stores them (signed 5-microsecond steps around 1500, so 'whole travel' reads 900 to 2100, not 4175), channels are named AUX1 to AUX13 as in Rotorflight, each line says in plain English whether a knob sets the value or a switch nudges it up and down, and the page has a help screen (Malcolm 2026-09-11: 'slightly mysterious'). Includes 0.9.620."
+    },
+    {
       "name": "RXV2-0.9.620-usb-clean",
       "url": "https://messiter.com/rxv2/release/v0.9.620/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.620/littlefs.bin",
@@ -68,13 +75,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.610/littlefs.bin",
       "fs_md5": "5d2aba876fde72edb7507feb8b9e2081",
       "notes": "Backup page: 'Keep the phone close to the model until the backup is complete' is the first line while a backup runs, and a struggling link shows live ('weak link, move closer' once three reads have needed a second try; apps 4.52/4.44 report it). Malcolm 2026-09-10. Includes 0.9.609."
-    },
-    {
-      "name": "RXV2-0.9.609-rename-dongle",
-      "url": "https://messiter.com/rxv2/release/v0.9.609/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.609/littlefs.bin",
-      "fs_md5": "b0ee349c3dd8f3404d22364ebb8fde7a",
-      "notes": "Setup page: 'Rename dongle' on a dongle (Malcolm 2026-09-10); the dongle-mode and rename buttons no longer split their text into two columns around the dash; the subtitle that listed the buttons is gone. Includes 0.9.608."
     }
   ]
 }
