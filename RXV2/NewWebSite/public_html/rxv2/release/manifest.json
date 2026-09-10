@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.635-prefill",
+      "url": "https://messiter.com/rxv2/release/v0.9.635/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.635/littlefs.bin",
+      "fs_md5": "588131d411f6401df5582445ad3626d1",
+      "notes": "In-flight adjustments: choosing a setting (or adding a line) fills the value boxes with that setting's current value in that bank, ready to edit (Malcolm 2026-09-11). The page reads the bank over USB and puts the bank in use back straight away. Every rates, PID, PID+, rescue and governor-profile adjustment is readable; the four global ones (governor idle/auto throttle, accelerometer trims) stay blank. Includes 0.9.634."
+    },
+    {
       "name": "RXV2-0.9.634-rate-units",
       "url": "https://messiter.com/rxv2/release/v0.9.634/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.634/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.624/littlefs.bin",
       "fs_md5": "20759fab292373bb70471e43c527220d",
       "notes": "In-flight adjustments (renamed): two kinds only - a knob for continuous adjustment within a range, or a switch choosing between settings, two or three positions (Malcolm 2026-09-11). A step-type line set in the configurator is shown but left exactly as it is. Includes 0.9.623."
-    },
-    {
-      "name": "RXV2-0.9.623-dividers",
-      "url": "https://messiter.com/rxv2/release/v0.9.623/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.623/littlefs.bin",
-      "fs_md5": "752803c4c0e59e02d36f1928c5c4e0f9",
-      "notes": "Adjustments page: a switch is one bar with draggable dividers - one for a two-position switch, two for a three-position one - and a value for each position (Malcolm 2026-09-11: 'three position switches would allow three possible values'). Underneath, one Rotorflight line per position, read back as one row. Knobs keep draggable ends; nudging has a down zone, a dead zone and an up zone. The red line still shows the switch's live position, and the region it is in lights up. Includes 0.9.622."
     }
   ]
 }
