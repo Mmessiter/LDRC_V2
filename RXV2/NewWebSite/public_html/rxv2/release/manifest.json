@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.625-knob-switch",
+      "url": "https://messiter.com/rxv2/release/v0.9.625/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.625/littlefs.bin",
+      "fs_md5": "08288fe65772acf4cf103587355caa9e",
+      "notes": "In-flight adjustments: the choice reads just Knob or Switch and the page loses its introduction - what they mean is in the help (Malcolm 2026-09-11: 'keep this page as simple as possible'). Includes 0.9.624."
+    },
+    {
       "name": "RXV2-0.9.624-two-kinds",
       "url": "https://messiter.com/rxv2/release/v0.9.624/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.624/littlefs.bin",
@@ -68,13 +75,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.614/littlefs.bin",
       "fs_md5": "5945e2955e289cbba223dff927e6a66d",
       "notes": "Updates page: the status pill no longer offers 'tap to install' while an install is already running. Includes 0.9.613."
-    },
-    {
-      "name": "RXV2-0.9.613-dongle-name",
-      "url": "https://messiter.com/rxv2/release/v0.9.613/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.613/littlefs.bin",
-      "fs_md5": "ef5893bcb791d56d29959a2ae111cbc5",
-      "notes": "Dongle setup now has the dongle's name at the top (type, Rename); Setup loses its rename button on a dongle (Malcolm 2026-09-10). Includes 0.9.612."
     }
   ]
 }

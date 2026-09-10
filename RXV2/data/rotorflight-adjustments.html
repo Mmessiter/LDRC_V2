@@ -46,13 +46,12 @@
     <div id=status class="banner info" style="display:none"></div>
 
     <div class=card>
-        <p class=sub style="margin:0 0 .4em"><b>A switch or knob on your transmitter changes a setting in flight.</b> Drag the round dividers to set where the switch changes over; the red line is the switch&rsquo;s live position &mdash; move the switch and watch it.</p>
         <div id=rows></div>
         <button id=addBtn class="btn usbOnly" type=button style="background:#4f7fa0;margin-top:.4em"><span class=ico>&#10133;</span>Add an adjustment</button>
     </div>
     <div class=card>
         <button id=saveBtn class="btn usbOnly" type=button style="background:#6cab5e"><span class=ico>&#128190;</span>Save to flight controller</button>
-        <p class=sub style="margin:.6em 0 0">Writes every line, then saves. Removed lines are gone.</p>
+        <p class=sub style="margin:.6em 0 0">Kept by the flight controller: they keep working with the USB unplugged.</p>
     </div>
     <div class=footer></div>
 </div>
@@ -66,8 +65,9 @@
 <p>The bar is the full travel of the channel, 875 to 2125 microseconds. The thin red line is where the channel is right now: move the switch or knob and watch it &mdash; the region it is in lights up green.</p>
 <h3>Channels</h3>
 <p>Rotorflight counts the switch channels from AUX1, which on a helicopter is channel 6: roll, pitch, yaw, collective and throttle come first.</p>
-<h3>Behind the scenes</h3>
-<p>Rotorflight itself only knows single zones, so a three-position switch is written as three lines and read back as one. Save writes every line and keeps them. This page needs the flight controller&rsquo;s USB socket plugged into the dongle: the list is too big for the radio link.</p>
+<h3>USB, then unplug</h3>
+<p>Setting these up needs the flight controller&rsquo;s USB socket plugged into the dongle, because the list is too big for the radio link. Once saved they live in the flight controller and work from your transmitter with the USB, and the dongle, unplugged.</p>
+<p>Rotorflight itself only knows single zones, so a three-position switch is written as three lines and read back as one.</p>
 </template>
 <script>
 const $ = id => document.getElementById(id);
@@ -210,9 +210,9 @@ function paint() {
         const d = document.createElement('div'); d.className = 'rowCard';
         const kindSel = r.kind === 'nudge'
             ? '<select id=kind' + i + ' disabled><option>a step adjustment from the configurator (kept as it is)</option></select>'
-            : '<select id=kind' + i + ' class=usbOnly><option value=knob' + (r.kind === 'knob' ? ' selected' : '') + '>a knob, continuous within a range</option><option value=switch' + (r.kind === 'switch' ? ' selected' : '') + '>a switch, choosing between settings</option></select>';
+            : '<select id=kind' + i + ' class=usbOnly><option value=knob' + (r.kind === 'knob' ? ' selected' : '') + '>Knob</option><option value=switch' + (r.kind === 'switch' ? ' selected' : '') + '>Switch</option></select>';
         let h = '<div class=r><label data-help="The Rotorflight setting this line changes.">What it changes</label>' + fnSel('fn' + i, r.fn) + '</div>' +
-                '<div class=r><label data-help="How the transmitter control sets the value.">How</label>' + kindSel + '<label>on</label>' + chanSel('ch' + i, r.ch) + '</div>';
+                '<div class=r><label data-help="Knob: continuous adjustment within a range. Switch: choosing between settings, two or three positions. The help button explains both.">Control</label>' + kindSel + '<label>on</label>' + chanSel('ch' + i, r.ch) + '</div>';
         if (r.kind === 'switch') h += '<div class=r><label data-help="Two positions have one divider, three positions have two.">Positions</label><select id=npos' + i + ' class=usbOnly><option value=2' + (r.t.length === 1 ? ' selected' : '') + '>2</option><option value=3' + (r.t.length === 2 ? ' selected' : '') + '>3</option></select></div>';
         h += '<div class=rScale><span>875</span><span>1500</span><span>2125</span></div><div class=rTrack id=tr' + i + '></div><div class=rLive id=lv' + i + '>&nbsp;</div>';
         if (r.kind === 'switch') {

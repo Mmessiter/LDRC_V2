@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.624-two-kinds";
+constexpr const char* FW_VERSION = "RXV2-0.9.625-knob-switch";
 
 //*********************************************************************
 //  Auto-update manifest URLs
