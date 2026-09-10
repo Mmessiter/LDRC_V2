@@ -1,6 +1,18 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.643-usb-tx-on",
+      "url": "https://messiter.com/rxv2/release/v0.9.643/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.643/littlefs.bin",
+      "fs_md5": "984ba206277f1216a684591f2277973c",
+      "notes": "A receiver now adopts a flight controller on its USB socket even while the transmitter is on (the USB task does the opening, the radio loop never waits), so the USB pages work in the usual bench setup: transmitter on, blades off. The command line and the reboot-to-apply settings still wait for the transmitter to be off. Includes 0.9.642."
+    },
+    {
+      "name": "RXV2-0.9.642-usb-review2",
+      "url": "https://messiter.com/rxv2/release/v0.9.642/firmware.bin",
+      "notes": "Second pass from the review: an MSP request on a receiver without a CRSF line (SBUS/IBUS/PPM, or FC telemetry off) is dropped rather than sent as CRSF frames onto the servo line once the USB cable is out; the telemetry-setup repair writes only over the CRSF link; long command-line output (dump) keeps its tail so the prompt is always seen; a half-installed USB host is undone; the USB socket switch is refused on a dongle; the USB-only pages say when the transmitter is keeping the USB link from opening; Find a setting knows the USB socket switch. Includes 0.9.641."
+    },
+    {
       "name": "RXV2-0.9.641-usb-review",
       "url": "https://messiter.com/rxv2/release/v0.9.641/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.641/littlefs.bin",
@@ -69,20 +81,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.632/littlefs.bin",
       "fs_md5": "83f41846ef72a18799c3fdea10a5302d",
       "notes": "In-flight adjustments: by default the list offers only PIDs and rates, each per bank ('Yaw P gain in bank 1'); a 'Show every setting' switch reveals the full Rotorflight set (over 400 entries, including 'in the bank in use'). The bank-switch entries read 'PID bank switch (1 to 4)' / 'Rates bank switch (1 to 4)'. Includes 0.9.631."
-    },
-    {
-      "name": "RXV2-0.9.631-bank-list",
-      "url": "https://messiter.com/rxv2/release/v0.9.631/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.631/littlefs.bin",
-      "fs_md5": "7275f564ff22eeaad0e7bb9a425f7630",
-      "notes": "In-flight adjustments: the 'What it changes' list itself now offers every setting per bank - 'Yaw P gain in bank 1', 'in bank 2' ... and 'in the bank in use' - grouped by bank; no separate bank choice. Garbled labels fixed (collective, cutoff, altitude). Includes 0.9.630."
-    },
-    {
-      "name": "RXV2-0.9.630-in-bank",
-      "url": "https://messiter.com/rxv2/release/v0.9.630/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.630/littlefs.bin",
-      "fs_md5": "abd2317e1998a848e9d23024dd26be11",
-      "notes": "In-flight adjustments: a line now reads as one phrase, 'Yaw P gain in bank 1', with the bank chosen right beside the setting (bank 1 to 4, or the bank in use) - Malcolm 2026-09-11: 'otherwise it is still much too vague'. Includes 0.9.629."
     }
   ]
 }

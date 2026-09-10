@@ -266,6 +266,7 @@ inline void mspSendRequest(uint8_t function, const uint8_t* payload = nullptr, u
     mspSendCount++;
     if (UsbHostMsp::cliMode) { if (dongleEnabled || UsbHostMsp::active()) return; }                   // an open command line owns the port: nothing typed into it (a receiver still has its radio-link tunnel)
     if (dongleEnabled || UsbHostMsp::active()) { mspSerialSend(function, payload, payloadLen); return; }   // plain MSP: the dongle's UART, or the USB cable on either (0.9.639)
+    if (currentProtocol != PROTO_CRSF || !fcTelemetryEnabled) return;   // no CRSF tunnel on this line (SBUS/IBUS/PPM, or FC telemetry off): nothing to speak through - the caller times out (0.9.642)
     uint8_t body[2 + 255];
     body[0] = payloadLen;
     body[1] = function;
@@ -1298,7 +1299,7 @@ inline void mspFcPoll() {
     // Never in the air: the flying latch above returns before this.
     const bool telemUrgent = isRf && (!fcInfo.telemCfgKnown || fcInfo.telemRecheck) && fcInfo.telemCfgTries < 6;
     const bool telemWatch  = isRf && fcInfo.telemCfgKnown && (uint32_t)(now - fcInfo.telemAskedMs) > TELEM_WATCH_MS;
-    if (isRf && fcInfo.telemRepairDue && fcInfo.telemGoodValid) {
+    if (isRf && fcInfo.telemRepairDue && fcInfo.telemGoodValid && currentProtocol == PROTO_CRSF) {   // the repair is for the CRSF-link corruption only (0.9.642)
         mspSendRequest(MSP_SET_TELEMETRY_CONFIG, fcInfo.telemGood, 52);
         fcInfo.telemRepairDue = false;
         fcInfo.telemRepairs++;

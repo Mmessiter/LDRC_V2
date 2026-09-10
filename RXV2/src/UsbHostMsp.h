@@ -23,9 +23,9 @@
 // Invariants (0.9.639/0.9.640, a RECEIVER runs this in flight):
 //  - the main loop never waits on USB: sends are queued for the usbtx task,
 //    bytes in arrive through the driver's task and a stream buffer;
-//  - a receiver opens or closes the device only with no transmitter linked
-//    for 3 s (mayTouchDevice); an unplug clears `opened` at once so MSP goes
-//    back to the CRSF tunnel, and the close itself waits for the link to end;
+//  - opens and closes run on the usbtx task (0.9.641), so they may happen at
+//    any time, transmitter on or off; an unplug clears `opened` at once so
+//    MSP goes back to the CRSF tunnel while the task does the close;
 //  - never queue after `opened` is false; the queue is emptied at every open;
 //  - never close a device that is still enumerated (close only on `gone`).
 #pragma once
@@ -125,11 +125,13 @@ namespace UsbHostMsp {
         }
     }
     inline const char* who() { return dongleEnabled ? "Dongle" : "Receiver"; }
-    // A receiver opens or closes the USB device only with no transmitter linked: both
-    // calls can block for tens of ms (descriptor fetches, transfer cancels) and the
-    // radio loop must never wait on them while the model may fly. A link that is
-    // already open stays open - its traffic runs in the driver's task and the queue.
-    inline bool mayTouchDevice() { return dongleEnabled || !(rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 3000); }   // 3 s: a 1 s gap is an in-flight dropout, not a landing (0.9.640)
+    // Opening and closing the device can wait for tens of ms (descriptor fetches,
+    // transfer cancels) - so from 0.9.641 they run on the usbtx task, and from
+    // 0.9.643 they may happen at any time: nothing on the radio loop waits on them,
+    // so a flight controller plugged in with the transmitter already on is adopted
+    // at once (the bench habit: transmitter on, blades off). The main loop only
+    // asks and reads the answer.
+    inline bool mayTouchDevice() { return true; }
     // Rotorflight's command line (0.9.617): '#' on the MSP port enters it,
     // 'save' or 'exit' leave it - both restart the flight controller. While
     // it is open MSP is dead, so the status poll and probes stand down and
@@ -174,11 +176,11 @@ namespace UsbHostMsp {
         dc.driver_task_priority   = 10;
         dc.xCoreID                = 0;
         dc.new_dev_cb             = newDevCb;
-        if (cdc_acm_host_install(&dc) != ESP_OK) { events.add("USB host: CDC driver failed"); return false; }
+        if (cdc_acm_host_install(&dc) != ESP_OK) { events.add("USB host: CDC driver failed"); usb_host_uninstall(); return false; }   // never leave a half-installed host (0.9.642)
         xTaskCreatePinnedToCore(hostTask, "usbhost", 4096, nullptr, 9, nullptr, 0);
         xTaskCreatePinnedToCore(txTask,   "usbtx",   4096, nullptr, 5, nullptr, 0);
         started = true;
-        events.add("USB host up: a flight controller on the USB socket will be used automatically");
+        if (dongleEnabled) events.add("USB host up: a flight controller on the USB socket will be used automatically");   // a receiver's boot says it once, in main.cpp
         return true;
     }
     inline bool active() { return opened; }
@@ -226,7 +228,7 @@ namespace UsbHostMsp {
             while ((n = xStreamBufferReceive(rxbuf, b, sizeof b, 0)) > 0) {
                 bytesIn += n;
                 crumb(2, n);
-                if (cliMode) { if (cliBuf.length() < 12000) cliBuf.concat((const char*)b, n); }
+                if (cliMode) { cliBuf.concat((const char*)b, n); if (cliBuf.length() > 16000) cliBuf.remove(0, cliBuf.length() - 16000); }   // keep the TAIL: the prompt ends it, however long a dump is (0.9.642)
                 else { crumb(3, n); for (size_t i = 0; i < n; i++) mspSerialFeed(b[i]); }
                 crumbDone();
             }

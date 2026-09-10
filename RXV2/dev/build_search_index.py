@@ -114,6 +114,7 @@ EXTRA = [
  ('/map', 'Remap channels', 'Receiver channels to simulator outputs, reversed if needed', '', 'Which channel drives which joystick axis'),
  ('/rotorflight', 'Rotorflight', 'Telemetry speed: fast or standard', '', 'How quickly Rotorflight answers the phone and the transmitter'),
  ('/setup', 'Setup', 'One-time receiver configuration menu', '', 'WiFi, protocol, bind, receiver settings, diagnostics'),
+ ('/setup', 'Setup', 'USB socket: flight controller over USB (like the dongle), or off', 'usbfcbtn', 'A USB-C cable from the receiver to the flight controller gives the app every Rotorflight setting; the simulator uses the socket instead'),
  ('/diagnostics', 'Diagnostics', 'Channel bars, radio statistics, raw values', '', 'See every channel live and the link quality'),
 ]
 
@@ -128,7 +129,7 @@ SYN = [
  ('rescue', 'panic save me level'), ('governor', 'gov'), ('expo', 'exponential feel centre center soft'),
  ('rate', 'rates agility roll rate speed'), ('gear', 'ratio pinion teeth'), ('esc', 'speed controller scorpion hobbywing'),
  ('travel', 'pitch collective limit degrees'), ('servo', 'centre center subtrim reverse direction'),
- ('filter', 'notch vibration'), ('blackbox', 'log logging flight record recorder'), ('sim', 'simulator realflight next joystick usb'),
+ ('filter', 'notch vibration'), ('blackbox', 'log logging flight record recorder'), ('sim', 'simulator realflight next joystick usb'), ('usb', 'socket cable usb-c flight controller dongle simulator'),
  ('throttle', 'motor power'), ('handover', 'takes over'), ('idle', 'tick over'), ('bank', 'profile banks flight mode'),
  ('yaw', 'tail rudder'), ('roll', 'aileron cyclic'), ('pitch', 'elevator cyclic'), ('collective', 'pitch stick'),
  ('battery', 'lipo volts voltage cells'), ('capacity', 'mah'), ('temperature', 'temp heat'), ('current', 'amps'),

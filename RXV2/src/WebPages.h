@@ -2338,6 +2338,7 @@ inline void handleDonglePage() {
 // Turning it on turns the simulator off - the socket is one thing at a time - and
 // choosing the simulator (handleSimSet) wins over it at boot.
 inline void handleUsbFcSet() {
+    if (dongleEnabled) { server.send(409, "text/plain", "a dongle always uses its USB socket for the flight controller"); return; }
     if (refuseIfTxLinked("turn the transmitter off first - the receiver restarts to apply this")) return;
     const bool on = server.hasArg("on") ? (server.arg("on").toInt() != 0) : true;
     const bool simWasOn = simEnabled;
