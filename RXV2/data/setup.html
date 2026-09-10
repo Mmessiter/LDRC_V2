@@ -25,7 +25,7 @@
     <a class="btn btn-diag" href="/rxsettings"><span class=ico>&#9881;&#65039;</span>Receiver settings &mdash; failsafe, battery, wave</a>
     <a class="btn btn-fw"   href="/wifi" id=wifibtn style="display:none"><span class=ico>&#128246;</span>WiFi settings</a>
     <a class="btn btn-fw"   href="/firmware"><span class=ico>&#128229;</span>Update or roll back firmware</a>
-    <button class="btn btn-diag" type=button id=usbfcbtn><span class=ico>&#128268;</span><span>USB socket&nbsp;&mdash;&nbsp;<span id=usbfcstate>&hellip;</span></span></button>
+    <button class="btn btn-diag" type=button id=usbfcbtn data-help="A USB-C cable from this receiver to the flight controller gives the app every Rotorflight setting, like the dongle. Updates still arrive over WiFi and Bluetooth. A USB flash of the receiver itself needs the BOOT button held while this is on."><span class=ico>&#128268;</span><span>USB socket&nbsp;&mdash;&nbsp;<span id=usbfcstate>&hellip;</span></span></button>
     <a class="btn btn-diag" href="/dongle" id=donglebtn><span class=ico>&#128268;</span><span id=donglelbl>Rotorflight dongle mode&nbsp;&mdash;&nbsp;<span id=donglestate>&hellip;</span></span></a>
     <button class="btn" type=button id=renamebtn style="background:#6f7e8b"><span class=ico>&#127991;&#65039;</span><span><span id=renamelbl>Rename receiver</span>&nbsp;&mdash;&nbsp;<span id=curname>&hellip;</span></span></button>
 
@@ -65,7 +65,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (!confirm(msg)) return;
                 const fd = new URLSearchParams(); fd.set('on', on ? '1' : '0');
                 fetch('/api/usbfc', { method: 'POST', body: fd })
-                  .then(r => r.text()).then(html => { document.open(); document.write(html); document.close(); })
+                  .then(r => r.ok ? r.text().then(html => { document.open(); document.write(html); document.close(); }) : r.text().then(t => alert(t)))
                   .catch(() => alert('Could not save — try again.'));
             };
         }

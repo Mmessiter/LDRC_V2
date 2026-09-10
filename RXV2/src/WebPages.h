@@ -736,7 +736,7 @@ inline void handleMspApi() {
     // and for every other path: no config request touches the FC while the
     // model is armed with a live transmitter.
     {
-        if (dongleEnabled && fcInfo.armed && fcInfo.armedMs && (uint32_t)(millis() - fcInfo.armedMs) < 5000) {
+        if (fcInfo.armed && fcInfo.armedMs && (uint32_t)(millis() - fcInfo.armedMs) < 5000) {   // the FC's own word, dongle or receiver (0.9.640)
             server.sendHeader("Cache-Control", "no-store");
             server.send(409, "text/plain", "ARMED - the flight controller says it is armed. Disarm first.");
             return;
@@ -2298,8 +2298,18 @@ inline void handleProtocolSet() {
 // Persists the flag; it takes effect at boot in setup(). USB mode is fixed at
 // compile time, so the HID joystick can only be brought up on a fresh boot —
 // the same reboot-to-apply model the output-protocol setting uses.
+// A receiver whose transmitter was linked within 3 s may be about to fly (the
+// same window fcTelemActionAllowed uses): no reboot-to-apply setting and no
+// command line then. A dongle has no transmitter to watch (0.9.640).
+inline bool rxTxLinkedRecently() { return !dongleEnabled && rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 3000; }
+inline bool refuseIfTxLinked(const char* why) {
+    if (!rxTxLinkedRecently()) return false;
+    server.send(409, "text/plain", why);
+    return true;
+}
 // Rotorflight dongle mode (Malcolm 2026-09-08): POST /api/dongle on=0|1 [baud=N]
 inline void handleDongleSet() {
+    if (refuseIfTxLinked("turn the transmitter off first - the receiver restarts to apply this")) return;
     // mode=0 automatic (default), 1 always a dongle, 2 always a receiver; `on` kept for older pages
     uint8_t mode = server.hasArg("mode") ? (uint8_t)server.arg("mode").toInt()
                  : server.hasArg("on")   ? (server.arg("on").toInt() != 0 ? 1 : 0) : 0;
@@ -2328,6 +2338,7 @@ inline void handleDonglePage() {
 // Turning it on turns the simulator off - the socket is one thing at a time - and
 // choosing the simulator (handleSimSet) wins over it at boot.
 inline void handleUsbFcSet() {
+    if (refuseIfTxLinked("turn the transmitter off first - the receiver restarts to apply this")) return;
     const bool on = server.hasArg("on") ? (server.arg("on").toInt() != 0) : true;
     const bool simWasOn = simEnabled;
     prefs.putUChar(NVS_KEY_USB_FC, on ? 1 : 0);
@@ -2342,6 +2353,7 @@ inline void handleUsbFcSet() {
 }
 
 inline void handleSimSet() {
+    if (refuseIfTxLinked("turn the transmitter off first - the receiver restarts to apply this")) return;
     bool on = server.hasArg("on") ? (server.arg("on").toInt() != 0) : false;
     prefs.putUChar(NVS_KEY_SIM, on ? 1 : 0);
     prefs.putUChar(NVS_KEY_CFG_REBOOT, 1);   // come straight back to WiFi (skip RF window)
@@ -2973,6 +2985,7 @@ inline void handleApiState() {
     bleStateJson(j);
     UsbHostMsp::stateJson(j);   // dongle_link usb|uart, usb_fc, USB host counters (0.9.615/0.9.639)
     j += ",\"usb_fc_mode\":"; j += (unsigned)usbFcMode;
+    j += ",\"fc_link\":\""; j += UsbHostMsp::active() ? "usb" : dongleEnabled ? "uart" : (currentProtocol == PROTO_CRSF && fcTelemetryEnabled) ? "crsf" : "none"; j += "\"";   // which wire carries MSP now (0.9.640)
     { char db[200]; snprintf(db, sizeof(db), ",\"dongle_mode\":%u,\"dongle_auto\":%s,\"dongle_baud\":%lu,\"fc_armed\":%s,\"dongle_wire\":{\"bytes_in\":%lu,\"frames\":%lu,\"bad_crc\":%lu,\"dropped\":%lu,\"sends\":%lu}",
                (unsigned)dongleMode, dongleAuto ? "true" : "false", (unsigned long)dongleBaud,
                (fcInfo.armed && fcInfo.armedMs && (uint32_t)(millis() - fcInfo.armedMs) < 5000) ? "true" : "false",
@@ -3125,11 +3138,12 @@ inline void handleApiState() {
 inline void handleCliApi() {
     server.sendHeader("Cache-Control", "no-store");
     if (!UsbHostMsp::active()) { server.send(409, "text/plain", "needs the USB connection: plug the flight controller's USB socket into the dongle or receiver"); return; }
+    if (refuseIfTxLinked("turn the transmitter off first - the command line pauses the receiver, and save or exit restarts the flight controller")) return;
     if (fcInfo.armed && fcInfo.armedMs && (uint32_t)(millis() - fcInfo.armedMs) < 5000) { server.send(409, "text/plain", "ARMED - disarm first"); return; }
     String cmd = server.hasArg("cmd") ? server.arg("cmd") : String("");
     cmd.trim();
     if (cmd.length() > 160) { server.send(400, "text/plain", "command too long"); return; }
-    if (cmd.equalsIgnoreCase("save") || cmd.equalsIgnoreCase("exit") || cmd.equalsIgnoreCase("reboot") || cmd.startsWith("dfu") || cmd.startsWith("bl")) {
+    if (cmd.equalsIgnoreCase("save") || cmd.equalsIgnoreCase("exit") || cmd.equalsIgnoreCase("reboot") || cmd.equalsIgnoreCase("msc") || cmd.startsWith("dfu") || cmd.startsWith("bl")) {
         server.send(400, "text/plain", "use the Save / Leave buttons for that"); return;
     }
     if (!UsbHostMsp::cliMode && !UsbHostMsp::cliEnter(2500)) { server.send(504, "text/plain", "the flight controller did not open its command line"); return; }
@@ -3142,6 +3156,7 @@ inline void handleCliApi() {
 inline void handleCliLeave() {
     server.sendHeader("Cache-Control", "no-store");
     if (!UsbHostMsp::cliMode) { server.send(200, "text/plain", "the command line was not open"); return; }
+    if (refuseIfTxLinked("turn the transmitter off first - leaving the command line restarts the flight controller")) return;
     const bool save = server.hasArg("save") && server.arg("save") == "1";
     UsbHostMsp::cliLeave(save);
     fcInfo.telemCfgKnown = false;  fcInfo.telemCfgTries = 0;   // the FC restarts: fresh look at everything

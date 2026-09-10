@@ -264,7 +264,7 @@ inline void mspSendRequest(uint8_t function, const uint8_t* payload = nullptr, u
     mspSendRing[mspSendRingPos] = { (uint32_t)millis(), function, payloadLen };
     mspSendRingPos = (uint8_t)((mspSendRingPos + 1) % MSP_SEND_RING);
     mspSendCount++;
-    if (dongleEnabled || UsbHostMsp::active()) { mspSerialSend(function, payload, payloadLen); return; }   // plain MSP: the dongle's UART, or the USB cable on either (0.9.639)
+    if (dongleEnabled || (UsbHostMsp::active() && !UsbHostMsp::cliMode)) { mspSerialSend(function, payload, payloadLen); return; }   // plain MSP: the dongle's UART, or the USB cable on either (0.9.639); never typed into an open command line (0.9.640)
     uint8_t body[2 + 255];
     body[0] = payloadLen;
     body[1] = function;
@@ -1103,7 +1103,7 @@ inline void bankAfterClientRequest(uint8_t fn, const uint8_t* data, uint8_t len,
 inline void bankPutBackTick() {
     if (!bankHeld()) return;
     const uint32_t now = millis();
-    if (currentProtocol != PROTO_CRSF || !fcTelemetryEnabled) { bankRelease(); return; }
+    if ((currentProtocol != PROTO_CRSF || !fcTelemetryEnabled) && !UsbHostMsp::active()) { bankRelease(); return; }   // over USB the banks are still ours to put back (0.9.640)
     if (bankTxLive()) {
         // Rotorflight owns the banks from here; a note says where it was left.
         char m[EventLog::MSG_LEN];

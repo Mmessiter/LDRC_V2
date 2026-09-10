@@ -87,14 +87,14 @@ async function run(cmd) {
         const t = await r.text();
         if (!r.ok) { setStatus('bad', t); print('! ' + t); }
         else { setStatus('', ''); print(t); }
-    } catch (e) { setStatus('bad', 'no answer from the dongle'); }
+    } catch (e) { setStatus('bad', 'no answer from the flight controller'); }
     $('send').disabled = false; $('cmd').value = ''; $('cmd').focus();
 }
 async function leave(save) {
     const what = save ? 'Save and restart the flight controller?' : 'Leave without saving? Any changes typed here are lost and the flight controller restarts.';
     if (!(await LDRC.confirm(what, { title: save ? 'Save' : 'Leave', icon: save ? '💾' : '❌', yes: save ? 'Save and restart' : 'Leave', kind: save ? 'go' : 'warn' }))) return;
     try { const r = await fetch('/api/cli/leave', { method: 'POST', body: new URLSearchParams({ save: save ? '1' : '0' }) }); const t = await r.text(); setStatus(r.ok ? 'good' : 'bad', t); print('# ' + t); }
-    catch (e) { setStatus('bad', 'no answer from the dongle'); }
+    catch (e) { setStatus('bad', 'no answer from the flight controller'); }
 }
 document.addEventListener('DOMContentLoaded', async () => {
     $('chips').innerHTML = QUICK.map(c => '<button type=button class="usbOnly" style="padding:.3em .7em;border-radius:14px;border:0;background:#dfe7ee;color:#2c3e50;font-size:.9em">' + c + '</button>').join('');

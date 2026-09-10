@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.640-usb-guards",
+      "url": "https://messiter.com/rxv2/release/v0.9.640/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.640/littlefs.bin",
+      "fs_md5": "787f038a86ea9799bc85960fa8ee2c98",
+      "notes": "Guards on top of 0.9.639 (receiver hosts the flight controller over USB): the command line and the reboot-to-apply settings (USB socket, simulator, dongle mode) are refused while the transmitter has been linked in the last 3 s; the USB device is opened or closed only after 3 s without a link; MSP is never typed into an open command line; the queue is emptied when a flight controller (re)connects; a bank hold is kept over USB on non-CRSF receivers; the flight controller's own 'armed' word refuses configuration on a receiver too; a gone USB device can no longer crash the board; 'msc' is refused on the command line; state.json gains fc_link (usb, crsf, uart or none). Home page says 'flight controller on USB' and warns while the command line is open. Includes 0.9.639."
+    },
+    {
       "name": "RXV2-0.9.639-usb-on-receiver",
       "url": "https://messiter.com/rxv2/release/v0.9.639/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.639/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.629/littlefs.bin",
       "fs_md5": "346ff3ad350dfb70fe79e82e6e077f41",
       "notes": "In-flight adjustments: each line can say 'Only in bank N' - it then works only while your bank switch has that bank in use, so a knob or a switch can carry values that suit one bank, and another line can serve another (Malcolm 2026-09-11: '40 and 60 might make sense in bank 3 but in bank 1 they would be far too low'). The bank's switch positions are read off your own PID-bank line. Includes 0.9.628."
-    },
-    {
-      "name": "RXV2-0.9.628-bank-in-use",
-      "url": "https://messiter.com/rxv2/release/v0.9.628/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.628/littlefs.bin",
-      "fs_md5": "2d64f4fcc5384118703d8812128284fe",
-      "notes": "In-flight adjustments: the bank settings read 'PID bank in use (1 to 4)' and 'Rates bank in use (1 to 4)' - the value is the bank number (Malcolm 2026-09-11: 'which bank flies - what does that mean?'). Includes 0.9.627."
     }
   ]
 }

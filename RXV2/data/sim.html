@@ -82,7 +82,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const ok = await LDRC.confirm(
                 turnOn ? 'The receiver reboots as a USB joystick & keyboard for your PC simulator. '
                        + 'Its flight-controller output switches OFF — it can’t fly a real model '
-                       + 'until simulator mode is turned off again.'
+                       + 'until simulator mode is turned off again. The USB socket then belongs to the simulator, not the flight controller.'
                        : 'The receiver reboots back to a normal receiver — flight-controller output '
                        + 'restored, ready to fly a real model.',
                 { title: turnOn ? 'Start simulator mode?' : 'Leave simulator mode?',

@@ -15,9 +15,19 @@
 // and are queued; the main loop drains them into mspSerialFeed(), so every
 // MSP reply is handled exactly as it is for the UART.
 //
-// While the host stack owns the socket the dongle cannot be flashed through
+// While the host stack owns the socket the board cannot be flashed through
 // it by the usual means - WiFi/Bluetooth updates are unaffected, and the
-// button-held ROM bootloader still works for a USB flash.
+// button-held ROM bootloader still works for a USB flash (the usbmodem port
+// is gone while the host runs).
+//
+// Invariants (0.9.639/0.9.640, a RECEIVER runs this in flight):
+//  - the main loop never waits on USB: sends are queued for the usbtx task,
+//    bytes in arrive through the driver's task and a stream buffer;
+//  - a receiver opens or closes the device only with no transmitter linked
+//    for 3 s (mayTouchDevice); an unplug clears `opened` at once so MSP goes
+//    back to the CRSF tunnel, and the close itself waits for the link to end;
+//  - never queue after `opened` is false; the queue is emptied at every open;
+//  - never close a device that is still enumerated (close only on `gone`).
 #pragma once
 #include <Arduino.h>
 #include "1Defs.h"     // dongleEnabled, usbFcEnabled, rx.lastMillis, events
@@ -77,7 +87,7 @@ namespace UsbHostMsp {
     // calls can block for tens of ms (descriptor fetches, transfer cancels) and the
     // radio loop must never wait on them while the model may fly. A link that is
     // already open stays open - its traffic runs in the driver's task and the queue.
-    inline bool mayTouchDevice() { return dongleEnabled || !(rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 1000); }
+    inline bool mayTouchDevice() { return dongleEnabled || !(rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 3000); }   // 3 s: a 1 s gap is an in-flight dropout, not a landing (0.9.640)
     // Rotorflight's command line (0.9.617): '#' on the MSP port enters it,
     // 'save' or 'exit' leave it - both restart the flight controller. While
     // it is open MSP is dead, so the status poll and probes stand down and
@@ -164,6 +174,7 @@ namespace UsbHostMsp {
                 cdc_acm_line_coding_t lc = { 115200, 0, 0, 8 };
                 cdc_acm_host_line_coding_set(hdl, &lc);
                 cdc_acm_host_set_control_line_state(hdl, true, true);
+                if (txq) xQueueReset(txq);                   // frames meant for the previous device (an FC that restarted) are not fired at this one (0.9.640)
                 opened = true; wasOpen = true; opens++; openedSeen = devSeen;
             }
             xSemaphoreGive(hdlMutex);
