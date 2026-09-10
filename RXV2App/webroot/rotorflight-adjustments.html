@@ -65,7 +65,7 @@
 <p>The channel&rsquo;s full travel. Drag the round dividers to where the switch changes over. The red line is the switch now; the lit region is the position it is in.</p>
 <h3>Banks</h3>
 <p>&ldquo;PID bank in use&rdquo; and &ldquo;Rates bank in use&rdquo; are your bank switch: the value is the bank number, 1 to 4. Every other setting is changed in the bank in use at the time.</p>
-<p><b>Only in</b> ties a line to one bank: it works only while your bank switch has that bank in use, so its values can suit that bank. Another line can serve another bank.</p>
+<p>&ldquo;Yaw P gain in bank 1&rdquo; works only while your bank switch has bank 1 in use, so its values can suit that bank; another line can serve bank 3. &ldquo;In the bank in use&rdquo; means whichever bank is flying.</p>
 <h3>Channels</h3>
 <p>AUX1 is channel 6 on a helicopter.</p>
 <h3>Saving</h3>
@@ -255,16 +255,18 @@ function paint() {
         const kindSel = r.kind === 'nudge'
             ? '<select id=kind' + i + ' disabled><option>a step adjustment from the configurator (kept as it is)</option></select>'
             : '<select id=kind' + i + ' class=usbOnly><option value=knob' + (r.kind === 'knob' ? ' selected' : '') + '>Knob</option><option value=switch' + (r.kind === 'switch' ? ' selected' : '') + '>Switch</option></select>';
-        let h = '<div class=r><label data-help="The Rotorflight setting this line changes.">What it changes</label>' + fnSel('fn' + i, r.fn) + '</div>' +
-                '<div class=r><label data-help="Knob: continuous adjustment within a range. Switch: choosing between settings, two or three positions. The help button explains both.">Control</label>' + kindSel + '<label>on</label>' + chanSel('ch' + i, r.ch) + '</div>';
-        if (r.kind === 'switch') h += '<div class=r><label data-help="Two positions have one divider, three positions have two.">Positions</label><select id=npos' + i + ' class=usbOnly><option value=2' + (r.t.length === 1 ? ' selected' : '') + '>2</option><option value=3' + (r.t.length === 2 ? ' selected' : '') + '>3</option></select></div>';
+        let bankSel = '';
         if (r.fn !== 1 && r.fn !== 2 && r.kind !== 'nudge') {
             const br = bankRegions(rows), cur = condToBank(r.cond, br);
-            let o = '<option value=0' + (cur === 0 ? ' selected' : '') + '>any bank</option>';
-            if (br) for (let v = 1; v <= 4; v++) if (br.regions[v]) o += '<option value=' + v + (cur === v ? ' selected' : '') + '>bank ' + v + ' only</option>';
-            if (cur === -1) o += '<option value=-1 selected>a condition set elsewhere (kept)</option>';
-            h += '<div class=r><label data-help="Works only while your bank switch has this bank in use, so the values can suit that bank. Needs a PID bank line on this page to know the switch.">Only in</label><select id=bank' + i + ' class=usbOnly' + (br ? '' : ' disabled') + '>' + o + '</select></div>';
+            let o = '';
+            if (br) for (let v = 1; v <= 4; v++) if (br.regions[v]) o += '<option value=' + v + (cur === v ? ' selected' : '') + '>in bank ' + v + '</option>';
+            o += '<option value=0' + (cur === 0 ? ' selected' : '') + '>in the bank in use</option>';
+            if (cur === -1) o += '<option value=-1 selected>with a condition set elsewhere</option>';
+            bankSel = '<select id=bank' + i + ' class=usbOnly' + (br ? '' : ' disabled') + '>' + o + '</select>';
         }
+        let h = '<div class=r><label data-help="The Rotorflight setting this line changes, and the bank it changes it in. A line for bank 1 works only while your bank switch has bank 1 in use; another line can serve bank 3 with values that suit it.">What it changes</label>' + fnSel('fn' + i, r.fn) + bankSel + '</div>' +
+                '<div class=r><label data-help="Knob: continuous adjustment within a range. Switch: choosing between settings, two or three positions. The help button explains both.">Control</label>' + kindSel + '<label>on</label>' + chanSel('ch' + i, r.ch) + '</div>';
+        if (r.kind === 'switch') h += '<div class=r><label data-help="Two positions have one divider, three positions have two.">Positions</label><select id=npos' + i + ' class=usbOnly><option value=2' + (r.t.length === 1 ? ' selected' : '') + '>2</option><option value=3' + (r.t.length === 2 ? ' selected' : '') + '>3</option></select></div>';
         h += '<div class=rScale><span>875</span><span>1500</span><span>2125</span></div><div class=rTrack id=tr' + i + '></div><div class=rLive id=lv' + i + '>&nbsp;</div>';
         if (r.kind === 'switch') {
             h += '<div class=vals>' + r.values.map((v, k) => '<div><input id=v' + i + '_' + k + ' class=usbOnly type=number min=0 max=65535 value="' + (v ?? '') + '"><small>position ' + (k + 1) + '</small></div>').join('') + '</div>';
