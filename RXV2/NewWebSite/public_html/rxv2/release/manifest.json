@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.631-bank-list",
+      "url": "https://messiter.com/rxv2/release/v0.9.631/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.631/littlefs.bin",
+      "fs_md5": "7275f564ff22eeaad0e7bb9a425f7630",
+      "notes": "In-flight adjustments: the 'What it changes' list itself now offers every setting per bank - 'Yaw P gain in bank 1', 'in bank 2' ... and 'in the bank in use' - grouped by bank; no separate bank choice. Garbled labels fixed (collective, cutoff, altitude). Includes 0.9.630."
+    },
+    {
       "name": "RXV2-0.9.630-in-bank",
       "url": "https://messiter.com/rxv2/release/v0.9.630/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.630/littlefs.bin",
@@ -76,11 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.620/littlefs.bin",
       "fs_md5": "6aa9241f3297dee8fc25c95fcbd30944",
       "notes": "Dongle over USB: Adjustments and the Command line, proven on a Nexus. The 'reply bigger than the link buffer' alarm no longer fires for legitimate USB replies. Includes 0.9.619."
-    },
-    {
-      "name": "RXV2-0.9.619-usb-jumbo",
-      "url": "https://messiter.com/rxv2/release/v0.9.619/firmware.bin",
-      "notes": "Dongle over USB: big replies (255 bytes and more, e.g. the adjustments list) are now parsed in Rotorflight's real jumbo-frame order - size, command, then the 16-bit length. Includes 0.9.618."
     }
   ]
 }
