@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.628-bank-in-use",
+      "url": "https://messiter.com/rxv2/release/v0.9.628/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.628/littlefs.bin",
+      "fs_md5": "2d64f4fcc5384118703d8812128284fe",
+      "notes": "In-flight adjustments: the bank settings read 'PID bank in use (1 to 4)' and 'Rates bank in use (1 to 4)' - the value is the bank number (Malcolm 2026-09-11: 'which bank flies - what does that mean?'). Includes 0.9.627."
+    },
+    {
       "name": "RXV2-0.9.627-adj-help",
       "url": "https://messiter.com/rxv2/release/v0.9.627/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.627/littlefs.bin",
@@ -70,13 +77,6 @@
       "name": "RXV2-0.9.617-usb-only-pages",
       "url": "https://messiter.com/rxv2/release/v0.9.617/firmware.bin",
       "notes": "What only USB can do (Malcolm 2026-09-11): a Command line page (every Rotorflight setting by name, with Save and Leave buttons) and an Adjustments page (a knob or switch changing a setting in flight - the 588-byte list the radio link could never carry). Both say plainly that they need the flight controller's USB socket plugged into the dongle when it is not. Factory reset is allowed over USB only. Includes 0.9.616."
-    },
-    {
-      "name": "RXV2-0.9.616-dongle-usb2",
-      "url": "https://messiter.com/rxv2/release/v0.9.616/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.616/littlefs.bin",
-      "fs_md5": "e3558da231445b32c08d26642ad4d680",
-      "notes": "Dongle over USB: page requests now get their answers (the waits that pump the UART drain the USB link too). Includes 0.9.615."
     }
   ]
 }
