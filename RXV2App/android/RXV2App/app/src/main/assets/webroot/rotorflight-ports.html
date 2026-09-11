@@ -159,7 +159,7 @@ async function fcBack() {             // after the restart: a small read answers
 }
 async function save() {
     if (ports.filter(p => (p.mask >>> 0) === F.RX).length > 1) { setStatus('bad', 'Only one port can carry the receiver'); return; }
-    const ok = await LDRC.confirm('Save the ports and restart the flight controller? If you move the port your receiver is on, the app loses the flight controller until the wiring matches.',
+    const ok = await LDRC.confirm('Save the ports and restart the flight controller? If you move the port your receiver is on, or the port this dongle is wired to, the app loses the flight controller until the wiring matches.',
                                   { title: 'Save and restart', icon: '💾', yes: 'Save and restart' });
     if (!ok) return;
     setStatus('info', 'Writing…');
