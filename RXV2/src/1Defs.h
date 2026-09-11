@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.648-nexus-labels";
+constexpr const char* FW_VERSION = "RXV2-0.9.649-alacarte-order";
 
 //*********************************************************************
 //  Auto-update manifest URLs

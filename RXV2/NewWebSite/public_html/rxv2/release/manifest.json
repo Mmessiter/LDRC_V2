@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.649-alacarte-order",
+      "url": "https://messiter.com/rxv2/release/v0.9.649/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.649/littlefs.bin",
+      "fs_md5": "a1bb90f76b854b8641dbcb1098797824",
+      "notes": "A la carte: In-flight adjustments sits in its alphabetical place (after Governor). Includes 0.9.648."
+    },
+    {
       "name": "RXV2-0.9.648-nexus-labels",
       "url": "https://messiter.com/rxv2/release/v0.9.648/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.648/littlefs.bin",
@@ -74,13 +81,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.638/littlefs.bin",
       "fs_md5": "7c9581d5879880c63a886879128a6465",
       "notes": "Help on In-flight adjustments and Command line: the USB cable runs from the dongle to the flight controller, not to a laptop (Malcolm: some might assume it needs the laptop). Includes 0.9.637."
-    },
-    {
-      "name": "RXV2-0.9.637-help-try",
-      "url": "https://messiter.com/rxv2/release/v0.9.637/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.637/littlefs.bin",
-      "fs_md5": "57dace4a4db7bc8f69e066e1afcaee1f",
-      "notes": "In-flight adjustments help (Malcolm): after the boxes fill with the current value, change one or two to the values you want to try and leave the first box as it is, so a flick of the switch takes you back. Includes 0.9.636."
     }
   ]
 }
