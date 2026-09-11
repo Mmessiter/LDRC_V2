@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.648-nexus-labels",
+      "url": "https://messiter.com/rxv2/release/v0.9.648/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.648/littlefs.bin",
+      "fs_md5": "4925e3c9160795f4ec32a741e6860dc6",
+      "notes": "Ports page: on a RadioMaster Nexus or Nexus-X (the board name the flight controller reports) the ports carry the socket names printed on the board - Port A (UART 4), Port B (UART 6), Port C (UART 3), TELEM (UART 2) and S.BUS (UART 1) on the Nexus-X; DSM/S.BUS on the original. Other boards keep UART numbers. Help explains the letters. Includes 0.9.647."
+    },
+    {
       "name": "RXV2-0.9.647-ports",
       "url": "https://messiter.com/rxv2/release/v0.9.647/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.647/littlefs.bin",
@@ -74,13 +81,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.637/littlefs.bin",
       "fs_md5": "57dace4a4db7bc8f69e066e1afcaee1f",
       "notes": "In-flight adjustments help (Malcolm): after the boxes fill with the current value, change one or two to the values you want to try and leave the first box as it is, so a flick of the switch takes you back. Includes 0.9.636."
-    },
-    {
-      "name": "RXV2-0.9.636-help",
-      "url": "https://messiter.com/rxv2/release/v0.9.636/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.636/littlefs.bin",
-      "fs_md5": "2c41e7d818446e2722693431982e47a9",
-      "notes": "Help screens: the In-flight adjustments and Command line pages now have the ? button (they were the only pages without it) with short, step-ordered help - setting one up, Switch, Knob, Banks, Numbers, USB; commands, leaving, what is paused. Includes 0.9.635."
     }
   ]
 }

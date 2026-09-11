@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.647-ports";
+constexpr const char* FW_VERSION = "RXV2-0.9.648-nexus-labels";
 
 //*********************************************************************
 //  Auto-update manifest URLs

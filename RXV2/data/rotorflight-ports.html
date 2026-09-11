@@ -73,11 +73,27 @@ function encodePorts(P) {
     P.forEach((p, i) => { const o = i * 9; b[o] = p.id; b[o + 1] = p.mask & 255; b[o + 2] = (p.mask >>> 8) & 255; b[o + 3] = (p.mask >>> 16) & 255; b[o + 4] = (p.mask >>> 24) & 255; b[o + 5] = p.msp; b[o + 6] = p.gps; b[o + 7] = p.tel; b[o + 8] = p.bb; });
     return b;
 }
+// The sockets on a RadioMaster Nexus, by the board name the flight controller reports (MSP 4):
+// Nexus-X: S.BUS[UART1] TELEM[UART2] PORT-A[UART4] PORT-B[UART6] PORT-C[UART3];
+// original Nexus: DSM[UART1] S.BUS[UART2] A-CRSF[UART4] PORT-B[UART6] PORT-C[UART3] (RadioMaster's own lists).
+const BOARD_PORTS = {
+    'NEXUS_X': { 0: 'S.BUS', 1: 'TELEM', 2: 'Port C', 3: 'Port A', 5: 'Port B' },
+    'NEXUS':   { 0: 'DSM',   1: 'S.BUS', 2: 'Port C', 3: 'Port A', 5: 'Port B' },
+};
+let boardName = '';
+function boardNameOf(b) {             // MSP_BOARD_INFO: id(4) rev(2) type(1) caps(1) targetName(len+chars) boardName(len+chars)
+    if (b.length < 10) return '';
+    let o = 8; const tl = b[o]; o += 1 + tl;
+    if (o >= b.length) return '';
+    const bl = b[o]; o += 1;
+    return String.fromCharCode.apply(null, Array.from(b.slice(o, o + bl)));
+}
 function portName(id) {               // identifiers: 0.. = UART1.., 20 = USB, 30.. = soft serial, 40.. = LPUART
     if (id === 20) return 'USB socket';
     if (id >= 40) return 'LPUART ' + (id - 39);
     if (id >= 30) return 'Soft serial ' + (id - 29);
-    return 'UART ' + (id + 1);
+    const m = BOARD_PORTS[boardName], l = m && m[id];
+    return l ? l + ' (UART ' + (id + 1) + ')' : 'UART ' + (id + 1);
 }
 function choiceOf(p, prov) {          // a port's functions -> our choice; anything else is kept as it is
     const m = p.mask >>> 0;
@@ -129,6 +145,7 @@ function paint() {
 async function load() {
     setStatus('info', 'Reading…');
     try {
+        try { boardName = boardNameOf(hexToBytes((await LDRC.msp(4)).trim())); } catch (e) { boardName = ''; }
         ports = parsePorts(hexToBytes((await LDRC.msp(54)).trim()));
         rxCfg = hexToBytes((await LDRC.msp(44)).trim()); prov = rxCfg[0];
         setStatus('', ''); paint(); markClean();
@@ -163,7 +180,7 @@ document.addEventListener('DOMContentLoaded', async () => { $('saveBtn').onclick
 <p>What each socket on the flight controller carries. Set it once. Save restarts the flight controller.</p>
 <h3>The usual layout</h3>
 <ul>
-<li><b>Receiver</b>: the port your LDRC receiver plugs into, as a CRSF receiver. One port only. On a RadioMaster Nexus, port A is UART 4.</li>
+<li><b>Receiver</b>: the port your LDRC receiver plugs into, as a CRSF receiver. One port only.</li>
 <li><b>Dongle on a wire</b>: MSP at 115200 on a spare port. A dongle on the USB socket needs no port at all.</li>
 <li><b>ESC telemetry</b>: the port the ESC&rsquo;s telemetry wire goes to.</li>
 </ul>
@@ -171,6 +188,8 @@ document.addEventListener('DOMContentLoaded', async () => { $('saveBtn').onclick
 <p>If you move the port your receiver is on, the app loses the flight controller until the wiring matches. &ldquo;As it is&rdquo; keeps a setting made in the configurator.</p>
 <h3>USB socket</h3>
 <p>Always configuration (MSP). Nothing to set.</p>
+<h3>Port letters</h3>
+<p>The letters are the sockets printed on a RadioMaster Nexus: Port A is UART 4, Port B is UART 6, Port C is UART 3. On the Nexus-X, TELEM is UART 2 (ESC telemetry) and S.BUS is UART 1; on the original Nexus, S.BUS is UART 2 and DSM is UART 1. Other boards show UART numbers only.</p>
 </template>
 </body>
 </html>
