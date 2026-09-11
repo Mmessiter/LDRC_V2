@@ -27,13 +27,12 @@
 <div class=bg-wash  aria-hidden=true></div>
 <div class=container>
     <h1>Before you start</h1>
-    <p class=subtitle>One USB session on a computer &mdash; four tasks the receiver cannot do.</p>
-    <p>Connect a <b>USB lead from the flight controller to your computer</b> and run the <b>Rotorflight Configurator</b>. The receiver need not be connected yet. Then:</p>
+    <p class=subtitle>A computer only to flash the firmware. Everything else from the phone, over the USB cable.</p>
 
     <div class=wcard>
-        <h2><span class=num>1</span>Update the firmware</h2>
-        <p>Flash the <b>latest Rotorflight</b> (Firmware Flasher tab).</p>
-        <p class=why>New boards do fly as delivered &mdash; but while the cable is in, start current. After flashing, the configurator may warn that <b>calibration is still needed</b> &mdash; ignore it (the wizard&rsquo;s next step does it from the phone), or calibrate right there while still plugged in: quick and easy.</p>
+        <h2><span class=num>1</span>Update the firmware (computer)</h2>
+        <p>USB lead from the flight controller to your computer, <b>Rotorflight Configurator</b>, Firmware Flasher tab: flash the <b>latest Rotorflight</b>.</p>
+        <p class=why>New boards do fly as delivered &mdash; but while the cable is in, start current. A warning that <b>calibration is still needed</b> can be ignored: the wizard&rsquo;s next step does it from the phone. Flashing is the one job the phone cannot do: it needs the board in bootloader mode on a computer.</p>
     </div>
 
     <div class=wcard style="background:#fdf0ec">
@@ -44,36 +43,29 @@
     </div>
 
     <div class=wcard>
-        <h2><span class=num>2</span>Check the serial port</h2>
-        <p>On the <b>Configuration</b> tab: the port where this receiver is plugged in must be <b>the one Rotorflight expects</b> (the serial receiver port).</p>
-        <p class=why>The board only listens on the port named here &mdash; a mismatch means silence.</p>
+        <h2><span class=num>2</span>Tell it where the receiver is (phone)</h2>
+        <p>Plug the receiver&rsquo;s lead into a spare port. Connect a short USB-C <b>data</b> cable from the receiver&rsquo;s USB socket to the flight controller&rsquo;s. Power the model and open this app: the <b>Rotorflight button appears</b>. Open <b>Ports</b>, choose <b>receiver</b> for the socket the lead is in, and <b>Save</b>.</p>
+        <p class=why>That one Save sets the port, CRSF, serial receiver mode and telemetry, and restarts the flight controller. The lead is then live; the cable can stay in or come out. With the dongle instead of the receiver, the Ports page is the same.</p>
     </div>
 
     <div class=wcard>
-        <h2><span class=num>3</span>Select CRSF</h2>
-        <p>On the <b>Receiver</b> tab: Receiver Mode <b>Serial</b>, Provider <b>CRSF</b>.</p>
-        <p class=why>CRSF is the language this receiver speaks &mdash; with any other choice there is no communication at all.</p>
+        <h2><span class=num style="background:#8a7dab">or</span>No USB cable? The configurator way</h2>
+        <p>While still on the computer. <b>Configuration</b> tab: the port the receiver is on set to <b>serial receiver</b>. <b>Receiver</b> tab: Receiver Mode <b>Serial</b>, Provider <b>CRSF</b>, <b>Telemetry ON</b>. Then <b>Save &amp; Reboot</b>.</p>
+        <p class=why>Without telemetry the board is mute on the receiver port &mdash; nothing reaches it until the configurator switches telemetry on and restarts it.</p>
     </div>
 
-    <div class=wcard>
-        <h2><span class=num>4</span>Enable Telemetry</h2>
-        <p>On the <b>Receiver</b> tab: turn <b>Telemetry ON</b>, then <b>Save &amp; Reboot</b> (button, bottom right).</p>
-        <p class=why>Without telemetry the board is mute &mdash; it cannot even be discovered.</p>
-    </div>
-
-    <p>After that reboot, the <b>Rotorflight button appears</b> on this phone &mdash; and everything else is done from here. The computer can go away.</p>
+    <p>After that restart, everything else is done from here. The computer can go away.</p>
 
     <div class=footer></div>
 </div>
 <template id=helpContent><h2>Before you start</h2>
-<p>The one computer session per new helicopter. Why these four cannot be done from the phone:</p>
+<p>The one computer job per new helicopter, and why the rest no longer needs one:</p>
 <ul>
-<li><b>Firmware flashing</b> needs the board in bootloader mode over USB &mdash; no radio link exists yet.</li>
+<li><b>Firmware flashing</b> needs the board in bootloader mode on a computer. No phone can do that.</li>
 <li><b>A failed or stuck flash is never fatal.</b> The bootloader sits in read-only memory, so the board cannot truly be bricked. Hold the BOOT button while plugging in USB and it wakes as a blank DFU device, ready to be flashed afresh (tick Full chip erase). Nine times out of ten the original culprit was the cable &mdash; charge-only leads power the board but carry no data, so swap to a known-good short data cable before trying again.</li>
-<li><b>CRSF</b> must be selected on the Receiver tab &mdash; it is the protocol this receiver speaks; anything else and the two boards cannot talk.</li>
-<li><b>The serial port</b> is a chicken-and-egg: the board cannot be told which port to listen on <i>over</i> a link it is not listening to.</li>
-<li><b>ESC telemetry</b> is NOT on this list (tested on the first real build): the wizard&rsquo;s tick + a flight-controller restart is enough &mdash; features apply at boot.</li>
-<li><b>Telemetry off</b> makes the board completely mute on its receiver port &mdash; it neither speaks nor listens there (tested!), so nothing can reach it until the configurator switches telemetry on and reboots it.</li>
+<li><b>The USB cable is the configurator&rsquo;s own channel.</b> The receiver (or dongle) talks to the flight controller over it before any port, protocol or telemetry is set, so the old chicken-and-egg &mdash; telling the board which port to listen on over a link it is not listening to &mdash; is gone. Choosing &ldquo;receiver&rdquo; on the Ports page sets the port, CRSF, serial receiver mode and telemetry in one Save.</li>
+<li><b>Telemetry</b> must be on for the everyday pages: they talk to the flight controller inside its CRSF telemetry. Off, the board is mute on the receiver port (tested).</li>
+<li><b>ESC telemetry</b> is not on this list: the wizard&rsquo;s tick plus a restart is enough &mdash; features apply at boot.</li>
 </ul>
 <p>Once the Rotorflight button appears, the wizard handles every remaining step from the phone.</p>
 </template>
