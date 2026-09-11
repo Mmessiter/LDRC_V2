@@ -166,6 +166,17 @@ async function save() {
     try {
         await LDRC.msp(55, bytesToHex(encodePorts(ports)));
         if (rxCfg && rxCfg[0] !== prov) { const r = new Uint8Array(rxCfg); r[0] = prov; await LDRC.msp(45, bytesToHex(r)); }   // the receiver protocol, read-modify-write
+        // A receiver port also means serial receiver mode (RX_SERIAL, bit 3) and
+        // telemetry (bit 10): the everyday pages talk to the flight controller
+        // inside its CRSF telemetry, and without it the board is mute on that
+        // port. Features are one u32 mask (MSP 36/37, the write replaces it all):
+        // read, add the two bits, write only if something changed.
+        if (ports.some(q => (q.mask >>> 0) === F.RX)) {
+            const fb = hexToBytes((await LDRC.msp(36)).trim());
+            const m = (fb[0] | (fb[1] << 8) | (fb[2] << 16) | (fb[3] << 24)) >>> 0;
+            const want = (m | (1 << 3) | (1 << 10)) >>> 0;
+            if (want !== m) await LDRC.msp(37, bytesToHex(new Uint8Array([want & 255, (want >> 8) & 255, (want >> 16) & 255, (want >> 24) & 255])));
+        }
         await LDRC.msp(250);
         setStatus('info', 'Saved. The flight controller is restarting…');
         try { await LDRC.msp(68); } catch (e) {}
@@ -180,7 +191,7 @@ document.addEventListener('DOMContentLoaded', async () => { $('saveBtn').onclick
 <p>What each socket on the flight controller carries. Set it once. Save restarts the flight controller.</p>
 <h3>The usual layout</h3>
 <ul>
-<li><b>Receiver</b>: the port your LDRC receiver plugs into, as a CRSF receiver. One port only.</li>
+<li><b>Receiver</b>: the port your LDRC receiver plugs into, as a CRSF receiver. One port only. Saving it also switches on serial receiver mode and telemetry, so the lead works straight away: on a brand-new flight controller this one Save replaces the configurator&rsquo;s Receiver tab.</li>
 <li><b>Dongle on a wire</b>: MSP at 115200 on a spare port. A dongle on the USB socket needs no port at all.</li>
 <li><b>ESC telemetry</b>: the port the ESC&rsquo;s telemetry wire goes to.</li>
 </ul>

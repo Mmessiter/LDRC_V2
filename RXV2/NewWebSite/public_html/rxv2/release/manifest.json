@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.659-usb-first-time",
+      "url": "https://messiter.com/rxv2/release/v0.9.659/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.659/littlefs.bin",
+      "fs_md5": "b9b8d492ea072b7840d4ad5467168dc2",
+      "notes": "Before you start: a computer only to flash the firmware; with the USB cable the Ports page does the rest - choosing 'receiver' for a port now also switches on serial receiver mode and telemetry (features 3 + 10, read-modify-write) in the same Save, so a brand-new flight controller never needs the configurator's Receiver tab. Configurator steps kept as the no-cable alternative. New-heli wizard step reworded. Includes 0.9.658."
+    },
+    {
       "name": "RXV2-0.9.658-help-corner",
       "url": "https://messiter.com/rxv2/release/v0.9.658/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.658/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.648/littlefs.bin",
       "fs_md5": "4925e3c9160795f4ec32a741e6860dc6",
       "notes": "Ports page: on a RadioMaster Nexus or Nexus-X (the board name the flight controller reports) the ports carry the socket names printed on the board - Port A (UART 4), Port B (UART 6), Port C (UART 3), TELEM (UART 2) and S.BUS (UART 1) on the Nexus-X; DSM/S.BUS on the original. Other boards keep UART numbers. Help explains the letters. Includes 0.9.647."
-    },
-    {
-      "name": "RXV2-0.9.647-ports",
-      "url": "https://messiter.com/rxv2/release/v0.9.647/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.647/littlefs.bin",
-      "fs_md5": "941585b0272d31bc8abff54a7ecce164",
-      "notes": "New Ports page (Rotorflight's Ports tab): each flight-controller UART gets one plain choice - nothing, receiver (CRSF, SBUS or IBUS), dongle on a wire (MSP 115200), ESC telemetry, S.Port telemetry, GPS or blackbox; other setups are kept as they are; one receiver port only; Save writes the ports and the receiver protocol, saves, restarts the flight controller and waits for it. With this, a new receiver never needs the configurator: the port is set from the phone over USB. Includes 0.9.646."
     }
   ]
 }
