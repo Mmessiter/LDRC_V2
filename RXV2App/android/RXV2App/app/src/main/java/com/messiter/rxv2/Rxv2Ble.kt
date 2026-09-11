@@ -187,7 +187,11 @@ class Rxv2Ble(private val context: Context) {
 
     fun disconnect() {
         userDisconnect = true
-        gatt?.disconnect()
+        // No GATT (the link had already dropped, or we are between reconnect
+        // attempts): nothing will call back, so go Idle here — otherwise the
+        // app stays on a dead page ("Load another model" did nothing).
+        val g = gatt
+        if (g == null) state = State.Idle else g.disconnect()
     }
 
     // Quietly re-establish the link after an unexpected drop — above all a
@@ -196,6 +200,7 @@ class Rxv2Ble(private val context: Context) {
     // as the link is back its requests start answering again, so the
     // update flow completes instead of dying at the reboot.
     private fun tryReconnect() {
+        if (userDisconnect) { state = State.Idle; return }   // the pilot chose to leave meanwhile
         val d = lastDevice ?: run { state = State.Idle; return }
         if (System.currentTimeMillis() > reconnectUntil) { state = State.Idle; return }
         gatt = d.connectGatt(context, false, gattCb, BluetoothDevice.TRANSPORT_LE)

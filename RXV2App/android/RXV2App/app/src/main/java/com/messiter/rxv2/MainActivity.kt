@@ -1316,8 +1316,12 @@ class MainActivity : AppCompatActivity() {
     // In demo mode the DEMO shim is injected instead: it intercepts fetch()
     // with canned receiver data, so nothing ever touches Bluetooth.
     private fun withShim(html: ByteArray): ByteArray {
+        // The demos answer every request themselves, but the page's
+        // "Load another model" / Bluetooth-badge disconnect still has to reach
+        // the app, so the demo gets the disconnect hook too (Malcolm 2026-09-11:
+        // "load another model fails on Android" — the hook was only in JS_SHIM).
         val tag = if (demoMode)
-            "<script>window.__demoDongle=$demoDongle;</script><script src=\"/demo-shim.js\"></script>".toByteArray(Charsets.UTF_8)
+            "<script>$JS_DISCONNECT_HOOK</script><script>window.__demoDongle=$demoDongle;</script><script src=\"/demo-shim.js\"></script>".toByteArray(Charsets.UTF_8)
         else "<script>$JS_SHIM</script>".toByteArray(Charsets.UTF_8)
         return tag + html
     }
@@ -1669,6 +1673,21 @@ class MainActivity : AppCompatActivity() {
         Toast.makeText(this, m, Toast.LENGTH_LONG).show()
 
     companion object {
+        // The page posts 'disconnect' the iOS way
+        // (window.webkit.messageHandlers.rxv2.postMessage); shim that object so
+        // the page code is unchanged. Injected on its own in the demos, and as
+        // part of JS_SHIM on a live link.
+        private const val JS_DISCONNECT_HOOK = """
+        (function(){
+          window.rxv2 = window.rxv2 || {};
+          window.rxv2.disconnect = function(){ try{ AndroidBle.disconnect(); }catch(e){} };
+          if (!window.webkit) window.webkit = {};
+          if (!window.webkit.messageHandlers) window.webkit.messageHandlers = {};
+          window.webkit.messageHandlers.rxv2 = {
+            postMessage: function(m){ if(String(m)==='disconnect') window.rxv2.disconnect(); }
+          };
+        })();
+        """
         // Injected into every page: bridge fetch()/forms through AndroidBle,
         // and expose the disconnect hook the page's Bluetooth badge posts to.
         private const val JS_SHIM = """
