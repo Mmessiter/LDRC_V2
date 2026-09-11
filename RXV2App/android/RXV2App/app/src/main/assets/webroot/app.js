@@ -223,7 +223,8 @@
                 + '<li><b>USB-C cable</b>, receiver or dongle to the flight controller — the configurator’s own channel: '
                 + 'every setting, any size, the command line, ports, factory reset and the black box. '
                 + 'A transmitter’s own Lua scripts have only the slow CRSF tunnel with its 320-byte replies, so they stop at the everyday pages. '
-                + 'With both wires this app can do everything the configurator can, apart from flashing Rotorflight itself.</li>'
+                + 'With both wires this app can do everything the configurator can, apart from flashing Rotorflight itself. '
+                + 'Buy a short one, about 12 cm, and make sure it is a <b>data</b> cable, not a charge-only lead.</li>'
                 + '</ul></div>';
             const overlay = document.createElement('div');
             overlay.className = 'helpModal';
