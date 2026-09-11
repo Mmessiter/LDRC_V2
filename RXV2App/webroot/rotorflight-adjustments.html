@@ -65,7 +65,7 @@
 <ol>
 <li><b>What it changes</b>: the setting and the bank, e.g. Yaw P gain in bank 1. The boxes fill with the current value in that bank. Change one or two to the values you want to try, and leave the first box as it is so a flick of the switch takes you back to it.</li>
 <li><b>Control</b>: Knob or Switch, and the channel it is on.</li>
-<li><b>Save to flight controller</b>.</li>
+<li><b>Save to flight controller</b>. The button says when there are unsaved changes. Remove saves by itself.</li>
 </ol>
 <h3>Switch</h3>
 <p>Each position sets the value you give it, two or three positions. Drag the round dividers to where the switch changes over. Move the switch: the red line follows it and the lit region is the position it is in.</p>
@@ -250,6 +250,7 @@ function wireHandle(i, h) {
             const r = rows[i];
             if (r.kind === 'knob') { if (k === 0) r.lo = Math.min(u, r.hi - 5); else r.hi = Math.max(u, r.lo + 5); }
             else { const lo = k > 0 ? r.t[k - 1] + 5 : RMIN + 5, hi = k + 1 < r.t.length ? r.t[k + 1] - 5 : RMAX - 5; r.t[k] = Math.max(lo, Math.min(hi, u)); }
+            markDirty();
             // move the regions and this handle without a full repaint (keeps the capture)
             const regs = r.kind === 'knob' ? [[RMIN, r.lo], [r.lo, r.hi], [r.hi, RMAX]] : regions(r.t);
             track.querySelectorAll('.rReg').forEach((el, j) => { const [lo2, hi2] = regs[j]; el.style.left = pct(lo2) + '%'; el.style.width = Math.max(0, pct(hi2) - pct(lo2)) + '%'; });
@@ -321,6 +322,10 @@ async function fillCurrent(i, force) {
     else if (r.kind === 'knob') { if (force || !+r.min) { changed = changed || +r.min !== v; r.min = v; } if (force || !+r.max) { changed = changed || +r.max !== v; r.max = v; } }
     return changed;
 }
+// Unsaved edits show on the Save button (0.9.646); Remove saves by itself.
+let dirty = false;
+function markDirty() { if (dirty) return; dirty = true; const b = $('saveBtn'); if (b) { b.innerHTML = '<span class=ico>&#128190;</span>Save to flight controller &mdash; unsaved changes'; b.style.background = '#d9822b'; } }
+function markClean() { dirty = false; const b = $('saveBtn'); if (b) { b.innerHTML = '<span class=ico>&#128190;</span>Save to flight controller'; b.style.background = '#6cab5e'; } }
 function paint() {
     const R = $('rows'); R.innerHTML = '';
     rows.forEach((r, i) => {
@@ -355,7 +360,12 @@ function paint() {
         if (r.kind === 'switch') r.values.forEach((v, k) => { $('v' + i + '_' + k).oninput = () => { rows[i].values[k] = $('v' + i + '_' + k).value; drawBar(i); }; });
     });
     if (!rows.length) R.innerHTML = '<p class=sub>No adjustments yet.</p>';
-    R.querySelectorAll('button[data-clear]').forEach(b => b.onclick = () => { collect(); rows.splice(+b.dataset.clear, 1); paint(); });
+    R.querySelectorAll('button[data-clear]').forEach(b => b.onclick = async () => {
+        collect(); const i = +b.dataset.clear; const r = rows[i];
+        const what = (r && r.fn && LABELS[r.fn]) ? LABELS[r.fn] : 'this adjustment';
+        if (!(await LDRC.confirm('Remove ' + what + ' from the flight controller? It is saved straight away.', { title: 'Remove and save', icon: '\uD83D\uDDD1\uFE0F', yes: 'Remove and save', kind: 'danger' }))) return;
+        rows.splice(i, 1); paint(); await save();
+    });
     document.querySelectorAll('.usbOnly').forEach(el => { el.disabled = !gateOk; el.style.opacity = gateOk ? '' : '.45'; });
 }
 function collect() {
@@ -410,7 +420,7 @@ async function load() {
         const r = await fetch('/api/msp?fn=52', { cache: 'no-store' });
         if (!r.ok) { setStatus('bad', await r.text()); return; }
         rows = scaleRows(linesToRows(parseLines(hexToBytes((await r.text()).trim()))), 1);
-        setStatus('', ''); paint();
+        setStatus('', ''); paint(); markClean();
     } catch (e) { setStatus('bad', 'no answer'); }
 }
 async function save() {
@@ -444,8 +454,9 @@ async function save() {
 }
 document.addEventListener('DOMContentLoaded', async () => {
     { const sa = $('showAll'); sa.checked = showAll; sa.onchange = () => { showAll = sa.checked; try { localStorage.setItem('adj.showAll', showAll ? '1' : '0'); } catch (e) {} collect(); paint(); }; }
-    $('addBtn').onclick = async () => { collect(); const br = bankRegions(rows); rows.push({ kind: 'switch', fn: 14, ch: 1, t: [1500], values: ['', ''], cond: br ? bankToCond(1, br) : null }); paint(); if (await fillCurrent(rows.length - 1, true)) paint(); };
+    $('addBtn').onclick = async () => { collect(); const br = bankRegions(rows); rows.push({ kind: 'switch', fn: 14, ch: 1, t: [1500], values: ['', ''], cond: br ? bankToCond(1, br) : null }); paint(); markDirty(); if (await fillCurrent(rows.length - 1, true)) paint(); };
     $('saveBtn').onclick = save;
+    $('rows').addEventListener('input', markDirty); $('rows').addEventListener('change', markDirty);
     await load();
     pollRc();
     setInterval(usbGate, 4000);
