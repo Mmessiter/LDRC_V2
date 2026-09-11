@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.655-filters",
+      "url": "https://messiter.com/rxv2/release/v0.9.655/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.655/littlefs.bin",
+      "fs_md5": "d7658fd27022a7851c1373811567a10b",
+      "notes": "New Filters page (Rotorflight's Filters tab): gyro lowpass 1 and 2 (type and cutoff), rotor-speed (RPM) notch preset and lowest frequency, dynamic notches (count, width, range) and the two fixed notches; read-modify-write of MSP 92/93, takes effect at once. The help explains what each filter does and how to read the Blackbox Explorer's frequency view to see which filter is needed. Includes 0.9.654."
+    },
+    {
       "name": "RXV2-0.9.654-review-fixes",
       "url": "https://messiter.com/rxv2/release/v0.9.654/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.654/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.644/littlefs.bin",
       "fs_md5": "b8be8cad6a2d8db169dc6bcd21720a4b",
       "notes": "In-flight adjustments: Save retries any of its 43 writes that the receiver answers 'busy with a transmitter edit' or 'did not respond' to, so saving with the transmitter on no longer stops at the first collision with the transmitter's own Rotorflight traffic (Goblin bench, 2026-09-11 07:54). Includes 0.9.643."
-    },
-    {
-      "name": "RXV2-0.9.643-usb-tx-on",
-      "url": "https://messiter.com/rxv2/release/v0.9.643/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.643/littlefs.bin",
-      "fs_md5": "984ba206277f1216a684591f2277973c",
-      "notes": "A receiver now adopts a flight controller on its USB socket even while the transmitter is on (the USB task does the opening, the radio loop never waits), so the USB pages work in the usual bench setup: transmitter on, blades off. The command line and the reboot-to-apply settings still wait for the transmitter to be off. Includes 0.9.642."
     }
   ]
 }

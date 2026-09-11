@@ -3211,6 +3211,7 @@ inline void registerWebRoutes() {
     server.on("/rotorflight-alacarte",  handleRotorflightAlaCarte);
     server.on("/rotorflight-adjustments", []() { if (!serveLittleFsFile("/rotorflight-adjustments.html", "text/html")) server.send(503, "text/plain", "page missing - update the web files"); });
     server.on("/rotorflight-ports", []() { if (!serveLittleFsFile("/rotorflight-ports.html", "text/html")) server.send(503, "text/plain", "page missing - update the web files"); });
+    server.on("/rotorflight-filters", []() { if (!serveLittleFsFile("/rotorflight-filters.html", "text/html")) server.send(503, "text/plain", "page missing - update the web files"); });
     server.on("/cli",                   []() { if (!serveLittleFsFile("/cli.html", "text/html")) server.send(503, "text/plain", "page missing - update the web files"); });
     server.on("/api/cli",               handleCliApi);          // USB only: one Rotorflight command, its printed reply
     server.on("/api/cli/leave",         HTTP_POST, handleCliLeave);
