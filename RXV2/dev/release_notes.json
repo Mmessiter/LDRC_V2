@@ -529,5 +529,6 @@
   "RXV2-0.9.649-alacarte-order": "A la carte: In-flight adjustments sits in its alphabetical place (after Governor). Includes 0.9.648.",
   "RXV2-0.9.650-back-scroll": "Back returns to where you were: a long list (A la carte, Find a setting, any page) remembers its scroll position when you leave it and puts it back when you come back by the back arrow or a back gesture. A fresh visit still starts at the top. Includes 0.9.649.",
   "RXV2-0.9.651-adj-offline-copy": "In-flight adjustments: without the USB cable the page shows the set it last read over USB (kept per model on the phone), greyed and not changeable, with the time it was read; the live switch marker still moves over the radio link. Includes 0.9.650.",
-  "RXV2-0.9.652-greyed-darker": "Greyed (read-only) controls on In-flight adjustments and the Command line stay readable: dark text at 80 percent instead of 45. Includes 0.9.651."
+  "RXV2-0.9.652-greyed-darker": "Greyed (read-only) controls on In-flight adjustments and the Command line stay readable: dark text at 80 percent instead of 45. Includes 0.9.651.",
+  "RXV2-0.9.653-recording-banner": "A replayed recording (Review: <model> in the app's list) now says so at the top of every page: 'Recording of <model> - nothing here is live. To connect, use Load another model on the front page.' Includes 0.9.652."
 }

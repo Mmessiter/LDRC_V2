@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.653-recording-banner",
+      "url": "https://messiter.com/rxv2/release/v0.9.653/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.653/littlefs.bin",
+      "fs_md5": "da78317718a2731fe96a6db694f3fa2c",
+      "notes": "A replayed recording (Review: <model> in the app's list) now says so at the top of every page: 'Recording of <model> - nothing here is live. To connect, use Load another model on the front page.' Includes 0.9.652."
+    },
+    {
       "name": "RXV2-0.9.652-greyed-darker",
       "url": "https://messiter.com/rxv2/release/v0.9.652/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.652/littlefs.bin",
@@ -74,13 +81,6 @@
       "name": "RXV2-0.9.642-usb-review2",
       "url": "https://messiter.com/rxv2/release/v0.9.642/firmware.bin",
       "notes": "Second pass from the review: an MSP request on a receiver without a CRSF line (SBUS/IBUS/PPM, or FC telemetry off) is dropped rather than sent as CRSF frames onto the servo line once the USB cable is out; the telemetry-setup repair writes only over the CRSF link; long command-line output (dump) keeps its tail so the prompt is always seen; a half-installed USB host is undone; the USB socket switch is refused on a dongle; the USB-only pages say when the transmitter is keeping the USB link from opening; Find a setting knows the USB socket switch. Includes 0.9.641."
-    },
-    {
-      "name": "RXV2-0.9.641-usb-review",
-      "url": "https://messiter.com/rxv2/release/v0.9.641/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.641/littlefs.bin",
-      "fs_md5": "456f38979b5b52e5319abcde841d954c",
-      "notes": "From the adversarial review of the receiver USB host: the USB device is now opened and closed by the USB task, never by the main loop (a misbehaving device can no longer hold the radio loop); an unplug while the command line is open closes the command line instead of leaving MSP dead until a reboot; a re-plugged device gets fresh open attempts; a device that leaves before it is opened is dropped at once; the dongle no longer types MSP into an open command line either; the simulator and dongle pages show a refusal instead of pretending to reboot. Includes 0.9.640."
     }
   ]
 }
