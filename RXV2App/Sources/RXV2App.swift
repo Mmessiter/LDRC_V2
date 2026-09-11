@@ -134,6 +134,7 @@ struct RootView: View {
             default: break
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .rxv2LeaveWeb)) { _ in demoMode = false; reviewMode = false }
         .fullScreenCover(isPresented: $reviewMode) {
             ZStack(alignment: .topTrailing) {
                 WebScreen(link: link, replay: true)
@@ -534,13 +535,13 @@ struct ScannerView: View {
                 // switch inside the demo was buried too deep, so it is gone.
                 Section {
                     Button {
-                        demoDongle = false; demoMode = true
+                        demoDongle = false; BleSchemeHandler.demoDongle = false; demoMode = true
                     } label: {
                         Label("No receiver yet?  Try the receiver demo",
                               systemImage: "theatermasks")
                     }
                     Button {
-                        demoDongle = true; demoMode = true
+                        demoDongle = true; BleSchemeHandler.demoDongle = true; demoMode = true
                     } label: {
                         Label("Try the dongle demo", systemImage: "theatermasks")
                     }

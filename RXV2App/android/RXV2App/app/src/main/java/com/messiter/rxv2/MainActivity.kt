@@ -1633,7 +1633,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         @JavascriptInterface
-        fun disconnect() { runOnUiThread { autoDone = true; SessionCache.saveIfDirty(); ble.disconnect() } }
+        fun disconnect() { runOnUiThread { if (demoMode || reviewMode) { demoMode = false; reviewMode = false; showScanner() } else { autoDone = true; SessionCache.saveIfDirty(); ble.disconnect() } } }   // Load another model works in the demo too (Malcolm 2026-09-11)
     }
 
     // Runs on the main thread already (Rxv2Ble posts onStreamFrame there).

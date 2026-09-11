@@ -26,6 +26,8 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
     private let link: BleLink
     private let demo: Bool
     private let demoDongle: Bool
+    /// Which demo the scanner chose (set at the tap, read when every demo page is served).
+    static var demoDongle = false
     private let replay: Bool   // "Review last session" — serve SessionCache, never touch BLE
     private var live = Set<ObjectIdentifier>()
     private lazy var ota = BleOta(link: link)
@@ -220,7 +222,7 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
         //    canned receiver data, so nothing ever touches Bluetooth.
         if method == "GET", var (data, type) = bundled(path: path) {
             if demo && type == "text/html" {
-                data = Data("<script>window.__demoDongle=\(demoDongle ? "true" : "false");</script><script src=\"/demo-shim.js\"></script>".utf8) + data
+                data = Data("<script>window.__demoDongle=\((demoDongle || BleSchemeHandler.demoDongle) ? "true" : "false");</script><script src=\"/demo-shim.js\"></script>".utf8) + data
             }
             deliver(task, url: url, code: 200, type: type, body: data)
             return

@@ -97,7 +97,12 @@ struct WebScreen: UIViewRepresentable {
                                    didReceive message: WKScriptMessage) {
             guard message.name == "rxv2" else { return }
             if (message.body as? String) == "disconnect" {
-                DispatchQueue.main.async { self.link.disconnect() }
+                DispatchQueue.main.async {
+                    self.link.disconnect()
+                    // In the demo or a recording there is no link to drop: the front
+                    // page's "Load another model" must still get you back to the list.
+                    NotificationCenter.default.post(name: .rxv2LeaveWeb, object: nil)
+                }
             }
         }
     }
@@ -155,4 +160,9 @@ extension WebScreen.Coordinator: WKUIDelegate {
         })
         if !present(a) { completionHandler(nil) }
     }
+}
+
+extension Notification.Name {
+    /// A page asked to leave ("Load another model"): closes the demo or recording cover.
+    static let rxv2LeaveWeb = Notification.Name("rxv2.leaveWeb")
 }
