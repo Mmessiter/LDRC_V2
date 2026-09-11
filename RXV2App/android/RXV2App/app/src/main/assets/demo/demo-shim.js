@@ -235,6 +235,8 @@
     try { localStorage.setItem("rxv2DemoState", JSON.stringify(demoState)); }
     catch (e) {}
   }
+  // Which demo: the app says so on every page it serves (window.__demoDongle).
+  if (typeof window.__demoDongle === "boolean") { demoState.dongle = window.__demoDongle; saveDemoState(); }
 
   function J(obj, status) {
     return Promise.resolve(new Response(JSON.stringify(obj), {
@@ -327,6 +329,10 @@
         // the "reboot" — radios return
         demoState.rfOnly = false; saveDemoState();
         return J({ ok: true });
+      case "/api/dongle":
+      case "/api/usbfc":
+        // Not switchable inside the demo any more: the front list offers both demos.
+        return Promise.resolve(new Response('<!doctype html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><body style="font-family:-apple-system,Helvetica,sans-serif;padding:2em;background:#f4f7fa;color:#2c3e50"><h2>Demo</h2><p>The demo cannot switch between receiver and dongle here. Close the demo and choose <b>Try the receiver demo</b> or <b>Try the dongle demo</b> on the app\'s front list.</p><p><a href="/">Back</a></p></body>', { status: 200, headers: { "Content-Type": "text/html" } }));
       case "/api/sim": {
         // The page confirms first, shows its "rebooting" card, THEN posts
         // here — flip the persistent flag so the "rebooted" receiver
@@ -347,6 +353,14 @@
     if (path === "/api/state.json") {
       const st = JSON.parse(JSON.stringify(CANNED["/api/state.json"]));
       st.sim = !!demoState.sim;
+      if (demoState.dongle) {                        // the dongle demo: the app on a Rotorflight dongle, flight controller on USB
+        st.dongle = true; st.dongle_auto = true; st.dongle_mode = 0; st.dongle_link = "usb"; st.fc_link = "usb"; st.usb_fc = false;
+        st.usb = { host: true, device: true, vid: "0483", pid: "5740", cli: false };
+        if (!demoState.name) { st.info.name = "Demo dongle"; st.info.hostname = "demo-dongle"; }
+        if (st.fcinfo) st.fcinfo.detected = true;
+        if (st.rf) { st.rf.last_pkt_ms = -1; st.rf.packets = 0; }
+        if (st.bind) st.bind.bound = false;
+      }
       st.net.rf_only = !!demoState.rfOnly;
       if (demoState.rfOnly) st.net.mode = "RF only (radios off)";
       if (demoState.name) { st.info.name = demoState.name; st.info.hostname = demoState.name; }

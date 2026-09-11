@@ -25,6 +25,7 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var backgroundedAt: Date? = nil
     @State private var demoMode = false
+    @State private var demoDongle = false     // which demo: receiver (false) or dongle (true)
     @State private var reviewMode = false
     @State private var sessionStarted = false
     @State private var txOnNoticeShown = false
@@ -92,7 +93,7 @@ struct RootView: View {
                         }
                     }
             default:
-                ScannerView(demoMode: $demoMode, reviewMode: $reviewMode)
+                ScannerView(demoMode: $demoMode, reviewMode: $reviewMode, demoDongle: $demoDongle)
                     .onAppear {
                         sessionStarted = false
                         // "--demo" launch argument: straight into demo mode (website screenshots)
@@ -149,7 +150,7 @@ struct RootView: View {
         }
         .fullScreenCover(isPresented: $demoMode) {
             ZStack(alignment: .topTrailing) {
-                WebScreen(link: link, demo: true)
+                WebScreen(link: link, demo: true, demoDongle: demoDongle)
                     .ignoresSafeArea()
                 Button {
                     demoMode = false
@@ -374,6 +375,7 @@ struct ScannerView: View {
     @EnvironmentObject var link: BleLink
     @Binding var demoMode: Bool
     @Binding var reviewMode: Bool
+    @Binding var demoDongle: Bool
     // Auto-connect to the receiver used last time (Malcolm 2026-08-16):
     // short cancellable countdown once it appears; the list stays live so a
     // different model can be chosen instead.
@@ -528,13 +530,22 @@ struct ScannerView: View {
             }
             // a real receiver in sight → the demo offer just muddies the water
             if link.found.isEmpty {
+                // Two demos, chosen here (Malcolm 2026-09-11): the dongle
+                // switch inside the demo was buried too deep, so it is gone.
                 Section {
                     Button {
-                        demoMode = true
+                        demoDongle = false; demoMode = true
                     } label: {
-                        Label("No receiver yet?  Try the demo",
+                        Label("No receiver yet?  Try the receiver demo",
                               systemImage: "theatermasks")
                     }
+                    Button {
+                        demoDongle = true; demoMode = true
+                    } label: {
+                        Label("Try the dongle demo", systemImage: "theatermasks")
+                    }
+                } footer: {
+                    Text("The same pages on canned data. The receiver demo flies a model; the dongle demo shows the app on a Rotorflight dongle.")
                 }
             }
         }

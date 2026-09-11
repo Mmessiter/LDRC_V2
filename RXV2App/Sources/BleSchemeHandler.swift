@@ -25,13 +25,15 @@ func md5Hex(_ d: Data) -> String {
 final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
     private let link: BleLink
     private let demo: Bool
+    private let demoDongle: Bool
     private let replay: Bool   // "Review last session" — serve SessionCache, never touch BLE
     private var live = Set<ObjectIdentifier>()
     private lazy var ota = BleOta(link: link)
 
-    init(link: BleLink, demo: Bool = false, replay: Bool = false) {
+    init(link: BleLink, demo: Bool = false, replay: Bool = false, demoDongle: Bool = false) {
         self.link = link
         self.demo = demo
+        self.demoDongle = demoDongle
         self.replay = replay
     }
 
@@ -218,7 +220,7 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
         //    canned receiver data, so nothing ever touches Bluetooth.
         if method == "GET", var (data, type) = bundled(path: path) {
             if demo && type == "text/html" {
-                data = Data("<script src=\"/demo-shim.js\"></script>".utf8) + data
+                data = Data("<script>window.__demoDongle=\(demoDongle ? "true" : "false");</script><script src=\"/demo-shim.js\"></script>".utf8) + data
             }
             deliver(task, url: url, code: 200, type: type, body: data)
             return

@@ -33,6 +33,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var root: FrameLayout
     private var webView: WebView? = null
     private var demoMode = false
+    private var demoDongle = false       // which demo: receiver (false) or dongle (true)
+    private var demoDongleBtn: TextView? = null
     private var reviewMode = false   // armchair review of the recorded last session
     private var demoBtn: TextView? = null
 
@@ -143,6 +145,7 @@ class MainActivity : AppCompatActivity() {
             scannerAdapter?.submit(list)
             // a real receiver in sight → the demo offer just muddies the water
             demoBtn?.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
+            demoDongleBtn?.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
         }
         ble.onStreamFrame = { line -> injectStream(line) }
 
@@ -291,12 +294,20 @@ class MainActivity : AppCompatActivity() {
         // No receiver? Let anyone play: the same web UI runs against
         // canned data from a real receiver, with animated channels.
         demoBtn = TextView(this).apply {
-            text = "🎭  No receiver yet?  Try the demo"
+            text = "🎭  No receiver yet?  Try the receiver demo"
             textSize = 15f; setPadding(40, 28, 40, 28)
             setBackgroundColor(0xFF1E293B.toInt()); setTextColor(0xFF7DD3FC.toInt())
-            setOnClickListener { demoMode = true; showWeb() }
+            setOnClickListener { demoDongle = false; demoMode = true; showWeb() }
         }
         col.addView(demoBtn)
+        // The dongle demo is chosen here too (Malcolm 2026-09-11): the dongle switch inside the demo was buried too deep.
+        demoDongleBtn = TextView(this).apply {
+            text = "🎭  Try the dongle demo"
+            textSize = 15f; setPadding(40, 28, 40, 28)
+            setBackgroundColor(0xFF1E293B.toInt()); setTextColor(0xFF7DD3FC.toInt())
+            setOnClickListener { demoDongle = true; demoMode = true; showWeb() }
+        }
+        col.addView(demoDongleBtn)
         // Armchair review (Malcolm's lodge idea 2026-08-04): each MODEL's
         // recorded session, browsable with everything switched off —
         // connecting another model never erases the previous one's.
@@ -1306,7 +1317,7 @@ class MainActivity : AppCompatActivity() {
     // with canned receiver data, so nothing ever touches Bluetooth.
     private fun withShim(html: ByteArray): ByteArray {
         val tag = if (demoMode)
-            "<script src=\"/demo-shim.js\"></script>".toByteArray(Charsets.UTF_8)
+            "<script>window.__demoDongle=$demoDongle;</script><script src=\"/demo-shim.js\"></script>".toByteArray(Charsets.UTF_8)
         else "<script>$JS_SHIM</script>".toByteArray(Charsets.UTF_8)
         return tag + html
     }
