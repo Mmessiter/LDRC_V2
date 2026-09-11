@@ -77,7 +77,7 @@
 <h3>Numbers</h3>
 <p>Rate, Shape and expo use the same numbers as the Rates page. AUX1 is channel 6 on a helicopter.</p>
 <h3>USB</h3>
-<p>Setting up needs the USB cable from the dongle or receiver to the flight controller, not a laptop. Afterwards the adjustments work with the cable unplugged.</p>
+<p>Setting up needs the USB cable from the dongle or receiver to the flight controller, not a laptop. Afterwards the adjustments work with the cable unplugged. Without the cable the page shows what it last read over USB, greyed; the switch marker still moves.</p>
 <h3>From the configurator</h3>
 <p>A step adjustment made in the configurator is shown but kept as it is. Change it there.</p>
 </template>
@@ -185,6 +185,21 @@ function setStatus(kind, msg) { const b = $('status'); b.style.display = msg ? '
 const hexToBytes = h => { const o = new Uint8Array(h.length / 2); for (let i = 0; i < o.length; i++) o[i] = parseInt(h.substr(i * 2, 2), 16); return o; };
 const bytesToHex = b => Array.from(b, x => x.toString(16).padStart(2, '0').toUpperCase()).join('');
 const pct = u => Math.max(0, Math.min(100, (u - RMIN) / (RMAX - RMIN) * 100));
+// The last set read over USB is kept per model (Malcolm 2026-09-11: "when the USB cable is gone, remember what
+// was set so we can show it but not change it"). Shown greyed when the cable is out; the live marker still works.
+let cacheAt = '';
+const cacheKey = () => 'adj.cache:' + ((LDRC.state && LDRC.state.info && LDRC.state.info.name) || '');
+function cacheStore(hex) { try { localStorage.setItem(cacheKey(), JSON.stringify({ hex, scale: RATE_SCALE, at: Date.now() })); } catch (e) {} }
+function cacheLoad() {
+    try {
+        const c = JSON.parse(localStorage.getItem(cacheKey()) || 'null'); if (!c || !c.hex) return false;
+        RATE_SCALE = c.scale || 5;
+        rows = scaleRows(linesToRows(parseLines(hexToBytes(c.hex))), 1);
+        const d = new Date(c.at); const today = new Date().toDateString() === d.toDateString();
+        cacheAt = (today ? '' : d.toLocaleDateString() + ' ') + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        return true;
+    } catch (e) { return false; }
+}
 async function usbGate() {
     const s = await LDRC.fetchState();
     gateOk = !!(s && s.usb && s.usb.device);            // a flight controller on the USB socket - dongle or receiver (0.9.639)
@@ -192,6 +207,7 @@ async function usbGate() {
     if (g && !gateOk && s) g.textContent = s.sim ? 'Simulator mode is using the USB socket. Turn the simulator off (Setup) to reach the flight controller over USB.'
         : (s.usb && !s.usb.host && !s.dongle) ? 'The USB socket is off. Turn it on in Setup, then connect a USB cable between the flight controller\u2019s USB socket and this receiver\u2019s.'
         : 'Connect a USB cable between the flight controller\u2019s USB socket and the ' + (s.dongle ? 'dongle' : 'receiver') + '\u2019s USB socket. This page needs the USB connection.';
+    if (g && !gateOk && cacheAt) g.textContent = 'Showing the settings read over USB at ' + cacheAt + ' - to change them, ' + g.textContent.replace(' This page needs the USB connection.', '').replace(/^Connect/, 'connect');
     document.querySelectorAll('.usbOnly').forEach(el => { el.disabled = !gateOk; el.style.opacity = gateOk ? '' : '.45'; });
     return gateOk ? s : null;
 }
@@ -381,7 +397,7 @@ function collect() {
     });
 }
 async function pollRc() {
-    if (document.hidden || !gateOk) { rcTimer = setTimeout(pollRc, 800); return; }
+    if (document.hidden || (!gateOk && !rows.length)) { rcTimer = setTimeout(pollRc, 800); return; }
     try {
         const b = hexToBytes(await LDRC.msp(105));
         rows.forEach((r, i) => {
@@ -398,7 +414,7 @@ async function pollRc() {
             const lv = $('lv' + i); if (lv) lv.innerHTML = 'now ' + u + ' &micro;s: ' + live;
             dot.classList.toggle('in', inK >= 0 && !(r.kind === 'knob' && inK !== 1) && !(r.kind === 'nudge' && inK === 1));
         });
-    } catch (e) { /* transient */ }
+    } catch (e) { rcTimer = setTimeout(pollRc, gateOk ? 400 : 3000); return; }   // no answer: ask again gently
     rcTimer = setTimeout(pollRc, 400);
 }
 let RATE_SCALE = 5;                                      // Rotorflight rates type: Rate on the Rates page = stored x5; older types x10
@@ -413,13 +429,15 @@ function scaleRows(rows, k) {                            // k = 1: raw -> page u
     });
 }
 async function load() {
-    if (!(await usbGate())) { paint(); return; }
+    if (!(await usbGate())) { if (cacheLoad()) { await usbGate(); } paint(); return; }   // no cable: the last USB read, greyed
     setStatus('info', 'Reading…');
     try {
         try { const t = hexToBytes((await LDRC.msp(111)).trim()); RATE_SCALE = t[0] === 6 ? 5 : 10; } catch (e) { RATE_SCALE = 5; }
         const r = await fetch('/api/msp?fn=52', { cache: 'no-store' });
         if (!r.ok) { setStatus('bad', await r.text()); return; }
-        rows = scaleRows(linesToRows(parseLines(hexToBytes((await r.text()).trim()))), 1);
+        const hex = (await r.text()).trim();
+        rows = scaleRows(linesToRows(parseLines(hexToBytes(hex))), 1);
+        cacheStore(hex); cacheAt = '';
         setStatus('', ''); paint(); markClean();
     } catch (e) { setStatus('bad', 'no answer'); }
 }
