@@ -468,6 +468,27 @@
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: 'epoch_ms=' + now + '&tz_min=' + (-new Date().getTimezoneOffset()) }).catch(() => {});
         },
+        // Coming BACK to a long list lands where you left it, not at the top
+        // (Malcolm 2026-09-11). The position is kept per page when you leave
+        // it, and put back only when you arrive by the back arrow or a back
+        // gesture - a fresh visit still starts at the top. Layout settles late
+        // on pages that fill themselves in, so the restore is repeated briefly,
+        // but never once you have started scrolling yourself.
+        saveScroll() { try { sessionStorage.setItem('ldrc.scroll:' + location.pathname, String(Math.round(window.scrollY))); } catch (e) {} },
+        restoreScroll(cameBack) {
+            let nav = null; try { nav = performance.getEntriesByType('navigation')[0]; } catch (e) {}
+            if (!cameBack && !(nav && nav.type === 'back_forward')) return;
+            let y = 0; try { y = parseInt(sessionStorage.getItem('ldrc.scroll:' + location.pathname) || '0', 10); } catch (e) {}
+            if (!(y > 0)) return;
+            let set = -1;
+            const go = () => {
+                if (set >= 0 && Math.abs(window.scrollY - set) > 8) return;      // you moved: leave it
+                const max = document.documentElement.scrollHeight - window.innerHeight;
+                if (max <= 0) return;
+                set = Math.min(y, max); window.scrollTo(0, set);
+            };
+            go(); [150, 400, 800].forEach(ms => setTimeout(go, ms));
+        },
         // One step of the back-arrow trail. `trail` = pages visited before
         // this one (oldest first, at most 6). Arriving by the arrow, or at
         // a page that is already on top of the trail (a swipe back, or a
@@ -723,6 +744,7 @@
             try { trail = JSON.parse(sessionStorage.getItem('ldrc.trail') || '[]'); } catch(_) {}
             let cameBack = false;
             try { cameBack = sessionStorage.getItem('ldrc.back') === '1'; sessionStorage.removeItem('ldrc.back'); } catch(_) {}
+            LDRC.restoreScroll(cameBack);
             const step = LDRC.trailStep(trail, location.pathname, from, cameBack);
             try { sessionStorage.setItem('ldrc.trail', JSON.stringify(step.trail)); } catch(_) {}
             const parent = step.prev
@@ -816,10 +838,12 @@
             sessionStorage.setItem('ldrc.from', location.pathname);
             if (a.classList.contains('backBtn')) sessionStorage.setItem('ldrc.back', '1');
         }catch(_){}
+        LDRC.saveScroll();
         LDRC.showLoading();
         setTimeout(() => { location.href = a.href; }, 50);
     }, true);
     document.addEventListener('submit', () => LDRC.showLoading(), true);
+    window.addEventListener('pagehide', () => LDRC.saveScroll());
     // Browser back/refresh/close: the native "Leave site?" dialog is the
     // only way to intercept these. Returning any string triggers it.
     window.addEventListener('beforeunload', e => {
