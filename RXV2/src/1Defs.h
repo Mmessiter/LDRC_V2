@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.653-recording-banner";
+constexpr const char* FW_VERSION = "RXV2-0.9.654-review-fixes";
 
 //*********************************************************************
 //  Auto-update manifest URLs

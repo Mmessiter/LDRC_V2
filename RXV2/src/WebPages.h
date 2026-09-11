@@ -783,6 +783,7 @@ inline void handleMspApi() {
             why = "refused: Rotorflight 4.6 cannot send its adjustments list over the receiver link without "
                   "overwriting its own telemetry setup (588-byte reply, 320-byte buffer). Plug the flight controller's USB into the dongle or receiver";
         else if (fn == MSP_RESET_CONF && !UsbHostMsp::active()) why = "refused: factory reset needs the USB connection to the flight controller";
+        else if (!dongleEnabled && !UsbHostMsp::active() && (currentProtocol != PROTO_CRSF || !fcTelemetryEnabled)) why = "needs the USB cable: this receiver's line to the flight controller carries no Rotorflight settings (not CRSF, or FC telemetry off)";
         else if (UsbHostMsp::cliMode) why = "refused: the command line is open - save or exit it first";
         else if (fn == MSP_SET_MOTOR)  why = "refused: motor test is never done from a phone";
         else if (reqLen == 0 && mspSetNeedsPayload(fn)) why = "refused: that is a write and it came with no data";

@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.654-review-fixes",
+      "url": "https://messiter.com/rxv2/release/v0.9.654/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.654/littlefs.bin",
+      "fs_md5": "7d466e2925ae2d44b8e3e5088ad87abb",
+      "notes": "From a critical pass over the day's work: In-flight adjustments never switches flight-controller banks while the transmitter is on (the boxes fill only for the bank in use; flip the switch for another); a Remove whose save fails reloads the page from the flight controller and says 'Not removed'; Save shows 'Writing line N of 43'; a receiver whose line to the flight controller carries no MSP (SBUS, IBUS, PPM, or FC telemetry off) answers 'needs the USB cable' instead of a timeout; the Ports warning covers the dongle's own port. Includes 0.9.653."
+    },
+    {
       "name": "RXV2-0.9.653-recording-banner",
       "url": "https://messiter.com/rxv2/release/v0.9.653/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.653/littlefs.bin",
@@ -76,11 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.643/littlefs.bin",
       "fs_md5": "984ba206277f1216a684591f2277973c",
       "notes": "A receiver now adopts a flight controller on its USB socket even while the transmitter is on (the USB task does the opening, the radio loop never waits), so the USB pages work in the usual bench setup: transmitter on, blades off. The command line and the reboot-to-apply settings still wait for the transmitter to be off. Includes 0.9.642."
-    },
-    {
-      "name": "RXV2-0.9.642-usb-review2",
-      "url": "https://messiter.com/rxv2/release/v0.9.642/firmware.bin",
-      "notes": "Second pass from the review: an MSP request on a receiver without a CRSF line (SBUS/IBUS/PPM, or FC telemetry off) is dropped rather than sent as CRSF frames onto the servo line once the USB cable is out; the telemetry-setup repair writes only over the CRSF link; long command-line output (dump) keeps its tail so the prompt is always seen; a half-installed USB host is undone; the USB socket switch is refused on a dongle; the USB-only pages say when the transmitter is keeping the USB link from opening; Find a setting knows the USB socket switch. Includes 0.9.641."
     }
   ]
 }
