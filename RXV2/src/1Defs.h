@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.659-usb-first-time";
+constexpr const char* FW_VERSION = "RXV2-0.9.660-two-wires-card";
 
 //*********************************************************************
 //  Auto-update manifest URLs
