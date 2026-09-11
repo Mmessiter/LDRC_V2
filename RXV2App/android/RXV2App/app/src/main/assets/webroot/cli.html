@@ -17,6 +17,7 @@
 .banner.bad{background:#dca08c;color:#5c2a1a}
 .needUsb{background:#ffd278;color:#5c3a00;border-radius:12px;padding:1em;margin:0 0 1em;font-weight:600;text-align:center}
 
+.usbOnly:disabled{color:#2c3e50;-webkit-text-fill-color:#2c3e50;opacity:.8}   /* read-only, still readable (Malcolm 2026-09-11) */
 </style>
 </head>
 <body>
@@ -74,7 +75,7 @@ async function usbGate() {
     if (g && !ok && s) g.textContent = s.sim ? 'Simulator mode is using the USB socket. Turn the simulator off (Setup) to reach the flight controller over USB.'
         : (s.usb && !s.usb.host && !s.dongle) ? 'The USB socket is off. Turn it on in Setup, then connect a USB cable between the flight controller\u2019s USB socket and this receiver\u2019s.'
         : 'Connect a USB cable between the flight controller\u2019s USB socket and the ' + (s.dongle ? 'dongle' : 'receiver') + '\u2019s USB socket. This page needs the USB connection.';
-    document.querySelectorAll('.usbOnly').forEach(el => { el.disabled = !ok; el.style.opacity = ok ? '' : '.45'; });
+    document.querySelectorAll('.usbOnly').forEach(el => { el.disabled = !ok; el.style.opacity = ok ? '' : '.8'; });
     return ok ? s : null;
 }
 
