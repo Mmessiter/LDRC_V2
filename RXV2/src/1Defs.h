@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.643-usb-tx-on";
+constexpr const char* FW_VERSION = "RXV2-0.9.644-save-retry";
 
 //*********************************************************************
 //  Auto-update manifest URLs

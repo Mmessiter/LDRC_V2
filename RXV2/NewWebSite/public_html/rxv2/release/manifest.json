@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.644-save-retry",
+      "url": "https://messiter.com/rxv2/release/v0.9.644/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.644/littlefs.bin",
+      "fs_md5": "b8be8cad6a2d8db169dc6bcd21720a4b",
+      "notes": "In-flight adjustments: Save retries any of its 43 writes that the receiver answers 'busy with a transmitter edit' or 'did not respond' to, so saving with the transmitter on no longer stops at the first collision with the transmitter's own Rotorflight traffic (Goblin bench, 2026-09-11 07:54). Includes 0.9.643."
+    },
+    {
       "name": "RXV2-0.9.643-usb-tx-on",
       "url": "https://messiter.com/rxv2/release/v0.9.643/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.643/littlefs.bin",
@@ -74,13 +81,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.633/littlefs.bin",
       "fs_md5": "bdb364d5dd52552a3de3377f5a6c8f7f",
       "notes": "In-flight adjustments: the bank-switch lines (PID bank / rates bank selector) are no longer shown or offered here - the Switches page owns them (Malcolm: 'this is defined in another area'). They stay untouched on the flight controller and still tell this page which channel range means bank 1 to 4. No '(nothing)' entry; a new line starts as 'Pitch P gain in bank 1'. Includes 0.9.632."
-    },
-    {
-      "name": "RXV2-0.9.632-short-list",
-      "url": "https://messiter.com/rxv2/release/v0.9.632/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.632/littlefs.bin",
-      "fs_md5": "83f41846ef72a18799c3fdea10a5302d",
-      "notes": "In-flight adjustments: by default the list offers only PIDs and rates, each per bank ('Yaw P gain in bank 1'); a 'Show every setting' switch reveals the full Rotorflight set (over 400 entries, including 'in the bank in use'). The bank-switch entries read 'PID bank switch (1 to 4)' / 'Rates bank switch (1 to 4)'. Includes 0.9.631."
     }
   ]
 }
