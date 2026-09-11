@@ -216,12 +216,14 @@
                 + '<p class=muted style="margin:.2em 0 .5em">Right now you are connected over '
                 + (this.viaBle ? '<b>Bluetooth</b> (the iPhone app).' : '<b>WiFi</b> (browser).') + '</p>'
                 + '<ul style="margin:.2em 0;padding-left:1.2em">'
-                + '<li><b>Bluetooth</b> — the RXV2 iPhone app. Nothing to join, no network needed; ideal at the flying field.</li>'
+                + '<li><b>Bluetooth</b> — the RXV2 app (iPhone, iPad, Android). Nothing to join, no network needed; ideal at the flying field.</li>'
                 + '<li><b>WiFi</b> — any browser: join the receiver’s own hotspot (named after your model) and open '
                 + '<b>http://192.168.4.1</b> — or, when the receiver is on your home network, simply '
                 + '<b>http://&lt;model-name&gt;.local</b>.</li>'
-                + '<li><b>Android?</b> The app is Apple-only for now, so the poor unfortunate Android owner '
-                + 'must take the WiFi route above. 😉</li>'
+                + '<li><b>USB-C cable</b>, receiver or dongle to the flight controller — the configurator’s own channel: '
+                + 'every setting, any size, the command line, ports, factory reset and the black box. '
+                + 'A transmitter’s own Lua scripts have only the slow CRSF tunnel with its 320-byte replies, so they stop at the everyday pages. '
+                + 'With both wires this app can do everything the configurator can, apart from flashing Rotorflight itself.</li>'
                 + '</ul></div>';
             const overlay = document.createElement('div');
             overlay.className = 'helpModal';

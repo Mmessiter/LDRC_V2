@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.656-two-wires",
+      "url": "https://messiter.com/rxv2/release/v0.9.656/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.656/littlefs.bin",
+      "fs_md5": "2252f4f300cedb9e69f4f1ee56e299a8",
+      "notes": "Help: 'Two wires, everything' - the receiver lead carries flying and the everyday pages; the USB-C cable adds the configurator's own channel (every setting, any size, command line, ports, factory reset, black box); a transmitter's Lua scripts have only the slow 320-byte CRSF tunnel. Said on the Rotorflight menu help and in every help screen's Ways to connect, which no longer calls the app Apple-only. Includes 0.9.655."
+    },
+    {
       "name": "RXV2-0.9.655-filters",
       "url": "https://messiter.com/rxv2/release/v0.9.655/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.655/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.645/littlefs.bin",
       "fs_md5": "ffe1567bfa079e36f11d9f8eb3c2a929",
       "notes": "The USB-only pages now say 'connect a USB cable between the flight controller's USB socket and the receiver's USB socket' (Malcolm, after the successful Goblin test with the transmitter on). Includes 0.9.644."
-    },
-    {
-      "name": "RXV2-0.9.644-save-retry",
-      "url": "https://messiter.com/rxv2/release/v0.9.644/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.644/littlefs.bin",
-      "fs_md5": "b8be8cad6a2d8db169dc6bcd21720a4b",
-      "notes": "In-flight adjustments: Save retries any of its 43 writes that the receiver answers 'busy with a transmitter edit' or 'did not respond' to, so saving with the transmitter on no longer stops at the first collision with the transmitter's own Rotorflight traffic (Goblin bench, 2026-09-11 07:54). Includes 0.9.643."
     }
   ]
 }
