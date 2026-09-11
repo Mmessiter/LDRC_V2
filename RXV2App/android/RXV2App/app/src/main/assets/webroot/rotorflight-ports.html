@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name=theme-color content="#5fa099">
+<meta name=apple-mobile-web-app-capable content=yes>
+<meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
+<meta name=apple-mobile-web-app-title content="LDRC RX V2">
+<title>Ports &middot; LDRC RX V2</title>
+<link rel=stylesheet href="/style.css?v=181">
+<script src="/app.js?v=198" defer></script>
+<style>
+.banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
+.banner.info{background:#c8d2dc;color:#3a5165}
+.banner.good{background:#a8d29a;color:#2a4d1f}
+.banner.bad{background:#dca08c;color:#5c2a1a}
+.port{display:flex;flex-wrap:wrap;gap:.4em .8em;align-items:center;margin:.55em 0;padding:.55em .6em;background:#e9eef2;border-radius:10px}
+.port label{min-width:5.5em;font-weight:600;color:#2c3e50}
+.port select{flex:1;min-width:12em;font-size:1em}
+.usbline{color:#5c6b75;font-size:.9em;margin:.5em .2em 0}
+</style>
+</head>
+<body>
+<button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
+<div class=bg-photo aria-hidden=true></div>
+<div class=bg-wash  aria-hidden=true></div>
+<div class=container>
+    <h1>Ports</h1>
+    <div id=status class="banner info" style="display:none"></div>
+
+    <div class=card>
+        <div id=ports></div>
+        <p class=usbline id=usbline></p>
+    </div>
+
+    <div class=card>
+        <button id=saveBtn class=btn type=button style="background:#6cab5e"><span class=ico>&#128190;</span>Save and restart the flight controller</button>
+    </div>
+    <div class=footer></div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+// Rotorflight serial port functions (io/serial.h) and receiver protocols (rx/rx.h)
+const F = { MSP: 1, GPS: 2, SPORT: 32, RX: 64, BLACKBOX: 128, ESC: 1024 };
+const PROV = { 0: 'Spektrum 1024', 1: 'Spektrum 2048', 2: 'SBUS', 3: 'SUMD', 4: 'SUMH', 5: 'XBUS B', 6: 'XBUS B RJ01', 7: 'IBUS', 8: 'Jeti EX Bus', 9: 'CRSF', 10: 'SRXL', 11: 'custom', 12: 'F.Port', 13: 'SRXL2', 14: 'GHST', 15: 'SBUS2', 16: 'F.Port 2', 17: 'FBUS', 18: 'XBUS A' };
+const RXPROV = { rx_crsf: 9, rx_sbus: 2, rx_ibus: 7 };
+const CHOICES = [
+    ['none',     'nothing'],
+    ['rx_crsf',  'receiver: LDRC RXV2 or any CRSF receiver'],
+    ['rx_sbus',  'receiver: SBUS'],
+    ['rx_ibus',  'receiver: IBUS'],
+    ['msp',      'dongle on a wire (MSP, 115200)'],
+    ['esc',      'ESC telemetry'],
+    ['sport',    'telemetry out: S.Port'],
+    ['gps',      'GPS'],
+    ['blackbox', 'blackbox logger'],
+];
+const hexToBytes = h => { const o = new Uint8Array(h.length / 2); for (let i = 0; i < o.length; i++) o[i] = parseInt(h.substr(i * 2, 2), 16); return o; };
+const bytesToHex = b => Array.from(b, x => x.toString(16).padStart(2, '0').toUpperCase()).join('');
+
+// ---------------- model (DOM-free, node-tested) ----------------
+// MSP 54 / 55 (msp.c MSP_SERIAL_CONFIG): 9 bytes per port - identifier, function mask u32,
+// then the MSP, GPS, telemetry and blackbox baud indexes. Every port is written back.
+function parsePorts(b) {
+    const out = [];
+    for (let o = 0; o + 9 <= b.length; o += 9)
+        out.push({ id: b[o], mask: (b[o + 1] | (b[o + 2] << 8) | (b[o + 3] << 16) | (b[o + 4] << 24)) >>> 0, msp: b[o + 5], gps: b[o + 6], tel: b[o + 7], bb: b[o + 8] });
+    return out;
+}
+function encodePorts(P) {
+    const b = new Uint8Array(P.length * 9);
+    P.forEach((p, i) => { const o = i * 9; b[o] = p.id; b[o + 1] = p.mask & 255; b[o + 2] = (p.mask >>> 8) & 255; b[o + 3] = (p.mask >>> 16) & 255; b[o + 4] = (p.mask >>> 24) & 255; b[o + 5] = p.msp; b[o + 6] = p.gps; b[o + 7] = p.tel; b[o + 8] = p.bb; });
+    return b;
+}
+function portName(id) {               // identifiers: 0.. = UART1.., 20 = USB, 30.. = soft serial, 40.. = LPUART
+    if (id === 20) return 'USB socket';
+    if (id >= 40) return 'LPUART ' + (id - 39);
+    if (id >= 30) return 'Soft serial ' + (id - 29);
+    return 'UART ' + (id + 1);
+}
+function choiceOf(p, prov) {          // a port's functions -> our choice; anything else is kept as it is
+    const m = p.mask >>> 0;
+    if (m === 0) return 'none';
+    if (m === F.RX) return prov === 9 ? 'rx_crsf' : prov === 2 ? 'rx_sbus' : prov === 7 ? 'rx_ibus' : 'other';
+    if (m === F.MSP) return 'msp';
+    if (m === F.ESC) return 'esc';
+    if (m === F.SPORT) return 'sport';
+    if (m === F.GPS) return 'gps';
+    if (m === F.BLACKBOX) return 'blackbox';
+    return 'other';
+}
+function applyChoice(p, c) {          // our choice -> the port's functions (the dongle also gets 115200)
+    if (c === 'other') return p;
+    const q = Object.assign({}, p);
+    q.mask = c === 'none' ? 0 : c.startsWith('rx_') ? F.RX : c === 'msp' ? F.MSP : c === 'esc' ? F.ESC : c === 'sport' ? F.SPORT : c === 'gps' ? F.GPS : F.BLACKBOX;
+    if (c === 'msp') q.msp = 5;       // baud index 5 = 115200, what the dongle speaks
+    return q;
+}
+function otherText(p, prov) {
+    if ((p.mask >>> 0) === F.RX) return 'as it is (receiver: ' + (PROV[prov] || ('protocol ' + prov)) + ')';
+    return 'as it is (functions 0x' + (p.mask >>> 0).toString(16) + ')';
+}
+
+// ---------------- page ----------------
+let ports = [], rxCfg = null, prov = 0, dirty = false;
+function setStatus(kind, msg) { const b = $('status'); b.style.display = msg ? '' : 'none'; if (!msg) return; b.className = 'banner ' + kind; b.textContent = msg; }
+function markDirty() { if (dirty) return; dirty = true; const b = $('saveBtn'); b.innerHTML = '<span class=ico>&#128190;</span>Save and restart the flight controller &mdash; unsaved changes'; b.style.background = '#d9822b'; }
+function markClean() { dirty = false; const b = $('saveBtn'); b.innerHTML = '<span class=ico>&#128190;</span>Save and restart the flight controller'; b.style.background = '#6cab5e'; }
+function paint() {
+    const P = $('ports'); P.innerHTML = '';
+    ports.forEach((p, i) => {
+        if (p.id === 20) { $('usbline').textContent = 'USB socket: configuration (MSP), always.'; return; }
+        const c = choiceOf(p, prov);
+        let opts = CHOICES.map(([v, t]) => '<option value=' + v + (c === v ? ' selected' : '') + '>' + t + '</option>').join('');
+        if (c === 'other') opts += '<option value=other selected>' + otherText(p, prov) + '</option>';
+        const d = document.createElement('div'); d.className = 'port';
+        d.innerHTML = '<label>' + portName(p.id) + '</label><select id=c' + i + '>' + opts + '</select>';
+        P.appendChild(d);
+        $('c' + i).onchange = () => {
+            const v = $('c' + i).value;
+            if (v.startsWith('rx_')) { ports.forEach((q, j) => { if (j !== i && (q.mask >>> 0) === F.RX) q.mask = 0; }); prov = RXPROV[v]; }   // one receiver port
+            ports[i] = applyChoice(ports[i], v);
+            markDirty(); paint();
+        };
+    });
+    if (!ports.length) P.innerHTML = '<p class=sub>No ports read yet.</p>';
+}
+async function load() {
+    setStatus('info', 'Reading…');
+    try {
+        ports = parsePorts(hexToBytes((await LDRC.msp(54)).trim()));
+        rxCfg = hexToBytes((await LDRC.msp(44)).trim()); prov = rxCfg[0];
+        setStatus('', ''); paint(); markClean();
+    } catch (e) { setStatus('bad', 'Read failed: ' + e.message); }
+}
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function fcBack() {             // after the restart: a small read answers again
+    await sleep(2500);
+    for (let i = 0; i < 20; i++) { try { await LDRC.msp(4); return true; } catch (e) {} await sleep(2000); }
+    return false;
+}
+async function save() {
+    if (ports.filter(p => (p.mask >>> 0) === F.RX).length > 1) { setStatus('bad', 'Only one port can carry the receiver'); return; }
+    const ok = await LDRC.confirm('Save the ports and restart the flight controller? If you move the port your receiver is on, the app loses the flight controller until the wiring matches.',
+                                  { title: 'Save and restart', icon: '💾', yes: 'Save and restart' });
+    if (!ok) return;
+    setStatus('info', 'Writing…');
+    try {
+        await LDRC.msp(55, bytesToHex(encodePorts(ports)));
+        if (rxCfg && rxCfg[0] !== prov) { const r = new Uint8Array(rxCfg); r[0] = prov; await LDRC.msp(45, bytesToHex(r)); }   // the receiver protocol, read-modify-write
+        await LDRC.msp(250);
+        setStatus('info', 'Saved. The flight controller is restarting…');
+        try { await LDRC.msp(68); } catch (e) {}
+        const back = await fcBack();
+        await load();
+        setStatus(back ? 'good' : 'bad', back ? '✓ Saved and restarted' : 'Saved, but the flight controller has not answered since the restart - check the wiring');
+    } catch (e) { setStatus('bad', 'Not saved: ' + e.message); }
+}
+document.addEventListener('DOMContentLoaded', async () => { $('saveBtn').onclick = save; await load(); });
+</script>
+<template id=helpContent><h2>Ports</h2>
+<p>What each socket on the flight controller carries. Set it once. Save restarts the flight controller.</p>
+<h3>The usual layout</h3>
+<ul>
+<li><b>Receiver</b>: the port your LDRC receiver plugs into, as a CRSF receiver. One port only. On a RadioMaster Nexus, port A is UART 4.</li>
+<li><b>Dongle on a wire</b>: MSP at 115200 on a spare port. A dongle on the USB socket needs no port at all.</li>
+<li><b>ESC telemetry</b>: the port the ESC&rsquo;s telemetry wire goes to.</li>
+</ul>
+<h3>Saving</h3>
+<p>If you move the port your receiver is on, the app loses the flight controller until the wiring matches. &ldquo;As it is&rdquo; keeps a setting made in the configurator.</p>
+<h3>USB socket</h3>
+<p>Always configuration (MSP). Nothing to set.</p>
+</template>
+</body>
+</html>
