@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.657-cable",
+      "url": "https://messiter.com/rxv2/release/v0.9.657/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.657/littlefs.bin",
+      "fs_md5": "b0d4f615fdf93cd990f31baabdb50ade",
+      "notes": "Help (Rotorflight menu, Setup's USB socket, every Ways-to-connect footer): buy a SHORT USB-C cable, about 12 cm, right-angled at the flight controller if you can, and make sure it is a data cable - many short leads only charge. Includes 0.9.656."
+    },
+    {
       "name": "RXV2-0.9.656-two-wires",
       "url": "https://messiter.com/rxv2/release/v0.9.656/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.656/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.646/littlefs.bin",
       "fs_md5": "246d925780bf05f0ebc4e83d745b4ea7",
       "notes": "In-flight adjustments: Remove asks 'Remove ... from the flight controller?' and saves straight away (Malcolm 2026-09-11: did not realise Save was still needed); any other edit turns the Save button orange with 'unsaved changes' until saved. Includes 0.9.645."
-    },
-    {
-      "name": "RXV2-0.9.645-cable-wording",
-      "url": "https://messiter.com/rxv2/release/v0.9.645/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.645/littlefs.bin",
-      "fs_md5": "ffe1567bfa079e36f11d9f8eb3c2a929",
-      "notes": "The USB-only pages now say 'connect a USB cable between the flight controller's USB socket and the receiver's USB socket' (Malcolm, after the successful Goblin test with the transmitter on). Includes 0.9.644."
     }
   ]
 }

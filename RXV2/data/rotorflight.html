@@ -9,7 +9,7 @@
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rotorflight &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=181">
-<script src="/app.js?v=201" defer></script>
+<script src="/app.js?v=202" defer></script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -63,7 +63,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 <h3>Why the swashplate may twitch</h3>
 <p>Changing banks and saving make the flight controller pause its servo outputs for a few milliseconds &mdash; a brief, harmless jump, on the ground only (the official configurator does the same).</p>
 <h3>Two wires, everything</h3>
-<p>The receiver lead carries the flying and the everyday pages. A short USB-C cable from the receiver to the flight controller adds the configurator&rsquo;s own channel: every setting, any size, the command line, ports, factory reset and the black box. A transmitter&rsquo;s own Lua scripts have only the slow CRSF tunnel with its 320-byte replies, so they stop at the everyday pages. With both wires this app can do everything the configurator can, apart from flashing Rotorflight itself.</p>
+<p>The receiver lead carries the flying and the everyday pages. A short USB-C cable from the receiver to the flight controller adds the configurator&rsquo;s own channel: every setting, any size, the command line, ports, factory reset and the black box. A transmitter&rsquo;s own Lua scripts have only the slow CRSF tunnel with its 320-byte replies, so they stop at the everyday pages. With both wires this app can do everything the configurator can, apart from flashing Rotorflight itself. Use a short cable, about 12 cm (5 in), right-angled at the flight-controller end if you can find one, and make sure it is a <b>data</b> cable: many short USB-C leads only charge.</p>
 <h3>Requirements</h3>
 <p>Protocol set to <b>CRSF</b> and a Rotorflight flight controller connected, by the lead or by USB.</p>
 </template>
