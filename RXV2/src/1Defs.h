@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.649-alacarte-order";
+constexpr const char* FW_VERSION = "RXV2-0.9.650-back-scroll";
 
 //*********************************************************************
 //  Auto-update manifest URLs

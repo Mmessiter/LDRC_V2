@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.650-back-scroll",
+      "url": "https://messiter.com/rxv2/release/v0.9.650/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.650/littlefs.bin",
+      "fs_md5": "d4f5e77f71bc8b06c64b03fccb9100c0",
+      "notes": "Back returns to where you were: a long list (A la carte, Find a setting, any page) remembers its scroll position when you leave it and puts it back when you come back by the back arrow or a back gesture. A fresh visit still starts at the top. Includes 0.9.649."
+    },
+    {
       "name": "RXV2-0.9.649-alacarte-order",
       "url": "https://messiter.com/rxv2/release/v0.9.649/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.649/littlefs.bin",
@@ -74,13 +81,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.639/littlefs.bin",
       "fs_md5": "c5dc127cce3835572fc733faaab08750",
       "notes": "A RECEIVER now hosts the flight controller on its USB socket exactly as the dongle does (Malcolm 2026-09-11: 'Yes let's do it'): a USB-C cable from the receiver to the flight controller gives the app every Rotorflight setting (the full adjustments read, In-flight adjustments, the Command line), while the CRSF line keeps carrying channels and telemetry. Automatic; Setup has a 'USB socket' switch to turn it off; simulator mode uses the socket instead. Flight rules: USB sends are queued to a task (the radio loop never waits), the device is opened or closed only with no transmitter linked, and an unplug falls back to the radio link at once. Includes 0.9.638."
-    },
-    {
-      "name": "RXV2-0.9.638-usb-wording",
-      "url": "https://messiter.com/rxv2/release/v0.9.638/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.638/littlefs.bin",
-      "fs_md5": "7c9581d5879880c63a886879128a6465",
-      "notes": "Help on In-flight adjustments and Command line: the USB cable runs from the dongle to the flight controller, not to a laptop (Malcolm: some might assume it needs the laptop). Includes 0.9.637."
     }
   ]
 }
