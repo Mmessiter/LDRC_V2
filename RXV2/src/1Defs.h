@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.645-cable-wording";
+constexpr const char* FW_VERSION = "RXV2-0.9.646-remove-saves";
 
 //*********************************************************************
 //  Auto-update manifest URLs

@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.646-remove-saves",
+      "url": "https://messiter.com/rxv2/release/v0.9.646/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.646/littlefs.bin",
+      "fs_md5": "246d925780bf05f0ebc4e83d745b4ea7",
+      "notes": "In-flight adjustments: Remove asks 'Remove ... from the flight controller?' and saves straight away (Malcolm 2026-09-11: did not realise Save was still needed); any other edit turns the Save button orange with 'unsaved changes' until saved. Includes 0.9.645."
+    },
+    {
       "name": "RXV2-0.9.645-cable-wording",
       "url": "https://messiter.com/rxv2/release/v0.9.645/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.645/littlefs.bin",
@@ -74,13 +81,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.635/littlefs.bin",
       "fs_md5": "588131d411f6401df5582445ad3626d1",
       "notes": "In-flight adjustments: choosing a setting (or adding a line) fills the value boxes with that setting's current value in that bank, ready to edit (Malcolm 2026-09-11). The page reads the bank over USB and puts the bank in use back straight away. Every rates, PID, PID+, rescue and governor-profile adjustment is readable; the four global ones (governor idle/auto throttle, accelerometer trims) stay blank. Includes 0.9.634."
-    },
-    {
-      "name": "RXV2-0.9.634-rate-units",
-      "url": "https://messiter.com/rxv2/release/v0.9.634/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.634/littlefs.bin",
-      "fs_md5": "77424b43ebab887056c5a5122973c7f8",
-      "notes": "In-flight adjustments: the Rate entries now show and save the same numbers as the Rates page (Rotorflight stores Rate/5 for its own rates type, Rate/10 for the older types; the page reads the rates type from the flight controller and converts both ways). Rates entries renamed: 'Pitch rate curve shape (Shape)', 'Pitch top rotation speed (Rate)', 'Pitch expo'. Includes 0.9.633."
     }
   ]
 }
