@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.657-cable";
+constexpr const char* FW_VERSION = "RXV2-0.9.658-help-corner";
 
 //*********************************************************************
 //  Auto-update manifest URLs
