@@ -423,56 +423,6 @@ struct ScannerView: View {
 
     var body: some View {
         List {
-            // One recording per MODEL (Malcolm 2026-08-04): connecting a
-            // different model parks this one's session, never erases it.
-            let _ = sessionRev   // touch so a delete forces this list to recompute
-            let sessions = SessionCache.savedSessions()
-            if !sessions.isEmpty {
-                Section {
-                    ForEach(sessions, id: \.model) { s in
-                        Button {
-                            SessionCache.shared.activate(model: s.model)
-                            reviewMode = true
-                        } label: {
-                            HStack(spacing: 10) {
-                                let _ = photoRev
-                                ModelThumb(name: s.model, side: 44)
-                                VStack(alignment: .leading) {
-                                    Text("Review:  \(s.model)").font(.headline)
-                                    Text(Self.friendlyWhen(s.savedAt)).font(.caption).foregroundStyle(.secondary)
-                                }
-                            }
-                        }
-                        // Swipe left to delete an old review (Malcolm
-                        // 2026-08-22). allowsFullSwipe:false so it takes a
-                        // deliberate tap on Delete, not an accidental flick —
-                        // these hold flight recordings.
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            Button(role: .destructive) {
-                                SessionCache.deleteSession(model: s.model)
-                                sessionRev += 1
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-                        }
-                    }
-                } footer: {
-                    Text("Flight data and Rotorflight settings recorded during each "
-                       + "model's last connection — browse them with everything "
-                       + "switched off.")
-                }
-            }
-            // a real receiver in sight → the demo offer just muddies the water
-            if link.found.isEmpty {
-                Section {
-                    Button {
-                        demoMode = true
-                    } label: {
-                        Label("No receiver yet?  Try the demo",
-                              systemImage: "theatermasks")
-                    }
-                }
-            }
             Section {
                 // "Searching…" lives IN the list, not floating over it: as an
                 // overlay it was drawn centred on the screen, on top of the
@@ -534,6 +484,58 @@ struct ScannerView: View {
                    + "Press and hold a receiver to give it a photograph. "
                    + "Not everybody has an iPhone — the WiFi web interface "
                    + "still works exactly as before.")
+            }
+            // Recordings come AFTER the live receivers (Malcolm 2026-09-11 tapped
+            // "Review: Goblin770" at the top and took it for a live connection).
+            // One recording per MODEL (Malcolm 2026-08-04): connecting a
+            // different model parks this one's session, never erases it.
+            let _ = sessionRev   // touch so a delete forces this list to recompute
+            let sessions = SessionCache.savedSessions()
+            if !sessions.isEmpty {
+                Section {
+                    ForEach(sessions, id: \.model) { s in
+                        Button {
+                            SessionCache.shared.activate(model: s.model)
+                            reviewMode = true
+                        } label: {
+                            HStack(spacing: 10) {
+                                let _ = photoRev
+                                ModelThumb(name: s.model, side: 44)
+                                VStack(alignment: .leading) {
+                                    Text("Review:  \(s.model)").font(.headline)
+                                    Text(Self.friendlyWhen(s.savedAt)).font(.caption).foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                        // Swipe left to delete an old review (Malcolm
+                        // 2026-08-22). allowsFullSwipe:false so it takes a
+                        // deliberate tap on Delete, not an accidental flick —
+                        // these hold flight recordings.
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button(role: .destructive) {
+                                SessionCache.deleteSession(model: s.model)
+                                sessionRev += 1
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                    }
+                } footer: {
+                    Text("Flight data and Rotorflight settings recorded during each "
+                       + "model's last connection — browse them with everything "
+                       + "switched off.")
+                }
+            }
+            // a real receiver in sight → the demo offer just muddies the water
+            if link.found.isEmpty {
+                Section {
+                    Button {
+                        demoMode = true
+                    } label: {
+                        Label("No receiver yet?  Try the demo",
+                              systemImage: "theatermasks")
+                    }
+                }
             }
         }
         .navigationTitle("RXV2 Receivers")
