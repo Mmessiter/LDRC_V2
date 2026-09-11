@@ -419,12 +419,26 @@ async function save() {
     const L = rowsToLines(scaleRows(rows, -1));
     if (rows.some(r => r.fn) && L.filter(l => l.fn).length === 0) { setStatus('bad', 'Give each position a value first'); return; }
     setStatus('info', 'Writing…');
+    // 43 writes in a row: with the transmitter on, its own Rotorflight traffic can
+    // make the receiver answer 503 (busy with a transmitter edit) or 504 (no answer
+    // in time) to one of them - retry those a few times before giving up (0.9.644).
+    const put = async (q) => {
+        let r, t = '';
+        for (let n = 0; n < 6; n++) {
+            r = await fetch(q, { cache: 'no-store' });
+            if (r.ok) return null;
+            t = await r.text();
+            if (r.status !== 503 && r.status !== 504) break;
+            await new Promise(rs => setTimeout(rs, 500 + 300 * n));
+        }
+        return t || ('HTTP ' + r.status);
+    };
     for (let i = 0; i < L.length; i++) {
-        const r = await fetch('/api/msp?fn=53&data=' + bytesToHex(encodeLine(i, L[i])), { cache: 'no-store' });
-        if (!r.ok) { setStatus('bad', 'Line ' + (i + 1) + ': ' + await r.text()); return; }
+        const err = await put('/api/msp?fn=53&data=' + bytesToHex(encodeLine(i, L[i])));
+        if (err) { setStatus('bad', 'Line ' + (i + 1) + ': ' + err); return; }
     }
-    const s = await fetch('/api/msp?fn=250', { cache: 'no-store' });
-    if (!s.ok) { setStatus('bad', 'Not saved: ' + await s.text()); return; }
+    const err = await put('/api/msp?fn=250');
+    if (err) { setStatus('bad', 'Not saved: ' + err); return; }
     setStatus('good', '✓ Saved');
     await load();
 }
