@@ -135,7 +135,10 @@ body.hasSearch .subtitle{max-width:calc(100% - 1rem)}
 .helpBtn{
     position:fixed;
     top:max(0.7em, env(safe-area-inset-top, 0.7em));
-    right:max(0.7em, env(safe-area-inset-right, 0.7em));
+    /* 2.6em in from the corner: the app's demo/review covers draw their own
+       small X there (Malcolm 2026-09-11, iPad: "I sometimes hit the little X
+       by mistake"). The search circle keeps its place beside the ?. */
+    right:calc(max(0.7em, env(safe-area-inset-right, 0.7em)) + 2.6em);
     width:3em;height:3em;border-radius:50%;
     background:#f4f7f9;color:#3a5165;
     font:700 1.5em/1 -apple-system,BlinkMacSystemFont,sans-serif;
@@ -148,7 +151,7 @@ body.hasSearch .subtitle{max-width:calc(100% - 1rem)}
 .searchBtn{
     position:fixed;
     top:max(0.7em, env(safe-area-inset-top, 0.7em));
-    right:calc(max(0.7em, env(safe-area-inset-right, 0.7em)) + 3.5em);
+    right:calc(max(0.7em, env(safe-area-inset-right, 0.7em)) + 6.1em);
     width:3em;height:3em;border-radius:50%;
     display:flex;align-items:center;justify-content:center;
     background:#f4f7f9;
