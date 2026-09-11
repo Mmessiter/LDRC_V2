@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.645-cable-wording",
+      "url": "https://messiter.com/rxv2/release/v0.9.645/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.645/littlefs.bin",
+      "fs_md5": "ffe1567bfa079e36f11d9f8eb3c2a929",
+      "notes": "The USB-only pages now say 'connect a USB cable between the flight controller's USB socket and the receiver's USB socket' (Malcolm, after the successful Goblin test with the transmitter on). Includes 0.9.644."
+    },
+    {
       "name": "RXV2-0.9.644-save-retry",
       "url": "https://messiter.com/rxv2/release/v0.9.644/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.644/littlefs.bin",
@@ -74,13 +81,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.634/littlefs.bin",
       "fs_md5": "77424b43ebab887056c5a5122973c7f8",
       "notes": "In-flight adjustments: the Rate entries now show and save the same numbers as the Rates page (Rotorflight stores Rate/5 for its own rates type, Rate/10 for the older types; the page reads the rates type from the flight controller and converts both ways). Rates entries renamed: 'Pitch rate curve shape (Shape)', 'Pitch top rotation speed (Rate)', 'Pitch expo'. Includes 0.9.633."
-    },
-    {
-      "name": "RXV2-0.9.633-no-bank-lines",
-      "url": "https://messiter.com/rxv2/release/v0.9.633/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.633/littlefs.bin",
-      "fs_md5": "bdb364d5dd52552a3de3377f5a6c8f7f",
-      "notes": "In-flight adjustments: the bank-switch lines (PID bank / rates bank selector) are no longer shown or offered here - the Switches page owns them (Malcolm: 'this is defined in another area'). They stay untouched on the flight controller and still tell this page which channel range means bank 1 to 4. No '(nothing)' entry; a new line starts as 'Pitch P gain in bank 1'. Includes 0.9.632."
     }
   ]
 }

@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.644-save-retry";
+constexpr const char* FW_VERSION = "RXV2-0.9.645-cable-wording";
 
 //*********************************************************************
 //  Auto-update manifest URLs

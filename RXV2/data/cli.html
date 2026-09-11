@@ -25,7 +25,7 @@
 <div class=bg-wash  aria-hidden=true></div>
 <div class=container>
     <h1>Command line</h1>
-    <div id=needUsb class=needUsb style="display:none">Plug the flight controller&rsquo;s USB socket into the dongle or receiver. This page needs the USB connection.</div>
+    <div id=needUsb class=needUsb style="display:none">Connect a USB cable between the flight controller&rsquo;s USB socket and the receiver&rsquo;s USB socket. This page needs the USB connection.</div>
     <div id=status class="banner info" style="display:none"></div>
 
     <div class=card>
@@ -72,8 +72,8 @@ async function usbGate() {
     const g = document.getElementById('needUsb');
     if (g) g.style.display = ok ? 'none' : '';
     if (g && !ok && s) g.textContent = s.sim ? 'Simulator mode is using the USB socket. Turn the simulator off (Setup) to reach the flight controller over USB.'
-        : (s.usb && !s.usb.host && !s.dongle) ? 'The USB socket is off. Turn it on in Setup, then plug the flight controller\u2019s USB socket into this receiver.'
-        : 'Plug the flight controller\u2019s USB socket into the ' + (s.dongle ? 'dongle' : 'receiver') + '. This page needs the USB connection.';
+        : (s.usb && !s.usb.host && !s.dongle) ? 'The USB socket is off. Turn it on in Setup, then connect a USB cable between the flight controller\u2019s USB socket and this receiver\u2019s.'
+        : 'Connect a USB cable between the flight controller\u2019s USB socket and the ' + (s.dongle ? 'dongle' : 'receiver') + '\u2019s USB socket. This page needs the USB connection.';
     document.querySelectorAll('.usbOnly').forEach(el => { el.disabled = !ok; el.style.opacity = ok ? '' : '.45'; });
     return ok ? s : null;
 }
