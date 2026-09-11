@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.647-ports",
+      "url": "https://messiter.com/rxv2/release/v0.9.647/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.647/littlefs.bin",
+      "fs_md5": "941585b0272d31bc8abff54a7ecce164",
+      "notes": "New Ports page (Rotorflight's Ports tab): each flight-controller UART gets one plain choice - nothing, receiver (CRSF, SBUS or IBUS), dongle on a wire (MSP 115200), ESC telemetry, S.Port telemetry, GPS or blackbox; other setups are kept as they are; one receiver port only; Save writes the ports and the receiver protocol, saves, restarts the flight controller and waits for it. With this, a new receiver never needs the configurator: the port is set from the phone over USB. Includes 0.9.646."
+    },
+    {
       "name": "RXV2-0.9.646-remove-saves",
       "url": "https://messiter.com/rxv2/release/v0.9.646/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.646/littlefs.bin",
@@ -74,13 +81,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.636/littlefs.bin",
       "fs_md5": "2c41e7d818446e2722693431982e47a9",
       "notes": "Help screens: the In-flight adjustments and Command line pages now have the ? button (they were the only pages without it) with short, step-ordered help - setting one up, Switch, Knob, Banks, Numbers, USB; commands, leaving, what is paused. Includes 0.9.635."
-    },
-    {
-      "name": "RXV2-0.9.635-prefill",
-      "url": "https://messiter.com/rxv2/release/v0.9.635/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.635/littlefs.bin",
-      "fs_md5": "588131d411f6401df5582445ad3626d1",
-      "notes": "In-flight adjustments: choosing a setting (or adding a line) fills the value boxes with that setting's current value in that bank, ready to edit (Malcolm 2026-09-11). The page reads the bank over USB and puts the bank in use back straight away. Every rates, PID, PID+, rescue and governor-profile adjustment is readable; the four global ones (governor idle/auto throttle, accelerometer trims) stay blank. Includes 0.9.634."
     }
   ]
 }

@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.646-remove-saves";
+constexpr const char* FW_VERSION = "RXV2-0.9.647-ports";
 
 //*********************************************************************
 //  Auto-update manifest URLs
