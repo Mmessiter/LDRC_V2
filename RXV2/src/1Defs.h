@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.650-back-scroll";
+constexpr const char* FW_VERSION = "RXV2-0.9.651-adj-offline-copy";
 
 //*********************************************************************
 //  Auto-update manifest URLs
