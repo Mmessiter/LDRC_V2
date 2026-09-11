@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.652-greyed-darker",
+      "url": "https://messiter.com/rxv2/release/v0.9.652/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.652/littlefs.bin",
+      "fs_md5": "6592d9c2a5126d86992020c458f2c849",
+      "notes": "Greyed (read-only) controls on In-flight adjustments and the Command line stay readable: dark text at 80 percent instead of 45. Includes 0.9.651."
+    },
+    {
       "name": "RXV2-0.9.651-adj-offline-copy",
       "url": "https://messiter.com/rxv2/release/v0.9.651/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.651/littlefs.bin",
@@ -74,13 +81,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.641/littlefs.bin",
       "fs_md5": "456f38979b5b52e5319abcde841d954c",
       "notes": "From the adversarial review of the receiver USB host: the USB device is now opened and closed by the USB task, never by the main loop (a misbehaving device can no longer hold the radio loop); an unplug while the command line is open closes the command line instead of leaving MSP dead until a reboot; a re-plugged device gets fresh open attempts; a device that leaves before it is opened is dropped at once; the dongle no longer types MSP into an open command line either; the simulator and dongle pages show a refusal instead of pretending to reboot. Includes 0.9.640."
-    },
-    {
-      "name": "RXV2-0.9.640-usb-guards",
-      "url": "https://messiter.com/rxv2/release/v0.9.640/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.640/littlefs.bin",
-      "fs_md5": "787f038a86ea9799bc85960fa8ee2c98",
-      "notes": "Guards on top of 0.9.639 (receiver hosts the flight controller over USB): the command line and the reboot-to-apply settings (USB socket, simulator, dongle mode) are refused while the transmitter has been linked in the last 3 s; the USB device is opened or closed only after 3 s without a link; MSP is never typed into an open command line; the queue is emptied when a flight controller (re)connects; a bank hold is kept over USB on non-CRSF receivers; the flight controller's own 'armed' word refuses configuration on a receiver too; a gone USB device can no longer crash the board; 'msc' is refused on the command line; state.json gains fc_link (usb, crsf, uart or none). Home page says 'flight controller on USB' and warns while the command line is open. Includes 0.9.639."
     }
   ]
 }

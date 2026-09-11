@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.651-adj-offline-copy";
+constexpr const char* FW_VERSION = "RXV2-0.9.652-greyed-darker";
 
 //*********************************************************************
 //  Auto-update manifest URLs

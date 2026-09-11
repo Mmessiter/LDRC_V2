@@ -37,6 +37,7 @@
 .vals small{display:block;color:#5c6b75;font-size:.75em}
 .showAll{display:flex;align-items:center;gap:.5em;margin:.2em 0 .6em;font-size:.95em}
 .showAll input{width:1.3em;height:1.3em}
+.usbOnly:disabled{color:#2c3e50;-webkit-text-fill-color:#2c3e50;opacity:.8}   /* read-only, still readable (Malcolm 2026-09-11) */
 </style>
 </head>
 <body>
@@ -208,7 +209,7 @@ async function usbGate() {
         : (s.usb && !s.usb.host && !s.dongle) ? 'The USB socket is off. Turn it on in Setup, then connect a USB cable between the flight controller\u2019s USB socket and this receiver\u2019s.'
         : 'Connect a USB cable between the flight controller\u2019s USB socket and the ' + (s.dongle ? 'dongle' : 'receiver') + '\u2019s USB socket. This page needs the USB connection.';
     if (g && !gateOk && cacheAt) g.textContent = 'Showing the settings read over USB at ' + cacheAt + ' - to change them, ' + g.textContent.replace(' This page needs the USB connection.', '').replace(/^Connect/, 'connect');
-    document.querySelectorAll('.usbOnly').forEach(el => { el.disabled = !gateOk; el.style.opacity = gateOk ? '' : '.45'; });
+    document.querySelectorAll('.usbOnly').forEach(el => { el.disabled = !gateOk; el.style.opacity = gateOk ? '' : '.8'; });
     return gateOk ? s : null;
 }
 function chanSel(id, v) {
@@ -382,7 +383,7 @@ function paint() {
         if (!(await LDRC.confirm('Remove ' + what + ' from the flight controller? It is saved straight away.', { title: 'Remove and save', icon: '\uD83D\uDDD1\uFE0F', yes: 'Remove and save', kind: 'danger' }))) return;
         rows.splice(i, 1); paint(); await save();
     });
-    document.querySelectorAll('.usbOnly').forEach(el => { el.disabled = !gateOk; el.style.opacity = gateOk ? '' : '.45'; });
+    document.querySelectorAll('.usbOnly').forEach(el => { el.disabled = !gateOk; el.style.opacity = gateOk ? '' : '.8'; });
 }
 function collect() {
     rows.forEach((r, i) => {
