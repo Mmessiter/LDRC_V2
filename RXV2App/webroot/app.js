@@ -538,6 +538,22 @@
             .then(r => r.json())
             .then(p => { LDRC.replay = (p.phase === 'replay'); return LDRC.replay; })
             .catch(() => false);
+        // A recording looks exactly like the live model - so every replayed page says
+        // so at the top (Malcolm 2026-09-11: opened "Review: Goblin770" with the model
+        // switched off and took it for a live connection).
+        LDRC.replayReady.then(rep => {
+            if (!rep) return;
+            const put = () => {
+                const c = document.querySelector('.container'); if (!c || document.getElementById('replayBanner')) return;
+                const b = document.createElement('div'); b.id = 'replayBanner';
+                b.style.cssText = 'background:#ffd278;color:#5c3a00;border-radius:12px;padding:.8em 1em;margin:0 0 1em;font-weight:600;text-align:center';
+                const name = (LDRC.state && LDRC.state.info && LDRC.state.info.name) || '';
+                b.textContent = 'Recording' + (name ? ' of ' + name : '') + ' \u2014 nothing here is live. To connect, use Load another model on the front page.';
+                c.insertBefore(b, c.firstChild);
+                if (!name) LDRC.fetchState().then(() => { const n = LDRC.state && LDRC.state.info && LDRC.state.info.name; if (n) b.textContent = 'Recording of ' + n + ' \u2014 nothing here is live. To connect, use Load another model on the front page.'; });
+            };
+            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', put); else put();
+        });
     }
 
     // Footer FW version. Defer the fetch by 200 ms so it can't block the
