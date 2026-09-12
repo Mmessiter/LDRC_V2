@@ -96,11 +96,13 @@ const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
 // ---- flight-controller context: filters (MSP 92, 27 B), gear ratios (MSP 131), recorder (MSP 80), memory (MSP 70) ----
 const FLEN=27;
 let filtRaw=null, filters=null, gear={main:0,tail:0}, rec=null, mem=null, polling=false, parts=null, analysis=null, curLog=0;
-function parseFilters(b){ return { lpf1t:b[1], lpf1Hz:rdU16(b,2), lpf2t:b[4], lpf2Hz:rdU16(b,5), n1:rdU16(b,7), n1c:rdU16(b,9), n2:rdU16(b,11), n2c:rdU16(b,13), dynCount:b[19], dynQ:b[20], dynMin:rdU16(b,21), dynMax:rdU16(b,23), rpmPreset:b[25], rpmMinHz:b[26] }; }
+function parseFilters(b){ return { lpf1t:b[1], lpf1Hz:rdU16(b,2), lpf2t:b[4], lpf2Hz:rdU16(b,5), n1:rdU16(b,7), n1c:rdU16(b,9), n2:rdU16(b,11), n2c:rdU16(b,13), dynLpfMin:rdU16(b,15), dynLpfMax:rdU16(b,17), dynCount:b[19], dynQ:b[20], dynMin:rdU16(b,21), dynMax:rdU16(b,23), rpmPreset:b[25], rpmMinHz:b[26] }; }
+let pidUs=0;
 async function readContext(){
     try{ const b=hexToBytes(await LDRC.msp(92)); if(b.length>=FLEN){ filtRaw=b.slice(0,FLEN); filters=parseFilters(b); } }catch(e){}
     try{ const b=hexToBytes(await LDRC.msp(131)); if(b.length>=29){ const mn=rdU16(b,21),md=rdU16(b,23),tn=rdU16(b,25),td=rdU16(b,27); gear.main=(mn&&md)?md/mn:0; gear.tail=(tn&&td)?td/tn:0; if(gear.main<1&&gear.main>0)gear.main=1/gear.main; if(gear.tail<1&&gear.tail>0)gear.tail=1/gear.tail; } }catch(e){}
     try{ const b=hexToBytes(await LDRC.msp(80)); if(b.length>=13&&b[0]) rec={device:b[1],mode:b[2],denom:rdU16(b,3),fields:rdU32(b,5)}; }catch(e){}
+    try{ const b=hexToBytes(await LDRC.msp(101)); if(b.length>=2) pidUs=rdU16(b,0); }catch(e){}
     try{ const b=hexToBytes(await LDRC.msp(70)); if(b.length>=13) mem={flags:b[0],total:rdU32(b,5),used:rdU32(b,9)}; }catch(e){}
     paintContext();
 }
@@ -109,11 +111,12 @@ function paintContext(){
     if(rec){
         const f=rec.fields, miss=[]; if(!(f&(1<<5)))miss.push('Gyro raw'); if(!(f&(1<<6)))miss.push('Gyro'); if(!(f&(1<<13)))miss.push('Head speed');
         if(miss.length) w.push('<b>The recorder is not saving '+miss.join(', ')+'.</b> Tick '+(miss.length>1?'them':'it')+' on the Flight recorder page before the next flight, or the check has nothing to read.');
-        if(rec.denom>8) w.push('<b>How often is 1 in '+rec.denom+'</b>: too slow to see vibration above '+Math.round(4000/rec.denom/2)+' Hz. Set 1 in 2 on the Flight recorder page.');
+        const loopHz=pidUs?1e6/pidUs:4000, logHz=loopHz/(rec.denom||1);
+        if(logHz<900) w.push('<b>How often is 1 in '+rec.denom+'</b> ('+Math.round(logHz)+' a second): too slow to see vibration above '+Math.round(logHz/2)+' Hz. Set 1 in 2 on the Flight recorder page.');
         if(rec.mode===0||rec.device===0) w.push('<b>The recorder is off</b> (When: never, or Where: nowhere). Turn it on on the Flight recorder page.');
     }
     const wd=$('recWarn'); wd.style.display=w.length?'':'none'; wd.innerHTML=w.map(x=>'<div>'+x+'</div>').join('')+(w.length?'<a href="/rotorflight-blackbox" style="display:inline-block;margin-top:.4em;font-weight:700;color:#2f4452">Flight recorder page &rarr;</a>':'');
-    if(mem){ $('memText').textContent=(mem.flags&1)?('Black box: '+mb(mem.used)+' recorded of '+mb(mem.total)+(mem.used?' — reading takes about '+Math.max(5,Math.round(mem.used/100000))+' s per flight':'')):'No memory chip for the black box on this flight controller.'; }
+    if(mem){ $('memText').textContent=(mem.flags&2)?('Black box: '+mb(mem.used)+' recorded of '+mb(mem.total)+(mem.used?' — the check reads it all, about '+Math.max(5,Math.round(mem.used/100000))+' s':'')):'No memory chip for the black box on this flight controller.'; }
 }
 
 // USB only: say so in one line, keep the button off until it is true (as the command line does)
@@ -154,7 +157,7 @@ async function poll(){
     polling=false; $('progWrap').style.display='none';
     document.querySelectorAll('.usbOnly').forEach(el=>{ el.disabled=false; });
     if(st.state==='failed'){ setStatus('bad','Stopped: '+st.reason); return; }
-    if(st.state==='done'){ $('progText').textContent=''; await showResult(st); return; }
+    if(st.state==='done'){ $('progText').textContent=''; if(!filtRaw) await readContext(); await showResult(st); return; }
     setStatus('info','State: '+st.state);
 }
 async function fetchPart(n){ const r=await fetch('/api/blackbox/result?part='+n,{cache:'no-store'}); if(!r.ok) throw new Error('result part '+n+': '+(await r.text())); return r.json(); }
@@ -165,7 +168,7 @@ async function showResult(st){
         parts={summary,fly,gnd,order,timeline,orderFilt};
     }catch(e){ setStatus('bad',e.message); return; }
     setStatus('','');
-    render();
+    try{ render(); }catch(e){ setStatus('bad','Could not show the result: '+e.message); }
 }
 function render(){
     const ctx={filters:filters||{}, gearMain:gear.main, gearTail:gear.tail, blades:2, tailBlades:2};
@@ -174,15 +177,15 @@ function render(){
     // verdict: one patch of text — bold what to do, then why; Apply if it can be applied here
     let h='';
     const p=a.primary;
-    if(p){
-        h+='<div class="verdict '+p.kind+'"><b>'+esc(p.title)+'</b>'+esc(p.why);
-        if(p.action&&filtRaw) h+='<button class=applyBtn id=applyBtn onclick="applyAction(analysis.primary.action)">'+esc(p.action.text)+'</button>';
-        h+='</div>';
-    }
-    for(const v of a.verdicts.slice(1)) h+='<div class=more><b>'+esc(v.title)+'.</b> '+esc(v.why)+(v.action&&filtRaw?'<button class=applyBtn onclick=\'applyAction('+JSON.stringify(v.action).replace(/'/g,'&#39;')+')\'>'+esc(v.action.text)+'</button>':'')+'</div>';
+    const gate=applyAllowed();
+    const btn=(act)=> (act&&filtRaw&&gate.ok) ? '<button class=applyBtn onclick=\'applyAction('+JSON.stringify(act).replace(/'/g,'&#39;')+')\'>'+esc(act.text)+'</button>' : '';
+    if(p) h+='<div class="verdict '+p.kind+'"><b>'+esc(p.title)+'</b>'+esc(p.why)+btn(p.action)+'</div>';
+    if(applied&&applied.sig===a.signature) h+='<div class=more><b>Changed after this flight: '+esc(applied.text)+'.</b> Fly, then check again before the next change.'+(applied.old?'<button class=applyBtn style="background:#c98a4a" onclick="undoChange()">Undo — put the filters back</button>':'')+'</div>';
+    else if(applied&&applied.old) h+='<div class=more>Last change: '+esc(applied.text)+'.<button class=applyBtn style="background:#c98a4a" onclick="undoChange()">Undo — put the filters back</button></div>';
+    for(const v of a.verdicts.slice(1)) h+='<div class=more><b>'+esc(v.title)+'.</b> '+esc(v.why)+btn(v.action)+'</div>';
     for(const n of a.notes) h+='<div class=more>'+esc(n)+'</div>';
     const secs=Math.round(a.seconds||0), hsm=Math.round(a.hsMedian||0);
-    h+='<p class=sub>'+(S.header&&S.header.date?esc(S.header.date.slice(0,16).replace('T',' '))+' — ':'')+secs+' s recorded at '+Math.round(a.rate)+' samples a second'+(hsm?', head speed about '+hsm+' rpm':'')+(S.logs&&S.logs.length>1?', flight '+(S.wantLog||S.logs.length)+' of '+S.logs.length:'')+(S.logs&&S.logs.length&&!S.logs[(S.wantLog||S.logs.length)-1].clean?' (the log ends abruptly: power off before disarm?)':'')+'.'+(a.hsSpread>0.08?' The head speed varied a lot (±'+Math.round(a.hsSpread*100)+' %), which smears the rotor lines.':'')+'</p>';
+    h+='<p class=sub>'+(S.header&&S.header.date?esc(S.header.date.slice(0,16).replace('T',' '))+' — ':'')+secs+' s recorded at '+Math.round(a.rate)+' samples a second'+(hsm?', head speed about '+hsm+' rpm':'')+((S.logsTotal||S.logs.length)>1?', flight '+(S.log||S.logs.length)+' of '+(S.logsTotal||S.logs.length):'')+((S.logs&&S.logs[(S.log||S.logs.length)-(S.logsFirst||1)]&&!S.logs[(S.log||S.logs.length)-(S.logsFirst||1)].clean)?' (the log ends abruptly: power off before disarm?)':'')+(S.keptFlying?' — a later arm without flying was ignored':'')+'.'+(a.hsSpread>0.08?' The head speed varied a lot (±'+Math.round(a.hsSpread*100)+' %), which smears the rotor lines.':'')+'</p>';
     $('verdictCard').innerHTML=h;
     // peaks
     const pk=a.peaks.slice(0,10);
@@ -193,9 +196,9 @@ function render(){
         $('peaksTable').innerHTML=t; $('peaksCard').style.display='';
     } else { $('peaksTable').innerHTML='<p class=sub>No strong vibration lines.</p>'; $('peaksCard').style.display=''; }
     // flights list
-    if(S.logs&&S.logs.length>1){
-        const cur=S.wantLog||S.logs.length;
-        $('flights').innerHTML=S.logs.map((L,i)=>'<button class="'+(i+1===cur?'cur':'')+'" onclick="startCheck('+(i+1)+')">Flight '+(i+1)+(L.seconds?' — '+Math.round(L.seconds)+' s':'')+(L.hsMedian?', '+Math.round(L.hsMedian)+' rpm':'')+'</button>').join('');
+    if((S.logsTotal||S.logs.length)>1){
+        const cur=S.log||S.logs.length, first=S.logsFirst||1;
+        $('flights').innerHTML=S.logs.map((L,i)=>'<button class="'+(first+i===cur?'cur':'')+'" onclick="startCheck('+(first+i)+')">Flight '+(first+i)+(L.seconds?' — '+Math.round(L.seconds)+' s':'')+(L.hsMedian?', '+Math.round(L.hsMedian)+' rpm':'')+'</button>').join('');
         $('flightsWrap').style.display='';
     } else $('flightsWrap').style.display='none';
     // charts
@@ -212,33 +215,94 @@ function render(){
 }
 
 // ---- apply a change to the filters (MSP 92 → 93 + 250, read-modify-write, takes effect at once) ----
-async function applyAction(act){
-    if(!filtRaw){ setStatus('bad','Filters not read yet'); return; }
-    const s=await LDRC.fetchState(); if(s&&s.rf&&s.rf.armed){ setStatus('bad','Refused — the model is ARMED'); return; }
-    if(!(await LDRC.confirm(act.text+'? It takes effect at once on the flight controller and is saved. Fly, then check again.',{title:'Change a filter',icon:'🎛️',yes:'Change it'}))) return;
-    try{
-        const b=new Uint8Array(hexToBytes(await LDRC.msp(92)).slice(0,FLEN));
-        const w16=(o,v)=>{b[o]=v&255;b[o+1]=(v>>8)&255;};
-        switch(act.set){
-            case 'rpmPreset': b[25]=act.value; break;
-            case 'rpmMinHz': b[26]=act.value; break;
-            case 'dynCount': b[19]=act.value; if(b[20]<10)b[20]=25; if(rdU16(b,21)<10)w16(21,25); if(rdU16(b,23)<rdU16(b,21)+20)w16(23,Math.max(rdU16(b,21)+20,350)); break;
-            case 'notch1': w16(7,act.value); w16(9,act.cutoff); break;
-            case 'notch2': w16(11,act.value); w16(13,act.cutoff); break;
-            case 'lpf1Hz': w16(2,act.value); break;
-            default: throw new Error('unknown change');
+// Safety (Malcolm 2026-09-12: "as safe as possible before it affects real flying"):
+//  never while armed or with the rotor turning; only on a Rotorflight whose
+//  byte layout is verified; every value bounded (Lowpass 1 never below 60 Hz
+//  and never raised, fixed notches 80..1000 Hz, dynamic notches 0..8, presets
+//  1..3); the write is read back and compared; the old 27 bytes are kept for
+//  Undo; ONE change per flight - Apply stays off until a NEW flight has been
+//  checked (the log signature must change).
+const LIMITS = { lpf1Min: 60, notchMin: 80, notchMax: 1000, dynMax: 8 };
+function modelName(){ return (LDRC.state && LDRC.state.info && LDRC.state.info.name) || 'model'; }
+function hsFromState(s){ for (const o of [s, s && s.rf, s && s.tele, s && s.fc, s && s.fcinfo]) { if (o && o.head_speed != null) return +o.head_speed; if (o && o.headspeed != null) return +o.headspeed; if (o && o.hs != null) return +o.hs; } return 0; }
+function lsGet(k){ try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } }
+function lsSet(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+let applied = null;   // {sig, text, at, old} for this model, from localStorage once the model name is known
+function loadApplied(){ applied = lsGet('bbcheck.applied:' + modelName()); }
+function applyAllowed(){
+    if (!analysis || !filtRaw) return { ok:false, why:'Filters not read yet' };
+    if (applied && applied.sig === analysis.signature) return { ok:false, why:'Already changed one thing after this flight (' + applied.text + '). Fly, then check again.' };
+    return { ok:true };
+}
+function planChange(act, b){
+    // returns {b (new bytes), before, after, label} or throws
+    const cur = parseFilters(b); const nb = new Uint8Array(b); const w16=(o,v)=>{nb[o]=v&255;nb[o+1]=(v>>8)&255;};
+    switch(act.set){
+        case 'rpmPreset': if(!(act.value>=1&&act.value<=3)) throw new Error('preset out of range'); nb[25]=act.value; return { b:nb, before:['custom','low','normal','high'][cur.rpmPreset]||cur.rpmPreset, after:['custom','low','normal','high'][act.value], label:'Rotor-speed notches' };
+        case 'rpmMinHz': if(!(act.value>=10&&act.value<=100)) throw new Error('lowest rotor frequency out of range'); nb[26]=act.value; return { b:nb, before:cur.rpmMinHz+' Hz', after:act.value+' Hz', label:'Lowest rotor frequency' };
+        case 'dynCount': if(!(act.value>=0&&act.value<=LIMITS.dynMax)) throw new Error('dynamic notch count out of range'); nb[19]=act.value; if(nb[20]<10)nb[20]=25; if(rdU16(nb,21)<20)w16(21,20); if(rdU16(nb,23)<rdU16(nb,21)+40)w16(23,Math.max(rdU16(nb,21)+40,250)); return { b:nb, before:cur.dynCount, after:act.value, label:'Dynamic notches' };
+        case 'notch1': case 'notch2': {
+            const f=Math.round(act.value), c=Math.round(act.cutoff||f*0.7);
+            if(!(f>=LIMITS.notchMin&&f<=LIMITS.notchMax)) throw new Error('a fixed notch is only offered between '+LIMITS.notchMin+' and '+LIMITS.notchMax+' Hz');
+            if(!(c>=Math.round(f*0.5)&&c<f)) throw new Error('notch cutoff out of range');
+            if(act.set==='notch1'){ w16(7,f); w16(9,c); return { b:nb, before:(cur.n1?cur.n1+' Hz':'off'), after:f+' Hz (cutoff '+c+')', label:'Fixed notch 1' }; }
+            w16(11,f); w16(13,c); return { b:nb, before:(cur.n2?cur.n2+' Hz':'off'), after:f+' Hz (cutoff '+c+')', label:'Fixed notch 2' };
         }
-        await LDRC.msp(93,bytesToHex(b)); await LDRC.msp(250);
-        const back=hexToBytes(await LDRC.msp(92)); filtRaw=back.slice(0,FLEN); filters=parseFilters(back);
-        setStatus('good','✓ '+act.text+' — in use now and saved. Fly, then check again.');
+        case 'lpf1Hz': { const v=Math.round(act.value); if(!(v>=LIMITS.lpf1Min)) throw new Error('Lowpass 1 is never set below '+LIMITS.lpf1Min+' Hz'); if(!(v<cur.lpf1Hz)) throw new Error('Lowpass 1 is only ever lowered here'); w16(2,v); return { b:nb, before:cur.lpf1Hz+' Hz', after:v+' Hz', label:'Lowpass 1' }; }
+        default: throw new Error('unknown change');
+    }
+}
+async function groundCheck(){
+    const s=await LDRC.fetchState();
+    if(!s) return 'Refused — the receiver did not answer';
+    if(s.rf&&s.rf.armed) return 'Refused — the model is ARMED';
+    if(hsFromState(s)>0) return 'Refused — the rotor is turning ('+Math.round(hsFromState(s))+' rpm)';
+    if(s.fcinfo&&s.fcinfo.api_major){ const alert=LDRC.rfVersionAlert&&LDRC.rfVersionAlert(s.fcinfo.api_major*100+s.fcinfo.api_minor); if(alert) return 'Not applied: '+alert+' Use the Filters page, or the Configurator, until this Rotorflight version is verified.'; }
+    return null;
+}
+async function writeFilters(nb, label){
+    await LDRC.msp(93,bytesToHex(nb)); await LDRC.msp(250);
+    const back=hexToBytes(await LDRC.msp(92)).slice(0,FLEN);
+    let same=back.length===FLEN; for(let i=0;i<FLEN&&same;i++) if(back[i]!==nb[i]) same=false;
+    filtRaw=back; filters=parseFilters(back);
+    if(!same) throw new Error(label+': the flight controller did not take the change as sent (it may have clamped a value) — nothing else was touched; the Filters page shows what it holds now');
+}
+async function applyAction(act){
+    const gate=applyAllowed(); if(!gate.ok){ setStatus('warn',gate.why); return; }
+    const g=await groundCheck(); if(g){ setStatus('bad',g); return; }
+    let plan;
+    try{ const fresh=hexToBytes(await LDRC.msp(92)).slice(0,FLEN); plan=planChange(act, fresh); plan.old=fresh; }
+    catch(e){ setStatus('bad','Not changed: '+e.message); return; }
+    if(!(await LDRC.confirm(plan.label+': '+plan.before+' → '+plan.after+'. Written to the flight controller and saved; in use at once. This is the one change for this flight — fly, then check again. Undo stays on this page.',{title:'Change one filter',icon:'🎛️',yes:'Change it'}))) return;
+    try{
+        const g2=await groundCheck(); if(g2){ setStatus('bad',g2); return; }
+        await writeFilters(plan.b, plan.label);
+        applied={ sig:analysis.signature, text:plan.label+' '+plan.before+' → '+plan.after, at:Date.now(), old:bytesToHex(plan.old) };
+        lsSet('bbcheck.applied:'+modelName(), applied);
+        setStatus('good','✓ '+applied.text+' — in use now and saved. Fly, then check again.');
         render();
     }catch(e){ setStatus('bad','Not changed: '+e.message); }
+}
+async function undoChange(){
+    if(!applied||!applied.old){ setStatus('warn','Nothing to undo'); return; }
+    const g=await groundCheck(); if(g){ setStatus('bad',g); return; }
+    if(!(await LDRC.confirm('Put the filters back as they were before "'+applied.text+'"?',{title:'Undo',icon:'↩️',yes:'Put them back',kind:'warn'}))) return;
+    try{
+        await writeFilters(hexToBytes(applied.old), 'Undo');
+        setStatus('good','✓ Filters put back as they were ('+applied.text.split(' → ')[0]+').');
+        applied=null; try{ localStorage.removeItem('bbcheck.applied:'+modelName()); }catch(e){}
+        render();
+    }catch(e){ setStatus('bad','Undo failed: '+e.message); }
 }
 
 document.addEventListener('DOMContentLoaded', async ()=>{
     if(window.LDRC&&LDRC.replayReady) await LDRC.replayReady;
     const s=await usbGate();
+    loadApplied();
     if(s) await readContext();
+    // the cable can be plugged in after the page opened: look again every few seconds while idle
+    let hadUsb=!!s;
+    setInterval(async()=>{ if(polling) return; const now=await usbGate(); if(now&&!hadUsb){ hadUsb=true; if(!filtRaw) await readContext(); } else if(!now) hadUsb=false; }, 3000);
     // a check already running or finished on the receiver (the page was left and reopened)
     try{ const st=await (await fetch('/api/blackbox/status',{cache:'no-store'})).json();
          if(st.state==='reading'||st.state==='summary'){ polling=true; $('progWrap').style.display=''; document.querySelectorAll('.usbOnly').forEach(el=>{ el.disabled=true; }); poll(); }
@@ -257,14 +321,20 @@ document.addEventListener('DOMContentLoaded', async ()=>{
 <li><b>Lines all taken down to the floor</b>: leave the filters alone.</li>
 </ul>
 <p><b>Before</b> is the gyro as the sensor sees it, <b>after</b> is what the control loop gets. dB: 20 dB removed means a tenth of the swing is left.</p>
-<h3>Applying a change</h3>
-<p>The button under the advice writes that one filter setting to the flight controller and saves it; it is in use at once. One change, one flight, check again. Everything else stays as it was; the Filters page shows it all.</p>
+<h3>Applying a change &mdash; the safety rules</h3>
+<ul>
+<li>Nothing changes by itself. The button under the advice writes that <b>one</b> setting, after you confirm it, and shows the old and new values first.</li>
+<li>Never while the model is armed or the rotor is turning, and only on a Rotorflight version whose settings layout is verified.</li>
+<li>Every value is bounded: Lowpass 1 is only ever lowered here and never below 60 Hz; a fixed notch is only offered between 80 and 1000 Hz (lower than that is inside the control range, so the page asks you to find the cause instead); dynamic notches 0 to 8; presets low, normal, high.</li>
+<li>The write is read back and compared. <b>Undo</b> puts the previous filters back, and the Backups page holds them too.</li>
+<li><b>One change per flight.</b> After a change the buttons stay off until a new flight has been checked. Fly, then check again.</li>
+</ul>
 <h3>Limits</h3>
 <ul>
 <li>USB cable only, transmitter off, model disarmed: the check needs the flight controller to itself for a minute (10 MB takes about two).</li>
-<li>Reads the most recent flight; with several in the memory it lists them and any can be checked.</li>
+<li>Reads the most recent flight that actually flew (an arm on the bench afterwards is ignored); with several in the memory it lists them and any can be checked.</li>
 <li>Motor and tail lines are named from the gear ratios on the First-time basics page; two-bladed heads and tails are assumed.</li>
-<li>With <i>Overwrite the oldest</i> on, a flight that wrapped round the end of the memory may be missed.</li>
+<li>With <i>Overwrite the oldest</i> on, the oldest flight in the memory may be cut short at its start; the newest is always complete.</li>
 </ul>
 </template>
 </body>

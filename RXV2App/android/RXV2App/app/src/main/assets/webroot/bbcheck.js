@@ -40,7 +40,7 @@ BB.source = (order, ctx) => {
     if (!(order > 0)) return { kind: 'unknown', label: 'not tied to the rotor' };
     const tol = Math.max(0.12, 1.5 * (ctx.hsSpread || 0));
     const blades = ctx.blades || 2, tailBlades = ctx.tailBlades || 2;
-    const near = (o, t) => Math.abs(o - t) <= tol * Math.max(1, t / 4);
+    const near = (o, t) => Math.abs(o - t) <= tol * Math.min(1.5, Math.max(1, t / 4));   // wider at high orders, but capped
     for (let k = 1; k <= 8; k++) if (near(order, k)) {
         if (k === 1) return { kind: 'rotor', order: 1, label: '1 per rev: main rotor out of balance or out of track' };
         if (k === blades) return { kind: 'rotor', order: k, label: k + ' per rev: main blades passing' };
@@ -75,7 +75,9 @@ BB.analyse = (parts, ctx) => {
                   logs: S.logs || [], verdicts: [], peaks: [], axes: [], notes: [] };
     const fRot = res.hsMedian / 60;
     res.fRot = fRot;
-    const v = (kind, title, why, action) => { const o = { kind, title, why }; if (action) o.action = action; res.verdicts.push(o); return o; };
+    // Apply buttons only when the flight controller's filters were actually read (the advice still stands)
+    const haveF = !!(F && F.rpmPreset != null && F.lpf1Hz != null);
+    const v = (kind, title, why, action) => { const o = { kind, title, why }; if (action) { if (haveF) o.action = action; else o.why += ' (The filters could not be read from the flight controller, so make the change on the Filters page.)'; } res.verdicts.push(o); if (!res.primary) res.primary = o; return o; };
 
     // 1. is the recording usable?
     if (!res.logs.length || !res.frames) { v('data', 'No flight in the memory', 'The black box holds no flight log. On the Flight recorder page check that recording is on (When: whenever armed, Where: flight-controller memory), tick Gyro raw, Gyro and Head speed, then fly and check again.'); res.ok = false; return res; }
@@ -84,7 +86,12 @@ BB.analyse = (parts, ctx) => {
     if (!res.fields.gyro) res.notes.push('No filtered gyro in the log (Gyro): the raw trace is shown alone. Tick Gyro on the Flight recorder page for the next flight.');
     if (rate && rate < 900) res.notes.push('Recorded at ' + Math.round(rate) + ' samples a second: fine up to ' + Math.round(rate / 2) + ' Hz, but vibrations above that are invisible. For a full picture set How often to 1 in 2 (2000 a second).');
     if (!res.fields.hs) v('data', 'No head speed in the log', 'Without a head-speed signal the rotor-speed notches cannot work and the lines below cannot be named. Check that the ESC telemetry (or an RPM sensor) reaches the flight controller and that Head speed is ticked on the Flight recorder page.');
-    else if (res.hsMedian < 300) { v('data', 'No flight in this log', 'The head speed never rose above ' + Math.round(res.hsMax) + ' rpm, so there is no rotor vibration to look at. Fly (a hover and a few brisk moves), then check again.'); res.ok = false; return res; }
+    else if (res.hsMedian < 300) {
+        const maxAll = Math.round((S.hs && S.hs.maxAll) || res.hsMax);
+        if (maxAll < 300 && res.seconds > 20) v('data', 'The head speed stayed at ' + maxAll + ' rpm for ' + Math.round(res.seconds) + ' s', 'Either this log is a bench arm, or the RPM signal (ESC telemetry or an RPM sensor) is not reaching the flight controller — then the rotor-speed notches cannot work either. Check the head speed on the front page with the motor running, then fly and check again.');
+        else v('data', 'No flight in this log', 'The head speed never rose above ' + maxAll + ' rpm, so there is no rotor vibration to look at. Fly (a hover and a few brisk moves), then check again.');
+        res.ok = false; return res;
+    }
     if (res.flyWin < 8) { v('data', 'Too short to judge', 'Only ' + r1(res.flyWin * N / 2 / (rate || 1)) + ' s of flight with the rotor turning. Fly longer, then check again.'); res.ok = false; return res; }
 
     // 2. spectra, floors and peaks per axis
@@ -116,17 +123,24 @@ BB.analyse = (parts, ctx) => {
     }
     res.peaks.sort((x, y) => y.dbRaw - x.dbRaw);
 
-    // 3. verdicts
+    // 3. verdicts — only when the log can support them: raw AND filtered gyro (else the
+    // filters' effect is invisible) AND a head speed (else rotor lines cannot be told from fixed ones)
+    const canAdvise = res.fields.raw && res.fields.gyro && res.fields.hs;
     const preset = F.rpmPreset == null ? -1 : F.rpmPreset;            // 0 custom 1 low 2 normal 3 high
     const presetName = ['custom', 'low', 'normal', 'high'];
-    if (worstResidual) {
+    if (!canAdvise) {
+        const miss = []; if (!res.fields.raw) miss.push('Gyro raw'); if (!res.fields.gyro) miss.push('Gyro'); if (!res.fields.hs) miss.push('Head speed');
+        v('data', 'Record ' + miss.join(', ') + ' for filter advice', 'The lines below are shown, but no filter change is offered: without ' + miss.join(' and ') + ' the check cannot tell what the filters removed' + (!res.fields.hs ? ' or which lines follow the rotor' : '') + '. Tick ' + (miss.length > 1 ? 'them' : 'it') + ' on the Flight recorder page, fly, then check again.');
+    }
+    if (worstResidual && canAdvise) {
         const L = worstResidual;
         if (L.src === 'rotor' || L.src === 'motor' || L.src === 'tail') {
-            if (!res.fields.hs || res.hsMedian < 300) v('rpm', 'Get the head-speed signal to the flight controller', L.f + ' Hz on ' + L.axisName.toLowerCase() + ' (' + L.label + ') is still ' + L.aboveFloor + ' dB above the filtered floor. The rotor-speed notches remove exactly this, but only with a head-speed signal.');
+            if (F.rpmMinHz && L.f < F.rpmMinHz) v('rpm', 'Lower the lowest rotor frequency', L.f + ' Hz (' + L.label + ') is below the ' + F.rpmMinHz + ' Hz where the rotor-speed notches start, so they leave it alone. Set Lowest rotor frequency to ' + Math.max(10, Math.floor(L.f * 0.8)) + ' Hz.', { set: 'rpmMinHz', value: Math.max(10, Math.floor(L.f * 0.8)), text: 'Set lowest rotor frequency to ' + Math.max(10, Math.floor(L.f * 0.8)) + ' Hz' });
             else if (preset === 0) v('rpm', 'Check the custom rotor-speed notches', L.f + ' Hz on ' + L.axisName.toLowerCase() + ' (' + L.label + ') gets through the filters (' + L.atten + ' dB taken out). The rotor-speed notches are set to custom; a notch on this harmonic (order ' + L.order + ') is missing or too narrow. The normal or high preset covers it.', { set: 'rpmPreset', value: 2, text: 'Set the rotor-speed notches to normal' });
             else if (preset < 3) v('rpm', 'Set the rotor-speed notches to ' + presetName[preset + 1], L.f + ' Hz on ' + L.axisName.toLowerCase() + ' (' + L.label + ') gets through the filters: only ' + L.atten + ' dB taken out, still ' + L.aboveFloor + ' dB above the rest. ' + (preset === 1 ? 'Low' : 'Normal') + ' does not cover this harmonic; ' + presetName[preset + 1] + ' does.', { set: 'rpmPreset', value: preset + 1, text: 'Set rotor-speed notches to ' + presetName[preset + 1] });
-            else if (F.rpmMinHz && L.f < F.rpmMinHz) v('rpm', 'Lower the lowest rotor frequency', L.f + ' Hz (' + L.label + ') is below the ' + F.rpmMinHz + ' Hz where the rotor-speed notches start, so they leave it alone. Set Lowest rotor frequency to ' + Math.max(10, Math.floor(L.f * 0.8)) + ' Hz.', { set: 'rpmMinHz', value: Math.max(10, Math.floor(L.f * 0.8)), text: 'Set lowest rotor frequency to ' + Math.max(10, Math.floor(L.f * 0.8)) + ' Hz' });
             else v('rpm', 'A rotor line the notches should have caught', L.f + ' Hz on ' + L.axisName.toLowerCase() + ' (' + L.label + ') is still ' + L.aboveFloor + ' dB above the floor with the rotor-speed notches on high. Check the gear ratios on the First-time basics page (a wrong ratio puts the motor and tail notches in the wrong place), then the head-speed signal.');
+        } else if (L.f < 80) {
+            v('mech', 'Find what shakes at ' + Math.round(L.f) + ' Hz', L.f + ' Hz on ' + L.axisName.toLowerCase() + ' does not follow the head speed and is still ' + L.aboveFloor + ' dB above the rest. That low, a notch would sit inside the control range and slow the response, so no filter change is offered: look for the cause (tail boom, canopy, battery tray, a wire) and fly again.');
         } else {
             const cut = Math.round(L.f * 0.7);
             if (!F.n1) v('notch', 'Add a fixed notch at ' + Math.round(L.f) + ' Hz', L.f + ' Hz on ' + L.axisName.toLowerCase() + ' does not follow the head speed, so the rotor-speed notches cannot touch it (' + L.atten + ' dB taken out, still ' + L.aboveFloor + ' dB above the rest). A fixed notch at ' + Math.round(L.f) + ' Hz (cutoff ' + cut + ') removes it. Better still, find what is loose at that frequency.', { set: 'notch1', value: Math.round(L.f), cutoff: cut, text: 'Add fixed notch 1 at ' + Math.round(L.f) + ' Hz' });
@@ -135,16 +149,22 @@ BB.analyse = (parts, ctx) => {
             else v('dyn', 'Add another dynamic notch', L.f + ' Hz on ' + L.axisName.toLowerCase() + ' is still there with ' + F.dynCount + ' dynamic notch' + (F.dynCount > 1 ? 'es' : '') + ' and both fixed notches in use. Add one more, and look for what is loose at ' + Math.round(L.f) + ' Hz.', { set: 'dynCount', value: Math.min(8, F.dynCount + 1), text: 'Set dynamic notches to ' + Math.min(8, F.dynCount + 1) });
         }
     }
-    if (broadband) {
+    if (broadband && canAdvise) {
         const cur = F.lpf1Hz || 0;
-        if (cur > 60) { const to = Math.max(60, Math.round(cur * 0.8 / 5) * 5); lpfAdvice = v('lpf', 'Lower Lowpass 1 to ' + to + ' Hz', 'Between 100 and 500 Hz the filtered gyro in flight sits well above the same gyro on the ground (grass, not lines). Lowpass 1 at ' + cur + ' Hz lets it through; ' + to + ' Hz smooths it. Never below 60 Hz.', { set: 'lpf1Hz', value: to, text: 'Set Lowpass 1 to ' + to + ' Hz' }); }
+        if (F.dynLpfMin > 0) res.notes.push('Broadband noise in flight. Lowpass 1 follows the head speed here (dynamic, ' + F.dynLpfMin + ' to ' + F.dynLpfMax + ' Hz), so lower that range a little on the Filters page, never below 60 Hz.');
+        else if (cur > 60) { const to = Math.max(60, Math.round(cur * 0.8 / 5) * 5); lpfAdvice = v('lpf', 'Lower Lowpass 1 to ' + to + ' Hz', 'Between 100 and 500 Hz the filtered gyro in flight sits well above the same gyro on the ground (grass, not lines). Lowpass 1 at ' + cur + ' Hz lets it through; ' + to + ' Hz smooths it. Never below 60 Hz.', { set: 'lpf1Hz', value: to, text: 'Set Lowpass 1 to ' + to + ' Hz' }); }
         else res.notes.push('Broadband noise in flight, but Lowpass 1 is already at ' + cur + ' Hz (Rotorflight advises not lower). Look for the mechanical cause: bearings, a bent shaft, blade balance.');
     }
-    if (!res.verdicts.length) {
+    if (!res.verdicts.length && canAdvise) {
         const top = res.peaks[0];
         v('ok', 'The filters are doing their job: leave them alone', top ? 'Every vibration line is taken down to the floor. Strongest in flight: ' + top.f + ' Hz on ' + top.axisName.toLowerCase() + ' (' + top.label + '), ' + top.atten + ' dB removed.' : 'No strong vibration lines and a quiet floor.');
     }
     res.primary = res.verdicts[0];
+    // signature of the flight analysed: the one-change-per-flight rule keys on it
+    const idx = (S.log || res.logs.length) - (S.logsFirst || 1);
+    const last = res.logs[idx] || null;
+    res.signature = last ? [last.addr, last.end, last.frames].join(':') : (S.frames + ':' + S.seconds);
+    res.log = S.log || 0; res.logsTotal = S.logsTotal || res.logs.length; res.keptFlying = !!S.keptFlying;
     return res;
 };
 

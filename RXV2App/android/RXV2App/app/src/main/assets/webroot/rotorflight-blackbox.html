@@ -106,7 +106,7 @@ const mb=n=>n>=1048576?(n/1048576).toFixed(1)+' MB':n>=1024?Math.round(n/1024)+'
 //  MSP 81 SET_BLACKBOX_CONFIG, 12 B: the same minus the supported byte.
 //    The FC silently IGNORES it while logging or erasing
 //    (blackboxMayEditConfig) — so every save is re-read and compared.
-//  MSP 70 DATAFLASH_SUMMARY, 13 B: u8 flags (1 supported, 2 ready),
+//  MSP 70 DATAFLASH_SUMMARY, 13 B: u8 flags (1 READY, 2 SUPPORTED),
 //    u32 sectors, u32 total bytes, u32 used bytes.  MSP 72 = erase (async).
 //  MSP 101 STATUS: first u16 = PID loop period µs → log rate = 1e6/µs/denom.
 //  denom and device are only read at boot (blackboxInit) → restart banner.
@@ -218,7 +218,7 @@ async function loadFlash(){
     const b=hexToBytes(await LDRC.msp(70));
     if(b.length<13) throw new Error('memory summary short ('+b.length+'B)');
     const f={flags:b[0],total:rdU32(b,5),used:rdU32(b,9)};
-    f.ok=!!(f.flags&1); f.ready=!!(f.flags&2);
+    f.ok=!!(f.flags&2); f.ready=!!(f.flags&1);   // MSP_FLASHFS_FLAG_READY = 1, SUPPORTED = 2 (msp.c) — was the other way round until 0.9.662
     if(!f.ok){ $('barFill').style.width='0'; $('memText').textContent='No memory chip on this board — SD card or serial logger only.'; $('eraseBtn').disabled=true; return f; }
     const pct=f.total?Math.round(f.used*100/f.total):0;
     $('barFill').style.width=pct+'%';
