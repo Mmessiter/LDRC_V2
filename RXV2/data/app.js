@@ -232,8 +232,8 @@
             // (Malcolm 2026-09-12: "I sometimes load a help screen by mistake
             // and then need to scroll all the way to the bottom to exit").
             overlay.innerHTML =
-                '<div class=helpPanel>'
-                + '<div class=helpTop><button class="helpClose helpBack" type=button aria-label="Close help">&#8592; Back</button></div>'
+                '<button class="helpClose helpBack" type=button aria-label=Back title=Back>\u2B05\uFE0F</button>'
+                + '<div class=helpPanel>'
                 + html + linkTip + homeTip
                 + '<button class=helpClose type=button>Got it</button>'
                 + '</div>';

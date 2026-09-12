@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.674-help-arrow",
+      "url": "https://messiter.com/rxv2/release/v0.9.674/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.674/littlefs.bin",
+      "fs_md5": "99a04a96fa94eb59997775e10d32bf1b",
+      "notes": "The help screen's way out is now the SAME round back arrow as every page, in the same top-left corner, instead of the wide bar 0.9.673 used. It floats above the overlay so it is there however far the help is scrolled. Got it stays at the bottom, tapping outside and Escape still work. The test compares its size, shape, colour and arrow against the page back button rule by rule. Includes 0.9.673."
+    },
+    {
       "name": "RXV2-0.9.673-help-back",
       "url": "https://messiter.com/rxv2/release/v0.9.673/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.673/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.663/littlefs.bin",
       "fs_md5": "82df3f3c1554f15f3131a1da30547a49",
       "notes": "Vibration check: the armed gate no longer aborts the check before the flight controller has answered (and never forces the shared armed flag every page reads); reads 4096-byte chunks where the FC allows, through the check's own PSRAM buffer."
-    },
-    {
-      "name": "RXV2-0.9.662-vibration-check-safe",
-      "url": "https://messiter.com/rxv2/release/v0.9.662/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.662/littlefs.bin",
-      "fs_md5": "314955bcd925adf5e055d54f27c3e1ee",
-      "notes": "Vibration check made safe before real flying (review + Malcolm's rules): the check owns the MSP link - every other sender stands down and /api/msp answers 503; arming is re-asked every second over USB; MSP 70 flag bits corrected (READY=1, SUPPORTED=2 - the recorder page had them the other way round too); a late reply re-arms instead of re-sending; PSRAM only; float maths. Decoder: the two TAG8_8SVB groups (sensors / temperatures) never merge, a header straight after a truncated log is recognised, time predictors in wrapping arithmetic, no 4.8 kB stack temporary. Analyser keeps the newest log that FLEW (a bench arm after landing no longer replaces the flight). Page: Apply is bounded (Lowpass 1 never below 60 and never raised, fixed notches 80-1000 Hz, dynamic notches 0-8), refused while armed or the rotor turns or on an unverified Rotorflight, read back and compared, Undo, ONE change per flight; filter advice only when the log has Gyro raw + Gyro + Head speed. Includes 0.9.661."
     }
   ]
 }

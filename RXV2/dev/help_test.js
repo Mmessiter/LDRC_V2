@@ -34,10 +34,11 @@ sandbox.LDRC.showHelp();
 const overlay = body.children[body.children.length - 1];
 ok(!!overlay, 'the overlay is added to the page');
 const h = overlay.innerHTML;
-ok(/class=helpTop/.test(h), 'there is a sticky top bar');
+ok(/class="helpClose helpBack"/.test(h), 'there is a round Back button');
 const topIdx = h.indexOf('helpBack'), gotItIdx = h.lastIndexOf('Got it');
 ok(topIdx > -1 && topIdx < gotItIdx, 'the Back button comes BEFORE the help text, not only at the bottom');
-ok(/&#8592; Back/.test(h), 'it is labelled Back with an arrow');
+ok(/\u2B05\uFE0F/.test(h), 'it carries the same left arrow as every page');
+ok(!/helpTop|Back<\/button>/.test(h), 'no wide bar and no text label: it is the small round button');
 ok(/Got it/.test(h), 'the bottom button is still there for people who read to the end');
 ok((h.match(/class="helpClose helpBack"|class=helpClose/g) || []).length === 2, 'both buttons carry the close class, so both are wired');
 ok(!!docListeners.keydown && docListeners.keydown.length > 0, 'Escape is listened for');
@@ -46,7 +47,11 @@ docListeners.keydown[0]({ key: 'Escape' });
 ok(overlay.removed === true, 'Escape removes the overlay');
 // the CSS makes the bar stick
 const css = fs.readFileSync(path.join(__dirname, '..', 'data', 'style.css'), 'utf8');
-ok(/\.helpTop\{[^}]*position:sticky/.test(css), 'the top bar is position:sticky, so it stays put while the help scrolls');
+ok(/\.helpBack\{[^}]*position:fixed/.test(css), 'it is fixed, so it stays put while the help scrolls');
+const hb = css.match(/\.helpBack\{[^}]*\}/)[0], bb = css.match(/\.backBtn\{[^}]*\}/)[0];
+for (const rule of ['width:3em', 'height:3em', 'border-radius:50%', 'background:#f4f7f9', 'font-size:1.55em'])
+    ok(hb.includes(rule) && bb.includes(rule), 'it matches the page back button on ' + rule);
+ok(/z-index:101/.test(hb), 'it sits above the help overlay (z-index 101 vs the modal 100)');
 ok(/\.helpPanel\{[^}]*background:#ffffff/.test(css), 'the help panel is a solid colour (the doctrine)');
 console.log(fails ? 'FAILED: ' + fails : 'ALL PASS');
 process.exit(fails ? 1 : 0);
