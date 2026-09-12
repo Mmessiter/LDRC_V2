@@ -19,7 +19,9 @@ const ctx = { filters: { lpf1Hz: 100, rpmPreset: 2, rpmMinHz: 20, dynCount: 0, n
     ok(an.ok, 'rec: analysis ran');
     const fixed = an.peaks.find(p => Math.abs(p.f - 190) < 3 && p.src === 'fixed');
     ok(!!fixed, 'rec: the 190 Hz fixed line is found and named "fixed" (' + JSON.stringify(fixed && { f: fixed.f, src: fixed.src, atten: fixed.atten }) + ')');
-    ok(fixed && fixed.atten < 3, 'rec: the fixed line is seen to pass the filters');
+    // attenuation is the best of +/-2 bins (a narrow rotor notch must not look useless),
+    // so a little of the neighbouring rotor line's attenuation leaks in: still far below a notched line
+    ok(fixed && fixed.atten < 8, 'rec: the fixed line is seen to pass the filters (' + (fixed && fixed.atten) + ' dB vs ~20 for a notched one)');
     const rot2 = an.peaks.find(p => p.src === 'rotor' && p.srcOrder === 2);
     ok(!!rot2 && rot2.atten > 12, 'rec: 2/rev found and seen attenuated (' + JSON.stringify(rot2 && { f: rot2.f, atten: rot2.atten }) + ')');
     ok(an.primary && an.primary.kind === 'notch' && an.primary.action && Math.abs(an.primary.action.value - 190) <= 3, 'rec: primary advice = fixed notch near 190 Hz (' + (an.primary && an.primary.title) + ')');
@@ -83,6 +85,29 @@ const ctx = { filters: { lpf1Hz: 100, rpmPreset: 2, rpmMinHz: 20, dynCount: 0, n
 {
     const a = load('rec'), b = load('rec4k');
     ok(a.stats.i === b.stats.i && a.stats.p === b.stats.p && JSON.stringify(a.fly) === JSON.stringify(b.fly), '4 kB chunks give the same result as 512 B');
+}
+// 10. THE REAL THING: 90 s of a SAB Goblin 770 at 1325 rpm, Rotorflight 4.6 on a Nexus-X,
+//     read over USB by the receiver on 2026-09-12. The captured result parts and the
+//     helicopter's own filter settings are the fixture: this is what the pilot sees.
+{
+    const parts = JSON.parse(fs.readFileSync(path.join(__dirname, 'goblin_flight_parts.json'), 'utf8'));
+    const gctx = JSON.parse(fs.readFileSync(path.join(__dirname, 'goblin_flight_ctx.json'), 'utf8'));
+    const an = BB.analyse(parts, gctx);
+    ok(an.ok && Math.abs(an.hsMedian - 1325) < 60 && Math.abs(an.rate - 1000) < 1, 'goblin: real flight read (' + an.seconds + ' s, ' + an.hsMedian + ' rpm, ' + an.rate + '/s)');
+    ok(an.fields.raw && an.fields.gyro && an.fields.hs, 'goblin: gyro raw, gyro and head speed all present');
+    const rev = an.peaks.find(p => p.src === 'rotor' && p.srcOrder === 1 && p.axis === 0);
+    ok(rev && rev.atten < 3, 'goblin: the 1/rev line is seen to pass the filters (' + (rev && rev.atten) + ' dB)');
+    const blades = an.peaks.find(p => p.src === 'rotor' && p.srcOrder === 2);
+    ok(blades && blades.atten > 12, 'goblin: the blade-passing line IS notched (' + (blades && blades.atten) + ' dB) — the filters work');
+    // preset 2 already notches 1/rev, so raising it would change nothing: the advice must be mechanical
+    ok(an.primary.kind === 'mech' && !an.primary.action, 'goblin: advice is mechanical, with no filter button (' + an.primary.title + ')');
+    ok(!/rotor-speed notches to/.test(an.primary.title), 'goblin: does NOT advise a preset that already covers the harmonic');
+    // and the preset table itself
+    ok(BB.covers(2, 'rotor', 1, 0) && BB.covers(2, 'rotor', 4, 0) && !BB.covers(2, 'rotor', 5, 0), 'presets: normal covers main 1..4, not 5');
+    ok(BB.presetThatCovers(2, 'rotor', 5, 0) === 3 && BB.presetThatCovers(2, 'rotor', 8, 0) === 0, 'presets: main 5 needs high; main 8 is in no preset');
+    ok(BB.covers(1, 'tail', 1, 0) && !BB.covers(1, 'tail', 2, 0) && BB.presetThatCovers(1, 'tail', 2, 0) === 2, 'presets: tail 2 needs normal');
+    const svg = BB.svgSpectrum(parts, an, 0, gctx) + BB.svgOrder(parts, an, 0, gctx) + BB.svgTimeline(parts);
+    ok(svg.length > 4000 && !/NaN|undefined/.test(svg), 'goblin: charts render from real data (' + svg.length + ' chars)');
 }
 console.log(fails ? ('FAILED: ' + fails) : 'ALL PASS');
 process.exit(fails ? 1 : 0);

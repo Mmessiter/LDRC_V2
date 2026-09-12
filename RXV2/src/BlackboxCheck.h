@@ -30,6 +30,11 @@ constexpr uint8_t MSP_STATUS_FN         = 101;  // flight-mode flags bit 0 = arm
 constexpr uint32_t STATUS_EVERY_MS      = 1000; // while the heartbeat probe stands down, the check asks for itself
 inline uint32_t lastStatusMs = 0;
 inline uint32_t notBeforeMs = 0;                // no request before this (MSP 70 busy back-off)
+inline bool     armedKnown = false;             // the FC has answered MSP 101 since this check started
+inline uint8_t* rxBuf = nullptr;                // PSRAM: a whole 4 kB dataflash reply (too big for mspAsyncBuf)
+inline uint16_t rxLen = 0;
+inline volatile bool rxReady = false;
+constexpr uint16_t RX_CAP = 4200;
 
 enum State : uint8_t { IDLE = 0, SUMMARY, STREAM, DONE, FAILED };
 inline State    state = IDLE;
@@ -44,16 +49,36 @@ inline BbDec::Decoder* dec = nullptr;
 inline BbAn::Analyser* an  = nullptr;
 inline char*    jsonBuf = nullptr;
 constexpr size_t   JSON_CAP = 24 * 1024;
-constexpr uint16_t CHUNK = 512;                 // reply = 7 + 512 = 519 B, inside the 640-byte MSP parser
+constexpr uint16_t CHUNK = 4096;                // the most the FC will give in one reply (MSP_PORT_OUTBUF_SIZE); 512 B chunks ran at 25 kB/s on the bench
 constexpr uint32_t REQ_TIMEOUT_MS = 1500;
+// The flight controller answers ~2 kB per request and ~30 requests a second
+// (measured on the Goblin, 62 kB/s), so reading a FULL 256 MB black box would
+// take over an hour. The check wants the newest flight, so it starts this far
+// back from the write head and lets the decoder find the first header there.
+// If that window holds no log at all it widens itself, up to WINDOW_MAX.
+constexpr uint32_t WINDOW_DEFAULT = 12u * 1024 * 1024;
+constexpr uint32_t WINDOW_MAX     = 96u * 1024 * 1024;
+inline uint32_t windowBytes = WINDOW_DEFAULT;
+inline bool     autoWindow  = false;   // no explicit address asked for: we choose, and may widen
 
 inline bool running() { return state == SUMMARY || state == STREAM; }
 inline uint32_t rd32(const uint8_t* p) { return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24); }
 inline void* psAlloc(size_t n) { return heap_caps_malloc(n, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT); }   // PSRAM only: ~70 kB of internal heap is not for this
-inline void freeWork() { if (dec) { dec->~Decoder(); heap_caps_free(dec); dec = nullptr; } }
+inline void freeWork() { if (dec) { dec->~Decoder(); heap_caps_free(dec); dec = nullptr; } if (rxBuf) { heap_caps_free(rxBuf); rxBuf = nullptr; } }
 inline void freeAll()  { freeWork(); if (an) { an->~Analyser(); heap_caps_free(an); an = nullptr; } if (jsonBuf) { heap_caps_free(jsonBuf); jsonBuf = nullptr; } }
 
-inline void stopLink() { reqOut = false; mspAsyncFunc = 0xFF; mspAsyncReady = false; bbCheckActive = false; endMs = millis(); }
+// The parser hands a dataflash reply straight to us: 4 kB will not fit
+// mspAsyncBuf. Same task as tick(), so a plain flag is enough.
+inline bool bigReply(uint8_t func, const uint8_t* p, uint16_t n) {
+    if (func != MSP_DATAFLASH_READ || !rxBuf || !bbCheckActive) return false;
+    if (n > RX_CAP) n = RX_CAP;
+    memcpy(rxBuf, p, n); rxLen = n; rxReady = true;
+    return true;                                 // taken: the 640-byte wait/async buffers never see it
+}
+
+inline void sendRead();          // defined below (done() may start another pass)
+inline void restartWork();
+inline void stopLink() { reqOut = false; mspAsyncFunc = 0xFF; mspAsyncReady = false; rxReady = false; mspBigReplyHook = nullptr; bbCheckActive = false; endMs = millis(); }
 inline void fail(const char* why) {
     snprintf(reason, sizeof reason, "%s", why);
     state = FAILED; stopLink(); freeWork();
@@ -61,6 +86,16 @@ inline void fail(const char* why) {
 }
 inline void done() {
     if (dec && an) dec->finish(*an);
+    // Nothing found in our window and there is more behind it: widen and go again.
+    if (autoWindow && an && an->nLogs == 0 && startAddr > 0 && windowBytes < WINDOW_MAX) {
+        windowBytes *= 4; if (windowBytes > WINDOW_MAX) windowBytes = WINDOW_MAX;
+        char m[EventLog::MSG_LEN]; snprintf(m, sizeof m, "Vibration check: no log in the last %lu MB - looking %lu MB back", (unsigned long)((usedBytes - startAddr) / 1048576), (unsigned long)(windowBytes / 1048576));
+        events.add(m);
+        restartWork();
+        startAddr = addr = (usedBytes > windowBytes) ? usedBytes - windowBytes : 0;
+        state = STREAM; startMs = millis(); sendRead();
+        return;
+    }
     state = DONE; stopLink();
     char m[EventLog::MSG_LEN];
     snprintf(m, sizeof m, "Vibration check: %lu kB in %lu s, %d log(s), %lu frames", (unsigned long)(bytesDone / 1024), (unsigned long)((endMs - startMs) / 1000), an ? an->nLogs : 0, (unsigned long)(dec ? dec->stats.iFrames + dec->stats.pFrames : 0));
@@ -92,19 +127,31 @@ inline const char* refuse() {
     return nullptr;
 }
 
+inline void restartWork() {                     // fresh decoder + analyser for another pass
+    if (dec) { dec->~Decoder(); new (dec) BbDec::Decoder(); }
+    if (an)  { an->~Analyser();  new (an) BbAn::Analyser(); an->wantLog = wantLog; }
+    bytesDone = 0; chunks = 0; retries = 0; rxReady = false; notBeforeMs = 0;
+}
+
 inline const char* start(uint32_t fromAddr, uint32_t maxLen, int logIdx) {
     const char* why = refuse(); if (why) return why;
     freeAll();
     dec = (BbDec::Decoder*)psAlloc(sizeof(BbDec::Decoder));
     an  = (BbAn::Analyser*)psAlloc(sizeof(BbAn::Analyser));
     jsonBuf = (char*)psAlloc(JSON_CAP);
-    if (!dec || !an || !jsonBuf) { freeAll(); return "not enough memory for the check"; }
+    rxBuf   = (uint8_t*)psAlloc(RX_CAP);
+    if (!dec || !an || !jsonBuf || !rxBuf) { freeAll(); return "not enough memory for the check"; }
     new (dec) BbDec::Decoder(); new (an) BbAn::Analyser();
     an->wantLog = logIdx; wantLog = logIdx;
     startAddr = addr = fromAddr; endAddr = maxLen ? fromAddr + maxLen : 0; usedBytes = totalBytes = 0;
+    autoWindow = (fromAddr == 0 && maxLen == 0);       // nothing asked for: the newest flight, from our own window
+    windowBytes = WINDOW_DEFAULT;
     bytesDone = 0; chunks = 0; retries = 0; reason[0] = 0; startMs = millis(); endMs = 0; notBeforeMs = 0;
-    bbCheckActive = true; state = SUMMARY;
-    fcInfo.armed = true;                                  // unknown until the FC says otherwise: the first request is MSP 101
+    bbCheckActive = true; state = SUMMARY; armedKnown = false; rxReady = false;
+    mspBigReplyHook = bigReply;                  // dataflash replies come straight to rxBuf
+    // The FC's own word before a single byte is read. fcInfo.armed is shared
+    // state (every page's armed refusal reads it) so it is never forced here:
+    // the check simply does not look at it until MSP 101 has answered.
     sendReq(MSP_STATUS_FN, nullptr, 0); lastStatusMs = millis();
     events.add("Vibration check: reading the black box over USB");
     return nullptr;
@@ -121,6 +168,10 @@ inline void handleSummary(const uint8_t* p, uint16_t n) {
     }
     if (usedBytes == 0) { fail("the black box is empty: nothing has been recorded"); return; }
     if (endAddr == 0 || endAddr > usedBytes) endAddr = usedBytes;
+    if (autoWindow) {                                  // the newest flight, not the whole memory
+        startAddr = addr = (usedBytes > windowBytes) ? usedBytes - windowBytes : 0;
+        endAddr = usedBytes;
+    }
     if (addr >= endAddr) { fail("nothing recorded beyond that address"); return; }
     state = STREAM; sendRead();
 }
@@ -129,7 +180,7 @@ inline void handleRead(const uint8_t* p, uint16_t n) {
     const uint32_t a = rd32(p); const uint16_t got = (uint16_t)(p[4] | (p[5] << 8)); const uint8_t comp = p[6];
     if (a != addr) {                                          // a late reply to an earlier (re-sent) read: ignore it, keep waiting for ours
         if (++retries > 6) { fail("the flight controller keeps answering the wrong address"); return; }
-        mspAsyncFunc = MSP_DATAFLASH_READ; mspAsyncReady = false; reqOut = true;   // re-arm without sending: one request outstanding
+        mspAsyncFunc = MSP_DATAFLASH_READ; mspAsyncReady = false; rxReady = false; reqOut = true;   // re-arm without sending: one request outstanding
         return;
     }
     if (comp != 0) { fail("compressed reply - not supported"); return; }
@@ -145,7 +196,7 @@ inline void tick() {
     if (!running()) return;
     if (!UsbHostMsp::active()) { fail("the USB cable was unplugged"); return; }
     if (UsbHostMsp::cliMode)   { fail("the command line was opened"); return; }
-    if (fcInfo.armed)          { fail("the flight controller was armed"); return; }
+    if (armedKnown && fcInfo.armed) { fail("the flight controller was armed"); return; }   // only after MSP 101 has answered us (0.9.663)
     if (!dongleEnabled && rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 1000) { fail("the transmitter came on"); return; }
     if (!reqOut) {
         if (notBeforeMs && (int32_t)(notBeforeMs - millis()) > 0) return;
@@ -156,6 +207,11 @@ inline void tick() {
         if (state == SUMMARY) sendReq(MSP_DATAFLASH_SUMMARY, nullptr, 0); else sendRead();
         return;
     }
+    if (rxReady && reqFn == MSP_DATAFLASH_READ) {     // a 4 kB dataflash reply, straight from the parser
+        rxReady = false; reqOut = false; mspAsyncFunc = 0xFF; mspAsyncReady = false;
+        handleRead(rxBuf, rxLen);
+        return;
+    }
     if (mspAsyncReady && mspAsyncFunc == reqFn) {
         static uint8_t copy[640];
         uint16_t n = mspAsyncLen; if (n > sizeof copy) n = sizeof copy;
@@ -163,6 +219,7 @@ inline void tick() {
         reqOut = false; mspAsyncReady = false; mspAsyncFunc = 0xFF;
         if (reqFn == MSP_STATUS_FN) {            // mspDeliverResponse has already parsed it into fcInfo.armed
             if (n < 10) { fail("the flight controller gave no status"); return; }
+            armedKnown = true;
             if (fcInfo.armed) { fail("the flight controller is armed"); return; }
             if (state == SUMMARY) sendReq(MSP_DATAFLASH_SUMMARY, nullptr, 0); else sendRead();
             return;
@@ -172,7 +229,7 @@ inline void tick() {
     }
     if ((uint32_t)(millis() - reqSentMs) > REQ_TIMEOUT_MS) {
         if (++retries > 3) { fail("the flight controller stopped answering"); return; }
-        reqOut = false; mspAsyncFunc = 0xFF;      // the next pass re-sends
+        reqOut = false; mspAsyncFunc = 0xFF; rxReady = false;      // the next pass re-sends
     }
 }
 
@@ -185,6 +242,10 @@ inline String statusJson() {
     s += ",\"addr\":" + String(addr) + ",\"start\":" + String(startAddr) + ",\"end\":" + String(endAddr) + ",\"used\":" + String(usedBytes) + ",\"total\":" + String(totalBytes);
     s += ",\"bytes\":" + String(bytesDone) + ",\"chunks\":" + String(chunks) + ",\"ms\":" + String(state == IDLE ? 0 : ms);
     s += ",\"pct\":" + String(span ? (int)((uint64_t)bytesDone * 100 / span) : 0);
+    const uint32_t rateBs = (ms > 500 && bytesDone) ? (uint32_t)((uint64_t)bytesDone * 1000 / ms) : 0;
+    s += ",\"bps\":" + String(rateBs);
+    s += ",\"eta\":" + String((rateBs && endAddr > addr) ? (uint32_t)((endAddr - addr) / rateBs) : 0);
+    s += ",\"window\":" + String(windowBytes);
     s += ",\"logs\":" + String(an ? an->nLogs : 0) + ",\"frames\":" + String(dec ? dec->stats.iFrames + dec->stats.pFrames : 0);
     s += ",\"rate\":" + String(an ? an->rateNow() : 0.0f, 0) + ",\"hs\":" + String(an ? an->hsMedian() : 0.0f, 0) + ",\"flyWin\":" + String(an ? an->flyWinNow() : 0);
     s += ",\"resyncs\":" + String(dec ? dec->stats.resyncs : 0) + ",\"usb\":"; s += UsbHostMsp::active() ? "true" : "false";

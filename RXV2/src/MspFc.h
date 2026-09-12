@@ -470,7 +470,13 @@ inline void mspParseResponse(const uint8_t* body, uint8_t bodyLen) {
     return;
 }
 
+// A reply too big for the 640-byte wait/async buffers (only the vibration
+// check's dataflash reads, over USB). Set by BlackboxCheck.h while it runs;
+// returns true when it has taken the reply. Same task as the parser (loop).
+inline bool (*mspBigReplyHook)(uint8_t func, const uint8_t* p, uint16_t n) = nullptr;
+
 inline void mspDeliverResponse(uint8_t func, const uint8_t* payload, uint16_t size) {
+    if (mspBigReplyHook && mspBigReplyHook(func, payload, size)) return;
 
     // Bigger than the FC's own reply buffer = the FC just overwrote part of
     // its memory to answer us (the MSP 52 bug, see the top of this file).

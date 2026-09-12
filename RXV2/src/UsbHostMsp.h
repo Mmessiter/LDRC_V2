@@ -164,7 +164,7 @@ namespace UsbHostMsp {
     }
     inline bool begin() {
         if (started) return true;
-        rxbuf = xStreamBufferCreate(4096, 1);
+        rxbuf = xStreamBufferCreate(12288, 1);   // one 4 kB dataflash reply is ~4110 bytes on the wire: never let a frame be dropped between poll() passes (0.9.663)
         txq = xQueueCreate(6, sizeof(TxItem));
         hdlMutex = xSemaphoreCreateMutex();
         usb_host_config_t hc = {};

@@ -14,7 +14,12 @@
 #include <stdint.h>
 #include <string.h>
 
-constexpr uint16_t MSP_SERIAL_MAX_PAYLOAD = 640;    // the FC's biggest reply we accept (jumbo)
+// The FC answers MSP over USB out of MSP_PORT_OUTBUF_SIZE = 4096 + 16 bytes
+// (msp_serial.h), so a dataflash read can carry 4096 data bytes: 4 addr + 2 len
+// + 1 compression + 4096 = 4103. 4200 covers it with room to spare; every other
+// reply is far smaller. Only the serial parser's own buffer is this big - the
+// CRSF tunnel keeps its 640-byte reassembly buffer (the link buffer is 320).
+constexpr uint16_t MSP_SERIAL_MAX_PAYLOAD = 4200;   // the FC's biggest reply we accept (jumbo, USB dataflash reads)
 
 // Build a request frame into `out`; returns the frame length, 0 if it does not fit.
 inline uint16_t mspSerialEncode(uint8_t* out, uint16_t outMax, uint8_t fn, const uint8_t* payload, uint16_t len) {

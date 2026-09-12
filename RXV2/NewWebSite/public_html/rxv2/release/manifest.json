@@ -1,6 +1,27 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.665-check-goblin",
+      "url": "https://messiter.com/rxv2/release/v0.9.665/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.665/littlefs.bin",
+      "fs_md5": "c22cf485f5e793aaa002f2b1a5abfda9",
+      "notes": "Vibration check, corrected by the Goblin's own flight: it advised 'set the rotor-speed notches to high' for a once-per-rev that Rotorflight's NORMAL preset already notches - the change would have done nothing. The check now knows what each preset really notches (rpmFilterPreset[] in rpm_filter.c: main harmonics 1-2-4 low, 1-4 normal, 1-6 high, tail 1 / 1-2 / 1-2, plus the main motor) and only advises a preset that genuinely adds the harmonic; a strong once-per-rev is reported as blade tracking and balance, with no filter button. Attenuation is measured over a wider window so a narrow rotor notch is not mistaken for a useless one. The 90-second Goblin flight is now a regression fixture (dev/goblin_flight_*.json). Includes 0.9.664."
+    },
+    {
+      "name": "RXV2-0.9.664-check-window",
+      "url": "https://messiter.com/rxv2/release/v0.9.664/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.664/littlefs.bin",
+      "fs_md5": "97d48b38e0392784433c1a25f6ad26c6",
+      "notes": "Vibration check reads the last 12 MB of the black box (the newest flight or two) instead of the whole memory, widening itself if that holds no log, and shows a time remaining; the page says so and offers Erase. Measured throughput 62-66 kB/s."
+    },
+    {
+      "name": "RXV2-0.9.663-check-fast",
+      "url": "https://messiter.com/rxv2/release/v0.9.663/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.663/littlefs.bin",
+      "fs_md5": "82df3f3c1554f15f3131a1da30547a49",
+      "notes": "Vibration check: the armed gate no longer aborts the check before the flight controller has answered (and never forces the shared armed flag every page reads); reads 4096-byte chunks where the FC allows, through the check's own PSRAM buffer."
+    },
+    {
       "name": "RXV2-0.9.662-vibration-check-safe",
       "url": "https://messiter.com/rxv2/release/v0.9.662/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.662/littlefs.bin",
@@ -62,27 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.654/littlefs.bin",
       "fs_md5": "7d466e2925ae2d44b8e3e5088ad87abb",
       "notes": "From a critical pass over the day's work: In-flight adjustments never switches flight-controller banks while the transmitter is on (the boxes fill only for the bank in use; flip the switch for another); a Remove whose save fails reloads the page from the flight controller and says 'Not removed'; Save shows 'Writing line N of 43'; a receiver whose line to the flight controller carries no MSP (SBUS, IBUS, PPM, or FC telemetry off) answers 'needs the USB cable' instead of a timeout; the Ports warning covers the dongle's own port. Includes 0.9.653."
-    },
-    {
-      "name": "RXV2-0.9.653-recording-banner",
-      "url": "https://messiter.com/rxv2/release/v0.9.653/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.653/littlefs.bin",
-      "fs_md5": "da78317718a2731fe96a6db694f3fa2c",
-      "notes": "A replayed recording (Review: <model> in the app's list) now says so at the top of every page: 'Recording of <model> - nothing here is live. To connect, use Load another model on the front page.' Includes 0.9.652."
-    },
-    {
-      "name": "RXV2-0.9.652-greyed-darker",
-      "url": "https://messiter.com/rxv2/release/v0.9.652/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.652/littlefs.bin",
-      "fs_md5": "6592d9c2a5126d86992020c458f2c849",
-      "notes": "Greyed (read-only) controls on In-flight adjustments and the Command line stay readable: dark text at 80 percent instead of 45. Includes 0.9.651."
-    },
-    {
-      "name": "RXV2-0.9.651-adj-offline-copy",
-      "url": "https://messiter.com/rxv2/release/v0.9.651/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.651/littlefs.bin",
-      "fs_md5": "364e2eb0637088a99ab08b30483cf9ec",
-      "notes": "In-flight adjustments: without the USB cable the page shows the set it last read over USB (kept per model on the phone), greyed and not changeable, with the time it was read; the live switch marker still moves over the radio link. Includes 0.9.650."
     }
   ]
 }

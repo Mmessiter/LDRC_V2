@@ -59,6 +59,7 @@ table.pk td:first-child,table.pk th:first-child,table.pk td:nth-child(3),table.p
     <div class=card id=startCard>
         <p class=do id=recNote><b>Record Gyro raw, Gyro and Head speed at 1 in 2, erase, fly a hover and a few brisk moves, land, transmitter off.</b> Then check. One change, one flight, check again.</p>
         <div id=recWarn class=more style="display:none"></div>
+        <div id=fullWarn class=more style="display:none"></div>
         <button class="startBtn usbOnly" id=startBtn onclick="startCheck(0)">&#128200; Check the last flight</button>
         <div id=progWrap style="display:none">
             <div class=bar><i id=barFill style="width:0"></i></div>
@@ -116,7 +117,15 @@ function paintContext(){
         if(rec.mode===0||rec.device===0) w.push('<b>The recorder is off</b> (When: never, or Where: nowhere). Turn it on on the Flight recorder page.');
     }
     const wd=$('recWarn'); wd.style.display=w.length?'':'none'; wd.innerHTML=w.map(x=>'<div>'+x+'</div>').join('')+(w.length?'<a href="/rotorflight-blackbox" style="display:inline-block;margin-top:.4em;font-weight:700;color:#2f4452">Flight recorder page &rarr;</a>':'');
-    if(mem){ $('memText').textContent=(mem.flags&2)?('Black box: '+mb(mem.used)+' recorded of '+mb(mem.total)+(mem.used?' — the check reads it all, about '+Math.max(5,Math.round(mem.used/100000))+' s':'')):'No memory chip for the black box on this flight controller.'; }
+    if(mem){
+        const WIN=12*1048576, span=Math.min(mem.used,WIN);
+        $('memText').textContent=(mem.flags&2)?('Black box: '+mb(mem.used)+' recorded of '+mb(mem.total)+(mem.used?' — the check reads the last '+mb(span)+', about '+Math.max(5,Math.round(span/62000))+' s':'')):'No memory chip for the black box on this flight controller.';
+        const fullWarn=$('fullWarn');
+        if(fullWarn){ const full=mem.used>0.5*mem.total;
+            fullWarn.style.display=full?'':'none';
+            if(full) fullWarn.innerHTML='<b>The black box is '+mb(mem.used)+' full.</b> The check looks at the last '+mb(span)+', which is the newest flight or two. <a href="/rotorflight-blackbox" style="font-weight:700;color:#2f4452">Erase it</a> before a test session and the check is quick and the flight easy to find.';
+        }
+    }
 }
 
 // USB only: say so in one line, keep the button off until it is true (as the command line does)
@@ -151,7 +160,8 @@ async function poll(){
     if(st.state==='reading'||st.state==='summary'){
         $('barFill').style.width=(st.pct||0)+'%';
         const secs=Math.round((st.ms||0)/1000);
-        $('progText').textContent=(st.state==='summary'?'Asking the flight controller…':(mb(st.bytes)+' of '+mb(st.end-st.start)+' read'+(st.logs?' — '+st.logs+' flight'+(st.logs>1?'s':'')+' so far':'')+(st.hs?' — head speed '+st.hs+' rpm':'')+' — '+secs+' s'));
+        const eta=st.eta?(st.eta>90?Math.round(st.eta/60)+' min left':st.eta+' s left'):'';
+        $('progText').textContent=(st.state==='summary'?'Asking the flight controller…':(mb(st.bytes)+' of '+mb(st.end-st.start)+' read'+(st.logs?' — '+st.logs+' flight'+(st.logs>1?'s':'')+' so far':'')+(st.hs?' — head speed '+st.hs+' rpm':'')+' — '+secs+' s'+(eta?', '+eta:'')));
         setTimeout(poll,700); return;
     }
     polling=false; $('progWrap').style.display='none';
@@ -331,7 +341,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
 </ul>
 <h3>Limits</h3>
 <ul>
-<li>USB cable only, transmitter off, model disarmed: the check needs the flight controller to itself for a minute (10 MB takes about two).</li>
+<li>USB cable only, transmitter off, model disarmed: the check needs the flight controller to itself. The flight controller hands over about 60 kB a second, so it reads the last 12 MB &mdash; three or four minutes &mdash; and finds the newest flight in it. Erase the black box before a test session and there is far less to read.</li>
 <li>Reads the most recent flight that actually flew (an arm on the bench afterwards is ignored); with several in the memory it lists them and any can be checked.</li>
 <li>Motor and tail lines are named from the gear ratios on the First-time basics page; two-bladed heads and tails are assumed.</li>
 <li>With <i>Overwrite the oldest</i> on, the oldest flight in the memory may be cut short at its start; the newest is always complete.</li>
