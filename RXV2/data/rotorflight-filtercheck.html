@@ -141,12 +141,23 @@ async function usbGate(){
 }
 
 // ---- the check ----
-async function startCheck(logIdx){
+async function startCheck(logIdx, attempt){
     if(polling) return;
-    curLog=logIdx||0;
+    curLog=logIdx||0; attempt=attempt||0;
     const qs='/api/blackbox/check'+(curLog?'?log='+curLog:'');
     let r; try{ r=await fetch(qs,{method:'POST',cache:'no-store'}); }catch(e){ setStatus('bad','Could not start: '+e.message); return; }
-    if(!r.ok){ setStatus('bad',await r.text()); return; }
+    if(!r.ok){
+        const msg=await r.text();
+        // The receiver makes the flight controller's banks safe before it hands
+        // the link over; that takes a few quiet seconds. Wait for it rather than
+        // making the pilot tap again.
+        if(/try again in a few seconds/.test(msg)&&attempt<3){
+            setStatus('info',msg.replace(/ - try again.*/,' — waiting…'));
+            setTimeout(()=>startCheck(curLog,attempt+1),3000);
+            return;
+        }
+        setStatus('bad',msg); return;
+    }
     setStatus('','');
     $('result').style.display='none'; $('progWrap').style.display=''; $('barFill').style.width='0'; $('progText').textContent='Starting…';
     polling=true; document.querySelectorAll('.usbOnly').forEach(el=>{ el.disabled=true; });

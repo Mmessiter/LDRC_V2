@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.667-banks-first",
+      "url": "https://messiter.com/rxv2/release/v0.9.667/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.667/littlefs.bin",
+      "fs_md5": "7094d7cc29f1eecfe4cb21e3aa46a255",
+      "notes": "FLIGHT SAFETY, found by the pre-flight review: a vibration check stands the bank put-back down for its whole run, so if a phone session had left the flight controller on a different PID bank and the transmitter came on during the check, the put-back was abandoned and the model would have flown on the phone's bank. A check now refuses to start while the banks are still held, and while any page has talked to the flight controller in the last 5 seconds (a restore is many requests with gaps); the page waits and retries by itself, so it is invisible. Also: the 20-minute cap now bounds the whole run, not each widened pass. Includes 0.9.666."
+    },
+    {
       "name": "RXV2-0.9.666-check-watchdog",
       "url": "https://messiter.com/rxv2/release/v0.9.666/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.666/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.656/littlefs.bin",
       "fs_md5": "2252f4f300cedb9e69f4f1ee56e299a8",
       "notes": "Help: 'Two wires, everything' - the receiver lead carries flying and the everyday pages; the USB-C cable adds the configurator's own channel (every setting, any size, command line, ports, factory reset, black box); a transmitter's Lua scripts have only the slow 320-byte CRSF tunnel. Said on the Rotorflight menu help and in every help screen's Ways to connect, which no longer calls the app Apple-only. Includes 0.9.655."
-    },
-    {
-      "name": "RXV2-0.9.655-filters",
-      "url": "https://messiter.com/rxv2/release/v0.9.655/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.655/littlefs.bin",
-      "fs_md5": "d7658fd27022a7851c1373811567a10b",
-      "notes": "New Filters page (Rotorflight's Filters tab): gyro lowpass 1 and 2 (type and cutoff), rotor-speed (RPM) notch preset and lowest frequency, dynamic notches (count, width, range) and the two fixed notches; read-modify-write of MSP 92/93, takes effect at once. The help explains what each filter does and how to read the Blackbox Explorer's frequency view to see which filter is needed. Includes 0.9.654."
     }
   ]
 }

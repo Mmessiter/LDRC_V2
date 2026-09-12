@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.666-check-watchdog";
+constexpr const char* FW_VERSION = "RXV2-0.9.667-banks-first";
 
 //*********************************************************************
 //  Auto-update manifest URLs

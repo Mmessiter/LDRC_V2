@@ -41,6 +41,7 @@ inline State    state = IDLE;
 inline char     reason[120] = "";
 inline uint32_t addr = 0, endAddr = 0, startAddr = 0, totalBytes = 0, usedBytes = 0;
 inline uint32_t startMs = 0, endMs = 0, reqSentMs = 0;
+inline uint32_t runStartMs = 0;                 // start of the whole run: the auto-widen re-stamps startMs, this one never moves
 inline uint8_t  retries = 0, reqFn = 0;
 inline bool     reqOut = false;
 inline uint32_t chunks = 0, bytesDone = 0;
@@ -128,6 +129,15 @@ inline const char* refuse() {
     if (fcInfo.armed) return "the flight controller is armed - disarm first";
     if (!dongleEnabled && rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 3000) return "switch the transmitter off first: the check needs the flight controller to itself for a minute";
     if (txParamBusy || mspWaitFunction != 0xFF || mspBridgeActive || mspProbeOutstanding()) return "the receiver is busy talking to the flight controller - try again in a moment";
+    // The check owns the link for minutes, and bankPutBackTick stands down while
+    // it runs. If a phone session has left the flight controller on a bank that
+    // is not the switch's, that put-back MUST happen first: were the transmitter
+    // to come on during the check, the put-back is abandoned and the model would
+    // fly on the phone's bank. Wait for it - it needs 5 quiet seconds.
+    if (bankHeld()) return "the receiver is putting the flight controller's PID banks back where your switch has them - try again in a few seconds";
+    // Mid-sequence, too: a restore or a page save is many requests with gaps
+    // between them, and none of the single-request tests above sees the gap.
+    if (banks.lastClientMs && (uint32_t)(millis() - banks.lastClientMs) < BANK_IDLE_MS) return "a page is still talking to the flight controller - try again in a few seconds";
     return nullptr;
 }
 
@@ -150,7 +160,7 @@ inline const char* start(uint32_t fromAddr, uint32_t maxLen, int logIdx) {
     startAddr = addr = fromAddr; endAddr = maxLen ? fromAddr + maxLen : 0; usedBytes = totalBytes = 0;
     autoWindow = (fromAddr == 0 && maxLen == 0);       // nothing asked for: the newest flight, from our own window
     windowBytes = WINDOW_DEFAULT;
-    bytesDone = 0; chunks = 0; retries = 0; reason[0] = 0; startMs = millis(); endMs = 0; notBeforeMs = 0;
+    bytesDone = 0; chunks = 0; retries = 0; reason[0] = 0; startMs = runStartMs = millis(); endMs = 0; notBeforeMs = 0;
     bbCheckActive = true; state = SUMMARY; armedKnown = false; rxReady = false;
     mspBigReplyHook = bigReply;                  // dataflash replies come straight to rxBuf
     // The FC's own word before a single byte is read. fcInfo.armed is shared
@@ -204,7 +214,7 @@ inline void tick() {
         if (bbCheckActive) { bbCheckActive = false; bbCheckOwnSend = false; mspBigReplyHook = nullptr; events.add("Vibration check: link handed back (watchdog)"); }
         return;
     }
-    if ((uint32_t)(millis() - startMs) > MAX_RUN_MS) { fail("the check took too long - the link is back with the flight controller"); return; }
+    if ((uint32_t)(millis() - runStartMs) > MAX_RUN_MS) { fail("the check took too long - the link is back with the flight controller"); return; }
     if (!UsbHostMsp::active()) { fail("the USB cable was unplugged"); return; }
     if (UsbHostMsp::cliMode)   { fail("the command line was opened"); return; }
     if (armedKnown && fcInfo.armed) { fail("the flight controller was armed"); return; }   // only after MSP 101 has answered us (0.9.663)
