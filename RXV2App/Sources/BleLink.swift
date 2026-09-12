@@ -91,6 +91,12 @@ final class BleLink: NSObject, ObservableObject {
     }
     static func tooWeak(_ rssi: Int) -> Bool { rssi != 0 && rssi <= weakRssi }
 
+    /// CoreBluetooth reports a peripheral ONCE per scan unless duplicates are
+    /// allowed, so without this the strength shown is frozen at the first
+    /// sighting and walking closer changes nothing (Malcolm 2026-09-12:
+    /// "it was necessary to quit the app and reload it").
+    static let scanOptions: [String: Any] = [CBCentralManagerScanOptionAllowDuplicatesKey: true]
+
     // Raw OTA chunk lane: 0xA5-framed writes streamed write-without-response,
     // flow-controlled by canSendWriteWithoutResponse. Independent of the
     // request pipeline — the firmware routes 0xA5 frames straight to flash.
@@ -110,7 +116,7 @@ final class BleLink: NSObject, ObservableObject {
         guard central.state == .poweredOn else { state = .scanning; return }
         state = .scanning
         if fastConnect() { return }   // instant reconnect to last device — no advert wait
-        central.scanForPeripherals(withServices: [Self.serviceUUID], options: nil)
+        central.scanForPeripherals(withServices: [Self.serviceUUID], options: Self.scanOptions)
     }
 
     func stopScan() { central.stopScan() }
@@ -185,7 +191,7 @@ final class BleLink: NSObject, ObservableObject {
                p.state != .connected {
                 self.connectNote = "\(name) has not answered — it may be switched off or too far away."
                 self.state = .scanning
-                self.central.scanForPeripherals(withServices: [Self.serviceUUID], options: nil)
+                self.central.scanForPeripherals(withServices: [Self.serviceUUID], options: Self.scanOptions)
             }
         }
         return true
@@ -210,7 +216,7 @@ final class BleLink: NSObject, ObservableObject {
             // Keep scanning so the list refills and he can retry at once —
             // but do NOT set .scanning, which would wipe the message above.
             if self.central.state == .poweredOn {
-                self.central.scanForPeripherals(withServices: [Self.serviceUUID], options: nil)
+                self.central.scanForPeripherals(withServices: [Self.serviceUUID], options: Self.scanOptions)
             }
         }
     }
@@ -449,7 +455,7 @@ extension BleLink: CBCentralManagerDelegate, CBPeripheralDelegate {
             // advertisement wait entirely. Falls through to a normal scan
             // (with discovery auto-connect) when nothing is stored.
             if fastConnect() { return }
-            central.scanForPeripherals(withServices: [Self.serviceUUID], options: nil)
+            central.scanForPeripherals(withServices: [Self.serviceUUID], options: Self.scanOptions)
         } else if central.state == .unauthorized {
             state = .failed("Bluetooth permission denied — enable it in Settings")
         } else if central.state == .poweredOff {
@@ -475,9 +481,11 @@ extension BleLink: CBCentralManagerDelegate, CBPeripheralDelegate {
             return
         }
         if let i = found.firstIndex(where: { $0.id == peripheral.identifier }) {
-            // Ease downwards only: one advertisement can read several dB low,
-            // and a momentary dip should not condemn a receiver that is in range.
-            let shown = max(RSSI.intValue, found[i].rssi - 3)
+            // Move at most 3 dB per advertisement, either way: repeat adverts
+            // arrive several times a second, so this tracks the pilot walking
+            // about within a second or two while one odd reading cannot flip it.
+            let prev = found[i].rssi
+            let shown = max(prev - 3, min(prev + 3, RSSI.intValue))
             found[i] = Discovered(id: peripheral.identifier, name: name,
                                   rssi: shown, peripheral: peripheral)
         } else {
@@ -538,7 +546,7 @@ extension BleLink: CBCentralManagerDelegate, CBPeripheralDelegate {
                 // pending connect can miss a rebooted stack, but a FRESH
                 // discovery + connect is exactly the manual-tap path that
                 // always works. didDiscover completes it.
-                central.scanForPeripherals(withServices: [Self.serviceUUID], options: nil)
+                central.scanForPeripherals(withServices: [Self.serviceUUID], options: Self.scanOptions)
                 // Deadline watchdog: a pending connect to a POWERED-OFF
                 // board never calls back on iOS, so .reconnecting could
                 // last forever. When the window closes, give up cleanly.

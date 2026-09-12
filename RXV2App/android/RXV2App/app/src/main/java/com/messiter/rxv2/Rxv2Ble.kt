@@ -143,10 +143,11 @@ class Rxv2Ble(private val context: Context) {
                 val name = r.scanRecord?.deviceName
                     ?: found[r.device.address]?.name
                     ?: r.device.name ?: "RXV2"
-                // Ease downwards only: one advertisement can read several dB
-                // low, and a dip should not condemn a receiver that is in range.
+                // Move at most 3 dB per advertisement, either way: this tracks
+                // the pilot walking about within a second or two, while one odd
+                // reading cannot flip the verdict.
                 val prev = found[r.device.address]?.rssi
-                val shown = if (prev == null) r.rssi else maxOf(r.rssi, prev - 3)
+                val shown = if (prev == null) r.rssi else maxOf(prev - 3, minOf(prev + 3, r.rssi))
                 found[r.device.address] = Discovered(r.device, name, shown)
             }
             val list = synchronized(found) { found.values.sortedByDescending { it.rssi } }
