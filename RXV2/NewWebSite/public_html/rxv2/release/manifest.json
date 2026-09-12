@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.666-check-watchdog",
+      "url": "https://messiter.com/rxv2/release/v0.9.666/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.666/littlefs.bin",
+      "fs_md5": "98848571ad1ef0b9da4938c686199303",
+      "notes": "Two safety nets before the Goblin flies: bbCheckActive (which stands every other MSP sender down) can never outlive the check that set it - the idle tick clears it and says so in the log; and a check that somehow ran past 20 minutes hands the flight controller back. Nothing in the flight path changed: Radio.h, Channels.h, Output.h, Telemetry.h and FlightLog.h are untouched since before the vibration check existed. Includes 0.9.665."
+    },
+    {
       "name": "RXV2-0.9.665-check-goblin",
       "url": "https://messiter.com/rxv2/release/v0.9.665/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.665/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.655/littlefs.bin",
       "fs_md5": "d7658fd27022a7851c1373811567a10b",
       "notes": "New Filters page (Rotorflight's Filters tab): gyro lowpass 1 and 2 (type and cutoff), rotor-speed (RPM) notch preset and lowest frequency, dynamic notches (count, width, range) and the two fixed notches; read-modify-write of MSP 92/93, takes effect at once. The help explains what each filter does and how to read the Blackbox Explorer's frequency view to see which filter is needed. Includes 0.9.654."
-    },
-    {
-      "name": "RXV2-0.9.654-review-fixes",
-      "url": "https://messiter.com/rxv2/release/v0.9.654/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.654/littlefs.bin",
-      "fs_md5": "7d466e2925ae2d44b8e3e5088ad87abb",
-      "notes": "From a critical pass over the day's work: In-flight adjustments never switches flight-controller banks while the transmitter is on (the boxes fill only for the bank in use; flip the switch for another); a Remove whose save fails reloads the page from the flight controller and says 'Not removed'; Save shows 'Writing line N of 43'; a receiver whose line to the flight controller carries no MSP (SBUS, IBUS, PPM, or FC telemetry off) answers 'needs the USB cable' instead of a timeout; the Ports warning covers the dongle's own port. Includes 0.9.653."
     }
   ]
 }

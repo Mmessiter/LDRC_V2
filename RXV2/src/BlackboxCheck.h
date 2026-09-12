@@ -51,6 +51,10 @@ inline char*    jsonBuf = nullptr;
 constexpr size_t   JSON_CAP = 24 * 1024;
 constexpr uint16_t CHUNK = 4096;                // the most the FC will give in one reply (MSP_PORT_OUTBUF_SIZE); 512 B chunks ran at 25 kB/s on the bench
 constexpr uint32_t REQ_TIMEOUT_MS = 1500;
+// A check must never own the flight controller for longer than this. Reading
+// the whole 256 MB of a full black box at 65 kB/s would take over an hour;
+// nothing legitimate runs past 20 minutes, so anything that does is wedged.
+constexpr uint32_t MAX_RUN_MS = 20u * 60u * 1000u;
 // The flight controller answers ~2 kB per request and ~30 requests a second
 // (measured on the Goblin, 62 kB/s), so reading a FULL 256 MB black box would
 // take over an hour. The check wants the newest flight, so it starts this far
@@ -193,7 +197,14 @@ inline void handleRead(const uint8_t* p, uint16_t n) {
 
 // loop(): one reply handled per pass, one request outstanding at most.
 inline void tick() {
-    if (!running()) return;
+    if (!running()) {
+        // Safety net: bbCheckActive gates every other MSP sender in the
+        // firmware, so it must never outlive the check that set it. If the
+        // state machine ever stops without clearing it, clear it here.
+        if (bbCheckActive) { bbCheckActive = false; bbCheckOwnSend = false; mspBigReplyHook = nullptr; events.add("Vibration check: link handed back (watchdog)"); }
+        return;
+    }
+    if ((uint32_t)(millis() - startMs) > MAX_RUN_MS) { fail("the check took too long - the link is back with the flight controller"); return; }
     if (!UsbHostMsp::active()) { fail("the USB cable was unplugged"); return; }
     if (UsbHostMsp::cliMode)   { fail("the command line was opened"); return; }
     if (armedKnown && fcInfo.armed) { fail("the flight controller was armed"); return; }   // only after MSP 101 has answered us (0.9.663)
