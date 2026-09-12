@@ -269,8 +269,21 @@ class MainActivity : AppCompatActivity() {
         list.setOnItemClickListener { _, _, pos, _ ->
             cancelAuto(); autoDone = true
             val d = scannerAdapter!!.item(pos)
-            getSharedPreferences("scanner", MODE_PRIVATE).edit().putString("last", d.name).apply()
-            ble.connect(d)
+            // Do not start a connection the signal says will fail; RSSI wanders,
+            // so ask rather than forbid (Malcolm 2026-09-12).
+            if (Rxv2Ble.tooWeak(d.rssi)) {
+                android.app.AlertDialog.Builder(this)
+                    .setTitle("Too far away")
+                    .setMessage("${d.name} is only ${d.rssi} dBm — too weak to connect reliably. Walk closer to the model and it will connect at once.")
+                    .setNegativeButton("Cancel", null)
+                    .setPositiveButton("Try anyway") { _, _ ->
+                        getSharedPreferences("scanner", MODE_PRIVATE).edit().putString("last", d.name).apply()
+                        ble.connect(d)
+                    }.show()
+            } else {
+                getSharedPreferences("scanner", MODE_PRIVATE).edit().putString("last", d.name).apply()
+                ble.connect(d)
+            }
         }
         list.setOnItemLongClickListener { _, _, pos, _ ->
             val d = scannerAdapter!!.item(pos)
@@ -492,7 +505,11 @@ class MainActivity : AppCompatActivity() {
             val texts = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL }
             texts.addView(TextView(this@MainActivity).apply { text = d.name; textSize = 17f })
             texts.addView(TextView(this@MainActivity).apply {
-                text = "Signal ${d.rssi} dBm"; alpha = 0.6f; textSize = 12f
+                text = Rxv2Ble.signalWord(d.rssi) + " — ${d.rssi} dBm" +
+                       (if (Rxv2Ble.tooWeak(d.rssi)) " — get closer" else "")
+                alpha = if (Rxv2Ble.tooWeak(d.rssi)) 0.95f else 0.6f
+                if (Rxv2Ble.tooWeak(d.rssi)) setTextColor(0xFFC0603C.toInt())
+                textSize = 12f
             })
             v.addView(texts, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             return v

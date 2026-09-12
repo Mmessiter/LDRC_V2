@@ -77,6 +77,17 @@ final class BleLink: NSObject, ObservableObject {
     /// Anything at or below this is too weak to connect reliably.
     static let weakRssi = -85
 
+    /// A plain word for a signal strength, and whether it is worth trying.
+    static func signalWord(_ rssi: Int) -> String {
+        switch rssi {
+        case (-70)...:    return "Strong"
+        case (-84)...(-71): return "Good"
+        case (-92)...(-85): return "Weak"
+        default:          return "Too far"
+        }
+    }
+    static func tooWeak(_ rssi: Int) -> Bool { rssi != 0 && rssi <= weakRssi }
+
     // Raw OTA chunk lane: 0xA5-framed writes streamed write-without-response,
     // flow-controlled by canSendWriteWithoutResponse. Independent of the
     // request pipeline — the firmware routes 0xA5 frames straight to flash.
@@ -454,8 +465,11 @@ extension BleLink: CBCentralManagerDelegate, CBPeripheralDelegate {
             return
         }
         if let i = found.firstIndex(where: { $0.id == peripheral.identifier }) {
+            // Ease downwards only: one advertisement can read several dB low,
+            // and a momentary dip should not condemn a receiver that is in range.
+            let shown = max(RSSI.intValue, found[i].rssi - 3)
             found[i] = Discovered(id: peripheral.identifier, name: name,
-                                  rssi: RSSI.intValue, peripheral: peripheral)
+                                  rssi: shown, peripheral: peripheral)
         } else {
             found.append(Discovered(id: peripheral.identifier, name: name,
                                     rssi: RSSI.intValue, peripheral: peripheral))

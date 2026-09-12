@@ -391,6 +391,8 @@ struct ScannerView: View {
     @State private var pickerItem: PhotosPickerItem? = nil
     @State private var showPhotoPicker = false
     @State private var showCamera = false
+    /// A receiver tapped while its signal was too weak to be worth trying.
+    @State private var weakTarget: BleLink.Discovered? = nil
 
     private func cancelAuto() {
         autoWork?.cancel(); autoWork = nil; autoTarget = nil
@@ -447,17 +449,24 @@ struct ScannerView: View {
                 ForEach(link.found) { d in
                     Button {
                         cancelAuto()
-                        lastUsedName = d.name
-                        link.connect(d)
+                        // Do not start a connection the signal says will fail
+                        // (Malcolm 2026-09-12: "perhaps it'd be better to not
+                        // even try if it's too weak?"). RSSI wanders, so this
+                        // asks rather than forbids.
+                        if BleLink.tooWeak(d.rssi) { weakTarget = d } else {
+                            lastUsedName = d.name
+                            link.connect(d)
+                        }
                     } label: {
                         HStack {
                             let _ = photoRev
                             ModelThumb(name: d.name, side: 60)
                             VStack(alignment: .leading) {
                                 Text(d.name).font(.headline)
-                                Text("Signal \(d.rssi) dBm")
+                                Text("\(BleLink.signalWord(d.rssi)) — \(d.rssi) dBm"
+                                     + (BleLink.tooWeak(d.rssi) ? " — get closer" : ""))
                                     .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(BleLink.tooWeak(d.rssi) ? Color.orange : Color.secondary)
                             }
                             if d.name == lastUsedName {
                                 Image(systemName: "clock.arrow.circlepath")
@@ -565,6 +574,18 @@ struct ScannerView: View {
         .sheet(isPresented: $showCamera) {
             CameraPicker { img in
                 if let name = photoFor { ModelPhotos.save(name, img); photoRev += 1 }
+            }
+        }
+        .alert("Too far away", isPresented: Binding(get: { weakTarget != nil },
+                                                    set: { if !$0 { weakTarget = nil } })) {
+            Button("Cancel", role: .cancel) { weakTarget = nil }
+            Button("Try anyway") {
+                if let d = weakTarget { lastUsedName = d.name; link.connect(d) }
+                weakTarget = nil
+            }
+        } message: {
+            if let d = weakTarget {
+                Text("\(d.name) is only \(d.rssi) dBm — too weak to connect reliably. Walk closer to the model and it will connect at once.")
             }
         }
         .onReceive(link.$found) { maybeArmAuto($0) }

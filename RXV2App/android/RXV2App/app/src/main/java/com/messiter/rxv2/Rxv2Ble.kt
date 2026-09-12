@@ -31,6 +31,13 @@ class Rxv2Ble(private val context: Context) {
 
     companion object {
         const val WEAK_RSSI = -85      // at or below this, too weak to connect reliably
+        fun signalWord(rssi: Int) = when {
+            rssi >= -70 -> "Strong"
+            rssi >= -84 -> "Good"
+            rssi >= -92 -> "Weak"
+            else        -> "Too far"
+        }
+        fun tooWeak(rssi: Int) = rssi != 0 && rssi <= WEAK_RSSI
         val SERVICE: UUID  = UUID.fromString("8e400001-f315-4f60-9fb8-838830daea50")
         val REQ: UUID      = UUID.fromString("8e400002-f315-4f60-9fb8-838830daea50")
         val RESP: UUID     = UUID.fromString("8e400003-f315-4f60-9fb8-838830daea50")
@@ -134,7 +141,11 @@ class Rxv2Ble(private val context: Context) {
                 val name = r.scanRecord?.deviceName
                     ?: found[r.device.address]?.name
                     ?: r.device.name ?: "RXV2"
-                found[r.device.address] = Discovered(r.device, name, r.rssi)
+                // Ease downwards only: one advertisement can read several dB
+                // low, and a dip should not condemn a receiver that is in range.
+                val prev = found[r.device.address]?.rssi
+                val shown = if (prev == null) r.rssi else maxOf(r.rssi, prev - 3)
+                found[r.device.address] = Discovered(r.device, name, shown)
             }
             val list = synchronized(found) { found.values.sortedByDescending { it.rssi } }
             ui.post { onFound?.invoke(list) }
