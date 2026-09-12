@@ -34,6 +34,8 @@ class Rxv2Ble(private val context: Context) {
         // 2026-09-12). Throughput collapses long before the connection does,
         // and this link carries whole web pages.
         const val WEAK_RSSI = -78      // at or below this, too weak to WORK
+        const val SMOOTHING = 0.3      // ~0.7 s to follow a change
+        const val PUBLISH_EVERY_MS = 1000L
         fun signalWord(rssi: Int) = when {
             rssi >= -65 -> "Strong"
             rssi >= -77 -> "Good"
@@ -115,10 +117,29 @@ class Rxv2Ble(private val context: Context) {
     }
 
     // ── Scanning ────────────────────────────────────────────────────
+    // Smoothed signal per device, published on a slow tick (see the scan callback).
+    private val smoothRssi = HashMap<String, Double>()
+    private var publishPending = false
+    private val publishRunnable = Runnable { publishPending = false; publishFound() }
+    private fun schedulePublish() {
+        if (publishPending) return
+        publishPending = true
+        ui.postDelayed(publishRunnable, PUBLISH_EVERY_MS)
+    }
+    private fun publishFound() {
+        val list = synchronized(found) {
+            smoothRssi.forEach { (addr, v) ->
+                found[addr]?.let { found[addr] = Discovered(it.device, it.name, Math.round(v).toInt()) }
+            }
+            found.values.sortedByDescending { it.rssi }
+        }
+        ui.post { onFound?.invoke(list) }
+    }
+
     fun startScan() {
         val a = adapter ?: run { state = State.Failed("Bluetooth unavailable"); return }
         if (!a.isEnabled) { state = State.Failed("Bluetooth is switched off"); return }
-        found.clear(); onFound?.invoke(emptyList())
+        found.clear(); smoothRssi.clear(); onFound?.invoke(emptyList())
         state = State.Scanning
         scanner = a.bluetoothLeScanner
         // No hardware filter — Samsung/Qualcomm offloaded scanners miss
@@ -129,7 +150,11 @@ class Rxv2Ble(private val context: Context) {
             .onFailure { state = State.Failed("Bluetooth permission needed") }
     }
 
-    fun stopScan() { runCatching { scanner?.stopScan(scanCb) } }
+    fun stopScan() {
+        ui.removeCallbacks(publishRunnable)
+        publishPending = false
+        runCatching { scanner?.stopScan(scanCb) }
+    }
 
     private val scanCb = object : ScanCallback() {
         override fun onScanResult(type: Int, r: ScanResult) {
@@ -143,15 +168,17 @@ class Rxv2Ble(private val context: Context) {
                 val name = r.scanRecord?.deviceName
                     ?: found[r.device.address]?.name
                     ?: r.device.name ?: "RXV2"
-                // Move at most 3 dB per advertisement, either way: this tracks
-                // the pilot walking about within a second or two, while one odd
-                // reading cannot flip the verdict.
-                val prev = found[r.device.address]?.rssi
-                val shown = if (prev == null) r.rssi else maxOf(prev - 3, minOf(prev + 3, r.rssi))
-                found[r.device.address] = Discovered(r.device, name, shown)
+                // Every advertisement feeds an average; the display is refreshed
+                // on a slow tick, because showing each one made the number a blur.
+                val prev = smoothRssi[r.device.address]
+                val avg = if (prev == null) r.rssi.toDouble() else prev + SMOOTHING * (r.rssi - prev)
+                smoothRssi[r.device.address] = avg
+                val isNew = !found.containsKey(r.device.address)
+                found[r.device.address] = Discovered(r.device, name,
+                    if (isNew) r.rssi else found[r.device.address]!!.rssi)
+                if (isNew) publishFound()          // a new receiver shows at once
             }
-            val list = synchronized(found) { found.values.sortedByDescending { it.rssi } }
-            ui.post { onFound?.invoke(list) }
+            schedulePublish()
         }
     }
 

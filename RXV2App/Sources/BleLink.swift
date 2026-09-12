@@ -91,6 +91,15 @@ final class BleLink: NSObject, ObservableObject {
     }
     static func tooWeak(_ rssi: Int) -> Bool { rssi != 0 && rssi <= weakRssi }
 
+    /// Smoothed signal per device, and the slow tick that publishes it.
+    /// Advertisements arrive several times a second; showing each one made the
+    /// number unreadable (Malcolm 2026-09-12: "it's a blur"). The average moves
+    /// with every advert, the display only once a second.
+    private var smoothRssi: [UUID: Double] = [:]
+    private var publishTimer: Timer?
+    private static let smoothing = 0.3          // ~0.7 s to follow a change
+    private static let publishEvery = 1.0       // seconds
+
     /// CoreBluetooth reports a peripheral ONCE per scan unless duplicates are
     /// allowed, so without this the strength shown is frozen at the first
     /// sighting and walking closer changes nothing (Malcolm 2026-09-12:
@@ -113,13 +122,34 @@ final class BleLink: NSObject, ObservableObject {
 
     func startScan() {
         found = []
+        smoothRssi.removeAll()
         guard central.state == .poweredOn else { state = .scanning; return }
         state = .scanning
         if fastConnect() { return }   // instant reconnect to last device — no advert wait
         central.scanForPeripherals(withServices: [Self.serviceUUID], options: Self.scanOptions)
+        startPublishing()
     }
 
-    func stopScan() { central.stopScan() }
+    func stopScan() { central.stopScan(); publishTimer?.invalidate(); publishTimer = nil }
+
+    /// Copy the smoothed signals into the published list once a second.
+    private func startPublishing() {
+        publishTimer?.invalidate()
+        publishTimer = Timer.scheduledTimer(withTimeInterval: Self.publishEvery, repeats: true) { [weak self] _ in
+            guard let self else { return }
+            var changed = false
+            for i in self.found.indices {
+                guard let s = self.smoothRssi[self.found[i].id] else { continue }
+                let v = Int(s.rounded())
+                if v != self.found[i].rssi {
+                    self.found[i] = Discovered(id: self.found[i].id, name: self.found[i].name,
+                                               rssi: v, peripheral: self.found[i].peripheral)
+                    changed = true
+                }
+            }
+            if changed { self.found.sort { $0.rssi > $1.rssi } }
+        }
+    }
 
     private var lastName = "RXV2"
     private var userDisconnect = false
@@ -480,19 +510,15 @@ extension BleLink: CBCentralManagerDelegate, CBPeripheralDelegate {
             central.connect(peripheral, options: nil)
             return
         }
-        if let i = found.firstIndex(where: { $0.id == peripheral.identifier }) {
-            // Move at most 3 dB per advertisement, either way: repeat adverts
-            // arrive several times a second, so this tracks the pilot walking
-            // about within a second or two while one odd reading cannot flip it.
-            let prev = found[i].rssi
-            let shown = max(prev - 3, min(prev + 3, RSSI.intValue))
-            found[i] = Discovered(id: peripheral.identifier, name: name,
-                                  rssi: shown, peripheral: peripheral)
-        } else {
-            found.append(Discovered(id: peripheral.identifier, name: name,
-                                    rssi: RSSI.intValue, peripheral: peripheral))
+        // Every advertisement feeds the average; the timer publishes it.
+        let id = peripheral.identifier, r = Double(RSSI.intValue)
+        smoothRssi[id] = smoothRssi[id].map { $0 + Self.smoothing * (r - $0) } ?? r
+        if found.firstIndex(where: { $0.id == id }) == nil {
+            // A receiver appearing for the first time shows at once, not in a second.
+            found.append(Discovered(id: id, name: name, rssi: RSSI.intValue, peripheral: peripheral))
+            found.sort { $0.rssi > $1.rssi }
+            if publishTimer == nil { startPublishing() }
         }
-        found.sort { $0.rssi > $1.rssi }
     }
 
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
