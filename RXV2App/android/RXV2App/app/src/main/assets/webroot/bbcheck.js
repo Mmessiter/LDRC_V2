@@ -33,7 +33,10 @@ BB.peaks = (db, rate, N, opts) => {
 };
 
 // Attenuation raw→filtered around bin k (best of ±1 bins).
-const atten = (raw, filt, k) => { let best = -99; for (let j = Math.max(0, k - 1); j <= Math.min(raw.length - 1, k + 1); j++) best = Math.max(best, raw[j] - filt[j]); return best; };
+// A rotor-speed notch is narrow (Q 3-8) and the head speed wanders, so the cut
+// can fall between FFT bins: take the best of +/-2 bins or a narrow notch looks
+// ineffective when it is working (seen on the Goblin, 1/rev at 21 Hz).
+const atten = (raw, filt, k) => { let best = -99; for (let j = Math.max(0, k - 2); j <= Math.min(raw.length - 1, k + 2); j++) best = Math.max(best, raw[j] - filt[j]); return best; };
 
 // Name the source of a vibration line from its order (multiples of the head speed).
 BB.source = (order, ctx) => {
@@ -49,6 +52,29 @@ BB.source = (order, ctx) => {
     if (ctx.gearMain > 1) for (let m = 1; m <= 2; m++) if (near(order, ctx.gearMain * m)) return { kind: 'motor', order: ctx.gearMain * m, label: (m === 1 ? 'motor speed (1 per motor rev)' : '2 per motor rev') };
     if (ctx.gearTail > 1) for (let m = 1; m <= tailBlades; m++) if (near(order, ctx.gearTail * m)) return { kind: 'tail', order: ctx.gearTail * m, label: (m === 1 ? 'tail rotor (1 per tail rev)' : 'tail blades passing') };
     return { kind: 'fixed', label: 'not a multiple of the head speed: something else vibrating (tail boom, canopy, a wire, a bearing)' };
+};
+
+// Which harmonics each rotor-speed preset actually notches, read from
+// rpmFilterPreset[] in Rotorflight 4.6 (rpm_filter.c): notch_source 11..18 =
+// main rotor harmonics 1..8, 21..28 = tail rotor harmonics 1..8, 10 = main
+// motor. Roll and pitch get the full list; yaw's "high" is the same as normal.
+// Without this the check advised "set the notches to high" for a 1/rev that
+// normal already notches - it would have changed nothing (Goblin, 2026-09-12).
+BB.PRESETS = {
+    1: { name: 'low',    main: [1, 2, 4],          mainYaw: [1, 2],       tail: [1],    motor: false },
+    2: { name: 'normal', main: [1, 2, 3, 4],       mainYaw: [1, 2, 3, 4], tail: [1, 2], motor: true },
+    3: { name: 'high',   main: [1, 2, 3, 4, 5, 6], mainYaw: [1, 2, 3, 4], tail: [1, 2], motor: true },
+};
+BB.covers = (preset, src, harmonic, axis) => {
+    const P = BB.PRESETS[preset]; if (!P) return false;
+    if (src === 'motor') return P.motor;
+    if (src === 'tail')  return P.tail.indexOf(harmonic) >= 0;
+    return (axis === 2 ? P.mainYaw : P.main).indexOf(harmonic) >= 0;
+};
+// The lowest preset above `from` that would notch this line, or 0 if none does.
+BB.presetThatCovers = (from, src, harmonic, axis) => {
+    for (let p = Math.max(1, from + 1); p <= 3; p++) if (BB.covers(p, src, harmonic, axis)) return p;
+    return 0;
 };
 
 // Head-speed spread (relative) from the histogram: how smeared the rotor lines are.
@@ -135,10 +161,23 @@ BB.analyse = (parts, ctx) => {
     if (worstResidual && canAdvise) {
         const L = worstResidual;
         if (L.src === 'rotor' || L.src === 'motor' || L.src === 'tail') {
-            if (F.rpmMinHz && L.f < F.rpmMinHz) v('rpm', 'Lower the lowest rotor frequency', L.f + ' Hz (' + L.label + ') is below the ' + F.rpmMinHz + ' Hz where the rotor-speed notches start, so they leave it alone. Set Lowest rotor frequency to ' + Math.max(10, Math.floor(L.f * 0.8)) + ' Hz.', { set: 'rpmMinHz', value: Math.max(10, Math.floor(L.f * 0.8)), text: 'Set lowest rotor frequency to ' + Math.max(10, Math.floor(L.f * 0.8)) + ' Hz' });
-            else if (preset === 0) v('rpm', 'Check the custom rotor-speed notches', L.f + ' Hz on ' + L.axisName.toLowerCase() + ' (' + L.label + ') gets through the filters (' + L.atten + ' dB taken out). The rotor-speed notches are set to custom; a notch on this harmonic (order ' + L.order + ') is missing or too narrow. The normal or high preset covers it.', { set: 'rpmPreset', value: 2, text: 'Set the rotor-speed notches to normal' });
-            else if (preset < 3) v('rpm', 'Set the rotor-speed notches to ' + presetName[preset + 1], L.f + ' Hz on ' + L.axisName.toLowerCase() + ' (' + L.label + ') gets through the filters: only ' + L.atten + ' dB taken out, still ' + L.aboveFloor + ' dB above the rest. ' + (preset === 1 ? 'Low' : 'Normal') + ' does not cover this harmonic; ' + presetName[preset + 1] + ' does.', { set: 'rpmPreset', value: preset + 1, text: 'Set rotor-speed notches to ' + presetName[preset + 1] });
-            else v('rpm', 'A rotor line the notches should have caught', L.f + ' Hz on ' + L.axisName.toLowerCase() + ' (' + L.label + ') is still ' + L.aboveFloor + ' dB above the floor with the rotor-speed notches on high. Check the gear ratios on the First-time basics page (a wrong ratio puts the motor and tail notches in the wrong place), then the head-speed signal.');
+            // Which harmonic is it? (1/rev = the rotor turning once, 2/rev = the two blades passing)
+            const h = L.srcOrder ? Math.round(L.src === 'rotor' ? L.srcOrder : (L.src === 'motor' ? L.srcOrder / (ctx.gearMain || 1) : L.srcOrder / (ctx.gearTail || 1))) : 0;
+            const nextP = BB.presetThatCovers(preset, L.src, h, L.axis);
+            if (L.src === 'rotor' && h === 1) {
+                // A notch at 1/rev sits inside the control band and Rotorflight already
+                // has one there in every preset: a strong 1/rev is the rotor itself.
+                v('mech', 'A strong once per rev: check blade tracking and balance', 'The biggest shake on ' + L.axisName.toLowerCase() + ' is ' + L.f + ' Hz, exactly once per rotor revolution, and the filters barely touch it (' + L.atten + ' dB). No filter can fix that: the rotor-speed notches already have a notch there in every preset, and anything wider would slow the controls. If the model shakes in the hover, check blade tracking, blade balance, and the head and shaft for a bend; if it flies smoothly this is normal once-per-rev motion and nothing needs doing.');
+            }
+            else if (!res.fields.hs) v('rpm', 'Get the head-speed signal to the flight controller', L.f + ' Hz on ' + L.axisName.toLowerCase() + ' (' + L.label + ') is still ' + L.aboveFloor + ' dB above the filtered floor. The rotor-speed notches remove exactly this, but only with a head-speed signal.');
+            else if (F.rpmMinHz && L.f < F.rpmMinHz) v('rpm', 'Lower the lowest rotor frequency', L.f + ' Hz (' + L.label + ') is below the ' + F.rpmMinHz + ' Hz where the rotor-speed notches start, so they leave it alone. Set Lowest rotor frequency to ' + Math.max(10, Math.floor(L.f * 0.8)) + ' Hz.', { set: 'rpmMinHz', value: Math.max(10, Math.floor(L.f * 0.8)), text: 'Set lowest rotor frequency to ' + Math.max(10, Math.floor(L.f * 0.8)) + ' Hz' });
+            else if (preset === 0) v('rpm', 'Switch the rotor-speed notches to a preset', L.f + ' Hz on ' + L.axisName.toLowerCase() + ' (' + L.label + ') gets through the filters (' + L.atten + ' dB taken out). The rotor-speed notches are set to custom, and this harmonic is missing from your table. The normal preset covers the rotor, its blades and the tail.', { set: 'rpmPreset', value: 2, text: 'Set the rotor-speed notches to normal' });
+            else if (nextP) v('rpm', 'Set the rotor-speed notches to ' + BB.PRESETS[nextP].name, L.f + ' Hz on ' + L.axisName.toLowerCase() + ' (' + L.label + ') gets through the filters: only ' + L.atten + ' dB taken out, still ' + L.aboveFloor + ' dB above the rest. ' + (BB.PRESETS[preset] ? BB.PRESETS[preset].name.charAt(0).toUpperCase() + BB.PRESETS[preset].name.slice(1) : 'This preset') + ' does not notch that harmonic; ' + BB.PRESETS[nextP].name + ' does.', { set: 'rpmPreset', value: nextP, text: 'Set rotor-speed notches to ' + BB.PRESETS[nextP].name });
+            else if (BB.covers(preset, L.src, h, L.axis)) {
+                const spread = res.hsSpread > 0.06 ? ' The head speed also varied by about ' + Math.round(res.hsSpread * 100) + ' %, which smears a narrow notch.' : '';
+                v('rpm', 'The notch for ' + L.f + ' Hz is there but not biting', L.label.charAt(0).toUpperCase() + L.label.slice(1) + ' on ' + L.axisName.toLowerCase() + ' is still ' + L.aboveFloor + ' dB above the rest, and the ' + BB.PRESETS[preset].name + ' preset does notch that harmonic. So the vibration is bigger than the notch can swallow, or the flight controller has the wrong speed for it: check the gear ratios on the First-time basics page and that the head speed on the front page matches the real one.' + spread + ' Mechanically, look for what is shaking at ' + Math.round(L.f) + ' Hz.');
+            }
+            else v('rpm', 'No preset notches ' + Math.round(L.f) + ' Hz', L.label.charAt(0).toUpperCase() + L.label.slice(1) + ' on ' + L.axisName.toLowerCase() + ' is ' + L.aboveFloor + ' dB above the rest, and none of the three presets covers that harmonic. A custom rotor-speed notch table can (Filters page, or the Rotorflight Configurator), or find the mechanical cause.');
         } else if (L.f < 80) {
             v('mech', 'Find what shakes at ' + Math.round(L.f) + ' Hz', L.f + ' Hz on ' + L.axisName.toLowerCase() + ' does not follow the head speed and is still ' + L.aboveFloor + ' dB above the rest. That low, a notch would sit inside the control range and slow the response, so no filter change is offered: look for the cause (tail boom, canopy, battery tray, a wire) and fly again.');
         } else {
