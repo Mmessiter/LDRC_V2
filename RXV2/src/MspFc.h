@@ -257,6 +257,11 @@ inline void mspSendRequest(uint8_t function, const uint8_t* payload = nullptr, u
     // Silently dropping long payloads here is what made the 84-byte
     // Scorpion ESC write (fn 218) vanish (2026-09-02).
     if (payloadLen == 0xFF) return;          // 0xFF size = MSP jumbo marker, never send it
+    if (bbCheckActive && !bbCheckOwnSend) {  // the vibration check owns the link (0.9.662): one request outstanding, ever
+        static uint32_t lastDropLog = 0;
+        if ((uint32_t)(millis() - lastDropLog) > 5000) { lastDropLog = millis(); char m[EventLog::MSG_LEN]; snprintf(m, sizeof m, "MSP %u not sent: the vibration check owns the link", function); events.add(m); }
+        return;
+    }
     if (mspReplyTooBigForFc(function)) {     // last line of defence — the API refuses it earlier, with the reason
         events.add("MSP 52 (adjustments) NOT sent: its reply overflows Rotorflight's link buffer (RF 4.6 bug)");
         return;
@@ -635,6 +640,7 @@ inline void mspDeliverResponse(uint8_t func, const uint8_t* payload, uint16_t si
 inline bool govThrottleGoverned() { return fcInfo.govMode == 3 || fcInfo.govMode == 4; }
 
 inline void govThrottleWatchTick() {
+    if (bbCheckActive) return;   // the vibration check owns the link (0.9.662)
     static uint32_t lastMs = 0;
     static bool     wasArmed = false;
     static uint16_t armedS = 0, parkedS = 0;
@@ -735,6 +741,7 @@ constexpr uint32_t MSP_WAIT_CAP_MS    = 12000;   // 588 B = 11 chunks; never lon
 
 inline bool mspRequestAndWait(uint8_t function, const uint8_t* req, uint8_t reqLen,
                               uint8_t* outBuf, uint16_t* outLen, uint32_t timeoutMs) {
+    if (bbCheckActive) return false;   // the vibration check owns the link (0.9.662): no waiting, no second request
     extern void protocolRx();   // defined in Telemetry.h
     extern void sbusTick();     // defined in Output.h
     extern void radioPoll();    // defined in Radio.h
@@ -1103,6 +1110,7 @@ inline void bankAfterClientRequest(uint8_t fn, const uint8_t* data, uint8_t len,
 
 // From loop(): the put-back itself, when the phone has gone quiet.
 inline void bankPutBackTick() {
+    if (bbCheckActive) return;   // the vibration check owns the link (0.9.662)
     if (!bankHeld()) return;
     const uint32_t now = millis();
     if ((currentProtocol != PROTO_CRSF || !fcTelemetryEnabled) && !UsbHostMsp::active()) { bankRelease(); return; }   // over USB the banks are still ours to put back (0.9.640)
@@ -1362,6 +1370,7 @@ inline void mspFcPoll() {
 // (escCatchArmed / escCatchGot are declared with the sync-wait state above.)
 
 inline void escCatchTick() {
+    if (bbCheckActive) return;   // the vibration check owns the link (0.9.662)
     if (!escCatchArmed) return;
     const uint32_t now = millis();
     if (currentProtocol != PROTO_CRSF) { escCatchArmed = false; return; }
@@ -1399,6 +1408,7 @@ inline void escCatchTick() {
 //*********************************************************************
 
 inline void fcTelemWatch() {
+    if (bbCheckActive) return;   // the vibration check owns the link (0.9.662)
     static bool wasLive = false;
     static uint32_t stopLoggedAt = 0;
     const bool live = fcTelem.lastFrameMs &&

@@ -76,6 +76,7 @@ def tag8_8svb(vals):
 SETS = {
  'min': ['iter','time','gyroRAW','gyroADC','headspeed'],
  'rec': ['iter','time','rcCommand','setpoint','axisPIDF','attitude','gyroRAW','gyroADC','accADC','rssi','Vbat','Ibat','gov','headspeed','tailspeed','motor','servo'],
+ 'gap': ['iter','time','gyroRAW','gyroADC','rssi','temps','headspeed'],   # rssi (group 1) directly followed by Tmcu/Tesc (group 2)
  'all': ['iter','time','rcCommand','setpoint','mixer','axisPIDF','axisB','attitude','gyroRAW','gyroADC','accADC','altitude','rssi','Vbat','Ibat','Vbec','esc','temps','gov','headspeed','tailspeed','motor','servo','debug'],
 }
 def build_fields(keys):
@@ -135,7 +136,7 @@ def header_bytes(F, pint, iint, extra):
          'H gyro_rpm_notch_preset:2', 'H gyro_notch_hz:0,0', 'H fields_mask:%d' % extra['mask']]
     return ('\n'.join(L) + '\n').encode()
 
-def gen(args, seed=1):
+def gen(args, seed=1, hs_override=None):
     random.seed(seed)
     F = build_fields(SETS[args.fields])
     pint = 2; rate = args.rate; iint = pint * 32  # I frame every 32 P frames
@@ -150,7 +151,8 @@ def gen(args, seed=1):
     for k in range(n):
         t = k / rate
         # head speed: ramp 0→hs over 4 s, then steady with a little wobble
-        hs = args.hs * min(1.0, t / 4.0) * (1 + 0.01 * math.sin(2 * math.pi * 0.2 * t)) if t > 0.5 else 0
+        top = args.hs if hs_override is None else hs_override
+        hs = top * min(1.0, t / 4.0) * (1 + 0.01 * math.sin(2 * math.pi * 0.2 * t)) if t > 0.5 else 0
         frot = hs / 60.0
         vals = {}
         raw = [0, 0, 0]; filt = [0, 0, 0]
@@ -227,7 +229,8 @@ def gen(args, seed=1):
                 elif enc == 7: out += tag2_3s32([resid(j) for j in range(i, i + 3)]); i += 3
                 elif enc == 6:
                     g = 0
-                    while i + g < len(F) and g < 8 and F[i + g]['pe'] == 6: g += 1
+                    temp = F[i]['name'] in ('Tmcu', 'Tesc', 'Tbec', 'Tesc2')
+                    while i + g < len(F) and g < 8 and F[i + g]['pe'] == 6 and (F[i + g]['name'] in ('Tmcu', 'Tesc', 'Tbec', 'Tesc2')) == temp: g += 1
                     out += tag8_8svb([resid(j) for j in range(i, i + g)]); i += g
                 else: raise Exception('enc %d' % enc)
             hist[2] = prev1; hist[1] = list(cur)
@@ -244,11 +247,12 @@ if __name__ == '__main__':
     ap = argparse.ArgumentParser(); ap.add_argument('out'); ap.add_argument('--seconds', type=float, default=20); ap.add_argument('--rate', type=int, default=2000)
     ap.add_argument('--hs', type=float, default=1800); ap.add_argument('--fields', default='rec'); ap.add_argument('--logs', type=int, default=1)
     ap.add_argument('--truncate', action='store_true'); ap.add_argument('--corrupt', type=int, default=0); ap.add_argument('--pad', type=int, default=0)
+    ap.add_argument('--hs2', type=float, default=None, help='head speed of the logs after the first (e.g. 0 = a bench arm)')
     a = ap.parse_args()
     data = bytearray()
     for L in range(a.logs):
         if L: data += b'\xff' * (a.pad if a.pad else 2048)   # page padding between logs
-        data += gen(a, seed=L + 1)
+        data += gen(a, seed=L + 1, hs_override=(a.hs2 if (L > 0 and a.hs2 is not None) else None))
     if a.corrupt:
         random.seed(99)
         for _ in range(a.corrupt):   # a run of 40 random bytes: breaks the frame structure, the decoder must resync

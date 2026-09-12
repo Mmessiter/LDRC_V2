@@ -9,7 +9,10 @@ python3 dev/bb_synth.py $T/all.bbl --seconds 8 --fields all >/dev/null
 python3 dev/bb_synth.py $T/two.bbl --seconds 6 --fields min --logs 2 >/dev/null
 python3 dev/bb_synth.py $T/trunc.bbl --seconds 6 --fields rec --truncate --pad 4096 >/dev/null
 python3 dev/bb_synth.py $T/corrupt.bbl --seconds 12 --fields rec --corrupt 6 >/dev/null
-for f in rec all two trunc corrupt; do $T/bbcheck_test $T/$f.bbl > $T/$f.json 2>/dev/null; done
+python3 dev/bb_synth.py $T/gap.bbl --seconds 6 --fields gap >/dev/null
+python3 dev/bb_synth.py $T/bench.bbl --seconds 8 --fields rec --logs 2 --hs2 0 >/dev/null
+python3 dev/bb_synth.py $T/zero.bbl --seconds 25 --fields rec --hs 0 >/dev/null
+for f in rec all two trunc corrupt gap bench zero; do $T/bbcheck_test $T/$f.bbl > $T/$f.json 2>/dev/null; done
 $T/bbcheck_test $T/two.bbl 1 > $T/two1.json 2>/dev/null
 $T/bbcheck_test $T/rec.bbl 0 4096 > $T/rec4k.json 2>/dev/null
 node dev/bbcheck_test.js $T

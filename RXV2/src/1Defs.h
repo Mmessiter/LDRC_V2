@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.661-vibration-check";
+constexpr const char* FW_VERSION = "RXV2-0.9.662-vibration-check-safe";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -1093,5 +1093,6 @@ inline void packF32(uint8_t* ack, float f) {
 // USB and owns the MSP link — the heartbeat probe, the TX-param machine and
 // /api/msp stand down until it finishes.
 inline volatile bool bbCheckActive = false;
+inline volatile bool bbCheckOwnSend = false;   // set by BlackboxCheck.h around its own mspSendRequest: everyone else's is dropped meanwhile
 
 #endif // _SRC_1DEFS_H

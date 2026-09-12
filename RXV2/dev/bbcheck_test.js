@@ -58,6 +58,27 @@ const ctx = { filters: { lpf1Hz: 100, rpmPreset: 2, rpmMinHz: 20, dynCount: 0, n
     ok(s.resyncs > 0 && s.resyncs <= 12, 'corrupt: resynced ' + s.resyncs + ' times');
     ok(s.i + s.p > 24000 * 0.95, 'corrupt: ' + (s.i + s.p) + ' of 24000 frames kept');
 }
+// 7. two TAG8_8SVB groups touching in the header (rssi | Tmcu): must not merge
+{
+    const d = load('gap'), s = d.stats;
+    ok(s.bad === 0 && s.resyncs === 0 && s.i + s.p === 12000, 'gap: rssi|Tmcu adjacent groups decode cleanly (' + (s.i + s.p) + ' frames, ' + s.bad + ' bad)');
+}
+// 8. a bench arm after the flight: the flight's spectra must survive
+{
+    const d = load('bench');
+    ok(d.summary.logsTotal === 2 && d.summary.log === 1 && d.summary.keptFlying === true, 'bench: newest FLYING log reported (log ' + d.summary.log + ' of ' + d.summary.logsTotal + ', keptFlying ' + d.summary.keptFlying + ')');
+    ok(d.summary.hs.median > 1500 && d.summary.flyWin > 20, 'bench: its head speed and windows are the flight\'s (' + d.summary.hs.median + ' rpm, ' + d.summary.flyWin + ' windows)');
+    const an = BB.analyse(parts(d), ctx);
+    ok(an.signature === [d.summary.logs[0].addr, d.summary.logs[0].end, d.summary.logs[0].frames].join(':'), 'bench: signature is the flying log');
+}
+// 9. head speed present but never rose: a data verdict WITH a primary
+{
+    const d = load('zero');
+    const an = BB.analyse(parts(d), ctx);
+    ok(an.primary && an.primary.kind === 'data' && /stayed at/.test(an.primary.title), 'zero: primary verdict names the missing RPM signal (' + (an.primary && an.primary.title) + ')');
+    const e = BB.analyse({ summary: { rate: 2000, n: 512, frames: 0, logs: [], fields: {} }, fly: {}, gnd: {} }, ctx);
+    ok(e.primary && e.primary.kind === 'data', 'empty: early return still sets a primary verdict');
+}
 // 6. chunk size must not matter
 {
     const a = load('rec'), b = load('rec4k');

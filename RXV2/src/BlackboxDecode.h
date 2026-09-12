@@ -44,7 +44,13 @@ struct Header {
     int fTime = -1, fIter = -1, fHs = -1, fTail = -1, fMotor0 = -1;
     int fRaw[3] = {-1, -1, -1}, fGyro[3] = {-1, -1, -1};
     bool haveI = false, haveS = false;
-    void clear() { *this = Header(); }
+    // In place, no temporary: `*this = Header()` put a 4.8 kB Header on the 8 kB loop-task stack.
+    void clear() {
+        memset(this, 0, sizeof *this);
+        iInterval = 32; pInterval = 1; dataVersion = 2; rpmPreset = -1;
+        fTime = fIter = fHs = fTail = fMotor0 = -1;
+        for (int a = 0; a < 3; a++) { fRaw[a] = -1; fGyro[a] = -1; }
+    }
 };
 
 struct Frame {
@@ -275,6 +281,13 @@ private:
     int parseFrame(Sink& sink, bool probing) {
         if (len < 1) return 0;
         const uint8_t t = buf[0];
+        if (t == 'H') {                     // "H " = the next log's header (a log cut short by a power cut has no End-of-log and no padding)
+            if (len < 2) return 0;
+            if (buf[1] == ' ') {
+                if (inLog) { inLog = false; stats.truncatedLogs++; sink.onLogEnd(streamPos, false); }
+                state = ST_SCAN; return scanForHeader(sink);
+            }
+        }
         Rd r(buf + 1, len - 1);
         int ok = 0;
         int32_t mainOut[MAX_FIELDS]; bool isMain = false, intra = false;
@@ -309,7 +322,8 @@ private:
     // Try to find the next I frame (or a header) after corruption.
     int resync(Sink& sink) {
         for (size_t i = 0; i < len; i++) {
-            if (buf[i] == 'H' && i + 2 <= len && buf[i + 1] == ' ') {
+            if (buf[i] == 'H' && i + 1 >= len) return i ? (int)i : 0;   // an 'H' at the very end: wait for the next byte
+            if (buf[i] == 'H' && buf[i + 1] == ' ') {
                 // could be a new log header
                 if (i) return (int)i;
                 if (inLog) { inLog = false; sink.onLogEnd(streamPos, false); stats.truncatedLogs++; }
@@ -335,6 +349,7 @@ private:
         stats.skipped += (uint32_t)len; return (int)len;
     }
 
+    static bool isTempField(const char* n) { return n[0] == 'T' && (!strcmp(n, "Tmcu") || !strcmp(n, "Tesc") || !strcmp(n, "Tbec") || !strcmp(n, "Tesc2")); }
     // decode an I or P frame into `out`; returns 1 ok, -1 bad, 0 short (r.short_)
     int decodeMainInto(Rd& r, bool intra, int32_t* out) {
         const int n = hdr.nI;
@@ -349,7 +364,10 @@ private:
                 case E_NEG14: v[0] = -signExt(r.uvb() & 0x3FFF, 14); break;
                 case E_NULL:  v[0] = 0; break;
                 case E_TAG8_8SVB: {
-                    g = 0; while (i + g < n && g < 8 && (intra ? hdr.I[i + g].ienc : hdr.I[i + g].penc) == E_TAG8_8SVB) g++;
+                    // writeInterframe packs magADC/altitude/vario/rssi as one group and Tmcu/Tesc/Tbec/Tesc2 as
+                    // another; with nothing logged between them they are adjacent in the header, so stop at the family change.
+                    const bool tempFam = isTempField(f.name);
+                    g = 0; while (i + g < n && g < 8 && (intra ? hdr.I[i + g].ienc : hdr.I[i + g].penc) == E_TAG8_8SVB && isTempField(hdr.I[i + g].name) == tempFam) g++;
                     if (g == 1) v[0] = r.svb();
                     else { uint8_t h = r.u8(); for (int k = 0; k < g; k++) v[k] = (h & (1 << k)) ? r.svb() : 0; }
                     break;
@@ -367,16 +385,16 @@ private:
                 const uint8_t pred = intra ? fk.ipred : fk.ppred;
                 switch (pred) {
                     case P_ZERO: break;
-                    case P_PREV: val += prev1[i + k]; break;
-                    case P_LINEAR: val += 2 * prev1[i + k] - prev2[i + k]; break;
-                    case P_AVG2: val += (int32_t)(((int64_t)prev1[i + k] + prev2[i + k]) / 2); break;
+                    case P_PREV:   val = (int32_t)((uint32_t)val + (uint32_t)prev1[i + k]); break;
+                    case P_LINEAR: val = (int32_t)((uint32_t)val + 2u * (uint32_t)prev1[i + k] - (uint32_t)prev2[i + k]); break;
+                    case P_AVG2:   val = (int32_t)((uint32_t)val + (uint32_t)(int32_t)(((int64_t)prev1[i + k] + prev2[i + k]) / 2)); break;
                     case P_MINTHR: val += hdr.minthrottle; break;
                     case P_MOTOR0: val += (hdr.fMotor0 >= 0) ? out[hdr.fMotor0] : 0; break;
-                    case P_INC: val += prev1[i + k] + hdr.pInterval; break;
+                    case P_INC: val = (int32_t)((uint32_t)val + (uint32_t)prev1[i + k] + (uint32_t)hdr.pInterval); break;
                     case P_HOME: val += (fk.idx == 0) ? homeLat : homeLon; break;
                     case P_1500: val += 1500; break;
                     case P_VBATREF: val += hdr.vbatref; break;
-                    case P_LASTTIME: val += (int32_t)lastMainTime; break;
+                    case P_LASTTIME: val = (int32_t)((uint32_t)val + lastMainTime); break;
                     case P_MINMOTOR: val += hdr.minmotor; break;
                     default: return -1;
                 }
@@ -544,72 +562,80 @@ constexpr int BINS = N / 2 + 1;      // 257
 constexpr int ORD  = 400;            // order bins, 0.1 order each: 0 .. 40 per rev
 constexpr int TL   = 160;            // timeline entries kept
 constexpr int HSH  = 80;             // head-speed histogram, 50 rpm bins
-constexpr int MAX_LOGS = 16;
+constexpr int MAX_LOGS = 64;
 constexpr float FLY_RPM = 300.0f;    // a window counts as "flying" above this head speed
 
 struct LogInfo { uint32_t addr = 0, end = 0, frames = 0; float seconds = 0, hsMedian = 0; bool clean = false; };
 
-struct Analyser : BbDec::Sink {
-    // ---- results (for the log selected by wantLog) ----
-    float fRaw[3][BINS], fFilt[3][BINS]; uint32_t flyWin = 0;
-    float gRaw[3][BINS];                 uint32_t gndWin = 0;
+// Everything the page gets for ONE log. Kept as a block so the newest FLYING
+// log survives a bench arm after landing (which would otherwise be "the last log").
+struct Res {
+    float fRaw[3][BINS], fFilt[3][BINS]; uint32_t flyWin;
+    float gRaw[3][BINS];                 uint32_t gndWin;
     float oRaw[3][ORD], oFilt[3][ORD], oCnt[ORD];
-    struct TLE { float t, hs, rr[3], fr[3]; } tl[TL]; int tlN = 0, tlStride = 1, tlSkip = 0;
+    struct TLE { float t, hs, rr[3], fr[3]; } tl[TL]; int tlN, tlStride, tlSkip;
     uint32_t hsHist[HSH];
-    float rate = 0;                      // samples per second (measured)
-    uint32_t frames = 0; float seconds = 0; uint32_t firstTime = 0, lastTime = 0; bool haveFirst = false;
-    bool hasRaw = false, hasGyro = false, hasHs = false, hasMotor = false;
-    LogInfo logs[MAX_LOGS]; int nLogs = 0; int curLog = -1;
-    int wantLog = 0;                     // 0 = the last log, else 1-based
+    float hsMaxAll;                      // over every window, flying or not (the "never rose above" message)
+    float rate;                          // samples per second (measured)
+    uint32_t frames; float seconds; uint32_t firstTime, lastTime; bool haveFirst;
+    bool hasRaw, hasGyro, hasHs, hasMotor;
+    uint32_t events[8];                  // counts by class: 0 disarm,1 gov,2 rescue,3 airborne,4 adjust,5 resume,6 other
+    int logIdx;                          // 0-based index of the log these came from
+    BbDec::Header hdr;
+    void clear() { memset(this, 0, sizeof *this); tlStride = 1; logIdx = -1; hdr.clear(); }
+};
+
+struct Analyser : BbDec::Sink {
+    Res r;                               // the log being read
+    Res keep; bool haveKeep = false;     // the newest log that FLEW (wantLog == 0 only)
+    LogInfo logs[MAX_LOGS]; int nLogs = 0, logsTotal = 0; int curLog = -1;
+    int wantLog = 0;                     // 0 = the newest flying log (else the newest), else 1-based
     bool selectedDone = false;           // wantLog reached and finished
-    BbDec::Header hdrCopy;
-    uint32_t events[8] = {0};            // counts by class: 0 disarm,1 gov,2 rescue,3 airborne,4 adjust,5 resume,6 other
 
     // ---- working state ----
     int16_t ringR[3][N], ringF[3][N]; int ringPos = 0; uint32_t ringCount = 0; int sinceHop = 0;
     float hsAcc = 0; uint32_t hsN = 0;   // head speed over the current hop
     uint32_t dtSamples[64]; int dtN = 0; uint32_t prevTime = 0;
     float fftRe[N], fftIm[N], win[N], twr[N / 2], twi[N / 2];
-    bool accumulating = false;           // true while inside the log we report
+    bool accumulating = false;           // true while inside a log we may report
 
     Analyser() { init(); }
     void init() {
         for (int i = 0; i < N; i++) win[i] = 0.5f - 0.5f * cosf(2.0f * (float)M_PI * (float)i / (float)N);
         for (int i = 0; i < N / 2; i++) { twr[i] = cosf(-2.0f * (float)M_PI * (float)i / (float)N); twi[i] = sinf(-2.0f * (float)M_PI * (float)i / (float)N); }
-        resetResults(); nLogs = 0; curLog = -1; selectedDone = false;
+        r.clear(); keep.clear(); haveKeep = false; nLogs = 0; logsTotal = 0; curLog = -1; selectedDone = false; resetWork();
     }
-    void resetResults() {
-        memset(fRaw, 0, sizeof fRaw); memset(fFilt, 0, sizeof fFilt); memset(gRaw, 0, sizeof gRaw);
-        memset(oRaw, 0, sizeof oRaw); memset(oFilt, 0, sizeof oFilt); memset(oCnt, 0, sizeof oCnt);
-        memset(hsHist, 0, sizeof hsHist); memset(tl, 0, sizeof tl);
-        flyWin = gndWin = 0; tlN = 0; tlStride = 1; tlSkip = 0; rate = 0; frames = 0; seconds = 0; haveFirst = false;
-        hasRaw = hasGyro = hasHs = hasMotor = false; ringPos = 0; ringCount = 0; sinceHop = 0; hsAcc = 0; hsN = 0; dtN = 0; prevTime = 0;
-        memset(ringR, 0, sizeof ringR); memset(ringF, 0, sizeof ringF); memset(events, 0, sizeof events);
+    void resetWork() {
+        ringPos = 0; ringCount = 0; sinceHop = 0; hsAcc = 0; hsN = 0; dtN = 0; prevTime = 0;
+        memset(ringR, 0, sizeof ringR); memset(ringF, 0, sizeof ringF);
     }
+    // the block the page should see
+    const Res& result() const { return (wantLog == 0 && haveKeep && r.flyWin == 0) ? keep : r; }
 
     void onLogStart(const BbDec::Header& h, uint32_t offset) override {
         if (!h.haveI) {                       // the magic was found; the header follows — a new log begins
-            if (nLogs < MAX_LOGS) { curLog = nLogs++; logs[curLog] = LogInfo(); logs[curLog].addr = offset; }
-            else curLog = MAX_LOGS - 1;
-            const int idx1 = curLog + 1;
-            accumulating = (wantLog == 0) || (wantLog == idx1);
-            if (accumulating) resetResults();
+            logsTotal++;
+            if (nLogs < MAX_LOGS) { curLog = nLogs++; }
+            else { memmove(&logs[0], &logs[1], sizeof(LogInfo) * (MAX_LOGS - 1)); curLog = MAX_LOGS - 1; }   // keep the newest 64
+            logs[curLog] = LogInfo(); logs[curLog].addr = offset;
+            accumulating = (wantLog == 0) || (wantLog == logsTotal);
+            if (accumulating) { r.clear(); r.logIdx = logsTotal - 1; resetWork(); }
             return;
         }
-        if (accumulating) hdrCopy = h;         // fields known now
+        if (accumulating) r.hdr = h;         // fields known now
     }
     void onFrame(const BbDec::Frame& f) override {
         if (curLog >= 0) logs[curLog].frames++;
         if (!accumulating) return;
-        frames++;
-        if (!haveFirst) { haveFirst = true; firstTime = f.time; prevTime = f.time; }
+        r.frames++;
+        if (!r.haveFirst) { r.haveFirst = true; r.firstTime = f.time; prevTime = f.time; }
         else {
             uint32_t dt = f.time - prevTime; prevTime = f.time;
             if (dtN < 64 && dt > 0 && dt < 100000) dtSamples[dtN++] = dt;
-            if (dtN == 64 && rate == 0) rateFromDt();
+            if (dtN == 64 && r.rate == 0) rateFromDt();
         }
-        lastTime = f.time;
-        hasRaw |= f.hasRaw; hasGyro |= f.hasGyro; hasHs |= f.hasHs; hasMotor |= f.hasMotor;
+        r.lastTime = f.time;
+        r.hasRaw |= f.hasRaw; r.hasGyro |= f.hasGyro; r.hasHs |= f.hasHs; r.hasMotor |= f.hasMotor;
         // samples: raw missing → use the filtered one for both (marked in the summary)
         for (int a = 0; a < 3; a++) {
             const int32_t rv = f.hasRaw ? f.raw[a] : f.gyro[a];
@@ -624,84 +650,92 @@ struct Analyser : BbDec::Sink {
     void onLogEnd(uint32_t offset, bool clean) override {
         if (curLog >= 0) {
             logs[curLog].end = offset; logs[curLog].clean = clean;
-            if (accumulating) { finalizeRate(); logs[curLog].seconds = seconds; logs[curLog].hsMedian = hsMedian(); }
+            if (accumulating) { finalizeRate(); logs[curLog].seconds = r.seconds; logs[curLog].hsMedian = hsMedian(r); }
         }
-        if (accumulating && wantLog != 0) selectedDone = true;
+        if (accumulating) {
+            if (wantLog == 0 && r.flyWin > 0) { keep = r; haveKeep = true; }   // the newest log that flew
+            if (wantLog != 0) selectedDone = true;
+        }
         accumulating = false;
     }
     void onEvent(uint8_t id, uint32_t a, uint32_t b) override {
+        (void)a; (void)b;
         if (!accumulating) return;
-        int k = 6;
+        int k;
         switch (id) { case 15: k = 0; break; case 50: k = 1; break; case 51: k = 2; break; case 52: k = 3; break; case 13: k = 4; break; case 14: k = 5; break; default: k = 6; }
-        events[k]++;
+        r.events[k]++;
     }
     void finalizeRate() {
-        if (rate == 0 && dtN > 0) rateFromDt();
-        if (rate == 0 && hdrCopy.looptime > 0) rate = 1e6f / ((float)hdrCopy.looptime * (float)(hdrCopy.pInterval > 0 ? hdrCopy.pInterval : 1));
-        seconds = (haveFirst && rate > 0) ? (float)frames / rate : 0;
+        if (r.rate == 0 && dtN > 0) rateFromDt();
+        if (r.rate == 0 && r.hdr.looptime > 0) r.rate = 1e6f / ((float)r.hdr.looptime * (float)(r.hdr.pInterval > 0 ? r.hdr.pInterval : 1));
+        r.seconds = (r.haveFirst && r.rate > 0) ? (float)r.frames / r.rate : 0;
     }
     void rateFromDt() {
         uint32_t s[64]; memcpy(s, dtSamples, sizeof(uint32_t) * (size_t)dtN);
         for (int i = 1; i < dtN; i++) { uint32_t v = s[i]; int j = i - 1; while (j >= 0 && s[j] > v) { s[j + 1] = s[j]; j--; } s[j + 1] = v; }
         const uint32_t med = s[dtN / 2];
-        if (med > 0) rate = 1e6f / (float)med;
+        if (med > 0) r.rate = 1e6f / (float)med;
     }
-    float hsMedian() const {
-        uint32_t tot = 0; for (int i = 0; i < HSH; i++) tot += hsHist[i];
+    static float hsMedian(const Res& R) {
+        uint32_t tot = 0; for (int i = 0; i < HSH; i++) tot += R.hsHist[i];
         if (!tot) return 0;
-        uint32_t acc = 0; for (int i = 0; i < HSH; i++) { acc += hsHist[i]; if (acc * 2 >= tot) return (float)i * 50.0f + 25.0f; }
+        uint32_t acc = 0; for (int i = 0; i < HSH; i++) { acc += R.hsHist[i]; if (acc * 2 >= tot) return (float)i * 50.0f + 25.0f; }
         return 0;
     }
-    float hsMax() const { for (int i = HSH - 1; i >= 0; i--) if (hsHist[i]) return (float)i * 50.0f + 50.0f; return 0; }
+    static float hsMax(const Res& R) { for (int i = HSH - 1; i >= 0; i--) if (R.hsHist[i]) return (float)i * 50.0f + 50.0f; return 0; }
+    float hsMedian() const { return hsMedian(result()); }
+    uint32_t flyWinNow() const { return result().flyWin; }
+    float rateNow() const { return result().rate; }
 
     // one Welch window over the last N samples
     void window() {
-        if (rate == 0 && dtN > 0) rateFromDt();
+        if (r.rate == 0 && dtN > 0) rateFromDt();
         const float hs = hsN ? hsAcc / (float)hsN : 0; hsAcc = 0; hsN = 0;
-        const bool flying = hasHs ? (hs >= FLY_RPM) : true;
-        if (hasHs && flying) { int b = (int)(hs / 50.0f); if (b >= HSH) b = HSH - 1; if (b >= 0) hsHist[b]++; }
+        const bool flying = r.hasHs ? (hs >= FLY_RPM) : true;
+        if (hs > r.hsMaxAll) r.hsMaxAll = hs;
+        if (r.hasHs && flying) { int b = (int)(hs / 50.0f); if (b >= HSH) b = HSH - 1; if (b >= 0) r.hsHist[b]++; }
         float rmsR[3], rmsF[3];
         float pw[BINS];
         const float fRot = hs / 60.0f;
         for (int a = 0; a < 3; a++) {
             spectrum(ringR[a], pw, rmsR[a]);
-            if (flying) { for (int k = 0; k < BINS; k++) fRaw[a][k] += pw[k]; if (hasHs && fRot > 1.0f) order(pw, fRot, oRaw[a], a == 0); }
-            else        { for (int k = 0; k < BINS; k++) gRaw[a][k] += pw[k]; }
+            if (flying) { for (int k = 0; k < BINS; k++) r.fRaw[a][k] += pw[k]; if (r.hasHs && fRot > 1.0f) order(pw, fRot, r.oRaw[a], a == 0); }
+            else        { for (int k = 0; k < BINS; k++) r.gRaw[a][k] += pw[k]; }
             spectrum(ringF[a], pw, rmsF[a]);
-            if (flying) { for (int k = 0; k < BINS; k++) fFilt[a][k] += pw[k]; if (hasHs && fRot > 1.0f) order(pw, fRot, oFilt[a], false); }
+            if (flying) { for (int k = 0; k < BINS; k++) r.fFilt[a][k] += pw[k]; if (r.hasHs && fRot > 1.0f) order(pw, fRot, r.oFilt[a], false); }
         }
-        if (flying) flyWin++; else gndWin++;
+        if (flying) r.flyWin++; else r.gndWin++;
         // timeline (decimated when full)
-        const float t = (rate > 0) ? (float)(ringCount) / rate : 0;
-        if (tlSkip > 0) { tlSkip--; }
+        const float t = (r.rate > 0) ? (float)(ringCount) / r.rate : 0;
+        if (r.tlSkip > 0) { r.tlSkip--; }
         else {
-            if (tlN >= TL) { for (int i = 0; i < TL / 2; i++) tl[i] = tl[2 * i]; tlN = TL / 2; tlStride *= 2; }
-            TLE& e = tl[tlN++]; e.t = t; e.hs = hs; for (int a = 0; a < 3; a++) { e.rr[a] = rmsR[a]; e.fr[a] = rmsF[a]; }
-            tlSkip = tlStride - 1;
+            if (r.tlN >= TL) { for (int i = 0; i < TL / 2; i++) r.tl[i] = r.tl[2 * i]; r.tlN = TL / 2; r.tlStride *= 2; }
+            Res::TLE& e = r.tl[r.tlN++]; e.t = t; e.hs = hs; for (int a = 0; a < 3; a++) { e.rr[a] = rmsR[a]; e.fr[a] = rmsF[a]; }
+            r.tlSkip = r.tlStride - 1;
         }
     }
     void spectrum(const int16_t* ring, float* pw, float& rms) {
-        double mean = 0; for (int i = 0; i < N; i++) mean += ring[(ringPos + i) % N];
-        mean /= N;
-        double sq = 0;
-        for (int i = 0; i < N; i++) { const float v = (float)((double)ring[(ringPos + i) % N] - mean); sq += (double)v * v; fftRe[i] = v * win[i]; fftIm[i] = 0; }
-        rms = (float)sqrt(sq / N);
+        // float throughout: the S3 has no double FPU (int16 sums fit a float exactly up to 2^24)
+        int32_t sum = 0; for (int i = 0; i < N; i++) sum += ring[(ringPos + i) % N];
+        const float mean = (float)sum / (float)N;
+        float sq = 0;
+        for (int i = 0; i < N; i++) { const float v = (float)ring[(ringPos + i) % N] - mean; sq += v * v; fftRe[i] = v * win[i]; fftIm[i] = 0; }
+        rms = sqrtf(sq / (float)N);
         fft();
         const float scale = 1.0f / ((float)N * 0.375f);     // Hann window power compensation
         for (int k = 0; k < BINS; k++) pw[k] = (fftRe[k] * fftRe[k] + fftIm[k] * fftIm[k]) * scale;
     }
     void order(const float* pw, float fRot, float* acc, bool count) {
-        const float df = rate / (float)N;
+        const float df = r.rate / (float)N;
         for (int k = 1; k < BINS; k++) {
             const float o = (float)k * df / fRot;
             const int ob = (int)(o * 10.0f + 0.5f);
             if (ob >= ORD) break;
             acc[ob] += pw[k];
-            if (count) oCnt[ob] += 1.0f;
+            if (count) r.oCnt[ob] += 1.0f;
         }
     }
     void fft() {
-        // bit reversal
         for (int i = 1, j = 0; i < N; i++) {
             int bit = N >> 1; for (; j & bit; bit >>= 1) j ^= bit; j ^= bit;
             if (i < j) { float t = fftRe[i]; fftRe[i] = fftRe[j]; fftRe[j] = t; t = fftIm[i]; fftIm[i] = fftIm[j]; fftIm[j] = t; }
@@ -728,42 +762,53 @@ struct Analyser : BbDec::Sink {
         void fnum(float v, int d) { char b[32]; snprintf(b, sizeof b, "%.*f", d, (double)v); put(b); }
     };
     static int dB10(float p, float div) { if (div <= 0) div = 1; float v = p / div; if (v < 1e-6f) v = 1e-6f; return (int)lrintf(100.0f * log10f(v)); }   // dB × 10
-    void arrDb(W& w, const float* a, int n, float div) { w.put("["); for (int k = 0; k < n; k++) { if (k) w.put(","); w.num(dB10(a[k], div)); } w.put("]"); }
-    void arrDb3(W& w, const float (*a)[BINS], float div) { w.put("["); for (int x = 0; x < 3; x++) { if (x) w.put(","); arrDb(w, a[x], BINS, div); } w.put("]"); }
-    void arrOrd(W& w, const float (*a)[ORD]) { w.put("["); for (int x = 0; x < 3; x++) { if (x) w.put(","); w.put("["); for (int k = 0; k < ORD; k++) { if (k) w.put(","); w.num(oCnt[k] > 0 ? dB10(a[x][k], oCnt[k]) : -600); } w.put("]"); } w.put("]"); }
+    static void jstr(W& w, const char* s) {          // JSON string body: escape quotes, backslashes and control bytes
+        for (const unsigned char* p = (const unsigned char*)s; *p; p++) {
+            char b[8];
+            if (*p == '"' || *p == '\\') { b[0] = '\\'; b[1] = (char)*p; b[2] = 0; }
+            else if (*p < 0x20) { snprintf(b, sizeof b, "\\u%04x", *p); }
+            else { b[0] = (char)*p; b[1] = 0; }
+            w.put(b);
+        }
+    }
+    static void arrDb(W& w, const float* a, int n, float div) { w.put("["); for (int k = 0; k < n; k++) { if (k) w.put(","); w.num(dB10(a[k], div)); } w.put("]"); }
+    static void arrDb3(W& w, const float (*a)[BINS], float div) { w.put("["); for (int x = 0; x < 3; x++) { if (x) w.put(","); arrDb(w, a[x], BINS, div); } w.put("]"); }
+    static void arrOrd(W& w, const Res& R, const float (*a)[ORD]) { w.put("["); for (int x = 0; x < 3; x++) { if (x) w.put(","); w.put("["); for (int k = 0; k < ORD; k++) { if (k) w.put(","); w.num(R.oCnt[k] > 0 ? dB10(a[x][k], R.oCnt[k]) : -600); } w.put("]"); } w.put("]"); }
 
     size_t toJson(int part, char* out, size_t cap) {
         W w{out, cap, 0, false};
+        const Res& R = result();
         switch (part) {
             case 0: {
-                w.put("{\"rate\":"); w.fnum(rate, 1);
-                w.put(",\"frames\":"); w.num(frames);
-                w.put(",\"seconds\":"); w.fnum(seconds, 1);
-                w.put(",\"flyWin\":"); w.num(flyWin); w.put(",\"gndWin\":"); w.num(gndWin);
+                w.put("{\"rate\":"); w.fnum(R.rate, 1);
+                w.put(",\"frames\":"); w.num(R.frames);
+                w.put(",\"seconds\":"); w.fnum(R.seconds, 1);
+                w.put(",\"flyWin\":"); w.num(R.flyWin); w.put(",\"gndWin\":"); w.num(R.gndWin);
                 w.put(",\"bins\":"); w.num(BINS); w.put(",\"n\":"); w.num(N); w.put(",\"ordStep\":0.1,\"ord\":"); w.num(ORD);
-                w.put(",\"fields\":{\"raw\":"); w.put(hasRaw ? "true" : "false"); w.put(",\"gyro\":"); w.put(hasGyro ? "true" : "false");
-                w.put(",\"hs\":"); w.put(hasHs ? "true" : "false"); w.put(",\"motor\":"); w.put(hasMotor ? "true" : "false"); w.put("}");
-                w.put(",\"hs\":{\"median\":"); w.fnum(hsMedian(), 0); w.put(",\"max\":"); w.fnum(hsMax(), 0); w.put(",\"hist\":[");
-                for (int i = 0; i < HSH; i++) { if (i) w.put(","); w.num(hsHist[i]); } w.put("]}");
-                w.put(",\"header\":{\"firmware\":\""); w.put(hdrCopy.firmware); w.put("\",\"craft\":\""); w.put(hdrCopy.craft); w.put("\",\"date\":\""); w.put(hdrCopy.date);
-                w.put("\",\"looptime\":"); w.num(hdrCopy.looptime); w.put(",\"pInterval\":"); w.num(hdrCopy.pInterval); w.put(",\"iInterval\":"); w.num(hdrCopy.iInterval);
-                w.put(",\"fieldsMask\":"); w.num((long)hdrCopy.fieldsMask); w.put(",\"rpmPreset\":"); w.num(hdrCopy.rpmPreset); w.put(",\"nFields\":"); w.num(hdrCopy.nI); w.put("}");
-                w.put(",\"events\":{\"disarm\":"); w.num(events[0]); w.put(",\"gov\":"); w.num(events[1]); w.put(",\"rescue\":"); w.num(events[2]); w.put(",\"airborne\":"); w.num(events[3]); w.put(",\"adjust\":"); w.num(events[4]); w.put(",\"resume\":"); w.num(events[5]); w.put(",\"other\":"); w.num(events[6]); w.put("}");
+                w.put(",\"fields\":{\"raw\":"); w.put(R.hasRaw ? "true" : "false"); w.put(",\"gyro\":"); w.put(R.hasGyro ? "true" : "false");
+                w.put(",\"hs\":"); w.put(R.hasHs ? "true" : "false"); w.put(",\"motor\":"); w.put(R.hasMotor ? "true" : "false"); w.put("}");
+                w.put(",\"hs\":{\"median\":"); w.fnum(hsMedian(R), 0); w.put(",\"max\":"); w.fnum(hsMax(R), 0); w.put(",\"maxAll\":"); w.fnum(R.hsMaxAll, 0); w.put(",\"hist\":[");
+                for (int i = 0; i < HSH; i++) { if (i) w.put(","); w.num(R.hsHist[i]); } w.put("]}");
+                w.put(",\"header\":{\"firmware\":\""); jstr(w, R.hdr.firmware); w.put("\",\"craft\":\""); jstr(w, R.hdr.craft); w.put("\",\"date\":\""); jstr(w, R.hdr.date);
+                w.put("\",\"looptime\":"); w.num(R.hdr.looptime); w.put(",\"pInterval\":"); w.num(R.hdr.pInterval); w.put(",\"iInterval\":"); w.num(R.hdr.iInterval);
+                w.put(",\"fieldsMask\":"); w.num((long)R.hdr.fieldsMask); w.put(",\"rpmPreset\":"); w.num(R.hdr.rpmPreset); w.put(",\"nFields\":"); w.num(R.hdr.nI); w.put("}");
+                w.put(",\"events\":{\"disarm\":"); w.num(R.events[0]); w.put(",\"gov\":"); w.num(R.events[1]); w.put(",\"rescue\":"); w.num(R.events[2]); w.put(",\"airborne\":"); w.num(R.events[3]); w.put(",\"adjust\":"); w.num(R.events[4]); w.put(",\"resume\":"); w.num(R.events[5]); w.put(",\"other\":"); w.num(R.events[6]); w.put("}");
                 w.put(",\"logs\":[");
                 for (int i = 0; i < nLogs; i++) { if (i) w.put(","); w.put("{\"addr\":"); w.num((long)logs[i].addr); w.put(",\"end\":"); w.num((long)logs[i].end); w.put(",\"frames\":"); w.num((long)logs[i].frames); w.put(",\"seconds\":"); w.fnum(logs[i].seconds, 1); w.put(",\"hsMedian\":"); w.fnum(logs[i].hsMedian, 0); w.put(",\"clean\":"); w.put(logs[i].clean ? "true" : "false"); w.put("}"); }
-                w.put("],\"wantLog\":"); w.num(wantLog); w.put("}");
+                w.put("],\"logsTotal\":"); w.num(logsTotal); w.put(",\"logsFirst\":"); w.num(logsTotal - nLogs + 1);   // logs[0] is this 1-based log number
+                w.put(",\"wantLog\":"); w.num(wantLog); w.put(",\"log\":"); w.num(R.logIdx + 1); w.put(",\"keptFlying\":"); w.put((wantLog == 0 && haveKeep && r.flyWin == 0) ? "true" : "false"); w.put("}");
                 break;
             }
-            case 1: { const float d = flyWin ? (float)flyWin : 1; w.put("{\"raw\":"); arrDb3(w, fRaw, d); w.put(",\"filt\":"); arrDb3(w, fFilt, d); w.put("}"); break; }
-            case 2: { const float d = gndWin ? (float)gndWin : 1; w.put("{\"raw\":"); arrDb3(w, gRaw, d); w.put("}"); break; }
-            case 3: { w.put("{\"raw\":"); arrOrd(w, oRaw); w.put(",\"cnt\":["); for (int k = 0; k < ORD; k++) { if (k) w.put(","); w.num((long)oCnt[k]); } w.put("]}"); break; }
-            case 5: { w.put("{\"filt\":"); arrOrd(w, oFilt); w.put("}"); break; }
+            case 1: { const float d = R.flyWin ? (float)R.flyWin : 1; w.put("{\"raw\":"); arrDb3(w, R.fRaw, d); w.put(",\"filt\":"); arrDb3(w, R.fFilt, d); w.put("}"); break; }
+            case 2: { const float d = R.gndWin ? (float)R.gndWin : 1; w.put("{\"raw\":"); arrDb3(w, R.gRaw, d); w.put("}"); break; }
+            case 3: { w.put("{\"raw\":"); arrOrd(w, R, R.oRaw); w.put(",\"cnt\":["); for (int k = 0; k < ORD; k++) { if (k) w.put(","); w.num((long)R.oCnt[k]); } w.put("]}"); break; }
             case 4: {
-                w.put("{\"stride\":"); w.num(tlStride); w.put(",\"rows\":[");
-                for (int i = 0; i < tlN; i++) { if (i) w.put(","); w.put("["); w.fnum(tl[i].t, 1); w.put(","); w.fnum(tl[i].hs, 0);
-                    for (int a = 0; a < 3; a++) { w.put(","); w.fnum(tl[i].rr[a], 1); } for (int a = 0; a < 3; a++) { w.put(","); w.fnum(tl[i].fr[a], 1); } w.put("]"); }
+                w.put("{\"stride\":"); w.num(R.tlStride); w.put(",\"rows\":[");
+                for (int i = 0; i < R.tlN; i++) { if (i) w.put(","); w.put("["); w.fnum(R.tl[i].t, 1); w.put(","); w.fnum(R.tl[i].hs, 0);
+                    for (int a = 0; a < 3; a++) { w.put(","); w.fnum(R.tl[i].rr[a], 1); } for (int a = 0; a < 3; a++) { w.put(","); w.fnum(R.tl[i].fr[a], 1); } w.put("]"); }
                 w.put("]}"); break;
             }
+            case 5: { w.put("{\"filt\":"); arrOrd(w, R, R.oFilt); w.put("}"); break; }
             default: w.put("{}");
         }
         if (w.ovf) return 0;

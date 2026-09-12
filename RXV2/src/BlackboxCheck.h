@@ -26,6 +26,10 @@ namespace BbCheck {
 
 constexpr uint8_t MSP_DATAFLASH_SUMMARY = 70;   // u8 flags, u32 sectors, u32 total, u32 used
 constexpr uint8_t MSP_DATAFLASH_READ    = 71;   // u32 addr, u16 size, u8 compress → u32 addr, u16 got, u8 comp, data
+constexpr uint8_t MSP_STATUS_FN         = 101;  // flight-mode flags bit 0 = armed: mspDeliverResponse keeps fcInfo.armed fresh
+constexpr uint32_t STATUS_EVERY_MS      = 1000; // while the heartbeat probe stands down, the check asks for itself
+inline uint32_t lastStatusMs = 0;
+inline uint32_t notBeforeMs = 0;                // no request before this (MSP 70 busy back-off)
 
 enum State : uint8_t { IDLE = 0, SUMMARY, STREAM, DONE, FAILED };
 inline State    state = IDLE;
@@ -45,7 +49,7 @@ constexpr uint32_t REQ_TIMEOUT_MS = 1500;
 
 inline bool running() { return state == SUMMARY || state == STREAM; }
 inline uint32_t rd32(const uint8_t* p) { return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24); }
-inline void* psAlloc(size_t n) { void* p = heap_caps_malloc(n, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT); if (!p) p = heap_caps_malloc(n, MALLOC_CAP_8BIT); return p; }
+inline void* psAlloc(size_t n) { return heap_caps_malloc(n, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT); }   // PSRAM only: ~70 kB of internal heap is not for this
 inline void freeWork() { if (dec) { dec->~Decoder(); heap_caps_free(dec); dec = nullptr; } }
 inline void freeAll()  { freeWork(); if (an) { an->~Analyser(); heap_caps_free(an); an = nullptr; } if (jsonBuf) { heap_caps_free(jsonBuf); jsonBuf = nullptr; } }
 
@@ -66,7 +70,7 @@ inline void done() {
 
 inline void sendReq(uint8_t fn, const uint8_t* d, uint8_t n) {
     mspAsyncFunc = fn; mspAsyncReady = false; reqFn = fn;
-    mspSendRequest(fn, d, n);
+    bbCheckOwnSend = true; mspSendRequest(fn, d, n); bbCheckOwnSend = false;
     reqOut = true; reqSentMs = millis(); mspLastForegroundMs = millis();
 }
 inline void sendRead() {
@@ -84,7 +88,7 @@ inline const char* refuse() {
     if (UsbHostMsp::cliMode) return "the command line is open - exit it first";
     if (fcInfo.armed) return "the flight controller is armed - disarm first";
     if (!dongleEnabled && rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 3000) return "switch the transmitter off first: the check needs the flight controller to itself for a minute";
-    if (txParamBusy || mspWaitFunction != 0xFF || mspBridgeActive) return "the receiver is busy talking to the flight controller - try again in a moment";
+    if (txParamBusy || mspWaitFunction != 0xFF || mspBridgeActive || mspProbeOutstanding()) return "the receiver is busy talking to the flight controller - try again in a moment";
     return nullptr;
 }
 
@@ -98,9 +102,10 @@ inline const char* start(uint32_t fromAddr, uint32_t maxLen, int logIdx) {
     new (dec) BbDec::Decoder(); new (an) BbAn::Analyser();
     an->wantLog = logIdx; wantLog = logIdx;
     startAddr = addr = fromAddr; endAddr = maxLen ? fromAddr + maxLen : 0; usedBytes = totalBytes = 0;
-    bytesDone = 0; chunks = 0; retries = 0; reason[0] = 0; startMs = millis(); endMs = 0;
+    bytesDone = 0; chunks = 0; retries = 0; reason[0] = 0; startMs = millis(); endMs = 0; notBeforeMs = 0;
     bbCheckActive = true; state = SUMMARY;
-    sendReq(MSP_DATAFLASH_SUMMARY, nullptr, 0);
+    fcInfo.armed = true;                                  // unknown until the FC says otherwise: the first request is MSP 101
+    sendReq(MSP_STATUS_FN, nullptr, 0); lastStatusMs = millis();
     events.add("Vibration check: reading the black box over USB");
     return nullptr;
 }
@@ -109,8 +114,11 @@ inline void cancel() { if (running()) fail("cancelled"); }
 inline void handleSummary(const uint8_t* p, uint16_t n) {
     if (n < 13) { fail("the flight controller gave no memory summary"); return; }
     const uint8_t flags = p[0]; totalBytes = rd32(p + 5); usedBytes = rd32(p + 9);
-    if (!(flags & 1)) { fail("this flight controller has no memory chip for the black box"); return; }
-    if (!(flags & 2)) { fail("the black-box memory is busy (erasing?) - try again in a minute"); return; }
+    if (!(flags & 2)) { fail("this flight controller has no memory chip for the black box"); return; }   // MSP_FLASHFS_FLAG_SUPPORTED = 2
+    if (!(flags & 1)) {                                       // MSP_FLASHFS_FLAG_READY = 1: an erase still finishing after landing takes a few seconds
+        if ((uint32_t)(millis() - startMs) < 6000) { notBeforeMs = millis() + 500; return; }   // ask again shortly (tick re-sends 70)
+        fail("the black-box memory is busy (erasing?) - try again in a minute"); return;
+    }
     if (usedBytes == 0) { fail("the black box is empty: nothing has been recorded"); return; }
     if (endAddr == 0 || endAddr > usedBytes) endAddr = usedBytes;
     if (addr >= endAddr) { fail("nothing recorded beyond that address"); return; }
@@ -119,7 +127,11 @@ inline void handleSummary(const uint8_t* p, uint16_t n) {
 inline void handleRead(const uint8_t* p, uint16_t n) {
     if (n < 7) { fail("short read reply"); return; }
     const uint32_t a = rd32(p); const uint16_t got = (uint16_t)(p[4] | (p[5] << 8)); const uint8_t comp = p[6];
-    if (a != addr) { if (++retries > 3) { fail("the flight controller answered the wrong address"); return; } sendRead(); return; }
+    if (a != addr) {                                          // a late reply to an earlier (re-sent) read: ignore it, keep waiting for ours
+        if (++retries > 6) { fail("the flight controller keeps answering the wrong address"); return; }
+        mspAsyncFunc = MSP_DATAFLASH_READ; mspAsyncReady = false; reqOut = true;   // re-arm without sending: one request outstanding
+        return;
+    }
     if (comp != 0) { fail("compressed reply - not supported"); return; }
     if (got == 0 || n < 7 + got) { done(); return; }          // end of the volume
     dec->feed(p + 7, got, *an);
@@ -135,12 +147,26 @@ inline void tick() {
     if (UsbHostMsp::cliMode)   { fail("the command line was opened"); return; }
     if (fcInfo.armed)          { fail("the flight controller was armed"); return; }
     if (!dongleEnabled && rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 1000) { fail("the transmitter came on"); return; }
-    if (!reqOut) { if (state == SUMMARY) sendReq(MSP_DATAFLASH_SUMMARY, nullptr, 0); else sendRead(); return; }
+    if (!reqOut) {
+        if (notBeforeMs && (int32_t)(notBeforeMs - millis()) > 0) return;
+        notBeforeMs = 0;
+        // Between chunks, ask the FC whether it is armed (the heartbeat probe
+        // is gated off while we own the link, so nobody else would notice).
+        if ((uint32_t)(millis() - lastStatusMs) >= STATUS_EVERY_MS) { lastStatusMs = millis(); sendReq(MSP_STATUS_FN, nullptr, 0); return; }
+        if (state == SUMMARY) sendReq(MSP_DATAFLASH_SUMMARY, nullptr, 0); else sendRead();
+        return;
+    }
     if (mspAsyncReady && mspAsyncFunc == reqFn) {
         static uint8_t copy[640];
         uint16_t n = mspAsyncLen; if (n > sizeof copy) n = sizeof copy;
         memcpy(copy, mspAsyncBuf, n);            // our own copy: mspAsyncBuf is shared
         reqOut = false; mspAsyncReady = false; mspAsyncFunc = 0xFF;
+        if (reqFn == MSP_STATUS_FN) {            // mspDeliverResponse has already parsed it into fcInfo.armed
+            if (n < 10) { fail("the flight controller gave no status"); return; }
+            if (fcInfo.armed) { fail("the flight controller is armed"); return; }
+            if (state == SUMMARY) sendReq(MSP_DATAFLASH_SUMMARY, nullptr, 0); else sendRead();
+            return;
+        }
         if (reqFn == MSP_DATAFLASH_SUMMARY) handleSummary(copy, n); else handleRead(copy, n);
         return;
     }
@@ -160,7 +186,7 @@ inline String statusJson() {
     s += ",\"bytes\":" + String(bytesDone) + ",\"chunks\":" + String(chunks) + ",\"ms\":" + String(state == IDLE ? 0 : ms);
     s += ",\"pct\":" + String(span ? (int)((uint64_t)bytesDone * 100 / span) : 0);
     s += ",\"logs\":" + String(an ? an->nLogs : 0) + ",\"frames\":" + String(dec ? dec->stats.iFrames + dec->stats.pFrames : 0);
-    s += ",\"rate\":" + String(an ? an->rate : 0.0f, 0) + ",\"hs\":" + String(an ? an->hsMedian() : 0.0f, 0) + ",\"flyWin\":" + String(an ? an->flyWin : 0);
+    s += ",\"rate\":" + String(an ? an->rateNow() : 0.0f, 0) + ",\"hs\":" + String(an ? an->hsMedian() : 0.0f, 0) + ",\"flyWin\":" + String(an ? an->flyWinNow() : 0);
     s += ",\"resyncs\":" + String(dec ? dec->stats.resyncs : 0) + ",\"usb\":"; s += UsbHostMsp::active() ? "true" : "false";
     s += ",\"result\":"; s += (state == DONE && an) ? "true" : "false";
     s += "}";

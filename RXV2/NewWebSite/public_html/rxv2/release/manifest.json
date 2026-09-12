@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.662-vibration-check-safe",
+      "url": "https://messiter.com/rxv2/release/v0.9.662/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.662/littlefs.bin",
+      "fs_md5": "314955bcd925adf5e055d54f27c3e1ee",
+      "notes": "Vibration check made safe before real flying (review + Malcolm's rules): the check owns the MSP link - every other sender stands down and /api/msp answers 503; arming is re-asked every second over USB; MSP 70 flag bits corrected (READY=1, SUPPORTED=2 - the recorder page had them the other way round too); a late reply re-arms instead of re-sending; PSRAM only; float maths. Decoder: the two TAG8_8SVB groups (sensors / temperatures) never merge, a header straight after a truncated log is recognised, time predictors in wrapping arithmetic, no 4.8 kB stack temporary. Analyser keeps the newest log that FLEW (a bench arm after landing no longer replaces the flight). Page: Apply is bounded (Lowpass 1 never below 60 and never raised, fixed notches 80-1000 Hz, dynamic notches 0-8), refused while armed or the rotor turns or on an unverified Rotorflight, read back and compared, Undo, ONE change per flight; filter advice only when the log has Gyro raw + Gyro + Head speed. Includes 0.9.661."
+    },
+    {
       "name": "RXV2-0.9.661-vibration-check",
       "url": "https://messiter.com/rxv2/release/v0.9.661/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.661/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.651/littlefs.bin",
       "fs_md5": "364e2eb0637088a99ab08b30483cf9ec",
       "notes": "In-flight adjustments: without the USB cable the page shows the set it last read over USB (kept per model on the phone), greyed and not changeable, with the time it was read; the live switch marker still moves over the radio link. Includes 0.9.650."
-    },
-    {
-      "name": "RXV2-0.9.650-back-scroll",
-      "url": "https://messiter.com/rxv2/release/v0.9.650/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.650/littlefs.bin",
-      "fs_md5": "d4f5e77f71bc8b06c64b03fccb9100c0",
-      "notes": "Back returns to where you were: a long list (A la carte, Find a setting, any page) remembers its scroll position when you leave it and puts it back when you come back by the back arrow or a back gesture. A fresh visit still starts at the top. Includes 0.9.649."
     }
   ]
 }
