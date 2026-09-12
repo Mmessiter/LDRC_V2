@@ -238,6 +238,10 @@ inline void mspSerialOnFrame(void*, uint8_t cmd, const uint8_t* p, uint16_t n, b
     mspDeliverResponse(cmd, p, n);
 }
 inline uint32_t mspSerBytes = 0;                       // every byte off the wire in dongle mode - the first thing to look at when the FC is silent
+// Declared in 1Defs.h because UsbHostMsp.h is compiled before this file.
+// A dropped byte mid-frame would otherwise hold the parser open until a whole
+// reply's worth of bytes arrived - up to 4200 since 0.9.663.
+inline void mspSerialResetParser() { mspSer.reset(); }
 inline void mspSerialFeed(uint8_t b) { mspSerBytes++; mspSer.feed(b, mspSerialOnFrame, nullptr); }   // Telemetry.h's byte pump (prototype in 1Defs.h)
 inline void mspSerialSend(uint8_t function, const uint8_t* payload, uint16_t len) {
     static uint8_t frame[8 + 300];

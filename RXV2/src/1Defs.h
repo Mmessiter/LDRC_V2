@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.667-banks-first";
+constexpr const char* FW_VERSION = "RXV2-0.9.668-armed-recheck";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -1066,6 +1066,7 @@ void     mspBridgePoll();
 void     mspBridgeOnFcByte(uint8_t b);
 void     mspParseResponse(const uint8_t* body, uint8_t bodyLen);
 void     mspSerialFeed(uint8_t b);                       // dongle mode: plain-MSP byte pump (MspFc.h)
+void     mspSerialResetParser();                         // drop a half-received MSP frame (MspFc.h): the device came or went, or a read timed out
 void     mspFcPoll();
 bool     fcIsRotorflightConfigCapable();
 void     ledOn();

@@ -201,6 +201,7 @@ namespace UsbHostMsp {
         }
         if (closeDone) {
             closeDone = false; gone = false;
+            ::mspSerialResetParser();                          // half a frame from a device that has gone must not wait for its tail
             if (cliMode) { cliMode = false; cliBuf = ""; events.add("Command line: the flight controller went away - closed, MSP resumes"); }   // never latched by an unplug (0.9.641)
             if (wasOpen) { char m[96]; snprintf(m, sizeof m, "%s: the USB flight controller was unplugged - back to the %s", who(), dongleEnabled ? "UART" : "radio link"); events.add(m); }
             wasOpen = false;
@@ -209,6 +210,7 @@ namespace UsbHostMsp {
         if (openResult != 0) {
             const int r = openResult; openResult = 0;
             if (r == 1) {
+                ::mspSerialResetParser();                      // a new device starts a clean frame (the parser now accepts 4200-byte replies: never inherit half a frame)
                 wasOpen = true; opens++; openedSeen = devSeen;
                 char m[96]; snprintf(m, sizeof m, "%s: flight controller on USB (%04X:%04X) - MSP over USB, no port setting needed", who(), vid, pid);
                 events.add(m);

@@ -82,6 +82,7 @@ inline bool bigReply(uint8_t func, const uint8_t* p, uint16_t n) {
 }
 
 inline void sendRead();          // defined below (done() may start another pass)
+inline void sendNext();
 inline void restartWork();
 inline void stopLink() { reqOut = false; mspAsyncFunc = 0xFF; mspAsyncReady = false; rxReady = false; mspBigReplyHook = nullptr; bbCheckActive = false; endMs = millis(); }
 inline void fail(const char* why) {
@@ -98,7 +99,7 @@ inline void done() {
         events.add(m);
         restartWork();
         startAddr = addr = (usedBytes > windowBytes) ? usedBytes - windowBytes : 0;
-        state = STREAM; startMs = millis(); sendRead();
+        state = STREAM; startMs = millis(); sendNext();
         return;
     }
     state = DONE; stopLink();
@@ -113,12 +114,23 @@ inline void sendReq(uint8_t fn, const uint8_t* d, uint8_t n) {
     bbCheckOwnSend = true; mspSendRequest(fn, d, n); bbCheckOwnSend = false;
     reqOut = true; reqSentMs = millis(); mspLastForegroundMs = millis();
 }
+// Every "what next?" goes through here, so the armed re-check cannot be
+// starved by a healthy stream: handleRead() re-arms immediately, so the
+// `if (!reqOut)` path at the top of tick() is never reached once reading
+// starts, and before 0.9.668 the MSP 101 poll lived only there - it ran
+// once, at the start, and fcInfo.armed then froze for the whole run. On a
+// receiver the transmitter test still covered it; on a dongle nothing did.
 inline void sendRead() {
     uint8_t q[7]; uint16_t sz = CHUNK;
     if (endAddr > addr && endAddr - addr < sz) sz = (uint16_t)(endAddr - addr);
     q[0] = (uint8_t)addr; q[1] = (uint8_t)(addr >> 8); q[2] = (uint8_t)(addr >> 16); q[3] = (uint8_t)(addr >> 24);
     q[4] = (uint8_t)sz; q[5] = (uint8_t)(sz >> 8); q[6] = 0;
     sendReq(MSP_DATAFLASH_READ, q, 7);
+}
+
+inline void sendNext() {
+    if ((uint32_t)(millis() - lastStatusMs) >= STATUS_EVERY_MS) { lastStatusMs = millis(); sendReq(MSP_STATUS_FN, nullptr, 0); return; }
+    if (state == SUMMARY) sendReq(MSP_DATAFLASH_SUMMARY, nullptr, 0); else sendRead();
 }
 
 // nullptr = may start; else the reason, for a 409
@@ -187,7 +199,7 @@ inline void handleSummary(const uint8_t* p, uint16_t n) {
         endAddr = usedBytes;
     }
     if (addr >= endAddr) { fail("nothing recorded beyond that address"); return; }
-    state = STREAM; sendRead();
+    state = STREAM; sendNext();
 }
 inline void handleRead(const uint8_t* p, uint16_t n) {
     if (n < 7) { fail("short read reply"); return; }
@@ -202,7 +214,7 @@ inline void handleRead(const uint8_t* p, uint16_t n) {
     dec->feed(p + 7, got, *an);
     bytesDone += got; addr += got; chunks++; retries = 0;
     if (an->selectedDone || addr >= endAddr) { done(); return; }
-    sendRead();
+    sendNext();                                   // the armed re-check gets its turn once a second
 }
 
 // loop(): one reply handled per pass, one request outstanding at most.
@@ -211,7 +223,11 @@ inline void tick() {
         // Safety net: bbCheckActive gates every other MSP sender in the
         // firmware, so it must never outlive the check that set it. If the
         // state machine ever stops without clearing it, clear it here.
-        if (bbCheckActive) { bbCheckActive = false; bbCheckOwnSend = false; mspBigReplyHook = nullptr; events.add("Vibration check: link handed back (watchdog)"); }
+        if (bbCheckActive) {
+            reqOut = false; mspAsyncFunc = 0xFF; mspAsyncReady = false; rxReady = false;   // the same state stopLink() leaves: a latched mspAsyncFunc would confuse TxParams
+            mspBigReplyHook = nullptr; bbCheckOwnSend = false; bbCheckActive = false;
+            events.add("Vibration check: link handed back (watchdog)");
+        }
         return;
     }
     if ((uint32_t)(millis() - runStartMs) > MAX_RUN_MS) { fail("the check took too long - the link is back with the flight controller"); return; }
@@ -222,10 +238,7 @@ inline void tick() {
     if (!reqOut) {
         if (notBeforeMs && (int32_t)(notBeforeMs - millis()) > 0) return;
         notBeforeMs = 0;
-        // Between chunks, ask the FC whether it is armed (the heartbeat probe
-        // is gated off while we own the link, so nobody else would notice).
-        if ((uint32_t)(millis() - lastStatusMs) >= STATUS_EVERY_MS) { lastStatusMs = millis(); sendReq(MSP_STATUS_FN, nullptr, 0); return; }
-        if (state == SUMMARY) sendReq(MSP_DATAFLASH_SUMMARY, nullptr, 0); else sendRead();
+        sendNext();
         return;
     }
     if (rxReady && reqFn == MSP_DATAFLASH_READ) {     // a 4 kB dataflash reply, straight from the parser
@@ -242,7 +255,7 @@ inline void tick() {
             if (n < 10) { fail("the flight controller gave no status"); return; }
             armedKnown = true;
             if (fcInfo.armed) { fail("the flight controller is armed"); return; }
-            if (state == SUMMARY) sendReq(MSP_DATAFLASH_SUMMARY, nullptr, 0); else sendRead();
+            sendNext();
             return;
         }
         if (reqFn == MSP_DATAFLASH_SUMMARY) handleSummary(copy, n); else handleRead(copy, n);
@@ -250,6 +263,7 @@ inline void tick() {
     }
     if ((uint32_t)(millis() - reqSentMs) > REQ_TIMEOUT_MS) {
         if (++retries > 3) { fail("the flight controller stopped answering"); return; }
+        ::mspSerialResetParser();                                 // a lost byte mid-frame would otherwise hold the parser open for a whole 4 kB reply
         reqOut = false; mspAsyncFunc = 0xFF; rxReady = false;      // the next pass re-sends
     }
 }

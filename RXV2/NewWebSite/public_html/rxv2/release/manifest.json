@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.668-armed-recheck",
+      "url": "https://messiter.com/rxv2/release/v0.9.668/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.668/littlefs.bin",
+      "fs_md5": "2c216bb63b744c5d3cf5be4f2a694bf9",
+      "notes": "FLIGHT SAFETY: the vibration check's once-a-second 'is it armed?' re-check never actually ran while the black box was streaming - it lived only on the idle path, and a healthy stream re-arms the next read immediately, so the flight controller's armed word was read once at the start and then frozen. On a receiver the transmitter test still covered it; on a DONGLE nothing did. All 'what next?' decisions now go through one place that gives the armed re-check its turn. Also: the idle watchdog now leaves exactly the state stopLink() leaves (a latched mspAsyncFunc would have confused the transmitter-parameter machine), and the serial MSP parser is reset when a read times out and whenever the USB device comes or goes, so one dropped byte cannot hold it open for a whole 4 kB reply. Includes 0.9.667."
+    },
+    {
       "name": "RXV2-0.9.667-banks-first",
       "url": "https://messiter.com/rxv2/release/v0.9.667/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.667/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.657/littlefs.bin",
       "fs_md5": "b0d4f615fdf93cd990f31baabdb50ade",
       "notes": "Help (Rotorflight menu, Setup's USB socket, every Ways-to-connect footer): buy a SHORT USB-C cable, about 12 cm, right-angled at the flight controller if you can, and make sure it is a data cable - many short leads only charge. Includes 0.9.656."
-    },
-    {
-      "name": "RXV2-0.9.656-two-wires",
-      "url": "https://messiter.com/rxv2/release/v0.9.656/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.656/littlefs.bin",
-      "fs_md5": "2252f4f300cedb9e69f4f1ee56e299a8",
-      "notes": "Help: 'Two wires, everything' - the receiver lead carries flying and the everyday pages; the USB-C cable adds the configurator's own channel (every setting, any size, command line, ports, factory reset, black box); a transmitter's Lua scripts have only the slow 320-byte CRSF tunnel. Said on the Rotorflight menu help and in every help screen's Ways to connect, which no longer calls the app Apple-only. Includes 0.9.655."
     }
   ]
 }
