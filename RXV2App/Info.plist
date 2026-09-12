@@ -31,9 +31,9 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>5.07</string>
+	<string>5.08</string>
 	<key>CFBundleVersion</key>
-	<string>369</string>
+	<string>370</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>

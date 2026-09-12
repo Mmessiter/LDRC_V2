@@ -47,6 +47,9 @@ table.pk td:first-child,table.pk th:first-child,table.pk td:nth-child(3),table.p
 .eraseBtn{width:100%;margin-top:.6em;padding:.7em;border:0;border-radius:10px;background:#c0603c;color:#fff;font-size:1em;font-weight:700;cursor:pointer}
 .eraseBtn:disabled{opacity:.5}
 .memLine{text-align:center;font-weight:700;color:#3a5165;margin:.3em 0}
+.fSum{background:#eaf3ee;border-radius:10px;padding:.7em .9em;margin:.2em 0 .7em;line-height:1.5;color:#2f4452}
+.fSum div{margin:.15em 0}
+.recLink{display:block;text-align:center;background:#5f8fab;color:#fff;text-decoration:none;padding:.6em;border-radius:10px;font-weight:700;margin:.5em 0 0}
 .sMsg{text-align:center;font-size:.9em;min-height:1.2em;margin-top:.3em;font-weight:600;color:#3a5165}
 </style>
 </head>
@@ -56,13 +59,14 @@ table.pk td:first-child,table.pk th:first-child,table.pk td:nth-child(3),table.p
 <div class=bg-wash  aria-hidden=true></div>
 <div class=container>
     <h1>Vibration check</h1>
-    <p class=subtitle>Reads the last flight from the black box and says which filter to change (Blackbox spectrum)</p>
+    <p class=subtitle>Reads the last flight from the black box: what happened, and which filter to change (Blackbox)</p>
     <div id=needUsb class=needUsb style="display:none"></div>
     <div id=status class="banner info" style="display:none"></div>
 
     <div class=card id=startCard>
         <p class=do id=recNote><b>Record Gyro raw, Gyro and Head speed at 1 in 2, erase, fly a hover and a few brisk moves, land, transmitter off.</b> Then check. One change, one flight, check again.</p>
         <div id=recWarn class=more style="display:none"></div>
+        <a class=recLink href="/rotorflight-blackbox"><span class=ico>&#128209;</span> What to record, and how often &rarr;</a>
         <button class="startBtn usbOnly" id=startBtn onclick="startCheck(0)">&#128200; Check the last flight</button>
         <div id=progWrap style="display:none">
             <div class=bar><i id=barFill style="width:0"></i></div>
@@ -81,6 +85,11 @@ table.pk td:first-child,table.pk th:first-child,table.pk td:nth-child(3),table.p
     </div>
 
     <div id=result style="display:none">
+        <div class=card id=flightCard style="display:none">
+            <h2>The flight</h2>
+            <div id=flightSummary></div>
+            <div id=flightCharts></div>
+        </div>
         <div class=card id=verdictCard></div>
         <div class=card id=peaksCard style="display:none">
             <h2>Strongest vibrations in flight</h2>
@@ -122,7 +131,7 @@ function paintContext(){
     const w=[];
     if(rec){
         const f=rec.fields, miss=[]; if(!(f&(1<<5)))miss.push('Gyro raw'); if(!(f&(1<<6)))miss.push('Gyro'); if(!(f&(1<<13)))miss.push('Head speed');
-        if(miss.length) w.push('<b>The recorder is not saving '+miss.join(', ')+'.</b> Tick '+(miss.length>1?'them':'it')+' on the Flight recorder page before the next flight, or the check has nothing to read.');
+        if(miss.length) w.push('<b>The recorder is not saving '+miss.join(', ')+'.</b> Tick '+(miss.length>1?'them':'it')+' under <b>What to record</b> on the Flight recorder page before the next flight, or the check has nothing to read.');
         const loopHz=pidUs?1e6/pidUs:4000, logHz=loopHz/(rec.denom||1);
         if(logHz<900) w.push('<b>How often is 1 in '+rec.denom+'</b> ('+Math.round(logHz)+' a second): too slow to see vibration above '+Math.round(logHz/2)+' Hz. Set 1 in 2 on the Flight recorder page.');
         if(rec.mode===0||rec.device===0) w.push('<b>The recorder is off</b> (When: never, or Where: nowhere). Turn it on on the Flight recorder page.');
@@ -227,8 +236,8 @@ async function fetchPart(n){ const r=await fetch('/api/blackbox/result?part='+n,
 async function showResult(st){
     setStatus('info','Reading the result…');
     try{
-        const [summary,fly,gnd,order,timeline,orderFilt]=await Promise.all([0,1,2,3,4,5].map(fetchPart));
-        parts={summary,fly,gnd,order,timeline,orderFilt};
+        const [summary,fly,gnd,order,timeline,orderFilt,flight]=await Promise.all([0,1,2,3,4,5,6].map(fetchPart));
+        parts={summary,fly,gnd,order,timeline,orderFilt,flight};
     }catch(e){ setStatus('bad',e.message); return; }
     setStatus('','');
     try{ render(); }catch(e){ setStatus('bad','Could not show the result: '+e.message); }
@@ -264,6 +273,17 @@ function render(){
         $('flights').innerHTML=S.logs.map((L,i)=>'<button class="'+(first+i===cur?'cur':'')+'" onclick="startCheck('+(first+i)+')">Flight '+(first+i)+(L.seconds?' — '+Math.round(L.seconds)+' s':'')+(L.hsMedian?', '+Math.round(L.hsMedian)+' rpm':'')+'</button>').join('');
         $('flightsWrap').style.display='';
     } else $('flightsWrap').style.display='none';
+    // the flight itself, before the vibration verdict
+    try{
+        const fl=BBCHECK.flight(parts);
+        if(fl){
+            const lines=BBCHECK.flightSummary(fl);
+            $('flightSummary').innerHTML=(lines.length?'<div class=fSum>'+lines.map(x=>'<div>'+esc(x)+'</div>').join('')+'</div>':'')
+                +(fl.evDropped?'<p class=sub>'+fl.evDropped+' more events not shown.</p>':'');
+            $('flightCharts').innerHTML=BBCHECK.svgTraces(fl,{});
+            $('flightCard').style.display='';
+        } else $('flightCard').style.display='none';
+    }catch(e){ $('flightCard').style.display='none'; }
     // charts
     if(a.ok){
         let c='';
@@ -392,6 +412,8 @@ document.addEventListener('DOMContentLoaded', async ()=>{
 <li>The write is read back and compared. <b>Undo</b> puts the previous filters back, and the Backups page holds them too.</li>
 <li><b>One change per flight.</b> After a change the buttons stay off until a new flight has been checked. Fly, then check again.</li>
 </ul>
+<h3>The flight</h3>
+<p>Before the vibration verdict the page shows what actually happened: head speed against what the governor asked for, throttle, battery volts and current (the thin line under the volts is the lowest reading in each moment, so a sag shows), roll and pitch, and ESC temperature. Arming, governor changes and rescue are marked as dotted lines. Only what the recorder saved appears &mdash; choose that under <b>What to record</b> on the Flight recorder page.</p>
 <h3>Black box memory</h3>
 <p>The bar shows how much of the flight controller&rsquo;s memory holds flight logs. The check reads back through the last 12 MB to find your newest flight, so a full memory makes it slow; on an empty one it reads only the flight you just made.</p>
 <p><b>Erase all flight logs</b> wipes them all, permanently. The flight controller beeps while it works (10&ndash;60 seconds). Erase before a test session and every check afterwards is quick. The same bar and button are on the Flight recorder page.</p>
