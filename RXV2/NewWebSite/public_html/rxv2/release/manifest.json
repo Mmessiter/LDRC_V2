@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.676-cable-advice",
+      "url": "https://messiter.com/rxv2/release/v0.9.676/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.676/littlefs.bin",
+      "fs_md5": "9a7b55d16dd28e6f9adb66aed0ad8c23",
+      "notes": "Cable advice matches what actually works on the model: the shortest cable you can get, right-angled at BOTH ends if possible, tied down and left in - it costs nothing in the air because the receiver stops talking over USB the moment the radio link is live. Said in the Ways-to-connect footer, the Rotorflight menu help and Setup's USB socket bullet; the website carries the fitted photo. Includes 0.9.675."
+    },
+    {
       "name": "RXV2-0.9.675-help-round",
       "url": "https://messiter.com/rxv2/release/v0.9.675/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.675/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.665/littlefs.bin",
       "fs_md5": "c22cf485f5e793aaa002f2b1a5abfda9",
       "notes": "Vibration check, corrected by the Goblin's own flight: it advised 'set the rotor-speed notches to high' for a once-per-rev that Rotorflight's NORMAL preset already notches - the change would have done nothing. The check now knows what each preset really notches (rpmFilterPreset[] in rpm_filter.c: main harmonics 1-2-4 low, 1-4 normal, 1-6 high, tail 1 / 1-2 / 1-2, plus the main motor) and only advises a preset that genuinely adds the harmonic; a strong once-per-rev is reported as blade tracking and balance, with no filter button. Attenuation is measured over a wider window so a narrow rotor notch is not mistaken for a useless one. The 90-second Goblin flight is now a regression fixture (dev/goblin_flight_*.json). Includes 0.9.664."
-    },
-    {
-      "name": "RXV2-0.9.664-check-window",
-      "url": "https://messiter.com/rxv2/release/v0.9.664/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.664/littlefs.bin",
-      "fs_md5": "97d48b38e0392784433c1a25f6ad26c6",
-      "notes": "Vibration check reads the last 12 MB of the black box (the newest flight or two) instead of the whole memory, widening itself if that holds no log, and shows a time remaining; the page says so and offers Erase. Measured throughput 62-66 kB/s."
     }
   ]
 }
