@@ -216,16 +216,22 @@ body.hasSearch .subtitle{max-width:calc(100% - 1rem)}
 .helpPanel ul{margin:.3em 0 .3em 1.2em;padding:0;color:#2c3e50}
 .helpPanel li{margin:.25em 0}
 .helpPanel code{font-family:ui-monospace,SFMono-Regular,monospace;font-size:.92em;color:#5d3a3a}
-/* Sticky Back bar: the way out is at the top, whatever the help's length. */
-.helpTop{
-    position:sticky;top:0;z-index:2;background:#ffffff;
-    margin:-1.3em -1.5em .9em;padding:.7em 1.5em;
-    border-bottom:1px solid rgba(125,158,176,.35);
-    border-radius:14px 14px 0 0;
-}
+/* The way out of help is the SAME round back button as every page, in the same
+   corner (Malcolm 2026-09-12: "I was expecting the left pointing arrow in a
+   smaller button as on all of the other pages"). Above the overlay, so it is
+   there whatever the help's length and wherever it is scrolled. */
 .helpBack{
-    width:auto;margin:0;padding:.45em 1em;font-size:.95em;background:#5f8fab;
+    position:fixed;
+    top:max(0.7em, env(safe-area-inset-top, 0.7em));
+    left:max(0.7em, env(safe-area-inset-left, 0.7em));
+    width:3em;height:3em;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:#f4f7f9;
+    font-size:1.55em;line-height:1;
+    border:1.5px solid rgba(125,158,176,.5);cursor:pointer;
+    z-index:101;box-shadow:0 2px 6px rgba(0,0,0,.15);padding:0;margin:0;
 }
+.helpBack:active{transform:scale(.95)}
 .helpClose{
     margin-top:1.2em;width:100%;padding:.75em;
     background:#5fa099;color:#fff;border:0;border-radius:10px;
