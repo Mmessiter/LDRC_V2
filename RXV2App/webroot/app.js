@@ -228,15 +228,22 @@
                 + '</ul></div>';
             const overlay = document.createElement('div');
             overlay.className = 'helpModal';
+            // A Back button that stays at the top while the help scrolls
+            // (Malcolm 2026-09-12: "I sometimes load a help screen by mistake
+            // and then need to scroll all the way to the bottom to exit").
             overlay.innerHTML =
-                '<div class=helpPanel>' + html + linkTip + homeTip +
-                '<button class=helpClose type=button>Got it</button>' +
-                '</div>';
-            const close = () => overlay.remove();
+                '<div class=helpPanel>'
+                + '<div class=helpTop><button class="helpClose helpBack" type=button aria-label="Close help">&#8592; Back</button></div>'
+                + html + linkTip + homeTip
+                + '<button class=helpClose type=button>Got it</button>'
+                + '</div>';
+            const close = () => { overlay.remove(); document.removeEventListener('keydown', onKey); };
+            const onKey = (e) => { if (e.key === 'Escape') close(); };
             overlay.addEventListener('click', (e) => {
                 if (e.target === overlay) close();
             });
-            overlay.querySelector('.helpClose').addEventListener('click', close);
+            overlay.querySelectorAll('.helpClose').forEach(b => b.addEventListener('click', close));
+            document.addEventListener('keydown', onKey);
             document.body.appendChild(overlay);
         },
 

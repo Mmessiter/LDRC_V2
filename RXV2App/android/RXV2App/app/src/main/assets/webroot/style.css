@@ -204,7 +204,7 @@ body.hasSearch .subtitle{max-width:calc(100% - 1rem)}
     display:flex;align-items:center;justify-content:center;padding:1em;
 }
 .helpPanel{
-    background:rgba(255,255,255,.96);
+    background:#ffffff;   /* SOLID — the doctrine everywhere else on these pages */
     border-radius:14px;padding:1.3em 1.5em;
     max-width:500px;max-height:85vh;overflow-y:auto;
     box-shadow:0 8px 32px rgba(0,0,0,.25);
@@ -216,6 +216,16 @@ body.hasSearch .subtitle{max-width:calc(100% - 1rem)}
 .helpPanel ul{margin:.3em 0 .3em 1.2em;padding:0;color:#2c3e50}
 .helpPanel li{margin:.25em 0}
 .helpPanel code{font-family:ui-monospace,SFMono-Regular,monospace;font-size:.92em;color:#5d3a3a}
+/* Sticky Back bar: the way out is at the top, whatever the help's length. */
+.helpTop{
+    position:sticky;top:0;z-index:2;background:#ffffff;
+    margin:-1.3em -1.5em .9em;padding:.7em 1.5em;
+    border-bottom:1px solid rgba(125,158,176,.35);
+    border-radius:14px 14px 0 0;
+}
+.helpBack{
+    width:auto;margin:0;padding:.45em 1em;font-size:.95em;background:#5f8fab;
+}
 .helpClose{
     margin-top:1.2em;width:100%;padding:.75em;
     background:#5fa099;color:#fff;border:0;border-radius:10px;
