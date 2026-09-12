@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.660-two-wires-card";
+constexpr const char* FW_VERSION = "RXV2-0.9.661-vibration-check";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -1088,5 +1088,10 @@ inline void packF32(uint8_t* ack, float f) {
     memcpy(&v, &f, sizeof(v));
     packU32(ack, v);
 }
+
+// BlackboxCheck.h (0.9.661): a vibration check is streaming the black box over
+// USB and owns the MSP link — the heartbeat probe, the TX-param machine and
+// /api/msp stand down until it finishes.
+inline volatile bool bbCheckActive = false;
 
 #endif // _SRC_1DEFS_H

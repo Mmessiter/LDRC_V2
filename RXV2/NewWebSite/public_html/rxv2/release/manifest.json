@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.661-vibration-check",
+      "url": "https://messiter.com/rxv2/release/v0.9.661/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.661/littlefs.bin",
+      "fs_md5": "4a5b8936cbc17667c53e9dc3fd4674e1",
+      "notes": "VIBRATION CHECK: the receiver (or dongle) reads the flight controller's black box over the USB cable (MSP 70/71, 512-byte chunks, one per loop pass), decodes Rotorflight 4.6's log format on the fly (src/BlackboxDecode.h, spec in BLACKBOX-FORMAT.md), accumulates Welch spectra of the gyro before and after the filters plus a head-speed-locked order spectrum, and the new page (Flight recorder \u2192 Vibration check, or the full list) names the lines (rotor, blades, motor, tail, or something loose), says in one line which filter to change and applies it (rotor-speed notch preset, lowest rotor frequency, fixed notch 1/2, dynamic notches, Lowpass 1). USB only, transmitter off, disarmed; /api/msp answers 503 while it runs; the heartbeat and TX-param machine stand down. Host-tested on synthetic logs (dev/bbcheck_test.sh). Includes 0.9.660."
+    },
+    {
       "name": "RXV2-0.9.660-two-wires-card",
       "url": "https://messiter.com/rxv2/release/v0.9.660/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.660/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.650/littlefs.bin",
       "fs_md5": "d4f5e77f71bc8b06c64b03fccb9100c0",
       "notes": "Back returns to where you were: a long list (A la carte, Find a setting, any page) remembers its scroll position when you leave it and puts it back when you come back by the back arrow or a back gesture. A fresh visit still starts at the top. Includes 0.9.649."
-    },
-    {
-      "name": "RXV2-0.9.649-alacarte-order",
-      "url": "https://messiter.com/rxv2/release/v0.9.649/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.649/littlefs.bin",
-      "fs_md5": "a1bb90f76b854b8641dbcb1098797824",
-      "notes": "A la carte: In-flight adjustments sits in its alphabetical place (after Governor). Includes 0.9.648."
     }
   ]
 }

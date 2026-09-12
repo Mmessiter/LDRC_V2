@@ -33,6 +33,7 @@
 #include "SimUsb.h"         // before WebPages.h — the firmware web pages call SimUSB::getMap/setMap
 #include "BleConfig.h"      // before WebPages.h — WebPages routes through the BLE/WiFi router
 #include "WebPages.h"
+#include "BlackboxCheck.h"  // after WebPages.h: registers its own routes, uses serveLittleFsFile (0.9.661)
 
 //*********************************************************************
 //  D4 external status LED  (2-radio boards only)
@@ -500,6 +501,7 @@ void setup() {
     // or startApMode() — calling it before WiFi is up panics LwIP).
     //*****************************************************************
     registerWebRoutes();
+    BbCheck::registerRoutes();   // /rotorflight-filtercheck + /api/blackbox/* (0.9.661)
 
     //*****************************************************************
     // BLE stack up-front (silent — no advertising until WiFi config
@@ -825,6 +827,7 @@ void loop() {
         { StallScope s("bankPutBack"); bankPutBackTick(); } // the switch's banks back after a phone session (0.9.567)
         { StallScope s("fcTelemWatch"); fcTelemWatch(); }  // periodic FC-variant / FC-version discovery
         { StallScope s("txParams");   txParamsLoop(); }    // TX Rotorflight edits: async MSP read/write state machine
+        { StallScope s("bbCheck");    BbCheck::tick(); }   // vibration check: one black-box chunk per pass over USB (0.9.661)
         { StallScope s("govThrWatch"); govThrottleWatchTick(); }   // "throttle parked" verdict + deferred NVS commits (0.9.551)
     }
     { StallScope s("vbat");        vbatPoll(); }              // battery divider ADC (5 Hz, no-op when off)

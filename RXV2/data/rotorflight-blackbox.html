@@ -78,7 +78,8 @@ h2 .hint{font-weight:400;font-size:.7em;color:#5d7a8c;display:block;margin-top:.
         <h2>Memory <span class=hint>flight logs stored on the flight controller (Dataflash)</span></h2>
         <div class=bar><i id=barFill style="width:0"></i></div>
         <div class=att id=memText>&hellip;</div>
-        <p class=do><b>Erase before a test session</b>, so the new flights are easy to find and the memory cannot fill mid-flight. Logs are read with the Rotorflight Blackbox Explorer over USB &mdash; erasing deletes them for good.</p>
+        <a class=btn href="/rotorflight-filtercheck" style="display:block;text-align:center;background:#3f8f6a;color:#fff;text-decoration:none;padding:.75em;border-radius:10px;font-weight:700;margin:.4em 0 .6em">&#128200; Vibration check &mdash; read the last flight, get filter advice</a>
+        <p class=do><b>Erase before a test session</b>, so the new flights are easy to find and the memory cannot fill mid-flight. The Vibration check reads the logs here over the USB cable; the Rotorflight Blackbox Explorer on a computer shows everything else &mdash; erasing deletes them for good.</p>
         <button class="saveBtn eraseBtn" id=eraseBtn onclick="erase()">Erase all flight logs</button>
         <div id=memMsg class=sMsg></div>
     </div>

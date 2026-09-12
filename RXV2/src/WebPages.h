@@ -755,6 +755,11 @@ inline void handleMspApi() {
             return;
         }
     }
+    if (bbCheckActive) {                       // the vibration check is streaming the black box (0.9.661): one request at a time at the FC
+        server.sendHeader("Cache-Control", "no-store");
+        server.send(503, "text/plain", "busy: the vibration check is reading the black box - wait for it to finish, or cancel it on its page");
+        return;
+    }
     if (!server.hasArg("fn")) { server.send(400, "text/plain", "missing fn"); return; }
     uint8_t fn = (uint8_t)server.arg("fn").toInt();
 

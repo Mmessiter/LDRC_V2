@@ -1213,6 +1213,7 @@ inline void mspFcPoll() {
     // Yield while the TX-parameter state machine has an MSP request in flight,
     // so we don't leave two outstanding requests for the FC to interleave.
     if (txParamBusy) return;
+    if (bbCheckActive) return;                          // the vibration check owns the link (0.9.661)
     // Don't fight a synchronous /api/msp request that's mid-wait — sending
     // a competing probe causes the FC to interleave two responses, often
     // making the sync request time out and the page see "Read failed".

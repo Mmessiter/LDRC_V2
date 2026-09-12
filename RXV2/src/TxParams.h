@@ -204,7 +204,7 @@ inline uint32_t      lastParamFetchMs = 0;     // last read re-poll (continuous 
 inline bool txParamMspFree() {
     // ...and not over a heartbeat probe still waiting for its answer (0.9.563):
     // the FC keeps one request and drops the one behind it.
-    return currentProtocol == PROTO_CRSF && !mspBridgeActive && mspWaitFunction == 0xFF && !mspProbeOutstanding();
+    return currentProtocol == PROTO_CRSF && !mspBridgeActive && mspWaitFunction == 0xFF && !mspProbeOutstanding() && !bbCheckActive;   // bbCheckActive: BlackboxCheck.h (0.9.661)
 }
 
 // MSP "get" function for the active read window.
