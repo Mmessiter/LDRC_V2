@@ -84,7 +84,11 @@ inline bool bigReply(uint8_t func, const uint8_t* p, uint16_t n) {
 inline void sendRead();          // defined below (done() may start another pass)
 inline void sendNext();
 inline void restartWork();
-inline void stopLink() { reqOut = false; mspAsyncFunc = 0xFF; mspAsyncReady = false; rxReady = false; mspBigReplyHook = nullptr; bbCheckActive = false; endMs = millis(); }
+inline void stopLink() {
+    reqOut = false; mspAsyncFunc = 0xFF; mspAsyncReady = false; rxReady = false;
+    mspBigReplyHook = nullptr; bbCheckOwnSend = false; bbCheckActive = false; endMs = millis();
+    banks.lastTryMs = 0; banks.tries = 0;        // any owed put-back goes at the first opportunity, not after the 2 s back-off
+}
 inline void fail(const char* why) {
     snprintf(reason, sizeof reason, "%s", why);
     state = FAILED; stopLink(); freeWork();

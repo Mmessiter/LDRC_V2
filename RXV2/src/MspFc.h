@@ -1120,7 +1120,6 @@ inline void bankAfterClientRequest(uint8_t fn, const uint8_t* data, uint8_t len,
 
 // From loop(): the put-back itself, when the phone has gone quiet.
 inline void bankPutBackTick() {
-    if (bbCheckActive) return;   // the vibration check owns the link (0.9.662)
     if (!bankHeld()) return;
     const uint32_t now = millis();
     if ((currentProtocol != PROTO_CRSF || !fcTelemetryEnabled) && !UsbHostMsp::active()) { bankRelease(); return; }   // over USB the banks are still ours to put back (0.9.640)
@@ -1135,6 +1134,10 @@ inline void bankPutBackTick() {
         bankRelease();
         return;
     }
+    // Only the MSP work waits for the vibration check (0.9.669): the transmitter
+    // hand-over above must stay reachable, and bankReadSync/bankSelectSync would
+    // fail instantly while the check owns the link and burn the retry count.
+    if (bbCheckActive) return;
     if ((uint32_t)(now - banks.lastClientMs) < BANK_IDLE_MS) return;
     if (mspBridgeActive || txParamBusy || mspWaitFunction != 0xFF || mspProbeOutstanding()) return;
     if ((uint32_t)(now - banks.lastTryMs) < 2000) return;

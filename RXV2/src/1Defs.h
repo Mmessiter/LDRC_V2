@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.668-armed-recheck";
+constexpr const char* FW_VERSION = "RXV2-0.9.669-bank-handover";
 
 //*********************************************************************
 //  Auto-update manifest URLs

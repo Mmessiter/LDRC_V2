@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.669-bank-handover",
+      "url": "https://messiter.com/rxv2/release/v0.9.669/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.669/littlefs.bin",
+      "fs_md5": "92e75125eb4799fa986f599f428b9ffd",
+      "notes": "Defence in depth on the bank hazard: a check already cannot start while the flight controller's banks are still held (0.9.667), but the vibration check's stand-down in bankPutBackTick now sits BELOW the transmitter hand-over instead of above it, so a transmitter switched on during a check still reaches the branch that releases the hold and records where the flight controller was left. Only the MSP work waits. And when the link is handed back, an owed put-back is attempted at once instead of after the two-second back-off. Includes 0.9.668."
+    },
+    {
       "name": "RXV2-0.9.668-armed-recheck",
       "url": "https://messiter.com/rxv2/release/v0.9.668/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.668/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.658/littlefs.bin",
       "fs_md5": "a0364d04e6b8d777e99ee1e3d7b6ce1e",
       "notes": "The ? and search circles sit 2.6em further in from the top-right corner, clear of the app's small X on the demo and review screens (iPad mis-taps). Includes 0.9.657."
-    },
-    {
-      "name": "RXV2-0.9.657-cable",
-      "url": "https://messiter.com/rxv2/release/v0.9.657/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.657/littlefs.bin",
-      "fs_md5": "b0d4f615fdf93cd990f31baabdb50ade",
-      "notes": "Help (Rotorflight menu, Setup's USB socket, every Ways-to-connect footer): buy a SHORT USB-C cable, about 12 cm, right-angled at the flight controller if you can, and make sure it is a data cable - many short leads only charge. Includes 0.9.656."
     }
   ]
 }
