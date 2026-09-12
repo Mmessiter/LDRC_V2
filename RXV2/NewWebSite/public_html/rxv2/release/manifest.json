@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.677-cable-part",
+      "url": "https://messiter.com/rxv2/release/v0.9.677/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.677/littlefs.bin",
+      "fs_md5": "645dfb2a23199609988ed56178cf70a3",
+      "notes": "The help now names the exact cable: a Chenyang CY-UC-088-0.07M, 70 mm, flat, USB-C at both ends with both plugs right-angled, USB 2.0 data, 65 W, on Amazon. Any short one will do so long as it carries data. The website says the same and carries the photo of it fitted. Includes 0.9.676."
+    },
+    {
       "name": "RXV2-0.9.676-cable-advice",
       "url": "https://messiter.com/rxv2/release/v0.9.676/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.676/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.666/littlefs.bin",
       "fs_md5": "98848571ad1ef0b9da4938c686199303",
       "notes": "Two safety nets before the Goblin flies: bbCheckActive (which stands every other MSP sender down) can never outlive the check that set it - the idle tick clears it and says so in the log; and a check that somehow ran past 20 minutes hands the flight controller back. Nothing in the flight path changed: Radio.h, Channels.h, Output.h, Telemetry.h and FlightLog.h are untouched since before the vibration check existed. Includes 0.9.665."
-    },
-    {
-      "name": "RXV2-0.9.665-check-goblin",
-      "url": "https://messiter.com/rxv2/release/v0.9.665/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.665/littlefs.bin",
-      "fs_md5": "c22cf485f5e793aaa002f2b1a5abfda9",
-      "notes": "Vibration check, corrected by the Goblin's own flight: it advised 'set the rotor-speed notches to high' for a once-per-rev that Rotorflight's NORMAL preset already notches - the change would have done nothing. The check now knows what each preset really notches (rpmFilterPreset[] in rpm_filter.c: main harmonics 1-2-4 low, 1-4 normal, 1-6 high, tail 1 / 1-2 / 1-2, plus the main motor) and only advises a preset that genuinely adds the harmonic; a strong once-per-rev is reported as blade tracking and balance, with no filter button. Attenuation is measured over a wider window so a narrow rotor notch is not mistaken for a useless one. The 90-second Goblin flight is now a regression fixture (dev/goblin_flight_*.json). Includes 0.9.664."
     }
   ]
 }
