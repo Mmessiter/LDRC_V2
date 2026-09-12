@@ -74,16 +74,19 @@ final class BleLink: NSObject, ObservableObject {
     private var connectingRssi = 0
     /// Shown under the spinner while connecting: a warning about a weak signal.
     @Published var connectNote: String? = nil
-    /// Anything at or below this is too weak to connect reliably.
-    static let weakRssi = -85
+    /// Anything at or below this is too weak to WORK, which is stricter than
+    /// too weak to connect: -85 let a link two rooms away connect and then fail
+    /// (Malcolm 2026-09-12). BLE throughput collapses long before the connection
+    /// does, and this link carries whole web pages.
+    static let weakRssi = -78
 
-    /// A plain word for a signal strength, and whether it is worth trying.
+    /// A plain word for a signal strength: dBm means nothing to most people.
+    /// The words line up with the gate - anything not Strong or Good is refused.
     static func signalWord(_ rssi: Int) -> String {
         switch rssi {
-        case (-70)...:    return "Strong"
-        case (-84)...(-71): return "Good"
-        case (-92)...(-85): return "Weak"
-        default:          return "Too far"
+        case (-65)...:      return "Strong"
+        case (-77)...(-66): return "Good"
+        default:            return "Too far"
         }
     }
     static func tooWeak(_ rssi: Int) -> Bool { rssi != 0 && rssi <= weakRssi }

@@ -30,11 +30,13 @@ import java.util.UUID
 class Rxv2Ble(private val context: Context) {
 
     companion object {
-        const val WEAK_RSSI = -85      // at or below this, too weak to connect reliably
+        // -85 let a link two rooms away connect and then fail (Malcolm
+        // 2026-09-12). Throughput collapses long before the connection does,
+        // and this link carries whole web pages.
+        const val WEAK_RSSI = -78      // at or below this, too weak to WORK
         fun signalWord(rssi: Int) = when {
-            rssi >= -70 -> "Strong"
-            rssi >= -84 -> "Good"
-            rssi >= -92 -> "Weak"
+            rssi >= -65 -> "Strong"
+            rssi >= -77 -> "Good"
             else        -> "Too far"
         }
         fun tooWeak(rssi: Int) = rssi != 0 && rssi <= WEAK_RSSI
