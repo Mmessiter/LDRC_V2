@@ -19,3 +19,4 @@ node dev/bbcheck_test.js $T
 # the page must RUN, not just parse (the lesson of the 0.9.351 stuck-install bug)
 for pg in rotorflight-filtercheck rotorflight-blackbox rotorflight-filters; do node dev/page_test.js data/$pg.html | sed "s|^|$pg: |"; done
 node dev/keptcheck_test.js
+node dev/help_test.js
