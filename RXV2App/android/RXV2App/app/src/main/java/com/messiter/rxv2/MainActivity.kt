@@ -208,6 +208,9 @@ class MainActivity : AppCompatActivity() {
         val last = getSharedPreferences("scanner", MODE_PRIVATE).getString("last", "") ?: ""
         if (last.isEmpty()) return
         val d = latestFound.firstOrNull { it.name == last } ?: return
+        // Never connect by ourselves to something we can already see is too far:
+        // it half-connects and everything after is slow (Malcolm 2026-09-12).
+        if (Rxv2Ble.tooWeak(d.rssi)) { cancelAuto(); autoDone = true; return }
         // More than one receiver in range: show the list and let the pilot choose
         // (Malcolm 2026-09-11: the app went to the dongle when he wanted Test1).
         // Alone, connect after a one-second look-around so a second receiver that
@@ -219,6 +222,7 @@ class MainActivity : AppCompatActivity() {
             if (autoDone) return@Runnable
             if (latestFound.size > 1) { autoDone = true; return@Runnable }
             val now = latestFound.firstOrNull { it.name == last } ?: return@Runnable
+            if (Rxv2Ble.tooWeak(now.rssi)) { cancelAuto(); autoDone = true; return@Runnable }
             autoDone = true
             autoBanner?.visibility = View.GONE
             ble.connect(now)

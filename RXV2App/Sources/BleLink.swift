@@ -138,6 +138,7 @@ final class BleLink: NSObject, ObservableObject {
         // advertisement to be scanned (Malcolm 2026-08-17).
         UserDefaults.standard.set(d.peripheral.identifier.uuidString,
                                   forKey: "lastDeviceId")
+        UserDefaults.standard.set(d.rssi, forKey: "lastDeviceRssi")
         central.connect(d.peripheral, options: nil)
     }
 
@@ -157,6 +158,12 @@ final class BleLink: NSObject, ObservableObject {
               let uuid = UUID(uuidString: idStr),
               let p = central.retrievePeripherals(withIdentifiers: [uuid]).first
         else { return false }
+        // fastConnect has no RSSI to judge - it connects by stored identifier
+        // without scanning. So use the strength recorded at the END of the last
+        // session: if the model was far away then, scan and let the pilot choose
+        // rather than connecting blind (Malcolm 2026-09-12).
+        let lastRssi = defaults.integer(forKey: "lastDeviceRssi")
+        if lastRssi != 0 && lastRssi <= Self.weakRssi { return false }
         scannerAutoDone = true
         stopScan()
         lastName = name

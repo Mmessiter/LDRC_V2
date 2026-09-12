@@ -203,7 +203,7 @@ class Rxv2Ble(private val context: Context) {
         // Remember the MAC so the NEXT launch can connect directly
         // (fastConnect) without waiting for a scan to hear an advert.
         context.getSharedPreferences("scanner", android.content.Context.MODE_PRIVATE)
-            .edit().putString("lastAddr", d.device.address).apply()
+            .edit().putString("lastAddr", d.device.address).putInt("lastRssi", d.rssi).apply()
         gatt = d.device.connectGatt(context, false, gattCb, BluetoothDevice.TRANSPORT_LE)
     }
 
@@ -214,6 +214,12 @@ class Rxv2Ble(private val context: Context) {
     fun fastConnect(name: String, addr: String): Boolean {
         val a = adapter ?: return false
         if (!a.isEnabled) return false
+        // No RSSI here - this connects by stored MAC without scanning. Use the
+        // strength recorded at the END of the last session: if the model was far
+        // away then, scan and let the pilot choose rather than connecting blind.
+        val lastRssi = context.getSharedPreferences("scanner", android.content.Context.MODE_PRIVATE)
+            .getInt("lastRssi", 0)
+        if (tooWeak(lastRssi)) return false
         val dev = runCatching { a.getRemoteDevice(addr) }.getOrNull() ?: return false
         connName = name
         lastDevice = dev

@@ -406,6 +406,10 @@ struct ScannerView: View {
         // disarmed for the rest of the launch (scannerAutoDone).
         guard !link.scannerAutoDone, !lastUsedName.isEmpty,
               let d = list.first(where: { $0.name == lastUsedName }) else { return }
+        // Never connect by ourselves to something we can already see is too far:
+        // it half-connects and everything after that is slow (Malcolm 2026-09-12,
+        // Dongle 4 at -94 dBm). Show the list instead, with the reason on the row.
+        if BleLink.tooWeak(d.rssi) { cancelAuto(); link.scannerAutoDone = true; return }
         // More than one receiver in range: show the list and let the pilot
         // choose (Malcolm 2026-09-11: the app went to the dongle when he wanted
         // Test1). Alone, connect as before - after a one-second look-around so
@@ -418,6 +422,7 @@ struct ScannerView: View {
             guard !link.scannerAutoDone, autoTarget == name else { return }
             if link.found.count > 1 { cancelAuto(); return }
             guard let now = link.found.first(where: { $0.name == name }) else { autoTarget = nil; return }
+            if BleLink.tooWeak(now.rssi) { cancelAuto(); link.scannerAutoDone = true; return }
             link.scannerAutoDone = true
             autoTarget = nil
             link.connect(now)
