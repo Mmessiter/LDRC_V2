@@ -44,6 +44,10 @@ table.pk td:first-child,table.pk th:first-child,table.pk td:nth-child(3),table.p
 .flights{display:flex;flex-wrap:wrap;gap:.4em;margin:.4em 0}
 .flights button{padding:.45em .7em;border:0;border-radius:8px;background:#5f8fab;color:#fff;font-weight:700;cursor:pointer;font-size:.9em}
 .flights button.cur{background:#3f8f6a}
+.eraseBtn{width:100%;margin-top:.6em;padding:.7em;border:0;border-radius:10px;background:#c0603c;color:#fff;font-size:1em;font-weight:700;cursor:pointer}
+.eraseBtn:disabled{opacity:.5}
+.memLine{text-align:center;font-weight:700;color:#3a5165;margin:.3em 0}
+.sMsg{text-align:center;font-size:.9em;min-height:1.2em;margin-top:.3em;font-weight:600;color:#3a5165}
 </style>
 </head>
 <body>
@@ -59,14 +63,21 @@ table.pk td:first-child,table.pk th:first-child,table.pk td:nth-child(3),table.p
     <div class=card id=startCard>
         <p class=do id=recNote><b>Record Gyro raw, Gyro and Head speed at 1 in 2, erase, fly a hover and a few brisk moves, land, transmitter off.</b> Then check. One change, one flight, check again.</p>
         <div id=recWarn class=more style="display:none"></div>
-        <div id=fullWarn class=more style="display:none"></div>
         <button class="startBtn usbOnly" id=startBtn onclick="startCheck(0)">&#128200; Check the last flight</button>
         <div id=progWrap style="display:none">
             <div class=bar><i id=barFill style="width:0"></i></div>
             <div class=prog id=progText></div>
             <button class=cancelBtn onclick="cancelCheck()">Cancel</button>
         </div>
-        <p class=sub id=memText></p>
+    </div>
+
+    <div class=card id=memCard>
+        <h2>Black box memory</h2>
+        <div class=bar><i id=memFill style="width:0"></i></div>
+        <p class=memLine id=memText>&hellip;</p>
+        <div id=fullWarn class=more style="display:none"></div>
+        <button class="eraseBtn usbOnly" id=eraseBtn onclick="eraseLogs()"><span class=ico>&#128465;&#65039;</span> Erase all flight logs</button>
+        <div id=eraseMsg class=sMsg></div>
     </div>
 
     <div id=result style="display:none">
@@ -117,14 +128,45 @@ function paintContext(){
         if(rec.mode===0||rec.device===0) w.push('<b>The recorder is off</b> (When: never, or Where: nowhere). Turn it on on the Flight recorder page.');
     }
     const wd=$('recWarn'); wd.style.display=w.length?'':'none'; wd.innerHTML=w.map(x=>'<div>'+x+'</div>').join('')+(w.length?'<a href="/rotorflight-blackbox" style="display:inline-block;margin-top:.4em;font-weight:700;color:#2f4452">Flight recorder page &rarr;</a>':'');
-    if(mem){
-        const WIN=12*1048576, span=Math.min(mem.used,WIN);
-        $('memText').textContent=(mem.flags&2)?('Black box: '+mb(mem.used)+' recorded of '+mb(mem.total)+(mem.used?' — the check reads the last '+mb(span)+', about '+Math.max(5,Math.round(span/62000))+' s':'')):'No memory chip for the black box on this flight controller.';
-        const fullWarn=$('fullWarn');
-        if(fullWarn){ const full=mem.used>0.5*mem.total;
-            fullWarn.style.display=full?'':'none';
-            if(full) fullWarn.innerHTML='<b>The black box is '+mb(mem.used)+' full.</b> The check looks at the last '+mb(span)+', which is the newest flight or two. <a href="/rotorflight-blackbox" style="font-weight:700;color:#2f4452">Erase it</a> before a test session and the check is quick and the flight easy to find.';
-        }
+    paintMem();
+}
+
+// Black box memory: how full, how long the check will take, and erasing it.
+const WIN=12*1048576;
+function paintMem(){
+    if(!mem){ $('memText').textContent='The black box memory could not be read — is the USB cable in?'; $('eraseBtn').style.display='none'; $('memFill').style.width='0'; return; }
+    const supported=!!(mem.flags&2), ready=!!(mem.flags&1);
+    const pct=mem.total?Math.round(mem.used*100/mem.total):0;
+    const span=Math.min(mem.used,WIN), secs=Math.max(5,Math.round(span/62000));
+    $('memFill').style.width=(supported?pct:0)+'%';
+    $('memFill').style.background=pct>85?'#c0603c':pct>60?'#c98a4a':'#5f8fab';
+    $('memText').textContent=supported
+        ? (mb(mem.used)+' of '+mb(mem.total)+' used ('+pct+'%)'+(ready?'':' — busy'))
+        : 'No memory chip for the black box on this flight controller.';
+    $('eraseBtn').style.display=supported?'':'none';
+    const fw=$('fullWarn'); const full=supported&&mem.used>0.5*mem.total;
+    fw.style.display=full?'':'none';
+    if(full) fw.innerHTML='<b>Erase it and the check takes seconds instead of '+(secs>90?Math.round(secs/60)+' minutes':secs+' s')+'.</b> '
+        +'The check reads back through the last '+mb(span)+' to find your newest flight. On an empty memory it reads only that flight. Nothing else uses these logs once you have checked them.';
+    else if(supported&&mem.used) $('eraseMsg').textContent='';
+}
+async function eraseLogs(){
+    if(polling){ setStatus('warn','Wait for the check to finish'); return; }
+    const g=await groundCheck(); if(g){ setStatus('bad',g); return; }
+    if(!(await LDRC.confirm('Erase every flight log on the flight controller? They cannot be got back, and anything you have not checked yet goes with them.',
+        {title:'Erase flight logs',icon:'🗑️',yes:'Erase',kind:'danger'}))) return;
+    $('eraseBtn').disabled=true; $('eraseMsg').textContent='Erasing…';
+    // retries 1: a repeated MSP 72 restarts the erase and doubles the wait.
+    try{ await LDRC.msp(72,'',1); }catch(e){}
+    const t0=Date.now();
+    for(;;){
+        await sleep(1500);
+        try{ const b=hexToBytes(await LDRC.msp(70)); if(b.length>=13) mem={flags:b[0],total:rdU32(b,5),used:rdU32(b,9)}; }catch(e){}
+        paintMem();
+        const s=Math.round((Date.now()-t0)/1000);
+        if(mem&&(mem.flags&1)&&mem.used===0){ $('eraseBtn').disabled=false; $('eraseMsg').textContent='✓ Erased in '+s+' s — fly, then check.'; return; }
+        $('eraseMsg').textContent='Erasing… '+s+' s';
+        if(s>=150){ $('eraseBtn').disabled=false; $('eraseMsg').textContent='⚠️ Still not erased after 2½ minutes — the flight controller may be recording. Check the Flight recorder page.'; return; }
     }
 }
 
@@ -350,6 +392,9 @@ document.addEventListener('DOMContentLoaded', async ()=>{
 <li>The write is read back and compared. <b>Undo</b> puts the previous filters back, and the Backups page holds them too.</li>
 <li><b>One change per flight.</b> After a change the buttons stay off until a new flight has been checked. Fly, then check again.</li>
 </ul>
+<h3>Black box memory</h3>
+<p>The bar shows how much of the flight controller&rsquo;s memory holds flight logs. The check reads back through the last 12 MB to find your newest flight, so a full memory makes it slow; on an empty one it reads only the flight you just made.</p>
+<p><b>Erase all flight logs</b> wipes them all, permanently. The flight controller beeps while it works (10&ndash;60 seconds). Erase before a test session and every check afterwards is quick. The same bar and button are on the Flight recorder page.</p>
 <h3>Limits</h3>
 <ul>
 <li>USB cable only, transmitter off, model disarmed: the check needs the flight controller to itself. The flight controller hands over about 60 kB a second, so it reads the last 12 MB &mdash; three or four minutes &mdash; and finds the newest flight in it. Erase the black box before a test session and there is far less to read.</li>

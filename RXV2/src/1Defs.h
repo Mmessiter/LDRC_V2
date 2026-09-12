@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.669-bank-handover";
+constexpr const char* FW_VERSION = "RXV2-0.9.670-memory-card";
 
 //*********************************************************************
 //  Auto-update manifest URLs

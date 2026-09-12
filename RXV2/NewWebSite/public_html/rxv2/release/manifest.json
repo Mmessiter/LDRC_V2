@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.670-memory-card",
+      "url": "https://messiter.com/rxv2/release/v0.9.670/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.670/littlefs.bin",
+      "fs_md5": "bee2ce5bc10e787f238f66e7b20b12b4",
+      "notes": "Vibration check page: a Black box memory card of its own - a bar and a plain 'X of Y used (Z%)' line, and an 'Erase all flight logs' button right there, refused while armed or with the rotor turning and confirmed first. When the memory is over half full it says how much time erasing would save, because that is where you notice it. The Flight recorder page keeps its own copy of both. Includes 0.9.669."
+    },
+    {
       "name": "RXV2-0.9.669-bank-handover",
       "url": "https://messiter.com/rxv2/release/v0.9.669/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.669/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.659/littlefs.bin",
       "fs_md5": "b9b8d492ea072b7840d4ad5467168dc2",
       "notes": "Before you start: a computer only to flash the firmware; with the USB cable the Ports page does the rest - choosing 'receiver' for a port now also switches on serial receiver mode and telemetry (features 3 + 10, read-modify-write) in the same Save, so a brand-new flight controller never needs the configurator's Receiver tab. Configurator steps kept as the no-cable alternative. New-heli wizard step reworded. Includes 0.9.658."
-    },
-    {
-      "name": "RXV2-0.9.658-help-corner",
-      "url": "https://messiter.com/rxv2/release/v0.9.658/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.658/littlefs.bin",
-      "fs_md5": "a0364d04e6b8d777e99ee1e3d7b6ce1e",
-      "notes": "The ? and search circles sit 2.6em further in from the top-right corner, clear of the app's small X on the demo and review screens (iPad mis-taps). Includes 0.9.657."
     }
   ]
 }
