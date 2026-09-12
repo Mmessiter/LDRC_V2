@@ -309,6 +309,7 @@ inline void registerRoutes() {
         server.sendHeader("Cache-Control", "no-store");
         if (state != DONE || !an || !jsonBuf) { server.send(409, "text/plain", "no result yet"); return; }
         const int part = server.hasArg("part") ? server.arg("part").toInt() : 0;
+        if (part < 0 || part > 6) { server.send(400, "text/plain", "no such part"); return; }
         const size_t L = an->toJson(part, jsonBuf, JSON_CAP);
         if (!L) { server.send(500, "text/plain", "result part too big"); return; }
         server.send(200, "application/json", String(jsonBuf));

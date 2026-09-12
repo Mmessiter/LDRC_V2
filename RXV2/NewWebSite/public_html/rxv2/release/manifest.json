@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.671-flight-review",
+      "url": "https://messiter.com/rxv2/release/v0.9.671/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.671/littlefs.bin",
+      "fs_md5": "364eeba267972118d876ae0a0c5e746b",
+      "notes": "See the flight, not just its vibration. The check now decodes head speed, the governor's wanted speed, throttle, battery volts and current, roll and pitch, ESC temperature and motor RPM as it reads, and the page shows them as a stack of traces sharing one time axis, with arming, governor changes and rescue marked - plus a plain-English summary ('Head speed averaged 1325 rpm, dipping to 1270. The governor asked for 1300, so it held to within 25 rpm. Battery 25.0 V down to 23.4 V, sagging to 22.8 V under load.'). A link to What to record on the Flight recorder page sits on the check page, since that is where you notice a field is missing. Includes 0.9.670."
+    },
+    {
       "name": "RXV2-0.9.670-memory-card",
       "url": "https://messiter.com/rxv2/release/v0.9.670/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.670/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.660/littlefs.bin",
       "fs_md5": "bc58a547f80b3d75365a177808fb3de9",
       "notes": "Before you start opens with 'First, get a short USB-C data cable': connect both wires - the lead flies and carries the everyday pages, the USB cable is the configurator's own channel (every setting, Ports, In-flight adjustments, command line, factory reset, black box); about 12 cm, right-angled if possible, must carry data. Without it the computer does the port/CRSF/telemetry and the USB-only pages stay out of reach. Includes 0.9.659."
-    },
-    {
-      "name": "RXV2-0.9.659-usb-first-time",
-      "url": "https://messiter.com/rxv2/release/v0.9.659/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.659/littlefs.bin",
-      "fs_md5": "b9b8d492ea072b7840d4ad5467168dc2",
-      "notes": "Before you start: a computer only to flash the firmware; with the USB cable the Ports page does the rest - choosing 'receiver' for a port now also switches on serial receiver mode and telemetry (features 3 + 10, read-modify-write) in the same Save, so a brand-new flight controller never needs the configurator's Receiver tab. Configurator steps kept as the no-cable alternative. New-heli wizard step reworded. Includes 0.9.658."
     }
   ]
 }

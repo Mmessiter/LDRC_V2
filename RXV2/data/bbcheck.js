@@ -282,6 +282,121 @@ BB.svgTimeline = parts => {
     return g;
 };
 
+// ---- the flight itself: traces and a plain-English summary --------------
+// part 6 rows: [t, <one per channel>, hsMin, voltsMin, shakeRaw, shakeFilt]
+BB.flight = (parts) => {
+    const F = parts.flight; if (!F || !F.rows || !F.rows.length) return null;
+    const idx = {}; F.channels.forEach((c, i) => { idx[c.key] = i + 1; });
+    const n = F.channels.length;
+    const col = { hsMin: n + 1, voltsMin: n + 2, shakeRaw: n + 3, shakeFilt: n + 4 };
+    const seen = {}; F.channels.forEach(c => { seen[c.key] = c.seen; });
+    const rows = F.rows, last = rows[rows.length - 1];
+    const get = (k) => rows.map(r => r[idx[k]]);
+    const stat = (k) => { if (!seen[k]) return null; const a = get(k).filter(v => v !== null); if (!a.length) return null;
+        const flying = rows.filter(r => !seen.hs || r[idx.hs] >= 300);
+        const b = flying.length ? flying.map(r => r[idx[k]]) : a;
+        return { min: Math.min.apply(null, b), max: Math.max.apply(null, b), mean: b.reduce((x, y) => x + y, 0) / b.length, first: a[0], last: a[a.length - 1] };
+    };
+    const EV = { 15: 'disarmed', 30: 'flight mode', 50: 'governor', 51: 'rescue', 52: 'airborne' };
+    return { rows, idx, col, seen, stride: F.stride, seconds: last[0],
+             events: (F.events || []).map(e => ({ t: e.t, id: e.id, a: e.a, label: EV[e.id] || ('event ' + e.id) })),
+             evDropped: F.evDropped || 0,
+             hs: stat('hs'), thr: stat('throttle'), volts: stat('volts'), amps: stat('amps'),
+             escTemp: stat('escTemp'), gov: stat('govTarget'), motor: stat('motor'),
+             roll: stat('roll'), pitch: stat('pitch') };
+};
+
+// One sentence per thing worth knowing. Only what was actually recorded.
+BB.flightSummary = (fl) => {
+    if (!fl) return [];
+    const out = [], r1 = v => v.toFixed(1);
+    if (fl.hs) {
+        let t = 'Head speed averaged ' + Math.round(fl.hs.mean) + ' rpm';
+        // Only rows that are actually up to speed: the spool-up is not a dip.
+        const up = fl.rows.filter(r => r[fl.idx.hs] >= 0.85 * fl.hs.mean);
+        const dip = Math.min.apply(null, up.map(r => r[fl.col.hsMin]).filter(v => v > 0).concat([1e9]));
+        if (dip < 1e9 && fl.hs.mean - dip > 40) t += ', dipping to ' + Math.round(dip);
+        if (fl.gov && fl.gov.mean > 100) {
+            const err = fl.hs.mean - fl.gov.mean;
+            t += '. The governor asked for ' + Math.round(fl.gov.mean) + ', so it held to within ' + Math.abs(Math.round(err)) + ' rpm';
+        }
+        out.push(t + '.');
+    }
+    if (fl.volts) {
+        let t = 'Battery ' + r1(fl.volts.first) + ' V down to ' + r1(fl.volts.last) + ' V';
+        const sag = Math.min.apply(null, fl.rows.map(r => r[fl.col.voltsMin]).filter(v => v > 1).concat([1e9]));
+        if (sag < 1e9 && fl.volts.last - sag > 0.3) t += ', sagging to ' + r1(sag) + ' V under load';
+        if (fl.amps && fl.amps.max > 1) t += '. Up to ' + r1(fl.amps.max) + ' A, ' + r1(fl.amps.mean) + ' A average';
+        out.push(t + '.');
+    }
+    if (fl.escTemp && fl.escTemp.max > 5) out.push('ESC reached ' + Math.round(fl.escTemp.max) + ' °C.');
+    if (fl.thr) out.push('Throttle averaged ' + Math.round(fl.thr.mean) + ' %.');
+    const notable = fl.events.filter(e => e.id !== 30);
+    if (notable.length) {
+        const names = {}; notable.forEach(e => { names[e.label] = (names[e.label] || 0) + 1; });
+        out.push('Marked on the trace: ' + Object.keys(names).map(k => names[k] > 1 ? names[k] + ' × ' + k : k).join(', ') + '.');
+    }
+    return out;
+};
+
+// A stack of small charts sharing one time axis: each keeps its own scale, so
+// volts and rpm are both readable (one chart with mixed units is not).
+BB.svgTraces = (fl, opts) => {
+    if (!fl) return '';
+    opts = opts || {};
+    const W = 640, L = 46, R = 10, H = 86, T = 8, B = 4;
+    const tMax = fl.seconds || 1;
+    const x = t => L + (t / tMax) * (W - L - R);
+    const PANELS = [
+        { keys: ['hs', 'govTarget'], names: ['head speed', 'governor wants'], colors: ['#2a5e45', '#8e6cab'], unit: 'rpm', dash: [0, 1], zero: true },
+        { keys: ['throttle'], names: ['throttle'], colors: ['#c98a4a'], unit: '%', zero: true, fixed: [0, 100] },
+        { keys: ['volts'], names: ['battery'], colors: ['#c0603c'], unit: 'V', minCol: 'voltsMin' },
+        { keys: ['amps'], names: ['current'], colors: ['#5f8fab'], unit: 'A', zero: true },
+        { keys: ['roll', 'pitch'], names: ['roll', 'pitch'], colors: ['#2f6fb0', '#8a97a3'], unit: '°' },
+        { keys: ['escTemp'], names: ['ESC temperature'], colors: ['#c0603c'], unit: '°C', zero: true },
+    ];
+    let out = '';
+    for (const p of PANELS) {
+        const keys = p.keys.filter(k => fl.seen[k]);
+        if (!keys.length) continue;
+        let vals = [];
+        keys.forEach(k => { vals = vals.concat(fl.rows.map(r => r[fl.idx[k]])); });
+        if (p.minCol) vals = vals.concat(fl.rows.map(r => r[fl.col[p.minCol]]).filter(v => v > 0));
+        let lo = p.fixed ? p.fixed[0] : Math.min.apply(null, vals), hi = p.fixed ? p.fixed[1] : Math.max.apply(null, vals);
+        if (p.zero && !p.fixed) lo = Math.min(0, lo);
+        if (!(isFinite(lo) && isFinite(hi))) continue;
+        if (hi - lo < 1e-6) { hi = lo + 1; }
+        const pad = (hi - lo) * 0.12; lo -= pad; hi += pad;
+        const y = v => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
+        let g = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">';
+        g += '<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="#f4f7f9"/>';
+        for (let q = 0; q <= 1; q++) { const v = lo + pad + (hi - lo - 2 * pad) * q;
+            g += '<line x1="' + L + '" y1="' + y(v).toFixed(1) + '" x2="' + (W - R) + '" y2="' + y(v).toFixed(1) + '" stroke="#d7dee4"/>'
+               + '<text x="' + (L - 4) + '" y="' + (y(v) + 4).toFixed(1) + '" font-size="10" fill="#3a5165" text-anchor="end">' + (Math.abs(v) >= 100 ? Math.round(v) : Math.round(v * 10) / 10) + '</text>'; }
+        // events as faint vertical marks
+        for (const e of fl.events) if (e.id !== 30) g += '<line x1="' + x(e.t).toFixed(1) + '" y1="' + T + '" x2="' + x(e.t).toFixed(1) + '" y2="' + (H - B) + '" stroke="#b9a06a" stroke-width="1" stroke-dasharray="2 3"/>';
+        if (p.minCol) {
+            let d = ''; fl.rows.forEach((r, i) => { const v = r[fl.col[p.minCol]]; if (v > 0) d += (d ? 'L' : 'M') + x(r[0]).toFixed(1) + ' ' + y(v).toFixed(1); });
+            if (d) g += '<path d="' + d + '" fill="none" stroke="#e0b0a0" stroke-width="1"/>';
+        }
+        keys.forEach((k, ki) => {
+            const ci = p.keys.indexOf(k);
+            let d = ''; fl.rows.forEach(r => { d += (d ? 'L' : 'M') + x(r[0]).toFixed(1) + ' ' + y(r[fl.idx[k]]).toFixed(1); });
+            g += '<path d="' + d + '" fill="none" stroke="' + p.colors[ci] + '" stroke-width="' + (p.dash && p.dash[ci] ? 1 : 1.6) + '"'
+               + (p.dash && p.dash[ci] ? ' stroke-dasharray="4 3"' : '') + '/>';
+            g += '<text x="' + (L + 6 + ki * 110) + '" y="' + (T + 11) + '" font-size="10" fill="' + p.colors[ci] + '">' + p.names[ci] + '</text>';
+        });
+        g += '<text x="' + (W - R) + '" y="' + (T + 11) + '" font-size="10" fill="#3a5165" text-anchor="end">' + p.unit + '</text></svg>';
+        out += '<div class=chart style="margin-bottom:.3em">' + g + '</div>';
+    }
+    // one shared time axis at the bottom
+    let ax = '<svg viewBox="0 0 ' + W + ' 22" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block"><rect x="0" y="0" width="' + W + '" height="22" fill="#f4f7f9"/>';
+    const step = tMax > 240 ? 60 : tMax > 90 ? 30 : tMax > 30 ? 10 : 5;
+    for (let t = 0; t <= tMax; t += step) ax += '<text x="' + x(t).toFixed(1) + '" y="14" font-size="10" fill="#3a5165" text-anchor="middle">' + Math.round(t) + ' s</text>';
+    ax += '</svg>';
+    return out + '<div class=chart>' + ax + '</div>';
+};
+
 root.BBCHECK = BB;
 if (typeof module !== 'undefined' && module.exports) module.exports = BB;
 })(typeof window !== 'undefined' ? window : globalThis);

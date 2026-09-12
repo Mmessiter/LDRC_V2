@@ -109,5 +109,26 @@ const ctx = { filters: { lpf1Hz: 100, rpmPreset: 2, rpmMinHz: 20, dynCount: 0, n
     const svg = BB.svgSpectrum(parts, an, 0, gctx) + BB.svgOrder(parts, an, 0, gctx) + BB.svgTimeline(parts);
     ok(svg.length > 4000 && !/NaN|undefined/.test(svg), 'goblin: charts render from real data (' + svg.length + ' chars)');
 }
+// 11. the flight traces (part 6): the channels, the summary wording and the charts
+{
+    const d = load('rec');
+    const fl = BB.flight({ flight: d.flight });
+    ok(fl && fl.rows.length > 100, 'flight: traces decoded (' + (fl && fl.rows.length) + ' rows over ' + (fl && fl.seconds) + ' s)');
+    ok(fl.seen.hs && fl.seen.throttle && fl.seen.volts && fl.seen.amps && fl.seen.roll && fl.seen.govTarget, 'flight: head speed, throttle, volts, amps, attitude and governor all present');
+    ok(!fl.seen.escTemp, 'flight: a channel the log does not hold is reported as absent');
+    const up = fl.rows.filter(r => r[fl.idx.hs] > 1500);
+    ok(up.length > 50 && Math.abs(up[up.length - 1][fl.idx.hs] - 1800) < 120, 'flight: head speed reaches the synthetic 1800 rpm (' + up[up.length - 1][fl.idx.hs] + ')');
+    ok(Math.abs(fl.rows[fl.rows.length - 1][fl.idx.throttle] - 80) < 2, 'flight: throttle read as per cent (' + fl.rows[fl.rows.length - 1][fl.idx.throttle] + ')');
+    ok(fl.volts.first > 24 && fl.volts.first < 26 && fl.volts.last < fl.volts.first, 'flight: battery falls over the flight (' + fl.volts.first.toFixed(1) + ' -> ' + fl.volts.last.toFixed(1) + ' V)');
+    const sum = BB.flightSummary(fl);
+    ok(sum.length >= 3 && /Head speed averaged \d+ rpm/.test(sum[0]), 'flight: summary leads with head speed (' + sum[0] + ')');
+    ok(!/dipping to (2\d\d|[01]\d\d)\b/.test(sum[0]), 'flight: the spool-up is not reported as a dip');
+    ok(/Battery 2[45]\.\d V/.test(sum.join(' ')), 'flight: volts keep their decimal');
+    ok(fl.events.some(e => e.id === 52), 'flight: the airborne event is marked with a time');
+    const svg = BB.svgTraces(fl, {});
+    ok(svg.length > 8000 && !/NaN|undefined/.test(svg), 'flight: traces render (' + svg.length + ' chars)');
+    ok((svg.match(/<svg/g) || []).length >= 5, 'flight: one panel per recorded channel group plus the time axis');
+    ok(BB.flight({}) === null && BB.svgTraces(null, {}) === '', 'flight: a log without the new part is handled, not crashed');
+}
 console.log(fails ? ('FAILED: ' + fails) : 'ALL PASS');
 process.exit(fails ? 1 : 0);

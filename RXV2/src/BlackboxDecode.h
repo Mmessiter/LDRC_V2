@@ -43,13 +43,16 @@ struct Header {
     // indices of the fields the analyser wants (-1 = absent)
     int fTime = -1, fIter = -1, fHs = -1, fTail = -1, fMotor0 = -1;
     int fRaw[3] = {-1, -1, -1}, fGyro[3] = {-1, -1, -1};
+    int fThr = -1, fVbat = -1, fIbat = -1, fEscT = -1, fGovT = -1;
+    int fAtt[3] = {-1, -1, -1};
     bool haveI = false, haveS = false;
     // In place, no temporary: `*this = Header()` put a 4.8 kB Header on the 8 kB loop-task stack.
     void clear() {
         memset(this, 0, sizeof *this);
         iInterval = 32; pInterval = 1; dataVersion = 2; rpmPreset = -1;
         fTime = fIter = fHs = fTail = fMotor0 = -1;
-        for (int a = 0; a < 3; a++) { fRaw[a] = -1; fGyro[a] = -1; }
+        fThr = fVbat = fIbat = fEscT = fGovT = -1;
+        for (int a = 0; a < 3; a++) { fRaw[a] = -1; fGyro[a] = -1; fAtt[a] = -1; }
     }
 };
 
@@ -58,7 +61,14 @@ struct Frame {
     int32_t  raw[3] = {0, 0, 0};     // gyroRAW  (deg/s)
     int32_t  gyro[3] = {0, 0, 0};    // gyroADC  (deg/s, filtered)
     int32_t  hs = 0, tail = 0, motor0 = 0;
+    // What happened in the flight (units as Rotorflight writes them, blackbox.c loadMainState):
+    int32_t  thr = 0;                // rcCommand[THROTTLE], 0..1000
+    int32_t  vbat = 0, ibat = 0;     // centivolts, centiamps
+    int32_t  att[3] = {0, 0, 0};     // roll, pitch, yaw in 0.1 degrees
+    int32_t  escTemp = 0;            // degrees C (the FC has already divided by 10)
+    int32_t  govTarget = 0;          // the governor's wanted head speed, rpm
     bool hasRaw = false, hasGyro = false, hasHs = false, hasMotor = false;
+    bool hasThr = false, hasBat = false, hasAtt = false, hasEscT = false, hasGov = false;
 };
 
 struct Sink {
@@ -66,7 +76,7 @@ struct Sink {
     virtual void onLogStart(const Header&, uint32_t offset) {}
     virtual void onFrame(const Frame&) {}
     virtual void onLogEnd(uint32_t offset, bool clean) {}
-    virtual void onEvent(uint8_t id, uint32_t a, uint32_t b) {}
+    virtual void onEvent(uint8_t id, uint32_t a, uint32_t b, uint32_t timeUs) {}
 };
 
 struct Stats {
@@ -272,6 +282,12 @@ private:
             else if (strcmp(f.name, "motor") == 0 && f.idx == 0) hdr.fMotor0 = i;
             else if (strcmp(f.name, "gyroRAW") == 0 && f.idx >= 0 && f.idx < 3) hdr.fRaw[f.idx] = i;
             else if (strcmp(f.name, "gyroADC") == 0 && f.idx >= 0 && f.idx < 3) hdr.fGyro[f.idx] = i;
+            else if (strcmp(f.name, "rcCommand") == 0 && f.idx == 4) hdr.fThr = i;
+            else if (strcmp(f.name, "Vbat") == 0) hdr.fVbat = i;
+            else if (strcmp(f.name, "Ibat") == 0) hdr.fIbat = i;
+            else if (strcmp(f.name, "Tesc") == 0) hdr.fEscT = i;
+            else if (strcmp(f.name, "govTarget") == 0) hdr.fGovT = i;
+            else if (strcmp(f.name, "attitude") == 0 && f.idx >= 0 && f.idx < 3) hdr.fAtt[f.idx] = i;
         }
         sink.onLogStart(hdr, streamPos);
     }
@@ -416,6 +432,11 @@ private:
         if (hdr.fHs >= 0) { fr.hasHs = true; fr.hs = cur[hdr.fHs]; }
         if (hdr.fTail >= 0) fr.tail = cur[hdr.fTail];
         if (hdr.fMotor0 >= 0) { fr.hasMotor = true; fr.motor0 = cur[hdr.fMotor0]; }
+        if (hdr.fThr  >= 0) { fr.hasThr = true;  fr.thr  = cur[hdr.fThr]; }
+        if (hdr.fVbat >= 0) { fr.hasBat = true;  fr.vbat = cur[hdr.fVbat]; if (hdr.fIbat >= 0) fr.ibat = cur[hdr.fIbat]; }
+        if (hdr.fEscT >= 0) { fr.hasEscT = true; fr.escTemp = cur[hdr.fEscT]; }
+        if (hdr.fGovT >= 0) { fr.hasGov = true;  fr.govTarget = cur[hdr.fGovT]; }
+        if (hdr.fAtt[0] >= 0) { fr.hasAtt = true; for (int a = 0; a < 3; a++) fr.att[a] = hdr.fAtt[a] >= 0 ? cur[hdr.fAtt[a]] : 0; }
         sink.onFrame(fr);
     }
 
@@ -479,13 +500,13 @@ private:
                 for (size_t k = 0; k < sizeof(END) - 1; k++) { if (r.u8() != (uint8_t)END[k] && !r.short_) return -1; }
                 (void)r.u8();
                 if (r.short_) return 0;
-                if (!probing) { stats.eFrames++; sink.onEvent(id, 0, 0); if (inLog) { inLog = false; sink.onLogEnd(streamPos + 1 + r.i, true); } state = ST_SCAN; }
+                if (!probing) { stats.eFrames++; sink.onEvent(id, 0, 0, lastMainTime); if (inLog) { inLog = false; sink.onLogEnd(streamPos + 1 + r.i, true); } state = ST_SCAN; }
                 return 1;
             }
             default: return -1;
         }
         if (r.short_) return 0;
-        if (!probing) { stats.eFrames++; sink.onEvent(id, a, b); }
+        if (!probing) { stats.eFrames++; sink.onEvent(id, a, b, lastMainTime); }
         return 1;
     }
 
@@ -567,13 +588,21 @@ constexpr float FLY_RPM = 300.0f;    // a window counts as "flying" above this h
 
 struct LogInfo { uint32_t addr = 0, end = 0, frames = 0; float seconds = 0, hsMedian = 0; bool clean = false; };
 
+// What the pilot sees as a trace through the flight. One row per Welch window
+// (about a quarter of a second), decimated when the flight outruns TL rows.
+enum TraceCh { TR_HS = 0, TR_THR, TR_VBAT, TR_IBAT, TR_ROLL, TR_PITCH, TR_ESCT, TR_GOVT, TR_MOTOR, TR_N };
+constexpr int MAX_EV = 48;
+struct EvRec { uint32_t t; uint8_t id; uint16_t a; };
+
 // Everything the page gets for ONE log. Kept as a block so the newest FLYING
 // log survives a bench arm after landing (which would otherwise be "the last log").
 struct Res {
     float fRaw[3][BINS], fFilt[3][BINS]; uint32_t flyWin;
     float gRaw[3][BINS];                 uint32_t gndWin;
     float oRaw[3][ORD], oFilt[3][ORD], oCnt[ORD];
-    struct TLE { float t, hs, rr[3], fr[3]; } tl[TL]; int tlN, tlStride, tlSkip;
+    struct TLE { float t, hs, rr[3], fr[3]; float ch[TR_N]; float hsMin, vbatMin; } tl[TL]; int tlN, tlStride, tlSkip;
+    bool  chSeen[TR_N];                  // which traces this log actually holds
+    EvRec ev[MAX_EV]; int evN; uint32_t evDropped;
     uint32_t hsHist[HSH];
     float hsMaxAll;                      // over every window, flying or not (the "never rose above" message)
     float rate;                          // samples per second (measured)
@@ -595,6 +624,7 @@ struct Analyser : BbDec::Sink {
     // ---- working state ----
     int16_t ringR[3][N], ringF[3][N]; int ringPos = 0; uint32_t ringCount = 0; int sinceHop = 0;
     float hsAcc = 0; uint32_t hsN = 0;   // head speed over the current hop
+    float chSum[TR_N]; uint32_t chN[TR_N]; float chMin[TR_N];   // the traces over the current hop
     uint32_t dtSamples[64]; int dtN = 0; uint32_t prevTime = 0;
     float fftRe[N], fftIm[N], win[N], twr[N / 2], twi[N / 2];
     bool accumulating = false;           // true while inside a log we may report
@@ -608,7 +638,10 @@ struct Analyser : BbDec::Sink {
     void resetWork() {
         ringPos = 0; ringCount = 0; sinceHop = 0; hsAcc = 0; hsN = 0; dtN = 0; prevTime = 0;
         memset(ringR, 0, sizeof ringR); memset(ringF, 0, sizeof ringF);
+        resetHop();
     }
+    void resetHop() { for (int c = 0; c < TR_N; c++) { chSum[c] = 0; chN[c] = 0; chMin[c] = 1e9f; } }
+    void note(int c, float v) { chSum[c] += v; chN[c]++; if (v < chMin[c]) chMin[c] = v; r.chSeen[c] = true; }
     // the block the page should see
     const Res& result() const { return (wantLog == 0 && haveKeep && r.flyWin == 0) ? keep : r; }
 
@@ -644,6 +677,13 @@ struct Analyser : BbDec::Sink {
             ringF[a][ringPos] = (int16_t)(fv > 32767 ? 32767 : fv < -32768 ? -32768 : fv);
         }
         if (f.hasHs) { hsAcc += (float)f.hs; hsN++; }
+        if (f.hasHs)    note(TR_HS,    (float)f.hs);
+        if (f.hasThr)   note(TR_THR,   (float)f.thr / 10.0f);          // 0..1000 -> per cent
+        if (f.hasBat)   { note(TR_VBAT, (float)f.vbat / 100.0f); note(TR_IBAT, (float)f.ibat / 100.0f); }
+        if (f.hasAtt)   { note(TR_ROLL, (float)f.att[0] / 10.0f); note(TR_PITCH, (float)f.att[1] / 10.0f); }
+        if (f.hasEscT)  note(TR_ESCT,  (float)f.escTemp);
+        if (f.hasGov)   note(TR_GOVT,  (float)f.govTarget);
+        if (f.hasMotor) note(TR_MOTOR, (float)f.motor0);
         ringPos = (ringPos + 1) % N; ringCount++; sinceHop++;
         if (ringCount >= (uint32_t)N && sinceHop >= HOP) { sinceHop = 0; window(); }
     }
@@ -658,12 +698,17 @@ struct Analyser : BbDec::Sink {
         }
         accumulating = false;
     }
-    void onEvent(uint8_t id, uint32_t a, uint32_t b) override {
-        (void)a; (void)b;
+    void onEvent(uint8_t id, uint32_t a, uint32_t b, uint32_t timeUs) override {
+        (void)b;
         if (!accumulating) return;
         int k;
         switch (id) { case 15: k = 0; break; case 50: k = 1; break; case 51: k = 2; break; case 52: k = 3; break; case 13: k = 4; break; case 14: k = 5; break; default: k = 6; }
         r.events[k]++;
+        // Keep the ones worth marking on the trace, with the time of the frame before them.
+        if (id == 15 || id == 30 || id == 50 || id == 51 || id == 52) {
+            if (r.evN < MAX_EV) { EvRec& e = r.ev[r.evN++]; e.t = timeUs; e.id = id; e.a = (uint16_t)(a & 0xFFFF); }
+            else r.evDropped++;
+        }
     }
     void finalizeRate() {
         if (r.rate == 0 && dtN > 0) rateFromDt();
@@ -711,8 +756,12 @@ struct Analyser : BbDec::Sink {
         else {
             if (r.tlN >= TL) { for (int i = 0; i < TL / 2; i++) r.tl[i] = r.tl[2 * i]; r.tlN = TL / 2; r.tlStride *= 2; }
             Res::TLE& e = r.tl[r.tlN++]; e.t = t; e.hs = hs; for (int a = 0; a < 3; a++) { e.rr[a] = rmsR[a]; e.fr[a] = rmsF[a]; }
+            for (int c = 0; c < TR_N; c++) e.ch[c] = chN[c] ? chSum[c] / (float)chN[c] : 0;
+            e.hsMin   = chN[TR_HS]   ? chMin[TR_HS]   : 0;
+            e.vbatMin = chN[TR_VBAT] ? chMin[TR_VBAT] : 0;
             r.tlSkip = r.tlStride - 1;
         }
+        resetHop();                      // AFTER the row is written, not before
     }
     void spectrum(const int16_t* ring, float* pw, float& rms) {
         // float throughout: the S3 has no double FPU (int16 sums fit a float exactly up to 2^24)
@@ -809,6 +858,32 @@ struct Analyser : BbDec::Sink {
                 w.put("]}"); break;
             }
             case 5: { w.put("{\"filt\":"); arrOrd(w, R, R.oFilt); w.put("}"); break; }
+            case 6: {                                   // the flight itself: one row per window, means (head speed and volts also carry their lowest)
+                static const char* CH[TR_N] = { "hs", "throttle", "volts", "amps", "roll", "pitch", "escTemp", "govTarget", "motor" };
+                w.put("{\"channels\":[");
+                for (int c = 0; c < TR_N; c++) { if (c) w.put(","); w.put("{\"key\":\""); w.put(CH[c]); w.put("\",\"seen\":"); w.put(R.chSeen[c] ? "true" : "false"); w.put("}"); }
+                w.put("],\"stride\":"); w.num(R.tlStride);
+                w.put(",\"rows\":[");
+                for (int i = 0; i < R.tlN; i++) {
+                    if (i) w.put(",");
+                    w.put("["); w.fnum(R.tl[i].t, 2);
+                    for (int c = 0; c < TR_N; c++) { w.put(","); w.fnum(R.tl[i].ch[c], (c == TR_VBAT || c == TR_IBAT || c == TR_ROLL || c == TR_PITCH) ? 2 : 0); }
+                    w.put(","); w.fnum(R.tl[i].hsMin, 0); w.put(","); w.fnum(R.tl[i].vbatMin, 2);
+                    // what the gyro was doing, so vibration can be read against the flight
+                    float rr = (R.tl[i].rr[0] + R.tl[i].rr[1] + R.tl[i].rr[2]) / 3.0f;
+                    float fr = (R.tl[i].fr[0] + R.tl[i].fr[1] + R.tl[i].fr[2]) / 3.0f;
+                    w.put(","); w.fnum(rr, 1); w.put(","); w.fnum(fr, 1);
+                    w.put("]");
+                }
+                w.put("],\"events\":[");
+                for (int i = 0; i < R.evN; i++) {
+                    if (i) w.put(",");
+                    w.put("{\"t\":"); w.fnum(R.haveFirst ? (float)(R.ev[i].t - R.firstTime) / 1e6f : 0.0f, 2);
+                    w.put(",\"id\":"); w.num(R.ev[i].id); w.put(",\"a\":"); w.num(R.ev[i].a); w.put("}");
+                }
+                w.put("],\"evDropped\":"); w.num(R.evDropped); w.put("}");
+                break;
+            }
             default: w.put("{}");
         }
         if (w.ovf) return 0;

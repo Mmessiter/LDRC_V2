@@ -14,8 +14,8 @@ int main(int argc, char** argv) {
     static char out[32768];
     printf("{\"stats\":{\"i\":%u,\"p\":%u,\"s\":%u,\"e\":%u,\"resyncs\":%u,\"bad\":%u,\"logs\":%u,\"bytes\":%u,\"skipped\":%u,\"truncated\":%u}",
            dec.stats.iFrames, dec.stats.pFrames, dec.stats.sFrames, dec.stats.eFrames, dec.stats.resyncs, dec.stats.badFrames, dec.stats.logs, dec.stats.bytes, dec.stats.skipped, dec.stats.truncatedLogs);
-    const char* names[] = {"summary", "fly", "gnd", "order", "timeline", "orderFilt"};
-    for (int part = 0; part < 6; part++) { size_t L = an.toJson(part, out, sizeof out); printf(",\"%s\":%s", names[part], L ? out : "null"); fprintf(stderr, "part %d: %zu bytes\n", part, L); }
+    const char* names[] = {"summary", "fly", "gnd", "order", "timeline", "orderFilt", "flight"};
+    for (int part = 0; part < 7; part++) { size_t L = an.toJson(part, out, sizeof out); printf(",\"%s\":%s", names[part], L ? out : "null"); fprintf(stderr, "part %d: %zu bytes\n", part, L); }
     printf("}\n");
     return 0;
 }

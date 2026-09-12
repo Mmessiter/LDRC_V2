@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.670-memory-card";
+constexpr const char* FW_VERSION = "RXV2-0.9.671-flight-review";
 
 //*********************************************************************
 //  Auto-update manifest URLs
