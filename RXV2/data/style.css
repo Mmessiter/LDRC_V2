@@ -201,12 +201,20 @@ body.hasSearch .subtitle{max-width:calc(100% - 1rem)}
     position:fixed;inset:0;z-index:100;
     background:rgba(46,68,90,.55);
     -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
-    display:flex;align-items:center;justify-content:center;padding:1em;
+    display:flex;align-items:flex-start;justify-content:center;
+    /* The round button is 3em of its own 1.55em font = 4.65em tall, so the
+       panel starts below it exactly as a page's content starts below its
+       floating buttons. */
+    padding:calc(max(0.7em, env(safe-area-inset-top, 0.7em)) + 5.15em) 1em 1em;
+    overflow:auto;
 }
 .helpPanel{
     background:#ffffff;   /* SOLID — the doctrine everywhere else on these pages */
     border-radius:14px;padding:1.3em 1.5em;
-    max-width:500px;max-height:85vh;overflow-y:auto;
+    max-width:500px;width:100%;min-width:0;   /* min-width:0 — a flex child will not shrink below its longest word otherwise */
+    box-sizing:border-box;                    /* without this the 1.5em padding is ADDED to width:100% and the panel hangs off the right of a phone */
+    overflow-wrap:break-word;                 /* only a word too long for the line is broken, never ordinary text */
+    max-height:calc(100vh - max(0.7em, env(safe-area-inset-top, 0.7em)) - 6.4em);overflow-y:auto;
     box-shadow:0 8px 32px rgba(0,0,0,.25);
     color:#2c3e50;line-height:1.5;
 }
@@ -216,6 +224,12 @@ body.hasSearch .subtitle{max-width:calc(100% - 1rem)}
 .helpPanel ul{margin:.3em 0 .3em 1.2em;padding:0;color:#2c3e50}
 .helpPanel li{margin:.25em 0}
 .helpPanel code{font-family:ui-monospace,SFMono-Regular,monospace;font-size:.92em;color:#5d3a3a}
+.helpClose{
+    margin-top:1.2em;width:100%;padding:.75em;
+    background:#5fa099;color:#fff;border:0;border-radius:10px;
+    font-weight:600;font-size:1em;cursor:pointer;
+}
+.helpClose:active{transform:translateY(1px)}
 /* The way out of help is the SAME round back button as every page, in the same
    corner (Malcolm 2026-09-12: "I was expecting the left pointing arrow in a
    smaller button as on all of the other pages"). Above the overlay, so it is
@@ -232,12 +246,6 @@ body.hasSearch .subtitle{max-width:calc(100% - 1rem)}
     z-index:101;box-shadow:0 2px 6px rgba(0,0,0,.15);padding:0;margin:0;
 }
 .helpBack:active{transform:scale(.95)}
-.helpClose{
-    margin-top:1.2em;width:100%;padding:.75em;
-    background:#5fa099;color:#fff;border:0;border-radius:10px;
-    font-weight:600;font-size:1em;cursor:pointer;
-}
-.helpClose:active{transform:translateY(1px)}
 
 /* Cards ---------------------------------------------------------------- */
 .card{

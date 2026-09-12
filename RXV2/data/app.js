@@ -232,7 +232,7 @@
             // (Malcolm 2026-09-12: "I sometimes load a help screen by mistake
             // and then need to scroll all the way to the bottom to exit").
             overlay.innerHTML =
-                '<button class="helpClose helpBack" type=button aria-label=Back title=Back>\u2B05\uFE0F</button>'
+                '<button class=helpBack type=button aria-label=Back title=Back>\u2B05\uFE0F</button>'
                 + '<div class=helpPanel>'
                 + html + linkTip + homeTip
                 + '<button class=helpClose type=button>Got it</button>'
@@ -242,7 +242,7 @@
             overlay.addEventListener('click', (e) => {
                 if (e.target === overlay) close();
             });
-            overlay.querySelectorAll('.helpClose').forEach(b => b.addEventListener('click', close));
+            overlay.querySelectorAll('.helpClose, .helpBack').forEach(b => b.addEventListener('click', close));
             document.addEventListener('keydown', onKey);
             document.body.appendChild(overlay);
         },
