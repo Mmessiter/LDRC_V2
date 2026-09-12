@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name=theme-color content="#5fa099">
+<meta name=apple-mobile-web-app-capable content=yes>
+<meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
+<meta name=apple-mobile-web-app-title content="LDRC RX V2">
+<title>Vibration check &middot; LDRC RX V2</title>
+<link rel=stylesheet href="/style.css?v=182">
+<script src="/app.js?v=202" defer></script>
+<script src="/bbcheck.js?v=1" defer></script>
+<style>
+.banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
+.banner.info{background:#c8d2dc;color:#3a5165}
+.banner.good{background:#a8d29a;color:#2a4d1f}
+.banner.bad {background:#dca08c;color:#5c2a1a}
+.banner.warn{background:#e8cf8f;color:#5c4a1a}
+.needUsb{background:#e8cf8f;color:#5c4a1a;border-radius:10px;padding:.7em .9em;font-weight:600;margin:0 0 1em;line-height:1.4}
+.do{margin:.2em 0 .6em;line-height:1.45}
+.sub{font-size:.88em;color:#5d7a8c;margin:.3em 0}
+.bar{height:1.1em;background:#dfe6ec;border-radius:6px;overflow:hidden;margin:.6em 0 .3em}
+.bar i{display:block;height:100%;background:#5f8fab;transition:width .4s}
+.prog{text-align:center;font-weight:600;color:#3a5165;min-height:1.3em}
+.verdict{background:#eaf3ee;border-radius:10px;padding:.8em .9em;margin:.4em 0 .6em;line-height:1.45}
+.verdict.rpm,.verdict.notch,.verdict.dyn,.verdict.lpf{background:#fdf3e4}
+.verdict.data{background:#fdf0ec}
+.verdict.ok{background:#eaf3ee}
+.verdict b{display:block;font-size:1.05em;margin-bottom:.25em}
+.more{background:#e6edf2;border-radius:10px;padding:.6em .8em;margin:.4em 0;line-height:1.4;font-size:.95em}
+.applyBtn{width:100%;margin-top:.5em;padding:.7em;border:0;border-radius:10px;background:#6cab5e;color:#fff;font-size:1em;font-weight:700;cursor:pointer}
+.applyBtn:disabled{opacity:.5}
+.startBtn{width:100%;padding:.8em;border:0;border-radius:10px;background:#3f8f6a;color:#fff;font-size:1.05em;font-weight:700;cursor:pointer}
+.startBtn:disabled{opacity:.5}
+.cancelBtn{width:100%;margin-top:.5em;padding:.6em;border:0;border-radius:10px;background:#c98a4a;color:#fff;font-size:.95em;font-weight:700;cursor:pointer}
+table.pk{width:100%;border-collapse:collapse;font-size:.9em;margin:.4em 0}
+table.pk th,table.pk td{padding:.3em .35em;text-align:right;border-bottom:1px solid #d7dee4;color:#2f4452}
+table.pk th{font-weight:700;color:#3a5165}
+table.pk td:first-child,table.pk th:first-child,table.pk td:nth-child(3),table.pk th:nth-child(3){text-align:left}
+.chartTitle{font-weight:700;color:#3a5165;margin:.7em 0 .2em}
+.chart{border-radius:8px;overflow:hidden;border:1px solid #d7dee4;background:#f4f7f9}
+.usbOnly:disabled{color:#2c3e50;-webkit-text-fill-color:#2c3e50;opacity:.8}
+.flights{display:flex;flex-wrap:wrap;gap:.4em;margin:.4em 0}
+.flights button{padding:.45em .7em;border:0;border-radius:8px;background:#5f8fab;color:#fff;font-weight:700;cursor:pointer;font-size:.9em}
+.flights button.cur{background:#3f8f6a}
+</style>
+</head>
+<body>
+<button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
+<div class=bg-photo aria-hidden=true></div>
+<div class=bg-wash  aria-hidden=true></div>
+<div class=container>
+    <h1>Vibration check</h1>
+    <p class=subtitle>Reads the last flight from the black box and says which filter to change (Blackbox spectrum)</p>
+    <div id=needUsb class=needUsb style="display:none"></div>
+    <div id=status class="banner info" style="display:none"></div>
+
+    <div class=card id=startCard>
+        <p class=do id=recNote><b>Record Gyro raw, Gyro and Head speed at 1 in 2, erase, fly a hover and a few brisk moves, land, transmitter off.</b> Then check. One change, one flight, check again.</p>
+        <div id=recWarn class=more style="display:none"></div>
+        <button class="startBtn usbOnly" id=startBtn onclick="startCheck(0)">&#128200; Check the last flight</button>
+        <div id=progWrap style="display:none">
+            <div class=bar><i id=barFill style="width:0"></i></div>
+            <div class=prog id=progText></div>
+            <button class=cancelBtn onclick="cancelCheck()">Cancel</button>
+        </div>
+        <p class=sub id=memText></p>
+    </div>
+
+    <div id=result style="display:none">
+        <div class=card id=verdictCard></div>
+        <div class=card id=peaksCard style="display:none">
+            <h2>Strongest vibrations in flight</h2>
+            <div id=peaksTable></div>
+            <div id=flightsWrap style="display:none"><p class=sub>More than one flight in the memory. Showing the one marked; tap another to check it.</p><div class=flights id=flights></div></div>
+        </div>
+        <div class=card id=chartsCard style="display:none">
+            <h2>Before and after the filters</h2>
+            <div id=charts></div>
+        </div>
+    </div>
+    <div class=footer></div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+function hexToBytes(h){const o=new Uint8Array(h.length/2);for(let i=0;i<o.length;i++)o[i]=parseInt(h.substr(i*2,2),16);return o;}
+function bytesToHex(b){return Array.from(b).map(x=>x.toString(16).padStart(2,'0')).join('');}
+const rdU16=(b,o)=>b[o]|(b[o+1]<<8);
+const rdU32=(b,o)=>(b[o]|(b[o+1]<<8)|(b[o+2]<<16)|(b[o+3]<<24))>>>0;
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const mb=n=>n>=1048576?(n/1048576).toFixed(1)+' MB':n>=1024?Math.round(n/1024)+' kB':n+' B';
+function setStatus(k,t){const s=$('status');s.style.display=t?'':'none';if(!t)return;s.className='banner '+k;s.textContent=t;}
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+
+// ---- flight-controller context: filters (MSP 92, 27 B), gear ratios (MSP 131), recorder (MSP 80), memory (MSP 70) ----
+const FLEN=27;
+let filtRaw=null, filters=null, gear={main:0,tail:0}, rec=null, mem=null, polling=false, parts=null, analysis=null, curLog=0;
+function parseFilters(b){ return { lpf1t:b[1], lpf1Hz:rdU16(b,2), lpf2t:b[4], lpf2Hz:rdU16(b,5), n1:rdU16(b,7), n1c:rdU16(b,9), n2:rdU16(b,11), n2c:rdU16(b,13), dynCount:b[19], dynQ:b[20], dynMin:rdU16(b,21), dynMax:rdU16(b,23), rpmPreset:b[25], rpmMinHz:b[26] }; }
+async function readContext(){
+    try{ const b=hexToBytes(await LDRC.msp(92)); if(b.length>=FLEN){ filtRaw=b.slice(0,FLEN); filters=parseFilters(b); } }catch(e){}
+    try{ const b=hexToBytes(await LDRC.msp(131)); if(b.length>=29){ const mn=rdU16(b,21),md=rdU16(b,23),tn=rdU16(b,25),td=rdU16(b,27); gear.main=(mn&&md)?md/mn:0; gear.tail=(tn&&td)?td/tn:0; if(gear.main<1&&gear.main>0)gear.main=1/gear.main; if(gear.tail<1&&gear.tail>0)gear.tail=1/gear.tail; } }catch(e){}
+    try{ const b=hexToBytes(await LDRC.msp(80)); if(b.length>=13&&b[0]) rec={device:b[1],mode:b[2],denom:rdU16(b,3),fields:rdU32(b,5)}; }catch(e){}
+    try{ const b=hexToBytes(await LDRC.msp(70)); if(b.length>=13) mem={flags:b[0],total:rdU32(b,5),used:rdU32(b,9)}; }catch(e){}
+    paintContext();
+}
+function paintContext(){
+    const w=[];
+    if(rec){
+        const f=rec.fields, miss=[]; if(!(f&(1<<5)))miss.push('Gyro raw'); if(!(f&(1<<6)))miss.push('Gyro'); if(!(f&(1<<13)))miss.push('Head speed');
+        if(miss.length) w.push('<b>The recorder is not saving '+miss.join(', ')+'.</b> Tick '+(miss.length>1?'them':'it')+' on the Flight recorder page before the next flight, or the check has nothing to read.');
+        if(rec.denom>8) w.push('<b>How often is 1 in '+rec.denom+'</b>: too slow to see vibration above '+Math.round(4000/rec.denom/2)+' Hz. Set 1 in 2 on the Flight recorder page.');
+        if(rec.mode===0||rec.device===0) w.push('<b>The recorder is off</b> (When: never, or Where: nowhere). Turn it on on the Flight recorder page.');
+    }
+    const wd=$('recWarn'); wd.style.display=w.length?'':'none'; wd.innerHTML=w.map(x=>'<div>'+x+'</div>').join('')+(w.length?'<a href="/rotorflight-blackbox" style="display:inline-block;margin-top:.4em;font-weight:700;color:#2f4452">Flight recorder page &rarr;</a>':'');
+    if(mem){ $('memText').textContent=(mem.flags&1)?('Black box: '+mb(mem.used)+' recorded of '+mb(mem.total)+(mem.used?' — reading takes about '+Math.max(5,Math.round(mem.used/100000))+' s per flight':'')):'No memory chip for the black box on this flight controller.'; }
+}
+
+// USB only: say so in one line, keep the button off until it is true (as the command line does)
+async function usbGate(){
+    const s=await LDRC.fetchState();
+    const ok=!!(s&&s.usb&&s.usb.device);
+    const g=$('needUsb'); g.style.display=ok?'none':'';
+    if(!ok&&s) g.textContent = s.sim ? 'Simulator mode is using the USB socket. Turn the simulator off (Setup) to reach the flight controller over USB.'
+        : (s.usb&&!s.usb.host&&!s.dongle) ? 'The USB socket is off. Turn it on in Setup, then connect a USB cable between the flight controller’s USB socket and this receiver’s.'
+        : 'Connect a USB cable between the flight controller’s USB socket and the '+(s.dongle?'dongle':'receiver')+'’s USB socket. The check reads the black box over USB.';
+    document.querySelectorAll('.usbOnly').forEach(el=>{ el.disabled=!ok||polling; });
+    return ok?s:null;
+}
+
+// ---- the check ----
+async function startCheck(logIdx){
+    if(polling) return;
+    curLog=logIdx||0;
+    const qs='/api/blackbox/check'+(curLog?'?log='+curLog:'');
+    let r; try{ r=await fetch(qs,{method:'POST',cache:'no-store'}); }catch(e){ setStatus('bad','Could not start: '+e.message); return; }
+    if(!r.ok){ setStatus('bad',await r.text()); return; }
+    setStatus('','');
+    $('result').style.display='none'; $('progWrap').style.display=''; $('barFill').style.width='0'; $('progText').textContent='Starting…';
+    polling=true; document.querySelectorAll('.usbOnly').forEach(el=>{ el.disabled=true; });
+    poll();
+}
+async function cancelCheck(){ try{ await fetch('/api/blackbox/cancel',{method:'POST',cache:'no-store'}); }catch(e){} }
+async function poll(){
+    let st=null;
+    try{ st=await (await fetch('/api/blackbox/status',{cache:'no-store'})).json(); }catch(e){}
+    if(!st){ setTimeout(poll,1000); return; }
+    if(st.state==='reading'||st.state==='summary'){
+        $('barFill').style.width=(st.pct||0)+'%';
+        const secs=Math.round((st.ms||0)/1000);
+        $('progText').textContent=(st.state==='summary'?'Asking the flight controller…':(mb(st.bytes)+' of '+mb(st.end-st.start)+' read'+(st.logs?' — '+st.logs+' flight'+(st.logs>1?'s':'')+' so far':'')+(st.hs?' — head speed '+st.hs+' rpm':'')+' — '+secs+' s'));
+        setTimeout(poll,700); return;
+    }
+    polling=false; $('progWrap').style.display='none';
+    document.querySelectorAll('.usbOnly').forEach(el=>{ el.disabled=false; });
+    if(st.state==='failed'){ setStatus('bad','Stopped: '+st.reason); return; }
+    if(st.state==='done'){ $('progText').textContent=''; await showResult(st); return; }
+    setStatus('info','State: '+st.state);
+}
+async function fetchPart(n){ const r=await fetch('/api/blackbox/result?part='+n,{cache:'no-store'}); if(!r.ok) throw new Error('result part '+n+': '+(await r.text())); return r.json(); }
+async function showResult(st){
+    setStatus('info','Reading the result…');
+    try{
+        const [summary,fly,gnd,order,timeline,orderFilt]=await Promise.all([0,1,2,3,4,5].map(fetchPart));
+        parts={summary,fly,gnd,order,timeline,orderFilt};
+    }catch(e){ setStatus('bad',e.message); return; }
+    setStatus('','');
+    render();
+}
+function render(){
+    const ctx={filters:filters||{}, gearMain:gear.main, gearTail:gear.tail, blades:2, tailBlades:2};
+    analysis=BBCHECK.analyse(parts,ctx);
+    const a=analysis, S=parts.summary;
+    // verdict: one patch of text — bold what to do, then why; Apply if it can be applied here
+    let h='';
+    const p=a.primary;
+    if(p){
+        h+='<div class="verdict '+p.kind+'"><b>'+esc(p.title)+'</b>'+esc(p.why);
+        if(p.action&&filtRaw) h+='<button class=applyBtn id=applyBtn onclick="applyAction(analysis.primary.action)">'+esc(p.action.text)+'</button>';
+        h+='</div>';
+    }
+    for(const v of a.verdicts.slice(1)) h+='<div class=more><b>'+esc(v.title)+'.</b> '+esc(v.why)+(v.action&&filtRaw?'<button class=applyBtn onclick=\'applyAction('+JSON.stringify(v.action).replace(/'/g,'&#39;')+')\'>'+esc(v.action.text)+'</button>':'')+'</div>';
+    for(const n of a.notes) h+='<div class=more>'+esc(n)+'</div>';
+    const secs=Math.round(a.seconds||0), hsm=Math.round(a.hsMedian||0);
+    h+='<p class=sub>'+(S.header&&S.header.date?esc(S.header.date.slice(0,16).replace('T',' '))+' — ':'')+secs+' s recorded at '+Math.round(a.rate)+' samples a second'+(hsm?', head speed about '+hsm+' rpm':'')+(S.logs&&S.logs.length>1?', flight '+(S.wantLog||S.logs.length)+' of '+S.logs.length:'')+(S.logs&&S.logs.length&&!S.logs[(S.wantLog||S.logs.length)-1].clean?' (the log ends abruptly: power off before disarm?)':'')+'.'+(a.hsSpread>0.08?' The head speed varied a lot (±'+Math.round(a.hsSpread*100)+' %), which smears the rotor lines.':'')+'</p>';
+    $('verdictCard').innerHTML=h;
+    // peaks
+    const pk=a.peaks.slice(0,10);
+    if(pk.length){
+        let t='<table class=pk><tr><th>Where</th><th>Hz</th><th>What</th><th>Before</th><th>After</th><th>Removed</th></tr>';
+        for(const L of pk) t+='<tr><td>'+L.axisName+'</td><td>'+L.f+'</td><td>'+esc(L.label)+(L.order?' (×'+L.order+')':'')+'</td><td>'+L.dbRaw+'</td><td>'+L.dbAfter+'</td><td>'+L.atten+' dB</td></tr>';
+        t+='</table><p class=sub>dB: louder is higher; 20 dB removed is a tenth of the swing. × = times the head speed.</p>';
+        $('peaksTable').innerHTML=t; $('peaksCard').style.display='';
+    } else { $('peaksTable').innerHTML='<p class=sub>No strong vibration lines.</p>'; $('peaksCard').style.display=''; }
+    // flights list
+    if(S.logs&&S.logs.length>1){
+        const cur=S.wantLog||S.logs.length;
+        $('flights').innerHTML=S.logs.map((L,i)=>'<button class="'+(i+1===cur?'cur':'')+'" onclick="startCheck('+(i+1)+')">Flight '+(i+1)+(L.seconds?' — '+Math.round(L.seconds)+' s':'')+(L.hsMedian?', '+Math.round(L.hsMedian)+' rpm':'')+'</button>').join('');
+        $('flightsWrap').style.display='';
+    } else $('flightsWrap').style.display='none';
+    // charts
+    if(a.ok){
+        let c='';
+        const opts={gearMain:gear.main,gearTail:gear.tail,maxHz:Math.min(600,a.rate/2)};
+        for(let ax=0;ax<3;ax++){ c+='<div class=chartTitle>'+['Roll','Pitch','Yaw'][ax]+'</div><div class=chart>'+BBCHECK.svgSpectrum(parts,a,ax,opts)+'</div>'; }
+        const o=BBCHECK.svgOrder(parts,a,0,{gearMain:gear.main,gearTail:gear.tail});
+        if(o) c+='<div class=chartTitle>Roll, as multiples of the head speed</div><div class=chart>'+o+'</div><p class=sub>Peaks on whole numbers are rotor vibration (1 = once per rev, 2 = the two blades). Motor and tail marks come from the gear ratios on the First-time basics page.</p>';
+        const tl=BBCHECK.svgTimeline(parts); if(tl) c+='<div class=chartTitle>Through the flight</div><div class=chart>'+tl+'</div>';
+        $('charts').innerHTML=c; $('chartsCard').style.display='';
+    } else $('chartsCard').style.display='none';
+    $('result').style.display='';
+}
+
+// ---- apply a change to the filters (MSP 92 → 93 + 250, read-modify-write, takes effect at once) ----
+async function applyAction(act){
+    if(!filtRaw){ setStatus('bad','Filters not read yet'); return; }
+    const s=await LDRC.fetchState(); if(s&&s.rf&&s.rf.armed){ setStatus('bad','Refused — the model is ARMED'); return; }
+    if(!(await LDRC.confirm(act.text+'? It takes effect at once on the flight controller and is saved. Fly, then check again.',{title:'Change a filter',icon:'🎛️',yes:'Change it'}))) return;
+    try{
+        const b=new Uint8Array(hexToBytes(await LDRC.msp(92)).slice(0,FLEN));
+        const w16=(o,v)=>{b[o]=v&255;b[o+1]=(v>>8)&255;};
+        switch(act.set){
+            case 'rpmPreset': b[25]=act.value; break;
+            case 'rpmMinHz': b[26]=act.value; break;
+            case 'dynCount': b[19]=act.value; if(b[20]<10)b[20]=25; if(rdU16(b,21)<10)w16(21,25); if(rdU16(b,23)<rdU16(b,21)+20)w16(23,Math.max(rdU16(b,21)+20,350)); break;
+            case 'notch1': w16(7,act.value); w16(9,act.cutoff); break;
+            case 'notch2': w16(11,act.value); w16(13,act.cutoff); break;
+            case 'lpf1Hz': w16(2,act.value); break;
+            default: throw new Error('unknown change');
+        }
+        await LDRC.msp(93,bytesToHex(b)); await LDRC.msp(250);
+        const back=hexToBytes(await LDRC.msp(92)); filtRaw=back.slice(0,FLEN); filters=parseFilters(back);
+        setStatus('good','✓ '+act.text+' — in use now and saved. Fly, then check again.');
+        render();
+    }catch(e){ setStatus('bad','Not changed: '+e.message); }
+}
+
+document.addEventListener('DOMContentLoaded', async ()=>{
+    if(window.LDRC&&LDRC.replayReady) await LDRC.replayReady;
+    const s=await usbGate();
+    if(s) await readContext();
+    // a check already running or finished on the receiver (the page was left and reopened)
+    try{ const st=await (await fetch('/api/blackbox/status',{cache:'no-store'})).json();
+         if(st.state==='reading'||st.state==='summary'){ polling=true; $('progWrap').style.display=''; document.querySelectorAll('.usbOnly').forEach(el=>{ el.disabled=true; }); poll(); }
+         else if(st.state==='done'&&st.result){ await showResult(st); } }catch(e){}
+});
+</script>
+<template id=helpContent><h2>Vibration check</h2>
+<p>Reads the flight controller&rsquo;s black box over the USB cable, works out the vibration spectrum of the gyro before and after the filters, and says in one line which filter to change. What the Rotorflight Blackbox Explorer shows on a computer, judged for you.</p>
+<h3>What to record</h3>
+<p>On the Flight recorder page tick <b>Gyro raw</b>, <b>Gyro</b> and <b>Head speed</b> (RPM), set <b>How often</b> to <b>1 in 2</b>, and <b>Erase</b> so the next flight is the only one. Fly a normal flight: a hover and a few brisk moves. Land, switch the transmitter off, connect the USB cable, tap <b>Check the last flight</b>.</p>
+<h3>What it looks for</h3>
+<ul>
+<li><b>Lines at multiples of the head speed</b> (1 per rev, the blades, the motor, the tail) are rotor vibration. The rotor-speed notches remove them &mdash; when they have a head-speed signal and cover enough harmonics (low, normal, high).</li>
+<li><b>A line that does not follow the head speed</b> is something loose or resonant: tail boom, canopy, a wire, a bearing. Fix it if you can; otherwise a fixed notch at that frequency.</li>
+<li><b>Grass everywhere</b> with no lines: Lowpass 1 a little lower, never below 60 Hz.</li>
+<li><b>Lines all taken down to the floor</b>: leave the filters alone.</li>
+</ul>
+<p><b>Before</b> is the gyro as the sensor sees it, <b>after</b> is what the control loop gets. dB: 20 dB removed means a tenth of the swing is left.</p>
+<h3>Applying a change</h3>
+<p>The button under the advice writes that one filter setting to the flight controller and saves it; it is in use at once. One change, one flight, check again. Everything else stays as it was; the Filters page shows it all.</p>
+<h3>Limits</h3>
+<ul>
+<li>USB cable only, transmitter off, model disarmed: the check needs the flight controller to itself for a minute (10 MB takes about two).</li>
+<li>Reads the most recent flight; with several in the memory it lists them and any can be checked.</li>
+<li>Motor and tail lines are named from the gear ratios on the First-time basics page; two-bladed heads and tails are assumed.</li>
+<li>With <i>Overwrite the oldest</i> on, a flight that wrapped round the end of the memory may be missed.</li>
+</ul>
+</template>
+</body>
+</html>

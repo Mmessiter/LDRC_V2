@@ -134,14 +134,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 <li><b>Dynamic notches</b>: hunt for the strongest vibration by themselves, for what the rotor-speed notches miss.</li>
 <li><b>Fixed notches</b>: for a vibration that stays at one frequency whatever the head speed.</li>
 </ul>
-<h3>Seeing what you need in the black box</h3>
+<h3>Which filter to change: the Vibration check</h3>
 <ol>
-<li>On the Flight recorder page set <b>How often</b> to every loop or 1 in 2, with the recommended fields. Fly a normal flight with a hover and some brisk moves.</li>
-<li>On a computer, download the log with the Rotorflight Configurator (Blackbox tab) and open it in the Rotorflight Blackbox Explorer. Click the filtered gyro trace and choose the frequency view.</li>
-<li><b>Peaks at multiples of the blade frequency</b> (they move with head speed): rotor and motor vibration. Raise the rotor-speed notches from normal to high, or check the head-speed signal reaches the flight controller.</li>
-<li><b>A peak that stays put at all head speeds</b>: something else is vibrating, such as the tail boom, a wire or a loose part. Fix it if you can; otherwise a fixed notch at that frequency.</li>
-<li><b>Grass everywhere</b> with no clear peaks: lower Lowpass 1 a little, never below 60 Hz.</li>
-<li>Peaks gone and the trace clean: leave the filters alone.</li>
+<li>On the Flight recorder page tick <b>Gyro raw</b>, <b>Gyro</b> and <b>Head speed</b>, set <b>How often</b> to 1 in 2, erase, and fly a normal flight with a hover and some brisk moves.</li>
+<li>Land, transmitter off, USB cable in, open <b>Vibration check</b> (Flight recorder page or the full list). It reads the log over USB and tells you, in one line, what to change &mdash; and applies it if you agree.</li>
+<li>It reads the spectrum the way a Rotorflight expert would: peaks at multiples of the head speed are rotor, motor or tail (rotor-speed notches, or a head-speed signal problem); a peak that does not follow the head speed is something loose (fix it, or a fixed notch); grass everywhere is Lowpass 1 (never below 60 Hz); a clean trace means leave the filters alone.</li>
+<li>One change, one flight, check again.</li>
 </ol>
 </template>
 </body>
