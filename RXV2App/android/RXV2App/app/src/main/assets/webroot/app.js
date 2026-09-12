@@ -224,7 +224,7 @@
                 + 'every setting, any size, the command line, ports, factory reset and the black box. '
                 + 'A transmitter’s own Lua scripts have only the slow CRSF tunnel with its 320-byte replies, so they stop at the everyday pages. '
                 + 'With both wires this app can do everything the configurator can, apart from flashing Rotorflight itself. '
-                + 'Buy the shortest one you can, right-angled at both ends if possible, and make sure it is a <b>data</b> cable, not a charge-only lead. Tie it down and leave it in: it costs nothing in the air.</li>'
+                + 'A <b>Chenyang CY-UC-088-0.07M</b> is ideal (70 mm, flat, right-angled at both ends, on Amazon). Any short one will do, so long as it carries <b>data</b> \u2014 many short USB-C leads only charge. Tie it down and leave it in: it costs nothing in the air.</li>'
                 + '</ul></div>';
             const overlay = document.createElement('div');
             overlay.className = 'helpModal';

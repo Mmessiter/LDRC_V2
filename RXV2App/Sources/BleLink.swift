@@ -66,6 +66,17 @@ final class BleLink: NSObject, ObservableObject {
     private var rxDiscarded = 0        // stale bytes skipped while hunting the header
     private var timeoutTimer: Timer?
 
+    // CoreBluetooth's connect() never gives up: out of range it waits for
+    // ever and the app looks frozen (Malcolm 2026-09-12: "it fails slowly
+    // and I have to quit the app"). These give it a deadline and, when the
+    // signal was weak to begin with, say so in plain words.
+    private var connectWatchdog: Timer?
+    private var connectingRssi = 0
+    /// Shown under the spinner while connecting: a warning about a weak signal.
+    @Published var connectNote: String? = nil
+    /// Anything at or below this is too weak to connect reliably.
+    static let weakRssi = -85
+
     // Raw OTA chunk lane: 0xA5-framed writes streamed write-without-response,
     // flow-controlled by canSendWriteWithoutResponse. Independent of the
     // request pipeline — the firmware routes 0xA5 frames straight to flash.
@@ -108,6 +119,7 @@ final class BleLink: NSObject, ObservableObject {
         lastName = d.name
         userDisconnect = false
         state = .connecting(d.name)
+        startConnectWatchdog(d.name, rssi: d.rssi)
         peripheral = d.peripheral
         d.peripheral.delegate = self
         // Remember the CoreBluetooth identifier so the NEXT launch can
@@ -150,6 +162,7 @@ final class BleLink: NSObject, ObservableObject {
             guard let self else { return }
             if case .connecting = self.state, self.peripheral === p,
                p.state != .connected {
+                self.connectNote = "\(name) has not answered — it may be switched off or too far away."
                 self.state = .scanning
                 self.central.scanForPeripherals(withServices: [Self.serviceUUID], options: nil)
             }
@@ -157,7 +170,33 @@ final class BleLink: NSObject, ObservableObject {
         return true
     }
 
+    // Give up on a connection that is going nowhere, and say why.
+    private func startConnectWatchdog(_ name: String, rssi: Int, seconds: TimeInterval = 12) {
+        connectWatchdog?.invalidate()
+        connectingRssi = rssi
+        connectNote = (rssi != 0 && rssi <= Self.weakRssi)
+            ? "The signal is weak (\(rssi) dBm). Move closer to the model."
+            : nil
+        connectWatchdog = Timer.scheduledTimer(withTimeInterval: seconds, repeats: false) { [weak self] _ in
+            guard let self else { return }
+            guard case .connecting = self.state else { return }
+            if let p = self.peripheral { self.central.cancelPeripheralConnection(p) }
+            self.cleanupConnection(message: nil)
+            self.state = .failed(self.connectingRssi != 0 && self.connectingRssi <= Self.weakRssi
+                ? "Too far away. The signal from \(name) was weak (\(self.connectingRssi) dBm) — get closer and tap it again."
+                : "\(name) did not answer. Get closer, check it is switched on, and tap it again.")
+            self.connectNote = nil
+            // Keep scanning so the list refills and he can retry at once —
+            // but do NOT set .scanning, which would wipe the message above.
+            if self.central.state == .poweredOn {
+                self.central.scanForPeripherals(withServices: [Self.serviceUUID], options: nil)
+            }
+        }
+    }
+    private func stopConnectWatchdog() { connectWatchdog?.invalidate(); connectWatchdog = nil; connectNote = nil }
+
     func disconnect() {
+        stopConnectWatchdog()
         userDisconnect = true
         scannerAutoDone = true   // returning to the scanner MEANS "let me choose"
         if let p = peripheral { central.cancelPeripheralConnection(p) }
@@ -430,7 +469,11 @@ extension BleLink: CBCentralManagerDelegate, CBPeripheralDelegate {
 
     func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral,
                         error: Error?) {
-        state = .failed(error?.localizedDescription ?? "Connection failed")
+        stopConnectWatchdog()
+        let name = lastName ?? "The receiver"
+        state = .failed(connectingRssi != 0 && connectingRssi <= Self.weakRssi
+            ? "Too far away. The signal from \(name) was weak (\(connectingRssi) dBm) — get closer and tap it again."
+            : (error?.localizedDescription ?? "Connection failed"))
         cleanupConnection(message: nil)
     }
 
@@ -503,6 +546,7 @@ extension BleLink: CBCentralManagerDelegate, CBPeripheralDelegate {
         }
         if reqChr != nil && respChr != nil {
             let name = peripheral.name ?? "RXV2"
+            stopConnectWatchdog()
             state = .ready(name)
             pump()
         } else {

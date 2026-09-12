@@ -582,6 +582,7 @@ struct ScannerView: View {
     }
 
     private var statusText: String {
+        if let note = link.connectNote { return note }
         switch link.state {
         case .failed(let m): return m
         default: return "Bring the receiver within a few metres and make sure it is in config mode (LED behaviour as usual)."

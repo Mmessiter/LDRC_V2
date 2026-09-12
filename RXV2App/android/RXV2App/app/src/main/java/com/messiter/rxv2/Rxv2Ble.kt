@@ -30,6 +30,7 @@ import java.util.UUID
 class Rxv2Ble(private val context: Context) {
 
     companion object {
+        const val WEAK_RSSI = -85      // at or below this, too weak to connect reliably
         val SERVICE: UUID  = UUID.fromString("8e400001-f315-4f60-9fb8-838830daea50")
         val REQ: UUID      = UUID.fromString("8e400002-f315-4f60-9fb8-838830daea50")
         val RESP: UUID     = UUID.fromString("8e400003-f315-4f60-9fb8-838830daea50")
@@ -156,12 +157,38 @@ class Rxv2Ble(private val context: Context) {
     }
     private var reconnectUntil = 0L
 
+    // connectGatt can sit for half a minute before Android gives up, and out
+    // of range it may never report at all - the app just looks stuck (Malcolm
+    // 2026-09-12: "it fails slowly and I have to quit the app"). Give it a
+    // deadline, and when the signal was weak to begin with, say so plainly.
+    private var connectWatchdog: Runnable? = null
+    private var connectingRssi = 0
+
+    private fun armConnectWatchdog(name: String, rssi: Int, ms: Long = 12_000) {
+        cancelConnectWatchdog()
+        connectingRssi = rssi
+        val r = Runnable {
+            if (state !is State.Connecting) return@Runnable
+            runCatching { gatt?.disconnect(); gatt?.close() }
+            gatt = null
+            state = State.Failed(
+                if (rssi != 0 && rssi <= WEAK_RSSI)
+                    "Too far away. The signal from $name was weak ($rssi dBm) - get closer and tap it again."
+                else
+                    "$name did not answer. Get closer, check it is switched on, and tap it again.")
+        }
+        connectWatchdog = r
+        ui.postDelayed(r, ms)
+    }
+    private fun cancelConnectWatchdog() { connectWatchdog?.let { ui.removeCallbacks(it) }; connectWatchdog = null }
+
     fun connect(d: Discovered) {
         stopScan()
         connName = d.name
         lastDevice = d.device
         userDisconnect = false
         state = State.Connecting(d.name)
+        armConnectWatchdog(d.name, d.rssi)
         // Remember the MAC so the NEXT launch can connect directly
         // (fastConnect) without waiting for a scan to hear an advert.
         context.getSharedPreferences("scanner", android.content.Context.MODE_PRIVATE)
@@ -186,6 +213,7 @@ class Rxv2Ble(private val context: Context) {
     }
 
     fun disconnect() {
+        cancelConnectWatchdog()
         userDisconnect = true
         // No GATT (the link had already dropped, or we are between reconnect
         // attempts): nothing will call back, so go Idle here — otherwise the
@@ -445,6 +473,7 @@ class Rxv2Ble(private val context: Context) {
         }
         override fun onDescriptorWrite(g: BluetoothGatt, d: BluetoothGattDescriptor, status: Int) {
             bg.post {
+                cancelConnectWatchdog()
                 state = State.Ready(connName)
                 pump()
             }
