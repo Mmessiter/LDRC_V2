@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.672-keep-checks",
+      "url": "https://messiter.com/rxv2/release/v0.9.672/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.672/littlefs.bin",
+      "fs_md5": "42bc5e6891cb1234bb63b9650617f8bd",
+      "notes": "Every finished check is now kept on the phone - the last six per model, about 30 kB each - and any of them can be opened again with no cable and no helicopter. So erasing the black box costs nothing, and a flight can be looked at again after a filter change. A kept check is clearly marked and can change nothing; run a new one for that. Page only, no firmware behaviour changed. Includes 0.9.671."
+    },
+    {
       "name": "RXV2-0.9.671-flight-review",
       "url": "https://messiter.com/rxv2/release/v0.9.671/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.671/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.661/littlefs.bin",
       "fs_md5": "4a5b8936cbc17667c53e9dc3fd4674e1",
       "notes": "VIBRATION CHECK: the receiver (or dongle) reads the flight controller's black box over the USB cable (MSP 70/71, 512-byte chunks, one per loop pass), decodes Rotorflight 4.6's log format on the fly (src/BlackboxDecode.h, spec in BLACKBOX-FORMAT.md), accumulates Welch spectra of the gyro before and after the filters plus a head-speed-locked order spectrum, and the new page (Flight recorder \u2192 Vibration check, or the full list) names the lines (rotor, blades, motor, tail, or something loose), says in one line which filter to change and applies it (rotor-speed notch preset, lowest rotor frequency, fixed notch 1/2, dynamic notches, Lowpass 1). USB only, transmitter off, disarmed; /api/msp answers 503 while it runs; the heartbeat and TX-param machine stand down. Host-tested on synthetic logs (dev/bbcheck_test.sh). Includes 0.9.660."
-    },
-    {
-      "name": "RXV2-0.9.660-two-wires-card",
-      "url": "https://messiter.com/rxv2/release/v0.9.660/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.660/littlefs.bin",
-      "fs_md5": "bc58a547f80b3d75365a177808fb3de9",
-      "notes": "Before you start opens with 'First, get a short USB-C data cable': connect both wires - the lead flies and carries the everyday pages, the USB cable is the configurator's own channel (every setting, Ports, In-flight adjustments, command line, factory reset, black box); about 12 cm, right-angled if possible, must carry data. Without it the computer does the port/CRSF/telemetry and the USB-only pages stay out of reach. Includes 0.9.659."
     }
   ]
 }

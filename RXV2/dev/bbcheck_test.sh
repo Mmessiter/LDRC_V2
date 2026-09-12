@@ -16,3 +16,6 @@ for f in rec all two trunc corrupt gap bench zero; do $T/bbcheck_test $T/$f.bbl 
 $T/bbcheck_test $T/two.bbl 1 > $T/two1.json 2>/dev/null
 $T/bbcheck_test $T/rec.bbl 0 4096 > $T/rec4k.json 2>/dev/null
 node dev/bbcheck_test.js $T
+# the page must RUN, not just parse (the lesson of the 0.9.351 stuck-install bug)
+for pg in rotorflight-filtercheck rotorflight-blackbox rotorflight-filters; do node dev/page_test.js data/$pg.html | sed "s|^|$pg: |"; done
+node dev/keptcheck_test.js

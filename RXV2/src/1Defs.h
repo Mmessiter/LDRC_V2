@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.671-flight-review";
+constexpr const char* FW_VERSION = "RXV2-0.9.672-keep-checks";
 
 //*********************************************************************
 //  Auto-update manifest URLs
