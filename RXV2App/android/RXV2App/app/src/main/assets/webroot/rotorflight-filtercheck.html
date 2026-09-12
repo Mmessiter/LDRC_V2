@@ -50,6 +50,10 @@ table.pk td:first-child,table.pk th:first-child,table.pk td:nth-child(3),table.p
 .fSum{background:#eaf3ee;border-radius:10px;padding:.7em .9em;margin:.2em 0 .7em;line-height:1.5;color:#2f4452}
 .fSum div{margin:.15em 0}
 .recLink{display:block;text-align:center;background:#5f8fab;color:#fff;text-decoration:none;padding:.6em;border-radius:10px;font-weight:700;margin:.5em 0 0}
+.kept{display:flex;flex-wrap:wrap;gap:.4em;margin:.4em 0}
+.kept button{padding:.45em .7em;border:0;border-radius:8px;background:#8e6cab;color:#fff;font-weight:700;cursor:pointer;font-size:.88em}
+.kept button.cur{background:#3f8f6a}
+.savedBanner{background:#e8dff2;color:#4a3a63;border-radius:10px;padding:.6em .8em;margin:0 0 .7em;font-weight:600;line-height:1.4}
 .sMsg{text-align:center;font-size:.9em;min-height:1.2em;margin-top:.3em;font-weight:600;color:#3a5165}
 </style>
 </head>
@@ -84,7 +88,14 @@ table.pk td:first-child,table.pk th:first-child,table.pk td:nth-child(3),table.p
         <div id=eraseMsg class=sMsg></div>
     </div>
 
+    <div class=card id=keptCard style="display:none">
+        <h2>Checks kept on this phone</h2>
+        <div class=kept id=keptList></div>
+        <p class=sub id=keptNote></p>
+    </div>
+
     <div id=result style="display:none">
+        <div id=savedBanner class=savedBanner style="display:none"></div>
         <div class=card id=flightCard style="display:none">
             <h2>The flight</h2>
             <div id=flightSummary></div>
@@ -191,6 +202,47 @@ async function usbGate(){
     return ok?s:null;
 }
 
+// ---- checks kept on this phone ---------------------------------------
+// A check is ~30 kB of JSON, so the phone can hold the last few. They are kept
+// automatically: erasing the black box, or flying again, then costs nothing
+// (Malcolm 2026-09-12: "I think I erased a bit too soon!").
+const KEEP_MAX=6;
+let viewingSaved=null;
+function keptKey(){ return 'bbcheck.kept:'+modelName(); }
+function keptLoad(){ const a=lsGet(keptKey()); return Array.isArray(a)?a:[]; }
+function keptSave(list){ 
+    while(list.length>KEEP_MAX) list.pop();
+    for(;;){ try{ localStorage.setItem(keptKey(), JSON.stringify(list)); return true; }
+             catch(e){ if(list.length<=1) return false; list.pop(); } }   // phone full: drop the oldest until it fits
+}
+function keepThis(){
+    if(!parts||!parts.summary) return;
+    const S=parts.summary, sig=(analysis&&analysis.signature)||'';
+    const list=keptLoad();
+    if(list.some(k=>k.sig===sig&&sig)) return;                    // already kept
+    list.unshift({ at:Date.now(), sig, seconds:S.seconds, hs:(S.hs&&S.hs.median)||0, date:(S.header&&S.header.date)||'', parts });
+    keptSave(list); paintKept();
+}
+function paintKept(){
+    const list=keptLoad();
+    $('keptCard').style.display=list.length?'':'none';
+    $('keptList').innerHTML=list.map((k,i)=>{
+        const d=new Date(k.at), when=d.toLocaleDateString(undefined,{day:'numeric',month:'short'})+' '+d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
+        return '<button class="'+(viewingSaved===i?'cur':'')+'" onclick="openKept('+i+')">'+when+(k.seconds?' — '+Math.round(k.seconds)+' s':'')+(k.hs?', '+Math.round(k.hs)+' rpm':'')+'</button>';
+    }).join('');
+    $('keptNote').textContent=list.length?('The last '+KEEP_MAX+' checks are kept here, so erasing the black box loses nothing. Tap one to look at it again — no cable needed.'):'';
+}
+function openKept(i){
+    const list=keptLoad(); const k=list[i]; if(!k) return;
+    parts=k.parts; viewingSaved=i;
+    setStatus('','');
+    const d=new Date(k.at);
+    $('savedBanner').style.display='';
+    $('savedBanner').textContent='A check kept on this phone from '+d.toLocaleString()+'. Nothing here is live, and no filter can be changed from it.';
+    try{ render(); }catch(e){ setStatus('bad','Could not show it: '+e.message); }
+    $('result').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
 // ---- the check ----
 async function startCheck(logIdx, attempt){
     if(polling) return;
@@ -240,7 +292,8 @@ async function showResult(st){
         parts={summary,fly,gnd,order,timeline,orderFilt,flight};
     }catch(e){ setStatus('bad',e.message); return; }
     setStatus('','');
-    try{ render(); }catch(e){ setStatus('bad','Could not show the result: '+e.message); }
+    viewingSaved=null; $('savedBanner').style.display='none';
+    try{ render(); keepThis(); paintKept(); }catch(e){ setStatus('bad','Could not show the result: '+e.message); }
 }
 function render(){
     const ctx={filters:filters||{}, gearMain:gear.main, gearTail:gear.tail, blades:2, tailBlades:2};
@@ -313,6 +366,7 @@ function lsSet(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){
 let applied = null;   // {sig, text, at, old} for this model, from localStorage once the model name is known
 function loadApplied(){ applied = lsGet('bbcheck.applied:' + modelName()); }
 function applyAllowed(){
+    if (viewingSaved !== null) return { ok:false, why:'This is a kept check, so nothing can be changed from it. Run a new one to change a filter.' };
     if (!analysis || !filtRaw) return { ok:false, why:'Filters not read yet' };
     if (applied && applied.sig === analysis.signature) return { ok:false, why:'Already changed one thing after this flight (' + applied.text + '). Fly, then check again.' };
     return { ok:true };
@@ -381,7 +435,7 @@ async function undoChange(){
 document.addEventListener('DOMContentLoaded', async ()=>{
     if(window.LDRC&&LDRC.replayReady) await LDRC.replayReady;
     const s=await usbGate();
-    loadApplied();
+    loadApplied(); paintKept();
     if(s) await readContext();
     // the cable can be plugged in after the page opened: look again every few seconds while idle
     let hadUsb=!!s;
@@ -412,6 +466,8 @@ document.addEventListener('DOMContentLoaded', async ()=>{
 <li>The write is read back and compared. <b>Undo</b> puts the previous filters back, and the Backups page holds them too.</li>
 <li><b>One change per flight.</b> After a change the buttons stay off until a new flight has been checked. Fly, then check again.</li>
 </ul>
+<h3>Checks are kept for you</h3>
+<p>Every finished check is stored on this phone &mdash; the last six per model. They appear under <b>Checks kept on this phone</b>, and tapping one shows it again with no cable and no helicopter. So you can erase the black box whenever you like, and you can look back at how a flight behaved before you changed a filter. A kept check cannot change anything: run a new one for that.</p>
 <h3>The flight</h3>
 <p>Before the vibration verdict the page shows what actually happened: head speed against what the governor asked for, throttle, battery volts and current (the thin line under the volts is the lowest reading in each moment, so a sag shows), roll and pitch, and ESC temperature. Arming, governor changes and rescue are marked as dotted lines. Only what the recorder saved appears &mdash; choose that under <b>What to record</b> on the Flight recorder page.</p>
 <h3>Black box memory</h3>
