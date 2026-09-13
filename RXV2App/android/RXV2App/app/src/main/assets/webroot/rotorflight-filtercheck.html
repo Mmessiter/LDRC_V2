@@ -7,9 +7,9 @@
 <meta name=apple-mobile-web-app-capable content=yes>
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
-<title>Vibration check &middot; LDRC RX V2</title>
+<title>Read black box &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=185">
-<script src="/app.js?v=213" defer></script>
+<script src="/app.js?v=214" defer></script>
 <script src="/bbcheck.js?v=1" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
@@ -62,8 +62,8 @@ table.pk td:first-child,table.pk th:first-child,table.pk td:nth-child(3),table.p
 <div class=bg-photo aria-hidden=true></div>
 <div class=bg-wash  aria-hidden=true></div>
 <div class=container>
-    <h1>Vibration check</h1>
-    <p class=subtitle>Reads the last flight from the black box: what happened, and which filter to change (Blackbox)</p>
+    <h1>Read black box</h1>
+    <p class=subtitle>The last flight, read from the flight controller: what happened, and which filter to change</p>
     <div id=needUsb class=needUsb style="display:none"></div>
     <div id=status class="banner info" style="display:none"></div>
 
@@ -446,7 +446,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
          else if(st.state==='done'&&st.result){ await showResult(st); } }catch(e){}
 });
 </script>
-<template id=helpContent><h2>Vibration check</h2>
+<template id=helpContent><h2>Read black box</h2>
 <p>Reads the flight controller&rsquo;s black box over the USB cable, works out the vibration spectrum of the gyro before and after the filters, and says in one line which filter to change. What the Rotorflight Blackbox Explorer shows on a computer, judged for you.</p>
 <h3>What to record</h3>
 <p>On the Black box page tick <b>Gyro raw</b>, <b>Gyro</b> and <b>Head speed</b> (RPM), set <b>How often</b> to <b>1 in 2</b>, and <b>Erase</b> so the next flight is the only one. Fly a normal flight: a hover and a few brisk moves. Land, switch the transmitter off, connect the USB cable, tap <b>Check the last flight</b>.</p>

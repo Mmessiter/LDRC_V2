@@ -717,6 +717,7 @@
                 '/rotorflight-txchannels': '/rotorflight-newheli',
                 '/rotorflight-firsttime': '/rotorflight-newheli',
                 '/rotorflight-esc': '/rotorflight-newheli',
+                '/rotorflight-filtercheck': '/rotorflight-blackbox',
                 '/rotorflight-modes': '/rotorflight',
                 '/rotorflight-alacarte': '/rotorflight',
                 '/rotorflight-easy': '/rotorflight-alacarte',
