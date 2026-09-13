@@ -1,6 +1,11 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.699-stray-wires",
+      "url": "https://messiter.com/rxv2/release/v0.9.699/firmware.bin",
+      "notes": "A few stray wires now peek out of the back of the 3D helicopter's frame, the way nobody's loom is ever quite tucked in. Three leads, each with its own droop and deliberately not matching. Includes 0.9.698."
+    },
+    {
       "name": "RXV2-0.9.698-tail-clearance",
       "url": "https://messiter.com/rxv2/release/v0.9.698/firmware.bin",
       "notes": "On the 3D helicopter the tail skid now reaches further down, and the tail rotor is larger - its lowest point comes to just above the bottom of the skid, so the skid would touch first. Includes 0.9.697."
@@ -54,11 +59,6 @@
       "name": "RXV2-0.9.688-usb-advice",
       "url": "https://messiter.com/rxv2/release/v0.9.688/firmware.bin",
       "notes": "Three pages still told you to turn the USB socket on in Setup - a button that 0.9.687 removed, because the receiver now works the socket out for itself. They now say to restart the receiver, which is the only thing that can actually be wrong. Found in an App Store screenshot. Includes 0.9.687."
-    },
-    {
-      "name": "RXV2-0.9.687-fewer-settings",
-      "url": "https://messiter.com/rxv2/release/v0.9.687/firmware.bin",
-      "notes": "Two settings left the Setup menu, because the receiver already knows the answers. It works out for itself whether it is a dongle or a receiver, and a flight controller plugged into its USB socket is adopted with no setting to turn on. A board that IS a dongle still shows its own button for the name and serial speed, and that is also where a receiver whose radios failed to start can force itself back to being a receiver. Also: in the new-helicopter wizard, the Back up step opened the Setup page instead of Backup & restore. Includes 0.9.686."
     }
   ]
 }

@@ -8,7 +8,7 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>View channels &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=197">
+<link rel=stylesheet href="/style.css?v=198">
 <style>
 .container{max-width:min(96vw,1100px)}
 .chTable{display:grid;grid-template-columns:auto auto 1fr auto;gap:6px 10px;align-items:center;font-variant-numeric:tabular-nums}
@@ -46,7 +46,7 @@
 .heliReadout{position:absolute;bottom:6px;left:10px;font-size:.78em;color:#556;font-variant-numeric:tabular-nums;background:#f2f6f8;padding:3px 8px;border-radius:4px;z-index:2}
 .heliStale #heli3D{opacity:.35;filter:grayscale(.4)}
 </style>
-<script src="/app.js?v=228" defer></script>
+<script src="/app.js?v=229" defer></script>
 <script src="/three.min.js" defer></script>
 </head>
 <body>
@@ -543,6 +543,39 @@ function buildHeli3D() {
     const cowl = new THREE.Mesh(cowlGeo, M.dark);
     cowl.position.set(-0.08, 0.26, 0);
     heli.add(cowl);
+
+    // ---- A few untidy wires peeking out of the back of the frame ----------
+    // Malcolm 2026-09-13: "often real models have a hint of slightly untidy
+    // wires just peeking out from the rear of the main fuselage. We could
+    // maybe add in a couple to make users smile?!"
+    // Nobody's loom is ever quite tucked in. Three leads in the usual colours,
+    // each with its own droop, deliberately NOT symmetrical — tidiness is what
+    // would give the game away. They are the last thing that says "somebody
+    // built this" rather than "a computer drew it".
+    const wireMat = {
+        black: new THREE.MeshPhysicalMaterial({ color: 0x121216, metalness: .05, roughness: .55 }),
+        red:   new THREE.MeshPhysicalMaterial({ color: 0xc02a20, metalness: .05, roughness: .5 }),
+        white: new THREE.MeshPhysicalMaterial({ color: 0xd8d8d4, metalness: .05, roughness: .5 })
+    };
+    // They have to emerge OUTBOARD of the frame plates (z = +/-0.118) and aft
+    // of them, or the frame simply swallows them — which is what happened on
+    // the first attempt.
+    const wires = [
+        { mat: wireMat.black, r: 0.0065, pts: [
+            [-0.330,  0.105,  0.112], [-0.415,  0.082,  0.148],
+            [-0.495,  0.030,  0.142], [-0.552, -0.032,  0.116] ] },
+        { mat: wireMat.red,   r: 0.0060, pts: [
+            [-0.325,  0.128,  0.098], [-0.425,  0.118,  0.132],
+            [-0.505,  0.072,  0.136], [-0.566,  0.016,  0.106] ] },
+        { mat: wireMat.white, r: 0.0052, pts: [
+            [-0.340,  0.078, -0.110], [-0.435,  0.044, -0.142],
+            [-0.498, -0.008, -0.126] ] }
+    ];
+    for (const w of wires) {
+        const path = new THREE.CatmullRomCurve3(w.pts.map(([x, y, z]) => new THREE.Vector3(x, y, z)));
+        const geo = new THREE.TubeGeometry(path, 20, w.r, 6, false);
+        heli.add(new THREE.Mesh(geo, w.mat));
+    }
 
     // Tail boom + control rod
     const boomGeo = new THREE.CylinderGeometry(0.022, 0.07, 1.3, 14);
