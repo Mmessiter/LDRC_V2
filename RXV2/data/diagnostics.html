@@ -8,7 +8,7 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>View channels &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=192">
+<link rel=stylesheet href="/style.css?v=193">
 <style>
 .container{max-width:min(96vw,1100px)}
 .chTable{display:grid;grid-template-columns:auto auto 1fr auto;gap:6px 10px;align-items:center;font-variant-numeric:tabular-nums}
@@ -46,7 +46,7 @@
 .heliReadout{position:absolute;bottom:6px;left:10px;font-size:.78em;color:#556;font-variant-numeric:tabular-nums;background:#f2f6f8;padding:3px 8px;border-radius:4px;z-index:2}
 .heliStale #heli3D{opacity:.35;filter:grayscale(.4)}
 </style>
-<script src="/app.js?v=223" defer></script>
+<script src="/app.js?v=224" defer></script>
 <script src="/three.min.js" defer></script>
 </head>
 <body>
@@ -578,9 +578,10 @@ function buildHeli3D() {
     // Horizontal stabiliser — a small black wing across the boom, well aft.
     // A real Goblin has one, and in silhouette it is what stops the tail
     // reading as a bare stick.
-    const stabGeo = new THREE.BoxGeometry(0.10, 0.014, 0.42);
+    const stabGeo = new THREE.BoxGeometry(0.085, 0.013, 0.30);
     const stab = new THREE.Mesh(stabGeo, M.dark);
-    stab.position.set(-1.22, 0.075, 0);
+    stab.position.set(-1.29, 0.088, 0);
+    stab.rotation.x = 0.12;   // slight dihedral, as on the real tail
     heli.add(stab);
 
     const rodGeo = new THREE.CylinderGeometry(0.008, 0.008, 1.18, 8);
@@ -625,19 +626,26 @@ function buildHeli3D() {
     fin.position.set(-1.40, 0.10, 0);
     heli.add(fin);
 
-    // Small ventral fin under the boom — the Goblin has one, and it stops the
-    // tail looking top-heavy now that the main fin has moved up.
-    const vShape = new THREE.Shape();
-    vShape.moveTo( 0.06,  0.00);
-    vShape.lineTo(-0.05,  0.00);
-    vShape.lineTo(-0.08, -0.10);
-    vShape.quadraticCurveTo(-0.02, -0.125, 0.05, -0.10);
-    vShape.closePath();
-    const vGeo = new THREE.ExtrudeGeometry(vShape, { depth: 0.016, bevelEnabled: false });
-    vGeo.translate(0, 0, -0.008);
-    const vFin = new THREE.Mesh(vGeo, M.dark);
-    vFin.position.set(-1.38, 0.06, 0);
-    heli.add(vFin);
+    // TAIL SKID — Malcolm 2026-09-13, pointing at the factory photograph:
+    // "notice the tail skid in the photo. It goes down and back (not up)".
+    // It is the bent orange rod that hangs off the very end of the tail and
+    // rakes aft, so that a tail-low landing puts the skid on the ground
+    // instead of the tail-rotor blades. The old part was a straight ventral
+    // fin pointing vertically down, which is neither the shape nor the job.
+    const skidPathT = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(-1.395,  0.055, 0),   // root, under the tail case
+        new THREE.Vector3(-1.425, -0.020, 0),
+        new THREE.Vector3(-1.480, -0.080, 0),
+        new THREE.Vector3(-1.560, -0.118, 0)    // tip, down AND aft
+    ]);
+    const tailSkidGeo = new THREE.TubeGeometry(skidPathT, 18, 0.011, 8, false);
+    const tailSkid = new THREE.Mesh(tailSkidGeo, M.body);   // orange, as on the real one
+    heli.add(tailSkid);
+    // a small black foot on the end, the bit that actually takes the knock
+    const tFootGeo = new THREE.SphereGeometry(0.016, 10, 8);
+    const tFoot = new THREE.Mesh(tFootGeo, M.dark);
+    tFoot.position.set(-1.562, -0.120, 0);
+    heli.add(tFoot);
 
     // Rotor mast — taller and clearly visible above the body.
     const mastGeo = new THREE.CylinderGeometry(0.035, 0.045, 0.22, 14);
@@ -742,14 +750,20 @@ function buildHeli3D() {
     // Tail rotor — same disc-or-blades treatment, in the X-Y plane.
     const tailRotorGrp = new THREE.Group();
     tailRotorGrp.position.set(-1.42, 0.22, 0.09);
+    // Two tail blades, like the main head — one bar across the diameter. The
+    // old pair crossed at 90 degrees made a four-blade tail rotor.
     const tBladeGeo = new THREE.BoxGeometry(0.27, 0.012, 0.022);
     const tailBlades = [];
-    for (let i = 0; i < 2; ++i) {
-        const tb = new THREE.Mesh(tBladeGeo, M.blade);
-        tb.rotation.z = i * Math.PI / 2;
-        tailRotorGrp.add(tb);
-        tailBlades.push(tb);
-    }
+    const tBlade = new THREE.Mesh(tBladeGeo, M.blade);
+    tailRotorGrp.add(tBlade);
+    tailBlades.push(tBlade);
+    // The orange pitch bracket at the hub — small, but it is the one splash of
+    // colour back there on the real machine.
+    const tHubGeo = new THREE.CylinderGeometry(0.026, 0.026, 0.030, 12);
+    tHubGeo.rotateX(Math.PI / 2);
+    const tHub = new THREE.Mesh(tHubGeo, M.body);
+    tailRotorGrp.add(tHub);
+    tailBlades.push(tHub);
     heli.add(tailRotorGrp);
 
     // CircleGeometry defaults to the X-Y plane (normal along +Z), which
@@ -782,10 +796,17 @@ function buildHeli3D() {
         new THREE.Vector3( 0.62, -0.26, 0)
     ]);
     const skidGeo  = new THREE.TubeGeometry(skidPath, 24, 0.024, 10, false);
+    const capGeo = new THREE.SphereGeometry(0.027, 12, 10);
     for (const z of [-0.24, 0.24]) {
         const skid = new THREE.Mesh(skidGeo, M.accent);   // white tubes, as on the real thing
         skid.position.set(0, 0, z);
         heli.add(skid);
+        // Black end caps, both ends — the rubber bungs a real skid wears.
+        for (const [cx, cy] of [[-0.50, -0.36], [0.62, -0.26]]) {
+            const cap = new THREE.Mesh(capGeo, M.dark);
+            cap.position.set(cx, cy, z);
+            heli.add(cap);
+        }
     }
     // Landing-gear struts — WIDE FLAT CARBON PLATES, not tubes (Malcolm's
     // factory photograph, 2026-09-13). A Goblin's gear is two broad black

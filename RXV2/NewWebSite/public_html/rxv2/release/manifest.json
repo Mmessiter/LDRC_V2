@@ -1,6 +1,11 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.694-tail-skid",
+      "url": "https://messiter.com/rxv2/release/v0.9.694/firmware.bin",
+      "notes": "The 3D helicopter's tail skid now rakes down and backwards with a black foot on the end, the way the real one does, so a tail-low landing would put the skid down rather than the tail blades. The landing skids have their black end caps, the tail rotor has two blades and its orange pitch bracket, and the tail stabiliser sits further aft. Includes 0.9.693."
+    },
+    {
       "name": "RXV2-0.9.693-goblin-match",
       "url": "https://messiter.com/rxv2/release/v0.9.693/firmware.bin",
       "notes": "The 3D helicopter now matches the real Goblin in the details that show: wide flat black landing-gear plates instead of wire legs, the big dark cut-out low in the canopy side with its white surround, GOBLIN 770 and SAB HELI DIVISION lettering along the shell, pale flashes and orange chevrons near the blade tips, and pitch links on the rotor head. Includes 0.9.692."
@@ -62,13 +67,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.683/littlefs.bin",
       "fs_md5": "311a9be3002a3494ad927a3ce49f4f37",
       "notes": "The Receiver log is offered plainly at the foot of Black box (Flight recorder) - no heading, no explaining - and is off the front page. It reappears on the front page only for a receiver with no Rotorflight, which would otherwise have no Black box page to reach it through. Includes 0.9.682."
-    },
-    {
-      "name": "RXV2-0.9.682-receiver-log",
-      "url": "https://messiter.com/rxv2/release/v0.9.682/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.682/littlefs.bin",
-      "fs_md5": "bb2c8bf7e4a1f537e654ef715ab8ae73",
-      "notes": "Two things were both called the black box. The receiver's own is now the RECEIVER LOG - what this receiver saw: live status, the radio link, past flights and events - on the front page, in its title and help, and in search. Black box (Flight recorder) keeps that name for the flight controller's recording, and now carries a 'Not this one?' card pointing across to the Receiver log; the Receiver log points back. Includes 0.9.681."
     }
   ]
 }

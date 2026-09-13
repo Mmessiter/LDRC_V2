@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.693-goblin-match";
+constexpr const char* FW_VERSION = "RXV2-0.9.694-tail-skid";
 
 //*********************************************************************
 //  Auto-update manifest URLs
