@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.679-help-links";
+constexpr const char* FW_VERSION = "RXV2-0.9.680-cli-leave";
 
 //*********************************************************************
 //  Auto-update manifest URLs
