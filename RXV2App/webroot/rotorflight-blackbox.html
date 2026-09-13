@@ -7,9 +7,9 @@
 <meta name=apple-mobile-web-app-capable content=yes>
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
-<title>Flight recorder &middot; LDRC RX V2</title>
+<title>Black box (Flight recorder) &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=185">
-<script src="/app.js?v=210" defer></script>
+<script src="/app.js?v=211" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -45,8 +45,8 @@ h2 .hint{font-weight:400;font-size:.7em;color:#5d7a8c;display:block;margin-top:.
 <div class=bg-photo aria-hidden=true></div>
 <div class=bg-wash  aria-hidden=true></div>
 <div class=container>
-    <h1>Flight recorder</h1>
-    <p class=subtitle>Rotorflight&rsquo;s own black box, kept on the flight controller (Blackbox)</p>
+    <h1>Black box</h1>
+    <p class=subtitle>What Rotorflight records in flight, kept on the flight controller (Blackbox, the Flight recorder)</p>
     <div id=verBanner class="banner warn" style="display:none"><span id=verBannerMsg></span></div>
     <div id=status class="banner info">loading&hellip;</div>
     <div id=rbBanner class="banner warn" style="display:none">The new rate or place to record only starts after a flight-controller restart.
@@ -280,7 +280,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
     load();
 });
 </script>
-<template id=helpContent><h2>Flight recorder</h2>
+<template id=helpContent><h2>Black box (Flight recorder)</h2>
 <p>Rotorflight&rsquo;s Blackbox writes the flight controller&rsquo;s insides &mdash; sticks, gyro, servos, governor, ESC &mdash; hundreds of times a second into the flight controller&rsquo;s own memory. Afterwards the Rotorflight Blackbox Explorer (computer, USB) shows exactly what happened. <b>Not the receiver&rsquo;s Black box log</b> on the front page: that records the radio link and telemetry a few times a second and is read here on the phone.</p>
 <ul>
 <li><b>When</b> &mdash; <i>Whenever armed</i> needs no switch and never forgets. The two switch choices need a Blackbox switch (Switches page); <i>Armed and the switch on</i> starts when both are true and the switch then pauses and resumes it.</li>
