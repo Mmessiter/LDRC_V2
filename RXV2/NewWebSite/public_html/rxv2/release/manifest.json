@@ -1,6 +1,11 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.696-tail-line",
+      "url": "https://messiter.com/rxv2/release/v0.9.696/firmware.bin",
+      "notes": "The 3D helicopter has lost the orange fin that stuck up from its tail, and the tail rotor now turns on the tail boom's own centreline instead of floating above it. The gearbox and tail skid moved down to match. Includes 0.9.695."
+    },
+    {
       "name": "RXV2-0.9.695-ldrc-livery",
       "url": "https://messiter.com/rxv2/release/v0.9.695/firmware.bin",
       "notes": "The 3D helicopter now carries our own name. The shell reads LDRC over LOCKDOWN RADIO CONTROL and the tail boom reads LDRC, in place of the manufacturer's name, which belongs to them. The shape is still modelled on a real machine; only the lettering has changed. Includes 0.9.694."
@@ -58,13 +63,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.685/littlefs.bin",
       "fs_md5": "5f73594cca7cb1026f665fdad6cc027e",
       "notes": "Read black box: the two buttons touched - the link above had no bottom margin and the button below had none at all. Checked by screenshot this time, not by reading the CSS. Includes 0.9.684."
-    },
-    {
-      "name": "RXV2-0.9.684-read-black-box",
-      "url": "https://messiter.com/rxv2/release/v0.9.684/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.684/littlefs.bin",
-      "fs_md5": "67cf54289f9597e52785686414409b91",
-      "notes": "The Vibration check is now called READ BLACK BOX, because that is what it does - it grew from filter advice into the whole flight - and it lives inside the black box area instead of as a separate entry in the list. Black box (Flight recorder) leads with it, and the Receiver log sits at the foot of the same page, so everything about recordings is in one place. Includes 0.9.683."
     }
   ]
 }

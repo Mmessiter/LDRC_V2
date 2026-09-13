@@ -8,7 +8,7 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>View channels &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=194">
+<link rel=stylesheet href="/style.css?v=195">
 <style>
 .container{max-width:min(96vw,1100px)}
 .chTable{display:grid;grid-template-columns:auto auto 1fr auto;gap:6px 10px;align-items:center;font-variant-numeric:tabular-nums}
@@ -46,7 +46,7 @@
 .heliReadout{position:absolute;bottom:6px;left:10px;font-size:.78em;color:#556;font-variant-numeric:tabular-nums;background:#f2f6f8;padding:3px 8px;border-radius:4px;z-index:2}
 .heliStale #heli3D{opacity:.35;filter:grayscale(.4)}
 </style>
-<script src="/app.js?v=225" defer></script>
+<script src="/app.js?v=226" defer></script>
 <script src="/three.min.js" defer></script>
 </head>
 <body>
@@ -600,33 +600,18 @@ function buildHeli3D() {
     const tailCaseGeo = new THREE.CylinderGeometry(0.055, 0.055, 0.085, 16);
     tailCaseGeo.rotateX(Math.PI / 2);
     const tailCase = new THREE.Mesh(tailCaseGeo, M.dark);
-    tailCase.position.set(-1.42, 0.10, 0);
+    tailCase.position.set(-1.42, 0.08, 0);
     heli.add(tailCase);
     // the case fairs into the boom rather than stopping dead
     const tailNeckGeo = new THREE.CylinderGeometry(0.030, 0.050, 0.13, 12);
     const tailNeck = new THREE.Mesh(tailNeckGeo, M.dark);
     tailNeck.rotation.z = Math.PI / 2;
-    tailNeck.position.set(-1.355, 0.095, 0);
+    tailNeck.position.set(-1.355, 0.08, 0);
     heli.add(tailNeck);
 
-    // Vertical fin — SWEPT, the way a real one is (Malcolm 2026-09-13: "the
-    // square tall skid looks wrong" — it was a plain 0.26 x 0.30 slab hanging
-    // under the boom, which read as a paddle). A fin is a thin aerofoil with a
-    // raked leading edge and a rounded tip, and it sits mostly ABOVE the boom
-    // on a Goblin, carrying the tail-rotor case.
-    const finShape = new THREE.Shape();
-    finShape.moveTo( 0.10,  0.00);
-    finShape.lineTo(-0.09,  0.00);
-    finShape.lineTo(-0.15,  0.17);
-    finShape.quadraticCurveTo(-0.13, 0.25, -0.055, 0.255);
-    finShape.lineTo( 0.035, 0.245);
-    finShape.quadraticCurveTo(0.10, 0.235, 0.11, 0.16);
-    finShape.closePath();
-    const finGeo = new THREE.ExtrudeGeometry(finShape, { depth: 0.018, bevelEnabled: false });
-    finGeo.translate(0, 0, -0.009);
-    const fin = new THREE.Mesh(finGeo, M.body);       // orange fin
-    fin.position.set(-1.40, 0.10, 0);
-    heli.add(fin);
+    // (No vertical fin. Malcolm 2026-09-13: "the orange fin that sticks up
+    //  from the tail should be removed" — a Goblin 770 carries none, and the
+    //  earlier swept fin was an invention that only made the tail top-heavy.)
 
     // TAIL SKID — Malcolm 2026-09-13, pointing at the factory photograph:
     // "notice the tail skid in the photo. It goes down and back (not up)".
@@ -635,7 +620,7 @@ function buildHeli3D() {
     // instead of the tail-rotor blades. The old part was a straight ventral
     // fin pointing vertically down, which is neither the shape nor the job.
     const skidPathT = new THREE.CatmullRomCurve3([
-        new THREE.Vector3(-1.395,  0.055, 0),   // root, under the tail case
+        new THREE.Vector3(-1.395,  0.035, 0),   // root, under the tail case
         new THREE.Vector3(-1.425, -0.020, 0),
         new THREE.Vector3(-1.480, -0.080, 0),
         new THREE.Vector3(-1.560, -0.118, 0)    // tip, down AND aft
@@ -751,7 +736,7 @@ function buildHeli3D() {
 
     // Tail rotor — same disc-or-blades treatment, in the X-Y plane.
     const tailRotorGrp = new THREE.Group();
-    tailRotorGrp.position.set(-1.42, 0.22, 0.09);
+    tailRotorGrp.position.set(-1.42, 0.08, 0.09);
     // Two tail blades, like the main head — one bar across the diameter. The
     // old pair crossed at 90 degrees made a four-blade tail rotor.
     const tBladeGeo = new THREE.BoxGeometry(0.27, 0.012, 0.022);
@@ -775,13 +760,13 @@ function buildHeli3D() {
     // 90° out from the blades and the rim it's meant to replace.
     const tailDiscGeo = new THREE.CircleGeometry(0.145, 32);
     const tailDisc    = new THREE.Mesh(tailDiscGeo, M.disc);
-    tailDisc.position.set(-1.42, 0.22, 0.095);
+    tailDisc.position.set(-1.42, 0.08, 0.095);
     tailDisc.visible = false;
     heli.add(tailDisc);
 
     const tailRimGeo = new THREE.RingGeometry(0.12, 0.145, 32);
     const tailRim    = new THREE.Mesh(tailRimGeo, M.discRim);
-    tailRim.position.set(-1.42, 0.22, 0.096);
+    tailRim.position.set(-1.42, 0.08, 0.096);
     tailRim.visible = false;
     heli.add(tailRim);
 
