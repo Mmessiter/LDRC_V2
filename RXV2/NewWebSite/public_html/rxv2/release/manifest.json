@@ -1,6 +1,11 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.698-tail-clearance",
+      "url": "https://messiter.com/rxv2/release/v0.9.698/firmware.bin",
+      "notes": "On the 3D helicopter the tail skid now reaches further down, and the tail rotor is larger - its lowest point comes to just above the bottom of the skid, so the skid would touch first. Includes 0.9.697."
+    },
+    {
       "name": "RXV2-0.9.697-tail-tidy",
       "url": "https://messiter.com/rxv2/release/v0.9.697/firmware.bin",
       "notes": "Three tidies to the 3D helicopter: the horizontal stabiliser at the back has gone, the tail rotor is a bit bigger, and two black posts that had been poking out of the belly have gone. Those posts were a mistake - a cross-tube that was never turned on its side, so it stood on its end. Includes 0.9.696."
@@ -54,13 +59,6 @@
       "name": "RXV2-0.9.687-fewer-settings",
       "url": "https://messiter.com/rxv2/release/v0.9.687/firmware.bin",
       "notes": "Two settings left the Setup menu, because the receiver already knows the answers. It works out for itself whether it is a dongle or a receiver, and a flight controller plugged into its USB socket is adopted with no setting to turn on. A board that IS a dongle still shows its own button for the name and serial speed, and that is also where a receiver whose radios failed to start can force itself back to being a receiver. Also: in the new-helicopter wizard, the Back up step opened the Setup page instead of Backup & restore. Includes 0.9.686."
-    },
-    {
-      "name": "RXV2-0.9.686-log-colour",
-      "url": "https://messiter.com/rxv2/release/v0.9.686/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.686/littlefs.bin",
-      "fs_md5": "5c59ff73282f984527cf338e4a81c718",
-      "notes": "The Receiver log button at the foot of Black box was grey, which reads as disabled. It is now the Receiver log's own blue - bright, and clear of the green above it. Includes 0.9.685."
     }
   ]
 }

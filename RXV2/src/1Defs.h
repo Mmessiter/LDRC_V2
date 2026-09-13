@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.697-tail-tidy";
+constexpr const char* FW_VERSION = "RXV2-0.9.698-tail-clearance";
 
 //*********************************************************************
 //  Auto-update manifest URLs
