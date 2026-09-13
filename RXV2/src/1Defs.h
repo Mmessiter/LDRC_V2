@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.701-gear-joined";
+constexpr const char* FW_VERSION = "RXV2-0.9.702-dongle-channels";
 
 //*********************************************************************
 //  Auto-update manifest URLs

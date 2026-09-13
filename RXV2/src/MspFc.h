@@ -38,6 +38,7 @@ constexpr uint8_t MSP_FC_VARIANT     = 2;     // 4 ASCII bytes (e.g. "RTFL")
 constexpr uint8_t MSP_FC_VERSION     = 3;     // 3 bytes: major, minor, patch
 
 // Rotorflight tuning commands (codes from v1's Nexus.h)
+constexpr uint8_t MSP_RC             = 105;   // 0.9.702: N x uint16 channel values in us, as the FC receives them
 constexpr uint8_t MSP_RC_TUNING      = 111;
 constexpr uint8_t MSP_PID            = 112;
 constexpr uint8_t MSP_SET_RC_TUNING  = 204;

@@ -2696,6 +2696,36 @@ inline void handleApiEventsPrev() {
 // page can grey the bars out when the signal drops.
 
 inline void handleApiChannels() {
+    // A DONGLE has no radio, so channelMicros[] is never filled by a
+    // transmitter — the page used to be hidden from it entirely. But the
+    // flight controller on the other end of the cable knows exactly what its
+    // own receiver is giving it, and MSP 105 hands those values over. So on a
+    // dongle the bars (and the little helicopter) show what the FC is
+    // actually seeing, which is arguably more useful than on a receiver:
+    // it proves the whole chain, transmitter to flight controller.
+    //
+    // Read here, in the HTTP handler, and NOT from loop(): this is already a
+    // request-scoped blocking context, it only happens while somebody has the
+    // page open, and loop() stays untouched.
+    // Stands down while the model is armed, per the standing rule that a
+    // dongle-motivated poll must not compete for the link near flight.
+    if (dongleEnabled && fcInfo.detected && !fcInfo.armed) {
+        static uint32_t lastRcMs = 0;
+        const uint32_t now = millis();
+        if ((uint32_t)(now - lastRcMs) >= 60) {        // <= ~16 Hz, whatever the page asks
+            lastRcMs = now;
+            static uint8_t rc[64];
+            uint16_t rcLen = 0;
+            if (mspRequestAndWait(MSP_RC, nullptr, 0, rc, &rcLen, 120) && rcLen >= 2) {
+                const int n = rcLen / 2 > 16 ? 16 : rcLen / 2;
+                for (int i = 0; i < n; ++i) {
+                    const uint16_t v = (uint16_t)(rc[i * 2] | (rc[i * 2 + 1] << 8));
+                    if (v >= 800 && v <= 2200) channelMicros[i] = v;
+                }
+                if (n > 0) lastChannelDataMs = now;
+            }
+        }
+    }
     String j;
     j.reserve(180);
     j += "{\"ch\":[";

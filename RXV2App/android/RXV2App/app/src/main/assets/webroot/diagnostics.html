@@ -8,7 +8,7 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>View channels &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=200">
+<link rel=stylesheet href="/style.css?v=201">
 <style>
 .container{max-width:min(96vw,1100px)}
 .chTable{display:grid;grid-template-columns:auto auto 1fr auto;gap:6px 10px;align-items:center;font-variant-numeric:tabular-nums}
@@ -46,7 +46,7 @@
 .heliReadout{position:absolute;bottom:6px;left:10px;font-size:.78em;color:#556;font-variant-numeric:tabular-nums;background:#f2f6f8;padding:3px 8px;border-radius:4px;z-index:2}
 .heliStale #heli3D{opacity:.35;filter:grayscale(.4)}
 </style>
-<script src="/app.js?v=231" defer></script>
+<script src="/app.js?v=232" defer></script>
 <script src="/three.min.js" defer></script>
 </head>
 <body>
@@ -1038,9 +1038,10 @@ function paint(s) {
     if (stale !== _lastStale) {
         _lastStale = stale;
         table.classList.toggle('stale', stale);
+        const viaFc = document.documentElement.classList.contains('h-dongle');
         status.innerHTML = stale
-            ? '<span class=statusBad>No RC signal</span>'
-            : '<span class=statusOK>RC signal live</span>';
+            ? '<span class=statusBad>' + (viaFc ? 'The flight controller is not receiving' : 'No RC signal') + '</span>'
+            : '<span class=statusOK>' + (viaFc ? 'Live, as the flight controller sees it' : 'RC signal live') + '</span>';
     }
 
     if (!_rowEls) {
@@ -1269,6 +1270,7 @@ document.addEventListener('visibilitychange', () => { _stopping = document.hidde
 <p>Shows the 16 RC channels arriving from the transmitter in real time, plus a 3-D model helicopter that mirrors your stick movements (roll, pitch, yaw, throttle, collective).</p>
 <h3>How to use it</h3>
 <p>Move the sticks on your transmitter — the bars should respond instantly and the helicopter should bank, pitch and yaw accordingly. Throttle changes the rotor speed.</p>
+<p><b>On a dongle</b> these are the flight controller's own channels, read down the cable, so they prove the whole chain: transmitter, its receiver, and the flight controller. They pause while the model is armed.</p>
 <h3>What to look for</h3>
 <ul>
 <li>Each of channels 1–16 should respond cleanly to its assigned stick or switch.</li>
