@@ -1,6 +1,11 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.690-heli-3d",
+      "url": "https://messiter.com/rxv2/release/v0.9.690/firmware.bin",
+      "notes": "The rotating helicopter on the View channels page is much better looking. It now sits on a real shadow, the bodywork is glossy and catches the light, the metal parts look like metal, and you can see through the spinning rotor instead of it being a grey plate. Same model, properly lit. Includes 0.9.689."
+    },
+    {
       "name": "RXV2-0.9.689-dev-host",
       "url": "https://messiter.com/rxv2/release/v0.9.689/firmware.bin",
       "notes": "The built-in address for a local firmware server was the developer's own Mac name. Two reasons to change it: it published a private machine name in every release, and any computer on your network answering to that name could have offered your receiver firmware. It is now a neutral name that nothing answers to by default, so updates come from messiter.com unless you set your own. Includes 0.9.688."
@@ -70,13 +75,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.679/littlefs.bin",
       "fs_md5": "d182d86e2c76f531e7ebac38c66f5a70",
       "notes": "Where a help screen tells you to use another page, it now offers it: the Filters help has Vibration check and Flight recorder buttons, and In-flight adjustments links the Switches page where the bank switch is set. Includes 0.9.678."
-    },
-    {
-      "name": "RXV2-0.9.678-ports-link",
-      "url": "https://messiter.com/rxv2/release/v0.9.678/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.678/littlefs.bin",
-      "fs_md5": "5cb99f8c339ed51a4b5960a874b4bcf8",
-      "notes": "Before you start, step 2 now has an Open Ports button, so the one page it tells you to use is one tap away instead of something to go and find. Includes 0.9.677."
     }
   ]
 }

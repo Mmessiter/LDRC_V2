@@ -543,8 +543,13 @@ struct ScannerView: View {
                        + "switched off.")
                 }
             }
-            // a real receiver in sight → the demo offer just muddies the water
-            if link.found.isEmpty {
+            // A real, REACHABLE receiver in sight → the demo offer just muddies
+            // the water. But a receiver that is merely *visible* and too far to
+            // connect is not a reason to take the demo away (Malcolm 2026-09-13:
+            // "I wanted to load the demo, but was not able to when a slightly
+            // out of range dongle was discovered"). Same trap would catch an App
+            // Review tester with any stray LDRC board in the building.
+            if link.found.allSatisfy({ BleLink.tooWeak($0.rssi) }) {
                 // Two demos, chosen here (Malcolm 2026-09-11): the dongle
                 // switch inside the demo was buried too deep, so it is gone.
                 Section {

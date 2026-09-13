@@ -8,7 +8,7 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>View channels &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=186">
+<link rel=stylesheet href="/style.css?v=189">
 <style>
 .container{max-width:min(96vw,1100px)}
 .chTable{display:grid;grid-template-columns:auto auto 1fr auto;gap:6px 10px;align-items:center;font-variant-numeric:tabular-nums}
@@ -46,7 +46,7 @@
 .heliReadout{position:absolute;bottom:6px;left:10px;font-size:.78em;color:#556;font-variant-numeric:tabular-nums;background:#f2f6f8;padding:3px 8px;border-radius:4px;z-index:2}
 .heliStale #heli3D{opacity:.35;filter:grayscale(.4)}
 </style>
-<script src="/app.js?v=217" defer></script>
+<script src="/app.js?v=220" defer></script>
 <script src="/three.min.js" defer></script>
 </head>
 <body>
@@ -189,47 +189,139 @@ function buildHeli3D() {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
     renderer.setClearColor(0x000000, 0);
     renderer.setSize(w, h, false);
+    // 0.9.690 (Malcolm: "could be made more beautiful"): the model was lit by
+    // plain Phong with no reflections, so glossy black read as flat grey.
+    // sRGB output + filmic tone mapping is what makes a render look
+    // photographed rather than computed.
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    // Environment map, drawn here rather than downloaded: a sky-to-ground
+    // gradient with a soft overhead highlight, prefiltered into a proper IBL.
+    // This is the single biggest change — a glossy black canopy has nothing to
+    // reflect without it, which is exactly why the old model looked dull.
+    (function buildEnvironment() {
+        const c = document.createElement('canvas');
+        c.width = 256; c.height = 128;
+        const g = c.getContext('2d');
+        const sky = g.createLinearGradient(0, 0, 0, 128);
+        sky.addColorStop(0.00, '#eaf2f8');   // zenith
+        sky.addColorStop(0.42, '#c2d2de');
+        sky.addColorStop(0.52, '#9fb0bc');   // horizon
+        sky.addColorStop(0.53, '#6e7a82');   // ground starts
+        sky.addColorStop(1.00, '#3c4349');
+        g.fillStyle = sky; g.fillRect(0, 0, 256, 128);
+        // a soft key highlight for the body to catch
+        const hot = g.createRadialGradient(86, 26, 2, 86, 26, 54);
+        hot.addColorStop(0, 'rgba(255,255,255,0.95)');
+        hot.addColorStop(1, 'rgba(255,255,255,0)');
+        g.fillStyle = hot; g.fillRect(0, 0, 256, 80);
+        const tex = new THREE.CanvasTexture(c);
+        tex.mapping = THREE.EquirectangularReflectionMapping;
+        tex.colorSpace = THREE.SRGBColorSpace;
+        const pmrem = new THREE.PMREMGenerator(renderer);
+        scene.environment = pmrem.fromEquirectangular(tex).texture;
+        pmrem.dispose(); tex.dispose();
+    })();
 
     // Lights
-    scene.add(new THREE.HemisphereLight(0xffffff, 0xb0b8c0, 0.65));
-    const sun = new THREE.DirectionalLight(0xffffff, 0.9);
-    sun.position.set(3.5, 5, 2.5);
+    // The environment map now does most of the ambient work, so the lights
+    // are here for shape: a key that casts the shadow, a gentle fill, and a
+    // rim from behind that separates a black model from a pale background.
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x9aa6b0, 0.35));
+    const sun = new THREE.DirectionalLight(0xfff4e6, 2.1);
+    sun.position.set(3.2, 4.6, 2.4);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(1024, 1024);
+    sun.shadow.camera.near = 1; sun.shadow.camera.far = 12;
+    sun.shadow.camera.left = -2.2; sun.shadow.camera.right = 2.2;
+    sun.shadow.camera.top = 2.2;   sun.shadow.camera.bottom = -2.2;
+    sun.shadow.bias = -0.0012;
+    sun.shadow.radius = 3;
     scene.add(sun);
-    const fill = new THREE.DirectionalLight(0xc8d4dc, 0.35);
-    fill.position.set(-3, 2, -2);
+    const fill = new THREE.DirectionalLight(0xc8d8e4, 0.55);
+    fill.position.set(-3.4, 1.6, -1.2);
     scene.add(fill);
+    const rim = new THREE.DirectionalLight(0xffffff, 1.5);
+    rim.position.set(-1.6, 1.1, -3.2);
+    scene.add(rim);
 
     // Materials — SAB Heli Division-ish: glossy black body with bright
     // lime-yellow accents. Real RC helis are usually painted in strong
     // primary or fluorescent colours so they can be seen against sky
     // and field; muted tones make a stylised model look generic.
+    // Materials — SAB Heli Division-ish: glossy black body with bright
+    // lime-yellow accents. Real RC helis are painted in strong primary or
+    // fluorescent colours so they can be seen against sky and field.
+    // 0.9.690: physically-based now, so metalness/roughness and the
+    // environment map do the work that fixed "shininess" numbers used to fake.
     const M = {
-        body:    new THREE.MeshPhongMaterial({ color: 0x1a1a1a, shininess: 140, specular: 0x606060 }),
-        accent:  new THREE.MeshPhongMaterial({ color: 0xd6f04a, shininess: 130, specular: 0x808080 }),
-        accent2: new THREE.MeshPhongMaterial({ color: 0xb8d63a, shininess: 110, specular: 0x707070 }),
-        // Canopy: very glossy black with strong specular so it picks up
-        // a highlight from the sun light and reads as moulded plexiglass
-        // rather than flat paint.
-        canopy:  new THREE.MeshPhongMaterial({ color: 0x0c0c0c, shininess: 280, specular: 0xc8d4e0, transparent: true, opacity: .92 }),
-        dark:    new THREE.MeshPhongMaterial({ color: 0x1f1f22, shininess: 60 }),
-        blade:   new THREE.MeshPhongMaterial({ color: 0x101014, shininess: 90 }),
-        metal:   new THREE.MeshPhongMaterial({ color: 0xa8aeb6, shininess: 200, specular: 0xd0d4d8 }),
-        // Battery pack — bright red so it pops against the matte black
-        // chassis it's slung under, the way a LiPo flight pack does.
-        battery: new THREE.MeshPhongMaterial({ color: 0xd9342a, shininess: 80 }),
-        // Translucent disc that stands in for spinning rotor blades.
-        // depthWrite is off so the disc doesn't z-clip with the hub/blades
-        // underneath and produce visible seams.
+        // Clearcoat is the trick that makes painted bodywork look painted:
+        // a rough-ish colour coat under a smooth lacquer that reflects the sky.
+        body:    new THREE.MeshPhysicalMaterial({ color: 0x0f0f14, metalness: .3, roughness: .3,
+                                                  clearcoat: 1, clearcoatRoughness: .07 }),
+        accent:  new THREE.MeshPhysicalMaterial({ color: 0xc8e63c, metalness: .1,  roughness: .3,
+                                                  clearcoat: 1, clearcoatRoughness: .12 }),
+        accent2: new THREE.MeshPhysicalMaterial({ color: 0xa9c92f, metalness: .1,  roughness: .36,
+                                                  clearcoat: 1, clearcoatRoughness: .16 }),
+        // Canopy: moulded tinted plexiglass. Low roughness + transmission-free
+        // dark tint keeps it readable against the body while still mirroring.
+        canopy:  new THREE.MeshPhysicalMaterial({ color: 0x07070a, metalness: .0, roughness: .04,
+                                                  clearcoat: 1, clearcoatRoughness: .02,
+                                                  transparent: true, opacity: .93,
+                                                  envMapIntensity: 1.8 }),
+        dark:    new THREE.MeshPhysicalMaterial({ color: 0x202024, metalness: .35, roughness: .55 }),
+        blade:   new THREE.MeshPhysicalMaterial({ color: 0x0e0e12, metalness: .15, roughness: .38,
+                                                  clearcoat: .8, clearcoatRoughness: .2 }),
+        // Anodised aluminium: properly metallic, so it reflects the gradient
+        // rather than sitting there as flat grey.
+        metal:   new THREE.MeshPhysicalMaterial({ color: 0xb4bac2, metalness: 1, roughness: .26,
+                                                  envMapIntensity: 1.3 }),
+        battery: new THREE.MeshPhysicalMaterial({ color: 0xcf3327, metalness: .1, roughness: .42,
+                                                  clearcoat: .7, clearcoatRoughness: .25 }),
+        // Spinning rotor: a motion-blurred disc, not a plate. The texture is
+        // drawn here — a faint sweep with two brighter arcs, so the eye reads
+        // blades passing rather than a sheet of grey plastic.
         disc:    new THREE.MeshBasicMaterial({
-            color: 0x141a20, transparent: true, opacity: .22,
+            map: (function () {
+                const c = document.createElement('canvas');
+                c.width = c.height = 256;
+                const g = c.getContext('2d');
+                g.clearRect(0, 0, 256, 256);
+                // faint body of the blur, fading to nothing at the hub
+                const r = g.createRadialGradient(128, 128, 18, 128, 128, 126);
+                r.addColorStop(0.00, 'rgba(18,24,30,0)');
+                r.addColorStop(0.22, 'rgba(18,24,30,0.05)');
+                r.addColorStop(0.90, 'rgba(18,24,30,0.10)');
+                r.addColorStop(1.00, 'rgba(18,24,30,0)');
+                g.fillStyle = r; g.fillRect(0, 0, 256, 256);
+                // two brighter sweeps = the blades you half-see
+                for (let i = 0; i < 2; i++) {
+                    g.save(); g.translate(128, 128); g.rotate(i * Math.PI);
+                    const a = g.createLinearGradient(0, 0, 124, 0);
+                    a.addColorStop(0, 'rgba(24,31,39,0)');
+                    a.addColorStop(.60, 'rgba(24,31,39,0.55)');
+                    a.addColorStop(.97, 'rgba(24,31,39,0.42)');
+                    a.addColorStop(1, 'rgba(24,31,39,0)');
+                    g.fillStyle = a;
+                    g.beginPath(); g.moveTo(0, 0);
+                    g.arc(0, 0, 124, -0.30, 0.30); g.closePath(); g.fill();
+                    g.restore();
+                }
+                const t = new THREE.CanvasTexture(c);
+                t.colorSpace = THREE.SRGBColorSpace;
+                return t;
+            })(),
+            transparent: true, opacity: .55, toneMapped: false,
             side: THREE.DoubleSide, depthWrite: false
         }),
-        // Rim ring: blade tips travel furthest and read slightly darker
-        // in a motion-blurred photo. Two layered translucent discs give
-        // the spinning rotor its convincing "thickness" without any
-        // animation cost.
+        // Blade tips travel furthest and read darker in a motion-blurred
+        // photograph; this thin ring gives the disc its edge.
         discRim: new THREE.MeshBasicMaterial({
-            color: 0x141a20, transparent: true, opacity: .36,
+            color: 0x151b22, transparent: true, opacity: .10, toneMapped: false,
             side: THREE.DoubleSide, depthWrite: false
         })
     };
@@ -472,7 +564,26 @@ function buildHeli3D() {
         }
     }
 
+    // Everything solid casts the shadow; the discs must not, or the rotor
+    // throws a black plate across the ground.
+    heli.traverse(o => {
+        if (o.isMesh && o.material !== M.disc && o.material !== M.discRim) {
+            o.castShadow = true;
+        }
+    });
     scene.add(heli);
+
+    // A shadow needs something to fall on. ShadowMaterial paints ONLY the
+    // shadow, so the card's own background still shows through everywhere
+    // else — the model reads as sitting on the page rather than floating.
+    const ground = new THREE.Mesh(
+        new THREE.PlaneGeometry(7, 7),
+        new THREE.ShadowMaterial({ opacity: .26 })
+    );
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -0.62;
+    ground.receiveShadow = true;
+    scene.add(ground);
 
     heliQuat = new THREE.Quaternion();        // starts at identity
 

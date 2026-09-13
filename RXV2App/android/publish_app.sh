@@ -20,6 +20,21 @@ set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP="$HERE/RXV2App"
 NOTES="${1:-}"
+
+# Credentials, including the host and username, live outside the repo so that
+# publishing the source does not name the account that serves everyone's OTA
+# firmware. Sourced HERE, before anything needs them.
+if [[ -z "${LDRC_FTP_HOST:-}" || -z "${LDRC_FTP_USER:-}" || -z "${LFTP_PASSWORD:-}" ]]; then
+  for f in "$HOME/.config/messiter_ftp.sh" "$HERE/../../RXV2/dev/ftp_credentials.sh"; do
+    # shellcheck disable=SC1090
+    [[ -f "$f" ]] && source "$f"
+  done
+  # ~/.config/messiter_ftp.sh exports MESSITER_FTP_*; the repo file LDRC_FTP_*/LFTP_PASSWORD
+  LDRC_FTP_HOST="${LDRC_FTP_HOST:-${MESSITER_FTP_HOST:-}}"
+  LDRC_FTP_USER="${LDRC_FTP_USER:-${MESSITER_FTP_USER:-}}"
+  LFTP_PASSWORD="${LFTP_PASSWORD:-${MESSITER_FTP_PASSWORD:-}}"
+  export LDRC_FTP_HOST LDRC_FTP_USER LFTP_PASSWORD
+fi
 HOST="${LDRC_FTP_HOST:?set LDRC_FTP_HOST (see dev/ftp_credentials.sh)}"
 USER_NAME="${LDRC_FTP_USER:?set LDRC_FTP_USER (see dev/ftp_credentials.sh)}"
 
@@ -64,16 +79,6 @@ json.dump({
 }, open(path, "w"), indent=1)
 EOF
 
-if [[ -z "${LFTP_PASSWORD:-}" ]]; then
-  for f in "$HOME/.config/messiter_ftp.sh" "$HERE/../../RXV2/dev/ftp_credentials.sh"; do
-    # shellcheck disable=SC1090
-    if [[ -f "$f" ]]; then source "$f"; fi
-    # ~/.config/messiter_ftp.sh exports MESSITER_FTP_*; the repo file exports LFTP_PASSWORD
-    LFTP_PASSWORD="${LFTP_PASSWORD:-${MESSITER_FTP_PASSWORD:-}}"
-    [[ -n "${LFTP_PASSWORD:-}" ]] && break
-  done
-  export LFTP_PASSWORD
-fi
 [[ -n "${LFTP_PASSWORD:-}" ]] || { echo "LFTP_PASSWORD not set and no credentials file found." >&2; exit 1; }
 command -v lftp >/dev/null 2>&1 || { echo "lftp not found (brew install lftp)." >&2; exit 1; }
 
