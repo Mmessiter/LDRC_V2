@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.685-button-gap",
+      "url": "https://messiter.com/rxv2/release/v0.9.685/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.685/littlefs.bin",
+      "fs_md5": "5f73594cca7cb1026f665fdad6cc027e",
+      "notes": "Read black box: the two buttons touched - the link above had no bottom margin and the button below had none at all. Checked by screenshot this time, not by reading the CSS. Includes 0.9.684."
+    },
+    {
       "name": "RXV2-0.9.684-read-black-box",
       "url": "https://messiter.com/rxv2/release/v0.9.684/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.684/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.674/littlefs.bin",
       "fs_md5": "99a04a96fa94eb59997775e10d32bf1b",
       "notes": "The help screen's way out is now the SAME round back arrow as every page, in the same top-left corner, instead of the wide bar 0.9.673 used. It floats above the overlay so it is there however far the help is scrolled. Got it stays at the bottom, tapping outside and Escape still work. The test compares its size, shape, colour and arrow against the page back button rule by rule. Includes 0.9.673."
-    },
-    {
-      "name": "RXV2-0.9.673-help-back",
-      "url": "https://messiter.com/rxv2/release/v0.9.673/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.673/littlefs.bin",
-      "fs_md5": "f60dadda4ebadc9ed45c0869c6bd19af",
-      "notes": "Every help screen now has a Back button at the TOP that stays there while you scroll, so opening one by mistake no longer means scrolling to the bottom to get out (Malcolm asked). Got it stays at the bottom for anyone who reads to the end, tapping outside still closes, and Escape now does too. The help panel is a solid colour, as everything else on these pages is. Includes 0.9.672."
     }
   ]
 }
