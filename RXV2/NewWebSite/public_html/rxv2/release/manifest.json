@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.683-log-under-blackbox",
+      "url": "https://messiter.com/rxv2/release/v0.9.683/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.683/littlefs.bin",
+      "fs_md5": "311a9be3002a3494ad927a3ce49f4f37",
+      "notes": "The Receiver log is offered plainly at the foot of Black box (Flight recorder) - no heading, no explaining - and is off the front page. It reappears on the front page only for a receiver with no Rotorflight, which would otherwise have no Black box page to reach it through. Includes 0.9.682."
+    },
+    {
       "name": "RXV2-0.9.682-receiver-log",
       "url": "https://messiter.com/rxv2/release/v0.9.682/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.682/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.672/littlefs.bin",
       "fs_md5": "42bc5e6891cb1234bb63b9650617f8bd",
       "notes": "Every finished check is now kept on the phone - the last six per model, about 30 kB each - and any of them can be opened again with no cable and no helicopter. So erasing the black box costs nothing, and a flight can be looked at again after a filter change. A kept check is clearly marked and can change nothing; run a new one for that. Page only, no firmware behaviour changed. Includes 0.9.671."
-    },
-    {
-      "name": "RXV2-0.9.671-flight-review",
-      "url": "https://messiter.com/rxv2/release/v0.9.671/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.671/littlefs.bin",
-      "fs_md5": "364eeba267972118d876ae0a0c5e746b",
-      "notes": "See the flight, not just its vibration. The check now decodes head speed, the governor's wanted speed, throttle, battery volts and current, roll and pitch, ESC temperature and motor RPM as it reads, and the page shows them as a stack of traces sharing one time axis, with arming, governor changes and rescue marked - plus a plain-English summary ('Head speed averaged 1325 rpm, dipping to 1270. The governor asked for 1300, so it held to within 25 rpm. Battery 25.0 V down to 23.4 V, sagging to 22.8 V under load.'). A link to What to record on the Flight recorder page sits on the check page, since that is where you notice a field is missing. Includes 0.9.670."
     }
   ]
 }
