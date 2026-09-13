@@ -576,5 +576,6 @@
   "RXV2-0.9.696-tail-line": "The 3D helicopter has lost the orange fin that stuck up from its tail, and the tail rotor now turns on the tail boom's own centreline instead of floating above it. The gearbox and tail skid moved down to match. Includes 0.9.695.",
   "RXV2-0.9.697-tail-tidy": "Three tidies to the 3D helicopter: the horizontal stabiliser at the back has gone, the tail rotor is a bit bigger, and two black posts that had been poking out of the belly have gone. Those posts were a mistake - a cross-tube that was never turned on its side, so it stood on its end. Includes 0.9.696.",
   "RXV2-0.9.698-tail-clearance": "On the 3D helicopter the tail skid now reaches further down, and the tail rotor is larger - its lowest point comes to just above the bottom of the skid, so the skid would touch first. Includes 0.9.697.",
-  "RXV2-0.9.699-stray-wires": "A few stray wires now peek out of the back of the 3D helicopter's frame, the way nobody's loom is ever quite tucked in. Three leads, each with its own droop and deliberately not matching. Includes 0.9.698."
+  "RXV2-0.9.699-stray-wires": "A few stray wires now peek out of the back of the 3D helicopter's frame, the way nobody's loom is ever quite tucked in. Three leads, each with its own droop and deliberately not matching. Includes 0.9.698.",
+  "RXV2-0.9.700-wire-loops": "The stray wires on the 3D helicopter are loops now: they come out of the frame a little way and go back in, instead of stopping in mid-air with a cut end. Includes 0.9.699."
 }

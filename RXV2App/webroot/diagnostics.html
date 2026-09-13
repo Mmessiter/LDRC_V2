@@ -8,7 +8,7 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>View channels &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=198">
+<link rel=stylesheet href="/style.css?v=199">
 <style>
 .container{max-width:min(96vw,1100px)}
 .chTable{display:grid;grid-template-columns:auto auto 1fr auto;gap:6px 10px;align-items:center;font-variant-numeric:tabular-nums}
@@ -46,7 +46,7 @@
 .heliReadout{position:absolute;bottom:6px;left:10px;font-size:.78em;color:#556;font-variant-numeric:tabular-nums;background:#f2f6f8;padding:3px 8px;border-radius:4px;z-index:2}
 .heliStale #heli3D{opacity:.35;filter:grayscale(.4)}
 </style>
-<script src="/app.js?v=229" defer></script>
+<script src="/app.js?v=230" defer></script>
 <script src="/three.min.js" defer></script>
 </head>
 <body>
@@ -557,19 +557,22 @@ function buildHeli3D() {
         red:   new THREE.MeshPhysicalMaterial({ color: 0xc02a20, metalness: .05, roughness: .5 }),
         white: new THREE.MeshPhysicalMaterial({ color: 0xd8d8d4, metalness: .05, roughness: .5 })
     };
-    // They have to emerge OUTBOARD of the frame plates (z = +/-0.118) and aft
-    // of them, or the frame simply swallows them — which is what happened on
-    // the first attempt.
+    // Each lead is a LOOP, not a stub. Malcolm 2026-09-13: "those showing
+    // wires need to be not cut off! They must come out a tiny bit and go back
+    // in!" — quite right: an open-ended tube shows its cut face hanging in
+    // mid-air. So every wire STARTS and ENDS inside the frame (|z| < 0.09 and
+    // x within the gap box, where the opaque black swallows it) and only the
+    // middle of the curve bulges outboard past the plates at z = +/-0.118.
     const wires = [
-        { mat: wireMat.black, r: 0.0065, pts: [
-            [-0.330,  0.105,  0.112], [-0.415,  0.082,  0.148],
-            [-0.495,  0.030,  0.142], [-0.552, -0.032,  0.116] ] },
-        { mat: wireMat.red,   r: 0.0060, pts: [
-            [-0.325,  0.128,  0.098], [-0.425,  0.118,  0.132],
-            [-0.505,  0.072,  0.136], [-0.566,  0.016,  0.106] ] },
-        { mat: wireMat.white, r: 0.0052, pts: [
-            [-0.340,  0.078, -0.110], [-0.435,  0.044, -0.142],
-            [-0.498, -0.008, -0.126] ] }
+        { mat: wireMat.black, r: 0.0060, pts: [
+            [-0.290,  0.105,  0.080], [-0.345,  0.098,  0.150],
+            [-0.400,  0.052,  0.156], [-0.355,  0.015,  0.082] ] },
+        { mat: wireMat.red,   r: 0.0055, pts: [
+            [-0.268,  0.135,  0.074], [-0.335,  0.132,  0.140],
+            [-0.395,  0.098,  0.148], [-0.345,  0.060,  0.078] ] },
+        { mat: wireMat.white, r: 0.0050, pts: [
+            [-0.300,  0.085, -0.078], [-0.355,  0.070, -0.145],
+            [-0.395,  0.030, -0.140], [-0.350,  0.005, -0.080] ] }
     ];
     for (const w of wires) {
         const path = new THREE.CatmullRomCurve3(w.pts.map(([x, y, z]) => new THREE.Vector3(x, y, z)));

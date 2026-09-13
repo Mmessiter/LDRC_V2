@@ -1,6 +1,11 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.700-wire-loops",
+      "url": "https://messiter.com/rxv2/release/v0.9.700/firmware.bin",
+      "notes": "The stray wires on the 3D helicopter are loops now: they come out of the frame a little way and go back in, instead of stopping in mid-air with a cut end. Includes 0.9.699."
+    },
+    {
       "name": "RXV2-0.9.699-stray-wires",
       "url": "https://messiter.com/rxv2/release/v0.9.699/firmware.bin",
       "notes": "A few stray wires now peek out of the back of the 3D helicopter's frame, the way nobody's loom is ever quite tucked in. Three leads, each with its own droop and deliberately not matching. Includes 0.9.698."
@@ -54,11 +59,6 @@
       "name": "RXV2-0.9.689-dev-host",
       "url": "https://messiter.com/rxv2/release/v0.9.689/firmware.bin",
       "notes": "The built-in address for a local firmware server was the developer's own Mac name. Two reasons to change it: it published a private machine name in every release, and any computer on your network answering to that name could have offered your receiver firmware. It is now a neutral name that nothing answers to by default, so updates come from messiter.com unless you set your own. Includes 0.9.688."
-    },
-    {
-      "name": "RXV2-0.9.688-usb-advice",
-      "url": "https://messiter.com/rxv2/release/v0.9.688/firmware.bin",
-      "notes": "Three pages still told you to turn the USB socket on in Setup - a button that 0.9.687 removed, because the receiver now works the socket out for itself. They now say to restart the receiver, which is the only thing that can actually be wrong. Found in an App Store screenshot. Includes 0.9.687."
     }
   ]
 }
