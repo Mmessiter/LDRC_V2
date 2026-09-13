@@ -401,7 +401,6 @@ void setup() {
     dongleAuto    = dongleEnabled && dongleMode == 0;
     dongleBaud    = prefs.isKey(NVS_KEY_DONGLE_BAUD) ? prefs.getUInt(NVS_KEY_DONGLE_BAUD, 115200) : 115200;
     if (dongleBaud < 9600 || dongleBaud > 2000000) dongleBaud = 115200;
-    usbFcMode     = prefs.isKey(NVS_KEY_USB_FC) ? prefs.getUChar(NVS_KEY_USB_FC, 1) : 1;
     if (simEnabled) {
         Serial.println("[sim] simulator mode — flight-controller output DISABLED (D6 stays silent)");
         events.add("Sim mode: FC output disabled");
@@ -416,14 +415,13 @@ void setup() {
     } else {
         configureOutputDriver(currentProtocol);
         // 0.9.639: a receiver hosts a flight controller on its USB socket exactly as the
-        // dongle does (automatic; Setup can switch the socket off). Never in sim mode:
-        // the socket is then the simulator's joystick. Nothing else changes - the CRSF
-        // line still carries the channels and telemetry; only MSP moves to the cable
-        // while a flight controller is on it.
-        usbFcEnabled = (usbFcMode != 0);
-        if (usbFcEnabled) {
-            if (UsbHostMsp::begin()) events.add("USB socket: a flight controller plugged into it is used for Rotorflight setup (Setup page to switch off)");
-        } else events.add("USB socket: off (Setup page)");
+        // dongle does. 0.9.687 (Malcolm: "our code can discover for itself if a USB cable
+        // is connected"): no setting at all - the socket is always ready, and a flight
+        // controller plugged into it is adopted. Never in sim mode: the socket is then
+        // the simulator's joystick. Nothing else changes - the CRSF line still carries
+        // the channels and telemetry; only MSP moves to the cable while an FC is on it.
+        usbFcEnabled = true;
+        if (UsbHostMsp::begin()) events.add("USB socket: a flight controller plugged into it is used for Rotorflight setup");
     }
 
     //*****************************************************************

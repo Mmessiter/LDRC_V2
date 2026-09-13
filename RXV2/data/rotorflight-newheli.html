@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>New helicopter &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=185">
-<script src="/app.js?v=216" defer></script>
+<link rel=stylesheet href="/style.css?v=186">
+<script src="/app.js?v=217" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.warn{background:#e8cf8f;color:#5c4a1a}
@@ -60,7 +60,7 @@ const STEPS=[
  {k:'rates', t:'Rates & PIDs', d:'How fast the model rotates at full stick, and how soft the feel is around centre. The starting values are fine for a first flight - tune later with the Tuning wizard.', href:'/rotorflight-rates'},
  {k:'bb',    t:'Black box (Flight recorder)', d:'Turn on Rotorflight\u2019s own black box: it records sticks, gyro, servos, governor and ESC hundreds of times a second onto the flight controller, so any problem in the first flights can be seen afterwards. Set it to record whenever armed, tick the recommended fields, and erase the memory before a test session.', href:'/rotorflight-blackbox'},
  {k:'blades',t:'Blades on \u2014 pitch & travel check', d:'Put the main and tail blades back on. Check main and tail pitch with a pitch gauge, and sweep full travel slowly, looking for anything that binds or touches. The last job before flying.'},
- {k:'backup',t:'Back up', d:'One tap saves the whole flight-controller setup to your phone. Restore it after any mishap - or use it as the starting point for your next helicopter.', href:'/setup'},
+ {k:'backup',t:'Back up', d:'One tap saves the whole flight-controller setup to your phone. Restore it after any mishap - or use it as the starting point for your next helicopter.', href:'/rotorflight-backup'},
 ];
 const $=id=>document.getElementById(id);
 // Ticks are per MODEL (receiver name), not per phone — Malcolm is setting up

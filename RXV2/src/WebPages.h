@@ -2339,25 +2339,6 @@ inline void handleDonglePage() {
     server.send(503, "text/plain", "/dongle.html missing — uploadfs the data/ folder");
 }
 
-// USB socket on a RECEIVER (0.9.639, Malcolm 2026-09-11 "Yes let's do it"): on = host a
-// flight controller on the USB socket like the dongle (the default), off = leave it idle.
-// Turning it on turns the simulator off - the socket is one thing at a time - and
-// choosing the simulator (handleSimSet) wins over it at boot.
-inline void handleUsbFcSet() {
-    if (dongleEnabled) { server.send(409, "text/plain", "a dongle always uses its USB socket for the flight controller"); return; }
-    if (refuseIfTxLinked("turn the transmitter off first - the receiver restarts to apply this")) return;
-    const bool on = server.hasArg("on") ? (server.arg("on").toInt() != 0) : true;
-    const bool simWasOn = simEnabled;
-    prefs.putUChar(NVS_KEY_USB_FC, on ? 1 : 0);
-    if (on && simEnabled) prefs.putUChar(NVS_KEY_SIM, 0);
-    prefs.putUChar(NVS_KEY_CFG_REBOOT, 1);   // come straight back to WiFi
-    events.add(on ? (simWasOn ? "USB socket: flight controller (simulator switched off)" : "USB socket: flight controller") : "USB socket: off");
-    server.send(200, "text/html", confirmPage("Saved & rebooting", on
-        ? "<p>The USB socket now hosts the <b>flight controller</b>. Rebooting. A USB-C cable from this receiver to the flight controller gives the app every Rotorflight setting, like the dongle.</p>"
-        : "<p>The USB socket is <b>off</b>. Rebooting. The flight controller is reached over the radio link only.</p>"));
-    delay(250);
-    safeOutputParkAndRestart();
-}
 
 inline void handleSimSet() {
     if (refuseIfTxLinked("turn the transmitter off first - the receiver restarts to apply this")) return;
@@ -2991,7 +2972,6 @@ inline void handleApiState() {
     j += ",\"dongle\":"; j += (dongleEnabled ? "true" : "false");
     bleStateJson(j);
     UsbHostMsp::stateJson(j);   // dongle_link usb|uart, usb_fc, USB host counters (0.9.615/0.9.639)
-    j += ",\"usb_fc_mode\":"; j += (unsigned)usbFcMode;
     j += ",\"fc_link\":\""; j += UsbHostMsp::active() ? "usb" : dongleEnabled ? "uart" : (currentProtocol == PROTO_CRSF && fcTelemetryEnabled) ? "crsf" : "none"; j += "\"";   // which wire carries MSP now (0.9.640)
     { char db[200]; snprintf(db, sizeof(db), ",\"dongle_mode\":%u,\"dongle_auto\":%s,\"dongle_baud\":%lu,\"fc_armed\":%s,\"dongle_wire\":{\"bytes_in\":%lu,\"frames\":%lu,\"bad_crc\":%lu,\"dropped\":%lu,\"sends\":%lu}",
                (unsigned)dongleMode, dongleAuto ? "true" : "false", (unsigned long)dongleBaud,
@@ -3291,7 +3271,6 @@ inline void registerWebRoutes() {
     server.on("/api/armch",          HTTP_POST, handleArmChSet);
     server.on("/protocol",    HTTP_POST, handleProtocolSet);
     server.on("/api/sim",     HTTP_POST, handleSimSet);
-    server.on("/api/usbfc",   HTTP_POST, handleUsbFcSet);   // receiver: USB socket hosts the flight controller on/off (0.9.639)
     server.on("/api/dongle",  HTTP_POST, handleDongleSet);
     server.on("/dongle",      HTTP_GET,  handleDonglePage);
     server.on("/api/sim/spool.json", HTTP_GET,  handleSimSpoolGet);

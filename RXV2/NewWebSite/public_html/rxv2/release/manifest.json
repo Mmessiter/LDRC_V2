@@ -1,6 +1,11 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.687-fewer-settings",
+      "url": "https://messiter.com/rxv2/release/v0.9.687/firmware.bin",
+      "notes": "Two settings left the Setup menu, because the receiver already knows the answers. It works out for itself whether it is a dongle or a receiver, and a flight controller plugged into its USB socket is adopted with no setting to turn on. A board that IS a dongle still shows its own button for the name and serial speed, and that is also where a receiver whose radios failed to start can force itself back to being a receiver. Also: in the new-helicopter wizard, the Back up step opened the Setup page instead of Backup & restore. Includes 0.9.686."
+    },
+    {
       "name": "RXV2-0.9.686-log-colour",
       "url": "https://messiter.com/rxv2/release/v0.9.686/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.686/littlefs.bin",
@@ -76,13 +81,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.676/littlefs.bin",
       "fs_md5": "9a7b55d16dd28e6f9adb66aed0ad8c23",
       "notes": "Cable advice matches what actually works on the model: the shortest cable you can get, right-angled at BOTH ends if possible, tied down and left in - it costs nothing in the air because the receiver stops talking over USB the moment the radio link is live. Said in the Ways-to-connect footer, the Rotorflight menu help and Setup's USB socket bullet; the website carries the fitted photo. Includes 0.9.675."
-    },
-    {
-      "name": "RXV2-0.9.675-help-round",
-      "url": "https://messiter.com/rxv2/release/v0.9.675/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.675/littlefs.bin",
-      "fs_md5": "737e04f6d894f1f188b81ba41ea55afe",
-      "notes": "The help back button really is the round arrow now. 0.9.674 gave it the class the wide green Got-it button uses, and since that rule comes later in the stylesheet it won on every shared property - so it rendered as a full-width teal bar. It now has its own class, declared after, and the panel starts below it exactly as a page's content starts below its floating buttons (the button is 3em of its own 1.55em font, so 4.65em tall, not 3em). Verified by screenshot in a headless browser, not by reading the CSS. Includes 0.9.674."
     }
   ]
 }
