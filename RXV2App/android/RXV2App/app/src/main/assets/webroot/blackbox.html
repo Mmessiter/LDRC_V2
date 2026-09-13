@@ -7,20 +7,20 @@
 <meta name=apple-mobile-web-app-capable content=yes>
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
-<title>Black box &middot; LDRC RX V2</title>
+<title>Receiver log &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=185">
-<script src="/app.js?v=211" defer></script>
+<script src="/app.js?v=212" defer></script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
 <div class=bg-photo aria-hidden=true></div>
 <div class=bg-wash  aria-hidden=true></div>
 <div class=container>
-    <h1>Black box</h1>
-    <p class=subtitle>Live status, post-flight analysis, event history</p>
+    <h1>Receiver log</h1>
+    <p class=subtitle>What <b>this receiver</b> saw: live status, the radio link, past flights, events</p>
 
     <!-- Live battery/status stays right here — the at-a-glance check you want
-         the moment you open the Black box, no extra tap. -->
+         the moment you open the Receiver log, no extra tap. -->
     <div class=card>
         <h2 style="margin-top:0">Status</h2>
         <div style="display:flex;align-items:center;gap:.5em;margin:.1em 0 .3em;flex-wrap:wrap">
@@ -215,7 +215,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 </script>
-<template id=helpContent><h2>Black box</h2>
+<template id=helpContent><h2>Receiver log</h2>
+<p>This is the <b>receiver&rsquo;s own</b> record: the radio link, the battery, and what it saw on each flight. The flight controller keeps a separate one of its gyro and controls &mdash; that is the <a href="/rotorflight-blackbox">Black box (Flight recorder)</a>, under Rotorflight.</p>
 <p>The receiver's flight-data recorder, in three parts.</p>
 <h3>On this page</h3>
 <p><b>Status</b> shows live flight-controller telemetry whenever the model is powered — the transmitter does not need to be on. Per-cell voltage with a resting state-of-charge estimate, current, head speed and ESC temperature.</p>

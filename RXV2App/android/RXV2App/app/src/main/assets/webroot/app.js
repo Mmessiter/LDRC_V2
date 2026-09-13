@@ -735,7 +735,7 @@
                 '/rotorflight-escprog': '/rotorflight'
             };
             const LABELS = {
-                '/': 'front screen', '/blackbox': 'Black box', '/setup': 'Setup',
+                '/': 'front screen', '/blackbox': 'Receiver log', '/setup': 'Setup',
                 '/sim': 'Simulator', '/rotorflight': 'Rotorflight',
                 '/rotorflight-alacarte': 'À la carte', '/rotorflight-wizards': 'Wizards',
                 '/rotorflight-newheli': 'New helicopter', '/rotorflight-tuning': 'Tuning'
