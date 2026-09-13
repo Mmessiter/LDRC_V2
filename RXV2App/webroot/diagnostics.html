@@ -8,7 +8,7 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>View channels &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=191">
+<link rel=stylesheet href="/style.css?v=192">
 <style>
 .container{max-width:min(96vw,1100px)}
 .chTable{display:grid;grid-template-columns:auto auto 1fr auto;gap:6px 10px;align-items:center;font-variant-numeric:tabular-nums}
@@ -46,7 +46,7 @@
 .heliReadout{position:absolute;bottom:6px;left:10px;font-size:.78em;color:#556;font-variant-numeric:tabular-nums;background:#f2f6f8;padding:3px 8px;border-radius:4px;z-index:2}
 .heliStale #heli3D{opacity:.35;filter:grayscale(.4)}
 </style>
-<script src="/app.js?v=222" defer></script>
+<script src="/app.js?v=223" defer></script>
 <script src="/three.min.js" defer></script>
 </head>
 <body>
@@ -390,7 +390,9 @@ function buildHeli3D() {
 
         // One flank's graphic, drawn at a given horizontal centre.
         // Canvas y is flipped against v, so the nose is at the TOP here.
-        function flank(cx) {
+        // dir says which way the BELLY lies from this flank in u, so the
+        // window and lettering land below the swoosh and not above it.
+        function flank(cx, dir) {
             const halfW = W * 0.105;
             const x0 = cx - halfW, x1 = cx + halfW;
             // white swoosh: a long tapering sweep from the tail up to the nose
@@ -409,20 +411,59 @@ function buildHeli3D() {
             g.bezierCurveTo(cx + halfW * 0.3, H * 0.79, cx - halfW * 0.3, H * 0.57, x0, H * 0.425);
             g.closePath();
             g.fillStyle = '#14141a'; g.fill();
+
+            // The big side cut-out: on a real Goblin the lower canopy is
+            // largely open, and you look straight through at the carbon frame.
+            // Painted rather than modelled, because a hole cut in a lathed
+            // shell would show the inside of the far side through it.
+            const wx = cx + dir * W * 0.062;
+            g.save();
+            g.beginPath();
+            const wy0 = H * 0.42, wy1 = H * 0.80, ww = W * 0.038;
+            g.moveTo(wx - ww, wy0 + 12);
+            g.quadraticCurveTo(wx - ww, wy0, wx - ww + 10, wy0);
+            g.lineTo(wx + ww - 10, wy0 + 6);
+            g.quadraticCurveTo(wx + ww, wy0 + 10, wx + ww, wy0 + 22);
+            g.lineTo(wx + ww, wy1 - 12);
+            g.quadraticCurveTo(wx + ww, wy1, wx + ww - 12, wy1);
+            g.lineTo(wx - ww + 8, wy1 - 4);
+            g.quadraticCurveTo(wx - ww, wy1 - 8, wx - ww, wy1 - 20);
+            g.closePath();
+            g.fillStyle = '#0d0d10'; g.fill();
+            g.lineWidth = 3; g.strokeStyle = '#f7f7f5'; g.stroke();   // white surround
+            g.restore();
+
+            // Lettering. Barely legible at 480 pixels, but the eye reads
+            // "there is writing on it", which is most of the effect.
+            g.save();
+            // This shell's UVs put the body's long axis along canvas Y, not X,
+            // so unrotated text runs AROUND the fuselage instead of along it.
+            // Rotate a quarter turn, then mirror per flank so it reads forwards
+            // on whichever side you are looking at.
+            g.translate(cx - dir * W * 0.042, H * 0.58);   // clear of the swoosh, up toward the spine
+            g.rotate(-Math.PI / 2);
+            g.scale(dir, 1);
+            g.fillStyle = '#f7f7f5';
+            g.font = 'bold 15px -apple-system, Helvetica, Arial, sans-serif';
+            g.textAlign = 'center';
+            g.fillText('GOBLIN 770', 0, 0);
+            g.font = 'bold 8px -apple-system, Helvetica, Arial, sans-serif';
+            g.fillText('SAB HELI DIVISION', 0, 12);
+            g.restore();
         }
-        // Measured from the render, not assumed: u=0.25 is the spine, so the
-        // flanks sit at u=0 and u=0.5. u=0 straddles the texture seam, so that
-        // flank is drawn twice, once at each edge.
-        flank(0);
-        flank(W);
-        flank(W * 0.5);
+        // Measured from the render, not assumed: u=0.75 is the SPINE and
+        // u=0.25 the belly, so the flanks sit at u=0 and u=0.5. u=0 straddles
+        // the texture seam, so that flank is drawn twice, once at each edge.
+        flank(0, +1);
+        flank(W, +1);
+        flank(W * 0.5, -1);
 
         // Dark vent panel on the spine, just ahead of the mast — the shadowed
         // cut-out every Goblin canopy has, and the thing that stops the top
         // reading as one unbroken orange dome.
         g.fillStyle = '#2a1c15';
         g.beginPath();
-        g.ellipse(W * 0.25, H * 0.34, W * 0.05, H * 0.10, 0, 0, Math.PI * 2);
+        g.ellipse(W * 0.75, H * 0.34, W * 0.05, H * 0.10, 0, 0, Math.PI * 2);
         g.fill();
 
         const t = new THREE.CanvasTexture(c);
@@ -650,12 +691,21 @@ function buildHeli3D() {
     const mainBlade = new THREE.Mesh(bladeGeo, M.blade);
     rotorGrp.add(mainBlade);
     mainBlades.push(mainBlade);
-    const tipGeo = new THREE.BoxGeometry(0.2, 0.0125, 0.057);
-    for (const x of [-0.77, 0.77]) {
+    // SAB blades are black with a pale flash and an orange chevron out near
+    // the tip — the markings that let you see blade track from the ground.
+    const tipGeo = new THREE.BoxGeometry(0.17, 0.0125, 0.057);
+    for (const x of [-0.74, 0.74]) {
         const tip = new THREE.Mesh(tipGeo, M.accent);
         tip.position.set(x, 0, 0);
         rotorGrp.add(tip);
         mainBlades.push(tip);
+    }
+    const chevGeo = new THREE.BoxGeometry(0.07, 0.0128, 0.058);
+    for (const x of [-0.60, 0.60]) {
+        const ch = new THREE.Mesh(chevGeo, M.body);
+        ch.position.set(x, 0, 0);
+        rotorGrp.add(ch);
+        mainBlades.push(ch);
     }
     heli.add(rotorGrp);
 
@@ -672,6 +722,22 @@ function buildHeli3D() {
     mainRim.position.set(0, 0.586, 0);
     mainRim.visible = false;
     heli.add(mainRim);
+
+    // Pitch links — the two thin rods from the swashplate up to the blade
+    // grips. At this size they are what makes the head read as machinery
+    // rather than a knob on a stick.
+    const linkGeo = new THREE.CylinderGeometry(0.007, 0.007, 0.115, 6);
+    for (const [lx, lz] of [[0.052, 0.052], [-0.052, -0.052]]) {
+        const lk = new THREE.Mesh(linkGeo, M.metal);
+        lk.position.set(lx, 0.495, lz);
+        lk.rotation.z = 0.16;
+        heli.add(lk);
+    }
+    // Washout / damper block just under the grips.
+    const dampGeo = new THREE.BoxGeometry(0.085, 0.032, 0.085);
+    const damp = new THREE.Mesh(dampGeo, M.dark);
+    damp.position.set(0, 0.523, 0);
+    heli.add(damp);
 
     // Tail rotor — same disc-or-blades treatment, in the X-Y plane.
     const tailRotorGrp = new THREE.Group();
@@ -721,26 +787,34 @@ function buildHeli3D() {
         skid.position.set(0, 0, z);
         heli.add(skid);
     }
-    // Skid struts — each one rises vertically from the skid then bends
-    // inward at the top to meet the body, the way real model heli
-    // landing-gear struts do. A straight cylinder leaves the strut
-    // tops floating beside the body rather than touching it. The path
-    // has four control points: foot at the skid, a short vertical run,
-    // a bend, and the top landing on (or just inside) the body's
-    // lower-side surface.
-    for (const zs of [-0.24, 0.24]) {
-        for (const xs of [-0.28, 0.28]) {
-            const xt = xs * (0.24 / 0.28);
-            const zt = zs * (0.10 / 0.24);
-            const strutPath = new THREE.CatmullRomCurve3([
-                new THREE.Vector3(xs, -0.36, zs),
-                new THREE.Vector3(xs, -0.28, zs),
-                new THREE.Vector3(xs, -0.22, zs * 0.85),
-                new THREE.Vector3(xt, -0.12, zt)
-            ]);
-            const strutGeo = new THREE.TubeGeometry(strutPath, 16, 0.014, 8, false);
-            heli.add(new THREE.Mesh(strutGeo, M.dark));
+    // Landing-gear struts — WIDE FLAT CARBON PLATES, not tubes (Malcolm's
+    // factory photograph, 2026-09-13). A Goblin's gear is two broad black
+    // plates that splay outward as they drop to the skids; thin round struts
+    // read as wire legs and were the last obviously toy-like thing left.
+    // Each plate is drawn in side view (x against y) and extruded in z, then
+    // tilted so its foot sits outboard of its top.
+    const gearShape = new THREE.Shape();
+    gearShape.moveTo(-0.062,  0.00);    // top, where it meets the frame
+    gearShape.lineTo( 0.062,  0.00);
+    gearShape.lineTo( 0.046, -0.225);   // narrows slightly on the way down
+    gearShape.lineTo(-0.046, -0.225);
+    gearShape.closePath();
+    const gearGeo = new THREE.ExtrudeGeometry(gearShape, { depth: 0.016, bevelEnabled: false });
+    gearGeo.translate(0, 0, -0.008);
+    for (const xs of [-0.17, 0.16]) {
+        for (const zs of [-1, 1]) {
+            const plate = new THREE.Mesh(gearGeo, M.dark);
+            plate.position.set(xs, -0.135, zs * 0.115);
+            plate.rotation.x = zs * -0.30;     // splayed: foot outboard of top
+            heli.add(plate);
         }
+    }
+    // The cross-tube the two gear plates bolt to, running under the frame.
+    const gearBarGeo = new THREE.CylinderGeometry(0.016, 0.016, 0.30, 10);
+    for (const xs of [-0.17, 0.16]) {
+        const bar = new THREE.Mesh(gearBarGeo, M.dark);
+        bar.position.set(xs, -0.135, 0);
+        heli.add(bar);
     }
 
     // Everything solid casts the shadow; the discs must not, or the rotor
