@@ -1,6 +1,11 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.695-ldrc-livery",
+      "url": "https://messiter.com/rxv2/release/v0.9.695/firmware.bin",
+      "notes": "The 3D helicopter now carries our own name. The shell reads LDRC over LOCKDOWN RADIO CONTROL and the tail boom reads LDRC, in place of the manufacturer's name, which belongs to them. The shape is still modelled on a real machine; only the lettering has changed. Includes 0.9.694."
+    },
+    {
       "name": "RXV2-0.9.694-tail-skid",
       "url": "https://messiter.com/rxv2/release/v0.9.694/firmware.bin",
       "notes": "The 3D helicopter's tail skid now rakes down and backwards with a black foot on the end, the way the real one does, so a tail-low landing would put the skid down rather than the tail blades. The landing skids have their black end caps, the tail rotor has two blades and its orange pitch bracket, and the tail stabiliser sits further aft. Includes 0.9.693."
@@ -60,13 +65,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.684/littlefs.bin",
       "fs_md5": "67cf54289f9597e52785686414409b91",
       "notes": "The Vibration check is now called READ BLACK BOX, because that is what it does - it grew from filter advice into the whole flight - and it lives inside the black box area instead of as a separate entry in the list. Black box (Flight recorder) leads with it, and the Receiver log sits at the foot of the same page, so everything about recordings is in one place. Includes 0.9.683."
-    },
-    {
-      "name": "RXV2-0.9.683-log-under-blackbox",
-      "url": "https://messiter.com/rxv2/release/v0.9.683/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.683/littlefs.bin",
-      "fs_md5": "311a9be3002a3494ad927a3ce49f4f37",
-      "notes": "The Receiver log is offered plainly at the foot of Black box (Flight recorder) - no heading, no explaining - and is off the front page. It reappears on the front page only for a receiver with no Rotorflight, which would otherwise have no Black box page to reach it through. Includes 0.9.682."
     }
   ]
 }
