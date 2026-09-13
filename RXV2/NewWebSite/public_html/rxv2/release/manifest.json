@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.679-help-links",
+      "url": "https://messiter.com/rxv2/release/v0.9.679/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.679/littlefs.bin",
+      "fs_md5": "d182d86e2c76f531e7ebac38c66f5a70",
+      "notes": "Where a help screen tells you to use another page, it now offers it: the Filters help has Vibration check and Flight recorder buttons, and In-flight adjustments links the Switches page where the bank switch is set. Includes 0.9.678."
+    },
+    {
       "name": "RXV2-0.9.678-ports-link",
       "url": "https://messiter.com/rxv2/release/v0.9.678/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.678/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.668/littlefs.bin",
       "fs_md5": "2c216bb63b744c5d3cf5be4f2a694bf9",
       "notes": "FLIGHT SAFETY: the vibration check's once-a-second 'is it armed?' re-check never actually ran while the black box was streaming - it lived only on the idle path, and a healthy stream re-arms the next read immediately, so the flight controller's armed word was read once at the start and then frozen. On a receiver the transmitter test still covered it; on a DONGLE nothing did. All 'what next?' decisions now go through one place that gives the armed re-check its turn. Also: the idle watchdog now leaves exactly the state stopLink() leaves (a latched mspAsyncFunc would have confused the transmitter-parameter machine), and the serial MSP parser is reset when a read times out and whenever the USB device comes or goes, so one dropped byte cannot hold it open for a whole 4 kB reply. Includes 0.9.667."
-    },
-    {
-      "name": "RXV2-0.9.667-banks-first",
-      "url": "https://messiter.com/rxv2/release/v0.9.667/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.667/littlefs.bin",
-      "fs_md5": "7094d7cc29f1eecfe4cb21e3aa46a255",
-      "notes": "FLIGHT SAFETY, found by the pre-flight review: a vibration check stands the bank put-back down for its whole run, so if a phone session had left the flight controller on a different PID bank and the transmitter came on during the check, the put-back was abandoned and the model would have flown on the phone's bank. A check now refuses to start while the banks are still held, and while any page has talked to the flight controller in the last 5 seconds (a restore is many requests with gaps); the page waits and retries by itself, so it is invisible. Also: the 20-minute cap now bounds the whole run, not each widened pass. Includes 0.9.666."
     }
   ]
 }
