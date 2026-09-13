@@ -101,7 +101,7 @@ EXTRA = [
  ('/rotorflight-escprog', 'ESC programming', 'Scorpion ESC settings (soft start, governor gains, BEC voltage, timing)', '', 'Read and change the ESC parameters over the telemetry wire'),
  ('/rotorflight-rescue', 'Rescue', 'Rescue mode: pull-up strength, climb and level', '', 'The panic switch that rights the model'),
  ('/rotorflight-filters', 'Filters', 'Gyro lowpass, rotor-speed (RPM) notches, dynamic and fixed notches', 'lpf1', 'Take the vibration out of the gyro signal; the help says how to read the black box for it'),
- ('/rotorflight-filtercheck', 'Vibration check', 'Reads the black box over USB, shows the gyro spectrum before and after the filters, says which filter to change and applies it', '', 'Rotor, motor, tail or a loose part: the peaks are named from the head speed'),
+ ('/rotorflight-filtercheck', 'Read black box', 'Reads the black box over USB, shows the gyro spectrum before and after the filters, says which filter to change and applies it', '', 'Rotor, motor, tail or a loose part: the peaks are named from the head speed'),
  ('/rotorflight-ports', 'Ports', 'Which flight-controller port carries the receiver (CRSF), a dongle wire (MSP) or ESC telemetry', '', 'Rotorflight Ports tab: set a UART once, the flight controller restarts'),
  ('/rotorflight-esc', 'ESC', 'ESC telemetry protocol and status', '', 'What the ESC reports over its telemetry wire'),
  ('/rxsettings', 'Receiver settings', 'Arming channel, auto fly mode, landing wiggle', 'armch', 'The receiver-side switches: which channel arms, radios off in flight, servo wiggle on landing'),

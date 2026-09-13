@@ -9,7 +9,7 @@
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Black box (Flight recorder) &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=185">
-<script src="/app.js?v=213" defer></script>
+<script src="/app.js?v=214" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -49,6 +49,7 @@ h2 .hint{font-weight:400;font-size:.7em;color:#5d7a8c;display:block;margin-top:.
     <p class=subtitle>What Rotorflight records in flight, kept on the flight controller (Blackbox, the Flight recorder)</p>
     <div id=verBanner class="banner warn" style="display:none"><span id=verBannerMsg></span></div>
     <div id=status class="banner info">loading&hellip;</div>
+    <a class=btn href="/rotorflight-filtercheck" style="display:block;text-align:center;background:#3f8f6a;color:#fff;text-decoration:none;padding:.8em;border-radius:10px;font-weight:700;margin:.2em 0 .8em;font-size:1.05em"><span class=ico>&#128200;</span>Read black box &mdash; the last flight, and which filter to change</a>
     <div id=rbBanner class="banner warn" style="display:none">The new rate or place to record only starts after a flight-controller restart.
         <button class=rbBtn onclick="rebootFc()">&#128260; Restart flight controller now</button></div>
 
@@ -78,8 +79,7 @@ h2 .hint{font-weight:400;font-size:.7em;color:#5d7a8c;display:block;margin-top:.
         <h2>Memory <span class=hint>flight logs stored on the flight controller (Dataflash)</span></h2>
         <div class=bar><i id=barFill style="width:0"></i></div>
         <div class=att id=memText>&hellip;</div>
-        <a class=btn href="/rotorflight-filtercheck" style="display:block;text-align:center;background:#3f8f6a;color:#fff;text-decoration:none;padding:.75em;border-radius:10px;font-weight:700;margin:.4em 0 .6em">&#128200; Vibration check &mdash; read the last flight, get filter advice</a>
-        <p class=do><b>Erase before a test session</b>, so the new flights are easy to find and the memory cannot fill mid-flight. The Vibration check reads the logs here over the USB cable; the Rotorflight Blackbox Explorer on a computer shows everything else &mdash; erasing deletes them for good.</p>
+        <p class=do><b>Erase before a test session</b>, so the new flights are easy to find and the memory cannot fill mid-flight. <b>Read black box</b> reads the logs here over the USB cable; the Rotorflight Blackbox Explorer on a computer shows everything else &mdash; erasing deletes them for good.</p>
         <button class="saveBtn eraseBtn" id=eraseBtn onclick="erase()">Erase all flight logs</button>
         <div id=memMsg class=sMsg></div>
     </div>
@@ -282,6 +282,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
 });
 </script>
 <template id=helpContent><h2>Black box (Flight recorder)</h2>
+<p><b>Read black box</b>, at the top, is how you look at what was recorded: the last flight as traces, in plain English, and which filter to change. <b>Receiver log</b>, at the foot, is the receiver's own separate record of the radio link and the battery.</p>
 <p>Rotorflight&rsquo;s Blackbox writes the flight controller&rsquo;s insides &mdash; sticks, gyro, servos, governor, ESC &mdash; hundreds of times a second into the flight controller&rsquo;s own memory. Afterwards the Rotorflight Blackbox Explorer (computer, USB) shows exactly what happened. <b>Not the receiver&rsquo;s Black box log</b> on the front page: that records the radio link and telemetry a few times a second and is read here on the phone.</p>
 <ul>
 <li><b>When</b> &mdash; <i>Whenever armed</i> needs no switch and never forgets. The two switch choices need a Blackbox switch (Switches page); <i>Armed and the switch on</i> starts when both are true and the switch then pauses and resumes it.</li>
