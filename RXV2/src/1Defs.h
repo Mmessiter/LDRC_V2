@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.700-wire-loops";
+constexpr const char* FW_VERSION = "RXV2-0.9.701-gear-joined";
 
 //*********************************************************************
 //  Auto-update manifest URLs

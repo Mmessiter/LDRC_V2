@@ -1,6 +1,11 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.701-gear-joined",
+      "url": "https://messiter.com/rxv2/release/v0.9.701/firmware.bin",
+      "notes": "On the 3D helicopter the landing-gear supports now actually join up: they reach the skids below and go up into the frame above, instead of stopping just short of both. Includes 0.9.700."
+    },
+    {
       "name": "RXV2-0.9.700-wire-loops",
       "url": "https://messiter.com/rxv2/release/v0.9.700/firmware.bin",
       "notes": "The stray wires on the 3D helicopter are loops now: they come out of the frame a little way and go back in, instead of stopping in mid-air with a cut end. Includes 0.9.699."
@@ -54,11 +59,6 @@
       "name": "RXV2-0.9.690-heli-3d",
       "url": "https://messiter.com/rxv2/release/v0.9.690/firmware.bin",
       "notes": "The rotating helicopter on the View channels page is much better looking. It now sits on a real shadow, the bodywork is glossy and catches the light, the metal parts look like metal, and you can see through the spinning rotor instead of it being a grey plate. Same model, properly lit. Includes 0.9.689."
-    },
-    {
-      "name": "RXV2-0.9.689-dev-host",
-      "url": "https://messiter.com/rxv2/release/v0.9.689/firmware.bin",
-      "notes": "The built-in address for a local firmware server was the developer's own Mac name. Two reasons to change it: it published a private machine name in every release, and any computer on your network answering to that name could have offered your receiver firmware. It is now a neutral name that nothing answers to by default, so updates come from messiter.com unless you set your own. Includes 0.9.688."
     }
   ]
 }
