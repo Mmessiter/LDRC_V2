@@ -9,7 +9,7 @@
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Home &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=185">
-<script src="/app.js?v=211" defer></script>
+<script src="/app.js?v=212" defer></script>
 <style>
 /* First paint from memory (Malcolm 2026-09-10: the receiver layout flashed
    before the dongle one): classes set on <html> by the hint script below,
@@ -143,7 +143,7 @@ html.h-dongle #dongleBanner { display: block !important; }
             document.getElementById('subtitle').textContent='';   // nothing to say until the receiver answers
         }catch(e){}
         </script>
-        <a class="btn btn-bb"   href="/blackbox"><span class=ico>&#128209;</span>Black box log</a>
+        <a class="btn btn-bb"   href="/blackbox"><span class=ico>&#128209;</span>Receiver log &mdash; link, battery, flights</a>
         <button class="btn btn-bind" type=button id=bindbtn><span class=ico>&#128279;</span>Bind</button>
         <a class="btn" href="/sim" id=simpg style="background:#4a90c9"><span class=ico>&#127918;</span><span id=simpglbl>Simulator</span></a>
         <a class="btn" href="/setup" style="background:#6f7e8b"><span class=ico>&#9881;&#65039;</span>Setup</a>
@@ -389,7 +389,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           + '<h3>Buttons</h3><ul>'
           + '<li><b>Turn off WiFi</b> &mdash; cuts WiFi to reduce radio interference; the simulator keeps running over USB. WiFi (and this phone control) comes back when you power-cycle the receiver.</li>'
           + '<li><b>Simulator — ON</b> &mdash; remap channels, RealFlight/neXt controls &amp; views, and the switch back to a normal receiver.</li>'
-          + '<li><b>Black box log / Setup</b> &mdash; as usual.</li>'
+          + '<li><b>Receiver log / Setup</b> &mdash; as usual.</li>'
           + '</ul><h3>Tips</h3><p>If the simulator doesn’t see the receiver, re-plug the USB cable. Turn simulator mode off (on the Simulator page) to fly a real model again.</p>';
     }
 

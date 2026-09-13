@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.681-black-box";
+constexpr const char* FW_VERSION = "RXV2-0.9.682-receiver-log";
 
 //*********************************************************************
 //  Auto-update manifest URLs

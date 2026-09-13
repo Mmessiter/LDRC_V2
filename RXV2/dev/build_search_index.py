@@ -110,7 +110,7 @@ EXTRA = [
  ('/wifi', 'WiFi', 'Home WiFi name (SSID) and password', 'ssid', 'Join your home network so the receiver updates over the air'),
  ('/firmware', 'Update', 'Receiver firmware update (over the air)', '', 'Install the newest receiver version from messiter.com'),
  ('/bind', 'Bind', 'Bind the receiver to the transmitter', '', 'Pairing: the transmitter\'s ID becomes the receiver\'s address'),
- ('/blackbox', 'Black box', 'Live status, flight analysis graph, event log, save session', '', 'Volts per cell, head speed, current, ESC temperature and the link statistics'),
+ ('/blackbox', 'Receiver log', 'What the RECEIVER recorded: live status, radio link quality, past flights, event log, save session', '', 'Volts per cell, head speed, current, ESC temperature and the link statistics - not the flight controller black box'),
  ('/flight', 'Flight analysis', 'Head speed, volts and current graph for each flight', '', 'The last 20 flights, one-second samples'),
  ('/sim', 'Simulator', 'Drive a PC simulator over USB (RealFlight, neXt)', '', 'The receiver becomes a USB joystick and keyboard'),
  ('/views', 'Simulator keys', 'Camera views and simulator keys from the phone', '', 'RealFlight menu and camera keys; neXt keys; realistic spool-up'),

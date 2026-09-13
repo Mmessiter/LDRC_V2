@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.682-receiver-log",
+      "url": "https://messiter.com/rxv2/release/v0.9.682/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.682/littlefs.bin",
+      "fs_md5": "bb2c8bf7e4a1f537e654ef715ab8ae73",
+      "notes": "Two things were both called the black box. The receiver's own is now the RECEIVER LOG - what this receiver saw: live status, the radio link, past flights and events - on the front page, in its title and help, and in search. Black box (Flight recorder) keeps that name for the flight controller's recording, and now carries a 'Not this one?' card pointing across to the Receiver log; the Receiver log points back. Includes 0.9.681."
+    },
+    {
       "name": "RXV2-0.9.681-black-box",
       "url": "https://messiter.com/rxv2/release/v0.9.681/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.681/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.671/littlefs.bin",
       "fs_md5": "364eeba267972118d876ae0a0c5e746b",
       "notes": "See the flight, not just its vibration. The check now decodes head speed, the governor's wanted speed, throttle, battery volts and current, roll and pitch, ESC temperature and motor RPM as it reads, and the page shows them as a stack of traces sharing one time axis, with arming, governor changes and rescue marked - plus a plain-English summary ('Head speed averaged 1325 rpm, dipping to 1270. The governor asked for 1300, so it held to within 25 rpm. Battery 25.0 V down to 23.4 V, sagging to 22.8 V under load.'). A link to What to record on the Flight recorder page sits on the check page, since that is where you notice a field is missing. Includes 0.9.670."
-    },
-    {
-      "name": "RXV2-0.9.670-memory-card",
-      "url": "https://messiter.com/rxv2/release/v0.9.670/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.670/littlefs.bin",
-      "fs_md5": "bee2ce5bc10e787f238f66e7b20b12b4",
-      "notes": "Vibration check page: a Black box memory card of its own - a bar and a plain 'X of Y used (Z%)' line, and an 'Erase all flight logs' button right there, refused while armed or with the rotor turning and confirmed first. When the memory is over half full it says how much time erasing would save, because that is where you notice it. The Flight recorder page keeps its own copy of both. Includes 0.9.669."
     }
   ]
 }
