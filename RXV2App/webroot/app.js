@@ -18,7 +18,11 @@
         // Pages that only mean something on a receiver (radio, channel
         // output, flight records). A dongle shows a one-line note instead
         // and Find a setting leaves them out (Malcolm 2026-09-10).
-        RX_ONLY: ['/bind', '/blackbox', '/diagnostics', '/flight', '/fly', '/map', '/protocol', '/rxsettings', '/sim', '/simctl', '/views'],
+        // Pages that need OUR radio and so make no sense on a dongle.
+        // /diagnostics came off this list in 0.9.702: a dongle reads the
+        // channels from the flight controller over MSP instead, so View
+        // channels works there and shows the whole chain.
+        RX_ONLY: ['/bind', '/blackbox', '/flight', '/fly', '/map', '/protocol', '/rxsettings', '/sim', '/simctl', '/views'],
         async dongleGuard() {
             const path = location.pathname.replace(/\.html$/, '').replace(/\/index$/, '/');
             if (!this.RX_ONLY.includes(path)) return false;
