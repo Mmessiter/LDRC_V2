@@ -31,7 +31,9 @@ Setting up happens with the blades off or the motor unplugged. The app refuses t
 FREE, AND FREE SOFTWARE
 The app is free. No adverts, no accounts, no subscriptions, no tracking, and nothing at all collected about you — everything stays on your phone and your own receiver.
 
-The source of the whole system is published under the GNU General Public License, so you can read it, change it and share it.
+The source of the whole system is published under the GNU General Public License, so you can read it, change it and share it:
+github.com/Mmessiter/LDRC_V2
+messiter.com/rxv2/source.html
 
 NOT AFFILIATED
 LockDown Radio Control is an independent project, not affiliated with or endorsed by the Rotorflight project or any flight-controller manufacturer.
