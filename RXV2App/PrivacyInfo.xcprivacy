@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Apple's privacy manifest. Required since 1 May 2024: an upload that touches a
+     "required reason" API without declaring it is bounced at processing with
+     ITMS-91053, before a human ever sees it.
+     This app collects nothing and tracks nobody. The one required-reason API it
+     uses is UserDefaults (BleLink.swift stores the last receiver's id, name and
+     signal strength; RXV2App.swift's @AppStorage is UserDefaults underneath).
+     CA92.1 = read/write only this app's own defaults, never shared, never sent. -->
+<plist version="1.0">
+<dict>
+    <key>NSPrivacyTracking</key>
+    <false/>
+    <key>NSPrivacyTrackingDomains</key>
+    <array/>
+    <key>NSPrivacyCollectedDataTypes</key>
+    <array/>
+    <key>NSPrivacyAccessedAPITypes</key>
+    <array>
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <string>CA92.1</string>
+            </array>
+        </dict>
+    </array>
+</dict>
+</plist>

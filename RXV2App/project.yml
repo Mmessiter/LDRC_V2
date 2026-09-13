@@ -20,6 +20,8 @@ targets:
         type: folder
         buildPhase: resources
       - path: Assets.xcassets
+      - path: PrivacyInfo.xcprivacy
+        buildPhase: resources
     info:
       path: Info.plist
       properties:
@@ -31,8 +33,8 @@ targets:
             LSItemContentTypes:
               - public.json
               - public.plain-text
-        CFBundleShortVersionString: "5.30"
-        CFBundleVersion: "392"
+        CFBundleShortVersionString: "5.31"
+        CFBundleVersion: "393"
         CFBundleDisplayName: RXV2
         UILaunchScreen: {}
         NSCameraUsageDescription: RXV2 uses the camera to take a photograph of your helicopter, shown beside its receiver.
