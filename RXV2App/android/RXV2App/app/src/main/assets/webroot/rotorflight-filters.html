@@ -9,7 +9,7 @@
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Filters &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=185">
-<script src="/app.js?v=208" defer></script>
+<script src="/app.js?v=209" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -137,10 +137,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 <h3>Which filter to change: the Vibration check</h3>
 <ol>
 <li>On the Flight recorder page tick <b>Gyro raw</b>, <b>Gyro</b> and <b>Head speed</b>, set <b>How often</b> to 1 in 2, erase, and fly a normal flight with a hover and some brisk moves.</li>
-<li>Land, transmitter off, USB cable in, open <b>Vibration check</b> (Flight recorder page or the full list). It reads the log over USB and tells you, in one line, what to change &mdash; and applies it if you agree.</li>
+<li>Land, transmitter off, USB cable in, open <b>Vibration check</b>. It reads the log over USB and tells you, in one line, what to change &mdash; and applies it if you agree.</li>
 <li>It reads the spectrum the way a Rotorflight expert would: peaks at multiples of the head speed are rotor, motor or tail (rotor-speed notches, or a head-speed signal problem); a peak that does not follow the head speed is something loose (fix it, or a fixed notch); grass everywhere is Lowpass 1 (never below 60 Hz); a clean trace means leave the filters alone.</li>
 <li>One change, one flight, check again.</li>
 </ol>
+<p><a href="/rotorflight-filtercheck" style="display:inline-block;background:#3f8f6a;color:#fff;text-decoration:none;padding:.5em .9em;border-radius:10px;font-weight:700;margin:.2em .4em .2em 0">&#128200; Vibration check</a>
+<a href="/rotorflight-blackbox" style="display:inline-block;background:#5f8fab;color:#fff;text-decoration:none;padding:.5em .9em;border-radius:10px;font-weight:700;margin:.2em 0">&#128209; Flight recorder</a></p>
 </template>
 </body>
 </html>
