@@ -8,9 +8,9 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Setup &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=185">
-<script src="/app.js?v=216" defer></script>
-<style>html.h-dongle #protobtn, html.h-dongle a[href="/diagnostics"], html.h-dongle a[href="/rxsettings"], html.h-dongle #renamebtn, html.h-dongle #usbfcbtn { display: none !important; }</style>
+<link rel=stylesheet href="/style.css?v=186">
+<script src="/app.js?v=217" defer></script>
+<style>html.h-dongle #protobtn, html.h-dongle a[href="/diagnostics"], html.h-dongle a[href="/rxsettings"], html.h-dongle #renamebtn { display: none !important; }</style>
 <script>try{if(JSON.parse(localStorage.getItem('frontHints')||'{}').dongle)document.documentElement.classList.add('h-dongle');}catch(e){}</script>
 </head>
 <body>
@@ -25,8 +25,7 @@
     <a class="btn btn-diag" href="/rxsettings"><span class=ico>&#9881;&#65039;</span>Receiver settings &mdash; failsafe, battery, wave</a>
     <a class="btn btn-fw"   href="/wifi" id=wifibtn style="display:none"><span class=ico>&#128246;</span>WiFi settings</a>
     <a class="btn btn-fw"   href="/firmware"><span class=ico>&#128229;</span>Update or roll back firmware</a>
-    <button class="btn btn-diag" type=button id=usbfcbtn data-help="A USB-C cable from this receiver to the flight controller gives the app every Rotorflight setting, like the dongle. Updates still arrive over WiFi and Bluetooth. A USB flash of the receiver itself needs the BOOT button held while this is on."><span class=ico>&#128268;</span><span>USB socket&nbsp;&mdash;&nbsp;<span id=usbfcstate>&hellip;</span></span></button>
-    <a class="btn btn-diag" href="/dongle" id=donglebtn><span class=ico>&#128268;</span><span id=donglelbl>Rotorflight dongle mode&nbsp;&mdash;&nbsp;<span id=donglestate>&hellip;</span></span></a>
+    <a class="btn btn-diag" href="/dongle" id=donglebtn style="display:none"><span class=ico>&#128268;</span>Dongle settings &mdash; name and serial speed</a>
     <button class="btn" type=button id=renamebtn style="background:#6f7e8b"><span class=ico>&#127991;&#65039;</span><span><span id=renamelbl>Rename receiver</span>&nbsp;&mdash;&nbsp;<span id=curname>&hellip;</span></span></button>
 
     <div class=footer></div>
@@ -44,32 +43,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // WiFi settings only make sense when an interface is up to serve the page from.
     const wifiVisible = s.net && (s.net.mode === 'WiFi up' || s.net.mode === 'AP mode');
-    const ds = document.getElementById('donglestate'); if (ds) ds.textContent = s.dongle ? (s.dongle_auto ? 'dongle (automatic)' : 'always a dongle') : (s.dongle_mode == 2 ? 'always a receiver' : 'receiver (automatic)');
-    if (s.dongle) { const dl = document.getElementById('donglelbl'); if (dl) dl.textContent = 'Dongle setup'; }   // a dongle needs no mode talk (Malcolm 2026-09-10)
     if (s.dongle) for (const sel of ['#protobtn', 'a[href="/diagnostics"]', 'a[href="/rxsettings"]']) { const el = document.querySelector(sel); if (el) el.style.display = 'none'; }   // receiver-only
+    // Dongle settings only exist on a board that IS a dongle. 0.9.687: the button that
+    // asked "dongle or receiver?" is gone - the board works that out for itself - but a
+    // dongle still needs its serial speed, and a receiver whose radios failed to
+    // enumerate finds "always a receiver" here, exactly when the answer might be wrong.
+    const db = document.getElementById('donglebtn');
+    if (db && s.dongle) db.style.display = '';
+
     const wb = document.getElementById('wifibtn');
     if (wb) wb.style.display = wifiVisible ? '' : 'none';
-
-    // USB socket (0.9.639): a receiver hosts the flight controller on it like the dongle; the simulator uses it instead.
-    const ub = document.getElementById('usbfcbtn');
-    if (ub) {
-        if (s.dongle) ub.style.display = 'none';
-        else {
-            const off = s.usb_fc_mode === 0;
-            LDRC.setText('usbfcstate', s.sim ? 'simulator' : off ? 'off' : (s.usb && s.usb.device) ? 'flight controller connected' : 'flight controller');
-            ub.onclick = () => {
-                const on = off || s.sim;
-                const msg = on
-                    ? 'Use the USB socket for the flight controller? A USB-C cable from this receiver to the flight controller then gives the app every Rotorflight setting, like the dongle.' + (s.sim ? ' The simulator is switched off.' : '') + ' The receiver restarts.'
-                    : 'Switch the USB socket off? The flight controller is then reached over the radio link only. The receiver restarts.';
-                if (!confirm(msg)) return;
-                const fd = new URLSearchParams(); fd.set('on', on ? '1' : '0');
-                fetch('/api/usbfc', { method: 'POST', body: fd })
-                  .then(r => r.ok ? r.text().then(html => { document.open(); document.write(html); document.close(); }) : r.text().then(t => alert(t)))
-                  .catch(() => alert('Could not save — try again.'));
-            };
-        }
-    }
 
     // Current name on the rename button.
     LDRC.setText('curname', (s.info && s.info.name) || 'RXV2');
@@ -97,7 +80,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 <li><b>View channels</b> &mdash; live channel bars, plus capturing your failsafe positions.</li>
 <li><b>WiFi settings</b> &mdash; home network details and the &ldquo;AP mode only&rdquo; field setting.</li>
 <li><b>Update firmware</b> &mdash; install newer firmware or roll back.</li>
-<li><b>USB socket</b> &mdash; a USB-C cable from the receiver to the flight controller gives the app every Rotorflight setting, like the dongle. The simulator uses the socket instead, so choosing one switches the other off. The shortest you can get, right-angled at both ends &mdash; a Chenyang CY-UC-088-0.07M (70&nbsp;mm) is ideal &mdash; and it must carry data: many short USB-C leads only charge.</li>
+<li><b>Dongle settings</b> &mdash; only on a dongle: the name the app shows, and the serial speed to the flight controller.</li>
 <li><b>Rename receiver</b> &mdash; the name is also the WiFi network name and the <code>.local</code> address.</li>
 </ul>
 <h3>Tips</h3>
