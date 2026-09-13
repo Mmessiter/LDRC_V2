@@ -9,7 +9,7 @@
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Home &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=185">
-<script src="/app.js?v=212" defer></script>
+<script src="/app.js?v=213" defer></script>
 <style>
 /* First paint from memory (Malcolm 2026-09-10: the receiver layout flashed
    before the dongle one): classes set on <html> by the hint script below,
@@ -143,7 +143,10 @@ html.h-dongle #dongleBanner { display: block !important; }
             document.getElementById('subtitle').textContent='';   // nothing to say until the receiver answers
         }catch(e){}
         </script>
-        <a class="btn btn-bb"   href="/blackbox"><span class=ico>&#128209;</span>Receiver log &mdash; link, battery, flights</a>
+        <!-- The Receiver log lives under Black box (Flight recorder) now
+             (Malcolm 2026-09-13). It stays here ONLY for a receiver with no
+             Rotorflight, which has no Black box page to reach it through. -->
+        <a class="btn btn-bb"   href="/blackbox" id=rxlogbtn style="display:none"><span class=ico>&#128209;</span>Receiver log &mdash; link, battery, flights</a>
         <button class="btn btn-bind" type=button id=bindbtn><span class=ico>&#128279;</span>Bind</button>
         <a class="btn" href="/sim" id=simpg style="background:#4a90c9"><span class=ico>&#127918;</span><span id=simpglbl>Simulator</span></a>
         <a class="btn" href="/setup" style="background:#6f7e8b"><span class=ico>&#9881;&#65039;</span>Setup</a>
@@ -179,6 +182,10 @@ function updateRfButton(s) {
     if (!show && s && !s.sim && mName && localStorage.getItem('rfSeen-' + mName) === '1')
         show = true;
     rfb.style.display = show ? '' : 'none';
+    // The Receiver log is reached through Black box (Flight recorder), which
+    // only exists when Rotorflight does. Without it, offer it here instead.
+    const rxl = document.getElementById('rxlogbtn');
+    if (rxl) rxl.style.display = (show || (s && s.dongle)) ? 'none' : '';
     saveFrontHint('rfShow', show);
     // The silent-FC hint (Malcolm 2026-08-19, the Nexus hunt): a fresh FC
     // with TELEMETRY disabled obeys channels but never talks, so it cannot
