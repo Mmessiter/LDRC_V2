@@ -8,7 +8,7 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>View channels &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=190">
+<link rel=stylesheet href="/style.css?v=191">
 <style>
 .container{max-width:min(96vw,1100px)}
 .chTable{display:grid;grid-template-columns:auto auto 1fr auto;gap:6px 10px;align-items:center;font-variant-numeric:tabular-nums}
@@ -46,7 +46,7 @@
 .heliReadout{position:absolute;bottom:6px;left:10px;font-size:.78em;color:#556;font-variant-numeric:tabular-nums;background:#f2f6f8;padding:3px 8px;border-radius:4px;z-index:2}
 .heliStale #heli3D{opacity:.35;filter:grayscale(.4)}
 </style>
-<script src="/app.js?v=221" defer></script>
+<script src="/app.js?v=222" defer></script>
 <script src="/three.min.js" defer></script>
 </head>
 <body>
@@ -337,79 +337,163 @@ function buildHeli3D() {
     // (Chassis box removed — the user found it sat awkwardly between
     //  the skids and read as a separate floating piece.)
 
-    // Main fuselage
-    const fuseGeo = new THREE.SphereGeometry(0.34, 32, 20);
-    fuseGeo.scale(2.2, 0.68, 0.45);
-    const fuse = new THREE.Mesh(fuseGeo, M.body);
-    fuse.position.set(-0.05, 0.03, 0);
+    // Main shell — ONE lathed surface, not a stack of spheres.
+    // Malcolm 2026-09-13: "remove the bulge at the nose, shortening the front".
+    // The bulge was unavoidable with the old build: a scaled sphere for the
+    // body and a second scaled sphere for the nose always meet at a visible
+    // shoulder, because two ellipsoids cannot share a tangent. A LatheGeometry
+    // spun from a single profile curve has no join anywhere along its length,
+    // so the taper into the nose is continuous by construction — and the
+    // profile is also where the shape is now tuned, one number at a time.
+    //
+    // Profile runs tail (-0.72) to nose (+0.50): the front is ~0.10 shorter
+    // than the old nose reached, and it closes to a small rounded tip instead
+    // of a ball. The spin axis is Y, so it is laid along X afterwards.
+    const shellPts = [
+        [0.205, -0.330],   // open rear mouth — the frame shows through here
+        [0.222, -0.230],
+        [0.232, -0.110],
+        [0.237,  0.000],   // deepest point, under the mast
+        [0.234,  0.110],
+        [0.224,  0.210],
+        [0.205,  0.300],
+        [0.175,  0.375],
+        [0.135,  0.435],
+        [0.088,  0.478],
+        [0.040,  0.500],
+        [0.000,  0.508]    // small blunt tip, not a ball
+    ].map(([r, y]) => new THREE.Vector2(r, y));
+    const shellGeo = new THREE.LatheGeometry(shellPts, 40);
+    shellGeo.rotateZ(-Math.PI / 2);          // spin axis Y -> body axis X
+    shellGeo.scale(1, 1.06, 0.80);           // a fuselage is taller than it is wide
+    shellGeo.computeVertexNormals();
+    const fuse = new THREE.Mesh(shellGeo, M.body);
+    fuse.position.set(0.14, 0.03, 0);
     heli.add(fuse);
 
-    // Painted side stripe — a swept chevron that swells through the
-    // middle of the body and tapers to a sharp point at the nose, the
-    // shape of a real model-heli racing decal. Flat ShapeGeometry on
-    // each flank rather than a 3D torus ring or a flat rectangle.
-    // White swoosh with a thin black liner beneath it — the Goblin's own
-    // graphic. Physical, like everything else, so it takes the same lacquer
-    // sheen as the shell it is painted on.
-    const stripeMat = new THREE.MeshPhysicalMaterial({
-        color: 0xf7f7f5, metalness: .05, roughness: .28,
-        clearcoat: 1, clearcoatRoughness: .12, side: THREE.DoubleSide
-    });
-    const linerMat = new THREE.MeshPhysicalMaterial({
-        color: 0x141419, metalness: .1, roughness: .34,
-        clearcoat: 1, clearcoatRoughness: .16, side: THREE.DoubleSide
-    });
-    const stripeShape = new THREE.Shape();
-    stripeShape.moveTo(-0.50,  0.035);
-    stripeShape.lineTo(-0.10,  0.052);
-    stripeShape.lineTo( 0.60,  0.000);
-    stripeShape.lineTo(-0.10, -0.052);
-    stripeShape.lineTo(-0.50, -0.035);
-    stripeShape.closePath();
-    const stripeGeo = new THREE.ShapeGeometry(stripeShape);
-    const stripeR = new THREE.Mesh(stripeGeo, stripeMat);
-    stripeR.position.set(-0.05, 0.02, 0.156);
-    heli.add(stripeR);
-    const stripeL = new THREE.Mesh(stripeGeo, stripeMat);
-    stripeL.position.set(-0.05, 0.02, -0.156);
-    heli.add(stripeL);
-    // the thin dark liner, a touch lower and slightly proud of the shell
-    const linerShape = new THREE.Shape();
-    linerShape.moveTo(-0.50, -0.031);
-    linerShape.lineTo(-0.10, -0.050);
-    linerShape.lineTo( 0.60, -0.004);
-    linerShape.lineTo(-0.10, -0.072);
-    linerShape.lineTo(-0.50, -0.050);
-    linerShape.closePath();
-    const linerGeo = new THREE.ShapeGeometry(linerShape);
-    for (const z of [0.1575, -0.1575]) {
-        const liner = new THREE.Mesh(linerGeo, linerMat);
-        liner.position.set(-0.05, 0.02, z);
-        heli.add(liner);
+    // Livery is PAINTED ON, not stuck on. The old graphics were flat
+    // ShapeGeometry planes floating just outside the body; on a lathed shell
+    // that curves in two directions they clip straight through it. A canvas
+    // texture mapped to the shell's own UVs follows the surface exactly, costs
+    // one 512x256 bitmap, and lets the swoosh wrap the way a real decal does.
+    //
+    // LatheGeometry UVs: u runs around the circumference, v along the profile
+    // from tail (v=0) to nose (v=1). The flanks are therefore at u=0.25 and
+    // u=0.75, which is where the graphic has to sit for it to appear on the
+    // sides and not over the spine.
+    (function paintShell() {
+        const W = 512, H = 256;
+        const c = document.createElement('canvas');
+        c.width = W; c.height = H;
+        const g = c.getContext('2d');
+        g.fillStyle = '#f2551c'; g.fillRect(0, 0, W, H);          // base coat
+
+        // One flank's graphic, drawn at a given horizontal centre.
+        // Canvas y is flipped against v, so the nose is at the TOP here.
+        function flank(cx) {
+            const halfW = W * 0.105;
+            const x0 = cx - halfW, x1 = cx + halfW;
+            // white swoosh: a long tapering sweep from the tail up to the nose
+            g.beginPath();
+            g.moveTo(x0, H * 0.30);
+            g.bezierCurveTo(cx - halfW * 0.3, H * 0.42, cx + halfW * 0.3, H * 0.62, x1, H * 0.80);
+            g.lineTo(x1, H * 0.92);
+            g.bezierCurveTo(cx + halfW * 0.3, H * 0.74, cx - halfW * 0.3, H * 0.52, x0, H * 0.38);
+            g.closePath();
+            g.fillStyle = '#f7f7f5'; g.fill();
+            // thin black liner hugging the underside of the swoosh
+            g.beginPath();
+            g.moveTo(x0, H * 0.38);
+            g.bezierCurveTo(cx - halfW * 0.3, H * 0.52, cx + halfW * 0.3, H * 0.74, x1, H * 0.92);
+            g.lineTo(x1, H * 0.975);
+            g.bezierCurveTo(cx + halfW * 0.3, H * 0.79, cx - halfW * 0.3, H * 0.57, x0, H * 0.425);
+            g.closePath();
+            g.fillStyle = '#14141a'; g.fill();
+        }
+        // Measured from the render, not assumed: u=0.25 is the spine, so the
+        // flanks sit at u=0 and u=0.5. u=0 straddles the texture seam, so that
+        // flank is drawn twice, once at each edge.
+        flank(0);
+        flank(W);
+        flank(W * 0.5);
+
+        // Dark vent panel on the spine, just ahead of the mast — the shadowed
+        // cut-out every Goblin canopy has, and the thing that stops the top
+        // reading as one unbroken orange dome.
+        g.fillStyle = '#2a1c15';
+        g.beginPath();
+        g.ellipse(W * 0.25, H * 0.34, W * 0.05, H * 0.10, 0, 0, Math.PI * 2);
+        g.fill();
+
+        const t = new THREE.CanvasTexture(c);
+        t.colorSpace = THREE.SRGBColorSpace;
+        t.anisotropy = 4;
+        // A DEDICATED material: assigning the map to M.body painted the decals
+        // onto every other orange part that shares it (the tail fin sprouted
+        // white slashes).
+        const shellMat = M.body.clone();
+        shellMat.map = t;
+        shellMat.color.set(0xffffff);    // let the texture carry the colour
+        fuse.material = shellMat;
+    })();
+
+    // (Nose and canopy meshes deleted: both are part of the lathed shell now.
+    //  A separate nose sphere was exactly what produced the bulge, and a
+    //  separate canopy dome sat on top of it as a second shoulder.)
+
+    // ---- Carbon frame, seen through the shell's cut-out -------------------
+    // The single most Goblin-ish thing about a Goblin: two black carbon side
+    // plates carrying the motor and the belt, visible under and behind the
+    // canopy. Without them the machine reads as one solid orange lozenge,
+    // which is what a toy looks like and a real helicopter does not.
+    const frameShape = new THREE.Shape();
+    frameShape.moveTo(-0.30, -0.17);
+    frameShape.lineTo( 0.20, -0.19);
+    frameShape.lineTo( 0.30, -0.02);
+    frameShape.lineTo( 0.26,  0.21);
+    frameShape.lineTo(-0.16,  0.25);
+    frameShape.lineTo(-0.32,  0.08);
+    frameShape.closePath();
+    const frameGeo = new THREE.ExtrudeGeometry(frameShape, { depth: 0.012, bevelEnabled: false });
+    for (const z of [-0.118, 0.106]) {
+        const fr = new THREE.Mesh(frameGeo, M.dark);
+        fr.position.set(-0.11, 0.05, z);
+        heli.add(fr);
+    }
+    // The dark gap between the plates, so the cut-out reads as a hole rather
+    // than a painted patch.
+    const gapGeo = new THREE.BoxGeometry(0.50, 0.34, 0.20);
+    const gap = new THREE.Mesh(gapGeo, new THREE.MeshPhysicalMaterial({
+        color: 0x0a0a0c, metalness: .2, roughness: .85
+    }));
+    gap.position.set(-0.13, 0.05, 0);
+    heli.add(gap);
+
+    // ---- Motor and belt pulley, low and forward between the plates --------
+    const motorGeo = new THREE.CylinderGeometry(0.072, 0.072, 0.115, 16);
+    const motor = new THREE.Mesh(motorGeo, M.metal);
+    motor.rotation.x = Math.PI / 2;
+    motor.position.set(0.01, 0.00, 0);
+    heli.add(motor);
+    const pulleyGeo = new THREE.CylinderGeometry(0.052, 0.052, 0.022, 16);
+    const pulley = new THREE.Mesh(pulleyGeo, M.dark);
+    pulleyGeo.rotateX(Math.PI / 2);
+    pulley.position.set(0.01, 0.00, 0.085);
+    heli.add(pulley);
+
+    // ---- Three servos, the little black boxes round the front frame -------
+    const servoGeo = new THREE.BoxGeometry(0.075, 0.058, 0.038);
+    for (const [x, y, z] of [[0.14, -0.07, 0.125], [0.14, -0.07, -0.125], [-0.20, -0.06, 0.125]]) {
+        const sv = new THREE.Mesh(servoGeo, M.dark);
+        sv.position.set(x, y, z);
+        heli.add(sv);
     }
 
-    // Nose — BLUNT and rounded (Malcolm 2026-09-13: "the conical front looks
-    // sharp and not realistic"). A real Goblin's canopy noses over into a
-    // smooth, fat curve; nothing on a model helicopter comes to a point,
-    // because the nose is a moulded plastic shell, not a spinner. An
-    // ellipsoid stretched forward gives the taper without the spike.
-    const noseGeo = new THREE.SphereGeometry(0.155, 28, 20);
-    noseGeo.scale(1.85, 0.82, 0.80);
-    const nose = new THREE.Mesh(noseGeo, M.body);
-    nose.position.set(0.60, 0.025, 0);
-    heli.add(nose);
-
-    // Canopy — pulled forward over the nose / front of the cabin.
-    const canGeo = new THREE.SphereGeometry(0.27, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.55);
-    canGeo.scale(1.65, 0.90, 0.55);
-    const canopy = new THREE.Mesh(canGeo, M.body);   // painted shell, not glazing
-    canopy.position.set(0.22, 0.06, 0);
-    heli.add(canopy);
-
-    // (No separate glazing mesh: a smoked panel laid over this shell poked
-    //  through as a dark blotch on the shoulder at most attitudes. The real
-    //  canopy's window is a printed graphic, not a raised part, so the plain
-    //  orange shell is the honest shape.)
+    // ---- Flight battery, slung low under the nose ------------------------
+    const battGeo = new THREE.BoxGeometry(0.30, 0.105, 0.145);
+    const batt = new THREE.Mesh(battGeo, M.battery);
+    batt.position.set(0.22, -0.135, 0);
+    heli.add(batt);
 
     // Engine cowling — narrow dome over the motor mount, behind the canopy.
     const cowlGeo = new THREE.SphereGeometry(0.18, 18, 12);
@@ -420,10 +504,43 @@ function buildHeli3D() {
 
     // Tail boom + control rod
     const boomGeo = new THREE.CylinderGeometry(0.022, 0.07, 1.3, 14);
-    const boom = new THREE.Mesh(boomGeo, M.accent);   // white boom
+    // The boom carries the model's name in big letters — the detail that makes
+    // a photograph of a Goblin instantly a Goblin. Drawn to a canvas and
+    // wrapped round the cylinder; at this size it reads as lettering even
+    // where the individual characters do not resolve.
+    const boomMat = M.accent.clone();
+    (function letterBoom() {
+        const c = document.createElement('canvas');
+        c.width = 512; c.height = 64;
+        const g = c.getContext('2d');
+        g.fillStyle = '#f7f7f5'; g.fillRect(0, 0, 512, 64);
+        g.fillStyle = '#f2551c';
+        g.font = 'bold 40px -apple-system, Helvetica, Arial, sans-serif';
+        g.textBaseline = 'middle';
+        g.setTransform(-1, 0, 0, 1, 512, 0);      // mirrored: the boom's UVs run aft
+        g.fillText('GOBLIN', 118, 34);
+        g.setTransform(1, 0, 0, 1, 0, 0);
+        g.fillStyle = '#14141a';
+        g.fillRect(0, 6, 512, 3);
+        g.fillRect(0, 55, 512, 3);
+        const t = new THREE.CanvasTexture(c);
+        t.colorSpace = THREE.SRGBColorSpace;
+        t.anisotropy = 4;
+        boomMat.map = t;
+        boomMat.color.set(0xffffff);
+    })();
+    const boom = new THREE.Mesh(boomGeo, boomMat);   // white boom, lettered
     boom.rotation.z = Math.PI / 2;
     boom.position.set(-0.86, 0.08, 0);
     heli.add(boom);
+
+    // Horizontal stabiliser — a small black wing across the boom, well aft.
+    // A real Goblin has one, and in silhouette it is what stops the tail
+    // reading as a bare stick.
+    const stabGeo = new THREE.BoxGeometry(0.10, 0.014, 0.42);
+    const stab = new THREE.Mesh(stabGeo, M.dark);
+    stab.position.set(-1.22, 0.075, 0);
+    heli.add(stab);
 
     const rodGeo = new THREE.CylinderGeometry(0.008, 0.008, 1.18, 8);
     const rod = new THREE.Mesh(rodGeo, M.metal);
@@ -434,22 +551,52 @@ function buildHeli3D() {
     // (Boom support strut removed — at the camera angle it stuck out
     //  diagonally and read as an aerial poking down out the back.)
 
-    // Tail gearbox housing — chunky block at the end of the boom where
-    // the bevel drive turns torque from the boom onto the tail-rotor
-    // shaft. Without this the tail rotor looks like it floats.
-    const tailBoxGeo = new THREE.BoxGeometry(0.11, 0.16, 0.08);
-    const tailBox = new THREE.Mesh(tailBoxGeo, M.dark);
-    tailBox.position.set(-1.42, 0.14, 0);
-    heli.add(tailBox);
+    // Tail gearbox — a rounded case, not a brick. The old BoxGeometry read as
+    // a tall square block bolted on the end of the boom.
+    const tailCaseGeo = new THREE.CylinderGeometry(0.055, 0.055, 0.085, 16);
+    tailCaseGeo.rotateX(Math.PI / 2);
+    const tailCase = new THREE.Mesh(tailCaseGeo, M.dark);
+    tailCase.position.set(-1.42, 0.10, 0);
+    heli.add(tailCase);
+    // the case fairs into the boom rather than stopping dead
+    const tailNeckGeo = new THREE.CylinderGeometry(0.030, 0.050, 0.13, 12);
+    const tailNeck = new THREE.Mesh(tailNeckGeo, M.dark);
+    tailNeck.rotation.z = Math.PI / 2;
+    tailNeck.position.set(-1.355, 0.095, 0);
+    heli.add(tailNeck);
 
-    // Vertical stabiliser — hangs DOWN from the boom (some model
-    // helis carry the fin under the tail boom rather than over it,
-    // a deliberate styling choice). No horizontal stab any more —
-    // they were visually busy without adding to the silhouette.
-    const finGeo = new THREE.BoxGeometry(0.26, 0.30, 0.025);
+    // Vertical fin — SWEPT, the way a real one is (Malcolm 2026-09-13: "the
+    // square tall skid looks wrong" — it was a plain 0.26 x 0.30 slab hanging
+    // under the boom, which read as a paddle). A fin is a thin aerofoil with a
+    // raked leading edge and a rounded tip, and it sits mostly ABOVE the boom
+    // on a Goblin, carrying the tail-rotor case.
+    const finShape = new THREE.Shape();
+    finShape.moveTo( 0.10,  0.00);
+    finShape.lineTo(-0.09,  0.00);
+    finShape.lineTo(-0.15,  0.17);
+    finShape.quadraticCurveTo(-0.13, 0.25, -0.055, 0.255);
+    finShape.lineTo( 0.035, 0.245);
+    finShape.quadraticCurveTo(0.10, 0.235, 0.11, 0.16);
+    finShape.closePath();
+    const finGeo = new THREE.ExtrudeGeometry(finShape, { depth: 0.018, bevelEnabled: false });
+    finGeo.translate(0, 0, -0.009);
     const fin = new THREE.Mesh(finGeo, M.body);       // orange fin
-    fin.position.set(-1.4, -0.08, 0);
+    fin.position.set(-1.40, 0.10, 0);
     heli.add(fin);
+
+    // Small ventral fin under the boom — the Goblin has one, and it stops the
+    // tail looking top-heavy now that the main fin has moved up.
+    const vShape = new THREE.Shape();
+    vShape.moveTo( 0.06,  0.00);
+    vShape.lineTo(-0.05,  0.00);
+    vShape.lineTo(-0.08, -0.10);
+    vShape.quadraticCurveTo(-0.02, -0.125, 0.05, -0.10);
+    vShape.closePath();
+    const vGeo = new THREE.ExtrudeGeometry(vShape, { depth: 0.016, bevelEnabled: false });
+    vGeo.translate(0, 0, -0.008);
+    const vFin = new THREE.Mesh(vGeo, M.dark);
+    vFin.position.set(-1.38, 0.06, 0);
+    heli.add(vFin);
 
     // Rotor mast — taller and clearly visible above the body.
     const mastGeo = new THREE.CylinderGeometry(0.035, 0.045, 0.22, 14);

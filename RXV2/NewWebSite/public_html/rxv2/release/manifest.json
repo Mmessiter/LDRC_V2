@@ -1,6 +1,11 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.692-goblin-detail",
+      "url": "https://messiter.com/rxv2/release/v0.9.692/firmware.bin",
+      "notes": "The 3D helicopter is a proper model now. The nose bulge is gone - the whole shell is one smooth surface instead of spheres stuck together - and the front is shorter. The canopy stops behind the cabin, so you can see the black carbon frame, the motor, the servos and the battery, just as you can on the real thing. The boom carries GOBLIN lettering and a tail stabiliser, and the tail fin is swept rather than a square slab. Includes 0.9.691."
+    },
+    {
       "name": "RXV2-0.9.691-goblin-livery",
       "url": "https://messiter.com/rxv2/release/v0.9.691/firmware.bin",
       "notes": "The 3D helicopter now looks like a real model helicopter: orange shell with the white and black graphics, white boom and skids, orange tail fin, and a blunt rounded nose instead of the sharp cone. It also has two blades, as a Goblin does, rather than four. Includes 0.9.690."
@@ -66,13 +71,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.681/littlefs.bin",
       "fs_md5": "35f5c54d965a688e699b60f3baed8abe",
       "notes": "Rotorflight's Flight recorder is now called Black box (Flight recorder), and sits under B in the a-la-carte list where you look for it. The page, its help and everything that points at it say Black box; the search index keeps both meanings apart, since the receiver has a Black box page of its own. Includes 0.9.680."
-    },
-    {
-      "name": "RXV2-0.9.680-cli-leave",
-      "url": "https://messiter.com/rxv2/release/v0.9.680/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.680/littlefs.bin",
-      "fs_md5": "b8de23efc92accdd4c6ba02f2483eafb",
-      "notes": "Command line: Leave without saving now leaves - it closes the session and then goes where the back arrow goes, instead of leaving you on a dead page to press Back yourself. Both buttons are disabled once the session is closed, which is what printed 'the command line was not open' when they were pressed again. Save and restart deliberately stays, because the flight controller is restarting and the message says so. Includes 0.9.679."
     }
   ]
 }
