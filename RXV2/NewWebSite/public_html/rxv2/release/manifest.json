@@ -1,6 +1,11 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.697-tail-tidy",
+      "url": "https://messiter.com/rxv2/release/v0.9.697/firmware.bin",
+      "notes": "Three tidies to the 3D helicopter: the horizontal stabiliser at the back has gone, the tail rotor is a bit bigger, and two black posts that had been poking out of the belly have gone. Those posts were a mistake - a cross-tube that was never turned on its side, so it stood on its end. Includes 0.9.696."
+    },
+    {
       "name": "RXV2-0.9.696-tail-line",
       "url": "https://messiter.com/rxv2/release/v0.9.696/firmware.bin",
       "notes": "The 3D helicopter has lost the orange fin that stuck up from its tail, and the tail rotor now turns on the tail boom's own centreline instead of floating above it. The gearbox and tail skid moved down to match. Includes 0.9.695."
@@ -56,13 +61,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.686/littlefs.bin",
       "fs_md5": "5c59ff73282f984527cf338e4a81c718",
       "notes": "The Receiver log button at the foot of Black box was grey, which reads as disabled. It is now the Receiver log's own blue - bright, and clear of the green above it. Includes 0.9.685."
-    },
-    {
-      "name": "RXV2-0.9.685-button-gap",
-      "url": "https://messiter.com/rxv2/release/v0.9.685/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.685/littlefs.bin",
-      "fs_md5": "5f73594cca7cb1026f665fdad6cc027e",
-      "notes": "Read black box: the two buttons touched - the link above had no bottom margin and the button below had none at all. Checked by screenshot this time, not by reading the CSS. Includes 0.9.684."
     }
   ]
 }
