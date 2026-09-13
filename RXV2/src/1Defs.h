@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.690-heli-3d";
+constexpr const char* FW_VERSION = "RXV2-0.9.691-goblin-livery";
 
 //*********************************************************************
 //  Auto-update manifest URLs
