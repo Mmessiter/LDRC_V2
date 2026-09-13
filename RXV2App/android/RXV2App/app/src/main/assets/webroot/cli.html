@@ -9,7 +9,7 @@
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Command line &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=185">
-<script src="/app.js?v=209" defer></script>
+<script src="/app.js?v=210" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -94,8 +94,30 @@ async function run(cmd) {
 async function leave(save) {
     const what = save ? 'Save and restart the flight controller?' : 'Leave without saving? Any changes typed here are lost and the flight controller restarts.';
     if (!(await LDRC.confirm(what, { title: save ? 'Save' : 'Leave', icon: save ? '💾' : '❌', yes: save ? 'Save and restart' : 'Leave', kind: save ? 'go' : 'warn' }))) return;
-    try { const r = await fetch('/api/cli/leave', { method: 'POST', body: new URLSearchParams({ save: save ? '1' : '0' }) }); const t = await r.text(); setStatus(r.ok ? 'good' : 'bad', t); print('# ' + t); }
+    try {
+        const r = await fetch('/api/cli/leave', { method: 'POST', body: new URLSearchParams({ save: save ? '1' : '0' }) });
+        const t = await r.text(); setStatus(r.ok ? 'good' : 'bad', t); print('# ' + t);
+        if (r.ok) {
+            // Nothing more to do here once the session is closed, so stop the
+            // buttons being pressed again (that is what printed "the command
+            // line was not open" three times).
+            document.querySelectorAll('.usbOnly').forEach(el => { el.disabled = true; });
+            // Leaving without saving IS leaving: go where the back button goes,
+            // instead of making the pilot press it afterwards (Malcolm 2026-09-13).
+            // A save stays put, because the flight controller is restarting and
+            // the message here says so.
+            if (!save) setTimeout(goBack, 1200);
+        }
+    }
     catch (e) { setStatus('bad', 'no answer from the flight controller'); }
+}
+
+// Wherever the floating back arrow points — the trail decides that, not this page.
+function goBack() {
+    const back = document.querySelector('a.backBtn');
+    if (back && back.href) { location.href = back.href; return; }
+    if (history.length > 1) { history.back(); return; }
+    location.href = '/rotorflight-alacarte';
 }
 document.addEventListener('DOMContentLoaded', async () => {
     $('chips').innerHTML = QUICK.map(c => '<button type=button class="usbOnly" style="padding:.3em .7em;border-radius:14px;border:0;background:#dfe7ee;color:#2c3e50;font-size:.9em">' + c + '</button>').join('');
