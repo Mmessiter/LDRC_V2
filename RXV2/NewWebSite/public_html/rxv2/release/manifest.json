@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.678-ports-link",
+      "url": "https://messiter.com/rxv2/release/v0.9.678/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.678/littlefs.bin",
+      "fs_md5": "5cb99f8c339ed51a4b5960a874b4bcf8",
+      "notes": "Before you start, step 2 now has an Open Ports button, so the one page it tells you to use is one tap away instead of something to go and find. Includes 0.9.677."
+    },
+    {
       "name": "RXV2-0.9.677-cable-part",
       "url": "https://messiter.com/rxv2/release/v0.9.677/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.677/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.667/littlefs.bin",
       "fs_md5": "7094d7cc29f1eecfe4cb21e3aa46a255",
       "notes": "FLIGHT SAFETY, found by the pre-flight review: a vibration check stands the bank put-back down for its whole run, so if a phone session had left the flight controller on a different PID bank and the transmitter came on during the check, the put-back was abandoned and the model would have flown on the phone's bank. A check now refuses to start while the banks are still held, and while any page has talked to the flight controller in the last 5 seconds (a restore is many requests with gaps); the page waits and retries by itself, so it is invisible. Also: the 20-minute cap now bounds the whole run, not each widened pass. Includes 0.9.666."
-    },
-    {
-      "name": "RXV2-0.9.666-check-watchdog",
-      "url": "https://messiter.com/rxv2/release/v0.9.666/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.666/littlefs.bin",
-      "fs_md5": "98848571ad1ef0b9da4938c686199303",
-      "notes": "Two safety nets before the Goblin flies: bbCheckActive (which stands every other MSP sender down) can never outlive the check that set it - the idle tick clears it and says so in the log; and a check that somehow ran past 20 minutes hands the flight controller back. Nothing in the flight path changed: Radio.h, Channels.h, Output.h, Telemetry.h and FlightLog.h are untouched since before the vibration check existed. Includes 0.9.665."
     }
   ]
 }
