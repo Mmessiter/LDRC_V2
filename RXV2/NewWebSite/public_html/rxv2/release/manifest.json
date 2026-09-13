@@ -1,6 +1,11 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.704-dongle-rxlog",
+      "url": "https://messiter.com/rxv2/release/v0.9.704/firmware.bin",
+      "notes": "On a dongle the Black box page no longer offers the Receiver log button. A dongle has no radio link, no battery sense and no flights of its own, so there was nothing behind it - and tapping it walked you into 'Not on a dongle'. Includes 0.9.703."
+    },
+    {
       "name": "RXV2-0.9.703-dongle-channels-fix",
       "url": "https://messiter.com/rxv2/release/v0.9.703/firmware.bin",
       "notes": "View channels really does work on a dongle now. 0.9.702 taught the dongle to read the channels and put the button back on the Setup menu, but the page itself still turned you away with 'Not on a dongle'. Includes 0.9.702."
@@ -54,11 +59,6 @@
       "name": "RXV2-0.9.693-goblin-match",
       "url": "https://messiter.com/rxv2/release/v0.9.693/firmware.bin",
       "notes": "The 3D helicopter now matches the real Goblin in the details that show: wide flat black landing-gear plates instead of wire legs, the big dark cut-out low in the canopy side with its white surround, GOBLIN 770 and SAB HELI DIVISION lettering along the shell, pale flashes and orange chevrons near the blade tips, and pitch links on the rotor head. Includes 0.9.692."
-    },
-    {
-      "name": "RXV2-0.9.692-goblin-detail",
-      "url": "https://messiter.com/rxv2/release/v0.9.692/firmware.bin",
-      "notes": "The 3D helicopter is a proper model now. The nose bulge is gone - the whole shell is one smooth surface instead of spheres stuck together - and the front is shorter. The canopy stops behind the cabin, so you can see the black carbon frame, the motor, the servos and the battery, just as you can on the real thing. The boom carries GOBLIN lettering and a tail stabiliser, and the tail fin is swept rather than a square slab. Includes 0.9.691."
     }
   ]
 }

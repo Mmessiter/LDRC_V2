@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Black box (Flight recorder) &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=202">
-<script src="/app.js?v=233" defer></script>
+<link rel=stylesheet href="/style.css?v=203">
+<script src="/app.js?v=234" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -84,7 +84,7 @@ h2 .hint{font-weight:400;font-size:.7em;color:#5d7a8c;display:block;margin-top:.
         <div id=memMsg class=sMsg></div>
     </div>
 
-    <a class=btn href="/blackbox" style="display:block;text-align:center;background:#4a90c9;color:#fff;text-decoration:none;padding:.75em;border-radius:10px;font-weight:700;margin:.8em 0"><span class=ico>&#128225;</span>Receiver log &mdash; the link, the battery, past flights</a>
+    <a class=btn id=rxlogbtn href="/blackbox" style="display:block;text-align:center;background:#4a90c9;color:#fff;text-decoration:none;padding:.75em;border-radius:10px;font-weight:700;margin:.8em 0"><span class=ico>&#128225;</span>Receiver log &mdash; the link, the battery, past flights</a>
     <div class=footer></div>
 </div>
 
@@ -278,8 +278,23 @@ async function load(){
 // DOMContentLoaded, never top-level: deferred app.js must define LDRC first.
 document.addEventListener('DOMContentLoaded', ()=>{
     for(const id of ['mode','dev','denom','grace','roll']) $(id).addEventListener('change',()=>{ LDRC.markDirty&&LDRC.markDirty(); paintSwitchWarn(); });
+    hideRxLogOnDongle();
     load();
 });
+
+// A dongle has no radio link, no battery sense and no flights of its own, so
+// the Receiver log has nothing in it — and /blackbox is a receiver-only page,
+// so the button walked you into "Not on a dongle". Hidden immediately from the
+// cached hint, then confirmed against live state.
+async function hideRxLogOnDongle(){
+    const b = $('rxlogbtn');
+    if (!b) return;
+    try { if (JSON.parse(localStorage.getItem('frontHints') || '{}').dongle) b.style.display = 'none'; } catch(e){}
+    try {
+        const s = LDRC.state || await LDRC.fetchState();
+        if (s) b.style.display = s.dongle ? 'none' : 'block';
+    } catch(e){}
+}
 </script>
 <template id=helpContent><h2>Black box (Flight recorder)</h2>
 <p><b>Read black box</b>, at the top, is how you look at what was recorded: the last flight as traces, in plain English, and which filter to change. <b>Receiver log</b>, at the foot, is the receiver's own separate record of the radio link and the battery.</p>

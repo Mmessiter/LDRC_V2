@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.703-dongle-channels-fix";
+constexpr const char* FW_VERSION = "RXV2-0.9.704-dongle-rxlog";
 
 //*********************************************************************
 //  Auto-update manifest URLs
