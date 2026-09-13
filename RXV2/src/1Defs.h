@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.685-button-gap";
+constexpr const char* FW_VERSION = "RXV2-0.9.686-log-colour";
 
 //*********************************************************************
 //  Auto-update manifest URLs

@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.686-log-colour",
+      "url": "https://messiter.com/rxv2/release/v0.9.686/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.686/littlefs.bin",
+      "fs_md5": "5c59ff73282f984527cf338e4a81c718",
+      "notes": "The Receiver log button at the foot of Black box was grey, which reads as disabled. It is now the Receiver log's own blue - bright, and clear of the green above it. Includes 0.9.685."
+    },
+    {
       "name": "RXV2-0.9.685-button-gap",
       "url": "https://messiter.com/rxv2/release/v0.9.685/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.685/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.675/littlefs.bin",
       "fs_md5": "737e04f6d894f1f188b81ba41ea55afe",
       "notes": "The help back button really is the round arrow now. 0.9.674 gave it the class the wide green Got-it button uses, and since that rule comes later in the stylesheet it won on every shared property - so it rendered as a full-width teal bar. It now has its own class, declared after, and the panel starts below it exactly as a page's content starts below its floating buttons (the button is 3em of its own 1.55em font, so 4.65em tall, not 3em). Verified by screenshot in a headless browser, not by reading the CSS. Includes 0.9.674."
-    },
-    {
-      "name": "RXV2-0.9.674-help-arrow",
-      "url": "https://messiter.com/rxv2/release/v0.9.674/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.674/littlefs.bin",
-      "fs_md5": "99a04a96fa94eb59997775e10d32bf1b",
-      "notes": "The help screen's way out is now the SAME round back arrow as every page, in the same top-left corner, instead of the wide bar 0.9.673 used. It floats above the overlay so it is there however far the help is scrolled. Got it stays at the bottom, tapping outside and Escape still work. The test compares its size, shape, colour and arrow against the page back button rule by rule. Includes 0.9.673."
     }
   ]
 }
