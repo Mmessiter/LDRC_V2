@@ -13,8 +13,8 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(dirname "$HERE")"
 LOCAL_DIR="$ROOT/NewWebSite/public_html"
 PRODUCT="rxv2"
-HOST="s96.lon.krystal.io"
-USER_NAME="messiter"
+HOST="${LDRC_FTP_HOST:?set LDRC_FTP_HOST (see dev/ftp_credentials.sh)}"
+USER_NAME="${LDRC_FTP_USER:?set LDRC_FTP_USER (see dev/ftp_credentials.sh)}"
 
 if [[ -z "${LFTP_PASSWORD:-}" && -f "$HERE/ftp_credentials.sh" ]]; then
   # shellcheck disable=SC1091

@@ -1,0 +1,82 @@
+                 LDRC APPLICATION-STORE DISTRIBUTION EXCEPTION
+                                 Version 1.0
+
+Copyright (C) 2026 Malcolm Messiter
+
+This is an additional permission under section 7 of the GNU General Public
+License, version 3, granted by the copyright holder of the LDRC software
+("the Program") to every recipient of the Program.  It applies to the
+Program under version 3 of that License and, at your option, under any
+later version.
+
+  1. DEFINITIONS
+
+     "Application Store" means any service, marketplace, platform or other
+     channel through which software is supplied to end users, together with
+     the device and operating-system platform that it serves.
+
+     "Store Terms" means the terms of service, developer agreements,
+     end-user licence agreements, usage rules, review guidelines,
+     code-signing requirements and technical measures that the operator of
+     an Application Store imposes on those who supply software through it,
+     or on those who receive software from it.
+
+  2. THE PERMISSION
+
+     You are additionally permitted to convey the Program, or a work based
+     on the Program, in object-code form through an Application Store, and
+     to accept and comply with that Application Store's Store Terms in
+     doing so, notwithstanding that those Store Terms would otherwise be
+     forbidden by this License.  This includes, without limitation, Store
+     Terms that limit the number of devices on which a recipient may
+     install the work, that make a recipient's licence non-transferable,
+     that tie the work to a recipient's account, that require the work to
+     be cryptographically signed by the operator of the Application Store,
+     or that prevent a recipient from installing a modified version of the
+     work on a device they own.
+
+     For the avoidance of doubt: restrictions that the operator of an
+     Application Store places on recipients are not, for the purposes of
+     section 10 of this License, further restrictions imposed by you; and
+     section 12 of this License shall not be construed so as to prevent
+     such conveying.
+
+  3. THE CONDITION - THE SOURCE MUST STAY FREE
+
+     This permission is granted only on the condition that, for each
+     version of the work you convey through an Application Store, you:
+
+       (a) make the Corresponding Source for that exact version publicly
+           available at no charge, under the GNU General Public License
+           version 3 or any later version, from a location that is
+           reachable without accepting any Store Terms and without holding
+           any account with the operator of an Application Store; keep it
+           so available for as long as that version is offered through the
+           Application Store, and for at least three years afterwards; and
+
+       (b) state plainly, either within the work itself or in its
+           Application Store listing, that the work is free software, name
+           its licence, and give the location at which the Corresponding
+           Source may be obtained.
+
+     If you do not satisfy this condition, this permission is void as to
+     you, and your conveying through an Application Store is governed by
+     the GNU General Public License alone.
+
+  4. NOTHING ELSE IS GIVEN UP
+
+     This is a permission, not a restriction.  Every other condition of the
+     GNU General Public License continues to apply in full.  In particular,
+     a work based on the Program must still be licensed as a whole, under
+     the GNU General Public License, to everyone who receives it, and a
+     person who obtains a copy from an Application Store has exactly the
+     same freedom to run, study, change and redistribute the work as any
+     other recipient.
+
+     This permission is granted to everybody, not only to the copyright
+     holder.  It travels with the Program: you may pass it on when you
+     convey the Program or a work based on it, and - as section 7 of the
+     GNU General Public License allows - you or any later recipient may
+     remove it from a copy.  The author asks that you keep it, so that the
+     next person may reach the people who can only install software from an
+     Application Store.

@@ -36,7 +36,7 @@ const char* FW_VERSION = "LDRC2SIM-1.1.0";          // parseable: LDRC2SIM-x.y.z
 // (public_html/ldrc2sim/release/). Safe to enable now: the fetch has an 8 s
 // timeout and only runs on the Firmware "check" action, and the host returns 200.
 // Publish releases with dev/stage_website.py then dev/publish_website.sh.
-const char* FW_LOCAL_MANIFEST  = "http://m4macmini.local:8001/manifest.json";
+const char* FW_LOCAL_MANIFEST  = "http://ldrc-dev.local:8001/manifest.json";
 const char* FW_PUBLIC_MANIFEST = "https://messiter.com/ldrc2sim/release/manifest.json";
 const uint16_t DNS_PORT = 53;
 

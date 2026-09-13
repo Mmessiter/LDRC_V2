@@ -1,0 +1,61 @@
+HOW TO REVIEW THIS APP WITHOUT THE HARDWARE
+
+This app configures a model-helicopter receiver that I design and build myself,
+so you will not have one. You do not need one.
+
+On launch, the app scans by Bluetooth and finds nothing. Below the "Searching"
+spinner are two buttons:
+
+    "No receiver yet? Try the receiver demo"
+    "Try the dongle demo"
+
+Tap either. The whole app then runs against a simulated helicopter, with every
+page live and editable. That is the intended way to review it, and it needs no
+hardware, no account and no sign-in. Bluetooth may be denied and the demo still
+works.
+
+A video of the app driving real hardware is at:
+    [VIDEO URL]
+
+WHAT IT IS
+The LDRC RX V2 is a radio-control receiver for model helicopters. The app talks
+to it over Bluetooth LE using a standard GATT service — no MFi accessory, no
+External Accessory framework. It sets flight-controller parameters, reads flight
+logs, and can send the receiver a firmware update.
+
+ABOUT THE WEB VIEW (guideline 4.2 and 2.5.2)
+Part of the interface is drawn by a web view, and I would rather explain that up
+front than have it look like a repackaged website:
+
+  * Every page is BUNDLED INSIDE THIS BINARY (see webroot/ in the app). Nothing
+    is loaded from any website. There is no server involved.
+  * In this build, HTML and JavaScript are NEVER fetched from anywhere at run
+    time. Only data crosses Bluetooth — JSON to and from the user's own receiver.
+  * There is no self-update mechanism of any kind in the iOS app.
+  * Firmware images can only be downloaded over HTTPS from messiter.com, my own
+    site; the host is hard-coded and any other URL is refused. Those images go to
+    the user's receiver over Bluetooth. They never execute on iOS.
+
+Native, outside the web view: the Bluetooth scanner with live signal strength
+and a too-weak-to-connect warning, per-model photographs from the camera and the
+photo picker, backup files exported and imported through the share sheet and the
+Files app, and offline replay of a recorded session.
+
+SAFETY
+The app writes stored settings only. It cannot arm the model, spin the motor or
+move a control surface in real time, and it refuses to change anything while the
+flight controller reports itself armed.
+
+PRIVACY
+No accounts, no analytics, no tracking, no data collection whatsoever. Settings
+and photographs stay in the app's own storage on the phone.
+
+OPEN SOURCE
+The whole project — receiver firmware, both phone apps, and these pages — is
+published under the GNU GPL v3, with an app-store exception:
+    https://github.com/Mmessiter/LDRC_V2
+    https://messiter.com/rxv2/source.html
+
+Thank you for reviewing it.
+Malcolm Messiter
+(contact details are in the App Store Connect submission form)

@@ -276,6 +276,37 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
             return
         }
 
+        // 1a) App Store builds never render HTML or JS fetched from the
+        //     receiver. App Review guideline 2.5.2 forbids downloading code
+        //     that adds features the reviewed build did not have, and the
+        //     receiver can serve whole pages — so in a RELEASE build a page
+        //     that is missing from the bundle is a stale app, not a fetch.
+        //     Data still crosses Bluetooth freely: /api/* and /app/* are how
+        //     the app talks to the receiver at all.
+        //     DEBUG builds keep the old behaviour on purpose: that is the
+        //     development loop, where a new receiver page must appear in the
+        //     app before the app has been rebuilt.
+        #if !DEBUG
+        if method == "GET", !path.hasPrefix("/api/"), !path.hasPrefix("/app/") {
+            let html = """
+            <!doctype html><meta charset=utf-8>
+            <meta name=viewport content="width=device-width,initial-scale=1">
+            <title>Update this app</title>
+            <style>body{font:16px -apple-system,system-ui,sans-serif;margin:0;\
+            padding:2.2em 1.4em;background:#eef2f5;color:#22303a}\
+            .c{background:#fff;border-radius:14px;padding:1.4em;max-width:26em;\
+            margin:0 auto;box-shadow:0 1px 4px rgba(0,0,0,.13)}\
+            h1{font-size:1.25em;margin:0 0 .6em}p{margin:.6em 0;line-height:1.45}</style>
+            <div class=c><h1>This app is older than your receiver</h1>
+            <p><b>Update the app from the App Store.</b></p>
+            <p>Your receiver has a page this version of the app does not know
+            about yet. Everything else still works.</p></div>
+            """
+            deliver(task, url: url, code: 200, type: "text/html", body: Data(html.utf8))
+            return
+        }
+        #endif
+
         // 2) everything else goes over Bluetooth
         // Page-originated MSP: stamp it so the background sweep yields —
         // interleaved bank selects made pages read the WRONG bank's values.
@@ -560,8 +591,21 @@ final class BleOta {
         if let failure { throw failure }
     }
 
+    /// Hosts a firmware image may be fetched from. The URL arrives from the
+    /// page in `fw=`, so without this the web content could name any server.
+    /// Firmware is the one download that ends up executing on the hardware,
+    /// so it comes from Malcolm's own site over TLS or it does not come.
+    private static let firmwareHosts = ["messiter.com", "www.messiter.com"]
+
     private func download(_ url: String) throws -> Data {
         guard let u = URL(string: url) else { throw fault("bad URL \(url)") }
+        #if !DEBUG    // DEBUG keeps the local dev firmware server usable
+        guard u.scheme?.lowercased() == "https",
+              let host = u.host?.lowercased(),
+              Self.firmwareHosts.contains(host) else {
+            throw fault("firmware may only be downloaded over https from messiter.com")
+        }
+        #endif
         let sem = DispatchSemaphore(value: 0)
         var data: Data?
         var failure: Error?

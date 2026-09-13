@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.687-fewer-settings";
+constexpr const char* FW_VERSION = "RXV2-0.9.689-dev-host";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -47,7 +47,7 @@ constexpr const char* FW_VERSION = "RXV2-0.9.687-fewer-settings";
 //                wherever the receiver has internet access, so a chip that
 //                never sees the dev Mac can still pull official releases.
 constexpr const char* FW_DEFAULT_LOCAL_MANIFEST_URL =
-    "http://m4macmini.local:8000/manifest.json";
+    "http://ldrc-dev.local:8000/manifest.json";
 constexpr const char* FW_PUBLIC_MANIFEST_URL =
     "https://messiter.com/rxv2/release/manifest.json";
 

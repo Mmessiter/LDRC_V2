@@ -1,0 +1,17 @@
+NAME (2-30):
+LDRC RX V2
+
+SUBTITLE (max 30):
+Set up your LDRC receiver
+
+PROMOTIONAL TEXT (max 170):
+Needs an LDRC receiver or dongle — or try demo mode, which works with no hardware at all. Set up a model helicopter from your phone: no laptop, no computer program.
+
+KEYWORDS (max 100, comma separated):
+helicopter,heli,rc,model,receiver,flight controller,telemetry,governor,bluetooth,ldrc,setup,tuning
+
+SUPPORT URL:      https://messiter.com/rxv2/support.html
+MARKETING URL:    https://messiter.com/rotorflight/
+PRIVACY POLICY:   https://messiter.com/rxv2/privacy.html
+CATEGORY:         Utilities   (secondary: none)
+PRICE:            Free

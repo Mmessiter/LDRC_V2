@@ -16,3 +16,6 @@ RXV2App/android/RXV2App/app/build/
 RXV2App/android/RXV2App/local.properties
 RXV2App/android/site/
 RXV2App/android/RXV2App/build/
+
+# App Store screenshots: regenerate with RXV2App/appstore/shoot.sh
+RXV2App/appstore/screenshots/

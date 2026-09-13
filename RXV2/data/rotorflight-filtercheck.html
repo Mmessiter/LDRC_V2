@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Read black box &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=186">
-<script src="/app.js?v=217" defer></script>
+<link rel=stylesheet href="/style.css?v=188">
+<script src="/app.js?v=219" defer></script>
 <script src="/bbcheck.js?v=1" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
@@ -196,7 +196,7 @@ async function usbGate(){
     const ok=!!(s&&s.usb&&s.usb.device);
     const g=$('needUsb'); g.style.display=ok?'none':'';
     if(!ok&&s) g.textContent = s.sim ? 'Simulator mode is using the USB socket. Turn the simulator off (Setup) to reach the flight controller over USB.'
-        : (s.usb&&!s.usb.host&&!s.dongle) ? 'The USB socket is off. Turn it on in Setup, then connect a USB cable between the flight controller’s USB socket and this receiver’s.'
+        : (s.usb&&!s.usb.host&&!s.dongle) ? 'The receiver is not using its USB socket. Restart the receiver, then connect a USB cable between the flight controller’s USB socket and this receiver’s.'
         : 'Connect a USB cable between the flight controller’s USB socket and the '+(s.dongle?'dongle':'receiver')+'’s USB socket. The check reads the black box over USB.';
     document.querySelectorAll('.usbOnly').forEach(el=>{ el.disabled=!ok||polling; });
     return ok?s:null;

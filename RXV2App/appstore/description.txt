@@ -1,0 +1,37 @@
+RXV2 sets up a radio-control model helicopter from your phone. No laptop, no computer program, no cables to a PC — at the flying field, or on the kitchen table.
+
+YOU NEED THE HARDWARE
+This app is a companion to LockDown Radio Control hardware. It needs either an LDRC RX V2 receiver or an LDRC dongle to do anything useful.
+
+Without one, the app opens in DEMO MODE, where every page works against a simulated helicopter. Look around the whole app before you build anything.
+
+The hardware is not for sale. This is an open project — the circuit designs, the firmware and both phone apps are free, and you build your own. Everything you need is at messiter.com.
+
+IT WORKS WITH THE V1 TRANSMITTER
+The RX V2 receiver flies with the original LockDown Radio Control transmitter, built on a Teensy 4.1. That transmitter's source is on GitHub, free, for anyone to build:
+github.com/Mmessiter/LockDownRadioControl
+
+WHAT IT DOES
+• Sets up a new helicopter step by step, from an empty flight controller to ready to fly
+• Servos, swashplate, blade pitch and travel limits, with a bench hold that drives the swash to exact angles for you
+• Head speed and governor, per flight bank
+• Rates and PIDs, with sliders that say what they change rather than what they are called
+• Rescue, switches, telemetry and in-flight adjustments
+• Reads the flight controller's black box and shows you the vibrations, then offers the filter change — with limits, a read-back and an undo
+• Flight traces: head speed, governor, throttle, battery and attitude over time, with a plain-English summary
+• Backs up the whole setup to your phone, and puts it back
+• Updates the receiver's firmware over Bluetooth
+
+PLAIN ENGLISH
+Every label says what the knob actually does, with the firmware's own term in brackets for anyone who wants it. "Roll wind-up relief (I-term relax cutoff)". A search finds any setting by either name.
+
+SAFE ON THE BENCH
+Setting up happens with the blades off or the motor unplugged. The app refuses to change anything while the model is armed, and it never spins a motor or moves a servo of its own accord.
+
+FREE, AND FREE SOFTWARE
+The app is free. No adverts, no accounts, no subscriptions, no tracking, and nothing at all collected about you — everything stays on your phone and your own receiver.
+
+The source of the whole system is published under the GNU General Public License, so you can read it, change it and share it.
+
+NOT AFFILIATED
+LockDown Radio Control is an independent project, not affiliated with or endorsed by the Rotorflight project or any flight-controller manufacturer.

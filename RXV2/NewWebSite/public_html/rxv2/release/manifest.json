@@ -1,6 +1,16 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.689-dev-host",
+      "url": "https://messiter.com/rxv2/release/v0.9.689/firmware.bin",
+      "notes": "The built-in address for a local firmware server was the developer's own Mac name. Two reasons to change it: it published a private machine name in every release, and any computer on your network answering to that name could have offered your receiver firmware. It is now a neutral name that nothing answers to by default, so updates come from messiter.com unless you set your own. Includes 0.9.688."
+    },
+    {
+      "name": "RXV2-0.9.688-usb-advice",
+      "url": "https://messiter.com/rxv2/release/v0.9.688/firmware.bin",
+      "notes": "Three pages still told you to turn the USB socket on in Setup - a button that 0.9.687 removed, because the receiver now works the socket out for itself. They now say to restart the receiver, which is the only thing that can actually be wrong. Found in an App Store screenshot. Includes 0.9.687."
+    },
+    {
       "name": "RXV2-0.9.687-fewer-settings",
       "url": "https://messiter.com/rxv2/release/v0.9.687/firmware.bin",
       "notes": "Two settings left the Setup menu, because the receiver already knows the answers. It works out for itself whether it is a dongle or a receiver, and a flight controller plugged into its USB socket is adopted with no setting to turn on. A board that IS a dongle still shows its own button for the name and serial speed, and that is also where a receiver whose radios failed to start can force itself back to being a receiver. Also: in the new-helicopter wizard, the Back up step opened the Setup page instead of Backup & restore. Includes 0.9.686."
@@ -67,20 +77,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.678/littlefs.bin",
       "fs_md5": "5cb99f8c339ed51a4b5960a874b4bcf8",
       "notes": "Before you start, step 2 now has an Open Ports button, so the one page it tells you to use is one tap away instead of something to go and find. Includes 0.9.677."
-    },
-    {
-      "name": "RXV2-0.9.677-cable-part",
-      "url": "https://messiter.com/rxv2/release/v0.9.677/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.677/littlefs.bin",
-      "fs_md5": "645dfb2a23199609988ed56178cf70a3",
-      "notes": "The help now names the exact cable: a Chenyang CY-UC-088-0.07M, 70 mm, flat, USB-C at both ends with both plugs right-angled, USB 2.0 data, 65 W, on Amazon. Any short one will do so long as it carries data. The website says the same and carries the photo of it fitted. Includes 0.9.676."
-    },
-    {
-      "name": "RXV2-0.9.676-cable-advice",
-      "url": "https://messiter.com/rxv2/release/v0.9.676/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.676/littlefs.bin",
-      "fs_md5": "9a7b55d16dd28e6f9adb66aed0ad8c23",
-      "notes": "Cable advice matches what actually works on the model: the shortest cable you can get, right-angled at BOTH ends if possible, tied down and left in - it costs nothing in the air because the receiver stops talking over USB the moment the radio link is live. Said in the Ways-to-connect footer, the Rotorflight menu help and Setup's USB socket bullet; the website carries the fitted photo. Includes 0.9.675."
     }
   ]
 }

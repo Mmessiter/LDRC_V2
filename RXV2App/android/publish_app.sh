@@ -20,8 +20,8 @@ set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP="$HERE/RXV2App"
 NOTES="${1:-}"
-HOST="s96.lon.krystal.io"
-USER_NAME="messiter"
+HOST="${LDRC_FTP_HOST:?set LDRC_FTP_HOST (see dev/ftp_credentials.sh)}"
+USER_NAME="${LDRC_FTP_USER:?set LDRC_FTP_USER (see dev/ftp_credentials.sh)}"
 
 VCODE=$(sed -n 's/^[[:space:]]*versionCode = \([0-9][0-9]*\).*/\1/p' "$APP/app/build.gradle.kts")
 VNAME=$(sed -n 's/^[[:space:]]*versionName = "\([^"]*\)".*/\1/p' "$APP/app/build.gradle.kts")

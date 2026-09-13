@@ -21,8 +21,8 @@ ROOT="$(dirname "$HERE")"
 LOCAL_DIR="$ROOT/NewWebSite/public_html"
 PRODUCT="ldrc2sim"
 
-HOST="s96.lon.krystal.io"
-USER_NAME="messiter"
+HOST="${LDRC_FTP_HOST:?set LDRC_FTP_HOST (see dev/ftp_credentials.sh)}"
+USER_NAME="${LDRC_FTP_USER:?set LDRC_FTP_USER (see dev/ftp_credentials.sh)}"
 
 # Load creds from the gitignored file if the env var isn't already set.
 if [[ -z "${LFTP_PASSWORD:-}" && -f "$HERE/ftp_credentials.sh" ]]; then
