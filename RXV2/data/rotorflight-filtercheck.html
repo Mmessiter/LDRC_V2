@@ -9,7 +9,7 @@
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Vibration check &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=185">
-<script src="/app.js?v=210" defer></script>
+<script src="/app.js?v=211" defer></script>
 <script src="/bbcheck.js?v=1" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
@@ -142,12 +142,12 @@ function paintContext(){
     const w=[];
     if(rec){
         const f=rec.fields, miss=[]; if(!(f&(1<<5)))miss.push('Gyro raw'); if(!(f&(1<<6)))miss.push('Gyro'); if(!(f&(1<<13)))miss.push('Head speed');
-        if(miss.length) w.push('<b>The recorder is not saving '+miss.join(', ')+'.</b> Tick '+(miss.length>1?'them':'it')+' under <b>What to record</b> on the Flight recorder page before the next flight, or the check has nothing to read.');
+        if(miss.length) w.push('<b>The recorder is not saving '+miss.join(', ')+'.</b> Tick '+(miss.length>1?'them':'it')+' under <b>What to record</b> on the Black box page before the next flight, or the check has nothing to read.');
         const loopHz=pidUs?1e6/pidUs:4000, logHz=loopHz/(rec.denom||1);
-        if(logHz<900) w.push('<b>How often is 1 in '+rec.denom+'</b> ('+Math.round(logHz)+' a second): too slow to see vibration above '+Math.round(logHz/2)+' Hz. Set 1 in 2 on the Flight recorder page.');
-        if(rec.mode===0||rec.device===0) w.push('<b>The recorder is off</b> (When: never, or Where: nowhere). Turn it on on the Flight recorder page.');
+        if(logHz<900) w.push('<b>How often is 1 in '+rec.denom+'</b> ('+Math.round(logHz)+' a second): too slow to see vibration above '+Math.round(logHz/2)+' Hz. Set 1 in 2 on the Black box page.');
+        if(rec.mode===0||rec.device===0) w.push('<b>The recorder is off</b> (When: never, or Where: nowhere). Turn it on on the Black box page.');
     }
-    const wd=$('recWarn'); wd.style.display=w.length?'':'none'; wd.innerHTML=w.map(x=>'<div>'+x+'</div>').join('')+(w.length?'<a href="/rotorflight-blackbox" style="display:inline-block;margin-top:.4em;font-weight:700;color:#2f4452">Flight recorder page &rarr;</a>':'');
+    const wd=$('recWarn'); wd.style.display=w.length?'':'none'; wd.innerHTML=w.map(x=>'<div>'+x+'</div>').join('')+(w.length?'<a href="/rotorflight-blackbox" style="display:inline-block;margin-top:.4em;font-weight:700;color:#2f4452">Black box page &rarr;</a>':'');
     paintMem();
 }
 
@@ -186,7 +186,7 @@ async function eraseLogs(){
         const s=Math.round((Date.now()-t0)/1000);
         if(mem&&(mem.flags&1)&&mem.used===0){ $('eraseBtn').disabled=false; $('eraseMsg').textContent='✓ Erased in '+s+' s — fly, then check.'; return; }
         $('eraseMsg').textContent='Erasing… '+s+' s';
-        if(s>=150){ $('eraseBtn').disabled=false; $('eraseMsg').textContent='⚠️ Still not erased after 2½ minutes — the flight controller may be recording. Check the Flight recorder page.'; return; }
+        if(s>=150){ $('eraseBtn').disabled=false; $('eraseMsg').textContent='⚠️ Still not erased after 2½ minutes — the flight controller may be recording. Check the Black box page.'; return; }
     }
 }
 
@@ -449,7 +449,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
 <template id=helpContent><h2>Vibration check</h2>
 <p>Reads the flight controller&rsquo;s black box over the USB cable, works out the vibration spectrum of the gyro before and after the filters, and says in one line which filter to change. What the Rotorflight Blackbox Explorer shows on a computer, judged for you.</p>
 <h3>What to record</h3>
-<p>On the Flight recorder page tick <b>Gyro raw</b>, <b>Gyro</b> and <b>Head speed</b> (RPM), set <b>How often</b> to <b>1 in 2</b>, and <b>Erase</b> so the next flight is the only one. Fly a normal flight: a hover and a few brisk moves. Land, switch the transmitter off, connect the USB cable, tap <b>Check the last flight</b>.</p>
+<p>On the Black box page tick <b>Gyro raw</b>, <b>Gyro</b> and <b>Head speed</b> (RPM), set <b>How often</b> to <b>1 in 2</b>, and <b>Erase</b> so the next flight is the only one. Fly a normal flight: a hover and a few brisk moves. Land, switch the transmitter off, connect the USB cable, tap <b>Check the last flight</b>.</p>
 <h3>What it looks for</h3>
 <ul>
 <li><b>Lines at multiples of the head speed</b> (1 per rev, the blades, the motor, the tail) are rotor vibration. The rotor-speed notches remove them &mdash; when they have a head-speed signal and cover enough harmonics (low, normal, high).</li>
@@ -469,10 +469,10 @@ document.addEventListener('DOMContentLoaded', async ()=>{
 <h3>Checks are kept for you</h3>
 <p>Every finished check is stored on this phone &mdash; the last six per model. They appear under <b>Checks kept on this phone</b>, and tapping one shows it again with no cable and no helicopter. So you can erase the black box whenever you like, and you can look back at how a flight behaved before you changed a filter. A kept check cannot change anything: run a new one for that.</p>
 <h3>The flight</h3>
-<p>Before the vibration verdict the page shows what actually happened: head speed against what the governor asked for, throttle, battery volts and current (the thin line under the volts is the lowest reading in each moment, so a sag shows), roll and pitch, and ESC temperature. Arming, governor changes and rescue are marked as dotted lines. Only what the recorder saved appears &mdash; choose that under <b>What to record</b> on the Flight recorder page.</p>
+<p>Before the vibration verdict the page shows what actually happened: head speed against what the governor asked for, throttle, battery volts and current (the thin line under the volts is the lowest reading in each moment, so a sag shows), roll and pitch, and ESC temperature. Arming, governor changes and rescue are marked as dotted lines. Only what the recorder saved appears &mdash; choose that under <b>What to record</b> on the Black box page.</p>
 <h3>Black box memory</h3>
 <p>The bar shows how much of the flight controller&rsquo;s memory holds flight logs. The check reads back through the last 12 MB to find your newest flight, so a full memory makes it slow; on an empty one it reads only the flight you just made.</p>
-<p><b>Erase all flight logs</b> wipes them all, permanently. The flight controller beeps while it works (10&ndash;60 seconds). Erase before a test session and every check afterwards is quick. The same bar and button are on the Flight recorder page.</p>
+<p><b>Erase all flight logs</b> wipes them all, permanently. The flight controller beeps while it works (10&ndash;60 seconds). Erase before a test session and every check afterwards is quick. The same bar and button are on the Black box page.</p>
 <h3>Limits</h3>
 <ul>
 <li>USB cable only, transmitter off, model disarmed: the check needs the flight controller to itself. The flight controller hands over about 60 kB a second, so it reads the last 12 MB &mdash; three or four minutes &mdash; and finds the newest flight in it. Erase the black box before a test session and there is far less to read.</li>

@@ -13,20 +13,43 @@ const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) fails++
 
 // ---- the smallest DOM that lets the page's own code run ----
 const mkEl = id => ({ id, style: {}, textContent: '', innerHTML: '', value: '', checked: false, disabled: false,
-    className: '', title: '', firstChild: null, children: [],
-    appendChild(c) { this.children.push(c); }, addEventListener() {}, scrollIntoView() {}, remove() {}, setAttribute() {}, getAttribute() { return null; } });
+    className: '', title: '', href: '', firstChild: null, children: [], classList: { add() {}, remove() {}, contains: () => false },
+    appendChild(c) { this.children.push(c); return c; }, insertBefore(c) { this.children.push(c); return c; },
+    addEventListener() {}, removeEventListener() {}, scrollIntoView() {}, focus() {}, click() {}, remove() {},
+    setAttribute() {}, getAttribute() { return null; }, removeAttribute() {},
+    // A created element must answer these too: a page that builds a card and
+    // then looks inside it is normal, and a missing stub fails the page, not the code.
+    // Same reasoning as document.querySelector: a stub, not null, so a page that
+    // builds a card and then reaches inside it keeps running.
+    querySelector(sel) { return mkEl(String(sel)); }, querySelectorAll() { return []; },
+    getElementsByTagName() { return []; }, getBoundingClientRect() { return { width: 0, height: 0, top: 0, left: 0 }; } });
 const els = {}; for (const id of ids) els[id] = mkEl(id);
 const store = {};
 const doc = {
     getElementById: id => els[id] || (els[id] = mkEl(id)),
-    querySelectorAll: () => [], querySelector: () => null,
+    // Return a stub rather than null: the point is to RUN the page, and a null
+    // here just stops the script at the first lookup instead of exercising it.
+    querySelectorAll: () => [], querySelector: sel => els['sel:' + sel] || (els['sel:' + sel] = mkEl(sel)),
+    getElementsByTagName: () => [], getElementsByClassName: () => [],
     createElement: t => mkEl('new-' + t),
     addEventListener: (ev, fn) => { if (ev === 'DOMContentLoaded') doc._ready = fn; },
     documentElement: { classList: { add() {}, remove() {} } }, body: mkEl('body'),
 };
 const calls = [];
 const sandbox = {
-    console, document: doc, setTimeout: (f) => 0, clearTimeout: () => {}, setInterval: () => 0, Date, Math, JSON, Promise, Array, Object, String, Number, isFinite, parseInt, parseFloat, encodeURIComponent, RegExp, Error, Uint8Array,
+    console, document: doc, setTimeout: (f) => 0, clearTimeout: () => {}, setInterval: () => 0, clearInterval: () => {},
+    requestAnimationFrame: () => 0, cancelAnimationFrame: () => {},
+    Date, Math, JSON, Promise, Array, Object, String, Number, Boolean, isFinite, isNaN, parseInt, parseFloat,
+    encodeURIComponent, decodeURIComponent, RegExp, Error, Uint8Array, Int16Array, Float32Array, ArrayBuffer, Map, Set,
+    URLSearchParams, URL, TextEncoder, TextDecoder, AbortController, Intl,
+    addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => true,
+    matchMedia: () => ({ matches: false, addEventListener: () => {}, addListener: () => {} }),
+    history: { pushState: () => {}, replaceState: () => {}, back: () => {}, length: 1 },
+    navigator: { userAgent: 'page_test', clipboard: { writeText: async () => {} } },
+    alert: () => {}, confirm: () => true, prompt: () => '',
+    sessionStorage: { getItem: () => null, setItem: () => {}, removeItem: () => {} },
+    performance: { now: () => 0 }, btoa: s => Buffer.from(s, 'binary').toString('base64'),
+    atob: s => Buffer.from(s, 'base64').toString('binary'),
     localStorage: { getItem: k => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }, removeItem: k => { delete store[k]; } },
     location: { pathname: '/rotorflight-filtercheck', protocol: 'http:', hostname: 'rxv2.local' },
     fetch: async (url, o) => { calls.push((o && o.method || 'GET') + ' ' + url); return { ok: true, status: 200, text: async () => '', json: async () => ({}) }; },
@@ -34,9 +57,16 @@ const sandbox = {
 };
 sandbox.window = sandbox; sandbox.globalThis = sandbox;
 // the shared helpers the page relies on
-sandbox.LDRC = { state: { info: { name: 'Goblin770' } }, viaBle: false, replayReady: null,
-    msp: async () => '', fetchState: async () => ({ rf: { armed: false }, usb: { device: true, host: true }, fcinfo: {} }),
-    confirm: async () => true, showHelp() {}, markDirty() {}, clearDirty() {}, rfVersionAlert: () => null };
+// Known members behave; anything else the page reaches for becomes a harmless
+// async no-op, so one unstubbed helper cannot fail a page that is really fine.
+const ldrcKnown = { state: { info: { name: 'Goblin770' } }, viaBle: false, replayReady: null, RF_API_VERIFIED: 1209,
+    msp: async () => '', fetchState: async () => ({ rf: { armed: false }, usb: { device: true, host: true }, fcinfo: {}, info: { name: 'Goblin770' } }),
+    confirm: async () => true, confirmLoseChanges: async () => true, showHelp() {}, markDirty() {}, clearDirty() {},
+    rfVersionAlert: () => null, setText() {}, teachTime() {}, startPolling() {}, stopPolling() {} };
+sandbox.LDRC = new Proxy(ldrcKnown, {
+    get(t, k) { if (k in t) return t[k]; if (typeof k !== 'string') return undefined; return async () => undefined; },
+    has() { return true; },
+});
 const bb = require(path.join(__dirname, '..', 'data', 'bbcheck.js'));
 sandbox.BBCHECK = bb;
 vm.createContext(sandbox);

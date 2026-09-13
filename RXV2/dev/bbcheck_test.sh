@@ -17,6 +17,11 @@ $T/bbcheck_test $T/two.bbl 1 > $T/two1.json 2>/dev/null
 $T/bbcheck_test $T/rec.bbl 0 4096 > $T/rec4k.json 2>/dev/null
 node dev/bbcheck_test.js $T
 # the page must RUN, not just parse (the lesson of the 0.9.351 stuck-install bug)
-for pg in rotorflight-filtercheck rotorflight-blackbox rotorflight-filters; do node dev/page_test.js data/$pg.html | sed "s|^|$pg: |"; done
+# every page must RUN, not just parse (the lesson of the 0.9.351 stuck-install bug)
+for pg in data/*.html; do
+  out=$(node dev/page_test.js "$pg" 2>&1 | grep -E "^FAIL") || true
+  [ -n "$out" ] && echo "$(basename $pg): $out"
+done
+echo "page_test: $(ls data/*.html | wc -l | tr -d ' ') pages checked"
 node dev/keptcheck_test.js
 node dev/help_test.js

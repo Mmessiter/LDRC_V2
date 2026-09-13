@@ -97,7 +97,7 @@ EXTRA = [
  ('/rotorflight-firsttime', 'First-time basics', 'Battery cell count and capacity', 'b_cells', 'Tell Rotorflight the pack size so warnings and telemetry read true'),
  ('/rotorflight-firsttime', 'First-time basics', 'Motor poles, gear ratio and ESC brand', '', 'Motor & ESC card: the numbers the head-speed reading depends on'),
  ('/rotorflight-firsttime', 'First-time basics', 'Which telemetry readings go to the transmitter', '', 'Flight mode, battery, head speed, temperature, attitude, altitude, GPS'),
- ('/rotorflight-blackbox', 'Flight recorder', 'Rotorflight blackbox logging rate and fields', '', 'What the flight controller records to its own card'),
+ ('/rotorflight-blackbox', 'Black box (Flight recorder)', 'What the FLIGHT CONTROLLER records in flight: Rotorflight Blackbox rate, fields, memory, erase', '', 'Not the receiver own black box - this is Rotorflight blackbox flight recorder logging'),
  ('/rotorflight-escprog', 'ESC programming', 'Scorpion ESC settings (soft start, governor gains, BEC voltage, timing)', '', 'Read and change the ESC parameters over the telemetry wire'),
  ('/rotorflight-rescue', 'Rescue', 'Rescue mode: pull-up strength, climb and level', '', 'The panic switch that rights the model'),
  ('/rotorflight-filters', 'Filters', 'Gyro lowpass, rotor-speed (RPM) notches, dynamic and fixed notches', 'lpf1', 'Take the vibration out of the gyro signal; the help says how to read the black box for it'),

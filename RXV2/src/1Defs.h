@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.680-cli-leave";
+constexpr const char* FW_VERSION = "RXV2-0.9.681-black-box";
 
 //*********************************************************************
 //  Auto-update manifest URLs
