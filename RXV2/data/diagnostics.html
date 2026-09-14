@@ -8,7 +8,7 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>View channels &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=212">
+<link rel=stylesheet href="/style.css?v=213">
 <style>
 .container{max-width:min(96vw,1100px)}
 .chTable{display:grid;grid-template-columns:auto auto 1fr auto;gap:6px 10px;align-items:center;font-variant-numeric:tabular-nums}
@@ -46,7 +46,7 @@
 .heliReadout{position:absolute;bottom:6px;left:10px;font-size:.78em;color:#556;font-variant-numeric:tabular-nums;background:#f2f6f8;padding:3px 8px;border-radius:4px;z-index:2}
 .heliStale #heli3D{opacity:.35;filter:grayscale(.4)}
 </style>
-<script src="/app.js?v=243" defer></script>
+<script src="/app.js?v=244" defer></script>
 <script src="/three.min.js" defer></script>
 </head>
 <body>
@@ -1208,6 +1208,7 @@ function syncGlide() {}   // retired — kept so older call sites are harmless
 // in one radio slot. Polling below stays alive as a slow watchdog and
 // takes over automatically if frames stop (e.g. over WiFi, or old fw).
 let _streamAlive = 0;
+let _streamEverAlive = false;   // has a pushed frame EVER arrived on this link?
 window.__rxStream = (line) => {
     const seg = String(line).trim().split('|');
     if (seg.length < 3 || seg[0] !== 'S') return;
@@ -1217,6 +1218,7 @@ window.__rxStream = (line) => {
     if (_lastSample) _period = _period * 0.8 + (now - _lastSample) * 0.2;
     _lastSample = now;
     _streamAlive = now;
+    _streamEverAlive = true;
     syncGlide();
     paint({ ch: ch, age_ms: parseInt(seg[2], 10) });
     // optional 4th field: arming state (-1 none / 0 disarmed / 1 armed) —
@@ -1273,7 +1275,19 @@ async function tick() {
     // wide enough gap for the 50 ms stream to get going — after which the
     // watchdog above takes over and polling stops almost entirely.
     const elapsed = performance.now() - t0;
-    const floor = LDRC.viaBle ? 220 : 15;   // viaBle is a PROPERTY, not a function
+    // ADAPTIVE, because a fixed floor is wrong in one direction or the other.
+    //
+    // The firmware only pushes a channel frame when nothing is in flight, so
+    // polling flat out starves the stream (0.9.711). But backing off to 220 ms
+    // unconditionally is worse than the old behaviour whenever the stream does
+    // NOT run — which is Malcolm's "still slower than a few days ago on view
+    // channels" (2026-09-14).
+    //
+    // So: poll briskly until we have actually SEEN a pushed frame. That proves
+    // the stream works, and only then do we stand back and let it do the work.
+    // If a frame never arrives we keep the old brisk cadence, so this can never
+    // be slower than before — only faster.
+    const floor = !LDRC.viaBle ? 15 : (_streamEverAlive ? 220 : 60);
     setTimeout(tick, Math.max(floor, POLL_MS - elapsed));
 }
 document.addEventListener('DOMContentLoaded', () => setTimeout(tick, 200));
