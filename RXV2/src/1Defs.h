@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.706-usb-after-update";
+constexpr const char* FW_VERSION = "RXV2-0.9.707-honest-errors";
 
 //*********************************************************************
 //  Auto-update manifest URLs

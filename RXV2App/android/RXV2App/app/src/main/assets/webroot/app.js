@@ -354,9 +354,9 @@
                 let r = null, msg = '';
                 try {
                     const resp = await fetch('/api/fc/telemetry/restore', {method: 'POST', cache: 'no-store'});
-                    r = await resp.json();
-                    msg = r.message || r.err || ('HTTP ' + resp.status);
-                } catch (e) { msg = e.message; }
+                    const rep = await LDRC.readReply(resp);
+                    r = rep.data; msg = LDRC.replyMessage(rep);
+                } catch (e) { msg = 'no answer from the receiver'; }
                 if (r && r.ok) {
                     el.dataset.telemDone = Date.now(); delete el.dataset.telemShown;
                     el.innerHTML = '<b>✓ Telemetry sensors restored — the flight controller is restarting.</b><br>' +
@@ -437,9 +437,9 @@
                 try {
                     const resp = await fetch('/api/fc/telemetry/speed?mode=' + mode, {method: 'POST', cache: 'no-store'});
                     status = resp.status;
-                    r = await resp.json();
-                    msg = r.message || r.err || ('HTTP ' + resp.status);
-                } catch (e) { msg = e.message; }
+                    const rep = await LDRC.readReply(resp);
+                    r = rep.data; msg = LDRC.replyMessage(rep);
+                } catch (e) { msg = 'no answer from the receiver'; }
                 if (r && r.ok && r.applied) {
                     el.dataset.speedDone = Date.now(); delete el.dataset.speedShown;
                     el.innerHTML = '<b>✓ ' + (mode === 'fast' ? 'Fast' : 'Standard') + ' telemetry saved — the flight controller is restarting.</b><br>' +
@@ -458,6 +458,31 @@
             const o = document.getElementById('telemSpeedOther');
             if (o) o.onclick = () => post(o, other);
             return true;
+        },
+
+        // Read a reply that SHOULD be JSON, without ever showing the pilot a
+        // browser exception. Malcolm 2026-09-14 got "The string did not match
+        // the expected pattern" when applying fast telemetry — that is WebKit's
+        // message for resp.json() on a body that is not JSON (an empty reply,
+        // or a plain-text error from the receiver), and the raw exception text
+        // was being handed straight to the alert. Useless to read and it hides
+        // what actually went wrong.
+        //
+        // Returns { data, text, status, ok } and never throws.
+        async readReply(resp) {
+            let text = '';
+            try { text = await resp.text(); } catch (e) { text = ''; }
+            let data = null;
+            const t = text.trim();
+            if (t && (t[0] === '{' || t[0] === '[')) { try { data = JSON.parse(t); } catch (e) { data = null; } }
+            return { data, text: t, status: resp.status, ok: resp.ok };
+        },
+        // Turn any reply into one sentence worth reading.
+        replyMessage(rep) {
+            if (rep.data && (rep.data.message || rep.data.err)) return rep.data.message || rep.data.err;
+            if (rep.text) return rep.text.slice(0, 200);
+            if (rep.status === 0) return 'no answer from the receiver';
+            return 'the receiver answered nothing (HTTP ' + rep.status + ')';
         },
 
         // Dirty-tracking: tuning pages call markDirty() on any user input

@@ -1,6 +1,11 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.707-honest-errors",
+      "url": "https://messiter.com/rxv2/release/v0.9.707/firmware.bin",
+      "notes": "When something goes wrong applying telemetry settings you now get a reason instead of a browser message. 'The string did not match the expected pattern' was the phone's own wording for a reply it could not read; it now says what the receiver actually answered, or that it answered nothing. Includes 0.9.706."
+    },
+    {
       "name": "RXV2-0.9.706-usb-after-update",
       "url": "https://messiter.com/rxv2/release/v0.9.706/firmware.bin",
       "notes": "The USB socket should now work straight after an update, without needing a second reboot. The restart was leaving the flight controller still thinking its USB port was open, so the receiver came back to a device that would not answer; it is now given a proper disconnect first. Each boot also records which version is running and from which half of the memory, on the Receiver log, so a firmware update that did not stick can be spotted. Includes 0.9.705."
@@ -54,11 +59,6 @@
       "name": "RXV2-0.9.696-tail-line",
       "url": "https://messiter.com/rxv2/release/v0.9.696/firmware.bin",
       "notes": "The 3D helicopter has lost the orange fin that stuck up from its tail, and the tail rotor now turns on the tail boom's own centreline instead of floating above it. The gearbox and tail skid moved down to match. Includes 0.9.695."
-    },
-    {
-      "name": "RXV2-0.9.695-ldrc-livery",
-      "url": "https://messiter.com/rxv2/release/v0.9.695/firmware.bin",
-      "notes": "The 3D helicopter now carries our own name. The shell reads LDRC over LOCKDOWN RADIO CONTROL and the tail boom reads LDRC, in place of the manufacturer's name, which belongs to them. The shape is still modelled on a real machine; only the lettering has changed. Includes 0.9.694."
     }
   ]
 }
