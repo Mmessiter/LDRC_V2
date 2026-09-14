@@ -80,12 +80,24 @@ def main() -> int:
             "name": name_by_ver.get(v) or f"RXV2-{v[0]}.{v[1]}.{v[2]}",
             "url":  f"{SITE}/{PRODUCT}/release/{tag}/firmware.bin",
         }
-        if (vdir / "littlefs.bin").exists():
-            entry["fs_url"] = f"{SITE}/{PRODUCT}/release/{tag}/littlefs.bin"
+        # The filesystem image, under EITHER name. It was once required to be
+        # exactly "littlefs.bin", and on 2026-09-14 that silently cost a whole
+        # day: every release had been copied in as "littlefs-<version>.bin"
+        # instead, so fs_url was omitted from the manifest and app-driven
+        # updates installed NEW FIRMWARE WITH THE OLD PAGES. Nothing failed
+        # loudly — the count printed at the end just drifted down to zero as
+        # the correctly-named older releases aged out of the staging window.
+        # Accept both spellings, and shout if a version dir has neither.
+        fs = vdir / "littlefs.bin"
+        if not fs.exists():
+            alts = sorted(vdir.glob("littlefs-*.bin"))
+            fs = alts[0] if alts else None
+        if fs is not None:
+            entry["fs_url"] = f"{SITE}/{PRODUCT}/release/{tag}/{fs.name}"
             # fs fingerprint: receivers skip flashing an identical image, so
             # fw-only releases leave saved flights + backups untouched.
             import hashlib
-            entry["fs_md5"] = hashlib.md5((vdir / "littlefs.bin").read_bytes()).hexdigest()
+            entry["fs_md5"] = hashlib.md5(fs.read_bytes()).hexdigest()
         entry["notes"] = note_by_ver.get(v) or new_notes.get(entry["name"], "")
         entry["_v"] = v
         versions.append(entry)
@@ -103,6 +115,13 @@ def main() -> int:
     if versions:
         print(f"  newest: {versions[0]['name']}")
     print(f"  versions shipping a littlefs.bin (fs_url): {fs_count}")
+    # The newest release is the one everybody actually installs. If it has no
+    # filesystem image, an app-driven update gets new firmware and stale pages
+    # — which is exactly the failure this guard exists to prevent.
+    if versions and "fs_url" not in versions[0]:
+        print(f"  !! WARNING: the NEWEST release ({versions[0]['name']}) has NO littlefs image.")
+        print(f"  !! Updates from the app will install firmware only and keep the old pages.")
+        print(f"  !! Copy .pio/build/xiao_s3_ota/littlefs.bin into that version's folder and re-run.")
     print("  next: dev/publish_website.sh")
     return 0
 

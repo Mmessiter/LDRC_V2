@@ -171,7 +171,24 @@ for e in entries:
     s = syn(e['l'] + ' ' + e['h'] + ' ' + e['k'] + ' ' + e['g'])
     rows.append([e['p'], e['g'], e['h'], e['l'], e['id'], e['k'], s])
 js = 'window.LDRC_SEARCH=' + json.dumps(rows, ensure_ascii=False, separators=(',', ':')) + ';\n'
-out = os.path.join(ROOT, 'search.js')
-open(out, 'w', encoding='utf-8').write(js)
+# Ships GZIPPED. LittleFS is the tight resource on this board (1.5 MB), and
+# the index is the third-biggest file in data/ — gzip takes it from ~58 kB to
+# ~15 kB. serveLittleFsFile() serves any "<name>.gz" with Content-Encoding:
+# gzip, and android/publish_app.sh unpacks .gz twins for the phone apps, so
+# this is the same arrangement three.min.js.gz already uses.
+#
+# This script owns BOTH files, which is the point: it writes the .gz and
+# deletes any plain twin every run, so a stale plain search.js can never sit
+# beside a fresh .gz and get served instead. (Do NOT hand-gzip a file that is
+# edited by hand — that trap is real and this is the safe case.)
+import gzip
+out   = os.path.join(ROOT, 'search.js')
+outgz = out + '.gz'
+raw   = js.encode('utf-8')
+with gzip.GzipFile(filename='', mode='wb', fileobj=open(outgz, 'wb'), mtime=0) as f:
+    f.write(raw)
+if os.path.exists(out):
+    os.remove(out)
 pages = len({r[0] for r in rows})
-print(f'search.js: {len(rows)} entries across {pages} pages, {len(js.encode())} bytes')
+print(f'search.js.gz: {len(rows)} entries across {pages} pages, '
+      f'{len(raw)} bytes -> {os.path.getsize(outgz)} gzipped')

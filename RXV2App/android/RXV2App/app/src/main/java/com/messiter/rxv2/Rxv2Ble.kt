@@ -311,6 +311,9 @@ class Rxv2Ble(private val context: Context) {
                 path.startsWith("/api/firmware")     -> 60000L
                 path.startsWith("/api/backup")       -> 30000L
                 path.startsWith("/api/bb")           -> 30000L
+                // Short, and it matters: this queue is serial, so the default
+                // window is how long everything behind an unanswered request
+                // waits. iOS uses 4 s here for the same reason.
                 else                                 -> 12000L
             }
             queue.addLast(Pending(payload, cb, firstByteMs = window))

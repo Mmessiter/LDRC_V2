@@ -258,17 +258,67 @@
             retries = retries || 3;
             const url = '/api/msp?fn=' + fn + (dataHex ? '&data=' + dataHex : '');
             let lastErr = null;
-            for (let attempt = 0; attempt < retries; attempt++) {
-                try {
-                    const r = await fetch(url, { cache: 'no-store' });
-                    if (r.ok) return (await r.text()).trim();
-                    lastErr = new Error(r.status === 409 ? (await r.text())
-                                        : 'HTTP ' + r.status + ': ' + (await r.text()));
-                    if (r.status === 409) break;   // armed — final, retrying is pointless
-                } catch (e) { lastErr = e; }
-                if (attempt < retries - 1) await new Promise(rs => setTimeout(rs, 200));
+            this.busyStart();
+            try {
+                for (let attempt = 0; attempt < retries; attempt++) {
+                    try {
+                        const r = await fetch(url, { cache: 'no-store' });
+                        if (r.ok) return (await r.text()).trim();
+                        lastErr = new Error(r.status === 409 ? (await r.text())
+                                            : 'HTTP ' + r.status + ': ' + (await r.text()));
+                        if (r.status === 409) break;   // armed — final, retrying is pointless
+                    } catch (e) { lastErr = e; }
+                    if (attempt < retries - 1) await new Promise(rs => setTimeout(rs, 200));
+                }
+                throw lastErr;
+            } finally { this.busyEnd(); }
+        },
+
+        // "Reading from the flight controller…" — one indicator for EVERY page
+        // that talks MSP, rather than one bolted onto each (Malcolm 2026-09-14:
+        // the command line's Please wait was good, "but reading PIDs and
+        // governor settings, etc"). Sitting in LDRC.msp() means the PID page,
+        // the governor pages, rates, servos and anything written later all get
+        // it for free.
+        //
+        // Only appears after 900 ms, so the quick reads never flash it, and it
+        // counts nested calls — a page load is a dozen MSP reads and should
+        // show ONE strip for the whole sequence.
+        _busy: 0, _busyT0: 0, _busyTimer: null, _busyShow: null,
+        busyStart() {
+            if (++this._busy > 1) return;
+            this._busyT0 = Date.now();
+            clearTimeout(this._busyShow);
+            this._busyShow = setTimeout(() => this._busyPaint(), 900);
+        },
+        busyEnd() {
+            if (--this._busy > 0) return;
+            this._busy = 0;
+            clearTimeout(this._busyShow); this._busyShow = null;
+            clearInterval(this._busyTimer); this._busyTimer = null;
+            const el = document.getElementById('ldrcBusy');
+            if (el) el.remove();
+        },
+        _busyPaint() {
+            if (this._busy <= 0) return;
+            let el = document.getElementById('ldrcBusy');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'ldrcBusy';
+                el.className = 'ldrcBusy';
+                el.innerHTML = '<div class=ldrcBusyRow><b>Reading from the flight controller\u2026</b>' +
+                               '<span id=ldrcBusySecs></span></div>' +
+                               '<div class=ldrcBusyTrack><div class=ldrcBusyBar></div></div>';
+                document.body.appendChild(el);
             }
-            throw lastErr;
+            const tick = () => {
+                const n = Math.round((Date.now() - this._busyT0) / 1000);
+                const sec = document.getElementById('ldrcBusySecs');
+                if (sec) sec.textContent = n + 's';
+            };
+            tick();
+            clearInterval(this._busyTimer);
+            this._busyTimer = setInterval(tick, 500);
         },
 
         // Rotorflight API version we've actually verified the byte layouts

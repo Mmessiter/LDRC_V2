@@ -1,18 +1,31 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.710-reading-indicator",
+      "url": "https://messiter.com/rxv2/release/v0.9.710/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.710/littlefs-RXV2-0.9.710-reading-indicator.bin",
+      "fs_md5": "e21edff4a384669cd18d449de40dd9b2",
+      "notes": "Every page that reads from the flight controller - PIDs, governor, rates, servos and the rest - now shows 'Reading from the flight controller' along the bottom with the seconds counting up, if it takes more than a moment. Quick reads show nothing, so it only appears when you would otherwise wonder. Includes 0.9.708."
+    },
+    {
       "name": "RXV2-0.9.708-please-wait",
       "url": "https://messiter.com/rxv2/release/v0.9.708/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.708/littlefs-RXV2-0.9.708-please-wait.bin",
+      "fs_md5": "1912eb35443165cfd6fe122ed4781882",
       "notes": "The command line now shows a Please wait strip with a moving bar and the seconds counting up, so a slow command no longer looks like a frozen screen. After four seconds it adds that dump and diff are the slow ones. The telemetry buttons count the seconds too. Includes 0.9.707."
     },
     {
       "name": "RXV2-0.9.707-honest-errors",
       "url": "https://messiter.com/rxv2/release/v0.9.707/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.707/littlefs-RXV2-0.9.707-honest-errors.bin",
+      "fs_md5": "4b3c8bc29f1d46e18f9d235d6d6d5df5",
       "notes": "When something goes wrong applying telemetry settings you now get a reason instead of a browser message. 'The string did not match the expected pattern' was the phone's own wording for a reply it could not read; it now says what the receiver actually answered, or that it answered nothing. Includes 0.9.706."
     },
     {
       "name": "RXV2-0.9.706-usb-after-update",
       "url": "https://messiter.com/rxv2/release/v0.9.706/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.706/littlefs-RXV2-0.9.706-usb-after-update.bin",
+      "fs_md5": "c0fd89ab15258841aa2d1f8745cd10e2",
       "notes": "The USB socket should now work straight after an update, without needing a second reboot. The restart was leaving the flight controller still thinking its USB port was open, so the receiver came back to a device that would not answer; it is now given a proper disconnect first. Each boot also records which version is running and from which half of the memory, on the Receiver log, so a firmware update that did not stick can be spotted. Includes 0.9.705."
     },
     {
@@ -23,42 +36,51 @@
     {
       "name": "RXV2-0.9.704-dongle-rxlog",
       "url": "https://messiter.com/rxv2/release/v0.9.704/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.704/littlefs-RXV2-0.9.704-dongle-rxlog.bin",
+      "fs_md5": "2c2598b65376519d912286907c7da92f",
       "notes": "On a dongle the Black box page no longer offers the Receiver log button. A dongle has no radio link, no battery sense and no flights of its own, so there was nothing behind it - and tapping it walked you into 'Not on a dongle'. Includes 0.9.703."
     },
     {
       "name": "RXV2-0.9.703-dongle-channels-fix",
       "url": "https://messiter.com/rxv2/release/v0.9.703/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.703/littlefs-RXV2-0.9.703-dongle-channels-fix.bin",
+      "fs_md5": "e11c1fb2586367bef9b33a8eba22c5b9",
       "notes": "View channels really does work on a dongle now. 0.9.702 taught the dongle to read the channels and put the button back on the Setup menu, but the page itself still turned you away with 'Not on a dongle'. Includes 0.9.702."
     },
     {
       "name": "RXV2-0.9.702-dongle-channels",
       "url": "https://messiter.com/rxv2/release/v0.9.702/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.702/littlefs-RXV2-0.9.702-dongle-channels.bin",
+      "fs_md5": "0b569c0c5a84f0162948758edf9050ca",
       "notes": "View channels now works on a dongle. A dongle has no radio of its own, so it asks the flight controller what its receiver is giving it and shows those - the bars and the little helicopter prove the whole chain, from your transmitter through its receiver to the flight controller. It pauses while the model is armed. Includes 0.9.701."
     },
     {
       "name": "RXV2-0.9.701-gear-joined",
       "url": "https://messiter.com/rxv2/release/v0.9.701/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.701/littlefs-RXV2-0.9.701-gear-joined.bin",
+      "fs_md5": "eb6e77af9d18dd5c426fe7e52eb1533d",
       "notes": "On the 3D helicopter the landing-gear supports now actually join up: they reach the skids below and go up into the frame above, instead of stopping just short of both. Includes 0.9.700."
     },
     {
       "name": "RXV2-0.9.700-wire-loops",
       "url": "https://messiter.com/rxv2/release/v0.9.700/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.700/littlefs-RXV2-0.9.700-wire-loops.bin",
+      "fs_md5": "a8a02dd95cb74e6ac8273316b6f54bfe",
       "notes": "The stray wires on the 3D helicopter are loops now: they come out of the frame a little way and go back in, instead of stopping in mid-air with a cut end. Includes 0.9.699."
     },
     {
       "name": "RXV2-0.9.699-stray-wires",
       "url": "https://messiter.com/rxv2/release/v0.9.699/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.699/littlefs-RXV2-0.9.699-stray-wires.bin",
+      "fs_md5": "cbff6e4b3dde75fd548916c905e5e2e4",
       "notes": "A few stray wires now peek out of the back of the 3D helicopter's frame, the way nobody's loom is ever quite tucked in. Three leads, each with its own droop and deliberately not matching. Includes 0.9.698."
     },
     {
       "name": "RXV2-0.9.698-tail-clearance",
       "url": "https://messiter.com/rxv2/release/v0.9.698/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.698/littlefs-RXV2-0.9.698-tail-clearance.bin",
+      "fs_md5": "c5634c1707441c81cef7e7924e12ad4c",
       "notes": "On the 3D helicopter the tail skid now reaches further down, and the tail rotor is larger - its lowest point comes to just above the bottom of the skid, so the skid would touch first. Includes 0.9.697."
-    },
-    {
-      "name": "RXV2-0.9.697-tail-tidy",
-      "url": "https://messiter.com/rxv2/release/v0.9.697/firmware.bin",
-      "notes": "Three tidies to the 3D helicopter: the horizontal stabiliser at the back has gone, the tail rotor is a bit bigger, and two black posts that had been poking out of the belly have gone. Those posts were a mistake - a cross-tube that was never turned on its side, so it stood on its end. Includes 0.9.696."
     }
   ]
 }

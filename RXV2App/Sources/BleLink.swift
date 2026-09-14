@@ -405,9 +405,17 @@ final class BleLink: NSObject, ObservableObject {
         if path.hasPrefix("/api/firmware")       { return 60 }
         if path.hasPrefix("/api/backup")         { return 30 }
         if path.hasPrefix("/api/bb")             { return 30 }
-        // Everything else: pages and polls. 12 s matches the Android bridge —
-        // 4 s was too tight for anything that touches the flight controller.
-        return 12
+        // Everything else: pages and ordinary polls, which the receiver answers
+        // in milliseconds. Stays at 4 s and MUST stay short.
+        //
+        // Malcolm 2026-09-14, minutes after I raised this to 12 s: "seems
+        // slower than before, much slower". Of course it did — this queue is
+        // SERIAL (one inFlight at a time), so the window is not just how long
+        // one request may take, it is how long everything queued behind a
+        // request that is never going to be answered has to wait. Tripling the
+        // default tripled every stall in the app. Only the paths that genuinely
+        // hold the receiver get a long window; the common case gets a short one.
+        return 4
     }
 
     // Watchdog: instead of one long dead-air timeout, the timer re-arms on
