@@ -420,7 +420,16 @@ body.hasFab{padding-bottom:8em}
    finger, SOLID per the no-translucent-panels rule, and the bar sweeps rather
    than fills because we cannot know how far through the flight controller is. */
 .ldrcBusy {
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: 120;
+    /* NEVER over the action bar. .fabBar is fixed at bottom:0 z-index:55 on 11
+       tuning pages, and the first version of this strip sat on top of it at
+       z-index 120 — swallowing every tap on Save and Back for the whole
+       duration of a read, which on a tuning page is most of the time.
+       Three defences, because this one hurt: it sits BELOW the bar in the
+       stack, it moves ABOVE it in layout when one is present, and it is
+       pointer-events:none so it can never take a tap under any circumstances.
+       It is information, not a control. */
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 54;
+    pointer-events: none;
     background: #eef3f6; border-top: 1px solid #c3d0d8;
     padding: .55em max(.8em, env(safe-area-inset-left)) calc(.55em + env(safe-area-inset-bottom));
     box-shadow: 0 -2px 8px rgba(0,0,0,.10);
@@ -429,5 +438,6 @@ body.hasFab{padding-bottom:8em}
 .ldrcBusyRow span { font-variant-numeric: tabular-nums; opacity:.8; }
 .ldrcBusyTrack { height:5px; border-radius:3px; background:#d5dfe6; overflow:hidden; margin:.35em 0 0; }
 .ldrcBusyBar { height:100%; width:35%; border-radius:3px; background:#2f6fb0; animation: ldrcSweep 1.1s ease-in-out infinite; }
+body.hasFab .ldrcBusy { bottom: calc(4.5em + env(safe-area-inset-bottom, 0px)); }
 @keyframes ldrcSweep { 0% { margin-left:-35%; } 50% { margin-left:100%; } 100% { margin-left:-35%; } }
 @media (prefers-reduced-motion: reduce) { .ldrcBusyBar { animation:none; width:100%; opacity:.55; } }

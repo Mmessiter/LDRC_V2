@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.711-channels-stream";
+constexpr const char* FW_VERSION = "RXV2-0.9.712-ble-loop";
 
 //*********************************************************************
 //  Auto-update manifest URLs

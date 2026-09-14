@@ -39,3 +39,9 @@ quit
 EOF
 echo
 echo "Done. Live manifest: https://messiter.com/$PRODUCT/release/manifest.json"
+
+# The phone apps bundle their OWN copy of these pages and never fetch them from
+# the receiver, so publishing a page fix here reaches WiFi users only. Say so
+# loudly rather than let it pass silently (2026-09-14: 0.9.711's View-channels
+# fix sat on the receiver while the iPhone kept the old page).
+python3 "$HERE/check_app_sync.py" || true

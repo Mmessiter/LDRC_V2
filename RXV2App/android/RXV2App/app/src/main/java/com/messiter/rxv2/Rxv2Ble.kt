@@ -313,8 +313,10 @@ class Rxv2Ble(private val context: Context) {
                 path.startsWith("/api/bb")           -> 30000L
                 // Short, and it matters: this queue is serial, so the default
                 // window is how long everything behind an unanswered request
-                // waits. iOS uses 4 s here for the same reason.
-                else                                 -> 12000L
+                // waits. My comment claimed this matched iOS; it did not — iOS
+                // went back to 4 s and this was left at 12, so Android still
+                // carried the "much slower" regression (2026-09-14).
+                else                                 -> 4000L
             }
             queue.addLast(Pending(payload, cb, firstByteMs = window))
             pump()

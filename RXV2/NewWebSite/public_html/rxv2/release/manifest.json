@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.712-ble-loop",
+      "url": "https://messiter.com/rxv2/release/v0.9.712/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.712/littlefs.bin",
+      "fs_md5": "00fba9d9649ccf5b6d6d50069b930687",
+      "notes": "An important one. Serving a page over Bluetooth used to hold the receiver's main loop for about a fifth of a second at a time - long enough to miss around 47 control frames to the flight controller, on the bench with the transmitter on. It now hands out its Bluetooth work in 3 millisecond slices (1.2 while a transmitter is linked) and always returns to flying the model. Also: the Reading from the flight controller strip no longer sits on top of the Save and Back buttons. Includes 0.9.711."
+    },
+    {
       "name": "RXV2-0.9.711-channels-stream",
       "url": "https://messiter.com/rxv2/release/v0.9.711/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.711/littlefs.bin",
@@ -74,13 +81,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.700/littlefs-RXV2-0.9.700-wire-loops.bin",
       "fs_md5": "a8a02dd95cb74e6ac8273316b6f54bfe",
       "notes": "The stray wires on the 3D helicopter are loops now: they come out of the frame a little way and go back in, instead of stopping in mid-air with a cut end. Includes 0.9.699."
-    },
-    {
-      "name": "RXV2-0.9.699-stray-wires",
-      "url": "https://messiter.com/rxv2/release/v0.9.699/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.699/littlefs-RXV2-0.9.699-stray-wires.bin",
-      "fs_md5": "cbff6e4b3dde75fd548916c905e5e2e4",
-      "notes": "A few stray wires now peek out of the back of the 3D helicopter's frame, the way nobody's loom is ever quite tucked in. Three leads, each with its own droop and deliberately not matching. Includes 0.9.698."
     }
   ]
 }

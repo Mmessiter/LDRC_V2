@@ -55,7 +55,31 @@ static const char* BLE_RESP_UUID = "8e400003-f315-4f60-9fb8-838830daea50";
 
 constexpr size_t BLE_MAX_REQUEST  = 16 * 1024;   // biggest POST we accept
 constexpr size_t BLE_MAX_RESPONSE = 160 * 1024;  // bigger → 413 (app bundles big assets)
-constexpr size_t BLE_PUMP_BUDGET  = 6 * 1024;    // max bytes notified per blePoll()
+// How much of one loop() pass the BLE pump may take. This used to be a BYTE
+// budget of 6 kB, and that was the "DIAG LOOP-STALL 192ms (ble 190ms)" the
+// receiver kept logging with a phone connected (found 2026-09-14).
+//
+// Why bytes were the wrong unit: every notify() is a synchronous hand-off that
+// ends up waiting on the controller's HCI semaphore, which the controller
+// releases as it drains packets OVER THE AIR. 6 kB at a 182-byte iOS chunk is
+// ~34 notifies; at a 15-30 ms connection interval and a few packets per event
+// that is 170-250 ms in which loop() does NOTHING ELSE — no radioPoll, no
+// sbusTick. At 250 Hz CRSF that is ~47 control frames never sent to the flight
+// controller, which is well inside Rotorflight's RXLOSS window, and it happens
+// on the bench with the transmitter on, which is exactly when the app is used.
+//
+// Every other blocking wait in this firmware already keeps the model flying
+// while it waits (see MspFc.h: "Keep FLYING while we wait … this wait starved
+// the channel stream and the FC flickered into failsafe"). The BLE transport
+// was the one that did not. It is now bounded by TIME instead, so the loop
+// always comes back.
+//
+// Throughput does not suffer: the loop turns ~500 times a second, so even a
+// few chunks per pass offers far more than the BLE air interface can carry.
+// The link stays the bottleneck; the control loop stops paying for it.
+constexpr uint32_t BLE_PUMP_US        = 3000;    // normal: at most ~3 ms of loop()
+constexpr uint32_t BLE_PUMP_US_FLYING = 1200;    // transmitter live: tighter still
+constexpr size_t   BLE_PUMP_BUDGET    = 6 * 1024;  // hard ceiling, still honoured
 
 //*********************************************************************
 //  BLE request/response state (written by NimBLE task, executed in loop)
@@ -715,10 +739,18 @@ inline void blePoll() {
     // header frame first (fits one chunk by construction of our short types)
     if (bleTxOffset == 0 && bleHeaderFrame.length()) {
         if (!bleRespChr->notify((const uint8_t*)bleHeaderFrame.c_str(), bleHeaderFrame.length())) { refused(); return; }
+        sentThisCall += bleHeaderFrame.length();   // the header's OWN length, not a whole chunk
         bleHeaderFrame = "";
-        sentThisCall += chunk;
     }
+    // Time-bounded: whatever is left rides the next pass through bleTxOffset,
+    // which already carries the position across calls — that is exactly what
+    // blePumping was built for. With a transmitter linked the budget tightens,
+    // because then a stall is dead air on the control link.
+    const bool txLive = rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 1000;
+    const uint32_t budgetUs = txLive ? BLE_PUMP_US_FLYING : BLE_PUMP_US;
+    const uint32_t pumpT0 = micros();
     while (bleTxOffset < bleBody.length() && sentThisCall < BLE_PUMP_BUDGET) {
+        if ((uint32_t)(micros() - pumpT0) > budgetUs) return;   // rest next pass
         size_t n = min(chunk, bleBody.length() - bleTxOffset);
         if (!bleRespChr->notify((const uint8_t*)bleBody.c_str() + bleTxOffset, n)) {
             refused();

@@ -284,10 +284,11 @@
         // Only appears after 900 ms, so the quick reads never flash it, and it
         // counts nested calls — a page load is a dozen MSP reads and should
         // show ONE strip for the whole sequence.
-        _busy: 0, _busyT0: 0, _busyTimer: null, _busyShow: null,
+        _busy: 0, _busyT0: 0, _busyTimer: null, _busyShow: null, _busyHide: null,
         busyStart() {
+            clearTimeout(this._busyHide); this._busyHide = null;
             if (++this._busy > 1) return;
-            this._busyT0 = Date.now();
+            if (!document.getElementById('ldrcBusy')) this._busyT0 = Date.now();
             clearTimeout(this._busyShow);
             this._busyShow = setTimeout(() => this._busyPaint(), 900);
         },
@@ -295,9 +296,18 @@
             if (--this._busy > 0) return;
             this._busy = 0;
             clearTimeout(this._busyShow); this._busyShow = null;
-            clearInterval(this._busyTimer); this._busyTimer = null;
-            const el = document.getElementById('ldrcBusy');
-            if (el) el.remove();
+            // A page load is a SEQUENCE of reads, not concurrent ones, so the
+            // counter drops to zero between every pair and the strip flickered
+            // on and off. Linger briefly: if another read starts within the
+            // grace period the strip simply stays, and one steady strip covers
+            // the whole load.
+            clearTimeout(this._busyHide);
+            this._busyHide = setTimeout(() => {
+                if (this._busy > 0) return;
+                clearInterval(this._busyTimer); this._busyTimer = null;
+                const el = document.getElementById('ldrcBusy');
+                if (el) el.remove();
+            }, 400);
         },
         _busyPaint() {
             if (this._busy <= 0) return;
