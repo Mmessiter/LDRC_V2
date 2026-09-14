@@ -137,6 +137,7 @@ namespace UsbHostMsp {
     // it is open MSP is dead, so the status poll and probes stand down and
     // the bytes go to cliBuf instead of the MSP parser.
     inline volatile bool cliMode = false;
+    inline uint32_t cliTouchedMs = 0;      // 0.9.705: last time anything used the command line
     inline String   cliBuf;
     inline uint32_t cliLines = 0;
 
@@ -256,7 +257,7 @@ namespace UsbHostMsp {
     inline bool cliEnter(uint32_t timeoutMs) {
         if (!opened) return false;
         if (cliMode) return true;
-        cliMode = true; cliBuf = "";
+        cliMode = true; cliBuf = ""; cliTouchedMs = millis();
         const uint8_t hash = '#';
         if (!send(&hash, 1)) { cliMode = false; return false; }
         if (!cliWait(timeoutMs)) { cliMode = false; return false; }
@@ -266,6 +267,7 @@ namespace UsbHostMsp {
     // Send one command, return everything the FC printed up to its next prompt.
     inline bool cliExchange(const String& cmd, String& out, uint32_t timeoutMs) {
         if (!cliMode) return false;
+        cliTouchedMs = millis();
         cliBuf = "";
         String line = cmd; line += "\n";
         if (!send((const uint8_t*)line.c_str(), line.length())) return false;
@@ -285,6 +287,55 @@ namespace UsbHostMsp {
         cliMode = false; cliBuf = "";
         { char m[110]; snprintf(m, sizeof m, save ? "%s: command line 'save' - flight controller restarting" : "%s: command line 'exit' - flight controller restarting, nothing saved", who()); events.add(m); }
     }
+    // Malcolm 2026-09-14: "I frequently forget to press exit without saving.
+    // This, of course, disables other options." An open command line owns the
+    // USB port, so every other page stops working until it is left — and the
+    // only way out was a button he had to remember to press.
+    //
+    // So: if the command line has been open and untouched for a while, leave
+    // it exactly as the button would, without saving. The page also asks on
+    // its way out (see data/cli.html), but that can be missed — the app can be
+    // killed, the phone can walk out of range, the battery can go flat. This
+    // watchdog cannot be dodged.
+    //
+    // NEVER while the transmitter is linked or the model is armed: leaving the
+    // command line RESTARTS the flight controller, which must not happen near
+    // flight. In that state the timer simply waits.
+    constexpr uint32_t CLI_IDLE_LEAVE_MS = 90000;   // 90 s with nobody typing
+
+    inline void cliIdleTick(bool safeToLeave) {
+        if (!cliMode) return;
+        if (!safeToLeave) { cliTouchedMs = millis(); return; }   // TX linked or armed: wait
+        if ((uint32_t)(millis() - cliTouchedMs) < CLI_IDLE_LEAVE_MS) return;
+        events.add("Command line: left open and idle - exited without saving so the other pages work again");
+        cliLeave(false);
+    }
+
+    // Malcolm 2026-09-14: "after updating the firmware, I frequently have found
+    // that the USB options don't work. On rebooting, they worked again."
+    //
+    // ESP.restart() is a SOFT reset: it does not reset the USB OTG peripheral,
+    // and the flight controller at the other end never sees the port drop, so
+    // it stays enumerated against a host that has just vanished. The fresh
+    // usb_host_install() after the reboot then meets a device that thinks it is
+    // already open. Closing the handle and dropping DTR/RTS first gives the FC
+    // a proper disconnect to react to.
+    //
+    // Called on the way into every OTA restart. Best-effort by design: if any
+    // of it fails we still reboot, which is no worse than before.
+    inline void prepareForRestart() {
+        if (!started) return;
+        cliMode = false;                      // never reboot mid-command-line
+        if (hdl && hdlMutex && xSemaphoreTake(hdlMutex, pdMS_TO_TICKS(200)) == pdTRUE) {
+            cdc_acm_host_set_control_line_state(hdl, false, false);   // drop DTR/RTS: the FC sees the port close
+            cdc_acm_host_close(hdl);
+            hdl = nullptr;
+            opened = false;
+            xSemaphoreGive(hdlMutex);
+        }
+        delay(60);                            // let the FC notice before the reset
+    }
+
     inline void stateJson(String& j) {
         char b[200];
         snprintf(b, sizeof b, ",\"dongle_link\":\"%s\",\"usb_fc\":%s,\"usb\":{\"host\":%s,\"device\":%s,\"vid\":\"%04X\",\"pid\":\"%04X\",\"in\":%lu,\"out\":%lu,\"opens\":%lu,\"fails\":%lu,\"cli\":%s}",
@@ -303,6 +354,8 @@ namespace UsbHostMsp {
     inline void cliLeave(bool) {}
     inline bool send(const uint8_t*, size_t) { return false; }
     inline void poll() {}
+    inline void cliIdleTick(bool) {}
+    inline void prepareForRestart() {}
     inline void stateJson(String& j) { j += ",\"dongle_link\":\"uart\",\"usb_fc\":false,\"usb\":{\"host\":false,\"device\":false,\"cli\":false}"; }
 }
 #endif

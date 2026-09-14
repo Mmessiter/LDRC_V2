@@ -20,6 +20,7 @@
 //
 //*********************************************************************
 
+#include "esp_ota_ops.h"
 #include "1Defs.h"
 #include "Storage.h"
 #include "Channels.h"
@@ -219,6 +220,14 @@ void setup() {
                  havePass  ? "yes" : "NO",
                  pipeLen == 5 ? "yes" : "NO");
         events.add(buf);
+        // 0.9.706: record WHAT is running and from WHERE, every boot. Malcolm
+        // has twice been re-offered an update straight after taking one; if
+        // that is a firmware write that did not stick, the running version and
+        // partition here say so at a glance, on /blackbox, with no cable.
+        { const esp_partition_t* run = esp_ota_get_running_partition();
+          char vb[110];
+          snprintf(vb, sizeof(vb), "Running %s from %s", FW_VERSION, run ? run->label : "?");
+          events.add(vb); }
         if (!haveSsid) {
             events.add("Boot: no WiFi SSID in NVS — AP mode");
         }
@@ -827,6 +836,11 @@ void loop() {
         { StallScope s("txParams");   txParamsLoop(); }    // TX Rotorflight edits: async MSP read/write state machine
         { StallScope s("bbCheck");    BbCheck::tick(); }   // vibration check: one black-box chunk per pass over USB (0.9.661)
         { StallScope s("govThrWatch"); govThrottleWatchTick(); }   // "throttle parked" verdict + deferred NVS commits (0.9.551)
+        // 0.9.705: a command line left open owns the USB port and stops every
+        // other page working. Leave it for the user if it has gone quiet — but
+        // never while the transmitter is linked or the model is armed, because
+        // leaving restarts the flight controller.
+        { StallScope s("cliIdle"); UsbHostMsp::cliIdleTick(!rxTxLinkedRecently() && !fcInfo.armed); }
     }
     { StallScope s("vbat");        vbatPoll(); }              // battery divider ADC (5 Hz, no-op when off)
     { StallScope s("teleSample");  telemetrySampleTick(); }   // 1 Hz flight telemetry log (ESC temp / head speed / battery)

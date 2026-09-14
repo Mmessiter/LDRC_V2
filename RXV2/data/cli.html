@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Command line &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=203">
-<script src="/app.js?v=234" defer></script>
+<link rel=stylesheet href="/style.css?v=205">
+<script src="/app.js?v=236" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -55,6 +55,7 @@
 </ul>
 <h3>Leaving</h3>
 <p><b>Save and restart</b> keeps your changes. <b>Leave without saving</b> drops them. Both restart the flight controller; the other pages come back once it is up. Use the buttons rather than typing save or exit.</p>
+<p>If you leave this page any other way &mdash; back, the front screen, or closing the app &mdash; it leaves <b>without saving</b> for you, so the other pages keep working. A command line left open and forgotten closes itself after a minute and a half.</p>
 <h3>While it is open</h3>
 <p>The flight controller cannot arm and the other pages are paused. Needs the USB cable from the dongle or receiver to the flight controller, not a laptop.</p>
 </template>
@@ -113,6 +114,40 @@ async function leave(save) {
 }
 
 // Wherever the floating back arrow points — the trail decides that, not this page.
+// Leaving the page by ANY route does what "Leave without saving" does.
+// Malcolm 2026-09-14: "I frequently forget to press exit without saving. This,
+// of course, disables other options." An open command line owns the USB port,
+// so every other page stops working until it is closed — forgetting one button
+// should not cost you the rest of the app.
+//
+// Belt: intercept the home and back buttons here and close the session first.
+// Braces: a keepalive POST on pagehide, for a swipe, a tab close or the app's
+// own X. And in the firmware, a watchdog closes an idle command line anyway
+// (0.9.705), because none of this survives the app being killed outright.
+let _cliLeaving = false;
+async function leaveQuietly() {
+    if (_cliLeaving) return;
+    _cliLeaving = true;
+    try { await fetch('/api/cli/leave', { method: 'POST', body: new URLSearchParams({ save: '0' }), keepalive: true }); } catch (e) {}
+}
+function armLeaveOnExit() {
+    document.addEventListener('click', async (e) => {
+        const a = e.target.closest && e.target.closest('a.homeBtn, a.backBtn');
+        if (!a || _cliLeaving) return;
+        const s = LDRC.state;
+        if (!(s && s.usb && s.usb.cli)) return;      // nothing open: let it go
+        e.preventDefault();
+        await leaveQuietly();
+        location.href = a.href;
+    }, true);
+    // Swipe back, tab close, app dismissed: no time to await anything, so a
+    // keepalive request is the best that can be done from the page.
+    window.addEventListener('pagehide', () => {
+        const s = LDRC.state;
+        if (s && s.usb && s.usb.cli) leaveQuietly();
+    });
+}
+
 function goBack() {
     const back = document.querySelector('a.backBtn');
     if (back && back.href) { location.href = back.href; return; }
@@ -120,6 +155,7 @@ function goBack() {
     location.href = '/rotorflight-alacarte';
 }
 document.addEventListener('DOMContentLoaded', async () => {
+    armLeaveOnExit();
     $('chips').innerHTML = QUICK.map(c => '<button type=button class="usbOnly" style="padding:.3em .7em;border-radius:14px;border:0;background:#dfe7ee;color:#2c3e50;font-size:.9em">' + c + '</button>').join('');
     $('chips').querySelectorAll('button').forEach(b => b.onclick = () => run(b.textContent));
     $('send').onclick = () => run();

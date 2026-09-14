@@ -1715,6 +1715,7 @@ inline void handleFirmwareInstall() {
     otaGuardEnd();
     server.send(200, "text/plain", String("ok — rebooting") + fsNote);
     bleEarlyPump();               // over BLE: deliver the reply before the reboot kills the link
+    UsbHostMsp::prepareForRestart();   // 0.9.706: give the FC a clean disconnect, or USB comes back dead
     delay(300);
     ESP.restart();
 }
@@ -1797,6 +1798,7 @@ inline void safeOutputParkAndRestart() {
     Serial1.flush();
     Serial1.end();
     pinMode(PIN_SBUS_TX, INPUT_PULLUP); // idle-HIGH through the restart — silence, not noise
+    UsbHostMsp::prepareForRestart();    // 0.9.706: and a clean USB disconnect for the FC
     delay(50);
     ESP.restart();
 }
