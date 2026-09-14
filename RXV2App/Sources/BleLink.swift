@@ -277,12 +277,23 @@ final class BleLink: NSObject, ObservableObject {
         text += "\n"
         var payload = Data(text.utf8)
         if let b = body { payload.append(b) }
-        // First-byte window: 4 s is plenty for pages and polls, but a flight-
-        // controller read through /api/msp can hold the receiver for longer —
-        // Rotorflight meters big replies out at ~0.5-0.8 s per 58-byte chunk
-        // (the 224-byte mixer rules take ~2 s, the 588-byte adjustment table
-        // ~6 s) and the receiver waits up to 12 s for them (fw 0.9.560).
-        let window: TimeInterval = path.hasPrefix("/api/msp") ? 14 : 4
+        // First-byte window. This MUST be at least as long as the receiver is
+        // willing to wait, or the app gives up on a request the receiver is
+        // still working on — and then hands the page its own HTML timeout
+        // notice, which the page tries to read as a reply.
+        //
+        // Malcolm 2026-09-14, on RAW420AJB: the command line "usually just
+        // didn't respond at all", fast telemetry hung on "Working...", and the
+        // telemetry error was WebKit's JSON complaint about that HTML page.
+        // All ONE bug: this was a flat 4 s for everything except /api/msp,
+        // while /api/cli alone can hold the receiver for 8.5 s (cliEnter 2.5 s
+        // + cliExchange 6 s) and `diff` routinely does. Android's equivalent
+        // was already 12 s, which is why it bit on the iPhone and not the
+        // Pixel.
+        //
+        // Anything that reaches the flight controller now gets a window that
+        // matches what the firmware will actually spend.
+        let window: TimeInterval = Self.firstByteWindow(for: path)
         queue.append(Pending(payload: payload, firstByteWindow: window, completion: completion))
         pump()
     }
@@ -376,6 +387,27 @@ final class BleLink: NSObject, ObservableObject {
             }
         }
         armTimeout(next.firstByteWindow)   // generous first-byte window; each chunk re-arms 3 s
+    }
+
+    /// How long to wait for the FIRST byte of a reply, by path. Each received
+    /// chunk re-arms a shorter 3 s watchdog, so a healthy big reply streams
+    /// freely; these numbers only cover the receiver's own thinking time.
+    static func firstByteWindow(for path: String) -> TimeInterval {
+        // The receiver waits cliEnter(2.5 s) + cliExchange(6 s) = 8.5 s, and a
+        // Rotorflight `diff` or `dump` uses most of it.
+        if path.hasPrefix("/api/cli")            { return 15 }
+        // Telemetry speed/restore write settings, save EEPROM and restart the FC.
+        if path.hasPrefix("/api/fc/telemetry")   { return 25 }
+        // A big MSP read is metered out at ~0.5-0.8 s per 58-byte chunk; the
+        // 588-byte adjustment table takes ~6 s and the receiver waits 12 s.
+        if path.hasPrefix("/api/msp")            { return 14 }
+        // These download or erase on the far side before answering at all.
+        if path.hasPrefix("/api/firmware")       { return 60 }
+        if path.hasPrefix("/api/backup")         { return 30 }
+        if path.hasPrefix("/api/bb")             { return 30 }
+        // Everything else: pages and polls. 12 s matches the Android bridge —
+        // 4 s was too tight for anything that touches the flight controller.
+        return 12
     }
 
     // Watchdog: instead of one long dead-air timeout, the timer re-arms on

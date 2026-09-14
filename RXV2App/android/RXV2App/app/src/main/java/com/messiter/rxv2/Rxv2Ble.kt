@@ -300,7 +300,19 @@ class Rxv2Ble(private val context: Context) {
             // longer than a page: Rotorflight meters big replies out at
             // ~0.5-0.8 s per 58-byte chunk (588-byte adjustment table ~6 s)
             // and the receiver waits up to 12 s for them (fw 0.9.560).
-            val window = if (path.startsWith("/api/msp")) 14000L else 12000L
+            // Match the iOS table (BleLink.firstByteWindow) so the two apps
+            // behave the same. The window must be at least as long as the
+            // receiver is willing to wait, or we abandon a request it is still
+            // working on and hand the page our own timeout notice instead.
+            val window = when {
+                path.startsWith("/api/cli")          -> 15000L   // cliEnter 2.5 s + cliExchange 6 s, and `diff` uses it
+                path.startsWith("/api/fc/telemetry") -> 25000L   // writes, EEPROM save, FC restart
+                path.startsWith("/api/msp")          -> 14000L
+                path.startsWith("/api/firmware")     -> 60000L
+                path.startsWith("/api/backup")       -> 30000L
+                path.startsWith("/api/bb")           -> 30000L
+                else                                 -> 12000L
+            }
             queue.addLast(Pending(payload, cb, firstByteMs = window))
             pump()
         }
