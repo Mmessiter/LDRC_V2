@@ -627,10 +627,23 @@
         },
 
         async startPolling(fn, ms) {
+            // MEASURED 2026-09-14: /api/state.json is 4,414 bytes and Bluetooth
+            // carries about 24 kB/s, so each poll is ~190 ms of the link. The
+            // 500 ms default means a page can spend 40 % of the whole link on
+            // polling alone, and everything else — a stick movement, a Save,
+            // a settings read — waits behind it. That was most of "much too
+            // slow".
+            //
+            // On WiFi nothing changes: it is fast and free there. On Bluetooth
+            // the floor is 1.5 s, which is still well inside the cadence any of
+            // these panels actually needs (they show link status, battery and
+            // armed state, none of which moves faster than that).
+            const floor = this.viaBle ? 1500 : 0;
+            const every = Math.max(floor, ms || 500);
             const tick = async () => {
                 await this.fetchState();
                 try { fn(this.state); } catch (e) { console.error(e); }
-                setTimeout(tick, ms || 500);
+                setTimeout(tick, every);
             };
             tick();
         }

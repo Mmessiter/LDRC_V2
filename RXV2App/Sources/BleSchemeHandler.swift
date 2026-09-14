@@ -329,6 +329,50 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
         if let ct = task.request.value(forHTTPHeaderField: "Content-Type") {
             headers["Content-Type"] = ct
         }
+        // ---- /api/state.json: single-flight + micro-cache --------------------
+        // MEASURED 2026-09-14: state.json is 4,414 bytes, and the app asks for
+        // it from several places at once — app.js's own poll, the armed banner,
+        // and each page's startPolling — 1.2 to 3.2 times a SECOND, with no
+        // sharing between them. Over Bluetooth the link carries roughly 24 kB/s,
+        // so that one document was occupying a large and permanent fraction of
+        // it before the user touched anything. Everything else queued behind it,
+        // which is what "much too slow" actually was.
+        //
+        // So: concurrent askers share ONE fetch, and a reply less than 600 ms
+        // old is served straight from memory. 600 ms is well inside the armed
+        // banner's own 1.2 s cadence, so nothing safety-relevant gets staler
+        // than it already was. WiFi is untouched — this handler is the
+        // Bluetooth path only.
+        if method == "GET", path == "/api/state.json", url.query?.isEmpty != false {
+            let now = Date()
+            if let c = Self.stateCache, now.timeIntervalSince(c.at) < 0.6 {
+                deliver(task, url: url, code: 200, type: "application/json", body: c.body)
+                return
+            }
+            Self.stateWaiters.append((task, url))
+            if Self.stateInFlight { return }            // someone is already asking
+            Self.stateInFlight = true
+            bleFetch(method: "GET", pathAndQuery: pathAndQuery, headers: headers,
+                     body: nil, hops: 0) { [weak self] result in
+                guard let self else { return }
+                let waiters = Self.stateWaiters
+                Self.stateWaiters.removeAll()
+                Self.stateInFlight = false
+                switch result {
+                case .success(let resp):
+                    let body = resp.body
+                    if resp.code == 200 || resp.code == 0 { Self.stateCache = (body, Date()) }
+                    for (t, u) in waiters {
+                        self.deliver(t, url: u, code: resp.code == 0 ? 200 : resp.code,
+                                     type: "application/json", body: body)
+                    }
+                case .failure(let e):
+                    for (t, _) in waiters { t.didFailWithError(e) }
+                }
+            }
+            return
+        }
+
         bleFetch(method: method, pathAndQuery: pathAndQuery, headers: headers,
                  body: task.request.httpBody, hops: 0) { [weak self] result in
             guard let self else { return }
@@ -391,6 +435,13 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
             completion(result)
         }
     }
+
+    /// Shared state.json reply and the tasks waiting on the one fetch in flight.
+    /// Cleared on disconnect so a new receiver never serves the old one's state.
+    static var stateCache: (body: Data, at: Date)?
+    static var stateInFlight = false
+    static var stateWaiters: [(WKURLSchemeTask, URL)] = []
+    static func forgetStateCache() { stateCache = nil; stateWaiters.removeAll(); stateInFlight = false }
 
     /// Map a portal path onto a file bundled in webroot/ (mirrors the
     /// firmware's route→file convention: "/" → index.html, "/wifi" →

@@ -503,6 +503,8 @@ final class BleLink: NSObject, ObservableObject {
     }
 
     private func cleanupConnection(message: String?) {
+        // Never let one receiver's cached state be served to the next.
+        BleSchemeHandler.forgetStateCache()
         timeoutTimer?.invalidate(); timeoutTimer = nil
         if let f = inFlight {
             f.completion(.failure(NSError(domain: "BleLink", code: 503,

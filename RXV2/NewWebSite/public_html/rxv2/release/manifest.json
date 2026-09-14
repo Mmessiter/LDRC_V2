@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.713-less-chatter",
+      "url": "https://messiter.com/rxv2/release/v0.9.713/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.713/littlefs.bin",
+      "fs_md5": "a2afed1e07d4c2a4b7cef3b33bd14c9c",
+      "notes": "The app now asks the receiver far less often over Bluetooth. The status document it fetches is 4.4 kB, Bluetooth carries about 24 kB a second, and several parts of the app were each asking for it two or three times a second - so most of the link was spent on it and everything else queued behind. Those requests now share one answer, and pages poll every 1.5 seconds instead of twice a second. WiFi is unchanged. Includes 0.9.712."
+    },
+    {
       "name": "RXV2-0.9.712-ble-loop",
       "url": "https://messiter.com/rxv2/release/v0.9.712/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.712/littlefs.bin",
@@ -74,13 +81,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.701/littlefs-RXV2-0.9.701-gear-joined.bin",
       "fs_md5": "eb6e77af9d18dd5c426fe7e52eb1533d",
       "notes": "On the 3D helicopter the landing-gear supports now actually join up: they reach the skids below and go up into the frame above, instead of stopping just short of both. Includes 0.9.700."
-    },
-    {
-      "name": "RXV2-0.9.700-wire-loops",
-      "url": "https://messiter.com/rxv2/release/v0.9.700/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.700/littlefs-RXV2-0.9.700-wire-loops.bin",
-      "fs_md5": "a8a02dd95cb74e6ac8273316b6f54bfe",
-      "notes": "The stray wires on the 3D helicopter are loops now: they come out of the frame a little way and go back in, instead of stopping in mid-air with a cut end. Includes 0.9.699."
     }
   ]
 }
