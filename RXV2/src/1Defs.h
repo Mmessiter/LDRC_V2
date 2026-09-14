@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.714-adaptive-poll";
+constexpr const char* FW_VERSION = "RXV2-0.9.715-safety-gates";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -496,6 +496,26 @@ constexpr uint16_t THROTTLE_SAFE_US = 885;  // well below 900: any ESC reads thi
 constexpr uint32_t IBUS_PERIOD_MS = 7;      // ~140 Hz
 constexpr uint32_t PPM_PERIOD_MS  = 25;     // 40 Hz — leaves 2-3 ms over the ~22 ms frame
 constexpr uint32_t FBUS_PERIOD_MS = 9;      // ~111 Hz
+
+// Keep the model flying through a blocking wait. Every long wait in this
+// firmware calls this instead of delay()-ing blind — the comment that earned it
+// is in MspFc.h: "this wait starved the channel stream and the FC flickered
+// into failsafe".
+//
+// The guard matters as much as the pumping. On a DONGLE, or in simulator mode,
+// there is no model and no radio link: D5/D6 are the flight controller's own
+// MSP UART, so sbusTick() there would write CRSF RC frames straight into the
+// port we are mid-conversation with. cliWait() has always known that; the MSP
+// waits did not, until a safety review found it on 2026-09-14.
+inline void keepFlyingTick() {
+    extern void radioPoll();      // Radio.h
+    extern void sbusTick();       // Output.h
+    extern void protocolRx();     // Telemetry.h
+    if (dongleEnabled || simEnabled) return;
+    radioPoll();
+    sbusTick();
+    protocolRx();
+}
 
 inline uint16_t channelMicros[16];                       // initialised in setup() to 1500us
 inline uint32_t lastChannelDataMs = 0;

@@ -756,13 +756,14 @@ inline bool mspRequestAndWait(uint8_t function, const uint8_t* req, uint8_t reqL
     extern void protocolRx();   // defined in Telemetry.h
     extern void sbusTick();     // defined in Output.h
     extern void radioPoll();    // defined in Radio.h
+    // NEVER on a dongle or in sim mode: there D5/D6 are the FC's MSP UART, and
+    // sbusTick() would write RC frames into it. cliWait() has always known this.
+    
     // A probe the FC has not answered yet is sitting in its one request
     // buffer; ours would land behind it and be thrown away (0.9.563 — the
     // reverse of the 0.9.562 hold-off). Wait for that reply, bounded.
     while (mspProbeOutstanding()) {
-        radioPoll();
-        sbusTick();
-        protocolRx();
+        keepFlyingTick();
         delay(1);
     }
     mspWaitFunction  = function;
@@ -902,7 +903,7 @@ inline bool telemSaveAndRestartSync() {
     // a saved setup silently not yet active), keeping the channels flowing.
     extern void protocolRx(); extern void sbusTick(); extern void radioPoll();
     mspSendRequest(MSP_REBOOT);
-    for (uint32_t t0 = millis(); (uint32_t)(millis() - t0) < 100; ) { radioPoll(); sbusTick(); protocolRx(); delay(1); }
+    for (uint32_t t0 = millis(); (uint32_t)(millis() - t0) < 100; ) { keepFlyingTick(); delay(1); }
     mspSendRequest(MSP_REBOOT);
     fcInfo.telemCfgKnown = false;      // re-read once the FC is back
     fcInfo.telemCfgTries = 0;

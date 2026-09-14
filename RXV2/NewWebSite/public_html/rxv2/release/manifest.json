@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.715-safety-gates",
+      "url": "https://messiter.com/rxv2/release/v0.9.715/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.715/littlefs.bin",
+      "fs_md5": "d0d47f67cf9882d01b33747ba48fdbb7",
+      "notes": "Safety review fixes. Capturing or clearing the failsafe positions is now refused while the model is armed - capturing on an armed model would have stored the arming switch ON as the failsafe position. Installing firmware is refused while the transmitter is on, because the receiver stops sending control frames for the whole download. Bringing the radios back after a flight now parks the output safely instead of restarting bare. And a dongle no longer writes control frames into the flight controller's settings port while waiting for a reply. Includes 0.9.714."
+    },
+    {
       "name": "RXV2-0.9.714-adaptive-poll",
       "url": "https://messiter.com/rxv2/release/v0.9.714/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.714/littlefs.bin",
@@ -74,13 +81,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.703/littlefs-RXV2-0.9.703-dongle-channels-fix.bin",
       "fs_md5": "e11c1fb2586367bef9b33a8eba22c5b9",
       "notes": "View channels really does work on a dongle now. 0.9.702 taught the dongle to read the channels and put the button back on the Setup menu, but the page itself still turned you away with 'Not on a dongle'. Includes 0.9.702."
-    },
-    {
-      "name": "RXV2-0.9.702-dongle-channels",
-      "url": "https://messiter.com/rxv2/release/v0.9.702/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.702/littlefs-RXV2-0.9.702-dongle-channels.bin",
-      "fs_md5": "0b569c0c5a84f0162948758edf9050ca",
-      "notes": "View channels now works on a dongle. A dongle has no radio of its own, so it asks the flight controller what its receiver is giving it and shows those - the bars and the little helicopter prove the whole chain, from your transmitter through its receiver to the flight controller. It pauses while the model is armed. Includes 0.9.701."
     }
   ]
 }

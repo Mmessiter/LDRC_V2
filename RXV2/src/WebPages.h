@@ -285,7 +285,7 @@ inline void handleFcWake() {
     // the gaps between the three frames keep the channel stream flowing
     // rather than sitting in delay() (0.9.563).
     auto pump = [](uint32_t ms) {
-        for (uint32_t t0 = millis(); (uint32_t)(millis() - t0) < ms; ) { radioPoll(); sbusTick(); protocolRx(); delay(1); }
+        for (uint32_t t0 = millis(); (uint32_t)(millis() - t0) < ms; ) { keepFlyingTick(); delay(1); }
     };
     mspSendRequest(MSP_SET_FEATURE_CFG, mask, 4);
     pump(60);
@@ -882,7 +882,7 @@ inline void handleMspApi() {
         // flowing (a lost single frame once left a saved setup silently not
         // yet active), and answer the page at once instead of a 504.
         mspSendRequest(MSP_REBOOT);
-        for (uint32_t t0 = millis(); (uint32_t)(millis() - t0) < 100; ) { radioPoll(); sbusTick(); protocolRx(); delay(1); }
+        for (uint32_t t0 = millis(); (uint32_t)(millis() - t0) < 100; ) { keepFlyingTick(); delay(1); }
         mspSendRequest(MSP_REBOOT);
         fcInfo.telemCfgKnown = false;      // re-read once the FC is back
         fcInfo.telemCfgTries = 0;
@@ -1529,6 +1529,8 @@ inline void fsFlashEnded(bool ok, size_t written) {
 }
 
 inline void safeOutputParkAndRestart();   // defined below (bind section)
+inline bool refuseIfTxLinked(const char* why);   // defined below — refuses while a TX link is live
+inline bool refuseIfArmed(const char* what);     // defined below — refuses on an armed model
 
 //*********************************************************************
 //  BLE OTA push — the app downloads with the PHONE's internet (5G!) and
@@ -1654,6 +1656,14 @@ inline String updateFilesystemKeepingBackups(const String& fsUrl) {
 }
 
 inline void handleFirmwareInstall() {
+    // The download runs INSIDE this handler: loop() — and therefore radioPoll()
+    // and sbusTick() — stops for its whole duration, seconds at best and tens of
+    // seconds on a slow server. The event log already records where that led
+    // once: "the Goblin receiver went DEAF for 8 minutes mid-update". Every
+    // lesser reboot endpoint refuses while the transmitter is on; this, the most
+    // loop-hostile one of all, did not (safety review, 2026-09-14).
+    if (refuseIfTxLinked("turn the transmitter off first - the receiver stops sending control frames for the whole update")) return;
+    if (refuseIfArmed("install firmware")) return;
     if (netMode != NET_WIFI_UP) {
         // ClaudeFix-16-7-2026 the chip itself downloads the image, so without home WiFi
         // the install can only fail — say so plainly instead of "begin failed".
@@ -2110,6 +2120,7 @@ inline void handleWifiResetGone() {
 // the model to sit with no signal (e.g. disarmed), then taps Save.
 
 inline void handleFailsafeSave() {
+    if (refuseIfArmed("capture failsafe")) return;   // would store arm-high as the failsafe
     saveFailsafeToNvs();
     events.add("Failsafe captured from current channels");
     server.sendHeader("Cache-Control", "no-store");
@@ -2117,6 +2128,7 @@ inline void handleFailsafeSave() {
 }
 
 inline void handleFailsafeClear() {
+    if (refuseIfArmed("clear failsafe")) return;
     clearFailsafeNvs();
     events.add("Failsafe cleared");
     server.sendHeader("Cache-Control", "no-store");
@@ -2310,6 +2322,32 @@ inline void handleProtocolSet() {
 // same window fcTelemActionAllowed uses): no reboot-to-apply setting and no
 // command line then. A dongle has no transmitter to watch (0.9.640).
 inline bool rxTxLinkedRecently() { return !dongleEnabled && rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 3000; }
+// Refuse anything that must not happen on an armed model. Same two tests
+// handleMspApi already uses: the flight controller's OWN word if it is fresh,
+// and the arming channel on a live transmitter link. Returns true if refused.
+//
+// Added 2026-09-14 after a safety review found POST /api/failsafe/save gated by
+// NOTHING: capturing failsafe on an armed, spooling model stores the arming
+// channel HIGH and the throttle wherever it happens to be, and that is what the
+// receiver would then output on a real signal loss. The one stored position
+// that must never say "armed".
+inline bool refuseIfArmed(const char* what) {
+    if (fcInfo.armed && fcInfo.armedMs && (uint32_t)(millis() - fcInfo.armedMs) < 5000) {
+        server.sendHeader("Cache-Control", "no-store");
+        server.send(409, "text/plain", "ARMED - the flight controller says it is armed. Disarm first.");
+        return true;
+    }
+    const bool armLink = rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 1000;
+    if (armLink && armingChannel >= 1 && armingChannel <= 16 &&
+        channelMicros[armingChannel - 1] > 1500) {
+        { char m[96]; snprintf(m, sizeof m, "Refused while ARMED: %s", what); events.add(m); }
+        server.sendHeader("Cache-Control", "no-store");
+        server.send(409, "text/plain", "ARMED - disarm first.");
+        return true;
+    }
+    return false;
+}
+
 inline bool refuseIfTxLinked(const char* why) {
     if (!rxTxLinkedRecently()) return false;
     server.send(409, "text/plain", why);
@@ -2576,10 +2614,16 @@ inline void handleFlyArm() {
 // boot, and the phone app auto-reconnects through it.
 
 inline void handleFlyDisarm() {
+    // This is the reboot a pilot presses AT THE FIELD, on a model still on its
+    // flight pack — head coasting down, or idling for the next flight. A bare
+    // ESP.restart() lets the output pin glitch on the way down, which is the
+    // exact fault safeOutputParkAndRestart() exists to prevent ("the propeller
+    // briefly spun during a reboot-into-bind, prop fitted"). It was the only
+    // pilot-facing reboot still using the unsafe one (safety review 2026-09-14).
+    if (refuseIfArmed("bring the radios back")) return;
     server.send(200, "text/plain", "ok — rebooting, radios return in ~15 s");
     bleEarlyPump();
-    delay(300);
-    ESP.restart();
+    safeOutputParkAndRestart();     // throttle-low burst, pin parked idle-high
 }
 
 //*********************************************************************

@@ -23,6 +23,10 @@ func md5Hex(_ d: Data) -> String {
 }
 
 final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
+    /// The handler currently serving the web view, so the static state.json
+    /// helpers can reach the per-instance `live` set when they need to fail a
+    /// task safely. Weak: the web screen owns its handler's lifetime.
+    private(set) static weak var current: BleSchemeHandler?
     private let link: BleLink
     private let demo: Bool
     private let demoDongle: Bool
@@ -46,6 +50,7 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
     ]
 
     func webView(_ webView: WKWebView, start task: WKURLSchemeTask) {
+        BleSchemeHandler.current = self
         live.insert(ObjectIdentifier(task))
         guard let url = task.request.url else { return fail(task, "bad URL") }
         let path = url.path.isEmpty ? "/" : url.path
@@ -367,7 +372,11 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
                                      type: "application/json", body: body)
                     }
                 case .failure(let e):
-                    for (t, _) in waiters { t.didFailWithError(e) }
+                    // MUST go through fail(): it checks `live` first. Calling
+                    // didFailWithError on a task WKWebView has already stopped
+                    // (a page navigation during the fetch) raises an Obj-C
+                    // exception and takes the app down.
+                    for (t, _) in waiters { self.fail(t, e.localizedDescription) }
                 }
             }
             return
@@ -441,7 +450,17 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
     static var stateCache: (body: Data, at: Date)?
     static var stateInFlight = false
     static var stateWaiters: [(WKURLSchemeTask, URL)] = []
-    static func forgetStateCache() { stateCache = nil; stateWaiters.removeAll(); stateInFlight = false }
+    /// Called on every disconnect. Waiters MUST be failed, not merely dropped:
+    /// a page whose status poll was in flight when the receiver rebooted would
+    /// otherwise never get an answer and would stop polling for good, leaving a
+    /// permanently frozen status display until the page was reloaded.
+    static func forgetStateCache() {
+        stateCache = nil
+        stateInFlight = false
+        let orphans = stateWaiters
+        stateWaiters.removeAll()
+        for (t, _) in orphans { current?.fail(t, "Receiver disconnected") }
+    }
 
     /// Map a portal path onto a file bundled in webroot/ (mirrors the
     /// firmware's route→file convention: "/" → index.html, "/wifi" →
