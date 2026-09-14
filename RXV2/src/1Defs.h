@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.710-reading-indicator";
+constexpr const char* FW_VERSION = "RXV2-0.9.711-channels-stream";
 
 //*********************************************************************
 //  Auto-update manifest URLs

@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.711-channels-stream",
+      "url": "https://messiter.com/rxv2/release/v0.9.711/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.711/littlefs.bin",
+      "fs_md5": "0344e49d6f91323f52c463a6f7c57969",
+      "notes": "View channels should keep up with your sticks over Bluetooth again. The receiver only sends a channel update when nothing else is being asked of it, but the page had been asking constantly - so the fast updates never got a chance to start and the bars crawled. The page now leaves room. Includes 0.9.710."
+    },
+    {
       "name": "RXV2-0.9.710-reading-indicator",
       "url": "https://messiter.com/rxv2/release/v0.9.710/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.710/littlefs-RXV2-0.9.710-reading-indicator.bin",
@@ -74,13 +81,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.699/littlefs-RXV2-0.9.699-stray-wires.bin",
       "fs_md5": "cbff6e4b3dde75fd548916c905e5e2e4",
       "notes": "A few stray wires now peek out of the back of the 3D helicopter's frame, the way nobody's loom is ever quite tucked in. Three leads, each with its own droop and deliberately not matching. Includes 0.9.698."
-    },
-    {
-      "name": "RXV2-0.9.698-tail-clearance",
-      "url": "https://messiter.com/rxv2/release/v0.9.698/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.698/littlefs-RXV2-0.9.698-tail-clearance.bin",
-      "fs_md5": "c5634c1707441c81cef7e7924e12ad4c",
-      "notes": "On the 3D helicopter the tail skid now reaches further down, and the tail rotor is larger - its lowest point comes to just above the bottom of the skid, so the skid would touch first. Includes 0.9.697."
     }
   ]
 }

@@ -8,7 +8,7 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>View channels &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=209">
+<link rel=stylesheet href="/style.css?v=210">
 <style>
 .container{max-width:min(96vw,1100px)}
 .chTable{display:grid;grid-template-columns:auto auto 1fr auto;gap:6px 10px;align-items:center;font-variant-numeric:tabular-nums}
@@ -46,7 +46,7 @@
 .heliReadout{position:absolute;bottom:6px;left:10px;font-size:.78em;color:#556;font-variant-numeric:tabular-nums;background:#f2f6f8;padding:3px 8px;border-radius:4px;z-index:2}
 .heliStale #heli3D{opacity:.35;filter:grayscale(.4)}
 </style>
-<script src="/app.js?v=240" defer></script>
+<script src="/app.js?v=241" defer></script>
 <script src="/three.min.js" defer></script>
 </head>
 <body>
@@ -1258,10 +1258,23 @@ async function tick() {
     // Self-pacing: aim for POLL_MS between REQUEST STARTS. On a slow link
     // the round-trip itself is the pacing — don't add a fixed gap on top
     // (that alone was costing a third of the Bluetooth frame rate).
-    // 15 ms floor keeps a sliver of air between polls — a saturated BLE
-    // link queues stalls; a lightly-paced one absorbs radio hiccups.
+    //
+    // OVER BLUETOOTH, THOUGH, THE GAP IS THE WHOLE POINT. The firmware only
+    // pushes a channel frame when nothing is in flight:
+    //     if (... || bleReqReady || blePumping) return;   // BleConfig.h
+    // and the app's BLE queue is serial. So a 15 ms floor means the pipe is
+    // busy essentially all the time, the stream never finds a gap to start in,
+    // the page never sees a pushed frame, and it therefore keeps polling — a
+    // livelock that starves the very stream that would make it fast.
+    // Malcolm 2026-09-14: View channels "didn't respond at all" to the sticks.
+    //
+    // So on BLE, leave real air between polls until the stream is running.
+    // 220 ms is still 4-5 updates a second from polling alone, and it is a
+    // wide enough gap for the 50 ms stream to get going — after which the
+    // watchdog above takes over and polling stops almost entirely.
     const elapsed = performance.now() - t0;
-    setTimeout(tick, Math.max(15, POLL_MS - elapsed));
+    const floor = LDRC.viaBle ? 220 : 15;   // viaBle is a PROPERTY, not a function
+    setTimeout(tick, Math.max(floor, POLL_MS - elapsed));
 }
 document.addEventListener('DOMContentLoaded', () => setTimeout(tick, 200));
 document.addEventListener('visibilitychange', () => { _stopping = document.hidden; if (!_stopping) { _lastSample = 0; tick(); } });
