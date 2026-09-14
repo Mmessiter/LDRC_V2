@@ -432,7 +432,14 @@
             el.innerHTML = html;
             const post = async (btn, mode) => {
                 const was = btn.innerHTML;
-                btn.disabled = true; btn.textContent = 'Working…';
+                btn.disabled = true;
+                // Malcolm 2026-09-14: "long pauses might cause panic". This one
+                // writes settings, saves EEPROM and restarts the flight
+                // controller, so it can be 10-20 s. Count it out loud.
+                const t0 = Date.now();
+                const tick = () => { btn.textContent = 'Working… ' + Math.round((Date.now() - t0) / 1000) + 's'; };
+                tick();
+                const timer = setInterval(tick, 500);
                 let r = null, msg = '', status = 0;
                 try {
                     const resp = await fetch('/api/fc/telemetry/speed?mode=' + mode, {method: 'POST', cache: 'no-store'});
@@ -440,6 +447,7 @@
                     const rep = await LDRC.readReply(resp);
                     r = rep.data; msg = LDRC.replyMessage(rep);
                 } catch (e) { msg = 'no answer from the receiver'; }
+                clearInterval(timer);
                 if (r && r.ok && r.applied) {
                     el.dataset.speedDone = Date.now(); delete el.dataset.speedShown;
                     el.innerHTML = '<b>✓ ' + (mode === 'fast' ? 'Fast' : 'Standard') + ' telemetry saved — the flight controller is restarting.</b><br>' +

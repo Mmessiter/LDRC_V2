@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.707-honest-errors";
+constexpr const char* FW_VERSION = "RXV2-0.9.708-please-wait";
 
 //*********************************************************************
 //  Auto-update manifest URLs

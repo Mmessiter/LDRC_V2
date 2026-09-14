@@ -1,6 +1,11 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.708-please-wait",
+      "url": "https://messiter.com/rxv2/release/v0.9.708/firmware.bin",
+      "notes": "The command line now shows a Please wait strip with a moving bar and the seconds counting up, so a slow command no longer looks like a frozen screen. After four seconds it adds that dump and diff are the slow ones. The telemetry buttons count the seconds too. Includes 0.9.707."
+    },
+    {
       "name": "RXV2-0.9.707-honest-errors",
       "url": "https://messiter.com/rxv2/release/v0.9.707/firmware.bin",
       "notes": "When something goes wrong applying telemetry settings you now get a reason instead of a browser message. 'The string did not match the expected pattern' was the phone's own wording for a reply it could not read; it now says what the receiver actually answered, or that it answered nothing. Includes 0.9.706."
@@ -54,11 +59,6 @@
       "name": "RXV2-0.9.697-tail-tidy",
       "url": "https://messiter.com/rxv2/release/v0.9.697/firmware.bin",
       "notes": "Three tidies to the 3D helicopter: the horizontal stabiliser at the back has gone, the tail rotor is a bit bigger, and two black posts that had been poking out of the belly have gone. Those posts were a mistake - a cross-tube that was never turned on its side, so it stood on its end. Includes 0.9.696."
-    },
-    {
-      "name": "RXV2-0.9.696-tail-line",
-      "url": "https://messiter.com/rxv2/release/v0.9.696/firmware.bin",
-      "notes": "The 3D helicopter has lost the orange fin that stuck up from its tail, and the tail rotor now turns on the tail boom's own centreline instead of floating above it. The gearbox and tail skid moved down to match. Includes 0.9.695."
     }
   ]
 }
