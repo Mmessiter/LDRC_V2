@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.719-weak-wifi-choice",
+      "url": "https://messiter.com/rxv2/release/v0.9.719/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.719/littlefs.bin",
+      "fs_md5": "9eeca10e6e082745cec33efe1713bf3f",
+      "notes": "When the receiver's WiFi is weak, the Firmware page now says so before you start and offers Bluetooth instead - slower, but it does not depend on the weak signal. And if a WiFi install does crawl and fail, there is now a button to try again over Bluetooth rather than leaving you to work it out. The old firmware is untouched either way. Includes 0.9.718."
+    },
+    {
       "name": "RXV2-0.9.718-rf-check-daily",
       "url": "https://messiter.com/rxv2/release/v0.9.718/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.718/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.707/littlefs-RXV2-0.9.707-honest-errors.bin",
       "fs_md5": "4b3c8bc29f1d46e18f9d235d6d6d5df5",
       "notes": "When something goes wrong applying telemetry settings you now get a reason instead of a browser message. 'The string did not match the expected pattern' was the phone's own wording for a reply it could not read; it now says what the receiver actually answered, or that it answered nothing. Includes 0.9.706."
-    },
-    {
-      "name": "RXV2-0.9.706-usb-after-update",
-      "url": "https://messiter.com/rxv2/release/v0.9.706/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.706/littlefs-RXV2-0.9.706-usb-after-update.bin",
-      "fs_md5": "c0fd89ab15258841aa2d1f8745cd10e2",
-      "notes": "The USB socket should now work straight after an update, without needing a second reboot. The restart was leaving the flight controller still thinking its USB port was open, so the receiver came back to a device that would not answer; it is now given a proper disconnect first. Each boot also records which version is running and from which half of the memory, on the Receiver log, so a firmware update that did not stick can be spotted. Includes 0.9.705."
     }
   ],
   "rotorflight": {

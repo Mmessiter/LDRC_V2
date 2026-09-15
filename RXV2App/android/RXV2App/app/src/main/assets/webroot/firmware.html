@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Check for Update &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=217">
-<script src="/app.js?v=248" defer></script>
+<link rel=stylesheet href="/style.css?v=218">
+<script src="/app.js?v=249" defer></script>
 <style>
 /* --- Currently-installed card -------------------------------------- */
 .installed-card .row{
@@ -501,6 +501,12 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
     // Wait for it — up to 45 s is still far quicker than a Bluetooth push
     // (Malcolm 2026-09-02: "over Bluetooth – but it should be Wi-Fi, of course").
     let chipHasInternet = false;
+    // Malcolm 2026-09-15: "on occasions where WiFi is available but very faint,
+    // our system will attempt to update over WiFi. I just did this. It was slow
+    // and then it failed." The lane was chosen on "is WiFi up" alone, with no
+    // regard for how weak it is. -70 dBm is the threshold already used for
+    // deciding whether a receiver is close enough to update at all.
+    const WEAK_WIFI_DBM = -70;
     try {
         const t0 = Date.now();
         let misses = 0;
@@ -513,7 +519,7 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
             if (!st) { if (++misses >= 4) break; await new Promise(r => setTimeout(r, 1500)); continue; }
             misses = 0;
             const mode = st.net ? st.net.mode : '';
-            chipHasInternet = mode === 'WiFi up';
+            chipHasInternet = (mode === 'WiFi up') && !window.__preferBle;
             // sta_status 1 = home network not in range (the field): don't wait.
             const joining = (mode === 'connecting WiFi' && st.net.sta_status !== 1) || mode === 'waiting for TX' || mode === 'init';
             if (chipHasInternet || !joining || Date.now() - t0 > 45000) break;
@@ -643,11 +649,23 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
         }
         if (answered2) {
             setStatePill('Failed', 'bad');
-            showMessage(before2 === v.name
-                ? 'The receiver kept answering on <code>' + splitName(before2).ver + '</code> without a reboot cycle \u2014 the reinstall may not have run. Try again.'
-                : 'The receiver came back still on <code>' + splitName(before2).ver + '</code> \u2014 the install did not complete. Try again.');
+            // A WiFi install that crawls and then fails is the weak-signal case
+            // (Malcolm 2026-09-15). Offer the other lane rather than leaving him
+            // to guess, and say why it is worth trying.
+            const overBle = LDRC.viaBle && !window.__preferBle;
+            showMessage((before2 === v.name
+                ? 'The receiver kept answering on <code>' + splitName(before2).ver + '</code> without a reboot cycle \u2014 the reinstall may not have run.'
+                : 'The receiver came back still on <code>' + splitName(before2).ver + '</code> \u2014 the install did not complete.')
+                + ' <b>The old firmware is untouched.</b>'
+                + (overBle
+                    ? '<br><br>That download went over the receiver\u2019s WiFi. If the signal there is weak it can crawl and then give up. '
+                      + '<b>Bluetooth is slower but does not depend on it.</b>'
+                      + '<div style="margin:.7em 0 0"><button class="btn" id=retryBle style="background:#2f6fb0;color:#fff;margin:0">Try again over Bluetooth</button></div>'
+                    : ' Try again.'));
             installing = false; $('check').disabled = false;
             document.querySelectorAll('.ver-btn').forEach(b => b.disabled = false);
+            const rb = document.getElementById('retryBle');
+            if (rb) rb.onclick = () => { window.__preferBle = true; doInstall(v, sourceKey, url, fsUrl, btnEl); };
         } else {
             setStatePill('Installed', 'good');
             showMessage('<b>The receiver has rebooted with the update.</b> Returning to the model list \u2014 reconnect there to confirm the new version\u2026');
@@ -749,7 +767,22 @@ document.addEventListener('DOMContentLoaded', () => {
             .then(st => {
                 const ln = document.getElementById('laneNote');
                 if (!st || !st.net) return;
-                if (st.net.mode === 'WiFi up') {
+                const rssi = (st.info && typeof st.info.rssi === 'number') ? st.info.rssi : 0;
+                if (st.net.mode === 'WiFi up' && rssi && rssi <= WEAK_WIFI_DBM) {
+                    // Up, but faint. Downloading a 1.5 MB image over this is the
+                    // slow-then-fail case. Say so and let the pilot choose.
+                    const paint = () => {
+                        ln.innerHTML = window.__preferBle
+                          ? '&#128246; Installs will stream over <b>Bluetooth</b>. Slower, but it does not depend on the weak WiFi. '
+                            + '<button class="btn" id=laneSwap style="background:#6b7c8c;color:#fff;margin:.5em 0 0;padding:.4em .9em;font-size:.9em">Use WiFi anyway</button>'
+                          : '&#9889;&#65039; The receiver\u2019s WiFi is <b>weak here (' + rssi + ' dBm)</b>. A WiFi install may crawl and then fail. '
+                            + '<b>Bluetooth is slower but far more likely to finish.</b>'
+                            + '<button class="btn" id=laneSwap style="background:#2f6fb0;color:#fff;margin:.5em 0 0;padding:.4em .9em;font-size:.9em">Use Bluetooth instead</button>';
+                        const b = document.getElementById('laneSwap');
+                        if (b) b.onclick = () => { window.__preferBle = !window.__preferBle; paint(); };
+                    };
+                    paint();
+                } else if (st.net.mode === 'WiFi up') {
                     ln.innerHTML = '&#9889; Installs will download over the receiver\u2019s <b>WiFi</b> (fast \u2014 30\u201390 s).';
                 } else {
                     ln.innerHTML = '&#128246; Installs will stream over <b>Bluetooth</b> (slower). The receiver keeps its WiFi off while the transmitter is on \u2014 switch the transmitter OFF, wait ~15 s and reopen this page to use the WiFi fast lane.';
