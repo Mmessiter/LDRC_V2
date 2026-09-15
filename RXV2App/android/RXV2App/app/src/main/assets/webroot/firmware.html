@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Check for Update &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=219">
-<script src="/app.js?v=250" defer></script>
+<link rel=stylesheet href="/style.css?v=220">
+<script src="/app.js?v=251" defer></script>
 <style>
 /* --- Currently-installed card -------------------------------------- */
 .installed-card .row{
@@ -124,7 +124,14 @@
     </div>
 
     <p id=message class=note hidden></p>
-    <p id=laneNote class=note hidden></p>
+    <div id=laneCard class=note hidden>
+        <div style="margin:0 0 .5em"><b>Install over</b></div>
+        <div style="display:flex;gap:.6em;flex-wrap:wrap">
+            <button class="btn" type=button id=laneWifi style="flex:1 1 9em;margin:0"></button>
+            <button class="btn" type=button id=laneBle  style="flex:1 1 9em;margin:0"></button>
+        </div>
+        <div id=laneWhy style="margin:.55em 0 0;font-size:.92em"></div>
+    </div>
 
     <section id=local-section class=source-section hidden>
         <h2>Local server</h2>
@@ -464,6 +471,14 @@ async function check() {
     }
 }
 
+// Malcolm 2026-09-15: "on occasions where WiFi is available but very faint,
+// our system will attempt to update over WiFi. I just did this. It was slow and
+// then it failed." The lane used to be chosen on "is WiFi up" alone, with no
+// regard for how weak it is. -70 dBm is the threshold already used for deciding
+// whether a receiver is close enough to update at all.
+// Module scope: both doInstall() and paintLanes() need it.
+const WEAK_WIFI_DBM = -70;
+
 async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
     if (installing) return;
     const { ver } = splitName(v.name);
@@ -501,12 +516,6 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
     // Wait for it — up to 45 s is still far quicker than a Bluetooth push
     // (Malcolm 2026-09-02: "over Bluetooth – but it should be Wi-Fi, of course").
     let chipHasInternet = false;
-    // Malcolm 2026-09-15: "on occasions where WiFi is available but very faint,
-    // our system will attempt to update over WiFi. I just did this. It was slow
-    // and then it failed." The lane was chosen on "is WiFi up" alone, with no
-    // regard for how weak it is. -70 dBm is the threshold already used for
-    // deciding whether a receiver is close enough to update at all.
-    const WEAK_WIFI_DBM = -70;
     try {
         const t0 = Date.now();
         let misses = 0;
@@ -800,37 +809,53 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
 $('check').addEventListener('click', check);
 document.addEventListener('DOMContentLoaded', () => {
     loadCurrent().then(check);
-    // Which lane will an install take? Say so up front (Malcolm 2026-08-06:
-    // a Bluetooth install surprised him while "WiFi was available" — the
-    // receiver keeps its OWN WiFi off while the transmitter is on).
+    // WHICH LANE, as a visible choice rather than a sentence (Malcolm
+    // 2026-09-15: "I do not see the button to select Bluetooth instead of
+    // WiFi - or perhaps two buttons, one to select each"). Quite right: a note
+    // that only appears in one condition is a note nobody trusts is there.
+    //
+    // Two lanes, always both shown inside the app:
+    //   WiFi      - the RECEIVER downloads the image itself. Fast, but only if
+    //               its own WiFi is up and strong.
+    //   Bluetooth - the PHONE downloads it (WiFi or 5G) and streams it across.
+    //               Slower, but it works at the flying field and does not care
+    //               how weak the receiver's WiFi is.
+    // Outside the app (a browser over WiFi) there is no Bluetooth lane at all,
+    // so the card stays hidden.
+    function paintLanes(st) {
+        const card = document.getElementById('laneCard');
+        if (!card || !LDRC.viaBle) return;
+        const net  = (st && st.net) || {};
+        const rssi = (st && st.info && typeof st.info.rssi === 'number') ? st.info.rssi : 0;
+        const wifiUp   = net.mode === 'WiFi up';
+        const wifiWeak = wifiUp && rssi && rssi <= WEAK_WIFI_DBM;
+        if (!wifiUp) window.__preferBle = true;          // no choice to make
+        const ble = !!window.__preferBle;
+
+        const w = document.getElementById('laneWifi');
+        const b = document.getElementById('laneBle');
+        const why = document.getElementById('laneWhy');
+        const on  = '#2f6fb0', off = '#9fb0bd';
+        w.innerHTML = (ble ? '' : '\u2713 ') + 'Receiver WiFi';
+        b.innerHTML = (ble ? '\u2713 ' : '') + 'Bluetooth';
+        w.style.cssText = 'flex:1 1 9em;margin:0;color:#fff;background:' + (ble ? off : on);
+        b.style.cssText = 'flex:1 1 9em;margin:0;color:#fff;background:' + (ble ? on : off);
+        w.disabled = !wifiUp;
+        if (!wifiUp) w.style.opacity = '.55';
+
+        why.innerHTML =
+            !wifiUp   ? 'The receiver has no WiFi of its own here, so Bluetooth is the only way. Your phone fetches the update and passes it across.'
+          : wifiWeak  ? '<b>The receiver\u2019s WiFi is weak here (' + rssi + ' dBm).</b> A WiFi install may crawl and then fail. Bluetooth is slower but does not depend on it.'
+          : ble       ? 'Bluetooth: your phone fetches the update and passes it across. Slower, but it works anywhere.'
+                      : 'The receiver fetches the update itself over its own WiFi (' + (rssi ? rssi + ' dBm, ' : '') + 'fast \u2014 30\u201390 s).';
+        card.hidden = false;
+        w.onclick = () => { if (!wifiUp) return; window.__preferBle = false; paintLanes(st); };
+        b.onclick = () => { window.__preferBle = true;  paintLanes(st); };
+    }
     if (LDRC.viaBle) {
         fetch('/api/state.json', { cache: 'no-store' })
             .then(r => r.json())
-            .then(st => {
-                const ln = document.getElementById('laneNote');
-                if (!st || !st.net) return;
-                const rssi = (st.info && typeof st.info.rssi === 'number') ? st.info.rssi : 0;
-                if (st.net.mode === 'WiFi up' && rssi && rssi <= WEAK_WIFI_DBM) {
-                    // Up, but faint. Downloading a 1.5 MB image over this is the
-                    // slow-then-fail case. Say so and let the pilot choose.
-                    const paint = () => {
-                        ln.innerHTML = window.__preferBle
-                          ? '&#128246; Installs will stream over <b>Bluetooth</b>. Slower, but it does not depend on the weak WiFi. '
-                            + '<button class="btn" id=laneSwap style="background:#6b7c8c;color:#fff;margin:.5em 0 0;padding:.4em .9em;font-size:.9em">Use WiFi anyway</button>'
-                          : '&#9889;&#65039; The receiver\u2019s WiFi is <b>weak here (' + rssi + ' dBm)</b>. A WiFi install may crawl and then fail. '
-                            + '<b>Bluetooth is slower but far more likely to finish.</b>'
-                            + '<button class="btn" id=laneSwap style="background:#2f6fb0;color:#fff;margin:.5em 0 0;padding:.4em .9em;font-size:.9em">Use Bluetooth instead</button>';
-                        const b = document.getElementById('laneSwap');
-                        if (b) b.onclick = () => { window.__preferBle = !window.__preferBle; paint(); };
-                    };
-                    paint();
-                } else if (st.net.mode === 'WiFi up') {
-                    ln.innerHTML = '&#9889; Installs will download over the receiver\u2019s <b>WiFi</b> (fast \u2014 30\u201390 s).';
-                } else {
-                    ln.innerHTML = '&#128246; Installs will stream over <b>Bluetooth</b> (slower). The receiver keeps its WiFi off while the transmitter is on \u2014 switch the transmitter OFF, wait ~15 s and reopen this page to use the WiFi fast lane.';
-                }
-                ln.hidden = false;
-            })
+            .then(st => paintLanes(st))
             .catch(() => {});
     }
 });

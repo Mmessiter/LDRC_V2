@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.721-lane-buttons",
+      "url": "https://messiter.com/rxv2/release/v0.9.721/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.721/littlefs.bin",
+      "fs_md5": "4ba3f625c5f9700f449ce4300ce90ca7",
+      "notes": "The Firmware page now has two plain buttons - Receiver WiFi and Bluetooth - so you can see and choose how an update travels, instead of a note that only appeared sometimes. The one in use is ticked, and a line underneath says why you might want the other. If the receiver has no WiFi of its own, Bluetooth is chosen for you. Includes 0.9.720."
+    },
+    {
       "name": "RXV2-0.9.720-patient-install",
       "url": "https://messiter.com/rxv2/release/v0.9.720/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.720/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.710/littlefs-RXV2-0.9.710-reading-indicator.bin",
       "fs_md5": "e21edff4a384669cd18d449de40dd9b2",
       "notes": "Every page that reads from the flight controller - PIDs, governor, rates, servos and the rest - now shows 'Reading from the flight controller' along the bottom with the seconds counting up, if it takes more than a moment. Quick reads show nothing, so it only appears when you would otherwise wonder. Includes 0.9.708."
-    },
-    {
-      "name": "RXV2-0.9.708-please-wait",
-      "url": "https://messiter.com/rxv2/release/v0.9.708/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.708/littlefs-RXV2-0.9.708-please-wait.bin",
-      "fs_md5": "1912eb35443165cfd6fe122ed4781882",
-      "notes": "The command line now shows a Please wait strip with a moving bar and the seconds counting up, so a slow command no longer looks like a frozen screen. After four seconds it adds that dump and diff are the slow ones. The telemetry buttons count the seconds too. Includes 0.9.707."
     }
   ],
   "rotorflight": {

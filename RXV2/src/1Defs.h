@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.720-patient-install";
+constexpr const char* FW_VERSION = "RXV2-0.9.721-lane-buttons";
 
 //*********************************************************************
 //  Auto-update manifest URLs
