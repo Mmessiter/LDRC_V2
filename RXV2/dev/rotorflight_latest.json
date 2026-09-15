@@ -1,0 +1,9 @@
+{
+  "_comment": "The newest Rotorflight firmware we are prepared to recommend. NOT written automatically: run dev/check_rotorflight_release.py, read what it says, and edit this by hand. 'api' must be <= LDRC.RF_API_VERIFIED in data/app.js before we tell anyone to upgrade — otherwise the pages would be steering people onto byte layouts we have not checked.",
+  "firmware": "4.6.0",
+  "api": 1209,
+  "suite": "2.3",
+  "released": "2026-06-30",
+  "notes_url": "https://github.com/rotorflight/rotorflight-firmware/releases/tag/release/4.6.0",
+  "line": "Rotorflight 2.3 — the release these pages are written and tested against."
+}

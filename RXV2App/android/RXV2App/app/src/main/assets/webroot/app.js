@@ -553,6 +553,101 @@
             return 'the receiver answered nothing (HTTP ' + rep.status + ')';
         },
 
+        // ---- "A newer Rotorflight is out" -------------------------------
+        // Malcolm 2026-09-15: "although we cannot implement the update, can we
+        // detect if there is an update on offer? ... we could at least suggest
+        // to the user it's time to connect briefly to the configurator."
+        //
+        // Yes — but the default is SILENCE. This speaks only when it has
+        // something worth acting on, because a notice you learn to ignore is
+        // worse than no notice.
+        //
+        // The recommendation rides in the manifest the app already fetches
+        // (dev/rotorflight_latest.json -> stage_website.py). It is curated by
+        // hand: dev/check_rotorflight_release.py asks GitHub and SUGGESTS, a
+        // human decides. Rotorflight's release workflow does not mark release
+        // candidates as prereleases, so an automatic "latest" would cheerfully
+        // recommend an RC.
+        //
+        // THE TRAP THIS AVOIDS: we must never steer someone onto a Rotorflight
+        // newer than the byte layouts our own tuning pages were checked against
+        // (RF_API_VERIFIED). If the newest release is ahead of us, the honest
+        // advice is the opposite — stay put — and that is what it says.
+        async rotorflightUpdateCard(st, elId) {
+            const el = document.getElementById(elId);
+            if (!el) return false;
+            const hide = () => { el.style.display = 'none'; return false; };
+            const fc = (st && st.fcinfo) || {};
+            if (this.replay) return hide();                       // a recording, or the demo
+            if (!fc.detected || !fc.version_known) return hide();
+            if (fc.variant !== 'RTFL' || fc.api_major !== 12) return hide();
+            if (st && st.rf && st.rf.armed) return hide();        // never mid-session
+            const feed = await this.rfLatest();
+            if (!feed || !feed.api || !feed.firmware) return hide();   // cannot check: say nothing
+
+            const fcApi = fc.api_major * 100 + fc.api_minor;
+            let head, body, kind;
+            if (feed.api > this.RF_API_VERIFIED) {
+                // The release is ahead of us. Protect the pilot AND ourselves.
+                if (fcApi >= feed.api) return hide();             // already there: rfVersionAlert has it
+                head = 'Stay on Rotorflight ' + (fc.rf_major || 2) + '.' + (fc.rf_minor || 3) + ' for now';
+                body = 'Rotorflight ' + feed.suite + ' (firmware ' + feed.firmware + ') is out, but these ' +
+                       'pages have not been checked against it yet. Nothing here is broken \u2014 there is ' +
+                       'simply no hurry.';
+                kind = 'hold';
+            } else if (fcApi < feed.api) {
+                head = 'A newer Rotorflight is available';
+                body = 'Your flight controller runs ' + fc.fw_major + '.' + fc.fw_minor + '.' + (fc.fw_patch | 0) +
+                       '. Rotorflight ' + feed.suite + ' (firmware ' + feed.firmware + ') came out on ' +
+                       (feed.released || 'a later date') + '. ' +
+                       '<b>Back up first, on the Backup &amp; restore page \u2014 flashing erases everything.</b> ' +
+                       'Then connect the flight controller to a computer running the Rotorflight Configurator; ' +
+                       'that is the one job these pages cannot do for you. Afterwards, restore your backup here.';
+                kind = 'go';
+            } else {
+                return hide();                                    // up to date: nothing to say
+            }
+
+            const seen = 'rfUpd.' + (st && st.info && st.info.name || '') + '.' + feed.firmware + '.' + kind;
+            try { if (localStorage.getItem(seen)) return hide(); } catch (e) {}
+
+            el.style.display = 'block';
+            el.style.cssText = 'display:block;background:' + (kind === 'go' ? '#dbe6f2' : '#e8e4d6') +
+                ';color:' + (kind === 'go' ? '#1d3a56' : '#4a4327') +
+                ';padding:1em;border-radius:10px;margin:0 0 1em;text-align:left;font-size:1.02em';
+            el.innerHTML = '<b>' + head + '</b><br>' + body +
+                (feed.notes_url ? '<br><a href="' + feed.notes_url + '" target="_blank" rel="noopener">What changed</a>' : '') +
+                '<div style="margin:.7em 0 0"><button class="btn" id=rfUpdSeen style="background:#6b7c8c;color:#fff;margin:0">Got it \u2014 don\u2019t mention again</button></div>';
+            const b = document.getElementById('rfUpdSeen');
+            if (b) b.onclick = () => { try { localStorage.setItem(seen, '1'); } catch (e) {} el.style.display = 'none'; };
+            return true;
+        },
+
+        // The curated recommendation, from whichever source can reach it, cached
+        // for a day. Returns null rather than throwing — "cannot check" must be
+        // indistinguishable from "nothing to say".
+        async rfLatest() {
+            const KEY = 'rfLatest.v1';
+            try {
+                const c = JSON.parse(localStorage.getItem(KEY) || 'null');
+                if (c && Date.now() - c.at < 86400000) return c.rf;
+            } catch (e) {}
+            const tryUrl = async (u) => {
+                try {
+                    const r = await fetch(u, { cache: 'no-store' });
+                    if (!r.ok) return null;
+                    const j = await r.json();
+                    return (j && j.rotorflight) || null;
+                } catch (e) { return null; }
+            };
+            // The phone's own internet first (it works at the field); then the
+            // receiver's, if it has any.
+            let rf = await tryUrl('/app/manifest');
+            if (!rf) rf = await tryUrl('/api/firmware/check');
+            if (rf) { try { localStorage.setItem(KEY, JSON.stringify({ at: Date.now(), rf })); } catch (e) {} }
+            return rf;
+        },
+
         // Dirty-tracking: tuning pages call markDirty() on any user input
         // (via a delegated 'input' listener) and clearDirty() after a
         // successful load() or save(). confirmLoseChanges() shows a

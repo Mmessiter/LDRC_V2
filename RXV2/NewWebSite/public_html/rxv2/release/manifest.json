@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.717-rf-update-hint",
+      "url": "https://messiter.com/rxv2/release/v0.9.717/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.717/littlefs.bin",
+      "fs_md5": "d4e7421af2fb8bcebeb88108f70b75d6",
+      "notes": "The Rotorflight page can now tell you when a newer Rotorflight has come out - the one job these pages cannot do for you. It says nothing at all unless there is something worth acting on, it tells you to back up first because flashing erases everything, and if the new release is one these pages have not been checked against yet it says the opposite: stay where you are, there is no hurry. Includes 0.9.716."
+    },
+    {
       "name": "RXV2-0.9.716-dongle-power",
       "url": "https://messiter.com/rxv2/release/v0.9.716/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.716/littlefs.bin",
@@ -74,13 +81,14 @@
       "name": "RXV2-0.9.705-cli-autoexit",
       "url": "https://messiter.com/rxv2/release/v0.9.705/firmware.bin",
       "notes": "Forgetting to leave the command line no longer breaks everything else. Leaving that page by any route - back, the front screen, or closing the app - now does what Leave without saving does. And if a command line is left open and untouched for a minute and a half, the receiver closes it for you. It never does that while the transmitter is on or the model is armed, because leaving restarts the flight controller. Includes 0.9.704."
-    },
-    {
-      "name": "RXV2-0.9.704-dongle-rxlog",
-      "url": "https://messiter.com/rxv2/release/v0.9.704/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.704/littlefs-RXV2-0.9.704-dongle-rxlog.bin",
-      "fs_md5": "2c2598b65376519d912286907c7da92f",
-      "notes": "On a dongle the Black box page no longer offers the Receiver log button. A dongle has no radio link, no battery sense and no flights of its own, so there was nothing behind it - and tapping it walked you into 'Not on a dongle'. Includes 0.9.703."
     }
-  ]
+  ],
+  "rotorflight": {
+    "firmware": "4.6.0",
+    "api": 1209,
+    "suite": "2.3",
+    "released": "2026-06-30",
+    "notes_url": "https://github.com/rotorflight/rotorflight-firmware/releases/tag/release/4.6.0",
+    "line": "Rotorflight 2.3 \u2014 the release these pages are written and tested against."
+  }
 }

@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rotorflight &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=215">
-<script src="/app.js?v=246" defer></script>
+<link rel=stylesheet href="/style.css?v=216">
+<script src="/app.js?v=247" defer></script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -28,6 +28,7 @@
     <a class="btn btn-fw" href="/rotorflight-backup"   style="background:#d4944a"><span class=ico>&#128190;</span><span style="display:flex;flex-direction:column;align-items:flex-start;text-align:left"><span>Backup &amp; restore</span><span style="font-size:.62em;font-weight:400;opacity:.85;margin-top:.25em">the whole setup, safe on the phone</span></span></a>
 
     <div id=telemSpeed class="banner" style="display:none;margin-top:1em"></div>
+    <div id=rfUpdate style="display:none"></div>
 
     <div class=footer></div>
 </div>
@@ -44,6 +45,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     LDRC.govThrottleBanner(s, 'thrBanner');   // 0.9.551: nag until a flight reaches full throttle
     LDRC.fcTelemBanner(s, 'telemBanner');     // 0.9.556: FC sensor list wiped = no volts/RPM on the TX
     if (!s.dongle) LDRC.fcTelemSpeedCard(s, 'telemSpeed');   // 0.9.563: fast (1000/1) vs standard (250/8) telemetry link rate - CRSF only, not for a dongle
+    // "A newer Rotorflight is available" — silent unless there is something to
+    // act on, and it defers to the two banners above: they are about THIS
+    // flight, this one is about a wet afternoon indoors.
+    LDRC.rotorflightUpdateCard(s, 'rfUpdate');
     setInterval(async () => {
         const s2 = await LDRC.fetchState();
         if (s2) { LDRC.fcTelemBanner(s2, 'telemBanner'); if (!s2.dongle) LDRC.fcTelemSpeedCard(s2, 'telemSpeed'); }   // the 3 s refresh forgot the dongle guard until 0.9.602

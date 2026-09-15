@@ -108,7 +108,20 @@ def main() -> int:
                                # for updating + rolling back. Older version dirs stay on disk.
     for e in versions:
         e.pop("_v")
-    MANIFEST.write_text(json.dumps({"versions": versions}, indent=2) + "\n")
+    # Carry the curated Rotorflight recommendation alongside our own versions, so
+    # the phone learns about it in a request it already makes. NOT generated here:
+    # dev/check_rotorflight_release.py suggests, a human edits
+    # dev/rotorflight_latest.json, and this only copies it.
+    out = {"versions": versions}
+    rf_file = HERE / "rotorflight_latest.json"
+    if rf_file.exists():
+        try:
+            rf = json.loads(rf_file.read_text())
+            rf.pop("_comment", None)
+            out["rotorflight"] = rf
+        except Exception as e:
+            print(f"  !! rotorflight_latest.json is not valid JSON ({e}) — left out of the manifest")
+    MANIFEST.write_text(json.dumps(out, indent=2) + "\n")
 
     fs_count = sum(1 for e in versions if "fs_url" in e)
     print(f"Staged {len(versions)} versions -> {RELEASE}")
