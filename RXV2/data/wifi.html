@@ -9,7 +9,7 @@
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>WiFi &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=221">
-<script src="/app.js?v=254" defer></script>
+<script src="/app.js?v=255" defer></script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -26,13 +26,12 @@
         <dt id=rssiDt style="display:none">RSSI</dt>    <dd id=rssi  style="display:none"></dd>
         <dt id=apDt   style="display:none">AP IP</dt>   <dd id=apip  style="display:none"></dd>
         <dt id=noteDt class=muted style="display:none">Note</dt>
-        <dd id=noteDd class=muted style="display:none">WiFi updates only work in STA mode &mdash; save credentials below so the next boot can join your network.</dd>
+        <dd id=noteDd class=muted style="display:none">WiFi updates need STA mode &mdash; set credentials below.</dd>
     </dl></div>
 
     <div class=card>
         <h2>Set credentials</h2>
-        <p>Saved to NVS and used on next boot. Edit either field and tap save; the current values are pre-filled.</p>
-        <p class=muted style="margin-top:-.2em">Tip: WiFi is steadiest with the <b>transmitter switched off</b>. The control radio and WiFi share the 2.4&nbsp;GHz band, so a live transmitter link can make WiFi drop in and out. Use the transmitter <em>or</em> the phone when you can &mdash; both together works, but expect WiFi to be less consistent.</p>
+        <p class=muted>Used on the next boot.</p>
         <form method=POST action="/wifi">
             <p><label>SSID<br>
                 <input name=ssid type=text required id=ssidField value=""
@@ -54,11 +53,7 @@
                 <input type=checkbox name=aponly id=aponlyField style="margin-right:.4em">
                 <b>AP mode only</b> — receiver's own WiFi (for the flying field)
             </label></p>
-            <div class=muted style="margin-top:-.3em;font-size:.85em;line-height:1.5">
-                <p style="margin:.2em 0"><b>What is AP mode?</b> AP (&ldquo;access point&rdquo;) means the receiver makes <b>its own little WiFi network</b> that your phone joins directly &mdash; no home router, no internet, just your phone talking straight to the receiver.</p>
-                <p style="margin:.2em 0"><b>Tick this at the flying field.</b> Away from home, your house WiFi is out of range, so the receiver would otherwise waste every start-up trying to find it. Ticked, it skips that and is ready straight away on its own network.</p>
-                <p style="margin:.2em 0">After you save, your phone won't follow automatically &mdash; you'll need to open your phone's WiFi settings and join the receiver's network (the page will tell you the name). <b>Untick it at home</b> to go back to your normal WiFi.</p>
-            </div>
+            <p class=muted style="margin-top:-.3em;font-size:.85em">After saving, join the receiver&rsquo;s network in your phone&rsquo;s WiFi settings.</p>
             <button class="btn btn-fw" type=submit><span class=ico>&#128190;</span>Save &amp; reboot</button>
         </form>
     </div>
@@ -68,7 +63,7 @@
          tap the model name on the front screen instead). git remembers. -->
     <div class=card style="border:1.5px solid rgba(201,116,100,.55)">
         <h2 style="color:#8a2e1a">Factory defaults</h2>
-        <p class=muted>Use this <b>before passing the receiver to someone else</b>. Wipes the saved WiFi password, model name, bind state, output protocol and any Rotorflight backups. The receiver reboots and comes up as a fresh unit at <code>RXV2.local</code>.</p>
+        <p class=muted>Wipes WiFi, model name, bind, protocol and any Rotorflight backups. Comes back as a fresh unit at <code>RXV2.local</code>.</p>
         <button class="btn danger" id=factoryBtn type=button><span class=ico>&#9888;&#65039;</span>Erase all saved settings</button>
     </div>
 
@@ -141,6 +136,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 <li><b>After flying</b> &mdash; if the transmitter link is lost for about 10&nbsp;seconds (you've landed, or switched the transmitter off), <b>WiFi switches back on by itself</b>, so you can reach the receiver again without a power-cycle.</li>
 </ul>
 <p>So if WiFi ever seems to be off when you didn't expect it, it just means a transmitter was on at switch-on &mdash; turn the transmitter off for ~10&nbsp;seconds and WiFi will return. (Simulator sessions keep WiFi on the whole time.)</p>
+<h3>AP mode only</h3>
+<p>AP (&ldquo;access point&rdquo;) means the receiver makes <b>its own little WiFi network</b> that your phone joins directly &mdash; no home router, no internet, just your phone talking straight to the receiver.</p>
+<p><b>Tick it at the flying field.</b> Away from home your house WiFi is out of range, so the receiver would otherwise waste every start-up looking for it. Ticked, it skips that and is ready straight away. After you save, your phone won&rsquo;t follow automatically &mdash; join the receiver&rsquo;s network in your phone&rsquo;s WiFi settings (the page tells you the name). <b>Untick it at home.</b></p>
+<h3>Factory defaults</h3>
+<p>Use it <b>before passing the receiver to someone else</b>. It wipes the saved WiFi password, model name, bind state, output protocol and any Rotorflight backups, then reboots as a fresh unit at <code>RXV2.local</code>.</p>
 <h3>Tips</h3>
 <p><b>Transmitter on?</b> WiFi shares the 2.4&nbsp;GHz band with the receiver's control radio, so a live transmitter link can make WiFi drop in and out. For the smoothest setup over WiFi, switch the transmitter off. Using both at once works, but expect WiFi to be less consistent &mdash; so when you can, use the transmitter <em>or</em> the phone, not both.</p>
 <p>Leave the password field blank to keep the existing saved one (handy when you want to change just the SSID).</p>

@@ -9,7 +9,7 @@
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Home &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=221">
-<script src="/app.js?v=254" defer></script>
+<script src="/app.js?v=255" defer></script>
 <style>
 /* First paint from memory (Malcolm 2026-09-10: the receiver layout flashed
    before the dongle one): classes set on <html> by the hint script below,
@@ -45,7 +45,7 @@ html.h-dongle #dongleBanner { display: block !important; }
          multi-receiver setups stop colliding on mDNS. -->
     <div id=nameGate class=card style="display:none;background:#fff7d9;border:2px solid rgba(212,148,74,.6)">
         <h2 style="margin-top:.2em;color:#5c3a00;text-align:center">Welcome — let's set this receiver up</h2>
-        <p style="color:#5c3a00;margin:.4em 0 1em;text-align:center">Give the receiver a unique name and (optionally) your home WiFi details. Filling both in here saves an extra reboot.</p>
+        <p style="color:#5c3a00;margin:.4em 0 1em;text-align:center">Name it, and add your home WiFi if you have it here.</p>
 
         <form id=nameGateForm>
             <p style="margin:.2em 0 .25em;font-weight:600;color:#5c3a00">Receiver name <span style="font-weight:400">(required)</span></p>
@@ -54,7 +54,7 @@ html.h-dongle #dongleBanner { display: block !important; }
                    placeholder="e.g. Goblin700"
                    title="Letters, digits and hyphens only — no spaces"
                    style="width:100%;padding:.7em;font-size:1.05em;border-radius:8px;border:1.5px solid #d4944a">
-            <p style="color:#5c3a00;margin:.3em 0 .9em;font-size:.88em">Letters, digits and hyphens only. No spaces. Up to 30 characters.</p>
+            <p style="color:#5c3a00;margin:.3em 0 .9em;font-size:.88em">Letters, digits and hyphens. No spaces.</p>
 
             <p style="margin:.2em 0 .25em;font-weight:600;color:#5c3a00">Home WiFi <span style="font-weight:400">(optional — leave blank to set later)</span></p>
             <input id=gateSsid type=text maxlength=32 placeholder="Home WiFi network name (SSID)"
@@ -77,10 +77,9 @@ html.h-dongle #dongleBanner { display: block !important; }
             </button>
 
             <p id=gateNextSteps style="color:#5c3a00;font-size:.85em;margin:.9em 0 0;line-height:1.45">
-                <b>What happens next:</b> the receiver reboots and reappears as <code id=gateNameEcho>&lt;name&gt;</code>.
-                If you provided WiFi details, it also joins your home network at
-                <code><span id=gateHostEcho>&lt;name&gt;</span>.local</code> — switch your phone back to home WiFi and visit that address.
-                If you didn't, reconnect to the <code id=gateApEcho>&lt;name&gt;</code> WiFi network and come back here to add them.
+                <b>Next:</b> it reboots as <code id=gateNameEcho>&lt;name&gt;</code> &mdash; with WiFi details, at
+                <code><span id=gateHostEcho>&lt;name&gt;</span>.local</code> on your home network;
+                without, on its own <code id=gateApEcho>&lt;name&gt;</code> network.
             </p>
         </form>
     </div>
@@ -114,7 +113,7 @@ html.h-dongle #dongleBanner { display: block !important; }
              box-shadow:0 3px 10px rgba(212,148,74,.35);animation:bindPulse 1s ease-in-out infinite alternate">
             <div style="font-size:1.15em;letter-spacing:.04em;margin-bottom:.25em">🔗  BIND MODE</div>
             <div style="font-weight:500;font-size:.92em;line-height:1.4">
-                Receiver is listening on the default pipe. Power up your transmitter in bind mode and the new pipe will be saved automatically within a few seconds. The on-board LED is blinking at 2 Hz.
+                Power up your transmitter in bind mode. LED blinking at 2&nbsp;Hz.
             </div>
         </div>
 
@@ -124,10 +123,8 @@ html.h-dongle #dongleBanner { display: block !important; }
         <button class="btn btn-fly"  type=button id=flybtn><span class=ico>&#128641;&#9992;&#65039;</span><span style="display:flex;flex-direction:column;align-items:flex-start;text-align:left"><span>Fly now</span><span style="font-size:.62em;font-weight:400;opacity:.85;margin-top:.25em">turns off WiFi &amp; Bluetooth</span></span></button>
         <a class="btn btn-bb"   href="/rotorflight" id=rfbtn style="display:none;background:#8e6cab"><span class=ico>&#129357;</span>Rotorflight setup and Wizard</a>
         <div id=fcHint class=muted style="display:none;font-size:.85em;line-height:1.5;text-align:center;padding:.3em .8em">
-            &#128161; Model responding but no flight controller detected? On the flight
-            controller, check <b>TELEMETRY</b> is enabled (Rotorflight &rarr; Configuration)
-            &mdash; without it the FC obeys silently and can&rsquo;t be seen. Then check the
-            telemetry wire to D5.
+            &#128161; No flight controller found? Enable <b>TELEMETRY</b> in Rotorflight &rarr; Configuration,
+            then check the wire to D5.
         </div>
         <script>
         // First-paint from memory (Malcolm 2026-08-24: "the Fly now button

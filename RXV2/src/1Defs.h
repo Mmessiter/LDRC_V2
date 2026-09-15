@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.724-teal-check";
+constexpr const char* FW_VERSION = "RXV2-0.9.725-fewer-words";
 
 //*********************************************************************
 //  Auto-update manifest URLs

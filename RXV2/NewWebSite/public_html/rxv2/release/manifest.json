@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.725-fewer-words",
+      "url": "https://messiter.com/rxv2/release/v0.9.725/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.725/littlefs.bin",
+      "fs_md5": "a914f64ed68f2e1cc2957c23f47df57b",
+      "notes": "Far fewer words on screen (Malcolm: 'too many words - the explanations can be in the help screens, this is true across the whole app'). Nothing is lost: every explanation moved into that page's ? help, in full. About 1000 words came off the pages this pass - the update page (install-over choice, progress line, failure message, and release notes now clipped to two lines, tap for the rest), Receiver settings, WiFi, Dongle, the welcome and bind panels on the front page, and Travel extents. Safety and consequence lines stay, cut to one sentence. The step-by-step guides keep their words, because there the instructions are the point."
+    },
+    {
       "name": "RXV2-0.9.724-teal-check",
       "url": "https://messiter.com/rxv2/release/v0.9.724/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.724/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.714/littlefs.bin",
       "fs_md5": "fefefcca0416b8c2ee9bbc755bbde7a8",
       "notes": "View channels now adapts. It asks briskly until the receiver's fast push actually starts working, and only then stands back to let the push do the work. Before, it always stood back - which was slower than it used to be whenever the push did not start. It can no longer be slower than it was. Includes 0.9.713."
-    },
-    {
-      "name": "RXV2-0.9.713-less-chatter",
-      "url": "https://messiter.com/rxv2/release/v0.9.713/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.713/littlefs.bin",
-      "fs_md5": "a2afed1e07d4c2a4b7cef3b33bd14c9c",
-      "notes": "The app now asks the receiver far less often over Bluetooth. The status document it fetches is 4.4 kB, Bluetooth carries about 24 kB a second, and several parts of the app were each asking for it two or three times a second - so most of the link was spent on it and everything else queued behind. Those requests now share one answer, and pages poll every 1.5 seconds instead of twice a second. WiFi is unchanged. Includes 0.9.712."
     }
   ],
   "rotorflight": {

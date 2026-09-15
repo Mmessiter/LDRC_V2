@@ -9,7 +9,7 @@
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rotorflight dongle &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=221">
-<script src="/app.js?v=254" defer></script>
+<script src="/app.js?v=255" defer></script>
 <style>
 .guide{background:#c8d2dc;color:#3a5165;padding:1em;border-radius:10px;margin:0 0 1em;font-size:1.02em}
 .fldRow{display:flex;justify-content:space-between;align-items:center;gap:.6em;padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -44,13 +44,11 @@ table.wire td:first-child{font-weight:700;color:#3a5165;white-space:nowrap}
             <tr><td>D5</td><td>flight controller <b>TX</b> (its data comes in here)</td></tr>
             <tr><td>D6</td><td>flight controller <b>RX</b></td></tr>
         </table>
-        <p class=sub>With a USB cable to the flight controller, D5 and D6 carry nothing &mdash; the dongle uses USB and falls back to these only if USB does not come up. Worth wiring anyway: they cost nothing and they are the safety net. <b>Link</b> above says which one is in use.</p>
-        <p class=sub>In Rotorflight (Ports), set that UART to <b>MSP</b> at the speed below. The receiver port stays with whatever receiver flies the model.</p>
-        <p class=sub><b>Take the 5 V from the flight controller</b>, not from a separate supply &mdash; see the warning below if you also use a USB cable.</p>
+        <p class=sub>With a USB cable, D5 and D6 are only the fallback. Wire them anyway. <b>Link</b> above says which is in use.</p>
+        <p class=sub>In Rotorflight (Ports), set that UART to <b>MSP</b> at the speed below.</p>
         <div class=warn style="background:#f6e6cf;color:#5a3f1c;border-radius:10px;padding:.8em 1em;margin:.8em 0 0">
-            <p style="margin:0 0 .4em"><b>With a USB cable to the flight controller, power the dongle from the flight controller&rsquo;s own 5 V.</b></p>
-            <p style="margin:0">The dongle drives the USB cable, so it puts 5 V down it &mdash; and most flight controllers feed USB power into their own 5 V rail. A separate supply would therefore meet the flight controller&rsquo;s own 5 V through that cable. No two supplies are the same voltage, so one pushes current into the other; and with the flight pack switched off the dongle would power the whole flight controller through the cable, which is how servos come half alive and twitch. Taking the 5 V from the flight controller keeps it all one rail.</p>
-            <p style="margin:.4em 0 0">A separate supply is only safe with the USB cable <b>unplugged</b>.</p>
+            <p style="margin:0 0 .4em"><b>Take the dongle&rsquo;s 5 V from the flight controller, never from a separate supply.</b></p>
+            <p style="margin:0">Two supplies would meet through the USB cable. Safe only with that cable unplugged.</p>
         </div>
     </div>
 
@@ -78,7 +76,11 @@ table.wire td:first-child{font-weight:700;color:#3a5165;white-space:nowrap}
     </div>
     <div class=footer></div>
 </div>
-<template id=helpContent>
+<template id=helpContent><h3>Why the 5 V must come from the flight controller</h3>
+<p>The dongle drives the USB cable, so it puts 5&nbsp;V down it &mdash; and most flight controllers feed USB power into their own 5&nbsp;V rail. A separate supply would therefore meet the flight controller&rsquo;s own 5&nbsp;V through that cable. No two supplies are the same voltage, so one pushes current into the other; and with the flight pack switched off the dongle would power the whole flight controller through the cable, which is how servos come half alive and twitch. Taking the 5&nbsp;V from the flight controller keeps it all one rail. A separate supply is only safe with the USB cable <b>unplugged</b>.</p>
+<h3>D5 and D6</h3>
+<p>With a USB cable to the flight controller, D5 and D6 carry nothing &mdash; the dongle uses USB and falls back to them only if USB does not come up. Worth wiring anyway: they cost nothing and they are the safety net. The <b>Link</b> line at the top says which one is in use. The receiver port stays with whatever receiver flies the model.</p>
+
 <h2>Rotorflight dongle</h2>
 <p>A bare XIAO ESP32-S3 running this firmware becomes a configuration dongle: it plugs into any spare UART of a Rotorflight flight controller (set to MSP) and gives the phone app - wizards, sliders, backups, everything - while an ELRS, FrSky or any other receiver flies the model.</p>
 <p><b>Automatic</b> is the normal setting: at every power-up the board counts its transceivers - none means it is a dongle, one or more means it is a receiver. So a bare XIAO with this firmware is a dongle with no setting at all.</p>
