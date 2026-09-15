@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Check for Update &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=218">
-<script src="/app.js?v=249" defer></script>
+<link rel=stylesheet href="/style.css?v=219">
+<script src="/app.js?v=250" defer></script>
 <style>
 /* --- Currently-installed card -------------------------------------- */
 .installed-card .row{
@@ -647,6 +647,42 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
                 if (Date.now() - t2 > 120000) break;   // answering but never completed
             } catch (e2) { sawSilence = true; markFlashing(); /* rebooting */ }
         }
+        // BEFORE calling it a failure, look once more, patiently.
+        // Malcolm 2026-09-15: "I was about to try the update again... and to my
+        // surprise, it told me that it was already up-to-date! So the failure
+        // was in fact not a failure. It was simply recorded wrongly."
+        // The 150 s window above is generous on a good link and far too short on
+        // a weak one — a 1.5 MB firmware plus a 1.5 MB filesystem can still be
+        // arriving. Declaring failure then is not just wrong, it invites the
+        // pilot to reflash a receiver that is busy flashing, which is the one
+        // thing we must not encourage. So: keep watching quietly for another
+        // three minutes, and only say it did not work if it still is not there.
+        {
+            const graceT0 = Date.now();
+            setStatePill('Working', '');
+            showMessage('<b>Still going.</b> This install is taking longer than usual \u2014 a weak WiFi signal '
+                      + 'will do that. <span class=muted>Watching for another <span id=__gsecs>0</span>\u2009s. '
+                      + 'Leave the receiver powered.</span>' + ibar(96));
+            while (Date.now() - graceT0 < 180000) {
+                await new Promise(res => setTimeout(res, 3000));
+                const g = document.getElementById('__gsecs');
+                if (g) g.textContent = Math.round((Date.now() - graceT0) / 1000);
+                try {
+                    const rs = await fetch('/api/state.json', { cache: 'no-store' });
+                    if (!rs.ok) continue;
+                    const st = await rs.json();
+                    const now = (st.info && st.info.fw_version) ? st.info.fw_version : '';
+                    if (now === v.name) {
+                        setStatePill('Installed', 'good');
+                        showMessage('<b>\u2713 ' + (before2 === v.name ? 'Reinstalled' : 'Updated') +
+                            '</b> \u2014 now running <code>' + now + '</code>. It just took a while. ' +
+                            'Page reloads in 5\u2009s.' + ibar(100));
+                        setTimeout(() => location.href = '/', 5000);
+                        return;
+                    }
+                } catch (e3) { /* still rebooting */ }
+            }
+        }
         if (answered2) {
             setStatePill('Failed', 'bad');
             // A WiFi install that crawls and then fails is the weak-signal case
@@ -667,8 +703,14 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
             const rb = document.getElementById('retryBle');
             if (rb) rb.onclick = () => { window.__preferBle = true; doInstall(v, sourceKey, url, fsUrl, btnEl); };
         } else {
-            setStatePill('Installed', 'good');
-            showMessage('<b>The receiver has rebooted with the update.</b> Returning to the model list \u2014 reconnect there to confirm the new version\u2026');
+            // It went quiet and never came back within the window. That is
+            // USUALLY a completed flash and a reboot, but we did not see the new
+            // version with our own eyes, so do not claim we did.
+            setStatePill('Rebooted', '');
+            showMessage('<b>The receiver went quiet and rebooted</b> \u2014 which normally means the update '
+                      + 'went in, but it did not answer again before we stopped watching, so this is not '
+                      + 'confirmed. Returning to the model list: reconnect there and check the version at the '
+                      + 'bottom of the screen.');
             setTimeout(() => { try { window.webkit.messageHandlers.rxv2.postMessage('disconnect'); } catch (e) {} }, 2500);
         }
         return;

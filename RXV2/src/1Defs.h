@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.719-weak-wifi-choice";
+constexpr const char* FW_VERSION = "RXV2-0.9.720-patient-install";
 
 //*********************************************************************
 //  Auto-update manifest URLs

@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.720-patient-install",
+      "url": "https://messiter.com/rxv2/release/v0.9.720/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.720/littlefs.bin",
+      "fs_md5": "bef8d68be92f99884a92d5f28491d626",
+      "notes": "An install that was simply taking a long time was being reported as a failure. The page gave it two and a half minutes, which is plenty on a good signal and not nearly enough on a weak one. It now says 'still going' and keeps watching for another three minutes before it says anything went wrong - and if it cannot actually see the new version with its own eyes, it says so rather than claiming success. Includes 0.9.719."
+    },
+    {
       "name": "RXV2-0.9.719-weak-wifi-choice",
       "url": "https://messiter.com/rxv2/release/v0.9.719/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.719/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.708/littlefs-RXV2-0.9.708-please-wait.bin",
       "fs_md5": "1912eb35443165cfd6fe122ed4781882",
       "notes": "The command line now shows a Please wait strip with a moving bar and the seconds counting up, so a slow command no longer looks like a frozen screen. After four seconds it adds that dump and diff are the slow ones. The telemetry buttons count the seconds too. Includes 0.9.707."
-    },
-    {
-      "name": "RXV2-0.9.707-honest-errors",
-      "url": "https://messiter.com/rxv2/release/v0.9.707/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.707/littlefs-RXV2-0.9.707-honest-errors.bin",
-      "fs_md5": "4b3c8bc29f1d46e18f9d235d6d6d5df5",
-      "notes": "When something goes wrong applying telemetry settings you now get a reason instead of a browser message. 'The string did not match the expected pattern' was the phone's own wording for a reply it could not read; it now says what the receiver actually answered, or that it answered nothing. Includes 0.9.706."
     }
   ],
   "rotorflight": {
