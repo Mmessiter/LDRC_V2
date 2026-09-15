@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.728-wifi-heal",
+      "url": "https://messiter.com/rxv2/release/v0.9.728/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.728/littlefs.bin",
+      "fs_md5": "dbb8d05cb610dd73b71e22adb4305ccf",
+      "notes": "Fixes WiFi going dead after an app session (Malcolm 2026-09-15: two receivers unreachable over WiFi until a power-cycle). With Bluetooth connected, the shared radio must let WiFi sleep, and a busy Bluetooth link can starve it until it stops hearing the router - yet it still reports itself connected, so it never tried to rejoin. Now, the moment the app disconnects, the receiver re-syncs its WiFi by itself. No more power-cycle to get it back. Safe by construction: this only runs on the ground - WiFi is off in the air - and never while a transmitter link is live or the model is armed. Firmware only; pages and apps unchanged from 0.9.727."
+    },
+    {
       "name": "RXV2-0.9.727-preflight-gates",
       "url": "https://messiter.com/rxv2/release/v0.9.727/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.727/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.716/littlefs.bin",
       "fs_md5": "a30e9efbda46266b1fc670de2089eb51",
       "notes": "The dongle's Wiring section now warns that if you also run a USB cable to the flight controller, the dongle's 5 V must come from the flight controller itself and not from a separate supply - the dongle puts 5 V down that cable, so a second supply would meet the flight controller's own 5 V through it. It also explains that D5 and D6 become a fallback once USB is in use. Includes 0.9.715."
-    },
-    {
-      "name": "RXV2-0.9.715-safety-gates",
-      "url": "https://messiter.com/rxv2/release/v0.9.715/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.715/littlefs.bin",
-      "fs_md5": "d0d47f67cf9882d01b33747ba48fdbb7",
-      "notes": "Safety review fixes. Capturing or clearing the failsafe positions is now refused while the model is armed - capturing on an armed model would have stored the arming switch ON as the failsafe position. Installing firmware is refused while the transmitter is on, because the receiver stops sending control frames for the whole download. Bringing the radios back after a flight now parks the output safely instead of restarting bare. And a dongle no longer writes control frames into the flight controller's settings port while waiting for a reply. Includes 0.9.714."
     }
   ],
   "rotorflight": {

@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.727-preflight-gates";
+constexpr const char* FW_VERSION = "RXV2-0.9.728-wifi-heal";
 
 //*********************************************************************
 //  Auto-update manifest URLs

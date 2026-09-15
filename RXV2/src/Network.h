@@ -435,6 +435,40 @@ inline void netStep() {
 
         case NET_WIFI_UP:
         {
+            // ZOMBIE-WIFI HEAL (Malcolm 2026-09-15: two receivers unreachable
+            // over WiFi after an app session, healed only by a power-cycle).
+            // A BLE client starves the co-existing STA: with both radios up the
+            // WiFi modem MUST sleep (mandatory the moment the BT controller is
+            // on — see startWifiStation), and while a live BLE connection holds
+            // the radio the sleeping STA misses its wake windows and stops
+            // hearing the AP. But WiFi.status() still returns WL_CONNECTED, so
+            // the drop debounce below never fires and the STA sits deaf until a
+            // reboot. The cure the receivers were missing: when the app LEAVES,
+            // force one STA re-associate to resync.
+            //
+            // SAFE BY CONSTRUCTION. This whole case never runs in the air —
+            // arming switches WiFi off (netMode becomes NET_NO_WIFI), so we are
+            // on the ground by definition here. Gated further on no live TX
+            // link and not armed, belt-and-braces, so it can never perturb a
+            // flight. It only ever kicks the config radio, never the nRF24
+            // control path, and re-begins non-blocking (wifiRebeginAtMs).
+            static bool bleClientWas = false;
+            const bool bleClientNow = bleHasClient();
+            const bool txLinkLive   = rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 1000;
+            const bool fcArmed      = fcInfo.armed && fcInfo.armedMs &&
+                                      (uint32_t)(millis() - fcInfo.armedMs) < 5000;
+            if (bleClientWas && !bleClientNow && staConnectedThisBoot &&
+                !txLinkLive && !fcArmed && !flyArmRequested && !flyTeardownAtMs) {
+                events.add("App left — re-syncing WiFi (Bluetooth had the radio)");
+                WiFi.disconnect(false, true);          // STA only; AP stays up
+                wifiRebeginAtMs = millis() + 200;      // non-blocking re-begin
+                netMode         = NET_WIFI_CONNECTING;
+                netStateStart   = millis();
+                bleClientWas    = bleClientNow;
+                break;
+            }
+            bleClientWas = bleClientNow;
+
             // 3-second debounce. ESP32's WiFi.status() can transiently
             // report not-connected during background scans even when
             // the link is fine, so we only treat a drop as real after
