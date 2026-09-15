@@ -310,8 +310,15 @@
         return J(CANNED["/api/flightlog.json"]);   // live flight: none in demo
       }
       case "/api/firmware/check":
-        // "offline" makes the page skip the update offer quietly.
-        return J({ current: "RXV2-demo", offline: true, net_mode: "demo" });
+        // "offline" makes the page skip the RECEIVER update offer quietly.
+        // The Rotorflight block still has to be here: the demo's flight
+        // controller is a real 4.6.0, so "Check for a Rotorflight update"
+        // should answer "up to date" exactly as a real receiver would,
+        // rather than "could not check" on a phone that plainly has internet.
+        return J({ current: "RXV2-demo", offline: true, net_mode: "demo",
+                   rotorflight: { firmware: "4.6.0", api: 1209, suite: "2.3",
+                                  released: "2026-06-30",
+                                  notes_url: "https://github.com/rotorflight/rotorflight-firmware/releases" } });
       case "/api/gear": {                    // receiver head-speed divisor (gear.js resets it to 1)
         const r = parseFloat(args.get("ratio") || "1");
         demoState.gear = (r > 0.1 && r <= 100) ? r : 1;

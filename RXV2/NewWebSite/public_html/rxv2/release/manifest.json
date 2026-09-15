@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.724-teal-check",
+      "url": "https://messiter.com/rxv2/release/v0.9.724/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.724/littlefs.bin",
+      "fs_md5": "d8047781cff295bed22faf0e54c2de52",
+      "notes": "The Check for a Rotorflight update button was grey, which reads as disabled (Malcolm spotted it). It is now teal with an icon, like the buttons above it. The demo now answers the check properly too - its flight controller is a real 4.6.0, so it says 'up to date' as a real receiver would, instead of 'could not check' on a phone that plainly has internet."
+    },
+    {
       "name": "RXV2-0.9.723-check-now",
       "url": "https://messiter.com/rxv2/release/v0.9.723/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.723/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.713/littlefs.bin",
       "fs_md5": "a2afed1e07d4c2a4b7cef3b33bd14c9c",
       "notes": "The app now asks the receiver far less often over Bluetooth. The status document it fetches is 4.4 kB, Bluetooth carries about 24 kB a second, and several parts of the app were each asking for it two or three times a second - so most of the link was spent on it and everything else queued behind. Those requests now share one answer, and pages poll every 1.5 seconds instead of twice a second. WiFi is unchanged. Includes 0.9.712."
-    },
-    {
-      "name": "RXV2-0.9.712-ble-loop",
-      "url": "https://messiter.com/rxv2/release/v0.9.712/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.712/littlefs.bin",
-      "fs_md5": "00fba9d9649ccf5b6d6d50069b930687",
-      "notes": "An important one. Serving a page over Bluetooth used to hold the receiver's main loop for about a fifth of a second at a time - long enough to miss around 47 control frames to the flight controller, on the bench with the transmitter on. It now hands out its Bluetooth work in 3 millisecond slices (1.2 while a transmitter is linked) and always returns to flying the model. Also: the Reading from the flight controller strip no longer sits on top of the Save and Back buttons. Includes 0.9.711."
     }
   ],
   "rotorflight": {
