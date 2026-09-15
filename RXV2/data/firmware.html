@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Check for Update &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=220">
-<script src="/app.js?v=251" defer></script>
+<link rel=stylesheet href="/style.css?v=221">
+<script src="/app.js?v=252" defer></script>
 <style>
 /* --- Currently-installed card -------------------------------------- */
 .installed-card .row{
@@ -704,7 +704,7 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
                 + ' <b>The old firmware is untouched.</b>'
                 + (overBle
                     ? '<br><br>That download went over the receiver\u2019s WiFi. If the signal there is weak it can crawl and then give up. '
-                      + '<b>Bluetooth is slower but does not depend on it.</b>'
+                      + '<b>Bluetooth is slower but stands a better chance of success in these circumstances.</b>'
                       + '<div style="margin:.7em 0 0"><button class="btn" id=retryBle style="background:#2f6fb0;color:#fff;margin:0">Try again over Bluetooth</button></div>'
                     : ' Try again.'));
             installing = false; $('check').disabled = false;
@@ -845,7 +845,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         why.innerHTML =
             !wifiUp   ? 'The receiver has no WiFi of its own here, so Bluetooth is the only way. Your phone fetches the update and passes it across.'
-          : wifiWeak  ? '<b>The receiver\u2019s WiFi is weak here (' + rssi + ' dBm).</b> A WiFi install may crawl and then fail. Bluetooth is slower but does not depend on it.'
+          : wifiWeak  ? '<b>The receiver\u2019s WiFi is weak here (' + rssi + ' dBm).</b> A WiFi install may crawl and then fail. Bluetooth is slower but stands a better chance of success in these circumstances.'
           : ble       ? 'Bluetooth: your phone fetches the update and passes it across. Slower, but it works anywhere.'
                       : 'The receiver fetches the update itself over its own WiFi (' + (rssi ? rssi + ' dBm, ' : '') + 'fast \u2014 30\u201390 s).';
         card.hidden = false;

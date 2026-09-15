@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.721-lane-buttons";
+constexpr const char* FW_VERSION = "RXV2-0.9.722-better-chance";
 
 //*********************************************************************
 //  Auto-update manifest URLs
