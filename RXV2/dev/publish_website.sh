@@ -25,6 +25,20 @@ if [[ -z "${LFTP_PASSWORD:-}" ]]; then
   exit 1
 fi
 command -v lftp >/dev/null 2>&1 || { echo "lftp not found (brew install lftp)." >&2; exit 1; }
+
+# A page whose script does not PARSE looks fine and does nothing — 0.9.725's
+# update screen stayed blank because one regex edit ate a catch block. Refuse to
+# publish that; there is no situation in which uploading it is right.
+# `if !` deliberately, not a pipeline: `set -e -o pipefail` would abort here with
+# no message at all, which is how a gate becomes a mystery.
+if command -v node >/dev/null 2>&1; then
+  echo "Checking every page script parses..."
+  if ! node "$HERE/check_page_syntax.js"; then
+    echo "REFUSING TO PUBLISH: a page script is broken (above)." >&2
+    exit 1
+  fi
+fi
+
 [[ -d "$LOCAL_DIR/$PRODUCT" ]] || { echo "Staging tree missing — run dev/stage_website.py first." >&2; exit 1; }
 
 echo "Mirroring $LOCAL_DIR/$PRODUCT  ->  $HOST:public_html/$PRODUCT"

@@ -1,11 +1,11 @@
 {
   "versions": [
     {
-      "name": "RXV2-0.9.725-fewer-words",
-      "url": "https://messiter.com/rxv2/release/v0.9.725/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.725/littlefs.bin",
-      "fs_md5": "a914f64ed68f2e1cc2957c23f47df57b",
-      "notes": "Far fewer words on screen (Malcolm: 'too many words - the explanations can be in the help screens, this is true across the whole app'). Nothing is lost: every explanation moved into that page's ? help, in full. About 1000 words came off the pages this pass - the update page (install-over choice, progress line, failure message, and release notes now clipped to two lines, tap for the rest), Receiver settings, WiFi, Dongle, the welcome and bind panels on the front page, and Travel extents. Safety and consequence lines stay, cut to one sentence. The step-by-step guides keep their words, because there the instructions are the point."
+      "name": "RXV2-0.9.726-page-fix",
+      "url": "https://messiter.com/rxv2/release/v0.9.726/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.726/littlefs.bin",
+      "fs_md5": "9fd3288b190ac6b71f505e0251a4f0de",
+      "notes": "Fixes the Check-for-Update screen, which stayed blank in 0.9.725 - the page's script had a missing catch block, so nothing on it ran. Withdrawn: 0.9.725 is no longer offered. Also carries what 0.9.725 meant to: far fewer words on screen (Malcolm: 'too many words - the explanations can be in the help screens, this is true across the whole app'). Nothing is lost - every explanation moved into that page's ? help, in full. About 1000 words came off the pages: the update page (install-over choice, progress line, failure message, and release notes now clipped to two lines, tap for the rest), Receiver settings, WiFi, Dongle, the welcome and bind panels on the front page, and Travel extents. Safety and consequence lines stay, cut to one sentence. The step-by-step guides keep their words. New: every page's script is now parse-checked before anything can be published."
     },
     {
       "name": "RXV2-0.9.724-teal-check",

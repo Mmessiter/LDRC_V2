@@ -9,7 +9,7 @@
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Check for Update &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=221">
-<script src="/app.js?v=255" defer></script>
+<script src="/app.js?v=256" defer></script>
 <style>
 /* --- Currently-installed card -------------------------------------- */
 .installed-card .row{
@@ -537,7 +537,91 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
             // sta_status 1 = home network not in range (the field): don't wait.
             const joining = (mode === 'connecting WiFi' && st.net.sta_status !== 1) || mode === 'waiting for TX' || mode === 'init';
             if (chipHasInternet || !joining || Date.now() - t0 > 45000) break;
-            showMessage('<b>Installing</b> <code>' + ver + '</code> — <span id=__iphase>downloading…</span> ' +
+            showMessage('<b>Installing</b> <code>' + ver + '</code>… <span class=muted>waiting for the receiver’s WiFi (' + Math.round((Date.now() - t0) / 1000) + ' s) — faster than Bluetooth.</span>');
+            await new Promise(r => setTimeout(r, 2000));
+        }
+    } catch (e) {}
+    // Inside the app WITHOUT receiver WiFi: native Bluetooth push — the
+    // PHONE downloads the images (WiFi or 5G) and streams them over BLE, so
+    // no receiver-side internet is needed (hello, hunting lodge). On WiFi
+    // (or an older app) the /app/ probe 404s and we fall to chip-pull.
+    try {
+        if (chipHasInternet) throw new Error('receiver WiFi is faster');
+        const r0 = await fetch('/app/bleota/start?fw=' + encodeURIComponent(url) +
+                               (fsUrl ? '&fs=' + encodeURIComponent(fsUrl) : ''), { cache: 'no-store' });
+        if (r0.ok && ((await r0.json()).ok)) {
+            clearInterval(instTick);
+            const t0 = Date.now();
+            const bar = pct =>
+                '<div style="height:12px;border-radius:6px;background:rgba(128,128,128,.25);overflow:hidden;margin-top:10px">' +
+                '<div style="height:100%;width:' + pct + '%;background:#3b82f6;border-radius:6px;transition:width .5s"></div></div>';
+            // The app's runner owns the whole install INCLUDING the reboot:
+            // it reconnects over BLE afterwards and confirms the new version,
+            // so this loop only displays phases until done/error.
+            for (;;) {
+                await new Promise(res => setTimeout(res, 600));
+                let p = null;
+                try { p = await (await fetch('/app/bleota/progress', { cache: 'no-store' })).json(); } catch (e) {}
+                if (!p) continue;
+                if (p.phase === 'error') {
+                    setStatePill('Failed', 'bad');
+                    showMessage('Bluetooth install failed: ' + p.msg + ' \u2014 the old firmware is untouched.');
+                    installing = false; $('check').disabled = false;
+                    document.querySelectorAll('.ver-btn').forEach(b => b.disabled = false);
+                    return;
+                }
+                if (p.phase === 'done') {
+                    setStatePill('Installed', 'good');
+                    showMessage('<b>\u2713 Updated over Bluetooth</b> \u2014 ' + p.msg + '. Page reloads in 5\u2009s.' + bar(100));
+                    setTimeout(() => location.href = '/', 5000);
+                    return;
+                }
+                if (p.phase === 'rebooting') {
+                    setStatePill('Rebooting\u2026', 'amber');
+                    showMessage('<b>Installed.</b> ' + p.msg + bar(100));
+                } else if (p.total > 0) {
+                    const pct = Math.round(100 * p.sent / p.total);
+                    setStatePill('Installing ' + pct + '%', 'amber');
+                    showMessage('<b>Installing over Bluetooth</b> \u2014 ' + p.msg +
+                                ' <span class=muted>(' + Math.round(p.sent / 1024) + ' of ' +
+                                Math.round(p.total / 1024) + ' KB \u2014 ' + pct + '%)</span>' + bar(pct));
+                } else {
+                    setStatePill('Installing\u2026', 'amber');
+                    showMessage('<b>Installing over Bluetooth</b> \u2014 ' + p.msg + bar(0));
+                }
+                if (Date.now() - t0 > 10 * 60 * 1000) {
+                    setStatePill('Waiting\u2026', 'amber');
+                    showMessage('This is taking longer than expected \u2014 reload this page to check the receiver.');
+                    installing = false; $('check').disabled = false;
+                    document.querySelectorAll('.ver-btn').forEach(b => b.disabled = false);
+                    return;
+                }
+            }
+        }
+    } catch (e) { /* not running inside the app — use the chip-pull path below */ }
+
+    // IN-APP chip-pull: deterministic by design (Malcolm 2026-08-08, third
+    // stuck screen). The install POST's reply is IRRELEVANT — the receiver
+    // blocks for the whole download then reboots, so over Bluetooth the
+    // reply may time out, error, or die with the link, and branching on it
+    // stranded the page three different ways. Fire it, forget it, and judge
+    // ONLY by the receiver's version changing.
+    if (window.LDRC && LDRC.viaBle) {
+        fetch('/api/firmware/install?url=' + encodeURIComponent(url) +
+              (fsUrl ? '&fs_url=' + encodeURIComponent(fsUrl) : '') +
+              (fsMd5 ? '&fs_md5=' + encodeURIComponent(fsMd5) : ''),
+              { method: 'POST' }).catch(() => {});
+        clearInterval(instTick);
+        setStatePill('Installing…', 'amber');
+        const before2 = currentFw;
+        const t2 = Date.now();
+        // Estimated glide (same idea as the front-page banner): fill to ~94%
+        // over ~75 s, snap to 100% on confirmation. Malcolm 2026-08-09: "a
+        // long wait will make users give up" — the bar is the reassurance.
+        const ibar = pct =>
+            '<div style="background:rgba(125,158,176,.28);border-radius:9px;height:16px;overflow:hidden;margin:.9em 0 .2em">' +
+            '<div id=__ibar style="height:100%;width:' + pct + '%;background:#6cab5e;border-radius:9px"></div></div>';
+        showMessage('<b>Installing</b> <code>' + ver + '</code> — <span id=__iphase>downloading…</span> ' +
             '<span class=muted>(<span id=__wsecs>0</span> s)</span>' + ibar(0));
         setTimeout(() => {
             const b = document.getElementById('__ibar');
@@ -618,7 +702,7 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
             // (Malcolm 2026-09-15). Offer the other lane rather than leaving him
             // to guess, and say why it is worth trying.
             const overBle = LDRC.viaBle && !window.__preferBle;
-            showMessage('Still on <code>' + splitName(before2).ver + '</code> — '
+            showMessage('Still on <code>' + splitName(before2).ver + '</code> \u2014 '
                 + (before2 === v.name ? 'the reinstall did not run.' : 'the install did not complete.')
                 + ' <b>The old firmware is untouched.</b>'
                 + (overBle
@@ -762,10 +846,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!wifiUp) w.style.opacity = '.55';
 
         why.innerHTML =
-            !wifiUp   ? 'No receiver WiFi here — Bluetooth is the only way.'
-          : wifiWeak  ? '<b>WiFi is weak here (' + rssi + ' dBm)</b> — Bluetooth stands a better chance.'
+            !wifiUp   ? 'No receiver WiFi here \u2014 Bluetooth is the only way.'
+          : wifiWeak  ? '<b>WiFi is weak here (' + rssi + ' dBm)</b> \u2014 Bluetooth stands a better chance.'
           : ble       ? 'Slower, but works anywhere.'
-                      : 'Fast — 30–90 s' + (rssi ? ' (' + rssi + ' dBm)' : '') + '.';
+                      : 'Fast \u2014 30\u201390 s' + (rssi ? ' (' + rssi + ' dBm)' : '') + '.';
         card.hidden = false;
         w.onclick = () => { if (!wifiUp) return; window.__preferBle = false; paintLanes(st); };
         b.onclick = () => { window.__preferBle = true;  paintLanes(st); };
