@@ -1,14 +1,15 @@
-// Exercise LDRC.rotorflightUpdateCard's decision table. The wrong answer here
+// Exercise LDRC.rotorflightCheckUpdate's decision table. The wrong answer here
 // means telling a pilot to reflash a flight controller that is already right,
-// or steering them onto layouts our pages cannot write — so it gets a test.
+// or steering them onto byte layouts our pages cannot write — so it gets a test.
 const fs = require('fs');
 const src = fs.readFileSync(__dirname + '/../data/app.js', 'utf8');
 
 let el;
 global.window = { addEventListener(){}, removeEventListener(){}, matchMedia: () => ({ matches:false, addEventListener(){} }) }; global.location = { protocol: 'http:', hostname: 'x', pathname: '/' };
 global.localStorage = { _d: {}, getItem(k){return this._d[k]||null;}, setItem(k,v){this._d[k]=v;}, removeItem(k){delete this._d[k];} };
+global.sessionStorage = { _d: {}, getItem(k){return this._d[k]||null;}, setItem(k,v){this._d[k]=v;}, removeItem(k){delete this._d[k];} };
 global.document = {
-  getElementById: (id) => (id === 'rfUpdate' ? el : { onclick: null, style: {}, innerHTML: '' }),
+  getElementById: (id) => (id === 'rfUpdate' ? el : null),
   addEventListener(){}, querySelector(){return null;}, querySelectorAll(){return [];},
   createElement(){return {style:{},setAttribute(){},appendChild(){},classList:{add(){},contains(){return false;}}};},
   body:{appendChild(){},children:[],classList:{add(){},contains(){return false;}}}, readyState:'complete', documentElement:{classList:{add(){},toggle(){},contains(){return false;}}}
@@ -19,23 +20,31 @@ global.performance = { now: () => 0 };
 Object.defineProperty(global, 'LDRC', { get: () => global.window.LDRC, configurable: true });
 eval(src);
 const L = window.LDRC;
-const REAL_rfLatest = L.rfLatest;   // the decision tests stub this out
+const REAL_rfLatest = L.rfLatest, REAL_rfGit = L.rfGithubLatest;
 
-async function run(name, fcinfo, feed, verified, expect) {
-  el = { style: { display: '', cssText: '' }, innerHTML: '' };
-  L.replay = false;
+let pass = 0, fail = 0;
+function check(ok, name, extra) {
+  if (ok) { pass++; console.log('PASS  ' + name); }
+  else    { fail++; console.log('FAIL  ' + name + (extra ? '\n        ' + extra : '')); }
+}
+
+// ---- the decision table -----------------------------------------------------
+async function run(name, fcinfo, feed, live, verified, expect, expectAhead) {
+  el = { style: { display: 'none', cssText: '' }, innerHTML: '' };
   L.RF_API_VERIFIED = verified;
   L.rfLatest = async () => feed;
-  await L.rotorflightUpdateCard({ fcinfo, rf: { armed: false }, info: { name: 'T' } }, 'rfUpdate');
-  const shown = el.style.display !== 'none';
-  const text  = el.innerHTML || '';
-  let got = 'silent';
-  if (shown && /newer Rotorflight is available/.test(text)) got = 'upgrade';
-  else if (shown && /Stay on Rotorflight/.test(text)) got = 'hold';
-  else if (shown) got = 'shown-but-unrecognised';
-  const ok = got === expect;
-  console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}\n        expected ${expect}, got ${got}`);
-  return ok;
+  L.rfGithubLatest = async () => live;
+  await L.rotorflightCheckUpdate({ fcinfo, info: { name: 'T' } }, 'rfUpdate');
+  const t = el.innerHTML || '';
+  let got = '?';
+  if (/newer Rotorflight is available/.test(t)) got = 'upgrade';
+  else if (/Up to date/.test(t)) got = 'uptodate';
+  else if (/newer than these pages/.test(t)) got = 'ahead';
+  else if (/Could not check/.test(t)) got = 'nofeed';
+  else if (/No flight controller/.test(t)) got = 'nofc';
+  const ahead = /has since come out/.test(t);
+  check(got === expect && ahead === !!expectAhead, name,
+        `expected ${expect}${expectAhead ? ' +ahead' : ''}, got ${got}${ahead ? ' +ahead' : ''}`);
 }
 
 const fc = (maj, min, patch, apiMin) => ({
@@ -43,64 +52,73 @@ const fc = (maj, min, patch, apiMin) => ({
   api_major: 12, api_minor: apiMin, fw_major: maj, fw_minor: min, fw_patch: patch,
   rf_major: 2, rf_minor: min - 3,
 });
-const feed = (v, api, suite) => ({ firmware: v, api, suite, released: '2026-06-30' });
+const FEED460 = { firmware: '4.6.0', api: 1209, suite: '2.3', released: '2026-06-30' };
 
 (async () => {
-  let all = true;
-  all &= await run("Malcolm's Goblin today: FC 4.6.0, newest 4.6.0, verified 1209",
-                   fc(4,6,0,9), feed('4.6.0',1209,'2.3'), 1209, 'silent');
-  all &= await run("one release behind, and we have verified the new one",
-                   fc(4,5,1,8), feed('4.6.0',1209,'2.3'), 1209, 'upgrade');
-  all &= await run("newest is AHEAD of what our pages were checked against",
-                   fc(4,6,0,9), feed('4.7.0',1210,'2.4'), 1209, 'hold');
-  all &= await run("pilot already on the unverified newer one (rfVersionAlert's job)",
-                   fc(4,7,0,10), feed('4.7.0',1210,'2.4'), 1209, 'silent');
-  all &= await run("no feed at all — must be indistinguishable from nothing to say",
-                   fc(4,5,1,8), null, 1209, 'silent');
-  all &= await run("not a Rotorflight board",
-                   {detected:true,version_known:true,variant:'BTFL',api_major:1,api_minor:44}, feed('4.6.0',1209,'2.3'), 1209, 'silent');
-  global.__decisionsOk = !!all;
-})().then(() => global.__cacheTests());
+  await run('same version as the curated line -> up to date',
+            fc(4,6,0,9), FEED460, null, 1209, 'uptodate');
+  await run('one release behind -> upgrade',
+            fc(4,5,1,8), FEED460, null, 1209, 'upgrade');
+  await run('patch behind -> upgrade',
+            fc(4,6,0,9), { ...FEED460, firmware: '4.6.1' }, null, 1209, 'upgrade');
+  await run('ahead of the curated line -> say so, do not invent advice',
+            fc(4,7,0,10), FEED460, '4.7.0', 1209, 'ahead');
+  await run('up to date, but Rotorflight has since released -> the extra sentence',
+            fc(4,6,0,9), FEED460, '4.7.0', 1209, 'uptodate', true);
+  await run('behind, and something newer still exists -> upgrade to the CHECKED one, with the caveat',
+            fc(4,5,1,8), FEED460, '4.7.0', 1209, 'upgrade', true);
+  await run('GitHub silent (no internet / rate limited) -> no caveat, check still works',
+            fc(4,6,0,9), FEED460, null, 1209, 'uptodate', false);
+  await run('GitHub not newer than the curated line -> no caveat',
+            fc(4,6,0,9), FEED460, '4.6.0', 1209, 'uptodate', false);
+  await run('no feed at all -> honest "could not check", never a guess',
+            fc(4,6,0,9), null, '4.7.0', 1209, 'nofeed');
+  await run('no flight controller -> asks for a wire, does not check',
+            { detected: false }, FEED460, null, 1209, 'nofc');
+  await run('a non-Rotorflight flight controller is not ours to advise',
+            { detected: true, version_known: true, variant: 'BTFL', api_major: 12, api_minor: 9,
+              fw_major: 4, fw_minor: 5, fw_patch: 0 }, FEED460, null, 1209, 'nofc');
 
-// --- once-a-day caching -------------------------------------------------
-// Proves the check happens on the first run of a calendar DAY and not again,
-// and that a failure does not claim the day.
-global.__cacheTests = async () => {
-  const L2 = window.LDRC;
-  L2.rfLatest = REAL_rfLatest;        // put the real one back
-  let fetches = 0;
-  const feedJson = { rotorflight: { firmware: '4.6.0', api: 1209, suite: '2.3' } };
-  global.fetch = async () => { fetches++; return { ok: true, json: async () => feedJson }; };
-  global.localStorage._d = {};
+  // ---- version comparison -----------------------------------------------
+  check(L.vcmp('4.10.0', '4.9.0') > 0, 'vcmp: 4.10.0 is newer than 4.9.0 (a string compare says otherwise)');
+  check(L.vcmp('4.6.0', '4.6.0') === 0, 'vcmp: equal versions compare equal');
+  check(L.vcmp('4.6', '4.6.0') === 0, 'vcmp: a missing patch counts as zero');
+  check(L.vcmp('4.5.9', '4.6.0') < 0, 'vcmp: minor beats patch');
 
-  const a = await L2.rfLatest();                       // first ever: must fetch and wait
-  const n1 = fetches;
-  const b = await L2.rfLatest();                       // same day: must NOT fetch
-  const n2 = fetches;
-  // roll the stored day back a day
-  const KEY = 'rfLatest.v2';
-  const c = JSON.parse(global.localStorage.getItem(KEY));
-  c.day = '2000-01-01';
-  global.localStorage.setItem(KEY, JSON.stringify(c));
-  const d = await L2.rfLatest();                       // new day: returns cache AT ONCE, refreshes behind
-  await new Promise(r => setImmediate(r));
-  const n3 = fetches;
+  // ---- the GitHub source, with its two traps ----------------------------
+  L.rfGithubLatest = REAL_rfGit;
+  const gitReply = (list) => { global.fetch = async () => ({ ok: true, json: async () => list }); };
+  const freshGit = async () => { localStorage.removeItem('rfGit.v1'); return await L.rfGithubLatest(); };
 
-  const ok1 = a && n1 >= 1;
-  const ok2 = b && n2 === n1;
-  const ok3 = d && n3 > n2;
-  console.log(`${ok1 ? 'PASS' : 'FAIL'}  first run fetches and returns a feed (${n1} fetch${n1===1?'':'es'})`);
-  console.log(`${ok2 ? 'PASS' : 'FAIL'}  same day does NOT fetch again (still ${n2})`);
-  console.log(`${ok3 ? 'PASS' : 'FAIL'}  a new day refreshes in the background (${n3}) without blocking`);
+  gitReply([{ tag_name: 'release/4.6.0' }, { tag_name: 'release/4.7.0-RC3' }]);
+  check(await freshGit() === '4.6.0', 'GitHub: a release candidate is NOT offered (they are not marked prerelease)');
 
-  // a failure must not claim the day
-  global.localStorage._d = {};
-  global.fetch = async () => ({ ok: false });
-  const e = await L2.rfLatest();
-  const stored = JSON.parse(global.localStorage.getItem(KEY) || 'null');
-  const ok4 = e === null && (!stored || stored.day !== new Date().toISOString().slice(0,10));
-  console.log(`${ok4 ? 'PASS' : 'FAIL'}  a failed check does not claim the day`);
-  const all = global.__decisionsOk && ok1 && ok2 && ok3 && ok4;
-  console.log(all ? '\nALL PASS' : '\nFAILURES');
-  process.exit(all ? 0 : 1);
-};
+  gitReply([{ tag_name: 'release/4.6.0' }, { tag_name: 'release/4.10.0' }, { tag_name: 'release/4.9.0' }]);
+  check(await freshGit() === '4.10.0', 'GitHub: the newest stable wins, numerically');
+
+  gitReply([{ tag_name: 'snapshot/20260901' }, { tag_name: 'v4.6.0' }]);
+  check(await freshGit() === null, 'GitHub: snapshots and odd tags are ignored');
+
+  gitReply([{ tag_name: 'release/4.7.0', draft: true }, { tag_name: 'release/4.6.0' }]);
+  check(await freshGit() === '4.6.0', 'GitHub: a draft is not a release');
+
+  global.fetch = async () => { throw new Error('offline'); };
+  check(await freshGit() === null, 'GitHub: offline is null, not a crash');
+
+  gitReply([{ tag_name: 'release/4.8.0' }]);
+  let calls = 0;
+  const counted = async (u) => { calls++; return { ok: true, json: async () => [{ tag_name: 'release/4.8.0' }] }; };
+  localStorage.removeItem('rfGit.v1');
+  global.fetch = counted;
+  await L.rfGithubLatest(); await L.rfGithubLatest(); await L.rfGithubLatest();
+  check(calls === 1, 'GitHub: repeated taps reuse the cached answer (60 questions an hour, and it counts 304s)', `asked ${calls} times`);
+
+  // ---- the curated feed never guesses when offline -----------------------
+  L.rfLatest = REAL_rfLatest;
+  localStorage.setItem('rfLatest.v3', JSON.stringify({ at: Date.now() - 600000, rf: FEED460 }));
+  global.fetch = async () => { throw new Error('offline'); };
+  check(await L.rfLatest() === null, 'curated feed: offline returns null, not a stale answer from an hour ago');
+
+  console.log(`\n${fail ? 'FAILURES: ' + fail : 'ALL PASS'}  (${pass} passed)`);
+  process.exit(fail ? 1 : 0);
+})();

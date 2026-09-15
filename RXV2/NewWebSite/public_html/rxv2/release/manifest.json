@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.723-check-now",
+      "url": "https://messiter.com/rxv2/release/v0.9.723/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.723/littlefs.bin",
+      "fs_md5": "d763f9c1135e44e1a597c0d9d91740b0",
+      "notes": "Check for a Rotorflight update, when YOU ask (Malcolm's suggestion). A button at the foot of the Rotorflight page asks, there and then, whether a newer Rotorflight has come out - so nothing runs on a timer and nothing waits to surprise you. It gives one of three plain answers: up to date; a newer one is available (with 'back up first - flashing erases everything', and the reminder that flashing itself needs the Configurator on a computer); or a newer one is out but these pages have not been checked against it yet, so stay where you are. It asks two places: our own checked recommendation, and Rotorflight's own releases live - so it cannot answer 'up to date' for weeks after a real release. It never recommends a release our tuning pages have not been checked against, and when it cannot reach the internet it says so instead of guessing. Two preview buttons in the page's help show the other two answers without waiting months for a release. Needs internet on the phone or the receiver; the daily automatic check is gone."
+    },
+    {
       "name": "RXV2-0.9.722-better-chance",
       "url": "https://messiter.com/rxv2/release/v0.9.722/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.722/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.712/littlefs.bin",
       "fs_md5": "00fba9d9649ccf5b6d6d50069b930687",
       "notes": "An important one. Serving a page over Bluetooth used to hold the receiver's main loop for about a fifth of a second at a time - long enough to miss around 47 control frames to the flight controller, on the bench with the transmitter on. It now hands out its Bluetooth work in 3 millisecond slices (1.2 while a transmitter is linked) and always returns to flying the model. Also: the Reading from the flight controller strip no longer sits on top of the Save and Back buttons. Includes 0.9.711."
-    },
-    {
-      "name": "RXV2-0.9.711-channels-stream",
-      "url": "https://messiter.com/rxv2/release/v0.9.711/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.711/littlefs.bin",
-      "fs_md5": "0344e49d6f91323f52c463a6f7c57969",
-      "notes": "View channels should keep up with your sticks over Bluetooth again. The receiver only sends a channel update when nothing else is being asked of it, but the page had been asking constantly - so the fast updates never got a chance to start and the bars crawled. The page now leaves room. Includes 0.9.710."
     }
   ],
   "rotorflight": {

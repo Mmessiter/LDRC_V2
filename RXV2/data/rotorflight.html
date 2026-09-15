@@ -9,7 +9,7 @@
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rotorflight &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=221">
-<script src="/app.js?v=252" defer></script>
+<script src="/app.js?v=253" defer></script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -28,6 +28,10 @@
     <a class="btn btn-fw" href="/rotorflight-backup"   style="background:#d4944a"><span class=ico>&#128190;</span><span style="display:flex;flex-direction:column;align-items:flex-start;text-align:left"><span>Backup &amp; restore</span><span style="font-size:.62em;font-weight:400;opacity:.85;margin-top:.25em">the whole setup, safe on the phone</span></span></a>
 
     <div id=telemSpeed class="banner" style="display:none;margin-top:1em"></div>
+
+    <div style="margin:1.4em 0 0;text-align:center">
+        <button class=btn type=button id=rfCheck style="background:#6b7c8c;color:#fff;margin:0;font-size:1em;padding:.8em 1.1em">Check for a Rotorflight update</button>
+    </div>
     <div id=rfUpdate style="display:none"></div>
 
     <div class=footer></div>
@@ -45,10 +49,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     LDRC.govThrottleBanner(s, 'thrBanner');   // 0.9.551: nag until a flight reaches full throttle
     LDRC.fcTelemBanner(s, 'telemBanner');     // 0.9.556: FC sensor list wiped = no volts/RPM on the TX
     if (!s.dongle) LDRC.fcTelemSpeedCard(s, 'telemSpeed');   // 0.9.563: fast (1000/1) vs standard (250/8) telemetry link rate - CRSF only, not for a dongle
-    // "A newer Rotorflight is available" — silent unless there is something to
-    // act on, and it defers to the two banners above: they are about THIS
-    // flight, this one is about a wet afternoon indoors.
-    LDRC.rotorflightUpdateCard(s, 'rfUpdate');
+    // Checking for a new Rotorflight happens only when asked (0.9.723). It is
+    // a wet-afternoon job, not a pre-flight one, so it never interrupts and
+    // never runs on a timer.
+    let checking = false;
+    const runCheck = async () => {
+        if (checking) return;
+        checking = true;
+        const btn = document.getElementById('rfCheck');
+        if (btn) btn.disabled = true;
+        try { await LDRC.rotorflightCheckUpdate(await LDRC.fetchState() || s, 'rfUpdate'); }
+        finally { checking = false; if (btn) btn.disabled = false; }
+    };
+    document.getElementById('rfCheck').onclick = runCheck;
+    // A preview shows the other answers without waiting months for a release.
+    // Its buttons live in the help panel, built on demand, so bind by
+    // delegation rather than by id at load.
+    document.addEventListener('click', (e) => {
+        const t = e.target && e.target.closest && e.target.closest('#rfPrevUp, #rfPrevHold');
+        if (!t) return;
+        try { sessionStorage.setItem('rfPreview', t.id === 'rfPrevHold' ? 'hold' : 'go'); } catch (err) {}
+        LDRC.hideHelp && LDRC.hideHelp();
+        runCheck();
+    });
+    // Arriving with a preview still set (it survives until the app closes).
+    try { if (sessionStorage.getItem('rfPreview')) runCheck(); } catch (e) {}
     setInterval(async () => {
         const s2 = await LDRC.fetchState();
         if (s2) { LDRC.fcTelemBanner(s2, 'telemBanner'); if (!s2.dongle) LDRC.fcTelemSpeedCard(s2, 'telemSpeed'); }   // the 3 s refresh forgot the dongle guard until 0.9.602
@@ -71,6 +96,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 <p>The receiver lead carries the flying and the everyday pages. A short USB-C cable from the receiver to the flight controller adds the configurator&rsquo;s own channel: every setting, any size, the command line, ports, factory reset and the black box. A transmitter&rsquo;s own Lua scripts have only the slow CRSF tunnel with its 320-byte replies, so they stop at the everyday pages. With both wires this app can do everything the configurator can, apart from flashing Rotorflight itself. Use the shortest cable you can, right-angled at both ends: a <b>Chenyang CY-UC-088-0.07M</b> (70&nbsp;mm, flat, angled both ends, on Amazon) is ideal. It must carry <b>data</b> &mdash; many short USB-C leads only charge. Tie it down and leave it in: the receiver stops talking over USB the moment the radio link is live, so it costs nothing in the air.</p>
 <h3>Requirements</h3>
 <p>Protocol set to <b>CRSF</b> and a Rotorflight flight controller connected, by the lead or by USB.</p>
+<h3>Checking for a new Rotorflight</h3>
+<p><b>Check for a Rotorflight update</b> at the foot of the page asks, there and then, whether a newer Rotorflight has come out. It needs the internet &mdash; the phone&rsquo;s own will do.</p>
+<p>If there is one, it tells you to <b>back up first</b>, because flashing erases everything. Flashing itself is the one job these pages cannot do: that needs the Rotorflight Configurator on a computer. Restore your backup here afterwards.</p>
+<p>Sometimes it says the opposite: a release is out, but these pages have not been checked against it yet, so stay where you are. Nothing is wrong, and there is no hurry.</p>
+<p>Releases are months apart, so the usual answer is &ldquo;up to date&rdquo;. To see the other two:</p>
+<p><button class=btn type=button id=rfPrevUp style="background:#2f6fb0;color:#fff;margin:.2em 0">Preview &ldquo;newer available&rdquo;</button>
+<button class=btn type=button id=rfPrevHold style="background:#8a7f52;color:#fff;margin:.2em 0">Preview &ldquo;stay put&rdquo;</button></p>
+<p class=sub>Previews are marked as such and vanish when you close the app. They never change what any receiver is told.</p>
 </template>
 </body>
 </html>

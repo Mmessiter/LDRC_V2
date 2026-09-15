@@ -241,7 +241,8 @@
                 + html + linkTip + homeTip
                 + '<button class=helpClose type=button>Got it</button>'
                 + '</div>';
-            const close = () => { overlay.remove(); document.removeEventListener('keydown', onKey); };
+            const close = () => { overlay.remove(); document.removeEventListener('keydown', onKey); this._helpClose = null; };
+            this._helpClose = close;   // so a button inside the help can dismiss it
             const onKey = (e) => { if (e.key === 'Escape') close(); };
             overlay.addEventListener('click', (e) => {
                 if (e.target === overlay) close();
@@ -250,6 +251,10 @@
             document.addEventListener('keydown', onKey);
             document.body.appendChild(overlay);
         },
+
+        // Close the help panel from inside it (a help button that DOES
+        // something wants the page it acted on, not the help text).
+        hideHelp() { if (this._helpClose) this._helpClose(); },
 
         // Retry-on-fail wrapper for the /api/msp endpoint. MSP responses
         // occasionally drop on the CRSF wire — pause 200 ms and try again,
@@ -562,114 +567,176 @@
         // something worth acting on, because a notice you learn to ignore is
         // worse than no notice.
         //
-        // The recommendation rides in the manifest the app already fetches
-        // (dev/rotorflight_latest.json -> stage_website.py). It is curated by
-        // hand: dev/check_rotorflight_release.py asks GitHub and SUGGESTS, a
-        // human decides. Rotorflight's release workflow does not mark release
-        // candidates as prereleases, so an automatic "latest" would cheerfully
-        // recommend an RC.
+        // CHECK FOR A ROTORFLIGHT UPDATE — on demand, never on a timer
+        // (Malcolm 2026-09-15: "let's add the option to explicitly check for a
+        // Rotorflight firmware update. Then we don't need to schedule regular
+        // checks"). A button you press is also its own test: there is nothing
+        // to wait months for and nothing to take on trust.
         //
-        // THE TRAP THIS AVOIDS: we must never steer someone onto a Rotorflight
-        // newer than the byte layouts our own tuning pages were checked against
-        // (RF_API_VERIFIED). If the newest release is ahead of us, the honest
-        // advice is the opposite — stay put — and that is what it says.
-        async rotorflightUpdateCard(st, elId) {
+        // TWO SOURCES, DELIBERATELY.
+        //   1. Our own curated line (dev/rotorflight_latest.json ->
+        //      stage_website.py -> the manifest). This is the only release we
+        //      ever RECOMMEND, because it is the only one whose byte layouts
+        //      these tuning pages have been checked against (RF_API_VERIFIED).
+        //      It is edited by hand: dev/check_rotorflight_release.py asks
+        //      GitHub and suggests, a human decides.
+        //   2. Rotorflight's own releases, asked live. Our curated line only
+        //      moves when the website is published, so without this the check
+        //      could answer "up to date" for weeks after a real release. It is
+        //      best-effort: no internet, no rate limit left, no answer — the
+        //      check still works, it just cannot add that sentence.
+        //
+        // Nothing from source 2 is ever turned into "go and flash this". A
+        // release we have not checked earns the opposite advice: stay put.
+        async rotorflightCheckUpdate(st, elId) {
             const el = document.getElementById(elId);
-            if (!el) return false;
-            const hide = () => { el.style.display = 'none'; return false; };
-            const fc = (st && st.fcinfo) || {};
-            if (this.replay) return hide();                       // a recording, or the demo
-            if (!fc.detected || !fc.version_known) return hide();
-            if (fc.variant !== 'RTFL' || fc.api_major !== 12) return hide();
-            if (st && st.rf && st.rf.armed) return hide();        // never mid-session
-            const feed = await this.rfLatest();
-            if (!feed || !feed.api || !feed.firmware) return hide();   // cannot check: say nothing
+            if (!el) return;
+            const show = (bg, fg, html) => {
+                el.style.cssText = 'display:block;background:' + bg + ';color:' + fg +
+                    ';padding:1em;border-radius:10px;margin:.6em 0 0;text-align:left;font-size:1.02em';
+                el.innerHTML = html;
+            };
+            const GREY = ['#dfe5ea', '#3a4a58'], GREEN = ['#d8e8d4', '#2c4526'],
+                  BLUE = ['#dbe6f2', '#1d3a56'], SAND = ['#e8e4d6', '#4a4327'];
 
+            let preview = null;
+            try { preview = sessionStorage.getItem('rfPreview'); } catch (e) {}
+
+            let fc = (st && st.fcinfo) || {};
+            if (preview) fc = { detected: true, version_known: true, variant: 'RTFL', api_major: 12,
+                                api_minor: 9, fw_major: 4, fw_minor: 6, fw_patch: 0, rf_major: 2, rf_minor: 3 };
+            if (preview === 'go') { fc.fw_minor = 5; fc.fw_patch = 1; fc.api_minor = 8; fc.rf_minor = 2; }
+
+            if (!fc.detected || !fc.version_known || fc.variant !== 'RTFL')
+                return show(SAND[0], SAND[1], '<b>No flight controller to ask</b><br>Connect the receiver lead, ' +
+                    'or a USB cable to the flight controller, and try again.');
+
+            show(GREY[0], GREY[1], 'Checking…');
+            const [feed, live] = preview
+                ? [{ firmware: '4.6.0', api: this.RF_API_VERIFIED, suite: '2.3', released: '2026-06-30',
+                     notes_url: 'https://github.com/rotorflight/rotorflight-firmware/releases' },
+                   preview === 'hold' ? '4.7.0' : null]
+                : [await this.rfLatest(), await this.rfGithubLatest()];
+
+            if (!feed || !feed.api || !feed.firmware)
+                return show(SAND[0], SAND[1], '<b>Could not check</b><br>This needs the internet. ' +
+                    'Try again when the phone has a signal, or when the receiver is on your home WiFi.');
+
+            const fcVer = fc.fw_major + '.' + fc.fw_minor + '.' + (fc.fw_patch | 0);
             const fcApi = fc.api_major * 100 + fc.api_minor;
-            let head, body, kind;
-            if (feed.api > this.RF_API_VERIFIED) {
-                // The release is ahead of us. Protect the pilot AND ourselves.
-                if (fcApi >= feed.api) return hide();             // already there: rfVersionAlert has it
-                head = 'Stay on Rotorflight ' + (fc.rf_major || 2) + '.' + (fc.rf_minor || 3) + ' for now';
-                body = 'Rotorflight ' + feed.suite + ' (firmware ' + feed.firmware + ') is out, but these ' +
-                       'pages have not been checked against it yet. Nothing here is broken \u2014 there is ' +
-                       'simply no hurry.';
-                kind = 'hold';
-            } else if (fcApi < feed.api) {
+            // Rotorflight put out something newer than the line we have checked.
+            const ahead = live && this.vcmp(live, feed.firmware) > 0 ? live : null;
+            const aheadLine = ahead
+                ? '<br><br>Rotorflight ' + ahead + ' has since come out, but these pages have not been ' +
+                  'checked against it yet. Nothing here is broken and there is no hurry — ' +
+                  'this app will say so when it is ready.'
+                : '';
+            const notes = feed.notes_url
+                ? '<br><a href="' + feed.notes_url + '" target="_blank" rel="noopener">What changed</a>' : '';
+
+            let head, body, colour;
+            if (fcApi > this.RF_API_VERIFIED || this.vcmp(fcVer, feed.firmware) > 0) {
+                // The pilot is ahead of us. Say so plainly rather than inventing advice.
+                colour = SAND;
+                head = 'Your flight controller is newer than these pages';
+                body = 'It runs ' + fcVer + '; these pages are written and tested against ' +
+                       feed.firmware + '. Most things will still work, but anything that looks wrong here ' +
+                       'is these pages catching up, not your helicopter.';
+            } else if (this.vcmp(fcVer, feed.firmware) < 0) {
+                colour = BLUE;
                 head = 'A newer Rotorflight is available';
-                body = 'Your flight controller runs ' + fc.fw_major + '.' + fc.fw_minor + '.' + (fc.fw_patch | 0) +
-                       '. Rotorflight ' + feed.suite + ' (firmware ' + feed.firmware + ') came out on ' +
-                       (feed.released || 'a later date') + '. ' +
-                       '<b>Back up first, on the Backup &amp; restore page \u2014 flashing erases everything.</b> ' +
+                body = 'Your flight controller runs ' + fcVer + '. Rotorflight ' + feed.suite +
+                       ' (firmware ' + feed.firmware + ') came out on ' + (feed.released || 'a later date') + '. ' +
+                       '<b>Back up first, on the Backup &amp; restore page — flashing erases everything.</b> ' +
                        'Then connect the flight controller to a computer running the Rotorflight Configurator; ' +
-                       'that is the one job these pages cannot do for you. Afterwards, restore your backup here.';
-                kind = 'go';
+                       'that is the one job these pages cannot do for you. Afterwards, restore your backup here.' +
+                       notes + aheadLine;
             } else {
-                return hide();                                    // up to date: nothing to say
+                colour = GREEN;
+                head = 'Up to date';
+                body = 'Your flight controller runs ' + fcVer + ' — Rotorflight ' + feed.suite +
+                       ', the release these pages are written and tested against.' + aheadLine;
             }
-
-            const seen = 'rfUpd.' + (st && st.info && st.info.name || '') + '.' + feed.firmware + '.' + kind;
-            try { if (localStorage.getItem(seen)) return hide(); } catch (e) {}
-
-            el.style.display = 'block';
-            el.style.cssText = 'display:block;background:' + (kind === 'go' ? '#dbe6f2' : '#e8e4d6') +
-                ';color:' + (kind === 'go' ? '#1d3a56' : '#4a4327') +
-                ';padding:1em;border-radius:10px;margin:0 0 1em;text-align:left;font-size:1.02em';
-            el.innerHTML = '<b>' + head + '</b><br>' + body +
-                (feed.notes_url ? '<br><a href="' + feed.notes_url + '" target="_blank" rel="noopener">What changed</a>' : '') +
-                '<div style="margin:.7em 0 0"><button class="btn" id=rfUpdSeen style="background:#6b7c8c;color:#fff;margin:0">Got it \u2014 don\u2019t mention again</button></div>';
-            const b = document.getElementById('rfUpdSeen');
-            if (b) b.onclick = () => { try { localStorage.setItem(seen, '1'); } catch (e) {} el.style.display = 'none'; };
-            return true;
+            if (preview) head = 'PREVIEW — ' + head;
+            show(colour[0], colour[1], '<b>' + head + '</b><br>' + body +
+                (preview ? '<div style="margin:.7em 0 0"><button class=btn id=rfPrevEnd ' +
+                    'style="background:#6b7c8c;color:#fff;margin:0">End preview</button></div>' : ''));
+            const b = document.getElementById('rfPrevEnd');
+            if (b) b.onclick = () => {
+                try { sessionStorage.removeItem('rfPreview'); } catch (e) {}
+                location.reload();
+            };
         },
 
-        // The curated recommendation, once a CALENDAR DAY (Malcolm 2026-09-15:
-        // "it should check only once in a day, just after the first boot up
-        // that day"). A rolling 24-hour timer drifts; a date does not.
-        //
-        // It also never makes the card wait for the network. Any cached copy is
-        // returned straight away and the refresh happens quietly behind it, so
-        // a new release shows up the following day. Given Rotorflight puts out
-        // a release roughly twice a year, that is no delay worth having, and it
-        // keeps the check off the Bluetooth link at exactly the moment the
-        // pilot is opening pages.
-        //
-        // A failed check does NOT claim the day — it simply waits an hour, so a
-        // phone with no signal at the field tries again once it is home.
-        async rfLatest() {
-            const KEY = 'rfLatest.v2';
-            const today = new Date().toISOString().slice(0, 10);   // YYYY-MM-DD, local boot day
+        // Compare dotted version strings. 4.10.0 is newer than 4.9.0, which is
+        // exactly what a string compare gets wrong.
+        vcmp(a, b) {
+            const pa = String(a || '').split('.').map(n => parseInt(n, 10) || 0);
+            const pb = String(b || '').split('.').map(n => parseInt(n, 10) || 0);
+            for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+                const d = (pa[i] || 0) - (pb[i] || 0);
+                if (d) return d < 0 ? -1 : 1;
+            }
+            return 0;
+        },
+
+        // Our curated line. A minute's cache so a second tap costs nothing;
+        // no day scheduling any more — this only runs when somebody asks.
+        async rfLatest(force) {
+            const KEY = 'rfLatest.v3';
             let c = null;
             try { c = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) {}
+            if (!force && c && c.rf && c.at && (Date.now() - c.at) < 60000) return c.rf;
+            const tryUrl = async (u) => {
+                try {
+                    const r = await fetch(u, { cache: 'no-store' });
+                    if (!r.ok) return null;
+                    const j = await r.json();
+                    return (j && j.rotorflight) || null;
+                } catch (e) { return null; }
+            };
+            // The phone's own internet first (it works at the field); then the
+            // receiver's, if it has any.
+            const rf = await tryUrl('/app/manifest') || await tryUrl('/api/firmware/check');
+            if (rf) { try { localStorage.setItem(KEY, JSON.stringify({ at: Date.now(), rf })); } catch (e) {} }
+            return rf;                                 // null = could not check; never a stale guess
+        },
 
-            const due = !c || c.day !== today;
-            const retryOk = !c || !c.failedAt || (Date.now() - c.failedAt) > 3600000;
-
-            if (due && retryOk) {
-                const refresh = async () => {
-                    const tryUrl = async (u) => {
-                        try {
-                            const r = await fetch(u, { cache: 'no-store' });
-                            if (!r.ok) return null;
-                            const j = await r.json();
-                            return (j && j.rotorflight) || null;
-                        } catch (e) { return null; }
-                    };
-                    // The phone's own internet first (it works at the field);
-                    // then the receiver's, if it has any.
-                    const rf = await tryUrl('/app/manifest') || await tryUrl('/api/firmware/check');
-                    try {
-                        if (rf) localStorage.setItem(KEY, JSON.stringify({ day: today, rf }));
-                        else    localStorage.setItem(KEY, JSON.stringify({ ...(c || {}), failedAt: Date.now() }));
-                    } catch (e) {}
-                    return rf;
-                };
-                // Nothing cached at all: this is the first run, so wait for it
-                // once. Otherwise let it happen in the background.
-                if (!c || !c.rf) return await refresh();
-                refresh();
-            }
-            return (c && c.rf) || null;
+        // Rotorflight's own releases, best-effort. Returns the newest STABLE
+        // version string, or null.
+        //
+        // TWO TRAPS, BOTH LEARNED THE HARD WAY.
+        //  - Rotorflight does not mark release candidates as prereleases, so
+        //    /releases/latest hands back an RC. Only tags of the exact shape
+        //    release/N.N.N are accepted.
+        //  - GitHub allows 60 questions an hour from one address and counts
+        //    even the ones it answers "nothing changed". Hence the 6-hour
+        //    cache: pressing the button repeatedly cannot burn the allowance.
+        async rfGithubLatest() {
+            const KEY = 'rfGit.v1';
+            let c = null;
+            try { c = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) {}
+            if (c && c.at && (Date.now() - c.at) < 6 * 3600000) return c.v || null;
+            let v = null;
+            try {
+                const ctl = typeof AbortController === 'function' ? new AbortController() : null;
+                if (ctl) setTimeout(() => ctl.abort(), 8000);
+                const r = await fetch('https://api.github.com/repos/rotorflight/rotorflight-firmware/releases?per_page=20',
+                                      ctl ? { signal: ctl.signal } : {});
+                if (r.ok) {
+                    const list = await r.json();
+                    if (Array.isArray(list)) {
+                        for (const rel of list) {
+                            const m = /^release\/(\d+\.\d+\.\d+)$/.exec(rel && rel.tag_name || '');
+                            if (m && !rel.draft && (!v || this.vcmp(m[1], v) > 0)) v = m[1];
+                        }
+                    }
+                }
+            } catch (e) {}
+            // A failed ask is cached for an hour only, so a phone that had no
+            // signal at the field can try again at home.
+            try { localStorage.setItem(KEY, JSON.stringify({ at: v ? Date.now() : Date.now() - 5 * 3600000, v })); } catch (e) {}
+            return v;
         },
 
         // Dirty-tracking: tuning pages call markDirty() on any user input

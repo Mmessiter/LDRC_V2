@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.722-better-chance";
+constexpr const char* FW_VERSION = "RXV2-0.9.723-check-now";
 
 //*********************************************************************
 //  Auto-update manifest URLs
