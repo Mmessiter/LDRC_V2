@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.717-rf-update-hint";
+constexpr const char* FW_VERSION = "RXV2-0.9.718-rf-check-daily";
 
 //*********************************************************************
 //  Auto-update manifest URLs

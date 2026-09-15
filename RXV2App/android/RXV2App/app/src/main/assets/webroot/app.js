@@ -623,29 +623,53 @@
             return true;
         },
 
-        // The curated recommendation, from whichever source can reach it, cached
-        // for a day. Returns null rather than throwing — "cannot check" must be
-        // indistinguishable from "nothing to say".
+        // The curated recommendation, once a CALENDAR DAY (Malcolm 2026-09-15:
+        // "it should check only once in a day, just after the first boot up
+        // that day"). A rolling 24-hour timer drifts; a date does not.
+        //
+        // It also never makes the card wait for the network. Any cached copy is
+        // returned straight away and the refresh happens quietly behind it, so
+        // a new release shows up the following day. Given Rotorflight puts out
+        // a release roughly twice a year, that is no delay worth having, and it
+        // keeps the check off the Bluetooth link at exactly the moment the
+        // pilot is opening pages.
+        //
+        // A failed check does NOT claim the day — it simply waits an hour, so a
+        // phone with no signal at the field tries again once it is home.
         async rfLatest() {
-            const KEY = 'rfLatest.v1';
-            try {
-                const c = JSON.parse(localStorage.getItem(KEY) || 'null');
-                if (c && Date.now() - c.at < 86400000) return c.rf;
-            } catch (e) {}
-            const tryUrl = async (u) => {
-                try {
-                    const r = await fetch(u, { cache: 'no-store' });
-                    if (!r.ok) return null;
-                    const j = await r.json();
-                    return (j && j.rotorflight) || null;
-                } catch (e) { return null; }
-            };
-            // The phone's own internet first (it works at the field); then the
-            // receiver's, if it has any.
-            let rf = await tryUrl('/app/manifest');
-            if (!rf) rf = await tryUrl('/api/firmware/check');
-            if (rf) { try { localStorage.setItem(KEY, JSON.stringify({ at: Date.now(), rf })); } catch (e) {} }
-            return rf;
+            const KEY = 'rfLatest.v2';
+            const today = new Date().toISOString().slice(0, 10);   // YYYY-MM-DD, local boot day
+            let c = null;
+            try { c = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) {}
+
+            const due = !c || c.day !== today;
+            const retryOk = !c || !c.failedAt || (Date.now() - c.failedAt) > 3600000;
+
+            if (due && retryOk) {
+                const refresh = async () => {
+                    const tryUrl = async (u) => {
+                        try {
+                            const r = await fetch(u, { cache: 'no-store' });
+                            if (!r.ok) return null;
+                            const j = await r.json();
+                            return (j && j.rotorflight) || null;
+                        } catch (e) { return null; }
+                    };
+                    // The phone's own internet first (it works at the field);
+                    // then the receiver's, if it has any.
+                    const rf = await tryUrl('/app/manifest') || await tryUrl('/api/firmware/check');
+                    try {
+                        if (rf) localStorage.setItem(KEY, JSON.stringify({ day: today, rf }));
+                        else    localStorage.setItem(KEY, JSON.stringify({ ...(c || {}), failedAt: Date.now() }));
+                    } catch (e) {}
+                    return rf;
+                };
+                // Nothing cached at all: this is the first run, so wait for it
+                // once. Otherwise let it happen in the background.
+                if (!c || !c.rf) return await refresh();
+                refresh();
+            }
+            return (c && c.rf) || null;
         },
 
         // Dirty-tracking: tuning pages call markDirty() on any user input

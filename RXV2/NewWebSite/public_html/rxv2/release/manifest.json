@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.718-rf-check-daily",
+      "url": "https://messiter.com/rxv2/release/v0.9.718/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.718/littlefs.bin",
+      "fs_md5": "b544a7593d52318188c4746f9b1ecd02",
+      "notes": "The Rotorflight update check now happens once a day, on the first time you open the app that day, and never makes you wait for it - anything it already knows is shown at once and the check happens quietly behind. If it cannot reach the internet it tries again in an hour rather than giving up for the day. Includes 0.9.717."
+    },
+    {
       "name": "RXV2-0.9.717-rf-update-hint",
       "url": "https://messiter.com/rxv2/release/v0.9.717/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.717/littlefs.bin",
@@ -76,11 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.706/littlefs-RXV2-0.9.706-usb-after-update.bin",
       "fs_md5": "c0fd89ab15258841aa2d1f8745cd10e2",
       "notes": "The USB socket should now work straight after an update, without needing a second reboot. The restart was leaving the flight controller still thinking its USB port was open, so the receiver came back to a device that would not answer; it is now given a proper disconnect first. Each boot also records which version is running and from which half of the memory, on the Receiver log, so a firmware update that did not stick can be spotted. Includes 0.9.705."
-    },
-    {
-      "name": "RXV2-0.9.705-cli-autoexit",
-      "url": "https://messiter.com/rxv2/release/v0.9.705/firmware.bin",
-      "notes": "Forgetting to leave the command line no longer breaks everything else. Leaving that page by any route - back, the front screen, or closing the app - now does what Leave without saving does. And if a command line is left open and untouched for a minute and a half, the receiver closes it for you. It never does that while the transmitter is on or the model is armed, because leaving restarts the flight controller. Includes 0.9.704."
     }
   ],
   "rotorflight": {
