@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.715-safety-gates";
+constexpr const char* FW_VERSION = "RXV2-0.9.716-dongle-power";
 
 //*********************************************************************
 //  Auto-update manifest URLs

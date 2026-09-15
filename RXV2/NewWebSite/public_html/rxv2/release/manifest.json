@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.716-dongle-power",
+      "url": "https://messiter.com/rxv2/release/v0.9.716/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.716/littlefs.bin",
+      "fs_md5": "a30e9efbda46266b1fc670de2089eb51",
+      "notes": "The dongle's Wiring section now warns that if you also run a USB cable to the flight controller, the dongle's 5 V must come from the flight controller itself and not from a separate supply - the dongle puts 5 V down that cable, so a second supply would meet the flight controller's own 5 V through it. It also explains that D5 and D6 become a fallback once USB is in use. Includes 0.9.715."
+    },
+    {
       "name": "RXV2-0.9.715-safety-gates",
       "url": "https://messiter.com/rxv2/release/v0.9.715/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.715/littlefs.bin",
@@ -74,13 +81,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.704/littlefs-RXV2-0.9.704-dongle-rxlog.bin",
       "fs_md5": "2c2598b65376519d912286907c7da92f",
       "notes": "On a dongle the Black box page no longer offers the Receiver log button. A dongle has no radio link, no battery sense and no flights of its own, so there was nothing behind it - and tapping it walked you into 'Not on a dongle'. Includes 0.9.703."
-    },
-    {
-      "name": "RXV2-0.9.703-dongle-channels-fix",
-      "url": "https://messiter.com/rxv2/release/v0.9.703/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.703/littlefs-RXV2-0.9.703-dongle-channels-fix.bin",
-      "fs_md5": "e11c1fb2586367bef9b33a8eba22c5b9",
-      "notes": "View channels really does work on a dongle now. 0.9.702 taught the dongle to read the channels and put the button back on the Setup menu, but the page itself still turned you away with 'Not on a dongle'. Includes 0.9.702."
     }
   ]
 }

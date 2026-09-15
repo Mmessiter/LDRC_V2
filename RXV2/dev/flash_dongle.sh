@@ -28,4 +28,8 @@ echo ">> port: $PORT   name: $NAME   wifi: $SSID"
   0x0 "$BD/bootloader.bin" 0x8000 "$BD/partitions.bin" 0x9000 "$NVS" 0xe000 "$BOOT_APP0" \
   0x10000 "$BD/firmware.bin" 0x670000 "$BD/littlefs.bin" | grep -E 'Hash of data verified|fatal|error'
 rm -f "$CSV" "$NVS"
-echo ">> DONE: the board boots as '$NAME' in dongle mode on '$SSID'. Wire 5V, GND, D5<-FC TX, D6->FC RX to a UART set to MSP 115200."
+echo ">> DONE: the board boots as '$NAME' in dongle mode on '$SSID'."
+echo "   Wire 5V, GND, D5<-FC TX, D6->FC RX to a UART set to MSP 115200."
+echo "   If you also run a USB-C cable to the FC, D5/D6 become a fallback (USB wins),"
+echo "   and the 5V MUST come from the flight controller - the dongle drives VBUS down"
+echo "   that cable, so a separate supply would meet the FC's own 5V through it."
