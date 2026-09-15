@@ -67,7 +67,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const fd = new URLSearchParams();
         fd.set('name', v.trim());
         fetch('/api/name', { method: 'POST', body: fd })
-          .then(r => r.text()).then(html => { document.open(); document.write(html); document.close(); })
+          // A refusal (transmitter on, armed, bad name) is a sentence, not a page.
+          .then(r => r.text().then(t => { if (!r.ok) { alert(t); return; }
+                                          document.open(); document.write(t); document.close(); }))
           .catch(() => alert('Could not save — try again.'));
     };
 });

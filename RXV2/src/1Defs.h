@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.726-page-fix";
+constexpr const char* FW_VERSION = "RXV2-0.9.727-preflight-gates";
 
 //*********************************************************************
 //  Auto-update manifest URLs

@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.727-preflight-gates",
+      "url": "https://messiter.com/rxv2/release/v0.9.727/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.727/littlefs.bin",
+      "fs_md5": "bb8c927742b28795520453ebca7c0fad",
+      "notes": "Pre-flight safety check (Malcolm: 'check that none of our code edits is going to interfere with control of the model when it's in the air'). Today's edits could not: the receiver's firmware was unchanged since the reviewed 0.9.715, the apps' own code was unchanged, and the pages only asked for two read-only things. In the air, WiFi and Bluetooth are off anyway - they switch off 0.8 s after arming, locked on with Rotorflight. The check did find four older paths that could restart the receiver or write an update with no transmitter or armed check, which 0.9.715 had given to their siblings: a Bluetooth update now needs the transmitter off (as a WiFi update already did); renaming and Reboot need it off and the model disarmed; the reboot at the end of a Bluetooth update is refused while armed. Renaming now restarts the safe way (throttle-low frames, output parked) instead of a bare restart. And a dongle no longer sends ~100 ms of control frames into the flight controller's MSP port when it restarts."
+    },
+    {
       "name": "RXV2-0.9.726-page-fix",
       "url": "https://messiter.com/rxv2/release/v0.9.726/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.726/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.715/littlefs.bin",
       "fs_md5": "d0d47f67cf9882d01b33747ba48fdbb7",
       "notes": "Safety review fixes. Capturing or clearing the failsafe positions is now refused while the model is armed - capturing on an armed model would have stored the arming switch ON as the failsafe position. Installing firmware is refused while the transmitter is on, because the receiver stops sending control frames for the whole download. Bringing the radios back after a flight now parks the output safely instead of restarting bare. And a dongle no longer writes control frames into the flight controller's settings port while waiting for a reply. Includes 0.9.714."
-    },
-    {
-      "name": "RXV2-0.9.714-adaptive-poll",
-      "url": "https://messiter.com/rxv2/release/v0.9.714/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.714/littlefs.bin",
-      "fs_md5": "fefefcca0416b8c2ee9bbc755bbde7a8",
-      "notes": "View channels now adapts. It asks briskly until the receiver's fast push actually starts working, and only then stands back to let the push do the work. Before, it always stood back - which was slower than it used to be whenever the push did not start. It can no longer be slower than it was. Includes 0.9.713."
     }
   ],
   "rotorflight": {

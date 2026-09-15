@@ -105,7 +105,9 @@ async function load() {
             if (!v) { LDRC.alert('Give it a name first.', { title: 'Rename', icon: '🏷️' }); return; }
             const fd = new URLSearchParams(); fd.set('name', v);
             fetch('/api/name', { method: 'POST', body: fd })
-              .then(r => r.text()).then(html => { document.open(); document.write(html); document.close(); })
+              // A refusal (armed, bad name) is a sentence, not a page.
+              .then(r => r.text().then(t => { if (!r.ok) { LDRC.alert(t, { title: 'Rename', icon: '🏷️' }); return; }
+                                              document.open(); document.write(t); document.close(); }))
               .catch(() => LDRC.alert('Could not reach the dongle.', { title: 'Rename', icon: '🏷️' }));
         };
         document.getElementById('mode').value = String(s.dongle_mode || 0);

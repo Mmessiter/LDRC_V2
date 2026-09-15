@@ -1538,6 +1538,13 @@ inline bool refuseIfArmed(const char* what);     // defined below — refuses on
 //*********************************************************************
 
 inline void handleBleOtaBegin() {
+    // The Bluetooth twin of /api/firmware/install, which the 0.9.715 safety
+    // review gated and this one escaped. Every chunk is a flash erase/write,
+    // which stalls the CPU, so a transfer is minutes of repeated holes in the
+    // control output. Refused before ANYTHING is touched (LittleFS included).
+    // Pre-flight check 2026-09-15.
+    if (refuseIfTxLinked("turn the transmitter off first - the receiver cannot keep sending control frames while it writes an update")) return;
+    if (refuseIfArmed("Bluetooth update")) return;
     String type = server.hasArg("type") ? server.arg("type") : "fw";
     uint32_t size = server.hasArg("size") ? (uint32_t) server.arg("size").toInt() : 0;
     if (size == 0 || size > 4u * 1024u * 1024u) {
@@ -1609,6 +1616,11 @@ inline void handleBleOtaEnd() {
 }
 
 inline void handleBleOtaReboot() {
+    // Armed only, deliberately: begin already required the transmitter off,
+    // and the app ignores this reply ("reply may die with the radio"), so a
+    // refusal on a merely-live link would leave it waiting for a reboot that
+    // never comes. The new image boots at the next power-up instead.
+    if (refuseIfArmed("reboot after a Bluetooth update")) return;
     prefs.putUChar(NVS_KEY_CFG_REBOOT, 1);   // config reboot: skip the RF window so BLE advertising returns and the app can reconnect + confirm
     server.send(200, "application/json", "{\"ok\":true,\"rebooting\":true}");
     bleEarlyPump();          // push the reply out over BLE before the radio dies
@@ -1804,7 +1816,12 @@ inline String confirmPage(const char* title, const char* body, bool autoReload =
 inline void safeOutputParkAndRestart() {
     if (throttleChannel >= 1 && throttleChannel <= 16)
         channelMicros[throttleChannel - 1] = THROTTLE_SAFE_US;
-    for (int i = 0; i < 12; ++i) { sbusTick(); delay(8); }     // ~100 ms of throttle-low frames
+    // Same guard loop() puts round sbusTick(): on a dongle D6 is the flight
+    // controller's MSP port, and in sim mode nothing is listening. RC frames
+    // belong on neither (pre-flight check 2026-09-15 — every dongle reboot was
+    // pushing ~100 ms of CRSF into the FC's MSP parser on the way down).
+    if (!dongleEnabled && !simEnabled)
+        for (int i = 0; i < 12; ++i) { sbusTick(); delay(8); }     // ~100 ms of throttle-low frames
     Serial1.flush();
     Serial1.end();
     pinMode(PIN_SBUS_TX, INPUT_PULLUP); // idle-HIGH through the restart — silence, not noise
@@ -2001,6 +2018,11 @@ inline void handleFirstRun() {
 // AP SSID + hostname budgets and stays readable in page titles.
 
 inline void handleNameSet() {
+    // A rename reboots. It had no transmitter or armed gate at all (pre-flight
+    // check 2026-09-15), and was the last reboot here still on a bare
+    // ESP.restart() — see below.
+    if (refuseIfTxLinked("turn the transmitter off first - renaming restarts the receiver")) return;
+    if (refuseIfArmed("rename")) return;
     String name = server.hasArg("name") ? server.arg("name") : server.arg("plain");
     name.trim();
     if (name.length() > 30) {
@@ -2043,7 +2065,7 @@ inline void handleNameSet() {
     bleEarlyPump();               // over BLE: give the reply a chance to leave before the reboot
     prefs.putUChar(NVS_KEY_CFG_REBOOT, 1);   // config reboot: come straight back to WiFi even if a TX is on
     delay(500);
-    ESP.restart();
+    safeOutputParkAndRestart();   // throttle-low burst, pin parked — a bare ESP.restart() lets the output glitch
 }
 
 //*********************************************************************
@@ -2631,6 +2653,10 @@ inline void handleFlyDisarm() {
 //*********************************************************************
 
 inline void handleReboot() {
+    // Registered for any method, GET included, so a prefetch or a restored
+    // browser tab can fire it. Pre-flight check 2026-09-15: it had no gate.
+    if (refuseIfTxLinked("turn the transmitter off first - this restarts the receiver")) return;
+    if (refuseIfArmed("reboot")) return;
     server.send(200, "text/html", confirmPage("Rebooting",
         "<p>Back in ~5 s.</p>"));
     delay(400);
