@@ -418,8 +418,24 @@ inline void sbusTick() {
         // telemetry at all, disarmed 30 s straight (a 770 coasts ~20 s).
         static uint32_t disarmedSinceMs = 0;
         if (disarmedLive) { if (!disarmedSinceMs) disarmedSinceMs = millis(); } else disarmedSinceMs = 0;
-        const bool rpmFresh     = fcTelem.rpmMs && (uint32_t)(millis() - fcTelem.rpmMs) < 3000;
-        const bool rotorStopped = rpmFresh ? (fcTelem.fcMotorRPM < 60)
+        // Head speed here is the ESC's motor RPM times the gear ratio, and on
+        // a helicopter the motor stops the instant the throttle is cut while
+        // the head coasts on its one-way bearing for ~20 s. So a fresh ZERO
+        // means the MOTOR stopped, not the rotor (Malcolm, the 09-16 flights:
+        // "as the head speed decayed, the tail waggled like an excited
+        // puppy"). Wait out the coast from the last reading that showed the
+        // head turning — and never inside 5 s of the safety switch going on,
+        // whatever the telemetry says (his rule). Both apply once the head
+        // has been SEEN turning this power-up; a plain power-up with the TX
+        // on keeps its prompt boot wiggle. (A brownout reboot in flight is
+        // covered by armedLive above — the TX still says armed.)
+        static uint32_t rotorTurningMs = 0;
+        const bool rpmFresh = fcTelem.rpmMs && (uint32_t)(millis() - fcTelem.rpmMs) < 3000;
+        if (rpmFresh && fcTelem.fcMotorRPM >= 60) rotorTurningMs = millis();
+        const bool coastOver    = !rotorTurningMs || (uint32_t)(millis() - rotorTurningMs) > ROTOR_COAST_MS;
+        const bool disarmedLong = !rotorTurningMs ||
+                                  (disarmedSinceMs && (uint32_t)(millis() - disarmedSinceMs) > WAVE_AFTER_DISARM_MS);
+        const bool rotorStopped = rpmFresh ? (fcTelem.fcMotorRPM < 60 && coastOver && disarmedLong)
                                            : (disarmedSinceMs && (uint32_t)(millis() - disarmedSinceMs) > 30000);
         const bool waveAllowed  = !fcModel || linkQuiet || (disarmedLive && rotorStopped);
         static uint32_t waveWaitSinceMs = 0;     // waiting for the rotor to stop (0 = not waiting)

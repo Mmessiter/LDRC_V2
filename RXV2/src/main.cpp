@@ -942,12 +942,11 @@ void loop() {
             quickBootReset = true;
             events.add("Quick-boot counter cleared");
         } else if (!armedNow && !qbcClearAtMs) {
-            fltPardonMsToSend = FLT_PARDON_MS;
-            fltPardonAnnounceLeft = 25;
+            announcePardon();
             qbcClearAtMs = millis() + 300;
         }
     }
-    if (qbcClearAtMs && (int32_t)(millis() - qbcClearAtMs) >= 0) {
+    if (qbcClearAtMs && (int32_t)(millis() - qbcClearAtMs) >= 0 && pardonDelivered(qbcClearAtMs - 300)) {
         qbcClearAtMs = 0;   // re-schedules itself if armed slipped in
         const bool armedNow = (armingChannel >= 1 && armingChannel <= 16 &&
                                rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 1000 &&
@@ -1075,13 +1074,13 @@ void loop() {
     // the pardon; now the loop keeps running for the 300 ms instead.
     if (flyArmRequested) {
         flyArmRequested = false;
-        if (rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 1000) {
-            fltPardonMsToSend = FLT_PARDON_MS;     // the ~700 ms teardown stall
-            fltPardonAnnounceLeft = 25;            // ~50 ms of acks at 500 Hz
-        }
+        if (rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 1000)
+            announcePardon();                      // the ~700 ms teardown stall
         flyTeardownAtMs = millis() + 300;
     }
-    if (flyTeardownAtMs && (int32_t)(millis() - flyTeardownAtMs) >= 0) {
+    // ...and not until the acks carrying it have actually gone out (the TX may
+    // be busy playing its safety-switch sound right now). Ceiling 1.5 s.
+    if (flyTeardownAtMs && (int32_t)(millis() - flyTeardownAtMs) >= 0 && pardonDelivered(flyTeardownAtMs - 300)) {
         flyTeardownAtMs = 0;
         { StallScope s("wifiOff"); disableWifi(); }
         // Post-mortem copy of the events (Malcolm 2026-08-07: a landing

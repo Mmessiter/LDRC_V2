@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.728-wifi-heal";
+constexpr const char* FW_VERSION = "RXV2-0.9.729-landing-manners";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -135,6 +135,20 @@ inline uint32_t flyTeardownAtMs = 0;
 
 inline bool autoWaveAllowed();   // defined below rx (needs rx.lastMillis)
 inline uint32_t fltPardonMsToSend = FLT_PARDON_MS;   // 0 = "unignore now" (Malcolm's explicit end)
+// Every deferred self-stall (arm teardown, disarm revivals, Bluetooth-off,
+// quick-boot clear) must let the pardon REACH the transmitter before it
+// stalls. The 25 announce acks go out one per received packet, so "all
+// consumed" means the TX was exchanging packets while we announced. It is
+// not always: the V1 TX plays a sound at every safety-switch change, and a
+// stall timed while it is busy with that is logged unexcused (Malcolm, the
+// 09-16 flights: "immediately after turning safety off we sometimes get a
+// long gap which is not excluded"). Wait for the acks, with a ceiling so a
+// silent TX cannot hold the action up for ever.
+constexpr uint32_t PARDON_ANNOUNCE_MAX_MS = 1500;
+inline void announcePardon() { fltPardonMsToSend = FLT_PARDON_MS; fltPardonAnnounceLeft = 25; }
+inline bool pardonDelivered(uint32_t announcedAtMs) {
+    return fltPardonAnnounceLeft == 0 || (uint32_t)(millis() - announcedAtMs) >= PARDON_ANNOUNCE_MAX_MS;
+}
 // What the TX's clock face actually holds is anyone's guess — Malcolm's reads
 // UTC plus six minutes of drift (set in winter, never adjusted). So we LEARN
 // its offset from true UTC whenever a phone sync and a TX time packet occur in
@@ -779,6 +793,8 @@ inline uint32_t bleWaveStartMs = 0;                    // != 0 → wave in progr
 constexpr uint32_t BLE_WAVE_MS      = 1600;            // total wave duration
 constexpr float    BLE_WAVE_HZ     = 2.5f;             // wiggle rate
 constexpr int16_t  BLE_WAVE_AMPL_US = 150;             // gentle: ±150 µs around failsafe
+constexpr uint32_t ROTOR_COAST_MS       = 20000;       // a 770's head coasts ~20 s after the motor is cut
+constexpr uint32_t WAVE_AFTER_DISARM_MS = 5000;        // Malcolm 2026-09-16: no wiggle inside 5 s of the safety switch going on
 
 // Flight telemetry time-series — one sample/second of ESC temp, head speed and
 // battery, into a ring holding the last ~20 min. Reset on a fresh connection so

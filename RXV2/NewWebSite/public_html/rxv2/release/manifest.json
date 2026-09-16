@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.729-landing-manners",
+      "url": "https://messiter.com/rxv2/release/v0.9.729/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.729/littlefs.bin",
+      "fs_md5": "8dacf778ebd4aec0ac7a75eb79c2d9fe",
+      "notes": "Three things from Malcolm's four test flights (2026-09-16, zero crashes). 1) The servo wiggle waited for 'head speed zero' - but that number is the motor's, and on a helicopter the motor stops the instant the throttle is cut while the head coasts on for ~20 s: the tail 'waggled like an excited puppy' on a turning rotor. The wiggle now waits 20 s from the last reading that showed the head turning, and never comes inside 5 s of the safety switch going on. A plain power-up keeps its prompt boot wiggle. 2) Long gaps in the transmitter's log right after the safety switch: on disarm, bringing Bluetooth (and at home, WiFi) back stalled the receiver with no warning to the transmitter, so it was logged as a real gap; on arm, the warning was sent in a 50 ms burst the transmitter can miss while it is writing its own log. Every such pause now announces itself and waits until the transmitter has actually taken the message before it happens. 3) Two wiggles for the price of one: with the transmitter on at power-up, the 30 s Bluetooth boot window closed and auto fly mode switched it straight back on, with a second wiggle. When the model is disarmed it now simply stays up; arming turns it off as before. Firmware only; nothing changes in the air (all of this runs disarmed, on the ground)."
+    },
+    {
       "name": "RXV2-0.9.728-wifi-heal",
       "url": "https://messiter.com/rxv2/release/v0.9.728/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.728/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.717/littlefs.bin",
       "fs_md5": "d4e7421af2fb8bcebeb88108f70b75d6",
       "notes": "The Rotorflight page can now tell you when a newer Rotorflight has come out - the one job these pages cannot do for you. It says nothing at all unless there is something worth acting on, it tells you to back up first because flashing erases everything, and if the new release is one these pages have not been checked against yet it says the opposite: stay where you are, there is no hurry. Includes 0.9.716."
-    },
-    {
-      "name": "RXV2-0.9.716-dongle-power",
-      "url": "https://messiter.com/rxv2/release/v0.9.716/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.716/littlefs.bin",
-      "fs_md5": "a30e9efbda46266b1fc670de2089eb51",
-      "notes": "The dongle's Wiring section now warns that if you also run a USB cable to the flight controller, the dongle's 5 V must come from the flight controller itself and not from a separate supply - the dongle puts 5 V down that cable, so a second supply would meet the flight controller's own 5 V through it. It also explains that D5 and D6 become a fallback once USB is in use. Includes 0.9.715."
     }
   ],
   "rotorflight": {

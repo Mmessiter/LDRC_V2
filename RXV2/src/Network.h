@@ -303,8 +303,21 @@ inline void netStep() {
     // Close the boot BLE window: stop advertising; keep a live client's link.
     if (bleBootGraceUntil && (int32_t)(millis() - bleBootGraceUntil) >= 0) {
         bleBootGraceUntil = 0;
-        if (bleHasClient()) bleFlyQuiet(); else bleStop();
-        events.add("Bluetooth boot window closed");
+        // With auto fly mode and an arming switch, the arm/disarm cycle owns
+        // the radios: disarmed on the ground = Bluetooth up. Closing the
+        // window here only had the disarm revival below switch it straight
+        // back on one pass later — with a second wiggle (Malcolm 2026-09-16:
+        // "two wiggles for the price of one", walking out to the field). So
+        // leave it up; arming takes it down exactly as before.
+        const bool disarmedOnGround = autoFlyActive() && armingChannel >= 1 && armingChannel <= 16 &&
+            rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 1000 &&
+            channelMicros[armingChannel - 1] < 1500;
+        if (disarmedOnGround) {
+            events.add("Bluetooth boot window: staying up while disarmed (arming turns it off)");
+        } else {
+            if (bleHasClient()) bleFlyQuiet(); else bleStop();
+            events.add("Bluetooth boot window closed");
+        }
     }
     // Malcolm 2026-08-01: "whenever the receiver turns WiFi off it should
     // also turn Bluetooth off" — he flew a whole flight with BLE advertising
@@ -328,12 +341,12 @@ inline void netStep() {
         (uint32_t)(millis() - linkStats.connStartMs) >= 30000 &&
         !armedNow &&                       // NEVER stall the loop while armed — wait for disarm
         !bleFlyOffAtMs) {
-        // Pardon first (the stop can stall the loop), then stop ~300 ms later.
-        fltPardonMsToSend = FLT_PARDON_MS;
-        fltPardonAnnounceLeft = 25;
+        // Pardon first (the stop can stall the loop), then stop ~300 ms later
+        // — once the acks carrying the pardon have gone.
+        announcePardon();
         bleFlyOffAtMs = millis() + 300;
     }
-    if (bleFlyOffAtMs && (int32_t)(millis() - bleFlyOffAtMs) >= 0) {
+    if (bleFlyOffAtMs && (int32_t)(millis() - bleFlyOffAtMs) >= 0 && pardonDelivered(bleFlyOffAtMs - 300)) {
         bleFlyOffAtMs = 0;
         if (armedNow) { /* armed in the window — try again next quiet moment */ }
         else {
@@ -585,6 +598,16 @@ inline void netStep() {
             {
                 static uint32_t disarmSinceMs = 0;
                 static uint32_t wifiCheckMs   = 0;
+                // Each revival stalls the loop — eventsPersist() is a flash
+                // write, bleStart()/startWifiStation() hundreds of ms — and
+                // did so with NO pardon, so the transmitter logged every one
+                // as a real gap (Malcolm, the 09-16 flights: "immediately
+                // after turning safety on, a long gap which is recorded,
+                // immediately followed by another long gap which is excluded"
+                // — this, then the flight save, which does announce). Now:
+                // announce, wait for the acks to go, then stall — exactly as
+                // the arm teardown does. Re-arming cancels a pending one.
+                static uint32_t bleReviveAnnouncedMs = 0, wifiReviveAnnouncedMs = 0;
                 const bool armLink = rx.lastMillis &&
                                      (uint32_t)(millis() - rx.lastMillis) < 1000;
                 const bool disarmedNow = autoFlyActive() && (dongleEnabled
@@ -599,20 +622,32 @@ inline void netStep() {
                     // the phone's link (Goblin 2026-09-03, "nothing came").
                     const bool wifiWanted = !staGaveUp && staConnectedThisBoot;
                     const bool bleDown    = !bleAdvertising() && !bleHasClient();
-                    if (bleDown && disarmedFor > 500) {
+                    if (bleDown && disarmedFor > 500 && !bleReviveAnnouncedMs) {
+                        announcePardon();
+                        bleReviveAnnouncedMs = millis();
+                    }
+                    if (bleReviveAnnouncedMs && pardonDelivered(bleReviveAnnouncedMs)) {
+                        bleReviveAnnouncedMs = 0;
+                        statsSelfStallUntilMs = millis() + 2000;   // our own stats look away too
                         events.add(wifiWanted ? "AUTO fly mode: disarmed — Bluetooth back (WiFi follows in 5 s)"
                                               : "AUTO fly mode: disarmed — Bluetooth back (field: no WiFi hunt)");
                         eventsPersist();
-                        bleStart();
+                        if (!bleAdvertising() && !bleHasClient()) bleStart();
                     }
                     if (wifiWanted && disarmedFor > 5000 &&
-                        (uint32_t)(millis() - wifiCheckMs) > 5000) {
+                        (uint32_t)(millis() - wifiCheckMs) > 5000 && !wifiReviveAnnouncedMs) {
                         wifiCheckMs = millis();
+                        announcePardon();
+                        wifiReviveAnnouncedMs = millis();
+                    }
+                    if (wifiReviveAnnouncedMs && pardonDelivered(wifiReviveAnnouncedMs)) {
+                        wifiReviveAnnouncedMs = 0;
+                        statsSelfStallUntilMs = millis() + 2000;
                         events.add("AUTO fly mode: disarmed — WiFi back on");
                         eventsPersist();
                         startWifiStation();      // leaves NET_NO_WIFI: runs once
                     }
-                } else disarmSinceMs = 0;
+                } else { disarmSinceMs = 0; bleReviveAnnouncedMs = 0; wifiReviveAnnouncedMs = 0; }
             }
             break;
         }
