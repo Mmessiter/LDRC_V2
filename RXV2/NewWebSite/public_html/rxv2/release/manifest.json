@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.732-button-spacing",
+      "url": "https://messiter.com/rxv2/release/v0.9.732/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.732/littlefs.bin",
+      "fs_md5": "fefb0563e4418310602934f47e23860a",
+      "notes": "The four round buttons at the top (home, back, search, help) overlapped slightly on Android (Malcolm's Pixel): their positions were set in em, and the web view's base font is 16 px on Android but about 14 px on iPhone, so the middle two grew inward until they touched. They are now placed in fixed pixels, the same on both. Pages only; nothing else changes."
+    },
+    {
       "name": "RXV2-0.9.731-after-update",
       "url": "https://messiter.com/rxv2/release/v0.9.731/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.731/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.720/littlefs.bin",
       "fs_md5": "bef8d68be92f99884a92d5f28491d626",
       "notes": "An install that was simply taking a long time was being reported as a failure. The page gave it two and a half minutes, which is plenty on a good signal and not nearly enough on a weak one. It now says 'still going' and keeps watching for another three minutes before it says anything went wrong - and if it cannot actually see the new version with its own eyes, it says so rather than claiming success. Includes 0.9.719."
-    },
-    {
-      "name": "RXV2-0.9.719-weak-wifi-choice",
-      "url": "https://messiter.com/rxv2/release/v0.9.719/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.719/littlefs.bin",
-      "fs_md5": "9eeca10e6e082745cec33efe1713bf3f",
-      "notes": "When the receiver's WiFi is weak, the Firmware page now says so before you start and offers Bluetooth instead - slower, but it does not depend on the weak signal. And if a WiFi install does crawl and fail, there is now a button to try again over Bluetooth rather than leaving you to work it out. The old firmware is untouched either way. Includes 0.9.718."
     }
   ],
   "rotorflight": {

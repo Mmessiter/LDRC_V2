@@ -134,12 +134,15 @@ body.hasSearch .subtitle{max-width:calc(100% - 1rem)}
  * (in app.js) reads the template and shows it as a modal overlay. */
 .helpBtn{
     position:fixed;
-    top:max(0.7em, env(safe-area-inset-top, 0.7em));
-    /* 2.6em in from the corner: the app's demo/review covers draw their own
+    top:max(10px, env(safe-area-inset-top, 10px));
+    /* ~60px in from the corner: the app's demo/review covers draw their own
        small X there (Malcolm 2026-09-11, iPad: "I sometimes hit the little X
-       by mistake"). The search circle keeps its place beside the ?. */
-    right:calc(max(0.7em, env(safe-area-inset-right, 0.7em)) + 2.6em);
-    width:3em;height:3em;border-radius:50%;
+       by mistake"). The search circle keeps its place beside the ?.
+       PIXELS, not em: the web view's base font is ~14px on iOS and 16px on
+       Android, and em-based offsets grew inward until the middle two circles
+       overlapped on a Pixel (Malcolm 2026-09-16). */
+    right:calc(max(10px, env(safe-area-inset-right, 10px)) + 52px);
+    width:46px;height:46px;border-radius:50%;
     background:#f4f7f9;color:#3a5165;
     font:700 1.5em/1 -apple-system,BlinkMacSystemFont,sans-serif;
     border:1.5px solid rgba(125,158,176,.5);cursor:pointer;
@@ -150,9 +153,9 @@ body.hasSearch .subtitle{max-width:calc(100% - 1rem)}
    2026-09-07: "search becomes available everywhere" - the menu buttons went). */
 .searchBtn{
     position:fixed;
-    top:max(0.7em, env(safe-area-inset-top, 0.7em));
-    right:calc(max(0.7em, env(safe-area-inset-right, 0.7em)) + 6.1em);
-    width:3em;height:3em;border-radius:50%;
+    top:max(10px, env(safe-area-inset-top, 10px));
+    right:calc(max(10px, env(safe-area-inset-right, 10px)) + 106px);
+    width:46px;height:46px;border-radius:50%;
     display:flex;align-items:center;justify-content:center;
     background:#f4f7f9;
     font-size:1.55em;line-height:1;text-decoration:none;
@@ -165,9 +168,9 @@ body.hasSearch .subtitle{max-width:calc(100% - 1rem)}
    to the menu never needs a scroll to the bottom. */
 .homeBtn{
     position:fixed;
-    top:max(0.7em, env(safe-area-inset-top, 0.7em));
-    left:max(0.7em, env(safe-area-inset-left, 0.7em));
-    width:3em;height:3em;border-radius:50%;
+    top:max(10px, env(safe-area-inset-top, 10px));
+    left:max(10px, env(safe-area-inset-left, 10px));
+    width:46px;height:46px;border-radius:50%;
     display:flex;align-items:center;justify-content:center;
     background:#f4f7f9;
     font-size:1.55em;line-height:1;text-decoration:none;
@@ -179,9 +182,9 @@ body.hasSearch .subtitle{max-width:calc(100% - 1rem)}
    always in reach; the old bottom "Back to …" buttons are hidden below. */
 .backBtn{
     position:fixed;
-    top:max(0.7em, env(safe-area-inset-top, 0.7em));
-    left:calc(max(0.7em, env(safe-area-inset-left, 0.7em)) + 3.5em);
-    width:3em;height:3em;border-radius:50%;
+    top:max(10px, env(safe-area-inset-top, 10px));
+    left:calc(max(10px, env(safe-area-inset-left, 10px)) + 54px);
+    width:46px;height:46px;border-radius:50%;
     display:flex;align-items:center;justify-content:center;
     background:#f4f7f9;
     font-size:1.55em;line-height:1;text-decoration:none;

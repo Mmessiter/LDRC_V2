@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.731-after-update";
+constexpr const char* FW_VERSION = "RXV2-0.9.732-button-spacing";
 
 //*********************************************************************
 //  Auto-update manifest URLs
