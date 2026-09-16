@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.730-dongle-review",
+      "url": "https://messiter.com/rxv2/release/v0.9.730/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.730/littlefs.bin",
+      "fs_md5": "6396456e2899f4260c9bb046988a5fec",
+      "notes": "Before two dongles go to a stranger: five independent reviews of the whole dongle path (first contact, byte-level correctness of every Rotorflight read and write, the dongle in a flying model, the phone apps over Bluetooth, and the guide against reality), every finding checked in the code before it was fixed. Nothing changes in the air for a receiver. What was fixed: the receiver now says 'No flight controller is answering' at once instead of waiting 8 s per read; a synchronous flight-controller wait was still pumping control frames into a dongle's MSP port (now guarded twice over); a WiFi retry scheduled just before arming could switch the WiFi radio back on for the whole flight (now cleared by the teardown); a dongle's armed word is now asked four times a second, 'no fresh word' is never taken as 'disarmed', and every write, save, restart and reboot a dongle can be asked for needs a fresh 'disarmed' from the flight controller; a dongle never rewrites another model's telemetry sensors, never blind-restarts a silent flight controller, never sleeps on a low battery, never opens the raw MSP bridge, and never reads a radio it has not got; three reboots that skipped the USB close (factory reset, first-run, WiFi) now close it; the Rotorflight hub no longer says 'connected' with nothing answering; Easy tuning could wrap a rate over 1275 deg/s into a wrong byte and 'verify' it; a blank Servos box was written as 0 us; PID+ showed a control Rotorflight 4.6 hard-codes; PID spool-up now covers all 6 banks; the dongle page saved ports with the OLD speed over Bluetooth; the front page recovers by itself after a reboot; the welcome card and help now speak of a dongle. Apps 5.68 (iOS) / 5.61 (Android): a backup from another model no longer carries its pilot's channel map or selector channels; timeouts reach pages as one plain line, not a web page; a refused update says the receiver's own sentence and offers a way back; Bluetooth update transfers get the time they need; Android now shows the pages' plain dialogs (rename worked on iPhone only) and no longer loops when Bluetooth is off; iPhone notices Bluetooth being switched on and reconnects by identity, not by name. The one-page guide and the wiring page were rewritten: the 5 V rule, Nexus port order, how the app really connects, and where the iPhone app stands."
+    },
+    {
       "name": "RXV2-0.9.729-landing-manners",
       "url": "https://messiter.com/rxv2/release/v0.9.729/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.729/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.718/littlefs.bin",
       "fs_md5": "b544a7593d52318188c4746f9b1ecd02",
       "notes": "The Rotorflight update check now happens once a day, on the first time you open the app that day, and never makes you wait for it - anything it already knows is shown at once and the check happens quietly behind. If it cannot reach the internet it tries again in an hour rather than giving up for the day. Includes 0.9.717."
-    },
-    {
-      "name": "RXV2-0.9.717-rf-update-hint",
-      "url": "https://messiter.com/rxv2/release/v0.9.717/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.717/littlefs.bin",
-      "fs_md5": "d4e7421af2fb8bcebeb88108f70b75d6",
-      "notes": "The Rotorflight page can now tell you when a newer Rotorflight has come out - the one job these pages cannot do for you. It says nothing at all unless there is something worth acting on, it tells you to back up first because flashing erases everything, and if the new release is one these pages have not been checked against yet it says the opposite: stay where you are, there is no hurry. Includes 0.9.716."
     }
   ],
   "rotorflight": {

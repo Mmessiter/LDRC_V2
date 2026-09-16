@@ -562,7 +562,7 @@ class MainActivity : AppCompatActivity() {
         val begin = bleReqSync("POST", "/api/bleota/begin?type=$type&size=${bytes.size}")
         if (begin.code == 404)
             throw Exception("this receiver's firmware is too old for Bluetooth updates — do this one update over WiFi, then Bluetooth works from now on")
-        if (begin.code != 200) throw Exception("begin($type): ${String(begin.body)}")
+        if (begin.code != 200) throw Exception("refused: " + String(begin.body))   // the receiver's own sentence; final (no retry)
         val chunkData = ble.otaChunkSize()
         var off = 0
         // A BLE hiccup mid-stream is NOT fatal: the receiver keeps the
@@ -636,7 +636,8 @@ class MainActivity : AppCompatActivity() {
             // so a transfer that died mid-way gets a second, fresh attempt
             val sendImage = { type: String, bytes: ByteArray, base: Long, label: String ->
                 try { streamImage(type, bytes, base) } catch (e: Exception) {
-                    if ((e.message ?: "").contains("too old")) throw e
+                    val m = e.message ?: ""
+                    if (m.contains("too old") || m.startsWith("refused:")) throw e   // a refusal is final: no retry
                     otaMsg = "Bluetooth hiccup — starting the $label again…"
                     Thread.sleep(2000)
                     streamImage(type, bytes, base)
@@ -688,6 +689,33 @@ class MainActivity : AppCompatActivity() {
         w.settings.mediaPlaybackRequiresUserGesture = false
         w.setBackgroundColor(0xFF0B1220.toInt())
         w.addJavascriptInterface(Bridge(), "AndroidBle")
+        // Pages use a few plain alert()/confirm()/prompt() calls (Setup's
+        // rename, refusals). A WebView shows NONE of them without a
+        // WebChromeClient: the rename button did nothing and refusals were
+        // swallowed silently (2026-09-16 review). iOS implements all three.
+        w.webChromeClient = object : android.webkit.WebChromeClient() {
+            override fun onJsAlert(v: WebView?, url: String?, msg: String?, r: android.webkit.JsResult?): Boolean {
+                android.app.AlertDialog.Builder(this@MainActivity).setMessage(msg ?: "")
+                    .setPositiveButton("OK") { _, _ -> r?.confirm() }
+                    .setOnCancelListener { r?.cancel() }.show()
+                return true
+            }
+            override fun onJsConfirm(v: WebView?, url: String?, msg: String?, r: android.webkit.JsResult?): Boolean {
+                android.app.AlertDialog.Builder(this@MainActivity).setMessage(msg ?: "")
+                    .setPositiveButton("OK") { _, _ -> r?.confirm() }
+                    .setNegativeButton("Cancel") { _, _ -> r?.cancel() }
+                    .setOnCancelListener { r?.cancel() }.show()
+                return true
+            }
+            override fun onJsPrompt(v: WebView?, url: String?, msg: String?, def: String?, r: android.webkit.JsPromptResult?): Boolean {
+                val box = android.widget.EditText(this@MainActivity).apply { setText(def ?: ""); setSelectAllOnFocus(true) }
+                android.app.AlertDialog.Builder(this@MainActivity).setMessage(msg ?: "").setView(box)
+                    .setPositiveButton("OK") { _, _ -> r?.confirm(box.text.toString()) }
+                    .setNegativeButton("Cancel") { _, _ -> r?.cancel() }
+                    .setOnCancelListener { r?.cancel() }.show()
+                return true
+            }
+        }
         w.webViewClient = object : WebViewClient() {
             // A crashed WebView renderer otherwise leaves a dead BLACK screen
             // until the app is force-quit (seen on the Fold saving settings,

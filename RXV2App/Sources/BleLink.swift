@@ -405,6 +405,9 @@ final class BleLink: NSObject, ObservableObject {
         if path.hasPrefix("/api/firmware")       { return 60 }
         if path.hasPrefix("/api/backup")         { return 30 }
         if path.hasPrefix("/api/bb")             { return 30 }
+        // begin reads 20 flights + 20 backups into RAM; end mounts/formats
+        // LittleFS and writes them back — seconds, not milliseconds.
+        if path.hasPrefix("/api/bleota")         { return 30 }
         // Everything else: pages and ordinary polls, which the receiver answers
         // in milliseconds. Stays at 4 s and MUST stay short.
         //
@@ -522,7 +525,14 @@ final class BleLink: NSObject, ObservableObject {
 
 extension BleLink: CBCentralManagerDelegate, CBPeripheralDelegate {
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
-        if central.state == .poweredOn, case .scanning = state {
+        if central.state == .poweredOn {
+            // Scan from .scanning — and from .failed/.idle too: Bluetooth
+            // switched on AFTER launch used to leave "Bluetooth is switched
+            // off" on screen until a relaunch (2026-09-16 review).
+            var wants = false
+            switch state { case .scanning, .idle, .failed: wants = true; default: break }
+            if !wants { return }
+            state = .scanning
             // Instant path first: connect by stored identifier, skipping the
             // advertisement wait entirely. Falls through to a normal scan
             // (with discovery auto-connect) when nothing is stored.
@@ -542,7 +552,7 @@ extension BleLink: CBCentralManagerDelegate, CBPeripheralDelegate {
         // Reconnect via fresh discovery: the rebooted receiver reappears
         // here first — grab it the same way a manual tap would.
         if case .reconnecting(let wanted) = state,
-           peripheral.identifier == self.peripheral?.identifier || name == wanted {
+           (self.peripheral != nil ? peripheral.identifier == self.peripheral!.identifier : name == wanted) {
             central.stopScan()
             if let old = self.peripheral, old !== peripheral {
                 central.cancelPeripheralConnection(old)

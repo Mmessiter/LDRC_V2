@@ -9,7 +9,7 @@
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Governor (global) &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=221">
-<script src="/app.js?v=256" defer></script>
+<script src="/app.js?v=257" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;
         padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -417,7 +417,8 @@ async function pidSpoolupOnAllBanks() {
     const st = hexToBytes(await LDRC.msp(101));
     const was = st.length > 23 ? (st[23] & 0x0f) : 0;
     let changed = 0;
-    for (let b = 0; b < 4; b++) {
+    const nb = (st.length > 24 && st[24] >= 1 && st[24] <= 8) ? st[24] : 6;   // byte 24 = PID bank count (RF 4.6: 6, not 4)
+    for (let b = 0; b < nb; b++) {
         await LDRC.msp(210, b.toString(16).padStart(2, '0'));
         const g = hexToBytes(await LDRC.msp(148));
         if (g.length < 17) continue;

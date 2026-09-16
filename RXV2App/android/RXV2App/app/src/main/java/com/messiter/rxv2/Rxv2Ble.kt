@@ -137,8 +137,11 @@ class Rxv2Ble(private val context: Context) {
     }
 
     fun startScan() {
-        val a = adapter ?: run { state = State.Failed("Bluetooth unavailable"); return }
-        if (!a.isEnabled) { state = State.Failed("Bluetooth is switched off"); return }
+        // Only post Failed once: MainActivity answers Failed with showScanner(),
+        // which scans again — with the adapter off that was an endless loop of
+        // list rebuilds and toasts (2026-09-16 review).
+        val a = adapter ?: run { if (state !is State.Failed) state = State.Failed("Bluetooth unavailable"); return }
+        if (!a.isEnabled) { if (state !is State.Failed) state = State.Failed("Bluetooth is switched off"); return }
         found.clear(); smoothRssi.clear(); onFound?.invoke(emptyList())
         state = State.Scanning
         scanner = a.bluetoothLeScanner
@@ -311,6 +314,7 @@ class Rxv2Ble(private val context: Context) {
                 path.startsWith("/api/firmware")     -> 60000L
                 path.startsWith("/api/backup")       -> 30000L
                 path.startsWith("/api/bb")           -> 30000L
+                path.startsWith("/api/bleota")       -> 30000L   // begin/end read and write flash for seconds
                 // Short, and it matters: this queue is serial, so the default
                 // window is how long everything behind an unanswered request
                 // waits. My comment claimed this matched iOS; it did not — iOS

@@ -269,9 +269,10 @@
                     try {
                         const r = await fetch(url, { cache: 'no-store' });
                         if (r.ok) return (await r.text()).trim();
-                        lastErr = new Error(r.status === 409 ? (await r.text())
-                                            : 'HTTP ' + r.status + ': ' + (await r.text()));
-                        if (r.status === 409) break;   // armed — final, retrying is pointless
+                        const body = await r.text();
+                        const noFc = r.status === 503 && body.indexOf('No flight controller') === 0;
+                        lastErr = new Error((r.status === 409 || noFc) ? body : 'HTTP ' + r.status + ': ' + body);
+                        if (r.status === 409 || noFc) break;   // armed, or nobody answering — final, retrying is pointless
                     } catch (e) { lastErr = e; }
                     if (attempt < retries - 1) await new Promise(rs => setTimeout(rs, 200));
                 }
@@ -396,6 +397,7 @@
         fcTelemBanner(st, elId) {
             const el = document.getElementById(elId);
             if (!el) return false;
+            if (st && st.dongle) { el.style.display = 'none'; return false; }   // a dongle never touches the sensor list
             const fc = (st && st.fcinfo) || {};
             const doneAt = +el.dataset.telemDone || 0;
             if (doneAt && Date.now() - doneAt < 25000) return true;   // let the "restored" note be read

@@ -22,6 +22,11 @@ inline bool bleAdvertising();   // defined in BleConfig.h (true while advertisin
 inline void bleFlyQuiet();
 inline bool bleHasClient();
 inline void bleStop();
+// Deferred STA re-begin fuse. File-scope (not a static inside netStep) so
+// disableWifi() can CLEAR it: a retry scheduled 200 ms before the arming
+// teardown used to fire one pass after it and switch the WiFi radio back on
+// for the whole flight (2026-09-16 review).
+inline uint32_t wifiRebeginAtMs = 0;
 
 //*********************************************************************
 //  Net-mode name (for UI + serial)
@@ -288,6 +293,7 @@ inline void disableWifi() {
     MDNS.end();
     WiFi.disconnect(true);
     WiFi.mode(WIFI_OFF);
+    wifiRebeginAtMs = 0;          // no re-begin may outlive the teardown
     netMode = NET_NO_WIFI;
     wifiRecoveryArmed = false;   // stay off until a real fly-then-land cycle
     events.add("WiFi off (until reboot)");
@@ -359,9 +365,10 @@ inline void netStep() {
     // every retry — long enough to pause CRSF/SBUS output and starve radioPoll,
     // so a flaky WiFi (desensed by the nRF24) made the FC flash to zero. We now
     // record when to re-begin and fire it on a later pass, never delaying.
-    static uint32_t wifiRebeginAtMs = 0;
     if (wifiRebeginAtMs && (int32_t)(millis() - wifiRebeginAtMs) >= 0) {
         wifiRebeginAtMs = 0;
+        if (netMode == NET_NO_WIFI) { /* the radios were switched off meanwhile — stay off */ }
+        else
         WiFi.begin(getEffectiveSsid().c_str(), getEffectivePass().c_str());
         netStateStart = millis();
     }

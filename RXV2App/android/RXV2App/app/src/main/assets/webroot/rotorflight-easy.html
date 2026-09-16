@@ -9,7 +9,7 @@
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Easy tuning &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=221">
-<script src="/app.js?v=256" defer></script>
+<script src="/app.js?v=257" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;gap:.6em;
         padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -245,7 +245,7 @@ function pidBytes() {
 function ratesBytes() {
     const b = ratesRaw.slice(), r = feelRate(+$('s_agile').value), e = feelExpoOf(+$('s_expo').value);
     const set = (o, rate) => {                                        // axis block: rcRate, rcExpo, srate, response, accel16
-        if (touched.agile) b[o] = Math.round(rate / 5);
+        if (touched.agile) b[o] = Math.min(255, Math.max(0, Math.round(rate / 5)));   // a Uint8Array wraps silently: 1400/5 = 280 became 24 (= 120 deg/s) and the read-back "verified" it
         if (touched.expo)  b[o + 1] = e;
     };
     set(1, r.rp); set(7, r.rp); set(13, r.yaw);
@@ -260,7 +260,9 @@ function govBytes() {
 function same(a, b, n) { for (let i = 0; i < n; i++) if (a[i] !== b[i]) return false; return true; }
 async function pidSpoolupOnAllBanks() {
     let n = 0;
-    for (let i = 0; i < 4; i++) {
+    const st0 = hexToBytes(await LDRC.msp(101));
+    const nb = (st0.length > 24 && st0[24] >= 1 && st0[24] <= 8) ? st0[24] : 6;   // MSP 101 byte 24 = PID bank count (RF 4.6: 6)
+    for (let i = 0; i < nb; i++) {
         await LDRC.msp(210, P(i));
         const g = hexToBytes(await LDRC.msp(148));
         if (g.length < 17 || (g[15] & 0x10)) continue;

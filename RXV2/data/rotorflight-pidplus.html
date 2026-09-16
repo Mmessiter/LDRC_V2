@@ -9,7 +9,7 @@
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>PID+ &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=221">
-<script src="/app.js?v=256" defer></script>
+<script src="/app.js?v=257" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;
         padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -47,7 +47,7 @@
 
     <div class=card>
         <h2>Filters &amp; limits</h2>
-        <div class=fldRow><label data-help="Keeps the cyclic pointing the same way in space while the model pirouettes, so a flat piro stays flat. Normally ON.">Hold cyclic true in pirouettes (piro comp)</label><input type=checkbox id=f_piro></div>
+        <div class=fldRow style="display:none"><label>Hold cyclic true in pirouettes (piro comp) — always on in Rotorflight 4.6</label><input type=checkbox id=f_piro checked disabled></div>
         <div class=fldRow><label data-help="On the ground the flight controller quietly lets built-up corrections drain away, so it never fights the ground or leans the swash before take-off.">Relax corrections on the ground (error decay)</label><input type=number id=f_ged></div>
         <div class=fldRow><label data-help="During fast roll moves the slow-trim (I) is held back so it cannot wind up and snap back after the move. Lower = more relief.">Roll wind-up relief (I-term relax cutoff)</label><input type=number id=f_cR></div>
         <div class=fldRow><label data-help="During fast pitch moves the slow-trim (I) is held back so it cannot wind up and snap back after the move. Lower = more relief.">Pitch wind-up relief (I-term relax cutoff)</label><input type=number id=f_cP></div>
@@ -104,7 +104,6 @@
 // Mapping: fieldId → byte offset in the MSP_PID_PROFILE payload (43 bytes total).
 // Lifted from v1's Nexus.h Parse_MSP_PID_PROFILE / WritePIDAdvancedToNexusAndSave.
 const FIELDS = [
-    ['f_piro',  6, 'bool'],
     ['f_ged',   1],
     ['f_cR',   17], ['f_cP',   18], ['f_cY',   19],
     ['f_eR',    7], ['f_eP',    8], ['f_eY',    9],

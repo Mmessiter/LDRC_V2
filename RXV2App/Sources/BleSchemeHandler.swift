@@ -403,13 +403,11 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
                 self.deliver(task, url: url, code: resp.code == 0 ? 200 : resp.code,
                              type: resp.contentType, body: resp.body)
             case .failure(let err):
-                let html = """
-                <html><body style="font-family:-apple-system;padding:2em;text-align:center">
-                <h2>Receiver not reachable</h2><p>\(err.localizedDescription)</p>
-                <p><a href="ble://rx/">Try again</a></p></body></html>
-                """
-                self.deliver(task, url: url, code: 502, type: "text/html",
-                             body: Data(html.utf8))
+                // Plain text, 504: pages show e.message and used to print this
+                // as raw HTML, and 502 is the firmware's own "FC rejected" code
+                // (2026-09-16 review).
+                self.deliver(task, url: url, code: 504, type: "text/plain",
+                             body: Data("no answer from the receiver (\(err.localizedDescription))".utf8))
             }
         }
     }
@@ -593,7 +591,8 @@ final class BleOta {
             // so a transfer that died mid-way gets a second, fresh attempt
             func sendImage(_ type: String, _ bytes: Data, _ base: Int64, _ label: String) throws {
                 do { try streamImage(type: type, bytes: bytes, base: base) } catch {
-                    if error.localizedDescription.contains("too old") { throw error }
+                    let m = error.localizedDescription
+                    if m.contains("too old") || m.hasPrefix("refused:") { throw error }   // a refusal is final: no retry
                     set(phaseNow(), "Bluetooth hiccup — starting the \(label) again…")
                     Thread.sleep(forTimeInterval: 2)
                     try streamImage(type: type, bytes: bytes, base: base)
@@ -701,7 +700,8 @@ final class BleOta {
             throw fault("this receiver's firmware is too old for Bluetooth updates — do this one update over WiFi, then Bluetooth works from now on")
         }
         guard begin.code == 200 else {
-            throw fault("begin(\(type)): \(String(data: begin.body, encoding: .utf8) ?? "")")
+            // The receiver's own sentence ("ARMED - …", "turn the transmitter off first - …"), marked final.
+            throw fault("refused: " + (String(data: begin.body, encoding: .utf8) ?? "the receiver refused to start the update"))
         }
         var chunkData = 64
         DispatchQueue.main.sync { chunkData = self.link.otaChunkSize() }

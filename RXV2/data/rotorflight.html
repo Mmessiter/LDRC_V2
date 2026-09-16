@@ -9,7 +9,7 @@
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rotorflight &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=221">
-<script src="/app.js?v=256" defer></script>
+<script src="/app.js?v=257" defer></script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -44,8 +44,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const fc = s.fcinfo || {};
     const label = (fc.rf_major > 0)
         ? ('Rotorflight ' + fc.rf_major + '.' + fc.rf_minor + ' (BetaFlight ' + fc.fw_major + '.' + fc.fw_minor + '.' + fc.fw_patch + ' \u2022 API ' + fc.api_major + '.' + fc.api_minor + ')')
-        : (fc.detected ? fc.variant : 'Flight controller connected (version pending)');
+        : (fc.detected ? fc.variant : 'No flight controller answering \u2014 check it is powered, its port, or the USB cable');
     LDRC.setText('fcInfo', label);
+    // No FC = the four doors lead nowhere; dim them rather than let each fail in turn.
+    document.querySelectorAll('a.btn-fw').forEach(a => { a.style.opacity = fc.detected ? '' : '.45'; a.style.pointerEvents = fc.detected ? '' : 'none'; });
     LDRC.govThrottleBanner(s, 'thrBanner');   // 0.9.551: nag until a flight reaches full throttle
     LDRC.fcTelemBanner(s, 'telemBanner');     // 0.9.556: FC sensor list wiped = no volts/RPM on the TX
     if (!s.dongle) LDRC.fcTelemSpeedCard(s, 'telemSpeed');   // 0.9.563: fast (1000/1) vs standard (250/8) telemetry link rate - CRSF only, not for a dongle

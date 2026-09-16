@@ -9,7 +9,7 @@
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Home &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=221">
-<script src="/app.js?v=256" defer></script>
+<script src="/app.js?v=257" defer></script>
 <style>
 /* First paint from memory (Malcolm 2026-09-10: the receiver layout flashed
    before the dongle one): classes set on <html> by the hint script below,
@@ -89,7 +89,7 @@ html.h-dongle #dongleBanner { display: block !important; }
         <div id=dongleBanner style="display:none;text-align:center;padding:1em;border-radius:12px;margin:0 0 1em;
              background:#5fa099;color:#0e2e2a;font-weight:700;box-shadow:0 3px 12px rgba(95,160,153,.45)">
             <div style="font-size:1.3em;letter-spacing:.05em">&#128268; ROTORFLIGHT DONGLE</div>
-            <div style="font-size:.85em;font-weight:400;margin-top:.3em;display:none" id=dongleWhy>Connect dongle to a spare UART and use configurator to set that port to MSP 115200</div>
+            <div style="font-size:.85em;font-weight:400;margin-top:.3em;display:none" id=dongleWhy>No flight controller yet: plug its USB-C into the dongle (nothing to set), or set the port the lead is in to MSP 115200 &mdash; Ports page or the Configurator.</div>
         </div>
         <div id=simBanner style="display:none;text-align:center;padding:1em;border-radius:12px;margin:0 0 1em;
              background:#6cab5e;color:#0e2e08;font-weight:700;box-shadow:0 3px 12px rgba(108,171,94,.45)">
@@ -269,7 +269,20 @@ function updateBindState(s) {
                 if (open) cb.innerHTML = '<b>Command line open</b> &mdash; the model cannot arm until you Save or Leave it. <a href="/cli">Command line</a>'; } }
     { const dw = document.getElementById('dongleWhy');   // the wiring hint only while nothing answers (Malcolm 2026-09-10)
       if (dw) dw.style.display = (s.dongle && !(s.fcinfo && s.fcinfo.detected)) ? '' : 'none'; }
+    if (s.dongle && !window.__dongleHelp) {   // the ? help: about a dongle, not transceivers and binding
+        window.__dongleHelp = true;
+        const hc = document.getElementById('helpContent');
+        if (hc) hc.innerHTML =
+            '<h2>Rotorflight dongle</h2>'
+          + '<p>This board has no radio of its own. It talks to the flight controller \u2014 by the USB-C cable, or by its lead once that port is set to <b>dongle on a wire</b> \u2014 and your phone talks to it by Bluetooth. Your own radio and receiver fly the model; nothing about them changes.</p>'
+          + '<h3>Buttons</h3><ul>'
+          + '<li><b>Rotorflight setup and Wizard</b> \u2014 appears once the flight controller answers: wizards, every setting, backups.</li>'
+          + '<li><b>Setup</b> \u2014 View channels (as the flight controller sees them), the dongle\u2019s name and serial speed, updates.</li>'
+          + '</ul><h3>Safety</h3><p>Blades off on the bench. Once a second the dongle asks the flight controller whether it is armed: while armed, nothing can be changed and Bluetooth goes quiet; it comes back a moment after you disarm.</p>'
+          + '<h3>Nothing answering?</h3><p>Model powered (the dongle has no power of its own), a <b>data</b> USB-C cable in the flight controller\u2019s USB socket \u2014 or the port the lead is in set to dongle on a wire (Ports page, with the USB cable in). Give it ten seconds.</p>';
+    }
     LDRC.setHtml('subtitle', subtitle);
+    window.__fcArmed = !!(s.fc_armed || (s.rf && s.rf.armed));   // never pop an update offer on an armed model
     const bb = document.getElementById('bindBanner');
     if (bb) bb.style.display = (s.dongle || (s.bind && s.bind.bound)) ? 'none' : '';
     // The Bind button's two personalities (see bindEnterFlow/bindCancelFlow).
@@ -301,7 +314,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     // Time-teaching now lives in app.js (LDRC.teachTime, every page).
     const s = await LDRC.fetchState();
-    if (!s) { LDRC.setText('subtitle', 'connection lost — try refresh'); return; }
+    if (!s) {
+        // A config reboot the app rides through can land here before the
+        // reconnect does; there is no refresh control on this page, so keep
+        // asking and start afresh the moment the receiver answers (2026-09-16).
+        LDRC.setText('subtitle', 'connection lost \u2014 reconnecting\u2026');
+        const again = setInterval(async () => { if (await LDRC.fetchState()) { clearInterval(again); location.reload(); } }, 3000);
+        return;
+    }
 
     // Keep the Rotorflight button AND the bind status in step with live state
     // (FC detection, and bind completing) without needing a page reload.
@@ -434,6 +454,15 @@ function paintModelName(s) {
     const gate = document.getElementById('nameGate');
     const menu = document.getElementById('mainMenu');
     if (!custom) {
+        if (s.dongle) {   // a dongle: say so, and no home-WiFi fields (it has no use for them; the guide says "leave blank")
+            const h = gate.querySelector('h2'); if (h) h.textContent = 'Welcome \u2014 let\u2019s name this dongle';
+            const intro = gate.querySelector('p'); if (intro) intro.textContent = 'Give it a name; that is all it needs.';
+            const lbl = gate.querySelector('form > p'); if (lbl) lbl.innerHTML = 'Dongle name <span style="font-weight:400">(required)</span>';
+            const ss = document.getElementById('gateSsid'), pw = document.getElementById('gatePass');
+            if (ss) { if (ss.previousElementSibling && ss.previousElementSibling.tagName === 'P') ss.previousElementSibling.style.display = 'none'; ss.style.display = 'none'; }
+            if (pw) { pw.style.display = 'none'; if (pw.nextElementSibling && pw.nextElementSibling.tagName === 'P') pw.nextElementSibling.style.display = 'none'; }
+            const nx = document.getElementById('gateNextSteps'); if (nx) nx.innerHTML = '<b>Next:</b> it restarts under the new name \u2014 tap it again in the app\u2019s list.';
+        }
         // First-run: hide the menu, show the naming card, focus the input.
         if (gate) gate.style.display = '';
         if (menu) menu.style.display = 'none';
@@ -886,7 +915,7 @@ async function checkFirmware(current) {
             b.style.cursor = 'pointer';
             b.onclick = () => offerUpdate(current, latest);
             b.style.display = '';
-            offerUpdate(current, latest);     // proactively offer the update the moment we connect
+            if (!window.__fcArmed) offerUpdate(current, latest);     // proactively offer the update the moment we connect (not on an armed model)
         } else {
             b.textContent = '✓  Firmware up to date';
             b.style.background = 'rgba(168,210,154,.85)';
@@ -1025,7 +1054,10 @@ function bleOtaWatch() {
         try { p = await (await fetch('/app/bleota/progress', { cache: 'no-store' })).json(); } catch (e) {}
         if (p) {
             if (p.phase === 'error') {
-                if (slow) slow.textContent = 'Update failed: ' + (p.msg || 'unknown error') + ' — reload and try again.';
+                if (slow) {   // the card replaced the menu: give a way out
+                    slow.textContent = 'Update failed: ' + (p.msg || 'unknown error') + ' \u2014 ';
+                    const a = document.createElement('a'); a.href = '/'; a.textContent = 'back to the menu'; slow.appendChild(a);
+                }
                 return;
             }
             if (p.phase === 'done') {

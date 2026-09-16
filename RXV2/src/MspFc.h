@@ -787,9 +787,7 @@ inline bool mspRequestAndWait(uint8_t function, const uint8_t* req, uint8_t reqL
         // programming poll made the swash twitch every ~2 s — this wait
         // starved the channel stream and the FC flickered into failsafe).
         // The radio keeps channels fresh, sbusTick keeps frames flowing.
-        radioPoll();
-        sbusTick();
-        protocolRx();
+        keepFlyingTick();          // guarded: no RC frames on a dongle (its Serial1 IS the FC's MSP port)
         delay(1);
         const uint32_t chunkMs = mspWaitChunkMs;
         if (chunkMs && chunkMs != lastChunk) {           // a chunk of OUR reply landed
@@ -874,6 +872,7 @@ inline bool telemWriteSync(const uint8_t img[52]) {
 // failed, 2 = the FC did not answer the read (the save goes ahead — a busy
 // FC is not an empty one; the watch re-checks within 30 s).
 inline uint8_t telemGuardBeforeSave(const char* who) {
+    if (dongleEnabled) return 0;   // a dongle never rewrites another model's telemetry setup
     uint8_t img[52] = {0};
     const uint16_t n = telemReadSync(img);
     if (n < 12) return 2;
@@ -1217,7 +1216,7 @@ inline void dongleStatusTick() {
     if (UsbHostMsp::cliMode) return;                    // the command line owns the port
     static uint32_t lastMs = 0;
     if (!dongleEnabled || !fcInfo.detected) return;
-    if ((uint32_t)(millis() - lastMs) < 1000) return;
+    if ((uint32_t)(millis() - lastMs) < 250) return;      // 4 Hz: a 30-byte reply, and the arming window shrinks to ~1 s (2026-09-16)
     if (txParamBusy || mspWaitFunction != 0xFF || mspProbeOutstanding()) return;
     lastMs = millis();
     mspSendRequest(MSP_STATUS);
@@ -1323,7 +1322,10 @@ inline void mspFcPoll() {
     // Never in the air: the flying latch above returns before this.
     const bool telemUrgent = isRf && (!fcInfo.telemCfgKnown || fcInfo.telemRecheck) && fcInfo.telemCfgTries < 6;
     const bool telemWatch  = isRf && fcInfo.telemCfgKnown && (uint32_t)(now - fcInfo.telemAskedMs) > TELEM_WATCH_MS;
-    if (isRf && fcInfo.telemRepairDue && fcInfo.telemGoodValid && currentProtocol == PROTO_CRSF) {   // the repair is for the CRSF-link corruption only (0.9.642)
+    // Never on a DONGLE: the telemetry list is the RECEIVER's link, and a
+    // dongle's "good copy" may be from a different helicopter entirely
+    // (2026-09-16 review: two loan dongles going to a stranger's models).
+    if (isRf && !dongleEnabled && fcInfo.telemRepairDue && fcInfo.telemGoodValid && currentProtocol == PROTO_CRSF) {   // the repair is for the CRSF-link corruption only (0.9.642)
         mspSendRequest(MSP_SET_TELEMETRY_CONFIG, fcInfo.telemGood, 52);
         fcInfo.telemRepairDue = false;
         fcInfo.telemRepairs++;

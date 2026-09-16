@@ -9,7 +9,7 @@
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Servos &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=221">
-<script src="/app.js?v=256" defer></script>
+<script src="/app.js?v=257" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -112,10 +112,20 @@ function paint(i) {
 }
 
 function gather(i) {
-    const g = id => parseInt($('s'+i+'_'+id).value, 10) || 0;
+    // A blank box used to become 0 and be written and "verified" — a centre
+    // of 0 us drives that servo to nothing at the next power-up (2026-09-16
+    // review). Every box must hold a number, and the ones that can wreck a
+    // swash must hold a sane one.
+    const g = (id, lo, hi, what) => {
+        const v = parseInt($('s'+i+'_'+id).value, 10);
+        if (Number.isNaN(v)) throw new Error('the ' + what + ' box is blank');
+        if (lo !== undefined && (v < lo || v > hi)) throw new Error(what + ' must be between ' + lo + ' and ' + hi);
+        return v;
+    };
     return {
-        mid: g('mid'), min: g('min'), max: g('max'),
-        rneg: g('rneg'), rpos: g('rpos'), rate: g('rate'), speed: g('speed'),
+        mid: g('mid', 750, 2250, 'centre'), min: g('min', undefined, undefined, 'minimum'), max: g('max', undefined, undefined, 'maximum'),
+        rneg: g('rneg', 50, 1000, 'negative scale'), rpos: g('rpos', 50, 1000, 'positive scale'),
+        rate: g('rate', 25, 5000, 'rate'), speed: g('speed', 0, 60000, 'speed'),
         flags: ($('s'+i+'_rev').checked ? 1 : 0) | ($('s'+i+'_geo').checked ? 2 : 0),
     };
 }

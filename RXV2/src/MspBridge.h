@@ -29,6 +29,7 @@
 
 inline void mspBridgeStart() {
     if (mspBridgeStarted) return;
+    if (dongleEnabled) return;   // a dongle's Serial1 IS the FC's MSP port: never let raw TCP at it
     if (currentProtocol != PROTO_CRSF) {
         // The bridge only makes sense when D5/D6 are in bidirectional CRSF
         // mode. For SBUS/IBUS/PPM there's no return path to the FC.

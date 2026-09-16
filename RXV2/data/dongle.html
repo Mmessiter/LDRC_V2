@@ -9,7 +9,7 @@
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rotorflight dongle &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=221">
-<script src="/app.js?v=256" defer></script>
+<script src="/app.js?v=257" defer></script>
 <style>
 .guide{background:#c8d2dc;color:#3a5165;padding:1em;border-radius:10px;margin:0 0 1em;font-size:1.02em}
 .fldRow{display:flex;justify-content:space-between;align-items:center;gap:.6em;padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -44,11 +44,15 @@ table.wire td:first-child{font-weight:700;color:#3a5165;white-space:nowrap}
             <tr><td>D5</td><td>flight controller <b>TX</b> (its data comes in here)</td></tr>
             <tr><td>D6</td><td>flight controller <b>RX</b></td></tr>
         </table>
-        <p class=sub>With a USB cable, D5 and D6 are only the fallback. Wire them anyway. <b>Link</b> above says which is in use.</p>
+        <p class=sub>With a USB cable, D5 and D6 are only the fallback. Wire them anyway.</p>
         <p class=sub>In Rotorflight (Ports), set that UART to <b>MSP</b> at the speed below.</p>
-        <div class=warn style="background:#f6e6cf;color:#5a3f1c;border-radius:10px;padding:.8em 1em;margin:.8em 0 0">
-            <p style="margin:0 0 .4em"><b>Take the dongle&rsquo;s 5 V from the flight controller, never from a separate supply.</b></p>
-            <p style="margin:0">Two supplies would meet through the USB cable. Safe only with that cable unplugged.</p>
+    </div>
+
+    <div class=card>
+        <h2>Power</h2>
+        <div class=warn style="background:#f6e6cf;color:#5a3f1c;border-radius:10px;padding:.8em 1em;margin:.2em 0 0">
+            <p style="margin:0 0 .4em"><b>The dongle&rsquo;s 5 V comes from the flight controller, never from anything else.</b></p>
+            <p style="margin:0">Never plug a charger, power bank or computer into the dongle&rsquo;s USB-C socket: it is only for the cable to the flight controller. Two supplies would meet through that cable.</p>
         </div>
     </div>
 
@@ -132,9 +136,17 @@ async function apply() {
     const mode = document.getElementById('mode').value;
     const what = mode == '1' ? 'always a dongle: no radio, no channel output' : mode == '2' ? 'always a receiver' : 'automatic: a dongle when it has no transceivers, a receiver when it has';
     if (!(await LDRC.confirm('Set this board to ' + what + '? It restarts now.', { okLabel: 'Yes, restart' }))) return;
-    const fd = new FormData(); fd.append('mode', mode); fd.append('baud', document.getElementById('baud').value);
+    const fd = new URLSearchParams(); fd.set('mode', mode); fd.set('baud', document.getElementById('baud').value);   // FormData is not parsed over Bluetooth
     document.getElementById('status').className = 'banner info'; document.getElementById('status').textContent = 'Saving and rebooting…';
-    try { const r = await fetch('/api/dongle', { method: 'POST', body: fd }); if (!r.ok) { document.getElementById('status').className = 'banner bad'; document.getElementById('status').textContent = await r.text(); return; } } catch (e) {}
+    try {
+        const r = await fetch('/api/dongle', { method: 'POST', body: fd });
+        if (!r.ok) {   // a refusal (armed, unknown state) arrives at once, as a sentence
+            const t = (await r.text()).replace(/<[^>]+>/g, ' ').trim().slice(0, 200);
+            document.getElementById('status').className = 'banner bad';
+            document.getElementById('status').textContent = t || ('HTTP ' + r.status);
+            return;
+        }
+    } catch (e) { /* the reboot cut the reply: that IS the save */ }
     setTimeout(() => location.href = '/', 9000);
 }
 document.addEventListener('DOMContentLoaded', load);

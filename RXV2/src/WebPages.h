@@ -269,7 +269,15 @@ inline void handleRotorflightNewHeli() {
 // while an FC is already talking — a blind mask write would strip a
 // configured board's features (the wizard's Features card re-ticks the
 // rest on a fresh board anyway).
+inline bool dongleDisarmedConfirmed();   // defined beside refuseIfArmed, below
 inline void handleFcWake() {
+    // A dongle port is MSP: if the flight controller is silent it is wiring or
+    // the port, not a feature flag — and a dongle that cannot hear the FC also
+    // cannot know whether it is armed. Never restart it blind (2026-09-16).
+    if (dongleEnabled) {
+        server.send(409, "application/json", "{\"ok\":false,\"err\":\"not from a dongle - if the flight controller is silent, check its port setting and the wiring\"}");
+        return;
+    }
     if (currentProtocol != PROTO_CRSF) {
         server.send(409, "application/json", "{\"ok\":false,\"err\":\"protocol is not CRSF\"}");
         return;
@@ -303,6 +311,10 @@ inline void handleFcWake() {
 inline bool fcTelemActionAllowed() {
     if (currentProtocol != PROTO_CRSF) {
         server.send(409, "application/json", "{\"ok\":false,\"err\":\"protocol is not CRSF\"}");
+        return false;
+    }
+    if (dongleEnabled) {   // the sensor list belongs to the receiver that flies the model, not to a dongle
+        server.send(409, "application/json", "{\"ok\":false,\"err\":\"not from a dongle: the telemetry sensors belong to the receiver that flies this model\"}");
         return false;
     }
     if (!fcInfo.detected || strncmp(fcInfo.variant, "RTFL", 4) != 0 ||
@@ -828,6 +840,31 @@ inline void handleMspApi() {
             server.send(503, "text/plain", "receiver busy with a transmitter edit — try again");
             return;
         }
+    }
+
+    // NOBODY IS ANSWERING — say so at once (Malcolm 2026-09-16, Test1 with
+    // the FC's port switched off: every read waited 1.2 s for the bank
+    // bookkeeping below plus 1.2 s for itself, so the page sat on "Reading
+    // from the flight controller… 8 s" while the receiver had known for
+    // thirteen minutes that 785 probes had gone unanswered). fcInfo.detected
+    // is false until the FC's first reply and drops after 10 s of silence;
+    // the probesSent floor keeps a page opened in the first seconds after
+    // boot from being refused before the receiver has even asked.
+    if (!fcInfo.detected && fcInfo.probesSent >= 3) {
+        server.sendHeader("Cache-Control", "no-store");
+        server.send(503, "text/plain", dongleEnabled
+            ? "No flight controller is answering. Check it is powered, and that its port is set to MSP (dongle on a wire) or the USB cable is in."
+            : "No flight controller is answering. Check it is powered, and that its port is set to serial receiver with telemetry on, or the USB cable is in.");
+        return;
+    }
+
+    // On a dongle, a write, a save or a restart needs the flight controller's
+    // FRESH "disarmed" word — silence is not consent (2026-09-16 review).
+    if (dongleEnabled && fcInfo.detected && !dongleDisarmedConfirmed() &&
+        ((reqLen > 0 && isSetupWriteFn(fn)) || fn == MSP_EEPROM_WRITE || fn == MSP_REBOOT)) {
+        server.sendHeader("Cache-Control", "no-store");
+        server.send(409, "text/plain", "Flight controller state unknown - it has not answered in the last few seconds. Try again.");
+        return;
     }
 
     // Bank bookkeeping (0.9.567): note the switch's banks before a page's
@@ -1831,6 +1868,7 @@ inline void safeOutputParkAndRestart() {
 }
 
 inline void handleBindDo() {
+    if (refuseIfArmed("bind")) return;   // 2026-09-16 review: on a dongle the TX-link gates are no-ops
     // Stash the current pairing so a mistaken bind entry has a way back
     // (/api/bind/cancel restores it). Overwritten stash is fine — the
     // latest real pairing is the one worth restoring.
@@ -1850,6 +1888,7 @@ inline void handleBindDo() {
 //*********************************************************************
 
 inline void handleBindCancel() {
+    if (refuseIfArmed("cancel bind")) return;   // 2026-09-16 review: on a dongle the TX-link gates are no-ops
     if (bindState.bound || !prefs.isKey(NVS_KEY_PIPE_BAK) ||
         prefs.getBytesLength(NVS_KEY_PIPE_BAK) != 5) {
         server.sendHeader("Cache-Control", "no-store");
@@ -1873,6 +1912,7 @@ inline void handleBindCancel() {
 //*********************************************************************
 
 inline void handleRollback() {
+    if (refuseIfArmed("roll back")) return;   // 2026-09-16 review: on a dongle the TX-link gates are no-ops
     const esp_partition_t* other = esp_ota_get_next_update_partition(NULL);
     if (!other) {
         server.send(500, "text/plain", "no other partition");
@@ -1906,6 +1946,7 @@ inline void handleRollback() {
 // (HTML/CSS/JS) are untouched so the UI still works on next boot.
 
 inline void handleFactoryReset() {
+    if (refuseIfArmed("factory reset")) return;   // 2026-09-16 review: on a dongle the TX-link gates are no-ops
     events.add("Factory reset requested via web UI");
 
     // 1. Wipe every NVS key in our namespace.
@@ -1937,7 +1978,7 @@ inline void handleFactoryReset() {
                 confirmPage("Factory reset", body.c_str(),
                             /*autoReload=*/false));
     delay(500);
-    ESP.restart();
+    safeOutputParkAndRestart();   // closes the FC's USB handle first (0.9.706) — a bare restart left USB dead
 }
 
 //*********************************************************************
@@ -1951,6 +1992,7 @@ inline void handleFactoryReset() {
 // hostname in one cycle.
 
 inline void handleFirstRun() {
+    if (refuseIfArmed("finish setup")) return;   // 2026-09-16 review: on a dongle the TX-link gates are no-ops
     String name = server.hasArg("name") ? server.arg("name") : String();
     name.trim();
     if (name.length() == 0 || name.length() > 30) {
@@ -2007,7 +2049,7 @@ inline void handleFirstRun() {
     server.send(200, "text/html", confirmPage("Saved", body.c_str()));
     prefs.putUChar(NVS_KEY_CFG_REBOOT, 1);   // config reboot: come straight back to WiFi even if a TX is on
     delay(500);
-    ESP.restart();
+    safeOutputParkAndRestart();   // closes the FC's USB handle first — a bare restart left USB dead
 }
 
 //*********************************************************************
@@ -2073,6 +2115,7 @@ inline void handleNameSet() {
 //*********************************************************************
 
 inline void handleWifiSet() {
+    if (refuseIfArmed("save WiFi")) return;   // 2026-09-16 review: on a dongle the TX-link gates are no-ops
     if (server.hasArg("ssid")) {
         String ssid = server.arg("ssid");
         ssid.trim();   // an invisible trailing space breaks joining (firstrun trims; this path didn't)
@@ -2115,7 +2158,7 @@ inline void handleWifiSet() {
     }
     prefs.putUChar(NVS_KEY_CFG_REBOOT, 1);   // config reboot: come straight back to WiFi even if a TX is on
     delay(500);
-    ESP.restart();
+    safeOutputParkAndRestart();   // closes the FC's USB handle first — a bare restart left USB dead
 }
 
 //*********************************************************************
@@ -2251,6 +2294,7 @@ inline void handleArmChSet() {
 //*********************************************************************
 
 inline void handleProtocolSet() {
+    if (refuseIfArmed("change the protocol")) return;   // 2026-09-16 review: on a dongle the TX-link gates are no-ops
     // Only a PROTOCOL (or PPM-polarity) change needs a reboot — the D6 pin
     // must be reconfigured as a different UART / RMT device. Everything else
     // (CRSF rate, FC-telemetry switch, throttle & arming channels) applies
@@ -2353,6 +2397,14 @@ inline bool rxTxLinkedRecently() { return !dongleEnabled && rx.lastMillis && (ui
 // channel HIGH and the throttle wherever it happens to be, and that is what the
 // receiver would then output on a real signal loss. The one stored position
 // that must never say "armed".
+// A dongle's ONLY flight signal is the flight controller's own armed word,
+// fetched 4 times a second. "No fresh word" is not "disarmed": the poll stops
+// behind a page's wait, the FC can fall silent, and a stale false would open
+// every gate on an armed model (2026-09-16 review). Fresh = within 2.5 s.
+inline bool dongleDisarmedConfirmed() {
+    return fcInfo.detected && fcInfo.armedMs && !fcInfo.armed &&
+           (uint32_t)(millis() - fcInfo.armedMs) < 2500;
+}
 inline bool refuseIfArmed(const char* what) {
     if (fcInfo.armed && fcInfo.armedMs && (uint32_t)(millis() - fcInfo.armedMs) < 5000) {
         server.sendHeader("Cache-Control", "no-store");
@@ -2367,6 +2419,15 @@ inline bool refuseIfArmed(const char* what) {
         server.send(409, "text/plain", "ARMED - disarm first.");
         return true;
     }
+    // On a dongle that KNOWS a flight controller, insist on a fresh "disarmed"
+    // — a silent or stale FC is refused, not trusted. A dongle that has never
+    // heard an FC this power-up (bench, unwired) is left alone.
+    if (dongleEnabled && fcInfo.detected && !dongleDisarmedConfirmed()) {
+        { char m[96]; snprintf(m, sizeof m, "Refused, FC state unknown: %s", what); events.add(m); }
+        server.sendHeader("Cache-Control", "no-store");
+        server.send(409, "text/plain", "Flight controller state unknown - it has not answered in the last few seconds. Try again.");
+        return true;
+    }
     return false;
 }
 
@@ -2377,6 +2438,7 @@ inline bool refuseIfTxLinked(const char* why) {
 }
 // Rotorflight dongle mode (Malcolm 2026-09-08): POST /api/dongle on=0|1 [baud=N]
 inline void handleDongleSet() {
+    if (refuseIfArmed("change the dongle setting")) return;   // 2026-09-16 review: on a dongle the TX-link gates are no-ops
     if (refuseIfTxLinked("turn the transmitter off first - the receiver restarts to apply this")) return;
     // mode=0 automatic (default), 1 always a dongle, 2 always a receiver; `on` kept for older pages
     uint8_t mode = server.hasArg("mode") ? (uint8_t)server.arg("mode").toInt()
@@ -2394,6 +2456,7 @@ inline void handleDongleSet() {
           "5 V and GND, on a UART set to MSP in Rotorflight. No radio is used; any receiver can fly the model.</p>"
         : "<p>Dongle mode <b>disabled</b>. Rebooting back to a normal receiver.</p>"));
     delay(250);
+    bleEarlyPump();               // over BLE the reply must leave before the reboot cuts the link
     safeOutputParkAndRestart();
 }
 inline void handleDonglePage() {
@@ -2403,6 +2466,7 @@ inline void handleDonglePage() {
 
 
 inline void handleSimSet() {
+    if (refuseIfArmed("change simulator mode")) return;   // 2026-09-16 review: on a dongle the TX-link gates are no-ops
     if (refuseIfTxLinked("turn the transmitter off first - the receiver restarts to apply this")) return;
     bool on = server.hasArg("on") ? (server.arg("on").toInt() != 0) : false;
     prefs.putUChar(NVS_KEY_SIM, on ? 1 : 0);
@@ -2965,7 +3029,8 @@ inline void handleApiState() {
     j += ",\"arm_auto\":"; j += ((armingChannel && !prefs.getUChar(NVS_KEY_ARM_CH, 0)) ? "true" : "false");
     // live armed state (so the config page can confirm the channel is right)
     { bool live = (rx.lastMillis != 0) && ((uint32_t)(millis() - rx.lastMillis) < 2000);
-      bool armed = live && armingChannel >= 1 && armingChannel <= 16 && channelMicros[armingChannel - 1] > 1500;
+      bool armed = dongleEnabled ? (fcInfo.armed && fcInfo.armedMs && (uint32_t)(millis() - fcInfo.armedMs) < 5000)
+                                 : (live && armingChannel >= 1 && armingChannel <= 16 && channelMicros[armingChannel - 1] > 1500);
       j += ",\"armed\":"; j += (armed ? "true" : "false"); }
     j += ",\"head_speed\":"; j += (uint32_t)((gearRatio > 0.1f ? fcTelem.fcMotorRPM / gearRatio : fcTelem.fcMotorRPM) + 0.5f);
     { char tb[48]; snprintf(tb, sizeof(tb), ",\"esc_temp_c\":%.1f", fcTelem.fcEscTempC); j += tb; }
@@ -3243,6 +3308,7 @@ inline void handleCliApi() {
     server.send(200, "text/plain", out);
 }
 inline void handleCliLeave() {
+    if (refuseIfArmed("leave the command line")) return;   // 2026-09-16 review: on a dongle the TX-link gates are no-ops
     server.sendHeader("Cache-Control", "no-store");
     if (!UsbHostMsp::cliMode) { server.send(200, "text/plain", "the command line was not open"); return; }
     if (refuseIfTxLinked("turn the transmitter off first - leaving the command line restarts the flight controller")) return;

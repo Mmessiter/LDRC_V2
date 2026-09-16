@@ -580,6 +580,7 @@ constexpr uint32_t BATT_STILL_MS       = 120000;   // channels still this long =
 constexpr uint16_t BATT_MOVE_US        = 12;       // movement threshold per channel
 
 static void batteryGuardTick() {
+    if (dongleEnabled) return;   // a dongle carries no flight pack of its own to guard, and must never sleep in a model
     static uint16_t snap[16] = {0};
     static uint32_t belowSinceMs = 0;
     const uint32_t now = millis();

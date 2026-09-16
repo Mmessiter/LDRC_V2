@@ -641,6 +641,7 @@ inline void telemetrySampleTick() {
 }
 
 inline void radioPoll() {
+    if (numRadiosPresent == 0) return;   // no chip to read: a noisy MISO must never fabricate a packet (2026-09-16)
     uint8_t pipe = 0;
     if (currentRadio->available(&pipe)) {
         uint8_t size = currentRadio->getDynamicPayloadSize();

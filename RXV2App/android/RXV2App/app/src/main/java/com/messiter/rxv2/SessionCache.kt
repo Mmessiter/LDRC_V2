@@ -383,7 +383,12 @@ object SessionCache {
         "/api/msp?fn=131", "/api/msp?fn=38", "/api/msp?fn=126", "/api/msp?fn=96", "/api/msp?fn=240",
         "/api/msp?fn=36", "/api/msp?fn=32", "/api/msp?fn=56", "/api/msp?fn=40",
         "/api/msp?fn=44", "/api/msp?fn=123", "/api/msp?fn=73", "/api/msp?fn=80", "/api/msp?fn=10",
-        "/api/msp?fn=34", "/api/msp?fn=238", "/api/msp?fn=77", "/api/msp?fn=154&data=")
+        "/api/msp?fn=34", "/api/msp?fn=238", "/api/msp?fn=77", "/api/msp?fn=154&data=",
+        // The pilot's radio, not the tune (2026-09-16 review): channel map,
+        // RSSI channel, RX config, and the bank/rates selector slots.
+        "/api/msp?fn=64", "/api/msp?fn=66", "/api/msp?fn=75",
+        "/app/declared/adj30", "/app/declared/adj31", "/app/declared/adj32", "/app/declared/adj33", "/app/declared/adj34", "/app/declared/adj35",
+        "/app/declared/adj36", "/app/declared/adj37", "/app/declared/adj38", "/app/declared/adj39", "/app/declared/adj40", "/app/declared/adj41")
     fun isMechanicsKey(k: String): Boolean = mechanicsKeyPrefixes.any { p ->
         if (p.endsWith("=")) k.startsWith(p) else (k == p || k.startsWith("$p&"))
     }

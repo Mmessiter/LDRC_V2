@@ -310,6 +310,11 @@ inline bool bleHasClient();
 inline bool outputDetachedForFailsafe = false;
 
 inline void sbusTick() {
+    // A dongle has no RC output at all: its Serial1 is the flight controller's
+    // MSP port, and a sim board's is idle. Every caller is meant to guard this
+    // (loop, keepFlyingTick, safeOutputParkAndRestart) — one slipped through
+    // for a year (mspRequestAndWait, 2026-09-16 review), so guard it HERE too.
+    if (dongleEnabled || simEnabled) return;
     // Suspend RC frame transmission while the MSP bridge has a client connected.
     // The user is configuring (TX is off, we're not flying); the FC's CRSF UART
     // is being driven by Configurator over the bridge instead. Sending RC frames
