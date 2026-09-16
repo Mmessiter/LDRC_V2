@@ -9,7 +9,7 @@
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Check for Update &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=221">
-<script src="/app.js?v=257" defer></script>
+<script src="/app.js?v=258" defer></script>
 <style>
 /* --- Currently-installed card -------------------------------------- */
 .installed-card .row{
@@ -830,7 +830,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const net  = (st && st.net) || {};
         const rssi = (st && st.info && typeof st.info.rssi === 'number') ? st.info.rssi : 0;
         const wifiUp   = net.mode === 'WiFi up';
+        const joining  = net.mode === 'connecting WiFi';   // after a restart the join can take half a minute
         const wifiWeak = wifiUp && rssi && rssi <= WEAK_WIFI_DBM;
+        if (joining) setTimeout(() => fetch('/api/state.json', { cache: 'no-store' }).then(r => r.json()).then(paintLanes).catch(() => {}), 3000);
         if (!wifiUp) window.__preferBle = true;          // no choice to make
         const ble = !!window.__preferBle;
 
@@ -846,7 +848,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!wifiUp) w.style.opacity = '.55';
 
         why.innerHTML =
-            !wifiUp   ? 'No receiver WiFi here \u2014 Bluetooth is the only way.'
+            joining   ? 'The receiver is still joining WiFi after its restart \u2014 usually under a minute. Bluetooth works meanwhile.'
+          : !wifiUp   ? 'No receiver WiFi here \u2014 Bluetooth is the only way.'
           : wifiWeak  ? '<b>WiFi is weak here (' + rssi + ' dBm)</b> \u2014 Bluetooth stands a better chance.'
           : ble       ? 'Slower, but works anywhere.'
                       : 'Fast \u2014 30\u201390 s' + (rssi ? ' (' + rssi + ' dBm)' : '') + '.';

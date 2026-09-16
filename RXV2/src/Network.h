@@ -198,9 +198,18 @@ inline void startWifiStation() {
     }
     Serial.printf("[wifi] STA connecting to '%s' (AP stays up)\n", ssid.c_str());
     WiFi.setHostname(g_hostname.c_str());
-    WiFi.begin(ssid.c_str(), getEffectivePass().c_str());
-    netMode       = NET_WIFI_CONNECTING;
-    netStateStart = millis();
+    if (staHoldUntilMs && (int32_t)(staHoldUntilMs - millis()) > 0) {
+        // Held (see staHoldUntilMs): the deferred re-begin fires the join
+        // when the hold ends, and the 25 s attempt timer starts THEN.
+        wifiRebeginAtMs = staHoldUntilMs;
+        netMode         = NET_WIFI_CONNECTING;
+        netStateStart   = staHoldUntilMs;
+        staHoldUntilMs  = 0;
+    } else {
+        WiFi.begin(ssid.c_str(), getEffectivePass().c_str());
+        netMode       = NET_WIFI_CONNECTING;
+        netStateStart = millis();
+    }
 
     char buf[80];
     snprintf(buf, sizeof(buf), "Trying STA WiFi '%s' (AP also up)", ssid.c_str());

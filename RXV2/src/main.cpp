@@ -298,6 +298,11 @@ void setup() {
     if (cfgReboot) {
         prefs.putUChar(NVS_KEY_CFG_REBOOT, 0);   // consume the one-shot
         forceWifiMode = true;
+        if (prefs.getUChar(NVS_KEY_OTA_BLE, 0)) {   // the update came over Bluetooth: let the phone confirm before the STA join
+            prefs.putUChar(NVS_KEY_OTA_BLE, 0);
+            staHoldUntilMs = millis() + 20000;
+            events.add("Update asked for over Bluetooth: WiFi join held 20 s so the phone can confirm first");
+        }
         Serial.println("[boot] config reboot — bringing WiFi up immediately (no RF window)");
     }
     // A WiFi update that never finished (download stalled → task watchdog

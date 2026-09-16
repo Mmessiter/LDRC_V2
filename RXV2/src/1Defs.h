@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.730-dongle-review";
+constexpr const char* FW_VERSION = "RXV2-0.9.731-after-update";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -132,6 +132,14 @@ inline uint8_t  fltPardonAnnounceLeft = 0;
 // flow while the loop runs — so Fly-now schedules the teardown ~300 ms out
 // instead of delay()ing into it.
 inline uint32_t flyTeardownAtMs = 0;
+// Black-Thunder-2, 2026-09-16: after a WiFi install asked for from the app,
+// the phone reconnected 1.5 s after the reboot — and the receiver began its
+// STA join at 2.4 s. The join and the phone's Bluetooth polls starved each
+// other: the first 25 s attempt FAILED (status 6), WiFi was up only at 31 s,
+// and the update page "hesitated worryingly for a long time right at the
+// end". So: an update asked for over Bluetooth holds the STA join for this
+// long after the reboot. AP, web and Bluetooth come up at once as before.
+inline uint32_t staHoldUntilMs = 0;
 
 inline bool autoWaveAllowed();   // defined below rx (needs rx.lastMillis)
 inline uint32_t fltPardonMsToSend = FLT_PARDON_MS;   // 0 = "unignore now" (Malcolm's explicit end)
@@ -379,6 +387,7 @@ constexpr const char* NVS_KEY_MODEL_NAME  = "nm";      // user-set model name (e
 constexpr const char* NVS_KEY_FS_MD5      = "fsmd5";   // md5 of the last-flashed littlefs image: identical-release fs updates are SKIPPED (flights survive untouched)
 constexpr const char* NVS_KEY_FS_DIRTY    = "fsdirty"; // 1 = a littlefs flash began and never committed: boot FORMATS the partition instead of mounting a half image (Goblin 2026-09-03)
 constexpr const char* NVS_KEY_SIM         = "sim";     // 1 = drive flight simulator over USB (HID joystick)
+constexpr const char* NVS_KEY_OTA_BLE     = "otable";   // 1 = the update was asked for over Bluetooth: hold the STA join ~20 s after the reboot so the phone can confirm on a quiet radio
 constexpr const char* NVS_KEY_DONGLE      = "dongle";  // 1 = Rotorflight DONGLE: plain MSP on D5/D6 to a spare FC UART, no radio, any receiver flies (2026-09-08)
 constexpr const char* NVS_KEY_DONGLE_BAUD = "dbaud";   // u32 UART baud for dongle mode (115200 default = Rotorflight's MSP port default)
 // Spool-up realism (Malcolm 2026-08-17, for neXt autorotation practice):

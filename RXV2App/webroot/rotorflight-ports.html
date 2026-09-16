@@ -9,7 +9,7 @@
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Ports &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=221">
-<script src="/app.js?v=257" defer></script>
+<script src="/app.js?v=258" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -27,6 +27,7 @@
 <div class=bg-wash  aria-hidden=true></div>
 <div class=container>
     <h1>Ports</h1>
+    <p class=sub id=boardLine style="text-align:center"></p>
     <div id=status class="banner info" style="display:none"></div>
 
     <div class=card>
@@ -76,9 +77,14 @@ function encodePorts(P) {
 // The sockets on a RadioMaster Nexus, by the board name the flight controller reports (MSP 4):
 // Nexus-X: S.BUS[UART1] TELEM[UART2] PORT-A[UART4] PORT-B[UART6] PORT-C[UART3];
 // original Nexus: DSM[UART1] S.BUS[UART2] A-CRSF[UART4] PORT-B[UART6] PORT-C[UART3] (RadioMaster's own lists).
+// Rotorflight's own targets (rotorflight-targets/configs, 2026-09-16): RDMS-NEXUS_F7
+// (the original Nexus), RDMS-NEXUS_X and RDMS-NEXUS_XR (a Nexus-X with UART5 in use).
+// UART3/4/6 are on the same pins in all three, so Ports C/A/B are common.
 const BOARD_PORTS = {
-    'NEXUS_X': { 0: 'S.BUS', 1: 'TELEM', 2: 'Port C', 3: 'Port A', 5: 'Port B' },
-    'NEXUS':   { 0: 'DSM',   1: 'S.BUS', 2: 'Port C', 3: 'Port A', 5: 'Port B' },
+    'NEXUS_X':  { 0: 'S.BUS', 1: 'TELEM', 2: 'Port C', 3: 'Port A', 5: 'Port B' },
+    'NEXUS_XR': { 0: 'S.BUS', 1: 'TELEM', 2: 'Port C', 3: 'Port A', 5: 'Port B' },
+    'NEXUS_F7': { 0: 'DSM',   1: 'S.BUS', 2: 'Port C', 3: 'Port A', 5: 'Port B' },
+    'NEXUS':    { 0: 'DSM',   1: 'S.BUS', 2: 'Port C', 3: 'Port A', 5: 'Port B' },
 };
 let boardName = '';
 function boardNameOf(b) {             // MSP_BOARD_INFO: id(4) rev(2) type(1) caps(1) targetName(len+chars) boardName(len+chars)
@@ -88,11 +94,25 @@ function boardNameOf(b) {             // MSP_BOARD_INFO: id(4) rev(2) type(1) ca
     const bl = b[o]; o += 1;
     return String.fromCharCode.apply(null, Array.from(b.slice(o, o + bl)));
 }
+// Which table for this board? Rotorflight reports the config's board_name,
+// and a Nexus-X flashed with the NEXUS_F7 config says 'NEXUS_F7' (Malcolm's
+// Black-Thunder-2, 2026-09-16: "the ports menu gave me the numbers of the
+// UARTs, but not the letters"). Ports A, B and C sit on the same UARTs on
+// every Nexus (4, 6, 3), so any board called NEXUS-something gets those
+// letters; only UART1/UART2 differ between variants, and an unknown variant
+// keeps plain numbers for those two rather than a guess.
+function boardTable(name) {
+    const n = String(name || '').toUpperCase();
+    if (BOARD_PORTS[n]) return BOARD_PORTS[n];
+    if (n.indexOf('NEXUS') < 0) return null;
+    if (/NEXUS[_-]?X/.test(n)) return BOARD_PORTS.NEXUS_X;
+    return { 2: 'Port C', 3: 'Port A', 5: 'Port B' };          // A/B/C are common to every Nexus
+}
 function portName(id) {               // identifiers: 0.. = UART1.., 20 = USB, 30.. = soft serial, 40.. = LPUART
     if (id === 20) return 'USB socket';
     if (id >= 40) return 'LPUART ' + (id - 39);
     if (id >= 30) return 'Soft serial ' + (id - 29);
-    const m = BOARD_PORTS[boardName], l = m && m[id];
+    const m = boardTable(boardName), l = m && m[id];
     return l ? l + ' (UART ' + (id + 1) + ')' : 'UART ' + (id + 1);
 }
 function choiceOf(p, prov) {          // a port's functions -> our choice; anything else is kept as it is
@@ -149,6 +169,9 @@ async function load() {
         ports = parsePorts(hexToBytes((await LDRC.msp(54)).trim()));
         rxCfg = hexToBytes((await LDRC.msp(44)).trim()); prov = rxCfg[0];
         setStatus('', ''); paint(); markClean();
+        LDRC.setText('boardLine', boardName ? 'Flight controller board: ' + boardName
+            + (boardTable(boardName) ? '' : ' (sockets shown by UART number)')
+            + (String(boardName).toUpperCase() === 'NEXUS_F7' ? ' \u2014 the original Nexus configuration; a Nexus-X should be flashed with NEXUS_X (S.BUS is on different pins)' : '') : '');
     } catch (e) { setStatus('bad', 'Read failed: ' + e.message); }
 }
 const sleep = ms => new Promise(r => setTimeout(r, ms));

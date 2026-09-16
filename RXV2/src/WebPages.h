@@ -1658,6 +1658,8 @@ inline void handleBleOtaReboot() {
     // refusal on a merely-live link would leave it waiting for a reboot that
     // never comes. The new image boots at the next power-up instead.
     if (refuseIfArmed("reboot after a Bluetooth update")) return;
+    prefs.putUChar(NVS_KEY_OTA_BLE, 1);      // by definition over Bluetooth: hold the STA join after the reboot
+    eventsPersist();                          // keep this boot's log
     prefs.putUChar(NVS_KEY_CFG_REBOOT, 1);   // config reboot: skip the RF window so BLE advertising returns and the app can reconnect + confirm
     server.send(200, "application/json", "{\"ok\":true,\"rebooting\":true}");
     bleEarlyPump();          // push the reply out over BLE before the radio dies
@@ -1774,6 +1776,8 @@ inline void handleFirmwareInstall() {
     otaGuardEnd();
     server.send(200, "text/plain", String("ok — rebooting") + fsNote);
     bleEarlyPump();               // over BLE: deliver the reply before the reboot kills the link
+    prefs.putUChar(NVS_KEY_OTA_BLE, bleActive ? 1 : 0);   // asked for from the app: hold the STA join after the reboot
+    eventsPersist();              // this boot's log survives the reboot (it did not, and the first attempt's story was lost)
     UsbHostMsp::prepareForRestart();   // 0.9.706: give the FC a clean disconnect, or USB comes back dead
     delay(300);
     ESP.restart();

@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.731-after-update",
+      "url": "https://messiter.com/rxv2/release/v0.9.731/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.731/littlefs.bin",
+      "fs_md5": "0c5e4753bcba5bf90074f8d799dde782",
+      "notes": "Two things Malcolm noticed right after installing 0.9.730 over WiFi from the app, both explained by the receiver's own log. 1) 'It hesitated worryingly at the end': the phone reconnected 1.5 s after the reboot, and the receiver began its WiFi join at 2.4 s - the join and the phone's Bluetooth polls starved each other, the first 25 s attempt failed, WiFi was up only at 31 s, and the update page crawled through that window. An update asked for from the app now holds the WiFi join for 20 s after the reboot so the phone can confirm on a quiet radio; AP, web and Bluetooth come up at once as before. The receiver also keeps its log across an update reboot now, so a first attempt that stalls leaves its story behind. 2) 'Bluetooth is the only way - no WiFi here', moments after a WiFi update: the page read 'still joining' as 'none'. It now says the receiver is joining WiFi after its restart, and re-checks by itself. 3) The Ports page showed UART numbers but not the Nexus letters (Malcolm): a Nexus-X flashed with the NEXUS_F7 config reports 'NEXUS_F7', which the page did not recognise. Any Nexus now gets Port A/B/C (the same UARTs on every Nexus), and the page shows the board name it was given."
+    },
+    {
       "name": "RXV2-0.9.730-dongle-review",
       "url": "https://messiter.com/rxv2/release/v0.9.730/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.730/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.719/littlefs.bin",
       "fs_md5": "9eeca10e6e082745cec33efe1713bf3f",
       "notes": "When the receiver's WiFi is weak, the Firmware page now says so before you start and offers Bluetooth instead - slower, but it does not depend on the weak signal. And if a WiFi install does crawl and fail, there is now a button to try again over Bluetooth rather than leaving you to work it out. The old firmware is untouched either way. Includes 0.9.718."
-    },
-    {
-      "name": "RXV2-0.9.718-rf-check-daily",
-      "url": "https://messiter.com/rxv2/release/v0.9.718/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.718/littlefs.bin",
-      "fs_md5": "b544a7593d52318188c4746f9b1ecd02",
-      "notes": "The Rotorflight update check now happens once a day, on the first time you open the app that day, and never makes you wait for it - anything it already knows is shown at once and the check happens quietly behind. If it cannot reach the internet it tries again in an hour rather than giving up for the day. Includes 0.9.717."
     }
   ],
   "rotorflight": {
