@@ -392,7 +392,15 @@ class MainActivity : AppCompatActivity() {
         // lightly throttled so back-and-forth doesn't hammer the server
         if (System.currentTimeMillis() - lastUpdateCheck < 60_000) return
         lastUpdateCheck = System.currentTimeMillis()
+        // "Pending" from the moment the CHECK starts, not only once the dialog
+        // is up: the page's firmware offer asks /app/update-pending within a
+        // second of connecting, which is exactly while this fetch is still in
+        // flight - it read "nothing pending", showed its offer, and then this
+        // dialog landed on top of it. Cleared when the check finds nothing,
+        // fails, or the dialog is dismissed.
+        appUpdateDialogUp = true
         Thread {
+            var stillPending = false
             runCatching {
                 val txt = java.net.URL(APP_MANIFEST_URL).openStream()
                     .use { it.readBytes().toString(Charsets.UTF_8) }
@@ -404,7 +412,7 @@ class MainActivity : AppCompatActivity() {
                     if (Build.VERSION.SDK_INT >= 28) longVersionCode.toInt()
                     else @Suppress("DEPRECATION") versionCode
                 }
-                if (newest > installed) runOnUiThread {
+                if (newest > installed) { stillPending = true; runOnUiThread {
                     // The banner on the scanner is fine when the scanner is
                     // still there - but instant auto-connect leaves it within
                     // a second, and this reply usually lands AFTER that, when
@@ -420,12 +428,12 @@ class MainActivity : AppCompatActivity() {
                         setOnClickListener { installUpdate(url, name) }
                     }, 0)
                     val sp = getSharedPreferences("appupdate", MODE_PRIVATE)
-                    if (sp.getInt("later", 0) == newest || isFinishing) return@runOnUiThread
+                    if (sp.getInt("later", 0) == newest || isFinishing) { appUpdateDialogUp = false; return@runOnUiThread }
                     // While this is up the page holds its own firmware offer
                     // (it asks /app/update-pending) - Malcolm 2026-09-17 got
                     // both on one screen. App first: it restarts the app, and
                     // the firmware offer comes back on reconnect.
-                    appUpdateDialogUp = true
+                    stillPending = true
                     android.app.AlertDialog.Builder(this)
                         .setTitle("App update available")
                         .setMessage("RXV2 app v$name is out. Install it now?")
@@ -433,8 +441,9 @@ class MainActivity : AppCompatActivity() {
                         .setNegativeButton("Later") { _, _ -> sp.edit().putInt("later", newest).apply() }
                         .setOnDismissListener { appUpdateDialogUp = false }
                         .show()
-                }
+                } }
             }
+            if (!stillPending) appUpdateDialogUp = false   // no update, or the check failed
         }.start()
     }
 
