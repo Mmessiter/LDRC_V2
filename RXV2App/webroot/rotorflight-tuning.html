@@ -9,7 +9,7 @@
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Tuning &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=222">
-<script src="/app.js?v=261" defer></script>
+<script src="/app.js?v=262" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.warn{background:#e8cf8f;color:#5c4a1a}
@@ -45,7 +45,7 @@
 
 <script>
 const STEPS=[
- {k:'backup0',t:'Back up first', d:'One tap — today’s working setup stays safe.', href:'/setup'},
+ {k:'backup0',t:'Back up first', d:'One tap — today’s working setup stays safe.', href:'/rotorflight-backup'},
  {k:'hover',  t:'First hovers', d:'Hover at eye height. Shakes or twitches = mechanics, not tuning.'},
  {k:'gov',    t:'Governor', d:'Steady head speed, no sag on hard pulls (raise gain/precomp gently).', href:'/rotorflight-gov-profile'},
  {k:'tail',   t:'Tail', d:'Raise response until it wiggles, back off a touch. Pulls kicking the tail = precomp.', href:'/rotorflight-pid'},
@@ -53,7 +53,7 @@ const STEPS=[
  {k:'feel',   t:'Feel — rates & expo', d:'Roll rate and stick softness. Pure taste.', href:'/rotorflight-rates'},
  {k:'fine',   t:'Fine touches', d:'Only if something still niggles.', href:'/rotorflight-pidplus'},
  {k:'rescue', t:'Prove Rescue', d:'Three mistakes high: flick it upright AND inverted.', href:'/rotorflight-rescue'},
- {k:'backup1',t:'Back up the tune', d:'Save the tune you now trust.', href:'/setup'},
+ {k:'backup1',t:'Back up the tune', d:'Save the tune you now trust.', href:'/rotorflight-backup'},
 ];
 const $=id=>document.getElementById(id);
 // Per-model ticks, same scheme as the New-helicopter checklist.

@@ -37,6 +37,11 @@ if command -v node >/dev/null 2>&1; then
     echo "REFUSING TO PUBLISH: a page script is broken (above)." >&2
     exit 1
   fi
+  echo "Checking every internal link leads somewhere..."
+  if ! node "$HERE/check_links.js"; then
+    echo "REFUSING TO PUBLISH: a link is broken or points at the wrong page (above)." >&2
+    exit 1
+  fi
 fi
 
 [[ -d "$LOCAL_DIR/$PRODUCT" ]] || { echo "Staging tree missing — run dev/stage_website.py first." >&2; exit 1; }

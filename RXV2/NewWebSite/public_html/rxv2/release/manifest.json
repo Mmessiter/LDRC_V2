@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.736-tuning-backup",
+      "url": "https://messiter.com/rxv2/release/v0.9.736/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.736/littlefs.bin",
+      "fs_md5": "bc688eee5f4338187cf1787549e1aaf5",
+      "notes": "Both Back up steps in the Tuning wizard went to Setup instead of the backup page (Malcolm 2026-09-17). The same fault was fixed in the New helicopter wizard in 0.9.687 and the Tuning one was missed. Both now open Back up. New check: every internal link on every page must lead to a page that exists, AND a wizard step called 'Back up' must lead to the backup page - the wrong-page half is what a plain link checker cannot see. Publishing refuses if either fails. Pages only."
+    },
+    {
       "name": "RXV2-0.9.735-backup-message",
       "url": "https://messiter.com/rxv2/release/v0.9.735/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.735/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.723/littlefs.bin",
       "fs_md5": "d763f9c1135e44e1a597c0d9d91740b0",
       "notes": "Check for a Rotorflight update, when YOU ask (Malcolm's suggestion). A button at the foot of the Rotorflight page asks, there and then, whether a newer Rotorflight has come out - so nothing runs on a timer and nothing waits to surprise you. It gives one of three plain answers: up to date; a newer one is available (with 'back up first - flashing erases everything', and the reminder that flashing itself needs the Configurator on a computer); or a newer one is out but these pages have not been checked against it yet, so stay where you are. It asks two places: our own checked recommendation, and Rotorflight's own releases live - so it cannot answer 'up to date' for weeks after a real release. It never recommends a release our tuning pages have not been checked against, and when it cannot reach the internet it says so instead of guessing. Two preview buttons in the page's help show the other two answers without waiting months for a release. Needs internet on the phone or the receiver; the daily automatic check is gone."
-    },
-    {
-      "name": "RXV2-0.9.722-better-chance",
-      "url": "https://messiter.com/rxv2/release/v0.9.722/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.722/littlefs.bin",
-      "fs_md5": "b1aa27775f048c0003eb3dbc5428b7d9",
-      "notes": "Better wording on the Firmware page: Bluetooth is slower but stands a better chance of success in these circumstances. Includes 0.9.721."
     }
   ],
   "rotorflight": {
