@@ -55,5 +55,25 @@ const c = (info,kind,rem,want,why) => {
 c({pid:3,rate:6,shown:0},'pid',5,0,'clamp a stale bank 6 on a 3-bank FC');
 c({pid:6,rate:6,shown:0},'pid',4,4,'clamp keeps a valid bank 5');
 c({pid:6,rate:6,shown:2},'pid',4,0,'clamp respects the cap');
+// The bank rows are drawn at run time by LDRC.bankRow(container, prefix,
+// 'fnName', n), so page_test.js's "every onclick handler exists" check never
+// sees them. Check here that each named function is really defined on the
+// page that names it (0.9.756 - a rename would otherwise ship a row of
+// buttons that do nothing).
+const path = require('path');
+const dir = process.env.PAGES_DIR || path.join(__dirname, '..', 'data');
+let rows = 0;
+for (const f of fs.readdirSync(dir).filter(x => x.endsWith('.html'))) {
+  const html = fs.readFileSync(path.join(dir, f), 'utf8');
+  const re = /LDRC\.bankRow\(\s*[^,]+,\s*'[^']*',\s*'([A-Za-z_$][\w$]*)'/g;
+  let m;
+  while ((m = re.exec(html))) {
+    rows++;
+    const fn = m[1];
+    const defined = new RegExp('(^|[^\\w$.])(async\\s+)?function\\s+' + fn + '\\s*\\(|(^|[^\\w$.])(const|let|var)\\s+' + fn + '\\s*=').test(html);
+    if (!defined) { bad++; console.log('FAIL  ' + f + ': LDRC.bankRow names ' + fn + '() but the page does not define it'); }
+  }
+}
+console.log((bad ? 'FAIL' : 'PASS') + '  every LDRC.bankRow callback is defined on its page (' + rows + ' rows)');
 console.log(bad ? ('\n' + bad + ' FAILED') : '\nALL PASS');
 process.exit(bad ? 1 : 0);

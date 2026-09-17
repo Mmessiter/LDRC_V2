@@ -102,7 +102,13 @@ if [[ $MODE == withdraw ]]; then
   cd "$RXV2"; source "$HERE/ftp_credentials.sh"
   python3 "$HERE/stage_website.py" | tail -3
   bash "$HERE/publish_website.sh" | grep -E "Done|REFUS" || die "publish failed"
-  echo "   ${DIM}Now restart the watcher on the version that is left (dev/release.sh does this on the next release).${OFF}"
+  # The watcher must not go on wanting a version that no longer exists.
+  LEFT=$(python3 -c "import json; v=json.load(open('$RELEASE/manifest.json'))['versions'][0]; print(v['name'], v.get('fs_md5',''))")
+  LEFT_NAME="${LEFT% *}"; LEFT_MD5="${LEFT#* }"
+  pkill -f "fleet_watch.sh" 2>/dev/null || true; sleep 1
+  nohup zsh "$HERE/fleet_watch.sh" "$LEFT_NAME" "$LEFT_MD5" >> "$HERE/fleet_watch.log" 2>&1 &
+  sleep 2; pgrep -f "zsh .*fleet_watch.sh" >/dev/null && ok "watcher now wants $LEFT_NAME" || warn "watcher did not restart"
+  echo "   ${DIM}Not touched: git history and the app stores. Commit a fix and release the next number.${OFF}"
   exit 0
 fi
 
@@ -210,14 +216,15 @@ EOF
   grep -q "Done. Live manifest" "$LOGF" || { tail -15 "$LOGF"; die "Android publish did not finish"; }
   ok "$AND_V built + published (it synced both app webroots)"
 fi
-python3 dev/check_app_sync.py | tail -2 | grep -q "OUT OF STEP" && die "app webroots do not match data/ - run publish_app.sh, or the pages changed on a --fw-only release"
+python3 dev/check_app_sync.py > "$LOGF" 2>&1 || { grep -E "OUT OF STEP|differs" "$LOGF"; die "app webroots do not match data/ - the pages changed on a --fw-only release? (drop --fw-only)"; }
 ok "app webroots match data/"
 
 # ---------------------------------------------------------------- 9 publish
 step "9  messiter.com"
 source "$HERE/ftp_credentials.sh"
-python3 dev/stage_website.py | grep -E "newest|WARNING|littlefs" | sed 's/^/   /'
-python3 dev/stage_website.py | grep -q "WARNING" && die "stage_website warned (above) - the newest release would ship without pages"
+python3 dev/stage_website.py > "$LOGF" 2>&1 || { tail -10 "$LOGF"; die "stage_website failed"; }
+grep -E "newest|WARNING|littlefs" "$LOGF" | sed 's/^/   /'
+grep -q "WARNING" "$LOGF" && die "stage_website warned (above) - the newest release would ship without pages"
 bash dev/publish_website.sh > "$LOGF" 2>&1 || { tail -20 "$LOGF"; die "publish refused (above)"; }
 LIVE=$(curl -s -m 15 "$MANIFEST_URL" | python3 -c "import sys,json; v=json.load(sys.stdin)['versions'][0]; print(v['name'], v.get('fs_md5',''))")
 [[ "$LIVE" == "$NAME $MD5" ]] || die "live manifest says '$LIVE', expected '$NAME $MD5'"
