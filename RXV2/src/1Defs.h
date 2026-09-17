@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.745-park-a-bank";
+constexpr const char* FW_VERSION = "RXV2-0.9.746-ble-request-ids";
 
 //*********************************************************************
 //  Auto-update manifest URLs

@@ -134,6 +134,7 @@
                 const r = await fetch('/api/state.json', { cache: 'no-store' });
                 if (!r.ok) return null;
                 this.state = await r.json();
+                this.stateAt = Date.now();          // so other pollers can share it
                 return this.state;
             } catch (e) { return null; }
         },
@@ -1507,12 +1508,21 @@
         if (document.hidden) return;
         if (window.LDRC && LDRC.replay) return;          // recordings can't arm anything
         try {
-            const s = await (await fetch('/api/state.json', { cache: 'no-store' })).json();
+            // Share the page's own poll when it is fresh (0.9.746): this ran on
+            // EVERY page beside the page's own state poll, doubling the
+            // 4.4 kB reads over Bluetooth for nothing.
+            const L = window.LDRC;
+            const fresh = L && L.state && L.stateAt && (Date.now() - L.stateAt) < 1000;
+            const s = fresh ? L.state : await (await fetch('/api/state.json', { cache: 'no-store' })).json();
             if (s && s.rf && s.rf.armed && s.rf.autofly) showArmedBanner();
             else if (overlay && s && s.rf && !s.rf.armed) hideArmedBanner();
         } catch (e) { /* link gone — keep the banner up, it explains why */ }
     }
+    // 1.2 s on WiFi; 2 s over Bluetooth, where every poll costs ~190 ms of
+    // the link. The receiver drops Bluetooth 3 s after arming, so the banner
+    // still gets its chance.
+    const every = (window.LDRC && LDRC.viaBle) ? 2000 : 1200;
     if (document.readyState === 'loading')
-        document.addEventListener('DOMContentLoaded', () => setInterval(tick, 1200));
-    else setInterval(tick, 1200);
+        document.addEventListener('DOMContentLoaded', () => setInterval(tick, every));
+    else setInterval(tick, every);
 })();

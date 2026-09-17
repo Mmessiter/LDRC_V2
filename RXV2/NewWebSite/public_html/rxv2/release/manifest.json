@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.746-ble-request-ids",
+      "url": "https://messiter.com/rxv2/release/v0.9.746/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.746/littlefs.bin",
+      "fs_md5": "f7733bc48c492e1f9ec6f523d5c494ff",
+      "notes": "Three faults from one Bluetooth session on RAW420AJB (Malcolm 2026-09-17: the app crashed on the update screen, it said there was no WiFi beside the router at -33 dBm, and no update was offered although 0.9.745 was out). The receiver's own log settled the WiFi one at once: its WiFi never dropped. The real fault was in the Bluetooth bridge, which had NO way of tying a reply to a request. When the app gave up on a slow request (4 s) and sent the next, the receiver silently threw the new one away - it was still inside the old handler - and then delivered the OLD reply, which the app took as the answer to the NEW request; every reply after that was one behind. The update page received some other endpoint's reply in place of state.json, found no WiFi field in it, and said 'no WiFi here'. That wrong answer was then remembered as the pilot's own choice of lane and forced the install down Bluetooth. Fixed properly: every request now carries a number, the receiver echoes it in the reply, and a reply for a request the app has given up on is swallowed and dropped, never handed to the wrong one. The receiver also refuses to send a reply nobody is waiting for. Old apps and old receivers keep working unchanged. The update offer: the front page's check asked only the receiver, whose WiFi cannot reach the internet while Bluetooth holds the radio, and took 'both sources failed' as a final answer - it now asks the phone's own internet first, as the update page always did. The crash: nothing readable was left behind, so the Android app now writes every crash to a file and shows it on the next launch with a Copy button; and two things that could have been it are fixed regardless - a dead web view was destroyed from inside its own callback (an Android-documented crash), and an out-of-memory during a Bluetooth install had no handler at all. Also: the armed-banner poll shares the page's own state read over Bluetooth instead of doubling it. Nothing changes in the air - Bluetooth is off when armed."
+    },
+    {
       "name": "RXV2-0.9.745-park-a-bank",
       "url": "https://messiter.com/rxv2/release/v0.9.745/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.745/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.735/littlefs.bin",
       "fs_md5": "73c3b972a1d5f6bbd5d8f571cb49c41f",
       "notes": "Back up said 'connect to the receiver first' on a dongle (Malcolm 2026-09-17). Two things were wrong with that sentence: it said receiver when it was a dongle, and it was not the reason - the only thing that refuses a backup there is the demo. It now says 'this is the demo - nothing here is really connected' when that is why, and 'connect to the receiver or dongle first' when nothing is connected. Same for Restore and for importing a backup file, on both phones."
-    },
-    {
-      "name": "RXV2-0.9.734-dongle-words",
-      "url": "https://messiter.com/rxv2/release/v0.9.734/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.734/littlefs.bin",
-      "fs_md5": "8cc459a26d15b104d5ad4d2d595d1bdb",
-      "notes": "The pages called it a receiver even when it is a dongle (Malcolm 2026-09-17: 'item 2 says Receiver even when it's a dongle... yes this also affects Wiring and many others'). Now, on a dongle: Before you start step 2 says dongle throughout, tells you to choose 'dongle on a wire' rather than 'receiver', and says to use port B or C and leave port A alone - that is usually the receiver's, and the receiver is what flies the model; its no-USB-cable route sets MSP for the dongle's port instead of serial receiver for the receiver's. The Wiring page's last card was the worst of them: it told you to plug into the receiver's port, which would take the port the model flies on - it now says port B or C, not the receiver's, and how to set it. Elsewhere a shared list of phrases corrects the wording (the WiFi page's 'receiver's own WiFi', the log's 'everything the receiver noticed', 'Rename receiver'), deliberately leaving alone the places where 'receiver' is right: Rotorflight's own 'serial receiver' port function, the configurator's Receiver tab, and 'the receiver that flies the model'. The one-page guide and the wiring page now say port B or C, never A. Pages only."
     }
   ],
   "rotorflight": {

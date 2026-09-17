@@ -51,12 +51,24 @@ final class BleLink: NSObject, ObservableObject {
 
     // single-request pipeline
     private struct Pending {
+        let id: Int                        // echoed by the receiver as "#id" (0.9.746)
         let payload: Data
         let firstByteWindow: TimeInterval
         let completion: (Result<BleResponse, Error>) -> Void
     }
     private var queue: [Pending] = []
     private var inFlight: Pending?
+    // Request ids (0.9.746). The bridge had no way to tie a reply to a request:
+    // when we gave up on a slow one and sent the next, the receiver dropped
+    // the new one and delivered the OLD reply, which we took as the answer to
+    // the NEW request — and every reply after that was one behind. Malcolm's
+    // update page read another endpoint's reply as state.json and announced
+    // "no WiFi here" beside the router. Every request now carries "X-Req: n";
+    // a receiver that knows about it echoes "#n" in the location slot, and a
+    // reply whose id is not the one we are waiting for is swallowed and
+    // dropped. Old receivers echo nothing, and behave exactly as before.
+    private var nextReqId = 1
+    private var rxStale = false        // swallowing a reply for a request we gave up on
     private var rxHeader = Data()
     private var rxBody = Data()
     private var rxExpected = -1
@@ -272,7 +284,10 @@ final class BleLink: NSObject, ObservableObject {
                 userInfo: [NSLocalizedDescriptionKey: "Not connected"])))
             return
         }
+        let id = nextReqId
+        nextReqId = nextReqId >= 999_999 ? 1 : nextReqId + 1
         var text = "\(method) \(path)\n"
+        text += "X-Req: \(id)\n"
         for (k, v) in headers { text += "\(k): \(v)\n" }
         text += "\n"
         var payload = Data(text.utf8)
@@ -294,7 +309,7 @@ final class BleLink: NSObject, ObservableObject {
         // Anything that reaches the flight controller now gets a window that
         // matches what the firmware will actually spend.
         let window: TimeInterval = Self.firstByteWindow(for: path)
-        queue.append(Pending(payload: payload, firstByteWindow: window, completion: completion))
+        queue.append(Pending(id: id, payload: payload, firstByteWindow: window, completion: completion))
         pump()
     }
 
@@ -434,6 +449,7 @@ final class BleLink: NSObject, ObservableObject {
 
     private func finish(_ result: Result<BleResponse, Error>) {
         timeoutTimer?.invalidate(); timeoutTimer = nil
+        rxStale = false
         let done = inFlight
         inFlight = nil
         done?.completion(result)
@@ -477,10 +493,19 @@ final class BleLink: NSObject, ObservableObject {
                                                            omittingEmptySubsequences: false)
                     if parts.count >= 3, let code = Int(parts[0]), let len = Int(parts[2]),
                        code >= 100, code < 600, len >= 0 {
+                        let loc = parts.count > 3 ? String(parts[3]) : ""
+                        // Echoed request id: a reply for a request we gave up
+                        // on is consumed and dropped, never handed to the one
+                        // now waiting (0.9.746).
+                        if loc.hasPrefix("#"), let rid = Int(loc.dropFirst()), let f = inFlight, rid != f.id {
+                            rxStale = true
+                        } else {
+                            rxStale = false
+                        }
                         rxCode = code
                         rxType = String(parts[1])
                         rxExpected = len
-                        rxLocation = parts.count > 3 ? String(parts[3]) : ""
+                        rxLocation = loc.hasPrefix("#") ? "" : loc
                         rxBody = Data(rxHeader[(nl + 1)...])
                         rxHeader = Data()
                         break
@@ -495,14 +520,41 @@ final class BleLink: NSObject, ObservableObject {
                     return
                 }
             }
+        } else if rxStale, data.first == UInt8(ascii: "R"), Self.looksLikeHeader(data) {
+            // The receiver abandoned the stale reply mid-body (our new request
+            // reached it) and this packet is the header of OURS. A header is
+            // always its own packet, so this test is safe.
+            rxStale = false
+            rxBody = Data(); rxExpected = -1; rxHeader = Data()
+            handleNotify(data)
+            return
         } else {
             rxBody.append(data)
         }
         if rxExpected >= 0 && rxBody.count >= rxExpected {
+            if rxStale {
+                // Swallowed the whole stale reply — back to waiting for ours.
+                rxStale = false
+                let rest = Data(rxBody.dropFirst(rxExpected))
+                rxBody = Data(); rxExpected = -1; rxHeader = Data()
+                armTimeout(inFlight?.firstByteWindow ?? 4)
+                if !rest.isEmpty { handleNotify(rest) }
+                return
+            }
             let resp = BleResponse(code: rxCode, contentType: rxType,
                                    location: rxLocation, body: rxBody.prefix(rxExpected))
             finish(.success(resp))
         }
+    }
+
+    /// "R<code>|<type>|<len>|<loc>\n" at the start of a packet?
+    private static func looksLikeHeader(_ d: Data) -> Bool {
+        guard let nl = d.firstIndex(of: 0x0A) else { return false }
+        let line = String(decoding: d[d.startIndex..<nl], as: UTF8.self)
+        guard line.hasPrefix("R") else { return false }
+        let parts = line.dropFirst().split(separator: "|", maxSplits: 3, omittingEmptySubsequences: false)
+        guard parts.count >= 3, let code = Int(parts[0]), let len = Int(parts[2]) else { return false }
+        return code >= 100 && code < 600 && len >= 0
     }
 
     private func cleanupConnection(message: String?) {

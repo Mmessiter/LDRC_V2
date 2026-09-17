@@ -88,9 +88,21 @@ class Rxv2Ble(private val context: Context) {
     // ── Single-request pipeline ────────────────────────────────────
     private class Pending(val payload: ByteArray, val cb: (kotlin.Result<Response>) -> Unit,
                           val rawChunks: List<ByteArray>? = null,
-                          val firstByteMs: Long = 12000)
+                          val firstByteMs: Long = 12000,
+                          val id: Int = 0)                 // echoed by the receiver as "#id" (0.9.746)
     private val queue = ArrayDeque<Pending>()
     private var inFlight: Pending? = null
+    // Request ids (0.9.746). The bridge had no way to tie a reply to a request:
+    // when we gave up on a slow one and sent the next, the receiver dropped
+    // the new one and delivered the OLD reply, which we took as the answer to
+    // the NEW request - and every reply after that was one behind. Malcolm's
+    // update page read another endpoint's reply as state.json and announced
+    // "no WiFi here" beside the router. Every request now carries "X-Req: n";
+    // a receiver that knows about it echoes "#n" in the location slot, and a
+    // reply whose id is not the one we are waiting for is swallowed and
+    // dropped. Old receivers echo nothing, and behave exactly as before.
+    private var nextReqId = 1
+    private var rxStale = false        // swallowing a reply for a request we gave up on
     private var rxHeader = ByteArrayOut()
     private var rxBody = ByteArrayOut()
     private var rxExpected = -1
@@ -287,7 +299,10 @@ class Rxv2Ble(private val context: Context) {
     // ── Public request API ──────────────────────────────────────────
     fun request(method: String, path: String, headers: Map<String, String>,
                 body: ByteArray?, cb: (kotlin.Result<Response>) -> Unit) {
+        val id = nextReqId
+        nextReqId = if (nextReqId >= 999_999) 1 else nextReqId + 1
         val sb = StringBuilder("$method $path\n")
+        sb.append("X-Req: $id\n")
         for ((k, v) in headers) sb.append("$k: $v\n")
         sb.append("\n")
         val head = sb.toString().toByteArray(Charsets.UTF_8)
@@ -322,7 +337,7 @@ class Rxv2Ble(private val context: Context) {
                 // carried the "much slower" regression (2026-09-14).
                 else                                 -> 4000L
             }
-            queue.addLast(Pending(payload, cb, firstByteMs = window))
+            queue.addLast(Pending(payload, cb, firstByteMs = window, id = id))
             pump()
         }
     }
@@ -418,6 +433,7 @@ class Rxv2Ble(private val context: Context) {
 
     private fun finish(result: kotlin.Result<Response>) {
         timeout?.let { bg.removeCallbacks(it) }; timeout = null
+        rxStale = false
         val done = inFlight; inFlight = null
         done?.cb?.invoke(result)
         pump()
@@ -453,8 +469,14 @@ class Rxv2Ble(private val context: Context) {
                     val len = parts.getOrNull(2)?.toIntOrNull()
                     if (parts.size >= 3 && code != null && len != null &&
                         code in 100..599 && len >= 0) {
+                        val loc = if (parts.size > 3) parts[3] else ""
+                        // Echoed request id: a reply for a request we gave up
+                        // on is consumed and dropped, never handed to the one
+                        // now waiting (0.9.746).
+                        val rid = if (loc.startsWith("#")) loc.substring(1).toIntOrNull() else null
+                        rxStale = rid != null && rid != (inFlight?.id ?: -1)
                         rxCode = code; rxType = parts[1]; rxExpected = len
-                        rxLocation = if (parts.size > 3) parts[3] else ""
+                        rxLocation = if (loc.startsWith("#")) "" else loc
                         rxBody = ByteArrayOut(); rxBody.append(rxHeader.bytes(), nl + 1, rxHeader.size() - (nl + 1))
                         rxHeader = ByteArrayOut()
                         break
@@ -466,13 +488,42 @@ class Rxv2Ble(private val context: Context) {
                     finish(kotlin.Result.failure(Exception("Bad response framing"))); return
                 }
             }
+        } else if (rxStale && data.isNotEmpty() && data[0] == 'R'.code.toByte() && looksLikeHeader(data)) {
+            // The receiver abandoned the stale reply mid-body (our new request
+            // reached it) and this packet is the header of OURS. A header is
+            // always its own packet, so this test is safe.
+            rxStale = false
+            rxBody = ByteArrayOut(); rxExpected = -1; rxHeader = ByteArrayOut()
+            handleNotify(data)
+            return
         } else {
             rxBody.append(data)
         }
         if (rxExpected in 0..rxBody.size()) {
+            if (rxStale) {
+                // Swallowed the whole stale reply - back to waiting for ours.
+                rxStale = false
+                val all = rxBody.bytes()
+                val rest = all.copyOfRange(rxExpected, rxBody.size())
+                rxBody = ByteArrayOut(); rxExpected = -1; rxHeader = ByteArrayOut()
+                armTimeout(inFlight?.firstByteMs ?: 4000L)
+                if (rest.isNotEmpty()) handleNotify(rest)
+                return
+            }
             val body = rxBody.bytes().copyOfRange(0, rxExpected)
             finish(kotlin.Result.success(Response(rxCode, rxType, rxLocation, body)))
         }
+    }
+
+    /** "R<code>|<type>|<len>|<loc>\n" at the start of a packet? */
+    private fun looksLikeHeader(d: ByteArray): Boolean {
+        val nl = d.indexOf('\n'.code.toByte()); if (nl < 0) return false
+        val line = String(d, 0, nl, Charsets.UTF_8)
+        if (!line.startsWith("R")) return false
+        val parts = line.substring(1).split("|", limit = 4)
+        val code = parts.getOrNull(0)?.toIntOrNull() ?: return false
+        val len = parts.getOrNull(2)?.toIntOrNull() ?: return false
+        return parts.size >= 3 && code in 100..599 && len >= 0
     }
 
     private fun cleanup(msg: String) {

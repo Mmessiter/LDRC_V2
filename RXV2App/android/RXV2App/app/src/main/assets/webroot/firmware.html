@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Check for Update &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=271">
-<script src="/app.js?v=271" defer></script>
+<link rel=stylesheet href="/style.css?v=272">
+<script src="/app.js?v=272" defer></script>
 <style>
 /* --- Currently-installed card -------------------------------------- */
 .installed-card .row{
@@ -838,14 +838,27 @@ document.addEventListener('DOMContentLoaded', () => {
     function paintLanes(st) {
         const card = document.getElementById('laneCard');
         if (!card || !LDRC.viaBle) return;
+        // Only a real state object may decide this (0.9.746). Malcolm's phone
+        // was told "no WiFi here" beside the router: the Bluetooth bridge had
+        // handed this page another request's reply, which parsed as JSON but
+        // had no .net — and "no .net" read as "no WiFi". Anything without the
+        // shape of a state is ignored, and we simply ask again.
+        if (!st || !st.info || !st.net) {
+            setTimeout(() => fetch('/api/state.json', { cache: 'no-store' }).then(r => r.json()).then(paintLanes).catch(() => {}), 2000);
+            return;
+        }
         const net  = (st && st.net) || {};
         const rssi = (st && st.info && typeof st.info.rssi === 'number') ? st.info.rssi : 0;
         const wifiUp   = net.mode === 'WiFi up';
         const joining  = net.mode === 'connecting WiFi';   // after a restart the join can take half a minute
         const wifiWeak = wifiUp && rssi && rssi <= WEAK_WIFI_DBM;
         if (joining) setTimeout(() => fetch('/api/state.json', { cache: 'no-store' }).then(r => r.json()).then(paintLanes).catch(() => {}), 3000);
-        if (!wifiUp) window.__preferBle = true;          // no choice to make
-        const ble = !!window.__preferBle;
+        // No WiFi = Bluetooth, but as a FACT of this paint, never written into
+        // the pilot's choice: __preferBle used to be forced true here and never
+        // cleared, so one wrong "no WiFi" sent the install down the slow lane
+        // even after WiFi was plainly up (0.9.746). It now holds only what the
+        // pilot tapped.
+        const ble = !wifiUp || !!window.__preferBle;
 
         const w = document.getElementById('laneWifi');
         const b = document.getElementById('laneBle');

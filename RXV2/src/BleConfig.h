@@ -133,6 +133,22 @@ inline int     bleCode     = 200;
 inline String  bleType;
 inline String  bleBody;
 inline String  bleLocation;
+// Request id (0.9.746). The app numbers every request ("X-Req: 17") and we
+// echo it in the reply header's location slot as "#17" whenever the reply is
+// not a redirect. Before this the bridge had NO way to tie a reply to a
+// request: when the app gave up on a slow one (4 s) and sent the next, the
+// receiver silently dropped the new one (it was still inside the handler)
+// and then delivered the OLD reply — which the app took as the answer to the
+// NEW request, and every reply after that was one behind. Malcolm's update
+// page read /api/time's {"ok":true} as state.json and announced "no WiFi
+// here" beside a router at -33 dBm. Old apps ignore location on a 2xx, so
+// this is invisible to them.
+inline String  bleReqId;
+// Set from the NimBLE task when a fresh 'Q' arrives while a handler is still
+// running (the app has given up on it). The finished reply is then thrown
+// away instead of pumped: a stale reply is never useful and, to an old app
+// without ids, actively misleading.
+inline volatile bool bleReplyStale = false;
 
 // outbound pump
 inline bool    blePumping  = false;
@@ -297,9 +313,17 @@ inline ReqRouter g_bleRouter;
 class BleReqCallbacks : public NimBLECharacteristicCallbacks {
     void onWrite(NimBLECharacteristic* c, NimBLEConnInfo& connInfo) override {
         bleLastActivityMs = millis();
-        if (bleReqReady) return;                        // one request at a time
         std::string v = c->getValue();
         if (v.empty()) return;
+        if (bleReqReady) {
+            // A handler is still running the previous request. A new 'Q' now
+            // means the app gave up on it: its reply must NOT go out (0.9.746).
+            // The new request itself is still lost — the app times out and
+            // asks again — but it can no longer be answered with the wrong
+            // body.
+            if (v[0] == 'Q') bleReplyStale = true;
+            return;
+        }
         if (v[0] == 'Q') {                              // new request
             // The app is strictly one-request-at-a-time, so a new 'Q' while
             // we are still pumping means it gave up on that response (stall
@@ -333,6 +357,7 @@ class BleReqCallbacks : public NimBLECharacteristicCallbacks {
             return;
         } else return;
         if (bleInboxExpected && bleInbox.length() >= bleInboxExpected) {
+            bleReplyStale = false;                       // this request is fresh
             bleReqReady = true;                          // blePoll() takes it from here
         }
     }
@@ -459,8 +484,9 @@ inline bool bleEarlyPumped = false;
 
 inline void bleEarlyPump() {
     if (!bleActive || !bleSent || !bleClientConnected || !bleRespChr) return;
+    const String loc = (bleLocation.length() || !bleReqId.length()) ? bleLocation : ("#" + bleReqId);
     String hdr = "R" + String(bleCode) + "|" + bleType + "|" +
-                 String(bleBody.length()) + "|" + bleLocation + "\n";
+                 String(bleBody.length()) + "|" + loc + "\n";
     for (int t = 0; t < 50 && !bleRespChr->notify((const uint8_t*)hdr.c_str(), hdr.length()); ++t)
         delay(10);
     size_t mtu   = bleConnMtu > 23 ? bleConnMtu : 23;
@@ -531,6 +557,8 @@ inline void bleExecuteRequest() {
     }
     String body = bleInbox.substring(pos);
     if (bleMethod == "POST" && body.length()) bleParseParams(body);   // form-encoded
+    bleReqId = "";
+    { auto it = bleHeaders.find("X-Req"); if (it != bleHeaders.end()) bleReqId = it->second; }
 
     // Dispatch through the SAME handlers the web portal uses.
     HTTPMethod m = (bleMethod == "POST") ? HTTP_POST : HTTP_GET;
@@ -554,9 +582,20 @@ inline void bleExecuteRequest() {
     }
     if (!bleSent) { bleCode = 500; bleType = "text/plain"; bleBody = "handler sent nothing"; }
 
-    // Frame the response and start pumping.
+    if (bleReplyStale) {
+        // The app gave up on this request while we were answering it (a fresh
+        // 'Q' arrived mid-handler). Nobody is waiting for this reply — drop it.
+        bleReplyStale = false;
+        bleBody = ""; bleHeaderFrame = "";
+        bleInbox = ""; bleInboxExpected = 0;
+        bleReqReady = false;
+        return;
+    }
+    // Frame the response and start pumping. A non-redirect reply carries the
+    // request id in the location slot so the app can match it (0.9.746).
+    const String loc = (bleLocation.length() || !bleReqId.length()) ? bleLocation : ("#" + bleReqId);
     bleHeaderFrame = "R" + String(bleCode) + "|" + bleType + "|" +
-                     String(bleBody.length()) + "|" + bleLocation + "\n";
+                     String(bleBody.length()) + "|" + loc + "\n";
     bleTxOffset = 0;
     blePumping  = true;
     bleInbox = "";

@@ -59,8 +59,6 @@ object SessionCache {
         return out.sortedByDescending { it.second }
     }
 
-    /** Load a saved model's recording as the active one (for review). */
-    @Synchronized
     // Delete a saved model's recording + restore point (Malcolm 2026-08-22:
     // long-press a review row to remove it, so they don't pile up).
     fun deleteSession(model: String) {
@@ -68,6 +66,11 @@ object SessionCache {
         restoreFileFor(model)?.delete()
     }
 
+    /** Load a saved model's recording as the active one (for review).
+     *  @Synchronized belongs HERE: a comment block once slipped between the
+     *  annotation and this function, so it landed on deleteSession() and
+     *  entries.clear() + loadFile() raced the BLE thread's record() (0.9.746). */
+    @Synchronized
     fun activate(model: String) {
         if (model == modelName) return
         saveIfDirty()

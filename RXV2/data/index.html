@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Home &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=271">
-<script src="/app.js?v=271" defer></script>
+<link rel=stylesheet href="/style.css?v=272">
+<script src="/app.js?v=272" defer></script>
 <style>
 /* First paint from memory (Malcolm 2026-09-10: the receiver layout flashed
    before the dongle one): classes set on <html> by the hint script below,
@@ -873,6 +873,18 @@ async function checkFirmware(current) {
         // Bluetooth the reply itself can be slow — connecting the app quickly
         // used to mean the update offer never appeared at all.
         let j = null, sawOffline = false, appTried = false;
+        // Phone first over Bluetooth, exactly as the update page does (0.9.746).
+        // Malcolm connected to a receiver on 0.9.728 with 0.9.745 published
+        // and was offered nothing: the chip's own check came back "tried both
+        // sources, both failed" — the receiver's WiFi cannot reach the
+        // internet while Bluetooth holds the radio — and that counted as an
+        // answer, so the phone's internet was never asked. The update page
+        // asks the phone first and so knew about 0.9.745; this banner did not.
+        if (window.LDRC && LDRC.viaBle) {
+            appTried = true;
+            const mj = await appManifest();
+            if (mj) j = { public: { ok: true, manifest: mj, manifest_url: PUBLIC_MANIFEST } };
+        }
         for (let attempt = 0; attempt < 20 && !j; attempt++) {
             if (attempt) await new Promise(res => setTimeout(res, j === null ? 10000 : 2500));
             try {
@@ -896,6 +908,12 @@ async function checkFirmware(current) {
         }
         if (!j) return;
         if (j.link_active) return;        // TX connected — check deferred to keep the radio link stable
+        // Chip online but neither source reachable from it — the phone may
+        // still manage with its own connection (the update page's fallback).
+        if (!(j.local && j.local.ok) && !(j.public && j.public.ok)) {
+            const mj = await appManifest();
+            if (mj) j = { public: { ok: true, manifest: mj, manifest_url: PUBLIC_MANIFEST } };
+        }
         // Collect every version with the manifest URL it came from (so any
         // relative download URL can be resolved at install time).
         const all = [];

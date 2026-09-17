@@ -108,6 +108,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        installCrashReporter()
+        showLastCrashIfAny()
         ble = Rxv2Ble(applicationContext)
         root = FrameLayout(this)
         setContentView(root)
@@ -672,10 +674,56 @@ class MainActivity : AppCompatActivity() {
             otaMsg = if (newVer.isEmpty())
                 "installed; the receiver didn't reappear on Bluetooth to confirm — reopen the app to check it"
             else "now running $newVer"
-        } catch (e: Exception) {
-            otaPhase = "error"; otaMsg = e.message ?: "failed"
+        } catch (e: Throwable) {
+            // Throwable, not Exception (0.9.746): an OutOfMemoryError on this
+            // bare thread had no handler at all and killed the app.
+            otaPhase = "error"
+            otaMsg = if (e is OutOfMemoryError) "the phone ran out of memory - close other apps and try again"
+                     else (e.message ?: e.javaClass.simpleName)
             runCatching { bleReqSync("POST", "/api/bleota/status") }
         }
+    }
+
+
+    // ---- Crash reporter (0.9.746) ----------------------------------------
+    // Malcolm 2026-09-17: "the app crashed" on the update screen, and there
+    // was nothing to read afterwards - no logcat without a cable. Every
+    // uncaught throw is now written to a file first, and shown on the next
+    // launch with a Copy button so the trace can be pasted straight into a
+    // message. The default handler still runs, so Android's own behaviour is
+    // unchanged.
+    private fun crashFile() = java.io.File(filesDir, "last-crash.txt")
+
+    private fun installCrashReporter() {
+        val previous = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { t, e ->
+            runCatching {
+                val sw = java.io.StringWriter()
+                e.printStackTrace(java.io.PrintWriter(sw))
+                val ver = runCatching { packageManager.getPackageInfo(packageName, 0).versionName }.getOrNull() ?: "?"
+                crashFile().writeText(
+                    "RXV2App $ver on Android ${Build.VERSION.RELEASE} (${Build.MODEL})\n" +
+                    "thread ${t.name} at ${java.util.Date()}\n\n" + sw.toString())
+            }
+            previous?.uncaughtException(t, e)
+        }
+    }
+
+    private fun showLastCrashIfAny() {
+        val f = crashFile()
+        if (!f.exists()) return
+        val text = runCatching { f.readText() }.getOrNull() ?: return
+        f.delete()
+        val shown = if (text.length > 2500) text.substring(0, 2500) + "\n..." else text
+        android.app.AlertDialog.Builder(this)
+            .setTitle("The app crashed last time")
+            .setMessage("This is what went wrong. Copy it and send it to Claude.\n\n" + shown)
+            .setPositiveButton("Copy") { _, _ ->
+                val cm = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                cm.setPrimaryClip(android.content.ClipData.newPlainText("RXV2 crash", text))
+            }
+            .setNegativeButton("Dismiss", null)
+            .show()
     }
 
     private fun showWeb() {
@@ -721,10 +769,19 @@ class MainActivity : AppCompatActivity() {
             // until the app is force-quit (seen on the Fold saving settings,
             // 2026-07-23). Recreate the WebView and reload the front page.
             override fun onRenderProcessGone(view: WebView, detail: android.webkit.RenderProcessGoneDetail): Boolean {
-                runOnUiThread {
+                // Never touch the dead WebView from inside its own callback
+                // (0.9.746). This ran runOnUiThread { view.destroy() } - but
+                // this callback IS on the UI thread, so that ran synchronously,
+                // re-entrantly, inside the framework's own call: Android
+                // documents that as a crash, and a renderer death (memory
+                // pressure, a WebView bug) then took the whole app with it
+                // instead of the page quietly reloading. Detach and rebuild on
+                // the next main-loop pass.
+                webView = null
+                root.post {
+                    runCatching { (view.parent as? android.view.ViewGroup)?.removeView(view) }
                     runCatching { view.destroy() }
-                    webView = null
-                    showWeb()
+                    runCatching { showWeb() }
                 }
                 return true
             }
