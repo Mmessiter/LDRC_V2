@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Read black box &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=222">
-<script src="/app.js?v=266" defer></script>
+<link rel=stylesheet href="/style.css?v=267">
+<script src="/app.js?v=267" defer></script>
 <script src="/bbcheck.js?v=1" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
@@ -469,7 +469,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
 <h3>Checks are kept for you</h3>
 <p>Every finished check is stored on this phone &mdash; the last six per model. They appear under <b>Checks kept on this phone</b>, and tapping one shows it again with no cable and no helicopter. So you can erase the black box whenever you like, and you can look back at how a flight behaved before you changed a filter. A kept check cannot change anything: run a new one for that.</p>
 <h3>The flight</h3>
-<p>Before the vibration verdict the page shows what actually happened: head speed against what the governor asked for, throttle, battery volts and current (the thin line under the volts is the lowest reading in each moment, so a sag shows), roll and pitch, and ESC temperature. Arming, governor changes and rescue are marked as dotted lines. Only what the recorder saved appears &mdash; choose that under <b>What to record</b> on the Black box page.</p>
+<p>Before the vibration verdict the page shows what actually happened: head speed against what the governor asked for, throttle, battery volts and current (the thin line under the volts is the lowest reading in each moment, so a sag shows), roll and pitch, and ESC temperature. Disarming, going airborne, governor changes and rescue are marked as dotted lines &mdash; the log itself begins at the arm. Only what the recorder saved appears &mdash; choose that under <b>What to record</b> on the Black box page.</p>
 <h3>Black box memory</h3>
 <p>The bar shows how much of the flight controller&rsquo;s memory holds flight logs. The check reads back through the last 12 MB to find your newest flight, so a full memory makes it slow; on an empty one it reads only the flight you just made.</p>
 <p><b>Erase all flight logs</b> wipes them all, permanently. The flight controller beeps while it works (10&ndash;60 seconds). Erase before a test session and every check afterwards is quick. The same bar and button are on the Black box page.</p>
@@ -477,7 +477,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
 <ul>
 <li>USB cable only, transmitter off, model disarmed: the check needs the flight controller to itself. The flight controller hands over about 60 kB a second, so it reads the last 12 MB &mdash; three or four minutes &mdash; and finds the newest flight in it. Erase the black box before a test session and there is far less to read.</li>
 <li>Reads the most recent flight that actually flew (an arm on the bench afterwards is ignored); with several in the memory it lists them and any can be checked.</li>
-<li>Motor and tail lines are named from the gear ratios on the First-time basics page; two-bladed heads and tails are assumed.</li>
+<li>Motor and tail lines are named from the gear ratios the flight controller holds (Gear ratio page); two-bladed heads and tails are assumed.</li>
 <li>With <i>Overwrite the oldest</i> on, the oldest flight in the memory may be cut short at its start; the newest is always complete.</li>
 </ul>
 </template>

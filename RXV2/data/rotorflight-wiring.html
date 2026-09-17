@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Wiring &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=222">
-<script src="/app.js?v=266" defer></script>
+<link rel=stylesheet href="/style.css?v=267">
+<script src="/app.js?v=267" defer></script>
 <style>
 .wcard{background:#f2f6f8;border-radius:12px;padding:.8em .9em;margin:.6em 0;
        box-shadow:0 2px 6px rgba(0,0,0,.08)}
@@ -77,13 +77,13 @@
 <p>The physical hookup for a Rotorflight helicopter, plug by plug.</p>
 <ul>
 <li><b>Swash servos:</b> Rotorflight&rsquo;s mixer expects S1 on the front-or-back (elevator) servo, then S2 and S3 clockwise around the swashplate viewed from above. The Servos step later confirms each one visually.</li>
-<li><b>Tail:</b> S4 &mdash; unless the tail is on a motor, in which case S4 stays empty and the tail motor is configured in the configurator.</li>
+<li><b>Tail:</b> S4 &mdash; unless the tail is on a motor, in which case S4 stays empty and the tail&rsquo;s throttle range is set on the Travel extents page.</li>
 <li><b>ESC:</b> three possible connections &mdash; the throttle lead (always), the one-wire telemetry (strongly recommended: battery + head speed data), and a dedicated RPM wire (only if your ESC provides one and its telemetry doesn&rsquo;t already carry RPM).</li>
 <li><b>Head speed must arrive somehow</b> &mdash; telemetry wire or RPM wire &mdash; or the governor has nothing to govern.</li>
-<li><b>Which UART?</b> The labelled receiver port (ELRS&thinsp;/&thinsp;RX) is pre-configured for CRSF, so no computer is needed. Any other UART is a chicken-and-egg: the flight controller can&rsquo;t be told which port to listen on <i>over</i> a link it isn&rsquo;t listening to yet &mdash; that one change needs the configurator on USB, once.</li>
+<li><b>Which UART?</b> Any port will do. Plug in, then set that socket on the Ports page with the USB-C cable in &mdash; one Save sets the port, CRSF, serial receiver mode and telemetry. The default receiver socket (Port A on a Nexus, ELRS&thinsp;/&thinsp;RX on many boards) is already CRSF; a dongle uses port B or C, set to <i>dongle on a wire</i>. Without the cable that one change still needs the configurator on USB, once.</li>
 <li><b>Servo damage risk:</b> a narrow-pulse or low-frequency servo driven with the wrong signal, or fed the wrong BEC voltage, can burn out in seconds. Wire the plugs by all means, but power the servos only after the Servos step (frequency/width) and the ESC&rsquo;s BEC voltage are set.</li>
 <li>Crossed TX/RX on the receiver port is the classic no-contact cause &mdash; if the Rotorflight button never appears, swap them first.</li>
-<li><b>Brand-new board still silent?</b> Factory boards ship with telemetry OFF &mdash; and a mute board ignores incoming commands too (tested: it can&rsquo;t be woken from this side). The one-time fix is the computer: Configurator &rarr; enable Telemetry &rarr; Save, which restarts the board. Every later step works from the phone.</li>
+<li><b>Brand-new board still silent?</b> Factory boards ship with telemetry OFF &mdash; and a mute board ignores incoming commands too (tested: it can&rsquo;t be woken from this side). Fix it from the phone: USB-C cable in, Ports page, choose receiver for that socket, Save &mdash; that switches telemetry on and restarts the board. Only without the cable does this need the configurator, once. Every later step works from the phone.</li>
 </ul>
 </template>
 <script>

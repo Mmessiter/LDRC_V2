@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Switches &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=222">
-<script src="/app.js?v=266" defer></script>
+<link rel=stylesheet href="/style.css?v=267">
+<script src="/app.js?v=267" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -457,12 +457,12 @@ document.addEventListener('DOMContentLoaded', ()=>{ load().then(()=>{ if(!LDRC.r
 <ul>
 <li><b>Arm</b> is the big one — the motor can only run while its switch is in range. Every model needs one.</li>
 <li><b>Rescue</b> — the safety-net switch; the Rescue page shows its settings.</li>
-<li>Ranges are in Rotorflight&rsquo;s 900&ndash;2100&nbsp;µs scale. A switch typically sits near 1100 (low), 1500 (middle) and 1900 (high) — so &ldquo;1700&ndash;2100&rdquo; means &ldquo;switch high&rdquo;.</li>
+<li>Ranges are on Rotorflight&rsquo;s 875&ndash;2125&nbsp;µs scale. A switch typically sits near 1100 (low), 1500 (middle) and 1900 (high) — so &ldquo;1700&ndash;2100&rdquo; means &ldquo;switch high&rdquo;.</li>
 <li>The <b>bar</b> under each row is the full 875&ndash;2125&nbsp;&micro;s travel; the <b>blue zone</b> is where the function is ON, and <b>drag the round ends</b> with a finger to set the range, and the thin <b>red line</b> is the channel&rsquo;s live position &mdash; flick the switch and watch it enter the zone (it turns green inside).</li>
 <li>The <b>Bank</b> and <b>Rates</b> cards at the top are the profile selectors: pick the channel and the position count &mdash; the bar divides into equal sections across the switch&rsquo;s travel, the live section lights up, and the flight-controller line shows which profile it has ACTUALLY chosen.</li>
-<li>Check which channel a switch moves on <b>View channels</b>.</li>
+<li>Find a switch by flicking it and watching the red line on this page&rsquo;s own bar. <b>View channels</b> numbers channels as your transmitter sends them &mdash; not the flight controller&rsquo;s numbering, once the channel order is set on the Transmitter channels page.</li>
 </ul>
-<p>Every <b>Save</b> writes the slot, stores it, reads it back and confirms the bytes match. Be especially careful with <b>Arm</b> — change it with the model unpowered.</p>
+<p>Every switch-action <b>Save</b> writes the slot, stores it, reads it back and confirms the bytes match. The <b>Bank</b> and <b>Rates</b> selectors cannot be read back &mdash; Rotorflight 4.6 will not send its adjustments list over the receiver link &mdash; so check those by flipping the switch and watching the flight-controller line. Be especially careful with <b>Arm</b> — change it with the model unpowered.</p>
 </template>
 </body>
 </html>

@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Easy tuning &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=222">
-<script src="/app.js?v=266" defer></script>
+<link rel=stylesheet href="/style.css?v=267">
+<script src="/app.js?v=267" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;gap:.6em;
         padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -60,7 +60,7 @@
         <p class=sub>Press and hold a heading to see exactly which numbers move.</p>
         <div class=sl><span>Very gentle</span><input type=range id=s_start min=0 max=100 step=5 value=50 oninput="onStart()"><span>Very fierce</span></div>
         <p class=sub id=startNote></p>
-        <div class=fldRow><label data-help="Rotorflight's PID spool-up makes the governor ramp the HEAD SPEED itself instead of the throttle, so the torque is even all the way up. It is a per-bank switch; ticked here, saving switches it on in all four banks.">Also switch on PID spool-up in every bank (recommended)</label> <input type=checkbox id=s_pidsp checked onchange="onStart()"></div>
+        <div class=fldRow><label data-help="Rotorflight's PID spool-up makes the governor ramp the HEAD SPEED itself instead of the throttle, so the torque is even all the way up. It is a per-bank switch; ticked here, saving switches it on in every bank.">Also switch on PID spool-up in every bank (recommended)</label> <input type=checkbox id=s_pidsp checked onchange="onStart()"></div>
         <a class=more href="/rotorflight-gov-global">See the numbers on the Governor page</a>
     </div>
 
@@ -332,12 +332,12 @@ document.addEventListener('DOMContentLoaded', () => { paintBanks(); load(); });
 <p>All the plain-English sliders in one place. Each one drives the real numbers on its own page (the link under it takes you there), and nothing is written until you tap Save.</p>
 <h3>How hard should it start?</h3><p>One slider for spool-up time, handover throttle and startup time, the same for every bank. Saving restarts the flight controller, so transmitter off and blades off.</p>
 <h3>How agile?</h3><p>Top rotation speeds at full stick, and how soft the sticks feel around centre. Per bank.</p>
-<h3>Feel</h3><p>Softer or sharper: scales the bank&rsquo;s P, I, D and feedforward together, relative to what the model flew last. Wobbles or shakes &rarr; softer. Sluggish, drifting or mushy &rarr; sharper. Small steps, one flight each; after a save the sliders return to centre.</p>
+<h3>Feel</h3><p>Softer or sharper: scales the bank&rsquo;s P, I, D and feedforward together, measured from your last backup. Wobbles or shakes &rarr; softer. Sluggish, drifting or mushy &rarr; sharper. Small steps, one flight each. The slider stays where it is after a save, so it keeps showing how far you have come &mdash; a backup re-centres it.</p>
 <h3>Which numbers move</h3>
 <ul>
-<li><b>Start:</b> Moves three numbers on the Governor page and nothing else: Spool-up time (40 s at very gentle, 10 s at very fierce), Handover throttle (10 % to 25 %) and Startup time (always twice the spool-up time). The tick switches on PID spool-up in each bank&rsquo;s governor profile.</li>
-<li><b>Agility and stick feel:</b> Moves the Rate column on the Rates page: roll and pitch from 120 to 500 degrees a second, yaw from 150 to 600. The Stick feel slider moves the Expo column on roll, pitch and yaw, from 70 (softest centre) to 0 (direct). Shape, collective and the dynamics are left alone.</li>
-<li><b>Feel:</b> Cyclic multiplies roll and pitch P, I, D and F on the PIDs page by 0.7 (softest) to 1.3 (sharpest); Tail does the same to yaw. Boost and HSI offsets are left alone. The starting point is what was loaded, or last saved.</li>
+<li><b>Start:</b> Moves three numbers on the Governor page and nothing else &mdash; Spool-up time, Startup time and Handover throttle. The centre is what the model had at your last backup: full left doubles the two times and drops the handover 15&nbsp;%, full right halves them and raises it 15&nbsp;%. The tick switches on PID spool-up in every bank&rsquo;s governor profile.</li>
+<li><b>Agility and stick feel:</b> Agility moves the Rate column on the Rates page (roll, pitch and yaw together) from half to double what this bank had at your last backup; Stick feel moves the Expo column 35 softer to 35 more direct. Shape, collective and the dynamics are left alone.</li>
+<li><b>Feel:</b> Cyclic multiplies roll and pitch P, I, D and F on the PIDs page by 0.7 (softest) to 1.3 (sharpest); Tail does the same to yaw. Boost and HSI offsets are left alone. The centre is what this bank had at your last backup.</li>
 </ul>
 <p>Everything else on those pages stays byte-for-byte as it was, and an untouched slider never rewrites its numbers.</p>
 </template>

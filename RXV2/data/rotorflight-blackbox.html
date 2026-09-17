@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Black box (Flight recorder) &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=222">
-<script src="/app.js?v=266" defer></script>
+<link rel=stylesheet href="/style.css?v=267">
+<script src="/app.js?v=267" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -298,7 +298,7 @@ async function hideRxLogOnDongle(){
 </script>
 <template id=helpContent><h2>Black box (Flight recorder)</h2>
 <p><b>Read black box</b>, at the top, is how you look at what was recorded: the last flight as traces, in plain English, and which filter to change. <b>Receiver log</b>, at the foot, is the receiver's own separate record of the radio link and the battery.</p>
-<p>Rotorflight&rsquo;s Blackbox writes the flight controller&rsquo;s insides &mdash; sticks, gyro, servos, governor, ESC &mdash; hundreds of times a second into the flight controller&rsquo;s own memory. Afterwards the Rotorflight Blackbox Explorer (computer, USB) shows exactly what happened. <b>Not the receiver&rsquo;s Black box log</b> on the front page: that records the radio link and telemetry a few times a second and is read here on the phone.</p>
+<p>Rotorflight&rsquo;s Blackbox writes the flight controller&rsquo;s insides &mdash; sticks, gyro, servos, governor, ESC &mdash; hundreds of times a second into the flight controller&rsquo;s own memory. Afterwards the Rotorflight Blackbox Explorer (computer, USB) shows exactly what happened. <b>Not the Receiver log</b> at the foot of this page: that records the radio link and telemetry a few times a second and is read here on the phone.</p>
 <ul>
 <li><b>When</b> &mdash; <i>Whenever armed</i> needs no switch and never forgets. The two switch choices need a Blackbox switch (Switches page); <i>Armed and the switch on</i> starts when both are true and the switch then pauses and resumes it.</li>
 <li><b>How often</b> &mdash; 1 in 8 loops is plenty for tuning and governor problems. Every loop or 1 in 2 for vibration hunting, and the memory fills that much faster. Applies after a restart.</li>

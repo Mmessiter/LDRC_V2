@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Output protocol &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=222">
-<script src="/app.js?v=266" defer></script>
+<link rel=stylesheet href="/style.css?v=267">
+<script src="/app.js?v=267" defer></script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -194,7 +194,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 <li><b>PPM</b> — old-school 8-channel pulse train, for legacy servo setups.</li>
 </ul>
 <h3>How to use it</h3>
-<p>Pick a protocol, tap <b>Save & reboot</b>. The receiver applies the change on the next boot.</p>
+<p>Pick a protocol and tap <b>Save</b>. Changing the protocol itself reboots the receiver (the button says so); the other settings apply at once.</p>
+<p><b>CRSF frame rate</b> — 250 Hz for a flight controller; drop to 100 Hz for CRSF→PWM converters. <b>Invert PPM</b> — try it if a sim or flight controller ignores PPM. <b>Flight controller on the telemetry line</b> — untick for a plain servo converter, whose echo reads as phantom telemetry.</p>
 <h3>Tips</h3>
 <p>If you're flying a Rotorflight helicopter, pick CRSF — it unlocks the FC telemetry + Rotorflight tuning pages on this device. PPM uses a different output mode; check your servo wiring if you switch.</p>
 </template>

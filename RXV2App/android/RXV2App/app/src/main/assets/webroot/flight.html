@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Flight analysis &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=222">
-<script src="/app.js?v=266" defer></script>
+<link rel=stylesheet href="/style.css?v=267">
+<script src="/app.js?v=267" defer></script>
 <style>
 /* Landscape = reading mode (Malcolm 2026-07-31): the page widens and the
    graph grows to occupy most of the screen instead of a slim centre column. */
@@ -424,7 +424,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 <template id=helpContent><h2>Flight analysis</h2>
 <p>Everything the receiver recorded about a flight, for the current session and the last twenty saved flights.</p>
 <h3>How to use it</h3>
-<p>Pick a flight with the selector at the top. <b>Current</b> is live (it redraws during a flight); saved flights are kept in flash, so they survive reboots and battery swaps — compare today with yesterday. Each saved flight shows the <b>date and time it was flown</b>, learned from your phone's clock or from the transmitter's (so phone-free field days are dated too); flights saved before the receiver ever knew the time say "date unknown". Ground tests under a minute aren't saved at all, and the <b>Delete</b> button (tap twice) prunes any saved flight you don't want. Turn the phone sideways for a much larger graph.</p>
+<p>Pick a flight with the selector at the top. <b>Current</b> is live (it redraws during a flight); saved flights are kept in flash, so they survive reboots and battery swaps — compare today with yesterday. Each saved flight shows the <b>date and time it was flown</b>, learned from your phone's clock or from the transmitter's (so phone-free field days are dated too); flights saved before the receiver ever knew the time say "date unknown". A short armed hop still saves (30 seconds armed counts); a wiggle-check with nothing armed does not, and the <b>Delete</b> button (tap twice) prunes any saved flight you don't want. Turn the phone sideways for a much larger graph.</p>
 <h3>What you're seeing</h3>
 <ul>
 <li><b>Link statistics</b> &mdash; duration, average frame rate, average and longest gap between packets, and the gap-size distribution. A longest gap under ~30&thinsp;ms is excellent.</li>

@@ -290,7 +290,8 @@
                 '<div style="margin-top:1em;border-top:1px solid rgba(125,158,176,.25);padding-top:.8em">'
                 + '<h3 style="margin:.2em 0 .4em">📡 Ways to connect</h3>'
                 + '<p class=muted style="margin:.2em 0 .5em">Right now you are connected over '
-                + (this.viaBle ? '<b>Bluetooth</b> (the iPhone app).' : '<b>WiFi</b> (browser).') + '</p>'
+                // "the iPhone app" was shown to Android users too (2026-09-17 help audit).
+                + (this.viaBle ? '<b>Bluetooth</b> (the RXV2 app).' : '<b>WiFi</b> (browser).') + '</p>'
                 // One app, one firmware (Malcolm 2026-09-17). Worth saying once,
                 // everywhere: a newcomer handed a dongle has no reason to guess
                 // that it is the same app and the same code as a receiver, and

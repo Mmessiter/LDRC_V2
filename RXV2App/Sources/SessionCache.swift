@@ -451,9 +451,11 @@ extension SessionCache {
     /// wiring, ESC telemetry, telemetry sensors, blackbox, name, modes,
     /// per-channel failsafe values, RPM notches. A backup from ANOTHER model
     /// leaves these out on import: they belong to that helicopter's hardware.
-    /// What transfers is the tune: PIDs, rates, governor, rescue, filters,
-    /// stick setup, failsafe policy, arming delay, RSSI, channel map and the
-    /// bank/rates switches.
+    /// What transfers is the TUNE ONLY: PIDs, advanced PIDs, rates, governor
+    /// (and its global settings), rescue, filters, auto-disarm delay, RSSI.
+    /// The channel map, stick centre & travel, failsafe and the bank/rates
+    /// selector slots were added to this list on 2026-09-17 — they are the
+    /// other pilot's RADIO, not his tune.
     static let mechanicsKeyPrefixes =
         ["/api/msp?fn=120", "/api/msp?fn=42", "/api/msp?fn=174&data=", "/api/msp?fn=172",
          "/api/msp?fn=131", "/api/msp?fn=38", "/api/msp?fn=126", "/api/msp?fn=96", "/api/msp?fn=240",
@@ -462,7 +464,7 @@ extension SessionCache {
          "/api/msp?fn=34", "/api/msp?fn=238", "/api/msp?fn=77", "/api/msp?fn=154&data=",
          // The pilot's radio, not the tune (2026-09-16 review): channel map,
          // RSSI channel, RX config, and the bank/rates selector slots.
-         "/api/msp?fn=64", "/api/msp?fn=66", "/api/msp?fn=75",
+         "/api/msp?fn=64", "/api/msp?fn=66", "/api/msp?fn=75",   // channel map, stick centre & travel, failsafe
          "/app/declared/adj30", "/app/declared/adj31", "/app/declared/adj32", "/app/declared/adj33", "/app/declared/adj34", "/app/declared/adj35",
          "/app/declared/adj36", "/app/declared/adj37", "/app/declared/adj38", "/app/declared/adj39", "/app/declared/adj40", "/app/declared/adj41"]
     static func isMechanicsKey(_ k: String) -> Bool {
@@ -662,8 +664,10 @@ extension SessionCache {
         for (k, e) in frozen where k.hasPrefix("/app/declared/adj") {
             guard let h = String(data: e.body, encoding: .utf8), h.count >= 4,
                   h.allSatisfy({ $0.isHexDigit }) else { continue }
-            let label = k.hasSuffix("adj40") ? "bank selector switch"
-                      : k.hasSuffix("adj41") ? "rates selector switch" : "declared \(k)"
+            // The live selector slots are adj30 (bank) and adj36 (rates);
+            // 40/41 are legacy and cleared (rotorflight-txchannels.html).
+            let label = k.hasSuffix("adj30") ? "bank selector switch"
+                      : k.hasSuffix("adj36") ? "rates selector switch" : "declared \(k)"
             out.append(RestoreItem(selectByte: nil, writeFn: 53, readFn: 0, hex: h.uppercased(), label: label))
         }
         return out

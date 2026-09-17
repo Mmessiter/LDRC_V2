@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Travel extents &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=222">
-<script src="/app.js?v=266" defer></script>
+<link rel=stylesheet href="/style.css?v=267">
+<script src="/app.js?v=267" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;
         padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -119,7 +119,7 @@ input:disabled{background:#eee;color:#999}
 //   [2] u8 tail_motor_idle  [3..4] s16 tail_center_trim
 //   [5] u8 swash_type  [6] u8 swash_ring  [7..8] s16 swash_phase
 //   [9..10] u16 swash_pitch_limit (deg = raw*12/1000, 0 = off)
-//   [11..16] s16 swash_trim[3] (0.1 deg)  [17] u8 tta_precomp
+//   [11..16] s16 swash_trim[3] (PERCENT of servo throw, not 0.1 deg — source-verified)  [17] u8 tta_precomp
 //   [18] s8 geo_correction  [19] s8 tilt_corr_pos  [20] s8 tilt_corr_neg
 // Mixer inputs: index 1 = stab roll, 2 = stab pitch, 3 = stab yaw,
 //   4 = stab collective. Cyclic/collective: deg = raw*12/1000. Yaw: *24/1000.
@@ -235,7 +235,7 @@ async function load() {
         const geoRaw = cachedCfg[18] > 127 ? cachedCfg[18] - 256 : cachedCfg[18];
         document.getElementById('t_geo').value = d1(geoRaw / 5);
         document.getElementById('t_total').value = d1((cachedCfg[9] | (cachedCfg[10]<<8)) * 12/1000);
-        // Trims (0.1 deg raw).
+        // Trims (percent of servo throw, Rotorflight's own unit for these).
         document.getElementById('t_trR').value = d1(s16At(cachedCfg,11) * 0.1);
         document.getElementById('t_trP').value = d1(s16At(cachedCfg,13) * 0.1);
         document.getElementById('t_trC').value = d1(s16At(cachedCfg,15) * 0.1);
@@ -470,20 +470,22 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => { ovSet({}).catch(() => {}); }, 1500);
 });
 </script>
-<template id=helpContent><h3>What the numbers do</h3>
-<p><b>Collective</b> is how much pitch the blades get at full stick &mdash; the fix for &ldquo;nowhere near enough collective&rdquo;. The <b>total</b> limit caps cyclic&nbsp;+&nbsp;collective combined; the flight controller keeps it at least 6&deg; above the collective limit, so it may adjust your number on save.</p>
-<p><b>Gains</b> make the degrees MEAN degrees: the gain scales how far the swash really moves per commanded degree. If a pitch gauge reads less than the limit says (6&deg; real when 14&deg; is commanded), multiply the gain by the ratio (&times;14/6). Direction is preserved &mdash; only the amount changes. Re-measure after saving; if the reading stops growing, the servo travel is the ceiling &mdash; stop and investigate before forcing it.</p>
-<p><b>Trims</b> are small levelling corrections for the swashplate, in percent of servo throw (Rotorflight&rsquo;s own unit for these). Use them to cure a steady hover drift once the mechanical setup is close.</p>
-<p><b>Tail</b> is degrees of authority each way, named by the rudder stick &mdash; matched to how these transmitters are rigged. If a differently-rigged model reads swapped, say so.</p>
+<template id=helpContent><h2>Travel extents</h2>
+<p>How far everything can move: collective and cyclic pitch limits, the total swash limit, swashplate trims, and tail travel. These are the numbers you discover on a model&rsquo;s first hover &mdash; most famously &ldquo;nowhere near enough collective&rdquo;.</p>
+<h3>How to use it</h3>
+<p>Change the numbers, tap <b>Save</b>. They apply at once &mdash; no reboot. Then check the real blade angles on the bench with a pitch gauge before flying.</p>
+<h3>What the numbers do</h3>
+<p><b>Collective pitch limit</b> is blade pitch at full stick, each way. <b>Cyclic pitch limit</b> is cyclic authority each way. <b>Total pitch limit</b> caps cyclic&nbsp;+&nbsp;collective combined; the flight controller keeps it at least 6&deg; above the collective limit, so it may adjust your number on save.</p>
+<p><b>Gains</b> make the degrees MEAN degrees: the gain scales how far the swash really moves per commanded degree. If a pitch gauge reads less than the limit says (6&deg; real when 14&deg; is commanded), multiply the gain by the ratio (&times;14/6). Direction is preserved &mdash; only the amount changes. Roll and pitch cyclic gains are separate, so you can even the two axes up: gauge reads 8&deg; roll but 10&deg; pitch? Lower the pitch gain by 8&frasl;10 (or raise roll by 10&frasl;8) until both match. Re-measure after saving; if the reading stops growing, the servo travel is the ceiling &mdash; stop and investigate before forcing it.</p>
+<p><b>Trims</b> are small levelling corrections for the swashplate, in percent of servo throw (Rotorflight&rsquo;s own unit for these). Use them to cure a steady hover drift once the mechanical setup is close. The collective trim also centres a blade pitch that isn&rsquo;t 0&deg; at mid-stick.</p>
+<p><b>Tail</b> is degrees of authority each way, named by the rudder stick &mdash; matched to how these transmitters are rigged. On a motorised tail it is throttle range instead. If a differently-rigged model reads swapped, say so.</p>
+<h3>Control sense</h3>
+<p>Tick a box if that control moves the wrong way. It reverses the control only &mdash; the servos and the other two controls are untouched, so it is safe to use after the mechanics are set. Check all three on the bench before flying: sticks and swash must agree.</p>
+<h3>Collective up/down balance</h3>
+<p>Linkage geometry often gives more pitch one way than the other. This evens them up (Rotorflight calls it geo correction &mdash; nothing to do with GPS). Measure both extremes with the gauge first; if they already match, leave it at zero.</p>
 <h3>Bench measure (swash calibration)</h3>
 <p><b>Motor off, blades clear.</b> It drives the swash to an exact angle with the gyros bypassed, so a pitch gauge can check the real geometry &mdash; the other swash axes are held at zero while you measure. The flight controller refuses to arm while this is on, and the swash is released automatically when you leave the page (or after 5 minutes).</p>
 <p><b>Measuring cyclic gain:</b> hold 8&deg; of Roll, put the gauge on one blade and slowly rotate the head by hand &mdash; note the <b>peak</b> reading anywhere round the circle (peak-hunting sidesteps swash phasing). Peak 5.6&deg; when 8&deg; is commanded gives a new cyclic gain of current &times; 8 &divide; 5.6. The green gain box follows the chosen axis; type the new gain, Save, re-check. This is Rotorflight&rsquo;s own official calibration method. <b>Collective</b> is deliberately not here &mdash; on this fleet it is calibrated the direct way: full stick, measure, adjust.</p>
-<h2>Travel extents</h2>
-<p>How far everything can move: collective and cyclic pitch limits, the total swash limit, swashplate trims, and tail travel. These are the numbers you discover on a model's first hover — most famously &ldquo;nowhere near enough collective&rdquo;.</p>
-<h3>How to use it</h3>
-<p>Change the limits, tap <b>Save</b>. They apply immediately — no reboot. Then check the real blade angles on the bench with a pitch gauge before flying.</p>
-<h3>What the numbers mean</h3>
-<p><b>Collective pitch limit</b> — blade pitch at full collective stick, each way. <b>Cyclic pitch limit</b> — cyclic authority each way. <b>Total pitch limit</b> — cap on cyclic + collective combined (the flight controller keeps it at least 6&deg; above collective). <b>Gains</b> — the calibration that makes commanded degrees equal real, measured degrees: if the gauge reads less than the limit says, raise the gain by that ratio. Roll and pitch cyclic gains are separate so you can <b>balance the two axes</b>: gauge reads 8&deg; roll but 10&deg; pitch? Lower the pitch gain by 8&frasl;10 (or raise roll by 10&frasl;8) until both match. <b>Swash trims</b> — fine levelling (collective trim also centres a blade pitch that isn't 0&deg; at mid-stick). <b>Tail travel</b> — tail-blade pitch each way (or throttle range on a motorised tail).</p>
 <h3>Safety</h3>
 <p>Bigger extents mean bigger forces. After changing them, always confirm on the bench that nothing binds at the ends of travel.</p>
 </template>

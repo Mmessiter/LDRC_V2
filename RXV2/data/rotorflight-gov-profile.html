@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Governor (profile) &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=222">
-<script src="/app.js?v=266" defer></script>
+<link rel=stylesheet href="/style.css?v=267">
+<script src="/app.js?v=267" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;
         padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -321,9 +321,9 @@ document.addEventListener('DOMContentLoaded', () => {
 <template id=helpContent><h2>Governor — profile</h2>
 <p>Per-profile governor settings: target headspeed, gains, master gain, feed-forward terms. Each Rotorflight profile carries its own set, so different flight styles can have different governor behaviour.</p>
 <h3>How to use it</h3>
-<p>Adjust headspeed and gains, tap <b>Save</b>. The values are written to the active profile on the FC.</p>
+<p>Adjust head speed and gains, tap <b>Save</b>. They go to the bank picked at the top of this page, and are read back and checked. On a receiver the model&rsquo;s own bank switch takes its bank back a few seconds after you stop; on a dongle your choice stays until that switch is moved.</p>
 <h3>Tips</h3>
-<p>The headspeed you set here is what the governor will hold once spool-up completes. Master gain controls how aggressively the governor reacts to throttle changes — too high and the rotor surges; too low and it sags under load.</p>
+<p>The headspeed you set here is what the governor will hold once spool-up completes. Master gain is the governor&rsquo;s overall strength: raise it if the head speed sags or wanders, lower it if it surges or pulses.</p>
 </template>
 </body>
 </html>

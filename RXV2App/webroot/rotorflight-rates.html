@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rates &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=222">
-<script src="/app.js?v=266" defer></script>
+<link rel=stylesheet href="/style.css?v=267">
+<script src="/app.js?v=267" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -651,9 +651,9 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 <template id=helpContent><h2>Rotorflight rates</h2>
-<p>Reshapes the curve that maps your stick deflection to a commanded angular rate. Independent curves for Roll, Pitch, Yaw.</p>
+<p>Reshapes the curve that maps your stick deflection to a commanded angular rate. Independent curves for Roll, Pitch, Yaw and Collective &mdash; Collective&rsquo;s Rate is degrees of blade pitch, not degrees a second.</p>
 <h3>How to use it</h3>
-<p>Pick a curve type (Betaflight / Actual / Quick / etc.) and adjust the parameters until the helicopter flies the way you want — gentle around centre stick for hover, sharper at the extremes for aerobatics.</p>
+<p>Rotorflight 4.6 uses rate type&nbsp;6 (ROTORFLIGHT): <b>Rate</b> is the top rotation speed at full stick, <b>Shape</b> is how the response builds towards it, <b>Expo</b> softens the centre, <b>Max Vel</b> just repeats Rate. Leave the rate type alone unless you know why &mdash; the other types read the same stored bytes as different things.</p>
 <h3>Tips</h3>
 <ul>
 <li>Gentle curves are calmer in hover; aggressive curves give a more responsive feel at full deflection.</li>

@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Governor (global) &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=222">
-<script src="/app.js?v=266" defer></script>
+<link rel=stylesheet href="/style.css?v=267">
+<script src="/app.js?v=267" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;
         padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -71,7 +71,7 @@ input:disabled,select:disabled{background:#eee;color:#999}
             <span style="font-size:.9em;white-space:nowrap">Very fierce</span>
         </div>
         <p class=sub id=feelNote></p>
-        <div class=fldRow><label data-help="Rotorflight's PID spool-up makes the governor ramp the HEAD SPEED itself instead of the throttle, so the torque is even all the way up rather than hardest when the head is slowest. It is a per-bank switch (Governor profile page); ticked here, saving switches it on in all four banks.">Also switch on PID spool-up in every bank (recommended)</label> <input type=checkbox id=g_feelPid checked></div>
+        <div class=fldRow><label data-help="Rotorflight's PID spool-up makes the governor ramp the HEAD SPEED itself instead of the throttle, so the torque is even all the way up rather than hardest when the head is slowest. It is a per-bank switch (Governor profile page); ticked here, saving switches it on in every bank.">Also switch on PID spool-up in every bank (recommended)</label> <input type=checkbox id=g_feelPid checked></div>
     </div>
 
     <div class=card>
@@ -632,11 +632,11 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 <template id=helpContent><h2>Governor — global</h2>
-<p>Rotorflight's global governor settings: mode (electric / nitro / off), spool-up time, full headspeed RPM, and other settings that apply to <em>every</em> profile.</p>
+<p>Rotorflight's global governor settings &mdash; mode (electric / nitro / off), the start-up timings, the filters and the bypass throttle curve: the ones that apply to <em>every</em> bank. Each bank's own head speed and gains are on the Governor (profile) page.</p>
 <h3>How to use it</h3>
-<p>Choose a governor mode, set spool-up curve and full-headspeed RPM, tap <b>Save</b>.</p>
+<p>Choose a governor mode, set the start-up timings, tap <b>Save</b>. Saving restarts the flight controller (about 7&nbsp;s) &mdash; these settings only take effect at start-up, so transmitter off and blades off.</p>
 <h3>Tips</h3>
-<p><b>Spool-up</b> is how slowly the FC ramps the rotor to full speed at start-up. Too fast can be hard on the model (stresses the drivetrain); too slow wastes time. 6–10 seconds is typical for an electric heli.</p>
+<p><b>Spool-up</b> is how slowly the FC ramps the rotor to full speed at start-up. Too fast can be hard on the model (stresses the drivetrain); too slow wastes time. 10 seconds is typical for an electric heli; longer is gentler on the drivetrain.</p>
 </template>
 </body>
 </html>

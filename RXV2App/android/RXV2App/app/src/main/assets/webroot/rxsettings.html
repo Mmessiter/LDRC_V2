@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Receiver settings &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=222">
-<script src="/app.js?v=266" defer></script>
+<link rel=stylesheet href="/style.css?v=267">
+<script src="/app.js?v=267" defer></script>
 </head>
 <body class=hasFab>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -176,23 +176,17 @@ $('fsClear').addEventListener('click', async () => {
 refresh();
 setInterval(refresh, 2000);
 </script>
-<template id=helpContent><h3>Hello wave</h3>
+<template id=helpContent><h2>Receiver settings</h2>
+<p>Three things the receiver itself does, independent of the flight controller:</p>
+<p>To set failsafe, first put the sticks/switches where you want them (watch them on <b>View channels</b>), then come back here and save.</p>
+<h3>Hello wave</h3>
 <p>The wave channels wiggle briefly whenever Bluetooth becomes available &mdash; power-on included &mdash; so you can SEE the receiver is reachable. A comma list (e.g. <code>1,6</code>); blank means no wave, and the throttle channel never waves. On a Rotorflight heli use ch&nbsp;1 (aileron): a rudder wave is invisible while disarmed. The throttle and arming channels themselves are set on the <a href="/rotorflight-txchannels">Transmitter channels</a> page.</p>
 <h3>Battery voltage</h3>
 <p>Measures the pack through a divider on <b>D9</b> (GPIO&nbsp;8), the spare pad on 2-radio boards (D4 carries the status LED). <b>220&thinsp;k&Omega; over 10&thinsp;k&Omega;</b> = ratio 23.0, good to 12S; 100&thinsp;k/10&thinsp;k = 11.0, good to 6S. Add 100&thinsp;nF pin&rarr;GND. Volts go to the transmitter as telemetry. With flight-controller telemetry switched off, the receiver finds the divider by itself on D9.</p>
 <h3>Automatic fly mode</h3>
-<p>The safety net for forgetting <b>Fly now</b>: three seconds after the model is armed &mdash; still on the ground, during spool-up &mdash; the receiver switches its WiFi and Bluetooth off by itself, so nothing interferes with the radio link. Disarming brings everything back, and so does switching the transmitter off after landing. With this on, the front page hides the Fly now button. On Rotorflight the arming channel is found automatically from the flight controller; for other setups, set it on the Output protocol page. It is always on when Rotorflight is present, and not switchable.</p>
+<p>The safety net for forgetting <b>Fly now</b>: three seconds after the model is armed &mdash; still on the ground, during spool-up &mdash; the receiver switches its WiFi and Bluetooth off by itself, so nothing interferes with the radio link. Disarming brings everything back, and so does switching the transmitter off after landing. With this on, the front page hides the Fly now button. On Rotorflight the arming channel is found automatically from the flight controller; for other setups, set it on the Transmitter channels page. It is always on when Rotorflight is present, and not switchable.</p>
 <h3>Failsafe positions</h3>
 <p>Used when the transmitter link is <b>lost in flight</b>: the receiver drives every channel to the positions you save here. Set the model where you want it on signal loss (motor off, disarmed), then tap Save. To capture positions, first open <b>View channels</b>, set the sticks and switches, then come here and save.</p>
-<p>On <b>CRSF</b> the flight controller (Rotorflight) runs its own failsafe and overrules this &mdash; set that in its Failsafe tab. These positions apply on <b>SBUS / FBUS / IBUS / PPM</b> models. A no-transmitter power-up is always disarmed-safe regardless.</p>
-<h2>Receiver settings</h2>
-<p>Three things the receiver itself does, independent of the flight controller:</p>
-<ul>
-<li><b>Battery voltage</b> — the on-board voltage divider that reports pack volts to your transmitter. Set the pin, the divider ratio, and (optionally) the cell count.</li>
-<li><b>Failsafe positions</b> — where the channels go if the transmitter link is lost in flight (non-CRSF models).</li>
-<li><b>Hello wave</b> — the servo channels that wiggle briefly when Bluetooth comes up, proof the receiver is alive. (The throttle and arming channels themselves are set on the Transmitter channels page and follow its Save.)</li>
-</ul>
-<p>To set failsafe, first put the sticks/switches where you want them (watch them on <b>View channels</b>), then come back here and save.</p>
-</template>
+<p>On <b>CRSF</b> the flight controller (Rotorflight) runs its own failsafe and overrules this &mdash; set that in its Failsafe tab. These positions apply on <b>SBUS / IBUS / PPM</b> models. A no-transmitter power-up is always disarmed-safe regardless.</p></template>
 </body>
 </html>

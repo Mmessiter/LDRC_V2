@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Receiver log &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=222">
-<script src="/app.js?v=266" defer></script>
+<link rel=stylesheet href="/style.css?v=267">
+<script src="/app.js?v=267" defer></script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -217,12 +217,11 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 <template id=helpContent><h2>Receiver log</h2>
 <p>This is the <b>receiver&rsquo;s own</b> record: the radio link, the battery, and what it saw on each flight. The flight controller keeps a separate one of its gyro and controls &mdash; that is the <a href="/rotorflight-blackbox">Black box (Flight recorder)</a>, under Rotorflight.</p>
-<p>The receiver's flight-data recorder, in three parts.</p>
 <h3>On this page</h3>
 <p><b>Status</b> shows live flight-controller telemetry whenever the model is powered — the transmitter does not need to be on. Per-cell voltage with a resting state-of-charge estimate, current, head speed and ESC temperature.</p>
 <h3>Buttons</h3>
 <ul>
-<li><b>Flight analysis</b> &mdash; the telemetry graph (ESC temp, head speed, battery, current vs time) and the radio-link statistics for the current and the last three saved flights.</li>
+<li><b>Flight analysis</b> &mdash; the telemetry graph (ESC temp, head speed, battery, current vs time) and the radio-link statistics for the current session and the last twenty saved flights.</li>
 <li><b>Event log</b> &mdash; a one-line entry for every interesting moment since boot: WiFi up/down, bind, radio swaps, TX edits.</li>
 <li><b>Save session to phone</b> (app only) &mdash; copies <b>everything</b> to your phone: all the Black box data (every saved flight and the event log) <b>and</b> every bank's Rotorflight settings. Afterwards the whole model can be reviewed offline ("Review" on the receiver list), and the settings can be restored from the Rotorflight page — the phone becomes a complete backup.</li>
 </ul>

@@ -59,7 +59,7 @@ Response is 21 bytes. SET accepts 19 bytes (pre-12.8 clients) or 21; the last
 | 6 | 1 | swash_ring | U8 | 0..100 | % |
 | 7 | 2 | swash_phase | S16 | −1800..1800 | 0.1 deg |
 | 9 | 2 | swash_pitch_limit | U16 | 0..3000 | **deg = raw×12/1000** (0 = off); "Total pitch limit" |
-| 11 | 2 | swash_trim[0] (roll) | S16 | −1000..1000 | 0.1 deg |
+| 11 | 2 | swash_trim[0] (roll) | S16 | −1000..1000 | percent of servo throw (NOT 0.1 deg — source-verified) |
 | 13 | 2 | swash_trim[1] (pitch) | S16 | −1000..1000 | 0.1 deg |
 | 15 | 2 | swash_trim[2] (collective) | S16 | −1000..1000 | 0.1 deg |
 | 17 | 1 | swash_tta_precomp | U8 | 0..250 | gain = raw/100 |

@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.741-help-audit",
+      "url": "https://messiter.com/rxv2/release/v0.9.741/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.741/littlefs.bin",
+      "fs_md5": "61a4d17a67ee9e51358e76c3cc3f7585",
+      "notes": "Every help screen re-read for things that are no longer true (Malcolm 2026-09-17: 'please re read all help text and look for out of date bits we ought to fix'). Four independent readers went through all 50 pages against the code that actually runs, and about 40 corrections came out of it. The ones that mattered most: Back up said a tune from a friend's helicopter brings his stick setup, channel map and bank switches with it - it does NOT any more (that is his radio, not his tune), and it only saves banks 1-4; the black box help mixed up the receiver's own flight record with the flight controller's black box - two different things; the swash trims were called tenths of a degree everywhere when Rotorflight means percent of servo throw; the update page told Android users to use 'the iPhone app'. Travel extents said everything twice - its help had been appended rather than merged - and Control sense and Collective up/down balance had no help at all; the dongle and Receiver settings help panels opened halfway down themselves. Three stale comments in the phone apps' own source were fixed too, including two that named the wrong selector slots. Pages and comments only - nothing changes in the air."
+    },
+    {
       "name": "RXV2-0.9.740-one-app",
       "url": "https://messiter.com/rxv2/release/v0.9.740/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.740/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.729/littlefs.bin",
       "fs_md5": "8dacf778ebd4aec0ac7a75eb79c2d9fe",
       "notes": "Three things from Malcolm's four test flights (2026-09-16, zero crashes). 1) The servo wiggle waited for 'head speed zero' - but that number is the motor's, and on a helicopter the motor stops the instant the throttle is cut while the head coasts on for ~20 s: the tail 'waggled like an excited puppy' on a turning rotor. The wiggle now waits 20 s from the last reading that showed the head turning, and never comes inside 5 s of the safety switch going on. A plain power-up keeps its prompt boot wiggle. 2) Long gaps in the transmitter's log right after the safety switch: on disarm, bringing Bluetooth (and at home, WiFi) back stalled the receiver with no warning to the transmitter, so it was logged as a real gap; on arm, the warning was sent in a 50 ms burst the transmitter can miss while it is writing its own log. Every such pause now announces itself and waits until the transmitter has actually taken the message before it happens. 3) Two wiggles for the price of one: with the transmitter on at power-up, the 30 s Bluetooth boot window closed and auto fly mode switched it straight back on, with a second wiggle. When the model is disarmed it now simply stays up; arming turns it off as before. Firmware only; nothing changes in the air (all of this runs disarmed, on the ground)."
-    },
-    {
-      "name": "RXV2-0.9.728-wifi-heal",
-      "url": "https://messiter.com/rxv2/release/v0.9.728/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.728/littlefs.bin",
-      "fs_md5": "dbb8d05cb610dd73b71e22adb4305ccf",
-      "notes": "Fixes WiFi going dead after an app session (Malcolm 2026-09-15: two receivers unreachable over WiFi until a power-cycle). With Bluetooth connected, the shared radio must let WiFi sleep, and a busy Bluetooth link can starve it until it stops hearing the router - yet it still reports itself connected, so it never tried to rejoin. Now, the moment the app disconnects, the receiver re-syncs its WiFi by itself. No more power-cycle to get it back. Safe by construction: this only runs on the ground - WiFi is off in the air - and never while a transmitter link is live or the model is armed. Firmware only; pages and apps unchanged from 0.9.727."
     }
   ],
   "rotorflight": {

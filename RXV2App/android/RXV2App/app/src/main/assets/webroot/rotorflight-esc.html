@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>ESC setup &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=222">
-<script src="/app.js?v=266" defer></script>
+<link rel=stylesheet href="/style.css?v=267">
+<script src="/app.js?v=267" defer></script>
 <script src="/gear.js?v=3" defer></script>
 <style>
 .wcard{background:#f2f6f8;border-radius:12px;padding:.8em .9em;margin:.6em 0;box-shadow:0 2px 6px rgba(0,0,0,.08)}
@@ -149,7 +149,7 @@ document.addEventListener('DOMContentLoaded',()=>{ LDRCGear.mount('gearBox',{tai
 <li><b>One governor only.</b> Rotorflight&rsquo;s governor is excellent and lives in the tuning wizard; the ESC&rsquo;s must then be off / external. Choose the ESC&rsquo;s instead and Rotorflight&rsquo;s must be off.</li>
 <li><b>Telemetry protocol</b> in the ESC and the <b>brand</b> chosen in First-time basics must match, or the data wire stays silent.</li>
 <li><b>Throttle range</b>: Rotorflight&rsquo;s motor output is 1000&ndash;2000 &micro;s by default. The calibration card teaches it to the ESC from the phone: the flight controller must be powered by USB (a power bank) so the battery can be plugged in <i>after</i> full throttle is set &mdash; exactly the configurator&rsquo;s Motors-tab procedure, without the computer. The hold lapses by itself a second after the phone stops sending, so nothing can stay stuck at full throttle.</li>
-<li><b>Scorpion Tribunus won&rsquo;t connect to Sproto?</b> It only listens for the programmer in its <b>first few seconds after power-up</b> &mdash; once telemetry is streaming it ignores Sproto. Open Sproto, plug the cable, click Connect, <i>then</i> plug the battery. (Bit us twice, both times right after a firmware update.) A fresh firmware load also resets the ESC to factory defaults &mdash; re-check governor mode, telemetry protocol and the throttle range afterwards.</li>
+<li><b>Scorpion Tribunus won&rsquo;t connect to Sproto?</b> It only listens for the programmer in its <b>first 10 seconds after power-up</b> &mdash; once telemetry is streaming it ignores Sproto. Open Sproto, plug the cable, click Connect, <i>then</i> plug the battery. (Bit us twice, both times right after a firmware update.) A fresh firmware load also resets the ESC to factory defaults &mdash; re-check governor mode, telemetry protocol and the throttle range afterwards.</li>
 </ul>
 </template>
 </body>

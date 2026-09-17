@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>WiFi &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=222">
-<script src="/app.js?v=266" defer></script>
+<link rel=stylesheet href="/style.css?v=267">
+<script src="/app.js?v=267" defer></script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -122,8 +122,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 });
 </script>
-<template id=helpContent><h2>WiFi &amp; identity</h2>
-<p><b>Model name</b> sets the receiver's <code>.local</code> hostname and its AP SSID at the same time &mdash; rename here if you mis-typed the name on first run (for example, calling a three-transceiver board <code>PT2</code> when it should be <code>PT3</code>). After the rename, this page jumps to the new URL automatically.</p>
+<template id=helpContent><p>To rename: tap the model name on the front screen, or Setup &rarr; Rename. The name is also the WiFi network name and the <code>.local</code> address.</p>
 <h2>WiFi settings</h2>
 <p>Shows the receiver's current WiFi state and lets you set the home network SSID + password. Credentials are saved to NVS and persist across reboots and firmware updates.</p>
 <h3>How to use it</h3>

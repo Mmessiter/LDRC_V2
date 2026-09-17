@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Home &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=222">
-<script src="/app.js?v=266" defer></script>
+<link rel=stylesheet href="/style.css?v=267">
+<script src="/app.js?v=267" defer></script>
 <style>
 /* First paint from memory (Malcolm 2026-09-10: the receiver layout flashed
    before the dongle one): classes set on <html> by the hint script below,
@@ -961,12 +961,12 @@ function offerUpdate(current, v) {
 <p>This is the receiver's home screen. It tells you whether the receiver is bound to a transmitter, and the boxes at the top show each fitted transceiver <b>live</b>: a green pulsing <b>receiving</b> box is the slot carrying your transmitter's signal right now, <b>standby</b> is its healthy partner ready to take over, and <b>listening…</b> means no transmitter is on the air. Switch your transmitter on and off and watch them change.</p>
 <h3>Buttons</h3>
 <ul>
-<li><b>Fly now</b> — shuts WiFi and Bluetooth down before flying. You normally do NOT need it: switch the transmitter on <i>before</i> powering the model and the receiver does it all by itself (see Flying, below). The button covers the other order — model powered first, transmitter second.</li>
+<li><b>Fly now</b> — shuts WiFi and Bluetooth down before flying. On a Rotorflight model the button is absent: the receiver does it by itself the moment you arm. You normally do NOT need it: switch the transmitter on <i>before</i> powering the model and the receiver does it all by itself (see Flying, below). The button covers the other order — model powered first, transmitter second.</li>
 <li><b>Rotorflight setup and Wizard</b> — appears when a Rotorflight flight controller is connected: rates, PIDs, governor and backups, from your phone.</li>
-<li><b>Black box log</b> — battery, link statistics, the flight graph and the event log.</li>
-<li><b>Bind</b> — pair the receiver with your transmitter. If it's already bound you'll be asked first, because re-binding erases the current pairing.</li>
+<li><b>Receiver log</b> — the link, the battery and past flights. With Rotorflight fitted it moves under Rotorflight → Black box instead.</li>
+<li><b>Bind</b> — pair the receiver with your transmitter. The old pairing is kept, so <b>Cancel bind</b> puts it straight back.</li>
 <li><b>Simulator</b> — fly a PC simulator over USB with your real transmitter.</li>
-<li><b>Setup</b> — output protocol, view channels, WiFi, firmware and renaming. One-time configuration lives there so this screen stays simple.</li>
+<li><b>Setup</b> — output protocol, view channels, receiver settings, WiFi, firmware and renaming. One-time configuration lives there so this screen stays simple.</li>
 </ul>
 <h3>Flying — it's automatic</h3>
 <p>Follow normal RC practice — <b>transmitter on first, then power the model</b> — and the receiver handles the radios itself: hearing your transmitter at boot it never starts WiFi, keeps Bluetooth open for just 30&thinsp;seconds (in case you want this app), then switches that off too. After landing, when the transmitter goes quiet for ~10&thinsp;seconds, WiFi and Bluetooth return by themselves so you can check the flight. No buttons, no ritual.</p>

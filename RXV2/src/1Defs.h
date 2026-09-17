@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.740-one-app";
+constexpr const char* FW_VERSION = "RXV2-0.9.741-help-audit";
 
 //*********************************************************************
 //  Auto-update manifest URLs

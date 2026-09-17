@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Copy a bank &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=222">
-<script src="/app.js?v=266" defer></script>
+<link rel=stylesheet href="/style.css?v=267">
+<script src="/app.js?v=267" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;gap:.6em;
         padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -366,6 +366,7 @@ document.addEventListener('DOMContentLoaded', () => { paint(); init(); });
 <li>Every copied block is read back from the target bank and compared byte for byte before it says done.</li>
 <li>The flight controller is returned to the bank it was on. The swashplate may twitch once or twice while banks switch &mdash; harmless, on the ground only.</li>
 </ul>
+<p><b>Adjust gains for the target bank&rsquo;s head speed</b> &mdash; the tick that rescales what it copies: the P, I, D, feedforward and boost are scaled by the two banks&rsquo; head speeds, down fully for a faster bank and up at most 25&nbsp;% for a slower one. Filters, offsets and the governor are left alone.</p>
 </template>
 </body>
 </html>

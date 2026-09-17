@@ -375,9 +375,11 @@ object SessionCache {
      *  wiring, ESC telemetry, telemetry sensors, blackbox, name, modes,
      *  per-channel failsafe values, RPM notches. A backup from ANOTHER model
      *  leaves these out on import: they belong to that helicopter's hardware.
-     *  What transfers is the tune: PIDs, rates, governor, rescue, filters,
-     *  stick setup, failsafe policy, arming delay, RSSI, channel map and the
-     *  bank/rates switches. */
+     *  What transfers is the TUNE ONLY: PIDs, advanced PIDs, rates, governor
+     *  (and its global settings), rescue, filters, auto-disarm delay, RSSI.
+     *  The channel map, stick centre & travel, failsafe and the bank/rates
+     *  selector slots were added to this list on 2026-09-17 - they are the
+     *  other pilot's RADIO, not his tune. */
     val mechanicsKeyPrefixes = listOf(
         "/api/msp?fn=120", "/api/msp?fn=42", "/api/msp?fn=174&data=", "/api/msp?fn=172",
         "/api/msp?fn=131", "/api/msp?fn=38", "/api/msp?fn=126", "/api/msp?fn=96", "/api/msp?fn=240",
@@ -592,8 +594,10 @@ object SessionCache {
         for ((k, v) in frozen) {
             if (!k.startsWith("/app/declared/adj")) continue
             if (v.length < 4 || !v.all { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }) continue
-            val label = when { k.endsWith("adj40") -> "bank selector switch"
-                               k.endsWith("adj41") -> "rates selector switch"
+            // The live selector slots are adj30 (bank) and adj36 (rates);
+            // 40/41 are legacy and cleared (rotorflight-txchannels.html).
+            val label = when { k.endsWith("adj30") -> "bank selector switch"
+                               k.endsWith("adj36") -> "rates selector switch"
                                else -> "declared $k" }
             out.add(RestoreItem(null, 53, 0, v.uppercase(), label))
         }
