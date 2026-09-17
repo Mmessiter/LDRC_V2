@@ -1555,7 +1555,8 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                     "/app/backup/import" -> {
-                        if (demoMode || reviewMode || connectedName.isEmpty()) answer("{\"ok\":false,\"error\":\"connect to the receiver first\"}")
+                        if (demoMode || reviewMode || connectedName.isEmpty())
+                            answer("{\"ok\":false,\"error\":\"" + (if (demoMode || reviewMode) "this is the demo \u2014 nothing here is really connected" else "connect to the receiver or dongle first") + "\"}")
                         else {
                             importFor = connectedName; importPhase = "picking"; importModel = ""; importCount = 0; importMechanics = true
                             runOnUiThread { importPick.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) }
@@ -1586,7 +1587,7 @@ class MainActivity : AppCompatActivity() {
                     }
                     "/app/restore/start" -> {
                         if (demoMode || reviewMode) {
-                            answer("{\"ok\":false,\"error\":\"connect to the receiver first\"}")
+                            answer("{\"ok\":false,\"error\":\"this is the demo \u2014 nothing here is really connected\"}")
                         } else Thread {
                             // Foolish-user guard: refuse outright with the TX on.
                             var txLive = false
@@ -1613,7 +1614,7 @@ class MainActivity : AppCompatActivity() {
             if (p == "/app/snapshot/start" || p == "/app/snapshot/progress") {
                 val json = if (p == "/app/snapshot/start") {
                     if (!demoMode && !reviewMode) { prefetchSession(fast = true, explicit = true); "{\"ok\":true}" }   // the pilot's own backup — sticky
-                    else "{\"ok\":false,\"error\":\"connect to the receiver first\"}"
+                    else "{\"ok\":false,\"error\":\"this is the demo \u2014 nothing here is really connected\"}"
                 } else {
                     // Review: phone IS the store — the page hides its save button.
                     if (reviewMode) "{\"phase\":\"replay\",\"done\":0,\"total\":0}"

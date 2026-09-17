@@ -9,7 +9,7 @@
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Backup &amp; restore &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=222">
-<script src="/app.js?v=260" defer></script>
+<script src="/app.js?v=261" defer></script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -87,7 +87,7 @@ async function phoneSave() {
     let r0 = null;
     try { r0 = await (await fetch('/app/snapshot/start', { cache: 'no-store' })).json(); } catch (e) {}
     if (!r0 || !r0.ok) {
-        lab.textContent = '⚠️ ' + ((r0 && r0.error) || 'connect to the receiver first');
+        lab.textContent = '⚠️ ' + ((r0 && r0.error) || 'connect to the receiver or dongle first');
         note.style.display = 'none';
         btn.style.display = '';
         return;

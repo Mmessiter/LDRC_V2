@@ -71,8 +71,11 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
         if path == "/app/snapshot/start" {
             let ok = !demo && !replay
             if ok { SessionPrefetcher.run(link: link, fast: true, explicit: true) }   // the pilot's own backup — sticky
+            // The ONLY way this refuses is demo/replay — so say that, rather
+            // than "connect to the receiver first", which sent Malcolm looking
+            // for a connection he already had, on a dongle (2026-09-17).
             deliver(task, url: url, code: 200, type: "application/json",
-                    body: Data("{\"ok\":\(ok)\(ok ? "" : ",\"error\":\"connect to the receiver first\"")}".utf8))
+                    body: Data("{\"ok\":\(ok)\(ok ? "" : ",\"error\":\"this is the demo \u{2014} nothing here is really connected\"")}".utf8))
             return
         }
         if path == "/app/snapshot/progress" {
@@ -105,7 +108,7 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
         if path == "/app/restore/start" {
             if demo || replay {
                 deliver(task, url: url, code: 200, type: "application/json",
-                        body: Data("{\"ok\":false,\"error\":\"connect to the receiver first\"}".utf8))
+                        body: Data("{\"ok\":false,\"error\":\"this is the demo \u{2014} nothing here is really connected\"}".utf8))
                 return
             }
             // Foolish-user guard: refuse outright with the transmitter on.
@@ -175,7 +178,7 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
             if case .ready(let n) = link.state { connName = n }
             if demo || replay || connName.isEmpty {
                 deliver(task, url: url, code: 200, type: "application/json",
-                        body: Data("{\"ok\":false,\"error\":\"connect to the receiver first\"}".utf8))
+                        body: Data("{\"ok\":false,\"error\":\"\((demo || replay) ? "this is the demo \u{2014} nothing here is really connected" : "connect to the receiver or dongle first")\"}".utf8))
                 return
             }
             BackupFilePicker.shared.pick(forModel: connName)
