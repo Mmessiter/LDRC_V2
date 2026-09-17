@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rescue &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=267">
-<script src="/app.js?v=267" defer></script>
+<link rel=stylesheet href="/style.css?v=268">
+<script src="/app.js?v=268" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -40,12 +40,7 @@ h2 .hint{font-weight:400;font-size:.7em;color:#5d7a8c;display:block;margin-top:.
 
     <div class=card>
         <h2>Bank</h2>
-        <div class=profRow>
-            <button class=profBtn onclick="selectBank(0)" id=pb0>1</button>
-            <button class=profBtn onclick="selectBank(1)" id=pb1>2</button>
-            <button class=profBtn onclick="selectBank(2)" id=pb2>3</button>
-            <button class=profBtn onclick="selectBank(3)" id=pb3>4</button>
-        </div>
+        <div class=profRow id=profRow></div>
     </div>
 
     <div class=card>
@@ -109,7 +104,8 @@ h2 .hint{font-weight:400;font-size:.7em;color:#5d7a8c;display:block;margin-top:.
 <script>
 const $ = id => document.getElementById(id);
 const PROFILE_BYTES = 28;
-let currentBank = parseInt(localStorage.getItem('rfPidProfile') || '0', 10) || 0;
+// Clamped to a bank that certainly exists (0.9.742).
+let currentBank = LDRC.bankClamp(LDRC.bankInfo(), 'pid', parseInt(localStorage.getItem('rfPidProfile') || '0', 10) || 0);
 let editable = true, cachedRaw = null, dirty = false;
 
 function hexToBytes(h){const o=new Uint8Array(h.length/2);for(let i=0;i<o.length;i++)o[i]=parseInt(h.substr(i*2,2),16);return o;}
@@ -117,7 +113,14 @@ function bytesToHex(b){return Array.from(b).map(x=>x.toString(16).padStart(2,'0'
 const rdU16=(b,o)=>b[o]|(b[o+1]<<8);
 const wrU16=(b,o,v)=>{v=Math.max(0,Math.min(65535,Math.round(v)));b[o]=v&0xff;b[o+1]=(v>>8)&0xff;};
 function setStatus(k,t){const s=$('status');s.style.display=t?'':'none';if(!t)return;s.className='banner '+k;s.textContent=t;}   // no banner without a status (Malcolm 2026-09-10)
-function paintBankButtons(){for(let i=0;i<4;i++)$('pb'+i).classList.toggle('active',i===currentBank);}
+// As many banks as the flight controller really has, capped by the pilot's
+// "How many banks" choice — never fewer than the bank we are on (0.9.742).
+let bankInfo = LDRC.bankInfo();
+function paintBankButtons(){
+    const n = LDRC.bankCount(bankInfo, 'pid', currentBank);
+    LDRC.bankRow('profRow', 'pb', 'selectBank', n);
+    for(let i=0;i<n;i++)$('pb'+i).classList.toggle('active',i===currentBank);
+}
 
 async function selectBank(idx){
     if(idx===currentBank)return;
@@ -228,6 +231,7 @@ async function loadRescueSwitch(){
 
 document.addEventListener('DOMContentLoaded',()=>{
     document.querySelectorAll('.fRow input,.fRow select').forEach(el=>el.addEventListener('input',()=>{dirty=true;}));
+    LDRC.fetchBanks().then(b => { bankInfo = b; paintBankButtons(); });
     load().then(loadRescueSwitch);
 });
 </script>

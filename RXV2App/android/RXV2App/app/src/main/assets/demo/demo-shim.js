@@ -144,6 +144,7 @@
     catch (e) { return {}; }
   })();
   let rateProfile = 0, pidProfile = 0;
+  let demoBanksShown = 0;            // 0 = all of them (0.9.742)
   function mspKey(fn, space) {
     return fn + "/" + (space === "rate" ? rateProfile : space === "pid" ? pidProfile : 0);
   }
@@ -292,6 +293,18 @@
 
     if (!path.startsWith("/api/") && !["/bind", "/fly_arm", "/fly_disarm", "/protocol"].includes(path)) {
       return _fetch(input, init);          // static pages load normally
+    }
+
+    // Banks (0.9.742): the demo FC reports six of each (see the MSP 101
+    // canned reply below), and the demo remembers a "how many banks" choice
+    // for as long as the page is open.
+    if (path === "/api/banks.json")
+      return J({ pid: 6, rate: 6, shown: demoBanksShown, fc: true });
+    if (path === "/api/fc/banks") {
+      const n = parseInt(args.get("show") || "0", 10);
+      if (!(n >= 0 && n <= 6)) return J({ ok: false, err: "show must be 0 (all) to 6" }, 400);
+      demoBanksShown = n;
+      return J({ ok: true, banks_shown: n, pid_banks: 6, rate_banks: 6 });
     }
 
     if (path === "/api/msp") return mspHandle(args);

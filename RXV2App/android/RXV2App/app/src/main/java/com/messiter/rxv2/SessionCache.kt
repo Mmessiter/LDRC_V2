@@ -410,6 +410,26 @@ object SessionCache {
         return Pair(p, r)
     }
 
+    /** Rotorflight's own ceiling (upstream common_pre.h). Nothing walks past it. */
+    const val MAX_BANKS = 6
+
+    /** How many banks this flight controller HAS - bytes 24 and 26 of the
+     *  same reply (0.9.742). Rotorflight builds the counts from flash size,
+     *  so they can differ: >256 kB gives 6 PID and 6 rate banks, >128 kB
+     *  gives 3 PID but still 6 rate. The sweep used to walk 0..3 flat, so a
+     *  full-size board's banks 5 and 6 were never backed up and never
+     *  restored - silently, with the progress bar reading 100 %. Falls back
+     *  to 4 (what the sweep always did) when the reply is junk. */
+    fun fcBankCounts(statusHex: String): Pair<Int, Int> {
+        val h = statusHex.uppercase()
+        if (h.length < 54) return Pair(4, 4)
+        fun byte(i: Int) = h.substring(2 * i, 2 * i + 2).toIntOrNull(16)
+        val pc = byte(24) ?: return Pair(4, 4)
+        val rc = byte(26) ?: return Pair(4, 4)
+        if (pc !in 1..8 || rc !in 1..8) return Pair(4, 4)
+        return Pair(pc, rc)
+    }
+
     /** Freeze the tuning reads currently in the rolling cache. explicit = the
      *  pilot's own "Back up" (or an import): STICKY — the automatic freeze at
      *  connection never replaces it (review 2026-09-04: it did, so a deliberate
@@ -469,13 +489,17 @@ object SessionCache {
             if (s.length < 2 || !s.all { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }) return null
             return s.uppercase()
         }
-        for (b in 0..3) {
+        // Walk every bank Rotorflight can have (0.9.742). hexAt() returns
+        // null for a bank the file does not hold, so a 4-bank backup taken
+        // before today restores exactly as it always did, and a 6-bank one
+        // restores all six. Never ask the FC here - the file decides.
+        for (b in 0 until MAX_BANKS) {
             hexAt("/api/msp?fn=112&bank=$b")?.let { out.add(RestoreItem(b, 202, 112, it, "PIDs bank ${b + 1}")) }
             hexAt("/api/msp?fn=94&bank=$b")?.let  { out.add(RestoreItem(b, 95,  94,  it, "advanced PIDs bank ${b + 1}")) }
             hexAt("/api/msp?fn=148&bank=$b")?.let { out.add(RestoreItem(b, 149, 148, it, "governor profile bank ${b + 1}")) }
             hexAt("/api/msp?fn=146&bank=$b")?.let { out.add(RestoreItem(b, 147, 146, it, "rescue bank ${b + 1}")) }
         }
-        for (r in 0..3) {
+        for (r in 0 until MAX_BANKS) {
             hexAt("/api/msp?fn=111&bank=$r")?.let { out.add(RestoreItem(0x80 or r, 204, 111, it, "rates bank ${r + 1}")) }
         }
         hexAt("/api/msp?fn=142")?.let { out.add(RestoreItem(null, 143, 142, it, "governor global")) }

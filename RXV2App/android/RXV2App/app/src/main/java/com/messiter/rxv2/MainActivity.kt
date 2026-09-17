@@ -1226,7 +1226,8 @@ class MainActivity : AppCompatActivity() {
             snapDone++
             req("/api/events.json"); snapDone++
             req("/api/events-prev.json"); snapDone++   // previous boot's persisted tail
-            // Rotorflight reads — all 4 PID-side banks + all 4 rate banks,
+            // Rotorflight reads — every PID-side bank + every rate bank the
+            // flight controller has (MSP 101 bytes 24/26 say how many),
             // ONLY with the transmitter off (never switch a bank under a
             // live TX). Current banks from MSP_STATUS fn=101 bytes 23/25 —
             // bytes 24/26 are the profile COUNTS; the 2026-09-04 review found
@@ -1269,10 +1270,16 @@ class MainActivity : AppCompatActivity() {
                     snapError = "could not read the flight controller's bank (MSP 101) — is it powered and connected, and are you close enough?"
                 } else {
                     val origPid = orig.first; val origRate = orig.second
+                    // How many banks this flight controller HAS (0.9.742). It
+                    // used to sweep four flat, so on a full-size board banks 5
+                    // and 6 were never saved - and the bar still read 100 %.
+                    val counts = req("/api/msp?fn=101")?.let { SessionCache.fcBankCounts(String(it)) } ?: Pair(4, 4)
+                    val nPid  = minOf(counts.first,  SessionCache.MAX_BANKS)
+                    val nRate = minOf(counts.second, SessionCache.MAX_BANKS)
                     // Exactly the planned reads: bankless + 4 mixer inputs + 3 RPM
                     // notch axes + 4 reads per PID bank + 1 per rate bank. Bank
                     // selects, MSP 101 checks and TX checks are not items.
-                    snapTotal += SessionCache.banklessReadFns.size + 4 + 3 + 4 * 4 + 4 * 1
+                    snapTotal += SessionCache.banklessReadFns.size + 4 + 3 + 4 * nPid + nRate
                     // Every bankless setup block (Malcolm 2026-09-04: "cover
                     // all items") — governor global, mixer, servos, modes,
                     // channel map, motor & gear, battery & meters, features,
@@ -1291,7 +1298,7 @@ class MainActivity : AppCompatActivity() {
                     // servo stall (the swash twitch). Skip no-op selects.
                     var curPid = origPid; var curRate = origRate
                     var aborted = false
-                    for (b in 0..3) {
+                    for (b in 0 until nPid) {
                         if (tooFar) break
                         if (txAppeared()) { aborted = true; break }
                         if (b != curPid) { selectBank(b); curPid = b }
@@ -1299,7 +1306,7 @@ class MainActivity : AppCompatActivity() {
                         mspRead("/api/msp?fn=112"); mspRead("/api/msp?fn=94"); mspRead("/api/msp?fn=148"); mspRead("/api/msp?fn=146")
                         if (!stillOn(b, null)) { aborted = true; break }
                     }
-                    if (!aborted) for (r in 0..3) {
+                    if (!aborted) for (r in 0 until nRate) {
                         if (tooFar) break
                         if (txAppeared()) { aborted = true; break }
                         if (r != curRate) { selectBank(0x80 or r); curRate = r }

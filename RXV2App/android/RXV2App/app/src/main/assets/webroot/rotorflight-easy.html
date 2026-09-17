@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Easy tuning &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=267">
-<script src="/app.js?v=267" defer></script>
+<link rel=stylesheet href="/style.css?v=268">
+<script src="/app.js?v=268" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;gap:.6em;
         padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -46,12 +46,7 @@
 
     <div class=card>
         <h2>Bank</h2>
-        <div class=profRow>
-            <button class=profBtn onclick="selectBank(0)" id=pb0>1</button>
-            <button class=profBtn onclick="selectBank(1)" id=pb1>2</button>
-            <button class=profBtn onclick="selectBank(2)" id=pb2>3</button>
-            <button class=profBtn onclick="selectBank(3)" id=pb3>4</button>
-        </div>
+        <div class=profRow id=profRow></div>
         <p class=sub>Agility and Feel belong to the bank; Start is the same for every bank.</p>
     </div>
 
@@ -114,7 +109,9 @@ const feelExpoOf = v => clamp(Math.round(ratesBase.expo - (v - 50) * 0.7), 0, 10
 const agileFeel  = rate => LDRC.relPos(ratesBase.rp, rate);
 const expoFeel   = e => clamp5(50 + (ratesBase.expo - e) / 0.7);
 
-let bank = parseInt(localStorage.getItem('rfPidProfile') || '0');
+// Clamped to a bank that certainly exists (0.9.742): a remembered bank 5
+// must not leave a 3-bank flight controller lighting nothing.
+let bank = LDRC.bankClamp(LDRC.bankInfo(), 'pid', parseInt(localStorage.getItem('rfPidProfile') || '0'));
 let govRaw = null, ratesRaw = null, pidRaw = null, pidBase = [];
 let changed = { gov: false, rates: false, pid: false };
 // Which rates slider was actually moved: an untouched one must not rewrite
@@ -128,7 +125,14 @@ function bytesToHex(b) { let s = ''; for (let i = 0; i < b.length; i++) s += b[i
 const $ = id => document.getElementById(id);
 const u16 = (b, o) => b[o] | (b[o + 1] << 8);
 
-function paintBanks() { for (let i = 0; i < 4; i++) $('pb' + i).classList.toggle('active', i === bank); }
+// As many banks as the flight controller really has, capped by the pilot's
+// "How many banks" choice — never fewer than the bank we are on (0.9.742).
+let bankInfo = LDRC.bankInfo();
+function paintBanks() {
+    const n = LDRC.bankCount(bankInfo, 'pid', bank);
+    LDRC.bankRow('profRow', 'pb', 'selectBank', n);
+    for (let i = 0; i < n; i++) $('pb' + i).classList.toggle('active', i === bank);
+}
 async function selectBank(i) {
     if (busy || i === bank) return;
     if (!(await LDRC.confirmLoseChanges('switching to bank ' + (i + 1)))) return;
@@ -216,6 +220,7 @@ async function load() {
     try {
         const st = await LDRC.fetchState();
         const fc = (st && st.fcinfo) || {};
+        bankInfo = st; paintBanks();
         if (!fc.detected) throw new Error('no flight controller answering — check the model is powered and the protocol is CRSF');
         if (!fc.rotorflight_capable) throw new Error('this needs Rotorflight 2.3');
         govRaw = hexToBytes(await LDRC.msp(142));

@@ -270,6 +270,7 @@ inline void handleRotorflightNewHeli() {
 // configured board's features (the wizard's Features card re-ticks the
 // rest on a fresh board anyway).
 inline bool dongleDisarmedConfirmed();   // defined beside refuseIfArmed, below
+inline bool refuseIfArmed(const char* what);   // ditto — refuses on an armed model
 inline void handleFcWake() {
     // A dongle port is MSP: if the flight controller is silent it is wiring or
     // the port, not a feature flag — and a dongle that cannot hear the FC also
@@ -372,6 +373,56 @@ inline void handleFcTelemRestore() {
     events.add(m);
     server.send(200, "application/json",
         "{\"ok\":true,\"message\":\"telemetry sensors restored - the flight controller is restarting; volts and RPM should be back in ~10 s\"}");
+}
+
+// GET /api/banks.json — {"pid":6,"rate":6,"shown":0}. Deliberately tiny:
+// every tuning page needs these three numbers to draw its bank row, and
+// /api/state.json is 4.4 kB, which over Bluetooth is a visible pause.
+inline void handleBanksJson() {
+    String j = "{\"pid\":";  j += (int)banks.pidCount;
+    j += ",\"rate\":";       j += (int)banks.rateCount;
+    j += ",\"shown\":";      j += (int)fcInfo.banksShown;
+    j += ",\"fc\":";         j += (fcInfo.detected ? "true" : "false"); j += "}";
+    server.sendHeader("Cache-Control", "no-store");
+    server.send(200, "application/json", j);
+}
+
+// POST /api/fc/banks?show=N — how many tuning banks the pages offer
+// (0.9.742). N = 0 means every bank this flight controller has; 1..6 shows
+// only that many, for a pilot who uses fewer. Purely a display preference
+// kept on the receiver so it follows the model from phone to phone: it
+// writes NOTHING to the flight controller and changes nothing in the air.
+// Still gated like any other setting — it is a flash write, and flash
+// writes never happen near flight.
+inline void handleFcBanksShown() {
+    if (refuseIfArmed("bank count")) return;
+    if (dongleEnabled && !dongleDisarmedConfirmed()) {
+        server.sendHeader("Cache-Control", "no-store");
+        server.send(409, "application/json",
+                    "{\"ok\":false,\"message\":\"the flight controller has not confirmed it is disarmed\"}");
+        return;
+    }
+    if (!server.hasArg("show")) {
+        server.send(400, "application/json", "{\"ok\":false,\"err\":\"show=0..6 required\"}");
+        return;
+    }
+    const long n = server.arg("show").toInt();
+    if (n < 0 || n > 6) {
+        server.send(400, "application/json", "{\"ok\":false,\"err\":\"show must be 0 (all) to 6\"}");
+        return;
+    }
+    if (fcInfo.banksShown != (uint8_t)n) {
+        fcInfo.banksShown = (uint8_t)n;
+        prefs.putUChar(NVS_KEY_BANKS_SHOWN, fcInfo.banksShown);
+        char e[64];
+        snprintf(e, sizeof(e), "Banks shown: %s", n ? String((int)n).c_str() : "all");
+        events.add(e);
+    }
+    server.sendHeader("Cache-Control", "no-store");
+    String j = "{\"ok\":true,\"banks_shown\":"; j += (int)fcInfo.banksShown;
+    j += ",\"pid_banks\":";  j += (int)banks.pidCount;
+    j += ",\"rate_banks\":"; j += (int)banks.rateCount; j += "}";
+    server.send(200, "application/json", j);
 }
 
 // POST /api/fc/telemetry/speed?mode=fast|standard — the receiver's
@@ -3258,6 +3309,14 @@ inline void handleApiState() {
     j += ",\"bank_switch_rate\":";j += (banks.switchRate == 0xFF ? -1 : (int)banks.switchRate);
     j += ",\"bank_hold\":";       j += (bankHeld() ? "true" : "false");
     j += ",\"bank_put_backs\":";  j += banks.putBacks;
+    // How many banks this flight controller REALLY has (0.9.742). Rotorflight
+    // builds them from flash size, so the two counts can differ: >256 kB gives
+    // 6 and 6, >128 kB gives 3 PID banks but still 6 rate banks, smaller still
+    // 2 and 3 (upstream common_pre.h). The pages offered 4 of each for years,
+    // which hid banks 5 and 6 on every full-size board. Read from MSP 101.
+    j += ",\"pid_banks\":";       j += (int)banks.pidCount;
+    j += ",\"rate_banks\":";      j += (int)banks.rateCount;
+    j += ",\"banks_shown\":";     j += (int)fcInfo.banksShown;   // 0 = all of them
     j += ",\"telem_cfg_known\":"; j += (fcInfo.telemCfgKnown ? "true" : "false");
     j += ",\"telem_cfg_bad\":";   j += (fcTelemCfgBad() ? "true" : "false");
     j += ",\"telem_sensors\":";   j += fcInfo.telemSensors;
@@ -3360,6 +3419,8 @@ inline void registerWebRoutes() {
     server.on("/api/fc/wake", HTTP_POST, handleFcWake);
     server.on("/api/fc/telemetry/restore", HTTP_POST, handleFcTelemRestore);
     server.on("/api/fc/telemetry/speed",   HTTP_POST, handleFcTelemSpeed);
+    server.on("/api/fc/banks",             HTTP_POST, handleFcBanksShown);
+    server.on("/api/banks.json",           HTTP_GET,  handleBanksJson);
     server.on("/api/esc/catch", HTTP_POST, handleEscCatchArm);
     server.on("/api/esc/catch", HTTP_GET,  handleEscCatchStatus);
     server.on("/rotorflight-tuning",    handleRotorflightTuning);

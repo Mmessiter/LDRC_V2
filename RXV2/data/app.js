@@ -438,6 +438,86 @@
                    'will show what the flight controller actually accepted.';
         },
 
+        // ---- How many tuning banks (0.9.742) -------------------------------
+        // Every page offered FOUR banks for years. Rotorflight 4.6 has SIX,
+        // so banks 5 and 6 were unreachable from the app and — worse — the
+        // phone backup never saved them. Rotorflight builds the count from
+        // flash size, and the two counts can differ (>256 kB: 6 PID and 6
+        // rate; >128 kB: 3 PID but still 6 rate), so ASK, never assume:
+        // fcinfo.pid_banks / .rate_banks come straight from MSP 101.
+        //
+        // On top of that a pilot may only use a few, so "How many banks"
+        // (Rotorflight page) caps what is shown. One rule that must never
+        // bend: the cap may hide a bank you do not use, but it can NEVER
+        // hide the bank the flight controller is actually ON. If a switch
+        // selects bank 5 while the cap says 3, the row still shows 5 —
+        // otherwise you would be editing a bank you cannot see.
+        BANKS_MAX: 6,
+
+        // The three numbers, cached in localStorage so a bank row can be
+        // drawn the instant a page opens. /api/banks.json is ~40 bytes;
+        // /api/state.json is 4.4 kB, a visible pause over Bluetooth.
+        bankInfo() {
+            try { return JSON.parse(localStorage.getItem('rfBanks') || 'null') || {}; }
+            catch (e) { return {}; }
+        },
+        async fetchBanks() {
+            try {
+                const r = await fetch('/api/banks.json', { cache: 'no-store' });
+                if (!r.ok) return this.bankInfo();
+                const b = await r.json();
+                if ((b.pid | 0) >= 1) localStorage.setItem('rfBanks', JSON.stringify(b));
+                return b;
+            } catch (e) { return this.bankInfo(); }
+        },
+
+        // info = what fetchBanks()/bankInfo() gave, or a whole state object.
+        // kind: 'pid' (default) or 'rate'. current = the 0-based bank now
+        // selected, so it is ALWAYS included. Returns 1..6.
+        bankCount(info, kind, current) {
+            const b = (info && info.fcinfo)
+                    ? { pid: info.fcinfo.pid_banks, rate: info.fcinfo.rate_banks, shown: info.fcinfo.banks_shown }
+                    : (info || {});
+            const real = (kind === 'rate' ? b.rate : b.pid) | 0;
+            // No answer yet: 4 is what every page showed for years, so a slow
+            // load does not make the row jump about.
+            const most = (real >= 1 && real <= this.BANKS_MAX) ? real : 4;
+            let n = most;
+            const cap = b.shown | 0;
+            if (cap >= 1 && cap < n) n = cap;
+            // Never hide the bank we are on — but never invent one either: a
+            // stale remembered bank 5 must not put a fifth button on a
+            // 3-bank flight controller.
+            const cur = (current | 0) + 1;                  // 0-based -> count
+            if (cur > n && cur <= most) n = cur;
+            return n;
+        },
+
+        // Where a page should start, given what it remembered. Returns a
+        // 0-based bank that certainly exists (0.9.742).
+        bankClamp(info, kind, remembered) {
+            const n = this.bankCount(info, kind, 0);
+            const r = remembered | 0;
+            return (r >= 0 && r < n) ? r : 0;
+        },
+
+        // Render a row of bank buttons. container = element or its id,
+        // idPrefix = 'pb' gives pb0..pbN, fn = the global function name to
+        // call with the 0-based index, cls = extra class (e.g. 'to').
+        // Rebuilt whenever the count can have changed; the caller then
+        // paints 'active'/'disabled' as it always did.
+        bankRow(container, idPrefix, fn, n, cls) {
+            const el = (typeof container === 'string') ? document.getElementById(container) : container;
+            if (!el) return;
+            if (el.dataset.bankN === String(n) && el.children.length === n) return;  // unchanged
+            let h = '';
+            for (let i = 0; i < n; i++)
+                h += '<button class="profBtn' + (cls ? ' ' + cls : '') + '" onclick="' + fn +
+                     '(' + i + ')" id=' + idPrefix + i + '>' + (i + 1) + '</button>';
+            el.innerHTML = h;
+            el.dataset.bankN = String(n);
+        },
+
         // Governor throttle check (0.9.551 — Goblin 770, 2026-09-03: "stable
         // but far too slow" in bank 1 because the transmitter still sent
         // 50 % throttle from the ESC-governor days). The receiver watches

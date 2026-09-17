@@ -42,6 +42,13 @@ if command -v node >/dev/null 2>&1; then
     echo "REFUSING TO PUBLISH: a link is broken or points at the wrong page (above)." >&2
     exit 1
   fi
+  echo "Checking the bank-count rules..."
+  if ! node "$HERE/check_banks.js"; then
+    echo "REFUSING TO PUBLISH: the bank-count rules are wrong (above) — a tuning" >&2
+    echo "page would offer a bank the flight controller has not got, or hide one" >&2
+    echo "it is sitting on." >&2
+    exit 1
+  fi
 fi
 
 [[ -d "$LOCAL_DIR/$PRODUCT" ]] || { echo "Staging tree missing — run dev/stage_website.py first." >&2; exit 1; }

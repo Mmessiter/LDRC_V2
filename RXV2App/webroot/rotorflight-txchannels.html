@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Transmitter channels &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=267">
-<script src="/app.js?v=267" defer></script>
+<link rel=stylesheet href="/style.css?v=268">
+<script src="/app.js?v=268" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -35,8 +35,9 @@
 .detBtn{border:0;border-radius:8px;background:#5f8fab;color:#fff;font-weight:700;padding:.5em .7em;cursor:pointer;font-size:.85em}
 /* ONE bar, four sections (Malcolm 2026-08-30: Rotorflight's three-bar
    adjustments are baffling; a switch selector needs one bar divided into
-   its positions). Sections = the flight controller's 875–2125 µs travel in
-   quarters, exactly how the adjustment maps to profiles 1–4; the red line
+   its positions). Sections = the flight controller's 875–2125 µs travel cut
+   into equal parts, exactly how the adjustment maps to bank numbers (two to
+   six of them — Rotorflight has six banks, not four); the red line
    is the live switch position. */
 .qTrack{position:relative;height:18px;background:#dfe5ea;border-radius:9px;margin:.15em .2em .55em;grid-column:1 / -1}
 .qZone{position:absolute;top:0;bottom:0;background:#4a90c9;opacity:.85;border-radius:6px;color:#fff;font-size:.72em;font-weight:700;text-align:center;line-height:18px}

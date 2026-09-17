@@ -22,7 +22,22 @@ HOST      = sys.argv[1] if len(sys.argv) > 1 and not sys.argv[1].startswith('-')
 READ_ONLY = '--read-only' in sys.argv
 BASE      = 'http://' + HOST
 NAME      = 'claude-selftest'
-PROFILES  = 4
+# How many banks the flight controller really has. Rotorflight builds the
+# count from flash size (>256 kB: 6; >128 kB: 3 PID, 6 rate), so ASK — this
+# used to be a flat 4 and the test never touched banks 5 and 6 (0.9.742).
+PROFILES  = 4                                 # replaced below once MSP 101 answers
+
+def fc_bank_counts():
+    """(pid, rate) from MSP_STATUS bytes 24 and 26. Falls back to (4, 4)."""
+    try:
+        h = msp(101)
+        b = bytes.fromhex(h)
+        pc, rc = b[24], b[26]
+        if 1 <= pc <= 8 and 1 <= rc <= 8:
+            return pc, rc
+    except Exception:
+        pass
+    return 4, 4
 
 passed, failed = [], []
 
@@ -62,6 +77,12 @@ def msp(fn, data_hex=None, retries=3):
         time.sleep(0.25)
     raise RuntimeError('msp fn=%d failed: %s' % (fn, last))
 
+def set_profile_count():
+    global PROFILES
+    pc, rc = fc_bank_counts()
+    PROFILES = min(pc, rc)                    # the sweep does both per bank index
+    print('    flight controller has %d PID banks and %d rate banks' % (pc, rc))
+
 def read_everything(label):
     """The exact read sequence createBackup() uses."""
     snap = {'pid_basic': [], 'pid_advanced': [], 'rates': [], 'governor': []}
@@ -95,6 +116,7 @@ if failed:
 
 # ---- Phase 1: MSP read stability -----------------------------------------
 print('--- Phase 1: read all banks twice, must be identical ---')
+set_profile_count()
 snapA = read_everything('pass 1')
 snapB = read_everything('pass 2')
 check('two full read passes byte-identical', snapA == snapB)

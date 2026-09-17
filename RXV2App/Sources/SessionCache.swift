@@ -88,8 +88,9 @@ final class SessionCache {
     var available: Bool { !entries.isEmpty }
 
     // MARK: bank-aware keys (Malcolm 2026-08-04: "the PID values fail to
-    // differ by bank"). Rotorflight keeps 4 PID-side banks (fn=210, byte
-    // 0-3) and 4 rate banks (fn=210, byte 0x80|idx); the reads 112/94/148
+    // differ by bank"). Rotorflight keeps up to SIX PID-side banks (fn=210,
+    // byte 0-5) and six rate banks (fn=210, byte 0x80|idx) — the exact counts
+    // come from MSP 101 bytes 24/26, see fcBankCounts; the reads 112/94/148
     // follow the PID bank and 111 the rate bank, so the cache must key
     // those reads by the bank that was selected when they were made.
     private(set) var pidBank = 0
@@ -488,6 +489,25 @@ extension SessionCache {
         return (p, r)
     }
 
+    /// How many banks this flight controller HAS — bytes 24 and 26 of the
+    /// same reply (0.9.742). Rotorflight builds the counts from flash size,
+    /// so they can differ: >256 kB gives 6 PID and 6 rate banks, >128 kB
+    /// gives 3 PID but still 6 rate. The sweep used to walk 0...3 flat,
+    /// which meant a full-size board's banks 5 and 6 were never backed up
+    /// and never restored — silently, with the progress bar reading 100 %.
+    /// Falls back to 4 (what the sweep always did) when the reply is junk.
+    /// Rotorflight's own ceiling (upstream common_pre.h). Nothing may walk
+    /// past this.
+    static let maxBanks = 6
+
+    static func fcBankCounts(statusHex: String) -> (pid: Int, rate: Int) {
+        let h = Array(statusHex.uppercased())
+        guard h.count >= 54 else { return (4, 4) }
+        func byte(_ i: Int) -> Int? { Int(String(h[(2 * i)..<(2 * i + 2)]), radix: 16) }
+        guard let pc = byte(24), let rc = byte(26), pc > 0, pc <= 8, rc > 0, rc <= 8 else { return (4, 4) }
+        return (pc, rc)
+    }
+
     /// Freeze the tuning reads currently in the rolling cache. `explicit` =
     /// the pilot's own "Back up" tap; an automatic (connection) freeze never
     /// replaces an explicit one. Returns false when nothing was written.
@@ -530,13 +550,17 @@ extension SessionCache {
                   s.count >= 2, s.allSatisfy({ $0.isHexDigit }) else { return nil }
             return s.uppercased()
         }
-        for b in 0...3 {
+        // Walk every bank Rotorflight can have (0.9.742). hexAt() returns
+        // nil for a bank the file does not hold, so a 4-bank backup taken
+        // before today restores exactly as it always did, and a 6-bank one
+        // restores all six. Never ask the FC here — the file decides.
+        for b in 0..<Self.maxBanks {
             if let h = hexAt("/api/msp?fn=112&bank=\(b)") { out.append(RestoreItem(selectByte: b, writeFn: 202, readFn: 112, hex: h, label: "PIDs bank \(b + 1)")) }
             if let h = hexAt("/api/msp?fn=94&bank=\(b)")  { out.append(RestoreItem(selectByte: b, writeFn: 95,  readFn: 94,  hex: h, label: "advanced PIDs bank \(b + 1)")) }
             if let h = hexAt("/api/msp?fn=148&bank=\(b)") { out.append(RestoreItem(selectByte: b, writeFn: 149, readFn: 148, hex: h, label: "governor profile bank \(b + 1)")) }
             if let h = hexAt("/api/msp?fn=146&bank=\(b)") { out.append(RestoreItem(selectByte: b, writeFn: 147, readFn: 146, hex: h, label: "rescue bank \(b + 1)")) }
         }
-        for r in 0...3 {
+        for r in 0..<Self.maxBanks {
             if let h = hexAt("/api/msp?fn=111&bank=\(r)") { out.append(RestoreItem(selectByte: 0x80 | r, writeFn: 204, readFn: 111, hex: h, label: "rates bank \(r + 1)")) }
         }
         if let h = hexAt("/api/msp?fn=142") { out.append(RestoreItem(selectByte: nil, writeFn: 143, readFn: 142, hex: h, label: "governor global")) }
@@ -1073,8 +1097,9 @@ final class SessionPrefetcher {
             done += 1
             _ = req("/api/events.json"); done += 1
             _ = req("/api/events-prev.json"); done += 1   // previous boot's persisted tail
-            // Rotorflight reads — banked (Malcolm 2026-08-04: each of the 4
-            // PID-side banks and 4 rate banks is its own set of values).
+            // Rotorflight reads — banked (Malcolm 2026-08-04: each PID-side
+            // bank and each rate bank is its own set of values; there are up
+            // to six of each — the FC's own counts decide, see fcBankCounts).
             // ONLY with the transmitter off: never switch a bank under a
             // live TX. The FC's current banks come from MSP_STATUS (fn=101,
             // bytes 23/25 = current PID / rate profile; 24/26 are the COUNTS
@@ -1112,10 +1137,17 @@ final class SessionPrefetcher {
             } else if !pageMspQuiet() {
                 error = "a Rotorflight page was busy reading — back up again in a moment"
             } else if let orig = fcBanks() {
+                // How many banks this flight controller HAS (0.9.742). It used
+                // to sweep four flat, so on a full-size board banks 5 and 6
+                // were never saved — and the progress bar still read 100 %.
+                let counts = SessionCache.fcBankCounts(
+                    statusHex: req("/api/msp?fn=101").flatMap { String(data: $0, encoding: .utf8) } ?? "")
+                let nPid  = min(counts.pid,  SessionCache.maxBanks)
+                let nRate = min(counts.rate, SessionCache.maxBanks)
                 // Exactly the planned reads: bankless + 4 mixer inputs + 3 RPM
                 // notch axes + 4 reads per PID bank + 1 per rate bank. Bank
                 // selects, MSP 101 checks and TX checks are not items.
-                total += SessionCache.banklessReadFns.count + 4 + 3 + 4 * 4 + 4 * 1
+                total += SessionCache.banklessReadFns.count + 4 + 3 + 4 * nPid + nRate
                 // Every bankless setup block (Malcolm 2026-09-04: "cover all
                 // items") — governor global, mixer, servos, modes, channel
                 // map, motor & gear, battery & meters, features, alignment,
@@ -1135,7 +1167,7 @@ final class SessionPrefetcher {
                 // selects that are already true.
                 var curPid = orig.pid, curRate = orig.rate
                 var aborted = false
-                for b in 0...3 {
+                for b in 0..<nPid {
                     if tooFar { break }
                     if txAppeared() { aborted = true; break }
                     if b != curPid { selectBank(b); curPid = b }
@@ -1147,7 +1179,7 @@ final class SessionPrefetcher {
                     if !stillOn(pid: b, rate: nil) { aborted = true; break }
                 }
                 if !aborted {
-                    for r in 0...3 {
+                    for r in 0..<nRate {
                         if tooFar { break }
                         if txAppeared() { aborted = true; break }
                         if r != curRate { selectBank(0x80 | r); curRate = r }

@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>In-flight adjustments &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=267">
-<script src="/app.js?v=267" defer></script>
+<link rel=stylesheet href="/style.css?v=268">
+<script src="/app.js?v=268" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -155,7 +155,7 @@ function rowsToLines(rows) {             // -> array of 42 line objects (fn 0 = 
 function bankRegions(rows) {
     const b = rows.find(r => r.fn === 2 && r.kind !== 'nudge'); if (!b) return null;
     const out = {};
-    if (b.kind === 'switch') { regions(b.t).forEach(([lo, hi], k) => { const v = +b.values[k]; if (v >= 1 && v <= 4) out[v] = [lo, hi]; }); }
+    if (b.kind === 'switch') { regions(b.t).forEach(([lo, hi], k) => { const v = +b.values[k]; if (v >= 1 && v <= LDRC.BANKS_MAX) out[v] = [lo, hi]; }); }
     else {
         const n = +b.max - +b.min; if (n <= 0) return null;
         for (let v = +b.min; v <= +b.max; v++) {           // value v is chosen where round(min + (u-lo)*n/(hi-lo)) == v
@@ -227,7 +227,9 @@ function fnSel(id, r, br) {
     const opt = (fn, bank, text) => '<option value="' + fn + ':' + bank + '"' + (r.fn === fn && cur === bank ? ' selected' : '') + '>' + text + '</option>';
     let h = '<select id=' + id + ' class=usbOnly>';
     if (cur === -1) h += opt(r.fn, -1, LABELS[r.fn] + ' with a condition set elsewhere');
-    const banks = br ? [1, 2, 3, 4].filter(v => br.regions[v]) : [];
+    // Every bank Rotorflight can have, not the four this page used to offer
+    // (0.9.742) - a switch section set to bank 5 had no entry at all.
+    const banks = br ? Array.from({length: LDRC.BANKS_MAX}, (_, i) => i + 1).filter(v => br.regions[v]) : [];
     banks.forEach(v => { h += '<optgroup label="In bank ' + v + '">'; fns.forEach(fn => h += opt(fn, v, LABELS[fn] + ' in bank ' + v)); h += '</optgroup>'; });
     if (showAll || !banks.length) { h += '<optgroup label="In the bank in use">'; fns.forEach(fn => h += opt(fn, 0, LABELS[fn] + ' in the bank in use')); h += '</optgroup>'; }
     else if (cur === 0 && r.fn > 2) h += opt(r.fn, 0, LABELS[r.fn] + ' in the bank in use');
@@ -315,7 +317,7 @@ function valueSource(fn) {
 async function currentValue(r) {
     const src = valueSource(r.fn); if (!src) return null;
     const [fn, off, n, side] = src;
-    const want = condToBank(r.cond, bankRegions(rows));                // 1..4, 0 = the bank in use, -1 = other condition
+    const want = condToBank(r.cond, bankRegions(rows));                // 1..6, 0 = the bank in use, -1 = other condition
     const st = hexToBytes(await LDRC.msp(101));
     const cur = side === 'pid' ? st[23] : st[25];
     const idx = want >= 1 ? want - 1 : cur;

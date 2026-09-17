@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Backup &amp; restore &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=267">
-<script src="/app.js?v=267" defer></script>
+<link rel=stylesheet href="/style.css?v=268">
+<script src="/app.js?v=268" defer></script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -281,7 +281,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 </script>
 <template id=helpContent><h2>Backup &amp; restore</h2>
 <p><b>Share backup file</b> hands the backup to the phone&rsquo;s share sheet &mdash; email or AirDrop it to another phone, or to a friend &mdash; his helicopter need not be the same model, as a file from a different model brings the tune only; <b>Import a backup file</b> adopts one as this model&rsquo;s restore point (then Restore writes it). The file carries everything. Imported under the same model name you get all of it back. Imported from a <b>different</b> model, only the tune arrives &mdash; PIDs, advanced PIDs, rates, governor, rescue, filters; everything belonging to that pilot&rsquo;s helicopter and radio stays yours, including the channel map, stick setup, failsafe and the bank and rates switch selectors.</p>
-<p><b>Back up settings to phone</b> saves the whole Rotorflight setup: banks 1&ndash;4's PIDs, advanced PIDs, rates, governor and rescue; the governor's global settings; mixer, servos, motor &amp; gear ratio; arming switch &amp; modes, channel map, receiver &amp; failsafe; battery &amp; meters, filters, board &amp; gyro alignment, telemetry, black box setup, the flight controller's name; the bank and rates switch assignments &mdash; and the receiver&rsquo;s own flight logs and link record too, so you can read them with the model switched off. The flight controller&rsquo;s black box is not in a backup: it stays on the flight controller. <b>Restore settings from phone</b> writes back only what differs, each item verified, with the transmitter off, then saves it in the flight controller (and restarts it when the governor or motor block changed). The telemetry speed (Rotorflight page) is not part of a backup: a restore keeps whatever speed the flight controller runs.</p>
+<p><b>Back up settings to phone</b> saves the whole Rotorflight setup: every bank&rsquo;s PIDs, advanced PIDs, rates, governor and rescue (all six on a full-size flight controller &mdash; it asks how many there are); the governor's global settings; mixer, servos, motor &amp; gear ratio; arming switch &amp; modes, channel map, receiver &amp; failsafe; battery &amp; meters, filters, board &amp; gyro alignment, telemetry, black box setup, the flight controller's name; the bank and rates switch assignments &mdash; and the receiver&rsquo;s own flight logs and link record too, so you can read them with the model switched off. The flight controller&rsquo;s black box is not in a backup: it stays on the flight controller. <b>Restore settings from phone</b> writes back only what differs, each item verified, with the transmitter off, then saves it in the flight controller (and restarts it when the governor or motor block changed). The telemetry speed (Rotorflight page) is not part of a backup: a restore keeps whatever speed the flight controller runs.</p>
 <p><b>Not in the backup</b> (left untouched by Restore): ESC parameters (Scorpion programming), serial ports, LED / OSD / GPS and the receiver's own settings.</p>
 <p>A backup is also taken automatically when you connect, so even a pilot who never presses Back&nbsp;up has one &mdash; but your own Back&nbsp;up (or an imported file) is kept until you back up again. Always back up a known-good setup before experimenting.</p>
 </template>

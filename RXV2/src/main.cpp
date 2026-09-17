@@ -173,6 +173,8 @@ void setup() {
     // FC's copy turns up empty (MspFc.h is included after Storage.h, so the
     // goodness check is repeated here: rate, ratio, at least one sensor).
     fcInfo.telemSpeedPref = prefs.isKey(NVS_KEY_FC_TELEM_SPEED) ? (prefs.getUChar(NVS_KEY_FC_TELEM_SPEED, 1) ? 1 : 0) : 1;
+    fcInfo.banksShown     = prefs.getUChar(NVS_KEY_BANKS_SHOWN, 0);
+    if (fcInfo.banksShown > 6) fcInfo.banksShown = 0;    // junk reads as "all of them"
     if (prefs.isKey(NVS_KEY_FC_TELEM_GOOD) && prefs.getBytesLength(NVS_KEY_FC_TELEM_GOOD) == 52) {
         prefs.getBytes(NVS_KEY_FC_TELEM_GOOD, fcInfo.telemGood, 52);
         bool sensors = false;

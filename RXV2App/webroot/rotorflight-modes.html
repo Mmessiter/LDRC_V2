@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Switches &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=267">
-<script src="/app.js?v=267" defer></script>
+<link rel=stylesheet href="/style.css?v=268">
+<script src="/app.js?v=268" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -213,8 +213,10 @@ async function pollRc(){
 }
 
 // Profile selectors (set on the Transmitter channels page; remembered there).
-// Four equal zones of 875–2125 µs = Rotorflight's absolute mapping to 1..4;
-// the FC's live profile (MSP_STATUS bytes 23 / 25) is the proof.
+// Equal zones of 875–2125 µs = Rotorflight's absolute mapping to bank
+// numbers — as many zones as the switch has positions (up to six, see the
+// block below); the FC's live profile (MSP_STATUS bytes 23 / 25) is the
+// proof.
 // Profile selectors (set on the Transmitter channels page). Each selector
 // is up to SIX adjustment slots (bank 30-35, rates 36-41), one per section:
 // enable range = the section, value = the profile number. Read them back

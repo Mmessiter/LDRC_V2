@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.741-help-audit";
+constexpr const char* FW_VERSION = "RXV2-0.9.742-six-banks";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -421,6 +421,7 @@ constexpr const char* NVS_KEY_FC_GOV_MODE = "fcgovmd";  // uint8 Rotorflight gov
 constexpr const char* NVS_KEY_GOV_THR_PARKED = "govthrpk"; // uint8 verdict of the last long armed spell: 0 = throttle reached full, else the % it sat at
 constexpr const char* NVS_KEY_GOV_THR_MAX = "govthrmx"; // uint8 highest throttle % seen in that spell
 constexpr const char* NVS_KEY_FC_TELEM_SPEED = "fctspd";  // uint8 Rotorflight telemetry link speed we keep the FC at: 1 = fast (1000/1, default), 0 = standard (250/8)
+constexpr const char* NVS_KEY_BANKS_SHOWN = "bankshow"; // uint8 how many tuning banks the pages offer: 0 = every bank this flight controller has (default), 1..6 = show only that many
 constexpr const char* NVS_KEY_FC_TELEM_GOOD  = "fctgood"; // 52-byte blob: the last GOOD MSP 73 image (mode, rate, ratio, sensor list) — the auto-repair's source
 constexpr const char* NVS_KEY_THR_CH      = "thrch";    // uint8 throttle channel (1..16, 0=off); held at THROTTLE_SAFE_US until the TX is first heard  // uint8 cell count for per-cell display (0 = not set, show pack volts only)  // uint8 1=expect FC on telemetry line (default); 0=ignore it (plain PWM converters echo junk that parses as telemetry)  // uint8 CRSF frame rate in Hz (50/100/250); some CRSF-to-PWM converters misbehave above ~100 Hz   // one-shot: web-initiated reboot to apply a setting → next boot skips the RF window, WiFi comes straight back
 
@@ -1071,6 +1072,11 @@ struct FcInfo {
     uint8_t  telemGood[52]    = {0};
     bool     telemGoodValid   = false;
     uint8_t  telemSpeedPref   = 1;       // 1 = fast (1000/1), 0 = standard (250/8) — NVS_KEY_FC_TELEM_SPEED
+    // How many tuning banks the pages offer (0.9.742). 0 = every bank this
+    // flight controller has; 1..6 = show only that many, for a pilot who
+    // uses fewer. It never hides the bank the FC is actually ON — see
+    // LDRC.bankCount() in app.js. NVS_KEY_BANKS_SHOWN.
+    uint8_t  banksShown       = 0;
     bool     telemRecheck     = false;   // the poll re-reads MSP 73 at its next slot (watch, or after a write/reboot)
     bool     telemRepairDue   = false;   // found empty with a good image cached: the poll writes it back (RAM) at its next slot
     uint32_t telemCheckedMs   = 0;       // millis() of the last MSP 73 reply

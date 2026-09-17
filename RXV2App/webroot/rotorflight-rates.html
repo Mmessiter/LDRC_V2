@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rates &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=267">
-<script src="/app.js?v=267" defer></script>
+<link rel=stylesheet href="/style.css?v=268">
+<script src="/app.js?v=268" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -48,12 +48,7 @@ table.dyn-yaw td input{width:6em;padding:.4em;font-size:.95em;text-align:right;
 
     <div class=card>
         <h2>Profile (Bank)</h2>
-        <div class=profRow>
-            <button class=profBtn onclick="selectProfile(0)" id=pb0>1</button>
-            <button class=profBtn onclick="selectProfile(1)" id=pb1>2</button>
-            <button class=profBtn onclick="selectProfile(2)" id=pb2>3</button>
-            <button class=profBtn onclick="selectProfile(3)" id=pb3>4</button>
-        </div>
+        <div class=profRow id=profRow></div>
     </div>
 
     <div class=card id=feelCard style="display:none">
@@ -119,12 +114,7 @@ table.dyn-yaw td input{width:6em;padding:.4em;font-size:.95em;text-align:right;
 
     <div class=card>
         <h2>Copy to Profile (Bank) &hellip;</h2>
-        <div class=profRow>
-            <button class=profBtn onclick="copyTo(0)" id=cb0>1</button>
-            <button class=profBtn onclick="copyTo(1)" id=cb1>2</button>
-            <button class=profBtn onclick="copyTo(2)" id=cb2>3</button>
-            <button class=profBtn onclick="copyTo(3)" id=cb3>4</button>
-        </div>
+        <div class=profRow id=copyRow></div>
     </div>
 
     <div class=fabBar>
@@ -143,7 +133,8 @@ const AXES = [
     { k:'Collective', cls:'coll',  color:'#ffb74d', rs:0.25 },
 ];
 
-let currentProfile = parseInt(localStorage.getItem('rfRatesProfile') || '0');
+// Clamped to a bank that certainly exists (0.9.742).
+let currentProfile = LDRC.bankClamp(LDRC.bankInfo(), 'rate', parseInt(localStorage.getItem('rfRatesProfile') || '0'));
 let cachedRaw = null;
 let hasAdvanced = false;
 
@@ -158,8 +149,14 @@ function flashSave(html, ms) {
     b.innerHTML = html;
     setTimeout(() => { b.innerHTML = old; }, ms || 4000);
 }
+// As many banks as the flight controller really has, capped by the pilot's
+// "How many banks" choice — never fewer than the bank we are on (0.9.742).
+let bankInfo = LDRC.bankInfo();
 function paintProfileButtons() {
-    for (let i = 0; i < 4; i++) {
+    const n = LDRC.bankCount(bankInfo, 'rate', currentProfile);
+    LDRC.bankRow('profRow', 'pb', 'selectProfile', n);
+    LDRC.bankRow('copyRow', 'cb', 'copyTo', n);
+    for (let i = 0; i < n; i++) {
         document.getElementById('pb' + i).classList.toggle('active', i === currentProfile);
         const cb = document.getElementById('cb' + i);
         if (cb) cb.disabled = (i === currentProfile);
@@ -500,6 +497,7 @@ async function selectProfile(idx) {
 }
 
 async function load() {
+    LDRC.fetchBanks().then(b => { bankInfo = b; paintProfileButtons(); });
     await LDRC.replayReady;
     setStatus('info', LDRC.replay ? 'Reading from the phone…' : 'Reading rates from flight controller…');
     LDRC.markStale();

@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rotorflight &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=267">
-<script src="/app.js?v=267" defer></script>
+<link rel=stylesheet href="/style.css?v=268">
+<script src="/app.js?v=268" defer></script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -28,6 +28,12 @@
     <a class="btn btn-fw" href="/rotorflight-backup"   style="background:#d4944a"><span class=ico>&#128190;</span><span style="display:flex;flex-direction:column;align-items:flex-start;text-align:left"><span>Backup &amp; restore</span><span style="font-size:.62em;font-weight:400;opacity:.85;margin-top:.25em">the whole setup, safe on the phone</span></span></a>
 
     <div id=telemSpeed class="banner" style="display:none;margin-top:1em"></div>
+
+    <div id=bankCard style="display:none;background:#e7edf2;color:#2e4356;padding:.8em .9em;border-radius:10px;margin:1.4em 0 0;text-align:left">
+        <label for=bankShow style="font-weight:600;display:block;margin-bottom:.35em" data-help="How many tuning banks (flight modes) the PID, rates, governor and rescue pages offer. Rotorflight has six; show fewer if you only use a few.">How many banks</label>
+        <select id=bankShow style="width:100%;padding:.5em;border-radius:8px;border:1px solid #b9c6d1;background:#fff;color:#2e4356;font-size:1em"></select>
+        <div id=bankNote style="font-size:.85em;color:#5d7a8c;margin-top:.4em"></div>
+    </div>
 
     <div style="margin:1.4em 0 0">
         <button class=btn type=button id=rfCheck style="background:#5fa099;color:#fff;margin:0"><span class=ico>&#128260;</span>Check for a Rotorflight update</button>
@@ -64,6 +70,40 @@ document.addEventListener('DOMContentLoaded', async () => {
         finally { checking = false; if (btn) btn.disabled = false; }
     };
     document.getElementById('rfCheck').onclick = runCheck;
+    // How many banks (0.9.742). Rotorflight has six; a pilot who uses two
+    // can say so and the tuning pages stop offering the rest. Hidden until
+    // the flight controller says how many it really has, so a small board
+    // is never offered six.
+    (async () => {
+        const b = await LDRC.fetchBanks();
+        const most = Math.min(Math.max(b.pid | 0, b.rate | 0), LDRC.BANKS_MAX);
+        if (most < 1) return;                       // no FC yet: ask again next visit
+        const card = document.getElementById('bankCard'), sel = document.getElementById('bankShow');
+        let h = '<option value=0>All of them (' + most + ')</option>';
+        for (let i = 1; i <= most; i++) h += '<option value=' + i + '>' + i + (i === 1 ? ' bank' : ' banks') + '</option>';
+        sel.innerHTML = h;
+        sel.value = String(Math.min(b.shown | 0, most));
+        const note = () => {
+            const n = +sel.value;
+            document.getElementById('bankNote').textContent = (n >= 1 && n < most)
+                ? 'Your transmitter’s switch can still reach the others; a page shows one if the flight controller is on it.'
+                : '';
+        };
+        note();
+        card.style.display = '';
+        sel.onchange = async () => {
+            note();
+            try {
+                const r = await fetch('/api/fc/banks?show=' + (+sel.value), { method: 'POST' });
+                const j = await r.json();
+                if (!j.ok) throw new Error(j.message || j.err || 'refused');
+                localStorage.setItem('rfBanks', JSON.stringify({ pid: b.pid, rate: b.rate, shown: j.banks_shown }));
+            } catch (e) {
+                await LDRC.alert('Could not save that (' + (e.message || e) + ').', { title: 'Not saved', icon: '⚠️', kind: 'danger' });
+                sel.value = String(b.shown | 0); note();
+            }
+        };
+    })();
     // A preview shows the other answers without waiting months for a release.
     // Its buttons live in the help panel, built on demand, so bind by
     // delegation rather than by id at load.
@@ -90,6 +130,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 <li><b>Copy a bank</b> &mdash; PIDs, PID +, rescue, rates and governor gains from one bank to another in one tap, read back and verified. Each bank keeps its own head speed unless you say otherwise.</li>
 <li><b>Backup &amp; restore</b> &mdash; the whole setup saved on the phone, restorable any time.</li>
 </ul>
+<h3>How many banks</h3>
+<p>Rotorflight has <b>six</b> banks (flight modes), not four &mdash; every page here offered four for years, so banks 5 and 6 were out of reach and were not saved by <b>Back up</b> either. Both are fixed. If you only ever use two or three, set the number here and the tuning pages stop offering the rest.</p>
+<p>It only hides them from the pages. Your transmitter&rsquo;s switch can still select any bank the flight controller has, and if it is sitting on one you have hidden, the page shows that bank anyway &mdash; you are never editing a bank you cannot see. A small flight controller with fewer than six is asked and believed: you are only ever offered banks that exist.</p>
 <h3>Telemetry speed (receiver only)</h3>
 <p>A dongle never shows this card: the telemetry link belongs to whatever receiver flies the model. On a receiver, Rotorflight paces everything it sends on the receiver wire &mdash; its sensors and its answers to this phone and the transmitter &mdash; by one <b>telemetry link rate</b>. <b>Fast</b> (1000/1) answers about six times quicker than Rotorflight&rsquo;s <b>standard</b> (250/8) and updates volts and RPM sooner; nothing else changes. The receiver remembers your choice and shows what the flight controller actually runs. Applying restarts the flight controller, so it needs the transmitter off. A restore from a phone backup keeps whatever speed the flight controller runs.</p>
 <h3>Why the swashplate may twitch</h3>
