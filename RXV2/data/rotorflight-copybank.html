@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Copy a bank &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=272">
-<script src="/app.js?v=272" defer></script>
+<link rel=stylesheet href="/style.css?v=273">
+<script src="/app.js?v=273" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;gap:.6em;
         padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -87,7 +87,8 @@
 // bank to be PARKED so it can be restored after an unsuccessful
 // experiment"). A hidden bank is the safest place to keep a known-good
 // tune, and parking is useless if you cannot copy it back.
-let BANKS = LDRC.bankMax(LDRC.bankInfo(), 'pid');
+// Set at DOMContentLoaded — app.js is `defer`, so LDRC does not exist yet here (0.9.748).
+let BANKS = 4;
 let fromBank = 0, toBank = -1, fcPid = 0, fcRate = 0, busy = false, live = false, govOk = false;
 
 function setStatus(kind, msg) {
@@ -358,7 +359,10 @@ async function copyBank() {
     window.scrollTo({top: 0, behavior: 'smooth'});   // the banner keeps the result on screen
 }
 
-document.addEventListener('DOMContentLoaded', () => { paint(); init(); });
+document.addEventListener('DOMContentLoaded', () => {
+    BANKS = LDRC.bankMax(LDRC.bankInfo(), 'pid');
+    paint(); init();
+});
 </script>
 <template id=helpContent><h2>Copy a bank</h2>
 <p>Copies a whole bank to another in one go &mdash; instead of visiting the PIDs, PID +, Rates, Rescue and Governor pages one by one and copying each.</p>

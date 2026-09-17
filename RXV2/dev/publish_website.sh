@@ -42,6 +42,12 @@ if command -v node >/dev/null 2>&1; then
     echo "REFUSING TO PUBLISH: a link is broken or points at the wrong page (above)." >&2
     exit 1
   fi
+  echo "Checking no page touches LDRC before app.js has loaded..."
+  if ! node "$HERE/check_page_order.js"; then
+    echo "REFUSING TO PUBLISH: a page's inline script uses LDRC at load time (above)." >&2
+    echo "app.js is deferred, so that page's whole script dies before it starts." >&2
+    exit 1
+  fi
   echo "Checking the bank-count rules..."
   if ! node "$HERE/check_banks.js"; then
     echo "REFUSING TO PUBLISH: the bank-count rules are wrong (above) — a tuning" >&2

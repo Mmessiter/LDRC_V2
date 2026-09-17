@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Easy tuning &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=272">
-<script src="/app.js?v=272" defer></script>
+<link rel=stylesheet href="/style.css?v=273">
+<script src="/app.js?v=273" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;gap:.6em;
         padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -111,7 +111,8 @@ const expoFeel   = e => clamp5(50 + (ratesBase.expo - e) / 0.7);
 
 // Clamped to a bank that certainly exists (0.9.742): a remembered bank 5
 // must not leave a 3-bank flight controller lighting nothing.
-let bank = LDRC.bankClamp(LDRC.bankInfo(), 'pid', parseInt(localStorage.getItem('rfPidProfile') || '0'));
+// Set at DOMContentLoaded — app.js is `defer`, so LDRC does not exist yet here (0.9.748).
+let bank = parseInt(localStorage.getItem('rfPidProfile') || '0');
 let govRaw = null, ratesRaw = null, pidRaw = null, pidBase = [];
 let changed = { gov: false, rates: false, pid: false };
 // Which rates slider was actually moved: an untouched one must not rewrite
@@ -127,7 +128,8 @@ const u16 = (b, o) => b[o] | (b[o + 1] << 8);
 
 // As many banks as the flight controller really has, capped by the pilot's
 // "How many banks" choice — never fewer than the bank we are on (0.9.742).
-let bankInfo = LDRC.bankInfo();
+// Set at DOMContentLoaded — app.js is `defer`, so LDRC does not exist yet here (0.9.748).
+let bankInfo = {};
 function paintBanks() {
     const n = LDRC.bankCount(bankInfo, 'pid', bank);
     LDRC.bankRow('profRow', 'pb', 'selectBank', n);
@@ -331,7 +333,11 @@ async function save() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-document.addEventListener('DOMContentLoaded', () => { paintBanks(); load(); });
+document.addEventListener('DOMContentLoaded', () => {
+    bankInfo = LDRC.bankInfo();
+    bank = LDRC.bankClamp(bankInfo, 'pid', bank);
+    paintBanks(); load();
+});
 </script>
 <template id=helpContent><h2>Easy tuning</h2>
 <p>All the plain-English sliders in one place. Each one drives the real numbers on its own page (the link under it takes you there), and nothing is written until you tap Save.</p>

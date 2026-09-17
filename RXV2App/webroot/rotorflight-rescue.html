@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rescue &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=272">
-<script src="/app.js?v=272" defer></script>
+<link rel=stylesheet href="/style.css?v=273">
+<script src="/app.js?v=273" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -105,7 +105,8 @@ h2 .hint{font-weight:400;font-size:.7em;color:#5d7a8c;display:block;margin-top:.
 const $ = id => document.getElementById(id);
 const PROFILE_BYTES = 28;
 // Clamped to a bank that certainly exists (0.9.742).
-let currentBank = LDRC.bankClamp(LDRC.bankInfo(), 'pid', parseInt(localStorage.getItem('rfPidProfile') || '0', 10) || 0);
+// Set at DOMContentLoaded — app.js is `defer`, so LDRC does not exist yet here (0.9.748).
+let currentBank = parseInt(localStorage.getItem('rfPidProfile') || '0', 10) || 0;
 let editable = true, cachedRaw = null, dirty = false;
 
 function hexToBytes(h){const o=new Uint8Array(h.length/2);for(let i=0;i<o.length;i++)o[i]=parseInt(h.substr(i*2,2),16);return o;}
@@ -115,7 +116,8 @@ const wrU16=(b,o,v)=>{v=Math.max(0,Math.min(65535,Math.round(v)));b[o]=v&0xff;b[
 function setStatus(k,t){const s=$('status');s.style.display=t?'':'none';if(!t)return;s.className='banner '+k;s.textContent=t;}   // no banner without a status (Malcolm 2026-09-10)
 // As many banks as the flight controller really has, capped by the pilot's
 // "How many banks" choice — never fewer than the bank we are on (0.9.742).
-let bankInfo = LDRC.bankInfo();
+// Set at DOMContentLoaded — app.js is `defer`, so LDRC does not exist yet here (0.9.748).
+let bankInfo = {};
 function paintBankButtons(){
     const n = LDRC.bankCount(bankInfo, 'pid', currentBank);
     LDRC.bankRow('profRow', 'pb', 'selectBank', n);
@@ -230,6 +232,8 @@ async function loadRescueSwitch(){
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
+    bankInfo = LDRC.bankInfo();
+    currentBank = LDRC.bankClamp(bankInfo, 'pid', currentBank);
     document.querySelectorAll('.fRow input,.fRow select').forEach(el=>el.addEventListener('input',()=>{dirty=true;}));
     LDRC.fetchBanks().then(b => { bankInfo = b; paintBankButtons(); });
     load().then(loadRescueSwitch);

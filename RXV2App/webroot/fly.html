@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Fly &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=272">
-<script src="/app.js?v=272" defer></script>
+<link rel=stylesheet href="/style.css?v=273">
+<script src="/app.js?v=273" defer></script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -74,7 +74,10 @@ function paint(s) {
     }
 }
 
-LDRC.startPolling(paint, 250);
+// app.js is `defer`, so LDRC does not exist while this inline script runs —
+// this line used to throw and the status card sat at "…" for ever (found by
+// dev/check_page_order.js, 0.9.748).
+document.addEventListener('DOMContentLoaded', () => LDRC.startPolling(paint, 250));
 </script>
 <template id=helpContent><h2>Fly mode</h2>
 <p>"Fly" shuts down the receiver's WiFi until the next power-cycle. Mixed WiFi + radio operation is reliable, but a clean radio-only link is the strongest possible link, and a broadcasting AP at a flying field is wasted power.</p>

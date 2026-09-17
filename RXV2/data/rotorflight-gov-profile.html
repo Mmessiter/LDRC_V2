@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Governor (profile) &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=272">
-<script src="/app.js?v=272" defer></script>
+<link rel=stylesheet href="/style.css?v=273">
+<script src="/app.js?v=273" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;
         padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -115,7 +115,8 @@ input:disabled{background:#eee;color:#999}
 const PROFILE_BYTES = 17;
 
 // Clamped to a bank that certainly exists (0.9.742).
-let currentProfile = LDRC.bankClamp(LDRC.bankInfo(), 'pid', parseInt(localStorage.getItem('rfPidProfile') || '0'));
+// Set at DOMContentLoaded — app.js is `defer`, so LDRC does not exist yet here (0.9.748).
+let currentProfile = parseInt(localStorage.getItem('rfPidProfile') || '0');
 let cachedRaw = null;
 let editable = false;
 
@@ -138,7 +139,8 @@ function hexToBytes(h) { const o = new Uint8Array(h.length/2); for (let i=0;i<o.
 function bytesToHex(b) { let s=''; for (let i=0;i<b.length;i++) s += b[i].toString(16).padStart(2,'0').toUpperCase(); return s; }
 // As many banks as the flight controller really has, capped by the pilot's
 // "How many banks" choice — never fewer than the bank we are on (0.9.742).
-let bankInfo = LDRC.bankInfo();
+// Set at DOMContentLoaded — app.js is `defer`, so LDRC does not exist yet here (0.9.748).
+let bankInfo = {};
 function paintProfileButtons() {
     const n = LDRC.bankCount(bankInfo, 'pid', currentProfile);
     LDRC.bankRow('profRow', 'pb', 'selectProfile', n);
@@ -309,6 +311,8 @@ async function copyTo(destIdx) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    bankInfo = LDRC.bankInfo();
+    currentProfile = LDRC.bankClamp(bankInfo, 'pid', currentProfile);   // a remembered bank that certainly exists
     paintProfileButtons();
     document.addEventListener('input', e => {
         if (e.target.matches('input, select')) LDRC.markDirty();
