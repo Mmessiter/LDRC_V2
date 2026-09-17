@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.755-release-script";
+constexpr const char* FW_VERSION = "RXV2-0.9.756-preflight-review";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -154,9 +154,15 @@ inline uint32_t fltPardonMsToSend = FLT_PARDON_MS;   // 0 = "unignore now" (Malc
 // silent TX cannot hold the action up for ever.
 constexpr uint32_t PARDON_ANNOUNCE_MAX_MS = 1500;
 inline void announcePardon() { fltPardonMsToSend = FLT_PARDON_MS; fltPardonAnnounceLeft = 25; }
-inline bool pardonDelivered(uint32_t announcedAtMs) {
-    return fltPardonAnnounceLeft == 0 || (uint32_t)(millis() - announcedAtMs) >= PARDON_ANNOUNCE_MAX_MS;
+inline bool pardonDelivered(uint32_t announcedAtMs, uint32_t maxMs = PARDON_ANNOUNCE_MAX_MS) {
+    return fltPardonAnnounceLeft == 0 || (uint32_t)(millis() - announcedAtMs) >= maxMs;
 }
+// The ARMING teardown gets a shorter ceiling (0.9.756 pre-flight review): with
+// 1.5 s a transmitter busy with its safety-switch sound could push the ~700 ms
+// stall to ~2.3 s after the arm switch - into the spool-up for a pilot quick
+// on the motor switch. 0.5 s bounds it at ~0.8 s, near the +300 ms every
+// flight to date has flown with; an unexcused gap in the log is the lesser evil.
+constexpr uint32_t PARDON_TEARDOWN_MAX_MS = 500;
 // What the TX's clock face actually holds is anyone's guess — Malcolm's reads
 // UTC plus six minutes of drift (set in winter, never adjusted). So we LEARN
 // its offset from true UTC whenever a phone sync and a TX time packet occur in

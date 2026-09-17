@@ -393,6 +393,16 @@ inline void sbusTick() {
     // values, boot defaults, even a live link during the boot BLE window.
     // The THROTTLE channel never waves. Skipped on CRSF with an FC (the FC
     // is channel authority during failsafe).
+    // Rotor watch, EVERY tick (0.9.756): the last moment the head was seen
+    // turning. It used to be sampled only inside the wave block below, which
+    // first runs at the disarm revival - by then the motor already reads 0 in
+    // the normal landing order (motor off, head coasts, safety on), so the
+    // 20 s coast wait never engaged and the tail waggled on a turning head.
+    // One comparison per tick; nothing else in the control path changes.
+    static uint32_t rotorTurningMs = 0;
+    const bool rpmFresh = fcTelem.rpmMs && (uint32_t)(millis() - fcTelem.rpmMs) < 3000;
+    if (rpmFresh && fcTelem.fcMotorRPM >= 60) rotorTurningMs = millis();
+
     if (bleWaveStartMs) {
         // FC models (CRSF + FC telemetry) wave too now — Malcolm's field
         // report 2026-07-31: the announce never showed on the repaired heli.
@@ -434,9 +444,6 @@ inline void sbusTick() {
         // has been SEEN turning this power-up; a plain power-up with the TX
         // on keeps its prompt boot wiggle. (A brownout reboot in flight is
         // covered by armedLive above — the TX still says armed.)
-        static uint32_t rotorTurningMs = 0;
-        const bool rpmFresh = fcTelem.rpmMs && (uint32_t)(millis() - fcTelem.rpmMs) < 3000;
-        if (rpmFresh && fcTelem.fcMotorRPM >= 60) rotorTurningMs = millis();
         const bool coastOver    = !rotorTurningMs || (uint32_t)(millis() - rotorTurningMs) > ROTOR_COAST_MS;
         const bool disarmedLong = !rotorTurningMs ||
                                   (disarmedSinceMs && (uint32_t)(millis() - disarmedSinceMs) > WAVE_AFTER_DISARM_MS);

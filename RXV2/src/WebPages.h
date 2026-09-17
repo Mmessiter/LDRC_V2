@@ -272,6 +272,7 @@ inline void handleRotorflightNewHeli() {
 inline bool dongleDisarmedConfirmed();   // defined beside refuseIfArmed, below
 inline bool refuseIfArmed(const char* what);   // ditto — refuses on an armed model
 inline bool rxTxLinkedRecently();              // ditto — a live transmitter link
+inline bool refuseIfTxLinked(const char* why);  // ditto — refuses while a TX link is live
 inline void handleFcWake() {
     // A dongle port is MSP: if the flight controller is silent it is wiring or
     // the port, not a feature flag — and a dongle that cannot hear the FC also
@@ -397,6 +398,9 @@ inline void handleBanksJson() {
 // writes never happen near flight.
 inline void handleFcBanksShown() {
     if (refuseIfArmed("bank count")) return;
+    // A flash write, so like every other setting: not under a live link
+    // (0.9.756 pre-flight review - it was the one config write without this).
+    if (refuseIfTxLinked("turn the transmitter off first - this setting is saved to flash")) return;
     if (dongleEnabled && !dongleDisarmedConfirmed()) {
         server.sendHeader("Cache-Control", "no-store");
         server.send(409, "application/json",

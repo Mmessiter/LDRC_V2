@@ -413,7 +413,12 @@ inline void netStep() {
                 onWifiConnected();
                 break;
             }
-            if ((uint32_t)(millis() - netStateStart) >= WIFI_CONNECT_MS) {
+            // SIGNED: after a Bluetooth update netStateStart is set to the END of
+            // the 20 s STA hold (a time in the future), and the unsigned form
+            // wrapped to ~4e9 ms, "timed out" on the first pass, and overwrote
+            // the hold with a re-begin 200 ms later - the hold never held
+            // (found by the 0.9.756 pre-flight review). Negative = not yet.
+            if ((int32_t)(millis() - netStateStart) >= (int32_t)WIFI_CONNECT_MS) {
                 // If a phone is on our softAP, DON'T churn the STA side now — a
                 // disconnect+scan hops channels and boots that phone off mid-
                 // session. Hold the retry until they're done (self-heal resumes

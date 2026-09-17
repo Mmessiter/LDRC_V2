@@ -1087,8 +1087,9 @@ void loop() {
         flyTeardownAtMs = millis() + 300;
     }
     // ...and not until the acks carrying it have actually gone out (the TX may
-    // be busy playing its safety-switch sound right now). Ceiling 1.5 s.
-    if (flyTeardownAtMs && (int32_t)(millis() - flyTeardownAtMs) >= 0 && pardonDelivered(flyTeardownAtMs - 300)) {
+    // be busy playing its safety-switch sound right now). Ceiling 0.5 s here -
+    // this stall must land before the motor switch (PARDON_TEARDOWN_MAX_MS).
+    if (flyTeardownAtMs && (int32_t)(millis() - flyTeardownAtMs) >= 0 && pardonDelivered(flyTeardownAtMs - 300, PARDON_TEARDOWN_MAX_MS)) {
         flyTeardownAtMs = 0;
         { StallScope s("wifiOff"); disableWifi(); }
         // Post-mortem copy of the events (Malcolm 2026-08-07: a landing

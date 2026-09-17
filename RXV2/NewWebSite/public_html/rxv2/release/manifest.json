@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.756-preflight-review",
+      "url": "https://messiter.com/rxv2/release/v0.9.756/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.756/littlefs.bin",
+      "fs_md5": "85a0dff58e253d25c50b97ac7e3f75d1",
+      "notes": "Pre-flight review of every firmware change since the last flown build (0.9.728), the night before Malcolm's next test flight. Verdict: nothing in that diff can touch control in the air - every changed path runs on the ground and is gated off when armed or under a live transmitter link. It found three things worth fixing anyway. 1) The tail-waggle fix from 0.9.729 never worked in the real landing order: the rotor-speed sample sat inside a block that only runs after the safety switch, by which time the motor already reads zero, so the 20-second coast wait never engaged and the tail still waggled on a turning head. The rotor is now watched every tick - one comparison. 2) The stall that switches the radios off after arming waited up to 1.5 s for the transmitter to acknowledge its warning; a transmitter busy with its safety-switch sound could push that stall to over two seconds after the arm switch, into the spool-up for a pilot quick on the motor switch. That wait is now capped at half a second, so the stall lands within 0.8 s - close to the +0.3 s every flight so far has flown with. 3) The 20-second WiFi hold after a Bluetooth update never held: its timer was compared unsigned against a time in the future and wrapped, so the join started 200 ms after boot as before. Also: the new bank-count setting is now refused under a live transmitter link, like every other setting saved to flash. Firmware only."
+    },
+    {
       "name": "RXV2-0.9.755-release-script",
       "url": "https://messiter.com/rxv2/release/v0.9.755/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.755/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.745/littlefs.bin",
       "fs_md5": "3218e62c88dcfec7732e07ab24fd2cb2",
       "notes": "Copy a bank now shows EVERY bank the flight controller has, even the ones you have hidden with How many banks (Malcolm 2026-09-17: \"our copy bank function should allow all banks even if we don't use them all. That will allow a bank to be parked so it can be restored after an unsuccessful experiment\"). Copy the tune you are happy with into a bank you never fly before you start changing things; if the experiment goes badly, copy it back and you are exactly where you were - quicker than a full restore, and it survives the flying session. Parking would be useless if the parking space were hidden, so this one page deliberately ignores the cap, and says so on the page when you have banks hidden, because otherwise the extra buttons look like a fault. The tuning pages are unchanged: they still show only what you said you use. Pages only."
-    },
-    {
-      "name": "RXV2-0.9.744-banks-profiles",
-      "url": "https://messiter.com/rxv2/release/v0.9.744/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.744/littlefs.bin",
-      "fs_md5": "95766414733e22f35589465bfa0ca785",
-      "notes": "Malcolm's final wording: \"How many banks (Profiles) do you use (1-6)?\" - Rotorflight's own word for a bank is a profile, and the house rule is plain English first with the firmware's jargon in brackets, so anyone who has read Rotorflight's documentation knows at once which thing is meant. The range shown is the range that flight controller really offers. Pages only."
     }
   ],
   "rotorflight": {
