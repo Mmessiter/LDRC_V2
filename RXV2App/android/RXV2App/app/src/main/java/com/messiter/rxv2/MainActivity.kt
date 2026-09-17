@@ -251,14 +251,14 @@ class MainActivity : AppCompatActivity() {
         root.removeAllViews()
         val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         col.addView(TextView(this).apply {
-            text = "RXV2 Receivers"; textSize = 22f; setPadding(40, 60, 40, 8)
+            text = "RXV2 Receivers & Dongles"; textSize = 22f; setPadding(40, 60, 40, 8)
         })
         col.addView(TextView(this).apply {
             text = "App v" + packageManager.getPackageInfo(packageName, 0).versionName
             setPadding(40, 0, 40, 8); alpha = 0.5f; textSize = 12f
         })
         col.addView(TextView(this).apply {
-            text = "Power the receiver with the transmitter OFF so its config radio comes up. Press and hold a receiver to give it a photograph. The WiFi web interface still works exactly as before."
+            text = "Power the model with the transmitter OFF so the board's config radio comes up. A dongle has no transmitter of its own: just power the model. Press and hold any board to give it a photograph. The WiFi web interface still works exactly as before."
             setPadding(40, 0, 40, 20); alpha = 0.7f; textSize = 13f
         })
         autoBanner = TextView(this).apply {
@@ -304,14 +304,14 @@ class MainActivity : AppCompatActivity() {
         col.addView(list, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
         val hint = TextView(this).apply {
-            text = "Searching…  Bring the receiver within a few metres."
+            text = "Searching…  Bring the receiver or dongle within a few metres."
             setPadding(40, 16, 40, 40); alpha = 0.6f; textSize = 13f
         }
         col.addView(hint)
         // No receiver? Let anyone play: the same web UI runs against
         // canned data from a real receiver, with animated channels.
         demoBtn = TextView(this).apply {
-            text = "🎭  No receiver yet?  Try the receiver demo"
+            text = "🎭  Nothing of your own yet?  Try the receiver demo"
             textSize = 15f; setPadding(40, 28, 40, 28)
             setBackgroundColor(0xFF1E293B.toInt()); setTextColor(0xFF7DD3FC.toInt())
             setOnClickListener { demoDongle = false; demoMode = true; showWeb() }

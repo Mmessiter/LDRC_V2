@@ -496,9 +496,10 @@ struct ScannerView: View {
             } header: {
                 Text(headerText)
             } footer: {
-                Text("Power the receiver with the transmitter OFF so its "
+                Text("Power the model with the transmitter OFF so the board's "
                    + "config radios come up (same rule as the WiFi portal). "
-                   + "Press and hold a receiver to give it a photograph. "
+                   + "A dongle has no transmitter of its own: just power the model. "
+                   + "Press and hold any board to give it a photograph. "
                    + "Not everybody has an iPhone — the WiFi web interface "
                    + "still works exactly as before.")
             }
@@ -556,7 +557,7 @@ struct ScannerView: View {
                     Button {
                         demoDongle = false; BleSchemeHandler.demoDongle = false; demoMode = true
                     } label: {
-                        Label("No receiver yet?  Try the receiver demo",
+                        Label("Nothing of your own yet?  Try the receiver demo",
                               systemImage: "theatermasks")
                     }
                     Button {
@@ -608,7 +609,7 @@ struct ScannerView: View {
         switch link.state {
         case .connecting(let n): return "Connecting to \(n)…"
         case .failed(let m):     return m
-        default:                 return "Nearby receivers"
+        default:                 return "Nearby receivers and dongles"
         }
     }
 
@@ -616,7 +617,7 @@ struct ScannerView: View {
         if let note = link.connectNote { return note }
         switch link.state {
         case .failed(let m): return m
-        default: return "Bring the receiver within a few metres and make sure it is in config mode (LED behaviour as usual)."
+        default: return "Bring the receiver or dongle within a few metres and make sure it is in config mode (LED behaviour as usual)."
         }
     }
 }
