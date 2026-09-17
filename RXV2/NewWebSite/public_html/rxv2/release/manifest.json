@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.753-heal-timing",
+      "url": "https://messiter.com/rxv2/release/v0.9.753/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.753/littlefs.bin",
+      "fs_md5": "0aa73935faef21c39a705729561711bf",
+      "notes": "The 0.9.752 USB heal fired both its stages one millisecond apart (RAW420AJB log: 'sent exit' at 51.334 s, 'closed' at 51.335 s), so the flight controller never got the two or three seconds it needs to restart after 'exit'. Both stages were timed from the moment the port opened and gated on the same byte count, which was not reached until 51 s - then both passed at once. Stage 2 now waits 8 seconds after stage 1, and the byte gate is a dozen probes rather than forty. Firmware only; nothing changes in the air."
+    },
+    {
       "name": "RXV2-0.9.752-cli-left-open",
       "url": "https://messiter.com/rxv2/release/v0.9.752/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.752/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.742/littlefs.bin",
       "fs_md5": "3f8dafe45bdeca156112665ed70df871",
       "notes": "Rotorflight has SIX banks, not four (Malcolm 2026-09-17: \"we ought to enable 6. Maybe we should add an option 'How many banks' which allows up to six\"). Every tuning page offered four, so banks 5 and 6 were out of reach - and worse, the phone's Back up never saved them and never restored them, silently, with the progress bar reading 100 %. Both are fixed, and nothing assumes a number any more: the flight controller is asked how many it has (MSP 101), because Rotorflight builds the count from flash size and the two counts can differ - a full-size board has 6 PID and 6 rate banks, a smaller one 3 PID but still 6 rate. A new setting on the Rotorflight page, How many banks, caps what the pages show for a pilot who only uses a few; it is kept on the receiver, so it follows the model from phone to phone. One rule it can never break: it may hide a bank you do not use, but never the bank the flight controller is actually ON - if your switch selects bank 5 while you have asked for three, the page shows bank 5 anyway, because editing a bank you cannot see is how a tune gets lost. A remembered bank is clamped too, so a stale bank 5 cannot leave a three-bank flight controller lighting nothing. Also fixed: the adjustments page could not express 'in bank 5' at all; Copy a bank said 'copying from bank 4' when the flight controller was on 5 or 6. All seven bank rows are now drawn by one piece of code, so there is one place to get this right. New check in the publish gate: 14 cases covering caps, small boards, stale banks and the never-hide rule - publishing refuses if any fails. Apps 5.81 (iOS) / 5.73 (Android) carry the six-bank backup. Nothing changes in the air: all of this is disarmed, on the ground."
-    },
-    {
-      "name": "RXV2-0.9.741-help-audit",
-      "url": "https://messiter.com/rxv2/release/v0.9.741/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.741/littlefs.bin",
-      "fs_md5": "61a4d17a67ee9e51358e76c3cc3f7585",
-      "notes": "Every help screen re-read for things that are no longer true (Malcolm 2026-09-17: 'please re read all help text and look for out of date bits we ought to fix'). Four independent readers went through all 50 pages against the code that actually runs, and about 40 corrections came out of it. The ones that mattered most: Back up said a tune from a friend's helicopter brings his stick setup, channel map and bank switches with it - it does NOT any more (that is his radio, not his tune), and it only saves banks 1-4; the black box help mixed up the receiver's own flight record with the flight controller's black box - two different things; the swash trims were called tenths of a degree everywhere when Rotorflight means percent of servo throw; the update page told Android users to use 'the iPhone app'. Travel extents said everything twice - its help had been appended rather than merged - and Control sense and Collective up/down balance had no help at all; the dongle and Receiver settings help panels opened halfway down themselves. Three stale comments in the phone apps' own source were fixed too, including two that named the wrong selector slots. Pages and comments only - nothing changes in the air."
     }
   ],
   "rotorflight": {

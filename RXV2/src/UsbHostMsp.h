@@ -72,6 +72,7 @@ namespace UsbHostMsp {
     inline uint32_t openedAtMs = 0, bytesOutAtOpen = 0;
     inline bool     usbSilent = false;   // enumerated, probed, never answered - closed on purpose
     inline uint8_t  healStage = 0;       // 0 fresh, 1 "exit" sent, 2 given up (closed)
+    inline uint32_t healSentAtMs = 0;    // when "exit" went out - stage 2 waits 8 s AFTER it, not after the open
     inline uint32_t lastOpenTryMs = 0;
     inline bool     wasOpen   = false;   // an "unplugged" note only after a link existed
     inline volatile uint32_t devSeen = 0;  // bumped by every enumeration; a device that arrived while a close was deferred is not forgotten
@@ -216,7 +217,7 @@ namespace UsbHostMsp {
         // enumerated), so it is left alone until the pilot re-plugs or
         // power-cycles - at which point devSeen changes and it gets its chance.
         const bool deaf = opened && !usbSilent && !cliMode && !wantClose && openedAtMs &&
-                          bytesOut - bytesOutAtOpen >= 300 &&
+                          bytesOut - bytesOutAtOpen >= 120 &&      // ~12 probes; 300 took 50 s and gated both stages at once (0.9.753)
                           (fcInfo.lastResponseMs == 0 || (int32_t)(fcInfo.lastResponseMs - openedAtMs) < 0);
         if (deaf && healStage == 0 && (uint32_t)(millis() - openedAtMs) > 8000) {
             // Stage 1: the likeliest cause is a command line left open across a
@@ -224,11 +225,15 @@ namespace UsbHostMsp {
             // an FC restart and re-enumerate clean; an FC NOT in its command
             // line ignores the stray bytes. Harmless either way, and it cannot
             // be armed while in a CLI.
-            healStage = 1;
+            healStage = 1; healSentAtMs = millis();
             static const char ex[] = "exit\n";
             send((const uint8_t*)ex, sizeof ex - 1);
             events.add("USB: the flight controller enumerated but has not answered - sent 'exit' in case its command line was left open");
-        } else if (deaf && healStage == 1 && (uint32_t)(millis() - openedAtMs) > 16000) {
+        } else if (deaf && healStage == 1 && (uint32_t)(millis() - healSentAtMs) > 8000) {
+            // 0.9.752 measured both stages from the OPEN, and the byte gate held
+            // both back until 51 s - so "exit" and "closed" landed 1 ms apart and
+            // the FC never had its 2-3 s to restart. Stage 2 now waits 8 s after
+            // stage 1 (2026-09-17, RAW420AJB log t=51334/51335).
             // Stage 2: still nothing. Drop the dead port so MSP falls back, and
             // say the one thing that works.
             healStage = 2;

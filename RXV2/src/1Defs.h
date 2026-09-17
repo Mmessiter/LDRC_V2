@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.752-cli-left-open";
+constexpr const char* FW_VERSION = "RXV2-0.9.753-heal-timing";
 
 //*********************************************************************
 //  Auto-update manifest URLs
