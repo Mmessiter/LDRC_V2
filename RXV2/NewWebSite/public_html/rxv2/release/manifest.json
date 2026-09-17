@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.747-ride-out-drops",
+      "url": "https://messiter.com/rxv2/release/v0.9.747/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.747/littlefs.bin",
+      "fs_md5": "63d137fa697cc2d11f1a3d19efa03597",
+      "notes": "Malcolm's 'crash' was not a crash (2026-09-17): 'the app returned to the opening screen, but the model wasn't selectable'. The Bluetooth link had dropped mid-session, and both apps treated any drop outside a reboot they had asked for as 'the model was switched off' and went straight to the scanner - with auto-connect disarmed, while the receiver was still tearing the old link down, so a tap on the model went nowhere. Now any unexpected drop from a live link is ridden out: 30 seconds of quiet reconnecting (90 for a reboot the app asked for), and if that window closes the scanner opens with auto-connect ARMED, so the receiver connects by itself the moment it is seen again. A model that really was switched off still lands on the scanner promptly. The receiver now logs WHY a link dropped (the radio's own reason code: lost each other, the phone ended it, we ended it), so the next one is diagnosable from the log alone. Firmware change is that one log line; nothing changes in the air."
+    },
+    {
       "name": "RXV2-0.9.746-ble-request-ids",
       "url": "https://messiter.com/rxv2/release/v0.9.746/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.746/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.736/littlefs.bin",
       "fs_md5": "bc688eee5f4338187cf1787549e1aaf5",
       "notes": "Both Back up steps in the Tuning wizard went to Setup instead of the backup page (Malcolm 2026-09-17). The same fault was fixed in the New helicopter wizard in 0.9.687 and the Tuning one was missed. Both now open Back up. New check: every internal link on every page must lead to a page that exists, AND a wizard step called 'Back up' must lead to the backup page - the wrong-page half is what a plain link checker cannot see. Publishing refuses if either fails. Pages only."
-    },
-    {
-      "name": "RXV2-0.9.735-backup-message",
-      "url": "https://messiter.com/rxv2/release/v0.9.735/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.735/littlefs.bin",
-      "fs_md5": "73c3b972a1d5f6bbd5d8f571cb49c41f",
-      "notes": "Back up said 'connect to the receiver first' on a dongle (Malcolm 2026-09-17). Two things were wrong with that sentence: it said receiver when it was a dongle, and it was not the reason - the only thing that refuses a backup there is the demo. It now says 'this is the demo - nothing here is really connected' when that is why, and 'connect to the receiver or dongle first' when nothing is connected. Same for Restore and for importing a backup file, on both phones."
     }
   ],
   "rotorflight": {

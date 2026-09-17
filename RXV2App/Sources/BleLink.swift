@@ -166,6 +166,10 @@ final class BleLink: NSObject, ObservableObject {
     private var lastName = "RXV2"
     private var userDisconnect = false
     private var reconnectUntil: Date?
+    /// True after an UNEXPECTED drop (not a reboot we asked for, not the
+    /// pilot leaving) until the app reads it — so the scanner can re-arm
+    /// auto-connect when the reconnect window closes (0.9.746).
+    var lastDropUnexpected = false
 
     // Scanner auto-connect (Malcolm 2026-08-16): fire at most once per app
     // launch, never after a deliberate disconnect.
@@ -653,15 +657,25 @@ extension BleLink: CBCentralManagerDelegate, CBPeripheralDelegate {
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral,
                         error: Error?) {
         cleanupConnection(message: "Receiver disconnected")
-        // Unexpected drop while in use — retry quietly for 90 s ONLY if a
-        // deliberate reboot is plausibly in progress; otherwise the model
-        // was switched off: straight back to the scanner.
+        // Any unexpected drop from a live link is ridden out (0.9.746). A
+        // deliberate reboot (install / save / fly) gets 90 s. A plain drop —
+        // the receiver's radio hiccupped, the phone's stack gave up — gets
+        // 30 s: long enough for the receiver to re-advertise, short enough
+        // that a model that was simply switched off still lands on the
+        // scanner promptly. Before this a plain drop went STRAIGHT to the
+        // scanner (2026-08-07 rule) — Malcolm 2026-09-17: mid-session the app
+        // "returned to the opening screen but the model wasn't selectable",
+        // because the receiver was still tearing the old link down.
         let wasActive: Bool
         if case .ready = state { wasActive = true }
         else if case .reconnecting = state { wasActive = true }
         else { wasActive = false }
-        if !userDisconnect && wasActive && Date() < Self.rebootishUntil {
-            if case .ready = state { reconnectUntil = Date().addingTimeInterval(90) }
+        let rebootish = Date() < Self.rebootishUntil
+        if !userDisconnect && wasActive {
+            if case .ready = state {
+                reconnectUntil = Date().addingTimeInterval(rebootish ? 90 : 30)
+                lastDropUnexpected = !rebootish
+            }
             if let until = reconnectUntil, Date() < until {
                 self.peripheral = peripheral          // cleanup nilled it
                 peripheral.delegate = self
@@ -685,6 +699,11 @@ extension BleLink: CBCentralManagerDelegate, CBPeripheralDelegate {
                     guard let self, case .reconnecting = self.state else { return }
                     self.central.stopScan()
                     if let p = self.peripheral { self.central.cancelPeripheralConnection(p) }
+                    // The window after an UNEXPECTED drop has closed: land on
+                    // the scanner with auto-connect ARMED, so the moment the
+                    // receiver is seen again it connects by itself (0.9.746).
+                    // A chosen parting (back / disconnect) still disarms it.
+                    if self.lastDropUnexpected { self.lastDropUnexpected = false; self.scannerAutoDone = false }
                     self.state = .idle
                 }
                 return

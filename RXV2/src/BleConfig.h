@@ -386,7 +386,11 @@ class BleServerCallbacks : public NimBLEServerCallbacks {
         bleConnMtu = 23;
         bleReqReady = false;
         blePumping  = false;
-        events.add("BLE app disconnected");
+        // The HCI reason says WHO let go (0.9.746): 0x08 supervision timeout
+        // (radio lost each other), 0x13 the phone ended it, 0x16 we ended
+        // it, 0x3e never established. Malcolm's 2026-09-17 drop logged only
+        // "disconnected", which settled nothing.
+        { char m[56]; snprintf(m, sizeof m, "BLE app disconnected (reason 0x%02x)", (unsigned)(reason & 0xFF)); events.add(m); }
         bleConnEvents++;
         if (bleStarted) NimBLEDevice::startAdvertising();   // not when BLE is meant to be off
     }

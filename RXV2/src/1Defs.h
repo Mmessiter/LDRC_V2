@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.746-ble-request-ids";
+constexpr const char* FW_VERSION = "RXV2-0.9.747-ride-out-drops";
 
 //*********************************************************************
 //  Auto-update manifest URLs

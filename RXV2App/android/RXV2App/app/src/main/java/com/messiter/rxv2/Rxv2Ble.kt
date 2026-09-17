@@ -212,6 +212,10 @@ class Rxv2Ble(private val context: Context) {
         if (until > rebootishUntil) rebootishUntil = until
     }
     private var reconnectUntil = 0L
+    /** True after an UNEXPECTED drop (not a reboot we asked for, not the
+     *  pilot leaving) until the app reads it - so the scanner can re-arm
+     *  auto-connect when the reconnect window closes (0.9.746). */
+    @Volatile var lastDropUnexpected = false
 
     // connectGatt can sit for half a minute before Android gives up, and out
     // of range it may never report at all - the app just looks stuck (Malcolm
@@ -547,9 +551,21 @@ class Rxv2Ble(private val context: Context) {
                 bg.post {
                     cleanup("Receiver disconnected")
                     g.close(); gatt = null
-                    if (!userDisconnect && state is State.Ready &&
-                        System.currentTimeMillis() < rebootishUntil) {
-                        reconnectUntil = System.currentTimeMillis() + 90_000
+                    // Any unexpected drop from a live link is ridden out
+                    // (0.9.746). A deliberate reboot (install / save / fly)
+                    // gets 90 s. A plain drop - the receiver's radio hiccupped,
+                    // the phone's stack gave up - gets 30 s: long enough for
+                    // the receiver to re-advertise, short enough that a model
+                    // that was simply switched off still lands on the scanner
+                    // promptly. Before this a plain drop went STRAIGHT to the
+                    // scanner (2026-08-07 rule) - Malcolm 2026-09-17: mid-
+                    // session the app "returned to the opening screen but the
+                    // model wasn't selectable", because the receiver was still
+                    // tearing the old link down.
+                    if (!userDisconnect && state is State.Ready) {
+                        val rebootish = System.currentTimeMillis() < rebootishUntil
+                        reconnectUntil = System.currentTimeMillis() + (if (rebootish) 90_000 else 30_000)
+                        lastDropUnexpected = !rebootish
                         state = State.Reconnecting(connName)
                         bg.postDelayed({ tryReconnect() }, 2000)
                     } else if (!userDisconnect && state is State.Reconnecting) {
