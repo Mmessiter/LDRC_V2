@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.754-modal-scroll",
+      "url": "https://messiter.com/rxv2/release/v0.9.754/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.754/littlefs.bin",
+      "fs_md5": "885b9e5865d7ba1de8337b812c67665d",
+      "notes": "A message box taller than the screen now scrolls inside itself, with its title and buttons staying put - What's in the backup lists forty-odd lines and ran off the bottom with no way to reach OK (Malcolm 2026-09-17). Applies to every message box. Pages only."
+    },
+    {
       "name": "RXV2-0.9.753-heal-timing",
       "url": "https://messiter.com/rxv2/release/v0.9.753/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.753/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.743/littlefs.bin",
       "fs_md5": "c4bc0a6215559e9158d2ef91a0c16efc",
       "notes": "Malcolm's wording for the new setting: \"How many banks do you use (1-6)?\" rather than the bare label \"How many banks\" - it is a question put to the pilot, so it should read like one. The range in it is the range that flight controller really offers, so a smaller board asks (1-3). Pages only."
-    },
-    {
-      "name": "RXV2-0.9.742-six-banks",
-      "url": "https://messiter.com/rxv2/release/v0.9.742/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.742/littlefs.bin",
-      "fs_md5": "3f8dafe45bdeca156112665ed70df871",
-      "notes": "Rotorflight has SIX banks, not four (Malcolm 2026-09-17: \"we ought to enable 6. Maybe we should add an option 'How many banks' which allows up to six\"). Every tuning page offered four, so banks 5 and 6 were out of reach - and worse, the phone's Back up never saved them and never restored them, silently, with the progress bar reading 100 %. Both are fixed, and nothing assumes a number any more: the flight controller is asked how many it has (MSP 101), because Rotorflight builds the count from flash size and the two counts can differ - a full-size board has 6 PID and 6 rate banks, a smaller one 3 PID but still 6 rate. A new setting on the Rotorflight page, How many banks, caps what the pages show for a pilot who only uses a few; it is kept on the receiver, so it follows the model from phone to phone. One rule it can never break: it may hide a bank you do not use, but never the bank the flight controller is actually ON - if your switch selects bank 5 while you have asked for three, the page shows bank 5 anyway, because editing a bank you cannot see is how a tune gets lost. A remembered bank is clamped too, so a stale bank 5 cannot leave a three-bank flight controller lighting nothing. Also fixed: the adjustments page could not express 'in bank 5' at all; Copy a bank said 'copying from bank 4' when the flight controller was on 5 or 6. All seven bank rows are now drawn by one piece of code, so there is one place to get this right. New check in the publish gate: 14 cases covering caps, small boards, stale banks and the never-hide rule - publishing refuses if any fails. Apps 5.81 (iOS) / 5.73 (Android) carry the six-bank backup. Nothing changes in the air: all of this is disarmed, on the ground."
     }
   ],
   "rotorflight": {

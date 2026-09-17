@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.753-heal-timing";
+constexpr const char* FW_VERSION = "RXV2-0.9.754-modal-scroll";
 
 //*********************************************************************
 //  Auto-update manifest URLs

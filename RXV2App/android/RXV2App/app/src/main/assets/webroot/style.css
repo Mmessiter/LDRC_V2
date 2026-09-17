@@ -310,6 +310,10 @@ code{
 .modalBox{
     background:#fff;border-radius:20px;padding:1.8em 1.5em 1.4em;
     max-width:90vw;width:380px;
+    /* Never taller than the screen (0.9.754): a long message scrolls inside
+       the box while the title and buttons stay put. "What's in the backup"
+       ran off the bottom with no way to reach OK (Malcolm 2026-09-17). */
+    max-height:90vh;display:flex;flex-direction:column;
     box-shadow:0 18px 50px rgba(0,0,0,.4),0 0 0 1px rgba(255,255,255,.6) inset;
     animation:modalPop .25s cubic-bezier(.34,1.56,.64,1);
     text-align:center
@@ -327,7 +331,8 @@ code{
 .modalAccent.danger{background:linear-gradient(135deg,#d4624a 0%,#c97464 100%)}
 .modalIcon{font-size:3em;line-height:1;margin:0 0 .15em;text-shadow:0 2px 4px rgba(0,0,0,.15)}
 .modalTitle{font-weight:700;font-size:1.35em;letter-spacing:.02em;margin:0}
-.modalMsg{color:#3a5165;margin:0 0 1.4em;font-size:1.05em;line-height:1.4;padding:0 .3em}
+.modalMsg{color:#3a5165;margin:0 0 1.4em;font-size:1.05em;line-height:1.4;padding:0 .3em;
+    flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .modalBtns{display:flex;gap:.6em}
 .modalBtn{
     flex:1;padding:.95em;border:0;border-radius:12px;
