@@ -9,7 +9,7 @@
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Check for Update &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=222">
-<script src="/app.js?v=262" defer></script>
+<script src="/app.js?v=263" defer></script>
 <style>
 /* --- Currently-installed card -------------------------------------- */
 .installed-card .row{
@@ -810,7 +810,18 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
 
 $('check').addEventListener('click', check);
 document.addEventListener('DOMContentLoaded', () => {
-    loadCurrent().then(check);
+    // ONE installer (Malcolm 2026-09-17: "we seem to have multiple places that
+    // install updates. One gives byte count, one does not. I suggest only one
+    // bit of code should update so we only ever need to update that bit").
+    // Quite right: the front page carried its own copy, which had drifted —
+    // no byte count, no lane choice, no 3-minute grace, a different failure
+    // message. It now sends people here with ?install=newest instead, and this
+    // is the only code that installs anything.
+    loadCurrent().then(check).then(() => {
+        const wanted = new URLSearchParams(location.search).get('install');
+        if (wanted === 'newest' && newestInstall) installNewest();
+        else if (wanted === 'newest') showMessage('Nothing newer to install.');
+    });
     // WHICH LANE, as a visible choice rather than a sentence (Malcolm
     // 2026-09-15: "I do not see the button to select Bluetooth instead of
     // WiFi - or perhaps two buttons, one to select each"). Quite right: a note

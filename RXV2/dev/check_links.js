@@ -24,7 +24,9 @@ for (const f of files) {
         if (/\.(css|js|json|png|jpg|jpeg|svg|ico|gz|bin|pdf)$/i.test(l)) continue;  // assets
         if (l.startsWith('/api/') || l.startsWith('/app/')) continue;              // endpoints
         n++;
-        const clean = l.replace(/\.html$/, '');
+        // A query string or fragment is not part of the page's name
+        // (/firmware?install=newest is still /firmware).
+        const clean = l.split(/[?#]/)[0].replace(/\.html$/, '');
         if (!have.has(clean) && !ROUTES.has(clean)) { bad++; console.log(`FAIL  ${f} -> ${l}`); }
     }
 }

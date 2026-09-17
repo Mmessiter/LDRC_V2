@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.737-one-installer",
+      "url": "https://messiter.com/rxv2/release/v0.9.737/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.737/littlefs.bin",
+      "fs_md5": "725a70377bedba38e415debc47b35337",
+      "notes": "Only one piece of code installs an update now (Malcolm 2026-09-17: 'we seem to have multiple places that install updates. One gives byte count, one does not. I suggest only one bit of code should update so we only ever need to update that bit'). The front page carried its own copy, which had drifted: no byte count, no choice of WiFi or Bluetooth, no three-minute grace before calling an install failed, and a different failure message. Its 'Update now?' offer now opens the update page and installs from there - 117 lines of duplicate gone, and the one remaining installer is the better one. Pages only."
+    },
+    {
       "name": "RXV2-0.9.736-tuning-backup",
       "url": "https://messiter.com/rxv2/release/v0.9.736/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.736/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.724/littlefs.bin",
       "fs_md5": "d8047781cff295bed22faf0e54c2de52",
       "notes": "The Check for a Rotorflight update button was grey, which reads as disabled (Malcolm spotted it). It is now teal with an icon, like the buttons above it. The demo now answers the check properly too - its flight controller is a real 4.6.0, so it says 'up to date' as a real receiver would, instead of 'could not check' on a phone that plainly has internet."
-    },
-    {
-      "name": "RXV2-0.9.723-check-now",
-      "url": "https://messiter.com/rxv2/release/v0.9.723/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.723/littlefs.bin",
-      "fs_md5": "d763f9c1135e44e1a597c0d9d91740b0",
-      "notes": "Check for a Rotorflight update, when YOU ask (Malcolm's suggestion). A button at the foot of the Rotorflight page asks, there and then, whether a newer Rotorflight has come out - so nothing runs on a timer and nothing waits to surprise you. It gives one of three plain answers: up to date; a newer one is available (with 'back up first - flashing erases everything', and the reminder that flashing itself needs the Configurator on a computer); or a newer one is out but these pages have not been checked against it yet, so stay where you are. It asks two places: our own checked recommendation, and Rotorflight's own releases live - so it cannot answer 'up to date' for weeks after a real release. It never recommends a release our tuning pages have not been checked against, and when it cannot reach the internet it says so instead of guessing. Two preview buttons in the page's help show the other two answers without waiting months for a release. Needs internet on the phone or the receiver; the daily automatic check is gone."
     }
   ],
   "rotorflight": {

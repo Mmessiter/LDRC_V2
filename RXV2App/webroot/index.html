@@ -9,7 +9,7 @@
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Home &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=222">
-<script src="/app.js?v=262" defer></script>
+<script src="/app.js?v=263" defer></script>
 <style>
 /* First paint from memory (Malcolm 2026-09-10: the receiver layout flashed
    before the dongle one): classes set on <html> by the hint script below,
@@ -946,133 +946,16 @@ async function appManifest() {
 // Proactive "Update now?" dialog — pops automatically on connect when newer
 // firmware exists, and is re-openable by tapping the banner.
 function offerUpdate(current, v) {
-    const resolve = u => { try { return new URL(u, v.base || location.href).href; } catch (e) { return u; } };
     modalCard({
         icon: '⬆️', title: 'Firmware update available',
         body: 'Installed: <b>' + vr(current) + '</b><br>Available: <b>' + vr(v.name) + '</b><br><br>'
-            + 'Update now? The receiver downloads, flashes and reboots itself &mdash; about 30 seconds.',
+            + 'Update now? The update page opens and installs it.',
         okLabel: '⬆️ Update now', okColor: '#6cab5e', cancelLabel: 'Later',
-        onOk: () => doFirmwareUpdate(resolve(v.url), v.fs_url ? resolve(v.fs_url) : '', v.name)
+        // Hand over to the ONE installer rather than keep a second copy here.
+        onOk: () => { location.href = '/firmware?install=newest'; }
     });
 }
 
-// One-tap OTA from the home screen: fire the install, show a waiting card, then
-// poll until the receiver is back on the new firmware and return home.
-// Inside the app the PHONE downloads and pushes over Bluetooth (the only path
-// that works at the field); outside the app the receiver pulls it itself.
-async function doFirmwareUpdate(url, fsUrl, name) {
-    const c = document.querySelector('.container');
-    if (c) c.innerHTML = '<h1>Updating firmware</h1>'
-      + '<div class=card><p style="font-size:1.15em;font-weight:600">&#9203; Installing ' + vr(name) + ' &mdash; please wait&hellip;</p>'
-      + '<div style="background:rgba(125,158,176,.28);border-radius:9px;height:18px;overflow:hidden;margin:1.1em 0 .2em">'
-      + '<div id=__bar style="height:100%;width:0;background:#6cab5e;border-radius:9px"></div></div>'
-      + '<p id=__slow class=muted style="text-align:center;min-height:1.1em;margin:.4em 0 0"></p></div>'
-      + '<div class=footer></div>';
-    // Estimated progress: glide to ~92% over ~30 s (download + flash + reboot) and
-    // snap to 100% the instant the receiver answers again. An estimate — exactness doesn't matter.
-    const bar = document.getElementById('__bar');
-    if (bar) { bar.style.transition = 'width 30s linear'; requestAnimationFrame(() => { bar.style.width = '92%'; }); }
-    // FASTEST FIRST (Malcolm 2026-08-06: "Still bluetooth!!" — this banner
-    // path missed the fast lane that firmware.html got): receiver WiFi up →
-    // chip-pull at WiFi speed; only genuinely offline pays Bluetooth.
-    // Still joining its network (just powered up, router slow to re-admit it)?
-    // Wait for it — up to 45 s is still far quicker than a Bluetooth push
-    // (Malcolm 2026-09-02: "over Bluetooth – but it should be Wi-Fi, of course").
-    let chipHasInternet = false;
-    try {
-        const t0 = Date.now();
-        let misses = 0;
-        for (;;) {
-            // One dropped status read must not send a WiFi-capable receiver
-            // down the Bluetooth path (Malcolm 2026-09-02: "sometimes go over
-            // BLE when they could easily go over Wi-Fi") — retry a few times.
-            let st = null;
-            try { st = await (await fetch('/api/state.json', { cache: 'no-store' })).json(); } catch (e) {}
-            if (!st) { if (++misses >= 4) break; await new Promise(r => setTimeout(r, 1500)); continue; }
-            misses = 0;
-            const mode = st.net ? st.net.mode : '';
-            chipHasInternet = mode === 'WiFi up';
-            // sta_status 1 = home network not in range (the field): don't wait.
-            const joining = (mode === 'connecting WiFi' && st.net.sta_status !== 1) || mode === 'waiting for TX' || mode === 'init';
-            if (chipHasInternet || !joining || Date.now() - t0 > 45000) break;
-            const sl = document.getElementById('__slow');
-            if (sl) sl.textContent = 'Waiting for the receiver’s WiFi (' + Math.round((Date.now() - t0) / 1000) + ' s) — faster than Bluetooth…';
-            await new Promise(r => setTimeout(r, 2000));
-        }
-    } catch (e) {}
-    try {
-        if (chipHasInternet) throw new Error('receiver WiFi is faster');
-        const r0 = await fetch('/app/bleota/start?fw=' + encodeURIComponent(url) +
-                               (fsUrl ? '&fs=' + encodeURIComponent(fsUrl) : ''), { cache: 'no-store' });
-        if (r0.ok && (await r0.json()).ok) { bleOtaWatch(); return; }
-    } catch (e) { /* not inside the app — chip-pull below */ }
-    { const sl = document.getElementById('__slow');
-      if (sl && chipHasInternet) sl.textContent = 'Downloading over the receiver’s WiFi (fast)…'; }
-    let q = '/api/firmware/install?url=' + encodeURIComponent(url);
-    if (fsUrl) q += '&fs_url=' + encodeURIComponent(fsUrl);
-    fetch(q, { method: 'POST' }).catch(() => {});      // device reboots mid-response — expected
-    const done = () => {
-        const b = document.getElementById('__bar');
-        if (b) { b.style.transition = 'width .3s'; b.style.width = '100%'; }
-        setTimeout(() => location.replace('/?r=' + Date.now()), 300);
-    };
-    let n = 0, ok = 0;
-    const ping = () => { let sg; try { sg = AbortSignal.timeout(2500); } catch (e) { const a = new AbortController(); setTimeout(() => a.abort(), 2500); sg = a.signal; } return fetch('/api/state.json', { cache: 'no-store', signal: sg }); };
-    const tick = async () => {
-        if (!document.getElementById('__bar')) return;             // user navigated away
-        if (n >= 6) {                                              // installing — give it a head start
-            try { const r = await ping(); if (r.ok) { if (++ok >= 2) { done(); return; } } else ok = 0; } catch (e) { ok = 0; }
-        }
-        // Rare hang only: after ~75 s, say so in plain text (no button — just reload).
-        if (n === 75) { const sl = document.getElementById('__slow'); if (sl) sl.textContent = 'Taking longer than usual — you can reload the page.'; }
-        // In the APP: never wait forever — after ~100 s return to the model
-        // list and reconnect there (Malcolm 2026-08-08).
-        if (n === 100 && ok === 0 && window.LDRC && LDRC.viaBle) {
-            const sl = document.getElementById('__slow');
-            if (sl) sl.textContent = 'The receiver has rebooted with the update — returning to the model list…';
-            setTimeout(() => { try { window.webkit.messageHandlers.rxv2.postMessage('disconnect'); } catch (e) {} }, 2500);
-            return;
-        }
-        if (n >= 180) return;
-        n++; setTimeout(tick, 1000);
-    };
-    tick();
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) ping().then(r => { if (r.ok) done(); }).catch(() => {}); });
-}
-
-// Follow the app's Bluetooth push with REAL progress (it takes a minute or
-// two, so the 30 s estimated glide would mislead). Mirrors firmware.html.
-function bleOtaWatch() {
-    const b0 = document.getElementById('__bar');
-    if (b0) { b0.style.transition = 'width .5s'; b0.style.width = '3%'; }
-    const t0 = Date.now();
-    const tick = async () => {
-        const bar = document.getElementById('__bar');
-        if (!bar) return;                                     // user navigated away
-        const slow = document.getElementById('__slow');
-        let p = null;
-        try { p = await (await fetch('/app/bleota/progress', { cache: 'no-store' })).json(); } catch (e) {}
-        if (p) {
-            if (p.phase === 'error') {
-                if (slow) {   // the card replaced the menu: give a way out
-                    slow.textContent = 'Update failed: ' + (p.msg || 'unknown error') + ' \u2014 ';
-                    const a = document.createElement('a'); a.href = '/'; a.textContent = 'back to the menu'; slow.appendChild(a);
-                }
-                return;
-            }
-            if (p.phase === 'done') {
-                bar.style.width = '100%';
-                if (slow) slow.textContent = 'Done — ' + (p.msg || 'installed');
-                setTimeout(() => location.replace('/?r=' + Date.now()), 2000);
-                return;
-            }
-            if (slow) slow.textContent = p.msg || '';
-            if (p.total > 0) bar.style.width = Math.max(3, Math.round(100 * p.sent / p.total)) + '%';
-        }
-        if (Date.now() - t0 < 10 * 60 * 1000) setTimeout(tick, 1000);
-    };
-    tick();
-}
 </script>
 <template id=helpContent><h2>About this page</h2>
 <p>This is the receiver's home screen. It tells you whether the receiver is bound to a transmitter, and the boxes at the top show each fitted transceiver <b>live</b>: a green pulsing <b>receiving</b> box is the slot carrying your transmitter's signal right now, <b>standby</b> is its healthy partner ready to take over, and <b>listening…</b> means no transmitter is on the air. Switch your transmitter on and off and watch them change.</p>

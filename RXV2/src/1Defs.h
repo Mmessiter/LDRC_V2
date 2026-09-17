@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.736-tuning-backup";
+constexpr const char* FW_VERSION = "RXV2-0.9.737-one-installer";
 
 //*********************************************************************
 //  Auto-update manifest URLs
