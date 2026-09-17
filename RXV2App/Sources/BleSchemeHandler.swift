@@ -101,8 +101,14 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
             }
             // explicit = the pilot's own "Back up" / an imported file (sticky);
             // false = the automatic freeze taken at connection.
-            deliver(task, url: url, code: 200, type: "application/json",
-                    body: Data("{\"available\":\(avail),\"when\":\"\(when)\",\"explicit\":\(cache.restorePointIsExplicit())}".utf8))
+            // items = every setting the restore point holds, by name, so the
+            // page can show a human what is in it (Malcolm 2026-09-17: the
+            // exported JSON "means little to a mere human").
+            let items = cache.restoreItems().map { $0.label }
+            let obj: [String: Any] = ["available": avail, "when": when,
+                                      "explicit": cache.restorePointIsExplicit(), "items": items]
+            let body = (try? JSONSerialization.data(withJSONObject: obj)) ?? Data("{\"available\":false}".utf8)
+            deliver(task, url: url, code: 200, type: "application/json", body: body)
             return
         }
         if path == "/app/restore/start" {

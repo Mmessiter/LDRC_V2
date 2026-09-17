@@ -1688,7 +1688,11 @@ class MainActivity : AppCompatActivity() {
                             android.text.format.DateFormat.format("d MMM HH:mm", rpAt) else ""
                         // explicit = the pilot's own "Back up" / an imported file (sticky);
                         // false = the automatic freeze taken at connection.
-                        answer("{\"available\":$avail,\"when\":${JSONObject.quote(whenTxt.toString())},\"explicit\":${SessionCache.restorePointIsExplicit()}}")
+                        // items = every setting the restore point holds, by name, so
+                        // the page can show a human what is in it (Malcolm 2026-09-17:
+                        // the exported JSON "means little to a mere human").
+                        val items = org.json.JSONArray().also { a -> SessionCache.restoreItems().forEach { a.put(it.label) } }
+                        answer("{\"available\":$avail,\"when\":${JSONObject.quote(whenTxt.toString())},\"explicit\":${SessionCache.restorePointIsExplicit()},\"items\":$items}")
                     }
                     "/app/restore/start" -> {
                         if (demoMode || reviewMode) {

@@ -216,7 +216,10 @@
                 yesBt.className = 'modalBtn yes' + (kind === 'warn' ? ' warn' : kind === 'danger' ? ' danger' : '');
                 document.getElementById('_mIcon').textContent  = opts.icon  || (kind === 'danger' ? '⚠️' : kind === 'warn' ? '✏️' : '💾');
                 document.getElementById('_mTitle').textContent = opts.title || (kind === 'danger' ? 'Are you sure?' : 'Confirm');
-                document.getElementById('_mMsg').textContent   = message;
+                // opts.html: the caller built the message itself from safe parts
+                // (What's in the backup, 0.9.750). Everything else stays text.
+                if (opts.html) document.getElementById('_mMsg').innerHTML = message;
+                else           document.getElementById('_mMsg').textContent = message;
                 yesBt.textContent = opts.yes || 'Yes, do it';
                 noBt.textContent  = opts.no  || 'Cancel';
                 noBt.style.display = '';   // restore in case alert() hid it on the shared modal
@@ -259,7 +262,10 @@
                 yesBt.className = 'modalBtn yes' + (kind === 'warn' ? ' warn' : kind === 'danger' ? ' danger' : '');
                 document.getElementById('_mIcon').textContent  = opts.icon  || '✅';
                 document.getElementById('_mTitle').textContent = opts.title || 'Done';
-                document.getElementById('_mMsg').textContent   = message;
+                // opts.html: the caller built the message itself from safe parts
+                // (What's in the backup, 0.9.750). Everything else stays text.
+                if (opts.html) document.getElementById('_mMsg').innerHTML = message;
+                else           document.getElementById('_mMsg').textContent = message;
                 yesBt.textContent  = opts.yes || 'OK';
                 noBt.style.display = 'none';
                 const close = () => { ov.classList.remove('show'); yesBt.onclick = null; resolve(true); };

@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Backup &amp; restore &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=274">
-<script src="/app.js?v=274" defer></script>
+<link rel=stylesheet href="/style.css?v=275">
+<script src="/app.js?v=275" defer></script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -39,6 +39,7 @@
         </div>
     </div>
 
+    <button id=contentsBtn class="btn" style="display:none;background:#6f8f6a" onclick="showContents()"><span class=ico>&#128203;</span>What&rsquo;s in the backup</button>
     <button id=shareBtn class="btn" style="display:none;background:#5f8fab" onclick="shareBackup()"><span class=ico>&#128228;</span>Share backup file&hellip;<br><span style="font-size:.68em;font-weight:400;opacity:.85">email / AirDrop it &mdash; another phone, or a friend with the same helicopter</span></button>
     <button id=importBtn class="btn" style="display:none;background:#7a6a9a" onclick="importBackup()"><span class=ico>&#128229;</span>Import a backup file&hellip;<br><span style="font-size:.68em;font-weight:400;opacity:.85">then tap Restore to write it to this model</span></button>
     <div id=impMsg class=muted style="display:none;font-size:.9em;margin:.4em 0"></div>
@@ -129,6 +130,7 @@ function paintRestoreBtn() {
         .then(i => {
             if (!i.available) return;
             document.getElementById('phoneRestoreBtn').style.display = '';
+            document.getElementById('contentsBtn').style.display = '';
             // explicit = the pilot's own Back up / an imported file (kept until
             // the next Back up); otherwise the automatic copy taken at connection.
             document.getElementById('phoneRestoreSub').textContent =
@@ -231,6 +233,41 @@ function restoreDoneText(p) {
     if (names.length > 0 && names.length <= 4) what = names.join(', ');
     else if (names.length > 4) what = plural(names.length, 'setting') + ' (' + names.slice(0, 4).join(', ') + ' and ' + (names.length - 4) + ' more)';
     return '✅ Written & verified: ' + what + '. Already matched: ' + same + '. Saved in the flight controller.';
+}
+
+// What's in the backup (Malcolm 2026-09-17: the exported file "means little
+// to a mere human"). The app names every item it holds; this folds the
+// names into plain lines - "PIDs: banks 1-6" - so a glance says whether all
+// six banks were saved.
+async function showContents() {
+    let i = null;
+    try { i = await (await fetch('/app/restore/info', { cache: 'no-store' })).json(); } catch (e) {}
+    const items = (i && i.items) || [];
+    if (!items.length) { await LDRC.alert('No backup on this phone for this model yet.', { title: 'Nothing to show', icon: '📋' }); return; }
+    const banked = {}, numbered = {}, plain = [];
+    for (const raw of items) {
+        let m = raw.match(/^(.*) bank (\d+)$/);
+        if (m) { (banked[m[1]] = banked[m[1]] || new Set()).add(+m[2]); continue; }
+        m = raw.match(/^(.*?) (?:ch)?(\d+)(?: \(.*\))?$/);          // "servo 3 (cyclic)", "mode slot 2", "failsafe value ch5"
+        if (m) { numbered[m[1]] = (numbered[m[1]] || 0) + 1; continue; }
+        plain.push(raw);
+    }
+    const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const cap = t => { t = esc(t); return t.charAt(0).toUpperCase() + t.slice(1); };
+    const range = set => {
+        const a = [...set].sort((x, y) => x - y);
+        const contiguous = a.every((v, k) => k === 0 || v === a[k - 1] + 1);
+        return a.length === 1 ? 'bank ' + a[0]
+             : contiguous ? 'banks ' + a[0] + '\u2013' + a[a.length - 1]
+             : 'banks ' + a.join(', ');
+    };
+    const lines = [];
+    for (const k of Object.keys(banked)) lines.push('<b>' + cap(k) + '</b> \u2014 ' + range(banked[k]));
+    for (const k of Object.keys(numbered)) lines.push('<b>' + cap(k) + 's</b> \u2014 ' + numbered[k]);
+    for (const k of plain) lines.push(cap(k));
+    await LDRC.alert('<div style="text-align:left;line-height:1.5">' + lines.join('<br>') + '</div>' +
+        '<div style="margin-top:.8em;font-size:.9em;opacity:.8">' + items.length + ' items' + (i.when ? ' \u2014 ' + (i.explicit ? 'your backup of ' : 'auto-saved ') + i.when : '') + '</div>',
+        { title: 'What\u2019s in the backup', icon: '📋', html: true });
 }
 
 // Portable backups (Malcolm 2026-08-30): the frozen restore point as a

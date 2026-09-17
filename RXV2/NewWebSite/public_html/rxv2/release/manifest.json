@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.750-whats-in-backup",
+      "url": "https://messiter.com/rxv2/release/v0.9.750/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.750/littlefs.bin",
+      "fs_md5": "21b21e812bdbe12cdddffac5cca43ef9",
+      "notes": "A backup can now be read by a person. Backup & restore has a new button, What's in the backup, which folds everything the phone holds into plain lines - 'PIDs - banks 1-6', 'Rates - banks 1-6', 'Servos - 4', and so on - with the item count and when it was taken (Malcolm 2026-09-17, having opened the exported file: 'it means little to a mere human'). Both apps now name every item they hold; the page does the folding. Pages and apps only."
+    },
+    {
       "name": "RXV2-0.9.749-offers-in-turn",
       "url": "https://messiter.com/rxv2/release/v0.9.749/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.749/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.739/littlefs.bin",
       "fs_md5": "f7a5aba5965c1cc8a373fb9e6bcef587",
       "notes": "Fixes a fault in this morning's own change (Malcolm asked whether the help screens needed checking too - they did). The help panels ARE corrected on a dongle, which is right, but a sentence that already mentioned both boards had the word swapped in it as well: 'USB-C cable, receiver or dongle to the flight controller' came out as 'dongle or dongle'. Now any sentence that already names a dongle is left completely alone - it was written knowing about both - which fixes that and also makes it safe to phrase a sentence for both boards wherever one is genuinely about both. Everywhere else each reader still sees their own word: a receiver says receiver, a dongle says dongle. 39 test cases. Pages only."
-    },
-    {
-      "name": "RXV2-0.9.738-says-dongle",
-      "url": "https://messiter.com/rxv2/release/v0.9.738/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.738/littlefs.bin",
-      "fs_md5": "4b1545e72538dd5d2eaca68f97f0b667",
-      "notes": "On a dongle the pages now say dongle wherever they mean the dongle (Malcolm 2026-09-17: 'it often says receiver when a dongle should say dongle'). There were about 190 mentions, so instead of a list of phrases to change - which could never stay complete - the word is simply swapped, except in a sentence where receiver means something else: Rotorflight's own 'serial receiver' port function, the configurator's Receiver tab, the Ports page's receiver choices, and above all 'the receiver that flies the model', which is a different thing entirely and must never be renamed. A sentence like that is left completely alone, so the worst this can do is leave the old wording. It also watches the page, so the words written after it loads - progress lines, refusals, banners - are corrected too. 35 test cases: 17 swapped, 18 protected. Pages only."
     }
   ],
   "rotorflight": {
