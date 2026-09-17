@@ -493,6 +493,18 @@
             return n;
         },
 
+        // Every bank the flight controller HAS, ignoring the pilot's cap
+        // (0.9.745). Copy a bank uses this: a bank you have hidden is the
+        // ideal place to PARK a known-good tune before an experiment, and
+        // you must be able to copy it back afterwards (Malcolm 2026-09-17).
+        bankMax(info, kind) {
+            const b = (info && info.fcinfo)
+                    ? { pid: info.fcinfo.pid_banks, rate: info.fcinfo.rate_banks }
+                    : (info || {});
+            const real = (kind === 'rate' ? b.rate : b.pid) | 0;
+            return (real >= 1 && real <= this.BANKS_MAX) ? real : 4;
+        },
+
         // Where a page should start, given what it remembered. Returns a
         // 0-based bank that certainly exists (0.9.742).
         bankClamp(info, kind, remembered) {

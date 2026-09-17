@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.745-park-a-bank",
+      "url": "https://messiter.com/rxv2/release/v0.9.745/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.745/littlefs.bin",
+      "fs_md5": "3218e62c88dcfec7732e07ab24fd2cb2",
+      "notes": "Copy a bank now shows EVERY bank the flight controller has, even the ones you have hidden with How many banks (Malcolm 2026-09-17: \"our copy bank function should allow all banks even if we don't use them all. That will allow a bank to be parked so it can be restored after an unsuccessful experiment\"). Copy the tune you are happy with into a bank you never fly before you start changing things; if the experiment goes badly, copy it back and you are exactly where you were - quicker than a full restore, and it survives the flying session. Parking would be useless if the parking space were hidden, so this one page deliberately ignores the cap, and says so on the page when you have banks hidden, because otherwise the extra buttons look like a fault. The tuning pages are unchanged: they still show only what you said you use. Pages only."
+    },
+    {
       "name": "RXV2-0.9.744-banks-profiles",
       "url": "https://messiter.com/rxv2/release/v0.9.744/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.744/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.734/littlefs.bin",
       "fs_md5": "8cc459a26d15b104d5ad4d2d595d1bdb",
       "notes": "The pages called it a receiver even when it is a dongle (Malcolm 2026-09-17: 'item 2 says Receiver even when it's a dongle... yes this also affects Wiring and many others'). Now, on a dongle: Before you start step 2 says dongle throughout, tells you to choose 'dongle on a wire' rather than 'receiver', and says to use port B or C and leave port A alone - that is usually the receiver's, and the receiver is what flies the model; its no-USB-cable route sets MSP for the dongle's port instead of serial receiver for the receiver's. The Wiring page's last card was the worst of them: it told you to plug into the receiver's port, which would take the port the model flies on - it now says port B or C, not the receiver's, and how to set it. Elsewhere a shared list of phrases corrects the wording (the WiFi page's 'receiver's own WiFi', the log's 'everything the receiver noticed', 'Rename receiver'), deliberately leaving alone the places where 'receiver' is right: Rotorflight's own 'serial receiver' port function, the configurator's Receiver tab, and 'the receiver that flies the model'. The one-page guide and the wiring page now say port B or C, never A. Pages only."
-    },
-    {
-      "name": "RXV2-0.9.732-button-spacing",
-      "url": "https://messiter.com/rxv2/release/v0.9.732/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.732/littlefs.bin",
-      "fs_md5": "fefb0563e4418310602934f47e23860a",
-      "notes": "The four round buttons at the top (home, back, search, help) overlapped slightly on Android (Malcolm's Pixel): their positions were set in em, and the web view's base font is 16 px on Android but about 14 px on iPhone, so the middle two grew inward until they touched. They are now placed in fixed pixels, the same on both. Pages only; nothing else changes."
     }
   ],
   "rotorflight": {

@@ -34,6 +34,19 @@ t({pid:6,rate:6,shown:9},'pid',0,6,'junk cap ignored');
 t({pid:6,rate:6,shown:1},'pid',0,1,'cap 1');
 t({pid:6,rate:6,shown:6},'pid',0,6,'cap equals the real count');
 t({fcinfo:{pid_banks:6,rate_banks:6,banks_shown:3}},'pid',0,3,'whole state object accepted');
+// bankMax — Copy a bank ignores the cap so a hidden bank can be used to PARK
+// a known-good tune (0.9.745).
+const m = (info,kind,want,why) => {
+  const g = L.bankMax(info,kind);
+  if (g !== want) bad++;
+  console.log((g===want?'PASS':'FAIL') + '  ' + why + ' -> ' + g + ' (want ' + want + ')');
+};
+m({pid:6,rate:6,shown:2},'pid',6,'bankMax ignores a cap of 2');
+m({pid:6,rate:6,shown:0},'pid',6,'bankMax with no cap');
+m({pid:3,rate:6,shown:1},'pid',3,'bankMax still respects a small board');
+m({pid:3,rate:6,shown:1},'rate',6,'bankMax rate side of the same board');
+m({},'pid',4,'bankMax with no answer yet -> the old 4');
+
 const c = (info,kind,rem,want,why) => {
   const g = L.bankClamp(info,kind,rem);
   if (g !== want) bad++;

@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Copy a bank &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=270">
-<script src="/app.js?v=270" defer></script>
+<link rel=stylesheet href="/style.css?v=271">
+<script src="/app.js?v=271" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;gap:.6em;
         padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -48,6 +48,7 @@
         <h2>To bank</h2>
         <div class=profRow id=toRow></div>
         <p class=sub>This bank&rsquo;s ticked settings are overwritten.</p>
+        <p class=sub id=parkNote style="display:none"></p>
     </div>
 
     <div class=card>
@@ -80,9 +81,13 @@
 // with a read-modify-write of MSP 148/149 afterwards. Then EEPROM save,
 // then every copied block is read back byte-for-byte from the target bank
 // (seeing is believing), and the FC is returned to the bank it was on.
-// How many banks this flight controller really has, capped by the pilot's
-// "How many banks" choice — never fewer than the bank we are on (0.9.742).
-let BANKS = LDRC.bankCount(LDRC.bankInfo(), 'pid', 0);
+// EVERY bank the flight controller has — this page deliberately ignores the
+// pilot's "How many banks" cap (0.9.745, Malcolm: "our copy bank function
+// should allow all banks even if we don't use them all. That will allow a
+// bank to be PARKED so it can be restored after an unsuccessful
+// experiment"). A hidden bank is the safest place to keep a known-good
+// tune, and parking is useless if you cannot copy it back.
+let BANKS = LDRC.bankMax(LDRC.bankInfo(), 'pid');
 let fromBank = 0, toBank = -1, fcPid = 0, fcRate = 0, busy = false, live = false, govOk = false;
 
 function setStatus(kind, msg) {
@@ -206,9 +211,18 @@ async function init() {
             document.getElementById('govNote').textContent =
                 'Rotorflight ' + fc.rf_major + '.' + fc.rf_minor + ': the governor (head speed included) is copied as part of the flight tuning.';
         }
-        BANKS = LDRC.bankCount(st, 'pid', 0);
+        BANKS = LDRC.bankMax(st, 'pid');
+        // More banks here than on the tuning pages is deliberate, and looks
+        // like a fault unless it is said once.
+        const cap = (st.fcinfo || {}).banks_shown | 0;
+        if (cap >= 1 && cap < BANKS) {
+            const el = document.getElementById('parkNote');
+            el.innerHTML = 'All ' + BANKS + ' banks are here, including the ' +
+                (BANKS - cap) + ' you have hidden on the tuning pages &mdash; ' +
+                'park a tune you want to keep in one of those before an experiment.';
+            el.style.display = '';
+        }
         await readWhereFcIs();
-        BANKS = LDRC.bankCount(st, 'pid', fcPid);   // never hide the bank the FC is on
         fromBank = Math.min(fcPid, BANKS - 1);
         live = true;
         setStatus('', '');                 // loaded: nothing to say until Copy is tapped
@@ -350,6 +364,9 @@ document.addEventListener('DOMContentLoaded', () => { paint(); init(); });
 <p>Copies a whole bank to another in one go &mdash; instead of visiting the PIDs, PID +, Rates, Rescue and Governor pages one by one and copying each.</p>
 <h3>What a bank is</h3>
 <p>Bank N is Rotorflight&rsquo;s PID profile N together with rate profile N &mdash; the same numbering the other pages use and the bank switch on your transmitter selects.</p>
+<h3>Parking a tune before an experiment</h3>
+<p>Copy the bank you are happy with into a bank you never fly &mdash; bank 6, say &mdash; before you start changing things. If the experiment goes badly, copy it back and you are exactly where you were. Quicker than a full restore, and it survives the flying session.</p>
+<p>This page shows <b>every</b> bank the flight controller has, even the ones you have hidden with <b>How many banks</b> on the Rotorflight page. That is on purpose: a bank you never fly is the best place to park, and parking would be useless if you could not copy it back.</p>
 <h3>What gets copied</h3>
 <ul>
 <li><b>Flight tuning</b> &mdash; everything on the PIDs, PID + and Rescue pages (and a few Rotorflight settings only the CLI shows).</li>

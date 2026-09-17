@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rotorflight &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=270">
-<script src="/app.js?v=270" defer></script>
+<link rel=stylesheet href="/style.css?v=271">
+<script src="/app.js?v=271" defer></script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -136,6 +136,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 </ul>
 <h3>How many banks (Profiles) do you use?</h3>
 <p>Rotorflight has <b>six</b> banks (flight modes), not four &mdash; every page here offered four for years, so banks 5 and 6 were out of reach and were not saved by <b>Back up</b> either. Both are fixed. If you only ever use two or three, set the number here and the tuning pages stop offering the rest.</p>
+<p><b>Copy a bank always shows all of them</b>, hidden ones included &mdash; a bank you never fly is the ideal place to park a tune you are happy with before an experiment, and you must be able to copy it back.</p>
 <p>It only hides them from the pages. Your transmitter&rsquo;s switch can still select any bank the flight controller has, and if it is sitting on one you have hidden, the page shows that bank anyway &mdash; you are never editing a bank you cannot see. A small flight controller with fewer than six is asked and believed: you are only ever offered banks that exist.</p>
 <h3>Telemetry speed (receiver only)</h3>
 <p>A dongle never shows this card: the telemetry link belongs to whatever receiver flies the model. On a receiver, Rotorflight paces everything it sends on the receiver wire &mdash; its sensors and its answers to this phone and the transmitter &mdash; by one <b>telemetry link rate</b>. <b>Fast</b> (1000/1) answers about six times quicker than Rotorflight&rsquo;s <b>standard</b> (250/8) and updates volts and RPM sooner; nothing else changes. The receiver remembers your choice and shows what the flight controller actually runs. Applying restarts the flight controller, so it needs the transmitter off. A restore from a phone backup keeps whatever speed the flight controller runs.</p>
