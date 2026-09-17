@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.750-whats-in-backup";
+constexpr const char* FW_VERSION = "RXV2-0.9.752-cli-left-open";
 
 //*********************************************************************
 //  Auto-update manifest URLs

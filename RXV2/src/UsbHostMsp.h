@@ -59,6 +59,19 @@ namespace UsbHostMsp {
     inline cdc_acm_dev_hdl_t hdl = nullptr;
     inline StreamBufferHandle_t rxbuf = nullptr;
     inline uint32_t bytesIn = 0, bytesOut = 0, opens = 0, openFails = 0;
+    // Wedged-device heal (0.9.751). Malcolm 2026-09-17, straight after a
+    // Bluetooth firmware update: the flight controller re-enumerated fine
+    // (opens 1, fails 0), sent 256 bytes once, then answered none of 245
+    // probes - "No flight controller answering" beside a plugged-in cable.
+    // prepareForRestart() closes the handle before every reboot, and that is
+    // usually enough; this time the STM32's CDC came back enumerated but
+    // deaf. This IDF has no way to cycle VBUS from software, so the cure is
+    // physical (power the model off and on) - but the receiver can at least
+    // notice, drop the dead port so MSP falls back to the receiver lead (or a
+    // dongle's UART), and say exactly that instead of "check the cable".
+    inline uint32_t openedAtMs = 0, bytesOutAtOpen = 0;
+    inline bool     usbSilent = false;   // enumerated, probed, never answered - closed on purpose
+    inline uint8_t  healStage = 0;       // 0 fresh, 1 "exit" sent, 2 given up (closed)
     inline uint32_t lastOpenTryMs = 0;
     inline bool     wasOpen   = false;   // an "unplugged" note only after a link existed
     inline volatile uint32_t devSeen = 0;  // bumped by every enumeration; a device that arrived while a close was deferred is not forgotten
@@ -195,7 +208,38 @@ namespace UsbHostMsp {
     inline void poll() {
         if (!started) return;
         static uint32_t seenAtReset = 0;
-        if (devSeen != seenAtReset) { seenAtReset = devSeen; openFails = 0; }   // a fresh enumeration gets fresh tries (0.9.641)
+        if (devSeen != seenAtReset) { seenAtReset = devSeen; openFails = 0; usbSilent = false; }   // a fresh enumeration gets fresh tries (0.9.641) - and a wedged one, re-plugged, a fresh chance
+        // The heal: open for 8 s, at least 300 bytes of probes sent, and not one
+        // valid MSP reply since the open. Bends the "close only on gone" rule
+        // above, deliberately: a device that never answers is gone in every
+        // way that matters. After closeDone, present goes false (nothing new
+        // enumerated), so it is left alone until the pilot re-plugs or
+        // power-cycles - at which point devSeen changes and it gets its chance.
+        const bool deaf = opened && !usbSilent && !cliMode && !wantClose && openedAtMs &&
+                          bytesOut - bytesOutAtOpen >= 300 &&
+                          (fcInfo.lastResponseMs == 0 || (int32_t)(fcInfo.lastResponseMs - openedAtMs) < 0);
+        if (deaf && healStage == 0 && (uint32_t)(millis() - openedAtMs) > 8000) {
+            // Stage 1: the likeliest cause is a command line left open across a
+            // restart (2026-09-17 - MSP is ignored inside it). "exit" makes such
+            // an FC restart and re-enumerate clean; an FC NOT in its command
+            // line ignores the stray bytes. Harmless either way, and it cannot
+            // be armed while in a CLI.
+            healStage = 1;
+            static const char ex[] = "exit\n";
+            send((const uint8_t*)ex, sizeof ex - 1);
+            events.add("USB: the flight controller enumerated but has not answered - sent 'exit' in case its command line was left open");
+        } else if (deaf && healStage == 1 && (uint32_t)(millis() - openedAtMs) > 16000) {
+            // Stage 2: still nothing. Drop the dead port so MSP falls back, and
+            // say the one thing that works.
+            healStage = 2;
+            usbSilent = true;
+            opened = false;                                  // at once: MSP falls back, like an unplug
+            wantClose = true;
+            char m[200];
+            snprintf(m, sizeof m, "USB: the flight controller never answered (%lu bytes back) - closed; MSP uses the %s. Power the model off and on to bring USB back",
+                     (unsigned long)(bytesIn), dongleEnabled ? "UART" : "receiver lead");
+            events.add(m);
+        }
         if (gone && !wantClose && !closeDone) {
             opened = false;                                  // at once: MSP falls back to the UART (dongle) or the radio-link tunnel (receiver)
             if (mayTouchDevice()) wantClose = true;          // the usbtx task closes it; a receiver only once the transmitter is quiet
@@ -204,7 +248,7 @@ namespace UsbHostMsp {
             closeDone = false; gone = false;
             ::mspSerialResetParser();                          // half a frame from a device that has gone must not wait for its tail
             if (cliMode) { cliMode = false; cliBuf = ""; events.add("Command line: the flight controller went away - closed, MSP resumes"); }   // never latched by an unplug (0.9.641)
-            if (wasOpen) { char m[96]; snprintf(m, sizeof m, "%s: the USB flight controller was unplugged - back to the %s", who(), dongleEnabled ? "UART" : "radio link"); events.add(m); }
+            if (wasOpen && !usbSilent) { char m[96]; snprintf(m, sizeof m, "%s: the USB flight controller was unplugged - back to the %s", who(), dongleEnabled ? "UART" : "radio link"); events.add(m); }
             wasOpen = false;
             if (devSeen == openedSeen) present = false;      // nothing new enumerated since the device we had: wait for the next plug-in
         }
@@ -213,6 +257,7 @@ namespace UsbHostMsp {
             if (r == 1) {
                 ::mspSerialResetParser();                      // a new device starts a clean frame (the parser now accepts 4200-byte replies: never inherit half a frame)
                 wasOpen = true; opens++; openedSeen = devSeen;
+                openedAtMs = millis(); bytesOutAtOpen = bytesOut; usbSilent = false; healStage = 0;
                 char m[96]; snprintf(m, sizeof m, "%s: flight controller on USB (%04X:%04X) - MSP over USB, no port setting needed", who(), vid, pid);
                 events.add(m);
             } else {
@@ -325,7 +370,12 @@ namespace UsbHostMsp {
     // of it fails we still reboot, which is no worse than before.
     inline void prepareForRestart() {
         if (!started) return;
-        cliMode = false;                      // never reboot mid-command-line
+        // 2026-09-17: this used to be `cliMode = false` - OUR flag cleared, the
+        // flight controller still sitting in its command line. After the reboot
+        // it enumerated fine and answered none of 245 probes, because a CLI
+        // ignores MSP. Leave it the way the Leave button does: "exit" (no
+        // save), which restarts the FC and brings its USB back clean.
+        if (cliMode) { cliLeave(false); delay(150); }
         if (hdl && hdlMutex && xSemaphoreTake(hdlMutex, pdMS_TO_TICKS(200)) == pdTRUE) {
             cdc_acm_host_set_control_line_state(hdl, false, false);   // drop DTR/RTS: the FC sees the port close
             cdc_acm_host_close(hdl);
@@ -337,10 +387,10 @@ namespace UsbHostMsp {
     }
 
     inline void stateJson(String& j) {
-        char b[200];
-        snprintf(b, sizeof b, ",\"dongle_link\":\"%s\",\"usb_fc\":%s,\"usb\":{\"host\":%s,\"device\":%s,\"vid\":\"%04X\",\"pid\":\"%04X\",\"in\":%lu,\"out\":%lu,\"opens\":%lu,\"fails\":%lu,\"cli\":%s}",
+        char b[256];                 // grew with "silent" (0.9.751) - 200 could truncate the JSON
+        snprintf(b, sizeof b, ",\"dongle_link\":\"%s\",\"usb_fc\":%s,\"usb\":{\"host\":%s,\"device\":%s,\"vid\":\"%04X\",\"pid\":\"%04X\",\"in\":%lu,\"out\":%lu,\"opens\":%lu,\"fails\":%lu,\"cli\":%s,\"silent\":%s}",
                  opened ? "usb" : "uart", usbFcEnabled ? "true" : "false", started ? "true" : "false", opened ? "true" : "false", vid, pid,
-                 (unsigned long)bytesIn, (unsigned long)bytesOut, (unsigned long)opens, (unsigned long)openFails, cliMode ? "true" : "false");
+                 (unsigned long)bytesIn, (unsigned long)bytesOut, (unsigned long)opens, (unsigned long)openFails, cliMode ? "true" : "false", usbSilent ? "true" : "false");
         j += b;
     }
 }

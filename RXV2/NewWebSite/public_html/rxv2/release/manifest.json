@@ -1,6 +1,20 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.752-cli-left-open",
+      "url": "https://messiter.com/rxv2/release/v0.9.752/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.752/littlefs.bin",
+      "fs_md5": "66894022f82ea63a8c737c544bfb8d6f",
+      "notes": "The deaf USB of 0.9.751 explained, and cured at the root. The receiver's own log from before that reboot showed it: 'Rotorflight command line open over USB' 21 seconds after the app connected, then every backup read REFUSED ('the command line is open - save or exit it first'), then the firmware install and reboot - with the flight controller still sitting in its command line, where it ignores MSP entirely. Three fixes. 1) Before every reboot the receiver now leaves the command line properly ('exit', no save - exactly as the Leave button does), instead of merely forgetting it had one open. 2) If a page asks for MSP while the command line has been open and untouched for 10 seconds, the receiver leaves it for you and says so - a page asking is the pilot having moved on, and Malcolm's own words are 'I frequently forget to press exit'. Before this a whole backup could be refused read by read without anyone noticing. 3) The heal from 0.9.751 now sends 'exit' first when a freshly-plugged flight controller stays silent, which restarts one that was left in its command line by an older receiver or a power-cut, and only then falls back to the receiver lead with the power-cycle advice. Nothing changes in the air: every one of these runs on the ground with the transmitter off."
+    },
+    {
+      "name": "RXV2-0.9.751-deaf-usb",
+      "url": "https://messiter.com/rxv2/release/v0.9.751/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.751/littlefs.bin",
+      "fs_md5": "583456c697dade701e4964773aea911b",
+      "notes": "Straight after a Bluetooth firmware update the Rotorflight page said 'No flight controller answering - check it is powered, its port, or the USB cable' (Malcolm 2026-09-17). The cable was fine. The flight controller's USB had come back from the restart enumerated but deaf: it answered none of 245 probes. The receiver already closes the USB link before every reboot, which is usually enough; this time it was not, and this chip has no way to cycle the USB power itself. So the receiver now notices - open for 8 s, plenty sent, not one answer - drops the dead port so Rotorflight goes over the receiver lead (or a dongle's UART) instead, logs what it did, and the pages say the one true thing: power the model off and on to bring USB back. Nothing changes in the air."
+    },
+    {
       "name": "RXV2-0.9.750-whats-in-backup",
       "url": "https://messiter.com/rxv2/release/v0.9.750/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.750/littlefs.bin",
@@ -69,20 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.741/littlefs.bin",
       "fs_md5": "61a4d17a67ee9e51358e76c3cc3f7585",
       "notes": "Every help screen re-read for things that are no longer true (Malcolm 2026-09-17: 'please re read all help text and look for out of date bits we ought to fix'). Four independent readers went through all 50 pages against the code that actually runs, and about 40 corrections came out of it. The ones that mattered most: Back up said a tune from a friend's helicopter brings his stick setup, channel map and bank switches with it - it does NOT any more (that is his radio, not his tune), and it only saves banks 1-4; the black box help mixed up the receiver's own flight record with the flight controller's black box - two different things; the swash trims were called tenths of a degree everywhere when Rotorflight means percent of servo throw; the update page told Android users to use 'the iPhone app'. Travel extents said everything twice - its help had been appended rather than merged - and Control sense and Collective up/down balance had no help at all; the dongle and Receiver settings help panels opened halfway down themselves. Three stale comments in the phone apps' own source were fixed too, including two that named the wrong selector slots. Pages and comments only - nothing changes in the air."
-    },
-    {
-      "name": "RXV2-0.9.740-one-app",
-      "url": "https://messiter.com/rxv2/release/v0.9.740/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.740/littlefs.bin",
-      "fs_md5": "7640910277ab0e9b3d58ea8bcfbfaeb1",
-      "notes": "Every page's help now says it plainly (Malcolm 2026-09-17): this is ONE app and ONE firmware for both boards. At every power-up the board looks for its transceivers - found, it is a receiver and flies the model; none, it is a dongle and only sets up the flight controller. That is why the pages look almost the same either way, and why a dongle simply hides the few that need a radio. Someone handed a dongle has no reason to guess any of that. Pages only."
-    },
-    {
-      "name": "RXV2-0.9.739-help-words",
-      "url": "https://messiter.com/rxv2/release/v0.9.739/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.739/littlefs.bin",
-      "fs_md5": "f7a5aba5965c1cc8a373fb9e6bcef587",
-      "notes": "Fixes a fault in this morning's own change (Malcolm asked whether the help screens needed checking too - they did). The help panels ARE corrected on a dongle, which is right, but a sentence that already mentioned both boards had the word swapped in it as well: 'USB-C cable, receiver or dongle to the flight controller' came out as 'dongle or dongle'. Now any sentence that already names a dongle is left completely alone - it was written knowing about both - which fixes that and also makes it safe to phrase a sentence for both boards wherever one is genuinely about both. Everywhere else each reader still sees their own word: a receiver says receiver, a dongle says dongle. 39 test cases. Pages only."
     }
   ],
   "rotorflight": {

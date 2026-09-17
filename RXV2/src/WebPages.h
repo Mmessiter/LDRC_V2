@@ -271,6 +271,7 @@ inline void handleRotorflightNewHeli() {
 // rest on a fresh board anyway).
 inline bool dongleDisarmedConfirmed();   // defined beside refuseIfArmed, below
 inline bool refuseIfArmed(const char* what);   // ditto — refuses on an armed model
+inline bool rxTxLinkedRecently();              // ditto — a live transmitter link
 inline void handleFcWake() {
     // A dongle port is MSP: if the flight controller is silent it is wiring or
     // the port, not a feature flag — and a dongle that cannot hear the FC also
@@ -852,7 +853,23 @@ inline void handleMspApi() {
                   "overwriting its own telemetry setup (588-byte reply, 320-byte buffer). Plug the flight controller's USB into the dongle or receiver";
         else if (fn == MSP_RESET_CONF && !UsbHostMsp::active()) why = "refused: factory reset needs the USB connection to the flight controller";
         else if (!dongleEnabled && !UsbHostMsp::active() && (currentProtocol != PROTO_CRSF || !fcTelemetryEnabled)) why = "needs the USB cable: this receiver's line to the flight controller carries no Rotorflight settings (not CRSF, or FC telemetry off)";
-        else if (UsbHostMsp::cliMode) why = "refused: the command line is open - save or exit it first";
+        else if (UsbHostMsp::cliMode) {
+            // Left open and forgotten (Malcolm: "I frequently forget to press
+            // exit"). 2026-09-17 it cost a whole backup - every read refused -
+            // and then a reboot with the FC still in its command line, which
+            // came back deaf. A page asking for MSP is the pilot having moved
+            // on: if nobody has typed for 10 s, leave the command line for
+            // them (without saving, exactly as the Leave button does). The FC
+            // restarts on exit, so THIS request still fails - honestly.
+            const bool idle = (uint32_t)(millis() - UsbHostMsp::cliTouchedMs) > 10000;
+            const bool safe = !rxTxLinkedRecently() && !(fcInfo.armed && fcInfo.armedMs && (uint32_t)(millis() - fcInfo.armedMs) < 5000);
+            if (idle && safe) {
+                UsbHostMsp::cliLeave(false);
+                why = "refused: the command line had been left open - it has been exited for you (no save); the flight controller is restarting, try again in a few seconds";
+            } else {
+                why = "refused: the command line is open - save or exit it first";
+            }
+        }
         else if (fn == MSP_SET_MOTOR)  why = "refused: motor test is never done from a phone";
         else if (reqLen == 0 && mspSetNeedsPayload(fn)) why = "refused: that is a write and it came with no data";
         if (why) {
@@ -903,6 +920,10 @@ inline void handleMspApi() {
     // boot from being refused before the receiver has even asked.
     if (!fcInfo.detected && fcInfo.probesSent >= 3) {
         server.sendHeader("Cache-Control", "no-store");
+        if (UsbHostMsp::usbSilent) {   // 0.9.751: the cable is fine - the FC's USB came back deaf from a restart
+            server.send(503, "text/plain", "The flight controller's USB stopped answering after the restart. Power the model off and on to bring it back.");
+            return;
+        }
         server.send(503, "text/plain", dongleEnabled
             ? "No flight controller is answering. Check it is powered, and that its port is set to MSP (dongle on a wire) or the USB cable is in."
             : "No flight controller is answering. Check it is powered, and that its port is set to serial receiver with telemetry on, or the USB cable is in.");
