@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Home &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=273">
-<script src="/app.js?v=273" defer></script>
+<link rel=stylesheet href="/style.css?v=274">
+<script src="/app.js?v=274" defer></script>
 <style>
 /* First paint from memory (Malcolm 2026-09-10: the receiver layout flashed
    before the dongle one): classes set on <html> by the hint script below,
@@ -933,7 +933,20 @@ async function checkFirmware(current) {
             b.style.cursor = 'pointer';
             b.onclick = () => offerUpdate(current, latest);
             b.style.display = '';
-            if (!window.__fcArmed) offerUpdate(current, latest);     // proactively offer the update the moment we connect (not on an armed model)
+            // Proactively offer the update the moment we connect (not on an
+            // armed model) - but AFTER the app's own update dialog, if one is
+            // up (Malcolm 2026-09-17: "the update offered for app AND firmware
+            // on same screen"). The app answers /app/update-pending; a plain
+            // browser 404s, which reads as "nothing pending".
+            if (!window.__fcArmed) (async () => {
+                for (let i = 0; i < 45; i++) {
+                    let pending = false;
+                    try { const r = await fetch('/app/update-pending', { cache: 'no-store' }); if (r.ok) pending = !!(await r.json()).pending; } catch (e) {}
+                    if (!pending) break;
+                    await new Promise(res => setTimeout(res, 2000));
+                }
+                offerUpdate(current, latest);
+            })();
         } else {
             b.textContent = '✓  Firmware up to date';
             b.style.background = 'rgba(168,210,154,.85)';

@@ -384,6 +384,8 @@ class MainActivity : AppCompatActivity() {
     private var lastUpdateCheck = 0L
     private var pendingUpdate: Pair<String, String>? = null   // url to versionName
 
+    @Volatile private var appUpdateDialogUp = false
+
     private fun checkAppUpdate(col: LinearLayout) {
         // every visit to the scanner re-checks (a backgrounded app can sit in
         // recents for days — a once-per-launch gate never fired again);
@@ -419,11 +421,17 @@ class MainActivity : AppCompatActivity() {
                     }, 0)
                     val sp = getSharedPreferences("appupdate", MODE_PRIVATE)
                     if (sp.getInt("later", 0) == newest || isFinishing) return@runOnUiThread
+                    // While this is up the page holds its own firmware offer
+                    // (it asks /app/update-pending) - Malcolm 2026-09-17 got
+                    // both on one screen. App first: it restarts the app, and
+                    // the firmware offer comes back on reconnect.
+                    appUpdateDialogUp = true
                     android.app.AlertDialog.Builder(this)
                         .setTitle("App update available")
                         .setMessage("RXV2 app v$name is out. Install it now?")
                         .setPositiveButton("Update") { _, _ -> installUpdate(url, name) }
                         .setNegativeButton("Later") { _, _ -> sp.edit().putInt("later", newest).apply() }
+                        .setOnDismissListener { appUpdateDialogUp = false }
                         .show()
                 }
             }
@@ -819,6 +827,8 @@ class MainActivity : AppCompatActivity() {
                         Thread { runBleOta(fw, fs) }.start()
                     return jsonResp("{\"ok\":true}")
                 }
+                if (path == "/app/update-pending")
+                    return jsonResp("{\"pending\":$appUpdateDialogUp}")
                 if (path == "/app/bleota/progress") {
                     val j = org.json.JSONObject()
                     j.put("phase", otaPhase); j.put("msg", otaMsg)

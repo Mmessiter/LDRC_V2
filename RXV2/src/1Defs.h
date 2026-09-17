@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.748-page-load-order";
+constexpr const char* FW_VERSION = "RXV2-0.9.749-offers-in-turn";
 
 //*********************************************************************
 //  Auto-update manifest URLs
