@@ -33,6 +33,13 @@
         // entirely alone, so the failure mode is the old wording, never a wrong
         // one. Add to DONGLE_KEEP, never to a list of things to change.
         DONGLE_KEEP: [
+            // FIRST and most useful: a sentence that already mentions a dongle
+            // was written knowing about both boards — either dual-purpose
+            // ("receiver or dongle") or deliberately telling them apart ("with
+            // the dongle instead of the receiver"). Swapping there produced
+            // "dongle or dongle" (shipped in 0.9.738, caught the same morning).
+            // It also makes dual-purpose wording safe to write anywhere.
+            /dongle/i,
             /serial receiver/i,                  // Rotorflight's port function
             /receiver (tab|mode|firmware)/i,     // the configurator's, and our own version
             /receiver that flies/i,              // the OTHER receiver, the one flying the model
@@ -284,6 +291,14 @@
                 + '<h3 style="margin:.2em 0 .4em">📡 Ways to connect</h3>'
                 + '<p class=muted style="margin:.2em 0 .5em">Right now you are connected over '
                 + (this.viaBle ? '<b>Bluetooth</b> (the iPhone app).' : '<b>WiFi</b> (browser).') + '</p>'
+                // One app, one firmware (Malcolm 2026-09-17). Worth saying once,
+                // everywhere: a newcomer handed a dongle has no reason to guess
+                // that it is the same app and the same code as a receiver, and
+                // it explains why a few pages are missing on a dongle.
+                + '<p class=muted style="margin:.2em 0 .6em">This is <b>one app and one firmware</b> for both boards. '
+                + 'At every power-up the board looks for its transceivers: <b>found</b> &rarr; it is a <b>receiver</b> and flies the model; '
+                + '<b>none</b> &rarr; it is a <b>dongle</b> and only sets up the flight controller. '
+                + 'That is why the pages look almost the same either way &mdash; a dongle simply hides the few that need a radio.</p>'
                 + '<ul style="margin:.2em 0;padding-left:1.2em">'
                 + '<li><b>Bluetooth</b> — the RXV2 app (iPhone, iPad, Android). Nothing to join, no network needed; ideal at the flying field.</li>'
                 + '<li><b>WiFi</b> — any browser: join the receiver’s own hotspot (named after your model) and open '

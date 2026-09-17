@@ -1,6 +1,20 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.740-one-app",
+      "url": "https://messiter.com/rxv2/release/v0.9.740/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.740/littlefs.bin",
+      "fs_md5": "7640910277ab0e9b3d58ea8bcfbfaeb1",
+      "notes": "Every page's help now says it plainly (Malcolm 2026-09-17): this is ONE app and ONE firmware for both boards. At every power-up the board looks for its transceivers - found, it is a receiver and flies the model; none, it is a dongle and only sets up the flight controller. That is why the pages look almost the same either way, and why a dongle simply hides the few that need a radio. Someone handed a dongle has no reason to guess any of that. Pages only."
+    },
+    {
+      "name": "RXV2-0.9.739-help-words",
+      "url": "https://messiter.com/rxv2/release/v0.9.739/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.739/littlefs.bin",
+      "fs_md5": "f7a5aba5965c1cc8a373fb9e6bcef587",
+      "notes": "Fixes a fault in this morning's own change (Malcolm asked whether the help screens needed checking too - they did). The help panels ARE corrected on a dongle, which is right, but a sentence that already mentioned both boards had the word swapped in it as well: 'USB-C cable, receiver or dongle to the flight controller' came out as 'dongle or dongle'. Now any sentence that already names a dongle is left completely alone - it was written knowing about both - which fixes that and also makes it safe to phrase a sentence for both boards wherever one is genuinely about both. Everywhere else each reader still sees their own word: a receiver says receiver, a dongle says dongle. 39 test cases. Pages only."
+    },
+    {
       "name": "RXV2-0.9.738-says-dongle",
       "url": "https://messiter.com/rxv2/release/v0.9.738/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.738/littlefs.bin",
@@ -69,20 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.728/littlefs.bin",
       "fs_md5": "dbb8d05cb610dd73b71e22adb4305ccf",
       "notes": "Fixes WiFi going dead after an app session (Malcolm 2026-09-15: two receivers unreachable over WiFi until a power-cycle). With Bluetooth connected, the shared radio must let WiFi sleep, and a busy Bluetooth link can starve it until it stops hearing the router - yet it still reports itself connected, so it never tried to rejoin. Now, the moment the app disconnects, the receiver re-syncs its WiFi by itself. No more power-cycle to get it back. Safe by construction: this only runs on the ground - WiFi is off in the air - and never while a transmitter link is live or the model is armed. Firmware only; pages and apps unchanged from 0.9.727."
-    },
-    {
-      "name": "RXV2-0.9.727-preflight-gates",
-      "url": "https://messiter.com/rxv2/release/v0.9.727/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.727/littlefs.bin",
-      "fs_md5": "bb8c927742b28795520453ebca7c0fad",
-      "notes": "Pre-flight safety check (Malcolm: 'check that none of our code edits is going to interfere with control of the model when it's in the air'). Today's edits could not: the receiver's firmware was unchanged since the reviewed 0.9.715, the apps' own code was unchanged, and the pages only asked for two read-only things. In the air, WiFi and Bluetooth are off anyway - they switch off 0.8 s after arming, locked on with Rotorflight. The check did find four older paths that could restart the receiver or write an update with no transmitter or armed check, which 0.9.715 had given to their siblings: a Bluetooth update now needs the transmitter off (as a WiFi update already did); renaming and Reboot need it off and the model disarmed; the reboot at the end of a Bluetooth update is refused while armed. Renaming now restarts the safe way (throttle-low frames, output parked) instead of a bare restart. And a dongle no longer sends ~100 ms of control frames into the flight controller's MSP port when it restarts."
-    },
-    {
-      "name": "RXV2-0.9.726-page-fix",
-      "url": "https://messiter.com/rxv2/release/v0.9.726/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.726/littlefs.bin",
-      "fs_md5": "9fd3288b190ac6b71f505e0251a4f0de",
-      "notes": "Fixes the Check-for-Update screen, which stayed blank in 0.9.725 - the page's script had a missing catch block, so nothing on it ran. Withdrawn: 0.9.725 is no longer offered. Also carries what 0.9.725 meant to: far fewer words on screen (Malcolm: 'too many words - the explanations can be in the help screens, this is true across the whole app'). Nothing is lost - every explanation moved into that page's ? help, in full. About 1000 words came off the pages: the update page (install-over choice, progress line, failure message, and release notes now clipped to two lines, tap for the rest), Receiver settings, WiFi, Dongle, the welcome and bind panels on the front page, and Travel extents. Safety and consequence lines stay, cut to one sentence. The step-by-step guides keep their words. New: every page's script is now parse-checked before anything can be published."
     }
   ],
   "rotorflight": {
