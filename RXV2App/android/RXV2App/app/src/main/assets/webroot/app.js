@@ -23,32 +23,70 @@
         // channels from the flight controller over MSP instead, so View
         // channels works there and shows the whole chain.
         RX_ONLY: ['/bind', '/blackbox', '/flight', '/fly', '/map', '/protocol', '/rxsettings', '/sim', '/simctl', '/views'],
-        // A dongle is not a receiver, and pages written for one say so all over
-        // (Malcolm 2026-09-17: "item 2 says Receiver even when it's a dongle …
-        // yes this also affects Wiring and many others"). Rather than a script
-        // per page, one curated list of PHRASES, replaced in text nodes only.
-        // Deliberately not a blanket receiver→dongle swap: "serial receiver" is
-        // a Rotorflight port function, "the receiver that flies the model" is
-        // right as it stands, and "Receiver tab" is the configurator's.
-        DONGLE_WORDS: [
-            [/\breceiver\u2019s own WiFi/g,                 'dongle\u2019s own WiFi'],
-            [/\breceiver's own WiFi/g,                      "dongle's own WiFi"],
-            [/join the receiver\u2019s network/g,            'join the dongle\u2019s network'],
-            [/Everything the receiver noticed since boot/g,  'Everything the dongle noticed since boot'],
-            [/\bRename receiver\b/g,                        'Rename dongle'],
+        // A dongle is not a receiver, and the pages were written for a receiver:
+        // 190-odd mentions (Malcolm 2026-09-17: "it often says receiver when a
+        // dongle should say dongle"). A hand-kept list of phrases could never
+        // stay complete, so this inverts the problem: on a dongle the word IS
+        // swapped — EXCEPT in a sentence where "receiver" means something else.
+        //
+        // Safe by construction: a sentence matching any KEEP pattern is left
+        // entirely alone, so the failure mode is the old wording, never a wrong
+        // one. Add to DONGLE_KEEP, never to a list of things to change.
+        DONGLE_KEEP: [
+            /serial receiver/i,                  // Rotorflight's port function
+            /receiver (tab|mode|firmware)/i,     // the configurator's, and our own version
+            /receiver that flies/i,              // the OTHER receiver, the one flying the model
+            /receiver[\u2019']s (own )?port/i,     // ditto
+            /(any|one|a) (crsf |serial )?receiver\b/i,
+            /receiver:/i,                        // the Ports page's choices
+            /port (your|the) receiver is on/i,
+            /port can carry the receiver/i,   // the Ports page: only one port may be THE receiver's
+            /receiver (&|and) failsafe/i,        // the FC's own settings group
+            /raw receiver channels/i,
+            /belongs to a receiver/i,            // the "not on a dongle" note
+            /receiver list/i,                    // the app's list of boards
+            /normal receiver mode/i,             // the Dongle page's Mode choice
+            /receiver when it has/i,
+            /three-transceiver/i,
         ],
-        dongleWords() {
-            const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+        dongleWord(t) {
+            if (this.DONGLE_KEEP.some(re => re.test(t))) return t;
+            return t.replace(/\bReceivers\b/g, 'Dongles').replace(/\breceivers\b/g, 'dongles')
+                    .replace(/\bReceiver\b/g, 'Dongle').replace(/\breceiver\b/g, 'dongle');
+        },
+        dongleWords(root) {
+            const w = document.createTreeWalker(root || document.body, NodeFilter.SHOW_TEXT);
             const hits = [];
             for (let n = w.nextNode(); n; n = w.nextNode()) {
                 if (n.parentNode && /^(SCRIPT|STYLE|TEMPLATE)$/.test(n.parentNode.nodeName)) continue;
-                if (this.DONGLE_WORDS.some(([re]) => re.test(n.nodeValue))) hits.push(n);
+                if (/receiver/i.test(n.nodeValue)) hits.push(n);
             }
-            for (const n of hits) {
-                let t = n.nodeValue;
-                for (const [re, to] of this.DONGLE_WORDS) t = t.replace(re, to);
-                n.nodeValue = t;
-            }
+            this._dongleBusy = true;
+            for (const n of hits) { const t = this.dongleWord(n.nodeValue); if (t !== n.nodeValue) n.nodeValue = t; }
+            this._dongleBusy = false;
+        },
+        // Pages write most of their words AFTER load — progress lines, refusals,
+        // banners. One pass at load would miss all of it, so watch and correct.
+        dongleWatch() {
+            this.dongleWords();
+            try {
+                new MutationObserver(ms => {
+                    if (this._dongleBusy) return;
+                    for (const m of ms) {
+                        if (m.type === 'characterData') { const n = m.target;
+                            if (/receiver/i.test(n.nodeValue)) { this._dongleBusy = true;
+                                const t = this.dongleWord(n.nodeValue); if (t !== n.nodeValue) n.nodeValue = t;
+                                this._dongleBusy = false; } }
+                        else for (const node of m.addedNodes)
+                            if (node.nodeType === 1) this.dongleWords(node);
+                            else if (node.nodeType === 3 && /receiver/i.test(node.nodeValue)) {
+                                this._dongleBusy = true;
+                                const t = this.dongleWord(node.nodeValue); if (t !== node.nodeValue) node.nodeValue = t;
+                                this._dongleBusy = false;
+                            }
+                    }
+                }).observe(document.body, { subtree: true, childList: true, characterData: true });
+            } catch (e) {}
         },
         async dongleGuard() {
             const path = location.pathname.replace(/\.html$/, '').replace(/\/index$/, '/');
@@ -964,7 +1002,7 @@
         LDRC.mountFooter();
         LDRC.dongleGuard();
         // Same state the guard just fetched: no extra traffic.
-        Promise.resolve(LDRC.state).then(s => { if (s && s.dongle) LDRC.dongleWords(); });
+        Promise.resolve(LDRC.state).then(s => { if (s && s.dongle) LDRC.dongleWatch(); });
         LDRC.findOnArrival();
         // Review mode? Buttons tell the truth: edits go to / come from the
         // PHONE (Malcolm 2026-08-04). Only the Rotorflight tuning pages
