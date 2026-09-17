@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.755-release-script",
+      "url": "https://messiter.com/rxv2/release/v0.9.755/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.755/littlefs.bin",
+      "fs_md5": "0f10b3c0cba79add207cd29a574567d7",
+      "notes": "One command now does a whole release (Malcolm 2026-09-17: fourteen releases in a day, every one by hand - 'by all means do it now'). dev/release.sh bumps the version, prepends these notes, bumps the page asset versions, rebuilds the search index, runs every publish gate, builds the firmware and the filesystem and refuses a partial image, copies the images to both release trees, bumps and publishes the Android app (which syncs the app webroots), stages and publishes to messiter.com and checks the live manifest, bumps, builds and installs the iOS app on both devices, restarts the fleet watcher, commits, pushes and pings the watch - stopping hard at the first thing that fails. The fleet watcher now lives in the repository too (it had been in a session scratchpad, where it would have vanished), and pings by ntfy, the channel that actually reaches the watch. Nothing changes on the receiver itself."
+    },
+    {
       "name": "RXV2-0.9.754-modal-scroll",
       "url": "https://messiter.com/rxv2/release/v0.9.754/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.754/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.744/littlefs.bin",
       "fs_md5": "95766414733e22f35589465bfa0ca785",
       "notes": "Malcolm's final wording: \"How many banks (Profiles) do you use (1-6)?\" - Rotorflight's own word for a bank is a profile, and the house rule is plain English first with the firmware's jargon in brackets, so anyone who has read Rotorflight's documentation knows at once which thing is meant. The range shown is the range that flight controller really offers. Pages only."
-    },
-    {
-      "name": "RXV2-0.9.743-banks-wording",
-      "url": "https://messiter.com/rxv2/release/v0.9.743/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.743/littlefs.bin",
-      "fs_md5": "c4bc0a6215559e9158d2ef91a0c16efc",
-      "notes": "Malcolm's wording for the new setting: \"How many banks do you use (1-6)?\" rather than the bare label \"How many banks\" - it is a question put to the pilot, so it should read like one. The range in it is the range that flight controller really offers, so a smaller board asks (1-3). Pages only."
     }
   ],
   "rotorflight": {

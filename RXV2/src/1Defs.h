@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.754-modal-scroll";
+constexpr const char* FW_VERSION = "RXV2-0.9.755-release-script";
 
 //*********************************************************************
 //  Auto-update manifest URLs

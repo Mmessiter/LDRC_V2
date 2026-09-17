@@ -19,3 +19,7 @@ RXV2App/android/RXV2App/build/
 
 # App Store screenshots: regenerate with RXV2App/appstore/shoot.sh
 RXV2App/appstore/screenshots/
+
+# Private ping channel (ntfy topic) and the fleet watcher log - never commit
+notify.sh
+fleet_watch.log
