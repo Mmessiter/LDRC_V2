@@ -179,9 +179,29 @@ LOGF=$(mktemp)
 pio run -e xiao_s3_ota > "$LOGF" 2>&1 || { tail -25 "$LOGF"; die "firmware build failed"; }
 grep -q "SUCCESS" "$LOGF" || { tail -25 "$LOGF"; die "firmware build did not report SUCCESS"; }
 ok "firmware"
-pio run -e xiao_s3_ota -t buildfs > "$LOGF" 2>&1 || { tail -25 "$LOGF"; die "filesystem build failed (full? see dev/check_fs_image.py)"; }
-python3 dev/check_fs_image.py | tail -1 | grep -q "ALL PASS" || die "filesystem image is not whole - a full partition leaves a PARTIAL image behind"
-ok "filesystem (whole)"
+if [[ $FW_ONLY == 1 ]]; then
+  # mklittlefs is NOT deterministic (same data/, different bytes every build -
+  # found 0.9.756), so a rebuilt image always carries a new fs_md5 and every
+  # receiver re-flashes 1.5 MB of unchanged pages. A firmware-only release
+  # therefore REUSES the last release's image - after unpacking it and proving
+  # it matches data/ byte for byte. Differs = the pages did change: no --fw-only.
+  PREV=$(python3 -c "import json; print(json.load(open('$RELEASE/manifest.json'))['versions'][0]['name'])")
+  PREV_FS="$RELEASE/v${PREV#RXV2-}"; PREV_FS="${PREV_FS%%-*}/littlefs.bin"
+  [[ -f "$PREV_FS" ]] || die "no previous image at $PREV_FS to reuse"
+  MK=~/.platformio/packages/tool-mklittlefs/mklittlefs; UNP=$(mktemp -d)
+  "$MK" -u "$UNP" -b 4096 -p 256 -s "$(stat -f%z "$PREV_FS")" "$PREV_FS" > /dev/null 2>&1 || die "could not unpack $PREV_FS"
+  if diff -rq "$UNP" data/ > "$LOGF" 2>&1; then
+    cp "$PREV_FS" .pio/build/xiao_s3_ota/littlefs.bin; touch .pio/build/xiao_s3_ota/littlefs.bin
+    ok "filesystem: pages identical to $PREV - reusing its image, so receivers skip the fs flash"
+  else
+    head -5 "$LOGF"; die "data/ differs from the last release's pages (above) - this is not a firmware-only release: drop --fw-only"
+  fi
+  rm -rf "$UNP"
+else
+  pio run -e xiao_s3_ota -t buildfs > "$LOGF" 2>&1 || { tail -25 "$LOGF"; die "filesystem build failed (full? see dev/check_fs_image.py)"; }
+  python3 dev/check_fs_image.py | tail -1 | grep -q "ALL PASS" || die "filesystem image is not whole - a full partition leaves a PARTIAL image behind"
+  ok "filesystem (whole)"
+fi
 strings .pio/build/xiao_s3_ota/firmware.bin | grep -q "$NAME" || die "built firmware does not carry $NAME"
 FW=.pio/build/xiao_s3_ota/firmware.bin; FS=.pio/build/xiao_s3_ota/littlefs.bin
 MD5=$(md5 -q "$FS")
