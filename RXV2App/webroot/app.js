@@ -23,6 +23,33 @@
         // channels from the flight controller over MSP instead, so View
         // channels works there and shows the whole chain.
         RX_ONLY: ['/bind', '/blackbox', '/flight', '/fly', '/map', '/protocol', '/rxsettings', '/sim', '/simctl', '/views'],
+        // A dongle is not a receiver, and pages written for one say so all over
+        // (Malcolm 2026-09-17: "item 2 says Receiver even when it's a dongle …
+        // yes this also affects Wiring and many others"). Rather than a script
+        // per page, one curated list of PHRASES, replaced in text nodes only.
+        // Deliberately not a blanket receiver→dongle swap: "serial receiver" is
+        // a Rotorflight port function, "the receiver that flies the model" is
+        // right as it stands, and "Receiver tab" is the configurator's.
+        DONGLE_WORDS: [
+            [/\breceiver\u2019s own WiFi/g,                 'dongle\u2019s own WiFi'],
+            [/\breceiver's own WiFi/g,                      "dongle's own WiFi"],
+            [/join the receiver\u2019s network/g,            'join the dongle\u2019s network'],
+            [/Everything the receiver noticed since boot/g,  'Everything the dongle noticed since boot'],
+            [/\bRename receiver\b/g,                        'Rename dongle'],
+        ],
+        dongleWords() {
+            const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+            const hits = [];
+            for (let n = w.nextNode(); n; n = w.nextNode()) {
+                if (n.parentNode && /^(SCRIPT|STYLE|TEMPLATE)$/.test(n.parentNode.nodeName)) continue;
+                if (this.DONGLE_WORDS.some(([re]) => re.test(n.nodeValue))) hits.push(n);
+            }
+            for (const n of hits) {
+                let t = n.nodeValue;
+                for (const [re, to] of this.DONGLE_WORDS) t = t.replace(re, to);
+                n.nodeValue = t;
+            }
+        },
         async dongleGuard() {
             const path = location.pathname.replace(/\.html$/, '').replace(/\/index$/, '/');
             if (!this.RX_ONLY.includes(path)) return false;
@@ -936,6 +963,8 @@
         LDRC.teachTime();
         LDRC.mountFooter();
         LDRC.dongleGuard();
+        // Same state the guard just fetched: no extra traffic.
+        Promise.resolve(LDRC.state).then(s => { if (s && s.dongle) LDRC.dongleWords(); });
         LDRC.findOnArrival();
         // Review mode? Buttons tell the truth: edits go to / come from the
         // PHONE (Malcolm 2026-08-04). Only the Rotorflight tuning pages

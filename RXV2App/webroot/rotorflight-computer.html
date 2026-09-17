@@ -9,7 +9,7 @@
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Before you start &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=222">
-<script src="/app.js?v=258" defer></script>
+<script src="/app.js?v=260" defer></script>
 <style>
 .wcard{background:#f2f6f8;border-radius:12px;padding:.8em .9em;margin:.6em 0;
        box-shadow:0 2px 6px rgba(0,0,0,.08)}
@@ -33,7 +33,7 @@
 
     <div class=wcard style="background:#eaf3ee">
         <h2><span class=num style="background:#3f8f6a">&#10003;</span>First, get a short USB-C data cable</h2>
-        <p><b>Connect both wires: the receiver&rsquo;s lead <i>and</i> a short USB-C cable from the receiver to the flight controller.</b> The lead flies the model and carries the everyday pages. The USB cable is the configurator&rsquo;s own channel: every setting of any size, Ports, In-flight adjustments, the command line, a factory reset and the black box, all from the phone &mdash; everything the configurator can do, except flashing.</p>
+        <p id=cableIntro><b>Connect both wires: the receiver&rsquo;s lead <i>and</i> a short USB-C cable from the receiver to the flight controller.</b> The lead flies the model and carries the everyday pages. The USB cable is the configurator&rsquo;s own channel: every setting of any size, Ports, In-flight adjustments, the command line, a factory reset and the black box, all from the phone &mdash; everything the configurator can do, except flashing.</p>
         <p class=why>About 12 cm (5 in), right-angled at the flight controller if you can find one, and it <b>must carry data</b>: many short USB-C leads only charge. Without the USB cable the computer is needed for a couple more tasks below (the port, CRSF and telemetry), and In-flight adjustments, the command line and a factory reset stay out of reach.</p>
     </div>
 
@@ -51,16 +51,16 @@
     </div>
 
     <div class=wcard>
-        <h2><span class=num>2</span>Tell it where the receiver is (phone)</h2>
-        <p>Plug the receiver&rsquo;s lead into a spare port. Connect a short USB-C <b>data</b> cable from the receiver&rsquo;s USB socket to the flight controller&rsquo;s. Power the model and open this app: the <b>Rotorflight button appears</b>. Open <b>Ports</b>, choose <b>receiver</b> for the socket the lead is in, and <b>Save</b>.</p>
+        <h2><span class=num>2</span><span id=step2Head>Tell it where the receiver is (phone)</span></h2>
+        <p id=step2Body>Plug the receiver&rsquo;s lead into a spare port. Connect a short USB-C <b>data</b> cable from the receiver&rsquo;s USB socket to the flight controller&rsquo;s. Power the model and open this app: the <b>Rotorflight button appears</b>. Open <b>Ports</b>, choose <b>receiver</b> for the socket the lead is in, and <b>Save</b>.</p>
         <a class=goLink href="/rotorflight-ports"><span class=ico>&#128225;</span> Open Ports &rarr;</a>
-        <p class=why>That one Save sets the port, CRSF, serial receiver mode and telemetry, and restarts the flight controller. The lead is then live; the cable can stay in or come out. With the dongle instead of the receiver, the Ports page is the same.</p>
+        <p class=why id=step2Why>That one Save sets the port, CRSF, serial receiver mode and telemetry, and restarts the flight controller. The lead is then live; the cable can stay in or come out. With the dongle instead of the receiver, the Ports page is the same.</p>
     </div>
 
     <div class=wcard>
         <h2><span class=num style="background:#8a7dab">or</span>No USB cable? The configurator way</h2>
-        <p>While still on the computer. <b>Configuration</b> tab: the port the receiver is on set to <b>serial receiver</b>. <b>Receiver</b> tab: Receiver Mode <b>Serial</b>, Provider <b>CRSF</b>, <b>Telemetry ON</b>. Then <b>Save &amp; Reboot</b>.</p>
-        <p class=why>Without telemetry the board is mute on the receiver port &mdash; nothing reaches it until the configurator switches telemetry on and restarts it.</p>
+        <p id=cfgWay>While still on the computer. <b>Configuration</b> tab: the port the receiver is on set to <b>serial receiver</b>. <b>Receiver</b> tab: Receiver Mode <b>Serial</b>, Provider <b>CRSF</b>, <b>Telemetry ON</b>. Then <b>Save &amp; Reboot</b>.</p>
+        <p class=why id=cfgWayWhy>Without telemetry the board is mute on the receiver port &mdash; nothing reaches it until the configurator switches telemetry on and restarts it.</p>
     </div>
 
     <p>After that restart, everything else is done from here. The computer can go away.</p>
@@ -78,5 +78,36 @@
 </ul>
 <p>Once the Rotorflight button appears, the wizard handles every remaining step from the phone.</p>
 </template>
+<script>
+// This page is written for a receiver. On a DONGLE the words change: it is
+// not "where the receiver is", the Ports choice is "dongle on a wire", and
+// the socket matters — port A is usually the receiver's, and taking it would
+// stop the model flying (Malcolm 2026-09-17: "item 2 says Receiver even when
+// it's a dongle. A dongle probably should also avoid port A").
+document.addEventListener('DOMContentLoaded', async () => {
+    const s = await LDRC.fetchState();
+    if (!s || !s.dongle) return;
+    LDRC.setText('step2Head', 'Tell it where the dongle is (phone)');
+    LDRC.setHtml('step2Body',
+        'Plug the dongle&rsquo;s lead into a spare port &mdash; <b>B or C</b>, not port A: that is usually the receiver&rsquo;s, '
+      + 'and the receiver that flies the model needs it. Connect a short USB-C <b>data</b> cable from the dongle&rsquo;s USB socket '
+      + 'to the flight controller&rsquo;s. Power the model and open this app: the <b>Rotorflight button appears</b>. '
+      + 'Open <b>Ports</b>, choose <b>dongle on a wire</b> for the socket the lead is in, and <b>Save</b>.');
+    LDRC.setHtml('step2Why',
+        'That one Save sets the port to MSP at 115200 and restarts the flight controller. The lead is then the whole connection; '
+      + 'the USB cable can stay in or come out. Leave the receiver&rsquo;s own port alone &mdash; it is set already, and it is what flies the model.');
+    const cw = document.getElementById('cfgWay');
+    if (cw) LDRC.setHtml('cfgWay',
+        'While still on the computer. <b>Ports tab</b>: switch on <b>Configuration/MSP</b> for the port the dongle&rsquo;s lead is in '
+      + '(B or C, not the receiver&rsquo;s), speed <b>115200</b>. Then <b>Save &amp; Reboot</b>. Leave the receiver&rsquo;s own port as it is.');
+    const cwy = document.getElementById('cfgWayWhy');
+    if (cwy) LDRC.setText('cfgWayWhy', 'A dongle speaks MSP, so it needs no telemetry and no receiver mode \u2014 just its own port set to MSP.');
+    LDRC.setHtml('cableIntro',
+        '<b>Connect both wires: the dongle&rsquo;s lead <i>and</i> a short USB-C cable from the dongle to the flight controller.</b> '
+      + 'The USB cable is the configurator&rsquo;s own channel: every setting of any size, Ports, In-flight adjustments, the command line, '
+      + 'a factory reset and the black box, all from the phone &mdash; everything the configurator can do, except flashing. '
+      + 'The lead carries the same conversation once its port is set, and powers the dongle either way.');
+});
+</script>
 </body>
 </html>

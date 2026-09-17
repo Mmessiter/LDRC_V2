@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.734-dongle-words",
+      "url": "https://messiter.com/rxv2/release/v0.9.734/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.734/littlefs.bin",
+      "fs_md5": "8cc459a26d15b104d5ad4d2d595d1bdb",
+      "notes": "The pages called it a receiver even when it is a dongle (Malcolm 2026-09-17: 'item 2 says Receiver even when it's a dongle... yes this also affects Wiring and many others'). Now, on a dongle: Before you start step 2 says dongle throughout, tells you to choose 'dongle on a wire' rather than 'receiver', and says to use port B or C and leave port A alone - that is usually the receiver's, and the receiver is what flies the model; its no-USB-cable route sets MSP for the dongle's port instead of serial receiver for the receiver's. The Wiring page's last card was the worst of them: it told you to plug into the receiver's port, which would take the port the model flies on - it now says port B or C, not the receiver's, and how to set it. Elsewhere a shared list of phrases corrects the wording (the WiFi page's 'receiver's own WiFi', the log's 'everything the receiver noticed', 'Rename receiver'), deliberately leaving alone the places where 'receiver' is right: Rotorflight's own 'serial receiver' port function, the configurator's Receiver tab, and 'the receiver that flies the model'. The one-page guide and the wiring page now say port B or C, never A. Pages only."
+    },
+    {
       "name": "RXV2-0.9.732-button-spacing",
       "url": "https://messiter.com/rxv2/release/v0.9.732/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.732/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.721/littlefs.bin",
       "fs_md5": "4ba3f625c5f9700f449ce4300ce90ca7",
       "notes": "The Firmware page now has two plain buttons - Receiver WiFi and Bluetooth - so you can see and choose how an update travels, instead of a note that only appeared sometimes. The one in use is ticked, and a line underneath says why you might want the other. If the receiver has no WiFi of its own, Bluetooth is chosen for you. Includes 0.9.720."
-    },
-    {
-      "name": "RXV2-0.9.720-patient-install",
-      "url": "https://messiter.com/rxv2/release/v0.9.720/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.720/littlefs.bin",
-      "fs_md5": "bef8d68be92f99884a92d5f28491d626",
-      "notes": "An install that was simply taking a long time was being reported as a failure. The page gave it two and a half minutes, which is plenty on a good signal and not nearly enough on a weak one. It now says 'still going' and keeps watching for another three minutes before it says anything went wrong - and if it cannot actually see the new version with its own eyes, it says so rather than claiming success. Includes 0.9.719."
     }
   ],
   "rotorflight": {

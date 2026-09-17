@@ -9,7 +9,7 @@
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Wiring &middot; LDRC RX V2</title>
 <link rel=stylesheet href="/style.css?v=222">
-<script src="/app.js?v=258" defer></script>
+<script src="/app.js?v=260" defer></script>
 <style>
 .wcard{background:#f2f6f8;border-radius:12px;padding:.8em .9em;margin:.6em 0;
        box-shadow:0 2px 6px rgba(0,0,0,.08)}
@@ -64,10 +64,10 @@
     </div>
 
     <div class=wcard>
-        <h2><span class=pad>RX</span>This receiver</h2>
-        <p><b>Plug it into the default receiver port</b> (labelled ELRS&thinsp;/&thinsp;RX) &mdash; it listens for CRSF out of the box.</p>
-        <p><b>Any other port?</b> Then the configurator must set it up first (USB, once).</p>
-        <p class=why>TX&rarr;RX, RX&rarr;TX, plus power. Done when the Rotorflight button appears on the front screen.</p>
+        <h2><span class=pad id=rxPad>RX</span><span id=rxHead>This receiver</span></h2>
+        <p id=rxLine1><b>Plug it into the default receiver port</b> (labelled ELRS&thinsp;/&thinsp;RX) &mdash; it listens for CRSF out of the box.</p>
+        <p id=rxLine2><b>Any other port?</b> Then the configurator must set it up first (USB, once).</p>
+        <p class=why id=rxWhy>TX&rarr;RX, RX&rarr;TX, plus power. Done when the Rotorflight button appears on the front screen.</p>
     </div>
 
 
@@ -86,5 +86,21 @@
 <li><b>Brand-new board still silent?</b> Factory boards ship with telemetry OFF &mdash; and a mute board ignores incoming commands too (tested: it can&rsquo;t be woken from this side). The one-time fix is the computer: Configurator &rarr; enable Telemetry &rarr; Save, which restarts the board. Every later step works from the phone.</li>
 </ul>
 </template>
+<script>
+// On a DONGLE this last card is wrong: a dongle does not go in the receiver's
+// port — that port is the receiver's, and the receiver is what flies the model.
+document.addEventListener('DOMContentLoaded', async () => {
+    const s = await LDRC.fetchState();
+    if (!s || !s.dongle) return;
+    LDRC.setText('rxPad', 'B/C');
+    LDRC.setText('rxHead', 'This dongle');
+    LDRC.setHtml('rxLine1', '<b>Plug it into port B or C</b> &mdash; <b>not</b> the receiver&rsquo;s port (ELRS&thinsp;/&thinsp;RX): '
+                          + 'that one belongs to the receiver that flies the model.');
+    LDRC.setHtml('rxLine2', '<b>Then set that port</b> to <i>dongle on a wire</i> on the Ports page (with the dongle&rsquo;s USB-C cable in), '
+                          + 'or to MSP at 115200 in the configurator.');
+    LDRC.setHtml('rxWhy', 'TX&rarr;RX, RX&rarr;TX, plus power &mdash; the dongle takes its 5&nbsp;V from the flight controller. '
+                        + 'Done when the Rotorflight button appears on the front screen.');
+});
+</script>
 </body>
 </html>
