@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.742-six-banks";
+constexpr const char* FW_VERSION = "RXV2-0.9.744-banks-profiles";
 
 //*********************************************************************
 //  Auto-update manifest URLs

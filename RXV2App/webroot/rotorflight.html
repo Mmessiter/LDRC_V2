@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rotorflight &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=268">
-<script src="/app.js?v=268" defer></script>
+<link rel=stylesheet href="/style.css?v=270">
+<script src="/app.js?v=270" defer></script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -30,7 +30,7 @@
     <div id=telemSpeed class="banner" style="display:none;margin-top:1em"></div>
 
     <div id=bankCard style="display:none;background:#e7edf2;color:#2e4356;padding:.8em .9em;border-radius:10px;margin:1.4em 0 0;text-align:left">
-        <label for=bankShow style="font-weight:600;display:block;margin-bottom:.35em" data-help="How many tuning banks (flight modes) the PID, rates, governor and rescue pages offer. Rotorflight has six; show fewer if you only use a few.">How many banks</label>
+        <label for=bankShow style="font-weight:600;display:block;margin-bottom:.35em" data-help="How many tuning banks (flight modes) the PID, rates, governor and rescue pages offer. Rotorflight has six; show fewer if you only use a few.">How many banks (Profiles) do you use?</label>
         <select id=bankShow style="width:100%;padding:.5em;border-radius:8px;border:1px solid #b9c6d1;background:#fff;color:#2e4356;font-size:1em"></select>
         <div id=bankNote style="font-size:.85em;color:#5d7a8c;margin-top:.4em"></div>
     </div>
@@ -82,6 +82,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         let h = '<option value=0>All of them (' + most + ')</option>';
         for (let i = 1; i <= most; i++) h += '<option value=' + i + '>' + i + (i === 1 ? ' bank' : ' banks') + '</option>';
         sel.innerHTML = h;
+        // Say the real range, not a hopeful one: a smaller flight controller
+        // has fewer, and we only ever offer banks that exist.
+        document.querySelector('label[for=bankShow]').innerHTML =
+            'How many banks (Profiles) do you use (1&ndash;' + most + ')?';
         sel.value = String(Math.min(b.shown | 0, most));
         const note = () => {
             const n = +sel.value;
@@ -130,7 +134,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 <li><b>Copy a bank</b> &mdash; PIDs, PID +, rescue, rates and governor gains from one bank to another in one tap, read back and verified. Each bank keeps its own head speed unless you say otherwise.</li>
 <li><b>Backup &amp; restore</b> &mdash; the whole setup saved on the phone, restorable any time.</li>
 </ul>
-<h3>How many banks</h3>
+<h3>How many banks (Profiles) do you use?</h3>
 <p>Rotorflight has <b>six</b> banks (flight modes), not four &mdash; every page here offered four for years, so banks 5 and 6 were out of reach and were not saved by <b>Back up</b> either. Both are fixed. If you only ever use two or three, set the number here and the tuning pages stop offering the rest.</p>
 <p>It only hides them from the pages. Your transmitter&rsquo;s switch can still select any bank the flight controller has, and if it is sitting on one you have hidden, the page shows that bank anyway &mdash; you are never editing a bank you cannot see. A small flight controller with fewer than six is asked and believed: you are only ever offered banks that exist.</p>
 <h3>Telemetry speed (receiver only)</h3>
