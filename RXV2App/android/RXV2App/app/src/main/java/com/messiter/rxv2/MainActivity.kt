@@ -403,13 +403,28 @@ class MainActivity : AppCompatActivity() {
                     else @Suppress("DEPRECATION") versionCode
                 }
                 if (newest > installed) runOnUiThread {
-                    if (col.parent == null) return@runOnUiThread   // scanner gone — connected already
-                    col.addView(TextView(this).apply {
+                    // The banner on the scanner is fine when the scanner is
+                    // still there - but instant auto-connect leaves it within
+                    // a second, and this reply usually lands AFTER that, when
+                    // it used to be thrown away (Malcolm 2026-09-17: "went
+                    // straight past the page that offered the update before I
+                    // could hit update"). So: banner if the scanner is up,
+                    // and ALWAYS a dialog, which outlives the page. "Later" is
+                    // remembered per version so it does not nag every minute.
+                    if (col.parent != null) col.addView(TextView(this).apply {
                         text = "⬆️  App update available: v$name — tap to install"
                         textSize = 15f; setPadding(40, 28, 40, 28)
                         setBackgroundColor(0xFFFFD278.toInt()); setTextColor(0xFF5C3A00.toInt())
                         setOnClickListener { installUpdate(url, name) }
                     }, 0)
+                    val sp = getSharedPreferences("appupdate", MODE_PRIVATE)
+                    if (sp.getInt("later", 0) == newest || isFinishing) return@runOnUiThread
+                    android.app.AlertDialog.Builder(this)
+                        .setTitle("App update available")
+                        .setMessage("RXV2 app v$name is out. Install it now?")
+                        .setPositiveButton("Update") { _, _ -> installUpdate(url, name) }
+                        .setNegativeButton("Later") { _, _ -> sp.edit().putInt("later", newest).apply() }
+                        .show()
                 }
             }
         }.start()
