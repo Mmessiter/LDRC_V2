@@ -570,7 +570,7 @@ struct ScannerView: View {
                 }
             }
         }
-        .navigationTitle("RXV2 Receivers")
+        .navigationTitle("RXV2 Receivers & Dongles")   // the big heading; headerText below it is the subtitle
         .photosPicker(isPresented: $showPhotoPicker, selection: $pickerItem, matching: .images)
         .onChange(of: pickerItem) { item in
             guard let item, let name = photoFor else { return }
