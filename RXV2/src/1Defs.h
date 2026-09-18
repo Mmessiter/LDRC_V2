@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.767-wire-finder";
+constexpr const char* FW_VERSION = "RXV2-0.9.768-ticked-lane-runs";
 
 //*********************************************************************
 //  Auto-update manifest URLs

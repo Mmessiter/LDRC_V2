@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.768-ticked-lane-runs",
+      "url": "https://messiter.com/rxv2/release/v0.9.768/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.768/littlefs.bin",
+      "fs_md5": "33f173585cd487aaa797ea0ce9226e77",
+      "notes": "Update page: the lane shown ticked is the one the install uses - with no WiFi up, Bluetooth starts at once instead of waiting 45 s for WiFi first."
+    },
+    {
       "name": "RXV2-0.9.767-wire-finder",
       "url": "https://messiter.com/rxv2/release/v0.9.767/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.767/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.757/littlefs.bin",
       "fs_md5": "6a3c7890e871102f6e1ae83b82b0a666",
       "notes": "The dongle gains a third role: Simulator interface (Malcolm 2026-09-17: 'all we need to do is add to the dongle a new option called Simulator interface'). A board with no radio, with one of your receivers wired to it, becomes a USB joystick for a simulator on the computer - Windows or Mac. Wiring is the same four-wire lead with the flight-controller end moved to the receiver: the receiver's signal output to D5, its 5 V to the board's 5V pin, ground to ground; then a USB cable to the computer, which powers the whole rig. No battery, no flight controller. CRSF, SBUS, IBUS and PPM are recognised on their own, and the Mode card says which was found and how many channels arrived. Everything else - which stick drives which axis, reversing, the spool-up realism, the camera keys - is on the Simulator pages exactly as it has always been, because the decoded channels are put precisely where the radio would have put them. This retires the separate LDRC2SIM firmware: one board, one firmware, three roles. A board with transceivers fitted is refused this role, because it belongs in a helicopter. Nothing changes for a receiver or a Rotorflight dongle."
-    },
-    {
-      "name": "RXV2-0.9.756-preflight-review",
-      "url": "https://messiter.com/rxv2/release/v0.9.756/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.756/littlefs.bin",
-      "fs_md5": "85a0dff58e253d25c50b97ac7e3f75d1",
-      "notes": "Pre-flight review of every firmware change since the last flown build (0.9.728), the night before Malcolm's next test flight. Verdict: nothing in that diff can touch control in the air - every changed path runs on the ground and is gated off when armed or under a live transmitter link. It found three things worth fixing anyway. 1) The tail-waggle fix from 0.9.729 never worked in the real landing order: the rotor-speed sample sat inside a block that only runs after the safety switch, by which time the motor already reads zero, so the 20-second coast wait never engaged and the tail still waggled on a turning head. The rotor is now watched every tick - one comparison. 2) The stall that switches the radios off after arming waited up to 1.5 s for the transmitter to acknowledge its warning; a transmitter busy with its safety-switch sound could push that stall to over two seconds after the arm switch, into the spool-up for a pilot quick on the motor switch. That wait is now capped at half a second, so the stall lands within 0.8 s - close to the +0.3 s every flight so far has flown with. 3) The 20-second WiFi hold after a Bluetooth update never held: its timer was compared unsigned against a time in the future and wrapped, so the join started 200 ms after boot as before. Also: the new bank-count setting is now refused under a live transmitter link, like every other setting saved to flash. Firmware only."
     }
   ],
   "rotorflight": {

@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Check for Update &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=290">
-<script src="/app.js?v=290" defer></script>
+<link rel=stylesheet href="/style.css?v=291">
+<script src="/app.js?v=291" defer></script>
 <style>
 /* --- Currently-installed card -------------------------------------- */
 .installed-card .row{
@@ -531,7 +531,7 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
         // "wait up to 45 s for WiFi, then use Bluetooth anyway". Malcolm
         // 2026-09-18, on a dongle that could not join: "even though Bluetooth
         // is selected, it's attempting to download over Wi-Fi and failing".
-        if (window.__preferBle) throw new Error('Bluetooth chosen - skip the WiFi wait');
+        if (window.__preferBle || window.__laneBle) throw new Error('Bluetooth chosen - skip the WiFi wait');
         const t0 = Date.now();
         let misses = 0;
         for (;;) {
@@ -885,6 +885,13 @@ document.addEventListener('DOMContentLoaded', () => {
         // even after WiFi was plainly up (0.9.746). It now holds only what the
         // pilot tapped.
         const ble = !wifiUp || !!window.__preferBle;
+        // What this paint TICKS is what an install must do (0.9.768). With no
+        // WiFi up the card showed Bluetooth ticked, yet doInstall still sat
+        // 45 s "waiting for the receiver's WiFi" unless the button had been
+        // tapped (Malcolm 2026-09-18, DongleSim: "trying WiFi and failing even
+        // though bluetooth is selected!!"). Re-painted every few seconds while
+        // the receiver is joining, so it flips to WiFi the moment that is up.
+        window.__laneBle = ble;
 
         const w = document.getElementById('laneWifi');
         const b = document.getElementById('laneBle');
