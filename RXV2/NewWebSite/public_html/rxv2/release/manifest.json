@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.766-wire-raw-and-sbus-ni",
+      "url": "https://messiter.com/rxv2/release/v0.9.766/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.766/littlefs.bin",
+      "fs_md5": "318bd470470514e01eebaa3bd4c1fb66",
+      "notes": "Simulator interface: while a signal is arriving but not recognised, the dongle page shows what each protocol saw and the last bytes raw; and SBUS on a non-inverted line is now recognised too."
+    },
+    {
       "name": "RXV2-0.9.765-background-drop-guard",
       "url": "https://messiter.com/rxv2/release/v0.9.765/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.765/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.755/littlefs.bin",
       "fs_md5": "0f10b3c0cba79add207cd29a574567d7",
       "notes": "One command now does a whole release (Malcolm 2026-09-17: fourteen releases in a day, every one by hand - 'by all means do it now'). dev/release.sh bumps the version, prepends these notes, bumps the page asset versions, rebuilds the search index, runs every publish gate, builds the firmware and the filesystem and refuses a partial image, copies the images to both release trees, bumps and publishes the Android app (which syncs the app webroots), stages and publishes to messiter.com and checks the live manifest, bumps, builds and installs the iOS app on both devices, restarts the fleet watcher, commits, pushes and pings the watch - stopping hard at the first thing that fails. The fleet watcher now lives in the repository too (it had been in a session scratchpad, where it would have vanished), and pings by ntfy, the channel that actually reaches the watch. Nothing changes on the receiver itself."
-    },
-    {
-      "name": "RXV2-0.9.754-modal-scroll",
-      "url": "https://messiter.com/rxv2/release/v0.9.754/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.754/littlefs.bin",
-      "fs_md5": "885b9e5865d7ba1de8337b812c67665d",
-      "notes": "A message box taller than the screen now scrolls inside itself, with its title and buttons staying put - What's in the backup lists forty-odd lines and ran off the bottom with no way to reach OK (Malcolm 2026-09-17). Applies to every message box. Pages only."
     }
   ],
   "rotorflight": {

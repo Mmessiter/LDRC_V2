@@ -3237,6 +3237,16 @@ inline void handleApiState() {
         j += ",\"sim_if_up\":";      j += (g_rcIn.linkUp() ? "true" : "false");
         j += ",\"sim_if_ch\":";      j += (int)g_rcIn.channelCount();
         j += ",\"sim_if_bytes\":";   j += (unsigned long)g_rcIn.bytesSeen();   // 0 = nothing on the wire (0.9.762)
+        // 0.9.766: what each candidate saw, and the last bytes raw - so a
+        // "not recognised" can be read from the phone instead of guessed at.
+        j += ",\"sim_if_cand\":[";
+        for (uint8_t i = 0; i < g_rcIn.candCount(); i++) {
+            if (i) j += ',';
+            j += "{\"p\":\""; j += g_rcIn.candName(i); j += "\",\"b\":"; j += (unsigned long)g_rcIn.candBytes(i);
+            j += ",\"f\":"; j += (unsigned long)g_rcIn.candFrames(i); j += '}';
+        }
+        j += ']';
+        { char hx[100]; g_rcIn.rawHex(hx, sizeof(hx)); j += ",\"sim_if_raw\":\""; j += hx; j += "\""; }
     }
     bleStateJson(j);
     UsbHostMsp::stateJson(j);   // dongle_link usb|uart, usb_fc, USB host counters (0.9.615/0.9.639)

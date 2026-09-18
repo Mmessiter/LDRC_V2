@@ -1,4 +1,5 @@
 {
+  "RXV2-0.9.766-wire-raw-and-sbus-ni": "Simulator interface: while a signal is arriving but not recognised, the dongle page shows what each protocol saw and the last bytes raw; and SBUS on a non-inverted line is now recognised too.",
   "RXV2-0.9.765-background-drop-guard": "Apps: with Bluetooth now running in the background, a link the receiver drops while the app is in the background (its idle watchdog, nothing installing) is no longer chased - that would have reconnected, gone silent and been dropped again every few minutes. Installs still ride out the reboot.",
   "RXV2-0.9.764-no-radio-warning-on-sim-if": "Front page: no 'No transceivers detected' warning on a board in the Simulator interface role - it has none by design, like a dongle.",
   "RXV2-0.9.763-install-survives-lock": "A Bluetooth install now carries on when the phone's screen locks or you switch to another app: the iPhone keeps Bluetooth running in the background, Android runs the install under a foreground service, and both hold the screen awake while it runs.",

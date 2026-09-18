@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rotorflight dongle &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=288">
-<script src="/app.js?v=288" defer></script>
+<link rel=stylesheet href="/style.css?v=289">
+<script src="/app.js?v=289" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;gap:.6em;padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
 .fldRow label{flex:1;color:#3a5165;font-size:.95em}
@@ -33,6 +33,7 @@ table.wire td:first-child{font-weight:700;color:#3a5165;white-space:nowrap}
     <h1 id=title>Rotorflight dongle</h1>
     <p class=subtitle id=subtitle>the phone app on a Nexus that another receiver flies</p>
     <div id=status class="banner info">loading&hellip;</div>
+    <pre id=simIfDiag style="display:none;font-size:.82em;white-space:pre-wrap;background:#f2f6f8;color:#3a5165;border-radius:8px;padding:.5em .7em;margin:.4em 0 0"></pre>
 
     <!-- A board with no transceivers is a dongle unless it is made a simulator
          interface; a board with transceivers is a receiver. Nothing else to
@@ -150,6 +151,16 @@ function paintStatus(s) {
         // What the board hears on the wire, live (0.9.762). Zero bytes is a
         // wiring or power problem; bytes without a lock is a protocol one.
         const bytes = s.sim_if_bytes | 0;
+        // 0.9.766: while not recognised, the per-protocol tally and the last
+        // bytes raw - the thing to photograph if it ever stays like this.
+        const dg = document.getElementById('simIfDiag');
+        if (dg) {
+            if (!s.sim_if_up && bytes > 0 && Array.isArray(s.sim_if_cand)) {
+                dg.textContent = s.sim_if_cand.map(c => c.p + ': ' + c.b + ' bytes, ' + c.f + ' frames').join('\n')
+                               + '\nlast bytes: ' + (s.sim_if_raw || '');
+                dg.style.display = '';
+            } else dg.style.display = 'none';
+        }
         if (s.sim_if_up) {
             st.className = 'banner good';
             st.textContent = '✓ Receiver found on D5 — ' + s.sim_if_link + ', ' + s.sim_if_ch + ' channels — the computer sees a joystick.';

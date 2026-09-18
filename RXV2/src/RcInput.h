@@ -26,7 +26,11 @@
 #pragma once
 #include <Arduino.h>
 
-enum RcProtocol : uint8_t { RC_NONE = 0, RC_CRSF, RC_SBUS, RC_IBUS, RC_PPM };
+// RC_SBUS_NI (0.9.766): SBUS framing on a NON-inverted line - some receivers
+// offer it, and the LDRC RXV1's port sits that way until its transmitter
+// connects (Binding.h StartSBUSandSERVOS), which is what the first bench test
+// was listening to.
+enum RcProtocol : uint8_t { RC_NONE = 0, RC_CRSF, RC_SBUS, RC_SBUS_NI, RC_IBUS, RC_PPM };
 
 class RcInput {
 public:
@@ -44,6 +48,12 @@ public:
   uint16_t    channelUs(uint8_t i) const;  // microseconds; 1500 if absent
   bool        failsafe() const { return _failsafe; }
   uint32_t    bytesSeen() const;         // everything that ever arrived on the wire (bytes, or PPM edges)
+  // Diagnostics (0.9.766): what each candidate saw, and the last bytes raw.
+  uint8_t     candCount() const;
+  const char* candName(uint8_t i) const;
+  uint32_t    candBytes(uint8_t i) const  { return _candBytes[i]; }
+  uint32_t    candFrames(uint8_t i) const { return _candFrames[i]; }
+  void        rawHex(char* out, size_t cap) const;   // last 32 bytes, oldest first, "0F 00 .."
 
 private:
   // ---- detection / lock ----
@@ -73,6 +83,10 @@ private:
   uint32_t _lastFrameMs = 0;
   bool     _failsafe = false;
   uint32_t _bytes = 0;                    // serial bytes read, whatever they turned out to be
+  uint32_t _candBytes[8]  = { 0 };        // per candidate index: bytes read while it was listening
+  uint32_t _candFrames[8] = { 0 };        // per candidate index: valid frames it parsed
+  uint8_t  _raw[32];                      // ring of the last bytes, whatever the candidate
+  uint8_t  _rawIdx = 0;
 
   // parser scratch
   uint8_t  _buf[64];
@@ -88,7 +102,7 @@ inline constexpr uint8_t  LOCK_HITS        = 3;    // valid frames needed to loc
 inline constexpr uint32_t LINK_TIMEOUT_MS  = 500;  // no frame this long -> re-detect
 
 // Detection order. CRSF first (most common today), PPM last (slowest to prove).
-inline constexpr RcProtocol CANDIDATES[] = { RC_CRSF, RC_SBUS, RC_IBUS, RC_PPM };
+inline constexpr RcProtocol CANDIDATES[] = { RC_CRSF, RC_SBUS, RC_SBUS_NI, RC_IBUS, RC_PPM };
 inline constexpr uint8_t NUM_CANDIDATES = sizeof(CANDIDATES) / sizeof(CANDIDATES[0]);
 
 // ======================================================================
@@ -125,6 +139,29 @@ static void IRAM_ATTR ppmIsr() {
 // an SBUS receiver: "no evidence that it was" detected) had nothing to read
 // back. Zero = a wiring or power problem; rising = a protocol one.
 inline uint32_t RcInput::bytesSeen() const { return _bytes + s_ppmEdges; }
+inline uint8_t  RcInput::candCount() const { return NUM_CANDIDATES; }
+inline const char* RcInput::candName(uint8_t i) const {
+  if (i >= NUM_CANDIDATES) return "?";
+  switch (CANDIDATES[i]) {
+    case RC_CRSF:    return "CRSF";
+    case RC_SBUS:    return "SBUS";
+    case RC_SBUS_NI: return "SBUS-NI";
+    case RC_IBUS:    return "IBUS";
+    case RC_PPM:     return "PPM";
+    default:         return "?";
+  }
+}
+inline void RcInput::rawHex(char* out, size_t cap) const {
+  static const char* hx = "0123456789ABCDEF";
+  size_t o = 0;
+  const uint8_t n = (_bytes < 32) ? (uint8_t)_bytes : 32;
+  for (uint8_t k = 0; k < n && o + 4 <= cap; k++) {
+    const uint8_t b = _raw[(uint8_t)(_rawIdx - n + k) & 31];
+    if (k) out[o++] = ' ';
+    out[o++] = hx[b >> 4]; out[o++] = hx[b & 15];
+  }
+  out[o] = 0;
+}
 
 // ======================================================================
 // Lifecycle
@@ -141,11 +178,12 @@ inline void RcInput::begin(int8_t rxPin, HardwareSerial* uart) {
 
 inline const char* RcInput::protocolName() const {
   switch (_proto) {
-    case RC_CRSF: return "CRSF";
-    case RC_SBUS: return "SBUS";
-    case RC_IBUS: return "IBUS";
-    case RC_PPM:  return "PPM";
-    default:      return "(searching)";
+    case RC_CRSF:    return "CRSF";
+    case RC_SBUS:    return "SBUS";
+    case RC_SBUS_NI: return "SBUS (non-inverted)";
+    case RC_IBUS:    return "IBUS";
+    case RC_PPM:     return "PPM";
+    default:         return "(searching)";
   }
 }
 
@@ -175,8 +213,9 @@ inline void RcInput::useCandidate(uint8_t idx) {
     attachInterrupt(digitalPinToInterrupt(_rxPin), ppmIsr, RISING);
   } else {
     // UART protocols: rx-only on _rxPin, tx unused (-1).
-    uint32_t baud   = (p == RC_CRSF) ? 420000 : (p == RC_SBUS) ? 100000 : 115200;
-    uint32_t config = (p == RC_SBUS) ? SERIAL_8E2 : SERIAL_8N1;
+    const bool sbus = (p == RC_SBUS) || (p == RC_SBUS_NI);
+    uint32_t baud   = (p == RC_CRSF) ? 420000 : sbus ? 100000 : 115200;
+    uint32_t config = sbus ? SERIAL_8E2 : SERIAL_8N1;
     bool     invert = (p == RC_SBUS);
     _uart->end();                    // clean reconfigure between candidates
     _uart->setRxBufferSize(1024);    // ~24ms headroom at 420 kbaud (call before begin)
@@ -200,6 +239,7 @@ inline bool RcInput::update() {
 
   if (gotFrame) {
     _lastFrameMs = millis();
+    _candFrames[_cand]++;
     if (!_locked) {
       if (++_candHits >= LOCK_HITS) {
         _locked = true;
@@ -239,10 +279,13 @@ inline bool RcInput::feedSerial() {
   for (int n = 0; n < 64 && _uart->available(); n++) {
     uint8_t b = (uint8_t)_uart->read();
     _bytes++;
+    _candBytes[_cand]++;
+    _raw[_rawIdx++ & 31] = b;
     switch (CANDIDATES[_cand]) {
-      case RC_CRSF: frame |= crsfByte(b); break;
-      case RC_SBUS: frame |= sbusByte(b); break;
-      case RC_IBUS: frame |= ibusByte(b); break;
+      case RC_CRSF:    frame |= crsfByte(b); break;
+      case RC_SBUS:
+      case RC_SBUS_NI: frame |= sbusByte(b); break;
+      case RC_IBUS:    frame |= ibusByte(b); break;
       default: break;
     }
   }
