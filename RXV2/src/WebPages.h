@@ -1791,7 +1791,15 @@ inline void handleFirmwareInstall() {
     // loop-hostile one of all, did not (safety review, 2026-09-14).
     if (refuseIfTxLinked("turn the transmitter off first - the receiver stops sending control frames for the whole update")) return;
     if (refuseIfArmed("install firmware")) return;
-    if (netMode != NET_WIFI_UP) {
+    // Asked for over Bluetooth (0.9.779): the STA may be "up" yet deaf, or
+    // mid-rejoin, because a Bluetooth link holds the one antenna (the zombie
+    // WiFi of 0.9.728). Below, Bluetooth is PAUSED for the download; so a
+    // receiver that has joined once this boot and is merely rejoining may
+    // proceed too - it will be given a quiet radio to finish on.
+    const bool fromBle = bleActive;
+    const bool wifiUsable = (netMode == NET_WIFI_UP) ||
+                            (fromBle && netMode == NET_WIFI_CONNECTING && staConnectedThisBoot);
+    if (!wifiUsable) {
         // ClaudeFix-16-7-2026 the chip itself downloads the image, so without home WiFi
         // the install can only fail — say so plainly instead of "begin failed".
         server.send(409, "text/plain",
@@ -1819,6 +1827,34 @@ inline void handleFirmwareInstall() {
         fsUrl = url.substring(0, url.length() - 12) + "littlefs.bin";  // 12 = strlen("firmware.bin")
     }
 
+    // PAUSE BLUETOOTH FOR THE DOWNLOAD (0.9.779). With a Bluetooth link open
+    // the STA keeps reporting "connected" but passes no data, so the chip's
+    // own download dies with HTTP -1 (Test1's page files, and DongleSim
+    // "offering only Bluetooth" on the footstool, both 2026-09-18 - Malcolm:
+    // "the idea we can only use WiFi when the app isn't running is weird!").
+    // Reply first, then drop the link and re-associate on a quiet radio,
+    // exactly as the app-leave heal does. The app rides out the drop (its
+    // install window is 240 s) and reconnects after the reboot; if the
+    // download fails, Bluetooth comes back so the page can report it.
+    // Ground only: the TX-link and armed gates above have already passed.
+    if (fromBle) {
+        server.send(202, "text/plain", "downloading over WiFi - Bluetooth pauses until the receiver has rebooted");
+        bleEarlyPump();
+        bleStop();
+        events.add("Install asked for over Bluetooth - Bluetooth paused, WiFi re-synced for the download");
+        WiFi.disconnect(false, true);
+        delay(200);
+        WiFi.begin(getEffectiveSsid().c_str(), getEffectivePass().c_str());
+        const uint32_t t0 = millis();
+        while (WiFi.status() != WL_CONNECTED && (uint32_t)(millis() - t0) < 15000) delay(100);
+        if (WiFi.status() != WL_CONNECTED) {
+            events.add("WiFi did not come back for the download - Bluetooth restored, nothing changed");
+            bleStart();
+            return;   // the page judges by the version: unchanged = "did not complete", and it offers Bluetooth
+        }
+        netMode = NET_WIFI_UP; netStateStart = millis();
+    }
+
     // 1) Application firmware -> OTA app slot. A mid-stream failure just leaves the
     //    current firmware bootable, so report it and DON'T reboot. The whole
     //    install runs under the download guard (see otaGuardBegin) so a stalled
@@ -1827,6 +1863,11 @@ inline void handleFirmwareInstall() {
     String err = flashStreamToPartition(url, U_FLASH);
     if (err.length()) {
         otaGuardEnd();
+        if (fromBle) {   // the reply has gone already; let the app back in to hear about it
+            events.add((String("Firmware download failed: ") + err + " - Bluetooth restored, nothing changed").c_str());
+            bleStart();
+            return;
+        }
         server.send(502, "text/plain", "firmware: " + err);
         return;
     }
@@ -1850,9 +1891,9 @@ inline void handleFirmwareInstall() {
     }
     events.add((String("Firmware installed via auto-update") + fsNote + " — rebooting").c_str());
     otaGuardEnd();
-    server.send(200, "text/plain", String("ok — rebooting") + fsNote);
-    bleEarlyPump();               // over BLE: deliver the reply before the reboot kills the link
-    prefs.putUChar(NVS_KEY_OTA_BLE, bleActive ? 1 : 0);   // asked for from the app: hold the STA join after the reboot
+    if (!fromBle) server.send(200, "text/plain", String("ok — rebooting") + fsNote);   // over Bluetooth the 202 went before the pause
+    bleEarlyPump();               // over BLE: deliver the reply before the reboot kills the link (a no-op once paused)
+    prefs.putUChar(NVS_KEY_OTA_BLE, fromBle ? 1 : 0);   // asked for from the app: hold the STA join after the reboot
     eventsPersist();              // this boot's log survives the reboot (it did not, and the first attempt's story was lost)
     UsbHostMsp::prepareForRestart();   // 0.9.706: give the FC a clean disconnect, or USB comes back dead
     delay(300);

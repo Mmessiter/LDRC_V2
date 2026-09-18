@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.778-preflight-guard";
+constexpr const char* FW_VERSION = "RXV2-0.9.779-wifi-install-pauses-ble";
 
 //*********************************************************************
 //  Auto-update manifest URLs

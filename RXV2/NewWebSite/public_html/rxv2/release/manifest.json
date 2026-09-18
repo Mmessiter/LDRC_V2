@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.779-wifi-install-pauses-ble",
+      "url": "https://messiter.com/rxv2/release/v0.9.779/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.779/littlefs.bin",
+      "fs_md5": "96a9e0e36f3fdce87e25da6f6676e7ab",
+      "notes": "Installing over WiFi from the app now works while the app is connected: the receiver answers, pauses Bluetooth, rejoins WiFi on a quiet radio, downloads at full speed and reboots - the app rides out the gap and reconnects. A Bluetooth link used to leave WiFi 'connected' but deaf, so the chip's own download failed and the page could only offer Bluetooth. The update page also lets you pick WiFi while the receiver is rejoining."
+    },
+    {
       "name": "RXV2-0.9.778-preflight-guard",
       "url": "https://messiter.com/rxv2/release/v0.9.778/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.778/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.768/littlefs.bin",
       "fs_md5": "33f173585cd487aaa797ea0ce9226e77",
       "notes": "Update page: the lane shown ticked is the one the install uses - with no WiFi up, Bluetooth starts at once instead of waiting 45 s for WiFi first."
-    },
-    {
-      "name": "RXV2-0.9.767-wire-finder",
-      "url": "https://messiter.com/rxv2/release/v0.9.767/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.767/littlefs.bin",
-      "fs_md5": "bd7efbde52b193620983ebadffb7ba79",
-      "notes": "Simulator interface: while nothing is recognised, the dongle counts signal edges on D4, D5 and D6 and the dongle page names the pad the wire is really on."
     }
   ],
   "rotorflight": {

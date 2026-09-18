@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Check for Update &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=297">
-<script src="/app.js?v=297" defer></script>
+<link rel=stylesheet href="/style.css?v=298">
+<script src="/app.js?v=298" defer></script>
 <style>
 /* --- Currently-installed card -------------------------------------- */
 .installed-card .row{
@@ -558,7 +558,11 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
             if (!st) { if (++misses >= 4) break; await new Promise(r => setTimeout(r, 1500)); continue; }
             misses = 0;
             const mode = st.net ? st.net.mode : '';
-            chipHasInternet = (mode === 'WiFi up') && !window.__preferBle;
+            // 0.9.779: WiFi chosen while the receiver is still rejoining is fine
+            // too - the receiver pauses Bluetooth and finishes the join itself
+            // before downloading. Only when WiFi was picked, never by default.
+            chipHasInternet = !window.__preferBle && !window.__laneBle &&
+                (mode === 'WiFi up' || (mode === 'connecting WiFi' && st.net.sta_status !== 1));
             // sta_status 1 = home network not in range (the field): don't wait.
             const joining = (mode === 'connecting WiFi' && st.net.sta_status !== 1) || mode === 'waiting for TX' || mode === 'init';
             if (chipHasInternet || !joining || Date.now() - t0 > 45000) break;
@@ -899,7 +903,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // cleared, so one wrong "no WiFi" sent the install down the slow lane
         // even after WiFi was plainly up (0.9.746). It now holds only what the
         // pilot tapped.
-        const ble = !wifiUp || !!window.__preferBle;
+        // Explicitly chosen WiFi holds while the receiver is rejoining (0.9.779);
+        // otherwise Bluetooth unless WiFi is plainly up.
+        const ble = (window.__preferBle === false) ? !(wifiUp || joining) : (!wifiUp || !!window.__preferBle);
         // What this paint TICKS is what an install must do (0.9.768). With no
         // WiFi up the card showed Bluetooth ticked, yet doInstall still sat
         // 45 s "waiting for the receiver's WiFi" unless the button had been
@@ -916,17 +922,20 @@ document.addEventListener('DOMContentLoaded', () => {
         b.innerHTML = (ble ? '\u2713 ' : '') + 'Bluetooth';
         w.style.cssText = 'flex:1 1 9em;margin:0;color:#fff;background:' + (ble ? off : on);
         b.style.cssText = 'flex:1 1 9em;margin:0;color:#fff;background:' + (ble ? on : off);
-        w.disabled = !wifiUp;
-        if (!wifiUp) w.style.opacity = '.55';
+        // 0.9.779: WiFi may be chosen while the receiver is rejoining - it
+        // pauses Bluetooth (which is what was holding WiFi off) and finishes
+        // the join itself before downloading.
+        w.disabled = !(wifiUp || joining);
+        if (!(wifiUp || joining)) w.style.opacity = '.55';
 
         why.innerHTML =
-            joining   ? 'The receiver is still joining WiFi after its restart \u2014 usually under a minute. Bluetooth works meanwhile.'
+            joining   ? 'The receiver is rejoining WiFi \u2014 Bluetooth on the phone tends to hold it off. <b>Receiver WiFi</b> pauses Bluetooth for the download and is much faster; Bluetooth works too.'
           : !wifiUp   ? 'No receiver WiFi here \u2014 Bluetooth is the only way.'
           : wifiWeak  ? '<b>WiFi is weak here (' + rssi + ' dBm)</b> \u2014 Bluetooth stands a better chance.'
           : ble       ? 'Slower, but works anywhere.'
                       : 'Fast \u2014 30\u201390 s' + (rssi ? ' (' + rssi + ' dBm)' : '') + '.';
         card.hidden = false;
-        w.onclick = () => { if (!wifiUp) return; window.__preferBle = false; paintLanes(st); };
+        w.onclick = () => { if (!(wifiUp || joining)) return; window.__preferBle = false; paintLanes(st); };
         b.onclick = () => { window.__preferBle = true;  paintLanes(st); };
     }
     if (LDRC.viaBle) {
