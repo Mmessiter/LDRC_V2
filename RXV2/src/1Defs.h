@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.763-install-survives-lock";
+constexpr const char* FW_VERSION = "RXV2-0.9.764-no-radio-warning-on-sim-if";
 
 //*********************************************************************
 //  Auto-update manifest URLs

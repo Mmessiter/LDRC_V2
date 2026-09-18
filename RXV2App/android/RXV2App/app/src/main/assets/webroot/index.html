@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Home &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=286">
-<script src="/app.js?v=286" defer></script>
+<link rel=stylesheet href="/style.css?v=287">
+<script src="/app.js?v=287" defer></script>
 <style>
 /* First paint from memory (Malcolm 2026-09-10: the receiver layout flashed
    before the dongle one): classes set on <html> by the hint script below,
@@ -829,7 +829,10 @@ function paintApAutoBanner(s) {
 function paintRadioBanner(s) {
     const rb = document.getElementById('radioBanner');
     if (!rb) return;
-    if (s.dongle) { rb.style.display = 'none'; return; }   // a dongle has no transceivers by design (Malcolm 2026-09-09: no warnings)
+    // A dongle has no transceivers by design, in either of its roles (Malcolm
+    // 2026-09-09: no warnings; 2026-09-18 on the simulator interface: "No
+    // Transceivers detected. we don't need that msg").
+    if (s.dongle || s.sim_if) { rb.style.display = 'none'; return; }
     const rf      = s.rf || {};
     const present = rf.radios_present || [];
     const slots   = [];
