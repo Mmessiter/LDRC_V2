@@ -11,9 +11,13 @@ the version-1 code (which stays in the `LockDownRadioControl` repo).
   the receiver into a USB HID joystick for a PC flight sim (neXt / RX2SIM). Built
   with PlatformIO (`xiao_s3_ota` / `xiao_s3_usb`).
 
-- **LDRC2SIM** — a standalone USB flight-sim adapter (XIAO ESP32-S3): auto-detects
-  CRSF / SBUS / IBUS / PPM on one pin and presents an 8-axis USB joystick, with a
-  WiFi portal and OTA updates from messiter.com. Built with PlatformIO.
+- **LDRC2SIM** — *retired 2026-09-18, and removed from this tree.* A standalone
+  USB flight-sim adapter (XIAO ESP32-S3) that auto-detected CRSF / SBUS / IBUS /
+  PPM on one pin and presented an 8-axis USB joystick. The RXV2 dongle now does
+  the same job in its **Simulator interface** role — same chip, same decoder
+  (`RXV2/src/RcInput.h` is the port), and maintained. The project as it stood is
+  at the **`ldrc2sim-final`** tag, and <https://messiter.com/ldrc2sim/> still
+  serves updates to anyone running it.
 
 - **RXV2App** — iOS app that configures the receiver over **Bluetooth LE**
   (no WiFi network-switching on the phone). It shows the receiver's own web
