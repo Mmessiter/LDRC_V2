@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.759-simif-status";
+constexpr const char* FW_VERSION = "RXV2-0.9.760-wifi-button-always";
 
 //*********************************************************************
 //  Auto-update manifest URLs

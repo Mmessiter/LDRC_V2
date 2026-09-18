@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.760-wifi-button-always",
+      "url": "https://messiter.com/rxv2/release/v0.9.760/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.760/littlefs.bin",
+      "fs_md5": "5d645a34f44fa6fafac03b397552da23",
+      "notes": "Two faults from one afternoon, both worth having found. FIRST, and much the more serious: a filesystem update that did not finish left the board crashing on every boot, for ever, recoverable only by a USB reflash - which is exactly what happened to Malcolm's dongle after an over-the-air update at -83 dBm. The recovery code wiped the half-written pages BEFORE mounting the filesystem, and the library only learns which partition to wipe when it mounts, so it wiped nothing and crashed instead. It now mounts first. Any board, receiver or dongle, could have been stopped this way by a power cut or a weak signal during the pages part of an update. SECOND: the WiFi button was shown only when WiFi or the access point was already up. In the app, where the page arrives over Bluetooth, that is a catch-22 - the one moment you need the WiFi settings is when WiFi is not working (wrong password, a new router, a board carried to a different house). In the app the button is now always there; in a browser it still depends on an interface being up to serve the page at all, which is simply true."
+    },
+    {
       "name": "RXV2-0.9.759-simif-status",
       "url": "https://messiter.com/rxv2/release/v0.9.759/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.759/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.749/littlefs.bin",
       "fs_md5": "056732ffe7afb7d2c013e93c4053270f",
       "notes": "The app's own update and the receiver's firmware update were both offered on one screen (Malcolm 2026-09-17: 'I coped - but in sequence would be better'). Now the front page holds its firmware offer while the app's update dialog is up, so they come one at a time: app first, because updating the app restarts it, and the firmware offer comes back by itself on reconnect. A plain browser has no app dialog and is unaffected. Pages only."
-    },
-    {
-      "name": "RXV2-0.9.748-page-load-order",
-      "url": "https://messiter.com/rxv2/release/v0.9.748/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.748/littlefs.bin",
-      "fs_md5": "7400a372c20e57ab772b6bbebbf19f86",
-      "notes": "Seven tuning pages have been dead since 0.9.742 this morning - PIDs, PID +, Rates, Governor (profile), Rescue, Easy tuning and Copy a bank: no bank buttons, no Save, nothing (Malcolm 2026-09-17: 'the copy from and the copy to boxes are both empty!', on Android and iPhone alike). One mistake, made seven times: app.js is loaded 'deferred', which means it runs AFTER a page's own script, and the six-bank change put a call into app.js at the very top of each page's script - so the page's whole script died before it defined anything. Every one is fixed by doing that work when the page has finished loading instead. The same fault was found lying in wait on the Fly page, where the status card had sat at '...' for ever, so that is fixed too. And a new gate now runs each page's script exactly as the browser does, before app.js exists, and refuses to publish anything that breaks - it caught all eight. Pages only; nothing changes in the air."
     }
   ],
   "rotorflight": {

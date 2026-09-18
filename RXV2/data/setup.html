@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Setup &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=282">
-<script src="/app.js?v=282" defer></script>
+<link rel=stylesheet href="/style.css?v=283">
+<script src="/app.js?v=283" defer></script>
 <style>html.h-dongle #protobtn, html.h-dongle a[href="/rxsettings"], html.h-dongle #renamebtn { display: none !important; }</style>
 <script>try{if(JSON.parse(localStorage.getItem('frontHints')||'{}').dongle)document.documentElement.classList.add('h-dongle');}catch(e){}</script>
 </head>
@@ -41,8 +41,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Output protocol — show what's selected right on the button.
     LDRC.setText('protoname', s.sim ? 'USB → SIM' : (s.protocol && s.protocol.current) || '…');
 
-    // WiFi settings only make sense when an interface is up to serve the page from.
-    const wifiVisible = s.net && (s.net.mode === 'WiFi up' || s.net.mode === 'AP mode');
+    // WiFi settings need an interface to SERVE this page from - in a browser.
+    // In the app the page comes over Bluetooth, so the WiFi state is beside the
+    // point, and hiding the button was a catch-22: the one moment you need it
+    // is when WiFi is NOT up (wrong password, moved house, new router). Malcolm
+    // 2026-09-18, on a dongle that could not join: "I wasn't able to inspect
+    // the Wi-Fi settings because the button isn't there."
+    const wifiVisible = LDRC.viaBle || (s.net && (s.net.mode === 'WiFi up' || s.net.mode === 'AP mode'));
     if (s.dongle) for (const sel of ['#protobtn', 'a[href="/rxsettings"]']) { const el = document.querySelector(sel); if (el) el.style.display = 'none'; }   // receiver-only
     // Dongle settings only exist on a board that IS a dongle. 0.9.687: the button that
     // asked "dongle or receiver?" is gone - the board works that out for itself - but a

@@ -245,6 +245,14 @@ void setup() {
     // the first byte went in and is cleared only once the image committed
     // (fsFlashBegan/fsFlashEnded, WebPages.h): set here means wipe, don't mount.
     if (prefs.getUChar(NVS_KEY_FS_DIRTY, 0)) {
+        // BOOT LOOP, and the whole reason a failed update "bricked" DongleSim
+        // (2026-09-18, after an OTA at -83 dBm): LittleFS.format() passes the
+        // Arduino wrapper's partitionLabel_ to esp_littlefs_format(), which
+        // asserts on NULL - and partitionLabel_ is only set INSIDE begin()
+        // (default "spiffs"). Calling format() first therefore crashed on
+        // every boot, for ever, recoverable only by a USB reflash. Mount
+        // first: it binds the label, and a failure here is fine and expected.
+        LittleFS.begin(false);
         LittleFS.format();
         prefs.remove(NVS_KEY_FS_MD5);      // no fingerprint → the next update flashes the pages again
         prefs.putUChar(NVS_KEY_FS_DIRTY, 0);
