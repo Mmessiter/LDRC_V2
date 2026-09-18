@@ -1,4 +1,5 @@
 {
+  "RXV2-0.9.776-stream-armed": "View channels over Bluetooth: the pushed 20-frames-a-second stream is armed again. The page had asked for it at load time, before app.js existed, so the request silently never went and every update was a Bluetooth round-trip (about 5 a second). The page-order gate now catches that shape too.",
   "RXV2-0.9.775-channel-rate-readout": "View channels shows how fast the bars really update and by which route (pushed stream or polled); the receiver counts the frames it pushes over Bluetooth (state.json ble.stream_sent) so a slow page can be diagnosed rather than guessed at.",
   "RXV2-0.9.774-wire-freshness": "Simulator interface: View channels now sees the wire's channels as live (age from the last decoded frame) instead of reporting no RC signal beside moving values.",
   "RXV2-0.9.773-census-pullup": "Simulator interface wire finder: the spare pads are held UP, not down, between checks - with a crossed lead the dongle's D6 sits on the receiver's own input, and a pull-down there was a permanent break.",

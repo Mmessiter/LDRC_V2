@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.776-stream-armed",
+      "url": "https://messiter.com/rxv2/release/v0.9.776/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.776/littlefs.bin",
+      "fs_md5": "e12eca2c68bc146b7dee1ac4beebe347",
+      "notes": "View channels over Bluetooth: the pushed 20-frames-a-second stream is armed again. The page had asked for it at load time, before app.js existed, so the request silently never went and every update was a Bluetooth round-trip (about 5 a second). The page-order gate now catches that shape too."
+    },
+    {
       "name": "RXV2-0.9.775-channel-rate-readout",
       "url": "https://messiter.com/rxv2/release/v0.9.775/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.775/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.765/littlefs.bin",
       "fs_md5": "ae885f3897a7e1824be2f15c68a79f9c",
       "notes": "Apps: with Bluetooth now running in the background, a link the receiver drops while the app is in the background (its idle watchdog, nothing installing) is no longer chased - that would have reconnected, gone silent and been dropped again every few minutes. Installs still ride out the reboot."
-    },
-    {
-      "name": "RXV2-0.9.764-no-radio-warning-on-sim-if",
-      "url": "https://messiter.com/rxv2/release/v0.9.764/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.764/littlefs.bin",
-      "fs_md5": "ea3dcf66d9f236d7eccd47b2943c97a2",
-      "notes": "Front page: no 'No transceivers detected' warning on a board in the Simulator interface role - it has none by design, like a dongle."
     }
   ],
   "rotorflight": {

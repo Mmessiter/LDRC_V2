@@ -56,7 +56,19 @@ function domStub() {
         innerWidth: 400, innerHeight: 800, devicePixelRatio: 2,
         // NO LDRC — that is the whole point.
     };
-    ctx.window = ctx; ctx.globalThis = ctx; ctx.self = ctx;
+    // A GUARDED look (`if (window.LDRC && LDRC.viaBle)`) at top level does not
+    // throw - it just silently does nothing, for ever. diagnostics.html armed
+    // its Bluetooth channel stream that way and never did (0.9.776: View
+    // channels polled at 5/s for weeks). So consulting window.LDRC at load
+    // time is a failure too. An accessor on the sandbox is invisible through
+    // vm's global proxy, hence a Proxy standing in for `window`.
+    const guard = new Proxy(ctx, {
+        get(t, p) {
+            if (p === 'LDRC') throw new ReferenceError('LDRC is not defined (window.LDRC consulted at top level - it is always undefined there)');
+            return Reflect.get(t, p);
+        },
+    });
+    ctx.window = guard; ctx.globalThis = guard; ctx.self = guard;
     return ctx;
 }
 

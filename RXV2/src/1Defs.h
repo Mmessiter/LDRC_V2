@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.775-channel-rate-readout";
+constexpr const char* FW_VERSION = "RXV2-0.9.776-stream-armed";
 
 //*********************************************************************
 //  Auto-update manifest URLs
