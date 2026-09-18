@@ -66,7 +66,12 @@ static uint32_t countEdges(uint8_t pin, uint32_t windowUs) {
 }
 
 static void statusLedBegin() {                     // call after detectAllRadios()
-    statusLedEnabled = !radioPresent[2];           // D4 is free only when radio 3 is gone
+    // D4 is free only when radio 3 is gone - and the external LED that lives
+    // on it is a RECEIVER-PCB feature. A bare XIAO (dongle, simulator
+    // interface) has nothing on D4 and must never drive it: DongleSim's
+    // receiver wire turned out to be on the D4 pad (2026-09-18), and the
+    // receiver's TX was driving against this output.
+    statusLedEnabled = !radioPresent[2] && numRadiosPresent > 0;
     if (statusLedEnabled) { pinMode(PIN_STATUS_LED, OUTPUT); statusLedWrite(false); }
 }
 
@@ -807,7 +812,7 @@ void loop() {
                     lastCensusMs = millis();
                     pinMode(PIN_STATUS_LED, INPUT);
                     simIfEdges[0] = countEdges(PIN_STATUS_LED, 40000);
-                    pinMode(PIN_STATUS_LED, OUTPUT);
+                    if (statusLedEnabled) pinMode(PIN_STATUS_LED, OUTPUT);   // never on a bare board (see statusLedBegin)
                     simIfEdges[1] = countEdges(PIN_FC_RX, 40000);      // the UART's own pin reads as a GPIO input too
                     pinMode(PIN_SBUS_TX, INPUT);                        // D6 is unused in this role (the console is USB)
                     simIfEdges[2] = countEdges(PIN_SBUS_TX, 40000);

@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.770-bare-board-d4-input",
+      "url": "https://messiter.com/rxv2/release/v0.9.770/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.770/littlefs.bin",
+      "fs_md5": "84ba8b3174f278048a5478999fde2547",
+      "notes": "A bare board (dongle or simulator interface) never drives D4: the status LED on that pad is a receiver-board feature, and a receiver wired there by mistake was fighting the output."
+    },
+    {
       "name": "RXV2-0.9.769-top-row-installing",
       "url": "https://messiter.com/rxv2/release/v0.9.769/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.769/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.759/littlefs.bin",
       "fs_md5": "12f5f43062ef89177ba2984a1db464ab",
       "notes": "The Simulator interface role could not show itself: the status flag went into the 'fcinfo' part of the receiver's state, and the dongle page looks for it at the top level beside the dongle flag (found on Malcolm's DongleSim board, 2026-09-18). So the Mode card never displayed the role, its wiring note, or whether a receiver had been found on the wire. Moved to where the page looks. Everything else about the role was correct. Pages and one status line."
-    },
-    {
-      "name": "RXV2-0.9.758-sim-roles-clear",
-      "url": "https://messiter.com/rxv2/release/v0.9.758/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.758/littlefs.bin",
-      "fs_md5": "ae321309b2999a140bc90c81f64dff8b",
-      "notes": "Making the two simulator routes plain (Malcolm 2026-09-18: 'a receiver with transceivers should STILL be able to operate in Simulator mode! It's even simpler for use as a receiver is built in'). He is quite right, and it always could - the receiver's own Simulator mode was never touched by yesterday's new role and needs no wire and no second board: a receiver plugs straight into the computer and flies the simulator from your own transmitter. What was wrong was the dongle page, which offered a board with its own radio the wire-fed Simulator interface role and then refused it. That option is now simply not offered to a board with transceivers, and the page says where its own Simulator mode lives instead. Pages only."
     }
   ],
   "rotorflight": {
