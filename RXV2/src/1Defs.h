@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.777-bars-follow-faster";
+constexpr const char* FW_VERSION = "RXV2-0.9.778-preflight-guard";
 
 //*********************************************************************
 //  Auto-update manifest URLs

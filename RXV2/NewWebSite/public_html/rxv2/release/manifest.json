@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.778-preflight-guard",
+      "url": "https://messiter.com/rxv2/release/v0.9.778/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.778/littlefs.bin",
+      "fs_md5": "cde152e930685748cab5f34557dfd6c3",
+      "notes": "Pre-flight review of everything since the build that flew this morning: a board with transceivers now ignores a saved 'simulator interface' mode and runs as a receiver, so a chip moved from a dongle lead onto a receiver board can never come up silent to the flight controller. Nothing else in the flying path changed."
+    },
+    {
       "name": "RXV2-0.9.777-bars-follow-faster",
       "url": "https://messiter.com/rxv2/release/v0.9.777/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.777/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.767/littlefs.bin",
       "fs_md5": "bd7efbde52b193620983ebadffb7ba79",
       "notes": "Simulator interface: while nothing is recognised, the dongle counts signal edges on D4, D5 and D6 and the dongle page names the pad the wire is really on."
-    },
-    {
-      "name": "RXV2-0.9.766-wire-raw-and-sbus-ni",
-      "url": "https://messiter.com/rxv2/release/v0.9.766/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.766/littlefs.bin",
-      "fs_md5": "318bd470470514e01eebaa3bd4c1fb66",
-      "notes": "Simulator interface: while a signal is arriving but not recognised, the dongle page shows what each protocol saw and the last bytes raw; and SBUS on a non-inverted line is now recognised too."
     }
   ],
   "rotorflight": {

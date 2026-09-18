@@ -461,7 +461,12 @@ void setup() {
     // the radio (0.9.757). Turning simEnabled on here also keeps it out of
     // dongleEnabled below, silences the FC output pin, and lights up every
     // existing sim page - one flag, no new branches downstream.
-    simIfEnabled  = (dongleMode == 3);
+    // A board WITH radios is a receiver whatever its saved mode says (0.9.778,
+    // pre-flight review): the dongle page refuses mode 3 on such a board, but
+    // a chip moved from a dongle lead onto a receiver PCB would otherwise come
+    // up silent to the flight controller and never arm.
+    simIfEnabled  = (dongleMode == 3) && numRadiosPresent == 0;
+    if (dongleMode == 3 && numRadiosPresent > 0) events.add("Saved as a simulator interface but transceivers are fitted - running as a receiver");
     if (simIfEnabled) simEnabled = true;
     dongleEnabled = (dongleMode == 1) || (dongleMode == 0 && numRadiosPresent == 0 && !simEnabled);
     dongleAuto    = dongleEnabled && dongleMode == 0;
