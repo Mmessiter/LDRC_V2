@@ -1,5 +1,10 @@
 # LDRC2SIM
 
+> **RETIRED 2026-09-18.** This firmware's job is now a role in the RXV2
+> firmware — *Mode → Simulator interface* on the dongle page (RXV2 0.9.757).
+> One board, one firmware, three roles. See [RETIRED.md](RETIRED.md). The
+> published OTA area stays up for anyone already running LDRC2SIM.
+
 Firmware for a **Seeed XIAO ESP32-S3** that turns a model RC receiver into a USB
 flight-sim controller. It **auto-detects and decodes a CRSF / SBUS / IBUS / PPM**
 receiver on one signal wire and presents the channels as an **8-axis USB HID
