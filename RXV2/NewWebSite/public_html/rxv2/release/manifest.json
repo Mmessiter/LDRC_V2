@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.771-wire-finder-rates",
+      "url": "https://messiter.com/rxv2/release/v0.9.771/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.771/littlefs.bin",
+      "fs_md5": "8c984b1385b349f705d3eee410c758f6",
+      "notes": "Simulator interface wire finder: 100 ms windows, floating pads held down, and the page tells a slow servo-style pulse train apart from a data stream - and says which end of the wire to move."
+    },
+    {
       "name": "RXV2-0.9.770-bare-board-d4-input",
       "url": "https://messiter.com/rxv2/release/v0.9.770/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.770/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.760/littlefs.bin",
       "fs_md5": "5d645a34f44fa6fafac03b397552da23",
       "notes": "Two faults from one afternoon, both worth having found. FIRST, and much the more serious: a filesystem update that did not finish left the board crashing on every boot, for ever, recoverable only by a USB reflash - which is exactly what happened to Malcolm's dongle after an over-the-air update at -83 dBm. The recovery code wiped the half-written pages BEFORE mounting the filesystem, and the library only learns which partition to wipe when it mounts, so it wiped nothing and crashed instead. It now mounts first. Any board, receiver or dongle, could have been stopped this way by a power cut or a weak signal during the pages part of an update. SECOND: the WiFi button was shown only when WiFi or the access point was already up. In the app, where the page arrives over Bluetooth, that is a catch-22 - the one moment you need the WiFi settings is when WiFi is not working (wrong password, a new router, a board carried to a different house). In the app the button is now always there; in a browser it still depends on an interface being up to serve the page at all, which is simply true."
-    },
-    {
-      "name": "RXV2-0.9.759-simif-status",
-      "url": "https://messiter.com/rxv2/release/v0.9.759/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.759/littlefs.bin",
-      "fs_md5": "12f5f43062ef89177ba2984a1db464ab",
-      "notes": "The Simulator interface role could not show itself: the status flag went into the 'fcinfo' part of the receiver's state, and the dongle page looks for it at the top level beside the dongle flag (found on Malcolm's DongleSim board, 2026-09-18). So the Mode card never displayed the role, its wiring note, or whether a receiver had been found on the wire. Moved to where the page looks. Everything else about the role was correct. Pages and one status line."
     }
   ],
   "rotorflight": {

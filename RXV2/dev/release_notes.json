@@ -1,4 +1,5 @@
 {
+  "RXV2-0.9.771-wire-finder-rates": "Simulator interface wire finder: 100 ms windows, floating pads held down, and the page tells a slow servo-style pulse train apart from a data stream - and says which end of the wire to move.",
   "RXV2-0.9.770-bare-board-d4-input": "A bare board (dongle or simulator interface) never drives D4: the status LED on that pad is a receiver-board feature, and a receiver wired there by mistake was fighting the output.",
   "RXV2-0.9.769-top-row-installing": "Update page: while an install runs, the top row says which version is being installed (and what it was), not what is installed.",
   "RXV2-0.9.768-ticked-lane-runs": "Update page: the lane shown ticked is the one the install uses - with no WiFi up, Bluetooth starts at once instead of waiting 45 s for WiFi first.",

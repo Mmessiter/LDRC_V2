@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.770-bare-board-d4-input";
+constexpr const char* FW_VERSION = "RXV2-0.9.771-wire-finder-rates";
 
 //*********************************************************************
 //  Auto-update manifest URLs

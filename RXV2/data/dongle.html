@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rotorflight dongle &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=292">
-<script src="/app.js?v=292" defer></script>
+<link rel=stylesheet href="/style.css?v=293">
+<script src="/app.js?v=293" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;gap:.6em;padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
 .fldRow label{flex:1;color:#3a5165;font-size:.95em}
@@ -161,11 +161,17 @@ function paintStatus(s) {
                 // Wire finder (0.9.767): which pad really carries the signal.
                 const e = Array.isArray(s.sim_if_edges) ? s.sim_if_edges : null;
                 if (e) {
-                    txt += '\nsignal edges in 40 ms — D4: ' + e[0] + ', D5: ' + e[1] + ', D6: ' + e[2];
-                    const best = e.indexOf(Math.max(...e));
-                    if (Math.max(...e) >= 20 && best !== 1) txt += '\n→ The wire is on ' + ['D4', 'D5', 'D6'][best] + ': move it to D5.';
-                    else if (e[1] >= 20) txt += '\n→ The signal IS on D5 — check the ground wire next.';
-                    else txt += '\n→ No signal on any pad in that window.';
+                    // 0.9.771: 100 ms windows. A data line (SBUS 100 kbaud, CRSF
+                    // 420 kbaud) gives hundreds of edges; a servo/PWM output a
+                    // handful (one pulse per 20 ms = 10 edges) - the first bench
+                    // test's wire was on a receiver's servo pin, every byte 0x00.
+                    const names = ['D4', 'D5', 'D6'];
+                    const top = Math.max(...e), best = e.indexOf(top);
+                    txt += '\nsignal edges in 100 ms — D4: ' + e[0] + ', D5: ' + e[1] + ', D6: ' + e[2];
+                    if (top === 0)           txt += '\n→ No signal on any pad in that window.';
+                    else if (top < 200)      txt += '\n→ Only slow pulses on ' + names[best] + ' (about ' + (top * 10) + ' a second) — that looks like a servo/PWM channel, not the receiver’s data output. At the RECEIVER end move the wire to its SBUS or CRSF output (RXV1: the SBUS pad, Teensy pin 14; RXV2: D6).';
+                    else if (best !== 1)     txt += '\n→ The wire is on ' + names[best] + ': move it to D5.';
+                    else                     txt += '\n→ A data stream IS on D5 — check the ground wire next.';
                 }
                 dg.textContent = txt;
                 dg.style.display = '';

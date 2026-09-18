@@ -810,12 +810,16 @@ void loop() {
                 static uint32_t lastCensusMs = 0;
                 if ((uint32_t)(millis() - lastCensusMs) > 5000) {
                     lastCensusMs = millis();
-                    pinMode(PIN_STATUS_LED, INPUT);
-                    simIfEdges[0] = countEdges(PIN_STATUS_LED, 40000);
+                    // 100 ms windows (0.9.771): slow signals - a servo pulse
+                    // every 20 ms - need room to show; a floating pad is held
+                    // down so it cannot invent edges of its own (the first
+                    // census read 41-89 phantom edges on an unwired D4).
+                    pinMode(PIN_STATUS_LED, INPUT_PULLDOWN);
+                    simIfEdges[0] = countEdges(PIN_STATUS_LED, 100000);
                     if (statusLedEnabled) pinMode(PIN_STATUS_LED, OUTPUT);   // never on a bare board (see statusLedBegin)
-                    simIfEdges[1] = countEdges(PIN_FC_RX, 40000);      // the UART's own pin reads as a GPIO input too
-                    pinMode(PIN_SBUS_TX, INPUT);                        // D6 is unused in this role (the console is USB)
-                    simIfEdges[2] = countEdges(PIN_SBUS_TX, 40000);
+                    simIfEdges[1] = countEdges(PIN_FC_RX, 100000);     // the UART's own pin reads as a GPIO input too
+                    pinMode(PIN_SBUS_TX, INPUT_PULLDOWN);               // D6 is unused in this role (the console is USB)
+                    simIfEdges[2] = countEdges(PIN_SBUS_TX, 100000);
                 }
             }
             if (g_rcIn.linkUp() && !g_rcIn.failsafe()) {
