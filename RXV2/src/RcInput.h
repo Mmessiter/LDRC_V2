@@ -418,3 +418,4 @@ inline RcInput g_rcIn;
 // Wire finder results (0.9.767): level changes seen in 40 ms on D4, D5, D6
 // while nothing is recognised - filled in main.cpp, shown on the dongle page.
 inline uint32_t simIfEdges[3] = { 0, 0, 0 };
+inline bool     simIfFloat[3] = { false, false, false };   // 0.9.772: true = nothing is connected to that pad

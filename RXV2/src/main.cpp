@@ -52,6 +52,23 @@ static inline void statusLedWrite(bool on) {
     digitalWrite(PIN_STATUS_LED, (on == STATUS_LED_ACTIVE_HIGH) ? HIGH : LOW);
 }
 
+// Is anything connected to a pad? Pull it up and read, pull it down and
+// read: a pad nothing drives follows our own pull both ways; a receiver's
+// output pin holds its level regardless (SBUS idles LOW, CRSF idles HIGH).
+// Five samples each way over a millisecond so a passing data bit cannot
+// fake an open wire. Only the pull resistors are touched - the UART's
+// routing to D5 is left alone (0.9.772, the simulator interface wire finder).
+#include <driver/gpio.h>
+static bool padFloats(uint8_t pin) {
+    const gpio_num_t g = (gpio_num_t)pin;
+    bool up = true, dn = true;
+    gpio_set_pull_mode(g, GPIO_PULLUP_ONLY);
+    for (int i = 0; i < 5; i++) { delayMicroseconds(200); if (gpio_get_level(g) != 1) up = false; }
+    gpio_set_pull_mode(g, GPIO_PULLDOWN_ONLY);
+    for (int i = 0; i < 5; i++) { delayMicroseconds(200); if (gpio_get_level(g) != 0) dn = false; }
+    return up && dn;
+}
+
 // Level changes on a pad over a short window - the simulator interface's
 // wire finder (0.9.767, see the sim-if block in loop()).
 static uint32_t countEdges(uint8_t pin, uint32_t windowUs) {
@@ -816,10 +833,14 @@ void loop() {
                     // census read 41-89 phantom edges on an unwired D4).
                     pinMode(PIN_STATUS_LED, INPUT_PULLDOWN);
                     simIfEdges[0] = countEdges(PIN_STATUS_LED, 100000);
+                    simIfFloat[0] = padFloats(PIN_STATUS_LED);
                     if (statusLedEnabled) pinMode(PIN_STATUS_LED, OUTPUT);   // never on a bare board (see statusLedBegin)
                     simIfEdges[1] = countEdges(PIN_FC_RX, 100000);     // the UART's own pin reads as a GPIO input too
+                    simIfFloat[1] = padFloats(PIN_FC_RX);
+                    gpio_set_pull_mode((gpio_num_t)PIN_FC_RX, GPIO_PULLUP_ONLY);   // back to the UART driver's own default
                     pinMode(PIN_SBUS_TX, INPUT_PULLDOWN);               // D6 is unused in this role (the console is USB)
                     simIfEdges[2] = countEdges(PIN_SBUS_TX, 100000);
+                    simIfFloat[2] = padFloats(PIN_SBUS_TX);
                 }
             }
             if (g_rcIn.linkUp() && !g_rcIn.failsafe()) {

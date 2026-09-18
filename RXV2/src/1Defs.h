@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.771-wire-finder-rates";
+constexpr const char* FW_VERSION = "RXV2-0.9.772-pad-open-test";
 
 //*********************************************************************
 //  Auto-update manifest URLs

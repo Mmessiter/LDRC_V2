@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rotorflight dongle &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=293">
-<script src="/app.js?v=293" defer></script>
+<link rel=stylesheet href="/style.css?v=294">
+<script src="/app.js?v=294" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;gap:.6em;padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
 .fldRow label{flex:1;color:#3a5165;font-size:.95em}
@@ -167,8 +167,15 @@ function paintStatus(s) {
                     // test's wire was on a receiver's servo pin, every byte 0x00.
                     const names = ['D4', 'D5', 'D6'];
                     const top = Math.max(...e), best = e.indexOf(top);
+                    // 0.9.772: is anything connected at all? A pad nothing drives
+                    // follows the chip's own pull-up/down; a receiver's output
+                    // pin holds its level. Turns "zero edges" into a plain answer.
+                    const fl = Array.isArray(s.sim_if_float) ? s.sim_if_float : null;
                     txt += '\nsignal edges in 100 ms — D4: ' + e[0] + ', D5: ' + e[1] + ', D6: ' + e[2];
-                    if (top === 0)           txt += '\n→ No signal on any pad in that window.';
+                    if (fl) txt += '\nconnected to something — D4: ' + (fl[0] ? 'no' : 'yes') + ', D5: ' + (fl[1] ? 'no' : 'yes') + ', D6: ' + (fl[2] ? 'no' : 'yes');
+                    if (top === 0 && fl && fl[1]) txt += '\n→ Nothing is connected to D5: the pad floats. The wire, its joint or the splice is open — check continuity from the receiver’s pin to the D5 pad.';
+                    else if (top === 0 && fl)     txt += '\n→ D5 is connected to something that holds it steady but sends nothing — is the receiver powered, and is that its data output?';
+                    else if (top === 0)           txt += '\n→ No signal on any pad in that window.';
                     else if (top < 200)      txt += '\n→ Only slow pulses on ' + names[best] + ' (about ' + (top * 10) + ' a second) — that looks like a servo/PWM channel, not the receiver’s data output. At the RECEIVER end move the wire to its SBUS or CRSF output (RXV1: the SBUS pad, Teensy pin 14; RXV2: D6).';
                     else if (best !== 1)     txt += '\n→ The wire is on ' + names[best] + ': move it to D5.';
                     else                     txt += '\n→ A data stream IS on D5 — check the ground wire next.';

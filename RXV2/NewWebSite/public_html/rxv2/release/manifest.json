@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.772-pad-open-test",
+      "url": "https://messiter.com/rxv2/release/v0.9.772/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.772/littlefs.bin",
+      "fs_md5": "c2196720a90ef8a30d3ae12ec4a9f0e6",
+      "notes": "Simulator interface wire finder: the dongle now tests whether anything is connected to each pad at all (pull it up, pull it down, see if the level follows), so an open wire or joint is named as such."
+    },
+    {
       "name": "RXV2-0.9.771-wire-finder-rates",
       "url": "https://messiter.com/rxv2/release/v0.9.771/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.771/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.761/littlefs.bin",
       "fs_md5": "bbbcb2fbc1679c3e9244c1f4388ecb33",
       "notes": "Two things Malcolm met while testing the dongle. FIRST: 'there was no mention of simulator mode'. Quite so - the Mode row was hidden on a dongle, because until this week the board worked out for itself what it was and there was nothing to choose. Now there is a third role, Simulator interface, and it was invisible on the very page that offers it. A board with no radio now always shows the Mode row, since it can be either role. SECOND: 'even though Bluetooth is selected, it's attempting to download over Wi-Fi and failing'. The install waited up to 45 seconds for the receiver's WiFi to come up before starting, whatever lane had been chosen - so choosing Bluetooth meant waiting three quarters of a minute and then using Bluetooth anyway. Tapping Bluetooth now means Bluetooth at once. Pages only."
-    },
-    {
-      "name": "RXV2-0.9.760-wifi-button-always",
-      "url": "https://messiter.com/rxv2/release/v0.9.760/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.760/littlefs.bin",
-      "fs_md5": "5d645a34f44fa6fafac03b397552da23",
-      "notes": "Two faults from one afternoon, both worth having found. FIRST, and much the more serious: a filesystem update that did not finish left the board crashing on every boot, for ever, recoverable only by a USB reflash - which is exactly what happened to Malcolm's dongle after an over-the-air update at -83 dBm. The recovery code wiped the half-written pages BEFORE mounting the filesystem, and the library only learns which partition to wipe when it mounts, so it wiped nothing and crashed instead. It now mounts first. Any board, receiver or dongle, could have been stopped this way by a power cut or a weak signal during the pages part of an update. SECOND: the WiFi button was shown only when WiFi or the access point was already up. In the app, where the page arrives over Bluetooth, that is a catch-22 - the one moment you need the WiFi settings is when WiFi is not working (wrong password, a new router, a board carried to a different house). In the app the button is now always there; in a browser it still depends on an interface being up to serve the page at all, which is simply true."
     }
   ],
   "rotorflight": {

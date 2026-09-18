@@ -3249,6 +3249,7 @@ inline void handleApiState() {
         { char hx[100]; g_rcIn.rawHex(hx, sizeof(hx)); j += ",\"sim_if_raw\":\""; j += hx; j += "\""; }
         // 0.9.767 wire finder: edges in 40 ms on D4, D5, D6 (see main.cpp).
         j += ",\"sim_if_edges\":["; j += (unsigned long)simIfEdges[0]; j += ','; j += (unsigned long)simIfEdges[1]; j += ','; j += (unsigned long)simIfEdges[2]; j += ']';
+        j += ",\"sim_if_float\":["; j += (simIfFloat[0] ? "true" : "false"); j += ','; j += (simIfFloat[1] ? "true" : "false"); j += ','; j += (simIfFloat[2] ? "true" : "false"); j += ']';   // 0.9.772: pad open?
     }
     bleStateJson(j);
     UsbHostMsp::stateJson(j);   // dongle_link usb|uart, usb_fc, USB host counters (0.9.615/0.9.639)
