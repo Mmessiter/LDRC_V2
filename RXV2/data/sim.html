@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Simulator &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=298">
-<script src="/app.js?v=298" defer></script>
+<link rel=stylesheet href="/style.css?v=299">
+<script src="/app.js?v=299" defer></script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -137,7 +137,12 @@ function postSim(on) {
     if (bar) { bar.style.transition = 'width 9s linear'; requestAnimationFrame(() => { bar.style.width = '92%'; }); }
     const fd = new URLSearchParams();
     fd.set('on', on ? '1' : '0');
-    fetch('/api/sim', { method: 'POST', body: fd }).then(r => { if (!r.ok) r.text().then(t => { alert(t); location.reload(); }); }).catch(() => {});   // a 409 (transmitter on) is said, not mistaken for a reboot (0.9.641)
+    // A 409 (transmitter on) is said, not mistaken for a reboot (0.9.641). A 503/504
+    // is the app's own Bluetooth bridge reporting the link gone mid-reply - which IS
+    // the reboot, not a refusal (Malcolm 2026-09-18: "no answer from the receiver
+    // (Receiver disconnected)" over a perfectly good switch-on). The poll below
+    // is what judges the reboot; those never get an alert.
+    fetch('/api/sim', { method: 'POST', body: fd }).then(r => { if (!r.ok && r.status !== 503 && r.status !== 504) r.text().then(t => { alert(t); location.reload(); }); }).catch(() => {});
     const done = () => {
         const bb = document.getElementById('__bar');
         if (bb) { bb.style.transition = 'width .3s'; bb.style.width = '100%'; }

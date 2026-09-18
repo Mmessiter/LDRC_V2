@@ -1740,6 +1740,7 @@ inline void handleBleOtaReboot() {
     server.send(200, "application/json", "{\"ok\":true,\"rebooting\":true}");
     bleEarlyPump();          // push the reply out over BLE before the radio dies
     delay(300);
+    bleEarlyPump();               // over Bluetooth the reply must leave before the restart cuts the link (0.9.780)
     safeOutputParkAndRestart();   // throttle-low frames + parked pin — no prop blip
 }
 
@@ -2001,6 +2002,7 @@ inline void handleBindDo() {
         "<p><a href='/'>Back to home</a> (reload after the chip is back)</p>");
     server.send(200, "text/html", body);
     delay(400);
+    bleEarlyPump();               // over Bluetooth the reply must leave before the restart cuts the link (0.9.780)
     safeOutputParkAndRestart();
 }
 
@@ -2025,6 +2027,7 @@ inline void handleBindCancel() {
     server.sendHeader("Cache-Control", "no-store");
     server.send(200, "application/json", "{\"ok\":true}");
     delay(300);
+    bleEarlyPump();               // over Bluetooth the reply must leave before the restart cuts the link (0.9.780)
     safeOutputParkAndRestart();
 }
 
@@ -2052,6 +2055,7 @@ inline void handleRollback() {
            "<p><a href='/'>Back to home</a> (reload after the chip is back)</p>";
     server.send(200, "text/html", confirmPage("Rolling back", msg.c_str()));
     delay(400);
+    bleEarlyPump();               // over Bluetooth the reply must leave before the restart cuts the link (0.9.780)
     safeOutputParkAndRestart();
 }
 
@@ -2099,6 +2103,7 @@ inline void handleFactoryReset() {
                 confirmPage("Factory reset", body.c_str(),
                             /*autoReload=*/false));
     delay(500);
+    bleEarlyPump();               // over Bluetooth the reply must leave before the restart cuts the link (0.9.780)
     safeOutputParkAndRestart();   // closes the FC's USB handle first (0.9.706) — a bare restart left USB dead
 }
 
@@ -2170,6 +2175,7 @@ inline void handleFirstRun() {
     server.send(200, "text/html", confirmPage("Saved", body.c_str()));
     prefs.putUChar(NVS_KEY_CFG_REBOOT, 1);   // config reboot: come straight back to WiFi even if a TX is on
     delay(500);
+    bleEarlyPump();               // over Bluetooth the reply must leave before the restart cuts the link (0.9.780)
     safeOutputParkAndRestart();   // closes the FC's USB handle first — a bare restart left USB dead
 }
 
@@ -2279,6 +2285,7 @@ inline void handleWifiSet() {
     }
     prefs.putUChar(NVS_KEY_CFG_REBOOT, 1);   // config reboot: come straight back to WiFi even if a TX is on
     delay(500);
+    bleEarlyPump();               // over Bluetooth the reply must leave before the restart cuts the link (0.9.780)
     safeOutputParkAndRestart();   // closes the FC's USB handle first — a bare restart left USB dead
 }
 
@@ -2496,6 +2503,7 @@ inline void handleProtocolSet() {
     server.send(200, "text/html", confirmPage("Saved & rebooting",
         "<p>Output protocol updated. The receiver is rebooting to apply.</p>"));
     delay(250);
+    bleEarlyPump();               // over Bluetooth the reply must leave before the restart cuts the link (0.9.780)
     safeOutputParkAndRestart();
 }
 
@@ -2609,6 +2617,7 @@ inline void handleSimSet() {
           "computer and it appears as a USB joystick driven by your sticks.</p>"
         : "<p>Simulator-over-USB <b>disabled</b>. The receiver is rebooting back to normal.</p>"));
     delay(250);
+    bleEarlyPump();               // over Bluetooth the reply must leave before the restart cuts the link (0.9.780)
     safeOutputParkAndRestart();
 }
 
@@ -2856,6 +2865,7 @@ inline void handleReboot() {
     server.send(200, "text/html", confirmPage("Rebooting",
         "<p>Back in ~5 s.</p>"));
     delay(400);
+    bleEarlyPump();               // over Bluetooth the reply must leave before the restart cuts the link (0.9.780)
     safeOutputParkAndRestart();
 }
 

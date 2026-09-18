@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.780-reply-before-restart",
+      "url": "https://messiter.com/rxv2/release/v0.9.780/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.780/littlefs.bin",
+      "fs_md5": "0e4d964d7e2e7756d3b95b983da29336",
+      "notes": "Every setting that restarts the receiver now delivers its reply over Bluetooth before restarting - simulator mode, WiFi, protocol, bind, rollback, factory reset, first run and reboot let it die with the link, so the app reported 'no answer from the receiver (Receiver disconnected)' over a perfectly good save (Malcolm 2026-09-18). The simulator page also no longer treats the bridge's own disconnect report as a refusal."
+    },
+    {
       "name": "RXV2-0.9.779-wifi-install-pauses-ble",
       "url": "https://messiter.com/rxv2/release/v0.9.779/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.779/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.769/littlefs.bin",
       "fs_md5": "84ba8b3174f278048a5478999fde2547",
       "notes": "Update page: while an install runs, the top row says which version is being installed (and what it was), not what is installed."
-    },
-    {
-      "name": "RXV2-0.9.768-ticked-lane-runs",
-      "url": "https://messiter.com/rxv2/release/v0.9.768/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.768/littlefs.bin",
-      "fs_md5": "33f173585cd487aaa797ea0ce9226e77",
-      "notes": "Update page: the lane shown ticked is the one the install uses - with no WiFi up, Bluetooth starts at once instead of waiting 45 s for WiFi first."
     }
   ],
   "rotorflight": {
