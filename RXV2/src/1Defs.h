@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.758-sim-roles-clear";
+constexpr const char* FW_VERSION = "RXV2-0.9.759-simif-status";
 
 //*********************************************************************
 //  Auto-update manifest URLs

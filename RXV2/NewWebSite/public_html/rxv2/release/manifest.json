@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.759-simif-status",
+      "url": "https://messiter.com/rxv2/release/v0.9.759/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.759/littlefs.bin",
+      "fs_md5": "12f5f43062ef89177ba2984a1db464ab",
+      "notes": "The Simulator interface role could not show itself: the status flag went into the 'fcinfo' part of the receiver's state, and the dongle page looks for it at the top level beside the dongle flag (found on Malcolm's DongleSim board, 2026-09-18). So the Mode card never displayed the role, its wiring note, or whether a receiver had been found on the wire. Moved to where the page looks. Everything else about the role was correct. Pages and one status line."
+    },
+    {
       "name": "RXV2-0.9.758-sim-roles-clear",
       "url": "https://messiter.com/rxv2/release/v0.9.758/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.758/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.748/littlefs.bin",
       "fs_md5": "7400a372c20e57ab772b6bbebbf19f86",
       "notes": "Seven tuning pages have been dead since 0.9.742 this morning - PIDs, PID +, Rates, Governor (profile), Rescue, Easy tuning and Copy a bank: no bank buttons, no Save, nothing (Malcolm 2026-09-17: 'the copy from and the copy to boxes are both empty!', on Android and iPhone alike). One mistake, made seven times: app.js is loaded 'deferred', which means it runs AFTER a page's own script, and the six-bank change put a call into app.js at the very top of each page's script - so the page's whole script died before it defined anything. Every one is fixed by doing that work when the page has finished loading instead. The same fault was found lying in wait on the Fly page, where the status card had sat at '...' for ever, so that is fixed too. And a new gate now runs each page's script exactly as the browser does, before app.js exists, and refuses to publish anything that breaks - it caught all eight. Pages only; nothing changes in the air."
-    },
-    {
-      "name": "RXV2-0.9.747-ride-out-drops",
-      "url": "https://messiter.com/rxv2/release/v0.9.747/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.747/littlefs.bin",
-      "fs_md5": "63d137fa697cc2d11f1a3d19efa03597",
-      "notes": "Malcolm's 'crash' was not a crash (2026-09-17): 'the app returned to the opening screen, but the model wasn't selectable'. The Bluetooth link had dropped mid-session, and both apps treated any drop outside a reboot they had asked for as 'the model was switched off' and went straight to the scanner - with auto-connect disarmed, while the receiver was still tearing the old link down, so a tap on the model went nowhere. Now any unexpected drop from a live link is ridden out: 30 seconds of quiet reconnecting (90 for a reboot the app asked for), and if that window closes the scanner opens with auto-connect ARMED, so the receiver connects by itself the moment it is seen again. A model that really was switched off still lands on the scanner promptly. The receiver now logs WHY a link dropped (the radio's own reason code: lost each other, the phone ended it, we ended it), so the next one is diagnosable from the log alone. Firmware change is that one log line; nothing changes in the air."
     }
   ],
   "rotorflight": {

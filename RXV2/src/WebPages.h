@@ -3228,6 +3228,15 @@ inline void handleApiState() {
     // --- sim (drive simulator over USB) ------------------------------
     j += ",\"sim\":"; j += (simEnabled ? "true" : "false");
     j += ",\"dongle\":"; j += (dongleEnabled ? "true" : "false");
+    // Simulator interface (0.9.757) - TOP LEVEL, beside dongle, which is where
+    // dongle.html looks. It first went inside "fcinfo", where the page never
+    // saw it, so the role could not display (found on DongleSim, 2026-09-18).
+    j += ",\"sim_if\":";         j += (simIfEnabled ? "true" : "false");
+    if (simIfEnabled) {
+        j += ",\"sim_if_link\":\""; j += g_rcIn.protocolName(); j += "\"";
+        j += ",\"sim_if_up\":";      j += (g_rcIn.linkUp() ? "true" : "false");
+        j += ",\"sim_if_ch\":";      j += (int)g_rcIn.channelCount();
+    }
     bleStateJson(j);
     UsbHostMsp::stateJson(j);   // dongle_link usb|uart, usb_fc, USB host counters (0.9.615/0.9.639)
     j += ",\"fc_link\":\""; j += UsbHostMsp::active() ? "usb" : dongleEnabled ? "uart" : (currentProtocol == PROTO_CRSF && fcTelemetryEnabled) ? "crsf" : "none"; j += "\"";   // which wire carries MSP now (0.9.640)
