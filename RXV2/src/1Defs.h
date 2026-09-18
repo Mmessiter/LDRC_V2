@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.776-stream-armed";
+constexpr const char* FW_VERSION = "RXV2-0.9.777-bars-follow-faster";
 
 //*********************************************************************
 //  Auto-update manifest URLs

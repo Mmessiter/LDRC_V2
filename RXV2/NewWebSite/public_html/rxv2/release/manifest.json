@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.777-bars-follow-faster",
+      "url": "https://messiter.com/rxv2/release/v0.9.777/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.777/littlefs.bin",
+      "fs_md5": "cde152e930685748cab5f34557dfd6c3",
+      "notes": "View channels over Bluetooth: the pushed stream runs at 30 ms and the bars follow it at 60 fps with a much tighter damping (~75 ms to settle instead of ~170), so what you see tracks the sticks about as closely as a phone link allows."
+    },
+    {
       "name": "RXV2-0.9.776-stream-armed",
       "url": "https://messiter.com/rxv2/release/v0.9.776/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.776/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.766/littlefs.bin",
       "fs_md5": "318bd470470514e01eebaa3bd4c1fb66",
       "notes": "Simulator interface: while a signal is arriving but not recognised, the dongle page shows what each protocol saw and the last bytes raw; and SBUS on a non-inverted line is now recognised too."
-    },
-    {
-      "name": "RXV2-0.9.765-background-drop-guard",
-      "url": "https://messiter.com/rxv2/release/v0.9.765/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.765/littlefs.bin",
-      "fs_md5": "ae885f3897a7e1824be2f15c68a79f9c",
-      "notes": "Apps: with Bluetooth now running in the background, a link the receiver drops while the app is in the background (its idle watchdog, nothing installing) is no longer chased - that would have reconnected, gone silent and been dropped again every few minutes. Installs still ride out the reboot."
     }
   ],
   "rotorflight": {
