@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Check for Update &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=285">
-<script src="/app.js?v=285" defer></script>
+<link rel=stylesheet href="/style.css?v=286">
+<script src="/app.js?v=286" defer></script>
 <style>
 /* --- Currently-installed card -------------------------------------- */
 .installed-card .row{
@@ -497,6 +497,11 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
             { title: 'Install firmware', icon: '📥', yes: 'Install + reboot', kind: 'warn' }))) return;
 
     installing = true;
+    // Keep the screen awake for the whole install where the browser allows it
+    // (Malcolm 2026-09-18: "The iPhone screen timed out during update causing
+    // a hiccup"). The apps hold the screen natively as well; this covers a
+    // plain browser. Held until the page unloads - every ending leaves it.
+    try { if (navigator.wakeLock) navigator.wakeLock.request('screen').catch(() => {}); } catch (e) {}
     document.querySelectorAll('.ver-btn').forEach(b => b.disabled = true);
     $('check').disabled = true;
     setStatePill('Installing ' + ver + '…', 'amber');

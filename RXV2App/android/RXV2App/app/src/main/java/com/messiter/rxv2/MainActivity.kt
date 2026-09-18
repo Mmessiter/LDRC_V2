@@ -650,6 +650,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun runBleOta(fwUrl: String, fsUrl: String?) {
+        // Foreground service + screen awake for the whole install (2026-09-18,
+        // Malcolm: "screen timeout or checking emails etc during update" must
+        // not matter). The service keeps the process alive and the link up
+        // while the screen is locked or another app is in front; the flag
+        // stops the screen locking in the first place. Both undone in finally.
+        runOnUiThread {
+            runCatching { OtaService.start(this) }
+            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            if (Build.VERSION.SDK_INT >= 33 &&
+                checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
+                runCatching { requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 77) }   // so the "update in progress" notice can show; the service runs either way
+        }
         try {
             otaPhase = "download"; otaMsg = "Downloading with the phone's internet…"; otaSent = 0; otaTotal = 0
             val fw = httpDownload(fwUrl)
@@ -723,6 +735,11 @@ class MainActivity : AppCompatActivity() {
             otaMsg = if (e is OutOfMemoryError) "the phone ran out of memory - close other apps and try again"
                      else (e.message ?: e.javaClass.simpleName)
             runCatching { bleReqSync("POST", "/api/bleota/status") }
+        } finally {
+            runOnUiThread {
+                runCatching { OtaService.stop(this) }
+                window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            }
         }
     }
 
@@ -1773,7 +1790,12 @@ class MainActivity : AppCompatActivity() {
             // Reboot-ish traffic keeps the ride-through reconnect armed;
             // plain browsing doesn't — a disconnect then = model off.
             if (method.uppercase() == "POST" && p != "/api/time")
-                if (p == "/api/firmware/install") ble.noteRebootish(300_000, 240_000) else ble.noteRebootish(15_000)
+                if (p == "/api/firmware/install") {
+                    ble.noteRebootish(300_000, 240_000)
+                    // The receiver downloads by itself on this lane; the phone only watches. Keep the screen on while it does (page watches ≤ 330 s).
+                    runOnUiThread { window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
+                    android.os.Handler(mainLooper).postDelayed({ if (otaPhase == "idle" || otaPhase == "done" || otaPhase == "error") window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }, 420_000)
+                } else ble.noteRebootish(15_000)
             val headers = HashMap<String, String>()
             runCatching {
                 val o = JSONObject(headersJson)

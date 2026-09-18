@@ -7,6 +7,13 @@
     <!-- Lets the app hand its own downloaded update APK to the installer
          (user approves once in Settings the first time). -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- A Bluetooth firmware install runs under a foreground service so the
+         screen locking or another app coming to the front cannot stall it
+         (2026-09-18). The notification needs POST_NOTIFICATIONS on 13+; the
+         service runs whether or not that is granted. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
         android:usesPermissionFlags="neverForLocation" />
@@ -48,6 +55,11 @@
                 <data android:mimeType="text/plain" />
             </intent-filter>
         </activity>
+        <!-- Keeps the process in the foreground for the length of a Bluetooth install. -->
+        <service
+            android:name=".OtaService"
+            android:exported="false"
+            android:foregroundServiceType="connectedDevice" />
         <!-- Shares exported backup files (cache/backups) via the system share sheet. -->
         <provider
             android:name="androidx.core.content.FileProvider"

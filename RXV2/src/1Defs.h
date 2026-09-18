@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.762-wire-diag-and-role";
+constexpr const char* FW_VERSION = "RXV2-0.9.763-install-survives-lock";
 
 //*********************************************************************
 //  Auto-update manifest URLs

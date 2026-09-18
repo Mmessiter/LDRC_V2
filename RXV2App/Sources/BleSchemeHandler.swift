@@ -12,6 +12,32 @@
 // web view always receives a final 200.
 
 import Foundation
+
+// Screen-awake hold for the length of an install (Malcolm 2026-09-18: "The
+// iPhone screen timed out during update causing a hiccup"). The Bluetooth
+// background mode (project.yml) keeps the transfer alive even when the
+// screen does lock or Mail is opened; this stops the timeout in the common
+// case, so the progress stays on screen. Held for a bounded time, released
+// early when the OTA runner finishes.
+enum ScreenAwake {
+    private static var until = Date.distantPast
+    static func hold(seconds: TimeInterval) {
+        DispatchQueue.main.async {
+            let u = Date().addingTimeInterval(seconds)
+            if u > until { until = u }
+            UIApplication.shared.isIdleTimerDisabled = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + seconds + 1) {
+                if Date() >= until { UIApplication.shared.isIdleTimerDisabled = false }
+            }
+        }
+    }
+    static func release() {
+        DispatchQueue.main.async {
+            until = .distantPast
+            UIApplication.shared.isIdleTimerDisabled = false
+        }
+    }
+}
 import WebKit
 import UIKit
 import UniformTypeIdentifiers
@@ -63,7 +89,7 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
             let fw = items?.first(where: { $0.name == "fw" })?.value
             let fs = items?.first(where: { $0.name == "fs" })?.value
             let ok = (fw != nil && !demo && !replay)
-            if ok { BleLink.noteRebootish(seconds: 600, window: 240); ota.start(fw: fw!, fs: fs) }
+            if ok { BleLink.noteRebootish(seconds: 600, window: 240); ScreenAwake.hold(seconds: 900); ota.start(fw: fw!, fs: fs) }
             deliver(task, url: url, code: 200, type: "application/json",
                     body: Data("{\"ok\":\(ok)}".utf8))
             return
@@ -335,7 +361,7 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
         // (Malcolm 2026-08-08: power-off after setting up a NEW receiver
         // sat in the old 180 s window instead of jumping to the scanner).
         if method == "POST" && path != "/api/time" {
-            if path == "/api/firmware/install" { BleLink.noteRebootish(seconds: 300, window: 240) }
+            if path == "/api/firmware/install" { BleLink.noteRebootish(seconds: 300, window: 240); ScreenAwake.hold(seconds: 420) }
             else { BleLink.noteRebootish(seconds: 15) }
         }
         var pathAndQuery = path
@@ -559,7 +585,7 @@ final class BleOta {
     }
 
     private func run(fwUrl: String, fsUrl: String?) {
-        defer { lock.lock(); running = false; lock.unlock() }
+        defer { lock.lock(); running = false; lock.unlock(); ScreenAwake.release() }
         do {
             let fw = try download(fwUrl)
             var fs: Data? = nil

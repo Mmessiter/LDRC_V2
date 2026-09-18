@@ -33,7 +33,7 @@ targets:
             LSItemContentTypes:
               - public.json
               - public.plain-text
-        CFBundleShortVersionString: "5.99"
+        CFBundleShortVersionString: "5.100"
         CFBundleVersion: "441"
         CFBundleDisplayName: RXV2
         UILaunchScreen: {}
@@ -41,6 +41,11 @@ targets:
         NSBluetoothAlwaysUsageDescription: >-
           RXV2 uses Bluetooth to find and configure your LockDown Radio
           Control receiver.
+        # A firmware install over Bluetooth keeps going when the screen locks
+        # or another app comes to the front (Malcolm 2026-09-18: "screen
+        # timeout or checking emails etc during update" must not matter).
+        UIBackgroundModes:
+          - bluetooth-central
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
           - UIInterfaceOrientationLandscapeLeft
