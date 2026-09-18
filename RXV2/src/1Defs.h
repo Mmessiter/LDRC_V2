@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.757-simulator-interface";
+constexpr const char* FW_VERSION = "RXV2-0.9.758-sim-roles-clear";
 
 //*********************************************************************
 //  Auto-update manifest URLs

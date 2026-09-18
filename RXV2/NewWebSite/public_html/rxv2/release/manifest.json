@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.758-sim-roles-clear",
+      "url": "https://messiter.com/rxv2/release/v0.9.758/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.758/littlefs.bin",
+      "fs_md5": "ae321309b2999a140bc90c81f64dff8b",
+      "notes": "Making the two simulator routes plain (Malcolm 2026-09-18: 'a receiver with transceivers should STILL be able to operate in Simulator mode! It's even simpler for use as a receiver is built in'). He is quite right, and it always could - the receiver's own Simulator mode was never touched by yesterday's new role and needs no wire and no second board: a receiver plugs straight into the computer and flies the simulator from your own transmitter. What was wrong was the dongle page, which offered a board with its own radio the wire-fed Simulator interface role and then refused it. That option is now simply not offered to a board with transceivers, and the page says where its own Simulator mode lives instead. Pages only."
+    },
+    {
       "name": "RXV2-0.9.757-simulator-interface",
       "url": "https://messiter.com/rxv2/release/v0.9.757/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.757/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.747/littlefs.bin",
       "fs_md5": "63d137fa697cc2d11f1a3d19efa03597",
       "notes": "Malcolm's 'crash' was not a crash (2026-09-17): 'the app returned to the opening screen, but the model wasn't selectable'. The Bluetooth link had dropped mid-session, and both apps treated any drop outside a reboot they had asked for as 'the model was switched off' and went straight to the scanner - with auto-connect disarmed, while the receiver was still tearing the old link down, so a tap on the model went nowhere. Now any unexpected drop from a live link is ridden out: 30 seconds of quiet reconnecting (90 for a reboot the app asked for), and if that window closes the scanner opens with auto-connect ARMED, so the receiver connects by itself the moment it is seen again. A model that really was switched off still lands on the scanner promptly. The receiver now logs WHY a link dropped (the radio's own reason code: lost each other, the phone ended it, we ended it), so the next one is diagnosable from the log alone. Firmware change is that one log line; nothing changes in the air."
-    },
-    {
-      "name": "RXV2-0.9.746-ble-request-ids",
-      "url": "https://messiter.com/rxv2/release/v0.9.746/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.746/littlefs.bin",
-      "fs_md5": "f7733bc48c492e1f9ec6f523d5c494ff",
-      "notes": "Three faults from one Bluetooth session on RAW420AJB (Malcolm 2026-09-17: the app crashed on the update screen, it said there was no WiFi beside the router at -33 dBm, and no update was offered although 0.9.745 was out). The receiver's own log settled the WiFi one at once: its WiFi never dropped. The real fault was in the Bluetooth bridge, which had NO way of tying a reply to a request. When the app gave up on a slow request (4 s) and sent the next, the receiver silently threw the new one away - it was still inside the old handler - and then delivered the OLD reply, which the app took as the answer to the NEW request; every reply after that was one behind. The update page received some other endpoint's reply in place of state.json, found no WiFi field in it, and said 'no WiFi here'. That wrong answer was then remembered as the pilot's own choice of lane and forced the install down Bluetooth. Fixed properly: every request now carries a number, the receiver echoes it in the reply, and a reply for a request the app has given up on is swallowed and dropped, never handed to the wrong one. The receiver also refuses to send a reply nobody is waiting for. Old apps and old receivers keep working unchanged. The update offer: the front page's check asked only the receiver, whose WiFi cannot reach the internet while Bluetooth holds the radio, and took 'both sources failed' as a final answer - it now asks the phone's own internet first, as the update page always did. The crash: nothing readable was left behind, so the Android app now writes every crash to a file and shows it on the next launch with a Copy button; and two things that could have been it are fixed regardless - a dead web view was destroyed from inside its own callback (an Android-documented crash), and an out-of-memory during a Bluetooth install had no handler at all. Also: the armed-banner poll shares the page's own state read over Bluetooth instead of doubling it. Nothing changes in the air - Bluetooth is off when armed."
     }
   ],
   "rotorflight": {

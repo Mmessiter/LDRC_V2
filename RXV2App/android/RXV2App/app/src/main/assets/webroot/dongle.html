@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rotorflight dongle &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=280">
-<script src="/app.js?v=280" defer></script>
+<link rel=stylesheet href="/style.css?v=281">
+<script src="/app.js?v=281" defer></script>
 <style>
 .guide{background:#c8d2dc;color:#3a5165;padding:1em;border-radius:10px;margin:0 0 1em;font-size:1.02em}
 .fldRow{display:flex;justify-content:space-between;align-items:center;gap:.6em;padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -66,6 +66,7 @@ table.wire td:first-child{font-weight:700;color:#3a5165;white-space:nowrap}
                 <option value=3>Simulator interface (a receiver on the wire &rarr; USB joystick)</option>
             </select></div>
         <div class=fldRow id=curRow><label>Right now</label><span class=state id=curState>&hellip;</span></div>
+        <p class=sub id=simIfWhere style="display:none">This board has its own radio, so it does not need a receiver on a wire: <a href="/sim">Simulator mode</a> flies a PC simulator from your own transmitter, with nothing but a USB cable. The <b>Simulator interface</b> role is for a spare board with <i>no</i> radio.</p>
         <p class=sub id=simIfNote style="display:none"><b>Wire one of your receivers to this board:</b> its signal output to <b>D5</b>, its 5&nbsp;V to this board&rsquo;s <b>5V</b> pin, ground to ground &mdash; the same lead, with the flight-controller end moved to the receiver. Then plug this board into the computer. CRSF, SBUS, IBUS and PPM are recognised on their own; the computer powers everything, so no battery and no flight controller.</p>
         <div class=fldRow><label data-help="The UART speed Rotorflight uses for its MSP port - 115200 is its default. Both ends must agree.">UART speed (baud)</label>
             <select id=baud>
@@ -95,7 +96,7 @@ table.wire td:first-child{font-weight:700;color:#3a5165;white-space:nowrap}
 <p>The third role for a board with no radio: it turns one of your <b>receivers</b> into a USB joystick for a simulator on the computer, Windows or Mac.</p>
 <p><b>Wiring</b> &mdash; the same lead, with the flight-controller end moved to the receiver: the receiver&rsquo;s signal output to <b>D5</b>, its 5&nbsp;V to this board&rsquo;s <b>5V</b> pin, ground to ground. Then plug this board into the computer with a USB cable. The computer powers both, so there is no battery and no flight controller in the rig at all.</p>
 <p>It recognises <b>CRSF, SBUS, IBUS and PPM</b> on its own &mdash; nothing to choose. Switch the transmitter on and the Mode card says which one it found and how many channels. Everything else is on the <b>Simulator</b> pages: which stick drives which axis, reversing, the spool-up realism, and the camera keys.</p>
-<p>An LDRC receiver needs none of this: it plugs into the computer by itself and flies the simulator from your own transmitter. This role is for flying a simulator with <i>someone else&rsquo;s</i> receiver &mdash; or when your own receivers are all in helicopters and the spare board is a dongle.</p>
+<p><b>A receiver does not need this role at all &mdash; it is the simpler rig.</b> An LDRC receiver has its own radio, so it plugs straight into the computer and flies the simulator from your own transmitter: no wire, no second board. That is <b>Simulator mode</b>, on the receiver&rsquo;s own Simulator page, and it is unchanged. The <b>Simulator interface</b> role is for a spare board with <i>no</i> radio &mdash; to fly a simulator with someone else&rsquo;s receiver, or when all your own receivers are in helicopters.</p>
 <h3>Like it? The receiver needs no dongle</h3>
 <p>The dongle is the little brother of the LDRC <b>receiver</b>: the same brain with the radio fitted. The receiver does everything here <b>and flies the model</b>, so with an LDRC receiver and transmitter there is no dongle to fit at all, and no spare flight-controller port used up. It also updates itself over the air and flies a PC simulator from the same transmitter. Free and open source: roughly &pound;35 of parts for a receiver, &pound;120 for a transmitter &mdash; and the V2 receiver works with the original V1 transmitter. More at <b>messiter.com/LDRC.html</b>.</p></template>
 <script>
@@ -128,6 +129,14 @@ async function load() {
         // The simulator interface is neither a dongle nor a receiver: no MSP,
         // so the port speed is meaningless, and the wiring note replaces it.
         const simIf = !!s.sim_if;
+        // A board with its own radio is never offered the wire-fed role - it
+        // has Simulator mode instead, which needs no wire at all (Malcolm
+        // 2026-09-18: "a receiver with transceivers should STILL be able to
+        // operate in Simulator mode! It's even simpler").
+        const radios = ((s.rf && s.rf.radios_count) | 0) > 0;
+        const opt3 = document.querySelector('#mode option[value="3"]');
+        if (opt3) opt3.disabled = radios;
+        document.getElementById('simIfWhere').style.display = radios ? '' : 'none';
         document.getElementById('simIfNote').style.display = simIf ? '' : 'none';
         for (const id of ['modeRow', 'curRow', 'modeNote']) document.getElementById(id).style.display = (on && !simIf) ? 'none' : '';
         document.getElementById('modeHead').textContent = on ? 'Port speed' : 'Mode';
