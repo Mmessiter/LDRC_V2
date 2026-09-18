@@ -1,4 +1,5 @@
 {
+  "RXV2-0.9.769-top-row-installing": "Update page: while an install runs, the top row says which version is being installed (and what it was), not what is installed.",
   "RXV2-0.9.768-ticked-lane-runs": "Update page: the lane shown ticked is the one the install uses - with no WiFi up, Bluetooth starts at once instead of waiting 45 s for WiFi first.",
   "RXV2-0.9.767-wire-finder": "Simulator interface: while nothing is recognised, the dongle counts signal edges on D4, D5 and D6 and the dongle page names the pad the wire is really on.",
   "RXV2-0.9.766-wire-raw-and-sbus-ni": "Simulator interface: while a signal is arriving but not recognised, the dongle page shows what each protocol saw and the last bytes raw; and SBUS on a non-inverted line is now recognised too.",

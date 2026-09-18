@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.769-top-row-installing",
+      "url": "https://messiter.com/rxv2/release/v0.9.769/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.769/littlefs.bin",
+      "fs_md5": "84ba8b3174f278048a5478999fde2547",
+      "notes": "Update page: while an install runs, the top row says which version is being installed (and what it was), not what is installed."
+    },
+    {
       "name": "RXV2-0.9.768-ticked-lane-runs",
       "url": "https://messiter.com/rxv2/release/v0.9.768/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.768/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.758/littlefs.bin",
       "fs_md5": "ae321309b2999a140bc90c81f64dff8b",
       "notes": "Making the two simulator routes plain (Malcolm 2026-09-18: 'a receiver with transceivers should STILL be able to operate in Simulator mode! It's even simpler for use as a receiver is built in'). He is quite right, and it always could - the receiver's own Simulator mode was never touched by yesterday's new role and needs no wire and no second board: a receiver plugs straight into the computer and flies the simulator from your own transmitter. What was wrong was the dongle page, which offered a board with its own radio the wire-fed Simulator interface role and then refused it. That option is now simply not offered to a board with transceivers, and the page says where its own Simulator mode lives instead. Pages only."
-    },
-    {
-      "name": "RXV2-0.9.757-simulator-interface",
-      "url": "https://messiter.com/rxv2/release/v0.9.757/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.757/littlefs.bin",
-      "fs_md5": "6a3c7890e871102f6e1ae83b82b0a666",
-      "notes": "The dongle gains a third role: Simulator interface (Malcolm 2026-09-17: 'all we need to do is add to the dongle a new option called Simulator interface'). A board with no radio, with one of your receivers wired to it, becomes a USB joystick for a simulator on the computer - Windows or Mac. Wiring is the same four-wire lead with the flight-controller end moved to the receiver: the receiver's signal output to D5, its 5 V to the board's 5V pin, ground to ground; then a USB cable to the computer, which powers the whole rig. No battery, no flight controller. CRSF, SBUS, IBUS and PPM are recognised on their own, and the Mode card says which was found and how many channels arrived. Everything else - which stick drives which axis, reversing, the spool-up realism, the camera keys - is on the Simulator pages exactly as it has always been, because the decoded channels are put precisely where the radio would have put them. This retires the separate LDRC2SIM firmware: one board, one firmware, three roles. A board with transceivers fitted is refused this role, because it belongs in a helicopter. Nothing changes for a receiver or a Rotorflight dongle."
     }
   ],
   "rotorflight": {

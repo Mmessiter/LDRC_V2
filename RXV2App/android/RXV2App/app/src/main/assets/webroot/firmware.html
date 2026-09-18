@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Check for Update &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=291">
-<script src="/app.js?v=291" defer></script>
+<link rel=stylesheet href="/style.css?v=292">
+<script src="/app.js?v=292" defer></script>
 <style>
 /* --- Currently-installed card -------------------------------------- */
 .installed-card .row{
@@ -484,6 +484,20 @@ async function check() {
 // Module scope: both doInstall() and paintLanes() need it.
 const WEAK_WIFI_DBM = -70;
 
+// The top row follows the install (Malcolm 2026-09-18: "instead of saying what
+// was installed i think it should say which version is being installed").
+function paintTopRow(installingVer) {
+    const lbl = document.querySelector('.installed-card .row .label');
+    const { ver, label } = splitName(currentFw);
+    if (installingVer) {
+        if (lbl) lbl.textContent = 'Installing';
+        $('current').textContent = installingVer + (ver ? '  (was ' + ver + ')' : '');
+    } else {
+        if (lbl) lbl.textContent = 'Installed';
+        $('current').textContent = currentFw ? ver + (label ? ' · ' + label : '') : '(offline)';
+    }
+}
+
 async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
     if (installing) return;
     const { ver } = splitName(v.name);
@@ -497,6 +511,7 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
             { title: 'Install firmware', icon: '📥', yes: 'Install + reboot', kind: 'warn' }))) return;
 
     installing = true;
+    paintTopRow(ver);
     // Keep the screen awake for the whole install where the browser allows it
     // (Malcolm 2026-09-18: "The iPhone screen timed out during update causing
     // a hiccup"). The apps hold the screen natively as well; this covers a
@@ -577,7 +592,7 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
                 if (p.phase === 'error') {
                     setStatePill('Failed', 'bad');
                     showMessage('Bluetooth install failed: ' + p.msg + ' \u2014 the old firmware is untouched.');
-                    installing = false; $('check').disabled = false;
+                    installing = false; paintTopRow(''); $('check').disabled = false;
                     document.querySelectorAll('.ver-btn').forEach(b => b.disabled = false);
                     return;
                 }
@@ -618,7 +633,7 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
                 if (Date.now() - t0 > 10 * 60 * 1000) {
                     setStatePill('Waiting\u2026', 'amber');
                     showMessage('This is taking longer than expected \u2014 reload this page to check the receiver.');
-                    installing = false; $('check').disabled = false;
+                    installing = false; paintTopRow(''); $('check').disabled = false;
                     document.querySelectorAll('.ver-btn').forEach(b => b.disabled = false);
                     return;
                 }
@@ -735,7 +750,7 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
                     ? '<br><br>Weak WiFi is the usual cause. <b>Bluetooth stands a better chance.</b>'
                       + '<div style="margin:.7em 0 0"><button class="btn" id=retryBle style="background:#2f6fb0;color:#fff;margin:0">Try again over Bluetooth</button></div>'
                     : ' Try again.'));
-            installing = false; $('check').disabled = false;
+            installing = false; paintTopRow(''); $('check').disabled = false;
             document.querySelectorAll('.ver-btn').forEach(b => b.disabled = false);
             const rb = document.getElementById('retryBle');
             if (rb) rb.onclick = () => { window.__preferBle = true; doInstall(v, sourceKey, url, fsUrl, btnEl); };
@@ -770,7 +785,7 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
             const t = await r.text();
             setStatePill('Failed', 'bad');
             showMessage('Install failed: ' + t);
-            installing = false;
+            installing = false; paintTopRow('');
             $('check').disabled = false;
             document.querySelectorAll('.ver-btn').forEach(b => b.disabled = false);
         }
@@ -828,7 +843,7 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
             setStatePill('Waiting\u2026', 'amber');
             showMessage('The receiver hasn\u2019t come back yet \u2014 give it a moment and reload this page.');
         }
-        installing = false;
+        installing = false; paintTopRow('');
         $('check').disabled = false;
         document.querySelectorAll('.ver-btn').forEach(b => b.disabled = false);
     }

@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.768-ticked-lane-runs";
+constexpr const char* FW_VERSION = "RXV2-0.9.769-top-row-installing";
 
 //*********************************************************************
 //  Auto-update manifest URLs
