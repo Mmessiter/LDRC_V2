@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.760-wifi-button-always";
+constexpr const char* FW_VERSION = "RXV2-0.9.761-mode-row-and-lane";
 
 //*********************************************************************
 //  Auto-update manifest URLs

@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rotorflight dongle &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=283">
-<script src="/app.js?v=283" defer></script>
+<link rel=stylesheet href="/style.css?v=284">
+<script src="/app.js?v=284" defer></script>
 <style>
 .guide{background:#c8d2dc;color:#3a5165;padding:1em;border-radius:10px;margin:0 0 1em;font-size:1.02em}
 .fldRow{display:flex;justify-content:space-between;align-items:center;gap:.6em;padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -138,7 +138,12 @@ async function load() {
         if (opt3) opt3.disabled = radios;
         document.getElementById('simIfWhere').style.display = radios ? '' : 'none';
         document.getElementById('simIfNote').style.display = simIf ? '' : 'none';
-        for (const id of ['modeRow', 'curRow', 'modeNote']) document.getElementById(id).style.display = (on && !simIf) ? 'none' : '';
+        // The Mode row used to be hidden on a dongle - the board knows what it
+        // is, so there was nothing to choose. Since 0.9.757 there IS: Simulator
+        // interface. Malcolm 2026-09-18: "there was no mention of simulator
+        // mode". A board with no radio can be either role, so it always shows.
+        const noRadio = ((s.rf && s.rf.radios_count) | 0) === 0;
+        for (const id of ['modeRow', 'curRow', 'modeNote']) document.getElementById(id).style.display = (on && !simIf && !noRadio) ? 'none' : '';
         document.getElementById('modeHead').textContent = on ? 'Port speed' : 'Mode';
         document.getElementById('curState').textContent = on
             ? ('Rotorflight dongle' + (s.dongle_auto ? ' (no transceivers found)' : ' (set to always)'))

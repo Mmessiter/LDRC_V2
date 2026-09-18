@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Check for Update &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=283">
-<script src="/app.js?v=283" defer></script>
+<link rel=stylesheet href="/style.css?v=284">
+<script src="/app.js?v=284" defer></script>
 <style>
 /* --- Currently-installed card -------------------------------------- */
 .installed-card .row{
@@ -522,6 +522,11 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
     // (Malcolm 2026-09-02: "over Bluetooth – but it should be Wi-Fi, of course").
     let chipHasInternet = false;
     try {
+        // The pilot's own choice wins. Tapping Bluetooth means Bluetooth - not
+        // "wait up to 45 s for WiFi, then use Bluetooth anyway". Malcolm
+        // 2026-09-18, on a dongle that could not join: "even though Bluetooth
+        // is selected, it's attempting to download over Wi-Fi and failing".
+        if (window.__preferBle) throw new Error('Bluetooth chosen - skip the WiFi wait');
         const t0 = Date.now();
         let misses = 0;
         for (;;) {

@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.761-mode-row-and-lane",
+      "url": "https://messiter.com/rxv2/release/v0.9.761/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.761/littlefs.bin",
+      "fs_md5": "bbbcb2fbc1679c3e9244c1f4388ecb33",
+      "notes": "Two things Malcolm met while testing the dongle. FIRST: 'there was no mention of simulator mode'. Quite so - the Mode row was hidden on a dongle, because until this week the board worked out for itself what it was and there was nothing to choose. Now there is a third role, Simulator interface, and it was invisible on the very page that offers it. A board with no radio now always shows the Mode row, since it can be either role. SECOND: 'even though Bluetooth is selected, it's attempting to download over Wi-Fi and failing'. The install waited up to 45 seconds for the receiver's WiFi to come up before starting, whatever lane had been chosen - so choosing Bluetooth meant waiting three quarters of a minute and then using Bluetooth anyway. Tapping Bluetooth now means Bluetooth at once. Pages only."
+    },
+    {
       "name": "RXV2-0.9.760-wifi-button-always",
       "url": "https://messiter.com/rxv2/release/v0.9.760/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.760/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.750/littlefs.bin",
       "fs_md5": "21b21e812bdbe12cdddffac5cca43ef9",
       "notes": "A backup can now be read by a person. Backup & restore has a new button, What's in the backup, which folds everything the phone holds into plain lines - 'PIDs - banks 1-6', 'Rates - banks 1-6', 'Servos - 4', and so on - with the item count and when it was taken (Malcolm 2026-09-17, having opened the exported file: 'it means little to a mere human'). Both apps now name every item they hold; the page does the folding. Pages and apps only."
-    },
-    {
-      "name": "RXV2-0.9.749-offers-in-turn",
-      "url": "https://messiter.com/rxv2/release/v0.9.749/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.749/littlefs.bin",
-      "fs_md5": "056732ffe7afb7d2c013e93c4053270f",
-      "notes": "The app's own update and the receiver's firmware update were both offered on one screen (Malcolm 2026-09-17: 'I coped - but in sequence would be better'). Now the front page holds its firmware offer while the app's update dialog is up, so they come one at a time: app first, because updating the app restarts it, and the firmware offer comes back by itself on reconnect. A plain browser has no app dialog and is unaffected. Pages only."
     }
   ],
   "rotorflight": {
