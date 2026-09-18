@@ -104,6 +104,7 @@ inline bool     bleStreamOn   = false;
 inline uint32_t bleStreamMs   = 50;      // frame interval (20-200 clamped)
 inline uint32_t bleStreamLast = 0;
 inline uint32_t bleStreamArm  = 0;       // page re-arms every ~25 s; auto-off at 60
+inline uint32_t bleStreamSent = 0;       // frames pushed since boot (state.json ble.stream_sent, 0.9.775)
 
 inline String  bleInbox;            // accumulating request payload
 inline size_t  bleInboxExpected = 0;
@@ -633,6 +634,7 @@ inline void bleStreamPoll() {
     int armState = armingChannel ? (armedNow ? 1 : 0) : -1;
     n += snprintf(f + n, sizeof(f) - n, "|%ld|%d\n", age, armState);
     bleRespChr->notify((const uint8_t*)f, (size_t)n);
+    bleStreamSent++;
 }
 
 //*********************************************************************
@@ -715,13 +717,13 @@ inline void bleStateJson(String& j) {
     const uint8_t conns = srv ? srv->getConnectedCount() : 0;
     std::string peer = conns ? srv->getPeerInfo(0).getAddress().toString() : "";
     char b[300];
-    snprintf(b, sizeof(b), ",\"ble\":{\"on\":%s,\"adv\":%s,\"client\":%s,\"conns\":%u,\"peer\":\"%s\",\"since_s\":%lu,\"idle_s\":%lu,\"adv_restarts\":%lu,\"phantom\":%lu,\"idle_drops\":%lu,\"adv_refresh\":%lu}",
+    snprintf(b, sizeof(b), ",\"ble\":{\"on\":%s,\"adv\":%s,\"client\":%s,\"conns\":%u,\"peer\":\"%s\",\"since_s\":%lu,\"idle_s\":%lu,\"adv_restarts\":%lu,\"phantom\":%lu,\"idle_drops\":%lu,\"adv_refresh\":%lu,\"stream_on\":%s,\"stream_sent\":%lu}",
              bleStarted ? "true" : "false", adv ? "true" : "false", bleClientConnected ? "true" : "false",
              (unsigned)conns, peer.c_str(),
              (unsigned long)((conns && bleConnectedAtMs) ? (millis() - bleConnectedAtMs) / 1000 : 0),
              (unsigned long)((bleLastActivityMs ? (millis() - bleLastActivityMs) : 0) / 1000),
              (unsigned long)bleAdvRestarts, (unsigned long)blePhantomClears, (unsigned long)bleIdleDrops,
-             (unsigned long)bleAdvRefreshes);
+             (unsigned long)bleAdvRefreshes, bleStreamOn ? "true" : "false", (unsigned long)bleStreamSent);
     j += b;
 }
 

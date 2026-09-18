@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.775-channel-rate-readout",
+      "url": "https://messiter.com/rxv2/release/v0.9.775/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.775/littlefs.bin",
+      "fs_md5": "364a9081bff99921e46f725d90c1d012",
+      "notes": "View channels shows how fast the bars really update and by which route (pushed stream or polled); the receiver counts the frames it pushes over Bluetooth (state.json ble.stream_sent) so a slow page can be diagnosed rather than guessed at."
+    },
+    {
       "name": "RXV2-0.9.774-wire-freshness",
       "url": "https://messiter.com/rxv2/release/v0.9.774/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.774/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.764/littlefs.bin",
       "fs_md5": "ea3dcf66d9f236d7eccd47b2943c97a2",
       "notes": "Front page: no 'No transceivers detected' warning on a board in the Simulator interface role - it has none by design, like a dongle."
-    },
-    {
-      "name": "RXV2-0.9.763-install-survives-lock",
-      "url": "https://messiter.com/rxv2/release/v0.9.763/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.763/littlefs.bin",
-      "fs_md5": "977d7766f84c78f1fa99f8ddd4debc32",
-      "notes": "A Bluetooth install now carries on when the phone's screen locks or you switch to another app: the iPhone keeps Bluetooth running in the background, Android runs the install under a foreground service, and both hold the screen awake while it runs."
     }
   ],
   "rotorflight": {

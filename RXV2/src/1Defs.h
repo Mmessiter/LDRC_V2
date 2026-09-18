@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.774-wire-freshness";
+constexpr const char* FW_VERSION = "RXV2-0.9.775-channel-rate-readout";
 
 //*********************************************************************
 //  Auto-update manifest URLs
