@@ -2520,18 +2520,29 @@ inline bool refuseIfTxLinked(const char* why) {
 inline void handleDongleSet() {
     if (refuseIfArmed("change the dongle setting")) return;   // 2026-09-16 review: on a dongle the TX-link gates are no-ops
     if (refuseIfTxLinked("turn the transmitter off first - the receiver restarts to apply this")) return;
-    // mode=0 automatic (default), 1 always a dongle, 2 always a receiver; `on` kept for older pages
+    // mode=0 automatic (default), 1 always a dongle, 2 always a receiver,
+    // 3 simulator interface (0.9.757); `on` kept for older pages
     uint8_t mode = server.hasArg("mode") ? (uint8_t)server.arg("mode").toInt()
                  : server.hasArg("on")   ? (server.arg("on").toInt() != 0 ? 1 : 0) : 0;
-    if (mode > 2) mode = 0;
+    if (mode > 3) mode = 0;
+    // A board WITH radios belongs in a model. Refuse to make it a simulator
+    // interface by mistake - it would stop flying at the next power-up.
+    if (mode == 3 && numRadiosPresent > 0) {
+        server.send(409, "text/plain", "this board has transceivers fitted, so it is a receiver - the simulator interface is for a board with no radio. Use Simulator mode on the home page to fly a PC sim from your own transmitter.");
+        return;
+    }
     const bool on = (mode == 1) || (mode == 0 && numRadiosPresent == 0 && !simEnabled);
     uint32_t baud = server.hasArg("baud") ? (uint32_t)server.arg("baud").toInt() : dongleBaud;
     if (baud < 9600 || baud > 2000000) baud = 115200;
     prefs.putUChar(NVS_KEY_DONGLE, mode);
     prefs.putUInt(NVS_KEY_DONGLE_BAUD, baud);
     prefs.putUChar(NVS_KEY_CFG_REBOOT, 1);   // come straight back to WiFi
-    { char m[96]; snprintf(m, sizeof(m), "Dongle setting: %s (%lu baud)", mode == 0 ? "automatic" : mode == 1 ? "always a dongle" : "always a receiver", (unsigned long)baud); events.add(m); }
-    server.send(200, "text/html", confirmPage("Saved & rebooting", on
+    { char m[96]; snprintf(m, sizeof(m), "Dongle setting: %s (%lu baud)", mode == 0 ? "automatic" : mode == 1 ? "always a dongle" : mode == 3 ? "simulator interface" : "always a receiver", (unsigned long)baud); events.add(m); }
+    server.send(200, "text/html", confirmPage("Saved & rebooting", mode == 3
+        ? "<p><b>Simulator interface</b>. Rebooting. Wire one of your receivers to this board: its signal output to <b>D5</b>, "
+          "its 5 V to this board's <b>5V</b> pin, ground to ground - the same lead, with the flight-controller end moved to the receiver. "
+          "Then plug this board into the computer, where it appears as a joystick. CRSF, SBUS, IBUS and PPM are recognised on their own.</p>"
+        : on
         ? "<p>Rotorflight dongle mode <b>enabled</b>. Rebooting. Wire D5 to the flight controller's TX, D6 to its RX, "
           "5 V and GND, on a UART set to MSP in Rotorflight. No radio is used; any receiver can fly the model.</p>"
         : "<p>Dongle mode <b>disabled</b>. Rebooting back to a normal receiver.</p>"));
@@ -3339,6 +3350,12 @@ inline void handleApiState() {
     // 6 and 6, >128 kB gives 3 PID banks but still 6 rate banks, smaller still
     // 2 and 3 (upstream common_pre.h). The pages offered 4 of each for years,
     // which hid banks 5 and 6 on every full-size board. Read from MSP 101.
+    j += ",\"sim_if\":";         j += (simIfEnabled ? "true" : "false");
+    if (simIfEnabled) {
+        j += ",\"sim_if_link\":\""; j += g_rcIn.protocolName(); j += "\"";
+        j += ",\"sim_if_up\":";      j += (g_rcIn.linkUp() ? "true" : "false");
+        j += ",\"sim_if_ch\":";      j += (int)g_rcIn.channelCount();
+    }
     j += ",\"pid_banks\":";       j += (int)banks.pidCount;
     j += ",\"rate_banks\":";      j += (int)banks.rateCount;
     j += ",\"banks_shown\":";     j += (int)fcInfo.banksShown;   // 0 = all of them

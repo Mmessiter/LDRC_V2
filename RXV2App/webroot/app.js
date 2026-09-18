@@ -95,12 +95,23 @@
                 }).observe(document.body, { subtree: true, childList: true, characterData: true });
             } catch (e) {}
         },
+        // Pages a SIMULATOR INTERFACE cannot use either (0.9.757): it has no
+        // radio, so binding, flight records and the output protocol mean
+        // nothing - but the four simulator pages are its whole point, so it
+        // keeps /sim, /simctl, /views and /map, which a Rotorflight dongle hides.
+        SIM_IF_HIDE: ['/bind', '/blackbox', '/flight', '/fly', '/protocol', '/rxsettings'],
         async dongleGuard() {
             const path = location.pathname.replace(/\.html$/, '').replace(/\/index$/, '/');
             if (!this.RX_ONLY.includes(path)) return false;
             let s = this.state;
             if (!s) { try { s = await Promise.race([this.fetchState(), new Promise(r => setTimeout(() => r(null), 2500))]); } catch (e) { s = null; } }
+            if (s && s.sim_if) return this.SIM_IF_HIDE.includes(path) ? this.dongleGuardHide('simulator interface') : false;
             if (!s || !s.dongle) return false;
+            return this.dongleGuardHide('dongle');
+        },
+        // Blank the page and say which role this board is in. Shared by the
+        // dongle and simulator-interface guards (0.9.757).
+        dongleGuardHide(role) {
             const keep = new Set(['searchBtn', 'homeBtn', 'backBtn', 'helpBtn']);
             for (const el of Array.from(document.body.children)) {
                 if (el.tagName === 'SCRIPT') continue;
@@ -108,7 +119,7 @@
                 el.style.display = 'none';
             }
             const d = document.createElement('div');
-            d.innerHTML = '<h1>Not on a dongle</h1><div class=card style="text-align:center"><p>This page belongs to a receiver. A dongle has no radio, so there is nothing here to set.</p>'
+            d.innerHTML = '<h1>Not on a ' + role + '</h1><div class=card style="text-align:center"><p>This page belongs to a receiver. A ' + role + ' has no radio, so there is nothing here to set.</p>'
                         + '<a class=btn href="/" style="background:#8e6cab;display:inline-block;margin-top:.6em">Home</a></div>';
             document.body.appendChild(d);
             return true;

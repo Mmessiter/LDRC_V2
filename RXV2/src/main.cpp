@@ -31,6 +31,7 @@
 #include "Network.h"
 #include "MspBridge.h"
 #include "MspFc.h"
+#include "RcInput.h"        // simulator interface: decode a receiver on the wire (0.9.757)
 #include "SimUsb.h"         // before WebPages.h — the firmware web pages call SimUSB::getMap/setMap
 #include "BleConfig.h"      // before WebPages.h — WebPages routes through the BLE/WiFi router
 #include "WebPages.h"
@@ -412,7 +413,13 @@ void setup() {
     runRadioSelfTest();
     detectAllRadios();       // probes slots 1/2/3 independently; sets radioPresent[] + numRadiosPresent
     dongleMode    = prefs.isKey(NVS_KEY_DONGLE) ? prefs.getUChar(NVS_KEY_DONGLE, 0) : 0;
-    if (dongleMode > 2) dongleMode = 0;
+    if (dongleMode > 3) dongleMode = 0;
+    // Mode 3 = simulator interface: the sim path, fed from the WIRE instead of
+    // the radio (0.9.757). Turning simEnabled on here also keeps it out of
+    // dongleEnabled below, silences the FC output pin, and lights up every
+    // existing sim page - one flag, no new branches downstream.
+    simIfEnabled  = (dongleMode == 3);
+    if (simIfEnabled) simEnabled = true;
     dongleEnabled = (dongleMode == 1) || (dongleMode == 0 && numRadiosPresent == 0 && !simEnabled);
     dongleAuto    = dongleEnabled && dongleMode == 0;
     dongleBaud    = prefs.isKey(NVS_KEY_DONGLE_BAUD) ? prefs.getUInt(NVS_KEY_DONGLE_BAUD, 115200) : 115200;
@@ -420,6 +427,14 @@ void setup() {
     if (simEnabled) {
         Serial.println("[sim] simulator mode — flight-controller output DISABLED (D6 stays silent)");
         events.add("Sim mode: FC output disabled");
+        if (simIfEnabled) {
+            // The receiver's signal arrives on D5 - the same pin (and the same
+            // lead) a dongle listens to a flight controller on. Auto-detects
+            // CRSF / SBUS / IBUS / PPM; D6 is left alone.
+            g_rcIn.begin(PIN_FC_RX, &Serial1);
+            Serial.println("[simif] simulator interface: decoding a receiver on D5 (CRSF/SBUS/IBUS/PPM)");
+            events.add("Simulator interface: listening to a receiver on D5, USB joystick to the computer");
+        }
     } else if (dongleEnabled) {
         // Rotorflight dongle: D5 = FC TX, D6 = FC RX, plain MSP, no channels.
         Serial1.setRxBufferSize(2048);
@@ -732,6 +747,19 @@ void loop() {
         // fading out over the last stretch of the spool as the governor
         // "catches up". All of it lives on a private copy — the real
         // channel data is untouched.
+        // Simulator interface (0.9.757): the channels come from the RECEIVER
+        // on the wire, not from a radio this board has not got. Fills
+        // channelMicros[] exactly where radioPoll() would, so everything
+        // below - spool-up realism, the axis map, the camera keys - is
+        // unchanged. On a failsafe frame we simply stop updating: the last
+        // good values hold, which is what a sim wants.
+        if (simIfEnabled) {
+            g_rcIn.update();
+            if (g_rcIn.linkUp() && !g_rcIn.failsafe()) {
+                const uint8_t n = g_rcIn.channelCount() < 16 ? g_rcIn.channelCount() : 16;
+                for (uint8_t i = 0; i < n; ++i) channelMicros[i] = g_rcIn.channelUs(i);
+            }
+        }
         static uint16_t simTx[16];
         for (uint8_t i = 0; i < 16; ++i) simTx[i] = channelMicros[i];
         if (simSpoolEnabled && simMotorChannel >= 1 && simMotorChannel <= 16) {

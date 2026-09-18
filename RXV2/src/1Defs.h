@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.756-preflight-review";
+constexpr const char* FW_VERSION = "RXV2-0.9.757-simulator-interface";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -394,6 +394,14 @@ constexpr const char* NVS_KEY_FS_MD5      = "fsmd5";   // md5 of the last-flashe
 constexpr const char* NVS_KEY_FS_DIRTY    = "fsdirty"; // 1 = a littlefs flash began and never committed: boot FORMATS the partition instead of mounting a half image (Goblin 2026-09-03)
 constexpr const char* NVS_KEY_SIM         = "sim";     // 1 = drive flight simulator over USB (HID joystick)
 constexpr const char* NVS_KEY_OTA_BLE     = "otable";   // 1 = the update was asked for over Bluetooth: hold the STA join ~20 s after the reboot so the phone can confirm on a quiet radio
+// SIMULATOR INTERFACE (0.9.757, dongle mode 3). Malcolm 2026-09-17: "add to
+// the dongle a new option called 'Simulator interface'". A radio-less board
+// with a RECEIVER wired to its D5 (the same 4-wire lead: 5 V out to the
+// receiver, GND, the receiver's CRSF/SBUS/IBUS/PPM signal in) decodes those
+// channels into channelMicros[] - exactly where the radio would put them -
+// so the whole existing sim path (SimUsb, spool-up realism, /map, /simctl,
+// /views) works unchanged. Replaces the separate LDRC2SIM firmware.
+inline bool simIfEnabled = false;
 constexpr const char* NVS_KEY_DONGLE      = "dongle";  // 1 = Rotorflight DONGLE: plain MSP on D5/D6 to a spare FC UART, no radio, any receiver flies (2026-09-08)
 constexpr const char* NVS_KEY_DONGLE_BAUD = "dbaud";   // u32 UART baud for dongle mode (115200 default = Rotorflight's MSP port default)
 // Spool-up realism (Malcolm 2026-08-17, for neXt autorotation practice):
