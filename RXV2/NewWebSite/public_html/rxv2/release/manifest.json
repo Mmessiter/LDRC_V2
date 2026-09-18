@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.774-wire-freshness",
+      "url": "https://messiter.com/rxv2/release/v0.9.774/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.774/littlefs.bin",
+      "fs_md5": "c2196720a90ef8a30d3ae12ec4a9f0e6",
+      "notes": "Simulator interface: View channels now sees the wire's channels as live (age from the last decoded frame) instead of reporting no RC signal beside moving values."
+    },
+    {
       "name": "RXV2-0.9.773-census-pullup",
       "url": "https://messiter.com/rxv2/release/v0.9.773/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.773/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.763/littlefs.bin",
       "fs_md5": "977d7766f84c78f1fa99f8ddd4debc32",
       "notes": "A Bluetooth install now carries on when the phone's screen locks or you switch to another app: the iPhone keeps Bluetooth running in the background, Android runs the install under a foreground service, and both hold the screen awake while it runs."
-    },
-    {
-      "name": "RXV2-0.9.762-wire-diag-and-role",
-      "url": "https://messiter.com/rxv2/release/v0.9.762/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.762/littlefs.bin",
-      "fs_md5": "d3bf85f166fbbcd0cb3b6040f7839985",
-      "notes": "Dongle page: one plain choice on a board with no transceivers - Rotorflight dongle or Simulator interface - and nothing to choose on a receiver. The simulator interface says what it hears on D5 (nothing, unrecognised, or locked) and logs locks and losses. Bluetooth installs: the apps now wait four minutes for the receiver to come back, and return to the list instead of reloading over a link that is not back."
     }
   ],
   "rotorflight": {

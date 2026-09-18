@@ -1,4 +1,5 @@
 {
+  "RXV2-0.9.774-wire-freshness": "Simulator interface: View channels now sees the wire's channels as live (age from the last decoded frame) instead of reporting no RC signal beside moving values.",
   "RXV2-0.9.773-census-pullup": "Simulator interface wire finder: the spare pads are held UP, not down, between checks - with a crossed lead the dongle's D6 sits on the receiver's own input, and a pull-down there was a permanent break.",
   "RXV2-0.9.772-pad-open-test": "Simulator interface wire finder: the dongle now tests whether anything is connected to each pad at all (pull it up, pull it down, see if the level follows), so an open wire or joint is named as such.",
   "RXV2-0.9.771-wire-finder-rates": "Simulator interface wire finder: 100 ms windows, floating pads held down, and the page tells a slow servo-style pulse train apart from a data stream - and says which end of the wire to move.",

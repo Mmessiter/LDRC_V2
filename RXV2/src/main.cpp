@@ -853,6 +853,12 @@ void loop() {
             if (g_rcIn.linkUp() && !g_rcIn.failsafe()) {
                 const uint8_t n = g_rcIn.channelCount() < 16 ? g_rcIn.channelCount() : 16;
                 for (uint8_t i = 0; i < n; ++i) channelMicros[i] = g_rcIn.channelUs(i);
+                // Freshness for the pages (0.9.774): View channels judges a
+                // signal by age_ms = now - lastChannelDataMs, which only the
+                // radio path stamped - so a wire-fed board showed live values
+                // under "No RC signal" (Malcolm 2026-09-18). Nothing on a
+                // bare board reads this for flight; sbusTick never runs here.
+                lastChannelDataMs = millis();
             }
         }
         static uint16_t simTx[16];

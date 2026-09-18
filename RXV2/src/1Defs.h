@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.773-census-pullup";
+constexpr const char* FW_VERSION = "RXV2-0.9.774-wire-freshness";
 
 //*********************************************************************
 //  Auto-update manifest URLs
