@@ -212,7 +212,12 @@ async function init() {
             document.getElementById('govNote').textContent =
                 'Rotorflight ' + fc.rf_major + '.' + fc.rf_minor + ': the governor (head speed included) is copied as part of the flight tuning.';
         }
-        BANKS = LDRC.bankMax(st, 'pid');
+        // Only believe a state that actually carries the counts (0.9.757):
+        // an older receiver, or the demo's canned state, has none, and the
+        // fallback of 4 was overwriting the six already drawn (Malcolm
+        // 2026-09-18: "on Android the bank copy function doesn't yet offer
+        // all six banks").
+        if (st.fcinfo && (st.fcinfo.pid_banks | 0) >= 1) BANKS = LDRC.bankMax(st, 'pid');
         // More banks here than on the tuning pages is deliberate, and looks
         // like a fault unless it is said once.
         const cap = (st.fcinfo || {}).banks_shown | 0;
@@ -362,6 +367,9 @@ async function copyBank() {
 document.addEventListener('DOMContentLoaded', () => {
     BANKS = LDRC.bankMax(LDRC.bankInfo(), 'pid');
     paint(); init();
+    // The same tiny source every tuning page uses (cache-backed): right even
+    // before the flight controller answers, and in the demo.
+    LDRC.fetchBanks().then(b => { const n = LDRC.bankMax(b, 'pid'); if (n !== BANKS) { BANKS = n; paint(); } });
 });
 </script>
 <template id=helpContent><h2>Copy a bank</h2>
