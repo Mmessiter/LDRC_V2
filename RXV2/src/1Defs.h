@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.772-pad-open-test";
+constexpr const char* FW_VERSION = "RXV2-0.9.773-census-pullup";
 
 //*********************************************************************
 //  Auto-update manifest URLs

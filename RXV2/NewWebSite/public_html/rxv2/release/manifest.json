@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.773-census-pullup",
+      "url": "https://messiter.com/rxv2/release/v0.9.773/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.773/littlefs.bin",
+      "fs_md5": "c2196720a90ef8a30d3ae12ec4a9f0e6",
+      "notes": "Simulator interface wire finder: the spare pads are held UP, not down, between checks - with a crossed lead the dongle's D6 sits on the receiver's own input, and a pull-down there was a permanent break."
+    },
+    {
       "name": "RXV2-0.9.772-pad-open-test",
       "url": "https://messiter.com/rxv2/release/v0.9.772/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.772/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.762/littlefs.bin",
       "fs_md5": "d3bf85f166fbbcd0cb3b6040f7839985",
       "notes": "Dongle page: one plain choice on a board with no transceivers - Rotorflight dongle or Simulator interface - and nothing to choose on a receiver. The simulator interface says what it hears on D5 (nothing, unrecognised, or locked) and logs locks and losses. Bluetooth installs: the apps now wait four minutes for the receiver to come back, and return to the list instead of reloading over a link that is not back."
-    },
-    {
-      "name": "RXV2-0.9.761-mode-row-and-lane",
-      "url": "https://messiter.com/rxv2/release/v0.9.761/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.761/littlefs.bin",
-      "fs_md5": "bbbcb2fbc1679c3e9244c1f4388ecb33",
-      "notes": "Two things Malcolm met while testing the dongle. FIRST: 'there was no mention of simulator mode'. Quite so - the Mode row was hidden on a dongle, because until this week the board worked out for itself what it was and there was nothing to choose. Now there is a third role, Simulator interface, and it was invisible on the very page that offers it. A board with no radio now always shows the Mode row, since it can be either role. SECOND: 'even though Bluetooth is selected, it's attempting to download over Wi-Fi and failing'. The install waited up to 45 seconds for the receiver's WiFi to come up before starting, whatever lane had been chosen - so choosing Bluetooth meant waiting three quarters of a minute and then using Bluetooth anyway. Tapping Bluetooth now means Bluetooth at once. Pages only."
     }
   ],
   "rotorflight": {

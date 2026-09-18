@@ -831,16 +831,23 @@ void loop() {
                     // every 20 ms - need room to show; a floating pad is held
                     // down so it cannot invent edges of its own (the first
                     // census read 41-89 phantom edges on an unwired D4).
-                    pinMode(PIN_STATUS_LED, INPUT_PULLDOWN);
+                    // Pull-UP, not down (0.9.773): with a crossed lead the
+                    // dongle's D6 sits on the receiver's own UART input, and a
+                    // pull-down there is a permanent break on that receiver.
+                    // Idle-high is what a UART line expects; a floating pad
+                    // still reads steady, so no phantom edges either way.
+                    pinMode(PIN_STATUS_LED, INPUT_PULLUP);
                     simIfEdges[0] = countEdges(PIN_STATUS_LED, 100000);
                     simIfFloat[0] = padFloats(PIN_STATUS_LED);
                     if (statusLedEnabled) pinMode(PIN_STATUS_LED, OUTPUT);   // never on a bare board (see statusLedBegin)
+                    else gpio_set_pull_mode((gpio_num_t)PIN_STATUS_LED, GPIO_PULLUP_ONLY);
                     simIfEdges[1] = countEdges(PIN_FC_RX, 100000);     // the UART's own pin reads as a GPIO input too
                     simIfFloat[1] = padFloats(PIN_FC_RX);
                     gpio_set_pull_mode((gpio_num_t)PIN_FC_RX, GPIO_PULLUP_ONLY);   // back to the UART driver's own default
-                    pinMode(PIN_SBUS_TX, INPUT_PULLDOWN);               // D6 is unused in this role (the console is USB)
+                    pinMode(PIN_SBUS_TX, INPUT_PULLUP);                 // D6 is unused in this role (the console is USB)
                     simIfEdges[2] = countEdges(PIN_SBUS_TX, 100000);
                     simIfFloat[2] = padFloats(PIN_SBUS_TX);
+                    gpio_set_pull_mode((gpio_num_t)PIN_SBUS_TX, GPIO_PULLUP_ONLY);
                 }
             }
             if (g_rcIn.linkUp() && !g_rcIn.failsafe()) {
