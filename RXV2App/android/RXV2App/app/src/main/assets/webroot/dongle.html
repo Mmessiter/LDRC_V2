@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rotorflight dongle &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=289">
-<script src="/app.js?v=289" defer></script>
+<link rel=stylesheet href="/style.css?v=290">
+<script src="/app.js?v=290" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;gap:.6em;padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
 .fldRow label{flex:1;color:#3a5165;font-size:.95em}
@@ -156,8 +156,18 @@ function paintStatus(s) {
         const dg = document.getElementById('simIfDiag');
         if (dg) {
             if (!s.sim_if_up && bytes > 0 && Array.isArray(s.sim_if_cand)) {
-                dg.textContent = s.sim_if_cand.map(c => c.p + ': ' + c.b + ' bytes, ' + c.f + ' frames').join('\n')
-                               + '\nlast bytes: ' + (s.sim_if_raw || '');
+                let txt = s.sim_if_cand.map(c => c.p + ': ' + c.b + ' bytes, ' + c.f + ' frames').join('\n')
+                        + '\nlast bytes: ' + (s.sim_if_raw || '');
+                // Wire finder (0.9.767): which pad really carries the signal.
+                const e = Array.isArray(s.sim_if_edges) ? s.sim_if_edges : null;
+                if (e) {
+                    txt += '\nsignal edges in 40 ms — D4: ' + e[0] + ', D5: ' + e[1] + ', D6: ' + e[2];
+                    const best = e.indexOf(Math.max(...e));
+                    if (Math.max(...e) >= 20 && best !== 1) txt += '\n→ The wire is on ' + ['D4', 'D5', 'D6'][best] + ': move it to D5.';
+                    else if (e[1] >= 20) txt += '\n→ The signal IS on D5 — check the ground wire next.';
+                    else txt += '\n→ No signal on any pad in that window.';
+                }
+                dg.textContent = txt;
                 dg.style.display = '';
             } else dg.style.display = 'none';
         }

@@ -415,3 +415,6 @@ inline bool RcInput::ibusByte(uint8_t b) {
 
 // The one instance, used only in the simulator-interface role.
 inline RcInput g_rcIn;
+// Wire finder results (0.9.767): level changes seen in 40 ms on D4, D5, D6
+// while nothing is recognised - filled in main.cpp, shown on the dongle page.
+inline uint32_t simIfEdges[3] = { 0, 0, 0 };

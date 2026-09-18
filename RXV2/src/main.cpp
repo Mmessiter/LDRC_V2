@@ -52,6 +52,19 @@ static inline void statusLedWrite(bool on) {
     digitalWrite(PIN_STATUS_LED, (on == STATUS_LED_ACTIVE_HIGH) ? HIGH : LOW);
 }
 
+// Level changes on a pad over a short window - the simulator interface's
+// wire finder (0.9.767, see the sim-if block in loop()).
+static uint32_t countEdges(uint8_t pin, uint32_t windowUs) {
+    uint32_t n = 0;
+    int last = digitalRead(pin);
+    const uint32_t t0 = micros();
+    while ((uint32_t)(micros() - t0) < windowUs) {
+        const int v = digitalRead(pin);
+        if (v != last) { n++; last = v; }
+    }
+    return n;
+}
+
 static void statusLedBegin() {                     // call after detectAllRadios()
     statusLedEnabled = !radioPresent[2];           // D4 is free only when radio 3 is gone
     if (statusLedEnabled) { pinMode(PIN_STATUS_LED, OUTPUT); statusLedWrite(false); }
@@ -778,6 +791,27 @@ void loop() {
                     snprintf(m, sizeof(m), "Simulator interface: receiver signal lost on D5 - searching again (%lu bytes seen so far)",
                              (unsigned long)g_rcIn.bytesSeen());
                 events.add(m);
+            }
+            // Wire finder (0.9.767). First bench test: bytes arrived but no
+            // frame ever parsed, with an RXV1 (SBUS) AND an RXV2 (CRSF) as the
+            // source - the signature of a wire on the NEIGHBOURING pad, with
+            // D5 hearing only crosstalk, or of a poor ground. So while nothing
+            // is recognised, count level changes on D4, D5 and D6 for 40 ms
+            // each, every 5 s, and let the page name the pad that carries the
+            // signal. D4 is the status LED's output on a radio-less board: it
+            // is borrowed as an input for the window and handed straight back.
+            // Bench role only: a 120 ms stall every 5 s never touches a model.
+            if (!g_rcIn.linkUp()) {
+                static uint32_t lastCensusMs = 0;
+                if ((uint32_t)(millis() - lastCensusMs) > 5000) {
+                    lastCensusMs = millis();
+                    pinMode(PIN_STATUS_LED, INPUT);
+                    simIfEdges[0] = countEdges(PIN_STATUS_LED, 40000);
+                    pinMode(PIN_STATUS_LED, OUTPUT);
+                    simIfEdges[1] = countEdges(PIN_FC_RX, 40000);      // the UART's own pin reads as a GPIO input too
+                    pinMode(PIN_SBUS_TX, INPUT);                        // D6 is unused in this role (the console is USB)
+                    simIfEdges[2] = countEdges(PIN_SBUS_TX, 40000);
+                }
             }
             if (g_rcIn.linkUp() && !g_rcIn.failsafe()) {
                 const uint8_t n = g_rcIn.channelCount() < 16 ? g_rcIn.channelCount() : 16;

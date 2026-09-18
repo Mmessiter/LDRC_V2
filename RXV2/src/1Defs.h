@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.766-wire-raw-and-sbus-ni";
+constexpr const char* FW_VERSION = "RXV2-0.9.767-wire-finder";
 
 //*********************************************************************
 //  Auto-update manifest URLs
