@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.764-no-radio-warning-on-sim-if";
+constexpr const char* FW_VERSION = "RXV2-0.9.765-background-drop-guard";
 
 //*********************************************************************
 //  Auto-update manifest URLs

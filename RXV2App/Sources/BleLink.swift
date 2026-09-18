@@ -12,6 +12,7 @@
 
 import Foundation
 import CoreBluetooth
+import UIKit
 
 struct BleResponse {
     let code: Int
@@ -676,6 +677,18 @@ extension BleLink: CBCentralManagerDelegate, CBPeripheralDelegate {
         else if case .reconnecting = state { wasActive = true }
         else { wasActive = false }
         let rebootish = Date() < Self.rebootishUntil
+        // In the BACKGROUND with no install in flight, a drop is the receiver's
+        // idle watchdog letting a silent app go (its pages stop polling when
+        // iOS pauses the web view). Since the Bluetooth background mode (5.100)
+        // the app is woken for that drop, and riding it out would reconnect
+        // from the background, go silent again, be dropped again - every few
+        // minutes, for as long as both are on. Land on idle instead; the
+        // scanner is what the pilot sees on return (RXV2App drops any link
+        // after a minute away in any case).
+        if !rebootish && UIApplication.shared.applicationState == .background {
+            state = .idle
+            return
+        }
         if !userDisconnect && wasActive {
             if case .ready = state {
                 reconnectUntil = Date().addingTimeInterval(rebootish ? Self.rebootWindow : 30)

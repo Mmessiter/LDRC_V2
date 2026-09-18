@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.765-background-drop-guard",
+      "url": "https://messiter.com/rxv2/release/v0.9.765/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.765/littlefs.bin",
+      "fs_md5": "ae885f3897a7e1824be2f15c68a79f9c",
+      "notes": "Apps: with Bluetooth now running in the background, a link the receiver drops while the app is in the background (its idle watchdog, nothing installing) is no longer chased - that would have reconnected, gone silent and been dropped again every few minutes. Installs still ride out the reboot."
+    },
+    {
       "name": "RXV2-0.9.764-no-radio-warning-on-sim-if",
       "url": "https://messiter.com/rxv2/release/v0.9.764/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.764/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.754/littlefs.bin",
       "fs_md5": "885b9e5865d7ba1de8337b812c67665d",
       "notes": "A message box taller than the screen now scrolls inside itself, with its title and buttons staying put - What's in the backup lists forty-odd lines and ran off the bottom with no way to reach OK (Malcolm 2026-09-17). Applies to every message box. Pages only."
-    },
-    {
-      "name": "RXV2-0.9.753-heal-timing",
-      "url": "https://messiter.com/rxv2/release/v0.9.753/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.753/littlefs.bin",
-      "fs_md5": "0aa73935faef21c39a705729561711bf",
-      "notes": "The 0.9.752 USB heal fired both its stages one millisecond apart (RAW420AJB log: 'sent exit' at 51.334 s, 'closed' at 51.335 s), so the flight controller never got the two or three seconds it needs to restart after 'exit'. Both stages were timed from the moment the port opened and gated on the same byte count, which was not reached until 51 s - then both passed at once. Stage 2 now waits 8 seconds after stage 1, and the byte gate is a dozen probes rather than forty. Firmware only; nothing changes in the air."
     }
   ],
   "rotorflight": {

@@ -207,6 +207,11 @@ class Rxv2Ble(private val context: Context) {
     // browsing never arms this — a disconnect then = model switched off →
     // straight back to the scanner (Malcolm 2026-08-07).
     @Volatile var rebootishUntil = 0L
+    // Set from MainActivity's onResume/onPause. A drop while the app is in the
+    // background with no install in flight is the receiver's idle watchdog
+    // letting a silent app go; chasing it would reconnect, go silent, be
+    // dropped - every few minutes. Not ridden out (5.95).
+    @Volatile var appInForeground = true
     // How long the drop that follows is ridden out: 90 s covers a config-save
     // reboot; a firmware install asks for more (5.93 - DongleSim's update
     // "just sat there": the OTA runner was still polling after the link had
@@ -567,8 +572,11 @@ class Rxv2Ble(private val context: Context) {
                     // session the app "returned to the opening screen but the
                     // model wasn't selectable", because the receiver was still
                     // tearing the old link down.
-                    if (!userDisconnect && state is State.Ready) {
-                        val rebootish = System.currentTimeMillis() < rebootishUntil
+                    val rebootishNow = System.currentTimeMillis() < rebootishUntil
+                    if (!userDisconnect && state is State.Ready && !rebootishNow && !appInForeground) {
+                        state = State.Idle   // background drop, nothing installing: let it go (see appInForeground)
+                    } else if (!userDisconnect && state is State.Ready) {
+                        val rebootish = rebootishNow
                         reconnectUntil = System.currentTimeMillis() + (if (rebootish) rebootWindowMs else 30_000L)
                         lastDropUnexpected = !rebootish
                         state = State.Reconnecting(connName)

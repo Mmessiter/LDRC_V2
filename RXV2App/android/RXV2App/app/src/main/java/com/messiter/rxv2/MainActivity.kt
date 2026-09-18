@@ -173,6 +173,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
+        ble.appInForeground = false
         SessionCache.saveIfDirty()   // recording survives app switches / kills
         pausedAtMs = System.currentTimeMillis()
     }
@@ -488,6 +489,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        ble.appInForeground = true
         // Away >1 min with a live/reconnecting link → fresh start on the
         // model list (demo and armchair review are deliberate — left alone).
         if (pausedAtMs > 0 && System.currentTimeMillis() - pausedAtMs > 60_000 &&
