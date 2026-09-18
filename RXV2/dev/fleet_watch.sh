@@ -24,7 +24,8 @@ LOG=$HERE/fleet_watch.log
 log(){ echo "$(date +%H:%M:%S) $*" >> $LOG }
 if [[ -f $HERE/notify.sh ]]; then source $HERE/notify.sh; else ping_watch(){ log "(no dev/notify.sh - would ping: $1)" }; fi
 
-typeset -A IDLE                      # per-board consecutive idle observations
+typeset -A IDLE                      # per-board consecutive idle observations (negative = backing off after a failure)
+typeset -A FAILS                     # per-board consecutive failed installs
 typeset -A PREVPK                    # per-board last packet count
 
 probe(){ curl -s -m 2 http://$1/api/state.json 2>/dev/null }
@@ -50,9 +51,12 @@ except Exception: pass" 2>/dev/null)
     SEEN="$SEEN $NAME"
     [[ "$FW" == "$WANT" ]] && { IDLE[$IP]=0; CURRENT="$CURRENT $NAME"; continue }
 
-    # A dongle has no radio, so packet count and RSSI mean nothing there.
+    # A dongle has no radio, so the PACKET COUNT means nothing there - but
+    # RSSI certainly does: it downloads the images over the same WiFi. Without
+    # this it retried at -83 dBm over and over, rebooting the board each time
+    # (DongleSim, 2026-09-18). Same -70 floor as a receiver.
     if (( DON == 1 )); then
-      QUIET=$(( ARMED == 0 && MACT == 0 && MCON == 0 && BLEC == 0 ))
+      QUIET=$(( ARMED == 0 && MACT == 0 && MCON == 0 && BLEC == 0 && RSSI > -70 ))
     else
       SAME=$(( PK == ${PREVPK[$IP]:--1} ))
       QUIET=$(( SAME == 1 && ARMED == 0 && HS == 0 && MACT == 0 && MCON == 0 && BLEC == 0 && RSSI > -70 ))
@@ -75,11 +79,18 @@ except Exception: pass" 2>/dev/null)
         [[ -n "$V" ]] && break; sleep 15
       done
       if [[ "$V" == "$WANT" ]]; then
+        FAILS[$IP]=0
         log "$NAME: SUCCESS on $WANT"
         ping_watch "$NAME updated to ${WANT#RXV2-} automatically."
       else
         log "$NAME: FAILED (reads ${V:-no answer})"
-        ping_watch "$NAME did NOT take ${WANT#RXV2-} (reads ${V:-no answer}) - worth a look."
+        # Back off after a failure: retrying at once just reboots the board on
+        # a loop. Each failure doubles the wait, to a ceiling of ~16 sweeps.
+        FAILS[$IP]=$(( ${FAILS[$IP]:-0} + 1 ))
+        local_backoff=$(( 1 << ${FAILS[$IP]} )); (( local_backoff > 16 )) && local_backoff=16
+        IDLE[$IP]=$(( -local_backoff ))
+        log "$NAME: backing off $local_backoff sweeps (failure ${FAILS[$IP]})"
+        (( ${FAILS[$IP]} == 1 )) && ping_watch "$NAME did NOT take ${WANT#RXV2-} (reads ${V:-no answer}) - signal was ${RSSI} dBm. Move it nearer the router."
       fi
     fi
   done
