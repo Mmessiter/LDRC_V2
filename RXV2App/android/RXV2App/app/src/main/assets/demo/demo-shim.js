@@ -378,7 +378,7 @@
         st.usb = { host: true, device: true, vid: "0483", pid: "5740", cli: false };
         if (!demoState.name) { st.info.name = "Demo dongle"; st.info.hostname = "demo-dongle"; }
         if (st.fcinfo) st.fcinfo.detected = true;
-        if (st.rf) { st.rf.last_pkt_ms = -1; st.rf.packets = 0; }
+        if (st.rf) { st.rf.last_pkt_ms = -1; st.rf.packets = 0; st.rf.radios_count = 0; st.rf.radios_present = [false, false, false]; }   // no transceivers: the dongle page's role card keys off this
         if (st.bind) st.bind.bound = false;
       }
       st.net.rf_only = !!demoState.rfOnly;

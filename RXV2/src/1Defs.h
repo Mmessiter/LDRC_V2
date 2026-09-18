@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.761-mode-row-and-lane";
+constexpr const char* FW_VERSION = "RXV2-0.9.762-wire-diag-and-role";
 
 //*********************************************************************
 //  Auto-update manifest URLs

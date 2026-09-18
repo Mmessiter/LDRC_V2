@@ -568,6 +568,7 @@ class MainActivity : AppCompatActivity() {
     @Volatile private var otaMsg = ""
     @Volatile private var otaSent = 0L
     @Volatile private var otaTotal = 0L
+    @Volatile private var otaConfirmed = true   // false with "done" = never reappeared over Bluetooth (firmware.html goes back to the list, 5.93)
 
     private fun bleReqSync(method: String, path: String, body: ByteArray? = null): Rxv2Ble.Response {
         val latch = java.util.concurrent.CountDownLatch(1)
@@ -693,11 +694,12 @@ class MainActivity : AppCompatActivity() {
             otaPhase = "rebooting"; otaMsg = "Waiting for the receiver to come back…"
             runCatching { bleReqSync("POST", "/api/bleota/reboot") }   // reply may die with the radio
             // The receiver reboots straight back into BLE mode (config-reboot
-            // flag) and Rxv2Ble auto-reconnects for 90 s — poll until it
-            // answers, then report the version it now runs.
+            // flag) and Rxv2Ble auto-reconnects for 240 s (the window stamped
+            // at /app/bleota/start) — poll until it answers, then report the
+            // version it now runs. Was 120 s against a 90 s window (5.93).
             Thread.sleep(4000)
             var newVer = ""
-            val deadline = System.currentTimeMillis() + 120_000
+            val deadline = System.currentTimeMillis() + 240_000
             while (System.currentTimeMillis() < deadline) {
                 try {
                     val st = bleReqSync("GET", "/api/state.json")
@@ -709,6 +711,7 @@ class MainActivity : AppCompatActivity() {
                 } catch (_: Exception) {}
                 Thread.sleep(3000)
             }
+            otaConfirmed = newVer.isNotEmpty()
             otaPhase = "done"
             otaMsg = if (newVer.isEmpty())
                 "installed; the receiver didn't reappear on Bluetooth to confirm — reopen the app to check it"
@@ -841,7 +844,7 @@ class MainActivity : AppCompatActivity() {
                 if (path == "/app/bleota/progress") {
                     val j = org.json.JSONObject()
                     j.put("phase", otaPhase); j.put("msg", otaMsg)
-                    j.put("sent", otaSent); j.put("total", otaTotal)
+                    j.put("sent", otaSent); j.put("total", otaTotal); j.put("confirmed", otaConfirmed)
                     return jsonResp(j.toString())
                 }
                 if (path == "/app/manifest") {
@@ -1741,11 +1744,11 @@ class MainActivity : AppCompatActivity() {
                 val json = if (p == "/app/bleota/start") {
                     val fw = uri.getQueryParameter("fw")
                     if (fw != null && !demoMode && !reviewMode) {
-                        ble.noteRebootish(600_000)
+                        ble.noteRebootish(600_000, 240_000)
                         if (otaPhase != "download" && otaPhase != "fw" &&
                             otaPhase != "fs" && otaPhase != "rebooting") {
                             val fs = uri.getQueryParameter("fs")
-                            otaPhase = "download"; otaMsg = "Starting…"; otaSent = 0; otaTotal = 0
+                            otaPhase = "download"; otaMsg = "Starting…"; otaSent = 0; otaTotal = 0; otaConfirmed = true
                             Thread { runBleOta(fw, fs) }.start()
                         }
                         "{\"ok\":true}"
@@ -1753,7 +1756,7 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     val j = JSONObject()
                     j.put("phase", otaPhase); j.put("msg", otaMsg)
-                    j.put("sent", otaSent); j.put("total", otaTotal)
+                    j.put("sent", otaSent); j.put("total", otaTotal); j.put("confirmed", otaConfirmed)
                     j.toString()
                 }
                 runOnUiThread {
@@ -1770,7 +1773,7 @@ class MainActivity : AppCompatActivity() {
             // Reboot-ish traffic keeps the ride-through reconnect armed;
             // plain browsing doesn't — a disconnect then = model off.
             if (method.uppercase() == "POST" && p != "/api/time")
-                ble.noteRebootish(if (p == "/api/firmware/install") 300_000 else 15_000)
+                if (p == "/api/firmware/install") ble.noteRebootish(300_000, 240_000) else ble.noteRebootish(15_000)
             val headers = HashMap<String, String>()
             runCatching {
                 val o = JSONObject(headersJson)

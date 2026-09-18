@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Home &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=284">
-<script src="/app.js?v=284" defer></script>
+<link rel=stylesheet href="/style.css?v=285">
+<script src="/app.js?v=285" defer></script>
 <style>
 /* First paint from memory (Malcolm 2026-09-10: the receiver layout flashed
    before the dongle one): classes set on <html> by the hint script below,
@@ -17,6 +17,8 @@
 html.h-dongle #flybtn, html.h-dongle #bindbtn, html.h-dongle #simpg, html.h-dongle #fcHint,
 html.h-dongle #bindBanner, html.h-dongle #simBanner, html.h-dongle a[href="/blackbox"] { display: none !important; }
 html.h-dongle #dongleBanner { display: block !important; }
+/* Simulator interface (a dongle in its other role): the receiver-only buttons go, the simulator ones stay. */
+html.h-simif #bindbtn, html.h-simif #fcHint, html.h-simif #bindBanner, html.h-simif a[href="/blackbox"] { display: none !important; }
 /* Friendly confirmation card (replaces the browser's utilitarian confirm()) */
 .modal{position:fixed;inset:0;background:rgba(16,38,58,.55);backdrop-filter:blur(2px);
  display:flex;align-items:center;justify-content:center;z-index:50;padding:1em}
@@ -136,6 +138,7 @@ html.h-dongle #dongleBanner { display: block !important; }
             if(h.flyHidden)document.getElementById('flybtn').style.display='none';
             if(h.rfShow)document.getElementById('rfbtn').style.display='';
             if(h.dongle)document.documentElement.classList.add('h-dongle');
+            if(h.simif)document.documentElement.classList.add('h-simif');
             if(h.name)document.getElementById('modelName').textContent=h.name;
             document.getElementById('subtitle').textContent='';   // nothing to say until the receiver answers
         }catch(e){}
@@ -262,6 +265,9 @@ function updateBindState(s) {
     }
     if (s.dongle) subtitle = (s.fcinfo && s.fcinfo.detected) ? 'Flight controller connected' : 'Waiting for the flight controller';
     else if (s.usb && s.usb.device) subtitle += ' &mdash; flight controller on USB';   // 0.9.640
+    if (s.sim_if) subtitle = s.sim_if_up   // simulator interface (0.9.762): what the wire carries, at a glance
+        ? ('Receiver on D5: ' + s.sim_if_link + ', ' + s.sim_if_ch + ' channels &mdash; joystick to the computer')
+        : 'Waiting for a receiver on D5';
     { // the command line left open keeps Rotorflight from arming: say so until it is closed (0.9.640)
       const st = document.getElementById('subtitle'); let cb = document.getElementById('cliOpen');
       if (st && !cb) { cb = document.createElement('div'); cb.id = 'cliOpen'; cb.className = 'banner bad'; cb.style.display = 'none'; st.parentNode.insertBefore(cb, st.nextSibling); }
@@ -386,6 +392,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         for (const id of ['flybtn', 'bindbtn', 'simpg', 'fcHint', 'bindBanner', 'simBanner']) { const el = document.getElementById(id); if (el) el.style.display = 'none'; }
         document.querySelectorAll('a[href="/blackbox"]').forEach(a => a.style.display = 'none');   // link stats, flights, RC telemetry: all the receiver's
     }
+    // Simulator interface (0.9.762): a dongle in its other role. No radio, so
+    // no bind and no flights - but every simulator page, so NOT the h-dongle set.
+    const simIfOn = !!s.sim_if;
+    saveFrontHint('simif', simIfOn);
+    document.documentElement.classList.toggle('h-simif', simIfOn);
+    if (simIfOn) {
+        for (const id of ['bindbtn', 'fcHint', 'bindBanner']) { const el = document.getElementById(id); if (el) el.style.display = 'none'; }
+        document.querySelectorAll('a[href="/blackbox"]').forEach(a => a.style.display = 'none');
+    }
     // Simulator state — banner + tint the Simulator button green while active.
     const simOn = !!s.sim;
     const simB = document.getElementById('simBanner');
@@ -410,6 +425,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (hc) hc.innerHTML =
             '<h2>Simulator mode</h2>'
           + '<p>The receiver is a <b>USB joystick</b> for a PC flight simulator, driven by your transmitter sticks. Its flight-controller output is OFF, so it cannot fly a real model.</p>'
+          + (s.sim_if ? '<p><b>Simulator interface:</b> the sticks come from the receiver wired to D5, not from a radio on this board. Setup &rarr; Dongle settings shows what it hears on that wire.</p>' : '')
           + '<h3>Buttons</h3><ul>'
           + '<li><b>Turn off WiFi</b> &mdash; cuts WiFi to reduce radio interference; the simulator keeps running over USB. WiFi (and this phone control) comes back when you power-cycle the receiver.</li>'
           + '<li><b>Simulator — ON</b> &mdash; remap channels, RealFlight/neXt controls &amp; views, and the switch back to a normal receiver.</li>'

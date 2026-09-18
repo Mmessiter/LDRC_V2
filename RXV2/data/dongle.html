@@ -8,16 +8,21 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rotorflight dongle &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=284">
-<script src="/app.js?v=284" defer></script>
+<link rel=stylesheet href="/style.css?v=285">
+<script src="/app.js?v=285" defer></script>
 <style>
-.guide{background:#c8d2dc;color:#3a5165;padding:1em;border-radius:10px;margin:0 0 1em;font-size:1.02em}
 .fldRow{display:flex;justify-content:space-between;align-items:center;gap:.6em;padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
 .fldRow label{flex:1;color:#3a5165;font-size:.95em}
 table.wire{width:100%;border-collapse:collapse;margin:.6em 0}
 table.wire td{padding:.35em .5em;border-bottom:1px solid #dbe5ea;font-size:.98em}
 table.wire td:first-child{font-weight:700;color:#3a5165;white-space:nowrap}
-.state{font-weight:700}
+.roleBtn{display:flex;align-items:center;gap:.8em;width:100%;text-align:left;padding:.8em .9em;margin:.35em 0;border:2px solid #c9d3dc;border-radius:12px;background:#f2f6f8;color:#22384b;font:inherit;cursor:pointer}
+.roleBtn.sel{border-color:#3b8a3b;background:#e2f2dc}
+.roleBtn .ico{font-size:1.6em;line-height:1}
+.roleBtn b{display:block;font-size:1.05em}
+.roleBtn small{display:block;color:#3a5165;font-size:.9em;margin-top:.15em}
+.roleBtn .tick{margin-left:auto;font-size:1.3em;color:#3b8a3b;visibility:hidden}
+.roleBtn.sel .tick{visibility:visible}
 </style>
 </head>
 <body class=hasFab>
@@ -25,9 +30,19 @@ table.wire td:first-child{font-weight:700;color:#3a5165;white-space:nowrap}
 <div class=bg-photo aria-hidden=true></div>
 <div class=bg-wash  aria-hidden=true></div>
 <div class=container>
-    <h1>Rotorflight dongle</h1>
-    <p class=subtitle>the phone app on a Nexus that another receiver flies</p>
+    <h1 id=title>Rotorflight dongle</h1>
+    <p class=subtitle id=subtitle>the phone app on a Nexus that another receiver flies</p>
     <div id=status class="banner info">loading&hellip;</div>
+
+    <!-- A board with no transceivers is a dongle unless it is made a simulator
+         interface; a board with transceivers is a receiver. Nothing else to
+         choose (Malcolm 2026-09-18: "If there are no transceivers, it must be
+         a dongle. No option, except it could be a simulator!"). -->
+    <div class=card id=roleCard style="display:none">
+        <h2>Role</h2>
+        <button class=roleBtn type=button id=roleDongle onclick="pickRole(0)"><span class=ico>&#128268;</span><span><b>Rotorflight dongle</b><small>the phone app on a flight controller</small></span><span class=tick>&#10003;</span></button>
+        <button class=roleBtn type=button id=roleSim onclick="pickRole(3)"><span class=ico>&#127918;</span><span><b>Simulator interface</b><small>a receiver on the wire, a joystick on the computer</small></span><span class=tick>&#10003;</span></button>
+    </div>
 
     <div class=card id=nameCard style="display:none">
         <h2>Name</h2>
@@ -36,7 +51,7 @@ table.wire td:first-child{font-weight:700;color:#3a5165;white-space:nowrap}
         <button class="btn" type=button id=renameBtn style="margin:.4em 0 0;background:#6f7e8b"><span class=ico>&#127991;&#65039;</span>Rename</button>
     </div>
 
-    <div class=card>
+    <div class=card id=wireFc>
         <h2>Wiring</h2>
         <table class=wire>
             <tr><td>5 V</td><td>flight controller 5 V</td></tr>
@@ -48,7 +63,7 @@ table.wire td:first-child{font-weight:700;color:#3a5165;white-space:nowrap}
         <p class=sub>In Rotorflight (Ports), set that UART to <b>MSP</b> at the speed below.</p>
     </div>
 
-    <div class=card>
+    <div class=card id=powerFc>
         <h2>Power</h2>
         <div class=warn style="background:#f6e6cf;color:#5a3f1c;border-radius:10px;padding:.8em 1em;margin:.2em 0 0">
             <p style="margin:0 0 .4em"><b>The dongle&rsquo;s 5 V comes from the flight controller, never from anything else.</b></p>
@@ -56,18 +71,8 @@ table.wire td:first-child{font-weight:700;color:#3a5165;white-space:nowrap}
         </div>
     </div>
 
-    <div class=card>
-        <h2 id=modeHead>Mode</h2>
-        <div class=fldRow id=modeRow><label data-help="Automatic: a board with no transceivers is a dongle, a board with transceivers is a receiver - decided at every power-up. Always a dongle / Always a receiver override that. A change reboots the board.">What this board is</label>
-            <select id=mode>
-                <option value=0>Automatic (by transceivers)</option>
-                <option value=1>Always a dongle</option>
-                <option value=2>Always a receiver</option>
-                <option value=3>Simulator interface (a receiver on the wire &rarr; USB joystick)</option>
-            </select></div>
-        <div class=fldRow id=curRow><label>Right now</label><span class=state id=curState>&hellip;</span></div>
-        <p class=sub id=simIfWhere style="display:none">This board has its own radio, so it does not need a receiver on a wire: <a href="/sim">Simulator mode</a> flies a PC simulator from your own transmitter, with nothing but a USB cable. The <b>Simulator interface</b> role is for a spare board with <i>no</i> radio.</p>
-        <p class=sub id=simIfNote style="display:none"><b>Wire one of your receivers to this board:</b> its signal output to <b>D5</b>, its 5&nbsp;V to this board&rsquo;s <b>5V</b> pin, ground to ground &mdash; the same lead, with the flight-controller end moved to the receiver. Then plug this board into the computer. CRSF, SBUS, IBUS and PPM are recognised on their own; the computer powers everything, so no battery and no flight controller.</p>
+    <div class=card id=speedCard>
+        <h2>Port speed</h2>
         <div class=fldRow><label data-help="The UART speed Rotorflight uses for its MSP port - 115200 is its default. Both ends must agree.">UART speed (baud)</label>
             <select id=baud>
                 <option value=115200>115200</option>
@@ -75,17 +80,33 @@ table.wire td:first-child{font-weight:700;color:#3a5165;white-space:nowrap}
                 <option value=460800>460800</option>
                 <option value=921600>921600</option>
             </select></div>
-        <p class=sub id=modeNote>Switching off returns the board to being a receiver. Both need a restart, which happens by itself.</p>
     </div>
 
-    <div class=fabBar>
-        <button class="btn btn-fly" id=toggleBtn onclick="apply()" style="margin:0;background:#6cab5e"><span class=ico>&#128190;</span>Save and restart</button>
+    <div class=card id=wireSim style="display:none">
+        <h2>Wiring</h2>
+        <table class=wire>
+            <tr><td>5V</td><td>receiver 5 V &mdash; the computer powers both</td></tr>
+            <tr><td>GND</td><td>receiver GND</td></tr>
+            <tr><td>D5</td><td>receiver <b>signal out</b> &mdash; CRSF, SBUS, IBUS or PPM, recognised on its own</td></tr>
+            <tr><td>USB-C</td><td>the computer &mdash; it sees a joystick</td></tr>
+        </table>
+        <p class=sub>The dongle&rsquo;s lead with the flight-controller end moved to the receiver. No battery, no flight controller. Sticks, reversing and the camera keys are on the <a href="/sim">Simulator</a> pages.</p>
+    </div>
+
+    <div class=card id=receiverCard style="display:none">
+        <h2>This board is a receiver</h2>
+        <p class=sub>It has transceivers, so it flies a model; the roles on this page are for a board with none. To fly a PC simulator from this receiver use <a href="/sim">Simulator mode</a> &mdash; no wire, no second board.</p>
+        <button class="btn" type=button id=unDongle style="display:none;margin:.4em 0 0;background:#c0392b" onclick="makeReceiver()"><span class=ico>&#128260;</span>Make it a receiver again</button>
+    </div>
+
+    <div class=fabBar id=fab style="display:none">
+        <button class="btn btn-fly" type=button onclick="apply()" style="margin:0;background:#6cab5e"><span class=ico>&#128190;</span>Save and restart</button>
     </div>
     <div class=footer></div>
 </div>
 <template id=helpContent><h2>Rotorflight dongle</h2>
 <p>A bare XIAO ESP32-S3 running this firmware becomes a configuration dongle: it plugs into any spare UART of a Rotorflight flight controller (set to MSP) and gives the phone app - wizards, sliders, backups, everything - while an ELRS, FrSky or any other receiver flies the model.</p>
-<p><b>Automatic</b> is the normal setting: at every power-up the board counts its transceivers - none means it is a dongle, one or more means it is a receiver. So a bare XIAO with this firmware is a dongle with no setting at all.</p>
+<p><b>Role.</b> The board counts its transceivers at every power-up. None means a Rotorflight dongle &mdash; unless you make it a <b>Simulator interface</b>, the only other thing a bare board can be. One or more means a receiver, and there is nothing to choose.</p>
 <p><b>Safety:</b> the dongle cannot see the model's transmitter, so it takes ARMED from the flight controller itself: configuration is refused and the radios go quiet while the flight controller reports it is armed, and come back after it disarms. Bank selections made from the phone stay until the model's own bank switch is moved.</p>
 <p>Not on a dongle: flight records and telemetry on the transmitter - those belong to the receiver that flies the model. View channels DOES work: it shows the flight controller's own channels, read down the cable.</p>
 <h3>Why the 5 V must come from the flight controller</h3>
@@ -93,26 +114,94 @@ table.wire td:first-child{font-weight:700;color:#3a5165;white-space:nowrap}
 <h3>D5 and D6</h3>
 <p>With a USB cable to the flight controller, D5 and D6 carry nothing &mdash; the dongle uses USB and falls back to them only if USB does not come up. Worth wiring anyway: they cost nothing and they are the safety net. The <b>Link</b> line at the top says which one is in use. The receiver port stays with whatever receiver flies the model.</p>
 <h3>Simulator interface</h3>
-<p>The third role for a board with no radio: it turns one of your <b>receivers</b> into a USB joystick for a simulator on the computer, Windows or Mac.</p>
+<p>The other role for a board with no radio: it turns one of your <b>receivers</b> into a USB joystick for a simulator on the computer, Windows or Mac.</p>
 <p><b>Wiring</b> &mdash; the same lead, with the flight-controller end moved to the receiver: the receiver&rsquo;s signal output to <b>D5</b>, its 5&nbsp;V to this board&rsquo;s <b>5V</b> pin, ground to ground. Then plug this board into the computer with a USB cable. The computer powers both, so there is no battery and no flight controller in the rig at all.</p>
-<p>It recognises <b>CRSF, SBUS, IBUS and PPM</b> on its own &mdash; nothing to choose. Switch the transmitter on and the Mode card says which one it found and how many channels. Everything else is on the <b>Simulator</b> pages: which stick drives which axis, reversing, the spool-up realism, and the camera keys.</p>
+<p>It recognises <b>CRSF, SBUS, IBUS and PPM</b> on its own &mdash; nothing to choose. The banner at the top says what it hears on D5: nothing yet (a wiring or power problem &mdash; is the receiver&rsquo;s LED on?), a signal it has not recognised (it keeps trying the four in turn), or the protocol and channel count once it has locked on. Everything else is on the <b>Simulator</b> pages: which stick drives which axis, reversing, the spool-up realism, and the camera keys.</p>
 <p><b>A receiver does not need this role at all &mdash; it is the simpler rig.</b> An LDRC receiver has its own radio, so it plugs straight into the computer and flies the simulator from your own transmitter: no wire, no second board. That is <b>Simulator mode</b>, on the receiver&rsquo;s own Simulator page, and it is unchanged. The <b>Simulator interface</b> role is for a spare board with <i>no</i> radio &mdash; to fly a simulator with someone else&rsquo;s receiver, or when all your own receivers are in helicopters.</p>
 <h3>Like it? The receiver needs no dongle</h3>
 <p>The dongle is the little brother of the LDRC <b>receiver</b>: the same brain with the radio fitted. The receiver does everything here <b>and flies the model</b>, so with an LDRC receiver and transmitter there is no dongle to fit at all, and no spare flight-controller port used up. It also updates itself over the air and flies a PC simulator from the same transmitter. Free and open source: roughly &pound;35 of parts for a receiver, &pound;120 for a transmitter &mdash; and the V2 receiver works with the original V1 transmitter. More at <b>messiter.com/LDRC.html</b>.</p></template>
 <script>
-let on = false;
+let on = false, simIf = false, radios = false, curRole = 0, picked = 0, usbLink = false, pollTimer = null;
+
+function pickRole(m) {
+    picked = m;
+    const sim = m === 3;
+    document.getElementById('roleDongle').classList.toggle('sel', !sim);
+    document.getElementById('roleSim').classList.toggle('sel', sim);
+    // The cards follow the CHOICE, so the wiring for the new role is on
+    // screen before the restart. USB link (0.9.615): the flight controller is
+    // on the dongle's USB socket - no wiring, no port setting.
+    document.getElementById('wireFc').style.display    = (sim || usbLink) ? 'none' : '';
+    document.getElementById('powerFc').style.display   = sim ? 'none' : '';
+    document.getElementById('speedCard').style.display = sim ? 'none' : '';
+    document.getElementById('wireSim').style.display   = sim ? '' : 'none';
+}
+
+function paintStatus(s) {
+    const st = document.getElementById('status');
+    if (radios) {
+        st.className = 'banner ' + (on ? 'warn' : 'info');
+        st.textContent = on
+            ? 'Set to be a dongle although it has transceivers — it will not fly a model until it is a receiver again.'
+            : 'A receiver — nothing to choose here.';
+        return;
+    }
+    if (simIf) {
+        // What the board hears on the wire, live (0.9.762). Zero bytes is a
+        // wiring or power problem; bytes without a lock is a protocol one.
+        const bytes = s.sim_if_bytes | 0;
+        if (s.sim_if_up) {
+            st.className = 'banner good';
+            st.textContent = '✓ Receiver found on D5 — ' + s.sim_if_link + ', ' + s.sim_if_ch + ' channels — the computer sees a joystick.';
+        } else if (bytes > 0) {
+            st.className = 'banner warn';
+            st.textContent = 'Signal arriving on D5 (' + bytes.toLocaleString() + ' bytes) but not recognised yet — trying CRSF, SBUS, IBUS and PPM in turn.';
+        } else {
+            st.className = 'banner warn';
+            st.textContent = 'Nothing arriving on D5 yet. Check the signal wire, that the receiver is powered (its LED) and that the transmitter is on.';
+        }
+        return;
+    }
+    if (on) {
+        const fc = s.fcinfo || {};
+        st.className = 'banner ' + (fc.detected ? 'good' : 'warn');
+        st.textContent = fc.detected
+            ? '✓ Flight controller answering' + (s.dongle_link === 'usb' ? ' by USB' : '') + (s.fc_armed ? ' (ARMED - configuration locked)' : '')
+            : 'No flight controller answering yet: check the wiring and the UART set to MSP, or plug the flight controller’s USB into the dongle.';
+        return;
+    }
+    // No transceivers, not a dongle, not a simulator interface: an older page
+    // set "always a receiver" on a bare board. Nothing works until a role is chosen.
+    st.className = 'banner warn';
+    st.textContent = 'No transceivers, yet set as a receiver — choose a role and save.';
+}
+
 async function load() {
+    const show = (id, v) => { document.getElementById(id).style.display = v ? '' : 'none'; };
     try {
         const s = await LDRC.fetchState();
-        on = !!s.dongle;
-        // USB link (0.9.615): the flight controller is on the dongle's USB socket - no wiring, no port setting.
-        const usb = s.dongle_link === 'usb';
-        document.querySelectorAll('.card').forEach(c => { if (c.querySelector('h2') && c.querySelector('h2').textContent === 'Wiring') c.style.display = usb ? 'none' : ''; });
-        // The dongle's name lives here, not on Setup (Malcolm 2026-09-10).
-        const nc = document.getElementById('nameCard'); if (nc) nc.style.display = on ? '' : 'none';
-        const nm = document.getElementById('nm'); if (nm) nm.value = (s.info && s.info.name) || '';
-        const rb = document.getElementById('renameBtn');
-        if (rb) rb.onclick = () => {
+        if (!s) throw new Error('no answer');
+        on = !!s.dongle; simIf = !!s.sim_if;
+        radios = ((s.rf && s.rf.radios_count) | 0) > 0;
+        usbLink = s.dongle_link === 'usb';
+        curRole = simIf ? 3 : 0;
+        if (radios) {
+            // Transceivers fitted: a receiver, full stop. The only button worth
+            // having is the way back from an older page's "always a dongle".
+            document.getElementById('title').textContent = 'Receiver';
+            document.getElementById('subtitle').textContent = 'this board has transceivers';
+            for (const id of ['roleCard', 'nameCard', 'wireFc', 'powerFc', 'speedCard', 'wireSim', 'fab']) show(id, false);
+            show('receiverCard', true);
+            show('unDongle', on);
+            paintStatus(s);
+            return;
+        }
+        show('receiverCard', false);
+        show('roleCard', true); show('fab', true);
+        // The board's name lives here, not on Setup (Malcolm 2026-09-10) - in both roles.
+        show('nameCard', true);
+        const nm = document.getElementById('nm'); nm.value = (s.info && s.info.name) || '';
+        document.getElementById('renameBtn').onclick = () => {
             const v = (nm.value || '').trim();
             if (!v) { LDRC.alert('Give it a name first.', { title: 'Rename', icon: '🏷️' }); return; }
             const fd = new URLSearchParams(); fd.set('name', v);
@@ -120,70 +209,41 @@ async function load() {
               // A refusal (armed, bad name) is a sentence, not a page.
               .then(r => r.text().then(t => { if (!r.ok) { LDRC.alert(t, { title: 'Rename', icon: '🏷️' }); return; }
                                               document.open(); document.write(t); document.close(); }))
-              .catch(() => LDRC.alert('Could not reach the dongle.', { title: 'Rename', icon: '🏷️' }));
+              .catch(() => LDRC.alert('Could not reach the board.', { title: 'Rename', icon: '🏷️' }));
         };
-        document.getElementById('mode').value = String(s.dongle_mode || 0);
-        // A dongle has no transceivers and never will: no Mode choice on it,
-        // just the port speed (Malcolm 2026-09-10). The choice stays on a
-        // receiver, where it decides what a board with dead radios becomes.
-        // The simulator interface is neither a dongle nor a receiver: no MSP,
-        // so the port speed is meaningless, and the wiring note replaces it.
-        const simIf = !!s.sim_if;
-        // A board with its own radio is never offered the wire-fed role - it
-        // has Simulator mode instead, which needs no wire at all (Malcolm
-        // 2026-09-18: "a receiver with transceivers should STILL be able to
-        // operate in Simulator mode! It's even simpler").
-        const radios = ((s.rf && s.rf.radios_count) | 0) > 0;
-        const opt3 = document.querySelector('#mode option[value="3"]');
-        if (opt3) opt3.disabled = radios;
-        document.getElementById('simIfWhere').style.display = radios ? '' : 'none';
-        document.getElementById('simIfNote').style.display = simIf ? '' : 'none';
-        // The Mode row used to be hidden on a dongle - the board knows what it
-        // is, so there was nothing to choose. Since 0.9.757 there IS: Simulator
-        // interface. Malcolm 2026-09-18: "there was no mention of simulator
-        // mode". A board with no radio can be either role, so it always shows.
-        const noRadio = ((s.rf && s.rf.radios_count) | 0) === 0;
-        for (const id of ['modeRow', 'curRow', 'modeNote']) document.getElementById(id).style.display = (on && !simIf && !noRadio) ? 'none' : '';
-        document.getElementById('modeHead').textContent = on ? 'Port speed' : 'Mode';
-        document.getElementById('curState').textContent = on
-            ? ('Rotorflight dongle' + (s.dongle_auto ? ' (no transceivers found)' : ' (set to always)'))
-            : ('LockDown receiver' + (s.dongle_mode == 2 ? ' (set to always)' : ''));
-        document.getElementById('curState').style.color = on ? '#2a7a2a' : '#5f7385';
         const b = document.getElementById('baud'); if (s.dongle_baud) b.value = String(s.dongle_baud);
-        b.closest('.fldRow').style.display = simIf ? 'none' : '';
-        if (simIf) {
-            document.getElementById('mode').value = '3';
-            document.getElementById('curState').textContent = 'Simulator interface';
-            document.getElementById('curState').style.color = '#2a7a2a';
-            document.getElementById('status').className = 'banner ' + (s.sim_if_up ? 'good' : 'warn');
-            document.getElementById('status').textContent = s.sim_if_up
-                ? ('\u2713 Receiver found on D5 \u2014 ' + s.sim_if_link + ', ' + s.sim_if_ch + ' channels \u2014 the computer sees a joystick'
-                   + '. Set it up on the Simulator pages.')
-                : 'Listening on D5 for a receiver (CRSF, SBUS, IBUS or PPM). Check the signal wire, the 5 V and the ground, and that the transmitter is on.';
-            return;
-        }
-        const fc = s.fcinfo || {};
-        document.getElementById('status').className = 'banner ' + (on ? (fc.detected ? 'good' : 'warn') : 'info');
-        document.getElementById('status').textContent = on
-            ? (fc.detected ? '✓ Dongle mode - flight controller answering' + (s.dongle_link === 'usb' ? ' by USB' : '') + (s.fc_armed ? ' (ARMED - configuration locked)' : '') : 'Dongle mode - no flight controller answering yet: check the wiring and the UART set to MSP, or plug the flight controller\'s USB into the dongle')
-            : 'Normal receiver mode';
-    } catch (e) { document.getElementById('status').className = 'banner bad'; document.getElementById('status').textContent = 'Could not read the receiver: ' + e.message; }
+        pickRole(curRole);
+        document.getElementById('title').textContent = simIf ? 'Simulator interface' : 'Rotorflight dongle';
+        document.getElementById('subtitle').textContent = simIf ? 'a receiver on the wire, a joystick on the computer' : 'the phone app on a Nexus that another receiver flies';
+        paintStatus(s);
+        // The wire banner is live: what the board hears changes as things are plugged in.
+        if (simIf && !pollTimer) pollTimer = setInterval(async () => { try { const t = await LDRC.fetchState(); if (t) paintStatus(t); } catch (e) {} }, 3000);
+    } catch (e) { document.getElementById('status').className = 'banner bad'; document.getElementById('status').textContent = 'Could not read the board: ' + e.message; }
 }
+
 async function apply() {
-    const mode = document.getElementById('mode').value;
-    const what = mode == '3' ? 'a simulator interface: a receiver wired to D5 drives a PC simulator over USB' : mode == '1' ? 'always a dongle: no radio, no channel output' : mode == '2' ? 'always a receiver' : 'automatic: a dongle when it has no transceivers, a receiver when it has';
-    if (!(await LDRC.confirm('Set this board to ' + what + '? It restarts now.', { okLabel: 'Yes, restart' }))) return;
-    const fd = new URLSearchParams(); fd.set('mode', mode); fd.set('baud', document.getElementById('baud').value);   // FormData is not parsed over Bluetooth
-    document.getElementById('status').className = 'banner info'; document.getElementById('status').textContent = 'Saving and rebooting…';
+    const mode = picked;
+    const what = mode === 3 ? 'a simulator interface' : 'a Rotorflight dongle';
+    const q = mode !== curRole ? 'Make this board ' + what + '? It restarts now.' : 'Save and restart the board?';
+    if (!(await LDRC.confirm(q, { title: 'Restart', icon: '🔌', yes: 'Yes, restart', kind: 'warn' }))) return;
+    await post(mode);
+}
+async function makeReceiver() {
+    if (!(await LDRC.confirm('Make this board a receiver again? It restarts now.', { title: 'Restart', icon: '🔌', yes: 'Yes, restart', kind: 'warn' }))) return;
+    await post(0);   // automatic: with transceivers fitted, that is a receiver
+}
+async function post(mode) {
+    const fd = new URLSearchParams(); fd.set('mode', String(mode)); fd.set('baud', document.getElementById('baud').value);   // FormData is not parsed over Bluetooth
+    const st = document.getElementById('status');
+    st.className = 'banner info'; st.textContent = 'Saving and restarting…';
     try {
         const r = await fetch('/api/dongle', { method: 'POST', body: fd });
         if (!r.ok) {   // a refusal (armed, unknown state) arrives at once, as a sentence
             const t = (await r.text()).replace(/<[^>]+>/g, ' ').trim().slice(0, 200);
-            document.getElementById('status').className = 'banner bad';
-            document.getElementById('status').textContent = t || ('HTTP ' + r.status);
+            st.className = 'banner bad'; st.textContent = t || ('HTTP ' + r.status);
             return;
         }
-    } catch (e) { /* the reboot cut the reply: that IS the save */ }
+    } catch (e) { /* the restart cut the reply: that IS the save */ }
     setTimeout(() => location.href = '/', 9000);
 }
 document.addEventListener('DOMContentLoaded', load);

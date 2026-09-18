@@ -207,9 +207,14 @@ class Rxv2Ble(private val context: Context) {
     // browsing never arms this — a disconnect then = model switched off →
     // straight back to the scanner (Malcolm 2026-08-07).
     @Volatile var rebootishUntil = 0L
-    fun noteRebootish(ms: Long) {
+    // How long the drop that follows is ridden out: 90 s covers a config-save
+    // reboot; a firmware install asks for more (5.93 - DongleSim's update
+    // "just sat there": the OTA runner was still polling after the link had
+    // given up at 90 s, so the page never learned the update had gone in).
+    @Volatile var rebootWindowMs = 90_000L
+    fun noteRebootish(ms: Long, windowMs: Long = 90_000L) {
         val until = System.currentTimeMillis() + ms
-        if (until > rebootishUntil) rebootishUntil = until
+        if (until > rebootishUntil) { rebootishUntil = until; rebootWindowMs = windowMs }
     }
     private var reconnectUntil = 0L
     /** True after an UNEXPECTED drop (not a reboot we asked for, not the
@@ -564,7 +569,7 @@ class Rxv2Ble(private val context: Context) {
                     // tearing the old link down.
                     if (!userDisconnect && state is State.Ready) {
                         val rebootish = System.currentTimeMillis() < rebootishUntil
-                        reconnectUntil = System.currentTimeMillis() + (if (rebootish) 90_000 else 30_000)
+                        reconnectUntil = System.currentTimeMillis() + (if (rebootish) rebootWindowMs else 30_000L)
                         lastDropUnexpected = !rebootish
                         state = State.Reconnecting(connName)
                         bg.postDelayed({ tryReconnect() }, 2000)

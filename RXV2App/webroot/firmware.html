@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Check for Update &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=284">
-<script src="/app.js?v=284" defer></script>
+<link rel=stylesheet href="/style.css?v=285">
+<script src="/app.js?v=285" defer></script>
 <style>
 /* --- Currently-installed card -------------------------------------- */
 .installed-card .row{
@@ -557,6 +557,7 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
         if (r0.ok && ((await r0.json()).ok)) {
             clearInterval(instTick);
             const t0 = Date.now();
+            let rebootT0 = 0;   // when the runner first said 'rebooting'
             const bar = pct =>
                 '<div style="height:12px;border-radius:6px;background:rgba(128,128,128,.25);overflow:hidden;margin-top:10px">' +
                 '<div style="height:100%;width:' + pct + '%;background:#3b82f6;border-radius:6px;transition:width .5s"></div></div>';
@@ -577,13 +578,28 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
                 }
                 if (p.phase === 'done') {
                     setStatePill('Installed', 'good');
+                    // confirmed:false (apps 5.99 / 5.93): the runner never saw the
+                    // receiver again over Bluetooth. A reload over a link that is
+                    // not back hangs on this screen for good (DongleSim,
+                    // 2026-09-18: "it just sat there... it had updated
+                    // successfully, but it didn't know it had"). Go back to the
+                    // list instead: the scanner reconnects by itself.
+                    if (p.confirmed === false) {
+                        showMessage('<b>Installed.</b> ' + p.msg + '<br><br>Back to the list in a moment \u2014 tap the model there and the new version shows at the bottom.' + bar(100));
+                        setTimeout(() => { try { window.webkit.messageHandlers.rxv2.postMessage('disconnect'); } catch (e) {} }, 4000);
+                        return;
+                    }
                     showMessage('<b>\u2713 Updated over Bluetooth</b> \u2014 ' + p.msg + '. Page reloads in 5\u2009s.' + bar(100));
                     setTimeout(() => location.href = '/', 5000);
                     return;
                 }
                 if (p.phase === 'rebooting') {
+                    if (!rebootT0) rebootT0 = Date.now();
+                    const rs = Math.round((Date.now() - rebootT0) / 1000);
                     setStatePill('Rebooting\u2026', 'amber');
-                    showMessage('<b>Installed.</b> ' + p.msg + bar(100));
+                    showMessage('<b>Installed.</b> ' + p.msg + ' <span class=muted>(' + rs + '\u2009s)</span>'
+                        + (rs > 75 ? '<br><span class=muted>Bluetooth is slow to re-find it. The update is in: if this goes on, go back to the list and tap the model.</span>' : '')
+                        + bar(100));
                 } else if (p.total > 0) {
                     const pct = Math.round(100 * p.sent / p.total);
                     setStatePill('Installing ' + pct + '%', 'amber');

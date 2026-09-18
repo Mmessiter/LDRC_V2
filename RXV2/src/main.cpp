@@ -763,6 +763,22 @@ void loop() {
         // good values hold, which is what a sim wants.
         if (simIfEnabled) {
             g_rcIn.update();
+            // Lock and loss go to the event log (0.9.762): the first bench test
+            // (Malcolm, SBUS: "no evidence that it was" detected) left nothing
+            // to read back. Only on a change, so it cannot flood.
+            static RcProtocol simIfSeen = RC_NONE;
+            const RcProtocol simIfNow = g_rcIn.linkUp() ? g_rcIn.protocol() : RC_NONE;
+            if (simIfNow != simIfSeen) {
+                simIfSeen = simIfNow;
+                char m[110];
+                if (simIfNow != RC_NONE)
+                    snprintf(m, sizeof(m), "Simulator interface: %s from the receiver on D5, %u channels",
+                             g_rcIn.protocolName(), (unsigned)g_rcIn.channelCount());
+                else
+                    snprintf(m, sizeof(m), "Simulator interface: receiver signal lost on D5 - searching again (%lu bytes seen so far)",
+                             (unsigned long)g_rcIn.bytesSeen());
+                events.add(m);
+            }
             if (g_rcIn.linkUp() && !g_rcIn.failsafe()) {
                 const uint8_t n = g_rcIn.channelCount() < 16 ? g_rcIn.channelCount() : 16;
                 for (uint8_t i = 0; i < n; ++i) channelMicros[i] = g_rcIn.channelUs(i);

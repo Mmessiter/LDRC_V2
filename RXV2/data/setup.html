@@ -8,10 +8,11 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Setup &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=284">
-<script src="/app.js?v=284" defer></script>
-<style>html.h-dongle #protobtn, html.h-dongle a[href="/rxsettings"], html.h-dongle #renamebtn { display: none !important; }</style>
-<script>try{if(JSON.parse(localStorage.getItem('frontHints')||'{}').dongle)document.documentElement.classList.add('h-dongle');}catch(e){}</script>
+<link rel=stylesheet href="/style.css?v=285">
+<script src="/app.js?v=285" defer></script>
+<style>html.h-dongle #protobtn, html.h-dongle a[href="/rxsettings"], html.h-dongle #renamebtn,
+html.h-simif #protobtn, html.h-simif a[href="/rxsettings"], html.h-simif #renamebtn { display: none !important; }</style>
+<script>try{const h=JSON.parse(localStorage.getItem('frontHints')||'{}');if(h.dongle)document.documentElement.classList.add('h-dongle');if(h.simif)document.documentElement.classList.add('h-simif');}catch(e){}</script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -25,7 +26,7 @@
     <a class="btn btn-diag" href="/rxsettings"><span class=ico>&#9881;&#65039;</span>Receiver settings &mdash; failsafe, battery, wave</a>
     <a class="btn btn-fw"   href="/wifi" id=wifibtn style="display:none"><span class=ico>&#128246;</span>WiFi settings</a>
     <a class="btn btn-fw"   href="/firmware"><span class=ico>&#128229;</span>Update or roll back firmware</a>
-    <a class="btn btn-diag" href="/dongle" id=donglebtn style="display:none"><span class=ico>&#128268;</span>Dongle settings &mdash; name and serial speed</a>
+    <a class="btn btn-diag" href="/dongle" id=donglebtn style="display:none"><span class=ico>&#128268;</span>Dongle settings &mdash; role, name and serial speed</a>
     <button class="btn" type=button id=renamebtn style="background:#6f7e8b"><span class=ico>&#127991;&#65039;</span><span><span id=renamelbl>Rename receiver</span>&nbsp;&mdash;&nbsp;<span id=curname>&hellip;</span></span></button>
 
     <div class=footer></div>
@@ -37,6 +38,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     for (let i = 0; i < 6 && !s; i++) { s = await LDRC.fetchState(); if (!s) await new Promise(r => setTimeout(r, 700)); }
     if (!s) return;
     document.documentElement.classList.toggle('h-dongle', !!s.dongle);   // the live answer wins (Malcolm 2026-09-10: "Setup page didn't hide it")
+    document.documentElement.classList.toggle('h-simif', !!s.sim_if);   // a dongle in its simulator-interface role (0.9.762)
+    const bare = !!(s.dongle || s.sim_if);   // a board with no transceivers, whichever role it is in
 
     // Output protocol — show what's selected right on the button.
     LDRC.setText('protoname', s.sim ? 'USB → SIM' : (s.protocol && s.protocol.current) || '…');
@@ -48,20 +51,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 2026-09-18, on a dongle that could not join: "I wasn't able to inspect
     // the Wi-Fi settings because the button isn't there."
     const wifiVisible = LDRC.viaBle || (s.net && (s.net.mode === 'WiFi up' || s.net.mode === 'AP mode'));
-    if (s.dongle) for (const sel of ['#protobtn', 'a[href="/rxsettings"]']) { const el = document.querySelector(sel); if (el) el.style.display = 'none'; }   // receiver-only
-    // Dongle settings only exist on a board that IS a dongle. 0.9.687: the button that
-    // asked "dongle or receiver?" is gone - the board works that out for itself - but a
-    // dongle still needs its serial speed, and a receiver whose radios failed to
-    // enumerate finds "always a receiver" here, exactly when the answer might be wrong.
+    if (bare) for (const sel of ['#protobtn', 'a[href="/rxsettings"]']) { const el = document.querySelector(sel); if (el) el.style.display = 'none'; }   // receiver-only
+    // Dongle settings exist on a board with no transceivers, in EITHER of its roles:
+    // the simulator interface must be able to find its way back (0.9.762 - the
+    // button keyed off s.dongle alone, which that role is not).
     const db = document.getElementById('donglebtn');
-    if (db && s.dongle) db.style.display = '';
+    if (db && bare) db.style.display = '';
 
     const wb = document.getElementById('wifibtn');
     if (wb) wb.style.display = wifiVisible ? '' : 'none';
 
     // Current name on the rename button.
     LDRC.setText('curname', (s.info && s.info.name) || 'RXV2');
-    LDRC.setText('renamelbl', s.dongle ? 'Rename dongle' : 'Rename receiver');   // Malcolm 2026-09-10
+    LDRC.setText('renamelbl', bare ? 'Rename dongle' : 'Rename receiver');   // Malcolm 2026-09-10
 
     // Rename — same prompt-based flow as tapping the front-screen title.
     const rb = document.getElementById('renamebtn');
@@ -88,7 +90,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 <li><b>Receiver settings</b> &mdash; failsafe positions, the battery divider and the hello wave.</li>
 <li><b>WiFi settings</b> &mdash; home network details and the &ldquo;AP mode only&rdquo; field setting.</li>
 <li><b>Update firmware</b> &mdash; install newer firmware or roll back.</li>
-<li><b>Dongle settings</b> &mdash; only on a dongle: the name the app shows, and the serial speed to the flight controller.</li>
+<li><b>Dongle settings</b> &mdash; only on a board with no transceivers: its role (Rotorflight dongle or Simulator interface), the name the app shows, and the serial speed to the flight controller.</li>
 <li><b>Rename receiver</b> &mdash; the name is also the WiFi network name and the <code>.local</code> address.</li>
 </ul>
 <h3>Tips</h3>

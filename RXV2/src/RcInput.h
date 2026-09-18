@@ -43,6 +43,7 @@ public:
   uint8_t     channelCount() const { return _chCount; }
   uint16_t    channelUs(uint8_t i) const;  // microseconds; 1500 if absent
   bool        failsafe() const { return _failsafe; }
+  uint32_t    bytesSeen() const;         // everything that ever arrived on the wire (bytes, or PPM edges)
 
 private:
   // ---- detection / lock ----
@@ -71,6 +72,7 @@ private:
   uint8_t  _chCount = 0;
   uint32_t _lastFrameMs = 0;
   bool     _failsafe = false;
+  uint32_t _bytes = 0;                    // serial bytes read, whatever they turned out to be
 
   // parser scratch
   uint8_t  _buf[64];
@@ -97,11 +99,13 @@ static volatile uint8_t  s_ppmIdx       = 0;
 static volatile uint8_t  s_ppmCount     = 0;
 static volatile uint32_t s_ppmLastEdge  = 0;
 static volatile bool     s_ppmFrameReady = false;
+static volatile uint32_t s_ppmEdges     = 0;   // diagnostics: edges seen while trying PPM
 
 // NOT `inline`: an IRAM ISR in a header makes the linker place its literal
 // pool after the use ("dangerous relocation"). One translation unit here.
 static void IRAM_ATTR ppmIsr() {
   uint32_t now = micros();
+  s_ppmEdges++;
   uint32_t d   = now - s_ppmLastEdge;
   s_ppmLastEdge = now;
   if (d > 3000) {                 // sync gap -> frame boundary
@@ -116,6 +120,11 @@ static void IRAM_ATTR ppmIsr() {
     }
   }
 }
+
+// Diagnostics for the dongle page (0.9.762). The first bench test (Malcolm,
+// an SBUS receiver: "no evidence that it was" detected) had nothing to read
+// back. Zero = a wiring or power problem; rising = a protocol one.
+inline uint32_t RcInput::bytesSeen() const { return _bytes + s_ppmEdges; }
 
 // ======================================================================
 // Lifecycle
@@ -229,6 +238,7 @@ inline bool RcInput::feedSerial() {
   // Bound the work per call so loop() stays responsive at high baud.
   for (int n = 0; n < 64 && _uart->available(); n++) {
     uint8_t b = (uint8_t)_uart->read();
+    _bytes++;
     switch (CANDIDATES[_cand]) {
       case RC_CRSF: frame |= crsfByte(b); break;
       case RC_SBUS: frame |= sbusByte(b); break;

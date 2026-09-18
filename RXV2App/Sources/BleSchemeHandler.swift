@@ -63,7 +63,7 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
             let fw = items?.first(where: { $0.name == "fw" })?.value
             let fs = items?.first(where: { $0.name == "fs" })?.value
             let ok = (fw != nil && !demo && !replay)
-            if ok { BleLink.noteRebootish(seconds: 600); ota.start(fw: fw!, fs: fs) }
+            if ok { BleLink.noteRebootish(seconds: 600, window: 240); ota.start(fw: fw!, fs: fs) }
             deliver(task, url: url, code: 200, type: "application/json",
                     body: Data("{\"ok\":\(ok)}".utf8))
             return
@@ -335,7 +335,8 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
         // (Malcolm 2026-08-08: power-off after setting up a NEW receiver
         // sat in the old 180 s window instead of jumping to the scanner).
         if method == "POST" && path != "/api/time" {
-            BleLink.noteRebootish(seconds: path == "/api/firmware/install" ? 300 : 15)
+            if path == "/api/firmware/install" { BleLink.noteRebootish(seconds: 300, window: 240) }
+            else { BleLink.noteRebootish(seconds: 15) }
         }
         var pathAndQuery = path
         if let q = url.query, !q.isEmpty { pathAndQuery += "?\(q)" }
@@ -523,6 +524,10 @@ final class BleOta {
     private var msg = ""
     private var sent: Int64 = 0
     private var total: Int64 = 0
+    // false with phase "done" = the receiver never reappeared over Bluetooth
+    // to confirm the version. firmware.html then returns to the model list
+    // instead of reloading over a link that is not back (5.99).
+    private var confirmed = true
     private var running = false
 
     init(link: BleLink) { self.link = link }
@@ -531,7 +536,7 @@ final class BleOta {
         lock.lock(); defer { lock.unlock() }
         let esc = msg.replacingOccurrences(of: "\\", with: "\\\\")
                      .replacingOccurrences(of: "\"", with: "\\\"")
-        return Data("{\"phase\":\"\(phase)\",\"msg\":\"\(esc)\",\"sent\":\(sent),\"total\":\(total)}".utf8)
+        return Data("{\"phase\":\"\(phase)\",\"msg\":\"\(esc)\",\"sent\":\(sent),\"total\":\(total),\"confirmed\":\(confirmed)}".utf8)
     }
 
     func start(fw: String, fs: String?) {
@@ -539,7 +544,7 @@ final class BleOta {
         if running { lock.unlock(); return }
         running = true
         phase = "download"; msg = "Downloading with the phone's internet…"
-        sent = 0; total = 0
+        sent = 0; total = 0; confirmed = true
         lock.unlock()
         DispatchQueue.global(qos: .userInitiated).async { self.run(fwUrl: fw, fsUrl: fs) }
     }
@@ -616,11 +621,14 @@ final class BleOta {
             set("rebooting", "Waiting for the receiver to come back…")
             _ = try? reqSync("POST", "/api/bleota/reboot")   // reply may die with the radio
             // The receiver reboots straight back into BLE mode (config-reboot
-            // flag) and the link layer auto-reconnects for 90 s — poll until
-            // it answers, then report the version it now runs.
+            // flag) and the link layer auto-reconnects for 240 s (the window
+            // stamped at /app/bleota/start) — poll until it answers, then
+            // report the version it now runs. Was 120 s against a 90 s
+            // reconnect window: DongleSim 2026-09-18 "just sat there" and the
+            // page never learned the update had gone in.
             Thread.sleep(forTimeInterval: 4)
             var newVer = ""
-            let deadline = Date().addingTimeInterval(120)
+            let deadline = Date().addingTimeInterval(240)
             while Date() < deadline {
                 if let st = try? reqSync("GET", "/api/state.json"), st.code == 200,
                    let j = (try? JSONSerialization.jsonObject(with: st.body)) as? [String: Any],
@@ -631,6 +639,7 @@ final class BleOta {
                 }
                 Thread.sleep(forTimeInterval: 3)
             }
+            lock.lock(); confirmed = !newVer.isEmpty; lock.unlock()
             set("done", newVer.isEmpty
                 ? "installed; the receiver didn't reappear on Bluetooth to confirm — reopen the app to check it"
                 : "now running \(newVer)")

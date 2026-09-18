@@ -649,9 +649,14 @@ extension BleLink: CBCentralManagerDelegate, CBPeripheralDelegate {
     // and the pilot wants the model list, not a hopeful spinner (Malcolm
     // 2026-08-07). The scheme handler stamps this on reboot-ish traffic.
     static var rebootishUntil = Date.distantPast
-    static func noteRebootish(seconds: TimeInterval) {
+    // How long the drop that follows is ridden out: 90 s covers a config-save
+    // reboot; a firmware install asks for more (5.99 — DongleSim's update
+    // "just sat there": the OTA runner was still polling after the link had
+    // given up at 90 s, so the page never learned the update had gone in).
+    static var rebootWindow: TimeInterval = 90
+    static func noteRebootish(seconds: TimeInterval, window: TimeInterval = 90) {
         let until = Date().addingTimeInterval(seconds)
-        if until > rebootishUntil { rebootishUntil = until }
+        if until > rebootishUntil { rebootishUntil = until; rebootWindow = window }
     }
 
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral,
@@ -673,7 +678,7 @@ extension BleLink: CBCentralManagerDelegate, CBPeripheralDelegate {
         let rebootish = Date() < Self.rebootishUntil
         if !userDisconnect && wasActive {
             if case .ready = state {
-                reconnectUntil = Date().addingTimeInterval(rebootish ? 90 : 30)
+                reconnectUntil = Date().addingTimeInterval(rebootish ? Self.rebootWindow : 30)
                 lastDropUnexpected = !rebootish
             }
             if let until = reconnectUntil, Date() < until {
