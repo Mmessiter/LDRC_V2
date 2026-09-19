@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.805-nothing-found-says-so";
+constexpr const char* FW_VERSION = "RXV2-0.9.806-no-uninvited-back";
 
 //*********************************************************************
 //  Auto-update manifest URLs

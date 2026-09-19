@@ -134,14 +134,20 @@ class MainActivity : AppCompatActivity() {
                     showWeb()
                     onConnectedSession(st.name)
                 }
-                is Rxv2Ble.State.Failed -> { showScanner(); showMessage(st.msg) }
+                // NEVER walk the user off a page he opened (Malcolm 2026-09-19:
+                // "it immediately went back as if I had hit the back button, but
+                // I had not ... better to wait for me to hit it myself"). These
+                // land on the front screen only when LEAVING a model's pages —
+                // webView != null. On Connect, Reviews, Backups or Demos the
+                // page stays put and says for itself what is happening.
+                is Rxv2Ble.State.Failed -> { if (webView != null) showScanner(); showMessage(st.msg) }
                 is Rxv2Ble.State.Idle -> {
                     // The reconnect window after an UNEXPECTED drop has closed:
                     // land on the scanner with auto-connect ARMED, so the moment
                     // the receiver is seen again it connects by itself (0.9.746).
                     // A chosen parting (back / disconnect) still disarms it.
                     if (ble.lastDropUnexpected) { ble.lastDropUnexpected = false; autoDone = false }
-                    showScanner()
+                    if (webView != null) showScanner()
                 }
                 else -> {}
             }

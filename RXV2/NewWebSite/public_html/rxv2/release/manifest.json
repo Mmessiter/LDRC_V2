@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.806-no-uninvited-back",
+      "url": "https://messiter.com/rxv2/release/v0.9.806/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.806/littlefs.bin",
+      "fs_md5": "db9c9d96abb44fcd26e46fc54adfc784",
+      "notes": "Android: the app no longer walks you back to the front screen on its own. A link going idle used to do that, so the Connect page vanished before its message could be read. It now happens only when leaving a model's pages - anywhere else you leave when you choose to."
+    },
+    {
       "name": "RXV2-0.9.805-nothing-found-says-so",
       "url": "https://messiter.com/rxv2/release/v0.9.805/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.805/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.795/littlefs.bin",
       "fs_md5": "4c1d46cae243cc5af78557a33464fe9d",
       "notes": "Presentation: every page now carries a proper heading - big, light, letter-spaced, centred on a solid chip like the headings on the receiver's own pages - instead of a small line in the navigation bar. The front screen gets a masthead: LockDown Radio Control large, with RXV2 beneath it in the app's teal."
-    },
-    {
-      "name": "RXV2-0.9.794-late-disconnect-leaves-the-search",
-      "url": "https://messiter.com/rxv2/release/v0.9.794/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.794/littlefs.bin",
-      "fs_md5": "1e3d5a1d0b2946e1b7b69c38de7973b3",
-      "notes": "The late disconnect callback no longer knocks a search that has already begun back to idle - it was wiping what the search had heard and starting it again (seen in the app's own log)."
     }
   ],
   "rotorflight": {
