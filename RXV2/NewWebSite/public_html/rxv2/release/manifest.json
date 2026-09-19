@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.787-quiet-front-screen",
+      "url": "https://messiter.com/rxv2/release/v0.9.787/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.787/littlefs.bin",
+      "fs_md5": "17f898454ce0d300c3638f209e9ada6f",
+      "notes": "Front screen: the 'Connecting to\u2026' line is gone \u2014 it said nothing the model's own pages do not say a second later. A real problem, such as Bluetooth being switched off, is still shown."
+    },
+    {
       "name": "RXV2-0.9.786-connect-fix-and-no-small-text",
       "url": "https://messiter.com/rxv2/release/v0.9.786/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.786/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.776/littlefs.bin",
       "fs_md5": "e12eca2c68bc146b7dee1ac4beebe347",
       "notes": "View channels over Bluetooth: the pushed 20-frames-a-second stream is armed again. The page had asked for it at load time, before app.js existed, so the request silently never went and every update was a Bluetooth round-trip (about 5 a second). The page-order gate now catches that shape too."
-    },
-    {
-      "name": "RXV2-0.9.775-channel-rate-readout",
-      "url": "https://messiter.com/rxv2/release/v0.9.775/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.775/littlefs.bin",
-      "fs_md5": "364a9081bff99921e46f725d90c1d012",
-      "notes": "View channels shows how fast the bars really update and by which route (pushed stream or polled); the receiver counts the frames it pushes over Bluetooth (state.json ble.stream_sent) so a slow page can be diagnosed rather than guessed at."
     }
   ],
   "rotorflight": {

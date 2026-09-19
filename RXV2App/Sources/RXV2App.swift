@@ -398,9 +398,10 @@ struct ScannerView: View {
                                 in: RoundedRectangle(cornerRadius: 14))
                     .padding(.bottom, 2)
 
-                if case .connecting(let n) = link.state {
-                    noticeCard("Connecting to \(n)…", systemImage: "antenna.radiowaves.left.and.right")
-                } else if case .failed(let m) = link.state {
+                // Only a problem is worth saying here. "Connecting…" speaks for
+                // itself — the model's own pages arrive a second later
+                // (Malcolm 2026-09-19: "a superfluous message").
+                if case .failed(let m) = link.state {
                     noticeCard(m, systemImage: "exclamationmark.triangle")
                 }
 

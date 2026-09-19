@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.786-connect-fix-and-no-small-text";
+constexpr const char* FW_VERSION = "RXV2-0.9.787-quiet-front-screen";
 
 //*********************************************************************
 //  Auto-update manifest URLs
