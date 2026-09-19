@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.798-automatic-says-so",
+      "url": "https://messiter.com/rxv2/release/v0.9.798/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.798/littlefs.bin",
+      "fs_md5": "4582345744d730824e6451949c49872d",
+      "notes": "Backups page: an automatic copy now says Automatic beside its date. Taking the label away made a copy the app had saved for itself look like a backup the pilot had made."
+    },
+    {
       "name": "RXV2-0.9.797-whats-in-it-looks-tappable",
       "url": "https://messiter.com/rxv2/release/v0.9.797/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.797/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.787/littlefs.bin",
       "fs_md5": "17f898454ce0d300c3638f209e9ada6f",
       "notes": "Front screen: the 'Connecting to\u2026' line is gone \u2014 it said nothing the model's own pages do not say a second later. A real problem, such as Bluetooth being switched off, is still shown."
-    },
-    {
-      "name": "RXV2-0.9.786-connect-fix-and-no-small-text",
-      "url": "https://messiter.com/rxv2/release/v0.9.786/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.786/littlefs.bin",
-      "fs_md5": "76786cca9e44ac41eed287ecc9d5406a",
-      "notes": "Fixes a receiver that was listed but would not connect: opening the Connect page again while a connection was under way silently cancelled it, because starting a search resets the link. Searching is now refused whenever a connection is in progress or live. Also removes the small text sitting on the photograph \u2014 it is all in each screen's help."
     }
   ],
   "rotorflight": {

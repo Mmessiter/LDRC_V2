@@ -809,8 +809,7 @@ struct BackupsListView: View {
                                 ModelThumb(name: b.model, side: 44)
                                 VStack(alignment: .leading, spacing: 5) {
                                     Text(b.model).font(.headline)
-                                    Text(b.explicit ? "Your backup · \(ScannerView.friendlyWhen(b.savedAt))"
-                                                    : ScannerView.friendlyWhen(b.savedAt))
+                                    Text("\(b.explicit ? "Your backup" : "Automatic") · \(ScannerView.friendlyWhen(b.savedAt))")
                                         .font(.caption).foregroundStyle(.secondary)
                                     HStack(spacing: 6) {
                                         Image(systemName: "list.bullet.rectangle")
@@ -860,7 +859,7 @@ struct BackupContentsView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    Text("\(model) — \(explicit ? "your backup" : "kept automatically") · \(when)")
+                    Text("\(model) — \(explicit ? "your backup" : "automatic, taken when you connected") · \(when)")
                         .font(.callout).foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(12)
@@ -1097,9 +1096,10 @@ struct ScannerHelpView: View {
                   body: "Tap any model here to see what its backup holds, folded into plain "
                       + "lines — \"PIDs — banks 1–6\", \"Servos — 8\" — so a glance says whether "
                       + "everything was saved."),
-            .init(icon: "checkmark.seal", title: "Your backup, or ours",
-                  body: "“Your backup” is one you asked for; it is never overwritten by the "
-                      + "copy the app keeps for itself at each connection."),
+            .init(icon: "checkmark.seal", title: "Your backup, or automatic",
+                  body: "“Automatic” is the copy the app takes for itself each time you "
+                      + "connect — useful, but not something you chose. “Your backup” is one "
+                      + "you asked for, and it is never overwritten by an automatic one."),
         ]
         case .demos: return [
             .init(icon: "cpu", title: "One board, three jobs",

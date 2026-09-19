@@ -530,7 +530,7 @@ class MainActivity : AppCompatActivity() {
                 }
             })
             card.addView(TextView(this).apply {
-                text = (if (b.explicit) "Your backup \u00b7 " else "") + friendlyWhen(b.atMs)
+                text = (if (b.explicit) "Your backup \u00b7 " else "Automatic \u00b7 ") + friendlyWhen(b.atMs)
                 textSize = 12f; setTextColor(0xFFC9B27A.toInt())
                 setPadding(0, 8, 0, 12)
             })
@@ -554,7 +554,7 @@ class MainActivity : AppCompatActivity() {
     /** WHAT'S IN THE BACKUP — the plain lines, for a backup this phone holds. */
     private fun showBackupContents(b: SessionCache.BackupInfo) {
         val lines = SessionCache.backupSummary(b.model)
-        val head = b.model + " \u2014 " + (if (b.explicit) "your backup" else "kept automatically") +
+        val head = b.model + " \u2014 " + (if (b.explicit) "your backup" else "automatic, taken when you connected") +
                    " \u00b7 " + friendlyWhen(b.atMs) + "\n\n"
         val body = if (lines.isEmpty()) "Nothing readable in this backup yet."
                    else lines.joinToString("\n") +

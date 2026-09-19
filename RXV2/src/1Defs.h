@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.797-whats-in-it-looks-tappable";
+constexpr const char* FW_VERSION = "RXV2-0.9.798-automatic-says-so";
 
 //*********************************************************************
 //  Auto-update manifest URLs
