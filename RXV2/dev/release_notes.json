@@ -1,4 +1,5 @@
 {
+  "RXV2-0.9.797-whats-in-it-looks-tappable": "Backups page: What's in it is now a filled pill that plainly invites a tap, and the date stands alone - only a backup you made on purpose carries a label.",
   "RXV2-0.9.796-whats-in-a-backup": "The Backups page: tap any model to see what its backup holds, in the same plain lines the receiver's own Backup and restore page uses - PIDs banks 1 to 6, Servos 8 - so a glance says whether everything was saved.",
   "RXV2-0.9.795-headings-with-presence": "Presentation: every page now carries a proper heading - big, light, letter-spaced, centred on a solid chip like the headings on the receiver's own pages - instead of a small line in the navigation bar. The front screen gets a masthead: LockDown Radio Control large, with RXV2 beneath it in the app's teal.",
   "RXV2-0.9.794-late-disconnect-leaves-the-search": "The late disconnect callback no longer knocks a search that has already begun back to idle - it was wiping what the search had heard and starting it again (seen in the app's own log).",

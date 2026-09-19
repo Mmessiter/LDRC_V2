@@ -512,21 +512,40 @@ class MainActivity : AppCompatActivity() {
             LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                                       ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(40, 8, 40, 28) })
         for (b in backups) {
-            col.addView(TextView(this).apply {
-                text = "💾  ${b.model}\n" +
-                       (if (b.explicit) "Your backup · " else "Kept automatically · ") +
-                       friendlyWhen(b.atMs) + "\nWhat\u2019s in it \u2014 ${b.items} settings held"
-                textSize = 15f; setPadding(40, 28, 40, 28)
-                setBackgroundColor(0xFF3B2F14.toInt()); setTextColor(0xFFFFD966.toInt())
-                setLineSpacing(6f, 1.0f)
+            // "Kept automatically" is the ordinary case and needs no label;
+            // only a deliberate backup is worth marking. "What's in it" is a
+            // pill so it LOOKS like the button it is (Malcolm 2026-09-19).
+            val card = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(40, 28, 40, 28)
+                setBackgroundColor(0xFF3B2F14.toInt())
+                setOnClickListener { showBackupContents(b) }
+            }
+            card.addView(TextView(this).apply {
+                text = "💾  ${b.model}"
+                textSize = 16f; setTextColor(0xFFFFD966.toInt())
                 ModelPhotos.load(this@MainActivity, b.model, 96)?.let {
                     setCompoundDrawablesWithIntrinsicBounds(android.graphics.drawable.BitmapDrawable(resources, it), null, null, null)
                     compoundDrawablePadding = 24
                 }
-                // Tap to see what it holds — the same thing the receiver's own
-                // Backup & restore page shows (Malcolm 2026-09-19).
+            })
+            card.addView(TextView(this).apply {
+                text = (if (b.explicit) "Your backup \u00b7 " else "") + friendlyWhen(b.atMs)
+                textSize = 12f; setTextColor(0xFFC9B27A.toInt())
+                setPadding(0, 8, 0, 12)
+            })
+            card.addView(TextView(this).apply {
+                text = "\uD83D\uDCCB  What\u2019s in it \u2014 ${b.items} settings"
+                textSize = 14f; setTextColor(0xFF0E2E08.toInt())
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                setPadding(28, 14, 28, 14)
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    cornerRadius = 40f; setColor(0xFFFFD966.toInt())
+                }
                 setOnClickListener { showBackupContents(b) }
-            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                                         ViewGroup.LayoutParams.WRAP_CONTENT))
+            col.addView(card, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                                          ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(40, 8, 40, 8) })
         }
         root.addView(ScrollView(this).apply { addView(col) })

@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.797-whats-in-it-looks-tappable",
+      "url": "https://messiter.com/rxv2/release/v0.9.797/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.797/littlefs.bin",
+      "fs_md5": "5bee5300368c7ab377c6aa3b7480f05f",
+      "notes": "Backups page: What's in it is now a filled pill that plainly invites a tap, and the date stands alone - only a backup you made on purpose carries a label."
+    },
+    {
       "name": "RXV2-0.9.796-whats-in-a-backup",
       "url": "https://messiter.com/rxv2/release/v0.9.796/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.796/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.786/littlefs.bin",
       "fs_md5": "76786cca9e44ac41eed287ecc9d5406a",
       "notes": "Fixes a receiver that was listed but would not connect: opening the Connect page again while a connection was under way silently cancelled it, because starting a search resets the link. Searching is now refused whenever a connection is in progress or live. Also removes the small text sitting on the photograph \u2014 it is all in each screen's help."
-    },
-    {
-      "name": "RXV2-0.9.785-full-colour-and-three-demos",
-      "url": "https://messiter.com/rxv2/release/v0.9.785/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.785/littlefs.bin",
-      "fs_md5": "c64b14d20a62fc825ea06cf257bbace0",
-      "notes": "The app's front screens: the flying-field photograph in full colour behind every one, the title centred as LockDown Radio Control RXV2, and a help page of its own on Connect, Reviews, Backups and Demos. The Demos page now offers all three roles one board can take - Receiver, Rotorflight dongle and Simulator interface - and its help explains that they are the same board doing different jobs."
     }
   ],
   "rotorflight": {

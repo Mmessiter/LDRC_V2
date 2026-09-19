@@ -807,12 +807,20 @@ struct BackupsListView: View {
                         } label: {
                             HStack(spacing: 10) {
                                 ModelThumb(name: b.model, side: 44)
-                                VStack(alignment: .leading, spacing: 2) {
+                                VStack(alignment: .leading, spacing: 5) {
                                     Text(b.model).font(.headline)
-                                    Text("\(b.explicit ? "Your backup" : "Kept automatically") · \(ScannerView.friendlyWhen(b.savedAt))")
+                                    Text(b.explicit ? "Your backup · \(ScannerView.friendlyWhen(b.savedAt))"
+                                                    : ScannerView.friendlyWhen(b.savedAt))
                                         .font(.caption).foregroundStyle(.secondary)
-                                    Text("What\u{2019}s in it — \(b.items) settings held")
-                                        .font(.caption2).foregroundStyle(Color.accentColor)
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "list.bullet.rectangle")
+                                        Text("What\u{2019}s in it — \(b.items) settings")
+                                    }
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(Color.accentColor)
+                                    .padding(.vertical, 6).padding(.horizontal, 11)
+                                    .background(Color.accentColor.opacity(0.14), in: Capsule())
+                                    .padding(.top, 1)
                                 }
                                 Spacer()
                                 Image(systemName: "chevron.right").font(.footnote).foregroundStyle(.tertiary)
