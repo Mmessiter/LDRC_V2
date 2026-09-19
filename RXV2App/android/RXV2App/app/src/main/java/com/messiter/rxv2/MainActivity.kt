@@ -445,7 +445,7 @@ class MainActivity : AppCompatActivity() {
         col.addView(autoBanner)
 
         SessionCache.init(this)
-        homeTile(col, "🔌", 0xFF6CAB5E.toInt(), "Connect") { showConnect() }
+        homeTile(col, "📡", 0xFF6CAB5E.toInt(), "Connect") { showConnect() }
         homeTile(col, "🕰", 0xFF4A90C9.toInt(), "Reviews") { showReviews() }
         homeTile(col, "💾", 0xFFC98A4A.toInt(), "Backups") { showBackups() }
         homeTile(col, "🎭", 0xFF6C8EB0.toInt(), "Demos")   { showDemos() }

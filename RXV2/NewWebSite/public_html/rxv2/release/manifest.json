@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.809-same-icons-as-the-pages",
+      "url": "https://messiter.com/rxv2/release/v0.9.809/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.809/littlefs.bin",
+      "fs_md5": "af64aad49c87569e6364174c1467e1b8",
+      "notes": "The app's buttons now carry the same icons as the receiver's own pages: the helicopter and aeroplane from Fly now, the game controller from Simulator, and so on. The hand-drawn helicopter is gone - the front page already had the right one."
+    },
+    {
       "name": "RXV2-0.9.808-better-helicopter",
       "url": "https://messiter.com/rxv2/release/v0.9.808/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.808/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.798/littlefs.bin",
       "fs_md5": "4582345744d730824e6451949c49872d",
       "notes": "Backups page: an automatic copy now says Automatic beside its date. Taking the label away made a copy the app had saved for itself look like a backup the pilot had made."
-    },
-    {
-      "name": "RXV2-0.9.797-whats-in-it-looks-tappable",
-      "url": "https://messiter.com/rxv2/release/v0.9.797/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.797/littlefs.bin",
-      "fs_md5": "5bee5300368c7ab377c6aa3b7480f05f",
-      "notes": "Backups page: What's in it is now a filled pill that plainly invites a tap, and the date stands alone - only a backup you made on purpose carries a label."
     }
   ],
   "rotorflight": {

@@ -403,29 +403,25 @@ struct ScannerView: View {
                 NavigationLink {
                     ConnectListView()
                 } label: {
-                    HomeTile(icon: "antenna.radiowaves.left.and.right",
-                             tint: Color(red: 0.42, green: 0.67, blue: 0.37),
+                    HomeTile(icon: "\u{1F4E1}", tint: Color(red: 0.42, green: 0.67, blue: 0.37),
                              title: "Connect")
                 }
                 NavigationLink {
                     ReviewsListView(reviewMode: $reviewMode)
                 } label: {
-                    HomeTile(icon: "clock",
-                             tint: Color(red: 0.29, green: 0.56, blue: 0.79),
+                    HomeTile(icon: "\u{1F570}\u{FE0F}", tint: Color(red: 0.29, green: 0.56, blue: 0.79),
                              title: "Reviews")
                 }
                 NavigationLink {
                     BackupsListView()
                 } label: {
-                    HomeTile(icon: "tray.and.arrow.down",
-                             tint: Color(red: 0.79, green: 0.54, blue: 0.29),
+                    HomeTile(icon: "\u{1F4BE}", tint: Color(red: 0.79, green: 0.54, blue: 0.29),
                              title: "Backups")
                 }
                 NavigationLink {
                     DemosView(demoMode: $demoMode, demoRole: $demoRole)
                 } label: {
-                    HomeTile(icon: "theatermasks",
-                             tint: Color(red: 0.42, green: 0.56, blue: 0.69),
+                    HomeTile(icon: "\u{1F3AD}", tint: Color(red: 0.42, green: 0.56, blue: 0.69),
                              title: "Demos")
                 }
             }
@@ -516,77 +512,19 @@ struct HomeMasthead: View {
     }
 }
 
-/// A helicopter, drawn: the symbol set has none, and a colour emoji would
-/// clash with the white line icons beside it. A SILHOUETTE — stroked outlines
-/// turn to mush at 25 points, where a filled body still reads (Malcolm
-/// 2026-09-19, on the first attempt: "ok but not the best").
-struct HelicopterGlyph: View {
-    var body: some View {
-        Canvas { ctx, size in
-            let w = size.width, h = size.height
-            func pt(_ x: Double, _ y: Double) -> CGPoint { CGPoint(x: w * x, y: h * y) }
-            let white = GraphicsContext.Shading.color(.white)
-
-            // Body: nose at the left, tapering into the tail boom at the right.
-            var body = Path()
-            body.move(to: pt(0.07, 0.56))
-            body.addQuadCurve(to: pt(0.34, 0.36), control: pt(0.10, 0.38))
-            body.addQuadCurve(to: pt(0.56, 0.40), control: pt(0.46, 0.33))
-            body.addLine(to: pt(0.96, 0.47))
-            body.addLine(to: pt(0.96, 0.54))
-            body.addLine(to: pt(0.56, 0.58))
-            body.addQuadCurve(to: pt(0.07, 0.56), control: pt(0.30, 0.70))
-            body.closeSubpath()
-            ctx.fill(body, with: white)
-
-            // Tail fin, swept up from the end of the boom.
-            var fin = Path()
-            fin.move(to: pt(0.86, 0.47))
-            fin.addLine(to: pt(0.99, 0.24))
-            fin.addLine(to: pt(1.00, 0.33))
-            fin.addLine(to: pt(0.93, 0.50))
-            fin.closeSubpath()
-            ctx.fill(fin, with: white)
-
-            // Mast, main rotor and skids.
-            let bar = StrokeStyle(lineWidth: max(1.5, w * 0.085), lineCap: .round)
-            var rotor = Path()
-            rotor.move(to: pt(0.03, 0.16)); rotor.addLine(to: pt(0.93, 0.16))
-            ctx.stroke(rotor, with: white, style: bar)
-            var mast = Path()
-            mast.move(to: pt(0.44, 0.17)); mast.addLine(to: pt(0.44, 0.36))
-            ctx.stroke(mast, with: white, style: StrokeStyle(lineWidth: max(1.2, w * 0.07)))
-            var skids = Path()
-            skids.move(to: pt(0.06, 0.90)); skids.addLine(to: pt(0.64, 0.90))
-            skids.move(to: pt(0.22, 0.66)); skids.addLine(to: pt(0.18, 0.90))
-            skids.move(to: pt(0.46, 0.66)); skids.addLine(to: pt(0.50, 0.90))
-            ctx.stroke(skids, with: white, style: bar)
-        }
-        .accessibilityLabel("helicopter")
-    }
-}
-
 /// A big coloured button in the app's usual style: what it does, and one line
 /// saying what is behind it.
 struct HomeTile: View {
+    /// The same emoji the receiver's own pages use for the same idea
+    /// (Malcolm 2026-09-19: "might be better to use same ones as on this
+    /// page" — Fly now already carries the helicopter and the aeroplane).
     let icon: String
     let tint: Color
     let title: String
-    /// The Receiver demo shows a helicopter beside the aeroplane: this is a
-    /// helicopter system first, and a plane system second.
-    var withHelicopter = false
 
     var body: some View {
         HStack(spacing: 16) {
-            if withHelicopter {
-                HStack(spacing: 5) {
-                    HelicopterGlyph().frame(width: 27, height: 27)
-                    Image(systemName: icon).font(.callout)
-                }
-                .frame(width: 52)
-            } else {
-                Image(systemName: icon).font(.title2).frame(width: 34)
-            }
+            Text(icon).font(.title2).frame(width: 52, alignment: .leading)
             Text(title).font(.title3.weight(.semibold))
             Spacer(minLength: 8)
             Image(systemName: "chevron.right").font(.footnote).opacity(0.85)
@@ -987,15 +925,15 @@ struct DemosView: View {
         ScrollView {
             VStack(spacing: 14) {
                 Button { play("receiver") } label: {
-                    HomeTile(icon: "airplane", tint: Color(red: 0.42, green: 0.67, blue: 0.37),
-                             title: "Receiver", withHelicopter: true)
+                    HomeTile(icon: "\u{1F681}\u{2708}\u{FE0F}", tint: Color(red: 0.42, green: 0.67, blue: 0.37),
+                             title: "Receiver")
                 }
                 Button { play("dongle") } label: {
-                    HomeTile(icon: "cable.connector", tint: Color(red: 0.37, green: 0.63, blue: 0.60),
+                    HomeTile(icon: "\u{1F50C}", tint: Color(red: 0.37, green: 0.63, blue: 0.60),
                              title: "Rotorflight dongle")
                 }
                 Button { play("simif") } label: {
-                    HomeTile(icon: "gamecontroller", tint: Color(red: 0.42, green: 0.56, blue: 0.69),
+                    HomeTile(icon: "\u{1F3AE}", tint: Color(red: 0.42, green: 0.56, blue: 0.69),
                              title: "Simulator interface")
                 }
             }
