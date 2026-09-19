@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Home &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=306">
-<script src="/app.js?v=306" defer></script>
+<link rel=stylesheet href="/style.css?v=307">
+<script src="/app.js?v=307" defer></script>
 <style>
 /* First paint from memory (Malcolm 2026-09-10: the receiver layout flashed
    before the dongle one): classes set on <html> by the hint script below,
@@ -152,7 +152,7 @@ html.h-simif #bindbtn, html.h-simif #fcHint, html.h-simif #bindBanner, html.h-si
         <a class="btn" href="/setup" style="background:#6f7e8b"><span class=ico>&#9881;&#65039;</span>Setup</a>
         <!-- App only (Malcolm 2026-08-06): straight back to the scanner to
              pick another model — no more force-quitting to change craft. -->
-        <button id=switchModelBtn class="btn" style="display:none;background:#8a7dab" onclick="switchModel()"><span class=ico>&#128260;</span>Load another model</button>
+        <button id=switchModelBtn class="btn" style="display:none;background:#8a7dab" onclick="switchModel()"><span class=ico>&#127968;</span>Return to front screen</button>
     </div>
 
     <div id=fwBanner style="display:none;text-align:center;padding:.7em;border-radius:10px;margin:1em 0 0;font-weight:600"></div>
@@ -305,11 +305,12 @@ function updateBindState(s) {
     }
 }
 
-// "Load another model" (app only) — same disconnect the Bluetooth badge
-// offers, but discoverable: back to the scanner, pick a different craft.
+// "Return to front screen" (app only) — the same thing the Bluetooth badge
+// does, but discoverable. One name for one action, everywhere it appears
+// (Malcolm 2026-09-19: "this button occurs in many places").
 async function switchModel() {
-    if (!(await LDRC.confirm('Disconnect from this model and choose another?',
-        { title: 'Load another model', icon: '🔄', yes: 'Change model', no: 'Stay' }))) return;
+    if (!(await LDRC.confirm('Leave this model and go back to the front screen?',
+        { title: 'Return to front screen', icon: '🏠', yes: 'Return', no: 'Stay' }))) return;
     window.webkit.messageHandlers.rxv2.postMessage('disconnect');
 }
 

@@ -1047,9 +1047,9 @@
                 const b = document.createElement('div'); b.id = 'replayBanner';
                 b.style.cssText = 'background:#ffd278;color:#5c3a00;border-radius:12px;padding:.8em 1em;margin:0 0 1em;font-weight:600;text-align:center';
                 const name = (LDRC.state && LDRC.state.info && LDRC.state.info.name) || '';
-                b.textContent = 'Recording' + (name ? ' of ' + name : '') + ' \u2014 nothing here is live. To connect, use Load another model on the front page.';
+                b.textContent = 'Recording' + (name ? ' of ' + name : '') + ' \u2014 nothing here is live. To connect, use Return to front screen on the front page.';
                 c.insertBefore(b, c.firstChild);
-                if (!name) LDRC.fetchState().then(() => { const n = LDRC.state && LDRC.state.info && LDRC.state.info.name; if (n) b.textContent = 'Recording of ' + n + ' \u2014 nothing here is live. To connect, use Load another model on the front page.'; });
+                if (!name) LDRC.fetchState().then(() => { const n = LDRC.state && LDRC.state.info && LDRC.state.info.name; if (n) b.textContent = 'Recording of ' + n + ' \u2014 nothing here is live. To connect, use Return to front screen on the front page.'; });
             };
             if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', put); else put();
         });
@@ -1442,7 +1442,7 @@
         } else {
             b.textContent = '🛜';
         }
-        b.title = ble ? 'Bluetooth — tap to disconnect' : 'WiFi';
+        b.title = ble ? 'Bluetooth — tap to return to the front screen' : 'WiFi';
         // Above the floating Save/Back bar on the tuning pages.
         const fabLift = document.querySelector('.fabBar') ? ' + 4.6em' : '';
         b.style.cssText =
@@ -1456,8 +1456,8 @@
         if (bridge) {
             b.onclick = async () => {
                 const ok = await LDRC.confirm(
-                    'Disconnect Bluetooth and return to the receiver list?',
-                    { icon: '🔵', title: 'Disconnect?', yes: 'Disconnect', no: 'Stay', kind: 'warn' });
+                    'Leave this model and go back to the front screen?',
+                    { icon: '🏠', title: 'Return to front screen', yes: 'Return', no: 'Stay', kind: 'warn' });
                 if (ok) window.webkit.messageHandlers.rxv2.postMessage('disconnect');
             };
         }
