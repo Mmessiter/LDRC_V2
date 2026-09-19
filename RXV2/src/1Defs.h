@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.790-no-connect-on-launch";
+constexpr const char* FW_VERSION = "RXV2-0.9.791-searching-says-more";
 
 //*********************************************************************
 //  Auto-update manifest URLs

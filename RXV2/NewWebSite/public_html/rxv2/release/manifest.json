@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.791-searching-says-more",
+      "url": "https://messiter.com/rxv2/release/v0.9.791/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.791/littlefs.bin",
+      "fs_md5": "7843acd3d0526fd2472e3b69fe8b811f",
+      "notes": "Connect page: the search now counts the seconds, and after fifteen says what is usually wrong - the model needs powering with the transmitter off, or another phone or tablet is holding it, since a receiver takes one at a time."
+    },
+    {
       "name": "RXV2-0.9.790-no-connect-on-launch",
       "url": "https://messiter.com/rxv2/release/v0.9.790/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.790/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.780/littlefs.bin",
       "fs_md5": "0e4d964d7e2e7756d3b95b983da29336",
       "notes": "Every setting that restarts the receiver now delivers its reply over Bluetooth before restarting - simulator mode, WiFi, protocol, bind, rollback, factory reset, first run and reboot let it die with the link, so the app reported 'no answer from the receiver (Receiver disconnected)' over a perfectly good save (Malcolm 2026-09-18). The simulator page also no longer treats the bridge's own disconnect report as a refusal."
-    },
-    {
-      "name": "RXV2-0.9.779-wifi-install-pauses-ble",
-      "url": "https://messiter.com/rxv2/release/v0.9.779/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.779/littlefs.bin",
-      "fs_md5": "96a9e0e36f3fdce87e25da6f6676e7ab",
-      "notes": "Installing over WiFi from the app now works while the app is connected: the receiver answers, pauses Bluetooth, rejoins WiFi on a quiet radio, downloads at full speed and reboots - the app rides out the gap and reconnects. A Bluetooth link used to leave WiFi 'connected' but deaf, so the chip's own download failed and the page could only offer Bluetooth. The update page also lets you pick WiFi while the receiver is rejoining."
     }
   ],
   "rotorflight": {

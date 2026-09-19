@@ -499,6 +499,8 @@ struct ConnectListView: View {
     @State private var autoTarget: String? = nil
     @State private var autoWork: DispatchWorkItem? = nil
     @State private var showHelp = false
+    /// How long this search has been running — a silent spinner tells you nothing.
+    @State private var searching = 0
 
     private func cancelAuto() {
         autoWork?.cancel(); autoWork = nil; autoTarget = nil
@@ -550,8 +552,17 @@ struct ConnectListView: View {
                     if link.found.isEmpty {
                         HStack(alignment: .top, spacing: 12) {
                             ProgressView().padding(.top, 2)
-                            Label("Searching…", systemImage: "dot.radiowaves.left.and.right")
-                                .font(.headline)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(searching < 3 ? "Searching…" : "Searching… \(searching) s")
+                                    .font(.headline)
+                                // After a while, say what is usually wrong
+                                // (Malcolm 2026-09-19 watched a silent spinner).
+                                if searching >= 15 {
+                                    Text("Nothing yet. Power the model with the transmitter OFF — and if it is on, another phone or tablet may be holding it: a receiver takes one at a time.")
+                                        .font(.footnote).foregroundStyle(.secondary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
                         }
                         .padding(.vertical, 6)
                     }
@@ -639,7 +650,10 @@ struct ConnectListView: View {
             }
         }
         .onReceive(link.$found) { maybeArmAuto($0) }
-        .onAppear { link.startScan() }
+        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in
+            if link.found.isEmpty, case .scanning = link.state { searching += 1 } else { searching = 0 }
+        }
+        .onAppear { searching = 0; link.startScan() }
         .onDisappear { link.stopScan() }
         .refreshable { link.startScan() }
     }
