@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.793-pages-replace-the-stack",
+      "url": "https://messiter.com/rxv2/release/v0.9.793/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.793/littlefs.bin",
+      "fs_md5": "3328006a9867219203bdf666253420ed",
+      "notes": "Fixes the connect that looked like a failure: since the search moved onto the Connect page, a successful connection opened the model's pages UNDERNEATH that page, which stayed on top saying Searching. The pages now replace the whole navigation stack the moment the link is ready."
+    },
+    {
       "name": "RXV2-0.9.792-search-heals-and-tells",
       "url": "https://messiter.com/rxv2/release/v0.9.792/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.792/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.782/littlefs.bin",
       "fs_md5": "9529238377a365fd3e2bb79a2ef14e52",
       "notes": "The model list \u2014 the first screen you see \u2014 now looks like the rest of the app: the flying-field backdrop, solid cards, and a ? that explains the whole screen properly. The blocks of small print are gone, replaced by one line each and a full help page covering how a model appears, signal strength, photographs, what a review is and how a backup differs."
-    },
-    {
-      "name": "RXV2-0.9.781-review-says-what-it-is",
-      "url": "https://messiter.com/rxv2/release/v0.9.781/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.781/littlefs.bin",
-      "fs_md5": "dc9fe63132edf8999f1c2a3cb28885b6",
-      "notes": "The model list now says what a review is: each row reads 'Last session' with the time, and the note underneath explains that these are recorded for you at every connection and that a backup is a different thing you make yourself."
     }
   ],
   "rotorflight": {

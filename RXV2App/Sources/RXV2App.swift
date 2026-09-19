@@ -43,15 +43,17 @@ struct RootView: View {
     @State private var importNotice: String? = nil
 
     var body: some View {
-        NavigationStack {
+        Group {
             switch link.state {
             case .ready(let name), .reconnecting(let name):
-                // Full-screen, like the web UI added to the home screen: no
-                // navigation bar. Disconnect lives on the page's Bluetooth
-                // badge (bottom-right), via the rxv2 JS message bridge.
+                // Full-screen, like the web UI added to the home screen, and
+                // OUTSIDE the navigation stack: connecting tears the whole
+                // stack down, pushed pages included (2026-09-19 — with the
+                // pages as the stack's root, the pushed Connect page stayed
+                // on top and a live link looked like "Searching…").
+                // Disconnect lives on the page's Bluetooth badge.
                 WebScreen(link: link)
                     .ignoresSafeArea()
-                    .toolbar(.hidden, for: .navigationBar)
                     .onAppear { onConnected(name) }
                     .onChange(of: link.state) { st in
                         if case .ready = st { SessionPrefetcher.run(link: link) }
@@ -93,12 +95,14 @@ struct RootView: View {
                         }
                     }
             default:
-                ScannerView(demoMode: $demoMode, reviewMode: $reviewMode, demoRole: $demoRole)
-                    .onAppear {
-                        sessionStarted = false
-                        // "--demo" launch argument: straight into demo mode (website screenshots)
-                        if ProcessInfo.processInfo.arguments.contains("--demo") { demoMode = true }
-                    }
+                NavigationStack {
+                    ScannerView(demoMode: $demoMode, reviewMode: $reviewMode, demoRole: $demoRole)
+                        .onAppear {
+                            sessionStarted = false
+                            // "--demo" launch argument: straight into demo mode (website screenshots)
+                            if ProcessInfo.processInfo.arguments.contains("--demo") { demoMode = true }
+                        }
+                }
             }
         }
         // No receiver? Let anyone play: canned data from a real receiver,
