@@ -1103,10 +1103,24 @@ struct ScannerHelpView: View {
                       + "lines — \"PIDs — banks 1–6\", \"Servos — 8\" — so a glance says whether "
                       + "everything was saved."),
             .init(icon: "checkmark.seal", title: "Two kinds, both kept",
-                  body: "“Automatic” is the copy the app takes for itself each time you "
-                      + "connect — always today's settings. “Your backup” is one you asked "
-                      + "for, and nothing ever overwrites it. Both are kept side by side, "
-                      + "and Backup & restore lets you put back whichever you want."),
+                  body: "“Your backup” is one you asked for, and nothing ever overwrites "
+                      + "it — only another Back up replaces it. “Automatic” is the copy the "
+                      + "app takes by itself each time you connect with the transmitter off. "
+                      + "Both are kept side by side, and Backup & restore offers each by "
+                      + "name and date."),
+            .init(icon: "arrow.uturn.backward.circle", title: "What the automatic copy is for",
+                  body: "It holds the settings as they were WHEN YOU CONNECTED, before "
+                      + "anything you changed in this session — so it undoes an afternoon's "
+                      + "experimenting. It is not an archive: next time you connect it is "
+                      + "taken again, and then it holds your changes too. A change that "
+                      + "restarts the receiver (protocol, name, WiFi) refreshes it on the "
+                      + "spot, so that undo is gone. Anything you want to keep beyond today "
+                      + "belongs in your own backup."),
+            .init(icon: "airplane.circle", title: "Never while you fly",
+                  body: "Arming takes the receiver's Bluetooth down, so nothing can be read "
+                      + "in the air at all. A backup also refuses to start if the "
+                      + "transmitter is on, and stops at once if it comes on part way "
+                      + "through — a half-read sweep is never kept."),
         ]
         case .demos: return [
             .init(icon: "cpu", title: "One board, three jobs",

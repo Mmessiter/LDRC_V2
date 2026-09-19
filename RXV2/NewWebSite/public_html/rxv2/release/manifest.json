@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.801-help-explains-both-backups",
+      "url": "https://messiter.com/rxv2/release/v0.9.801/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.801/littlefs.bin",
+      "fs_md5": "5443661ae782647ec2b38f8e91526237",
+      "notes": "Help now explains the two kinds of backup: yours is never overwritten, while the automatic copy holds the settings as they were when you connected - an undo for the session, not an archive, since the next connection takes it again. It also says plainly that nothing is ever read in the air: arming takes Bluetooth down, a backup refuses to start with the transmitter on, and a half-read sweep is never kept."
+    },
+    {
       "name": "RXV2-0.9.800-two-backups-per-model",
       "url": "https://messiter.com/rxv2/release/v0.9.800/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.800/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.790/littlefs.bin",
       "fs_md5": "7d33dc8f79a616de079dc8da944920f5",
       "notes": "Opening the app no longer connects to anything: it used to seize the last model the moment Bluetooth came up, which is why a tablet left on the side could lock a receiver out of the phone - a receiver takes one at a time. Searching and connecting now begin only on the Connect page, as they should."
-    },
-    {
-      "name": "RXV2-0.9.789-connect-honest",
-      "url": "https://messiter.com/rxv2/release/v0.9.789/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.789/littlefs.bin",
-      "fs_md5": "455a3a66b97d114f3ce70931f5d117b0",
-      "notes": "Connect page: it now says what it is doing \u2014 connecting, or why a connection failed \u2014 instead of failing in silence, and a receiver that has gone quiet drops off the list rather than sitting there untappable. A receiver takes one phone or tablet at a time, and the timeout message now says so: that was the real reason a listed model would not open."
     }
   ],
   "rotorflight": {

@@ -647,9 +647,24 @@ class MainActivity : AppCompatActivity() {
                 <p><b>Putting it back</b><br>
                 On the same page, transmitter off and blades off. Each setting is written and read
                 back to check it landed.</p>
-                <p><b>Your backup, or ours</b><br>
-                &ldquo;Your backup&rdquo; is one you asked for; it is never overwritten by the copy
-                the app keeps for itself at each connection.</p>
+                <p><b>Two kinds, both kept</b><br>
+                &ldquo;Your backup&rdquo; is one you asked for, and nothing ever overwrites it &mdash;
+                only another Back up replaces it. &ldquo;Automatic&rdquo; is the copy the app takes by
+                itself each time you connect with the transmitter off. Both are kept side by side,
+                and Backup &amp; restore offers each by name and date.</p>
+
+                <p><b>What the automatic copy is for</b><br>
+                It holds the settings as they were WHEN YOU CONNECTED, before anything you changed
+                in this session &mdash; so it undoes an afternoon&rsquo;s experimenting. It is not an
+                archive: next time you connect it is taken again, and then it holds your changes
+                too. A change that restarts the receiver (protocol, name, WiFi) refreshes it on the
+                spot, so that undo is gone. Anything you want to keep beyond today belongs in your
+                own backup.</p>
+
+                <p><b>Never while you fly</b><br>
+                Arming takes the receiver&rsquo;s Bluetooth down, so nothing can be read in the air at
+                all. A backup also refuses to start if the transmitter is on, and stops at once if
+                it comes on part way through &mdash; a half-read sweep is never kept.</p>
             """
             "demos" -> """
                 <p>The whole app on canned data &mdash; every page, nothing connected.</p>
