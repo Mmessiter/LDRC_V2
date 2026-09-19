@@ -1618,7 +1618,13 @@ class MainActivity : AppCompatActivity() {
     @Volatile private var snapRetries = 0   // reads that needed a second try: a weak link, shown live
     /** explicit = the pilot pressed "Back up": the restore point it freezes is
      *  sticky — later automatic sweeps at connection never overwrite it. */
+    // A "Back up" tap landing while a sweep runs used to be DROPPED by the
+    // guard below, so the pilot's deliberate backup was written as an
+    // automatic one (Malcolm 2026-09-19). The sweep in flight adopts it.
+    @Volatile private var pendingExplicit = false
+
     private fun prefetchSession(fast: Boolean = false, explicit: Boolean = false) {
+        if (explicit) pendingExplicit = true
         if (prefetchRunning) return
         prefetchRunning = true
         snapPhase = "running"; snapDone = 0; snapOk = false; snapError = ""; snapRetries = 0
@@ -1795,13 +1801,21 @@ class MainActivity : AppCompatActivity() {
             // edits). A pilot's own backup (explicit) is sticky: the
             // automatic sweep at connection must never replace it.
             if (sweepOK) {
-                val froze = SessionCache.snapshotRestorePoint(explicit)
-                snapOk = froze || !explicit
+                val wanted = explicit || pendingExplicit
+                val froze = SessionCache.snapshotRestorePoint(wanted)
+                if (wanted) pendingExplicit = false
+                snapOk = froze || !wanted
                 if (!snapOk) snapError = "the backup file could not be written on the phone"
             }
             snapTotal += flightPaths.size
             for (p in flightPaths) { req(p); snapDone++ }
             if (sweepOK && snapDone < snapTotal) snapDone = snapTotal   // every planned item was attempted
+            // A "Back up" that landed after the freeze still gets what it
+            // asked for, from the reads this sweep just gathered.
+            if (pendingExplicit) {
+                if (sweepOK) { SessionCache.snapshotRestorePoint(true); snapOk = true }
+                pendingExplicit = false
+            }
             SessionCache.saveIfDirty()
             snapPhase = "done"
             prefetchRunning = false

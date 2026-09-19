@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.799-your-backup-is-never-dropped",
+      "url": "https://messiter.com/rxv2/release/v0.9.799/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.799/littlefs.bin",
+      "fs_md5": "c459a150e2ab94ce7496a0668135701f",
+      "notes": "A deliberate Back up is no longer lost when the app happens to be sweeping already: the sweep in flight takes on the request, and one that arrives after the settings were frozen is still honoured. Before this, tapping Back up during the automatic sweep that follows every connection left the copy marked automatic, as though the pilot had never asked."
+    },
+    {
       "name": "RXV2-0.9.798-automatic-says-so",
       "url": "https://messiter.com/rxv2/release/v0.9.798/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.798/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.788/littlefs.bin",
       "fs_md5": "5302698e0f1b0cb753c292bfdf948405",
       "notes": "One name for one action: the front page's button and the Bluetooth badge on every page both now say Return to front screen, and both take you there \u2014 from a live model, a demo or a recording alike."
-    },
-    {
-      "name": "RXV2-0.9.787-quiet-front-screen",
-      "url": "https://messiter.com/rxv2/release/v0.9.787/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.787/littlefs.bin",
-      "fs_md5": "17f898454ce0d300c3638f209e9ada6f",
-      "notes": "Front screen: the 'Connecting to\u2026' line is gone \u2014 it said nothing the model's own pages do not say a second later. A real problem, such as Bluetooth being switched off, is still shown."
     }
   ],
   "rotorflight": {

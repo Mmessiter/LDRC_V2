@@ -1057,10 +1057,19 @@ final class SessionPrefetcher {
     /// explicit = the pilot pressed "Back up" (or imported a file): the
     /// restore point it freezes is sticky — later automatic sweeps at
     /// connection never overwrite it (they still refresh the rolling cache).
+    /// A "Back up" tap that lands while a sweep is already running. The guard
+    /// below used to DROP it, so that sweep finished and wrote itself as an
+    /// automatic copy — the pilot's deliberate backup vanished (Malcolm
+    /// 2026-09-19: "I just made an explicit backup deliberately. But the
+    /// screen still says it was automatic"). The sweep in flight adopts the
+    /// intent; one that lands too late is honoured when the sweep ends.
+    static var pendingExplicit = false
+
     static func run(link: BleLink, fast: Bool = false, explicit: Bool = false) {
         // Re-run on EVERY (re)connection — an OTA reboot or a walk-away cut
         // the first attempt short (Malcolm 2026-08-04: "could not view this
         // morning's data"); recording is idempotent, so repeats are free.
+        if explicit { pendingExplicit = true }
         guard !running else { return }
         running = true
         phase = "running"; done = 0; total = 4; ok = false; error = ""; retries = 0   // state, flights, events x2
@@ -1270,13 +1279,21 @@ final class SessionPrefetcher {
             // A pilot's own backup (explicit) is sticky: the automatic sweep
             // at connection must never replace it with today's values.
             if sweepOK {
-                let froze = SessionCache.shared.snapshotRestorePoint(explicit: explicit)
-                ok = froze || !explicit
+                let wanted = explicit || pendingExplicit
+                let froze = SessionCache.shared.snapshotRestorePoint(explicit: wanted)
+                if wanted { pendingExplicit = false }
+                ok = froze || !wanted
                 if !ok { error = "the backup file could not be written on the phone" }
             }
             total += flightPaths.count
             for p in flightPaths { _ = req(p); done += 1 }
             if sweepOK && done < total { done = total }   // every planned item was attempted
+            // A "Back up" that landed after the freeze still gets what it
+            // asked for, from the reads this sweep just gathered.
+            if pendingExplicit {
+                if sweepOK { _ = SessionCache.shared.snapshotRestorePoint(explicit: true); ok = true }
+                pendingExplicit = false
+            }
             running = false
             phase = "done"
         }
