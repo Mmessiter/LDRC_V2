@@ -126,7 +126,7 @@ struct RootView: View {
                     // model selection page" — a .connecting/.failed limbo
                     // slipped through the old .ready/.reconnecting cases).
                     switch link.state {
-                    case .idle: break
+                    case .idle, .scanning, .failed: break   // nothing to hang up
                     default: link.disconnect()
                     }
                 }
@@ -499,8 +499,7 @@ struct ConnectListView: View {
     @State private var autoTarget: String? = nil
     @State private var autoWork: DispatchWorkItem? = nil
     @State private var showHelp = false
-    /// How long this search has been running — a silent spinner tells you nothing.
-    @State private var searching = 0
+    @Environment(\.scenePhase) private var scenePhase
 
     private func cancelAuto() {
         autoWork?.cancel(); autoWork = nil; autoTarget = nil
@@ -553,11 +552,11 @@ struct ConnectListView: View {
                         HStack(alignment: .top, spacing: 12) {
                             ProgressView().padding(.top, 2)
                             VStack(alignment: .leading, spacing: 4) {
-                                Text(searching < 3 ? "Searching…" : "Searching… \(searching) s")
+                                Text(link.scanSeconds < 3 ? "Searching…" : "Searching… \(link.scanSeconds) s")
                                     .font(.headline)
                                 // After a while, say what is usually wrong
                                 // (Malcolm 2026-09-19 watched a silent spinner).
-                                if searching >= 15 {
+                                if link.scanSeconds >= 15 {
                                     Text("Nothing yet. Power the model with the transmitter OFF — and if it is on, another phone or tablet may be holding it: a receiver takes one at a time.")
                                         .font(.footnote).foregroundStyle(.secondary)
                                         .fixedSize(horizontal: false, vertical: true)
@@ -620,7 +619,7 @@ struct ConnectListView: View {
                     .accessibilityLabel("Help")
             }
         }
-        .sheet(isPresented: $showHelp) { ScannerHelpView(page: .connect) }
+        .sheet(isPresented: $showHelp) { ScannerHelpView(page: .connect, log: link.log) }
         .photosPicker(isPresented: $showPhotoPicker, selection: $pickerItem, matching: .images)
         .onChange(of: pickerItem) { item in
             guard let item, let name = photoFor else { return }
@@ -650,10 +649,11 @@ struct ConnectListView: View {
             }
         }
         .onReceive(link.$found) { maybeArmAuto($0) }
-        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in
-            if link.found.isEmpty, case .scanning = link.state { searching += 1 } else { searching = 0 }
-        }
-        .onAppear { searching = 0; link.startScan() }
+        // The search must never be left dead on this page: if the link falls
+        // idle here (a drop's ride-out gave up, the app was away), search again.
+        .onChange(of: link.state) { st in if case .idle = st { link.startScan() } }
+        .onChange(of: scenePhase) { ph in if ph == .active { link.startScan() } }
+        .onAppear { link.startScan() }
         .onDisappear { link.stopScan() }
         .refreshable { link.startScan() }
     }
@@ -853,6 +853,8 @@ struct ScannerBackdrop: View {
 struct ScannerHelpView: View {
     enum Page { case home, connect, reviews, backups, demos }
     let page: Page
+    /// The link's own account of itself (Connect only): read, don't guess.
+    var log: [String] = []
     @Environment(\.dismiss) private var dismiss
 
     struct Topic: Identifiable {
@@ -1003,6 +1005,19 @@ struct ScannerHelpView: View {
                             Label(t.title, systemImage: t.icon).font(.headline)
                             Text(t.body).font(.callout)
                                 .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color(.secondarySystemGroupedBackground),
+                                    in: RoundedRectangle(cornerRadius: 12))
+                    }
+                    if !log.isEmpty {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Label("What the app did", systemImage: "list.bullet.rectangle").font(.headline)
+                            ForEach(Array(log.suffix(30).enumerated()), id: \.offset) { _, line in
+                                Text(line).font(.system(.caption, design: .monospaced))
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
                         }
                         .padding(12)
                         .frame(maxWidth: .infinity, alignment: .leading)

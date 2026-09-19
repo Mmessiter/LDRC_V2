@@ -87,6 +87,18 @@ final class BleLink: NSObject, ObservableObject {
     private var connectingRssi = 0
     /// Shown under the spinner while connecting: a warning about a weak signal.
     @Published var connectNote: String? = nil
+    /// Seconds the current search has heard nothing. The Connect page shows
+    /// it, and the search restarts itself along the way (2026-09-19).
+    @Published var scanSeconds = 0
+    /// What the link did, oldest first, for the Connect page's "?" — so a
+    /// "can't connect" can be READ from the phone instead of guessed at.
+    @Published var log: [String] = []
+    private static let logKeep = 60
+    private static let logClock: DateFormatter = { let f = DateFormatter(); f.dateFormat = "HH:mm:ss"; return f }()
+    func note(_ s: String) {
+        log.append(Self.logClock.string(from: Date()) + "  " + s)
+        if log.count > Self.logKeep { log.removeFirst(log.count - Self.logKeep) }
+    }
     /// Anything at or below this is too weak to WORK, which is stricter than
     /// too weak to connect: -85 let a link two rooms away connect and then fail
     /// (Malcolm 2026-09-12). BLE throughput collapses long before the connection
@@ -146,14 +158,23 @@ final class BleLink: NSObject, ObservableObject {
         found = []
         smoothRssi.removeAll()
         lastHeard.removeAll()
-        guard central.state == .poweredOn else { state = .scanning; return }
+        scanSeconds = 0
+        guard central.state == .poweredOn else { state = .scanning; note("waiting for Bluetooth to come on"); return }
         state = .scanning
         if fastConnect() { return }   // instant reconnect to last device — no advert wait
-        central.scanForPeripherals(withServices: [Self.serviceUUID], options: Self.scanOptions)
-        startPublishing()
+        note("searching")
+        beginScan()
     }
 
     func stopScan() { central.stopScan(); publishTimer?.invalidate(); publishTimer = nil }
+
+    /// The radio scan AND the once-a-second tick that smooths signals, sweeps
+    /// stale rows, counts the quiet seconds and restarts a search that has gone
+    /// dead. Every scan starts here so none of that can be forgotten again.
+    private func beginScan() {
+        central.scanForPeripherals(withServices: [Self.serviceUUID], options: Self.scanOptions)
+        startPublishing()
+    }
 
     /// Advertisements are heard every second or so; a board that has gone
     /// quiet for this long is off, out of range, or already has a phone on it.
@@ -179,6 +200,18 @@ final class BleLink: NSObject, ObservableObject {
                 }
             }
             if changed { self.found.sort { $0.rssi > $1.rssi } }
+            if self.found.isEmpty, case .scanning = self.state {
+                self.scanSeconds += 1
+                // A CoreBluetooth scan can simply go quiet; a fresh one is the
+                // standard remedy. Every 10 s of silence, start again.
+                if self.scanSeconds % 10 == 0 {
+                    self.central.stopScan()
+                    self.central.scanForPeripherals(withServices: [Self.serviceUUID], options: Self.scanOptions)
+                    self.note("nothing heard for \(self.scanSeconds) s - search restarted")
+                }
+            } else if !self.found.isEmpty {
+                self.scanSeconds = 0
+            }
         }
     }
 
@@ -204,6 +237,7 @@ final class BleLink: NSObject, ObservableObject {
         lastName = d.name
         userDisconnect = false
         state = .connecting(d.name)
+        note("connecting to \(d.name) (\(d.rssi) dBm)")
         startConnectWatchdog(d.name, rssi: d.rssi)
         peripheral = d.peripheral
         d.peripheral.delegate = self
@@ -243,6 +277,7 @@ final class BleLink: NSObject, ObservableObject {
         lastName = name
         userDisconnect = false
         state = .connecting(name)
+        note("connecting to \(name), used last time")
         peripheral = p
         p.delegate = self
         central.connect(p, options: nil)
@@ -255,8 +290,9 @@ final class BleLink: NSObject, ObservableObject {
             if case .connecting = self.state, self.peripheral === p,
                p.state != .connected {
                 self.connectNote = "\(name) has not answered — it may be switched off or too far away."
+                self.note("\(name) has not answered in 4 s - searching instead")
                 self.state = .scanning
-                self.central.scanForPeripherals(withServices: [Self.serviceUUID], options: Self.scanOptions)
+                self.beginScan()
             }
         }
         return true
@@ -274,6 +310,7 @@ final class BleLink: NSObject, ObservableObject {
             guard case .connecting = self.state else { return }
             if let p = self.peripheral { self.central.cancelPeripheralConnection(p) }
             self.cleanupConnection(message: nil)
+            self.note("\(name) did not answer in 12 s")
             self.state = .failed(self.connectingRssi != 0 && self.connectingRssi <= Self.weakRssi
                 ? "Too far away. The signal from \(name) was weak (\(self.connectingRssi) dBm) — get closer and tap it again."
                 : "\(name) did not answer. A receiver takes one phone or tablet at a time — close the app on any other device that may be holding it. Otherwise check it is switched on, and get closer.")
@@ -290,6 +327,7 @@ final class BleLink: NSObject, ObservableObject {
     func disconnect() {
         stopConnectWatchdog()
         userDisconnect = true
+        note("you left the model")
         scannerAutoDone = true   // returning to the scanner MEANS "let me choose"
         if let p = peripheral { central.cancelPeripheralConnection(p) }
         cleanupConnection(message: nil)
@@ -616,8 +654,8 @@ extension BleLink: CBCentralManagerDelegate, CBPeripheralDelegate {
             switch state {
             case .scanning:   // the Connect page is open and waiting
                 if fastConnect() { return }
-                central.scanForPeripherals(withServices: [Self.serviceUUID], options: Self.scanOptions)
-                startPublishing()   // smoothing + the stale-row sweep
+                note("Bluetooth is on - searching")
+                beginScan()
             default: break
             }
         } else if central.state == .unauthorized {
@@ -652,11 +690,13 @@ extension BleLink: CBCentralManagerDelegate, CBPeripheralDelegate {
             // A receiver appearing for the first time shows at once, not in a second.
             found.append(Discovered(id: id, name: name, rssi: RSSI.intValue, peripheral: peripheral))
             found.sort { $0.rssi > $1.rssi }
+            note("heard \(name) at \(RSSI.intValue) dBm")
             if publishTimer == nil { startPublishing() }
         }
     }
 
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
+        note("connected - looking for the RXV2 service")
         peripheral.discoverServices([Self.serviceUUID])
     }
 
@@ -664,6 +704,7 @@ extension BleLink: CBCentralManagerDelegate, CBPeripheralDelegate {
                         error: Error?) {
         stopConnectWatchdog()
         let name = lastName ?? "The receiver"
+        note("connect failed: \(error?.localizedDescription ?? "no reason given")")
         state = .failed(connectingRssi != 0 && connectingRssi <= Self.weakRssi
             ? "Too far away. The signal from \(name) was weak (\(connectingRssi) dBm) — get closer and tap it again."
             : (error?.localizedDescription ?? "Connection failed"))
@@ -688,6 +729,7 @@ extension BleLink: CBCentralManagerDelegate, CBPeripheralDelegate {
 
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral,
                         error: Error?) {
+        note("disconnected" + (error.map { " - " + $0.localizedDescription } ?? ""))
         cleanupConnection(message: "Receiver disconnected")
         // Any unexpected drop from a live link is ridden out (0.9.746). A
         // deliberate reboot (install / save / fly) gets 90 s. A plain drop —
@@ -724,6 +766,7 @@ extension BleLink: CBCentralManagerDelegate, CBPeripheralDelegate {
                 self.peripheral = peripheral          // cleanup nilled it
                 peripheral.delegate = self
                 state = .reconnecting(lastName)
+                note("riding out the drop, up to \(Int(until.timeIntervalSinceNow)) s")
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
                     guard let self, case .reconnecting = self.state,
                           let p = self.peripheral else { return }
@@ -748,6 +791,7 @@ extension BleLink: CBCentralManagerDelegate, CBPeripheralDelegate {
                     // receiver is seen again it connects by itself (0.9.746).
                     // A chosen parting (back / disconnect) still disarms it.
                     if self.lastDropUnexpected { self.lastDropUnexpected = false; self.scannerAutoDone = false }
+                    self.note("gave up waiting for \(self.lastName)")
                     self.state = .idle
                 }
                 return
@@ -772,6 +816,7 @@ extension BleLink: CBCentralManagerDelegate, CBPeripheralDelegate {
         if reqChr != nil && respChr != nil {
             let name = peripheral.name ?? "RXV2"
             stopConnectWatchdog()
+            note("ready: \(name)")
             state = .ready(name)
             pump()
         } else {

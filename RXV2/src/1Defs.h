@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.791-searching-says-more";
+constexpr const char* FW_VERSION = "RXV2-0.9.792-search-heals-and-tells";
 
 //*********************************************************************
 //  Auto-update manifest URLs
