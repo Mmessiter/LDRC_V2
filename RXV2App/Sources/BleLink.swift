@@ -134,6 +134,15 @@ final class BleLink: NSObject, ObservableObject {
     // MARK: - public API
 
     func startScan() {
+        // NEVER while a connection is under way or live: startScan() resets
+        // `state` to .scanning, which throws away a connect in progress. With
+        // the four-door front screen the Connect page can appear again while
+        // connecting, and that silently cancelled the attempt — the row was
+        // there, tapping it did nothing (Malcolm 2026-09-19, RAW420MCM).
+        switch state {
+        case .connecting, .ready, .reconnecting: return
+        default: break
+        }
         found = []
         smoothRssi.removeAll()
         guard central.state == .poweredOn else { state = .scanning; return }

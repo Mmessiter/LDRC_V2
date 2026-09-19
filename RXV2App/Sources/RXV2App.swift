@@ -533,11 +533,8 @@ struct ConnectListView: View {
                 if link.found.isEmpty {
                     HStack(alignment: .top, spacing: 12) {
                         ProgressView().padding(.top, 2)
-                        VStack(alignment: .leading, spacing: 4) {
-                            Label("Searching…", systemImage: "dot.radiowaves.left.and.right")
-                                .font(.headline)
-                            Text(statusText).font(.footnote).foregroundStyle(.secondary)
-                        }
+                        Label("Searching…", systemImage: "dot.radiowaves.left.and.right")
+                            .font(.headline)
                     }
                     .padding(.vertical, 6)
                 }
@@ -581,10 +578,6 @@ struct ConnectListView: View {
                         }
                     }
                 }
-            } header: {
-                Text("Nearby receivers and dongles")
-            } footer: {
-                Text("Transmitter OFF while you connect — a dongle has none, so just power the model.")
             }
             .listRowBackground(Color(.secondarySystemGroupedBackground))
         }
@@ -633,13 +626,6 @@ struct ConnectListView: View {
         .refreshable { link.startScan() }
     }
 
-    private var statusText: String {
-        if let note = link.connectNote { return note }
-        switch link.state {
-        case .failed(let m): return m
-        default: return "Within a few metres, with the transmitter off."
-        }
-    }
 }
 
 /// REVIEWS — one recording per model, made automatically at every connection.
@@ -687,8 +673,6 @@ struct ReviewsListView: View {
                             } label: { Label("Delete", systemImage: "trash") }
                         }
                     }
-                } footer: {
-                    Text("The flights and the settings as they were, to browse with everything switched off. Swipe a model to delete its recording.")
                 }
                 .listRowBackground(Color(.secondarySystemGroupedBackground))
             }
@@ -737,8 +721,6 @@ struct BackupsListView: View {
                             Spacer()
                         }
                     }
-                } footer: {
-                    Text("Rotorflight settings only — no flight data. Connect to the model and use Backup & restore to put them back, or to send a backup to yourself as a file.")
                 }
                 .listRowBackground(Color(.secondarySystemGroupedBackground))
             }
@@ -784,13 +766,6 @@ struct DemosView: View {
                     HomeTile(icon: "gamecontroller", tint: Color(red: 0.42, green: 0.56, blue: 0.69),
                              title: "Simulator interface")
                 }
-                Text("The same pages on canned data — nothing to connect.")
-                    .font(.footnote)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity)
-                    .padding(10)
-                    .background(Color(.secondarySystemGroupedBackground),
-                                in: RoundedRectangle(cornerRadius: 10))
             }
             .padding(18)
         }

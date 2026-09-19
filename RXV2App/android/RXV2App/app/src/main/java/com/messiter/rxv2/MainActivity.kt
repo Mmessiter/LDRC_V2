@@ -382,9 +382,6 @@ class MainActivity : AppCompatActivity() {
         backdrop()
         val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         pageHeader(col, "Connect", back = true)
-        col.addView(chip("Transmitter OFF while you connect — a dongle has none, so just power the model."),
-                    LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                                              ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(40, 0, 40, 14) })
         val list = ListView(this).apply { divider = null; dividerHeight = 0 }
         scannerAdapter = ScannerAdapter()
         list.adapter = scannerAdapter
@@ -421,9 +418,6 @@ class MainActivity : AppCompatActivity() {
         }
         col.addView(list, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
-        col.addView(chip("Searching…  Within a few metres, with the transmitter off."),
-                    LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                                              ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(40, 14, 40, 36) })
         root.addView(col)
         startScanIfPermitted()
         scannerAdapter?.submit(latestFound)   // whatever is already in sight
@@ -438,11 +432,10 @@ class MainActivity : AppCompatActivity() {
         pageHeader(col, "Reviews", back = true)
         SessionCache.init(this)
         val sessions = SessionCache.savedSessions()
-        if (sessions.isEmpty()) {
-            col.addView(chip("Nothing recorded yet. Connect to a model and one is kept for you."),
-                        LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                                                  ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(40, 14, 40, 28) })
-        }
+        if (sessions.isEmpty()) col.addView(
+            chip("Nothing recorded yet. Connect to a model and one is kept for you."),
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                                      ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(40, 8, 40, 28) })
         for ((model, atMs) in sessions) {
             val t = if (atMs > 0) "\nLast session · " + friendlyWhen(atMs) else ""
             col.addView(TextView(this).apply {
@@ -473,11 +466,6 @@ class MainActivity : AppCompatActivity() {
             }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                                          ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(40, 8, 40, 8) })
         }
-        col.addView(chip("The flights and the settings as they were, to browse with everything " +
-                   "switched off. Press and hold a model to delete its recording. A backup " +
-                   "is a different thing."),
-                    LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                                              ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(40, 14, 40, 28) })
         root.addView(ScrollView(this).apply { addView(col) })
     }
 
@@ -490,12 +478,10 @@ class MainActivity : AppCompatActivity() {
         pageHeader(col, "Backups", back = true)
         SessionCache.init(this)
         val backups = SessionCache.savedBackups()
-        if (backups.isEmpty()) {
-            col.addView(chip("No backups yet. Open a model, go to Rotorflight → Backup & restore, " +
-                       "and tap Back up: the settings are kept here on the phone."),
-                        LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                                                  ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(40, 14, 40, 28) })
-        }
+        if (backups.isEmpty()) col.addView(
+            chip("No backups yet. Open a model, go to Rotorflight → Backup & restore, and tap Back up."),
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                                      ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(40, 8, 40, 28) })
         for (b in backups) {
             col.addView(TextView(this).apply {
                 text = "💾  ${b.model}\n" +
@@ -511,10 +497,6 @@ class MainActivity : AppCompatActivity() {
             }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                                          ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(40, 8, 40, 8) })
         }
-        col.addView(chip("Rotorflight settings only — no flight data. Connect to the model and use " +
-                   "Backup & restore to put them back, or to send a backup to yourself as a file."),
-                    LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                                              ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(40, 14, 40, 28) })
         root.addView(ScrollView(this).apply { addView(col) })
     }
 
@@ -528,9 +510,6 @@ class MainActivity : AppCompatActivity() {
         homeTile(col, "✈️", 0xFF6CAB5E.toInt(), "Receiver") { demoRole = "receiver"; demoMode = true; showWeb() }
         homeTile(col, "🔌", 0xFF5FA099.toInt(), "Rotorflight dongle") { demoRole = "dongle"; demoMode = true; showWeb() }
         homeTile(col, "🎮", 0xFF6C8EB0.toInt(), "Simulator interface") { demoRole = "simif"; demoMode = true; showWeb() }
-        col.addView(chip("The same pages on canned data — nothing to connect."),
-                    LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                                              ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(40, 14, 40, 28) })
         root.addView(col)
     }
 

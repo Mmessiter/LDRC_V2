@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.786-connect-fix-and-no-small-text",
+      "url": "https://messiter.com/rxv2/release/v0.9.786/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.786/littlefs.bin",
+      "fs_md5": "76786cca9e44ac41eed287ecc9d5406a",
+      "notes": "Fixes a receiver that was listed but would not connect: opening the Connect page again while a connection was under way silently cancelled it, because starting a search resets the link. Searching is now refused whenever a connection is in progress or live. Also removes the small text sitting on the photograph \u2014 it is all in each screen's help."
+    },
+    {
       "name": "RXV2-0.9.785-full-colour-and-three-demos",
       "url": "https://messiter.com/rxv2/release/v0.9.785/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.785/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.775/littlefs.bin",
       "fs_md5": "364a9081bff99921e46f725d90c1d012",
       "notes": "View channels shows how fast the bars really update and by which route (pushed stream or polled); the receiver counts the frames it pushes over Bluetooth (state.json ble.stream_sent) so a slow page can be diagnosed rather than guessed at."
-    },
-    {
-      "name": "RXV2-0.9.774-wire-freshness",
-      "url": "https://messiter.com/rxv2/release/v0.9.774/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.774/littlefs.bin",
-      "fs_md5": "c2196720a90ef8a30d3ae12ec4a9f0e6",
-      "notes": "Simulator interface: View channels now sees the wire's channels as live (age from the last decoded frame) instead of reporting no RC signal beside moving values."
     }
   ],
   "rotorflight": {
