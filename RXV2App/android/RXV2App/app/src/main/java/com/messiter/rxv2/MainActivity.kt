@@ -272,12 +272,18 @@ class MainActivity : AppCompatActivity() {
 
     /** The flying-field backdrop every web page uses, under a wash. */
     private fun backdrop() {
+        root.background = null          // the old stretched drawable, if any
         runCatching {
             val bmp = assets.open("webroot/flying-field.jpg").use { android.graphics.BitmapFactory.decodeStream(it) }
             // FULL COLOUR (Malcolm 2026-09-19) — the text that sits on it has
-            // its own solid chip, exactly as the web pages do.
-            root.background = android.graphics.drawable.BitmapDrawable(resources, bmp)
-                .apply { gravity = android.view.Gravity.FILL }
+            // its own solid chip, exactly as the web pages do. CENTER_CROP,
+            // never a stretched background drawable: the photograph keeps its
+            // proportions and is cropped, as it is on iOS.
+            root.addView(ImageView(this).apply {
+                setImageBitmap(bmp)
+                scaleType = ImageView.ScaleType.CENTER_CROP
+            }, android.widget.FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         }
     }
 

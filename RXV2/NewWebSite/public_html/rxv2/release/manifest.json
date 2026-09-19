@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.804-backdrop-not-stretched",
+      "url": "https://messiter.com/rxv2/release/v0.9.804/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.804/littlefs.bin",
+      "fs_md5": "ab1a4c4091da1ed463bb7dfd56e1bc14",
+      "notes": "Android: the flying-field photograph keeps its proportions. It was being stretched to the screen's shape, which squeezed a landscape picture on a tall phone; it is now cropped instead, as on iPhone."
+    },
+    {
       "name": "RXV2-0.9.803-bigger-chevron",
       "url": "https://messiter.com/rxv2/release/v0.9.803/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.803/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.793/littlefs.bin",
       "fs_md5": "3328006a9867219203bdf666253420ed",
       "notes": "Fixes the connect that looked like a failure: since the search moved onto the Connect page, a successful connection opened the model's pages UNDERNEATH that page, which stayed on top saying Searching. The pages now replace the whole navigation stack the moment the link is ready."
-    },
-    {
-      "name": "RXV2-0.9.792-search-heals-and-tells",
-      "url": "https://messiter.com/rxv2/release/v0.9.792/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.792/littlefs.bin",
-      "fs_md5": "8cb1473e9d7c03aaecb60cad4221190a",
-      "notes": "Connect page: a search that hears nothing restarts itself every ten seconds, the seconds are counted by the link itself, the search comes back by itself after a trip to another app or a dropped link, and the page's help now ends with 'What the app did' - the link's own timestamped account of searching, hearing, connecting, failing and leaving - so a can't-connect can be read instead of guessed at."
     }
   ],
   "rotorflight": {

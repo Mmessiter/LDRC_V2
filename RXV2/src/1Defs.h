@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.803-bigger-chevron";
+constexpr const char* FW_VERSION = "RXV2-0.9.804-backdrop-not-stretched";
 
 //*********************************************************************
 //  Auto-update manifest URLs
