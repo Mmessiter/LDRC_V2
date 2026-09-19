@@ -393,6 +393,10 @@ struct ScannerView: View {
     @State private var showCamera = false
     /// A receiver tapped while its signal was too weak to be worth trying.
     @State private var weakTarget: BleLink.Discovered? = nil
+    /// The "?" every other screen has (Malcolm 2026-09-19: "That screen has
+    /// blocks of tiny text … give it a real help screen that fully explains.
+    /// It's the first screen a user sees").
+    @State private var showHelp = false
 
     private func cancelAuto() {
         autoWork?.cancel(); autoWork = nil; autoTarget = nil
@@ -496,13 +500,10 @@ struct ScannerView: View {
             } header: {
                 Text(headerText)
             } footer: {
-                Text("Power the model with the transmitter OFF so the board's "
-                   + "config radios come up (same rule as the WiFi portal). "
-                   + "A dongle has no transmitter of its own: just power the model. "
-                   + "Press and hold any board to give it a photograph. "
-                   + "Not everybody has an iPhone — the WiFi web interface "
-                   + "still works exactly as before.")
+                // One line; the rest moved into the "?" (2026-09-19).
+                Text("Transmitter OFF while you connect — a dongle has none, so just power the model.")
             }
+            .listRowBackground(Color(.secondarySystemGroupedBackground))
             // Recordings come AFTER the live receivers (Malcolm 2026-09-11 tapped
             // "Review: Goblin770" at the top and took it for a live connection).
             // One recording per MODEL (Malcolm 2026-08-04): connecting a
@@ -543,11 +544,9 @@ struct ScannerView: View {
                         }
                     }
                 } footer: {
-                    Text("Recorded for you at every connection — the flights and the "
-                       + "settings as they were — so a model can be browsed with "
-                       + "everything switched off. A backup is a different thing: "
-                       + "you make that yourself on the model's Backup & restore page.")
+                    Text("Recorded for you at every connection, to browse with everything switched off. A backup is a different thing.")
                 }
+                .listRowBackground(Color(.secondarySystemGroupedBackground))
             }
             // A real, REACHABLE receiver in sight → the demo offer just muddies
             // the water. But a receiver that is merely *visible* and too far to
@@ -571,11 +570,25 @@ struct ScannerView: View {
                         Label("Try the dongle demo", systemImage: "theatermasks")
                     }
                 } footer: {
-                    Text("The same pages on canned data. The receiver demo flies a model; the dongle demo shows the app on a Rotorflight dongle.")
+                    Text("The same pages on canned data — nothing to connect.")
                 }
+                .listRowBackground(Color(.secondarySystemGroupedBackground))
             }
         }
+        // The flying-field backdrop every other screen has, so the first one
+        // belongs to the same app; rows stay solid, never translucent.
+        .scrollContentBackground(.hidden)
+        .background(ScannerBackdrop())
         .navigationTitle("RXV2 Receivers & Dongles")   // the big heading; headerText below it is the subtitle
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button { showHelp = true } label: {
+                    Image(systemName: "questionmark.circle").font(.title3)
+                }
+                .accessibilityLabel("Help")
+            }
+        }
+        .sheet(isPresented: $showHelp) { ScannerHelpView() }
         .photosPicker(isPresented: $showPhotoPicker, selection: $pickerItem, matching: .images)
         .onChange(of: pickerItem) { item in
             guard let item, let name = photoFor else { return }
@@ -622,7 +635,129 @@ struct ScannerView: View {
         if let note = link.connectNote { return note }
         switch link.state {
         case .failed(let m): return m
-        default: return "Bring the receiver or dongle within a few metres and make sure it is in config mode (LED behaviour as usual)."
+        default: return "Within a few metres, with the transmitter off."
+        }
+    }
+}
+
+/// The flying-field photograph the web pages use (`style.css` .bg-photo),
+/// with the same wash over it so headings and footnotes stay legible against
+/// sky and meadow. Loaded from the bundled webroot, so there is one copy of
+/// the picture in the app (Malcolm 2026-09-19: make the first screen look
+/// "more like our other screens").
+struct ScannerBackdrop: View {
+    static let photo: UIImage? = {
+        guard let u = Bundle.main.url(forResource: "flying-field", withExtension: "jpg",
+                                      subdirectory: "webroot"),
+              let d = try? Data(contentsOf: u) else { return nil }
+        return UIImage(data: d)
+    }()
+
+    var body: some View {
+        ZStack {
+            Color(.systemGroupedBackground)
+            if let img = Self.photo {
+                Image(uiImage: img).resizable().scaledToFill()
+            }
+            // systemBackground, not white: the wash follows light and dark.
+            LinearGradient(colors: [Color(.systemBackground).opacity(0.80),
+                                    Color(.systemBackground).opacity(0.62),
+                                    Color(.systemBackground).opacity(0.82)],
+                           startPoint: .top, endPoint: .bottom)
+        }
+        .ignoresSafeArea()
+    }
+}
+
+/// The scanner's "?" — the first screen now explains itself as fully as every
+/// other page does, instead of carrying blocks of small print.
+struct ScannerHelpView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    private struct Topic: Identifiable {
+        let id = UUID()
+        let icon: String
+        let title: String
+        let body: String
+    }
+
+    private let topics: [Topic] = [
+        .init(icon: "antenna.radiowaves.left.and.right",
+              title: "Getting a model to appear",
+              body: "Power the model with the transmitter OFF, so the board's own "
+                  + "config radios come up — the same rule as the WiFi portal. A dongle "
+                  + "has no transmitter of its own, so just power the model it is plugged "
+                  + "into. Bring the phone within a few metres. The list refreshes by "
+                  + "itself; pull down to search again."),
+        .init(icon: "wifi",
+              title: "Signal strength",
+              body: "Each row says how strong the signal is. Below about −85 dBm a "
+                  + "connection half-forms and everything afterwards is slow, so the app "
+                  + "asks before trying rather than leaving you to guess. Walking a few "
+                  + "steps closer is usually all it takes."),
+        .init(icon: "clock.arrow.circlepath",
+              title: "The model you used last",
+              body: "It carries a small clock. When it is the only board in range the app "
+                  + "connects to it by itself; with more than one in range the list waits "
+                  + "for you to choose. Going back to this screen disarms that until the "
+                  + "next launch."),
+        .init(icon: "photo",
+              title: "Photographs",
+              body: "Press and hold any row to give that board a photograph of its model — "
+                  + "much quicker to recognise than a name when several are similar."),
+        .init(icon: "clock",
+              title: "“Review” — what it is",
+              body: "A recording of a model's last connection, made for you automatically: "
+                  + "the flights and the black box, and every Rotorflight setting as it was. "
+                  + "It lets you sit indoors and go through a model with everything switched "
+                  + "off. One per model, kept until you swipe it away — connecting a "
+                  + "different model never erases another's. It can also put a model's tuning "
+                  + "back, which is the safety net if no backup was ever made."),
+        .init(icon: "tray.and.arrow.down",
+              title: "A backup is a different thing",
+              body: "A backup is one you make on purpose, on the model's Backup & restore "
+                  + "page. It holds the Rotorflight settings only — no flight data — lives on "
+                  + "the receiver, and can be sent to yourself as a file. Use a backup before "
+                  + "you change anything; use a review to look back at what happened."),
+        .init(icon: "theatermasks",
+              title: "The demos",
+              body: "The same pages driven by canned data, with no hardware at all: one "
+                  + "shows the app flying a model, the other shows it on a Rotorflight "
+                  + "dongle. They appear when nothing of your own is within reach."),
+        .init(icon: "globe",
+              title: "No phone? No problem",
+              body: "Everything here is also in the receiver's own WiFi pages, in any web "
+                  + "browser, exactly as before. The app simply carries the same pages over "
+                  + "Bluetooth so no network switching is needed at the field."),
+    ]
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 22) {
+                    Text("This screen lists the LockDown receivers and dongles the phone can "
+                       + "hear, and the recordings it has kept of earlier sessions.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                    ForEach(topics) { t in
+                        VStack(alignment: .leading, spacing: 6) {
+                            Label(t.title, systemImage: t.icon)
+                                .font(.headline)
+                            Text(t.body)
+                                .font(.callout)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+                .padding(20)
+            }
+            .navigationTitle("About this screen")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
         }
     }
 }

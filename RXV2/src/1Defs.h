@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.781-review-says-what-it-is";
+constexpr const char* FW_VERSION = "RXV2-0.9.782-first-screen-tidy";
 
 //*********************************************************************
 //  Auto-update manifest URLs

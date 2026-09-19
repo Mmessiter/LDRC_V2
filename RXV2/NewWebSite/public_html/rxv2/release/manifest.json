@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.782-first-screen-tidy",
+      "url": "https://messiter.com/rxv2/release/v0.9.782/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.782/littlefs.bin",
+      "fs_md5": "9529238377a365fd3e2bb79a2ef14e52",
+      "notes": "The model list \u2014 the first screen you see \u2014 now looks like the rest of the app: the flying-field backdrop, solid cards, and a ? that explains the whole screen properly. The blocks of small print are gone, replaced by one line each and a full help page covering how a model appears, signal strength, photographs, what a review is and how a backup differs."
+    },
+    {
       "name": "RXV2-0.9.781-review-says-what-it-is",
       "url": "https://messiter.com/rxv2/release/v0.9.781/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.781/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.771/littlefs.bin",
       "fs_md5": "8c984b1385b349f705d3eee410c758f6",
       "notes": "Simulator interface wire finder: 100 ms windows, floating pads held down, and the page tells a slow servo-style pulse train apart from a data stream - and says which end of the wire to move."
-    },
-    {
-      "name": "RXV2-0.9.770-bare-board-d4-input",
-      "url": "https://messiter.com/rxv2/release/v0.9.770/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.770/littlefs.bin",
-      "fs_md5": "84ba8b3174f278048a5478999fde2547",
-      "notes": "A bare board (dongle or simulator interface) never drives D4: the status LED on that pad is a receiver-board feature, and a receiver wired there by mistake was fighting the output."
     }
   ],
   "rotorflight": {

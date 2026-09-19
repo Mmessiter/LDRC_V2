@@ -256,20 +256,53 @@ class MainActivity : AppCompatActivity() {
         return android.text.format.DateFormat.format("d MMM, HH:mm", ms).toString()
     }
 
+    // The web pages' ink colours, used explicitly on the scanner so it reads
+    // the same whatever the phone's dark-mode setting (2026-09-19).
+    private val INK = 0xFF22384B.toInt()
+    private val SUB = 0xFF3A5165.toInt()
+
     private fun showScanner() {
         webView?.let { it.stopLoading(); it.destroy() }; webView = null
         root.removeAllViews()
         val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        col.addView(TextView(this).apply {
-            text = "RXV2 Receivers & Dongles"; textSize = 22f; setPadding(40, 60, 40, 8)
+        // The flying-field backdrop every web page uses, so the first screen
+        // belongs to the same app (Malcolm 2026-09-19: "it's the first screen a
+        // user sees so let's make it look better presented more like our other
+        // screens"). Every text colour from here on is explicit: the pages are
+        // light whatever the phone's dark-mode setting says, and so is this.
+        runCatching {
+            val bmp = assets.open("webroot/flying-field.jpg").use { android.graphics.BitmapFactory.decodeStream(it) }
+            root.background = android.graphics.drawable.LayerDrawable(arrayOf(
+                android.graphics.drawable.BitmapDrawable(resources, bmp).apply { gravity = android.view.Gravity.FILL },
+                android.graphics.drawable.ColorDrawable(0xCCFFFFFF.toInt())))
+        }
+        val titleRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            setPadding(40, 60, 40, 8)
+        }
+        titleRow.addView(TextView(this).apply {
+            text = "RXV2 Receivers & Dongles"; textSize = 22f; setTextColor(INK)
+        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        // The "?" every other screen has.
+        titleRow.addView(TextView(this).apply {
+            text = "?"; textSize = 21f; setTextColor(0xFF2F6FB0.toInt())
+            setPadding(34, 4, 34, 10)
+            background = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.OVAL
+                setColor(0xFFFFFFFF.toInt()); setStroke(2, 0xFFC9D3DC.toInt())
+            }
+            setOnClickListener { showScannerHelp() }
         })
+        col.addView(titleRow)
         col.addView(TextView(this).apply {
             text = "App v" + packageManager.getPackageInfo(packageName, 0).versionName
-            setPadding(40, 0, 40, 8); alpha = 0.5f; textSize = 12f
+            setPadding(40, 0, 40, 8); setTextColor(SUB); alpha = 0.7f; textSize = 12f
         })
         col.addView(TextView(this).apply {
-            text = "Power the model with the transmitter OFF so the board's config radio comes up. A dongle has no transmitter of its own: just power the model. Press and hold any board to give it a photograph. The WiFi web interface still works exactly as before."
-            setPadding(40, 0, 40, 20); alpha = 0.7f; textSize = 13f
+            // One line; everything else moved into the "?" (2026-09-19).
+            text = "Transmitter OFF while you connect — a dongle has none, so just power the model."
+            setPadding(40, 0, 40, 20); setTextColor(SUB); textSize = 13f
         })
         autoBanner = TextView(this).apply {
             visibility = View.GONE
@@ -314,8 +347,8 @@ class MainActivity : AppCompatActivity() {
         col.addView(list, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
         val hint = TextView(this).apply {
-            text = "Searching…  Bring the receiver or dongle within a few metres."
-            setPadding(40, 16, 40, 40); alpha = 0.6f; textSize = 13f
+            text = "Searching…  Within a few metres, with the transmitter off."
+            setPadding(40, 16, 40, 40); setTextColor(SUB); textSize = 13f
         }
         col.addView(hint)
         // No receiver? Let anyone play: the same web UI runs against
@@ -374,15 +407,77 @@ class MainActivity : AppCompatActivity() {
             })
         }
         if (savedSessions.isNotEmpty()) col.addView(TextView(this).apply {
-            text = "Recorded for you at every connection — the flights and the settings " +
-                   "as they were — so a model can be browsed with everything switched off. " +
-                   "A backup is a different thing: you make that yourself on the model's " +
-                   "Backup & restore page."
-            textSize = 12f; setPadding(40, 8, 40, 28); setTextColor(0xFF94A3B8.toInt())
+            text = "Recorded for you at every connection, to browse with everything " +
+                   "switched off. A backup is a different thing."
+            textSize = 12f; setPadding(40, 8, 40, 28); setTextColor(SUB)
         })
         root.addView(col)
         startScanIfPermitted()
         checkAppUpdate(col)
+    }
+
+    // The scanner's own help — the first screen now explains itself as fully
+    // as every other page does, instead of carrying blocks of small print
+    // (Malcolm 2026-09-19). Same words as the iOS sheet.
+    private fun showScannerHelp() {
+        val html = """
+            <p>This screen lists the LockDown receivers and dongles the phone can hear,
+            and the recordings it has kept of earlier sessions.</p>
+
+            <p><b>Getting a model to appear</b><br>
+            Power the model with the transmitter OFF, so the board's own config radios
+            come up &mdash; the same rule as the WiFi portal. A dongle has no transmitter
+            of its own, so just power the model it is plugged into. Bring the phone within
+            a few metres.</p>
+
+            <p><b>Signal strength</b><br>
+            Each row says how strong the signal is. Below about &minus;85&nbsp;dBm a
+            connection half-forms and everything afterwards is slow, so the app asks before
+            trying rather than leaving you to guess. Walking a few steps closer is usually
+            all it takes.</p>
+
+            <p><b>The model you used last</b><br>
+            When it is the only board in range the app connects to it by itself; with more
+            than one in range the list waits for you to choose.</p>
+
+            <p><b>Photographs</b><br>
+            Press and hold any row to give that board a photograph of its model &mdash;
+            much quicker to recognise than a name when several are similar.</p>
+
+            <p><b>&ldquo;Review&rdquo; &mdash; what it is</b><br>
+            A recording of a model's last connection, made for you automatically: the
+            flights and the black box, and every Rotorflight setting as it was. It lets you
+            sit indoors and go through a model with everything switched off. One per model,
+            kept until you delete it &mdash; connecting a different model never erases
+            another's. It can also put a model's tuning back, which is the safety net if no
+            backup was ever made.</p>
+
+            <p><b>A backup is a different thing</b><br>
+            A backup is one you make on purpose, on the model's Backup &amp; restore page.
+            It holds the Rotorflight settings only &mdash; no flight data &mdash; lives on
+            the receiver, and can be sent to yourself as a file. Use a backup before you
+            change anything; use a review to look back at what happened.</p>
+
+            <p><b>The demos</b><br>
+            The same pages driven by canned data, with no hardware at all: one shows the app
+            flying a model, the other shows it on a Rotorflight dongle. They appear when
+            nothing of your own is within reach.</p>
+
+            <p><b>No phone? No problem</b><br>
+            Everything here is also in the receiver's own WiFi pages, in any web browser,
+            exactly as before. The app simply carries the same pages over Bluetooth so no
+            network switching is needed at the field.</p>
+        """.trimIndent()
+        val tv = TextView(this).apply {
+            text = android.text.Html.fromHtml(html, android.text.Html.FROM_HTML_MODE_COMPACT)
+            textSize = 14f; setPadding(48, 24, 48, 24); setTextColor(INK)
+            setLineSpacing(6f, 1.0f)
+        }
+        android.app.AlertDialog.Builder(this)
+            .setTitle("About this screen")
+            .setView(ScrollView(this).apply { addView(tv) })
+            .setPositiveButton("Done", null)
+            .show()
     }
 
     // ── App self-update ─────────────────────────────────────────────
@@ -552,6 +647,8 @@ class MainActivity : AppCompatActivity() {
             val v = convert as? LinearLayout ?: LinearLayout(this@MainActivity).apply {
                 orientation = LinearLayout.HORIZONTAL; setPadding(40, 28, 40, 28)
                 gravity = android.view.Gravity.CENTER_VERTICAL
+                // A solid card on the backdrop, never translucent (2026-09-19).
+                setBackgroundColor(0xFFF2F6F8.toInt())
             }
             v.removeAllViews()
             val d = items[i]
@@ -561,12 +658,11 @@ class MainActivity : AppCompatActivity() {
                 else setImageResource(android.R.drawable.stat_sys_data_bluetooth)
             }, LinearLayout.LayoutParams(160, 160).apply { rightMargin = 28 })
             val texts = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL }
-            texts.addView(TextView(this@MainActivity).apply { text = d.name; textSize = 17f })
+            texts.addView(TextView(this@MainActivity).apply { text = d.name; textSize = 17f; setTextColor(INK) })
             texts.addView(TextView(this@MainActivity).apply {
                 text = Rxv2Ble.signalWord(d.rssi) + " — ${d.rssi} dBm" +
                        (if (Rxv2Ble.tooWeak(d.rssi)) " — get closer" else "")
-                alpha = if (Rxv2Ble.tooWeak(d.rssi)) 0.95f else 0.6f
-                if (Rxv2Ble.tooWeak(d.rssi)) setTextColor(0xFFC0603C.toInt())
+                setTextColor(if (Rxv2Ble.tooWeak(d.rssi)) 0xFFC0603C.toInt() else SUB)
                 textSize = 12f
             })
             v.addView(texts, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
