@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Backup &amp; restore &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=318">
-<script src="/app.js?v=318" defer></script>
+<link rel=stylesheet href="/style.css?v=319">
+<script src="/app.js?v=319" defer></script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -39,6 +39,7 @@
         </div>
     </div>
 
+    <button id=otherRestoreBtn class="btn" style="display:none;background:#8e6cab" onclick="phoneRestore('auto')"><span class=ico>&#128260;</span>Restore the automatic copy instead<br><span id=otherRestoreSub style="font-size:.68em;font-weight:400;opacity:.85"></span></button>
     <button id=contentsBtn class="btn" style="display:none;background:#6f8f6a" onclick="showContents()"><span class=ico>&#128203;</span>What&rsquo;s in the backup</button>
     <button id=shareBtn class="btn" style="display:none;background:#5f8fab" onclick="shareBackup()"><span class=ico>&#128228;</span>Share backup file&hellip;<br><span style="font-size:.68em;font-weight:400;opacity:.85">email / AirDrop it &mdash; another phone, or a friend with the same helicopter</span></button>
     <button id=importBtn class="btn" style="display:none;background:#7a6a9a" onclick="importBackup()"><span class=ico>&#128229;</span>Import a backup file&hellip;<br><span style="font-size:.68em;font-weight:400;opacity:.85">then tap Restore to write it to this model</span></button>
@@ -135,13 +136,26 @@ function paintRestoreBtn() {
             // the next Back up); otherwise the automatic copy taken at connection.
             document.getElementById('phoneRestoreSub').textContent =
                 (i.explicit ? 'your backup of ' : 'auto-saved at connection ') + (i.when || 'earlier');
+            // Two kinds are kept: yours (never overwritten) and the automatic
+            // copy taken at every connection. Offer the other one too.
+            const other = (i.choices || []).find(c => c.which === (i.explicit ? 'auto' : 'yours'));
+            const ob = document.getElementById('otherRestoreBtn');
+            if (other) {
+                ob.style.display = '';
+                ob.setAttribute('onclick', "phoneRestore('" + other.which + "')");
+                ob.querySelector('.ico').innerHTML = other.which === 'yours' ? '&#128274;' : '&#128260;';
+                ob.childNodes[1].nodeValue = other.which === 'yours'
+                    ? 'Restore your own backup instead' : 'Restore the automatic copy instead';
+                document.getElementById('otherRestoreSub').textContent =
+                    (other.which === 'yours' ? 'your backup of ' : 'auto-saved at connection ') + (other.when || 'earlier');
+            } else ob.style.display = 'none';
         })
         .catch(() => {});
 }
 
 // Restore every recorded setting (all banks) from the phone's session
 // recording — the parachute for a pilot who never made a backup.
-async function phoneRestore() {
+async function phoneRestore(which) {
     // Same TX-on guard as backup: the restore switches banks and writes
     // flash — never under a live transmitter.
     try {
@@ -159,9 +173,12 @@ async function phoneRestore() {
         await LDRC.alert('No matching recording on the phone for this model.', { title: 'Nothing to restore', icon: '📡' });
         return;
     }
+    const pick = (info.choices || []).find(c => c.which === which);
+    const kind = which === 'auto' ? 'the automatic copy' : which === 'yours' ? 'your own backup'
+               : (info.explicit ? 'your own backup' : 'the automatic copy');
     if (!(await LDRC.confirm(
-        'Overwrite this model\u2019s Rotorflight setup with the phone backup' +
-        (info.when ? ' from ' + info.when : '') + '?\n\nWrites back the whole setup: PIDs, advanced PIDs, rates, governor & rescue (every bank); mixer, servos, motor & gear ratio; arming switch & modes, channel map, receiver & failsafe; battery & meters, filters, alignment, telemetry, black box; the bank and rates switches. Only what differs is written, each item verified.\n\nNot in the backup, left as they are: ESC parameters, serial ports, LED / OSD / GPS, the telemetry speed, the receiver’s own settings.\n\nKeep the transmitter OFF and the model powered while it runs.',
+        'Overwrite this model\u2019s Rotorflight setup with ' + kind +
+        ((pick && pick.when) || info.when ? ' from ' + ((pick && pick.when) || info.when) : '') + '?\n\nWrites back the whole setup: PIDs, advanced PIDs, rates, governor & rescue (every bank); mixer, servos, motor & gear ratio; arming switch & modes, channel map, receiver & failsafe; battery & meters, filters, alignment, telemetry, black box; the bank and rates switches. Only what differs is written, each item verified.\n\nNot in the backup, left as they are: ESC parameters, serial ports, LED / OSD / GPS, the telemetry speed, the receiver’s own settings.\n\nKeep the transmitter OFF and the model powered while it runs.',
         { title: 'Restore from phone', icon: '📡', yes: 'Restore everything', kind: 'warn' }))) return;
     const btn = document.getElementById('phoneRestoreBtn');
     const prog = document.getElementById('restProg');
@@ -169,12 +186,14 @@ async function phoneRestore() {
     const fill = document.getElementById('restFill');
     const note = document.getElementById('restNote');
     btn.style.display = 'none';
+    const ob = document.getElementById('otherRestoreBtn');
+    if (ob) ob.style.display = 'none';
     prog.style.display = '';
     note.style.display = '';
     lab.textContent = 'Restoring…';
     fill.style.width = '0%';
     let r0 = null;
-    try { r0 = await (await fetch('/app/restore/start', { cache: 'no-store' })).json(); } catch (e) {}
+    try { r0 = await (await fetch('/app/restore/start' + (which ? '?which=' + which : ''), { cache: 'no-store' })).json(); } catch (e) {}
     if (!r0 || !r0.ok) {
         lab.textContent = '⚠️ ' + ((r0 && r0.error) || 'could not start');
         note.style.display = 'none';

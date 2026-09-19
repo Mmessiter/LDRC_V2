@@ -131,8 +131,22 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
             // page can show a human what is in it (Malcolm 2026-09-17: the
             // exported JSON "means little to a mere human").
             let items = cache.restoreItems().map { $0.label }
+            // Two slots since 0.9.800: the pilot's own and the automatic copy.
+            // "choices" lets the page name both and let him pick.
+            let f = DateFormatter(); f.dateStyle = .short; f.timeStyle = .short
+            var choices: [[String: Any]] = []
+            if cache.modelName == connName, !demo, !replay {
+                for mine in [true, false] {
+                    let n = cache.restoreItems(mine: mine).count
+                    guard n > 0 else { continue }
+                    var c: [String: Any] = ["which": mine ? "yours" : "auto", "items": n]
+                    if let at = cache.restorePointDate(mine: mine) { c["when"] = f.string(from: at) }
+                    choices.append(c)
+                }
+            }
             let obj: [String: Any] = ["available": avail, "when": when,
-                                      "explicit": cache.restorePointIsExplicit(), "items": items]
+                                      "explicit": cache.restorePointIsExplicit(),
+                                      "choices": choices, "items": items]
             let body = (try? JSONSerialization.data(withJSONObject: obj)) ?? Data("{\"available\":false}".utf8)
             deliver(task, url: url, code: 200, type: "application/json", body: body)
             return
@@ -158,6 +172,11 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
                         self.deliver(task, url: url, code: 200, type: "application/json",
                                      body: Data("{\"ok\":false,\"error\":\"switch the transmitter OFF first\"}".utf8))
                     } else {
+                        // Which backup to write back (0.9.800). Absent = the
+                        // pilot's own when he has one.
+                        let which = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                            .queryItems?.first(where: { $0.name == "which" })?.value
+                        RestoreRunner.useMine = which == "yours" ? true : which == "auto" ? false : nil
                         RestoreRunner.run(link: self.link)
                         self.deliver(task, url: url, code: 200, type: "application/json",
                                      body: Data("{\"ok\":true}".utf8))

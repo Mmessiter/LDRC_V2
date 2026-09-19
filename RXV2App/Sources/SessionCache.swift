@@ -69,11 +69,14 @@ final class SessionCache {
         let files = (try? FileManager.default.contentsOfDirectory(
             at: docs, includingPropertiesForKeys: nil)) ?? []
         var out: [(String, Date, Bool, Int)] = []
-        for f in files where f.lastPathComponent.hasPrefix("restore-") {
+        for f in files where f.lastPathComponent.hasPrefix("restore-")
+                          || f.lastPathComponent.hasPrefix("backup-") {
             if let d = try? Data(contentsOf: f),
                let s = try? JSONDecoder().decode(RestoreShape.self, from: d),
                !s.entries.isEmpty {
-                out.append((s.model, s.savedAt, s.explicit ?? false, s.entries.count))
+                // The slot the file sits in is the truth (a migrated file may
+                // carry either flag).
+                out.append((s.model, s.savedAt, f.lastPathComponent.hasPrefix("backup-"), s.entries.count))
             }
         }
         return out.sorted { $0.1 > $1.1 }
@@ -83,8 +86,8 @@ final class SessionCache {
     /// "PIDs — banks 1–6" / "Servos — 8" (Malcolm 2026-09-17: the raw list
     /// "means little to a mere human"). Mirrors showContents() in
     /// rotorflight-backup.html so the app and the receiver agree.
-    static func backupSummary(model: String) -> [String] {
-        let items = shared.restoreItems(for: model).map { $0.label }
+    static func backupSummary(model: String, mine: Bool? = nil) -> [String] {
+        let items = shared.restoreItems(for: model, mine: mine).map { $0.label }
         var banked: [String: Set<Int>] = [:], bankOrder: [String] = []
         var numbered: [String: Int] = [:], numOrder: [String] = []
         var plain: [String] = []
@@ -124,6 +127,7 @@ final class SessionCache {
     static func deleteSession(model: String) {
         try? FileManager.default.removeItem(at: sessionURL(for: model))
         try? FileManager.default.removeItem(at: restoreURL(for: model))
+        try? FileManager.default.removeItem(at: restoreURL(for: model, mine: true))
     }
 
     /// Load a saved model's recording as the active one (for review).
@@ -479,10 +483,33 @@ extension SessionCache {
     // The parachute therefore restores from a FROZEN restore point, written
     // only when a full TX-off sweep completes — at connection (before any
     // editing) and on each explicit "Save session to phone".
-    private static func restoreURL(for model: String) -> URL {
+    /// TWO backups per model (Malcolm 2026-09-19: "let's keep both backup
+    /// types"). `backup-` is the pilot's own, written only when he asks and
+    /// never touched by the app; `restore-` is the automatic copy, refreshed
+    /// by every clean sweep. Either can be restored; yours is offered first.
+    static func restoreURL(for model: String, mine: Bool = false) -> URL {
         let safe = model.isEmpty ? "last"
             : String(model.map { $0.isLetter || $0.isNumber ? $0 : "_" })
-        return docs.appendingPathComponent("restore-\(safe).json")
+        return docs.appendingPathComponent("\(mine ? "backup" : "restore")-\(safe).json")
+    }
+
+    /// Before two slots existed, a deliberate backup lived in `restore-` with
+    /// explicit:true. Move it to its own slot the first time we look, so no
+    /// backup a pilot made is lost to the change.
+    static func migrateRestorePoint(model: String) {
+        let mine = restoreURL(for: model, mine: true)
+        guard !FileManager.default.fileExists(atPath: mine.path),
+              let d = try? Data(contentsOf: restoreURL(for: model)),
+              let s = try? JSONDecoder().decode(RestoreShape.self, from: d),
+              s.explicit == true else { return }
+        try? d.write(to: mine, options: .atomic)
+        try? FileManager.default.removeItem(at: restoreURL(for: model))
+    }
+
+    /// The backup a restore should use: the pilot's own when he has one.
+    static func chosenIsMine(_ model: String) -> Bool {
+        migrateRestorePoint(model: model)
+        return FileManager.default.fileExists(atPath: restoreURL(for: model, mine: true).path)
     }
     private struct RestoreShape: Codable {
         var model: String
@@ -572,34 +599,44 @@ extension SessionCache {
     /// replaces an explicit one. Returns false when nothing was written.
     @discardableResult
     func snapshotRestorePoint(explicit: Bool = false) -> Bool {
-        if !explicit, restorePointIsExplicit() { return false }
+        Self.migrateRestorePoint(model: modelName)
         var keep: [String: Entry] = [:]
         for (k, v) in entries where Self.isRestoreKey(k) { keep[k] = v }
         guard !keep.isEmpty else { return false }
         let shape = RestoreShape(model: modelName, savedAt: Date(), entries: keep, explicit: explicit)
         guard let d = try? JSONEncoder().encode(shape) else { return false }
-        do { try d.write(to: Self.restoreURL(for: modelName), options: .atomic) } catch { return false }
+        // Each kind has its own slot now, so the automatic copy can stay
+        // fresh without ever threatening the one the pilot made.
+        do { try d.write(to: Self.restoreURL(for: modelName, mine: explicit), options: .atomic) }
+        catch { return false }
         return true
     }
 
     /// When was the current model's restore point frozen? nil = none.
-    func restorePointDate() -> Date? {
-        guard let d = try? Data(contentsOf: Self.restoreURL(for: modelName)),
+    func restorePointDate(mine: Bool? = nil) -> Date? {
+        let m = mine ?? Self.chosenIsMine(modelName)
+        guard let d = try? Data(contentsOf: Self.restoreURL(for: modelName, mine: m)),
               let s = try? JSONDecoder().decode(RestoreShape.self, from: d) else { return nil }
         return s.savedAt
     }
 
     /// Was the current restore point a deliberate backup (or an import)?
-    func restorePointIsExplicit() -> Bool {
-        guard let d = try? Data(contentsOf: Self.restoreURL(for: modelName)),
-              let s = try? JSONDecoder().decode(RestoreShape.self, from: d) else { return false }
-        return s.explicit ?? false
+    func restorePointIsExplicit() -> Bool { Self.chosenIsMine(modelName) }
+
+    /// Does this model have BOTH kinds? (the page then offers the choice)
+    func hasBothBackups() -> Bool {
+        Self.migrateRestorePoint(model: modelName)
+        let f = FileManager.default
+        return f.fileExists(atPath: Self.restoreURL(for: modelName, mine: true).path)
+            && f.fileExists(atPath: Self.restoreURL(for: modelName).path)
     }
 
     /// Everything restorable from the FROZEN restore point, in write order.
     /// `model` names another model's backup (the Backups page shows them all).
-    func restoreItems(for model: String? = nil) -> [RestoreItem] {
-        guard let d = try? Data(contentsOf: Self.restoreURL(for: model ?? modelName)),
+    func restoreItems(for model: String? = nil, mine: Bool? = nil) -> [RestoreItem] {
+        let name = model ?? modelName
+        let m = mine ?? Self.chosenIsMine(name)
+        guard let d = try? Data(contentsOf: Self.restoreURL(for: name, mine: m)),
               let shape = try? JSONDecoder().decode(RestoreShape.self, from: d)
         else { return [] }
         let frozen = shape.entries
@@ -772,19 +809,20 @@ extension SessionCache {
         if let d = try? JSONEncoder().encode(FileShape(model: modelName, savedAt: Date(), entries: entries)) {
             try? d.write(to: fileURL, options: .atomic)
         }
-        var shape = (try? Data(contentsOf: Self.restoreURL(for: modelName)))
+        let mineNow = Self.chosenIsMine(modelName)
+        var shape = (try? Data(contentsOf: Self.restoreURL(for: modelName, mine: mineNow)))
             .flatMap { try? JSONDecoder().decode(RestoreShape.self, from: $0) }
             ?? RestoreShape(model: modelName, savedAt: Date(), entries: [:])
         shape.entries[k] = e
         if let d = try? JSONEncoder().encode(shape) {
-            try? d.write(to: Self.restoreURL(for: modelName), options: .atomic)
+            try? d.write(to: Self.restoreURL(for: modelName, mine: mineNow), options: .atomic)
         }
     }
 
     /// key → hex of every declared item known for this model.
     func declared() -> [String: String] {
         var out: [String: String] = [:]
-        if let d = try? Data(contentsOf: Self.restoreURL(for: modelName)),
+        if let d = try? Data(contentsOf: Self.restoreURL(for: modelName, mine: Self.chosenIsMine(modelName))),
            let shape = try? JSONDecoder().decode(RestoreShape.self, from: d) {
             for (k, e) in shape.entries where k.hasPrefix("/app/declared/") {
                 out[String(k.dropFirst("/app/declared/".count))] = String(data: e.body, encoding: .utf8) ?? ""
@@ -798,7 +836,8 @@ extension SessionCache {
 
     /// Portable backup file (same shape on Android): the frozen restore point.
     func exportRestoreJSON() -> Data? {
-        guard let d = try? Data(contentsOf: Self.restoreURL(for: modelName)),
+        // Sending yourself a backup means the one you made, when you have one.
+        guard let d = try? Data(contentsOf: Self.restoreURL(for: modelName, mine: Self.chosenIsMine(modelName))),
               let shape = try? JSONDecoder().decode(RestoreShape.self, from: d),
               !shape.entries.isEmpty else { return nil }
         var es: [String: Any] = [:]
@@ -830,12 +869,16 @@ extension SessionCache {
         guard !entries.isEmpty else { return (false, fileModel, 0, false) }
         let shape = RestoreShape(model: model, savedAt: Date(), entries: entries, explicit: true)
         guard let d = try? JSONEncoder().encode(shape) else { return (false, fileModel, 0, false) }
-        do { try d.write(to: Self.restoreURL(for: model), options: .atomic) } catch { return (false, fileModel, 0, false) }
+        // An imported file is the pilot's own backup.
+        do { try d.write(to: Self.restoreURL(for: model, mine: true), options: .atomic) } catch { return (false, fileModel, 0, false) }
         return (true, fileModel, entries.count, sameModel)
     }
 }
 
 final class RestoreRunner {
+    /// Which backup the next run writes back: nil = the pilot's own if he has
+    /// one (set from /app/restore/start?which=…).
+    static var useMine: Bool? = nil
     private static var running = false
     static var phase = "idle"      // idle | running | done
     static var done = 0
@@ -862,7 +905,7 @@ final class RestoreRunner {
         running = true
         phase = "running"; done = 0; failures = 0; failedLabels = []; error = ""
         written = 0; same = 0; blind = 0; writtenLabels = []
-        let items = SessionCache.shared.restoreItems()
+        let items = SessionCache.shared.restoreItems(mine: useMine)
         total = items.count + 1   // + EEPROM save
 
         func req(_ p: String) -> (ok: Bool, body: String) {

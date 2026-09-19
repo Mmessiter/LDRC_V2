@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.800-two-backups-per-model",
+      "url": "https://messiter.com/rxv2/release/v0.9.800/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.800/littlefs.bin",
+      "fs_md5": "86f977a1d822aa8969cdeedca383214d",
+      "notes": "Both kinds of backup are now kept side by side for every model: the one you made, which nothing ever overwrites, and the automatic copy refreshed at each connection. The Backups page lists them separately and tells them apart, and Backup and restore on the model's own pages offers a second button so you can put back whichever you want. Any deliberate backup made before today is moved into its own slot rather than lost."
+    },
+    {
       "name": "RXV2-0.9.799-your-backup-is-never-dropped",
       "url": "https://messiter.com/rxv2/release/v0.9.799/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.799/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.789/littlefs.bin",
       "fs_md5": "455a3a66b97d114f3ce70931f5d117b0",
       "notes": "Connect page: it now says what it is doing \u2014 connecting, or why a connection failed \u2014 instead of failing in silence, and a receiver that has gone quiet drops off the list rather than sitting there untappable. A receiver takes one phone or tablet at a time, and the timeout message now says so: that was the real reason a listed model would not open."
-    },
-    {
-      "name": "RXV2-0.9.788-return-to-front-screen",
-      "url": "https://messiter.com/rxv2/release/v0.9.788/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.788/littlefs.bin",
-      "fs_md5": "5302698e0f1b0cb753c292bfdf948405",
-      "notes": "One name for one action: the front page's button and the Bluetooth badge on every page both now say Return to front screen, and both take you there \u2014 from a live model, a demo or a recording alike."
     }
   ],
   "rotorflight": {

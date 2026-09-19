@@ -785,11 +785,15 @@ struct BackupsListView: View {
     @State private var showHelp = false
     @State private var rev = 0
     @State private var opened: OpenedBackup? = nil
-    struct OpenedBackup: Identifiable { let id: String; let when: String; let explicit: Bool }
+    struct OpenedBackup: Identifiable { let id: String; let model: String; let when: String; let explicit: Bool }
 
     var body: some View {
         let _ = rev
+        // Two kinds per model since 0.9.800 — key on both so SwiftUI keeps
+        // them apart.
         let backups = SessionCache.savedBackups()
+            .map { (key: "\($0.model)|\($0.explicit)", model: $0.model, savedAt: $0.savedAt,
+                    explicit: $0.explicit, items: $0.items) }
         List {
             if backups.isEmpty {
                 Section {
@@ -799,9 +803,9 @@ struct BackupsListView: View {
                 .listRowBackground(Color(.secondarySystemGroupedBackground))
             } else {
                 Section {
-                    ForEach(backups, id: \.model) { b in
+                    ForEach(backups, id: \.key) { b in
                         Button {
-                            opened = OpenedBackup(id: b.model,
+                            opened = OpenedBackup(id: b.key, model: b.model,
                                                   when: ScannerView.friendlyWhen(b.savedAt),
                                                   explicit: b.explicit)
                         } label: {
@@ -842,7 +846,7 @@ struct BackupsListView: View {
             }
         }
         .sheet(isPresented: $showHelp) { ScannerHelpView(page: .backups) }
-        .sheet(item: $opened) { b in BackupContentsView(model: b.id, when: b.when, explicit: b.explicit) }
+        .sheet(item: $opened) { b in BackupContentsView(model: b.model, when: b.when, explicit: b.explicit) }
     }
 }
 
@@ -855,7 +859,7 @@ struct BackupContentsView: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        let lines = SessionCache.backupSummary(model: model)
+        let lines = SessionCache.backupSummary(model: model, mine: explicit)
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
@@ -883,7 +887,9 @@ struct BackupContentsView: View {
                         .padding(14)
                         .background(Color(.secondarySystemGroupedBackground),
                                     in: RoundedRectangle(cornerRadius: 12))
-                        Text("Rotorflight settings only — no flight data. Connect to the model and use Backup & restore to put them back.")
+                        Text(explicit
+                             ? "Rotorflight settings only — no flight data. This one is yours: the app never overwrites it. Connect to the model and use Backup & restore to put it back."
+                             : "Rotorflight settings only — no flight data. This copy is refreshed every time you connect. Connect to the model and use Backup & restore to put it back.")
                             .font(.footnote).foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(12)
@@ -1096,10 +1102,11 @@ struct ScannerHelpView: View {
                   body: "Tap any model here to see what its backup holds, folded into plain "
                       + "lines — \"PIDs — banks 1–6\", \"Servos — 8\" — so a glance says whether "
                       + "everything was saved."),
-            .init(icon: "checkmark.seal", title: "Your backup, or automatic",
+            .init(icon: "checkmark.seal", title: "Two kinds, both kept",
                   body: "“Automatic” is the copy the app takes for itself each time you "
-                      + "connect — useful, but not something you chose. “Your backup” is one "
-                      + "you asked for, and it is never overwritten by an automatic one."),
+                      + "connect — always today's settings. “Your backup” is one you asked "
+                      + "for, and nothing ever overwrites it. Both are kept side by side, "
+                      + "and Backup & restore lets you put back whichever you want."),
         ]
         case .demos: return [
             .init(icon: "cpu", title: "One board, three jobs",

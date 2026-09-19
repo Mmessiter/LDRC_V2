@@ -553,13 +553,15 @@ class MainActivity : AppCompatActivity() {
 
     /** WHAT'S IN THE BACKUP — the plain lines, for a backup this phone holds. */
     private fun showBackupContents(b: SessionCache.BackupInfo) {
-        val lines = SessionCache.backupSummary(b.model)
+        val lines = SessionCache.backupSummary(b.model, b.explicit)
         val head = b.model + " \u2014 " + (if (b.explicit) "your backup" else "automatic, taken when you connected") +
                    " \u00b7 " + friendlyWhen(b.atMs) + "\n\n"
         val body = if (lines.isEmpty()) "Nothing readable in this backup yet."
-                   else lines.joinToString("\n") +
-                        "\n\nRotorflight settings only \u2014 no flight data. Connect to the model and " +
-                        "use Backup & restore to put them back."
+                   else lines.joinToString("\n") + "\n\n" +
+                        (if (b.explicit) "This one is yours: the app never overwrites it. "
+                         else "This copy is refreshed every time you connect. ") +
+                        "Rotorflight settings only \u2014 no flight data. Connect to the model and " +
+                        "use Backup & restore to put it back."
         android.app.AlertDialog.Builder(this)
             .setTitle("What\u2019s in the backup")
             .setMessage(head + body)
@@ -1453,12 +1455,16 @@ class MainActivity : AppCompatActivity() {
     @Volatile private var restWrittenNames = ArrayList<String>()   // the readable items that were written — the page names them
     @Volatile private var restRunning = false
 
+    /** Which backup the next restore writes back: null = the pilot's own if
+     *  he has one (set from /app/restore/start?which=…). */
+    @Volatile private var restoreUseMine: Boolean? = null
+
     private fun runRestore() {
         if (restRunning) return
         restRunning = true
         restPhase = "running"; restDone = 0; restFailures = 0; restFailed = ArrayList(); restError = ""
         restWritten = 0; restSame = 0; restBlind = 0; restWrittenNames = ArrayList()
-        val items = SessionCache.restoreItems()
+        val items = SessionCache.restoreItems(mine = restoreUseMine)
         restTotal = items.size + 1
         Thread {
             fun req(p: String): Pair<Boolean, String> {
@@ -2072,7 +2078,19 @@ class MainActivity : AppCompatActivity() {
                         // the page can show a human what is in it (Malcolm 2026-09-17:
                         // the exported JSON "means little to a mere human").
                         val items = org.json.JSONArray().also { a -> SessionCache.restoreItems().forEach { a.put(it.label) } }
-                        answer("{\"available\":$avail,\"when\":${JSONObject.quote(whenTxt.toString())},\"explicit\":${SessionCache.restorePointIsExplicit()},\"items\":$items}")
+                        // Two slots since 0.9.800: name BOTH so the page can offer the choice.
+                        val choices = org.json.JSONArray()
+                        if (!demoMode && !reviewMode && SessionCache.modelName == connectedName) {
+                            for (mine in listOf(true, false)) {
+                                val n = SessionCache.restoreItems(mine = mine).size
+                                if (n == 0) continue
+                                val at = SessionCache.restorePointAtMs(mine)
+                                val w = if (at > 0) android.text.format.DateFormat.format("d MMM HH:mm", at).toString() else ""
+                                choices.put(JSONObject().put("which", if (mine) "yours" else "auto")
+                                                        .put("items", n).put("when", w))
+                            }
+                        }
+                        answer("{\"available\":$avail,\"when\":${JSONObject.quote(whenTxt.toString())},\"explicit\":${SessionCache.restorePointIsExplicit()},\"choices\":$choices,\"items\":$items}")
                     }
                     "/app/restore/start" -> {
                         if (demoMode || reviewMode) {
@@ -2088,7 +2106,11 @@ class MainActivity : AppCompatActivity() {
                                 }
                             }
                             if (txLive) answer("{\"ok\":false,\"error\":\"switch the transmitter OFF first\"}")
-                            else { runRestore(); answer("{\"ok\":true}") }
+                            else {
+                                val which = uri.getQueryParameter("which")
+                                restoreUseMine = when (which) { "yours" -> true; "auto" -> false; else -> null }
+                                runRestore(); answer("{\"ok\":true}")
+                            }
                         }.start()
                     }
                     else -> {

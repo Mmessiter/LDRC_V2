@@ -61,8 +61,8 @@ object SessionCache {
 
     /** "What's in the backup" in plain lines: "PIDs — banks 1–6", "Servos — 8".
      *  Mirrors showContents() in rotorflight-backup.html and the iOS twin. */
-    fun backupSummary(model: String): List<String> {
-        val items = restoreItems(model).map { it.label }
+    fun backupSummary(model: String, mine: Boolean? = null): List<String> {
+        val items = restoreItems(model, mine).map { it.label }
         val banked = LinkedHashMap<String, MutableSet<Int>>()
         val numbered = LinkedHashMap<String, Int>()
         val plain = ArrayList<String>()
@@ -108,13 +108,14 @@ object SessionCache {
     fun savedBackups(): List<BackupInfo> {
         val d = dir ?: return emptyList()
         val out = ArrayList<BackupInfo>()
-        d.listFiles { f -> f.name.startsWith("restore-") }?.forEach { f ->
+        d.listFiles { f -> f.name.startsWith("restore-") || f.name.startsWith("backup-") }?.forEach { f ->
             runCatching {
                 val root = JSONObject(f.readText())
                 val n = root.optJSONObject("entries")?.length() ?: 0
+                // The slot the file sits in is the truth.
                 if (n > 0) out.add(BackupInfo(root.optString("model", ""),
                                               root.optLong("savedAtMs", 0),
-                                              root.optBoolean("explicit", false), n))
+                                              f.name.startsWith("backup-"), n))
             }
         }
         return out.sortedByDescending { it.atMs }
@@ -125,6 +126,7 @@ object SessionCache {
     fun deleteSession(model: String) {
         fileFor(model)?.delete()
         restoreFileFor(model)?.delete()
+        restoreFileFor(model, true)?.delete()
     }
 
     /** Load a saved model's recording as the active one (for review).
@@ -417,11 +419,41 @@ object SessionCache {
     // very edits a confused pilot wants to undo (Malcolm's closed-loop test
     // caught the restore re-writing the random edits). The parachute uses a
     // FROZEN restore point: written only when a full TX-off sweep completes.
-    private fun restoreFileFor(model: String): File? {
+    /** TWO backups per model (Malcolm 2026-09-19): "backup-" is the pilot's
+     *  own, written only when he asks; "restore-" is the automatic copy,
+     *  refreshed by every clean sweep. Either can be restored. */
+    private fun restoreFileFor(model: String, mine: Boolean = false): File? {
         val d = dir ?: return null
         val safe = if (model.isEmpty()) "last"
                    else model.map { if (it.isLetterOrDigit()) it else '_' }.joinToString("")
-        return File(d, "restore-$safe.json")
+        return File(d, (if (mine) "backup-" else "restore-") + safe + ".json")
+    }
+
+    /** A deliberate backup made before two slots existed lived in "restore-"
+     *  with explicit:true — move it to its own slot so it is not lost. */
+    private fun migrateRestorePoint(model: String) {
+        val mine = restoreFileFor(model, true) ?: return
+        if (mine.exists()) return
+        val old = restoreFileFor(model) ?: return
+        if (!old.exists()) return
+        runCatching {
+            if (JSONObject(old.readText()).optBoolean("explicit", false)) {
+                old.copyTo(mine, overwrite = true); old.delete()
+            }
+        }
+    }
+
+    /** The backup a restore should use: the pilot's own when he has one. */
+    fun chosenIsMine(model: String): Boolean {
+        migrateRestorePoint(model)
+        return restoreFileFor(model, true)?.exists() == true
+    }
+
+    /** Does this model have BOTH kinds? */
+    fun hasBothBackups(): Boolean {
+        migrateRestorePoint(modelName)
+        return restoreFileFor(modelName, true)?.exists() == true &&
+               restoreFileFor(modelName)?.exists() == true
     }
     private val restoreKeyPrefixes = listOf(
         "/api/msp?fn=112&bank=", "/api/msp?fn=94&bank=",
@@ -501,8 +533,10 @@ object SessionCache {
      *  was written. */
     @Synchronized
     fun snapshotRestorePoint(explicit: Boolean = false): Boolean {
-        val f = restoreFileFor(modelName) ?: return false
-        if (!explicit && restorePointIsExplicit()) return false
+        migrateRestorePoint(modelName)
+        // Each kind has its own slot, so the automatic copy stays fresh
+        // without ever threatening the one the pilot made.
+        val f = restoreFileFor(modelName, explicit) ?: return false
         val keep = entries.filterKeys { isRestoreKey(it) }
         if (keep.isEmpty()) return false
         return runCatching {
@@ -523,23 +557,20 @@ object SessionCache {
         }.getOrDefault(false)
     }
 
-    fun restorePointAtMs(): Long {
-        val f = restoreFileFor(modelName) ?: return 0
+    fun restorePointAtMs(mine: Boolean? = null): Long {
+        val f = restoreFileFor(modelName, mine ?: chosenIsMine(modelName)) ?: return 0
         if (!f.exists()) return 0
         return runCatching { JSONObject(f.readText()).optLong("savedAtMs", 0) }.getOrDefault(0)
     }
 
     /** Was the current restore point a deliberate backup (or an import)? */
-    fun restorePointIsExplicit(): Boolean {
-        val f = restoreFileFor(modelName) ?: return false
-        if (!f.exists()) return false
-        return runCatching { JSONObject(f.readText()).optBoolean("explicit", false) }.getOrDefault(false)
-    }
+    fun restorePointIsExplicit(): Boolean = chosenIsMine(modelName)
 
     @Synchronized
-    fun restoreItems(model: String? = null): List<RestoreItem> {
+    fun restoreItems(model: String? = null, mine: Boolean? = null): List<RestoreItem> {
         val out = ArrayList<RestoreItem>()
-        val f = restoreFileFor(model ?: modelName) ?: return out
+        val name = model ?: modelName
+        val f = restoreFileFor(name, mine ?: chosenIsMine(name)) ?: return out
         if (!f.exists()) return out
         val frozen = HashMap<String, String>()
         runCatching {
@@ -698,7 +729,8 @@ object SessionCache {
         val k = "/app/declared/$key"
         entries[k] = Pair("text/plain", hex.toByteArray(Charsets.UTF_8))
         savedAtMs = System.currentTimeMillis(); dirty = true; saveIfDirty()
-        val f = restoreFileFor(modelName) ?: return
+        // A declared item belongs in the backup that will actually be restored.
+        val f = restoreFileFor(modelName, chosenIsMine(modelName)) ?: return
         runCatching {
             val root = if (f.exists()) JSONObject(f.readText()) else JSONObject().put("model", modelName).put("entries", JSONObject())
             val es = root.optJSONObject("entries") ?: JSONObject().also { root.put("entries", it) }
@@ -711,7 +743,7 @@ object SessionCache {
     @Synchronized
     fun declared(): Map<String, String> {
         val out = HashMap<String, String>()
-        restoreFileFor(modelName)?.takeIf { it.exists() }?.let { f ->
+        restoreFileFor(modelName, chosenIsMine(modelName))?.takeIf { it.exists() }?.let { f ->
             runCatching {
                 val es = JSONObject(f.readText()).getJSONObject("entries")
                 es.keys().forEach { k -> if (k.startsWith("/app/declared/"))
@@ -724,7 +756,8 @@ object SessionCache {
 
     /** Portable backup file (same shape as iOS): the frozen restore point. */
     fun exportRestoreJson(): String? {
-        val f = restoreFileFor(modelName)?.takeIf { it.exists() } ?: return null
+        // Sending yourself a backup means the one you made, when you have one.
+        val f = restoreFileFor(modelName, chosenIsMine(modelName))?.takeIf { it.exists() } ?: return null
         return runCatching {
             val root = JSONObject(f.readText())
             if (root.getJSONObject("entries").length() == 0) return null
@@ -756,7 +789,8 @@ object SessionCache {
                 keep.put(k, v)
             }
             if (keep.length() == 0) return ImportResult(false, fileModel, 0, false)
-            val f = restoreFileFor(forModel) ?: return ImportResult(false, fileModel, 0, false)
+            // An imported file is the pilot's own backup.
+            val f = restoreFileFor(forModel, true) ?: return ImportResult(false, fileModel, 0, false)
             val out = JSONObject().put("model", forModel).put("savedAtMs", System.currentTimeMillis())
                 .put("explicit", true).put("entries", keep)
             f.writeText(out.toString())
