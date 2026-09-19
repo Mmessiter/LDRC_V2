@@ -289,7 +289,7 @@ class MainActivity : AppCompatActivity() {
             gravity = android.view.Gravity.CENTER_VERTICAL
             setPadding(40, 60, 40, 8)
         }
-        if (back) row.addView(roundButton("\u2039") { if (onBack != null) onBack() else showScanner() })
+        if (back) row.addView(roundButton("\u2039", 38f) { if (onBack != null) onBack() else showScanner() })
         row.addView(TextView(this).apply {
             text = ""; textSize = 22f
         }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
@@ -311,9 +311,9 @@ class MainActivity : AppCompatActivity() {
 
     /** A round button on a SOLID white disc — never a bare glyph on the
      *  photograph, where it cannot be read. */
-    private fun roundButton(glyph: String, go: () -> Unit): TextView = TextView(this).apply {
+    private fun roundButton(glyph: String, size: Float = 22f, go: () -> Unit): TextView = TextView(this).apply {
         text = glyph
-        textSize = 22f; setTextColor(0xFF2F6FB0.toInt())
+        textSize = size; setTextColor(0xFF2F6FB0.toInt())
         setTypeface(typeface, android.graphics.Typeface.BOLD)
         gravity = android.view.Gravity.CENTER
         width = 108; height = 108

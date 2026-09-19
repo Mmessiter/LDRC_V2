@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.802-android-back-button-visible";
+constexpr const char* FW_VERSION = "RXV2-0.9.803-bigger-chevron";
 
 //*********************************************************************
 //  Auto-update manifest URLs

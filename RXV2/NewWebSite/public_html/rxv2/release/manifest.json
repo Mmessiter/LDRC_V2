@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.803-bigger-chevron",
+      "url": "https://messiter.com/rxv2/release/v0.9.803/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.803/littlefs.bin",
+      "fs_md5": "bff762e8452ae986b289718bfa54a689",
+      "notes": "Android: the back chevron is drawn larger, so it carries the same weight as the question mark beside it - a thin glyph needs more point size than a letter to look the same."
+    },
+    {
       "name": "RXV2-0.9.802-android-back-button-visible",
       "url": "https://messiter.com/rxv2/release/v0.9.802/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.802/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.792/littlefs.bin",
       "fs_md5": "8cb1473e9d7c03aaecb60cad4221190a",
       "notes": "Connect page: a search that hears nothing restarts itself every ten seconds, the seconds are counted by the link itself, the search comes back by itself after a trip to another app or a dropped link, and the page's help now ends with 'What the app did' - the link's own timestamped account of searching, hearing, connecting, failing and leaving - so a can't-connect can be read instead of guessed at."
-    },
-    {
-      "name": "RXV2-0.9.791-searching-says-more",
-      "url": "https://messiter.com/rxv2/release/v0.9.791/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.791/littlefs.bin",
-      "fs_md5": "7843acd3d0526fd2472e3b69fe8b811f",
-      "notes": "Connect page: the search now counts the seconds, and after fifteen says what is usually wrong - the model needs powering with the transmitter off, or another phone or tablet is holding it, since a receiver takes one at a time."
     }
   ],
   "rotorflight": {
