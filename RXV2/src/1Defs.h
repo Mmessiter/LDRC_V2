@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.788-return-to-front-screen";
+constexpr const char* FW_VERSION = "RXV2-0.9.789-connect-honest";
 
 //*********************************************************************
 //  Auto-update manifest URLs

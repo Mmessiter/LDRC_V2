@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.789-connect-honest",
+      "url": "https://messiter.com/rxv2/release/v0.9.789/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.789/littlefs.bin",
+      "fs_md5": "455a3a66b97d114f3ce70931f5d117b0",
+      "notes": "Connect page: it now says what it is doing \u2014 connecting, or why a connection failed \u2014 instead of failing in silence, and a receiver that has gone quiet drops off the list rather than sitting there untappable. A receiver takes one phone or tablet at a time, and the timeout message now says so: that was the real reason a listed model would not open."
+    },
+    {
       "name": "RXV2-0.9.788-return-to-front-screen",
       "url": "https://messiter.com/rxv2/release/v0.9.788/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.788/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.778/littlefs.bin",
       "fs_md5": "cde152e930685748cab5f34557dfd6c3",
       "notes": "Pre-flight review of everything since the build that flew this morning: a board with transceivers now ignores a saved 'simulator interface' mode and runs as a receiver, so a chip moved from a dongle lead onto a receiver board can never come up silent to the flight controller. Nothing else in the flying path changed."
-    },
-    {
-      "name": "RXV2-0.9.777-bars-follow-faster",
-      "url": "https://messiter.com/rxv2/release/v0.9.777/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.777/littlefs.bin",
-      "fs_md5": "cde152e930685748cab5f34557dfd6c3",
-      "notes": "View channels over Bluetooth: the pushed stream runs at 30 ms and the bars follow it at 60 fps with a much tighter damping (~75 ms to settle instead of ~170), so what you see tracks the sticks about as closely as a phone link allows."
     }
   ],
   "rotorflight": {

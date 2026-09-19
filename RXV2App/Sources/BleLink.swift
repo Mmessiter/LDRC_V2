@@ -145,6 +145,7 @@ final class BleLink: NSObject, ObservableObject {
         }
         found = []
         smoothRssi.removeAll()
+        lastHeard.removeAll()
         guard central.state == .poweredOn else { state = .scanning; return }
         state = .scanning
         if fastConnect() { return }   // instant reconnect to last device — no advert wait
@@ -154,12 +155,20 @@ final class BleLink: NSObject, ObservableObject {
 
     func stopScan() { central.stopScan(); publishTimer?.invalidate(); publishTimer = nil }
 
+    /// Advertisements are heard every second or so; a board that has gone
+    /// quiet for this long is off, out of range, or already has a phone on it.
+    private static let staleAfter: TimeInterval = 12
+    private var lastHeard: [UUID: Date] = [:]
+
     /// Copy the smoothed signals into the published list once a second.
     private func startPublishing() {
         publishTimer?.invalidate()
         publishTimer = Timer.scheduledTimer(withTimeInterval: Self.publishEvery, repeats: true) { [weak self] _ in
             guard let self else { return }
             var changed = false
+            let cutoff = Date().addingTimeInterval(-Self.staleAfter)
+            let alive = self.found.filter { (self.lastHeard[$0.id] ?? .distantPast) > cutoff }
+            if alive.count != self.found.count { self.found = alive; changed = true }
             for i in self.found.indices {
                 guard let s = self.smoothRssi[self.found[i].id] else { continue }
                 let v = Int(s.rounded())
@@ -267,7 +276,7 @@ final class BleLink: NSObject, ObservableObject {
             self.cleanupConnection(message: nil)
             self.state = .failed(self.connectingRssi != 0 && self.connectingRssi <= Self.weakRssi
                 ? "Too far away. The signal from \(name) was weak (\(self.connectingRssi) dBm) — get closer and tap it again."
-                : "\(name) did not answer. Get closer, check it is switched on, and tap it again.")
+                : "\(name) did not answer. A receiver takes one phone or tablet at a time — close the app on any other device that may be holding it. Otherwise check it is switched on, and get closer.")
             self.connectNote = nil
             // Keep scanning so the list refills and he can retry at once —
             // but do NOT set .scanning, which would wipe the message above.
@@ -631,6 +640,7 @@ extension BleLink: CBCentralManagerDelegate, CBPeripheralDelegate {
         // Every advertisement feeds the average; the timer publishes it.
         let id = peripheral.identifier, r = Double(RSSI.intValue)
         smoothRssi[id] = smoothRssi[id].map { $0 + Self.smoothing * (r - $0) } ?? r
+        lastHeard[id] = Date()
         if found.firstIndex(where: { $0.id == id }) == nil {
             // A receiver appearing for the first time shows at once, not in a second.
             found.append(Discovered(id: id, name: name, rssi: RSSI.intValue, peripheral: peripheral))

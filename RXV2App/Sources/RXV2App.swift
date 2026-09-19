@@ -531,13 +531,30 @@ struct ConnectListView: View {
     var body: some View {
         List {
             Section {
-                if link.found.isEmpty {
-                    HStack(alignment: .top, spacing: 12) {
-                        ProgressView().padding(.top, 2)
-                        Label("Searching…", systemImage: "dot.radiowaves.left.and.right")
-                            .font(.headline)
+                // What the app is doing, ON THIS PAGE and on a card — a timed-out
+                // connection used to fail in silence here (Malcolm 2026-09-19).
+                switch link.state {
+                case .connecting(let n):
+                    HStack(spacing: 12) {
+                        ProgressView()
+                        Text("Connecting to \(n)…").font(.headline)
                     }
                     .padding(.vertical, 6)
+                case .failed(let m):
+                    HStack(alignment: .top, spacing: 12) {
+                        Image(systemName: "exclamationmark.triangle").foregroundStyle(.orange)
+                        Text(m).font(.callout).fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.vertical, 6)
+                default:
+                    if link.found.isEmpty {
+                        HStack(alignment: .top, spacing: 12) {
+                            ProgressView().padding(.top, 2)
+                            Label("Searching…", systemImage: "dot.radiowaves.left.and.right")
+                                .font(.headline)
+                        }
+                        .padding(.vertical, 6)
+                    }
                 }
                 ForEach(link.found) { d in
                     Button {
