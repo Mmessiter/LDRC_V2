@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.795-headings-with-presence",
+      "url": "https://messiter.com/rxv2/release/v0.9.795/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.795/littlefs.bin",
+      "fs_md5": "4c1d46cae243cc5af78557a33464fe9d",
+      "notes": "Presentation: every page now carries a proper heading - big, light, letter-spaced, centred on a solid chip like the headings on the receiver's own pages - instead of a small line in the navigation bar. The front screen gets a masthead: LockDown Radio Control large, with RXV2 beneath it in the app's teal."
+    },
+    {
       "name": "RXV2-0.9.794-late-disconnect-leaves-the-search",
       "url": "https://messiter.com/rxv2/release/v0.9.794/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.794/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.784/littlefs.bin",
       "fs_md5": "ac6799589373b861d2eeab4b33d23652",
       "notes": "First screen: titled LDRC RXV2, four one-word buttons \u2014 Connect, Reviews, Backups, Demos \u2014 and no small print. Searching, and the jump straight to the model used last, now begin only when Connect is tapped. The help page shares the same backdrop as everything else and carries the app version."
-    },
-    {
-      "name": "RXV2-0.9.783-four-doors",
-      "url": "https://messiter.com/rxv2/release/v0.9.783/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.783/littlefs.bin",
-      "fs_md5": "99afee385f262d8bd2fbfe659f867964",
-      "notes": "The first screen is now a proper menu: Connect, Reviews, Backups and Demos, each a button in the app's usual style with its own page. Backups is new \u2014 it shows what the phone has saved for each model, when, and whether you made it or it was kept for you. The backdrop wash is stronger so the text reads easily."
     }
   ],
   "rotorflight": {

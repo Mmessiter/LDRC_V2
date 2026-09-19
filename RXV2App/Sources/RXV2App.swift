@@ -391,16 +391,7 @@ struct ScannerView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 14) {
-                // The app's name, centred on a solid chip like every page's
-                // heading (Malcolm 2026-09-19).
-                Text("LockDown Radio Control RXV2")
-                    .font(.title3.weight(.medium))
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12).padding(.horizontal, 16)
-                    .background(Color(.secondarySystemGroupedBackground),
-                                in: RoundedRectangle(cornerRadius: 14))
-                    .padding(.bottom, 2)
+                HomeMasthead()
 
                 // Only a problem is worth saying here. "Connecting…" speaks for
                 // itself — the model's own pages arrive a second later
@@ -462,6 +453,66 @@ struct ScannerView: View {
             .padding(14)
             .background(Color(.secondarySystemGroupedBackground),
                         in: RoundedRectangle(cornerRadius: 14))
+    }
+}
+
+extension Color {
+    /// The web pages' ink (#2c3e50), lightened for a dark phone.
+    static let ldrcInk = Color(uiColor: UIColor { t in
+        t.userInterfaceStyle == .dark ? UIColor(white: 0.93, alpha: 1)
+                                      : UIColor(red: 0.173, green: 0.243, blue: 0.314, alpha: 1) })
+    /// The app's teal (#5fa099).
+    static let ldrcTeal = Color(uiColor: UIColor { t in
+        t.userInterfaceStyle == .dark ? UIColor(red: 0.46, green: 0.74, blue: 0.71, alpha: 1)
+                                      : UIColor(red: 0.373, green: 0.627, blue: 0.600, alpha: 1) })
+}
+
+/// Every page's heading: the web pages' h1 — light, letter-spaced, centred on
+/// a solid chip (Malcolm 2026-09-19: the inline navigation titles were "a
+/// little disappointing").
+struct PageHeading: View {
+    let text: String
+    init(_ text: String) { self.text = text }
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: 26, weight: .light))
+            .tracking(2)
+            .foregroundStyle(Color.ldrcInk)
+            .lineLimit(1).minimumScaleFactor(0.6)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 13)
+            .background(Color(.secondarySystemGroupedBackground),
+                        in: RoundedRectangle(cornerRadius: 16))
+            .shadow(color: .black.opacity(0.10), radius: 3, y: 2)
+            .padding(.horizontal, 18)
+            .padding(.top, 2)
+            .padding(.bottom, 8)
+    }
+}
+
+/// The front door's masthead. It carries more weight than a page heading
+/// because it is the first thing anyone sees (Malcolm 2026-09-19: "should be
+/// a bit more IMPORTANT looking because it's the very first").
+struct HomeMasthead: View {
+    var body: some View {
+        VStack(spacing: 7) {
+            Text("LockDown Radio Control")
+                .font(.system(size: 29, weight: .semibold))
+                .foregroundStyle(Color.ldrcInk)
+                .multilineTextAlignment(.center)
+                .lineLimit(2).minimumScaleFactor(0.65)
+            Text("RXV2")
+                .font(.system(size: 15, weight: .semibold))
+                .tracking(7)
+                .foregroundStyle(Color.ldrcTeal)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 22).padding(.horizontal, 18)
+        .background(Color(.secondarySystemGroupedBackground),
+                    in: RoundedRectangle(cornerRadius: 22))
+        .shadow(color: .black.opacity(0.14), radius: 6, y: 3)
+        .padding(.bottom, 4)
     }
 }
 
@@ -615,7 +666,8 @@ struct ConnectListView: View {
         }
         .scrollContentBackground(.hidden)
         .background(ScannerBackdrop())
-        .navigationTitle("Connect")
+        .safeAreaInset(edge: .top) { PageHeading("Connect") }
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -715,7 +767,8 @@ struct ReviewsListView: View {
         }
         .scrollContentBackground(.hidden)
         .background(ScannerBackdrop())
-        .navigationTitle("Reviews")
+        .safeAreaInset(edge: .top) { PageHeading("Reviews") }
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -763,7 +816,8 @@ struct BackupsListView: View {
         }
         .scrollContentBackground(.hidden)
         .background(ScannerBackdrop())
-        .navigationTitle("Backups")
+        .safeAreaInset(edge: .top) { PageHeading("Backups") }
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -806,7 +860,8 @@ struct DemosView: View {
             .padding(18)
         }
         .background(ScannerBackdrop())
-        .navigationTitle("Demos")
+        .safeAreaInset(edge: .top) { PageHeading("Demos") }
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -1037,7 +1092,8 @@ struct ScannerHelpView: View {
                 .padding(18)
             }
             .background(ScannerBackdrop())
-            .navigationTitle(heading)
+            .safeAreaInset(edge: .top) { PageHeading(heading) }
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }

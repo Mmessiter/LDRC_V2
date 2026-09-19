@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.794-late-disconnect-leaves-the-search";
+constexpr const char* FW_VERSION = "RXV2-0.9.795-headings-with-presence";
 
 //*********************************************************************
 //  Auto-update manifest URLs

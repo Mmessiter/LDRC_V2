@@ -295,7 +295,7 @@ class MainActivity : AppCompatActivity() {
             setOnClickListener { if (onBack != null) onBack() else showScanner() }
         })
         row.addView(TextView(this).apply {
-            text = title; textSize = 22f; setTextColor(INK)
+            text = ""; textSize = 22f
         }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         if (withHelp) row.addView(TextView(this).apply {
             text = "?"; textSize = 21f; setTextColor(0xFF2F6FB0.toInt())
@@ -307,6 +307,18 @@ class MainActivity : AppCompatActivity() {
             setOnClickListener { showScannerHelp() }
         })
         col.addView(row)
+        if (title.isNotEmpty()) col.addView(TextView(this).apply {
+            text = title
+            textSize = 25f; setTextColor(INK)
+            letterSpacing = 0.08f
+            gravity = android.view.Gravity.CENTER
+            setPadding(36, 26, 36, 26)
+            background = android.graphics.drawable.GradientDrawable().apply {
+                cornerRadius = 30f; setColor(0xFFF2F6F8.toInt())
+            }
+            elevation = 4f
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                                     ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(40, 4, 40, 18) })
     }
 
     /** Standalone words sit on a solid chip, never straight on the photograph. */
@@ -345,16 +357,33 @@ class MainActivity : AppCompatActivity() {
         backdrop()
         val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         pageHeader(col, "", back = false)
-        col.addView(TextView(this).apply {
-            text = "LockDown Radio Control RXV2"
-            textSize = 20f; setTextColor(INK)
+        // The masthead: it is the first thing anyone sees, so it carries more
+        // weight than a page heading (Malcolm 2026-09-19).
+        val masthead = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
             gravity = android.view.Gravity.CENTER
-            setPadding(36, 26, 36, 26)
+            setPadding(36, 44, 36, 40)
             background = android.graphics.drawable.GradientDrawable().apply {
-                cornerRadius = 24f; setColor(0xFFF2F6F8.toInt())
+                cornerRadius = 40f; setColor(0xFFF2F6F8.toInt())
             }
-        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                                     ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(40, 0, 40, 18) })
+            elevation = 6f
+        }
+        masthead.addView(TextView(this).apply {
+            text = "LockDown Radio Control"
+            textSize = 27f; setTextColor(INK)
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            gravity = android.view.Gravity.CENTER
+        })
+        masthead.addView(TextView(this).apply {
+            text = "RXV2"
+            textSize = 14f; setTextColor(0xFF5FA099.toInt())
+            letterSpacing = 0.5f
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            gravity = android.view.Gravity.CENTER
+            setPadding(0, 14, 0, 0)
+        })
+        col.addView(masthead, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                                     ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(40, 0, 40, 22) })
         autoBanner = TextView(this).apply {
             visibility = View.GONE
             textSize = 14f; setPadding(40, 24, 40, 24)
