@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.794-late-disconnect-leaves-the-search",
+      "url": "https://messiter.com/rxv2/release/v0.9.794/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.794/littlefs.bin",
+      "fs_md5": "1e3d5a1d0b2946e1b7b69c38de7973b3",
+      "notes": "The late disconnect callback no longer knocks a search that has already begun back to idle - it was wiping what the search had heard and starting it again (seen in the app's own log)."
+    },
+    {
       "name": "RXV2-0.9.793-pages-replace-the-stack",
       "url": "https://messiter.com/rxv2/release/v0.9.793/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.793/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.783/littlefs.bin",
       "fs_md5": "99afee385f262d8bd2fbfe659f867964",
       "notes": "The first screen is now a proper menu: Connect, Reviews, Backups and Demos, each a button in the app's usual style with its own page. Backups is new \u2014 it shows what the phone has saved for each model, when, and whether you made it or it was kept for you. The backdrop wash is stronger so the text reads easily."
-    },
-    {
-      "name": "RXV2-0.9.782-first-screen-tidy",
-      "url": "https://messiter.com/rxv2/release/v0.9.782/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.782/littlefs.bin",
-      "fs_md5": "9529238377a365fd3e2bb79a2ef14e52",
-      "notes": "The model list \u2014 the first screen you see \u2014 now looks like the rest of the app: the flying-field backdrop, solid cards, and a ? that explains the whole screen properly. The blocks of small print are gone, replaced by one line each and a full help page covering how a model appears, signal strength, photographs, what a review is and how a backup differs."
     }
   ],
   "rotorflight": {

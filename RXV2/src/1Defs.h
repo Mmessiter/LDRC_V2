@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.793-pages-replace-the-stack";
+constexpr const char* FW_VERSION = "RXV2-0.9.794-late-disconnect-leaves-the-search";
 
 //*********************************************************************
 //  Auto-update manifest URLs

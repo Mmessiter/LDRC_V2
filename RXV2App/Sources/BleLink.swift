@@ -754,6 +754,7 @@ extension BleLink: CBCentralManagerDelegate, CBPeripheralDelegate {
         // scanner is what the pilot sees on return (RXV2App drops any link
         // after a minute away in any case).
         if !rebootish && UIApplication.shared.applicationState == .background {
+            if case .scanning = state { return }   // a search already began: leave it
             state = .idle
             return
         }
@@ -797,6 +798,7 @@ extension BleLink: CBCentralManagerDelegate, CBPeripheralDelegate {
                 return
             }
         }
+        if case .scanning = state { return }   // a search already began: leave it
         state = .idle
     }
 
