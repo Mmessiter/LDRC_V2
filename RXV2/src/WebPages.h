@@ -296,7 +296,7 @@ inline void handleFcWake() {
     // the gaps between the three frames keep the channel stream flowing
     // rather than sitting in delay() (0.9.563).
     auto pump = [](uint32_t ms) {
-        for (uint32_t t0 = millis(); (uint32_t)(millis() - t0) < ms; ) { keepFlyingTick(); delay(1); }
+        for (uint32_t t0 = millis(); (uint32_t)(millis() - t0) < ms; ) { keepLinkTick(); delay(1); }
     };
     mspSendRequest(MSP_SET_FEATURE_CFG, mask, 4);
     pump(60);
@@ -995,7 +995,7 @@ inline void handleMspApi() {
         // flowing (a lost single frame once left a saved setup silently not
         // yet active), and answer the page at once instead of a 504.
         mspSendRequest(MSP_REBOOT);
-        for (uint32_t t0 = millis(); (uint32_t)(millis() - t0) < 100; ) { keepFlyingTick(); delay(1); }
+        for (uint32_t t0 = millis(); (uint32_t)(millis() - t0) < 100; ) { keepLinkTick(); delay(1); }
         mspSendRequest(MSP_REBOOT);
         fcInfo.telemCfgKnown = false;      // re-read once the FC is back
         fcInfo.telemCfgTries = 0;

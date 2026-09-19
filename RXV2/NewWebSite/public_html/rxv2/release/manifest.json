@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.811-dongle-reads-again",
+      "url": "https://messiter.com/rxv2/release/v0.9.811/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.811/littlefs.bin",
+      "fs_md5": "12281791b7ddec089bf2642b21a9c922",
+      "notes": "Fixes a dongle being unable to read anything from the flight controller: PIDs, rates, the lot. Since 0.9.715 a blocking read sent its request and then nothing drained the flight controller's port while it waited, so every page read timed out after 2.7 seconds - while the receiver's own background probes, pumped by the main loop, were answered normally. A wait now keeps alive the link it is waiting on: flying on a receiver, draining the flight controller's UART and USB on a dongle, without ever writing to it."
+    },
+    {
       "name": "RXV2-0.9.810-simulator-switch-tells-the-truth",
       "url": "https://messiter.com/rxv2/release/v0.9.810/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.810/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.800/littlefs.bin",
       "fs_md5": "86f977a1d822aa8969cdeedca383214d",
       "notes": "Both kinds of backup are now kept side by side for every model: the one you made, which nothing ever overwrites, and the automatic copy refreshed at each connection. The Backups page lists them separately and tells them apart, and Backup and restore on the model's own pages offers a second button so you can put back whichever you want. Any deliberate backup made before today is moved into its own slot rather than lost."
-    },
-    {
-      "name": "RXV2-0.9.799-your-backup-is-never-dropped",
-      "url": "https://messiter.com/rxv2/release/v0.9.799/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.799/littlefs.bin",
-      "fs_md5": "c459a150e2ab94ce7496a0668135701f",
-      "notes": "A deliberate Back up is no longer lost when the app happens to be sweeping already: the sweep in flight takes on the request, and one that arrives after the settings were frozen is still honoured. Before this, tapping Back up during the automatic sweep that follows every connection left the copy marked automatic, as though the pilot had never asked."
     }
   ],
   "rotorflight": {

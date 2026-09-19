@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.810-simulator-switch-tells-the-truth";
+constexpr const char* FW_VERSION = "RXV2-0.9.811-dongle-reads-again";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -553,6 +553,24 @@ inline void keepFlyingTick() {
     radioPoll();
     sbusTick();
     protocolRx();
+}
+
+// What a BLOCKING WAIT must keep alive: on a receiver, flying (channels in,
+// frames out, telemetry parsed); on a DONGLE, the flight controller's own
+// UART and USB — drained, never written to.
+//
+// A dongle's Serial1 IS the FC's MSP port, so keepFlyingTick() rightly does
+// nothing there (0.9.715: sbusTick() would have pushed RC frames into it).
+// But protocolRx() is also the READER: without it, a page's MSP request went
+// out and nothing ever read the reply, so every read timed out at 2.7 s while
+// the background prober — pumped by loop() — was answered normally. Malcolm
+// 2026-09-19, a dongle on a Nexus-X port B: "it's not reading PIDs".
+// In simulator mode Serial1 belongs to RcInput, so it is left alone.
+inline void keepLinkTick() {
+    extern void protocolRx();     // Telemetry.h
+    if (dongleEnabled) { protocolRx(); return; }
+    if (simEnabled) return;
+    keepFlyingTick();
 }
 
 inline uint16_t channelMicros[16];                       // initialised in setup() to 1500us

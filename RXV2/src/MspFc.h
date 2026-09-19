@@ -763,7 +763,7 @@ inline bool mspRequestAndWait(uint8_t function, const uint8_t* req, uint8_t reqL
     // buffer; ours would land behind it and be thrown away (0.9.563 — the
     // reverse of the 0.9.562 hold-off). Wait for that reply, bounded.
     while (mspProbeOutstanding()) {
-        keepFlyingTick();
+        keepLinkTick();
         delay(1);
     }
     mspWaitFunction  = function;
@@ -787,7 +787,7 @@ inline bool mspRequestAndWait(uint8_t function, const uint8_t* req, uint8_t reqL
         // programming poll made the swash twitch every ~2 s — this wait
         // starved the channel stream and the FC flickered into failsafe).
         // The radio keeps channels fresh, sbusTick keeps frames flowing.
-        keepFlyingTick();          // guarded: no RC frames on a dongle (its Serial1 IS the FC's MSP port)
+        keepLinkTick();            // receiver: keep flying. Dongle: DRAIN the FC's UART — the reply arrives on it
         delay(1);
         const uint32_t chunkMs = mspWaitChunkMs;
         if (chunkMs && chunkMs != lastChunk) {           // a chunk of OUR reply landed
@@ -902,7 +902,7 @@ inline bool telemSaveAndRestartSync() {
     // a saved setup silently not yet active), keeping the channels flowing.
     extern void protocolRx(); extern void sbusTick(); extern void radioPoll();
     mspSendRequest(MSP_REBOOT);
-    for (uint32_t t0 = millis(); (uint32_t)(millis() - t0) < 100; ) { keepFlyingTick(); delay(1); }
+    for (uint32_t t0 = millis(); (uint32_t)(millis() - t0) < 100; ) { keepLinkTick(); delay(1); }
     mspSendRequest(MSP_REBOOT);
     fcInfo.telemCfgKnown = false;      // re-read once the FC is back
     fcInfo.telemCfgTries = 0;
