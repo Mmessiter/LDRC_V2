@@ -515,7 +515,7 @@ class MainActivity : AppCompatActivity() {
             col.addView(TextView(this).apply {
                 text = "💾  ${b.model}\n" +
                        (if (b.explicit) "Your backup · " else "Kept automatically · ") +
-                       friendlyWhen(b.atMs) + "\n${b.items} settings held"
+                       friendlyWhen(b.atMs) + "\nWhat\u2019s in it \u2014 ${b.items} settings held"
                 textSize = 15f; setPadding(40, 28, 40, 28)
                 setBackgroundColor(0xFF3B2F14.toInt()); setTextColor(0xFFFFD966.toInt())
                 setLineSpacing(6f, 1.0f)
@@ -523,10 +523,29 @@ class MainActivity : AppCompatActivity() {
                     setCompoundDrawablesWithIntrinsicBounds(android.graphics.drawable.BitmapDrawable(resources, it), null, null, null)
                     compoundDrawablePadding = 24
                 }
+                // Tap to see what it holds — the same thing the receiver's own
+                // Backup & restore page shows (Malcolm 2026-09-19).
+                setOnClickListener { showBackupContents(b) }
             }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                                          ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(40, 8, 40, 8) })
         }
         root.addView(ScrollView(this).apply { addView(col) })
+    }
+
+    /** WHAT'S IN THE BACKUP — the plain lines, for a backup this phone holds. */
+    private fun showBackupContents(b: SessionCache.BackupInfo) {
+        val lines = SessionCache.backupSummary(b.model)
+        val head = b.model + " \u2014 " + (if (b.explicit) "your backup" else "kept automatically") +
+                   " \u00b7 " + friendlyWhen(b.atMs) + "\n\n"
+        val body = if (lines.isEmpty()) "Nothing readable in this backup yet."
+                   else lines.joinToString("\n") +
+                        "\n\nRotorflight settings only \u2014 no flight data. Connect to the model and " +
+                        "use Backup & restore to put them back."
+        android.app.AlertDialog.Builder(this)
+            .setTitle("What\u2019s in the backup")
+            .setMessage(head + body)
+            .setPositiveButton("Done", null)
+            .show()
     }
 
     /** DEMOS — one board, three jobs (Malcolm 2026-09-19). */

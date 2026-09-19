@@ -59,6 +59,46 @@ object SessionCache {
         return out.sortedByDescending { it.second }
     }
 
+    /** "What's in the backup" in plain lines: "PIDs — banks 1–6", "Servos — 8".
+     *  Mirrors showContents() in rotorflight-backup.html and the iOS twin. */
+    fun backupSummary(model: String): List<String> {
+        val items = restoreItems(model).map { it.label }
+        val banked = LinkedHashMap<String, MutableSet<Int>>()
+        val numbered = LinkedHashMap<String, Int>()
+        val plain = ArrayList<String>()
+        val bankRe = Regex(" bank (\\d+)$")
+        val parenRe = Regex(" \\(.*\\)$")
+        val numRe = Regex(" (?:ch)?(\\d+)$")
+        for (raw in items) {
+            val bm = bankRe.find(raw)
+            if (bm != null) {
+                val name = raw.substring(0, bm.range.first)
+                banked.getOrPut(name) { linkedSetOf() }.add(bm.groupValues[1].toInt())
+                continue
+            }
+            val t = parenRe.replace(raw, "")
+            val nm = numRe.find(t)
+            if (nm != null) {
+                val name = t.substring(0, nm.range.first)
+                numbered[name] = (numbered[name] ?: 0) + 1
+                continue
+            }
+            plain.add(raw)
+        }
+        fun cap(t: String) = if (t.isEmpty()) t else t[0].uppercase() + t.substring(1)
+        fun spread(set: Set<Int>): String {
+            val a = set.sorted()
+            if (a.size == 1) return "bank ${a[0]}"
+            val run = a.withIndex().all { (i, v) -> i == 0 || v == a[i - 1] + 1 }
+            return if (run) "banks ${a[0]}\u2013${a[a.size - 1]}" else "banks " + a.joinToString(", ")
+        }
+        val lines = ArrayList<String>()
+        for ((k, v) in banked) lines.add(cap(k) + " \u2014 " + spread(v))
+        for ((k, v) in numbered) lines.add(cap(k) + "s \u2014 " + v)
+        for (k in plain) lines.add(cap(k))
+        return lines
+    }
+
     /** One model's backup as held on this phone. */
     data class BackupInfo(val model: String, val atMs: Long, val explicit: Boolean, val items: Int)
 
@@ -497,9 +537,9 @@ object SessionCache {
     }
 
     @Synchronized
-    fun restoreItems(): List<RestoreItem> {
+    fun restoreItems(model: String? = null): List<RestoreItem> {
         val out = ArrayList<RestoreItem>()
-        val f = restoreFileFor(modelName) ?: return out
+        val f = restoreFileFor(model ?: modelName) ?: return out
         if (!f.exists()) return out
         val frozen = HashMap<String, String>()
         runCatching {

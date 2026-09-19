@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.796-whats-in-a-backup",
+      "url": "https://messiter.com/rxv2/release/v0.9.796/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.796/littlefs.bin",
+      "fs_md5": "44fe391269e266bf8d550684f7d9bdda",
+      "notes": "The Backups page: tap any model to see what its backup holds, in the same plain lines the receiver's own Backup and restore page uses - PIDs banks 1 to 6, Servos 8 - so a glance says whether everything was saved."
+    },
+    {
       "name": "RXV2-0.9.795-headings-with-presence",
       "url": "https://messiter.com/rxv2/release/v0.9.795/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.795/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.785/littlefs.bin",
       "fs_md5": "c64b14d20a62fc825ea06cf257bbace0",
       "notes": "The app's front screens: the flying-field photograph in full colour behind every one, the title centred as LockDown Radio Control RXV2, and a help page of its own on Connect, Reviews, Backups and Demos. The Demos page now offers all three roles one board can take - Receiver, Rotorflight dongle and Simulator interface - and its help explains that they are the same board doing different jobs."
-    },
-    {
-      "name": "RXV2-0.9.784-one-word-doors",
-      "url": "https://messiter.com/rxv2/release/v0.9.784/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.784/littlefs.bin",
-      "fs_md5": "ac6799589373b861d2eeab4b33d23652",
-      "notes": "First screen: titled LDRC RXV2, four one-word buttons \u2014 Connect, Reviews, Backups, Demos \u2014 and no small print. Searching, and the jump straight to the model used last, now begin only when Connect is tapped. The help page shares the same backdrop as everything else and carries the app version."
     }
   ],
   "rotorflight": {

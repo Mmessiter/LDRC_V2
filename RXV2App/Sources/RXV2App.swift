@@ -784,6 +784,8 @@ struct ReviewsListView: View {
 struct BackupsListView: View {
     @State private var showHelp = false
     @State private var rev = 0
+    @State private var opened: OpenedBackup? = nil
+    struct OpenedBackup: Identifiable { let id: String; let when: String; let explicit: Bool }
 
     var body: some View {
         let _ = rev
@@ -798,16 +800,23 @@ struct BackupsListView: View {
             } else {
                 Section {
                     ForEach(backups, id: \.model) { b in
-                        HStack(spacing: 10) {
-                            ModelThumb(name: b.model, side: 44)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(b.model).font(.headline)
-                                Text("\(b.explicit ? "Your backup" : "Kept automatically") · \(ScannerView.friendlyWhen(b.savedAt))")
-                                    .font(.caption).foregroundStyle(.secondary)
-                                Text("\(b.items) settings held")
-                                    .font(.caption2).foregroundStyle(.tertiary)
+                        Button {
+                            opened = OpenedBackup(id: b.model,
+                                                  when: ScannerView.friendlyWhen(b.savedAt),
+                                                  explicit: b.explicit)
+                        } label: {
+                            HStack(spacing: 10) {
+                                ModelThumb(name: b.model, side: 44)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(b.model).font(.headline)
+                                    Text("\(b.explicit ? "Your backup" : "Kept automatically") · \(ScannerView.friendlyWhen(b.savedAt))")
+                                        .font(.caption).foregroundStyle(.secondary)
+                                    Text("What\u{2019}s in it — \(b.items) settings held")
+                                        .font(.caption2).foregroundStyle(Color.accentColor)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right").font(.footnote).foregroundStyle(.tertiary)
                             }
-                            Spacer()
                         }
                     }
                 }
@@ -826,6 +835,63 @@ struct BackupsListView: View {
             }
         }
         .sheet(isPresented: $showHelp) { ScannerHelpView(page: .backups) }
+        .sheet(item: $opened) { b in BackupContentsView(model: b.id, when: b.when, explicit: b.explicit) }
+    }
+}
+
+/// WHAT'S IN THE BACKUP — the same plain lines the receiver's own Backup &
+/// restore page shows, for a backup this phone holds (Malcolm 2026-09-19).
+struct BackupContentsView: View {
+    let model: String
+    let when: String
+    let explicit: Bool
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        let lines = SessionCache.backupSummary(model: model)
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    Text("\(model) — \(explicit ? "your backup" : "kept automatically") · \(when)")
+                        .font(.callout).foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(12)
+                        .background(Color(.secondarySystemGroupedBackground),
+                                    in: RoundedRectangle(cornerRadius: 12))
+                    if lines.isEmpty {
+                        Text("Nothing readable in this backup yet.")
+                            .font(.callout)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(12)
+                            .background(Color(.secondarySystemGroupedBackground),
+                                        in: RoundedRectangle(cornerRadius: 12))
+                    } else {
+                        VStack(alignment: .leading, spacing: 9) {
+                            ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
+                                Text(line).font(.callout)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(14)
+                        .background(Color(.secondarySystemGroupedBackground),
+                                    in: RoundedRectangle(cornerRadius: 12))
+                        Text("Rotorflight settings only — no flight data. Connect to the model and use Backup & restore to put them back.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(12)
+                            .background(Color(.secondarySystemGroupedBackground),
+                                        in: RoundedRectangle(cornerRadius: 12))
+                    }
+                }
+                .padding(18)
+            }
+            .background(ScannerBackdrop())
+            .safeAreaInset(edge: .top) { PageHeading("What\u{2019}s in the backup") }
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+        }
     }
 }
 
@@ -1019,6 +1085,10 @@ struct ScannerHelpView: View {
             .init(icon: "arrow.uturn.backward", title: "Putting it back",
                   body: "On the same page, with the transmitter off and blades off. The app "
                       + "writes each setting and reads it back to check it landed."),
+            .init(icon: "list.bullet.rectangle", title: "What's in one",
+                  body: "Tap any model here to see what its backup holds, folded into plain "
+                      + "lines — \"PIDs — banks 1–6\", \"Servos — 8\" — so a glance says whether "
+                      + "everything was saved."),
             .init(icon: "checkmark.seal", title: "Your backup, or ours",
                   body: "“Your backup” is one you asked for; it is never overwritten by the "
                       + "copy the app keeps for itself at each connection."),

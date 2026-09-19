@@ -79,6 +79,48 @@ final class SessionCache {
         return out.sorted { $0.1 > $1.1 }
     }
 
+    /// "What's in the backup", in plain lines: the item names folded into
+    /// "PIDs — banks 1–6" / "Servos — 8" (Malcolm 2026-09-17: the raw list
+    /// "means little to a mere human"). Mirrors showContents() in
+    /// rotorflight-backup.html so the app and the receiver agree.
+    static func backupSummary(model: String) -> [String] {
+        let items = shared.restoreItems(for: model).map { $0.label }
+        var banked: [String: Set<Int>] = [:], bankOrder: [String] = []
+        var numbered: [String: Int] = [:], numOrder: [String] = []
+        var plain: [String] = []
+        for raw in items {
+            if let r = raw.range(of: #" bank \d+$"#, options: .regularExpression),
+               let n = Int(raw[r].replacingOccurrences(of: " bank ", with: "")) {
+                let name = String(raw[raw.startIndex..<r.lowerBound])
+                if banked[name] == nil { banked[name] = []; bankOrder.append(name) }
+                banked[name]?.insert(n)
+                continue
+            }
+            var t = raw                                        // "servo 3 (cyclic)"
+            if let p = t.range(of: #" \(.*\)$"#, options: .regularExpression) { t.removeSubrange(p) }
+            if let r = t.range(of: #" (?:ch)?\d+$"#, options: .regularExpression) {
+                let name = String(t[t.startIndex..<r.lowerBound])
+                numbered[name, default: 0] += 1
+                if !numOrder.contains(name) { numOrder.append(name) }
+                continue
+            }
+            plain.append(raw)
+        }
+        func cap(_ t: String) -> String { t.prefix(1).uppercased() + t.dropFirst() }
+        func spread(_ set: Set<Int>) -> String {
+            let a = set.sorted()
+            if a.count == 1 { return "bank \(a[0])" }
+            let run = a.enumerated().allSatisfy { i, v in i == 0 || v == a[i - 1] + 1 }
+            return run ? "banks \(a[0])–\(a[a.count - 1])"
+                       : "banks " + a.map(String.init).joined(separator: ", ")
+        }
+        var lines: [String] = []
+        for k in bankOrder { lines.append(cap(k) + " — " + spread(banked[k]!)) }
+        for k in numOrder  { lines.append(cap(k) + "s — \(numbered[k]!)") }
+        lines += plain.map(cap)
+        return lines
+    }
+
     static func deleteSession(model: String) {
         try? FileManager.default.removeItem(at: sessionURL(for: model))
         try? FileManager.default.removeItem(at: restoreURL(for: model))
@@ -555,8 +597,9 @@ extension SessionCache {
     }
 
     /// Everything restorable from the FROZEN restore point, in write order.
-    func restoreItems() -> [RestoreItem] {
-        guard let d = try? Data(contentsOf: Self.restoreURL(for: modelName)),
+    /// `model` names another model's backup (the Backups page shows them all).
+    func restoreItems(for model: String? = nil) -> [RestoreItem] {
+        guard let d = try? Data(contentsOf: Self.restoreURL(for: model ?? modelName)),
               let shape = try? JSONDecoder().decode(RestoreShape.self, from: d)
         else { return [] }
         let frozen = shape.entries
