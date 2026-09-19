@@ -521,7 +521,11 @@ struct ScannerView: View {
                                 ModelThumb(name: s.model, side: 44)
                                 VStack(alignment: .leading) {
                                     Text("Review:  \(s.model)").font(.headline)
-                                    Text(Self.friendlyWhen(s.savedAt)).font(.caption).foregroundStyle(.secondary)
+                                    // Say WHAT it is, not just when (Malcolm 2026-09-19:
+                                    // "users might be a little confused between the contents
+                                    // of a review and an explicit backup. I am.").
+                                    Text("Last session · \(Self.friendlyWhen(s.savedAt))")
+                                        .font(.caption).foregroundStyle(.secondary)
                                 }
                             }
                         }
@@ -539,9 +543,10 @@ struct ScannerView: View {
                         }
                     }
                 } footer: {
-                    Text("Flight data and Rotorflight settings recorded during each "
-                       + "model's last connection — browse them with everything "
-                       + "switched off.")
+                    Text("Recorded for you at every connection — the flights and the "
+                       + "settings as they were — so a model can be browsed with "
+                       + "everything switched off. A backup is a different thing: "
+                       + "you make that yourself on the model's Backup & restore page.")
                 }
             }
             // A real, REACHABLE receiver in sight → the demo offer just muddies

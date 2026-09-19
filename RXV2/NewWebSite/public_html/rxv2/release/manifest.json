@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.781-review-says-what-it-is",
+      "url": "https://messiter.com/rxv2/release/v0.9.781/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.781/littlefs.bin",
+      "fs_md5": "dc9fe63132edf8999f1c2a3cb28885b6",
+      "notes": "The model list now says what a review is: each row reads 'Last session' with the time, and the note underneath explains that these are recorded for you at every connection and that a backup is a different thing you make yourself."
+    },
+    {
       "name": "RXV2-0.9.780-reply-before-restart",
       "url": "https://messiter.com/rxv2/release/v0.9.780/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.780/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.770/littlefs.bin",
       "fs_md5": "84ba8b3174f278048a5478999fde2547",
       "notes": "A bare board (dongle or simulator interface) never drives D4: the status LED on that pad is a receiver-board feature, and a receiver wired there by mistake was fighting the output."
-    },
-    {
-      "name": "RXV2-0.9.769-top-row-installing",
-      "url": "https://messiter.com/rxv2/release/v0.9.769/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.769/littlefs.bin",
-      "fs_md5": "84ba8b3174f278048a5478999fde2547",
-      "notes": "Update page: while an install runs, the top row says which version is being installed (and what it was), not what is installed."
     }
   ],
   "rotorflight": {

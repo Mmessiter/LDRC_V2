@@ -339,8 +339,12 @@ class MainActivity : AppCompatActivity() {
         // recorded session, browsable with everything switched off —
         // connecting another model never erases the previous one's.
         SessionCache.init(this)
-        for ((model, atMs) in SessionCache.savedSessions()) {
-            val t = if (atMs > 0) " — " + friendlyWhen(atMs) else ""
+        val savedSessions = SessionCache.savedSessions()
+        for ((model, atMs) in savedSessions) {
+            // Say WHAT it is, not just when (Malcolm 2026-09-19: "users might be a
+            // little confused between the contents of a review and an explicit
+            // backup. I am."). The caption below the list draws the distinction.
+            val t = if (atMs > 0) "\nLast session · " + friendlyWhen(atMs) else ""
             col.addView(TextView(this).apply {
                 text = "🕰  Review:  $model$t"
                 textSize = 15f; setPadding(40, 28, 40, 28)
@@ -369,6 +373,13 @@ class MainActivity : AppCompatActivity() {
                 }
             })
         }
+        if (savedSessions.isNotEmpty()) col.addView(TextView(this).apply {
+            text = "Recorded for you at every connection — the flights and the settings " +
+                   "as they were — so a model can be browsed with everything switched off. " +
+                   "A backup is a different thing: you make that yourself on the model's " +
+                   "Backup & restore page."
+            textSize = 12f; setPadding(40, 8, 40, 28); setTextColor(0xFF94A3B8.toInt())
+        })
         root.addView(col)
         startScanIfPermitted()
         checkAppUpdate(col)
