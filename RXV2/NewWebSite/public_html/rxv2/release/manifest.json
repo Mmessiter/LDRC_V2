@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.784-one-word-doors",
+      "url": "https://messiter.com/rxv2/release/v0.9.784/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.784/littlefs.bin",
+      "fs_md5": "ac6799589373b861d2eeab4b33d23652",
+      "notes": "First screen: titled LDRC RXV2, four one-word buttons \u2014 Connect, Reviews, Backups, Demos \u2014 and no small print. Searching, and the jump straight to the model used last, now begin only when Connect is tapped. The help page shares the same backdrop as everything else and carries the app version."
+    },
+    {
       "name": "RXV2-0.9.783-four-doors",
       "url": "https://messiter.com/rxv2/release/v0.9.783/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.783/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.773/littlefs.bin",
       "fs_md5": "c2196720a90ef8a30d3ae12ec4a9f0e6",
       "notes": "Simulator interface wire finder: the spare pads are held UP, not down, between checks - with a crossed lead the dongle's D6 sits on the receiver's own input, and a pull-down there was a permanent break."
-    },
-    {
-      "name": "RXV2-0.9.772-pad-open-test",
-      "url": "https://messiter.com/rxv2/release/v0.9.772/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.772/littlefs.bin",
-      "fs_md5": "c2196720a90ef8a30d3ae12ec4a9f0e6",
-      "notes": "Simulator interface wire finder: the dongle now tests whether anything is connected to each pad at all (pull it up, pull it down, see if the level follows), so an open wire or joint is named as such."
     }
   ],
   "rotorflight": {

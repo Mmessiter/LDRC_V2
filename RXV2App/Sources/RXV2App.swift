@@ -377,69 +377,8 @@ struct ScannerView: View {
     @Binding var demoMode: Bool
     @Binding var reviewMode: Bool
     @Binding var demoDongle: Bool
-    // Auto-connect to the receiver used last time (Malcolm 2026-08-16):
-    // short cancellable countdown once it appears; the list stays live so a
-    // different model can be chosen instead.
-    @AppStorage("lastDeviceName") private var lastUsedName = ""
-    @State private var autoTarget: String? = nil
-    @State private var autoWork: DispatchWorkItem? = nil
-    @State private var sessionRev = 0   // bump to refresh the saved-session list after a delete
-    // Model photos (Malcolm 2026-09-05): long-press a receiver → choose /
-    // take / remove. photoRev redraws the thumbnails after a change.
-    @State private var photoRev = 0
-    @State private var photoFor: String? = nil
-    @State private var pickerItem: PhotosPickerItem? = nil
-    @State private var showPhotoPicker = false
-    @State private var showCamera = false
-    /// A receiver tapped while its signal was too weak to be worth trying.
-    @State private var weakTarget: BleLink.Discovered? = nil
-    /// The "?" every other screen has (Malcolm 2026-09-19: "That screen has
-    /// blocks of tiny text … give it a real help screen that fully explains.
-    /// It's the first screen a user sees").
+    /// The "?" every other screen has (Malcolm 2026-09-19).
     @State private var showHelp = false
-
-    private func cancelAuto() {
-        autoWork?.cancel(); autoWork = nil; autoTarget = nil
-        link.scannerAutoDone = true
-    }
-    private func maybeArmAuto(_ list: [BleLink.Discovered]) {
-        // Instant (Malcolm 2026-08-17: "straight to the front screen without
-        // going round the houses") — the moment the remembered receiver is
-        // spotted, connect. No countdown, no banner. Choosing a different
-        // model is still easy: disconnect returns here with auto-connect
-        // disarmed for the rest of the launch (scannerAutoDone).
-        guard !link.scannerAutoDone, !lastUsedName.isEmpty,
-              let d = list.first(where: { $0.name == lastUsedName }) else { return }
-        // Never connect by ourselves to something we can already see is too far:
-        // it half-connects and everything after that is slow (Malcolm 2026-09-12,
-        // Dongle 4 at -94 dBm). Show the list instead, with the reason on the row.
-        if BleLink.tooWeak(d.rssi) { cancelAuto(); link.scannerAutoDone = true; return }
-        // More than one receiver in range: show the list and let the pilot
-        // choose (Malcolm 2026-09-11: the app went to the dongle when he wanted
-        // Test1). Alone, connect as before - after a one-second look-around so
-        // a second receiver that advertises a beat later still gets its say.
-        if list.count > 1 { cancelAuto(); return }
-        if autoTarget == d.name { return }          // already looking around
-        autoTarget = d.name
-        let name = d.name
-        let work = DispatchWorkItem {
-            guard !link.scannerAutoDone, autoTarget == name else { return }
-            if link.found.count > 1 { cancelAuto(); return }
-            guard let now = link.found.first(where: { $0.name == name }) else { autoTarget = nil; return }
-            if BleLink.tooWeak(now.rssi) { cancelAuto(); link.scannerAutoDone = true; return }
-            link.scannerAutoDone = true
-            autoTarget = nil
-            link.connect(now)
-        }
-        autoWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: work)
-    }
-
-    /// Counts for the menu, refreshed when this screen appears.
-    @State private var counts: (reviews: Int, backups: Int) = (0, 0)
-    static func currentCounts() -> (reviews: Int, backups: Int) {
-        (SessionCache.savedSessions().count, SessionCache.savedBackups().count)
-    }
 
     // Four doors instead of one crowded list (Malcolm 2026-09-19): Connect,
     // Reviews, Backups, Demos — each a button in the app's usual style, each
@@ -459,45 +398,34 @@ struct ScannerView: View {
                 } label: {
                     HomeTile(icon: "antenna.radiowaves.left.and.right",
                              tint: Color(red: 0.42, green: 0.67, blue: 0.37),
-                             title: "Connect to a model",
-                             subtitle: connectSubtitle)
+                             title: "Connect")
                 }
                 NavigationLink {
                     ReviewsListView(reviewMode: $reviewMode)
                 } label: {
                     HomeTile(icon: "clock",
                              tint: Color(red: 0.29, green: 0.56, blue: 0.79),
-                             title: "Reviews",
-                             subtitle: counts.reviews == 0
-                                 ? "None yet — one is kept each time you connect"
-                                 : "\(counts.reviews) model\(counts.reviews == 1 ? "" : "s") recorded")
+                             title: "Reviews")
                 }
                 NavigationLink {
                     BackupsListView()
                 } label: {
                     HomeTile(icon: "tray.and.arrow.down",
                              tint: Color(red: 0.79, green: 0.54, blue: 0.29),
-                             title: "Backups",
-                             subtitle: counts.backups == 0
-                                 ? "None yet — made on a model's Backup & restore page"
-                                 : "\(counts.backups) model\(counts.backups == 1 ? "" : "s") backed up")
+                             title: "Backups")
                 }
                 NavigationLink {
                     DemosView(demoMode: $demoMode, demoDongle: $demoDongle)
                 } label: {
                     HomeTile(icon: "theatermasks",
                              tint: Color(red: 0.42, green: 0.56, blue: 0.69),
-                             title: "Demos",
-                             subtitle: "See how it all works with no hardware")
+                             title: "Demos")
                 }
-
-                Text("App \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "")")
-                    .font(.caption2).foregroundStyle(.secondary).padding(.top, 8)
             }
             .padding(18)
         }
         .background(ScannerBackdrop())
-        .navigationTitle("RXV2 Receivers & Dongles")
+        .navigationTitle("LDRC RXV2")
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button { showHelp = true } label: {
@@ -507,18 +435,7 @@ struct ScannerView: View {
             }
         }
         .sheet(isPresented: $showHelp) { ScannerHelpView() }
-        .onReceive(link.$found) { maybeArmAuto($0) }
-        .onAppear { link.startScan(); counts = Self.currentCounts() }
-        .onDisappear { link.stopScan() }
-        .refreshable { link.startScan(); counts = Self.currentCounts() }
-    }
-
-    private var connectSubtitle: String {
-        if case .connecting(let n) = link.state { return "Connecting to \(n)…" }
-        if case .failed = link.state            { return "Tap to search again" }
-        let n = link.found.count
-        if n == 0 { return "Searching…" }
-        return n == 1 ? "1 found nearby" : "\(n) found nearby"
+        .onAppear { link.stopScan() }
     }
 
     @ViewBuilder private func noticeCard(_ text: String, systemImage: String) -> some View {
@@ -537,22 +454,16 @@ struct HomeTile: View {
     let icon: String
     let tint: Color
     let title: String
-    let subtitle: String
 
     var body: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 16) {
             Image(systemName: icon).font(.title2).frame(width: 34)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title).font(.headline)
-                Text(subtitle).font(.caption).opacity(0.92)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+            Text(title).font(.title3.weight(.semibold))
             Spacer(minLength: 8)
             Image(systemName: "chevron.right").font(.footnote).opacity(0.85)
         }
         .foregroundStyle(.white)
-        .multilineTextAlignment(.leading)
-        .padding(.horizontal, 16).padding(.vertical, 18)
+        .padding(.horizontal, 18).padding(.vertical, 22)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(tint, in: RoundedRectangle(cornerRadius: 16))
         .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
@@ -569,6 +480,39 @@ struct ConnectListView: View {
     @State private var showPhotoPicker = false
     @State private var showCamera = false
     @State private var weakTarget: BleLink.Discovered? = nil
+    // Auto-connect to the receiver used last time (Malcolm 2026-08-16) — but
+    // only once Connect has been tapped (2026-09-19: "leaping directly to the
+    // last used model should only happen AFTER hitting connect").
+    @State private var autoTarget: String? = nil
+    @State private var autoWork: DispatchWorkItem? = nil
+
+    private func cancelAuto() {
+        autoWork?.cancel(); autoWork = nil; autoTarget = nil
+        link.scannerAutoDone = true
+    }
+    private func maybeArmAuto(_ list: [BleLink.Discovered]) {
+        guard !link.scannerAutoDone, !lastUsedName.isEmpty,
+              let d = list.first(where: { $0.name == lastUsedName }) else { return }
+        // Never connect by ourselves to something we can already see is too far:
+        // it half-connects and everything after that is slow (Malcolm 2026-09-12).
+        if BleLink.tooWeak(d.rssi) { cancelAuto(); link.scannerAutoDone = true; return }
+        // More than one in range: let the pilot choose (Malcolm 2026-09-11).
+        if list.count > 1 { cancelAuto(); return }
+        if autoTarget == d.name { return }          // already looking around
+        autoTarget = d.name
+        let name = d.name
+        let work = DispatchWorkItem {
+            guard !link.scannerAutoDone, autoTarget == name else { return }
+            if link.found.count > 1 { cancelAuto(); return }
+            guard let now = link.found.first(where: { $0.name == name }) else { autoTarget = nil; return }
+            if BleLink.tooWeak(now.rssi) { cancelAuto(); link.scannerAutoDone = true; return }
+            link.scannerAutoDone = true
+            autoTarget = nil
+            link.connect(now)
+        }
+        autoWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: work)
+    }
 
     var body: some View {
         List {
@@ -587,7 +531,7 @@ struct ConnectListView: View {
                 ForEach(link.found) { d in
                     Button {
                         // A deliberate choice here ends any automatic connecting.
-                        link.scannerAutoDone = true
+                        cancelAuto()
                         // Do not start a connection the signal says will fail
                         // (Malcolm 2026-09-12). RSSI wanders, so this asks.
                         if BleLink.tooWeak(d.rssi) { weakTarget = d } else {
@@ -663,7 +607,9 @@ struct ConnectListView: View {
                 Text("\(d.name) is only \(d.rssi) dBm — too weak to connect reliably. Walk closer to the model and it will connect at once.")
             }
         }
+        .onReceive(link.$found) { maybeArmAuto($0) }
         .onAppear { link.startScan() }
+        .onDisappear { link.stopScan() }
         .refreshable { link.startScan() }
     }
 
@@ -906,6 +852,8 @@ struct ScannerHelpView: View {
                        + "hear, and the recordings it has kept of earlier sessions.")
                         .font(.callout)
                         .foregroundStyle(.secondary)
+                    Text("App version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "")")
+                        .font(.footnote).foregroundStyle(.secondary)
                     ForEach(topics) { t in
                         VStack(alignment: .leading, spacing: 6) {
                             Label(t.title, systemImage: t.icon)
@@ -918,6 +866,7 @@ struct ScannerHelpView: View {
                 }
                 .padding(20)
             }
+            .background(ScannerBackdrop())
             .navigationTitle("About this screen")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

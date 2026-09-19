@@ -194,6 +194,7 @@ class MainActivity : AppCompatActivity() {
         }
         // A sub-page (Connect, Reviews, Backups, Demos) → back to the four
         // doors, not out of the app (2026-09-19).
+        else if (homePage == "help") helpBack()
         else if (homePage != "home") showScanner()
         else super.onBackPressed()
     }
@@ -282,7 +283,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** Title bar: a back chevron on the sub-pages, the title, and the "?". */
-    private fun pageHeader(col: LinearLayout, title: String, back: Boolean) {
+    private fun pageHeader(col: LinearLayout, title: String, back: Boolean,
+                           withHelp: Boolean = true, onBack: (() -> Unit)? = null) {
         val row = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = android.view.Gravity.CENTER_VERTICAL
@@ -291,12 +293,12 @@ class MainActivity : AppCompatActivity() {
         if (back) row.addView(TextView(this).apply {
             text = "‹"; textSize = 28f; setTextColor(0xFF2F6FB0.toInt())
             setPadding(0, 0, 30, 12)
-            setOnClickListener { showScanner() }
+            setOnClickListener { if (onBack != null) onBack() else showScanner() }
         })
         row.addView(TextView(this).apply {
             text = title; textSize = 22f; setTextColor(INK)
         }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        row.addView(TextView(this).apply {
+        if (withHelp) row.addView(TextView(this).apply {
             text = "?"; textSize = 21f; setTextColor(0xFF2F6FB0.toInt())
             setPadding(34, 4, 34, 10)
             background = android.graphics.drawable.GradientDrawable().apply {
@@ -310,14 +312,11 @@ class MainActivity : AppCompatActivity() {
 
     /** A big coloured button in the app's usual style. */
     private fun homeTile(col: LinearLayout, icon: String, colour: Int,
-                         title: String, sub: String, go: () -> Unit) {
+                         title: String, go: () -> Unit) {
         col.addView(TextView(this).apply {
-            text = android.text.Html.fromHtml(
-                "$icon  <b>$title</b><br><small>$sub</small>",
-                android.text.Html.FROM_HTML_MODE_COMPACT)
-            textSize = 16f; setTextColor(0xFFFFFFFF.toInt())
-            setPadding(44, 34, 44, 34)
-            setLineSpacing(6f, 1.0f)
+            text = "$icon   $title"
+            textSize = 19f; setTextColor(0xFFFFFFFF.toInt())
+            setPadding(48, 42, 48, 42)
             background = android.graphics.drawable.GradientDrawable().apply {
                 cornerRadius = 28f; setColor(colour)
             }
@@ -336,11 +335,7 @@ class MainActivity : AppCompatActivity() {
         root.removeAllViews()
         backdrop()
         val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        pageHeader(col, "RXV2 Receivers & Dongles", back = false)
-        col.addView(TextView(this).apply {
-            text = "App v" + packageManager.getPackageInfo(packageName, 0).versionName
-            setPadding(40, 0, 40, 18); setTextColor(SUB); textSize = 12f
-        })
+        pageHeader(col, "LDRC RXV2", back = false)
         autoBanner = TextView(this).apply {
             visibility = View.GONE
             textSize = 14f; setPadding(40, 24, 40, 24)
@@ -349,21 +344,15 @@ class MainActivity : AppCompatActivity() {
         col.addView(autoBanner)
 
         SessionCache.init(this)
-        val nRev = SessionCache.savedSessions().size
-        val nBak = SessionCache.savedBackups().size
-        homeTile(col, "🔌", 0xFF6CAB5E.toInt(), "Connect to a model",
-                 "Search for a receiver or dongle") { showConnect() }
-        homeTile(col, "🕰", 0xFF4A90C9.toInt(), "Reviews",
-                 if (nRev == 0) "None yet — one is kept each time you connect"
-                 else "$nRev model${if (nRev == 1) "" else "s"} recorded") { showReviews() }
-        homeTile(col, "💾", 0xFFC98A4A.toInt(), "Backups",
-                 if (nBak == 0) "None yet — made on a model&#39;s Backup &amp; restore page"
-                 else "$nBak model${if (nBak == 1) "" else "s"} backed up") { showBackups() }
-        homeTile(col, "🎭", 0xFF6C8EB0.toInt(), "Demos",
-                 "See how it all works with no hardware") { showDemos() }
+        homeTile(col, "🔌", 0xFF6CAB5E.toInt(), "Connect") { showConnect() }
+        homeTile(col, "🕰", 0xFF4A90C9.toInt(), "Reviews") { showReviews() }
+        homeTile(col, "💾", 0xFFC98A4A.toInt(), "Backups") { showBackups() }
+        homeTile(col, "🎭", 0xFF6C8EB0.toInt(), "Demos")   { showDemos() }
 
         root.addView(col)
-        startScanIfPermitted()
+        // No searching here: the hunt — and the leap to the model used last —
+        // begins only when Connect is tapped (Malcolm 2026-09-19).
+        ble.stopScan()
         checkAppUpdate(col)
     }
 
@@ -549,6 +538,17 @@ class MainActivity : AppCompatActivity() {
     // The scanner's own help — the first screen now explains itself as fully
     // as every other page does, instead of carrying blocks of small print
     // (Malcolm 2026-09-19). Same words as the iOS sheet.
+    private var helpReturn = "home"
+    private fun helpBack() {
+        when (helpReturn) {
+            "connect" -> showConnect()
+            "reviews" -> showReviews()
+            "backups" -> showBackups()
+            "demos"   -> showDemos()
+            else      -> showScanner()
+        }
+    }
+
     private fun showScannerHelp() {
         val html = """
             <p>This screen lists the LockDown receivers and dongles the phone can hear,
@@ -603,11 +603,22 @@ class MainActivity : AppCompatActivity() {
             textSize = 14f; setPadding(48, 24, 48, 24); setTextColor(INK)
             setLineSpacing(6f, 1.0f)
         }
-        android.app.AlertDialog.Builder(this)
-            .setTitle("About this screen")
-            .setView(ScrollView(this).apply { addView(tv) })
-            .setPositiveButton("Done", null)
-            .show()
+        if (homePage != "help") helpReturn = homePage
+        homePage = "help"
+        root.removeAllViews()
+        backdrop()
+        val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        pageHeader(col, "About this screen", back = true, withHelp = false) { helpBack() }
+        col.addView(TextView(this).apply {
+            text = "App version " + packageManager.getPackageInfo(packageName, 0).versionName
+            setPadding(48, 0, 48, 16); setTextColor(SUB); textSize = 13f
+        })
+        col.addView(TextView(this).apply {
+            text = android.text.Html.fromHtml(html, android.text.Html.FROM_HTML_MODE_COMPACT)
+            textSize = 14f; setPadding(48, 8, 48, 48); setTextColor(INK)
+            setLineSpacing(6f, 1.0f)
+        })
+        root.addView(ScrollView(this).apply { addView(col) })
     }
 
     // ── App self-update ─────────────────────────────────────────────
