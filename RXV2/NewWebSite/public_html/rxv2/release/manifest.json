@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.783-four-doors",
+      "url": "https://messiter.com/rxv2/release/v0.9.783/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.783/littlefs.bin",
+      "fs_md5": "99afee385f262d8bd2fbfe659f867964",
+      "notes": "The first screen is now a proper menu: Connect, Reviews, Backups and Demos, each a button in the app's usual style with its own page. Backups is new \u2014 it shows what the phone has saved for each model, when, and whether you made it or it was kept for you. The backdrop wash is stronger so the text reads easily."
+    },
+    {
       "name": "RXV2-0.9.782-first-screen-tidy",
       "url": "https://messiter.com/rxv2/release/v0.9.782/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.782/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.772/littlefs.bin",
       "fs_md5": "c2196720a90ef8a30d3ae12ec4a9f0e6",
       "notes": "Simulator interface wire finder: the dongle now tests whether anything is connected to each pad at all (pull it up, pull it down, see if the level follows), so an open wire or joint is named as such."
-    },
-    {
-      "name": "RXV2-0.9.771-wire-finder-rates",
-      "url": "https://messiter.com/rxv2/release/v0.9.771/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.771/littlefs.bin",
-      "fs_md5": "8c984b1385b349f705d3eee410c758f6",
-      "notes": "Simulator interface wire finder: 100 ms windows, floating pads held down, and the page tells a slow servo-style pulse train apart from a data stream - and says which end of the wire to move."
     }
   ],
   "rotorflight": {

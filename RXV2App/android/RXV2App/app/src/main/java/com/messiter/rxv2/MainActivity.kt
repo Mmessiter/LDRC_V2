@@ -152,9 +152,9 @@ class MainActivity : AppCompatActivity() {
             latestFound = list
             maybeArmAuto()
             scannerAdapter?.submit(list)
-            // a real receiver in sight → the demo offer just muddies the water
-            demoBtn?.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
-            demoDongleBtn?.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
+            // The demos used to be hidden whenever a receiver was in sight.
+            // They have their own page now (2026-09-19), chosen deliberately —
+            // hiding them there would empty the page you just asked for.
         }
         ble.onStreamFrame = { line -> injectStream(line) }
 
@@ -192,6 +192,9 @@ class MainActivity : AppCompatActivity() {
             else if (reviewMode) { reviewMode = false; SessionCache.saveIfDirty(); showScanner() }
             else { autoDone = true; ble.disconnect() }   // Ready → back = disconnect (chosen)
         }
+        // A sub-page (Connect, Reviews, Backups, Demos) → back to the four
+        // doors, not out of the app (2026-09-19).
+        else if (homePage != "home") showScanner()
         else super.onBackPressed()
     }
 
@@ -261,31 +264,39 @@ class MainActivity : AppCompatActivity() {
     private val INK = 0xFF22384B.toInt()
     private val SUB = 0xFF3A5165.toInt()
 
-    private fun showScanner() {
-        webView?.let { it.stopLoading(); it.destroy() }; webView = null
-        root.removeAllViews()
-        val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        // The flying-field backdrop every web page uses, so the first screen
-        // belongs to the same app (Malcolm 2026-09-19: "it's the first screen a
-        // user sees so let's make it look better presented more like our other
-        // screens"). Every text colour from here on is explicit: the pages are
-        // light whatever the phone's dark-mode setting says, and so is this.
+    // ── The front door ──────────────────────────────────────────────
+    // Four doors instead of one crowded list (Malcolm 2026-09-19): Connect,
+    // Reviews, Backups, Demos — each a button in the app's usual style, each
+    // its own page. Scanning still runs on the home page, so the model used
+    // last still connects by itself without going round the houses.
+    private var homePage = "home"
+
+    /** The flying-field backdrop every web page uses, under a wash. */
+    private fun backdrop() {
         runCatching {
             val bmp = assets.open("webroot/flying-field.jpg").use { android.graphics.BitmapFactory.decodeStream(it) }
             root.background = android.graphics.drawable.LayerDrawable(arrayOf(
                 android.graphics.drawable.BitmapDrawable(resources, bmp).apply { gravity = android.view.Gravity.FILL },
-                android.graphics.drawable.ColorDrawable(0xCCFFFFFF.toInt())))
+                android.graphics.drawable.ColorDrawable(0xE6FFFFFF.toInt())))
         }
-        val titleRow = LinearLayout(this).apply {
+    }
+
+    /** Title bar: a back chevron on the sub-pages, the title, and the "?". */
+    private fun pageHeader(col: LinearLayout, title: String, back: Boolean) {
+        val row = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = android.view.Gravity.CENTER_VERTICAL
             setPadding(40, 60, 40, 8)
         }
-        titleRow.addView(TextView(this).apply {
-            text = "RXV2 Receivers & Dongles"; textSize = 22f; setTextColor(INK)
+        if (back) row.addView(TextView(this).apply {
+            text = "‹"; textSize = 28f; setTextColor(0xFF2F6FB0.toInt())
+            setPadding(0, 0, 30, 12)
+            setOnClickListener { showScanner() }
+        })
+        row.addView(TextView(this).apply {
+            text = title; textSize = 22f; setTextColor(INK)
         }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        // The "?" every other screen has.
-        titleRow.addView(TextView(this).apply {
+        row.addView(TextView(this).apply {
             text = "?"; textSize = 21f; setTextColor(0xFF2F6FB0.toInt())
             setPadding(34, 4, 34, 10)
             background = android.graphics.drawable.GradientDrawable().apply {
@@ -294,15 +305,41 @@ class MainActivity : AppCompatActivity() {
             }
             setOnClickListener { showScannerHelp() }
         })
-        col.addView(titleRow)
+        col.addView(row)
+    }
+
+    /** A big coloured button in the app's usual style. */
+    private fun homeTile(col: LinearLayout, icon: String, colour: Int,
+                         title: String, sub: String, go: () -> Unit) {
+        col.addView(TextView(this).apply {
+            text = android.text.Html.fromHtml(
+                "$icon  <b>$title</b><br><small>$sub</small>",
+                android.text.Html.FROM_HTML_MODE_COMPACT)
+            textSize = 16f; setTextColor(0xFFFFFFFF.toInt())
+            setPadding(44, 34, 44, 34)
+            setLineSpacing(6f, 1.0f)
+            background = android.graphics.drawable.GradientDrawable().apply {
+                cornerRadius = 28f; setColor(colour)
+            }
+            setOnClickListener { go() }
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                                     ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+            setMargins(40, 10, 40, 10)
+        })
+    }
+
+    /** HOME — the four doors. Kept as showScanner() so every existing
+     *  "back to the list" path still lands here. */
+    private fun showScanner() {
+        webView?.let { it.stopLoading(); it.destroy() }; webView = null
+        homePage = "home"
+        root.removeAllViews()
+        backdrop()
+        val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        pageHeader(col, "RXV2 Receivers & Dongles", back = false)
         col.addView(TextView(this).apply {
             text = "App v" + packageManager.getPackageInfo(packageName, 0).versionName
-            setPadding(40, 0, 40, 8); setTextColor(SUB); alpha = 0.7f; textSize = 12f
-        })
-        col.addView(TextView(this).apply {
-            // One line; everything else moved into the "?" (2026-09-19).
-            text = "Transmitter OFF while you connect — a dongle has none, so just power the model."
-            setPadding(40, 0, 40, 20); setTextColor(SUB); textSize = 13f
+            setPadding(40, 0, 40, 18); setTextColor(SUB); textSize = 12f
         })
         autoBanner = TextView(this).apply {
             visibility = View.GONE
@@ -310,7 +347,38 @@ class MainActivity : AppCompatActivity() {
             setBackgroundColor(0xFF3B2F14.toInt()); setTextColor(0xFFFFD966.toInt())
         }
         col.addView(autoBanner)
-        val list = ListView(this)
+
+        SessionCache.init(this)
+        val nRev = SessionCache.savedSessions().size
+        val nBak = SessionCache.savedBackups().size
+        homeTile(col, "🔌", 0xFF6CAB5E.toInt(), "Connect to a model",
+                 "Search for a receiver or dongle") { showConnect() }
+        homeTile(col, "🕰", 0xFF4A90C9.toInt(), "Reviews",
+                 if (nRev == 0) "None yet — one is kept each time you connect"
+                 else "$nRev model${if (nRev == 1) "" else "s"} recorded") { showReviews() }
+        homeTile(col, "💾", 0xFFC98A4A.toInt(), "Backups",
+                 if (nBak == 0) "None yet — made on a model&#39;s Backup &amp; restore page"
+                 else "$nBak model${if (nBak == 1) "" else "s"} backed up") { showBackups() }
+        homeTile(col, "🎭", 0xFF6C8EB0.toInt(), "Demos",
+                 "See how it all works with no hardware") { showDemos() }
+
+        root.addView(col)
+        startScanIfPermitted()
+        checkAppUpdate(col)
+    }
+
+    /** CONNECT — the live search that used to be the whole first screen. */
+    private fun showConnect() {
+        homePage = "connect"
+        root.removeAllViews()
+        backdrop()
+        val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        pageHeader(col, "Connect", back = true)
+        col.addView(TextView(this).apply {
+            text = "Transmitter OFF while you connect — a dongle has none, so just power the model."
+            setPadding(40, 0, 40, 18); setTextColor(SUB); textSize = 13f
+        })
+        val list = ListView(this).apply { divider = null; dividerHeight = 0 }
         scannerAdapter = ScannerAdapter()
         list.adapter = scannerAdapter
         list.setOnItemClickListener { _, _, pos, _ ->
@@ -346,40 +414,34 @@ class MainActivity : AppCompatActivity() {
         }
         col.addView(list, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
-        val hint = TextView(this).apply {
+        col.addView(TextView(this).apply {
             text = "Searching…  Within a few metres, with the transmitter off."
             setPadding(40, 16, 40, 40); setTextColor(SUB); textSize = 13f
-        }
-        col.addView(hint)
-        // No receiver? Let anyone play: the same web UI runs against
-        // canned data from a real receiver, with animated channels.
-        demoBtn = TextView(this).apply {
-            text = "🎭  Nothing of your own yet?  Try the receiver demo"
-            textSize = 15f; setPadding(40, 28, 40, 28)
-            setBackgroundColor(0xFF1E293B.toInt()); setTextColor(0xFF7DD3FC.toInt())
-            setOnClickListener { demoDongle = false; demoMode = true; showWeb() }
-        }
-        col.addView(demoBtn)
-        // The dongle demo is chosen here too (Malcolm 2026-09-11): the dongle switch inside the demo was buried too deep.
-        demoDongleBtn = TextView(this).apply {
-            text = "🎭  Try the dongle demo"
-            textSize = 15f; setPadding(40, 28, 40, 28)
-            setBackgroundColor(0xFF1E293B.toInt()); setTextColor(0xFF7DD3FC.toInt())
-            setOnClickListener { demoDongle = true; demoMode = true; showWeb() }
-        }
-        col.addView(demoDongleBtn)
-        // Armchair review (Malcolm's lodge idea 2026-08-04): each MODEL's
-        // recorded session, browsable with everything switched off —
-        // connecting another model never erases the previous one's.
+        })
+        root.addView(col)
+        startScanIfPermitted()
+        scannerAdapter?.submit(latestFound)   // whatever is already in sight
+    }
+
+    /** REVIEWS — one recording per model, made automatically at every connection. */
+    private fun showReviews() {
+        homePage = "reviews"
+        root.removeAllViews()
+        backdrop()
+        val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        pageHeader(col, "Reviews", back = true)
         SessionCache.init(this)
-        val savedSessions = SessionCache.savedSessions()
-        for ((model, atMs) in savedSessions) {
-            // Say WHAT it is, not just when (Malcolm 2026-09-19: "users might be a
-            // little confused between the contents of a review and an explicit
-            // backup. I am."). The caption below the list draws the distinction.
+        val sessions = SessionCache.savedSessions()
+        if (sessions.isEmpty()) {
+            col.addView(TextView(this).apply {
+                text = "Nothing recorded yet. Connect to a model and one is kept for you."
+                setPadding(40, 8, 40, 28); setTextColor(SUB); textSize = 14f
+            })
+        }
+        for ((model, atMs) in sessions) {
             val t = if (atMs > 0) "\nLast session · " + friendlyWhen(atMs) else ""
             col.addView(TextView(this).apply {
-                text = "🕰  Review:  $model$t"
+                text = "🕰  $model$t"
                 textSize = 15f; setPadding(40, 28, 40, 28)
                 setBackgroundColor(0xFF14532D.toInt()); setTextColor(0xFF86EFAC.toInt())
                 ModelPhotos.load(this@MainActivity, model, 96)?.let {
@@ -390,30 +452,98 @@ class MainActivity : AppCompatActivity() {
                     SessionCache.activate(model)
                     reviewMode = true; showWeb()
                 }
-                // Long-press to delete an old review (Android's swipe-to-
-                // delete equivalent for this simple list). Confirm first —
-                // these hold flight recordings.
+                // Long-press to delete an old review. Confirm first — these
+                // hold flight recordings.
                 setOnLongClickListener {
                     android.app.AlertDialog.Builder(this@MainActivity)
                         .setTitle("Delete review?")
                         .setMessage("Remove the saved recording for \"$model\"?")
                         .setPositiveButton("Delete") { _, _ ->
-                            SessionCache.deleteSession(model); showScanner()
+                            SessionCache.deleteSession(model); showReviews()
                         }
                         .setNegativeButton("Cancel", null)
                         .show()
                     true
                 }
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                                         ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(40, 8, 40, 8) })
+        }
+        col.addView(TextView(this).apply {
+            text = "The flights and the settings as they were, to browse with everything " +
+                   "switched off. Press and hold a model to delete its recording. A backup " +
+                   "is a different thing."
+            textSize = 12f; setPadding(40, 18, 40, 28); setTextColor(SUB)
+        })
+        root.addView(ScrollView(this).apply { addView(col) })
+    }
+
+    /** BACKUPS — what this phone has saved for each model, and when. */
+    private fun showBackups() {
+        homePage = "backups"
+        root.removeAllViews()
+        backdrop()
+        val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        pageHeader(col, "Backups", back = true)
+        SessionCache.init(this)
+        val backups = SessionCache.savedBackups()
+        if (backups.isEmpty()) {
+            col.addView(TextView(this).apply {
+                text = "No backups yet. Open a model, go to Rotorflight → Backup & restore, " +
+                       "and tap Back up: the settings are kept here on the phone."
+                setPadding(40, 8, 40, 28); setTextColor(SUB); textSize = 14f
             })
         }
-        if (savedSessions.isNotEmpty()) col.addView(TextView(this).apply {
-            text = "Recorded for you at every connection, to browse with everything " +
-                   "switched off. A backup is a different thing."
-            textSize = 12f; setPadding(40, 8, 40, 28); setTextColor(SUB)
+        for (b in backups) {
+            col.addView(TextView(this).apply {
+                text = "💾  ${b.model}\n" +
+                       (if (b.explicit) "Your backup · " else "Kept automatically · ") +
+                       friendlyWhen(b.atMs) + "\n${b.items} settings held"
+                textSize = 15f; setPadding(40, 28, 40, 28)
+                setBackgroundColor(0xFF3B2F14.toInt()); setTextColor(0xFFFFD966.toInt())
+                setLineSpacing(6f, 1.0f)
+                ModelPhotos.load(this@MainActivity, b.model, 96)?.let {
+                    setCompoundDrawablesWithIntrinsicBounds(android.graphics.drawable.BitmapDrawable(resources, it), null, null, null)
+                    compoundDrawablePadding = 24
+                }
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                                         ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(40, 8, 40, 8) })
+        }
+        col.addView(TextView(this).apply {
+            text = "Rotorflight settings only — no flight data. Connect to the model and use " +
+                   "Backup & restore to put them back, or to send a backup to yourself as a file."
+            textSize = 12f; setPadding(40, 18, 40, 28); setTextColor(SUB)
+        })
+        root.addView(ScrollView(this).apply { addView(col) })
+    }
+
+    /** DEMOS — the same pages on canned data, for anyone with no hardware. */
+    private fun showDemos() {
+        homePage = "demos"
+        root.removeAllViews()
+        backdrop()
+        val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        pageHeader(col, "Demos", back = true)
+        demoBtn = TextView(this).apply {
+            text = "🎭  The receiver demo — a model in flight"
+            textSize = 15f; setPadding(40, 28, 40, 28)
+            setBackgroundColor(0xFF1E293B.toInt()); setTextColor(0xFF7DD3FC.toInt())
+            setOnClickListener { demoDongle = false; demoMode = true; showWeb() }
+        }
+        col.addView(demoBtn, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                                                       ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(40, 8, 40, 8) })
+        demoDongleBtn = TextView(this).apply {
+            text = "🎭  The dongle demo — the app on a Rotorflight dongle"
+            textSize = 15f; setPadding(40, 28, 40, 28)
+            setBackgroundColor(0xFF1E293B.toInt()); setTextColor(0xFF7DD3FC.toInt())
+            setOnClickListener { demoDongle = true; demoMode = true; showWeb() }
+        }
+        col.addView(demoDongleBtn, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                                                            ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(40, 8, 40, 8) })
+        col.addView(TextView(this).apply {
+            text = "The same pages on canned data — nothing to connect, nothing to set up."
+            textSize = 12f; setPadding(40, 18, 40, 28); setTextColor(SUB)
         })
         root.addView(col)
-        startScanIfPermitted()
-        checkAppUpdate(col)
     }
 
     // The scanner's own help — the first screen now explains itself as fully

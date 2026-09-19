@@ -435,33 +435,161 @@ struct ScannerView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: work)
     }
 
+    /// Counts for the menu, refreshed when this screen appears.
+    @State private var counts: (reviews: Int, backups: Int) = (0, 0)
+    static func currentCounts() -> (reviews: Int, backups: Int) {
+        (SessionCache.savedSessions().count, SessionCache.savedBackups().count)
+    }
+
+    // Four doors instead of one crowded list (Malcolm 2026-09-19): Connect,
+    // Reviews, Backups, Demos — each a button in the app's usual style, each
+    // its own page. Scanning still runs HERE, so the model used last still
+    // connects by itself without going round the houses.
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 14) {
+                if case .connecting(let n) = link.state {
+                    noticeCard("Connecting to \(n)…", systemImage: "antenna.radiowaves.left.and.right")
+                } else if case .failed(let m) = link.state {
+                    noticeCard(m, systemImage: "exclamationmark.triangle")
+                }
+
+                NavigationLink {
+                    ConnectListView()
+                } label: {
+                    HomeTile(icon: "antenna.radiowaves.left.and.right",
+                             tint: Color(red: 0.42, green: 0.67, blue: 0.37),
+                             title: "Connect to a model",
+                             subtitle: connectSubtitle)
+                }
+                NavigationLink {
+                    ReviewsListView(reviewMode: $reviewMode)
+                } label: {
+                    HomeTile(icon: "clock",
+                             tint: Color(red: 0.29, green: 0.56, blue: 0.79),
+                             title: "Reviews",
+                             subtitle: counts.reviews == 0
+                                 ? "None yet — one is kept each time you connect"
+                                 : "\(counts.reviews) model\(counts.reviews == 1 ? "" : "s") recorded")
+                }
+                NavigationLink {
+                    BackupsListView()
+                } label: {
+                    HomeTile(icon: "tray.and.arrow.down",
+                             tint: Color(red: 0.79, green: 0.54, blue: 0.29),
+                             title: "Backups",
+                             subtitle: counts.backups == 0
+                                 ? "None yet — made on a model's Backup & restore page"
+                                 : "\(counts.backups) model\(counts.backups == 1 ? "" : "s") backed up")
+                }
+                NavigationLink {
+                    DemosView(demoMode: $demoMode, demoDongle: $demoDongle)
+                } label: {
+                    HomeTile(icon: "theatermasks",
+                             tint: Color(red: 0.42, green: 0.56, blue: 0.69),
+                             title: "Demos",
+                             subtitle: "See how it all works with no hardware")
+                }
+
+                Text("App \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "")")
+                    .font(.caption2).foregroundStyle(.secondary).padding(.top, 8)
+            }
+            .padding(18)
+        }
+        .background(ScannerBackdrop())
+        .navigationTitle("RXV2 Receivers & Dongles")
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button { showHelp = true } label: {
+                    Image(systemName: "questionmark.circle").font(.title3)
+                }
+                .accessibilityLabel("Help")
+            }
+        }
+        .sheet(isPresented: $showHelp) { ScannerHelpView() }
+        .onReceive(link.$found) { maybeArmAuto($0) }
+        .onAppear { link.startScan(); counts = Self.currentCounts() }
+        .onDisappear { link.stopScan() }
+        .refreshable { link.startScan(); counts = Self.currentCounts() }
+    }
+
+    private var connectSubtitle: String {
+        if case .connecting(let n) = link.state { return "Connecting to \(n)…" }
+        if case .failed = link.state            { return "Tap to search again" }
+        let n = link.found.count
+        if n == 0 { return "Searching…" }
+        return n == 1 ? "1 found nearby" : "\(n) found nearby"
+    }
+
+    @ViewBuilder private func noticeCard(_ text: String, systemImage: String) -> some View {
+        Label(text, systemImage: systemImage)
+            .font(.callout)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+            .background(Color(.secondarySystemGroupedBackground),
+                        in: RoundedRectangle(cornerRadius: 14))
+    }
+}
+
+/// A big coloured button in the app's usual style: what it does, and one line
+/// saying what is behind it.
+struct HomeTile: View {
+    let icon: String
+    let tint: Color
+    let title: String
+    let subtitle: String
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Image(systemName: icon).font(.title2).frame(width: 34)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title).font(.headline)
+                Text(subtitle).font(.caption).opacity(0.92)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 8)
+            Image(systemName: "chevron.right").font(.footnote).opacity(0.85)
+        }
+        .foregroundStyle(.white)
+        .multilineTextAlignment(.leading)
+        .padding(.horizontal, 16).padding(.vertical, 18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(tint, in: RoundedRectangle(cornerRadius: 16))
+        .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
+    }
+}
+
+/// CONNECT — the live search that used to be the whole first screen.
+struct ConnectListView: View {
+    @EnvironmentObject var link: BleLink
+    @AppStorage("lastDeviceName") private var lastUsedName = ""
+    @State private var photoRev = 0
+    @State private var photoFor: String? = nil
+    @State private var pickerItem: PhotosPickerItem? = nil
+    @State private var showPhotoPicker = false
+    @State private var showCamera = false
+    @State private var weakTarget: BleLink.Discovered? = nil
+
     var body: some View {
         List {
             Section {
-                // "Searching…" lives IN the list, not floating over it: as an
-                // overlay it was drawn centred on the screen, on top of the
-                // Review rows and the demo button (Malcolm 2026-09-06 screenshot).
                 if link.found.isEmpty {
                     HStack(alignment: .top, spacing: 12) {
-                        ProgressView()
-                            .padding(.top, 2)
+                        ProgressView().padding(.top, 2)
                         VStack(alignment: .leading, spacing: 4) {
                             Label("Searching…", systemImage: "dot.radiowaves.left.and.right")
                                 .font(.headline)
-                            Text(statusText)
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
+                            Text(statusText).font(.footnote).foregroundStyle(.secondary)
                         }
                     }
                     .padding(.vertical, 6)
                 }
                 ForEach(link.found) { d in
                     Button {
-                        cancelAuto()
+                        // A deliberate choice here ends any automatic connecting.
+                        link.scannerAutoDone = true
                         // Do not start a connection the signal says will fail
-                        // (Malcolm 2026-09-12: "perhaps it'd be better to not
-                        // even try if it's too weak?"). RSSI wanders, so this
-                        // asks rather than forbids.
+                        // (Malcolm 2026-09-12). RSSI wanders, so this asks.
                         if BleLink.tooWeak(d.rssi) { weakTarget = d } else {
                             lastUsedName = d.name
                             link.connect(d)
@@ -483,8 +611,7 @@ struct ScannerView: View {
                                     .accessibilityLabel("used last time")
                             }
                             Spacer()
-                            Image(systemName: "chevron.right")
-                                .foregroundStyle(.tertiary)
+                            Image(systemName: "chevron.right").foregroundStyle(.tertiary)
                         }
                     }
                     .contextMenu {
@@ -498,97 +625,16 @@ struct ScannerView: View {
                     }
                 }
             } header: {
-                Text(headerText)
+                Text("Nearby receivers and dongles")
             } footer: {
-                // One line; the rest moved into the "?" (2026-09-19).
                 Text("Transmitter OFF while you connect — a dongle has none, so just power the model.")
             }
             .listRowBackground(Color(.secondarySystemGroupedBackground))
-            // Recordings come AFTER the live receivers (Malcolm 2026-09-11 tapped
-            // "Review: Goblin770" at the top and took it for a live connection).
-            // One recording per MODEL (Malcolm 2026-08-04): connecting a
-            // different model parks this one's session, never erases it.
-            let _ = sessionRev   // touch so a delete forces this list to recompute
-            let sessions = SessionCache.savedSessions()
-            if !sessions.isEmpty {
-                Section {
-                    ForEach(sessions, id: \.model) { s in
-                        Button {
-                            SessionCache.shared.activate(model: s.model)
-                            reviewMode = true
-                        } label: {
-                            HStack(spacing: 10) {
-                                let _ = photoRev
-                                ModelThumb(name: s.model, side: 44)
-                                VStack(alignment: .leading) {
-                                    Text("Review:  \(s.model)").font(.headline)
-                                    // Say WHAT it is, not just when (Malcolm 2026-09-19:
-                                    // "users might be a little confused between the contents
-                                    // of a review and an explicit backup. I am.").
-                                    Text("Last session · \(Self.friendlyWhen(s.savedAt))")
-                                        .font(.caption).foregroundStyle(.secondary)
-                                }
-                            }
-                        }
-                        // Swipe left to delete an old review (Malcolm
-                        // 2026-08-22). allowsFullSwipe:false so it takes a
-                        // deliberate tap on Delete, not an accidental flick —
-                        // these hold flight recordings.
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            Button(role: .destructive) {
-                                SessionCache.deleteSession(model: s.model)
-                                sessionRev += 1
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-                        }
-                    }
-                } footer: {
-                    Text("Recorded for you at every connection, to browse with everything switched off. A backup is a different thing.")
-                }
-                .listRowBackground(Color(.secondarySystemGroupedBackground))
-            }
-            // A real, REACHABLE receiver in sight → the demo offer just muddies
-            // the water. But a receiver that is merely *visible* and too far to
-            // connect is not a reason to take the demo away (Malcolm 2026-09-13:
-            // "I wanted to load the demo, but was not able to when a slightly
-            // out of range dongle was discovered"). Same trap would catch an App
-            // Review tester with any stray LDRC board in the building.
-            if link.found.allSatisfy({ BleLink.tooWeak($0.rssi) }) {
-                // Two demos, chosen here (Malcolm 2026-09-11): the dongle
-                // switch inside the demo was buried too deep, so it is gone.
-                Section {
-                    Button {
-                        demoDongle = false; BleSchemeHandler.demoDongle = false; demoMode = true
-                    } label: {
-                        Label("Nothing of your own yet?  Try the receiver demo",
-                              systemImage: "theatermasks")
-                    }
-                    Button {
-                        demoDongle = true; BleSchemeHandler.demoDongle = true; demoMode = true
-                    } label: {
-                        Label("Try the dongle demo", systemImage: "theatermasks")
-                    }
-                } footer: {
-                    Text("The same pages on canned data — nothing to connect.")
-                }
-                .listRowBackground(Color(.secondarySystemGroupedBackground))
-            }
         }
-        // The flying-field backdrop every other screen has, so the first one
-        // belongs to the same app; rows stay solid, never translucent.
         .scrollContentBackground(.hidden)
         .background(ScannerBackdrop())
-        .navigationTitle("RXV2 Receivers & Dongles")   // the big heading; headerText below it is the subtitle
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button { showHelp = true } label: {
-                    Image(systemName: "questionmark.circle").font(.title3)
-                }
-                .accessibilityLabel("Help")
-            }
-        }
-        .sheet(isPresented: $showHelp) { ScannerHelpView() }
+        .navigationTitle("Connect")
+        .navigationBarTitleDisplayMode(.inline)
         .photosPicker(isPresented: $showPhotoPicker, selection: $pickerItem, matching: .images)
         .onChange(of: pickerItem) { item in
             guard let item, let name = photoFor else { return }
@@ -617,18 +663,8 @@ struct ScannerView: View {
                 Text("\(d.name) is only \(d.rssi) dBm — too weak to connect reliably. Walk closer to the model and it will connect at once.")
             }
         }
-        .onReceive(link.$found) { maybeArmAuto($0) }
         .onAppear { link.startScan() }
-        .onDisappear { link.stopScan() }
         .refreshable { link.startScan() }
-    }
-
-    private var headerText: String {
-        switch link.state {
-        case .connecting(let n): return "Connecting to \(n)…"
-        case .failed(let m):     return m
-        default:                 return "Nearby receivers and dongles"
-        }
     }
 
     private var statusText: String {
@@ -637,6 +673,135 @@ struct ScannerView: View {
         case .failed(let m): return m
         default: return "Within a few metres, with the transmitter off."
         }
+    }
+}
+
+/// REVIEWS — one recording per model, made automatically at every connection.
+struct ReviewsListView: View {
+    @Binding var reviewMode: Bool
+    @State private var sessionRev = 0
+    @State private var photoRev = 0
+
+    var body: some View {
+        let _ = sessionRev
+        let sessions = SessionCache.savedSessions()
+        List {
+            if sessions.isEmpty {
+                Section {
+                    Text("Nothing recorded yet. Connect to a model and one is kept for you.")
+                        .font(.callout).foregroundStyle(.secondary)
+                }
+                .listRowBackground(Color(.secondarySystemGroupedBackground))
+            } else {
+                Section {
+                    ForEach(sessions, id: \.model) { s in
+                        Button {
+                            SessionCache.shared.activate(model: s.model)
+                            reviewMode = true
+                        } label: {
+                            HStack(spacing: 10) {
+                                let _ = photoRev
+                                ModelThumb(name: s.model, side: 44)
+                                VStack(alignment: .leading) {
+                                    Text(s.model).font(.headline)
+                                    Text("Last session · \(ScannerView.friendlyWhen(s.savedAt))")
+                                        .font(.caption).foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right").foregroundStyle(.tertiary)
+                            }
+                        }
+                        // Deliberate tap on Delete, not an accidental flick —
+                        // these hold flight recordings (Malcolm 2026-08-22).
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button(role: .destructive) {
+                                SessionCache.deleteSession(model: s.model)
+                                sessionRev += 1
+                            } label: { Label("Delete", systemImage: "trash") }
+                        }
+                    }
+                } footer: {
+                    Text("The flights and the settings as they were, to browse with everything switched off. Swipe a model to delete its recording.")
+                }
+                .listRowBackground(Color(.secondarySystemGroupedBackground))
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .background(ScannerBackdrop())
+        .navigationTitle("Reviews")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+/// BACKUPS — what this phone has saved for each model, and when.
+struct BackupsListView: View {
+    @State private var rev = 0
+
+    var body: some View {
+        let _ = rev
+        let backups = SessionCache.savedBackups()
+        List {
+            if backups.isEmpty {
+                Section {
+                    Text("No backups yet. Open a model, go to Rotorflight → Backup & restore, and tap Back up: the settings are kept here on the phone.")
+                        .font(.callout).foregroundStyle(.secondary)
+                }
+                .listRowBackground(Color(.secondarySystemGroupedBackground))
+            } else {
+                Section {
+                    ForEach(backups, id: \.model) { b in
+                        HStack(spacing: 10) {
+                            ModelThumb(name: b.model, side: 44)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(b.model).font(.headline)
+                                Text("\(b.explicit ? "Your backup" : "Kept automatically") · \(ScannerView.friendlyWhen(b.savedAt))")
+                                    .font(.caption).foregroundStyle(.secondary)
+                                Text("\(b.items) settings held")
+                                    .font(.caption2).foregroundStyle(.tertiary)
+                            }
+                            Spacer()
+                        }
+                    }
+                } footer: {
+                    Text("Rotorflight settings only — no flight data. Connect to the model and use Backup & restore to put them back, or to send a backup to yourself as a file.")
+                }
+                .listRowBackground(Color(.secondarySystemGroupedBackground))
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .background(ScannerBackdrop())
+        .navigationTitle("Backups")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+/// DEMOS — the same pages on canned data, for anyone with no hardware.
+struct DemosView: View {
+    @Binding var demoMode: Bool
+    @Binding var demoDongle: Bool
+
+    var body: some View {
+        List {
+            Section {
+                Button {
+                    demoDongle = false; BleSchemeHandler.demoDongle = false; demoMode = true
+                } label: {
+                    Label("The receiver demo — a model in flight", systemImage: "theatermasks")
+                }
+                Button {
+                    demoDongle = true; BleSchemeHandler.demoDongle = true; demoMode = true
+                } label: {
+                    Label("The dongle demo — the app on a Rotorflight dongle", systemImage: "theatermasks")
+                }
+            } footer: {
+                Text("The same pages on canned data — nothing to connect, nothing to set up.")
+            }
+            .listRowBackground(Color(.secondarySystemGroupedBackground))
+        }
+        .scrollContentBackground(.hidden)
+        .background(ScannerBackdrop())
+        .navigationTitle("Demos")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
@@ -660,9 +825,11 @@ struct ScannerBackdrop: View {
                 Image(uiImage: img).resizable().scaledToFill()
             }
             // systemBackground, not white: the wash follows light and dark.
-            LinearGradient(colors: [Color(.systemBackground).opacity(0.80),
-                                    Color(.systemBackground).opacity(0.62),
-                                    Color(.systemBackground).opacity(0.82)],
+            // Stronger than the first attempt (Malcolm 2026-09-19: "the wash
+            // is too faint") — the photograph is a backdrop, not the subject.
+            LinearGradient(colors: [Color(.systemBackground).opacity(0.92),
+                                    Color(.systemBackground).opacity(0.86),
+                                    Color(.systemBackground).opacity(0.94)],
                            startPoint: .top, endPoint: .bottom)
         }
         .ignoresSafeArea()

@@ -59,6 +59,27 @@ object SessionCache {
         return out.sortedByDescending { it.second }
     }
 
+    /** One model's backup as held on this phone. */
+    data class BackupInfo(val model: String, val atMs: Long, val explicit: Boolean, val items: Int)
+
+    /** Every model this phone holds a backup (restore point) for, newest
+     *  first — what the Backups page lists with nothing connected
+     *  (Malcolm 2026-09-19: "Backups shows what backups we made and when"). */
+    fun savedBackups(): List<BackupInfo> {
+        val d = dir ?: return emptyList()
+        val out = ArrayList<BackupInfo>()
+        d.listFiles { f -> f.name.startsWith("restore-") }?.forEach { f ->
+            runCatching {
+                val root = JSONObject(f.readText())
+                val n = root.optJSONObject("entries")?.length() ?: 0
+                if (n > 0) out.add(BackupInfo(root.optString("model", ""),
+                                              root.optLong("savedAtMs", 0),
+                                              root.optBoolean("explicit", false), n))
+            }
+        }
+        return out.sortedByDescending { it.atMs }
+    }
+
     // Delete a saved model's recording + restore point (Malcolm 2026-08-22:
     // long-press a review row to remove it, so they don't pile up).
     fun deleteSession(model: String) {

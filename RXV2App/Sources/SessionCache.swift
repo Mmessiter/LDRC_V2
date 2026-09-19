@@ -62,6 +62,23 @@ final class SessionCache {
     /// Delete a saved model's recording + its restore point (Malcolm
     /// 2026-08-22: "otherwise they accumulate rather excessively!").
     /// Swipe-to-delete on the scanner list calls this.
+    /// Every model this phone holds a backup (restore point) for, newest
+    /// first — what the Backups page lists with nothing connected
+    /// (Malcolm 2026-09-19: "Backups shows what backups we made and when").
+    static func savedBackups() -> [(model: String, savedAt: Date, explicit: Bool, items: Int)] {
+        let files = (try? FileManager.default.contentsOfDirectory(
+            at: docs, includingPropertiesForKeys: nil)) ?? []
+        var out: [(String, Date, Bool, Int)] = []
+        for f in files where f.lastPathComponent.hasPrefix("restore-") {
+            if let d = try? Data(contentsOf: f),
+               let s = try? JSONDecoder().decode(RestoreShape.self, from: d),
+               !s.entries.isEmpty {
+                out.append((s.model, s.savedAt, s.explicit ?? false, s.entries.count))
+            }
+        }
+        return out.sorted { $0.1 > $1.1 }
+    }
+
     static func deleteSession(model: String) {
         try? FileManager.default.removeItem(at: sessionURL(for: model))
         try? FileManager.default.removeItem(at: restoreURL(for: model))
