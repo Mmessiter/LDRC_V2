@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Simulator &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=328">
-<script src="/app.js?v=328" defer></script>
+<link rel=stylesheet href="/style.css?v=329">
+<script src="/app.js?v=329" defer></script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -62,7 +62,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // stays in sim mode.
     const bindBtn = document.getElementById('simBindBtn');
     if (bindBtn) {
-        bindBtn.style.display = simOn ? '' : 'none';
+        // A simulator-interface board has no radios, so it cannot bind.
+        bindBtn.style.display = (simOn && !s.sim_if) ? '' : 'none';
         bindBtn.onclick = async () => {
             const ok = await LDRC.confirm(
                 'The receiver reboots and listens for a transmitter in bind mode; power up your TX '
@@ -74,6 +75,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const sb = document.getElementById('simbtn');
+    // On a SIMULATOR INTERFACE board the role IS simulator mode, so this
+    // switch cannot turn it off — the role is the control (Malcolm
+    // 2026-09-19). Offer the thing he actually wanted instead.
+    if (sb && s.sim_if) {
+        sb.style.background = '#5fa099';
+        LDRC.setText('simlbl', 'Make this a Rotorflight dongle instead');
+        sb.onclick = async () => {
+            if (!(await LDRC.confirm(
+                'This board\u2019s role is <b>Simulator interface</b> \u2014 which is simulator mode, so it cannot be switched off here. '
+              + 'Change its role to <b>Rotorflight dongle</b>? It restarts, stops being a joystick, and talks MSP to a flight controller on D5/D6.',
+                { title: 'Change the role', icon: '\uD83D\uDD0C', yes: 'Yes, make it a dongle', no: 'Stay a simulator interface', kind: 'go', html: true }))) return;
+            const fd = new URLSearchParams(); fd.set('mode', '0');
+            try { await fetch('/api/dongle', { method: 'POST', body: fd }); } catch (e) { /* the restart cuts the reply: that IS the save */ }
+            setTimeout(() => location.href = '/', 9000);
+        };
+        return;
+    }
     if (sb) {
         sb.style.background = simOn ? '#c97464' : '#6cab5e';
         LDRC.setText('simlbl', simOn ? 'Turn simulator mode OFF' : 'Turn simulator mode ON');

@@ -2609,6 +2609,17 @@ inline void handleSimSet() {
     if (refuseIfArmed("change simulator mode")) return;   // 2026-09-16 review: on a dongle the TX-link gates are no-ops
     if (refuseIfTxLinked("turn the transmitter off first - the receiver restarts to apply this")) return;
     bool on = server.hasArg("on") ? (server.arg("on").toInt() != 0) : false;
+    // A SIMULATOR INTERFACE board is in simulator mode by definition: boot
+    // forces simEnabled from the role, so writing this setting changed
+    // nothing while the page claimed it had (Malcolm 2026-09-19: "I turned
+    // off Simulator mode to check it as Rotorflight dongle but it didn't go
+    // off!"). Say so, and name the control that does work.
+    if (simIfEnabled && !on) {
+        server.send(409, "text/plain",
+            "this board's role is Simulator interface, which IS simulator mode - turning it off here would change nothing. "
+            "To make it a Rotorflight dongle instead, choose that role on the Dongle page.");
+        return;
+    }
     prefs.putUChar(NVS_KEY_SIM, on ? 1 : 0);
     prefs.putUChar(NVS_KEY_CFG_REBOOT, 1);   // come straight back to WiFi (skip RF window)
     events.add(on ? "Sim-over-USB enabled" : "Sim-over-USB disabled");

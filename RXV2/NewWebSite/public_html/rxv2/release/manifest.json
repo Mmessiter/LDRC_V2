@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.810-simulator-switch-tells-the-truth",
+      "url": "https://messiter.com/rxv2/release/v0.9.810/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.810/littlefs.bin",
+      "fs_md5": "85735d1fffe9b59d7f7e502edb9716cb",
+      "notes": "On a simulator-interface board the Simulator switch could not turn simulator mode off - the role forces it on at every boot - yet the page said it had. It now offers the thing that was wanted instead: one tap makes the board a Rotorflight dongle. The receiver refuses the impossible setting plainly, and a board with no radios is no longer offered Bind."
+    },
+    {
       "name": "RXV2-0.9.809-same-icons-as-the-pages",
       "url": "https://messiter.com/rxv2/release/v0.9.809/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.809/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.799/littlefs.bin",
       "fs_md5": "c459a150e2ab94ce7496a0668135701f",
       "notes": "A deliberate Back up is no longer lost when the app happens to be sweeping already: the sweep in flight takes on the request, and one that arrives after the settings were frozen is still honoured. Before this, tapping Back up during the automatic sweep that follows every connection left the copy marked automatic, as though the pilot had never asked."
-    },
-    {
-      "name": "RXV2-0.9.798-automatic-says-so",
-      "url": "https://messiter.com/rxv2/release/v0.9.798/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.798/littlefs.bin",
-      "fs_md5": "4582345744d730824e6451949c49872d",
-      "notes": "Backups page: an automatic copy now says Automatic beside its date. Taking the label away made a copy the app had saved for itself look like a backup the pilot had made."
     }
   ],
   "rotorflight": {
