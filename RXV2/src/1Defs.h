@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.807-helicopter-joins-the-aeroplane";
+constexpr const char* FW_VERSION = "RXV2-0.9.808-better-helicopter";
 
 //*********************************************************************
 //  Auto-update manifest URLs

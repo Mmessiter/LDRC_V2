@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.808-better-helicopter",
+      "url": "https://messiter.com/rxv2/release/v0.9.808/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.808/littlefs.bin",
+      "fs_md5": "150aa37e65c22d2e427dc503e06ee0bf",
+      "notes": "The helicopter on the Receiver demo is redrawn as a filled silhouette - nose, tapering tail boom, swept fin, rotor and skids - which reads far better at icon size than the outline did."
+    },
+    {
       "name": "RXV2-0.9.807-helicopter-joins-the-aeroplane",
       "url": "https://messiter.com/rxv2/release/v0.9.807/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.807/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.797/littlefs.bin",
       "fs_md5": "5bee5300368c7ab377c6aa3b7480f05f",
       "notes": "Backups page: What's in it is now a filled pill that plainly invites a tap, and the date stands alone - only a backup you made on purpose carries a label."
-    },
-    {
-      "name": "RXV2-0.9.796-whats-in-a-backup",
-      "url": "https://messiter.com/rxv2/release/v0.9.796/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.796/littlefs.bin",
-      "fs_md5": "44fe391269e266bf8d550684f7d9bdda",
-      "notes": "The Backups page: tap any model to see what its backup holds, in the same plain lines the receiver's own Backup and restore page uses - PIDs banks 1 to 6, Servos 8 - so a glance says whether everything was saved."
     }
   ],
   "rotorflight": {

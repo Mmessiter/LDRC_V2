@@ -516,33 +516,51 @@ struct HomeMasthead: View {
     }
 }
 
-/// A helicopter in the same weight as the system symbols beside it — drawn,
-/// because the symbol set has no helicopter and a colour emoji would clash.
+/// A helicopter, drawn: the symbol set has none, and a colour emoji would
+/// clash with the white line icons beside it. A SILHOUETTE — stroked outlines
+/// turn to mush at 25 points, where a filled body still reads (Malcolm
+/// 2026-09-19, on the first attempt: "ok but not the best").
 struct HelicopterGlyph: View {
     var body: some View {
         Canvas { ctx, size in
             let w = size.width, h = size.height
-            let lw = max(1.3, w * 0.085)
-            let stroke = StrokeStyle(lineWidth: lw, lineCap: .round, lineJoin: .round)
-            var p = Path()
-            p.move(to: CGPoint(x: w * 0.04, y: h * 0.17))      // main rotor
-            p.addLine(to: CGPoint(x: w * 0.96, y: h * 0.17))
-            p.move(to: CGPoint(x: w * 0.44, y: h * 0.17))      // mast
-            p.addLine(to: CGPoint(x: w * 0.44, y: h * 0.33))
-            p.move(to: CGPoint(x: w * 0.60, y: h * 0.47))      // tail boom
-            p.addLine(to: CGPoint(x: w * 0.97, y: h * 0.42))
-            p.move(to: CGPoint(x: w * 0.92, y: h * 0.30))      // tail rotor
-            p.addLine(to: CGPoint(x: w * 0.99, y: h * 0.53))
-            p.move(to: CGPoint(x: w * 0.10, y: h * 0.90))      // skid
-            p.addLine(to: CGPoint(x: w * 0.64, y: h * 0.90))
-            p.move(to: CGPoint(x: w * 0.23, y: h * 0.70))      // skid legs
-            p.addLine(to: CGPoint(x: w * 0.20, y: h * 0.90))
-            p.move(to: CGPoint(x: w * 0.47, y: h * 0.70))
-            p.addLine(to: CGPoint(x: w * 0.50, y: h * 0.90))
-            ctx.stroke(p, with: .color(.white), style: stroke)
-            ctx.stroke(Path(ellipseIn: CGRect(x: w * 0.14, y: h * 0.33,
-                                              width: w * 0.48, height: h * 0.38)),
-                       with: .color(.white), style: stroke)
+            func pt(_ x: Double, _ y: Double) -> CGPoint { CGPoint(x: w * x, y: h * y) }
+            let white = GraphicsContext.Shading.color(.white)
+
+            // Body: nose at the left, tapering into the tail boom at the right.
+            var body = Path()
+            body.move(to: pt(0.07, 0.56))
+            body.addQuadCurve(to: pt(0.34, 0.36), control: pt(0.10, 0.38))
+            body.addQuadCurve(to: pt(0.56, 0.40), control: pt(0.46, 0.33))
+            body.addLine(to: pt(0.96, 0.47))
+            body.addLine(to: pt(0.96, 0.54))
+            body.addLine(to: pt(0.56, 0.58))
+            body.addQuadCurve(to: pt(0.07, 0.56), control: pt(0.30, 0.70))
+            body.closeSubpath()
+            ctx.fill(body, with: white)
+
+            // Tail fin, swept up from the end of the boom.
+            var fin = Path()
+            fin.move(to: pt(0.86, 0.47))
+            fin.addLine(to: pt(0.99, 0.24))
+            fin.addLine(to: pt(1.00, 0.33))
+            fin.addLine(to: pt(0.93, 0.50))
+            fin.closeSubpath()
+            ctx.fill(fin, with: white)
+
+            // Mast, main rotor and skids.
+            let bar = StrokeStyle(lineWidth: max(1.5, w * 0.085), lineCap: .round)
+            var rotor = Path()
+            rotor.move(to: pt(0.03, 0.16)); rotor.addLine(to: pt(0.93, 0.16))
+            ctx.stroke(rotor, with: white, style: bar)
+            var mast = Path()
+            mast.move(to: pt(0.44, 0.17)); mast.addLine(to: pt(0.44, 0.36))
+            ctx.stroke(mast, with: white, style: StrokeStyle(lineWidth: max(1.2, w * 0.07)))
+            var skids = Path()
+            skids.move(to: pt(0.06, 0.90)); skids.addLine(to: pt(0.64, 0.90))
+            skids.move(to: pt(0.22, 0.66)); skids.addLine(to: pt(0.18, 0.90))
+            skids.move(to: pt(0.46, 0.66)); skids.addLine(to: pt(0.50, 0.90))
+            ctx.stroke(skids, with: white, style: bar)
         }
         .accessibilityLabel("helicopter")
     }
@@ -562,7 +580,7 @@ struct HomeTile: View {
         HStack(spacing: 16) {
             if withHelicopter {
                 HStack(spacing: 5) {
-                    HelicopterGlyph().frame(width: 25, height: 25)
+                    HelicopterGlyph().frame(width: 27, height: 27)
                     Image(systemName: icon).font(.callout)
                 }
                 .frame(width: 52)
