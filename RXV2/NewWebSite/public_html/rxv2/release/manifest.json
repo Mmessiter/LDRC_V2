@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.785-full-colour-and-three-demos",
+      "url": "https://messiter.com/rxv2/release/v0.9.785/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.785/littlefs.bin",
+      "fs_md5": "c64b14d20a62fc825ea06cf257bbace0",
+      "notes": "The app's front screens: the flying-field photograph in full colour behind every one, the title centred as LockDown Radio Control RXV2, and a help page of its own on Connect, Reviews, Backups and Demos. The Demos page now offers all three roles one board can take - Receiver, Rotorflight dongle and Simulator interface - and its help explains that they are the same board doing different jobs."
+    },
+    {
       "name": "RXV2-0.9.784-one-word-doors",
       "url": "https://messiter.com/rxv2/release/v0.9.784/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.784/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.774/littlefs.bin",
       "fs_md5": "c2196720a90ef8a30d3ae12ec4a9f0e6",
       "notes": "Simulator interface: View channels now sees the wire's channels as live (age from the last decoded frame) instead of reporting no RC signal beside moving values."
-    },
-    {
-      "name": "RXV2-0.9.773-census-pullup",
-      "url": "https://messiter.com/rxv2/release/v0.9.773/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.773/littlefs.bin",
-      "fs_md5": "c2196720a90ef8a30d3ae12ec4a9f0e6",
-      "notes": "Simulator interface wire finder: the spare pads are held UP, not down, between checks - with a crossed lead the dongle's D6 sits on the receiver's own input, and a pull-down there was a permanent break."
     }
   ],
   "rotorflight": {

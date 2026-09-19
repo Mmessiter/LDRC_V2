@@ -236,8 +236,17 @@
     try { localStorage.setItem("rxv2DemoState", JSON.stringify(demoState)); }
     catch (e) {}
   }
-  // Which demo: the app says so on every page it serves (window.__demoDongle).
-  if (typeof window.__demoDongle === "boolean") { demoState.dongle = window.__demoDongle; saveDemoState(); }
+  // Which demo: the app says so on every page it serves (window.__demoRole,
+  // one of "receiver" | "dongle" | "simif"). Older builds said __demoDongle.
+  if (typeof window.__demoRole === "string") {
+    demoState.role   = window.__demoRole;
+    demoState.dongle = (demoState.role === "dongle");
+    saveDemoState();
+  } else if (typeof window.__demoDongle === "boolean") {
+    demoState.dongle = window.__demoDongle;
+    demoState.role   = demoState.dongle ? "dongle" : "receiver";
+    saveDemoState();
+  }
 
   function J(obj, status) {
     return Promise.resolve(new Response(JSON.stringify(obj), {
@@ -379,6 +388,15 @@
         if (!demoState.name) { st.info.name = "Demo dongle"; st.info.hostname = "demo-dongle"; }
         if (st.fcinfo) st.fcinfo.detected = true;
         if (st.rf) { st.rf.last_pkt_ms = -1; st.rf.packets = 0; st.rf.radios_count = 0; st.rf.radios_present = [false, false, false]; }   // no transceivers: the dongle page's role card keys off this
+        if (st.bind) st.bind.bound = false;
+      } else if (demoState.role === "simif") {       // the simulator-interface demo: a receiver on the wire, a joystick on the computer
+        st.dongle = false; st.sim = true; st.dongle_mode = 3;
+        st.sim_if = true; st.sim_if_link = "CRSF"; st.sim_if_up = true;
+        st.sim_if_ch = 16; st.sim_if_bytes = 418233;
+        st.usb = { host: false, device: true, vid: "303a", pid: "1001", cli: false };
+        if (!demoState.name) { st.info.name = "Demo simulator interface"; st.info.hostname = "demo-simif"; }
+        if (st.fcinfo) st.fcinfo.detected = false;
+        if (st.rf) { st.rf.last_pkt_ms = -1; st.rf.packets = 0; st.rf.radios_count = 0; st.rf.radios_present = [false, false, false]; }
         if (st.bind) st.bind.bound = false;
       }
       st.net.rf_only = !!demoState.rfOnly;

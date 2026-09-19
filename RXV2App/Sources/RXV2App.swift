@@ -25,7 +25,7 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var backgroundedAt: Date? = nil
     @State private var demoMode = false
-    @State private var demoDongle = false     // which demo: receiver (false) or dongle (true)
+    @State private var demoRole = "receiver"  // which demo: receiver | dongle | simif
     @State private var reviewMode = false
     @State private var sessionStarted = false
     @State private var txOnNoticeShown = false
@@ -93,7 +93,7 @@ struct RootView: View {
                         }
                     }
             default:
-                ScannerView(demoMode: $demoMode, reviewMode: $reviewMode, demoDongle: $demoDongle)
+                ScannerView(demoMode: $demoMode, reviewMode: $reviewMode, demoRole: $demoRole)
                     .onAppear {
                         sessionStarted = false
                         // "--demo" launch argument: straight into demo mode (website screenshots)
@@ -151,7 +151,7 @@ struct RootView: View {
         }
         .fullScreenCover(isPresented: $demoMode) {
             ZStack(alignment: .topTrailing) {
-                WebScreen(link: link, demo: true, demoDongle: demoDongle)
+                WebScreen(link: link, demo: true, demoRole: demoRole)
                     .ignoresSafeArea()
                 Button {
                     demoMode = false
@@ -376,7 +376,7 @@ struct ScannerView: View {
     @EnvironmentObject var link: BleLink
     @Binding var demoMode: Bool
     @Binding var reviewMode: Bool
-    @Binding var demoDongle: Bool
+    @Binding var demoRole: String
     /// The "?" every other screen has (Malcolm 2026-09-19).
     @State private var showHelp = false
 
@@ -387,6 +387,17 @@ struct ScannerView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 14) {
+                // The app's name, centred on a solid chip like every page's
+                // heading (Malcolm 2026-09-19).
+                Text("LockDown Radio Control RXV2")
+                    .font(.title3.weight(.medium))
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12).padding(.horizontal, 16)
+                    .background(Color(.secondarySystemGroupedBackground),
+                                in: RoundedRectangle(cornerRadius: 14))
+                    .padding(.bottom, 2)
+
                 if case .connecting(let n) = link.state {
                     noticeCard("Connecting to \(n)…", systemImage: "antenna.radiowaves.left.and.right")
                 } else if case .failed(let m) = link.state {
@@ -415,7 +426,7 @@ struct ScannerView: View {
                              title: "Backups")
                 }
                 NavigationLink {
-                    DemosView(demoMode: $demoMode, demoDongle: $demoDongle)
+                    DemosView(demoMode: $demoMode, demoRole: $demoRole)
                 } label: {
                     HomeTile(icon: "theatermasks",
                              tint: Color(red: 0.42, green: 0.56, blue: 0.69),
@@ -425,7 +436,8 @@ struct ScannerView: View {
             .padding(18)
         }
         .background(ScannerBackdrop())
-        .navigationTitle("LDRC RXV2")
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button { showHelp = true } label: {
@@ -434,7 +446,7 @@ struct ScannerView: View {
                 .accessibilityLabel("Help")
             }
         }
-        .sheet(isPresented: $showHelp) { ScannerHelpView() }
+        .sheet(isPresented: $showHelp) { ScannerHelpView(page: .home) }
         .onAppear { link.stopScan() }
     }
 
@@ -485,6 +497,7 @@ struct ConnectListView: View {
     // last used model should only happen AFTER hitting connect").
     @State private var autoTarget: String? = nil
     @State private var autoWork: DispatchWorkItem? = nil
+    @State private var showHelp = false
 
     private func cancelAuto() {
         autoWork?.cancel(); autoWork = nil; autoTarget = nil
@@ -579,6 +592,13 @@ struct ConnectListView: View {
         .background(ScannerBackdrop())
         .navigationTitle("Connect")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button { showHelp = true } label: { Image(systemName: "questionmark.circle").font(.title3) }
+                    .accessibilityLabel("Help")
+            }
+        }
+        .sheet(isPresented: $showHelp) { ScannerHelpView(page: .connect) }
         .photosPicker(isPresented: $showPhotoPicker, selection: $pickerItem, matching: .images)
         .onChange(of: pickerItem) { item in
             guard let item, let name = photoFor else { return }
@@ -625,6 +645,7 @@ struct ConnectListView: View {
 /// REVIEWS — one recording per model, made automatically at every connection.
 struct ReviewsListView: View {
     @Binding var reviewMode: Bool
+    @State private var showHelp = false
     @State private var sessionRev = 0
     @State private var photoRev = 0
 
@@ -676,11 +697,19 @@ struct ReviewsListView: View {
         .background(ScannerBackdrop())
         .navigationTitle("Reviews")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button { showHelp = true } label: { Image(systemName: "questionmark.circle").font(.title3) }
+                    .accessibilityLabel("Help")
+            }
+        }
+        .sheet(isPresented: $showHelp) { ScannerHelpView(page: .reviews) }
     }
 }
 
 /// BACKUPS — what this phone has saved for each model, and when.
 struct BackupsListView: View {
+    @State private var showHelp = false
     @State private var rev = 0
 
     var body: some View {
@@ -718,36 +747,63 @@ struct BackupsListView: View {
         .background(ScannerBackdrop())
         .navigationTitle("Backups")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button { showHelp = true } label: { Image(systemName: "questionmark.circle").font(.title3) }
+                    .accessibilityLabel("Help")
+            }
+        }
+        .sheet(isPresented: $showHelp) { ScannerHelpView(page: .backups) }
     }
 }
 
 /// DEMOS — the same pages on canned data, for anyone with no hardware.
 struct DemosView: View {
     @Binding var demoMode: Bool
-    @Binding var demoDongle: Bool
+    @Binding var demoRole: String
+    @State private var showHelp = false
+
+    private func play(_ role: String) {
+        demoRole = role
+        BleSchemeHandler.demoRole = role
+        demoMode = true
+    }
 
     var body: some View {
-        List {
-            Section {
-                Button {
-                    demoDongle = false; BleSchemeHandler.demoDongle = false; demoMode = true
-                } label: {
-                    Label("The receiver demo — a model in flight", systemImage: "theatermasks")
+        ScrollView {
+            VStack(spacing: 14) {
+                Button { play("receiver") } label: {
+                    HomeTile(icon: "airplane", tint: Color(red: 0.42, green: 0.67, blue: 0.37),
+                             title: "Receiver")
                 }
-                Button {
-                    demoDongle = true; BleSchemeHandler.demoDongle = true; demoMode = true
-                } label: {
-                    Label("The dongle demo — the app on a Rotorflight dongle", systemImage: "theatermasks")
+                Button { play("dongle") } label: {
+                    HomeTile(icon: "cable.connector", tint: Color(red: 0.37, green: 0.63, blue: 0.60),
+                             title: "Rotorflight dongle")
                 }
-            } footer: {
-                Text("The same pages on canned data — nothing to connect, nothing to set up.")
+                Button { play("simif") } label: {
+                    HomeTile(icon: "gamecontroller", tint: Color(red: 0.42, green: 0.56, blue: 0.69),
+                             title: "Simulator interface")
+                }
+                Text("The same pages on canned data — nothing to connect.")
+                    .font(.footnote)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+                    .padding(10)
+                    .background(Color(.secondarySystemGroupedBackground),
+                                in: RoundedRectangle(cornerRadius: 10))
             }
-            .listRowBackground(Color(.secondarySystemGroupedBackground))
+            .padding(18)
         }
-        .scrollContentBackground(.hidden)
         .background(ScannerBackdrop())
         .navigationTitle("Demos")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button { showHelp = true } label: { Image(systemName: "questionmark.circle").font(.title3) }
+                    .accessibilityLabel("Help")
+            }
+        }
+        .sheet(isPresented: $showHelp) { ScannerHelpView(page: .demos) }
     }
 }
 
@@ -768,15 +824,18 @@ struct ScannerBackdrop: View {
         ZStack {
             Color(.systemGroupedBackground)
             if let img = Self.photo {
-                Image(uiImage: img).resizable().scaledToFill()
+                Image(uiImage: img).resizable().scaledToFill().opacity(0.92)
             }
-            // systemBackground, not white: the wash follows light and dark.
-            // Stronger than the first attempt (Malcolm 2026-09-19: "the wash
-            // is too faint") — the photograph is a backdrop, not the subject.
-            LinearGradient(colors: [Color(.systemBackground).opacity(0.92),
-                                    Color(.systemBackground).opacity(0.86),
-                                    Color(.systemBackground).opacity(0.94)],
-                           startPoint: .top, endPoint: .bottom)
+            // The web pages' own vignette (style.css .bg-wash) and nothing
+            // more: bright at the top so headings read against the sky,
+            // darker at the foot so cards read against the meadow. The
+            // photograph stays in FULL COLOUR (Malcolm 2026-09-19).
+            RadialGradient(colors: [Color.white.opacity(0.20), .clear],
+                           center: UnitPoint(x: 0.5, y: 0.08),
+                           startRadius: 0, endRadius: 620)
+            RadialGradient(colors: [Color(red: 0.18, green: 0.27, blue: 0.35).opacity(0.18), .clear],
+                           center: UnitPoint(x: 0.5, y: 1.0),
+                           startRadius: 0, endRadius: 700)
         }
         .ignoresSafeArea()
     }
@@ -785,94 +844,177 @@ struct ScannerBackdrop: View {
 /// The scanner's "?" — the first screen now explains itself as fully as every
 /// other page does, instead of carrying blocks of small print.
 struct ScannerHelpView: View {
+    enum Page { case home, connect, reviews, backups, demos }
+    let page: Page
     @Environment(\.dismiss) private var dismiss
 
-    private struct Topic: Identifiable {
+    struct Topic: Identifiable {
         let id = UUID()
         let icon: String
         let title: String
         let body: String
     }
 
-    private let topics: [Topic] = [
-        .init(icon: "antenna.radiowaves.left.and.right",
-              title: "Getting a model to appear",
-              body: "Power the model with the transmitter OFF, so the board's own "
-                  + "config radios come up — the same rule as the WiFi portal. A dongle "
-                  + "has no transmitter of its own, so just power the model it is plugged "
-                  + "into. Bring the phone within a few metres. The list refreshes by "
-                  + "itself; pull down to search again."),
-        .init(icon: "wifi",
-              title: "Signal strength",
-              body: "Each row says how strong the signal is. Below about −85 dBm a "
-                  + "connection half-forms and everything afterwards is slow, so the app "
-                  + "asks before trying rather than leaving you to guess. Walking a few "
-                  + "steps closer is usually all it takes."),
-        .init(icon: "clock.arrow.circlepath",
-              title: "The model you used last",
-              body: "It carries a small clock. When it is the only board in range the app "
-                  + "connects to it by itself; with more than one in range the list waits "
-                  + "for you to choose. Going back to this screen disarms that until the "
-                  + "next launch."),
-        .init(icon: "photo",
-              title: "Photographs",
-              body: "Press and hold any row to give that board a photograph of its model — "
-                  + "much quicker to recognise than a name when several are similar."),
-        .init(icon: "clock",
-              title: "“Review” — what it is",
-              body: "A recording of a model's last connection, made for you automatically: "
-                  + "the flights and the black box, and every Rotorflight setting as it was. "
-                  + "It lets you sit indoors and go through a model with everything switched "
-                  + "off. One per model, kept until you swipe it away — connecting a "
-                  + "different model never erases another's. It can also put a model's tuning "
-                  + "back, which is the safety net if no backup was ever made."),
-        .init(icon: "tray.and.arrow.down",
-              title: "A backup is a different thing",
-              body: "A backup is one you make on purpose, on the model's Backup & restore "
-                  + "page. It holds the Rotorflight settings only — no flight data — lives on "
-                  + "the receiver, and can be sent to yourself as a file. Use a backup before "
-                  + "you change anything; use a review to look back at what happened."),
-        .init(icon: "theatermasks",
-              title: "The demos",
-              body: "The same pages driven by canned data, with no hardware at all: one "
-                  + "shows the app flying a model, the other shows it on a Rotorflight "
-                  + "dongle. They appear when nothing of your own is within reach."),
-        .init(icon: "globe",
-              title: "No phone? No problem",
-              body: "Everything here is also in the receiver's own WiFi pages, in any web "
-                  + "browser, exactly as before. The app simply carries the same pages over "
-                  + "Bluetooth so no network switching is needed at the field."),
-    ]
+    private var heading: String {
+        switch page {
+        case .home:    return "About this app"
+        case .connect: return "About Connect"
+        case .reviews: return "About Reviews"
+        case .backups: return "About Backups"
+        case .demos:   return "About the demos"
+        }
+    }
+
+    private var intro: String {
+        switch page {
+        case .home:
+            return "Four doors: Connect to a model, browse a Review of an earlier session, see the Backups this phone holds, or try a Demo with no hardware at all."
+        case .connect:
+            return "Find a LockDown receiver or dongle over Bluetooth and open its pages."
+        case .reviews:
+            return "A recording of a model's last connection, kept for you automatically."
+        case .backups:
+            return "The Rotorflight settings this phone has saved for each model."
+        case .demos:
+            return "The whole app on canned data — every page, nothing connected."
+        }
+    }
+
+    private var topics: [Topic] {
+        switch page {
+        case .home: return [
+            .init(icon: "antenna.radiowaves.left.and.right", title: "Connect",
+                  body: "Searches for receivers and dongles nearby and opens the one you "
+                      + "choose. The model you used last connects by itself once you are in "
+                      + "there, if it is the only one in range."),
+            .init(icon: "clock", title: "Reviews",
+                  body: "One recording per model, made at every connection: the flights and "
+                      + "the settings as they were, to go through indoors with everything "
+                      + "switched off."),
+            .init(icon: "tray.and.arrow.down", title: "Backups",
+                  body: "What this phone has saved for each model, and when — settings you "
+                      + "can put back if a change goes wrong."),
+            .init(icon: "theatermasks", title: "Demos",
+                  body: "The same pages driven by canned data: a receiver in a model, a "
+                      + "Rotorflight dongle, or a simulator interface. Nothing to buy first."),
+            .init(icon: "globe", title: "No phone needed at all",
+                  body: "Everything here is also in the receiver's own WiFi pages, in any web "
+                      + "browser. The app simply carries the same pages over Bluetooth, so "
+                      + "there is no network to switch at the field."),
+        ]
+        case .connect: return [
+            .init(icon: "power", title: "Getting a model to appear",
+                  body: "Power the model with the transmitter OFF, so the board's own config "
+                      + "radios come up — the same rule as the WiFi portal. A dongle has no "
+                      + "transmitter of its own, so just power the model it is plugged into. "
+                      + "Bring the phone within a few metres."),
+            .init(icon: "wifi", title: "Signal strength",
+                  body: "Each row says how strong the signal is. Below about −85 dBm a "
+                      + "connection half-forms and everything afterwards is slow, so the app "
+                      + "asks before trying rather than leaving you to guess."),
+            .init(icon: "clock.arrow.circlepath", title: "The model you used last",
+                  body: "It carries a small clock, and connects by itself when it is the only "
+                      + "board in range. With more than one in range the list waits for you "
+                      + "to choose."),
+            .init(icon: "photo", title: "Photographs",
+                  body: "Press and hold any row to give that board a photograph of its "
+                      + "model — quicker to recognise than a name when several are similar."),
+        ]
+        case .reviews: return [
+            .init(icon: "clock", title: "What a review holds",
+                  body: "The flights and the black box, and every Rotorflight setting as it "
+                      + "was at that connection. Enough to sit indoors and go through a "
+                      + "model with everything switched off."),
+            .init(icon: "square.stack.3d.up", title: "One per model",
+                  body: "Connecting a different model never erases another's. A review is "
+                      + "kept until you swipe it away."),
+            .init(icon: "lifepreserver", title: "The safety net",
+                  body: "A review can also put a model's tuning back — which is what saves "
+                      + "the day when no backup was ever made."),
+            .init(icon: "tray.and.arrow.down", title: "Not a backup",
+                  body: "A backup is one you make on purpose, holds the settings only, and "
+                      + "is what you should take before changing anything. A review is a "
+                      + "record of what happened."),
+        ]
+        case .backups: return [
+            .init(icon: "tray.and.arrow.down", title: "What a backup is",
+                  body: "Every Rotorflight setting the model had when you tapped Back up: "
+                      + "PIDs, rates, governor, servos, the lot. No flight data."),
+            .init(icon: "iphone", title: "Where it lives",
+                  body: "Here, on the phone — one per model, so it survives anything that "
+                      + "happens to the model or its card. You can also send one to yourself "
+                      + "as a file and open it again later."),
+            .init(icon: "plus.circle", title: "Making one",
+                  body: "Connect to the model, open Rotorflight → Backup & restore, and tap "
+                      + "Back up. Do it before you change anything, and after a session you "
+                      + "are happy with."),
+            .init(icon: "arrow.uturn.backward", title: "Putting it back",
+                  body: "On the same page, with the transmitter off and blades off. The app "
+                      + "writes each setting and reads it back to check it landed."),
+            .init(icon: "checkmark.seal", title: "Your backup, or ours",
+                  body: "“Your backup” is one you asked for; it is never overwritten by the "
+                      + "copy the app keeps for itself at each connection."),
+        ]
+        case .demos: return [
+            .init(icon: "cpu", title: "One board, three jobs",
+                  body: "Every demo here is the same little XIAO ESP32-S3 running the same "
+                      + "firmware. What it does depends only on what is fitted to it and "
+                      + "which role you choose in its settings — not on buying a different "
+                      + "product."),
+            .init(icon: "airplane", title: "Receiver",
+                  body: "With transceivers fitted it flies the model: it takes your "
+                      + "transmitter's signal and drives the flight controller, records the "
+                      + "flight, and gives you every Rotorflight page from your phone."),
+            .init(icon: "cable.connector", title: "Rotorflight dongle",
+                  body: "The same board with no transceivers, plugged into a flight "
+                      + "controller. Your own radio and receiver still fly the model; the "
+                      + "dongle just gives the app to any Rotorflight helicopter."),
+            .init(icon: "gamecontroller", title: "Simulator interface",
+                  body: "The same bare board again, with a receiver wired to it, turning "
+                      + "that receiver into a USB joystick for RealFlight or neXt. It works "
+                      + "out for itself whether the receiver speaks CRSF, SBUS, IBUS or PPM."),
+            .init(icon: "sparkles", title: "And a receiver does all three",
+                  body: "A LockDown receiver needs no dongle for the app, and flies a "
+                      + "simulator on its own over USB. The other two roles are for spare "
+                      + "boards and for people flying someone else's radio."),
+        ]
+        }
+    }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
-                    Text("This screen lists the LockDown receivers and dongles the phone can "
-                       + "hear, and the recordings it has kept of earlier sessions.")
+                    Text(intro)
                         .font(.callout)
-                        .foregroundStyle(.secondary)
-                    Text("App version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "")")
-                        .font(.footnote).foregroundStyle(.secondary)
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color(.secondarySystemGroupedBackground),
+                                    in: RoundedRectangle(cornerRadius: 12))
                     ForEach(topics) { t in
                         VStack(alignment: .leading, spacing: 6) {
-                            Label(t.title, systemImage: t.icon)
-                                .font(.headline)
-                            Text(t.body)
-                                .font(.callout)
+                            Label(t.title, systemImage: t.icon).font(.headline)
+                            Text(t.body).font(.callout)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color(.secondarySystemGroupedBackground),
+                                    in: RoundedRectangle(cornerRadius: 12))
+                    }
+                    if page == .home {
+                        Text("App version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "")")
+                            .font(.footnote).foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity)
                     }
                 }
-                .padding(20)
+                .padding(18)
             }
             .background(ScannerBackdrop())
-            .navigationTitle("About this screen")
+            .navigationTitle(heading)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                }
+                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
             }
         }
     }

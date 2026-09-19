@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.784-one-word-doors";
+constexpr const char* FW_VERSION = "RXV2-0.9.785-full-colour-and-three-demos";
 
 //*********************************************************************
 //  Auto-update manifest URLs

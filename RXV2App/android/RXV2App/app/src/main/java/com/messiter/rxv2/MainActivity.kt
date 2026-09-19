@@ -33,10 +33,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var root: FrameLayout
     private var webView: WebView? = null
     private var demoMode = false
-    private var demoDongle = false       // which demo: receiver (false) or dongle (true)
-    private var demoDongleBtn: TextView? = null
+    private var demoRole = "receiver"    // which demo: receiver | dongle | simif
     private var reviewMode = false   // armchair review of the recorded last session
-    private var demoBtn: TextView? = null
 
     // Fake same-origin the WebView believes it is talking to. Every request
     // to this host is intercepted; the network is never actually touched.
@@ -276,9 +274,10 @@ class MainActivity : AppCompatActivity() {
     private fun backdrop() {
         runCatching {
             val bmp = assets.open("webroot/flying-field.jpg").use { android.graphics.BitmapFactory.decodeStream(it) }
-            root.background = android.graphics.drawable.LayerDrawable(arrayOf(
-                android.graphics.drawable.BitmapDrawable(resources, bmp).apply { gravity = android.view.Gravity.FILL },
-                android.graphics.drawable.ColorDrawable(0xE6FFFFFF.toInt())))
+            // FULL COLOUR (Malcolm 2026-09-19) — the text that sits on it has
+            // its own solid chip, exactly as the web pages do.
+            root.background = android.graphics.drawable.BitmapDrawable(resources, bmp)
+                .apply { gravity = android.view.Gravity.FILL }
         }
     }
 
@@ -310,6 +309,16 @@ class MainActivity : AppCompatActivity() {
         col.addView(row)
     }
 
+    /** Standalone words sit on a solid chip, never straight on the photograph. */
+    private fun chip(text: String): TextView = TextView(this).apply {
+        this.text = text
+        textSize = 13f; setTextColor(SUB); setPadding(34, 22, 34, 22)
+        setLineSpacing(5f, 1.0f)
+        background = android.graphics.drawable.GradientDrawable().apply {
+            cornerRadius = 20f; setColor(0xFFF2F6F8.toInt())
+        }
+    }
+
     /** A big coloured button in the app's usual style. */
     private fun homeTile(col: LinearLayout, icon: String, colour: Int,
                          title: String, go: () -> Unit) {
@@ -335,7 +344,17 @@ class MainActivity : AppCompatActivity() {
         root.removeAllViews()
         backdrop()
         val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        pageHeader(col, "LDRC RXV2", back = false)
+        pageHeader(col, "", back = false)
+        col.addView(TextView(this).apply {
+            text = "LockDown Radio Control RXV2"
+            textSize = 20f; setTextColor(INK)
+            gravity = android.view.Gravity.CENTER
+            setPadding(36, 26, 36, 26)
+            background = android.graphics.drawable.GradientDrawable().apply {
+                cornerRadius = 24f; setColor(0xFFF2F6F8.toInt())
+            }
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                                     ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(40, 0, 40, 18) })
         autoBanner = TextView(this).apply {
             visibility = View.GONE
             textSize = 14f; setPadding(40, 24, 40, 24)
@@ -363,10 +382,9 @@ class MainActivity : AppCompatActivity() {
         backdrop()
         val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         pageHeader(col, "Connect", back = true)
-        col.addView(TextView(this).apply {
-            text = "Transmitter OFF while you connect — a dongle has none, so just power the model."
-            setPadding(40, 0, 40, 18); setTextColor(SUB); textSize = 13f
-        })
+        col.addView(chip("Transmitter OFF while you connect — a dongle has none, so just power the model."),
+                    LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                                              ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(40, 0, 40, 14) })
         val list = ListView(this).apply { divider = null; dividerHeight = 0 }
         scannerAdapter = ScannerAdapter()
         list.adapter = scannerAdapter
@@ -403,10 +421,9 @@ class MainActivity : AppCompatActivity() {
         }
         col.addView(list, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
-        col.addView(TextView(this).apply {
-            text = "Searching…  Within a few metres, with the transmitter off."
-            setPadding(40, 16, 40, 40); setTextColor(SUB); textSize = 13f
-        })
+        col.addView(chip("Searching…  Within a few metres, with the transmitter off."),
+                    LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                                              ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(40, 14, 40, 36) })
         root.addView(col)
         startScanIfPermitted()
         scannerAdapter?.submit(latestFound)   // whatever is already in sight
@@ -422,10 +439,9 @@ class MainActivity : AppCompatActivity() {
         SessionCache.init(this)
         val sessions = SessionCache.savedSessions()
         if (sessions.isEmpty()) {
-            col.addView(TextView(this).apply {
-                text = "Nothing recorded yet. Connect to a model and one is kept for you."
-                setPadding(40, 8, 40, 28); setTextColor(SUB); textSize = 14f
-            })
+            col.addView(chip("Nothing recorded yet. Connect to a model and one is kept for you."),
+                        LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                                                  ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(40, 14, 40, 28) })
         }
         for ((model, atMs) in sessions) {
             val t = if (atMs > 0) "\nLast session · " + friendlyWhen(atMs) else ""
@@ -457,12 +473,11 @@ class MainActivity : AppCompatActivity() {
             }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                                          ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(40, 8, 40, 8) })
         }
-        col.addView(TextView(this).apply {
-            text = "The flights and the settings as they were, to browse with everything " +
+        col.addView(chip("The flights and the settings as they were, to browse with everything " +
                    "switched off. Press and hold a model to delete its recording. A backup " +
-                   "is a different thing."
-            textSize = 12f; setPadding(40, 18, 40, 28); setTextColor(SUB)
-        })
+                   "is a different thing."),
+                    LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                                              ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(40, 14, 40, 28) })
         root.addView(ScrollView(this).apply { addView(col) })
     }
 
@@ -476,11 +491,10 @@ class MainActivity : AppCompatActivity() {
         SessionCache.init(this)
         val backups = SessionCache.savedBackups()
         if (backups.isEmpty()) {
-            col.addView(TextView(this).apply {
-                text = "No backups yet. Open a model, go to Rotorflight → Backup & restore, " +
-                       "and tap Back up: the settings are kept here on the phone."
-                setPadding(40, 8, 40, 28); setTextColor(SUB); textSize = 14f
-            })
+            col.addView(chip("No backups yet. Open a model, go to Rotorflight → Backup & restore, " +
+                       "and tap Back up: the settings are kept here on the phone."),
+                        LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                                                  ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(40, 14, 40, 28) })
         }
         for (b in backups) {
             col.addView(TextView(this).apply {
@@ -497,47 +511,29 @@ class MainActivity : AppCompatActivity() {
             }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                                          ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(40, 8, 40, 8) })
         }
-        col.addView(TextView(this).apply {
-            text = "Rotorflight settings only — no flight data. Connect to the model and use " +
-                   "Backup & restore to put them back, or to send a backup to yourself as a file."
-            textSize = 12f; setPadding(40, 18, 40, 28); setTextColor(SUB)
-        })
+        col.addView(chip("Rotorflight settings only — no flight data. Connect to the model and use " +
+                   "Backup & restore to put them back, or to send a backup to yourself as a file."),
+                    LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                                              ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(40, 14, 40, 28) })
         root.addView(ScrollView(this).apply { addView(col) })
     }
 
-    /** DEMOS — the same pages on canned data, for anyone with no hardware. */
+    /** DEMOS — one board, three jobs (Malcolm 2026-09-19). */
     private fun showDemos() {
         homePage = "demos"
         root.removeAllViews()
         backdrop()
         val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         pageHeader(col, "Demos", back = true)
-        demoBtn = TextView(this).apply {
-            text = "🎭  The receiver demo — a model in flight"
-            textSize = 15f; setPadding(40, 28, 40, 28)
-            setBackgroundColor(0xFF1E293B.toInt()); setTextColor(0xFF7DD3FC.toInt())
-            setOnClickListener { demoDongle = false; demoMode = true; showWeb() }
-        }
-        col.addView(demoBtn, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                                                       ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(40, 8, 40, 8) })
-        demoDongleBtn = TextView(this).apply {
-            text = "🎭  The dongle demo — the app on a Rotorflight dongle"
-            textSize = 15f; setPadding(40, 28, 40, 28)
-            setBackgroundColor(0xFF1E293B.toInt()); setTextColor(0xFF7DD3FC.toInt())
-            setOnClickListener { demoDongle = true; demoMode = true; showWeb() }
-        }
-        col.addView(demoDongleBtn, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                                                            ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(40, 8, 40, 8) })
-        col.addView(TextView(this).apply {
-            text = "The same pages on canned data — nothing to connect, nothing to set up."
-            textSize = 12f; setPadding(40, 18, 40, 28); setTextColor(SUB)
-        })
+        homeTile(col, "✈️", 0xFF6CAB5E.toInt(), "Receiver") { demoRole = "receiver"; demoMode = true; showWeb() }
+        homeTile(col, "🔌", 0xFF5FA099.toInt(), "Rotorflight dongle") { demoRole = "dongle"; demoMode = true; showWeb() }
+        homeTile(col, "🎮", 0xFF6C8EB0.toInt(), "Simulator interface") { demoRole = "simif"; demoMode = true; showWeb() }
+        col.addView(chip("The same pages on canned data — nothing to connect."),
+                    LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                                              ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(40, 14, 40, 28) })
         root.addView(col)
     }
 
-    // The scanner's own help — the first screen now explains itself as fully
-    // as every other page does, instead of carrying blocks of small print
-    // (Malcolm 2026-09-19). Same words as the iOS sheet.
     private var helpReturn = "home"
     private fun helpBack() {
         when (helpReturn) {
@@ -550,74 +546,128 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showScannerHelp() {
-        val html = """
-            <p>This screen lists the LockDown receivers and dongles the phone can hear,
-            and the recordings it has kept of earlier sessions.</p>
-
-            <p><b>Getting a model to appear</b><br>
-            Power the model with the transmitter OFF, so the board's own config radios
-            come up &mdash; the same rule as the WiFi portal. A dongle has no transmitter
-            of its own, so just power the model it is plugged into. Bring the phone within
-            a few metres.</p>
-
-            <p><b>Signal strength</b><br>
-            Each row says how strong the signal is. Below about &minus;85&nbsp;dBm a
-            connection half-forms and everything afterwards is slow, so the app asks before
-            trying rather than leaving you to guess. Walking a few steps closer is usually
-            all it takes.</p>
-
-            <p><b>The model you used last</b><br>
-            When it is the only board in range the app connects to it by itself; with more
-            than one in range the list waits for you to choose.</p>
-
-            <p><b>Photographs</b><br>
-            Press and hold any row to give that board a photograph of its model &mdash;
-            much quicker to recognise than a name when several are similar.</p>
-
-            <p><b>&ldquo;Review&rdquo; &mdash; what it is</b><br>
-            A recording of a model's last connection, made for you automatically: the
-            flights and the black box, and every Rotorflight setting as it was. It lets you
-            sit indoors and go through a model with everything switched off. One per model,
-            kept until you delete it &mdash; connecting a different model never erases
-            another's. It can also put a model's tuning back, which is the safety net if no
-            backup was ever made.</p>
-
-            <p><b>A backup is a different thing</b><br>
-            A backup is one you make on purpose, on the model's Backup &amp; restore page.
-            It holds the Rotorflight settings only &mdash; no flight data &mdash; lives on
-            the receiver, and can be sent to yourself as a file. Use a backup before you
-            change anything; use a review to look back at what happened.</p>
-
-            <p><b>The demos</b><br>
-            The same pages driven by canned data, with no hardware at all: one shows the app
-            flying a model, the other shows it on a Rotorflight dongle. They appear when
-            nothing of your own is within reach.</p>
-
-            <p><b>No phone? No problem</b><br>
-            Everything here is also in the receiver's own WiFi pages, in any web browser,
-            exactly as before. The app simply carries the same pages over Bluetooth so no
-            network switching is needed at the field.</p>
-        """.trimIndent()
-        val tv = TextView(this).apply {
-            text = android.text.Html.fromHtml(html, android.text.Html.FROM_HTML_MODE_COMPACT)
-            textSize = 14f; setPadding(48, 24, 48, 24); setTextColor(INK)
-            setLineSpacing(6f, 1.0f)
+        val forPage = if (homePage == "help") helpReturn else homePage
+        val heading = when (forPage) {
+            "connect" -> "About Connect"
+            "reviews" -> "About Reviews"
+            "backups" -> "About Backups"
+            "demos"   -> "About the demos"
+            else      -> "About this app"
         }
+        val html = when (forPage) {
+            "connect" -> """
+                <p>Find a LockDown receiver or dongle over Bluetooth and open its pages.</p>
+                <p><b>Getting a model to appear</b><br>
+                Power the model with the transmitter OFF, so the board&#39;s own config radios come
+                up &mdash; the same rule as the WiFi portal. A dongle has no transmitter of its own,
+                so just power the model it is plugged into. Bring the phone within a few metres.</p>
+                <p><b>Signal strength</b><br>
+                Each row says how strong the signal is. Below about &minus;85&nbsp;dBm a connection
+                half-forms and everything afterwards is slow, so the app asks before trying.</p>
+                <p><b>The model you used last</b><br>
+                It connects by itself when it is the only board in range; with more than one in
+                range the list waits for you to choose.</p>
+                <p><b>Photographs</b><br>
+                Press and hold any row to give that board a photograph of its model.</p>
+            """
+            "reviews" -> """
+                <p>A recording of a model&#39;s last connection, kept for you automatically.</p>
+                <p><b>What a review holds</b><br>
+                The flights and the black box, and every Rotorflight setting as it was at that
+                connection &mdash; enough to sit indoors and go through a model with everything
+                switched off.</p>
+                <p><b>One per model</b><br>
+                Connecting a different model never erases another&#39;s. Press and hold to delete one.</p>
+                <p><b>The safety net</b><br>
+                A review can also put a model&#39;s tuning back &mdash; what saves the day when no
+                backup was ever made.</p>
+                <p><b>Not a backup</b><br>
+                A backup is one you make on purpose, holds the settings only, and is what to take
+                before changing anything. A review is a record of what happened.</p>
+            """
+            "backups" -> """
+                <p>The Rotorflight settings this phone has saved for each model.</p>
+                <p><b>What a backup is</b><br>
+                Every setting the model had when you tapped Back up: PIDs, rates, governor,
+                servos, the lot. No flight data.</p>
+                <p><b>Where it lives</b><br>
+                Here, on the phone &mdash; one per model, so it survives anything that happens to
+                the model. You can also send one to yourself as a file and open it again later.</p>
+                <p><b>Making one</b><br>
+                Connect to the model, open Rotorflight &rarr; Backup &amp; restore, and tap Back up.
+                Do it before you change anything.</p>
+                <p><b>Putting it back</b><br>
+                On the same page, transmitter off and blades off. Each setting is written and read
+                back to check it landed.</p>
+                <p><b>Your backup, or ours</b><br>
+                &ldquo;Your backup&rdquo; is one you asked for; it is never overwritten by the copy
+                the app keeps for itself at each connection.</p>
+            """
+            "demos" -> """
+                <p>The whole app on canned data &mdash; every page, nothing connected.</p>
+                <p><b>One board, three jobs</b><br>
+                Every demo here is the same little XIAO ESP32-S3 running the same firmware. What it
+                does depends only on what is fitted to it and which role you choose in its
+                settings &mdash; not on buying a different product.</p>
+                <p><b>Receiver</b><br>
+                With transceivers fitted it flies the model: it takes your transmitter&#39;s signal
+                and drives the flight controller, records the flight, and gives you every
+                Rotorflight page from your phone.</p>
+                <p><b>Rotorflight dongle</b><br>
+                The same board with no transceivers, plugged into a flight controller. Your own
+                radio and receiver still fly the model; the dongle just gives the app to any
+                Rotorflight helicopter.</p>
+                <p><b>Simulator interface</b><br>
+                The same bare board again, with a receiver wired to it, turning that receiver into
+                a USB joystick for RealFlight or neXt. It works out for itself whether the receiver
+                speaks CRSF, SBUS, IBUS or PPM.</p>
+                <p><b>And a receiver does all three</b><br>
+                A LockDown receiver needs no dongle for the app, and flies a simulator on its own
+                over USB. The other two roles are for spare boards, and for people flying someone
+                else&#39;s radio.</p>
+            """
+            else -> """
+                <p>Four doors: Connect to a model, browse a Review of an earlier session, see the
+                Backups this phone holds, or try a Demo with no hardware at all.</p>
+                <p><b>Connect</b><br>
+                Searches for receivers and dongles nearby and opens the one you choose. The model
+                you used last connects by itself once you are in there, if it is alone in range.</p>
+                <p><b>Reviews</b><br>
+                One recording per model, made at every connection: the flights and the settings as
+                they were, to go through indoors with everything switched off.</p>
+                <p><b>Backups</b><br>
+                What this phone has saved for each model, and when &mdash; settings you can put
+                back if a change goes wrong.</p>
+                <p><b>Demos</b><br>
+                The same pages driven by canned data: a receiver in a model, a Rotorflight dongle,
+                or a simulator interface. Nothing to buy first.</p>
+                <p><b>No phone needed at all</b><br>
+                Everything here is also in the receiver&#39;s own WiFi pages, in any web browser.
+                The app simply carries the same pages over Bluetooth, so there is no network to
+                switch at the field.</p>
+            """
+        }.trimIndent()
+
         if (homePage != "help") helpReturn = homePage
         homePage = "help"
         root.removeAllViews()
         backdrop()
         val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        pageHeader(col, "About this screen", back = true, withHelp = false) { helpBack() }
-        col.addView(TextView(this).apply {
-            text = "App version " + packageManager.getPackageInfo(packageName, 0).versionName
-            setPadding(48, 0, 48, 16); setTextColor(SUB); textSize = 13f
-        })
-        col.addView(TextView(this).apply {
+        pageHeader(col, heading, back = true, withHelp = false) { helpBack() }
+        val body = TextView(this).apply {
             text = android.text.Html.fromHtml(html, android.text.Html.FROM_HTML_MODE_COMPACT)
-            textSize = 14f; setPadding(48, 8, 48, 48); setTextColor(INK)
+            textSize = 14f; setPadding(36, 28, 36, 28); setTextColor(INK)
             setLineSpacing(6f, 1.0f)
-        })
+            background = android.graphics.drawable.GradientDrawable().apply {
+                cornerRadius = 24f; setColor(0xFFF2F6F8.toInt())
+            }
+        }
+        col.addView(body, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                                                    ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(40, 0, 40, 20) })
+        if (forPage == "home") col.addView(chip("App version " +
+            packageManager.getPackageInfo(packageName, 0).versionName),
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                                      ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(40, 0, 40, 36) })
         root.addView(ScrollView(this).apply { addView(col) })
     }
 
@@ -1745,7 +1795,7 @@ class MainActivity : AppCompatActivity() {
         // the app, so the demo gets the disconnect hook too (Malcolm 2026-09-11:
         // "load another model fails on Android" — the hook was only in JS_SHIM).
         val tag = if (demoMode)
-            "<script>$JS_DISCONNECT_HOOK</script><script>window.__demoDongle=$demoDongle;</script><script src=\"/demo-shim.js\"></script>".toByteArray(Charsets.UTF_8)
+            "<script>$JS_DISCONNECT_HOOK</script><script>window.__demoRole=\"$demoRole\";</script><script src=\"/demo-shim.js\"></script>".toByteArray(Charsets.UTF_8)
         else "<script>$JS_SHIM</script>".toByteArray(Charsets.UTF_8)
         return tag + html
     }

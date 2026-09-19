@@ -11,7 +11,7 @@ import WebKit
 struct WebScreen: UIViewRepresentable {
     let link: BleLink
     var demo: Bool = false
-    var demoDongle: Bool = false   // the dongle demo (demo only)
+    var demoRole: String = "receiver"   // which demo: receiver | dongle | simif
     var replay: Bool = false   // armchair review of the recorded last session
 
     static let formShim = """
@@ -47,7 +47,7 @@ struct WebScreen: UIViewRepresentable {
 
     func makeUIView(context: Context) -> WKWebView {
         let cfg = WKWebViewConfiguration()
-        cfg.setURLSchemeHandler(BleSchemeHandler(link: link, demo: demo, replay: replay, demoDongle: demoDongle), forURLScheme: "ble")
+        cfg.setURLSchemeHandler(BleSchemeHandler(link: link, demo: demo, replay: replay, demoRole: demoRole), forURLScheme: "ble")
         let shim = WKUserScript(source: Self.formShim,
                                 injectionTime: .atDocumentEnd,
                                 forMainFrameOnly: false)
