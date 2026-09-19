@@ -289,23 +289,11 @@ class MainActivity : AppCompatActivity() {
             gravity = android.view.Gravity.CENTER_VERTICAL
             setPadding(40, 60, 40, 8)
         }
-        if (back) row.addView(TextView(this).apply {
-            text = "‹"; textSize = 28f; setTextColor(0xFF2F6FB0.toInt())
-            setPadding(0, 0, 30, 12)
-            setOnClickListener { if (onBack != null) onBack() else showScanner() }
-        })
+        if (back) row.addView(roundButton("\u2039") { if (onBack != null) onBack() else showScanner() })
         row.addView(TextView(this).apply {
             text = ""; textSize = 22f
         }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        if (withHelp) row.addView(TextView(this).apply {
-            text = "?"; textSize = 21f; setTextColor(0xFF2F6FB0.toInt())
-            setPadding(34, 4, 34, 10)
-            background = android.graphics.drawable.GradientDrawable().apply {
-                shape = android.graphics.drawable.GradientDrawable.OVAL
-                setColor(0xFFFFFFFF.toInt()); setStroke(2, 0xFFC9D3DC.toInt())
-            }
-            setOnClickListener { showScannerHelp() }
-        })
+        if (withHelp) row.addView(roundButton("?") { showScannerHelp() })
         col.addView(row)
         if (title.isNotEmpty()) col.addView(TextView(this).apply {
             text = title
@@ -319,6 +307,22 @@ class MainActivity : AppCompatActivity() {
             elevation = 4f
         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                                      ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(40, 4, 40, 18) })
+    }
+
+    /** A round button on a SOLID white disc — never a bare glyph on the
+     *  photograph, where it cannot be read. */
+    private fun roundButton(glyph: String, go: () -> Unit): TextView = TextView(this).apply {
+        text = glyph
+        textSize = 22f; setTextColor(0xFF2F6FB0.toInt())
+        setTypeface(typeface, android.graphics.Typeface.BOLD)
+        gravity = android.view.Gravity.CENTER
+        width = 108; height = 108
+        background = android.graphics.drawable.GradientDrawable().apply {
+            shape = android.graphics.drawable.GradientDrawable.OVAL
+            setColor(0xFFFFFFFF.toInt()); setStroke(2, 0xFFC9D3DC.toInt())
+        }
+        elevation = 3f
+        setOnClickListener { go() }
     }
 
     /** Standalone words sit on a solid chip, never straight on the photograph. */

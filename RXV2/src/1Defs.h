@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.801-help-explains-both-backups";
+constexpr const char* FW_VERSION = "RXV2-0.9.802-android-back-button-visible";
 
 //*********************************************************************
 //  Auto-update manifest URLs
