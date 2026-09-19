@@ -604,15 +604,22 @@ extension BleLink: CBCentralManagerDelegate, CBPeripheralDelegate {
             // Scan from .scanning — and from .failed/.idle too: Bluetooth
             // switched on AFTER launch used to leave "Bluetooth is switched
             // off" on screen until a relaunch (2026-09-16 review).
-            var wants = false
-            switch state { case .scanning, .idle, .failed: wants = true; default: break }
-            if !wants { return }
-            state = .scanning
-            // Instant path first: connect by stored identifier, skipping the
-            // advertisement wait entirely. Falls through to a normal scan
-            // (with discovery auto-connect) when nothing is stored.
-            if fastConnect() { return }
-            central.scanForPeripherals(withServices: [Self.serviceUUID], options: Self.scanOptions)
+            // Bluetooth coming up is NOT a reason to connect to anything.
+            // It used to fastConnect() here, so merely opening the app seized
+            // the last model — Malcolm 2026-09-19: "when I reload the app it
+            // jumps straight to the connection to the previous model without
+            // waiting for me to press connect". Worse, a receiver takes one
+            // client at a time, so an iPad left on the side silently locked
+            // the model out of the phone. Searching and connecting now begin
+            // only on the Connect page (startScan / fastConnect from there).
+            if case .failed = state { state = .idle }   // clear "Bluetooth is switched off"
+            switch state {
+            case .scanning:   // the Connect page is open and waiting
+                if fastConnect() { return }
+                central.scanForPeripherals(withServices: [Self.serviceUUID], options: Self.scanOptions)
+                startPublishing()   // smoothing + the stale-row sweep
+            default: break
+            }
         } else if central.state == .unauthorized {
             state = .failed("Bluetooth permission denied — enable it in Settings")
         } else if central.state == .poweredOff {

@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.790-no-connect-on-launch",
+      "url": "https://messiter.com/rxv2/release/v0.9.790/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.790/littlefs.bin",
+      "fs_md5": "7d33dc8f79a616de079dc8da944920f5",
+      "notes": "Opening the app no longer connects to anything: it used to seize the last model the moment Bluetooth came up, which is why a tablet left on the side could lock a receiver out of the phone - a receiver takes one at a time. Searching and connecting now begin only on the Connect page, as they should."
+    },
+    {
       "name": "RXV2-0.9.789-connect-honest",
       "url": "https://messiter.com/rxv2/release/v0.9.789/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.789/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.779/littlefs.bin",
       "fs_md5": "96a9e0e36f3fdce87e25da6f6676e7ab",
       "notes": "Installing over WiFi from the app now works while the app is connected: the receiver answers, pauses Bluetooth, rejoins WiFi on a quiet radio, downloads at full speed and reboots - the app rides out the gap and reconnects. A Bluetooth link used to leave WiFi 'connected' but deaf, so the chip's own download failed and the page could only offer Bluetooth. The update page also lets you pick WiFi while the receiver is rejoining."
-    },
-    {
-      "name": "RXV2-0.9.778-preflight-guard",
-      "url": "https://messiter.com/rxv2/release/v0.9.778/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.778/littlefs.bin",
-      "fs_md5": "cde152e930685748cab5f34557dfd6c3",
-      "notes": "Pre-flight review of everything since the build that flew this morning: a board with transceivers now ignores a saved 'simulator interface' mode and runs as a receiver, so a chip moved from a dongle lead onto a receiver board can never come up silent to the flight controller. Nothing else in the flying path changed."
     }
   ],
   "rotorflight": {
