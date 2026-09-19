@@ -1,4 +1,5 @@
 {
+  "RXV2-0.9.805-nothing-found-says-so": "Connect now says No receivers or dongles found nearby after twelve quiet seconds, with what to check, instead of leaving a spinner or an empty page. Android's back chevron is drawn rather than typed, so it sits in the middle of its circle whatever the font does.",
   "RXV2-0.9.804-backdrop-not-stretched": "Android: the flying-field photograph keeps its proportions. It was being stretched to the screen's shape, which squeezed a landscape picture on a tall phone; it is now cropped instead, as on iPhone.",
   "RXV2-0.9.803-bigger-chevron": "Android: the back chevron is drawn larger, so it carries the same weight as the question mark beside it - a thin glyph needs more point size than a letter to look the same.",
   "RXV2-0.9.802-android-back-button-visible": "Android: the back button on each page now sits on a solid white disc like the question mark beside it. It was there all along, but a thin blue chevron straight on the photograph could not be seen.",

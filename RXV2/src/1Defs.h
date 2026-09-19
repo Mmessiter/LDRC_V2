@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.804-backdrop-not-stretched";
+constexpr const char* FW_VERSION = "RXV2-0.9.805-nothing-found-says-so";
 
 //*********************************************************************
 //  Auto-update manifest URLs

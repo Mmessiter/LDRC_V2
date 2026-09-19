@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.805-nothing-found-says-so",
+      "url": "https://messiter.com/rxv2/release/v0.9.805/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.805/littlefs.bin",
+      "fs_md5": "54f90a53d87f00dbe5c5001d5a0d9398",
+      "notes": "Connect now says No receivers or dongles found nearby after twelve quiet seconds, with what to check, instead of leaving a spinner or an empty page. Android's back chevron is drawn rather than typed, so it sits in the middle of its circle whatever the font does."
+    },
+    {
       "name": "RXV2-0.9.804-backdrop-not-stretched",
       "url": "https://messiter.com/rxv2/release/v0.9.804/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.804/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.794/littlefs.bin",
       "fs_md5": "1e3d5a1d0b2946e1b7b69c38de7973b3",
       "notes": "The late disconnect callback no longer knocks a search that has already begun back to idle - it was wiping what the search had heard and starting it again (seen in the app's own log)."
-    },
-    {
-      "name": "RXV2-0.9.793-pages-replace-the-stack",
-      "url": "https://messiter.com/rxv2/release/v0.9.793/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.793/littlefs.bin",
-      "fs_md5": "3328006a9867219203bdf666253420ed",
-      "notes": "Fixes the connect that looked like a failure: since the search moved onto the Connect page, a successful connection opened the model's pages UNDERNEATH that page, which stayed on top saying Searching. The pages now replace the whole navigation stack the moment the link is ready."
     }
   ],
   "rotorflight": {

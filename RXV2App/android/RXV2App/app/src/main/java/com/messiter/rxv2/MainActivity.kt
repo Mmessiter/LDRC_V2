@@ -295,11 +295,13 @@ class MainActivity : AppCompatActivity() {
             gravity = android.view.Gravity.CENTER_VERTICAL
             setPadding(40, 60, 40, 8)
         }
-        if (back) row.addView(roundButton("\u2039", 38f) { if (onBack != null) onBack() else showScanner() })
+        if (back) row.addView(roundBack { if (onBack != null) onBack() else showScanner() },
+                              LinearLayout.LayoutParams(112, 112))
         row.addView(TextView(this).apply {
             text = ""; textSize = 22f
         }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        if (withHelp) row.addView(roundButton("?") { showScannerHelp() })
+        if (withHelp) row.addView(roundButton("?") { showScannerHelp() },
+                                  LinearLayout.LayoutParams(112, 112))
         col.addView(row)
         if (title.isNotEmpty()) col.addView(TextView(this).apply {
             text = title
@@ -315,6 +317,41 @@ class MainActivity : AppCompatActivity() {
                                      ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(40, 4, 40, 18) })
     }
 
+    /** The back chevron, DRAWN rather than typed: a font glyph sits wherever
+     *  its metrics put it (Malcolm 2026-09-19: "right at the bottom of its
+     *  little circle"), while a path is centred by construction. */
+    private inner class ChevronView(ctx: android.content.Context) : View(ctx) {
+        private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xFF2F6FB0.toInt()
+            style = android.graphics.Paint.Style.STROKE
+            strokeCap = android.graphics.Paint.Cap.ROUND
+            strokeJoin = android.graphics.Paint.Join.ROUND
+        }
+        override fun onDraw(c: android.graphics.Canvas) {
+            val cx = width / 2f + width * 0.04f      // optical centre: the V points left
+            val cy = height / 2f
+            val r = minOf(width, height) * 0.24f
+            paint.strokeWidth = maxOf(6f, minOf(width, height) * 0.085f)
+            val path = android.graphics.Path().apply {
+                moveTo(cx + r * 0.62f, cy - r)
+                lineTo(cx - r * 0.62f, cy)
+                lineTo(cx + r * 0.62f, cy + r)
+            }
+            c.drawPath(path, paint)
+        }
+    }
+
+    private fun roundBack(go: () -> Unit): View = android.widget.FrameLayout(this).apply {
+        background = android.graphics.drawable.GradientDrawable().apply {
+            shape = android.graphics.drawable.GradientDrawable.OVAL
+            setColor(0xFFFFFFFF.toInt()); setStroke(2, 0xFFC9D3DC.toInt())
+        }
+        elevation = 3f
+        addView(ChevronView(this@MainActivity), android.widget.FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        setOnClickListener { go() }
+    }
+
     /** A round button on a SOLID white disc — never a bare glyph on the
      *  photograph, where it cannot be read. */
     private fun roundButton(glyph: String, size: Float = 22f, go: () -> Unit): TextView = TextView(this).apply {
@@ -322,7 +359,7 @@ class MainActivity : AppCompatActivity() {
         textSize = size; setTextColor(0xFF2F6FB0.toInt())
         setTypeface(typeface, android.graphics.Typeface.BOLD)
         gravity = android.view.Gravity.CENTER
-        width = 108; height = 108
+        includeFontPadding = false
         background = android.graphics.drawable.GradientDrawable().apply {
             shape = android.graphics.drawable.GradientDrawable.OVAL
             setColor(0xFFFFFFFF.toInt()); setStroke(2, 0xFFC9D3DC.toInt())
@@ -421,6 +458,23 @@ class MainActivity : AppCompatActivity() {
         backdrop()
         val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         pageHeader(col, "Connect", back = true)
+        // Nothing found used to leave the page blank (Malcolm 2026-09-19).
+        val status = chip("Searching\u2026")
+        col.addView(status, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(40, 0, 40, 14) })
+        val startedAt = System.currentTimeMillis()
+        val tick = object : Runnable {
+            override fun run() {
+                if (homePage != "connect") return
+                val n = latestFound.size
+                val secs = ((System.currentTimeMillis() - startedAt) / 1000).toInt()
+                status.visibility = if (n > 0) View.GONE else View.VISIBLE
+                if (n == 0) status.text = if (secs < 12) "Searching\u2026 " + (if (secs < 3) "" else "$secs s")
+                    else "No receivers or dongles found nearby.\n\nPower the model with the transmitter OFF, and bring the phone within a few metres. If it is on, another phone or tablet may be holding it: a receiver takes one at a time."
+                uiHandler.postDelayed(this, 1000)
+            }
+        }
+        uiHandler.post(tick)
         val list = ListView(this).apply { divider = null; dividerHeight = 0 }
         scannerAdapter = ScannerAdapter()
         list.adapter = scannerAdapter
@@ -1649,6 +1703,9 @@ class MainActivity : AppCompatActivity() {
     @Volatile private var snapRetries = 0   // reads that needed a second try: a weak link, shown live
     /** explicit = the pilot pressed "Back up": the restore point it freezes is
      *  sticky — later automatic sweeps at connection never overwrite it. */
+    /** Main-thread ticker for the Connect page's "searching / nothing found". */
+    private val uiHandler = android.os.Handler(android.os.Looper.getMainLooper())
+
     // A "Back up" tap landing while a sweep runs used to be DROPPED by the
     // guard below, so the pilot's deliberate backup was written as an
     // automatic one (Malcolm 2026-09-19). The sweep in flight adopts it.

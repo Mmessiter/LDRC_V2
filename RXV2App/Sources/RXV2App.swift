@@ -606,15 +606,17 @@ struct ConnectListView: View {
                     if link.found.isEmpty {
                         HStack(alignment: .top, spacing: 12) {
                             ProgressView().padding(.top, 2)
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(link.scanSeconds < 3 ? "Searching…" : "Searching… \(link.scanSeconds) s")
+                            VStack(alignment: .leading, spacing: 5) {
+                                Text(link.scanSeconds >= 12 ? "No receivers or dongles found nearby"
+                                     : link.scanSeconds < 3 ? "Searching…" : "Searching… \(link.scanSeconds) s")
                                     .font(.headline)
-                                // After a while, say what is usually wrong
-                                // (Malcolm 2026-09-19 watched a silent spinner).
-                                if link.scanSeconds >= 15 {
-                                    Text("Nothing yet. Power the model with the transmitter OFF — and if it is on, another phone or tablet may be holding it: a receiver takes one at a time.")
+                                    .fixedSize(horizontal: false, vertical: true)
+                                if link.scanSeconds >= 12 {
+                                    Text("Power the model with the transmitter OFF, and bring the phone within a few metres. If it is on, another phone or tablet may be holding it: a receiver takes one at a time.")
                                         .font(.footnote).foregroundStyle(.secondary)
                                         .fixedSize(horizontal: false, vertical: true)
+                                    Text("Still looking…")
+                                        .font(.caption2).foregroundStyle(.tertiary)
                                 }
                             }
                         }
