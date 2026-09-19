@@ -516,16 +516,59 @@ struct HomeMasthead: View {
     }
 }
 
+/// A helicopter in the same weight as the system symbols beside it — drawn,
+/// because the symbol set has no helicopter and a colour emoji would clash.
+struct HelicopterGlyph: View {
+    var body: some View {
+        Canvas { ctx, size in
+            let w = size.width, h = size.height
+            let lw = max(1.3, w * 0.085)
+            let stroke = StrokeStyle(lineWidth: lw, lineCap: .round, lineJoin: .round)
+            var p = Path()
+            p.move(to: CGPoint(x: w * 0.04, y: h * 0.17))      // main rotor
+            p.addLine(to: CGPoint(x: w * 0.96, y: h * 0.17))
+            p.move(to: CGPoint(x: w * 0.44, y: h * 0.17))      // mast
+            p.addLine(to: CGPoint(x: w * 0.44, y: h * 0.33))
+            p.move(to: CGPoint(x: w * 0.60, y: h * 0.47))      // tail boom
+            p.addLine(to: CGPoint(x: w * 0.97, y: h * 0.42))
+            p.move(to: CGPoint(x: w * 0.92, y: h * 0.30))      // tail rotor
+            p.addLine(to: CGPoint(x: w * 0.99, y: h * 0.53))
+            p.move(to: CGPoint(x: w * 0.10, y: h * 0.90))      // skid
+            p.addLine(to: CGPoint(x: w * 0.64, y: h * 0.90))
+            p.move(to: CGPoint(x: w * 0.23, y: h * 0.70))      // skid legs
+            p.addLine(to: CGPoint(x: w * 0.20, y: h * 0.90))
+            p.move(to: CGPoint(x: w * 0.47, y: h * 0.70))
+            p.addLine(to: CGPoint(x: w * 0.50, y: h * 0.90))
+            ctx.stroke(p, with: .color(.white), style: stroke)
+            ctx.stroke(Path(ellipseIn: CGRect(x: w * 0.14, y: h * 0.33,
+                                              width: w * 0.48, height: h * 0.38)),
+                       with: .color(.white), style: stroke)
+        }
+        .accessibilityLabel("helicopter")
+    }
+}
+
 /// A big coloured button in the app's usual style: what it does, and one line
 /// saying what is behind it.
 struct HomeTile: View {
     let icon: String
     let tint: Color
     let title: String
+    /// The Receiver demo shows a helicopter beside the aeroplane: this is a
+    /// helicopter system first, and a plane system second.
+    var withHelicopter = false
 
     var body: some View {
         HStack(spacing: 16) {
-            Image(systemName: icon).font(.title2).frame(width: 34)
+            if withHelicopter {
+                HStack(spacing: 5) {
+                    HelicopterGlyph().frame(width: 25, height: 25)
+                    Image(systemName: icon).font(.callout)
+                }
+                .frame(width: 52)
+            } else {
+                Image(systemName: icon).font(.title2).frame(width: 34)
+            }
             Text(title).font(.title3.weight(.semibold))
             Spacer(minLength: 8)
             Image(systemName: "chevron.right").font(.footnote).opacity(0.85)
@@ -927,7 +970,7 @@ struct DemosView: View {
             VStack(spacing: 14) {
                 Button { play("receiver") } label: {
                     HomeTile(icon: "airplane", tint: Color(red: 0.42, green: 0.67, blue: 0.37),
-                             title: "Receiver")
+                             title: "Receiver", withHelicopter: true)
                 }
                 Button { play("dongle") } label: {
                     HomeTile(icon: "cable.connector", tint: Color(red: 0.37, green: 0.63, blue: 0.60),

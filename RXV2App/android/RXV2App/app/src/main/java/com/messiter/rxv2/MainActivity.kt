@@ -646,7 +646,7 @@ class MainActivity : AppCompatActivity() {
         backdrop()
         val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         pageHeader(col, "Demos", back = true)
-        homeTile(col, "✈️", 0xFF6CAB5E.toInt(), "Receiver") { demoRole = "receiver"; demoMode = true; showWeb() }
+        homeTile(col, "🚁✈️", 0xFF6CAB5E.toInt(), "Receiver") { demoRole = "receiver"; demoMode = true; showWeb() }
         homeTile(col, "🔌", 0xFF5FA099.toInt(), "Rotorflight dongle") { demoRole = "dongle"; demoMode = true; showWeb() }
         homeTile(col, "🎮", 0xFF6C8EB0.toInt(), "Simulator interface") { demoRole = "simif"; demoMode = true; showWeb() }
         root.addView(col)

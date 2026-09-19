@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.807-helicopter-joins-the-aeroplane",
+      "url": "https://messiter.com/rxv2/release/v0.9.807/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.807/littlefs.bin",
+      "fs_md5": "15c93aa4ad04255aeda66e4d0d4db833",
+      "notes": "The Receiver demo now shows a helicopter beside the aeroplane. Apple's symbol set has no helicopter, so it is drawn in the same white line weight as the symbols around it rather than dropped in as a coloured emoji."
+    },
+    {
       "name": "RXV2-0.9.806-no-uninvited-back",
       "url": "https://messiter.com/rxv2/release/v0.9.806/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.806/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.796/littlefs.bin",
       "fs_md5": "44fe391269e266bf8d550684f7d9bdda",
       "notes": "The Backups page: tap any model to see what its backup holds, in the same plain lines the receiver's own Backup and restore page uses - PIDs banks 1 to 6, Servos 8 - so a glance says whether everything was saved."
-    },
-    {
-      "name": "RXV2-0.9.795-headings-with-presence",
-      "url": "https://messiter.com/rxv2/release/v0.9.795/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.795/littlefs.bin",
-      "fs_md5": "4c1d46cae243cc5af78557a33464fe9d",
-      "notes": "Presentation: every page now carries a proper heading - big, light, letter-spaced, centred on a solid chip like the headings on the receiver's own pages - instead of a small line in the navigation bar. The front screen gets a masthead: LockDown Radio Control large, with RXV2 beneath it in the app's teal."
     }
   ],
   "rotorflight": {

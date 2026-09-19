@@ -33,7 +33,7 @@ targets:
             LSItemContentTypes:
               - public.json
               - public.plain-text
-        CFBundleShortVersionString: "5.139"
+        CFBundleShortVersionString: "5.140"
         CFBundleVersion: "441"
         CFBundleDisplayName: RXV2
         UILaunchScreen: {}

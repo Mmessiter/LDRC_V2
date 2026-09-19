@@ -1,4 +1,5 @@
 {
+  "RXV2-0.9.807-helicopter-joins-the-aeroplane": "The Receiver demo now shows a helicopter beside the aeroplane. Apple's symbol set has no helicopter, so it is drawn in the same white line weight as the symbols around it rather than dropped in as a coloured emoji.",
   "RXV2-0.9.806-no-uninvited-back": "Android: the app no longer walks you back to the front screen on its own. A link going idle used to do that, so the Connect page vanished before its message could be read. It now happens only when leaving a model's pages - anywhere else you leave when you choose to.",
   "RXV2-0.9.805-nothing-found-says-so": "Connect now says No receivers or dongles found nearby after twelve quiet seconds, with what to check, instead of leaving a spinner or an empty page. Android's back chevron is drawn rather than typed, so it sits in the middle of its circle whatever the font does.",
   "RXV2-0.9.804-backdrop-not-stretched": "Android: the flying-field photograph keeps its proportions. It was being stretched to the screen's shape, which squeezed a landscape picture on a tall phone; it is now cropped instead, as on iPhone.",
