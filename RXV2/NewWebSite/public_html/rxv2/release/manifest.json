@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.816-send-debug-data",
+      "url": "https://messiter.com/rxv2/release/v0.9.816/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.816/littlefs.bin",
+      "fs_md5": "9e2f42c3ed3dcf23cc30c3433382e08c",
+      "notes": "Send debug data to Malcolm: one tap on the Event log page gathers the board's name and firmware, its role and what it hears on the wire, how the last update went, which flight controller answered, the whole event log and - on iPhone - what the app itself did, into a text file for the share sheet. No passwords. For testers with boards of their own, it turns it did not work into something traceable."
+    },
+    {
       "name": "RXV2-0.9.815-record-names-the-version",
       "url": "https://messiter.com/rxv2/release/v0.9.815/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.815/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.805/littlefs.bin",
       "fs_md5": "54f90a53d87f00dbe5c5001d5a0d9398",
       "notes": "Connect now says No receivers or dongles found nearby after twelve quiet seconds, with what to check, instead of leaving a spinner or an empty page. Android's back chevron is drawn rather than typed, so it sits in the middle of its circle whatever the font does."
-    },
-    {
-      "name": "RXV2-0.9.804-backdrop-not-stretched",
-      "url": "https://messiter.com/rxv2/release/v0.9.804/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.804/littlefs.bin",
-      "fs_md5": "ab1a4c4091da1ed463bb7dfd56e1bc14",
-      "notes": "Android: the flying-field photograph keeps its proportions. It was being stretched to the screen's shape, which squeezed a landscape picture on a tall phone; it is now cropped instead, as on iPhone."
     }
   ],
   "rotorflight": {

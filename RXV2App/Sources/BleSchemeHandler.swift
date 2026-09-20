@@ -202,6 +202,35 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
             deliver(task, url: url, code: 200, type: "application/json", body: body)
             return
         }
+        // SEND DEBUG DATA (0.9.816). The page gathers the receiver's side and
+        // posts it here as plain text; the app appends what IT did — the link
+        // log the receiver cannot see — and hands the lot to the share sheet.
+        // For testers with boards of their own: "it didn't work" becomes
+        // something traceable (Malcolm 2026-09-20).
+        if path == "/app/debug/export" {
+            var report = String(data: task.request.httpBody ?? Data(), encoding: .utf8) ?? ""
+            if report.isEmpty { report = "(the page sent nothing)" }
+            report += "\n\nWHAT THE APP DID (this phone)\n"
+            let log = link.log
+            report += log.isEmpty ? "  (nothing recorded)\n" : log.map { "  " + $0 }.joined(separator: "\n")
+            let appVer = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
+            report += "\n\nPHONE\n  app \(appVer) on iOS \(UIDevice.current.systemVersion), \(UIDevice.current.model)\n"
+            let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd-HHmm"
+            let safe = String(SessionCache.shared.modelName.map { $0.isLetter || $0.isNumber ? $0 : "_" })
+            let file = FileManager.default.temporaryDirectory
+                .appendingPathComponent("\(safe.isEmpty ? "LDRC" : safe)-debug-\(df.string(from: Date())).txt")
+            try? report.data(using: .utf8)?.write(to: file, options: .atomic)
+            DispatchQueue.main.async {
+                let av = UIActivityViewController(activityItems: [file], applicationActivities: nil)
+                if let top = BackupFilePicker.topViewController() {
+                    av.popoverPresentationController?.sourceView = top.view
+                    av.popoverPresentationController?.sourceRect = CGRect(x: top.view.bounds.midX, y: top.view.bounds.midY, width: 1, height: 1)
+                    top.present(av, animated: true)
+                }
+            }
+            deliver(task, url: url, code: 200, type: "application/json", body: Data("{\"ok\":true}".utf8))
+            return
+        }
         if path == "/app/backup/export" {
             guard let json = SessionCache.shared.exportRestoreJSON() else {
                 deliver(task, url: url, code: 200, type: "application/json",

@@ -2099,6 +2099,7 @@ class MainActivity : AppCompatActivity() {
                 return
             }
             if (p == "/app/declare" || p == "/app/declared" || p == "/app/backup/export" ||
+                p == "/app/debug/export" ||
                 p == "/app/backup/import" || p == "/app/backup/import/status") {
                 fun answer(json: String) = runOnUiThread {
                     val w = webView ?: return@runOnUiThread
@@ -2114,6 +2115,30 @@ class MainActivity : AppCompatActivity() {
                         answer("{\"ok\":$ok}")
                     }
                     "/app/declared" -> answer(JSONObject(SessionCache.declared() as Map<*, *>).toString())
+                    // SEND DEBUG DATA (0.9.816): the page posts the receiver's
+                    // side; the app adds what IT did and shares the lot.
+                    "/app/debug/export" -> {
+                        val sb = StringBuilder(body.ifEmpty { "(the page sent nothing)" })
+                        sb.append("\n\nWHAT THE APP DID (this phone)\n")
+                        sb.append("  (the Android app keeps no link log yet \u2014 iOS does)\n")
+                        sb.append("\nPHONE\n  app ")
+                          .append(packageManager.getPackageInfo(packageName, 0).versionName)
+                          .append(" on Android ").append(android.os.Build.VERSION.RELEASE)
+                          .append(", ").append(android.os.Build.MODEL).append('\n')
+                        val safe = SessionCache.modelName.map { if (it.isLetterOrDigit()) it else '_' }.joinToString("").ifEmpty { "LDRC" }
+                        val dir = java.io.File(cacheDir, "backups").apply { mkdirs() }
+                        val stamp = java.text.SimpleDateFormat("yyyy-MM-dd-HHmm", java.util.Locale.US).format(java.util.Date())
+                        val f = java.io.File(dir, "$safe-debug-$stamp.txt").apply { writeText(sb.toString()) }
+                        val u = androidx.core.content.FileProvider.getUriForFile(this@MainActivity, "$packageName.fileprovider", f)
+                        val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(android.content.Intent.EXTRA_STREAM, u)
+                            putExtra(android.content.Intent.EXTRA_SUBJECT, "LDRC debug \u2014 $safe")
+                            addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                        runOnUiThread { startActivity(android.content.Intent.createChooser(send, "Send debug data")) }
+                        answer("{\"ok\":true}")
+                    }
                     "/app/backup/export" -> {
                         val json = SessionCache.exportRestoreJson()
                         if (json == null) answer("{\"ok\":false,\"error\":\"no backup on this phone for this model yet\"}")

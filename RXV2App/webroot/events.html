@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Event log &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=334">
-<script src="/app.js?v=334" defer></script>
+<link rel=stylesheet href="/style.css?v=335">
+<script src="/app.js?v=335" defer></script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -18,6 +18,12 @@
 <div class=container>
     <h1>Event log</h1>
     <p class=subtitle>Everything the receiver noticed since boot, newest first</p>
+
+    <!-- After ANY malfunction: one tap gathers everything and hands it to the
+         phone's share sheet. Testers can describe what they saw; this says
+         what actually happened (Malcolm 2026-09-20, lending boards out). -->
+    <button class="btn" type=button id=dbgBtn style="display:none;background:#8a7dab"><span class=ico>&#128228;</span>Send debug data to Malcolm</button>
+    <p class=muted id=dbgNote style="display:none;margin:-.6em 0 1.2em">Something went wrong? Tap this straight afterwards and email or message the file. It carries the version, the last update, this log and what the app itself did &mdash; no passwords.</p>
 
     <div class=card>
         <p class=muted id=summary>loading&hellip;</p>
@@ -54,9 +60,56 @@ document.addEventListener('DOMContentLoaded', async () => {
         html += '<dt>' + when + '</dt><dd>' + e.msg.replace(/</g, '&lt;') + '</dd>';
     }
     list.innerHTML = html;
+
+    // ---- Send debug data (app only: it owns the share sheet) -------------
+    const btn = document.getElementById('dbgBtn');
+    if (btn && window.LDRC && LDRC.viaBle) {
+        document.getElementById('dbgNote').style.display = '';
+        btn.style.display = '';
+        btn.onclick = async () => {
+            const was = btn.innerHTML;
+            btn.disabled = true; btn.innerHTML = '<span class=ico>\u23F3</span>Gathering\u2026';
+            try {
+                const s = await LDRC.fetchState();
+                const lines = [];
+                const info = (s && s.info) || {};
+                lines.push('LDRC debug report');
+                lines.push('taken: ' + new Date().toString());
+                lines.push('');
+                lines.push('BOARD');
+                lines.push('  name:      ' + (info.name || '?'));
+                lines.push('  firmware:  ' + (info.fw_version || '?'));
+                lines.push('  uptime:    ' + (info.uptime_str || info.uptime_s + ' s'));
+                lines.push('  signal:    ' + info.rssi + ' dBm   ip: ' + (info.ip || '-'));
+                lines.push('  free heap: ' + info.free_heap);
+                const role = s.sim_if ? 'simulator interface' : s.dongle ? 'Rotorflight dongle'
+                           : s.sim ? 'receiver in simulator mode' : 'receiver';
+                lines.push('  role:      ' + role + (s.role_auto ? ' (chosen automatically)' : ' (set by hand)'));
+                if (s.sim_if) lines.push('  wire:      ' + s.sim_if_link + (s.sim_if_up ? ' locked' : ' NOT locked')
+                                         + ', ' + s.sim_if_ch + ' channels, ' + s.sim_if_bytes + ' bytes seen');
+                const u = s.last_update;
+                if (u && u.to) lines.push('  last update: ' + (u.from || '?') + ' -> ' + u.to + ' : ' + u.stage + (u.ok ? ' (ok)' : ''));
+                const fc = s.fcinfo || {};
+                lines.push('  flight controller: ' + (fc.detected ? (fc.variant || 'yes') + ' ' + fc.fw_major + '.' + fc.fw_minor + '.' + fc.fw_patch : 'not answering'));
+                lines.push('');
+                lines.push('EVENT LOG (newest first)');
+                for (const e of ev) lines.push('  ' + (e.e ? new Date(e.e * 1000).toLocaleTimeString() : fmt(e.t)) + '  ' + e.msg);
+                lines.push('');
+                lines.push('FULL STATE');
+                lines.push(JSON.stringify(s, null, 1));
+                const r = await fetch('/app/debug/export', { method: 'POST', body: lines.join('\n') });
+                const j = await r.json().catch(() => ({}));
+                if (j && j.ok === false) await LDRC.alert(j.error || 'could not build the report', { title: 'Not sent', icon: '\u26A0\uFE0F' });
+            } catch (e) {
+                await LDRC.alert('Could not gather the report: ' + e.message, { title: 'Not sent', icon: '\u26A0\uFE0F' });
+            }
+            btn.disabled = false; btn.innerHTML = was;
+        };
+    }
 });
 </script>
 <template id=helpContent><h2>Event log</h2>
+<p><b>Send debug data to Malcolm</b> gathers, into one text file you can email or message: the board&rsquo;s name and firmware version, how long it has been running, its role and what it is hearing on the wire, how the last update went, what flight controller answered, this whole event log, and what the app itself did (searching, connecting, dropping). <b>No passwords and no WiFi credentials.</b> Tap it straight after anything goes wrong &mdash; it turns &ldquo;it did not work&rdquo; into something that can actually be traced.</p>
 <p>The in-RAM event log. The receiver writes a one-line entry for every interesting moment — boot, WiFi up/down, bind, radio swap, TX edits, flight saves — newest first.</p>
 <h3>How to use it</h3>
 <p>Read it when something unexpected has happened: a WiFi drop, a failed bind, a sudden mode change. Timestamps show the <b>time of day</b> once the receiver has been told the time — by your phone, or by the transmitter's clock on phone-free days; before that, time-since-boot.</p>
