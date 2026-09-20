@@ -5,6 +5,12 @@
 # its own hotspot + Bluetooth (the app uses Bluetooth), so a borrower never
 # carries our home password and the board never hunts for a network that is
 # not there. Uses the images already in .pio/build (build first if stale).
+#
+# Role is AUTOMATIC (dongle=0, since 0.9.812): with no transceivers the board
+# listens on D5 at boot and decides for itself whether it is a Rotorflight
+# dongle or a simulator interface. A lend-out board must NOT be nailed to
+# "always a dongle" (dongle=1) - that would lock a tester out of the
+# simulator-interface role, which is half of what makes this worth lending.
 set -e
 cd "$(dirname "$0")/.."
 NAME="${1:?dongle name}"
@@ -14,11 +20,11 @@ BD=.pio/build/xiao_s3_ota
 BOOT_APP0=$(ls "$HOME"/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin | head -1)
 echo ">> firmware: $(grep -oE 'RXV2-[0-9][0-9.a-z-]+' src/1Defs.h | head -1)  (images: $(date -r $BD/firmware.bin '+%d %b %H:%M'))"
 CSV=$(mktemp /tmp/dongle_nvs.XXXXXX.csv); NVS=$(mktemp /tmp/dongle_nvs.XXXXXX.bin)
-printf 'key,type,encoding,value\nrxv2,namespace,,\nnm,data,string,%s\ndongle,data,u8,1\ndbaud,data,u32,115200\n' "$NAME" > "$CSV"
+printf 'key,type,encoding,value\nrxv2,namespace,,\nnm,data,string,%s\ndongle,data,u8,0\ndbaud,data,u32,115200\n' "$NAME" > "$CSV"
 "$PY" -m esp_idf_nvs_partition_gen generate "$CSV" "$NVS" 0x5000 > /dev/null
 PORT=$(ls /dev/cu.* 2>/dev/null | grep -iE 'usbmodem|usbserial' | grep -v '3262395A32341' | head -1)
 [ -z "$PORT" ] && { echo "!! no XIAO on USB (data cable? hold B, tap R, release B)"; exit 1; }
-echo ">> port: $PORT   name: $NAME   wifi: none (hotspot + Bluetooth)"
+echo ">> port: $PORT   name: $NAME   wifi: none (hotspot + Bluetooth)   role: automatic"
 "$PY" "$ESPTOOL" --chip esp32s3 --port "$PORT" --baud 921600 --before default_reset --after hard_reset --connect-attempts 5 \
   write_flash -z --flash_mode dio --flash_freq 80m --flash_size 8MB \
   0x0 "$BD/bootloader.bin" 0x8000 "$BD/partitions.bin" 0x9000 "$NVS" 0xe000 "$BOOT_APP0" \
