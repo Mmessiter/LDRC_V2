@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.814-wire-finder-stays-out-of-the-way",
+      "url": "https://messiter.com/rxv2/release/v0.9.814/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.814/littlefs.bin",
+      "fs_md5": "f4a0f3572c559412f05ea0fc626a6f62",
+      "notes": "The simulator interface lost its signal and then took nearly two minutes to find it again: the wire finder was grabbing D5 as a plain pin for 300 milliseconds every five seconds, which is precisely how to stop a protocol locking. It now runs only when nothing whatever is arriving on the wire, which is the question it was built to answer."
+    },
+    {
       "name": "RXV2-0.9.813-the-update-record",
       "url": "https://messiter.com/rxv2/release/v0.9.813/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.813/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.803/littlefs.bin",
       "fs_md5": "bff762e8452ae986b289718bfa54a689",
       "notes": "Android: the back chevron is drawn larger, so it carries the same weight as the question mark beside it - a thin glyph needs more point size than a letter to look the same."
-    },
-    {
-      "name": "RXV2-0.9.802-android-back-button-visible",
-      "url": "https://messiter.com/rxv2/release/v0.9.802/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.802/littlefs.bin",
-      "fs_md5": "2e91e6af19cc3486e9ce9b99255a3c4c",
-      "notes": "Android: the back button on each page now sits on a solid white disc like the question mark beside it. It was there all along, but a thin blue chevron straight on the photograph could not be seen."
     }
   ],
   "rotorflight": {

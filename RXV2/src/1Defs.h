@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.813-the-update-record";
+constexpr const char* FW_VERSION = "RXV2-0.9.814-wire-finder-stays-out-of-the-way";
 
 //*********************************************************************
 //  Auto-update manifest URLs

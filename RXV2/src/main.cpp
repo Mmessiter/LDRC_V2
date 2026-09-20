@@ -893,7 +893,16 @@ void loop() {
             // signal. D4 is the status LED's output on a radio-less board: it
             // is borrowed as an input for the window and handed straight back.
             // Bench role only: a 120 ms stall every 5 s never touches a model.
-            if (!g_rcIn.linkUp()) {
+            // ONLY when the wire is utterly silent (0.9.814). This census takes
+            // D5 over as a plain pin for ~300 ms to count edges, which is fatal
+            // to a protocol trying to lock: after a momentary loss it stalled
+            // the loop 308 ms every 5 s and CRSF took 107 SECONDS to come back
+            // (Malcolm 2026-09-20: "not yet getting data through the USB").
+            // Its job is answering "nothing is arriving at all - which pad is
+            // the wire on?", so bytesSeen() == 0 is exactly when it earns its
+            // keep; once bytes arrive, the per-candidate tallies and the raw
+            // hex tell the story without touching the pin.
+            if (!g_rcIn.linkUp() && g_rcIn.bytesSeen() == 0) {
                 static uint32_t lastCensusMs = 0;
                 if ((uint32_t)(millis() - lastCensusMs) > 5000) {
                     lastCensusMs = millis();
