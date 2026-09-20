@@ -50,8 +50,13 @@ ok(overlay.removed === true, 'Escape removes the overlay');
 const css = fs.readFileSync(path.join(__dirname, '..', 'data', 'style.css'), 'utf8');
 ok(/\.helpBack\{[^}]*position:fixed/.test(css), 'it is fixed, so it stays put while the help scrolls');
 const hb = css.match(/\.helpBack\{[^}]*\}/)[0], bb = css.match(/\.backBtn\{[^}]*\}/)[0];
-for (const rule of ['width:3em', 'height:3em', 'border-radius:50%', 'background:#f4f7f9', 'font-size:1.55em'])
-    ok(hb.includes(rule) && bb.includes(rule), 'it matches the page back button on ' + rule);
+// The point is that the two buttons AGREE, not what the numbers happen to be:
+// width/height moved from 3em to a fixed 46px hit target and this test was left
+// behind, failing on a pair that in fact matched perfectly (2026-09-20).
+const prop = (rule, k) => (rule.match(new RegExp(k + ':([^;}]+)')) || [])[1];
+for (const k of ['width', 'height', 'border-radius', 'background', 'font-size'])
+    ok(prop(hb, k) !== undefined && prop(hb, k) === prop(bb, k),
+       'it matches the page back button on ' + k + ' (' + prop(hb, k) + ' vs ' + prop(bb, k) + ')');
 ok(/z-index:101/.test(hb), 'it sits above the help overlay (z-index 101 vs the modal 100)');
 // source order decides between two single-class rules: .helpBack must come last
 ok(css.indexOf('.helpBack{') > css.indexOf('.helpClose{'), '.helpBack is declared AFTER .helpClose, so nothing overrides the round shape');

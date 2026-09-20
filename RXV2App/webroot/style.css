@@ -241,7 +241,7 @@ body.hasSearch .subtitle{max-width:calc(100% - 1rem)}
     position:fixed;
     top:max(0.7em, env(safe-area-inset-top, 0.7em));
     left:max(0.7em, env(safe-area-inset-left, 0.7em));
-    width:3em;height:3em;border-radius:50%;
+    width:46px;height:46px;border-radius:50%;
     display:flex;align-items:center;justify-content:center;
     background:#f4f7f9;
     font-size:1.55em;line-height:1;

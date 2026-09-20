@@ -1,5 +1,8 @@
 NAME (2-30):
-LDRC RX V2
+LockDownRadioControl RXV2
+(25 chars. Matches the app's own front screen and the website; "LDRC RX V2"
+was a third spelling of the same thing. The short name under the icon stays
+RXV2 — that is CFBundleDisplayName, and it is what fits on a home screen.)
 
 SUBTITLE (max 30):
 Set up your LDRC receiver

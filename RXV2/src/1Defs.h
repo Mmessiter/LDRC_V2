@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.816-send-debug-data";
+constexpr const char* FW_VERSION = "RXV2-0.9.817-debug-destination";
 
 //*********************************************************************
 //  Auto-update manifest URLs

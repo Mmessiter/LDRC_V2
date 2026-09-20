@@ -208,6 +208,8 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
         // For testers with boards of their own: "it didn't work" becomes
         // something traceable (Malcolm 2026-09-20).
         if path == "/app/debug/export" {
+            let subject = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                .queryItems?.first(where: { $0.name == "subject" })?.value ?? "LDRC debug report"
             var report = String(data: task.request.httpBody ?? Data(), encoding: .utf8) ?? ""
             if report.isEmpty { report = "(the page sent nothing)" }
             report += "\n\nWHAT THE APP DID (this phone)\n"
@@ -221,7 +223,8 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
                 .appendingPathComponent("\(safe.isEmpty ? "LDRC" : safe)-debug-\(df.string(from: Date())).txt")
             try? report.data(using: .utf8)?.write(to: file, options: .atomic)
             DispatchQueue.main.async {
-                let av = UIActivityViewController(activityItems: [file], applicationActivities: nil)
+                let av = UIActivityViewController(activityItems: [DebugShareItem(file: file, subject: subject)],
+                                                  applicationActivities: nil)
                 if let top = BackupFilePicker.topViewController() {
                     av.popoverPresentationController?.sourceView = top.view
                     av.popoverPresentationController?.sourceRect = CGRect(x: top.view.bounds.midX, y: top.view.bounds.midY, width: 1, height: 1)
@@ -888,4 +891,17 @@ final class BackupFilePicker: NSObject, UIDocumentPickerDelegate {
         phase = r.ok ? "done" : "failed"
     }
     func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) { phase = "idle" }
+}
+
+/// Shares the debug file with a subject line, so a tester who picks Mail gets
+/// "LDRC debug — RAW420 MCM — 0.9.816" rather than an untitled attachment.
+/// A bare URL in the share sheet carries no subject at all.
+final class DebugShareItem: NSObject, UIActivityItemSource {
+    private let file: URL
+    private let subject: String
+    init(file: URL, subject: String) { self.file = file; self.subject = subject }
+
+    func activityViewControllerPlaceholderItem(_ c: UIActivityViewController) -> Any { file }
+    func activityViewController(_ c: UIActivityViewController, itemForActivityType t: UIActivity.ActivityType?) -> Any? { file }
+    func activityViewController(_ c: UIActivityViewController, subjectForActivityType t: UIActivity.ActivityType?) -> String { subject }
 }

@@ -3,25 +3,31 @@ HOW TO REVIEW THIS APP WITHOUT THE HARDWARE
 This app configures a model-helicopter receiver that I design and build myself,
 so you will not have one. You do not need one.
 
-On launch, the app scans by Bluetooth and finds nothing. Below the "Searching"
-spinner are two buttons:
+The app opens on a screen of four buttons: Connect, Reviews, Backups, Demos.
 
-    "No receiver yet? Try the receiver demo"
-    "Try the dongle demo"
+    Tap DEMOS.
 
-Tap either. The whole app then runs against a simulated helicopter, with every
-page live and editable. That is the intended way to review it, and it needs no
-hardware, no account and no sign-in. Bluetooth may be denied and the demo still
-works.
+It offers three demos — Receiver, Rotorflight dongle, Simulator interface.
+Tap any of them. The whole app then runs against a simulated helicopter, with
+every page live and editable. That is the intended way to review it, and it
+needs no hardware, no account and no sign-in. Bluetooth may be denied and the
+demos still work.
 
-A video of the app driving real hardware is at:
-    [VIDEO URL]
+Nothing happens over Bluetooth until you tap Connect, and Connect is the only
+button that needs hardware. Every other button, including all three demos,
+works on its own.
+
+A ? button on every screen opens that screen's own help.
 
 WHAT IT IS
 The LDRC RX V2 is a radio-control receiver for model helicopters. The app talks
 to it over Bluetooth LE using a standard GATT service — no MFi accessory, no
 External Accessory framework. It sets flight-controller parameters, reads flight
 logs, and can send the receiver a firmware update.
+
+The same small board does three jobs, which is what the three demos show: a
+receiver in the model, a dongle that plugs into a flight controller on the
+bench, and a USB interface that flies a PC flight simulator from a real radio.
 
 ABOUT THE WEB VIEW (guideline 4.2 and 2.5.2)
 Part of the interface is drawn by a web view, and I would rather explain that up
@@ -49,6 +55,13 @@ flight controller reports itself armed.
 PRIVACY
 No accounts, no analytics, no tracking, no data collection whatsoever. Settings
 and photographs stay in the app's own storage on the phone.
+
+One screen has a "Send debug data to Malcolm" button, for testers reporting a
+fault. It gathers the receiver's own event log and settings — no passwords, no
+WiFi credentials, nothing about the phone's owner — writes a plain text file and
+hands it to the system share sheet. The user chooses where it goes, or cancels.
+The app never transmits it anywhere by itself, and there is no server to receive
+it.
 
 OPEN SOURCE
 The whole project — receiver firmware, both phone apps, and these pages — is

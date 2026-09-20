@@ -2133,7 +2133,11 @@ class MainActivity : AppCompatActivity() {
                         val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                             type = "text/plain"
                             putExtra(android.content.Intent.EXTRA_STREAM, u)
-                            putExtra(android.content.Intent.EXTRA_SUBJECT, "LDRC debug \u2014 $safe")
+                            // The page names the subject (board + firmware); EXTRA_EMAIL
+                            // pre-addresses any mail app so a tester need not know it.
+                            putExtra(android.content.Intent.EXTRA_SUBJECT,
+                                     uri.getQueryParameter("subject") ?: "LDRC debug \u2014 $safe")
+                            putExtra(android.content.Intent.EXTRA_EMAIL, arrayOf("mmessiter@gmail.com"))
                             addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
                         }
                         runOnUiThread { startActivity(android.content.Intent.createChooser(send, "Send debug data")) }
