@@ -1860,10 +1860,26 @@ inline void handleFirmwareInstall() {
     //    current firmware bootable, so report it and DON'T reboot. The whole
     //    install runs under the download guard (see otaGuardBegin) so a stalled
     //    server can no longer hold loop() — and the receiver — hostage.
+    // THE UPDATE RECORD (0.9.813): written as it happens so the next page to
+    // ask can say plainly how far this got — no more working it out from
+    // whether a poll answered (Malcolm 2026-09-19 and again 2026-09-20: "it
+    // updated successfully, but stopped short of telling me so").
+    {
+        String want = url;
+        int sl = want.lastIndexOf('/');
+        if (sl >= 0) want = want.substring(sl + 1);
+        want.replace(".bin", "");
+        prefs.putString(NVS_KEY_UPD_FROM, FW_VERSION);
+        prefs.putString(NVS_KEY_UPD_TO, want);
+        prefs.putUChar(NVS_KEY_UPD_STAGE, UPD_FIRMWARE);
+        updFrom = FW_VERSION; updTo = want; updStage = UPD_FIRMWARE;
+    }
     otaGuardBegin();
     String err = flashStreamToPartition(url, U_FLASH);
     if (err.length()) {
         otaGuardEnd();
+        prefs.putUChar(NVS_KEY_UPD_STAGE, UPD_FAILED);
+        updStage = UPD_FAILED;
         if (fromBle) {   // the reply has gone already; let the app back in to hear about it
             events.add((String("Firmware download failed: ") + err + " - Bluetooth restored, nothing changed").c_str());
             bleStart();
@@ -1888,9 +1904,13 @@ inline void handleFirmwareInstall() {
         fsNote = " (web files identical — kept, flights preserved)";
         events.add("FS update skipped: image unchanged");
     } else if (fsUrl.length() && (fsUrl.startsWith("http://") || isHttpsUrl(fsUrl))) {
+        prefs.putUChar(NVS_KEY_UPD_STAGE, UPD_PAGES);
+        updStage = UPD_PAGES;
         fsNote = updateFilesystemKeepingBackups(fsUrl);
     }
     events.add((String("Firmware installed via auto-update") + fsNote + " — rebooting").c_str());
+    prefs.putUChar(NVS_KEY_UPD_STAGE, UPD_REBOOTING);
+    updStage = UPD_REBOOTING;
     otaGuardEnd();
     if (!fromBle) server.send(200, "text/plain", String("ok — rebooting") + fsNote);   // over Bluetooth the 202 went before the pause
     bleEarlyPump();               // over BLE: deliver the reply before the reboot kills the link (a no-op once paused)
@@ -3293,6 +3313,12 @@ inline void handleApiState() {
     // Simulator interface (0.9.757) - TOP LEVEL, beside dongle, which is where
     // dongle.html looks. It first went inside "fcinfo", where the page never
     // saw it, so the role could not display (found on DongleSim, 2026-09-18).
+    // THE UPDATE RECORD (0.9.813): what the last install did, so a page can
+    // SAY so instead of the pilot having to work it out.
+    j += ",\"last_update\":{\"from\":\""; j += updFrom; j += "\",\"to\":\""; j += updTo;
+    j += "\",\"stage\":\""; j += updStageName(updStage);
+    j += "\",\"ok\":"; j += (updStage == UPD_DONE ? "true" : "false");
+    j += ",\"fresh\":"; j += (updJustDone ? "true" : "false"); j += "}";
     j += ",\"role_auto\":";      j += (roleAuto ? "true" : "false");   // 0.9.812: the board chose this role itself
     j += ",\"sim_if\":";         j += (simIfEnabled ? "true" : "false");
     if (simIfEnabled) {

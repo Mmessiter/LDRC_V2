@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.813-the-update-record",
+      "url": "https://messiter.com/rxv2/release/v0.9.813/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.813/littlefs.bin",
+      "fs_md5": "f4a0f3572c559412f05ea0fc626a6f62",
+      "notes": "One spelling of the name everywhere: LockDownRadioControl. And the receiver now keeps its own record of the last update - what it was, what it was asked to become, and how far it got - so the update page can SAY whether it worked instead of leaving you to work it out by reloading and reading the version. A failed one names the stage it stopped at and reminds you the old firmware is untouched."
+    },
+    {
       "name": "RXV2-0.9.812-role-decides-itself",
       "url": "https://messiter.com/rxv2/release/v0.9.812/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.812/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.802/littlefs.bin",
       "fs_md5": "2e91e6af19cc3486e9ce9b99255a3c4c",
       "notes": "Android: the back button on each page now sits on a solid white disc like the question mark beside it. It was there all along, but a thin blue chevron straight on the photograph could not be seen."
-    },
-    {
-      "name": "RXV2-0.9.801-help-explains-both-backups",
-      "url": "https://messiter.com/rxv2/release/v0.9.801/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.801/littlefs.bin",
-      "fs_md5": "5443661ae782647ec2b38f8e91526237",
-      "notes": "Help now explains the two kinds of backup: yours is never overwritten, while the automatic copy holds the settings as they were when you connected - an undo for the session, not an archive, since the next connection takes it again. It also says plainly that nothing is ever read in the air: arming takes Bluetooth down, a backup refuses to start with the transmitter on, and a half-read sweep is never kept."
     }
   ],
   "rotorflight": {

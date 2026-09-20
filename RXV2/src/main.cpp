@@ -475,6 +475,25 @@ void setup() {
     // Malcolm 2026-09-08 - "on detecting zero transceivers, it puts itself
     // into dongle mode". A bare XIAO is a dongle by nature; a receiver
     // whose radios have died cannot fly anyway, and the home page says so.
+    // THE UPDATE RECORD, judged (0.9.813): an install that reached "restarting"
+    // and came back as the version it wanted WORKED - say so, and keep saying
+    // so until something else is installed. Anything else stopped where the
+    // record says it stopped.
+    {
+        updFrom  = prefs.getString(NVS_KEY_UPD_FROM, "");
+        updTo    = prefs.getString(NVS_KEY_UPD_TO, "");
+        updStage = prefs.getUChar(NVS_KEY_UPD_STAGE, UPD_NONE);
+        if (updStage == UPD_REBOOTING) {
+            const bool arrived = updTo.length() && String(FW_VERSION).indexOf(updTo) >= 0;
+            updStage = arrived ? UPD_DONE : UPD_FAILED;
+            updJustDone = arrived;
+            prefs.putUChar(NVS_KEY_UPD_STAGE, updStage);
+            char m[EventLog::MSG_LEN];
+            snprintf(m, sizeof(m), arrived ? "Update DONE: %.40s is running" : "Update did NOT take: still on %.40s",
+                     arrived ? FW_VERSION : FW_VERSION);
+            events.add(m);
+        }
+    }
     runRadioSelfTest();
     detectAllRadios();       // probes slots 1/2/3 independently; sets radioPresent[] + numRadiosPresent
     dongleMode    = prefs.isKey(NVS_KEY_DONGLE) ? prefs.getUChar(NVS_KEY_DONGLE, 0) : 0;

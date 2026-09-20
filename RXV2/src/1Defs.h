@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.812-role-decides-itself";
+constexpr const char* FW_VERSION = "RXV2-0.9.813-the-update-record";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -393,6 +393,15 @@ constexpr const char* NVS_KEY_MODEL_NAME  = "nm";      // user-set model name (e
 constexpr const char* NVS_KEY_FS_MD5      = "fsmd5";   // md5 of the last-flashed littlefs image: identical-release fs updates are SKIPPED (flights survive untouched)
 constexpr const char* NVS_KEY_FS_DIRTY    = "fsdirty"; // 1 = a littlefs flash began and never committed: boot FORMATS the partition instead of mounting a half image (Goblin 2026-09-03)
 constexpr const char* NVS_KEY_SIM         = "sim";     // 1 = drive flight simulator over USB (HID joystick)
+// THE UPDATE RECORD (0.9.813, top of the hardening list). Malcolm has twice
+// had an install succeed while the page "stopped short of telling me so", and
+// has had to work out for himself whether it worked. The receiver now keeps
+// its own account: what it was on, what it was asked to become, and how far it
+// got. Read back in state.json, so any page - even one opened minutes later -
+// can say plainly whether the last update worked.
+constexpr const char* NVS_KEY_UPD_FROM    = "updfrom";  // version running when the install began
+constexpr const char* NVS_KEY_UPD_TO      = "updto";    // version it was asked to become
+constexpr const char* NVS_KEY_UPD_STAGE   = "updstage"; // see UpdStage below
 constexpr const char* NVS_KEY_OTA_BLE     = "otable";   // 1 = the update was asked for over Bluetooth: hold the STA join ~20 s after the reboot so the phone can confirm on a quiet radio
 // SIMULATOR INTERFACE (0.9.757, dongle mode 3). Malcolm 2026-09-17: "add to
 // the dongle a new option called 'Simulator interface'". A radio-less board
@@ -405,6 +414,25 @@ inline bool simIfEnabled = false;
 // 0.9.812: the role was CHOSEN BY THE BOARD, not by the pilot (dongle mode 0
 // with no transceivers). Reported in state.json so the pages can say so.
 inline bool roleAuto = false;
+
+// How far the last update got. Written as it happens, read at the next boot.
+enum UpdStage : uint8_t {
+    UPD_NONE = 0, UPD_FIRMWARE = 1, UPD_PAGES = 2, UPD_REBOOTING = 3,
+    UPD_DONE = 4, UPD_FAILED = 5
+};
+inline String   updFrom, updTo;      // what the record says, loaded at boot
+inline uint8_t  updStage = UPD_NONE;
+inline bool     updJustDone = false; // TRUE on the first boot after a good one
+inline const char* updStageName(uint8_t st) {
+    switch (st) {
+        case UPD_FIRMWARE:  return "downloading the firmware";
+        case UPD_PAGES:     return "downloading the pages";
+        case UPD_REBOOTING: return "restarting";
+        case UPD_DONE:      return "done";
+        case UPD_FAILED:    return "failed";
+        default:            return "none";
+    }
+}
 constexpr const char* NVS_KEY_SIMIF_HINT  = "simifh";  // 1 = a receiver was heard on D5 last run: listen LONGER before falling back to dongle (0.9.812)
 constexpr const char* NVS_KEY_DONGLE      = "dongle";  // 1 = Rotorflight DONGLE: plain MSP on D5/D6 to a spare FC UART, no radio, any receiver flies (2026-09-08)
 constexpr const char* NVS_KEY_DONGLE_BAUD = "dbaud";   // u32 UART baud for dongle mode (115200 default = Rotorflight's MSP port default)

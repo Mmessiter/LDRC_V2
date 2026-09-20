@@ -1,14 +1,14 @@
 RXV2 sets up a radio-control model helicopter from your phone. No laptop, no computer program, no cables to a PC — at the flying field, or on the kitchen table.
 
 YOU NEED THE HARDWARE
-This app is a companion to LockDown Radio Control hardware. It needs either an LDRC RX V2 receiver or an LDRC dongle to do anything useful.
+This app is a companion to LockDownRadioControl hardware. It needs either an LDRC RX V2 receiver or an LDRC dongle to do anything useful.
 
 Without one, the app opens in DEMO MODE, where every page works against a simulated helicopter. Look around the whole app before you build anything.
 
 The hardware is not for sale. This is an open project — the circuit designs, the firmware and both phone apps are free, and you build your own. Everything you need is at messiter.com.
 
 IT WORKS WITH THE V1 TRANSMITTER
-The RX V2 receiver flies with the original LockDown Radio Control transmitter, built on a Teensy 4.1. That transmitter's source is on GitHub, free, for anyone to build:
+The RX V2 receiver flies with the original LockDownRadioControl transmitter, built on a Teensy 4.1. That transmitter's source is on GitHub, free, for anyone to build:
 github.com/Mmessiter/LockDownRadioControl
 
 WHAT IT DOES
@@ -36,4 +36,4 @@ github.com/Mmessiter/LDRC_V2
 messiter.com/rxv2/source.html
 
 NOT AFFILIATED
-LockDown Radio Control is an independent project, not affiliated with or endorsed by the Rotorflight project or any flight-controller manufacturer.
+LockDownRadioControl is an independent project, not affiliated with or endorsed by the Rotorflight project or any flight-controller manufacturer.

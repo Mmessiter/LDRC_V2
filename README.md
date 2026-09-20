@@ -1,4 +1,4 @@
-# LDRC V2 — LockDown Radio Control, Version 2
+# LDRC V2 — LockDownRadioControl, Version 2
 
 Private monorepo for the **version-2** hardware and firmware, kept separate from
 the version-1 code (which stays in the `LockDownRadioControl` repo).

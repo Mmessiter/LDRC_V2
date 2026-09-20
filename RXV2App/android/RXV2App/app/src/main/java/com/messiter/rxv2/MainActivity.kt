@@ -422,7 +422,7 @@ class MainActivity : AppCompatActivity() {
             elevation = 6f
         }
         masthead.addView(TextView(this).apply {
-            text = "LockDown Radio Control"
+            text = "LockDownRadioControl"
             textSize = 27f; setTextColor(INK)
             setTypeface(typeface, android.graphics.Typeface.BOLD)
             gravity = android.view.Gravity.CENTER

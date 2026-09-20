@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Check for Update &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=331">
-<script src="/app.js?v=331" defer></script>
+<link rel=stylesheet href="/style.css?v=333">
+<script src="/app.js?v=333" defer></script>
 <style>
 /* --- Currently-installed card -------------------------------------- */
 .installed-card .row{
@@ -324,6 +324,7 @@ async function loadCurrent() {
         const { ver, label } = splitName(currentFw);
         currentVer = ver;
         $('current').textContent = ver + (label ? ' · ' + label : '');
+        showLastUpdate(s.last_update);
         return s;
     } catch (e) {
         $('current').textContent = '(offline)';
@@ -486,6 +487,37 @@ const WEAK_WIFI_DBM = -70;
 
 // The top row follows the install (Malcolm 2026-09-18: "instead of saying what
 // was installed i think it should say which version is being installed").
+// THE LAST UPDATE, in the receiver's own words (0.9.813). It keeps a record
+// of what it was asked to become and how far it got, so this page can SAY
+// whether the last install worked — even one opened long afterwards, and even
+// when the install's own progress was never seen. Malcolm twice had an update
+// succeed while the page "stopped short of telling me so", and had to work it
+// out by reloading and reading the version.
+function showLastUpdate(u) {
+    if (!u || !u.to || installing) return;
+    const el = document.getElementById('message');
+    if (!el || el.dataset.updShown) return;
+    const to = splitName(u.to).ver || u.to, from = splitName(u.from).ver || u.from;
+    if (u.ok) {
+        // Only worth saying while it is news: the boot straight after it.
+        if (!u.fresh) return;
+        el.dataset.updShown = '1';
+        el.className = 'note';
+        el.innerHTML = '<b>\u2713 Update finished.</b> ' +
+            (from && from !== to ? 'This receiver went from <code>' + from + '</code> to <code>' + to + '</code>.'
+                                 : 'This receiver is running <code>' + to + '</code>.');
+        el.hidden = false;
+        return;
+    }
+    if (u.stage === 'none' || u.stage === 'done') return;
+    el.dataset.updShown = '1';
+    el.className = 'note';
+    el.innerHTML = '<b>The last update did not finish.</b> It was installing <code>' + to +
+        '</code> and stopped while <b>' + u.stage + '</b>. This receiver is still on <code>' +
+        (from || currentVer) + '</code>, which is untouched \u2014 try again below.';
+    el.hidden = false;
+}
+
 function paintTopRow(installingVer) {
     const lbl = document.querySelector('.installed-card .row .label');
     const { ver, label } = splitName(currentFw);

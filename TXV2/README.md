@@ -1,6 +1,6 @@
 # TXV2 — Transmitter V2
 
-The next-generation LockDown Radio Control **transmitter**.
+The next-generation LockDownRadioControl **transmitter**.
 
 **Not started yet** — this is a placeholder so the folder exists in the repo.
 Work begins soon. (See the V2 transmitter design notes kept alongside the

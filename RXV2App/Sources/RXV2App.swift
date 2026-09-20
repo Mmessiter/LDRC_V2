@@ -493,7 +493,7 @@ struct PageHeading: View {
 struct HomeMasthead: View {
     var body: some View {
         VStack(spacing: 7) {
-            Text("LockDown Radio Control")
+            Text("LockDownRadioControl")
                 .font(.system(size: 29, weight: .semibold))
                 .foregroundStyle(Color.ldrcInk)
                 .multilineTextAlignment(.center)
