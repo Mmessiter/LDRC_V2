@@ -2,6 +2,45 @@
 
 Checked on the machine 2026-09-20, against build 5.148 (441).
 
+## DO THIS — there is only one job, and it takes about five minutes
+
+Everything else I can do for you once you have done this one thing.
+
+### The key
+
+1. Go to **appstoreconnect.apple.com** and sign in.
+2. Click **Users and Access** along the top.
+3. Click the **Integrations** tab.
+4. You are now on **App Store Connect API**, on **Team Keys**.
+5. Click the blue **+**.
+6. Name it anything — *Claude upload* will do.
+7. Access: choose **App Manager** from the dropdown.
+8. Click **Generate**.
+9. A row appears. Click **Download API Key**.
+   **Apple lets you download it once, ever.** If you miss it, delete the key
+   and make another — no harm done.
+10. On that same page, above the table, is **Issuer ID** — a long line of
+    letters, numbers and dashes. Click the copy button beside it.
+
+Then tell me: paste the Issuer ID, and say the key file has downloaded.
+I do not need the Key ID — it is in the file's own name.
+Leave the file in Downloads. I will put it where it belongs.
+
+### The one thing to check while you are there
+
+Click **Business** in the top bar. The **Free Apps** agreement should say
+**Active**. If it does not, click it and accept it — without that, Apple
+cannot distribute the app even for nothing.
+
+### That is all
+
+With the key I can create the app record, upload the build, fill in the
+listing and put it into TestFlight, without you clicking anything else.
+I will read the forms back to you before anything is submitted.
+
+If any screen does not look like the above, just tell me what you see.
+Apple moves these pages about, and I would rather you asked than guessed.
+
 ## Ready — verified, not assumed
 
 | | |
@@ -20,21 +59,15 @@ Checked on the machine 2026-09-20, against build 5.148 (441).
 RF24 is GPL-2.0-only and must eventually be replaced — but it is **firmware only**.
 It is not in the iOS app and does not block this submission.
 
-## Three things only you can do
+## Why only one job, and not three
 
-1. **App Store Connect API key** — App Store Connect → Users and Access →
-   Integrations → App Store Connect API → **+**, role **App Manager**.
-   Download the `.p8` ONCE (Apple never shows it again) and put it at
-   `~/.appstoreconnect/private_keys/AuthKey_<KEYID>.p8`.
-   Tell me the Key ID and Issuer ID and every upload after that is one command.
+Creating the app record and uploading both go through the same API key, so
+once it exists I can do them. That leaves Malcolm with the key itself, which
+needs a signed-in human, and the agreement, which needs a person to accept it.
 
-2. **Create the app record** — App Store Connect → Apps → **+** → New App.
-   Platform iOS · Name `LDRC RX V2` · Primary language English (UK) ·
-   Bundle ID `com.messiter.rxv2app` · SKU `ldrc-rxv2` · Full access.
-   (With the API key I can do this instead.)
-
-3. **Agreements** — Business → the free-apps agreement must show **Active**,
-   or the app cannot be sold, even for nothing.
+The app record, for the avoidance of doubt, is: Platform **iOS**, Name
+**LockDownRadioControl RXV2**, Primary language **English (UK)**, Bundle ID
+**com.messiter.rxv2app**, SKU **ldrc-rxv2**, User access **Full Access**.
 
 ## The answers to the forms
 
