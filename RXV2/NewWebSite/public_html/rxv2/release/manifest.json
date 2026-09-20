@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.819-column-apps",
+      "url": "https://messiter.com/rxv2/release/v0.9.819/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.819/littlefs.bin",
+      "fs_md5": "c9bef46520a800c110d1ea963e34272a",
+      "notes": "Ships the centred column to both apps (0.9.818 committed it but --fw-only skipped the app builds)"
+    },
+    {
       "name": "RXV2-0.9.818-centred-column",
       "url": "https://messiter.com/rxv2/release/v0.9.818/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.818/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.808/littlefs.bin",
       "fs_md5": "150aa37e65c22d2e427dc503e06ee0bf",
       "notes": "The helicopter on the Receiver demo is redrawn as a filled silhouette - nose, tapering tail boom, swept fin, rotor and skids - which reads far better at icon size than the outline did."
-    },
-    {
-      "name": "RXV2-0.9.807-helicopter-joins-the-aeroplane",
-      "url": "https://messiter.com/rxv2/release/v0.9.807/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.807/littlefs.bin",
-      "fs_md5": "15c93aa4ad04255aeda66e4d0d4db833",
-      "notes": "The Receiver demo now shows a helicopter beside the aeroplane. Apple's symbol set has no helicopter, so it is drawn in the same white line weight as the symbols around it rather than dropped in as a coloured emoji."
     }
   ],
   "rotorflight": {

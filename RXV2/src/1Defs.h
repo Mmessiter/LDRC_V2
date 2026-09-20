@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.818-centred-column";
+constexpr const char* FW_VERSION = "RXV2-0.9.819-column-apps";
 
 //*********************************************************************
 //  Auto-update manifest URLs
