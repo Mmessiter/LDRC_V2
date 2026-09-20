@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rotorflight dongle &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=330">
-<script src="/app.js?v=330" defer></script>
+<link rel=stylesheet href="/style.css?v=331">
+<script src="/app.js?v=331" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;gap:.6em;padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
 .fldRow label{flex:1;color:#3a5165;font-size:.95em}
@@ -41,8 +41,9 @@ table.wire td:first-child{font-weight:700;color:#3a5165;white-space:nowrap}
          a dongle. No option, except it could be a simulator!"). -->
     <div class=card id=roleCard style="display:none">
         <h2>Role</h2>
-        <button class=roleBtn type=button id=roleDongle onclick="pickRole(0)"><span class=ico>&#128268;</span><span><b>Rotorflight dongle</b><small>the phone app on a flight controller</small></span><span class=tick>&#10003;</span></button>
-        <button class=roleBtn type=button id=roleSim onclick="pickRole(3)"><span class=ico>&#127918;</span><span><b>Simulator interface</b><small>a receiver on the wire, a joystick on the computer</small></span><span class=tick>&#10003;</span></button>
+        <button class=roleBtn type=button id=roleAuto onclick="pickRole(0)"><span class=ico>&#129302;</span><span><b>Automatic</b><small>decides by what is on the wire &mdash; normally leave it here</small></span><span class=tick>&#10003;</span></button>
+        <button class=roleBtn type=button id=roleDongle onclick="pickRole(1)"><span class=ico>&#128268;</span><span><b>Always a Rotorflight dongle</b><small>the phone app on a flight controller</small></span><span class=tick>&#10003;</span></button>
+        <button class=roleBtn type=button id=roleSim onclick="pickRole(3)"><span class=ico>&#127918;</span><span><b>Always a simulator interface</b><small>a receiver on the wire, a joystick on the computer</small></span><span class=tick>&#10003;</span></button>
     </div>
 
     <div class=card id=nameCard style="display:none">
@@ -127,7 +128,8 @@ let on = false, simIf = false, radios = false, curRole = 0, picked = 0, usbLink 
 function pickRole(m) {
     picked = m;
     const sim = m === 3;
-    document.getElementById('roleDongle').classList.toggle('sel', !sim);
+    document.getElementById('roleAuto').classList.toggle('sel', m === 0);
+    document.getElementById('roleDongle').classList.toggle('sel', m === 1);
     document.getElementById('roleSim').classList.toggle('sel', sim);
     // The cards follow the CHOICE, so the wiring for the new role is on
     // screen before the restart. USB link (0.9.615): the flight controller is
@@ -218,7 +220,10 @@ async function load() {
         on = !!s.dongle; simIf = !!s.sim_if;
         radios = ((s.rf && s.rf.radios_count) | 0) > 0;
         usbLink = s.dongle_link === 'usb';
-        curRole = simIf ? 3 : 0;
+        // What is SAVED (0 automatic, 1 always a dongle, 3 always a simulator
+        // interface) — not what the board happens to be right now, which with
+        // Automatic it works out for itself at every boot (0.9.812).
+        curRole = s.role_auto ? 0 : (simIf ? 3 : 1);
         if (radios) {
             // Transceivers fitted: a receiver, full stop. The only button worth
             // having is the way back from an older page's "always a dongle".
@@ -248,7 +253,9 @@ async function load() {
         const b = document.getElementById('baud'); if (s.dongle_baud) b.value = String(s.dongle_baud);
         pickRole(curRole);
         document.getElementById('title').textContent = simIf ? 'Simulator interface' : 'Rotorflight dongle';
-        document.getElementById('subtitle').textContent = simIf ? 'a receiver on the wire, a joystick on the computer' : 'the phone app on a Nexus that another receiver flies';
+        document.getElementById('subtitle').textContent =
+            (s.role_auto ? 'chosen automatically \u2014 ' : '') +
+            (simIf ? 'a receiver on the wire, a joystick on the computer' : 'the phone app on a Nexus that another receiver flies');
         paintStatus(s);
         // The wire banner is live: what the board hears changes as things are plugged in.
         if (simIf && !pollTimer) pollTimer = setInterval(async () => { try { const t = await LDRC.fetchState(); if (t) paintStatus(t); } catch (e) {} }, 3000);
@@ -257,7 +264,8 @@ async function load() {
 
 async function apply() {
     const mode = picked;
-    const what = mode === 3 ? 'a simulator interface' : 'a Rotorflight dongle';
+    const what = mode === 3 ? 'always a simulator interface' : mode === 1 ? 'always a Rotorflight dongle'
+               : 'automatic \u2014 it decides for itself at every start';
     const q = mode !== curRole ? 'Make this board ' + what + '? It restarts now.' : 'Save and restart the board?';
     if (!(await LDRC.confirm(q, { title: 'Restart', icon: '🔌', yes: 'Yes, restart', kind: 'warn' }))) return;
     await post(mode);

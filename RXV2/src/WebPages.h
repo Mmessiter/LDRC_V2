@@ -3293,6 +3293,7 @@ inline void handleApiState() {
     // Simulator interface (0.9.757) - TOP LEVEL, beside dongle, which is where
     // dongle.html looks. It first went inside "fcinfo", where the page never
     // saw it, so the role could not display (found on DongleSim, 2026-09-18).
+    j += ",\"role_auto\":";      j += (roleAuto ? "true" : "false");   // 0.9.812: the board chose this role itself
     j += ",\"sim_if\":";         j += (simIfEnabled ? "true" : "false");
     if (simIfEnabled) {
         j += ",\"sim_if_link\":\""; j += g_rcIn.protocolName(); j += "\"";

@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.811-dongle-reads-again";
+constexpr const char* FW_VERSION = "RXV2-0.9.812-role-decides-itself";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -402,6 +402,10 @@ constexpr const char* NVS_KEY_OTA_BLE     = "otable";   // 1 = the update was as
 // so the whole existing sim path (SimUsb, spool-up realism, /map, /simctl,
 // /views) works unchanged. Replaces the separate LDRC2SIM firmware.
 inline bool simIfEnabled = false;
+// 0.9.812: the role was CHOSEN BY THE BOARD, not by the pilot (dongle mode 0
+// with no transceivers). Reported in state.json so the pages can say so.
+inline bool roleAuto = false;
+constexpr const char* NVS_KEY_SIMIF_HINT  = "simifh";  // 1 = a receiver was heard on D5 last run: listen LONGER before falling back to dongle (0.9.812)
 constexpr const char* NVS_KEY_DONGLE      = "dongle";  // 1 = Rotorflight DONGLE: plain MSP on D5/D6 to a spare FC UART, no radio, any receiver flies (2026-09-08)
 constexpr const char* NVS_KEY_DONGLE_BAUD = "dbaud";   // u32 UART baud for dongle mode (115200 default = Rotorflight's MSP port default)
 // Spool-up realism (Malcolm 2026-08-17, for neXt autorotation practice):

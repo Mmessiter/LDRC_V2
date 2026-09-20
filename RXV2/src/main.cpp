@@ -82,6 +82,28 @@ static uint32_t countEdges(uint8_t pin, uint32_t windowUs) {
     return n;
 }
 
+// Is a RECEIVER talking on D5? Listens only — the UART is opened with no TX
+// pin, so D6 stays silent throughout. Returns true the moment one of CRSF,
+// SBUS, IBUS or PPM locks (0.9.812, automatic role).
+//
+// LISTENING IS THE SAFE TEST, so it goes first. A flight controller's MSP
+// port says nothing until it is asked, while a receiver chatters at once —
+// and transmitting on D6 to find a flight controller would push bytes into
+// whatever the crossed lead has on that pin. On an RXV1 that pin is an
+// OUTPUT (Malcolm 2026-09-19: "if no flight controller on serial it must be
+// sim interface" — true, but listen before you speak).
+static bool listenForReceiverOnD5(uint32_t forMs) {
+    g_rcIn.begin(PIN_FC_RX, &Serial1);
+    const uint32_t t0 = millis();
+    while ((uint32_t)(millis() - t0) < forMs) {
+        g_rcIn.update();
+        if (g_rcIn.linkUp()) return true;      // leave the UART as it is: the caller commits
+        delay(1);
+    }
+    Serial1.end();
+    return false;
+}
+
 static void statusLedBegin() {                     // call after detectAllRadios()
     // D4 is free only when radio 3 is gone - and the external LED that lives
     // on it is a RECEIVER-PCB feature. A bare XIAO (dongle, simulator
@@ -468,6 +490,30 @@ void setup() {
     simIfEnabled  = (dongleMode == 3) && numRadiosPresent == 0;
     if (dongleMode == 3 && numRadiosPresent > 0) events.add("Saved as a simulator interface but transceivers are fitted - running as a receiver");
     if (simIfEnabled) simEnabled = true;
+    // AUTOMATIC ROLE (0.9.812, Malcolm: "the switch between Rotorflight
+    // dongle and Simulator interface can and ought to be automatic"). With no
+    // transceivers this board is one or the other, and it can tell which:
+    // listen on D5 first (passive), and only call itself a dongle when
+    // nothing is talking there. This runs BEFORE the USB is brought up,
+    // because the USB role - joystick or host - is fixed at boot.
+    roleAuto = (dongleMode == 0) && numRadiosPresent == 0 && !simEnabled;
+    if (roleAuto) {
+        // A receiver heard last run earns a longer listen: its transmitter
+        // may simply be off at this moment (the hint is cleared either way).
+        const bool hinted = prefs.getUChar(NVS_KEY_SIMIF_HINT, 0) != 0;
+        if (listenForReceiverOnD5(hinted ? 6000 : 2600)) {
+            simIfEnabled = true;
+            simEnabled   = true;
+            prefs.putUChar(NVS_KEY_SIMIF_HINT, 1);
+            char m[110];
+            snprintf(m, sizeof(m), "Simulator interface chosen by itself: %s on D5, %u channels",
+                     g_rcIn.protocolName(), (unsigned)g_rcIn.channelCount());
+            events.add(m);
+        } else {
+            prefs.putUChar(NVS_KEY_SIMIF_HINT, 0);
+            events.add("Nothing talking on D5 - starting as a Rotorflight dongle (it listens again if that is wrong)");
+        }
+    }
     dongleEnabled = (dongleMode == 1) || (dongleMode == 0 && numRadiosPresent == 0 && !simEnabled);
     dongleAuto    = dongleEnabled && dongleMode == 0;
     dongleBaud    = prefs.isKey(NVS_KEY_DONGLE_BAUD) ? prefs.getUInt(NVS_KEY_DONGLE_BAUD, 115200) : 115200;
@@ -969,6 +1015,33 @@ void loop() {
         SimUSB::sendChannels(simTx);
         SimUSB::keyboardTick();   // send any pending camera/view keystroke (non-blocking)
     } else {
+        // AUTOMATIC ROLE, second half (0.9.812). We are a dongle because D5 was
+        // silent at boot - but a simulator rig whose transmitter was off is
+        // silent too. While no flight controller has EVER answered, listen
+        // again now and then; D6 stays silent for those 2.6 s. A lock means
+        // this is a simulator interface, and that needs a restart because the
+        // USB role (joystick, not host) is fixed at boot.
+        if (dongleAuto && roleAuto && !fcInfo.detected && !UsbHostMsp::active() &&
+            millis() > 20000 && !bbCheckActive) {
+            static uint32_t lastListenMs = 0;
+            if ((uint32_t)(millis() - lastListenMs) > 15000) {
+                lastListenMs = millis();
+                if (listenForReceiverOnD5(2600)) {
+                    char m[110];
+                    snprintf(m, sizeof(m), "A receiver is talking on D5 (%s) and no flight controller ever answered - restarting as a simulator interface",
+                             g_rcIn.protocolName());
+                    events.add(m);
+                    prefs.putUChar(NVS_KEY_SIMIF_HINT, 1);
+                    prefs.putUChar(NVS_KEY_CFG_REBOOT, 1);
+                    eventsPersist();
+                    delay(200);
+                    ESP.restart();
+                }
+                // Nothing there: put the flight controller's UART back.
+                Serial1.setRxBufferSize(2048);
+                Serial1.begin(dongleBaud, SERIAL_8N1, PIN_FC_RX, PIN_SBUS_TX, false);
+            }
+        }
         { StallScope s("protocolRx"); protocolRx(); }      // pull any telemetry/MSP bytes the FC has sent back on D5
         { StallScope s("mspBridge");  mspBridgePoll(); }   // TCP/5760 ↔ FC for wireless Rotorflight config
         { StallScope s("mspFcPoll");  mspFcPoll(); }
