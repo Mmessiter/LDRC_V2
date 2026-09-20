@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.815-record-names-the-version",
+      "url": "https://messiter.com/rxv2/release/v0.9.815/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.815/littlefs.bin",
+      "fs_md5": "5134badd2f8961d66c42cf46f003ad90",
+      "notes": "The update record named the file rather than the version - it read to: firmware and then judged a perfectly good install a failure, which is the one thing it exists to prevent. It now takes the release name from the page, or the version folder from the address."
+    },
+    {
       "name": "RXV2-0.9.814-wire-finder-stays-out-of-the-way",
       "url": "https://messiter.com/rxv2/release/v0.9.814/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.814/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.804/littlefs.bin",
       "fs_md5": "ab1a4c4091da1ed463bb7dfd56e1bc14",
       "notes": "Android: the flying-field photograph keeps its proportions. It was being stretched to the screen's shape, which squeezed a landscape picture on a tall phone; it is now cropped instead, as on iPhone."
-    },
-    {
-      "name": "RXV2-0.9.803-bigger-chevron",
-      "url": "https://messiter.com/rxv2/release/v0.9.803/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.803/littlefs.bin",
-      "fs_md5": "bff762e8452ae986b289718bfa54a689",
-      "notes": "Android: the back chevron is drawn larger, so it carries the same weight as the question mark beside it - a thin glyph needs more point size than a letter to look the same."
     }
   ],
   "rotorflight": {

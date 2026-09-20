@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Check for Update &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=333">
-<script src="/app.js?v=333" defer></script>
+<link rel=stylesheet href="/style.css?v=334">
+<script src="/app.js?v=334" defer></script>
 <style>
 /* --- Currently-installed card -------------------------------------- */
 .installed-card .row{
@@ -686,7 +686,8 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
     if (window.LDRC && LDRC.viaBle) {
         fetch('/api/firmware/install?url=' + encodeURIComponent(url) +
               (fsUrl ? '&fs_url=' + encodeURIComponent(fsUrl) : '') +
-              (fsMd5 ? '&fs_md5=' + encodeURIComponent(fsMd5) : ''),
+              (fsMd5 ? '&fs_md5=' + encodeURIComponent(fsMd5) : '') +
+              '&name=' + encodeURIComponent(v.name),
               { method: 'POST' }).catch(() => {});
         clearInterval(instTick);
         setStatePill('Installing…', 'amber');
@@ -807,7 +808,8 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
     try {
         const r = await fetch('/api/firmware/install?url=' + encodeURIComponent(url) +
                               (fsUrl ? '&fs_url=' + encodeURIComponent(fsUrl) : '') +
-                              (fsMd5 ? '&fs_md5=' + encodeURIComponent(fsMd5) : ''),
+                              (fsMd5 ? '&fs_md5=' + encodeURIComponent(fsMd5) : '') +
+                              '&name=' + encodeURIComponent(v.name),
                               { method: 'POST' });
         if (r.ok) {
             clearInterval(instTick);

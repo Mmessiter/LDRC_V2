@@ -1865,10 +1865,21 @@ inline void handleFirmwareInstall() {
     // whether a poll answered (Malcolm 2026-09-19 and again 2026-09-20: "it
     // updated successfully, but stopped short of telling me so").
     {
-        String want = url;
-        int sl = want.lastIndexOf('/');
-        if (sl >= 0) want = want.substring(sl + 1);
-        want.replace(".bin", "");
+        // What we are becoming. The page sends the release name; without it,
+        // take the URL's DIRECTORY - .../release/v0.9.814/firmware.bin - since
+        // the file itself is always called "firmware.bin" (0.9.815: the first
+        // record read "to: firmware" and then judged a perfectly good install
+        // a failure, which is the very thing this was built to prevent).
+        String want = server.hasArg("name") ? server.arg("name") : String("");
+        if (!want.length()) {
+            String u = url;
+            int sl = u.lastIndexOf('/');
+            if (sl >= 0) u = u.substring(0, sl);          // drop "/firmware.bin"
+            sl = u.lastIndexOf('/');
+            if (sl >= 0) u = u.substring(sl + 1);          // the version folder
+            if (u.startsWith("v")) u = u.substring(1);     // "v0.9.814" -> "0.9.814"
+            want = u;
+        }
         prefs.putString(NVS_KEY_UPD_FROM, FW_VERSION);
         prefs.putString(NVS_KEY_UPD_TO, want);
         prefs.putUChar(NVS_KEY_UPD_STAGE, UPD_FIRMWARE);
