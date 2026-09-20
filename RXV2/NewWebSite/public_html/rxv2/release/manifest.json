@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.818-centred-column",
+      "url": "https://messiter.com/rxv2/release/v0.9.818/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.818/littlefs.bin",
+      "fs_md5": "50d4b7c1dd311451b3b3dbc088b9a558",
+      "notes": "Both apps: a centred column instead of full width, so an iPad or tablet no longer stretches the buttons across the whole screen"
+    },
+    {
       "name": "RXV2-0.9.817-debug-destination",
       "url": "https://messiter.com/rxv2/release/v0.9.817/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.817/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.807/littlefs.bin",
       "fs_md5": "15c93aa4ad04255aeda66e4d0d4db833",
       "notes": "The Receiver demo now shows a helicopter beside the aeroplane. Apple's symbol set has no helicopter, so it is drawn in the same white line weight as the symbols around it rather than dropped in as a coloured emoji."
-    },
-    {
-      "name": "RXV2-0.9.806-no-uninvited-back",
-      "url": "https://messiter.com/rxv2/release/v0.9.806/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.806/littlefs.bin",
-      "fs_md5": "db9c9d96abb44fcd26e46fc54adfc784",
-      "notes": "Android: the app no longer walks you back to the front screen on its own. A link going idle used to do that, so the Connect page vanished before its message could be read. It now happens only when leaving a model's pages - anywhere else you leave when you choose to."
     }
   ],
   "rotorflight": {

@@ -425,7 +425,7 @@ struct ScannerView: View {
                              title: "Demos")
                 }
             }
-            .padding(18)
+            .pageColumn()
         }
         .background(ScannerBackdrop())
         .navigationTitle("")
@@ -898,7 +898,7 @@ struct BackupContentsView: View {
                                         in: RoundedRectangle(cornerRadius: 12))
                     }
                 }
-                .padding(18)
+                .pageColumn()
             }
             .background(ScannerBackdrop())
             .safeAreaInset(edge: .top) { PageHeading("What\u{2019}s in the backup") }
@@ -937,7 +937,7 @@ struct DemosView: View {
                              title: "Simulator interface")
                 }
             }
-            .padding(18)
+            .pageColumn()
         }
         .background(ScannerBackdrop())
         .safeAreaInset(edge: .top) { PageHeading("Demos") }
@@ -1189,7 +1189,7 @@ struct ScannerHelpView: View {
                             .frame(maxWidth: .infinity)
                     }
                 }
-                .padding(18)
+                .pageColumn()
             }
             .background(ScannerBackdrop())
             .safeAreaInset(edge: .top) { PageHeading(heading) }
@@ -1199,5 +1199,18 @@ struct ScannerHelpView: View {
                 ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
             }
         }
+    }
+}
+
+
+extension View {
+    /// A centred column, as the receiver's own web pages have always used.
+    /// Full width on a phone (the cap is never reached), so nothing changes
+    /// there; on an iPad it stops the buttons stretching the whole width and
+    /// leaving the page mostly empty (Malcolm 2026-09-20).
+    func pageColumn() -> some View {
+        self.padding(18)
+            .frame(maxWidth: 620)
+            .frame(maxWidth: .infinity)
     }
 }

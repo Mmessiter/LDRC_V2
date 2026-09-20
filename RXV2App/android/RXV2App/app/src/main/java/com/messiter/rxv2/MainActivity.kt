@@ -294,6 +294,17 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** Title bar: a back chevron on the sub-pages, the title, and the "?". */
+    /** Attach a page's column centred, capped at 620dp. A tablet otherwise
+     *  stretches the buttons the whole width and leaves the page mostly empty;
+     *  the receiver's own web pages have always used a centred column, and iOS
+     *  now matches (Malcolm 2026-09-20). A phone never reaches the cap. */
+    private fun addColumn(v: android.view.View) {
+        val cap = (620 * resources.displayMetrics.density).toInt()
+        val w = minOf(cap, resources.displayMetrics.widthPixels)
+        root.addView(v, FrameLayout.LayoutParams(w, FrameLayout.LayoutParams.MATCH_PARENT,
+                                                 android.view.Gravity.CENTER_HORIZONTAL))
+    }
+
     private fun pageHeader(col: LinearLayout, title: String, back: Boolean,
                            withHelp: Boolean = true, onBack: (() -> Unit)? = null) {
         val row = LinearLayout(this).apply {
@@ -450,7 +461,7 @@ class MainActivity : AppCompatActivity() {
         homeTile(col, "💾", 0xFFC98A4A.toInt(), "Backups") { showBackups() }
         homeTile(col, "🎭", 0xFF6C8EB0.toInt(), "Demos")   { showDemos() }
 
-        root.addView(col)
+        addColumn(col)
         // No searching here: the hunt — and the leap to the model used last —
         // begins only when Connect is tapped (Malcolm 2026-09-19).
         ble.stopScan()
@@ -517,7 +528,7 @@ class MainActivity : AppCompatActivity() {
         }
         col.addView(list, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
-        root.addView(col)
+        addColumn(col)
         startScanIfPermitted()
         scannerAdapter?.submit(latestFound)   // whatever is already in sight
     }
@@ -565,7 +576,7 @@ class MainActivity : AppCompatActivity() {
             }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                                          ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(40, 8, 40, 8) })
         }
-        root.addView(ScrollView(this).apply { addView(col) })
+        addColumn(ScrollView(this).apply { addView(col) })
     }
 
     /** BACKUPS — what this phone has saved for each model, and when. */
@@ -618,7 +629,7 @@ class MainActivity : AppCompatActivity() {
             col.addView(card, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                                          ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(40, 8, 40, 8) })
         }
-        root.addView(ScrollView(this).apply { addView(col) })
+        addColumn(ScrollView(this).apply { addView(col) })
     }
 
     /** WHAT'S IN THE BACKUP — the plain lines, for a backup this phone holds. */
@@ -649,7 +660,7 @@ class MainActivity : AppCompatActivity() {
         homeTile(col, "🚁✈️", 0xFF6CAB5E.toInt(), "Receiver") { demoRole = "receiver"; demoMode = true; showWeb() }
         homeTile(col, "🔌", 0xFF5FA099.toInt(), "Rotorflight dongle") { demoRole = "dongle"; demoMode = true; showWeb() }
         homeTile(col, "🎮", 0xFF6C8EB0.toInt(), "Simulator interface") { demoRole = "simif"; demoMode = true; showWeb() }
-        root.addView(col)
+        addColumn(col)
     }
 
     private var helpReturn = "home"
@@ -801,7 +812,7 @@ class MainActivity : AppCompatActivity() {
             packageManager.getPackageInfo(packageName, 0).versionName),
             LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                                       ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(40, 0, 40, 36) })
-        root.addView(ScrollView(this).apply { addView(col) })
+        addColumn(ScrollView(this).apply { addView(col) })
     }
 
     // ── App self-update ─────────────────────────────────────────────

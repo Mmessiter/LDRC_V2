@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.817-debug-destination";
+constexpr const char* FW_VERSION = "RXV2-0.9.818-centred-column";
 
 //*********************************************************************
 //  Auto-update manifest URLs
