@@ -214,7 +214,22 @@ cp "$FW" "$HERE/$NAME.bin"
 cp "$FW" "$SHARED/v$XYZ/firmware.bin"; cp "$FS" "$SHARED/v$XYZ/littlefs.bin"
 cp "$FW" "$SHARED/v$XYZ/$NAME.bin"; md5 -q "$SHARED/v$XYZ/$NAME.bin" > "$SHARED/v$XYZ/$NAME.bin.md5"
 cp "$FW" "$SHARED/$NAME.bin"; cp "$FS" "$SHARED/littlefs-$NAME.bin"
-ok "NewWebSite v$XYZ, dev/$NAME.bin, firmware-server v$XYZ + root twins (fs md5 $MD5)"
+
+# release/latest/ — the five images a person needs to flash a BARE XIAO by
+# cable, for anyone building their own dongle. The dongle page links straight
+# to these by name, so they must never go stale (added 2026-09-21).
+LATEST="$RELEASE/latest"; mkdir -p "$LATEST"
+cp "$FW" "$LATEST/firmware.bin"; cp "$FS" "$LATEST/littlefs.bin"
+cp .pio/build/xiao_s3_ota/bootloader.bin "$LATEST/bootloader.bin"
+cp .pio/build/xiao_s3_ota/partitions.bin "$LATEST/partitions.bin"
+BOOT_APP0=$(ls "$HOME"/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin 2>/dev/null | head -1)
+[[ -f "$BOOT_APP0" ]] && cp "$BOOT_APP0" "$LATEST/boot_app0.bin"
+printf 'These five files flash a bare Seeed XIAO ESP32-S3 into an LDRC dongle or receiver.\nBuild: %s\n\nesptool write_flash offsets:\n  0x0       bootloader.bin\n  0x8000    partitions.bin\n  0xe000    boot_app0.bin\n  0x10000   firmware.bin\n  0x670000  littlefs.bin\n\nInstructions: https://messiter.com/rotorflight/dongle.html#firmware\n' "$NAME" > "$LATEST/README.txt"
+for f in bootloader.bin partitions.bin boot_app0.bin firmware.bin littlefs.bin; do
+  [[ -s "$LATEST/$f" ]] || die "release/latest/$f missing — the dongle build page links to it"
+done
+
+ok "NewWebSite v$XYZ, dev/$NAME.bin, firmware-server v$XYZ + root twins (fs md5 $MD5), release/latest refreshed"
 
 # ---------------------------------------------------------------- 8 android
 AND_V="(unchanged)"
