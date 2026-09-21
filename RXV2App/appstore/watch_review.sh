@@ -2,6 +2,13 @@
 # Poll both Apple review queues and ping Malcolm's watch when either MOVES.
 # Runs from a LaunchAgent so it survives sleep, wake and logout — a nohup job
 # does not (see the session-drops note). Read-only: it only ever GETs.
+#
+# THIS FILE IS THE SOURCE. It runs from a COPY in /Users/Shared/ldrc-watch/,
+# because ~/Documents is TCC-protected and a LaunchAgent cannot read a thing in
+# there — it failed on every run for a whole night, logging only
+# "can't open input file", which looks nothing like a permissions problem.
+# Same reason the dev firmware server lives in /Users/Shared. After editing:
+#   dev/sync_watchers.sh
 APP=/Users/malcolmmessiter/Documents/GitHub/LDRC_V2_ALL/RXV2App
 NOTIFY=/Users/malcolmmessiter/Documents/GitHub/LDRC_V2_ALL/RXV2/dev/notify.sh
 STATE=$HOME/.appstoreconnect/rxv2_review_state
