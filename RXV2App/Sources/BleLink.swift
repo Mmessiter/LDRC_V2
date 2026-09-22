@@ -28,7 +28,7 @@ final class BleLink: NSObject, ObservableObject {
 
     struct Discovered: Identifiable {
         let id: UUID
-        let name: String
+        var name: String                 // a board can be renamed while it sits in the list (0.9.828)
         let rssi: Int
         let peripheral: CBPeripheral
     }
@@ -698,7 +698,22 @@ extension BleLink: CBCentralManagerDelegate, CBPeripheralDelegate {
         let id = peripheral.identifier, r = Double(RSSI.intValue)
         smoothRssi[id] = smoothRssi[id].map { $0 + Self.smoothing * (r - $0) } ?? r
         lastHeard[id] = Date()
-        if found.firstIndex(where: { $0.id == id }) == nil {
+        if let i = found.firstIndex(where: { $0.id == id }) {
+            // 0.9.828: a board already in the list can come back under a NEW
+            // name - a rename reboots it in ~5 s, well inside the 12 s that
+            // would have let the old entry expire, and every fresh advert only
+            // refreshed the clock. So it sat there as "Sally" while
+            // advertising "EGON", and tapping it connected to EGON (Malcolm
+            // 2026-09-22). Take the name the advertisement carries; iOS's own
+            // cached peripheral.name may still be the old one, so only an
+            // advertised local name counts as evidence of a change.
+            if let adv = advertisementData[CBAdvertisementDataLocalNameKey] as? String,
+               !adv.isEmpty, adv != found[i].name {
+                note("\(found[i].name) is now called \(adv)")
+                found[i].name = adv
+                if publishTimer == nil { startPublishing() }
+            }
+        } else {
             // A receiver appearing for the first time shows at once, not in a second.
             found.append(Discovered(id: id, name: name, rssi: RSSI.intValue, peripheral: peripheral))
             found.sort { $0.rssi > $1.rssi }
