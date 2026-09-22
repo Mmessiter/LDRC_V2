@@ -1872,13 +1872,27 @@ inline void handleFirmwareInstall() {
         // a failure, which is the very thing this was built to prevent).
         String want = server.hasArg("name") ? server.arg("name") : String("");
         if (!want.length()) {
+            // 0.9.826: the URL comes in two shapes, and the old code knew one.
+            //   messiter.com:  .../release/v0.9.814/firmware.bin   -> version folder
+            //   dev server:    http://192.168.1.193:8000/RXV2-0.9.825-slug.bin -> the FILE
+            // On the second it took "192.168.1.193:8000" as the target, and the
+            // boot judge then called a perfectly good install a FAILURE — the
+            // exact false negative this record must never give (Malcolm's Sally
+            // report, 2026-09-22). Prefer a release-named file; else the
+            // version folder; else say nothing rather than something wrong.
             String u = url;
+            int q = u.indexOf('?'); if (q >= 0) u = u.substring(0, q);
             int sl = u.lastIndexOf('/');
-            if (sl >= 0) u = u.substring(0, sl);          // drop "/firmware.bin"
-            sl = u.lastIndexOf('/');
-            if (sl >= 0) u = u.substring(sl + 1);          // the version folder
-            if (u.startsWith("v")) u = u.substring(1);     // "v0.9.814" -> "0.9.814"
-            want = u;
+            String file = (sl >= 0) ? u.substring(sl + 1) : u;
+            if (file.startsWith("RXV2-")) {
+                if (file.endsWith(".bin")) file = file.substring(0, file.length() - 4);
+                want = file;
+            } else {
+                String dir = (sl >= 0) ? u.substring(0, sl) : String("");
+                int s2 = dir.lastIndexOf('/');
+                String seg = (s2 >= 0) ? dir.substring(s2 + 1) : dir;
+                if (seg.length() > 1 && seg[0] == 'v' && isDigit(seg[1])) want = seg.substring(1);
+            }
         }
         prefs.putString(NVS_KEY_UPD_FROM, FW_VERSION);
         prefs.putString(NVS_KEY_UPD_TO, want);

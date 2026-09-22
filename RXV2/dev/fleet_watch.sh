@@ -84,7 +84,8 @@ except Exception: pass" 2>/dev/null)
       OUT=$(curl -s -m 900 -X POST http://$IP/api/firmware/install \
               --data-urlencode url=$SRV/$WANT.bin \
               --data-urlencode fs_url=$SRV/littlefs-$WANT.bin \
-              --data-urlencode fs_md5=$FSMD5)
+              --data-urlencode fs_md5=$FSMD5 \
+              --data-urlencode name=$WANT)          # the update record's target: never leave it to guess
       log "$NAME install reply: ${OUT:0:70}"
       IDLE[$IP]=0
       sleep 45

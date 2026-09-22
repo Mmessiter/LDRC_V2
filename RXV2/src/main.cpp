@@ -484,7 +484,11 @@ void setup() {
         updTo    = prefs.getString(NVS_KEY_UPD_TO, "");
         updStage = prefs.getUChar(NVS_KEY_UPD_STAGE, UPD_NONE);
         if (updStage == UPD_REBOOTING) {
-            const bool arrived = updTo.length() && String(FW_VERSION).indexOf(updTo) >= 0;
+            // Target known: did we become it? Target unknown (a URL the record
+            // could not read a name from): did the version change at all? A
+            // record must not call a good install a failure (0.9.826).
+            const bool arrived = updTo.length() ? (String(FW_VERSION).indexOf(updTo) >= 0)
+                                                : (updFrom.length() && updFrom != FW_VERSION);
             updStage = arrived ? UPD_DONE : UPD_FAILED;
             updJustDone = arrived;
             prefs.putUChar(NVS_KEY_UPD_STAGE, updStage);

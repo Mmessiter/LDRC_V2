@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.826-update-record-truth",
+      "url": "https://messiter.com/rxv2/release/v0.9.826/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.826/littlefs.bin",
+      "fs_md5": "f0a17850e5dc42921b04d298eb10d08c",
+      "notes": "The update record never calls a good install a failure: it reads the target from a release-named file as well as a version folder, judges an unknown target by whether the version changed, and the fleet watcher now names what it installs"
+    },
+    {
       "name": "RXV2-0.9.825-dongle-event-log",
       "url": "https://messiter.com/rxv2/release/v0.9.825/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.825/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.815/littlefs.bin",
       "fs_md5": "5134badd2f8961d66c42cf46f003ad90",
       "notes": "The update record named the file rather than the version - it read to: firmware and then judged a perfectly good install a failure, which is the one thing it exists to prevent. It now takes the release name from the page, or the version folder from the address."
-    },
-    {
-      "name": "RXV2-0.9.814-wire-finder-stays-out-of-the-way",
-      "url": "https://messiter.com/rxv2/release/v0.9.814/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.814/littlefs.bin",
-      "fs_md5": "f4a0f3572c559412f05ea0fc626a6f62",
-      "notes": "The simulator interface lost its signal and then took nearly two minutes to find it again: the wire finder was grabbing D5 as a plain pin for 300 milliseconds every five seconds, which is precisely how to stop a protocol locking. It now runs only when nothing whatever is arriving on the wire, which is the question it was built to answer."
     }
   ],
   "rotorflight": {
