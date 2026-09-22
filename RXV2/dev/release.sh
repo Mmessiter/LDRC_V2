@@ -232,7 +232,7 @@ import json, io, sys
 latest, ver = sys.argv[1], sys.argv[2]
 io.open(latest + '/manifest-esp.json', 'w').write(json.dumps({
     "name": "LockDownRadioControl RXV2", "version": ver,
-    "new_install_prompt_erase": True,
+    "new_install_prompt_erase": False,   # one dialog fewer; it then always erases, which is what the page promises
     "builds": [{"chipFamily": "ESP32-S3", "parts": [
         {"path": "bootloader.bin", "offset": 0x0},
         {"path": "partitions.bin", "offset": 0x8000},

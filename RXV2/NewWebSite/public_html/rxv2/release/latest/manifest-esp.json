@@ -2,7 +2,7 @@
  "name": "LockDownRadioControl RXV2",
  "version": "0.9.819",
  "funding_url": "https://messiter.com/rotorflight/",
- "new_install_prompt_erase": true,
+ "new_install_prompt_erase": false,
  "builds": [
   {
    "chipFamily": "ESP32-S3",
