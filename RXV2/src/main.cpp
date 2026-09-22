@@ -1049,27 +1049,49 @@ void loop() {
         // again now and then; D6 stays silent for those 2.6 s. A lock means
         // this is a simulator interface, and that needs a restart because the
         // USB role (joystick, not host) is fixed at boot.
-        if (dongleAuto && roleAuto && !fcInfo.detected && !UsbHostMsp::active() &&
-            millis() > 20000 && !bbCheckActive) {
-            static uint32_t lastListenMs = 0;
-            if ((uint32_t)(millis() - lastListenMs) > 15000) {
-                lastListenMs = millis();
-                if (listenForReceiverOnD5(2600)) {
-                    char m[110];
-                    snprintf(m, sizeof(m), "A receiver is talking on D5 (%s) and no flight controller ever answered - restarting as a simulator interface",
-                             g_rcIn.protocolName());
-                    events.add(m);
-                    prefs.putUChar(NVS_KEY_SIMIF_HINT, 1);
-                    prefs.putUChar(NVS_KEY_CFG_REBOOT, 1);
-                    eventsPersist();
-                    delay(200);
-                    ESP.restart();
-                }
+        //
+        // 0.9.820: NON-BLOCKING. Until now this called listenForReceiverOnD5(2600),
+        // which sat in a while-loop for 2.6 s - every 15 s, for as long as the
+        // bench had no flight controller on it. The web server and Bluetooth
+        // froze with it, and a first-run rename fired over BLE landed inside
+        // one of those stalls and was never serviced: the board answered
+        // nothing, the app moved on, and the naming box came straight back
+        // (Malcolm's freshly flashed dongle, 2026-09-22; 62 stalls in the log).
+        // Same 2.6 s window, same 15 s cadence, but spread over loop() passes.
+        // While the listener owns D5 the flight-controller UART users below are
+        // skipped, exactly as they never ran inside the old blocking wait.
+        static uint32_t lastListenMs = 0;
+        static uint32_t listenT0     = 0;
+        static bool     listening    = false;
+        if (listening) {
+            g_rcIn.update();
+            if (g_rcIn.linkUp()) {
+                char m[110];
+                snprintf(m, sizeof(m), "A receiver is talking on D5 (%s) and no flight controller ever answered - restarting as a simulator interface",
+                         g_rcIn.protocolName());
+                events.add(m);
+                prefs.putUChar(NVS_KEY_SIMIF_HINT, 1);
+                prefs.putUChar(NVS_KEY_CFG_REBOOT, 1);
+                eventsPersist();
+                delay(200);
+                ESP.restart();
+            }
+            if ((uint32_t)(millis() - listenT0) >= 2600) {
+                listening = false;
                 // Nothing there: put the flight controller's UART back.
+                Serial1.end();
                 Serial1.setRxBufferSize(2048);
                 Serial1.begin(dongleBaud, SERIAL_8N1, PIN_FC_RX, PIN_SBUS_TX, false);
             }
+        } else if (dongleAuto && roleAuto && !fcInfo.detected && !UsbHostMsp::active() &&
+                   millis() > 20000 && !bbCheckActive &&
+                   (uint32_t)(millis() - lastListenMs) > 15000) {
+            lastListenMs = millis();
+            listenT0     = millis();
+            listening    = true;
+            g_rcIn.begin(PIN_FC_RX, &Serial1);     // TX pin untouched: D6 stays silent
         }
+        if (!listening) {
         { StallScope s("protocolRx"); protocolRx(); }      // pull any telemetry/MSP bytes the FC has sent back on D5
         { StallScope s("mspBridge");  mspBridgePoll(); }   // TCP/5760 ↔ FC for wireless Rotorflight config
         { StallScope s("mspFcPoll");  mspFcPoll(); }
@@ -1084,6 +1106,7 @@ void loop() {
         // never while the transmitter is linked or the model is armed, because
         // leaving restarts the flight controller.
         { StallScope s("cliIdle"); UsbHostMsp::cliIdleTick(!rxTxLinkedRecently() && !fcInfo.armed); }
+        }   // !listening
     }
     { StallScope s("vbat");        vbatPoll(); }              // battery divider ADC (5 Hz, no-op when off)
     { StallScope s("teleSample");  telemetrySampleTick(); }   // 1 Hz flight telemetry log (ESC temp / head speed / battery)

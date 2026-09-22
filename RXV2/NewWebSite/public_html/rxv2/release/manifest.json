@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.820-no-stall-naming",
+      "url": "https://messiter.com/rxv2/release/v0.9.820/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.820/littlefs.bin",
+      "fs_md5": "ffd0c33208c9d0e9e247cc5e387693e4",
+      "notes": "Dongle on the bench: the automatic-role re-listen no longer freezes the board for 2.6 s every 15 s; the first-run name save over Bluetooth waits for the board's answer instead of firing and leaving; and the naming box now has a way out to the event log"
+    },
+    {
       "name": "RXV2-0.9.819-column-apps",
       "url": "https://messiter.com/rxv2/release/v0.9.819/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.819/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.809/littlefs.bin",
       "fs_md5": "af64aad49c87569e6364174c1467e1b8",
       "notes": "The app's buttons now carry the same icons as the receiver's own pages: the helicopter and aeroplane from Fly now, the game controller from Simulator, and so on. The hand-drawn helicopter is gone - the front page already had the right one."
-    },
-    {
-      "name": "RXV2-0.9.808-better-helicopter",
-      "url": "https://messiter.com/rxv2/release/v0.9.808/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.808/littlefs.bin",
-      "fs_md5": "150aa37e65c22d2e427dc503e06ee0bf",
-      "notes": "The helicopter on the Receiver demo is redrawn as a filled silhouette - nose, tapering tail boom, swept fin, rotor and skids - which reads far better at icon size than the outline did."
     }
   ],
   "rotorflight": {

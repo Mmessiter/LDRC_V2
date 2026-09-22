@@ -30,6 +30,12 @@ typeset -A PREVPK                    # per-board last packet count
 
 probe(){ curl -s -m 2 http://$1/api/state.json 2>/dev/null }
 
+vernum() {   # RXV2-0.9.820-anything -> 000009820 as a plain integer; 0 if it is not a version
+  local v; v=$(print -r -- "$1" | sed -nE 's/^RXV2-([0-9]+)\.([0-9]+)\.([0-9]+).*/\1 \2 \3/p')
+  [[ -z "$v" ]] && { print 0; return; }
+  set -- ${=v}; print $(( $1 * 1000000 + $2 * 1000 + $3 ))
+}
+
 log "fleet watch started: want $WANT on $NET.0/24"
 while true; do
   # --- discover: probe the whole subnet in parallel, keep the LDRC boards ---
@@ -50,6 +56,14 @@ except Exception: pass" 2>/dev/null)
     [[ "$FW" != RXV2-* ]] && continue                     # not one of ours
     SEEN="$SEEN $NAME"
     [[ "$FW" == "$WANT" ]] && { IDLE[$IP]=0; CURRENT="$CURRENT $NAME"; continue }
+    # NEVER DOWNGRADE (2026-09-22). During a release the OLD watcher is still
+    # running while release.sh builds the apps, and it saw a board already on
+    # the new version as "wrong" and put the old one back. A board ahead of us
+    # is someone else's business - most likely the release now in progress.
+    if (( $(vernum "$FW") > $(vernum "$WANT") )); then
+      log "$NAME @ $IP is on $FW, AHEAD of $WANT - leaving it alone"
+      IDLE[$IP]=0; continue
+    fi
 
     # A dongle has no radio, so the PACKET COUNT means nothing there - but
     # RSSI certainly does: it downloads the images over the same WiFi. Without

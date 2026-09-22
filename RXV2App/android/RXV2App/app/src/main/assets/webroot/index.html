@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Home &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=337">
-<script src="/app.js?v=337" defer></script>
+<link rel=stylesheet href="/style.css?v=338">
+<script src="/app.js?v=338" defer></script>
 <style>
 /* First paint from memory (Malcolm 2026-09-10: the receiver layout flashed
    before the dongle one): classes set on <html> by the hint script below,
@@ -77,6 +77,12 @@ html.h-simif #bindbtn, html.h-simif #fcHint, html.h-simif #bindBanner, html.h-si
             <button type=submit class="btn btn-fly" style="margin-top:1em">
                 <span class=ico>&#9989;</span>Save and continue
             </button>
+            <!-- A way out. Malcolm was trapped here on 2026-09-22 with a save
+                 that silently never landed, and could reach no page that would
+                 have told him why. The gate still gates; it just no longer walls. -->
+            <p style="margin:.9em 0 0;text-align:center;font-size:.9em">
+                <a href="/events" style="color:#5c3a00">Something not right? Read the event log</a>
+            </p>
 
             <p id=gateNextSteps style="color:#5c3a00;font-size:.85em;margin:.9em 0 0;line-height:1.45">
                 <b>Next:</b> it reboots as <code id=gateNameEcho>&lt;name&gt;</code> &mdash; with WiFi details, at
@@ -522,19 +528,34 @@ function paintModelName(s) {
                 }
                 if (err) err.style.display = 'none';
                 if (window.LDRC && LDRC.viaBle) {
-                    // The reboot cuts the reply mid-transfer over Bluetooth —
-                    // deterministic local farewell, then back to the model
-                    // list where the newly named receiver reappears.
-                    fetch('/api/firstrun', { method: 'POST', body: fd }).catch(() => {});
-                    setTimeout(() => {
+                    // 0.9.820: WAIT for the board's answer before leaving.
+                    // This used to fire the save and disconnect 1.5 s later
+                    // regardless; on a bench dongle whose loop stalled 2.6 s
+                    // every 15 s, the request was never serviced, nothing was
+                    // saved, and the naming box simply came back with no
+                    // error (Malcolm 2026-09-22). Now: a 200 or a dropped
+                    // reply (the reboot can cut it) means go; a 4xx is shown.
+                    const btn = form.querySelector('button[type=submit]');
+                    if (btn) { btn.disabled = true; btn.textContent = 'Saving\u2026'; }
+                    const farewell = () => {
                         const c = document.querySelector('.container');
                         if (c) c.innerHTML = '<h1>Welcome aboard</h1><div class=card>'
-                            + '<p style="font-size:1.15em;font-weight:600">✅ Rebooting as <b>' + v + '</b>.</p>'
-                            + '<p style="font-weight:700">Returning to the model list — it reappears there under its new name in a few seconds…</p></div>';
+                            + '<p style="font-size:1.15em;font-weight:600">\u2705 Rebooting as <b>' + v + '</b>.</p>'
+                            + '<p style="font-weight:700">Returning to the model list \u2014 it reappears there under its new name in a few seconds\u2026</p></div>';
                         setTimeout(() => {
                             try { window.webkit.messageHandlers.rxv2.postMessage('disconnect'); } catch (e) {}
                         }, 1500);
-                    }, 900);
+                    };
+                    const refused = (t) => {
+                        if (btn) { btn.disabled = false; btn.innerHTML = '<span class=ico>\u2705</span>Save and continue'; }
+                        if (err) { err.textContent = t || 'The receiver refused that name.'; err.style.display = ''; }
+                    };
+                    let sg;
+                    try { sg = AbortSignal.timeout(12000); }
+                    catch (e) { const a = new AbortController(); setTimeout(() => a.abort(), 12000); sg = a.signal; }
+                    fetch('/api/firstrun', { method: 'POST', body: fd, signal: sg })
+                      .then(r => r.ok ? farewell() : r.text().then(refused))
+                      .catch(() => farewell());   // reply cut by the reboot: the list will show which name it came back with
                     return;
                 }
                 fetch('/api/firstrun', { method: 'POST', body: fd })

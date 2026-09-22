@@ -1,4 +1,5 @@
 {
+  "RXV2-0.9.820-no-stall-naming": "Dongle on the bench: the automatic-role re-listen no longer freezes the board for 2.6 s every 15 s; the first-run name save over Bluetooth waits for the board's answer instead of firing and leaving; and the naming box now has a way out to the event log",
   "RXV2-0.9.819-column-apps": "Ships the centred column to both apps (0.9.818 committed it but --fw-only skipped the app builds)",
   "RXV2-0.9.818-centred-column": "Both apps: a centred column instead of full width, so an iPad or tablet no longer stretches the buttons across the whole screen",
   "RXV2-0.9.817-debug-destination": "Debug report says where to send it (mmessiter@gmail.com) and carries a subject line; help's back button now matches the page's",
