@@ -1,4 +1,5 @@
 {
+  "RXV2-0.9.825-dongle-event-log": "A dongle or simulator interface now has an Event log button on its front page: the Black box page is hidden on those, and the Event log - with Send debug data to Malcolm - lived only behind it, so a dongle could not report a fault at all",
   "RXV2-0.9.824-new-name-first-paint": "After a rename the front page paints the NEW name from its first frame: the last-known-name memory it paints from is taught the new name the moment the receiver accepts it",
   "RXV2-0.9.823-no-old-name-flash": "iOS app: after a rename the front page shows the new name from the first moment, instead of iOS's cached old one for two seconds",
   "RXV2-0.9.822-remember-new-name": "iOS app: after a rename the app remembers the NEW name, so the model list auto-connects to the board under its new name instead of hunting for the old one",

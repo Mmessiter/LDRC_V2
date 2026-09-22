@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.825-dongle-event-log",
+      "url": "https://messiter.com/rxv2/release/v0.9.825/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.825/littlefs.bin",
+      "fs_md5": "f0a17850e5dc42921b04d298eb10d08c",
+      "notes": "A dongle or simulator interface now has an Event log button on its front page: the Black box page is hidden on those, and the Event log - with Send debug data to Malcolm - lived only behind it, so a dongle could not report a fault at all"
+    },
+    {
       "name": "RXV2-0.9.824-new-name-first-paint",
       "url": "https://messiter.com/rxv2/release/v0.9.824/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.824/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.814/littlefs.bin",
       "fs_md5": "f4a0f3572c559412f05ea0fc626a6f62",
       "notes": "The simulator interface lost its signal and then took nearly two minutes to find it again: the wire finder was grabbing D5 as a plain pin for 300 milliseconds every five seconds, which is precisely how to stop a protocol locking. It now runs only when nothing whatever is arriving on the wire, which is the question it was built to answer."
-    },
-    {
-      "name": "RXV2-0.9.813-the-update-record",
-      "url": "https://messiter.com/rxv2/release/v0.9.813/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.813/littlefs.bin",
-      "fs_md5": "f4a0f3572c559412f05ea0fc626a6f62",
-      "notes": "One spelling of the name everywhere: LockDownRadioControl. And the receiver now keeps its own record of the last update - what it was, what it was asked to become, and how far it got - so the update page can SAY whether it worked instead of leaving you to work it out by reloading and reading the version. A failed one names the stage it stopped at and reminds you the old firmware is untouched."
     }
   ],
   "rotorflight": {

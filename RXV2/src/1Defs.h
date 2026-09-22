@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.824-new-name-first-paint";
+constexpr const char* FW_VERSION = "RXV2-0.9.825-dongle-event-log";
 
 //*********************************************************************
 //  Auto-update manifest URLs
