@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Home &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=345">
-<script src="/app.js?v=345" defer></script>
+<link rel=stylesheet href="/style.css?v=346">
+<script src="/app.js?v=346" defer></script>
 <style>
 /* First paint from memory (Malcolm 2026-09-10: the receiver layout flashed
    before the dongle one): classes set on <html> by the hint script below,
@@ -46,8 +46,8 @@ html.h-simif #bindbtn, html.h-simif #fcHint, html.h-simif #bindBanner, html.h-si
          discoverability + forced unique naming on first connection so
          multi-receiver setups stop colliding on mDNS. -->
     <div id=nameGate class=card style="display:none;background:#fff7d9;border:2px solid rgba(212,148,74,.6)">
-        <h2 style="margin-top:.2em;color:#5c3a00;text-align:center">Welcome — let's set this receiver up</h2>
-        <p style="color:#5c3a00;margin:.4em 0 1em;text-align:center">Name it, and add your home WiFi if you have it here.</p>
+        <h2 style="margin-top:.2em;color:#5c3a00;text-align:center">This receiver is called Untitled</h2>
+        <p style="color:#5c3a00;margin:.4em 0 1em;text-align:center"><b>Please rename it as soon as you can</b> &mdash; two boards with the same name cannot be told apart. Add your home WiFi here too, if you have it.</p>
 
         <form id=nameGateForm>
             <p style="margin:.2em 0 .25em;font-weight:600;color:#5c3a00">Receiver name <span style="font-weight:400">(required)</span></p>
@@ -485,17 +485,20 @@ function paintModelName(s) {
     const menu = document.getElementById('mainMenu');
     if (!custom) {
         if (s.dongle) {   // a dongle: say so, and no home-WiFi fields (it has no use for them; the guide says "leave blank")
-            const h = gate.querySelector('h2'); if (h) h.textContent = 'Welcome \u2014 let\u2019s name this dongle';
-            const intro = gate.querySelector('p'); if (intro) intro.textContent = 'Give it a name; that is all it needs.';
+            const h = gate.querySelector('h2'); if (h) h.textContent = 'This dongle is called Untitled';
+            const intro = gate.querySelector('p'); if (intro) intro.innerHTML = '<b>Please rename it as soon as you can</b> \u2014 two boards with the same name cannot be told apart.';
             const lbl = gate.querySelector('form > p'); if (lbl) lbl.innerHTML = 'Dongle name <span style="font-weight:400">(required)</span>';
             const ss = document.getElementById('gateSsid'), pw = document.getElementById('gatePass');
             if (ss) { if (ss.previousElementSibling && ss.previousElementSibling.tagName === 'P') ss.previousElementSibling.style.display = 'none'; ss.style.display = 'none'; }
             if (pw) { pw.style.display = 'none'; if (pw.nextElementSibling && pw.nextElementSibling.tagName === 'P') pw.nextElementSibling.style.display = 'none'; }
             const nx = document.getElementById('gateNextSteps'); if (nx) nx.innerHTML = '<b>Next:</b> it restarts under the new name \u2014 tap it again in the app\u2019s list.';
         }
-        // First-run: hide the menu, show the naming card, focus the input.
+        // First-run (0.9.829): show the naming card ABOVE the menu, not
+        // instead of it. It used to wall the user in until they named the
+        // board; Malcolm 2026-09-22: default it to "Untitled", say it should
+        // be renamed as soon as possible, and let them get on.
         if (gate) gate.style.display = '';
-        if (menu) menu.style.display = 'none';
+        if (menu) menu.style.display = '';
         const form = document.getElementById('nameGateForm');
         const inp  = document.getElementById('nameGateInput');
         const err  = document.getElementById('nameGateErr');

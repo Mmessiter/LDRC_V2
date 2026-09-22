@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.828-list-follows-rename";
+constexpr const char* FW_VERSION = "RXV2-0.9.829-untitled";
 
 //*********************************************************************
 //  Auto-update manifest URLs

@@ -121,15 +121,17 @@ inline bool nameIsCustom() {
 }
 
 inline String defaultName() {
-    // Single fixed default ("RXV2") so a fresh chip is reachable at
-    // a predictable hostname / AP SSID — RXV2.local from the phone,
-    // "RXV2" in the WiFi network list. The front page then refuses
-    // to let the user past until they've assigned a unique friendly
-    // name, after which the hostname and AP SSID re-derive from it
-    // (so multi-receiver setups stop colliding). Trying to be clever
-    // with auto-generated MAC-suffix defaults made the default name
-    // unmemorable, which is the opposite of what we wanted.
-    return String("RXV2");
+    // Single fixed default so a fresh chip is reachable at a predictable
+    // hostname / AP SSID / Bluetooth name. It was "RXV2" and the front page
+    // WALLED the user in until they renamed it; since 0.9.829 (Malcolm
+    // 2026-09-22) it is "Untitled" and the front page only NAGS - the menu
+    // works underneath, and the banner says to rename it as soon as
+    // possible, because two boards with the same name cannot be told
+    // apart. Trying to be clever with auto-generated MAC-suffix defaults
+    // made the default name unmemorable, which is the opposite of what we
+    // wanted. Keep it a plain word: letters only, and 8 characters fits
+    // the advert whether or not the scan response carries the name.
+    return String("Untitled");
 }
 
 inline String effectiveName() {
@@ -156,7 +158,7 @@ inline String hostnameFromName(const String& src) {
     }
     while (out.length() && out[out.length() - 1] == '-')
         out.remove(out.length() - 1);
-    if (out.length() == 0) out = "RXV2";
+    if (out.length() == 0) out = defaultName();   // a name that sanitised to nothing
     return out;
 }
 
