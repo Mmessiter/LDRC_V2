@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Home &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=341">
-<script src="/app.js?v=341" defer></script>
+<link rel=stylesheet href="/style.css?v=342">
+<script src="/app.js?v=342" defer></script>
 <style>
 /* First paint from memory (Malcolm 2026-09-10: the receiver layout flashed
    before the dongle one): classes set on <html> by the hint script below,
@@ -546,6 +546,7 @@ function paintModelName(s) {
                     const btn = form.querySelector('button[type=submit]');
                     if (btn) { btn.disabled = true; btn.textContent = 'Saving\u2026'; }
                     const farewell = () => {
+                        saveFrontHint('name', v);        // so the next paint says the NEW name (see postName)
                         const c = document.querySelector('.container');
                         if (c) c.innerHTML = '<h1>Welcome aboard</h1><div class=card>'
                             + '<p style="font-size:1.15em;font-weight:600">\u2705 Rebooting as <b>' + v + '</b>.</p>'
@@ -567,7 +568,7 @@ function paintModelName(s) {
                     return;
                 }
                 fetch('/api/firstrun', { method: 'POST', body: fd })
-                  .then(r => r.text()).then(html => {
+                  .then(r => { if (r.ok) saveFrontHint('name', v); return r.text(); }).then(html => {
                       document.open(); document.write(html); document.close();
                   })
                   .catch(() => alert('Could not save — try again.'));
@@ -616,6 +617,11 @@ function postName(v) {
     setTimeout(() => {
         if (rejected) return;
         const shown = v || 'RXV2';
+        // The front page first-paints its last-known name from localStorage;
+        // after a rename that is the OLD one, shown for the two seconds the
+        // board takes to answer (Malcolm 2026-09-22: "slightly disturbing").
+        // We know the new name - teach the hint before we leave.
+        saveFrontHint('name', shown);
         const c = document.querySelector('.container');
         if (!c) return;
         const ble = window.LDRC && LDRC.viaBle;

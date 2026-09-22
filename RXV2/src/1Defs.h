@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.823-no-old-name-flash";
+constexpr const char* FW_VERSION = "RXV2-0.9.824-new-name-first-paint";
 
 //*********************************************************************
 //  Auto-update manifest URLs

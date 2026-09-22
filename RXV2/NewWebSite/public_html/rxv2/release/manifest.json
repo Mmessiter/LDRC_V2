@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.824-new-name-first-paint",
+      "url": "https://messiter.com/rxv2/release/v0.9.824/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.824/littlefs.bin",
+      "fs_md5": "b1e16342e044317393087e3281257815",
+      "notes": "After a rename the front page paints the NEW name from its first frame: the last-known-name memory it paints from is taught the new name the moment the receiver accepts it"
+    },
+    {
       "name": "RXV2-0.9.823-no-old-name-flash",
       "url": "https://messiter.com/rxv2/release/v0.9.823/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.823/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.813/littlefs.bin",
       "fs_md5": "f4a0f3572c559412f05ea0fc626a6f62",
       "notes": "One spelling of the name everywhere: LockDownRadioControl. And the receiver now keeps its own record of the last update - what it was, what it was asked to become, and how far it got - so the update page can SAY whether it worked instead of leaving you to work it out by reloading and reading the version. A failed one names the stage it stopped at and reminds you the old firmware is untouched."
-    },
-    {
-      "name": "RXV2-0.9.812-role-decides-itself",
-      "url": "https://messiter.com/rxv2/release/v0.9.812/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.812/littlefs.bin",
-      "fs_md5": "17cc7da6128166720781e5b83b6d6b8c",
-      "notes": "A board with no transceivers now works out for itself whether it is a Rotorflight dongle or a simulator interface. It listens on D5 first, which is the safe test - a flight controller says nothing until asked, while a receiver chatters at once - and only calls itself a dongle when nothing is talking there. A dongle that never hears a flight controller listens again every fifteen seconds, in case the receiver's transmitter was simply off at the start, and restarts into the other role when it hears one. The role card keeps Always a dongle and Always a simulator interface for anyone who wants certainty."
     }
   ],
   "rotorflight": {
