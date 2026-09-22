@@ -474,6 +474,26 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
             guard let self else { return }
             switch result {
             case .success(let resp):
+                // A rename that the receiver ACCEPTED: remember the NEW name now.
+                // The list's auto-connect looks for lastDeviceName, and until
+                // this it still held the name the user TAPPED - a board that no
+                // longer exists once it reboots as the new one. Malcolm named a
+                // dongle "Fred" and had to quit and reopen the app twice before
+                // it would connect (2026-09-22). The identifier is unchanged, so
+                // fastConnect still finds it; now the label agrees too.
+                if method == "POST", (path == "/api/firstrun" || path == "/api/name"),
+                   (resp.code == 0 || resp.code == 200),
+                   let b = task.request.httpBody, let form = String(data: b, encoding: .utf8) {
+                    let newName = form.split(separator: "&")
+                        .compactMap { kv -> String? in
+                            let p = kv.split(separator: "=", maxSplits: 1).map(String.init)
+                            return p.count == 2 && p[0] == "name" ? p[1].removingPercentEncoding : nil
+                        }.first?.trimmingCharacters(in: .whitespaces) ?? ""
+                    if !newName.isEmpty {
+                        UserDefaults.standard.set(newName, forKey: "lastDeviceName")
+                        self.link.note("renamed to \(newName): the list will look for that")
+                    }
+                }
                 // Bank selects steer the recorder's keys for banked MSP reads.
                 if path == "/api/msp", let q = url.query, q.contains("fn=210"),
                    (resp.code == 0 || resp.code == 200),

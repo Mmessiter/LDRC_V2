@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.822-remember-new-name",
+      "url": "https://messiter.com/rxv2/release/v0.9.822/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.822/littlefs.bin",
+      "fs_md5": "c790aa2d6a58684c64045afcc0055f1f",
+      "notes": "iOS app: after a rename the app remembers the NEW name, so the model list auto-connects to the board under its new name instead of hunting for the old one"
+    },
+    {
       "name": "RXV2-0.9.821-dongle-naming-gate",
       "url": "https://messiter.com/rxv2/release/v0.9.821/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.821/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.811/littlefs.bin",
       "fs_md5": "12281791b7ddec089bf2642b21a9c922",
       "notes": "Fixes a dongle being unable to read anything from the flight controller: PIDs, rates, the lot. Since 0.9.715 a blocking read sent its request and then nothing drained the flight controller's port while it waited, so every page read timed out after 2.7 seconds - while the receiver's own background probes, pumped by the main loop, were answered normally. A wait now keeps alive the link it is waiting on: flying on a receiver, draining the flight controller's UART and USB on a dongle, without ever writing to it."
-    },
-    {
-      "name": "RXV2-0.9.810-simulator-switch-tells-the-truth",
-      "url": "https://messiter.com/rxv2/release/v0.9.810/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.810/littlefs.bin",
-      "fs_md5": "85735d1fffe9b59d7f7e502edb9716cb",
-      "notes": "On a simulator-interface board the Simulator switch could not turn simulator mode off - the role forces it on at every boot - yet the page said it had. It now offers the thing that was wanted instead: one tap makes the board a Rotorflight dongle. The receiver refuses the impossible setting plainly, and a board with no radios is no longer offered Bind."
     }
   ],
   "rotorflight": {
