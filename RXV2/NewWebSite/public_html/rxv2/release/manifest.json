@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.830-cli-can-leave",
+      "url": "https://messiter.com/rxv2/release/v0.9.830/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.830/littlefs.bin",
+      "fs_md5": "0d93423881a91a8aed4bafb625576660",
+      "notes": "Leaving the command line no longer refuses itself: opening it pauses MSP, so the flight controller could not give the fresh disarmed answer the guard demanded before restarting it. The last answer before the command line opened now stands. On the page a refusal is an alert that says why, back and home stay put on a refusal instead of walking off with the command line open, and the one-shot latch that skipped every second attempt resets."
+    },
+    {
       "name": "RXV2-0.9.829-untitled",
       "url": "https://messiter.com/rxv2/release/v0.9.829/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.829/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.819/littlefs.bin",
       "fs_md5": "c9bef46520a800c110d1ea963e34272a",
       "notes": "Ships the centred column to both apps (0.9.818 committed it but --fw-only skipped the app builds)"
-    },
-    {
-      "name": "RXV2-0.9.818-centred-column",
-      "url": "https://messiter.com/rxv2/release/v0.9.818/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.818/littlefs.bin",
-      "fs_md5": "50d4b7c1dd311451b3b3dbc088b9a558",
-      "notes": "Both apps: a centred column instead of full width, so an iPad or tablet no longer stretches the buttons across the whole screen"
     }
   ],
   "rotorflight": {

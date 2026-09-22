@@ -2596,7 +2596,16 @@ inline bool refuseIfArmed(const char* what) {
     // On a dongle that KNOWS a flight controller, insist on a fresh "disarmed"
     // — a silent or stale FC is refused, not trusted. A dongle that has never
     // heard an FC this power-up (bench, unwired) is left alone.
-    if (dongleEnabled && fcInfo.detected && !dongleDisarmedConfirmed()) {
+    //
+    // EXCEPT while the command line is open (0.9.830). Opening it PAUSES MSP,
+    // so the flight controller cannot give a fresh answer — and this clause
+    // then refused the one action that would let it: leaving. Malcolm's
+    // MyDongle, 2026-09-22: three "Refused, FC state unknown: leave the
+    // command line" in a row, the app dead for the duration, until another
+    // page's MSP call forced the exit. The last answer BEFORE the command
+    // line opened stands: nothing can have armed the model since - the CLI is
+    // the only thing talking to the FC, and it does not fly.
+    if (dongleEnabled && fcInfo.detected && !UsbHostMsp::cliMode && !dongleDisarmedConfirmed()) {
         { char m[96]; snprintf(m, sizeof m, "Refused, FC state unknown: %s", what); events.add(m); }
         server.sendHeader("Cache-Control", "no-store");
         server.send(409, "text/plain", "Flight controller state unknown - it has not answered in the last few seconds. Try again.");

@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Command line &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=346">
-<script src="/app.js?v=346" defer></script>
+<link rel=stylesheet href="/style.css?v=347">
+<script src="/app.js?v=347" defer></script>
 <style>
 /* Malcolm 2026-09-14: "long pauses might cause panic so let's add a please
    wait or even a progress bar". A Rotorflight `diff` or `dump` genuinely takes
@@ -135,6 +135,10 @@ async function leave(save) {
     try {
         const r = await fetch('/api/cli/leave', { method: 'POST', body: new URLSearchParams({ save: save ? '1' : '0' }) });
         const t = await r.text(); setStatus(r.ok ? 'good' : 'bad', t); print('# ' + t);
+        // A refusal (armed, transmitter on) used to be one grey line at the
+        // bottom; Malcolm read it as "it fails to leave at all" (2026-09-22).
+        // Say it where it cannot be missed, and say what to do.
+        if (!r.ok) await LDRC.alert(t, { title: 'Could not leave the command line', icon: '\u26A0\uFE0F' });
         if (r.ok) {
             // Nothing more to do here once the session is closed, so stop the
             // buttons being pressed again (that is what printed "the command
@@ -163,10 +167,19 @@ async function leave(save) {
 // own X. And in the firmware, a watchdog closes an idle command line anyway
 // (0.9.705), because none of this survives the app being killed outright.
 let _cliLeaving = false;
+// Returns: true = closed (or was not open); a string = the board REFUSED and
+// this is why; null = no answer. The latch used to stay set for ever after
+// the first attempt, so a second press of back or home skipped the leave
+// entirely and walked off with the command line still open (2026-09-22).
 async function leaveQuietly() {
-    if (_cliLeaving) return;
+    if (_cliLeaving) return null;
     _cliLeaving = true;
-    try { await fetch('/api/cli/leave', { method: 'POST', body: new URLSearchParams({ save: '0' }), keepalive: true }); } catch (e) {}
+    try {
+        const r = await fetch('/api/cli/leave', { method: 'POST', body: new URLSearchParams({ save: '0' }), keepalive: true });
+        const t = await r.text().catch(() => '');
+        return r.ok ? true : (t || 'refused');
+    } catch (e) { return null; }
+    finally { _cliLeaving = false; }
 }
 function armLeaveOnExit() {
     document.addEventListener('click', async (e) => {
@@ -175,8 +188,15 @@ function armLeaveOnExit() {
         const s = LDRC.state;
         if (!(s && s.usb && s.usb.cli)) return;      // nothing open: let it go
         e.preventDefault();
-        await leaveQuietly();
-        location.href = a.href;
+        const res = await leaveQuietly();
+        if (typeof res === 'string') {
+            // Refused (armed, or the transmitter is on). Walking away now would
+            // leave the command line open and every other page dead - stay, and
+            // say what has to happen first.
+            await LDRC.alert(res, { title: 'Could not leave the command line', icon: '\u26A0\uFE0F' });
+            return;
+        }
+        location.href = a.href;    // closed, or no answer (the firmware's idle watchdog is the backstop)
     }, true);
     // Swipe back, tab close, app dismissed: no time to await anything, so a
     // keepalive request is the best that can be done from the page.
