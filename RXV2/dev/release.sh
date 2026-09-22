@@ -225,8 +225,24 @@ cp .pio/build/xiao_s3_ota/partitions.bin "$LATEST/partitions.bin"
 BOOT_APP0=$(ls "$HOME"/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin 2>/dev/null | head -1)
 [[ -f "$BOOT_APP0" ]] && cp "$BOOT_APP0" "$LATEST/boot_app0.bin"
 printf 'These five files flash a bare Seeed XIAO ESP32-S3 into an LDRC dongle or receiver.\nBuild: %s\n\nesptool write_flash offsets:\n  0x0       bootloader.bin\n  0x8000    partitions.bin\n  0xe000    boot_app0.bin\n  0x10000   firmware.bin\n  0x670000  littlefs.bin\n\nInstructions: https://messiter.com/rotorflight/dongle.html#firmware\n' "$NAME" > "$LATEST/README.txt"
-for f in bootloader.bin partitions.bin boot_app0.bin firmware.bin littlefs.bin; do
-  [[ -s "$LATEST/$f" ]] || die "release/latest/$f missing — the dongle build page links to it"
+# The browser flasher (messiter.com/rotorflight/flash.html) reads this manifest
+# and writes the five images itself, so it must name the current version.
+python3 - "$LATEST" "$XYZ" <<'PYEOF'
+import json, io, sys
+latest, ver = sys.argv[1], sys.argv[2]
+io.open(latest + '/manifest-esp.json', 'w').write(json.dumps({
+    "name": "LockDownRadioControl RXV2", "version": ver,
+    "new_install_prompt_erase": True,
+    "builds": [{"chipFamily": "ESP32-S3", "parts": [
+        {"path": "bootloader.bin", "offset": 0x0},
+        {"path": "partitions.bin", "offset": 0x8000},
+        {"path": "boot_app0.bin",  "offset": 0xe000},
+        {"path": "firmware.bin",   "offset": 0x10000},
+        {"path": "littlefs.bin",   "offset": 0x670000}]}]}, indent=1))
+PYEOF
+
+for f in bootloader.bin partitions.bin boot_app0.bin firmware.bin littlefs.bin manifest-esp.json; do
+  [[ -s "$LATEST/$f" ]] || die "release/latest/$f missing — the dongle build page and the browser flasher link to it"
 done
 
 ok "NewWebSite v$XYZ, dev/$NAME.bin, firmware-server v$XYZ + root twins (fs md5 $MD5), release/latest refreshed"
