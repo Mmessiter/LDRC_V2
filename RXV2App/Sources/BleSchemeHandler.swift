@@ -489,10 +489,7 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
                             let p = kv.split(separator: "=", maxSplits: 1).map(String.init)
                             return p.count == 2 && p[0] == "name" ? p[1].removingPercentEncoding : nil
                         }.first?.trimmingCharacters(in: .whitespaces) ?? ""
-                    if !newName.isEmpty {
-                        UserDefaults.standard.set(newName, forKey: "lastDeviceName")
-                        self.link.note("renamed to \(newName): the list will look for that")
-                    }
+                    if !newName.isEmpty { self.link.noteRenamed(newName) }
                 }
                 // Bank selects steer the recorder's keys for banked MSP reads.
                 if path == "/api/msp", let q = url.query, q.contains("fn=210"),

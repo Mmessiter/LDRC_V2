@@ -1,4 +1,5 @@
 {
+  "RXV2-0.9.827-rename-follows": "iOS app: the link's own idea of the board's name follows a rename, so after renaming a freshly wiped chip the app no longer sits reconnecting to the name it knew before",
   "RXV2-0.9.826-update-record-truth": "The update record never calls a good install a failure: it reads the target from a release-named file as well as a version folder, judges an unknown target by whether the version changed, and the fleet watcher now names what it installs",
   "RXV2-0.9.825-dongle-event-log": "A dongle or simulator interface now has an Event log button on its front page: the Black box page is hidden on those, and the Event log - with Send debug data to Malcolm - lived only behind it, so a dongle could not report a fault at all",
   "RXV2-0.9.824-new-name-first-paint": "After a rename the front page paints the NEW name from its first frame: the last-known-name memory it paints from is taught the new name the moment the receiver accepts it",

@@ -324,6 +324,18 @@ final class BleLink: NSObject, ObservableObject {
     }
     private func stopConnectWatchdog() { connectWatchdog?.invalidate(); connectWatchdog = nil; connectNote = nil }
 
+    /// The receiver accepted a new name. Everything that names the board
+    /// from now on - the ride-through's ".reconnecting(name)", the list's
+    /// auto-connect, the connected label - must use it. Until 0.9.827 only
+    /// the stored default was updated and the link's own lastName was left
+    /// behind, so after a rename on a freshly wiped chip the app sat
+    /// "connecting to Sally" while EGON advertised (Malcolm 2026-09-22).
+    func noteRenamed(_ name: String) {
+        lastName = name
+        UserDefaults.standard.set(name, forKey: "lastDeviceName")
+        note("renamed to \(name): the list will look for that")
+    }
+
     func disconnect() {
         stopConnectWatchdog()
         userDisconnect = true
