@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.820-no-stall-naming";
+constexpr const char* FW_VERSION = "RXV2-0.9.821-dongle-naming-gate";
 
 //*********************************************************************
 //  Auto-update manifest URLs

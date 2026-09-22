@@ -168,7 +168,7 @@ fi
 
 # ---------------------------------------------------------------- 5 gates
 step "5  Gates"
-for g in check_page_syntax check_links check_page_order check_banks; do
+for g in check_page_syntax check_links check_page_order check_banks name_gate_test help_test; do
   node "dev/$g.js" | tail -1 | grep -q "ALL PASS" || die "dev/$g.js failed - run it to see why"
   ok "$g"
 done

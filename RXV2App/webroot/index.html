@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Home &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=338">
-<script src="/app.js?v=338" defer></script>
+<link rel=stylesheet href="/style.css?v=339">
+<script src="/app.js?v=339" defer></script>
 <style>
 /* First paint from memory (Malcolm 2026-09-10: the receiver layout flashed
    before the dongle one): classes set on <html> by the hint script below,
@@ -499,12 +499,20 @@ function paintModelName(s) {
             setTimeout(() => inp.focus(), 200);
             // Live preview of what the WiFi network + mDNS address will
             // become so the user can see why the chars matter.
+            // 0.9.821: null-safe. On a DONGLE the branch above rewrites
+            // #gateNextSteps, which deletes these three elements; writing to
+            // the first one then threw, the submit handler below was never
+            // attached, and the form fell back to a plain page reload — the
+            // naming box came straight back with no error, on every dongle
+            // that ever met it. None had, until Malcolm's home-built one
+            // (2026-09-22): the flashing scripts bake a name in.
             const echoName = () => {
                 const v = inp.value.trim();
                 const out = v || '<name>';
-                document.getElementById('gateNameEcho').textContent = out;
-                document.getElementById('gateHostEcho').textContent = out;
-                document.getElementById('gateApEcho').textContent   = out;
+                for (const id of ['gateNameEcho', 'gateHostEcho', 'gateApEcho']) {
+                    const el = document.getElementById(id);
+                    if (el) el.textContent = out;
+                }
             };
             inp.addEventListener('input', echoName);
             echoName();
