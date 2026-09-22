@@ -1,4 +1,5 @@
 {
+  "RXV2-0.9.823-no-old-name-flash": "iOS app: after a rename the front page shows the new name from the first moment, instead of iOS's cached old one for two seconds",
   "RXV2-0.9.822-remember-new-name": "iOS app: after a rename the app remembers the NEW name, so the model list auto-connects to the board under its new name instead of hunting for the old one",
   "RXV2-0.9.821-dongle-naming-gate": "The first-run naming box works on a dongle: it deleted three elements it then wrote to, the script died before attaching Save, and the form fell back to a page reload - the box came straight back with no error. Never seen before because every dongle had its name baked in by the flashing script.",
   "RXV2-0.9.820-no-stall-naming": "Dongle on the bench: the automatic-role re-listen no longer freezes the board for 2.6 s every 15 s; the first-run name save over Bluetooth waits for the board's answer instead of firing and leaving; and the naming box now has a way out to the event log",

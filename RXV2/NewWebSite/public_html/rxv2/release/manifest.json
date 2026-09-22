@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.823-no-old-name-flash",
+      "url": "https://messiter.com/rxv2/release/v0.9.823/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.823/littlefs.bin",
+      "fs_md5": "a9c0d8518f8e666d1a0b1366fc9ef0a0",
+      "notes": "iOS app: after a rename the front page shows the new name from the first moment, instead of iOS's cached old one for two seconds"
+    },
+    {
       "name": "RXV2-0.9.822-remember-new-name",
       "url": "https://messiter.com/rxv2/release/v0.9.822/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.822/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.812/littlefs.bin",
       "fs_md5": "17cc7da6128166720781e5b83b6d6b8c",
       "notes": "A board with no transceivers now works out for itself whether it is a Rotorflight dongle or a simulator interface. It listens on D5 first, which is the safe test - a flight controller says nothing until asked, while a receiver chatters at once - and only calls itself a dongle when nothing is talking there. A dongle that never hears a flight controller listens again every fifteen seconds, in case the receiver's transmitter was simply off at the start, and restarts into the other role when it hears one. The role card keeps Always a dongle and Always a simulator interface for anyone who wants certainty."
-    },
-    {
-      "name": "RXV2-0.9.811-dongle-reads-again",
-      "url": "https://messiter.com/rxv2/release/v0.9.811/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.811/littlefs.bin",
-      "fs_md5": "12281791b7ddec089bf2642b21a9c922",
-      "notes": "Fixes a dongle being unable to read anything from the flight controller: PIDs, rates, the lot. Since 0.9.715 a blocking read sent its request and then nothing drained the flight controller's port while it waited, so every page read timed out after 2.7 seconds - while the receiver's own background probes, pumped by the main loop, were answered normally. A wait now keeps alive the link it is waiting on: flying on a receiver, draining the flight controller's UART and USB on a dongle, without ever writing to it."
     }
   ],
   "rotorflight": {

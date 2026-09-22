@@ -816,7 +816,16 @@ extension BleLink: CBCentralManagerDelegate, CBPeripheralDelegate {
             if c.uuid == Self.responseUUID { respChr = c; peripheral.setNotifyValue(true, for: c) }
         }
         if reqChr != nil && respChr != nil {
-            let name = peripheral.name ?? "RXV2"
+            // iOS caches a peripheral's name and keeps serving the OLD one
+            // until it hears a fresh advertisement - so straight after a
+            // rename this label showed the old name for a couple of seconds
+            // before the page caught up (Malcolm 2026-09-22: "slightly
+            // disturbing"). We connected by identifier and just stored the
+            // name the receiver accepted; when the cache disagrees with what
+            // we were told, what we were told wins.
+            let stored = UserDefaults.standard.string(forKey: "lastDeviceName") ?? ""
+            let sameBoard = UserDefaults.standard.string(forKey: "lastDeviceId") == peripheral.identifier.uuidString
+            let name = (sameBoard && !stored.isEmpty) ? stored : (peripheral.name ?? "RXV2")
             stopConnectWatchdog()
             note("ready: \(name)")
             state = .ready(name)
