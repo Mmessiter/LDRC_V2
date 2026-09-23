@@ -13,11 +13,30 @@ every page live and editable. That is the intended way to review it, and it
 needs no hardware, no account and no sign-in. Bluetooth may be denied and the
 demos still work.
 
-Nothing happens over Bluetooth until you tap Connect, and Connect is the only
-button that needs hardware. Every other button, including all three demos,
-works on its own.
+Only Connect needs hardware; every other button, including the demos, works
+on its own. A ? on every screen opens its help.
 
-A ? button on every screen opens that screen's own help.
+BLUETOOTH, AND WHY IT RUNS IN THE BACKGROUND (guideline 2.5.4)
+Everything the app does with real hardware goes over Bluetooth Low Energy,
+using Core Bluetooth: it scans for the receiver's GATT service, connects, and
+exchanges JSON with it over two characteristics. In the demo there is no
+Bluetooth traffic at all, which is why a review without the hardware sees
+none - a screen recording of the app driving a real receiver is here:
+
+    https://messiter.com/rxv2/review/bluetooth.mp4
+
+It shows: the scan finding a receiver by name and signal strength, a connection,
+Rotorflight pages reading live values over the link, and a firmware update
+being sent to the receiver over Bluetooth.
+
+The bluetooth-central background mode exists for that last step. A firmware
+update is several megabytes pushed to the receiver over BLE and takes a few
+minutes. If the user switches to another app mid-transfer, the mode keeps the
+transfer alive instead of abandoning the receiver half-written; and when the
+receiver reboots into the new firmware and the link drops, the mode lets the
+app be woken to reconnect and confirm the version. That is the whole use - the
+app does no scanning, tracking or beaconing in the background, and drops any
+link after a minute away in normal use.
 
 WHAT IT IS
 The LDRC RX V2 is a radio-control receiver for model helicopters. The app talks
@@ -25,27 +44,14 @@ to it over Bluetooth LE using a standard GATT service — no MFi accessory, no
 External Accessory framework. It sets flight-controller parameters, reads flight
 logs, and can send the receiver a firmware update.
 
-The same small board does three jobs, which is what the three demos show: a
-receiver in the model, a dongle that plugs into a flight controller on the
-bench, and a USB interface that flies a PC flight simulator from a real radio.
-
 ABOUT THE WEB VIEW (guideline 4.2 and 2.5.2)
-Part of the interface is drawn by a web view, and I would rather explain that up
-front than have it look like a repackaged website:
-
-  * Every page is BUNDLED INSIDE THIS BINARY (see webroot/ in the app). Nothing
-    is loaded from any website. There is no server involved.
-  * In this build, HTML and JavaScript are NEVER fetched from anywhere at run
-    time. Only data crosses Bluetooth — JSON to and from the user's own receiver.
-  * There is no self-update mechanism of any kind in the iOS app.
-  * Firmware images can only be downloaded over HTTPS from messiter.com, my own
-    site; the host is hard-coded and any other URL is refused. Those images go to
-    the user's receiver over Bluetooth. They never execute on iOS.
-
-Native, outside the web view: the Bluetooth scanner with live signal strength
-and a too-weak-to-connect warning, per-model photographs from the camera and the
-photo picker, backup files exported and imported through the share sheet and the
-Files app, and offline replay of a recorded session.
+Part of the interface is a web view. Every page is BUNDLED INSIDE THIS BINARY
+(webroot/); no HTML or JavaScript is ever fetched at run time, and there is no
+server. Only JSON crosses Bluetooth, to and from the user's own receiver.
+Firmware images download over HTTPS from messiter.com only (host hard-coded)
+and go to the receiver; they never execute on iOS. Native, outside the web
+view: the Bluetooth scanner, model photographs, backup files via the share
+sheet and Files, and offline replay of a recorded session.
 
 SAFETY
 The app writes stored settings only. It cannot arm the model, spin the motor or
@@ -56,12 +62,10 @@ PRIVACY
 No accounts, no analytics, no tracking, no data collection whatsoever. Settings
 and photographs stay in the app's own storage on the phone.
 
-One screen has a "Send debug data to Malcolm" button, for testers reporting a
-fault. It gathers the receiver's own event log and settings — no passwords, no
-WiFi credentials, nothing about the phone's owner — writes a plain text file and
-hands it to the system share sheet. The user chooses where it goes, or cancels.
-The app never transmits it anywhere by itself, and there is no server to receive
-it.
+A "Send debug data to Malcolm" button gathers the receiver's own event log and
+settings (no passwords, no WiFi credentials, nothing about the phone's owner)
+into a text file and hands it to the system share sheet. The user chooses where
+it goes; the app never transmits it by itself.
 
 OPEN SOURCE
 The whole project — receiver firmware, both phone apps, and these pages — is

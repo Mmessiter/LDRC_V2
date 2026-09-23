@@ -14,7 +14,7 @@ NOTIFY=/Users/malcolmmessiter/Documents/GitHub/LDRC_V2_ALL/RXV2/dev/notify.sh
 STATE=$HOME/.appstoreconnect/rxv2_review_state
 KEY=KLS4GZ93JB
 ISS=69a6de80-5be5-47e3-e053-5b8c7c11a4d1
-SUB=c73c429e-e2d9-4a29-b6e1-3820b0fae538
+SUB=a3348a1d-58f1-40ad-ab4f-c5c18bfe0cc8
 BUILD=7dd2fa62-1e2c-4c3b-a429-f5730af27930
 
 # /usr/bin/python3 is an Xcode shim and refuses to run until the licence is
