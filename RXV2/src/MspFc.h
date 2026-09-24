@@ -574,7 +574,10 @@ inline void mspDeliverResponse(uint8_t func, const uint8_t* payload, uint16_t si
         // in the air (TX-on boot) and an NVS write is a flash stall, so the
         // watch tick commits them at the next quiet moment.
         case MSP_RX_MAP:
-            if (size >= 5 && payload[4] < 16) {
+            // Rotorflight's order only (A E R C T: [4] = throttle). Betaflight
+            // and INAV put AUX1 there, and this channel now decides which
+            // channel the receiver holds low before a transmitter is heard.
+            if (size >= 5 && payload[4] < 16 && strncmp(fcInfo.variant, "RTFL", 4) == 0) {
                 uint8_t ch = payload[4] + 1;
                 if (ch != fcInfo.throttleCh) {
                     fcInfo.throttleCh = ch;

@@ -168,10 +168,12 @@ fi
 
 # ---------------------------------------------------------------- 5 gates
 step "5  Gates"
-for g in check_page_syntax check_links check_page_order check_banks name_gate_test help_test; do
+for g in check_page_syntax check_links check_page_order check_banks name_gate_test help_test lane_test; do
   node "dev/$g.js" | tail -1 | grep -q "ALL PASS" || die "dev/$g.js failed - run it to see why"
   ok "$g"
 done
+zsh dev/prelink_hold_test.sh | tail -1 | grep -q "ALL PASS" || die "dev/prelink_hold_test.sh failed - run it to see why"
+ok "prelink_hold_test"
 
 # ---------------------------------------------------------------- 6 build
 step "6  Build"

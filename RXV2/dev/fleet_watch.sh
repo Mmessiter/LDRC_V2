@@ -49,10 +49,14 @@ try:
     s=json.load(sys.stdin); i=s['info']; rf=s.get('rf',{}); m=s.get('msp',{})
     print(i.get('name','?').replace(' ','_'), i['fw_version'], i.get('rssi',-99), rf.get('packets',0),
           int(bool(rf.get('armed'))), rf.get('head_speed',0), int(bool(m.get('active'))),
-          m.get('connections',0), int(bool((s.get('ble') or {}).get('client'))), int(bool(s.get('dongle'))))
+          m.get('connections',0), int(bool((s.get('ble') or {}).get('client'))), int(bool(s.get('dongle'))),
+          (s.get('protocol') or {}).get('thr_ch',0), (s.get('fcinfo') or {}).get('throttle_ch',0),
+          int(bool((s.get('protocol') or {}).get('fc_telem'))),
+          int(not (0 <= rf.get('last_pkt_ms', -1) < 3000)))
 except Exception: pass" 2>/dev/null)
     [[ -z "$R" ]] && continue
     set -- ${=R}; NAME=$1; FW=$2; RSSI=$3; PK=$4; ARMED=$5; HS=$6; MACT=$7; MCON=$8; BLEC=$9; DON=${10}
+    THR=${11:-0}; FCTHR=${12:-0}; FCT=${13:-0}; TXOFF=${14:-0}
     [[ "$FW" != RXV2-* ]] && continue                     # not one of ours
     SEEN="$SEEN $NAME"
     [[ "$FW" == "$WANT" ]] && { IDLE[$IP]=0; CURRENT="$CURRENT $NAME"; continue }
@@ -63,6 +67,18 @@ except Exception: pass" 2>/dev/null)
     if (( $(vernum "$FW") > $(vernum "$WANT") )); then
       log "$NAME @ $IP is on $FW, AHEAD of $WANT - leaving it alone"
       IDLE[$IP]=0; continue
+    fi
+
+    # THROTTLE HOLD ON THE RIGHT CHANNEL, at first sight (2026-09-24).
+    # Firmware before 0.9.834 holds the thr_ch setting (default 3) low until a
+    # transmitter is heard - on a Rotorflight heli that is the COLLECTIVE,
+    # parked past full negative (Black Thunder 2's swash hit its stops), and
+    # every stall of an install made it jump. Point it at the FC's own
+    # throttle channel at once: transmitter off, disarmed, rotor still only.
+    # fc_telem=1 rides along - those builds read a missing box as "off".
+    if (( DON == 0 && FCT == 1 && FCTHR >= 1 && FCTHR <= 16 && THR != FCTHR && ARMED == 0 && HS == 0 && TXOFF == 1 )); then
+      OUTT=$(curl -s -m 10 -X POST http://$IP/protocol --data-urlencode thr_ch=$FCTHR --data-urlencode fc_telem=1)
+      log "$NAME @ $IP: throttle hold moved ch$THR -> ch$FCTHR (the FC's throttle channel): ${OUTT:0:60}"
     fi
 
     # A dongle has no radio, so the PACKET COUNT means nothing there - but

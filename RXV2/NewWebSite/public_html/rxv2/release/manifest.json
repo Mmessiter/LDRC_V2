@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.834-swash-stays-level",
+      "url": "https://messiter.com/rxv2/release/v0.9.834/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.834/littlefs.bin",
+      "fs_md5": "0345e6bab861f2f8297bf66792a7e07b",
+      "notes": "With the transmitter off, the swash no longer drops past full negative or hits its stops during updates, backups and restores. The receiver used to hold channel 3 low until it heard a transmitter; on Rotorflight helis channel 3 is the collective. It now holds the flight controller's own throttle channel and keeps every flight control centred. Also: an update started just after power-up waits for the receiver's WiFi instead of going over Bluetooth; the phone's background backup never runs during an update, and the receiver refuses flight-controller requests while one is being written; saving on the Transmitter channels or Receiver settings pages no longer switches flight-controller telemetry off."
+    },
+    {
       "name": "RXV2-0.9.833-compare-reviews",
       "url": "https://messiter.com/rxv2/release/v0.9.833/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.833/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.823/littlefs.bin",
       "fs_md5": "a9c0d8518f8e666d1a0b1366fc9ef0a0",
       "notes": "iOS app: after a rename the front page shows the new name from the first moment, instead of iOS's cached old one for two seconds"
-    },
-    {
-      "name": "RXV2-0.9.822-remember-new-name",
-      "url": "https://messiter.com/rxv2/release/v0.9.822/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.822/littlefs.bin",
-      "fs_md5": "c790aa2d6a58684c64045afcc0055f1f",
-      "notes": "iOS app: after a rename the app remembers the NEW name, so the model list auto-connects to the board under its new name instead of hunting for the old one"
     }
   ],
   "rotorflight": {

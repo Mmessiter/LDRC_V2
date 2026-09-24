@@ -636,6 +636,16 @@ final class BleOta {
     private var confirmed = true
     private var running = false
 
+    // Any install in flight, app-wide (0.9.834): the background backup
+    // (SessionPrefetcher) will not start, and a running one stops, so no
+    // bank switch or flight-controller read shares the link with an update.
+    private static let busyLock = NSLock()
+    private static var busyFlag = false
+    static var busy: Bool {
+        get { busyLock.lock(); defer { busyLock.unlock() }; return busyFlag }
+        set { busyLock.lock(); busyFlag = newValue; busyLock.unlock() }
+    }
+
     init(link: BleLink) { self.link = link }
 
     var progressJSON: Data {
@@ -649,6 +659,7 @@ final class BleOta {
         lock.lock()
         if running { lock.unlock(); return }
         running = true
+        BleOta.busy = true
         phase = "download"; msg = "Downloading with the phone's internet…"
         sent = 0; total = 0; confirmed = true
         lock.unlock()
@@ -665,7 +676,7 @@ final class BleOta {
     }
 
     private func run(fwUrl: String, fsUrl: String?) {
-        defer { lock.lock(); running = false; lock.unlock(); ScreenAwake.release() }
+        defer { lock.lock(); running = false; lock.unlock(); BleOta.busy = false; ScreenAwake.release() }
         do {
             let fw = try download(fwUrl)
             var fs: Data? = nil

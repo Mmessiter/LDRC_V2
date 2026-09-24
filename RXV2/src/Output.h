@@ -309,6 +309,74 @@ inline bool bleAdvertising();   // BleConfig.h (included later): Bluetooth confi
 inline bool bleHasClient();
 inline bool outputDetachedForFailsafe = false;
 
+// PRE-LINK SAFETY HOLDS (0.9.834). Malcolm 2026-09-24, Black Thunder 2 mid
+// Bluetooth update, transmitter off: the swash "suddenly shot down to the very
+// bottom and was straining to get past the end of its travel". The morning's
+// report: updates, backups and restores make the swash "jump up or down".
+//
+// Until a transmitter is heard the receiver holds the THROTTLE at 885 us
+// (below any ESC's "off"). The channel it held was the thr_ch setting, default
+// 3 - and on every heli here Rotorflight's map is roll 1, pitch 2, COLLECTIVE
+// 3, yaw 4, throttle 5 (MSP_RX_MAP 00 01 03 02 04). So a transmitter-off
+// power-up streamed the collective past full negative (885 us = -123 %) while
+// the real throttle sat at mid. Every loop stall of an update or a backup
+// sweep dropped frames; the FC fell back to its own failsafe (collective
+// centre), then took the stream again: the jump. A bank with a bigger
+// collective range put the swash into the stops.
+//
+// Now: with a Rotorflight FC that has told us its throttle channel, THAT
+// channel is held and every flight control stays centred - exactly the FC's
+// own failsafe, so a dropped frame changes nothing. The thr_ch setting still
+// rules a receiver with no flight controller (a plane on a PWM converter).
+// A learned channel is only a memory until the FC answers this power-up, so
+// for those first seconds the setting's channel is held too, at the bottom of
+// the normal range (988 us): a heli's collective stays inside its travel, a
+// converter's ESC still reads "off". No Rotorflight answer within 10 s, or a
+// different FC: the setting alone, exactly as before.
+constexpr uint16_t CH_FLOOR_US        = 988;     // bottom of the normal stick range (CRSF 172)
+constexpr uint32_t PRELINK_FC_WAIT_MS = 10000;   // how long a learned map is trusted without the FC answering
+struct PreLinkHold { uint8_t low; uint8_t floor; };   // channels 1..16, 0 = none
+inline uint16_t bootDefaultMicros(uint8_t idx) { return idx < 5 ? 1500 : 500; }   // main.cpp's pre-link posture
+// A Rotorflight FC answered this power-up. Sticky until the next boot: an FC
+// that goes quiet (rebooting after a restore, a busy USB line, a long flash
+// write here) is the same FC - "FC lost" after 10 s must not put the hold
+// back on its collective.
+inline bool holdRfSeen = false;
+inline PreLinkHold preLinkHold() {
+    const uint8_t setting = (throttleChannel >= 1 && throttleChannel <= 16) ? throttleChannel : 0;
+    const uint8_t learned = (fcTelemetryEnabled && fcInfo.throttleCh >= 1 && fcInfo.throttleCh <= 16)
+                          ? fcInfo.throttleCh : 0;
+    const bool known = fcInfo.detected && fcInfo.variant[0];
+    if (known && strncmp(fcInfo.variant, "RTFL", 4) == 0) holdRfSeen = true;
+    if (!learned || learned == setting) return { setting, 0 };
+    if (holdRfSeen) return { learned, 0 };
+    if (known || millis() > PRELINK_FC_WAIT_MS) return { setting, 0 };
+    return { learned, setting };
+}
+
+// The hold, every output tick. `window` = no transmitter yet, or its first 25
+// packets (the original rule for the throttle). A channel the receiver stops
+// holding goes back to its boot default - only before any transmitter was
+// heard, so a live stick value is never overwritten.
+inline void applyPreLinkHolds(bool window, bool neverLinked) {
+    static uint8_t heldLow = 0, heldFloor = 0;
+    const PreLinkHold h = preLinkHold();
+    if (neverLinked) {
+        for (uint8_t was : { heldLow, heldFloor })
+            if (was && was != h.low && was != h.floor) channelMicros[was - 1] = bootDefaultMicros(was - 1);
+    }
+    if (h.low != heldLow && h.low) {
+        char m[96];
+        snprintf(m, sizeof(m), "Throttle held low on ch%u%s", h.low,
+                 h.low == fcInfo.throttleCh && h.low != throttleChannel ? " (Rotorflight's throttle channel)" : "");
+        events.add(m);
+    }
+    heldLow = h.low; heldFloor = h.floor;
+    if (!window) return;
+    if (h.low) channelMicros[h.low - 1] = THROTTLE_SAFE_US;
+    if (h.floor && neverLinked) channelMicros[h.floor - 1] = CH_FLOOR_US;
+}
+
 inline void sbusTick() {
     // A dongle has no RC output at all: its Serial1 is the flight controller's
     // MSP port, and a sim board's is idle. Every caller is meant to guard this
@@ -368,8 +436,7 @@ inline void sbusTick() {
     // when a V1 TX in bind mode bypasses its own motor-low overrides and the
     // earliest packets may be junk (the propeller blipped during a field
     // rebind, prop fitted, hands near the model).
-    if ((!everConnected || channelPacketsRx < 25) && throttleChannel >= 1 && throttleChannel <= 16)
-        channelMicros[throttleChannel - 1] = THROTTLE_SAFE_US;
+    applyPreLinkHolds(!everConnected || channelPacketsRx < 25, !everConnected);
     // Gate is "not CRSF", NOT "not idle-high": IBUS/IBUS2 are idle-high too but
     // have no FC-side failsafe authority (no in-frame loss flag either), so they
     // rely on the receiver applying the captured posture like SBUS/PPM do.
@@ -463,7 +530,7 @@ inline void sbusTick() {
             if (waveEpoch == bleWaveStartMs && waveChannelMask)
                 for (uint8_t i = 0; i < 16; ++i)
                     if ((waveChannelMask & (1u << i)) &&
-                        throttleChannel != i + 1 && armingChannel != i + 1)
+                        preLinkHold().low != i + 1 && preLinkHold().floor != i + 1 && armingChannel != i + 1)
                         channelMicros[i] = waveBase[i];
             bleWaveStartMs = 0;
             waveWaitSinceMs = 0;
@@ -483,7 +550,7 @@ inline void sbusTick() {
             int32_t off = (int32_t)(BLE_WAVE_AMPL_US * sinf(ph));
             for (uint8_t i = 0; i < 16; ++i) {
                 if (!(waveChannelMask & (1u << i))) continue;
-                if (throttleChannel == i + 1) continue;    // never wave the throttle
+                if (preLinkHold().low == i + 1 || preLinkHold().floor == i + 1) continue;   // never wave the throttle (or a held channel)
                 if (armingChannel   == i + 1) continue;    // never wave the arm switch
                 // Swing around a sensible CENTRE. A channel parked OUTSIDE
                 // the real servo range (boot parks AUX at 500 µs) waves

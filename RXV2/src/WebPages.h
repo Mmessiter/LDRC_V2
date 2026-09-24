@@ -828,6 +828,16 @@ inline void handleMspApi() {
             return;
         }
     }
+    if (bleOtaActive) {
+        // An update is being written (0.9.834, Malcolm 2026-09-24: the app's
+        // background backup switched banks in the middle of a Bluetooth
+        // update and the swash hit its stops). Every flash write already
+        // pauses the control output; the flight controller is left alone
+        // until the update is in - no bank switches, no reads.
+        server.sendHeader("Cache-Control", "no-store");
+        server.send(503, "text/plain", "busy: an update is being written - the flight controller is left alone until it finishes");
+        return;
+    }
     if (bbCheckActive) {                       // the vibration check is streaming the black box (0.9.661): one request at a time at the FC
         server.sendHeader("Cache-Control", "no-store");
         server.send(503, "text/plain", "busy: the vibration check is reading the black box - wait for it to finish, or cancel it on its page");
@@ -2023,8 +2033,8 @@ inline String confirmPage(const char* title, const char* body, bool autoReload =
 // idle-high so the reboot glitch can't feed the converter/FC garbage
 // (the propeller briefly spun during a reboot-into-bind, prop fitted).
 inline void safeOutputParkAndRestart() {
-    if (throttleChannel >= 1 && throttleChannel <= 16)
-        channelMicros[throttleChannel - 1] = THROTTLE_SAFE_US;
+    { const uint8_t tc = preLinkHold().low;   // the channel that really is the throttle (0.9.834)
+      if (tc >= 1 && tc <= 16) channelMicros[tc - 1] = THROTTLE_SAFE_US; }
     // Same guard loop() puts round sbusTick(): on a dongle D6 is the flight
     // controller's MSP port, and in sim mode nothing is listening. RC frames
     // belong on neither (pre-flight check 2026-09-15 — every dongle reboot was
@@ -2489,9 +2499,20 @@ inline void handleProtocolSet() {
             events.add(buf);
         }
     }
-    bool wantInv = server.hasArg("ppm_inv");
-    if (wantInv != ppmInverted && currentProtocol == PROTO_PPM) needReboot = true;
-    prefs.putUChar(NVS_KEY_PPM_INV, wantInv ? 1 : 0);
+    // CHECKBOXES are simply absent from a form post when unticked, so they can
+    // only be read as "off" from the protocol page's own form - which always
+    // carries proto (0.9.834). Other pages post single settings here (the TX
+    // channels page: thr_ch + arm_ch; Receiver settings: wave_chs), and every
+    // such save used to switch FC telemetry OFF - and with it the CRSF
+    // signal-loss rule: with telemetry off the receiver takes the FC to be a
+    // PWM converter and streams its own failsafe posture instead of going
+    // silent, so a Rotorflight FC would never see the loss.
+    const bool fullForm = server.hasArg("proto");
+    if (fullForm) {
+        bool wantInv = server.hasArg("ppm_inv");
+        if (wantInv != ppmInverted && currentProtocol == PROTO_PPM) needReboot = true;
+        prefs.putUChar(NVS_KEY_PPM_INV, wantInv ? 1 : 0);
+    }
 
     if (server.hasArg("crsf_hz")) {
         long hz = server.arg("crsf_hz").toInt();
@@ -2499,7 +2520,7 @@ inline void handleProtocolSet() {
         prefs.putUChar(NVS_KEY_CRSF_HZ, v);
         crsfRateHz = v;                                     // live: period is read every tick
     }
-    {
+    if (fullForm) {
         bool fcOn = server.hasArg("fc_telem");
         prefs.putUChar(NVS_KEY_FC_TELEM, fcOn ? 1 : 0);
         fcTelemetryEnabled = fcOn;                          // live: gates parser + probes
@@ -2507,17 +2528,10 @@ inline void handleProtocolSet() {
     if (server.hasArg("thr_ch")) {
         long tc = server.arg("thr_ch").toInt();
         if (tc >= 0 && tc <= 16) {
-            uint8_t old = throttleChannel;
             throttleChannel = (uint8_t)tc;
             prefs.putUChar(NVS_KEY_THR_CH, throttleChannel);
-            // If the TX has never been heard, release the previously-pinned
-            // channel back to centre and pin the new one at once.
-            if (!lastChannelDataMs) {
-                if (old >= 1 && old <= 16 && old != throttleChannel)
-                    channelMicros[old - 1] = 1500;
-                if (throttleChannel >= 1)
-                    channelMicros[throttleChannel - 1] = THROTTLE_SAFE_US;
-            }
+            // The output tick moves the pre-link hold to the new channel and
+            // releases the old one (Output.h, applyPreLinkHolds).
         }
     }
     if (server.hasArg("arm_ch")) {

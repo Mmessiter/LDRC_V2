@@ -172,8 +172,9 @@ void setup() {
     // heard, the throttle channel is pinned low (Output.h keeps it there).
     throttleChannel = prefs.isKey(NVS_KEY_THR_CH) ? prefs.getUChar(NVS_KEY_THR_CH, 3) : 3;
     if (throttleChannel > 16) throttleChannel = 3;
-    if (throttleChannel >= 1)
-        channelMicros[throttleChannel - 1] = THROTTLE_SAFE_US;
+    // The hold itself is applied by the output tick (Output.h,
+    // applyPreLinkHolds) - it needs the FC's learned throttle channel,
+    // loaded further down, and it runs before the first frame is sent.
 
     // Log WHY we booted — the blackbox story starts here. Distinguishes a
     // normal power-up from the silent self-reboots that matter: BROWNOUT

@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Check for Update &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=350">
-<script src="/app.js?v=350" defer></script>
+<link rel=stylesheet href="/style.css?v=351">
+<script src="/app.js?v=351" defer></script>
 <style>
 /* --- Currently-installed card -------------------------------------- */
 .installed-card .row{
@@ -167,6 +167,8 @@ const $ = id => document.getElementById(id);
 let currentFw = '';
 let currentVer = '';
 let installing = false;
+// The "Install over" card comes back after a failed install (0.9.834).
+function repaintLanes() { if (window.__repaintLanes) window.__repaintLanes(); }
 
 // "RXV2-0.9.35-page-cards"  →  { ver: "0.9.35", label: "page-cards" }
 // Lets the page show a clean version number (the user asked for the
@@ -543,6 +545,7 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
             { title: 'Install firmware', icon: '📥', yes: 'Install + reboot', kind: 'warn' }))) return;
 
     installing = true;
+    { const lc = document.getElementById('laneCard'); if (lc) lc.hidden = true; }   // the lane is chosen now
     paintTopRow(ver);
     // Keep the screen awake for the whole install where the browser allows it
     // (Malcolm 2026-09-18: "The iPhone screen timed out during update causing
@@ -628,7 +631,7 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
                 if (p.phase === 'error') {
                     setStatePill('Failed', 'bad');
                     showMessage('Bluetooth install failed: ' + p.msg + ' \u2014 the old firmware is untouched.');
-                    installing = false; paintTopRow(''); $('check').disabled = false;
+                    installing = false; repaintLanes(); paintTopRow(''); $('check').disabled = false;
                     document.querySelectorAll('.ver-btn').forEach(b => b.disabled = false);
                     return;
                 }
@@ -669,7 +672,7 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
                 if (Date.now() - t0 > 10 * 60 * 1000) {
                     setStatePill('Waiting\u2026', 'amber');
                     showMessage('This is taking longer than expected \u2014 reload this page to check the receiver.');
-                    installing = false; paintTopRow(''); $('check').disabled = false;
+                    installing = false; repaintLanes(); paintTopRow(''); $('check').disabled = false;
                     document.querySelectorAll('.ver-btn').forEach(b => b.disabled = false);
                     return;
                 }
@@ -699,7 +702,7 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
         const ibar = pct =>
             '<div style="background:rgba(125,158,176,.28);border-radius:9px;height:16px;overflow:hidden;margin:.9em 0 .2em">' +
             '<div id=__ibar style="height:100%;width:' + pct + '%;background:#6cab5e;border-radius:9px"></div></div>';
-        showMessage('<b>Installing</b> <code>' + ver + '</code> — <span id=__iphase>downloading…</span> ' +
+        showMessage('<b>Installing over the receiver\u2019s WiFi</b> <code>' + ver + '</code> — <span id=__iphase>downloading…</span> ' +
             '<span class=muted>(<span id=__wsecs>0</span> s)</span>' + ibar(0));
         setTimeout(() => {
             const b = document.getElementById('__ibar');
@@ -787,7 +790,7 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
                     ? '<br><br>Weak WiFi is the usual cause. <b>Bluetooth stands a better chance.</b>'
                       + '<div style="margin:.7em 0 0"><button class="btn" id=retryBle style="background:#2f6fb0;color:#fff;margin:0">Try again over Bluetooth</button></div>'
                     : ' Try again.'));
-            installing = false; paintTopRow(''); $('check').disabled = false;
+            installing = false; repaintLanes(); paintTopRow(''); $('check').disabled = false;
             document.querySelectorAll('.ver-btn').forEach(b => b.disabled = false);
             const rb = document.getElementById('retryBle');
             if (rb) rb.onclick = () => { window.__preferBle = true; doInstall(v, sourceKey, url, fsUrl, btnEl); };
@@ -823,7 +826,7 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
             const t = await r.text();
             setStatePill('Failed', 'bad');
             showMessage('Install failed: ' + t);
-            installing = false; paintTopRow('');
+            installing = false; repaintLanes(); paintTopRow('');
             $('check').disabled = false;
             document.querySelectorAll('.ver-btn').forEach(b => b.disabled = false);
         }
@@ -881,7 +884,7 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
             setStatePill('Waiting\u2026', 'amber');
             showMessage('The receiver hasn\u2019t come back yet \u2014 give it a moment and reload this page.');
         }
-        installing = false; paintTopRow('');
+        installing = false; repaintLanes(); paintTopRow('');
         $('check').disabled = false;
         document.querySelectorAll('.ver-btn').forEach(b => b.disabled = false);
     }
@@ -926,12 +929,21 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => fetch('/api/state.json', { cache: 'no-store' }).then(r => r.json()).then(paintLanes).catch(() => {}), 2000);
             return;
         }
+        // An install in progress owns the lane: the card could only
+        // contradict it (Malcolm 2026-09-24: "Installing over Bluetooth" with
+        // Receiver WiFi ticked underneath). It returns after a failed install.
+        if (installing) { card.hidden = true; return; }
         const net  = (st && st.net) || {};
         const rssi = (st && st.info && typeof st.info.rssi === 'number') ? st.info.rssi : 0;
         const wifiUp   = net.mode === 'WiFi up';
-        const joining  = net.mode === 'connecting WiFi';   // after a restart the join can take half a minute
+        // Joining = home WiFi in range and on its way (sta_status 1 = not in
+        // range: the field), or the boot window just before the join starts.
+        // The same test the install's WiFi wait uses.
+        const joining  = (net.mode === 'connecting WiFi' && net.sta_status !== 1)
+                      || net.mode === 'waiting for TX' || net.mode === 'init';
         const wifiWeak = wifiUp && rssi && rssi <= WEAK_WIFI_DBM;
-        if (joining) setTimeout(() => fetch('/api/state.json', { cache: 'no-store' }).then(r => r.json()).then(paintLanes).catch(() => {}), 3000);
+        if (joining || net.mode === 'connecting WiFi')
+            setTimeout(() => fetch('/api/state.json', { cache: 'no-store' }).then(r => r.json()).then(paintLanes).catch(() => {}), 3000);
         // No WiFi = Bluetooth, but as a FACT of this paint, never written into
         // the pilot's choice: __preferBle used to be forced true here and never
         // cleared, so one wrong "no WiFi" sent the install down the slow lane
@@ -939,7 +951,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // pilot tapped.
         // Explicitly chosen WiFi holds while the receiver is rejoining (0.9.779);
         // otherwise Bluetooth unless WiFi is plainly up.
-        const ble = (window.__preferBle === false) ? !(wifiUp || joining) : (!wifiUp || !!window.__preferBle);
+        // 0.9.834 (Malcolm 2026-09-24, beside the router: "it should be
+        // Wi-Fi"): while the receiver is JOINING, WiFi is the default too.
+        // Ticking Bluetooth there made the install skip its wait for WiFi, so
+        // an update tapped just after power-up went the slow way. The pilot's
+        // own tap still wins.
+        const ble = window.__preferBle === true ? true : !(wifiUp || joining);
         // What this paint TICKS is what an install must do (0.9.768). With no
         // WiFi up the card showed Bluetooth ticked, yet doInstall still sat
         // 45 s "waiting for the receiver's WiFi" unless the button had been
@@ -963,7 +980,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!(wifiUp || joining)) w.style.opacity = '.55';
 
         why.innerHTML =
-            joining   ? 'The receiver is rejoining WiFi \u2014 Bluetooth on the phone tends to hold it off. <b>Receiver WiFi</b> pauses Bluetooth for the download and is much faster; Bluetooth works too.'
+            joining && !ble ? 'Joining WiFi. The install waits for it, then uses Bluetooth if it does not come.'
+          : joining   ? 'Slower, but works anywhere.'
           : !wifiUp   ? 'No receiver WiFi here \u2014 Bluetooth is the only way.'
           : wifiWeak  ? '<b>WiFi is weak here (' + rssi + ' dBm)</b> \u2014 Bluetooth stands a better chance.'
           : ble       ? 'Slower, but works anywhere.'
@@ -972,12 +990,9 @@ document.addEventListener('DOMContentLoaded', () => {
         w.onclick = () => { if (!(wifiUp || joining)) return; window.__preferBle = false; paintLanes(st); };
         b.onclick = () => { window.__preferBle = true;  paintLanes(st); };
     }
-    if (LDRC.viaBle) {
-        fetch('/api/state.json', { cache: 'no-store' })
-            .then(r => r.json())
-            .then(st => paintLanes(st))
-            .catch(() => {});
-    }
+    window.__repaintLanes = () => fetch('/api/state.json', { cache: 'no-store' })
+        .then(r => r.json()).then(st => paintLanes(st)).catch(() => {});
+    if (LDRC.viaBle) window.__repaintLanes();
 });
 </script>
 <template id=helpContent><h2>Firmware update</h2>

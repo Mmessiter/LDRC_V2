@@ -1728,7 +1728,16 @@ class MainActivity : AppCompatActivity() {
     // automatic one (Malcolm 2026-09-19). The sweep in flight adopts it.
     @Volatile private var pendingExplicit = false
 
+    // An install in flight (0.9.834, Malcolm 2026-09-24): the background backup
+    // never shares the link with an update - its bank switches ran through the
+    // middle of a Bluetooth install and the swash hit its stops.
+    private fun otaBusy() = otaPhase == "download" || otaPhase == "fw" || otaPhase == "fs" || otaPhase == "finish" || otaPhase == "rebooting"
+
     private fun prefetchSession(fast: Boolean = false, explicit: Boolean = false) {
+        if (otaBusy()) {
+            if (explicit) { snapPhase = "done"; snapOk = false; snapError = "an update is being installed — back up again once it has finished" }
+            return
+        }
         if (explicit) pendingExplicit = true
         if (prefetchRunning) return
         prefetchRunning = true
@@ -1739,6 +1748,7 @@ class MainActivity : AppCompatActivity() {
             var failures = 0      // MSP reads that never answered (after one retry)
             var straightFails = 0 // ...in a row: five means the link is gone, not a hiccup
             var tooFar = false    // (Malcolm 2026-09-10: "it tried and tried" out of range)
+            var updating = false  // an install started mid-sweep (0.9.834): stop, and freeze nothing
             fun reqCoded(p: String): Pair<Int, ByteArray?> {   // followFetch records automatically
                 val r = bleSyncCoded(p)
                 // Progress counts PLANNED items, not requests: bank checks,
@@ -1756,7 +1766,8 @@ class MainActivity : AppCompatActivity() {
             // restore point cannot carry a stale copy of it either.
             fun mspRead(p: String, optional: Boolean = false) {
                 try {
-                    if (tooFar) return                     // the link is gone: skip the rest, finish fast
+                    if (otaBusy()) updating = true         // an install started: leave the FC alone
+                    if (tooFar || updating) return         // the link is gone: skip the rest, finish fast
                     val first = reqCoded(p)
                     if (first.second != null) { straightFails = 0; return }
                     if (optional && first.first == 502) { SessionCache.forget(p); return }
@@ -1770,6 +1781,7 @@ class MainActivity : AppCompatActivity() {
                 } finally { snapDone++ }                 // one planned item, however many tries
             }
             fun selectBank(byte: Int) {
+                if (otaBusy()) { updating = true; return }   // never switch a bank under an install
                 val hex = "%02X".format(byte)
                 SessionCache.noteBankSelect(hex)
                 req("/api/msp?fn=210&data=$hex")
@@ -1874,7 +1886,7 @@ class MainActivity : AppCompatActivity() {
                     var curPid = origPid; var curRate = origRate
                     var aborted = false
                     for (b in 0 until nPid) {
-                        if (tooFar) break
+                        if (tooFar || updating) break
                         if (txAppeared()) { aborted = true; break }
                         if (b != curPid) { selectBank(b); curPid = b }
                         else SessionCache.noteBankSelect("%02X".format(b))
@@ -1882,7 +1894,7 @@ class MainActivity : AppCompatActivity() {
                         if (!stillOn(b, null)) { aborted = true; break }
                     }
                     if (!aborted) for (r in 0 until nRate) {
-                        if (tooFar) break
+                        if (tooFar || updating) break
                         if (txAppeared()) { aborted = true; break }
                         if (r != curRate) { selectBank(0x80 or r); curRate = r }
                         else SessionCache.noteBankSelect("%02X".format(0x80 or r))
@@ -1895,10 +1907,11 @@ class MainActivity : AppCompatActivity() {
                         if (curPid != origPid) selectBank(origPid)
                         if (curRate != origRate) selectBank(0x80 or origRate)
                     }
-                    if (tooFar) snapError = "too far from the receiver — the link kept dropping. Move within a metre and back up again"
+                    if (updating) snapError = "an update started — back up again once it has finished"
+                    else if (tooFar) snapError = "too far from the receiver — the link kept dropping. Move within a metre and back up again"
                     else if (aborted) snapError = "the transmitter came on (or the flight controller changed bank) mid-backup — switch it off and back up again"
                     else if (failures > 0) snapError = "$failures read${if (failures == 1) "" else "s"} got no answer — back up again"
-                    sweepOK = !aborted && !tooFar && failures == 0
+                    sweepOK = !aborted && !tooFar && !updating && failures == 0
                 }
             }
             // Full sweep completed → freeze the restore point (the rolling
@@ -1913,7 +1926,7 @@ class MainActivity : AppCompatActivity() {
                 if (!snapOk) snapError = "the backup file could not be written on the phone"
             }
             snapTotal += flightPaths.size
-            for (p in flightPaths) { req(p); snapDone++ }
+            for (p in flightPaths) { if (otaBusy()) break; req(p); snapDone++ }
             if (sweepOK && snapDone < snapTotal) snapDone = snapTotal   // every planned item was attempted
             // A "Back up" that landed after the freeze still gets what it
             // asked for, from the reads this sweep just gathered.
