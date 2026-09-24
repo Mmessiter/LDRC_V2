@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.840-review-reads-travel-extents";
+constexpr const char* FW_VERSION = "RXV2-0.9.841-rates-types-explained";
 
 //*********************************************************************
 //  Auto-update manifest URLs

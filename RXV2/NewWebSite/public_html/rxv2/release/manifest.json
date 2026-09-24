@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.841-rates-types-explained",
+      "url": "https://messiter.com/rxv2/release/v0.9.841/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.841/littlefs.bin",
+      "fs_md5": "e40415ce2d530b1d3344a949d90dc75a",
+      "notes": "The Rates page help now explains how each rates type actually works, from Rotorflight's own formulas: what the three numbers mean and how the curve is shaped for ROTORFLIGHT, ACTUAL, QUICKRATES, BETAFLIGHT, KISS and RACEFLIGHT."
+    },
+    {
       "name": "RXV2-0.9.840-review-reads-travel-extents",
       "url": "https://messiter.com/rxv2/release/v0.9.840/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.840/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.830/littlefs.bin",
       "fs_md5": "0d93423881a91a8aed4bafb625576660",
       "notes": "Leaving the command line no longer refuses itself: opening it pauses MSP, so the flight controller could not give the fresh disarmed answer the guard demanded before restarting it. The last answer before the command line opened now stands. On the page a refusal is an alert that says why, back and home stay put on a refusal instead of walking off with the command line open, and the one-shot latch that skipped every second attempt resets."
-    },
-    {
-      "name": "RXV2-0.9.829-untitled",
-      "url": "https://messiter.com/rxv2/release/v0.9.829/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.829/littlefs.bin",
-      "fs_md5": "34e310a8703f10d11e31e14bee787798",
-      "notes": "A new board is called Untitled and its front page asks - rather than forces - you to rename it as soon as you can, with the menu working underneath. Two boards with the same name cannot be told apart, and the banner says so."
     }
   ],
   "rotorflight": {

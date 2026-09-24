@@ -1,6 +1,6 @@
 {
  "name": "LockDownRadioControl RXV2",
- "version": "0.9.840",
+ "version": "0.9.841",
  "new_install_prompt_erase": false,
  "builds": [
   {

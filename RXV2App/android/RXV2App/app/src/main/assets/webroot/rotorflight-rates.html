@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rates &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=356">
-<script src="/app.js?v=356" defer></script>
+<link rel=stylesheet href="/style.css?v=357">
+<script src="/app.js?v=357" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -69,7 +69,7 @@ table.dyn-yaw td input{width:6em;padding:.4em;font-size:.95em;text-align:right;
     </div>
 
     <div class=card>
-        <h2 data-help="Which formula turns stick movement into rotation speed. The numbers below mean different things for each type, so leave it as it is unless you mean to re-enter them all. ACTUAL is the easiest to read: Centre is how fast the model turns just off the middle of the stick, Max Rate is how fast it turns at full stick (degrees per second), and Expo softens the middle. ROTORFLIGHT is Rotorflight&rsquo;s own. The Easy tuning sliders work with ROTORFLIGHT, ACTUAL and QUICKRATES.">Rates type</h2>
+        <h2 data-help="Which formula turns stick movement into rotation speed. The numbers below mean different things for each type, so leave it as it is unless you mean to re-enter them all. ACTUAL is the easiest to read: Centre is how fast the model turns just off the middle of the stick, Max Rate is how fast it turns at full stick (degrees per second), and Expo softens the middle. ROTORFLIGHT is Rotorflight&rsquo;s own. The Easy tuning sliders work with ROTORFLIGHT, ACTUAL and QUICKRATES. Each type is explained in the ? help.">Rates type</h2>
         <select class=typeDD id=ratesType>
             <option value=0>0 — NONE</option>
             <option value=1>1 — BETAFLIGHT</option>
@@ -670,8 +670,16 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 <template id=helpContent><h2>Rotorflight rates</h2>
 <p>Reshapes the curve that maps your stick deflection to a commanded angular rate. Independent curves for Roll, Pitch, Yaw and Collective &mdash; Collective&rsquo;s Rate is degrees of blade pitch, not degrees a second.</p>
-<h3>How to use it</h3>
-<p>Rotorflight 4.6 uses rate type&nbsp;6 (ROTORFLIGHT): <b>Rate</b> is the top rotation speed at full stick, <b>Shape</b> is how the response builds towards it, <b>Expo</b> softens the centre, <b>Max Vel</b> just repeats Rate. Leave the rate type alone unless you know why &mdash; the other types read the same stored bytes as different things.</p>
+<h3>The rates types</h3>
+<p>Every type turns stick position into a rotation speed. They differ in what the three numbers mean and in the shape of the curve between centre and full stick. From Rotorflight&rsquo;s own formulas:</p>
+<ul>
+<li><b>ROTORFLIGHT</b> (Rotorflight&rsquo;s own): <b>Rate</b> is the speed at full stick in degrees per second, so it means what it says. <b>Expo</b> (0&ndash;100) is how much of the curve is bent towards the ends: 0 is a straight line, 100 is all curve. <b>Shape</b> sets how sharp that bend is: a higher number keeps the response gentle over more of the stick and brings the speed on later, nearer full stick. Collective&rsquo;s Rate is degrees of blade pitch.</li>
+<li><b>ACTUAL:</b> two honest numbers in degrees per second. <b>Centre</b> is how fast the model turns for small stick movements; <b>Max Rate</b> is the speed at full stick. The difference between them is added progressively as the stick moves out, and <b>Expo</b> decides how late that extra arrives. Centre equal to Max gives a straight line.</li>
+<li><b>QUICKRATES:</b> a Betaflight-style curve with an honest top. <b>Max Rate</b> is degrees per second at full stick, <b>RC Rate</b> sets how lively it is around centre, and the flight controller works out the curve between them itself.</li>
+<li><b>BETAFLIGHT</b> and <b>KISS:</b> the quadcopter classics. <b>RC Rate</b> is the sensitivity around centre (an abstract number, about 2&deg;/s per unit), <b>Super Rate</b> makes the curve steeper and steeper towards full stick, and <b>Expo</b> softens the middle. Full-stick speed is RC Rate &times; 2 &divide; (1 &minus; Super Rate), so it takes arithmetic to know. KISS softens the middle a little less.</li>
+<li><b>RACEFLIGHT:</b> <b>Rate</b> is degrees per second, <b>Acro+</b> adds a boost that grows towards full stick, so the top speed is Rate &times; (1 + Acro+&nbsp;%), and <b>Expo</b> softens the middle.</li>
+</ul>
+<p>Changing the type keeps the stored numbers and reads them the new way, so re-enter every axis after a change. ACTUAL and ROTORFLIGHT are the easiest to read; the sliders work with those two and QUICKRATES. <b>Max Vel</b> is read-only: the speed the type actually delivers at full stick.</p>
 <h3>Tips</h3>
 <ul>
 <li>Gentle curves are calmer in hover; aggressive curves give a more responsive feel at full deflection.</li>
