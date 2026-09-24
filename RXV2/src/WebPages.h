@@ -77,7 +77,13 @@ inline bool serveLittleFsFile(const char* path, const char* mime) {
     if (!gz && !LittleFS.exists(path)) return false;
     File f = LittleFS.open(gz ? gzPath.c_str() : path, "r");
     if (!f) return false;
-    if (gz) server.sendHeader("Content-Encoding", "gzip");
+    // NO manual Content-Encoding here (0.9.846): streamFile() below adds
+    // "Content-Encoding: gzip" itself for any file named *.gz. Sending it here
+    // as well put the header in TWICE - "gzip, gzip" to a browser, which then
+    // tries to decode twice and shows nothing. Latent since 2026-08-29 for the
+    // 3D helicopter and search; every page from 0.9.844, when the build began
+    // gzipping all of them (dev/stage_fs.py). The apps bundle their own pages
+    // and never saw it.
     // ETag revalidation. mklittlefs bakes each host file's mtime into the FS
     // image, so size+mtime uniquely identifies the exact build of every asset.
     // When the browser's copy matches we answer 304 (~100 B) instead of

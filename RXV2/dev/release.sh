@@ -202,7 +202,10 @@ if [[ $FW_ONLY == 1 ]]; then
   [[ -f "$PREV_FS" ]] || die "no previous image at $PREV_FS to reuse"
   MK=~/.platformio/packages/tool-mklittlefs/mklittlefs; UNP=$(mktemp -d)
   "$MK" -u "$UNP" -b 4096 -p 256 -s "$(stat -f%z "$PREV_FS")" "$PREV_FS" > /dev/null 2>&1 || die "could not unpack $PREV_FS"
-  if diff -rq "$UNP" data/ > "$LOGF" 2>&1; then
+  # The image holds the STAGED pages (dev/stage_fs.py: big text assets
+  # gzipped, deterministic - mtime 0), so compare with .pio/fsdata, which the
+  # firmware build above has just re-staged from data/ (0.9.846).
+  if diff -rq "$UNP" .pio/fsdata/ > "$LOGF" 2>&1; then
     cp "$PREV_FS" .pio/build/xiao_s3_ota/littlefs.bin; touch .pio/build/xiao_s3_ota/littlefs.bin
     ok "filesystem: pages identical to $PREV - reusing its image, so receivers skip the fs flash"
   else

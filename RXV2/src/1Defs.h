@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.845-save-button-label-stuck";
+constexpr const char* FW_VERSION = "RXV2-0.9.846-pages-open-in-a-browser";
 
 //*********************************************************************
 //  Auto-update manifest URLs
