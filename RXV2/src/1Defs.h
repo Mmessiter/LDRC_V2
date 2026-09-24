@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.831-no-wiggle-after-update";
+constexpr const char* FW_VERSION = "RXV2-0.9.832-rates-type-help";
 
 //*********************************************************************
 //  Auto-update manifest URLs
