@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.835-throttle-setting-kept",
+      "url": "https://messiter.com/rxv2/release/v0.9.835/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.835/littlefs.bin",
+      "fs_md5": "0345e6bab861f2f8297bf66792a7e07b",
+      "notes": "The receiver's throttle channel setting now survives a restart. Since 0.9.230 it was read before the settings store was open, so every receiver booted holding channel 3 low whatever was saved."
+    },
+    {
       "name": "RXV2-0.9.834-swash-stays-level",
       "url": "https://messiter.com/rxv2/release/v0.9.834/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.834/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.824/littlefs.bin",
       "fs_md5": "b1e16342e044317393087e3281257815",
       "notes": "After a rename the front page paints the NEW name from its first frame: the last-known-name memory it paints from is taught the new name the moment the receiver accepts it"
-    },
-    {
-      "name": "RXV2-0.9.823-no-old-name-flash",
-      "url": "https://messiter.com/rxv2/release/v0.9.823/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.823/littlefs.bin",
-      "fs_md5": "a9c0d8518f8e666d1a0b1366fc9ef0a0",
-      "notes": "iOS app: after a rename the front page shows the new name from the first moment, instead of iOS's cached old one for two seconds"
     }
   ],
   "rotorflight": {

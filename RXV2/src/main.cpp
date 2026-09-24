@@ -170,11 +170,10 @@ void setup() {
     for (uint8_t i = 0; i < 16; ++i) channelMicros[i] = (i < 5) ? 1500 : 500;
     // SAFETY: never boot with the throttle at mid-stick. Until the TX is
     // heard, the throttle channel is pinned low (Output.h keeps it there).
-    throttleChannel = prefs.isKey(NVS_KEY_THR_CH) ? prefs.getUChar(NVS_KEY_THR_CH, 3) : 3;
-    if (throttleChannel > 16) throttleChannel = 3;
     // The hold itself is applied by the output tick (Output.h,
-    // applyPreLinkHolds) - it needs the FC's learned throttle channel,
-    // loaded further down, and it runs before the first frame is sent.
+    // applyPreLinkHolds) - it needs the FC's learned throttle channel and the
+    // thr_ch setting, both loaded below once NVS is open, and it runs before
+    // the first frame is sent.
 
     // Log WHY we booted — the blackbox story starts here. Distinguishes a
     // normal power-up from the silent self-reboots that matter: BROWNOUT
@@ -219,6 +218,12 @@ void setup() {
     vbatCellsCfg = prefs.isKey(NVS_KEY_VBAT_CELLS) ? prefs.getUChar(NVS_KEY_VBAT_CELLS, 0)    : 0;
     if (vbatPin != 0 && vbatPin != 9) vbatPin = 0;   // D9 only — the sole free pad (D4 is the status LED)
     vbatInit();
+    // The pilot's throttle channel. Read HERE, after prefs.begin (0.9.835):
+    // from 0.9.230 it was read before NVS was open, so isKey() always said no
+    // and every receiver booted on channel 3 whatever was saved - Black
+    // Thunder 2 lost its thr_ch 5 at the very next restart (2026-09-24).
+    throttleChannel = prefs.isKey(NVS_KEY_THR_CH) ? prefs.getUChar(NVS_KEY_THR_CH, 3) : 3;
+    if (throttleChannel > 16) throttleChannel = 3;
     armingChannel = prefs.isKey(NVS_KEY_ARM_CH) ? prefs.getUChar(NVS_KEY_ARM_CH, 0) : 0;
     // Governor throttle watch (0.9.551): what the FC told us last time, so a
     // TX-on boot (never allowed to probe) can still judge the flight.

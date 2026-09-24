@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.834-swash-stays-level";
+constexpr const char* FW_VERSION = "RXV2-0.9.835-throttle-setting-kept";
 
 //*********************************************************************
 //  Auto-update manifest URLs
