@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.835-throttle-setting-kept";
+constexpr const char* FW_VERSION = "RXV2-0.9.836-sliders-all-rates-types";
 
 //*********************************************************************
 //  Auto-update manifest URLs

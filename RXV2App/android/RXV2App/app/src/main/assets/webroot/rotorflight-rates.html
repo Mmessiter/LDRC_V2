@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rates &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=351">
-<script src="/app.js?v=351" defer></script>
+<link rel=stylesheet href="/style.css?v=352">
+<script src="/app.js?v=352" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -52,7 +52,7 @@ table.dyn-yaw td input{width:6em;padding:.4em;font-size:.95em;text-align:right;
     </div>
 
     <div class=card id=feelCard style="display:none">
-        <h2 data-help="Agility moves the Rate column on the Rates page (roll, pitch and yaw together); Stick feel moves the Expo column. The centre of each slider is what this bank had at your last backup: Agility goes from half to double those rates, Stick feel from 35 softer to 35 more direct. Back up and the sliders re-centre on today&rsquo;s numbers. ROTORFLIGHT rate type only.">How agile?</h2>
+        <h2 data-help="Agility moves the full-stick rate (Rate, or Max Rate on the Actual type; roll, pitch and yaw together); Stick feel moves the Expo column. The centre of each slider is what this bank had at your last backup: Agility goes from half to double those rates, Stick feel from 35 softer to 35 more direct. Back up and the sliders re-centre on today&rsquo;s numbers. On the Actual and Quick types Agility moves Max Rate, and Centre keeps its ratio to it. Betaflight, Raceflight and KISS types are not covered.">How agile?</h2>
         <p class=sub>Two sliders set the numbers in the table below; everything stays visible. <b>Agility</b> is the top rotation speed at full stick. <b>Stick feel</b> is how soft the response is around centre stick.</p>
         <div style="display:flex;align-items:center;gap:.6em;margin:.6em 0">
             <span style="font-size:.9em;white-space:nowrap">Docile</span>
@@ -69,7 +69,7 @@ table.dyn-yaw td input{width:6em;padding:.4em;font-size:.95em;text-align:right;
     </div>
 
     <div class=card>
-        <h2 data-help="Which formula turns stick movement into rotation speed. The numbers below mean different things for each type, so leave it as it is unless you mean to re-enter them all. ACTUAL is the easiest to read: Centre is how fast the model turns just off the middle of the stick, Max Rate is how fast it turns at full stick (degrees per second), and Expo softens the middle. ROTORFLIGHT is Rotorflight&rsquo;s own; the Easy tuning sliders work with that one only.">Rates type</h2>
+        <h2 data-help="Which formula turns stick movement into rotation speed. The numbers below mean different things for each type, so leave it as it is unless you mean to re-enter them all. ACTUAL is the easiest to read: Centre is how fast the model turns just off the middle of the stick, Max Rate is how fast it turns at full stick (degrees per second), and Expo softens the middle. ROTORFLIGHT is Rotorflight&rsquo;s own. The Easy tuning sliders work with ROTORFLIGHT, ACTUAL and QUICKRATES.">Rates type</h2>
         <select class=typeDD id=ratesType>
             <option value=0>0 — NONE</option>
             <option value=1>1 — BETAFLIGHT</option>
@@ -185,9 +185,12 @@ function bytesToHex(b) { let s=''; for(let i=0;i<b.length;i++) s+=b[i].toString(
 //   stored = round(display/sc).  ro: derived/read-only (Max Vel = Rate).
 // peak/expo/centre name the columns that drive the preview curve.
 function modelForType(t) {
+    // feel: which COLUMNS the How agile? sliders move (0.9.836) - rate = the
+    // full-stick rate, centre = scaled alongside it so the curve keeps its
+    // shape, expo. Absent = the sliders do not cover this type.
     if (t === 6) {   // ROTORFLIGHT — matches the official Configurator
         return {
-            curve: 'rotorflight', peak: 0, expo: 2, centre: null,
+            curve: 'rotorflight', peak: 0, expo: 2, centre: null, feel: { rate: 0, centre: null, expo: 2 },
             cols: [
                 { h:'Rate',    hh:'Top rotation speed at full stick, degrees per second (Collective: degrees of pitch).', slot:0, sc:5, scC:0.125 },
                 { h:'Shape',   hh:'Curve shape: how the response builds from centre stick to full stick.', slot:2, sc:1, scC:1     },
@@ -198,7 +201,7 @@ function modelForType(t) {
     }
     if (t === 4) {   // ACTUAL — matches the official Configurator (Center Sensitivity / Max Rate / Expo / Max Vel)
         return {
-            curve: 'actual', peak: 1, expo: 2, centre: 0,
+            curve: 'actual', peak: 1, expo: 2, centre: 0, feel: { rate: 1, centre: 0, expo: 2 },
             cols: [
                 { h:'Centre',   hh:'How lively the response is around centre stick.', slot:0, sc:10, scC:0.25 },   // Center Sensitivity
                 { h:'Max Rate', hh:'Top rotation speed at full stick, degrees per second.', slot:2, sc:10, scC:0.25 },   // Max Rate (= Max Vel)
@@ -210,6 +213,7 @@ function modelForType(t) {
     // Legacy generic (Betaflight/Raceflight/KISS/Quick — kept until each gets its own model)
     return {
         curve: 'actual', peak: 2, expo: 1, centre: 0,
+        feel: t === 5 ? { rate: 2, centre: 0, expo: 1 } : null,   // QUICKRATES: Max = slot 2 x 10, like ACTUAL
         cols: [
             { h:'Centre', hh:'How lively the response is around centre stick.', slot:0, sc:10, scC:0.25 },
             { h:'Expo',   hh:'Softens the feel around centre stick without changing the full-stick rate.', slot:1, sc:1,  scC:1    },
@@ -222,7 +226,8 @@ function modelForType(t) {
 let MODEL = modelForType(6);
 
 // "How agile?" (Malcolm 2026-09-06: sliders for people who just want to
-// fly). ROTORFLIGHT rates type only (columns Rate / Shape / Expo):
+// fly). ROTORFLIGHT, ACTUAL and QUICKRATES rates types (MODEL.feel names the
+// columns; 0.9.836 - it was ROTORFLIGHT only):
 //   agility v → roll & pitch rate 120..500 °/s, yaw 150..600 °/s
 //   stick feel v → expo 70 (softest centre) .. 0 (direct), all three axes
 // Collective and Shape are left alone; the table stays editable.
@@ -231,7 +236,7 @@ let MODEL = modelForType(6);
 // saw them). Agility: half to double the rates. Stick feel: expo 35 softer
 // to 35 more direct. A backup re-centres the sliders on today's numbers.
 let feelBase = { rp: 250, yaw: 300, expo: 40 };
-const r5 = x => Math.max(5, Math.round(x / 5) * 5);
+const r5 = x => { const st = (MODEL.feel && MODEL.cols[MODEL.feel.rate].sc) || 5; return Math.max(st, Math.round(x / st) * st); };   // the type's own step
 const feelRate = v => ({ rp: r5(LDRC.relScale(feelBase.rp, v)), yaw: r5(LDRC.relScale(feelBase.yaw, v)) });
 const feelExpoOf = v => Math.max(0, Math.min(100, Math.round(feelBase.expo - (v - 50) * 0.7)));
 const agilePos = rate => LDRC.relPos(feelBase.rp, rate);
@@ -243,16 +248,24 @@ function feelSet(axKey, ci, val) {
     syncCell(axKey, ci);
 }
 function feelAgile() {
-    if (MODEL.curve !== 'rotorflight') return;
-    const r = feelRate(+document.getElementById('f_agile').value);
-    feelSet('Roll', 0, r.rp); feelSet('Pitch', 0, r.rp); feelSet('Yaw', 0, r.yaw);
+    if (!MODEL.feel) return;
+    const r = feelRate(+document.getElementById('f_agile').value), f = MODEL.feel;
+    for (const [k, rate] of [['Roll', r.rp], ['Pitch', r.rp], ['Yaw', r.yaw]]) {
+        // ACTUAL/QUICKRATES: the centre sensitivity keeps its ratio to the max rate.
+        if (f.centre !== null) {
+            const was = parseFloat(document.getElementById('r_' + k + '_' + f.rate).value);
+            const ctr = parseFloat(document.getElementById('r_' + k + '_' + f.centre).value);
+            if (was > 0 && !isNaN(ctr)) feelSet(k, f.centre, Math.round(ctr * rate / was));
+        }
+        feelSet(k, f.rate, rate);
+    }
     document.getElementById('agileNote').textContent = 'Roll and pitch ' + r.rp + ' °/s, yaw ' + r.yaw + ' °/s at full stick.' + LDRC.endHint(+document.getElementById('f_agile').value, 0, 100);
     LDRC.markDirty(); drawCurves();
 }
 function feelExpo() {
-    if (MODEL.curve !== 'rotorflight') return;
+    if (!MODEL.feel) return;
     const e = feelExpoOf(+document.getElementById('f_expo').value);
-    for (const k of ['Roll', 'Pitch', 'Yaw']) feelSet(k, 2, e);
+    for (const k of ['Roll', 'Pitch', 'Yaw']) feelSet(k, MODEL.feel.expo, e);
     document.getElementById('expoNote').textContent = 'Expo ' + e + ' on roll, pitch and yaw.' + LDRC.endHint(+document.getElementById('f_expo').value, 0, 100);
     LDRC.markDirty(); drawCurves();
 }
@@ -260,24 +273,26 @@ function feelExpo() {
 // the table moves the slider (roll leads; the note names what is set).
 document.addEventListener('input', e => {
     const id = (e.target && e.target.id) || '';
-    if (MODEL.curve !== 'rotorflight' || !/^r_(Roll|Pitch|Yaw)_[0-3]$/.test(id)) return;
-    const rate = parseFloat(document.getElementById('r_Roll_0').value);
-    const expo = parseFloat(document.getElementById('r_Roll_2').value);
+    if (!MODEL.feel || !/^r_(Roll|Pitch|Yaw)_[0-4]$/.test(id)) return;
+    const f = MODEL.feel, cell = (k, ci) => document.getElementById('r_' + k + '_' + ci).value;
+    const rate = parseFloat(cell('Roll', f.rate));
+    const expo = parseFloat(cell('Roll', f.expo));
     if (!isNaN(rate)) document.getElementById('f_agile').value = agilePos(rate);
     if (!isNaN(expo)) document.getElementById('f_expo').value  = expoPos(expo);
-    document.getElementById('agileNote').textContent = 'From the table: roll ' + document.getElementById('r_Roll_0').value + ', pitch ' + document.getElementById('r_Pitch_0').value + ', yaw ' + document.getElementById('r_Yaw_0').value + ' °/s.';
-    document.getElementById('expoNote').textContent  = 'From the table: expo ' + document.getElementById('r_Roll_2').value + ' / ' + document.getElementById('r_Pitch_2').value + ' / ' + document.getElementById('r_Yaw_2').value + '.';
+    document.getElementById('agileNote').textContent = 'From the table: roll ' + cell('Roll', f.rate) + ', pitch ' + cell('Pitch', f.rate) + ', yaw ' + cell('Yaw', f.rate) + ' °/s.';
+    document.getElementById('expoNote').textContent  = 'From the table: expo ' + cell('Roll', f.expo) + ' / ' + cell('Pitch', f.expo) + ' / ' + cell('Yaw', f.expo) + '.';
 });
-// After a load: show the card for the ROTORFLIGHT type and put the sliders
+// After a load: show the card for a covered rates type and put the sliders
 // where the bank's numbers are (roll rate and roll expo lead).
 function feelReflect() {
     const card = document.getElementById('feelCard');
-    const on = MODEL.curve === 'rotorflight';
+    const on = !!MODEL.feel;
     card.style.display = on ? '' : 'none';
     if (!on) return;
-    const rate = parseFloat((document.getElementById('r_Roll_0') || {}).value);
-    const yaw  = parseFloat((document.getElementById('r_Yaw_0') || {}).value);
-    const expo = parseFloat((document.getElementById('r_Roll_2') || {}).value);
+    const f = MODEL.feel;
+    const rate = parseFloat((document.getElementById('r_Roll_' + f.rate) || {}).value);
+    const yaw  = parseFloat((document.getElementById('r_Yaw_' + f.rate) || {}).value);
+    const expo = parseFloat((document.getElementById('r_Roll_' + f.expo) || {}).value);
     if (!isNaN(rate) && !isNaN(expo))
         feelBase = LDRC.baseFor('rates', currentProfile, { rp: rate, yaw: isNaN(yaw) ? rate * 1.2 : yaw, expo });
     if (!isNaN(rate)) document.getElementById('f_agile').value = agilePos(rate);

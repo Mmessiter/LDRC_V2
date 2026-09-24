@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Easy tuning &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=351">
-<script src="/app.js?v=351" defer></script>
+<link rel=stylesheet href="/style.css?v=352">
+<script src="/app.js?v=352" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;gap:.6em;
         padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -60,7 +60,7 @@
     </div>
 
     <div class=card id=agileCard>
-        <h2 data-help="Agility moves the Rate column on the Rates page (roll, pitch and yaw together), Stick feel the Expo column. The centre of each slider is what this bank had at your last backup: half to double the rates; expo 35 softer to 35 more direct. Back up and they re-centre on today&rsquo;s numbers.">How agile?</h2>
+        <h2 data-help="Agility moves the full-stick rate on the Rates page (Rate, or Max Rate on the Actual type; roll, pitch and yaw together), Stick feel the Expo column. The centre of each slider is what this bank had at your last backup: half to double the rates; expo 35 softer to 35 more direct. Back up and they re-centre on today&rsquo;s numbers.">How agile?</h2>
         <div class=sl><span>Docile</span><input type=range id=s_agile min=0 max=100 step=5 value=40 oninput="onAgile()"><span>Acrobatic</span></div>
         <p class=sub id=agileNote></p>
         <div class=sl><span>Soft centre</span><input type=range id=s_expo min=0 max=100 step=5 value=50 oninput="onExpo()"><span>Direct</span></div>
@@ -101,7 +101,9 @@ const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 // when a page first saw it). The same baselines as the Governor, Rates and
 // PIDs pages, so the two views always agree. A backup re-centres them all.
 let startBase = { spool: 15, hand: 15, start: 30 }, ratesBase = { rp: 250, yaw: 300, expo: 40 };
-const r5 = x => Math.max(5, Math.round(x / 5) * 5);
+// Rates round to the type's own step: 5 deg/s (ROTORFLIGHT), 10 (ACTUAL, QUICKRATES).
+const feelStep = () => { const m = ratesRaw && LDRC.feelModel(ratesRaw[0]); return m ? m.sc : 5; };
+const r5 = x => { const st = feelStep(); return Math.max(st, Math.round(x / st) * st); };
 const startNums  = v => { const k = Math.pow(2, (50 - v) / 50); return { spool: Math.max(1, Math.round(startBase.spool * k)), hand: clamp(Math.round(startBase.hand + (v - 50) * 0.3), 10, 50), start: Math.max(1, Math.round(startBase.start * k)) }; };
 const startFeel  = spool => (startBase.spool > 0 && spool > 0) ? clamp5(50 - 50 * Math.log2(spool / startBase.spool)) : 50;
 const feelRate   = v => ({ rp: r5(LDRC.relScale(ratesBase.rp, v)), yaw: r5(LDRC.relScale(ratesBase.yaw, v)) });
@@ -188,15 +190,18 @@ function reflect() {
     startBase = LDRC.baseFor('start', null, { spool: u16(govRaw, 3) / 10, hand: govRaw[19], start: u16(govRaw, 1) / 10 });
     $('s_start').value = startFeel(u16(govRaw, 3) / 10);
     $('startNote').textContent = '';
-    const rf = ratesRaw[0] === 6;
+    // ROTORFLIGHT, ACTUAL and QUICKRATES rates types (0.9.836): the
+    // full-stick rate and expo of each, via LDRC.feelModel.
+    const rf = !!LDRC.feelModel(ratesRaw[0]);
     for (const id of ['s_agile', 's_expo']) $(id).disabled = !rf;
     $('agileOff').style.display = rf ? 'none' : '';
     if (rf) {
-        ratesBase = LDRC.baseFor('rates', bank, { rp: ratesRaw[1] * 5, yaw: ratesRaw[13] * 5, expo: ratesRaw[2] });
-        $('s_agile').value = agileFeel(ratesRaw[1] * 5);
-        $('s_expo').value  = expoFeel(ratesRaw[2]);
+        const rp = LDRC.feelRateOf(ratesRaw, 0), yaw = LDRC.feelRateOf(ratesRaw, 2), expo = LDRC.feelExpoOf(ratesRaw, 0);
+        ratesBase = LDRC.baseFor('rates', bank, { rp, yaw, expo });
+        $('s_agile').value = agileFeel(rp);
+        $('s_expo').value  = expoFeel(expo);
     } else {
-        $('agileOff').textContent = 'This bank uses a rates type the sliders do not cover — use the Rates page.';
+        $('agileOff').textContent = 'This bank uses the Betaflight, Raceflight or KISS rates type, which the sliders do not cover — use the Rates page.';
     }
     $('agileNote').textContent = ''; $('expoNote').textContent = '';
     pidBase = []; for (let i = 0; i < 17; i++) pidBase.push(u16(pidRaw, i * 2));
@@ -251,11 +256,12 @@ function pidBytes() {
 }
 function ratesBytes() {
     const b = ratesRaw.slice(), r = feelRate(+$('s_agile').value), e = feelExpoOf(+$('s_expo').value);
-    const set = (o, rate) => {                                        // axis block: rcRate, rcExpo, srate, response, accel16
-        if (touched.agile) b[o] = Math.min(255, Math.max(0, Math.round(rate / 5)));   // a Uint8Array wraps silently: 1400/5 = 280 became 24 (= 120 deg/s) and the read-back "verified" it
-        if (touched.expo)  b[o + 1] = e;
-    };
-    set(1, r.rp); set(7, r.rp); set(13, r.yaw);
+    // Per rates type (LDRC.feelModel): the full-stick rate byte, the centre
+    // sensitivity alongside it on ACTUAL/QUICKRATES, and the expo byte.
+    for (const [ax, rate] of [[0, r.rp], [1, r.rp], [2, r.yaw]]) {
+        if (touched.agile) LDRC.feelSetRate(b, ax, rate);
+        if (touched.expo)  LDRC.feelSetExpo(b, ax, e);
+    }
     return b;
 }
 function govBytes() {

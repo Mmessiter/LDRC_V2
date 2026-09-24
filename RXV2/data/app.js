@@ -1083,6 +1083,29 @@
         } catch (e) { return 0; }
     };
     // Relative slider maths: 50 = the baseline; the ends are half and double.
+    // FEEL SLIDERS ACROSS RATES TYPES (0.9.836, Malcolm 2026-09-24: "the easy
+    // tuning sliders work with rotorflight rates type, but not the others,
+    // which seems a pity. Especially as I have been used to using actual").
+    // What Agility and Stick feel move in a MSP 111 blob, per rates type:
+    //   ROTORFLIGHT (6): Rate = slot 0 x 5 deg/s;  expo slot 1.
+    //   ACTUAL (4), QUICKRATES (5): Max rate = slot 2 x 10 deg/s, and the
+    //   centre sensitivity (slot 0) keeps its ratio to it so the curve keeps
+    //   its shape; expo slot 1.
+    //   BETAFLIGHT / RACEFLIGHT / KISS: not covered (their full-stick rate is
+    //   a formula of two numbers) - the Rates table still edits them.
+    LDRC.feelModel = t => t === 6 ? { rateSlot: 0, sc: 5,  centreSlot: null, expoSlot: 1 }
+                        : (t === 4 || t === 5) ? { rateSlot: 2, sc: 10, centreSlot: 0, expoSlot: 1 }
+                        : null;
+    LDRC.feelRateOf = (b, ax) => { const m = LDRC.feelModel(b[0]); return m ? b[1 + ax * 6 + m.rateSlot] * m.sc : NaN; };
+    LDRC.feelExpoOf = (b, ax) => { const m = LDRC.feelModel(b[0]); return m ? b[1 + ax * 6 + m.expoSlot] : NaN; };
+    LDRC.feelSetRate = (b, ax, rate) => {
+        const m = LDRC.feelModel(b[0]); if (!m) return;
+        const o = 1 + ax * 6, was = b[o + m.rateSlot];
+        const now = Math.min(255, Math.max(0, Math.round(rate / m.sc)));   // a Uint8Array wraps silently past 255
+        if (m.centreSlot !== null && was > 0) b[o + m.centreSlot] = Math.min(255, Math.max(0, Math.round(b[o + m.centreSlot] * now / was)));
+        b[o + m.rateSlot] = now;
+    };
+    LDRC.feelSetExpo = (b, ax, expo) => { const m = LDRC.feelModel(b[0]); if (m) b[1 + ax * 6 + m.expoSlot] = Math.min(100, Math.max(0, Math.round(expo))); };
     LDRC.relScale = (base, v) => base * Math.pow(2, (v - 50) / 50);
     LDRC.relPos   = (base, val) => (base > 0 && val > 0) ? Math.max(0, Math.min(100, Math.round((50 + 50 * Math.log2(val / base)) / 5) * 5)) : 50;
     LDRC.clamp5   = x => Math.max(0, Math.min(100, Math.round(x / 5) * 5));

@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.836-sliders-all-rates-types",
+      "url": "https://messiter.com/rxv2/release/v0.9.836/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.836/littlefs.bin",
+      "fs_md5": "af272d4df2224de032c2ca386c282b7e",
+      "notes": "The Easy tuning sliders, and How agile? on the Rates page, now work with the ACTUAL and QUICKRATES rates types as well as ROTORFLIGHT. Agility moves the full-stick rate (Max Rate on those types, with Centre keeping its ratio so the curve keeps its shape); Stick feel moves expo. Betaflight, Raceflight and KISS types are still table-only."
+    },
+    {
       "name": "RXV2-0.9.835-throttle-setting-kept",
       "url": "https://messiter.com/rxv2/release/v0.9.835/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.835/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.825/littlefs.bin",
       "fs_md5": "f0a17850e5dc42921b04d298eb10d08c",
       "notes": "A dongle or simulator interface now has an Event log button on its front page: the Black box page is hidden on those, and the Event log - with Send debug data to Malcolm - lived only behind it, so a dongle could not report a fault at all"
-    },
-    {
-      "name": "RXV2-0.9.824-new-name-first-paint",
-      "url": "https://messiter.com/rxv2/release/v0.9.824/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.824/littlefs.bin",
-      "fs_md5": "b1e16342e044317393087e3281257815",
-      "notes": "After a rename the front page paints the NEW name from its first frame: the last-known-name memory it paints from is taught the new name the moment the receiver accepts it"
     }
   ],
   "rotorflight": {
