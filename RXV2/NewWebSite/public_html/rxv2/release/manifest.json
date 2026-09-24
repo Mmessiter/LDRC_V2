@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.842-transmitter-off-first",
+      "url": "https://messiter.com/rxv2/release/v0.9.842/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.842/littlefs.bin",
+      "fs_md5": "9f2c1078a4f2143bd012c0c4d97f2844",
+      "notes": "The update page now checks the transmitter before anything starts and says 'Turn the transmitter off first' if it is on. A refusal from the receiver over WiFi is shown at once instead of being discovered as 'did not complete' minutes later."
+    },
+    {
       "name": "RXV2-0.9.841-rates-types-explained",
       "url": "https://messiter.com/rxv2/release/v0.9.841/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.841/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.831/littlefs.bin",
       "fs_md5": "0d93423881a91a8aed4bafb625576660",
       "notes": "No Bluetooth-ready servo wiggle after a reboot the app caused - a firmware install or a save that restarts the receiver. On a helicopter that wiggle is the swash plate moving by itself straight after an update. A genuine power-on still wiggles."
-    },
-    {
-      "name": "RXV2-0.9.830-cli-can-leave",
-      "url": "https://messiter.com/rxv2/release/v0.9.830/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.830/littlefs.bin",
-      "fs_md5": "0d93423881a91a8aed4bafb625576660",
-      "notes": "Leaving the command line no longer refuses itself: opening it pauses MSP, so the flight controller could not give the fresh disarmed answer the guard demanded before restarting it. The last answer before the command line opened now stands. On the page a refusal is an alert that says why, back and home stay put on a refusal instead of walking off with the command line open, and the one-shot latch that skipped every second attempt resets."
     }
   ],
   "rotorflight": {
