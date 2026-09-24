@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.844-page-follows-the-bank-switch";
+constexpr const char* FW_VERSION = "RXV2-0.9.845-save-button-label-stuck";
 
 //*********************************************************************
 //  Auto-update manifest URLs

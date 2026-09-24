@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.845-save-button-label-stuck",
+      "url": "https://messiter.com/rxv2/release/v0.9.845/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.845/littlefs.bin",
+      "fs_md5": "681668e427b999ebb87bcba24a377530",
+      "notes": "The Save button on the Rates, PIDs, PID+, Governor and Travel extents pages could be left saying 'Verifying...' for good after a save, whenever the read-back took more than a second. The two flashes captured each other's text; now one timer always puts the real label back."
+    },
+    {
       "name": "RXV2-0.9.844-page-follows-the-bank-switch",
       "url": "https://messiter.com/rxv2/release/v0.9.844/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.844/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.834/littlefs.bin",
       "fs_md5": "0345e6bab861f2f8297bf66792a7e07b",
       "notes": "With the transmitter off, the swash no longer drops past full negative or hits its stops during updates, backups and restores. The receiver used to hold channel 3 low until it heard a transmitter; on Rotorflight helis channel 3 is the collective. It now holds the flight controller's own throttle channel and keeps every flight control centred. Also: an update started just after power-up waits for the receiver's WiFi instead of going over Bluetooth; the phone's background backup never runs during an update, and the receiver refuses flight-controller requests while one is being written; saving on the Transmitter channels or Receiver settings pages no longer switches flight-controller telemetry off."
-    },
-    {
-      "name": "RXV2-0.9.833-compare-reviews",
-      "url": "https://messiter.com/rxv2/release/v0.9.833/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.833/littlefs.bin",
-      "fs_md5": "d40489a476188e4a831492c35051c5ff",
-      "notes": "Reviews showed the wrong flight: the receiver numbers flights by age, so a recorded flight 1 went stale after the next flight; the apps now store each flight by its own identity. New Compare models page: lines up your rates against another model's backup, bank by bank, and copies a bank's rates on request."
     }
   ],
   "rotorflight": {
