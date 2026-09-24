@@ -384,7 +384,14 @@ inline void handleBanksJson() {
     String j = "{\"pid\":";  j += (int)banks.pidCount;
     j += ",\"rate\":";       j += (int)banks.rateCount;
     j += ",\"shown\":";      j += (int)fcInfo.banksShown;
-    j += ",\"fc\":";         j += (fcInfo.detected ? "true" : "false"); j += "}";
+    j += ",\"fc\":";         j += (fcInfo.detected ? "true" : "false");
+    // Where the flight controller IS (0.9.844): fresh every 2 s while the
+    // transmitter is on and a phone is watching (bankFollowTick), so a page
+    // can follow the switch. -1 = unknown.
+    j += ",\"fc_pid\":";     j += (banks.fcPid  == 0xFF ? -1 : (int)banks.fcPid);
+    j += ",\"fc_rate\":";    j += (banks.fcRate == 0xFF ? -1 : (int)banks.fcRate);
+    j += ",\"tx\":";         j += (bankTxLive() ? "true" : "false");
+    j += ",\"armed\":";      j += (fcInfo.armed ? "true" : "false"); j += "}";
     server.sendHeader("Cache-Control", "no-store");
     server.send(200, "application/json", j);
 }

@@ -76,7 +76,12 @@ def main() -> int:
     if listing is None:
         print("Could not list %s with mklittlefs — is tool-mklittlefs installed?" % IMAGE)
         return 1
-    on_disk = {os.path.basename(f): os.path.getsize(f) for f in files}
+    # The image is built from .pio/fsdata (dev/stage_fs.py: data/ with the big
+    # text assets gzipped), so THAT is what the listing must match; staleness
+    # above is still judged against data/, the source.
+    staged_dir = os.path.join(os.path.dirname(DATA.rstrip(os.sep)), ".pio", "fsdata")
+    staged = [f for f in sorted(glob.glob(os.path.join(staged_dir, "*"))) if os.path.isfile(f)] if os.path.isdir(staged_dir) else files
+    on_disk = {os.path.basename(f): os.path.getsize(f) for f in staged}
     missing = []
     for name, size in sorted(on_disk.items()):
         if name not in listing:
@@ -105,9 +110,9 @@ def main() -> int:
         print("serveLittleFsFile in src/WebPages.h) and build again.")
         return 1
 
-    total = sum(os.path.getsize(f) for f in files)
-    print("ALL PASS  (%d files, %d bytes of content, image %d bytes)"
-          % (len(files), total, len(blob)))
+    total = sum(on_disk.values())
+    print("ALL PASS  (%d files, %d bytes on the chip (data/ is %d), image %d bytes)"
+          % (len(on_disk), total, sum(os.path.getsize(f) for f in files), len(blob)))
     return 0
 
 

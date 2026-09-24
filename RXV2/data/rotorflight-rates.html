@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rates &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=359">
-<script src="/app.js?v=359" defer></script>
+<link rel=stylesheet href="/style.css?v=361">
+<script src="/app.js?v=361" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -504,6 +504,28 @@ function buildBoostUI() {
     body.innerHTML = html;
 }
 
+// The transmitter moved its bank switch (LDRC.followSwitch): follow it -
+// unless there are unsaved edits, which belong to the bank they were made on.
+let following = false;
+async function followTx(idx) {
+    if (following) return;
+    if (LDRC.dirty || idx < 0) {
+        // Unsaved edits are never touched (Malcolm 2026-09-24: "auto refreshing
+        // every two seconds might interfere with my edits before I have saved
+        // them!"). idx < 0 = the poll stopped at the edits before even asking.
+        if (idx >= 0) setStatus('info', 'The transmitter is on bank ' + (idx + 1) + '. Your unsaved edits are for bank ' + (currentProfile + 1) + ': save them, or tap bank ' + (idx + 1) + ' to discard them.');
+        return;
+    }
+    following = true;
+    try {
+        currentProfile = idx;
+        localStorage.setItem('rfRatesProfile', String(idx));
+        paintProfileButtons();
+        await load();
+        setStatus('good', '\u2713 Following the transmitter: bank ' + (idx + 1));
+    } catch (e) {} finally { following = false; }
+}
+
 async function selectProfile(idx) {
     if (idx === currentProfile) return;
     if (!(await LDRC.confirmLoseChanges('switching profile'))) return;
@@ -655,6 +677,7 @@ async function copyTo(destIdx) {
 document.addEventListener('DOMContentLoaded', () => {
     bankInfo = LDRC.bankInfo();
     currentProfile = LDRC.bankClamp(bankInfo, 'rate', currentProfile);   // a remembered bank that certainly exists
+    LDRC.followSwitch('rate', () => currentProfile, followTx);           // the transmitter's bank switch moves the page (0.9.844)
     applyModel(modelForType(6));   // sensible default layout until load() learns the FC's actual type
     paintProfileButtons();
     // Changing the rates type re-lays out the columns and re-reads the cached
@@ -686,6 +709,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <p>Changing the type keeps the stored numbers and reads them the new way, so re-enter every axis after a change. ACTUAL and ROTORFLIGHT are the easiest to read; the sliders work with those two and QUICKRATES. <b>Max Vel</b> is read-only: the speed the type actually delivers at full stick.</p>
 <h3>Tips</h3>
 <ul>
+<li>With the transmitter on, the page follows its bank switch. Unsaved edits stay with the bank they were made on until you save or discard them.</li>
 <li>Gentle curves are calmer in hover; aggressive curves give a more responsive feel at full deflection.</li>
 <li>Test in a safe area — a rate change at high speed is more dramatic than it sounds on paper.</li>
 </ul>

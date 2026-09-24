@@ -1226,6 +1226,29 @@ inline void dongleStatusTick() {
     mspProbeSentMs = millis();
 }
 
+// FOLLOW THE TRANSMITTER'S BANK SWITCH (0.9.844, Malcolm 2026-09-24: "when I
+// switch bank, the bank does not change on the phone's display. I think it
+// should if it can"). With the transmitter on, Rotorflight moves the bank
+// itself from the switch; nothing told the receiver until someone read MSP
+// 101. While the transmitter is live, a phone is connected (or a page spoke
+// MSP in the last 15 s) and the model is DISARMED, ask MSP_STATUS every 2 s -
+// the passive digest fills banks.fcPid/fcRate, /api/banks.json reports them,
+// and the tuning pages poll that 60-byte answer. Stops the moment it sees
+// armed: nothing extra near flight.
+inline bool bleHasClient();
+inline void bankFollowTick() {
+    if (dongleEnabled || UsbHostMsp::cliMode) return;
+    if (!fcInfo.detected || fcInfo.armed || !bankTxLive()) return;
+    const bool watched = bleHasClient() || (banks.lastClientMs && (uint32_t)(millis() - banks.lastClientMs) < 15000);
+    if (!watched) return;
+    static uint32_t lastMs = 0;
+    if ((uint32_t)(millis() - lastMs) < 2000) return;
+    if (txParamBusy || mspWaitFunction != 0xFF || mspProbeOutstanding()) return;
+    lastMs = millis();
+    mspSendRequest(MSP_STATUS);
+    mspProbeSentMs = millis();
+}
+
 inline void mspFcPoll() {
     if (UsbHostMsp::cliMode) return;                    // command line open over USB: no MSP until save/exit (0.9.617)
     if (!fcTelemetryEnabled && !UsbHostMsp::active())

@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>PIDs &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=359">
-<script src="/app.js?v=359" defer></script>
+<link rel=stylesheet href="/style.css?v=361">
+<script src="/app.js?v=361" defer></script>
 <style>
 table.pids{width:100%;border-collapse:separate;border-spacing:.3em}
 table.pids th{text-align:center;color:#3a5165;font-weight:600;padding:.4em 0}
@@ -218,6 +218,28 @@ function paintProfileButtons() {
     }
 }
 
+// The transmitter moved its bank switch (LDRC.followSwitch): follow it -
+// unless there are unsaved edits, which belong to the bank they were made on.
+let following = false;
+async function followTx(idx) {
+    if (following) return;
+    if (LDRC.dirty || idx < 0) {
+        // Unsaved edits are never touched (Malcolm 2026-09-24: "auto refreshing
+        // every two seconds might interfere with my edits before I have saved
+        // them!"). idx < 0 = the poll stopped at the edits before even asking.
+        if (idx >= 0) setStatus('info', 'The transmitter is on bank ' + (idx + 1) + '. Your unsaved edits are for bank ' + (currentProfile + 1) + ': save them, or tap bank ' + (idx + 1) + ' to discard them.');
+        return;
+    }
+    following = true;
+    try {
+        currentProfile = idx;
+        localStorage.setItem('rfPidProfile', String(idx));
+        paintProfileButtons();
+        await load();
+        setStatus('good', '\u2713 Following the transmitter: bank ' + (idx + 1));
+    } catch (e) {} finally { following = false; }
+}
+
 async function selectProfile(idx) {
     if (idx === currentProfile) return;
     if (!(await LDRC.confirmLoseChanges('switching profile'))) return;
@@ -348,6 +370,7 @@ async function copyTo(destIdx) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    LDRC.followSwitch('pid', () => currentProfile, followTx);            // the transmitter's bank switch moves the page (0.9.844)
     bankInfo = LDRC.bankInfo();
     currentProfile = LDRC.bankClamp(bankInfo, 'pid', currentProfile);   // a remembered bank that certainly exists
     paintProfileButtons();

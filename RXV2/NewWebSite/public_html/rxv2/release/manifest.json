@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.844-page-follows-the-bank-switch",
+      "url": "https://messiter.com/rxv2/release/v0.9.844/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.844/littlefs.bin",
+      "fs_md5": "50e9d2af8ce83718b134ee172ad0fe15",
+      "notes": "With the transmitter on, the Rates and PIDs pages follow its bank switch: the receiver refreshes the flight controller's bank every two seconds while a phone is watching and the model is disarmed, and the page moves to that bank. Never while you have unsaved edits or your cursor is in a field: then a one-line note says which bank the transmitter is on and your edits stay put until you save or discard them."
+    },
+    {
       "name": "RXV2-0.9.843-max-vel-read-only",
       "url": "https://messiter.com/rxv2/release/v0.9.843/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.843/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.833/littlefs.bin",
       "fs_md5": "d40489a476188e4a831492c35051c5ff",
       "notes": "Reviews showed the wrong flight: the receiver numbers flights by age, so a recorded flight 1 went stale after the next flight; the apps now store each flight by its own identity. New Compare models page: lines up your rates against another model's backup, bank by bank, and copies a bank's rates on request."
-    },
-    {
-      "name": "RXV2-0.9.832-rates-type-help",
-      "url": "https://messiter.com/rxv2/release/v0.9.832/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.832/littlefs.bin",
-      "fs_md5": "138c59d88b8b3b8d76045bd458d55771",
-      "notes": "Rates page: press and hold 'Rates type' to see what it means - which formula turns the stick into rotation speed, why to leave it alone, and what the ACTUAL columns mean"
     }
   ],
   "rotorflight": {

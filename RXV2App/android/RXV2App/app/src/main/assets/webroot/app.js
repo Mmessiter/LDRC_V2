@@ -489,6 +489,36 @@
             } catch (e) { return this.bankInfo(); }
         },
 
+        // FOLLOW THE TRANSMITTER'S BANK SWITCH (0.9.844, Malcolm 2026-09-24:
+        // "when I switch bank, the bank does not change on the phone's
+        // display. I think it should if it can"). While the transmitter is
+        // on, the receiver refreshes the flight controller's bank every 2 s;
+        // a tuning page polls /api/banks.json (60 bytes) every 2 s and, when
+        // the flight controller is on another bank than the page, calls
+        // onMove(bank). The page decides: follow, or, with unsaved edits, say
+        // so and stay. Nothing is asked with the transmitter off (then the
+        // phone owns the bank) or in a recording.
+        followSwitch(kind, current, onMove) {
+            let inFlight = false;
+            setInterval(async () => {
+                if (this.replay || document.hidden || inFlight) return;
+                // Never under the pilot's fingers: not while a field has the
+                // cursor, and (the page's own rule) never with unsaved edits.
+                const a = document.activeElement;
+                if (a && (a.tagName === 'INPUT' || a.tagName === 'SELECT' || a.tagName === 'TEXTAREA')) return;
+                if (this.dirty) { onMove(-1); return; }   // -1: "the transmitter may have moved, but you have edits" - pages may say so, never reload
+                inFlight = true;
+                try {
+                    const r = await fetch('/api/banks.json', { cache: 'no-store' });
+                    if (!r.ok) return;
+                    const b = await r.json();
+                    if (!b.tx || b.armed) return;
+                    const fc = kind === 'rate' ? b.fc_rate : b.fc_pid;
+                    if (typeof fc === 'number' && fc >= 0 && fc !== current()) onMove(fc);
+                } catch (e) {} finally { inFlight = false; }
+            }, 2000);
+        },
+
         // info = what fetchBanks()/bankInfo() gave, or a whole state object.
         // kind: 'pid' (default) or 'rate'. current = the 0-based bank now
         // selected, so it is ALWAYS included. Returns 1..6.

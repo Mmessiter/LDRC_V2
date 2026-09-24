@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.843-max-vel-read-only";
+constexpr const char* FW_VERSION = "RXV2-0.9.844-page-follows-the-bank-switch";
 
 //*********************************************************************
 //  Auto-update manifest URLs

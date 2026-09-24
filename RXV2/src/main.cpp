@@ -1184,6 +1184,7 @@ void loop() {
     if (!simEnabled && !dongleEnabled) { StallScope s("sbusTick"); sbusTick(); }   // no RC output frames at all in sim or dongle mode
     { StallScope s("usbHost"); UsbHostMsp::poll(); }              // dongle AND receiver (0.9.639): adopt/drop a USB flight controller, drain its bytes; a no-op unless the host is up
     if (dongleEnabled) { StallScope s("dongleStatus"); dongleStatusTick(); }
+    else               { StallScope s("bankFollow");   bankFollowTick(); }     // the phone follows the transmitter's bank switch (0.9.844)
     { StallScope s("heartbeat"); heartbeat(); }
     { StallScope s("statusLed"); statusLedTick(); }    // D4 connection-status LED (2-radio boards)
     { StallScope s("netStep");   netStep(); }
