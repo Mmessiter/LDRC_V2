@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Travel extents &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=353">
-<script src="/app.js?v=353" defer></script>
+<link rel=stylesheet href="/style.css?v=354">
+<script src="/app.js?v=354" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;
         padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -53,7 +53,8 @@ input:disabled{background:#eee;color:#999}
 
     <div class=card>
         <h2>Calibration (gains)</h2>
-        <div class=fldRow><label data-help="Calibration so commanded collective degrees equal measured degrees. Gauge reads low? Raise by the same ratio.">Collective gain (%)</label> <input type=number id=t_gColl step=1 min=0 max=500></div>
+        <div class=fldRow><label data-help="Calibration so commanded collective degrees equal measured degrees. Gauge reads low? Raise by the same ratio.">Collective gain (%)</label> <input type=number id=t_gColl step=1 min=0 max=500 oninput="paintGainNote()"></div>
+        <p class=cardNote id=gainNote style="display:none"></p>
         <div style="margin-top:.6em;padding:.6em .7em;background:#e7edf2;border-radius:10px">
             <b style="font-size:.95em;color:#2e4356">Control sense</b>
             <div style="font-size:.8em;color:#5d7a8c;margin:.15em 0 .35em">Moves the wrong way? Tick to reverse just that control &mdash; servos and the others stay untouched.</div>
@@ -225,6 +226,7 @@ async function load() {
         document.getElementById('t_cyc').value   = d1(s16At(cachedInputs, inOff(2,2)) * 12/1000);
         // Gains — rate magnitude in 0.1 % (sign = direction, preserved on save).
         document.getElementById('t_gColl').value = Math.round(Math.abs(s16At(cachedInputs, inOff(4,0))) / 10);
+        paintGainNote();
         document.getElementById('t_revAil').checked  = s16At(cachedInputs, inOff(1,0)) < 0;
         document.getElementById('t_revEle').checked  = s16At(cachedInputs, inOff(2,0)) < 0;
         document.getElementById('t_revColl').checked = s16At(cachedInputs, inOff(4,0)) < 0;
@@ -386,6 +388,22 @@ let benchTimer = null;
 // exact same hold is already active; Release is meaningless when nothing is
 // held. benchHeld tracks the active hold ({idx, raw} or null).
 let benchHeld = null;
+// A collective gain a long way from 100 % usually hides a rates problem
+// (Malcolm 2026-09-24: the first hover had "vastly insufficient collective",
+// the gain was raised to cure it, and the real cause - a 6 deg collective
+// rate - stayed. Every bank with a normal 12 deg then drove the swash into
+// its stops). Shown only when the gain is far from default: do first, why second.
+function paintGainNote() {
+    const el = document.getElementById('gainNote');
+    const g = parseFloat(document.getElementById('t_gColl').value);
+    const far = !isNaN(g) && (g >= 150 || (g > 0 && g <= 60));
+    el.style.display = far ? '' : 'none';
+    if (!far) return;
+    el.innerHTML = '<b>Check the collective rate on the <a href="/rotorflight-rates">Rates page</a> first</b> (12&deg; is usual). '
+                 + 'A gain of ' + Math.round(g) + '&nbsp;% usually means the rate was too small and the gain was raised to hide it: '
+                 + 'then every bank with a normal rate over-travels.';
+}
+
 function paintBench() {
     const apply = document.getElementById('bmApply');
     const off   = document.getElementById('bmOff');
@@ -477,6 +495,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <h3>What the numbers do</h3>
 <p><b>Collective pitch limit</b> is blade pitch at full stick, each way. <b>Cyclic pitch limit</b> is cyclic authority each way. <b>Total pitch limit</b> caps cyclic&nbsp;+&nbsp;collective combined; the flight controller keeps it at least 6&deg; above the collective limit, so it may adjust your number on save.</p>
 <p><b>Gains</b> make the degrees MEAN degrees: the gain scales how far the swash really moves per commanded degree. If a pitch gauge reads less than the limit says (6&deg; real when 14&deg; is commanded), multiply the gain by the ratio (&times;14/6). Direction is preserved &mdash; only the amount changes. Roll and pitch cyclic gains are separate, so you can even the two axes up: gauge reads 8&deg; roll but 10&deg; pitch? Lower the pitch gain by 8&frasl;10 (or raise roll by 10&frasl;8) until both match. Re-measure after saving; if the reading stops growing, the servo travel is the ceiling &mdash; stop and investigate before forcing it.</p>
+<p><b>A gain a long way from 100 %</b> is a warning sign. If the first hover had far too little collective, the temptation is to raise this gain &mdash; but the usual cause is a small collective <i>rate</i> (6&deg; instead of 12&deg;) on the Rates page. Cure it there, and keep the gain honest, or every bank with a normal rate will drive the swash into its stops, and rescue and the governor&rsquo;s collective compensation (which also work in degrees) get double what they ask for.</p>
 <p><b>Trims</b> are small levelling corrections for the swashplate, in percent of servo throw (Rotorflight&rsquo;s own unit for these). Use them to cure a steady hover drift once the mechanical setup is close. The collective trim also centres a blade pitch that isn&rsquo;t 0&deg; at mid-stick.</p>
 <p><b>Tail</b> is degrees of authority each way, named by the rudder stick &mdash; matched to how these transmitters are rigged. On a motorised tail it is throttle range instead. If a differently-rigged model reads swapped, say so.</p>
 <h3>Control sense</h3>
