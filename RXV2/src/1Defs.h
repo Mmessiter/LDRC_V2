@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.842-transmitter-off-first";
+constexpr const char* FW_VERSION = "RXV2-0.9.843-max-vel-read-only";
 
 //*********************************************************************
 //  Auto-update manifest URLs

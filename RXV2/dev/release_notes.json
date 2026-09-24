@@ -1,4 +1,5 @@
 {
+  "RXV2-0.9.843-max-vel-read-only": "Rates page: Max Vel is shown as a plain number again, no box and no keyboard. It only repeats the full-stick speed the type delivers.",
   "RXV2-0.9.842-transmitter-off-first": "The update page now checks the transmitter before anything starts and says 'Turn the transmitter off first' if it is on. A refusal from the receiver over WiFi is shown at once instead of being discovered as 'did not complete' minutes later.",
   "RXV2-0.9.841-rates-types-explained": "The Rates page help now explains how each rates type actually works, from Rotorflight's own formulas: what the three numbers mean and how the curve is shaped for ROTORFLIGHT, ACTUAL, QUICKRATES, BETAFLIGHT, KISS and RACEFLIGHT.",
   "RXV2-0.9.840-review-reads-travel-extents": "Travel extents now open in a review. The app's review treated the two flight-controller reads that carry an index (mixer inputs and RPM notches) as writes and refused them, so the page said 'this change cannot be made in review'. The recorder already knew they were reads; the review side now does too.",

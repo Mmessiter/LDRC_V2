@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rates &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=358">
-<script src="/app.js?v=358" defer></script>
+<link rel=stylesheet href="/style.css?v=359">
+<script src="/app.js?v=359" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -36,6 +36,7 @@ table.dyn-yaw{width:100%;margin:.6em 0;border-collapse:separate;border-spacing:.
 table.dyn-yaw td.lab{background:#7986cb;color:#fff;font-weight:700;padding:.6em;border-radius:6px}
 table.dyn-yaw td input{width:6em;padding:.4em;font-size:.95em;text-align:right;
                        border:1px solid #b8c7d0;border-radius:6px}
+.roCell{background:transparent;border:none;box-shadow:none;color:#5d7a8c;pointer-events:none}
 </style>
 </head>
 <body class=hasFab>
@@ -314,11 +315,14 @@ function applyModel(model) {
     for (const ax of AXES) {
         body += '<tr><td class="lab ' + ax.cls + '">' + ax.k + '</td>';
         for (let i = 0; i < model.cols.length; i++) {
-            // Every column is editable (Malcolm 2026-08-06: "when I click
-            // Max Vel it doesn't bring up the keyboard"). Columns sharing a
-            // stored slot (Max Vel = Rate) keep each other in sync instead.
+            // Read-only columns (Max Vel) are shown as plain numbers, no box,
+            // no keyboard (Malcolm 2026-09-24: "Max vel can be edited! It
+            // should read only" - reversing 2026-08-06, when a boxed cell that
+            // opened no keyboard looked broken). They still follow the column
+            // that shares their stored slot through syncCell.
+            const ro = !!model.cols[i].ro;
             body += '<td><input type=number id=r_' + ax.k + '_' + i +
-                    ' oninput="syncCell(\'' + ax.k + '\',' + i + ')"></td>';
+                    (ro ? ' readonly tabindex=-1 class=roCell' : ' oninput="syncCell(\'' + ax.k + '\',' + i + ')"') + '></td>';
         }
         body += '</tr>';
     }
