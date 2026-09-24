@@ -479,6 +479,7 @@ void setup() {
     // and came back as the version it wanted WORKED - say so, and keep saying
     // so until something else is installed. Anything else stopped where the
     // record says it stopped.
+    bool installReboot = false;   // this boot is the end of an install (0.9.831: no wiggle)
     {
         updFrom  = prefs.getString(NVS_KEY_UPD_FROM, "");
         updTo    = prefs.getString(NVS_KEY_UPD_TO, "");
@@ -496,7 +497,21 @@ void setup() {
             snprintf(m, sizeof(m), arrived ? "Update DONE: %.40s is running" : "Update did NOT take: still on %.40s",
                      arrived ? FW_VERSION : FW_VERSION);
             events.add(m);
+            installReboot = true;
         }
+    }
+    // 0.9.831: NO "Bluetooth is ready" wiggle after a reboot WE caused - a
+    // firmware install, or a save that restarts the receiver (name, WiFi,
+    // protocol...). The wiggle rocks the aileron channel ±150 us for 1.6 s;
+    // on a helicopter that is the swash plate moving by itself straight after
+    // an update, with the pilot's hands near it (Malcolm 2026-09-24: "the
+    // swash plate sometimes makes an alarming jump"). Its job is to say "you
+    // can connect now" at POWER-ON; after one of our own reboots the phone is
+    // already waiting for it. Consuming the boot's one wave here keeps every
+    // later wave (after a real transmitter session) exactly as it was.
+    if (cfgReboot || installReboot) {
+        lastWaveLinkEpoch = rx.lastMillis;
+        events.add("Restarted by the app: no servo wiggle this time");
     }
     runRadioSelfTest();
     detectAllRadios();       // probes slots 1/2/3 independently; sets radioPresent[] + numRadiosPresent

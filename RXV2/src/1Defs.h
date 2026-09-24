@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.830-cli-can-leave";
+constexpr const char* FW_VERSION = "RXV2-0.9.831-no-wiggle-after-update";
 
 //*********************************************************************
 //  Auto-update manifest URLs
