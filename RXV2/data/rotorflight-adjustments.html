@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>In-flight adjustments &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=354">
-<script src="/app.js?v=354" defer></script>
+<link rel=stylesheet href="/style.css?v=355">
+<script src="/app.js?v=355" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -442,7 +442,7 @@ async function load() {
     try {
         try { const t = hexToBytes((await LDRC.msp(111)).trim()); RATE_SCALE = t[0] === 6 ? 5 : 10; } catch (e) { RATE_SCALE = 5; }
         const r = await fetch('/api/msp?fn=52', { cache: 'no-store' });
-        if (!r.ok) { setStatus('bad', await r.text()); return; }
+        if (!r.ok) { setStatus('bad', LDRC.replay ? 'Adjustments are not in the recording \u2014 they need the model connected.' : await r.text()); return; }
         const hex = (await r.text()).trim();
         rows = scaleRows(linesToRows(parseLines(hexToBytes(hex))), 1);
         cacheStore(hex); cacheAt = '';

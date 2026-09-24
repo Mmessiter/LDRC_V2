@@ -435,7 +435,8 @@ object SessionCache {
         10, 36, 38, 61, 240, 96, 126,                   // name, features, board, arming, trims, sensors, alignment
         64, 44, 66, 75, 77, 50, 73,                     // channel map, receiver, sticks, failsafe, rxfail, RSSI, telemetry
         80, 92, 32, 123, 131,                           // blackbox, filters, battery, ESC telemetry, motor
-        34, 238, 172, 56, 40)                           // modes (+extras), mixer rules, meters
+        34, 238, 172, 56, 40,
+        4, 54, 70)   // board, serial ports, blackbox memory (0.9.839)                           // modes (+extras), mixer rules, meters
     /** Verbatim read → write items, in restore order: (read fn, write fn, label). */
     private val simpleItems = listOf(
         Triple(10, 11, "flight controller name"),
@@ -457,7 +458,7 @@ object SessionCache {
     /** Reads the FC may legitimately reject (older Rotorflight builds lack
      *  them): a 'rejected' answer is not a backup failure, the item is simply
      *  not in the backup. No answer at all still is. */
-    val optionalReadFns = setOf(123, 154)
+    val optionalReadFns = setOf(123, 154, 70)
     /** A telemetry image (MSP 73, 52 bytes) worth restoring: link rate and ratio non-zero
      *  and at least one sensor in the 40 slots. */
     fun telemImageGood(hex: String): Boolean {
@@ -678,12 +679,12 @@ object SessionCache {
         hexAt("/api/msp?fn=142")?.let { out.add(RestoreItem(null, 143, 142, it, "governor global")) }
         // Mixer (Travel extents, bankless): config block, then each input —
         // 171 takes ONE input per frame (index byte + rate/min/max).
-        hexAt("/api/msp?fn=42")?.let { out.add(RestoreItem(null, 43, 42, it, "mixer limits & trims")) }
+        hexAt("/api/msp?fn=42")?.let { out.add(RestoreItem(null, 43, 42, it, "travel extents (limits & trims)")) }
         val axisNames = mapOf(1 to "roll", 2 to "pitch", 3 to "yaw", 4 to "collective")
         for (i in 1..4) {
             val key = "%02X".format(i)
             hexAt("/api/msp?fn=174&data=$key")?.let {
-                out.add(RestoreItem(null, 171, 174, key + it, "mixer input — ${axisNames[i]}",
+                out.add(RestoreItem(null, 171, 174, key + it, "travel extents (${axisNames[i]})",
                                     readData = key, verifyHex = it))
             }
         }

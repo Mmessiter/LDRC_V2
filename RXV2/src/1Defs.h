@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.838-gain-hides-a-rates-problem";
+constexpr const char* FW_VERSION = "RXV2-0.9.839-reviews-show-more";
 
 //*********************************************************************
 //  Auto-update manifest URLs

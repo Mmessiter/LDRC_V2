@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Travel extents &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=354">
-<script src="/app.js?v=354" defer></script>
+<link rel=stylesheet href="/style.css?v=355">
+<script src="/app.js?v=355" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;
         padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -485,7 +485,7 @@ document.addEventListener('DOMContentLoaded', () => {
     load();
     // Safety sweep: if a previous visit (or crash) left an override active,
     // clear 1/2/4 quietly once the page is up. Fire-and-forget.
-    setTimeout(() => { ovSet({}).catch(() => {}); }, 1500);
+    if (!LDRC.replay) setTimeout(() => { ovSet({}).catch(() => {}); }, 1500);   // a recording has nothing to switch off
 });
 </script>
 <template id=helpContent><h2>Travel extents</h2>

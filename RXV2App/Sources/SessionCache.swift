@@ -534,7 +534,8 @@ extension SessionCache {
          10, 36, 38, 61, 240, 96, 126,                   // name, features, board, arming, trims, sensors, alignment
          64, 44, 66, 75, 77, 50, 73,                     // channel map, receiver, sticks, failsafe, rxfail, RSSI, telemetry
          80, 92, 32, 123, 131,                           // blackbox, filters, battery, ESC telemetry, motor
-         34, 238, 172, 56, 40]                           // modes (+extras), mixer rules, meters
+         34, 238, 172, 56, 40,                           // modes (+extras), mixer rules, meters
+         4, 54, 70]                                      // board, serial ports, blackbox memory (0.9.839: the Ports and Black box pages in a review)
     /// Verbatim read → write items, in restore order: (read fn, write fn, label).
     static let simpleItems: [(read: Int, write: Int, label: String)] =
         [(10, 11, "flight controller name"),
@@ -556,7 +557,7 @@ extension SessionCache {
     /// Reads the FC may legitimately reject (older Rotorflight builds lack
     /// them): a 'rejected' answer is not a backup failure, the item is
     /// simply not in the backup. No answer at all still is.
-    static let optionalReadFns: Set<Int> = [123, 154]
+    static let optionalReadFns: Set<Int> = [123, 154, 70]
     /// A telemetry image (MSP 73, 52 bytes) worth restoring: link rate and
     /// ratio non-zero and at least one sensor in the 40 slots.
     static func telemImageGood(_ hex: String) -> Bool {
@@ -776,13 +777,13 @@ extension SessionCache {
         if let h = hexAt("/api/msp?fn=142") { out.append(RestoreItem(selectByte: nil, writeFn: 143, readFn: 142, hex: h, label: "governor global")) }
         // Mixer (Travel extents, bankless): config block, then each input —
         // 171 takes ONE input per frame (index byte + rate/min/max).
-        if let h = hexAt("/api/msp?fn=42") { out.append(RestoreItem(selectByte: nil, writeFn: 43, readFn: 42, hex: h, label: "mixer limits & trims")) }
+        if let h = hexAt("/api/msp?fn=42") { out.append(RestoreItem(selectByte: nil, writeFn: 43, readFn: 42, hex: h, label: "travel extents (limits & trims)")) }
         let axisNames = [1: "roll", 2: "pitch", 3: "yaw", 4: "collective"]
         for i in [1, 2, 3, 4] {
             let key = String(format: "%02X", i)
             if let h = hexAt("/api/msp?fn=174&data=\(key)") {
                 out.append(RestoreItem(selectByte: nil, writeFn: 171, readFn: 174,
-                                       hex: key + h, label: "mixer input — \(axisNames[i]!)",
+                                       hex: key + h, label: "travel extents (\(axisNames[i]!))",
                                        readData: key, verifyHex: h))
             }
         }
