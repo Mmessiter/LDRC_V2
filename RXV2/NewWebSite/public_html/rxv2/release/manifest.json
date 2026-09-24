@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.833-compare-reviews",
+      "url": "https://messiter.com/rxv2/release/v0.9.833/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.833/littlefs.bin",
+      "fs_md5": "d40489a476188e4a831492c35051c5ff",
+      "notes": "Reviews showed the wrong flight: the receiver numbers flights by age, so a recorded flight 1 went stale after the next flight; the apps now store each flight by its own identity. New Compare models page: lines up your rates against another model's backup, bank by bank, and copies a bank's rates on request."
+    },
+    {
       "name": "RXV2-0.9.832-rates-type-help",
       "url": "https://messiter.com/rxv2/release/v0.9.832/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.832/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.822/littlefs.bin",
       "fs_md5": "c790aa2d6a58684c64045afcc0055f1f",
       "notes": "iOS app: after a rename the app remembers the NEW name, so the model list auto-connects to the board under its new name instead of hunting for the old one"
-    },
-    {
-      "name": "RXV2-0.9.821-dongle-naming-gate",
-      "url": "https://messiter.com/rxv2/release/v0.9.821/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.821/littlefs.bin",
-      "fs_md5": "92853d2ebace4c27666dff4e248facd8",
-      "notes": "The first-run naming box works on a dongle: it deleted three elements it then wrote to, the script died before attaching Save, and the form fell back to a page reload - the box came straight back with no error. Never seen before because every dongle had its name baked in by the flashing script."
     }
   ],
   "rotorflight": {

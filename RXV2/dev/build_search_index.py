@@ -84,6 +84,7 @@ class Page(HTMLParser):
 EXTRA = [
  ('/rotorflight-pid', 'PIDs', 'P, I, D and F gains for roll, pitch and yaw', 'p_roll', 'The main flight tuning numbers, one row per axis; softer or sharper sliders above them'),
  ('/rotorflight-pid', 'PIDs', 'Boost and HSI gain (O)', '', 'Extra kick on fast stick movements; how strongly the high-speed trim builds up (O gain). The trim cap (HSI offset limit) is on the PID+ page'),
+ ('/rotorflight-compare', 'Compare models', 'Your rates against another model, bank by bank', '', 'Line up two models from the phone backups and copy the rates you like'),
  ('/rotorflight-rates', 'Rates', 'Roll, pitch and yaw rate, expo and max velocity', 'r_rate', 'How fast the model rotates at full stick and how soft the centre feels'),
  ('/rotorflight-servos', 'Servos', 'Servo centre, minimum, maximum, rate and reverse', 's0c', 'Per servo: centre position, travel limits, pulse rate, direction and geometry correction'),
  ('/rotorflight-modes', 'Switches', 'What each transmitter switch does (arm, rescue, bank selector) and which channel', 'm0', 'Assign flight-controller functions to transmitter switches with their live channel bars'),

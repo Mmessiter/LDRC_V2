@@ -199,8 +199,40 @@ object SessionCache {
         if (entries.remove(keyFor(pathAndQuery)) != null) { savedAtMs = System.currentTimeMillis(); dirty = true }
     }
 
+    // FLIGHTS BY IDENTITY (0.9.833, Malcolm 2026-09-24: "Viewing a review
+    // often loads the wrong file"). The receiver numbers saved flights by AGE
+    // (f=1 = newest), so a new flight shifts every number and the old by-number
+    // key served an older flight. Saved flights are stored under their own
+    // identity (saved_at, count, dur_ms) and found through the recorded list.
+    // Mirrors the iOS SessionCache.
+    private fun flightNumber(pathAndQuery: String): Int? {
+        if (!pathAndQuery.startsWith("/api/flightlog.json?")) return null
+        val n = pathAndQuery.substringAfter("?").split("&")
+            .firstOrNull { it.startsWith("f=") }?.removePrefix("f=")?.toIntOrNull() ?: return null
+        return if (n > 0) n else null
+    }
+    private fun flightId(o: JSONObject): String? {
+        if (!o.has("count") || !o.has("dur_ms")) return null
+        return "flight#${o.optLong("saved_at", 0)}-${o.optLong("count")}-${o.optLong("dur_ms")}"
+    }
+    private fun flightId(body: ByteArray): String? = runCatching { flightId(JSONObject(String(body))) }.getOrNull()
+    private fun listedFlightId(n: Int): String? = runCatching {
+        val arr = org.json.JSONArray(String(entries["/api/flights.json"]!!.second))
+        (0 until arr.length()).map { arr.getJSONObject(it) }.firstOrNull { it.optInt("i", -1) == n }?.let { flightId(it) }
+    }.getOrNull()
+
     @Synchronized
     fun record(pathAndQuery: String, path: String, type: String, body: ByteArray) {
+        if (flightNumber(pathAndQuery) != null) {
+            val id = flightId(body)
+            if (id != null) {
+                entries[id] = Pair(type, body)
+                entries.remove(keyFor(pathAndQuery))   // never a by-number copy to go stale
+                savedAtMs = System.currentTimeMillis()
+                dirty = true
+                return
+            }
+        }
         entries[keyFor(pathAndQuery)] = Pair(type, body)
         if (path == "/api/state.json") {
             runCatching {
@@ -227,7 +259,13 @@ object SessionCache {
     }
 
     @Synchronized
-    fun lookup(pathAndQuery: String): Pair<String, ByteArray>? = entries[keyFor(pathAndQuery)]
+    fun lookup(pathAndQuery: String): Pair<String, ByteArray>? {
+        val n = flightNumber(pathAndQuery) ?: return entries[keyFor(pathAndQuery)]
+        val id = listedFlightId(n) ?: return null          // only the flight the list names
+        entries[id]?.let { return it }
+        val old = entries[keyFor(pathAndQuery)] ?: return null   // pre-0.9.833 recording
+        return if (flightId(old.second) == id) old else null
+    }
 
     /** Called opportunistically (on disconnect / app background). */
     @Synchronized
@@ -447,6 +485,33 @@ object SessionCache {
     fun chosenIsMine(model: String): Boolean {
         migrateRestorePoint(model)
         return restoreFileFor(model, true)?.exists() == true
+    }
+
+    /** Compare page (0.9.833): saved models, one row each, READ-ONLY. */
+    fun compareModels(): org.json.JSONArray {
+        val arr = org.json.JSONArray(); val seen = HashSet<String>()
+        for (b in savedBackups()) {
+            if (b.model.isEmpty() || !seen.add(b.model)) continue
+            val mine = chosenIsMine(b.model)
+            val at = savedBackups().firstOrNull { it.model == b.model && it.explicit == mine }?.atMs ?: b.atMs
+            arr.put(JSONObject().put("model", b.model).put("savedAtMs", at).put("explicit", mine))
+        }
+        return arr
+    }
+    /** A saved model's MSP replies, key -> hex. */
+    fun compareEntries(model: String): JSONObject {
+        val out = JSONObject()
+        val f = restoreFileFor(model, chosenIsMine(model)) ?: return out
+        if (!f.exists()) return out
+        runCatching {
+            val es = JSONObject(f.readText()).getJSONObject("entries")
+            for (k in es.keys()) {
+                if (!k.startsWith("/api/msp?fn=")) continue
+                val h = String(Base64.decode(es.getJSONObject(k).getString("b64"), Base64.NO_WRAP))
+                if (h.length >= 2 && h.all { it.isLetterOrDigit() }) out.put(k, h.uppercase())
+            }
+        }
+        return out
     }
 
     /** Does this model have BOTH kinds? */

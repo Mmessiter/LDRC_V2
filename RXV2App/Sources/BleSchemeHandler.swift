@@ -196,6 +196,18 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
             deliver(task, url: url, code: 200, type: "application/json", body: Data("{\"ok\":\(ok)}".utf8))
             return
         }
+        // COMPARE (0.9.833): saved backups, read-only, for rotorflight-compare.
+        if path == "/app/compare/models" {
+            let body = (try? JSONSerialization.data(withJSONObject: SessionCache.compareModels())) ?? Data("[]".utf8)
+            deliver(task, url: url, code: 200, type: "application/json", body: body)
+            return
+        }
+        if path == "/app/compare/entries" {
+            let m = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "model" }?.value ?? ""
+            let body = (try? JSONSerialization.data(withJSONObject: SessionCache.compareEntries(model: m))) ?? Data("{}".utf8)
+            deliver(task, url: url, code: 200, type: "application/json", body: body)
+            return
+        }
         if path == "/app/declared" {
             let d = SessionCache.shared.declared()
             let body = (try? JSONSerialization.data(withJSONObject: d)) ?? Data("{}".utf8)

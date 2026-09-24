@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name=theme-color content="#5fa099">
+<meta name=apple-mobile-web-app-capable content=yes>
+<meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
+<meta name=apple-mobile-web-app-title content="LDRC RX V2">
+<title>Compare models &middot; LDRC RX V2</title>
+<link rel=stylesheet href="/style.css?v=350">
+<script src="/app.js?v=350" defer></script>
+<style>
+.banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
+.banner.info{background:#c8d2dc;color:#3a5165}
+.banner.good{background:#a8d29a;color:#2a4d1f}
+.banner.bad {background:#dca08c;color:#5c2a1a}
+.pick{display:flex;flex-direction:column;gap:.35em;margin:.2em 0 .9em}
+.pick select{padding:.6em;font-size:1.05em;border-radius:10px;border:1.5px solid #b8c7d0;background:#fff}
+.pick small{color:#5d7a8c}
+table.cmp{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;margin:.4em 0}
+table.cmp th,table.cmp td{padding:.45em .3em;text-align:center;border-bottom:1px solid #dfe7ee}
+table.cmp th{font-size:.85em;color:#3a5165}
+table.cmp td.ax{text-align:left;font-weight:600}
+table.cmp tr.diff td{background:#fff3d6}
+table.cmp td.big{font-weight:700;color:#8a3b12}
+.useBtn{margin:.7em 0 0}
+.note{color:#5d7a8c;font-size:.92em}
+</style>
+</head>
+<body>
+<button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
+<div class=bg-photo aria-hidden=true></div>
+<div class=bg-wash  aria-hidden=true></div>
+<div class=container>
+    <h1>Compare models</h1>
+    <div id=status class="banner info">loading&hellip;</div>
+
+    <div class=card>
+        <div class=pick>
+            <b>This model</b>
+            <select id=selA></select>
+            <small id=agoA></small>
+        </div>
+        <div class=pick>
+            <b>Compare with</b>
+            <select id=selB></select>
+            <small id=agoB></small>
+        </div>
+        <p class=note>From the backups on this phone. Back up both first, so you compare today&rsquo;s settings.</p>
+    </div>
+
+    <div id=out></div>
+
+    <div class=card>
+        <h2>Not compared</h2>
+        <p class=note>PIDs, governor, servos and swash belong to the helicopter, not to you. A big model&rsquo;s tail gains on a small one can be dangerous, so they are never copied here.</p>
+    </div>
+    <div class=footer></div>
+</div>
+
+<script>
+// COMPARE MODELS (0.9.833, Malcolm 2026-09-24: "compare all of my settings
+// with those of another model ... make suggestions to make things a bit more
+// similar"). READ-ONLY until a button is pressed: both sides come from the
+// phone's saved backups. Only RATES are compared and offered - they are the
+// pilot's feel, and a rate in degrees per second means the same on any
+// helicopter. Airframe settings (PIDs, governor, servos) are never offered.
+// "Use X's rates" writes that bank's stored MSP 111 reply back with 204 - the
+// exact move a restore makes - then reads it back to prove it arrived.
+const $ = id => document.getElementById(id);
+const AXES = ['Roll', 'Pitch', 'Yaw', 'Collective'];
+const hexToBytes = h => { const o = new Uint8Array(h.length / 2); for (let i = 0; i < o.length; i++) o[i] = parseInt(h.substr(i * 2, 2), 16); return o; };
+let models = [], A = null, B = null, connectedName = '';
+
+function say(kind, t) { const s = $('status'); s.className = 'banner ' + kind; s.textContent = t; s.style.display = t ? '' : 'none'; }
+function ago(ms) {
+    if (!ms) return '';
+    const d = Math.round((Date.now() - ms) / 86400000);
+    return 'backed up ' + (d <= 0 ? 'today' : d === 1 ? 'yesterday' : d + ' days ago');
+}
+
+// One bank's rates from a stored MSP 111 reply, in words people fly by:
+// full-stick rate (deg/s; collective in degrees) and expo.
+function decode(hex) {
+    if (!hex || hex.length < 50) return null;
+    const b = hexToBytes(hex), type = b[0], out = { type, axes: [] };
+    for (let i = 0; i < 4; i++) {
+        const o = 1 + i * 6, coll = i === 3;
+        let rate = null;
+        if (type === 4) rate = b[o + 2] * (coll ? 0.25 : 10);        // ACTUAL: Max Rate
+        else if (type === 6) rate = b[o + 0] * (coll ? 0.125 : 5);   // ROTORFLIGHT: Rate
+        out.axes.push({ rate, expo: b[o + 1] });
+    }
+    return out;
+}
+const TYPE = { 4: 'ACTUAL', 6: 'ROTORFLIGHT' };
+
+async function entries(model) {
+    const r = await fetch('/app/compare/entries?model=' + encodeURIComponent(model), { cache: 'no-store' });
+    return r.ok ? r.json() : {};
+}
+
+function banksIn(e) {
+    const n = [];
+    for (let i = 0; i < 6; i++) if (e['/api/msp?fn=111&bank=' + i]) n.push(i);
+    return n;
+}
+
+async function render() {
+    const a = $('selA').value, b = $('selB').value;
+    $('agoA').textContent = ago((models.find(m => m.model === a) || {}).savedAtMs);
+    $('agoB').textContent = ago((models.find(m => m.model === b) || {}).savedAtMs);
+    if (!a || !b || a === b) { $('out').innerHTML = ''; say('info', a === b ? 'Pick two different models.' : ''); return; }
+    say('info', 'Reading the backups…');
+    [A, B] = await Promise.all([entries(a), entries(b)]);
+    const banks = [...new Set([...banksIn(A), ...banksIn(B)])].sort();
+    if (!banks.length) { $('out').innerHTML = ''; say('bad', 'Neither backup holds any rates - back both up again.'); return; }
+    const canWrite = LDRC.viaBle && !LDRC.replay && connectedName && connectedName === a;
+    let html = '', diffs = 0;
+    for (const bank of banks) {
+        const ra = decode(A['/api/msp?fn=111&bank=' + bank]), rb = decode(B['/api/msp?fn=111&bank=' + bank]);
+        html += '<div class=card><h2>Bank ' + (bank + 1) + '</h2>';
+        if (!ra || !rb) { html += '<p class=note>Only one of the two backups has this bank.</p></div>'; continue; }
+        if (ra.type !== rb.type || !TYPE[ra.type]) {
+            html += '<p class=note>Different rates types (' + (TYPE[ra.type] || ra.type) + ' and ' + (TYPE[rb.type] || rb.type) +
+                    '), so the numbers cannot be lined up. Copying would bring ' + esc(b) + '&rsquo;s type with it.</p>';
+        } else {
+            html += '<table class=cmp><tr><th></th><th>' + esc(a) + '</th><th>' + esc(b) + '</th><th>Expo</th></tr>';
+            for (let i = 0; i < 4; i++) {
+                const x = ra.axes[i], y = rb.axes[i], unit = i === 3 ? '&deg;' : '&deg;/s';
+                const far = y.rate > 0 && Math.abs(x.rate - y.rate) / y.rate > 0.15;
+                const expoFar = Math.abs(x.expo - y.expo) > 10;
+                if (far || expoFar) diffs++;
+                html += '<tr' + (far || expoFar ? ' class=diff' : '') + '><td class=ax>' + AXES[i] + '</td>' +
+                        '<td' + (far ? ' class=big' : '') + '>' + fmt(x.rate) + unit + '</td><td>' + fmt(y.rate) + unit + '</td>' +
+                        '<td>' + x.expo + ' / ' + y.expo + '</td></tr>';
+            }
+            html += '</table>';
+        }
+        if (canWrite)
+            html += '<button class="btn useBtn" type=button onclick="useRates(' + bank + ')" style="background:#5fa099">' +
+                    'Use ' + esc(b) + '&rsquo;s rates in bank ' + (bank + 1) + '</button>';
+        html += '</div>';
+    }
+    $('out').innerHTML = html;
+    say(diffs ? 'info' : 'good', diffs ? 'Rows in yellow differ by more than 15% (expo by more than 10).'
+                                       : 'The rates match closely.');
+    if (!canWrite && LDRC.viaBle && connectedName && connectedName !== a)
+        say('info', 'To copy rates, pick the connected model (' + connectedName + ') as "This model".');
+}
+const fmt = v => v == null ? '?' : (Math.round(v * 10) / 10);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+async function useRates(bank) {
+    const b = $('selB').value, hex = B['/api/msp?fn=111&bank=' + bank];
+    if (!hex) return;
+    if (!(await LDRC.confirm('Bank ' + (bank + 1) + ' of ' + connectedName + ' takes ' + b + '\u2019s rates. ' +
+                             'Only rates change, nothing about the helicopter itself. Back up afterwards to keep a record.',
+                             { title: 'Use ' + b + '\u2019s rates', icon: '\uD83D\uDCCB', yes: 'Use them', kind: 'go' }))) return;
+    say('info', 'Writing bank ' + (bank + 1) + '\u2026');
+    const sel = n => LDRC.msp(210, (0x80 | n).toString(16).padStart(2, '0'));
+    let back = null;
+    try {
+        // The FC's own rate bank (MSP_STATUS byte 25), put back afterwards.
+        const st = hexToBytes(await LDRC.msp(101));
+        if (st.length > 25) back = st[25];
+        await sel(bank);
+        const cur = hexToBytes(await LDRC.msp(111));
+        if (cur.length !== hex.length / 2) throw new Error('the two flight controllers store rates differently (' + cur.length + ' and ' + hex.length / 2 + ' bytes). Set them by hand on the Rates page.');
+        await LDRC.msp(204, hex);
+        await LDRC.msp(250);
+        const check = await LDRC.msp(111);
+        if (String(check).toUpperCase() !== hex.toUpperCase()) throw new Error('the read-back does not match. Check the Rates page.');
+        say('good', '\u2713 Bank ' + (bank + 1) + ' now has ' + b + '\u2019s rates, written and verified. Back up to keep a record.');
+    } catch (e) { say('bad', 'Not done: ' + e.message); }
+    finally { if (back !== null && back !== bank) { try { await sel(back); } catch (e) {} } }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    await LDRC.replayReady;
+    if (!LDRC.viaBle) { say('info', 'This page works in the phone app: it compares the backups kept on the phone.'); return; }
+    try {
+        const s = await LDRC.fetchState();
+        connectedName = (s && s.info && s.info.name) || '';
+        const r = await fetch('/app/compare/models', { cache: 'no-store' });
+        models = r.ok ? await r.json() : [];
+    } catch (e) { models = []; }
+    if (models.length < 2) { say('info', 'Back up at least two models first - this compares the backups kept on the phone.'); return; }
+    const opts = models.map(m => '<option value="' + esc(m.model) + '">' + esc(m.model) + '</option>').join('');
+    $('selA').innerHTML = opts; $('selB').innerHTML = opts;
+    $('selA').value = models.some(m => m.model === connectedName) ? connectedName : models[0].model;
+    const other = models.find(m => m.model !== $('selA').value);
+    $('selB').value = other ? other.model : '';
+    $('selA').onchange = render; $('selB').onchange = render;
+    render();
+});
+</script>
+<template id=helpContent><h2>Compare models</h2>
+<p><b>Pick two models; the differences show in yellow.</b> It reads the backups kept on this phone, so back both up first.</p>
+<p>Only <b>rates</b> are compared. They are how fast the model turns at full stick &mdash; your feel, not the helicopter&rsquo;s &mdash; so the same numbers suit you on any model.</p>
+<p><b>Use &hellip;&rsquo;s rates</b> copies one bank&rsquo;s rates from the other model into the connected one, then reads them back to check. It appears only when &ldquo;This model&rdquo; is the one you are connected to.</p>
+<p>PIDs, governor, servos and swash settings belong to the airframe. They are never copied from another model.</p>
+</template>
+</body>
+</html>

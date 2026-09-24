@@ -2110,7 +2110,7 @@ class MainActivity : AppCompatActivity() {
                 return
             }
             if (p == "/app/declare" || p == "/app/declared" || p == "/app/backup/export" ||
-                p == "/app/debug/export" ||
+                p == "/app/debug/export" || p == "/app/compare/models" || p == "/app/compare/entries" ||
                 p == "/app/backup/import" || p == "/app/backup/import/status") {
                 fun answer(json: String) = runOnUiThread {
                     val w = webView ?: return@runOnUiThread
@@ -2126,6 +2126,9 @@ class MainActivity : AppCompatActivity() {
                         answer("{\"ok\":$ok}")
                     }
                     "/app/declared" -> answer(JSONObject(SessionCache.declared() as Map<*, *>).toString())
+                    // COMPARE (0.9.833): saved backups, read-only.
+                    "/app/compare/models"  -> answer(SessionCache.compareModels().toString())
+                    "/app/compare/entries" -> answer(SessionCache.compareEntries(uri.getQueryParameter("model") ?: "").toString())
                     // SEND DEBUG DATA (0.9.816): the page posts the receiver's
                     // side; the app adds what IT did and shares the lot.
                     "/app/debug/export" -> {

@@ -219,7 +219,48 @@ final class SessionCache {
         if Thread.isMainThread { work() } else { DispatchQueue.main.sync(execute: work) }   // the recording lives on main
     }
 
+    // FLIGHTS BY IDENTITY (0.9.833, Malcolm 2026-09-24: "Viewing a review
+    // often loads the wrong file"). The receiver numbers saved flights by
+    // AGE (f=1 = newest), so every new flight shifts the numbers. The
+    // recording used to key them by that number: a flight recorded as f=1
+    // this morning was still "f=1" after the next flight saved, and the
+    // review served the old flight for the new one's name. A saved flight is
+    // now stored under its own identity (saved_at, count, dur_ms - fields in
+    // both the list and the flight itself) and found through the recorded
+    // list the page is showing. f=0 (the live flight) keeps its plain key.
+    private static func flightNumber(_ pathAndQuery: String) -> Int? {
+        guard pathAndQuery.hasPrefix("/api/flightlog.json?") else { return nil }
+        let q = pathAndQuery.dropFirst("/api/flightlog.json?".count)
+        guard let f = q.split(separator: "&").first(where: { $0.hasPrefix("f=") }),
+              let n = Int(f.dropFirst(2)), n > 0 else { return nil }
+        return n
+    }
+    private static func flightId(_ o: [String: Any]) -> String? {
+        guard let c = (o["count"] as? NSNumber)?.intValue,
+              let d = (o["dur_ms"] as? NSNumber)?.intValue else { return nil }
+        let at = (o["saved_at"] as? NSNumber)?.intValue ?? 0
+        return "flight#\(at)-\(c)-\(d)"
+    }
+    private static func flightId(body: Data) -> String? {
+        guard let o = (try? JSONSerialization.jsonObject(with: body)) as? [String: Any] else { return nil }
+        return flightId(o)
+    }
+    /// The identity of flight number n in the flight list as recorded.
+    private func listedFlightId(_ n: Int) -> String? {
+        guard let l = entries["/api/flights.json"],
+              let arr = (try? JSONSerialization.jsonObject(with: l.body)) as? [[String: Any]],
+              let f = arr.first(where: { ($0["i"] as? NSNumber)?.intValue == n }) else { return nil }
+        return Self.flightId(f)
+    }
+
     func record(pathAndQuery: String, path: String, type: String, body: Data) {
+        if Self.flightNumber(pathAndQuery) != nil, let id = Self.flightId(body: body) {
+            entries[id] = Entry(type: type, body: body)
+            entries[keyFor(pathAndQuery)] = nil      // never a by-number copy to go stale
+            savedAt = Date()
+            scheduleSave()
+            return
+        }
         entries[keyFor(pathAndQuery)] = Entry(type: type, body: body)
         if path == "/api/state.json",
            let obj = try? JSONSerialization.jsonObject(with: body) as? [String: Any],
@@ -245,7 +286,18 @@ final class SessionCache {
         scheduleSave()
     }
 
-    func lookup(pathAndQuery: String) -> Entry? { entries[keyFor(pathAndQuery)] }
+    func lookup(pathAndQuery: String) -> Entry? {
+        if let n = Self.flightNumber(pathAndQuery) {
+            // Only the flight the list names for that number - or nothing.
+            guard let id = listedFlightId(n) else { return nil }
+            if let hit = entries[id] { return hit }
+            // A recording from before 0.9.833: serve its by-number copy only
+            // if it really is that flight.
+            if let old = entries[keyFor(pathAndQuery)], Self.flightId(body: old.body) == id { return old }
+            return nil
+        }
+        return entries[keyFor(pathAndQuery)]
+    }
 
     // MARK: persistence (debounced — recording fires on every poll tick)
 
@@ -510,6 +562,28 @@ extension SessionCache {
     static func chosenIsMine(_ model: String) -> Bool {
         migrateRestorePoint(model: model)
         return FileManager.default.fileExists(atPath: restoreURL(for: model, mine: true).path)
+    }
+    /// For the Compare page (0.9.833): the saved models, one row each (the
+    /// pilot's own backup preferred), and a model's MSP replies as hex.
+    /// READ-ONLY - nothing here touches a flight controller.
+    static func compareModels() -> [[String: Any]] {
+        var seen = Set<String>(), out: [[String: Any]] = []
+        for b in savedBackups() where !seen.contains(b.model) && !b.model.isEmpty {
+            seen.insert(b.model)
+            let mine = chosenIsMine(b.model)
+            let at = savedBackups().first { $0.model == b.model && $0.explicit == mine }?.savedAt ?? b.savedAt
+            out.append(["model": b.model, "savedAtMs": Int(at.timeIntervalSince1970 * 1000), "explicit": mine])
+        }
+        return out
+    }
+    static func compareEntries(model: String) -> [String: String] {
+        guard let d = try? Data(contentsOf: restoreURL(for: model, mine: chosenIsMine(model))),
+              let shape = try? JSONDecoder().decode(RestoreShape.self, from: d) else { return [:] }
+        var out: [String: String] = [:]
+        for (k, e) in shape.entries where k.hasPrefix("/api/msp?fn=") {
+            if let h = String(data: e.body, encoding: .utf8), h.count >= 2, h.allSatisfy({ $0.isHexDigit }) { out[k] = h.uppercased() }
+        }
+        return out
     }
     private struct RestoreShape: Codable {
         var model: String
