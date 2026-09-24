@@ -221,38 +221,51 @@ object SessionCache {
         (0 until arr.length()).map { arr.getJSONObject(it) }.firstOrNull { it.optInt("i", -1) == n }?.let { flightId(it) }
     }.getOrNull()
 
+    // A NEW CONNECTION (0.9.837): until its first state.json names the model,
+    // replies are held back rather than filed under whichever model was
+    // active. Malcolm 2026-09-24: "opening a review file opens the wrong
+    // file" - every review on the phone carried ANOTHER model's state.json.
+    // A switch filed the new model's first reply under the old model and then
+    // saved the old model's file with it inside. Mirrors the iOS SessionCache.
+    @Volatile private var awaitingIdentity = false
+    private val held = ArrayList<Array<Any>>()
+    @Synchronized fun connectionStarted() { awaitingIdentity = true; held.clear() }
+
+    fun stateName(body: ByteArray): String? =
+        runCatching { JSONObject(String(body)).getJSONObject("info").getString("name") }.getOrNull()?.takeIf { it.isNotEmpty() }
+
     @Synchronized
     fun record(pathAndQuery: String, path: String, type: String, body: ByteArray) {
-        if (flightNumber(pathAndQuery) != null) {
-            val id = flightId(body)
-            if (id != null) {
-                entries[id] = Pair(type, body)
-                entries.remove(keyFor(pathAndQuery))   // never a by-number copy to go stale
-                savedAtMs = System.currentTimeMillis()
-                dirty = true
-                return
+        val name = if (path == "/api/state.json") stateName(body) else null
+        if (name != null) {
+            if (name != modelName) {
+                // Different receiver: park the old model's recording in its
+                // own file FIRST, then resume the new model's (never a
+                // chimera, never an erasure — Malcolm 2026-08-04).
+                if (modelName.isNotEmpty()) { dirty = true; saveIfDirty() }
+                entries.clear()
+                modelName = name
+                savedAtMs = 0
+                loadFile(fileFor(name))
+                modelName = name
             }
+            awaitingIdentity = false
+            val flush = ArrayList(held); held.clear()
+            for (h in flush) store(h[0] as String, h[1] as String, h[2] as ByteArray)
+        } else if (awaitingIdentity) {
+            if (held.size < 64) held.add(arrayOf(pathAndQuery, type, body))
+            return
         }
-        entries[keyFor(pathAndQuery)] = Pair(type, body)
-        if (path == "/api/state.json") {
-            runCatching {
-                val name = JSONObject(String(body)).getJSONObject("info").getString("name")
-                if (name.isNotEmpty()) {
-                    if (modelName.isNotEmpty() && name != modelName) {
-                        // Different receiver: park the old model's recording
-                        // in its own file and RESUME the new model's (never a
-                        // chimera, never an erasure — Malcolm 2026-08-04).
-                        val keep = entries[keyFor(pathAndQuery)]!!
-                        dirty = true
-                        saveIfDirty()
-                        entries.clear()
-                        modelName = name
-                        loadFile(fileFor(name))
-                        entries[keyFor(pathAndQuery)] = keep
-                    }
-                    modelName = name
-                }
-            }
+        store(pathAndQuery, type, body)
+    }
+
+    private fun store(pathAndQuery: String, type: String, body: ByteArray) {
+        val id = if (flightNumber(pathAndQuery) != null) flightId(body) else null
+        if (id != null) {
+            entries[id] = Pair(type, body)
+            entries.remove(keyFor(pathAndQuery))   // never a by-number copy to go stale
+        } else {
+            entries[keyFor(pathAndQuery)] = Pair(type, body)
         }
         savedAtMs = System.currentTimeMillis()
         dirty = true
@@ -864,6 +877,24 @@ object SessionCache {
     }
 
     private fun load() {
+        // REPAIR (0.9.837): a review saved with another model's state.json
+        // inside (see record) gets its own name back, so it opens as itself.
+        // The next connection to that model refreshes the rest.
+        dir?.listFiles { f -> f.name.startsWith("session-") }?.forEach { f ->
+            runCatching {
+                val root = JSONObject(f.readText())
+                val model = root.optString("model", "")
+                val es = root.getJSONObject("entries")
+                val st = es.optJSONObject("/api/state.json") ?: return@runCatching
+                val body = Base64.decode(st.getString("b64"), Base64.NO_WRAP)
+                val name = stateName(body) ?: return@runCatching
+                if (model.isEmpty() || name == model) return@runCatching
+                val obj = JSONObject(String(body))
+                obj.getJSONObject("info").put("name", model)
+                st.put("b64", Base64.encodeToString(obj.toString().toByteArray(), Base64.NO_WRAP))
+                f.writeText(root.toString())
+            }
+        }
         // Wake up with the newest model's session active.
         val newest = savedSessions().firstOrNull() ?: return
         modelName = newest.first

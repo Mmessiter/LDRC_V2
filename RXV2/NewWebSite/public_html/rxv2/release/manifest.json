@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.837-reviews-keep-their-name",
+      "url": "https://messiter.com/rxv2/release/v0.9.837/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.837/littlefs.bin",
+      "fs_md5": "9b51a6fc921c5839d02ac2fe0c771507",
+      "notes": "Opening a review no longer shows another model: when you switched models, the new model's first status reply was filed under the old model, and the old model's review was saved with it inside. The recorder now parks the old model first and holds a new connection's replies until the receiver has named itself. Existing reviews get their own names back at the next app launch; the rest of their details refresh at the next connection."
+    },
+    {
       "name": "RXV2-0.9.836-sliders-all-rates-types",
       "url": "https://messiter.com/rxv2/release/v0.9.836/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.836/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.826/littlefs.bin",
       "fs_md5": "f0a17850e5dc42921b04d298eb10d08c",
       "notes": "The update record never calls a good install a failure: it reads the target from a release-named file as well as a version folder, judges an unknown target by whether the version changed, and the fleet watcher now names what it installs"
-    },
-    {
-      "name": "RXV2-0.9.825-dongle-event-log",
-      "url": "https://messiter.com/rxv2/release/v0.9.825/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.825/littlefs.bin",
-      "fs_md5": "f0a17850e5dc42921b04d298eb10d08c",
-      "notes": "A dongle or simulator interface now has an Event log button on its front page: the Black box page is hidden on those, and the Event log - with Send debug data to Malcolm - lived only behind it, so a dongle could not report a fault at all"
     }
   ],
   "rotorflight": {

@@ -131,6 +131,7 @@ class MainActivity : AppCompatActivity() {
                 is Rxv2Ble.State.Ready -> {
                     demoMode = false; reviewMode = false
                     connectedName = st.name
+                    SessionCache.connectionStarted()   // replies wait for the model's own name (0.9.837)
                     showWeb()
                     onConnectedSession(st.name)
                 }

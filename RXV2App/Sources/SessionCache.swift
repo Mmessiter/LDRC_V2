@@ -253,34 +253,55 @@ final class SessionCache {
         return Self.flightId(f)
     }
 
+    // A NEW CONNECTION (0.9.837): until its first state.json names the model,
+    // replies are held back rather than filed under whichever model was
+    // active. Malcolm 2026-09-24: "opening a review file opens the wrong
+    // file" - every review on the phone carried ANOTHER model's state.json.
+    // A switch filed the new model's first reply under the old model and then
+    // saved the old model's file with it inside.
+    private var awaitingIdentity = false
+    private var held: [(pathAndQuery: String, path: String, type: String, body: Data)] = []
+    func connectionStarted() { awaitingIdentity = true; held.removeAll() }
+
+    static func stateName(_ body: Data) -> String? {
+        guard let obj = (try? JSONSerialization.jsonObject(with: body)) as? [String: Any],
+              let info = obj["info"] as? [String: Any],
+              let name = info["name"] as? String, !name.isEmpty else { return nil }
+        return name
+    }
+
     func record(pathAndQuery: String, path: String, type: String, body: Data) {
-        if Self.flightNumber(pathAndQuery) != nil, let id = Self.flightId(body: body) {
-            entries[id] = Entry(type: type, body: body)
-            entries[keyFor(pathAndQuery)] = nil      // never a by-number copy to go stale
-            savedAt = Date()
-            scheduleSave()
-            return
-        }
-        entries[keyFor(pathAndQuery)] = Entry(type: type, body: body)
-        if path == "/api/state.json",
-           let obj = try? JSONSerialization.jsonObject(with: body) as? [String: Any],
-           let info = obj["info"] as? [String: Any],
-           let name = info["name"] as? String, !name.isEmpty {
-            if name != modelName && !modelName.isEmpty {
+        if path == "/api/state.json", let name = Self.stateName(body) {
+            if name != modelName {
                 // Different receiver: park the old model's recording in its
-                // own file and RESUME the new model's (never a chimera, and
-                // never an erasure — Malcolm 2026-08-04).
-                let keep = entries[keyFor(pathAndQuery)]
-                saveNow()
+                // own file FIRST, then resume the new model's (never a
+                // chimera, never an erasure - Malcolm 2026-08-04).
+                if !modelName.isEmpty { saveNow() }
                 entries = [:]
                 modelName = name
+                savedAt = nil
                 if let d = try? Data(contentsOf: fileURL),
                    let s = try? JSONDecoder().decode(FileShape.self, from: d) {
                     entries = s.entries
                 }
-                if let keep { entries[keyFor(pathAndQuery)] = keep }
             }
-            modelName = name
+            awaitingIdentity = false
+            let flush = held
+            held.removeAll()
+            for h in flush { store(pathAndQuery: h.pathAndQuery, type: h.type, body: h.body) }
+        } else if awaitingIdentity {
+            if held.count < 64 { held.append((pathAndQuery, path, type, body)) }
+            return
+        }
+        store(pathAndQuery: pathAndQuery, type: type, body: body)
+    }
+
+    private func store(pathAndQuery: String, type: String, body: Data) {
+        if Self.flightNumber(pathAndQuery) != nil, let id = Self.flightId(body: body) {
+            entries[id] = Entry(type: type, body: body)
+            entries[keyFor(pathAndQuery)] = nil      // never a by-number copy to go stale
+        } else {
+            entries[keyFor(pathAndQuery)] = Entry(type: type, body: body)
         }
         savedAt = Date()
         scheduleSave()
@@ -327,6 +348,24 @@ final class SessionCache {
            let shape = try? JSONDecoder().decode(FileShape.self, from: data) {
             try? data.write(to: Self.sessionURL(for: shape.model), options: .atomic)
             try? FileManager.default.removeItem(at: legacy)
+        }
+        // REPAIR (0.9.837): a review saved with another model's state.json
+        // inside (see record) gets its own name back, so it opens as itself.
+        // The next connection to that model refreshes the rest.
+        let files = (try? FileManager.default.contentsOfDirectory(at: Self.docs, includingPropertiesForKeys: nil)) ?? []
+        for f in files where f.lastPathComponent.hasPrefix("session-") {
+            guard let d = try? Data(contentsOf: f),
+                  var s = try? JSONDecoder().decode(FileShape.self, from: d),
+                  let st = s.entries["/api/state.json"],
+                  let name = Self.stateName(st.body), name != s.model,
+                  var obj = (try? JSONSerialization.jsonObject(with: st.body)) as? [String: Any],
+                  var info = obj["info"] as? [String: Any] else { continue }
+            info["name"] = s.model
+            obj["info"] = info
+            if let nb = try? JSONSerialization.data(withJSONObject: obj) {
+                s.entries["/api/state.json"] = Entry(type: st.type, body: nb)
+                if let out = try? JSONEncoder().encode(s) { try? out.write(to: f, options: .atomic) }
+            }
         }
         // Wake up with the newest model's session active.
         guard let newest = Self.savedSessions().first,

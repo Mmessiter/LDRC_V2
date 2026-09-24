@@ -56,7 +56,7 @@ struct RootView: View {
                     .ignoresSafeArea()
                     .onAppear { onConnected(name) }
                     .onChange(of: link.state) { st in
-                        if case .ready = st { SessionPrefetcher.run(link: link) }
+                        if case .ready = st { SessionCache.shared.connectionStarted(); SessionPrefetcher.run(link: link) }
                     }
                     .alert("Settings edited offline", isPresented: $showPendingOffer) {
                         if pendingEdits.isEmpty {
@@ -191,6 +191,7 @@ extension RootView {
     }
 
     func onConnected(_ name: String) {
+        SessionCache.shared.connectionStarted()   // replies wait for the model's own name (0.9.837)
         guard !sessionStarted else { return }
         sessionStarted = true
         let (model, edits) = SessionCache.loadPending()

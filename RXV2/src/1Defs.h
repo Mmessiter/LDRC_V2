@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.836-sliders-all-rates-types";
+constexpr const char* FW_VERSION = "RXV2-0.9.837-reviews-keep-their-name";
 
 //*********************************************************************
 //  Auto-update manifest URLs
