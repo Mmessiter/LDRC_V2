@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.840-review-reads-travel-extents",
+      "url": "https://messiter.com/rxv2/release/v0.9.840/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.840/littlefs.bin",
+      "fs_md5": "d45f3cfd6d47fa85a66d2c7be668277d",
+      "notes": "Travel extents now open in a review. The app's review treated the two flight-controller reads that carry an index (mixer inputs and RPM notches) as writes and refused them, so the page said 'this change cannot be made in review'. The recorder already knew they were reads; the review side now does too."
+    },
+    {
       "name": "RXV2-0.9.839-reviews-show-more",
       "url": "https://messiter.com/rxv2/release/v0.9.839/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.839/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.829/littlefs.bin",
       "fs_md5": "34e310a8703f10d11e31e14bee787798",
       "notes": "A new board is called Untitled and its front page asks - rather than forces - you to rename it as soon as you can, with the menu working underneath. Two boards with the same name cannot be told apart, and the banner says so."
-    },
-    {
-      "name": "RXV2-0.9.828-list-follows-rename",
-      "url": "https://messiter.com/rxv2/release/v0.9.828/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.828/littlefs.bin",
-      "fs_md5": "d63e5a2712315bdd5c500b3f7accd4b0",
-      "notes": "iOS app: a board already in the model list takes the new name it advertises after a rename, instead of sitting there under the old one"
     }
   ],
   "rotorflight": {

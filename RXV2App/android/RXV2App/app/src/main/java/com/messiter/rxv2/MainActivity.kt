@@ -2037,7 +2037,10 @@ class MainActivity : AppCompatActivity() {
                     cb(kotlin.Result.success(Rxv2Ble.Response(200, "text/plain", "", ByteArray(0))))
                     return
                 }
-                if (!dataHex.isNullOrEmpty()) {   // offline EDIT: capture for the reconnect offer
+                // fn=174 (mixer input) and fn=154 (RPM notch) are READS whose index
+                // rides in data= (the recorder knows; so must the review, or Travel
+                // extents says "this change cannot be made in review" - 2026-09-24).
+                if (!dataHex.isNullOrEmpty() && fn != 174 && fn != 154) {   // offline EDIT: capture for the reconnect offer
                     if (SessionCache.captureOfflineWrite(fn, dataHex))
                         cb(kotlin.Result.success(Rxv2Ble.Response(200, "text/plain", "", ByteArray(0))))
                     else

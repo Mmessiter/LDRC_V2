@@ -350,7 +350,11 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
                     deliver(task, url: url, code: 200, type: "text/plain", body: Data())
                     return
                 }
-                if let hex = dataHex, !hex.isEmpty {
+                // fn=174 (mixer input) and fn=154 (RPM notch) are READS whose
+                // index rides in data= - the recorder knows (cacheable), and so
+                // must the review, or Travel extents answers "this change cannot
+                // be made in review" (Malcolm 2026-09-24, Goblin770 review).
+                if let hex = dataHex, !hex.isEmpty, !SessionCache.indexedReadFns.contains(fn) {
                     if SessionCache.shared.captureOfflineWrite(fn: fn, dataHex: hex) {
                         deliver(task, url: url, code: 200, type: "text/plain", body: Data())
                     } else {

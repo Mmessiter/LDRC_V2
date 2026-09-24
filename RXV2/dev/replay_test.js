@@ -37,6 +37,7 @@ function replay(method, url) {
         const items = Object.fromEntries((q || '').split('&').map(x => x.split('=')));
         const fn = parseInt(items.fn || '-1');
         if (fn === 210) { const b = parseInt((items.data || '').slice(0, 2), 16); if (b & 0x80) rateBank = b & 0x7f; else pidBank = b; return [200, 'text/plain', '']; }
+        // 174/154 carry an index in data= but are READS - the apps' indexedReadFns (BleSchemeHandler.swift / MainActivity.kt); keep the three in step
         if (items.data && !['174', '154'].includes(items.fn)) return captured.has(fn) ? [200, 'text/plain', ''] : [409, 'text/plain', 'receiver offline — this change cannot be made in review'];
         if (fn === 250 || fn === 68) return [200, 'text/plain', ''];
     }

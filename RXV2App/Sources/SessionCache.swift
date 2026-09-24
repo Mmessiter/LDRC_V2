@@ -558,6 +558,9 @@ extension SessionCache {
     /// them): a 'rejected' answer is not a backup failure, the item is
     /// simply not in the backup. No answer at all still is.
     static let optionalReadFns: Set<Int> = [123, 154, 70]
+    /// Reads whose parameter (an index) rides in data=: recorded and replayed
+    /// as reads, never mistaken for writes (mixer inputs, RPM notches).
+    static let indexedReadFns: Set<Int> = [174, 154]
     /// A telemetry image (MSP 73, 52 bytes) worth restoring: link rate and
     /// ratio non-zero and at least one sensor in the 40 slots.
     static func telemImageGood(_ hex: String) -> Bool {
