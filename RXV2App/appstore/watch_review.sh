@@ -14,8 +14,8 @@ NOTIFY=/Users/malcolmmessiter/Documents/GitHub/LDRC_V2_ALL/RXV2/dev/notify.sh
 STATE=$HOME/.appstoreconnect/rxv2_review_state
 KEY=KLS4GZ93JB
 ISS=69a6de80-5be5-47e3-e053-5b8c7c11a4d1
-SUB=a3348a1d-58f1-40ad-ab4f-c5c18bfe0cc8
-BUILD=7dd2fa62-1e2c-4c3b-a429-f5730af27930
+SUB=32bc8253-72a9-42e3-b221-e08b47859459   # 5.173 store update, submitted 2026-09-25 (5.160 went live that morning)
+BUILD=b0df7402-a97e-4314-9241-e1aaf6faac8a   # TestFlight build 443 = app 5.173 (approved 2026-09-24)
 
 # /usr/bin/python3 is an Xcode shim and refuses to run until the licence is
 # agreed - and the LaunchAgent's PATH finds exactly that one. Pick the first

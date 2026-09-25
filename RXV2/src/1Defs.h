@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.846-pages-open-in-a-browser";
+constexpr const char* FW_VERSION = "RXV2-0.9.847-rates-chart-shows-every-curve";
 
 //*********************************************************************
 //  Auto-update manifest URLs

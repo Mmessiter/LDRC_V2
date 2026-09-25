@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.847-rates-chart-shows-every-curve",
+      "url": "https://messiter.com/rxv2/release/v0.9.847/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.847/littlefs.bin",
+      "fs_md5": "c3429d1d8d569ecdbd2572065208f5de",
+      "notes": "Rates chart: a curve that lies exactly on another is now drawn dashed, so the one beneath shows through. Yaw with Centre equal to Max Rate was hidden under a straight collective line, and identical roll and pitch hid roll. The collective legend now says degrees, not degrees per second."
+    },
+    {
       "name": "RXV2-0.9.846-pages-open-in-a-browser",
       "url": "https://messiter.com/rxv2/release/v0.9.846/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.846/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.836/littlefs.bin",
       "fs_md5": "af272d4df2224de032c2ca386c282b7e",
       "notes": "The Easy tuning sliders, and How agile? on the Rates page, now work with the ACTUAL and QUICKRATES rates types as well as ROTORFLIGHT. Agility moves the full-stick rate (Max Rate on those types, with Centre keeping its ratio so the curve keeps its shape); Stick feel moves expo. Betaflight, Raceflight and KISS types are still table-only."
-    },
-    {
-      "name": "RXV2-0.9.835-throttle-setting-kept",
-      "url": "https://messiter.com/rxv2/release/v0.9.835/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.835/littlefs.bin",
-      "fs_md5": "0345e6bab861f2f8297bf66792a7e07b",
-      "notes": "The receiver's throttle channel setting now survives a restart. Since 0.9.230 it was read before the settings store was open, so every receiver booted holding channel 3 low whatever was saved."
     }
   ],
   "rotorflight": {

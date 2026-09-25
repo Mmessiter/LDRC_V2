@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rates &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=362">
-<script src="/app.js?v=362" defer></script>
+<link rel=stylesheet href="/style.css?v=363">
+<script src="/app.js?v=363" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -438,23 +438,35 @@ function drawCurves() {
     // different unit (degrees) and tiny range — keeps its own scale so it stays
     // visible. 0.92 leaves a little headroom so peaks don't touch the edge.
     const rpyMax = Math.max(1, ...curves.filter(c => c.ax.k !== 'Collective').map(c => c.max));
+    // A curve that lies ON an earlier one is drawn dashed, each twin's dashes
+    // in the next gap, so every curve beneath still shows (Malcolm 2026-09-25:
+    // "I see no curve for yaw" - yaw, Centre = Max = 350, was a straight line
+    // at the top of the shared scale; collective, 12 = 12, a straight line on
+    // its own full scale; the same line, and collective, drawn last, hid it.
+    // Roll = pitch hid roll the same way).
+    const paths = [];
     for (const c0 of curves) {
         if (c0.max <= 0) continue;
         const scaleMax = (c0.ax.k === 'Collective') ? c0.max : rpyMax;
-        ctx.strokeStyle = c0.ax.color;
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
+        const ys = [];
         for (let px = 0; px <= W; px++) {
             const stick = (px / W) * 2 - 1;
             const v = (MODEL.curve === 'rotorflight')
                 ? rotorflightCurve(stick, c0.max, c0.expo)
                 : rateCurve(stick, c0.centre, c0.max, c0.expo);
-            const py = H / 2 - (v / scaleMax) * (H / 2) * 0.92;
-            if (px === 0) ctx.moveTo(px, py);
-            else ctx.lineTo(px, py);
+            ys.push(H / 2 - (v / scaleMax) * (H / 2) * 0.92);
         }
+        const under = paths.filter(p => p.every((y, i) => Math.abs(y - ys[i]) < 1.5)).length;
+        ctx.setLineDash(under ? [6, 12] : []);
+        ctx.lineDashOffset = under ? -6 * (under - 1) : 0;
+        ctx.strokeStyle = c0.ax.color;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ys.forEach((py, px) => px === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py));
         ctx.stroke();
+        paths.push(ys);
     }
+    ctx.setLineDash([]); ctx.lineDashOffset = 0;
 
     // Orange dot at origin (matches Configurator)
     ctx.fillStyle = '#ffb74d';
@@ -468,7 +480,7 @@ function drawCurves() {
     for (const c0 of curves) {
         if (c0.max <= 0) continue;
         // Coloured chip background
-        const labelText = c0.ax.k + ' ' + Math.round(c0.max) + '°/s';
+        const labelText = c0.ax.k + ' ' + Math.round(c0.max) + (c0.ax.k === 'Collective' ? '°' : '°/s');   // collective is degrees of pitch
         const w = ctx.measureText(labelText).width + 16;
         ctx.fillStyle = c0.ax.color;
         ctx.globalAlpha = 0.85;
