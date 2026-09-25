@@ -1,4 +1,5 @@
 {
+  "RXV2-0.9.849-tracking-time-explained": "Governor page: tracking time explained — it is the time for a full-range head-speed change (0 to full), so a bank step takes a fraction of it; want a 2-second bank change, set about 20",
   "RXV2-0.9.848-new-app-icon": "New app icon on iPhone, iPad and Android: a red helicopter with LDRC on the cabin, over our sky and hill.",
   "RXV2-0.9.847-rates-chart-shows-every-curve": "Rates chart: a curve that lies exactly on another is now drawn dashed, so the one beneath shows through. Yaw with Centre equal to Max Rate was hidden under a straight collective line, and identical roll and pitch hid roll. The collective legend now says degrees, not degrees per second.",
   "RXV2-0.9.846-pages-open-in-a-browser": "Pages opened in a web browser over WiFi work again. Compressed files were sent labelled 'compressed' twice, which a browser reads as compressed twice and then shows nothing; since 0.9.844 that was every page. The phone apps carry their own pages and were never affected.",

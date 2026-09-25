@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Governor (global) &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=364">
-<script src="/app.js?v=364" defer></script>
+<link rel=stylesheet href="/style.css?v=365">
+<script src="/app.js?v=365" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;
         padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -79,7 +79,7 @@ input:disabled,select:disabled{background:#eee;color:#999}
         <div class=fldRow><label data-help="How gently the motor first starts turning from standstill, in seconds. Bigger = softer start.">Startup time</label>             <input type=number id=g_start step=0.1 min=0 max=600></div>
         <div class=fldRow><label data-help="Time to ramp from idle to full head speed, in seconds. 10 is typical - bigger = gentler spool-up.">Spool-up time</label>            <input type=number id=g_spool step=0.1 min=0 max=600></div>
         <div class=fldRow><label data-help="Time to wind the rotor down when you lower the throttle switch, in seconds.">Spool-down time</label>          <input type=number id=g_spdwn step=0.1 min=0 max=600></div>
-        <div class=fldRow><label data-help="How quickly the governor moves between two head speeds (e.g. on a bank change), in seconds. 2 is typical.">Speed-change time (tracking time)</label>            <input type=number id=g_track step=0.1 min=0 max=600></div>
+        <div class=fldRow><label data-help="Seconds for a FULL-RANGE change, from 0 to full head speed. A bank change moves only a fraction of that range, so it takes a fraction of this time: with 2 s here, stepping 1800 to 2000 rpm on a 2000 rpm head takes about 0.2 s. Want a 2-second bank change? Set about 20.">Speed-change time (tracking time)</label>            <input type=number id=g_track step=0.1 min=0 max=600></div>
         <div class=fldRow><label data-help="The fast spool-up used when the rotor is still turning (after a brief throttle hold), in seconds.">Quick-restart time (recovery time)</label>            <input type=number id=g_recov step=0.1 min=0 max=600></div>
         <div class=fldRow><label data-help="For an ORDINARY throttle chop (throttle hold): the fast quick-restart stays available for this long, in seconds. Beyond it the governor insists on a full, slow spool-up — the rotor has slowed too much for a safe snap back.">Throttle-hold timeout</label>    <input type=number id=g_hold step=0.1 min=0 max=600></div>
         <div class=fldRow><label data-help="For a DELIBERATE autorotation with bail-out enabled (Auto throttle above 0): the auto may last this long, in seconds, and still get the instant bail-out power. Usually set longer than the throttle-hold timeout — the rotor keeps its speed in an auto.">Autorotation timeout</label>     <input type=number id=g_auto_to step=0.1 min=0 max=600></div>

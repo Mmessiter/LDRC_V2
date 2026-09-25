@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.848-new-app-icon";
+constexpr const char* FW_VERSION = "RXV2-0.9.849-tracking-time-explained";
 
 //*********************************************************************
 //  Auto-update manifest URLs

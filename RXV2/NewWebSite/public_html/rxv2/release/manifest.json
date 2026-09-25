@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.849-tracking-time-explained",
+      "url": "https://messiter.com/rxv2/release/v0.9.849/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.849/littlefs.bin",
+      "fs_md5": "4173422d69f5ada2383aeda99e3ec773",
+      "notes": "Governor page: tracking time explained \u2014 it is the time for a full-range head-speed change (0 to full), so a bank step takes a fraction of it; want a 2-second bank change, set about 20"
+    },
+    {
       "name": "RXV2-0.9.848-new-app-icon",
       "url": "https://messiter.com/rxv2/release/v0.9.848/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.848/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.838/littlefs.bin",
       "fs_md5": "5ddd2bfffbd09e078f85d70671f0aa30",
       "notes": "Travel extents: when the collective gain is a long way from 100 % the page now says to check the collective rate on the Rates page first. A small rate (6\u00b0 instead of 12\u00b0) is usually the real cause of too little collective, and raising the gain to hide it makes every bank with a normal rate drive the swash into its stops."
-    },
-    {
-      "name": "RXV2-0.9.837-reviews-keep-their-name",
-      "url": "https://messiter.com/rxv2/release/v0.9.837/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.837/littlefs.bin",
-      "fs_md5": "9b51a6fc921c5839d02ac2fe0c771507",
-      "notes": "Opening a review no longer shows another model: when you switched models, the new model's first status reply was filed under the old model, and the old model's review was saved with it inside. The recorder now parks the old model first and holds a new connection's replies until the receiver has named itself. Existing reviews get their own names back at the next app launch; the rest of their details refresh at the next connection."
     }
   ],
   "rotorflight": {

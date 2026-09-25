@@ -14,8 +14,8 @@ NOTIFY=/Users/malcolmmessiter/Documents/GitHub/LDRC_V2_ALL/RXV2/dev/notify.sh
 STATE=$HOME/.appstoreconnect/rxv2_review_state
 KEY=KLS4GZ93JB
 ISS=69a6de80-5be5-47e3-e053-5b8c7c11a4d1
-SUB=ec252ea0-c3c4-4835-b867-c0c3f2005c12   # 5.173 store update with the Rotorflight-led listing, resubmitted 2026-09-25
-BUILD=b0df7402-a97e-4314-9241-e1aaf6faac8a   # TestFlight build 443 = app 5.173 (approved 2026-09-24)
+SUB=74b1b7ba-eb15-4d20-9f72-a3791f482f2f   # 5.175 store update (new icon), submitted 2026-09-25
+BUILD=4f19eec7-2b23-479b-b0d3-9ec6c0f26820   # TestFlight build 444 = app 5.175
 
 # /usr/bin/python3 is an Xcode shim and refuses to run until the licence is
 # agreed - and the LaunchAgent's PATH finds exactly that one. Pick the first
