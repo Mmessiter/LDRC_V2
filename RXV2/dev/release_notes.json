@@ -1,4 +1,5 @@
 {
+  "RXV2-0.9.852-battery-one-line": "Battery card is one line: 'Average 3.8 V per cell' — the colour says the rest",
   "RXV2-0.9.851-battery-card-honest": "Battery card: volts per cell is the truth — the flight controller's percent (capacity used since power-on, not charge state) no longer shows; mAh reads 'used since power-on'",
   "RXV2-0.9.850-battery-first": "Home page: a battery card under the model name from the first moment — volts per cell, cells, total, and the flight controller's percent, mAh and amps when it has them; green / amber / red",
   "RXV2-0.9.849-tracking-time-explained": "Governor page: tracking time explained — it is the time for a full-range head-speed change (0 to full), so a bank step takes a fraction of it; want a 2-second bank change, set about 20",

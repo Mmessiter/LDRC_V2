@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.852-battery-one-line",
+      "url": "https://messiter.com/rxv2/release/v0.9.852/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.852/littlefs.bin",
+      "fs_md5": "6569bd2fa096dd8d2bc35265c03c4a70",
+      "notes": "Battery card is one line: 'Average 3.8 V per cell' \u2014 the colour says the rest"
+    },
+    {
       "name": "RXV2-0.9.851-battery-card-honest",
       "url": "https://messiter.com/rxv2/release/v0.9.851/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.851/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.841/littlefs.bin",
       "fs_md5": "e40415ce2d530b1d3344a949d90dc75a",
       "notes": "The Rates page help now explains how each rates type actually works, from Rotorflight's own formulas: what the three numbers mean and how the curve is shaped for ROTORFLIGHT, ACTUAL, QUICKRATES, BETAFLIGHT, KISS and RACEFLIGHT."
-    },
-    {
-      "name": "RXV2-0.9.840-review-reads-travel-extents",
-      "url": "https://messiter.com/rxv2/release/v0.9.840/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.840/littlefs.bin",
-      "fs_md5": "d45f3cfd6d47fa85a66d2c7be668277d",
-      "notes": "Travel extents now open in a review. The app's review treated the two flight-controller reads that carry an index (mixer inputs and RPM notches) as writes and refused them, so the page said 'this change cannot be made in review'. The recorder already knew they were reads; the review side now does too."
     }
   ],
   "rotorflight": {

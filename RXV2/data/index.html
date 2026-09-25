@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Home &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=367">
-<script src="/app.js?v=367" defer></script>
+<link rel=stylesheet href="/style.css?v=368">
+<script src="/app.js?v=368" defer></script>
 <style>
 /* First paint from memory (Malcolm 2026-09-10: the receiver layout flashed
    before the dongle one): classes set on <html> by the hint script below,
@@ -742,17 +742,10 @@ function paintBattCard(s) {
     }
     const bg = per >= 3.85 ? '#2e8b57' : per >= 3.6 ? '#d4944a' : '#c0392b';
     c.style.background = bg;
-    const word = per >= 3.85 ? 'Good' : per >= 3.6 ? 'Part used' : 'Low';
-    let detail = cells + 'S \u00b7 ' + volts.toFixed(1) + ' V';
-    if (fc) {
-        // Not the FC's percent: Rotorflight counts capacity USED since power-on,
-        // not charge state — a half-used pack reads 98 % right after plugging in.
-        if (fc.mah > 0) detail += ' \u00b7 ' + fc.mah.toLocaleString() + ' mAh used since power-on';
-        if (fc.a > 0.5) detail += ' \u00b7 ' + fc.a.toFixed(1) + ' A';
-    }
+    // One line (Malcolm 2026-09-25: "average 3.8 V per cell — that is all we
+    // needed to know"); the colour carries the verdict.
     c.innerHTML = '<span style="font-size:2em;line-height:1">' + (per >= 3.85 ? '\ud83d\udd0b' : '\ud83e\udeab') + '</span>'
-        + '<span><span style="font-size:1.45em;line-height:1.1">' + per.toFixed(2) + ' V/cell \u00b7 ' + word + '</span>'
-        + '<br><span style="font-size:.95em;font-weight:600;opacity:.95">' + detail + '</span></span>';
+        + '<span style="font-size:1.45em;line-height:1.1">Average ' + per.toFixed(1) + ' V per cell</span>';
 }
 
 // Low-battery klaxon (Malcolm 2026-07-28): at 3.5 V/cell a MASSIVE warning;

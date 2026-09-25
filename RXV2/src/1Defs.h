@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.851-battery-card-honest";
+constexpr const char* FW_VERSION = "RXV2-0.9.852-battery-one-line";
 
 //*********************************************************************
 //  Auto-update manifest URLs
