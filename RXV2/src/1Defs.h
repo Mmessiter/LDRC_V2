@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.849-tracking-time-explained";
+constexpr const char* FW_VERSION = "RXV2-0.9.850-battery-first";
 
 //*********************************************************************
 //  Auto-update manifest URLs

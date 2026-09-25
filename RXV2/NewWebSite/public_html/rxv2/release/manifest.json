@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.850-battery-first",
+      "url": "https://messiter.com/rxv2/release/v0.9.850/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.850/littlefs.bin",
+      "fs_md5": "73de1b3e3d94e89e0772aa928412db86",
+      "notes": "Home page: a battery card under the model name from the first moment \u2014 volts per cell, cells, total, and the flight controller's percent, mAh and amps when it has them; green / amber / red"
+    },
+    {
       "name": "RXV2-0.9.849-tracking-time-explained",
       "url": "https://messiter.com/rxv2/release/v0.9.849/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.849/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.839/littlefs.bin",
       "fs_md5": "87f043b603d7d27efe0abf9f9d96114d",
       "notes": "Reviews now record the board, serial ports and blackbox memory too, so the Ports and Black box pages open from a recording. Travel extents were already recorded; the page no longer tries to switch overrides off in a review, and backups list them as travel extents rather than mixer inputs. Adjustments say plainly that they need the model connected. New dev harness runs every page against a real recording at each release."
-    },
-    {
-      "name": "RXV2-0.9.838-gain-hides-a-rates-problem",
-      "url": "https://messiter.com/rxv2/release/v0.9.838/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.838/littlefs.bin",
-      "fs_md5": "5ddd2bfffbd09e078f85d70671f0aa30",
-      "notes": "Travel extents: when the collective gain is a long way from 100 % the page now says to check the collective rate on the Rates page first. A small rate (6\u00b0 instead of 12\u00b0) is usually the real cause of too little collective, and raising the gain to hide it makes every bank with a normal rate drive the swash into its stops."
     }
   ],
   "rotorflight": {
