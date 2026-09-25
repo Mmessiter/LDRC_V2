@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Receiver log &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=368">
-<script src="/app.js?v=368" defer></script>
+<link rel=stylesheet href="/style.css?v=369">
+<script src="/app.js?v=369" defer></script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -96,11 +96,8 @@ async function refreshStatus() {
     if (v != null && v > 0.5) {
         // Cell count: the FC's own answer when it gives one (45.1 V is 11S
         // nearly-full AND 12S at storage — volts alone cannot decide), else
-        // guess — knowing packs above 4S only come in EVEN counts (6S, 8S,
-        // 12S… never 11S; Malcolm 2026-08-05), which settles the ambiguity.
-        let guess = Math.max(1, Math.ceil(v / 4.3));
-        if (guess > 4 && (guess % 2)) guess++;
-        const cells = (fc.cells > 0) ? fc.cells : guess;
+        // the shared guess (LDRC.packCells: even counts above 4S).
+        const cells = LDRC.packCells(v, fc.cells).cells;
         const per = v / cells;
         const soc = lipoPct(per);                            // resting state-of-charge
         const col = soc >= 50 ? '#2e7d32' : soc >= 20 ? '#d99a3a' : '#c0392b';  // green / amber / red

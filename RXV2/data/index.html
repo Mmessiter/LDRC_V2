@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Home &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=368">
-<script src="/app.js?v=368" defer></script>
+<link rel=stylesheet href="/style.css?v=369">
+<script src="/app.js?v=369" defer></script>
 <style>
 /* First paint from memory (Malcolm 2026-09-10: the receiver layout flashed
    before the dongle one): classes set on <html> by the hint script below,
@@ -718,20 +718,31 @@ function showFlyConfirm() {
         } else if (s) el.innerHTML = '<span style="color:#a4242a">not bound</span>';
     }).catch(() => {});
 }
-// Battery card (Malcolm 2026-09-25): the first thing you want to know on
-// connecting. Sits under the model name from the first state poll. Reads the
-// flight controller's telemetry when it has some (volts, %, mAh, amps, cells),
-// else the receiver's own divider. Colour by volts per cell: green above
-// 3.85, amber to 3.60, red below. Hides while the klaxon below is shouting.
-function paintBattCard(s) {
-    let c = document.getElementById('battCard');
+// The pack as the receiver sees it: the flight controller's telemetry when it
+// has some, else the receiver's own voltage divider. Cells: LDRC.packCells.
+function packNow(s) {
     const fc = s && s.fc && s.fc.v > 3 ? s.fc : null;
     const vb = s && s.rf && s.rf.vbat && s.rf.vbat.volts > 3 ? s.rf.vbat : null;
-    const volts = fc ? fc.v : vb ? vb.volts : 0;
-    if (!volts) { if (c) c.remove(); return; }
-    const cells = (fc && fc.cells) || (vb && vb.cells) || Math.min(6, Math.max(1, Math.round((volts + 1.9) / 3.8)));
-    const per = volts / cells;
-    if (per <= 3.5) { if (c) c.remove(); return; }           // the klaxon has the floor
+    if (!fc && !vb) return null;
+    const volts = fc ? fc.v : vb.volts;
+    // Told count: the FC's own, else the one saved on the receiver's settings
+    // page (set it once and the guess — and its "?" — go away).
+    const vbCells = (s.rf && s.rf.vbat && s.rf.vbat.cells) || 0;
+    const n = LDRC.packCells(volts, (fc && fc.cells) || vbCells);
+    return { volts: volts, cells: n.cells, guessed: n.guessed, per: volts / n.cells, fromRx: !fc,
+             armed: !!(s.fc_armed || (s.rf && s.rf.armed)) };
+}
+
+// Battery card (Malcolm 2026-09-25): the first thing you want to know on
+// connecting — one line, "Average 3.8 V per cell", under the model name from
+// the first state poll. Green from 3.85, amber from 3.60, red below. A cell
+// count the receiver had to guess says so ("· 12S?"). At 3.5 and below the
+// klaxon takes over, except while armed: a pack under load sags, so it stays
+// here, red, without the shouting.
+function paintBattCard(s) {
+    let c = document.getElementById('battCard');
+    const p = packNow(s);
+    if (!p || (p.per <= 3.5 && !p.armed)) { if (c) c.remove(); return; }
     if (!c) {
         c = document.createElement('div');
         c.id = 'battCard';
@@ -740,25 +751,24 @@ function paintBattCard(s) {
         if (h1 && h1.parentNode) h1.insertAdjacentElement('afterend', c);
         else (document.querySelector('.container') || document.body).prepend(c);
     }
-    const bg = per >= 3.85 ? '#2e8b57' : per >= 3.6 ? '#d4944a' : '#c0392b';
-    c.style.background = bg;
-    // One line (Malcolm 2026-09-25: "average 3.8 V per cell — that is all we
-    // needed to know"); the colour carries the verdict.
-    c.innerHTML = '<span style="font-size:2em;line-height:1">' + (per >= 3.85 ? '\ud83d\udd0b' : '\ud83e\udeab') + '</span>'
-        + '<span style="font-size:1.45em;line-height:1.1">Average ' + per.toFixed(1) + ' V per cell</span>';
+    c.style.background = p.per >= 3.85 ? '#2e8b57' : p.per >= 3.6 ? '#d4944a' : '#c0392b';
+    c.innerHTML = '<span style="font-size:2em;line-height:1">' + (p.per >= 3.85 ? '🔋' : '🪫') + '</span>'
+        + '<span style="font-size:1.45em;line-height:1.1">Average ' + p.per.toFixed(1) + ' V per cell'
+        + (p.guessed ? ' · ' + p.cells + 'S?' : '') + '</span>';
 }
 
 // Low-battery klaxon (Malcolm 2026-07-28): at 3.5 V/cell a MASSIVE warning;
 // at 3.3 the receiver itself deep-sleeps if the model is provably forgotten
 // (channels dead-still 2 min, not flying, not armed) — the pack that died
-// during supper-and-a-film shall have no successors.
+// during supper-and-a-film shall have no successors. 2026-09-25: reads the
+// flight controller's telemetry too (it read only the receiver's own divider,
+// so a model without one never warned), never while armed, and the cell count
+// comes from LDRC.packCells (the old guess stopped at 6 cells: a 12S pack
+// read 7.5 V per cell and could never warn).
 function paintBattWarn(s) {
-    const vb = s && s.rf && s.rf.vbat;
     let b = document.getElementById('battWarn');
-    if (!vb || !vb.volts || vb.volts < 3) { if (b) b.remove(); return; }
-    const cells = vb.cells || Math.min(6, Math.max(1, Math.round((vb.volts + 1.9) / 3.8)));
-    const per = vb.volts / cells;
-    if (per > 3.5) { if (b) b.remove(); return; }
+    const p = packNow(s);
+    if (!p || p.per > 3.5 || p.armed) { if (b) b.remove(); return; }
     if (!b) {
         b = document.createElement('div');
         b.id = 'battWarn';
@@ -771,9 +781,10 @@ function paintBattWarn(s) {
         const menu = document.getElementById('mainMenu');
         (menu || document.querySelector('.container') || document.body).prepend(b);
     }
-    b.innerHTML = '🪫 BATTERY LOW — <b>' + per.toFixed(2) + ' V/cell!</b><br>'
+    // Only the receiver's own divider feeds the deep-sleep guardian.
+    b.innerHTML = '🪫 BATTERY LOW — <b>' + p.per.toFixed(2) + ' V/cell!</b><br>'
         + '<span style="font-size:.75em;font-weight:600">Disconnect the flight battery NOW.'
-        + (per <= 3.35 ? '<br>Receiver will deep-sleep shortly if left untouched.' : '') + '</span>';
+        + (p.fromRx && p.per <= 3.35 ? '<br>Receiver will deep-sleep shortly if left untouched.' : '') + '</span>';
 }
 
 // Radios just went off (or already were): NO separate screen — the menu

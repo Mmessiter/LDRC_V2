@@ -753,8 +753,20 @@ static void batteryGuardTick() {
     if (moved || !lastChMoveMs) lastChMoveMs = now;   // shared: battery guardian + quiet-moment flight save
 
     if (vbatVolts < 3.0f) { belowSinceMs = 0; return; }   // no/implausible sensor
-    uint8_t cells = vbatCellsCfg ? vbatCellsCfg
-                                 : (uint8_t)constrain((int)((vbatVolts + 1.9f) / 3.8f), 1, 6);
+    // Cell count — the same rule as the pages (LDRC.packCells): the user's
+    // setting while it is physically possible (no cell above 4.35 V), else
+    // the fewest cells that keep each at or below 4.3 V, rounded up to even
+    // above 4S (packs come 6S/8S/12S, never 11S). For a LiPo (never above
+    // 4.2 V a cell) the guess can only UNDER-count, so perCell never reads
+    // lower than the truth: the guardian can fire late, never early. (The old guess stopped at 6 cells — a 12S
+    // pack read 7.5 V/cell and was never protected.)
+    uint8_t cells = vbatCellsCfg;
+    if (!cells || vbatVolts / cells > 4.35f) {
+        int n = (int)ceilf(vbatVolts / 4.3f);
+        if (n < 1) n = 1;
+        if (n > 4 && (n & 1)) n++;
+        cells = (uint8_t)n;
+    }
     float perCell = vbatVolts / cells;
 
     // The armed check reuses the flight-save definition of armed.

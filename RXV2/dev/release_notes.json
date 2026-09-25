@@ -1,4 +1,5 @@
 {
+  "RXV2-0.9.853-cells-never-impossible": "Battery: one cell-count rule everywhere — a told count only while physically possible, else the even-count guess (no more 7.5 V per cell on 12S); a guessed count shows '· 12S?'; the klaxon reads FC telemetry too and stays quiet while armed; the battery guardian no longer stops at 6 cells",
   "RXV2-0.9.852-battery-one-line": "Battery card is one line: 'Average 3.8 V per cell' — the colour says the rest",
   "RXV2-0.9.851-battery-card-honest": "Battery card: volts per cell is the truth — the flight controller's percent (capacity used since power-on, not charge state) no longer shows; mAh reads 'used since power-on'",
   "RXV2-0.9.850-battery-first": "Home page: a battery card under the model name from the first moment — volts per cell, cells, total, and the flight controller's percent, mAh and amps when it has them; green / amber / red",

@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.853-cells-never-impossible",
+      "url": "https://messiter.com/rxv2/release/v0.9.853/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.853/littlefs.bin",
+      "fs_md5": "dc2e7c2ce5892b4bdc8827b9b21599ff",
+      "notes": "Battery: one cell-count rule everywhere \u2014 a told count only while physically possible, else the even-count guess (no more 7.5 V per cell on 12S); a guessed count shows '\u00b7 12S?'; the klaxon reads FC telemetry too and stays quiet while armed; the battery guardian no longer stops at 6 cells"
+    },
+    {
       "name": "RXV2-0.9.852-battery-one-line",
       "url": "https://messiter.com/rxv2/release/v0.9.852/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.852/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.842/littlefs.bin",
       "fs_md5": "9f2c1078a4f2143bd012c0c4d97f2844",
       "notes": "The update page now checks the transmitter before anything starts and says 'Turn the transmitter off first' if it is on. A refusal from the receiver over WiFi is shown at once instead of being discovered as 'did not complete' minutes later."
-    },
-    {
-      "name": "RXV2-0.9.841-rates-types-explained",
-      "url": "https://messiter.com/rxv2/release/v0.9.841/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.841/littlefs.bin",
-      "fs_md5": "e40415ce2d530b1d3344a949d90dc75a",
-      "notes": "The Rates page help now explains how each rates type actually works, from Rotorflight's own formulas: what the three numbers mean and how the curve is shaped for ROTORFLIGHT, ACTUAL, QUICKRATES, BETAFLIGHT, KISS and RACEFLIGHT."
     }
   ],
   "rotorflight": {
