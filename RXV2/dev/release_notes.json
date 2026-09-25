@@ -1,4 +1,5 @@
 {
+  "RXV2-0.9.856-autorotation-timeout-is-seconds": "Governor: the autorotation timeout is WHOLE seconds on the flight controller (the other timings are tenths) — the page and the transmitter path were scaling it by 10; a model set to 5 from either actually held 50 s — it now shows the true value, set it once",
   "RXV2-0.9.855-wifi-only-is-off": "Post-landing Bluetooth link: the button says 'Re-enable WiFi' — WiFi alone is off for flying; the Bluetooth you are on is not",
   "RXV2-0.9.854-helis-are-6s-or-12s": "Battery guess knows helicopters fly 6S or 12S: a voltage that fits either is that pack, so a flat 12S is caught (42 V no longer reads as a full 10S); the klaxon shows a guessed count too; the battery guardian uses the same rule",
   "RXV2-0.9.853-cells-never-impossible": "Battery: one cell-count rule everywhere — a told count only while physically possible, else the even-count guess (no more 7.5 V per cell on 12S); a guessed count shows '· 12S?'; the klaxon reads FC telemetry too and stays quiet while armed; the battery guardian no longer stops at 6 cells",

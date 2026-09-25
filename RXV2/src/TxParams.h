@@ -315,7 +315,7 @@ inline void buildGovConfigFromMsp(const uint8_t* p, uint16_t len) {
     govAckSecs(govAck, 26, p, 5);               // Tracking
     govAckSecs(govAck, 28, p, 7);               // Recovery
     govAckSecs(govAck, 30, p, 9);               // Throttle_Hold_Timeout
-    govAckSecs(govAck, 32, p, 13);              // Autorotation_Timeout
+    govAck[32] = p[13]; govAck[33] = p[14];     // Autorotation_Timeout — already WHOLE seconds on the FC (governor does *1000 ms), unlike the tenths above
     govAck[34] = p[21];                         // Rpm_Filter
     govAck[35] = p[20];                         // Pwr_Filter
     govAck[36] = p[25];                         // D_Filter
@@ -599,7 +599,7 @@ inline bool applyWriteToScratch() {
         govScratchTenths(pmScratch, 5,  govWrite, 26); // Tracking
         govScratchTenths(pmScratch, 7,  govWrite, 28); // Recovery
         govScratchTenths(pmScratch, 9,  govWrite, 30); // Throttle_Hold_Timeout
-        govScratchTenths(pmScratch, 13, govWrite, 32); // Autorotation_Timeout
+        pmScratch[13] = govWrite[32]; pmScratch[14] = govWrite[33]; // Autorotation_Timeout — whole seconds both ways
         pmScratch[19] = govWrite[19];           // Handover_Throttle
         pmScratch[20] = govWrite[35];           // Pwr_Filter
         pmScratch[21] = govWrite[34];           // Rpm_Filter

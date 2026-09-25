@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.856-autorotation-timeout-is-seconds",
+      "url": "https://messiter.com/rxv2/release/v0.9.856/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.856/littlefs.bin",
+      "fs_md5": "9bab3ae34dcb3ae24559737d55e16d8f",
+      "notes": "Governor: the autorotation timeout is WHOLE seconds on the flight controller (the other timings are tenths) \u2014 the page and the transmitter path were scaling it by 10; a model set to 5 from either actually held 50 s \u2014 it now shows the true value, set it once"
+    },
+    {
       "name": "RXV2-0.9.855-wifi-only-is-off",
       "url": "https://messiter.com/rxv2/release/v0.9.855/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.855/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.845/littlefs.bin",
       "fs_md5": "681668e427b999ebb87bcba24a377530",
       "notes": "The Save button on the Rates, PIDs, PID+, Governor and Travel extents pages could be left saying 'Verifying...' for good after a save, whenever the read-back took more than a second. The two flashes captured each other's text; now one timer always puts the real label back."
-    },
-    {
-      "name": "RXV2-0.9.844-page-follows-the-bank-switch",
-      "url": "https://messiter.com/rxv2/release/v0.9.844/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.844/littlefs.bin",
-      "fs_md5": "50e9d2af8ce83718b134ee172ad0fe15",
-      "notes": "With the transmitter on, the Rates and PIDs pages follow its bank switch: the receiver refreshes the flight controller's bank every two seconds while a phone is watching and the model is disarmed, and the page moves to that bank. Never while you have unsaved edits or your cursor is in a field: then a one-line note says which bank the transmitter is on and your edits stay put until you save or discard them."
     }
   ],
   "rotorflight": {
