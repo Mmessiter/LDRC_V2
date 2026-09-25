@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e8f3ea"/><stop offset=".45" stop-color="#9fd0ee"/><stop offset="1" stop-color="#3f86c4"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="220" cy="200" r="260" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fffbe0" stop-opacity=".95"/><stop offset="1" stop-color="#fffbe0" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="hill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#83c263"/><stop offset="1" stop-color="#4a8a3a"/>
+    </linearGradient>
+    <linearGradient id="red" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ff6a55"/><stop offset=".45" stop-color="#e3261b"/><stop offset="1" stop-color="#9c120c"/>
+    </linearGradient>
+    <linearGradient id="boom" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f4493a"/><stop offset="1" stop-color="#a3140d"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7fb8ff"/><stop offset=".55" stop-color="#1f5fd6"/><stop offset="1" stop-color="#0d2f7a"/>
+    </linearGradient>
+    <linearGradient id="metal" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#9aa3ad"/><stop offset="1" stop-color="#4a525c"/>
+    </linearGradient>
+    <linearGradient id="blade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#d9dde2"/><stop offset="1" stop-color="#6b737c"/>
+    </linearGradient>
+    <filter id="blur6" x="-20%" y="-50%" width="140%" height="200%"><feGaussianBlur stdDeviation="6"/></filter>
+    <filter id="blur14" x="-30%" y="-80%" width="160%" height="260%"><feGaussianBlur stdDeviation="14"/></filter>
+    <filter id="soft" x="-10%" y="-10%" width="120%" height="140%"><feGaussianBlur stdDeviation="3"/></filter>
+    <!-- compact cabin, nose to the LEFT -->
+    <clipPath id="bodyClip"><path id="bodyShape" d="M 225 590 C 222 510 280 448 370 440 C 450 434 530 452 562 500 C 590 540 585 610 555 640 C 520 672 440 684 360 682 C 280 680 228 660 225 590 Z"/></clipPath>
+  </defs>
+
+  <!-- sky, sun, clouds -->
+  <rect width="1024" height="1024" fill="url(#sky)"/>
+  <rect width="1024" height="1024" fill="url(#sun)"/>
+  <g fill="#fff" opacity=".92">
+    <ellipse cx="770" cy="170" rx="130" ry="40"/><ellipse cx="700" cy="170" rx="80" ry="34"/><ellipse cx="850" cy="165" rx="75" ry="30"/>
+    <ellipse cx="150" cy="300" rx="90" ry="26" opacity=".8"/><ellipse cx="212" cy="307" rx="66" ry="22" opacity=".8"/>
+  </g>
+
+  <!-- hill and shadow -->
+  <path d="M 0 872 Q 512 820 1024 872 L 1024 1024 L 0 1024 Z" fill="url(#hill)"/>
+  <ellipse cx="450" cy="888" rx="270" ry="22" fill="#2f5e25" opacity=".32" filter="url(#soft)"/>
+
+  <!-- rotor disc (motion blur) -->
+  <ellipse cx="395" cy="392" rx="345" ry="46" fill="#ffffff" opacity=".28" filter="url(#blur14)"/>
+
+  <!-- tail boom, nearly level; no fin; tail skid; tail rotor clear at the end -->
+  <path d="M 540 518 L 904 528 C 918 529 926 538 924 548 L 922 556 L 560 612 Z" fill="url(#boom)"/>
+  <path d="M 872 556 C 880 590 890 616 904 640" stroke="#2b3036" stroke-width="12" stroke-linecap="round" fill="none"/>
+  <rect x="902" y="524" width="30" height="34" rx="10" fill="url(#metal)"/>
+  <ellipse cx="946" cy="541" rx="22" ry="116" fill="#cfd5db" opacity=".5" filter="url(#blur6)"/>
+  <rect x="938" y="431" width="16" height="220" rx="8" fill="url(#metal)"/>
+  <circle cx="946" cy="541" r="17" fill="#3d444c"/>
+
+  <!-- far skid (behind the cabin): upturn at the FRONT (left) -->
+  <g stroke-linecap="round" fill="none" stroke="#5a6068">
+    <path d="M 348 660 L 339 730 M 500 656 L 510 730" stroke-width="18"/>
+    <path d="M 601 732 L 292 732 C 264 732 246 720 238 702" stroke-width="20"/>
+  </g>
+
+  <!-- cabin -->
+  <use href="#bodyShape" fill="url(#red)"/>
+  <g clip-path="url(#bodyClip)">
+    <path d="M 205 626 C 330 650 470 652 605 610" stroke="#ffffff" stroke-width="22" fill="none"/>
+    <path d="M 205 650 C 330 674 470 676 605 634" stroke="#b01810" stroke-width="10" fill="none" opacity=".6"/>
+    <ellipse cx="400" cy="700" rx="230" ry="56" fill="#6d0c07" opacity=".35" filter="url(#blur14)"/>
+    <ellipse cx="410" cy="462" rx="150" ry="28" fill="#fff" opacity=".38" filter="url(#blur6)"/>
+  </g>
+  <use href="#bodyShape" fill="none" stroke="#7d0e09" stroke-width="4" opacity=".6"/>
+
+  <!-- windows: windscreen + ONE side window -->
+  <path d="M 244 575 C 240 515 285 465 355 454 L 378 452 C 386 505 370 560 332 600 C 302 612 252 606 244 575 Z" fill="url(#glass)" stroke="#0b2a66" stroke-width="5"/>
+  <path d="M 266 530 C 280 500 306 482 336 474" stroke="#e6f2ff" stroke-width="10" stroke-linecap="round" fill="none" opacity=".8"/>
+  <!-- LDRC on the cabin side, where the side window was -->
+  <text x="476" y="563" text-anchor="middle" font-family="'Arial Rounded MT Bold', 'Helvetica Neue', Arial, sans-serif" font-weight="700"
+        font-size="58" letter-spacing="2" fill="#ffffff" stroke="#8a0f09" stroke-width="4" paint-order="stroke" stroke-linejoin="round">LDRC</text>
+
+  <!-- near skid: upturn at the FRONT (left) -->
+  <g stroke-linecap="round" fill="none" stroke="#2b3036">
+    <path d="M 330 672 L 318 762 M 492 672 L 504 762" stroke-width="20"/>
+    <path d="M 613 762 L 250 762 C 216 762 196 748 188 726" stroke-width="22"/>
+  </g>
+
+  <!-- mast, hub, blades, tip swooshes (rotor centred over the cabin) -->
+  <rect x="377" y="398" width="36" height="50" rx="10" fill="url(#metal)"/>
+  <ellipse cx="395" cy="398" rx="40" ry="16" fill="#3d444c"/>
+  <path d="M 395 390 L 78 370 C 66 370 62 386 74 390 L 395 408 Z" fill="url(#blade)"/>
+  <path d="M 395 390 L 718 374 C 732 374 736 390 722 394 L 395 410 Z" fill="url(#blade)"/>
+  <path d="M 92 356 C 42 368 42 398 102 406" stroke="#fff" stroke-width="10" fill="none" opacity=".75" stroke-linecap="round" filter="url(#soft)"/>
+  <path d="M 708 360 C 770 372 772 400 712 410" stroke="#fff" stroke-width="10" fill="none" opacity=".75" stroke-linecap="round" filter="url(#soft)"/>
+  <circle cx="395" cy="396" r="14" fill="#23282e"/>
+</svg>

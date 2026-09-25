@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.847-rates-chart-shows-every-curve";
+constexpr const char* FW_VERSION = "RXV2-0.9.848-new-app-icon";
 
 //*********************************************************************
 //  Auto-update manifest URLs

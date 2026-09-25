@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.848-new-app-icon",
+      "url": "https://messiter.com/rxv2/release/v0.9.848/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.848/littlefs.bin",
+      "fs_md5": "fcc34471d59de31ceca9dd10a98a044c",
+      "notes": "New app icon on iPhone, iPad and Android: a red helicopter with LDRC on the cabin, over our sky and hill."
+    },
+    {
       "name": "RXV2-0.9.847-rates-chart-shows-every-curve",
       "url": "https://messiter.com/rxv2/release/v0.9.847/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.847/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.837/littlefs.bin",
       "fs_md5": "9b51a6fc921c5839d02ac2fe0c771507",
       "notes": "Opening a review no longer shows another model: when you switched models, the new model's first status reply was filed under the old model, and the old model's review was saved with it inside. The recorder now parks the old model first and holds a new connection's replies until the receiver has named itself. Existing reviews get their own names back at the next app launch; the rest of their details refresh at the next connection."
-    },
-    {
-      "name": "RXV2-0.9.836-sliders-all-rates-types",
-      "url": "https://messiter.com/rxv2/release/v0.9.836/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.836/littlefs.bin",
-      "fs_md5": "af272d4df2224de032c2ca386c282b7e",
-      "notes": "The Easy tuning sliders, and How agile? on the Rates page, now work with the ACTUAL and QUICKRATES rates types as well as ROTORFLIGHT. Agility moves the full-stick rate (Max Rate on those types, with Centre keeping its ratio so the curve keeps its shape); Stick feel moves expo. Betaflight, Raceflight and KISS types are still table-only."
     }
   ],
   "rotorflight": {
