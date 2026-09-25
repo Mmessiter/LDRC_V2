@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.854-helis-are-6s-or-12s";
+constexpr const char* FW_VERSION = "RXV2-0.9.855-wifi-only-is-off";
 
 //*********************************************************************
 //  Auto-update manifest URLs

@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.855-wifi-only-is-off",
+      "url": "https://messiter.com/rxv2/release/v0.9.855/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.855/littlefs.bin",
+      "fs_md5": "b4fd16157e3af820b42a46cf49b5d58a",
+      "notes": "Post-landing Bluetooth link: the button says 'Re-enable WiFi' \u2014 WiFi alone is off for flying; the Bluetooth you are on is not"
+    },
+    {
       "name": "RXV2-0.9.854-helis-are-6s-or-12s",
       "url": "https://messiter.com/rxv2/release/v0.9.854/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.854/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.844/littlefs.bin",
       "fs_md5": "50e9d2af8ce83718b134ee172ad0fe15",
       "notes": "With the transmitter on, the Rates and PIDs pages follow its bank switch: the receiver refreshes the flight controller's bank every two seconds while a phone is watching and the model is disarmed, and the page moves to that bank. Never while you have unsaved edits or your cursor is in a field: then a one-line note says which bank the transmitter is on and your edits stay put until you save or discard them."
-    },
-    {
-      "name": "RXV2-0.9.843-max-vel-read-only",
-      "url": "https://messiter.com/rxv2/release/v0.9.843/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.843/littlefs.bin",
-      "fs_md5": "4c6cbf4e65e0b34afe14d097b3614a35",
-      "notes": "Rates page: Max Vel is shown as a plain number again, no box and no keyboard. It only repeats the full-stick speed the type delivers."
     }
   ],
   "rotorflight": {

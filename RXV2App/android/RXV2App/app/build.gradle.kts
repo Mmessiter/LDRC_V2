@@ -14,8 +14,8 @@ android {
         // Bump BOTH for every release published to messiter.com — the in-app
         // update check compares versionCode against rxv2app/release/manifest.json
         // (publish with ../publish_app.sh, which reads these values).
-        versionCode = 575
-        versionName = "5.175"
+        versionCode = 576
+        versionName = "5.176"
     }
     buildTypes {
         release { isMinifyEnabled = false }
