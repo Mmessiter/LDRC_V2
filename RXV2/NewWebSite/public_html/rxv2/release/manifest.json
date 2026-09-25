@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.851-battery-card-honest",
+      "url": "https://messiter.com/rxv2/release/v0.9.851/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.851/littlefs.bin",
+      "fs_md5": "d4820bd6a0b70f880e632313abc1cb82",
+      "notes": "Battery card: volts per cell is the truth \u2014 the flight controller's percent (capacity used since power-on, not charge state) no longer shows; mAh reads 'used since power-on'"
+    },
+    {
       "name": "RXV2-0.9.850-battery-first",
       "url": "https://messiter.com/rxv2/release/v0.9.850/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.850/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.840/littlefs.bin",
       "fs_md5": "d45f3cfd6d47fa85a66d2c7be668277d",
       "notes": "Travel extents now open in a review. The app's review treated the two flight-controller reads that carry an index (mixer inputs and RPM notches) as writes and refused them, so the page said 'this change cannot be made in review'. The recorder already knew they were reads; the review side now does too."
-    },
-    {
-      "name": "RXV2-0.9.839-reviews-show-more",
-      "url": "https://messiter.com/rxv2/release/v0.9.839/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.839/littlefs.bin",
-      "fs_md5": "87f043b603d7d27efe0abf9f9d96114d",
-      "notes": "Reviews now record the board, serial ports and blackbox memory too, so the Ports and Black box pages open from a recording. Travel extents were already recorded; the page no longer tries to switch overrides off in a review, and backups list them as travel extents rather than mixer inputs. Adjustments say plainly that they need the model connected. New dev harness runs every page against a real recording at each release."
     }
   ],
   "rotorflight": {
