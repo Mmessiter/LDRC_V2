@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.854-helis-are-6s-or-12s",
+      "url": "https://messiter.com/rxv2/release/v0.9.854/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.854/littlefs.bin",
+      "fs_md5": "631dc516cdf7dd98f2291856879e871d",
+      "notes": "Battery guess knows helicopters fly 6S or 12S: a voltage that fits either is that pack, so a flat 12S is caught (42 V no longer reads as a full 10S); the klaxon shows a guessed count too; the battery guardian uses the same rule"
+    },
+    {
       "name": "RXV2-0.9.853-cells-never-impossible",
       "url": "https://messiter.com/rxv2/release/v0.9.853/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.853/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.843/littlefs.bin",
       "fs_md5": "4c6cbf4e65e0b34afe14d097b3614a35",
       "notes": "Rates page: Max Vel is shown as a plain number again, no box and no keyboard. It only repeats the full-stick speed the type delivers."
-    },
-    {
-      "name": "RXV2-0.9.842-transmitter-off-first",
-      "url": "https://messiter.com/rxv2/release/v0.9.842/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.842/littlefs.bin",
-      "fs_md5": "9f2c1078a4f2143bd012c0c4d97f2844",
-      "notes": "The update page now checks the transmitter before anything starts and says 'Turn the transmitter off first' if it is on. A refusal from the receiver over WiFi is shown at once instead of being discovered as 'did not complete' minutes later."
     }
   ],
   "rotorflight": {

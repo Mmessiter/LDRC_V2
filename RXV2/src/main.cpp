@@ -754,18 +754,25 @@ static void batteryGuardTick() {
 
     if (vbatVolts < 3.0f) { belowSinceMs = 0; return; }   // no/implausible sensor
     // Cell count — the same rule as the pages (LDRC.packCells): the user's
-    // setting while it is physically possible (no cell above 4.35 V), else
-    // the fewest cells that keep each at or below 4.3 V, rounded up to even
-    // above 4S (packs come 6S/8S/12S, never 11S). For a LiPo (never above
-    // 4.2 V a cell) the guess can only UNDER-count, so perCell never reads
-    // lower than the truth: the guardian can fire late, never early. (The old guess stopped at 6 cells — a 12S
-    // pack read 7.5 V/cell and was never protected.)
+    // setting while it is physically possible (no cell above 4.35 V); else
+    // 12S or 6S when the voltage fits one at 3.0-4.35 V a cell (helicopters
+    // fly 6S or 12S with very few exceptions — Malcolm 2026-09-25; this is
+    // what lets a flat 12S be caught at all); else the fewest cells that keep
+    // each at or below 4.3 V, even above 4S. A rare 10S pack can read as a
+    // low 12S — the guardian still only acts on a FORGOTTEN model (still 2
+    // min, not flown, not armed), and a saved cell count ends the guessing.
+    // (The old guess stopped at 6 cells: a 12S pack read 7.5 V/cell and was
+    // never protected.)
     uint8_t cells = vbatCellsCfg;
     if (!cells || vbatVolts / cells > 4.35f) {
-        int n = (int)ceilf(vbatVolts / 4.3f);
-        if (n < 1) n = 1;
-        if (n > 4 && (n & 1)) n++;
-        cells = (uint8_t)n;
+        if (vbatVolts >= 36.0f && vbatVolts <= 52.2f)      cells = 12;
+        else if (vbatVolts >= 18.0f && vbatVolts <= 26.1f) cells = 6;
+        else {
+            int n = (int)ceilf(vbatVolts / 4.3f);
+            if (n < 1) n = 1;
+            if (n > 4 && (n & 1)) n++;
+            cells = (uint8_t)n;
+        }
     }
     float perCell = vbatVolts / cells;
 

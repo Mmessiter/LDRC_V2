@@ -1464,13 +1464,18 @@
     // Cell count for a pack voltage (Malcolm 2026-09-25: "per cell voltage
     // cannot exceed 4.2 ever"). A count we were told — the flight
     // controller's own, or the receiver's setting — is trusted while it keeps
-    // every cell at or below 4.35 V (a full LiHV cell). Otherwise guess the
-    // FEWEST cells that keep each at or below 4.3 V; above 4S packs only come
-    // in even counts (6S, 8S, 12S — never 11S; Malcolm 2026-08-05). For a
-    // LiPo (never above 4.2 V a cell) the guess can only under-count, so it
-    // never reads a pack as worse than it is.
+    // every cell at or below 4.35 V (a full LiHV cell). Otherwise guess:
+    // helicopters fly 6S or 12S with very few exceptions (Malcolm 2026-09-25),
+    // so a voltage that fits either at 3.0 to 4.35 V a cell IS that pack —
+    // this is what catches a flat 12S (42 V is also a full 10S). Anything else:
+    // the fewest cells that keep each at or below 4.3 V, and above 4S only
+    // even counts (6S, 8S, 12S — never 11S; Malcolm 2026-08-05). A rare 10S or
+    // 14S pack can read wrong — the card shows the guess ("12S?"), and saving
+    // the cell count on the receiver's settings page ends guessing.
     LDRC.packCells = function (volts, told) {
         if (told > 0 && volts / told <= 4.35) return { cells: told, guessed: false };
+        if (volts >= 36.0 && volts <= 52.2) return { cells: 12, guessed: true };
+        if (volts >= 18.0 && volts <= 26.1) return { cells: 6, guessed: true };
         let n = Math.max(1, Math.ceil(volts / 4.3));
         if (n > 4 && (n % 2)) n++;
         return { cells: n, guessed: true };

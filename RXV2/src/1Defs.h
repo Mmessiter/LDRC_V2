@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.853-cells-never-impossible";
+constexpr const char* FW_VERSION = "RXV2-0.9.854-helis-are-6s-or-12s";
 
 //*********************************************************************
 //  Auto-update manifest URLs
