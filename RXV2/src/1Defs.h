@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.857-no-battery-says-so";
+constexpr const char* FW_VERSION = "RXV2-0.9.858-home-refresh-fault-tolerant";
 
 //*********************************************************************
 //  Auto-update manifest URLs

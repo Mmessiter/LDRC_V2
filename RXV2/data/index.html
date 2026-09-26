@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Home &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=373">
-<script src="/app.js?v=373" defer></script>
+<link rel=stylesheet href="/style.css?v=374">
+<script src="/app.js?v=374" defer></script>
 <style>
 /* First paint from memory (Malcolm 2026-09-10: the receiver layout flashed
    before the dongle one): classes set on <html> by the hint script below,
@@ -344,12 +344,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Keep the Rotorflight button AND the bind status in step with live state
     // (FC detection, and bind completing) without needing a page reload.
+    // Each painter on its own: one that throws must not silently stop the
+    // ones after it (the battery card lives on this refresh — right after a
+    // reboot the first load has no telemetry yet). 2026-09-26.
+    const painters = [updateRfButton, updateBindState, paintApAutoBanner, paintRadioBanner, paintFlyButton,
+                      paintBattWarn, paintBattCard, (x) => LDRC.fcTelemBanner(x, 'telemBanner')];
+    const paintAll = (st) => { for (const f of painters) { try { f(st); } catch (e) { console.error('home page painter failed:', f.name || 'fcTelemBanner', e); } } };
     setInterval(async () => {
         const s2 = await LDRC.fetchState();
-        if (s2) { updateRfButton(s2); updateBindState(s2); paintApAutoBanner(s2); paintRadioBanner(s2); paintFlyButton(s2); paintBattWarn(s2); paintBattCard(s2); LDRC.fcTelemBanner(s2, 'telemBanner'); }
+        if (s2) paintAll(s2);
     }, 3000);
-    paintBattWarn(s);
-    paintBattCard(s);
+    for (const f of [paintBattWarn, paintBattCard]) { try { f(s); } catch (e) { console.error('home page painter failed:', f.name, e); } }
     LDRC.fcTelemBanner(s, 'telemBanner');   // 0.9.556: FC sensor list wiped = no volts/RPM on the TX
 
     // Proven-tune nudge (Malcolm 2026-08-07): tuning edits followed by six

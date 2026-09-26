@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.858-home-refresh-fault-tolerant",
+      "url": "https://messiter.com/rxv2/release/v0.9.858/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.858/littlefs.bin",
+      "fs_md5": "8261d5a4d30faa822c11464180d0267a",
+      "notes": "Home page: each 3-second painter runs on its own \u2014 one failing can no longer silently stop the battery card and the rest"
+    },
+    {
       "name": "RXV2-0.9.857-no-battery-says-so",
       "url": "https://messiter.com/rxv2/release/v0.9.857/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.857/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.847/littlefs.bin",
       "fs_md5": "c3429d1d8d569ecdbd2572065208f5de",
       "notes": "Rates chart: a curve that lies exactly on another is now drawn dashed, so the one beneath shows through. Yaw with Centre equal to Max Rate was hidden under a straight collective line, and identical roll and pitch hid roll. The collective legend now says degrees, not degrees per second."
-    },
-    {
-      "name": "RXV2-0.9.846-pages-open-in-a-browser",
-      "url": "https://messiter.com/rxv2/release/v0.9.846/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.846/littlefs.bin",
-      "fs_md5": "681668e427b999ebb87bcba24a377530",
-      "notes": "Pages opened in a web browser over WiFi work again. Compressed files were sent labelled 'compressed' twice, which a browser reads as compressed twice and then shows nothing; since 0.9.844 that was every page. The phone apps carry their own pages and were never affected."
     }
   ],
   "rotorflight": {
