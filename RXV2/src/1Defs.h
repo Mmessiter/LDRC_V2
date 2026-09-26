@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.860-save-bar-steps-aside";
+constexpr const char* FW_VERSION = "RXV2-0.9.861-install-request-is-judged";
 
 //*********************************************************************
 //  Auto-update manifest URLs

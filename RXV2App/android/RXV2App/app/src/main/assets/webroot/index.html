@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Home &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=376">
-<script src="/app.js?v=376" defer></script>
+<link rel=stylesheet href="/style.css?v=378">
+<script src="/app.js?v=378" defer></script>
 <style>
 /* First paint from memory (Malcolm 2026-09-10: the receiver layout flashed
    before the dongle one): classes set on <html> by the hint script below,
@@ -1104,7 +1104,7 @@ function offerUpdate(current, v) {
     modalCard({
         icon: '⬆️', title: 'Firmware update available',
         body: 'Installed: <b>' + vr(current) + '</b><br>Available: <b>' + vr(v.name) + '</b><br><br>'
-            + 'Update now? The update page opens and installs it.',
+            + 'Update now? The update page opens \u2014 choose WiFi or Bluetooth there.',
         okLabel: '⬆️ Update now', okColor: '#6cab5e', cancelLabel: 'Later',
         // Hand over to the ONE installer rather than keep a second copy here.
         onOk: () => { location.href = '/firmware?install=newest'; }

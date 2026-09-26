@@ -1,4 +1,5 @@
 {
+  "RXV2-0.9.861-install-request-is-judged": "Update page: the install request is awaited and judged (a lost request said 'stopped at the end' after minutes); the bar moves only once the install is under way; twenty seconds of normal answers = 'not started, try again'; 'Update now' from the front page lands on the WiFi/Bluetooth choice instead of picking a lane; the receiver logs every install request",
   "RXV2-0.9.860-save-bar-steps-aside": "Save to Flight Controller bar: steps aside while the keyboard is up (it used to chase the scroll and jump); tap the keypad's tick and it is back",
   "RXV2-0.9.859-startup-is-only-the-first-stir": "Governor help: Startup time only covers the throttle's creep to the handover point; the climb to head speed is Spool-up time — the number that makes a start gentle or fierce",
   "RXV2-0.9.858-home-refresh-fault-tolerant": "Home page: each 3-second painter runs on its own — one failing can no longer silently stop the battery card and the rest",

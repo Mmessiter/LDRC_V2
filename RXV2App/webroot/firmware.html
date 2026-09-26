@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Check for Update &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=376">
-<script src="/app.js?v=376" defer></script>
+<link rel=stylesheet href="/style.css?v=378">
+<script src="/app.js?v=378" defer></script>
 <style>
 /* --- Currently-installed card -------------------------------------- */
 .installed-card .row{
@@ -705,13 +705,36 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
         // Fire and forget - except a REFUSAL (409), which answers at once and
         // must be shown at once (0.9.842), not discovered as "did not
         // complete" after minutes of waiting.
-        let refused = '';
-        fetch('/api/firmware/install?url=' + encodeURIComponent(url) +
-              (fsUrl ? '&fs_url=' + encodeURIComponent(fsUrl) : '') +
-              (fsMd5 ? '&fs_md5=' + encodeURIComponent(fsMd5) : '') +
-              '&name=' + encodeURIComponent(v.name),
-              { method: 'POST' }).then(r => { if (r.status === 409 || r.status === 503) r.text().then(t => { refused = t || ('refused (HTTP ' + r.status + ')'); }); }).catch(() => {});
+        // 0.9.861: the request is AWAITED and judged. It used to be fire-and-
+        // forget: when it never reached the receiver (Malcolm 2026-09-26, a
+        // Bluetooth link 40 s old) the page "watched" an install that had not
+        // begun, glided a bar to 94 % and reported it stopped at the end — the
+        // receiver's log had no trace of it. The receiver answers 202 BEFORE it
+        // pauses Bluetooth for the download, so the answer normally arrives;
+        // a lost answer is covered by the evidence rule in the loop below.
+        let refused = '', accepted = false;
+        const notStarted = (why) => {
+            setStatePill('Not started', 'bad');
+            showMessage('<b>Not started.</b> ' + why + ' <b>The old firmware is untouched.</b>');
+            installing = false; repaintLanes(); paintTopRow(''); $('check').disabled = false;
+            document.querySelectorAll('.ver-btn').forEach(b => b.disabled = false);
+        };
+        {
+            const ac = new AbortController();
+            const tmo = setTimeout(() => ac.abort(), 15000);
+            try {
+                const r = await fetch('/api/firmware/install?url=' + encodeURIComponent(url) +
+                      (fsUrl ? '&fs_url=' + encodeURIComponent(fsUrl) : '') +
+                      (fsMd5 ? '&fs_md5=' + encodeURIComponent(fsMd5) : '') +
+                      '&name=' + encodeURIComponent(v.name),
+                      { method: 'POST', signal: ac.signal });
+                if (r.status === 202 || r.status === 200) accepted = true;
+                else refused = (await r.text().catch(() => '')) || ('refused (HTTP ' + r.status + ')');
+            } catch (e) { /* no answer: judged by evidence below */ }
+            clearTimeout(tmo);
+        }
         clearInterval(instTick);
+        if (refused) { notStarted(refused.replace(/</g, '&lt;')); return; }
         setStatePill('Installing…', 'amber');
         const before2 = currentFw;
         const t2 = Date.now();
@@ -721,12 +744,19 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
         const ibar = pct =>
             '<div style="background:rgba(125,158,176,.28);border-radius:9px;height:16px;overflow:hidden;margin:.9em 0 .2em">' +
             '<div id=__ibar style="height:100%;width:' + pct + '%;background:#6cab5e;border-radius:9px"></div></div>';
-        showMessage('<b>Installing over the receiver\u2019s WiFi</b> <code>' + ver + '</code> — <span id=__iphase>downloading…</span> ' +
+        showMessage('<b>Installing over the receiver\u2019s WiFi</b> <code>' + ver + '</code> — <span id=__iphase>' +
+            (accepted ? 'downloading…' : 'waiting for the receiver to start…') + '</span> ' +
             '<span class=muted>(<span id=__wsecs>0</span> s)</span>' + ibar(0));
-        setTimeout(() => {
+        // The glide starts only once the install is evidently under way — the
+        // receiver accepted, or it has gone quiet to download (0.9.861). A bar
+        // that never moves means nothing started.
+        let glideStarted = false;
+        const startGlide = () => {
+            if (glideStarted) return; glideStarted = true;
             const b = document.getElementById('__ibar');
             if (b) { b.style.transition = 'width 75s linear'; b.style.width = '94%'; }
-        }, 60);
+        };
+        if (accepted) setTimeout(startGlide, 60);
         // Success = the receiver reports the TARGET version after the install
         // cycle. "Version changed" alone can't judge a same-version REINSTALL
         // (Malcolm hit this within the hour of 0.9.351 shipping): there the
@@ -735,18 +765,12 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
         // completed cycle.
         let answered2 = false, sawSilence = false;
         const markFlashing = () => {
+            startGlide();
             const p = document.getElementById('__iphase');
             if (p) p.textContent = 'flashing + rebooting…';
         };
         while (Date.now() - t2 < 150000) {
             await new Promise(res => setTimeout(res, 2500));
-            if (refused) {
-                setStatePill('Not started', 'bad');
-                showMessage('<b>Not started.</b> ' + refused.replace(/</g, '&lt;') + ' <b>The old firmware is untouched.</b>');
-                installing = false; repaintLanes(); paintTopRow(''); $('check').disabled = false;
-                document.querySelectorAll('.ver-btn').forEach(b => b.disabled = false);
-                return;
-            }
             const we = document.getElementById('__wsecs');
             if (we) we.textContent = Math.round((Date.now() - t2) / 1000);
             if (!answered2 && Date.now() - t2 > 100000) break;   // rescue below
@@ -757,6 +781,13 @@ async function doInstall(v, sourceKey, url, fsUrl, btnEl) {
                 const now = (st.info && st.info.fw_version) ? st.info.fw_version : '';
                 if (!now) { sawSilence = true; markFlashing(); continue; }
                 answered2 = true;
+                // Evidence rule (0.9.861): a delivered request makes the receiver
+                // pause Bluetooth for the download within seconds. Twenty seconds
+                // of normal answers with the old version = it never got there.
+                if (!accepted && !sawSilence && now === before2 && Date.now() - t2 > 20000) {
+                    notStarted('The install request did not reach the receiver (a Bluetooth hiccup) — try again.');
+                    return;
+                }
                 if (now === v.name && (now !== before2 || sawSilence)) {
                     setStatePill('Installed', 'good');
                     showMessage('<b>\u2713 ' + (before2 === v.name ? 'Reinstalled' : 'Updated') +
@@ -927,7 +958,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // is the only code that installs anything.
     loadCurrent().then(check).then(() => {
         const wanted = new URLSearchParams(location.search).get('install');
-        if (wanted === 'newest' && newestInstall) installNewest();
+        // 0.9.861 (Malcolm 2026-09-26: "the choice is not offered — it simply
+        // goes to WiFi if it thinks it'll work"): land on the lane choice and
+        // the Install button, never straight into an install.
+        if (wanted === 'newest' && newestInstall) {
+            showMessage('<b>Choose a lane below \u2014 Receiver WiFi or Bluetooth \u2014 then tap Install.</b>');
+            const b = document.querySelector('.ver-btn');
+            if (b) { b.scrollIntoView({ block: 'center', behavior: 'smooth' }); b.style.outline = '3px solid #d4944a'; }
+        }
         else if (wanted === 'newest') showMessage('Nothing newer to install.');
     });
     // WHICH LANE, as a visible choice rather than a sentence (Malcolm

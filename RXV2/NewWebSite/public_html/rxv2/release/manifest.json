@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.861-install-request-is-judged",
+      "url": "https://messiter.com/rxv2/release/v0.9.861/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.861/littlefs.bin",
+      "fs_md5": "b7723f2a3f8981ec5995ef579108fe02",
+      "notes": "Update page: the install request is awaited and judged (a lost request said 'stopped at the end' after minutes); the bar moves only once the install is under way; twenty seconds of normal answers = 'not started, try again'; 'Update now' from the front page lands on the WiFi/Bluetooth choice instead of picking a lane; the receiver logs every install request"
+    },
+    {
       "name": "RXV2-0.9.860-save-bar-steps-aside",
       "url": "https://messiter.com/rxv2/release/v0.9.860/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.860/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.850/littlefs.bin",
       "fs_md5": "73de1b3e3d94e89e0772aa928412db86",
       "notes": "Home page: a battery card under the model name from the first moment \u2014 volts per cell, cells, total, and the flight controller's percent, mAh and amps when it has them; green / amber / red"
-    },
-    {
-      "name": "RXV2-0.9.849-tracking-time-explained",
-      "url": "https://messiter.com/rxv2/release/v0.9.849/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.849/littlefs.bin",
-      "fs_md5": "4173422d69f5ada2383aeda99e3ec773",
-      "notes": "Governor page: tracking time explained \u2014 it is the time for a full-range head-speed change (0 to full), so a bank step takes a fraction of it; want a 2-second bank change, set about 20"
     }
   ],
   "rotorflight": {

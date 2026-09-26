@@ -1818,6 +1818,10 @@ inline void handleFirmwareInstall() {
     // once: "the Goblin receiver went DEAF for 8 minutes mid-update". Every
     // lesser reboot endpoint refuses while the transmitter is on; this, the most
     // loop-hostile one of all, did not (safety review, 2026-09-14).
+    // First thing, before any guard: evidence that the request arrived at
+    // all (2026-09-26: an install "stopped at the end" that this log never
+    // saw — the request had been lost on the way).
+    events.add((String("Install requested: ") + (server.hasArg("name") ? server.arg("name") : String("(unnamed)"))).c_str());
     if (refuseIfTxLinked("turn the transmitter off first - the receiver stops sending control frames for the whole update")) return;
     if (refuseIfArmed("install firmware")) return;
     // Asked for over Bluetooth (0.9.779): the STA may be "up" yet deaf, or
