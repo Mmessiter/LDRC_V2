@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.856-autorotation-timeout-is-seconds";
+constexpr const char* FW_VERSION = "RXV2-0.9.857-no-battery-says-so";
 
 //*********************************************************************
 //  Auto-update manifest URLs

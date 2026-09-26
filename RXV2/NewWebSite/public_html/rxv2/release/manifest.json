@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.857-no-battery-says-so",
+      "url": "https://messiter.com/rxv2/release/v0.9.857/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.857/littlefs.bin",
+      "fs_md5": "0fb8bfa9315dcecc48f152c5f55a333e",
+      "notes": "Battery card: when the flight controller is on USB with no pack plugged in it now says 'No flight battery connected' instead of vanishing"
+    },
+    {
       "name": "RXV2-0.9.856-autorotation-timeout-is-seconds",
       "url": "https://messiter.com/rxv2/release/v0.9.856/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.856/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.846/littlefs.bin",
       "fs_md5": "681668e427b999ebb87bcba24a377530",
       "notes": "Pages opened in a web browser over WiFi work again. Compressed files were sent labelled 'compressed' twice, which a browser reads as compressed twice and then shows nothing; since 0.9.844 that was every page. The phone apps carry their own pages and were never affected."
-    },
-    {
-      "name": "RXV2-0.9.845-save-button-label-stuck",
-      "url": "https://messiter.com/rxv2/release/v0.9.845/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.845/littlefs.bin",
-      "fs_md5": "681668e427b999ebb87bcba24a377530",
-      "notes": "The Save button on the Rates, PIDs, PID+, Governor and Travel extents pages could be left saying 'Verifying...' for good after a save, whenever the read-back took more than a second. The two flashes captured each other's text; now one timer always puts the real label back."
     }
   ],
   "rotorflight": {

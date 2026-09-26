@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Home &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=372">
-<script src="/app.js?v=372" defer></script>
+<link rel=stylesheet href="/style.css?v=373">
+<script src="/app.js?v=373" defer></script>
 <style>
 /* First paint from memory (Malcolm 2026-09-10: the receiver layout flashed
    before the dongle one): classes set on <html> by the hint script below,
@@ -742,7 +742,12 @@ function packNow(s) {
 function paintBattCard(s) {
     let c = document.getElementById('battCard');
     const p = packNow(s);
-    if (!p || (p.per <= 3.5 && !p.armed)) { if (c) c.remove(); return; }
+    // The flight controller is talking but reads no battery (USB power, pack
+    // unplugged): say so — a card that silently vanishes looks like a fault
+    // (Malcolm 2026-09-26).
+    const fcNoPack = !p && s && s.fc && ('v' in s.fc);
+    if (!p && !fcNoPack) { if (c) c.remove(); return; }
+    if (p && p.per <= 3.5 && !p.armed) { if (c) c.remove(); return; }   // the klaxon has the floor
     if (!c) {
         c = document.createElement('div');
         c.id = 'battCard';
@@ -750,6 +755,12 @@ function paintBattCard(s) {
         const h1 = document.getElementById('modelName');
         if (h1 && h1.parentNode) h1.insertAdjacentElement('afterend', c);
         else (document.querySelector('.container') || document.body).prepend(c);
+    }
+    if (fcNoPack) {
+        c.style.background = '#6f7e8b';
+        c.innerHTML = '<span style="font-size:2em;line-height:1">\ud83d\udd0c</span>'
+            + '<span style="font-size:1.25em;line-height:1.1">No flight battery connected</span>';
+        return;
     }
     c.style.background = p.per >= 3.85 ? '#2e8b57' : p.per >= 3.6 ? '#d4944a' : '#c0392b';
     c.innerHTML = '<span style="font-size:2em;line-height:1">' + (p.per >= 3.85 ? '🔋' : '🪫') + '</span>'
