@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Governor (global) &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=374">
-<script src="/app.js?v=374" defer></script>
+<link rel=stylesheet href="/style.css?v=375">
+<script src="/app.js?v=375" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;
         padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -76,8 +76,8 @@ input:disabled,select:disabled{background:#eee;color:#999}
 
     <div class=card>
         <h2>Timings (seconds)</h2>
-        <div class=fldRow><label data-help="How gently the motor first starts turning from standstill, in seconds. Bigger = softer start.">Startup time</label>             <input type=number id=g_start step=0.1 min=0 max=600></div>
-        <div class=fldRow><label data-help="Time to ramp from idle to full head speed, in seconds. 10 is typical - bigger = gentler spool-up.">Spool-up time</label>            <input type=number id=g_spool step=0.1 min=0 max=600></div>
+        <div class=fldRow><label data-help="Only the first stir of the motor: the throttle creeps from zero to the handover point and then this is over. Given as seconds for a full sweep, so with handover at 10 % it lasts a tenth of this (70 = 7 s to reach 10 %). It does NOT shape the climb to head speed — that is Spool-up time. 20 to 30 is plenty.">Startup time</label>             <input type=number id=g_start step=0.1 min=0 max=600></div>
+        <div class=fldRow><label data-help="From the handover point to full head speed, in seconds. THIS is the number that makes a start gentle or fierce: 10 to 15 is brisk, 25 to 30 is soft.">Spool-up time</label>            <input type=number id=g_spool step=0.1 min=0 max=600></div>
         <div class=fldRow><label data-help="Time to wind the rotor down when you lower the throttle switch, in seconds.">Spool-down time</label>          <input type=number id=g_spdwn step=0.1 min=0 max=600></div>
         <div class=fldRow><label data-help="Seconds for a FULL-RANGE change, from 0 to full head speed. A bank change moves only a fraction of that range, so it takes a fraction of this time: with 2 s here, stepping 1800 to 2000 rpm on a 2000 rpm head takes about 0.2 s. Want a 2-second bank change? Set about 20.">Speed-change time (tracking time)</label>            <input type=number id=g_track step=0.1 min=0 max=600></div>
         <div class=fldRow><label data-help="The fast spool-up used when the rotor is still turning (after a brief throttle hold), in seconds.">Quick-restart time (recovery time)</label>            <input type=number id=g_recov step=0.1 min=0 max=600></div>

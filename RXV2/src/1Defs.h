@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.858-home-refresh-fault-tolerant";
+constexpr const char* FW_VERSION = "RXV2-0.9.859-startup-is-only-the-first-stir";
 
 //*********************************************************************
 //  Auto-update manifest URLs

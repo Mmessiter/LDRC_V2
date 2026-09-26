@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.859-startup-is-only-the-first-stir",
+      "url": "https://messiter.com/rxv2/release/v0.9.859/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.859/littlefs.bin",
+      "fs_md5": "996db70450e3b5db1d4bf9134c1a86b4",
+      "notes": "Governor help: Startup time only covers the throttle's creep to the handover point; the climb to head speed is Spool-up time \u2014 the number that makes a start gentle or fierce"
+    },
+    {
       "name": "RXV2-0.9.858-home-refresh-fault-tolerant",
       "url": "https://messiter.com/rxv2/release/v0.9.858/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.858/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.848/littlefs.bin",
       "fs_md5": "fcc34471d59de31ceca9dd10a98a044c",
       "notes": "New app icon on iPhone, iPad and Android: a red helicopter with LDRC on the cabin, over our sky and hill."
-    },
-    {
-      "name": "RXV2-0.9.847-rates-chart-shows-every-curve",
-      "url": "https://messiter.com/rxv2/release/v0.9.847/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.847/littlefs.bin",
-      "fs_md5": "c3429d1d8d569ecdbd2572065208f5de",
-      "notes": "Rates chart: a curve that lies exactly on another is now drawn dashed, so the one beneath shows through. Yaw with Centre equal to Max Rate was hidden under a straight collective line, and identical roll and pitch hid roll. The collective legend now says degrees, not degrees per second."
     }
   ],
   "rotorflight": {

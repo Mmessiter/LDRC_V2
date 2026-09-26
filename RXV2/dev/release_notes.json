@@ -1,4 +1,5 @@
 {
+  "RXV2-0.9.859-startup-is-only-the-first-stir": "Governor help: Startup time only covers the throttle's creep to the handover point; the climb to head speed is Spool-up time — the number that makes a start gentle or fierce",
   "RXV2-0.9.858-home-refresh-fault-tolerant": "Home page: each 3-second painter runs on its own — one failing can no longer silently stop the battery card and the rest",
   "RXV2-0.9.857-no-battery-says-so": "Battery card: when the flight controller is on USB with no pack plugged in it now says 'No flight battery connected' instead of vanishing",
   "RXV2-0.9.856-autorotation-timeout-is-seconds": "Governor: the autorotation timeout is WHOLE seconds on the flight controller (the other timings are tenths) — the page and the transmitter path were scaling it by 10; a model set to 5 from either actually held 50 s — it now shows the true value, set it once",
