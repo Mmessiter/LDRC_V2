@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.863-flights-kept-gaps-honest",
+      "url": "https://messiter.com/rxv2/release/v0.9.863/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.863/littlefs.bin",
+      "fs_md5": "cc4878104ade8765b32ab2b7b6cb420e",
+      "notes": "Flights: a save that could not start is retried or logged, never silently lost; gaps while disarmed are left out of the link statistics (a real in-flight loss still counts); both apps record flight data first and re-check the list at the end, so a short post-landing connection keeps the flights for review"
+    },
+    {
       "name": "RXV2-0.9.862-per-cell-average",
       "url": "https://messiter.com/rxv2/release/v0.9.862/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.862/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.852/littlefs.bin",
       "fs_md5": "6569bd2fa096dd8d2bc35265c03c4a70",
       "notes": "Battery card is one line: 'Average 3.8 V per cell' \u2014 the colour says the rest"
-    },
-    {
-      "name": "RXV2-0.9.851-battery-card-honest",
-      "url": "https://messiter.com/rxv2/release/v0.9.851/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.851/littlefs.bin",
-      "fs_md5": "d4820bd6a0b70f880e632313abc1cb82",
-      "notes": "Battery card: volts per cell is the truth \u2014 the flight controller's percent (capacity used since power-on, not charge state) no longer shows; mAh reads 'used since power-on'"
     }
   ],
   "rotorflight": {

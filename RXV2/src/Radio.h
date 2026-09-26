@@ -755,7 +755,20 @@ inline void radioPoll() {
                 // BLE quarantine: while a phone is attached (or just around
                 // connect/disconnect), deaf spells are OUR BT radio desensing
                 // the nRF24s — never billed to the RF link.
-                if (lateUs >= (uint32_t)gapMinMs * 1000UL && !bleStatsQuarantine()) {
+                // GROUND GAPS (Malcolm 2026-09-26: "ANY gap when arming is off
+                // (but available) is excluded as it didn't happen in flight"):
+                // with an arming channel set, a gap while the TX last said
+                // DISARMED is ground time — the flight save, the post-landing
+                // radios — never billed to the link. The decode below hasn't
+                // run yet, so lastRxArmUs is the value from before the gap.
+                const bool groundGap = armingChannel >= 1 && armingChannel <= 16 &&
+                                       lastRxArmUs != 0 && lastRxArmUs <= 1500;
+                if (groundGap && lateUs >= SHUTDOWN_TRIM_MIN_US) {
+                    char gb[48];
+                    snprintf(gb, sizeof(gb), "Link late %lu ms (disarmed, not counted)", (unsigned long)(lateUs / 1000));
+                    events.add(gb);
+                }
+                if (lateUs >= (uint32_t)gapMinMs * 1000UL && !bleStatsQuarantine() && !groundGap) {
                     if (lateUs > linkStats.maxGapUs) { linkStats.maxGapUs = lateUs; linkStats.maxGapAtMs = nowMs; }
                     linkStats.gapSumUs += lateUs; linkStats.gapCount++;
                     uint32_t lateMs = lateUs / 1000;

@@ -1802,7 +1802,17 @@ class MainActivity : AppCompatActivity() {
             }
             snapDone++
             val flightPaths = mutableListOf<String>()
-            req("/api/flights.json")?.let { body ->
+            // The newest saved flight's identity (saved_at-count-dur), to spot
+            // a flight saved while this sweep runs.
+            fun newestFlightId(d: ByteArray?): String? = d?.let { body ->
+                runCatching {
+                    val arr = org.json.JSONArray(String(body))
+                    (0 until arr.length()).map { arr.getJSONObject(it) }.firstOrNull { it.optInt("i", 0) == 1 }
+                        ?.let { "${it.opt("saved_at") ?: 0}-${it.opt("count") ?: 0}-${it.opt("dur_ms") ?: 0}" }
+                }.getOrNull()
+            }
+            val firstList = req("/api/flights.json")
+            firstList?.let { body ->
                 runCatching {
                     val arr = org.json.JSONArray(String(body))
                     for (k in 0 until arr.length()) {
@@ -1812,6 +1822,12 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             snapDone++
+            // Flight data FIRST (2026-09-26, Malcolm: "looked at review and was
+            // sorry to see no data"): the logs used to wait behind every
+            // Rotorflight read, so a short post-landing connection recorded
+            // the list and none of the data.
+            snapTotal += flightPaths.size
+            for (p in flightPaths) { if (otaBusy()) break; req(p); snapDone++ }
             req("/api/events.json"); snapDone++
             req("/api/events-prev.json"); snapDone++   // previous boot's persisted tail
             // Rotorflight reads — every PID-side bank + every rate bank the
@@ -1926,8 +1942,13 @@ class MainActivity : AppCompatActivity() {
                 snapOk = froze || !wanted
                 if (!snapOk) snapError = "the backup file could not be written on the phone"
             }
-            snapTotal += flightPaths.size
-            for (p in flightPaths) { if (otaBusy()) break; req(p); snapDone++ }
+            // A flight saved WHILE this sweep ran is not in the list read at
+            // the start: look once more and record the newest.
+            if (!otaBusy()) {
+                val lastList = req("/api/flights.json")
+                val newest = newestFlightId(lastList)
+                if (newest != null && newest != newestFlightId(firstList)) req("/api/flightlog.json?f=1")
+            }
             if (sweepOK && snapDone < snapTotal) snapDone = snapTotal   // every planned item was attempted
             // A "Back up" that landed after the freeze still gets what it
             // asked for, from the reads this sweep just gathered.

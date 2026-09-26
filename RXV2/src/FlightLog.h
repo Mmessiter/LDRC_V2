@@ -250,9 +250,14 @@ inline uint32_t     svFlightMs = 0;       // flying time for the proven-tune cou
 // the save, right after motor-off — honest, but it polluted the averages).
 inline uint32_t svAnnounceStartMs = 0;
 
-inline void startFlightSaveAsync(bool rotate) {
-    if (svState) return;                                 // one save at a time
-    if (!littleFsMounted || teleCount < FLIGHT_MIN_SAMPLES) return;
+// Returns true when a save has started. false = nothing started: another
+// save is still writing (svState != 0 — the caller tries again next pass), or
+// there is nothing worth saving / nowhere to save it (2026-09-26: callers
+// used to mark the flight saved either way, so a refused save vanished
+// without a trace).
+inline bool startFlightSaveAsync(bool rotate) {
+    if (svState) return false;                           // one save at a time
+    if (!littleFsMounted || teleCount < FLIGHT_MIN_SAMPLES) return false;
     statsSelfStallUntilMs = millis() + 2000;
     svHdr = FlightHeader{};
     svHdr.magic     = FLIGHT_MAGIC;
@@ -281,6 +286,7 @@ inline void startFlightSaveAsync(bool rotate) {
     fltPardonAnnounceLeft = 25;                          // ~50 ms of acks at 500 Hz
     svAnnounceStartMs = millis();
     svState = 3;
+    return true;
 }
 
 // Announce complete (or timed out — TX off means nobody consumes acks):
@@ -393,7 +399,8 @@ inline void maybeSaveFlight() {
         rx.lastMillis != 0 && (uint32_t)(now - rx.lastMillis) > waitMs) {
         const uint32_t durMs = (rx.lastMillis > linkStats.connStartMs)
                                ? rx.lastMillis - linkStats.connStartMs : 0;
-        if (durMs >= FLIGHT_FALLBACK_MIN_MS) startFlightSaveAsync(true);
+        if (durMs >= FLIGHT_FALLBACK_MIN_MS && !startFlightSaveAsync(true) && svState)
+            return;                                // another save is still writing: try again next pass
         armedConnStart = 0;                        // handled; re-arms on the next connection
     }
 }
@@ -463,9 +470,16 @@ inline void flightSaveTick() {
         const bool sticksStill = lastChMoveMs && (uint32_t)(now - lastChMoveMs) >= 2000;
         const bool linkDead    = rx.lastMillis && (uint32_t)(now - rx.lastMillis) > 3000;
         if (sticksStill || linkDead || fltSaveAsapActive()) {   // a data request ends the wait
-            startFlightSaveAsync(!fltSessionSaved);
-            fltSessionSaved = true;            // (the RAM ring spans the whole session, so each save holds everything so far)
-            fltSavePending  = false;
+            if (startFlightSaveAsync(!fltSessionSaved)) {
+                fltSessionSaved = true;        // (the RAM ring spans the whole session, so each save holds everything so far)
+                fltSavePending  = false;
+            } else if (!svState) {
+                // Nothing to wait for and still not saved: say so, once,
+                // instead of losing the flight silently (2026-09-26).
+                events.add(teleCount < FLIGHT_MIN_SAMPLES ? "Flight NOT saved: too few samples"
+                                                          : "Flight NOT saved: no filesystem");
+                fltSavePending = false;
+            }                                  // else an earlier save is still writing: next pass
         }
     }
 

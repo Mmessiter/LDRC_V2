@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.862-per-cell-average";
+constexpr const char* FW_VERSION = "RXV2-0.9.863-flights-kept-gaps-honest";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -623,6 +623,10 @@ inline bool     failsafeSet        = false;
 // the two cancelled on the TX display while the governor sat at min throttle.
 inline float    gearRatio          = 1.0f;
 inline uint8_t  armingChannel      = 0;    // 1..16 = save the flight on DISARM of this channel; 0 = off (use link-loss save)
+// The arming channel exactly as last RECEIVED from the transmitter (0 = not
+// yet). Failsafe and the pre-link holds rewrite channelMicros; they never
+// touch this — so a real in-flight link loss can't pass for "disarmed".
+inline uint16_t lastRxArmUs        = 0;
 // Gap accounting is LATENESS-based (Malcolm 2026-07-27): every packet arrives
 // ~2 ms after the last (4 ms buddy-boxing) — that spacing is measured, not a
 // gap. A packet only counts as a gap when it's at least this many ms LATER

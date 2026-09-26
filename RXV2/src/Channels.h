@@ -103,6 +103,7 @@ inline void decodeChannelData(const uint8_t* payload, uint8_t size) {
         if (mask & (1u << i)) {
             uint16_t v      = raw[p++];
             channelMicros[i] = v;
+            if (armingChannel == i + 1) lastRxArmUs = v;   // ground-gap rule (Radio.h)
             if (!chSeen[i]) { chBase[i] = v; chSeen[i] = true; }   // first sighting → baseline
             else if (!beingFlown) {
                 int d = (int)v - (int)chBase[i];

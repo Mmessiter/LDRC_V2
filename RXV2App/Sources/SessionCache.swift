@@ -1331,13 +1331,27 @@ final class SessionPrefetcher {
                 txLive = lastPkt >= 0 && lastPkt < 3000
             }
             done += 1
-            if let fl = req("/api/flights.json"),
+            // The newest saved flight's identity (saved_at-count-dur), to spot
+            // a flight saved while this sweep runs.
+            func newestFlightId(_ d: Data?) -> String? {
+                guard let d, let arr = (try? JSONSerialization.jsonObject(with: d)) as? [[String: Any]],
+                      let f = arr.first(where: { (($0["i"] as? NSNumber)?.intValue ?? 0) == 1 }) else { return nil }
+                return "\(f["saved_at"] ?? 0)-\(f["count"] ?? 0)-\(f["dur_ms"] ?? 0)"
+            }
+            let firstList = req("/api/flights.json")
+            if let fl = firstList,
                let arr = (try? JSONSerialization.jsonObject(with: fl)) as? [[String: Any]] {
                 for f in arr {
                     if let i = f["i"] as? Int, i > 0 { flightPaths.append("/api/flightlog.json?f=\(i)") }
                 }
             }
             done += 1
+            // Flight data FIRST (2026-09-26, Malcolm: "looked at review and was
+            // sorry to see no data"). The logs used to wait behind every
+            // Rotorflight read — a minute and more over Bluetooth — so a short
+            // post-landing connection recorded the list and none of the data.
+            total += flightPaths.count
+            for p in flightPaths where !BleOta.busy { _ = req(p); done += 1 }
             _ = req("/api/events.json"); done += 1
             _ = req("/api/events-prev.json"); done += 1   // previous boot's persisted tail
             // Rotorflight reads — banked (Malcolm 2026-08-04: each PID-side
@@ -1461,8 +1475,15 @@ final class SessionPrefetcher {
                 ok = froze || !wanted
                 if !ok { error = "the backup file could not be written on the phone" }
             }
-            total += flightPaths.count
-            for p in flightPaths where !BleOta.busy { _ = req(p); done += 1 }
+            // A flight saved WHILE this sweep ran is not in the list read at
+            // the start (the list request is itself the receiver's cue to
+            // finish a pending save): look once more and record the newest.
+            if !BleOta.busy {
+                let lastList = req("/api/flights.json")
+                if let newest = newestFlightId(lastList), newest != newestFlightId(firstList) {
+                    _ = req("/api/flightlog.json?f=1")
+                }
+            }
             if sweepOK && done < total { done = total }   // every planned item was attempted
             // A "Back up" that landed after the freeze still gets what it
             // asked for, from the reads this sweep just gathered.

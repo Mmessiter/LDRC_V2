@@ -1,4 +1,5 @@
 {
+  "RXV2-0.9.863-flights-kept-gaps-honest": "Flights: a save that could not start is retried or logged, never silently lost; gaps while disarmed are left out of the link statistics (a real in-flight loss still counts); both apps record flight data first and re-check the list at the end, so a short post-landing connection keeps the flights for review",
   "RXV2-0.9.862-per-cell-average": "Battery card reads '3.8 V per cell (average)'",
   "RXV2-0.9.861-install-request-is-judged": "Update page: the install request is awaited and judged (a lost request said 'stopped at the end' after minutes); the bar moves only once the install is under way; twenty seconds of normal answers = 'not started, try again'; 'Update now' from the front page lands on the WiFi/Bluetooth choice instead of picking a lane; the receiver logs every install request",
   "RXV2-0.9.860-save-bar-steps-aside": "Save to Flight Controller bar: steps aside while the keyboard is up (it used to chase the scroll and jump); tap the keypad's tick and it is back",
