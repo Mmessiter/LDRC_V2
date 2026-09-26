@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.859-startup-is-only-the-first-stir";
+constexpr const char* FW_VERSION = "RXV2-0.9.860-save-bar-steps-aside";
 
 //*********************************************************************
 //  Auto-update manifest URLs

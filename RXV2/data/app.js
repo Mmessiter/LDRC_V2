@@ -1545,24 +1545,21 @@
 (function () {
     const vv = window.visualViewport;
     if (!vv) return;
+    // 2026-09-26 (Malcolm: with the cursor in a box, scrolling made the bar
+    // "jump all over the place"): on iOS a fixed bar cannot be held still
+    // against the visual viewport while the keyboard is up — every chase
+    // lags a frame. So while the keyboard is up the bar steps aside; tap ✓
+    // on the keypad and it is back where it always was. (Replaces the
+    // 2026-08-15 ride-up, which is what jumped.)
     function adjust() {
         const bar = document.querySelector('.fabBar');
         if (!bar) return;
         const covered = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-        if (covered > 40) {
-            bar.style.transform = 'translateY(-' + covered + 'px)';
-            // The keyboard swallows the home-indicator safe area, but the
-            // bar's bottom padding still reserved it — reclaim it while
-            // raised or the buttons sit half-under the keyboard's accessory
-            // strip (Malcolm 2026-08-15: "Nearly!").
-            bar.style.paddingBottom = '.55em';
-        } else {
-            bar.style.transform = '';
-            bar.style.paddingBottom = '';
-        }
+        bar.style.visibility = covered > 40 ? 'hidden' : '';
+        bar.style.transform = '';
+        bar.style.paddingBottom = '';
     }
     vv.addEventListener('resize', adjust);
-    vv.addEventListener('scroll', adjust);
     addEventListener('focusin',  () => setTimeout(adjust, 60));
     addEventListener('focusout', () => setTimeout(adjust, 250));
 })();

@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.860-save-bar-steps-aside",
+      "url": "https://messiter.com/rxv2/release/v0.9.860/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.860/littlefs.bin",
+      "fs_md5": "a42e0de6d81728593a447680c7f0a7cf",
+      "notes": "Save to Flight Controller bar: steps aside while the keyboard is up (it used to chase the scroll and jump); tap the keypad's tick and it is back"
+    },
+    {
       "name": "RXV2-0.9.859-startup-is-only-the-first-stir",
       "url": "https://messiter.com/rxv2/release/v0.9.859/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.859/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.849/littlefs.bin",
       "fs_md5": "4173422d69f5ada2383aeda99e3ec773",
       "notes": "Governor page: tracking time explained \u2014 it is the time for a full-range head-speed change (0 to full), so a bank step takes a fraction of it; want a 2-second bank change, set about 20"
-    },
-    {
-      "name": "RXV2-0.9.848-new-app-icon",
-      "url": "https://messiter.com/rxv2/release/v0.9.848/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.848/littlefs.bin",
-      "fs_md5": "fcc34471d59de31ceca9dd10a98a044c",
-      "notes": "New app icon on iPhone, iPad and Android: a red helicopter with LDRC on the cabin, over our sky and hill."
     }
   ],
   "rotorflight": {
