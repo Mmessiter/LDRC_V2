@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.862-per-cell-average",
+      "url": "https://messiter.com/rxv2/release/v0.9.862/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.862/littlefs.bin",
+      "fs_md5": "db082dbc20154b450b12495cf688c970",
+      "notes": "Battery card reads '3.8 V per cell (average)'"
+    },
+    {
       "name": "RXV2-0.9.861-install-request-is-judged",
       "url": "https://messiter.com/rxv2/release/v0.9.861/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.861/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.851/littlefs.bin",
       "fs_md5": "d4820bd6a0b70f880e632313abc1cb82",
       "notes": "Battery card: volts per cell is the truth \u2014 the flight controller's percent (capacity used since power-on, not charge state) no longer shows; mAh reads 'used since power-on'"
-    },
-    {
-      "name": "RXV2-0.9.850-battery-first",
-      "url": "https://messiter.com/rxv2/release/v0.9.850/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.850/littlefs.bin",
-      "fs_md5": "73de1b3e3d94e89e0772aa928412db86",
-      "notes": "Home page: a battery card under the model name from the first moment \u2014 volts per cell, cells, total, and the flight controller's percent, mAh and amps when it has them; green / amber / red"
     }
   ],
   "rotorflight": {

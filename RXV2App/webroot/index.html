@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Home &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=378">
-<script src="/app.js?v=378" defer></script>
+<link rel=stylesheet href="/style.css?v=379">
+<script src="/app.js?v=379" defer></script>
 <style>
 /* First paint from memory (Malcolm 2026-09-10: the receiver layout flashed
    before the dongle one): classes set on <html> by the hint script below,
@@ -769,7 +769,7 @@ function paintBattCard(s) {
     }
     c.style.background = p.per >= 3.85 ? '#2e8b57' : p.per >= 3.6 ? '#d4944a' : '#c0392b';
     c.innerHTML = '<span style="font-size:2em;line-height:1">' + (p.per >= 3.85 ? '🔋' : '🪫') + '</span>'
-        + '<span style="font-size:1.45em;line-height:1.1">Average ' + p.per.toFixed(1) + ' V per cell'
+        + '<span style="font-size:1.45em;line-height:1.1">' + p.per.toFixed(1) + ' V per cell (average)'
         + (p.guessed ? ' · ' + p.cells + 'S?' : '') + '</span>';
 }
 

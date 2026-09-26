@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.861-install-request-is-judged";
+constexpr const char* FW_VERSION = "RXV2-0.9.862-per-cell-average";
 
 //*********************************************************************
 //  Auto-update manifest URLs
