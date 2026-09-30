@@ -1,4 +1,5 @@
 {
+  "RXV2-0.9.868-release-list-read-as-written": "Transmitter-ordered update: the release list is read as the website writes it (a space after every colon); 0.9.864-867 expected none and would have reported 'release not in the list'.",
   "RXV2-0.9.867-install-time-logged": "The event log says how long an install took (firmware and pages, in seconds), so the transmitter's silence during a transmitter-ordered update can be sized from real numbers.",
   "RXV2-0.9.866-quiet-radio-for-the-download": "Transmitter-ordered update: Bluetooth is switched off again just before the download (the WiFi start had brought it back up), so the download runs on a quiet radio.",
   "RXV2-0.9.865-installable-from-the-transmitter": "Same firmware as 0.9.864, released so that a receiver on 0.9.864 has something to install from the transmitter: the first release to be installed that way. Receivers older than 0.9.864 still need one update from the phone app (they cannot say their version to the transmitter yet).",

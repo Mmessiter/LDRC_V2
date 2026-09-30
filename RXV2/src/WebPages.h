@@ -2012,16 +2012,27 @@ inline void handleFirmwareInstall() {
 // does with the transmitter off - and the transmitter IS off, by its own
 // choice, for RXU_QUIET_SECONDS.
 
-// One JSON string value out of the manifest, from `from` on, up to the entry's closing brace.
-inline String manifestField(const String& body, int from, const char* key) {
-    int close = body.indexOf('}', from); if (close < 0) close = body.length();
-    String k = String("\"") + key + "\":\"";
-    int at = body.indexOf(k, from);
-    if (at < 0 || at > close) return String("");
-    at += k.length();
-    int end = body.indexOf('"', at);
-    if (end < 0 || end > close) return String("");
-    return body.substring(at, end);
+// One string value of a JSON object: `"key"`, a colon and the opening quote, with any spaces or line breaks
+// between - the release list is written pretty-printed, a space after every colon (the first reader expected
+// none: 30-9-2026, found on the bench). Searches from `from`, not beyond `upTo`. Returns the position after the
+// value, or -1.
+inline int manifestString(const String& body, int from, int upTo, const char* key, String& value) {
+    const String k = String("\"") + key + "\"";
+    for (int at = body.indexOf(k, from); at >= 0 && at < upTo; at = body.indexOf(k, at + 1)) {
+        int i = at + (int)k.length();
+        while (i < (int)body.length() && (body[i] == ' ' || body[i] == '\t' || body[i] == '\n' || body[i] == '\r')) ++i;
+        if (i >= (int)body.length() || body[i] != ':') continue;
+        ++i;
+        while (i < (int)body.length() && (body[i] == ' ' || body[i] == '\t' || body[i] == '\n' || body[i] == '\r')) ++i;
+        if (i >= (int)body.length() || body[i] != '"') continue;
+        value = "";
+        for (++i; i < (int)body.length() && body[i] != '"'; ++i) {
+            if (body[i] == '\\' && i + 1 < (int)body.length()) { ++i; value += body[i]; continue; }
+            value += body[i];
+        }
+        return i < (int)body.length() ? i + 1 : (int)body.length();
+    }
+    return -1;
 }
 
 inline void rxUpdSetOutcome(uint8_t outcome, const char* said) {
@@ -2043,23 +2054,28 @@ inline void rxUpdInstall() {
         rxUpdSetOutcome(RXO_NO_MANIFEST, m);
         return;
     }
-    // The entry whose name is exactly the release ordered ("RXV2-0.9.870" followed by the slug or the quote).
+    // The entry whose name is exactly the release ordered ("RXV2-0.9.870", then the slug or nothing).
+    String name;
     int at = -1;
-    for (int p = out.indexOf(String("\"name\":\"") + want); p >= 0; p = out.indexOf(String("\"name\":\"") + want, p + 1)) {
-        const char after = out.charAt(p + 8 + strlen(want));
-        if (after == '-' || after == '"') { at = p; break; }
+    for (int from = 0;;) {
+        String v;
+        const int after = manifestString(out, from, out.length(), "name", v);
+        if (after < 0) break;
+        if (v.startsWith(want) && (v.length() == strlen(want) || v[strlen(want)] == '-')) { name = v; at = after; break; }
+        from = after;
     }
     if (at < 0) {
         snprintf(m, sizeof m, "Receiver update: %s is not in the release list - nothing changed", want);
         rxUpdSetOutcome(RXO_NOT_FOUND, m);
         return;
     }
-    // Back to the start of this entry, so every field read belongs to it.
-    int open = out.lastIndexOf('{', at); if (open < 0) open = at;
-    String name  = manifestField(out, open, "name");
-    String url   = manifestField(out, open, "url");
-    String fsUrl = manifestField(out, open, "fs_url");
-    String fsMd5 = manifestField(out, open, "fs_md5");
+    // This entry's other fields: from its opening brace to its closing one.
+    int open = out.lastIndexOf('{', at); if (open < 0) open = 0;
+    int close = out.indexOf('}', at); if (close < 0) close = out.length();
+    String url, fsUrl, fsMd5;
+    manifestString(out, open, close, "url", url);
+    manifestString(out, open, close, "fs_url", fsUrl);
+    manifestString(out, open, close, "fs_md5", fsMd5);
     if (!(url.startsWith("http://") || isHttpsUrl(url))) {
         snprintf(m, sizeof m, "Receiver update: %s has no usable firmware URL - nothing changed", want);
         rxUpdSetOutcome(RXO_NOT_FOUND, m);

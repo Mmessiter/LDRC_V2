@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.867-install-time-logged";
+constexpr const char* FW_VERSION = "RXV2-0.9.868-release-list-read-as-written";
 
 //*********************************************************************
 //  Auto-update manifest URLs
