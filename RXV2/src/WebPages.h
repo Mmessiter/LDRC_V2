@@ -2106,6 +2106,14 @@ inline void rxUpdInstall() {
     // A pending outcome for the boot judge to confirm or overrule (main.cpp).
     prefs.putUChar(NVS_KEY_RXU_OUTCOME, RXO_DID_NOT_TAKE);
     String err = fwInstallCore(url, fsUrl, name, fsMd5, false, false);   // restarts on success
+    if (err.startsWith("HTTP ") || err.indexOf("-1") >= 0 || err.indexOf("connect") >= 0) {
+        // The first try on the bench (30-9-2026) met an HTTP 404 for a file that had been on the website for
+        // 35 s and was there a minute later. One more try, after a breath; the transmitter is still silent.
+        snprintf(m, sizeof m, "Receiver update: %.40s - trying once more", err.c_str());
+        events.add(m);
+        delay(5000);
+        err = fwInstallCore(url, fsUrl, name, fsMd5, false, false);
+    }
     snprintf(m, sizeof m, "Receiver update: %.50s - nothing changed", err.c_str());
     rxUpdSetOutcome(RXO_DOWNLOAD_FAILED, m);
 }

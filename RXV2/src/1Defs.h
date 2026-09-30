@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.872-installable-from-the-transmitter";
+constexpr const char* FW_VERSION = "RXV2-0.9.873-shorter-silence";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -456,7 +456,7 @@ inline uint32_t rxUpdOrderedMs = 0;       // when the order (or the refusal) was
 inline uint32_t rxUpdWorkMs    = 0;       // when the transmitter was seen quiet and the work began
 inline uint8_t  rxUpdWantMaj = 0, rxUpdWantMin = 0;
 inline uint16_t rxUpdWantMinimus = 0;
-constexpr uint8_t  RXU_QUIET_SECONDS  = 90;     // how long we ask the transmitter to stay quiet
+constexpr uint8_t  RXU_QUIET_SECONDS  = 60;     // how long we ask the transmitter to stay quiet (the bench, 30-9-2026: accepted to restarted in 20 s at home)
 constexpr uint32_t RXU_ORDER_TTL_MS   = 60000;  // accepted but the transmitter never went quiet: forget it
 constexpr uint32_t RXU_QUIET_AFTER_MS = 2000;   // no packet for this long = the transmitter has gone
 constexpr uint32_t RXU_WIFI_WAIT_MS   = 30000;  // the network must be joined within this, or nothing changes

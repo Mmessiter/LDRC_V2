@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.873-shorter-silence",
+      "url": "https://messiter.com/rxv2/release/v0.9.873/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.873/littlefs.bin",
+      "fs_md5": "cc4878104ade8765b32ab2b7b6cb420e",
+      "notes": "Transmitter-ordered update: the transmitter is asked to stay silent for 60 s instead of 90 (the bench: accepted to restarted in 20 s at home), and a download that fails with an HTTP error is tried once more after 5 s (the first bench run met a 404 for a file that was there)."
+    },
+    {
       "name": "RXV2-0.9.872-installable-from-the-transmitter",
       "url": "https://messiter.com/rxv2/release/v0.9.872/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.872/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.862/littlefs.bin",
       "fs_md5": "db082dbc20154b450b12495cf688c970",
       "notes": "Battery card reads '3.8 V per cell (average)'"
-    },
-    {
-      "name": "RXV2-0.9.861-install-request-is-judged",
-      "url": "https://messiter.com/rxv2/release/v0.9.861/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.861/littlefs.bin",
-      "fs_md5": "b7723f2a3f8981ec5995ef579108fe02",
-      "notes": "Update page: the install request is awaited and judged (a lost request said 'stopped at the end' after minutes); the bar moves only once the install is under way; twenty seconds of normal answers = 'not started, try again'; 'Update now' from the front page lands on the WiFi/Bluetooth choice instead of picking a lane; the receiver logs every install request"
     }
   ],
   "rotorflight": {
