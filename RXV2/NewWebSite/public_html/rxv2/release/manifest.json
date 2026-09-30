@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.866-quiet-radio-for-the-download",
+      "url": "https://messiter.com/rxv2/release/v0.9.866/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.866/littlefs.bin",
+      "fs_md5": "cc4878104ade8765b32ab2b7b6cb420e",
+      "notes": "Transmitter-ordered update: Bluetooth is switched off again just before the download (the WiFi start had brought it back up), so the download runs on a quiet radio."
+    },
+    {
       "name": "RXV2-0.9.865-installable-from-the-transmitter",
       "url": "https://messiter.com/rxv2/release/v0.9.865/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.865/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.855/littlefs.bin",
       "fs_md5": "b4fd16157e3af820b42a46cf49b5d58a",
       "notes": "Post-landing Bluetooth link: the button says 'Re-enable WiFi' \u2014 WiFi alone is off for flying; the Bluetooth you are on is not"
-    },
-    {
-      "name": "RXV2-0.9.854-helis-are-6s-or-12s",
-      "url": "https://messiter.com/rxv2/release/v0.9.854/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.854/littlefs.bin",
-      "fs_md5": "631dc516cdf7dd98f2291856879e871d",
-      "notes": "Battery guess knows helicopters fly 6S or 12S: a voltage that fits either is that pack, so a flat 12S is caught (42 V no longer reads as a full 10S); the klaxon shows a guessed count too; the battery guardian uses the same rule"
     }
   ],
   "rotorflight": {

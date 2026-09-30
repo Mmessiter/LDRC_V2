@@ -2116,6 +2116,8 @@ inline void rxUpdStep() {
         }
         return;
     }
+    // startWifiStation() brought Bluetooth up again beside the WiFi: off for the download (one antenna, 0.9.779).
+    if (bleHasClient() || bleAdvertising()) bleStop();
     rxUpdInstall();          // returns only on failure
     rxUpdState = RXU_IDLE;
 }
