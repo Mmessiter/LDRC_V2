@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.865-installable-from-the-transmitter",
+      "url": "https://messiter.com/rxv2/release/v0.9.865/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.865/littlefs.bin",
+      "fs_md5": "cc4878104ade8765b32ab2b7b6cb420e",
+      "notes": "Same firmware as 0.9.864, released so that a receiver on 0.9.864 has something to install from the transmitter: the first release to be installed that way. Receivers older than 0.9.864 still need one update from the phone app (they cannot say their version to the transmitter yet)."
+    },
+    {
       "name": "RXV2-0.9.864-update-from-the-transmitter",
       "url": "https://messiter.com/rxv2/release/v0.9.864/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.864/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.854/littlefs.bin",
       "fs_md5": "631dc516cdf7dd98f2291856879e871d",
       "notes": "Battery guess knows helicopters fly 6S or 12S: a voltage that fits either is that pack, so a flat 12S is caught (42 V no longer reads as a full 10S); the klaxon shows a guessed count too; the battery guardian uses the same rule"
-    },
-    {
-      "name": "RXV2-0.9.853-cells-never-impossible",
-      "url": "https://messiter.com/rxv2/release/v0.9.853/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.853/littlefs.bin",
-      "fs_md5": "dc2e7c2ce5892b4bdc8827b9b21599ff",
-      "notes": "Battery: one cell-count rule everywhere \u2014 a told count only while physically possible, else the even-count guess (no more 7.5 V per cell on 12S); a guessed count shows '\u00b7 12S?'; the klaxon reads FC telemetry too and stays quiet while armed; the battery guardian no longer stops at 6 cells"
     }
   ],
   "rotorflight": {

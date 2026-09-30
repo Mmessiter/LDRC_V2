@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.864-update-from-the-transmitter";
+constexpr const char* FW_VERSION = "RXV2-0.9.865-installable-from-the-transmitter";
 
 //*********************************************************************
 //  Auto-update manifest URLs
