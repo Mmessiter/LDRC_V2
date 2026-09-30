@@ -1820,6 +1820,7 @@ inline String updateFilesystemKeepingBackups(const String& fsUrl) {
 //*********************************************************************
 inline String fwInstallCore(const String& url, const String& fsUrl, const String& name,
                             const String& wantMd5In, bool fromBle, bool webReply) {
+    const uint32_t installBeganMs = millis();   // how long the whole thing took goes in the log (to size the transmitter's silence)
     // 1) Application firmware -> OTA app slot. A mid-stream failure just leaves the
     //    current firmware bootable, so report it and DON'T reboot. The whole
     //    install runs under the download guard (see otaGuardBegin) so a stalled
@@ -1891,7 +1892,7 @@ inline String fwInstallCore(const String& url, const String& fsUrl, const String
         updStage = UPD_PAGES;
         fsNote = updateFilesystemKeepingBackups(fsUrl);
     }
-    events.add((String("Firmware installed via auto-update") + fsNote + " — rebooting").c_str());
+    events.add((String("Firmware installed via auto-update") + fsNote + " in " + String((millis() - installBeganMs) / 1000) + " s — rebooting").c_str());
     prefs.putUChar(NVS_KEY_UPD_STAGE, UPD_REBOOTING);
     updStage = UPD_REBOOTING;
     otaGuardEnd();

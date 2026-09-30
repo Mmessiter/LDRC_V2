@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.867-install-time-logged",
+      "url": "https://messiter.com/rxv2/release/v0.9.867/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.867/littlefs.bin",
+      "fs_md5": "cc4878104ade8765b32ab2b7b6cb420e",
+      "notes": "The event log says how long an install took (firmware and pages, in seconds), so the transmitter's silence during a transmitter-ordered update can be sized from real numbers."
+    },
+    {
       "name": "RXV2-0.9.866-quiet-radio-for-the-download",
       "url": "https://messiter.com/rxv2/release/v0.9.866/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.866/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.856/littlefs.bin",
       "fs_md5": "9bab3ae34dcb3ae24559737d55e16d8f",
       "notes": "Governor: the autorotation timeout is WHOLE seconds on the flight controller (the other timings are tenths) \u2014 the page and the transmitter path were scaling it by 10; a model set to 5 from either actually held 50 s \u2014 it now shows the true value, set it once"
-    },
-    {
-      "name": "RXV2-0.9.855-wifi-only-is-off",
-      "url": "https://messiter.com/rxv2/release/v0.9.855/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.855/littlefs.bin",
-      "fs_md5": "b4fd16157e3af820b42a46cf49b5d58a",
-      "notes": "Post-landing Bluetooth link: the button says 'Re-enable WiFi' \u2014 WiFi alone is off for flying; the Bluetooth you are on is not"
     }
   ],
   "rotorflight": {

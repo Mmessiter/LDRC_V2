@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.866-quiet-radio-for-the-download";
+constexpr const char* FW_VERSION = "RXV2-0.9.867-install-time-logged";
 
 //*********************************************************************
 //  Auto-update manifest URLs
