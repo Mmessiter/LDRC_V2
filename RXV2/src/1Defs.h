@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.863-flights-kept-gaps-honest";
+constexpr const char* FW_VERSION = "RXV2-0.9.864-update-from-the-transmitter";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -302,7 +302,7 @@ constexpr uint8_t  HOP_TIME_MS         = 8;   // v1 HOPTIME → ~100 Hz FHSS
 constexpr uint16_t MAC_ACK_THRESHOLD   = 200; // MAC on the first N acks of each connection (dense, a half per ack), then telemetry. v1 used 20; bumped so both MAC halves land reliably even if a radio swap fires during the opening burst, while still handing over to telemetry within ~0.4 s so the TX never starves (see loadNextAck)
 constexpr uint16_t MAC_STICK_DEADBAND  = 200;
 constexpr uint8_t  MAC_MOVE_CONFIRM    = 3;    // a channel must exceed the deadband on this many packets before "being flown" latches (rejects single-packet glitches)  // 12-bit counts a channel must move from its settled baseline to count as "being flown" → end ID broadcast (well above gimbal jitter, well below a real stick move)
-constexpr uint8_t  MAX_TELEMETRY_ITEM  = 37;  // 36 = RX3 active time; 37 = phone-true local time for the TX RTC
+constexpr uint8_t  MAX_TELEMETRY_ITEM  = 40;  // 36 = RX3 active time; 37 = phone-true local time for the TX RTC; 38 = flight pardon (announced, never rotated); 39 = our release number; 40 = transmitter-ordered update state (0.9.864)
 
 // v1 channel 82 lives at index 14 of FHSS_CHANNELS. We bind there, then increment.
 constexpr uint8_t  CHAN82_INDEX        = 14;
@@ -431,6 +431,62 @@ inline const char* updStageName(uint8_t st) {
         case UPD_DONE:      return "done";
         case UPD_FAILED:    return "failed";
         default:            return "none";
+    }
+}
+// ---- A RECEIVER UPDATE ORDERED BY THE TRANSMITTER (0.9.864) ----
+// The V1B transmitter's screen compares our release number (telemetry item
+// 39) with messiter.com and, on the pilot's press, sends TX parameter 35 with
+// the exact version it saw. We ACCEPT only disarmed and only knowing a WiFi
+// network, and we ACT only once the transmitter has gone quiet: no install
+// ever runs under a live link (the standing rule of handleFirmwareInstall),
+// and the transmitter's silence is its consent. The order lapses after 60 s
+// if it never goes quiet. Item 40 tells the transmitter where we stand and,
+// after the restart, how it ended. No secrets travel over the air: the
+// receiver joins the one network it already knows.
+enum RxUpdState : uint8_t {
+    RXU_IDLE = 0, RXU_ACCEPTED = 1, RXU_REFUSED_ARMED = 2, RXU_REFUSED_NO_WIFI = 3, RXU_WORKING = 4
+};
+enum RxUpdOutcome : uint8_t {           // how the LAST transmitter-ordered update ended (0 = none yet)
+    RXO_NONE = 0, RXO_DONE = 1, RXO_NO_WIFI = 2, RXO_NO_MANIFEST = 3, RXO_NOT_FOUND = 4,
+    RXO_DOWNLOAD_FAILED = 5, RXO_DID_NOT_TAKE = 6, RXO_NOT_QUIET = 7, RXO_PAGES_FAILED = 8
+};
+inline uint8_t  rxUpdState     = RXU_IDLE;
+inline uint8_t  rxUpdOutcome   = RXO_NONE;
+inline uint32_t rxUpdOrderedMs = 0;       // when the order (or the refusal) was taken
+inline uint32_t rxUpdWorkMs    = 0;       // when the transmitter was seen quiet and the work began
+inline uint8_t  rxUpdWantMaj = 0, rxUpdWantMin = 0;
+inline uint16_t rxUpdWantMinimus = 0;
+constexpr uint8_t  RXU_QUIET_SECONDS  = 90;     // how long we ask the transmitter to stay quiet
+constexpr uint32_t RXU_ORDER_TTL_MS   = 60000;  // accepted but the transmitter never went quiet: forget it
+constexpr uint32_t RXU_QUIET_AFTER_MS = 2000;   // no packet for this long = the transmitter has gone
+constexpr uint32_t RXU_WIFI_WAIT_MS   = 30000;  // the network must be joined within this, or nothing changes
+constexpr const char* NVS_KEY_RXU_OUTCOME = "rxuout";   // the outcome survives the restart (u8)
+// Our release number as one word: "RXV2-0.9.863-…" -> 0x0009035F (major<<24 | minor<<16 | minimus).
+inline uint32_t fwReleaseCode() {
+    static uint32_t code = 0xFFFFFFFFu;       // parsed once (it goes out in every 40th ack)
+    if (code == 0xFFFFFFFFu) {
+        unsigned a = 0, b = 0, c = 0;
+        code = (sscanf(FW_VERSION, "RXV2-%u.%u.%u", &a, &b, &c) == 3)
+             ? (((uint32_t)(a & 0xFF) << 24) | ((uint32_t)(b & 0xFF) << 16) | (uint32_t)(c & 0xFFFF)) : 0;
+    }
+    return code;
+}
+// Telemetry item 40: state<<28 | wanted minimus<<16 | quiet seconds<<8 | last outcome.
+inline uint32_t rxUpdTelemetryWord() {
+    return ((uint32_t)(rxUpdState & 0xF) << 28) | ((uint32_t)(rxUpdWantMinimus & 0xFFF) << 16) |
+           ((uint32_t)RXU_QUIET_SECONDS << 8) | (uint32_t)rxUpdOutcome;
+}
+inline const char* rxUpdOutcomeName(uint8_t o) {
+    switch (o) {
+        case RXO_DONE:            return "done";
+        case RXO_NO_WIFI:         return "could not join WiFi";
+        case RXO_NO_MANIFEST:     return "could not read the release list";
+        case RXO_NOT_FOUND:       return "release not in the list";
+        case RXO_DOWNLOAD_FAILED: return "download failed";
+        case RXO_DID_NOT_TAKE:    return "did not take";
+        case RXO_NOT_QUIET:       return "transmitter never went quiet";
+        case RXO_PAGES_FAILED:    return "pages failed";
+        default:                  return "none";
     }
 }
 constexpr const char* NVS_KEY_SIMIF_HINT  = "simifh";  // 1 = a receiver was heard on D5 last run: listen LONGER before falling back to dongle (0.9.812)

@@ -499,12 +499,16 @@ void setup() {
             updStage = arrived ? UPD_DONE : UPD_FAILED;
             updJustDone = arrived;
             prefs.putUChar(NVS_KEY_UPD_STAGE, updStage);
+            // A transmitter-ordered install (0.9.864) left "did not take" pending: the judge's word replaces it.
+            if (prefs.getUChar(NVS_KEY_RXU_OUTCOME, RXO_NONE) == RXO_DID_NOT_TAKE)
+                prefs.putUChar(NVS_KEY_RXU_OUTCOME, arrived ? RXO_DONE : RXO_DID_NOT_TAKE);
             char m[EventLog::MSG_LEN];
             snprintf(m, sizeof(m), arrived ? "Update DONE: %.40s is running" : "Update did NOT take: still on %.40s",
                      arrived ? FW_VERSION : FW_VERSION);
             events.add(m);
             installReboot = true;
         }
+        rxUpdOutcome = prefs.getUChar(NVS_KEY_RXU_OUTCOME, RXO_NONE);   // told to the transmitter in telemetry item 40
     }
     // 0.9.831: NO "Bluetooth is ready" wiggle after a reboot WE caused - a
     // firmware install, or a save that restarts the receiver (name, WiFi,
@@ -1207,6 +1211,7 @@ void loop() {
     { StallScope s("heartbeat"); heartbeat(); }
     { StallScope s("statusLed"); statusLedTick(); }    // D4 connection-status LED (2-radio boards)
     { StallScope s("netStep");   netStep(); }
+    { StallScope s("rxUpdStep"); rxUpdStep(); }   // a receiver update ordered by the transmitter (0.9.864): idle unless one is pending
 
     // Periodic free-heap snapshot to the event log so we can spot leaks
     // (every 60 s; logs only when value drops to track downward trend).

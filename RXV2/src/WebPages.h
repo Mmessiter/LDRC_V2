@@ -1811,6 +1811,100 @@ inline String updateFilesystemKeepingBackups(const String& fsUrl) {
     return String(m);
 }
 
+//*********************************************************************
+//  The install itself, shared by the web/Bluetooth handler and the
+//  transmitter-ordered update (0.9.864). Guards and replies are the
+//  CALLER's: this runs only on the ground with no live transmitter link.
+//  Returns "" and RESTARTS on success; else the error text, with the
+//  current firmware still bootable and the update record saying FAILED.
+//*********************************************************************
+inline String fwInstallCore(const String& url, const String& fsUrl, const String& name,
+                            const String& wantMd5In, bool fromBle, bool webReply) {
+    // 1) Application firmware -> OTA app slot. A mid-stream failure just leaves the
+    //    current firmware bootable, so report it and DON'T reboot. The whole
+    //    install runs under the download guard (see otaGuardBegin) so a stalled
+    //    server can no longer hold loop() — and the receiver — hostage.
+    // THE UPDATE RECORD (0.9.813): written as it happens so the next page to
+    // ask can say plainly how far this got — no more working it out from
+    // whether a poll answered (Malcolm 2026-09-19 and again 2026-09-20: "it
+    // updated successfully, but stopped short of telling me so").
+    {
+        // What we are becoming. The page sends the release name; without it,
+        // take the URL's DIRECTORY - .../release/v0.9.814/firmware.bin - since
+        // the file itself is always called "firmware.bin" (0.9.815: the first
+        // record read "to: firmware" and then judged a perfectly good install
+        // a failure, which is the very thing this was built to prevent).
+        String want = name;
+        if (!want.length()) {
+            // 0.9.826: the URL comes in two shapes, and the old code knew one.
+            //   messiter.com:  .../release/v0.9.814/firmware.bin   -> version folder
+            //   dev server:    http://192.168.1.193:8000/RXV2-0.9.825-slug.bin -> the FILE
+            // On the second it took "192.168.1.193:8000" as the target, and the
+            // boot judge then called a perfectly good install a FAILURE — the
+            // exact false negative this record must never give (Malcolm's Sally
+            // report, 2026-09-22). Prefer a release-named file; else the
+            // version folder; else say nothing rather than something wrong.
+            String u = url;
+            int q = u.indexOf('?'); if (q >= 0) u = u.substring(0, q);
+            int sl = u.lastIndexOf('/');
+            String file = (sl >= 0) ? u.substring(sl + 1) : u;
+            if (file.startsWith("RXV2-")) {
+                if (file.endsWith(".bin")) file = file.substring(0, file.length() - 4);
+                want = file;
+            } else {
+                String dir = (sl >= 0) ? u.substring(0, sl) : String("");
+                int s2 = dir.lastIndexOf('/');
+                String seg = (s2 >= 0) ? dir.substring(s2 + 1) : dir;
+                if (seg.length() > 1 && seg[0] == 'v' && isDigit(seg[1])) want = seg.substring(1);
+            }
+        }
+        prefs.putString(NVS_KEY_UPD_FROM, FW_VERSION);
+        prefs.putString(NVS_KEY_UPD_TO, want);
+        prefs.putUChar(NVS_KEY_UPD_STAGE, UPD_FIRMWARE);
+        updFrom = FW_VERSION; updTo = want; updStage = UPD_FIRMWARE;
+    }
+    otaGuardBegin();
+    String err = flashStreamToPartition(url, U_FLASH);
+    if (err.length()) {
+        otaGuardEnd();
+        prefs.putUChar(NVS_KEY_UPD_STAGE, UPD_FAILED);
+        updStage = UPD_FAILED;
+        return err;      // the caller says who hears about it
+    }
+
+    // 2) Matching web/data filesystem, if the release ships one (fs_url). Flashing
+    //    it makes the web UI travel with the firmware — even on a jump up from an
+    //    old version — while preserving the user's Rotorflight backups.
+    String fsNote = "";
+    // fs fingerprint skip (2026-07-31): when the client passes the release's
+    // fs_md5 and it matches the image we already flashed, the web files are
+    // identical — do not rewrite the filesystem. Saved flights (now 20) and
+    // Rotorflight backups survive untouched, and field updates get faster.
+    String wantMd5 = wantMd5In;
+    wantMd5.toLowerCase(); wantMd5.trim();
+    String haveMd5 = prefs.getString(NVS_KEY_FS_MD5, ""); haveMd5.toLowerCase();
+    if (wantMd5.length() == 32 && wantMd5 == haveMd5) {
+        fsNote = " (web files identical — kept, flights preserved)";
+        events.add("FS update skipped: image unchanged");
+    } else if (fsUrl.length() && (fsUrl.startsWith("http://") || isHttpsUrl(fsUrl))) {
+        prefs.putUChar(NVS_KEY_UPD_STAGE, UPD_PAGES);
+        updStage = UPD_PAGES;
+        fsNote = updateFilesystemKeepingBackups(fsUrl);
+    }
+    events.add((String("Firmware installed via auto-update") + fsNote + " — rebooting").c_str());
+    prefs.putUChar(NVS_KEY_UPD_STAGE, UPD_REBOOTING);
+    updStage = UPD_REBOOTING;
+    otaGuardEnd();
+    if (webReply) server.send(200, "text/plain", String("ok — rebooting") + fsNote);   // over Bluetooth the 202 went before the pause; a transmitter-ordered install has no one to answer
+    bleEarlyPump();               // over BLE: deliver the reply before the reboot kills the link (a no-op once paused)
+    prefs.putUChar(NVS_KEY_OTA_BLE, fromBle ? 1 : 0);   // asked for from the app: hold the STA join after the reboot
+    eventsPersist();              // this boot's log survives the reboot (it did not, and the first attempt's story was lost)
+    UsbHostMsp::prepareForRestart();   // 0.9.706: give the FC a clean disconnect, or USB comes back dead
+    delay(300);
+    ESP.restart();
+    return String("");   // not reached: the restart is on its way
+}
+
 inline void handleFirmwareInstall() {
     // The download runs INSIDE this handler: loop() — and therefore radioPoll()
     // and sbusTick() — stops for its whole duration, seconds at best and tens of
@@ -1888,94 +1982,142 @@ inline void handleFirmwareInstall() {
         netMode = NET_WIFI_UP; netStateStart = millis();
     }
 
-    // 1) Application firmware -> OTA app slot. A mid-stream failure just leaves the
-    //    current firmware bootable, so report it and DON'T reboot. The whole
-    //    install runs under the download guard (see otaGuardBegin) so a stalled
-    //    server can no longer hold loop() — and the receiver — hostage.
-    // THE UPDATE RECORD (0.9.813): written as it happens so the next page to
-    // ask can say plainly how far this got — no more working it out from
-    // whether a poll answered (Malcolm 2026-09-19 and again 2026-09-20: "it
-    // updated successfully, but stopped short of telling me so").
-    {
-        // What we are becoming. The page sends the release name; without it,
-        // take the URL's DIRECTORY - .../release/v0.9.814/firmware.bin - since
-        // the file itself is always called "firmware.bin" (0.9.815: the first
-        // record read "to: firmware" and then judged a perfectly good install
-        // a failure, which is the very thing this was built to prevent).
-        String want = server.hasArg("name") ? server.arg("name") : String("");
-        if (!want.length()) {
-            // 0.9.826: the URL comes in two shapes, and the old code knew one.
-            //   messiter.com:  .../release/v0.9.814/firmware.bin   -> version folder
-            //   dev server:    http://192.168.1.193:8000/RXV2-0.9.825-slug.bin -> the FILE
-            // On the second it took "192.168.1.193:8000" as the target, and the
-            // boot judge then called a perfectly good install a FAILURE — the
-            // exact false negative this record must never give (Malcolm's Sally
-            // report, 2026-09-22). Prefer a release-named file; else the
-            // version folder; else say nothing rather than something wrong.
-            String u = url;
-            int q = u.indexOf('?'); if (q >= 0) u = u.substring(0, q);
-            int sl = u.lastIndexOf('/');
-            String file = (sl >= 0) ? u.substring(sl + 1) : u;
-            if (file.startsWith("RXV2-")) {
-                if (file.endsWith(".bin")) file = file.substring(0, file.length() - 4);
-                want = file;
-            } else {
-                String dir = (sl >= 0) ? u.substring(0, sl) : String("");
-                int s2 = dir.lastIndexOf('/');
-                String seg = (s2 >= 0) ? dir.substring(s2 + 1) : dir;
-                if (seg.length() > 1 && seg[0] == 'v' && isDigit(seg[1])) want = seg.substring(1);
-            }
-        }
-        prefs.putString(NVS_KEY_UPD_FROM, FW_VERSION);
-        prefs.putString(NVS_KEY_UPD_TO, want);
-        prefs.putUChar(NVS_KEY_UPD_STAGE, UPD_FIRMWARE);
-        updFrom = FW_VERSION; updTo = want; updStage = UPD_FIRMWARE;
-    }
-    otaGuardBegin();
-    String err = flashStreamToPartition(url, U_FLASH);
-    if (err.length()) {
-        otaGuardEnd();
-        prefs.putUChar(NVS_KEY_UPD_STAGE, UPD_FAILED);
-        updStage = UPD_FAILED;
-        if (fromBle) {   // the reply has gone already; let the app back in to hear about it
-            events.add((String("Firmware download failed: ") + err + " - Bluetooth restored, nothing changed").c_str());
-            bleStart();
-            return;
-        }
-        server.send(502, "text/plain", "firmware: " + err);
+    String want = server.hasArg("name") ? server.arg("name") : String("");
+    String err = fwInstallCore(url, fsUrl, want,
+                               server.hasArg("fs_md5") ? server.arg("fs_md5") : String(""),
+                               fromBle, !fromBle);   // restarts on success
+    if (fromBle) {   // the reply has gone already; let the app back in to hear about it
+        events.add((String("Firmware download failed: ") + err + " - Bluetooth restored, nothing changed").c_str());
+        bleStart();
         return;
     }
+    server.send(502, "text/plain", "firmware: " + err);
+}
 
-    // 2) Matching web/data filesystem, if the release ships one (fs_url). Flashing
-    //    it makes the web UI travel with the firmware — even on a jump up from an
-    //    old version — while preserving the user's Rotorflight backups.
-    String fsNote = "";
-    // fs fingerprint skip (2026-07-31): when the client passes the release's
-    // fs_md5 and it matches the image we already flashed, the web files are
-    // identical — do not rewrite the filesystem. Saved flights (now 20) and
-    // Rotorflight backups survive untouched, and field updates get faster.
-    String wantMd5 = server.hasArg("fs_md5") ? server.arg("fs_md5") : String("");
-    wantMd5.toLowerCase(); wantMd5.trim();
-    String haveMd5 = prefs.getString(NVS_KEY_FS_MD5, ""); haveMd5.toLowerCase();
-    if (wantMd5.length() == 32 && wantMd5 == haveMd5) {
-        fsNote = " (web files identical — kept, flights preserved)";
-        events.add("FS update skipped: image unchanged");
-    } else if (fsUrl.length() && (fsUrl.startsWith("http://") || isHttpsUrl(fsUrl))) {
-        prefs.putUChar(NVS_KEY_UPD_STAGE, UPD_PAGES);
-        updStage = UPD_PAGES;
-        fsNote = updateFilesystemKeepingBackups(fsUrl);
+//*********************************************************************
+//  A RECEIVER UPDATE ORDERED BY THE TRANSMITTER (0.9.864)
+//*********************************************************************
+// The order came in over the radio (TxParams.h, ID 35) and was accepted:
+// disarmed, and a WiFi network is known. This is the ground work, called
+// from loop() next to netStep():
+//   accepted  -> wait for the transmitter to go QUIET (its consent; 60 s TTL)
+//   quiet     -> Bluetooth off, WiFi station on (the network it already knows)
+//   WiFi up   -> read the PUBLIC release list, find the version ordered,
+//                install it with the very code the app uses, restart
+//   30 s and no WiFi -> nothing changes, outcome "could not join WiFi"
+// The outcome goes to NVS so the transmitter can be told after the restart
+// (telemetry item 40), and the boot judge's own verdict outranks it.
+// Everything from "WiFi up" on BLOCKS the loop, exactly as the app's install
+// does with the transmitter off - and the transmitter IS off, by its own
+// choice, for RXU_QUIET_SECONDS.
+
+// One JSON string value out of the manifest, from `from` on, up to the entry's closing brace.
+inline String manifestField(const String& body, int from, const char* key) {
+    int close = body.indexOf('}', from); if (close < 0) close = body.length();
+    String k = String("\"") + key + "\":\"";
+    int at = body.indexOf(k, from);
+    if (at < 0 || at > close) return String("");
+    at += k.length();
+    int end = body.indexOf('"', at);
+    if (end < 0 || end > close) return String("");
+    return body.substring(at, end);
+}
+
+inline void rxUpdSetOutcome(uint8_t outcome, const char* said) {
+    rxUpdOutcome = outcome;
+    prefs.putUChar(NVS_KEY_RXU_OUTCOME, outcome);
+    events.add(said);
+    eventsPersist();
+}
+
+// Read the public release list and install the release ordered. Returns only on failure.
+inline void rxUpdInstall() {
+    char m[EventLog::MSG_LEN];
+    char want[24];
+    snprintf(want, sizeof want, "RXV2-%u.%u.%u", (unsigned)rxUpdWantMaj, (unsigned)rxUpdWantMin, (unsigned)rxUpdWantMinimus);
+    String out;
+    fetchManifestInto(out, String(FW_PUBLIC_MANIFEST_URL), 6000);
+    if (out.indexOf("\"ok\":true") < 0) {
+        snprintf(m, sizeof m, "Receiver update: could not read the release list - nothing changed");
+        rxUpdSetOutcome(RXO_NO_MANIFEST, m);
+        return;
     }
-    events.add((String("Firmware installed via auto-update") + fsNote + " — rebooting").c_str());
-    prefs.putUChar(NVS_KEY_UPD_STAGE, UPD_REBOOTING);
-    updStage = UPD_REBOOTING;
-    otaGuardEnd();
-    if (!fromBle) server.send(200, "text/plain", String("ok — rebooting") + fsNote);   // over Bluetooth the 202 went before the pause
-    bleEarlyPump();               // over BLE: deliver the reply before the reboot kills the link (a no-op once paused)
-    prefs.putUChar(NVS_KEY_OTA_BLE, fromBle ? 1 : 0);   // asked for from the app: hold the STA join after the reboot
-    eventsPersist();              // this boot's log survives the reboot (it did not, and the first attempt's story was lost)
-    UsbHostMsp::prepareForRestart();   // 0.9.706: give the FC a clean disconnect, or USB comes back dead
-    delay(300);
-    ESP.restart();
+    // The entry whose name is exactly the release ordered ("RXV2-0.9.870" followed by the slug or the quote).
+    int at = -1;
+    for (int p = out.indexOf(String("\"name\":\"") + want); p >= 0; p = out.indexOf(String("\"name\":\"") + want, p + 1)) {
+        const char after = out.charAt(p + 8 + strlen(want));
+        if (after == '-' || after == '"') { at = p; break; }
+    }
+    if (at < 0) {
+        snprintf(m, sizeof m, "Receiver update: %s is not in the release list - nothing changed", want);
+        rxUpdSetOutcome(RXO_NOT_FOUND, m);
+        return;
+    }
+    // Back to the start of this entry, so every field read belongs to it.
+    int open = out.lastIndexOf('{', at); if (open < 0) open = at;
+    String name  = manifestField(out, open, "name");
+    String url   = manifestField(out, open, "url");
+    String fsUrl = manifestField(out, open, "fs_url");
+    String fsMd5 = manifestField(out, open, "fs_md5");
+    if (!(url.startsWith("http://") || isHttpsUrl(url))) {
+        snprintf(m, sizeof m, "Receiver update: %s has no usable firmware URL - nothing changed", want);
+        rxUpdSetOutcome(RXO_NOT_FOUND, m);
+        return;
+    }
+    snprintf(m, sizeof m, "Receiver update: installing %.40s", name.c_str());
+    events.add(m);
+    eventsPersist();
+    // A pending outcome for the boot judge to confirm or overrule (main.cpp).
+    prefs.putUChar(NVS_KEY_RXU_OUTCOME, RXO_DID_NOT_TAKE);
+    String err = fwInstallCore(url, fsUrl, name, fsMd5, false, false);   // restarts on success
+    snprintf(m, sizeof m, "Receiver update: %.50s - nothing changed", err.c_str());
+    rxUpdSetOutcome(RXO_DOWNLOAD_FAILED, m);
+}
+
+inline void rxUpdStep() {
+    if (rxUpdState == RXU_IDLE) return;
+    const uint32_t now = millis();
+    if (rxUpdState == RXU_REFUSED_ARMED || rxUpdState == RXU_REFUSED_NO_WIFI) {
+        if ((uint32_t)(now - rxUpdOrderedMs) > 10000) rxUpdState = RXU_IDLE;   // said for 10 s, then forgotten
+        return;
+    }
+    if (rxUpdState == RXU_ACCEPTED) {
+        const bool quiet = rx.lastMillis && (uint32_t)(now - rx.lastMillis) >= RXU_QUIET_AFTER_MS;
+        if (!quiet) {
+            if ((uint32_t)(now - rxUpdOrderedMs) > RXU_ORDER_TTL_MS) {
+                rxUpdState = RXU_IDLE;
+                rxUpdSetOutcome(RXO_NOT_QUIET, "Receiver update order lapsed: the transmitter never went quiet");
+            }
+            return;
+        }
+        // The last look before anything is touched: the flight controller's own word.
+        if (fcInfo.armed && fcInfo.armedMs && (uint32_t)(now - fcInfo.armedMs) < 5000) {
+            rxUpdState = RXU_REFUSED_ARMED; rxUpdOrderedMs = now;
+            events.add("Receiver update: the flight controller says ARMED - nothing changed");
+            return;
+        }
+        rxUpdState  = RXU_WORKING;
+        rxUpdWorkMs = now;
+        char m[EventLog::MSG_LEN];
+        snprintf(m, sizeof m, "Transmitter quiet: receiver update begins, joining %.30s", getEffectiveSsid().c_str());
+        events.add(m);
+        eventsPersist();
+        if (bleHasClient() || bleAdvertising()) bleStop();    // one antenna: the download needs a quiet radio (0.9.779)
+        if (netMode != NET_WIFI_UP && netMode != NET_WIFI_CONNECTING) startWifiStation();
+        return;
+    }
+    // RXU_WORKING
+    if (netMode != NET_WIFI_UP) {
+        if ((uint32_t)(now - rxUpdWorkMs) > RXU_WIFI_WAIT_MS) {
+            rxUpdState = RXU_IDLE;
+            char m[EventLog::MSG_LEN];
+            snprintf(m, sizeof m, "Receiver update: could not join %.30s in 30 s - nothing changed", getEffectiveSsid().c_str());
+            rxUpdSetOutcome(RXO_NO_WIFI, m);
+        }
+        return;
+    }
+    rxUpdInstall();          // returns only on failure
+    rxUpdState = RXU_IDLE;
 }
 
 //*********************************************************************
@@ -3389,6 +3531,9 @@ inline void handleApiState() {
     j += "\",\"stage\":\""; j += updStageName(updStage);
     j += "\",\"ok\":"; j += (updStage == UPD_DONE ? "true" : "false");
     j += ",\"fresh\":"; j += (updJustDone ? "true" : "false"); j += "}";
+    // A transmitter-ordered update (0.9.864): where it stands, and how the last one ended.
+    j += ",\"tx_update\":{\"state\":"; j += (int)rxUpdState;
+    j += ",\"outcome\":\""; j += rxUpdOutcomeName(rxUpdOutcome); j += "\"}";
     j += ",\"role_auto\":";      j += (roleAuto ? "true" : "false");   // 0.9.812: the board chose this role itself
     j += ",\"sim_if\":";         j += (simIfEnabled ? "true" : "false");
     if (simIfEnabled) {

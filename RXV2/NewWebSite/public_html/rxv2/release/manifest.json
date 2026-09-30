@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.864-update-from-the-transmitter",
+      "url": "https://messiter.com/rxv2/release/v0.9.864/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.864/littlefs.bin",
+      "fs_md5": "cc4878104ade8765b32ab2b7b6cb420e",
+      "notes": "A V1B transmitter can now update the receiver: with a model connected, the transmitter's Check for update compares this receiver's release number (telemetry item 39) with messiter.com and, on Install, orders the update over the radio (parameter 35). The receiver accepts only disarmed and knowing a WiFi network, acts only once the transmitter has gone quiet, joins the network it already knows, installs the exact version ordered with the same code the app uses, and restarts; item 40 tells the transmitter how it went. No password ever travels over the air. state.json shows tx_update."
+    },
+    {
       "name": "RXV2-0.9.863-flights-kept-gaps-honest",
       "url": "https://messiter.com/rxv2/release/v0.9.863/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.863/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.853/littlefs.bin",
       "fs_md5": "dc2e7c2ce5892b4bdc8827b9b21599ff",
       "notes": "Battery: one cell-count rule everywhere \u2014 a told count only while physically possible, else the even-count guess (no more 7.5 V per cell on 12S); a guessed count shows '\u00b7 12S?'; the klaxon reads FC telemetry too and stays quiet while armed; the battery guardian no longer stops at 6 cells"
-    },
-    {
-      "name": "RXV2-0.9.852-battery-one-line",
-      "url": "https://messiter.com/rxv2/release/v0.9.852/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.852/littlefs.bin",
-      "fs_md5": "6569bd2fa096dd8d2bc35265c03c4a70",
-      "notes": "Battery card is one line: 'Average 3.8 V per cell' \u2014 the colour says the rest"
     }
   ],
   "rotorflight": {

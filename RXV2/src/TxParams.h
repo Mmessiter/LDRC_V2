@@ -58,8 +58,52 @@ enum ParamId : uint8_t {
     PID_GOV_WR_CONFIG2      = 32,
     PID_GOV_WR_CONFIG3      = 33,
     PID_TX_TIME             = 34,   // V1 TX's RTC: Y,M,D,h,m,s + 321 magic (added 2026-08-02)
-    PARAM_MAX_ID            = 34,
+    PID_RX_UPDATE           = 35,   // V1B TX: "install release major.minor.minimus" — 321, maj, min, minimus, 321 (0.9.864)
+    PARAM_MAX_ID            = 35,
 };
+
+//*********************************************************************
+//  A receiver update ORDERED BY THE TRANSMITTER (0.9.864, see 1Defs.h)
+//*********************************************************************
+// The V1B screen compared our release number (telemetry item 39) with
+// messiter.com and the pilot pressed Install. Sets flags only: the work
+// itself (WiFi, download, install) is rxUpdStep() in WebPages.h, and it
+// waits for the transmitter to go quiet. Nothing here can stall the loop.
+// The packet is repeated three times by the TX; the first one counts.
+inline void rxUpdOrder(const uint16_t* w) {
+    if (w[1] != 321 || w[5] != 321) return;              // magic at both ends guards a corrupt packet
+    if (dongleEnabled) return;                            // a dongle has no transmitter to obey
+    if (rxUpdState == RXU_WORKING) return;                // already at it
+    const uint8_t  maj = (uint8_t)w[2], min = (uint8_t)w[3];
+    const uint16_t mnm = w[4] & 0xFFF;
+    if (maj == rxUpdWantMaj && min == rxUpdWantMin && mnm == rxUpdWantMinimus &&
+        (rxUpdState == RXU_ACCEPTED || ((rxUpdState == RXU_REFUSED_ARMED || rxUpdState == RXU_REFUSED_NO_WIFI) &&
+                                        (uint32_t)(millis() - rxUpdOrderedMs) < 3000)))
+        return;                                           // the same order again (the TX repeats it three times): one answer
+    char m[EventLog::MSG_LEN];
+    rxUpdWantMaj = maj; rxUpdWantMin = min; rxUpdWantMinimus = mnm;
+    rxUpdOrderedMs = millis();
+    rxUpdOutcome = RXO_NONE;                              // a fresh order: the last update's word no longer applies
+    const bool armedFc   = fcInfo.armed && fcInfo.armedMs && (uint32_t)(millis() - fcInfo.armedMs) < 5000;
+    const bool armLink   = rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 1000;
+    const bool armedCh   = armLink && armingChannel >= 1 && armingChannel <= 16 &&
+                           channelMicros[armingChannel - 1] > 1500;
+    if (armedFc || armedCh) {
+        rxUpdState = RXU_REFUSED_ARMED;
+        snprintf(m, sizeof m, "Update to %u.%u.%u ordered by the transmitter REFUSED: armed", maj, min, mnm);
+        events.add(m);
+        return;
+    }
+    if (getEffectiveSsid().length() == 0) {
+        rxUpdState = RXU_REFUSED_NO_WIFI;
+        snprintf(m, sizeof m, "Update to %u.%u.%u ordered by the transmitter REFUSED: no WiFi network known", maj, min, mnm);
+        events.add(m);
+        return;
+    }
+    rxUpdState = RXU_ACCEPTED;
+    snprintf(m, sizeof m, "Update to %u.%u.%u ordered by the transmitter: accepted, waiting for it to go quiet", maj, min, mnm);
+    events.add(m);
+}
 
 inline void patchFlightEpochs();   // FlightLog.h (included after Radio.h) — used by the TX-time handler
 
@@ -377,6 +421,10 @@ inline void readExtraParameters(const uint8_t* payload, uint8_t size) {
     // by the phone, NVS) converts to the UTC epoch the flight stamps use. A
     // phone sync this boot outranks us (it is the fresher, absolute source).
     // Not Rotorflight-gated: dates matter on FC-less models too.
+    // V1B RECEIVER UPDATE (ID 35): flags only, acted on once the TX is quiet.
+    // Before the Rotorflight gate: an FC-less model updates too.
+    if (id == PID_RX_UPDATE) { rxUpdOrder(w); return; }
+
     if (id == PID_TX_TIME) {
         // Log EVERY outcome (rate-limited): a silent return here made a field
         // test undiagnosable — with the phone connected the TX time is

@@ -302,6 +302,9 @@ inline void loadNextAck() {
         // only after the MAC window, by which point a TX that has our model
         // saved has matched and stopped reading slots 0/1 as the MAC.
         if (++telemetryItem > MAX_TELEMETRY_ITEM) telemetryItem = 0;
+        // 38 is the flight pardon, sent ONLY by the announcement below: rotated
+        // naturally it would carry a zero and cancel a pardon in force.
+        if (telemetryItem == 38) telemetryItem = 39;
         // V1 idle-skip (LoadAckPayload): 25-30/32-34 are MSP param slots. The
         // TX starts reading the moment its screen opens — BEFORE its "send
         // now" request has reached us — and the global-governor screen latches
@@ -418,6 +421,8 @@ inline void loadNextAck() {
             case 37:  // phone-true LOCAL wall time (epoch s) — TX corrects its RTC from this
                 packU32(ack, (uint32_t)((int64_t)epochNowS() + (int64_t)tzOffsetMin * 60));
                 break;
+            case 39:  packU32(ack, fwReleaseCode());       break;  // our release number, for the V1B screen's update check (0.9.864)
+            case 40:  packU32(ack, rxUpdTelemetryWord());  break;  // transmitter-ordered update: state, wanted, quiet time, last outcome
             default:  break;
         }
         if (hopThisAck) {
