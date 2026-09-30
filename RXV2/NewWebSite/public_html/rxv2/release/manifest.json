@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.872-installable-from-the-transmitter",
+      "url": "https://messiter.com/rxv2/release/v0.9.872/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.872/littlefs.bin",
+      "fs_md5": "cc4878104ade8765b32ab2b7b6cb420e",
+      "notes": "Same firmware as 0.9.871: something for a receiver on 0.9.871 to install from the transmitter."
+    },
+    {
       "name": "RXV2-0.9.871-release-number-always-sent",
       "url": "https://messiter.com/rxv2/release/v0.9.871/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.871/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.861/littlefs.bin",
       "fs_md5": "b7723f2a3f8981ec5995ef579108fe02",
       "notes": "Update page: the install request is awaited and judged (a lost request said 'stopped at the end' after minutes); the bar moves only once the install is under way; twenty seconds of normal answers = 'not started, try again'; 'Update now' from the front page lands on the WiFi/Bluetooth choice instead of picking a lane; the receiver logs every install request"
-    },
-    {
-      "name": "RXV2-0.9.860-save-bar-steps-aside",
-      "url": "https://messiter.com/rxv2/release/v0.9.860/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.860/littlefs.bin",
-      "fs_md5": "a42e0de6d81728593a447680c7f0a7cf",
-      "notes": "Save to Flight Controller bar: steps aside while the keyboard is up (it used to chase the scroll and jump); tap the keypad's tick and it is back"
     }
   ],
   "rotorflight": {
