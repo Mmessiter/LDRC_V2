@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.871-release-number-always-sent",
+      "url": "https://messiter.com/rxv2/release/v0.9.871/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.871/littlefs.bin",
+      "fs_md5": "cc4878104ade8765b32ab2b7b6cb420e",
+      "notes": "Telemetry items 39 and 40 (the release number, and the transmitter-ordered update) were skipped whenever no phone had set the clock this boot: the rotation went from item 37 straight back to 0. Now sent every time. Found on the bench: the transmitter said 'The receiver did not say its version' as soon as the receiver was power-cycled."
+    },
+    {
       "name": "RXV2-0.9.870-one-update-at-a-time",
       "url": "https://messiter.com/rxv2/release/v0.9.870/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.870/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.860/littlefs.bin",
       "fs_md5": "a42e0de6d81728593a447680c7f0a7cf",
       "notes": "Save to Flight Controller bar: steps aside while the keyboard is up (it used to chase the scroll and jump); tap the keypad's tick and it is back"
-    },
-    {
-      "name": "RXV2-0.9.859-startup-is-only-the-first-stir",
-      "url": "https://messiter.com/rxv2/release/v0.9.859/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.859/littlefs.bin",
-      "fs_md5": "996db70450e3b5db1d4bf9134c1a86b4",
-      "notes": "Governor help: Startup time only covers the throttle's creep to the handover point; the climb to head speed is Spool-up time \u2014 the number that makes a start gentle or fierce"
     }
   ],
   "rotorflight": {

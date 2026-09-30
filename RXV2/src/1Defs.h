@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.870-one-update-at-a-time";
+constexpr const char* FW_VERSION = "RXV2-0.9.871-release-number-always-sent";
 
 //*********************************************************************
 //  Auto-update manifest URLs

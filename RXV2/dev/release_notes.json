@@ -1,4 +1,5 @@
 {
+  "RXV2-0.9.871-release-number-always-sent": "Telemetry items 39 and 40 (the release number, and the transmitter-ordered update) were skipped whenever no phone had set the clock this boot: the rotation went from item 37 straight back to 0. Now sent every time. Found on the bench: the transmitter said 'The receiver did not say its version' as soon as the receiver was power-cycled.",
   "RXV2-0.9.870-one-update-at-a-time": "One update at a time: an install asked for over WiFi, or ordered by the transmitter, is refused while the app is writing firmware over Bluetooth (a WiFi install cut a Bluetooth transfer short at 442 KB on the bench); a second Bluetooth 'begin' while the first still streams is refused too.",
   "RXV2-0.9.869-installable-from-the-transmitter": "Same firmware as 0.9.868: something for a receiver on 0.9.868 to install from the transmitter.",
   "RXV2-0.9.868-release-list-read-as-written": "Transmitter-ordered update: the release list is read as the website writes it (a space after every colon); 0.9.864-867 expected none and would have reported 'release not in the list'.",

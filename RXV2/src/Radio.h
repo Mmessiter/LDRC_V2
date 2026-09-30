@@ -323,7 +323,11 @@ inline void loadNextAck() {
         // RTC (Malcolm's idea: most models never carry GPS, but every model
         // meets a phone). ONLY when this boot's clock came from a phone —
         // never echo back time we learned from the TX itself.
-        if (telemetryItem == 37 && !epochFromPhone) telemetryItem = 0;
+        // (0.9.871: it went back to 0 here, and items 39 and 40 - the release number
+        //  and the transmitter-ordered update - were never sent unless a phone had
+        //  set the clock this boot. Found on the bench: "The receiver did not say
+        //  its version" the moment the receiver was power-cycled.)
+        if (telemetryItem == 37 && !epochFromPhone) telemetryItem = 39;
         ack[0] = telemetryItem;
         bool versionCase = false;
 
