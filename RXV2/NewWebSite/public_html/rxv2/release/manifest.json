@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.870-one-update-at-a-time",
+      "url": "https://messiter.com/rxv2/release/v0.9.870/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.870/littlefs.bin",
+      "fs_md5": "cc4878104ade8765b32ab2b7b6cb420e",
+      "notes": "One update at a time: an install asked for over WiFi, or ordered by the transmitter, is refused while the app is writing firmware over Bluetooth (a WiFi install cut a Bluetooth transfer short at 442 KB on the bench); a second Bluetooth 'begin' while the first still streams is refused too."
+    },
+    {
       "name": "RXV2-0.9.869-installable-from-the-transmitter",
       "url": "https://messiter.com/rxv2/release/v0.9.869/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.869/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.859/littlefs.bin",
       "fs_md5": "996db70450e3b5db1d4bf9134c1a86b4",
       "notes": "Governor help: Startup time only covers the throttle's creep to the handover point; the climb to head speed is Spool-up time \u2014 the number that makes a start gentle or fierce"
-    },
-    {
-      "name": "RXV2-0.9.858-home-refresh-fault-tolerant",
-      "url": "https://messiter.com/rxv2/release/v0.9.858/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.858/littlefs.bin",
-      "fs_md5": "8261d5a4d30faa822c11464180d0267a",
-      "notes": "Home page: each 3-second painter runs on its own \u2014 one failing can no longer silently stop the battery card and the rest"
     }
   ],
   "rotorflight": {

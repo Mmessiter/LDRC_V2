@@ -1692,7 +1692,17 @@ inline void handleBleOtaBegin() {
         server.send(400, "application/json", "{\"ok\":false,\"error\":\"bad size\"}");
         return;
     }
-    if (bleOtaActive) { Update.abort(); bleOtaActive = false; }
+    if (bleOtaActive) {
+        // A transfer still receiving chunks is not taken over (0.9.870): a
+        // second "begin" while the first streams would throw away everything
+        // written so far. One that has gone quiet for 10 s is stale (its own
+        // 30 s watchdog would clear it) and is replaced.
+        if ((uint32_t)(millis() - bleOtaLastChunkMs) < 10000) {
+            server.send(409, "application/json", "{\"ok\":false,\"error\":\"a Bluetooth update is being written - let it finish\"}");
+            return;
+        }
+        Update.abort(); bleOtaActive = false;
+    }
     bleOtaCmd = (type == "fs") ? U_SPIFFS : U_FLASH;
     if (bleOtaCmd == U_SPIFFS) {
         snapshotBackupsToRam();      // whole partition is about to be replaced
@@ -1919,6 +1929,15 @@ inline void handleFirmwareInstall() {
     events.add((String("Install requested: ") + (server.hasArg("name") ? server.arg("name") : String("(unnamed)"))).c_str());
     if (refuseIfTxLinked("turn the transmitter off first - the receiver stops sending control frames for the whole update")) return;
     if (refuseIfArmed("install firmware")) return;
+    // One update at a time (0.9.870). A WiFi install begun while the app was
+    // streaming firmware over Bluetooth took the flash away from it: "BLE OTA
+    // write error at 442 KB: Aborted" (the bench, 2026-09-30). The one in
+    // progress finishes; this one is refused.
+    if (bleOtaActive) {
+        events.add("Install refused: a Bluetooth update is being written");
+        server.send(409, "text/plain", "A Bluetooth update is being written - let it finish, then try again.");
+        return;
+    }
     // Asked for over Bluetooth (0.9.779): the STA may be "up" yet deaf, or
     // mid-rejoin, because a Bluetooth link holds the one antenna (the zombie
     // WiFi of 0.9.728). Below, Bluetooth is PAUSED for the download; so a
@@ -2131,6 +2150,11 @@ inline void rxUpdStep() {
             snprintf(m, sizeof m, "Receiver update: could not join %.30s in 30 s - nothing changed", getEffectiveSsid().c_str());
             rxUpdSetOutcome(RXO_NO_WIFI, m);
         }
+        return;
+    }
+    if (bleOtaActive) {      // the app is writing firmware over Bluetooth: it finishes, this order lapses (0.9.870)
+        rxUpdState = RXU_IDLE;
+        rxUpdSetOutcome(RXO_DOWNLOAD_FAILED, "Receiver update: a Bluetooth update is being written - nothing changed");
         return;
     }
     // startWifiStation() brought Bluetooth up again beside the WiFi: off for the download (one antenna, 0.9.779).
