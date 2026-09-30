@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.869-installable-from-the-transmitter",
+      "url": "https://messiter.com/rxv2/release/v0.9.869/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.869/littlefs.bin",
+      "fs_md5": "cc4878104ade8765b32ab2b7b6cb420e",
+      "notes": "Same firmware as 0.9.868: something for a receiver on 0.9.868 to install from the transmitter."
+    },
+    {
       "name": "RXV2-0.9.868-release-list-read-as-written",
       "url": "https://messiter.com/rxv2/release/v0.9.868/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.868/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.858/littlefs.bin",
       "fs_md5": "8261d5a4d30faa822c11464180d0267a",
       "notes": "Home page: each 3-second painter runs on its own \u2014 one failing can no longer silently stop the battery card and the rest"
-    },
-    {
-      "name": "RXV2-0.9.857-no-battery-says-so",
-      "url": "https://messiter.com/rxv2/release/v0.9.857/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.857/littlefs.bin",
-      "fs_md5": "0fb8bfa9315dcecc48f152c5f55a333e",
-      "notes": "Battery card: when the flight controller is on USB with no pack plugged in it now says 'No flight battery connected' instead of vanishing"
     }
   ],
   "rotorflight": {
