@@ -4,7 +4,7 @@ Beside each switch is where it is now: near (towards you), mid, or away. Move a 
 
 Touch a number or its job to choose the job: Banks 1 2 3, Bank 4 & Motor, Safety, Rates, Buddy, or Channel 5 to 16: the switch becomes that channel's input (any channel can use it on the Inputs page; on 5 to 8 it takes the place of the front switch or knob). 'Reversed' turns the switch's sense round. A switch that behaves strangely probably still needs calibrating.||
 
-A front switch with no other job is its channel's input, and is marked 'Channel 5' to 'Channel 8', or with the channel's name where you have renamed it (Flaps, say). Given another job it still feeds its channel: if that channel is in use, give it another input on the Inputs page. 'Not used' makes it do nothing at all: its channel's input sits at its centre.||
+A front switch with no other job is its channel's input, and is marked 'Channel 5' to 'Channel 8', or with the channel's name where you have renamed it (Flaps, say). Given any other job it lets go of its channel, whose input then sits at its centre (give that channel another input on the Inputs page if you need it). 'Not used' does the same and nothing else.||
 
 When using the Buddy box feature, one switch must be defined as 'Buddy'. It's probably best if this is a spring-return switch.||
 

@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B39 05/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B40 05/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -972,7 +972,8 @@ void DelaySimple(uint32_t ms);
 uint8_t GetSwitchPosition(uint8_t Sw_Number);
 bool AnyJobOnFrontSwitch();                   // B32: a job is assigned to one of switches 5-8
 bool InputIsSwitch(uint8_t InputDevice);      // B33: input device 0-15 (InPutStick's numbering) is served by a switch
-bool InputUnused(uint8_t InputDevice);        // B38: a front input (4-7) whose switch is marked Not used, and no other switch serves it
+bool InputUnused(uint8_t InputDevice);        // B38: a front input (4-7) whose switch is marked Not used (B40: or has another job), and no other switch serves it
+bool FrontSwitchHasOtherJob(uint8_t n);       // B40: switch 5-8 has a job other than its own channel
 bool FrontSwitchIsDefault(uint8_t n);         // B38: switch 5-8 with no job: its channel's input (the default marking)
 void ReadFrontSwitches();                     // B32: the four analogue readings, once a frame
 void ShowSwitchPositions();                   // B32: "up / mid / down" beside each switch on the Switches page

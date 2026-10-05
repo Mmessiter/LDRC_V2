@@ -30,9 +30,23 @@ bool InputIsSwitch(uint8_t InputDevice)
         return false; // (B38) a front switch given its own channel is simply its channel's input: read as the analogue input, so a knob there stays a knob
     return sw >= 1 && sw <= 8;
 }
+// B40 (Malcolm: switch 8 given channel 15 "did move channel 15, but it also moved channel 8 as well, which I think it should
+// not have done"): a front switch does ONE thing. Given any job other than its own channel, it lets go of that channel.
+bool FrontSwitchHasOtherJob(uint8_t n) // n 5-8
+{
+    if (SafetySwitch == n || BuddySwitch == n || BankSwitch == n || Autoswitch == n || DualRatesSwitch == n)
+        return true;
+    for (uint8_t k = 0; k < SWITCH_INPUTS; ++k)
+        if (TopChannelSwitch[k] == n && k != (uint8_t)(n - 5))
+            return true;
+    return false;
+}
 bool InputUnused(uint8_t InputDevice)
 {
-    return InputDevice >= 4 && InputDevice <= 7 && ((FrontSwitchUnused >> (InputDevice - 4)) & 1) && !InputIsSwitch(InputDevice);
+    if (InputDevice < 4 || InputDevice > 7 || InputIsSwitch(InputDevice))
+        return false;
+    const uint8_t n = InputDevice + 1; // the front switch that is this input
+    return ((FrontSwitchUnused >> (InputDevice - 4)) & 1) || FrontSwitchHasOtherJob(n);
 }
 bool FrontSwitchIsDefault(uint8_t n)
 {

@@ -186,6 +186,13 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## A switch does one thing (V2 B40, 5 Oct 2026)
+
+Malcolm set switch 8 to move channel 15: "it did move channel 15, but it also moved channel 8 as well, which I think
+it should not have done." B32's rule had a front switch keep feeding its own channel whatever job it had. Now a front
+switch given any other job (a special job, or another channel) lets go of its own channel, whose input sits at its
+centre, as "Not used" does. The B32 note below about a front switch feeding its channel no longer applies.
+
 ## A renamed channel by its name (V2 B39, 5 Oct 2026)
 
 Malcolm: "it is possible that channel 5, 6, 7 or 8 might have been renamed flaps or gear. In which case, let's
