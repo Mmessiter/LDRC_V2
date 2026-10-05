@@ -18,6 +18,11 @@ struct ScreenFront : public ldrc::FlightSource {
         const Kept *k = keptOf(c); if (!k) return dflt;
         auto t = k->ints.find("val"); return t == k->ints.end() ? dflt : t->second;
     }
+    long attribute(const char *c, const char *attr, long dflt) override {   // a colour the main board wrote: live, else as kept
+        if (Comp *p = live(c)) { const std::string a = attr; return a == "bco" ? p->bco : a == "pco" ? p->pco : dflt; }
+        const Kept *k = keptOf(c); if (!k) return dflt;
+        auto t = k->ints.find(attr); return t == k->ints.end() ? dflt : t->second;
+    }
     bool linked() override {                               // the main board's word; one too old to say: the link bar showing
         if (txStatus >= 0) return (txStatus & TX_MODEL) != 0;
         Comp *q = live("Quality"); return q && q->vis;

@@ -186,6 +186,15 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The Motor box in the safety's colours (screen 1.9.13, 5 Oct 2026)
+
+Malcolm: "The Motor option in a screen box does not convey the state of Safety yet as on the original screen. I
+suggest the use of green if safety is on, otherwise red, overriding user colour selection there." The original
+page's motor button is coloured by the main board as the safety switch moves (Motor_sign.h ShowSafety: red with
+white words while the safety is on, green with black words when it is off). The Motor box now takes exactly those
+colours, over whatever theme it was given, whenever the main board has written them; with no safety switch, or the
+motor kill off, it keeps its theme. The box's theme page still shows the theme being chosen.
+
 ## What the other boxes show (screen 1.9.12, 5 Oct 2026)
 
 Malcolm: "When choosing the contents of one of the new screen boxes, it's easy to forget which ones have already

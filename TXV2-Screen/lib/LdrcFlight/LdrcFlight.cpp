@@ -126,6 +126,16 @@ FlightValue flightValue(int item, FlightSource &src) {
         if (t.find("ON") != std::string::npos) { v.big = "ON"; v.state = FS_GOOD; }
         else if (t.find("OFF") != std::string::npos || t.find("off") != std::string::npos) v.big = "OFF";
         else unknown(nullptr);
+        // 1.9.13 (Malcolm: "The Motor option in a screen box does not convey the state of Safety yet as on the original screen"):
+        // the original page's motor button is coloured by the main board as the safety switch moves (red while the safety is
+        // on, green when it is off, with white or black words: Motor_sign.h ShowSafety). The box takes the same colours, over
+        // its theme, whenever the main board has written them.
+        const long face = src.attribute("bt0", "bco", -1);
+        if (face >= 0 && v.state != FS_EMPTY) {
+            const long ink = src.attribute("bt0", "pco", -1);
+            v.coloured = true; v.face = (uint16_t) face; v.ink = ink >= 0 ? (uint16_t) ink : (themeIsLight((uint16_t) face) ? 0x0000 : 0xFFFF);
+            if (v.state == FS_GOOD) v.state = FS_NORMAL;   // (its words in the given colour, not the usual green)
+        }
         break;
     }
     case FL_CLOCK: { const std::string t = flightClock(src.text("DateTime")); if (t.empty()) unknown(nullptr); else v.big = t; break; }
@@ -321,7 +331,7 @@ void FlightScreen::build(FlightSource &src, FlightFonts *fonts) {
         sc.right = flightClock(src.text("DateTime"));
         sc.alert = flightAlert(src);
         const std::vector<FlightRect> rs = flightLayout(cfg.layout, FlightRect(6, FLIGHT_STRIP + 6, FLIGHT_W - 12, FLIGHT_BUTTONS_Y - 6 - (FLIGHT_STRIP + 6)));
-        for (size_t i = 0; i < rs.size(); ++i) { FlightTile t; t.id = (int) i; t.r = rs[i]; t.item = cfg.items[i]; paint(t, (int) i); t.v = flightValue(t.item, src); sc.tiles.push_back(t); }
+        for (size_t i = 0; i < rs.size(); ++i) { FlightTile t; t.id = (int) i; t.r = rs[i]; t.item = cfg.items[i]; paint(t, (int) i); t.v = flightValue(t.item, src); if (t.v.coloured) { t.own = true; t.face = t.v.face; t.ink = t.v.ink; } sc.tiles.push_back(t); }
         // along the bottom, as on the front page: the transmitter's setup on the left, the model's on the right
         // (Malcolm, 10-04: "Transmitter  Original screen  Model", as the front page's row reads "Transmitter  Defined screen  Model")
         static const struct { int id; const char *text; } BUTTONS[] = { { ID_TXSETUP, "Transmitter" }, { ID_ORIGINAL, "Original screen" }, { ID_MODELSETUP, "Model" } };
@@ -350,7 +360,7 @@ void FlightScreen::build(FlightSource &src, FlightFonts *fonts) {
     } else if (chooser == -1) {
         sc.layout = 2000 + cfg.layout; sc.title = "Front screen"; sc.hint = "Touch a box to choose what it shows.";
         const std::vector<FlightRect> rs = flightLayout(cfg.layout, FlightRect(6, 92, FLIGHT_W - 12, 312));
-        for (size_t i = 0; i < rs.size(); ++i) { FlightTile t; t.id = (int) i; t.r = rs[i]; t.item = cfg.items[i]; paint(t, (int) i); t.v = flightValue(t.item, src); t.pressed = pressedId == (int) i && !slidOff;
+        for (size_t i = 0; i < rs.size(); ++i) { FlightTile t; t.id = (int) i; t.r = rs[i]; t.item = cfg.items[i]; paint(t, (int) i); t.v = flightValue(t.item, src); if (t.v.coloured) { t.own = true; t.face = t.v.face; t.ink = t.v.ink; } t.pressed = pressedId == (int) i && !slidOff;
                                                  if (t.item == FL_NONE) { t.v.label = "Nothing"; t.v.state = FS_EMPTY; } sc.tiles.push_back(t); }
         // (1.9.8: no "When" button any more - the front page's own buttons choose the screen, and the choice stays.
         // 1.9.9, Malcolm: "The three remaining buttons now look as if there's one just missing! I think they should be

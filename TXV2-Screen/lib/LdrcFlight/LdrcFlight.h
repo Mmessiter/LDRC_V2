@@ -43,6 +43,7 @@ struct FlightSource {
     virtual long number(const char *comp, long dflt) = 0;
     virtual bool linked() = 0;                         // a model is connected
     virtual bool flying() = 0;
+    virtual long attribute(const char *comp, const char *attr, long dflt) { (void) comp; (void) attr; return dflt; }   // a colour the main board wrote ("bt0.bco="), -1 if never
 };
 
 enum FlightState : uint8_t { FS_NORMAL = 0, FS_GOOD, FS_WARN, FS_ALARM, FS_STALE, FS_EMPTY };
@@ -50,6 +51,7 @@ struct FlightValue {
     std::string label, big, unit, small;               // "Flight battery", "7.82", "V", "3.91 V per cell   78 %"
     FlightState state = FS_NORMAL;
     std::vector<uint8_t> bars;                         // channel bars (Malcolm, 10-03: "Channel bars (first 8 or all 16)"): each 0..100, 50 = centre, as the front page has them
+    bool coloured = false; uint16_t face = 0, ink = 0; // the box takes these colours whatever its theme (1.9.13: the Motor box in the safety's colours, as the original front page's button)
     std::string image;                                 // the model's picture (Malcolm, 10-04: "can we add to the available box options 'model image'"): the front page's, by the name the main board gave it
 };
 FlightValue flightValue(int item, FlightSource &src);
