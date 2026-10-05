@@ -186,6 +186,16 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Six defined front screens (screen 1.10.0, 5 Oct 2026)
+
+Malcolm: "Currently one defined screen is all we can have. Perhaps we can allow a choice? I suggest perhaps 6 slots
+each of which can hold a different screen definition. Then a user can easily switch from one good definition to
+another without needing to laboriously redesign it." Six definitions, each with its own boxes, sizes and themes,
+chosen by tabs 1 to 6 in the strip of the Defined front screen setup page; the one in use is yellow. Touching a tab
+switches at once, and the boxes below show that design. Each is kept in the chip; the one definition of 1.6.0-1.9.15
+becomes screen 1, so an update changes nothing. Whether the defined or the original front screen shows (the two
+buttons) is the pilot's choice, not a slot's, and goes along when the tab changes.
+
 ## "Defined front screen" (screen 1.9.15, 5 Oct 2026)
 
 Malcolm: "Front screen needs to say Defined front screen for greater clarity." The Appearance page's button and the

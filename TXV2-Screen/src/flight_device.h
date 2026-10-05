@@ -14,9 +14,22 @@ static bool flightSaveWanted = false; static uint32_t flightSaveAt = 0;
 static std::string flightSetupOver;                             // the page the setup page was opened over: it goes when the main board leaves it
 
 static bool flightUp() { return topOn && (topWho == FLIGHT_WHO || topWho == FLIGHT_SETUP_WHO); }
+// The six definitions (1.10.0): "flight" is slot 1 (as the one definition of 1.6.0-1.9.15 was kept, so an update keeps
+// it), "flight2".."flight6" the others, "flightSlot" the one in use.
+static std::string flightKey(int k) { return k == 0 ? std::string("flight") : "flight" + std::to_string(k + 1); }
 static void flightLoad() {
-    const std::string s = prefs.getString("flight", "").c_str();
-    if (!s.empty() && !flight.cfg.load(s)) blog("flight", "setting not understood: " + s);
+    for (int k = 0; k < ldrc::FlightScreen::FLIGHT_SLOTS; ++k) {
+        const std::string s = prefs.getString(flightKey(k).c_str(), "").c_str();
+        if (!s.empty() && !flight.loadSlot(k, s)) blog("flight", "setting not understood: " + s);
+    }
+    flight.setSlotInUse(prefs.getInt("flightSlot", 0));
+}
+static void flightStore() {
+    for (int k = 0; k < ldrc::FlightScreen::FLIGHT_SLOTS; ++k) {
+        const std::string s = flight.slotConfig(k).save();
+        if (std::string(prefs.getString(flightKey(k).c_str(), "").c_str()) != s) prefs.putString(flightKey(k).c_str(), s.c_str());
+    }
+    if (prefs.getInt("flightSlot", 0) != flight.slotInUse()) prefs.putInt("flightSlot", flight.slotInUse());
 }
 static void flightTouch(bool pressed, int x, int y, uint32_t now) {
     static uint32_t lastDown = 0;
@@ -62,8 +75,7 @@ static void flightPoll() {
         if (teensyLink.running() || armedNow) flightSaveAt = now;   // (held back: the wait starts again when it may be written)
         else if ((int32_t) (now - lastRxMs) > 300 || now - flightSaveAt > 3000) {
             flightSaveWanted = false;
-            const std::string s = flight.cfg.save();
-            if (std::string(prefs.getString("flight", "").c_str()) != s) prefs.putString("flight", s.c_str());
+            flightStore();
         }
     }
     const int who = !layerFree || blank ? 0 : flight.setupOpen() ? FLIGHT_SETUP_WHO : flight.showing() ? FLIGHT_WHO : 0;

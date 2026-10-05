@@ -141,6 +141,7 @@ struct FlightScene {
     std::string title, left, middle, right, hint;      // the strip: (setup) the title; (flight) model, bank, clock
     std::string alert;                                 // (flight) a warning: the strip turns red and says it
     int stripRight = 800;                              // (flight) where the strip's words end on the right: the Help button is beyond
+    bool tabs = false;                                 // (setup) the slot tabs sit at the right of the strip: the title goes on the left
     std::vector<FlightTile> tiles;
     std::vector<FlightButton> buttons;
 };
@@ -152,7 +153,17 @@ static const int FLIGHT_BUTTONS_Y = 424, FLIGHT_BUTTONS_H = 50;
 
 class FlightScreen {
 public:
-    FlightConfig cfg;
+    FlightConfig cfg;                                  // the definition in use (slot slotNo), as it is being used or edited
+    // Six definitions to keep (1.10.0, Malcolm: "6 slots each of which can hold a different screen definition. Then a user
+    // can easily switch from one good definition to another without needing to laboriously redesign it"). The one in use
+    // is cfg; the others wait in slots[]. The choice of the moment (cfg.manual) is the pilot's, not a slot's: it goes
+    // along when the slot changes. The setup page's tabs choose the slot.
+    static const int FLIGHT_SLOTS = 6;
+    int slotInUse() const { return slotNo; }
+    void chooseSlot(int k);                            // k 0-5: the definition in use from now on (its own boxes, sizes, themes)
+    const FlightConfig &slotConfig(int k) const { return k == slotNo ? cfg : slots[k < 0 || k >= FLIGHT_SLOTS ? 0 : k]; }
+    bool loadSlot(int k, const std::string &s);        // a stored definition into slot k (the one in use included)
+    void setSlotInUse(int k) { if (k >= 0 && k < FLIGHT_SLOTS && k != slotNo) { slots[slotNo] = cfg; const uint8_t m = cfg.manual; slotNo = k; cfg = slots[k]; cfg.manual = m; } }   // (at start-up: no "saved")
     uint16_t themeFace = 0x114A, themeInk = 0xFFFF;    // the screens' theme (the Themes page's): what a box follows
     uint16_t palPanels[THEME_COUNT], palInks[THEME_COUNT];   // the twelve themes on offer (set by the screen; as they came until then)
     FlightScreen();
@@ -180,6 +191,7 @@ private:
     uint32_t lastSeen = 0;                             // the last sample with the finger on the glass: a lift is real after 80 ms of none
     int idAt(int x, int y) const;
     FlightConfig before;                               // the settings when the page opened
+    FlightConfig slots[FLIGHT_SLOTS]; int slotNo = 0;  // the definitions not in use (slots[slotNo] is stale: cfg is that one)
     FlightScene sc;
     void build(FlightSource &src, FlightFonts *fonts);
     void releaseOn(int id);

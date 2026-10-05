@@ -311,6 +311,18 @@ void FlightScreen::poll(uint32_t now, bool onFront, bool flying, bool blocked) {
 }
 void FlightScreen::useDefined() { if (cfg.manual != FM_DEFINED) { cfg.manual = FM_DEFINED; saved = true; } }   // (kept: the same screen after a switch-off)
 void FlightScreen::openSetup() { setup = true; shown = false; chooser = -1; colourFor = -1; pressedId = -1; down = slidOff = false; before = cfg; }
+void FlightScreen::chooseSlot(int k) {
+    if (k < 0 || k >= FLIGHT_SLOTS || k == slotNo) return;
+    slots[slotNo] = cfg;                               // what was being used or edited, kept in its slot
+    const uint8_t m = cfg.manual;
+    slotNo = k; cfg = slots[k]; cfg.manual = m;        // (the choice of the moment is the pilot's, not the slot's)
+    before = cfg; saved = true;                        // (the slot in use is a setting: stored)
+}
+bool FlightScreen::loadSlot(int k, const std::string &s) {
+    if (k < 0 || k >= FLIGHT_SLOTS) return false;
+    if (k == slotNo) return cfg.load(s);
+    return slots[k].load(s);
+}
 void FlightScreen::closeSetup() { setup = false; chooser = -1; colourFor = -1; pressedId = -1; down = slidOff = false; if (!(cfg == before)) saved = true; }
 bool FlightScreen::takeSaved() { const bool s = saved; saved = false; return s; }
 bool FlightScreen::takeFrontPress(std::string &comp) { if (frontPress.empty()) return false; comp = frontPress; frontPress.clear(); return true; }
@@ -318,7 +330,7 @@ bool FlightScreen::takeFrontPress(std::string &comp) { if (frontPress.empty()) r
 static uint32_t hashOf(const std::string &s, uint32_t h) { for (unsigned char c : s) h = (h ^ c) * 16777619u; return h; }
 static const int ID_BOXES = 101, ID_STAY = 102, ID_OK = 103, ID_BACK = 104, ID_ITEM = 200, ID_LAYOUT = 300;
 static const int ID_TXSETUP = 110, ID_ORIGINAL = 111, ID_MODELSETUP = 112, ID_HELP = 113;
-static const int ID_COLOUR = 120, ID_COLOUR_DONE = 121, ID_SAME = 122, ID_FACE = 500;
+static const int ID_COLOUR = 120, ID_COLOUR_DONE = 121, ID_SAME = 122, ID_FACE = 500, ID_SLOT = 600;
 static const int SLOT_Y = 414, SLOT_H = 56, SLOT_W = 180;
 static FlightRect slot(int i) { return FlightRect(14 + i * 197, SLOT_Y, SLOT_W, SLOT_H); }
 
@@ -361,7 +373,10 @@ void FlightScreen::build(FlightSource &src, FlightFonts *fonts) {
         FlightButton bt; bt.id = ID_SAME; bt.r = FlightRect(14, 414, 377, 56); bt.text = "Same as screens"; sc.buttons.push_back(bt);
         bt.id = ID_COLOUR_DONE; bt.r = slot(3); bt.text = "OK"; sc.buttons.push_back(bt);
     } else if (chooser == -1) {
-        sc.layout = 2000 + cfg.layout; sc.title = "Defined front screen"; sc.hint = "Touch a box to choose what it shows.";
+        sc.layout = 2000 + cfg.layout + 32 * slotNo; sc.title = "Defined front screen"; sc.hint = "Touch a box to choose what it shows. Tabs: six screens to design."; sc.tabs = true;
+        for (int k = 0; k < FLIGHT_SLOTS; ++k) {                      // the six definitions, as tabs in the strip: the one in use marked
+            FlightButton tb; tb.id = ID_SLOT + k; tb.r = FlightRect(FLIGHT_W - 14 - (FLIGHT_SLOTS - k) * 42 + 4, 8, 38, 42); tb.text = std::to_string(k + 1); tb.chosen = k == slotNo; sc.buttons.push_back(tb);
+        }
         const std::vector<FlightRect> rs = flightLayout(cfg.layout, FlightRect(6, 92, FLIGHT_W - 12, 312));
         for (size_t i = 0; i < rs.size(); ++i) { FlightTile t; t.id = (int) i; t.r = rs[i]; t.item = cfg.items[i]; paint(t, (int) i); t.v = flightValue(t.item, src); if (t.v.coloured) { t.own = true; t.face = t.v.face; t.ink = t.v.ink; } t.pressed = pressedId == (int) i && !slidOff;
                                                  if (t.item == FL_NONE) { t.v.label = "Nothing"; t.v.state = FS_EMPTY; } sc.tiles.push_back(t); }
@@ -470,6 +485,7 @@ void FlightScreen::releaseOn(int id) {
         return;
     }
     if (id >= 0 && id < cfg.boxes()) { chooser = id; return; }       // (what the boxes beyond the layout's show is kept, for a bigger layout)
+    if (id >= ID_SLOT && id < ID_SLOT + FLIGHT_SLOTS) { chooseSlot(id - ID_SLOT); return; }   // another definition, from now on
     if (id == ID_BOXES) chooser = CHOOSE_SIZES;
     else if (id == ID_STAY) cfg.stayOn = !cfg.stayOn;
     else if (id == ID_OK) closeSetup();

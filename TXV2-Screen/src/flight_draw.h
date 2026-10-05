@@ -277,7 +277,7 @@ static void flightDrawStrip(const ldrc::FlightScene &sc) {
         return;
     }
     gfx->fillRect(0, 0, W, FLIGHT_SETUP_STRIP, FL_STRIP); gfx->drawFastHLine(0, FLIGHT_SETUP_STRIP, W, FL_LINE);
-    flText((W - textWidth(0, sc.title)) / 2, (FLIGHT_SETUP_STRIP - fontHeight(0)) / 2, 0, FL_INK, sc.title);
+    flText(sc.tabs ? 14 : (W - textWidth(0, sc.title)) / 2, (FLIGHT_SETUP_STRIP - fontHeight(0)) / 2, 0, FL_INK, sc.title);   // (tabs at the right: the title on the left)
     gfx->fillRect(0, FLIGHT_SETUP_STRIP + 1, W, 32, FL_GROUND);
     if (!sc.hint.empty()) flText((W - textWidth(6, sc.hint)) / 2, FLIGHT_SETUP_STRIP + 4, 6, FL_SOFT, sc.hint);
 }
