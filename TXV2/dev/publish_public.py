@@ -37,7 +37,7 @@ def run(cmd, cwd=None): subprocess.run(cmd, cwd=cwd, check=True)
 def rsync(src, dst, include, exclude):
     os.makedirs(dst, exist_ok=True)
     args = ['rsync', '-a', '--delete', '--delete-excluded', '--prune-empty-dirs']
-    for k in KEEP_IN_PUBLIC: args += ['--exclude', '/' + k]
+    for k in KEEP_IN_PUBLIC: args += ['--filter', 'P /' + k, '--exclude', '/' + k]   # (P: protected from --delete-excluded too)
     for e in exclude: args += (['--include', e[1:]] if e.startswith('!') else ['--exclude', e])
     for i in include: args += ['--include', '/' + i + ('/***' if os.path.isdir(os.path.join(src, i)) else '')]
     args += ['--exclude', '*', src.rstrip('/') + '/', dst.rstrip('/') + '/']
