@@ -375,14 +375,17 @@ void FlightScreen::build(FlightSource &src, FlightFonts *fonts) {
         for (int it = 1; it <= FL_ITEMS; ++it) {                        // the things, then "Nothing" last
             const int item = it == FL_ITEMS ? FL_NONE : it, k = it - 1;
             FlightButton bt; bt.id = ID_ITEM + item; bt.r = FlightRect(x0 + (k % cols) * (w + gap), y0 + (k / cols) * (h + gap), w, h);
-            bt.text = flightItemName(item); bt.chosen = cfg.items[chooser] == item; sc.buttons.push_back(bt);
+            bt.text = flightItemName(item); bt.chosen = cfg.items[chooser] == item;
+            // (1.9.12, Malcolm: "it's easy to forget which ones have already been selected") another box already shows it: say which
+            if (item != FL_NONE) for (int k = 0; k < cfg.boxes(); ++k) if (k != chooser && cfg.items[k] == item) { bt.usedBy = (uint8_t) (k + 1); break; }
+            sc.buttons.push_back(bt);
         }
         FlightButton bt; bt.id = ID_BACK; bt.r = slot(3); bt.text = "OK"; sc.buttons.push_back(bt);   // (OK at the bottom right, as on every page)
         bt.id = ID_COLOUR; bt.r = slot(0); bt.text = "Theme"; sc.buttons.push_back(bt);   // (its theme: a page of its own)
     }
     for (auto &b : sc.buttons) {
         b.pressed = b.id == pressedId && !slidOff && !b.label;
-        b.serial = hashOf(b.text, 2166136261u) ^ ((b.chosen ? 1u : 0u) << 1) ^ (b.pressed ? 1u : 0u);
+        b.serial = hashOf(b.text, 2166136261u) ^ ((b.chosen ? 1u : 0u) << 1) ^ (b.pressed ? 1u : 0u) ^ ((uint32_t) b.usedBy << 4);
         if (b.swatch) b.serial = (b.serial ^ b.face) * 16777619u ^ b.ink;
     }
     flightSizeTiles(sc.tiles, fonts);

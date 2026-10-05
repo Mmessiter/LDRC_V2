@@ -201,7 +201,7 @@ static void flightDrawButton(const ldrc::FlightButton &b) {
         flText(b.r.x, b.r.y + (b.r.h - fontHeight(6)) / 2, 6, FL_SOFT, b.text);
         return;
     }
-    uint16_t face = b.chosen ? FL_CHOSEN : FL_BUTTON;
+    uint16_t face = b.chosen ? FL_CHOSEN : b.usedBy ? shade(FL_BUTTON, -18) : FL_BUTTON;   // (a thing another box shows: a shade darker, and badged below)
     if (b.pressed) face = shade(face, -30);
     flRaised(b.r, face, b.pressed);
     if (b.swatch) {                                               // a pair to touch: its box colour, a sample of its text colour on it, the box's own marked
@@ -243,6 +243,12 @@ static void flightDrawButton(const ldrc::FlightButton &b) {
     } else {
         const std::string s = flCut(b.text, 2, b.r.w - 12);
         flText(b.r.x + (b.r.w - textWidth(2, s)) / 2 + d, b.r.y + (b.r.h - fontHeight(2)) / 2 + d, 2, 0x0000, s);
+    }
+    if (b.usedBy) {                                               // the box that already shows this thing: its number in a dark disc, top right
+        const int cx = b.r.x + b.r.w - 16 + d, cy = b.r.y + 14 + d;
+        gfx->fillCircle(cx, cy, 11, 0x4A69);
+        const std::string n = std::to_string((int) b.usedBy);
+        flText(cx - textWidth(4, n) / 2, cy - fontHeight(4) / 2, 4, 0xFFFF, n);
     }
     flUnclip();
 }

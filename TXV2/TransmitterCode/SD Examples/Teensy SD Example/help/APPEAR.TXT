@@ -12,7 +12,7 @@ FRONT SCREEN: your own front screen, with big, clear numbers while you fly. Touc
 
 'Box sizes' offers twelve layouts, from one big box to nine small ones. Box 1 is always the biggest: put what matters most there. The numbers grow with their boxes.||
 
-Box themes: touch a box, then 'Theme'. A box takes any of the twelve themes. 'Same as screens' gives it the screens' theme again.||
+A choice another box already shows is darker and carries that box's number, so nothing is chosen twice by mistake. Box themes: touch a box, then 'Theme'. A box takes any of the twelve themes. 'Same as screens' gives it the screens' theme again.||
 
 Which front screen shows is chosen on the front screens themselves: 'Defined screen' on the original brings yours, 'Original screen' on yours brings the original back, and the choice stays, through take-offs, landings and switching off, until you press the other button. Your screen's other buttons: 'Transmitter', 'Model' and 'Help'. A touch anywhere else does nothing.||
 

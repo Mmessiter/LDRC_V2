@@ -186,6 +186,13 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## What the other boxes show (screen 1.9.12, 5 Oct 2026)
+
+Malcolm: "When choosing the contents of one of the new screen boxes, it's easy to forget which ones have already
+been selected. Perhaps we can put some marker on the buttons to indicate which has been used already." In the
+chooser, a thing another box already shows is a shade darker and carries that box's number in a small disc, top
+right. The box's own choice stays yellow.
+
 ## The picture alone (screen 1.9.11, 5 Oct 2026)
 
 Malcolm: "If I select model image, I get the name as well as the image. But I only want the image, so if we remove
