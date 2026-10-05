@@ -352,7 +352,10 @@ void FlightScreen::build(FlightSource &src, FlightFonts *fonts) {
         for (int k = 0; k < THEME_COUNT; ++k) {                       // four to a row, three rows, each in its own two colours
             FlightButton bt; bt.id = ID_FACE + k; bt.r = FlightRect(14 + (k % 4) * 126, 100 + (k / 4) * 90, 120, 80);
             bt.swatch = (uint8_t) (k + 1); bt.face = palPanels[k]; bt.ink = palInks[k];
-            bt.text = std::to_string(k + 1); bt.chosen = k == mark; sc.buttons.push_back(bt);   // (by number, as on the Themes page)
+            bt.text = std::to_string(k + 1); bt.chosen = k == mark;                         // (by number, as on the Themes page)
+            for (int j = 0; j < cfg.boxes(); ++j)                                             // (1.9.14, Malcolm: "which themes have already been used") the other boxes wearing it
+                if (j != colourFor && cfg.boxTheme[j] == k + 1) bt.usedBoxes += (bt.usedBoxes.empty() ? "" : " ") + std::to_string(j + 1);
+            sc.buttons.push_back(bt);
         }
         // (OK at the bottom right, as on every page - Malcolm, 10-04; "Same as screens" on the left)
         FlightButton bt; bt.id = ID_SAME; bt.r = FlightRect(14, 414, 377, 56); bt.text = "Same as screens"; sc.buttons.push_back(bt);
@@ -395,7 +398,7 @@ void FlightScreen::build(FlightSource &src, FlightFonts *fonts) {
     }
     for (auto &b : sc.buttons) {
         b.pressed = b.id == pressedId && !slidOff && !b.label;
-        b.serial = hashOf(b.text, 2166136261u) ^ ((b.chosen ? 1u : 0u) << 1) ^ (b.pressed ? 1u : 0u) ^ ((uint32_t) b.usedBy << 4);
+        b.serial = hashOf(b.text, 2166136261u) ^ ((b.chosen ? 1u : 0u) << 1) ^ (b.pressed ? 1u : 0u) ^ ((uint32_t) b.usedBy << 4) ^ hashOf(b.usedBoxes, 7u);
         if (b.swatch) b.serial = (b.serial ^ b.face) * 16777619u ^ b.ink;
     }
     flightSizeTiles(sc.tiles, fonts);

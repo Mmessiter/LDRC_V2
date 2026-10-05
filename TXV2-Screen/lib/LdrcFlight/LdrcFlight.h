@@ -132,7 +132,8 @@ struct FlightTile { int id = 0; FlightRect r; int item = FL_NONE; FlightValue v;
 // label: words on the page, not a button.
 struct FlightButton { int id = 0; FlightRect r; std::string text; bool chosen = false, pressed = false; uint32_t serial = 0; int8_t layout = -1;
                       uint8_t swatch = 0; uint16_t face = 0, ink = 0; bool label = false;
-                      uint8_t usedBy = 0; };                   // (the chooser) this thing is already shown by box usedBy (1-9): marked, so it is not chosen twice by mistake
+                      uint8_t usedBy = 0;                   // (the chooser) this thing is already shown by box usedBy (1-9): marked, so it is not chosen twice by mistake
+                      std::string usedBoxes; };             // (a box's theme page) the other boxes that wear this theme, "2 5": marked the same way (1.9.14)
 void flightSizeTiles(std::vector<FlightTile> &tiles, FlightFonts *fonts);
 struct FlightScene {
     uint32_t layout = 0;                               // changes when everything must be drawn again

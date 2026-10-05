@@ -216,6 +216,13 @@ static void flightDrawButton(const ldrc::FlightButton &b) {
             const int font = r.h >= 60 && textWidth(0, b.text) <= r.w - 12 ? 0 : 2;
             flClip(r); flText(r.x + (r.w - textWidth(font, b.text)) / 2, r.y + (r.h - fontHeight(font)) / 2, font, b.ink, b.text); flUnclip();
         }
+        if (!b.usedBoxes.empty()) {                               // the other boxes wearing this theme: their numbers in a dark pill, top right (1.9.14)
+            const int tw = textWidth(4, b.usedBoxes), pw = tw + 12, ph = 20, px = r.x + r.w - pw - 4, py = r.y + 4;
+            flClip(r);
+            gfx->fillRoundRect(px, py, pw, ph, 10, 0x4A69);
+            flText(px + 6, py + (ph - fontHeight(4)) / 2, 4, 0xFFFF, b.usedBoxes);
+            flUnclip();
+        }
         return;
     }
     if (b.layout >= 0) {                                          // a choice of box sizes: its boxes, drawn small, box 1 marked

@@ -186,6 +186,13 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Which themes the other boxes wear (screen 1.9.14, 5 Oct 2026)
+
+Malcolm: "when choosing a theme it would be quite nice to know while choosing which themes have already been used."
+On a box's theme page, a theme other boxes wear carries their numbers in a small dark pill, top right ("2 5"). The
+box's own theme keeps its yellow frame. (A host test had walked a scene's buttons while asking for the scene again,
+which rebuilds it; it only showed when the button record grew. The test copies the scene first now.)
+
 ## The Motor box in the safety's colours (screen 1.9.13, 5 Oct 2026)
 
 Malcolm: "The Motor option in a screen box does not convey the state of Safety yet as on the original screen. I
