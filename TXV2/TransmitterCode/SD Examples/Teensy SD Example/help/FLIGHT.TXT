@@ -6,4 +6,4 @@ This is your own front screen: big, clear numbers while you fly.||
 
 A box turns amber or red when its value needs a look. The top line turns red for BATTERY LOW, or NO LINK in flight.||
 
-To choose what the boxes show, their themes and their sizes: Transmitter setup, Appearance, then Defined front screen.
+To choose what the boxes show, their themes and their sizes: Transmitter setup, Appearance, then Defined front screen. There are six screens to design: the tabs 1 to 6 on that page choose which one you are looking at now, and each keeps its own design.

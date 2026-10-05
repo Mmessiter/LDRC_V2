@@ -186,6 +186,12 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The six screens explained (help files, 5 Oct 2026)
+
+Malcolm: "let us explain the functionality of the six definable front screens in the help text." The Appearance help
+has a paragraph of its own on the six screens (tabs, the yellow one in use, what each keeps, why: one design for
+the simulator, one for a helicopter, one for a glider), and the defined screen's own help points to the tabs.
+
 ## Six defined front screens (screen 1.10.0, 5 Oct 2026)
 
 Malcolm: "Currently one defined screen is all we can have. Perhaps we can allow a choice? I suggest perhaps 6 slots
