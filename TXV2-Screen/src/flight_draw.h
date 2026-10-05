@@ -166,9 +166,9 @@ static void flightDrawTile(const ldrc::FlightTile &t, bool setup) {
     flClip(FlightRect(r.x + 2, r.y + 2, r.w - 4, r.h - 4));
     const int pad = FLIGHT_PAD, tf = t.textFont, labelH = fontHeight(tf), smallH = labelH;   // (room for the small line in every box: the numbers of a row line up)
     flText(r.x + pad, r.y + 8, tf, soft, flCut(v.label, tf, r.w - 2 * pad));
-    if (!v.image.empty()) {                                       // the model's picture instead of a number, as big as the box allows
-        const int top = r.y + 8 + labelH + 6;
-        if (!flImage(FlightRect(r.x + pad, top, r.w - 2 * pad, r.y + r.h - 10 - top), v.image)) {   // (no such picture on the card: say which)
+    if (!v.image.empty()) {                                       // the model's picture instead of a number, as big as the box allows: the whole box but its edge (1.9.11)
+        const int top = r.y + 5;
+        if (!flImage(FlightRect(r.x + 5, top, r.w - 10, r.h - 10), v.image)) {   // (no such picture on the card: say which)
             flNumber(FlightRect(r.x + pad, top, r.w - 2 * pad, r.y + r.h - 10 - top - smallH - 4), "--", "", t.scale, FL_DIM, FL_DIM);
             std::string base = v.image.substr(v.image.find_last_of("/\\") == std::string::npos ? 0 : v.image.find_last_of("/\\") + 1);
             const size_t dot = base.find_last_of('.'); if (dot != std::string::npos) base = base.substr(0, dot);

@@ -186,6 +186,13 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The picture alone (screen 1.9.11, 5 Oct 2026)
+
+Malcolm: "If I select model image, I get the name as well as the image. But I only want the image, so if we remove
+the name, we can have a bigger image!" The Model image box shows the picture alone, as big as the box allows, its
+shape kept. The model's name stays in the strip at the top of the screen. A box with no picture to show keeps its
+"Model image" label and says which picture is missing.
+
 ## A switch does one thing (V2 B40, 5 Oct 2026)
 
 Malcolm set switch 8 to move channel 15: "it did move channel 15, but it also moved channel 8 as well, which I think

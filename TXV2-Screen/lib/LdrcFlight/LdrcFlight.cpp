@@ -130,10 +130,10 @@ FlightValue flightValue(int item, FlightSource &src) {
     }
     case FL_CLOCK: { const std::string t = flightClock(src.text("DateTime")); if (t.empty()) unknown(nullptr); else v.big = t; break; }
     case FL_MODEL: { const std::string t = src.text("ModelName"); if (t.empty() || t == "Model name") unknown(nullptr); else v.big = t; break; }
-    case FL_IMAGE: {                                   // the front page's picture (the main board names it at every visit: exp0.path); its name above it
-        const std::string t = src.text("ModelName"); if (!t.empty() && t != "Model name") v.label = t;
-        v.image = src.text("exp0");
-        if (v.image.empty()) unknown("no picture");
+    case FL_IMAGE: {                                   // the front page's picture (the main board names it at every visit: exp0.path), and nothing else:
+        v.image = src.text("exp0");                     // no name above it (1.9.11, Malcolm: "I only want the image ... we can have a bigger image")
+        if (v.image.empty()) unknown("no picture");     // (the box keeps its "Model image" label only while it has no picture to show)
+        else v.label.clear();
         break;
     }
     case FL_BARS8: case FL_BARS16: {                      // the transmitter's own outputs: with a model or without
