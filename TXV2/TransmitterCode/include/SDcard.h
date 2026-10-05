@@ -699,6 +699,30 @@ uint8_t SDRead8BITS(int p_address)
 }
 
 /*********************************************************************************************************************************/
+// B32: the transmitter block's extension. Two bytes at a fixed place near the end of the block (TXSIZE is 512, the sequence
+// above ends near 276): a marker, then the reversed flags of switches 5-8 in bits 0-3. Read and written with the checksum
+// switched off, so a models.dat from before B32 (which never wrote them) still passes its checksum, and a build before B32
+// never looks at them. No marker: nothing reversed.
+void ReadTxExtension()
+{
+    DoingCheckSm = true; // (BuildCheckSum() skips while this is set)
+    const uint8_t marker = SDRead8BITS(TX_EXT_ADDR), bits = SDRead8BITS(TX_EXT_ADDR + 1);
+    DoingCheckSm = false;
+    for (uint8_t k = 0; k < 4; ++k)
+        SwitchReversed[4 + k] = (marker == TX_EXT_MAGIC) && ((bits >> k) & 1);
+}
+void SaveTxExtension()
+{
+    uint8_t bits = 0;
+    for (uint8_t k = 0; k < 4; ++k)
+        if (SwitchReversed[4 + k])
+            bits |= (1 << k);
+    DoingCheckSm = true;
+    SDUpdate8BITS(TX_EXT_ADDR, TX_EXT_MAGIC);
+    SDUpdate8BITS(TX_EXT_ADDR + 1, bits);
+    DoingCheckSm = false;
+}
+/*********************************************************************************************************************************/
 /******************************************* LOAD ALL PARAMS *********************************************************************/
 /*********************************************************************************************************************************/
 
@@ -850,20 +874,20 @@ bool LoadAllParameters()
     Autoswitch = SDRead8BITS(SDCardAddress);
     ++SDCardAddress;
     TopChannelSwitch[Ch9_SW] = SDRead8BITS(SDCardAddress);
-    if (TopChannelSwitch[Ch9_SW] > 4)
-        TopChannelSwitch[Ch9_SW] = 0; // ClaudeFix-2-7-2026 switches are 1..4; 0 = unused
+    if (TopChannelSwitch[Ch9_SW] > 8)
+        TopChannelSwitch[Ch9_SW] = 0; // ClaudeFix-2-7-2026 switches are 1..4 (B32: 1..8); 0 = unused
     ++SDCardAddress;
     TopChannelSwitch[Ch10_SW] = SDRead8BITS(SDCardAddress);
-    if (TopChannelSwitch[Ch10_SW] > 4)
-        TopChannelSwitch[Ch10_SW] = 0; // ClaudeFix-2-7-2026 switches are 1..4; 0 = unused
+    if (TopChannelSwitch[Ch10_SW] > 8)
+        TopChannelSwitch[Ch10_SW] = 0; // ClaudeFix-2-7-2026 switches are 1..4 (B32: 1..8); 0 = unused
     ++SDCardAddress;
     TopChannelSwitch[Ch11_SW] = SDRead8BITS(SDCardAddress);
-    if (TopChannelSwitch[Ch11_SW] > 4)
-        TopChannelSwitch[Ch11_SW] = 0; // ClaudeFix-2-7-2026 switches are 1..4; 0 = unused
+    if (TopChannelSwitch[Ch11_SW] > 8)
+        TopChannelSwitch[Ch11_SW] = 0; // ClaudeFix-2-7-2026 switches are 1..4 (B32: 1..8); 0 = unused
     ++SDCardAddress;
     TopChannelSwitch[Ch12_SW] = SDRead8BITS(SDCardAddress);
-    if (TopChannelSwitch[Ch12_SW] > 4)
-        TopChannelSwitch[Ch12_SW] = 0; // ClaudeFix-2-7-2026 switches are 1..4; 0 = unused
+    if (TopChannelSwitch[Ch12_SW] > 8)
+        TopChannelSwitch[Ch12_SW] = 0; // ClaudeFix-2-7-2026 switches are 1..4 (B32: 1..8); 0 = unused
     ++SDCardAddress;
     SwitchReversed[0] = bool(SDRead8BITS(SDCardAddress));
     ++SDCardAddress;
@@ -898,6 +922,7 @@ bool LoadAllParameters()
     ++SDCardAddress;
 
     ReadCheckSum32();
+    ReadTxExtension(); // B32: the front switches' reversed flags, outside the checksummed sequence (an older file has none)
     CheckTrimValues();
     MemoryForTransmtter = SDCardAddress;
     if ((ModelNumber < 1) || (ModelNumber > 90))
@@ -1084,6 +1109,7 @@ void SaveTransmitterParameters()
     ++SDCardAddress;
 
     SaveCheckSum32(); // Save the Transmitter parametres checksm
+    SaveTxExtension(); // B32: the front switches' reversed flags (outside the checksum)
     CloseModelsFile();
 }
 

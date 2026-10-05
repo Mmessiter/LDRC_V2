@@ -9,11 +9,32 @@
 
 /************************************************************************************************************/
 
+// B32: is any job on one of the front switches (5-8)? Then their analogue inputs are read every frame, as the top ones are.
+bool AnyJobOnFrontSwitch()
+{
+    if (SafetySwitch >= 5 || BuddySwitch >= 5 || BankSwitch >= 5 || Autoswitch >= 5 || DualRatesSwitch >= 5)
+        return true;
+    for (uint8_t k = 0; k < 4; ++k)
+        if (TopChannelSwitch[k] >= 5)
+            return true;
+    return false;
+}
+
+// B32: the front switches' readings. Switch 5 is the input of channel 5 (A6), 6 of channel 6, and so on: the same inputs the
+// channel mixer reads, so a knob in one of those places reads as a three-position switch too.
+FASTRUN void ReadFrontSwitches()
+{
+    for (uint8_t k = 0; k < 4; ++k)
+        FrontSwitchRaw[k] = adc->analogRead(AnalogueInput[4 + k]);
+}
+
 FASTRUN void ReadTheSwitchesAndTrims() // and indeed read digital trims if these are fitted
 {
     CRUMB(CRUMB_SWITCHES);
     byte flag = 0;
     static uint8_t PreviousTrim = 255;
+    if (AnyJobOnFrontSwitch() || CurrentView == SWITCHES_VIEW)
+        ReadFrontSwitches(); // B32 (the page shows every switch's position live)
     for (int i = 0; i < 8; ++i)
     {
         Switch[i] = !digitalRead(SwitchNumber[i]);   // These are reversed because they are active low
@@ -56,7 +77,7 @@ void ReadChannelSwitches9to12()
     uint8_t Values[3] = {0, 90, 180};
     for (uint8_t ChSwith = Ch9_SW; ChSwith <= Ch12_SW; ChSwith++)
     {
-        if (TopChannelSwitch[ChSwith] >= 1 && TopChannelSwitch[ChSwith] <= 4)                            // if this switch is defined.... 1 2 3 or 4 ... (ClaudeFix-2-7-2026 a corrupt config byte >4 made GetSwitchPosition return 0 and Values[-1] was read)
+        if (TopChannelSwitch[ChSwith] >= 1 && TopChannelSwitch[ChSwith] <= 8)                            // if this switch is defined.... 1-8 (B32: the front four too) ... (ClaudeFix-2-7-2026 a corrupt config byte made GetSwitchPosition return 0 and Values[-1] was read)
         {
             uint8_t SwPos = GetSwitchPosition(TopChannelSwitch[ChSwith]);
             if (SwPos >= 1 && SwPos <= 3)
@@ -80,7 +101,7 @@ void ViewSwitches() // shows state of all 8 switches' pin numbers (DEBUG TESTS O
 }
 
 /************************************************************************************************************/
-uint8_t GetSwitchPosition(uint8_t ThisSwitchNumber) // returns 1,2, or 3 for any of the four switches and handles reversed too. :-)
+uint8_t GetSwitchPosition(uint8_t ThisSwitchNumber) // returns 1,2, or 3 for any of the EIGHT switches and handles reversed too. :-)
 {
     static const uint8_t Pin[4][2] = {
         {7, 6},  // Switch 1
@@ -88,6 +109,29 @@ uint8_t GetSwitchPosition(uint8_t ThisSwitchNumber) // returns 1,2, or 3 for any
         {1, 0},  // Switch 3
         {3, 2}}; // Switch 4
 
+    if (ThisSwitchNumber >= 5 && ThisSwitchNumber <= 8)
+    { // B32: a front switch, from its analogue reading and the calibration of its input (channel 5-8's): thirds of the travel,
+      // with a dead band of a twelfth either side of each threshold so a reading that sits near one does not flicker
+        const uint8_t k = ThisSwitchNumber - 5, in = 4 + k;
+        const int lo = min(ChannelMin[in], ChannelMax[in]), hi = max(ChannelMin[in], ChannelMax[in]);
+        const int span = hi - lo;
+        if (span < 200)
+            return 0; // not calibrated: no position (the job behaves as with no switch)
+        const int t1 = lo + span / 3, t2 = lo + (2 * span) / 3, band = span / 12, v = FrontSwitchRaw[k];
+        uint8_t pos = FrontSwitchPos[k];
+        if (pos < 1 || pos > 3)
+            pos = v < t1 ? 1 : (v < t2 ? 2 : 3); // the first reading: no history to hold on to
+        else if (pos == 1 && v > t1 + band)
+            pos = v < t2 + band ? 2 : 3;
+        else if (pos == 3 && v < t2 - band)
+            pos = v > t1 - band ? 2 : 1;
+        else if (pos == 2 && v < t1 - band)
+            pos = 1;
+        else if (pos == 2 && v > t2 + band)
+            pos = 3;
+        FrontSwitchPos[k] = pos;
+        return SwitchReversed[ThisSwitchNumber - 1] ? (uint8_t)(4 - pos) : pos;
+    }
     if (ThisSwitchNumber < 1 || ThisSwitchNumber > 4)
         return 0; // or some error code
 

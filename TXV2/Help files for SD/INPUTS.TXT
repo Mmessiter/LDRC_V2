@@ -42,3 +42,5 @@ For example, if you set 'Tr1' to '14', then moving the trim that's usually for a
 You can then adjust the 'trims multiplier' of course so that the extent of the control over channel 14 is correct for your application.||
 
 After making changes, Be *SURE TO TEST* on the ground before flying!||
+
+Inputs 5 to 8 are the front switches or knobs. Inputs 9 to 12 are any switch given the job 'Channel 9' to 'Channel 12' on the Switches page, so a top-edge switch can drive any channel: give it that job, then choose its input number here.

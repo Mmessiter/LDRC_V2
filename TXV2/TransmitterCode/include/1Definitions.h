@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B31 05/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B32 05/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -970,6 +970,9 @@ void LogTotalRXGoodPackets();
 void LogTotalPacketsAttempted();
 void DelaySimple(uint32_t ms);
 uint8_t GetSwitchPosition(uint8_t Sw_Number);
+bool AnyJobOnFrontSwitch();                   // B32: a job is assigned to one of switches 5-8
+void ReadFrontSwitches();                     // B32: the four analogue readings, once a frame
+void ShowSwitchPositions();                   // B32: "up / mid / down" beside each switch on the Switches page
 FASTRUN void LogAverageGap();
 void ReadChannelSwitches9to12();
 int GetExtraParameters();
@@ -1352,11 +1355,16 @@ uint8_t DualRatesSwitch = 0;
 uint8_t TopChannelSwitch[4] = {0, 0, 0, 0};
 uint8_t TopChannelSwitchValue[4] = {0, 0, 0, 0};
 
-bool SwitchReversed[4] = {
-    false,
-    false,
-    false,
-    false};
+// B32 (Malcolm, 5 Oct 2026: "Ideally, it should be possible to designate any of these eight to any of those functions"):
+// EIGHT switches, not four. 1-4 are the top edge's (digital, two contacts each); 5-8 are the front four (the analogue inputs
+// of channels 5-8, A6-A9, read as three positions from their calibration). Every job (Safety, Buddy, Banks, Bank 4 & Motor,
+// Rates, Channel 9-12) goes through GetSwitchPosition(), which answers for all eight. Reversed flags for 5-8 live outside
+// the transmitter block's checksummed sequence (TX_EXT_ADDR), so a models.dat written before B32 still loads.
+bool SwitchReversed[8] = {false, false, false, false, false, false, false, false};
+#define TX_EXT_ADDR 500                   // B32: two bytes near the end of the TX block (TXSIZE 512): 0x5A, then bits 0-3 = switches 5-8 reversed
+#define TX_EXT_MAGIC 0x5A
+uint16_t FrontSwitchRaw[4] = {0, 0, 0, 0}; // B32: the front switches' readings, taken once a frame (only when a job uses one, or their page shows)
+uint8_t FrontSwitchPos[4] = {0, 0, 0, 0};  // B32: their last positions (hysteresis: a reading near a threshold does not flicker)
 
 uint16_t StartLocation = 0;
 bool ValueSent = false;

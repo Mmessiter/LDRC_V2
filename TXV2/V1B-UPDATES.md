@@ -186,6 +186,41 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Any switch, any job (V2 B32 + screen files, 5 Oct 2026)
+
+Malcolm: "It has eight switches. Four of them simply are the sources for channels 5678. The other four on the top of
+the transmitter handle special functions like safety, buddy, motor, etc. ... Ideally, it should be possible to
+designate any of these eight to any of those functions."
+
+The two groups are different hardware: the top edge's four are digital (two contacts each), the front four are the
+analogue inputs of channels 5-8 (so a knob can take a switch's place). Every job (Safety, Buddy, Banks 1 2 3, Bank 4 &
+Motor, Rates, Channel 9-12) already went through one routine, GetSwitchPosition(), so:
+
+- **GetSwitchPosition() answers for switches 5-8 too**, from the front inputs' readings and their calibration: thirds
+  of the travel, with a dead band of a twelfth either side of each threshold so a reading near one does not flicker.
+  The four readings are taken once a frame, and only when a job uses a front switch (or the Switches page shows).
+- **The Switches page shows all eight**, the top edge's four as before and the front four below, and beside each
+  where it is now: up, mid or down (the main board writes p1..p8 while the page shows). Move a switch to see which
+  number it is. Touching a number or its job opens the same job page as before.
+- **Reversed** works for all eight. The four new flags live in two bytes near the end of the transmitter block
+  (TX_EXT_ADDR 500, a marker then the bits), read and written outside the checksummed sequence, so a models.dat from
+  before B32 loads as it always did, and a build before B32 never looks at them.
+- The pre-flight motor check (CheckMotorOff) and the Channel 9-12 reader accept switches 5-8.
+- A switch edit now saves the transmitter block at once (it used to wait for the next switch-off).
+- Help texts SWITCHES, ONESWICH and INPUTS say all this.
+
+**What changes in an existing setup: nothing.** The jobs belong to the transmitter, not to the model, and every job
+stays on the switch it had. Only when a job is moved onto a front switch:
+
+- that switch goes on feeding its channel's input (5-8). If the channel is in use, give it another input on the
+  Inputs page, or an unused one;
+- a Version 1 transmitter, or this one on a build before B32, reads a job on a front switch as a switch that does not
+  exist: Safety reads as permanently on, Banks stays on bank 1, and with the Bank & Motor job there the motor stays off. The jobs are
+  the transmitter's own and are not in a model file, so a model copied to another transmitter is unaffected.
+
+A top-edge switch driving a channel is unchanged: give it the job "Channel 9" (to "Channel 12"), then on the Inputs
+page give the channel that input number.
+
 ## The Models page in two colours (screen files, 5 Oct 2026)
 
 Malcolm: "the heading Models should become Models Loaded. And the heading Backups should become Backup Files ... the

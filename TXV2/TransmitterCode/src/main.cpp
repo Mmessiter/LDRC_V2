@@ -1258,7 +1258,7 @@ void ShowSwitchNameWithReversed(char *Sw, uint8_t n, char *text)
 { // this removes the R from switch name if it's not reversed
 
     char NotReversed[30] = " ";
-    if (n >= 1 && n <= 4 && SwitchReversed[n - 1])
+    if (n >= 1 && n <= 8 && SwitchReversed[n - 1]) // (B32: eight switches)
     {
         SendText(Sw, text);
         return;
@@ -1266,7 +1266,7 @@ void ShowSwitchNameWithReversed(char *Sw, uint8_t n, char *text)
     for (uint8_t i = 0; i < strlen(text) - 1; ++i)
         NotReversed[i] = text[i];
 
-    if (n >= 1 && n <= 4 && !SwitchReversed[n - 1])
+    if (n >= 1 && n <= 8 && !SwitchReversed[n - 1])
     {
         SendText(Sw, NotReversed);
         return;
@@ -1359,10 +1359,41 @@ void DoOneSwitch(char *Sw, uint8_t n)
 /*********************************************************************************************************************************/
 
 void UpdateSwitchesView()
-{ // now optimised!
-    char sw[4][4] = {"sw1", "sw2", "sw3", "sw4"};
-    for (int i = 1; i <= 4; ++i)
+{ // now optimised! (B32: eight switches - the top edge's four and the front four)
+    char sw[8][4] = {"sw1", "sw2", "sw3", "sw4", "sw5", "sw6", "sw7", "sw8"};
+    for (int i = 1; i <= 8; ++i)
         DoOneSwitch(sw[i - 1], i);
+    ShowSwitchPositions();
+}
+
+/*********************************************************************************************************************************/
+// B32: beside each switch on the Switches page, where it is now: up, mid or down (the front four are told apart by moving them).
+// Sent only when a position changes, a few times a second at most.
+void ShowSwitchPositions()
+{
+    static uint8_t shown[8] = {9, 9, 9, 9, 9, 9, 9, 9};
+    static uint32_t last = 0;
+    static const char *words[4] = {"", "down", "mid", "up"};
+    char p[8][3] = {"p1", "p2", "p3", "p4", "p5", "p6", "p7", "p8"};
+    if (CurrentView != SWITCHES_VIEW)
+    {
+        for (uint8_t i = 0; i < 8; ++i)
+            shown[i] = 9; // (shown afresh when the page comes back)
+        return;
+    }
+    if (millis() - last < 150)
+        return;
+    last = millis();
+    for (uint8_t i = 1; i <= 8; ++i)
+    {
+        uint8_t pos = GetSwitchPosition(i);
+        if (pos > 3)
+            pos = 0;
+        if (pos == shown[i - 1])
+            continue;
+        shown[i - 1] = pos;
+        SendText(p[i - 1], (char *)words[pos]);
+    }
 }
 
 /*********************************************************************************************************************************/
@@ -2332,7 +2363,7 @@ void DoOneSwitchView(uint8_t n) // n is 1-4  = number for switch to edit
 
     SendValue(OneSwitchViewc_revd, 0);
 
-    if (n >= 1 && n <= 4 && SwitchReversed[n - 1]) // shows the Reversed check box on the one switch screen
+    if (n >= 1 && n <= 8 && SwitchReversed[n - 1]) // shows the Reversed check box on the one switch screen (B32: eight)
         SendValue(OneSwitchViewc_revd, 1);
     else
         SendValue(OneSwitchViewc_revd, 0); // ... or not
@@ -2500,7 +2531,7 @@ void ReadNewSwitchFunction()
 
     SendValue(Progress, 90);
 
-    if (SwitchEditNumber >= 1 && SwitchEditNumber <= 4)
+    if (SwitchEditNumber >= 1 && SwitchEditNumber <= 8) // (B32: eight)
     {
         SwitchReversed[SwitchEditNumber - 1] = GetValue(OneSwitchViewc_revd);
         if (SwitchEditNumber == 2)
@@ -2509,6 +2540,7 @@ void ReadNewSwitchFunction()
 
     SendValue(Progress, 100);
     SaveOneModel(ModelNumber);
+    SaveTransmitterParameters(); // B32: the jobs and the reversed flags are the transmitter's, not the model's: kept now, not at the next switch-off
     SendCommand(PageSwitchView); // change to all switches screen
     CurrentView = SWITCHES_VIEW;
     UpdateSwitchesView(); // update its info
@@ -2610,8 +2642,8 @@ void ResetTransmitterSettings()
     TopChannelSwitch[Ch10_SW] = 0;
     TopChannelSwitch[Ch11_SW] = 0;
     TopChannelSwitch[Ch12_SW] = 0;
-    for (int i = 0; i < 4; ++i)
-        SwitchReversed[i] = false;
+    for (int i = 0; i < 8; ++i)
+        SwitchReversed[i] = false; // (B32: eight)
 
     SendValue(Progress, 100);
     ModelNumber = 1;
@@ -4347,6 +4379,11 @@ void CheckMotorOff()
         if (Switch[pin] == reversed)
             SafetyON = true;
     }
+    // B32: a job on a front switch (5-8): the same rules, from its three-position reading (ReadTheSwitchesAndTrims above read it)
+    if (Autoswitch >= 5 && Autoswitch <= 8 && GetSwitchPosition(Autoswitch) != 3)
+        MotorEnabled = true;
+    if (SafetySwitch >= 5 && SafetySwitch <= 8 && GetSwitchPosition(SafetySwitch) != 3)
+        SafetyON = true;
 
     if (SafetyON)
         MotorEnabled = false;
@@ -4849,6 +4886,7 @@ FASTRUN void loop()
         FixMotorChannel();  // Maybe force motor low BEFORE Binding data is added
         FixArmingChannel(); // Be sure to show correct arming channel value if using RotorFlight options
         ShowServoPos();     // Show servo positions to user
+        ShowSwitchPositions(); // B32: the Switches page's up / mid / down (nothing unless that page shows)
         if (BindingEnabled && !BoundFlag)
             SendBindingPipe(); // Only if binding and not bound yet - override low throttle setting
     }

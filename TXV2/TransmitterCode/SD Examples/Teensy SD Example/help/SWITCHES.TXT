@@ -1,10 +1,11 @@
-Here you can define the function of the four EDGE switches.||
+Any of the EIGHT switches can do any job. The top edge's four (1 to 4) are shown as they are seen from above with the sticks towards you; the front four (5 to 8) are the inputs of channels 5 to 8, and a knob in one of those places reads as a three-position switch.||
 
-If a switch behaves strangely, it probably still needs to be calibrated.||
+Beside each switch is where it is now: up, mid or down. Move a switch to see which number it is.||
 
-When using the Buddy box feature, one switch must be defined as 'Buddy'. It's probably best if this is a spring-return switch. 
+Touch a number or its job to choose the job: Banks 1 2 3, Bank 4 & Motor, Safety, Rates, Buddy, or Channel 9 to 12 (an input any channel can use on the Inputs page). 'Reversed' turns the switch's sense round. A switch that behaves strangely probably still needs calibrating.||
 
-If the Buddy function is not at the ideal switch position, re-calibrate the switches and/or reverse the Buddy switch sense. 
+A front switch keeps feeding its channel's input whatever job it has: if that channel is in use, give it another input on the Inputs page.||
 
-Channels 5,6,7, and 8 can be knobs or switches. These channels are not defined here, but are defined as any other channel.
- 
+When using the Buddy box feature, one switch must be defined as 'Buddy'. It's probably best if this is a spring-return switch.||
+
+The jobs belong to the transmitter, not to the model: they stay the same whichever model is loaded.

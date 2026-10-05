@@ -184,8 +184,8 @@ uint32_t ControlFingerprint()
     Fp(Autoswitch);
     for (i = 0; i < 4; ++i)
         Fp(TopChannelSwitch[i]);
-    for (i = 0; i < 4; ++i)
-        Fp(SwitchReversed[i] ? 1 : 0);
+    for (i = 0; i < 8; ++i)
+        Fp(SwitchReversed[i] ? 1 : 0); // (B32: eight switches)
     Fp(BuddySwitch);
     Fp(DualRatesSwitch);
     Fp(SafetySwitch);
