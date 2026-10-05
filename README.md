@@ -1,6 +1,6 @@
 # LockDownRadioControl, Version 2
 
-![The Version 2 transmitter](TXV2/Images/V2_transmitter.jpg)
+![The Version 2 transmitter's front screen with a helicopter connected](TXV2/Images/V2_front_screen_real_model.jpg)
 
 **LDRC** is a free, open-source radio control system for model aircraft: a 16-channel
 transmitter, receivers, and a phone app, all built from parts anyone can buy. Malcolm

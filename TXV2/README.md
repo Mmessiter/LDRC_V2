@@ -1,6 +1,6 @@
 # The Version 2 transmitter
 
-![The front screen with a real model connected](Images/V2_front_screen_real_model.jpg)
+![The Version 2 transmitter](Images/V2_transmitter.jpg)
 
 The Version 2 transmitter is the Version 1 transmitter with a new screen. Its Teensy 4.1
 motherboard, its Ebyte ML01DP5 radio module, its gimbals, switches and case are those of
