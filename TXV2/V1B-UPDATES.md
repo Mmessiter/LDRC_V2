@@ -186,6 +186,11 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Channels by number (V2 B34, 5 Oct 2026)
+
+Malcolm: "I note you put Gear instead of Channel 5. Please call it channel 5 as it's only rarely gear." The job page
+and the Switches page say "Channel 5" to "Channel 16", never the channel's name.
+
 ## A switch as the input of any channel, 5 to 16 (V2 B33 + screen files, 5 Oct 2026)
 
 Malcolm: "you said channels 9-12 are offered. Can we make that 5 to 16, I wonder? That would be complete!" The

@@ -1300,8 +1300,8 @@ void DoOneSwitch(char *Sw, uint8_t n)
     {
         if (TopChannelSwitch[d] != n)
             continue;
-        char c[48];
-        snprintf(c, sizeof(c), "%s (Ch %u) R", ChannelNames[d + 4], (unsigned)(d + 5));
+        char c[24];
+        snprintf(c, sizeof(c), "Channel %u R", (unsigned)(d + 5)); // (B34: by number, not by the channel's name)
         ShowSwitchNameWithReversed(Sw, n, c);
         return;
     }
@@ -2334,12 +2334,10 @@ void DoOneSwitchView(uint8_t n) // n is 1-4  = number for switch to edit
         SendValue(OneSwitchViewc_revd, 0); // ... or not
 
     for (int d = 0; d < SWITCH_INPUTS; ++d)
-    { // show channel names (B33: 5-16)
+    { // the channels by number (B34, Malcolm: "Please call it channel 5 as it's only rarely gear")
         char v[24];
         snprintf(v, sizeof(v), "Channel %d", d + 5);
         SendText((char *)chLabel[d], v);
-        if (strlen(ChannelNames[d + 4]) >= 2)
-            SendText((char *)chLabel[d], ChannelNames[d + 4]); // Show EDITED channel names if they exist
     }
 }
 
