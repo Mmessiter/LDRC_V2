@@ -186,6 +186,16 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The Models page in two colours (screen files, 5 Oct 2026)
+
+Malcolm: "the heading Models should become Models Loaded. And the heading Backups should become Backup Files ... the
+left-hand side should adopt a colour for the headings and the buttons and the models, which looks unified. The
+right-hand side, which handles the backup files and functions connected with them, should also use a unified colour,
+but a different one." Done as hmi/colour_models_page.py: the left side (the models in the transmitter) in blue, the
+right (the backup files on the card) in amber: each heading a solid strip in its deep colour, its list bordered in it
+on a pale tint, its buttons the pale tint. The middle column, the picture, the name and OK are as they were. Page
+file only: no new firmware.
+
 ## Lists centred again (screen 1.9.10, 5 Oct 2026)
 
 Malcolm: "The model names and the back-up file names in version one were centred rather than left justified, which
