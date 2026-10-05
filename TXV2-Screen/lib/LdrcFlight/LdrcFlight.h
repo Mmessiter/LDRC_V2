@@ -195,6 +195,7 @@ private:
     int heldBox = -1; uint32_t heldSince = 0;          // the box under a finger on the flight screen, and since when
     bool inFlight = false;                             // (poll) the model could be flying: no long press then - setup pages close in flight by rule
     bool quickEdit = false;                            // the setup page was opened by a long press: it closes as soon as the box is chosen
+    bool waitLift = false;                             // the finger that opened it is still down: nothing counts until it has really lifted (1.10.4)
     uint32_t lastSeen = 0;                             // the last sample with the finger on the glass: a lift is real after 80 ms of none
     int idAt(int x, int y) const;
     FlightConfig before;                               // the settings when the page opened

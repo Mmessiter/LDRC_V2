@@ -436,6 +436,11 @@ int FlightScreen::idAt(int x, int y) const {
     return id;
 }
 void FlightScreen::touch(bool pressed, int x, int y, uint32_t now) {
+    if (waitLift) {                                    // the long press's own finger, still down over the chooser that has just appeared: not a press on it
+        if (pressed) lastSeen = now;
+        else if ((int32_t) (now - lastSeen) > 80) waitLift = false;   // (really lifted: the next touch counts)
+        return;
+    }
     if (pressed) {
         lastSeen = now;
         const int id = idAt(x, y);                     // (the flight screen: its buttons only; a touch anywhere else does nothing)
@@ -445,8 +450,8 @@ void FlightScreen::touch(bool pressed, int x, int y, uint32_t now) {
             int box = -1; for (auto &t : sc.tiles) if (t.r.has(x, y)) box = t.id;
             if (box != heldBox) { heldBox = box; heldSince = now; }
             else if (box >= 0 && now - heldSince >= LONG_PRESS_MS) {   // two seconds: that box's chooser, from here
-                heldBox = -1; down = false; pressedId = -1;            // (the lift that follows is not a tap on the chooser)
-                openSetup(); chooser = box; quickEdit = true;
+                heldBox = -1; down = false; pressedId = -1;
+                openSetup(); chooser = box; quickEdit = true; waitLift = true;   // (the finger is still down: nothing counts until it has lifted)
             }
         } else heldBox = -1;
         return;

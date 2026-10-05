@@ -186,6 +186,13 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The lift after the long press (screen 1.10.4, 5 Oct 2026)
+
+Malcolm: "It does now go to the select screen after two seconds, but when I lift my finger it goes instantly back to
+the front screen. If I slide my finger elsewhere before lifting it works better!" The finger that opened the chooser
+was still down, over whatever button the chooser had put there, and its lift chose that. The chooser now ignores that
+finger until it has really lifted; the next touch counts.
+
 ## The long press that did nothing (screen 1.10.3, 5 Oct 2026)
 
 Malcolm: "I held my finger still on a box for over three seconds but it did nothing" (1.10.2, screen lit, safety
