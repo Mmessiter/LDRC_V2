@@ -26,7 +26,9 @@
 //    The values are fed one by one, in a fixed order, each as a 32-bit number: the fingerprint does not depend on
 //    how the variables are laid out in memory, only on what they hold. The order below is version 1 and must NEVER
 //    change. A firmware that reads MORE settings adds them to a version 2 and says so (the screen compares only
-//    fingerprints of the same version, and says when it could not compare).
+//    fingerprints of the same version, and says when it could not compare) - OR, better, folds them in at the end
+//    only when they are in use (B34), so that a setup an earlier firmware could hold still gives version 1's number
+//    and the update IS compared. Never put a new setting inside the sequence, and never widen a loop in it.
 #ifndef FLIGHT_GUARD_H
 #define FLIGHT_GUARD_H
 
@@ -182,13 +184,35 @@ uint32_t ControlFingerprint()
         Fp(TrimNumber[i]);
     Fp(BankSwitch); // which switch does what
     Fp(Autoswitch);
-    for (i = 0; i < SWITCH_INPUTS; ++i)
-        Fp(TopChannelSwitch[i]); // (B33: twelve)
-    for (i = 0; i < 8; ++i)
-        Fp(SwitchReversed[i] ? 1 : 0); // (B32: eight switches)
+    for (i = 0; i < 4; ++i)
+        Fp(TopChannelSwitch[Ch9_SW + i]); // the switches of channels 9-12: the four of version 1, in version 1's place
+    for (i = 0; i < 4; ++i)
+        Fp(SwitchReversed[i] ? 1 : 0); // the top edge's four: version 1's
     Fp(BuddySwitch);
     Fp(DualRatesSwitch);
     Fp(SafetySwitch);
+    // B34 (the first B32-B34 update was refused by this very check: the number had changed for settings that had not):
+    // what B32 and B33 added - the front four's reversed flags and the switches of channels 5-8 and 13-16 - is folded in
+    // only when one of them is in use. A setup an earlier firmware could hold gives the number it always gave, so the
+    // update is compared and kept; a setup that uses them is compared between firmwares that both read them.
+    {
+        static const uint8_t extra[8] = {0, 1, 2, 3, 8, 9, 10, 11}; // channels 5-8 and 13-16
+        bool inUse = false;
+        for (i = 4; i < 8; ++i)
+            if (SwitchReversed[i])
+                inUse = true;
+        for (i = 0; i < 8; ++i)
+            if (TopChannelSwitch[extra[i]])
+                inUse = true;
+        if (inUse)
+        {
+            Fp(0x5EC2);
+            for (i = 4; i < 8; ++i)
+                Fp(SwitchReversed[i] ? 1 : 0);
+            for (i = 0; i < 8; ++i)
+                Fp(TopChannelSwitch[extra[i]]);
+        }
+    }
     return FingerprintSoFar;
 }
 

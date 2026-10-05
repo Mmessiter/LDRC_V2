@@ -186,6 +186,19 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The refused update, and the fingerprint (V2 B35, 5 Oct 2026)
+
+Malcolm's first install of B34 was refused by the transmitter's own guard: "2.5.6 B34 read this model's settings
+differently from 2.5.6 B31 ... It was NOT kept." He suspected the saved parameters' layout ("the replacement
+parameters must be precisely the same size"). It was not that: the transmitter block's sequence is untouched and the
+new bytes sit at fixed spare addresses outside it. It was the settings FINGERPRINT (FlightGuard.h): B32 had made it
+cover eight reversed flags and twelve switch inputs instead of four and four, so B34 gave a different number for
+settings that had not changed, and the guard did what it is for. B35 computes version 1's sequence exactly as B31
+did, and folds the new settings in only when one of them is in use: a setup an earlier firmware could hold gives the
+number it always gave, so the update is compared and kept. The rule in FlightGuard.h now says so: never put a new
+setting inside the sequence, never widen a loop in it. The extension also gained a second marker byte and a check
+of every value, so a stale byte on an old card cannot pass for ours.
+
 ## Channels by number (V2 B34, 5 Oct 2026)
 
 Malcolm: "I note you put Gear instead of Channel 5. Please call it channel 5 as it's only rarely gear." The job page
@@ -197,7 +210,7 @@ Malcolm: "you said channels 9-12 are offered. Can we make that 5 to 16, I wonder
 "Channel N" job now runs from 5 to 16. A switch given channel 5 to 8 takes the place of the front switch or knob
 there (the mixer reads the switch instead of the analogue input); 13 to 16 had no input at all before. The switches
 of channels 9-12 keep their four bytes of the transmitter block; the other eight are in the block's extension
-(TX_EXT_ADDR + 2, outside the checksum, like the reversed flags). The job page shows the twelve channels in two
+(TX_EXT_ADDR + 3 .. + 10, outside the checksum, like the reversed flags). The job page shows the twelve channels in two
 columns on the right, the special jobs down the left; the Switches page names the job "<channel name> (Ch N)".
 Help texts SWITCHES, ONESWICH and INPUTS say so.
 
@@ -217,9 +230,10 @@ Motor, Rates, Channel 9-12) already went through one routine, GetSwitchPosition(
 - **The Switches page shows all eight**, the top edge's four as before and the front four below, and beside each
   where it is now: up, mid or down (the main board writes p1..p8 while the page shows). Move a switch to see which
   number it is. Touching a number or its job opens the same job page as before.
-- **Reversed** works for all eight. The four new flags live in two bytes near the end of the transmitter block
-  (TX_EXT_ADDR 500, a marker then the bits), read and written outside the checksummed sequence, so a models.dat from
-  before B32 loads as it always did, and a build before B32 never looks at them.
+- **Reversed** works for all eight. The four new flags live near the end of the transmitter block (TX_EXT_ADDR 500:
+  two marker bytes, the flags, then B33's eight switch bytes), read and written outside the checksummed sequence, so
+  a models.dat from before B32 loads as it always did, and a build before B32 never looks at them. The sequence of
+  the block itself is untouched: nothing moved, nothing changed size.
 - The pre-flight motor check (CheckMotorOff) and the Channel 9-12 reader accept switches 5-8.
 - A switch edit now saves the transmitter block at once (it used to wait for the next switch-off).
 - Help texts SWITCHES, ONESWICH and INPUTS say all this.

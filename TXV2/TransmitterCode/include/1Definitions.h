@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B34 05/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B35 05/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -1368,8 +1368,9 @@ uint8_t TopChannelSwitchValue[SWITCH_INPUTS] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 // Rates, Channel 9-12) goes through GetSwitchPosition(), which answers for all eight. Reversed flags for 5-8 live outside
 // the transmitter block's checksummed sequence (TX_EXT_ADDR), so a models.dat written before B32 still loads.
 bool SwitchReversed[8] = {false, false, false, false, false, false, false, false};
-#define TX_EXT_ADDR 500                   // B32: near the end of the TX block (TXSIZE 512): 0x5A, bits 0-3 = switches 5-8 reversed; B33: + 8 bytes, the switches of inputs 5-8 and 13-16
+#define TX_EXT_ADDR 500                   // B32-B35: near the end of the TX block (TXSIZE 512, the sequence ends near 276): 500-501 two marker bytes, 502 switches 5-8 reversed (bits 0-3), 503-510 the switches of inputs 5-8 and 13-16
 #define TX_EXT_MAGIC 0x5A
+#define TX_EXT_MAGIC2 0xC3
 uint16_t FrontSwitchRaw[4] = {0, 0, 0, 0}; // B32: the front switches' readings, taken once a frame (only when a job uses one, or their page shows)
 uint8_t FrontSwitchPos[4] = {0, 0, 0, 0};  // B32: their last positions (hysteresis: a reading near a threshold does not flicker)
 

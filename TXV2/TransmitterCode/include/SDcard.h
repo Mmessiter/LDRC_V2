@@ -705,33 +705,38 @@ uint8_t SDRead8BITS(int p_address)
 // never looks at them. No marker: nothing reversed.
 void ReadTxExtension()
 {
-    DoingCheckSm = true; // (BuildCheckSum() skips while this is set)
-    const uint8_t marker = SDRead8BITS(TX_EXT_ADDR), bits = SDRead8BITS(TX_EXT_ADDR + 1);
-    DoingCheckSm = false;
-    for (uint8_t k = 0; k < 4; ++k)
-        SwitchReversed[4 + k] = (marker == TX_EXT_MAGIC) && ((bits >> k) & 1);
-    // B33: the switches of inputs 5-8 (indices 0-3) and 13-16 (indices 8-11); 9-12 are in the block itself
+    // B35 layout: 500 0x5A, 501 0xC3 (two marker bytes: a stale byte on an old card is not mistaken for ours), 502 the
+    // reversed flags of switches 5-8 in bits 0-3 (bits 4-7 must be 0), 503-510 the switches of inputs 5-8 and 13-16 (0-8).
     static const uint8_t idx[8] = {0, 1, 2, 3, 8, 9, 10, 11};
-    DoingCheckSm = true;
+    DoingCheckSm = true; // (BuildCheckSum() skips while this is set)
+    const uint8_t m0 = SDRead8BITS(TX_EXT_ADDR), m1 = SDRead8BITS(TX_EXT_ADDR + 1), bits = SDRead8BITS(TX_EXT_ADDR + 2);
+    uint8_t sw[8];
+    bool good = (m0 == TX_EXT_MAGIC) && (m1 == TX_EXT_MAGIC2) && ((bits & 0xF0) == 0);
     for (uint8_t k = 0; k < 8; ++k)
     {
-        const uint8_t v = SDRead8BITS(TX_EXT_ADDR + 2 + k);
-        TopChannelSwitch[idx[k]] = (marker == TX_EXT_MAGIC && v >= 1 && v <= 8) ? v : 0;
+        sw[k] = SDRead8BITS(TX_EXT_ADDR + 3 + k);
+        if (sw[k] > 8)
+            good = false;
     }
     DoingCheckSm = false;
+    for (uint8_t k = 0; k < 4; ++k)
+        SwitchReversed[4 + k] = good && ((bits >> k) & 1);
+    for (uint8_t k = 0; k < 8; ++k)
+        TopChannelSwitch[idx[k]] = good ? sw[k] : 0;
 }
 void SaveTxExtension()
 {
+    static const uint8_t idx[8] = {0, 1, 2, 3, 8, 9, 10, 11};
     uint8_t bits = 0;
     for (uint8_t k = 0; k < 4; ++k)
         if (SwitchReversed[4 + k])
             bits |= (1 << k);
-    static const uint8_t idx[8] = {0, 1, 2, 3, 8, 9, 10, 11};
     DoingCheckSm = true;
     SDUpdate8BITS(TX_EXT_ADDR, TX_EXT_MAGIC);
-    SDUpdate8BITS(TX_EXT_ADDR + 1, bits);
+    SDUpdate8BITS(TX_EXT_ADDR + 1, TX_EXT_MAGIC2);
+    SDUpdate8BITS(TX_EXT_ADDR + 2, bits);
     for (uint8_t k = 0; k < 8; ++k)
-        SDUpdate8BITS(TX_EXT_ADDR + 2 + k, TopChannelSwitch[idx[k]]); // B33
+        SDUpdate8BITS(TX_EXT_ADDR + 3 + k, TopChannelSwitch[idx[k]]);
     DoingCheckSm = false;
 }
 /*********************************************************************************************************************************/
