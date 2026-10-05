@@ -29,7 +29,7 @@ def add(n, t, x, y, w, h, font, txt, c, a, ev=None, after=None):
     pg['comps'].insert(pg['comps'].index(comp(after)) + 1 if after else len(pg['comps']), d); return d
 comp('t0')['txt'] = 'Switches'
 m = comp('ModelName'); m.update({'x': 10, 'y': 4, 'w': 200, 'h': 25, 'font': 2}); m['c'].update({'pco': 65504, 'bco': STRIP}); m['a'].update({'xcen': 0, 'txt_maxl': 20})
-hint = comp('t'); place('t', 34, 360, 732, 50); hint['txt'] = 'Touch a number or its job to set up that switch.\r\nMove a switch to see which one it is: up, mid or down.'
+hint = comp('t'); place('t', 34, 360, 732, 50); hint['txt'] = 'Touch a number or its job to set up that switch.\r\nMove a switch to see which one it is: near (towards you), mid or away.'
 hint['a']['txt_maxl'] = 300
 for sw in range(1, 9):
     col, y = row(sw); nx, jx, px = COLS[col]

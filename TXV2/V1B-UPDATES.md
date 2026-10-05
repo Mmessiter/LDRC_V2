@@ -186,6 +186,14 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Near, mid, away (V2 B37 + screen files, 5 Oct 2026)
+
+Malcolm: "that last swap of directions was a mistake. My mistake. Perhaps up and down is not the ideal way of
+describing their positions. Towards the pilot and away from the pilot makes better sense." B36's swap is undone (a
+high reading is position 3 again, as B35 had it), and the words beside each switch are now "near" (towards you),
+"mid" and "away" for all eight: position 3 is near, 1 is away. The help texts say which position does what in those
+words. If a switch reads the other way round, Reversed turns it.
+
 ## The front switches the right way up (V2 B36, 5 Oct 2026)
 
 B35 installed and ran ("it looks very good indeed"). Malcolm: the front switches "say they are up when they are down

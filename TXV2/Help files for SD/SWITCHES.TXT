@@ -1,6 +1,6 @@
 Any of the EIGHT switches can do any job. The top edge's four (1 to 4) are shown as they are seen from above with the sticks towards you; the front four (5 to 8) are the inputs of channels 5 to 8, and a knob in one of those places reads as a three-position switch.||
 
-Beside each switch is where it is now: up, mid or down. Move a switch to see which number it is.||
+Beside each switch is where it is now: near (towards you), mid, or away. Move a switch to see which number it is.||
 
 Touch a number or its job to choose the job: Banks 1 2 3, Bank 4 & Motor, Safety, Rates, Buddy, or Channel 5 to 16: the switch becomes that channel's input (any channel can use it on the Inputs page; on 5 to 8 it takes the place of the front switch or knob). 'Reversed' turns the switch's sense round. A switch that behaves strangely probably still needs calibrating.||
 

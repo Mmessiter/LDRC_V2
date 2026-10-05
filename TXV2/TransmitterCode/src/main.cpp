@@ -1339,7 +1339,7 @@ void ShowSwitchPositions()
 {
     static uint8_t shown[8] = {9, 9, 9, 9, 9, 9, 9, 9};
     static uint32_t last = 0;
-    static const char *words[4] = {"", "down", "mid", "up"};
+    static const char *words[4] = {"", "away", "mid", "near"}; // (B37: position 3 is near, towards you; 1 is away)
     char p[8][3] = {"p1", "p2", "p3", "p4", "p5", "p6", "p7", "p8"};
     if (CurrentView != SWITCHES_VIEW)
     {

@@ -136,9 +136,9 @@ uint8_t GetSwitchPosition(uint8_t ThisSwitchNumber) // returns 1,2, or 3 for any
         else if (pos == 2 && v > t2 + band)
             pos = 3;
         FrontSwitchPos[k] = pos;
-        // The reading is LOW with the lever UP (Malcolm, B35 on the transmitter: "it says they are up when they are down"):
-        // position 3 is up, so the reading's order is turned round here (B36), and Reversed turns it round again.
-        pos = (uint8_t)(4 - pos);
+        // A high reading is position 3 (B36 turned this round and B37 turned it back: Malcolm, "that last swap of
+        // directions was a mistake"). The words on the Switches page describe a position as near (towards you), mid or
+        // away, not up or down, which meant nothing for a lever on the front. Reversed turns the order round.
         return SwitchReversed[ThisSwitchNumber - 1] ? (uint8_t)(4 - pos) : pos;
     }
     if (ThisSwitchNumber < 1 || ThisSwitchNumber > 4)
