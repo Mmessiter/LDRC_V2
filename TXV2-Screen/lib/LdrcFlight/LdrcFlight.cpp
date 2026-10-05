@@ -293,10 +293,8 @@ void flightSizeTiles(std::vector<FlightTile> &tiles, FlightFonts *f) {
 
 // ------------------------------------------------------------------ the flight screen and its setup page
 void FlightScreen::poll(uint32_t now, bool onFront, bool flying, bool blocked) {
-    (void) now;
-    if (flying != wasFlying && cfg.manual != FM_NONE) { cfg.manual = FM_NONE; saved = true; }   // taking off or landing: the rule again, whatever was chosen
-    wasFlying = flying;
-    const bool want = cfg.manual == FM_DEFINED || (cfg.manual == FM_NONE && (cfg.when == FW_ALWAYS || (cfg.when == FW_FLYING && flying)));
+    (void) now; (void) flying;                         // (1.9.8: taking off or landing changes nothing; the buttons choose)
+    const bool want = cfg.manual == FM_DEFINED;
     const bool was = shown;
     shown = !setup && want && onFront && !blocked;
     if (shown != was && !setup) { down = false; pressedId = -1; slidOff = false; }   // a finger on the glass as it came or went was not for it
@@ -308,7 +306,7 @@ bool FlightScreen::takeSaved() { const bool s = saved; saved = false; return s; 
 bool FlightScreen::takeFrontPress(std::string &comp) { if (frontPress.empty()) return false; comp = frontPress; frontPress.clear(); return true; }
 
 static uint32_t hashOf(const std::string &s, uint32_t h) { for (unsigned char c : s) h = (h ^ c) * 16777619u; return h; }
-static const int ID_SHOW = 100, ID_BOXES = 101, ID_STAY = 102, ID_OK = 103, ID_BACK = 104, ID_ITEM = 200, ID_LAYOUT = 300;
+static const int ID_BOXES = 101, ID_STAY = 102, ID_OK = 103, ID_BACK = 104, ID_ITEM = 200, ID_LAYOUT = 300;
 static const int ID_TXSETUP = 110, ID_ORIGINAL = 111, ID_MODELSETUP = 112, ID_HELP = 113;
 static const int ID_COLOUR = 120, ID_COLOUR_DONE = 121, ID_SAME = 122, ID_FACE = 500;
 static const int SLOT_Y = 414, SLOT_H = 56, SLOT_W = 180;
@@ -354,12 +352,9 @@ void FlightScreen::build(FlightSource &src, FlightFonts *fonts) {
         const std::vector<FlightRect> rs = flightLayout(cfg.layout, FlightRect(6, 92, FLIGHT_W - 12, 312));
         for (size_t i = 0; i < rs.size(); ++i) { FlightTile t; t.id = (int) i; t.r = rs[i]; t.item = cfg.items[i]; paint(t, (int) i); t.v = flightValue(t.item, src); t.pressed = pressedId == (int) i && !slidOff;
                                                  if (t.item == FL_NONE) { t.v.label = "Nothing"; t.v.state = FS_EMPTY; } sc.tiles.push_back(t); }
-        static const char *whenText[] = { "When: never", "When: flying", "When: always" };
-        char b[24];
-        FlightButton bt; bt.id = ID_SHOW; bt.r = slot(0); bt.text = whenText[cfg.when <= FW_ALWAYS ? cfg.when : 1]; sc.buttons.push_back(bt);
-        bt.id = ID_BOXES; bt.r = slot(1); bt.text = "Box sizes"; sc.buttons.push_back(bt);
-        (void) b;
-        bt.id = ID_STAY; bt.r = slot(2); bt.text = cfg.stayOn ? "Stays lit: yes" : "Stays lit: no"; sc.buttons.push_back(bt);
+        // (1.9.8: no "When" button any more - the front page's own buttons choose the screen, and the choice stays)
+        FlightButton bt; bt.id = ID_BOXES; bt.r = slot(0); bt.text = "Box sizes"; sc.buttons.push_back(bt);
+        bt.id = ID_STAY; bt.r = slot(1); bt.text = cfg.stayOn ? "Stays lit: yes" : "Stays lit: no"; sc.buttons.push_back(bt);
         bt.id = ID_OK; bt.r = slot(3); bt.text = "OK"; sc.buttons.push_back(bt);
     } else if (chooser == CHOOSE_SIZES) {                       // the box sizes: each choice drawn as its boxes
         sc.layout = 4000; sc.title = "Front screen"; sc.hint = "Choose the box sizes. Box 1 is the biggest.";
@@ -455,8 +450,7 @@ void FlightScreen::releaseOn(int id) {
         return;
     }
     if (id >= 0 && id < cfg.boxes()) { chooser = id; return; }       // (what the boxes beyond the layout's show is kept, for a bigger layout)
-    if (id == ID_SHOW) cfg.when = (uint8_t) (cfg.when == FW_FLYING ? FW_ALWAYS : cfg.when == FW_ALWAYS ? FW_NEVER : FW_FLYING);
-    else if (id == ID_BOXES) chooser = CHOOSE_SIZES;
+    if (id == ID_BOXES) chooser = CHOOSE_SIZES;
     else if (id == ID_STAY) cfg.stayOn = !cfg.stayOn;
     else if (id == ID_OK) closeSetup();
 }

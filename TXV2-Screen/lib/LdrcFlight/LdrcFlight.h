@@ -8,10 +8,11 @@
 // the main board does nothing new in flight ("the Teensy flies, the screen talks"). The screen keeps its copy of the
 // front page whatever is on the glass, and this screen is drawn on our own layer over it.
 //
-// When: never, while flying (the main board's own rule: safety off, or motor on where no safety switch is defined -
-// the rule that turns the radios off), or always in place of the front page. A touch shows the front page for ten
-// seconds. Set up on Transmitter setup > Flight screen: the screen as it will look, live; touch a box to choose what
-// it shows.
+// Which front screen shows is the pilot's own choice, made with a button: the front page's "Defined screen" brings this
+// one, its "Original screen" brings the front page back, and the choice stays, through take-offs and landings and a
+// switch-off, until the other button is pressed. Nothing switches by itself (screen 1.9.8, Malcolm 10-05: "The When:
+// Never etc button I think ought to go because we just hit a button to swap"). Set up on Transmitter setup >
+// Appearance > Front screen: the screen as it will look, live; touch a box to choose what it shows.
 //
 // Portable: no Arduino, tested on the Mac (hmi/test_flight). The drawing is src/flight_draw.h, the rest
 // src/flight_device.h.
@@ -85,17 +86,19 @@ std::vector<FlightRect> flightLayout(int layout, const FlightRect &area, int gap
 // simply be reused for the individual boxes on the defined front screen." So a box takes one of the Themes page's (1.8.4: twelve themes, each a panel colour with its own text colour)
 // twelve panel colours and one of its six text colours (lib/LdrcTheme: the pilot's own, made on its Edit colours).
 
-// The pilot's choice
+// Screens 1.6.0-1.9.7 had a rule as well ("When: never / flying / always", and a take-off or landing put the rule back):
+// gone in 1.9.8. The setting is still written and read, so that older and newer screens read each other's settings,
+// but nothing looks at it.
 enum FlightWhen : uint8_t { FW_NEVER = 0, FW_FLYING = 1, FW_ALWAYS = 2 };
-// The pilot's choice of the moment lasts until the next take-off or landing (screen 1.7.3, Malcolm 10-04: "On the original
-// screen let's add 'use defined' as a middle button and on the defined let's add help button top right"): "Original screen"
-// keeps the front page, its "Defined screen" brings the pilot's own back; nothing switches by itself in between. Kept with
-// the settings (1.8.7; Malcolm: "it should boot up with whichever I was using last time").
+// The pilot's choice: "Original screen" keeps the front page, its "Defined screen" brings the pilot's own (screen 1.7.3,
+// Malcolm 10-04: "On the original screen let's add 'use defined' as a middle button and on the defined let's add help
+// button top right"). Kept with the settings (1.8.7; Malcolm: "it should boot up with whichever I was using last time").
+// FM_NONE (never chosen) is the front page.
 enum FlightManual : uint8_t { FM_NONE = 0, FM_ORIGINAL, FM_DEFINED };
 struct FlightConfig {
-    uint8_t when = FW_FLYING, layout = FLIGHT_DEFAULT_LAYOUT;
+    uint8_t when = FW_FLYING, layout = FLIGHT_DEFAULT_LAYOUT;   // (when: unused since 1.9.8, see above)
     bool stayOn = true;                                // while it shows, the main board's screen saver is told "someone is here"
-    uint8_t manual = FM_NONE;                          // the choice of the moment (Original screen / Defined screen), kept across a switch-off
+    uint8_t manual = FM_NONE;                          // the pilot's choice (Original screen / Defined screen), kept across a switch-off
     uint8_t items[FLIGHT_MAX_BOXES] = { FL_TIMER, FL_RXBAT, FL_RPM, FL_LINK, FL_ESC, FL_MAH, FL_AMPS, FL_TXBAT, FL_BANK };
     // Each box's theme: 0 the screens' (it follows the Themes page), k the Themes page's theme k (its panel colour and its
     // text colour). Amber and red still take over a box whose value needs a look.
@@ -162,7 +165,7 @@ public:
     void touch(bool pressed, int x, int y, uint32_t now);   // while showing() or setupOpen(), at every pass: the chip drops samples mid-press, so a lift counts after 80 ms of none
     const FlightScene &scene(FlightSource &src, FlightFonts *fonts = nullptr);   // what to draw, now (fonts: the numbers' sizes)
 private:
-    bool shown = false, setup = false, wasFlying = false, saved = false;
+    bool shown = false, setup = false, saved = false;
     std::string frontPress;                            // the front page's button to press for the pilot ("b0", "b1"), "" none
     int chooser = -1;                                  // the box whose choice is being made, -1 none, CHOOSE_SIZES the box sizes
     int colourFor = -1;                                // the box whose theme is being chosen (its own page), -1 none

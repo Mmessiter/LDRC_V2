@@ -2,8 +2,8 @@ This is your own front screen: big, clear numbers while you fly.||
 
 'Transmitter' and 'Model' open the setups, as on the original front screen.||
 
-'Original screen' shows the original front screen. Its 'Defined screen' button brings this screen back. Your choice lasts until you next take off or land, and the transmitter switches on with the screen you were using.||
+'Original screen' shows the original front screen. Its 'Defined screen' button brings this screen back. Your choice stays, through take-offs, landings and switching off, until you press the other button.||
 
 A box turns amber or red when its value needs a look. The top line turns red for BATTERY LOW, or NO LINK in flight.||
 
-To choose what the boxes show, their themes, their sizes, and when this screen appears: Transmitter setup, Appearance, then Front screen.
+To choose what the boxes show, their themes and their sizes: Transmitter setup, Appearance, then Front screen.

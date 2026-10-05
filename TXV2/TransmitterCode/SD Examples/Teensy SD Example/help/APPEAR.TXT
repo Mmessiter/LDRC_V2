@@ -14,6 +14,6 @@ FRONT SCREEN: your own front screen, with big, clear numbers while you fly. Touc
 
 Box themes: touch a box, then 'Theme'. A box takes any of the twelve themes. 'Same as screens' gives it the screens' theme again.||
 
-'When: flying' shows it while the safety is off (with no safety switch: while the motor is on). 'When: always' shows it whenever the front screen would show. Its buttons: 'Transmitter', 'Model', 'Help', and 'Original screen', which shows the original front screen until you press its 'Defined screen' (or next take off or land); the transmitter switches on with the screen you were using. A touch anywhere else does nothing.||
+Which front screen shows is chosen on the front screens themselves: 'Defined screen' on the original brings yours, 'Original screen' on yours brings the original back, and the choice stays, through take-offs, landings and switching off, until you press the other button. Your screen's other buttons: 'Transmitter', 'Model' and 'Help'. A touch anywhere else does nothing.||
 
 'Stays lit: yes' keeps the screen from going dark while it shows. A warning (BATTERY LOW, NO LINK) turns its top line red, and the power-off countdown always shows on the original front screen.

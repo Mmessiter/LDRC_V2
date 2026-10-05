@@ -186,6 +186,16 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The front screens: the buttons choose, nothing else (screen 1.9.8, 5 Oct 2026)
+
+Malcolm: "The When: Never etc button I think ought to go because we just hit a button to swap." Gone, and with it
+the rule behind it: until now a take-off or a landing put the rule back ("When: flying" showed the defined screen in
+the air and the original on the ground, whatever had been chosen). Now the front page's "Defined screen" and the
+defined screen's "Original screen" are the whole story: the choice stays, through take-offs, landings and switching
+off, until the other button is pressed. A transmitter that has never chosen shows the original. The Front screen
+setup page's bottom row is Box sizes, Stays lit, OK. The old setting is still written and read, so that older and
+newer screens read each other's settings; nothing looks at it. Help texts FLIGHT, APPEAR and FRONT say so.
+
 ## The exchange from a Version 1 transmitter (V2 B31, 5 Oct 2026)
 
 Malcolm: "I just tried to send a model memory from a V1 transmitter. Unfortunately, it failed." Four packets came

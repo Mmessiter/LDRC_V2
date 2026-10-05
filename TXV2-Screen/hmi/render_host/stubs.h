@@ -10,6 +10,7 @@ static int pendingVol = 0, pendingBg = 0; static bool updRequested = false, rxUp
 static std::string lastDateTime, sentTrace, outBuf, oddTrace; static int scriptDepth = 0;
 static std::string recent[64]; static int recentN = 0;
 static void blog(const char *, const std::string &) {}
+static void rtcGlobalNote(const std::string &, int32_t) {}            // (1.9.7: the last values of global variables, kept through the chip's own restarts)
 static char rtcPage[24]; static uint32_t rtcMagic = 0; static char rtcPicture[40]; static uint32_t rtcPictureMagic = 0;
 static void delay(uint32_t) {}
 static void flushOut();

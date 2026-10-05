@@ -459,6 +459,10 @@ def publish():
     print(f'{rcount} releases can be gone back to ("Earlier versions"):', ', '.join(l.split('=', 1)[1].split('|')[0] for l in rtext.splitlines() if l.startswith('release=')))
     print(f'PUBLISHED: "{d["name"]}" is the latest release.\n  Teensy {d["teensy.version"]}, screen {d.get("screen.version", "as it is")}, {d["teensy_files.count"]} help files, {d["screen_files.count"]} screen files'
           f'\n  {BASE}latest.txt')
+    # The public repository (github.com/Mmessiter/LDRC_V2) gets the same release as a snapshot, committed and pushed
+    # (Malcolm, 2026-10-05: "Go!" - Version 2 is public).
+    r = subprocess.run([sys.executable, os.path.join(HERE, 'publish_public.py'), '--push'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    print(('  public repository: ' + r.stdout.strip().splitlines()[-1]) if r.returncode == 0 else ('  public repository NOT updated:\n' + r.stdout[-1500:]))
 
 def status():
     conn = [None]
