@@ -5,11 +5,12 @@ derivative stays free too. So:
 
 | What | Licence | In plain English |
 |---|---|---|
-| All code — firmware (RXV2, TXV2, LDRC2SIM), the iOS/Android apps, the web pages | **GPL-3.0-or-later** ([LICENSE](LICENSE)), with an [app-store exception](LICENSE-EXCEPTION.txt) | Use, copy, change and share it freely. If you share a changed version, you must share its source under the same licence. |
-| Circuit boards (KiCad schematics and layouts, when published) | **CERN-OHL-S-2.0** | The hardware equivalent of the GPL: build and sell boards, but published changes must stay open. |
-| Manuals, help text, pictures | **CC BY-SA 4.0** | Share and adapt, credit the author, same licence for adaptations. |
+| All code — firmware (TXV2-Screen, RXV2, LDRC2SIM), the iOS/Android apps, the web pages, the tools and tests | **GPL-3.0-or-later** ([LICENSE](LICENSE)), with an [app-store exception](LICENSE-EXCEPTION.txt) | Use, copy, change and share it freely. If you share a changed version, you must share its source under the same licence. |
+| The transmitter's Teensy firmware (TXV2/TransmitterCode) | **GPL-2.0-or-later** ([TXV2/LICENSE](TXV2/LICENSE)) | The same freedoms. It is Version 1's firmware grown up, and like Version 1 it links the RF24 radio driver, which is GPL-2.0 only; so it stays at version 2 "or later" until RF24 is replaced. |
+| Circuit boards (the transmitter's Proteus project and Gerbers, the KiCad files of RXV2 and TXV3) | **CERN-OHL-S-2.0** | The hardware equivalent of the GPL: build and sell boards, but published changes must stay open. |
+| Manuals, help texts, the screen's pages and sounds, pictures, the case files | **CC BY-SA 4.0** | Share and adapt, credit the author, same licence for adaptations. |
 
-Copyright (C) 2026 Malcolm Messiter.
+Copyright (C) 2020-2026 Malcolm Messiter.
 
 ## Credits
 

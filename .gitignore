@@ -9,6 +9,8 @@ compile_commands.json
 # ── Secrets — NEVER commit ──
 # The messiter.com FTP password lives here (also ignored inside LDRC2SIM/.gitignore).
 ftp_credentials.sh
+# The screen's bench WiFi networks (TXV2-Screen/include/secrets.h): the publisher never copies it, and git never takes it
+secrets.h
 
 # ── Android app (RXV2App) — build artifacts + publish staging ──
 RXV2App/android/RXV2App/.gradle/
