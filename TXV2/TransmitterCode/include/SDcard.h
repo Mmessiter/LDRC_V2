@@ -710,6 +710,15 @@ void ReadTxExtension()
     DoingCheckSm = false;
     for (uint8_t k = 0; k < 4; ++k)
         SwitchReversed[4 + k] = (marker == TX_EXT_MAGIC) && ((bits >> k) & 1);
+    // B33: the switches of inputs 5-8 (indices 0-3) and 13-16 (indices 8-11); 9-12 are in the block itself
+    static const uint8_t idx[8] = {0, 1, 2, 3, 8, 9, 10, 11};
+    DoingCheckSm = true;
+    for (uint8_t k = 0; k < 8; ++k)
+    {
+        const uint8_t v = SDRead8BITS(TX_EXT_ADDR + 2 + k);
+        TopChannelSwitch[idx[k]] = (marker == TX_EXT_MAGIC && v >= 1 && v <= 8) ? v : 0;
+    }
+    DoingCheckSm = false;
 }
 void SaveTxExtension()
 {
@@ -717,9 +726,12 @@ void SaveTxExtension()
     for (uint8_t k = 0; k < 4; ++k)
         if (SwitchReversed[4 + k])
             bits |= (1 << k);
+    static const uint8_t idx[8] = {0, 1, 2, 3, 8, 9, 10, 11};
     DoingCheckSm = true;
     SDUpdate8BITS(TX_EXT_ADDR, TX_EXT_MAGIC);
     SDUpdate8BITS(TX_EXT_ADDR + 1, bits);
+    for (uint8_t k = 0; k < 8; ++k)
+        SDUpdate8BITS(TX_EXT_ADDR + 2 + k, TopChannelSwitch[idx[k]]); // B33
     DoingCheckSm = false;
 }
 /*********************************************************************************************************************************/

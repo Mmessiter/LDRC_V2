@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B32 05/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B33 05/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -971,6 +971,7 @@ void LogTotalPacketsAttempted();
 void DelaySimple(uint32_t ms);
 uint8_t GetSwitchPosition(uint8_t Sw_Number);
 bool AnyJobOnFrontSwitch();                   // B32: a job is assigned to one of switches 5-8
+bool InputIsSwitch(uint8_t InputDevice);      // B33: input device 0-15 (InPutStick's numbering) is served by a switch
 void ReadFrontSwitches();                     // B32: the four analogue readings, once a frame
 void ShowSwitchPositions();                   // B32: "up / mid / down" beside each switch on the Switches page
 FASTRUN void LogAverageGap();
@@ -1347,13 +1348,19 @@ uint8_t DualRatesSwitch = 0;
 //                Top switch Channel numbers                                   *
 // **************************************************************************
 
-#define Ch9_SW 0
-#define Ch10_SW 1
-#define Ch11_SW 2
-#define Ch12_SW 3
+// B33 (Malcolm, 5 Oct 2026: "Can we make that 5 to 16, I wonder? That would be complete!"): a switch can be the input of
+// any channel from 5 to 16, not only 9 to 12. TopChannelSwitch[d] is the switch (1-8, 0 none) that is input device d + 4,
+// i.e. channel d + 5: index 0 = channel 5 ... index 11 = channel 16. A switch on inputs 5-8 takes the place of the front
+// switch or knob there. Channels 9-12 keep their four bytes of the transmitter block (Ch9_SW..Ch12_SW), the other eight
+// live in the block's extension (TX_EXT_ADDR + 2 ..).
+#define Ch9_SW 4
+#define Ch10_SW 5
+#define Ch11_SW 6
+#define Ch12_SW 7
+#define SWITCH_INPUTS 12 // input devices 5-16 (indices 4-15 of InPutStick's numbering) that a switch can be
 
-uint8_t TopChannelSwitch[4] = {0, 0, 0, 0};
-uint8_t TopChannelSwitchValue[4] = {0, 0, 0, 0};
+uint8_t TopChannelSwitch[SWITCH_INPUTS] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+uint8_t TopChannelSwitchValue[SWITCH_INPUTS] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 // B32 (Malcolm, 5 Oct 2026: "Ideally, it should be possible to designate any of these eight to any of those functions"):
 // EIGHT switches, not four. 1-4 are the top edge's (digital, two contacts each); 5-8 are the front four (the analogue inputs
@@ -1361,7 +1368,7 @@ uint8_t TopChannelSwitchValue[4] = {0, 0, 0, 0};
 // Rates, Channel 9-12) goes through GetSwitchPosition(), which answers for all eight. Reversed flags for 5-8 live outside
 // the transmitter block's checksummed sequence (TX_EXT_ADDR), so a models.dat written before B32 still loads.
 bool SwitchReversed[8] = {false, false, false, false, false, false, false, false};
-#define TX_EXT_ADDR 500                   // B32: two bytes near the end of the TX block (TXSIZE 512): 0x5A, then bits 0-3 = switches 5-8 reversed
+#define TX_EXT_ADDR 500                   // B32: near the end of the TX block (TXSIZE 512): 0x5A, bits 0-3 = switches 5-8 reversed; B33: + 8 bytes, the switches of inputs 5-8 and 13-16
 #define TX_EXT_MAGIC 0x5A
 uint16_t FrontSwitchRaw[4] = {0, 0, 0, 0}; // B32: the front switches' readings, taken once a frame (only when a job uses one, or their page shows)
 uint8_t FrontSwitchPos[4] = {0, 0, 0, 0};  // B32: their last positions (hysteresis: a reading near a threshold does not flicker)

@@ -14,10 +14,16 @@ bool AnyJobOnFrontSwitch()
 {
     if (SafetySwitch >= 5 || BuddySwitch >= 5 || BankSwitch >= 5 || Autoswitch >= 5 || DualRatesSwitch >= 5)
         return true;
-    for (uint8_t k = 0; k < 4; ++k)
+    for (uint8_t k = 0; k < SWITCH_INPUTS; ++k)
         if (TopChannelSwitch[k] >= 5)
             return true;
     return false;
+}
+
+// B33: is this input device (0-15) a switch's? Inputs 5-16 can be (index 4-15); a switch on 5-8 takes the front input's place.
+bool InputIsSwitch(uint8_t InputDevice)
+{
+    return InputDevice >= 4 && InputDevice <= 15 && TopChannelSwitch[InputDevice - 4] >= 1 && TopChannelSwitch[InputDevice - 4] <= 8;
 }
 
 // B32: the front switches' readings. Switch 5 is the input of channel 5 (A6), 6 of channel 6, and so on: the same inputs the
@@ -71,11 +77,11 @@ void ReadSafetySwitch()
 }
 
 /************************************************************************************************************/
-// if one or more of the top switches is defined as a channel 9 10 11 or 12, this function reads that switch as channel value: three positions only of course.
+// if one or more of the switches is defined as a channel 5 to 16 (B33; it was 9 to 12), this function reads that switch as channel value: three positions only of course.
 void ReadChannelSwitches9to12()
 {
     uint8_t Values[3] = {0, 90, 180};
-    for (uint8_t ChSwith = Ch9_SW; ChSwith <= Ch12_SW; ChSwith++)
+    for (uint8_t ChSwith = 0; ChSwith < SWITCH_INPUTS; ChSwith++)
     {
         if (TopChannelSwitch[ChSwith] >= 1 && TopChannelSwitch[ChSwith] <= 8)                            // if this switch is defined.... 1-8 (B32: the front four too) ... (ClaudeFix-2-7-2026 a corrupt config byte made GetSwitchPosition return 0 and Values[-1] was read)
         {
@@ -322,9 +328,9 @@ void ReadDualRateSwitch()
 FASTRUN uint16_t ReadThreePositionSwitch(uint8_t InputDevice)
 {
 
-    if (InputDevice >= 8 && InputDevice <= 11)
+    if (InputIsSwitch(InputDevice)) // B33: any input 5-16 that a switch serves (it was 9-12)
     {
-        uint8_t switchIndex = InputDevice - 8; // Because Ch9_SW = 0
+        uint8_t switchIndex = InputDevice - 4; // index 0 = input 5
         uint16_t value = TopChannelSwitchValue[switchIndex];
         if (value == 0)
             return ChannelMin[InputDevice];

@@ -43,4 +43,4 @@ You can then adjust the 'trims multiplier' of course so that the extent of the c
 
 After making changes, Be *SURE TO TEST* on the ground before flying!||
 
-Inputs 5 to 8 are the front switches or knobs. Inputs 9 to 12 are any switch given the job 'Channel 9' to 'Channel 12' on the Switches page, so a top-edge switch can drive any channel: give it that job, then choose its input number here.
+Inputs 5 to 8 are the front switches or knobs. Any switch given the job 'Channel 5' to 'Channel 16' on the Switches page becomes that input (in place of the front switch or knob for 5 to 8), so a top-edge switch can drive any channel: give it that job, then choose its input number here.

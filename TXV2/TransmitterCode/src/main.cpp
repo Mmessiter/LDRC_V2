@@ -394,7 +394,7 @@ FASTRUN void ShowServoPos()
             return; // ClaudeFix-2-7-2026 ChanneltoSet can still be 0 when the graph page appears by an unusual route -- InPutStick[-1] was read
         MinimumDistance = 4;
         InputDevice = (InPutStick[ChanneltoSet - 1]);
-        if (InputDevice < 8)
+        if (InputDevice < 8 && !InputIsSwitch(InputDevice)) // (B33)
             InputAmount = AnalogueReed(InputDevice);
         else
             InputAmount = ReadThreePositionSwitch(InputDevice);                                                   // not analogue
@@ -562,7 +562,7 @@ void GetAllInputs()
 {
     for (uint16_t OutputChannel = 0; OutputChannel < CHANNELSUSED; ++OutputChannel)
     {
-        if (InPutStick[OutputChannel] < 8)
+        if (InPutStick[OutputChannel] < 8 && !InputIsSwitch(InPutStick[OutputChannel])) // (B33: a switch given input 5-8 takes the place of the front switch or knob)
         {
             InputsBuffer[OutputChannel] = AnalogueReed(InPutStick[OutputChannel]); // Get values from sticks' pots (taking into account mode 1 and mode 2!)
         }
@@ -1283,29 +1283,6 @@ void DoOneSwitch(char *Sw, uint8_t n)
     char Safety_Switch[] = "Safety  R";
     char Buddy_Switch[] = "Buddy  R";
     char DualRates_Switch[] = "Rates  R";
-    char cc9[] = " (Ch 9) ";
-    char cc10[] = " (Ch 10) ";
-    char cc11[] = " (Ch 11) ";
-    char cc12[] = " (Ch 12) ";
-    char c9[40];
-    char c10[40];
-    char c11[40];
-    char c12[40];
-    char R[] = " R";
-
-    strcpy(c9, ChannelNames[8]);
-    strcpy(c10, ChannelNames[9]);
-    strcpy(c11, ChannelNames[10]);
-    strcpy(c12, ChannelNames[11]);
-
-    strcat(c9, cc9);
-    strcat(c9, R);
-    strcat(c10, cc10);
-    strcat(c10, R);
-    strcat(c11, cc11);
-    strcat(c11, R);
-    strcat(c12, cc12);
-    strcat(c12, R);
 
     SendText(Sw, NotUsed);
 
@@ -1319,24 +1296,13 @@ void DoOneSwitch(char *Sw, uint8_t n)
         ShowSwitchNameWithReversed(Sw, n, Banks123);
         return;
     }
-    if (TopChannelSwitch[Ch9_SW] == n)
+    for (uint8_t d = 0; d < SWITCH_INPUTS; ++d) // B33: "<channel name> (Ch N) R", N = 5..16
     {
-        ShowSwitchNameWithReversed(Sw, n, c9);
-        return;
-    }
-    if (TopChannelSwitch[Ch10_SW] == n)
-    {
-        ShowSwitchNameWithReversed(Sw, n, c10);
-        return;
-    }
-    if (TopChannelSwitch[Ch11_SW] == n)
-    {
-        ShowSwitchNameWithReversed(Sw, n, c11);
-        return;
-    }
-    if (TopChannelSwitch[Ch12_SW] == n)
-    {
-        ShowSwitchNameWithReversed(Sw, n, c12);
+        if (TopChannelSwitch[d] != n)
+            continue;
+        char c[48];
+        snprintf(c, sizeof(c), "%s (Ch %u) R", ChannelNames[d + 4], (unsigned)(d + 5));
+        ShowSwitchNameWithReversed(Sw, n, c);
         return;
     }
     if (SafetySwitch == n)
@@ -2329,13 +2295,17 @@ void ShowBank()
 
 void DoOneSwitchView(uint8_t n) // n is 1-4  = number for switch to edit
 {
-    char chLabels[4][3] = {"t3", "t4", "t5", "t6"};
-    char chValues[4][11] = {"Channel 9", "Channel 10", "Channel 11", "Channel 12"};
+    // B33: twelve channel jobs (5-16). Their radios and labels on the page, by channel: 9-12 keep r3-r6 / t3-t6, the
+    // others are r10-r17 / t10-t17 (5, 6, 7, 8, 13, 14, 15, 16).
+    static const char *chRadio[SWITCH_INPUTS] = {"r10", "r11", "r12", "r13", "r3", "r4", "r5", "r6", "r14", "r15", "r16", "r17"};
+    static const char *chLabel[SWITCH_INPUTS] = {"t10", "t11", "t12", "t13", "t3", "t4", "t5", "t6", "t14", "t15", "t16", "t17"};
     char Rlabels[10][3] = {"r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9"};
     char OneSwitchViewc_revd[] = "c_revd"; // Reversed
 
     for (int i = 0; i < 10; ++i)
         SendValue(Rlabels[i], 0); // clear all
+    for (int d = 0; d < SWITCH_INPUTS; ++d)
+        SendValue((char *)chRadio[d], 0);
 
     ValueSent = false; // If no setting, = 'Not Used'
 
@@ -2343,14 +2313,9 @@ void DoOneSwitchView(uint8_t n) // n is 1-4  = number for switch to edit
         SendValue(Rlabels[1], 1); // No duplicates allowed!
     if ((Autoswitch == n) && (!ValueSent))
         SendValue(Rlabels[2], 1); // No duplicates allowed!
-    if ((TopChannelSwitch[Ch9_SW] == n) && (!ValueSent))
-        SendValue(Rlabels[3], 1); // No duplicates allowed!
-    if ((TopChannelSwitch[Ch10_SW] == n) && (!ValueSent))
-        SendValue(Rlabels[4], 1); // No duplicates allowed!
-    if ((TopChannelSwitch[Ch11_SW] == n) && (!ValueSent))
-        SendValue(Rlabels[5], 1); // No duplicates allowed!
-    if ((TopChannelSwitch[Ch12_SW] == n) && (!ValueSent))
-        SendValue(Rlabels[6], 1); // No duplicates allowed!
+    for (int d = 0; d < SWITCH_INPUTS; ++d)
+        if ((TopChannelSwitch[d] == n) && (!ValueSent))
+            SendValue((char *)chRadio[d], 1); // No duplicates allowed! (B33: channels 5-16)
     if ((SafetySwitch == n) && (!ValueSent))
         SendValue(Rlabels[7], 1); // No duplicates allowed!
     if ((DualRatesSwitch == n) && (!ValueSent))
@@ -2368,11 +2333,13 @@ void DoOneSwitchView(uint8_t n) // n is 1-4  = number for switch to edit
     else
         SendValue(OneSwitchViewc_revd, 0); // ... or not
 
-    for (int i = 0; i < 4; ++i)
-    { // show channel names
-        SendText(chLabels[i], chValues[i]);
-        if (strlen(ChannelNames[i + 8]) >= 2)
-            SendText(chLabels[i], ChannelNames[i + 8]); // Show EDITED channel names if they exist
+    for (int d = 0; d < SWITCH_INPUTS; ++d)
+    { // show channel names (B33: 5-16)
+        char v[24];
+        snprintf(v, sizeof(v), "Channel %d", d + 5);
+        SendText((char *)chLabel[d], v);
+        if (strlen(ChannelNames[d + 4]) >= 2)
+            SendText((char *)chLabel[d], ChannelNames[d + 4]); // Show EDITED channel names if they exist
     }
 }
 
@@ -2422,10 +2389,6 @@ void ReadNewSwitchFunction()
 {
     char OneSwitchView_r1[] = "r1"; // Flight modes
     char OneSwitchView_r2[] = "r2"; // Auto
-    char OneSwitchView_r3[] = "r3"; // Ch9
-    char OneSwitchView_r4[] = "r4"; // Ch10
-    char OneSwitchView_r5[] = "r5"; // Ch11
-    char OneSwitchView_r6[] = "r6"; // Ch12
     char OneSwitchView_r7[] = "r7"; // Safety
     char OneSwitchView_r8[] = "r8"; // Dual Rates
     char OneSwitchView_r9[] = "r9"; // Buddy
@@ -2459,44 +2422,17 @@ void ReadNewSwitchFunction()
             Autoswitch = 0;
     }
     SendValue(Progress, 25);
-    if (GetValue(OneSwitchView_r3))
-    {
-        TopChannelSwitch[Ch9_SW] = SwitchEditNumber;
-    }
-    else
-    {
-        if (TopChannelSwitch[Ch9_SW] == SwitchEditNumber)
-            TopChannelSwitch[Ch9_SW] = 0;
-    }
-    SendValue(Progress, 30);
-    if (GetValue(OneSwitchView_r4))
-    {
-        TopChannelSwitch[Ch10_SW] = SwitchEditNumber;
-    }
-    else
-    {
-        if (TopChannelSwitch[Ch10_SW] == SwitchEditNumber)
-            TopChannelSwitch[Ch10_SW] = 0;
-    }
-    SendValue(Progress, 40);
-    if (GetValue(OneSwitchView_r5))
-    {
-        TopChannelSwitch[Ch11_SW] = SwitchEditNumber;
-    }
-    else
-    {
-        if (TopChannelSwitch[Ch11_SW] == SwitchEditNumber)
-            TopChannelSwitch[Ch11_SW] = 0;
-    }
-    SendValue(Progress, 50);
-    if (GetValue(OneSwitchView_r6))
-    {
-        TopChannelSwitch[Ch12_SW] = SwitchEditNumber;
-    }
-    else
-    {
-        if (TopChannelSwitch[Ch12_SW] == SwitchEditNumber)
-            TopChannelSwitch[Ch12_SW] = 0;
+    { // B33: the twelve channel jobs (5-16), each its own radio on the page
+        static const char *chRadio[SWITCH_INPUTS] = {"r10", "r11", "r12", "r13", "r3", "r4", "r5", "r6", "r14", "r15", "r16", "r17"};
+        for (uint8_t d = 0; d < SWITCH_INPUTS; ++d)
+        {
+            if (GetValue((char *)chRadio[d]))
+                TopChannelSwitch[d] = SwitchEditNumber;
+            else if (TopChannelSwitch[d] == SwitchEditNumber)
+                TopChannelSwitch[d] = 0;
+            if (d == 3 || d == 7)
+                SendValue(Progress, d == 3 ? 40 : 50);
+        }
     }
     SendValue(Progress, 60);
     if (GetValue(OneSwitchView_r7))
@@ -2638,10 +2574,8 @@ void ResetTransmitterSettings()
     SafetySwitch = 2;
     BuddySwitch = 3;
     BankSwitch = 4;
-    TopChannelSwitch[Ch9_SW] = 0;
-    TopChannelSwitch[Ch10_SW] = 0;
-    TopChannelSwitch[Ch11_SW] = 0;
-    TopChannelSwitch[Ch12_SW] = 0;
+    for (int i = 0; i < SWITCH_INPUTS; ++i)
+        TopChannelSwitch[i] = 0; // (B33: twelve)
     for (int i = 0; i < 8; ++i)
         SwitchReversed[i] = false; // (B32: eight)
 

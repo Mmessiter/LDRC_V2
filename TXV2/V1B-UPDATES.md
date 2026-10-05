@@ -186,6 +186,16 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## A switch as the input of any channel, 5 to 16 (V2 B33 + screen files, 5 Oct 2026)
+
+Malcolm: "you said channels 9-12 are offered. Can we make that 5 to 16, I wonder? That would be complete!" The
+"Channel N" job now runs from 5 to 16. A switch given channel 5 to 8 takes the place of the front switch or knob
+there (the mixer reads the switch instead of the analogue input); 13 to 16 had no input at all before. The switches
+of channels 9-12 keep their four bytes of the transmitter block; the other eight are in the block's extension
+(TX_EXT_ADDR + 2, outside the checksum, like the reversed flags). The job page shows the twelve channels in two
+columns on the right, the special jobs down the left; the Switches page names the job "<channel name> (Ch N)".
+Help texts SWITCHES, ONESWICH and INPUTS say so.
+
 ## Any switch, any job (V2 B32 + screen files, 5 Oct 2026)
 
 Malcolm: "It has eight switches. Four of them simply are the sources for channels 5678. The other four on the top of

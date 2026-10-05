@@ -182,8 +182,8 @@ uint32_t ControlFingerprint()
         Fp(TrimNumber[i]);
     Fp(BankSwitch); // which switch does what
     Fp(Autoswitch);
-    for (i = 0; i < 4; ++i)
-        Fp(TopChannelSwitch[i]);
+    for (i = 0; i < SWITCH_INPUTS; ++i)
+        Fp(TopChannelSwitch[i]); // (B33: twelve)
     for (i = 0; i < 8; ++i)
         Fp(SwitchReversed[i] ? 1 : 0); // (B32: eight switches)
     Fp(BuddySwitch);
