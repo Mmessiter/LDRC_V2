@@ -186,6 +186,11 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## "Defined front screen" (screen 1.9.15, 5 Oct 2026)
+
+Malcolm: "Front screen needs to say Defined front screen for greater clarity." The Appearance page's button and the
+title of its setup pages say so; the help texts follow.
+
 ## Which themes the other boxes wear (screen 1.9.14, 5 Oct 2026)
 
 Malcolm: "when choosing a theme it would be quite nice to know while choosing which themes have already been used."

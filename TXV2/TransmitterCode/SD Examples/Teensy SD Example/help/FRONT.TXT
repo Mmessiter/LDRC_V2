@@ -2,7 +2,7 @@ If you have questions even after looking at the help screens, please email these
 
 It's recommended that this screen is visible while flying a model because it shows the bank, time, trims, motor timer and battery voltages. ||
 
-Your own front screen (Transmitter setup / Appearance / Front screen) can show your choice of numbers, big and clear, in place of this screen while you fly. Its 'Original screen' button brings this screen back; 'Defined screen' (bottom middle) shows yours again. The choice stays, through take-offs, landings and switching off, until you press the other button.||
+Your own front screen (Transmitter setup / Appearance / Defined front screen) can show your choice of numbers, big and clear, in place of this screen while you fly. Its 'Original screen' button brings this screen back; 'Defined screen' (bottom middle) shows yours again. The choice stays, through take-offs, landings and switching off, until you press the other button.||
 
 The link quality bar sits just above the buttons.||
 

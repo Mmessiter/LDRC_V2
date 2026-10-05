@@ -341,7 +341,7 @@ void FlightScreen::build(FlightSource &src, FlightFonts *fonts) {
         FlightButton help; help.id = ID_HELP; help.r = FlightRect(FLIGHT_W - 6 - 120, 3, 120, FLIGHT_STRIP - 6); help.text = "Help"; sc.buttons.push_back(help);
         sc.stripRight = help.r.x - 6;
     } else if (colourFor >= 0) {                          // a box's theme: the Themes page's twelve, the box as it will look
-        sc.layout = 5000 + colourFor; sc.title = "Front screen";
+        sc.layout = 5000 + colourFor; sc.title = "Defined front screen";
         char b[64]; snprintf(b, sizeof(b), "Box %d: its theme.", colourFor + 1); sc.hint = b;
         FlightTile t; t.id = 0; t.r = FlightRect(528, 94, 258, 252); t.item = cfg.items[colourFor]; paint(t, colourFor); t.v = flightValue(t.item, src);
         if (t.item == FL_NONE) { t.v.label = "Nothing"; t.v.state = FS_NORMAL; t.v.big = "--"; }
@@ -361,7 +361,7 @@ void FlightScreen::build(FlightSource &src, FlightFonts *fonts) {
         FlightButton bt; bt.id = ID_SAME; bt.r = FlightRect(14, 414, 377, 56); bt.text = "Same as screens"; sc.buttons.push_back(bt);
         bt.id = ID_COLOUR_DONE; bt.r = slot(3); bt.text = "OK"; sc.buttons.push_back(bt);
     } else if (chooser == -1) {
-        sc.layout = 2000 + cfg.layout; sc.title = "Front screen"; sc.hint = "Touch a box to choose what it shows.";
+        sc.layout = 2000 + cfg.layout; sc.title = "Defined front screen"; sc.hint = "Touch a box to choose what it shows.";
         const std::vector<FlightRect> rs = flightLayout(cfg.layout, FlightRect(6, 92, FLIGHT_W - 12, 312));
         for (size_t i = 0; i < rs.size(); ++i) { FlightTile t; t.id = (int) i; t.r = rs[i]; t.item = cfg.items[i]; paint(t, (int) i); t.v = flightValue(t.item, src); if (t.v.coloured) { t.own = true; t.face = t.v.face; t.ink = t.v.ink; } t.pressed = pressedId == (int) i && !slidOff;
                                                  if (t.item == FL_NONE) { t.v.label = "Nothing"; t.v.state = FS_EMPTY; } sc.tiles.push_back(t); }
@@ -374,7 +374,7 @@ void FlightScreen::build(FlightSource &src, FlightFonts *fonts) {
         bt.id = ID_STAY; bt.r = third(1); bt.text = cfg.stayOn ? "Stays lit: yes" : "Stays lit: no"; sc.buttons.push_back(bt);
         bt.id = ID_OK; bt.r = third(2); bt.text = "OK"; sc.buttons.push_back(bt);
     } else if (chooser == CHOOSE_SIZES) {                       // the box sizes: each choice drawn as its boxes
-        sc.layout = 4000; sc.title = "Front screen"; sc.hint = "Choose the box sizes. Box 1 is the biggest.";
+        sc.layout = 4000; sc.title = "Defined front screen"; sc.hint = "Choose the box sizes. Box 1 is the biggest.";
         const int cols = 4, gap = 10, x0 = 14, y0 = 92, w = (FLIGHT_W - 2 * x0 - (cols - 1) * gap) / cols, h = (312 - 2 * gap) / 3;
         for (int k = 0; k < FLIGHT_LAYOUT_COUNT; ++k) {
             FlightButton bt; bt.id = ID_LAYOUT + k; bt.r = FlightRect(x0 + (k % cols) * (w + gap), y0 + (k / cols) * (h + gap), w, h);
@@ -382,7 +382,7 @@ void FlightScreen::build(FlightSource &src, FlightFonts *fonts) {
         }
         FlightButton bt; bt.id = ID_BACK; bt.r = slot(3); bt.text = "OK"; sc.buttons.push_back(bt);   // (OK at the bottom right, as on every page)
     } else if (chooser >= 0) {
-        sc.layout = 3000 + chooser; sc.title = "Front screen";
+        sc.layout = 3000 + chooser; sc.title = "Defined front screen";
         char b[48]; snprintf(b, sizeof(b), "Box %d shows:", chooser + 1); sc.hint = b;
         const int cols = 4, gap = 5, x0 = 14, y0 = 92, w = (FLIGHT_W - 2 * x0 - (cols - 1) * gap) / cols, h = 58;   // (five rows of four: 17 things)
         for (int it = 1; it <= FL_ITEMS; ++it) {                        // the things, then "Nothing" last

@@ -321,7 +321,7 @@ void AppearancePage::poll(const AppearanceWorld &w) {
 }
 const AppearanceScene &AppearancePage::scene() {
     sc = AppearanceScene(); sc.layout = 9000; sc.title = "Appearance";
-    static const struct { int id; const char *text; } BUTTONS[] = { { APP_BACKGROUND, "Background picture" }, { APP_COLOURS, "Themes" }, { APP_FRONT, "Front screen" } };
+    static const struct { int id; const char *text; } BUTTONS[] = { { APP_BACKGROUND, "Background picture" }, { APP_COLOURS, "Themes" }, { APP_FRONT, "Defined front screen" } };
     for (int k = 0; k < 3; ++k) {
         ThemeTile t; t.button = true; t.face = 0xD69A; t.ink = 0x0000; t.id = BUTTONS[k].id; t.text = BUTTONS[k].text;
         t.r = ThemeRect(190, 96 + k * 96, 420, 76); sc.tiles.push_back(t);
