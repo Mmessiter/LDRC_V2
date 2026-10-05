@@ -1,0 +1,27 @@
+# 53 SwitchesView ("Switches on top") - TXSetupView "Switches" (print "SwitchesView") -> main.cpp:3851-3859
+# UpdateSwitchesView -> DoOneSwitch (main.cpp:1262-1343): each box first gets "Not used" + 9 trailing spaces, then
+# its job; a job's text ends in "  R" when reversed, else the R is cut off and two trailing spaces remain
+# (ShowSwitchNameWithReversed, main.cpp:1242-1258). Here: 1 Safety, 2 not used, 3 Bank 4 & Motor, 4 Banks 1 2 3 reversed.
+Screen_Background=8
+@model 0
+page SwitchesView
+sw1.txt="Not used         "
+sw1.txt="Safety  "
+sw2.txt="Not used         "
+sw3.txt="Not used         "
+sw3.txt="Bank 4 & Motor  "
+sw4.txt="Not used         "
+sw4.txt="Banks 1 2 3  R"
+ModelName.txt="RAW 420 MCM (3)"
+@shot 53_open
+# worst case: the longest jobs - channel switches with 10-char channel names (ChannelNames[16][11]) - all reversed
+sw1.txt="Not used         "
+sw1.txt="Bank 4 & Motor  R"
+sw2.txt="Not used         "
+sw2.txt="Nav lights (Ch 10)  R"
+sw3.txt="Not used         "
+sw3.txt="Smoke pump (Ch 11)  R"
+sw4.txt="Not used         "
+sw4.txt="Flaps down (Ch 12)  R"
+ModelName.txt="SAB GOBLIN RAW 700 COMPETITION (90)"
+@shot 53_long

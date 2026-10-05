@@ -1,0 +1,126 @@
+# 39 InputsView - group C scenario (what the Teensy sends; file:line = TXV1B/TransmitterCode)
+Screen_Background=8
+@model 0
+# "InputsView" from RXSetupView (main.cpp:3697): (with a model connected a "Warning: model is connected!"
+# question comes first, over RXSetupView), then page, UpdateButtonLabels, UpdateModelsNameEveryWhere
+page InputsView
+ch1.txt="Aileron"
+c1.val=1
+n4.val=1
+n0.val=1
+ch2.txt="Elevator"
+c2.val=2
+n5.val=2
+n1.val=2
+ch3.txt="Throttle"
+c3.val=3
+n6.val=3
+n2.val=3
+ch4.txt="Rudder"
+c4.val=4
+n7.val=4
+n3.val=4
+ch5.txt="Gear"
+c5.val=5
+n8.val=5
+ch6.txt="AUX1"
+c6.val=6
+n9.val=6
+ch7.txt="AUX2"
+c7.val=7
+n10.val=7
+ch8.txt="AUX3"
+c8.val=8
+n11.val=8
+ch9.txt="AUX4"
+c9.val=9
+n12.val=9
+ch10.txt="AUX5"
+c10.val=10
+n13.val=10
+ch11.txt="AUX6"
+c11.val=11
+n14.val=11
+ch12.txt="AUX7"
+c12.val=12
+n15.val=12
+ch13.txt="AUX8"
+c13.val=13
+n16.val=13
+ch14.txt="AUX9"
+c14.val=14
+n17.val=14
+ch15.txt="AUX10"
+c15.val=15
+n18.val=15
+ch16.txt="AUX11"
+c16.val=16
+n19.val=16
+ModelName.txt="RAW 420 MCM (3)"
+@shot 39_open
+# OK: InputsViewEnd (MenuOptions.h:603) after the pilot changed input 5 -> 7 (screen-side)
+vis Progress,1
+# get c5.val
+Progress.val=30
+Progress.val=36
+Progress.val=42
+Progress.val=49
+@shot 39_saving
+# ---- worst case: inputs/outputs at 16, longest names and model name
+# "InputsView" from RXSetupView (main.cpp:3697): (with a model connected a "Warning: model is connected!"
+# question comes first, over RXSetupView), then page, UpdateButtonLabels, UpdateModelsNameEveryWhere
+page InputsView
+ch1.txt="WWWWWWWWWW"
+c1.val=16
+n4.val=16
+n0.val=16
+ch2.txt="WWWWWWWWWW"
+c2.val=16
+n5.val=16
+n1.val=16
+ch3.txt="WWWWWWWWWW"
+c3.val=16
+n6.val=16
+n2.val=16
+ch4.txt="WWWWWWWWWW"
+c4.val=16
+n7.val=16
+n3.val=16
+ch5.txt="WWWWWWWWWW"
+c5.val=16
+n8.val=16
+ch6.txt="WWWWWWWWWW"
+c6.val=16
+n9.val=16
+ch7.txt="WWWWWWWWWW"
+c7.val=16
+n10.val=16
+ch8.txt="WWWWWWWWWW"
+c8.val=16
+n11.val=16
+ch9.txt="WWWWWWWWWW"
+c9.val=16
+n12.val=16
+ch10.txt="WWWWWWWWWW"
+c10.val=16
+n13.val=16
+ch11.txt="WWWWWWWWWW"
+c11.val=16
+n14.val=16
+ch12.txt="WWWWWWWWWW"
+c12.val=16
+n15.val=16
+ch13.txt="WWWWWWWWWW"
+c13.val=16
+n16.val=16
+ch14.txt="WWWWWWWWWW"
+c14.val=16
+n17.val=16
+ch15.txt="WWWWWWWWWW"
+c15.val=16
+n18.val=16
+ch16.txt="WWWWWWWWWW"
+c16.val=16
+n19.val=16
+ModelName.txt="WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW (90)"
+@shot 39_long

@@ -1,0 +1,162 @@
+# RFGovViewGlbl (page 5). Start_Gov_Global RF_Governor_Global.h:427 -> ShowGOV_Global_Bank :397 -> ShowGOVConfigMsg :34;
+# values DisplayGovConfigValues :171; HideGOVConfigMsg :72 when all 24 bytes are in; AddWords :46 also runs on tm0 (500 ms).
+Screen_Background=8
+@model 1
+page RFGovViewGlbl
+t27.txt="RAW 420 MCM"
+n14.val=0
+n15.val=0
+n16.val=0
+n17.val=0
+n18.val=0
+n19.val=0
+n20.val=0
+n21.val=0
+n22.val=0
+n23.val=0
+n24.val=0
+n25.val=0
+n26.val=0
+n27.val=0
+n28.val=0
+n29.val=0
+n30.val=0
+n14.pco=33840
+n15.pco=33840
+n16.pco=33840
+n17.pco=33840
+n18.pco=33840
+n19.pco=33840
+n20.pco=33840
+n21.pco=33840
+n22.pco=33840
+n23.pco=33840
+n24.pco=33840
+n25.pco=33840
+n26.pco=33840
+n27.pco=33840
+n28.pco=33840
+n29.pco=33840
+n30.pco=33840
+t4.txt="Loading config values ..."
+vis t4,1
+vis b1,0
+vis b3,0
+b3.txt="Save"
+# tm0 tick -> AddWords (first visit since power-on: n14=0, n28=0)
+GovMode.txt="(Mode 0 = Off)"
+ThrMode.txt="(Type 0 = Normal)"
+@shot 5_busy
+n14.val=3
+n15.val=20
+n17.val=20
+n18.val=3
+n19.val=2
+n20.val=2
+n21.val=5
+n22.val=30
+n28.val=0
+n29.val=0
+n30.val=0
+vis t4,0
+vis b1,1
+n14.pco=0
+n15.pco=0
+n16.pco=0
+n17.pco=0
+n18.pco=0
+n19.pco=0
+n20.pco=0
+n21.pco=0
+n22.pco=0
+n23.pco=0
+n24.pco=0
+n25.pco=0
+n26.pco=0
+n27.pco=0
+n28.pco=0
+n29.pco=0
+n30.pco=0
+GovMode.txt="(Mode 3 = Electric)"
+@shot 5_open
+# pilot edits Handover (screen keyboard), Teensy Gov_Global_Were_Edited :463
+n15.val=25
+vis b3,1
+@shot 5_edited
+# ---- worst case: "Restore SD to FC" (RestoreFromSDGlobalGOV :324, longest message), 30-char model name,
+# widest mode words, uint8/uint16 maxima
+page RFGovViewGlbl
+t27.txt="GOBLIN RAW 700 COMPETITION MK2"
+n14.val=0
+n15.val=0
+n16.val=0
+n17.val=0
+n18.val=0
+n19.val=0
+n20.val=0
+n21.val=0
+n22.val=0
+n23.val=0
+n24.val=0
+n25.val=0
+n26.val=0
+n27.val=0
+n28.val=0
+n29.val=0
+n30.val=0
+n14.pco=33840
+n15.pco=33840
+n16.pco=33840
+n17.pco=33840
+n18.pco=33840
+n19.pco=33840
+n20.pco=33840
+n21.pco=33840
+n22.pco=33840
+n23.pco=33840
+n24.pco=33840
+n25.pco=33840
+n26.pco=33840
+n27.pco=33840
+n28.pco=33840
+n29.pco=33840
+n30.pco=33840
+t4.txt="Restoring config values ..."
+vis t4,1
+vis b1,0
+vis b3,0
+b3.txt="Save"
+n14.val=255
+n15.val=255
+n17.val=65535
+n18.val=65535
+n19.val=65535
+n20.val=65535
+n21.val=65535
+n22.val=65535
+n28.val=255
+n29.val=255
+n30.val=255
+GovMode.txt="(Mode 3 = Electric)"
+ThrMode.txt="(Type 2 = Function)"
+@shot 5_long_busy
+vis t4,0
+vis b1,1
+n14.pco=0
+n15.pco=0
+n16.pco=0
+n17.pco=0
+n18.pco=0
+n19.pco=0
+n20.pco=0
+n21.pco=0
+n22.pco=0
+n23.pco=0
+n24.pco=0
+n25.pco=0
+n26.pco=0
+n27.pco=0
+n28.pco=0
+n29.pco=0
+n30.pco=0
+@shot 5_long

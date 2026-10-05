@@ -1,0 +1,35 @@
+# GPSView (page 52). GotoGPSView main.cpp:2646: page GPSView; PopulateGPSView Telemetry.h:273 every 100 ms (ShowComms).
+# Each value is snprintf-truncated: Bear/Dist 6 chars, ALT/BTo/Sped/MxS/MALT/Mxd 5 chars, Lon/Lat 14 chars.
+Screen_Background=8
+@model 1
+page GPSView
+Sat.txt="4"
+Fix.txt="No"
+@shot 52_nofix
+Sat.txt="11"
+Fix.txt="Yes"
+Bear.txt="214.55"
+ALT.txt="36.78"
+Dist.txt="61.237"
+BTo.txt="34.55"
+Lon.txt="-0.07215634412"
+Lat.txt="51.42718203456"
+Sped.txt="17.43"
+MxS.txt="38.91"
+MALT.txt="88.45"
+Mxd.txt="142.3"
+@shot 52_open
+# ---- worst case: 255 satellites, longest truncated strings (a 4-digit altitude keeps a bare trailing dot)
+Sat.txt="255"
+Fix.txt="Yes"
+Bear.txt="359.99"
+ALT.txt="1234."
+Dist.txt="1234.5"
+BTo.txt="359.9"
+Lon.txt="-122.419400000"
+Lat.txt="-33.8688000000"
+Sped.txt="123.4"
+MxS.txt="123.4"
+MALT.txt="1234."
+Mxd.txt="1234."
+@shot 52_long

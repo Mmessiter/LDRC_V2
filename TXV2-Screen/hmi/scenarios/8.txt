@@ -1,0 +1,83 @@
+Screen_Background=8
+@model 1
+# RotorFlightStart (RF_RotorFlight.h:32)
+page RFView
+t11.txt="RAW 420 MCM"
+Ratio.txt="10.30"
+Arming.txt="6"
+sw0.val=1
+t5.txt="2.3"
+t14.txt="Bank 1"
+t8.txt="Rate 1"
+@shot 8_open
+# a bank change while the page shows (Switches.h:318 BankHasChanged): ModelName (not on this page), Bank, Rate
+ModelName.txt="RAW 420 MCM (3)"
+t14.txt="Bank 2"
+t8.txt="Rate 2"
+@shot 8_bank2
+# Save to SD: PickBankView2 OK -> Start_SAVE (RF_Save_Restore.h:491): Collect_data_from_dialog reads PickBankView2, then
+# RotorFlightStart (LinkRatesToBanks forced true meanwhile -> sw0.val=1), then the progress bar and t2
+page PickBankView2
+get n0.val
+get sw0.val
+get sw1.val
+get sw2.val
+get sw3.val
+get sw4.val
+# RotorFlightStart (RF_RotorFlight.h:32)
+page RFView
+t11.txt="RAW 420 MCM"
+Ratio.txt="10.30"
+Arming.txt="6"
+sw0.val=1
+t5.txt="2.3"
+t14.txt="Bank 1"
+t8.txt="Rate 1"
+vis Progress,1
+vis t2,1
+Progress.val=1
+t2.txt="Saving PIDs: FC Bank 1 to LocalBank 1"
+Progress.val=20
+t2.txt="Saving Advanced PIDs: FC Bank 1 to LocalBank 1"
+Progress.val=39
+@shot 8_busy
+t2.txt="Success!"
+play 0,17,0
+vis Progress,0
+vis t2,0
+t2.txt=" "
+# rates NOT linked to banks, RF 2.2: the plain open with the switch off
+# RotorFlightStart (RF_RotorFlight.h:32)
+page RFView
+t11.txt="RAW 420 MCM"
+Ratio.txt="10.30"
+Arming.txt="6"
+sw0.val=0
+t5.txt="2.2"
+t14.txt="Bank 2"
+t8.txt="Rate 1"
+@shot 8_unlinked
+# worst case: the 30-char name, the longest t2 message (Restore, RF_Save_Restore.h:145-149);
+# Start_RESTORE forces LinkRatesToBanks true before RotorFlightStart, so sw0.val=1 whatever the setting
+page PickBankView1
+get n0.val
+get sw0.val
+get sw1.val
+get sw2.val
+get sw3.val
+get sw4.val
+# RotorFlightStart (RF_RotorFlight.h:32)
+page RFView
+t11.txt="SAB GOBLIN 700 COMPETITION MK2"
+Ratio.txt="13.33"
+Arming.txt="16"
+sw0.val=1
+t5.txt="2.3"
+t14.txt="Bank 4"
+t8.txt="Rate 4"
+vis Progress,1
+vis t2,1
+Progress.val=1
+t2.txt="Restoring Rates Advanced: LocalRates 4 to FC Rates 4"
+Progress.val=61
+@shot 8_long

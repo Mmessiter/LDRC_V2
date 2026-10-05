@@ -1,0 +1,32 @@
+# 25 OptionsView ("General (1 of 3)") - TXSetupView "System" (va0.val=7<<8) -> SystemPage1Start, MenuOptions.h:10-31
+Screen_Background=8
+@model 0
+page OptionsView
+n0.val=2
+Sto.val=120
+Pto.val=60
+TxName.txt="Malcolm Messiter"
+c0.val=1
+Bwn.val=42
+@shot 25_open
+# Bind pressed on this page (va1.val=63<<8 -> Enable_Binding, Utilities.h:1406-1414)
+OptionsView.b0.txt="Stop Bind"
+@shot 25_bind
+# OK pressed (va1.val=6<<8 -> SystemPage1End, MenuOptions.h:35-60): progress bar shown while reading back + saving
+OptionsView.b0.txt="Bind"
+vis Progress,1
+Progress.val=20
+Progress.val=40
+Progress.val=50
+Progress.val=60
+@shot 25_busy
+# worst case: longest owner name the keyboard allows (TxName txt_maxl 30), largest numbers the Teensy can send
+page OptionsView
+n0.val=2
+Sto.val=65535
+Pto.val=60
+TxName.txt="Malcolm Messiter's transmitter"
+c0.val=0
+Bwn.val=100
+OptionsView.b0.txt="Stop Bind"
+@shot 25_long

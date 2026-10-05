@@ -1,0 +1,37 @@
+# LogFiles (page 19). StartLogFilesListScreen LogFilesList.h:18 (refused while connected): page LogFiles; t0 title;
+# BuildDirectory SDFiles.h:300 + LoadFileSelector :108 -> FilesBox.path (12-char name + size); ShowFreeSpaceEtc SDFiles.h:120.
+Screen_Background=8
+@model 0
+page LogFiles
+t0.txt="All log files"
+FilesBox.path="01-10-26.LOG  22.61 KB\r\n02-10-26.LOG   8.42 KB\r\n03-10-26.LOG   4.37 KB\r\n14-09-26.LOG  31.08 KB\r\n20-09-26.LOG  17.55 KB\r\n21-09-26.LOG  12.94 KB\r\n27-09-26.LOG  46.13 KB\r\n28-09-26.LOG   9.71 KB\r\n30-09-26.LOG  14.07 KB\r\n"
+t4.txt="29.72 GB"
+t6.txt="29.66 GB"
+t5.txt="62.11 MB"
+@shot 19_open
+# help-files mode (TextFileName ends .TXT): Help (b15) and Delete (b1) hidden, title changed
+page LogFiles
+vis b15,0
+vis b1,0
+t0.txt="All help files"
+FilesBox.path="AUDIO.TXT      1.13 KB\r\nBANKNAME.TXT   4.83 KB\r\nBUDDY.TXT      3.53 KB\r\nCALIB.TXT      2.23 KB\r\nCHANNELS.TXT   5.93 KB\r\nCURVES.TXT     4.63 KB\r\nDATA.TXT       3.33 KB\r\nDRATES.TXT     2.03 KB\r\nFAILSAFE.TXT   5.73 KB\r\nFRONT.TXT      4.43 KB\r\nGAPS.TXT       3.13 KB\r\nGPS.TXT        1.83 KB\r\nIDCHECK.TXT    5.53 KB\r\nIDS.TXT        4.23 KB\r\nIMAGE.TXT      2.93 KB\r\nINPUTS.TXT     1.63 KB\r\nLIPO.TXT       5.33 KB\r\nLOG.TXT        4.03 KB\r\nLOGFILES.TXT   2.73 KB\r\nMACROS.TXT     1.43 KB\r\nMIXES.TXT      5.13 KB\r\nMODELS.TXT     3.83 KB\r\nONESWICH.TXT   2.53 KB\r\nOPTIONS.TXT    1.23 KB\r\nPID.TXT        3.63 KB\r\nPID_A.TXT      4.93 KB\r\nPONG.TXT       2.33 KB\r\nRATES1.TXT     4.73 KB\r\nRATES_A.TXT    6.03 KB\r\nREVERSE.TXT    3.43 KB\r\nRFGOVG.TXT     2.13 KB\r\nRFGOVP.TXT     5.83 KB\r\nRFLIGHT.TXT    4.53 KB\r\nRXSETUP.TXT    3.23 KB\r\nRXSETUP1.TXT   1.93 KB\r\nSERVOTYP.TXT   5.63 KB\r\nSLOWSERV.TXT   4.33 KB\r\nSUBTRIM.TXT    3.03 KB\r\nSWITCHES.TXT   1.73 KB\r\nTRIMS.TXT      5.43 KB\r\nTXSETUP.TXT    4.13 KB\r\n"
+t4.txt="29.72 GB"
+t6.txt="29.66 GB"
+t5.txt="62.11 MB"
+@shot 19_help
+# empty /log/ folder
+page LogFiles
+t0.txt="All log files"
+FilesBox.path="(No files)"
+t4.txt="29.72 GB"
+t6.txt="29.66 GB"
+t5.txt="62.11 MB"
+@shot 19_nofiles
+# ---- worst case: longest title, files of 1 MB+ (size runs into the name: no space left), 1 TB card
+page LogFiles
+t0.txt="All help files"
+FilesBox.path="01-08-26.LOG12345.67 KB\r\n01-09-26.LOG1024.00 KB\r\n01-10-26.LOG  22.61 KB\r\n02-10-26.LOG   8.42 KB\r\n03-10-26.LOG   4.37 KB\r\n14-09-26.LOG  31.08 KB\r\n20-09-26.LOG  17.55 KB\r\n21-09-26.LOG  12.94 KB\r\n27-09-26.LOG  46.13 KB\r\n28-09-26.LOG   9.71 KB\r\n30-09-26.LOG  14.07 KB\r\nNO_CLOCK.LOG 999.99 KB\r\n"
+t4.txt="953.67 GB"
+t6.txt="953.60 GB"
+t5.txt=" 0.07 GB"
+@shot 19_long

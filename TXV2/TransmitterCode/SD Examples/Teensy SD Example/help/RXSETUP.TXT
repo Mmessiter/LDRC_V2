@@ -1,0 +1,7 @@
+The Model Setup screen offers all options for setting up the model.||
+
+The options for setting up the transmitter are to be seen on the Transmitter Setup screen.
+
+RECEIVER UPDATES: with the model on and connected, safety on, this checks messiter.com for a newer receiver firmware and, on 'Install now', sends the order over the radio. The transmitter goes silent for a minute while the receiver fetches it over the WiFi it knows, installs it and restarts. Keep the model on. The button is greyed out while no model is connected. At the field, give the receiver your phone's hotspot once, on the phone app's WiFi page.||
+
+To return to the Front screen, press 'OK'.   

@@ -1,0 +1,72 @@
+# 16 BuddyView ("Wireless buddy") - TXSetupView "Buddy" (va0.val=128+11) -> StartBuddyView, MenuOptions.h:661-720
+# the nine vis commands go out as ONE SendCommand joined by FF FF FF (one per line here); "vis t7,x" names a
+# component this page does not have. Combo options (page's own): 0 Master, 1 Nudge, 2 Buddy.
+Screen_Background=8
+@model 0
+page BuddyView
+BuddyM.val=0
+BuddyP.val=0
+cb0.val=0
+cb1.val=1
+cb2.val=2
+vis t1,0
+vis t2,0
+vis t3,0
+vis t6,0
+vis t7,0
+vis b0,0
+vis cb0,0
+vis cb1,0
+vis cb2,0
+@shot 16_open
+# master on: the switch-position choices and "Select channels..." are shown
+page BuddyView
+BuddyM.val=1
+BuddyP.val=0
+cb0.val=0
+cb1.val=1
+cb2.val=2
+vis t1,1
+vis t2,1
+vis t3,1
+vis t6,1
+vis t7,1
+vis b0,1
+vis cb0,1
+vis cb1,1
+vis cb2,1
+@shot 16_master
+# buddy (pupil) on: master options hidden again
+page BuddyView
+BuddyM.val=0
+BuddyP.val=1
+cb0.val=0
+cb1.val=1
+cb2.val=2
+vis t1,0
+vis t2,0
+vis t3,0
+vis t6,0
+vis t7,0
+vis b0,0
+vis cb0,0
+vis cb1,0
+vis cb2,0
+@shot 16_pupil
+# worst case: no texts come from the Teensy; widest choice in all three boxes ("Master")
+page BuddyView
+BuddyM.val=1
+BuddyP.val=0
+cb0.val=0
+cb1.val=0
+cb2.val=0
+vis t1,1
+vis t2,1
+vis t3,1
+vis t6,1
+vis t7,1
+vis b0,1
+vis cb0,1
+vis cb1,1
+vis cb2,1
+@shot 16_long

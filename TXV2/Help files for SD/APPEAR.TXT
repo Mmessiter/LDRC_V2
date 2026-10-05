@@ -1,0 +1,19 @@
+How the screens look.||
+
+BACKGROUND PICTURE: the picture behind the screens. '+' and '-' choose it, 'OK' keeps it.||
+
+THEMES: twelve themes, each a panel colour with its own text colour. Touch one: the page shows it at once. 'OK' makes it the screens' theme, 'Cancel' leaves things as they were.||
+
+'Edit themes' changes either colour of any theme to any colour at all: touch a theme, press 'Panel colour' or 'Text colour', then slide the three bars - colour, strength (grey to vivid), light (black to bright). The sample shows the theme as it will look. 'Defaults' puts all twelve back as they came.||
+
+The themes go by number, 1 to 12. Buttons, the white boxes you type into, and red and green words keep their own colours.||
+
+FRONT SCREEN: your own front screen, with big, clear numbers while you fly. Touch a box to choose what it shows: the timer, a battery, the link, the frame rate, head speed, ESC temperature, current, capacity used, bank, rate, motor, the clock, the model's name, the model's picture, or the channel bars (channels 1 to 8, or all 16).||
+
+'Box sizes' offers twelve layouts, from one big box to nine small ones. Box 1 is always the biggest: put what matters most there. The numbers grow with their boxes.||
+
+Box themes: touch a box, then 'Theme'. A box takes any of the twelve themes. 'Same as screens' gives it the screens' theme again.||
+
+'When: flying' shows it while the safety is off (with no safety switch: while the motor is on). 'When: always' shows it whenever the front screen would show. Its buttons: 'Transmitter', 'Model', 'Help', and 'Original screen', which shows the original front screen until you press its 'Defined screen' (or next take off or land); the transmitter switches on with the screen you were using. A touch anywhere else does nothing.||
+
+'Stays lit: yes' keeps the screen from going dark while it shows. A warning (BATTERY LOW, NO LINK) turns its top line red, and the power-off countdown always shows on the original front screen.

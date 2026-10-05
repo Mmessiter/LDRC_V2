@@ -1,0 +1,90 @@
+Screen_Background=8
+@model 0
+# GotoModelsView (MenuOptions.h:378)
+page ModelsView
+findfile "sd0/images/Raw420.jpg",sys0
+get sys0
+exp0.path="sd0/images/Raw420.jpg"
+ModelName.txt="RAW 420 MCM"
+Mfiles.path="BTHUNDER.MOD\r\nEDGE540.MOD\r\nEXTRA330.MOD\r\nGOBLIN70.MOD\r\nHAVOK.MOD\r\nLOGO200.MOD\r\nOMPM2PIN.MOD\r\nRAW420MC.MOD\r\nRIOT.MOD\r\nTUNDRA.MOD\r\nYAK54.MOD\r\n"
+get Mfiles.val
+filename.txt="BTHUNDER.MOD"
+MMems.path="Logo 200 (1)\r\nOMP M2 Pink (2)\r\nRAW 420 MCM (3)\r\nGoblin 700 Comp (4)\r\nEdge 540 (5)\r\nExtra 330 SC (6)\r\nYak 54 (7)\r\nHavok (8)\r\nBlack Thunder (9)\r\nTundra (10)\r\nRiot (11)\r\nTest heli [12]\r\nNot in use [13]\r\nNot in use [14]\r\nNot in use [15]\r\nNot in use [16]\r\nNot in use [17]\r\nNot in use [18]\r\nNot in use [19]\r\nNot in use [20]\r\nNot in use [21]\r\nNot in use [22]\r\nNot in use [23]\r\nNot in use [24]\r\nNot in use [25]\r\nNot in use [26]\r\nNot in use [27]\r\nNot in use [28]\r\nNot in use [29]\r\nNot in use [30]\r\nNot in use [31]\r\nNot in use [32]\r\nNot in use [33]\r\nNot in use [34]\r\nNot in use [35]\r\nNot in use [36]\r\nNot in use [37]\r\nNot in use [38]\r\nNot in use [39]\r\nNot in use [40]\r\nNot in use [41]\r\nNot in use [42]\r\nNot in use [43]\r\nNot in use [44]\r\nNot in use [45]\r\nNot in use [46]\r\nNot in use [47]\r\nNot in use [48]\r\nNot in use [49]\r\nNot in use [50]\r\nNot in use [51]\r\nNot in use [52]\r\nNot in use [53]\r\nNot in use [54]\r\nNot in use [55]\r\nNot in use [56]\r\nNot in use [57]\r\nNot in use [58]\r\nNot in use [59]\r\nNot in use [60]\r\nNot in use [61]\r\nNot in use [62]\r\nNot in use [63]\r\nNot in use [64]\r\nNot in use [65]\r\nNot in use [66]\r\nNot in use [67]\r\nNot in use [68]\r\nNot in use [69]\r\nNot in use [70]\r\nNot in use [71]\r\nNot in use [72]\r\nNot in use [73]\r\nNot in use [74]\r\nNot in use [75]\r\nNot in use [76]\r\nNot in use [77]\r\nNot in use [78]\r\nNot in use [79]\r\nNot in use [80]\r\nNot in use [81]\r\nNot in use [82]\r\nNot in use [83]\r\nNot in use [84]\r\nNot in use [85]\r\nNot in use [86]\r\nNot in use [87]\r\nNot in use [88]\r\nNot in use [89]\r\nNot in use [90]\r\n"
+MMems.val=2
+modelname.txt="RAW 420 MCM"
+# GetConfirmation (Utilities.h:1168)
+page PopupView
+Dialog.txt="Is 'RAW420MC.MOD' up to date?\r\nPress 'OK' to send it now, \r\n(otherwise press 'Cancel')."
+page ModelsView
+# SendModelFile (ModelExchange.h:65)
+page FileExchView
+filename.txt="RAW420MC.MOD"
+t0.txt="Sending file"
+vis Progress,1
+Progress.val=5
+# the loop (ModelExchange.h:110): t1 then Progress for each 28-byte packet; packet 1 carries the name
+t1.txt="Sent 0 of 2716"
+Progress.val=0
+t1.txt="Sent 0 of 2716"
+Progress.val=0
+t1.txt="Sent 28 of 2716"
+Progress.val=1
+t1.txt="Sent 56 of 2716"
+Progress.val=2
+# ... half way
+t1.txt="Sent 1372 of 2716"
+Progress.val=50
+@shot 47_open
+Progress.val=100
+vis Progress,0
+play 0,17,0
+t1.txt="Sent 2716 bytes."
+@shot 47_sent
+page ModelsView
+# ReceiveModelFile (ModelExchange.h:203): current model is not free -> Overwrite?
+# GetConfirmation (Utilities.h:1168)
+page PopupView
+Dialog.txt="Overwrite RAW 420 MCM?"
+page ModelsView
+page FileExchView
+filename.txt="Waiting "
+t0.txt="File receive"
+filename.txt="Waiting 30..."
+filename.txt="Waiting 29..."
+filename.txt="Waiting 18..."
+@shot 47_waiting
+vis Progress,1
+Progress.val=5
+filename.txt="Receiving: "
+filename.txt="Receiving: RAW420MC.MOD"
+Progress.val=51
+t1.txt="Received 1400 of 2716"
+@shot 47_busy
+Progress.val=100
+filename.txt="* Success! *"
+filename.txt="RAW420MC.MOD"
+vis Progress,0
+t1.txt="Received 2716 bytes."
+play 0,17,0
+@shot 47_received
+# timeout after 30 s
+page ModelsView
+page FileExchView
+filename.txt="Waiting "
+t0.txt="File receive"
+filename.txt="Waiting 1..."
+filename.txt="TIMEOUT"
+play 0,25,0
+@shot 47_timeout
+# worst case per box: filename "Receiving: " + a 12-char name (fnamebuf[30]); t1 "Received 3072 of 3072" (MAXFILELEN); t0 12 chars
+page ModelsView
+page FileExchView
+filename.txt="Waiting "
+t0.txt="File receive"
+vis Progress,1
+Progress.val=5
+filename.txt="Receiving: "
+filename.txt="Receiving: SABGOBLI.MOD"
+Progress.val=99
+t1.txt="Received 3052 of 3072"
+@shot 47_long

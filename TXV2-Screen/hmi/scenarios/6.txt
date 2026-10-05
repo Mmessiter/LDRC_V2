@@ -1,0 +1,149 @@
+# RFGovView (page 6). Start_RF_Governor RF_Governor_Profile.h:253 -> FixHeading :197 -> ShowGOVBank :208 -> ShowGOVMsg :185;
+# values DisplayGovValues :99 (ack 25-29); HideGOVMsg :172 after GOV_PROFILE_WAIT_TIME 1000 ms.
+Screen_Background=8
+@model 1
+page RFGovView
+t27.txt="RAW 420 MCM"
+t0.txt="RF Governor (Profile: 1)"
+n0.val=0
+n1.val=0
+n2.val=0
+n3.val=0
+n4.val=0
+n5.val=0
+n6.val=0
+n7.val=0
+n8.val=0
+n9.val=0
+n10.val=0
+n11.val=0
+n12.val=0
+n13.val=0
+t26.txt="Bank 1"
+t0.txt="RF Governor (Profile: 1)"
+n0.pco=33840
+n1.pco=33840
+n2.pco=33840
+n3.pco=33840
+n4.pco=33840
+n5.pco=33840
+n6.pco=33840
+n7.pco=33840
+n8.pco=33840
+n9.pco=33840
+n10.pco=33840
+n11.pco=33840
+n12.pco=33840
+n13.pco=33840
+busy.txt="Loading governor values ..."
+vis busy,1
+vis b2,0
+vis b3,0
+@shot 6_busy
+n0.val=2200
+n1.val=50
+n2.val=40
+n3.val=50
+n4.val=0
+n5.val=190
+n6.val=0
+n7.val=20
+n8.val=100
+n9.val=25
+n10.val=10
+n11.val=10
+n12.val=10
+n13.val=60
+vis busy,0
+vis b2,1
+n0.pco=0
+n1.pco=0
+n2.pco=0
+n3.pco=0
+n4.pco=0
+n5.pco=0
+n6.pco=0
+n7.pco=0
+n8.pco=0
+n9.pco=0
+n10.pco=0
+n11.pco=0
+n12.pco=0
+n13.pco=0
+@shot 6_open
+# pilot edits F gain (screen keyboard), Teensy GOVS_P_Were_Edited :328
+n5.val=170
+vis b3,1
+@shot 6_edited
+# Save -> SendEditedGovValues :298 (connected: no message, just hides Save)
+vis b3,0
+# ---- worst case: profile 4 heading, 13-char bank name, 30-char model name, longest message, uint16/uint8 maxima
+page RFGovView
+t27.txt="GOBLIN RAW 700 COMPETITION MK2"
+t0.txt="RF Governor (Profile: 4)"
+n0.val=0
+n1.val=0
+n2.val=0
+n3.val=0
+n4.val=0
+n5.val=0
+n6.val=0
+n7.val=0
+n8.val=0
+n9.val=0
+n10.val=0
+n11.val=0
+n12.val=0
+n13.val=0
+t26.txt="Flight mode 4"
+t0.txt="RF Governor (Profile: 4)"
+n0.pco=33840
+n1.pco=33840
+n2.pco=33840
+n3.pco=33840
+n4.pco=33840
+n5.pco=33840
+n6.pco=33840
+n7.pco=33840
+n8.pco=33840
+n9.pco=33840
+n10.pco=33840
+n11.pco=33840
+n12.pco=33840
+n13.pco=33840
+busy.txt="Loading governor values ..."
+vis busy,1
+vis b2,0
+vis b3,0
+n0.val=65535
+n1.val=255
+n2.val=255
+n3.val=255
+n4.val=255
+n5.val=255
+n6.val=255
+n7.val=255
+n8.val=255
+n9.val=255
+n10.val=255
+n11.val=255
+n12.val=255
+n13.val=255
+@shot 6_long_busy
+vis busy,0
+vis b2,1
+n0.pco=0
+n1.pco=0
+n2.pco=0
+n3.pco=0
+n4.pco=0
+n5.pco=0
+n6.pco=0
+n7.pco=0
+n8.pco=0
+n9.pco=0
+n10.pco=0
+n11.pco=0
+n12.pco=0
+n13.pco=0
+@shot 6_long

@@ -1,0 +1,147 @@
+# RatesView (page 1). StartRFRatesView RF_Rates.h:252 -> Modify_Labels_For_RATES_View :237 -> ShowRatesBank :200
+# -> RatesMsg :152; values: ReadRatesBytesFromAckPayload transceiver.h:1099 -> DisplayRatesValues RF_Rates.h:124;
+# HideRATESMsg :165 after MSP_WAIT_TIME (transceiver.h:1164). RF 2.3 (RotorFlight_V=2), RAW 420 MCM snapshot values.
+Screen_Background=8
+@model 1
+page RatesView
+t4.txt="Rates"
+t5.txt="Rate"
+t6.txt="Shape"
+t9.txt="Rate 1"
+tn0.pco=33840
+tn1.pco=33840
+tn2.pco=33840
+tn3.pco=33840
+tn4.pco=33840
+tn5.pco=33840
+tn6.pco=33840
+tn7.pco=33840
+tn8.pco=33840
+tn9.pco=33840
+tn10.pco=33840
+tn11.pco=33840
+busy.txt="Loading rates for Rate 1"
+vis busy,1
+vis b2,0
+vis b3,0
+t11.txt="RAW 420 MCM"
+@shot 1_busy
+# ack items 25..28: t10 = Rate_Types[6], then Rate/Shape/Expo per axis (x5,x1,x1; collective x0.125 -> "%.2f")
+t10.txt="Rotorflight 2.3"
+tn0.txt="160"
+tn1.txt="20"
+tn2.txt="20"
+tn3.txt="160"
+tn4.txt="20"
+tn5.txt="20"
+tn6.txt="400"
+tn7.txt="20"
+tn8.txt="20"
+tn9.txt="6.00"
+tn10.txt="48"
+tn11.txt="0"
+vis busy,0
+vis b2,1
+tn0.pco=0
+tn1.pco=0
+tn2.pco=0
+tn3.pco=0
+tn4.pco=0
+tn5.pco=0
+tn6.pco=0
+tn7.pco=0
+tn8.pco=0
+tn9.pco=0
+tn10.pco=0
+tn11.pco=0
+@shot 1_open
+# pilot edits Roll Rate (the screen keyboard writes the box), Teensy RatesWereEdited RF_Rates.h:280
+tn0.txt="180"
+vis b3,1
+@shot 1_edited
+# Save -> SendEditedRates RF_Rates.h:59 (connected)
+tn0.pco=33840
+tn1.pco=33840
+tn2.pco=33840
+tn3.pco=33840
+tn4.pco=33840
+tn5.pco=33840
+tn6.pco=33840
+tn7.pco=33840
+tn8.pco=33840
+tn9.pco=33840
+tn10.pco=33840
+tn11.pco=33840
+busy.txt="Sending edited Rates ..."
+vis busy,1
+vis b2,0
+vis b3,0
+@shot 1_sending
+vis busy,0
+vis b2,1
+tn0.pco=0
+tn1.pco=0
+tn2.pco=0
+tn3.pco=0
+tn4.pco=0
+tn5.pco=0
+tn6.pco=0
+tn7.pco=0
+tn8.pco=0
+tn9.pco=0
+tn10.pco=0
+tn11.pco=0
+vis b3,0
+# ---- worst case: longest text each box can get. RF 2.2 labels (longer), byte 255 everywhere with the RF 2.2
+# factors (x10, x0.01, x0.25), longest type name, Rate 4, 30-char model name
+page RatesView
+t4.txt="Axis"
+t5.txt="Centre Sens."
+t6.txt="Maximum"
+t9.txt="Rate 4"
+tn0.pco=33840
+tn1.pco=33840
+tn2.pco=33840
+tn3.pco=33840
+tn4.pco=33840
+tn5.pco=33840
+tn6.pco=33840
+tn7.pco=33840
+tn8.pco=33840
+tn9.pco=33840
+tn10.pco=33840
+tn11.pco=33840
+busy.txt="Loading rates for Rate 4"
+vis busy,1
+vis b2,0
+vis b3,0
+t11.txt="GOBLIN RAW 700 COMPETITION MK2"
+t10.txt="Rotorflight 2.3"
+tn0.txt="2550"
+tn1.txt="2550"
+tn2.txt="2.55"
+tn3.txt="2550"
+tn4.txt="2550"
+tn5.txt="2.55"
+tn6.txt="2550"
+tn7.txt="2550"
+tn8.txt="2.55"
+tn9.txt="63.75"
+tn10.txt="63.75"
+tn11.txt="2.55"
+@shot 1_long_busy
+vis busy,0
+vis b2,1
+tn0.pco=0
+tn1.pco=0
+tn2.pco=0
+tn3.pco=0
+tn4.pco=0
+tn5.pco=0
+tn6.pco=0
+tn7.pco=0
+tn8.pco=0
+tn9.pco=0
+tn10.pco=0
+tn11.pco=0
+@shot 1_long

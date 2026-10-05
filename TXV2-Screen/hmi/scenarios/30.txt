@@ -1,0 +1,65 @@
+# DataView (page 30). Opened by "Data_View" (main.cpp:4152) or LogEND (LogFiles.h:759): page DataView;
+# PopulateDataView Telemetry.h:326 every SHOWCOMMSDELAY (100 ms) as ONE combined command (BuildText/BuildValue);
+# CheckTXVolts Telemetry.h:58 -> t17, CheckRXVolts :102 -> t6.
+Screen_Background=8
+# no model connected (fresh power-on): n0 and rxv are NOT sent, so the page keeps its design-time "2.5.6K"
+@model 0
+page DataView
+txv.txt="2.5.6B22 03/10/26"
+pps.val=0
+lps.val=0
+Ls.val=0
+Ts.val=0
+Sg.txt="0:00:00"
+Ag.val=0
+Gc.txt="0:00:00"
+n1.txt="0:00:00"
+alt.txt="0 RPM"
+MaxAlt.txt="0.0 C."
+Temp.txt="0.0 C."
+rx.txt="0"
+Sbus.txt="Unknown"
+t17.txt="3.98"
+@shot 30_nomodel
+# connected, 16 minutes into a RAW 420 session
+@model 1
+txv.txt="2.5.6B22 03/10/26"
+n0.val=486
+rxv.txt="2.5.6K (RX)"
+pps.val=491
+lps.val=37
+Ls.val=24
+Ts.val=4
+Sg.txt="0:11:42"
+Ag.val=6
+Gc.txt="0:03:18"
+n1.txt="0:00:56"
+alt.txt="2214 RPM"
+MaxAlt.txt="52.4 C."
+Temp.txt="44.8 C."
+rx.txt="452117"
+Sbus.txt="TRX:3 V2"
+t17.txt="3.96"
+t6.txt="3.89"
+@shot 30_open
+# ---- worst case: type maxima as the Teensy formats them (uint16 65535, uint32 sent as int 2147483647, uint16 seconds
+# 18:12:15, rx cut to 6 chars by snprintf(7), ESC temp clamp -100..300, longest receiver type, char[20] RX version)
+txv.txt="2.5.6B22 03/10/26"
+n0.val=65535
+rxv.txt="255.255.255Z (RX)"
+pps.val=65535
+lps.val=2147483647
+Ls.val=2147483647
+Ts.val=65535
+Sg.txt="18:12:15"
+Ag.val=2147483647
+Gc.txt="18:12:15"
+n1.txt="18:12:15"
+alt.txt="65534 RPM"
+MaxAlt.txt="299.9 C."
+Temp.txt="-99.9 C."
+rx.txt="999999"
+Sbus.txt="TRX:2 PWM:11"
+t17.txt="4.20"
+t6.txt="4.20"
+@shot 30_long

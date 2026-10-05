@@ -1,0 +1,14 @@
+|
+Touch a picture, then press OK.||
+
+To add your own photo:|
+1. Press Add photo.|
+2. Scan the code with your phone's camera.|
+3. Choose a photo and fit it in the frame.|
+4. Press Send, then OK on the transmitter.||
+
+The phone must be on the same WiFi as the transmitter. The phone makes the photo the right size.||
+
+Your own photos have green names. Delete removes one of yours.||
+
+All pictures are kept on the screen's card. They are not needed on the Teensy's card any more.|

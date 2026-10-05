@@ -1,0 +1,25 @@
+This screen offers all options for setting up the transmitter.||
+
+Use the 'Calibrate' option first, and after making any major changes such as replacing the gimbals. ||
+
+Only the first 8 channels, the edge switches and the hardware trims need to be calibrated.||
+
+To setup a model, use the Model setup screen.
+
+To return to the Front screen, press 'OK'.||
+
+WIFI SETUP: choose your network and type its password, once. At the field, your phone's hotspot will do.||
+
+APPEARANCE: the background picture, the themes (each a panel colour with its text colour), and your own front screen. Its 'Help' says more.||
+
+TRANSMITTER UPDATES: asks messiter.com for the latest version. Nothing is installed unless you press 'Install now'. Your models, settings and logs are copied to the screen's card first.||
+
+'Earlier versions' puts a previous version back.||
+
+'Transmitter updates' updates the transmitter and its screen only, and is greyed out while a model is connected. The safety must be on (with no safety switch: the motor off).||
+
+The receiver's own update is on the Model setup screen: 'Receiver updates', available while a model is connected.||
+
+WiFi and Bluetooth switch themselves off while the safety is off (with no safety switch: while the motor is on).||
+
+If new firmware reads a model's settings differently from the old one, it is not kept: the old firmware comes back by itself, and the screen says so.

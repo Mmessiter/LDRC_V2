@@ -1,0 +1,87 @@
+# 34 ServosTypeView - group C scenario (what the Teensy sends; file:line = TXV1B/TransmitterCode)
+Screen_Background=8
+@model 1
+# StartServosTypeView (MenuOptions.h:1134), 10<<8 from RXSetupView
+page ServosTypeView
+n0.val=333
+n8.val=1500
+ch1.txt="Aileron"
+n1.val=333
+n9.val=1500
+ch2.txt="Elevator"
+n2.val=333
+n10.val=1500
+ch3.txt="Throttle"
+n3.val=333
+n11.val=1500
+ch4.txt="Rudder"
+n4.val=50
+n12.val=1500
+ch5.txt="Gear"
+n5.val=50
+n13.val=1500
+ch6.txt="AUX1"
+n6.val=50
+n14.val=1500
+ch7.txt="AUX2"
+n7.val=50
+n15.val=1500
+ch8.txt="AUX3"
+n16.val=50
+n17.val=1500
+t13.txt="AUX4"
+n18.val=50
+n19.val=1500
+t14.txt="AUX5"
+n20.val=50
+n21.val=1500
+t16.txt="AUX6"
+ModelName.txt="RAW 420 MCM (3)"
+@shot 34_open
+# OK: EndServoTypeView (MenuOptions.h:1154): Progress, then GotoFrontView
+vis Progress,1
+Progress.val=9
+Progress.val=18
+Progress.val=27
+Progress.val=36
+Progress.val=45
+@shot 34_saving
+vis Progress,0
+# ---- worst case: 4-digit centres, 3-digit rates, longest names and model name
+# StartServosTypeView (MenuOptions.h:1134), 10<<8 from RXSetupView
+page ServosTypeView
+n0.val=560
+n8.val=1520
+ch1.txt="WWWWWWWWWW"
+n1.val=560
+n9.val=1520
+ch2.txt="WWWWWWWWWW"
+n2.val=560
+n10.val=1520
+ch3.txt="WWWWWWWWWW"
+n3.val=560
+n11.val=1520
+ch4.txt="WWWWWWWWWW"
+n4.val=560
+n12.val=1520
+ch5.txt="WWWWWWWWWW"
+n5.val=560
+n13.val=1520
+ch6.txt="WWWWWWWWWW"
+n6.val=560
+n14.val=1520
+ch7.txt="WWWWWWWWWW"
+n7.val=560
+n15.val=1520
+ch8.txt="WWWWWWWWWW"
+n16.val=560
+n17.val=1520
+t13.txt="WWWWWWWWWW"
+n18.val=560
+n19.val=1520
+t14.txt="WWWWWWWWWW"
+n20.val=560
+n21.val=1520
+t16.txt="WWWWWWWWWW"
+ModelName.txt="WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW (90)"
+@shot 34_long

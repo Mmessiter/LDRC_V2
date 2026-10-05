@@ -1,0 +1,67 @@
+# The flight screen (screen 1.6.0) over a Rotorflight heli's front page: 6, 4, 9 boxes, warnings, no model, the setup page and its chooser.
+Screen_Background=21
+@model 1
+page FrontView
+ModelName.txt="RAW 420 MCM"
+t4.txt="Bank 1"
+Hours.val=0
+Mins.val=4
+Secs.val=7
+RXBV.txt="7.82V (3.91V per cell)"
+JRX.val=78
+TXBV.txt="8.10V (4.05V per cell)"
+JTX.val=85
+vis Quality,1
+Quality.val=97
+vis rpm,1
+rpm.txt="RPM: 2150"
+vis Warning,1
+Warning.txt="ESC: 52.3"
+vis StillConnected,1
+StillConnected.txt="Amps: 12.4"
+vis wb,1
+wb.txt="mAh: 345"
+bt0.txt="Motor is ON"
+DateTime.txt="3 Oct. 2026 20:31:07"
+@shot flight_front
+@flying 1
+@flight default
+@shot flight_6
+page FrontView
+@flight f1 w1 b4 s1 timer,rxbat,rpm,link
+@shot flight_4
+page FrontView
+@flight f1 w1 b9 s1 timer,rxbat,rpm,link,esc,mah,amps,txbat,bank
+@shot flight_9
+page FrontView
+JRX.val=31
+Quality.val=42
+Warning.txt="ESC: 97.1"
+@flight default
+@shot flight_warn
+page FrontView
+@model 0
+@flight default
+@shot flight_lost
+@model 1
+@flying 0
+page TXSetupView
+@flightsetup default
+@shot flight_setup
+@flightsetup default @box 3
+@shot flight_choose
+page TXSetupView
+ModelName.txt="RAW 420 MCM (3)"
+@shot flight_txsetup
+page FrontView
+@model 1
+vis Warning,1
+Warning.txt="Battery LOW"
+JRX.val=31
+@flying 1
+@flight f1 w1 b6 s1 timer,rxbat,rpm,link,motor,mah
+@shot flight_alert
+page FrontView
+@model 0
+@flight f1 w1 b6 s1 timer,rxbat,rpm,clock,motor,txbat
+@shot flight_nolink

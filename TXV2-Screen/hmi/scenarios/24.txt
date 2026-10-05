@@ -1,0 +1,15 @@
+# 24 OptionView2 ("Clock (2 of 3)") - OptionsView "Next >" (va0.val=128+25) -> OptionView2Start, MenuOptions.h:902-929
+# then ReadTime() once a second (Utilities.h:704-773): DateTime.txt, OPTIONVIEW2 format pads a 1-digit day with 2 spaces
+Screen_Background=8
+@model 0
+page OptionView2
+dGMT.val=0
+DateTime.txt="3   Oct.  2026 20:31:07"
+@shot 24_open
+# a second later (two-digit day for comparison)
+DateTime.txt="13 Oct.  2026 20:31:08"
+@shot 24_day2
+# worst case: widest date string ReadTime can build (620 px in font 1) and a negative time zone
+dGMT.val=-12
+DateTime.txt="9   June  2026 00:00:00"
+@shot 24_long

@@ -1,0 +1,113 @@
+# The pilot's themes (screen 1.7.0, twelve themes since 1.8.4): the Themes page, the pages that open it, and the channel bars that grow from the middle.
+Screen_Background=21
+@model 1
+page FrontView
+ModelName.txt="RAW 420 MCM"
+t4.txt="Bank 1"
+Hours.val=0
+Mins.val=4
+Secs.val=7
+RXBV.txt="7.82V (3.91V per cell)"
+JRX.val=78
+TXBV.txt="8.10V (4.05V per cell)"
+JTX.val=85
+vis Quality,1
+Quality.val=97
+bt0.txt="Motor is OFF"
+DateTime.txt="4 Oct. 2026 07:31:07"
+Ch1.val=50
+Ch2.val=32
+Ch3.val=71
+Ch4.val=25
+Ch5.val=75
+Ch6.val=50
+Ch7.val=88
+Ch8.val=12
+Ch9.val=50
+Ch10.val=60
+Ch11.val=40
+Ch12.val=50
+Ch13.val=50
+Ch14.val=50
+Ch15.val=66
+Ch16.val=50
+@shot colours_front
+page SticksView
+t1.txt="Bank 1"
+ModelName.txt="RAW 420 MCM"
+Sch1.txt="1 Aileron"
+Sch2.txt="2 Elevator"
+Sch3.txt="3 Throttle"
+Sch4.txt="4 Rudder"
+Sch5.txt="5 Gear"
+Sch6.txt="6 Aux 1"
+Sch7.txt="7 Aux 2"
+Sch8.txt="8 Aux 3"
+Sch9.txt="9 Aux 4"
+Sch10.txt="10 Aux 5"
+Sch11.txt="11 Aux 6"
+Sch12.txt="12 Aux 7"
+Sch13.txt="13 Aux 8"
+Sch14.txt="14 Aux 9"
+Sch15.txt="15 Aux 10"
+Sch16.txt="16 Aux 11"
+Ch1.val=50
+Ch2.val=32
+Ch3.val=71
+Ch4.val=25
+Ch5.val=75
+Ch6.val=50
+Ch7.val=88
+Ch8.val=12
+Ch9.val=50
+Ch10.val=60
+Ch11.val=40
+Ch12.val=50
+Ch13.val=50
+Ch14.val=50
+Ch15.val=66
+Ch16.val=50
+@shot colours_sticks
+@model 0
+Screen_Background=8
+page BackGroundView
+@shot colours_bg
+@colours
+@shot colours_page
+@colours wine
+@shot colours_page_wine
+@colours black
+@shot colours_page_black
+@model 1
+page TXSetupView
+ModelName.txt="RAW 420 MCM (3)"
+@shot colours_txsetup
+@theme wine cream
+@shot colours_txsetup_wine
+page FrontView
+@shot colours_front_wine
+@flying 1
+@flight default
+@shot colours_flight_wine
+@flying 0
+@theme teal white
+page SticksView
+@shot colours_sticks_teal
+@theme navy white
+@model 0
+page BackGroundView
+@colours edit
+@shot colours_edit
+@colours edit red hsv:200,80,70
+@shot colours_edit_red
+@colours white
+@shot colours_page_white
+@theme white burgundy
+@model 1
+page TXSetupView
+ModelName.txt="RAW 420 MCM (3)"
+@shot colours_txsetup_white
+page RXSetupView
+ModelName.txt="SAB GOBLIN RAW 700 COMPETITION (90)"
+@shot colours_model_white
+@theme navy white

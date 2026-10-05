@@ -1,0 +1,396 @@
+{
+  "_comment": "Colour/attribute tweaks applied on top of the extracted HMI when the pages are built (apply_overrides.py). Malcolm 2026-09-29: paler yellow, darker red on Wireless Buddy for contrast.",
+  "BuddyView": {
+    "t1": {
+      "c": {
+        "bco": 65528
+      }
+    },
+    "t2": {
+      "c": {
+        "bco": 65528
+      }
+    },
+    "t3": {
+      "c": {
+        "bco": 65528
+      }
+    },
+    "t6": {
+      "c": {
+        "bco": 65528
+      }
+    },
+    "cb0": {
+      "c": {
+        "pco2": 40960,
+        "bco2": 63372
+      }
+    },
+    "cb1": {
+      "c": {
+        "pco2": 40960,
+        "bco2": 63372
+      }
+    },
+    "cb2": {
+      "c": {
+        "pco2": 40960,
+        "bco2": 63372
+      }
+    }
+  },
+  "_comment_add": "\"+\": components ADDED to a page (apply_overrides.py). An event of \"ldrc <word>\" is handled by the screen itself and never reaches the Teensy: \"ldrc update\" = Check for update, \"ldrc wifi\" = the WiFi page, \"ldrc flight\" = the flight screen's setup page, \"ldrc colours\" = the Themes page, \"ldrc appearance\" = the Appearance page, \"ldrc defined\" = the pilot's own front screen now (the front page's \"Defined screen\").",
+  "+": {
+    "TXSetupView": [
+      {
+        "g": "l",
+        "y": 294,
+        "h": 78,
+        "font": 6,
+        "sta": 1,
+        "c": {
+          "bco2": 1024,
+          "pco": 0,
+          "borderc": 0,
+          "bco": 54938,
+          "pco2": 65535
+        },
+        "val": 0,
+        "a": {
+          "style": 4,
+          "borderw": 2,
+          "xcen": 1,
+          "ycen": 1,
+          "txt_maxl": 30,
+          "isbr": 0
+        },
+        "n": "ldrcUpdate",
+        "i": 40,
+        "t": "button",
+        "x": 406,
+        "w": 380,
+        "txt": "Check for update",
+        "ev": {
+          "r": "ldrc update"
+        }
+      },
+      {
+        "g": "l",
+        "y": 294,
+        "h": 78,
+        "font": 6,
+        "sta": 1,
+        "c": {
+          "bco2": 1024,
+          "pco": 0,
+          "borderc": 0,
+          "bco": 54938,
+          "pco2": 65535
+        },
+        "val": 0,
+        "a": {
+          "style": 4,
+          "borderw": 2,
+          "xcen": 1,
+          "ycen": 1,
+          "txt_maxl": 30,
+          "isbr": 0
+        },
+        "n": "ldrcWifi",
+        "i": 41,
+        "t": "button",
+        "x": 210,
+        "w": 184,
+        "txt": "WiFi",
+        "ev": {
+          "r": "ldrc wifi"
+        }
+      },
+      {
+        "g": "l",
+        "y": 294,
+        "h": 78,
+        "font": 6,
+        "sta": 1,
+        "c": {
+          "bco2": 1024,
+          "pco": 0,
+          "borderc": 0,
+          "bco": 54938,
+          "pco2": 65535
+        },
+        "val": 0,
+        "a": {
+          "style": 4,
+          "borderw": 2,
+          "xcen": 1,
+          "ycen": 1,
+          "txt_maxl": 30,
+          "isbr": 0
+        },
+        "n": "ldrcAppearance",
+        "i": 42,
+        "t": "button",
+        "x": 210,
+        "w": 184,
+        "txt": "Appearance",
+        "ev": {
+          "r": "ldrc appearance"
+        }
+      }
+    ],
+    "FrontView": [
+      {
+        "n": "ldrcDefined",
+        "i": 90,
+        "t": "button",
+        "g": "l",
+        "x": 287,
+        "y": 394,
+        "w": 229,
+        "h": 53,
+        "font": 6,
+        "sta": 1,
+        "c": {
+          "bco2": 1024,
+          "pco": 0,
+          "borderc": 0,
+          "bco": 54938,
+          "pco2": 65535
+        },
+        "txt": "Defined screen",
+        "val": 0,
+        "a": {
+          "style": 4,
+          "borderw": 2,
+          "xcen": 1,
+          "ycen": 1,
+          "txt_maxl": 30,
+          "isbr": 0
+        },
+        "ev": {
+          "r": "ldrc defined"
+        }
+      }
+    ]
+  },
+  "TXSetupView": {
+    "b0": {
+      "x": 14,
+      "y": 108,
+      "w": 184,
+      "h": 78
+    },
+    "b11": {
+      "x": 210,
+      "y": 108,
+      "w": 184,
+      "h": 78
+    },
+    "b6": {
+      "x": 406,
+      "y": 108,
+      "w": 184,
+      "h": 78
+    },
+    "b15": {
+      "x": 602,
+      "y": 108,
+      "w": 184,
+      "h": 78
+    },
+    "b7": {
+      "x": 14,
+      "y": 201,
+      "w": 184,
+      "h": 78
+    },
+    "b10": {
+      "x": 210,
+      "y": 201,
+      "w": 184,
+      "h": 78
+    },
+    "b5": {
+      "x": 406,
+      "y": 201,
+      "w": 184,
+      "h": 78
+    },
+    "b19": {
+      "x": 602,
+      "y": 201,
+      "w": 184,
+      "h": 78
+    },
+    "b3": {
+      "x": 14,
+      "y": 294,
+      "w": 184,
+      "h": 78
+    },
+    "t0": {
+      "x": 14,
+      "y": 15,
+      "w": 576,
+      "h": 78
+    },
+    "ModelName": {
+      "x": 14,
+      "y": 387,
+      "w": 576,
+      "h": 78
+    },
+    "b2": {
+      "x": 602,
+      "y": 387,
+      "w": 184,
+      "h": 78
+    },
+    "b17": {
+      "x": 602,
+      "y": 15,
+      "w": 184,
+      "h": 78
+    }
+  },
+  "_comment_layout": "TXSetupView is laid out afresh here (x, y, w, h of every button): a grid of four columns. The Teensy knows its buttons by what they send, not by where they are.",
+  "FrontView": {
+    "Ch1": {
+      "centre": true
+    },
+    "Ch2": {
+      "centre": true
+    },
+    "Ch3": {
+      "centre": true
+    },
+    "Ch4": {
+      "centre": true
+    },
+    "Ch5": {
+      "centre": true
+    },
+    "Ch6": {
+      "centre": true
+    },
+    "Ch7": {
+      "centre": true
+    },
+    "Ch8": {
+      "centre": true
+    },
+    "Ch9": {
+      "centre": true
+    },
+    "Ch10": {
+      "centre": true
+    },
+    "Ch11": {
+      "centre": true
+    },
+    "Ch12": {
+      "centre": true
+    },
+    "Ch13": {
+      "centre": true
+    },
+    "Ch14": {
+      "centre": true
+    },
+    "Ch15": {
+      "centre": true
+    },
+    "Ch16": {
+      "centre": true
+    },
+    "b0": {
+      "x": 38,
+      "y": 394,
+      "w": 229,
+      "h": 53
+    },
+    "b1": {
+      "x": 536,
+      "y": 394,
+      "w": 229,
+      "h": 53
+    },
+    "Quality": {
+      "x": 305,
+      "y": 377,
+      "w": 460,
+      "h": 13
+    },
+    "Connected": {
+      "x": 38,
+      "y": 370,
+      "w": 262,
+      "h": 24,
+      "font": 2,
+      "c": {
+        "pco": 65535
+      },
+      "a": {
+        "xcen": 2,
+        "ycen": 1
+      }
+    },
+    "BackGround": {
+      "val": 0
+    }
+  },
+  "SticksView": {
+    "Ch1": {
+      "centre": true
+    },
+    "Ch2": {
+      "centre": true
+    },
+    "Ch3": {
+      "centre": true
+    },
+    "Ch4": {
+      "centre": true
+    },
+    "Ch5": {
+      "centre": true
+    },
+    "Ch6": {
+      "centre": true
+    },
+    "Ch7": {
+      "centre": true
+    },
+    "Ch8": {
+      "centre": true
+    },
+    "Ch9": {
+      "centre": true
+    },
+    "Ch10": {
+      "centre": true
+    },
+    "Ch11": {
+      "centre": true
+    },
+    "Ch12": {
+      "centre": true
+    },
+    "Ch13": {
+      "centre": true
+    },
+    "Ch14": {
+      "centre": true
+    },
+    "Ch15": {
+      "centre": true
+    },
+    "Ch16": {
+      "centre": true
+    }
+  },
+  "_comment_centre": "Channel bars that grow from the middle (screen 1.7.0, Malcolm 2026-10-04): \"centre\": true on a progress bar.",
+  "_comment_front": "FrontView bottom row (screen 1.7.3, 1.8.6): three equal buttons, Transmitter / Defined screen / Model; the link word and bar side by side above them (hmi/front_buttons.py). BackGround.val starts at 0 (black), as the main board sets it at every power-on; the HMI had 214, an old blue, which showed when only the screen had restarted (1.9.7)."
+}

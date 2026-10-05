@@ -1,0 +1,44 @@
+# 27 MacrosView - group C scenario (what the Teensy sends; file:line = TXV1B/TransmitterCode)
+Screen_Background=8
+@model 1
+# GotoMacrosView (MenuOptions.h:355), 128+5 from RXSetupView
+page MacrosView
+ModelName.txt="RAW 420 MCM (3)"
+# get Mno.val
+Tch.val=7
+Mch.val=5
+Pos.val=180
+Del.val=10
+Dur.val=30
+# get Mch.val
+chM.txt="Gear"
+@shot 27_open
+# the pilot presses + by the macro number (screen-side: Mno=2, prints 128+6) -> PopulateMacrosView
+click b0,0
+# get Tch.val
+# get Mch.val
+# get Pos.val
+# get Del.val
+# get Dur.val
+# get Mno.val
+Tch.val=0
+Mch.val=0
+Pos.val=0
+Del.val=0
+Dur.val=0
+# get Mch.val
+chM.txt="Aileron"
+@shot 27_empty
+# ---- worst case: 3-digit values, longest name and model name
+# GotoMacrosView (MenuOptions.h:355), 128+5 from RXSetupView
+page MacrosView
+ModelName.txt="WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW (90)"
+# get Mno.val
+Tch.val=16
+Mch.val=16
+Pos.val=180
+Del.val=255
+Dur.val=255
+# get Mch.val
+chM.txt="WWWWWWWWWW"
+@shot 27_long

@@ -1,0 +1,74 @@
+# 9 RXOptionsView ("Model options") - RXSetupView "Options" (va0.val=128+38) -> RXOptionsViewStart, MenuOptions.h:1037-1068
+# t10 = snprintf(Vbuf,5,"%1.2f",StopFlyingVoltsPerCell) (4 chars max); t12 = snprintf(Vbuf,15,"%3.0d",Max_Safe_Amps)
+# n0 = map(MotorChannelZero 30, 0,180, -100,100) = -67; sw0.val=1 goes to a component this page does not have
+# DisplayModelImage (MenuOptions.h:353-361): findfile check, then exp0.path
+Screen_Background=8
+@model 1
+page RXOptionsView
+c1.val=1
+n3.val=5
+t10.txt="3.70"
+n0.val=-67
+n1.val=5
+c0.val=1
+n2.val=0
+c2.val=0
+click c2,0
+n4.val=5
+sw0.val=1
+t12.txt=" 80"
+findfile "sd0/images/Raw420.jpg",sys0
+get sys0
+exp0.path="sd0/images/Raw420.jpg"
+ModelName.txt="RAW 420 MCM (3)"
+@shot 9_open
+# OK pressed (va0.val=128+39 -> RXOptionsViewEnd, MenuOptions.h:1072-1128): progress bar while reading back
+vis Progress,1
+Progress.val=5
+Progress.val=15
+Progress.val=30
+Progress.val=40
+Progress.val=50
+Progress.val=60
+@shot 9_busy
+# Re-opened with the three switches the other way round. The page colours t2/t3/t4/n4 in its postinitialize,
+# BEFORE the Teensy sends c0/c1/c2, so the greying follows the old values: every label is now wrong.
+# Also Max_Safe_Amps 0 -> "%3.0d" gives three spaces: the box shows nothing (page default was "0").
+page RXOptionsView
+c1.val=0
+n3.val=5
+t10.txt="3.70"
+n0.val=-67
+n1.val=5
+c0.val=0
+n2.val=0
+c2.val=1
+click c2,0
+n4.val=5
+sw0.val=1
+t12.txt="0"
+findfile "sd0/images/Raw420.jpg",sys0
+get sys0
+exp0.path="sd0/images/Raw420.jpg"
+ModelName.txt="RAW 420 MCM (3)"
+@shot 9_switches
+# worst case: longest texts / widest numbers the Teensy can send
+page RXOptionsView
+c1.val=1
+n3.val=65535
+t10.txt="10.0"
+n0.val=-100
+n1.val=16
+c0.val=1
+n2.val=-32768
+c2.val=1
+click c2,0
+n4.val=1092
+sw0.val=1
+t12.txt="65535"
+# (a picture name of 8 chars whose file is missing -> CheckModelImageFileName falls back to "Noimage")
+findfile "sd0/images/Goblin70.jpg",sys0
+get sys0
+exp0.path="sd0/images/Noimage.jpg"
+ModelName.txt="SAB GOBLIN RAW 700 COMPETITION (90)"
+@shot 9_long

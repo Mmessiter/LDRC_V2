@@ -1,0 +1,195 @@
+# PIDView (page 40). StartPIDView RF_PIDs.h:212 -> ShowPIDBank :123 -> PIDMsg :89; values: Display2PIDValues :63
+# (ack items 25-30) + DisplayBoostPidValues :74 (32/33); HidePIDMsg :102 after MSP_WAIT_TIME (transceiver.h:1155).
+Screen_Background=8
+@model 1
+page PIDView
+t9.txt="Bank 1"
+n0.pco=33840
+n1.pco=33840
+n2.pco=33840
+n3.pco=33840
+n4.pco=33840
+n5.pco=33840
+n6.pco=33840
+n7.pco=33840
+n8.pco=33840
+n9.pco=33840
+n10.pco=33840
+n11.pco=33840
+n12.pco=33840
+n13.pco=33840
+n14.pco=33840
+n15.pco=33840
+n16.pco=33840
+busy.txt="Loading PIDs for  Bank 1 ..."
+vis busy,1
+vis b2,0
+vis b3,0
+t11.txt="RAW 420 MCM"
+@shot 40_busy
+n0.val=50
+n1.val=100
+n2.val=20
+n3.val=100
+n4.val=130
+n5.val=140
+n6.val=50
+n7.val=100
+n8.val=150
+n9.val=165
+n10.val=25
+n11.val=0
+n12.val=0
+n13.val=25
+n14.val=8
+n15.val=55
+n16.val=55
+vis busy,0
+vis b2,1
+n0.pco=0
+n1.pco=0
+n2.pco=0
+n3.pco=0
+n4.pco=0
+n5.pco=0
+n6.pco=0
+n7.pco=0
+n8.pco=0
+n9.pco=0
+n10.pco=0
+n11.pco=0
+n12.pco=0
+n13.pco=0
+n14.pco=0
+n15.pco=0
+n16.pco=0
+@shot 40_open
+# pilot edits Roll P (screen keyboard), Teensy PIDs_Were_edited RF_PIDs.h:159
+n0.val=55
+vis b3,1
+@shot 40_edited
+# Save -> SendEditedPIDs RF_PIDs.h:190: HidePIDMsg, PIDMsg("Sending ...")
+vis busy,0
+vis b2,1
+n0.pco=0
+n1.pco=0
+n2.pco=0
+n3.pco=0
+n4.pco=0
+n5.pco=0
+n6.pco=0
+n7.pco=0
+n8.pco=0
+n9.pco=0
+n10.pco=0
+n11.pco=0
+n12.pco=0
+n13.pco=0
+n14.pco=0
+n15.pco=0
+n16.pco=0
+n0.pco=33840
+n1.pco=33840
+n2.pco=33840
+n3.pco=33840
+n4.pco=33840
+n5.pco=33840
+n6.pco=33840
+n7.pco=33840
+n8.pco=33840
+n9.pco=33840
+n10.pco=33840
+n11.pco=33840
+n12.pco=33840
+n13.pco=33840
+n14.pco=33840
+n15.pco=33840
+n16.pco=33840
+busy.txt="Sending edited PIDs ..."
+vis busy,1
+vis b2,0
+vis b3,0
+@shot 40_sending
+vis b3,0
+vis busy,0
+vis b2,1
+n0.pco=0
+n1.pco=0
+n2.pco=0
+n3.pco=0
+n4.pco=0
+n5.pco=0
+n6.pco=0
+n7.pco=0
+n8.pco=0
+n9.pco=0
+n10.pco=0
+n11.pco=0
+n12.pco=0
+n13.pco=0
+n14.pco=0
+n15.pco=0
+n16.pco=0
+# ---- worst case: 13-char bank name, longest message, 30-char model name, uint16 maximum in every box
+page PIDView
+t9.txt="Flight mode 4"
+n0.pco=33840
+n1.pco=33840
+n2.pco=33840
+n3.pco=33840
+n4.pco=33840
+n5.pco=33840
+n6.pco=33840
+n7.pco=33840
+n8.pco=33840
+n9.pco=33840
+n10.pco=33840
+n11.pco=33840
+n12.pco=33840
+n13.pco=33840
+n14.pco=33840
+n15.pco=33840
+n16.pco=33840
+busy.txt="Loading PIDs for  Flight mode 4 ..."
+vis busy,1
+vis b2,0
+vis b3,0
+t11.txt="GOBLIN RAW 700 COMPETITION MK2"
+n0.val=65535
+n1.val=65535
+n2.val=65535
+n3.val=65535
+n4.val=65535
+n5.val=65535
+n6.val=65535
+n7.val=65535
+n8.val=65535
+n9.val=65535
+n10.val=65535
+n11.val=65535
+n12.val=65535
+n13.val=65535
+n14.val=65535
+n15.val=65535
+n16.val=65535
+@shot 40_long_busy
+vis busy,0
+vis b2,1
+n0.pco=0
+n1.pco=0
+n2.pco=0
+n3.pco=0
+n4.pco=0
+n5.pco=0
+n6.pco=0
+n7.pco=0
+n8.pco=0
+n9.pco=0
+n10.pco=0
+n11.pco=0
+n12.pco=0
+n13.pco=0
+n14.pco=0
+n15.pco=0
+n16.pco=0
+@shot 40_long

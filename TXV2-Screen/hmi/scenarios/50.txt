@@ -1,0 +1,10 @@
+Screen_Background=8
+@model 0
+# StartRenameModel (main.cpp:2855)
+page RenameView
+NewName.txt="RAW 420 MCM"
+@shot 50_open
+# longest model name: 30 chars (NewName txt_maxl 30 = the keyboard limit; the SD keeps 30 bytes)
+page RenameView
+NewName.txt="SAB GOBLIN 700 COMPETITION MK2"
+@shot 50_long

@@ -1,0 +1,48 @@
+# 55 AudioView ("Sounds and brightness") - TXSetupView "Sounds etc." (va0.val=2<<8) -> StartAudioVisualView, MenuOptions.h:500-532
+# c0 fanfare, c1 trim clicks, c2 vario tones, c3 timer voice, c4 bank voice, c5 connected voice; then SetAudioVolume -> volume=
+Screen_Background=8
+@model 0
+page AudioView
+Ex1.val=60
+n2.val=3
+n0.val=400
+n3.val=125
+h0.val=80
+c0.val=1
+c1.val=1
+c2.val=0
+c3.val=1
+c4.val=1
+c5.val=1
+volume=60
+@shot 55_open
+# everything off, sliders at their lowest (Brightness floor 10 in the Teensy, 15 in the page's postinitialize)
+page AudioView
+Ex1.val=0
+n2.val=0
+n0.val=0
+n3.val=50
+h0.val=10
+c0.val=0
+c1.val=0
+c2.val=0
+c3.val=0
+c4.val=0
+c5.val=0
+volume=0
+@shot 55_off
+# worst case: widest numbers (CheckRange 0..1000 / 50..1000), everything on, sliders full
+page AudioView
+Ex1.val=100
+n2.val=3
+n0.val=1000
+n3.val=1000
+h0.val=100
+c0.val=1
+c1.val=1
+c2.val=1
+c3.val=1
+c4.val=1
+c5.val=1
+volume=100
+@shot 55_long

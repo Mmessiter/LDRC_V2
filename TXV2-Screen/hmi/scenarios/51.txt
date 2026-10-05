@@ -1,0 +1,32 @@
+# 51 TypeView ("Batteries") - RXSetupView or TXSetupView "Batteries" (print "TypeView") -> main.cpp:3977-4008
+# all radios cleared, then the model's cell count (RXCellCount 2/3/4/5/6/12) and the TX type (TXLiPo -> r1, else r0)
+# CurrentView is NOT changed here, so UpdateModelsNameEveryWhere adds the model number
+Screen_Background=8
+@model 0
+page TypeView
+r2s.val=0
+r3s.val=0
+r4s.val=0
+r5s.val=0
+r6s.val=0
+r12s.val=0
+r0.val=0
+r1.val=0
+r6s.val=1
+r0.val=1
+ModelName.txt="RAW 420 MCM (3)"
+@shot 51_open
+# worst case: 30-char model name + two-digit model number; 12S and Li-ion chosen
+page TypeView
+r2s.val=0
+r3s.val=0
+r4s.val=0
+r5s.val=0
+r6s.val=0
+r12s.val=0
+r0.val=0
+r1.val=0
+r12s.val=1
+r1.val=1
+ModelName.txt="SAB GOBLIN RAW 700 COMPETITION (90)"
+@shot 51_long

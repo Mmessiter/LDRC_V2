@@ -1,0 +1,136 @@
+Screen_Background=8
+@model 0
+# GotoModelsView (MenuOptions.h:378)
+page ModelsView
+findfile "sd0/images/Raw420.jpg",sys0
+get sys0
+exp0.path="sd0/images/Raw420.jpg"
+ModelName.txt="RAW 420 MCM"
+Mfiles.path="BTHUNDER.MOD\r\nEDGE540.MOD\r\nEXTRA330.MOD\r\nGOBLIN70.MOD\r\nHAVOK.MOD\r\nLOGO200.MOD\r\nOMPM2PIN.MOD\r\nRAW420MC.MOD\r\nRIOT.MOD\r\nTUNDRA.MOD\r\nYAK54.MOD\r\n"
+get Mfiles.val
+filename.txt="BTHUNDER.MOD"
+MMems.path="Logo 200 (1)\r\nOMP M2 Pink (2)\r\nRAW 420 MCM (3)\r\nGoblin 700 Comp (4)\r\nEdge 540 (5)\r\nExtra 330 SC (6)\r\nYak 54 (7)\r\nHavok (8)\r\nBlack Thunder (9)\r\nTundra (10)\r\nRiot (11)\r\nTest heli [12]\r\nNot in use [13]\r\nNot in use [14]\r\nNot in use [15]\r\nNot in use [16]\r\nNot in use [17]\r\nNot in use [18]\r\nNot in use [19]\r\nNot in use [20]\r\nNot in use [21]\r\nNot in use [22]\r\nNot in use [23]\r\nNot in use [24]\r\nNot in use [25]\r\nNot in use [26]\r\nNot in use [27]\r\nNot in use [28]\r\nNot in use [29]\r\nNot in use [30]\r\nNot in use [31]\r\nNot in use [32]\r\nNot in use [33]\r\nNot in use [34]\r\nNot in use [35]\r\nNot in use [36]\r\nNot in use [37]\r\nNot in use [38]\r\nNot in use [39]\r\nNot in use [40]\r\nNot in use [41]\r\nNot in use [42]\r\nNot in use [43]\r\nNot in use [44]\r\nNot in use [45]\r\nNot in use [46]\r\nNot in use [47]\r\nNot in use [48]\r\nNot in use [49]\r\nNot in use [50]\r\nNot in use [51]\r\nNot in use [52]\r\nNot in use [53]\r\nNot in use [54]\r\nNot in use [55]\r\nNot in use [56]\r\nNot in use [57]\r\nNot in use [58]\r\nNot in use [59]\r\nNot in use [60]\r\nNot in use [61]\r\nNot in use [62]\r\nNot in use [63]\r\nNot in use [64]\r\nNot in use [65]\r\nNot in use [66]\r\nNot in use [67]\r\nNot in use [68]\r\nNot in use [69]\r\nNot in use [70]\r\nNot in use [71]\r\nNot in use [72]\r\nNot in use [73]\r\nNot in use [74]\r\nNot in use [75]\r\nNot in use [76]\r\nNot in use [77]\r\nNot in use [78]\r\nNot in use [79]\r\nNot in use [80]\r\nNot in use [81]\r\nNot in use [82]\r\nNot in use [83]\r\nNot in use [84]\r\nNot in use [85]\r\nNot in use [86]\r\nNot in use [87]\r\nNot in use [88]\r\nNot in use [89]\r\nNot in use [90]\r\n"
+MMems.val=2
+modelname.txt="RAW 420 MCM"
+# DeleteModel (MenuOptions.h:578): the plain yes/no
+# GetConfirmation (Utilities.h:1168)
+page PopupView
+Dialog.txt="Delete RAW 420 MCM?"
+@shot 41_open
+page ModelsView
+# Send a model (main.cpp:3631): 3 lines
+# GetConfirmation (Utilities.h:1168)
+page PopupView
+Dialog.txt="Is 'RAW420MC.MOD' up to date?\r\nPress 'OK' to send it now, \r\n(otherwise press 'Cancel')."
+@shot 41_sendask
+page ModelsView
+# SendModelFile with nobody listening (ModelExchange.h:181): MsgBox over FileExchView over ModelsView
+page FileExchView
+filename.txt="RAW420MC.MOD"
+t0.txt="Sending file"
+vis Progress,1
+Progress.val=5
+t1.txt="Sent 0 of 2716"
+Progress.val=0
+Progress.val=100
+vis Progress,0
+play 0,16,0
+play 0,16,0
+play 0,16,0
+# MsgBox (Utilities.h:1188)
+page PopupView
+vis b1,0
+Dialog.txt="                Cannot send!\r\n\r\nReceiving transmitter not ready. \r\n\r\n                File not sent."
+@shot 41_cannotsend
+page ModelsView
+# Trims -> Subtrims (Trims.h:495), over TrimView
+@model 1
+# StartTrimView (Trims.h:9) - n0 / c0 do not exist on TrimView (dropped)
+page TrimView
+n0.val=5
+c0.val=0
+ModelName.txt="RAW 420 MCM (3)"
+t1.txt="Bank 1"
+ch1.val=82
+n1.val=2
+c1.txt="Aileron"
+ch2.val=80
+n2.val=0
+c2.txt="Throttle"
+ch4.val=77
+n4.val=-3
+c3.txt="Elevator"
+ch3.val=81
+n3.val=1
+c4.txt="Rudder"
+# GetConfirmation (Utilities.h:1168)
+page PopupView
+Dialog.txt="Move these trims to Subtrims?\r\n\r\nThis would re-centre these trims."
+@shot 41_subtrims_ask
+page TrimView
+play 0,17,0
+# MsgBox (Utilities.h:1188)
+page PopupView
+vis b1,0
+Dialog.txt="Done!\r\nSubtrims have been amended.\r\n\r\nLook at the Subtrim view \r\nif you'd like to check."
+@shot 41_subtrims_done
+page TrimView
+# Model ID stored (Model_IDs.h:175): short MsgBox over IDsStartView
+# StartModelIDView (Model_IDs.h:191)
+page IDsStartView
+t1.txt="RAW 420 MCM"
+t4.txt="No ID stored"
+t5.txt="4C11AE8D2F30"
+# GetConfirmation (Utilities.h:1168)
+page PopupView
+Dialog.txt="Store ID for RAW 420 MCM?"
+page IDsStartView
+play 0,72,0
+# MsgBox (Utilities.h:1188)
+page PopupView
+vis b1,0
+Dialog.txt="Model ID stored."
+@shot 41_msgbox
+page IDsStartView
+t4.txt="4C11AE8D2F30"
+t5.txt="4C11AE8D2F30"
+# widest single line: "Delete ID for " + a 30-char name (Model_IDs.h:125-134), over IDsStartView
+# StartModelIDView (Model_IDs.h:191)
+page IDsStartView
+t1.txt="SAB GOBLIN 700 COMPETITION MK2"
+t4.txt="30AEA4C81F64"
+t5.txt="30AEA4C81F64"
+# GetConfirmation (Utilities.h:1168)
+page PopupView
+Dialog.txt="Delete ID for SAB GOBLIN 700 COMPETITION MK2?"
+@shot 41_widest
+page IDsStartView
+# longest text of all (138 chars, 5 lines): RF governor on RF 2.2 (RF_Governor_Profile.h:255), over RFView
+# RotorFlightStart (RF_RotorFlight.h:32)
+page RFView
+t11.txt="RAW 420 MCM"
+Ratio.txt="10.30"
+Arming.txt="6"
+sw0.val=1
+t5.txt="2.2"
+t14.txt="Bank 1"
+t8.txt="Rate 1"
+# MsgBox (Utilities.h:1188)
+page PopupView
+vis b1,0
+Dialog.txt="RotorFlight V2.3 is needed for all\r\ngovernor tuning features.\r\n\r\nYour current version is only V2.2.\r\nPlease update your flight controller!"
+@shot 41_long
+page RFView
+# Not connected (RF_Save_Restore.h:455): MsgBox over RFBackUpView, then back to RFView
+@model 0
+# Start_RF_Backup_Restore (RF_Save_Restore.h:522)
+page RFBackUpView
+t14.txt="Bank 1"
+t8.txt="Rate 1"
+t11.txt="RAW 420 MCM"
+# MsgBox (Utilities.h:1188)
+page PopupView
+vis b1,0
+Dialog.txt="Not connected!"
+@shot 41_notconnected
+page RFView

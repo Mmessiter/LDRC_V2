@@ -1,0 +1,17 @@
+Screen_Background=8
+@model 0
+# ChooseBackGround (Utilities.h:1327)
+page BackGroundView
+@shot 17_open
+# the same page with other backgrounds the pilot may have chosen (Screen_Background is sent once at the Teensy boot, main.cpp:1015)
+Screen_Background=1
+page BackGroundView
+@shot 17_bg1
+Screen_Background=20
+page BackGroundView
+@shot 17_bg20
+Screen_Background=43
+page BackGroundView
+@shot 17_bg43
+# no Teensy text reaches this page: the longest is the page own (n0 up to 43)
+@shot 17_long

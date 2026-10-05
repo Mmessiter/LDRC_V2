@@ -1,0 +1,53 @@
+Screen_Background=8
+@model 0
+# GotoModelsView (MenuOptions.h:378)
+page ModelsView
+findfile "sd0/images/Raw420.jpg",sys0
+get sys0
+exp0.path="sd0/images/Raw420.jpg"
+ModelName.txt="RAW 420 MCM"
+Mfiles.path="BTHUNDER.MOD\r\nEDGE540.MOD\r\nEXTRA330.MOD\r\nGOBLIN70.MOD\r\nHAVOK.MOD\r\nLOGO200.MOD\r\nOMPM2PIN.MOD\r\nRAW420MC.MOD\r\nRIOT.MOD\r\nTUNDRA.MOD\r\nYAK54.MOD\r\n"
+get Mfiles.val
+filename.txt="BTHUNDER.MOD"
+MMems.path="Logo 200 (1)\r\nOMP M2 Pink (2)\r\nRAW 420 MCM (3)\r\nGoblin 700 Comp (4)\r\nEdge 540 (5)\r\nExtra 330 SC (6)\r\nYak 54 (7)\r\nHavok (8)\r\nBlack Thunder (9)\r\nTundra (10)\r\nRiot (11)\r\nTest heli [12]\r\nNot in use [13]\r\nNot in use [14]\r\nNot in use [15]\r\nNot in use [16]\r\nNot in use [17]\r\nNot in use [18]\r\nNot in use [19]\r\nNot in use [20]\r\nNot in use [21]\r\nNot in use [22]\r\nNot in use [23]\r\nNot in use [24]\r\nNot in use [25]\r\nNot in use [26]\r\nNot in use [27]\r\nNot in use [28]\r\nNot in use [29]\r\nNot in use [30]\r\nNot in use [31]\r\nNot in use [32]\r\nNot in use [33]\r\nNot in use [34]\r\nNot in use [35]\r\nNot in use [36]\r\nNot in use [37]\r\nNot in use [38]\r\nNot in use [39]\r\nNot in use [40]\r\nNot in use [41]\r\nNot in use [42]\r\nNot in use [43]\r\nNot in use [44]\r\nNot in use [45]\r\nNot in use [46]\r\nNot in use [47]\r\nNot in use [48]\r\nNot in use [49]\r\nNot in use [50]\r\nNot in use [51]\r\nNot in use [52]\r\nNot in use [53]\r\nNot in use [54]\r\nNot in use [55]\r\nNot in use [56]\r\nNot in use [57]\r\nNot in use [58]\r\nNot in use [59]\r\nNot in use [60]\r\nNot in use [61]\r\nNot in use [62]\r\nNot in use [63]\r\nNot in use [64]\r\nNot in use [65]\r\nNot in use [66]\r\nNot in use [67]\r\nNot in use [68]\r\nNot in use [69]\r\nNot in use [70]\r\nNot in use [71]\r\nNot in use [72]\r\nNot in use [73]\r\nNot in use [74]\r\nNot in use [75]\r\nNot in use [76]\r\nNot in use [77]\r\nNot in use [78]\r\nNot in use [79]\r\nNot in use [80]\r\nNot in use [81]\r\nNot in use [82]\r\nNot in use [83]\r\nNot in use [84]\r\nNot in use [85]\r\nNot in use [86]\r\nNot in use [87]\r\nNot in use [88]\r\nNot in use [89]\r\nNot in use [90]\r\n"
+MMems.val=2
+modelname.txt="RAW 420 MCM"
+# Export (main.cpp:3878): GetDefaultFilename -> "RAW420MC.MOD"
+# GetBackupFilename (Utilities.h:1231)
+page BackupView
+t0.txt="Filename?"
+t1.txt="RAW420MC.MOD"
+Modelname.txt="RAW 420 MCM"
+t3.txt="Create backup file for"
+@shot 48_open
+get t1.txt
+page ModelsView
+# Rename a backup (SDFiles.h:161 RenameFile)
+get filename.txt
+page BackupView
+t0.txt="New filename?"
+t1.txt="BTHUNDER.MOD"
+Modelname.txt="(i.e. just change its filename)"
+t3.txt="Rename this backup"
+@shot 48_rename
+get t1.txt
+page ModelsView
+# worst case: 30-char model, its default file name, the longest prompt
+# GotoModelsView (MenuOptions.h:378)
+page ModelsView
+findfile "sd0/images/.jpg",sys0
+get sys0
+exp0.path="sd0/images/Noimage.jpg"
+ModelName.txt="SAB GOBLIN 700 COMPETITION MK2"
+Mfiles.path="BTHUNDER.MOD\r\nEDGE540.MOD\r\nEXTRA330.MOD\r\nGOBLIN70.MOD\r\nHAVOK.MOD\r\nLOGO200.MOD\r\nOMPM2PIN.MOD\r\nRAW420MC.MOD\r\nRIOT.MOD\r\nSABGOBLI.MOD\r\nTUNDRA.MOD\r\nYAK54.MOD\r\n"
+get Mfiles.val
+filename.txt="BTHUNDER.MOD"
+MMems.path="Logo 200 (1)\r\nOMP M2 Pink (2)\r\nRAW 420 MCM (3)\r\nGoblin 700 Comp (4)\r\nEdge 540 (5)\r\nExtra 330 SC (6)\r\nYak 54 (7)\r\nHavok (8)\r\nBlack Thunder (9)\r\nTundra (10)\r\nRiot (11)\r\nTest heli [12]\r\nSAB GOBLIN 700 COMPETITION MK2 (13)\r\nNot in use [14]\r\nNot in use [15]\r\nNot in use [16]\r\nNot in use [17]\r\nNot in use [18]\r\nNot in use [19]\r\nNot in use [20]\r\nNot in use [21]\r\nNot in use [22]\r\nNot in use [23]\r\nNot in use [24]\r\nNot in use [25]\r\nNot in use [26]\r\nNot in use [27]\r\nNot in use [28]\r\nNot in use [29]\r\nNot in use [30]\r\nNot in use [31]\r\nNot in use [32]\r\nNot in use [33]\r\nNot in use [34]\r\nNot in use [35]\r\nNot in use [36]\r\nNot in use [37]\r\nNot in use [38]\r\nNot in use [39]\r\nNot in use [40]\r\nNot in use [41]\r\nNot in use [42]\r\nNot in use [43]\r\nNot in use [44]\r\nNot in use [45]\r\nNot in use [46]\r\nNot in use [47]\r\nNot in use [48]\r\nNot in use [49]\r\nNot in use [50]\r\nNot in use [51]\r\nNot in use [52]\r\nNot in use [53]\r\nNot in use [54]\r\nNot in use [55]\r\nNot in use [56]\r\nNot in use [57]\r\nNot in use [58]\r\nNot in use [59]\r\nNot in use [60]\r\nNot in use [61]\r\nNot in use [62]\r\nNot in use [63]\r\nNot in use [64]\r\nNot in use [65]\r\nNot in use [66]\r\nNot in use [67]\r\nNot in use [68]\r\nNot in use [69]\r\nNot in use [70]\r\nNot in use [71]\r\nNot in use [72]\r\nNot in use [73]\r\nNot in use [74]\r\nNot in use [75]\r\nNot in use [76]\r\nNot in use [77]\r\nNot in use [78]\r\nNot in use [79]\r\nNot in use [80]\r\nNot in use [81]\r\nNot in use [82]\r\nNot in use [83]\r\nNot in use [84]\r\nNot in use [85]\r\nNot in use [86]\r\nNot in use [87]\r\nNot in use [88]\r\nNot in use [89]\r\nNot in use [90]\r\n"
+MMems.val=12
+modelname.txt="SAB GOBLIN 700 COMPETITION MK2"
+page BackupView
+t0.txt="New filename?"
+t1.txt="SABGOBLI.MOD"
+Modelname.txt="SAB GOBLIN 700 COMPETITION MK2"
+t3.txt="Create backup file for"
+@shot 48_long

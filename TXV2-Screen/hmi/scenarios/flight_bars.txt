@@ -1,0 +1,52 @@
+# Channel bars on the flight screen (Malcolm, 10-03: first 8 or all 16), in the 6, 4 and 9 box layouts.
+Screen_Background=21
+@model 1
+page FrontView
+ModelName.txt="RAW 420 MCM"
+t4.txt="Bank 1"
+Hours.val=0
+Mins.val=4
+Secs.val=7
+RXBV.txt="7.82V (3.91V per cell)"
+JRX.val=78
+TXBV.txt="8.10V (4.05V per cell)"
+JTX.val=85
+vis Quality,1
+Quality.val=97
+vis rpm,1
+rpm.txt="RPM: 2150"
+vis Warning,1
+Warning.txt="ESC: 52.3"
+vis StillConnected,1
+StillConnected.txt="Amps: 12.4"
+vis wb,1
+wb.txt="mAh: 345"
+bt0.txt="Motor is ON"
+DateTime.txt="3 Oct. 2026 20:31:07"
+@shot flight_front
+@flying 1
+Ch1.val=62
+Ch2.val=40
+Ch3.val=75
+Ch4.val=50
+Ch5.val=25
+Ch6.val=75
+Ch7.val=50
+Ch8.val=58
+Ch9.val=50
+Ch10.val=25
+Ch11.val=75
+Ch12.val=50
+Ch13.val=33
+Ch14.val=50
+Ch15.val=90
+Ch16.val=10
+@flying 1
+@flight f1 w1 b6 s1 timer,rxbat,bars8,link,esc,bars16
+@shot bars_6
+page FrontView
+@flight f1 w1 b4 s1 bars8,bars16,timer,link
+@shot bars_4
+page FrontView
+@flight f1 w1 b9 s1 timer,rxbat,rpm,link,bars8,mah,bars16,txbat,bank
+@shot bars_9

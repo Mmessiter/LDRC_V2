@@ -1,0 +1,79 @@
+{
+ "0": {
+  "member": "0.zi",
+  "name": "Arial32Biso-8859-1",
+  "height": 32,
+  "fixed_width": null,
+  "first_char": 32,
+  "last_char": 255,
+  "glyphs": 224,
+  "data_bytes": 21366,
+  "encoding_byte": 3
+ },
+ "1": {
+  "member": "1.zi",
+  "name": "Arial64Biso-8859-1",
+  "height": 64,
+  "fixed_width": null,
+  "first_char": 32,
+  "last_char": 255,
+  "glyphs": 224,
+  "data_bytes": 45950,
+  "encoding_byte": 3
+ },
+ "2": {
+  "member": "2.zi",
+  "name": "Arial24iso-8859-1",
+  "height": 24,
+  "fixed_width": null,
+  "first_char": 32,
+  "last_char": 255,
+  "glyphs": 224,
+  "data_bytes": 14079,
+  "encoding_byte": 3
+ },
+ "3": {
+  "member": "3.zi",
+  "name": "24asciiascii",
+  "height": 24,
+  "fixed_width": null,
+  "first_char": 32,
+  "last_char": 126,
+  "glyphs": 95,
+  "data_bytes": 3585,
+  "encoding_byte": 1
+ },
+ "4": {
+  "member": "4.zi",
+  "name": "16asciiascii",
+  "height": 16,
+  "fixed_width": null,
+  "first_char": 32,
+  "last_char": 126,
+  "glyphs": 95,
+  "data_bytes": 2478,
+  "encoding_byte": 1
+ },
+ "5": {
+  "member": "8.zi",
+  "name": "Courier32Biso-8859-1",
+  "height": 32,
+  "fixed_width": null,
+  "first_char": 32,
+  "last_char": 255,
+  "glyphs": 224,
+  "data_bytes": 19536,
+  "encoding_byte": 3
+ },
+ "6": {
+  "member": "5.zi",
+  "name": "Arial28iso-8859-1",
+  "height": 28,
+  "fixed_width": null,
+  "first_char": 32,
+  "last_char": 255,
+  "glyphs": 224,
+  "data_bytes": 15605,
+  "encoding_byte": 3
+ }
+}

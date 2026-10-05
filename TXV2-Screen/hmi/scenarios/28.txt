@@ -1,0 +1,93 @@
+# 28 TrimView - group C scenario (labels as Teensy B23 sends them in mode 2) (what the Teensy sends; file:line = TXV1B/TransmitterCode)
+Screen_Background=8
+@model 1
+# StartTrimView (Trims.h:9), "TrimView" from FrontView. Sticks mode 2.
+page TrimView
+n0.val=5
+c0.val=1
+ModelName.txt="RAW 420 MCM (3)"
+t1.txt="Bank 1"
+ch1.val=82
+n1.val=2
+c1.txt="Aileron"
+ch2.val=80
+n2.val=0
+c2.txt="Elevator"
+ch4.val=77
+n4.val=-3
+c3.txt="Throttle"
+ch3.val=85
+n3.val=5
+c4.txt="Rudder"
+@shot 28_open
+# the pilot presses the rudder + button (b3 -> 128+31 RudderRightTrim -> IncTrim, Trims.h:380)
+ch3.val=86
+n3.val=6
+c4.txt="Rudder"
+play 0,0,0
+# "Move to subtrim" (128+75 TrimsToSubtrim, Trims.h:496): GetConfirmation (Utilities.h:1168)
+page PopupView
+Dialog.txt="Move these trims to Subtrims?\r\n\r\nThis would re-centre these trims."
+@shot 28_confirm
+# Yes -> MsgBox(pTrimView, ItsAllDone)
+page TrimView
+play 0,17,0
+page PopupView
+vis b1,0
+Dialog.txt="Done!\r\nSubtrims have been amended.\r\n\r\nLook at the Subtrim view \r\nif you'd like to check."
+@shot 28_done
+page TrimView
+# ForceDataRedisplay + UpdateTrimView: all trims re-centred
+ch1.val=80
+n1.val=0
+c1.txt="Aileron"
+ch2.val=80
+n2.val=0
+c2.txt="Elevator"
+ch4.val=80
+n4.val=0
+c3.txt="Throttle"
+ch3.val=80
+n3.val=0
+c4.txt="Rudder"
+@shot 28_after_subtrim
+# ---- same page in sticks mode 1 (labels c2/c3 differ from mode 2)
+# StartTrimView (Trims.h:9), "TrimView" from FrontView. Sticks mode 1.
+page TrimView
+n0.val=5
+c0.val=1
+ModelName.txt="RAW 420 MCM (3)"
+t1.txt="Bank 1"
+ch1.val=82
+n1.val=2
+c1.txt="Aileron"
+ch4.val=77
+n4.val=-3
+c2.txt="Elevator"
+ch2.val=80
+n2.val=0
+c3.txt="Throttle"
+ch3.val=86
+n3.val=6
+c4.txt="Rudder"
+@shot 28_mode1
+# ---- worst case: trims at the ends (40 / 120), longest names, bank name and model name
+# StartTrimView (Trims.h:9), "TrimView" from FrontView. Sticks mode 2.
+page TrimView
+n0.val=5
+c0.val=1
+ModelName.txt="WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW (90)"
+t1.txt="Flight mode 1"
+ch1.val=40
+n1.val=-40
+c1.txt="WWWWWWWWWW"
+ch2.val=40
+n2.val=-40
+c2.txt="WWWWWWWWWW"
+ch4.val=120
+n4.val=40
+c3.txt="WWWWWWWWWW"
+ch3.val=120
+n3.val=40
+c4.txt="WWWWWWWWWW"
+@shot 28_long

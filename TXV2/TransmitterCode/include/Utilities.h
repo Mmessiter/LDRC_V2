@@ -1,0 +1,1487 @@
+// *********************************************** utilities.h for Transmitter code *******************************************
+
+#include <Arduino.h>
+#include "1Definitions.h"
+#ifndef UTILITIES_H
+#define UTILITIES_H
+
+// ********************************************************************************************************************************
+
+// Because data are only displayed when different, this sets all to zero so that they will be displayed on the first pass.
+void ForceDataRedisplay()
+{
+    LastShowTime = 0; //
+    ForceVoltDisplay = true;
+    for (int i = 0; i < 5; ++i)
+    {
+        for (int j = 0; j < 17; ++j)
+        {
+            LastTrim[i][j] = 0;
+        }
+    }
+    return;
+}
+
+// ********************************************************************************************************************************
+
+void SaveOrRestoreScreen(bool Restore)
+{
+    // V1B B17 (Malcolm, 1-10-2026): "When not flying, if the screen times out and goes blank, a touch should really
+    // return to the screen that was in use at the timeout moment." Every page now comes back, not only the seventeen
+    // that did before; the rest went to the front page. The screen (1.4.3 and later) remembers the page exactly as it
+    // was when it went blank - values, texts, what was hidden, edits not yet confirmed - and puts it back when this
+    // asks for the same page again, so nothing here re-reads, re-sends or re-starts anything: the page's own Start
+    // function is NOT called (some reset things: StartTrimDefView zeroes the trims, the Rotorflight pages read the
+    // flight controller afresh, GotoModelsView asks a question). Only what is drawn with lines is drawn again.
+    // The screen saver never blanks in the middle of a calibration, a scan, trim setting or Pong (CheckScreenTime).
+    static uint8_t LastScreen = 0;
+    if (!Restore)
+    {
+        LastScreen = CurrentView; // Saved the ID of the screen we are leaving
+        return;
+    }
+    if (LastScreen == FRONTVIEW)
+    {
+        GotoFrontView(); // (it fills itself in)
+        return;
+    }
+    static const struct
+    {
+        uint8_t view;
+        const char *page;
+    } Pages[] = {
+        {STICKSVIEW, "SticksView"}, {GRAPHVIEW, "GraphView"}, {MIXESVIEW, "MixesView"}, {MODELSVIEW, "ModelsView"},
+        {CALIBRATEVIEW, "CalibrateView"}, {TXSETUPVIEW, "TXSetupView"}, {SUBTRIMVIEW, "SubTrimView"}, {DATAVIEW, "DataView"},
+        {TRIM_VIEW, "TrimView"}, {MACROS_VIEW, "MacrosView"}, {SWITCHES_VIEW, "SwitchesView"}, {ONE_SWITCH_VIEW, "OneSwitchView"},
+        {HELP_VIEW, "LogView"}, {OPTIONS_VIEW, "OptionsView"}, {INPUTS_VIEW, "InputsView"}, {FAILSAFE_VIEW, "FailSafeView"},
+        {COLOURS_VIEW, "BackGroundView"}, {AUDIOVIEW, "AudioView"}, {REVERSEVIEW, "ReverseView"}, {BUDDYVIEW, "BuddyView"},
+        {LOGVIEW, "LogView"}, {OPTIONVIEW2, "OptionView2"}, {OPTIONVIEW3, "OptionView3"}, {BUDDYCHVIEW, "BuddyChView"},
+        {RXSETUPVIEW1, "RXOptionsView"}, {DUALRATESVIEW, "DualRatesView"}, {GPSVIEW, "GPSView"}, {RXSETUPVIEW, "RXSetupView"},
+        {BANKSNAMESVIEW, "BankNameView"}, {SLOWSERVOVIEW, "SlowServoView"}, {RENAMEMODELVIEW, "RenameView"},
+        {FILEEXCHANGEVIEW, "FileExchView"}, {IDCHECKVIEW, "IDsView"}, {TYPEVIEW, "TypeView"}, {SERVOTYPESVIEW, "ServosTypeView"},
+        {LOGFILESLISTVIEW, "LogFiles"}, {GAPSVIEW, "GapsView"}, {PIDVIEW, "PIDView"}, {RATESVIEW_RF, "RatesView"},
+        {ROTORFLIGHTVIEW, "RFView"}, {RATESADVANCEDVIEW, "Rates_A_View"}, {PIDADVANCEDVIEW, "PID_A_View"},
+        {PICKBANKVIEW1, "PickBankView1"}, {PICKBANKVIEW2, "PickBankView2"}, {CHOOSEIMAGEVIEW, "ImageView"},
+        {RFBACKUP_RESTOREVIEW, "RFBackUpView"}, {RFGOVERNORVIEW_PROFILE, "RFGovView"}, {RFGOVERNORVIEW_GLOBAL, "RFGovViewGlbl"},
+        {MODELIDVIEW, "IDsStartView"}};
+    for (const auto &p : Pages)
+    {
+        if (p.view != LastScreen)
+            continue;
+        char cmd[40];
+        snprintf(cmd, sizeof cmd, "page %s", p.page);
+        SendCommand(cmd);
+        CurrentView = LastScreen; // (the old code set OPTIONS_VIEW for the inputs page)
+        switch (LastScreen)
+        {
+        case DATAVIEW:
+            ForceDataRedisplay(); // live values: all of them again at once
+            break;
+        case GPSVIEW:
+        case GAPSVIEW:
+            LastShowTime = 0; // filled in by ShowComms() at once
+            break;
+        case GRAPHVIEW:
+            DisplayCurveAndServoPos(); // the curve is drawn with lines: the screen does not remember those
+            break;
+        default:
+            break;
+        }
+        return;
+    }
+    GotoFrontView(); // a page the screen saver never blanks (a scan, a calibration under way, trim setting, Pong), or none
+}
+
+/*********************************************************************************************************************************/
+void RestoreBrightness()
+{
+    char cmd[20];
+    char dim[] = "dim=";
+    char nb[10];
+    if (Brightness < 10)
+        Brightness = 10;
+    strcpy(cmd, dim);
+    Str(nb, Brightness, 0);
+    strcat(cmd, nb);
+    ScreenIsOff = false;
+    SendCommand(cmd);
+    ScreenTimeTimer = millis(); // reset screen counter
+}
+
+/******************************************************************************************************************************/
+void ShowScreenAgain()
+{
+    SaveOrRestoreScreen(true);
+    ScreenIsOff = false;
+    RestoreBrightness();
+}
+
+/******************************************************************************************************************************/
+void HideScreenAgain()
+{
+    char ScreenOff[] = "page BlankView";
+    char NoBrightness[] = "dim=0";
+
+    if (CurrentView == SCANVIEW)
+        return; // recovery fails
+    if (CurrentView == GRAPHVIEW)
+        return;
+    if (CurrentView == COLOURS_VIEW)
+        return;
+    if (CurrentView == AUDIOVIEW)
+        return;
+    if (CurrentView == HELP_VIEW)
+        return;
+    if (CurrentView == PONGVIEW)
+        return;
+    if (CurrentView == CALIBRATEVIEW)
+        return;
+
+    SaveOrRestoreScreen(false);
+    SendCommand(ScreenOff);    // move to blank screen
+    DelayWithDog(10);          // wait a moment for screen to change
+    SendCommand(NoBrightness); // turn off backlight
+    ScreenIsOff = true;
+    CurrentView = BLANKVIEW;
+}
+
+/*********************************************************************************************************************************/
+void CheckScreenTime() // turn off screen after a timeout
+{
+    CRUMB(CRUMB_SCREENTIME);
+    if (CurrentMode != NORMAL && CurrentMode != LISTENMODE)
+    { // B17: never in the middle of something - a calibration, a scan, trim setting, Pong, a Rotorflight save or
+      // restore. Coming back from blank could not resume it. (The timeout starts again when it is over.)
+        ScreenTimeTimer = millis();
+        return;
+    }
+    if (((millis() - ScreenTimeTimer) > ScreenTimeout * 1000) && (ScreenIsOff == false))
+        HideScreenAgain();
+}
+
+// ********************************************************************************************************************************
+
+void CheckForNextionButtonPress()
+{
+    if (GetButtonPress())
+        ButtonWasPressed();
+}
+
+// **********************************************************************************************************************************
+
+uint8_t Ascii(char c)
+{
+    return (uint8_t)c;
+}
+
+// **************************************************************** Play a sound from RAM *********************************************
+// ──────────────────────────────────────────────────────────────
+// Play a RAM-resident clip on the Nextion
+// ──────────────────────────────────────────────────────────────
+void PlaySound(uint16_t id)
+{
+    CRUMB(CRUMB_SOUND);
+    if (millis() < 5000 && !Force_Early_Sound)
+        return;                // don't play any sounds for the first 5 seconds of power up, except the forced early sound (e.g. for binding enabled)
+    Force_Early_Sound = false; // reset this flag so that we don't play any more sounds for the first 5 seconds of power up
+    if (CurrentView == MODELSVIEW && id != CLICKONE)
+        return;
+    if (!SD_Card_Exists)
+        return;
+    char cmd[24];
+    snprintf(cmd, sizeof(cmd), "play 0,%u,0", id); // loop = 0 (play once)
+    SendCommand(cmd);                              // appends 0xFF³
+}
+/*********************************************************************************************************************************/
+
+// This function converts an int to a char[] array, then adds a comma, a dot, or nothing at the end.
+// It builds the char[] array at a pointer (*s) Where there MUST be enough space for all characters plus a zero terminator. (MAX 14)
+// It dates for a very early time when I didn't know about standard library functions!
+// But it works just fine, so it says in.
+
+FASTRUN char *Str(char *s, int n, int comma) // comma = 0 for nothing, 1 for a comma, 2 for a dot.
+{
+    int r, i, m, flag;
+    char cma[] = ",";
+    char dot[] = ".";
+
+    flag = 0;
+    i = 0;
+    m = 1000000000;
+    if (n < 0)
+    {
+        s[0] = '-';
+        i = 1;
+        n = -n;
+    }
+    if (n == 0)
+    {
+        s[0] = 48;
+        s[1] = 0;
+
+        if (comma == 1)
+        {
+            strcat(s, cma);
+        }
+        if (comma == 2)
+        {
+            strcat(s, dot);
+        }
+        return s;
+    }
+    while (m >= 1)
+    {
+        r = n / m;
+        if (r > 0)
+        {
+            flag = 1;
+        } //  first digit
+        if (flag == 1)
+        {
+            s[i] = 48 + r;
+            ++i;
+            s[i] = 0;
+        }
+        n -= (r * m);
+        m /= 10;
+    }
+    if (comma == 1)
+    {
+        strcat(s, cma);
+    }
+    if (comma == 2)
+    {
+        strcat(s, dot);
+    }
+    return s;
+}
+
+/*********************************************************************************************************************************/
+
+void SetAudioVolume(uint16_t v)
+{ // sets audio volume v (0-100)
+    char vol[] = "volume=";
+    char cmd[20];
+    char nb[6];
+    strcpy(cmd, vol);
+    Str(nb, v, 0);
+    strcat(cmd, nb);
+    SendCommand(cmd);
+}
+
+/*********************************************************************************************************************************/
+
+void Reboot()
+{
+    while (true)
+    {
+        TeensyWatchDog.feed();
+    }
+}
+
+/*********************************************************************************************************************************/
+void InitializeCommsGapScreen()
+{
+    char tBox[11][4] = {
+        "t1", "t2", "t3", "t4", "t5", "t6", "t7", "t8", "t9", "t10", "t11"};
+    char txt[12];
+    for (int i = 1; i < 11; ++i)
+    {
+        sprintf(txt, "< %u", GapThesholds[i]);
+        SendText(tBox[i - 1], txt);
+    }
+    SendCommand((char *)"vis n0,0"); // hide the 0 count§");
+    SendCommand((char *)"vis n1,0");
+    SendCommand((char *)"vis n2,0");
+    SendCommand((char *)"vis n3,0");
+    SendCommand((char *)"vis n4,0");
+    SendCommand((char *)"vis n5,0");
+    SendCommand((char *)"vis n6,0");
+    SendCommand((char *)"vis n7,0");
+    SendCommand((char *)"vis n8,0");
+    SendCommand((char *)"vis n9,0");
+    SendCommand((char *)"vis n10,0");
+    sprintf(txt, "> %u", GapThesholds[10]);
+    SendText(tBox[10], txt);
+}
+/*********************************************************************************************************************************/
+// V1B: timed by the CPU's cycle counter, not millis(). Writing or erasing flash (LinkMode.h) holds interrupts
+// off for tens of milliseconds at a time, and millis() stands nearly still meanwhile: by millis() the dog would
+// go unfed for seconds of real time. (The counter wraps every 7 s; this is called far more often than that.)
+uint32_t LastDogKickCycles = 0;
+void KickTheDog()
+{
+    if ((uint32_t)(ARM_DWT_CYCCNT - LastDogKickCycles) >= (F_CPU_ACTUAL / 1000u) * KICKRATE)
+    {
+        TeensyWatchDog.feed();
+        LastDogKickCycles = ARM_DWT_CYCCNT;
+    }
+    CrumbKick(); // B14/B15: the breadcrumb to the clock's coin cell (at most every 50 ms)
+}
+// **********************************************************************************************************************************
+
+void ConfigureStickMode()
+{ // This sets stick mode without moving any wires. Must be wired as for Mode 1
+
+    if (SticksMode == 1)
+    {
+        AnalogueInput[0] = A0;
+        AnalogueInput[1] = A1;
+        AnalogueInput[2] = A2;
+        AnalogueInput[3] = A3;
+        AnalogueInput[4] = A6;
+        AnalogueInput[5] = A7;
+        AnalogueInput[6] = A8;
+        AnalogueInput[7] = A9;
+    }
+
+    if (SticksMode == 2)
+    {
+        AnalogueInput[0] = A0;
+        AnalogueInput[1] = A2;
+        AnalogueInput[2] = A1;
+        AnalogueInput[3] = A3;
+        AnalogueInput[4] = A6;
+        AnalogueInput[5] = A7;
+        AnalogueInput[6] = A8;
+        AnalogueInput[7] = A9;
+    }
+}
+
+/******************* DeltaGMT is a user defined representation of time zone. It should never exceed 24. Not on this planet. **********/
+void FixDeltaGMTSign()
+{
+    if (DeltaGMT < -24)
+        DeltaGMT = 0; // Undefined value?f
+    if (DeltaGMT > 24)
+    {                         // This fixes the sign bit if negative !!!! (There's surely a better way !!!)
+        DeltaGMT ^= 0xffff;   // toggle every bit! :-)
+        ++DeltaGMT;           // Add one
+        DeltaGMT = -DeltaGMT; // it's definately meant to be negative!
+    }
+}
+/*********************************************************************************************************************************/
+
+uint8_t decToBcd(uint8_t val)
+{
+    return ((val / 10 * 16) + (val % 10));
+}
+
+/*********************************************************************************************************************************/
+
+uint8_t bcdToDec(uint8_t val)
+{
+    return ((val / 16 * 10) + (val % 16));
+}
+
+/*********************************************************************************************************************************/
+
+FLASHMEM void SetTheRTC()
+{
+    uint8_t zero = 0x00;
+    Wire.beginTransmission(DS1307_ADDRESS);
+    Wire.write(zero); // Stop the oscillator
+    Wire.write(decToBcd(Gsecond));
+    Wire.write(decToBcd(Gminute));
+    Wire.write(decToBcd(Ghour));
+    Wire.write(decToBcd(GweekDay));
+    Wire.write(decToBcd(GmonthDay));
+    Wire.write(decToBcd(Gmonth));
+    Wire.write(decToBcd(Gyear));
+    Wire.write(zero); //  Re-start it
+    Wire.endTransmission();
+}
+/*********************************************************************************************************************************/
+// Epoch <-> calendar (Howard Hinnant's civil-days algorithms).
+int64_t DaysFromCivil(int y, unsigned m, unsigned d)
+{
+    y -= m <= 2;
+    const int era = (y >= 0 ? y : y - 399) / 400;
+    const unsigned yoe = (unsigned)(y - era * 400);
+    const unsigned doy = (153 * (m + (m > 2 ? -3 : 9)) + 2) / 5 + d - 1;
+    const unsigned doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    return (int64_t)era * 146097 + (int64_t)doe - 719468;
+}
+void CivilFromDays(int64_t z, int &y, unsigned &m, unsigned &d)
+{
+    z += 719468;
+    const int64_t era = (z >= 0 ? z : z - 146096) / 146097;
+    const unsigned doe = (unsigned)(z - era * 146097);
+    const unsigned yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+    y = (int)(yoe) + (int)(era * 400);
+    const unsigned doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    const unsigned mp = (5 * doy + 2) / 153;
+    d = doy - (153 * mp + 2) / 5 + 1;
+    m = mp + (mp < 10 ? 3 : -9);
+    y += m <= 2;
+}
+
+/*********************************************************************************************************************************/
+// V2 B30 (Malcolm, 5-10-2026: "the real-time clock ... occasionally simply refuses to give us any time and has to be
+// reset"). A DS1307 that stops answering is nearly always an I2C bus left half-way through a byte (a brown-out, a
+// glitch): it holds SDA low and nothing on the bus can speak until it has been clocked out of it. At power-on, a
+// clock that does not answer gets the standard cure - nine clock pulses with the bus released, then a stop - and is
+// asked again. The time itself is kept by the chip's own battery through all this; and from B30 the screen sends the
+// true time from the internet whenever it has WiFi (TIME=, below), as a phone does through the receiver.
+bool ClockRecovered = false, ClockDead = false; // at power-on: it had to be clocked back to life / it does not answer at all
+void RecoverI2CBus()
+{
+    const uint8_t SCL = 19, SDA = 18; // Wire's pins on the Teensy 4.1
+    pinMode(SDA, INPUT_PULLUP);
+    pinMode(SCL, OUTPUT_OPENDRAIN);
+    for (int i = 0; i < 9; ++i)
+    {
+        digitalWrite(SCL, LOW);
+        delayMicroseconds(5);
+        digitalWrite(SCL, HIGH);
+        delayMicroseconds(5);
+        if (digitalRead(SDA))
+            break; // the slave has let go
+    }
+    pinMode(SDA, OUTPUT_OPENDRAIN); // a stop: SDA low to high while SCL is high
+    digitalWrite(SDA, LOW);
+    delayMicroseconds(5);
+    digitalWrite(SCL, HIGH);
+    delayMicroseconds(5);
+    digitalWrite(SDA, HIGH);
+    delayMicroseconds(5);
+    Wire.begin(); // the pins back to the bus
+}
+void CheckTheClock() // at power-on, after Wire.begin()
+{
+    if (RTC.read(tm))
+        return;
+    RecoverI2CBus();
+    delay(5);
+    if (RTC.read(tm))
+    {
+        ClockRecovered = true;
+        return;
+    }
+    ClockDead = true;
+}
+// The screen's word TIME=<local seconds since 1970> (from the internet, whenever it has WiFi): applied as a phone's time is
+void TimeFromScreen(const char *digits)
+{
+    const uint32_t v = (uint32_t)strtoul(digits, nullptr, 10);
+    if (v < 1700000000u)
+        return;
+    PhoneEpochLocal = v;
+    PhoneEpochAtMs = millis();
+}
+
+/*********************************************************************************************************************************/
+// Correct our drifty DS1307 from the phone-true LOCAL time RXV2 streams in
+// ack item 37 (only when the receiver's clock came from a phone). Captured in
+// the radio path, applied HERE — I2C writes must never run there. Corrections
+// only when >= 10 s adrift, so the bus stays quiet in normal operation.
+void CorrectRtcFromPhoneTime()
+{
+    if (!PhoneEpochLocal)
+        return;
+    const uint32_t nowEpoch = PhoneEpochLocal + (millis() - PhoneEpochAtMs) / 1000;
+    PhoneEpochLocal = 0; // consumed — the next ack cycle refreshes it
+    if (nowEpoch < 1700000000u)
+        return; // insane value — ignore
+    int32_t diff = 1000000;
+    if (RTC.read(tm))
+    { // (a clock that does not answer is written all the same: the write is what starts a halted one, B30)
+        ReadTheRTC();
+        const int64_t face = DaysFromCivil(2000 + Gyear, Gmonth, GmonthDay) * 86400LL + (int64_t)Ghour * 3600 + (int64_t)Gminute * 60 + Gsecond;
+        diff = (int32_t)((int64_t)nowEpoch - face);
+    }
+    if (abs(diff) < 10)
+        return; // close enough — leave the RTC alone
+    int y;
+    unsigned mo, da;
+    const int64_t days = (int64_t)(nowEpoch / 86400u);
+    CivilFromDays(days, y, mo, da);
+    Gyear = (uint8_t)(y - 2000);
+    Gmonth = (uint8_t)mo;
+    GmonthDay = (uint8_t)da;
+    GweekDay = (uint8_t)(((days + 4) % 7) + 1); // 1970-01-01 was a Thursday; 1 = Sunday
+    Ghour = (uint8_t)((nowEpoch / 3600u) % 24);
+    Gminute = (uint8_t)((nowEpoch / 60u) % 60);
+    Gsecond = (uint8_t)(nowEpoch % 60);
+    SetTheRTC();
+    GPSTimeSynched = true; // phone truth is at least as good — don't let GPS fight it this session
+}
+
+/*********************************************************************************************************************************/
+void SynchRTCwithGPSTime()
+{ // This function corrects the time and the date.
+    if (!GPSTimeSynched)
+    {
+        GPSTimeSynched = true;
+        Gsecond = GPS_RX_SECS;
+        Gminute = GPS_RX_Mins;
+        Ghour = GPS_RX_Hours;
+        GmonthDay = GPS_RX_DAY;
+        Gmonth = GPS_RX_MONTH;
+        Gyear = GPS_RX_YEAR;
+        SetTheRTC();
+        GPSTimeSynched = true;
+    }
+}
+/*********************************************************************************************************************************/
+void AdjustDateTime(uint8_t MinChange, uint8_t HourChange, uint8_t YearChange, uint8_t MonthChange, uint8_t DateChange)
+{
+    ReadTheRTC();
+    Gminute += MinChange;
+    if (Gminute > 59)
+    {
+        Gminute = 0;
+        if (Ghour < 23)
+        {
+            ++Ghour;
+        }
+    }
+    if (Gminute < 1)
+    {
+        Gminute = 0;
+        if (Ghour > 0)
+        {
+            --Ghour;
+        }
+    }
+    Ghour += HourChange;
+    if (Ghour < 0)
+        Ghour = 0;
+    if (Ghour > 23)
+        Ghour = 23;
+    Gyear += YearChange;
+    if (Gyear < 0)
+        Gyear = 0;
+    if (Gyear > 99)
+        Gyear = 99;
+    Gmonth += MonthChange;
+    if (Gmonth < 1)
+        Gmonth = 1;
+    if (Gmonth > 12)
+        Gmonth = 12;
+    GmonthDay += DateChange;
+    if (GmonthDay < 1)
+        GmonthDay = 1;
+    if (GmonthDay > 31)
+        GmonthDay = 31;
+    SetTheRTC();
+}
+
+/*********************************************************************************************************************************/
+void ReadTheRTC()
+{
+    CRUMB(CRUMB_RTC);
+    uint8_t second = tm.Second; // 0-59
+    uint8_t minute = tm.Minute; // 0-59
+    uint8_t hour = tm.Hour;     // 0-23
+    uint8_t weekDay = tm.Wday;  // 1-7
+    uint8_t monthDay = tm.Day;  // 1-31
+    uint8_t month = tm.Month;   // 1-12
+    uint8_t year = tm.Year;     // 0-99
+    Gsecond = second;
+    Gminute = minute;
+    Ghour = hour;
+    GweekDay = weekDay;
+    GmonthDay = monthDay;
+    Gmonth = month;
+    Gyear = year - 30; // ???
+}
+/*********************************************************************************************************************************/
+
+void IncMinute()
+{
+    uint8_t zero = 0x00;
+    uint8_t c = 1;
+    if (RTC.read(tm))
+    {
+        AdjustDateTime(c, zero, zero, zero, zero);
+    }
+}
+
+/*********************************************************************************************************************************/
+
+void DecMinute()
+{
+    uint8_t zero = 0x00;
+    uint8_t c = -1;
+    if (RTC.read(tm))
+    {
+        AdjustDateTime(c, zero, zero, zero, zero);
+    }
+}
+
+/*********************************************************************************************************************************/
+
+void IncHour()
+{
+    uint8_t c = 1;
+    uint8_t zero = 0x00;
+    if (RTC.read(tm))
+    {
+        AdjustDateTime(zero, c, zero, zero, zero);
+    }
+}
+
+/*********************************************************************************************************************************/
+
+void DecHour()
+{
+    uint8_t c = -1;
+    uint8_t zero = 0x00;
+    if (RTC.read(tm))
+    {
+        AdjustDateTime(zero, c, zero, zero, zero);
+    }
+}
+
+/*********************************************************************************************************************************/
+
+void IncYear()
+{
+    uint8_t c = 1;
+    uint8_t zero = 0x00;
+    if (RTC.read(tm))
+    {
+        AdjustDateTime(zero, zero, c, zero, zero);
+    }
+}
+
+/*********************************************************************************************************************************/
+
+void DecYear()
+{
+    uint8_t c = -1;
+    uint8_t zero = 0x00;
+    if (RTC.read(tm))
+    {
+        AdjustDateTime(zero, zero, c, zero, zero);
+    }
+}
+
+/*********************************************************************************************************************************/
+
+void IncMonth()
+{
+    uint8_t c = 1;
+    uint8_t zero = 0x00;
+    if (RTC.read(tm))
+    {
+        AdjustDateTime(zero, zero, zero, c, zero);
+    }
+}
+
+/*********************************************************************************************************************************/
+
+void DecMonth()
+{
+    uint8_t c = -1;
+    uint8_t zero = 0x00;
+    if (RTC.read(tm))
+    {
+        AdjustDateTime(zero, zero, zero, c, zero);
+    }
+}
+
+/*********************************************************************************************************************************/
+
+void IncDate()
+{
+    uint8_t c = 1;
+    uint8_t zero = 0x00;
+    if (RTC.read(tm))
+    {
+        AdjustDateTime(zero, zero, zero, zero, c);
+    }
+}
+
+/*********************************************************************************************************************************/
+
+void DecDate()
+{
+    uint8_t c = -1;
+    uint8_t zero = 0x00;
+    if (RTC.read(tm))
+    {
+        AdjustDateTime(zero, zero, zero, zero, c);
+    }
+}
+
+/*********************************************************************************************************************************/
+
+bool getTime(const char *str)
+{
+    int Hour, Min, Sec;
+    if (sscanf(str, "%d:%d:%d", &Hour, &Min, &Sec) != 3)
+        return false;
+    tm.Hour = Hour;
+    tm.Minute = Min;
+    tm.Second = Sec;
+    return true;
+}
+
+/*********************************************************************************************************************************/
+
+bool getDate(const char *str)
+{
+    char Month[12];
+    int Day, Year;
+    uint8_t monthIndex;
+    const char *monthName[12] = {
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+    if (sscanf(str, "%s %d %d", Month, &Day, &Year) != 3)
+        return false;
+    for (monthIndex = 0; monthIndex < 12; ++monthIndex)
+    {
+        if (strcmp(Month, monthName[monthIndex]) == 0)
+            break;
+    }
+    if (monthIndex >= 12)
+        return false;
+    tm.Day = Day;
+    tm.Month = monthIndex + 1;
+    tm.Year = CalendarYrToTm(Year);
+    return true;
+}
+
+/*********************************************************************************************************************************/
+
+bool MayBeAddZero(uint8_t nn)
+{
+    if (nn >= 0 && nn < 10)
+    {
+        return true;
+    }
+    return false;
+}
+
+/*********************************************************************************************************************************/
+
+void ReadTime()
+{
+    CRUMB(CRUMB_TIME);
+
+    static char month[12][15] = {"January", "February", "March", "April", "May", "June", "July", "August", "Sept", "October", "November", "December"};
+    static char ShortMonth[12][7] = {"Jan. ", "Feb. ", "Mar. ", "Apr. ", "May  ", "June ", "July ", "Aug. ", "Sept ", "Oct. ", "Nov. ", "Dec. "};
+
+    char NB[10];
+    char TimeString[80];
+    char Space[] = " ";
+    char colon[] = ":";
+    char zero[] = "0";
+    char DateTime[] = "DateTime";
+
+    uint8_t DisplayedHour;
+    FixDeltaGMTSign();
+    if (CurrentView == FRONTVIEW || CurrentView == OPTIONVIEW2)
+    {
+        if (RTC.read(tm))
+        {
+            strcpy(TimeString, Str(NB, tm.Day + DateFix, 0));
+            if (CurrentView == OPTIONVIEW2)
+            {
+                if ((tm.Day) < 10)
+                {
+                    strcat(TimeString, Space); // to align better the rest of the data
+                    strcat(TimeString, Space);
+                }
+            }
+            strcat(TimeString, Space);
+            if (CurrentView == OPTIONVIEW2)
+            {
+                strcat(TimeString, ShortMonth[tm.Month - 1]);
+            }
+            else
+            {
+                strcat(TimeString, month[tm.Month - 1]);
+            }
+            strcat(TimeString, Space);
+            strcat(TimeString, (Str(NB, tmYearToCalendar(tm.Year), 0)));
+            strcat(TimeString, Space);
+            int LocalHour = (int)tm.Hour + DeltaGMT; // ClaudeFix-2-7-2026 signed: DisplayedHour is uint8_t, so a negative GMT wrapped it to ~251 and the <0 fix never ran
+            DateFix = 0;
+            if (LocalHour >= 24)
+            {
+                LocalHour -= 24;
+                DateFix = 1;
+            }
+            if (LocalHour < 0)
+            {
+                LocalHour += 24;
+                DateFix = -1;
+            }
+            DisplayedHour = (uint8_t)LocalHour;
+            if (MayBeAddZero(DisplayedHour))
+                strcat(TimeString, zero);
+            strcat(TimeString, Str(NB, DisplayedHour, 0));
+            strcat(TimeString, colon);
+            if (MayBeAddZero(tm.Minute))
+                strcat(TimeString, zero);
+            strcat(TimeString, Str(NB, tm.Minute, 0));
+            strcat(TimeString, colon);
+            if (MayBeAddZero(tm.Second))
+                strcat(TimeString, zero);
+            strcat(TimeString, Str(NB, tm.Second, 0));
+            SendText(DateTime, TimeString);
+        }
+    }
+}
+/************************************************************************************************************/
+FLASHMEM void ResetSubTrims()
+{
+    for (int i = 0; i < 16; ++i)
+    {
+        SubTrims[i] = 127;
+    }
+}
+/**************************** Clear Macros if junk was loaded from SD ********************************************************************************/
+void CheckMacrosBuffer()
+{
+
+    bool junk = false;
+    for (uint8_t i = 0; i < MAXMACROS; ++i)
+    {
+        if (MacrosBuffer[i][MACROTRIGGERCHANNEL] > 16)
+            junk = true;
+        if (MacrosBuffer[i][MACROMOVECHANNEL] > 16)
+            junk = true;
+        if (MacrosBuffer[i][MACROMOVETOPOSITION] > 180)
+            junk = true;
+        if (MacrosBuffer[i][MACROTRIGGERCHANNEL] > 0)
+            UseMacros = true;
+    }
+    if (junk == false)
+        return;
+    UseMacros = false;
+    for (uint8_t j = 0; j < BYTESPERMACRO; ++j)
+    {
+        for (uint8_t i = 0; i < MAXMACROS; ++i)
+        {
+            MacrosBuffer[i][j] = 0;
+        }
+    }
+}
+
+/*********************************************************************************************************************************/
+
+void StartInactvityTimeout()
+{
+    Inactivity_Start = millis();
+}
+
+/*********************************************************************************************************************************/
+
+uint8_t GetLEDBrightness()
+{
+    static uint8_t BlinkOnPhase = 1;
+    static uint32_t BlinkTimer = 0;
+
+    if (LEDBrightness < 15)
+    {
+        LEDBrightness = DEFAULTLEDBRIGHTNESS;
+        SaveTransmitterParameters();
+    }
+
+    if (LedIsBlinking)
+    {
+        if ((millis() - BlinkTimer) > (1000 / BlinkHertz))
+        {
+            BlinkOnPhase ^= 1;
+            BlinkTimer = millis();
+        }
+    }
+    else
+    {
+        BlinkOnPhase = 1;
+    }
+    if (BlinkOnPhase)
+    {
+        return LEDBrightness; // 0 - 254 (= brightness)
+    }
+    else
+    {
+        return 0;
+    }
+}
+
+/*********************************************************************************************************************************/
+uint8_t IntoDegrees(uint16_t HiRes) // convert to lower resolution for screen display
+{
+    return (map(HiRes, MINMICROS, MAXMICROS, 0, 180));
+}
+/*********************************************************************************************************************************/
+uint8_t IntoLowerRes(uint16_t HiRes) // convert to lower resolution for screen display
+{
+    return (map(HiRes, MINMICROS, MAXMICROS, 0, 100));
+}
+
+/*********************************************************************************************************************************/
+uint16_t IntoHigherRes(uint8_t LowRes) // This returns the main curve-points at the higher resolution for Servo output
+{
+    return map(LowRes, 0, 180, MINMICROS, MAXMICROS);
+}
+/*********************************************************************************************************************************/
+void ClearText()
+{
+    for (int i = 0; i < MAXTEXTIN; ++i)
+    {
+        TextIn[i] = 0;
+    }
+    //   memset(TextIn, 0, sizeof(TextIn)); // Clear the text input buffer
+}
+
+/*********************************************************************************************************************************/
+
+/** Send 13 joined together char arrays to NEXTION */
+void SendCharArray(char *ch0, char *ch1, char *ch2, char *ch3, char *ch4, char *ch5, char *ch6, char *ch7, char *ch8, char *ch9, char *ch10, char *ch11, char *ch12)
+{
+    strcpy(ch0, ch1);
+    strcat(ch0, ch2);
+    strcat(ch0, ch3);
+    strcat(ch0, ch4);
+    strcat(ch0, ch5);
+    strcat(ch0, ch6);
+    strcat(ch0, ch7);
+    strcat(ch0, ch8);
+    strcat(ch0, ch9);
+    strcat(ch0, ch10);
+    strcat(ch0, ch11);
+    strcat(ch0, ch12);
+    SendCommand(ch0);
+}
+
+// /*********************************************************************************************************************************/
+int GetNextNumber(int p1, char text1[CHARSMAX])
+{
+    int i = p1 - 1;
+    int result = 0;
+
+    while (i < CHARSMAX && isdigit(text1[i]))
+    {
+        result = result * 10 + (text1[i] - '0');
+        ++i;
+    }
+
+    return result;
+}
+/*********************************************************************************************************************************/
+
+void ClearSuccessRate()
+{
+    for (int i = 0; i < (PACKET_HISTORY_WINDOW * (uint16_t)ConnectionAssessSeconds); ++i)
+    { // 126 packets per second start off good
+        if (i < PACKET_HISTORY_WINDOW)
+            PacketsHistoryBuffer[i] = 1;
+    }
+}
+
+/*********************************************************************************************************************************/
+
+FASTRUN void DrawDot(int xx, int yy, int rad, int colr)
+{
+    char cirs[] = "cirs ";
+    char nb[12];
+    char cb[60];
+    char comma[] = ",";
+    strcpy(cb, cirs);
+    strcat(cb, Str(nb, xx, 0));
+    strcat(cb, comma);
+    strcat(cb, Str(nb, yy, 0));
+    strcat(cb, comma);
+    strcat(cb, Str(nb, rad, 0));
+    strcat(cb, comma);
+    strcat(cb, Str(nb, colr, 0));
+    SendCommand(cb);
+}
+
+/*********************************************************************************************************************************/
+
+/**
+ * @param x1
+ * @param y1
+ * @param x2
+ * @param y2
+ * @param color
+ */
+FASTRUN void DrawBox(int x1, int y1, int x2, int y2, int c)
+{
+    char line[] = "draw ";
+    char nb[12];
+    char cb[60];
+    char comma[] = ",";
+    strcpy(cb, line);
+    strcat(cb, Str(nb, x1, 0));
+    strcat(cb, comma);
+    strcat(cb, Str(nb, y1, 0));
+    strcat(cb, comma);
+    strcat(cb, Str(nb, x2, 0));
+    strcat(cb, comma);
+    strcat(cb, Str(nb, y2, 0));
+    strcat(cb, comma);
+    strcat(cb, Str(nb, c, 0));
+    SendCommand(cb);
+}
+
+/*********************************************************************************************************************************/
+/**
+ * @param x1
+ * @param y1
+ * @param x2
+ * @param y2
+ * @param color
+ */
+void FillBox(int x1, int y1, int w, int h, int c)
+{
+    char line[] = "fill ";
+    char nb[12];
+    char cb[60];
+    char comma[] = ",";
+    strcpy(cb, line);
+    strcat(cb, Str(nb, x1, 0));
+    strcat(cb, comma);
+    strcat(cb, Str(nb, y1, 0));
+    strcat(cb, comma);
+    strcat(cb, Str(nb, w, 0));
+    strcat(cb, comma);
+    strcat(cb, Str(nb, h, 0));
+    strcat(cb, comma);
+    strcat(cb, Str(nb, c, 0));
+    SendCommand(cb);
+}
+
+/*********************************************************************************************************************************/
+
+/**
+ * @param x1
+ * @param y1
+ * @param x2
+ * @param y2
+ * @param color
+ */
+void DrawLine(int x1, int y1, int x2, int y2, int c)
+{
+    char line[] = "line ";
+    char nb[12];
+    char cb[60];
+    char comma[] = ",";
+    strcpy(cb, line);
+    strcat(cb, Str(nb, x1, 0));
+    strcat(cb, comma);
+    strcat(cb, Str(nb, y1, 0));
+    strcat(cb, comma);
+    strcat(cb, Str(nb, x2, 0));
+    strcat(cb, comma);
+    strcat(cb, Str(nb, y2, 0));
+    strcat(cb, comma);
+    strcat(cb, Str(nb, c, 0));
+    SendCommand(cb);
+}
+
+/*********************************************************************************************************************************/
+
+int DegsToPercent(int degs)
+{
+    return map(degs, 0, 180, -100, 100);
+}
+
+/*********************************************************************************************************************************/
+
+void ClearBox()
+{
+    char cmd[80];
+    SendOtherValue((char *)"GraphView.pic", BackGroundSelection);
+    delay(50);
+    char fillcmd[] = "fill 36, 36, 360, 360,0";
+    strcpy(cmd, fillcmd);
+    SendCommand(cmd);
+}
+// *********************************************************************************************************************************/
+void DelaySimple(uint32_t ms)
+{
+    uint32_t ThisMoment = millis();
+    while (millis() - ThisMoment < ms)
+    {
+        KickTheDog(); // keep the dog happy and its tail wagging so it doesn't bite us!
+        delay(10);    // this is needed to allow the dog to wag its tail!
+    }
+}
+
+/*********************************************************************************************************************************/
+uint16_t GetSuccessRate()
+{
+    uint32_t Total = 0; // Accumulates number of successful packets
+    uint16_t SuccessRate;
+    for (uint16_t i = 0; i < PACKET_HISTORY_WINDOW; ++i)
+        Total += PacketsHistoryBuffer[i]; // Sum successes from ring buffer
+
+    SuccessRate = (Total * 100) / PACKET_HISTORY_WINDOW; // Percentage of successful packets
+    return SuccessRate;
+}
+/*********************************************************************************************************************************/
+//                  My new version of the the traditional "map()" function -- but here with exponential added.
+/*********************************************************************************************************************************/
+
+FASTRUN float MapWithExponential(float xx, float Xxmin, float Xxmax, float Yymin, float Yymax, float Expo)
+{
+    Expo = map(Expo, -100, 100, -0.25, 0.75);
+    xx = pow(xx * xx, Expo);
+    Xxmin = pow(Xxmin * Xxmin, Expo);
+    Xxmax = pow(Xxmax * Xxmax, Expo);
+    return map(xx, Xxmin, Xxmax, Yymin, Yymax);
+}
+
+// ******************************************************************************************************************************
+bool AnyMatches(uint8_t a, uint8_t b, uint8_t c)
+{
+    if (a == b)
+        return true;
+    if (a == c)
+        return true;
+    if (b == c)
+        return true;
+    return false;
+}
+
+/******************************************** CHANNEL REVERSE FUNCTION **********************************************************/
+
+FASTRUN void ServoReverse()
+{
+    for (uint8_t i = 0; i < 16; i++)
+    {
+        if (ReversedChannelBITS & 1 << i)
+        {                                                                                     // Is this channel reversed?
+            PreMixBuffer[i] = map(SendBuffer[i], MINMICROS, MAXMICROS, MAXMICROS, MINMICROS); // Yes so reverse the channel
+            SendBuffer[i] = PreMixBuffer[i];
+        }
+    }
+}
+
+/************************************************************************************************************/
+void DelayWithDog(uint32_t HowLong)
+{ // Implements delay() while kicking the dog (very cruelly) and checking for power-off button and sending data to RX.
+    CRUMB(CRUMB_DELAY);
+    uint32_t ThisMoment = millis();
+    static bool AlreadyKicking = false;
+    if (AlreadyKicking)
+        return; // Guard against possible recursivity which would be disastrous
+    AlreadyKicking = true;
+    while ((millis() - ThisMoment) < HowLong)
+    {
+        KickTheDog();
+        CheckPowerOffButton();
+        if (ModelMatched && BoundFlag)
+        {
+            GetNewChannelValues(); // these might have changed while we were waiting
+            FixMotorChannel();     // ensure motor channel is off if that's needed
+            SendData();            // send new data to RX
+        }
+    }
+    AlreadyKicking = false;
+}
+
+// ********************************************************************************************************************
+void SpeedTest()
+{
+
+    // calculate how many prime numbers are there between 1 and 100000
+    // and also how long it takes to calculate them
+    Look("Calculating prime numbers between 1 and 100000 ...");
+    int count = 0;
+    unsigned long start = millis();
+    for (int i = 1; i < 100000; i++)
+    {
+        KickTheDog();
+        bool isPrime = true;
+        for (int j = 2; j <= i / 2; j++)
+        {
+            if (i % j == 0)
+            {
+                isPrime = false;
+                break;
+            }
+        }
+        if (isPrime)
+        {
+            count++;
+        }
+    }
+    unsigned long end = millis();
+    Look1("There are ");
+    Look1(count);
+    Look(" prime numbers between 1 and 100000");
+    Look1("Time taken to calculate them is ");
+    Look1(end - start);
+    Look(" milliseconds");
+    DelayWithDog(1000);
+}
+
+/******************************************************************************************************************************/
+// Gets Windows style confirmation (FILE OVERWRITE ETC.)
+// params:
+// Prompt is the prompt
+// goback is the command needed to return to calling page
+
+bool GetConfirmation(char *goback, char *Prompt)
+{
+    char GoPopupView[] = "page PopupView";
+    char Dialog[] = "Dialog";
+    SendCommand(GoPopupView);
+    SendText(Dialog, Prompt);
+    GetYesOrNo();
+    SendCommand(goback);
+    LastFileInView = 120;
+    if (Confirmed[0] == 'Y')
+        return true; // tell caller OK to continue
+    return false;    // tell caller STOP!
+}
+
+/******************************************************************************************************************************/
+// Windows style MSGBOX
+// params:
+// Prompt is the prompt
+// goback is the command needed to return to calling page
+
+void MsgBox(char *goback, char *Prompt)
+{
+    char GoPopupView[] = "page PopupView";
+    char Dialog[] = "Dialog";
+    char NoCancel[] = "vis b1,0"; // hide cancel button
+    SendCommand(GoPopupView);
+    SendCommand(NoCancel);
+    SendText(Dialog, Prompt);
+    GetYesOrNo();
+    SendCommand(goback);
+    LastFileInView = 120;
+    return;
+}
+
+/******************************************************************************************************************************/
+void YesPressed() { Confirmed[0] = 'Y'; }
+/******************************************************************************************************************************/
+void NoPressed() { Confirmed[0] = 'N'; }
+/******************************************************************************************************************************/
+
+/******************************************************************************************************************************/
+
+uint8_t ModalWaits = 0; // V1B: how many questions are waiting for an answer (the file link is refused meanwhile)
+void GetYesOrNo()
+{ // on return from here, Confirmed[0] will be Y or N
+    Confirmed[0] = '?';
+    ++ModalWaits;
+    CRUMB(CRUMB_QUESTION);
+    while (Confirmed[0] == '?')
+    { // await user response
+        CheckForNextionButtonPress();
+        CheckPowerOffButton();
+        KickTheDog();
+        if (BoundFlag && ModelMatched)
+        {
+            GetNewChannelValues();
+            FixMotorChannel();
+            SendData();
+        }
+    }
+    --ModalWaits;
+}
+/******************************************************************************************************************************/
+bool GetBackupFilename(char *goback, char *tt1, char *MMname, char *heading, char *pprompt)
+{ // HERE THE USER CAN REPLACE DEFAULT FILENAME IF HE WANTS TO
+
+    char GoBackupView[] = "page BackupView";
+    char t0[] = "t0";           // prompt
+    char t1[] = "t1";           // default filename
+    char t3[] = "t3";           // heading
+    char Mname[] = "Modelname"; // model name
+    SendCommand(GoBackupView);
+    SendText(t0, pprompt);   // prompt
+    SendText(t1, tt1);       // filename
+    SendText(Mname, MMname); // Model name
+    SendText(t3, heading);   // heading
+    GetYesOrNo();
+    GetText(t1, SingleModelFile, 40); // ClaudeFix-2-7-2026
+    SendCommand(goback);
+    if (Confirmed[0] == 'Y')
+        return true;
+    return false;
+}
+/******************************************************************************************************************************/
+void SaveCurrentModel()
+{
+    SavedModelNumber = ModelNumber;
+}
+
+// ************************************************************************
+// This function looks at the TextIn for an int and returns it as an integer
+int GetIntFromTextIn(uint8_t offset)
+{
+    union
+    {
+        uint8_t F4Bytes[4];
+        int FDWord;
+    } NextionCommand;
+
+    for (uint8_t i = 0; i < 4; i++)
+        NextionCommand.F4Bytes[i] = TextIn[i + offset];
+    return NextionCommand.FDWord;
+}
+// ************************************************************************************************************/
+void ShowMismatchMsg()
+{
+    if (CurrentView != FRONTVIEW)
+        GotoFrontView(); // if needed
+
+    char prompt[200];
+    char TDetails[40];
+    char RDetails[40];
+    strcpy(RDetails, (char *)"Versions mismatch!\r\n\r\nRX:");
+    strcat(RDetails, ReceiverVersionNumber);
+    strcpy(TDetails, (char *)"TX:");
+    strcat(TDetails, TransmitterVersionNumber);
+    strcpy(prompt, RDetails);
+    strcat(prompt, (char *)"\r\n");
+    strcat(prompt, TDetails);
+    MsgBox((char *)"page FrontView", prompt);
+}
+
+/************************************************************************************************************/
+
+void WarnUserOfVersionsMismatch()
+{
+    VersionMismatch = true;
+    PlaySound(WHAHWHAHMSG); // Play warning sound
+    ShowMismatchMsg();
+}
+
+/************************************************************************************************************/
+
+void CompareVersionNumbers()
+{ // Warn  user if TX and RX versions don't match - but ignore final letter
+
+    if (VersionsCompared)
+        return;
+    if ((strlen(ReceiverVersionNumber) > 11) || (ReceiverVersionNumber[1] != '.'))
+        return; // Too long etc for a version number. Probably binding data !
+    VersionsCompared = true;
+    for (int i = 0; i < 5; ++i)
+    {
+        if (ReceiverVersionNumber[i] != TransmitterVersionNumber[i])
+        { // Compare the two version numbers, but not the letter
+            WarnUserOfVersionsMismatch();
+            return;
+        }
+    }
+}
+/************************************************************************************************************/
+void swap(uint8_t *a, uint8_t *b)
+{ // Just swap over two bytes, a & b :-)
+    uint8_t c;
+    c = *a;
+    *a = *b;
+    *b = c;
+}
+// ************************************************************************************************************/
+void ChooseBackGround()
+{
+    SendCommand(pColoursView); // go to colours page
+    CurrentView = COLOURS_VIEW;
+}
+// ************************************************************************************************************/
+void Save_BackGround()
+{
+    BackGroundSelection = GetValue((char *)"n0");
+    SaveTransmitterParameters();
+    StartTXSetupView();
+}
+// ************************************************************************************************************/
+/// BUILD_ID_STR should be: __DATE__ " " __TIME__   e.g. "Feb 14 2026 13:31:06"
+
+static int monthFrom3(const char mmm[4])
+{
+    // mmm is "Jan".."Dec"
+    if (mmm[0] == 'J' && mmm[1] == 'a' && mmm[2] == 'n')
+        return 1;
+    if (mmm[0] == 'F' && mmm[1] == 'e' && mmm[2] == 'b')
+        return 2;
+    if (mmm[0] == 'M' && mmm[1] == 'a' && mmm[2] == 'r')
+        return 3;
+    if (mmm[0] == 'A' && mmm[1] == 'p' && mmm[2] == 'r')
+        return 4;
+    if (mmm[0] == 'M' && mmm[1] == 'a' && mmm[2] == 'y')
+        return 5;
+    if (mmm[0] == 'J' && mmm[1] == 'u' && mmm[2] == 'n')
+        return 6;
+    if (mmm[0] == 'J' && mmm[1] == 'u' && mmm[2] == 'l')
+        return 7;
+    if (mmm[0] == 'A' && mmm[1] == 'u' && mmm[2] == 'g')
+        return 8;
+    if (mmm[0] == 'S' && mmm[1] == 'e' && mmm[2] == 'p')
+        return 9;
+    if (mmm[0] == 'O' && mmm[1] == 'c' && mmm[2] == 't')
+        return 10;
+    if (mmm[0] == 'N' && mmm[1] == 'o' && mmm[2] == 'v')
+        return 11;
+    if (mmm[0] == 'D' && mmm[1] == 'e' && mmm[2] == 'c')
+        return 12;
+    return 0;
+}
+
+// Howard Hinnant's days-from-civil (public domain style; widely used)
+static int32_t daysFromCivil(int32_t y, uint32_t m, uint32_t d)
+{
+    y -= (m <= 2);
+    const int32_t era = (y >= 0 ? y : y - 399) / 400;
+    const uint32_t yoe = (uint32_t)(y - era * 400);                        // [0, 399]
+    const uint32_t doy = (153 * (m + (m > 2 ? -3u : 9u)) + 2) / 5 + d - 1; // [0, 365]
+    const uint32_t doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;            // [0, 146096]
+    return era * 146097 + (int32_t)doe;                                    // days relative to an arbitrary origin
+}
+
+uint32_t GetBuildDaysSince2020()
+{
+    const char *s = BUILD_ID_STR;
+
+    // Parse: "Feb 14 2026 13:31:06"
+    char mmm[4] = {0};
+    int dd = 0, yyyy = 0;
+
+    // This ignores the time part safely.
+    if (sscanf(s, "%3s %d %d", mmm, &dd, &yyyy) != 3)
+        return 0;
+
+    const int mm = monthFrom3(mmm);
+    if (mm < 1 || mm > 12 || dd < 1 || dd > 31 || yyyy < 1970)
+        return 0;
+
+    const int32_t base = daysFromCivil(2020, 1, 1);
+    const int32_t cur = daysFromCivil(yyyy, (uint32_t)mm, (uint32_t)dd);
+
+    // cur >= base for your builds; clamp just in case.
+    return (cur >= base) ? (uint32_t)(cur - base) : 0u;
+}
+// ************************************************************************************************************/
+void Enable_Binding()
+{
+    if (!BindingEnabled)
+    {
+        BindingEnabled = true;
+        LedIsBlinking = true;
+        PlaySound(BINDINGENABLED);
+        SendText((char *)"OptionsView.b0", (char *)"Stop Bind");
+    }
+    else
+    {
+        BindingEnabled = false;
+        LedIsBlinking = false;
+        PlaySound(BEEPCOMPLETE);
+        SendText((char *)"OptionsView.b0", (char *)"Bind");
+        if (LedWasRed)
+        {
+            RedLedOn();
+        }
+        if (LedWasGreen)
+        {
+            GreenLedOn();
+        }
+    }
+}
+#endif

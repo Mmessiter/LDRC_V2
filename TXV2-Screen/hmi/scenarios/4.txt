@@ -1,0 +1,17 @@
+# 4 RXSetupView ("Model setup") - FrontView -> StartModelSetup (va0.val=128+50), main.cpp:2732-2750
+# UpdateModelsNameEveryWhere (main.cpp:632-668) adds " (n)" (or " [n]" for a model never bound)
+Screen_Background=8
+@model 1
+page RXSetupView
+ModelName.txt="RAW 420 MCM (3)"
+@shot 4_open
+# no model connected: "Receiver updates" greys out (need "model"); the page is re-shown e.g. on return from Help/Data/Options
+@model 0
+page RXSetupView
+ModelName.txt="RAW 420 MCM (3)"
+@shot 4_nomodel
+# worst case: 30-char model name (rename keyboard limit, RenameView NewName txt_maxl 30) + two-digit model number
+@model 1
+page RXSetupView
+ModelName.txt="SAB GOBLIN RAW 700 COMPETITION (90)"
+@shot 4_long

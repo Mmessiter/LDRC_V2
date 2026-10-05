@@ -1,0 +1,93 @@
+# The flight screen's box sizes (screen 1.7.1): every layout, numbers as big as their boxes, the setup page and its choice of sizes.
+Screen_Background=21
+@model 1
+page FrontView
+ModelName.txt="RAW 420 MCM"
+t4.txt="Bank 1"
+Hours.val=0
+Mins.val=4
+Secs.val=7
+RXBV.txt="7.82V (3.91V per cell)"
+JRX.val=78
+TXBV.txt="8.10V (4.05V per cell)"
+JTX.val=85
+vis Quality,1
+Quality.val=97
+vis rpm,1
+rpm.txt="RPM: 2150"
+vis Warning,1
+Warning.txt="ESC: 52.3"
+vis StillConnected,1
+StillConnected.txt="Amps: 12.4"
+vis wb,1
+wb.txt="mAh: 345"
+bt0.txt="Motor is ON"
+DateTime.txt="3 Oct. 2026 20:31:07"
+Ch1.val=50
+Ch2.val=32
+Ch3.val=71
+Ch4.val=25
+Ch5.val=75
+Ch6.val=50
+Ch7.val=88
+Ch8.val=12
+Ch9.val=50
+Ch10.val=60
+Ch11.val=40
+Ch12.val=50
+Ch13.val=50
+Ch14.val=50
+Ch15.val=66
+Ch16.val=50
+@flying 1
+@flight f2 w1 one s1 timer
+@shot sizes_one
+@flight f2 w1 two s1 timer,rxbat
+@shot sizes_two
+@flight f2 w1 grid4 s1 timer,rxbat,rpm,link
+@shot sizes_grid4
+@flight f2 w1 grid6 s1 timer,rxbat,rpm,link,esc,mah
+@shot sizes_grid6
+@flight f2 w1 grid9 s1 timer,rxbat,rpm,link,esc,mah,amps,txbat,bank
+@shot sizes_grid9
+@flight f2 w1 big2 s1 timer,rpm,rxbat
+@shot sizes_big2
+@flight f2 w1 big4 s1 rpm,timer,rxbat,link,esc
+@shot sizes_big4
+@flight f2 w1 big6 s1 rpm,timer,rxbat,link,esc,mah,amps
+@shot sizes_big6
+@flight f2 w1 wide3 s1 timer,rxbat,rpm,link
+@shot sizes_wide3
+@flight f2 w1 wide4 s1 rpm,timer,rxbat,link,esc
+@shot sizes_wide4
+@flight f2 w1 two3 s1 timer,rpm,rxbat,link,esc
+@shot sizes_two3
+@flight f2 w1 two4 s1 timer,rxbat,rpm,link,esc,mah
+@shot sizes_two4
+@flight f2 w1 big4 s1 bars16,timer,rxbat,link,esc
+@shot sizes_big4_bars
+@flight f2 w1 big2 s1 bank,clock,model
+@shot sizes_big2_words
+@flightsetup f2 w1 big4 s1 rpm,timer,rxbat,link,esc
+@shot sizes_setup
+@flightsetup f2 w1 big4 s1 rpm,timer,rxbat,link,esc @sizes
+@shot sizes_choose
+@flight f2 w1 big4 s1 rpm,timer,rxbat,link,esc b:9.1,10.5,11.4,12.6,3.
+@shot colours_boxes
+@flightsetup f2 w1 big4 s1 rpm,timer,rxbat,link,esc b:9.1,10.5,11.4,12.6,3.
+@shot colours_boxes_setup
+@flight f2 w1 grid6 s1 timer,rxbat,rpm,link,esc,mah b:9.,3.,10.5,11.4,8.,12.6
+@shot colours_boxes6
+@flightsetup f2 w1 big4 s1 rpm,timer,rxbat,link,esc @box 2 @boxcolour 10 5
+@shot colours_box_page
+exp0.path="sd0/images/Raw420.jpg"
+vis exp0,1
+@flight f2 w1 big4 s1 image,timer,rxbat,link,esc b:,9.,10.5,,
+@shot colours_image_box
+@flight f2 w1 grid6 s1 timer,image,rpm,link,esc,mah
+@shot colours_image_small
+# the picture in two boxes, and the model's name in a third (screen 1.8.0: Malcolm saw it in one box only - the other was "Model")
+@flight f2 w1 big4 s1 image,image,model,timer
+@shot colours_image_twice
+@flightsetup f2 w1 grid6 s1 image,timer,image,model,image,rxbat
+@shot colours_image_thrice_setup

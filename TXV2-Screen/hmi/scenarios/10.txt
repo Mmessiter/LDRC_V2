@@ -1,0 +1,62 @@
+# PickBankView2 (page 10), a dialog with no background. SaveRFParameters RF_Save_Restore.h:455: page PickBankView2; n0.val=Bank; n1.val=Bank;
+# RF < 2.25 also: sw4.val=0, vis sw4,0, vis t9,0. Bank switch while up: n0/n1.val=Bank (Switches.h:383).
+Screen_Background=8
+@model 1
+# parent page: Start_RF_Backup_Restore RF_Save_Restore.h:516
+page RFBackUpView
+t14.txt="Bank 1"
+t8.txt="Rate 1"
+t11.txt="RAW 420 MCM"
+page PickBankView2
+n0.val=1
+n1.val=1
+@shot 10_open
+# the bank switch moves to bank 3 while the dialog is up
+n0.val=3
+n1.val=3
+@shot 10_bank3
+# after a finished run the dialog reopens over RFView (case 400 -> SaveRFParameters)
+page RFView
+t11.txt="RAW 420 MCM"
+Ratio.txt="10.30"
+Arming.txt="6"
+sw0.val=0
+t5.txt="2.3"
+t14.txt="Bank 1"
+t8.txt="Rate 1"
+vis Progress,1
+vis t2,1
+Progress.val=1
+t2.txt="Saving PIDs: FC Bank 1 to LocalBank 1"
+Progress.val=99
+t2.txt="Success!"
+vis Progress,0
+vis t2,0
+t2.txt=" "
+page PickBankView2
+n0.val=1
+n1.val=1
+@shot 10_again
+# ---- worst case: no texts are sent to this dialog; bank 4 + the longest model name on the page beneath
+# parent page: Start_RF_Backup_Restore RF_Save_Restore.h:516
+page RFBackUpView
+t14.txt="Bank 4"
+t8.txt="Rate 4"
+t11.txt="GOBLIN RAW 700 COMPETITION MK2"
+page PickBankView2
+n0.val=4
+n1.val=4
+@shot 10_long
+# Rotorflight 2.2 flight controller: governor option hidden (last: the screen keeps sw4.val=0 afterwards)
+# parent page: Start_RF_Backup_Restore RF_Save_Restore.h:516
+page RFBackUpView
+t14.txt="Bank 1"
+t8.txt="Rate 1"
+t11.txt="RAW 420 MCM"
+page PickBankView2
+n0.val=1
+n1.val=1
+sw4.val=0
+vis sw4,0
+vis t9,0
+@shot 10_rf22

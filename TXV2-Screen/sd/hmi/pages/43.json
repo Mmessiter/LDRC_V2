@@ -1,0 +1,1 @@
+{"name":"SplashView","id":43,"w":800,"h":480,"bg":{"sta":1,"mode":"solid colour","colour":"#ffffff","rgb565":65535},"nav":{"up":255,"down":255,"left":255,"right":255},"ev":{},"comps":[{"n":"p0","i":1,"t":"picture","g":"l","x":0,"y":0,"w":800,"h":480,"pic":{"pic":0}}]}

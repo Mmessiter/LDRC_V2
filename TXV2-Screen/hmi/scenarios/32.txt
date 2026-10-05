@@ -1,0 +1,88 @@
+# 32 SubTrimView - group C scenario (what the Teensy sends; file:line = TXV1B/TransmitterCode)
+Screen_Background=8
+@model 1
+# StartSubTrimView (Trims.h:353), 128+20 from RXSetupView. (The page's own preinit "click n00,0" prints StCH;
+# the Teensy's answer to it is n0/h0 again, the same values as below.)
+page SubTrimView
+ch1.txt="Aileron"
+n00.val=3
+ch2.txt="Elevator"
+n1.val=-5
+ch3.txt="Throttle"
+n2.val=0
+ch4.txt="Rudder"
+n3.val=12
+ch5.txt="Gear"
+n4.val=0
+ch6.txt="AUX1"
+n5.val=0
+ch7.txt="AUX2"
+n6.val=0
+ch8.txt="AUX3"
+n7.val=0
+ch9.txt="AUX4"
+n8.val=0
+ch10.txt="AUX5"
+n9.val=0
+ch11.txt="AUX6"
+n10.val=0
+ch12.txt="AUX7"
+n11.val=0
+ch13.txt="AUX8"
+n12.val=0
+ch14.txt="AUX9"
+n13.val=0
+ch15.txt="AUX10"
+n14.val=0
+ch16.txt="AUX11"
+n15.val=0
+n0.val=3
+h0.val=130
+ModelName.txt="RAW 420 MCM (3)"
+@shot 32_open
+# the pilot touches channel 4 (screen-side; simulated with click) -> the page prints "StCH" (main.cpp:3360)
+click n3,0
+# get s0.val
+n0.val=12
+h0.val=139
+@shot 32_ch4
+# ---- worst case: extremes -127 / +127, longest names and model name
+# StartSubTrimView (Trims.h:353), 128+20 from RXSetupView. (The page's own preinit "click n00,0" prints StCH;
+# the Teensy's answer to it is n0/h0 again, the same values as below.)
+page SubTrimView
+ch1.txt="WWWWWWWWWW"
+n00.val=-127
+ch2.txt="WWWWWWWWWW"
+n1.val=127
+ch3.txt="WWWWWWWWWW"
+n2.val=-127
+ch4.txt="WWWWWWWWWW"
+n3.val=127
+ch5.txt="WWWWWWWWWW"
+n4.val=-127
+ch6.txt="WWWWWWWWWW"
+n5.val=127
+ch7.txt="WWWWWWWWWW"
+n6.val=-127
+ch8.txt="WWWWWWWWWW"
+n7.val=127
+ch9.txt="WWWWWWWWWW"
+n8.val=-127
+ch10.txt="WWWWWWWWWW"
+n9.val=127
+ch11.txt="WWWWWWWWWW"
+n10.val=-127
+ch12.txt="WWWWWWWWWW"
+n11.val=127
+ch13.txt="WWWWWWWWWW"
+n12.val=-127
+ch14.txt="WWWWWWWWWW"
+n13.val=127
+ch15.txt="WWWWWWWWWW"
+n14.val=-127
+ch16.txt="WWWWWWWWWW"
+n15.val=127
+n0.val=-127
+h0.val=0
+ModelName.txt="WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW (90)"
+@shot 32_long

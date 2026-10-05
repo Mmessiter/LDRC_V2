@@ -1,0 +1,154 @@
+# Rates_A_View (page 42). StartRatesAdvancedView RF_Rates_Advanced.h:132 -> ShowRatesAdvancedBank :89 -> RatesAdvancedMsg :57;
+# values Display_Advanced_Rates_Values :23 (ack 25-28); Hide_Advanced_Rates_Msg :13 after MSP_WAIT_TIME.
+Screen_Background=8
+@model 1
+page Rates_A_View
+t9.txt="Rate 1"
+n0.pco=33840
+n1.pco=33840
+n2.pco=33840
+n3.pco=33840
+n4.pco=33840
+n5.pco=33840
+n6.pco=33840
+n7.pco=33840
+n8.pco=33840
+n9.pco=33840
+n10.pco=33840
+n11.pco=33840
+n12.pco=33840
+n13.pco=33840
+t14.pco=33840
+busy.txt="Loading values for Rate 1"
+vis busy,1
+vis b3,0
+t11.txt="RAW 420 MCM"
+@shot 42_busy
+n0.val=0
+n1.val=0
+n2.val=0
+n3.val=0
+n4.val=0
+n5.val=0
+n6.val=0
+n7.val=0
+n8.val=15
+n9.val=15
+n10.val=90
+n11.val=15
+n12.val=0
+n13.val=10
+t14.txt="6.0"
+vis busy,0
+n0.pco=0
+n1.pco=0
+n2.pco=0
+n3.pco=0
+n4.pco=0
+n5.pco=0
+n6.pco=0
+n7.pco=0
+n8.pco=0
+n9.pco=0
+n10.pco=0
+n11.pco=0
+n12.pco=0
+n13.pco=0
+t14.pco=0
+@shot 42_open
+# pilot edits a value (screen keyboard), Teensy RatesAdvancedWereEdited :51
+n0.val=20
+vis b3,1
+@shot 42_edited
+# Save -> SendEditedRatesAdvanced :198 (connected)
+n0.pco=33840
+n1.pco=33840
+n2.pco=33840
+n3.pco=33840
+n4.pco=33840
+n5.pco=33840
+n6.pco=33840
+n7.pco=33840
+n8.pco=33840
+n9.pco=33840
+n10.pco=33840
+n11.pco=33840
+n12.pco=33840
+n13.pco=33840
+t14.pco=33840
+busy.txt="Sending edited values ..."
+vis busy,1
+vis b3,0
+@shot 42_sending
+vis busy,0
+n0.pco=0
+n1.pco=0
+n2.pco=0
+n3.pco=0
+n4.pco=0
+n5.pco=0
+n6.pco=0
+n7.pco=0
+n8.pco=0
+n9.pco=0
+n10.pco=0
+n11.pco=0
+n12.pco=0
+n13.pco=0
+t14.pco=0
+# ---- worst case: Rate 4, 30-char model name, uint8 maxima ("25.5" in t14), longest message
+# ("Saving edited Advanced Rates ...", SaveLocalRatesAdvancedBank :182, the not-connected Save)
+page Rates_A_View
+t9.txt="Rate 4"
+n0.pco=33840
+n1.pco=33840
+n2.pco=33840
+n3.pco=33840
+n4.pco=33840
+n5.pco=33840
+n6.pco=33840
+n7.pco=33840
+n8.pco=33840
+n9.pco=33840
+n10.pco=33840
+n11.pco=33840
+n12.pco=33840
+n13.pco=33840
+t14.pco=33840
+busy.txt="Saving edited Advanced Rates ..."
+vis busy,1
+vis b3,0
+t11.txt="GOBLIN RAW 700 COMPETITION MK2"
+n0.val=255
+n1.val=255
+n2.val=255
+n3.val=255
+n4.val=255
+n5.val=255
+n6.val=255
+n7.val=255
+n8.val=255
+n9.val=255
+n10.val=255
+n11.val=255
+n12.val=255
+n13.val=255
+t14.txt="25.5"
+@shot 42_long_busy
+vis busy,0
+n0.pco=0
+n1.pco=0
+n2.pco=0
+n3.pco=0
+n4.pco=0
+n5.pco=0
+n6.pco=0
+n7.pco=0
+n8.pco=0
+n9.pco=0
+n10.pco=0
+n11.pco=0
+n12.pco=0
+n13.pco=0
+t14.pco=0
+@shot 42_long

@@ -1,0 +1,67 @@
+# 54 OneSwitchView ("Switch") - SwitchesView: touch a number or its job (print "OneSwitchView 3") -> main.cpp:3681-3689
+# UpdateOneSwitchView/DoOneSwitchView (main.cpp:2285-2340): Sw = switch number (a number box in the title bar),
+# all ten radios cleared then one set, c_revd twice, t3..t6 "Channel 9".."Channel 12" each overwritten by the
+# model's channel names 9-12 when those are 2+ chars ("Ch 9".. for a model made with SetDefaultValues)
+Screen_Background=8
+@model 0
+page OneSwitchView
+Sw.val=3
+r0.val=0
+r1.val=0
+r2.val=0
+r3.val=0
+r4.val=0
+r5.val=0
+r6.val=0
+r7.val=0
+r8.val=0
+r9.val=0
+r2.val=1
+c_revd.val=0
+c_revd.val=0
+t3.txt="Channel 9"
+t3.txt="Ch 9"
+t4.txt="Channel 10"
+t4.txt="Ch 10"
+t5.txt="Channel 11"
+t5.txt="Ch 11"
+t6.txt="Channel 12"
+t6.txt="Ch 12"
+ModelName.txt="RAW 420 MCM (3)"
+@shot 54_open
+# OK pressed (print "SwitchesView1" -> ReadNewSwitchFunction, main.cpp:2376-2504): progress bar while reading back
+vis Progress,1
+Progress.val=10
+Progress.val=15
+Progress.val=25
+Progress.val=30
+Progress.val=40
+Progress.val=50
+Progress.val=60
+@shot 54_busy
+# worst case: switch 4, channel 12 chosen, reversed, 10-char channel names, 30-char model name + 2-digit number
+page OneSwitchView
+Sw.val=4
+r0.val=0
+r1.val=0
+r2.val=0
+r3.val=0
+r4.val=0
+r5.val=0
+r6.val=0
+r7.val=0
+r8.val=0
+r9.val=0
+r6.val=1
+c_revd.val=0
+c_revd.val=1
+t3.txt="Channel 9"
+t3.txt="Retracts 2"
+t4.txt="Channel 10"
+t4.txt="Nav lights"
+t5.txt="Channel 11"
+t5.txt="Smoke pump"
+t6.txt="Channel 12"
+t6.txt="Flaps down"
+ModelName.txt="SAB GOBLIN RAW 700 COMPETITION (90)"
+@shot 54_long

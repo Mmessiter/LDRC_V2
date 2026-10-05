@@ -1,0 +1,1835 @@
+// ***************************************** 1Definitions.h ***************************************
+// NOTE: This header contains *definitions* of globals (storage), not just declarations.          *
+// Project must remain only main.cpp compiled plus many .h include files.                         *
+// If additional .cpp files are added they must NOT include this header, only extern declarations *
+// ************************************************************************************************
+// Malcolm Messiter 2020 - 2026
+
+#ifndef Definitions_H
+#define Definitions_H
+
+#include <Arduino.h>
+#include <Watchdog_t4.h>
+#include <PulsePosition.h>
+#include <RF24.h>
+#include <SD.h>
+#include <SPI.h>
+#include <Wire.h>
+#include <Adafruit_INA219.h>
+#include <DS1307RTC.h>
+#include <InterpolationLib.h>
+#include "ADC-master/ADC.h"
+
+// *************************************************************************************
+//                   TX VERSION NUMBER   (2020 - 2026 Malcolm Messiter)                *
+//**************************************************************************************
+
+#define BUILD_ID_STR __DATE__ " " __TIME__ // EG "Aug 03 2026 13:31:06"
+#define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
+#define TXVERSION_MINOR 5
+#define TXVERSION_MINIMUS 6
+#define TXVERSION_EXTRA "B31 05/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+
+// *************************************************************************************
+//          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
+//**************************************************************************************
+
+// #define DB_NEXTION        // Debug NEXTION
+// #define DB_SD             // Debug SD card data
+// #define DB_CHECKSUM       // Debug 32BIT file checksum info
+// #define DB_FHSS           // Debug real time FHSS data
+// #define DB_SENSORS        // Debug Sensors
+// #define DB_BIND           // Debug Binding
+// #define DB_MODEL_EXCHANGE // Debug MODEL EXCHANGE (by RF link)
+// #define DB_Variometer     // Debug Variometer
+// #define DB_PACKETDATA     // Debug Packet Data
+// #define DB_Reconnect      // Debug reconnections
+// #define DB_BUILD_AGE_GAP  // Debug build age gap checking (set FAKE_BUILD_AGE_GAP to a value greater than MAX_ACCEPTABLE_AGE_GAP to see the message box)
+
+// ************************************************************************************
+//                                       General                                      *
+// ************************************************************************************
+
+#define PACEMAKER 2                           // (SOLO RATE) 2 ms = 500 Hz. MINIMUM ms between sent packets of data. These brief pauses allow the receiver to poll its i2c Sensor hub, and TX to ShowComms();
+#define PACEMAKER_BUDDY 4                     // (BUDDY RATE) 4 ms = 250 Hz. MINIMUM ms between sent packets of data. These brief pauses allow the receiver to poll its i2c Sensor hub, and TX to ShowComms();
+#define PACKET_HISTORY_WINDOW 200             // For success rate calculation
+#define TIMEFORTXMANAGMENT 1                  // 1 is plenty. takes only 1ms or so
+#define MAXRESOLUTION 4095                    // 12 BIT ADC Resolution
+#define CE_PIN 7                              // for SPI to nRF24L01
+#define CSN_PIN 8                             // for SPI to nRF24L01
+#define BINDINGTIME 2000                      // 2 seconds to bind ?
+#define CHANNELSUSED 16                       // 16 channels in use
+#define UNCOMPRESSEDWORDS 20                  // these are all bigger than needed
+#define COMPRESSEDWORDS 20                    // these are all bigger than needed
+#define SENDBUFFERSIZE 20                     // these are all bigger than needed
+#define DEFAULTPIPEADDRESS 0xB7BE3E9423LL     // Pipe address for startup - any value but MUST match RX
+#define MAXMIXES 32                           // 32 mixes
+#define TICKSPERMINUTE 60000                  // millis() = 60000 per minute
+#define PROPOCHANNELS 8                       // Only 4 have knobs / 2 sticks (= 4 hall sensors)
+#define BANKSWITCH 4                          // Default BANK switch
+#define AUTOSWITCH 1                          // Default AUTO switch
+#define BANKS_USED 4                          // Flight modes (AKA Banks)
+#define LOWBATTERY 42                         // Default percent for warning (User definable)
+#define DEFAULTTRIMREPEATSPEED 600            //
+#define INACTIVITYTIMEOUT 10 * TICKSPERMINUTE // Default time after which to switch off
+#define INACTIVITYMINIMUM 05 * TICKSPERMINUTE // Inactivity timeout minimum is 5 minutes
+#define INACTIVITYMAXIMUM 60 * TICKSPERMINUTE // Inactivity timeout maximum is 60 minutes (it was 30: Malcolm set 60 on 29/09/26 and got 30)
+#define DS1307_ADDRESS 0x68                   // I2C address for RTC
+#define MAXLINES 60                           // text to load at once for help screens
+#define MAXNEXTIONCOMMANDLENGTH 1024          // Max length of NEXTION "Intelligent" command string buffer
+#define DEFAULT_EXPO 50                       // = ZERO EXPO (Range is 0 - 200. Below 50 is negative Expo)
+#define CHARSMAX 250                          // Max length for char arrays  (was 120)
+#define MAXTEXTIN 1024 * 4                    // 4K buffer for incoming text from Nextion
+#define DEFAULTLEDBRIGHTNESS 20               // LED brightness
+#define DEFAULTPOWEROFFWARNING 2              // Default time to warn before cutting power
+#define MAXDUALRATE 200                       //
+#define MAXBUFFERSIZE 1024 * 6                //
+#define MAXMODELNUMBER 91                     //
+#define CRLF "\r\n"                           //
+#define RED_LED_ON_TIME 2000                  // How many ms of no connection before RED led comes on
+#define LOW_VOLTAGE_TIME 10000                // How many ms to endure low voltage before announcing it. (10 seconds)
+#define SHOWCOMMSDELAY 100                    // ms pauses between updated info on NEXTION
+#define WARMUPDELAY 300                       // fails at 200 so must be >200 ...
+#define SCREENCHANGEWAIT 20                   // allow 20ms for screen to appear
+#define BATTERY_CHECK_INTERVAL 1000           // 2 seconds between battery checks
+#define POWERONOFFDELAY 1000                  // Delay after power OFF before transmit stops.
+#define POWERONOFFDELAY2 4000                 // Delay after power ON before Off is possible....
+#define MSP_WAIT_TIME 1000                    // Time to allow for reading MSP data from RX and FC
+
+#define GOV_PROFILE_WAIT_TIME 1000 // Profiles GOV values reading time
+#define GOV_GLOBAL_WAIT_TIME 4000  // Global GOV values reading time
+#define GOV_CONFIG_PAYLOAD_SIZE 42 // bytes [0]-[41]; we use [18]-[41]
+
+// **************************************************************************
+//                            FHSS BITS                                     *
+//***************************************************************************
+#define DATARATE RF24_250KBPS   // RF24_250KBPS or RF24_1MBPS or RF24_2MBPS
+#define FASTDATARATE RF24_2MBPS // (WAS RF24_1MBPS) 2 MBPS = RF24_2MBPS; 1 MBPS = RF24_1MBPS >> THIS IS FOR BUDDY ONLY <<
+#define QUIETCHANNEL 5          // This was found to be the least busy channel in the 2.4GHz band in my house
+#define STOPLISTENINGDELAY 100  // seems close to ideal <<<<< *********
+#define SELECTTARGETDELAY 100
+
+// **************************************************************************
+//           Channel curves box position and dimentions                     *
+//***************************************************************************
+
+#define BOXLEFT 35
+#define BOXTOP 35
+#define BOXWIDTH 395
+#define BOXHEIGHT 395
+#define BOXBOTTOM BOXTOP + BOXHEIGHT
+#define BOXRIGHT BOXLEFT + BOXWIDTH
+
+// **************************************************************************
+//      GOVERNOR (RF)                    *
+//***************************************************************************
+
+#define GOV_ACK_PAYLOAD_SIZE 59
+#define SEND_GOV_PROFILE_RF 6
+#define SEND_GOV_CONFIG_RF 5
+// Governor flags bitmap helpers (must match Nexus.h on RX side)
+#define GOV_FLAG_FALLBACK_PRECOMP (1u << 2)
+#define GOV_FLAG_VOLTAGE_COMP (1u << 3)
+#define GOV_FLAG_PID_SPOOLUP (1u << 4)
+#define GOV_FLAG_DYN_MIN_THROTTLE (1u << 6)
+
+// **************************************************************************
+//                            CURRENTMODE VALUES                            *
+//***************************************************************************
+
+#define NORMAL 0              // Normal = transmit as usual                 (SEND DATA!)
+#define CALIBRATELIMITS 1     // Calibrate limits                           (SEND NO DATA)
+#define CENTRESTICKS 2        // Calibrate Centres                          (SEND NO DATA)
+#define SCANWAVEBAND 3        // Scan waveband                              (SEND NO DATA)
+#define SENDNOTHING 4         // Transmission off                           (SEND NO DATA)
+#define PONGMODE 5            // Play Pong                                  (SEND NO DATA)
+#define LISTENMODE 6          // Listen only - for wireless buddy boxing    (SEND NO DATA)
+#define SAVE_RF_SETTINGS 7    // Save RF settings from RX                   (SEND DATA!)
+#define RESTORE_RF_SETTINGS 8 // Restore RF settings to RX                  (SEND DATA!)
+
+// **************************************************************************
+//                      Colours   (UPPER or Lower case :-)                  *
+// **************************************************************************
+#define BLACK 0
+#define BLUE 31
+#define BROWN 48192
+#define GREEN 2016
+#define YELLOW 65504
+#define RED 63488
+#define GRAY 33840
+#define SKYBLUE 2047
+#define PURPLE 39070
+#define ORANGE 64512
+#define WHITE 65535
+
+#define Black 0
+#define Blue 31
+#define Brown 48192
+#define Green 2016
+#define Yellow 65504
+#define Red 63488
+#define Gray 33840
+#define SkyBlue 2047
+#define Purple 39070
+#define Orange 64512
+#define White 65535
+// **************************************************************************
+//                      Parameters to sent to RX IDs                        *
+// **************************************************************************
+
+// When servo frequencies, servo centre points, PID values, failsafe data, QNH settings,
+// PID parameters (etc.) are sent to the RX, they are sent for only 5 ms in each 100 ms period.
+// This is to allow the TX and RX to exchange control data too - during the remaining 95 ms.
+// It therefore takes a few seconds to send all the parameters,
+// but it is necessary to allow control data to be sent too.
+// Parameter transmission timing and redundancy
+
+#define PAUSE_BEFORE_PARAMETER_SEND 3000 // ms pause before sending parameters (to allow RX to prepare)
+#define PARAMETER_SEND_REPEATS 3         // was 3 Each parameter is repeated this many times (in case of packet loss)
+#define PARAMETER_SEND_FREQUENCY 100     // ms between parameter send slots (was 100)
+#define PARAMETER_SEND_DURATION 5        // ms duration for parameter sending (remainder used for control)
+#define PARAMETER_QUEUE_MAXIMUM 250      // Maximum queued parameters allowed at once
+
+#define GOV_PROFILE_PAYLOAD_SIZE 18
+uint8_t Saved_GOV_Profiles_Values[GOV_PROFILE_PAYLOAD_SIZE][4];
+
+// **************************************************************************
+// Parameter ID definitions.
+// Used to identify different types of parameters being sent to/from RX
+// **************************************************************************
+
+#define FAILSAFE_SETTINGS 1
+#define QNH_SETTING 2
+#define GPS_MARK_LOCATION 3
+#define PID_VALUES 4
+#define KALMAN_VALUES 5
+#define SERVO_FREQUENCIES 6
+#define SERVO_PULSE_WIDTHS 7
+#define GEAR_RATIO 8                          // Gear Ratio (Motor:Rotor) for RPM calculation
+#define SEND_PID_VALUES 9                     // Command to request PID values from RX
+#define GET_FIRST_6_PID_VALUES 10             // Command to update first 6 PID values to RX
+#define GET_SECOND_11_PID_VALUES 11           // Command to update second 6 PID values to RX
+#define SEND_RATES_VALUES 12                  // Command to request RATES values from RX
+#define GET_FIRST_7_RATES_VALUES 13           // Command to update first 6 RATES values to RX
+#define GET_SECOND_6_RATES_VALUES 14          // Command to update second 6 RATES values to RX
+#define SEND_RATES_ADVANCED_VALUES 15         // Command to request RATES values from RX
+#define GET_RATES_ADVANCED_VALUES_SECOND_8 16 // Command to update second 8 RATES values to RX
+#define GET_RATES_ADVANCED_VALUES_FIRST_7 17  // Command to update first 7 RATES values to RX
+#define SEND_PID_ADVANCED_VALUES 18           // Command to request PID values from RX
+#define GET_FIRST_9_ADVANCED_PID_VALUES 19    // Command to update first 9 Advanced PID values to RX
+#define GET_SECOND_9_ADVANCED_PID_VALUES 20   // Command to update second 9 Advanced PID values to RX
+#define GET_THIRD_8_ADVANCED_PID_VALUES 21    // Command to update third 8 Advanced PID values to RX ... 26 total
+// #define MSP_BANK_CHANGE 22                    // Command to send current bank number to RX (for MSP Bank change)
+// #define MSP_RATES_CHANGE 23                   // Command to send current rates number to RX (for MSP Rates change)
+//  #define MSP_BANK_CHANGE_CONFIRMATION 24       // NOT USED NOW. Confirmation from RX that bank change was successful (for MSP Bank change confirmation) NOT YET USED
+#define MSP_INHIBIT_TELEMETRY 25  // Inhibit telemetry for a short time to allow MSP data to be sent without interference from telemetry data (for MSP data transmission)
+#define MSP_ENABLE_TELEMETRY 26   // ENABLE telemetry after MSP data has been sent (for MSP data transmission)
+#define SEND_GOV_VALUES 27        // Command to request RFGOVERNOR values from RX
+#define SEND_GOV_CONFIG_VALUES 28 // Command to request RFGOVERNOR CONFIG values from RX
+
+#define SEND_GOV_WRITE_PROFILE1 29
+#define SEND_GOV_WRITE_PROFILE2 30
+#define SEND_GOV_WRITE_CONFIG1 31
+#define SEND_GOV_WRITE_CONFIG2 32
+#define SEND_GOV_WRITE_CONFIG3 33
+#define RTC_TIME_SETTING 34 // TX's battery-backed RTC -> RX, so flights get dated with no phone (RXV2; V1 RXs ignore it)
+#define RX_UPDATE_ORDER 35  // V1B: "install release maj.min.minimus" - the screen's Check for update, for the receiver (RXV2 0.9.864+; others ignore it)
+// Ack item 37 from RXV2: phone-true LOCAL time, so we can correct our own
+// drifty DS1307 whenever any model has met a phone. Captured in the radio
+// path, APPLIED in the slow loop (I2C writes must never run there).
+uint32_t PhoneEpochLocal = 0;   // 0 = nothing pending
+uint32_t PhoneEpochAtMs = 0;    // millis() at capture, for staleness correction
+// Ack item 38 from RXV2: "pardon the next N ms" — the receiver is about to
+// write a finished flight to flash (an erase stalls it ~100 ms, always on the
+// ground). Gaps inside the window are excluded from ALL statistics and logged
+// as excused, so the averages describe the LINK, not the housekeeping.
+uint32_t GapPardonUntilMs = 0;
+bool GapStartedDisarmed = false; // Rotorflight arming in use and DISARMED when the current gap began = a ground gap
+
+#define PARAMETERS_MAX_ID 35 // Max types of parameters packet to send  ... might increase.
+
+// **************************************************************************
+//                               Mixes                                      *
+// **************************************************************************
+
+#define M_MIX_OUTPUTS 0 // Offsets for Mixes array ( up to 17)
+#define M_Bank 1
+#define M_MasterChannel 2
+#define M_SlaveChannel 3
+#define M_Reversed 4
+#define M_Percent 5
+#define M_MIX_INPUTS 6
+#define M_R2 7
+#define M_ONEDIRECTION 8
+#define M_OFFSET 9
+
+// **************************************************************************
+//                               Screens                                    *
+// **************************************************************************
+
+#define FRONTVIEW 0
+#define STICKSVIEW 1
+#define GRAPHVIEW 2
+#define MIXESVIEW 3
+#define SCANVIEW 4
+#define MODELSVIEW 5
+#define CALIBRATEVIEW 6
+#define TXSETUPVIEW 7
+#define SUBTRIMVIEW 8
+#define DATAVIEW 9
+#define TRIM_VIEW 10
+#define MACROS_VIEW 11
+#define SWITCHES_VIEW 12
+#define ONE_SWITCH_VIEW 13
+#define HELP_VIEW 14
+#define OPTIONS_VIEW 15
+#define INPUTS_VIEW 16
+#define FAILSAFE_VIEW 17
+#define COLOURS_VIEW 18
+#define AUDIOVIEW 19
+#define FILESVIEW 20
+#define REVERSEVIEW 21
+#define BUDDYVIEW 22
+#define LOGVIEW 23
+#define TRIMDEFVIEW 24
+#define OPTIONVIEW2 25
+#define OPTIONVIEW3 26
+#define BUDDYCHVIEW 27
+#define RXSETUPVIEW1 28
+#define DUALRATESVIEW 29
+#define GPSVIEW 30
+#define RXSETUPVIEW 31
+#define BANKSNAMESVIEW 32
+#define SLOWSERVOVIEW 33
+#define RENAMEMODELVIEW 34
+#define FILEEXCHANGEVIEW 35
+#define TXMODULEVIEW 36
+#define PONGVIEW 37
+#define IDCHECKVIEW 38
+#define BLANKVIEW 39
+#define TYPEVIEW 40
+#define SERVOTYPESVIEW 41
+#define LOGFILESLISTVIEW 42
+#define GAPSVIEW 43
+#define SPLASHVIEW 44
+#define PIDVIEW 45
+#define RATESVIEW_RF 46
+#define ROTORFLIGHTVIEW 47
+#define RATESADVANCEDVIEW 48
+#define PIDADVANCEDVIEW 49
+#define PICKBANKVIEW1 50
+#define PICKBANKVIEW2 51
+#define CHOOSEIMAGEVIEW 52
+#define RFBACKUP_RESTOREVIEW 53
+#define RFGOVERNORVIEW_PROFILE 54
+#define RFGOVERNORVIEW_GLOBAL 55
+#define MODELIDVIEW 56
+
+// **************************************************************************
+//                          Switches' GPIOs                                 *
+// **************************************************************************
+
+#define SWITCH0 32 // EDGE SWITCHES' PIN NUMBERS ...
+#define SWITCH1 31
+#define SWITCH2 30
+#define SWITCH3 29
+#define SWITCH4 28
+#define SWITCH5 27
+#define SWITCH6 26
+#define SWITCH7 25
+
+// **************************************************************************
+//                           TRIMS' GPIOs                                   *
+// **************************************************************************
+
+#define TRIM1A 34 // Digital trims pins
+#define TRIM1B 35
+#define TRIM2A 36
+#define TRIM2B 37
+#define TRIM3A 38
+#define TRIM3B 39
+#define TRIM4A 40
+#define TRIM4B 41
+
+// **************************************************************************
+//                LED and Power off GPIOs                                   *
+// **************************************************************************
+
+#define REDLED 2 // COLOURED LEDS' PIN NUMBERS ...
+#define GREENLED 3
+#define BLUELED 4
+#define POWER_OFF_PIN 5
+#define BUTTON_SENSE_PIN 33
+
+// **************************************************************************
+//                                Sounds                                    *
+//***************************************************************************
+
+#define CLICKZERO 0
+#define CLICKONE 1
+#define ONEMINUTE 2
+#define TWOMINUTES 3
+#define THREEMINUTES 4
+#define FOURMINUTES 5
+#define FIVEMINUTES 6
+#define SIXMINUTES 7
+#define SEVENMINUTES 8
+#define EIGHTMINUTES 9
+#define NINEMINUTES 10
+#define TENMINUTES 11
+#define BANKONE 12
+#define BANKTWO 13
+#define BANKTHREE 14
+#define BANKFOUR 15
+#define BEEPMIDDLE 16
+#define BEEPCOMPLETE 17
+#define THEFANFARE 18
+#define BATTERYISLOW 19
+#define CONNECTEDMSG 20
+#define DISCONNECTEDMSG 21
+#define BUDDYMSG 22
+#define MASTERMSG 23
+#define WEAKMSG 23
+#define WHAHWHAHMSG 25
+#define BINDSUCCEEDED 26
+#define BINDNEEDED 27
+#define MMFOUND 28
+#define MMMATCHED 29
+#define MMNOTFOUND 30 // Model not found or 75!!
+#define MOTORON 31
+#define MOTOROFF 32
+#define STORAGECHARGE 33
+#define RATE1 34
+#define RATE2 35
+#define RATE3 36
+#define PLSTURNOFF 37
+#define AEROBATICS 38
+#define AUTO 39
+#define CRUISE 40
+#define FLAPS 41
+#define HOVER 42
+#define IDLE1 43
+#define IDLE2 44
+#define LANDING 45
+#define LAUNCH 46
+#define NORMALB 47
+#define SPEED 48
+#define TAKEOFF 49
+#define THERMAL 50
+#define THRHOLD 51
+#define THREEDEE 52
+#define BFM1 53
+#define BFM2 54
+#define BFM3 55
+#define BFM4 56
+#define AIRBRAKES 57
+#define STUNT1 58
+#define STUNT2 59
+#define WHEELSDOWN 60
+#define WHEELSUP 61
+#define TEN 62
+#define NINE 63
+#define EIGHT 64
+#define SEVEN 65
+#define SIX 66
+#define FIVE 67
+#define FOUR 68
+#define THREE 69
+#define TWO 70
+#define ONE 71
+#define MMSAVED 72
+#define SAFEON 73
+#define SAFEOFF 74
+#define NOTFOUND 75 // or 30 !! :-)
+#define WINDOWS1 76
+#define WINDOWS2 77
+
+#define GOINGUP1 78 // variometer sounds up...
+#define GOINGUP2 79
+#define GOINGUP3 80
+#define GOINGUP4 81
+#define GOINGUP5 82
+#define GOINGUP6 83
+#define GOINGUP7 84
+#define GOINGUP8 85
+#define GOINGUP9 86
+#define GOINGUP10 87
+
+#define GOINGDOWN1 88 // variometer sounds down...
+#define GOINGDOWN2 89
+#define GOINGDOWN3 90
+#define GOINGDOWN4 91
+#define GOINGDOWN5 92
+#define GOINGDOWN6 93
+#define GOINGDOWN7 94
+#define GOINGDOWN8 95
+#define GOINGDOWN9 96
+#define GOINGDOWN10 97
+
+#define BINDINGENABLED 98 // binding enabled sound
+#define BUDDYMASTERON 99  // Buddy Master on sound
+#define BUDDYPUPILON 100  // Buddy Pupil on sound
+#define EXTRABUDDIES 101  // Extra Buddies found sound
+#define TXNOTBOUND 102    //  TX not bound sound // not yet used
+#define NUDGE_MSG 103     // buddy is in nudge mode.
+
+// **************************************************************************
+//               Three BUDDY states now possible                            *
+//***************************************************************************
+
+#define BUDDY_OFF 0   // Master has control
+#define BUDDY_NUDGE 1 // Master can Nudge but buddy has mostly control.
+#define BUDDY_ON 2    // Buddy has control
+
+#define MASTER_HAS_CONTROL 0 // possible values for CurrentBuddyState
+#define SLAVE_HAS_CONTROL 1
+#define MASTER_CAN_NUDGE 2
+
+// **************************************************************************
+//               SDCARD MODEL MEMORY CONSTANTS                              *
+//***************************************************************************
+
+#define TXSIZE 512            // SD space reserved for transmitter (WAS  250)
+#define MODELSIZE 1024 * 3    // SD space reserved for each model (2k)
+#define MAXFILELEN (1024 * 3) // 3?? MAX SIZE FOR HELP AND LOG FILES
+#define MAXBACKUPFILES 95
+
+// **************************************************************************
+//                            SERVO RANGE PARAMETERS                        *
+//***************************************************************************
+
+#define MINMICROS 500
+#define MAXMICROS 2500
+#define HALFMICROSRANGE (MAXMICROS - MINMICROS) / 2
+#define MIDMICROS MINMICROS + HALFMICROSRANGE
+
+// **************************************************************************
+//                           nRF24L01 lines on off                          *
+// **************************************************************************
+
+#define CSN_ON LOW
+#define CSN_OFF HIGH
+#define CE_ON HIGH
+#define CE_OFF LOW
+
+// **************************************************************************
+//                            Error Codes                                *
+// **************************************************************************
+
+#define NOERROR 0
+#define MODELSFILENOTFOUND 1
+#define CHECKSUMERROR 2
+#define MOTORISON 3
+
+// **************************************************************************
+//                            Interpolations                                *
+// **************************************************************************
+
+#define STRAIGHTLINES 0
+#define SMOOTHEDCURVES 1
+#define EXPONENTIALCURVES 2
+
+// ********************* Offsets within macros' buffer ***********************
+
+#define MACROTRIGGERCHANNEL 0 // 1 - 16. 0 means dissabled.
+#define MACROSTARTTIME 1      // In ** >> 10ths << ** of a second since trigger. ( = millis() * 100 ) up to 25.4 seconds
+#define MACRODURATION 2       // In ** >> 10ths << ** of a second since start    ( = millis() * 100 ) up to 25.4 seconds
+#define MACROMOVECHANNEL 3    // Which channel to move.
+#define MACROMOVETOPOSITION 4 // Where to put said channel for said duration. (0 - 180)
+#define MACRORUNNINGNOW 5     // Running flag (BIT 0 running/not running,  BIT 1 = Timer active / inactive)
+
+// **************************************************************************
+//                              Macros                                      *
+// **************************************************************************
+
+#define MAXMACROS 8     // 8 macros enough for now?
+#define BYTESPERMACRO 6 // 6 bytes each
+
+// **************************************************************************
+//                          NEXTION SERIAL CONNECTION                       *
+//***************************************************************************
+
+#define NEXTION Serial1 // NEXTION is connected to Serial1
+
+// **************************************************************************
+//                            WATCHDOG                            *
+//***************************************************************************
+
+#define WATCHDOGTIMEOUT 2500 // 2.5 Seconds before reboot (32ms -> 500 seconds)
+#define KICKRATE 1000        // Kick interval (must be between WATCHDOGMAXRATE and WATCHDOGTIMEOUT)
+#define WATCHDOGMAXRATE 250  // 250 ms secs between kicks is max rate allowed
+
+//***************************************************************************
+//                                     PONG                                 *
+//***************************************************************************
+
+#define PONGX1 20                                    // BOX dimentions
+#define PONGX2 790                                   // BOX dimentions
+#define PONGY1 60                                    // BOX dimentions (was 50)
+#define PONGY2 410                                   // BOX dimentions
+#define PONGGOALSIZE 180                             // Size of goal
+#define PONGBALLSIZE 7                               // Size of ball
+#define PONGSPEED 10                                 // Frame rate
+#define PONGBALLSPEED 5                              // Ball movement per frame
+#define PONGCLEAR (PONGBALLSPEED + PONGBALLSIZE) + 4 // ball clearance from box when bouncing
+#define GOALTOP (PONGY1 + ((PONGY2 - PONGY1) / 2)) - (PONGGOALSIZE / 2)
+#define GOALBOT (PONGY1 + ((PONGY2 - PONGY1) / 2)) + (PONGGOALSIZE / 2)
+#define STARTX PONGX1 + ((PONGX2 - PONGX1) / 2) // start position of ball
+#define STARTY PONGY1 + ((PONGY2 - PONGY1) / 2) + 90
+#define PADDLEHEIGHT 60
+#define PADDLEGAP 40
+#define LEFTPADDLEX PONGX1 + PADDLEGAP
+#define RIGHTPADDLEX PONGX2 - PADDLEGAP
+#define EXTRAPONG 38
+
+// **************************************************************************
+//                           Screenposition                                 *
+//***************************************************************************
+
+#define SCREEN_X "tch2"
+#define SCREEN_Y "tch1"
+
+// **************************************************************************
+//                               MIXES                                      *
+//***************************************************************************
+
+#define MIXINPUT 0
+#define MIXOUTPUT 1
+#define BANK 2
+#define MASTERCHANNEL 3
+#define SLAVECHANNEL 4
+#define ONEDIRECTION 5
+#define REVERSED 6
+#define OFFSET 7
+#define PERCENT 8
+
+// **************************************************************************
+//                            Function Prototypes                           *
+//***************************************************************************
+
+ADC *adc = new ADC();
+
+void KickTheDog();
+void SendCommand(char *tbox);
+void ReadTheSwitchesAndTrims();
+void ShowComms();
+void SendCharArray(char *ch0, char *ch1, char *ch2, char *ch3, char *ch4, char *ch5, char *ch6, char *ch7, char *ch8, char *ch9, char *ch10, char *ch11, char *ch12);
+char *Str(char *s, int n, int comma);
+void GetNewChannelValues();
+void GreenLedOn();
+void StoreNewCommsGap();
+FASTRUN void ParseAckPayload();
+void FailedPacket();
+void StartInactvityTimeout();
+// V1B (FlightGuard.h): why the transmitter went off, written to the EEPROM on the way out and said at the next start
+enum
+{
+    OFF_NONE = 0,
+    OFF_BUTTON = 1,           // the power button, not connected
+    OFF_BUTTON_CONNECTED = 2, // the power button, held through the countdown while connected
+    OFF_IDLE = 3,             // the inactivity power-off
+    OFF_RESTORE_RESTART = 4,  // a restart after the pilot's files were put back through the link
+    OFF_FIRMWARE_SWAP = 5,    // a restart into new (or previous) firmware
+};
+void NoteWhyOff(uint8_t why);
+// V1B B14: the breadcrumb - where the code is, kept on the clock's coin cell (see FlightGuard.h, part 4).
+enum Crumb : uint8_t
+{
+    CRUMB_NONE = 0,
+    CRUMB_LOOP = 1,        // the main loop, nothing special
+    CRUMB_LINK = 2,        // the screen's file link (LinkMode)
+    CRUMB_QUESTION = 3,    // a question waits on screen (GetYesOrNo)
+    CRUMB_DELAY = 4,       // DelayWithDog
+    CRUMB_LOG = 5,         // writing the log (SD)
+    CRUMB_SAVE = 6,        // saving the models file (SD)
+    CRUMB_CONNECT = 7,     // TryToConnect
+    CRUMB_RECONNECT = 8,   // TryToReconnect
+    CRUMB_EXCHANGE = 9,    // model exchange (ModelExchange.h)
+    CRUMB_FWSWAP = 10,     // FwSwapAndRestart
+    CRUMB_LOAD = 11,       // loading the models file (SD)
+    CRUMB_SOUND = 12,      // PlaySound
+    CRUMB_GETVALUE = 13,   // waiting for a value from the screen
+    CRUMB_MOTORWAIT = 14,  // "Motor switch is still ON!" (main.cpp)
+    CRUMB_PARAMS = 15,     // sending parameters to the receiver
+    CRUMB_RTC = 16,        // reading the clock (I2C)
+    CRUMB_SDCARD = 17,     // CheckSDCard
+    CRUMB_GAP = 18,        // ProcessRecentCommsGap
+    CRUMB_COMMAND = 19,    // SendCommand to the screen
+    CRUMB_BUTTON = 20,     // ButtonWasPressed (a command from the screen)
+    CRUMB_HOUSEKEEPING = 21, // the once-a-second chores
+    CRUMB_SENDDATA = 22,   // SendData
+    CRUMB_RXUPDATE = 23,   // RxUpdateTick / OrderReceiverUpdate
+    // B15: the jobs that run while flying, each timed (Malcolm, 1-10-2026: "measure and keep track of those delays
+    // which might actually affect flying, and move them one at a time, starting with the most important ones")
+    CRUMB_SERVOPOS = 24,   // ShowServoPos: the channel bars, up to 40 times a second
+    CRUMB_SHOWCOMMS = 25,  // ShowComms: the front page / data page / GPS page, once a second
+    CRUMB_BATTERY = 26,    // CheckBatteryStates
+    CRUMB_TIME = 27,       // ReadTime: the clock on the page
+    CRUMB_TRIMVIEW = 28,   // UpdateTrimView
+    CRUMB_MOTORTIMER = 29, // ShowMotorTimer
+    CRUMB_FRAMERATE = 30,  // GetFrameRate
+    CRUMB_SCREENTIME = 31, // CheckScreenTime
+    CRUMB_TELLSCREEN = 32, // TellScreen + TellScreenRx (V1B status lines)
+    CRUMB_SWITCHES = 33,   // ReadTheSwitchesAndTrims
+    CRUMB_HWTRIMS = 34,    // CheckHardwareTrims
+    CRUMB_BANK = 35,       // GetBank
+    CRUMB_VARIO = 36,      // DoTheVariometer
+    CRUMB_CHANNELS = 37,   // GetNewChannelValues: sticks, mixes, rates
+    CRUMB_POWERBUTTON = 38,// CheckPowerOffButton
+    CRUMB_MAXCURRENT = 39, // CheckMaxCurrent
+    CRUMB_GETTEXT = 40,    // GetTextIn: reading what the screen sent
+    CRUMB_RETURNCODE = 41, // GetReturnCode: draining the screen's replies after a command
+    CRUMB_LAST = 41
+};
+// THE BREADCRUMB lives in RAM (CrumbNow); KickTheDog copies it to the clock's coin cell at most every 50 ms (a loop
+// that hangs while kicking the dog - the kind that leaves the power button dead - copies its own crumb within 50 ms;
+// one that stops kicking is bitten by the watchdog, and the reset cause says so).
+volatile uint8_t CrumbNow = CRUMB_NONE;
+// THE TIMING (B15): every guarded job is timed with the cycle counter, its own time apart from the jobs inside it,
+// while a model is connected (that is: as in flight). PerfConnected is set by SendData.
+struct PerfStat
+{
+    uint32_t count, maxOwn, maxAll; // cycles
+    uint64_t totalOwn;
+};
+PerfStat PerfStats[CRUMB_LAST + 1];
+bool PerfConnected = false;
+uint8_t PerfDepth = 0;
+uint32_t PerfStart[10], PerfChild[10];
+uint8_t PerfCrumbAt[10];
+uint32_t PerfWorstOwn = 0;        // since the last packet: the job that took longest by itself ...
+uint8_t PerfWorstCrumb = 0, PerfWorstParent = 0;
+struct CrumbGuard
+{
+    uint8_t was;
+    bool pushed;
+    CrumbGuard(uint8_t c)
+    {
+        was = CrumbNow;
+        CrumbNow = c;
+        pushed = PerfDepth < 10;
+        if (pushed)
+        {
+            PerfCrumbAt[PerfDepth] = c;
+            PerfChild[PerfDepth] = 0;
+            PerfStart[PerfDepth] = ARM_DWT_CYCCNT;
+            ++PerfDepth;
+        }
+    }
+    ~CrumbGuard()
+    {
+        CrumbNow = was;
+        if (!pushed)
+            return;
+        --PerfDepth;
+        const uint32_t all = ARM_DWT_CYCCNT - PerfStart[PerfDepth];
+        const uint32_t own = all - PerfChild[PerfDepth];
+        if (PerfDepth)
+            PerfChild[PerfDepth - 1] += all;
+        if (!PerfConnected)
+            return;
+        PerfStat &st = PerfStats[PerfCrumbAt[PerfDepth]];
+        ++st.count;
+        st.totalOwn += own;
+        if (own > st.maxOwn)
+            st.maxOwn = own;
+        if (all > st.maxAll)
+            st.maxAll = all;
+        if (own > PerfWorstOwn)
+        {
+            PerfWorstOwn = own;
+            PerfWorstCrumb = PerfCrumbAt[PerfDepth];
+            PerfWorstParent = PerfDepth ? PerfCrumbAt[PerfDepth - 1] : 0;
+        }
+    }
+};
+#define CRUMB_PASTE2(a, b) a##b
+#define CRUMB_PASTE(a, b) CRUMB_PASTE2(a, b)
+#define CRUMB(c) CrumbGuard CRUMB_PASTE(crumbGuard_, __LINE__)(c)
+uint8_t LastCrumb = CRUMB_NONE;   // from the previous run, read at start-up
+uint32_t LastCrumbUpMs = 0;
+uint32_t LastCrumbView = 0;
+uint32_t CrumbViewNow = 0;
+// B20: the coin cell is written only when one crumb has lasted two seconds - what a hang looks like - and once for
+// that crumb. B15-B19 wrote it every 50 ms, and a write to the clock's battery-backed registers holds the Teensy up
+// long enough for its serial port to drop bytes: a third of the screen's file-link frames were lost and had to be
+// sent again (2-10-2026: the firmware of an update took two minutes to send instead of seven seconds).
+uint32_t SnvsWriteCycles = 0;   // what one breadcrumb (three registers) costs, measured at start-up (FlightGuard.h)
+inline void CrumbKick() // from KickTheDog
+{
+    static uint8_t seen = 0xFF, copied = 0xFF;
+    static uint32_t since = 0;
+    const uint32_t now = millis();
+    const uint8_t c = CrumbNow;
+    if (c != seen)
+    {
+        seen = c;
+        since = now;
+        return;
+    }
+    if (c == copied || (now - since) < 2000)
+        return;
+    copied = c;
+    SNVS_LPGPR0 = c;
+    SNVS_LPGPR1 = now;          // when (two seconds into it)
+    SNVS_LPGPR2 = CrumbViewNow; // the page showing
+}
+inline void CrumbClear() { SNVS_LPGPR0 = CRUMB_NONE; } // a clean power-off: nothing hung
+inline void CrumbView(uint32_t view) { CrumbViewNow = view; } // once a second
+void PerfNoteSend();        // Perf.h: a packet is about to go
+void PerfSilent();          // Perf.h: silent on purpose - the next gap is not a late packet
+void PerfWriteReport(bool keepCopy); // Perf.h: /PERF.TXT, when the file link opens and at power-off (then a dated copy in /PERF too)
+const char *PerfHelloText();
+void ShowServoPos();
+void ZeroDataScreen();
+void RedLedOn();
+int InStrng(char *text1, char *text2);
+void ReadCheckSum32();
+void ResetTransmitterSettings();
+void TryToReconnect();
+void FlushFifos();
+FLASHMEM void SetDS1307ToCompilerTime();
+int GetOtherValue(char *nbox);
+void CheckInvisiblePoint();
+void GotoFrontView();
+void CheckDualRatesValues();
+void UpdateLED();
+void CheckMotorOff();
+bool GetButtonPress();
+void CheckPowerOffButton();
+void LoadFileSelector();
+void LoadModelSelector();
+void PlaySound(uint16_t TheSound);
+uint8_t CheckPipeNibbles(uint8_t b);
+void InitRadio(uint64_t Pipe);
+void SetThePipe(uint64_t WhichPipe);
+void DoScanInit();
+void DoScanEnd();
+void HopToNextChannel();
+void ScanAllChannels(bool cls);
+void SendData();
+void DrawFhssBox();
+void SendText(char *tbox, char *NewWord); // needed a prototype or two here!
+void RestoreBrightness();
+void ButtonWasPressed();
+void CalibrateEdgeSwitches();
+void DisplayCurve();
+void DrawLine(int x1, int y1, int x2, int y2, int c);
+void DrawBox(int x1, int y1, int x2, int y2, int c);
+void FillBox(int x1, int y1, int w, int h, int c);
+void LogConnection();
+void LogDisConnection();
+void CloseLogFile();
+void LogLongestGap();
+void Force_ReDisplay();
+FASTRUN void Compress(uint16_t *compressed_buf, uint16_t *uncompressed_buf, uint8_t uncompressed_size);
+FASTRUN void Decompress(uint16_t *uncompressed_buf, uint16_t *compressed_buf, uint8_t uncompressed_size);
+FASTRUN void BufferTeensyMACAddPipe();
+void ExecuteMacro();
+void LogTimer(uint32_t Mins);
+FASTRUN void LogText(char *TheText, uint16_t len, bool TimeStamp);
+void LogAverageFrameRate();
+void ShowBank();
+void UpdateModelsNameEveryWhere();
+void ResetAllTrims();
+void CheckTrimValues();
+void ClearSuccessRate();
+int CheckRange(int v, int min, int max);
+void MoveaTrim(uint8_t i);
+FASTRUN void LogSafety();
+void StartModelSetup();
+bool GetConfirmation(char *goback, char *Prompt);
+void GotoModelsView();
+void SaveCurrentModel();
+bool CheckModelName();
+int AnalogueReed(uint8_t InputChannel);
+void DelayWithDog(uint32_t HowLong);
+void SaveTransmitterParameters();
+void PlayPong();
+void StartPong();
+FASTRUN void ButtonWasPressed();
+bool GetButtonPress();
+void EndSend();
+void ReadTheRTC();
+void swap(uint8_t *a, uint8_t *b);
+void SaveOneModel(uint32_t mnum);
+bool ReadOneModel(uint32_t Mnum);
+void SaveAllParameters();
+void BindNow();
+FASTRUN uint32_t GetIntFromAckPayload(); // This one uses a uint32_t int
+uint32_t getvalue(char *nbox);
+uint32_t GetValue(char *nbox);
+void SendValue(char *nbox, int value);
+void LogTotalLostPackets();
+void LogTotalGoodPackets();
+void LogOverallSuccessRate();
+void ClearText();
+void BuildDirectory();
+void ShowFileNumber();
+void MsgBox(char *goback, char *Prompt);
+void ShowRemoteID();
+void CloseModelsFile();
+void ShortishDelay();
+void ShortDelay();
+void BlueLedOn();
+void NormaliseTheRadio();
+void ConfigureRadio();
+uint16_t MakeTwobytes(bool *f);
+void SendSpecialPacket();
+void GetSpecialPacket();
+void StartBuddyListen();
+void RationaliseBuddy();
+void ShowConnectionQuality();
+void GetSlaveChannelValuesWireless();
+void GetTeensyMacAddress();
+FASTRUN void LogThisGap();
+void GetRXVersionNumber();
+void GetRXVersionNumber();
+void CompareModelsIDs();
+void OpenModelsFile();
+uint8_t SDRead8BITS(int p_address);
+short int SDRead16BITS(int p_address);
+void UpdateButtonLabels();
+void SDUpdate32BITS(int p_address, uint32_t p_value);
+void SDUpdate8BITS(int p_address, uint8_t p_value);
+uint32_t SDRead32BITS(int p_address);
+void CheckSavedTrimValues();
+void CheckMacrosBuffer();
+void FixMotorChannel();
+void SendInitialSetupParams();
+void AddParameterstoQueue(uint8_t ID);
+void SetDefaultValues();
+FASTRUN void LogThisRX();
+void CompareVersionNumbers();
+void PopulateFrontView();
+void PopulateDataView();
+void PopulateGPSView();
+void CheckScreenTime();
+void CheckBatteryStates();
+void ShowCurrentRate();
+void ShowAMS();
+void ShowTrimToAll();
+FASTRUN bool CheckTXVolts();
+FASTRUN bool CheckRXVolts();
+bool MayBeAddZero(uint8_t nn);
+void SendText1(char *tbox, char *NewWord);
+void ForceDataRedisplay();
+void TrimsToSubtrim();
+void LogBuddyChange();
+void SetUpTargetForBuddy();
+FASTRUN uint16_t ReadThreePositionSwitch(uint8_t l); // This returns the input only
+void UpdateSpeedScreen();
+void SetNewDualRate();
+void CheckSelectedRatesMode();
+void GetCurveDots(uint16_t OutputChannel, uint16_t TheRate); // This for the Dual Rates function
+void CheckDualRatesValues();
+void ReadDualRatesValues();
+void DisplayDualRateValues();
+void PopulateMacrosView();
+void LoadModelForRenaming();
+bool GetBackupFilename(char *goback, char *tt1, char *MMname, char *heading, char *pprompt);
+void FixFileName();
+void WriteBackup();
+void RestoreCurrentModel();
+void GetYesOrNo();
+uint16_t GetText(char *TextBoxName, char *TheText, uint16_t maxlen);  // ClaudeFix-2-7-2026
+void StoreModelID();
+void ResetMotorTimer();
+void SpeedTest();
+void StartLogFilesListScreen();
+void EndLogFilesListScreen();
+void LoadNewLogFile();
+void DeleteThisLogFile();
+void SortDirectory();
+void ClearFilesList();
+FASTRUN void LogModelMatched();
+FASTRUN void LogModelFound();
+FASTRUN void LogModelNotFound();
+void SendHelp();
+FASTRUN void MakeTextFileName();
+void GetCommandbytes(uint8_t *C, uint8_t *C1);
+void TestTheCommandByte(uint8_t C, uint8_t C1);
+void LogRXVoltsPerCell();
+void LogTXVoltsPerCell();
+void LogStopFlyingMsg();
+void LogNewRateInUse();
+void LogTotalRXSwaps();
+void LogTimeSinceBoot();
+void LogConnectedDuration();
+void LogTouched();
+void RefreshDualRatesNew();
+void CheckDualRatesScreen(uint32_t RightNow);
+int GetIntFromTextIn(uint8_t offset);
+void ShowLogFileNew(uint16_t LinesCounter);
+uint16_t ReadAFewLines();
+void LogVIEWNew();
+File OpenTextFileForReading();
+void StartLogFileView();
+void LogTotalRXGoodPackets();
+void LogTotalRXGoodPackets();
+void LogTotalPacketsAttempted();
+void DelaySimple(uint32_t ms);
+uint8_t GetSwitchPosition(uint8_t Sw_Number);
+FASTRUN void LogAverageGap();
+void ReadChannelSwitches9to12();
+int GetExtraParameters();
+void ShowSendingParameters();
+float SDReadFLOAT(int p_address);
+void SDUpdateFLOAT(int p_address, float p_value);
+void GetBank();
+void LogRPM(uint32_t RPM);
+void SuccessfulPacket();
+void StartGapsView();
+void PopulateGapsView();
+void ProcessRecentCommsGap();
+void InitializeCommsGapScreen();
+void SimplePing();
+void TryToConnect();
+void ShowMismatchMsg();
+void StartPIDView();
+void ShowPIDBank();
+void Display2PIDValues(uint8_t i);
+void HidePIDMsg();
+void HideRATESMsg();
+void SendColour(char *but, int Colour);
+void SendEditedPIDs();
+void PIDs_Were_edited();
+void EndPIDView();
+void StartRFRatesView();
+void EndRFRatesView();
+void RatesWereEdited();
+void SendEditedRates();
+void DisplayRatesValues(uint8_t startIndex, uint8_t stopIndex);
+void ReadRatesBytesFromAckPayload(uint8_t n, uint8_t m);
+void RatesMsg(const char *msg, uint16_t Colour);
+void ShowRatesBank();
+void RotorFlightStart();
+void RXOptionsViewStart();
+void RotorFlightEnd();
+void StartRatesAdvancedView();
+void StartPIDAdvancedView();
+void SendForegroundColour(const char *label, uint16_t colour);
+void Display_Advanced_Rates_Values(uint8_t n, uint8_t m);
+void Hide_Advanced_Rates_Msg();
+void ForegroundColourAdvancedRates(uint16_t Colour);
+void RatesAdvancedWereEdited();
+void EndRatesAdvancedView();
+void SendEditedRatesAdvanced();
+void HidePID_Advanced_Msg();
+void Hide_msg_if_needed();
+void Display_PID_Advanced_Values(uint8_t n, uint8_t m);
+void PIDsAdvancedWereEdited();
+void SendEditedPID_Advanced();
+void EndPIDsAdvancedView();
+void PIDMsg(const char *msg, uint16_t Colour);
+void SaveRFParameters();
+void RestoreRFParameters();
+void Save_SOME_RF_Parameters();
+void Restore_SOME_RF_Parameters();
+void SoundBank();
+void ShowRFBank();
+void ShowRFRate();
+void Start_RESTORE();
+void Cancel_RESTORE();
+void Start_SAVE();
+void Cancel_SAVE();
+void DisplayBoostPidValues();
+void ChooseBackGround();
+void Save_BackGround();
+void StartTXSetupView();
+bool CheckFileExists(char *fl);
+void CheckModelImageFileName();
+bool NextionFileExistsOnSD(const char *filename, bool verbose = false);
+int NextionFileExistsOnSD3(const char *filename);
+void ShowModelImage();
+FASTRUN void OpenLogFileW();
+uint32_t GetFileSize(char *filename);
+void WriteEntireBuffer();
+FASTRUN void DeleteLogFile();
+void ShowFreeSpaceEtc();
+void TidyLogFolder();
+void CheckTheClock();
+void TimeFromScreen(const char *digits);
+extern bool ClockRecovered, ClockDead;
+void DeleteMODfile(int p);
+void AddPath(char *filename);
+void StartChooseImage();
+void EndChooseImage();
+void ChooseImageFromScreen(const char *text);
+void ImageScrollStop();
+void GetAllInputs();
+void CalculateAllOutputs();
+void ReduceLimits();
+void CalibrateSticks();
+void ChannelCentres();
+uint32_t GetBuildDaysSince2020();
+void ShowSafetyIsOn();
+void ShowSafetyIsOff();
+FASTRUN void DisplayCurveAndServoPos();
+void ReadSpeedsScreen(uint8_t bk);
+void ShowRatesAdvancedBank();
+void ShowPIDAdvancedBank();
+void LinkRatesToBanksChanged();
+void DisplayModelImage();
+void BankHasChanged();
+void FixArmingChannel();
+void DisplayGovValues(uint8_t n, uint8_t m);
+void HideGOVMsg();
+void ShowGOVMsg(const char *msg, uint16_t Colour);
+void ShowGOVBank();
+void LoadGovWritePayload();
+void Start_RF_Backup_Restore();
+void DisplayGovConfigValues(uint8_t n, uint8_t m);
+void HideGOVConfigMsg();
+void Gov_Global_Were_Edited();
+bool AllGlobalConfigBytesReceived();
+void AddWords();
+void BuildValue(char *nbox, int value);
+void ShowMotor();
+void SetBrightness(uint8_t B);
+void ShowBindingIsEnabled();
+// **************************************************************************
+//                            GLOBAL DATA                                   *
+//***************************************************************************
+
+RF24 Radio1(CE_PIN, CSN_PIN);
+
+/************************************************************************************************************/
+/************************************************************************************************************/
+// // For numeric types (int, float, double, etc.)
+template <typename T>
+void Look(const T &value, int format)
+{
+    Serial.println(value, format);
+}
+
+template <typename T>
+void Look1(const T &value, int format)
+{
+    Serial.print(value, format);
+}
+
+// Fallback for types where a format doesn't apply (e.g., String, const char*)
+template <typename T>
+void Look(const T &value)
+{
+    Serial.println(value);
+}
+
+template <typename T>
+void Look1(const T &value)
+{
+    Serial.print(value);
+}
+
+// ******************************************************************************************************************************************************************
+
+WDT_T4<WDT3> TeensyWatchDog;
+WDT_timings_t WatchDogConfig;
+uint8_t Mixes[MAXMIXES + 1][17];                       // 17 possible elements per mix. NOTHING to do with channels count!!!
+int Trims[BANKS_USED + 1][CHANNELSUSED + 1];           // Trims to store
+uint8_t Exponential[BANKS_USED + 1][CHANNELSUSED + 1]; // Exponential
+uint8_t InterpolationTypes[BANKS_USED + 1][CHANNELSUSED + 1];
+uint8_t LastMixNumber = 1;
+uint8_t MixNumber = 0;
+uint8_t CurrentView = FRONTVIEW;
+uint8_t SavedCurrentView = FRONTVIEW;
+uint64_t DefaultPipe = DEFAULTPIPEADDRESS;      //          Default Radio pipe address
+uint64_t TeensyMACAddPipe = DEFAULTPIPEADDRESS; //          New Radio pipe address for binding will come from MAC address
+uint64_t BuddyMACAddPipe = DEFAULTPIPEADDRESS;  //          Buddy pipe address
+char TextIn[MAXTEXTIN + 2];                     //          Spare space
+uint16_t PacketsPerSecond = 0;
+uint8_t PacketsHistoryBuffer[PACKET_HISTORY_WINDOW + 1]; // Here we record some history
+uint32_t TotalLostPackets = 0;
+uint32_t TotalGoodPackets = 0;
+uint16_t PacketNumber = 0;
+uint8_t GPSMarkHere = 0;
+uint16_t TrimRepeatSpeed = 600;
+char na[] = "";
+
+uint8_t ServoSpeed[BANKS_USED + 1][CHANNELSUSED + 1]; //    Speed of servo movement
+uint16_t CurrentPosition[SENDBUFFERSIZE + 1];         //    Position from which a slow servo started (0 = not started yet)
+uint16_t SendBuffer[SENDBUFFERSIZE + 1];              //    Data to send to rx (16 words)
+uint16_t BuddyBuffer[SENDBUFFERSIZE + 1];             //    Data from wireless buddy (16 words)
+uint16_t ShownBuffer[SENDBUFFERSIZE + 1];             //    Data shown before
+uint16_t RawDataBuffer[SENDBUFFERSIZE + 1];           //    Data as actually sent
+uint16_t InputsBuffer[CHANNELSUSED + 1];              //    Data from pots
+uint16_t LastBuffer[CHANNELSUSED + 1];                //    Used to spot any change
+uint16_t PreMixBuffer[CHANNELSUSED + 1];              //    Data collected from sticks
+uint8_t MaxDegrees[5][CHANNELSUSED + 1];              //    Max degrees (180)
+uint8_t MidHiDegrees[5][CHANNELSUSED + 1];            //    MidHi degrees (135)
+uint8_t CentreDegrees[5][CHANNELSUSED + 1];           //    Middle degrees (90)
+uint8_t MidLowDegrees[5][CHANNELSUSED + 1];           //    MidLow Degrees (45)
+uint8_t MinDegrees[5][CHANNELSUSED + 1];              //    Min Degrees (0)
+uint8_t SubTrims[CHANNELSUSED + 1];                   //    Subtrims
+uint8_t SubTrimToEdit = 1;
+uint32_t LastPacketSentTime = 0;
+uint8_t Bank = 1;
+void SendOtherValue(char *nbox, int value);
+// User defined bank names zone
+// ************************************** 0                  1                 2                  3                4          5           6           7          8                9        10          11       12        13             14            15          16          17      18        19           20         21     22           23         24         25          26           27        ***
+char BankNames[32][14] = {{"Flight mode 1"},
+                          {"Flight mode 2"},
+                          {"Flight mode 3"},
+                          {"Flight mode 4"},
+                          {"Bank 1"},
+                          {"Bank 2"},
+                          {"Bank 3"},
+                          {"Bank 4"},
+                          {"Aerobatics"},
+                          {"Auto"},
+                          {"Cruise"},
+                          {"Flaps"},
+                          {"Hover"},
+                          {"Idle up 1"},
+                          {"Idle up 2"},
+                          {"Landing"},
+                          {"Launch"},
+                          {"Normal"},
+                          {"Speed"},
+                          {"Takeoff"},
+                          {"Thermal"},
+                          {"Hold"},
+                          {"3D"},
+                          {"Brakes"},
+                          {"Stunt 1"},
+                          {"Stunt 2"},
+                          {"Gear down"}, // V1B B23: the screen's list and BankSounds have Gear down at 26, Gear up at 27
+                          {"Gear up"},
+                          {"Profile 1"},
+                          {"Profile 2"},
+                          {"Profile 3"},
+                          {"Profile 4"}};
+uint8_t BankSounds[32] = {
+    BFM1,       // "Flight mode 1"
+    BFM2,       // "Flight mode 2"
+    BFM3,       // "Flight mode 3"
+    BFM4,       // "Flight mode 4"
+    BANKONE,    // "Bank 1"
+    BANKTWO,    // "Bank 2"
+    BANKTHREE,  // "Bank 3"
+    BANKFOUR,   // "Bank 4"
+    AEROBATICS, // "Aerobatics"
+    AUTO,       // "Auto"
+    CRUISE,     // "Cruise"
+    FLAPS,      // "Flaps"
+    HOVER,      // "Hover"
+    IDLE1,      // "Idle up 1"
+    IDLE2,      // "Idle up 2"
+    LANDING,    // "Landing"
+    LAUNCH,     // "Launch"
+    NORMALB,    // "Normal"
+    SPEED,      // "Speed"
+    TAKEOFF,    // "Takeoff"
+    THERMAL,    // "Thermal"
+    THRHOLD,    // "Hold"
+    THREEDEE,   // "3D"
+    AIRBRAKES,  // "Brakes"
+    STUNT1,     // "Stunt 1"
+    STUNT2,     // "Stunt 2"
+    WHEELSDOWN, // "Gear down"
+    WHEELSUP,   // "Gear up"
+    BANKONE,    // "Bank 1"
+    BANKTWO,    // "Bank 2"
+    BANKTHREE,  // "Bank 3"
+    BANKFOUR};  // "Bank 4"
+uint8_t BanksInUse[4] = {0, 1, 2, 3};
+uint8_t PreviousBank = 1;
+// ************************************
+char ChannelNames[CHANNELSUSED][11] = {{"Aileron"}, {"Elevator"}, {"Throttle"}, {"Rudder"}, {"Gear"}, {"AUX1"}, {"AUX2"}, {"AUX3"}, {"AUX4"}, {"AUX5"}, {"AUX6"}, {"AUX7"}, {"AUX8"}, {"AUX9"}, {"AUX10"}, {"AUX11"}};
+uint8_t DualRateInUse = 1;
+uint8_t PreviousDualRateInUse = 1;
+uint16_t PreviousBuffer[SENDBUFFERSIZE + 1]; //     Used to spot any change
+uint16_t ChannelMax[CHANNELSUSED + 1];       //    output of pots at max
+uint16_t ChannelMidHi[CHANNELSUSED + 1];     //    output of pots at MidHi
+uint16_t ChannelCentre[CHANNELSUSED + 1];    //    output of pots at Centre
+uint16_t ChannelMidLow[CHANNELSUSED + 1];    //    output of pots at MidLow
+uint16_t ChannelMin[CHANNELSUSED + 1];       //    output of pots at min
+uint16_t ChanneltoSet = 0;
+bool Connected = false;
+File LogFileNumber;
+bool LogFileOpen = false;
+uint16_t BuddyControlled = 0; // Flags
+bool BuddyHasAllSwitches = true;
+double PointsCount = 5; // This for displaying curves only
+double xPoints[5];
+double yPoints[5];
+double xPoint = 0;
+double yPoint = 0;
+uint16_t ClickX;
+uint16_t ClickY;
+uint8_t SticksMode = 2;
+uint8_t SavedSticksMode = 2;
+uint16_t AnalogueInput[PROPOCHANNELS] = {A0, A1, A2, A3, A6, A7, A8, A9};                 // default definition of first 8 PROPO Channels inputs // must fix the order for mode 2
+uint8_t TrimNumber[8] = {TRIM1A, TRIM1B, TRIM2A, TRIM2B, TRIM3A, TRIM3B, TRIM4A, TRIM4B}; // These too can get swapped over later
+uint8_t CurrentMode = NORMAL;
+uint32_t MotorStartTime = 0;
+uint32_t LastSeconds = 0;
+uint32_t Secs = 0;
+uint32_t MotorOnSeconds = 0;
+uint32_t PausedSecs = 0;
+uint32_t Mins = 0;
+uint32_t Hours = 0;
+uint32_t ModelNumber = 1;
+uint32_t SavedModelNumber = 1;
+uint32_t PreviousModelNumber = 1;
+uint8_t ModelDefined = 0;
+uint16_t MemoryForTransmtter = 0;                                                                          // SD space for transmitter
+uint16_t OneModelMemory = 0;                                                                               // SD space for every model
+uint32_t SDCardAddress = 0;                                                                                // Address on SD card (offset from zero)
+uint8_t SwitchNumber[8] = {SWITCH0, SWITCH1, SWITCH2, SWITCH3, SWITCH4, SWITCH5, SWITCH6, SWITCH7};        // These can get swapped over later
+uint8_t DefaultSwitchNumber[8] = {SWITCH0, SWITCH1, SWITCH2, SWITCH3, SWITCH4, SWITCH5, SWITCH6, SWITCH7}; // Default values
+bool DefiningTrims = false;
+bool TrimDefined[4] = {true, true, true, true};
+char ModelName[40] = "Untitled";
+uint16_t ScreenTimeout = 120; // Screen has two minute timeout by default
+int LastLinePosition = 0;
+uint8_t RXCellCount = 2;
+bool JustHoppedFlag = true;
+bool LostContactFlag = true;
+uint32_t RecentPacketsLost = 0;
+
+// *********************************** RX GPS ***************************************
+float GPS_RX_Latitude = 0;
+float GPS_RX_Longitude = 0;
+float GPS_RX_Altitude = 0;
+float GPS_RX_ANGLE = 0;
+bool GPS_RX_FIX = 0;
+uint8_t GPS_RX_Satellites = 0;
+float GPS_RX_Speed = 0;
+float GPS_RX_MaxSpeed = 0;
+uint8_t GPS_RX_Hours = 0;
+uint8_t GPS_RX_Mins = 0;
+uint8_t GPS_RX_SECS = 0;
+uint8_t GPS_RX_DAY = 0;
+uint8_t GPS_RX_MONTH = 0;
+uint8_t GPS_RX_YEAR = 0;
+float GPS_RX_Maxaltitude = 0;
+float GPS_RX_GroundAltitude = 0;
+float GPS_RX_DistanceTo = 0;
+float GPS_RX_CourseTo = 0;
+float GPS_RX_MaxDistance = 0;
+float RXModelVolts = 0;
+float RXModelAltitude = 0;
+float RXModelAltitudeBMP280 = 0;
+float RXMAXModelAltitude = 0;
+float GroundModelAltitude = 0;
+float RXTemperature = 0;
+float MaxAlt = 0;
+char ModelTempRX[11] = {'0', 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0};
+char ModelAltitude[31] = {'0', 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0};
+char Maxaltitude[31] = {'0', 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0};
+char ReceiverVersionNumber[20];
+char TransmitterVersionNumber[20];
+char ModelVolts[11] = {'0', 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0};
+float RXVoltsPerCell = 0;
+float TXVoltsTotal = 0;
+File ModelsFileNumber;
+Adafruit_INA219 ina219;
+char SingleModelFile[40];
+bool SingleModelFlag = false;
+bool ModelsFileOpen = false;
+extern bool LinkChangedUserData; // V1B (LinkMode.h): a file of the pilot's was replaced through the file link; nothing is saved until the restart
+bool USE_INA219 = false;
+bool BoundFlag = false;
+bool Switch[8];
+bool TrimSwitch[8];
+uint8_t BankSwitch = BANKSWITCH;
+uint8_t Autoswitch = Autoswitch;
+uint8_t SafetySwitch = 0;
+uint8_t BuddySwitch = 0;
+uint8_t DualRatesSwitch = 0;
+
+// **************************************************************************
+//                Top switch Channel numbers                                   *
+// **************************************************************************
+
+#define Ch9_SW 0
+#define Ch10_SW 1
+#define Ch11_SW 2
+#define Ch12_SW 3
+
+uint8_t TopChannelSwitch[4] = {0, 0, 0, 0};
+uint8_t TopChannelSwitchValue[4] = {0, 0, 0, 0};
+
+bool SwitchReversed[4] = {
+    false,
+    false,
+    false,
+    false};
+
+uint16_t StartLocation = 0;
+bool ValueSent = false;
+uint8_t SwitchEditNumber = 0; // number of switch being edited
+uint32_t ShowServoTimer = 0;
+bool LastFourOnly = false;
+uint8_t InPutStick[17] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};    // User defined stick inputs
+uint8_t ChannelOutPut[17] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}; // User defined channel outputs
+uint8_t InputTrim[4] = {0, 1, 2, 3};                                                // User defined trim inputs
+uint8_t ExportedFileCounter = 0;
+char TheFilesList[150][24];
+uint16_t FileNumberInView = 0;
+bool FileError = false;
+uint32_t RangeTestStart = 0;
+uint16_t RecentGoodPacketsCount = 0;
+uint8_t SaveBank = 0;
+bool FailSafeChannel[CHANNELSUSED + 1];
+bool SaveFailSafeNow = false;
+uint32_t FailSafeTimer;
+uint16_t LogLineNumber = 0;
+struct CD
+{
+    uint16_t ChannelBitMask = 0;
+    uint16_t CompressedData[COMPRESSEDWORDS + 12]; // Much Bigger than needed for safety
+};
+CD DataTosend;
+
+struct CD2
+{
+    uint16_t ID = 0;
+    uint16_t word[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+};
+CD2 Parameters;
+uint8_t SizeOfParameters = sizeof(Parameters);
+
+struct CD_buddy
+{
+    uint16_t ChannelBitMask = 0;
+    uint16_t CompressedData[20]; // 40 bytes ... far too big
+};
+uint16_t RawDataIn[21]; //  21 x 16 BIT words
+
+CD_buddy DataReceived;
+
+uint16_t SizeOfDataTosend = sizeof(DataTosend);
+uint8_t SizeOfCompressedData = sizeof(DataTosend.CompressedData);
+
+uint32_t Inactivity_Timeout = INACTIVITYTIMEOUT;
+uint32_t Inactivity_Start = 0;
+tmElements_t tm;
+char TxName[40] = "Unknown";
+uint32_t LastTimeRead = 0;
+uint32_t LastScanButtonCheck = 0;
+
+uint32_t LastShowTime = 0;
+uint8_t MacAddress[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+uint8_t MasterMacAddress[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+uint8_t BuddyMacAddress[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+uint8_t ErrorState = 0;
+uint16_t XtouchPlace = 0; // Clicked X
+uint16_t YtouchPlace = 0; // Clicked Y
+
+// changing these four valiables controls LED blink and speed
+
+bool LedIsBlinking = false;
+float BlinkHertz = 6;
+
+bool LedWasGreen = false;
+bool LedWasRed = false;
+char ThisRadio[6] = "0 ";
+uint8_t LastRadio = 0;
+uint8_t NextChannel = 0;
+bool WirelessBuddy = false;
+bool BuddyPupilOnWireless = false;
+bool WasBuddyPupilOnWireless = false;
+bool BuddyMasterOnWireless = false;
+uint8_t CurrentBuddyState = 0;
+float Qnh = 1009; // pressure at sea level here
+uint16_t LastModelLoaded = 0;
+uint16_t LastFileInView = 0;
+uint8_t MinimumGap = 75;
+int RecentStartLine = 0; // we need the signed version
+char RecentTextFile[30];
+bool LogRXSwaps = false;
+bool ThereIsMoreToSee = false;
+bool UseLog = false;
+uint8_t Gsecond;   // = tm.Second; // 0-59
+uint8_t Gminute;   // = tm.Minute; // 0-59
+uint8_t Ghour;     // = tm.Hour;   // 0-23
+uint8_t GweekDay;  // = tm.Wday;   // 1-7
+uint8_t GmonthDay; // = tm.Day;    // 1-31
+uint8_t Gmonth;    // = tm.Month;  // 1-12
+uint8_t Gyear;     // = tm.Year;   // 0-99
+bool GPSTimeSynched = false;
+short int DeltaGMT = 0;
+
+uint16_t TrimMultiplier = 5; // By how much to multiply trim
+uint8_t DateFix = 0;
+uint16_t BackGroundColour = 214;
+uint16_t ForeGroundColour = White;
+uint16_t HighlightColour = Yellow;
+uint16_t SpecialColour = Red;
+bool Reconnected = false;
+uint8_t LowBattery = LOWBATTERY;
+uint16_t SbusRepeats = 0;
+bool RXVoltsDetected = false;
+uint16_t RadioSwaps = 0;
+uint16_t RX1TotalTime = 0;
+uint16_t RX2TotalTime = 0;
+uint16_t RX3TotalTime = 0;
+uint8_t AudioVolume = 50;
+uint32_t WarningTimer = 0;
+uint32_t ScreenTimeTimer = 0;
+bool ScreenIsOff = false;
+uint8_t Brightness = 100;
+bool UseVariometer = false;
+bool PlayFanfare = true;
+bool TrimClicks = true;
+bool SpeakingClock = true;
+bool ClockSpoken = false;
+bool ClockSpoken1 = false;
+bool AnnounceBanks = true;
+bool AnnounceConnected = true;
+bool CopyTrimsToAll = true;
+uint16_t ReversedChannelBITS = 0; // 16 BIT for 16 Channels
+uint16_t SavedLineX = 12345;
+uint8_t ReConnectChannel = 0;
+
+bool ShowVPC = false;
+short int TxVoltageCorrection = 0;
+short int RxVoltageCorrection = 0;
+uint16_t ServoCentrePulse[11] = {1500, 1500, 1500, 1500, 1500, 1500, 1500, 1500}; // 11 channels for servo centre pulse
+uint16_t ServoFrequency[11] = {50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50};       // 11 channels for servo frequency
+uint8_t LEDBrightness = DEFAULTLEDBRIGHTNESS;                                     // 0-255
+uint8_t PowerOffWarningSeconds = 2;
+uint8_t ConnectionAssessSeconds = 1;
+uint32_t PreviousPowerOffTimer = 0;
+bool ModelIdentified = false;
+bool ModelMatched = false;
+bool ModelMatchFailed = false;
+bool AutoModelSelect = true;
+uint32_t TrimTimer = 0;
+uint32_t LastPassivePacketTime = 0;
+
+union uMacReceived
+{
+    uint64_t Val64 = 0;
+    uint32_t Val32[2];
+    uint8_t Val8[8]; // Model's Mac address just obtained from model
+} ModelsMacUnion;
+
+union uMacStored
+{
+    uint64_t Val64 = 0;
+    uint32_t Val32[2];
+    uint8_t Val8[8]; // Model's Mac address that had been saved on disk
+} ModelsMacUnionSaved;
+bool MotorEnabled = false;
+bool SendNoData = false;
+bool ReceiverUpdateQuiet = false; // V1B: the transmitter is silent on purpose while the receiver updates itself (RxUpdate.h)
+uint8_t RxUpdWantMaj = 0, RxUpdWantMin = 0; // V1B: the receiver release ordered (parameter 35, RxUpdate.h)
+uint16_t RxUpdWantMinimus = 0;
+void RxHeardRelease(uint32_t code);   // RxUpdate.h: ack item 39
+void RxHeardUpdateWord(uint32_t word); // RxUpdate.h: ack item 40
+bool MotorWasEnabled = false;
+uint8_t MotorChannel = 2;
+uint8_t MotorChannelZero = 30;
+bool UseMotorKill = true;
+bool SafetyON = false;
+uint8_t BuddyState = BUDDY_OFF; // three possible states now. BUDDY_OFF, BUDDY_NUDGE, BUDDY_ON
+bool SafetyWasOn = false;
+u_int8_t WarningSound = BATTERYISLOW;
+float StopFlyingVoltsPerCell = 0;
+uint16_t SFV = 0; // =StopFlyingVoltsPerCell * 100
+bool NewCompressNeeded = true;
+uint32_t FileCheckSum = 0;
+bool DoingCheckSm = false;
+bool RecursedAlready = false;
+bool TXLiPo = false;
+uint8_t CurrentPoint = 1;
+bool UseDualRates = false;
+uint8_t Drate1 = 100;
+uint8_t Drate2 = 75;
+uint8_t Drate3 = 50;
+
+uint8_t DualRateChannels[8] = {1, 2, 4, 0, 0, 0, 0, 0};
+uint8_t DualRateRate[5];
+uint8_t DualRateValue = 100;
+uint16_t CurveDots[5];
+char Confirmed[2];
+char NewFileBuffer[MAXFILELEN];
+uint16_t NewFileBufferPointer = 0;
+bool TimerDownwards = false;
+uint16_t TimerStartTime = 5 * 60;
+bool TimesUp = false;
+uint8_t CountDownIndex = 0;
+uint8_t MacrosBuffer[MAXMACROS][BYTESPERMACRO]; // macros' buffer
+uint32_t MacroStartTime[MAXMACROS];
+uint32_t MacroStopTime[MAXMACROS];
+uint8_t PreviousMacroNumber = 1;
+bool UseMacros = false;
+uint8_t ScanSensitivity = 42;
+uint8_t CurrentChannel = 0;
+uint8_t PupilIsAlive = 0;
+uint8_t MasterIsAlive = 0;
+bool VersionsCompared = false;
+uint32_t LedGreenMoment = 0;
+bool ReconnectingNow = true;
+uint32_t LastHopTime = 0; //  Time of last hop
+uint16_t ParametersToBeSent[PARAMETER_QUEUE_MAXIMUM + 1];
+uint8_t ParametersToBeSentPointer = 0;
+bool UsingDefaultPipeAddress = true;
+bool DontChangePipeAddress = false;
+bool LastAutoModelSelect = false;
+bool LastCopyTrimsToAll = false;
+uint8_t OldRate = 0;
+bool ForceVoltDisplay = false;
+float MaxRateOfClimb = 0;
+uint16_t LastConnectionQuality = 0;
+uint8_t RadioNumber = 0;
+
+bool VersionMismatch = false;
+
+char ParaNames[28][30] = {
+    "FailSafe positions", // 1
+    "QNH",                // 2
+    "Mark Location",      // 3
+    "PID Values",         // 4
+    "Kalman Values",      // 5
+    "Servo Frequencies",  // 6
+    "Servo Pulse Widths", // 7
+    "Gear Ratio",         // 8
+    "READ PIDs",          // 9
+    "SET PIDs 1-6",       // 10
+    "SET PIDs 7-12",      // 11
+    "READ RATES",         // 12
+    "SET 6 RATES",        // 13
+    "SET 7 RATES",        // 14
+    "READ ADV RATES",     // 15
+    "SET 8 ADV RATES",    // 16
+    "SET 7 ADV RATES",    // 17
+    "READ ADV PIDs",      // 18
+    "SET 9 ADV PIDs",     // 19
+    "SET 9* ADV PIDs",    // 20
+    "SET 8  ADV PIDs",    // 21
+    "Bank Change",        // 22
+    "Rates Change",       // 23
+    "NOT USED",           // 24
+    "INHIBIT TELEMETRY",  // 25
+    "ENABLE TELEMETRY",   // 26
+
+};
+uint16_t ScreenData[50];
+uint16_t AverageFrameRate = 0;
+uint64_t TotalFrameRate = 0;
+uint32_t FrameRateCounter = 0;
+char TextFileName[40];
+char MOD[10];
+char Mfiles[10];
+int LastTrim[5][17];
+char RXOptionsView[] = "page RXOptionsView";
+char pFhssView[] = "page FhssView";
+char pDataView[] = "page DataView";
+char pSwitchesView[] = "page SwitchesView";
+char pInputsView[] = "page InputsView";
+char pOptionsViewS[] = "page OptionsView";
+char pMixesView[] = "page MixesView";
+char pTypeView[] = "page TypeView";
+char pFailSafe[] = "page FailSafeView";
+char pModelsView[] = "page ModelsView";
+char pRXSetupView[] = "page RXSetupView";
+char pModelsIDView[] = "page IDsStartView";
+char pCalibrateView[] = "page CalibrateView";
+char pSubTrimView[] = "page SubTrimView";
+char pAudioView[] = "page AudioView";
+char pColoursView[] = "page BackGroundView";
+char pSticksView[] = "page SticksView";
+char pGraphView[] = "page GraphView";
+char pTXSetupView[] = "page TXSetupView";
+char pBuddyChView[] = "page BuddyChView";
+char pBuddyView[] = "page BuddyView";
+char pOptionView2[] = "page OptionView2";
+char pFrontView[] = "page FrontView";
+char pPongView[] = "page PongView";
+char pTXModule[] = "page TXModuleView";
+char pTrimDefView[] = "page TrimDefView";
+char pTrimView[] = "page TrimView";
+char pLogView[] = "page LogView";
+char pGPSView[] = "page GPSView";
+char pPopupView[] = "page PopupView";
+char pBlankView[] = "page BlankView";
+char pGapsView[] = "page GapsView";
+char pSplashView[] = "page SplashView";
+char pRXSetup1[] = "page RXOptionsView";
+
+int Previous_Current_Y = 0; // for scrolling log file
+int Max_Y = 666;
+uint32_t NextionReturn = 0;
+bool ReadingaFile = false;
+bool FirstGPSfix = true;
+uint32_t RXSuccessfulPackets = 0;
+uint32_t TotalPacketsAttempted = 0;
+float RateOfClimb = 0;
+char NextionCommand[MAXNEXTIONCOMMANDLENGTH];
+char WarnNow[] = "vis Warning,1";
+char WarnOff[] = "vis Warning,0";
+bool BatteryWarningShown = false; // V1B B24: the front page's Warning box says "Battery LOW" (the ESC temperature waits)
+uint32_t PowerCountdownShownAt = 0; // V1B B24: when "TURN OFF?! n" was last written into StillConnected (the current waits while the power button is held)
+char Warning[] = "Warning";
+bool SD_Card_Exists = false;
+char err_MotorOn[] = " MOTOR IS ON! ";
+uint8_t VariometerBank = 3;
+uint16_t VariometerThreshold = 400; // 400 fpm
+uint16_t VariometerSpacing = 125;   // 125 fpm
+bool Variometer_InitDone = false;
+bool BindingEnabled = false; // This is used to enable binding
+uint8_t Connect_MMmsg = 0;
+uint8_t Buddy_Low_Position = 0;
+uint8_t Buddy_Mid_Position = 1;
+uint8_t Buddy_Hi_Position = 2;
+
+bool ParamPause = true;
+bool First_RPM_Data = true;
+uint32_t RotorRPM = 0;
+uint32_t Max_RotorRPM = 0;
+char Max_Rotor_RPM[10];
+
+uint32_t GapSum = 0;
+uint32_t GapLongest = 0;
+uint32_t GapShortest = 1000;
+uint32_t GapStart = 0;
+uint32_t ThisGap = 0;
+uint32_t GapAverage = 0;
+uint32_t GapCount = 0;
+
+uint32_t GapSets[11] = {0};
+uint8_t GapPercentages[11] = {0};
+const uint16_t GapThesholds[11] = {0, 4, 8, 10, 12, 15, 25, 50, 100, 250, 500};
+uint32_t MaxBin = 100;
+uint32_t PrevGapSets[11] = {0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff};
+float Battery_Amps = 0;
+float Max_Battery_Amps = 0;
+float Battery_mAh = 0;
+uint8_t Receiver_type = 0;
+char Rx_type[7][30] = {"Unknown", "TRX:1 PWM:8", "TRX:2 PWM:8", "TRX:2 PWM:11","TRX:1 V2","TRX:2 V2","TRX:3 V2"};
+float ESC_Temp = 0;
+float Max_ESC_Temp = 0;
+char ESC_Temperature[10];
+char MAX_ESC_Temperature[10];
+char PID_Labels[17][4] = {"n0", "n1", "n2", "n3", "n4", "n5", "n6", "n7", "n8", "n9", "n10", "n11", "n12", "n13", "n14", "n15", "n16"};
+bool PIDS_Were_Edited = false;
+bool GOVS_PROFILE_Were_Edited = false;
+bool PIDS_Advanced_Were_Edited = false;
+bool GOVS_GLOBAL_Were_Edited = false;
+bool Rates_Were_Edited = false;
+bool Rates_Advanced_Were_Edited = false;
+float GearRatio = 10.3;
+uint8_t ArmingChannel = 0;
+uint32_t TXBuildAge;
+uint32_t RXBuildAge;
+bool AgeGapChecked = false;
+bool BankCheckIsNeeded = false;
+
+bool BlockBankChanges = false; // used to block bank changes when Param go to or from Nexus
+uint8_t BackGroundSelection = 1;
+char SearchFile[80]; // used for searching files on SD card after adding path to filename
+
+#define MAX_PID_WORDS 12            // 24 bytes
+#define MAX_RATES_BYTES 13          // 13 bytes
+#define MAX_RATES_ADVANCED_BYTES 15 // 15 bytes
+#define MAX_PIDS_ADVANCED_BYTES 26  // 26 bytes (Total = 78 bytes)
+
+char RatesWindows[MAX_RATES_BYTES][5] = {"t10", "tn0", "tn1", "tn2", "tn3", "tn4", "tn5", "tn6", "tn7", "tn8", "tn9", "tn10", "tn11"};
+bool LinkRatesToBanks = false;
+
+// **********************************************************************************************************************************
+// **********************************  Area & namespace for FHSS data ************************************************************
+// **********************************************************************************************************************************
+
+namespace FHSS_data
+{
+    uint8_t Used_Recovery_Channels[3] = {15, 71, 82}; // channels 15, 71, 82 are used for recovery
+
+    uint8_t FHSS_Channels[83] = {51, 28, 24, 61, 64, 55, 66, 19, 76, 21, 59, 67, 15, 71, 82, 32, 49, 69, 13, 2, 34, 47, 20, 16, 72, // UK array
+                                 35, 57, 45, 29, 75, 3, 41, 62, 11, 9, 77, 37, 8, 31, 36, 18, 17, 50, 78, 73, 30, 79, 6, 23, 40,
+                                 54, 12, 80, 53, 22, 1, 74, 39, 58, 63, 70, 52, 42, 25, 43, 26, 14, 38, 48, 68, 33, 27, 60, 44, 46,
+                                 56, 7, 81, 5, 65, 4, 10, 0};
+
+    uint8_t *FHSSRecoveryPointer = Used_Recovery_Channels;
+    uint8_t *FHSSChPointer = FHSS_Channels; // pointer for channels array
+    uint8_t NextChannelNumber = 0;
+    uint8_t PaceMaker = PACEMAKER; // now signed variables are used
+
+} // namespace FHSS_data
+
+/* ************************************* AckPayload structure ******************************************************
+
+ * This first byte "Ack_Payload_byte[0]" defines what all the other bytes mean, AND ...
+ * the highest BIT of Ack_Payload_byte[0] means ** HOP TO NEXT CHANNEL A.S.A.P. (IF ON) **
+ * the lower 7 BITs then define the meaning of the remainder of the ackpayload bytes
+ */
+#define PAYLOADSIZE 6
+struct Payload
+{
+    uint8_t Ack_Payload_byte[PAYLOADSIZE];
+};
+Payload AckPayload;
+
+struct spd // Special Packet Data for Wireless Buddy functions
+{
+    uint8_t Command[2];
+    uint64_t ModelID;
+    uint8_t MasterPaceMaker;
+    uint8_t Channel = QUIETCHANNEL;
+};
+spd SpecialPacketData; // longer version
+bool MasterIsInControl = true;
+bool NeedToRecover = false;
+uint8_t ChannelSentLastTime = 0; // The old channel number
+uint8_t Index = 82;
+
+uint16_t PID_Values[MAX_PID_WORDS];
+uint16_t PID_Boost_Values[3];
+uint16_t PID_HSI_Offset_Values[2];
+uint8_t Rate_Values[MAX_RATES_BYTES];
+uint8_t Rate_Advanced_Values[MAX_RATES_ADVANCED_BYTES];
+uint8_t PID_Advanced_Values[MAX_PIDS_ADVANCED_BYTES];
+
+uint16_t Saved_PID_Values[MAX_PID_WORDS + 5][4];
+uint8_t Saved_Rate_Values[MAX_RATES_BYTES][4];
+uint8_t Saved_Rate_Advanced_Values[MAX_RATES_ADVANCED_BYTES][4];
+uint8_t Saved_PID_Advanced_Values[MAX_PIDS_ADVANCED_BYTES][4];
+
+uint16_t PID_Send_Duration = 0;
+uint16_t PID_Advanced_Send_Duration = 0;
+uint16_t RATES_Send_Duration = 0;
+uint16_t Rates_Advanced_Send_Duration = 0;
+
+uint32_t PID_Start_Time = 0;
+
+uint32_t GOV_Start_Time = 0;
+uint32_t GOV_Global_Start_Time = 0;
+uint32_t GOV_Send_Duration = 0;
+uint32_t GOV_Config_Send_Duration = 0;
+
+uint32_t PID_Advanced_Start_Time = 0;
+uint32_t RATES_Advanced_Start_Time = 0;
+uint32_t RATES_Start_Time = 0;
+bool Reading_PIDS_Now = false;
+bool Reading_PIDS_Advanced_Now = false;
+bool Reading_RATES_Now = false;
+bool Reading_RATES_Advanced_Now = false;
+bool Reading_GOV_Now = false;
+bool Reading_GOV_Config_Now = false;
+
+uint8_t GovWritePayload[GOV_ACK_PAYLOAD_SIZE] = {0};
+uint8_t GovAckPayload[GOV_ACK_PAYLOAD_SIZE] = {0};
+uint8_t Saved_GOV_Config_Values[GOV_CONFIG_PAYLOAD_SIZE] = {0};
+
+char Rate_Types[7][16] = {"None", "Betaflight", "Raceflight", "KISS", "Actual", "QuickRates", "Rotorflight 2.3"};
+
+const float FactorTableRF2_2[13] = {1, 10, 10, .01, 10, 10, .01, 10, 10, .01, .25, .25, .01}; // Factors for RATES in RF V2.2 (0th element not used)
+const float FactorTableRF2_3[13] = {1, 5, 1, 1, 5, 1, 1, 5, 1, 1, .125, 1, 1};                // Factors for RATES in RF V2.3 (0th element not used)
+
+uint8_t RotorFlight_V = 0;           // 0 = NO RF, 1 = RF v2.2, 2 = RF v2.3
+float RotorFlight_Version = 0;       // none, V2.2, V2.3 for display only
+float RFVersions[3] = {0, 2.2, 2.3}; // for display only
+
+char ModelImageFileName[9];
+bool Armed = false;
+bool Wait_for_Advanced_Rates_to_Be_Sent_Too = false;
+uint16_t Max_Safe_Amps = 0;
+bool Force_Early_Sound = false;
+// *********************************************** END OF GLOBAL DATA ***************************************************************
+
+#endif

@@ -1,0 +1,476 @@
+// ********************************************************************************************************
+// RF_Governor_Global.h
+// Handles global/config parameters for the Rotorflight Governor on the Nextion display.
+// Config parameters — MSP cmd 142, payload bytes [18]-[41]
+// Off-screen (not editable): Startup [20-21], RPM/Pwr/D/FF/TTA filters [34-38]
+// Profile-specific parameters are handled in RF_Governor_Profile.h
+// ********************************************************************************************************
+
+#ifndef GOVERNOR_GLOBAL_H
+#define GOVERNOR_GLOBAL_H
+#define GOVERNOR_GLOBAL_LABELS_COUNT 17
+
+#include <Arduino.h>
+#include "1Definitions.h"
+
+uint8_t Global_Params_Received_Flags[24] = {0}; // tracks which config bytes [18]-[41] have been received from FC
+
+char GOV_Global_Labels[GOVERNOR_GLOBAL_LABELS_COUNT][4] = {
+    "n14", "n15", "n16", "n17", "n18", "n19", "n20",
+    "n21", "n22", "n23", "n24", "n25", "n26", "n27",
+    "n28", "n29", "n30"};
+
+char Gov_Mode_types[5][20] = {"(Mode 0 = Off)", "(Mode 1 = Limit)", "(Mode 2 = Direct)", "(Mode 3 = Electric)", "(Mode 4 = Nitro)"};
+char Throttle_types[3][20] = {"(Type 0 = Normal)", "(Type 1 = Switch)", "(Type 2 = Function)"};
+
+// ====================================================
+void ForegroundColourGOVConfigLabels(uint16_t Colour)
+{
+    for (int i = 0; i < GOVERNOR_GLOBAL_LABELS_COUNT; ++i)
+        SendForegroundColour(GOV_Global_Labels[i], Colour);
+}
+
+// ====================================================
+void ShowGOVConfigMsg(const char *msg, uint16_t Colour)
+{
+    if (CurrentView == RFGOVERNORVIEW_GLOBAL)
+    {
+        ForegroundColourGOVConfigLabels(Colour);
+        SendText((char *)"t4", (char *)msg);
+        SendCommand((char *)"vis t4,1");
+        SendCommand((char *)"vis b1,0");
+        BlockBankChanges = true;
+    }
+}
+// ====================================================
+void AddWords() // Add in the text words to describe the meaning of numeric config values, so user doesn't have to keep the manual open
+{
+    uint8_t temp = GetValue((char *)"n14"); // Current governor mode
+    static uint8_t last_temp = -1;
+    static uint8_t last_temp1 = -1;
+
+    if (temp != last_temp)
+    {
+        if (temp < 5)
+            SendText((char *)"GovMode", Gov_Mode_types[temp]);
+        else
+            SendText((char *)"GovMode", (char *)"0 - 4 only!");
+        last_temp = temp;
+    }
+
+    uint8_t temp1 = GetValue((char *)"n28"); // Current throttle type
+    if (temp1 != last_temp1)
+    {
+        if (temp1 < 3)
+            SendText((char *)"ThrMode", Throttle_types[temp1]);
+        else
+            SendText((char *)"ThrMode", (char *)"0 - 2 only!");
+        last_temp1 = temp1;
+    }
+}
+// ====================================================
+void HideGOVConfigMsg()
+{
+    BlockBankChanges = false; // ALWAYS clear — a view change before this call
+                              // must never leave the bank switch dead (ClaudeFix 25-8-2026)
+    if (CurrentView == RFGOVERNORVIEW_GLOBAL)
+    {
+        SendCommand((char *)"vis t4,0");
+        SendCommand((char *)"vis b1,1");
+        ForegroundColourGOVConfigLabels(Black);
+        if (LedWasGreen && !AllGlobalConfigBytesReceived())
+        {
+            MsgBox((char *)"page RFGovGlobalView", (char *)"Failed to read global \r\n(config) bytes. Try again.");
+            Start_RF_Governor();
+        }
+        AddWords();
+    }
+}
+
+// ====================================================
+void GOVS_G_Were_Edited()
+{
+    SendCommand((char *)"vis b3,1");
+    GOVS_GLOBAL_Were_Edited = true;
+    AddWords();
+}
+
+// ====================================================
+// LoadGovConfigWritePayload()
+// Reads visible config fields from Nextion into GovWritePayload[18..41]
+// Off-screen fields preserved directly from GovAckPayload[]
+// U16 fields split into lo/hi byte pairs
+// ====================================================
+void LoadGovConfigWritePayload()
+{
+    // Gov mode and Handover thr — visible, editable
+    GovWritePayload[18] = (uint8_t)GetValue((char *)"n14"); // Gov mode
+    GovWritePayload[19] = (uint8_t)GetValue((char *)"n15"); // Handover thr %
+
+    // Startup ×.1s — off-screen, preserve from last FC read
+    GovWritePayload[20] = GovAckPayload[20];
+    GovWritePayload[21] = GovAckPayload[21];
+
+    // U16 fields — visible, editable
+    uint16_t v;
+    v = (uint16_t)GetValue((char *)"n17"); // Spoolup ×.1%/s
+    GovWritePayload[22] = (uint8_t)(v & 0xFF);
+    GovWritePayload[23] = (uint8_t)(v >> 8);
+
+    v = (uint16_t)GetValue((char *)"n18"); // Spooldown ×.1%/s
+    GovWritePayload[24] = (uint8_t)(v & 0xFF);
+    GovWritePayload[25] = (uint8_t)(v >> 8);
+
+    v = (uint16_t)GetValue((char *)"n19"); // Tracking ×.1%/s
+    GovWritePayload[26] = (uint8_t)(v & 0xFF);
+    GovWritePayload[27] = (uint8_t)(v >> 8);
+
+    v = (uint16_t)GetValue((char *)"n20"); // Recovery ×.1%/s
+    GovWritePayload[28] = (uint8_t)(v & 0xFF);
+    GovWritePayload[29] = (uint8_t)(v >> 8);
+
+    v = (uint16_t)GetValue((char *)"n21"); // Hold timeout ×.1s
+    GovWritePayload[30] = (uint8_t)(v & 0xFF);
+    GovWritePayload[31] = (uint8_t)(v >> 8);
+
+    v = (uint16_t)GetValue((char *)"n22"); // Autorot timeout s
+    GovWritePayload[32] = (uint8_t)(v & 0xFF);
+    GovWritePayload[33] = (uint8_t)(v >> 8);
+
+    // Filter bytes — off-screen, preserve from last FC read
+    GovWritePayload[34] = GovAckPayload[34]; // RPM filter Hz
+    GovWritePayload[35] = GovAckPayload[35]; // Power filter Hz
+    GovWritePayload[36] = GovAckPayload[36]; // D filter ×.1Hz
+    GovWritePayload[37] = GovAckPayload[37]; // FF filter Hz
+    GovWritePayload[38] = GovAckPayload[38]; // TTA filter Hz
+
+    // Throttle section — visible, editable
+    GovWritePayload[39] = (uint8_t)GetValue((char *)"n28"); // Throttle type
+    GovWritePayload[40] = (uint8_t)GetValue((char *)"n29"); // Idle thr ×.1%
+    GovWritePayload[41] = (uint8_t)GetValue((char *)"n30"); // Auto thr ×.1%
+}
+
+// ====================================================
+bool AllGlobalConfigBytesReceived()
+{
+    for (int i = 0; i < 24; ++i)
+    {
+        if (Global_Params_Received_Flags[i] == 0)
+            return false;
+    }
+    return true;
+}
+
+// ====================================================
+// DisplayGovConfigValues()
+// Called with byte range [n, m) from GovAckPayload[]
+// Receives only two values at a time — mirrors DisplayGovValues()
+// Off-screen fields: stored in GovAckPayload[] but not sent to Nextion
+// All U16 pairs: skip lo byte, display on hi byte once both are in buffer
+// ====================================================
+void DisplayGovConfigValues(uint8_t n, uint8_t m)
+{
+    if (CurrentView != RFGOVERNORVIEW_GLOBAL)
+        return;
+
+    for (uint8_t i = n; i < m; ++i)
+    {
+        if (i >= GOV_ACK_PAYLOAD_SIZE)
+            break;
+
+        if (i >= 18 && (uint8_t)(i - 18) < sizeof(Global_Params_Received_Flags))
+            Global_Params_Received_Flags[i - 18] = 1; // mark this config byte as received
+
+        if (AllGlobalConfigBytesReceived())
+        {
+            GOV_Global_Start_Time = 0; // instant timeout — all bytes in
+        }
+
+        switch (i)
+        {
+        case 18:
+            SendValue((char *)"n14", GovAckPayload[i]);
+            break; // Gov mode
+        case 19:
+            SendValue((char *)"n15", GovAckPayload[i]);
+            break; // Handover thr %
+
+        // Startup — off-screen, silent
+        case 20:
+            break; // lo byte of Startup
+        case 21:
+            break; // hi byte of Startup — off-screen, not displayed
+
+        case 22:
+            break; // lo byte of Spoolup
+        case 23:
+            SendValue((char *)"n17", (uint16_t)GovAckPayload[22] | ((uint16_t)GovAckPayload[23] << 8));
+            break; // Spoolup ×.1%/s
+
+        case 24:
+            break; // lo byte of Spooldown
+        case 25:
+            SendValue((char *)"n18", (uint16_t)GovAckPayload[24] | ((uint16_t)GovAckPayload[25] << 8));
+            break; // Spooldown ×.1%/s
+
+        case 26:
+            break; // lo byte of Tracking
+        case 27:
+            SendValue((char *)"n19", (uint16_t)GovAckPayload[26] | ((uint16_t)GovAckPayload[27] << 8));
+            break; // Tracking ×.1%/s
+
+        case 28:
+            break; // lo byte of Recovery
+        case 29:
+            SendValue((char *)"n20", (uint16_t)GovAckPayload[28] | ((uint16_t)GovAckPayload[29] << 8));
+            break; // Recovery ×.1%/s
+
+        case 30:
+            break; // lo byte of Hold timeout
+        case 31:
+            SendValue((char *)"n21", (uint16_t)GovAckPayload[30] | ((uint16_t)GovAckPayload[31] << 8));
+            break; // Hold timeout ×.1s
+
+        case 32:
+            break; // lo byte of Autorot timeout
+        case 33:
+            SendValue((char *)"n22", (uint16_t)GovAckPayload[32] | ((uint16_t)GovAckPayload[33] << 8));
+            break; // Autorot timeout s
+
+        // Filter bytes — off-screen, silent (stored in GovAckPayload[] for write-back)
+        case 34:
+            break; // RPM filter Hz
+        case 35:
+            break; // Power filter Hz
+        case 36:
+            break; // D filter ×.1Hz
+        case 37:
+            break; // FF filter Hz
+        case 38:
+            break; // TTA filter Hz
+
+        case 39:
+            SendValue((char *)"n28", GovAckPayload[i]);
+            break; // Throttle type
+        case 40:
+            SendValue((char *)"n29", GovAckPayload[i]);
+            break; // Idle thr ×.1%
+        case 41:
+            SendValue((char *)"n30", GovAckPayload[i]);
+            break; // Auto thr ×.1%
+
+        default:
+            break;
+        }
+    }
+}
+
+// ====================================================
+// ShowLocalGovConfigBank()
+// Shows saved config values from SD card when not connected
+// Off-screen fields not sent to Nextion
+// ====================================================
+void ShowLocalGovConfigBank()
+{
+    SendValue((char *)"n14", Saved_GOV_Config_Values[18]); // Gov mode
+    SendValue((char *)"n15", Saved_GOV_Config_Values[19]); // Handover thr %
+
+    // Startup off-screen — skip
+
+    SendValue((char *)"n17", (uint16_t)Saved_GOV_Config_Values[22] | ((uint16_t)Saved_GOV_Config_Values[23] << 8)); // Spoolup
+    SendValue((char *)"n18", (uint16_t)Saved_GOV_Config_Values[24] | ((uint16_t)Saved_GOV_Config_Values[25] << 8)); // Spooldown
+    SendValue((char *)"n19", (uint16_t)Saved_GOV_Config_Values[26] | ((uint16_t)Saved_GOV_Config_Values[27] << 8)); // Tracking
+    SendValue((char *)"n20", (uint16_t)Saved_GOV_Config_Values[28] | ((uint16_t)Saved_GOV_Config_Values[29] << 8)); // Recovery
+    SendValue((char *)"n21", (uint16_t)Saved_GOV_Config_Values[30] | ((uint16_t)Saved_GOV_Config_Values[31] << 8)); // Hold timeout
+    SendValue((char *)"n22", (uint16_t)Saved_GOV_Config_Values[32] | ((uint16_t)Saved_GOV_Config_Values[33] << 8)); // Autorot timeout
+
+    // Filter bytes off-screen — skip
+
+    SendValue((char *)"n28", Saved_GOV_Config_Values[39]); // Throttle type
+    SendValue((char *)"n29", Saved_GOV_Config_Values[40]); // Idle thr ×.1%
+    SendValue((char *)"n30", Saved_GOV_Config_Values[41]); // Auto thr ×.1%
+
+    HideGOVConfigMsg();
+    BlockBankChanges = false;
+}
+
+// ====================================================
+// SaveToLocalGovConfigBank()
+// ====================================================
+void SaveToLocalGovGLOBAL() // "Save FC to SD" button
+{ // This function only works when connected. The values are already on screen so it's easy enough.
+    
+    if (!GetConfirmation((char *)"page RFGovViewGlbl", (char *)"Save these config values to SD card?"))
+        return;
+    
+    ShowGOVConfigMsg((char *)"Saving config values ...", Gray);
+    LoadGovConfigWritePayload();
+
+    for (int i = 18; i < GOV_CONFIG_PAYLOAD_SIZE; ++i)
+        Saved_GOV_Config_Values[i] = GovWritePayload[i];
+
+    SaveOneModel(ModelNumber);
+    SendCommand((char *)"vis b3,0");
+    HideGOVConfigMsg();
+    GOVS_GLOBAL_Were_Edited = false;
+    PlaySound(BEEPCOMPLETE);
+}
+
+// ====================================================
+// RestoreFromSDGlobalGOV()
+// Reads saved config values from SD card, displays them on screen,
+// and sends them to the FC via MSP. Only works when connected.
+// ====================================================
+void RestoreFromSDGlobalGOV()
+{
+    if (!LedWasGreen)
+    {
+        MsgBox((char *)"page RFGovViewGlbl", (char *)"Not connected!\r\nCannot restore to FC.");
+        return;
+    }
+
+    if (SendBuffer[ArmingChannel - 1] > 1000)
+    {
+        PlaySound(WHAHWHAHMSG);
+        MsgBox((char *)"page RFGovViewGlbl", (char *)"Model is armed!\r\nDisarm before restoring governor config.");
+        return;
+    }
+
+    if (!GetConfirmation((char *)"page RFGovViewGlbl", (char *)"Restore config values from SD card?"))
+        return;
+
+    ShowGOVConfigMsg((char *)"Restoring config values ...", Gray);
+
+    // Copy SD values into GovWritePayload[18..41]
+    for (int i = 18; i < GOV_CONFIG_PAYLOAD_SIZE; ++i)
+        GovWritePayload[i] = Saved_GOV_Config_Values[i];
+
+    // Show restored values on screen
+    ShowLocalGovConfigBank();
+
+    // Send to FC — queue in reverse order (LIFO)
+    AddParameterstoQueue(SEND_GOV_WRITE_CONFIG3); // executes 3rd
+    AddParameterstoQueue(SEND_GOV_WRITE_CONFIG2); // executes 2nd
+    AddParameterstoQueue(SEND_GOV_WRITE_CONFIG1); // executes 1st
+
+    GOVS_GLOBAL_Were_Edited = false;
+    SendCommand((char *)"vis b3,0");
+    HideGOVConfigMsg();
+    PlaySound(BEEPCOMPLETE);
+}
+
+// ====================================================
+// SendEditedGovConfigValues()
+// Writes config values to FC via MSP, then reboots FC
+// ====================================================
+void SendEditedGovConfigValues()
+{
+    if (!LedWasGreen)
+    {
+        SaveToLocalGovGLOBAL();
+        return;
+    }
+
+    if (SendBuffer[ArmingChannel - 1] > 1000)
+    {
+        PlaySound(WHAHWHAHMSG);
+        MsgBox((char *)"page RFGovViewGlbl", (char *)"Model is armed!\r\nDisarm before writing governor config.");
+        return;
+    }
+
+    PlaySound(BEEPMIDDLE);
+    DelayWithDog(100);
+    LoadGovConfigWritePayload();
+
+    // Queue in reverse order — LIFO executes CONFIG1 first, CONFIG2 second, CONFIG3 third
+    AddParameterstoQueue(SEND_GOV_WRITE_CONFIG3); // executes 3rd
+    AddParameterstoQueue(SEND_GOV_WRITE_CONFIG2); // executes 2nd
+    AddParameterstoQueue(SEND_GOV_WRITE_CONFIG1); // executes 1st
+
+    GOVS_GLOBAL_Were_Edited = false;
+    SendCommand((char *)"vis b3,0");
+    PlaySound(BEEPCOMPLETE);
+
+    // Reboot FC is done at receiver.
+}
+// ====================================================
+void ShowGOV_Global_Bank()
+{
+    if (CurrentView == RFGOVERNORVIEW_GLOBAL)
+    {
+        for (int i = 0; i < GOVERNOR_GLOBAL_LABELS_COUNT; ++i)
+            SendValue(GOV_Global_Labels[i], 0);
+
+        // Reset received flags for fresh read
+        memset(Global_Params_Received_Flags, 0, sizeof(Global_Params_Received_Flags));
+
+        if (!LedWasGreen)
+        {
+            ShowGOVConfigMsg((char *)"Loading config values ...", Gray);
+            GOVS_GLOBAL_Were_Edited = false;
+            ShowLocalGovConfigBank();
+            return;
+        }
+
+        BlockBankChanges = true;
+        ShowGOVConfigMsg((char *)"Loading config values ...", Gray);
+        GOV_Config_Send_Duration = GOV_GLOBAL_WAIT_TIME; // heer
+        Reading_GOV_Config_Now = true;
+        AddParameterstoQueue(SEND_GOV_CONFIG_VALUES);
+        GOVS_GLOBAL_Were_Edited = false;
+        SendCommand((char *)"vis b3,0");
+        GOV_Global_Start_Time = millis();
+    }
+}
+
+// ====================================================
+void Start_Gov_Global()
+{
+    AddParameterstoQueue(MSP_INHIBIT_TELEMETRY);
+    SendCommand((char *)"page RFGovViewGlbl");
+    CurrentView = RFGOVERNORVIEW_GLOBAL;
+    SendText((char *)"t27", ModelName);
+    ShowGOV_Global_Bank();
+    SendText((char *)"b3", (char *)"Save");
+}
+
+// ====================================================
+void End_Gov_Global()
+{
+    if (GOVS_GLOBAL_Were_Edited)
+    {
+        if (GetConfirmation((char *)"page RFGovViewGlbl", (char *)"Discard edited governor config?"))
+        {
+            GOVS_GLOBAL_Were_Edited = false;
+            AddParameterstoQueue(MSP_ENABLE_TELEMETRY);
+            RotorFlightStart();
+        }
+        // if user says No, stay on page
+    }
+    else
+    {
+        AddParameterstoQueue(MSP_ENABLE_TELEMETRY);
+        RotorFlightStart();
+    }
+}
+
+// ====================================================
+void Restore_FROM_SD_Global_GOV()
+{
+    // Implementation for restoring from SD card
+}
+// ====================================================
+void Gov_Global_Were_Edited()
+{
+    SendCommand((char *)"vis b3,1");
+    GOVS_GLOBAL_Were_Edited = true;
+}
+
+// ====================================================
+void Save_Gov_Global()
+{
+    SendEditedGovConfigValues();
+    AddWords();
+}
+
+#endif // RF_GOVERNOR_GLOBAL_H

@@ -1,0 +1,36 @@
+Screen_Background=8
+@model 1
+# StartModelIDView (Model_IDs.h:191)
+page IDsStartView
+t1.txt="RAW 420 MCM"
+t4.txt="4C11AE8D2F30"
+t5.txt="4C11AE8D2F30"
+@shot 3_open
+# Delete stored ID -> GetConfirmation, then MsgBox "Model ID deleted.", back to the page and the IDs again (Model_IDs.h:115)
+# GetConfirmation (Utilities.h:1168)
+page PopupView
+Dialog.txt="Delete ID for RAW 420 MCM?"
+page IDsStartView
+# MsgBox (Utilities.h:1188)
+page PopupView
+vis b1,0
+Dialog.txt="Model ID deleted."
+page IDsStartView
+t4.txt="No ID stored"
+t5.txt="4C11AE8D2F30"
+@shot 3_deleted
+# no model connected, nothing stored
+@model 0
+# StartModelIDView (Model_IDs.h:191)
+page IDsStartView
+t1.txt="Test heli"
+t4.txt="No ID stored"
+t5.txt="No ID received"
+@shot 3_noid
+# worst case: the 30-char name, the longest ID texts ("No ID received" 14 chars, 12 hex digits)
+# StartModelIDView (Model_IDs.h:191)
+page IDsStartView
+t1.txt="SAB GOBLIN 700 COMPETITION MK2"
+t4.txt="30AEA4C81F64"
+t5.txt="No ID received"
+@shot 3_long

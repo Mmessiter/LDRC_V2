@@ -1,0 +1,19 @@
+# BankNameView (page 20). StartBankNames main.cpp:2662: page BankNameView; BK1..BK4.val=BanksInUse[i];
+# UpdateModelsNameEveryWhere main.cpp:633 -> ModelName.txt = name + " (n)" (or " [n]" before the model ID is saved).
+Screen_Background=8
+@model 0
+page BankNameView
+BK1.val=4
+BK2.val=5
+BK3.val=6
+BK4.val=7
+ModelName.txt="RAW 420 MCM (3)"
+@shot 20_open
+# ---- worst case: the 13-char names (indices 0-3 "Flight mode n"), 30-char name + 2-digit model number (MAXMODELNUMBER 91)
+page BankNameView
+BK1.val=0
+BK2.val=1
+BK3.val=2
+BK4.val=3
+ModelName.txt="GOBLIN RAW 700 COMPETITION MK2 (90)"
+@shot 20_long

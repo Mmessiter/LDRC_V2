@@ -1,0 +1,22 @@
+Screen_Background=8
+@model 0
+# StartTrimDefView (Trims.h:23)
+page TrimDefView
+@shot 49_open
+# pilot pushes the aileron trim, then the throttle trim (SticksMode 2)
+play 0,17,0
+ail.txt="Aileron trim is defined!"
+play 0,17,0
+thr.txt="Throttle trim is defined!"
+@shot 49_partial
+play 0,17,0
+ele.txt="Elevator trim is defined!"
+play 0,17,0
+rud.txt="Rudder trim is defined!"
+# all four defined = every text the Teensy sends here (25 chars max)
+@shot 49_long
+# OK -> DefineTrimsEnd (Trims.h:36) -> CalibrateView; later "Calibrate trims" again -> StartTrimDefView sends only the page
+page CalibrateView
+ModelName.txt="RAW 420 MCM (3)"
+page TrimDefView
+@shot 49_again

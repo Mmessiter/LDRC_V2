@@ -1,0 +1,16 @@
+# 33 TXSetupView ("Transmitter setup") - FrontView -> "MainSetup" / StartTXSetupView, main.cpp:3376-3388, MenuOptions.h:490-496
+Screen_Background=8
+@model 0
+page TXSetupView
+ModelName.txt="RAW 420 MCM (3)"
+@shot 33_open
+# a model connected: "Transmitter updates" greys out (need "nomodel")
+@model 1
+page TXSetupView
+ModelName.txt="RAW 420 MCM (3)"
+@shot 33_model
+# worst case: 30-char model name + two-digit model number
+@model 0
+page TXSetupView
+ModelName.txt="SAB GOBLIN RAW 700 COMPETITION (90)"
+@shot 33_long

@@ -1,0 +1,89 @@
+# 29 MixesView - group C scenario (what the Teensy sends; file:line = TXV1B/TransmitterCode)
+Screen_Background=8
+@model 1
+# "MIXESVIEW" from RXSetupView (main.cpp:4102)
+page MixesView
+ModelName.txt="RAW 420 MCM (3)"
+MixNumber.val=1
+Enabled.val=1
+c0.val=0
+FlightMode.val=0
+MasterChannel.val=1
+SlaveChannel.val=4
+Reversed.val=0
+Percent.val=25
+od.val=0
+Offset.val=0
+chM.txt="Aileron"
+chS.txt="Rudder"
+# ReceiveLotsofData -> ReadMixValues -> FixCHNames, then FixCHNames again (main.cpp:4112-4113)
+chM.txt="Aileron"
+chS.txt="Rudder"
+t10.txt="All banks"
+chM.txt="Aileron"
+chS.txt="Rudder"
+t10.txt="All banks"
+# the page's own postinitialize "click b22,0" sends 128+76 -> ReceiveLotsofData -> FixCHNames once more
+chM.txt="Aileron"
+chS.txt="Rudder"
+t10.txt="All banks"
+@shot 29_open
+# the pilot presses + by the mix number (screen-side: b0 -> MixNumber=2, click b22,0, print "MixesView")
+click b0,0
+# 128+76 data -> ReadMixValues -> FixCHNames; then "MixesView" (main.cpp:4118): number changed
+chM.txt="Aileron"
+chS.txt="Rudder"
+t10.txt="All banks"
+# get MixNumber.val
+vis b1,0
+vis b0,0
+chM.txt="Aileron"
+chS.txt="Rudder"
+t10.txt="All banks"
+@shot 29_mixchange
+Enabled.val=0
+c0.val=0
+FlightMode.val=0
+MasterChannel.val=1
+SlaveChannel.val=1
+Reversed.val=0
+SlaveChannel.val=2
+Percent.val=100
+od.val=0
+Offset.val=0
+chM.txt="Aileron"
+chS.txt="Elevator"
+vis b1,1
+vis b0,1
+chM.txt="Aileron"
+chS.txt="Elevator"
+t10.txt="All banks"
+@shot 29_mix2
+# ---- worst case: bank 1 named "Flight mode 1", offset -90, 200 %, longest names and model name
+# "MIXESVIEW" from RXSetupView (main.cpp:4102)
+page MixesView
+ModelName.txt="WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW (90)"
+MixNumber.val=32
+Enabled.val=1
+c0.val=0
+FlightMode.val=1
+MasterChannel.val=16
+SlaveChannel.val=15
+Reversed.val=1
+Percent.val=200
+od.val=1
+Offset.val=-90
+chM.txt="WWWWWWWWWW"
+chS.txt="WWWWWWWWWW"
+# ReceiveLotsofData -> ReadMixValues -> FixCHNames, then FixCHNames again (main.cpp:4112-4113)
+chM.txt="WWWWWWWWWW"
+chS.txt="WWWWWWWWWW"
+t10.txt="Flight mode 1"
+chM.txt="WWWWWWWWWW"
+chS.txt="WWWWWWWWWW"
+t10.txt="Flight mode 1"
+# the page's own postinitialize "click b22,0" sends 128+76 -> ReceiveLotsofData -> FixCHNames once more
+chM.txt="WWWWWWWWWW"
+chS.txt="WWWWWWWWWW"
+t10.txt="Flight mode 1"
+@shot 29_long

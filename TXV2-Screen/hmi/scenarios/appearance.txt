@@ -1,0 +1,25 @@
+# The Appearance page (screen 1.8.0): Transmitter setup's Appearance button, its page in the screens' colours, and the
+# background page without the Colours button; Edit themes' rainbow on white text (it gains strength, so it changes).
+Screen_Background=8
+@model 1
+page TXSetupView
+ModelName.txt="RAW 420 MCM (3)"
+@shot app_txsetup
+@appearance
+@shot app_page
+@theme wine cream
+page TXSetupView
+ModelName.txt="RAW 420 MCM (3)"
+@appearance
+@shot app_page_wine
+@theme white burgundy
+page TXSetupView
+ModelName.txt="RAW 420 MCM (3)"
+@appearance
+@shot app_page_white
+@theme navy white
+@model 0
+page BackGroundView
+@shot app_bg
+@colours edit text_colour hsv:200,-1,-1
+@shot app_edit_text_hue

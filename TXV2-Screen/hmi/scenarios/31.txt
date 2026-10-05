@@ -1,0 +1,74 @@
+# 31 DualRatesView - group C scenario (what the Teensy sends; file:line = TXV1B/TransmitterCode)
+Screen_Background=8
+@model 1
+# DualRatesStart (DualRates.h:252), 128+45 from RXSetupView -> DisplayDualRateValues (DualRates.h:167)
+page DualRatesView
+rate1.val=100
+rate2.val=75
+rate3.val=50
+n2.val=1
+n0.val=2
+n1.val=4
+n3.val=0
+n6.val=0
+n4.val=0
+n5.val=0
+n7.val=0
+t12.txt="Aileron"
+t8.txt="Elevator"
+t11.txt="Rudder"
+t13.txt="Not used"
+t16.txt="Not used"
+t14.txt="Not used"
+t15.txt="Not used"
+t17.txt="Not used"
+rate.val=0
+t1.txt="Bank 1"
+# get rate.val
+t3.txt="'Bank 1' will use rate switch"
+ModelName.txt="RAW 420 MCM (3)"
+@shot 31_open
+# the pilot picks "Use rate 2" in the list (screen-side, stood in for by rate.val=2): 128+77 -> SetNewDualRate
+rate.val=2
+t3.txt="'Bank 1' will use rate 2"
+@shot 31_rate2
+# bank switch moved to bank 2: BankHasChanged (Switches.h:318): ModelName, then DisplayNewDualRateBank
+ModelName.txt="RAW 420 MCM (3)"
+rate.val=0
+t1.txt="Bank 2"
+# get rate.val
+t3.txt="'Bank 2' will use rate switch"
+# every 600 ms while the page is up: CheckDualRatesScreen (DualRates.h:225) polls n2,n0,n1,n3,n6,n4,n5,n7 and
+# re-sends a name box only when a number changed - the pilot typed 5 into the 4th box (n3):
+n3.val=5
+# get n2.val ... get n7.val
+t13.txt="Gear"
+@shot 31_bank2
+# ---- worst case: 200 %, channels 16, longest names, "Not used", longest bank name + t3, model name
+# DualRatesStart (DualRates.h:252), 128+45 from RXSetupView -> DisplayDualRateValues (DualRates.h:167)
+page DualRatesView
+rate1.val=200
+rate2.val=200
+rate3.val=200
+n2.val=16
+n0.val=16
+n1.val=16
+n3.val=16
+n6.val=0
+n4.val=0
+n5.val=0
+n7.val=0
+t12.txt="WWWWWWWWWW"
+t8.txt="WWWWWWWWWW"
+t11.txt="WWWWWWWWWW"
+t13.txt="WWWWWWWWWW"
+t16.txt="Not used"
+t14.txt="Not used"
+t15.txt="Not used"
+t17.txt="Not used"
+rate.val=0
+t1.txt="Flight mode 1"
+# get rate.val
+t3.txt="'Flight mode 1' will use rate switch"
+ModelName.txt="WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW (90)"
+@shot 31_long

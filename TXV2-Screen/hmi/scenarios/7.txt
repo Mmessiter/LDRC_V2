@@ -1,0 +1,243 @@
+# PID_A_View (page 7). StartPIDAdvancedView RF_PID_Advanced.h:183 -> ShowPIDAdvancedBank :110 -> PIDAdvancedMsg :70;
+# values Display_PID_Advanced_Values :14 (ack 25-30,32); HidePID_Advanced_Msg :60 after MSP_WAIT_TIME.
+Screen_Background=8
+@model 1
+page PID_A_View
+t26.txt="Bank 1"
+sw0.pco=33840
+t1.pco=33840
+t2.pco=33840
+t3.pco=33840
+t4.pco=33840
+t5.pco=33840
+t6.pco=33840
+t7.pco=33840
+t8.pco=33840
+t9.pco=33840
+t10.pco=33840
+t11.pco=33840
+t12.pco=33840
+t13.pco=33840
+t14.pco=33840
+t15.pco=33840
+t16.pco=33840
+t17.pco=33840
+t18.pco=33840
+t19.pco=33840
+t20.pco=33840
+t21.pco=33840
+t22.pco=33840
+t23.pco=33840
+t24.pco=33840
+t25.pco=33840
+busy.txt="Loading Values for  Bank 1 ..."
+vis busy,1
+vis b3,0
+t27.txt="RAW 420 MCM"
+@shot 7_busy
+sw0.val=1
+t1.txt="2.5"
+t2.txt="15"
+t3.txt="12"
+t4.txt="15"
+t5.txt="45"
+t6.txt="45"
+t7.txt="60"
+t8.txt="110"
+t9.txt="110"
+t10.txt="65"
+t11.txt="65"
+t12.txt="200"
+t13.txt="25"
+t14.txt="25"
+t15.txt="35"
+t16.txt="25"
+t17.txt="25"
+t18.txt="35"
+t19.txt="120"
+t20.txt="80"
+t21.txt="5"
+t22.txt="10"
+t23.txt="60"
+t24.txt="0"
+t25.txt="2.5"
+vis busy,0
+sw0.pco=0
+t1.pco=0
+t2.pco=0
+t3.pco=0
+t4.pco=0
+t5.pco=0
+t6.pco=0
+t7.pco=0
+t8.pco=0
+t9.pco=0
+t10.pco=0
+t11.pco=0
+t12.pco=0
+t13.pco=0
+t14.pco=0
+t15.pco=0
+t16.pco=0
+t17.pco=0
+t18.pco=0
+t19.pco=0
+t20.pco=0
+t21.pco=0
+t22.pco=0
+t23.pco=0
+t24.pco=0
+t25.pco=0
+@shot 7_open
+# pilot edits a value (screen keyboard), Teensy PIDsAdvancedWereEdited :81
+t2.txt="20"
+vis b3,1
+@shot 7_edited
+# Save -> SendEditedPID_Advanced :162
+sw0.pco=33840
+t1.pco=33840
+t2.pco=33840
+t3.pco=33840
+t4.pco=33840
+t5.pco=33840
+t6.pco=33840
+t7.pco=33840
+t8.pco=33840
+t9.pco=33840
+t10.pco=33840
+t11.pco=33840
+t12.pco=33840
+t13.pco=33840
+t14.pco=33840
+t15.pco=33840
+t16.pco=33840
+t17.pco=33840
+t18.pco=33840
+t19.pco=33840
+t20.pco=33840
+t21.pco=33840
+t22.pco=33840
+t23.pco=33840
+t24.pco=33840
+t25.pco=33840
+busy.txt="Sending edited PID Advanced values ..."
+vis busy,1
+vis b3,0
+@shot 7_sending
+vis busy,0
+sw0.pco=0
+t1.pco=0
+t2.pco=0
+t3.pco=0
+t4.pco=0
+t5.pco=0
+t6.pco=0
+t7.pco=0
+t8.pco=0
+t9.pco=0
+t10.pco=0
+t11.pco=0
+t12.pco=0
+t13.pco=0
+t14.pco=0
+t15.pco=0
+t16.pco=0
+t17.pco=0
+t18.pco=0
+t19.pco=0
+t20.pco=0
+t21.pco=0
+t22.pco=0
+t23.pco=0
+t24.pco=0
+t25.pco=0
+vis b3,0
+# ---- worst case: 13-char bank name, 30-char model name, widest values ("%u" of 255, "%.1f" of 25.5), longest message
+page PID_A_View
+t26.txt="Flight mode 4"
+sw0.pco=33840
+t1.pco=33840
+t2.pco=33840
+t3.pco=33840
+t4.pco=33840
+t5.pco=33840
+t6.pco=33840
+t7.pco=33840
+t8.pco=33840
+t9.pco=33840
+t10.pco=33840
+t11.pco=33840
+t12.pco=33840
+t13.pco=33840
+t14.pco=33840
+t15.pco=33840
+t16.pco=33840
+t17.pco=33840
+t18.pco=33840
+t19.pco=33840
+t20.pco=33840
+t21.pco=33840
+t22.pco=33840
+t23.pco=33840
+t24.pco=33840
+t25.pco=33840
+busy.txt="Loading Values for  Flight mode 4 ..."
+vis busy,1
+vis b3,0
+t27.txt="GOBLIN RAW 700 COMPETITION MK2"
+sw0.val=1
+t1.txt="25.5"
+t2.txt="255"
+t3.txt="255"
+t4.txt="255"
+t5.txt="255"
+t6.txt="255"
+t7.txt="255"
+t8.txt="255"
+t9.txt="255"
+t10.txt="255"
+t11.txt="255"
+t12.txt="255"
+t13.txt="255"
+t14.txt="255"
+t15.txt="255"
+t16.txt="255"
+t17.txt="255"
+t18.txt="255"
+t19.txt="255"
+t20.txt="255"
+t21.txt="255"
+t22.txt="255"
+t23.txt="255"
+t24.txt="255"
+t25.txt="25.5"
+busy.txt="Sending edited PID Advanced values ..."
+@shot 7_long_busy
+vis busy,0
+sw0.pco=0
+t1.pco=0
+t2.pco=0
+t3.pco=0
+t4.pco=0
+t5.pco=0
+t6.pco=0
+t7.pco=0
+t8.pco=0
+t9.pco=0
+t10.pco=0
+t11.pco=0
+t12.pco=0
+t13.pco=0
+t14.pco=0
+t15.pco=0
+t16.pco=0
+t17.pco=0
+t18.pco=0
+t19.pco=0
+t20.pco=0
+t21.pco=0
+t22.pco=0
+t23.pco=0
+t24.pco=0
+t25.pco=0
+@shot 7_long
