@@ -186,6 +186,14 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## A long press on a box (screen 1.10.2, 5 Oct 2026)
+
+Malcolm: "While on a defined front screen, a long press on a box allows that box to be redefined. Possible? But not
+a short tap. A very long press." Two full seconds on a box, without moving, and that box's chooser opens from the
+flight screen itself; the choice made (or OK, or its theme page done), the flight screen is straight back and the
+change is kept. A tap or a slide does nothing, as before. Only on the ground: in flight setup pages close by rule, so
+a held finger does nothing then. The Appearance page's way in is unchanged.
+
 ## The tabs on the screen itself (screen 1.10.1, 5 Oct 2026)
 
 Malcolm: "when a defined front screen is in view, please try to squeeze in those 6 buttons so that a user can

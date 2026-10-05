@@ -188,6 +188,13 @@ private:
     void paint(FlightTile &t, int box) const;          // a box in its theme
     int pressedId = -1;                                // the button or box the finger came down on (setup)
     bool down = false, slidOff = false;                // the finger is down; it has left what it came down on (no action then)
+    // A very long press on a box of the flight screen (1.10.2, Malcolm: "a long press on a box allows that box to be
+    // redefined ... But not a short tap. A very long press"): two seconds without moving, and that box's chooser opens
+    // from the flight screen itself; the choice made (or OK), the flight screen is back. A tap or a slide does nothing.
+    static const uint32_t LONG_PRESS_MS = 2000;
+    int heldBox = -1; uint32_t heldSince = 0;          // the box under a finger on the flight screen, and since when
+    bool inFlight = false;                             // (poll) the model could be flying: no long press then - setup pages close in flight by rule
+    bool quickEdit = false;                            // the setup page was opened by a long press: it closes as soon as the box is chosen
     uint32_t lastSeen = 0;                             // the last sample with the finger on the glass: a lift is real after 80 ms of none
     int idAt(int x, int y) const;
     FlightConfig before;                               // the settings when the page opened

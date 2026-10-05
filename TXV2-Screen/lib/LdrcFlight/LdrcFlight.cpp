@@ -303,14 +303,14 @@ void flightSizeTiles(std::vector<FlightTile> &tiles, FlightFonts *f) {
 
 // ------------------------------------------------------------------ the flight screen and its setup page
 void FlightScreen::poll(uint32_t now, bool onFront, bool flying, bool blocked) {
-    (void) now; (void) flying;                         // (1.9.8: taking off or landing changes nothing; the buttons choose)
+    (void) now; inFlight = flying;                     // (1.9.8: taking off or landing changes nothing; the buttons choose)
     const bool want = cfg.manual == FM_DEFINED;
     const bool was = shown;
     shown = !setup && want && onFront && !blocked;
     if (shown != was && !setup) { down = false; pressedId = -1; slidOff = false; }   // a finger on the glass as it came or went was not for it
 }
 void FlightScreen::useDefined() { if (cfg.manual != FM_DEFINED) { cfg.manual = FM_DEFINED; saved = true; } }   // (kept: the same screen after a switch-off)
-void FlightScreen::openSetup() { setup = true; shown = false; chooser = -1; colourFor = -1; pressedId = -1; down = slidOff = false; before = cfg; }
+void FlightScreen::openSetup() { setup = true; shown = false; chooser = -1; colourFor = -1; pressedId = -1; down = slidOff = false; quickEdit = false; before = cfg; }
 void FlightScreen::chooseSlot(int k) {
     if (k < 0 || k >= FLIGHT_SLOTS || k == slotNo) return;
     slots[slotNo] = cfg;                               // what was being used or edited, kept in its slot
@@ -323,7 +323,7 @@ bool FlightScreen::loadSlot(int k, const std::string &s) {
     if (k == slotNo) return cfg.load(s);
     return slots[k].load(s);
 }
-void FlightScreen::closeSetup() { setup = false; chooser = -1; colourFor = -1; pressedId = -1; down = slidOff = false; if (!(cfg == before)) saved = true; }
+void FlightScreen::closeSetup() { setup = false; chooser = -1; colourFor = -1; pressedId = -1; down = slidOff = false; quickEdit = false; if (!(cfg == before)) saved = true; }
 bool FlightScreen::takeSaved() { const bool s = saved; saved = false; return s; }
 bool FlightScreen::takeFrontPress(std::string &comp) { if (frontPress.empty()) return false; comp = frontPress; frontPress.clear(); return true; }
 
@@ -439,10 +439,19 @@ void FlightScreen::touch(bool pressed, int x, int y, uint32_t now) {
     if (pressed) {
         lastSeen = now;
         const int id = idAt(x, y);                     // (the flight screen: its buttons only; a touch anywhere else does nothing)
-        if (!down) { down = true; pressedId = id; slidOff = false; }
+        if (!down) { down = true; pressedId = id; slidOff = false; heldBox = -1; }
         else if (id != pressedId) slidOff = true;      // it has slid off: lifting it does nothing
+        if (!setup && shown && !inFlight && id < 0 && !slidOff) {   // the flight screen on the ground, a finger on no button: on a box, held?
+            int box = -1; for (auto &t : sc.tiles) if (t.r.has(x, y)) box = t.id;
+            if (box != heldBox) { heldBox = box; heldSince = now; }
+            else if (box >= 0 && now - heldSince >= LONG_PRESS_MS) {   // two seconds: that box's chooser, from here
+                heldBox = -1; down = false; pressedId = -1;            // (the lift that follows is not a tap on the chooser)
+                openSetup(); chooser = box; quickEdit = true;
+            }
+        } else heldBox = -1;
         return;
     }
+    heldBox = -1;
     if (!down || (int32_t) (now - lastSeen) <= 80) return;   // a sample the chip dropped mid-press, not a lift
     down = false;
     const int was = pressedId; const bool off = slidOff;
@@ -458,6 +467,7 @@ void FlightScreen::touch(bool pressed, int x, int y, uint32_t now) {
         return;
     }
     releaseOn(was);
+    if (quickEdit && setup && chooser == -1 && colourFor < 0) closeSetup();   // a long press's chooser, done (or its theme page): the flight screen again
 }
 FlightScreen::FlightScreen() {
     for (int i = 0; i < THEME_COUNT; ++i) { palPanels[i] = THEME_PAIRS[i].panel; palInks[i] = THEME_PAIRS[i].ink; }

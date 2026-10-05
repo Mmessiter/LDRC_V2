@@ -38,7 +38,9 @@ static void flightTouch(bool pressed, int x, int y, uint32_t now) {
         if (!pressed && (int32_t) (now - lastDown) > 80) touchLockout = false;
         return;
     }
+    const bool setupBefore = flight.setupOpen();
     flight.touch(pressed, x, y, now);
+    if (!setupBefore && flight.setupOpen()) { flightSetupOver = page.name; flightTouchedAt = now; }   // opened by a long press on a box (1.10.2): over the page that is there
     std::string comp;
     if (flight.takeFrontPress(comp) && page.name == "FrontView" && !teensyLink.running()) {   // "Transmitter setup", "Model setup": the front page's own button, pressed for the pilot
         if (comp == "help") runScript("print \"HelpView:FLIGHT.TXT\"\nLogView.t0.txt=\"Front screen help\"\nLogView.return.txt=\"FrontView\"", "");   // (as the front page's Help asks for FRONT.TXT)
