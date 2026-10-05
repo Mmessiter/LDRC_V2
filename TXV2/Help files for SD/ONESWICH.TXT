@@ -1,6 +1,6 @@
 Choose the job of this switch. One job per switch; giving a job to this switch takes it from any other that had it.||
 
-A switch's positions are near (towards you), mid, and away. Banks 1 2 3: away is bank 1, mid bank 2, near bank 3. Bank 4 & Motor: away is the motor on; mid is bank 4 with the motor on; near is bank 4 with the motor off. Safety: near is 'safety off'. Rates: away, mid, near are rates 1, 2, 3. Buddy: hand control to the buddy. Channel 5 to 16: the switch becomes that channel's input, which any channel may use on the Inputs page; a switch given channel 5 to 8 takes the place of the front switch or knob there.||
+A switch's positions are near (towards you), mid, and away. Banks 1 2 3: away is bank 1, mid bank 2, near bank 3. Bank 4 & Motor: away is the motor on; mid is bank 4 with the motor on; near is bank 4 with the motor off. Safety: near is 'safety off'. Rates: away, mid, near are rates 1, 2, 3. Buddy: hand control to the buddy. Channel 5 to 16 (shown by name where you have renamed a channel): the switch becomes that channel's input, which any channel may use on the Inputs page; a switch given channel 5 to 8 takes the place of the front switch or knob there.||
 
 'Reversed' turns the switch's sense round, so that near and away swap.||
 

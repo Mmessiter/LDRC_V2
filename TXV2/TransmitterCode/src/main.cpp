@@ -1278,6 +1278,39 @@ void ShowSwitchNameWithReversed(char *Sw, uint8_t n, char *text)
 
 /*********************************************************************************************************************************/
 
+// B39 (Malcolm: "it is possible that channel 5, 6, 7 or 8 might have been renamed flaps or gear. In which case, let's display
+// that instead"): a channel's label on the switch pages is its name if the pilot has renamed it, else "Channel N". The
+// names a model starts with ("Ch 5", "AUX1", and the old "Gear" of channel 5) count as not renamed.
+static bool ChannelRenamed(uint8_t ch) // ch 1-16
+{
+    char name[12], generic[12];
+    uint8_t j = 0;
+    for (uint8_t i = 0; ChannelNames[ch - 1][i] && j < 11; ++i)
+        if (ChannelNames[ch - 1][i] != ' ')
+            name[j++] = (char)tolower((unsigned char)ChannelNames[ch - 1][i]);
+    name[j] = 0;
+    if (!name[0])
+        return false;
+    snprintf(generic, sizeof(generic), "ch%u", (unsigned)ch);
+    if (!strcmp(name, generic))
+        return false;
+    snprintf(generic, sizeof(generic), "channel%u", (unsigned)ch);
+    if (!strcmp(name, generic))
+        return false;
+    if (!strncmp(name, "aux", 3))
+        return false;
+    if (ch == 5 && !strcmp(name, "gear"))
+        return false;
+    return true;
+}
+static void ChannelLabel(uint8_t ch, char *out, size_t size) // "Flaps", or "Channel 6"
+{
+    if (ChannelRenamed(ch))
+        snprintf(out, size, "%s", ChannelNames[ch - 1]);
+    else
+        snprintf(out, size, "Channel %u", (unsigned)ch);
+}
+
 void DoOneSwitch(char *Sw, uint8_t n)
 {
     char NotUsed[] = "Not used         ";
@@ -1303,8 +1336,9 @@ void DoOneSwitch(char *Sw, uint8_t n)
     {
         if (TopChannelSwitch[d] != n)
             continue;
-        char c[24];
-        snprintf(c, sizeof(c), "Channel %u R", (unsigned)(d + 5)); // (B34: by number, not by the channel's name)
+        char c[32], label[16];
+        ChannelLabel((uint8_t)(d + 5), label, sizeof(label)); // (B34: by number; B39: or its name, if the pilot has renamed it)
+        snprintf(c, sizeof(c), "%s R", label);
         ShowSwitchNameWithReversed(Sw, n, c);
         return;
     }
@@ -1325,8 +1359,9 @@ void DoOneSwitch(char *Sw, uint8_t n)
     }
     if (FrontSwitchIsDefault(n)) // B38: a front switch with no job is its channel's input, and says so
     {
-        char c[24];
-        snprintf(c, sizeof(c), "Channel %u R", (unsigned)n);
+        char c[32], label[16];
+        ChannelLabel(n, label, sizeof(label));
+        snprintf(c, sizeof(c), "%s R", label);
         ShowSwitchNameWithReversed(Sw, n, c);
     }
 }
@@ -2348,9 +2383,9 @@ void DoOneSwitchView(uint8_t n) // n is 1-4  = number for switch to edit
         SendValue(OneSwitchViewc_revd, 0); // ... or not
 
     for (int d = 0; d < SWITCH_INPUTS; ++d)
-    { // the channels by number (B34, Malcolm: "Please call it channel 5 as it's only rarely gear")
+    { // the channels by number (B34), or by name where the pilot has renamed one (B39)
         char v[24];
-        snprintf(v, sizeof(v), "Channel %d", d + 5);
+        ChannelLabel((uint8_t)(d + 5), v, sizeof(v));
         SendText((char *)chLabel[d], v);
     }
 }

@@ -186,6 +186,13 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## A renamed channel by its name (V2 B39, 5 Oct 2026)
+
+Malcolm: "it is possible that channel 5, 6, 7 or 8 might have been renamed flaps or gear. In which case, let's
+display that instead." On the Switches page and the job page a channel shows its name where the pilot has renamed
+it, else "Channel N". The names a model starts with ("Ch 5", "AUX1", and the old "Gear" of channel 5) count as not
+renamed, so B34's "by number" still holds for them.
+
 ## A front switch's marking is its channel (V2 B38, 5 Oct 2026)
 
 Malcolm: "the default markings for channels 5, 6, 7 and 8 is Not Used. This is not strictly true, because by default
