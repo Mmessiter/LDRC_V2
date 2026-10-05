@@ -186,6 +186,12 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Lists centred again (screen 1.9.10, 5 Oct 2026)
+
+Malcolm: "The model names and the back-up file names in version one were centred rather than left justified, which
+I think I preferred." Every scrolling list (the Models page's two, the log files, the bank names, the rates, the
+model IDs) centres its rows again, as the Nextion's wheel did; a name too long for its box still ends in "...".
+
 ## The Front screen setup page's row (screen 1.9.9, 5 Oct 2026)
 
 Malcolm: "The three remaining buttons now look as if there's one just missing! I think they should be evenly spaced

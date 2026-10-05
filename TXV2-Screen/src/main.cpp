@@ -37,7 +37,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.9.9"
+#define SCREEN_VERSION "1.9.10"
 #endif
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
 constexpr int SD_MOSI = 11, SD_MISO = 13, SD_CLK = 12, SD_CS = 10;
@@ -734,8 +734,10 @@ static void drawList(Comp &c) {
     if (n > 0) {
         const bool cyc = listCyclic(c);
         const int kFirst = floorDiv(iy - by + c.scroll, rowH) - 1, kLast = floorDiv(iy + ih - by + c.scroll, rowH) + 1;
-        // A margin on the left, and a name too long for the box ends in "..." rather than half a letter (Malcolm, 10-03:
-        // "the words are too close to the left edge"). (Whole rows: the page's box holds an odd number of them.)
+        // Each row centred, as the Nextion's wheel showed them (Malcolm, 10-05: "The model names and the back-up file names in
+        // version one were centred rather than left justified, which I think I preferred"), with a margin at both ends, and
+        // a name too long for the box ends in "..." rather than half a letter. (Whole rows: the page's box holds an odd
+        // number of them.)
         const int pad = 14, room = iw - 2 * pad;
         for (int k = kFirst; k <= kLast; ++k) {              // k counts rows on the wheel; cyclic wheels repeat the list
             int i = k; if (cyc) i = ((k % n) + n) % n; else if (k < 0 || k >= n) continue;
@@ -744,7 +746,7 @@ static void drawList(Comp &c) {
             const bool inBand = abs(ry - by) < rowH / 2;
             std::string s = c.options[i];
             if (textWidth(c.font, s) > room) { while (!s.empty() && textWidth(c.font, s + "...") > room) s.pop_back(); s += "..."; }
-            gfx->startWrite(); drawGlyphs(ix + pad, ry + (rowH - fh) / 2, c.font, inBand ? c.pco2 : c.pco, s); gfx->endWrite();
+            gfx->startWrite(); drawGlyphs(ix + (iw - textWidth(c.font, s)) / 2, ry + (rowH - fh) / 2, c.font, inBand ? c.pco2 : c.pco, s); gfx->endWrite();
         }
     }
     if (c.dis) { gfx->drawFastHLine(ix, by, iw, c.pco1); gfx->drawFastHLine(ix, by + rowH - 1, iw, c.pco1); }
