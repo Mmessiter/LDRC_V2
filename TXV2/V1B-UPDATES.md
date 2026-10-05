@@ -186,6 +186,12 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The front switches the right way up (V2 B36, 5 Oct 2026)
+
+B35 installed and ran ("it looks very good indeed"). Malcolm: the front switches "say they are up when they are down
+and down when they are up". Their analogue reading is low with the lever up; B35 had taken a high reading as up. B36
+turns the reading's order round for switches 5-8, so up is up; Reversed still turns it round again for odd wiring.
+
 ## The refused update, and the fingerprint (V2 B35, 5 Oct 2026)
 
 Malcolm's first install of B34 was refused by the transmitter's own guard: "2.5.6 B34 read this model's settings
