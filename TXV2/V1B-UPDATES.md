@@ -186,6 +186,12 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The Front screen setup page's row (screen 1.9.9, 5 Oct 2026)
+
+Malcolm: "The three remaining buttons now look as if there's one just missing! I think they should be evenly spaced
+and perhaps a little larger." Box sizes, Stays lit and OK are now three equal buttons across the width, as the front
+screens' own row is (250 wide, where the old four-slot row had them 180).
+
 ## The front screens: the buttons choose, nothing else (screen 1.9.8, 5 Oct 2026)
 
 Malcolm: "The When: Never etc button I think ought to go because we just hit a button to swap." Gone, and with it

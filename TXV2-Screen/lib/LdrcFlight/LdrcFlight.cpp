@@ -352,10 +352,14 @@ void FlightScreen::build(FlightSource &src, FlightFonts *fonts) {
         const std::vector<FlightRect> rs = flightLayout(cfg.layout, FlightRect(6, 92, FLIGHT_W - 12, 312));
         for (size_t i = 0; i < rs.size(); ++i) { FlightTile t; t.id = (int) i; t.r = rs[i]; t.item = cfg.items[i]; paint(t, (int) i); t.v = flightValue(t.item, src); t.pressed = pressedId == (int) i && !slidOff;
                                                  if (t.item == FL_NONE) { t.v.label = "Nothing"; t.v.state = FS_EMPTY; } sc.tiles.push_back(t); }
-        // (1.9.8: no "When" button any more - the front page's own buttons choose the screen, and the choice stays)
-        FlightButton bt; bt.id = ID_BOXES; bt.r = slot(0); bt.text = "Box sizes"; sc.buttons.push_back(bt);
-        bt.id = ID_STAY; bt.r = slot(1); bt.text = cfg.stayOn ? "Stays lit: yes" : "Stays lit: no"; sc.buttons.push_back(bt);
-        bt.id = ID_OK; bt.r = slot(3); bt.text = "OK"; sc.buttons.push_back(bt);
+        // (1.9.8: no "When" button any more - the front page's own buttons choose the screen, and the choice stays.
+        // 1.9.9, Malcolm: "The three remaining buttons now look as if there's one just missing! I think they should be
+        // evenly spaced and perhaps a little larger": three across the width, as the front screens' own row is.)
+        const int bw = (FLIGHT_W - 12 - 2 * 19) / 3;
+        auto third = [&](int i) { return FlightRect(6 + i * (bw + 19), SLOT_Y, bw, SLOT_H); };
+        FlightButton bt; bt.id = ID_BOXES; bt.r = third(0); bt.text = "Box sizes"; sc.buttons.push_back(bt);
+        bt.id = ID_STAY; bt.r = third(1); bt.text = cfg.stayOn ? "Stays lit: yes" : "Stays lit: no"; sc.buttons.push_back(bt);
+        bt.id = ID_OK; bt.r = third(2); bt.text = "OK"; sc.buttons.push_back(bt);
     } else if (chooser == CHOOSE_SIZES) {                       // the box sizes: each choice drawn as its boxes
         sc.layout = 4000; sc.title = "Front screen"; sc.hint = "Choose the box sizes. Box 1 is the biggest.";
         const int cols = 4, gap = 10, x0 = 14, y0 = 92, w = (FLIGHT_W - 2 * x0 - (cols - 1) * gap) / cols, h = (312 - 2 * gap) / 3;
