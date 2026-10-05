@@ -36,12 +36,19 @@ KEEP_IN_PUBLIC = ['README.md', 'LICENSE']   # files of the public folders that a
 def run(cmd, cwd=None): subprocess.run(cmd, cwd=cwd, check=True)
 def rsync(src, dst, include, exclude):
     os.makedirs(dst, exist_ok=True)
+    # The public folder's own files are lifted out before the copy and put back after: macOS's rsync (openrsync) has no
+    # protect rule, and --delete-excluded took the READMEs with the rest the first time (2026-10-05).
+    kept = {}
+    for k in KEEP_IN_PUBLIC:
+        f = os.path.join(dst, k)
+        if os.path.isfile(f): kept[f] = open(f, 'rb').read()
     args = ['rsync', '-a', '--delete', '--delete-excluded', '--prune-empty-dirs']
-    for k in KEEP_IN_PUBLIC: args += ['--filter', 'P /' + k, '--exclude', '/' + k]   # (P: protected from --delete-excluded too)
+    for k in KEEP_IN_PUBLIC: args += ['--exclude', '/' + k]
     for e in exclude: args += (['--include', e[1:]] if e.startswith('!') else ['--exclude', e])
     for i in include: args += ['--include', '/' + i + ('/***' if os.path.isdir(os.path.join(src, i)) else '')]
     args += ['--exclude', '*', src.rstrip('/') + '/', dst.rstrip('/') + '/']
     run(args)
+    for f, b in kept.items(): open(f, 'wb').write(b)
 
 def scan(folder, private):
     n = 0
