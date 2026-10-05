@@ -451,8 +451,8 @@ void FlightScreen::touch(bool pressed, int x, int y, uint32_t now) {
         } else heldBox = -1;
         return;
     }
-    heldBox = -1;
-    if (!down || (int32_t) (now - lastSeen) <= 80) return;   // a sample the chip dropped mid-press, not a lift
+    if (!down || (int32_t) (now - lastSeen) <= 80) return;   // a sample the chip dropped mid-press, not a lift (the long press's clock runs on)
+    heldBox = -1;                                              // a real lift: the long press, if any, starts again
     down = false;
     const int was = pressedId; const bool off = slidOff;
     pressedId = -1; slidOff = false;

@@ -186,6 +186,13 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The long press that did nothing (screen 1.10.3, 5 Oct 2026)
+
+Malcolm: "I held my finger still on a box for over three seconds but it did nothing" (1.10.2, screen lit, safety
+on). The touch chip drops the odd sample in the middle of a press - the screen has always known, a lift counts only
+after 80 ms with no samples - and the long press's clock restarted at every dropped sample, so two seconds never
+came. It now runs on through a dropped sample and restarts only at a real lift.
+
 ## A long press on a box (screen 1.10.2, 5 Oct 2026)
 
 Malcolm: "While on a defined front screen, a long press on a box allows that box to be redefined. Possible? But not
