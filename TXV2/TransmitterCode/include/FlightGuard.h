@@ -212,6 +212,11 @@ uint32_t ControlFingerprint()
             for (i = 0; i < 8; ++i)
                 Fp(TopChannelSwitch[extra[i]]);
         }
+        if (FrontSwitchUnused) // B38: a front switch marked Not used parks its channel's input - only when set, after everything else
+        {
+            Fp(0x5EC3);
+            Fp(FrontSwitchUnused);
+        }
     }
     return FingerprintSoFar;
 }

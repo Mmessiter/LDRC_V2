@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B37 05/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B38 05/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -972,6 +972,8 @@ void DelaySimple(uint32_t ms);
 uint8_t GetSwitchPosition(uint8_t Sw_Number);
 bool AnyJobOnFrontSwitch();                   // B32: a job is assigned to one of switches 5-8
 bool InputIsSwitch(uint8_t InputDevice);      // B33: input device 0-15 (InPutStick's numbering) is served by a switch
+bool InputUnused(uint8_t InputDevice);        // B38: a front input (4-7) whose switch is marked Not used, and no other switch serves it
+bool FrontSwitchIsDefault(uint8_t n);         // B38: switch 5-8 with no job: its channel's input (the default marking)
 void ReadFrontSwitches();                     // B32: the four analogue readings, once a frame
 void ShowSwitchPositions();                   // B32: "up / mid / down" beside each switch on the Switches page
 FASTRUN void LogAverageGap();
@@ -1372,6 +1374,11 @@ bool SwitchReversed[8] = {false, false, false, false, false, false, false, false
 #define TX_EXT_MAGIC 0x5A
 #define TX_EXT_MAGIC2 0xC3
 uint16_t FrontSwitchRaw[4] = {0, 0, 0, 0}; // B32: the front switches' readings, taken once a frame (only when a job uses one, or their page shows)
+// B38 (Malcolm: a front switch's default marking should be its channel, "If anyone actually does select not used ... they
+// should do nothing at all"): bits 0-3 = switches 5-8 marked Not used: the input of that channel sits at its centre. With
+// no job and this bit clear, a front switch IS its channel's input, and the pages say "Channel 5" (to 8). Kept at
+// TX_EXT_ADDR + 11.
+uint8_t FrontSwitchUnused = 0;
 uint8_t FrontSwitchPos[4] = {0, 0, 0, 0};  // B32: their last positions (hysteresis: a reading near a threshold does not flicker)
 
 uint16_t StartLocation = 0;

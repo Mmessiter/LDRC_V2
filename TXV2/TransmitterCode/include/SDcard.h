@@ -718,11 +718,13 @@ void ReadTxExtension()
         if (sw[k] > 8)
             good = false;
     }
+    const uint8_t unused = SDRead8BITS(TX_EXT_ADDR + 11); // B38: bits 0-3 = front switches marked Not used (a B35-B37 file has 0 or stale there)
     DoingCheckSm = false;
     for (uint8_t k = 0; k < 4; ++k)
         SwitchReversed[4 + k] = good && ((bits >> k) & 1);
     for (uint8_t k = 0; k < 8; ++k)
         TopChannelSwitch[idx[k]] = good ? sw[k] : 0;
+    FrontSwitchUnused = (good && (unused & 0xF0) == 0) ? unused : 0;
 }
 void SaveTxExtension()
 {
@@ -737,6 +739,7 @@ void SaveTxExtension()
     SDUpdate8BITS(TX_EXT_ADDR + 2, bits);
     for (uint8_t k = 0; k < 8; ++k)
         SDUpdate8BITS(TX_EXT_ADDR + 3 + k, TopChannelSwitch[idx[k]]);
+    SDUpdate8BITS(TX_EXT_ADDR + 11, FrontSwitchUnused & 0x0F); // B38
     DoingCheckSm = false;
 }
 /*********************************************************************************************************************************/

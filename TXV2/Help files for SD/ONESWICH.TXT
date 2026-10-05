@@ -4,4 +4,4 @@ A switch's positions are near (towards you), mid, and away. Banks 1 2 3: away is
 
 'Reversed' turns the switch's sense round, so that near and away swap.||
 
-Switches 5 to 8 are the front four, the inputs of channels 5 to 8 (a knob there reads as a switch). A job on one of them does not stop it feeding its channel.
+Switches 5 to 8 are the front four, the inputs of channels 5 to 8 (a knob there reads as a switch): with no other job, 'Channel 5' to 'Channel 8' is their marking. A job on one of them does not stop it feeding its channel. 'Not used' makes it do nothing at all: its channel's input sits at its centre.

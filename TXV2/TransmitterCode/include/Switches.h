@@ -23,7 +23,29 @@ bool AnyJobOnFrontSwitch()
 // B33: is this input device (0-15) a switch's? Inputs 5-16 can be (index 4-15); a switch on 5-8 takes the front input's place.
 bool InputIsSwitch(uint8_t InputDevice)
 {
-    return InputDevice >= 4 && InputDevice <= 15 && TopChannelSwitch[InputDevice - 4] >= 1 && TopChannelSwitch[InputDevice - 4] <= 8;
+    if (InputDevice < 4 || InputDevice > 15)
+        return false;
+    const uint8_t sw = TopChannelSwitch[InputDevice - 4];
+    if (InputDevice <= 7 && sw == InputDevice + 1)
+        return false; // (B38) a front switch given its own channel is simply its channel's input: read as the analogue input, so a knob there stays a knob
+    return sw >= 1 && sw <= 8;
+}
+bool InputUnused(uint8_t InputDevice)
+{
+    return InputDevice >= 4 && InputDevice <= 7 && ((FrontSwitchUnused >> (InputDevice - 4)) & 1) && !InputIsSwitch(InputDevice);
+}
+bool FrontSwitchIsDefault(uint8_t n)
+{
+    if (n < 5 || n > 8)
+        return false;
+    if ((FrontSwitchUnused >> (n - 5)) & 1)
+        return false; // marked Not used
+    if (SafetySwitch == n || BuddySwitch == n || BankSwitch == n || Autoswitch == n || DualRatesSwitch == n)
+        return false; // a job
+    for (uint8_t k = 0; k < SWITCH_INPUTS; ++k)
+        if (TopChannelSwitch[k] == n)
+            return false; // the input of another channel
+    return TopChannelSwitch[n - 5] == 0; // (and its own channel's input is not another switch)
 }
 
 // B32: the front switches' readings. Switch 5 is the input of channel 5 (A6), 6 of channel 6, and so on: the same inputs the

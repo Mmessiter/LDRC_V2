@@ -186,6 +186,15 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## A front switch's marking is its channel (V2 B38, 5 Oct 2026)
+
+Malcolm: "the default markings for channels 5, 6, 7 and 8 is Not Used. This is not strictly true, because by default
+they are still controlling channels 5, 6, 7 and 8 ... If anyone actually does select not used (pretty unlikely) then
+I guess they should do nothing at all." A front switch with no job now shows "Channel 5" (to 8) on the Switches page,
+and that radio is the one selected on its job page. Choosing it is the default (nothing is stored as a job, so a knob
+there stays a knob). "Not used", chosen on purpose, is kept (TX_EXT_ADDR + 11, outside the checksum) and parks that
+channel's input at its centre. The fingerprint folds the flag in only when it is set.
+
 ## Near, mid, away (V2 B37 + screen files, 5 Oct 2026)
 
 Malcolm: "that last swap of directions was a mistake. My mistake. Perhaps up and down is not the ideal way of

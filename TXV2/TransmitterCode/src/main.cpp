@@ -395,7 +395,7 @@ FASTRUN void ShowServoPos()
         MinimumDistance = 4;
         InputDevice = (InPutStick[ChanneltoSet - 1]);
         if (InputDevice < 8 && !InputIsSwitch(InputDevice)) // (B33)
-            InputAmount = AnalogueReed(InputDevice);
+            InputAmount = InputUnused(InputDevice) ? ChannelCentre[InputDevice] : AnalogueReed(InputDevice); // (B38)
         else
             InputAmount = ReadThreePositionSwitch(InputDevice);                                                   // not analogue
         InputAmount = map(InputAmount, ChannelCentre[InputDevice], ChannelMax[InputDevice], 0, 100);              // input stick position
@@ -564,7 +564,10 @@ void GetAllInputs()
     {
         if (InPutStick[OutputChannel] < 8 && !InputIsSwitch(InPutStick[OutputChannel])) // (B33: a switch given input 5-8 takes the place of the front switch or knob)
         {
-            InputsBuffer[OutputChannel] = AnalogueReed(InPutStick[OutputChannel]); // Get values from sticks' pots (taking into account mode 1 and mode 2!)
+            if (InputUnused(InPutStick[OutputChannel]))
+                InputsBuffer[OutputChannel] = ChannelCentre[InPutStick[OutputChannel]]; // (B38) a front switch marked Not used: its channel's input sits at its centre
+            else
+                InputsBuffer[OutputChannel] = AnalogueReed(InPutStick[OutputChannel]); // Get values from sticks' pots (taking into account mode 1 and mode 2!)
         }
         else
         {
@@ -1319,6 +1322,12 @@ void DoOneSwitch(char *Sw, uint8_t n)
     {
         ShowSwitchNameWithReversed(Sw, n, Buddy_Switch);
         return;
+    }
+    if (FrontSwitchIsDefault(n)) // B38: a front switch with no job is its channel's input, and says so
+    {
+        char c[24];
+        snprintf(c, sizeof(c), "Channel %u R", (unsigned)n);
+        ShowSwitchNameWithReversed(Sw, n, c);
     }
 }
 
@@ -2324,7 +2333,12 @@ void DoOneSwitchView(uint8_t n) // n is 1-4  = number for switch to edit
         SendValue(Rlabels[9], 1); // No duplicates allowed!
 
     if (!ValueSent)
-        SendValue(Rlabels[0], 1); // nothing yet, so 'not used' is selected
+    {
+        if (FrontSwitchIsDefault(n))
+            SendValue((char *)chRadio[n - 5], 1); // B38: a front switch with no job is its own channel's input: that is its marking
+        else
+            SendValue(Rlabels[0], 1); // nothing yet, so 'not used' is selected
+    }
 
     SendValue(OneSwitchViewc_revd, 0);
 
@@ -2385,6 +2399,7 @@ void ZeroDataScreen()
 
 void ReadNewSwitchFunction()
 {
+    char OneSwitchView_r0[] = "r0"; // Not used (B38: a real choice for a front switch)
     char OneSwitchView_r1[] = "r1"; // Flight modes
     char OneSwitchView_r2[] = "r2"; // Auto
     char OneSwitchView_r7[] = "r7"; // Safety
@@ -2431,6 +2446,16 @@ void ReadNewSwitchFunction()
             if (d == 3 || d == 7)
                 SendValue(Progress, d == 3 ? 40 : 50);
         }
+    }
+    if (SwitchEditNumber >= 5 && SwitchEditNumber <= 8) // B38
+    {
+        const uint8_t bit = (uint8_t)(1 << (SwitchEditNumber - 5));
+        if (TopChannelSwitch[SwitchEditNumber - 5] == SwitchEditNumber)
+            TopChannelSwitch[SwitchEditNumber - 5] = 0; // its own channel: the default, not a job
+        if (GetValue(OneSwitchView_r0))
+            FrontSwitchUnused |= bit; // Not used, chosen on purpose: the channel's input sits at its centre
+        else
+            FrontSwitchUnused &= (uint8_t)~bit;
     }
     SendValue(Progress, 60);
     if (GetValue(OneSwitchView_r7))
@@ -2574,6 +2599,7 @@ void ResetTransmitterSettings()
     BankSwitch = 4;
     for (int i = 0; i < SWITCH_INPUTS; ++i)
         TopChannelSwitch[i] = 0; // (B33: twelve)
+    FrontSwitchUnused = 0;       // (B38)
     for (int i = 0; i < 8; ++i)
         SwitchReversed[i] = false; // (B32: eight)
 
