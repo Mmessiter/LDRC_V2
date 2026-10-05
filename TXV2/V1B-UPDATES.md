@@ -186,6 +186,14 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The tabs on the screen itself (screen 1.10.1, 5 Oct 2026)
+
+Malcolm: "when a defined front screen is in view, please try to squeeze in those 6 buttons so that a user can
+rapidly switch to another defined screen. We might need to omit an element from the top bar." The clock goes from
+the top line (it is a box you can add, and the original screen still shows it) and the six tabs take its place,
+before Help; the bank sits between the name and the tabs. A warning (BATTERY LOW, NO LINK) shows alone, centred
+before the tabs. A tab touched in flight switches at once and the choice is kept.
+
 ## The six screens explained (help files, 5 Oct 2026)
 
 Malcolm: "let us explain the functionality of the six definable front screens in the help text." The Appearance help

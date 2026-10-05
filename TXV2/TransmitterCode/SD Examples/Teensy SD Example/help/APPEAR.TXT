@@ -10,7 +10,7 @@ The themes go by number, 1 to 12. Buttons, the white boxes you type into, and re
 
 DEFINED FRONT SCREEN: your own front screen, with big, clear numbers while you fly.||
 
-SIX SCREENS: you can design six of them, numbered 1 to 6 on the tabs at the top right of the setup page. The yellow tab is the screen in use; touch another tab and that screen is in use at once, and the page shows its design. Each of the six keeps its own choice of boxes, box sizes, box themes and 'Stays lit', so a design for the simulator, one for a helicopter and one for a glider can all be ready, and switching between them is one touch instead of designing again. The six are kept in the screen through updates and switching off.||
+SIX SCREENS: you can design six of them, numbered 1 to 6 on the tabs at the top right of the setup page. The yellow tab is the screen in use; touch another tab and that screen is in use at once, and the page shows its design. The same six tabs are on the defined front screen itself, so switching while you fly is one touch. Each of the six keeps its own choice of boxes, box sizes, box themes and 'Stays lit', so a design for the simulator, one for a helicopter and one for a glider can all be ready, and switching between them is one touch instead of designing again. The six are kept in the screen through updates and switching off.||
 
 Touch a box to choose what it shows: the timer, a battery, the link, the frame rate, head speed, ESC temperature, current, capacity used, bank, rate, motor, the clock, the model's name, the model's picture, or the channel bars (channels 1 to 8, or all 16).||
 

@@ -269,10 +269,16 @@ static void flightDrawStrip(const ldrc::FlightScene &sc) {
         gfx->fillRect(0, 0, W, FLIGHT_STRIP, alert ? FL_RED : FL_STRIP);
         const int y = (FLIGHT_STRIP - fontHeight(6)) / 2, third = W / 3;
         flClip(FlightRect(0, 0, W, FLIGHT_STRIP));
-        if (!sc.left.empty()) flText(12, y, 6, alert ? FL_INK : FL_YELLOW, flCut(sc.left, 6, third - 20));
-        if (alert) flText((W - textWidth(0, sc.alert)) / 2, (FLIGHT_STRIP - fontHeight(0)) / 2, 0, FL_INK, sc.alert);
-        else if (!sc.middle.empty()) { const std::string m = flCut(sc.middle, 6, third); flText((W - textWidth(6, m)) / 2, y, 6, FL_INK, m); }
-        if (!sc.right.empty()) flText(sc.stripRight - 6 - textWidth(6, sc.right), y, 6, FL_INK, sc.right);   // (the Help button beyond it)
+        if (!sc.left.empty() && !alert) flText(12, y, 6, FL_YELLOW, flCut(sc.left, 6, third - 20));
+        if (alert) {                                             // the warning alone, centred in the strip before the tabs (1.10.1), as big as fits
+            const int room = sc.stripRight - 12, font = textWidth(0, sc.alert) <= room ? 0 : 6;
+            flText(6 + (room - textWidth(font, sc.alert)) / 2, (FLIGHT_STRIP - fontHeight(font)) / 2, font, FL_INK, sc.alert);
+        }
+        else if (!sc.middle.empty()) {                           // the bank, centred in what is left between the name and the tabs
+            const int room = sc.stripRight - third - 8; const std::string m = flCut(sc.middle, 6, room);
+            flText(third + (room - textWidth(6, m)) / 2 + 4, y, 6, FL_INK, m);
+        }
+        if (!sc.right.empty()) flText(sc.stripRight - 6 - textWidth(6, sc.right), y, 6, FL_INK, sc.right);   // (nothing since 1.10.1; the tabs and the Help button are beyond)
         flUnclip();
         return;
     }

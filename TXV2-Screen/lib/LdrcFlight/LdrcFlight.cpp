@@ -337,11 +337,10 @@ static FlightRect slot(int i) { return FlightRect(14 + i * 197, SLOT_Y, SLOT_W, 
 void FlightScreen::build(FlightSource &src, FlightFonts *fonts) {
     sc = FlightScene(); sc.setup = setup;
     if (!setup) {
-        sc.layout = 1000 + cfg.layout;
+        sc.layout = 1000 + cfg.layout + 32 * slotNo;
         sc.left = src.text("ModelName"); if (sc.left == "Model name") sc.left.clear();
         sc.middle = src.text("t4"); if (sc.middle == "Bank") sc.middle.clear();
-        sc.right = flightClock(src.text("DateTime"));
-        sc.alert = flightAlert(src);
+        sc.alert = flightAlert(src);                        // (1.10.1: no clock in the strip - the six tabs take its place; a Clock box shows the time)
         const std::vector<FlightRect> rs = flightLayout(cfg.layout, FlightRect(6, FLIGHT_STRIP + 6, FLIGHT_W - 12, FLIGHT_BUTTONS_Y - 6 - (FLIGHT_STRIP + 6)));
         for (size_t i = 0; i < rs.size(); ++i) { FlightTile t; t.id = (int) i; t.r = rs[i]; t.item = cfg.items[i]; paint(t, (int) i); t.v = flightValue(t.item, src); if (t.v.coloured) { t.own = true; t.face = t.v.face; t.ink = t.v.ink; } sc.tiles.push_back(t); }
         // along the bottom, as on the front page: the transmitter's setup on the left, the model's on the right
@@ -351,7 +350,11 @@ void FlightScreen::build(FlightSource &src, FlightFonts *fonts) {
         for (int k = 0; k < 3; ++k) { FlightButton bt; bt.id = BUTTONS[k].id; bt.r = FlightRect(6 + k * (bw + 19), FLIGHT_BUTTONS_Y, bw, FLIGHT_BUTTONS_H); bt.text = BUTTONS[k].text; sc.buttons.push_back(bt); }
         // and Help at the top right, as on the front page: this screen's own help (FLIGHT.TXT on the main board's card)
         FlightButton help; help.id = ID_HELP; help.r = FlightRect(FLIGHT_W - 6 - 120, 3, 120, FLIGHT_STRIP - 6); help.text = "Help"; sc.buttons.push_back(help);
-        sc.stripRight = help.r.x - 6;
+        // the six screens as small tabs before Help (1.10.1, Malcolm: "when a defined front screen is in view, please try to
+        // squeeze in those 6 buttons so that a user can rapidly switch to another defined screen"): the one in use yellow
+        const int tabW = 30, tabGap = 3, tabsX = help.r.x - 6 - (FLIGHT_SLOTS * tabW + (FLIGHT_SLOTS - 1) * tabGap);
+        for (int k = 0; k < FLIGHT_SLOTS; ++k) { FlightButton tb; tb.id = ID_SLOT + k; tb.r = FlightRect(tabsX + k * (tabW + tabGap), 8, tabW, FLIGHT_STRIP - 16); tb.text = std::to_string(k + 1); tb.chosen = k == slotNo; sc.buttons.push_back(tb); }
+        sc.stripRight = tabsX - 6;
     } else if (colourFor >= 0) {                          // a box's theme: the Themes page's twelve, the box as it will look
         sc.layout = 5000 + colourFor; sc.title = "Defined front screen";
         char b[64]; snprintf(b, sizeof(b), "Box %d: its theme.", colourFor + 1); sc.hint = b;
@@ -451,6 +454,7 @@ void FlightScreen::touch(bool pressed, int x, int y, uint32_t now) {
         else if (was == ID_TXSETUP) frontPress = "b0";                 // the front page's "Transmitter" button
         else if (was == ID_MODELSETUP) frontPress = "b1";              // and its "Model"
         else if (was == ID_HELP) frontPress = "help";                  // this screen's own help
+        else if (was >= ID_SLOT && was < ID_SLOT + FLIGHT_SLOTS) chooseSlot(was - ID_SLOT);   // another of the six screens, now
         return;
     }
     releaseOn(was);
