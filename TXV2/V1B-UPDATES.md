@@ -186,6 +186,17 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The Bluetooth pipe, step 1 (screen 1.11.0, 6 Oct 2026)
+
+Malcolm: the Rotorflight editing "should go via Bluetooth rather than the current method which can be removed",
+with the processing kept on the Teensy, "where I believe we still have plenty of room". Step 1 of four: the screen
+can find a Version 2 receiver, join its Bluetooth bridge (the one the phone app uses) and relay a request. The
+framing is lib/LdrcBle, tested on the Mac; the radio is src/ble_device.h, NimBLE in a task of its own so the
+Nextion wire is never starved; the stack comes up only when asked and goes down after, and never while the model
+could be flying. Nothing uses it yet but the bench, through the workshop door (/ble/on, /ble/status, /ble/req,
+/ble/reply). Flash: 1.60 MB -> 1.80 MB of the 1.97 MB slot. Next: the receiver's identity in its advertisement,
+then the Teensy's pages over this pipe instead of the radio link, then the old path removed.
+
 ## Cell voltage big (screen 1.10.9, 6 Oct 2026)
 
 Malcolm: "In those boxes which show voltage please make the PER CELL voltage big, and the total voltage smaller."

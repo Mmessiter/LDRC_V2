@@ -37,7 +37,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.10.9"
+#define SCREEN_VERSION "1.11.0"
 #endif
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
 constexpr int SD_MOSI = 11, SD_MISO = 13, SD_CLK = 12, SD_CS = 10;
@@ -438,6 +438,7 @@ static bool picPanelUp();
 static void picTouch(bool pressed, int x, int y, uint32_t now);
 static void picPoll();
 static void picWeb();
+static void bleWeb(); static void blePoll();
 static void picPageLoaded();                           // loadPage(): the chooser covers its page before anything of that page is drawn
 static void picSoon();                                 // "Model image..." touched: the chooser's frame at once
 // The flight screen (src/flight_device.h, lib/LdrcFlight): what the pilot chose to see while flying, over the front page
@@ -2045,6 +2046,7 @@ static void webBegin() {
     updWeb();
     wifiWeb();
     picWeb();
+    bleWeb();
     static const char *wanted[] = { "X-LDRC" };
     web.collectHeaders(wanted, 1);
     web.begin();
@@ -2293,6 +2295,7 @@ static void netPoll() {
 #include "flight_device.h"
 #include "theme_device.h"
 #include "pong_device.h"
+#include "ble_device.h"
 
 void setup() {
     Serial.setRxBufferSize(32768);                        // BEFORE begin(): set afterwards it stayed at 256 bytes and telemetry bursts overran it
@@ -2371,7 +2374,7 @@ void loop() {
     lastLoop = now;
     uint32_t t = micros(), u;
     #define PHASE(i) u = micros(); if (u - t > phaseMax[i]) phaseMax[i] = u - t; t = u;
-    pumpSerial(); linkPoll(); updPoll(); wifiPoll(); picPoll(); flightPoll(); coloursPoll(); appearancePoll(); pongPoll(); blPoll(); PHASE(0)
+    pumpSerial(); linkPoll(); updPoll(); wifiPoll(); picPoll(); flightPoll(); coloursPoll(); appearancePoll(); pongPoll(); blPoll(); blePoll(); PHASE(0)
     audioFill(); if (!teensyLink.running()) audioWarm(); PHASE(1)
     if (!teensyLink.running()) prefsPoll(); PHASE(2)
     pollTouch(); PHASE(3)
