@@ -3626,12 +3626,17 @@ FASTRUN void ButtonWasPressed()
                 SendCommand(pRXSetupView);
                 return;
             }
-            else // this handles those we forgot
+            // B43 (Malcolm, 6 Oct 2026: "on returning from help, it goes all the way back to the front screen, which it
+            // should not do"): every other page stays where help was opened. The page has been sent back already, and the
+            // screen gives it every value it had (the Rotorflight pages' included). Only an unknown view goes to the front.
+            if (CurrentView > 0 && CurrentView < 90)
             {
-                GotoFrontView(); // otherwise it goes round for ever ... might fix later
                 ClearText();
                 return;
             }
+            GotoFrontView(); // (a view we do not know: the front page rather than going round for ever)
+            ClearText();
+            return;
         }
 
         if (InStrng(Exrite, TextIn) > 0)

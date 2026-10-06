@@ -186,6 +186,12 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Help comes back to the page it was opened from (V2 B43, 6 Oct 2026)
+
+Malcolm: "on returning from help, it goes all the way back to the front screen, which it should not do." A Version 1
+habit: every page without a special case of its own went to the front screen after help ("might fix later"). Now
+every page stays where help was opened; the screen gives it back every value it had.
+
 ## Which way the values travel (V2 B42, 6 Oct 2026)
 
 Malcolm, on the first live session (a bench Nexus, PIDs read and written): "What I don't know for sure is whether
