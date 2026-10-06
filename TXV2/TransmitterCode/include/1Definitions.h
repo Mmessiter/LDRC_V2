@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B44 06/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B45 06/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -986,6 +986,7 @@ void PipeOn();                                // B41: ask the screen to join the
 void PipeOff();
 void PipeTick();                              // B44: renew the ask to the receiver while the menu is open
 bool RadiosMustBeOff();                       // FlightGuard.h: safety off (or, with no safety, motor on)
+bool ModelSeemsArmed(char *why, size_t n);    // B45: Parameters.h - the Rotorflight pages' refusal, with its reason
 void ShowPipeState();                         // B42: "By Bluetooth" / "By radio link" on the Rotorflight menu
 FASTRUN void LogAverageGap();
 void ReadChannelSwitches9to12();

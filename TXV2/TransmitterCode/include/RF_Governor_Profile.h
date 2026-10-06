@@ -304,10 +304,11 @@ void SendEditedGovValues()
         return;
     }
 
-    if (SendBuffer[ArmingChannel - 1] > 1000)
+    char why[80];
+    if (ModelSeemsArmed(why, sizeof(why))) // B45: says what it saw
     {
         PlaySound(WHAHWHAHMSG);
-        MsgBox((char *)"page RFGovView", (char *)"Model is armed!\r\nDisarm before writing governor values.");
+        MsgBox((char *)"page RFGovView", why);
         return;
     }
 

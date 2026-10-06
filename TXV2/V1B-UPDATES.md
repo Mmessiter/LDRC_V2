@@ -186,6 +186,27 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## A refusal explains itself (V2 B45 + screen 1.11.7 + receiver 0.9.876, 6 Oct 2026, late)
+
+Malcolm, in the Rotorflight menu with a Bluetooth link at last: "when I try to read PIDs, it thinks arming is on or
+safety is off ... arming is in fact off, safety is on". The test behind "Model is armed and dangerous" was *arming
+channel above 1000*, and since B40 a front switch with another job parks its channel at its CENTRE (1500); a model whose
+Rotorflight version is not set (Black Thunder 2 shows 0.0) has nothing else driving that channel. **B45:** one helper,
+`ModelSeemsArmed`, for the PID, rates and governor pages: when the transmitter drives the arming channel (a Rotorflight
+version set, FixArmingChannel) armed means *the safety is off*; otherwise only the channel's upper third (1800 up)
+counts. The message names what was seen: "Model may be armed: channel 6 (arming) is at 1500. Move it low first." The
+menu's own entry message says which of the two it saw (motor enabled, or safety off).
+
+**Receiver 0.9.876:** when the transmitter's Bluetooth ask cannot be honoured, the events log says why ("not while armed
+(channel 6 at 1503)", or a receiver update), and state.json's `ble.tx_ask` shows the ask. **Screen 1.11.7:** `/status`
+gains `rst`, why the screen last started (1 power, 3 its own restart, 4 panic, 5-7 watchdogs, 9 brown-out): it restarted
+once in the evening's session, cause unknown; the Bluetooth task's stack goes from 8 to 12 kB.
+
+**Still open (7 Oct morning):** the receiver did not open its Bluetooth when asked, minutes after power-on. Suspect: the
+receiver's own arming channel (6) reads the parked centre as "armed" (its rule is above 1500). The bench order that
+shows everything: model on FIRST with the transmitter off (it joins the house WiFi, so its events can be read), then the
+transmitter on, then the Rotorflight menu; read `/api/events.json` on the receiver and `/status` on the screen.
+
 ## The transmitter asks the receiver for Bluetooth (V2 B44 + screen 1.11.6 + receiver 0.9.875, 6 Oct 2026)
 
 Malcolm, with 1.11.5 and the door open: "I'm getting still by Radio Link". The screen's status said why: the scan found

@@ -59,6 +59,26 @@ void PipeOff()
     PipeState = 0;
 }
 
+// B45: "Model is armed and dangerous" was said with the safety on and the model disarmed (Malcolm, 6 Oct). The test was
+// "arming channel above 1000", and B40 parks a front switch's channel at its CENTRE (1500) once the switch has another
+// job - and a model whose Rotorflight version is not set (RotorFlight_V 0) has its arming channel driven by nothing
+// else. So: when this transmitter drives the arming channel (FixArmingChannel: a Rotorflight version set), armed means
+// the safety is off, which is what drives it. Otherwise only the channel's upper third counts as armed. Either way the
+// message says what was seen, so a refusal explains itself.
+bool ModelSeemsArmed(char *why, size_t n)
+{
+    const bool inRange = ArmingChannel >= 1 && ArmingChannel <= CHANNELSUSED;
+    const bool managed = RotorFlight_V && inRange && !BindingEnabled && !BuddyPupilOnWireless;
+    const uint16_t v = inRange ? SendBuffer[ArmingChannel - 1] : 0;
+    const bool armed = managed ? Armed : (v >= 1800);
+    if (!armed)
+        return false;
+    if (managed)
+        snprintf(why, n, "Model is armed: the safety is off.\r\nSafety on first.");
+    else
+        snprintf(why, n, "Model may be armed: channel %u\r\n(arming) is at %u. Move it low first.", (unsigned)ArmingChannel, (unsigned)v);
+    return true;
+}
 void AddParameterstoQueue(uint8_t ID) // this queue is essentially a LIFO stack
 {
     if (!ModelMatched || !BoundFlag || ID == 0)

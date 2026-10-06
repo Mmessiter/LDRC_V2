@@ -329,10 +329,11 @@ void RestoreFromSDGlobalGOV()
         return;
     }
 
-    if (SendBuffer[ArmingChannel - 1] > 1000)
+    char why[80];
+    if (ModelSeemsArmed(why, sizeof(why))) // B45: says what it saw
     {
         PlaySound(WHAHWHAHMSG);
-        MsgBox((char *)"page RFGovViewGlbl", (char *)"Model is armed!\r\nDisarm before restoring governor config.");
+        MsgBox((char *)"page RFGovViewGlbl", why);
         return;
     }
 
@@ -371,10 +372,11 @@ void SendEditedGovConfigValues()
         return;
     }
 
-    if (SendBuffer[ArmingChannel - 1] > 1000)
+    char why[80];
+    if (ModelSeemsArmed(why, sizeof(why))) // B45: says what it saw
     {
         PlaySound(WHAHWHAHMSG);
-        MsgBox((char *)"page RFGovViewGlbl", (char *)"Model is armed!\r\nDisarm before writing governor config.");
+        MsgBox((char *)"page RFGovViewGlbl", why);
         return;
     }
 

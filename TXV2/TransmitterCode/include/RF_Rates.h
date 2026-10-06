@@ -251,10 +251,11 @@ void Modify_Labels_For_RATES_View()
 // ******************************************************************************************************************************/
 void StartRFRatesView()
 {
-    if (SendBuffer[ArmingChannel - 1] > 1000) // Safety is on if value > 1000
+    char why[80];
+    if (ModelSeemsArmed(why, sizeof(why))) // B45: says what it saw
     {
         PlaySound(WHAHWHAHMSG); // let user know we're in trouble
-        MsgBox((char *)"page RFView", (char *)"Model is armed and dangerous!\r\n(Disarm model to edit Rates.)");
+        MsgBox((char *)"page RFView", why);
         return;
     }
     SendCommand((char *)"page RatesView");

@@ -177,7 +177,7 @@ static void bleTask(void *) {
         vTaskDelay(pdMS_TO_TICKS(20));
     }
 }
-static void bleStartTask() { if (!bleMutex) bleMutex = xSemaphoreCreateMutex(); if (!bleTaskHandle) xTaskCreatePinnedToCore(bleTask, "ldrcble", 8192, nullptr, 1, &bleTaskHandle, 0); }
+static void bleStartTask() { if (!bleMutex) bleMutex = xSemaphoreCreateMutex(); if (!bleTaskHandle) xTaskCreatePinnedToCore(bleTask, "ldrcble", 12288, nullptr, 1, &bleTaskHandle, 0); /* 1.11.7: 8 kB was never measured; the screen restarted once mid-session, cause unknown */ }
 // loop(): the radio rule, and the bench
 static bool bleAsk(const std::string &method, const std::string &path, const std::string &body, const std::string &type) {   // false: busy or not joined
     if (bleReqPending || bleState != BLE_READY) return false;
