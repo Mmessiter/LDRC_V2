@@ -75,10 +75,11 @@ FlightValue flightValue(int item, FlightSource &src) {
         if (rx && !linked) { unknown("no model"); break; }
         if (!flightBattery(src.text(rx ? "RXBV" : "TXBV"), a, b)) { unknown(nullptr); break; }
         const long pct = src.number(rx ? "JRX" : "JTX", -1);
-        // the whole pack big, the cell below, as the front page says it ("7.82V (3.91V per cell)"); the cell big with
-        // "per cell  7.82 V" below read as if the total were per cell (Malcolm, 10-04: "the wrong way around")
-        v.big = fmt("%.2f", a); v.unit = "V";
-        v.small = fmt("%.2f V per cell", b) + (pct >= 0 && pct <= 100 ? "   " + fmt("%.0f %%", (double) pct) : "");
+        // the cell big, the whole pack below, named (1.10.9, Malcolm 10-06: "make the PER CELL voltage big, and the total
+        // voltage smaller"). The small line says "total" so it cannot be read as the cell (10-04: "per cell  7.82 V" below
+        // a big number had read as if the total were per cell).
+        v.big = fmt("%.2f", b); v.unit = "V";
+        v.small = fmt("%.2f V total", a) + (pct >= 0 && pct <= 100 ? "   " + fmt("%.0f %%", (double) pct) : "");
         if (pct >= 0 && pct <= 20) v.state = FS_ALARM; else if (pct >= 0 && pct <= 40) v.state = FS_WARN;
         // (the front page's "Battery LOW" is for either battery: it turns the strip red, not this box)
         break;

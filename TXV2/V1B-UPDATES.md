@@ -186,6 +186,12 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Cell voltage big (screen 1.10.9, 6 Oct 2026)
+
+Malcolm: "In those boxes which show voltage please make the PER CELL voltage big, and the total voltage smaller."
+Both battery boxes: the cell voltage big, and below it "7.82 V total  78 %". The small line says "total" so that it
+cannot be read as the cell, which is what went wrong the last time the cell was big (10-04).
+
 ## "6 defined front screens" (screen 1.10.8, 6 Oct 2026)
 
 Malcolm: "Please change defined front screen into '6 defined front screens'." The Appearance page's button says so,
