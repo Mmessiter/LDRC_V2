@@ -329,6 +329,8 @@ inline void netStep() {
             channelMicros[armingChannel - 1] < 1500;
         if (disarmedOnGround) {
             events.add("Bluetooth boot window: staying up while disarmed (arming turns it off)");
+        } else if (txBleWanted()) {                      // 0.9.875: the transmitter's screen is joining, or about to
+            events.add("Bluetooth boot window: staying up, the transmitter asked");
         } else {
             if (bleHasClient()) bleFlyQuiet(); else bleStop();
             events.add("Bluetooth boot window closed");
@@ -355,6 +357,7 @@ inline void netStep() {
         rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 1000 &&
         (uint32_t)(millis() - linkStats.connStartMs) >= 30000 &&
         !armedNow &&                       // NEVER stall the loop while armed — wait for disarm
+        !txBleWanted() &&                  // 0.9.875: not while the transmitter's screen wants to join (it asks only on the ground)
         !bleFlyOffAtMs) {
         // Pardon first (the stop can stall the loop), then stop ~300 ms later
         // — once the acks carrying the pardon have gone.
@@ -369,6 +372,21 @@ inline void netStep() {
             events.add("Bluetooth off (flying) — back after landing");
         }
     }
+    // 0.9.875: a Version 2 transmitter in its Rotorflight menu asks for Bluetooth (TX parameter 36, renewed every few
+    // seconds while the menu is open and the transmitter is on the ground by its own rule) so that its screen can join
+    // us as the phone app does. Honoured while we are not armed by our own knowledge, with the same pardon dance as a
+    // disarm revival (the keying stalls the loop); not during a receiver update (one antenna). Down again by the
+    // ordinary rules above once the asks stop.
+    static uint32_t txBleAnnouncedMs = 0;
+    if (txBleWanted() && !armedNow && !bleAdvertising() && !bleHasClient() && !otaStarted && rxUpdState == RXU_IDLE) {
+        if (!txBleAnnouncedMs) { announcePardon(); txBleAnnouncedMs = millis(); }
+        else if (pardonDelivered(txBleAnnouncedMs)) {
+            txBleAnnouncedMs = 0;
+            statsSelfStallUntilMs = millis() + 2000;   // our own stats look away too
+            events.add("Bluetooth up: the transmitter asked (Rotorflight menu)");
+            bleStart();
+        }
+    } else txBleAnnouncedMs = 0;
     // Non-blocking WiFi re-begin: a STA retry used to do WiFi.disconnect() +
     // delay(200) + WiFi.begin() inline, which BLOCKED the main loop for ~208 ms
     // every retry — long enough to pause CRSF/SBUS output and starve radioPoll,

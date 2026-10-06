@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.874-txparams-pipe";
+constexpr const char* FW_VERSION = "RXV2-0.9.875-ble-wanted";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -763,6 +763,13 @@ inline uint32_t      bleStatsQuietUntilMs = 0;    // covers connect/disconnect/s
 // billed 808 ms late AT THE DISARM. Deliberate on-ground housekeeping must
 // not be measured as link quality: the save announces itself here first.
 inline uint32_t statsSelfStallUntilMs = 0;
+// 0.9.875: a Version 2 transmitter in its Rotorflight menu asks for Bluetooth (TX parameter 36, TxParams.h) so that its
+// screen can join us as the phone app does; the ask is renewed every few seconds while the menu is open. While this
+// holds, Network.h keeps Bluetooth up (and brings it up) unless we are armed; once it lapses the ordinary rules apply.
+constexpr uint32_t TX_BLE_WANTED_MS = 20000;
+inline uint32_t txBleWantedUntil = 0;
+inline bool     txBleWantedSeen  = false;
+inline bool txBleWanted() { return txBleWantedUntil && (int32_t)(millis() - txBleWantedUntil) < 0; }
 
 // millis() of the last channel MOVEMENT (any channel changed >12 us).
 // Shared by the battery guardian and the flight save: 'sticks still' means

@@ -59,7 +59,8 @@ enum ParamId : uint8_t {
     PID_GOV_WR_CONFIG3      = 33,
     PID_TX_TIME             = 34,   // V1 TX's RTC: Y,M,D,h,m,s + 321 magic (added 2026-08-02)
     PID_RX_UPDATE           = 35,   // V1B TX: "install release major.minor.minimus" — 321, maj, min, minimus, 321 (0.9.864)
-    PARAM_MAX_ID            = 35,
+    PID_BLUETOOTH_WANTED    = 36,   // V2 TX in its Rotorflight menu: 321, 1 = open Bluetooth for my screen (renewed every few s), 0 = done (0.9.875)
+    PARAM_MAX_ID            = 36,
 };
 
 //*********************************************************************
@@ -586,6 +587,16 @@ inline void txParamsWords(const uint16_t* w) {
             break;
         case PID_GOV_WR_CONFIG3:                // 33 — config bytes 40..45, then write
             if (govSupported()) { for (uint8_t i = 0; i < 6; ++i) govWrite[i + 40] = (uint8_t)w[i + 1]; if (writeTrigFresh(5)) { govConfigWriteReq = true; linkStats.paramOps++; } }
+            break;
+        case PID_BLUETOOTH_WANTED:              // 36 — a Version 2 transmitter's screen wants to join us over Bluetooth (0.9.875)
+            // The transmitter asks only while its Rotorflight menu is open and it is on the ground by its own rule, and
+            // again every few seconds; a 0 (leaving the menu) ends it at once. Network.h brings Bluetooth up while this
+            // holds and we are not armed, and the ordinary rules take it down again once the asks stop.
+            if (w[1] == 321) {
+                txBleWantedUntil = w[2] ? millis() + TX_BLE_WANTED_MS : 0;
+                if (w[2] && !txBleWantedSeen) { txBleWantedSeen = true; events.add("Transmitter asks for Bluetooth (Rotorflight menu)"); }
+                if (!w[2]) txBleWantedSeen = false;
+            }
             break;
 
         default:

@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.875-ble-wanted",
+      "url": "https://messiter.com/rxv2/release/v0.9.875/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.875/littlefs.bin",
+      "fs_md5": "cc4878104ade8765b32ab2b7b6cb420e",
+      "notes": "A Version 2 transmitter in its Rotorflight menu now asks the receiver to open its Bluetooth (parameter 36), so the transmitter's screen can join it minutes after power-on, not only in the first 30 s. Honoured only while not armed; the ordinary rules shut it again afterwards."
+    },
+    {
       "name": "RXV2-0.9.874-txparams-pipe",
       "url": "https://messiter.com/rxv2/release/v0.9.874/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.874/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.864/littlefs.bin",
       "fs_md5": "cc4878104ade8765b32ab2b7b6cb420e",
       "notes": "A V1B transmitter can now update the receiver: with a model connected, the transmitter's Check for update compares this receiver's release number (telemetry item 39) with messiter.com and, on Install, orders the update over the radio (parameter 35). The receiver accepts only disarmed and knowing a WiFi network, acts only once the transmitter has gone quiet, joins the network it already knows, installs the exact version ordered with the same code the app uses, and restarts; item 40 tells the transmitter how it went. No password ever travels over the air. state.json shows tx_update."
-    },
-    {
-      "name": "RXV2-0.9.863-flights-kept-gaps-honest",
-      "url": "https://messiter.com/rxv2/release/v0.9.863/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.863/littlefs.bin",
-      "fs_md5": "cc4878104ade8765b32ab2b7b6cb420e",
-      "notes": "Flights: a save that could not start is retried or logged, never silently lost; gaps while disarmed are left out of the link statistics (a real in-flight loss still counts); both apps record flight data first and re-check the list at the end, so a short post-landing connection keeps the flights for review"
     }
   ],
   "rotorflight": {
