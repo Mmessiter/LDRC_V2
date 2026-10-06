@@ -186,6 +186,15 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## A failed Rotorflight enquiry no longer un-Rotorflights a model (V2 B46, 6 Oct 2026, late)
+
+Malcolm: "the tx enquires about Rotorflight as soon as they connect and if it fails then it assumes no Rotorflight -
+wrongly in this case." The receiver's telemetry item 31 carries the flight controller's Rotorflight version (0 none,
+1 = 2.2, 2 = 2.3+), and it says 0 while the flight controller has not answered the receiver's own enquiry, not only when
+there is no Rotorflight. The transmitter took that 0 as gospel, so Black Thunder 2's arming channel stopped following
+the safety switch (FixArmingChannel) and its menu said 0.0. **B46:** a 0 from the receiver does not clear what the model's
+file knows; a real answer still rules and is saved with the model as before.
+
 ## A refusal explains itself (V2 B45 + screen 1.11.8 + receiver 0.9.876, 6 Oct 2026, late)
 
 Malcolm, in the Rotorflight menu with a Bluetooth link at last: "when I try to read PIDs, it thinks arming is on or

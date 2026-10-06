@@ -1628,10 +1628,18 @@ FASTRUN void ParseTelemetryItem()
             break;
         if (Reading_GOV_Config_Now)
             break; // bytes [42..45] were an extraneous read and never used — dropped to stop OOB writes
-        RotorFlight_V = GetIntFromAckPayload();
-        if (RotorFlight_V > 2)
-            RotorFlight_V = 0; // ClaudeFix-2-7-2026 RFVersions is float[3]; a corrupt byte read past it and enabled RotorFlight behaviours on a non-RF model
-        RotorFlight_Version = RFVersions[RotorFlight_V];
+        {
+            uint8_t v = GetIntFromAckPayload();
+            if (v > 2)
+                v = 0; // ClaudeFix-2-7-2026 RFVersions is float[3]; a corrupt byte read past it and enabled RotorFlight behaviours on a non-RF model
+            // B46 (Malcolm, 6 Oct: "the TX enquires about Rotorflight as soon as they connect and if it fails then it assumes no
+            // Rotorflight - wrongly in this case"): the receiver answers 0 while its flight controller has not answered IT, not
+            // only when there is none. A model its file knows as Rotorflight stays so (the arming channel keeps following the
+            // safety switch); the receiver's answer, once it has one, still rules, and is kept when the model is next saved.
+            if (v != 0 || RotorFlight_V == 0)
+                RotorFlight_V = v;
+            RotorFlight_Version = RFVersions[RotorFlight_V];
+        }
         break;
 
     case 32:
