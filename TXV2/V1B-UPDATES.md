@@ -186,6 +186,11 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## "6 defined front screens" (screen 1.10.8, 6 Oct 2026)
+
+Malcolm: "Please change defined front screen into '6 defined front screens'." The Appearance page's button says so,
+and the help texts that point to it.
+
 ## Tabs easier to hit (screen 1.10.7, 6 Oct 2026)
 
 Malcolm: "Because they are so close to the top of the screen they were quite difficult to hit with a finger ... but

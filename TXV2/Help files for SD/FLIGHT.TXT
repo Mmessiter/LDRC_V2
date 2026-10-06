@@ -8,4 +8,4 @@ To change what one box shows without leaving this screen, press and hold the box
 
 A box turns amber or red when its value needs a look. The top line turns red for BATTERY LOW, or NO LINK in flight.||
 
-To choose what the boxes show, their themes and their sizes: Transmitter setup, Appearance, then Defined front screen. There are six screens to design, and the tabs 1 to 6 at the top of this screen switch between them at a touch; the yellow tab is the one in use, and each keeps its own design. (The time is a box you can add; the tabs took its place in the top line.)
+To choose what the boxes show, their themes and their sizes: Transmitter setup, Appearance, then 6 defined front screens. There are six screens to design, and the tabs 1 to 6 at the top of this screen switch between them at a touch; the yellow tab is the one in use, and each keeps its own design. (The time is a box you can add; the tabs took its place in the top line.)
