@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.874-txparams-pipe",
+      "url": "https://messiter.com/rxv2/release/v0.9.874/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.874/littlefs.bin",
+      "fs_md5": "cc4878104ade8765b32ab2b7b6cb420e",
+      "notes": "The Version 2 transmitter's Rotorflight editing over Bluetooth: the transmitter's parameter packets arrive as words at /api/txparams and the block being read goes back at /api/txparams/ack, into the same code the radio link uses. Nothing changes for the radio link or the phone app."
+    },
+    {
       "name": "RXV2-0.9.873-shorter-silence",
       "url": "https://messiter.com/rxv2/release/v0.9.873/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.873/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.863/littlefs.bin",
       "fs_md5": "cc4878104ade8765b32ab2b7b6cb420e",
       "notes": "Flights: a save that could not start is retried or logged, never silently lost; gaps while disarmed are left out of the link statistics (a real in-flight loss still counts); both apps record flight data first and re-check the list at the end, so a short post-landing connection keeps the flights for review"
-    },
-    {
-      "name": "RXV2-0.9.862-per-cell-average",
-      "url": "https://messiter.com/rxv2/release/v0.9.862/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.862/littlefs.bin",
-      "fs_md5": "db082dbc20154b450b12495cf688c970",
-      "notes": "Battery card reads '3.8 V per cell (average)'"
     }
   ],
   "rotorflight": {
