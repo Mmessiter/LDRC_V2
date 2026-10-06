@@ -18,6 +18,6 @@ Touch a box to choose what it shows: the timer, a battery, the link, the frame r
 
 A choice another box already shows is darker and carries that box's number, so nothing is chosen twice by mistake. A Motor box takes the safety's colours, as the original front screen's motor button does, whatever theme it was given. Box themes: touch a box, then 'Theme'. A box takes any of the twelve themes; a theme other boxes already wear carries their numbers. 'Same as screens' gives it the screens' theme again.||
 
-Which front screen shows is chosen on the front screens themselves: 'Defined screen' on the original brings yours, 'Original screen' on yours brings the original back, and the choice stays, through take-offs, landings and switching off, until you press the other button. Your screen's other buttons: 'Transmitter', 'Model' and 'Help'. A touch anywhere else does nothing.||
+Which front screen shows is chosen on the front screens themselves: 'Defined screens' on the original brings yours, 'Original screen' on yours brings the original back, and the choice stays, through take-offs, landings and switching off, until you press the other button. Your screen's other buttons: 'Transmitter', 'Model' and 'Help'. A touch anywhere else does nothing.||
 
 'Stays lit: yes' keeps the screen from going dark while it shows. A warning (BATTERY LOW, NO LINK) turns its top line red, and the power-off countdown always shows on the original front screen.

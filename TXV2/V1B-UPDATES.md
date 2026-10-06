@@ -186,6 +186,13 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The same tabs, and "Defined screens" (screen 1.10.6, 6 Oct 2026)
+
+Malcolm: "They are still smaller! Please make them the same size as setup area. Also please change Defined screen to
+Defined screens." The flight screen's strip was 44 high, the setup page's 58, so its tabs were clipped to 28; the
+strip is 50 now and the tabs 38 by 42 on both pages. The front page's middle button says "Defined screens", there
+being six, and the help texts follow.
+
 ## Bigger tabs (screen 1.10.5, 6 Oct 2026)
 
 Malcolm: "The six little buttons for selecting which defined screen on the front screen are a bit too small. Please

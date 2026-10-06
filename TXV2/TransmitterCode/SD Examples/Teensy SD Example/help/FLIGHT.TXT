@@ -2,7 +2,7 @@ This is your own front screen: big, clear numbers while you fly.||
 
 'Transmitter' and 'Model' open the setups, as on the original front screen.||
 
-'Original screen' shows the original front screen. Its 'Defined screen' button brings this screen back. Your choice stays, through take-offs, landings and switching off, until you press the other button.||
+'Original screen' shows the original front screen. Its 'Defined screens' button brings this screen back. Your choice stays, through take-offs, landings and switching off, until you press the other button.||
 
 To change what one box shows without leaving this screen, press and hold the box for two full seconds (on the ground, with the safety on): its chooser opens, and your choice brings this screen straight back. A tap or a slide does nothing.||
 

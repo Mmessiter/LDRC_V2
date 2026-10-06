@@ -145,7 +145,7 @@ struct FlightScene {
     std::vector<FlightTile> tiles;
     std::vector<FlightButton> buttons;
 };
-static const int FLIGHT_W = 800, FLIGHT_H = 480, FLIGHT_STRIP = 44, FLIGHT_SETUP_STRIP = 58;
+static const int FLIGHT_W = 800, FLIGHT_H = 480, FLIGHT_STRIP = 50, FLIGHT_SETUP_STRIP = 58;   // (the flight strip was 44: 50 since 1.10.6, so its six tabs are the setup page's size)
 // The flight screen's buttons along the bottom (screen 1.7.2, Malcolm 10-04: "any press returns to default. Instead, let's
 // include 'use original' as an option, and on the defined front screen add the 'model setup' and 'transmitter setup'
 // buttons"): a touch anywhere else does nothing. The setups are the front page's own buttons, pressed for the pilot.
