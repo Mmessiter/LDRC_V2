@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B43 06/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B44 06/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -234,6 +234,7 @@ uint8_t Saved_GOV_Profiles_Values[GOV_PROFILE_PAYLOAD_SIZE][4];
 #define SEND_GOV_WRITE_CONFIG3 33
 #define RTC_TIME_SETTING 34 // TX's battery-backed RTC -> RX, so flights get dated with no phone (RXV2; V1 RXs ignore it)
 #define RX_UPDATE_ORDER 35  // V1B: "install release maj.min.minimus" - the screen's Check for update, for the receiver (RXV2 0.9.864+; others ignore it)
+#define BLUETOOTH_WANTED 36 // B44: "open your Bluetooth for my screen" while the Rotorflight menu is open: 321, 1 or 0 (RXV2 0.9.875+; others ignore it)
 // Ack item 37 from RXV2: phone-true LOCAL time, so we can correct our own
 // drifty DS1307 whenever any model has met a phone. Captured in the radio
 // path, APPLIED in the slow loop (I2C writes must never run there).
@@ -246,7 +247,7 @@ uint32_t PhoneEpochAtMs = 0;    // millis() at capture, for staleness correction
 uint32_t GapPardonUntilMs = 0;
 bool GapStartedDisarmed = false; // Rotorflight arming in use and DISARMED when the current gap began = a ground gap
 
-#define PARAMETERS_MAX_ID 35 // Max types of parameters packet to send  ... might increase.
+#define PARAMETERS_MAX_ID 36 // Max types of parameters packet to send  ... might increase.
 
 // **************************************************************************
 //                               Mixes                                      *
@@ -983,6 +984,8 @@ bool RfParamOverPipe(uint8_t id);             // B41: this parameter ID goes by 
 void SendParameterByPipe(uint8_t id);         // B41: as words, to the screen
 void PipeOn();                                // B41: ask the screen to join the model's receiver
 void PipeOff();
+void PipeTick();                              // B44: renew the ask to the receiver while the menu is open
+bool RadiosMustBeOff();                       // FlightGuard.h: safety off (or, with no safety, motor on)
 void ShowPipeState();                         // B42: "By Bluetooth" / "By radio link" on the Rotorflight menu
 FASTRUN void LogAverageGap();
 void ReadChannelSwitches9to12();
@@ -1393,6 +1396,8 @@ uint8_t FrontSwitchUnused = 0;
 // link, and the block being read comes back as "ldrctel ..." items into the same telemetry parser. Everything else - the
 // pages, the values, the save and restore - is as it was. With no pipe, the radio link carries them as it always has.
 uint8_t PipeState = 0;
+bool PipeWanted = false;      // B44: the Rotorflight menu is open: the receiver is asked (parameter 36) to open its Bluetooth for the screen
+uint32_t PipeAskedMs = 0;     // ... and asked again every few seconds while it stays open (PipeTick)
 uint8_t FrontSwitchPos[4] = {0, 0, 0, 0};  // B32: their last positions (hysteresis: a reading near a threshold does not flicker)
 
 uint16_t StartLocation = 0;

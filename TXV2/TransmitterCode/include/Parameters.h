@@ -21,8 +21,24 @@ void PipeOn()
 { // the model's receiver, by the board id it gave at binding (the two halves as the acks carried them)
     char b[40];
     const uint32_t a = ModelsMacUnion.Val32[0], c = ModelsMacUnion.Val32[1];
+    // B44: the receiver shuts its Bluetooth 30 s after it hears us at its power-on (and keeps it shut while a model with
+    // no arming channel is connected): so it is ASKED to open it, over the radio link, while this menu is open and we
+    // are on the ground by our own rule. The screen's scan runs on for a while, to give the receiver time to come up.
+    PipeWanted = true;
+    PipeAskedMs = millis();
+    if (!RadiosMustBeOff())
+        AddParameterstoQueue(BLUETOOTH_WANTED);
     snprintf(b, sizeof(b), "ldrcpipe on %02X%02X%02X%02X%02X%02X", (unsigned)(a & 0xFF), (unsigned)((a >> 8) & 0xFF), (unsigned)((a >> 16) & 0xFF), (unsigned)((a >> 24) & 0xFF), (unsigned)(c & 0xFF), (unsigned)((c >> 8) & 0xFF));
     SendCommand(b);
+}
+void PipeTick() // B44: once a second from the main loop: the ask is renewed every five seconds while the menu is open (the receiver forgets it after twenty)
+{
+    if (!PipeWanted || RadiosMustBeOff())
+        return;
+    if (millis() - PipeAskedMs < 5000)
+        return;
+    PipeAskedMs = millis();
+    AddParameterstoQueue(BLUETOOTH_WANTED);
 }
 void ShowPipeState() // B42: on the Rotorflight menu, which way the values travel
 {
@@ -33,6 +49,11 @@ void ShowPipeState() // B42: on the Rotorflight menu, which way the values trave
 }
 void PipeOff()
 {
+    if (PipeWanted)
+    {
+        PipeWanted = false;
+        AddParameterstoQueue(BLUETOOTH_WANTED); // B44: ... and the receiver may shut it again (word 2 = 0)
+    }
     if (PipeState)
         SendCommand((char *)"ldrcpipe off");
     PipeState = 0;
@@ -300,6 +321,13 @@ void LoadOneParameter() // todo: return length of this parameter (avoid using MA
         Parameters.word[5] = 321;
         Parameters.word[6] = 0;
         Parameters.word[7] = 0;
+        break;
+
+    case BLUETOOTH_WANTED:            // 36 - B44: the Rotorflight menu is open (1) or has been left (0): the receiver opens or may shut its Bluetooth
+        Parameters.word[1] = 321;
+        Parameters.word[2] = PipeWanted ? 1 : 0;
+        for (int i = 3; i < 12; ++i)
+            Parameters.word[i] = 0;
         break;
 
     default:

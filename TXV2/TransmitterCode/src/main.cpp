@@ -4825,6 +4825,7 @@ void FASTRUN ManageTransmitter()
         ShowMotorTimer();          // Show motor timer and send any queued parameters
         TellScreen(true);          // V1B: motor enabled? armed? a model connected? - once a second, whatever page is showing
         TellScreenRx();            // V1B: the receiver's release number, and how its update is going (RxUpdate.h)
+        PipeTick();                // B44: the Rotorflight menu's ask for the receiver's Bluetooth, renewed (Parameters.h)
         LastTimeRead = millis();   // Reset this timer
         return;                    // That's enough housekeeping for this time around
     }

@@ -186,6 +186,21 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The transmitter asks the receiver for Bluetooth (V2 B44 + screen 1.11.6 + receiver 0.9.875, 6 Oct 2026)
+
+Malcolm, with 1.11.5 and the door open: "I'm getting still by Radio Link". The screen's status said why: the scan found
+no receiver at all. **The receiver shuts its Bluetooth 30 seconds after it hears the transmitter at its power-on**, and
+keeps it shut while a model with no arming channel is connected (its flying rule, from the days when only a phone
+would ever join it). The first live session had worked because the menu was opened within those 30 seconds.
+
+So the transmitter now asks. **B44** sends a new parameter over the radio link, 36 "Bluetooth wanted" (321, 1), when the
+Rotorflight menu opens and again every five seconds while it stays open and the transmitter is on the ground by its
+own rule; (321, 0) on leaving. Version 1 receivers and older Version 2 receivers ignore it. **Receiver 0.9.875** honours
+it while not armed by its own knowledge: Bluetooth comes up (with the usual pardon to the transmitter for the keying
+stall), the boot window and the no-arming-channel flying rule stand down while the asks keep coming, and the ordinary
+rules take it down again once they stop. **Screen 1.11.6** scans for up to fifteen seconds instead of 2.5, since the
+receiver needs a second or two to come up, and stops at once if the menu is left.
+
 ## The firmware write checks itself and tries again (screen 1.11.5, 6 Oct 2026)
 
 Malcolm's install of 1.11.4 stopped at the last step: "The new firmware was not accepted by the flash (Could Not

@@ -68,35 +68,42 @@ static bool bleConnectTo(const NimBLEAdvertisedDevice *d, std::string &why) {   
 static bool bleJoin() {                                        // in the task: scan, then the candidates strongest first; the identity checked on each one's state page
     bleState = BLE_SCANNING;
     NimBLEScan *scan = NimBLEDevice::getScan(); scan->setActiveScan(true); scan->setInterval(45); scan->setWindow(30); scan->setMaxResults(20);
-    NimBLEScanResults res = scan->getResults(2500, false);
-    std::vector<BleSeen> seen; std::vector<const NimBLEAdvertisedDevice *> cands;
-    for (int i = 0; i < res.getCount(); ++i) {
-        const NimBLEAdvertisedDevice *d = res.getDevice(i);
-        if (!d->isAdvertisingService(NimBLEUUID(ldrc::BLE_SVC_UUID))) continue;
-        BleSeen s; s.name = d->getName(); s.addr = d->getAddress().toString(); s.rssi = d->getRSSI(); seen.push_back(s);
-        if (bleTarget.empty() || s.name == bleTarget) cands.push_back(d);
-    }
-    if (xSemaphoreTake(bleMutex, pdMS_TO_TICKS(100)) == pdTRUE) { bleSeen = seen; xSemaphoreGive(bleMutex); }
-    std::sort(cands.begin(), cands.end(), [](const NimBLEAdvertisedDevice *a, const NimBLEAdvertisedDevice *b) { return a->getRSSI() > b->getRSSI(); });
-    if (cands.empty()) { bleWhy = seen.empty() ? "no receiver in reach" : "the receiver named is not in reach"; scan->clearResults(); return false; }
-    bleState = BLE_CONNECTING;
-    std::string why; bool ok = false;
-    for (size_t i = 0; i < cands.size() && !ok; ++i) {
-        if (!bleConnectTo(cands[i], why)) continue;
-        if (bleWantMac.empty()) { ok = true; break; }
-        ldrc::BleReply r; std::string err;                       // the receiver's identity: its state page says
-        if (bleServeNow("GET", "/api/state.json", "", "", r, err) && r.code == 200) {
-            const size_t k = r.body.find("\"board_mac\":\"");
-            const std::string mac = k == std::string::npos ? "" : bleUpper(r.body.substr(k + 13, 12));
-            if (mac == bleWantMac) { ok = true; break; }
-            why = "not the model's receiver (" + bleJoined + ")";
-        } else why = "no answer from " + bleJoined + (err.empty() ? "" : ": " + err);
-        bleLeave();
+    // 1.11.6: the receiver shuts its Bluetooth 30 s after it hears the transmitter at its power-on, so the main board now
+    // ASKS it (over the radio link, B44 + receiver 0.9.875) when this menu opens, and it comes up a second or two later.
+    // So the scan, and the attempt on what it finds, are repeated for up to about fifteen seconds, unless the pipe is
+    // called off meanwhile (the menu left).
+    std::string why = "no receiver in reach";
+    for (int round = 0; round < 5 && bleOrder != 2; ++round) {
+        if (round) { vTaskDelay(pdMS_TO_TICKS(500)); bleState = BLE_SCANNING; }
+        scan->clearResults();
+        NimBLEScanResults res = scan->getResults(2500, false);
+        std::vector<BleSeen> seen; std::vector<const NimBLEAdvertisedDevice *> cands;
+        for (int i = 0; i < res.getCount(); ++i) {
+            const NimBLEAdvertisedDevice *d = res.getDevice(i);
+            if (!d->isAdvertisingService(NimBLEUUID(ldrc::BLE_SVC_UUID))) continue;
+            BleSeen s; s.name = d->getName(); s.addr = d->getAddress().toString(); s.rssi = d->getRSSI(); seen.push_back(s);
+            if (bleTarget.empty() || s.name == bleTarget) cands.push_back(d);
+        }
+        if (xSemaphoreTake(bleMutex, pdMS_TO_TICKS(100)) == pdTRUE) { bleSeen = seen; xSemaphoreGive(bleMutex); }
+        std::sort(cands.begin(), cands.end(), [](const NimBLEAdvertisedDevice *a, const NimBLEAdvertisedDevice *b) { return a->getRSSI() > b->getRSSI(); });
+        if (cands.empty()) { why = seen.empty() ? "no receiver in reach" : "the receiver named is not in reach"; continue; }
+        bleState = BLE_CONNECTING;
+        for (size_t i = 0; i < cands.size() && bleOrder != 2; ++i) {
+            if (!bleConnectTo(cands[i], why)) continue;
+            if (bleWantMac.empty()) { scan->clearResults(); bleState = BLE_READY; return true; }
+            ldrc::BleReply r; std::string err;                   // the receiver's identity: its state page says
+            if (bleServeNow("GET", "/api/state.json", "", "", r, err) && r.code == 200) {
+                const size_t k = r.body.find("\"board_mac\":\"");
+                const std::string mac = k == std::string::npos ? "" : bleUpper(r.body.substr(k + 13, 12));
+                if (mac == bleWantMac) { scan->clearResults(); bleState = BLE_READY; return true; }
+                why = "not the model's receiver (" + bleJoined + ")";
+            } else why = "no answer from " + bleJoined + (err.empty() ? "" : ": " + err);
+            bleLeave();
+        }
     }
     scan->clearResults();
-    if (!ok) { bleWhy = why; return false; }
-    bleState = BLE_READY;
-    return true;
+    bleWhy = bleOrder == 2 ? "called off" : why;
+    return false;
 }
 static void bleLeave() {
     if (bleClient) { if (bleClient->isConnected()) bleClient->disconnect(); NimBLEDevice::deleteClient(bleClient); bleClient = nullptr; }
