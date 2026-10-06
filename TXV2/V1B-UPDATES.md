@@ -186,6 +186,26 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The firmware write checks itself and tries again (screen 1.11.5, 6 Oct 2026)
+
+Malcolm's install of 1.11.4 stopped at the last step: "The new firmware was not accepted by the flash (Could Not
+Activate The Firmware)." The file had reached the card whole (its CRC checked twice) and every byte given to the flash
+had the right CRC: it was the chip's own check of what it had just written (header, segments, SHA-256) that said no,
+and the reason it logged went out on UART0, the wire to the main board, where nobody reads it.
+
+Three changes:
+- **The written half is read back** and compared with what was written before the chip is asked. A flash that did not
+  keep what it was given is named as such ("the flash did not keep what was written").
+- **A second attempt by itself**: the whole write again from the file on the card, before anyone is told. The message
+  names both reasons if they differ.
+- **The system's own lines come to the screen**, not to the main board (esp_log_set_vprintf): the last eight at the end
+  of `/recent`, the last one in `/status` as "sys", and those logged while the chip checks a new firmware go into the
+  failure message, e.g. "Could Not Activate The Firmware: esp_image: Image hash failed - image is corrupt".
+
+Also: **the corner holds run on through dropped touch samples** (the GT911 drops a sample now and then mid-press, and
+each one began the hold again: "I held for three seconds, no banner"). A finger is up only after 120 ms up, as the
+flight screen's long press has had since 1.10.3.
+
 ## A Workshop door button (screen 1.11.4, 6 Oct 2026)
 
 Malcolm: "you could create an ordinary button that switches it on, which I can find perhaps bottom left on the

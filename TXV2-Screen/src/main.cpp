@@ -30,6 +30,7 @@
 #include <ESPmDNS.h>
 #include <WebServer.h>
 #include <Preferences.h>
+#include <esp_log.h>
 
 #ifndef NEXTION_BAUD
 #define NEXTION_BAUD 921600
@@ -37,7 +38,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.4"
+#define SCREEN_VERSION "1.11.5"
 #endif
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
 constexpr int SD_MOSI = 11, SD_MISO = 13, SD_CLK = 12, SD_CS = 10;
@@ -495,6 +496,41 @@ static void blog(const char *tag, const std::string &what) { if (bootLog.size() 
 static std::string oddTrace;                           // commands the parser did not understand, for GET /status
 static std::string radioLog;                           // when the radio went on and off, and why: GET /radiolog (the last twenty lines)
 static std::string recent[64]; static int recentN = 0;   // the last commands from the Teensy, for GET /recent
+// The system's own error lines (ESP-IDF's log: "E (12345) esp_image: Image hash failed - image is corrupt") went out on
+// UART0 - the wire to the main board - until 1.11.5. They are kept here instead: the last eight at the end of GET /recent,
+// the last one in /status ("sys"), and the ones logged while the flash checks a new firmware go into the update's
+// failure message (update_device.h). Called from any task: a fixed ring, a short critical section, no heap.
+static const int SYS_LINES = 8; static char sysLines[SYS_LINES][112]; static volatile uint32_t sysN = 0;
+static portMUX_TYPE sysMux = portMUX_INITIALIZER_UNLOCKED;
+static int sysLogHook(const char *fmt, va_list ap) {
+    char b[160]; const int n = vsnprintf(b, sizeof(b), fmt, ap);
+    if (n <= 0) return 0;
+    int len = n < (int) sizeof(b) ? n : (int) sizeof(b) - 1;
+    char c[160]; int k = 0;                                   // without colour codes (ESC [ ... m) and the line end
+    for (int i = 0; i < len; ++i) { if (b[i] == 27) { while (i < len && b[i] != 'm') ++i; continue; } if (b[i] == '\n' || b[i] == '\r') continue; c[k++] = b[i]; }
+    if (k == 0) return n;
+    if (k > (int) sizeof(sysLines[0]) - 1) k = (int) sizeof(sysLines[0]) - 1;
+    portENTER_CRITICAL(&sysMux);
+    char *line = sysLines[sysN % SYS_LINES]; memcpy(line, c, k); line[k] = 0; sysN = sysN + 1;
+    portEXIT_CRITICAL(&sysMux);
+    return n;
+}
+static std::string sysLine(uint32_t i) { char b[112]; portENTER_CRITICAL(&sysMux); strlcpy(b, sysLines[i % SYS_LINES], sizeof(b)); portEXIT_CRITICAL(&sysMux); return b; }
+static std::string sysText() { std::string out; const uint32_t n = sysN; for (uint32_t i = n > SYS_LINES ? n - SYS_LINES : 0; i < n; ++i) { out += sysLine(i); out += "\n"; } return out; }
+static std::string sysLast() { const uint32_t n = sysN; return n ? sysLine(n - 1) : std::string(); }
+// The lines logged since `mark` (a value of sysN), their "E (12345) " prefixes dropped, joined with "; ": the reason the
+// system's own code gives when something of ours fails.
+static std::string sysSince(uint32_t mark) {
+    std::string out; const uint32_t n = sysN;
+    for (uint32_t i = (n > mark + SYS_LINES ? n - SYS_LINES : mark); i < n; ++i) {
+        std::string l = sysLine(i);
+        if (l.size() > 3 && l[1] == ' ' && l[2] == '(') { const size_t e = l.find(") "); if (e != std::string::npos) l = l.substr(e + 2); }
+        if (l.empty()) continue;
+        if (!out.empty()) out += "; ";
+        out += l;
+    }
+    return out;
+}
 static Preferences prefs;
 // Flash writes stall the chip for milliseconds and the UART's 128-byte FIFO overflows at 921600 baud in
 // 1.1 ms: a preference saved during a page load mangled whatever the Teensy sent right then (its file
@@ -1640,11 +1676,14 @@ static void pollTouch() {
     // button) is let go without its release event, and nothing counts until the finger has lifted.
     static uint32_t cornerSince = 0; static bool cornerFired = false;
     static uint32_t doorSince = 0; static bool doorFired = false;
+    static uint32_t upSince = 0;                                // when the finger was last seen up (0 while it is down)
+    if (pressed) upSince = 0; else if (!upSince) upSince = now;
+    const bool lifted = !pressed && now - upSince > 120;        // 1.11.5: a sample the GT911 dropped mid-press is not a lift (the holds began again at every dropped sample: "I held for three seconds, no banner"); the flight screen's long press learnt this in 1.10.3
     bool cornerHeld = false;
     if (pressed && x[0] < 48 && y[0] < 48) { if (!cornerSince) { cornerSince = now; cornerFired = false; } else if (!cornerFired && now - cornerSince > 1500) { cornerFired = true; cornerHeld = true; setRadios(!radiosOn); } }
-    else if (!pressed) cornerSince = 0;
+    else if (lifted) cornerSince = 0;
     if (pressed && x[0] >= W - 48 && y[0] < 48) { if (!doorSince) { doorSince = now; doorFired = false; } else if (!doorFired && now - doorSince > 3000) { doorFired = true; cornerHeld = true; doorToggle(); } }
-    else if (!pressed) doorSince = 0;
+    else if (lifted) doorSince = 0;
     if (cornerHeld) {                                           // (our own pages: their handlers see no lift, the lockout holds until the finger is up)
         if (down && held >= 0 && held < (int) page.comps.size()) { Comp &c = page.comps[held]; c.pressed = false; if (c.type == "button" || c.type == "dual-state button") redraw(c); }
         down = false; held = -1; touchLockout = true; touchPainted = true;
@@ -1804,7 +1843,8 @@ static void webBegin() {
                  rxNews.phase, rxNews.why, rxNews.outcome, (unsigned long) rxNews.release, (unsigned long) rxNews.wanted, (unsigned long) rxNews.left, (unsigned long) rxNews.flags, rxNewsAny ? (long) ((millis() - rxNews.atMs) / 1000) : -1L,
                  page.name.c_str(), page.id, (unsigned long) cmdCount, (unsigned long) badCount, ESP.getMinFreeHeap(), ESP.getFreeHeap(), ESP.getFreePsram(), sdOk, touchOk, WiFi.localIP().toString().c_str(), audioId, (unsigned long) bootMs, (unsigned long) millis());
         std::string out = b;                                 // (1.11.3) the Bluetooth pipe's state, readable with the door shut
-        out.pop_back(); out += ",\"ble\":" + bleStatusJson() + "}";
+        out.pop_back(); out += ",\"ble\":" + bleStatusJson();
+        { std::string l = sysLast(); for (size_t i = 0; i < l.size(); ++i) if (l[i] == '"' || l[i] == '\\') l[i] = '\''; out += ",\"sys\":\"" + l + "\"}"; }   // (1.11.5) the system's last error line
         web.send(200, "application/json", out.c_str());
     });
     doorOn("/cmd", HTTP_POST, []() {
@@ -2029,6 +2069,7 @@ static void webBegin() {
     doorOn("/recent", HTTP_GET, []() {
         std::string out;
         for (int i = max(0, recentN - 64); i < recentN; ++i) { out += recent[i % 64]; out += "\n"; }
+        if (sysN) { out += "--- the system's own lines ---\n"; out += sysText(); }     // (1.11.5)
         web.send(200, "text/plain", out.c_str());
     });
     doorOn("/odd", HTTP_GET, []() { web.send(200, "text/plain", oddTrace.c_str()); oddTrace.clear(); });
@@ -2305,6 +2346,7 @@ static void netPoll() {
 void setup() {
     Serial.setRxBufferSize(32768);                        // BEFORE begin(): set afterwards it stayed at 256 bytes and telemetry bursts overran it
     Serial.begin(NEXTION_BAUD);
+    esp_log_set_vprintf(sysLogHook);                      // 1.11.5: the system's own error lines come to us, not to the main board
     // Above 57600 baud the core raises the receive interrupt at 120 bytes of the 128-byte hardware FIFO: at
     // 921600 that leaves 87 microseconds before bytes are lost, and any brief interrupt delay mangled a command
     // (a stray line across the curve page). At 24 bytes there is over a millisecond in hand.

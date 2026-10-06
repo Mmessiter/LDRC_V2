@@ -151,24 +151,61 @@ static void updCheckFile(ldrc::Work &w) {
 }
 // The screen's own firmware, from the file on the card into the spare half of the flash. The half that is
 // running is not touched: until the very end (and the restart) the screen is as it was.
-static void updFlash(ldrc::Work &w) {
+//
+// 1.11.5. The core's last step, Update.end(), has the chip check what was written (its header, its segments, its
+// SHA-256) and name it as the one to start. On Malcolm's transmitter 1.11.4 failed there ("Could Not Activate The
+// Firmware") though every byte given to the flash had the right CRC, and the chip's reason went out on the wire to
+// the main board, unread. So now: the written half is read back and compared BEFORE the chip is asked (a flash that
+// did not keep what it was given is named as such), the system's own lines logged during the check are put in the
+// message (sysSince), and the whole write is tried a second time by itself before anyone is told.
+static bool updFlashOnce(std::string &why, uint32_t &size, uint32_t &crcOut) {
+    why.clear();
     File f = sdOk ? SD.open(updJob.local.c_str(), FILE_READ) : File();
-    if (!f || f.isDirectory() || f.size() != updJob.size) { if (f) f.close(); w.error = "the firmware file on the card is not the one fetched"; return; }
-    if (!Update.begin(updJob.size, U_FLASH)) { w.error = std::string("the flash would not start (") + Update.errorString() + ")"; f.close(); return; }
-    uint32_t crc = 0, done = 0; int n, turns = 0;
+    if (!f || f.isDirectory() || f.size() != updJob.size) { if (f) f.close(); why = "the firmware file on the card is not the one fetched"; return false; }
+    if (!Update.begin(updJob.size, U_FLASH)) { why = std::string("the flash would not start (") + Update.errorString() + ")"; f.close(); return false; }
+    const esp_partition_t *part = esp_ota_get_next_update_partition(NULL);   // the half the core writes (it asks the same question in begin())
+    uint32_t crc = 0, body = 0, done = 0; int n, turns = 0;
     while ((n = f.read(updBuf, UPD_BUF)) > 0) {
-        if (updStop) { w.error = "cancelled"; break; }        // given up (it took too long, or the pilot is flying): the image is NOT named as the one to start
+        if (updStop) { why = "cancelled"; break; }        // given up (it took too long, or the pilot is flying): the image is NOT named as the one to start
         crc = ldrc::crc32(updBuf, (size_t) n, crc);
-        if (Update.write(updBuf, (size_t) n) != (size_t) n) { w.error = std::string("the flash would not take it (") + Update.errorString() + ")"; break; }
+        const uint32_t skip = done < 16 ? min<uint32_t>(16 - done, (uint32_t) n) : 0;     // the CRC of everything after the 16-byte header, which the core holds back until end()
+        body = ldrc::crc32(updBuf + skip, (size_t) n - skip, body);
+        if (Update.write(updBuf, (size_t) n) != (size_t) n) { why = std::string("the flash would not take it (") + Update.errorString() + ")"; break; }
         done += n; updProgress = done;
         if ((++turns & 3) == 0) vTaskDelay(1);
     }
     f.close();
-    if (w.error.empty() && updStop) w.error = "cancelled";
-    if (w.error.empty() && (done != updJob.size || crc != updJob.crc)) w.error = "the firmware file on the card is damaged";
-    if (!w.error.empty()) { Update.abort(); return; }
-    if (!Update.end(false)) { w.error = std::string("the new firmware was not accepted by the flash (") + Update.errorString() + ")"; return; }   // checks the image, then names it as the one to start
-    w.size = done; w.crc = crc; w.ok = true;
+    if (why.empty() && updStop) why = "cancelled";
+    if (why.empty() && (done != updJob.size || crc != updJob.crc)) why = "the firmware file on the card is damaged";
+    if (why.empty() && part) {                               // read back: from byte 16 on, the flash holds exactly what it was given
+        uint32_t held = 0, at = 16;
+        while (at < updJob.size) {
+            const size_t n2 = min((size_t) UPD_BUF, (size_t) (updJob.size - at));
+            if (esp_partition_read(part, at, updBuf, n2) != ESP_OK) { why = "the flash could not be read back"; break; }
+            held = ldrc::crc32(updBuf, n2, held); at += (uint32_t) n2;
+            if ((++turns & 3) == 0) vTaskDelay(1);
+        }
+        if (why.empty() && held != body) why = "the flash did not keep what was written";
+    }
+    if (!why.empty()) { Update.abort(); return false; }
+    const uint32_t mark = sysN;
+    if (!Update.end(false)) {                                // the chip checks the image, then names it as the one to start
+        const std::string reason = sysSince(mark);
+        why = std::string("the new firmware was not accepted by the flash (") + Update.errorString() + (reason.empty() ? "" : ": " + reason) + ")";
+        return false;
+    }
+    size = done; crcOut = crc;
+    return true;
+}
+static void updFlash(ldrc::Work &w) {
+    std::string why, first;
+    for (int attempt = 1; attempt <= 2; ++attempt) {
+        uint32_t size = 0, crc = 0;
+        if (updFlashOnce(why, size, crc)) { w.size = size; w.crc = crc; w.ok = true; return; }
+        if (updStop || why == "cancelled") break;
+        if (attempt == 1) { first = why; vTaskDelay(pdMS_TO_TICKS(500)); }   // once more, from the file on the card again
+    }
+    w.error = first.empty() || first == why ? why + (first.empty() ? "" : ", twice") : "first " + first + ", then " + why;
 }
 static void updTask(void *) {
     for (;;) {
