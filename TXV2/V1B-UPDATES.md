@@ -186,6 +186,15 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The door on every page, and the pipe's state in plain sight (screen 1.11.3, 6 Oct 2026)
+
+Malcolm, trying to open the workshop door on the defined front screen and then on Transmitter setup: "no banner".
+The corner holds (the door at the top right, the radios at the top left) were checked only after the screen's own
+pages had taken the touch, so they never worked over the defined front screen; now they come first, on every page,
+and the page underneath sees no press. The Bluetooth pipe's state (state, why, the receiver wanted and joined, the
+receivers seen) is on /status, which answers with the door shut; and a failed join keeps its reason instead of
+putting the stack away at once.
+
 ## Help comes back to the page it was opened from (V2 B43, 6 Oct 2026)
 
 Malcolm: "on returning from help, it goes all the way back to the front screen, which it should not do." A Version 1

@@ -343,6 +343,8 @@ static bool wifiSecretShown() {                                // the keys are u
     return wifiKeysOnGlass || wifiPage.typing();               // (the whole page: a key lights up as it is pressed, whatever the box shows)
 }
 static void wifiTouch(bool pressed, int x, int y, uint32_t now) {
+    { static uint32_t lastDownHere = 0; if (pressed) lastDownHere = now;   // a corner held (the door, the radios): that finger is not for this page (1.11.3)
+      if (touchLockout) { if (!pressed && (int32_t) (now - lastDownHere) > 80) touchLockout = false; return; } }
     static bool waking = false;
     if (pressed) wifiTouchedAt = now;
     if (pressed && page.name == "BlankView") {                  // the Teensy has blanked the screen: this touch wakes it, and does no more

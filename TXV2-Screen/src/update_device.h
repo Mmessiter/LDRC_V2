@@ -470,6 +470,8 @@ static int updButtonAt(int px, int py) {
 // The panel has the screen: a touch is for its buttons and for nothing else. One exception: when the
 // Teensy has blanked the screen, the touch wakes it (the blank page's own event), as it always did.
 static void updTouch(bool pressed, int x, int y, uint32_t now) {
+    { static uint32_t lastDownHere = 0; if (pressed) lastDownHere = now;   // a corner held (the door, the radios): that finger is not for this page (1.11.3)
+      if (touchLockout) { if (!pressed && (int32_t) (now - lastDownHere) > 80) touchLockout = false; return; } }
     static bool down = false; static uint32_t seen = 0; static int lastX = 0, lastY = 0;
     if (pressed) {
         seen = now; lastX = x; lastY = y;

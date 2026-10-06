@@ -155,7 +155,7 @@ static void bleTxServe() {                                     // in the task: t
 }
 static void bleTask(void *) {
     for (;;) {
-        if (bleOrder == 2 || (bleState == BLE_FAILED && bleOrder != 1)) {   // off (or failed and not asked again): down with the stack
+        if (bleOrder == 2) {                                   // off: down with the stack (a failed join keeps its reason until then)
             bleOrder = 0; bleState = BLE_STOPPING; bleLeave(); NimBLEDevice::deinit(true); bleState = BLE_OFF;
         } else if (bleOrder == 1) {
             bleOrder = 0;
@@ -202,18 +202,19 @@ static void bleTxCommand(const std::string &words) {
     blog("ble", "from the main board: " + words);
     if (bleMutex && xSemaphoreTake(bleMutex, pdMS_TO_TICKS(5)) == pdTRUE) { if (bleTxQueue.size() < 16) bleTxQueue.push_back(words); xSemaphoreGive(bleMutex); }
 }
+static std::string bleStatusJson() {
+    std::string out = std::string("{\"state\":\"") + bleStateName(bleState) + "\",\"why\":\"" + bleWhy + "\",\"wanted\":\"" + bleWantMac + "\",\"joined\":\"" + bleJoined + "\",\"mtu\":" + std::to_string(bleMtu) + ",\"told\":" + std::to_string(blePipeTold) + ",\"seen\":[";
+    if (bleMutex && xSemaphoreTake(bleMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
+        for (size_t i = 0; i < bleSeen.size(); ++i) out += (i ? "," : "") + std::string("{\"name\":\"") + bleSeen[i].name + "\",\"addr\":\"" + bleSeen[i].addr + "\",\"rssi\":" + std::to_string(bleSeen[i].rssi) + "}";
+        xSemaphoreGive(bleMutex);
+    }
+    out += "],\"pending\":" + std::string(bleReqPending ? "true" : "false") + ",\"queued\":" + std::to_string(bleTxQueue.size()) + ",\"heap\":" + std::to_string(ESP.getFreeHeap()) + "}";
+    return out;
+}
 static void bleWeb() {
     doorOn("/ble/on", HTTP_POST, []() { if (tx.armed) { web.send(409, "text/plain", "the model could be flying"); return; } bleTarget = web.arg("name").c_str(); bleStartTask(); bleOrder = 1; web.send(200, "text/plain", "joining"); });
     doorOn("/ble/off", HTTP_POST, []() { bleOrder = 2; web.send(200, "text/plain", "leaving"); });
-    doorOn("/ble/status", HTTP_GET, []() {
-        std::string out = std::string("{\"state\":\"") + bleStateName(bleState) + "\",\"why\":\"" + bleWhy + "\",\"joined\":\"" + bleJoined + "\",\"mtu\":" + std::to_string(bleMtu) + ",\"seen\":[";
-        if (bleMutex && xSemaphoreTake(bleMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
-            for (size_t i = 0; i < bleSeen.size(); ++i) out += (i ? "," : "") + std::string("{\"name\":\"") + bleSeen[i].name + "\",\"addr\":\"" + bleSeen[i].addr + "\",\"rssi\":" + std::to_string(bleSeen[i].rssi) + "}";
-            xSemaphoreGive(bleMutex);
-        }
-        out += "],\"pending\":" + std::string(bleReqPending ? "true" : "false") + ",\"heap\":" + std::to_string(ESP.getFreeHeap()) + "}";
-        web.send(200, "application/json", out.c_str());
-    });
+    doorOn("/ble/status", HTTP_GET, []() { web.send(200, "application/json", bleStatusJson().c_str()); });
     doorOn("/ble/req", HTTP_POST, []() {               // /ble/req?method=GET&path=/api/state.json [body in the POST] : starts it; /ble/reply fetches the answer
         const std::string method = web.arg("method").length() ? web.arg("method").c_str() : "GET", path = web.arg("path").c_str(), body = web.arg("plain").c_str();
         if (path.empty()) { web.send(400, "text/plain", "path?"); return; }

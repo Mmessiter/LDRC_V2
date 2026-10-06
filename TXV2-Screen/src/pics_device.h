@@ -372,6 +372,8 @@ static const int PIC_PARTS[] = { 1, 4, 2, 3, 10, 11, 12, 13, 14, 15, 16, 17, 20,
 
 // ------------------------------------------------------------------ the finger
 static void picTouch(bool pressed, int x, int y, uint32_t now) {
+    { static uint32_t lastDownHere = 0; if (pressed) lastDownHere = now;   // a corner held (the door, the radios): that finger is not for this page (1.11.3)
+      if (touchLockout) { if (!pressed && (int32_t) (now - lastDownHere) > 80) touchLockout = false; return; } }
     static bool down = false; static uint32_t seen = 0; static int lastX = 0, lastY = 0;
     if (pressed) {
         seen = now; lastX = x; lastY = y;

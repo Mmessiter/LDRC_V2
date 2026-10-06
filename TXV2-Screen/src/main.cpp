@@ -37,7 +37,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.2"
+#define SCREEN_VERSION "1.11.3"
 #endif
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
 constexpr int SD_MOSI = 11, SD_MISO = 13, SD_CLK = 12, SD_CS = 10;
@@ -438,7 +438,7 @@ static bool picPanelUp();
 static void picTouch(bool pressed, int x, int y, uint32_t now);
 static void picPoll();
 static void picWeb();
-static void bleWeb(); static void blePoll(); static void blePipeCommand(const std::string &a); static void bleTxCommand(const std::string &words);
+static void bleWeb(); static void blePoll(); static void blePipeCommand(const std::string &a); static void bleTxCommand(const std::string &words); static std::string bleStatusJson();
 static void picPageLoaded();                           // loadPage(): the chooser covers its page before anything of that page is drawn
 static void picSoon();                                 // "Model image..." touched: the chooser's frame at once
 // The flight screen (src/flight_device.h, lib/LdrcFlight): what the pilot chose to see while flying, over the front page
@@ -1633,6 +1633,23 @@ static void pollTouch() {
     bool pressed;
     if ((int32_t) (fakeTouchUntil - now) > 0) { pressed = true; x[0] = fakeX; y[0] = fakeY; }
     else pressed = touchOk && touch.getPoint(x, y, 2) > 0;
+    // Hold the top-left corner for 1.5 s: radios on/off (a bench control, remembered across power cycles).
+    // Hold the top-RIGHT corner for 3 s: the workshop door, open or shut on the network we are on.
+    // On every page, ours included (1.11.3; Malcolm on the defined front screen: "After three seconds or more, no banner").
+    // A corner that has been held is a corner, not a button: whatever lies under the finger (on most pages the Help
+    // button) is let go without its release event, and nothing counts until the finger has lifted.
+    static uint32_t cornerSince = 0; static bool cornerFired = false;
+    static uint32_t doorSince = 0; static bool doorFired = false;
+    bool cornerHeld = false;
+    if (pressed && x[0] < 48 && y[0] < 48) { if (!cornerSince) { cornerSince = now; cornerFired = false; } else if (!cornerFired && now - cornerSince > 1500) { cornerFired = true; cornerHeld = true; setRadios(!radiosOn); } }
+    else if (!pressed) cornerSince = 0;
+    if (pressed && x[0] >= W - 48 && y[0] < 48) { if (!doorSince) { doorSince = now; doorFired = false; } else if (!doorFired && now - doorSince > 3000) { doorFired = true; cornerHeld = true; doorToggle(); } }
+    else if (!pressed) doorSince = 0;
+    if (cornerHeld) {                                           // (our own pages: their handlers see no lift, the lockout holds until the finger is up)
+        if (down && held >= 0 && held < (int) page.comps.size()) { Comp &c = page.comps[held]; c.pressed = false; if (c.type == "button" || c.type == "dual-state button") redraw(c); }
+        down = false; held = -1; touchLockout = true; touchPainted = true;
+        return;
+    }
     static bool oursWasUp = false; static uint32_t oursWentAt = 0;
     if (!(updPanelUp() || wifiPageUp() || picPanelUp() || flightUp() || coloursUp() || appearanceUp()) && oursWasUp) {   // our page has just gone: the finger that closed it, and the second tap of a double tap, are not for the page underneath
         oursWasUp = false; oursWentAt = now; touchLockout = true; lastSeen = now;
@@ -1657,22 +1674,6 @@ static void pollTouch() {
     if (touchLockout && down) { down = false; held = -1; dragged = false; }
     if (pressed) { lastSeen = now; lastX = x[0]; lastY = y[0]; host.sys["tch0"] = x[0]; host.sys["tch1"] = y[0]; touchPainted = true; }
     else if (down) touchPainted = true;
-    // Hold the top-left corner for 1.5 s: radios on/off (a bench control, remembered across power cycles).
-    // Hold the top-RIGHT corner for 3 s: the workshop door, open or shut on the network we are on.
-    // A corner that has been held is a corner, not a button: whatever lies under the finger (on most pages the Help
-    // button) is let go without its release event, and nothing counts until the finger has lifted.
-    static uint32_t cornerSince = 0; static bool cornerFired = false;
-    static uint32_t doorSince = 0; static bool doorFired = false;
-    bool cornerHeld = false;
-    if (pressed && x[0] < 48 && y[0] < 48) { if (!cornerSince) { cornerSince = now; cornerFired = false; } else if (!cornerFired && now - cornerSince > 1500) { cornerFired = true; cornerHeld = true; setRadios(!radiosOn); } }
-    else if (!pressed) cornerSince = 0;
-    if (pressed && x[0] >= W - 48 && y[0] < 48) { if (!doorSince) { doorSince = now; doorFired = false; } else if (!doorFired && now - doorSince > 3000) { doorFired = true; cornerHeld = true; doorToggle(); } }
-    else if (!pressed) doorSince = 0;
-    if (cornerHeld) {
-        if (down && held >= 0 && held < (int) page.comps.size()) { Comp &c = page.comps[held]; c.pressed = false; if (c.type == "button" || c.type == "dual-state button") redraw(c); }
-        down = false; held = -1; touchLockout = true; touchPainted = true;
-        return;
-    }
     // The touch chip drops the odd sample mid-press: a release is only real after 80 ms of nothing.
     const bool up = !pressed && down && now - lastSeen > 80;
     if (pressed && !down) {
@@ -1802,7 +1803,9 @@ static void webBegin() {
                  doorOpen() ? "true" : "false", doorSsid.empty() ? "false" : "true", txStatus, flyingNow(),
                  rxNews.phase, rxNews.why, rxNews.outcome, (unsigned long) rxNews.release, (unsigned long) rxNews.wanted, (unsigned long) rxNews.left, (unsigned long) rxNews.flags, rxNewsAny ? (long) ((millis() - rxNews.atMs) / 1000) : -1L,
                  page.name.c_str(), page.id, (unsigned long) cmdCount, (unsigned long) badCount, ESP.getMinFreeHeap(), ESP.getFreeHeap(), ESP.getFreePsram(), sdOk, touchOk, WiFi.localIP().toString().c_str(), audioId, (unsigned long) bootMs, (unsigned long) millis());
-        web.send(200, "application/json", b);
+        std::string out = b;                                 // (1.11.3) the Bluetooth pipe's state, readable with the door shut
+        out.pop_back(); out += ",\"ble\":" + bleStatusJson() + "}";
+        web.send(200, "application/json", out.c_str());
     });
     doorOn("/cmd", HTTP_POST, []() {
         std::string body = web.arg("plain").c_str();
