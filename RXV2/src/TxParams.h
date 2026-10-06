@@ -380,6 +380,10 @@ inline void ackPair(uint8_t* ack, uint16_t a, uint16_t b) {
 //*********************************************************************
 //  Incoming parameter packet parser  (V1 ReadExtraParameters)
 //*********************************************************************
+// The words of a parameter packet, however they came: over the radio link (readExtraParameters below, the 12-bit
+// compression undone) or over Bluetooth from a Version 2 transmitter's screen (0.9.874: POST /api/txparams, the words
+// as plain numbers). From here on the two are one path - the same reads, the same writes, the same cache.
+inline void txParamsWords(const uint16_t* w);
 inline void readExtraParameters(const uint8_t* payload, uint8_t size) {
     if (size <= 2) return;
     uint16_t compressed[16] = {0};
@@ -388,6 +392,9 @@ inline void readExtraParameters(const uint8_t* payload, uint8_t size) {
         compressed[i / 2] = (uint16_t)payload[2 + i] | ((uint16_t)payload[2 + i + 1] << 8);
     uint16_t w[24] = {0};                       // w[0]=ID, w[1..11]=words
     decompress(w, compressed, decompressedSize(size));
+    txParamsWords(w);
+}
+inline void txParamsWords(const uint16_t* w) {
     const uint16_t id = w[0];
     // Diagnostic: log each parameter ID once per boot. The TX's initial-setup
     // burst proved impossible to debug blind (2026-08-02: the time packet
@@ -1048,6 +1055,25 @@ inline bool fillParamAck(uint8_t item, uint8_t* ack) {
         }
     }
     return false;
+}
+
+// For the Bluetooth pipe (0.9.874): the block in hand, as the ack payload would carry it - items 25..34, four bytes
+// each, as hex, only those the block has. "" until the first read of the block has come back from the FC.
+inline String txParamsAckJson() {
+    static const char* names[] = { "none", "pid", "rates", "ratesadv", "pidadv", "govconfig", "govprofile" };   // (ParamSend's order)
+    String j = "{\"block\":\"";
+    j += (paramSend >= 0 && paramSend <= 6) ? names[paramSend] : "?";
+    j += "\",\"open\":"; j += paramReadWindowOpen() ? "true" : "false";
+    j += ",\"items\":{";
+    bool first = true;
+    for (uint8_t item = 25; item <= 34; ++item) {
+        uint8_t ack[6] = {0};
+        if (!fillParamAck(item, ack)) continue;
+        char b[24]; snprintf(b, sizeof(b), "%s\"%u\":\"%02X%02X%02X%02X\"", first ? "" : ",", (unsigned)item, ack[1], ack[2], ack[3], ack[4]);
+        j += b; first = false;
+    }
+    j += "}}";
+    return j;
 }
 
 #endif // _SRC_TXPARAMS_H

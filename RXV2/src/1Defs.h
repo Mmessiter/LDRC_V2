@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.873-shorter-silence";
+constexpr const char* FW_VERSION = "RXV2-0.9.874-txparams-pipe";
 
 //*********************************************************************
 //  Auto-update manifest URLs

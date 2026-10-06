@@ -3871,6 +3871,18 @@ inline void registerWebRoutes() {
     server.on("/api/backup/save",          HTTP_POST, handleBackupSave);
     server.on("/api/backup/delete",        HTTP_POST, handleBackupDelete);
     server.on("/api/msp",         HTTP_GET, handleMspApi);
+    // The Version 2 transmitter's Rotorflight editing over Bluetooth (0.9.874; TXV1B B41 + screen 1.11.1): the same
+    // parameter packets the radio link carried, as plain words - "id,w1,w2,...,w11" - into the same code (TxParams.h
+    // txParamsWords), and the block being read as the ack payload would carry it.
+    server.on("/api/txparams", HTTP_POST, []() {
+        const String body = server.hasArg("plain") ? server.arg("plain") : server.arg("w");
+        uint16_t w[24] = {0}; int n = 0; const char* p = body.c_str();
+        while (*p && n < 12) { char* e = nullptr; const long v = strtol(p, &e, 10); if (e == p) break; w[n++] = (uint16_t)(v & 0xFFF); p = (*e == ',') ? e + 1 : e; }
+        if (n < 1 || w[0] < 1 || w[0] > PARAM_MAX_ID) { server.send(400, "text/plain", "id,w1,...,w11?"); return; }
+        txParamsWords(w);
+        server.send(200, "application/json", txParamsAckJson());
+    });
+    server.on("/api/txparams/ack", HTTP_GET, []() { server.send(200, "application/json", txParamsAckJson()); });
 
     // Auto-update endpoints.
     server.on("/api/time",             HTTP_POST, handleTimeSync);
