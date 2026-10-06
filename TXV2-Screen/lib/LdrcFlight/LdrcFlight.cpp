@@ -431,7 +431,13 @@ const FlightScene &FlightScreen::scene(FlightSource &src, FlightFonts *fonts) { 
 
 int FlightScreen::idAt(int x, int y) const {
     int id = -1;
-    for (auto &b : sc.buttons) if (!b.label && b.r.has(x, y)) id = b.id;
+    for (auto &b : sc.buttons) {
+        if (b.label) continue;
+        if (b.id >= ID_SLOT && b.id < ID_SLOT + FLIGHT_SLOTS) {   // a tab, near the top edge of the glass: it answers to a touch a little below its drawn edge too (1.10.7)
+            FlightRect r = b.r; r.h = (int16_t) (r.h + 10); r.x = (int16_t) (r.x - 2); r.w = (int16_t) (r.w + 4);
+            if (r.has(x, y)) id = b.id;
+        } else if (b.r.has(x, y)) id = b.id;
+    }
     if (setup && chooser == -1 && colourFor < 0) for (auto &t : sc.tiles) if (t.r.has(x, y)) id = t.id;
     return id;
 }

@@ -186,6 +186,12 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Tabs easier to hit (screen 1.10.7, 6 Oct 2026)
+
+Malcolm: "Because they are so close to the top of the screen they were quite difficult to hit with a finger ... but
+they're okay now... Just!" A tab now answers to a touch up to 10 px below its drawn edge and 2 px either side,
+without looking any different.
+
 ## The same tabs, and "Defined screens" (screen 1.10.6, 6 Oct 2026)
 
 Malcolm: "They are still smaller! Please make them the same size as setup area. Also please change Defined screen to
