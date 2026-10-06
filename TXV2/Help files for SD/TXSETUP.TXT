@@ -23,3 +23,5 @@ The receiver's own update is on the Model setup screen: 'Receiver updates', avai
 WiFi and Bluetooth switch themselves off while the safety is off (with no safety switch: while the motor is on).||
 
 If new firmware reads a model's settings differently from the old one, it is not kept: the old firmware comes back by itself, and the screen says so.
+
+'Workshop door' lets a computer on the same WiFi talk to the screen (for Malcolm's bench tools). Press it again to shut the door. Shut, the screen answers nothing but its status.

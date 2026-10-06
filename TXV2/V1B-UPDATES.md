@@ -186,6 +186,12 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## A Workshop door button (screen 1.11.4, 6 Oct 2026)
+
+Malcolm: "you could create an ordinary button that switches it on, which I can find perhaps bottom left on the
+transmitter setup screen." Done: "Workshop door" at the bottom left of Transmitter setup opens or shuts it, with the
+banner saying which. The corner hold stays.
+
 ## The door on every page, and the pipe's state in plain sight (screen 1.11.3, 6 Oct 2026)
 
 Malcolm, trying to open the workshop door on the defined front screen and then on Transmitter setup: "no banner".
