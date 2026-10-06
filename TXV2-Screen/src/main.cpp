@@ -39,7 +39,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.7"
+#define SCREEN_VERSION "1.11.8"
 #endif
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
 constexpr int SD_MOSI = 11, SD_MISO = 13, SD_CLK = 12, SD_CS = 10;
@@ -440,7 +440,7 @@ static bool picPanelUp();
 static void picTouch(bool pressed, int x, int y, uint32_t now);
 static void picPoll();
 static void picWeb();
-static void bleWeb(); static void blePoll(); static void blePipeCommand(const std::string &a); static void bleTxCommand(const std::string &words); static std::string bleStatusJson();
+static void bleWeb(); static void blePoll(); static void blePipeCommand(const std::string &a); static void bleTxCommand(const std::string &words); static std::string bleStatusJson(); static unsigned bleStackSpare();
 static void picPageLoaded();                           // loadPage(): the chooser covers its page before anything of that page is drawn
 static void picSoon();                                 // "Model image..." touched: the chooser's frame at once
 // The flight screen (src/flight_device.h, lib/LdrcFlight): what the pilot chose to see while flying, over the front page
@@ -1846,6 +1846,7 @@ static void webBegin() {
         std::string out = b;                                 // (1.11.3) the Bluetooth pipe's state, readable with the door shut
         out.pop_back(); out += ",\"ble\":" + bleStatusJson();
         out += ",\"rst\":" + std::to_string((int) esp_reset_reason());   // (1.11.7) why we last started: 1 power, 3 our own restart, 4 panic, 5/6/7 watchdogs, 9 brown-out
+        out += ",\"stack\":{\"loop\":" + std::to_string((unsigned) uxTaskGetStackHighWaterMark(NULL)) + ",\"ble\":" + std::to_string(bleStackSpare()) + "}";   // (1.11.8) the least each task's stack has ever had to spare, in bytes
         { std::string l = sysLast(); for (size_t i = 0; i < l.size(); ++i) if (l[i] == '"' || l[i] == '\\') l[i] = '\''; out += ",\"sys\":\"" + l + "\"}"; }   // (1.11.5) the system's last error line
         web.send(200, "application/json", out.c_str());
     });

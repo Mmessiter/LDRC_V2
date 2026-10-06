@@ -186,7 +186,7 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
-## A refusal explains itself (V2 B45 + screen 1.11.7 + receiver 0.9.876, 6 Oct 2026, late)
+## A refusal explains itself (V2 B45 + screen 1.11.8 + receiver 0.9.876, 6 Oct 2026, late)
 
 Malcolm, in the Rotorflight menu with a Bluetooth link at last: "when I try to read PIDs, it thinks arming is on or
 safety is off ... arming is in fact off, safety is on". The test behind "Model is armed and dangerous" was *arming
@@ -200,7 +200,8 @@ menu's own entry message says which of the two it saw (motor enabled, or safety 
 **Receiver 0.9.876:** when the transmitter's Bluetooth ask cannot be honoured, the events log says why ("not while armed
 (channel 6 at 1503)", or a receiver update), and state.json's `ble.tx_ask` shows the ask. **Screen 1.11.7:** `/status`
 gains `rst`, why the screen last started (1 power, 3 its own restart, 4 panic, 5-7 watchdogs, 9 brown-out): it restarted
-once in the evening's session, cause unknown; the Bluetooth task's stack goes from 8 to 12 kB.
+once in the evening's session, cause unknown; the Bluetooth task's stack goes from 8 to 12 kB. **Screen 1.11.8:** `/status` also
+shows `stack` (the least each task has ever had spare: `loop`, `ble`).
 
 **Still open (7 Oct morning):** the receiver did not open its Bluetooth when asked, minutes after power-on. Suspect: the
 receiver's own arming channel (6) reads the parked centre as "armed" (its rule is above 1500). The bench order that

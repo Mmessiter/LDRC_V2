@@ -23,6 +23,7 @@ static std::string bleTarget;                                  // the receiver w
 static std::string bleJoined; static int bleMtu = 0;           // what we are joined to
 static SemaphoreHandle_t bleMutex = nullptr;
 static TaskHandle_t bleTaskHandle = nullptr;
+static unsigned bleStackSpare() { return bleTaskHandle ? (unsigned) uxTaskGetStackHighWaterMark(bleTaskHandle) : 0u; }   // (1.11.8) for /status
 // one request at a time
 struct BleRequest { std::string method, path, body, type; uint32_t id = 0; };
 static BleRequest bleReq; static volatile bool bleReqPending = false, bleReqDone = false; static ldrc::BleReply bleLast; static std::string bleReqError;
