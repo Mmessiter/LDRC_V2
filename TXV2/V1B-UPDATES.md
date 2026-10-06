@@ -186,7 +186,13 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
-## The Bluetooth pipe, steps 2 and 3 - built, not yet released (B41 + screen 1.11.1 + receiver 0.9.874, 6 Oct 2026)
+## Which way the values travel (V2 B42, 6 Oct 2026)
+
+Malcolm, on the first live session (a bench Nexus, PIDs read and written): "What I don't know for sure is whether
+it's using BLE or the old method." The Rotorflight menu now says, at the right of its message line: "Bluetooth:
+joining", then "By Bluetooth", or "By radio link" / "By radio link (no Bluetooth)".
+
+## The Bluetooth pipe, steps 2 and 3 (B41 + screen 1.11.2 + receiver 0.9.874, 6 Oct 2026)
 
 The receiver's identity: no change to its Bluetooth advertisement is needed. The screen tries the receivers in reach,
 strongest first, reads each one's board identity from its state page and keeps the one the main board named, which is
@@ -195,8 +201,8 @@ packet in, the block being read out. The screen relays: "ldrcpipe on <id>" from 
 "ldrctx id,w1..w11" packets go across, and while a read is open the block comes back as "ldrctel" items into the same
 telemetry parser the radio link's acks use. The main board sends the Rotorflight parameters (IDs 9-21, 27-33) by the
 pipe only while the screen says it is ready, and by the radio link as ever otherwise; the pages, values, save and
-restore are untouched. Everything compiles and the pure parts are tested on the Mac; the live test waits for a
-receiver to be switched on.
+restore are untouched. Released the same afternoon; the first live session on a bench Nexus read the PIDs and wrote one over
+Bluetooth (the write landed in every bank: the bench Nexus had no profile switching set up, as Malcolm found).
 
 ## The Bluetooth pipe, step 1 (screen 1.11.0, 6 Oct 2026)
 

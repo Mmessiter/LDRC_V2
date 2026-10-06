@@ -3896,6 +3896,7 @@ FASTRUN void ButtonWasPressed()
         { // B41: the screen's Bluetooth pipe to the receiver: 0 off, 1 joining, 2 ready, 3 failed
             p = InStrng((char *)"ldrcpipe=", TextIn);
             PipeState = (uint8_t)CheckRange(atoi(TextIn + p + 8), 0, 3);
+            ShowPipeState();
             ClearText();
             return;
         }

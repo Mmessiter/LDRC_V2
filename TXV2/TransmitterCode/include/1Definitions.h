@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B41 06/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B42 06/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -983,6 +983,7 @@ bool RfParamOverPipe(uint8_t id);             // B41: this parameter ID goes by 
 void SendParameterByPipe(uint8_t id);         // B41: as words, to the screen
 void PipeOn();                                // B41: ask the screen to join the model's receiver
 void PipeOff();
+void ShowPipeState();                         // B42: "By Bluetooth" / "By radio link" on the Rotorflight menu
 FASTRUN void LogAverageGap();
 void ReadChannelSwitches9to12();
 int GetExtraParameters();

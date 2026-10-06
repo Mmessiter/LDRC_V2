@@ -24,6 +24,13 @@ void PipeOn()
     snprintf(b, sizeof(b), "ldrcpipe on %02X%02X%02X%02X%02X%02X", (unsigned)(a & 0xFF), (unsigned)((a >> 8) & 0xFF), (unsigned)((a >> 16) & 0xFF), (unsigned)((a >> 24) & 0xFF), (unsigned)(c & 0xFF), (unsigned)((c >> 8) & 0xFF));
     SendCommand(b);
 }
+void ShowPipeState() // B42: on the Rotorflight menu, which way the values travel
+{
+    if (CurrentView != ROTORFLIGHTVIEW)
+        return;
+    static const char *words[4] = {"By radio link", "Bluetooth: joining", "By Bluetooth", "By radio link (no Bluetooth)"};
+    SendText((char *)"pipe", (char *)words[PipeState <= 3 ? PipeState : 0]);
+}
 void PipeOff()
 {
     if (PipeState)
