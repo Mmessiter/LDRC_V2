@@ -182,20 +182,24 @@ static void blePoll() {
     static bool wasArmed = false;
     if (tx.armed && !wasArmed && bleState != BLE_OFF) bleOrder = 2;   // the model could be flying: Bluetooth down, as the WiFi goes
     wasArmed = tx.armed;
+    static int logged = -1;
+    if ((int) bleState != logged) { logged = bleState; blog("ble", std::string(bleStateName(bleState)) + (bleState == BLE_FAILED ? ": " + bleWhy : bleState == BLE_READY ? ": " + bleJoined + ", MTU " + std::to_string(bleMtu) : "")); }
     const int st = bleState == BLE_READY ? 2 : bleState == BLE_FAILED ? 3 : bleState == BLE_OFF ? 0 : 1;
     if (st != blePipeTold && !teensyLink.running()) { blePipeTold = st; flushOut(); const std::string t = "ldrcpipe=" + std::to_string(st); Serial.write((const uint8_t *) t.data(), t.size()); }
     if (!bleMail.empty() && bleMutex && xSemaphoreTake(bleMutex, pdMS_TO_TICKS(5)) == pdTRUE) {   // the task's words for the main board, one a pass
         std::string m = bleMail.front(); bleMail.erase(bleMail.begin()); xSemaphoreGive(bleMutex);
-        if (!teensyLink.running()) { flushOut(); Serial.write((const uint8_t *) m.data(), m.size()); }
+        if (!teensyLink.running()) { flushOut(); Serial.write((const uint8_t *) m.data(), m.size()); blog("ble", "to the main board: " + m.substr(0, 60)); }
     }
 }
 // From the main board: "ldrcpipe on AABBCCDDEEFF" (the receiver's board id, as it learned at binding; "on" alone = the
 // nearest), "ldrcpipe off", and "ldrctx 12,321,5000,0,0,0,0,0,0,0,0,0" (a parameter packet, as words)
 static void blePipeCommand(const std::string &a) {
+    blog("ble", "from the main board: pipe " + a);
     if (a.rfind("on", 0) == 0) { bleWantMac = bleUpper(a.size() > 3 ? a.substr(3) : ""); bleTarget.clear(); bleTelLast.clear(); if (tx.armed) return; bleStartTask(); bleOrder = 1; }
     else if (a == "off") { bleOrder = 2; blePollUntil = 0; if (bleMutex && xSemaphoreTake(bleMutex, pdMS_TO_TICKS(5)) == pdTRUE) { bleTxQueue.clear(); xSemaphoreGive(bleMutex); } }
 }
 static void bleTxCommand(const std::string &words) {
+    blog("ble", "from the main board: " + words);
     if (bleMutex && xSemaphoreTake(bleMutex, pdMS_TO_TICKS(5)) == pdTRUE) { if (bleTxQueue.size() < 16) bleTxQueue.push_back(words); xSemaphoreGive(bleMutex); }
 }
 static void bleWeb() {
