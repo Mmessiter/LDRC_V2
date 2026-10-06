@@ -378,6 +378,7 @@ inline void netStep() {
     // disarm revival (the keying stalls the loop); not during a receiver update (one antenna). Down again by the
     // ordinary rules above once the asks stop.
     static uint32_t txBleAnnouncedMs = 0;
+    static bool txBleRefusedSaid = false;              // (0.9.876) one line per ask window when the ask cannot be honoured
     if (txBleWanted() && !armedNow && !bleAdvertising() && !bleHasClient() && !otaStarted && rxUpdState == RXU_IDLE) {
         if (!txBleAnnouncedMs) { announcePardon(); txBleAnnouncedMs = millis(); }
         else if (pardonDelivered(txBleAnnouncedMs)) {
@@ -386,7 +387,17 @@ inline void netStep() {
             events.add("Bluetooth up: the transmitter asked (Rotorflight menu)");
             bleStart();
         }
-    } else txBleAnnouncedMs = 0;
+    } else {
+        txBleAnnouncedMs = 0;
+        if (txBleWanted() && !bleAdvertising() && !bleHasClient() && !txBleRefusedSaid) {
+            txBleRefusedSaid = true;
+            char m[EventLog::MSG_LEN];
+            if (armedNow) snprintf(m, sizeof m, "Transmitter asks for Bluetooth: not while armed (channel %u at %u)", (unsigned)armingChannel, (unsigned)channelMicros[armingChannel - 1]);
+            else snprintf(m, sizeof m, "Transmitter asks for Bluetooth: not during a receiver update");
+            events.add(m);
+        }
+    }
+    if (!txBleWanted()) txBleRefusedSaid = false;
     // Non-blocking WiFi re-begin: a STA retry used to do WiFi.disconnect() +
     // delay(200) + WiFi.begin() inline, which BLOCKED the main loop for ~208 ms
     // every retry — long enough to pause CRSF/SBUS output and starve radioPoll,

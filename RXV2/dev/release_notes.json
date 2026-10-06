@@ -1,4 +1,5 @@
 {
+  "RXV2-0.9.876-ble-ask-events": "When a Version 2 transmitter asks for Bluetooth and the receiver cannot open it (armed, or a receiver update), the events log says so and why; state.json ble.tx_ask shows the ask.",
   "RXV2-0.9.875-ble-wanted": "A Version 2 transmitter in its Rotorflight menu now asks the receiver to open its Bluetooth (parameter 36), so the transmitter's screen can join it minutes after power-on, not only in the first 30 s. Honoured only while not armed; the ordinary rules shut it again afterwards.",
   "RXV2-0.9.874-txparams-pipe": "The Version 2 transmitter's Rotorflight editing over Bluetooth: the transmitter's parameter packets arrive as words at /api/txparams and the block being read goes back at /api/txparams/ack, into the same code the radio link uses. Nothing changes for the radio link or the phone app.",
   "RXV2-0.9.873-shorter-silence": "Transmitter-ordered update: the transmitter is asked to stay silent for 60 s instead of 90 (the bench: accepted to restarted in 20 s at home), and a download that fails with an HTTP error is tried once more after 5 s (the first bench run met a 404 for a file that was there).",

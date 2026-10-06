@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.876-ble-ask-events",
+      "url": "https://messiter.com/rxv2/release/v0.9.876/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.876/littlefs.bin",
+      "fs_md5": "cc4878104ade8765b32ab2b7b6cb420e",
+      "notes": "When a Version 2 transmitter asks for Bluetooth and the receiver cannot open it (armed, or a receiver update), the events log says so and why; state.json ble.tx_ask shows the ask."
+    },
+    {
       "name": "RXV2-0.9.875-ble-wanted",
       "url": "https://messiter.com/rxv2/release/v0.9.875/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.875/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.865/littlefs.bin",
       "fs_md5": "cc4878104ade8765b32ab2b7b6cb420e",
       "notes": "Same firmware as 0.9.864, released so that a receiver on 0.9.864 has something to install from the transmitter: the first release to be installed that way. Receivers older than 0.9.864 still need one update from the phone app (they cannot say their version to the transmitter yet)."
-    },
-    {
-      "name": "RXV2-0.9.864-update-from-the-transmitter",
-      "url": "https://messiter.com/rxv2/release/v0.9.864/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.864/littlefs.bin",
-      "fs_md5": "cc4878104ade8765b32ab2b7b6cb420e",
-      "notes": "A V1B transmitter can now update the receiver: with a model connected, the transmitter's Check for update compares this receiver's release number (telemetry item 39) with messiter.com and, on Install, orders the update over the radio (parameter 35). The receiver accepts only disarmed and knowing a WiFi network, acts only once the transmitter has gone quiet, joins the network it already knows, installs the exact version ordered with the same code the app uses, and restarts; item 40 tells the transmitter how it went. No password ever travels over the air. state.json shows tx_update."
     }
   ],
   "rotorflight": {

@@ -717,13 +717,14 @@ inline void bleStateJson(String& j) {
     const uint8_t conns = srv ? srv->getConnectedCount() : 0;
     std::string peer = conns ? srv->getPeerInfo(0).getAddress().toString() : "";
     char b[300];
-    snprintf(b, sizeof(b), ",\"ble\":{\"on\":%s,\"adv\":%s,\"client\":%s,\"conns\":%u,\"peer\":\"%s\",\"since_s\":%lu,\"idle_s\":%lu,\"adv_restarts\":%lu,\"phantom\":%lu,\"idle_drops\":%lu,\"adv_refresh\":%lu,\"stream_on\":%s,\"stream_sent\":%lu}",
+    snprintf(b, sizeof(b), ",\"ble\":{\"on\":%s,\"adv\":%s,\"client\":%s,\"conns\":%u,\"peer\":\"%s\",\"since_s\":%lu,\"idle_s\":%lu,\"adv_restarts\":%lu,\"phantom\":%lu,\"idle_drops\":%lu,\"adv_refresh\":%lu,\"stream_on\":%s,\"stream_sent\":%lu,\"tx_ask\":%s}",
              bleStarted ? "true" : "false", adv ? "true" : "false", bleClientConnected ? "true" : "false",
              (unsigned)conns, peer.c_str(),
              (unsigned long)((conns && bleConnectedAtMs) ? (millis() - bleConnectedAtMs) / 1000 : 0),
              (unsigned long)((bleLastActivityMs ? (millis() - bleLastActivityMs) : 0) / 1000),
              (unsigned long)bleAdvRestarts, (unsigned long)blePhantomClears, (unsigned long)bleIdleDrops,
-             (unsigned long)bleAdvRefreshes, bleStreamOn ? "true" : "false", (unsigned long)bleStreamSent);
+             (unsigned long)bleAdvRefreshes, bleStreamOn ? "true" : "false", (unsigned long)bleStreamSent,
+             txBleWanted() ? "true" : "false");   // (0.9.876) a Version 2 transmitter's Rotorflight menu is asking for Bluetooth
     j += b;
 }
 
