@@ -352,7 +352,7 @@ void FlightScreen::build(FlightSource &src, FlightFonts *fonts) {
         FlightButton help; help.id = ID_HELP; help.r = FlightRect(FLIGHT_W - 6 - 120, 3, 120, FLIGHT_STRIP - 6); help.text = "Help"; sc.buttons.push_back(help);
         // the six screens as small tabs before Help (1.10.1, Malcolm: "when a defined front screen is in view, please try to
         // squeeze in those 6 buttons so that a user can rapidly switch to another defined screen"): the one in use yellow
-        const int tabW = 30, tabGap = 3, tabsX = help.r.x - 6 - (FLIGHT_SLOTS * tabW + (FLIGHT_SLOTS - 1) * tabGap);
+        const int tabW = 38, tabGap = 4, tabsX = help.r.x - 6 - (FLIGHT_SLOTS * tabW + (FLIGHT_SLOTS - 1) * tabGap);   // (1.10.5: as big as the setup page's, Malcolm: "a bit too small")
         for (int k = 0; k < FLIGHT_SLOTS; ++k) { FlightButton tb; tb.id = ID_SLOT + k; tb.r = FlightRect(tabsX + k * (tabW + tabGap), 8, tabW, FLIGHT_STRIP - 16); tb.text = std::to_string(k + 1); tb.chosen = k == slotNo; sc.buttons.push_back(tb); }
         sc.stripRight = tabsX - 6;
     } else if (colourFor >= 0) {                          // a box's theme: the Themes page's twelve, the box as it will look

@@ -186,6 +186,11 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Bigger tabs (screen 1.10.5, 6 Oct 2026)
+
+Malcolm: "The six little buttons for selecting which defined screen on the front screen are a bit too small. Please
+make them the same size as the ones in the definition area." Done: 38 by 42, four apart, on both pages.
+
 ## The lift after the long press (screen 1.10.4, 5 Oct 2026)
 
 Malcolm: "It does now go to the select screen after two seconds, but when I lift my finger it goes instantly back to
