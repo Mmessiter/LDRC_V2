@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B40 05/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B41 06/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -977,6 +977,12 @@ bool FrontSwitchHasOtherJob(uint8_t n);       // B40: switch 5-8 has a job other
 bool FrontSwitchIsDefault(uint8_t n);         // B38: switch 5-8 with no job: its channel's input (the default marking)
 void ReadFrontSwitches();                     // B32: the four analogue readings, once a frame
 void ShowSwitchPositions();                   // B32: "up / mid / down" beside each switch on the Switches page
+FASTRUN void ParseTelemetryItem();            // B41: the telemetry switch (an ack's, or the pipe's)
+void TelemetryFromPipe(const char *list);     // B41: "ldrctel 25:AABBCCDD ..." from the screen
+bool RfParamOverPipe(uint8_t id);             // B41: this parameter ID goes by the pipe when it is ready
+void SendParameterByPipe(uint8_t id);         // B41: as words, to the screen
+void PipeOn();                                // B41: ask the screen to join the model's receiver
+void PipeOff();
 FASTRUN void LogAverageGap();
 void ReadChannelSwitches9to12();
 int GetExtraParameters();
@@ -1380,6 +1386,12 @@ uint16_t FrontSwitchRaw[4] = {0, 0, 0, 0}; // B32: the front switches' readings,
 // no job and this bit clear, a front switch IS its channel's input, and the pages say "Channel 5" (to 8). Kept at
 // TX_EXT_ADDR + 11.
 uint8_t FrontSwitchUnused = 0;
+// B41 (Malcolm, 6 Oct 2026: the Rotorflight editing "should go via Bluetooth rather than the current method"): the screen's
+// Bluetooth pipe to the receiver. The screen says "ldrcpipe=<n>" (0 off, 1 joining, 2 ready, 3 failed); while it is ready,
+// the Rotorflight parameter packets (IDs 9-21, 27-33) go to the screen as words ("ldrctx id,w1..w11") instead of the radio
+// link, and the block being read comes back as "ldrctel ..." items into the same telemetry parser. Everything else - the
+// pages, the values, the save and restore - is as it was. With no pipe, the radio link carries them as it always has.
+uint8_t PipeState = 0;
 uint8_t FrontSwitchPos[4] = {0, 0, 0, 0};  // B32: their last positions (hysteresis: a reading near a threshold does not flicker)
 
 uint16_t StartLocation = 0;

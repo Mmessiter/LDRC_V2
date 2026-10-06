@@ -5,10 +5,41 @@
 
 /*********************************************************************************************************************************/
 
+void LoadOneParameter();
+bool RfParamOverPipe(uint8_t id) { return (id >= 9 && id <= 21) || (id >= 27 && id <= 33); }
+void SendParameterByPipe(uint8_t id)
+{
+    Parameters.ID = id;
+    LoadOneParameter(); // the same words the radio link would carry
+    char b[100];
+    int n = snprintf(b, sizeof(b), "ldrctx %u", (unsigned)id);
+    for (int i = 1; i < 12 && n < (int)sizeof(b) - 6; ++i)
+        n += snprintf(b + n, sizeof(b) - n, ",%u", (unsigned)(Parameters.word[i] & 0xFFF));
+    SendCommand(b);
+}
+void PipeOn()
+{ // the model's receiver, by the board id it gave at binding (the two halves as the acks carried them)
+    char b[40];
+    const uint32_t a = ModelsMacUnion.Val32[0], c = ModelsMacUnion.Val32[1];
+    snprintf(b, sizeof(b), "ldrcpipe on %02X%02X%02X%02X%02X%02X", (unsigned)(a & 0xFF), (unsigned)((a >> 8) & 0xFF), (unsigned)((a >> 16) & 0xFF), (unsigned)((a >> 24) & 0xFF), (unsigned)(c & 0xFF), (unsigned)((c >> 8) & 0xFF));
+    SendCommand(b);
+}
+void PipeOff()
+{
+    if (PipeState)
+        SendCommand((char *)"ldrcpipe off");
+    PipeState = 0;
+}
+
 void AddParameterstoQueue(uint8_t ID) // this queue is essentially a LIFO stack
 {
     if (!ModelMatched || !BoundFlag || ID == 0)
         return;
+    if (PipeState == 2 && RfParamOverPipe(ID)) // B41: the screen's Bluetooth pipe carries the Rotorflight ones, once
+    {
+        SendParameterByPipe(ID);
+        return;
+    }
     for (int i = 0; i < PARAMETER_SEND_REPEATS; ++i)
     {
         if (ParametersToBeSentPointer < PARAMETER_QUEUE_MAXIMUM)

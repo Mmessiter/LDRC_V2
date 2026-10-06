@@ -41,6 +41,7 @@ void RotorFlightStart()
 
     SendCommand((char *)"page RFView");
     CurrentView = ROTORFLIGHTVIEW;
+    PipeOn(); // B41: the screen joins the model's receiver over Bluetooth; while it is joined the Rotorflight packets go that way
     AddParameterstoQueue(MSP_INHIBIT_TELEMETRY); // Inhibit telemetry for a short time to allow MSP data to be sent without interference from telemetry data (for MSP data transmission)
     SendText((char *)"t11", ModelName);          // Show model name
     snprintf(Vbuf, sizeof(Vbuf), "%1.2f", GearRatio);       // 10.3 usually (ClaudeFix-2-7-2026 size 5 truncated 10.35 to "10.3" -- which RotorFlightEnd then read back and SAVED, silently degrading the ratio)

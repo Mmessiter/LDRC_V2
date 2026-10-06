@@ -3892,6 +3892,20 @@ FASTRUN void ButtonWasPressed()
             ClearText();
             return;
         }
+        if (InStrng((char *)"ldrcpipe=", TextIn) > 0)
+        { // B41: the screen's Bluetooth pipe to the receiver: 0 off, 1 joining, 2 ready, 3 failed
+            p = InStrng((char *)"ldrcpipe=", TextIn);
+            PipeState = (uint8_t)CheckRange(atoi(TextIn + p + 8), 0, 3);
+            ClearText();
+            return;
+        }
+        if (InStrng((char *)"ldrctel ", TextIn) > 0)
+        { // B41: the block the receiver holds, by the pipe, as telemetry items
+            p = InStrng((char *)"ldrctel ", TextIn);
+            TelemetryFromPipe(TextIn + p + 7);
+            ClearText();
+            return;
+        }
 
         if (InStrng(SwitchesView, TextIn))
         {
@@ -4450,6 +4464,7 @@ void GotoFrontView()
     char FrontView_Connected[] = "Connected";
     PupilIsAlive = 0;
     MasterIsAlive = 0;
+    PipeOff(); // B41: the Rotorflight pages are left: the screen lets go of the receiver's Bluetooth
     AddParameterstoQueue(MSP_ENABLE_TELEMETRY); // 26 = ENABLE telemetry after MSP data has been sent (for MSP data transmission)
     LastAutoModelSelect = true;
     LastCopyTrimsToAll = true;

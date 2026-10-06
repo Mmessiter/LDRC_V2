@@ -48,4 +48,20 @@ bool BleBridge::feed(const uint8_t *data, size_t len, uint32_t wantId) {
     return true;
 }
 
+std::string bleItemsWord(const std::string &json) {
+    std::string tel;
+    size_t k = json.find("\"items\":{"); if (k == std::string::npos) return tel;
+    k += 9;
+    while (true) {
+        const size_t q = json.find('"', k); if (q == std::string::npos) break;
+        const size_t q2 = json.find('"', q + 1); if (q2 == std::string::npos) break;
+        const std::string item = json.substr(q + 1, q2 - q - 1);
+        if (item.empty() || item[0] < '0' || item[0] > '9') break;
+        const size_t v1 = json.find('"', q2 + 2), v2 = v1 == std::string::npos ? v1 : json.find('"', v1 + 1); if (v2 == std::string::npos) break;
+        tel += (tel.empty() ? "ldrctel " : " ") + item + ":" + json.substr(v1 + 1, v2 - v1 - 1);
+        k = v2 + 1;
+    }
+    return tel;
+}
+
 }  // namespace ldrc

@@ -186,6 +186,18 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The Bluetooth pipe, steps 2 and 3 - built, not yet released (B41 + screen 1.11.1 + receiver 0.9.874, 6 Oct 2026)
+
+The receiver's identity: no change to its Bluetooth advertisement is needed. The screen tries the receivers in reach,
+strongest first, reads each one's board identity from its state page and keeps the one the main board named, which is
+what it learned at binding. The receiver gains two endpoints feeding its existing, proven parameter code: the words of a
+packet in, the block being read out. The screen relays: "ldrcpipe on <id>" from the main board joins the receiver,
+"ldrctx id,w1..w11" packets go across, and while a read is open the block comes back as "ldrctel" items into the same
+telemetry parser the radio link's acks use. The main board sends the Rotorflight parameters (IDs 9-21, 27-33) by the
+pipe only while the screen says it is ready, and by the radio link as ever otherwise; the pages, values, save and
+restore are untouched. Everything compiles and the pure parts are tested on the Mac; the live test waits for a
+receiver to be switched on.
+
 ## The Bluetooth pipe, step 1 (screen 1.11.0, 6 Oct 2026)
 
 Malcolm: the Rotorflight editing "should go via Bluetooth rather than the current method which can be removed",

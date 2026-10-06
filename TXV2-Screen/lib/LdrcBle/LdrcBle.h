@@ -37,4 +37,8 @@ private:
     bool header_ = true; std::string head_; size_t bodyLen_ = 0; std::string body_; BleReply reply_; bool mine_ = false;
 };
 
+// The receiver's /api/txparams reply, '{"block":"rates","open":true,"items":{"25":"AABBCCDD","26":"EEFF0011"}}', as
+// the word for the main board: "ldrctel 25:AABBCCDD 26:EEFF0011" ("" when the block has no items yet).
+std::string bleItemsWord(const std::string &json);
+
 }  // namespace ldrc

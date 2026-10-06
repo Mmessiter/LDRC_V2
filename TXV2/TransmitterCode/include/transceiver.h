@@ -1294,6 +1294,12 @@ FASTRUN void ParseAckPayload()
         return;
     }
 
+    ParseTelemetryItem();
+}
+// B41: the telemetry items themselves, from an ack payload (above) or from the screen's Bluetooth pipe (TelemetryFromPipe):
+// one path for what they mean, wherever they came from
+FASTRUN void ParseTelemetryItem()
+{
     switch (AckPayload.Ack_Payload_byte[0]) // Only looking at the low 7 BITS (127 values max)
     {
     case 0:
@@ -1674,6 +1680,40 @@ FASTRUN void ParseAckPayload()
         break;
     default:
         break;
+    }
+}
+
+// B41: the Rotorflight block the receiver holds, told by the screen over its Bluetooth pipe as the items the ack payload
+// would carry: "ldrctel 25:AABBCCDD 26:EEFF0011 ..." (item, four bytes as hex). Each is handed to the same parser as an ack.
+void TelemetryFromPipe(const char *list)
+{
+    const char *p = list;
+    while (*p)
+    {
+        while (*p == ' ')
+            ++p;
+        if (!*p)
+            break;
+        char *e = nullptr;
+        const long item = strtol(p, &e, 10);
+        if (e == p || *e != ':' || item < 1 || item > 127)
+            break;
+        p = e + 1;
+        uint8_t b[4] = {0, 0, 0, 0};
+        int n = 0;
+        for (; n < 4 && isxdigit((unsigned char)p[0]) && isxdigit((unsigned char)p[1]); ++n, p += 2)
+        {
+            char h[3] = {p[0], p[1], 0};
+            b[n] = (uint8_t)strtol(h, nullptr, 16);
+        }
+        if (n < 2)
+            break;
+        AckPayload.Ack_Payload_byte[0] = (uint8_t)item; // (the hop bit clear: nothing to hop)
+        AckPayload.Ack_Payload_byte[1] = b[0];
+        AckPayload.Ack_Payload_byte[2] = b[1];
+        AckPayload.Ack_Payload_byte[3] = b[2];
+        AckPayload.Ack_Payload_byte[4] = b[3];
+        ParseTelemetryItem();
     }
 }
 
