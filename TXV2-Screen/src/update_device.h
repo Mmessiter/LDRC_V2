@@ -30,8 +30,10 @@ static uint8_t *updBuf = nullptr; static const size_t UPD_BUF = 16384;
 static volatile uint32_t updFreeKb = 0; static volatile bool updFreeKnown = false;      // the card's free space: asking takes seconds the first time, so the task asks
 
 static void updHangUp() { if (updHttp) updHttp->end(); if (updTls) updTls->stop(); }
+static volatile bool updNoMemory = false;                   // (1.11.32) the last ask failed for want of memory: mbedTLS could not get its buffers (-0x7F00), or there is plainly no room
 // Ask for `url`; on success the answer's body is waiting and `len` is its length.
 static bool updAsk(const std::string &url, int &len, std::string &err) {
+    updNoMemory = false;
     if (WiFi.status() != WL_CONNECTED) { err = "the WiFi is not connected"; return false; }
     if (!updTls) { updTls = new WiFiClientSecure(); updTls->setCACert(LDRC_CA_BUNDLE); updTls->setHandshakeTimeout(20); }
     if (!updHttp) { updHttp = new HTTPClient(); updHttp->setReuse(true); updHttp->setUserAgent("LDRC-V1B-screen/" SCREEN_VERSION); }
@@ -44,6 +46,7 @@ static bool updAsk(const std::string &url, int &len, std::string &err) {
         else if (tls == -0x2700) err = "the certificate of messiter.com was not accepted";      // MBEDTLS_ERR_X509_CERT_VERIFY_FAILED
         else {
             err = "no connection to messiter.com"; if (tls) { char b[64]; snprintf(b, sizeof b, " (%d, -0x%04X)", code, (unsigned) -tls); err += b; } else { char b[24]; snprintf(b, sizeof b, " (%d)", code); err += b; }
+            updNoMemory = tls == -0x7F00 || ESP.getMaxAllocHeap() < 40000;   // MBEDTLS_ERR_SSL_ALLOC_FAILED: the updater restarts the screen once for this (1.11.32)
             // 1.11.11 (Malcolm, 7 Oct: "could not join the Wi-Fi usefully until I had switched the transmitter off and on",
             // twice): a TLS connection wants some 45 kB of memory in one piece; after a Bluetooth session there may not be.
             // The numbers go into the message, so the next time says which it was.
@@ -230,6 +233,7 @@ static void updTask(void *) {
         default: w.error = "no such job"; break;
         }
         if (updStop && !w.ok) w.error = "cancelled";
+        if (!w.ok && updNoMemory && !updStop) w.memory = true;
         if (sdOk && (!updFreeKnown || updJob.kind == 2)) {
             const uint64_t total = SD.totalBytes(), used = SD.usedBytes();
             if (total > 0 && used <= total) { updFreeKb = (uint32_t) ((total - used) / 1024); updFreeKnown = true; }      // (a card that answers nothing is asked again)

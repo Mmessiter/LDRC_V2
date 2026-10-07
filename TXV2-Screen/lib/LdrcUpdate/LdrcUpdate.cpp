@@ -240,11 +240,27 @@ void Updater::noWifi(const std::string &title, const std::string &l1, const std:
 void Updater::close() {
     const uint32_t s = view_.serial + 1;
     view_ = UpdView(); view_.serial = s;
-    phase_ = P_IDLE; changing_ = false; waiting_ = false; rxFlow_ = false; again_ = false; freshKind_.clear(); freshUrl_.clear(); freshChoosing_ = false;
+    phase_ = P_IDLE; changing_ = false; waiting_ = false; rxFlow_ = false; again_ = false; freshKind_.clear(); freshUrl_.clear(); freshChoosing_ = false; haveText_.clear();
     items_.clear(); teensyList_.clear(); screenList_.clear();
     host_.wifiWanted(false);
 }
 std::string Updater::url(const std::string &file) const { return rel_.base + file; }
+std::string Updater::stagedOf(const Item &it) const {
+    if (it.kind != 3) return it.path;
+    std::string s = std::string(STAGING) + blobName(it.crc, it.size);
+    if (it.twin) s += "." + num((uint32_t) it.twin - 1);
+    return s;
+}
+std::string Updater::urlOf(const Item &it) const {
+    if (it.kind == 0) return url(rel_.teensy.file);
+    if (it.kind == 2) return url(rel_.screen.file);
+    return url("files/" + blobName(it.crc, it.size));
+}
+std::string Updater::remoteOf(const Item &it) const {
+    if (it.kind == 0) return TEENSY_PACKAGE_REMOTE;
+    if (it.kind == 1) return it.path.substr(strlen(TEENSY_COPIES));
+    return "";
+}
 
 // ------------------------------------------------------------------ what is kept across a restart
 std::string Updater::stateText(const std::string &stage) const {
@@ -290,7 +306,7 @@ void Updater::fail(const std::string &stage, const std::string &why) {
     std::vector<std::string> lines;
     lines.push_back("It stopped at: " + stage + ".");
     lines.push_back(sentence(why));
-    if (!changing_) lines.push_back("Nothing was changed.");
+    if (!changing_) { lines.push_back("Nothing was changed."); restoreHave(); }
     else if (phase_ == P_TEENSY && !stTeensyChanged_) lines.push_back("The screen was not changed.");
     else if (phase_ == P_TEENSY || phase_ == P_PLACE) lines.push_back(std::string(stTeensyChanged_ ? "The main board was updated. " : "") + "Check for update again to finish.");
     else if (phase_ == P_FLASH) lines.push_back(stTeensyChanged_ ? "The main board was updated. The screen's firmware was not." : "The screen's firmware was not changed.");
@@ -332,7 +348,6 @@ void Updater::begin() {
     }
     if (!host_.wifiAny()) { noWifi("No WiFi yet", "The transmitter fetches its updates over WiFi.", "Choose a network and give its password, once."); return; }
     descrUrl_ = latestUrl_; freshUrl_.clear(); freshChoosing_ = false;
-    if (freshNeeded()) { freshStart("check"); return; }
     host_.wifiWanted(true);
     host_.keepAwake(); lastPoke_ = host_.ms();
     show(UpdView::BUSY, "Checking for an update"); line("Joining the WiFi"); buttons("Cancel", "");
@@ -349,6 +364,22 @@ void Updater::freshStart(const std::string &kind) {
     host_.writeText(STATE_FILE, st);
     show(UpdView::WORKING, "Making room"); line("The screen restarts, and carries on by itself.");
     changing_ = false; phase_ = P_FRESH; restartAt_ = host_.ms() + 1500;
+}
+// A job failed for want of memory (the screen says so: a secure connection could not be made, -0x7F00). Before anything
+// is changed, the cure is a fresh start - once; a second shortage gets the usual verdict.
+bool Updater::freshForMemory(const Work &w) {
+    if (!w.memory || freshDone_ || changing_) return false;
+    host_.stopWork();
+    restoreHave();
+    const bool installing = phase_ == P_LISTS || phase_ == P_COMPARE || phase_ == P_FETCH;
+    if (phase_ == P_DESCR) choosing_ = true;                  // (the chosen version's description: fetched again after the restart)
+    freshStart(installing ? "install" : "check");
+    return true;
+}
+void Updater::restoreHave() {
+    if (haveText_.empty()) return;
+    host_.writeText(SCREEN_HAVE, haveText_);
+    haveText_.clear();
 }
 
 void Updater::askTeensy() {
@@ -441,6 +472,7 @@ bool Updater::textArrived() {
     if (w.ok) return true;
     note("asking messiter.com: " + w.error + (textTries_ < 3 ? " (it is asked again)" : ""));
     if (flyingNow() != UpdateHost::FLY_NO) { notNow(); return false; }
+    if ((phase_ == P_LATEST || phase_ == P_DESCR) && freshForMemory(w)) return false;
     if (textTries_ >= 3) { message("messiter.com did not answer", sentence(w.error)); return false; }
     textTries_++; waiting_ = true; since_ = now;
     return false;
@@ -503,9 +535,10 @@ void Updater::install() {
         // is taken as right without being read (40 MB read from the card take most of a minute). The memory is
         // taken OFF the card now and written again only when this install has put everything in place: after a
         // failure, a cut, or a file put on the card by hand (POST /put), everything is read and checked.
-        std::string have, why;
-        if (host_.readText(SCREEN_HAVE, have, 300000) && !parseList(have, false, known_, why)) known_.clear();
-        host_.remove(SCREEN_HAVE);
+        std::string why;
+        haveText_.clear();
+        if (host_.readText(SCREEN_HAVE, haveText_, 300000) && !parseList(haveText_, false, known_, why)) { known_.clear(); haveText_.clear(); }
+        host_.remove(SCREEN_HAVE);                            // (1.11.32: and put back by restoreHave if the fetching fails, so the next try compares quickly)
     }
     phase_ = P_LISTS; nextList();
 }
@@ -525,6 +558,7 @@ void Updater::gotList() {
     if (!w.ok) {
         note(std::string(stage) + ": " + w.error);
         if (host_.flying() != UpdateHost::FLY_NO) { fail(stage, flyingWords(host_.flying())); return; }
+        if (freshForMemory(w)) return;
         if (++tries_ >= 5) { fail(stage, w.error); return; }
         waiting_ = true; since_ = host_.ms();
         return;
@@ -538,24 +572,24 @@ void Updater::gotList() {
 }
 void Updater::buildItems() {
     items_.clear();
-    Item it; it.have = false; it.fetched = false; it.known = false;
-    if (needTeensyFw_) { it.kind = 0; it.path = TEENSY_PACKAGE; it.remote = TEENSY_PACKAGE_REMOTE; it.staged = it.path; it.url = url(rel_.teensy.file); it.size = rel_.teensy.size; it.crc = rel_.teensy.crc; items_.push_back(it); }
+    Item it; it.have = false; it.fetched = false; it.known = false; it.twin = 0;
+    if (needTeensyFw_) { it.kind = 0; it.path = TEENSY_PACKAGE; it.size = rel_.teensy.size; it.crc = rel_.teensy.crc; items_.push_back(it); }
     for (size_t i = 0; i < teensyList_.size(); ++i) {
         const UpdEntry &e = teensyList_[i];
-        it.kind = 1; it.path = std::string(TEENSY_COPIES) + e.path; it.remote = e.path; it.staged = it.path; it.url = url("files/" + blobName(e.crc, e.size)); it.size = e.size; it.crc = e.crc; items_.push_back(it);
+        it.kind = 1; it.path = std::string(TEENSY_COPIES) + e.path; it.size = e.size; it.crc = e.crc; items_.push_back(it);
     }
-    if (needScreenFw_) { it.kind = 2; it.path = SCREEN_IMAGE; it.remote.clear(); it.staged = it.path; it.url = url(rel_.screen.file); it.size = rel_.screen.size; it.crc = rel_.screen.crc; items_.push_back(it); }
+    if (needScreenFw_) { it.kind = 2; it.path = SCREEN_IMAGE; it.size = rel_.screen.size; it.crc = rel_.screen.crc; items_.push_back(it); }
     for (size_t i = 0; i < screenList_.size(); ++i) {
         const UpdEntry &e = screenList_[i];
-        it.kind = 3; it.path = e.path; it.remote.clear(); it.staged = std::string(STAGING) + blobName(e.crc, e.size); it.url = url("files/" + blobName(e.crc, e.size)); it.size = e.size; it.crc = e.crc;
+        it.kind = 3; it.path = e.path; it.size = e.size; it.crc = e.crc; it.twin = 0;
         // Two files with the same content (two sounds that are the same sound) share a name on the website, but not
         // on our card: a staged file is MOVED to where it belongs, and the twin would find it gone.
-        for (size_t k = 0; k < items_.size(); ++k) if (items_[k].kind == 3 && items_[k].crc == e.crc && items_[k].size == e.size) { it.staged += "." + num((uint32_t) i); break; }
+        for (size_t k = 0; k < items_.size(); ++k) if (items_[k].kind == 3 && items_[k].crc == e.crc && items_[k].size == e.size) { it.twin = (uint16_t) (i + 1); break; }
         it.known = false;
         for (size_t k = 0; k < known_.size(); ++k) if (known_[k].path == e.path) { it.known = known_[k].size == e.size && known_[k].crc == e.crc; break; }
         items_.push_back(it);
     }
-    known_.clear();
+    std::vector<UpdEntry>().swap(known_); std::vector<UpdEntry>().swap(teensyList_); std::vector<UpdEntry>().swap(screenList_);   // (their memory back: items_ has what is needed)
     at_ = 0; sub_ = 0; waiting_ = false;
     setLine(0, "Checking what is already here");
     bar(0, (uint32_t) items_.size());
@@ -567,8 +601,8 @@ void Updater::compareNext() {
     int budget = 6;                                           // card look-ups per call: the display must not stall
     while (at_ < items_.size()) {
         Item &it = items_[at_];
-        if (sub_ == 1 && it.staged == it.path) { at_++; sub_ = 0; continue; }
-        const std::string &p = sub_ == 0 ? it.path : it.staged;
+        if (sub_ == 1 && it.kind != 3) { at_++; sub_ = 0; continue; }      // (staged where it belongs: one look is enough)
+        const std::string p = sub_ == 0 ? it.path : stagedOf(it);
         if (budget-- <= 0) return;
         if (sub_ == 0 && it.known) {                          // the last install put it there: its size is proof enough
             it.known = false;
@@ -603,17 +637,18 @@ void Updater::fetchNext() {
     if (at_ >= items_.size()) { afterFetch(); return; }
     Item &it = items_[at_];
     setLine(0, "Fetching " + num((uint32_t) fetchIndex_ + 1) + " of " + num((uint32_t) fetchCount_));
-    host_.fetchFile(it.url, it.staged, it.size, it.crc); since_ = host_.ms();
+    host_.fetchFile(urlOf(it), stagedOf(it), it.size, it.crc); since_ = host_.ms();
 }
 void Updater::fetched() {
     const Work &w = host_.done(); Item &it = items_[at_];
     if (w.ok) {
-        it.fetched = true; if (it.staged == it.path) it.have = true;
+        it.fetched = true; if (it.kind != 3) it.have = true;
         fetchDone_ += it.size; fetchIndex_++; at_++; tries_ = 0;
         fetchNext(); return;
     }
     note("fetching " + it.path + ": " + w.error);
     if (host_.flying() != UpdateHost::FLY_NO) { fail("fetching " + leaf(it.path), flyingWords(host_.flying())); return; }
+    if (freshForMemory(w)) return;
     if (++tries_ >= 5) { fail("fetching " + leaf(it.path), w.error); return; }
     setLine(0, "Fetching " + num((uint32_t) fetchIndex_ + 1) + " of " + num((uint32_t) fetchCount_) + " (again)");
     waiting_ = true; since_ = host_.ms();                     // a breath (and the WiFi back, if that is what went), then the same file again
@@ -643,7 +678,7 @@ void Updater::startTeensy() {
         link_.keepFolder("/mod", keepDir_ + "/mod", ".MOD");
         link_.keepFolder("/log", LOGS_KEPT, ".LOG", 4u * 1024u * 1024u, true);     // the logs: only those we do not hold yet, or that have grown
     }
-    for (size_t i = 0; i < items_.size(); ++i) if (items_[i].kind == 1) link_.put(items_[i].path, items_[i].remote, 0, true);
+    for (size_t i = 0; i < items_.size(); ++i) if (items_[i].kind == 1) link_.put(items_[i].path, remoteOf(items_[i]), 0, true);
     if (needTeensyFiles_) {
         if (!host_.writeText(TEENSY_MARK_LOCAL, hex8(rel_.teensyFiles.crc) + "\n")) { changing_ = false; link_.clear(); fail("updating the transmitter", "the screen's card would not take a file"); return; }
         link_.put(TEENSY_MARK_LOCAL, TEENSY_MARK_REMOTE, 0, true);           // last of the files: it says the set is complete
@@ -724,7 +759,7 @@ void Updater::placeSome() {
     while (at_ < items_.size() && budget > 0) {
         Item &it = items_[at_];
         if (it.kind == 3 && !it.have) {
-            if (!it.fetched || !host_.rename(it.staged, it.path)) { fail("placing " + leaf(it.path), "the screen's card would not take it"); return; }
+            if (!it.fetched || !host_.rename(stagedOf(it), it.path)) { fail("placing " + leaf(it.path), "the screen's card would not take it"); return; }
             it.have = true; placed_++; budget--;
         }
         at_++;
@@ -732,6 +767,7 @@ void Updater::placeSome() {
     bar((uint32_t) at_, (uint32_t) items_.size());
     if (at_ < items_.size()) return;
     if (!host_.writeText(SCREEN_MARK, hex8(rel_.screenFiles.crc) + "\n") || !host_.writeText(SCREEN_HAVE, screenListText_)) { fail("placing the files", "the screen's card would not take a file"); return; }
+    haveText_.clear();                                        // (the card's memory is the new list now)
     stFiles_ = (int) placed_;
     note(num((uint32_t) placed_) + " of the screen's files replaced");
     startFlash();
@@ -909,6 +945,7 @@ void Updater::cancel() {
     if (linkOurs_ && linkStarted_ && link_.running()) link_.cancel("cancelled");
     linkWanted_ = false; linkOurs_ = false; lastPoke_ = host_.ms();
     host_.remove(STATE_FILE);
+    if (!changing_) restoreHave();
     close();
 }
 void Updater::press(int button) {
@@ -972,7 +1009,10 @@ void Updater::poll() {
 
     switch (phase_) {
     case P_WIFI:
-        if (host_.wifiUp()) { setLine(0, "Asking messiter.com"); fetchAsked(freshUrl_.empty() ? latestUrl_ : freshUrl_); phase_ = P_LATEST; }
+        if (host_.wifiUp()) {
+            if (freshNeeded()) { freshStart("check"); return; }    // (looked at now, with the WiFi's own memory taken: a fresh start has 90 kB and more to spare)
+            setLine(0, "Asking messiter.com"); fetchAsked(freshUrl_.empty() ? latestUrl_ : freshUrl_); phase_ = P_LATEST;
+        }
         else if (now - since_ > 45000) noWifi("No WiFi", "None of the networks the transmitter knows could be joined.", "A phone's hotspot: open its hotspot page, then try again.");
         return;
     case P_LATEST:
@@ -1005,7 +1045,7 @@ void Updater::poll() {
     case P_FETCH:
         if (waiting_) {
             if (now - since_ < 3000 || (!host_.wifiUp() && now - since_ < 45000)) return;
-            waiting_ = false; Item &it = items_[at_]; host_.fetchFile(it.url, it.staged, it.size, it.crc); since_ = now;
+            waiting_ = false; Item &it = items_[at_]; host_.fetchFile(urlOf(it), stagedOf(it), it.size, it.crc); since_ = now;
             return;
         }
         if (host_.busy()) {

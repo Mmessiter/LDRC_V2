@@ -22,7 +22,8 @@ namespace ldrc {
 
 struct Work {                                     // how a slow job ended
     bool ok; std::string error; uint32_t size, crc; std::string text;
-    Work() : ok(false), size(0), crc(0) {}
+    bool memory;                                  // it failed for want of memory (a secure connection could not be made): a restart is the cure
+    Work() : ok(false), size(0), crc(0), memory(false) {}
 };
 
 class UpdateHost {                                // the machine the updater runs on
@@ -142,10 +143,17 @@ private:
                  P_LISTS, P_COMPARE, P_FETCH, P_TEENSY, P_PLACE, P_FLASH, P_RESTART,
                  P_TRIAL, P_RESULT, P_FRESH,
                  P_RX_WIFI, P_RX_LATEST, P_RX_OFFER, P_RX_RUN };     // the receiver's update, through the main board
+    // (1.11.32: one string each. Three hundred items with four strings apiece - the website's name of each file, where it
+    //  is staged, its name on the main board - held some 60 kB of the chip's internal memory in a thousand small pieces,
+    //  and a secure connection made in the middle of the fetching found none big enough. The other names are made
+    //  when they are wanted: stagedOf, urlOf, remoteOf.)
     struct Item {
         uint8_t kind;                             // 0 Teensy firmware, 1 a Teensy file, 2 the screen's firmware, 3 a screen file
-        std::string path, remote, staged, url; uint32_t size, crc; bool have, fetched, known;
+        std::string path; uint32_t size, crc; uint16_t twin; bool have, fetched, known;   // twin: 1 + its place in the list, when another screen file has the same content
     };
+    std::string stagedOf(const Item &it) const;   // where the fetched file waits on the card
+    std::string urlOf(const Item &it) const;      // where it is on messiter.com
+    std::string remoteOf(const Item &it) const;   // its name on the main board's card (kinds 0 and 1)
 
     void note(const std::string &line);
     void bar(uint32_t done, uint32_t total);
@@ -170,7 +178,9 @@ private:
     void fetchAsked(const std::string &url, size_t maxBytes = 8192);      // a small text from messiter.com, tried three times
     void freshStart(const std::string &kind);     // the memory is in pieces: the screen restarts, and `kind` ("check" or "install") goes on by itself
     bool freshNeeded() const { return !freshDone_ && host_.roomForTls() < TLS_ROOM; }
-    static const uint32_t TLS_ROOM = 48u * 1024u;
+    bool freshForMemory(const Work &w);           // a job failed for want of memory: a fresh start, once (true: it is under way)
+    void restoreHave();                           // the card's memory of its files, put back when the fetching failed (nothing was changed)
+    static const uint32_t TLS_ROOM = 56u * 1024u;
     // the receiver's update
     void rxGotLatest();
     void rxInstall();
@@ -221,6 +231,7 @@ private:
     bool teensyThere_, teensyFellBack_; std::string teensyFw_, teensyMarker_;
     std::string recentUrl_; std::vector<UpdRecent> recent_; bool choosing_, noteVersions_;
     std::string descrUrl_;                        // where rel_ came from (latest.txt, or a chosen version's description): a fresh start fetches it again
+    std::string haveText_;                        // the card's memory of its files (SCREEN_HAVE), taken off the card at install, put back if nothing is changed
     std::string freshKind_, freshUrl_; bool freshDone_, freshChoosing_;   // this run began from a fresh start (so it never asks for another)
     bool needTeensyFw_, needTeensyFiles_, needScreenFw_, needScreenFiles_;
     std::vector<UpdEntry> teensyList_, screenList_, known_;

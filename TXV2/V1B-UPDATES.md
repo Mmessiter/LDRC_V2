@@ -186,6 +186,24 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## An update that could not connect, part two: the update itself was eating the memory (screen 1.11.32, 7 Oct 2026)
+
+1.11.31 was not enough: switched off and on, the transmitter failed the same way, this time with "largest 32756".
+Two more things were going on. (1) The update's own bookkeeping held some 60 kB of the chip's internal memory in a
+thousand small pieces: three hundred files, each with four strings (its path, its name on the website, where it is
+staged, its name on the main board), plus the two file lists kept alive all through the fetching. A secure connection
+made in the middle of that found no piece big enough. (2) After a failed attempt the card's memory of its files was
+thrown away, so the next attempt read all 40 MB from the card before fetching - most of a minute, in which messiter.com
+let the idle connection go - and so the first fetch of every retry needed a new connection, with the bookkeeping at its
+fullest. A dead end: only a successful install could have cleared it.
+
+1.11.32: one string per file (the other names are made when wanted) and the lists let go once the files are known -
+the bookkeeping is a tenth of what it was. A failure while fetching changes nothing on the card, so the card's memory
+is put back and the next try compares in seconds (and mostly keeps its connection). The memory is now looked at once
+the WiFi is up (it has 45 kB of its own) rather than before. And if a fetch still fails for want of memory, the screen
+says "Making room", restarts once, and goes on from where it was - the files already fetched are not fetched again.
+Eleven more checks in hmi/test_update (335 in all).
+
 ## An update that could not connect: the screen restarts first (screen 1.11.31, 7 Oct 2026)
 
 Malcolm, after a day on the Rotorflight pages over Bluetooth: four updates in a row stopped at "fetching screen.bin.
