@@ -354,6 +354,7 @@ struct ScreenHost : public ldrc::UpdateHost {
     void accept() override { esp_ota_mark_app_valid_cancel_rollback(); }
     bool reject() override { flushOut(); delay(200); esp_ota_mark_app_invalid_rollback_and_reboot(); return false; }   // comes back only if there is nothing to go back to
     void restart() override { flushOut(); delay(200); ESP.restart(); }
+    uint32_t roomForTls() override { return (uint32_t) ESP.getMaxAllocHeap(); }   // (1.11.31) the largest piece of internal memory: mbedTLS takes its buffers from nowhere else (CONFIG_MBEDTLS_INTERNAL_MEM_ALLOC)
 };
 static ScreenHost updHost;
 static ldrc::Updater updater(updHost, teensyLink, LATEST_URL);

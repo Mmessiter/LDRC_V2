@@ -178,7 +178,7 @@ Updater::Updater(UpdateHost &host, LinkMaster &link, const std::string &latestUr
       since_(0), lastPoke_(0), shownAt_(0), linkAfter_(0), restartAt_(0), stageSince_(0),
       linkOurs_(false), linkWanted_(false), linkStarted_(false), changing_(false), silent_(false), waiting_(false), noteWifi_(false),
       shownFlying_(false), mustSee_(false), textTries_(0), textMax_(8192),
-      teensyThere_(false), teensyFellBack_(false), choosing_(false), noteVersions_(false), needTeensyFw_(false), needTeensyFiles_(false), needScreenFw_(false), needScreenFiles_(false),
+      teensyThere_(false), teensyFellBack_(false), choosing_(false), noteVersions_(false), freshDone_(false), freshChoosing_(false), needTeensyFw_(false), needTeensyFiles_(false), needScreenFw_(false), needScreenFiles_(false),
       listStep_(0), at_(0), sub_(0), tries_(0), fetchTotal_(0), fetchDone_(0), fetchCount_(0), fetchIndex_(0),
       placed_(0), trialSeen_(0), keptFiles_(0), stTeensyThere_(false), stTeensyChanged_(false), stScreenFw_(false), stFiles_(0), stKept_(0), trialStep_(0), resultGood_(false),
       rxFlow_(false), rxHave_(0), rxLatest_(0), rxPhaseSeen_(0), rxNewsAt_(0), rxQuietTotal_(0), again_(false) {}
@@ -240,7 +240,7 @@ void Updater::noWifi(const std::string &title, const std::string &l1, const std:
 void Updater::close() {
     const uint32_t s = view_.serial + 1;
     view_ = UpdView(); view_.serial = s;
-    phase_ = P_IDLE; changing_ = false; waiting_ = false; rxFlow_ = false; again_ = false;
+    phase_ = P_IDLE; changing_ = false; waiting_ = false; rxFlow_ = false; again_ = false; freshKind_.clear(); freshUrl_.clear(); freshChoosing_ = false;
     items_.clear(); teensyList_.clear(); screenList_.clear();
     host_.wifiWanted(false);
 }
@@ -331,10 +331,24 @@ void Updater::begin() {
         host_.remove(STATE_FILE);
     }
     if (!host_.wifiAny()) { noWifi("No WiFi yet", "The transmitter fetches its updates over WiFi.", "Choose a network and give its password, once."); return; }
+    descrUrl_ = latestUrl_; freshUrl_.clear(); freshChoosing_ = false;
+    if (freshNeeded()) { freshStart("check"); return; }
     host_.wifiWanted(true);
     host_.keepAwake(); lastPoke_ = host_.ms();
     show(UpdView::BUSY, "Checking for an update"); line("Joining the WiFi"); buttons("Cancel", "");
     phase_ = P_WIFI; since_ = host_.ms();
+}
+// The memory is in pieces (after a Bluetooth session it is: 7 Oct 2026, four updates in a row stopped at "fetching
+// screen.bin, no connection to messiter.com (-1, -0x7F00) [largest 17396]" - mbedTLS could not get its two 16 kB
+// buffers for a fresh connection, and nothing but a restart puts the memory back together). So: the screen restarts
+// NOW, before anything is fetched, and the check or the install goes on by itself when it is back (resume()).
+void Updater::freshStart(const std::string &kind) {
+    note("fresh start before the " + kind + ": the memory is in pieces (largest " + num(host_.roomForTls()) + " bytes); the screen restarts and goes on by itself");
+    std::string st = stateText("fresh");
+    st += "resume=" + kind + "\n" + "descr=" + descrUrl_ + "\n" + std::string("again=") + (again_ ? "1" : "0") + "\n" + std::string("choosing=") + (choosing_ ? "1" : "0") + "\n";
+    host_.writeText(STATE_FILE, st);
+    show(UpdView::WORKING, "Making room"); line("The screen restarts, and carries on by itself.");
+    changing_ = false; phase_ = P_FRESH; restartAt_ = host_.ms() + 1500;
 }
 
 void Updater::askTeensy() {
@@ -382,6 +396,7 @@ void Updater::decide() {
     stFrom_ = host_.screenVersion(); stTo_ = needScreenFw_ ? rel_.screen.version : host_.screenVersion(); stScreenFw_ = false; stFiles_ = 0; stKept_ = 0;
     stSettings_.clear(); stWarn_.clear(); mustSee_ = false;
     if (!needTeensyFw_ && !needTeensyFiles_ && !needScreenFw_ && !needScreenFiles_) {
+        freshKind_.clear();
         note(choosing_ ? "that version is the one installed (" + rel_.name + ")" : "up to date (release " + rel_.name + ")");
         show(UpdView::NOTE, choosing_ ? "This version is installed" : "Up to date"); versionRows();
         if (!teensyThere_) line(host_.teensySeen() ? "The main board does not answer." : "No main board is connected.");
@@ -405,6 +420,7 @@ void Updater::decide() {
     if (!choosing_) { view_.button3 = "Earlier versions"; changed(); }
     note(std::string(choosing_ ? "chosen" : "update available") + ", release " + rel_.name + ":" + what);
     phase_ = P_OFFER;
+    if (freshKind_ == "install") { freshKind_.clear(); note("fresh start: the install goes on by itself"); install(); }
 }
 
 // ------------------------------------------------------------------ going back: the few releases before this one
@@ -460,7 +476,8 @@ void Updater::pick(size_t i) {
     note("chosen: " + recent_[i].name);
     show(UpdView::BUSY, recent_[i].name); line("Asking messiter.com"); buttons("Cancel", "");
     const size_t cut = latestUrl_.rfind('/');
-    fetchAsked(latestUrl_.substr(0, cut + 1) + recent_[i].path);
+    descrUrl_ = latestUrl_.substr(0, cut + 1) + recent_[i].path;
+    fetchAsked(descrUrl_);
     phase_ = P_DESCR;
 }
 void Updater::gotDescription() {
@@ -474,6 +491,7 @@ void Updater::gotDescription() {
 void Updater::install() {
     if (notNow()) return;
     if (link_.running() || host_.busy()) { message("Busy", "Another job is still running.", "Try again in a minute."); return; }
+    if (freshNeeded()) { freshStart("install"); return; }
     note("install " + rel_.name);
     changing_ = false; placed_ = 0;
     saveState("fetch");
@@ -774,6 +792,21 @@ void Updater::resume() {
     { size_t at = 0; std::string l; while (nextLine(text, at, l)) if (startsWith(l, "warn=") && stWarn_.size() < 4) stWarn_.push_back(l.substr(5)); }
     note("---- start-up with an update in hand (" + stage + ", release " + stRelease_ + ", screen " + host_.screenVersion() + ")");
 
+    if (stage == "fresh") {                                   // the screen restarted to put its memory together: the check, or the install, goes on by itself
+        host_.remove(STATE_FILE);                             // (first: whatever happens next, no second restart)
+        freshDone_ = true; freshKind_ = valueOf(text, "resume"); freshUrl_ = valueOf(text, "descr");
+        again_ = valueOf(text, "again") == "1"; freshChoosing_ = valueOf(text, "choosing") == "1"; choosing_ = false;
+        if (freshUrl_.empty() || freshUrl_ == latestUrl_) { freshUrl_.clear(); freshChoosing_ = false; }
+        descrUrl_ = freshUrl_.empty() ? latestUrl_ : freshUrl_;
+        { const size_t cut = latestUrl_.rfind('/'); recentUrl_ = latestUrl_.substr(0, cut + 1) + "recent.txt"; }
+        note("---- fresh start: the " + freshKind_ + " goes on by itself (largest piece of memory now " + num(host_.roomForTls()) + " bytes)");
+        if (!host_.wifiAny()) { noWifi("No WiFi yet", "The transmitter fetches its updates over WiFi.", "Choose a network and give its password, once."); return; }
+        host_.wifiWanted(true);
+        host_.keepAwake(); lastPoke_ = host_.ms();
+        show(UpdView::BUSY, freshKind_ == "install" ? "Installing the update" : "Checking for an update"); line("Joining the WiFi"); buttons("Cancel", "");
+        phase_ = P_WIFI; since_ = host_.ms();
+        return;
+    }
     if (stage == "result") {                                  // a verdict nobody has acknowledged: show it again
         resultGood_ = valueOf(text, "good") == "1";
         show(resultGood_ ? UpdView::GOOD : UpdView::BAD, valueOf(text, "title"));
@@ -939,7 +972,7 @@ void Updater::poll() {
 
     switch (phase_) {
     case P_WIFI:
-        if (host_.wifiUp()) { setLine(0, "Asking messiter.com"); fetchAsked(latestUrl_); phase_ = P_LATEST; }
+        if (host_.wifiUp()) { setLine(0, "Asking messiter.com"); fetchAsked(freshUrl_.empty() ? latestUrl_ : freshUrl_); phase_ = P_LATEST; }
         else if (now - since_ > 45000) noWifi("No WiFi", "None of the networks the transmitter knows could be joined.", "A phone's hotspot: open its hotspot page, then try again.");
         return;
     case P_LATEST:
@@ -948,7 +981,8 @@ void Updater::poll() {
             const Work &w = host_.done();
             std::string why;
             if (!parseRelease(w.text, rel_, why)) { message("The answer was not understood", sentence(why)); return; }
-            note("latest release: " + rel_.name + " (" + rel_.date + ")");
+            note((freshChoosing_ ? "chosen release: " : "latest release: ") + rel_.name + " (" + rel_.date + ")");
+            choosing_ = freshChoosing_;
         }
         askTeensy();
         return;
@@ -998,7 +1032,7 @@ void Updater::poll() {
         }
         afterAll();
         return;
-    case P_RESTART:
+    case P_RESTART: case P_FRESH:
         if (host_.flying() != UpdateHost::FLY_NO) { restartAt_ = now + 1500; return; }     // nobody restarts a screen in flight: it waits
         if ((int32_t) (now - restartAt_) >= 0) { restartAt_ = now + 600000; host_.restart(); }
         return;

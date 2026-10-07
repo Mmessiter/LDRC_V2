@@ -186,6 +186,23 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## An update that could not connect: the screen restarts first (screen 1.11.31, 7 Oct 2026)
+
+Malcolm, after a day on the Rotorflight pages over Bluetooth: four updates in a row stopped at "fetching screen.bin.
+No connection to messiter.com (-1, -0x7F00) [heap 63116, largest 17396]". -0x7F00 is mbedTLS saying it could not get
+memory: a secure connection wants two 16 kB buffers from the chip's internal memory (the screen's build allots mbedTLS
+nothing else), and after a long Bluetooth session that memory is in pieces, the largest 17 kB. The first three fetches
+rode on the connection made at "Check for update"; screen.bin needed a new one (messiter.com had let the idle
+connection go while the files were checked), and no piece was big enough - the same every time, because nothing but a
+restart puts the memory back together. Each attempt tried five times and gave up, as it should; nothing was changed.
+
+1.11.31: before a check or an install begins, the screen looks at its largest free piece; under 48 kB (a fresh start
+has 90 to 110 kB) it says "Making room: the screen restarts, and carries on by itself", writes down what it was about
+to do (the check, or the install, of the latest release or of the chosen one), restarts, and goes on by itself when it
+is back - "Checking for an update" or "Installing the update", with nothing to press. It asks for that restart once:
+short of memory even after it, the update simply goes on. Four new host tests (hmi/test_update). For the transmitter
+that is still on 1.11.29: switch it off and on, then Transmitter updates, before any Rotorflight page is opened.
+
 ## Gyro filters as the configurator's Gyro tab, and its Enables (V2 B61 + screen 1.11.30, 7 Oct 2026)
 
 Malcolm compared the configurator 2.3's Gyro tab with the transmitter's filters page: "I see some differences, which

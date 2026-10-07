@@ -77,6 +77,10 @@ public:
     virtual void accept() = 0;
     virtual bool reject() = 0;                    // the previous firmware comes back (a restart); false: there is none to go back to
     virtual void restart() = 0;
+    // The largest piece of memory a new secure connection could get (bytes). After a Bluetooth session the memory is
+    // in pieces, and a connection to messiter.com wants some 45 kB in one; the update then restarts the screen first
+    // and goes on by itself (1.11.31). The default says "plenty".
+    virtual uint32_t roomForTls() { return 0xFFFFFFFFu; }
 };
 
 struct UpdRow { std::string what, now, next; };
@@ -136,7 +140,7 @@ public:
 private:
     enum Phase { P_IDLE, P_WIFI, P_LATEST, P_ASK, P_NOTE, P_OFFER, P_RECENT, P_PICK, P_DESCR,
                  P_LISTS, P_COMPARE, P_FETCH, P_TEENSY, P_PLACE, P_FLASH, P_RESTART,
-                 P_TRIAL, P_RESULT,
+                 P_TRIAL, P_RESULT, P_FRESH,
                  P_RX_WIFI, P_RX_LATEST, P_RX_OFFER, P_RX_RUN };     // the receiver's update, through the main board
     struct Item {
         uint8_t kind;                             // 0 Teensy firmware, 1 a Teensy file, 2 the screen's firmware, 3 a screen file
@@ -164,6 +168,9 @@ private:
     bool notNow();                                // true: flying comes first, and the panel says so
     int flyingNow() const;                        // host_.flying(), except that a connected model is no bar to the receiver's own update
     void fetchAsked(const std::string &url, size_t maxBytes = 8192);      // a small text from messiter.com, tried three times
+    void freshStart(const std::string &kind);     // the memory is in pieces: the screen restarts, and `kind` ("check" or "install") goes on by itself
+    bool freshNeeded() const { return !freshDone_ && host_.roomForTls() < TLS_ROOM; }
+    static const uint32_t TLS_ROOM = 48u * 1024u;
     // the receiver's update
     void rxGotLatest();
     void rxInstall();
@@ -213,6 +220,8 @@ private:
     UpdRelease rel_;
     bool teensyThere_, teensyFellBack_; std::string teensyFw_, teensyMarker_;
     std::string recentUrl_; std::vector<UpdRecent> recent_; bool choosing_, noteVersions_;
+    std::string descrUrl_;                        // where rel_ came from (latest.txt, or a chosen version's description): a fresh start fetches it again
+    std::string freshKind_, freshUrl_; bool freshDone_, freshChoosing_;   // this run began from a fresh start (so it never asks for another)
     bool needTeensyFw_, needTeensyFiles_, needScreenFw_, needScreenFiles_;
     std::vector<UpdEntry> teensyList_, screenList_, known_;
     std::string screenListText_;
