@@ -89,23 +89,40 @@ class BleScanCb : public NimBLEScanCallbacks {
 };
 static BleScanCb bleScanCb;
 static bool bleBridgeUp(const std::string &name, std::string &why);
+// 1.11.16: ONE client for the whole session. THE CRASH of 7 Oct (the core dump, read with 1.11.15: task ldrcble, a load
+// from address 0x28 in NimBLEClient::setClientCallbacks, called from bleJoin): a client was created for every attempt
+// and "deleted" after a failed one - but NimBLE only marks a client that is still connecting or parting for deletion
+// later, and it counts until then; at three the next createClient() gives nothing, and 1.11.14 used it without looking.
+static bool bleClientReady() {
+    if (!bleClient) bleClient = NimBLEDevice::getDisconnectedClient();
+    if (!bleClient) bleClient = NimBLEDevice::createClient();
+    if (!bleClient) return false;
+    bleClient->setClientCallbacks(&bleClientCb, false); bleClient->setConnectTimeout(4000);
+    NimBLEClient::Config cfg = bleClient->getConfig(); cfg.connectFailRetries = 1; cfg.deleteOnDisconnect = false; cfg.deleteOnConnectFail = false; bleClient->setConfig(cfg);   // (a dead attempt costs ~8 s, not 15; the client stays ours)
+    return true;
+}
 static bool bleConnectTo(const NimBLEAdvertisedDevice *d, std::string &why) {   // in the task: connect and find the bridge
-    bleClient = NimBLEDevice::createClient(); bleClient->setClientCallbacks(&bleClientCb, false); bleClient->setConnectTimeout(4000);
-    NimBLEClient::Config cfg = bleClient->getConfig(); cfg.connectFailRetries = 1; bleClient->setConfig(cfg);
     const std::string name = d->getName();
-    if (!bleClient->connect(d, true, false, true)) { why = "could not connect to " + name; NimBLEDevice::deleteClient(bleClient); bleClient = nullptr; vTaskDelay(pdMS_TO_TICKS(400)); return false; }
+    if (!bleClientReady()) { why = "no Bluetooth client to connect with"; vTaskDelay(pdMS_TO_TICKS(400)); return false; }
+    if (!bleClient->connect(d, true, false, true)) { why = "could not connect to " + name; vTaskDelay(pdMS_TO_TICKS(400)); return false; }   // (the stack has just cancelled: a moment before the next attempt)
     return bleBridgeUp(name, why);
 }
 static bool bleConnectAddr(const NimBLEAddress &addr, const std::string &name, std::string &why) {   // (1.11.14) the one the scan stopped for
-    bleClient = NimBLEDevice::createClient(); bleClient->setClientCallbacks(&bleClientCb, false); bleClient->setConnectTimeout(4000);
-    NimBLEClient::Config cfg = bleClient->getConfig(); cfg.connectFailRetries = 1; bleClient->setConfig(cfg);   // 1.11.15: a dead attempt costs ~8 s, not 15 (then the scan runs again)
-    if (!bleClient->connect(addr, true, false, true)) { why = "could not connect to " + name; NimBLEDevice::deleteClient(bleClient); bleClient = nullptr; vTaskDelay(pdMS_TO_TICKS(400)); return false; }   // (the stack has just cancelled: a moment before the next attempt)
+    if (!bleClientReady()) { why = "no Bluetooth client to connect with"; vTaskDelay(pdMS_TO_TICKS(400)); return false; }
+    if (!bleClient->connect(addr, true, false, true)) { why = "could not connect to " + name; vTaskDelay(pdMS_TO_TICKS(400)); return false; }
     return bleBridgeUp(name, why);
+}
+static void bleHangUp() {                                      // the goodbye, and the wait for it to have gone (1.11.15): the receiver advertises again at once
+    if (!bleClient || !bleClient->isConnected()) return;
+    bleGone = false;
+    bleClient->disconnect();
+    for (int i = 0; i < 150 && !bleGone; ++i) vTaskDelay(pdMS_TO_TICKS(10));   // until the DISCONNECT EVENT (isConnected() turns false the moment the goodbye is asked for, long before it has gone out: the receiver saw timeouts, 0x08, every time)
+    bleNote(bleGone ? "goodbye said" : "goodbye not answered in 1.5 s");
 }
 static bool bleBridgeUp(const std::string &name, std::string &why) {           // connected: the service and its two characteristics
     NimBLERemoteService *svc = bleClient->getService(NimBLEUUID(ldrc::BLE_SVC_UUID));
     bleReqChr = svc ? svc->getCharacteristic(NimBLEUUID(ldrc::BLE_REQ_UUID)) : nullptr; bleRespChr = svc ? svc->getCharacteristic(NimBLEUUID(ldrc::BLE_RESP_UUID)) : nullptr;
-    if (!bleReqChr || !bleRespChr || !bleRespChr->canNotify() || !bleRespChr->subscribe(true, bleNotify, true)) { why = name + " has no bridge"; bleClient->disconnect(); NimBLEDevice::deleteClient(bleClient); bleClient = nullptr; bleReqChr = bleRespChr = nullptr; return false; }
+    if (!bleReqChr || !bleRespChr || !bleRespChr->canNotify() || !bleRespChr->subscribe(true, bleNotify, true)) { why = name + " has no bridge"; bleReqChr = bleRespChr = nullptr; bleHangUp(); return false; }
     bleJoined = name; bleMtu = bleClient->getMTU();
     return true;
 }
@@ -164,16 +181,8 @@ static bool bleJoin() {                                        // in the task: s
     bleNote("failed: " + bleWhy);
     return false;
 }
-static void bleLeave() {
-    if (bleClient) {
-        if (bleClient->isConnected()) {                        // 1.11.9: say goodbye and let it go out, so the receiver logs a disconnect, not a timeout (its log: "reason 0x08"), and advertises again at once
-            bleGone = false;
-            bleClient->disconnect();
-            for (int i = 0; i < 150 && !bleGone; ++i) vTaskDelay(pdMS_TO_TICKS(10));   // 1.11.15: until the DISCONNECT EVENT (isConnected() turns false the moment the goodbye is asked for, long before it has gone out: the receiver still saw timeouts, 0x08, every time)
-            bleNote(bleGone ? "goodbye said" : "goodbye not answered in 1.5 s");
-        }
-        NimBLEDevice::deleteClient(bleClient); bleClient = nullptr;
-    }
+static void bleLeave() {                                       // the link, not the client: that is kept for the next attempt (1.11.16), and goes with the stack
+    bleHangUp();
     bleReqChr = bleRespChr = nullptr; bleJoined.clear(); bleMtu = 0;
 }
 static void bleServe() {                                       // in the task: one request, written in frames; the reply comes by notification
@@ -238,7 +247,7 @@ static void bleTxServe() {                                     // in the task: t
 static void bleTask(void *) {
     for (;;) {
         if (bleOrder == 2) {                                   // off: down with the stack (a failed join keeps its reason until then)
-            bleOrder = 0; bleState = BLE_STOPPING; bleNote("stopping"); bleLeave(); NimBLEDevice::deinit(true); bleState = BLE_OFF; bleWifiKick = true; bleNote("off");
+            bleOrder = 0; bleState = BLE_STOPPING; bleNote("stopping"); bleLeave(); NimBLEDevice::deinit(true); bleClient = nullptr; bleState = BLE_OFF; bleWifiKick = true; bleNote("off");   // (deinit deletes every client)
         } else if (bleOrder == 1) {
             bleOrder = 0;
             if (bleState == BLE_OFF || bleState == BLE_FAILED) {

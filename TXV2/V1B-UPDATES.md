@@ -186,6 +186,16 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The crash, read and fixed (screen 1.11.16, 7 Oct 2026)
+
+Malcolm: "the screen crash happens when going to the model screen and probably while attempting to connect." The core
+dump, read through 1.11.15 and decoded against the 1.11.14 firmware: task ldrcble, a load from address 0x28 in
+NimBLEClient::setClientCallbacks, called from bleJoin. The screen made a new Bluetooth client for every connection
+attempt and "deleted" it after a failed one; but NimBLE only marks a client that is still connecting or parting for
+deletion later, and it counts until then: at three, the next createClient() gives nothing, and 1.11.14 used it without
+looking. Now one client serves the whole session, looked at before use, and the main task's stack goes from 8 to 16 kB
+(it had 2.5 kB to spare at the worst moment seen).
+
 ## A goodbye that arrives; the crash kept for reading (screen 1.11.15, 7 Oct 2026)
 
 Malcolm, with B49: "If it tries to join while it's on the Bluetooth screen, it takes a long time. But if I allow it to
