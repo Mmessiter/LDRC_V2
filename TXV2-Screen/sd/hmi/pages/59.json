@@ -561,8 +561,40 @@
    }
   },
   {
-   "n": "b1",
+   "n": "b2",
    "i": 20,
+   "t": "button",
+   "g": "l",
+   "x": 408,
+   "y": 414,
+   "w": 180,
+   "h": 56,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "< Previous",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=71<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "b1",
+   "i": 21,
    "t": "button",
    "g": "l",
    "x": 605,
@@ -589,12 +621,12 @@
     "isbr": 0
    },
    "ev": {
-    "r": "va0.val=71<<8\nprint va0.val"
+    "r": "va0.val=65<<8\nprint va0.val"
    }
   },
   {
    "n": "busy",
-   "i": 21,
+   "i": 22,
    "t": "text",
    "g": "l",
    "x": 40,
@@ -604,9 +636,9 @@
    "font": 2,
    "sta": 1,
    "c": {
-    "pco": 65535,
+    "pco": 0,
     "borderc": 0,
-    "bco": 4426
+    "bco": 65504
    },
    "txt": "",
    "a": {

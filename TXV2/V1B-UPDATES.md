@@ -186,6 +186,13 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## A banner that looks like one; Next and Previous (V2 B53 + screen 1.11.22, 7 Oct 2026)
+
+Malcolm: "It seems to work very well now, bravo!" Two refinements. The line that says "Writing ..." / "Reading ..." /
+"Saved ..." was the colour of the page: it is now a yellow strip with black words. And the two rescue pages are joined
+by "Next >" and "< Previous" in the middle of the bottom row (it was "Height hold ...", with only OK on the second
+page); OK on either page leaves the rescue pages, asking first if something was edited and not saved.
+
 ## Rescue as the configurator shows it (V2 B52 + screen 1.11.21, 7 Oct 2026)
 
 Malcolm, with the latest Rotorflight configurator open: "the configurator offers flip or no flip. Climb goes elsewhere

@@ -8,4 +8,4 @@ Height hold P, I and D: how firmly the height is held (0 to 10000 each). Rotorfl
 
 Max Collective [%]: the most collective rescue may ever use (1 to 100).||
 
-Save sends everything on both rescue pages to the flight controller, stores it there, and reads it back. OK returns to the first page with your edits kept, not yet saved.||
+Save sends everything on both rescue pages to the flight controller, stores it there, and reads it back. < Previous returns to the first page with your edits kept, not yet saved. OK leaves the rescue pages; if something was edited and not saved, it asks.||

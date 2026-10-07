@@ -284,9 +284,9 @@ void StartRescueView()
     Rescue_Was_Edited = false;
     RescueRead();
 }
-void EndRescueView() // OK
+void EndRescueView() // OK, on either page (B53: page 2 has OK too; "< Previous" is EndRescue2View)
 {
-    if (Rescue_Was_Edited && !GetConfirmation((char *)"page RescueView", (char *)"Discard the edited rescue values?"))
+    if (Rescue_Was_Edited && !GetConfirmation((char *)(CurrentView == RESCUE2VIEW ? "page Rescue2View" : "page RescueView"), (char *)"Discard the edited rescue values?"))
         return;
     RescueStep = RSC_IDLE;
     Rescue_Was_Edited = false;
@@ -342,7 +342,7 @@ void SaveRescue()
     RescueBusy("Writing to the flight controller ...");
     RescueAskSelect(RSC_W_SELECT);
 }
-void StartRescue2View() // Height ...
+void StartRescue2View() // Next >
 {
     if (CurrentView == RESCUEVIEW)
         RescueGatherPage1(); // page 1's edits travel with us, unsaved: a save on page 2 writes both
@@ -358,7 +358,7 @@ void StartRescue2View() // Height ...
     else
         RescueRead();
 }
-void EndRescue2View() // OK: back to page 1 (its fields from the bytes in hand, edits kept)
+void EndRescue2View() // < Previous: back to page 1 (its fields from the bytes in hand, edits kept)
 {
     RescueGatherPage2();
     memcpy(RescueRaw, RescueWant, RESCUE_BYTES); // (what page 1 shows next is the edited set; a save or a re-read settles it)

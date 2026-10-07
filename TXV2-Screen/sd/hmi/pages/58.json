@@ -991,7 +991,7 @@
     "bco": 54938,
     "pco2": 65535
    },
-   "txt": "Height hold ...",
+   "txt": "Next >",
    "val": 0,
    "a": {
     "style": 4,
@@ -1049,9 +1049,9 @@
    "font": 2,
    "sta": 1,
    "c": {
-    "pco": 65535,
+    "pco": 0,
     "borderc": 0,
-    "bco": 4426
+    "bco": 65504
    },
    "txt": "",
    "a": {

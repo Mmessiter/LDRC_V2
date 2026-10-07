@@ -32,7 +32,9 @@ def page(pid, name, title, fields, buttons, help_file):
         add(f)
     for (nm, txt, x, w, code) in buttons:
         b = comp(BUTTON, n=nm, x=x, y=414, w=w, h=56, txt=txt); b['ev'] = {'r': 'va0.val=%d<<8\nprint va0.val' % code}; add(b)
-    add(comp(BUSY, n='busy', x=40, y=296, w=720, h=44, txt='', font=2))   # over rows 5-6 while it shows (vis 0 the rest of the time)
+    b = comp(BUSY, n='busy', x=40, y=296, w=720, h=44, txt='', font=2)   # over rows 5-6 while it shows (vis 0 the rest of the time)
+    b['c'] = {'pco': 0, 'borderc': 0, 'bco': 65504}; b['a'] = dict(b['a'], borderw=2)   # 1.11.22 (Malcolm: "more obviously a banner and a bit brighter, perhaps with a border"): yellow, black words (a flat text's border does not draw: the colour does the work)
+    add(b)
     out = {'name': name, 'id': pid, 'w': 800, 'h': 480, 'bg': rates['bg'], 'nav': rates['nav'], 'ev': {'preinitialize': 'vis busy,0\n%s.pic=Screen_Background' % name}, 'comps': comps}
     json.dump(out, open(os.path.join(PAGES, '%d.json' % pid), 'w'), indent=1)
     print(pid, name, len(comps), 'components')
@@ -46,12 +48,12 @@ page(58, 'RescueView', 'Rescue (Rotorflight)', [          # the configurator's n
     ('tn8', 'Exit Time [s]', 1, 0, 'num', 67), ('tn9', 'Leveling Gain', 1, 1, 'num', 67),
     ('tn10', 'Flip-to-Upright Gain', 1, 2, 'num', 67), ('tn11', 'Max Levelling Rate', 1, 3, 'num', 67),
     ('tn12', 'Max Leveling Accel.', 1, 4, 'num', 67),
-], [('b3', 'Save', 14, 180, 66), ('b2', 'Height hold ...', 408, 180, 70), ('b1', 'OK', 605, 180, 65)], 'RESCUE.TXT')
+], [('b3', 'Save', 14, 180, 66), ('b2', 'Next >', 408, 180, 70), ('b1', 'OK', 605, 180, 65)], 'RESCUE.TXT')   # 1.11.22: Next / Previous between the two pages (Malcolm)
 page(59, 'Rescue2View', 'Rescue: height hold', [
     ('tn0', 'Rescue mode', 0, 0, 'cycle', 72), ('tn1', 'Hover height [m]', 0, 1, 'num', 67),
     ('tn2', 'Height hold P', 0, 2, 'num', 67), ('tn3', 'Height hold I', 0, 3, 'num', 67),
     ('tn4', 'Height hold D', 0, 4, 'num', 67), ('tn5', 'Max Collective [%]', 0, 5, 'num', 67),
-], [('b3', 'Save', 14, 180, 66), ('b1', 'OK', 605, 180, 71)], 'RESCUE2.TXT')
+], [('b3', 'Save', 14, 180, 66), ('b2', '< Previous', 408, 180, 71), ('b1', 'OK', 605, 180, 65)], 'RESCUE2.TXT')
 
 # the menu: a fifth button, the pipe line beside the model name
 menu = json.load(open(os.path.join(PAGES, '8.json')))
