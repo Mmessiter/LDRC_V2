@@ -70,8 +70,8 @@ if 'Servos' not in names:                                   # 1.11.24: the sixth
 order = ['Pid', 'b1', 'b2', 'Rescue', 'Servos', 'b3']
 for c in menu['comps']:
     if c['n'] in order: c['y'] = 84 + 48 * order.index(c['n']); c['h'] = 42
-    if c['n'] == 't11': c['w'] = 480; c['y'] = 372; c['h'] = 40
-    if c['n'] == 'pipe': c['y'] = 370; c['h'] = 44
+    if c['n'] == 't11': c['w'] = 480; c['y'] = 366; c['h'] = 38
+    if c['n'] == 'pipe': c['y'] = 362; c['h'] = 44   # (the progress bar lies at 407)
 for c in menu['comps']:
     if c['n'] == 't2': c['w'] = 390
 json.dump(menu, open(os.path.join(PAGES, '8.json'), 'w'), indent=1)
