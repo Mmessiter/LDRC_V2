@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Read black box &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=380">
-<script src="/app.js?v=380" defer></script>
+<link rel=stylesheet href="/style.css?v=381">
+<script src="/app.js?v=381" defer></script>
 <script src="/bbcheck.js?v=1" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
@@ -375,7 +375,7 @@ function planChange(act, b){
     // returns {b (new bytes), before, after, label} or throws
     const cur = parseFilters(b); const nb = new Uint8Array(b); const w16=(o,v)=>{nb[o]=v&255;nb[o+1]=(v>>8)&255;};
     switch(act.set){
-        case 'rpmPreset': if(!(act.value>=1&&act.value<=3)) throw new Error('preset out of range'); nb[25]=act.value; return { b:nb, before:['custom','low','normal','high'][cur.rpmPreset]||cur.rpmPreset, after:['custom','low','normal','high'][act.value], label:'Rotor-speed notches' };
+        case 'rpmPreset': if(!(act.value>=1&&act.value<=3)) throw new Error('preset out of range'); nb[25]=act.value; return { b:nb, before:['Custom','Low','Medium','High'][cur.rpmPreset]||cur.rpmPreset, after:['Custom','Low','Medium','High'][act.value], label:'RPM filter strength' };
         case 'rpmMinHz': if(!(act.value>=10&&act.value<=100)) throw new Error('lowest rotor frequency out of range'); nb[26]=act.value; return { b:nb, before:cur.rpmMinHz+' Hz', after:act.value+' Hz', label:'Lowest rotor frequency' };
         case 'dynCount': if(!(act.value>=0&&act.value<=LIMITS.dynMax)) throw new Error('dynamic notch count out of range'); nb[19]=act.value; if(nb[20]<10)nb[20]=25; if(rdU16(nb,21)<20)w16(21,20); if(rdU16(nb,23)<rdU16(nb,21)+40)w16(23,Math.max(rdU16(nb,21)+40,250)); return { b:nb, before:cur.dynCount, after:act.value, label:'Dynamic notches' };
         case 'notch1': case 'notch2': {
@@ -452,7 +452,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
 <p>On the Black box page tick <b>Gyro raw</b>, <b>Gyro</b> and <b>Head speed</b> (RPM), set <b>How often</b> to <b>1 in 2</b>, and <b>Erase</b> so the next flight is the only one. Fly a normal flight: a hover and a few brisk moves. Land, switch the transmitter off, connect the USB cable, tap <b>Check the last flight</b>.</p>
 <h3>What it looks for</h3>
 <ul>
-<li><b>Lines at multiples of the head speed</b> (1 per rev, the blades, the motor, the tail) are rotor vibration. The rotor-speed notches remove them &mdash; when they have a head-speed signal and cover enough harmonics (low, normal, high).</li>
+<li><b>Lines at multiples of the head speed</b> (1 per rev, the blades, the motor, the tail) are rotor vibration. The rotor-speed notches remove them &mdash; when they have a head-speed signal and cover enough harmonics (strength Low, Medium, High).</li>
 <li><b>A line that does not follow the head speed</b> is something loose or resonant: tail boom, canopy, a wire, a bearing. Fix it if you can; otherwise a fixed notch at that frequency.</li>
 <li><b>Grass everywhere</b> with no lines: Lowpass 1 a little lower, never below 60 Hz.</li>
 <li><b>Lines all taken down to the floor</b>: leave the filters alone.</li>
@@ -462,7 +462,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
 <ul>
 <li>Nothing changes by itself. The button under the advice writes that <b>one</b> setting, after you confirm it, and shows the old and new values first.</li>
 <li>Never while the model is armed or the rotor is turning, and only on a Rotorflight version whose settings layout is verified.</li>
-<li>Every value is bounded: Lowpass 1 is only ever lowered here and never below 60 Hz; a fixed notch is only offered between 80 and 1000 Hz (lower than that is inside the control range, so the page asks you to find the cause instead); dynamic notches 0 to 8; presets low, normal, high.</li>
+<li>Every value is bounded: Lowpass 1 is only ever lowered here and never below 60 Hz; a fixed notch is only offered between 80 and 1000 Hz (lower than that is inside the control range, so the page asks you to find the cause instead); dynamic notches 0 to 8; RPM filter strength Low, Medium, High.</li>
 <li>The write is read back and compared. <b>Undo</b> puts the previous filters back, and the Backups page holds them too.</li>
 <li><b>One change per flight.</b> After a change the buttons stay off until a new flight has been checked. Fly, then check again.</li>
 </ul>

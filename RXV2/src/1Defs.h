@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.876-ble-ask-events";
+constexpr const char* FW_VERSION = "RXV2-0.9.877-filters-as-configurator";
 
 //*********************************************************************
 //  Auto-update manifest URLs

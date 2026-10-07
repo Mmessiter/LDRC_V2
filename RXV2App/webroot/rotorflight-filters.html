@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Filters &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=380">
-<script src="/app.js?v=380" defer></script>
+<link rel=stylesheet href="/style.css?v=381">
+<script src="/app.js?v=381" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -32,75 +32,129 @@ h2{font-size:1.05em;margin:.2em 0 .5em;color:#2c3e50}
     <div id=status class="banner info" style="display:none"></div>
 
     <div class=card>
-        <h2>Gyro smoothing</h2>
-        <div class=r><label data-help="Takes the fizz off the gyro signal. Lower cutoff = smoother but slower to react; Rotorflight advises not below 60 Hz.">Lowpass 1</label><select id=lpf1t></select><input id=lpf1 type=number min=0 max=1000> <span class=unit>Hz (0 = off)</span></div>
-        <div class=r><label data-help="A second, gentler stage. Off on most helicopters.">Lowpass 2</label><select id=lpf2t></select><input id=lpf2 type=number min=0 max=1000> <span class=unit>Hz (0 = off)</span></div>
+        <h2>Lowpass Filter</h2>
+        <div class=r><label data-help="Smooths everything above the cutoff. Off = no lowpass (the type and cutoff are kept for an Enable on).">Enable</label><input id=lpf1on type=checkbox></div>
+        <div class=r data-for=lpf1on><label data-help="1st order or 2nd order. Another type set from the configurator stays offered while it is the one set.">Filter type</label><select id=lpf1t></select></div>
+        <div class=r data-for=lpf1on><label data-help="Lower = smoother but slower to react. Rotorflight advises not below 60 Hz; 100 is usual.">Cutoff frequency</label><input id=lpf1 type=number min=0 max=1000> <span class=unit>Hz</span></div>
     </div>
 
     <div class=card>
-        <h2>Vibration notches</h2>
-        <div class=r><label data-help="Follows the head speed and takes out the rotor and motor vibrations wherever they are. Needs a head-speed signal (ESC telemetry or an RPM sensor). Custom keeps a table made in the configurator.">Rotor-speed notches</label><select id=rpmp></select></div>
-        <div class=r><label data-help="Below this frequency the rotor-speed notches stand down, so the spool-up does not get filtered.">Lowest rotor frequency</label><input id=rpmmin type=number min=1 max=255> <span class=unit>Hz</span></div>
-        <div class=r><label data-help="Notches that hunt for the strongest vibration by themselves. 0 = off. Up to 8.">Dynamic notches</label><input id=dnc type=number min=0 max=8> <span class=unit>(0 = off)</span></div>
-        <div class=r><label data-help="How narrow each dynamic notch is: higher = narrower. 10 to 100.">Dynamic notch width</label><input id=dnq type=number min=10 max=100> <span class=unit>Q &times; 10</span></div>
-        <div class=r><label data-help="The range the dynamic notches search.">Dynamic notch range</label><input id=dnmin type=number min=10 max=200> <span class=unit>to</span> <input id=dnmax type=number min=100 max=500> <span class=unit>Hz</span></div>
+        <h2>Dynamic Filter</h2>
+        <div class=r><label data-help="Notches that find the strongest vibrations by themselves. A Rotorflight feature: it takes effect when the flight controller restarts.">Enable</label><input id=dynon type=checkbox></div>
+        <div class=r data-for=dynon><label data-help="How many: 4 to 6 alone, 2 to 4 with the RPM filter. Up to 8.">Notch count</label><input id=dnc type=number min=0 max=8></div>
+        <div class=r data-for=dynon><label data-help="How narrow each notch is: higher = narrower. 2.0 to 4.0 recommended; below 2.0 adds delay.">Notch Q</label><input id=dnq type=number min=1 max=10 step=0.1></div>
+        <div class=r data-for=dynon><label data-help="The range the notches search.">Notch minimum frequency</label><input id=dnmin type=number min=10 max=200> <span class=unit>Hz</span></div>
+        <div class=r data-for=dynon><label data-help="The range the notches search.">Notch maximum frequency</label><input id=dnmax type=number min=100 max=500> <span class=unit>Hz</span></div>
     </div>
 
     <div class=card>
-        <h2>Fixed notches</h2>
-        <div class=r><label data-help="A notch at one fixed frequency, for a vibration that stays put whatever the head speed. 0 = off.">Notch 1</label><input id=n1 type=number min=0 max=1000> <span class=unit>Hz, cutoff</span> <input id=n1c type=number min=0 max=1000> <span class=unit>Hz</span></div>
-        <div class=r><label data-help="A second fixed notch. 0 = off.">Notch 2</label><input id=n2 type=number min=0 max=1000> <span class=unit>Hz, cutoff</span> <input id=n2c type=number min=0 max=1000> <span class=unit>Hz</span></div>
+        <h2>RPM Filter</h2>
+        <div class=r><label data-help="Follows the head speed and takes out the rotor and motor vibrations wherever they are. Needs a head-speed signal (ESC telemetry or an RPM sensor). A Rotorflight feature: it takes effect when the flight controller restarts.">Enable</label><input id=rpmon type=checkbox></div>
+        <div class=r data-for=rpmon><label data-help="Higher removes more vibration, with more delay. Custom keeps a table made in the configurator.">Strength</label><select id=rpmp></select></div>
+        <div class=r data-for=rpmon><label data-help="Set a little below the main rotor's frequency at the lowest flying head speed; 20 Hz is usual.">Minimum frequency</label><input id=rpmmin type=number min=1 max=100> <span class=unit>Hz</span></div>
     </div>
+
+    <details class=card id=expert>
+        <summary style="cursor:pointer;font-weight:600;color:#2c3e50">Expert mode (as the configurator's)</summary>
+        <h2 style="margin-top:.8em">Lowpass Filter 2</h2>
+        <div class=r><label data-help="A second lowpass after the first. Off on most helicopters.">Enable</label><input id=lpf2on type=checkbox></div>
+        <div class=r data-for=lpf2on><label>Filter type</label><select id=lpf2t></select></div>
+        <div class=r data-for=lpf2on><label>Cutoff frequency</label><input id=lpf2 type=number min=0 max=1000> <span class=unit>Hz</span></div>
+        <h2 style="margin-top:.8em">Dynamic Cutoff (lowpass 1)</h2>
+        <div class=r><label data-help="The first lowpass's cutoff follows the head speed between the minimum and the maximum instead of staying fixed.">Enable</label><input id=dlpon type=checkbox></div>
+        <div class=r data-for=dlpon><label>Min cutoff frequency</label><input id=dlpmin type=number min=0 max=1000> <span class=unit>Hz</span></div>
+        <div class=r data-for=dlpon><label>Max cutoff frequency</label><input id=dlpmax type=number min=0 max=1000> <span class=unit>Hz</span></div>
+        <h2 style="margin-top:.8em">Notch Filter 1</h2>
+        <div class=r><label data-help="A notch at one fixed frequency, for a vibration that stays put whatever the head speed.">Enable</label><input id=n1on type=checkbox></div>
+        <div class=r data-for=n1on><label data-help="The middle of the notch.">Center frequency</label><input id=n1 type=number min=0 max=1000> <span class=unit>Hz</span></div>
+        <div class=r data-for=n1on><label data-help="Where the notch starts: center 260 and cutoff 160 cover 160 to 360 Hz.">Cutoff frequency</label><input id=n1c type=number min=0 max=1000> <span class=unit>Hz</span></div>
+        <h2 style="margin-top:.8em">Notch Filter 2</h2>
+        <div class=r><label>Enable</label><input id=n2on type=checkbox></div>
+        <div class=r data-for=n2on><label>Center frequency</label><input id=n2 type=number min=0 max=1000> <span class=unit>Hz</span></div>
+        <div class=r data-for=n2on><label>Cutoff frequency</label><input id=n2c type=number min=0 max=1000> <span class=unit>Hz</span></div>
+    </details>
 
     <div class=card>
         <button id=saveBtn class=btn type=button style="background:#6cab5e"><span class=ico>&#128190;</span>Save to flight controller</button>
-        <p class=sub style="margin:.6em 0 0">Takes effect at once, no restart.</p>
+        <p class=sub style="margin:.6em 0 0">Takes effect at once. An Enable of the Dynamic or RPM filter takes effect when the flight controller restarts: the save offers that.</p>
     </div>
     <div class=footer></div>
 </div>
 <script>
 const $ = id => document.getElementById(id);
-const TYPES = ['PT1', 'PT2', 'PT3', '1st order', 'Butterworth', 'Bessel', 'Damped'];   // Rotorflight's lowpass types, in its own order
-const PRESETS = ['custom (as set in the configurator)', 'low vibration', 'normal', 'high vibration'];
+// Rotorflight's lowpass types (common/filter.h), the configurator's words; it offers 1st and 2nd order and keeps another only while it is the one set
+const TYPES = ['Disabled', '1st order', '2nd order', 'PT1', 'PT2', 'PT3', 'Order1', 'Butter', 'Bessel', 'Damped'];
+const TYPES_OFFERED = [1, 2];
+const PRESETS = ['Custom', 'Low', 'Medium', 'High'];   // the configurator's "Strength"
+const FEAT_DYN_NOTCH = 1 << 29, FEAT_RPM_FILTER = 1 << 30;   // Rotorflight features (MSP 36/37): applied when the flight controller boots
 const hexToBytes = h => { const o = new Uint8Array(h.length / 2); for (let i = 0; i < o.length; i++) o[i] = parseInt(h.substr(i * 2, 2), 16); return o; };
 const bytesToHex = b => Array.from(b, x => x.toString(16).padStart(2, '0').toUpperCase()).join('');
 const u16 = (b, o) => b[o] | (b[o + 1] << 8);
 // ---------------- model (node-tested) ----------------
 // MSP 92 / 93 on Rotorflight 4.6 (msp.c MSP_FILTER_CONFIG), 27 bytes:
 //  0 hardware lpf | 1 lpf1 type | 2-3 lpf1 Hz | 4 lpf2 type | 5-6 lpf2 Hz | 7-8 notch1 Hz | 9-10 notch1 cutoff
-//  11-12 notch2 Hz | 13-14 notch2 cutoff | 15-16 dyn lpf min | 17-18 dyn lpf max | 19 dyn notch count | 20 dyn notch Q
-//  21-22 dyn notch min Hz | 23-24 dyn notch max Hz | 25 rpm preset | 26 rpm min Hz.  The write takes effect at once.
+//  11-12 notch2 Hz | 13-14 notch2 cutoff | 15-16 dyn lpf min | 17-18 dyn lpf max | 19 dyn notch count | 20 dyn notch Q x10
+//  21-22 dyn notch min Hz | 23-24 dyn notch max Hz | 25 rpm preset (0 custom 1 low 2 medium 3 high) | 26 rpm min Hz.  The write takes effect at once.
 const LEN = 27;
 function parseF(b) {
     if (b.length < LEN) return null;
     return { lpf1t: b[1], lpf1: u16(b, 2), lpf2t: b[4], lpf2: u16(b, 5), n1: u16(b, 7), n1c: u16(b, 9), n2: u16(b, 11), n2c: u16(b, 13),
-             dnc: b[19], dnq: b[20], dnmin: u16(b, 21), dnmax: u16(b, 23), rpmp: b[25], rpmmin: b[26] };
+             dlpmin: u16(b, 15), dlpmax: u16(b, 17), dnc: b[19], dnq: b[20], dnmin: u16(b, 21), dnmax: u16(b, 23), rpmp: b[25], rpmmin: b[26] };
 }
 function encodeF(raw, f) {            // read-modify-write: only the fields the page shows change
     const b = new Uint8Array(raw);
     const w16 = (o, v) => { b[o] = v & 255; b[o + 1] = (v >> 8) & 255; };
     b[1] = f.lpf1t; w16(2, f.lpf1); b[4] = f.lpf2t; w16(5, f.lpf2); w16(7, f.n1); w16(9, f.n1c); w16(11, f.n2); w16(13, f.n2c);
-    b[19] = f.dnc; b[20] = f.dnq; w16(21, f.dnmin); w16(23, f.dnmax); b[25] = f.rpmp; b[26] = f.rpmmin;
+    w16(15, f.dlpmin); w16(17, f.dlpmax); b[19] = f.dnc; b[20] = f.dnq; w16(21, f.dnmin); w16(23, f.dnmax); b[25] = f.rpmp; b[26] = f.rpmmin;
     return b;
 }
+const featMask = b => (b[0] | (b[1] << 8) | (b[2] << 16) | (b[3] << 24)) >>> 0;
+const featBytes = m => new Uint8Array([m & 255, (m >> 8) & 255, (m >> 16) & 255, (m >>> 24) & 255]);
 // ---------------- page ----------------
-let raw = null, dirty = false;
+let raw = null, feat = 0, dirty = false;
+const prev = {};   // what a section had before its Enable went off (the configurator's previousValues)
 function setStatus(kind, msg) { const b = $('status'); b.style.display = msg ? '' : 'none'; if (!msg) return; b.className = 'banner ' + kind; b.textContent = msg; }
 function markDirty() { if (dirty) return; dirty = true; const b = $('saveBtn'); b.innerHTML = '<span class=ico>&#128190;</span>Save to flight controller &mdash; unsaved changes'; b.style.background = '#d9822b'; }
 function markClean() { dirty = false; const b = $('saveBtn'); b.innerHTML = '<span class=ico>&#128190;</span>Save to flight controller'; b.style.background = '#6cab5e'; }
-function fill(sel, list, v) { sel.innerHTML = list.map((t, i) => '<option value=' + i + (i === v ? ' selected' : '') + '>' + t + '</option>').join(''); if (v >= list.length) sel.innerHTML += '<option value=' + v + ' selected>type ' + v + '</option>'; }
+function fillTypes(sel, v) { sel.innerHTML = TYPES.map((t, i) => (TYPES_OFFERED.includes(i) || i === v) ? '<option value=' + i + (i === v ? ' selected' : '') + '>' + t + '</option>' : '').join(''); if (v >= TYPES.length) sel.innerHTML += '<option value=' + v + ' selected>type ' + v + '</option>'; }
+function fill(sel, list, v) { sel.innerHTML = list.map((t, i) => '<option value=' + i + (i === v ? ' selected' : '') + '>' + t + '</option>').join(''); if (v >= list.length) sel.innerHTML += '<option value=' + v + ' selected>' + v + '</option>'; }
+function showRows() { document.querySelectorAll('[data-for]').forEach(r => { r.style.display = $(r.dataset.for).checked ? '' : 'none'; }); }
 function paint(f) {
-    fill($('lpf1t'), TYPES, f.lpf1t); fill($('lpf2t'), TYPES, f.lpf2t); fill($('rpmp'), PRESETS, f.rpmp);
-    for (const k of ['lpf1', 'lpf2', 'n1', 'n1c', 'n2', 'n2c', 'dnc', 'dnq', 'dnmin', 'dnmax', 'rpmmin']) $(k).value = f[k];
+    $('lpf1on').checked = f.lpf1t > 0; fillTypes($('lpf1t'), f.lpf1t || 1); $('lpf1').value = f.lpf1;
+    $('lpf2on').checked = f.lpf2t > 0; fillTypes($('lpf2t'), f.lpf2t || 1); $('lpf2').value = f.lpf2;
+    $('dlpon').checked = f.dlpmin > 0 && f.dlpmin < f.dlpmax; $('dlpmin').value = f.dlpmin; $('dlpmax').value = f.dlpmax;
+    $('n1on').checked = f.n1 > 0 && f.n1c > 0; $('n1').value = f.n1; $('n1c').value = f.n1c;
+    $('n2on').checked = f.n2 > 0 && f.n2c > 0; $('n2').value = f.n2; $('n2c').value = f.n2c;
+    $('dynon').checked = !!(feat & FEAT_DYN_NOTCH); $('dnc').value = f.dnc; $('dnq').value = (f.dnq / 10).toFixed(1); $('dnmin').value = f.dnmin; $('dnmax').value = f.dnmax;
+    $('rpmon').checked = !!(feat & FEAT_RPM_FILTER); fill($('rpmp'), PRESETS, f.rpmp); $('rpmmin').value = f.rpmmin;
+    showRows();
 }
-function collect() {
-    const f = {}; for (const k of ['lpf1t', 'lpf2t', 'rpmp']) f[k] = +$(k).value;
-    for (const k of ['lpf1', 'lpf2', 'n1', 'n1c', 'n2', 'n2c', 'dnc', 'dnq', 'dnmin', 'dnmax', 'rpmmin']) { const el = $(k); f[k] = Math.max(+el.min, Math.min(+el.max, Math.round(+el.value || 0))); }
+const num = (id, lo, hi) => { const el = $(id); return Math.max(lo, Math.min(hi, Math.round(+el.value || 0))); };
+function collect() {   // a section with Enable off goes to the flight controller as the configurator sends it: zeros
+    const f = {};
+    f.lpf1t = $('lpf1on').checked ? +$('lpf1t').value : 0; f.lpf1 = $('lpf1on').checked ? num('lpf1', 0, 1000) : 0;
+    f.lpf2t = $('lpf2on').checked ? +$('lpf2t').value : 0; f.lpf2 = $('lpf2on').checked ? num('lpf2', 0, 1000) : 0;
+    const dlp = $('lpf1on').checked && $('dlpon').checked; f.dlpmin = dlp ? num('dlpmin', 0, 1000) : 0; f.dlpmax = dlp ? num('dlpmax', 0, 1000) : 0;
+    f.n1 = $('n1on').checked ? num('n1', 0, 1000) : 0; f.n1c = $('n1on').checked ? num('n1c', 0, 1000) : 0;
+    f.n2 = $('n2on').checked ? num('n2', 0, 1000) : 0; f.n2c = $('n2on').checked ? num('n2c', 0, 1000) : 0;
+    f.dnc = num('dnc', 0, 8); f.dnq = Math.max(10, Math.min(100, Math.round((+$('dnq').value || 0) * 10))); f.dnmin = num('dnmin', 10, 200); f.dnmax = num('dnmax', 100, 500);
+    f.rpmp = +$('rpmp').value; f.rpmmin = num('rpmmin', 1, 100);
     return f;
+}
+function collectFeat() { let m = feat; m = $('dynon').checked ? (m | FEAT_DYN_NOTCH) >>> 0 : (m & ~FEAT_DYN_NOTCH) >>> 0; m = $('rpmon').checked ? (m | FEAT_RPM_FILTER) >>> 0 : (m & ~FEAT_RPM_FILTER) >>> 0; return m; }
+// An Enable on takes the value that is there if it is not 0, else what was remembered, else the configurator's default (its loadValue)
+const pick = (id, def) => { const el = $(id); if (+el.value) return; el.value = prev[id] || def; };
+function toggled(id) {
+    const on = $(id).checked;
+    const rows = { lpf1on: ['lpf1'], lpf2on: ['lpf2'], dlpon: ['dlpmin', 'dlpmax'], n1on: ['n1', 'n1c'], n2on: ['n2', 'n2c'] }[id] || [];
+    const defs = { lpf1: 125, lpf2: 500, dlpmin: 50, dlpmax: 150, n1: 400, n1c: 300, n2: 200, n2c: 100 };
+    if (on) rows.forEach(r => pick(r, defs[r])); else rows.forEach(r => { prev[r] = +$(r).value || prev[r]; });
+    showRows(); markDirty();
 }
 async function load() {
     setStatus('info', 'Reading…');
     try {
+        feat = featMask(hexToBytes((await LDRC.msp(36)).trim()));
         raw = hexToBytes((await LDRC.msp(92)).trim());
         const f = parseF(raw);
         if (!f) { setStatus('bad', 'The flight controller sent ' + raw.length + ' bytes, not the ' + LEN + ' this page knows (Rotorflight 2.3)'); return; }
@@ -109,19 +163,32 @@ async function load() {
 }
 async function save() {
     if (!raw) return;
-    const f = collect();
-    if (f.dnmax <= f.dnmin) { setStatus('bad', 'The dynamic notch range must go up: highest above lowest'); return; }
+    const f = collect(), m = collectFeat();
+    if ($('dynon').checked && f.dnmax <= f.dnmin) { setStatus('bad', 'The dynamic filter\'s maximum frequency must be above its minimum'); return; }
     setStatus('info', 'Writing…');
     try {
         await LDRC.msp(93, bytesToHex(encodeF(raw, f)));
+        const featChanged = m !== feat;
+        if (featChanged) await LDRC.msp(37, bytesToHex(featBytes(m)));
         await LDRC.msp(250);
+        if (featChanged) {
+            // Features apply at BOOT (the configurator restarts the flight controller after every save of its Gyro tab).
+            if (await LDRC.confirm('Saved. An Enable of the Dynamic or RPM filter takes effect when the flight controller restarts.\n\nRestart it now?', { title: 'Restart to apply', icon: '🔄', yes: 'Restart now' })) {
+                try { await LDRC.msp(68, '', 1); } catch (e) {}   // retries=1: the FC reboots before answering
+                setStatus('info', 'Flight controller restarting — back in a few seconds…');
+                setTimeout(load, 8000);
+                return;
+            }
+        }
         await load();
-        setStatus('good', '✓ Saved - in use now');
+        setStatus('good', featChanged ? '✓ Saved - the Enable applies at the next restart' : '✓ Saved - in use now');
     } catch (e) { setStatus('bad', 'Not saved: ' + e.message); }
 }
 document.addEventListener('DOMContentLoaded', async () => {
     $('saveBtn').onclick = save;
-    document.querySelectorAll('.card input, .card select').forEach(el => { el.addEventListener('input', markDirty); el.addEventListener('change', markDirty); });
+    document.querySelectorAll('.card input, .card select, #expert input, #expert select').forEach(el => { el.addEventListener('input', markDirty); el.addEventListener('change', markDirty); });
+    ['lpf1on', 'lpf2on', 'dlpon', 'n1on', 'n2on'].forEach(id => $(id).addEventListener('change', () => toggled(id)));
+    ['dynon', 'rpmon'].forEach(id => $(id).addEventListener('change', () => { showRows(); markDirty(); }));
     await load();
 });
 </script>
@@ -129,10 +196,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 <p>The gyro hears every vibration in the helicopter. Filters take the vibration out before the PIDs see it. The defaults suit most helicopters; change one thing at a time.</p>
 <h3>What each one does</h3>
 <ul>
-<li><b>Lowpass</b>: smooths everything above the cutoff. Lower cutoff = smoother but slower to react. Rotorflight advises not below 60 Hz.</li>
-<li><b>Rotor-speed notches</b>: follow the head speed and remove the rotor and motor vibrations wherever they are. The main filter on a helicopter. They need a head-speed signal (ESC telemetry or an RPM sensor). Low, normal or high sets how many harmonics they cover.</li>
-<li><b>Dynamic notches</b>: hunt for the strongest vibration by themselves, for what the rotor-speed notches miss.</li>
-<li><b>Fixed notches</b>: for a vibration that stays at one frequency whatever the head speed.</li>
+<li><b>Lowpass Filter</b>: smooths everything above the cutoff. Lower cutoff = smoother but slower to react. Rotorflight advises not below 60 Hz. Expert mode adds a second lowpass, and a dynamic cutoff that follows the head speed.</li>
+<li><b>RPM Filter</b>: follows the head speed and removes the rotor and motor vibrations wherever they are. The main filter on a helicopter. It needs a head-speed signal (ESC telemetry or an RPM sensor). Strength Low, Medium or High: more removes more, with more delay.</li>
+<li><b>Dynamic Filter</b>: notches that find the strongest vibrations by themselves, for what the RPM filter misses. Q 2.0 to 4.0.</li>
+<li><b>Notch Filter 1 and 2</b> (expert mode): for a vibration that stays at one frequency whatever the head speed.</li>
+<li>The names, the order and the units are the configurator's Gyro tab, so the two can be compared side by side. The <b>Enable</b> of the Dynamic Filter and of the RPM Filter are Rotorflight features, which take effect when the flight controller restarts: the save offers the restart.</li>
 </ul>
 <h3>Which filter to change: read the black box</h3>
 <ol>

@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.877-filters-as-configurator",
+      "url": "https://messiter.com/rxv2/release/v0.9.877/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.877/littlefs.bin",
+      "fs_md5": "fdb41165a169db2bc62797e26c3711b3",
+      "notes": "Filters page laid out as the configurator's Gyro tab: the lowpass type names were in the wrong order (1st order read as PT2), Notch Q now in tenths, Strength Custom/Low/Medium/High, and Enable on every section, with the restart the Dynamic and RPM filter Enables need."
+    },
+    {
       "name": "RXV2-0.9.876-ble-ask-events",
       "url": "https://messiter.com/rxv2/release/v0.9.876/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.876/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.866/littlefs.bin",
       "fs_md5": "cc4878104ade8765b32ab2b7b6cb420e",
       "notes": "Transmitter-ordered update: Bluetooth is switched off again just before the download (the WiFi start had brought it back up), so the download runs on a quiet radio."
-    },
-    {
-      "name": "RXV2-0.9.865-installable-from-the-transmitter",
-      "url": "https://messiter.com/rxv2/release/v0.9.865/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.865/littlefs.bin",
-      "fs_md5": "cc4878104ade8765b32ab2b7b6cb420e",
-      "notes": "Same firmware as 0.9.864, released so that a receiver on 0.9.864 has something to install from the transmitter: the first release to be installed that way. Receivers older than 0.9.864 still need one update from the phone app (they cannot say their version to the transmitter yet)."
     }
   ],
   "rotorflight": {
