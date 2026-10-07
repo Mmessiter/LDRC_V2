@@ -186,6 +186,15 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## "Clicking receiver update makes the screen reboot" (screen 1.11.20, 7 Oct 2026)
+
+The crash record (read through /status): task wifi, abort() in the driver's pm_set_sleep_type. The update panel keeps
+the WiFi awake for its downloads (power save off), and the one radio cannot be kept awake while Bluetooth is up: the
+driver aborts. 1.11.20: an update lets the Bluetooth pipe go first and keeps the WiFi awake only once Bluetooth is down;
+a pipe asked for while an update has the radio is refused (the main board tries again in fifteen seconds). Also: each
+request the main board sends over the pipe, and its answer, now goes into the screen's Bluetooth timeline, for the
+rescue read-back question ("immediately after writing them, the transmitter screen reverts to the default values").
+
 ## Rescue on the transmitter, and the line that makes the rest possible (V2 B50 + screen 1.11.19, 7 Oct 2026)
 
 Malcolm: "Assuming we still have sufficient memory, let us add in now the other Rotorflight settings to complete our

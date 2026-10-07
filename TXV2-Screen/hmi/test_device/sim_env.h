@@ -250,7 +250,8 @@ static void topText(int x, int y, int font, uint16_t col, const std::string &s) 
 // main.cpp 1210-1215
 static std::string topCut(const std::string &s, int font, int maxW) { if (textWidth(font, s) <= maxW) return s; std::string t = s; while (!t.empty() && textWidth(font, t + "...") > maxW) t.erase(t.size() - 1); return t + "..."; }
 static bool topOn = false; static int topWho = 0; static int topX = 40, topY = 36, topW = 720, topH = 408;
-static bool touchLockout = false;                          // (1.11.3: a corner held is not a touch for the page)
+static bool touchLockout = false;
+static bool bleIsOff() { return true; }   // (1.11.20) no Bluetooth on the Mac                          // (1.11.3: a corner held is not a touch for the page)
 static bool simTopReady = true; static bool topReady() { return simTopReady; }
 struct TopDraw { TopDraw() {} ~TopDraw() {} };
 static long dirtyCalls = 0; static bool anyDirty = false, touchPainted = false;

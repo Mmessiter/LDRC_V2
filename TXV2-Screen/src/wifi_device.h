@@ -114,7 +114,7 @@ static int wifiLookState() {
 static void wifiStart() {                                      // the radio comes on: at start-up, by the pilot's switch, when the motor goes off
     WiFi.persistent(false);                                     // the networks are in OUR store: the driver writes nothing to the flash (it did, at every begin())
     WiFi.mode(WIFI_STA);
-    WiFi.setSleep(!updWifi);
+    WiFi.setSleep(!(updWifi && bleIsOff()));                 // (1.11.20) awake only when Bluetooth is down
     WiFi.setAutoReconnect(true);
     wifiAutoStep = 0;
 }

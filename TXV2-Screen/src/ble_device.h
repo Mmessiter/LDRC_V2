@@ -30,7 +30,7 @@ static volatile bool bleGone = false;                           // (1.11.15) the
 // order, after the parameter packets; a body is cut at 1500 bytes (a Rotorflight reply is at most a few hundred).
 struct BleHttpReq { int id; std::string path; };
 static std::vector<BleHttpReq> bleHttpQueue;
-static volatile bool bleWifiKick = false;                      // (1.11.11) the stack has just gone down: the WiFi joins afresh (loop())
+static volatile bool bleWifiKick = false; static volatile bool bleWifiKickSleep = false;   // (1.11.20) ... and may stay awake for an update                      // (1.11.11) the stack has just gone down: the WiFi joins afresh (loop())
 // 1.11.13 (Malcolm: "Sometimes connecting to Bluetooth takes a very long time, and sometimes it's quicker"): the last
 // 24 happenings with their time, from either side, in /ble/status and /status ("log"): each join's timeline.
 static std::string bleLog[24]; static int bleLogN = 0;
@@ -254,8 +254,8 @@ static void bleTxServe() {                                     // in the task: t
     if (have) {
         ldrc::BleReply r; std::string err;
         std::string rep = "ldrcrep " + std::to_string(q.id) + " ";
-        if (bleServeNow("GET", q.path, "", "", r, err)) { std::string body = r.body; if (body.size() > 1500) body.resize(1500); for (auto &c : body) if (c == '\n' || c == '\r') c = ' '; rep += std::to_string(r.code) + " " + body; }
-        else rep += "0 " + err;
+        if (bleServeNow("GET", q.path, "", "", r, err)) { std::string body = r.body; if (body.size() > 1500) body.resize(1500); for (auto &c : body) if (c == '\n' || c == '\r') c = ' '; rep += std::to_string(r.code) + " " + body; bleNote("req " + q.path.substr(q.path.find('?') == std::string::npos ? 0 : q.path.find('?') + 1, 24) + " -> " + std::to_string(r.code) + " " + body.substr(0, 60)); }
+        else { rep += "0 " + err; bleNote("req " + q.path.substr(0, 30) + " -> " + err); }
         rep += "\n";
         bleMailPost(rep);
     }
@@ -263,7 +263,7 @@ static void bleTxServe() {                                     // in the task: t
 static void bleTask(void *) {
     for (;;) {
         if (bleOrder == 2) {                                   // off: down with the stack (a failed join keeps its reason until then)
-            bleOrder = 0; bleState = BLE_STOPPING; bleNote("stopping"); bleLeave(); NimBLEDevice::deinit(true); bleClient = nullptr; bleState = BLE_OFF; bleWifiKick = true; bleNote("off");   // (deinit deletes every client)
+            bleOrder = 0; bleState = BLE_STOPPING; bleNote("stopping"); bleLeave(); NimBLEDevice::deinit(true); bleClient = nullptr; bleState = BLE_OFF; bleWifiKick = true; bleWifiKickSleep = true; bleNote("off");   // (deinit deletes every client)
         } else if (bleOrder == 1) {
             bleOrder = 0;
             if (bleState == BLE_OFF || bleState == BLE_FAILED) {
@@ -323,6 +323,7 @@ static void blePoll() {
     // both; when the Bluetooth stack goes down the WiFi link may be left looking joined and carrying nothing. So the WiFi
     // joins afresh after every Bluetooth session: a few seconds, on the ground.
     if (bleWifiKick) { bleWifiKick = false; if (radiosLive) { blog("ble", "stack down: the WiFi joins again"); bleNote("the WiFi joins again"); WiFi.disconnect(); wifiAutoStep = 0; } }
+    if (bleWifiKickSleep) { bleWifiKickSleep = false; wifiApplySleep(); }
     if (tx.armed && !wasArmed && bleState != BLE_OFF) bleOrder = 2;   // the model could be flying: Bluetooth down, as the WiFi goes
     wasArmed = tx.armed;
     static int logged = -1;
@@ -340,6 +341,7 @@ static void blePipeCommand(const std::string &a) {
     blog("ble", "from the main board: pipe " + a); bleNote("main board: pipe " + a);
     if (a.rfind("on", 0) == 0) {
         if (bleState == BLE_STARTING || bleState == BLE_SCANNING || bleState == BLE_CONNECTING) { bleNote("joining already: left to it"); return; }   // 1.11.15: a second "on" mid-join (the menu opened while Model setup's join runs) changes nothing
+        if (updWifi) { bleNote("the update has the radio: not now"); bleMailPost("ldrcpipe=3"); return; }   // 1.11.20 (the main board tries again in fifteen seconds)
         bleWantMac = bleUpper(a.size() > 3 ? a.substr(3) : ""); bleTarget.clear(); bleTelLast.clear();
         if (tx.armed) return;
         if (bleState == BLE_READY) { blePipeTold = -1; return; }   // 1.11.9: already joined (the menu was re-entered from one of its pages): say so again, or the main board waits on "joining"
@@ -350,6 +352,13 @@ static void blePipeCommand(const std::string &a) {
 static void bleTxCommand(const std::string &words) {
     blog("ble", "from the main board: " + words);
     if (bleMutex && xSemaphoreTake(bleMutex, pdMS_TO_TICKS(5)) == pdTRUE) { if (bleTxQueue.size() < 16) bleTxQueue.push_back(words); xSemaphoreGive(bleMutex); }
+}
+static bool bleIsOff() { return bleState == BLE_OFF; }
+static void bleOffForTheUpdate() {                             // (1.11.20) an update begins: the pipe goes, the main board is told (ldrcpipe=0 follows by itself)
+    if (bleState == BLE_OFF) return;
+    bleNote("an update begins: the pipe is let go");
+    bleOrder = 2; blePollUntil = 0;
+    if (bleMutex && xSemaphoreTake(bleMutex, pdMS_TO_TICKS(5)) == pdTRUE) { bleTxQueue.clear(); bleHttpQueue.clear(); xSemaphoreGive(bleMutex); }
 }
 static void bleHttpCommand(const std::string &a) {             // (1.11.18) "ldrcreq <id> <path>"
     const size_t sp = a.find(' ');

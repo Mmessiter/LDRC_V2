@@ -42,7 +42,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.19"
+#define SCREEN_VERSION "1.11.20"
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room
 #endif
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -445,6 +445,13 @@ static void picTouch(bool pressed, int x, int y, uint32_t now);
 static void picPoll();
 static void picWeb();
 static void bleWeb(); static void blePoll(); static void blePipeCommand(const std::string &a); static void bleTxCommand(const std::string &words); static void bleHttpCommand(const std::string &a); static std::string bleStatusJson(); static unsigned bleStackSpare();
+static bool bleIsOff();                                    // (1.11.20) the Bluetooth stack is down: the WiFi may stay awake
+static void bleOffForTheUpdate();                          // (1.11.20) an update begins: the pipe is let go
+// THE CRASH of 7 Oct, "clicking receiver update makes the screen reboot": task wifi, abort() in pm_set_sleep_type: the WiFi
+// driver refuses to be kept awake (power save off) while Bluetooth is up - the one radio is shared, and modem sleep is
+// what lets them share. So the WiFi is kept awake only when the Bluetooth stack is down; an update that wants it awake
+// first lets the pipe go.
+static void wifiApplySleep() { if (radiosLive) WiFi.setSleep(!(updWifi && bleIsOff())); }
 static void picPageLoaded();                           // loadPage(): the chooser covers its page before anything of that page is drawn
 static void picSoon();                                 // "Model image..." touched: the chooser's frame at once
 // The flight screen (src/flight_device.h, lib/LdrcFlight): what the pilot chose to see while flying, over the front page

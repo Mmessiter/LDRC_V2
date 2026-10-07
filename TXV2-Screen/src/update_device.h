@@ -261,7 +261,8 @@ struct ScreenHost : public ldrc::UpdateHost {
     void wifiWanted(bool on) override {
         if (updWifi == on) return;
         updWifi = on;
-        if (radiosLive) WiFi.setSleep(!on);                 // awake while we fetch: a radio that dozes between beacons fetches at a crawl
+        if (on) bleOffForTheUpdate();                       // (1.11.20) the pipe is let go first: awake WiFi and Bluetooth do not mix (the crash of 7 Oct)
+        wifiApplySleep();                                   // awake while we fetch (once Bluetooth is down: blePoll applies it then): a radio that dozes between beacons fetches at a crawl
         applyRadios(on ? "WiFi on for the update" : "WiFi off again");
     }
 #ifdef LDRC_TEST_FAIL_TRIAL                               // a build that never finds the WiFi while it is on trial: the fall-back, tried out for real
