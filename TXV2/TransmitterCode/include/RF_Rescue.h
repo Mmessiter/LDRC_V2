@@ -29,7 +29,7 @@ static int RescueStep = RSC_IDLE, RescueReq = 0;
 static uint32_t RescueMsgUntil = 0;        // a message shown over the fields goes by itself
 static uint8_t RescueWant[RESCUE_BYTES];   // what a save asked for
 
-static const char *RescueModeWords[3] = {"Off", "Climb", "Hold height"};
+static const char *RescueModeWords[3] = {"Off", "Climb", "Hold height"};   // the mode on the height page; page 1's "Enable Rescue" is Off / On (B52: the configurator's names in its places)
 
 static uint16_t RdU16(const uint8_t *b, int o) { return (uint16_t)(b[o] | (b[o + 1] << 8)); }
 static void WrU16(uint8_t *b, int o, long v)
@@ -60,35 +60,43 @@ static void RescueTenths(const char *name, int tenths)
     snprintf(b, sizeof(b), "%d.%d", tenths / 10, tenths % 10);
     RescueField(name, b);
 }
+static void RescuePercent(const char *name, int tenths) // a collective of 0..1000 as the configurator shows it: 450 = 45, 655 = 65.5
+{
+    char b[16];
+    if (tenths % 10) snprintf(b, sizeof(b), "%d.%d", tenths / 10, tenths % 10); else snprintf(b, sizeof(b), "%d", tenths / 10);
+    RescueField(name, b);
+}
 // The page's fields from the bytes (page 1: RescueView; page 2: Rescue2View)
 static void RescueShowPage1()
 {
     RescueMode = RescueRaw[0] <= 2 ? RescueRaw[0] : 0;
     RescueFlip = RescueRaw[1] ? 1 : 0;
-    RescueField("tn0", RescueModeWords[RescueMode]);
-    RescueField("tn1", RescueFlip ? "On" : "Off");
-    RescueNumber("tn2", RescueRaw[2]);
-    RescueNumber("tn3", RescueRaw[3]);
-    RescueTenths("tn4", RescueRaw[4]);
-    RescueTenths("tn5", RescueRaw[5]);
-    RescueTenths("tn6", RescueRaw[6]);
-    RescueTenths("tn7", RescueRaw[7]);
-    RescueNumber("tn8", RdU16(RescueRaw, 8));
-    RescueNumber("tn9", RdU16(RescueRaw, 10));
-    RescueNumber("tn10", RdU16(RescueRaw, 12));
-    RescueNumber("tn11", RdU16(RescueRaw, 22));
-    RescueNumber("tn12", RdU16(RescueRaw, 24));
-    RescueNumber("tn13", RdU16(RescueRaw, 26));
+    RescueField("tn0", RescueMode ? "On" : "Off");
+    RescueField("tn1", RescueFlip ? "Flip" : "No-Flip");
+    RescuePercent("tn2", RdU16(RescueRaw, 8));   // Pull-up Collective [%]
+    RescueTenths("tn3", RescueRaw[4]);           // Pull-up Time [s]
+    RescuePercent("tn4", RdU16(RescueRaw, 10));  // Climb Collective [%]
+    RescueTenths("tn5", RescueRaw[5]);           // Climb Time [s]
+    RescuePercent("tn6", RdU16(RescueRaw, 12));  // Hover Collective [%]
+    RescueTenths("tn7", RescueRaw[6]);           // Flip Fail Time [s]
+    RescueTenths("tn8", RescueRaw[7]);           // Exit Time [s]
+    RescueNumber("tn9", RescueRaw[3]);           // Leveling Gain
+    RescueNumber("tn10", RescueRaw[2]);          // Flip-to-Upright Gain
+    RescueNumber("tn11", RdU16(RescueRaw, 24));  // Max Levelling Rate
+    RescueNumber("tn12", RdU16(RescueRaw, 26));  // Max Leveling Acceleration
 }
 static void RescueShowPage2()
 {
     char b[16];
+    RescueMode = RescueRaw[0] <= 2 ? RescueRaw[0] : 0;
+    RescueField("tn0", RescueModeWords[RescueMode]);
     const unsigned h = RdU16(RescueRaw, 14);
     snprintf(b, sizeof(b), "%u.%02u", h / 100, h % 100);
-    RescueField("tn0", b);
-    RescueNumber("tn1", RdU16(RescueRaw, 16));
-    RescueNumber("tn2", RdU16(RescueRaw, 18));
-    RescueNumber("tn3", RdU16(RescueRaw, 20));
+    RescueField("tn1", b);                       // Hover height [m]
+    RescueNumber("tn2", RdU16(RescueRaw, 16));   // Height hold P
+    RescueNumber("tn3", RdU16(RescueRaw, 18));   // I
+    RescueNumber("tn4", RdU16(RescueRaw, 20));   // D
+    RescuePercent("tn5", RdU16(RescueRaw, 22));  // Max Collective [%]
 }
 static void RescueShow()
 {
@@ -113,36 +121,41 @@ static int FieldTenths(const char *name, int lo, int hi) // "1.5" -> 15
     return v < lo ? lo : v > hi ? hi : v;
 }
 // The bytes to write: the page's fields over the last read (the other page's values stay as read, or as edited there)
+static int FieldPercent(const char *name, int lo, int hi) // "45" or "65.5" -> 450 / 655
+{
+    return FieldTenths(name, lo, hi);
+}
 static void RescueGatherPage1()
 {
     RescueWant[0] = (uint8_t)RescueMode;
     RescueWant[1] = (uint8_t)RescueFlip;
-    RescueWant[2] = (uint8_t)FieldNumber("tn2", 5, 250);
-    RescueWant[3] = (uint8_t)FieldNumber("tn3", 5, 250);
-    RescueWant[4] = (uint8_t)FieldTenths("tn4", 0, 250);
+    WrU16(RescueWant, 8, FieldPercent("tn2", 0, 1000));
+    RescueWant[4] = (uint8_t)FieldTenths("tn3", 0, 250);
+    WrU16(RescueWant, 10, FieldPercent("tn4", 0, 1000));
     RescueWant[5] = (uint8_t)FieldTenths("tn5", 0, 250);
-    RescueWant[6] = (uint8_t)FieldTenths("tn6", 0, 250);
-    RescueWant[7] = (uint8_t)FieldTenths("tn7", 0, 250);
-    WrU16(RescueWant, 8, FieldNumber("tn8", 0, 1000));
-    WrU16(RescueWant, 10, FieldNumber("tn9", 0, 1000));
-    WrU16(RescueWant, 12, FieldNumber("tn10", 0, 1000));
-    WrU16(RescueWant, 22, FieldNumber("tn11", 1, 1000));
-    WrU16(RescueWant, 24, FieldNumber("tn12", 1, 1000));
-    WrU16(RescueWant, 26, FieldNumber("tn13", 1, 10000));
+    WrU16(RescueWant, 12, FieldPercent("tn6", 0, 1000));
+    RescueWant[6] = (uint8_t)FieldTenths("tn7", 0, 250);
+    RescueWant[7] = (uint8_t)FieldTenths("tn8", 0, 250);
+    RescueWant[3] = (uint8_t)FieldNumber("tn9", 5, 250);
+    RescueWant[2] = (uint8_t)FieldNumber("tn10", 5, 250);
+    WrU16(RescueWant, 24, FieldNumber("tn11", 1, 1000));
+    WrU16(RescueWant, 26, FieldNumber("tn12", 1, 10000));
 }
 static void RescueGatherPage2()
 {
+    RescueWant[0] = (uint8_t)RescueMode;
     char t[24] = "";
-    GetText((char *)"tn0", t, sizeof(t) - 1);
+    GetText((char *)"tn1", t, sizeof(t) - 1);
     float h = (float)atof(t);
     if (h < 0)
         h = 0;
     if (h > 500)
         h = 500;
     WrU16(RescueWant, 14, (long)(h * 100.0f + 0.5f));
-    WrU16(RescueWant, 16, FieldNumber("tn1", 0, 10000));
-    WrU16(RescueWant, 18, FieldNumber("tn2", 0, 10000));
-    WrU16(RescueWant, 20, FieldNumber("tn3", 0, 10000));
+    WrU16(RescueWant, 16, FieldNumber("tn2", 0, 10000));
+    WrU16(RescueWant, 18, FieldNumber("tn3", 0, 10000));
+    WrU16(RescueWant, 20, FieldNumber("tn4", 0, 10000));
+    WrU16(RescueWant, 22, FieldPercent("tn5", 10, 1000));
 }
 static void RescueAskSelect(int next)
 {
@@ -284,16 +297,31 @@ void RescueWasEdited() // a number was typed
     SendCommand((char *)"vis b3,1");
     Rescue_Was_Edited = true;
 }
-void RescueModeTapped() // Off -> Climb -> Hold height -> Off
+static int RescueModeWhenOn = 1;       // what "On" means: Climb, or Hold height if that is what it was
+void RescueModeTapped() // page 1, Enable Rescue: Off <-> On
 {
-    RescueMode = (RescueMode + 1) % 3;
-    RescueField("tn0", RescueModeWords[RescueMode]);
+    if (RescueMode)
+    {
+        RescueModeWhenOn = RescueMode;
+        RescueMode = 0;
+    }
+    else
+        RescueMode = RescueModeWhenOn >= 1 && RescueModeWhenOn <= 2 ? RescueModeWhenOn : 1;
+    RescueField("tn0", RescueMode ? "On" : "Off");
     RescueWasEdited();
 }
-void RescueFlipTapped()
+void RescueFlipTapped() // page 1: Flip <-> No-Flip
 {
     RescueFlip = !RescueFlip;
-    RescueField("tn1", RescueFlip ? "On" : "Off");
+    RescueField("tn1", RescueFlip ? "Flip" : "No-Flip");
+    RescueWasEdited();
+}
+void RescueMode2Tapped() // page 2, Rescue mode: Off -> Climb -> Hold height -> Off
+{
+    RescueMode = (RescueMode + 1) % 3;
+    if (RescueMode)
+        RescueModeWhenOn = RescueMode;
+    RescueField("tn0", RescueModeWords[RescueMode]);
     RescueWasEdited();
 }
 void SaveRescue()

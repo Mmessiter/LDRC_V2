@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B51 07/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B52 07/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -855,6 +855,7 @@ void RescueModeTapped();
 void RescueFlipTapped();
 void StartRescue2View();
 void EndRescue2View();
+void RescueMode2Tapped();                     // B52: the mode on the height page
 void StartModelSetup();
 bool GetConfirmation(char *goback, char *Prompt);
 void GotoModelsView();

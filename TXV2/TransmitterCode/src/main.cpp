@@ -3005,7 +3005,7 @@ void RestoreCurrentModel()
 // ******************************** Global Array1 of numbered function pointers OK up the **********************************
 
 // This new list can be huge - up to 24 BITS unsigned!  ( Use "NUMBER<<8" )
-#define LASTFUNCTION1 72 // One more than final one
+#define LASTFUNCTION1 73 // One more than final one
 
 void (*NumberedFunctions1[LASTFUNCTION1])(){
     Blank,                   // 0 Cannot be used
@@ -3079,7 +3079,8 @@ void (*NumberedFunctions1[LASTFUNCTION1])(){
     RescueModeTapped,        // 68 Off / Climb / Hold height
     RescueFlipTapped,        // 69 Roll upright first: Off / On
     StartRescue2View,        // 70 Height ...
-    EndRescue2View           // 71 OK on page 2: back to page 1
+    EndRescue2View,          // 71 OK on page 2: back to page 1
+    RescueMode2Tapped        // 72 B52: the mode on the height page (Off / Climb / Hold height)
 };
 
 // This list migth become MUCH longer as it limit is 24 bits big

@@ -186,6 +186,16 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Rescue as the configurator shows it (V2 B52 + screen 1.11.21, 7 Oct 2026)
+
+Malcolm, with the latest Rotorflight configurator open: "the configurator offers flip or no flip. Climb goes elsewhere
+... I think we should use the same names in the same places." So the first page now has the configurator's Rescue
+Settings in its order, names and units: Enable Rescue (Off / On), Flip to upright (Flip / No-Flip), Pull-up Collective
+[%], Pull-up Time [s], Climb Collective [%], Climb Time [s], Hover Collective [%], Flip Fail Time [s], Exit Time [s],
+Leveling Gain, Flip-to-Upright Gain, Max Levelling Rate, Max Leveling Accel. Collectives are percent (45, or 65.5), as
+there, not the flight controller's thousandths. The height-hold page carries the rescue mode (Off / Climb / Hold
+height), the hover height, its P, I, D, and Max Collective [%].
+
 ## Rescue reads back what it wrote (V2 B51, 7 Oct 2026)
 
 Malcolm: "After writing, it should really read back what has been written to confirm, but it does not. It displays the

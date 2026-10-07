@@ -1,7 +1,11 @@
-Rescue, height hold: the values used when Rescue is set to Hold height, for the bank shown at the top left.||
+Rescue, height hold: for the bank shown at the top left.||
 
-Hover height: the height, in metres, the model climbs to and holds (0 to 500; with two decimals).||
+Rescue mode: Off, Climb (level the model and climb for the climb time), or Hold height (level it and climb to the hover height, then hold it). Tap to change. Off here is the same as Enable Rescue Off on the first page.||
+
+Hover height [m]: the height the model climbs to and holds (0 to 500, with two decimals).||
 
 Height hold P, I and D: how firmly the height is held (0 to 10000 each). Rotorflight's defaults suit most models; change them in small steps.||
 
-Save sends everything on both rescue pages to the flight controller, stores it there, and reads it back to check. OK returns to the first rescue page with your edits kept, not yet saved.||
+Max Collective [%]: the most collective rescue may ever use (1 to 100).||
+
+Save sends everything on both rescue pages to the flight controller, stores it there, and reads it back. OK returns to the first page with your edits kept, not yet saved.||

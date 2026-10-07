@@ -24,7 +24,7 @@ def page(pid, name, title, fields, buttons, help_file):
     add(help_btn)
     for (nm, label, col, row, kind, code) in fields:
         y = 94 + row * 40
-        lx, lw, vx, vw = (34, 200, 240, 174) if col == 0 else (430, 236, 672, 94)
+        lx, lw, vx, vw = (34, 254, 294, 120) if col == 0 else (430, 236, 672, 94)
         add(comp(LABEL_L if col == 0 else LABEL_R, n='l' + nm, x=lx, y=y, w=lw, h=36, txt=label, g='g'))
         f = comp(FIELD, n=nm, x=vx, y=y, w=vw, h=36, txt='0', g='g')
         if kind == 'num': f['ev'] = {'r': 'keybdB.t1.txt="%s"\nva0.val=%d<<8\nprint va0.val' % (label, code)}
@@ -38,18 +38,19 @@ def page(pid, name, title, fields, buttons, help_file):
     print(pid, name, len(comps), 'components')
 
 # codes (the main board's NumberedFunctions1): 64 open, 65 OK, 66 save, 67 a number edited, 68 the mode tapped, 69 flip tapped, 70 page 2, 71 back to page 1
-page(58, 'RescueView', 'Rescue (Rotorflight)', [
-    ('tn0', 'Rescue', 0, 0, 'cycle', 68), ('tn1', 'Roll upright first', 0, 1, 'cycle', 69),
-    ('tn2', 'Flip strength', 0, 2, 'num', 67), ('tn3', 'Levelling strength', 0, 3, 'num', 67),
-    ('tn4', 'Pull-up time (s)', 0, 4, 'num', 67), ('tn5', 'Climb time (s)', 0, 5, 'num', 67),
-    ('tn6', 'Flip time (s)', 0, 6, 'num', 67), ('tn7', 'Exit time (s)', 0, 7, 'num', 67),
-    ('tn8', 'Pull-up collective', 1, 0, 'num', 67), ('tn9', 'Climb collective', 1, 1, 'num', 67),
-    ('tn10', 'Hover collective', 1, 2, 'num', 67), ('tn11', 'Max collective', 1, 3, 'num', 67),
-    ('tn12', 'Max turn rate', 1, 4, 'num', 67), ('tn13', 'Max turn accel.', 1, 5, 'num', 67),
-], [('b3', 'Save', 14, 180, 66), ('b2', 'Height ...', 408, 180, 70), ('b1', 'OK', 605, 180, 65)], 'RESCUE.TXT')
+page(58, 'RescueView', 'Rescue (Rotorflight)', [          # the configurator's names, order and units (Malcolm, 7 Oct: "use the same names in the same places")
+    ('tn0', 'Enable Rescue', 0, 0, 'cycle', 68), ('tn1', 'Flip to upright', 0, 1, 'cycle', 69),
+    ('tn2', 'Pull-up Collective [%]', 0, 2, 'num', 67), ('tn3', 'Pull-up Time [s]', 0, 3, 'num', 67),
+    ('tn4', 'Climb Collective [%]', 0, 4, 'num', 67), ('tn5', 'Climb Time [s]', 0, 5, 'num', 67),
+    ('tn6', 'Hover Collective [%]', 0, 6, 'num', 67), ('tn7', 'Flip Fail Time [s]', 0, 7, 'num', 67),
+    ('tn8', 'Exit Time [s]', 1, 0, 'num', 67), ('tn9', 'Leveling Gain', 1, 1, 'num', 67),
+    ('tn10', 'Flip-to-Upright Gain', 1, 2, 'num', 67), ('tn11', 'Max Levelling Rate', 1, 3, 'num', 67),
+    ('tn12', 'Max Leveling Accel.', 1, 4, 'num', 67),
+], [('b3', 'Save', 14, 180, 66), ('b2', 'Height hold ...', 408, 180, 70), ('b1', 'OK', 605, 180, 65)], 'RESCUE.TXT')
 page(59, 'Rescue2View', 'Rescue: height hold', [
-    ('tn0', 'Hover height (m)', 0, 0, 'num', 67), ('tn1', 'Height hold P', 0, 1, 'num', 67),
-    ('tn2', 'Height hold I', 0, 2, 'num', 67), ('tn3', 'Height hold D', 0, 3, 'num', 67),
+    ('tn0', 'Rescue mode', 0, 0, 'cycle', 72), ('tn1', 'Hover height [m]', 0, 1, 'num', 67),
+    ('tn2', 'Height hold P', 0, 2, 'num', 67), ('tn3', 'Height hold I', 0, 3, 'num', 67),
+    ('tn4', 'Height hold D', 0, 4, 'num', 67), ('tn5', 'Max Collective [%]', 0, 5, 'num', 67),
 ], [('b3', 'Save', 14, 180, 66), ('b1', 'OK', 605, 180, 71)], 'RESCUE2.TXT')
 
 # the menu: a fifth button, the pipe line beside the model name

@@ -181,7 +181,7 @@
    "g": "g",
    "x": 34,
    "y": 94,
-   "w": 200,
+   "w": 254,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -190,7 +190,7 @@
     "borderc": 0,
     "bco": 63752
    },
-   "txt": "Rescue",
+   "txt": "Enable Rescue",
    "a": {
     "style": 0,
     "key": 255,
@@ -207,9 +207,9 @@
    "i": 8,
    "t": "text",
    "g": "g",
-   "x": 240,
+   "x": 294,
    "y": 94,
-   "w": 174,
+   "w": 120,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -240,7 +240,7 @@
    "g": "g",
    "x": 34,
    "y": 134,
-   "w": 200,
+   "w": 254,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -249,7 +249,7 @@
     "borderc": 0,
     "bco": 63752
    },
-   "txt": "Roll upright first",
+   "txt": "Flip to upright",
    "a": {
     "style": 0,
     "key": 255,
@@ -266,9 +266,9 @@
    "i": 10,
    "t": "text",
    "g": "g",
-   "x": 240,
+   "x": 294,
    "y": 134,
-   "w": 174,
+   "w": 120,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -299,7 +299,7 @@
    "g": "g",
    "x": 34,
    "y": 174,
-   "w": 200,
+   "w": 254,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -308,7 +308,7 @@
     "borderc": 0,
     "bco": 63752
    },
-   "txt": "Flip strength",
+   "txt": "Pull-up Collective [%]",
    "a": {
     "style": 0,
     "key": 255,
@@ -325,9 +325,9 @@
    "i": 12,
    "t": "text",
    "g": "g",
-   "x": 240,
+   "x": 294,
    "y": 174,
-   "w": 174,
+   "w": 120,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -348,7 +348,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Flip strength\"\nva0.val=67<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Pull-up Collective [%]\"\nva0.val=67<<8\nprint va0.val"
    }
   },
   {
@@ -358,7 +358,7 @@
    "g": "g",
    "x": 34,
    "y": 214,
-   "w": 200,
+   "w": 254,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -367,7 +367,7 @@
     "borderc": 0,
     "bco": 63752
    },
-   "txt": "Levelling strength",
+   "txt": "Pull-up Time [s]",
    "a": {
     "style": 0,
     "key": 255,
@@ -384,9 +384,9 @@
    "i": 14,
    "t": "text",
    "g": "g",
-   "x": 240,
+   "x": 294,
    "y": 214,
-   "w": 174,
+   "w": 120,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -407,7 +407,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Levelling strength\"\nva0.val=67<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Pull-up Time [s]\"\nva0.val=67<<8\nprint va0.val"
    }
   },
   {
@@ -417,7 +417,7 @@
    "g": "g",
    "x": 34,
    "y": 254,
-   "w": 200,
+   "w": 254,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -426,7 +426,7 @@
     "borderc": 0,
     "bco": 63752
    },
-   "txt": "Pull-up time (s)",
+   "txt": "Climb Collective [%]",
    "a": {
     "style": 0,
     "key": 255,
@@ -443,9 +443,9 @@
    "i": 16,
    "t": "text",
    "g": "g",
-   "x": 240,
+   "x": 294,
    "y": 254,
-   "w": 174,
+   "w": 120,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -466,7 +466,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Pull-up time (s)\"\nva0.val=67<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Climb Collective [%]\"\nva0.val=67<<8\nprint va0.val"
    }
   },
   {
@@ -476,7 +476,7 @@
    "g": "g",
    "x": 34,
    "y": 294,
-   "w": 200,
+   "w": 254,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -485,7 +485,7 @@
     "borderc": 0,
     "bco": 63752
    },
-   "txt": "Climb time (s)",
+   "txt": "Climb Time [s]",
    "a": {
     "style": 0,
     "key": 255,
@@ -502,9 +502,9 @@
    "i": 18,
    "t": "text",
    "g": "g",
-   "x": 240,
+   "x": 294,
    "y": 294,
-   "w": 174,
+   "w": 120,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -525,7 +525,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Climb time (s)\"\nva0.val=67<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Climb Time [s]\"\nva0.val=67<<8\nprint va0.val"
    }
   },
   {
@@ -535,7 +535,7 @@
    "g": "g",
    "x": 34,
    "y": 334,
-   "w": 200,
+   "w": 254,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -544,7 +544,7 @@
     "borderc": 0,
     "bco": 63752
    },
-   "txt": "Flip time (s)",
+   "txt": "Hover Collective [%]",
    "a": {
     "style": 0,
     "key": 255,
@@ -561,9 +561,9 @@
    "i": 20,
    "t": "text",
    "g": "g",
-   "x": 240,
+   "x": 294,
    "y": 334,
-   "w": 174,
+   "w": 120,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -584,7 +584,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Flip time (s)\"\nva0.val=67<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Hover Collective [%]\"\nva0.val=67<<8\nprint va0.val"
    }
   },
   {
@@ -594,7 +594,7 @@
    "g": "g",
    "x": 34,
    "y": 374,
-   "w": 200,
+   "w": 254,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -603,7 +603,7 @@
     "borderc": 0,
     "bco": 63752
    },
-   "txt": "Exit time (s)",
+   "txt": "Flip Fail Time [s]",
    "a": {
     "style": 0,
     "key": 255,
@@ -620,9 +620,9 @@
    "i": 22,
    "t": "text",
    "g": "g",
-   "x": 240,
+   "x": 294,
    "y": 374,
-   "w": 174,
+   "w": 120,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -643,7 +643,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Exit time (s)\"\nva0.val=67<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Flip Fail Time [s]\"\nva0.val=67<<8\nprint va0.val"
    }
   },
   {
@@ -662,7 +662,7 @@
     "borderc": 0,
     "bco": 44369
    },
-   "txt": "Pull-up collective",
+   "txt": "Exit Time [s]",
    "a": {
     "style": 0,
     "key": 255,
@@ -702,7 +702,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Pull-up collective\"\nva0.val=67<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Exit Time [s]\"\nva0.val=67<<8\nprint va0.val"
    }
   },
   {
@@ -721,7 +721,7 @@
     "borderc": 0,
     "bco": 44369
    },
-   "txt": "Climb collective",
+   "txt": "Leveling Gain",
    "a": {
     "style": 0,
     "key": 255,
@@ -761,7 +761,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Climb collective\"\nva0.val=67<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Leveling Gain\"\nva0.val=67<<8\nprint va0.val"
    }
   },
   {
@@ -780,7 +780,7 @@
     "borderc": 0,
     "bco": 44369
    },
-   "txt": "Hover collective",
+   "txt": "Flip-to-Upright Gain",
    "a": {
     "style": 0,
     "key": 255,
@@ -820,7 +820,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Hover collective\"\nva0.val=67<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Flip-to-Upright Gain\"\nva0.val=67<<8\nprint va0.val"
    }
   },
   {
@@ -839,7 +839,7 @@
     "borderc": 0,
     "bco": 44369
    },
-   "txt": "Max collective",
+   "txt": "Max Levelling Rate",
    "a": {
     "style": 0,
     "key": 255,
@@ -879,7 +879,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Max collective\"\nva0.val=67<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Max Levelling Rate\"\nva0.val=67<<8\nprint va0.val"
    }
   },
   {
@@ -898,7 +898,7 @@
     "borderc": 0,
     "bco": 44369
    },
-   "txt": "Max turn rate",
+   "txt": "Max Leveling Accel.",
    "a": {
     "style": 0,
     "key": 255,
@@ -938,71 +938,12 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Max turn rate\"\nva0.val=67<<8\nprint va0.val"
-   }
-  },
-  {
-   "n": "ltn13",
-   "i": 33,
-   "t": "text",
-   "g": "g",
-   "x": 430,
-   "y": 294,
-   "w": 236,
-   "h": 36,
-   "font": 2,
-   "sta": 1,
-   "c": {
-    "pco": 0,
-    "borderc": 0,
-    "bco": 44369
-   },
-   "txt": "Max turn accel.",
-   "a": {
-    "style": 0,
-    "key": 255,
-    "borderw": 2,
-    "xcen": 1,
-    "ycen": 1,
-    "pw": 0,
-    "txt_maxl": 20,
-    "isbr": 0
-   }
-  },
-  {
-   "n": "tn13",
-   "i": 34,
-   "t": "text",
-   "g": "g",
-   "x": 672,
-   "y": 294,
-   "w": 94,
-   "h": 36,
-   "font": 2,
-   "sta": 1,
-   "c": {
-    "pco": 0,
-    "borderc": 0,
-    "bco": 65535
-   },
-   "txt": "0",
-   "a": {
-    "style": 2,
-    "key": 2,
-    "borderw": 2,
-    "xcen": 1,
-    "ycen": 1,
-    "pw": 0,
-    "txt_maxl": 10,
-    "isbr": 0
-   },
-   "ev": {
-    "r": "keybdB.t1.txt=\"Max turn accel.\"\nva0.val=67<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Max Leveling Accel.\"\nva0.val=67<<8\nprint va0.val"
    }
   },
   {
    "n": "b3",
-   "i": 35,
+   "i": 33,
    "t": "button",
    "g": "l",
    "x": 14,
@@ -1034,7 +975,7 @@
   },
   {
    "n": "b2",
-   "i": 36,
+   "i": 34,
    "t": "button",
    "g": "l",
    "x": 408,
@@ -1050,7 +991,7 @@
     "bco": 54938,
     "pco2": 65535
    },
-   "txt": "Height ...",
+   "txt": "Height hold ...",
    "val": 0,
    "a": {
     "style": 4,
@@ -1066,7 +1007,7 @@
   },
   {
    "n": "b1",
-   "i": 37,
+   "i": 35,
    "t": "button",
    "g": "l",
    "x": 605,
@@ -1098,7 +1039,7 @@
   },
   {
    "n": "busy",
-   "i": 38,
+   "i": 36,
    "t": "text",
    "g": "l",
    "x": 40,
