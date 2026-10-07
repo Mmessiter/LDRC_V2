@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B59 07/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B60 07/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -850,6 +850,7 @@ FASTRUN void DeferLogText(const char *text, bool stamp);
 bool RxHasPipe();                             // B47: RxUpdate.h - the connected receiver can carry the Rotorflight pipe (0.9.874+)
 bool PipeJoining(char *why, size_t n);        // B47: Parameters.h - the screen is still joining the receiver: wait
 bool RfPipeBlocked(char *why, size_t n);      // B48: Parameters.h - a model is connected and the pipe is not ready: the Rotorflight pages refuse
+bool RfNeedsModel(char *why, size_t n);       // B60: Parameters.h - no model: the pages without a copy on the card refuse
 void PipeReplyFromScreen(const char *text);   // B50: PipeHttp.h - "ldrcrep <id> <code> <body>"
 void RescuePoll();                            // B50: RF_Rescue.h - each time round the loop
 void StartRescueView();

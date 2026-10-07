@@ -151,6 +151,15 @@ bool PipeJoining(char *why, size_t n)
 // B48 (Malcolm, 7 Oct: "I think we can remove the By radio fallback. I think Rotorflight editing should be entirely over
 // Bluetooth"): with a model connected, the Rotorflight pages and their writes need the pipe. Without a model they work
 // on the transmitter's own copies (the local banks), as before.
+// B60 (Malcolm: "if I try to read travel extents when not connected it seems to crash the screen"): the pages that keep
+// no copy on the card - rescue, servos, travel extents, filters - have nothing to show without a model.
+bool RfNeedsModel(char *why, size_t n)
+{
+    if (BoundFlag && ModelMatched)
+        return false;
+    snprintf(why, n, "No model is connected.\r\nThese values live in the flight controller.");
+    return true;
+}
 bool RfPipeBlocked(char *why, size_t n)
 {
     if (!BoundFlag || !ModelMatched)

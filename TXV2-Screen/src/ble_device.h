@@ -218,7 +218,7 @@ static bool bleServeNow(const std::string &method, const std::string &path, cons
     if (!bleReplyReady) { err = bleClient && bleClient->isConnected() ? "no reply in 6 s" : "the connection went"; return false; }
     out = bleLast; return true;
 }
-static void bleMailPost(const std::string &s) { if (xSemaphoreTake(bleMutex, pdMS_TO_TICKS(100)) == pdTRUE) { bleMail.push_back(s); xSemaphoreGive(bleMutex); } }
+static void bleMailPost(const std::string &s) { if (!bleMutex) bleMutex = xSemaphoreCreateMutex(); if (bleMutex && xSemaphoreTake(bleMutex, pdMS_TO_TICKS(100)) == pdTRUE) { bleMail.push_back(s); xSemaphoreGive(bleMutex); } }   // (1.11.29: before any join the mutex did not exist, and a request with no model crashed the screen)
 // The block the receiver has, told to the main board as telemetry items - only when they changed
 static void bleTellItems(const std::string &json) {
     const std::string tel = ldrc::bleItemsWord(json);          // "ldrctel 25:AABBCCDD 26:..."

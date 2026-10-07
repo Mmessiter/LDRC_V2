@@ -186,6 +186,15 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## No model, no page; and the screen no longer crashes on a request before any join (V2 B60 + screen 1.11.29, 7 Oct 2026)
+
+Malcolm: "if I try to read travel extents when not connected it seems to crash the screen." Two faults, one each
+side. The screen answered a request over the pipe that had never been joined by posting "not joined" into a mail queue
+whose lock did not exist yet (it is made when the first join starts): a crash. 1.11.29 makes the lock on first use.
+And the pages that keep no copy on the card - rescue, servos, travel extents, filters - opened with no model and asked
+anyway; B60 refuses them with "No model is connected. These values live in the flight controller." PIDs and rates still
+open without a model, on the card's copies, as before.
+
 ## A question's page takes the fields away (V2 B59, 7 Oct 2026)
 
 Malcolm, testing Travel extents: "I edited collective pitch limit. It wrote zero." The travel Save asked "are you

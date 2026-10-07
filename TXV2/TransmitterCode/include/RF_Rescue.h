@@ -307,7 +307,7 @@ static void RescueRead()
 void StartRescueView()
 {
     char why[120];
-    if (ModelSeemsArmed(why, sizeof(why)) || RfPipeBlocked(why, sizeof(why)))
+    if (RfNeedsModel(why, sizeof(why)) || ModelSeemsArmed(why, sizeof(why)) || RfPipeBlocked(why, sizeof(why)))
     {
         PlaySound(WHAHWHAHMSG);
         MsgBox((char *)"page RFView", why);
