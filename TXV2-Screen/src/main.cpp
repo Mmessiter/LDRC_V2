@@ -32,6 +32,8 @@
 #include <Preferences.h>
 #include <esp_log.h>
 #include <esp_system.h>
+#include <esp_core_dump.h>
+#include <esp_partition.h>
 
 #ifndef NEXTION_BAUD
 #define NEXTION_BAUD 921600
@@ -39,7 +41,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.14"
+#define SCREEN_VERSION "1.11.15"
 #endif
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
 constexpr int SD_MOSI = 11, SD_MISO = 13, SD_CLK = 12, SD_CS = 10;
@@ -519,6 +521,22 @@ static int sysLogHook(const char *fmt, va_list ap) {
 static std::string sysLine(uint32_t i) { char b[112]; portENTER_CRITICAL(&sysMux); strlcpy(b, sysLines[i % SYS_LINES], sizeof(b)); portEXIT_CRITICAL(&sysMux); return b; }
 static std::string sysText() { std::string out; const uint32_t n = sysN; for (uint32_t i = n > SYS_LINES ? n - SYS_LINES : 0; i < n; ++i) { out += sysLine(i); out += "\n"; } return out; }
 static std::string sysLast() { const uint32_t n = sysN; return n ? sysLine(n - 1) : std::string(); }
+// 1.11.15 (Malcolm, 7 Oct: "the tx screen went blank for a moment, and I think it rebooted" - rst said 4, a panic): the
+// core dump the chip keeps in its flash after a crash, summarised: the task, the cause, the program counter and the
+// backtrace, to be read against the firmware's ELF (dev/out/elf/screen-<version>.elf, kept by the release tool).
+static std::string crashJson() {
+    esp_core_dump_summary_t *sm = (esp_core_dump_summary_t *) malloc(sizeof(esp_core_dump_summary_t));
+    if (!sm) return "null";
+    std::string out = "null";
+    if (esp_core_dump_image_check() == ESP_OK && esp_core_dump_get_summary(sm) == ESP_OK) {
+        char b[160]; snprintf(b, sizeof b, "{\"task\":\"%.15s\",\"pc\":\"0x%08lx\",\"cause\":%lu,\"vaddr\":\"0x%08lx\",\"depth\":%lu,\"corrupt\":%s,\"bt\":[", sm->exc_task, (unsigned long) sm->exc_pc, (unsigned long) sm->ex_info.exc_cause, (unsigned long) sm->ex_info.exc_vaddr, (unsigned long) sm->exc_bt_info.depth, sm->exc_bt_info.corrupted ? "true" : "false");
+        out = b;
+        for (uint32_t i = 0; i < sm->exc_bt_info.depth && i < 16; ++i) { snprintf(b, sizeof b, "%s\"0x%08lx\"", i ? "," : "", (unsigned long) sm->exc_bt_info.bt[i]); out += b; }
+        out += "]}";
+    }
+    free(sm);
+    return out;
+}
 // The lines logged since `mark` (a value of sysN), their "E (12345) " prefixes dropped, joined with "; ": the reason the
 // system's own code gives when something of ours fails.
 static std::string sysSince(uint32_t mark) {
@@ -1848,6 +1866,7 @@ static void webBegin() {
         out += ",\"rst\":" + std::to_string((int) esp_reset_reason());   // (1.11.7) why we last started: 1 power, 3 our own restart, 4 panic, 5/6/7 watchdogs, 9 brown-out
         out += ",\"stack\":{\"loop\":" + std::to_string((unsigned) uxTaskGetStackHighWaterMark(NULL)) + ",\"ble\":" + std::to_string(bleStackSpare()) + "}";   // (1.11.8) the least each task's stack has ever had to spare, in bytes
         out += ",\"largest\":" + std::to_string((unsigned) ESP.getMaxAllocHeap()) + ",\"rssi\":" + std::to_string((int) WiFi.RSSI());   // (1.11.11) the largest piece of free memory (a TLS connection wants ~45 kB), and the WiFi signal
+        out += ",\"crash\":" + crashJson();                     // (1.11.15) the last crash's summary from the core dump in flash, if there is one
         { std::string l = sysLast(); for (size_t i = 0; i < l.size(); ++i) if (l[i] == '"' || l[i] == '\\') l[i] = '\''; out += ",\"sys\":\"" + l + "\"}"; }   // (1.11.5) the system's last error line
         web.send(200, "application/json", out.c_str());
     });
@@ -1904,6 +1923,13 @@ static void webBegin() {
         web.send(200, "text/plain", "ok");
     });
     doorOn("/bootlog", HTTP_GET, []() { web.send(200, "text/plain", bootLog.c_str()); });
+    doorOn("/coredump", HTTP_GET, []() {                   // (1.11.15) the whole core dump partition, for espcoredump on the Mac
+        const esp_partition_t *p = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_COREDUMP, NULL);
+        if (!p) { web.send(404, "text/plain", "no core dump partition"); return; }
+        web.setContentLength(p->size); web.send(200, "application/octet-stream", "");
+        static uint8_t buf[1024];
+        for (uint32_t at = 0; at < p->size; at += sizeof buf) { if (esp_partition_read(p, at, buf, sizeof buf) != ESP_OK) break; web.sendContent((const char *) buf, sizeof buf); }
+    });
     doorOn("/kept", HTTP_GET, []() {                    // /kept[?page=Name]: the values that outlive a page, as the screen holds them (a workshop look)
         const std::string want = web.hasArg("page") ? std::string(web.arg("page").c_str()) + "." : std::string();
         std::string out = "page now: " + page.name + "\n";

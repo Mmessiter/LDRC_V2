@@ -94,6 +94,12 @@ def screen_firmware(build):
     if version != m.group(1): sys.exit(f'the screen firmware that is built is {version}, the source says {m.group(1)}: build it (leave out --no-build)')
     if b[0] != 0xE9: sys.exit('the screen firmware is not an ESP32 image')
     if len(b) > 0x1E0000: sys.exit('the screen firmware is too big for its half of the flash')
+    # The ELF of every screen build that is staged, for reading a crash's core dump against (screen 1.11.15: /status "crash",
+    # /coredump): dev/out/elf/screen-<version>.elf
+    elf = os.path.join(CLEAN, '.pio', 'build', 'ota', 'firmware.elf')
+    if os.path.exists(elf):
+        keep = os.path.join(HERE, 'out', 'elf'); os.makedirs(keep, exist_ok=True)
+        shutil.copy2(elf, os.path.join(keep, f'screen-{version}.elf'))
     return b, version
 
 def teensy_files():

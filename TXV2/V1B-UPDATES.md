@@ -186,6 +186,25 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## A goodbye that arrives; the crash kept for reading (screen 1.11.15, 7 Oct 2026)
+
+Malcolm, with B49: "If it tries to join while it's on the Bluetooth screen, it takes a long time. But if I allow it to
+join before we get to that screen, it's much quicker." And: "While changing screens, the tx screen went blank for a
+moment, and I think it rebooted."
+
+**The slow joins.** The receiver's events showed every parting as a timeout ("disconnected (reason 0x08)"), never a
+goodbye, although 1.11.9 meant to say one: the screen waited for its link to stop being "connected", which happens the
+moment a goodbye is ASKED for, long before it has gone out on the air, and then took its Bluetooth down. A receiver that
+has not yet noticed the old link refuses the new one until its timeout runs out, several seconds; a join begun in that
+time hung for fifteen seconds and failed. Now the screen waits for the disconnect event itself (up to 1.5 s) before its
+Bluetooth goes down, and the timeline says "goodbye said". Also: a second "on" from the main board while a join is under
+way is left alone; a dead connection attempt is given up after about eight seconds, not fifteen, and the scan runs again.
+
+**The reboot.** `/status` said rst 4: a crash, and the chip keeps a core dump of a crash in its flash. `/status` now
+carries its summary (the task, the cause, the program counter, the backtrace) under "crash", and `/coredump` (door)
+gives the whole dump for espcoredump on the Mac. The release tool keeps each screen firmware's ELF in dev/out/elf for
+the reading. The crash itself is not yet found: its dump is in the screen's flash, readable once this is installed.
+
 ## The join begins on Model setup, and ends the moment the receiver is heard (V2 B49 + screen 1.11.14, 7 Oct 2026)
 
 Malcolm: "when safety is on, we could quietly try to connect Bluetooth in the background so that the connection banner
