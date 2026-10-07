@@ -186,6 +186,16 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## A clock that does not answer says what the bus answered (V2 B62, 7 Oct 2026)
+
+Malcolm's second transmitter: "I cannot get the real-time clock to work ... four different ones so far". The Reset
+clock button (SetDS1307ToCompilerTime: the build's date and time written, which also starts the chip's oscillator) is
+the same code the first transmitter used, so four modules that all stay silent point at the board, not the chips or
+the reset. B62 makes the power-on message place the fault: the start-up I2C scan now keeps the addresses that
+answered, and "The clock does not answer" says either "Nothing answers on the I2C bus: check 5 V to the module, SDA to
+pin 18, SCL to pin 19, and its pull-up resistors" or "On the I2C bus: 0x50 0x57" (the module's memory chips answer,
+its clock at 0x68 does not). A DS1307 fed 3.3 V instead of 5 V keeps time on its battery but never answers on I2C.
+
 ## An update that could not connect, part two: the update itself was eating the memory (screen 1.11.32, 7 Oct 2026)
 
 1.11.31 was not enough: switched off and on, the transmitter failed the same way, this time with "largest 32756".

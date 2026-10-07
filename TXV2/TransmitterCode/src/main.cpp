@@ -611,15 +611,18 @@ void ResetSwitchNumbers()
 
 /*********************************************************************************************************************************/
 
+char I2cSeen[48] = "";   // B62: the addresses that answered at power-on ("0x50 0x68"), for the clock's message
 FLASHMEM void ScanI2c()
 {
     int ii;
     USE_INA219 = false;
+    I2cSeen[0] = 0;
     for (ii = 1; ii < 127; ++ii)
     {
         Wire.beginTransmission(ii);
         if (Wire.endTransmission() == 0)
         {
+            if (strlen(I2cSeen) < sizeof(I2cSeen) - 6) { char b[8]; snprintf(b, sizeof(b), "%s0x%02X", I2cSeen[0] ? " " : "", ii); strcat(I2cSeen, b); }
 #ifdef DB_SENSORS
             Serial.print(ii, HEX); // in case new one shows up
             Serial.print("   ");
@@ -1087,7 +1090,12 @@ FLASHMEM void setup()
     RedLedOn();
     if (ClockRecovered || ClockDead)
     { // V2 B30: say so once (the time is put right by itself from WiFi, or from a phone through the receiver)
-        MsgBox(pFrontView, ClockDead ? (char *)"The clock does not answer.\r\n\r\nThe time will be wrong until it does.\r\nIt is set by itself from WiFi,\r\nor from a phone." : (char *)"The clock had stopped answering\r\nand was started again.\r\n\r\nThe time is put right by itself\r\nfrom WiFi, or from a phone.");
+        // B62 (a second transmitter whose clock never answered, 7 Oct): the message says what the I2C bus answered, so the
+        // fault is placed - nothing at all (power, SDA 18, SCL 19, pull-ups) or the module's memory (0x50) but not its clock (0x68)
+        char dead[200];
+        if (!I2cSeen[0]) snprintf(dead, sizeof(dead), "The clock does not answer.\r\nNothing answers on the I2C bus:\r\ncheck 5 V to the module, SDA to pin 18,\r\nSCL to pin 19, and its pull-up resistors.");
+        else snprintf(dead, sizeof(dead), "The clock does not answer (0x68).\r\nOn the I2C bus: %s.\r\nThe time is set from WiFi or a phone\r\nuntil it does.", I2cSeen);
+        MsgBox(pFrontView, ClockDead ? dead : (char *)"The clock had stopped answering\r\nand was started again.\r\n\r\nThe time is put right by itself\r\nfrom WiFi, or from a phone.");
         GotoFrontView();
     }
     TXBuildAge = GetBuildDaysSince2020(); // days since 1st Jan 2020 for this build
