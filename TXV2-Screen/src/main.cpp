@@ -42,7 +42,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.32"
+#define SCREEN_VERSION "1.11.33"
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room
 #endif
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -2137,6 +2137,35 @@ static void webBegin() {
     doorOn("/radios", HTTP_POST, []() { const bool on = web.arg("on") != "0"; web.send(200, "text/plain", on ? "on" : "off"); delay(50); setRadios(on); });
     doorOn("/nodraw", HTTP_POST, []() { noDraw = web.arg("on") == "1"; web.send(200, "text/plain", noDraw ? "drawing off" : "drawing on"); });
     doorOn("/reboot", HTTP_POST, []() { web.send(200, "text/plain", "rebooting"); delay(100); ESP.restart(); });
+    // (1.11.33) The pilot's look, to copy from one transmitter to another: the six defined screens and the one in use, the
+    // themes, the background. GET gives it as key=value lines; POST the same lines back on the other screen, which keeps
+    // them and restarts to show them (Malcolm, 7 Oct: "copy all defined screens so that I need not set them all up again").
+    static const char *LOOK_KEYS[] = { "theme", "flight", "flight2", "flight3", "flight4", "flight5", "flight6" };
+    doorOn("/look", HTTP_GET, []() {
+        std::string out;
+        for (const char *k : LOOK_KEYS) out += std::string(k) + "=" + prefs.getString(k, "").c_str() + "\n";
+        out += "flightSlot=" + std::to_string(prefs.getInt("flightSlot", 0)) + "\n";
+        out += "bg=" + std::to_string(prefs.getInt("bg", 1)) + "\n";
+        web.send(200, "text/plain", out.c_str());
+    });
+    doorOn("/look", HTTP_POST, []() {
+        const std::string body = web.arg("plain").c_str();
+        int kept = 0; size_t at = 0;
+        while (at < body.size()) {
+            size_t nl = body.find('\n', at); if (nl == std::string::npos) nl = body.size();
+            std::string line = body.substr(at, nl - at); at = nl + 1;
+            if (!line.empty() && line.back() == '\r') line.pop_back();
+            const size_t eq = line.find('='); if (eq == std::string::npos) continue;
+            const std::string key = line.substr(0, eq), val = line.substr(eq + 1);
+            bool known = false; for (const char *k : LOOK_KEYS) if (key == k) known = true;
+            if (known) { if (val.empty()) { if (prefs.isKey(key.c_str())) prefs.remove(key.c_str()); } else prefs.putString(key.c_str(), val.c_str()); ++kept; }
+            else if (key == "flightSlot" || key == "bg") { prefs.putInt(key.c_str(), atoi(val.c_str())); ++kept; }
+        }
+        if (!kept) { web.send(400, "text/plain", "nothing I know in that"); return; }
+        web.send(200, "text/plain", (std::to_string(kept) + " settings kept; restarting to show them").c_str());
+        blog("look", std::to_string(kept) + " settings came from another transmitter");
+        delay(200); ESP.restart();
+    });
     doorOn("/door", HTTP_POST, []() {                   // /door?on=1 : open on the network we are on, and remembered; /door?on=0 : shut (and this was the last request to be answered)
         const bool on = web.arg("on") != "0";
         if (!doorSet(on)) { web.send(409, "text/plain", "not on a network"); return; }

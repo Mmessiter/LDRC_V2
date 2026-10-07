@@ -186,6 +186,18 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The front screen you left is the one that comes back; the look can be copied (screen 1.11.33, 7 Oct 2026)
+
+Malcolm: "if I turn off the transmitter with the original front screen in view, when I turn it on again I get a defined
+screen." The choice (Original / Defined) is stored with each defined screen's definition; at start-up the six were
+loaded and then the slot in use was switched to, carrying the choice along as a change of slot does - which at
+start-up was slot 1's old choice, not the stored choice of the slot in use. 1.11.33 starts with the slot in use and
+its own stored choice, and stores the choice of the moment in every slot, so they agree (test_flight: 14 more checks).
+
+And the first step of "copy all defined screens" to a second transmitter: with the workshop door open, GET /look
+gives the six defined screens, the one in use, the themes and the background as lines; POST /look the same lines on
+the other screen and it keeps them and restarts. A button for the pilot (no Mac) can follow.
+
 ## Send waits for Receive (V2 B64, 7 Oct 2026)
 
 The first model exchange between two Version 2 transmitters (Malcolm, 7 Oct: a model sent to the new one, flown at

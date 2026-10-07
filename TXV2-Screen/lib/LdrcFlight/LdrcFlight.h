@@ -164,6 +164,12 @@ public:
     const FlightConfig &slotConfig(int k) const { return k == slotNo ? cfg : slots[k < 0 || k >= FLIGHT_SLOTS ? 0 : k]; }
     bool loadSlot(int k, const std::string &s);        // a stored definition into slot k (the one in use included)
     void setSlotInUse(int k) { if (k >= 0 && k < FLIGHT_SLOTS && k != slotNo) { slots[slotNo] = cfg; const uint8_t m = cfg.manual; slotNo = k; cfg = slots[k]; cfg.manual = m; } }   // (at start-up: no "saved")
+    // At start-up, once every slot is loaded: the slot in use, with ITS stored choice of the moment (Original / Defined).
+    // setSlotInUse carries the choice along, right while the pilot changes slot, but at start-up that was slot 1's old
+    // choice: a transmitter switched off on the original screen came back on a defined one (Malcolm, 7 Oct 2026; 1.11.33).
+    void startWithSlot(int k) { if (k >= 0 && k < FLIGHT_SLOTS && k != slotNo) { slots[slotNo] = cfg; slotNo = k; cfg = slots[k]; } }
+    // Every slot as it is to be stored: each carries the choice of the moment, so that whichever is read first agrees
+    std::string slotToStore(int k) const { FlightConfig c = slotConfig(k); c.manual = cfg.manual; return c.save(); }
     uint16_t themeFace = 0x114A, themeInk = 0xFFFF;    // the screens' theme (the Themes page's): what a box follows
     uint16_t palPanels[THEME_COUNT], palInks[THEME_COUNT];   // the twelve themes on offer (set by the screen; as they came until then)
     FlightScreen();

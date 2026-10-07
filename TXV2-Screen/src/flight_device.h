@@ -22,11 +22,11 @@ static void flightLoad() {
         const std::string s = prefs.getString(flightKey(k).c_str(), "").c_str();
         if (!s.empty() && !flight.loadSlot(k, s)) blog("flight", "setting not understood: " + s);
     }
-    flight.setSlotInUse(prefs.getInt("flightSlot", 0));
+    flight.startWithSlot(prefs.getInt("flightSlot", 0));      // (1.11.33: with its own stored Original / Defined choice)
 }
 static void flightStore() {
     for (int k = 0; k < ldrc::FlightScreen::FLIGHT_SLOTS; ++k) {
-        const std::string s = flight.slotConfig(k).save();
+        const std::string s = flight.slotToStore(k);
         if (std::string(prefs.getString(flightKey(k).c_str(), "").c_str()) != s) prefs.putString(flightKey(k).c_str(), s.c_str());
     }
     if (prefs.getInt("flightSlot", 0) != flight.slotInUse()) prefs.putInt("flightSlot", flight.slotInUse());
