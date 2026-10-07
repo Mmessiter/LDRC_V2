@@ -107,7 +107,13 @@ static bool bleJoin() {                                        // in the task: s
     return false;
 }
 static void bleLeave() {
-    if (bleClient) { if (bleClient->isConnected()) bleClient->disconnect(); NimBLEDevice::deleteClient(bleClient); bleClient = nullptr; }
+    if (bleClient) {
+        if (bleClient->isConnected()) {                        // 1.11.9: say goodbye and let it go out, so the receiver logs a disconnect, not a timeout (its log: "reason 0x08"), and advertises again at once
+            bleClient->disconnect();
+            for (int i = 0; i < 30 && bleClient->isConnected(); ++i) vTaskDelay(pdMS_TO_TICKS(10));
+        }
+        NimBLEDevice::deleteClient(bleClient); bleClient = nullptr;
+    }
     bleReqChr = bleRespChr = nullptr; bleJoined.clear(); bleMtu = 0;
 }
 static void bleServe() {                                       // in the task: one request, written in frames; the reply comes by notification
@@ -153,7 +159,10 @@ static void bleTxServe() {                                     // in the task: t
             int id = atoi(words.c_str()); const char *c = strchr(words.c_str(), ','); const int w1 = c ? atoi(c + 1) : 0; const char *c2 = c ? strchr(c + 1, ',') : nullptr; const int w2 = c2 ? atoi(c2 + 1) : 0;
             if (w1 == 321 && (id == 9 || id == 12 || id == 15 || id == 18 || id == 27 || id == 28)) { blePollUntil = millis() + (uint32_t) std::min(std::max(w2, 1000), 15000); bleTelLast.clear(); }   // "send me the block": watch it
             bleTellItems(r.body);
-        } else { bleWhy = "the receiver refused a parameter (" + (err.empty() ? std::to_string(r.code) : err) + ")"; bleMailPost("ldrcpipe=3"); blePollUntil = 0; }
+        } else if (err.empty()) {                              // 1.11.9: the receiver answered, but not 200 (one bad packet): noted for /status, the pipe stays
+            bleWhy = "the receiver refused a parameter (" + std::to_string(r.code) + "): " + words.substr(0, 40);
+            blog("ble", bleWhy);
+        } else { bleWhy = "the receiver refused a parameter (" + err + ")"; bleMailPost("ldrcpipe=3"); blePollUntil = 0; }   // no answer at all, or the link went: the main board goes back to the radio link
         return;
     }
     if (blePollUntil && (int32_t) (millis() - blePollUntil) < 0 && millis() - blePollLast > 200) {
@@ -203,7 +212,12 @@ static void blePoll() {
 // nearest), "ldrcpipe off", and "ldrctx 12,321,5000,0,0,0,0,0,0,0,0,0" (a parameter packet, as words)
 static void blePipeCommand(const std::string &a) {
     blog("ble", "from the main board: pipe " + a);
-    if (a.rfind("on", 0) == 0) { bleWantMac = bleUpper(a.size() > 3 ? a.substr(3) : ""); bleTarget.clear(); bleTelLast.clear(); if (tx.armed) return; bleStartTask(); bleOrder = 1; }
+    if (a.rfind("on", 0) == 0) {
+        bleWantMac = bleUpper(a.size() > 3 ? a.substr(3) : ""); bleTarget.clear(); bleTelLast.clear();
+        if (tx.armed) return;
+        if (bleState == BLE_READY) { blePipeTold = -1; return; }   // 1.11.9: already joined (the menu was re-entered from one of its pages): say so again, or the main board waits on "joining"
+        bleStartTask(); bleOrder = 1;
+    }
     else if (a == "off") { bleOrder = 2; blePollUntil = 0; if (bleMutex && xSemaphoreTake(bleMutex, pdMS_TO_TICKS(5)) == pdTRUE) { bleTxQueue.clear(); xSemaphoreGive(bleMutex); } }
 }
 static void bleTxCommand(const std::string &words) {

@@ -186,6 +186,17 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Rotorflight over Bluetooth WORKS; three blemishes tidied (screen 1.11.9, 7 Oct 2026)
+
+Malcolm, early, on the footstool with receiver 0.9.876 and B46: "It seems to be working!" The receiver's events agreed:
+the transmitter's ask arrived, Bluetooth stayed up ("staying up while disarmed"), the screen joined, and rates, PIDs,
+governor profile and governor config were all read over the pipe. The transmitter's menu said Rotorflight 2.3 again.
+
+Tidied in **1.11.9**: a parameter the receiver refuses (one 400 was seen; which one, the status now says) no longer ends
+the pipe, only no answer at all does; "ldrcpipe on" while already joined (the menu re-entered from one of its pages)
+makes the screen say "ready" again instead of leaving the menu on "Bluetooth: joining"; and leaving the pages now says a
+proper goodbye to the receiver (its log had "disconnected (reason 0x08)", a timeout) so it advertises again at once.
+
 ## A failed Rotorflight enquiry no longer un-Rotorflights a model (V2 B46, 6 Oct 2026, late)
 
 Malcolm: "the tx enquires about Rotorflight as soon as they connect and if it fails then it assumes no Rotorflight -
