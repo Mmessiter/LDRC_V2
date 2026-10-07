@@ -186,6 +186,14 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Gyro filters (V2 B58 + screen 1.11.28, 7 Oct 2026)
+
+The eighth button, "Filters ...", and one page with the configurator's Gyro Filters names (RF_Filters.h; page FilterView,
+hmi/filter_pages.py; help FILTERS.TXT), as the receiver's filters page reads them (MSP 92 / 93, 27 bytes, read-modify-
+write): Lowpass 1 and 2 type (tap: PT1, PT2, PT3, 1st order, Butterworth, Bessel, Damped) and cutoff [Hz], RPM filter
+preset (tap: Custom, Low vib., Normal, High vib.) and min [Hz], Notch 1 and 2 center and cutoff [Hz], the dynamic notches'
+count, Q, min and max [Hz]. Save writes 93, stores, reads back. Not per bank. Untested on hardware as written.
+
 ## Travel extents (V2 B57 + screen 1.11.27, 7 Oct 2026)
 
 The seventh button, "Travel extents ...", and two pages with the configurator's Mixer tab's names (RF_Travel.h; pages

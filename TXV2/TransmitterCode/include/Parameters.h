@@ -56,6 +56,7 @@ bool PipePageShowing()
     case RFSETUPVIEW:
     case TRAVELVIEW:
     case TRAVEL2VIEW:
+    case FILTERVIEW:
         return true;
     default:
         return false;

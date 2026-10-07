@@ -1,0 +1,11 @@
+Gyro filters: Rotorflight's filtering of the gyro signal, as the configurator's Gyro Filters have it. It needs a Version 2 receiver with Bluetooth, the safety on and the model disarmed. Not per bank; a save takes effect at once.||
+
+Lowpass 1 and 2: the type (PT1, PT2, PT3, 1st order, Butterworth, Bessel, Damped; tap to change) and the cutoff in Hz (0 = off, up to 1000). Lowpass 1 takes the fizz off the gyro; Rotorflight advises not below 60 Hz. Lowpass 2 is a second, gentler stage, off on most helicopters.||
+
+Notch 1 and 2: a notch at one fixed frequency, for a vibration that stays put whatever the head speed: the center and the cutoff in Hz (0 = off).||
+
+Dyn notch count (0 to 8, 0 = off), Q (10 to 100, higher = narrower), min and max [Hz]: notches that hunt for the strongest vibration by themselves, within that range.||
+
+RPM filter preset: Custom (as set in the configurator), Low vib., Normal or High vib.; tap to change. It follows the head speed and needs a head-speed signal. RPM filter min [Hz]: below this the rotor-speed notches stand down, so the spool-up is not filtered.||
+
+Press a number to type a new one. Save writes to the flight controller, stores there, and reads back. OK leaves; if something was edited and not saved, it asks.||
