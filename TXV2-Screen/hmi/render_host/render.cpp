@@ -12,6 +12,7 @@ std::string sdRoot; SDClass SD; SerialStub Serial;
 #include "NextionScript.h"
 #include "nextion_fonts.h"
 #include "LdrcTheme.h"
+#include "tooth_icon.h"                                  // (1.11.17) the Rotorflight menu's blue tooth
 constexpr int W = 800, H = 480;
 static Gfx gfxObj; static Gfx *gfx = &gfxObj;
 static uint16_t *fbNow = nullptr, *screenFb = nullptr, *pageFb = nullptr;

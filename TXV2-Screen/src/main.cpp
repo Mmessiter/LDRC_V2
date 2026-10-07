@@ -33,6 +33,7 @@
 #include <esp_log.h>
 #include <esp_system.h>
 #include <esp_core_dump.h>
+#include "tooth_icon.h"
 #include <esp_partition.h>
 
 #ifndef NEXTION_BAUD
@@ -41,7 +42,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.16"
+#define SCREEN_VERSION "1.11.17"
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room
 #endif
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -860,6 +861,19 @@ static void drawComp(Comp &c) {
     if (t == "text" || t == "number" || t == "combobox") {
         if (c.sta == 1) gfx->fillRect(c.x, c.y, c.w, c.h, c.bco); else restoreUnder(c);
         drawFrame(c, c.bco, false);
+        if (t == "text" && page.id == 8 && c.name == "pipe" && c.txt == "By Bluetooth") {   // 1.11.17 (Malcolm: "remove By Bluetooth and replace it with the little icon ... of a tooth which happens to be blue"): the tooth, at the right, blended on the box's colour
+            const int ox = c.x + c.w - TOOTH_W - 4, oy = c.y + (c.h - TOOTH_H) / 2;
+            const uint16_t bg = c.sta == 1 ? (uint16_t) c.bco : (uint16_t) page.bgColor;
+            gfx->startWrite();
+            for (int yy = 0; yy < TOOTH_H; ++yy) for (int xx = 0; xx < TOOTH_W; ++xx) {
+                const int i = yy * TOOTH_W + xx; const int a = TOOTH_A[i]; if (!a) continue;
+                const uint16_t f = TOOTH_RGB[i];
+                const int r = ((f >> 11) * a + (bg >> 11) * (255 - a)) / 255, g = (((f >> 5) & 63) * a + ((bg >> 5) & 63) * (255 - a)) / 255, b = ((f & 31) * a + (bg & 31) * (255 - a)) / 255;
+                gfx->writePixel(ox + xx, oy + yy, (uint16_t) ((r << 11) | (g << 5) | b));
+            }
+            gfx->endWrite();
+            return;
+        }
         std::string s;
         if (t == "number") { char b[16]; if (c.lenth > 0) snprintf(b, sizeof(b), "%0*ld", c.lenth, (long) c.val); else snprintf(b, sizeof(b), "%ld", (long) c.val); s = b; }   // (one format string with two arguments printed the digit count — every free-length number read 0)
         else if (t == "combobox") s = (c.val >= 0 && c.val < (int) c.options.size()) ? c.options[c.val] : c.txt;

@@ -186,6 +186,15 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The blue tooth (screen 1.11.17, 7 Oct 2026)
+
+Malcolm: "I wonder if we might remove By Bluetooth and replace it with the little icon we created a few days ago of a
+tooth which happens to be blue!" His own Genmoji molar, the Bluetooth badge of the receiver's pages (RXV2 data/app.js,
+15 August), cut from its PNG and scaled to 31 x 40 (src/tooth_icon.h: RGB565 and an alpha, 3.7 kB), is drawn at the
+right of the Rotorflight menu's line in place of the words, blended on the panel's colour. The other states keep their
+words: "Connecting Bluetooth: wait", "No Bluetooth", "Bluetooth: not joined". (The Mac renderer learnt the door and the
+pipe as stubs on the way; it had not built since 1.11.4.)
+
 ## The crash, read and fixed (screen 1.11.16, 7 Oct 2026)
 
 Malcolm: "the screen crash happens when going to the model screen and probably while attempting to connect." The core

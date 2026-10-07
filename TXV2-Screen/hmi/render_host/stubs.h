@@ -14,3 +14,7 @@ static void rtcGlobalNote(const std::string &, int32_t) {}            // (1.9.7:
 static char rtcPage[24]; static uint32_t rtcMagic = 0; static char rtcPicture[40]; static uint32_t rtcPictureMagic = 0;
 static void delay(uint32_t) {}
 static void flushOut();
+// (1.11.17) the workshop door and the Bluetooth pipe: the renderer draws, it does not talk
+static void doorToggle() {}
+static void blePipeCommand(const std::string &) {}
+static void bleTxCommand(const std::string &) {}
