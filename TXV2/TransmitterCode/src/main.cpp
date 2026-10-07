@@ -639,6 +639,27 @@ FLASHMEM void ScanI2c()
 }
 
 /*********************************************************************************************************************************/
+// V2 B30: a clock that did not answer at power-on is said once. B62 (a second transmitter whose clock never answered,
+// 7 Oct): the message says what the I2C bus answered, so the fault is placed - nothing at all (power, SDA 18, SCL 19,
+// pull-ups) or the module's memory (0x50, 0x57) but not its clock (0x68). B63: NOT while new firmware is on trial. The
+// box waits for OK, and the trial counts only the main loop's running (FwTrialTick): the screen's updater waited for
+// the confirmation that could not come, and called a good update failed. Said once the trial is over instead.
+bool ClockMessagePending = false;
+void ClockMessageTick()
+{
+    static bool asked = false;
+    char pFront[] = "page FrontView";
+    if (!asked) { asked = true; ClockMessagePending = ClockRecovered || ClockDead; }
+    if (!ClockMessagePending || FwTrialRunning || CurrentView != FRONTVIEW || ModelMatched)
+        return;
+    ClockMessagePending = false;
+    char dead[200];
+    if (!I2cSeen[0]) snprintf(dead, sizeof(dead), "The clock does not answer.\r\nNothing answers on the I2C bus:\r\ncheck 5 V to the module, SDA to pin 18,\r\nSCL to pin 19, and its pull-up resistors.");
+    else snprintf(dead, sizeof(dead), "The clock does not answer (0x68).\r\nOn the I2C bus: %s.\r\nThe time is set from WiFi or a phone\r\nuntil it does.", I2cSeen);
+    MsgBox(pFront, ClockDead ? dead : (char *)"The clock had stopped answering\r\nand was started again.\r\n\r\nThe time is put right by itself\r\nfrom WiFi, or from a phone.");
+    GotoFrontView();
+}
+/*********************************************************************************************************************************/
 
 void UpdateModelsNameEveryWhere()
 {
@@ -1088,16 +1109,7 @@ FLASHMEM void setup()
     DelayWithDog(500);
     GotoFrontView();
     RedLedOn();
-    if (ClockRecovered || ClockDead)
-    { // V2 B30: say so once (the time is put right by itself from WiFi, or from a phone through the receiver)
-        // B62 (a second transmitter whose clock never answered, 7 Oct): the message says what the I2C bus answered, so the
-        // fault is placed - nothing at all (power, SDA 18, SCL 19, pull-ups) or the module's memory (0x50) but not its clock (0x68)
-        char dead[200];
-        if (!I2cSeen[0]) snprintf(dead, sizeof(dead), "The clock does not answer.\r\nNothing answers on the I2C bus:\r\ncheck 5 V to the module, SDA to pin 18,\r\nSCL to pin 19, and its pull-up resistors.");
-        else snprintf(dead, sizeof(dead), "The clock does not answer (0x68).\r\nOn the I2C bus: %s.\r\nThe time is set from WiFi or a phone\r\nuntil it does.", I2cSeen);
-        MsgBox(pFrontView, ClockDead ? dead : (char *)"The clock had stopped answering\r\nand was started again.\r\n\r\nThe time is put right by itself\r\nfrom WiFi, or from a phone.");
-        GotoFrontView();
-    }
+    ClockMessageTick(); // V2 B30/B62/B63: a clock that did not answer, said once - but not while new firmware is on trial (below)
     TXBuildAge = GetBuildDaysSince2020(); // days since 1st Jan 2020 for this build
     Look(BUILD_ID_STR);
     Look(TXBuildAge);
@@ -4894,6 +4906,7 @@ void FASTRUN ManageTransmitter()
         TellScreen(true);          // V1B: motor enabled? armed? a model connected? - once a second, whatever page is showing
         TellScreenRx();            // V1B: the receiver's release number, and how its update is going (RxUpdate.h)
         PipeTick();                // B44: the Rotorflight menu's ask for the receiver's Bluetooth, renewed (Parameters.h)
+        ClockMessageTick();        // B63: the clock's word, once a trial is over
         LastTimeRead = millis();   // Reset this timer
         return;                    // That's enough housekeeping for this time around
     }

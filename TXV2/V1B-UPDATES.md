@@ -186,6 +186,15 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## A good update called failed by the clock's message (V2 B63, 7 Oct 2026)
+
+On the second transmitter the B62 update ended "Update failed ... the new firmware is still on trial: it has not yet run
+for 30 seconds without restarting", yet B62 was in and ran. The clock's "does not answer" box comes up at power-on and
+waits for OK, and the trial counts only the main loop's running (a firmware that merely answers the screen must not
+pass): with the box waiting, the trial could not finish, the screen gave up, and called it failed; OK pressed, the
+main loop ran and B62 confirmed itself. B63 holds the clock's message back while firmware is on trial, and says it on
+the front page once the trial is over (or at once, as before, when there is no trial).
+
 ## A clock that does not answer says what the bus answered (V2 B62, 7 Oct 2026)
 
 Malcolm's second transmitter: "I cannot get the real-time clock to work ... four different ones so far". The Reset
