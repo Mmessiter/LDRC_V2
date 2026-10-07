@@ -67,6 +67,7 @@ static void FltGather()
     FltWant[25] = (uint8_t)FltPreset;
     FltWant[26] = (uint8_t)FieldNumber("tn13", 1, 255);
 }
+static void FltHead();
 static void FltFail(const char *what)
 {
     char msg[180];
@@ -75,6 +76,7 @@ static void FltFail(const char *what)
     FltBusy("");
     PlaySound(WHAHWHAHMSG);
     MsgBox((char *)"page FilterView", msg);
+    FltHead();
     FltShow();
 }
 static void FltRead()
@@ -149,10 +151,21 @@ void StartFilterView()
     Flt_Was_Edited = false;
     FltRead();
 }
+static void FltHead()
+{
+    SendText((char *)"t11", ModelName);
+    char b[16];
+    snprintf(b, sizeof(b), "Bank %d", Bank);
+    SendText((char *)"t9", b);
+    SendCommand((char *)(Flt_Was_Edited ? "vis b3,1" : "vis b3,0"));
+}
 void EndFilterView()
 {
-    if (Flt_Was_Edited && !GetConfirmation((char *)"page FilterView", (char *)"Discard the edited filter values?"))
-        return;
+    if (Flt_Was_Edited)
+    {
+        FltGather(); // (B59) before the question's page takes the fields away
+        if (!GetConfirmation((char *)"page FilterView", (char *)"Discard the edited filter values?")) { FltHead(); FltShow(); return; }
+    }
     FltStep = FLT_IDLE;
     Flt_Was_Edited = false;
     RotorFlightStart();

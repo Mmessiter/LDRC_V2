@@ -186,6 +186,15 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## A question's page takes the fields away (V2 B59, 7 Oct 2026)
+
+Malcolm, testing Travel extents: "I edited collective pitch limit. It wrote zero." The travel Save asked "are you
+sure" first, and the question is a page of its own: the travel page came back from it reloaded, every field blank, and
+only then were the fields read - zeros, and zeros went to the flight controller. Rescue, with no question before its
+save, never met this. B59: on every one of the new pages the fields are gathered BEFORE any question or message box
+(the save's question, OK's "discard?", the servo step's, a failure's box) and shown again after it, so what was typed
+survives a "No", and a save writes what was on the screen.
+
 ## Gyro filters (V2 B58 + screen 1.11.28, 7 Oct 2026)
 
 The eighth button, "Filters ...", and one page with the configurator's Gyro Filters names (RF_Filters.h; page FilterView,

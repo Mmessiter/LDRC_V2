@@ -118,6 +118,7 @@ static void TravGatherPage2()
     TravCfgWant[19] = (uint8_t)(FieldNumber("tn7", -100, 100) & 0xFF);
     TravCfgWant[20] = (uint8_t)(FieldNumber("tn8", -100, 100) & 0xFF);
 }
+static void TravPageHead();
 static void TravFail(const char *what)
 {
     char msg[180];
@@ -126,6 +127,7 @@ static void TravFail(const char *what)
     TravBusy("");
     PlaySound(WHAHWHAHMSG);
     MsgBox((char *)(CurrentView == TRAVEL2VIEW ? "page Travel2View" : "page TravelView"), msg);
+    TravPageHead();
     TravShow();
 }
 static void TravAskInput(int idx, int step)
@@ -244,8 +246,16 @@ void StartTravelView()
 }
 void EndTravelView() // OK on either page
 {
-    if (Trav_Was_Edited && !GetConfirmation((char *)(CurrentView == TRAVEL2VIEW ? "page Travel2View" : "page TravelView"), (char *)"Discard the edited travel extents?"))
-        return;
+    if (Trav_Was_Edited)
+    {
+        if (CurrentView == TRAVELVIEW) TravGatherPage1(); else TravGatherPage2();   // (B59) before the question's page takes the fields away
+        if (!GetConfirmation((char *)(CurrentView == TRAVEL2VIEW ? "page Travel2View" : "page TravelView"), (char *)"Discard the edited travel extents?"))
+        {
+            TravPageHead();
+            TravShow();
+            return;
+        }
+    }
     TravStep = TRV_IDLE;
     Trav_Was_Edited = false;
     RotorFlightStart();
@@ -265,9 +275,17 @@ void SaveTravel()
         MsgBox((char *)(CurrentView == TRAVEL2VIEW ? "page Travel2View" : "page TravelView"), why);
         return;
     }
-    if (!GetConfirmation((char *)(CurrentView == TRAVEL2VIEW ? "page Travel2View" : "page TravelView"), (char *)"Save the travel extents?\r\nThey change how FAR the swash and tail move:\r\ncheck them on the bench, blades off."))
-        return;
+    // B59: the fields FIRST. The question is a page of its own, and the travel page comes back from it reloaded, every
+    // field blank: read after the question, they were zeros, and zeros were written (Malcolm, 7 Oct: "It wrote zero").
     if (CurrentView == TRAVELVIEW) TravGatherPage1(); else TravGatherPage2();
+    if (!GetConfirmation((char *)(CurrentView == TRAVEL2VIEW ? "page Travel2View" : "page TravelView"), (char *)"Save the travel extents?\r\nThey change how FAR the swash and tail move:\r\ncheck them on the bench, blades off."))
+    {
+        TravPageHead();
+        TravShow(); // the page came back blank: the edited values again
+        return;
+    }
+    TravPageHead();
+    TravShow();
     TravBusy("Writing to the flight controller ...");
     TravReq = MspAsk(43, TravCfgWant, CFG_BYTES);
     TravStep = TRV_WRITE_CFG;

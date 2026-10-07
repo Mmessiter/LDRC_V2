@@ -81,6 +81,8 @@ static void ServoFail(const char *what)
     ServoBusy("");
     PlaySound(WHAHWHAHMSG);
     MsgBox((char *)"page ServoView", msg);
+    SendText((char *)"t11", ModelName);
+    SendCommand((char *)(Servo_Was_Edited ? "vis b3,1" : "vis b3,0"));
     ServoShow();
 }
 static void ServoRead()
@@ -194,10 +196,23 @@ void StartServoView()
     ServoAt = 0;
     ServoRead();
 }
+static void ServoShowEdits() // after a question's page: the typed values again (ServoWant holds them)
+{
+    SendText((char *)"t11", ModelName);
+    SendCommand((char *)"vis b3,1");
+    ServoTitle();
+    ServoNum("tn0", RdU16(ServoWant, 0)); ServoNum("tn1", RdS16(ServoWant, 2)); ServoNum("tn2", RdS16(ServoWant, 4));
+    ServoNum("tn3", RdU16(ServoWant, 6)); ServoNum("tn4", RdU16(ServoWant, 8)); ServoNum("tn5", RdU16(ServoWant, 10)); ServoNum("tn6", RdU16(ServoWant, 12));
+    SendText((char *)"tn7", (char *)(ServoRev ? "Yes" : "No"));
+    SendText((char *)"tn8", (char *)(ServoGeo ? "Yes" : "No"));
+}
 void EndServoView() // OK
 {
-    if (Servo_Was_Edited && !GetConfirmation((char *)"page ServoView", (char *)"Discard the edited servo values?"))
-        return;
+    if (Servo_Was_Edited)
+    {
+        ServoGather(); // (B59) before the question's page takes the fields away
+        if (!GetConfirmation((char *)"page ServoView", (char *)"Discard the edited servo values?")) { ServoShowEdits(); return; }
+    }
     ServoStep = SRV_IDLE;
     Servo_Was_Edited = false;
     RotorFlightStart();
@@ -223,8 +238,12 @@ static void ServoStep1(int d) // < Servo / Servo >
 {
     if (!ServoHave || ServoCount < 2)
         return;
-    if (Servo_Was_Edited && !GetConfirmation((char *)"page ServoView", (char *)"Discard the edited servo values?"))
-        return;
+    if (Servo_Was_Edited)
+    {
+        ServoGather();
+        if (!GetConfirmation((char *)"page ServoView", (char *)"Discard the edited servo values?")) { ServoShowEdits(); return; }
+        SendText((char *)"t11", ModelName);
+    }
     Servo_Was_Edited = false;
     SendCommand((char *)"vis b3,0");
     ServoAt = (ServoAt + d + ServoCount) % ServoCount;

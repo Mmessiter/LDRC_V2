@@ -69,34 +69,34 @@ static void RescuePercent(const char *name, int tenths) // a collective of 0..10
 // The page's fields from the bytes (page 1: RescueView; page 2: Rescue2View)
 static void RescueShowPage1()
 {
-    RescueMode = RescueRaw[0] <= 2 ? RescueRaw[0] : 0;
-    RescueFlip = RescueRaw[1] ? 1 : 0;
+    RescueMode = RescueWant[0] <= 2 ? RescueWant[0] : 0;
+    RescueFlip = RescueWant[1] ? 1 : 0;
     RescueField("tn0", RescueMode ? "On" : "Off");
     RescueField("tn1", RescueFlip ? "Flip" : "No-Flip");
-    RescuePercent("tn2", RdU16(RescueRaw, 8));   // Pull-up Collective [%]
-    RescueTenths("tn3", RescueRaw[4]);           // Pull-up Time [s]
-    RescuePercent("tn4", RdU16(RescueRaw, 10));  // Climb Collective [%]
-    RescueTenths("tn5", RescueRaw[5]);           // Climb Time [s]
-    RescuePercent("tn6", RdU16(RescueRaw, 12));  // Hover Collective [%]
-    RescueTenths("tn7", RescueRaw[6]);           // Flip Fail Time [s]
-    RescueTenths("tn8", RescueRaw[7]);           // Exit Time [s]
-    RescueNumber("tn9", RescueRaw[3]);           // Leveling Gain
-    RescueNumber("tn10", RescueRaw[2]);          // Flip-to-Upright Gain
-    RescueNumber("tn11", RdU16(RescueRaw, 24));  // Max Levelling Rate
-    RescueNumber("tn12", RdU16(RescueRaw, 26));  // Max Leveling Acceleration
+    RescuePercent("tn2", RdU16(RescueWant, 8));   // Pull-up Collective [%]
+    RescueTenths("tn3", RescueWant[4]);           // Pull-up Time [s]
+    RescuePercent("tn4", RdU16(RescueWant, 10));  // Climb Collective [%]
+    RescueTenths("tn5", RescueWant[5]);           // Climb Time [s]
+    RescuePercent("tn6", RdU16(RescueWant, 12));  // Hover Collective [%]
+    RescueTenths("tn7", RescueWant[6]);           // Flip Fail Time [s]
+    RescueTenths("tn8", RescueWant[7]);           // Exit Time [s]
+    RescueNumber("tn9", RescueWant[3]);           // Leveling Gain
+    RescueNumber("tn10", RescueWant[2]);          // Flip-to-Upright Gain
+    RescueNumber("tn11", RdU16(RescueWant, 24));  // Max Levelling Rate
+    RescueNumber("tn12", RdU16(RescueWant, 26));  // Max Leveling Acceleration
 }
 static void RescueShowPage2()
 {
     char b[16];
-    RescueMode = RescueRaw[0] <= 2 ? RescueRaw[0] : 0;
+    RescueMode = RescueWant[0] <= 2 ? RescueWant[0] : 0;
     RescueField("tn0", RescueModeWords[RescueMode]);
-    const unsigned h = RdU16(RescueRaw, 14);
+    const unsigned h = RdU16(RescueWant, 14);
     snprintf(b, sizeof(b), "%u.%02u", h / 100, h % 100);
     RescueField("tn1", b);                       // Hover height [m]
-    RescueNumber("tn2", RdU16(RescueRaw, 16));   // Height hold P
-    RescueNumber("tn3", RdU16(RescueRaw, 18));   // I
-    RescueNumber("tn4", RdU16(RescueRaw, 20));   // D
-    RescuePercent("tn5", RdU16(RescueRaw, 22));  // Max Collective [%]
+    RescueNumber("tn2", RdU16(RescueWant, 16));   // Height hold P
+    RescueNumber("tn3", RdU16(RescueWant, 18));   // I
+    RescueNumber("tn4", RdU16(RescueWant, 20));   // D
+    RescuePercent("tn5", RdU16(RescueWant, 22));  // Max Collective [%]
 }
 static void RescueShow()
 {
@@ -172,6 +172,8 @@ static void RescueFail(const char *what) // B54 (Malcolm: "the error banners sho
     RescueBusy("");
     PlaySound(WHAHWHAHMSG);
     MsgBox((char *)(CurrentView == RESCUE2VIEW ? "page Rescue2View" : "page RescueView"), msg);
+    SendText((char *)"t11", ModelName);
+    SendCommand((char *)(Rescue_Was_Edited ? "vis b3,1" : "vis b3,0"));
     RescueShow(); // the page came back from the box: its fields again
 }
 static bool RescueRereadWanted = false;    // B54: the bank switch moved while a read or a save was under way
@@ -190,6 +192,8 @@ void RescueBankChanged()                   // from BankHasChanged (Switches.h): 
         strcat(Wmsg, Str(NB, PreviousBank, 0));
         strcat(Wmsg, " were edited \r\nbut not saved. (Too late now!)\r\nSo you may want to check them.");
         MsgBox((char *)(CurrentView == RESCUE2VIEW ? "page Rescue2View" : "page RescueView"), Wmsg);
+        SendText((char *)"t11", ModelName);
+        SendText((char *)"t9", b);
     }
     Rescue_Was_Edited = false;
     SendCommand((char *)"vis b3,0");
@@ -321,8 +325,17 @@ void StartRescueView()
 }
 void EndRescueView() // OK, on either page (B53: page 2 has OK too; "< Previous" is EndRescue2View)
 {
-    if (Rescue_Was_Edited && !GetConfirmation((char *)(CurrentView == RESCUE2VIEW ? "page Rescue2View" : "page RescueView"), (char *)"Discard the edited rescue values?"))
-        return;
+    if (Rescue_Was_Edited)
+    {
+        if (CurrentView == RESCUEVIEW) RescueGatherPage1(); else RescueGatherPage2();   // (B59) the edits, before the question's page takes the fields away
+        if (!GetConfirmation((char *)(CurrentView == RESCUE2VIEW ? "page Rescue2View" : "page RescueView"), (char *)"Discard the edited rescue values?"))
+        {
+            SendText((char *)"t11", ModelName);
+            SendCommand((char *)"vis b3,1");
+            RescueShow(); // the page came back blank: the edits again
+            return;
+        }
+    }
     RescueStep = RSC_IDLE;
     Rescue_Was_Edited = false;
     RotorFlightStart();
