@@ -483,6 +483,7 @@ void LogRx_type()
  */
 FASTRUN void LogDisConnection()
 {
+    FlushDeferredLog(); // B47: any motor lines not yet written
     char buf[40] = " ";
     char TheText[] = "Disconnected from ";
     strcpy(buf, TheText);
@@ -546,22 +547,43 @@ FASTRUN void LogNewBank()
 }
 
 // ************************************************************************
+// B47 (Malcolm, 7 Oct 2026: "when I turn the motor on or off, there is a momentary, huge drop in the frame rate ... this
+// should occur when safety is turned on and off rather than motor"): a log line is an open-write-close of the file on
+// the card, tens of milliseconds in which no packet goes out. The motor goes on and off with the model in the air (an
+// autorotation is a motor-off); the safety changes on the ground. So "Motor On" and "Motor Off" are kept here with
+// their time, and written when the safety next changes, when the model disconnects, at power-off, or when this runs out
+// of room.
+static char DeferredLog[6][40];
+static uint8_t DeferredLogN = 0;
+FASTRUN void FlushDeferredLog()
+{
+    if (!DeferredLogN)
+        return;
+    char crlf[] = {'|', 13, 10, 0};
+    CheckLogFileIsOpen();
+    for (uint8_t i = 0; i < DeferredLogN; ++i)
+    {
+        WriteToLogFile(DeferredLog[i], strlen(DeferredLog[i]));
+        WriteToLogFile(crlf, strlen(crlf));
+    }
+    DeferredLogN = 0;
+    CloseLogFile();
+}
 FASTRUN void LogMotor(bool On)
 {
-    char Ltext1[] = "Motor On";
-    char Ltext0[] = "Motor Off";
-    char thetext[20];
-    if (On)
-        strcpy(thetext, Ltext1);
-    else
-        strcpy(thetext, Ltext0);
-    LogText(thetext, 9, true);
+    if (DeferredLogN >= 6)
+        FlushDeferredLog(); // (rare: six motor changes with no safety change between)
+    char stamp[22];
+    CreateTimeStamp(stamp);
+    snprintf(DeferredLog[DeferredLogN], sizeof(DeferredLog[0]), "%s - %s", stamp, On ? "Motor On" : "Motor Off");
+    ++DeferredLogN;
 }
 
 // ************************************************************************
 FASTRUN void LogSafety()
 {
-char thetext[12] = "Safety Off";
+    FlushDeferredLog(); // B47: the motor lines kept since the last change, first, in their order
+    char thetext[12] = "Safety Off";
     if (SafetyON)
         strcpy(thetext, "Safety On");
     LogText(thetext, 10, true);

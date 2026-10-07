@@ -252,7 +252,7 @@ void Modify_Labels_For_RATES_View()
 void StartRFRatesView()
 {
     char why[80];
-    if (ModelSeemsArmed(why, sizeof(why))) // B45: says what it saw
+    if (ModelSeemsArmed(why, sizeof(why)) || PipeJoining(why, sizeof(why))) // B45: says what it saw; B47: or asks for a moment while the screen joins the receiver
     {
         PlaySound(WHAHWHAHMSG); // let user know we're in trouble
         MsgBox((char *)"page RFView", why);

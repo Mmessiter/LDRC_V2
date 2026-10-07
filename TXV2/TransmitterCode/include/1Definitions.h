@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B46 06/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B47 07/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -838,6 +838,9 @@ void ClearSuccessRate();
 int CheckRange(int v, int min, int max);
 void MoveaTrim(uint8_t i);
 FASTRUN void LogSafety();
+FASTRUN void FlushDeferredLog();              // B47: the motor lines kept for a quiet moment (LogFiles.h)
+bool RxHasPipe();                             // B47: RxUpdate.h - the connected receiver can carry the Rotorflight pipe (0.9.874+)
+bool PipeJoining(char *why, size_t n);        // B47: Parameters.h - the screen is still joining the receiver: wait
 void StartModelSetup();
 bool GetConfirmation(char *goback, char *Prompt);
 void GotoModelsView();

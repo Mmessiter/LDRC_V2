@@ -195,8 +195,39 @@ static bool bleAsk(const std::string &method, const std::string &path, const std
     bleReqDone = false; bleReqError.clear(); bleReqStartedAt = millis(); bleReqPending = true;
     return true;
 }
+// 1.11.10 (Malcolm: "It's very easy to try to view the PIDs while it says Bluetooth connecting ... a much more obvious
+// banner that says please wait, connecting Bluetooth"): while the screen is joining the receiver, a box over the
+// Rotorflight menu's four buttons says so, in the biggest letters we have; it goes when the join ends. The main board
+// refuses those pages meanwhile (B47), with the same words.
+static bool pipeNoticeUp = false; static int pipeNoticePage = -1;
+static const int PN_X = 420, PN_Y = 78, PN_W = 356, PN_H = 226;
+static void pipeNoticeDraw() {
+    gfx->fillRect(PN_X, PN_Y, PN_W, PN_H, OUR_PANEL);
+    gfx->drawRect(PN_X, PN_Y, PN_W, PN_H, OUR_INK); gfx->drawRect(PN_X + 1, PN_Y + 1, PN_W - 2, PN_H - 2, OUR_INK);
+    gfx->startWrite();
+    const std::string a = "Connecting", b = "Bluetooth", c = "please wait a moment";
+    int y = PN_Y + 18;
+    drawGlyphs(PN_X + (PN_W - textWidth(1, a)) / 2, y, 1, OUR_INK, a); y += fontHeight(1) + 2;
+    drawGlyphs(PN_X + (PN_W - textWidth(1, b)) / 2, y, 1, OUR_INK, b); y += fontHeight(1) + 14;
+    drawGlyphs(PN_X + (PN_W - textWidth(2, c)) / 2, y, 2, OUR_INK, c);
+    gfx->endWrite();
+    memoTouched(PN_X, PN_Y, PN_W, PN_H); dirty(PN_X, PN_Y, PN_W, PN_H); damage(PN_X, PN_Y, PN_W, PN_H);
+}
+static void pipeNoticeClear() {
+    restoreRect(PN_X, PN_Y, PN_W, PN_H);
+    for (auto &c : page.comps) if (c.x < PN_X + PN_W && c.x + c.w > PN_X && c.y < PN_Y + PN_H && c.y + c.h > PN_Y) drawComp(c);
+    memoTouched(PN_X, PN_Y, PN_W, PN_H); dirty(PN_X, PN_Y, PN_W, PN_H);
+}
+static void pipeNoticePoll() {
+    const bool joining = bleState == BLE_STARTING || bleState == BLE_SCANNING || bleState == BLE_CONNECTING;
+    const bool want = joining && page.id == 8 && !topOn && !loadingPage;
+    if (pipeNoticeUp && page.id != pipeNoticePage) pipeNoticeUp = false;   // the page went: it was drawn afresh without us
+    if (want && !pipeNoticeUp) { pipeNoticeDraw(); pipeNoticeUp = true; pipeNoticePage = page.id; }
+    else if (!want && pipeNoticeUp) { pipeNoticeUp = false; pipeNoticeClear(); }
+}
 static void blePoll() {
     static bool wasArmed = false;
+    pipeNoticePoll();
     if (tx.armed && !wasArmed && bleState != BLE_OFF) bleOrder = 2;   // the model could be flying: Bluetooth down, as the WiFi goes
     wasArmed = tx.armed;
     static int logged = -1;

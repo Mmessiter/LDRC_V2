@@ -44,7 +44,7 @@ void ShowPipeState() // B42: on the Rotorflight menu, which way the values trave
 {
     if (CurrentView != ROTORFLIGHTVIEW)
         return;
-    static const char *words[4] = {"By radio link", "Bluetooth: joining", "By Bluetooth", "By radio link (no Bluetooth)"};
+    static const char *words[4] = {"By radio link", "Connecting Bluetooth: wait", "By Bluetooth", "By radio link (no Bluetooth)"};
     SendText((char *)"pipe", (char *)words[PipeState <= 3 ? PipeState : 0]);
 }
 void PipeOff()
@@ -77,6 +77,15 @@ bool ModelSeemsArmed(char *why, size_t n)
         snprintf(why, n, "Model is armed: the safety is off.\r\nSafety on first.");
     else
         snprintf(why, n, "Model may be armed: channel %u\r\n(arming) is at %u. Move it low first.", (unsigned)ArmingChannel, (unsigned)v);
+    return true;
+}
+// B47 (Malcolm, 7 Oct: "It's very easy to try to view the PIDs while it says Bluetooth connecting. Probably we should wait
+// for it to finish connecting before attempting to read them"): the Rotorflight pages wait while the screen is joining.
+bool PipeJoining(char *why, size_t n)
+{
+    if (PipeState != 1)
+        return false;
+    snprintf(why, n, "Connecting Bluetooth.\r\nPlease wait a moment.");
     return true;
 }
 void AddParameterstoQueue(uint8_t ID) // this queue is essentially a LIFO stack

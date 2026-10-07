@@ -330,7 +330,7 @@ void RestoreFromSDGlobalGOV()
     }
 
     char why[80];
-    if (ModelSeemsArmed(why, sizeof(why))) // B45: says what it saw
+    if (ModelSeemsArmed(why, sizeof(why)) || PipeJoining(why, sizeof(why))) // B45: says what it saw; B47: or asks for a moment while the screen joins the receiver
     {
         PlaySound(WHAHWHAHMSG);
         MsgBox((char *)"page RFGovViewGlbl", why);
@@ -373,7 +373,7 @@ void SendEditedGovConfigValues()
     }
 
     char why[80];
-    if (ModelSeemsArmed(why, sizeof(why))) // B45: says what it saw
+    if (ModelSeemsArmed(why, sizeof(why)) || PipeJoining(why, sizeof(why))) // B45: says what it saw; B47: or asks for a moment while the screen joins the receiver
     {
         PlaySound(WHAHWHAHMSG);
         MsgBox((char *)"page RFGovViewGlbl", why);

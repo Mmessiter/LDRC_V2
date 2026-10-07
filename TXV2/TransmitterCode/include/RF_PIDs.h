@@ -212,7 +212,7 @@ void SendEditedPIDs()
 void StartPIDView() // this starts PID view
 {
     char why[80];
-    if (ModelSeemsArmed(why, sizeof(why))) // B45: says what it saw
+    if (ModelSeemsArmed(why, sizeof(why)) || PipeJoining(why, sizeof(why))) // B45: says what it saw; B47: or asks for a moment while the screen joins the receiver
     {
         PlaySound(WHAHWHAHMSG); // let user know we're in trouble
         MsgBox((char *)"page RFView", why);

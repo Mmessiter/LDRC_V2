@@ -186,6 +186,22 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## "Connecting Bluetooth": wait, said loudly; motor lines logged later (V2 B47 + screen 1.11.10, 7 Oct 2026)
+
+Malcolm: "It's very easy to try to view the PIDs while it says Bluetooth connecting. Probably we should wait for it to
+finish connecting before attempting to read them ... a much more obvious banner that says please wait, connecting
+Bluetooth!" So: **screen 1.11.10** puts a box over the Rotorflight menu's four buttons while it is joining, in the
+biggest letters it has ("Connecting / Bluetooth / please wait a moment"); it goes when the join ends. **B47** refuses
+the PID, rates and governor pages while the screen is joining, with the same words, and the menu's own line says
+"Connecting Bluetooth: wait". B47 also asks the screen to join only when the connected receiver can carry the pipe
+(release 0.9.874 or later, heard in the telemetry): a Version 1 receiver gets "By radio link" at once, no scan.
+
+And: "when I turn the motor on or off, there is a momentary, huge drop in the frame rate ... this should occur when
+safety is turned on and off rather than motor". A log line is an open-write-close of the file on the card, tens of
+milliseconds in which no packet goes out, and the motor goes on and off with the model in the air. **B47** keeps "Motor
+On" / "Motor Off" in memory with their time and writes them when the safety next changes (on the ground), when the
+model disconnects, or at power-off.
+
 ## Rotorflight over Bluetooth WORKS; three blemishes tidied (screen 1.11.9, 7 Oct 2026)
 
 Malcolm, early, on the footstool with receiver 0.9.876 and B46: "It seems to be working!" The receiver's events agreed:

@@ -38,9 +38,14 @@ void RotorFlightStart()
 
     SendCommand((char *)"page RFView");
     CurrentView = ROTORFLIGHTVIEW;
-    PipeOn(); // B41: the screen joins the model's receiver over Bluetooth; while it is joined the Rotorflight packets go that way
-    if (PipeState != 2)
-        PipeState = 1; // (asked: joining, until the screen says)
+    if (RxHasPipe()) // B47: only a receiver that can carry it (0.9.874+) is asked; a Version 1 receiver gets "By radio link" at once
+    {
+        PipeOn(); // B41: the screen joins the model's receiver over Bluetooth; while it is joined the Rotorflight packets go that way
+        if (PipeState != 2)
+            PipeState = 1; // (asked: joining, until the screen says)
+    }
+    else
+        PipeOff();
     ShowPipeState();
     AddParameterstoQueue(MSP_INHIBIT_TELEMETRY); // Inhibit telemetry for a short time to allow MSP data to be sent without interference from telemetry data (for MSP data transmission)
     SendText((char *)"t11", ModelName);          // Show model name

@@ -81,6 +81,14 @@ void RxHeardRelease(uint32_t code)
     RxReleaseCode = code;
     RxReleaseCodeAtMs = millis();
 }
+// B47: the receiver that is connected can carry the Rotorflight pipe (POST /api/txparams: RXV2 0.9.874 and later). Its
+// release number comes round in the telemetry within a fraction of a second of connecting; a Version 1 receiver never
+// sends one. Not heard for five seconds = not known = no pipe (the menu says "By radio link" at once, no scan).
+bool RxHasPipe()
+{
+    const uint32_t code = (RxReleaseCodeAtMs && (millis() - RxReleaseCodeAtMs) < 5000) ? RxReleaseCode : 0;
+    return code >= ((9u << 16) | 874u);
+}
 void RxHeardUpdateWord(uint32_t word)
 {
     RxUpdateWord = word;
