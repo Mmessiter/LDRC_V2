@@ -186,6 +186,30 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Gyro filters as the configurator's Gyro tab, and its Enables (V2 B61 + screen 1.11.30, 7 Oct 2026)
+
+Malcolm compared the configurator 2.3's Gyro tab with the transmitter's filters page: "I see some differences, which
+I'm puzzled about." Three were real. (1) The lowpass type names were in the wrong order, copied from the receiver's own
+filters page: Rotorflight's enum is 0 none, 1 1st order, 2 2nd order, 3 PT1, 4 PT2, 5 PT3, 6 order1, 7 Butterworth,
+8 Bessel, 9 damped, so his "1st order" read as "PT2", and a type picked on the receiver page would have been written
+as the wrong one. (2) Notch Q is tenths: the configurator shows 25 as 2.5. (3) The RPM filter's "preset" is the
+configurator's "Strength": Custom, Low, Medium, High. And the configurator's Gyro tab has an Enable on every section,
+which the page had not: for a lowpass that is its type (0 = off), for a notch its two frequencies (0 = off), for the
+Dynamic Filter and the RPM Filter a Rotorflight FEATURE bit (MSP 36/37, bits 29 and 30), which the flight controller
+applies only when it boots - the reason the configurator restarts it after every save of that tab.
+
+B61 + 1.11.30 lay the pages out as the configurator does (Malcolm, 7 Oct: "use the same names in the same places"):
+page 1 "Gyro filters" is its plain Gyro tab - Lowpass Filter (Enable, Filter type, Cutoff frequency), Dynamic Filter
+(Enable, Notch count, Notch Q, Notch minimum, Notch maximum), RPM Filter (Enable, Strength, Minimum frequency) - and
+Next > is its expert mode: Lowpass Filter 2, Dynamic Cutoff (lowpass 1), Notch Filter 1 and 2, each with Enable, Center
+and Cutoff. A section at Enable No hides its rows and keeps its values for a Yes, as the configurator's toggle does;
+a type other than 1st or 2nd order stays offered only while it is the one set. Save writes 93, then 37 only if an
+Enable of the Dynamic or RPM filter changed, stores (250), and in that case restarts the flight controller (68, as the
+configurator) and asks it for its features every few seconds until it answers, then reads back 92. "All banks" at the
+top left: the filters are global. The main board's host tests now run in the release gate (dev/test_filters,
+dev/test_pipe; a failure stops the release). The receiver's own filters page had the same wrong type list: fixed in
+RXV2 0.9.877. Help: FILTERS.TXT, FILTERS2.TXT. Untested on hardware as written.
+
 ## No model, no page; and the screen no longer crashes on a request before any join (V2 B60 + screen 1.11.29, 7 Oct 2026)
 
 Malcolm: "if I try to read travel extents when not connected it seems to crash the screen." Two faults, one each

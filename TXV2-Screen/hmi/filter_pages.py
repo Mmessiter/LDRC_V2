@@ -1,19 +1,46 @@
 #!/usr/bin/env python3
-"""The Filters page of the transmitter (screen 1.11.28, B58): sd/hmi/pages/64.json (FilterView), in the style of the
-Rescue pages, with the configurator's Gyro Filters names. Re-run after a change here."""
+"""The Gyro filters pages of the transmitter (screen 1.11.30, B61): sd/hmi/pages/64.json (FilterView) and 65.json
+(Filter2View), laid out as the configurator 2.3's Gyro tab - its section names, field names, order and units, the plain
+view on page 1 and its expert-mode items on page 2 (Malcolm, 7 Oct: "use the same names in the same places").
+Every section has the configurator's Enable: for a lowpass or a notch that is its values (type 0 / 0 Hz = off), for the
+dynamic filter and the RPM filter it is Rotorflight's feature bit, which only a restart applies. Re-run after a change."""
 import json, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import rescue_pages as rp
-# codes: 92 open, 93 OK, 94 save, 95 a number edited, 96 lowpass 1 type tapped, 97 lowpass 2 type tapped, 98 RPM preset tapped
+# codes (the main board's NumberedFunctions1): 92 open, 93 OK, 94 save, 95 a number edited, 96 lowpass 1 type, 97 lowpass 2 type,
+# 98 RPM strength, 99 lowpass 1 enable, 100 RPM filter enable, 101 dynamic filter enable, 102 next page, 103 previous page,
+# 104 lowpass 2 enable, 105 dynamic cutoff enable, 106 notch 1 enable, 107 notch 2 enable
 rp.page(64, 'FilterView', 'Gyro filters (Rotorflight)', [
-    ('tn0', 'Lowpass 1 type', 0, 0, 'cycle', 96), ('tn1', 'Lowpass 1 cutoff [Hz]', 0, 1, 'num', 95),
-    ('tn2', 'Lowpass 2 type', 0, 2, 'cycle', 97), ('tn3', 'Lowpass 2 cutoff [Hz]', 0, 3, 'num', 95),
-    ('tn12', 'RPM filter preset', 0, 4, 'cycle', 98), ('tn13', 'RPM filter min [Hz]', 0, 5, 'num', 95),
-    ('tn4', 'Notch 1 center [Hz]', 0, 6, 'num', 95), ('tn5', 'Notch 1 cutoff [Hz]', 0, 7, 'num', 95),
-    ('tn6', 'Notch 2 center [Hz]', 1, 0, 'num', 95), ('tn7', 'Notch 2 cutoff [Hz]', 1, 1, 'num', 95),
-    ('tn8', 'Dyn notch count', 1, 2, 'num', 95), ('tn9', 'Dyn notch Q', 1, 3, 'num', 95),
-    ('tn10', 'Dyn notch min [Hz]', 1, 4, 'num', 95), ('tn11', 'Dyn notch max [Hz]', 1, 5, 'num', 95),
-], [('b3', 'Save', 14, 180, 94), ('b1', 'OK', 605, 180, 93)], 'FILTERS.TXT')
+    ('h0', 'Lowpass Filter', 0, 0, 'head', 0),
+    ('tn0', 'Enable', 0, 1, 'cycle', 99), ('tn1', 'Filter type', 0, 2, 'cycle', 96),
+    ('tn2', 'Cutoff frequency [Hz]', 0, 3, 'num', 95, 'Lowpass cutoff [Hz]'),
+    ('h1', 'RPM Filter', 0, 4, 'head', 0),
+    ('tn3', 'Enable', 0, 5, 'cycle', 100), ('tn4', 'Strength', 0, 6, 'cycle', 98),
+    ('tn5', 'Minimum frequency [Hz]', 0, 7, 'num', 95, 'RPM filter minimum [Hz]'),
+    ('h2', 'Dynamic Filter', 1, 0, 'head', 0),
+    ('tn6', 'Enable', 1, 1, 'cycle', 101), ('tn7', 'Notch count', 1, 2, 'num', 95),
+    ('tn8', 'Notch Q', 1, 3, 'num', 95), ('tn9', 'Notch minimum [Hz]', 1, 4, 'num', 95),
+    ('tn10', 'Notch maximum [Hz]', 1, 5, 'num', 95),
+], [('b3', 'Save', 14, 180, 94), ('b2', 'Next >', 408, 180, 102), ('b1', 'OK', 605, 180, 93)], 'FILTERS.TXT')
+rp.page(65, 'Filter2View', 'Gyro filters: expert', [
+    ('h0', 'Lowpass Filter 2', 0, 0, 'head', 0),
+    ('tn0', 'Enable', 0, 1, 'cycle', 104), ('tn1', 'Filter type', 0, 2, 'cycle', 97),
+    ('tn2', 'Cutoff frequency [Hz]', 0, 3, 'num', 95, 'Lowpass 2 cutoff [Hz]'),
+    ('h1', 'Dynamic Cutoff (lowpass 1)', 0, 4, 'head', 0),
+    ('tn3', 'Enable', 0, 5, 'cycle', 105), ('tn4', 'Min cutoff [Hz]', 0, 6, 'num', 95, 'Dynamic min cutoff [Hz]'),
+    ('tn5', 'Max cutoff [Hz]', 0, 7, 'num', 95, 'Dynamic max cutoff [Hz]'),
+    ('h2', 'Notch Filter 1', 1, 0, 'head', 0),
+    ('tn6', 'Enable', 1, 1, 'cycle', 106), ('tn7', 'Center frequency [Hz]', 1, 2, 'num', 95, 'Notch 1 center [Hz]'),
+    ('tn8', 'Cutoff frequency [Hz]', 1, 3, 'num', 95, 'Notch 1 cutoff [Hz]'),
+    ('h3', 'Notch Filter 2', 1, 4, 'head', 0),
+    ('tn9', 'Enable', 1, 5, 'cycle', 107), ('tn10', 'Center frequency [Hz]', 1, 6, 'num', 95, 'Notch 2 center [Hz]'),
+    ('tn11', 'Cutoff frequency [Hz]', 1, 7, 'num', 95, 'Notch 2 cutoff [Hz]'),
+], [('b3', 'Save', 14, 180, 94), ('b2', '< Previous', 408, 180, 103), ('b1', 'OK', 605, 180, 93)], 'FILTERS2.TXT')
 idx = json.load(open(os.path.join(rp.PAGES, '..', 'index.json')))
-if 64 not in {x['id'] for x in idx['pages']}: idx['pages'].append({'id': 64, 'name': 'FilterView', 'n': 37}); idx['pages'].sort(key=lambda x: x['id'])
+have = {x['id']: x for x in idx['pages']}
+for pid, name in ((64, 'FilterView'), (65, 'Filter2View')):
+    n = len(json.load(open(os.path.join(rp.PAGES, '%d.json' % pid)))['comps'])
+    if pid in have: have[pid]['n'] = n
+    else: idx['pages'].append({'id': pid, 'name': name, 'n': n})
+idx['pages'].sort(key=lambda x: x['id'])
 json.dump(idx, open(os.path.join(rp.PAGES, '..', 'index.json'), 'w'), indent=1)

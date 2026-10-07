@@ -18,3 +18,4 @@ static void flushOut();
 static void doorToggle() {}
 static void blePipeCommand(const std::string &) {}
 static void bleTxCommand(const std::string &) {}
+static void bleHttpCommand(const std::string &) {}

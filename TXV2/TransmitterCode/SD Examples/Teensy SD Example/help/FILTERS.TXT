@@ -1,11 +1,11 @@
-Gyro filters: Rotorflight's filtering of the gyro signal, as the configurator's Gyro Filters have it. It needs a Version 2 receiver with Bluetooth, the safety on and the model disarmed. Not per bank; a save takes effect at once.||
+Gyro filters: Rotorflight's filtering of the gyro signal, laid out as the configurator's Gyro tab, with its names. Needs a Version 2 receiver with Bluetooth, the safety on and the model disarmed. The same for every bank. Next > shows what the configurator's expert mode adds.||
 
-Lowpass 1 and 2: the type (PT1, PT2, PT3, 1st order, Butterworth, Bessel, Damped; tap to change) and the cutoff in Hz (0 = off, up to 1000). Lowpass 1 takes the fizz off the gyro; Rotorflight advises not below 60 Hz. Lowpass 2 is a second, gentler stage, off on most helicopters.||
+Lowpass Filter: smooths everything above the cutoff. Enable off = no lowpass (the type and cutoff are kept for an Enable on). Filter type: 1st order or 2nd order (tap to change; another type set from the configurator stays offered while it is the one set). Cutoff frequency: Rotorflight advises not below 60 Hz; 100 is usual.||
 
-Notch 1 and 2: a notch at one fixed frequency, for a vibration that stays put whatever the head speed: the center and the cutoff in Hz (0 = off).||
+Dynamic Filter: notches that find the strongest vibrations by themselves. Notch count 0 to 8 (4 to 6 alone, 2 to 4 with the RPM filter). Notch Q: how narrow each notch is, 2.0 to 4.0 recommended, below 2.0 adds delay. Notch minimum and maximum: the range they search, in Hz.||
 
-Dyn notch count (0 to 8, 0 = off), Q (10 to 100, higher = narrower), min and max [Hz]: notches that hunt for the strongest vibration by themselves, within that range.||
+RPM Filter: follows the head speed and removes the rotor and motor vibrations wherever they are; the main filter on a helicopter. It needs a head-speed signal (ESC telemetry or an RPM sensor). Strength: Low, Medium or High (more removes more, with more delay); Custom keeps a table made in the configurator. Minimum frequency: set a little below the main rotor's frequency at the lowest flying head speed (20 Hz is usual).||
 
-RPM filter preset: Custom (as set in the configurator), Low vib., Normal or High vib.; tap to change. It follows the head speed and needs a head-speed signal. RPM filter min [Hz]: below this the rotor-speed notches stand down, so the spool-up is not filtered.||
+The Enable of the Dynamic Filter and of the RPM Filter are Rotorflight features, which take effect only when the flight controller starts: a save that changes one restarts the flight controller (as the configurator does), and the page waits for it and reads back.||
 
 Press a number to type a new one. Save writes to the flight controller, stores there, and reads back. OK leaves; if something was edited and not saved, it asks.||

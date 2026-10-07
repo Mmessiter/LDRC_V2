@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B60 07/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B61 07/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -331,6 +331,7 @@ bool GapStartedDisarmed = false; // Rotorflight arming in use and DISARMED when 
 #define TRAVELVIEW 62            // B57: travel extents (RF_Travel.h)
 #define TRAVEL2VIEW 63           // B57: ... the tail and the swashplate
 #define FILTERVIEW 64            // B58: the gyro filters (RF_Filters.h)
+#define FILTER2VIEW 65           // B61: ... the expert-mode items
 #define MODELIDVIEW 56
 
 // **************************************************************************
@@ -892,6 +893,15 @@ void FilterWasEdited();
 void FilterLpf1Tapped();
 void FilterLpf2Tapped();
 void FilterPresetTapped();
+void FilterLpf1EnableTapped();               // B61: the configurator's Enables, Next / Previous
+void FilterRpmEnableTapped();
+void FilterDynNotchEnableTapped();
+void StartFilter2View();
+void EndFilter2View();
+void FilterLpf2EnableTapped();
+void FilterDynCutoffTapped();
+void FilterNotch1Tapped();
+void FilterNotch2Tapped();
 void StartModelSetup();
 bool GetConfirmation(char *goback, char *Prompt);
 void GotoModelsView();

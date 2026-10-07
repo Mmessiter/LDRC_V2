@@ -359,7 +359,13 @@ def fetch(conn, path):
     return 0, str(last).encode()
 
 def gate():
-    """The screen's own parser reads the staged release (the host tests of the screen's project): what it refuses is not published."""
+    """The screen's own parser reads the staged release (the host tests of the screen's project): what it refuses is not published.
+       First the main board's own host tests (dev/test_*/test_*.py, B61): a failing one stops the release."""
+    import glob
+    for t in sorted(glob.glob(os.path.join(HERE, 'test_*', 'test_*.py'))):
+        r = subprocess.run([sys.executable, t], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        print('  ' + r.stdout.strip().replace('\n', '\n  '))
+        if r.returncode: sys.exit(f'REFUSING TO PUBLISH: {os.path.basename(t)} failed (above).')
     test = os.path.join(SCREEN, 'hmi', 'test_update', 'run.sh')
     r = subprocess.run([test, '--release', REL], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     print('  ' + r.stdout.strip().replace('\n', '\n  '))

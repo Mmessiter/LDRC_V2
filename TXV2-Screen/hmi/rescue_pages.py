@@ -12,7 +12,7 @@ def comp(proto, **kw):
     c = json.loads(json.dumps(proto)); c.update(kw); return c
 
 def page(pid, name, title, fields, buttons, help_file):
-    """fields: (name, label, column, row, kind) with kind 'num' (the keypad) or 'cycle' (a tap, code)"""
+    """fields: (name, label, column, row, kind, code[, keypad label]) with kind 'num' (the keypad), 'cycle' (a tap) or 'head' (a group heading, no value)"""
     comps = []; i = [1]
     def add(c): c['i'] = i[0]; i[0] += 1; comps.append(c); return c
     add(comp(TITLE, n='t0', txt=title))
@@ -22,12 +22,17 @@ def page(pid, name, title, fields, buttons, help_file):
     add(comp(VA0, n='va0'))
     help_btn = comp(by['b0'], n='b0'); help_btn['ev'] = {'r': 'print "HelpView:%s"\nLogView.t0.txt="%s"\nLogView.return.txt="%s"' % (help_file, title + ' help', name)}
     add(help_btn)
-    for (nm, label, col, row, kind, code) in fields:
+    for field in fields:
+        (nm, label, col, row, kind, code), klabel = field[:6], (field[6] if len(field) > 6 else field[1])   # klabel: what the keypad calls it (1.11.30)
         y = 94 + row * 40
         lx, lw, vx, vw = (34, 254, 294, 120) if col == 0 else (430, 236, 672, 94)
+        if kind == 'head':   # 1.11.30: a group heading across the column, white on the card, as the configurator's sections (no value)
+            h = comp(LABEL_L, n=nm, x=lx, y=y, w=lw + vw + (vx - lx - lw), h=36, txt=label, g='g', font=6)
+            h['c'] = {'pco': 65535, 'borderc': CARD['c']['bco'], 'bco': CARD['c']['bco']}; h['a'] = dict(h['a'], borderw=0, xcen=0, txt_maxl=30)
+            add(h); continue
         add(comp(LABEL_L if col == 0 else LABEL_R, n='l' + nm, x=lx, y=y, w=lw, h=36, txt=label, g='g'))
         f = comp(FIELD, n=nm, x=vx, y=y, w=vw, h=36, txt='0', g='g')
-        if kind == 'num': f['ev'] = {'r': 'keybdB.t1.txt="%s"\nva0.val=%d<<8\nprint va0.val' % (label, code)}
+        if kind == 'num': f['ev'] = {'r': 'keybdB.t1.txt="%s"\nva0.val=%d<<8\nprint va0.val' % (klabel, code)}
         else: f['a'] = dict(f['a'], key=255); f['ev'] = {'r': 'va0.val=%d<<8\nprint va0.val' % code}
         add(f)
     for (nm, txt, x, w, code) in buttons:

@@ -1,0 +1,9 @@
+Gyro filters, expert: what the configurator's expert mode adds to its Gyro tab. Rarely needed: the defaults suit most helicopters.||
+
+Lowpass Filter 2: a second lowpass after the first, 1st or 2nd order, with its own cutoff. Off on most helicopters.||
+
+Dynamic Cutoff (lowpass 1): the first lowpass's cutoff follows the head speed between Min cutoff and Max cutoff instead of staying at its fixed cutoff. Enable off = fixed cutoff.||
+
+Notch Filter 1 and 2: a notch at one fixed frequency, for a vibration that stays put whatever the head speed. Center frequency is the middle of the notch; Cutoff frequency is where it starts: center 260 and cutoff 160 cover 160 to 360 Hz. Enable off = no notch.||
+
+Save writes every page's values together, stores, and reads back. < Previous returns to the first page; OK leaves; if something was edited and not saved, it asks.||
