@@ -252,6 +252,15 @@ void ShowGOVBank()
 // ====================================================
 void Start_RF_Governor()
 {
+    {
+        char why[120];
+        if (RfPipeBlocked(why, sizeof(why))) // B48: the governor pages read from the receiver: the pipe first
+        {
+            PlaySound(WHAHWHAHMSG);
+            MsgBox((char *)"page RFView", why);
+            return;
+        }
+    }
     if (RotorFlight_Version < 2.25) // floats might not be exactly 2.2 or 2.3
     {
         char msg[160];
@@ -305,7 +314,7 @@ void SendEditedGovValues()
     }
 
     char why[80];
-    if (ModelSeemsArmed(why, sizeof(why)) || PipeJoining(why, sizeof(why))) // B45: says what it saw; B47: or asks for a moment while the screen joins the receiver
+    if (ModelSeemsArmed(why, sizeof(why)) || RfPipeBlocked(why, sizeof(why))) // B45: says what it saw; B47/B48: or the pipe is not ready (joining, or none)
     {
         PlaySound(WHAHWHAHMSG);
         MsgBox((char *)"page RFGovView", why);

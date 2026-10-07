@@ -543,18 +543,20 @@ FASTRUN void LogNewBank()
     {
         strcpy(thetext, Ltext);
     }
-    LogText(thetext, strlen(thetext), true);
+    DeferLogText(thetext, true); // B48: in the air, the bank changes with the motor switch too: kept for a quiet moment
 }
 
 // ************************************************************************
-// B47 (Malcolm, 7 Oct 2026: "when I turn the motor on or off, there is a momentary, huge drop in the frame rate ... this
-// should occur when safety is turned on and off rather than motor"): a log line is an open-write-close of the file on
-// the card, tens of milliseconds in which no packet goes out. The motor goes on and off with the model in the air (an
-// autorotation is a motor-off); the safety changes on the ground. So "Motor On" and "Motor Off" are kept here with
-// their time, and written when the safety next changes, when the model disconnects, at power-off, or when this runs out
-// of room.
-static char DeferredLog[6][40];
+// B47/B48 (Malcolm, 7 Oct 2026: "when I turn the motor on or off, there is a momentary, huge drop in the frame rate ...
+// this should occur when safety is turned on and off rather than motor"): a log line is an open-write-close of the file
+// on the card, tens of milliseconds in which no packet goes out. The motor goes on and off with the model in the air
+// (an autorotation is a motor-off), the motor switch also moves the bank (to 4 and back), the receiver swaps its
+// radios and the link has its gaps in the air; the safety changes on the ground. So those lines are kept here with
+// their time, in order, and written when the safety next changes, when the model disconnects, at power-off, or when
+// this runs out of room (24 lines).
+static char DeferredLog[24][48];
 static uint8_t DeferredLogN = 0;
+static char DeferredLast[48];
 FASTRUN void FlushDeferredLog()
 {
     if (!DeferredLogN)
@@ -569,14 +571,29 @@ FASTRUN void FlushDeferredLog()
     DeferredLogN = 0;
     CloseLogFile();
 }
+FASTRUN void DeferLogText(const char *text, bool stamp) // as LogText, but for later: the same line, the same "not the same thing twice"
+{
+    if (!text || !*text)
+        return;
+    if (strcmp(text, DeferredLast) == 0)
+        return;
+    strlcpy(DeferredLast, text, sizeof(DeferredLast));
+    if (DeferredLogN >= 24)
+        FlushDeferredLog(); // (full: one stall instead of twenty-four)
+    char *line = DeferredLog[DeferredLogN];
+    if (stamp)
+    {
+        char s[22];
+        CreateTimeStamp(s);
+        snprintf(line, sizeof(DeferredLog[0]), "%s - %s", s, text);
+    }
+    else
+        snprintf(line, sizeof(DeferredLog[0]), "               - %s", text);
+    ++DeferredLogN;
+}
 FASTRUN void LogMotor(bool On)
 {
-    if (DeferredLogN >= 6)
-        FlushDeferredLog(); // (rare: six motor changes with no safety change between)
-    char stamp[22];
-    CreateTimeStamp(stamp);
-    snprintf(DeferredLog[DeferredLogN], sizeof(DeferredLog[0]), "%s - %s", stamp, On ? "Motor On" : "Motor Off");
-    ++DeferredLogN;
+    DeferLogText(On ? "Motor On" : "Motor Off", true);
 }
 
 // ************************************************************************
@@ -596,7 +613,7 @@ FASTRUN void LogThisRX()
     char thetext[10];
     strcpy(thetext, Ltext);
     strcat(thetext, ThisRadio);
-    LogText(thetext, 5, true);
+    DeferLogText(thetext, true); // B48: a swap of radios is in the air
 }
 
 // ************************************************************************
@@ -614,7 +631,7 @@ void Log_GPS_RX_Altitude()
     dtostrf(GPS_RX_Altitude, 2, 2, NB);
     strcpy(buf, TheText);
     strcat(buf, NB);
-    LogText(buf, strlen(buf), false);
+    DeferLogText(buf, false); // B48: with the gap line
 }
 // ************************************************************************
 void Log_GPS_RX_DistanceTo()
@@ -625,7 +642,7 @@ void Log_GPS_RX_DistanceTo()
     dtostrf(GPS_RX_DistanceTo, 2, 2, NB);
     strcpy(buf, TheText);
     strcat(buf, NB);
-    LogText(buf, strlen(buf), false);
+    DeferLogText(buf, false); // B48: with the gap line
 }
 // ************************************************************************
 
@@ -641,7 +658,7 @@ if (CurrentView >= PIDVIEW)
     Str(NB, ThisGap, 0);
     strcpy(thetext, Ltext);
     strcat(thetext, NB);
-    LogText(thetext, 8, true);
+    DeferLogText(thetext, true); // B48: a gap is in the air, and the line that recorded it used to be the next gap
     if (GPS_RX_FIX)
     {
         Log_GPS_RX_Altitude();

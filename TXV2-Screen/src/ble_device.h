@@ -24,6 +24,13 @@ static std::string bleJoined; static int bleMtu = 0;           // what we are jo
 static SemaphoreHandle_t bleMutex = nullptr;
 static TaskHandle_t bleTaskHandle = nullptr;
 static volatile bool bleWifiKick = false;                      // (1.11.11) the stack has just gone down: the WiFi joins afresh (loop())
+// 1.11.13 (Malcolm: "Sometimes connecting to Bluetooth takes a very long time, and sometimes it's quicker"): the last
+// 24 happenings with their time, from either side, in /ble/status and /status ("log"): each join's timeline.
+static std::string bleLog[24]; static int bleLogN = 0;
+static void bleNote(const std::string &what) {
+    if (!bleMutex) bleMutex = xSemaphoreCreateMutex();
+    if (xSemaphoreTake(bleMutex, pdMS_TO_TICKS(50)) == pdTRUE) { bleLog[bleLogN % 24] = std::to_string(millis()) + " " + what; ++bleLogN; xSemaphoreGive(bleMutex); }
+}
 static unsigned bleStackSpare() { return bleTaskHandle ? (unsigned) uxTaskGetStackHighWaterMark(bleTaskHandle) : 0u; }   // (1.11.8) for /status
 // one request at a time
 struct BleRequest { std::string method, path, body, type; uint32_t id = 0; };
@@ -44,7 +51,7 @@ static NimBLEClient *bleClient = nullptr; static NimBLERemoteCharacteristic *ble
 static volatile bool bleReplyReady = false;
 
 struct BleClientCb : public NimBLEClientCallbacks {
-    void onDisconnect(NimBLEClient *, int reason) override { if (bleState == BLE_READY) { bleState = BLE_FAILED; bleWhy = "the receiver dropped the connection (" + std::to_string(reason) + ")"; } }
+    void onDisconnect(NimBLEClient *, int reason) override { bleNote("disconnected (" + std::to_string(reason) + ")"); if (bleState == BLE_READY) { bleState = BLE_FAILED; bleWhy = "the receiver dropped the connection (" + std::to_string(reason) + ")"; } }
 };
 static BleClientCb bleClientCb;
 
@@ -79,6 +86,7 @@ static bool bleJoin() {                                        // in the task: s
         if (round) { vTaskDelay(pdMS_TO_TICKS(500)); bleState = BLE_SCANNING; }
         scan->clearResults();
         NimBLEScanResults res = scan->getResults(2500, false);
+        bleNote("scan " + std::to_string(round + 1) + ": " + std::to_string(res.getCount()) + " devices");
         std::vector<BleSeen> seen; std::vector<const NimBLEAdvertisedDevice *> cands;
         for (int i = 0; i < res.getCount(); ++i) {
             const NimBLEAdvertisedDevice *d = res.getDevice(i);
@@ -88,23 +96,26 @@ static bool bleJoin() {                                        // in the task: s
         }
         if (xSemaphoreTake(bleMutex, pdMS_TO_TICKS(100)) == pdTRUE) { bleSeen = seen; xSemaphoreGive(bleMutex); }
         std::sort(cands.begin(), cands.end(), [](const NimBLEAdvertisedDevice *a, const NimBLEAdvertisedDevice *b) { return a->getRSSI() > b->getRSSI(); });
-        if (cands.empty()) { why = seen.empty() ? "no receiver in reach" : "the receiver named is not in reach"; continue; }
+        if (cands.empty()) { why = seen.empty() ? "no receiver in reach" : "the receiver named is not in reach"; bleNote("no receiver among them"); continue; }
         bleState = BLE_CONNECTING;
         for (size_t i = 0; i < cands.size() && bleOrder != 2; ++i) {
-            if (!bleConnectTo(cands[i], why)) continue;
-            if (bleWantMac.empty()) { scan->clearResults(); bleState = BLE_READY; return true; }
+            bleNote("connecting to " + cands[i]->getName() + " (" + std::to_string(cands[i]->getRSSI()) + " dBm)");
+            if (!bleConnectTo(cands[i], why)) { bleNote(why); continue; }
+            if (bleWantMac.empty()) { scan->clearResults(); bleState = BLE_READY; bleNote("ready: " + bleJoined + " (any receiver)"); return true; }
             ldrc::BleReply r; std::string err;                   // the receiver's identity: its state page says
             if (bleServeNow("GET", "/api/state.json", "", "", r, err) && r.code == 200) {
                 const size_t k = r.body.find("\"board_mac\":\"");
                 const std::string mac = k == std::string::npos ? "" : bleUpper(r.body.substr(k + 13, 12));
-                if (mac == bleWantMac) { scan->clearResults(); bleState = BLE_READY; return true; }
+                if (mac == bleWantMac) { scan->clearResults(); bleState = BLE_READY; bleNote("ready: " + bleJoined + ", MTU " + std::to_string(bleMtu)); return true; }
                 why = "not the model's receiver (" + bleJoined + ")";
             } else why = "no answer from " + bleJoined + (err.empty() ? "" : ": " + err);
+            bleNote(why);
             bleLeave();
         }
     }
     scan->clearResults();
     bleWhy = bleOrder == 2 ? "called off" : why;
+    bleNote("failed: " + bleWhy);
     return false;
 }
 static void bleLeave() {
@@ -167,7 +178,7 @@ static void bleTxServe() {                                     // in the task: t
             bleTellItems(r.body);
         } else if (err.empty()) {                              // 1.11.9: the receiver answered, but not 200 (one bad packet): noted for /status, the pipe stays
             bleWhy = "the receiver refused a parameter (" + std::to_string(r.code) + "): " + words.substr(0, 40);
-            blog("ble", bleWhy);
+            blog("ble", bleWhy); bleNote(bleWhy);
         } else { bleWhy = "the receiver refused a parameter (" + err + ")"; bleMailPost("ldrcpipe=3"); blePollUntil = 0; }   // no answer at all, or the link went: the main board goes back to the radio link
         return;
     }
@@ -179,11 +190,11 @@ static void bleTxServe() {                                     // in the task: t
 static void bleTask(void *) {
     for (;;) {
         if (bleOrder == 2) {                                   // off: down with the stack (a failed join keeps its reason until then)
-            bleOrder = 0; bleState = BLE_STOPPING; bleLeave(); NimBLEDevice::deinit(true); bleState = BLE_OFF; bleWifiKick = true;
+            bleOrder = 0; bleState = BLE_STOPPING; bleNote("stopping"); bleLeave(); NimBLEDevice::deinit(true); bleState = BLE_OFF; bleWifiKick = true; bleNote("off");
         } else if (bleOrder == 1) {
             bleOrder = 0;
             if (bleState == BLE_OFF || bleState == BLE_FAILED) {
-                bleState = BLE_STARTING;
+                bleState = BLE_STARTING; bleNote("starting");
                 if (!NimBLEDevice::isInitialized()) { NimBLEDevice::init("ldrc-screen"); NimBLEDevice::setMTU(247); }
                 if (!bleJoin()) { bleLeave(); bleState = BLE_FAILED; }
             }
@@ -238,7 +249,7 @@ static void blePoll() {
     // transmitter off and on again. This happened yesterday"): both times after a Bluetooth session. The one radio serves
     // both; when the Bluetooth stack goes down the WiFi link may be left looking joined and carrying nothing. So the WiFi
     // joins afresh after every Bluetooth session: a few seconds, on the ground.
-    if (bleWifiKick) { bleWifiKick = false; if (radiosLive) { blog("ble", "stack down: the WiFi joins again"); WiFi.disconnect(); wifiAutoStep = 0; } }
+    if (bleWifiKick) { bleWifiKick = false; if (radiosLive) { blog("ble", "stack down: the WiFi joins again"); bleNote("the WiFi joins again"); WiFi.disconnect(); wifiAutoStep = 0; } }
     if (tx.armed && !wasArmed && bleState != BLE_OFF) bleOrder = 2;   // the model could be flying: Bluetooth down, as the WiFi goes
     wasArmed = tx.armed;
     static int logged = -1;
@@ -253,7 +264,7 @@ static void blePoll() {
 // From the main board: "ldrcpipe on AABBCCDDEEFF" (the receiver's board id, as it learned at binding; "on" alone = the
 // nearest), "ldrcpipe off", and "ldrctx 12,321,5000,0,0,0,0,0,0,0,0,0" (a parameter packet, as words)
 static void blePipeCommand(const std::string &a) {
-    blog("ble", "from the main board: pipe " + a);
+    blog("ble", "from the main board: pipe " + a); bleNote("main board: pipe " + a);
     if (a.rfind("on", 0) == 0) {
         bleWantMac = bleUpper(a.size() > 3 ? a.substr(3) : ""); bleTarget.clear(); bleTelLast.clear();
         if (tx.armed) return;
@@ -272,7 +283,13 @@ static std::string bleStatusJson() {
         for (size_t i = 0; i < bleSeen.size(); ++i) out += (i ? "," : "") + std::string("{\"name\":\"") + bleSeen[i].name + "\",\"addr\":\"" + bleSeen[i].addr + "\",\"rssi\":" + std::to_string(bleSeen[i].rssi) + "}";
         xSemaphoreGive(bleMutex);
     }
-    out += "],\"pending\":" + std::string(bleReqPending ? "true" : "false") + ",\"queued\":" + std::to_string(bleTxQueue.size()) + ",\"heap\":" + std::to_string(ESP.getFreeHeap()) + "}";
+    out += "],\"pending\":" + std::string(bleReqPending ? "true" : "false") + ",\"queued\":" + std::to_string(bleTxQueue.size()) + ",\"heap\":" + std::to_string(ESP.getFreeHeap()) + ",\"log\":[";
+    if (bleMutex && xSemaphoreTake(bleMutex, pdMS_TO_TICKS(50)) == pdTRUE) {           // (1.11.13) the last 24 happenings, oldest first
+        bool first = true;
+        for (int i = bleLogN > 24 ? bleLogN - 24 : 0; i < bleLogN; ++i) { std::string l = bleLog[i % 24]; for (auto &c : l) if (c == '"' || c == '\\') c = '\''; out += (first ? "\"" : ",\"") + l + "\""; first = false; }
+        xSemaphoreGive(bleMutex);
+    }
+    out += "]}";
     return out;
 }
 static void bleWeb() {

@@ -166,6 +166,14 @@ void SendEditedPID_Advanced()
         SaveToLocalABank();
         return;
     }
+    {
+        char why[120];
+        if (RfPipeBlocked(why, sizeof(why))) // B48: the pipe went while the page was open
+        {
+            MsgBox((char *)"page PID_A_View", why);
+            return;
+        }
+    }
     PlaySound(BEEPMIDDLE);
     PIDS_Advanced_Were_Edited = false;
     DelayWithDog(100);                                                      // allow LOTS of time for screen to update BEFORE sending another Nextion command

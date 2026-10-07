@@ -330,7 +330,7 @@ void RestoreFromSDGlobalGOV()
     }
 
     char why[80];
-    if (ModelSeemsArmed(why, sizeof(why)) || PipeJoining(why, sizeof(why))) // B45: says what it saw; B47: or asks for a moment while the screen joins the receiver
+    if (ModelSeemsArmed(why, sizeof(why)) || RfPipeBlocked(why, sizeof(why))) // B45: says what it saw; B47/B48: or the pipe is not ready (joining, or none)
     {
         PlaySound(WHAHWHAHMSG);
         MsgBox((char *)"page RFGovViewGlbl", why);
@@ -373,7 +373,7 @@ void SendEditedGovConfigValues()
     }
 
     char why[80];
-    if (ModelSeemsArmed(why, sizeof(why)) || PipeJoining(why, sizeof(why))) // B45: says what it saw; B47: or asks for a moment while the screen joins the receiver
+    if (ModelSeemsArmed(why, sizeof(why)) || RfPipeBlocked(why, sizeof(why))) // B45: says what it saw; B47/B48: or the pipe is not ready (joining, or none)
     {
         PlaySound(WHAHWHAHMSG);
         MsgBox((char *)"page RFGovViewGlbl", why);
@@ -428,6 +428,15 @@ void ShowGOV_Global_Bank()
 // ====================================================
 void Start_Gov_Global()
 {
+    {
+        char why[120];
+        if (RfPipeBlocked(why, sizeof(why))) // B48: the pipe first
+        {
+            PlaySound(WHAHWHAHMSG);
+            MsgBox((char *)"page RFGovView", why);
+            return;
+        }
+    }
     AddParameterstoQueue(MSP_INHIBIT_TELEMETRY);
     SendCommand((char *)"page RFGovViewGlbl");
     CurrentView = RFGOVERNORVIEW_GLOBAL;

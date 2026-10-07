@@ -63,6 +63,14 @@ void SendEditedRates()
         SaveRatesLocalBank();
         return;
     }
+    {
+        char why[120];
+        if (RfPipeBlocked(why, sizeof(why))) // B48: the pipe went while the page was open
+        {
+            MsgBox((char *)"page RatesView", why);
+            return;
+        }
+    }
     Rates_Were_Edited = false;
     BlockBankChanges = true;
     PlaySound(BEEPMIDDLE);
@@ -252,7 +260,7 @@ void Modify_Labels_For_RATES_View()
 void StartRFRatesView()
 {
     char why[80];
-    if (ModelSeemsArmed(why, sizeof(why)) || PipeJoining(why, sizeof(why))) // B45: says what it saw; B47: or asks for a moment while the screen joins the receiver
+    if (ModelSeemsArmed(why, sizeof(why)) || RfPipeBlocked(why, sizeof(why))) // B45: says what it saw; B47/B48: or the pipe is not ready (joining, or none)
     {
         PlaySound(WHAHWHAHMSG); // let user know we're in trouble
         MsgBox((char *)"page RFView", why);

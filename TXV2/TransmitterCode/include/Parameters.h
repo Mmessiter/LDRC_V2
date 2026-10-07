@@ -44,7 +44,7 @@ void ShowPipeState() // B42: on the Rotorflight menu, which way the values trave
 {
     if (CurrentView != ROTORFLIGHTVIEW)
         return;
-    static const char *words[4] = {"By radio link", "Connecting Bluetooth: wait", "By Bluetooth", "By radio link (no Bluetooth)"};
+    static const char *words[4] = {"No Bluetooth", "Connecting Bluetooth: wait", "By Bluetooth", "Bluetooth: not joined"};   // B48: no radio-link fallback
     SendText((char *)"pipe", (char *)words[PipeState <= 3 ? PipeState : 0]);
 }
 void PipeOff()
@@ -88,14 +88,29 @@ bool PipeJoining(char *why, size_t n)
     snprintf(why, n, "Connecting Bluetooth.\r\nPlease wait a moment.");
     return true;
 }
+// B48 (Malcolm, 7 Oct: "I think we can remove the By radio fallback. I think Rotorflight editing should be entirely over
+// Bluetooth"): with a model connected, the Rotorflight pages and their writes need the pipe. Without a model they work
+// on the transmitter's own copies (the local banks), as before.
+bool RfPipeBlocked(char *why, size_t n)
+{
+    if (!BoundFlag || !ModelMatched)
+        return false; // no model: the local banks
+    if (PipeJoining(why, n))
+        return true;
+    if (PipeState == 2)
+        return false;
+    snprintf(why, n, "No Bluetooth link to the receiver.\r\nRotorflight needs a Version 2 receiver\r\n(0.9.874 or later), in reach.");
+    return true;
+}
 void AddParameterstoQueue(uint8_t ID) // this queue is essentially a LIFO stack
 {
     if (!ModelMatched || !BoundFlag || ID == 0)
         return;
-    if (PipeState == 2 && RfParamOverPipe(ID)) // B41: the screen's Bluetooth pipe carries the Rotorflight ones, once
+    if (RfParamOverPipe(ID)) // B41: the screen's Bluetooth pipe carries the Rotorflight ones, once; B48: and nothing else does
     {
-        SendParameterByPipe(ID);
-        return;
+        if (PipeState == 2)
+            SendParameterByPipe(ID);
+        return; // (no pipe: the pages refuse first, RfPipeBlocked; a packet that slips past them is dropped, never sent by radio)
     }
     for (int i = 0; i < PARAMETER_SEND_REPEATS; ++i)
     {

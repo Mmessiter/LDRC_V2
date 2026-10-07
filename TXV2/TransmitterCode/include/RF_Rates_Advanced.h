@@ -203,6 +203,14 @@ void SendEditedRatesAdvanced()
         SaveLocalRatesAdvancedBank();
         return;
     }
+    {
+        char why[120];
+        if (RfPipeBlocked(why, sizeof(why))) // B48: the pipe went while the page was open
+        {
+            MsgBox((char *)"page Rates_A_View", why);
+            return;
+        }
+    }
     PlaySound(BEEPMIDDLE);
     BlockBankChanges = true;
     DelayWithDog(100);                                           //  allow LOTS of time for screen to update BEFORE sending another Nextion command

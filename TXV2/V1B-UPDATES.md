@@ -186,6 +186,27 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Rotorflight editing is Bluetooth only; the bank and gap lines wait too; a join's timeline (V2 B48 + screen 1.11.13, 7 Oct 2026)
+
+Malcolm, with 1.11.12: "It works much better now." Then three things.
+
+**"I think we can remove the By radio fallback. Rotorflight editing should be entirely over Bluetooth."** B48: with a
+model connected, the PID, rates, governor and advanced pages, and their writes, need the pipe; they refuse with the
+reason ("Connecting Bluetooth. Please wait a moment." or "No Bluetooth link to the receiver. Rotorflight needs a Version
+2 receiver (0.9.874 or later), in reach."). Without a model they work on the transmitter's own copies as before. A
+Rotorflight parameter is never sent by radio any more; the menu says "No Bluetooth" / "Connecting Bluetooth: wait" /
+"By Bluetooth" / "Bluetooth: not joined". Version 1 receivers have lost Rotorflight editing from the transmitter, as
+decided on 6 October.
+
+**"There is still a drop in frame rate when I move the motor switch, whether safety is on or not."** The motor switch
+also moves the bank (to 4 and back: positions 2 and 3), and every bank change wrote a log line to the card. B48 keeps
+the bank lines, the radio-swap lines and the gap lines with the motor lines, written at the next safety change, the
+disconnection or power-off (24 lines of room). A gap's own log line used to be the next gap.
+
+**"Sometimes connecting to Bluetooth takes a very long time, and sometimes it's quicker."** Screen 1.11.13 keeps the last
+24 happenings of the pipe with their time ("scan 1: 3 devices", "connecting to Test1 (-57 dBm)", "ready: Test1, MTU
+247", "disconnected (19)" ...) in `/status` under ble.log: the next slow join can be read.
+
 ## The pipe's parameters were never accepted: now sent as a form (screen 1.11.12, 7 Oct 2026)
 
 Malcolm, with B47 and 1.11.10: the banner, then "By Bluetooth", "but all the values it reads are zero from PID and
