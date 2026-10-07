@@ -64,10 +64,42 @@ static void bleNotify(NimBLERemoteCharacteristic *, uint8_t *data, size_t len, b
 static bool bleServeNow(const std::string &method, const std::string &path, const std::string &body, const std::string &type, ldrc::BleReply &out, std::string &err);   // (the task, below)
 static void bleLeave();
 static std::string bleUpper(std::string s) { for (auto &c : s) c = (char) toupper((unsigned char) c); return s; }
+// 1.11.14 (Malcolm: "Sometimes connecting to Bluetooth takes a very long time"): the scan stops the moment the model's
+// receiver is heard, rather than at the end of its window. Its Bluetooth address is its board id or that plus one to
+// three (the ESP32 derives its addresses from one base); heard with such an address it is connected to at once and the
+// identity check by its state page is skipped. Any other receiver heard waits for the window to end, as before.
+struct BleFound { bool have = false; NimBLEAddress addr; std::string name; int rssi = 0; };
+static BleFound bleFound;
+static std::string bleScanWant, bleScanTarget;                 // what the scan looks for, copied before it starts (the callback runs in the host task; the main board may change its mind meanwhile)
+static bool bleAddrNear(const std::string &adv, const std::string &want) {        // "e0:72:a1:fa:54:bd" against "E072A1FA54BC"
+    if (want.size() != 12) return false;
+    std::string a; for (char c : adv) if (c != ':') a += (char) toupper((unsigned char) c);
+    if (a.size() != 12 || a.compare(0, 10, want, 0, 10) != 0) return false;
+    const int x = (int) strtol(a.substr(10).c_str(), nullptr, 16), w = (int) strtol(want.substr(10).c_str(), nullptr, 16);
+    return x >= w && x - w <= 3;
+}
+class BleScanCb : public NimBLEScanCallbacks {
+    void onResult(const NimBLEAdvertisedDevice *d) override {
+        if (bleFound.have || !d->isAdvertisingService(NimBLEUUID(ldrc::BLE_SVC_UUID))) return;
+        const std::string name = d->getName(), addr = d->getAddress().toString();
+        if (!bleScanTarget.empty() ? name != bleScanTarget : (!bleScanWant.empty() && !bleAddrNear(addr, bleScanWant))) return;   // not the one wanted: the window goes on
+        bleFound.addr = d->getAddress(); bleFound.name = name; bleFound.rssi = d->getRSSI(); bleFound.have = true;
+    }
+};
+static BleScanCb bleScanCb;
+static bool bleBridgeUp(const std::string &name, std::string &why);
 static bool bleConnectTo(const NimBLEAdvertisedDevice *d, std::string &why) {   // in the task: connect and find the bridge
     bleClient = NimBLEDevice::createClient(); bleClient->setClientCallbacks(&bleClientCb, false); bleClient->setConnectTimeout(5000);
     const std::string name = d->getName();
     if (!bleClient->connect(d, true, false, true)) { why = "could not connect to " + name; NimBLEDevice::deleteClient(bleClient); bleClient = nullptr; return false; }
+    return bleBridgeUp(name, why);
+}
+static bool bleConnectAddr(const NimBLEAddress &addr, const std::string &name, std::string &why) {   // (1.11.14) the one the scan stopped for
+    bleClient = NimBLEDevice::createClient(); bleClient->setClientCallbacks(&bleClientCb, false); bleClient->setConnectTimeout(5000);
+    if (!bleClient->connect(addr, true, false, true)) { why = "could not connect to " + name; NimBLEDevice::deleteClient(bleClient); bleClient = nullptr; return false; }
+    return bleBridgeUp(name, why);
+}
+static bool bleBridgeUp(const std::string &name, std::string &why) {           // connected: the service and its two characteristics
     NimBLERemoteService *svc = bleClient->getService(NimBLEUUID(ldrc::BLE_SVC_UUID));
     bleReqChr = svc ? svc->getCharacteristic(NimBLEUUID(ldrc::BLE_REQ_UUID)) : nullptr; bleRespChr = svc ? svc->getCharacteristic(NimBLEUUID(ldrc::BLE_RESP_UUID)) : nullptr;
     if (!bleReqChr || !bleRespChr || !bleRespChr->canNotify() || !bleRespChr->subscribe(true, bleNotify, true)) { why = name + " has no bridge"; bleClient->disconnect(); NimBLEDevice::deleteClient(bleClient); bleClient = nullptr; bleReqChr = bleRespChr = nullptr; return false; }
@@ -85,8 +117,13 @@ static bool bleJoin() {                                        // in the task: s
     for (int round = 0; round < 5 && bleOrder != 2; ++round) {
         if (round) { vTaskDelay(pdMS_TO_TICKS(500)); bleState = BLE_SCANNING; }
         scan->clearResults();
-        NimBLEScanResults res = scan->getResults(2500, false);
-        bleNote("scan " + std::to_string(round + 1) + ": " + std::to_string(res.getCount()) + " devices");
+        bleFound = BleFound(); bleScanWant = bleWantMac; bleScanTarget = bleTarget; scan->setScanCallbacks(&bleScanCb, false);
+        const uint32_t t0 = millis();
+        scan->start(2500, false, true);                           // (1.11.14) ends early when the one wanted is heard
+        while (scan->isScanning() && !bleFound.have && bleOrder != 2) vTaskDelay(pdMS_TO_TICKS(20));
+        if (scan->isScanning()) scan->stop();
+        NimBLEScanResults res = scan->getResults();
+        bleNote("scan " + std::to_string(round + 1) + ": " + std::to_string(res.getCount()) + " devices in " + std::to_string(millis() - t0) + " ms" + (bleFound.have ? ", " + bleFound.name + " heard" : ""));
         std::vector<BleSeen> seen; std::vector<const NimBLEAdvertisedDevice *> cands;
         for (int i = 0; i < res.getCount(); ++i) {
             const NimBLEAdvertisedDevice *d = res.getDevice(i);
@@ -96,6 +133,12 @@ static bool bleJoin() {                                        // in the task: s
         }
         if (xSemaphoreTake(bleMutex, pdMS_TO_TICKS(100)) == pdTRUE) { bleSeen = seen; xSemaphoreGive(bleMutex); }
         std::sort(cands.begin(), cands.end(), [](const NimBLEAdvertisedDevice *a, const NimBLEAdvertisedDevice *b) { return a->getRSSI() > b->getRSSI(); });
+        if (bleFound.have && bleOrder != 2) {                          // (1.11.14) the one the scan stopped for: straight in
+            bleState = BLE_CONNECTING;
+            bleNote("connecting to " + bleFound.name + " (" + std::to_string(bleFound.rssi) + " dBm, by its address)");
+            if (bleConnectAddr(bleFound.addr, bleFound.name, why)) { scan->clearResults(); bleState = BLE_READY; bleNote("ready: " + bleJoined + ", MTU " + std::to_string(bleMtu)); return true; }
+            bleNote(why);
+        }
         if (cands.empty()) { why = seen.empty() ? "no receiver in reach" : "the receiver named is not in reach"; bleNote("no receiver among them"); continue; }
         bleState = BLE_CONNECTING;
         for (size_t i = 0; i < cands.size() && bleOrder != 2; ++i) {

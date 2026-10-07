@@ -186,6 +186,30 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The join begins on Model setup, and ends the moment the receiver is heard (V2 B49 + screen 1.11.14, 7 Oct 2026)
+
+Malcolm: "when safety is on, we could quietly try to connect Bluetooth in the background so that the connection banner
+and pause are eliminated or at least reduced. Turning safety off should instantly turn Bluetooth and WiFi off." Two
+parts, and one limit.
+
+**B49:** the screen is asked to join the model's receiver as soon as the pilot is in Model setup (or any Rotorflight
+page), one step before the Rotorflight menu, so the menu usually opens already joined; a failed join is tried again
+after fifteen seconds while those pages show. Not sooner than Model setup: the receiver takes one Bluetooth client at
+a time, and the phone app must find it free the rest of the time. The pipe is let go on the way back to the front page,
+as before, and when the safety goes off the receiver is told at once (not twenty seconds later when the ask lapses); the
+screen already drops Bluetooth and WiFi the moment the safety goes off.
+
+**Screen 1.11.14:** the scan stops the moment the model's receiver is heard, rather than at the end of its 2.5 s window.
+The receiver's Bluetooth address is its board id or that plus one to three (the ESP32 derives its addresses from one
+base), so heard with such an address it is connected to at once and the identity check by its state page is skipped.
+Any other receiver waits for the window, as before. A join with the receiver's Bluetooth already up should now take a
+second or so.
+
+Still open: "a big drop in frame rate when moving the motor switch with safety off", and at a bank change. The
+transmitter's timing report of this morning's session shows no gap in its sending above 55 ms and no gap in the
+acknowledgements above 50 ms except at the safety changes (the receiver's flight saves), so the link itself does not
+stall there; what the box shows, and for how long, is the next question.
+
 ## Rotorflight editing is Bluetooth only; the bank and gap lines wait too; a join's timeline (V2 B48 + screen 1.11.13, 7 Oct 2026)
 
 Malcolm, with 1.11.12: "It works much better now." Then three things.

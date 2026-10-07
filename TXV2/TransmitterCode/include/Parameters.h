@@ -31,9 +31,62 @@ void PipeOn()
     snprintf(b, sizeof(b), "ldrcpipe on %02X%02X%02X%02X%02X%02X", (unsigned)(a & 0xFF), (unsigned)((a >> 8) & 0xFF), (unsigned)((a >> 16) & 0xFF), (unsigned)((a >> 24) & 0xFF), (unsigned)(c & 0xFF), (unsigned)((c >> 8) & 0xFF));
     SendCommand(b);
 }
+// B49 (Malcolm, 7 Oct: "when safety is on, we could quietly try to connect Bluetooth in the background so that the
+// connection banner and pause are eliminated or at least reduced"): the screen joins the receiver as soon as the pilot
+// is in Model setup, one step before the Rotorflight menu, so the menu usually opens already joined. Not sooner: the
+// receiver takes one Bluetooth client at a time, and the phone app must find it free the rest of the time. The pipe is
+// let go on the way back to the front page (GotoFrontView), and at once when the safety goes off (the screen's rule).
+bool PipePageShowing()
+{
+    switch (CurrentView)
+    {
+    case RXSETUPVIEW:
+    case RXSETUPVIEW1:
+    case ROTORFLIGHTVIEW:
+    case PIDVIEW:
+    case RATESVIEW_RF:
+    case RATESADVANCEDVIEW:
+    case PIDADVANCEDVIEW:
+    case RFBACKUP_RESTOREVIEW:
+    case RFGOVERNORVIEW_PROFILE:
+    case RFGOVERNORVIEW_GLOBAL:
+        return true;
+    default:
+        return false;
+    }
+}
 void PipeTick() // B44: once a second from the main loop: the ask is renewed every five seconds while the menu is open (the receiver forgets it after twenty)
 {
-    if (!PipeWanted || RadiosMustBeOff())
+    static uint32_t PipeFailedAt = 0;
+    if (RadiosMustBeOff())
+    { // B49 (Malcolm: "Turning safety off should instantly turn Bluetooth and WiFi off"): the screen does that by itself
+      // the moment it hears; the receiver is told at once too, instead of waiting twenty seconds for the ask to lapse
+        if (PipeWanted)
+            PipeOff();
+        return;
+    }
+    if (PipePageShowing() && BoundFlag && ModelMatched && RxHasPipe()) // B49: the join begins on Model setup, and is tried again after a failure
+    {
+        if (PipeState == 0)
+        {
+            PipeOn();
+            PipeState = 1;
+            ShowPipeState();
+        }
+        else if (PipeState == 3)
+        {
+            if (!PipeFailedAt)
+                PipeFailedAt = millis();
+            else if (millis() - PipeFailedAt > 15000)
+            {
+                PipeFailedAt = 0;
+                PipeState = 0; // (asked again next second)
+            }
+        }
+        else
+            PipeFailedAt = 0;
+    }
+    if (!PipeWanted)
         return;
     if (millis() - PipeAskedMs < 5000)
         return;

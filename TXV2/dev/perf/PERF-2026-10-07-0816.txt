@@ -1,0 +1,76 @@
+LDRC transmitter timing - firmware 2.5.6 B48 07/10/26 - up 723 s
+While a model was connected: 296851 packets. On time = a gap under 3 ms (one every 2 ms).
+
+GAPS BETWEEN PACKETS
+  under  3 ms       296079
+    3 to   4 ms         94
+    4 to   6 ms        521
+    6 to  10 ms         55
+   10 to  20 ms         10
+   20 to  50 ms         87
+   50 to 100 ms          5
+  100 ms or more         0
+Late packets (4 ms or more): 678. Worst: 55.0 ms at 623 s, in ButtonWasPressed, called by (no job).
+
+THE LAST LATE PACKETS (oldest first): when, the gap, the job that took longest by itself, its time, who called it, the page
+     693 s   26675 us  TryToReconnect                      23198 us  < SendData (the radio)           page 0
+     693 s   26161 us  TryToReconnect                      23199 us  < SendData (the radio)           page 0
+     693 s   26679 us  TryToReconnect                      23201 us  < SendData (the radio)           page 0
+     693 s   26288 us  TryToReconnect                      23201 us  < SendData (the radio)           page 0
+     693 s   26552 us  TryToReconnect                      23201 us  < SendData (the radio)           page 0
+     693 s   26869 us  TryToReconnect                      23196 us  < SendData (the radio)           page 0
+     693 s   26676 us  TryToReconnect                      23198 us  < SendData (the radio)           page 0
+     693 s   26160 us  TryToReconnect                      23199 us  < SendData (the radio)           page 0
+     693 s   26679 us  TryToReconnect                      23201 us  < SendData (the radio)           page 0
+     693 s   26288 us  TryToReconnect                      23201 us  < SendData (the radio)           page 0
+     693 s   26553 us  TryToReconnect                      23200 us  < SendData (the radio)           page 0
+     693 s   26869 us  TryToReconnect                      23196 us  < SendData (the radio)           page 0
+     693 s   26676 us  TryToReconnect                      23198 us  < SendData (the radio)           page 0
+     693 s   26161 us  TryToReconnect                      23199 us  < SendData (the radio)           page 0
+     693 s   26678 us  TryToReconnect                      23201 us  < SendData (the radio)           page 0
+     693 s   26288 us  TryToReconnect                      23201 us  < SendData (the radio)           page 0
+     693 s   26553 us  TryToReconnect                      23201 us  < SendData (the radio)           page 0
+     693 s   26869 us  TryToReconnect                      23196 us  < SendData (the radio)           page 0
+     693 s   26676 us  TryToReconnect                      23198 us  < SendData (the radio)           page 0
+     693 s   26160 us  TryToReconnect                      23199 us  < SendData (the radio)           page 0
+     693 s   26679 us  TryToReconnect                      23201 us  < SendData (the radio)           page 0
+     693 s   26288 us  TryToReconnect                      23201 us  < SendData (the radio)           page 0
+     693 s   26553 us  TryToReconnect                      23201 us  < SendData (the radio)           page 0
+     693 s   26869 us  TryToReconnect                      23196 us  < SendData (the radio)           page 0
+
+THE JOBS, longest single run first: runs, longest by itself, longest with what it calls, total by itself
+  GetBank                                    11809     3914 us   752637 us        39 ms
+  DelayWithDog                                  54   135009 us   749852 us       588 ms
+  ButtonWasPressed                              58    52129 us   744543 us       282 ms
+  SendData (the radio)                   105601884     6979 us    67835 us    423854 ms
+  GetValue (waits for the screen)               23        5 us    56268 us         0 ms
+  TryToReconnect                                92    23201 us    23201 us      2046 ms
+  SendCommand (to the screen)                 6380      458 us    21331 us       514 ms
+  writing the log                               38     7303 us     7303 us       163 ms
+  once-a-second chores                         608        1 us     7275 us         0 ms
+  CheckBatteryStates                           608     4274 us     4580 us      1022 ms
+  ProcessRecentCommsGap                          5        3 us     4220 us         0 ms
+  GetTextIn (reading the screen)                58     2324 us     2324 us        10 ms
+  ShowServoPos (channel bars)                23696       12 us     2255 us        12 ms
+  ShowComms (front/data page)                  608     1280 us     1748 us        50 ms
+  TryToConnect                                   1     1551 us     1551 us         1 ms
+  UpdateTrimView                               637        5 us     1040 us         0 ms
+  ReadTime (page clock)                        608      939 us     1023 us       516 ms
+  sending parameters                        353762        0 us      414 us        11 ms
+  motor-switch wait                              1        0 us      171 us         0 ms
+  GetFrameRate                                 608        1 us      149 us         0 ms
+  GetNewChannelValues (mixing)           105601884       91 us       91 us     28178 ms
+  PlaySound                                     31        1 us       77 us         0 ms
+  TellScreen                                 13025       30 us       30 us         6 ms
+  ReadTheSwitchesAndTrims                    11810        1 us        1 us        12 ms
+  CheckPowerOffButton                    105564747        0 us        0 us     14760 ms
+  DoTheVariometer                        104342876        0 us        0 us      2609 ms
+  GetReturnCode (draining the screen)        11937        0 us        0 us         1 ms
+  ShowMotorTimer                               616        0 us        0 us         0 ms
+  CheckHardwareTrims                         11809        0 us        0 us         0 ms
+  reading the clock (I2C)                     9900        0 us        0 us         0 ms
+  receiver update                            11809        0 us        0 us         0 ms
+  CheckScreenTime                              608        0 us        0 us         0 ms
+  CheckMaxCurrent                            11809        0 us        0 us         0 ms
+
+Pages: 0 front, 1 sticks, 7 transmitter setup, 9 data, 30 GPS, 31 model setup, 39 blank (screen off), 43 gaps.

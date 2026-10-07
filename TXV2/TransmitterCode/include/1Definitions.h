@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B48 07/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B49 07/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -989,7 +989,8 @@ bool RfParamOverPipe(uint8_t id);             // B41: this parameter ID goes by 
 void SendParameterByPipe(uint8_t id);         // B41: as words, to the screen
 void PipeOn();                                // B41: ask the screen to join the model's receiver
 void PipeOff();
-void PipeTick();                              // B44: renew the ask to the receiver while the menu is open
+void PipeTick();                              // B44: renew the ask to the receiver while the menu is open; B49: the join begins on Model setup
+bool PipePageShowing();                       // B49: Model setup and the Rotorflight pages
 bool RadiosMustBeOff();                       // FlightGuard.h: safety off (or, with no safety, motor on)
 bool ModelSeemsArmed(char *why, size_t n);    // B45: Parameters.h - the Rotorflight pages' refusal, with its reason
 void ShowPipeState();                         // B42: "By Bluetooth" / "By radio link" on the Rotorflight menu
