@@ -290,15 +290,14 @@ static bool bleAsk(const std::string &method, const std::string &path, const std
 // Rotorflight menu's four buttons says so, in the biggest letters we have; it goes when the join ends. The main board
 // refuses those pages meanwhile (B47), with the same words.
 static bool pipeNoticeUp = false; static int pipeNoticePage = -1;
-static const int PN_X = 420, PN_Y = 78, PN_W = 356, PN_H = 288;   // (1.11.19: five buttons)
+static const int PN_X = 34, PN_Y = 280, PN_W = 732, PN_H = 112;   // (1.11.26: a strip under the menu's grid of buttons, over the model name's line)
 static void pipeNoticeDraw() {
     gfx->fillRect(PN_X, PN_Y, PN_W, PN_H, OUR_PANEL);
     gfx->drawRect(PN_X, PN_Y, PN_W, PN_H, OUR_INK); gfx->drawRect(PN_X + 1, PN_Y + 1, PN_W - 2, PN_H - 2, OUR_INK);
     gfx->startWrite();
-    const std::string a = "Connecting", b = "Bluetooth", c = "please wait a moment";
-    int y = PN_Y + 18;
-    drawGlyphs(PN_X + (PN_W - textWidth(1, a)) / 2, y, 1, OUR_INK, a); y += fontHeight(1) + 2;
-    drawGlyphs(PN_X + (PN_W - textWidth(1, b)) / 2, y, 1, OUR_INK, b); y += fontHeight(1) + 14;
+    const std::string a = "Connecting Bluetooth", c = "please wait a moment";
+    int y = PN_Y + 10;
+    drawGlyphs(PN_X + (PN_W - textWidth(1, a)) / 2, y, 1, OUR_INK, a); y += fontHeight(1) + 4;
     drawGlyphs(PN_X + (PN_W - textWidth(2, c)) / 2, y, 2, OUR_INK, c);
     gfx->endWrite();
     memoTouched(PN_X, PN_Y, PN_W, PN_H); dirty(PN_X, PN_Y, PN_W, PN_H); damage(PN_X, PN_Y, PN_W, PN_H);

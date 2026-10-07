@@ -3006,7 +3006,7 @@ void RestoreCurrentModel()
 // ******************************** Global Array1 of numbered function pointers OK up the **********************************
 
 // This new list can be huge - up to 24 BITS unsigned!  ( Use "NUMBER<<8" )
-#define LASTFUNCTION1 81 // One more than final one
+#define LASTFUNCTION1 83 // One more than final one
 
 void (*NumberedFunctions1[LASTFUNCTION1])(){
     Blank,                   // 0 Cannot be used
@@ -3089,7 +3089,9 @@ void (*NumberedFunctions1[LASTFUNCTION1])(){
     ServoReverseTapped,      // 77 Reverse
     ServoGeometryTapped,     // 78 Geometry Corr.
     ServoPrevious,           // 79 < Servo
-    ServoNext                // 80 Servo >
+    ServoNext,               // 80 Servo >
+    StartRFSettingsView,     // 81 B56: the menu's Settings ...
+    EndRFSettingsView        // 82 OK on the settings page
 };
 
 // This list migth become MUCH longer as it limit is 24 bits big

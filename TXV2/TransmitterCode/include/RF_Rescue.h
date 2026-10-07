@@ -182,6 +182,15 @@ void RescueBankChanged()                   // from BankHasChanged (Switches.h): 
     char b[16];
     snprintf(b, sizeof(b), "Bank %d", Bank);
     SendText((char *)"t9", b);
+    if (Rescue_Was_Edited) // B56 (Malcolm): the warning the other pages give, "too late now"
+    {
+        char NB[10];
+        char Wmsg[120];
+        strcpy(Wmsg, "Rescue values for Bank ");
+        strcat(Wmsg, Str(NB, PreviousBank, 0));
+        strcat(Wmsg, " were edited \r\nbut not saved. (Too late now!)\r\nSo you may want to check them.");
+        MsgBox((char *)(CurrentView == RESCUE2VIEW ? "page Rescue2View" : "page RescueView"), Wmsg);
+    }
     Rescue_Was_Edited = false;
     SendCommand((char *)"vis b3,0");
     if (RescueStep != RSC_IDLE)

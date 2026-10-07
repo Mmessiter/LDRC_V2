@@ -49,6 +49,20 @@ void RotorFlightStart()
     ShowPipeState();
     AddParameterstoQueue(MSP_INHIBIT_TELEMETRY); // Inhibit telemetry for a short time to allow MSP data to be sent without interference from telemetry data (for MSP data transmission)
     SendText((char *)"t11", ModelName);          // Show model name
+    RotorFlight_Version = RFVersions[RotorFlight_V];
+    (void)Vbuf; // (B56: the four settings have a page of their own, RFSetupView: StartRFSettingsView)
+    ShowRFBank();
+    ShowRFRate();
+}
+// B56 (Malcolm, 7 Oct: the menu "will become a bit overcrowded ... redesign it slightly"): the four settings that were on
+// the menu - link rates and banks, version, arming channel, main RPM ratio - on a page of their own, and the menu a grid
+// of buttons. The fields keep their names (sw0, t5, Arming, Ratio), so the keypad and LinkRatesToBanksChanged work as before.
+void StartRFSettingsView()
+{
+    char Vbuf[15];
+    SendCommand((char *)"page RFSetupView");
+    CurrentView = RFSETUPVIEW;
+    SendText((char *)"t11", ModelName);
     snprintf(Vbuf, sizeof(Vbuf), "%1.2f", GearRatio);       // 10.3 usually (ClaudeFix-2-7-2026 size 5 truncated 10.35 to "10.3" -- which RotorFlightEnd then read back and SAVED, silently degrading the ratio)
     SendText((char *)"Ratio", Vbuf);
     snprintf(Vbuf, sizeof(Vbuf), "%d", ArmingChannel);
@@ -62,7 +76,12 @@ void RotorFlightStart()
 }
 
 // **********************************************************************************************************/
-void RotorFlightEnd()
+void RotorFlightEnd() // OK on the menu: to the front page (B56: the fields are on the settings page; EndRFSettingsView reads them)
+{
+    ZeroDataScreen();        // clear the screen data because editing Rotorflight parameters may have created misleading comms gaps
+    GotoFrontView();
+}
+void EndRFSettingsView() // OK on the settings page: the fields read back, the model saved, back to the menu
 {
     char temp[15];
     // Nextion serial can carry stale bytes after heavy MSP traffic, so GetText may fail silently.
@@ -91,8 +110,7 @@ void RotorFlightEnd()
             LinkRatesToBanks = (bool)sw; // ClaudeFix-2-7-2026 ignore a comms-error 65535 (would have saved as 'true')
     }
     SaveOneModel(ModelNumber); // save the model including gear ratio and arming channel
-    ZeroDataScreen();        // clear the screen data because editing Rotorflight parameters may have created misleading comms gaps
-    GotoFrontView();
+    RotorFlightStart();
 }
 // **********************************************************************************************************/
 void LinkRatesToBanksChanged()

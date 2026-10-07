@@ -55,27 +55,7 @@ page(59, 'Rescue2View', 'Rescue: height hold', [
     ('tn4', 'Height hold D', 0, 4, 'num', 67), ('tn5', 'Max Collective [%]', 0, 5, 'num', 67),
 ], [('b3', 'Save', 14, 180, 66), ('b2', '< Previous', 408, 180, 71), ('b1', 'OK', 605, 180, 65)], 'RESCUE2.TXT')
 
-# the menu: a fifth button, the pipe line beside the model name
-menu = json.load(open(os.path.join(PAGES, '8.json')))
-names = {c['n'] for c in menu['comps']}
-if 'Rescue' not in names:
-    b = comp(next(c for c in menu['comps'] if c['n'] == 'b3'), n='Rescue', x=430, y=252, w=336, h=46, txt='Rescue ...'); b['i'] = max(c['i'] for c in menu['comps']) + 1
-    b['ev'] = {'r': 'va0.val=64<<8\nprint va0.val'}
-    menu['comps'].append(b)
-if 'Servos' not in names:                                   # 1.11.24: the sixth button
-    b = comp(next(c for c in menu['comps'] if c['n'] == 'b3'), n='Servos', x=430, y=276, w=336, h=42, txt='Servos ...'); b['i'] = max(c['i'] for c in menu['comps']) + 1
-    b['ev'] = {'r': 'va0.val=73<<8\nprint va0.val'}
-    menu['comps'].append(b)
-# 1.11.23 (Malcolm): the pages with editable values together, Backup / Restore last; 1.11.24: six buttons, 42 high at a pitch of 48
-order = ['Pid', 'b1', 'b2', 'Rescue', 'Servos', 'b3']
-for c in menu['comps']:
-    if c['n'] in order: c['y'] = 84 + 48 * order.index(c['n']); c['h'] = 42
-    if c['n'] == 't11': c['w'] = 480; c['y'] = 366; c['h'] = 38
-    if c['n'] == 'pipe': c['y'] = 362; c['h'] = 44   # (the progress bar lies at 407)
-for c in menu['comps']:
-    if c['n'] == 't2': c['w'] = 390
-json.dump(menu, open(os.path.join(PAGES, '8.json'), 'w'), indent=1)
-print('8 RFView: Rescue button, pipe beside the model name')
+# (the Rotorflight menu itself is made by hmi/rfmenu_pages.py since 1.11.26)
 idx = json.load(open(os.path.join(PAGES, '..', 'index.json')))
 have = {x['id'] for x in idx['pages']}
 for pid, name, n in ((58, 'RescueView', 38), (59, 'Rescue2View', 17)):

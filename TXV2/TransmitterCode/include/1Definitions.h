@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B55 07/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B56 07/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -327,6 +327,7 @@ bool GapStartedDisarmed = false; // Rotorflight arming in use and DISARMED when 
 #define RESCUEVIEW 58            // B50: Rotorflight rescue, page 1 (RF_Rescue.h)
 #define RESCUE2VIEW 59           // B50: ... page 2, height hold
 #define SERVOVIEW 60             // B55: Rotorflight servos (RF_Servos.h)
+#define RFSETUPVIEW 61           // B56: the Rotorflight settings page (RF_RotorFlight.h)
 #define MODELIDVIEW 56
 
 // **************************************************************************
@@ -867,6 +868,8 @@ void ServoReverseTapped();
 void ServoGeometryTapped();
 void ServoPrevious();
 void ServoNext();
+void StartRFSettingsView();                   // B56
+void EndRFSettingsView();
 void StartModelSetup();
 bool GetConfirmation(char *goback, char *Prompt);
 void GotoModelsView();

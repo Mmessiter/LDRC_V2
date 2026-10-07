@@ -186,6 +186,21 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The menu redesigned: a grid, and a Settings page (V2 B56 + screen 1.11.26, 7 Oct 2026)
+
+Malcolm: "I like your suggestion. Let's do it that way." The four settings that sat on the Rotorflight menu - link
+rates and banks, version, arming channel, main RPM ratio - have a page of their own, "Settings ...", opened from the
+menu and closed with OK (which reads the fields back and saves the model, as the menu's OK did). The menu is a grid of
+buttons, three to a row, the pages with values to edit first: PIDs, Rates, Governor / Rescue, Servos, Settings; room
+for three more (Travel extents, Filters, ESC setup); the model name and the blue tooth below; Backup / Restore at the
+bottom left, OK at the bottom right. The "Connecting Bluetooth" notice is a strip under the grid. Help texts
+RFLIGHT.TXT (rewritten) and RFSETUP.TXT.
+
+And: "If a user moves the bank switch ... and there is stuff to be saved, I already have a particular message box which
+warns him that these changes are lost and it's too late now!" The rescue pages now give that one on a bank change with
+unsaved edits ("Rescue values for Bank 4 were edited but not saved. (Too late now!) So you may want to check them."),
+as the rates and governor pages do. OK with unsaved edits still asks first, so a save is not lost by a slip.
+
 ## Servos; errors as message boxes; the bank switch on a rescue page; the menu reordered (V2 B55 + screen 1.11.24, 7 Oct 2026)
 
 Malcolm's three points after the rescue test: "the error banners should look more like message boxes. This one doesn't

@@ -1,0 +1,11 @@
+Rotorflight settings: what the transmitter itself needs to know about this model's flight controller.||
+
+Link rates and banks: On makes the rates bank follow the PID bank (the bank switch sets both). Off leaves the rates bank to the rates switch.||
+
+Version: the Rotorflight version the receiver reports from the flight controller (2.2 or 2.3). 0.0 means it has not answered yet; the model keeps the last version it knew.||
+
+Arming channel: the channel the safety switch drives to arm the flight controller (usually 6). Press the box to type another.||
+
+Main RPM ratio: the main rotor's gear ratio, motor turns per rotor turn, so the head speed can be shown. Press the box to type it.||
+
+OK saves these with the model and returns to the Rotorflight options.||

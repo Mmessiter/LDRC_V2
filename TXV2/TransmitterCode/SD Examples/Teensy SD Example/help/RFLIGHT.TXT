@@ -1,18 +1,11 @@
-This screen allows you to view and edit PIDs (aka Profiles) and Rates for a flight controller that runs RotorFlight open source firmware. ||
+Rotorflight options: the pages that view and edit a flight controller running Rotorflight (2.2 or later), over the receiver's Bluetooth. Do the first setup of the helicopter with Rotorflight's Configurator; at the field, tune it from here with no laptop.||
 
-Version 2.2 or higher of Rotorflight is needed here. ||
+PIDs, Rates (each with an Advanced page), Governor, Rescue and Servos read their values from the flight controller when opened, for the bank shown at the top left (change bank with the bank switch), and Save writes them back, stores them, and reads them back to check.||
 
-For both Rates and PID you can select the Advanced option in order to view and edit a number of other tuning parameters.||
+Settings holds what the transmitter itself needs to know: whether rates follow the banks, the Rotorflight version (as the receiver reports it), the arming channel, and the main rotor to motor RPM ratio.||
 
-It is therefore envisaged that you need do only the initial setup of your helicopter using RotorFlights Configurator. Once you are at the field you can tune the flying characteristics using the transmitter with no need for a laptop.||
+Backup / Restore saves the PIDs and rates of a bank to the transmitter's card, and puts them back. Save as soon as you are happy with them; never restore what was never saved.||
 
-Also on this screen you can save the parameters to the SD card. It is recommended to do this as soon as you are happy with them. If you then edit them and realise you've made it worse, just restore the saved settings. Never restore the saved settings if you have not ever saved them! That would send junk values which is not a very good idea.||
+Without a model connected, PIDs and Rates show and edit the copies on the card. The other pages need the model.||
 
-If you use these options while NOT connected to a model, you can view and edit the parameters that have been stored on the SD card. It is recommended to do this before you restore or upload the sd card values so that you can check what it is you're sending to the model.
-
-Saving and restoring happens one Bank at a time, and you can select any of the four possibilities. Selection of the local (SD card) bank and the Rotorflight bank is independent. Hence it is possible to copy the settings from one bank to another.
-
-Please land and disarm the model before using this screen. 
-
-
- 
+The blue tooth at the right means the link to the receiver is up; the words say when it is connecting, or absent. Land and disarm before using these pages: with the safety off, nothing here will open.||

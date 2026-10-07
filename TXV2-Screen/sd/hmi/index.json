@@ -47,7 +47,7 @@
   {
    "id": 8,
    "name": "RFView",
-   "n": 21
+   "n": 17
   },
   {
    "id": 9,
@@ -308,6 +308,11 @@
    "id": 60,
    "name": "ServoView",
    "n": 28
+  },
+  {
+   "id": 61,
+   "name": "RFSetupView",
+   "n": 16
   }
  ],
  "fonts": {
