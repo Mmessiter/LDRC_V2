@@ -23,6 +23,7 @@ static std::string bleTarget;                                  // the receiver w
 static std::string bleJoined; static int bleMtu = 0;           // what we are joined to
 static SemaphoreHandle_t bleMutex = nullptr;
 static TaskHandle_t bleTaskHandle = nullptr;
+static volatile bool bleWifiKick = false;                      // (1.11.11) the stack has just gone down: the WiFi joins afresh (loop())
 static unsigned bleStackSpare() { return bleTaskHandle ? (unsigned) uxTaskGetStackHighWaterMark(bleTaskHandle) : 0u; }   // (1.11.8) for /status
 // one request at a time
 struct BleRequest { std::string method, path, body, type; uint32_t id = 0; };
@@ -173,7 +174,7 @@ static void bleTxServe() {                                     // in the task: t
 static void bleTask(void *) {
     for (;;) {
         if (bleOrder == 2) {                                   // off: down with the stack (a failed join keeps its reason until then)
-            bleOrder = 0; bleState = BLE_STOPPING; bleLeave(); NimBLEDevice::deinit(true); bleState = BLE_OFF;
+            bleOrder = 0; bleState = BLE_STOPPING; bleLeave(); NimBLEDevice::deinit(true); bleState = BLE_OFF; bleWifiKick = true;
         } else if (bleOrder == 1) {
             bleOrder = 0;
             if (bleState == BLE_OFF || bleState == BLE_FAILED) {
@@ -228,6 +229,11 @@ static void pipeNoticePoll() {
 static void blePoll() {
     static bool wasArmed = false;
     pipeNoticePoll();
+    // 1.11.11 (Malcolm, 7 Oct: "I could not update, or rather could not join the Wi-Fi usefully until I had switched the
+    // transmitter off and on again. This happened yesterday"): both times after a Bluetooth session. The one radio serves
+    // both; when the Bluetooth stack goes down the WiFi link may be left looking joined and carrying nothing. So the WiFi
+    // joins afresh after every Bluetooth session: a few seconds, on the ground.
+    if (bleWifiKick) { bleWifiKick = false; if (radiosLive) { blog("ble", "stack down: the WiFi joins again"); WiFi.disconnect(); wifiAutoStep = 0; } }
     if (tx.armed && !wasArmed && bleState != BLE_OFF) bleOrder = 2;   // the model could be flying: Bluetooth down, as the WiFi goes
     wasArmed = tx.armed;
     static int logged = -1;

@@ -42,7 +42,13 @@ static bool updAsk(const std::string &url, int &len, std::string &err) {
         char why[96] = ""; const int tls = updTls->lastError(why, sizeof why);
         if (code > 0) { char b[48]; snprintf(b, sizeof b, "messiter.com answered %d", code); err = b; }
         else if (tls == -0x2700) err = "the certificate of messiter.com was not accepted";      // MBEDTLS_ERR_X509_CERT_VERIFY_FAILED
-        else { err = "no connection to messiter.com"; if (tls) { char b[64]; snprintf(b, sizeof b, " (%d, -0x%04X)", code, (unsigned) -tls); err += b; } else { char b[24]; snprintf(b, sizeof b, " (%d)", code); err += b; } }
+        else {
+            err = "no connection to messiter.com"; if (tls) { char b[64]; snprintf(b, sizeof b, " (%d, -0x%04X)", code, (unsigned) -tls); err += b; } else { char b[24]; snprintf(b, sizeof b, " (%d)", code); err += b; }
+            // 1.11.11 (Malcolm, 7 Oct: "could not join the Wi-Fi usefully until I had switched the transmitter off and on",
+            // twice): a TLS connection wants some 45 kB of memory in one piece; after a Bluetooth session there may not be.
+            // The numbers go into the message, so the next time says which it was.
+            { char b[64]; snprintf(b, sizeof b, " [heap %u, largest %u, rssi %d]", (unsigned) ESP.getFreeHeap(), (unsigned) ESP.getMaxAllocHeap(), (int) WiFi.RSSI()); err += b; }
+        }
         updHangUp();
         return false;
     }

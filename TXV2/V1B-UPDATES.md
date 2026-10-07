@@ -186,6 +186,17 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The WiFi joins afresh after a Bluetooth session (screen 1.11.11, 7 Oct 2026)
+
+Malcolm, updating: "I noticed not for the first time that I could not update, or rather could not join the Wi-Fi
+usefully until I had switched the transmitter off and switched it on again. This happened yesterday." Both times after a
+Rotorflight session over Bluetooth. One radio serves both, and when the Bluetooth stack is taken down the WiFi link can
+be left looking joined and carrying nothing - then "Transmitter updates" waits on a WiFi that will never answer. So:
+after every Bluetooth session the screen's WiFi disconnects and joins again by itself (a few seconds, on the ground).
+Not proven to be the cause: `/status` now also shows `largest` (the largest piece of free memory; a secure connection
+wants about 45 kB in one piece) and `rssi`, and a failed connection to messiter.com puts those numbers in its message.
+If it happens again: do not switch off, say so, and the numbers will be read.
+
 ## "Connecting Bluetooth": wait, said loudly; motor lines logged later (V2 B47 + screen 1.11.10, 7 Oct 2026)
 
 Malcolm: "It's very easy to try to view the PIDs while it says Bluetooth connecting. Probably we should wait for it to
