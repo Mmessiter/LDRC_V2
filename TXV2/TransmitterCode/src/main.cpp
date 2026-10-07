@@ -161,6 +161,7 @@
 #include "RF_Rates.h"
 #include "RF_RotorFlight.h"
 #include "RF_Rescue.h" // B50: Rotorflight rescue, over the pipe
+#include "RF_Servos.h" // B55: Rotorflight servos, over the pipe
 #include "RF_Rates_Advanced.h"
 #include "RF_PID_Advanced.h"
 #include "RF_Save_Restore.h"
@@ -3005,7 +3006,7 @@ void RestoreCurrentModel()
 // ******************************** Global Array1 of numbered function pointers OK up the **********************************
 
 // This new list can be huge - up to 24 BITS unsigned!  ( Use "NUMBER<<8" )
-#define LASTFUNCTION1 73 // One more than final one
+#define LASTFUNCTION1 81 // One more than final one
 
 void (*NumberedFunctions1[LASTFUNCTION1])(){
     Blank,                   // 0 Cannot be used
@@ -3080,7 +3081,15 @@ void (*NumberedFunctions1[LASTFUNCTION1])(){
     RescueFlipTapped,        // 69 Roll upright first: Off / On
     StartRescue2View,        // 70 Height ...
     EndRescue2View,          // 71 OK on page 2: back to page 1
-    RescueMode2Tapped        // 72 B52: the mode on the height page (Off / Climb / Hold height)
+    RescueMode2Tapped,       // 72 B52: the mode on the height page (Off / Climb / Hold height)
+    StartServoView,          // 73 B55: the Rotorflight menu's Servos ...
+    EndServoView,            // 74 OK
+    SaveServo,               // 75 Save
+    ServoWasEdited,          // 76 a number typed
+    ServoReverseTapped,      // 77 Reverse
+    ServoGeometryTapped,     // 78 Geometry Corr.
+    ServoPrevious,           // 79 < Servo
+    ServoNext                // 80 Servo >
 };
 
 // This list migth become MUCH longer as it limit is 24 bits big
@@ -4817,6 +4826,7 @@ void FASTRUN ManageTransmitter()
 
     DoTheVariometer(); // Do the variometer
     RescuePoll();      // B50: a Rotorflight rescue read or save in progress, over the pipe
+    ServoPoll();       // B55: the servos page, likewise
 
     if (RightNow - LastTimeRead >= 1000)
     { // Only once a second for these..

@@ -163,14 +163,33 @@ static void RescueAskSelect(int next)
     RescueReq = MspAsk(210, &b, 1);
     RescueStep = next;
 }
-static void RescueFail(const char *what)
+static void RescueRead();
+static void RescueFail(const char *what) // B54 (Malcolm: "the error banners should look more like message boxes"): a message box, with the whole of the receiver's words
 {
-    char msg[160];
-    snprintf(msg, sizeof(msg), "%s: %.100s", what, PipeRepCode ? PipeRepBody : "the screen could not ask (no Bluetooth)");
+    char msg[180];
+    snprintf(msg, sizeof(msg), "%s:\r\n%.140s", what, PipeRepCode ? PipeRepBody : "the screen could not ask (no Bluetooth)");
     RescueStep = RSC_IDLE;
-    RescueBusy(msg);
-    RescueMsgUntil = millis() + 8000;
+    RescueBusy("");
     PlaySound(WHAHWHAHMSG);
+    MsgBox((char *)(CurrentView == RESCUE2VIEW ? "page Rescue2View" : "page RescueView"), msg);
+    RescueShow(); // the page came back from the box: its fields again
+}
+static bool RescueRereadWanted = false;    // B54: the bank switch moved while a read or a save was under way
+void RescueBankChanged()                   // from BankHasChanged (Switches.h): the values of the new bank, the edits of the old one let go
+{
+    if (CurrentView != RESCUEVIEW && CurrentView != RESCUE2VIEW)
+        return;
+    char b[16];
+    snprintf(b, sizeof(b), "Bank %d", Bank);
+    SendText((char *)"t9", b);
+    Rescue_Was_Edited = false;
+    SendCommand((char *)"vis b3,0");
+    if (RescueStep != RSC_IDLE)
+    {
+        RescueRereadWanted = true;
+        return;
+    }
+    RescueRead();
 }
 // Each time round the loop (ManageTransmitter)
 void RescuePoll()
@@ -188,7 +207,14 @@ void RescuePoll()
         RescueShow(); // the fields the message lay over
     }
     if (RescueStep == RSC_IDLE)
+    {
+        if (RescueRereadWanted)
+        {
+            RescueRereadWanted = false;
+            RescueRead();
+        }
         return;
+    }
     if (!PipeReplyReady(RescueReq))
     {
         if (PipeReplyLate())

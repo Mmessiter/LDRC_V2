@@ -1,0 +1,17 @@
+Servos: Rotorflight's settings for each servo, one servo at a time, as the configurator's Servos tab has them. It needs a Version 2 receiver with Bluetooth, the safety on and the model disarmed.||
+
+< Servo and Servo > move between the servos (the title says which one you are on). Servo 1, 2 and 3 are usually the swashplate, 4 the tail.||
+
+Center [us]: where the arm sits with the sticks at zero (750 to 2250). Adjust so the linkages are level.||
+
+Min and Max [us]: how far the servo may move either way from the centre (-1000 to 0, and 0 to 1000).||
+
+Scale Neg and Scale Pos [us]: how much arm movement a full stick asks for, each way (50 to 1000; usually the same both ways).||
+
+Rate [Hz]: how often the servo is refreshed (25 to 5000). Check the servo's own specification.||
+
+Speed [ms]: slow-motion time, 0 = full speed (normal).||
+
+Reverse: flips the servo's direction, like a servo-reverse switch. Tap to change. Geometry Corr.: evens out the arc of the arm so equal commands give equal swash movement up and down; usually On for the three swashplate servos. Tap to change.||
+
+Press a number to type a new one. Save writes this servo to the flight controller, stores it there, and reads it back. OK leaves; if something was edited and not saved, it asks.||

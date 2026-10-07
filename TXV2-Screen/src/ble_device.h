@@ -290,7 +290,7 @@ static bool bleAsk(const std::string &method, const std::string &path, const std
 // Rotorflight menu's four buttons says so, in the biggest letters we have; it goes when the join ends. The main board
 // refuses those pages meanwhile (B47), with the same words.
 static bool pipeNoticeUp = false; static int pipeNoticePage = -1;
-static const int PN_X = 420, PN_Y = 78, PN_W = 356, PN_H = 276;   // (1.11.19: five buttons)
+static const int PN_X = 420, PN_Y = 78, PN_W = 356, PN_H = 294;   // (1.11.19: five buttons)
 static void pipeNoticeDraw() {
     gfx->fillRect(PN_X, PN_Y, PN_W, PN_H, OUR_PANEL);
     gfx->drawRect(PN_X, PN_Y, PN_W, PN_H, OUR_INK); gfx->drawRect(PN_X + 1, PN_Y + 1, PN_W - 2, PN_H - 2, OUR_INK);

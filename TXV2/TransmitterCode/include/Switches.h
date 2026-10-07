@@ -464,6 +464,8 @@ void BankHasChanged()
     {
         ShowPIDAdvancedBank();
     }
+    if (CurrentView == RESCUEVIEW || CurrentView == RESCUE2VIEW)
+        RescueBankChanged(); // B54: the new bank's rescue values
     if (CurrentView == ROTORFLIGHTVIEW || CurrentView == RFBACKUP_RESTOREVIEW)
     {
         ShowRFBank();

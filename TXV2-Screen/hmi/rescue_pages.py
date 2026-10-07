@@ -59,13 +59,21 @@ page(59, 'Rescue2View', 'Rescue: height hold', [
 menu = json.load(open(os.path.join(PAGES, '8.json')))
 names = {c['n'] for c in menu['comps']}
 if 'Rescue' not in names:
-    b = comp(next(c for c in menu['comps'] if c['n'] == 'b3'), n='Rescue', x=430, y=304, w=336, h=46, txt='Rescue ...'); b['i'] = max(c['i'] for c in menu['comps']) + 1
+    b = comp(next(c for c in menu['comps'] if c['n'] == 'b3'), n='Rescue', x=430, y=252, w=336, h=46, txt='Rescue ...'); b['i'] = max(c['i'] for c in menu['comps']) + 1
     b['ev'] = {'r': 'va0.val=64<<8\nprint va0.val'}
     menu['comps'].append(b)
+if 'Servos' not in names:                                   # 1.11.24: the sixth button
+    b = comp(next(c for c in menu['comps'] if c['n'] == 'b3'), n='Servos', x=430, y=276, w=336, h=42, txt='Servos ...'); b['i'] = max(c['i'] for c in menu['comps']) + 1
+    b['ev'] = {'r': 'va0.val=73<<8\nprint va0.val'}
+    menu['comps'].append(b)
+# 1.11.23 (Malcolm): the pages with editable values together, Backup / Restore last; 1.11.24: six buttons, 42 high at a pitch of 48
+order = ['Pid', 'b1', 'b2', 'Rescue', 'Servos', 'b3']
 for c in menu['comps']:
-    if c['n'] == 't11': c['w'] = 480
+    if c['n'] in order: c['y'] = 84 + 48 * order.index(c['n']); c['h'] = 42
+    if c['n'] == 't11': c['w'] = 480; c['y'] = 372; c['h'] = 40
+    if c['n'] == 'pipe': c['y'] = 370; c['h'] = 44
+for c in menu['comps']:
     if c['n'] == 't2': c['w'] = 390
-    if c['n'] == 'pipe': c['y'] = 352; c['h'] = 46
 json.dump(menu, open(os.path.join(PAGES, '8.json'), 'w'), indent=1)
 print('8 RFView: Rescue button, pipe beside the model name')
 idx = json.load(open(os.path.join(PAGES, '..', 'index.json')))

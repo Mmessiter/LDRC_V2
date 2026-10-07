@@ -52,6 +52,7 @@ bool PipePageShowing()
     case RFGOVERNORVIEW_GLOBAL:
     case RESCUEVIEW:
     case RESCUE2VIEW:
+    case SERVOVIEW:
         return true;
     default:
         return false;

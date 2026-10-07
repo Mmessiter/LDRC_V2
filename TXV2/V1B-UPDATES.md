@@ -186,6 +186,22 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Servos; errors as message boxes; the bank switch on a rescue page; the menu reordered (V2 B55 + screen 1.11.24, 7 Oct 2026)
+
+Malcolm's three points after the rescue test: "the error banners should look more like message boxes. This one doesn't
+manage to hold all of its text"; "when I move the bank switch and rescue options are displayed, the screen does not
+recognise the change in the bank"; "the backup and restore option should be at the bottom, because it is not one of
+those with editable values". B54: a failure on the rescue pages is a message box with the whole of the receiver's words
+(the yellow strip keeps the progress); the bank switch re-reads the rescue values of the new bank (edits let go, as on
+the rates page), after a read or save that is under way. Screen 1.11.23/24: the menu's buttons are PIDs, Rates,
+Governor, Rescue, Servos, Backup / Restore, 42 high at a pitch of 48, the model name and the blue tooth below them.
+
+**Servos (B55 + 1.11.24):** one servo at a time (< Servo, Servo >), the title saying which of how many: Center, Min,
+Max, Scale Neg, Scale Pos [us], Rate [Hz], Speed [ms], Reverse and Geometry Corr. (tap), as the receiver's servos page
+reads them (MSP 120, a count and sixteen bytes a servo; set with 212, stored with 250, read back to check). Save writes
+the servo shown. Help SERVOS.TXT. The seventh page onwards will need the menu redesigned: the four settings on the left
+would move to a page of their own, leaving a grid of nine buttons.
+
 ## A banner that looks like one; Next and Previous (V2 B53 + screen 1.11.22, 7 Oct 2026)
 
 Malcolm: "It seems to work very well now, bravo!" Two refinements. The line that says "Writing ..." / "Reading ..." /

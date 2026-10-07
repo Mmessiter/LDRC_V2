@@ -1,0 +1,865 @@
+{
+ "name": "ServoView",
+ "id": 60,
+ "w": 800,
+ "h": 480,
+ "bg": {
+  "sta": 2,
+  "mode": "image",
+  "picture": 3
+ },
+ "nav": {
+  "up": 255,
+  "down": 255,
+  "left": 255,
+  "right": 255
+ },
+ "ev": {
+  "preinitialize": "vis busy,0\nServoView.pic=Screen_Background"
+ },
+ "comps": [
+  {
+   "n": "t0",
+   "i": 1,
+   "t": "text",
+   "g": "l",
+   "x": 0,
+   "y": 0,
+   "w": 800,
+   "h": 58,
+   "font": 0,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 2214
+   },
+   "txt": "Servo 1 (Rotorflight)",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "card",
+   "i": 2,
+   "t": "text",
+   "g": "l",
+   "x": 0,
+   "y": 58,
+   "w": 800,
+   "h": 422,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 65535,
+    "bco": 4426
+   },
+   "txt": "",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 1,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t9",
+   "i": 3,
+   "t": "text",
+   "g": "g",
+   "x": 10,
+   "y": 4,
+   "w": 200,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 2214
+   },
+   "txt": "Bank 1",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t11",
+   "i": 4,
+   "t": "text",
+   "g": "g",
+   "x": 10,
+   "y": 30,
+   "w": 200,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65504,
+    "borderc": 0,
+    "bco": 2214
+   },
+   "txt": "Model name",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "va0",
+   "i": 5,
+   "t": "variable",
+   "g": "l",
+   "sta": 0,
+   "txt": "newtxt",
+   "val": 0,
+   "a": {
+    "txt_maxl": 10
+   }
+  },
+  {
+   "n": "b0",
+   "i": 6,
+   "t": "button",
+   "g": "l",
+   "x": 620,
+   "y": 4,
+   "w": 170,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Help",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"HelpView:SERVOS.TXT\"\nLogView.t0.txt=\"Servo 1 (Rotorflight) help\"\nLogView.return.txt=\"ServoView\""
+   }
+  },
+  {
+   "n": "ltn0",
+   "i": 7,
+   "t": "text",
+   "g": "g",
+   "x": 34,
+   "y": 94,
+   "w": 254,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 63752
+   },
+   "txt": "Center [us]",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "tn0",
+   "i": 8,
+   "t": "text",
+   "g": "g",
+   "x": 294,
+   "y": 94,
+   "w": 120,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Center [us]\"\nva0.val=76<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "ltn1",
+   "i": 9,
+   "t": "text",
+   "g": "g",
+   "x": 34,
+   "y": 134,
+   "w": 254,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 63752
+   },
+   "txt": "Min [us]",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "tn1",
+   "i": 10,
+   "t": "text",
+   "g": "g",
+   "x": 294,
+   "y": 134,
+   "w": 120,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Min [us]\"\nva0.val=76<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "ltn2",
+   "i": 11,
+   "t": "text",
+   "g": "g",
+   "x": 34,
+   "y": 174,
+   "w": 254,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 63752
+   },
+   "txt": "Max [us]",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "tn2",
+   "i": 12,
+   "t": "text",
+   "g": "g",
+   "x": 294,
+   "y": 174,
+   "w": 120,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Max [us]\"\nva0.val=76<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "ltn3",
+   "i": 13,
+   "t": "text",
+   "g": "g",
+   "x": 34,
+   "y": 214,
+   "w": 254,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 63752
+   },
+   "txt": "Scale Neg [us]",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "tn3",
+   "i": 14,
+   "t": "text",
+   "g": "g",
+   "x": 294,
+   "y": 214,
+   "w": 120,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Scale Neg [us]\"\nva0.val=76<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "ltn4",
+   "i": 15,
+   "t": "text",
+   "g": "g",
+   "x": 34,
+   "y": 254,
+   "w": 254,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 63752
+   },
+   "txt": "Scale Pos [us]",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "tn4",
+   "i": 16,
+   "t": "text",
+   "g": "g",
+   "x": 294,
+   "y": 254,
+   "w": 120,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Scale Pos [us]\"\nva0.val=76<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "ltn5",
+   "i": 17,
+   "t": "text",
+   "g": "g",
+   "x": 430,
+   "y": 94,
+   "w": 236,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 44369
+   },
+   "txt": "Rate [Hz]",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 20,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "tn5",
+   "i": 18,
+   "t": "text",
+   "g": "g",
+   "x": 672,
+   "y": 94,
+   "w": 94,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Rate [Hz]\"\nva0.val=76<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "ltn6",
+   "i": 19,
+   "t": "text",
+   "g": "g",
+   "x": 430,
+   "y": 134,
+   "w": 236,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 44369
+   },
+   "txt": "Speed [ms]",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 20,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "tn6",
+   "i": 20,
+   "t": "text",
+   "g": "g",
+   "x": 672,
+   "y": 134,
+   "w": 94,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Speed [ms]\"\nva0.val=76<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "ltn7",
+   "i": 21,
+   "t": "text",
+   "g": "g",
+   "x": 430,
+   "y": 174,
+   "w": 236,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 44369
+   },
+   "txt": "Reverse",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 20,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "tn7",
+   "i": 22,
+   "t": "text",
+   "g": "g",
+   "x": 672,
+   "y": 174,
+   "w": 94,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=77<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "ltn8",
+   "i": 23,
+   "t": "text",
+   "g": "g",
+   "x": 430,
+   "y": 214,
+   "w": 236,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 44369
+   },
+   "txt": "Geometry Corr.",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 20,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "tn8",
+   "i": 24,
+   "t": "text",
+   "g": "g",
+   "x": 672,
+   "y": 214,
+   "w": 94,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=78<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "b3",
+   "i": 25,
+   "t": "button",
+   "g": "l",
+   "x": 14,
+   "y": 414,
+   "w": 180,
+   "h": 56,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Save",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=75<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "b4",
+   "i": 26,
+   "t": "button",
+   "g": "l",
+   "x": 214,
+   "y": 414,
+   "w": 180,
+   "h": 56,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "< Servo",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=79<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "b2",
+   "i": 27,
+   "t": "button",
+   "g": "l",
+   "x": 414,
+   "y": 414,
+   "w": 180,
+   "h": 56,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Servo >",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=80<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "b1",
+   "i": 28,
+   "t": "button",
+   "g": "l",
+   "x": 605,
+   "y": 414,
+   "w": 180,
+   "h": 56,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "OK",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=74<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "busy",
+   "i": 29,
+   "t": "text",
+   "g": "l",
+   "x": 40,
+   "y": 296,
+   "w": 720,
+   "h": 44,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65504
+   },
+   "txt": "",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 50,
+    "isbr": 0
+   }
+  }
+ ]
+}
