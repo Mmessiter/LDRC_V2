@@ -186,6 +186,16 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Send waits for Receive (V2 B64, 7 Oct 2026)
+
+The first model exchange between two Version 2 transmitters (Malcolm, 7 Oct: a model sent to the new one, flown at
+once in the simulator): "I had to press Receive several times before it happened." The radio gives up on an
+unanswered packet within ten milliseconds, so Send pressed before Receive failed on the spot ("Receiving transmitter
+not ready") and only the order Receive-then-Send ever worked. B64: the sender offers its first packet again every
+tenth of a second for fifteen seconds, counting down on its screen ("Waiting for the receiver 12..."), so the two
+buttons may be pressed in either order; a button press gives it up. A receiver that hears that first packet twice
+(its ack went astray) ignores the repeat. Nothing changes on the air: a Version 1 transmitter at either end is as before.
+
 ## A good update called failed by the clock's message (V2 B63, 7 Oct 2026)
 
 On the second transmitter the B62 update ended "Update failed ... the new firmware is still on trial: it has not yet run

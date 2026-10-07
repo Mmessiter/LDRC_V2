@@ -29,6 +29,7 @@
 #define FILEPALEVEL RF24_PA_MAX
 #define FILECHANNEL QUIETCHANNEL
 #define FILETIMEOUT 30                 // seconds a receiver waits for a sender to begin
+#define FILESENDWAIT 15                // B64: seconds a sender keeps offering its first packet, for a receiver that is not listening yet
 #define FILEDATATIMEOUT 3000           // ms a receiver waits for the next packet once the transfer has begun
 #define FILEPROTOCOL 1                 // packet 1, byte 21: what this firmware sends (Version 1 sends 0)
 #define FILESCRATCH "~RECV.MOD"        // the received file, until it has been checked
@@ -223,6 +224,55 @@ void SendModelFile()
             Fbuffer[BUFFERSIZE + 3] = (uint8_t)(~seq >> 8);
         }
         ReceiverConnected = (Radio1.write(&Fbuffer, BUFFERSIZE + 4)); //  we added error checking for RX not ready. Now we maybe need a real checksum
+        if (!ReceiverConnected && PacketNumber == 1)
+        { // B64 (Malcolm, 7 Oct, the first exchange between two V2s: "I had to press Receive several times"): the radio gives
+          // up on an unanswered packet in ten milliseconds, so Send pressed before Receive failed at once. Now the first
+          // packet is offered again every tenth of a second for FILESENDWAIT seconds; the other end may press Receive meanwhile.
+            for (int q = 0; q < 10; ++q)
+            { // (as the receiver does before its wait: a press still pending from the Send button must not end this one)
+                delay(5);
+                KickTheDog();
+                GetButtonPress();
+                ClearText();
+            }
+            const uint32_t t0 = millis();
+            int lastShown = -1;
+            bool abandoned = false;
+            while (!ReceiverConnected)
+            {
+                KickTheDog();
+                if (GetButtonPress())
+                {
+                    abandoned = true;
+                    break;
+                }
+                const int elapsed = (millis() - t0) / 1000;
+                if (elapsed >= FILESENDWAIT)
+                    break;
+                if (elapsed != lastShown)
+                {
+                    lastShown = elapsed;
+                    strcpy(msg, "Waiting for the receiver ");
+                    strcat(msg, Str(nb1, FILESENDWAIT - elapsed, 0));
+                    strcat(msg, "...");
+                    ShowFileProgress(msg);
+                }
+                DelayWithDog(100);
+                ReceiverConnected = (Radio1.write(&Fbuffer, BUFFERSIZE + 4));
+            }
+            if (abandoned)
+            {
+                ButtonWasPressed();
+                NormaliseTheRadio();
+                SendCommand(ProgressEnd);
+                RedLedOn();
+                SendCommand(GoModelsView);
+                CurrentView = MODELSVIEW;
+                CloseModelsFile();
+                ConfigureRadio();
+                return;
+            }
+        }
         if (!ReceiverConnected)
             break;
         if (Radio1.available())
@@ -417,6 +467,8 @@ void ReceiveModelFile()
 
     DelayWithDog(5);
     Radio1.read(&Fbuffer, BUFFERSIZE + 4); //  Read first packet (the ack it needs goes out by itself; the ack PAYLOADS begin once the sender's kind is known, below)
+    char FirstPacket[BUFFERSIZE + 4];
+    memcpy(FirstPacket, Fbuffer, BUFFERSIZE + 4); // (B64: to know it again if the sender offers it twice)
     SendCommand(ProgressStart);
     SendValue(Progress, p);
     SendText(ModelsView_filename, Receiving);
@@ -481,6 +533,8 @@ void ReceiveModelFile()
             DelayWithDog(5);
             Radio1.read(&Fbuffer, BUFFERSIZE + 4);
             RXTimer = millis();
+            if (Protocol >= 1 && Expected == 1 && memcmp(Fbuffer, FirstPacket, BUFFERSIZE + 4) == 0)
+                continue; // B64: the first packet again (its ack went astray and the sender offered it once more): already read
             if (Protocol >= 1)
             { // B27 sender: every data packet carries its number. The same again is dropped, anything else is a lost packet.
                 const uint16_t seq = (uint8_t)Fbuffer[BUFFERSIZE] | (uint16_t)(uint8_t)Fbuffer[BUFFERSIZE + 1] << 8;
