@@ -156,7 +156,12 @@ static void bleTxServe() {                                     // in the task: t
     if (xSemaphoreTake(bleMutex, pdMS_TO_TICKS(100)) == pdTRUE) { if (!bleTxQueue.empty()) { words = bleTxQueue.front(); bleTxQueue.erase(bleTxQueue.begin()); } xSemaphoreGive(bleMutex); }
     if (!words.empty()) {
         ldrc::BleReply r; std::string err;
-        if (bleServeNow("POST", "/api/txparams", words, "text/plain", r, err) && r.code == 200) {
+        // 1.11.12: as a FORM ("w=9,321,...", the receiver's handler reads "w" when there is no raw body): the receiver's
+        // Bluetooth bridge hands a POST's body to its handlers only as form fields, never as the raw "plain" the WiFi
+        // server gives - so every parameter sent as text/plain was refused (400), and until 1.11.9 that quietly put the
+        // main board back on the radio link ("By Bluetooth", yet the values came by radio); from 1.11.9 the values were
+        // simply never read ("all the values it reads are zero", Malcolm, 7 Oct).
+        if (bleServeNow("POST", "/api/txparams", "w=" + words, "application/x-www-form-urlencoded", r, err) && r.code == 200) {
             int id = atoi(words.c_str()); const char *c = strchr(words.c_str(), ','); const int w1 = c ? atoi(c + 1) : 0; const char *c2 = c ? strchr(c + 1, ',') : nullptr; const int w2 = c2 ? atoi(c2 + 1) : 0;
             if (w1 == 321 && (id == 9 || id == 12 || id == 15 || id == 18 || id == 27 || id == 28)) { blePollUntil = millis() + (uint32_t) std::min(std::max(w2, 1000), 15000); bleTelLast.clear(); }   // "send me the block": watch it
             bleTellItems(r.body);

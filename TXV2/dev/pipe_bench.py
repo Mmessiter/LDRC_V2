@@ -14,8 +14,8 @@ def call(path, method='GET', body=None):
     req = urllib.request.Request(f'http://{host}{path}', data=body.encode() if body is not None else None, method=method, headers={'X-LDRC': '1'})
     try: return urllib.request.urlopen(req, timeout=10).read().decode(errors='replace')
     except urllib.error.HTTPError as e: return f'{e.code} {e.read().decode(errors="replace")}'
-def request(method, path, body=''):
-    r = call(f'/ble/req?method={method}&path={urllib.parse.quote(path, safe="/?=&,")}', 'POST', body)
+def request(method, path, body='', ctype=''):
+    r = call(f'/ble/req?method={method}&path={urllib.parse.quote(path, safe="/?=&,")}' + (f'&type={urllib.parse.quote(ctype)}' if ctype else ''), 'POST', body)
     if not r.strip().isdigit(): return r
     for _ in range(80):
         time.sleep(0.1); r = call('/ble/reply')
@@ -28,7 +28,7 @@ elif cmd == 'off': print(call('/ble/off', 'POST', ''))
 elif cmd == 'get': print(request('GET', args[1]))
 elif cmd == 'read':
     ident, ms = int(args[1]), int(args[2]) if len(args) > 2 else 5000
-    print(request('POST', '/api/txparams', f'{ident},321,{ms},0,0,0,0,0,0,0,0,0'))
+    print(request('POST', '/api/txparams', f'w={ident},321,{ms},0,0,0,0,0,0,0,0,0', 'application/x-www-form-urlencoded'))   # as a form: the bridge gives handlers no raw body
     for _ in range(6): time.sleep(0.5); print(request('GET', '/api/txparams/ack'))
 elif cmd == 'log': print('\n'.join(l for l in call('/bootlog').splitlines() if ' ble ' in l))
 else: print(__doc__)

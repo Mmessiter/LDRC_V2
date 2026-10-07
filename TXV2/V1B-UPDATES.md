@@ -186,6 +186,17 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The pipe's parameters were never accepted: now sent as a form (screen 1.11.12, 7 Oct 2026)
+
+Malcolm, with B47 and 1.11.10: the banner, then "By Bluetooth", "but all the values it reads are zero from PID and
+rates". The screen's status had the answer: "the receiver refused a parameter (400): 9,321,1000,0,0,0,0,0,0,0,0,0". The
+receiver's Bluetooth bridge hands a POST's body to its handlers only as FORM FIELDS; the raw body ("plain") that the
+WiFi server gives never exists over Bluetooth. So every parameter the pipe sent as text/plain was refused. Until 1.11.9
+the first refusal quietly put the main board back on the radio link, so the values came, by radio, under a banner that
+said Bluetooth; from 1.11.9 the pipe stayed, and the values never came. **1.11.12** sends each parameter as a form,
+"w=9,321,...", which the receiver's handler reads when there is no raw body - every receiver from 0.9.874 takes it. The
+first real reads over Bluetooth are therefore still to be seen.
+
 ## The WiFi joins afresh after a Bluetooth session (screen 1.11.11, 7 Oct 2026)
 
 Malcolm, updating: "I noticed not for the first time that I could not update, or rather could not join the Wi-Fi
