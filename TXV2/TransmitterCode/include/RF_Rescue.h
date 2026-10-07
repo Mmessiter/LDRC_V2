@@ -23,7 +23,7 @@ enum
     RSC_WRITE,      // 147
     RSC_STORE,      // 250
     RSC_V_SELECT,   // 210 before the read-back
-    RSC_VERIFY      // 146 again
+    RSC_VERIFY      // 146 again (B51: a step of its own; B50 took the select's empty answer for the read-back and showed the old values)
 };
 static int RescueStep = RSC_IDLE, RescueReq = 0;
 static uint32_t RescueMsgUntil = 0;        // a message shown over the fields goes by itself
@@ -218,7 +218,12 @@ void RescuePoll()
         return;
     case RSC_STORE:
         if (!ok) { RescueFail("Not stored"); return; }
-        RescueAskSelect(RSC_VERIFY);
+        RescueAskSelect(RSC_V_SELECT);
+        return;
+    case RSC_V_SELECT:
+        if (!ok) { RescueFail("Could not select the bank"); return; }
+        RescueReq = MspAsk(146, nullptr, 0);
+        RescueStep = RSC_VERIFY;
         return;
     case RSC_VERIFY:
     {

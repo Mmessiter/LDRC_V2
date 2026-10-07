@@ -186,6 +186,14 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Rescue reads back what it wrote (V2 B51, 7 Oct 2026)
+
+Malcolm: "After writing, it should really read back what has been written to confirm, but it does not. It displays the
+values that we had before they were edited." The screen's timeline of the pipe (1.11.20) showed the save: select the
+bank, write, store, select the bank ... and no read. B50 took the second bank selection's empty answer for the read-back,
+found no bytes in it, and showed the old values with "the flight controller adjusted some values". B51 asks for the
+values after the selection, as the first read does, and compares those.
+
 ## "Clicking receiver update makes the screen reboot" (screen 1.11.20, 7 Oct 2026)
 
 The crash record (read through /status): task wifi, abort() in the driver's pm_set_sleep_type. The update panel keeps
