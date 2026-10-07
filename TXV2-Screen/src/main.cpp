@@ -42,7 +42,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.17"
+#define SCREEN_VERSION "1.11.19"
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room
 #endif
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -444,7 +444,7 @@ static bool picPanelUp();
 static void picTouch(bool pressed, int x, int y, uint32_t now);
 static void picPoll();
 static void picWeb();
-static void bleWeb(); static void blePoll(); static void blePipeCommand(const std::string &a); static void bleTxCommand(const std::string &words); static std::string bleStatusJson(); static unsigned bleStackSpare();
+static void bleWeb(); static void blePoll(); static void blePipeCommand(const std::string &a); static void bleTxCommand(const std::string &words); static void bleHttpCommand(const std::string &a); static std::string bleStatusJson(); static unsigned bleStackSpare();
 static void picPageLoaded();                           // loadPage(): the chooser covers its page before anything of that page is drawn
 static void picSoon();                                 // "Model image..." touched: the chooser's frame at once
 // The flight screen (src/flight_device.h, lib/LdrcFlight): what the pilot chose to see while flying, over the front page
@@ -1357,7 +1357,8 @@ static void handle(const std::string &cmd) {
     cmdCount++;
     if (cmd.rfind("pong=", 0) == 0) { pongCommand(cmd.substr(5)); return; }
     if (cmd.rfind("ldrcpipe ", 0) == 0) { blePipeCommand(cmd.substr(9)); return; }   // the main board's Bluetooth pipe to the receiver (src/ble_device.h, 1.11.1)
-    if (cmd.rfind("ldrctx ", 0) == 0) { bleTxCommand(cmd.substr(7)); return; }   // the main board's Pong, once a frame: ours to draw (src/pong_device.h), before the script sees it as a system variable
+    if (cmd.rfind("ldrctx ", 0) == 0) { bleTxCommand(cmd.substr(7)); return; }
+    if (cmd.rfind("ldrcreq ", 0) == 0) { bleHttpCommand(cmd.substr(8)); return; }   // (1.11.18) the main board asks the receiver something over the pipe   // the main board's Pong, once a frame: ours to draw (src/pong_device.h), before the script sees it as a system variable
     recent[recentN++ % 64] = cmd;
     if (cmd.rfind("Ch", 0) != 0 && cmd.rfind("J", 0) != 0 && cmd.rfind("TXBV", 0) != 0 && cmd.rfind("RXBV", 0) != 0 && cmd.rfind("vis Warning", 0) != 0) blog("<", cmd);
 #ifdef EMU_ECHO

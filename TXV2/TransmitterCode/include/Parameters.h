@@ -50,6 +50,8 @@ bool PipePageShowing()
     case RFBACKUP_RESTOREVIEW:
     case RFGOVERNORVIEW_PROFILE:
     case RFGOVERNORVIEW_GLOBAL:
+    case RESCUEVIEW:
+    case RESCUE2VIEW:
         return true;
     default:
         return false;

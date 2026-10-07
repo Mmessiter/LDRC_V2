@@ -1,0 +1,1128 @@
+{
+ "name": "RescueView",
+ "id": 58,
+ "w": 800,
+ "h": 480,
+ "bg": {
+  "sta": 2,
+  "mode": "image",
+  "picture": 3
+ },
+ "nav": {
+  "up": 255,
+  "down": 255,
+  "left": 255,
+  "right": 255
+ },
+ "ev": {
+  "preinitialize": "vis busy,0\nRescueView.pic=Screen_Background"
+ },
+ "comps": [
+  {
+   "n": "t0",
+   "i": 1,
+   "t": "text",
+   "g": "l",
+   "x": 0,
+   "y": 0,
+   "w": 800,
+   "h": 58,
+   "font": 0,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 2214
+   },
+   "txt": "Rescue (Rotorflight)",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "card",
+   "i": 2,
+   "t": "text",
+   "g": "l",
+   "x": 0,
+   "y": 58,
+   "w": 800,
+   "h": 422,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 65535,
+    "bco": 4426
+   },
+   "txt": "",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 1,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t9",
+   "i": 3,
+   "t": "text",
+   "g": "g",
+   "x": 10,
+   "y": 4,
+   "w": 200,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 2214
+   },
+   "txt": "Bank 1",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t11",
+   "i": 4,
+   "t": "text",
+   "g": "g",
+   "x": 10,
+   "y": 30,
+   "w": 200,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65504,
+    "borderc": 0,
+    "bco": 2214
+   },
+   "txt": "Model name",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "va0",
+   "i": 5,
+   "t": "variable",
+   "g": "l",
+   "sta": 0,
+   "txt": "newtxt",
+   "val": 0,
+   "a": {
+    "txt_maxl": 10
+   }
+  },
+  {
+   "n": "b0",
+   "i": 6,
+   "t": "button",
+   "g": "l",
+   "x": 620,
+   "y": 4,
+   "w": 170,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Help",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"HelpView:RESCUE.TXT\"\nLogView.t0.txt=\"Rescue (Rotorflight) help\"\nLogView.return.txt=\"RescueView\""
+   }
+  },
+  {
+   "n": "ltn0",
+   "i": 7,
+   "t": "text",
+   "g": "g",
+   "x": 34,
+   "y": 94,
+   "w": 200,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 63752
+   },
+   "txt": "Rescue",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "tn0",
+   "i": 8,
+   "t": "text",
+   "g": "g",
+   "x": 240,
+   "y": 94,
+   "w": 174,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=68<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "ltn1",
+   "i": 9,
+   "t": "text",
+   "g": "g",
+   "x": 34,
+   "y": 134,
+   "w": 200,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 63752
+   },
+   "txt": "Roll upright first",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "tn1",
+   "i": 10,
+   "t": "text",
+   "g": "g",
+   "x": 240,
+   "y": 134,
+   "w": 174,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=69<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "ltn2",
+   "i": 11,
+   "t": "text",
+   "g": "g",
+   "x": 34,
+   "y": 174,
+   "w": 200,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 63752
+   },
+   "txt": "Flip strength",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "tn2",
+   "i": 12,
+   "t": "text",
+   "g": "g",
+   "x": 240,
+   "y": 174,
+   "w": 174,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Flip strength\"\nva0.val=67<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "ltn3",
+   "i": 13,
+   "t": "text",
+   "g": "g",
+   "x": 34,
+   "y": 214,
+   "w": 200,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 63752
+   },
+   "txt": "Levelling strength",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "tn3",
+   "i": 14,
+   "t": "text",
+   "g": "g",
+   "x": 240,
+   "y": 214,
+   "w": 174,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Levelling strength\"\nva0.val=67<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "ltn4",
+   "i": 15,
+   "t": "text",
+   "g": "g",
+   "x": 34,
+   "y": 254,
+   "w": 200,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 63752
+   },
+   "txt": "Pull-up time (s)",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "tn4",
+   "i": 16,
+   "t": "text",
+   "g": "g",
+   "x": 240,
+   "y": 254,
+   "w": 174,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Pull-up time (s)\"\nva0.val=67<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "ltn5",
+   "i": 17,
+   "t": "text",
+   "g": "g",
+   "x": 34,
+   "y": 294,
+   "w": 200,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 63752
+   },
+   "txt": "Climb time (s)",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "tn5",
+   "i": 18,
+   "t": "text",
+   "g": "g",
+   "x": 240,
+   "y": 294,
+   "w": 174,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Climb time (s)\"\nva0.val=67<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "ltn6",
+   "i": 19,
+   "t": "text",
+   "g": "g",
+   "x": 34,
+   "y": 334,
+   "w": 200,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 63752
+   },
+   "txt": "Flip time (s)",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "tn6",
+   "i": 20,
+   "t": "text",
+   "g": "g",
+   "x": 240,
+   "y": 334,
+   "w": 174,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Flip time (s)\"\nva0.val=67<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "ltn7",
+   "i": 21,
+   "t": "text",
+   "g": "g",
+   "x": 34,
+   "y": 374,
+   "w": 200,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 63752
+   },
+   "txt": "Exit time (s)",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "tn7",
+   "i": 22,
+   "t": "text",
+   "g": "g",
+   "x": 240,
+   "y": 374,
+   "w": 174,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Exit time (s)\"\nva0.val=67<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "ltn8",
+   "i": 23,
+   "t": "text",
+   "g": "g",
+   "x": 430,
+   "y": 94,
+   "w": 236,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 44369
+   },
+   "txt": "Pull-up collective",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 20,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "tn8",
+   "i": 24,
+   "t": "text",
+   "g": "g",
+   "x": 672,
+   "y": 94,
+   "w": 94,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Pull-up collective\"\nva0.val=67<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "ltn9",
+   "i": 25,
+   "t": "text",
+   "g": "g",
+   "x": 430,
+   "y": 134,
+   "w": 236,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 44369
+   },
+   "txt": "Climb collective",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 20,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "tn9",
+   "i": 26,
+   "t": "text",
+   "g": "g",
+   "x": 672,
+   "y": 134,
+   "w": 94,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Climb collective\"\nva0.val=67<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "ltn10",
+   "i": 27,
+   "t": "text",
+   "g": "g",
+   "x": 430,
+   "y": 174,
+   "w": 236,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 44369
+   },
+   "txt": "Hover collective",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 20,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "tn10",
+   "i": 28,
+   "t": "text",
+   "g": "g",
+   "x": 672,
+   "y": 174,
+   "w": 94,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Hover collective\"\nva0.val=67<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "ltn11",
+   "i": 29,
+   "t": "text",
+   "g": "g",
+   "x": 430,
+   "y": 214,
+   "w": 236,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 44369
+   },
+   "txt": "Max collective",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 20,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "tn11",
+   "i": 30,
+   "t": "text",
+   "g": "g",
+   "x": 672,
+   "y": 214,
+   "w": 94,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Max collective\"\nva0.val=67<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "ltn12",
+   "i": 31,
+   "t": "text",
+   "g": "g",
+   "x": 430,
+   "y": 254,
+   "w": 236,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 44369
+   },
+   "txt": "Max turn rate",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 20,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "tn12",
+   "i": 32,
+   "t": "text",
+   "g": "g",
+   "x": 672,
+   "y": 254,
+   "w": 94,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Max turn rate\"\nva0.val=67<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "ltn13",
+   "i": 33,
+   "t": "text",
+   "g": "g",
+   "x": 430,
+   "y": 294,
+   "w": 236,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 44369
+   },
+   "txt": "Max turn accel.",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 20,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "tn13",
+   "i": 34,
+   "t": "text",
+   "g": "g",
+   "x": 672,
+   "y": 294,
+   "w": 94,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Max turn accel.\"\nva0.val=67<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "b3",
+   "i": 35,
+   "t": "button",
+   "g": "l",
+   "x": 14,
+   "y": 414,
+   "w": 180,
+   "h": 56,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Save",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=66<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "b2",
+   "i": 36,
+   "t": "button",
+   "g": "l",
+   "x": 408,
+   "y": 414,
+   "w": 180,
+   "h": 56,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Height ...",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=70<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "b1",
+   "i": 37,
+   "t": "button",
+   "g": "l",
+   "x": 605,
+   "y": 414,
+   "w": 180,
+   "h": 56,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "OK",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=65<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "busy",
+   "i": 38,
+   "t": "text",
+   "g": "l",
+   "x": 40,
+   "y": 296,
+   "w": 720,
+   "h": 44,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 50,
+    "isbr": 0
+   }
+  }
+ ]
+}

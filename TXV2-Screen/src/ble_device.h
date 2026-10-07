@@ -24,6 +24,12 @@ static std::string bleJoined; static int bleMtu = 0;           // what we are jo
 static SemaphoreHandle_t bleMutex = nullptr;
 static TaskHandle_t bleTaskHandle = nullptr;
 static volatile bool bleGone = false;                           // (1.11.15) the disconnect event has arrived
+// 1.11.18: the main board's own requests to the receiver over the pipe ("ldrcreq <id> <path>": a GET, the receiver's
+// raw Rotorflight line /api/msp?fn=N[&data=HEX] above all), answered on the wire as "ldrcrep <id> <code> <body>\n". The
+// main board does the thinking (the bytes of every Rotorflight setting it shows); the screen relays. One at a time, in
+// order, after the parameter packets; a body is cut at 1500 bytes (a Rotorflight reply is at most a few hundred).
+struct BleHttpReq { int id; std::string path; };
+static std::vector<BleHttpReq> bleHttpQueue;
 static volatile bool bleWifiKick = false;                      // (1.11.11) the stack has just gone down: the WiFi joins afresh (loop())
 // 1.11.13 (Malcolm: "Sometimes connecting to Bluetooth takes a very long time, and sometimes it's quicker"): the last
 // 24 happenings with their time, from either side, in /ble/status and /status ("log"): each join's timeline.
@@ -243,6 +249,16 @@ static void bleTxServe() {                                     // in the task: t
         blePollLast = millis(); ldrc::BleReply r; std::string err;
         if (bleServeNow("GET", "/api/txparams/ack", "", "", r, err) && r.code == 200) bleTellItems(r.body);
     } else if (blePollUntil && (int32_t) (millis() - blePollUntil) >= 0) blePollUntil = 0;
+    BleHttpReq q; bool have = false;                           // (1.11.18) the main board's own request, if one waits
+    if (xSemaphoreTake(bleMutex, pdMS_TO_TICKS(100)) == pdTRUE) { if (!bleHttpQueue.empty()) { q = bleHttpQueue.front(); bleHttpQueue.erase(bleHttpQueue.begin()); have = true; } xSemaphoreGive(bleMutex); }
+    if (have) {
+        ldrc::BleReply r; std::string err;
+        std::string rep = "ldrcrep " + std::to_string(q.id) + " ";
+        if (bleServeNow("GET", q.path, "", "", r, err)) { std::string body = r.body; if (body.size() > 1500) body.resize(1500); for (auto &c : body) if (c == '\n' || c == '\r') c = ' '; rep += std::to_string(r.code) + " " + body; }
+        else rep += "0 " + err;
+        rep += "\n";
+        bleMailPost(rep);
+    }
 }
 static void bleTask(void *) {
     for (;;) {
@@ -274,7 +290,7 @@ static bool bleAsk(const std::string &method, const std::string &path, const std
 // Rotorflight menu's four buttons says so, in the biggest letters we have; it goes when the join ends. The main board
 // refuses those pages meanwhile (B47), with the same words.
 static bool pipeNoticeUp = false; static int pipeNoticePage = -1;
-static const int PN_X = 420, PN_Y = 78, PN_W = 356, PN_H = 226;
+static const int PN_X = 420, PN_Y = 78, PN_W = 356, PN_H = 276;   // (1.11.19: five buttons)
 static void pipeNoticeDraw() {
     gfx->fillRect(PN_X, PN_Y, PN_W, PN_H, OUR_PANEL);
     gfx->drawRect(PN_X, PN_Y, PN_W, PN_H, OUR_INK); gfx->drawRect(PN_X + 1, PN_Y + 1, PN_W - 2, PN_H - 2, OUR_INK);
@@ -329,11 +345,20 @@ static void blePipeCommand(const std::string &a) {
         if (bleState == BLE_READY) { blePipeTold = -1; return; }   // 1.11.9: already joined (the menu was re-entered from one of its pages): say so again, or the main board waits on "joining"
         bleStartTask(); bleOrder = 1;
     }
-    else if (a == "off") { bleOrder = 2; blePollUntil = 0; if (bleMutex && xSemaphoreTake(bleMutex, pdMS_TO_TICKS(5)) == pdTRUE) { bleTxQueue.clear(); xSemaphoreGive(bleMutex); } }
+    else if (a == "off") { bleOrder = 2; blePollUntil = 0; if (bleMutex && xSemaphoreTake(bleMutex, pdMS_TO_TICKS(5)) == pdTRUE) { bleTxQueue.clear(); bleHttpQueue.clear(); xSemaphoreGive(bleMutex); } }
 }
 static void bleTxCommand(const std::string &words) {
     blog("ble", "from the main board: " + words);
     if (bleMutex && xSemaphoreTake(bleMutex, pdMS_TO_TICKS(5)) == pdTRUE) { if (bleTxQueue.size() < 16) bleTxQueue.push_back(words); xSemaphoreGive(bleMutex); }
+}
+static void bleHttpCommand(const std::string &a) {             // (1.11.18) "ldrcreq <id> <path>"
+    const size_t sp = a.find(' ');
+    if (sp == std::string::npos) return;
+    BleHttpReq q; q.id = atoi(a.c_str()); q.path = a.substr(sp + 1);
+    while (!q.path.empty() && (q.path.back() == ' ' || q.path.back() == '\r' || q.path.back() == '\n')) q.path.pop_back();
+    if (q.path.empty() || q.path[0] != '/') return;
+    if (bleState != BLE_READY) { bleMailPost("ldrcrep " + std::to_string(q.id) + " 0 not joined\n"); return; }
+    if (bleMutex && xSemaphoreTake(bleMutex, pdMS_TO_TICKS(5)) == pdTRUE) { if (bleHttpQueue.size() < 8) bleHttpQueue.push_back(q); xSemaphoreGive(bleMutex); }
 }
 static std::string bleStatusJson() {
     std::string out = std::string("{\"state\":\"") + bleStateName(bleState) + "\",\"why\":\"" + bleWhy + "\",\"wanted\":\"" + bleWantMac + "\",\"joined\":\"" + bleJoined + "\",\"mtu\":" + std::to_string(bleMtu) + ",\"told\":" + std::to_string(blePipeTold) + ",\"seen\":[";

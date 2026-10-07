@@ -1,0 +1,19 @@
+Rescue: what Rotorflight does when you flick the rescue switch. It needs a Version 2 receiver with Bluetooth, the safety on and the model disarmed.||
+
+The values are those of the bank shown at the top left: change bank with the bank switch, and the page reads again.||
+
+Rescue: Off, Climb (level the model and climb), or Hold height (level it and hold the height). Tap to change.||
+
+Roll upright first: if the model is upside down when rescue engages, it rolls level-side-up before climbing. Recommended On. Tap to change.||
+
+Flip strength and Levelling strength: how hard it rolls over and how firmly it holds level (5 to 250).||
+
+Pull-up, Climb, Flip and Exit times: seconds, in tenths (1.5 = a second and a half).||
+
+Pull-up, Climb and Hover collective: how much collective each stage uses (0 to 1000). Max collective caps them (1 to 1000).||
+
+Max turn rate and Max turn accel.: how fast the model may be rolled level (1 to 1000, 1 to 10000).||
+
+Height ... opens the height-hold values (hover height, and its P, I and D).||
+
+Press a number to type a new one. Save sends the values to the flight controller, stores them there, and reads them back to check: the line says so. OK leaves; if something was edited and not saved, it asks.||

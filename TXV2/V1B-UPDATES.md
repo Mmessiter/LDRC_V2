@@ -186,6 +186,25 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Rescue on the transmitter, and the line that makes the rest possible (V2 B50 + screen 1.11.19, 7 Oct 2026)
+
+Malcolm: "Assuming we still have sufficient memory, let us add in now the other Rotorflight settings to complete our
+set! After that, we better do some rigorous testing." The set agreed: Rescue, Servos, Travel extents, Filters, ESC
+setup; switches, ports, wiring, wizards, calibration and the black box stay on the phone. Rescue first.
+
+**The line.** The receiver already answers raw Rotorflight requests on /api/msp?fn=N[&data=HEX], as its own pages do.
+Screen 1.11.18 relays the main board's own requests over the pipe ("ldrcreq <id> <path>" on the wire, "ldrcrep <id>
+<code> <body>" back, one at a time after the parameter packets); B50's PipeHttp.h asks and never waits (a page's state
+machine looks for the reply each time round). No receiver change: every receiver from 0.9.874 serves it.
+
+**Rescue** (RF_Rescue.h; pages RescueView and Rescue2View on the card, made by the screen project's hmi/rescue_pages.py;
+help RESCUE.TXT and RESCUE2.TXT): Rotorflight 2.3's 28-byte rescue profile for the bank shown, read with 210 then 146,
+saved with 210, 147, 250 and read back to compare. Page 1: the mode (Off / Climb / Hold height, tap to change), roll
+upright first (tap), flip and levelling strength, the four times in tenths of a second, the pull-up, climb, hover and
+max collectives, max turn rate and acceleration. Page 2 (Height ...): hover height in metres, height hold P, I, D. Save
+on either page writes both. The Rotorflight menu gets a fifth button, "Rescue ...", with the model name and the blue
+tooth below. Untested on hardware as written: the bench next.
+
 ## The blue tooth (screen 1.11.17, 7 Oct 2026)
 
 Malcolm: "I wonder if we might remove By Bluetooth and replace it with the little icon we created a few days ago of a

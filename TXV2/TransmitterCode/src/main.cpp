@@ -156,9 +156,11 @@
 #include "Switches.h"
 #include "ADC-master/ADC.h"
 #include "Parameters.h"
+#include "PipeHttp.h" // B50: the main board's own requests to the receiver over the screen's Bluetooth pipe
 #include "RF_PIDs.h"
 #include "RF_Rates.h"
 #include "RF_RotorFlight.h"
+#include "RF_Rescue.h" // B50: Rotorflight rescue, over the pipe
 #include "RF_Rates_Advanced.h"
 #include "RF_PID_Advanced.h"
 #include "RF_Save_Restore.h"
@@ -3003,7 +3005,7 @@ void RestoreCurrentModel()
 // ******************************** Global Array1 of numbered function pointers OK up the **********************************
 
 // This new list can be huge - up to 24 BITS unsigned!  ( Use "NUMBER<<8" )
-#define LASTFUNCTION1 64 // One more than final one
+#define LASTFUNCTION1 72 // One more than final one
 
 void (*NumberedFunctions1[LASTFUNCTION1])(){
     Blank,                   // 0 Cannot be used
@@ -3069,7 +3071,15 @@ void (*NumberedFunctions1[LASTFUNCTION1])(){
     EndModelIDView,          // 60
     SaveToLocalGovGLOBAL,    // 61
     RestoreFromSDGlobalGOV,  // 62
-    Enable_Binding           // 63
+    Enable_Binding,          // 63
+    StartRescueView,         // 64 B50: the Rotorflight menu's Rescue ...
+    EndRescueView,           // 65 OK
+    SaveRescue,              // 66 Save (either page)
+    RescueWasEdited,         // 67 a number typed
+    RescueModeTapped,        // 68 Off / Climb / Hold height
+    RescueFlipTapped,        // 69 Roll upright first: Off / On
+    StartRescue2View,        // 70 Height ...
+    EndRescue2View           // 71 OK on page 2: back to page 1
 };
 
 // This list migth become MUCH longer as it limit is 24 bits big
@@ -3909,6 +3919,13 @@ FASTRUN void ButtonWasPressed()
         { // B41: the block the receiver holds, by the pipe, as telemetry items
             p = InStrng((char *)"ldrctel ", TextIn);
             TelemetryFromPipe(TextIn + p + 7);
+            ClearText();
+            return;
+        }
+        if (InStrng((char *)"ldrcrep ", TextIn) > 0)
+        { // B50: the receiver's answer to one of our own requests over the pipe (PipeHttp.h)
+            p = InStrng((char *)"ldrcrep ", TextIn);
+            PipeReplyFromScreen(TextIn + p + 7);
             ClearText();
             return;
         }
@@ -4798,6 +4815,7 @@ void FASTRUN ManageTransmitter()
     CheckPowerOffButton();
 
     DoTheVariometer(); // Do the variometer
+    RescuePoll();      // B50: a Rotorflight rescue read or save in progress, over the pipe
 
     if (RightNow - LastTimeRead >= 1000)
     { // Only once a second for these..

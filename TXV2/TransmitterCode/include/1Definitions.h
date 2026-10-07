@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B49 07/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B50 07/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -324,6 +324,8 @@ bool GapStartedDisarmed = false; // Rotorflight arming in use and DISARMED when 
 #define RFBACKUP_RESTOREVIEW 53
 #define RFGOVERNORVIEW_PROFILE 54
 #define RFGOVERNORVIEW_GLOBAL 55
+#define RESCUEVIEW 58            // B50: Rotorflight rescue, page 1 (RF_Rescue.h)
+#define RESCUE2VIEW 59           // B50: ... page 2, height hold
 #define MODELIDVIEW 56
 
 // **************************************************************************
@@ -843,6 +845,16 @@ FASTRUN void DeferLogText(const char *text, bool stamp);
 bool RxHasPipe();                             // B47: RxUpdate.h - the connected receiver can carry the Rotorflight pipe (0.9.874+)
 bool PipeJoining(char *why, size_t n);        // B47: Parameters.h - the screen is still joining the receiver: wait
 bool RfPipeBlocked(char *why, size_t n);      // B48: Parameters.h - a model is connected and the pipe is not ready: the Rotorflight pages refuse
+void PipeReplyFromScreen(const char *text);   // B50: PipeHttp.h - "ldrcrep <id> <code> <body>"
+void RescuePoll();                            // B50: RF_Rescue.h - each time round the loop
+void StartRescueView();
+void EndRescueView();
+void SaveRescue();
+void RescueWasEdited();
+void RescueModeTapped();
+void RescueFlipTapped();
+void StartRescue2View();
+void EndRescue2View();
 void StartModelSetup();
 bool GetConfirmation(char *goback, char *Prompt);
 void GotoModelsView();
