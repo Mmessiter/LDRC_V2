@@ -1,0 +1,9 @@
+Tail and swashplate: the rest of the configurator's Mixer tab.||
+
+Tail yaw min and max [deg]: how far the tail may move each way with the rudder stick (0 to 60), or, with a motorised tail, min and max in percent. Tail center trim: where the tail sits with the stick centred (degrees, or percent for a motorised tail). Tail motor idle [%]: a motorised tail's idle (0 to 25).||
+
+Phase angle [deg]: the swashplate's phase (-180 to 180, in tenths). Swash ring [%]: limits combined cyclic to a circle (0 to 100).||
+
+Geo correction: evens out the swash geometry (-25 to 25, in fifths). Tilt corr. pos and neg [%]: collective tilt correction each way (-100 to 100).||
+
+< Previous returns to the first page with your edits kept. Save writes everything on both pages; OK leaves, asking first if something is edited and not saved.||

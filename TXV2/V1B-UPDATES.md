@@ -186,6 +186,19 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Travel extents (V2 B57 + screen 1.11.27, 7 Oct 2026)
+
+The seventh button, "Travel extents ...", and two pages with the configurator's Mixer tab's names (RF_Travel.h; pages
+TravelView and Travel2View, hmi/travel_pages.py; help TRAVEL.TXT, TRAVEL2.TXT), as the receiver's travel page reads them
+(spec RXV2/TRAVEL-EXTENTS-MSP-SPEC.md): the mixer config (MSP 42 / 43, 21 bytes) and the mixer inputs roll, pitch, yaw
+and collective (174 read one, 171 write one). Page 1: Collective, Cyclic and Total pitch limit [deg] (1000 raw = 12
+deg), Collective, Cyclic and Yaw gain [%] (the cyclic gain written to roll and pitch alike), Aileron, Elevator and
+Collective reversed (Yes / No, the sign of the gain), Swash trim roll, pitch and collective [%]. Page 2: Tail yaw min and
+max [deg] (1000 raw = 24 deg; percent for a motorised tail), Tail center trim, Tail motor idle [%], Phase angle [deg],
+Swash ring [%], Geo correction, Tilt corr. pos and neg [%]. Save asks first (these change how far things move), writes
+43 and four 171s, stores, reads it all back and compares; the swash and tail types are left alone. Not per bank.
+Untested on hardware as written.
+
 ## The menu redesigned: a grid, and a Settings page (V2 B56 + screen 1.11.26, 7 Oct 2026)
 
 Malcolm: "I like your suggestion. Let's do it that way." The four settings that sat on the Rotorflight menu - link

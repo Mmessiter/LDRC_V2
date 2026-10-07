@@ -1,0 +1,11 @@
+Travel extents: how far the swash and the tail may move, as the configurator's Mixer tab has them. It needs a Version 2 receiver with Bluetooth, the safety on and the model disarmed. These are not per bank.||
+
+Collective pitch limit and Cyclic pitch limit [deg]: the most collective and cyclic pitch the swash may give, either way (0 to 30). Total pitch limit [deg]: collective and cyclic together; 0 = off. Rotorflight raises it to at least the collective limit plus six degrees when it stores.||
+
+Collective, Cyclic and Yaw gain [%]: how much of a full stick reaches the swash or tail (0 to 1000). The cyclic gain is written to roll and pitch alike.||
+
+Aileron, Elevator and Collective reversed: the direction of each control. Tap to change. Check the direction with the model on the bench before flying.||
+
+Swash trim roll, pitch and coll. [%]: small corrections to where the swash sits (-100 to 100, in tenths).||
+
+Next > opens the tail and swashplate values. Save writes everything on both pages, stores it in the flight controller and reads it back; it asks first, because these change how FAR things move: check the new extents on the bench with the blades off. OK leaves; if something was edited and not saved, it asks.||

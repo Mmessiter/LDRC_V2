@@ -54,6 +54,8 @@ bool PipePageShowing()
     case RESCUE2VIEW:
     case SERVOVIEW:
     case RFSETUPVIEW:
+    case TRAVELVIEW:
+    case TRAVEL2VIEW:
         return true;
     default:
         return false;

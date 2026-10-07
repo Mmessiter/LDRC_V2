@@ -9,6 +9,8 @@ import json, os, copy
 HERE = os.path.dirname(os.path.abspath(__file__)); PAGES = os.path.join(HERE, '..', 'sd', 'hmi', 'pages')
 menu = json.load(open(os.path.join(PAGES, '8.json')))
 by = {c['n']: c for c in menu['comps']}
+if os.path.exists(os.path.join(PAGES, '61.json')):          # the settings' components live on the settings page once it exists
+    for c in json.load(open(os.path.join(PAGES, '61.json')))['comps']: by.setdefault(c['n'], c)
 def comp(proto, **kw):
     c = copy.deepcopy(proto); c.update(kw); return c
 
@@ -37,7 +39,8 @@ add(comps, comp(by['t14'])); add(comps, comp(by['t8']))
 add(comps, comp(by['va0']))
 BUTTONS = [  # (name, words, code) in the order they sit, three to a row: the pages with values to edit first, the settings last
     ('Pid', 'PIDs ...', 18), ('b1', 'Rates ...', 22), ('b2', 'Governor ...', 50),
-    ('Rescue', 'Rescue ...', 64), ('Servos', 'Servos ...', 73), ('Setup', 'Settings ...', 81),
+    ('Rescue', 'Rescue ...', 64), ('Servos', 'Servos ...', 73), ('Travel', 'Travel extents ...', 83),
+    ('Setup', 'Settings ...', 81),
 ]
 proto = by['Pid']
 for k, (name, words, code) in enumerate(BUTTONS):

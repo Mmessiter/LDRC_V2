@@ -57,7 +57,7 @@ static void ServoShow()
     const int flags = RdU16(b, 14);
     ServoRev = (flags & 1) ? 1 : 0;
     ServoGeo = (flags & 2) ? 1 : 0;
-    SendText((char *)"tn7", (char *)(ServoRev ? "Reversed" : "Normal"));
+    SendText((char *)"tn7", (char *)(ServoRev ? "Yes" : "No"));
     SendText((char *)"tn8", (char *)(ServoGeo ? "On" : "Off"));
 }
 static void ServoGather() // the page's fields, clamped as the receiver's page clamps them
@@ -210,7 +210,7 @@ void ServoWasEdited()
 void ServoReverseTapped()
 {
     ServoRev = !ServoRev;
-    SendText((char *)"tn7", (char *)(ServoRev ? "Reversed" : "Normal"));
+    SendText((char *)"tn7", (char *)(ServoRev ? "Yes" : "No"));
     ServoWasEdited();
 }
 void ServoGeometryTapped()

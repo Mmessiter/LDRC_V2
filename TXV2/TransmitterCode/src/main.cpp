@@ -162,6 +162,7 @@
 #include "RF_RotorFlight.h"
 #include "RF_Rescue.h" // B50: Rotorflight rescue, over the pipe
 #include "RF_Servos.h" // B55: Rotorflight servos, over the pipe
+#include "RF_Travel.h" // B57: travel extents, over the pipe
 #include "RF_Rates_Advanced.h"
 #include "RF_PID_Advanced.h"
 #include "RF_Save_Restore.h"
@@ -3006,7 +3007,7 @@ void RestoreCurrentModel()
 // ******************************** Global Array1 of numbered function pointers OK up the **********************************
 
 // This new list can be huge - up to 24 BITS unsigned!  ( Use "NUMBER<<8" )
-#define LASTFUNCTION1 83 // One more than final one
+#define LASTFUNCTION1 92 // One more than final one
 
 void (*NumberedFunctions1[LASTFUNCTION1])(){
     Blank,                   // 0 Cannot be used
@@ -3091,7 +3092,16 @@ void (*NumberedFunctions1[LASTFUNCTION1])(){
     ServoPrevious,           // 79 < Servo
     ServoNext,               // 80 Servo >
     StartRFSettingsView,     // 81 B56: the menu's Settings ...
-    EndRFSettingsView        // 82 OK on the settings page
+    EndRFSettingsView,       // 82 OK on the settings page
+    StartTravelView,         // 83 B57: the menu's Travel extents ...
+    EndTravelView,           // 84 OK (either page)
+    SaveTravel,              // 85 Save (either page)
+    TravelWasEdited,         // 86 a number typed
+    TravelAilTapped,         // 87 Aileron reversed
+    TravelEleTapped,         // 88 Elevator reversed
+    TravelCollTapped,        // 89 Collective reversed
+    StartTravel2View,        // 90 Next >
+    EndTravel2View           // 91 < Previous
 };
 
 // This list migth become MUCH longer as it limit is 24 bits big
@@ -4829,6 +4839,7 @@ void FASTRUN ManageTransmitter()
     DoTheVariometer(); // Do the variometer
     RescuePoll();      // B50: a Rotorflight rescue read or save in progress, over the pipe
     ServoPoll();       // B55: the servos page, likewise
+    TravelPoll();      // B57: the travel extents pages
 
     if (RightNow - LastTimeRead >= 1000)
     { // Only once a second for these..
