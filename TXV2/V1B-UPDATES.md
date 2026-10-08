@@ -186,6 +186,12 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The expert filters page in the configurator's order (screen files, 8 Oct 2026)
+
+Malcolm, testing page 1 against the configurator (every line agreed, his 25 Hz went through): "the parameters are
+grouped differently" on the expert page. Now in the configurator's expert order: Lowpass 1's Dynamic Cutoff first, then
+Lowpass Filter 2, then Notch Filters 1 and 2. A card-files change only (65.json), no new firmware.
+
 ## The front screen you left is the one that comes back; the look can be copied (screen 1.11.33, 7 Oct 2026)
 
 Malcolm: "if I turn off the transmitter with the original front screen in view, when I turn it on again I get a defined

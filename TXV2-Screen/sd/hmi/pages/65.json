@@ -175,7 +175,7 @@
    }
   },
   {
-   "n": "h0",
+   "n": "h1",
    "i": 7,
    "t": "text",
    "g": "g",
@@ -190,7 +190,7 @@
     "borderc": 4426,
     "bco": 4426
    },
-   "txt": "Lowpass Filter 2",
+   "txt": "Lowpass 1: Dynamic Cutoff",
    "a": {
     "style": 0,
     "key": 255,
@@ -203,7 +203,7 @@
    }
   },
   {
-   "n": "ltn0",
+   "n": "ltn3",
    "i": 8,
    "t": "text",
    "g": "g",
@@ -231,7 +231,7 @@
    }
   },
   {
-   "n": "tn0",
+   "n": "tn3",
    "i": 9,
    "t": "text",
    "g": "g",
@@ -258,11 +258,11 @@
     "isbr": 0
    },
    "ev": {
-    "r": "va0.val=104<<8\nprint va0.val"
+    "r": "va0.val=105<<8\nprint va0.val"
    }
   },
   {
-   "n": "ltn1",
+   "n": "ltn4",
    "i": 10,
    "t": "text",
    "g": "g",
@@ -277,7 +277,7 @@
     "borderc": 0,
     "bco": 63752
    },
-   "txt": "Filter type",
+   "txt": "Min cutoff [Hz]",
    "a": {
     "style": 0,
     "key": 255,
@@ -290,7 +290,7 @@
    }
   },
   {
-   "n": "tn1",
+   "n": "tn4",
    "i": 11,
    "t": "text",
    "g": "g",
@@ -308,7 +308,7 @@
    "txt": "0",
    "a": {
     "style": 2,
-    "key": 255,
+    "key": 2,
     "borderw": 2,
     "xcen": 1,
     "ycen": 1,
@@ -317,11 +317,11 @@
     "isbr": 0
    },
    "ev": {
-    "r": "va0.val=97<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Dynamic min cutoff [Hz]\"\nva0.val=95<<8\nprint va0.val"
    }
   },
   {
-   "n": "ltn2",
+   "n": "ltn5",
    "i": 12,
    "t": "text",
    "g": "g",
@@ -336,7 +336,7 @@
     "borderc": 0,
     "bco": 63752
    },
-   "txt": "Cutoff frequency [Hz]",
+   "txt": "Max cutoff [Hz]",
    "a": {
     "style": 0,
     "key": 255,
@@ -349,7 +349,7 @@
    }
   },
   {
-   "n": "tn2",
+   "n": "tn5",
    "i": 13,
    "t": "text",
    "g": "g",
@@ -376,11 +376,11 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Lowpass 2 cutoff [Hz]\"\nva0.val=95<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Dynamic max cutoff [Hz]\"\nva0.val=95<<8\nprint va0.val"
    }
   },
   {
-   "n": "h1",
+   "n": "h0",
    "i": 14,
    "t": "text",
    "g": "g",
@@ -395,7 +395,7 @@
     "borderc": 4426,
     "bco": 4426
    },
-   "txt": "Dynamic Cutoff (lowpass 1)",
+   "txt": "Lowpass Filter 2",
    "a": {
     "style": 0,
     "key": 255,
@@ -408,7 +408,7 @@
    }
   },
   {
-   "n": "ltn3",
+   "n": "ltn0",
    "i": 15,
    "t": "text",
    "g": "g",
@@ -436,7 +436,7 @@
    }
   },
   {
-   "n": "tn3",
+   "n": "tn0",
    "i": 16,
    "t": "text",
    "g": "g",
@@ -463,11 +463,11 @@
     "isbr": 0
    },
    "ev": {
-    "r": "va0.val=105<<8\nprint va0.val"
+    "r": "va0.val=104<<8\nprint va0.val"
    }
   },
   {
-   "n": "ltn4",
+   "n": "ltn1",
    "i": 17,
    "t": "text",
    "g": "g",
@@ -482,7 +482,7 @@
     "borderc": 0,
     "bco": 63752
    },
-   "txt": "Min cutoff [Hz]",
+   "txt": "Filter type",
    "a": {
     "style": 0,
     "key": 255,
@@ -495,7 +495,7 @@
    }
   },
   {
-   "n": "tn4",
+   "n": "tn1",
    "i": 18,
    "t": "text",
    "g": "g",
@@ -513,7 +513,7 @@
    "txt": "0",
    "a": {
     "style": 2,
-    "key": 2,
+    "key": 255,
     "borderw": 2,
     "xcen": 1,
     "ycen": 1,
@@ -522,11 +522,11 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Dynamic min cutoff [Hz]\"\nva0.val=95<<8\nprint va0.val"
+    "r": "va0.val=97<<8\nprint va0.val"
    }
   },
   {
-   "n": "ltn5",
+   "n": "ltn2",
    "i": 19,
    "t": "text",
    "g": "g",
@@ -541,7 +541,7 @@
     "borderc": 0,
     "bco": 63752
    },
-   "txt": "Max cutoff [Hz]",
+   "txt": "Cutoff frequency [Hz]",
    "a": {
     "style": 0,
     "key": 255,
@@ -554,7 +554,7 @@
    }
   },
   {
-   "n": "tn5",
+   "n": "tn2",
    "i": 20,
    "t": "text",
    "g": "g",
@@ -581,7 +581,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Dynamic max cutoff [Hz]\"\nva0.val=95<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Lowpass 2 cutoff [Hz]\"\nva0.val=95<<8\nprint va0.val"
    }
   },
   {
