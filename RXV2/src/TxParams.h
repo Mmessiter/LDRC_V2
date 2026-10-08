@@ -347,7 +347,9 @@ inline void buildGovConfigFromMsp(const uint8_t* p, uint16_t len) {
         }
         return;
     }
-    if (!govConfigValid) {
+    static bool saidServing = false;   // (0.9.878: once per boot - the cache is emptied at every request now)
+    if (!saidServing) {
+        saidServing = true;
         char m[64];
         snprintf(m, sizeof(m), "GovCfg: MSP reply ok (%u bytes) - serving", (unsigned)len);
         events.add(m);
@@ -490,17 +492,23 @@ inline void txParamsWords(const uint16_t* w) {
 
     switch (id) {
         // ---- reads: "send block now" (word[1]==321, word[2]=duration ms) ----
+        // 0.9.878: a "send me the block" request EMPTIES the block's cache first, so that nothing is served until the
+        // flight controller has answered afresh (within 50 ms). The cache was served at once - the values of the bank
+        // the FC was on BEFORE the transmitter's bank switch moved - and the fresh read that followed could reach a
+        // Version 2 transmitter after its listening window had closed (Malcolm, 8 Oct: "when I switched banks reading
+        // PIDs, it doesn't always update to the PIDs for that bank"). A Version 1 transmitter reads the slots for a
+        // second: it loses nothing but 50 ms.
         case PID_SEND_RATES:
-            if (w[1] == 321) { linkStats.paramOps++; paramSend = PSEND_RATES;     paramSendUntil = millis() + w[2]; lastParamFetchMs = 0; }
+            if (w[1] == 321) { linkStats.paramOps++; paramSend = PSEND_RATES;     paramSendUntil = millis() + w[2]; lastParamFetchMs = 0; ratesAckValid = false; }
             break;
         case PID_SEND_RATES_ADV:
-            if (w[1] == 321) { linkStats.paramOps++; paramSend = PSEND_RATES_ADV; paramSendUntil = millis() + w[2]; lastParamFetchMs = 0; }
+            if (w[1] == 321) { linkStats.paramOps++; paramSend = PSEND_RATES_ADV; paramSendUntil = millis() + w[2]; lastParamFetchMs = 0; ratesAckValid = false; }
             break;
         case PID_SEND_PID:
-            if (w[1] == 321) { linkStats.paramOps++; paramSend = PSEND_PID;       paramSendUntil = millis() + w[2]; lastParamFetchMs = 0; }
+            if (w[1] == 321) { linkStats.paramOps++; paramSend = PSEND_PID;       paramSendUntil = millis() + w[2]; lastParamFetchMs = 0; pidAckValid = false; }
             break;
         case PID_SEND_PID_ADV:
-            if (w[1] == 321) { linkStats.paramOps++; paramSend = PSEND_PID_ADV;   paramSendUntil = millis() + w[2]; lastParamFetchMs = 0; }
+            if (w[1] == 321) { linkStats.paramOps++; paramSend = PSEND_PID_ADV;   paramSendUntil = millis() + w[2]; lastParamFetchMs = 0; advPidAckValid = false; }
             break;
 
         // ---- RATES write ----
@@ -558,7 +566,7 @@ inline void txParamsWords(const uint16_t* w) {
                 lastReqLog27 = millis();
                 events.add("GovProf: TX request received");
             }
-            if (govSupported() && w[1] == 321) { linkStats.paramOps++; paramSend = PSEND_GOV_PROFILE; paramSendUntil = millis() + w[2]; lastParamFetchMs = 0; }
+            if (govSupported() && w[1] == 321) { linkStats.paramOps++; paramSend = PSEND_GOV_PROFILE; paramSendUntil = millis() + w[2]; lastParamFetchMs = 0; govProfileValid = false; }
             break;
         }
         case PID_SEND_GOV_CONFIG: {             // 28 — read governor config
@@ -570,7 +578,7 @@ inline void txParamsWords(const uint16_t* w) {
                          (unsigned)w[1], (unsigned)w[2], (unsigned)rotorflightTxVersion());
                 events.add(m);
             }
-            if (govSupported() && w[1] == 321) { linkStats.paramOps++; paramSend = PSEND_GOV_CONFIG;  paramSendUntil = millis() + w[2]; lastParamFetchMs = 0; }
+            if (govSupported() && w[1] == 321) { linkStats.paramOps++; paramSend = PSEND_GOV_CONFIG;  paramSendUntil = millis() + w[2]; lastParamFetchMs = 0; govConfigValid = false; }
             break;
         }
         case PID_GOV_WR_PROFILE1:               // 29 — profile bytes 1..11

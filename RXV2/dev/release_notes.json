@@ -1,4 +1,5 @@
 {
+  "RXV2-0.9.878-fresh-block-reads": "A transmitter asking for a block of settings (PIDs, rates, governor) now gets a fresh read, never the cached values from before its bank switch moved: the Version 2 transmitter could keep showing the previous bank's PIDs.",
   "RXV2-0.9.877-filters-as-configurator": "Filters page laid out as the configurator's Gyro tab: the lowpass type names were in the wrong order (1st order read as PT2), Notch Q now in tenths, Strength Custom/Low/Medium/High, and Enable on every section, with the restart the Dynamic and RPM filter Enables need.",
   "RXV2-0.9.876-ble-ask-events": "When a Version 2 transmitter asks for Bluetooth and the receiver cannot open it (armed, or a receiver update), the events log says so and why; state.json ble.tx_ask shows the ask.",
   "RXV2-0.9.875-ble-wanted": "A Version 2 transmitter in its Rotorflight menu now asks the receiver to open its Bluetooth (parameter 36), so the transmitter's screen can join it minutes after power-on, not only in the first 30 s. Honoured only while not armed; the ordinary rules shut it again afterwards.",

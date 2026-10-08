@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.877-filters-as-configurator";
+constexpr const char* FW_VERSION = "RXV2-0.9.878-fresh-block-reads";
 
 //*********************************************************************
 //  Auto-update manifest URLs
