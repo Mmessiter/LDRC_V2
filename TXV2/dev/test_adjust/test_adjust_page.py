@@ -41,6 +41,8 @@ static void RotorFlightStart() { ++rfStarts; CurrentView = 47; }
 static bool ModelSeemsArmed(char *, int) { return false; }
 static bool RfPipeBlocked(char *, int) { return false; }
 static long FieldNumber(const char *name, long lo, long hi) { long v = atol(fields[name].c_str()); return v < lo ? lo : v > hi ? hi : v; }
+static std::map<std::string, int> attrs; static int GetOtherValue(char *n) { return attrs.count(n) ? attrs[n] : 0; }   // the bar's handles, as the screen holds them
+static int cmdValue(const char *attr) { for (int i = (int) cmds.size() - 1; i >= 0; --i) { const std::string pre = std::string(attr) + "="; if (cmds[i].rfind(pre, 0) == 0) return atoi(cmds[i].c_str() + pre.size()); } return -9999; }
 // ---- the pipe and a fake flight controller
 static int PipeReqId = 0, PipeRepId = -1, PipeRepCode = 0; static char PipeRepBody[1600] = ""; static uint32_t PipeReqSentMs = 0;
 bool PipeReplyReady(int id) { return PipeRepId == id; }
@@ -84,20 +86,23 @@ int main() {
     run(4);
     CHECK(AdjHave && AdjN == 3 && AdjAt == 0 && fields["t0"] == "Adjustment 1 of 3" && fields["tn0"] == "PID bank switch (1 to 6)" && fields["tn1"] == "Channel 6: AUX1" && fields["tn2"] == "Switch 3" && fields["tn3"] == "Any");
     CHECK(fields["tn4"] == "1" && fields["tn5"] == "2" && fields["tn6"] == "3");
-    CHECK(fields["tn8"] == "Channel 6 now: 1500 us");
+    CHECK(fields["tn8"] == "Now 1500 us: position 2 = 2" && cmdValue("bar.mk") == 1500 && cmdValue("bar.n") == 3 && cmdValue("bar.d0") == 1300 && cmdValue("bar.d1") == 1700 && fields["bar"] == "1 = 1|2 = 2|3 = 3");
     // the second row: the knob in bank 2, with its present value read from the PIDs (bank 2 is the bank in use)
     AdjustNext(); run(6);
     CHECK(AdjAt == 1 && fields["tn0"] == "Yaw P gain" && fields["tn1"] == "Channel 8: AUX3" && fields["tn2"] == "Knob" && fields["tn3"] == "Bank 2" && fields["tn4"] == "60" && fields["tn5"] == "120");
+    CHECK(cmdValue("bar.kind") == 1 && cmdValue("bar.d0") == 1000 && cmdValue("bar.d1") == 2000 && fields["bar"] == "|60 to 120|" && fields["tn8"] == "Now 1500 us: about 90");
     CHECK(fields["tn7"] == "Now: 95");
     // the third: the nudge, a Rate shown x5
     AdjustNext(); run(6);
     CHECK(AdjAt == 2 && fields["tn0"] == "Pitch top rotation speed (Rate)" && fields["tn2"] == "Up/down" && fields["tn4"] == "2" && fields["tn5"] == "100" && fields["tn6"] == "500");
+    CHECK(cmdValue("bar.kind") == 2 && fields["bar"] == "down 2||up 2" && fields["tn8"] == "Now 1500 us: holding");
     CHECK(fields["tn7"] == "Now: 240");
     // 2. edit the knob's high end, save: only line 3 is written, then the store, then the read-back
     AdjustPrevious(); run(6); fields["tn5"] = "130"; AdjustWasEdited(); CHECK(Adj_Was_Edited);
+    attrs["bar.d0"] = 1100; attrs["bar.d1"] = 2000; AdjustBarMoved(); CHECK(AdjRows[1].lo == 1100 && AdjRows[1].hi == 2000 && fields["tn8"] == "Now 1500 us: about 91");   // (a handle dragged: the knob's travel)
     fcLog.clear(); busyOnce = 1; SaveAdjustments(); run(30);
     CHECK(writes(53) == 2 && fcLog[0].fn == 53 && fcLog[1].fn == 53 && fcLog[0].data == fcLog[1].data && fcLog[0].data.substr(0, 2) == "03");   // (the 503 answered again)
-    CHECK(writes(250) == 1 && writes(52) == 1 && AdjStep_ == ADJ_IDLE && !Adj_Was_Edited && adj[3 * 14 + 11] == 130 && adj[3 * 14 + 12] == 0);
+    CHECK(writes(250) == 1 && writes(52) == 1 && AdjStep_ == ADJ_IDLE && !Adj_Was_Edited && adj[3 * 14 + 11] == 130 && adj[3 * 14 + 12] == 0 && adj[3 * 14 + 5] == stp(1100));
     CHECK(fields["busy"].find("Saved, and read back the same") == 0 && fields["tn5"] == "130");
     // the nudge's Rate goes back /5
     AdjustNext(); run(6); fields["tn6"] = "600"; AdjustWasEdited(); fcLog.clear(); SaveAdjustments(); run(30);

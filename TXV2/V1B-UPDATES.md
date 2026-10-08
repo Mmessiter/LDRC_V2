@@ -186,6 +186,22 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The adjustments page as the phone's: the bar, the blobs, the marker (V2 B74 + screen 1.11.35, 8 Oct 2026)
+
+Malcolm, after the first adjustment saved from the transmitter landed in the configurator: "It appears to be working
+well ... But it looks very different from what I was expecting. On the iPhone, I like being able to drag the blob and
+see where the channel is. I wonder if we could make this version look more similar?" Screen 1.11.35: a component type
+of its own, 'rangebar' - a scale of 875 to 2125 microseconds across the width, the regions coloured (blue, green,
+orange, as the phone page) and labelled, the dividers as round handles the finger drags in 5-microsecond steps and never
+past a neighbour, a green marker where the channel is now; a knob greys the regions outside its travel, a step
+adjustment greys the middle. The main board sets it by attributes (bar.n, bar.d0.., bar.kind, bar.mk, the labels as its
+text) and reads the handles back after a drag (code 130, get bar.d0 ..). B74: AdjShow drives the bar for every kind,
+the marker follows the channel as the FLIGHT CONTROLLER sees it (this transmitter's microseconds through the
+receiver's CRSF scaling and clamp, 988 to 2012: the knob at 2178 reads 2012, as the phone said), and the line under
+the bar says what that gives: "Now 1512 us: position 2 = 120", "about 91" for a knob, "stepping up" for a nudge. The
+value boxes sit under their positions. Page 67 remade (hmi/adjust_pages.py, explicit layout). test_adjust_page 29.
+Untested on hardware as written.
+
 ## An ID heard twice before it is believed (V2 B73, 8 Oct 2026)
 
 Malcolm, on the second transmitter: "the model ID was lost. I saved it again, reconnected, and again it was lost" -

@@ -307,18 +307,46 @@ FLASHMEM static int AdjLinesUsed(int exceptRow) // how many of the 42 lines the 
     for (int i = 0; i < AdjN; ++i) { if (i == exceptRow || !AdjRows[i].fn) continue; k += AdjRows[i].kind == AK_SWITCH ? AdjRows[i].n : 1; }
     return k;
 }
-FLASHMEM static void AdjLive() // the chosen channel's position from this transmitter's own output
+// This transmitter's output for a channel, as the flight controller sees it: the receiver makes CRSF of it (819/500 per
+// microsecond about 1500, clamped to 172..1811) and Rotorflight makes microseconds of that again (988..2012)
+FLASHMEM static int AdjFcUs(uint16_t txUs)
 {
-    static int lastCh = -1; static uint16_t lastUs = 0;
-    if (!AdjN) { if (lastCh != -1) { lastCh = -1; AdjText("tn8", ""); } return; }
-    const int ch = AdjRows[AdjAt].ch + 6;   // 1-based channel
-    const uint16_t us = (ch >= 1 && ch <= CHANNELSUSED) ? SendBuffer[ch - 1] : 0;
-    if (ch == lastCh && us == lastUs) return;
-    lastCh = ch; lastUs = us;
-    char b[40];
-    snprintf(b, sizeof(b), "Channel %d now: %u us", ch, (unsigned)us);
+    long v = 1500 + ((long)txUs - 1500) * 819L * 5L / (500L * 8L);
+    if (v < 988) v = 988;
+    if (v > 2012) v = 2012;
+    return (int)v;
+}
+FLASHMEM static int AdjRegionOf(const AdjRow &r, int us) // which region of the row's bar the channel is in (0..), -1 for none
+{
+    if (r.kind == AK_KNOB) return us < r.lo ? 0 : us > r.hi ? 2 : 1;
+    const int n = r.kind == AK_SWITCH ? r.n : 3;
+    for (int k = 0; k < n - 1; ++k) if (us < r.t[k]) return k;
+    return n - 1;
+}
+static int AdjLiveCh = -1, AdjLiveUs = -1;   // what the marker and the line last showed (AdjShow forgets them: the row may have changed)
+FLASHMEM static void AdjLive() // the chosen channel's position, from this transmitter's own output: the bar's marker and the line under it
+{
+    if (!AdjN) { if (AdjLiveCh != -1) { AdjLiveCh = -1; AdjText("tn8", ""); } return; }
+    const AdjRow &r = AdjRows[AdjAt];
+    const int ch = r.ch + 6;   // 1-based channel
+    const int us = (ch >= 1 && ch <= CHANNELSUSED) ? AdjFcUs(SendBuffer[ch - 1]) : -1;
+    if (ch == AdjLiveCh && us == AdjLiveUs) return;
+    AdjLiveCh = ch; AdjLiveUs = us;
+    char c[24], b[64];
+    snprintf(c, sizeof(c), "bar.mk=%d", us); SendCommand(c);
+    const int k = us >= 0 ? AdjRegionOf(r, us) : -1;
+    if (k < 0) snprintf(b, sizeof(b), "Channel %d now: ?", ch);
+    else if (r.kind == AK_SWITCH) snprintf(b, sizeof(b), "Now %d us: position %d = %ld", us, k + 1, (long)r.v[k]);
+    else if (r.kind == AK_KNOB)
+    {
+        if (k != 1) snprintf(b, sizeof(b), "Now %d us: outside the knob's travel", us);
+        else { const long span = r.hi > r.lo ? r.hi - r.lo : 1; const long v = r.v[0] + ((r.v[1] - r.v[0]) * (long)(us - r.lo) + span / 2) / span; snprintf(b, sizeof(b), "Now %d us: about %ld", us, v); }
+    }
+    else snprintf(b, sizeof(b), "Now %d us: %s", us, k == 0 ? "stepping down" : k == 2 ? "stepping up" : "holding");
     AdjText("tn8", b);
 }
+static void AdjGather();
+static void AdjEdited();
 FLASHMEM static void AdjShowNow()
 {
     char b[40];
@@ -336,6 +364,7 @@ FLASHMEM static void AdjShow()
         AdjText("tn0", (char *)"(none: Add one)"); AdjText("tn1", (char *)""); AdjText("tn2", (char *)""); AdjText("tn3", (char *)"");
         for (int i = 4; i <= 6; ++i) AdjRowVis(i, false);
         AdjText("tn7", (char *)""); AdjText("tn8", (char *)"");
+        SendCommand((char *)"bar.n=1"); SendCommand((char *)"bar.kind=0"); SendCommand((char *)"bar.mk=-1"); AdjText("bar", (char *)"");
         return;
     }
     const AdjRow &r = AdjRows[AdjAt];
@@ -349,28 +378,61 @@ FLASHMEM static void AdjShow()
     const int bank = AdjCondToBank(r, AdjBk);
     if (bank > 0) snprintf(b, sizeof(b), "Bank %d", bank); else snprintf(b, sizeof(b), "%s", bank < 0 ? "Other" : "Any");
     AdjText("tn3", b);
+    // the bar: its kind, its regions and their dividers, the labels in them
+    char labels[160] = "";
     if (r.kind == AK_KNOB)
     {
+        SendCommand((char *)"bar.kind=1"); SendCommand((char *)"bar.n=3");
+        snprintf(b, sizeof(b), "bar.d0=%d", r.lo); SendCommand(b); snprintf(b, sizeof(b), "bar.d1=%d", r.hi); SendCommand(b);
+        snprintf(labels, sizeof(labels), "|%ld to %ld|", (long)r.v[0], (long)r.v[1]);
         AdjRowVis(4, true); AdjRowVis(5, true); AdjRowVis(6, false);
         AdjText("ltn4", (char *)"Low end value"); AdjNum("tn4", r.v[0]);
         AdjText("ltn5", (char *)"High end value"); AdjNum("tn5", r.v[1]);
     }
     else if (r.kind == AK_SWITCH)
     {
+        SendCommand((char *)"bar.kind=0"); snprintf(b, sizeof(b), "bar.n=%d", r.n); SendCommand(b);
+        for (int k = 0; k + 1 < r.n && k < 5; ++k) { snprintf(b, sizeof(b), "bar.d%d=%d", k, r.t[k]); SendCommand(b); }
+        for (int k = 0; k < r.n; ++k) { char one[28]; snprintf(one, sizeof(one), "%s%d = %ld", k ? "|" : "", k + 1, (long)r.v[k]); strncat(labels, one, sizeof(labels) - strlen(labels) - 1); }
         AdjRowVis(4, true); AdjRowVis(5, r.n >= 2); AdjRowVis(6, r.n >= 3);
-        AdjText("ltn4", (char *)"Position 1 value"); AdjNum("tn4", r.v[0]);
-        AdjText("ltn5", (char *)"Position 2 value"); AdjNum("tn5", r.v[1]);
-        AdjText("ltn6", (char *)(r.n > 3 ? "Position 3 (of more)" : "Position 3 value")); AdjNum("tn6", r.v[2]);
+        AdjText("ltn4", (char *)"Position 1"); AdjNum("tn4", r.v[0]);
+        AdjText("ltn5", (char *)"Position 2"); AdjNum("tn5", r.v[1]);
+        AdjText("ltn6", (char *)(r.n > 3 ? "Position 3 (of more)" : "Position 3")); AdjNum("tn6", r.v[2]);
     }
     else
     {
+        SendCommand((char *)"bar.kind=2"); SendCommand((char *)"bar.n=3");
+        snprintf(b, sizeof(b), "bar.d0=%d", r.t[0]); SendCommand(b); snprintf(b, sizeof(b), "bar.d1=%d", r.t[1]); SendCommand(b);
+        snprintf(labels, sizeof(labels), "down %d||up %d", r.stp, r.stp);
         AdjRowVis(4, true); AdjRowVis(5, true); AdjRowVis(6, true);
         AdjText("ltn4", (char *)"Step size"); AdjNum("tn4", r.stp);
         AdjText("ltn5", (char *)"Lowest value"); AdjNum("tn5", r.v[0]);
         AdjText("ltn6", (char *)"Highest value"); AdjNum("tn6", r.v[1]);
     }
+    AdjText("bar", labels);
     AdjShowNow();
+    AdjLiveCh = -1;   // (the line under the bar is worded from the row: said again)
     AdjLive();
+}
+// A handle of the bar was dragged (the screen's release event): the dividers as the screen now has them, into the row
+FLASHMEM void AdjustBarMoved()
+{
+    if (!AdjN || AdjStep_ != ADJ_IDLE) return;
+    AdjGather();
+    AdjRow &r = AdjRows[AdjAt];
+    int d[5];
+    const int nd = r.kind == AK_SWITCH ? r.n - 1 : 2;
+    for (int k = 0; k < nd && k < 5; ++k) { char n[10]; snprintf(n, sizeof(n), "bar.d%d", k); const int v = GetOtherValue((char *)n); d[k] = (v >= ADJ_RMIN && v <= ADJ_RMAX) ? v : -1; }
+    bool changed = false;
+    for (int k = 0; k < nd && k < 5; ++k)
+    {
+        if (d[k] < 0) continue;
+        int16_t &slot = r.kind == AK_KNOB ? (k == 0 ? r.lo : r.hi) : r.t[k];
+        if (slot != d[k]) { slot = (int16_t)d[k]; changed = true; }
+    }
+    if (!changed) return;
+    AdjEdited();
+    AdjShow();
 }
 FLASHMEM static void AdjGather() // the typed values of the row showing
 {

@@ -3031,7 +3031,7 @@ void RestoreCurrentModel()
 // ******************************** Global Array1 of numbered function pointers OK up the **********************************
 
 // This new list can be huge - up to 24 BITS unsigned!  ( Use "NUMBER<<8" )
-#define LASTFUNCTION1 130 // One more than final one
+#define LASTFUNCTION1 131 // One more than final one
 
 void (*NumberedFunctions1[LASTFUNCTION1])(){
     Blank,                   // 0 Cannot be used
@@ -3163,7 +3163,8 @@ void (*NumberedFunctions1[LASTFUNCTION1])(){
     AdjustPrevious,          // 126 < Prev
     AdjustNext,              // 127 Next >
     AdjustAdd,               // 128 Add
-    AdjustRemove             // 129 Remove
+    AdjustRemove,            // 129 Remove
+    AdjustBarMoved           // 130 B74: a handle of the bar dragged
 };
 
 // This list migth become MUCH longer as it limit is 24 bits big

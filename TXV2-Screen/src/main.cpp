@@ -42,7 +42,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.34"
+#define SCREEN_VERSION "1.11.35"
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room
 #endif
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -299,7 +299,7 @@ static int typeCodeOf(const std::string &t) {
     static const struct { const char *name; int code; } tab[] = {
         { "text", 116 }, { "number", 54 }, { "button", 98 }, { "dual-state button", 53 }, { "picture", 112 }, { "progress bar", 106 },
         { "slider", 1 }, { "hotspot", 109 }, { "timer", 51 }, { "variable", 52 }, { "checkbox", 56 }, { "radio", 57 }, { "audio", 4 },
-        { "external picture", 60 }, { "combobox", 61 }, { "sltext", 62 }, { "switch", 67 }, { "textselect", 68 }, { "scrolling text", 55 }, { "xfloat", 59 } };
+        { "external picture", 60 }, { "combobox", 61 }, { "sltext", 62 }, { "switch", 67 }, { "rangebar", 69 }, { "textselect", 68 }, { "scrolling text", 55 }, { "xfloat", 59 } };
     for (auto &e : tab) if (t == e.name) return e.code;
     return 0;
 }
@@ -834,6 +834,40 @@ static std::string imagePath(const std::string &base) {
     if (sdOk && SD.exists(mine.c_str())) return mine;
     return "/images/" + base + ".565";
 }
+// RANGE BAR (1.11.35, Malcolm 8 Oct: "On the iPhone, I like being able to drag the blob and see where the channel is"):
+// the phone page's bar for an in-flight adjustment, as a component of the main board's pages. A scale lo..hi (microseconds,
+// 875-2125) across the width; n regions divided at d0..d4, each coloured and labelled (txt: the labels, '|' between);
+// kind 0 a switch (every region live), 1 a knob (the outer regions dead), 2 a nudge (the middle dead); a marker at mk
+// (the channel now; -1 none); round handles on the dividers, which the finger drags (5 us steps, never past a neighbour).
+// Set by the main board as attributes (bar.d0=1300, bar.mk=1512 ...) and read back the same way (get bar.d0).
+static int rbPad(const Comp &c) { return min(14, c.h / 2); }
+static int rbAt(const Comp &c, int us, int lo, int hi) { const int p = rbPad(c); return c.x + p + (int) ((long) (c.w - 2 * p) * (us - lo) / max(1, hi - lo)); }
+static int rbUs(const Comp &c, int x, int lo, int hi) { const int p = rbPad(c); return lo + (int) ((long) (x - c.x - p) * (hi - lo) / max(1, c.w - 2 * p)); }
+static int rbGet(const Comp &c, const char *k, int d) { auto it = c.extra.find(k); return it == c.extra.end() ? d : it->second; }
+static void drawRangeBar(Comp &c) {
+    const int lo = rbGet(c, "lo", 875), hi = rbGet(c, "hi", 2125), n = constrain(rbGet(c, "n", 2), 1, 6), kind = rbGet(c, "kind", 0), mk = rbGet(c, "mk", -1);
+    int edges[7]; edges[0] = lo; edges[n] = hi;
+    for (int k = 0; k < n - 1 && k < 5; ++k) { char key[3] = {'d', (char) ('0' + k), 0}; edges[k + 1] = constrain(rbGet(c, key, lo), lo, hi); }
+    gfx->fillRect(c.x, c.y, c.w, c.h, c.bco);
+    const int p = rbPad(c), th = max(12, c.h - 2 * 9), ty = c.y + (c.h - th) / 2, mid = c.y + c.h / 2;
+    static const uint16_t cols[3] = { 0x4C7E, 0x4E69, 0xFC80 };   // blue, green, orange (the phone page's)
+    std::vector<std::string> labels; { size_t a = 0; while (true) { size_t b = c.txt.find('|', a); labels.push_back(c.txt.substr(a, b == std::string::npos ? std::string::npos : b - a)); if (b == std::string::npos) break; a = b + 1; } }
+    const int fh = fontHeight(c.font);
+    for (int k = 0; k < n; ++k) {
+        const bool dead = (kind == 1 && k != 1) || (kind == 2 && k == 1);
+        const int x0 = rbAt(c, edges[k], lo, hi), x1 = rbAt(c, edges[k + 1], lo, hi);
+        if (x1 <= x0) continue;
+        gfx->fillRoundRect(x0, ty, x1 - x0, th, 6, dead ? 0x9CD3 : cols[k % 3]);
+        if (k < (int) labels.size() && !labels[k].empty()) {
+            std::string l = labels[k]; int tw = textWidth(c.font, l);
+            while (tw > x1 - x0 - 6 && l.size() > 1) { l.erase(l.size() - 1); tw = textWidth(c.font, l); }
+            if (tw <= x1 - x0 - 6) drawGlyphs((x0 + x1 - tw) / 2, mid - fh / 2, c.font, dead ? 0x4208 : 0xFFFF, l);
+        }
+    }
+    if (mk >= lo && mk <= hi) { const int mx = rbAt(c, mk, lo, hi); gfx->fillRect(mx - 2, c.y + 1, 5, c.h - 2, 0x0320); gfx->fillRect(mx - 1, c.y + 1, 3, c.h - 2, 0x07E0); }
+    for (int k = 0; k < n - 1; ++k) { const int hx = rbAt(c, edges[k + 1], lo, hi); gfx->fillCircle(hx, mid, p - 1, 0xFFFF); gfx->fillCircle(hx, mid, p - 4, 0x2A5F); }
+    (void) p;
+}
 static void drawComp(Comp &c) {
     if (loadingPage || noDraw) return;
     c.damaged = false;
@@ -908,6 +942,7 @@ static void drawComp(Comp &c) {
         else { const int hh = c.h * v / 100; gfx->fillRect(c.x, c.y + c.h - hh, c.w, hh, c.pco); }
         return;
     }
+    if (t == "rangebar") { drawRangeBar(c); return; }
     if (t == "slider") {
         // The Nextion draws these (psta 0, wid/hig 255) as a thin track in bco with a round knob in pco
         // whose diameter is the component's thickness — a small dot on the 15 px trims, a big blob on the
@@ -1081,6 +1116,7 @@ struct Host : public NextionHost {
         else if (attr == "w") c->w = v; else if (attr == "h") c->h = v; else if (attr == "pic") c->pic = v; else if (attr == "pic2") c->pic2 = v; else if (attr == "font") c->font = v;
         else if (attr == "val_y") c->scroll = max(0, (int) v);
         else if (attr == "en") { c->en = v; paint = false; } else if (attr == "tim") { c->tim = v; paint = false; }
+        else if (c->type == "rangebar") { auto it = c->extra.find(attr); if (it != c->extra.end() && it->second == v && !c->damaged) { perfSkipped++; return; } c->extra[attr] = v; }   // (a divider, the marker, the kind: the bar is drawn again)
         else { c->extra[attr] = v; paint = false; }
         if (paint) redraw(*c);
     }
@@ -1241,6 +1277,7 @@ static bool loadPage(const std::string &name) {
         c.dir = a["dir"] | 1; c.bco1 = col["bco1"] | 65535; c.pco3 = col["pco3"] | 0x8410; c.style = a["style"] | 0;
         c.roles = ldrc::themeRoles(c.bco, c.bco2, c.pco, c.pco2, c.borderc);   // (from the page's own colours)
         c.centre = j["centre"] | false;
+        if (c.type == "rangebar") { c.extra["lo"] = a["lo"] | 875; c.extra["hi"] = a["hi"] | 2125; c.extra["n"] = a["n"] | 2; c.extra["kind"] = a["kind"] | 0; c.extra["mk"] = a["mk"] | -1; c.extra["d0"] = a["d0"] | 1500; c.extra["d1"] = a["d1"] | 1700; c.extra["d2"] = a["d2"] | 1900; c.extra["d3"] = a["d3"] | 2000; c.extra["d4"] = a["d4"] | 2100; }
         for (JsonVariant o : j["opt"].as<JsonArray>()) c.options.push_back(o.as<std::string>());
         if (!c.options.empty() && c.options.back().empty()) c.options.pop_back();      // the editor keeps the final line break as an empty option
         JsonObject e = j["ev"]; c.evPress = e["p"] | ""; c.evRelease = e["r"] | ""; c.evMove = e["m"] | ""; c.evTimer = e["t"] | "";
@@ -1774,8 +1811,25 @@ static void pollTouch() {
         }
         for (auto &o : page.comps) if (o.type == "combobox" && o.open && (int) (&o - page.comps.data()) != held) closeCombo(o);
         if (held >= 0 && needUnmet(page.comps[held])) held = -1;   // greyed out: deaf, and the touch goes to the page (a keep-awake, nothing more)
+        if (held >= 0 && page.comps[held].type == "rangebar") {   // the handle nearest the finger, if it is near enough
+            Comp &c = page.comps[held]; const int lo = rbGet(c, "lo", 875), hi = rbGet(c, "hi", 2125), n = constrain(rbGet(c, "n", 2), 1, 6);
+            int best = -1, bestD = 30;
+            for (int k = 0; k < n - 1 && k < 5; ++k) { char key[3] = {'d', (char) ('0' + k), 0}; const int d = abs(x[0] - rbAt(c, rbGet(c, key, lo), lo, hi)); if (d < bestD) { bestD = d; best = k; } }
+            c.extra["drag"] = best;
+        }
         if (held >= 0) { Comp &c = page.comps[held]; c.pressed = true; dragS0 = c.scroll; if (c.type == "slider" && sliderTo(c, x[0], y[0])) keepTouched(c); if (c.type == "button" || c.type == "slider") redraw(c); runScript(c.evPress, c.name); }
         else runScript(page.evPress, "");
+    } else if (pressed && down && held >= 0 && held < (int) page.comps.size() && page.comps[held].type == "rangebar") {
+        Comp &c = page.comps[held]; const int k = rbGet(c, "drag", -1);   // dragging a handle: 5 us steps, never past its neighbours
+        if (k >= 0 && now - lastDragDraw > 40) {
+            const int lo = rbGet(c, "lo", 875), hi = rbGet(c, "hi", 2125);
+            char key[3] = {'d', (char) ('0' + k), 0}, kp[3] = {'d', (char) ('0' + k - 1), 0}, kn[3] = {'d', (char) ('0' + k + 1), 0};
+            const int n = constrain(rbGet(c, "n", 2), 1, 6);
+            int us = ((rbUs(c, x[0], lo, hi) + 2) / 5) * 5;
+            const int minUs = k > 0 ? rbGet(c, kp, lo) + 5 : lo + 5, maxUs = k + 1 < n - 1 ? rbGet(c, kn, hi) - 5 : hi - 5;
+            us = constrain(us, minUs, maxUs);
+            if (us != rbGet(c, key, lo)) { c.extra[key] = us; lastDragDraw = now; redraw(c); runScript(c.evMove, c.name); }
+        }
     } else if (pressed && down && held >= 0 && held < (int) page.comps.size() && page.comps[held].type == "slider") {
         Comp &c = page.comps[held];                          // dragging the knob
         if (now - lastDragDraw > 40 && sliderTo(c, x[0], y[0])) { lastDragDraw = now; keepTouched(c); redraw(c); runScript(c.evMove, c.name); }

@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B73 08/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B74 08/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -930,6 +930,7 @@ void AdjustPrevious();
 void AdjustNext();
 void AdjustAdd();
 void AdjustRemove();
+void AdjustBarMoved();                        // B74: a handle of the bar dragged
 void StartModelSetup();
 bool GetConfirmation(char *goback, char *Prompt);
 void GotoModelsView();
