@@ -742,6 +742,21 @@ FLASHMEM static void AdjTakeRows(const uint8_t *b, int n) // the 52 image -> row
         m.fn = r.fn; m.ch = r.ch; m.n = r.n; m.lo = (int16_t)AdjUs(AdjStep(r.lo)); m.hi = (int16_t)AdjUs(AdjStep(r.hi)); m.first = (r.v[0] + sc / 2) / sc; m.last = (r.v[r.n - 1] + sc / 2) / sc;
     }
     AdjN = AdjLinesToRows(L, nl, AdjRows);
+    // ONE bank switch and one rates switch (B86): a second line for the same selector fights the first (the phone app's
+    // Switches page wrote its own into slot 30 while the transmitter's sat in slot 0 - Malcolm, 8 Oct 23:05). The first
+    // is kept, the rest go, to be saved away.
+    int dups = 0;
+    for (int fn = 1; fn <= 2; ++fn)
+    {
+        int first = -1;
+        for (int i = 0; i < AdjN; ++i)
+        {
+            if (AdjRows[i].fn != fn || AdjRows[i].kind == AK_NUDGE) continue;
+            if (first < 0) { first = i; continue; }
+            for (int j = i; j + 1 < AdjN; ++j) AdjRows[j] = AdjRows[j + 1];
+            --AdjN; --i; ++dups;
+        }
+    }
     int legacy = 0;
     for (int i = 0; i < AdjN; ++i)
     {
@@ -771,7 +786,8 @@ FLASHMEM static void AdjTakeRows(const uint8_t *b, int n) // the 52 image -> row
         if (AdjFitBankRow(i)) refit = true;
     }
     AdjTakeNote[0] = 0;
-    if (legacy) snprintf(AdjTakeNote, sizeof(AdjTakeNote), "%d switch%s in the old once-only form: put right, press Save", legacy, legacy == 1 ? "" : "es");
+    if (dups) snprintf(AdjTakeNote, sizeof(AdjTakeNote), "%d extra bank switch line%s (they fight): removed - press Save", dups, dups == 1 ? "" : "s");
+    else if (legacy) snprintf(AdjTakeNote, sizeof(AdjTakeNote), "%d switch%s in the old once-only form: put right, press Save", legacy, legacy == 1 ? "" : "es");
     else if (refit) snprintf(AdjTakeNote, sizeof(AdjTakeNote), "The bank switch did not follow this transmitter's banks: matched - press Save");
 }
 FLASHMEM static int AdjLinesToWrite(AdjLine *L) // the rows, back in raw units

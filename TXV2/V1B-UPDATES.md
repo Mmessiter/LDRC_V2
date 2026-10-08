@@ -186,6 +186,16 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## A second bank switch line is removed (V2 B86, 9 Oct 2026)
+
+The phone app's Switches page knew nothing of the line the transmitter had written (Rotorflight cannot send the list
+over the link, and the app's own record is on the phone), drew its own idea of the bank selector (equal sections over
+988..2012) and, saved, put a second bank line into slot 30 beside the transmitter's in slot 0: two lines that fight
+(bank 2 on the way down went to bank 1). B86: the Adjustments page keeps the first bank switch and the first rates
+switch and removes any other, "1 extra bank switch line (they fight): removed - press Save". The receiver (0.9.880)
+now keeps a copy of the lines it sees pass (every MSP 52 read and 53 write) and the app's Switches page draws the real
+line from it and saves into its slot, blanking duplicates.
+
 ## A touch on the bank switch's bar says nothing (V2 B85, 9 Oct 2026)
 
 B84 confirmed ("it does seem to work perfectly now"). The yellow banner a touch on the bank bar brought up ("A bank

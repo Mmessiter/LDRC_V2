@@ -218,6 +218,15 @@ int main() {
     putLine(0, 2, 0, 875, 2125, 0, 1300, 1400, 1500, 1500, 1, 4, 0);
     StartAdjustView(); run(6);
     CHECK(AdjAt == 0 && fields["tn2"] == "Banks 1 to 4 of this transmitter" && AdjRows[0].lo == bankLo && AdjRows[0].hi == bankHi && Adj_Was_Edited && fields["busy"] == "The bank switch did not follow this transmitter's banks: matched - press Save");
+    // 7c. a second bank line (the phone app's Switches page wrote its own into slot 30, 8 Oct): the first is kept, the
+    // second removed, said in the banner, and the save blanks it
+    putLine(0, 2, 0, 875, 2125, 0, 1000, 1850, 1500, 1500, 1, 4, 0);
+    putLine(30, 2, 255, 1500, 1500, 0, 988, 2012, 1500, 1500, 1, 4, 0);
+    StartAdjustView(); run(6);
+    CHECK(AdjN == 4 && Adj_Was_Edited && fields["busy"] == "1 extra bank switch line (they fight): removed - press Save");
+    { int k = 0; for (int i = 0; i < AdjN; ++i) if (AdjRows[i].fn == 2) ++k; CHECK(k == 1 && AdjRows[0].lo == 1000 && AdjRows[0].hi == 1850); }
+    fcLog.clear(); SaveAdjustments(); run(40);
+    { AdjLine L[42]; AdjParseLines(adj, 588, L); int k = 0; for (int i = 0; i < 42; ++i) if (L[i].fn == 2) ++k; CHECK(k == 1 && L[30].fn == 0 && writes(53) >= 1); }
     // 8. no USB cable: the refusal, in the receiver's words, and back to the menu
     usb = false; boxes = 0; rfStarts = 0; StartAdjustView(); run(6);
     CHECK(boxes == 1 && rfStarts == 1 && lastBox.find("Adjustments need the USB cable") == 0 && lastBox.find("Plug the flight controller's USB") != std::string::npos && CurrentView == 47);
