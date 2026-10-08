@@ -13,6 +13,8 @@ prog = r'''
 #include <cstdlib>
 #include <cstring>
 #include <cstdint>
+#define FLASHMEM
+#define PROGMEM
 #include <cctype>
 #include <string>
 #include <map>

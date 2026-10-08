@@ -59,6 +59,7 @@ bool PipePageShowing()
     case FILTERVIEW:
     case FILTER2VIEW:
     case TRAVEL3VIEW:
+    case ADJUSTVIEW:
         return true;
     default:
         return false;
@@ -165,7 +166,7 @@ bool RfNeedsModel(char *why, size_t n)
         return false;
     if (BakHaveFile())
         return false;   // B70: no model, but its backup on the card: the pages read and edit that
-    snprintf(why, n, "No model is connected, and no backup\r\nof it is on the card. These values live\r\nin the flight controller: back it up once\r\n(Rotorflight, Backup) to edit them here.");
+    snprintf(why, n, "No model, and no backup of it on the\r\ncard. Back it up once (Rotorflight,\r\nBackup) to edit it here.");   // (B72: within the callers' 120 characters)
     return true;
 }
 bool RfPipeBlocked(char *why, size_t n)

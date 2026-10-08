@@ -164,6 +164,7 @@
 #include "RF_Servos.h" // B55: Rotorflight servos, over the pipe
 #include "RF_Travel.h" // B57: travel extents, over the pipe
 #include "RF_Filters.h" // B58: the gyro filters, over the pipe
+#include "RF_Adjust.h" // B72: the in-flight adjustments, over the pipe with the USB cable
 #include "RF_Rates_Advanced.h"
 #include "RF_PID_Advanced.h"
 #include "RF_Save_Restore.h"
@@ -3029,7 +3030,7 @@ void RestoreCurrentModel()
 // ******************************** Global Array1 of numbered function pointers OK up the **********************************
 
 // This new list can be huge - up to 24 BITS unsigned!  ( Use "NUMBER<<8" )
-#define LASTFUNCTION1 116 // One more than final one
+#define LASTFUNCTION1 130 // One more than final one
 
 void (*NumberedFunctions1[LASTFUNCTION1])(){
     Blank,                   // 0 Cannot be used
@@ -3147,7 +3148,21 @@ void (*NumberedFunctions1[LASTFUNCTION1])(){
     RestoreAll,              // 112 Restore all
     WriteEdits,              // 113 Write edits
     DiscardEdits,            // 114 Forget edits
-    EndBackupView            // 115 OK
+    EndBackupView,           // 115 OK
+    StartAdjustView,         // 116 B72: the menu's Adjustments ...
+    EndAdjustView,           // 117 OK
+    SaveAdjustments,         // 118 Save
+    AdjustWasEdited,         // 119 a number typed
+    AdjustSettingNext,       // 120 Setting >
+    AdjustSettingPrev,       // 121 Setting <
+    AdjustChannelNext,       // 122 Channel >
+    AdjustChannelPrev,       // 123 Channel <
+    AdjustKindTapped,        // 124 Kind
+    AdjustBankTapped,        // 125 In bank
+    AdjustPrevious,          // 126 < Prev
+    AdjustNext,              // 127 Next >
+    AdjustAdd,               // 128 Add
+    AdjustRemove             // 129 Remove
 };
 
 // This list migth become MUCH longer as it limit is 24 bits big
@@ -4887,6 +4902,7 @@ void FASTRUN ManageTransmitter()
     ServoPoll();       // B55: the servos page, likewise
     TravelPoll();      // B57: the travel extents pages
     FilterPoll();      // B58: the filters page
+    AdjustPoll();      // B72: the adjustments page
 
     if (RightNow - LastTimeRead >= 1000)
     { // Only once a second for these..

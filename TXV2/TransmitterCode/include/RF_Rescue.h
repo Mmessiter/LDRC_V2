@@ -31,8 +31,8 @@ static uint8_t RescueWant[RESCUE_BYTES];   // what a save asked for
 
 static const char *RescueModeWords[3] = {"Off", "Climb", "Hold height"};   // the mode on the height page; page 1's "Enable Rescue" is Off / On (B52: the configurator's names in its places)
 
-static uint16_t RdU16(const uint8_t *b, int o) { return (uint16_t)(b[o] | (b[o + 1] << 8)); }
-static void WrU16(uint8_t *b, int o, long v)
+FLASHMEM static uint16_t RdU16(const uint8_t *b, int o) { return (uint16_t)(b[o] | (b[o + 1] << 8)); }
+FLASHMEM static void WrU16(uint8_t *b, int o, long v)
 {
     if (v < 0)
         v = 0;
@@ -41,33 +41,33 @@ static void WrU16(uint8_t *b, int o, long v)
     b[o] = (uint8_t)(v & 0xFF);
     b[o + 1] = (uint8_t)(v >> 8);
 }
-static void RescueBusy(const char *msg)
+FLASHMEM static void RescueBusy(const char *msg)
 {
     SendCommand((char *)(msg && *msg ? "vis busy,1" : "vis busy,0"));
     if (msg && *msg)
         SendText((char *)"busy", (char *)msg);
 }
-static void RescueField(const char *name, const char *text) { SendText((char *)name, (char *)text); }
-static void RescueNumber(const char *name, long v)
+FLASHMEM static void RescueField(const char *name, const char *text) { SendText((char *)name, (char *)text); }
+FLASHMEM static void RescueNumber(const char *name, long v)
 {
     char b[16];
     snprintf(b, sizeof(b), "%ld", v);
     RescueField(name, b);
 }
-static void RescueTenths(const char *name, int tenths)
+FLASHMEM static void RescueTenths(const char *name, int tenths)
 {
     char b[16];
     snprintf(b, sizeof(b), "%d.%d", tenths / 10, tenths % 10);
     RescueField(name, b);
 }
-static void RescuePercent(const char *name, int tenths) // a collective of 0..1000 as the configurator shows it: 450 = 45, 655 = 65.5
+FLASHMEM static void RescuePercent(const char *name, int tenths) // a collective of 0..1000 as the configurator shows it: 450 = 45, 655 = 65.5
 {
     char b[16];
     if (tenths % 10) snprintf(b, sizeof(b), "%d.%d", tenths / 10, tenths % 10); else snprintf(b, sizeof(b), "%d", tenths / 10);
     RescueField(name, b);
 }
 // The page's fields from the bytes (page 1: RescueView; page 2: Rescue2View)
-static void RescueShowPage1()
+FLASHMEM static void RescueShowPage1()
 {
     RescueMode = RescueWant[0] <= 2 ? RescueWant[0] : 0;
     RescueFlip = RescueWant[1] ? 1 : 0;
@@ -85,7 +85,7 @@ static void RescueShowPage1()
     RescueNumber("tn11", RdU16(RescueWant, 24));  // Max Levelling Rate
     RescueNumber("tn12", RdU16(RescueWant, 26));  // Max Leveling Acceleration
 }
-static void RescueShowPage2()
+FLASHMEM static void RescueShowPage2()
 {
     char b[16];
     RescueMode = RescueWant[0] <= 2 ? RescueWant[0] : 0;
@@ -98,21 +98,21 @@ static void RescueShowPage2()
     RescueNumber("tn4", RdU16(RescueWant, 20));   // D
     RescuePercent("tn5", RdU16(RescueWant, 22));  // Max Collective [%]
 }
-static void RescueShow()
+FLASHMEM static void RescueShow()
 {
     if (CurrentView == RESCUEVIEW)
         RescueShowPage1();
     else if (CurrentView == RESCUE2VIEW)
         RescueShowPage2();
 }
-static long FieldNumber(const char *name, long lo, long hi) // a field as typed, clamped
+FLASHMEM static long FieldNumber(const char *name, long lo, long hi) // a field as typed, clamped
 {
     char t[24] = "";
     GetText((char *)name, t, sizeof(t) - 1);
     long v = strtol(t, nullptr, 10);
     return v < lo ? lo : v > hi ? hi : v;
 }
-static int FieldTenths(const char *name, int lo, int hi) // "1.5" -> 15
+FLASHMEM static int FieldTenths(const char *name, int lo, int hi) // "1.5" -> 15
 {
     char t[24] = "";
     GetText((char *)name, t, sizeof(t) - 1);
@@ -121,11 +121,11 @@ static int FieldTenths(const char *name, int lo, int hi) // "1.5" -> 15
     return v < lo ? lo : v > hi ? hi : v;
 }
 // The bytes to write: the page's fields over the last read (the other page's values stay as read, or as edited there)
-static int FieldPercent(const char *name, int lo, int hi) // "45" or "65.5" -> 450 / 655
+FLASHMEM static int FieldPercent(const char *name, int lo, int hi) // "45" or "65.5" -> 450 / 655
 {
     return FieldTenths(name, lo, hi);
 }
-static void RescueGatherPage1()
+FLASHMEM static void RescueGatherPage1()
 {
     RescueWant[0] = (uint8_t)RescueMode;
     RescueWant[1] = (uint8_t)RescueFlip;
@@ -141,7 +141,7 @@ static void RescueGatherPage1()
     WrU16(RescueWant, 24, FieldNumber("tn11", 1, 1000));
     WrU16(RescueWant, 26, FieldNumber("tn12", 1, 10000));
 }
-static void RescueGatherPage2()
+FLASHMEM static void RescueGatherPage2()
 {
     RescueWant[0] = (uint8_t)RescueMode;
     char t[24] = "";
@@ -157,14 +157,14 @@ static void RescueGatherPage2()
     WrU16(RescueWant, 20, FieldNumber("tn4", 0, 10000));
     WrU16(RescueWant, 22, FieldPercent("tn5", 10, 1000));
 }
-static void RescueAskSelect(int next)
+FLASHMEM static void RescueAskSelect(int next)
 {
     uint8_t b = (uint8_t)(Bank >= 1 && Bank <= 6 ? Bank - 1 : 0);
     RescueReq = MspAsk(210, &b, 1);
     RescueStep = next;
 }
 static void RescueRead();
-static void RescueFail(const char *what) // B54 (Malcolm: "the error banners should look more like message boxes"): a message box, with the whole of the receiver's words
+FLASHMEM static void RescueFail(const char *what) // B54 (Malcolm: "the error banners should look more like message boxes"): a message box, with the whole of the receiver's words
 {
     char msg[180];
     snprintf(msg, sizeof(msg), "%s:\r\n%.140s", what, PipeRepCode ? PipeRepBody : "the screen could not ask (no Bluetooth)");
@@ -177,7 +177,7 @@ static void RescueFail(const char *what) // B54 (Malcolm: "the error banners sho
     RescueShow(); // the page came back from the box: its fields again
 }
 static bool RescueRereadWanted = false;    // B54: the bank switch moved while a read or a save was under way
-void RescueBankChanged()                   // from BankHasChanged (Switches.h): the values of the new bank, the edits of the old one let go
+FLASHMEM void RescueBankChanged()                   // from BankHasChanged (Switches.h): the values of the new bank, the edits of the old one let go
 {
     if (CurrentView != RESCUEVIEW && CurrentView != RESCUE2VIEW)
         return;
@@ -205,7 +205,7 @@ void RescueBankChanged()                   // from BankHasChanged (Switches.h): 
     RescueRead();
 }
 // Each time round the loop (ManageTransmitter)
-void RescuePoll()
+FLASHMEM void RescuePoll()
 {
     if (CurrentView != RESCUEVIEW && CurrentView != RESCUE2VIEW)
     {
@@ -299,12 +299,12 @@ void RescuePoll()
         return;
     }
 }
-static void RescueRead()
+FLASHMEM static void RescueRead()
 {
     RescueBusy("Reading from the flight controller ...");
     RescueAskSelect(RSC_SELECT);
 }
-void StartRescueView()
+FLASHMEM void StartRescueView()
 {
     char why[120];
     if (RfNeedsModel(why, sizeof(why)) || ModelSeemsArmed(why, sizeof(why)) || RfPipeBlocked(why, sizeof(why)))
@@ -323,7 +323,7 @@ void StartRescueView()
     Rescue_Was_Edited = false;
     RescueRead();
 }
-void EndRescueView() // OK, on either page (B53: page 2 has OK too; "< Previous" is EndRescue2View)
+FLASHMEM void EndRescueView() // OK, on either page (B53: page 2 has OK too; "< Previous" is EndRescue2View)
 {
     if (Rescue_Was_Edited)
     {
@@ -340,13 +340,13 @@ void EndRescueView() // OK, on either page (B53: page 2 has OK too; "< Previous"
     Rescue_Was_Edited = false;
     RotorFlightStart();
 }
-void RescueWasEdited() // a number was typed
+FLASHMEM void RescueWasEdited() // a number was typed
 {
     SendCommand((char *)"vis b3,1");
     Rescue_Was_Edited = true;
 }
 static int RescueModeWhenOn = 1;       // what "On" means: Climb, or Hold height if that is what it was
-void RescueModeTapped() // page 1, Enable Rescue: Off <-> On
+FLASHMEM void RescueModeTapped() // page 1, Enable Rescue: Off <-> On
 {
     if (RescueMode)
     {
@@ -358,13 +358,13 @@ void RescueModeTapped() // page 1, Enable Rescue: Off <-> On
     SendValue((char *)"tn0", RescueMode ? 1 : 0);   // (B65: a switch)
     RescueWasEdited();
 }
-void RescueFlipTapped() // page 1: Flip <-> No-Flip
+FLASHMEM void RescueFlipTapped() // page 1: Flip <-> No-Flip
 {
     RescueFlip = !RescueFlip;
     SendValue((char *)"tn1", RescueFlip ? 1 : 0);   // (B65: a switch)
     RescueWasEdited();
 }
-void RescueMode2Tapped() // page 2, Rescue mode: Off -> Climb -> Hold height -> Off
+FLASHMEM void RescueMode2Tapped() // page 2, Rescue mode: Off -> Climb -> Hold height -> Off
 {
     RescueMode = (RescueMode + 1) % 3;
     if (RescueMode)
@@ -372,7 +372,7 @@ void RescueMode2Tapped() // page 2, Rescue mode: Off -> Climb -> Hold height -> 
     RescueField("tn0", RescueModeWords[RescueMode]);
     RescueWasEdited();
 }
-void SaveRescue()
+FLASHMEM void SaveRescue()
 {
     if (!RescueHave)
         return;
@@ -390,7 +390,7 @@ void SaveRescue()
     RescueBusy("Writing to the flight controller ...");
     RescueAskSelect(RSC_W_SELECT);
 }
-void StartRescue2View() // Next >
+FLASHMEM void StartRescue2View() // Next >
 {
     if (CurrentView == RESCUEVIEW)
         RescueGatherPage1(); // page 1's edits travel with us, unsaved: a save on page 2 writes both
@@ -406,7 +406,7 @@ void StartRescue2View() // Next >
     else
         RescueRead();
 }
-void EndRescue2View() // < Previous: back to page 1 (its fields from the bytes in hand, edits kept)
+FLASHMEM void EndRescue2View() // < Previous: back to page 1 (its fields from the bytes in hand, edits kept)
 {
     RescueGatherPage2();
     memcpy(RescueRaw, RescueWant, RESCUE_BYTES); // (what page 1 shows next is the edited set; a save or a re-read settles it)

@@ -32,7 +32,7 @@ static uint8_t BakSelPid = 0, BakSelRate = 0; // what 210 chose, offline
 static const char *BAK_DIR = "/rfbak";
 
 // ---------------------------------------------------------------- the text store
-static void BakPath(char *out, size_t n, const char *model)
+FLASHMEM static void BakPath(char *out, size_t n, const char *model)
 {
     char safe[24];
     int j = 0;
@@ -44,7 +44,7 @@ static void BakPath(char *out, size_t n, const char *model)
     safe[j] = 0;
     snprintf(out, n, "%s/%s.rfb", BAK_DIR, safe);
 }
-static bool BakFileExists(const char *model)
+FLASHMEM static bool BakFileExists(const char *model)
 {
     char p[48];
     BakPath(p, sizeof(p), model);
@@ -66,7 +66,7 @@ static char *BakFind(const char *key)
     }
     return nullptr;
 }
-static int BakGet(const char *key, char *out, size_t n) // the value (hex) of a key; its length, or -1
+FLASHMEM static int BakGet(const char *key, char *out, size_t n) // the value (hex) of a key; its length, or -1
 {
     const char *v = BakFind(key);
     if (!v)
@@ -80,7 +80,7 @@ static int BakGet(const char *key, char *out, size_t n) // the value (hex) of a 
     out[i] = 0;
     return (int)i;
 }
-static bool BakSet(const char *key, const char *value) // replace the line, or append it
+FLASHMEM static bool BakSet(const char *key, const char *value) // replace the line, or append it
 {
     char *v = BakFind(key);
     const size_t len = strlen(Bak), vl = strlen(value);
@@ -102,7 +102,7 @@ static bool BakSet(const char *key, const char *value) // replace the line, or a
     BakDirty = true;
     return true;
 }
-static bool BakLoad(const char *model)
+FLASHMEM static bool BakLoad(const char *model)
 {
     BakLoaded = false;
     Bak[0] = 0;
@@ -119,7 +119,7 @@ static bool BakLoad(const char *model)
     BakDirty = false;
     return BakLoaded;
 }
-static bool BakSave()
+FLASHMEM static bool BakSave()
 {
     if (!SD.exists(BAK_DIR))
         SD.mkdir(BAK_DIR);
@@ -134,7 +134,7 @@ static bool BakSave()
     BakDirty = false;
     return true;
 }
-void BakForModel() // the file of the model in use, when it changes (ChangeModel): loaded, or none
+FLASHMEM void BakForModel() // the file of the model in use, when it changes (ChangeModel): loaded, or none
 {
     static uint32_t triedMs = 0;
     if (strcmp(BakModel, ModelName) == 0 && (BakLoaded || (uint32_t)(millis() - triedMs) < 5000))
@@ -142,9 +142,9 @@ void BakForModel() // the file of the model in use, when it changes (ChangeModel
     triedMs = millis();
     BakLoad(ModelName);
 }
-bool BakHaveFile() { BakForModel(); return BakLoaded; }
+FLASHMEM bool BakHaveFile() { BakForModel(); return BakLoaded; }
 // Edits made without the model: the "edits=" line, keys comma-separated
-static bool BakEdited(const char *key)
+FLASHMEM static bool BakEdited(const char *key)
 {
     char e[400];
     if (BakGet("edits", e, sizeof(e)) <= 0)
@@ -161,7 +161,7 @@ static bool BakEdited(const char *key)
     }
     return false;
 }
-static void BakMarkEdit(const char *key)
+FLASHMEM static void BakMarkEdit(const char *key)
 {
     if (BakEdited(key))
         return;
@@ -172,17 +172,17 @@ static void BakMarkEdit(const char *key)
     strncat(e, key, sizeof(e) - strlen(e) - 1);
     BakSet("edits", e);
 }
-bool BakEditsWaiting()
+FLASHMEM bool BakEditsWaiting()
 {
     char e[8];
     return BakHaveFile() && BakGet("edits", e, sizeof(e)) > 0;
 }
-static void BakClearEdits() { BakSet("edits", ""); }
-bool BakOffline() { return !(BoundFlag && ModelMatched) && BakHaveFile(); }
+FLASHMEM static void BakClearEdits() { BakSet("edits", ""); }
+FLASHMEM bool BakOffline() { return !(BoundFlag && ModelMatched) && BakHaveFile(); }
 
 // ---------------------------------------------------------------- hex helpers
-static int Hex2(const char *h) { char t[3] = {h[0], h[1], 0}; return (int)strtol(t, nullptr, 16); }   // one byte of hex
-static int HexToBytes(const char *h, uint8_t *out, int max)
+FLASHMEM static int Hex2(const char *h) { char t[3] = {h[0], h[1], 0}; return (int)strtol(t, nullptr, 16); }   // one byte of hex
+FLASHMEM static int HexToBytes(const char *h, uint8_t *out, int max)
 {
     int n = 0;
     while (h[0] && h[1] && n < max)
@@ -197,14 +197,14 @@ static int HexToBytes(const char *h, uint8_t *out, int max)
     }
     return n;
 }
-static void BytesToHex(const uint8_t *b, int n, char *out, size_t max)
+FLASHMEM static void BytesToHex(const uint8_t *b, int n, char *out, size_t max)
 {
     size_t j = 0;
     for (int i = 0; i < n && j + 2 < max; ++i)
         j += snprintf(out + j, max - j, "%02X", b[i]);
     out[j] = 0;
 }
-static void BakKey(char *out, size_t n, uint8_t fn, int bank, int idx) // "112.0", "174.01", "42"
+FLASHMEM static void BakKey(char *out, size_t n, uint8_t fn, int bank, int idx) // "112.0", "174.01", "42"
 {
     if (bank >= 0)
         snprintf(out, n, "%u.%d", (unsigned)fn, bank);
@@ -216,10 +216,10 @@ static void BakKey(char *out, size_t n, uint8_t fn, int bank, int idx) // "112.0
 
 // ---------------------------------------------------------------- the flight controller's stand-in (offline)
 static const uint8_t BAK_PER_BANK[] = {112, 94, 148, 146};    // read with the PID bank selected
-static bool BakPerBank(uint8_t fn) { for (uint8_t f : BAK_PER_BANK) if (f == fn) return true; return false; }
-static bool BakIndexed(uint8_t fn) { return fn == 174 || fn == 154; }
+FLASHMEM static bool BakPerBank(uint8_t fn) { for (uint8_t f : BAK_PER_BANK) if (f == fn) return true; return false; }
+FLASHMEM static bool BakIndexed(uint8_t fn) { return fn == 174 || fn == 154; }
 // A write's function -> the read key it changes (the plain pairs; nothing to patch)
-static uint8_t BakReadOfWrite(uint8_t w)
+FLASHMEM static uint8_t BakReadOfWrite(uint8_t w)
 {
     static const uint8_t pairs[][2] = {{93, 92}, {37, 36}, {147, 146}, {149, 148}, {202, 112}, {95, 94}, {204, 111}, {143, 142}, {43, 42}, {11, 10}, {39, 38}, {62, 61}, {239, 240}, {97, 96}, {220, 126}, {65, 64}, {45, 44}, {67, 66}, {76, 75}, {51, 50}, {74, 73}, {33, 32}, {216, 123}, {155, 154}, {171, 174}};
     for (auto &p : pairs)
@@ -227,13 +227,13 @@ static uint8_t BakReadOfWrite(uint8_t w)
             return p[1];
     return 0;
 }
-static void BakReply(int code, const char *body)
+FLASHMEM static void BakReply(int code, const char *body)
 {
     PipeRepCode = code;
     strncpy(PipeRepBody, body, sizeof(PipeRepBody) - 1);
     PipeRepBody[sizeof(PipeRepBody) - 1] = 0;
 }
-bool BakOfflineAnswer(uint8_t fn, const uint8_t *data, int len) // true: answered (PipeRep* set)
+FLASHMEM bool BakOfflineAnswer(uint8_t fn, const uint8_t *data, int len) // true: answered (PipeRep* set)
 {
     char key[16], hex[700];
     if (fn == 210 && len >= 1)
@@ -313,14 +313,14 @@ bool BakOfflineAnswer(uint8_t fn, const uint8_t *data, int len) // true: answere
 // Byte for byte the receiver's code (RXV2 src/TxParams.h), so an offline edit lands as the online one would.
 static char BakItems[160];
 static int BakItemsN = 0;
-static void BakItem(uint8_t item, uint8_t a, uint8_t b, uint8_t c, uint8_t d)
+FLASHMEM static void BakItem(uint8_t item, uint8_t a, uint8_t b, uint8_t c, uint8_t d)
 {
     if (BakItemsN < (int)sizeof(BakItems) - 14)
         BakItemsN += snprintf(BakItems + BakItemsN, sizeof(BakItems) - BakItemsN, "%u:%02X%02X%02X%02X ", (unsigned)item, a, b, c, d);
 }
-static void BakItemPair(uint8_t item, uint16_t a, uint16_t b) { BakItem(item, (uint8_t)a, (uint8_t)(a >> 8), (uint8_t)b, (uint8_t)(b >> 8)); }
-static void BakItemsTell() { TelemetryFromPipe(BakItems); BakItemsN = 0; BakItems[0] = 0; }
-static bool BakBlock(uint8_t fn, int bank, uint8_t *out, int max, int &n) // the file's image of a block, as bytes
+FLASHMEM static void BakItemPair(uint8_t item, uint16_t a, uint16_t b) { BakItem(item, (uint8_t)a, (uint8_t)(a >> 8), (uint8_t)b, (uint8_t)(b >> 8)); }
+FLASHMEM static void BakItemsTell() { TelemetryFromPipe(BakItems); BakItemsN = 0; BakItems[0] = 0; }
+FLASHMEM static bool BakBlock(uint8_t fn, int bank, uint8_t *out, int max, int &n) // the file's image of a block, as bytes
 {
     char key[16], hex[700];
     BakKey(key, sizeof(key), fn, bank, -1);
@@ -329,7 +329,7 @@ static bool BakBlock(uint8_t fn, int bank, uint8_t *out, int max, int &n) // the
     n = HexToBytes(hex, out, max);
     return true;
 }
-static const char *BakPageOf(uint8_t view)
+FLASHMEM static const char *BakPageOf(uint8_t view)
 {
     switch (view)
     {
@@ -342,7 +342,7 @@ static const char *BakPageOf(uint8_t view)
     default: return "page RFView";
     }
 }
-static void BakNotInFile(const char *what, int bank) // the block is not in the file: say so, and back to the menu (nothing to edit)
+FLASHMEM static void BakNotInFile(const char *what, int bank) // the block is not in the file: say so, and back to the menu (nothing to edit)
 {
     char m[150];
     if (bank >= 0)
@@ -358,19 +358,19 @@ static uint16_t BwPid[17];
 static uint8_t BwRatesType, BwRoll[3], BwPitch[3], BwYaw[3], BwColl[3], BwResp[4], BwBoostGain[4], BwBoostCutoff[4], BwYawDyn[3], BwAdvPid[26], BwGov[46];
 static bool BwBasicPending = false;
 static const uint8_t BAK_ADV_PID_MAP[26] = {6, 1, 17, 18, 19, 7, 8, 9, 36, 37, 10, 11, 12, 13, 14, 15, 38, 39, 40, 20, 21, 22, 23, 24, 41, 42}; // compact byte i <-> MSP 94 byte
-static void BakSecsFromTenths(uint8_t *dst, int i, const uint8_t *p, int j) // the receiver shows the governor's times in whole seconds
+FLASHMEM static void BakSecsFromTenths(uint8_t *dst, int i, const uint8_t *p, int j) // the receiver shows the governor's times in whole seconds
 {
     const uint16_t tenths = (uint16_t)(p[j] | (p[j + 1] << 8)), secs = (uint16_t)((tenths + 5) / 10);
     dst[i] = (uint8_t)secs; dst[i + 1] = (uint8_t)(secs >> 8);
 }
-static void BakTenthsFromSecs(uint8_t *dst, int i, const uint8_t *w, int j)
+FLASHMEM static void BakTenthsFromSecs(uint8_t *dst, int i, const uint8_t *w, int j)
 {
     uint32_t tenths = (uint32_t)(w[j] | (w[j + 1] << 8)) * 10;
     if (tenths > 65535) tenths = 65535;
     dst[i] = (uint8_t)tenths; dst[i + 1] = (uint8_t)(tenths >> 8);
 }
 enum { BW_RATES = 0, BW_RATES_ADV, BW_PID, BW_PID_ADV, BW_GOV_PROFILE, BW_GOV_CONFIG };
-static bool BakWriteBlock(int kind) // a trigger part arrived: the block's image, patched as the receiver patches the flight controller's, back into the file
+FLASHMEM static bool BakWriteBlock(int kind) // a trigger part arrived: the block's image, patched as the receiver patches the flight controller's, back into the file
 {
     const uint8_t fn = kind == BW_PID ? 112 : kind == BW_PID_ADV ? 94 : kind == BW_GOV_PROFILE ? 148 : kind == BW_GOV_CONFIG ? 142 : 111;
     const int bank = fn == 142 ? -1 : fn == 111 ? (DualRateInUse > 0 ? DualRateInUse - 1 : 0) : (Bank > 0 ? Bank - 1 : 0);
@@ -429,7 +429,7 @@ static bool BakWriteBlock(int kind) // a trigger part arrived: the block's image
     BakSave();
     return true;
 }
-bool BakOfflineWords(uint8_t id) // a Version 1 parameter word packet, with no model connected: answered from, or into, the file
+FLASHMEM bool BakOfflineWords(uint8_t id) // a Version 1 parameter word packet, with no model connected: answered from, or into, the file
 {
     uint8_t p[128];
     int n = 0;
@@ -617,20 +617,20 @@ static const BakRestoreItem BAK_RESTORE[] = {
 static const int BAK_RESTORE_N = sizeof(BAK_RESTORE) / sizeof(BAK_RESTORE[0]);
 static const int BAK_BANKED_N = 5;   // per bank: 112, 94, 148, 146; per rates bank: 111
 
-static void BakBusy(const char *msg)
+FLASHMEM static void BakBusy(const char *msg)
 {
     SendCommand((char *)(msg && *msg ? "vis busy,1" : "vis busy,0"));
     if (msg && *msg)
         SendText((char *)"busy", (char *)msg);
 }
 static void BakShowPage();
-static void BakProgress(const char *what)
+FLASHMEM static void BakProgress(const char *what)
 {
     char m[90];
     snprintf(m, sizeof(m), "%s %d of %d: %s", BakJob == BAK_JOB_BACKUP ? "Reading" : "Writing", BakDone + 1, BakTotal, what);
     BakBusy(m);
 }
-static void BakFinish(const char *verdict)
+FLASHMEM static void BakFinish(const char *verdict)
 {
     BakJob = BAK_JOB_NONE;
     CurrentMode = NORMAL;
@@ -641,7 +641,7 @@ static void BakFinish(const char *verdict)
     MsgBox((char *)"page RFBackUpView", (char *)verdict);
     BakShowPage();
 }
-static void BakStart(int job)
+FLASHMEM static void BakStart(int job)
 {
     char why[120];
     if (ModelSeemsArmed(why, sizeof(why)) || RfPipeBlocked(why, sizeof(why)) || RfNeedsModel(why, sizeof(why)))
@@ -660,8 +660,8 @@ static void BakStart(int job)
     BakStep = 1;
 }
 // ---- the sweep
-static int BakSweepTotal() { return BakPidBanks * 4 + BakRateBanks + BAK_READS_N; }
-static void BakSweepAsk() // BakIdx: 0.. the item in the sweep; BakSub 0 = select (banked), 1 = read
+FLASHMEM static int BakSweepTotal() { return BakPidBanks * 4 + BakRateBanks + BAK_READS_N; }
+FLASHMEM static void BakSweepAsk() // BakIdx: 0.. the item in the sweep; BakSub 0 = select (banked), 1 = read
 {
     const int perBank = BakPidBanks * 4;
     if (BakIdx < perBank)
@@ -688,7 +688,7 @@ static void BakSweepAsk() // BakIdx: 0.. the item in the sweep; BakSub 0 = selec
     if (it.idx >= 0) { uint8_t d = (uint8_t)it.idx; BakReq = MspAsk(it.fn, &d, 1); }
     else BakReq = MspAsk(it.fn, nullptr, 0);
 }
-static void BakSweepTake(bool ok)
+FLASHMEM static void BakSweepTake(bool ok)
 {
     const int perBank = BakPidBanks * 4;
     char key[16];
@@ -719,8 +719,8 @@ static void BakSweepTake(bool ok)
 struct BakTodo { uint8_t readFn, writeFn, kind; int8_t bank, idx; const char *label; };
 static BakTodo BakList[80];
 static int BakListN = 0;
-static bool BakOnlyEdits() { return BakJob == BAK_JOB_EDITS; }
-static void BakBuildList()
+FLASHMEM static bool BakOnlyEdits() { return BakJob == BAK_JOB_EDITS; }
+FLASHMEM static void BakBuildList()
 {
     BakListN = 0;
     char key[16], v[8];
@@ -745,7 +745,7 @@ static void BakBuildList()
 }
 // The write for a list item and its part (BakSub): the payload hex, the chunk to verify (offset and length in the read
 // image, in hex characters; -1 = the whole), and whether there is another part after this one
-static bool BakWritePayload(const BakTodo &t, int part, char *out, size_t n, int &verifyOff, int &verifyLen, bool &more)
+FLASHMEM static bool BakWritePayload(const BakTodo &t, int part, char *out, size_t n, int &verifyOff, int &verifyLen, bool &more)
 {
     char key[16], img[700];
     const int bankNo = t.bank < 0 ? -1 : (t.bank & 0x3F);
@@ -804,7 +804,7 @@ static bool BakWritePayload(const BakTodo &t, int part, char *out, size_t n, int
     return false;
 }
 // Is the image read from the FC the same as the file's, for this part?
-static bool BakSame(const BakTodo &t, int part, const char *fcHex)
+FLASHMEM static bool BakSame(const BakTodo &t, int part, const char *fcHex)
 {
     char key[16], img[700];
     const int bankNo = t.bank < 0 ? -1 : (t.bank & 0x3F);
@@ -817,19 +817,19 @@ static bool BakSame(const BakTodo &t, int part, const char *fcHex)
     if (t.kind == BK_MOTOR || t.kind == BK_BLACKBOX) return strncmp(fcHex, img, strlen(img)) == 0;
     return strncmp(fcHex, img, strlen(img)) == 0;   // (the reply may be longer: the prefix)
 }
-static int BakRestoreReadAsk(const BakTodo &t)
+FLASHMEM static int BakRestoreReadAsk(const BakTodo &t)
 {
     if (t.idx >= 0) { uint8_t d = (uint8_t)t.idx; return MspAsk(t.readFn, &d, 1); }
     return MspAsk(t.readFn, nullptr, 0);
 }
-static void BakRestoreNext(); // forward
-static void BakRestoreAskSelect(const BakTodo &t)
+FLASHMEM static void BakRestoreNext(); // forward
+FLASHMEM static void BakRestoreAskSelect(const BakTodo &t)
 {
     uint8_t d = (uint8_t)((t.bank & 0x40) ? (0x80 | (t.bank & 0x3F)) : (t.bank & 0x3F));
     BakReq = MspAsk(210, &d, 1);
     BakStep = 10;   // selected -> read
 }
-static void BakRestoreNext() // BakIdx the item, BakSub the part
+FLASHMEM static void BakRestoreNext() // BakIdx the item, BakSub the part
 {
     if (BakIdx >= BakListN) { BakStep = 80; { uint8_t d = (uint8_t)(Bank - 1); BakReq = MspAsk(210, &d, 1); } return; }
     const BakTodo &t = BakList[BakIdx];
@@ -839,12 +839,12 @@ static void BakRestoreNext() // BakIdx the item, BakSub the part
     if (t.bank >= 0 && BakSub == 0) { BakRestoreAskSelect(t); return; }
     BakReq = BakRestoreReadAsk(t); BakStep = 11;
 }
-static void BakNoteFail(const BakTodo &t)
+FLASHMEM static void BakNoteFail(const BakTodo &t)
 {
     ++BakFails; BakItemWrote = false;
     if (strlen(BakFailed) < 110) { strncat(BakFailed, t.label, sizeof(BakFailed) - strlen(BakFailed) - 1); strncat(BakFailed, ", ", sizeof(BakFailed) - strlen(BakFailed) - 1); }
 }
-static void BakRestoreTake(bool ok)
+FLASHMEM static void BakRestoreTake(bool ok)
 {
     BakTodo &t = BakList[BakIdx];
     char payload[700]; int off, len; bool more;
@@ -890,7 +890,7 @@ static void BakRestoreTake(bool ok)
     }
 }
 // ---- the pump: from the main loop while CurrentMode is SAVE_RF_SETTINGS or RESTORE_RF_SETTINGS
-void BackupRun()
+FLASHMEM void BackupRun()
 {
     if (BakJob == BAK_JOB_NONE) { CurrentMode = NORMAL; return; }
     if (BakStep == 95)
@@ -976,7 +976,7 @@ void BackupRun()
     }
 }
 // ---------------------------------------------------------------- the page
-static void BakEditsText(char *out, size_t n)
+FLASHMEM static void BakEditsText(char *out, size_t n)
 { // the edited keys as words: "filters, rescue bank 2"
     char e[400] = "";
     out[0] = 0;
@@ -991,7 +991,7 @@ static void BakEditsText(char *out, size_t n)
         strncat(out, w, n - strlen(out) - 1);
     }
 }
-static void BakShowPage()
+FLASHMEM static void BakShowPage()
 {
     char b[120], d[40], e[160];
     SendText((char *)"t11", ModelName);
@@ -1010,32 +1010,32 @@ static void BakShowPage()
     SendCommand((char *)(e[0] ? "vis b4,1" : "vis b4,0"));
     SendCommand((char *)(BakHaveFile() ? "vis b2,1" : "vis b2,0"));
 }
-void StartBackupView() // the menu's Backup/Restore
+FLASHMEM void StartBackupView() // the menu's Backup/Restore
 {
     SendCommand((char *)"page RFBackUpView");
     CurrentView = RFBACKUP_RESTOREVIEW;
     BakShowPage();
 }
-void EndBackupView()
+FLASHMEM void EndBackupView()
 {
     if (BakJob != BAK_JOB_NONE) return;   // (a run is on: wait for it)
     RotorFlightStart();
 }
-void BackupNow()
+FLASHMEM void BackupNow()
 {
     if (BakJob != BAK_JOB_NONE) return;
     if (!GetConfirmation((char *)"page RFBackUpView", (char *)"Back up every Rotorflight setting\r\nof this model to the card?\r\n(Any backup there already is replaced.)")) { BakShowPage(); return; }
     BakShowPage();
     BakStart(BAK_JOB_BACKUP);
 }
-void RestoreAll()
+FLASHMEM void RestoreAll()
 {
     if (BakJob != BAK_JOB_NONE) return;
     if (!GetConfirmation((char *)"page RFBackUpView", (char *)"Write EVERY setting in the backup\r\nto the flight controller?\r\nWhat it has now is replaced.")) { BakShowPage(); return; }
     BakShowPage();
     BakStart(BAK_JOB_RESTORE);
 }
-void WriteEdits()
+FLASHMEM void WriteEdits()
 {
     if (BakJob != BAK_JOB_NONE) return;
     char e[160], q[220];
@@ -1045,7 +1045,7 @@ void WriteEdits()
     BakShowPage();
     BakStart(BAK_JOB_EDITS);
 }
-void DiscardEdits()
+FLASHMEM void DiscardEdits()
 {
     if (BakJob != BAK_JOB_NONE || !BakEditsWaiting()) return;
     if (!GetConfirmation((char *)"page RFBackUpView", (char *)"Forget the edits made without the model?\r\nThe backup keeps them until they are written.")) { BakShowPage(); return; }
@@ -1058,13 +1058,13 @@ void DiscardEdits()
 // when the model comes on, or the join completes, while the menu is already showing (BakOfferTick, once a second)
 static bool BakOffered = false;
 void BakOfferEdits();
-void BakOfferTick()
+FLASHMEM void BakOfferTick()
 {
     if (!(BoundFlag && ModelMatched)) { BakOffered = false; return; }
     if (CurrentView == ROTORFLIGHTVIEW && PipeState == 2 && BakJob == BAK_JOB_NONE && !ModalWaits)
         BakOfferEdits();
 }
-void BakOfferEdits()
+FLASHMEM void BakOfferEdits()
 {
     if (!(BoundFlag && ModelMatched)) { BakOffered = false; return; }
     if (BakOffered || !BakEditsWaiting()) return;

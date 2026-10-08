@@ -19,27 +19,27 @@ static uint8_t ServoWant[SERVO_BYTES];
 static bool ServoReadAgainWanted = false;
 static uint32_t ServoMsgUntil = 0;
 
-static uint8_t *ServoBytes(int i) { return ServoRaw + 1 + i * SERVO_BYTES; }
-static int RdS16(const uint8_t *b, int o) { const int v = b[o] | (b[o + 1] << 8); return v > 32767 ? v - 65536 : v; }
-static void ServoBusy(const char *msg)
+FLASHMEM static uint8_t *ServoBytes(int i) { return ServoRaw + 1 + i * SERVO_BYTES; }
+FLASHMEM static int RdS16(const uint8_t *b, int o) { const int v = b[o] | (b[o + 1] << 8); return v > 32767 ? v - 65536 : v; }
+FLASHMEM static void ServoBusy(const char *msg)
 {
     SendCommand((char *)(msg && *msg ? "vis busy,1" : "vis busy,0"));
     if (msg && *msg)
         SendText((char *)"busy", (char *)msg);
 }
-static void ServoTitle()
+FLASHMEM static void ServoTitle()
 {
     char b[40];
     snprintf(b, sizeof(b), "Servo %d of %d (Rotorflight)", ServoAt + 1, ServoCount > 0 ? ServoCount : 1);
     SendText((char *)"t0", b);
 }
-static void ServoNum(const char *name, long v)
+FLASHMEM static void ServoNum(const char *name, long v)
 {
     char b[16];
     snprintf(b, sizeof(b), "%ld", v);
     SendText((char *)name, b);
 }
-static void ServoShow()
+FLASHMEM static void ServoShow()
 {
     if (!ServoHave || ServoCount < 1)
         return;
@@ -60,7 +60,7 @@ static void ServoShow()
     SendValue((char *)"tn7", ServoRev ? 1 : 0);   // (B65: a switch)
     SendValue((char *)"tn8", ServoGeo ? 1 : 0);   // (B65: a switch)
 }
-static void ServoGather() // the page's fields, clamped as the receiver's page clamps them
+FLASHMEM static void ServoGather() // the page's fields, clamped as the receiver's page clamps them
 {
     const uint8_t *was = ServoBytes(ServoAt);
     memcpy(ServoWant, was, SERVO_BYTES);
@@ -73,7 +73,7 @@ static void ServoGather() // the page's fields, clamped as the receiver's page c
     WrU16(ServoWant, 12, FieldNumber("tn6", 0, 60000));
     WrU16(ServoWant, 14, (ServoRev ? 1 : 0) | (ServoGeo ? 2 : 0));
 }
-static void ServoFail(const char *what)
+FLASHMEM static void ServoFail(const char *what)
 {
     char msg[180];
     snprintf(msg, sizeof(msg), "%s:\r\n%.140s", what, PipeRepCode ? PipeRepBody : "the screen could not ask (no Bluetooth)");
@@ -85,13 +85,13 @@ static void ServoFail(const char *what)
     SendCommand((char *)(Servo_Was_Edited ? "vis b3,1" : "vis b3,0"));
     ServoShow();
 }
-static void ServoRead()
+FLASHMEM static void ServoRead()
 {
     ServoBusy("Reading the servos from the flight controller ...");
     ServoReq = MspAsk(120, nullptr, 0);
     ServoStep = SRV_READ;
 }
-void ServoPoll() // each time round the loop (ManageTransmitter)
+FLASHMEM void ServoPoll() // each time round the loop (ManageTransmitter)
 {
     if (CurrentView != SERVOVIEW)
     {
@@ -176,7 +176,7 @@ void ServoPoll() // each time round the loop (ManageTransmitter)
         return;
     }
 }
-void StartServoView()
+FLASHMEM void StartServoView()
 {
     char why[120];
     if (RfNeedsModel(why, sizeof(why)) || ModelSeemsArmed(why, sizeof(why)) || RfPipeBlocked(why, sizeof(why)))
@@ -196,7 +196,7 @@ void StartServoView()
     ServoAt = 0;
     ServoRead();
 }
-static void ServoShowEdits() // after a question's page: the typed values again (ServoWant holds them)
+FLASHMEM static void ServoShowEdits() // after a question's page: the typed values again (ServoWant holds them)
 {
     SendText((char *)"t11", ModelName);
     SendCommand((char *)"vis b3,1");
@@ -206,7 +206,7 @@ static void ServoShowEdits() // after a question's page: the typed values again 
     SendValue((char *)"tn7", ServoRev ? 1 : 0);   // (B65: a switch)
     SendValue((char *)"tn8", ServoGeo ? 1 : 0);   // (B65: a switch)
 }
-void EndServoView() // OK
+FLASHMEM void EndServoView() // OK
 {
     if (Servo_Was_Edited)
     {
@@ -217,24 +217,24 @@ void EndServoView() // OK
     Servo_Was_Edited = false;
     RotorFlightStart();
 }
-void ServoWasEdited()
+FLASHMEM void ServoWasEdited()
 {
     SendCommand((char *)"vis b3,1");
     Servo_Was_Edited = true;
 }
-void ServoReverseTapped()
+FLASHMEM void ServoReverseTapped()
 {
     ServoRev = !ServoRev;
     SendValue((char *)"tn7", ServoRev ? 1 : 0);   // (B65: a switch)
     ServoWasEdited();
 }
-void ServoGeometryTapped()
+FLASHMEM void ServoGeometryTapped()
 {
     ServoGeo = !ServoGeo;
     SendValue((char *)"tn8", ServoGeo ? 1 : 0);   // (B65: a switch)
     ServoWasEdited();
 }
-static void ServoStep1(int d) // < Servo / Servo >
+FLASHMEM static void ServoStep1(int d) // < Servo / Servo >
 {
     if (!ServoHave || ServoCount < 2)
         return;
@@ -249,9 +249,9 @@ static void ServoStep1(int d) // < Servo / Servo >
     ServoAt = (ServoAt + d + ServoCount) % ServoCount;
     ServoShow();
 }
-void ServoPrevious() { ServoStep1(-1); }
-void ServoNext() { ServoStep1(1); }
-void SaveServo()
+FLASHMEM void ServoPrevious() { ServoStep1(-1); }
+FLASHMEM void ServoNext() { ServoStep1(1); }
+FLASHMEM void SaveServo()
 {
     if (!ServoHave)
         return;

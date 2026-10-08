@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B71 08/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B72 08/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -333,6 +333,7 @@ bool GapStartedDisarmed = false; // Rotorflight arming in use and DISARMED when 
 #define FILTERVIEW 64            // B58: the gyro filters (RF_Filters.h)
 #define FILTER2VIEW 65           // B61: ... the expert-mode items
 #define TRAVEL3VIEW 66           // B66: the mixer's third page, the tail rotor (RF_Travel.h)
+#define ADJUSTVIEW 67            // B72: the in-flight adjustments (RF_Adjust.h)
 #define MODELIDVIEW 56
 
 // **************************************************************************
@@ -914,6 +915,21 @@ void FilterLpf2EnableTapped();
 void FilterDynCutoffTapped();
 void FilterNotch1Tapped();
 void FilterNotch2Tapped();
+void AdjustPoll();                            // B72: RF_Adjust.h, the in-flight adjustments
+void StartAdjustView();
+void EndAdjustView();
+void SaveAdjustments();
+void AdjustWasEdited();
+void AdjustSettingNext();
+void AdjustSettingPrev();
+void AdjustChannelNext();
+void AdjustChannelPrev();
+void AdjustKindTapped();
+void AdjustBankTapped();
+void AdjustPrevious();
+void AdjustNext();
+void AdjustAdd();
+void AdjustRemove();
 void StartModelSetup();
 bool GetConfirmation(char *goback, char *Prompt);
 void GotoModelsView();

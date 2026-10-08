@@ -16,7 +16,9 @@ def comp(proto, **kw):
 # one shade per group (each heading starts the next), the first shade for a page without headings.
 PALE = (65497, 57215, 59323, 61215, 65402, 65341)   # pale yellow, blue, green, lavender, peach, pink (RGB565)
 def page(pid, name, title, fields, buttons, help_file):
-    """fields: (name, label, column, row, kind, code[, keypad label]) with kind 'num' (the keypad), 'cycle' (a tap), 'switch' (on/off), 'info' (told, not changed) or 'head' (a group heading, no value)"""
+    """fields: (name, label, column, row, kind, code[, keypad label]) with kind 'num' (the keypad), 'cycle' (a tap), 'switch' (on/off), 'info' (told, not changed),
+    'head' (a group heading, no value) or 'pick' (1.11.35: a choice from a long list, the whole row: label, a < button, the choice, a > button;
+    code = the > button's, the 7th element = the < button's)"""
     comps = []; i = [1]
     def add(c): c['i'] = i[0]; i[0] += 1; comps.append(c); return c
     add(comp(TITLE, n='t0', txt=title))
@@ -37,6 +39,12 @@ def page(pid, name, title, fields, buttons, help_file):
             h = comp(LABEL_L, n=nm, x=lx, y=y, w=lw + vw + (vx - lx - lw), h=36, txt=label, g='g', font=6)
             h['c'] = {'pco': 65535, 'borderc': CARD['c']['bco'], 'bco': CARD['c']['bco']}; h['a'] = dict(h['a'], borderw=0, xcen=0, txt_maxl=30)
             add(h); continue
+        if kind == 'pick':   # 1.11.35: a choice from a long list (the adjustments' settings), across the page: label, <, the choice, >
+            lab = comp(LABEL_L, n='l' + nm, x=34, y=y, w=150, h=36, txt=label, g='g'); lab['c'] = dict(lab['c'], pco=0, bco=shade()); add(lab)
+            bp = comp(BUTTON, n='p' + nm, x=190, y=y - 2, w=50, h=40, txt='<'); bp['ev'] = {'r': 'va0.val=%d<<8\nprint va0.val' % int(klabel)}; add(bp)
+            f = comp(FIELD, n=nm, x=246, y=y, w=464, h=36, txt='', g='g'); f['a'] = dict(f['a'], key=255, txt_maxl=40); add(f)
+            bn = comp(BUTTON, n='n' + nm, x=716, y=y - 2, w=50, h=40, txt='>'); bn['ev'] = {'r': 'va0.val=%d<<8\nprint va0.val' % code}; add(bn)
+            continue
         if kind == 'info':   # 1.11.34: a row that only tells (the configurator's selects the transmitter does not change): label box across the column, the main board sets its text
             f = comp(LABEL_L, n=nm, x=lx, y=y, w=lw + vw + (vx - lx - lw), h=36, txt=label, g='g')
             f['c'] = dict(f['c'], pco=0, bco=shade()); f['a'] = dict(f['a'], txt_maxl=40); add(f); continue

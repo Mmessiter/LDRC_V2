@@ -32,29 +32,29 @@ static const char *FltPresetWords[4] = {"Custom", "Low", "Medium", "High"};   //
 static uint8_t PrevLpf1Type = 0, PrevLpf2Type = 0;
 static uint16_t PrevLpf1Hz = 0, PrevLpf2Hz = 0, PrevDynMin = 0, PrevDynMax = 0, PrevN1Hz = 0, PrevN1Cut = 0, PrevN2Hz = 0, PrevN2Cut = 0;
 
-static bool Lpf1On() { return FltWant[1] != 0; }
-static bool Lpf2On() { return FltWant[4] != 0; }
-static bool DynLpfOn() { return RdU16(FltWant, 15) > 0 && RdU16(FltWant, 15) < RdU16(FltWant, 17); }
-static bool N1On() { return RdU16(FltWant, 7) > 0 && RdU16(FltWant, 9) > 0; }
-static bool N2On() { return RdU16(FltWant, 11) > 0 && RdU16(FltWant, 13) > 0; }
-static bool DynNotchOn() { return (FeatWant & FEAT_DYN_NOTCH) != 0; }
-static bool RpmOn() { return (FeatWant & FEAT_RPM_FILTER) != 0; }
-static const char *FltPageWord() { return CurrentView == FILTER2VIEW ? "page Filter2View" : "page FilterView"; }
+FLASHMEM static bool Lpf1On() { return FltWant[1] != 0; }
+FLASHMEM static bool Lpf2On() { return FltWant[4] != 0; }
+FLASHMEM static bool DynLpfOn() { return RdU16(FltWant, 15) > 0 && RdU16(FltWant, 15) < RdU16(FltWant, 17); }
+FLASHMEM static bool N1On() { return RdU16(FltWant, 7) > 0 && RdU16(FltWant, 9) > 0; }
+FLASHMEM static bool N2On() { return RdU16(FltWant, 11) > 0 && RdU16(FltWant, 13) > 0; }
+FLASHMEM static bool DynNotchOn() { return (FeatWant & FEAT_DYN_NOTCH) != 0; }
+FLASHMEM static bool RpmOn() { return (FeatWant & FEAT_RPM_FILTER) != 0; }
+FLASHMEM static const char *FltPageWord() { return CurrentView == FILTER2VIEW ? "page Filter2View" : "page FilterView"; }
 
-static void FltBusy(const char *msg)
+FLASHMEM static void FltBusy(const char *msg)
 {
     SendCommand((char *)(msg && *msg ? "vis busy,1" : "vis busy,0"));
     if (msg && *msg)
         SendText((char *)"busy", (char *)msg);
 }
-static void FltNum(const char *name, long v)
+FLASHMEM static void FltNum(const char *name, long v)
 {
     char b[16];
     snprintf(b, sizeof(b), "%ld", v);
     SendText((char *)name, b);
 }
-static void FltYesNo(const char *name, bool on) { SendValue((char *)name, on ? 1 : 0); }   // B65: a switch on the screen (Malcolm, 8 Oct: "the yes/no boxes should be switches")
-static void FltRows(bool on, int from, int to) // show or hide the value rows tn<from>..tn<to> and their labels
+FLASHMEM static void FltYesNo(const char *name, bool on) { SendValue((char *)name, on ? 1 : 0); }   // B65: a switch on the screen (Malcolm, 8 Oct: "the yes/no boxes should be switches")
+FLASHMEM static void FltRows(bool on, int from, int to) // show or hide the value rows tn<from>..tn<to> and their labels
 {
     char c[20];
     for (int i = from; i <= to; ++i)
@@ -63,7 +63,7 @@ static void FltRows(bool on, int from, int to) // show or hide the value rows tn
         snprintf(c, sizeof(c), "vis tn%d,%d", i, on ? 1 : 0); SendCommand(c);
     }
 }
-static void FltShowPage1()
+FLASHMEM static void FltShowPage1()
 {
     FltYesNo("tn0", Lpf1On()); FltRows(Lpf1On(), 1, 2);
     SendText((char *)"tn1", (char *)FltTypeWords[FltWant[1] < 10 ? FltWant[1] : 0]);
@@ -77,7 +77,7 @@ static void FltShowPage1()
     FltNum("tn9", RdU16(FltWant, 21));
     FltNum("tn10", RdU16(FltWant, 23));
 }
-static void FltShowPage2()
+FLASHMEM static void FltShowPage2()
 {
     FltYesNo("tn0", Lpf2On()); FltRows(Lpf2On(), 1, 2);
     SendText((char *)"tn1", (char *)FltTypeWords[FltWant[4] < 10 ? FltWant[4] : 0]);
@@ -92,13 +92,13 @@ static void FltShowPage2()
     FltNum("tn10", RdU16(FltWant, 11));
     FltNum("tn11", RdU16(FltWant, 13));
 }
-static void FltShow()
+FLASHMEM static void FltShow()
 {
     if (CurrentView == FILTERVIEW) FltShowPage1();
     else if (CurrentView == FILTER2VIEW) FltShowPage2();
 }
 // The typed numbers of the page showing, into FltWant (only the rows that show: a section at No keeps its zeros)
-static void FltGather()
+FLASHMEM static void FltGather()
 {
     if (CurrentView == FILTERVIEW)
     {
@@ -122,19 +122,19 @@ static void FltGather()
 }
 // The bytes the page NOT showing owns, compared with what was read: page 1 = lowpass 1 (1-3), dynamic filter (19-24),
 // RPM filter (25-26) and the two feature bits; page 2 = lowpass 2 (4-6), notches (7-14), dynamic cutoff (15-18)
-static bool FltOtherPageChanged()
+FLASHMEM static bool FltOtherPageChanged()
 {
     if (CurrentView == FILTERVIEW)
         return memcmp(FltWant + 4, FltRaw + 4, 15) != 0;
     return memcmp(FltWant + 1, FltRaw + 1, 3) != 0 || memcmp(FltWant + 19, FltRaw + 19, 8) != 0 || ((FeatWant ^ FeatRaw) & (FEAT_DYN_NOTCH | FEAT_RPM_FILTER)) != 0;
 }
-static void FltHead()
+FLASHMEM static void FltHead()
 {
     SendText((char *)"t11", ModelName);
     SendText((char *)"t9", (char *)"All banks");   // the filters are not per bank
     SendCommand((char *)(Flt_Was_Edited ? "vis b3,1" : "vis b3,0"));
 }
-static void FltFail(const char *what)
+FLASHMEM static void FltFail(const char *what)
 {
     char msg[180];
     snprintf(msg, sizeof(msg), "%s:\r\n%.140s", what, PipeRepCode ? PipeRepBody : "the screen could not ask (no Bluetooth)");
@@ -145,25 +145,25 @@ static void FltFail(const char *what)
     FltHead();
     FltShow();
 }
-static void FltRead()
+FLASHMEM static void FltRead()
 {
     FltBusy("Reading from the flight controller ...");
     FltReq = MspAsk(36, nullptr, 0);
     FltStep = FLT_READ_FEAT;
 }
-static bool FltTakeFeatures(uint32_t *m)
+FLASHMEM static bool FltTakeFeatures(uint32_t *m)
 {
     uint8_t b[8];
     if (PipeReplyBytes(b, sizeof(b)) < 4) return false;
     *m = (uint32_t)b[0] | ((uint32_t)b[1] << 8) | ((uint32_t)b[2] << 16) | ((uint32_t)b[3] << 24);
     return true;
 }
-static void FltAskFeaturesAgain() // after the restart: the flight controller is asked until it answers
+FLASHMEM static void FltAskFeaturesAgain() // after the restart: the flight controller is asked until it answers
 {
     FltWaitUntil = millis() + (FltTries ? 2500 : 5000);
     FltStep = FLT_WAIT;
 }
-void FilterPoll()
+FLASHMEM void FilterPoll()
 {
     if (CurrentView != FILTERVIEW && CurrentView != FILTER2VIEW) { FltStep = FLT_IDLE; FltMsgUntil = 0; return; }
     if (FltMsgUntil && (int32_t)(millis() - FltMsgUntil) >= 0) { FltMsgUntil = 0; FltBusy(""); FltShow(); }
@@ -257,7 +257,7 @@ void FilterPoll()
         return;
     }
 }
-void StartFilterView()
+FLASHMEM void StartFilterView()
 {
     char why[120];
     if (RfNeedsModel(why, sizeof(why)) || ModelSeemsArmed(why, sizeof(why)) || RfPipeBlocked(why, sizeof(why)))
@@ -273,7 +273,7 @@ void StartFilterView()
     FltHead();
     FltRead();
 }
-void EndFilterView() // OK on either page
+FLASHMEM void EndFilterView() // OK on either page
 {
     if (Flt_Was_Edited)
     {
@@ -284,7 +284,7 @@ void EndFilterView() // OK on either page
     Flt_Was_Edited = false;
     RotorFlightStart();
 }
-void StartFilter2View() // Next >
+FLASHMEM void StartFilter2View() // Next >
 {
     if (CurrentView == FILTERVIEW) FltGather();
     SendCommand((char *)"page Filter2View");
@@ -292,7 +292,7 @@ void StartFilter2View() // Next >
     FltHead();
     if (FltHave) FltShowPage2(); else FltRead();
 }
-void EndFilter2View() // < Previous
+FLASHMEM void EndFilter2View() // < Previous
 {
     if (CurrentView == FILTER2VIEW) FltGather();
     SendCommand((char *)"page FilterView");
@@ -300,21 +300,21 @@ void EndFilter2View() // < Previous
     FltHead();
     if (FltHave) FltShowPage1(); else FltRead();
 }
-void FilterWasEdited() { SendCommand((char *)"vis b3,1"); Flt_Was_Edited = true; }
-static void FltEdited() { FltGather(); FilterWasEdited(); }   // a tap on an Enable or a type: the typed numbers first, so none is lost
+FLASHMEM void FilterWasEdited() { SendCommand((char *)"vis b3,1"); Flt_Was_Edited = true; }
+FLASHMEM static void FltEdited() { FltGather(); FilterWasEdited(); }   // a tap on an Enable or a type: the typed numbers first, so none is lost
 // A type: the configurator offers 1st order and 2nd order, and keeps another type only while it is the one set
-static uint8_t FltNextType(uint8_t t, uint8_t orig)
+FLASHMEM static uint8_t FltNextType(uint8_t t, uint8_t orig)
 {
     if (t == 1) return 2;
     if (t == 2) return (orig > 2) ? orig : 1;
     return 1;
 }
-void FilterLpf1Tapped() { if (!Lpf1On()) return; FltEdited(); FltWant[1] = FltNextType(FltWant[1], FltRaw[1]); FltShow(); }
-void FilterLpf2Tapped() { if (!Lpf2On()) return; FltEdited(); FltWant[4] = FltNextType(FltWant[4], FltRaw[4]); FltShow(); }
-void FilterPresetTapped() { FltEdited(); FltWant[25] = (uint8_t)((FltWant[25] + 1) % 4); FltShow(); }
+FLASHMEM void FilterLpf1Tapped() { if (!Lpf1On()) return; FltEdited(); FltWant[1] = FltNextType(FltWant[1], FltRaw[1]); FltShow(); }
+FLASHMEM void FilterLpf2Tapped() { if (!Lpf2On()) return; FltEdited(); FltWant[4] = FltNextType(FltWant[4], FltRaw[4]); FltShow(); }
+FLASHMEM void FilterPresetTapped() { FltEdited(); FltWant[25] = (uint8_t)((FltWant[25] + 1) % 4); FltShow(); }
 // A Yes takes the value that is there if it is not 0, else what was remembered, else the configurator's default (its loadValue)
-static uint16_t FltPick(uint16_t cur, uint16_t prev, uint16_t def) { return cur ? cur : prev ? prev : def; }
-void FilterLpf1EnableTapped()
+FLASHMEM static uint16_t FltPick(uint16_t cur, uint16_t prev, uint16_t def) { return cur ? cur : prev ? prev : def; }
+FLASHMEM void FilterLpf1EnableTapped()
 {
     FltEdited();
     if (Lpf1On())
@@ -331,14 +331,14 @@ void FilterLpf1EnableTapped()
     }
     FltShow();
 }
-void FilterLpf2EnableTapped()
+FLASHMEM void FilterLpf2EnableTapped()
 {
     FltEdited();
     if (Lpf2On()) { PrevLpf2Type = FltWant[4]; PrevLpf2Hz = RdU16(FltWant, 5); FltWant[4] = 0; WrU16(FltWant, 5, 0); }
     else { FltWant[4] = (uint8_t)FltPick(0, PrevLpf2Type, 1); WrU16(FltWant, 5, FltPick(RdU16(FltWant, 5), PrevLpf2Hz, 500)); }
     FltShow();
 }
-void FilterDynCutoffTapped()
+FLASHMEM void FilterDynCutoffTapped()
 {
     FltEdited();
     if (DynLpfOn()) { PrevDynMin = RdU16(FltWant, 15); PrevDynMax = RdU16(FltWant, 17); WrU16(FltWant, 15, 0); WrU16(FltWant, 17, 0); }
@@ -349,23 +349,23 @@ void FilterDynCutoffTapped()
     }
     FltShow();
 }
-void FilterNotch1Tapped()
+FLASHMEM void FilterNotch1Tapped()
 {
     FltEdited();
     if (N1On()) { PrevN1Hz = RdU16(FltWant, 7); PrevN1Cut = RdU16(FltWant, 9); WrU16(FltWant, 7, 0); WrU16(FltWant, 9, 0); }
     else { WrU16(FltWant, 7, FltPick(RdU16(FltWant, 7), PrevN1Hz, 400)); WrU16(FltWant, 9, FltPick(RdU16(FltWant, 9), PrevN1Cut, 300)); }
     FltShow();
 }
-void FilterNotch2Tapped()
+FLASHMEM void FilterNotch2Tapped()
 {
     FltEdited();
     if (N2On()) { PrevN2Hz = RdU16(FltWant, 11); PrevN2Cut = RdU16(FltWant, 13); WrU16(FltWant, 11, 0); WrU16(FltWant, 13, 0); }
     else { WrU16(FltWant, 11, FltPick(RdU16(FltWant, 11), PrevN2Hz, 200)); WrU16(FltWant, 13, FltPick(RdU16(FltWant, 13), PrevN2Cut, 100)); }
     FltShow();
 }
-void FilterDynNotchEnableTapped() { FltEdited(); FeatWant ^= FEAT_DYN_NOTCH; FltShow(); }
-void FilterRpmEnableTapped() { FltEdited(); FeatWant ^= FEAT_RPM_FILTER; FltShow(); }
-void SaveFilters()
+FLASHMEM void FilterDynNotchEnableTapped() { FltEdited(); FeatWant ^= FEAT_DYN_NOTCH; FltShow(); }
+FLASHMEM void FilterRpmEnableTapped() { FltEdited(); FeatWant ^= FEAT_RPM_FILTER; FltShow(); }
+FLASHMEM void SaveFilters()
 {
     if (!FltHave)
         return;

@@ -186,6 +186,33 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## In-flight adjustments on the transmitter, with the USB cable (V2 B72 + card files, 8 Oct 2026)
+
+Malcolm: "is it possible to add in those functions which require the USB connection? It would be wonderful if we could
+... We can have a USB cable connecting to the flight controller! We don't have to live without it." The receiver's
+rules decide which: the ADJUSTMENTS (the configurator's tab) need the cable only because Rotorflight 4.6 cannot send
+their 588-byte list over the receiver's lead (it overflows the flight controller's buffer and wipes its telemetry
+setup) - over the cable the receiver answers 52 as its own page does, and the pipe carries the reply whole. The
+command line and the black box check stay off the transmitter: the receiver refuses both while a transmitter is
+linked (they take the flight controller away for a minute). B72, RF_Adjust.h: the phone page's model ported line for
+line (lines of 14 bytes <-> rows: a knob, a switch with one value per position, a step up/down; a bank condition read
+off the PID-bank line; the Rate settings shown x5) and proven against the phone page's own JavaScript on 40 random
+sets, byte for byte (dev/test_adjust, 1001 checks). Page 67 AdjustView (hmi/adjust_pages.py; the menu's ninth
+button): one adjustment at a time - Setting and Channel as 'pick' rows (a new row kind: label, <, the choice, >),
+Kind and In bank by tap, the values the kind needs with their labels set by the main board, Now (the setting's present
+value, read from the bank in use when a row is added or its setting changed; never another bank under a live
+transmitter), the channel's live position from this transmitter's own output; Save writes only the lines that differ
+(each write holds the receiver up for most of a second), stores, reads back and compares; 503/504 answered again.
+Without the cable the receiver's refusal is shown in its words and the menu comes back. Help ADJUST.TXT. Flow test
+dev/test_adjust/test_adjust_page.py (26 checks: read, save with a retry, the Rate scale, Add with the present value,
+bank, kind, channel, Remove, the refusals).
+
+MEMORY: this module pushed the Teensy's code over a 32 kB boundary of its tightly-coupled memory and the room for
+local variables fell from 64 kB to 23 kB. The Rotorflight pipe pages (rescue, servos, mixer, filters, backup, this
+one: 225 functions) now run from flash (FLASHMEM) - user-interface code, never in the control path - which brought the
+code from 327 kB to 292 kB and the room for locals to 94 kB; the adjustment tables sit in RAM2. Untested on hardware
+as written.
+
 ## The receiver's check makes room first, with the model connected (screen 1.11.34, 8 Oct 2026)
 
 Malcolm, after testing B71's offline PIDs over Bluetooth: Model setup > Receiver updates said "messiter.com did not

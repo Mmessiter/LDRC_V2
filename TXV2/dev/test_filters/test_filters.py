@@ -12,6 +12,7 @@ prog = r'''
 #include <cstdlib>
 #include <cstring>
 #include <cstdint>
+#define FLASHMEM
 #include <string>
 #include <vector>
 #include <map>
