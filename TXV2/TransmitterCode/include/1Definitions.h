@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B81 09/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B82 09/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -1109,6 +1109,7 @@ void SendParameterByPipe(uint8_t id);         // B41: as words, to the screen
 void PipeFlush();                             // B71: the words waiting, in the queue's order (last in, first out)
 bool RfLive();                                // B71: live values - the flight controller's or the backup file's - not the model file's copies
 void RfPipeBack();                            // B80: the pipe is back: a page left unread reads its block
+void FcBankTick();                            // B82: the flight controller's bank beside the transmitter's
 extern bool PipeReadRefused;
 void PipeOn();                                // B41: ask the screen to join the model's receiver
 void PipeOff();
@@ -1987,6 +1988,7 @@ bool Reading_GOV_Now = false;
 bool Reading_GOV_Config_Now = false;
 uint16_t BlockSeen = 0;   // B79: the items of the block being read that have come (transceiver.h BlockItemSeen); cleared when a block is asked for
 bool BlockShown = false;  // B81: the set came whole and the Loading message went (once per ask)
+uint32_t FcBankAskAt = 0, FcBankAskAt2 = 0;   // B82: when to ask the flight controller which bank it is on (PipeHttp.h FcBankTick)
 
 uint8_t GovWritePayload[GOV_ACK_PAYLOAD_SIZE] = {0};
 uint8_t GovAckPayload[GOV_ACK_PAYLOAD_SIZE] = {0};

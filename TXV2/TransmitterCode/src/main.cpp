@@ -4997,6 +4997,7 @@ void FASTRUN ManageTransmitter()
         if (CurrentView >= PIDVIEW && CurrentView <= RFGOVERNORVIEW_GLOBAL)
         {
             Hide_msg_if_needed(); // Hide any message in rotoflight config area
+            FcBankTick();         // B82: which bank the flight controller is really on
         }
         TransmitterLastManaged = millis();
     }

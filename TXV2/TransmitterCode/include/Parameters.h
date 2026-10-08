@@ -211,28 +211,12 @@ void PipeFlush()
 // when there is neither (B71).
 bool RfLive() { return LedWasGreen || BakOffline(); }
 bool PipeReadRefused = false;   // B80: a page asked for its block with no pipe: read again when the pipe is back (RfPipeBack)
-void ShowPIDBank(); void ShowRatesBank(); void ShowRatesAdvancedBank(); void ShowPIDAdvancedBank(); void ShowGOVBank(); void ShowGOV_Global_Bank();
-void RfPipeBack() // the screen says the pipe is ready: a Rotorflight page left unread reads its block now
-{
-    if (!PipeReadRefused) return;
-    PipeReadRefused = false;
-    switch (CurrentView)
-    {
-    case PIDVIEW: ShowPIDBank(); break;
-    case RATESVIEW_RF: ShowRatesBank(); break;
-    case RATESADVANCEDVIEW: ShowRatesAdvancedBank(); break;
-    case PIDADVANCEDVIEW: ShowPIDAdvancedBank(); break;
-    case RFGOVERNORVIEW_PROFILE: ShowGOVBank(); break;
-    case RFGOVERNORVIEW_GLOBAL: ShowGOV_Global_Bank(); break;
-    default: break;
-    }
-}
 void AddParameterstoQueue(uint8_t ID) // this queue is essentially a LIFO stack
 {
     if (RfParamOverPipe(ID)) // B41/B48: the Rotorflight ones travel by the screen's Bluetooth pipe and by nothing else; B71: or into the backup file
     {
         const bool sendMe = ID == SEND_PID_VALUES || ID == SEND_RATES_VALUES || ID == SEND_RATES_ADVANCED_VALUES || ID == SEND_PID_ADVANCED_VALUES || ID == SEND_GOV_VALUES || ID == SEND_GOV_CONFIG_VALUES;
-        if (sendMe) { BlockSeen = 0; BlockShown = false; }   // B79: a fresh set is awaited
+        if (sendMe) { BlockSeen = 0; BlockShown = false; FcBankAskAt = millis() + 900; FcBankAskAt2 = millis() + 2200; }   // B79: a fresh set is awaited; B82: and the FC's bank checked
         if (sendMe && ModelMatched && BoundFlag && !BakOffline() && PipeState != 2)
         { // B80: no pipe - the page used to show "Loading ..." for the window and then its OLD numbers, with nothing said (Malcolm, 8 Oct: "whenever I put the switch on any bank, nothing changes")
             Reading_PIDS_Now = Reading_RATES_Now = Reading_RATES_Advanced_Now = Reading_PIDS_Advanced_Now = Reading_GOV_Now = Reading_GOV_Config_Now = false;

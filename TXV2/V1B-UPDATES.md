@@ -186,6 +186,16 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The flight controller's own bank, beside the transmitter's (V2 B82, 9 Oct 2026)
+
+With B81 the result was the same and no banner came: the receiver answered, with the same numbers. So the question is
+whether the flight controller moves to the new bank when channel 7 moves (Malcolm: "the bank changes are controlled by
+channel 7"; the phone app reads right, but it selects the bank itself). B82: 0.9 s and 2.2 s after a block is asked for,
+the transmitter asks the receiver which banks the flight controller is on (MSP 101, bytes 23 and 25) and, when it
+differs from the transmitter's, the page's bank word says "Bank 3 / FC 2" (rates: "Rate 2 / FC 3"), and the log gets
+"Bank mismatch: transmitter 3, flight controller 2 (ch6 988, ch7 1909, ch8 1500 us)" - channels 6 to 8 as the flight
+controller sees them, so the log tells whether the channel moved and whether the flight controller followed.
+
 ## A read that gets no answer says so (V2 B81, 9 Oct 2026)
 
 Malcolm, with B80: "No change, and no messages. The first four bank changes worked. After that it didn't change again,

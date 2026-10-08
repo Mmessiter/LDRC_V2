@@ -86,4 +86,68 @@ int PipeReplyBytes(uint8_t *out, int max)
     }
     return n;
 }
+// B82: WHICH BANK IS THE FLIGHT CONTROLLER REALLY ON? After a block is asked for, the receiver is asked (MSP 101, bytes 23
+// and 25) at 0.9 s and again at 2.2 s, and the page's bank word says so when it differs: "Bank 3 / FC 2". Malcolm, 9 Oct:
+// after three bank changes the PIDs page kept showing the same numbers - the receiver answered, so the question is whether
+// the flight controller moved. A mismatch goes to the log too.
+static int FcBankReq = 0;
+static bool FcBankPending = false;
+static int FcPidBank = 0, FcRateBank = 0;   // 1-based, 0 unknown
+void LogText(char *TheText, uint16_t len, bool TimeStamp);
+static int FcUsOf(uint16_t txUs) { long v = 1500 + ((long)txUs - 1500) * 819L * 5L / (500L * 8L); return v < 988 ? 988 : v > 2012 ? 2012 : (int)v; }   // (this transmitter's microseconds as the FC sees them)
+static bool FcBankPage() { return CurrentView == PIDVIEW || CurrentView == RATESVIEW_RF || CurrentView == RATESADVANCEDVIEW || CurrentView == PIDADVANCEDVIEW || CurrentView == RFGOVERNORVIEW_PROFILE; }
+static void FcBankShow()
+{
+    char b[40];
+    const bool rates = CurrentView == RATESVIEW_RF || CurrentView == RATESADVANCEDVIEW;
+    const int tx = rates ? DualRateInUse : Bank, fc = rates ? FcRateBank : FcPidBank;
+    if (!fc) return;
+    if (fc == tx) snprintf(b, sizeof(b), "%s %d", rates ? "Rate" : "Bank", tx);
+    else
+    {
+        snprintf(b, sizeof(b), "%s %d / FC %d", rates ? "Rate" : "Bank", tx, fc);
+        char l[110];   // (with channels 6 to 8 as the flight controller sees them: the bank switch is usually among them)
+        snprintf(l, sizeof(l), "Bank mismatch: transmitter %d, flight controller %d (ch6 %d, ch7 %d, ch8 %d us)", tx, fc, FcUsOf(SendBuffer[5]), FcUsOf(SendBuffer[6]), FcUsOf(SendBuffer[7]));
+        LogText(l, strlen(l), false);
+    }
+    SendText((char *)((CurrentView == PIDADVANCEDVIEW || CurrentView == RFGOVERNORVIEW_PROFILE) ? "t26" : "t9"), b);
+}
+void FcBankTick() // every 50 ms (ManageTransmitter)
+{
+    if (!FcBankPage() || PipeState != 2 || !(BoundFlag && ModelMatched)) { FcBankPending = false; FcBankAskAt = FcBankAskAt2 = 0; return; }
+    if (FcBankPending)
+    {
+        if (PipeReplyReady(FcBankReq))
+        {
+            uint8_t b[40];
+            const int n = PipeRepCode == 200 ? PipeReplyBytes(b, sizeof(b)) : 0;
+            FcBankPending = false;
+            if (n >= 26) { FcPidBank = (b[23] & 0x0F) + 1; FcRateBank = (b[25] & 0x0F) + 1; FcBankShow(); }
+        }
+        else if (PipeReplyLate()) FcBankPending = false;
+        return;
+    }
+    uint32_t *at = FcBankAskAt && (int32_t)(millis() - FcBankAskAt) >= 0 ? &FcBankAskAt : FcBankAskAt2 && (int32_t)(millis() - FcBankAskAt2) >= 0 ? &FcBankAskAt2 : nullptr;
+    if (!at) return;
+    *at = 0;
+    FcBankReq = MspAsk(101, nullptr, 0);
+    FcBankPending = true;
+}
+void ShowPIDBank(); void ShowRatesBank(); void ShowRatesAdvancedBank(); void ShowPIDAdvancedBank(); void ShowGOVBank(); void ShowGOV_Global_Bank();
+void RfPipeBack() // the screen says the pipe is ready: a Rotorflight page left unread reads its block now
+{
+    if (!PipeReadRefused) return;
+    PipeReadRefused = false;
+    switch (CurrentView)
+    {
+    case PIDVIEW: ShowPIDBank(); break;
+    case RATESVIEW_RF: ShowRatesBank(); break;
+    case RATESADVANCEDVIEW: ShowRatesAdvancedBank(); break;
+    case PIDADVANCEDVIEW: ShowPIDAdvancedBank(); break;
+    case RFGOVERNORVIEW_PROFILE: ShowGOVBank(); break;
+    case RFGOVERNORVIEW_GLOBAL: ShowGOV_Global_Bank(); break;
+    default: break;
+    }
+}
+
 #endif
