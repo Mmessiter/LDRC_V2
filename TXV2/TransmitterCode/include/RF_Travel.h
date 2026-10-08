@@ -54,9 +54,9 @@ static void TravShowPage1()
     TravNum("tn4", (labs(TravInWant[1][0]) + 5) / 10);              // Cyclic gain % (roll's; pitch gets the same on a save)
     TravNum("tn5", (labs(TravInWant[3][0]) + 5) / 10);              // Yaw gain %
     TravRevAil = TravInWant[1][0] < 0; TravRevEle = TravInWant[2][0] < 0; TravRevColl = TravInWant[4][0] < 0;
-    SendText((char *)"tn6", (char *)(TravRevAil ? "Yes" : "No"));
-    SendText((char *)"tn7", (char *)(TravRevEle ? "Yes" : "No"));
-    SendText((char *)"tn8", (char *)(TravRevColl ? "Yes" : "No"));
+    SendValue((char *)"tn6", TravRevAil ? 1 : 0);   // (B65: a switch)
+    SendValue((char *)"tn7", TravRevEle ? 1 : 0);   // (B65: a switch)
+    SendValue((char *)"tn8", TravRevColl ? 1 : 0);   // (B65: a switch)
     TravTenths("tn9", S16At(TravCfgWant, 11));                      // swash trims, 0.1 %
     TravTenths("tn10", S16At(TravCfgWant, 13));
     TravTenths("tn11", S16At(TravCfgWant, 15));
@@ -261,9 +261,9 @@ void EndTravelView() // OK on either page
     RotorFlightStart();
 }
 void TravelWasEdited() { SendCommand((char *)"vis b3,1"); Trav_Was_Edited = true; }
-void TravelAilTapped() { TravRevAil = !TravRevAil; SendText((char *)"tn6", (char *)(TravRevAil ? "Yes" : "No")); TravelWasEdited(); }
-void TravelEleTapped() { TravRevEle = !TravRevEle; SendText((char *)"tn7", (char *)(TravRevEle ? "Yes" : "No")); TravelWasEdited(); }
-void TravelCollTapped() { TravRevColl = !TravRevColl; SendText((char *)"tn8", (char *)(TravRevColl ? "Yes" : "No")); TravelWasEdited(); }
+void TravelAilTapped() { TravRevAil = !TravRevAil; SendValue((char *)"tn6", TravRevAil ? 1 : 0); TravelWasEdited(); }
+void TravelEleTapped() { TravRevEle = !TravRevEle; SendValue((char *)"tn7", TravRevEle ? 1 : 0); TravelWasEdited(); }
+void TravelCollTapped() { TravRevColl = !TravRevColl; SendValue((char *)"tn8", TravRevColl ? 1 : 0); TravelWasEdited(); }
 void SaveTravel()
 {
     if (!TravHave)

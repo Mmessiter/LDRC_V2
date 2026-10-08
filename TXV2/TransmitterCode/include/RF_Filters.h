@@ -53,7 +53,7 @@ static void FltNum(const char *name, long v)
     snprintf(b, sizeof(b), "%ld", v);
     SendText((char *)name, b);
 }
-static void FltYesNo(const char *name, bool on) { SendText((char *)name, (char *)(on ? "Yes" : "No")); }
+static void FltYesNo(const char *name, bool on) { SendValue((char *)name, on ? 1 : 0); }   // B65: a switch on the screen (Malcolm, 8 Oct: "the yes/no boxes should be switches")
 static void FltRows(bool on, int from, int to) // show or hide the value rows tn<from>..tn<to> and their labels
 {
     char c[20];
@@ -119,6 +119,14 @@ static void FltGather()
         if (N1On()) { WrU16(FltWant, 7, FieldNumber("tn7", 0, 1000)); WrU16(FltWant, 9, FieldNumber("tn8", 0, 1000)); }
         if (N2On()) { WrU16(FltWant, 11, FieldNumber("tn10", 0, 1000)); WrU16(FltWant, 13, FieldNumber("tn11", 0, 1000)); }
     }
+}
+// The bytes the page NOT showing owns, compared with what was read: page 1 = lowpass 1 (1-3), dynamic filter (19-24),
+// RPM filter (25-26) and the two feature bits; page 2 = lowpass 2 (4-6), notches (7-14), dynamic cutoff (15-18)
+static bool FltOtherPageChanged()
+{
+    if (CurrentView == FILTERVIEW)
+        return memcmp(FltWant + 4, FltRaw + 4, 15) != 0;
+    return memcmp(FltWant + 1, FltRaw + 1, 3) != 0 || memcmp(FltWant + 19, FltRaw + 19, 8) != 0 || ((FeatWant ^ FeatRaw) & (FEAT_DYN_NOTCH | FEAT_RPM_FILTER)) != 0;
 }
 static void FltHead()
 {
@@ -375,6 +383,17 @@ void SaveFilters()
         MsgBox((char *)FltPageWord(), (char *)"Not saved: the dynamic filter's maximum frequency must be above its minimum.");
         FltHead(); FltShow();
         return;
+    }
+    // B65 (Malcolm, 8 Oct: four Enables touched on the expert page went to the flight controller with a save on page 1,
+    // unseen): a save writes both pages, so a change on the OTHER page is said, and asked about, first.
+    if (FltOtherPageChanged())
+    {
+        if (!GetConfirmation((char *)FltPageWord(), (char *)(CurrentView == FILTERVIEW ? "The expert page was changed too\r\n(lowpass 2, dynamic cutoff or notches).\r\nSave both pages?" : "The first page was changed too\r\n(lowpass, dynamic or RPM filter).\r\nSave both pages?")))
+        {
+            FltHead(); FltShow();
+            return;
+        }
+        FltHead(); FltShow();
     }
     FltBusy("Writing to the flight controller ...");
     FltReq = MspAsk(93, FltWant, FLT_BYTES);

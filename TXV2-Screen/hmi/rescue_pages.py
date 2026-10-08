@@ -12,7 +12,7 @@ def comp(proto, **kw):
     c = json.loads(json.dumps(proto)); c.update(kw); return c
 
 def page(pid, name, title, fields, buttons, help_file):
-    """fields: (name, label, column, row, kind, code[, keypad label]) with kind 'num' (the keypad), 'cycle' (a tap) or 'head' (a group heading, no value)"""
+    """fields: (name, label, column, row, kind, code[, keypad label]) with kind 'num' (the keypad), 'cycle' (a tap), 'switch' (on/off) or 'head' (a group heading, no value)"""
     comps = []; i = [1]
     def add(c): c['i'] = i[0]; i[0] += 1; comps.append(c); return c
     add(comp(TITLE, n='t0', txt=title))
@@ -31,6 +31,11 @@ def page(pid, name, title, fields, buttons, help_file):
             h['c'] = {'pco': 65535, 'borderc': CARD['c']['bco'], 'bco': CARD['c']['bco']}; h['a'] = dict(h['a'], borderw=0, xcen=0, txt_maxl=30)
             add(h); continue
         add(comp(LABEL_L if col == 0 else LABEL_R, n='l' + nm, x=lx, y=y, w=lw, h=36, txt=label, g='g'))
+        if kind == 'switch':   # 1.11.34 (Malcolm, 8 Oct: "the yes/no boxes should be switches"): the screen's own switch, grey off / green on, its val set by the main board
+            sw = {'n': nm, 't': 'switch', 'g': 'g', 'x': vx + (vw - 80) // 2, 'y': y + 1, 'w': 80, 'h': 34, 'font': 0,
+                  'c': {'pco1': 0, 'bco2': 2016, 'pco': 65535, 'bco': 33808, 'pco2': 65535}, 'txt': ' / ', 'val': 0, 'a': {'dez': 0, 'dis': 100, 'txt_maxl': 24},
+                  'ev': {'r': 'va0.val=%d<<8\nprint va0.val' % code}}
+            add(sw); continue
         f = comp(FIELD, n=nm, x=vx, y=y, w=vw, h=36, txt='0', g='g')
         if kind == 'num': f['ev'] = {'r': 'keybdB.t1.txt="%s"\nva0.val=%d<<8\nprint va0.val' % (klabel, code)}
         else: f['a'] = dict(f['a'], key=255); f['ev'] = {'r': 'va0.val=%d<<8\nprint va0.val' % code}
@@ -46,7 +51,7 @@ def page(pid, name, title, fields, buttons, help_file):
 
 # codes (the main board's NumberedFunctions1): 64 open, 65 OK, 66 save, 67 a number edited, 68 the mode tapped, 69 flip tapped, 70 page 2, 71 back to page 1
 page(58, 'RescueView', 'Rescue (Rotorflight)', [          # the configurator's names, order and units (Malcolm, 7 Oct: "use the same names in the same places")
-    ('tn0', 'Enable Rescue', 0, 0, 'cycle', 68), ('tn1', 'Flip to upright', 0, 1, 'cycle', 69),
+    ('tn0', 'Enable Rescue', 0, 0, 'switch', 68), ('tn1', 'Flip to upright', 0, 1, 'switch', 69),
     ('tn2', 'Pull-up Collective [%]', 0, 2, 'num', 67), ('tn3', 'Pull-up Time [s]', 0, 3, 'num', 67),
     ('tn4', 'Climb Collective [%]', 0, 4, 'num', 67), ('tn5', 'Climb Time [s]', 0, 5, 'num', 67),
     ('tn6', 'Hover Collective [%]', 0, 6, 'num', 67), ('tn7', 'Flip Fail Time [s]', 0, 7, 'num', 67),

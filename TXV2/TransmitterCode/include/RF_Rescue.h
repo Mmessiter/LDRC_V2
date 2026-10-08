@@ -71,8 +71,8 @@ static void RescueShowPage1()
 {
     RescueMode = RescueWant[0] <= 2 ? RescueWant[0] : 0;
     RescueFlip = RescueWant[1] ? 1 : 0;
-    RescueField("tn0", RescueMode ? "On" : "Off");
-    RescueField("tn1", RescueFlip ? "Flip" : "No-Flip");
+    SendValue((char *)"tn0", RescueMode ? 1 : 0);   // (B65: a switch)
+    SendValue((char *)"tn1", RescueFlip ? 1 : 0);   // (B65: a switch)
     RescuePercent("tn2", RdU16(RescueWant, 8));   // Pull-up Collective [%]
     RescueTenths("tn3", RescueWant[4]);           // Pull-up Time [s]
     RescuePercent("tn4", RdU16(RescueWant, 10));  // Climb Collective [%]
@@ -355,13 +355,13 @@ void RescueModeTapped() // page 1, Enable Rescue: Off <-> On
     }
     else
         RescueMode = RescueModeWhenOn >= 1 && RescueModeWhenOn <= 2 ? RescueModeWhenOn : 1;
-    RescueField("tn0", RescueMode ? "On" : "Off");
+    SendValue((char *)"tn0", RescueMode ? 1 : 0);   // (B65: a switch)
     RescueWasEdited();
 }
 void RescueFlipTapped() // page 1: Flip <-> No-Flip
 {
     RescueFlip = !RescueFlip;
-    RescueField("tn1", RescueFlip ? "Flip" : "No-Flip");
+    SendValue((char *)"tn1", RescueFlip ? 1 : 0);   // (B65: a switch)
     RescueWasEdited();
 }
 void RescueMode2Tapped() // page 2, Rescue mode: Off -> Climb -> Hold height -> Off

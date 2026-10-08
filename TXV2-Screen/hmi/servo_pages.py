@@ -9,7 +9,7 @@ rp.page(60, 'ServoView', 'Servo 1 (Rotorflight)', [
     ('tn0', 'Center [us]', 0, 0, 'num', 76), ('tn1', 'Min [us]', 0, 1, 'num', 76), ('tn2', 'Max [us]', 0, 2, 'num', 76),
     ('tn3', 'Scale Neg [us]', 0, 3, 'num', 76), ('tn4', 'Scale Pos [us]', 0, 4, 'num', 76),
     ('tn5', 'Rate [Hz]', 1, 0, 'num', 76), ('tn6', 'Speed [ms]', 1, 1, 'num', 76),
-    ('tn7', 'Reverse', 1, 2, 'cycle', 77), ('tn8', 'Geometry Corr.', 1, 3, 'cycle', 78),
+    ('tn7', 'Reverse', 1, 2, 'switch', 77), ('tn8', 'Geometry Corr.', 1, 3, 'switch', 78),
 ], [('b3', 'Save', 14, 180, 75), ('b4', '< Servo', 214, 180, 79), ('b2', 'Servo >', 414, 180, 80), ('b1', 'OK', 605, 180, 74)], 'SERVOS.TXT')
 idx = json.load(open(os.path.join(rp.PAGES, '..', 'index.json')))
 if 60 not in {x['id'] for x in idx['pages']}: idx['pages'].append({'id': 60, 'name': 'ServoView', 'n': 28}); idx['pages'].sort(key=lambda x: x['id'])

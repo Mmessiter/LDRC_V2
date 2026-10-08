@@ -28,6 +28,7 @@ static std::map<std::string, std::string> fields; static std::map<std::string, i
 static int boxes = 0; static std::string lastBox; static bool confirmAnswer = true; static int sounds = 0;
 static void SendCommand(char *c) { std::string s(c); cmds.push_back(s); if (s.rfind("vis ", 0) == 0) { size_t k = s.find(','); vis[s.substr(4, k - 4)] = atoi(s.c_str() + k + 1); } }
 static void SendText(char *n, char *t) { fields[n] = t; }
+static void SendValue(char *n, int v) { fields[n] = v ? "Yes" : "No"; }   // (a switch: its val, read back here as the word it stands for)
 static void GetText(char *n, char *buf, int max) { strncpy(buf, fields[n].c_str(), max); buf[max] = 0; }
 static void MsgBox(char *page, const char *msg) { ++boxes; lastBox = msg; }
 static bool GetConfirmation(char *page, char *prompt) { return confirmAnswer; }
@@ -143,6 +144,10 @@ int main() {
     // a type the configurator does not offer stays reachable while it is the one set
     FltWant[4] = 7; FltRaw[4] = 7; FltShow(); CHECK(fields["tn1"] == "Butter");
     FilterLpf2Tapped(); CHECK(fields["tn1"] == "1st order"); FilterLpf2Tapped(); CHECK(fields["tn1"] == "2nd order"); FilterLpf2Tapped(); CHECK(fields["tn1"] == "Butter");
+    // 8b. a change on the expert page is asked about before a save from page 1 (B65): No = nothing goes out
+    openPage(BOTH); StartFilter2View(); FilterNotch1Tapped(); EndFilter2View(); CHECK(CurrentView == FILTERVIEW);
+    confirmAnswer = false; reqs.clear(); SaveFilters(); CHECK(reqs.empty() && Flt_Was_Edited);
+    confirmAnswer = true; reqs.clear(); SaveFilters(); CHECK(reqs.size() == 1 && reqs[0].fn == 93 && RdU16(reqs[0].data.data(), 7) == 400);
     // 8. a dynamic range upside down is refused before anything goes out
     openPage(BOTH); fields["tn9"] = "300"; fields["tn10"] = "200"; FilterWasEdited(); reqs.clear(); boxes = 0; SaveFilters();
     CHECK(reqs.empty() && boxes == 1 && lastBox.find("Not saved") == 0);

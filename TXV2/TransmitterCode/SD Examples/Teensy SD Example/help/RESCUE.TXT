@@ -2,9 +2,9 @@ Rescue: what Rotorflight does when you flick the rescue switch. The names, order
 
 The values are those of the bank shown at the top left: change bank with the bank switch, and the page reads again.||
 
-Enable Rescue: Off or On. Tap to change. (Whether rescue climbs or holds a height is set on the Height hold page.)||
+Enable Rescue: a switch (green = on). (Whether rescue climbs or holds a height is set on the Height hold page.)||
 
-Flip to upright: Flip or No-Flip. If the model is upside down when rescue engages, Flip rolls it level-side-up first. Recommended Flip. Tap to change.||
+Flip to upright: a switch. On, a model that is upside down when rescue engages is rolled level-side-up first. Recommended on.||
 
 Pull-up, Climb and Hover Collective: percent of full collective for each stage (0 to 100, halves allowed).||
 

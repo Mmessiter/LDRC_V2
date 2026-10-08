@@ -57,8 +57,8 @@ static void ServoShow()
     const int flags = RdU16(b, 14);
     ServoRev = (flags & 1) ? 1 : 0;
     ServoGeo = (flags & 2) ? 1 : 0;
-    SendText((char *)"tn7", (char *)(ServoRev ? "Yes" : "No"));
-    SendText((char *)"tn8", (char *)(ServoGeo ? "On" : "Off"));
+    SendValue((char *)"tn7", ServoRev ? 1 : 0);   // (B65: a switch)
+    SendValue((char *)"tn8", ServoGeo ? 1 : 0);   // (B65: a switch)
 }
 static void ServoGather() // the page's fields, clamped as the receiver's page clamps them
 {
@@ -203,8 +203,8 @@ static void ServoShowEdits() // after a question's page: the typed values again 
     ServoTitle();
     ServoNum("tn0", RdU16(ServoWant, 0)); ServoNum("tn1", RdS16(ServoWant, 2)); ServoNum("tn2", RdS16(ServoWant, 4));
     ServoNum("tn3", RdU16(ServoWant, 6)); ServoNum("tn4", RdU16(ServoWant, 8)); ServoNum("tn5", RdU16(ServoWant, 10)); ServoNum("tn6", RdU16(ServoWant, 12));
-    SendText((char *)"tn7", (char *)(ServoRev ? "Yes" : "No"));
-    SendText((char *)"tn8", (char *)(ServoGeo ? "Yes" : "No"));
+    SendValue((char *)"tn7", ServoRev ? 1 : 0);   // (B65: a switch)
+    SendValue((char *)"tn8", ServoGeo ? 1 : 0);   // (B65: a switch)
 }
 void EndServoView() // OK
 {
@@ -225,13 +225,13 @@ void ServoWasEdited()
 void ServoReverseTapped()
 {
     ServoRev = !ServoRev;
-    SendText((char *)"tn7", (char *)(ServoRev ? "Yes" : "No"));
+    SendValue((char *)"tn7", ServoRev ? 1 : 0);   // (B65: a switch)
     ServoWasEdited();
 }
 void ServoGeometryTapped()
 {
     ServoGeo = !ServoGeo;
-    SendText((char *)"tn8", (char *)(ServoGeo ? "On" : "Off"));
+    SendValue((char *)"tn8", ServoGeo ? 1 : 0);   // (B65: a switch)
     ServoWasEdited();
 }
 static void ServoStep1(int d) // < Servo / Servo >

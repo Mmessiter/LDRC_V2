@@ -4,7 +4,7 @@ Collective pitch limit and Cyclic pitch limit [deg]: the most collective and cyc
 
 Collective, Cyclic and Yaw gain [%]: how much of a full stick reaches the swash or tail (0 to 1000). The cyclic gain is written to roll and pitch alike.||
 
-Aileron, Elevator and Collective reversed: the direction of each control. Tap to change. Check the direction with the model on the bench before flying.||
+Aileron, Elevator and Collective reversed: the direction of each control, a switch each (green = reversed). Check the direction with the model on the bench before flying.||
 
 Swash trim roll, pitch and coll. [%]: small corrections to where the swash sits (-100 to 100, in tenths).||
 

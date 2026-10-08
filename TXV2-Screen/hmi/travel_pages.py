@@ -10,8 +10,8 @@ rp.page(62, 'TravelView', 'Travel extents (Rotorflight)', [
     ('tn0', 'Collective pitch limit [deg]', 0, 0, 'num', 86), ('tn1', 'Cyclic pitch limit [deg]', 0, 1, 'num', 86),
     ('tn2', 'Total pitch limit [deg]', 0, 2, 'num', 86), ('tn3', 'Collective gain [%]', 0, 3, 'num', 86),
     ('tn4', 'Cyclic gain [%]', 0, 4, 'num', 86), ('tn5', 'Yaw gain [%]', 0, 5, 'num', 86),
-    ('tn6', 'Aileron reversed', 1, 0, 'cycle', 87), ('tn7', 'Elevator reversed', 1, 1, 'cycle', 88),
-    ('tn8', 'Collective reversed', 1, 2, 'cycle', 89),
+    ('tn6', 'Aileron reversed', 1, 0, 'switch', 87), ('tn7', 'Elevator reversed', 1, 1, 'switch', 88),
+    ('tn8', 'Collective reversed', 1, 2, 'switch', 89),
     ('tn9', 'Swash trim roll [%]', 1, 3, 'num', 86), ('tn10', 'Swash trim pitch [%]', 1, 4, 'num', 86), ('tn11', 'Swash trim coll. [%]', 1, 5, 'num', 86),
 ], [('b3', 'Save', 14, 180, 85), ('b2', 'Next >', 408, 180, 90), ('b1', 'OK', 605, 180, 84)], 'TRAVEL.TXT')
 rp.page(63, 'Travel2View', 'Tail and swash (Rotorflight)', [

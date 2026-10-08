@@ -12,6 +12,6 @@ Rate [Hz]: how often the servo is refreshed (25 to 5000). Check the servo's own 
 
 Speed [ms]: slow-motion time, 0 = full speed (normal).||
 
-Reverse (Yes or No): flips the servo's direction, like a servo-reverse switch. Tap to change. Geometry Corr.: evens out the arc of the arm so equal commands give equal swash movement up and down; usually On for the three swashplate servos. Tap to change.||
+Reverse: a switch (green = reversed) that flips the servo's direction, like a servo-reverse switch. Geometry Corr.: evens out the arc of the arm so equal commands give equal swash movement up and down; usually on for the three swashplate servos; a switch.||
 
 Press a number to type a new one. Save writes this servo to the flight controller, stores it there, and reads it back. OK leaves; if something was edited and not saved, it asks.||

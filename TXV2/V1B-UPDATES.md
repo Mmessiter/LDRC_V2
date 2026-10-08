@@ -186,6 +186,18 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Switches for every yes/no; the screen saver returns to a Rotorflight page; a save says when the other page changed (V2 B65, 8 Oct 2026)
+
+Three things from Malcolm's testing of the filters pages on the second transmitter, 8 Oct. "The yes/no boxes should be
+switches": every on/off row on the Rotorflight pages - the filters' Enables, Enable Rescue and Flip to upright, the
+servos' Reverse and Geometry, the three travel reversals - is now the screen's own switch, grey off, green on, set by
+the main board (the pages' JSON; the main board sends a value instead of a word). "When the screen times out it would be
+helpful if it returned to the one I was editing": the Rotorflight pages were missing from the list of pages the screen
+saver comes back to, so they went to the front page; they are on it now, and come back with their edits as the screen
+kept them. And a save that would carry the OTHER filters page's changes (four Enables touched on the expert page went to
+the flight controller with a save on page 1, unseen, and lowpass 2 at 50 Hz with them) says so and asks first.
+Help texts: RESCUE, SERVOS, TRAVEL. test_filters: 84 checks.
+
 ## The expert filters page in the configurator's order (screen files, 8 Oct 2026)
 
 Malcolm, testing page 1 against the configurator (every line agreed, his 25 Hz went through): "the parameters are

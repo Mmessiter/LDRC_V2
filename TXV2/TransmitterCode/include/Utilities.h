@@ -63,7 +63,11 @@ void SaveOrRestoreScreen(bool Restore)
         {ROTORFLIGHTVIEW, "RFView"}, {RATESADVANCEDVIEW, "Rates_A_View"}, {PIDADVANCEDVIEW, "PID_A_View"},
         {PICKBANKVIEW1, "PickBankView1"}, {PICKBANKVIEW2, "PickBankView2"}, {CHOOSEIMAGEVIEW, "ImageView"},
         {RFBACKUP_RESTOREVIEW, "RFBackUpView"}, {RFGOVERNORVIEW_PROFILE, "RFGovView"}, {RFGOVERNORVIEW_GLOBAL, "RFGovViewGlbl"},
-        {MODELIDVIEW, "IDsStartView"}};
+        {MODELIDVIEW, "IDsStartView"},
+        // B65 (Malcolm, 8 Oct: "when the screen times out, it would be helpful if it returned to the one I was editing"):
+        // the Rotorflight pages of B50-B61, with their edits, as the screen kept them
+        {RESCUEVIEW, "RescueView"}, {RESCUE2VIEW, "Rescue2View"}, {SERVOVIEW, "ServoView"}, {RFSETUPVIEW, "RFSetupView"},
+        {TRAVELVIEW, "TravelView"}, {TRAVEL2VIEW, "Travel2View"}, {FILTERVIEW, "FilterView"}, {FILTER2VIEW, "Filter2View"}};
     for (const auto &p : Pages)
     {
         if (p.view != LastScreen)
