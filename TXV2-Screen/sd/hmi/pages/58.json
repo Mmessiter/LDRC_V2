@@ -188,7 +188,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 63752
+    "bco": 65497
    },
    "txt": "Enable Rescue",
    "a": {
@@ -244,7 +244,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 63752
+    "bco": 65497
    },
    "txt": "Flip to upright",
    "a": {
@@ -300,7 +300,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 63752
+    "bco": 65497
    },
    "txt": "Pull-up Collective [%]",
    "a": {
@@ -359,7 +359,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 63752
+    "bco": 65497
    },
    "txt": "Pull-up Time [s]",
    "a": {
@@ -418,7 +418,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 63752
+    "bco": 65497
    },
    "txt": "Climb Collective [%]",
    "a": {
@@ -477,7 +477,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 63752
+    "bco": 65497
    },
    "txt": "Climb Time [s]",
    "a": {
@@ -536,7 +536,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 63752
+    "bco": 65497
    },
    "txt": "Hover Collective [%]",
    "a": {
@@ -595,7 +595,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 63752
+    "bco": 65497
    },
    "txt": "Flip Fail Time [s]",
    "a": {
@@ -654,7 +654,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 44369
+    "bco": 65497
    },
    "txt": "Exit Time [s]",
    "a": {
@@ -664,7 +664,7 @@
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
-    "txt_maxl": 20,
+    "txt_maxl": 10,
     "isbr": 0
    }
   },
@@ -713,7 +713,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 44369
+    "bco": 65497
    },
    "txt": "Leveling Gain",
    "a": {
@@ -723,7 +723,7 @@
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
-    "txt_maxl": 20,
+    "txt_maxl": 10,
     "isbr": 0
    }
   },
@@ -772,7 +772,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 44369
+    "bco": 65497
    },
    "txt": "Flip-to-Upright Gain",
    "a": {
@@ -782,7 +782,7 @@
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
-    "txt_maxl": 20,
+    "txt_maxl": 10,
     "isbr": 0
    }
   },
@@ -831,7 +831,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 44369
+    "bco": 65497
    },
    "txt": "Max Levelling Rate",
    "a": {
@@ -841,7 +841,7 @@
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
-    "txt_maxl": 20,
+    "txt_maxl": 10,
     "isbr": 0
    }
   },
@@ -890,7 +890,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 44369
+    "bco": 65497
    },
    "txt": "Max Leveling Accel.",
    "a": {
@@ -900,7 +900,7 @@
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
-    "txt_maxl": 20,
+    "txt_maxl": 10,
     "isbr": 0
    }
   },

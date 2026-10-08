@@ -216,7 +216,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 63752
+    "bco": 65497
    },
    "txt": "Enable",
    "a": {
@@ -272,7 +272,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 63752
+    "bco": 65497
    },
    "txt": "Filter type",
    "a": {
@@ -331,7 +331,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 63752
+    "bco": 65497
    },
    "txt": "Cutoff frequency [Hz]",
    "a": {
@@ -418,7 +418,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 63752
+    "bco": 57215
    },
    "txt": "Enable",
    "a": {
@@ -474,7 +474,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 63752
+    "bco": 57215
    },
    "txt": "Strength",
    "a": {
@@ -533,7 +533,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 63752
+    "bco": 57215
    },
    "txt": "Minimum frequency [Hz]",
    "a": {
@@ -620,7 +620,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 44369
+    "bco": 59323
    },
    "txt": "Enable",
    "a": {
@@ -630,7 +630,7 @@
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
-    "txt_maxl": 20,
+    "txt_maxl": 10,
     "isbr": 0
    }
   },
@@ -676,7 +676,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 44369
+    "bco": 59323
    },
    "txt": "Notch count",
    "a": {
@@ -686,7 +686,7 @@
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
-    "txt_maxl": 20,
+    "txt_maxl": 10,
     "isbr": 0
    }
   },
@@ -735,7 +735,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 44369
+    "bco": 59323
    },
    "txt": "Notch Q",
    "a": {
@@ -745,7 +745,7 @@
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
-    "txt_maxl": 20,
+    "txt_maxl": 10,
     "isbr": 0
    }
   },
@@ -794,7 +794,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 44369
+    "bco": 59323
    },
    "txt": "Notch minimum [Hz]",
    "a": {
@@ -804,7 +804,7 @@
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
-    "txt_maxl": 20,
+    "txt_maxl": 10,
     "isbr": 0
    }
   },
@@ -853,7 +853,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 44369
+    "bco": 59323
    },
    "txt": "Notch maximum [Hz]",
    "a": {
@@ -863,7 +863,7 @@
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
-    "txt_maxl": 20,
+    "txt_maxl": 10,
     "isbr": 0
    }
   },

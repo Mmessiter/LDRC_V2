@@ -216,7 +216,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 63752
+    "bco": 65497
    },
    "txt": "Swashplate Type",
    "a": {
@@ -244,7 +244,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 63752
+    "bco": 65497
    },
    "txt": "Main Rotor Direction",
    "a": {
@@ -272,7 +272,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 63752
+    "bco": 65497
    },
    "txt": "Aileron reversed",
    "a": {
@@ -328,7 +328,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 63752
+    "bco": 65497
    },
    "txt": "Elevator reversed",
    "a": {
@@ -384,7 +384,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 63752
+    "bco": 65497
    },
    "txt": "Collective reversed",
    "a": {
@@ -468,7 +468,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 44369
+    "bco": 57215
    },
    "txt": "Roll trim [%]",
    "a": {
@@ -478,7 +478,7 @@
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
-    "txt_maxl": 20,
+    "txt_maxl": 10,
     "isbr": 0
    }
   },
@@ -527,7 +527,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 44369
+    "bco": 57215
    },
    "txt": "Pitch trim [%]",
    "a": {
@@ -537,7 +537,7 @@
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
-    "txt_maxl": 20,
+    "txt_maxl": 10,
     "isbr": 0
    }
   },
@@ -586,7 +586,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 44369
+    "bco": 57215
    },
    "txt": "Collective trim [%]",
    "a": {
@@ -596,7 +596,7 @@
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
-    "txt_maxl": 20,
+    "txt_maxl": 10,
     "isbr": 0
    }
   },

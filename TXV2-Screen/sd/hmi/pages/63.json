@@ -216,7 +216,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 63752
+    "bco": 65497
    },
    "txt": "Cyclic calibration [%]",
    "a": {
@@ -275,7 +275,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 63752
+    "bco": 65497
    },
    "txt": "Collective calib. [%]",
    "a": {
@@ -334,7 +334,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 63752
+    "bco": 65497
    },
    "txt": "Geometry correction [%]",
    "a": {
@@ -393,7 +393,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 63752
+    "bco": 65497
    },
    "txt": "Cyclic pitch limit [deg]",
    "a": {
@@ -452,7 +452,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 63752
+    "bco": 65497
    },
    "txt": "Collective pitch limit [deg]",
    "a": {
@@ -511,7 +511,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 63752
+    "bco": 65497
    },
    "txt": "Total pitch limit [deg]",
    "a": {
@@ -570,7 +570,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 63752
+    "bco": 65497
    },
    "txt": "Swash phase angle [deg]",
    "a": {
@@ -629,7 +629,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 44369
+    "bco": 65497
    },
    "txt": "Positive tilt corr. [%]",
    "a": {
@@ -639,7 +639,7 @@
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
-    "txt_maxl": 20,
+    "txt_maxl": 10,
     "isbr": 0
    }
   },
@@ -688,7 +688,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 44369
+    "bco": 65497
    },
    "txt": "Negative tilt corr. [%]",
    "a": {
@@ -698,7 +698,7 @@
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
-    "txt_maxl": 20,
+    "txt_maxl": 10,
     "isbr": 0
    }
   },

@@ -188,7 +188,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 63752
+    "bco": 65497
    },
    "txt": "Center [us]",
    "a": {
@@ -247,7 +247,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 63752
+    "bco": 65497
    },
    "txt": "Min [us]",
    "a": {
@@ -306,7 +306,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 63752
+    "bco": 65497
    },
    "txt": "Max [us]",
    "a": {
@@ -365,7 +365,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 63752
+    "bco": 65497
    },
    "txt": "Scale Neg [us]",
    "a": {
@@ -424,7 +424,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 63752
+    "bco": 65497
    },
    "txt": "Scale Pos [us]",
    "a": {
@@ -483,7 +483,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 44369
+    "bco": 65497
    },
    "txt": "Rate [Hz]",
    "a": {
@@ -493,7 +493,7 @@
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
-    "txt_maxl": 20,
+    "txt_maxl": 10,
     "isbr": 0
    }
   },
@@ -542,7 +542,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 44369
+    "bco": 65497
    },
    "txt": "Speed [ms]",
    "a": {
@@ -552,7 +552,7 @@
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
-    "txt_maxl": 20,
+    "txt_maxl": 10,
     "isbr": 0
    }
   },
@@ -601,7 +601,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 44369
+    "bco": 65497
    },
    "txt": "Reverse",
    "a": {
@@ -611,7 +611,7 @@
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
-    "txt_maxl": 20,
+    "txt_maxl": 10,
     "isbr": 0
    }
   },
@@ -657,7 +657,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 44369
+    "bco": 65497
    },
    "txt": "Geometry Corr.",
    "a": {
@@ -667,7 +667,7 @@
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
-    "txt_maxl": 20,
+    "txt_maxl": 10,
     "isbr": 0
    }
   },

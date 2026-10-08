@@ -186,6 +186,14 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Pale shades, black words, one shade per section (card files, 8 Oct 2026)
+
+Malcolm: "the red background colour chosen has insufficient contrast with the text. I suggest that the background
+should be very pale shades of whatever you choose and black text ... the different colours should suggest the
+groupings rather than just random." The Rotorflight pages' label boxes are now pale shades with black words, one shade
+per section (pale yellow, blue, green, lavender, peach, pink, in turn, each heading starting the next; a page without
+headings takes the first). Rescue, Servos, Mixer, Filters. Card files only.
+
 ## A button's code lost inside a "get": Receive once, for good (V2 B69, 8 Oct 2026)
 
 With B68 in, Malcolm: "mostly one press was enough, but on one attempt I had to do three ... this bug was definitely
