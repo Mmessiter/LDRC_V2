@@ -186,6 +186,19 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## A button's code lost inside a "get": Receive once, for good (V2 B69, 8 Oct 2026)
+
+With B68 in, Malcolm: "mostly one press was enough, but on one attempt I had to do three ... this bug was definitely
+here on version one as well." The second cause, in the main board's reading of the screen. The screen's touch words
+and its replies to "get" are both frames ending in FF FF FF, and the Models page asks "get MMems.val, get Mfiles.val"
+without pause. A reply's collector stopped at the FIRST terminator: a touch word that landed just ahead of the reply
+ended the collecting, the reply itself was read as debris, and the word was rescued only if it was PRINTABLE (the
+rescue of 14 July: "SendModel" survives) - a button's code such as Receive (C1 00 00 00) is not printable, so it was
+lost whenever it fell inside one of those windows, which on that page is most of the time. Send always worked; Receive
+needed luck. B69 collects a reply frame by frame: a frame that is not the reply is kept whole for the button handler,
+codes and words alike (the one-byte return codes are let go), and the collecting goes on until the reply or the
+timeout; the rescue before a "get" does the same. Host test dev/test_nextion (18 checks), in the release gate.
+
 ## Receive once is enough (V2 B68, 8 Oct 2026)
 
 "I had to press Receive more than once" (Malcolm, on the second transmitter, 7 and 8 Oct). The screen's record of what it

@@ -163,16 +163,87 @@ void StashPrintableBytes(const char *src, uint16_t len)
     PendingEvent[PendingEventLen] = 0;
 }
 
-void StashPendingEventBytes() // replaces the blind pre-get flush
+void StashFrame(const uint8_t *f, uint16_t n);
+void StashPendingEventBytes() // replaces the blind pre-get flush (B69: frame by frame, so a button's code is kept too, not only a word)
 {
+    uint8_t f[64];
+    uint16_t n = 0, ffs = 0;
     while (NEXTION.available())
     {
-        uint8_t b = NEXTION.read();
-        if (b >= 32 && b < 0x7F && PendingEventLen < sizeof(PendingEvent) - 1)
-            PendingEvent[PendingEventLen++] = b;
+        const uint8_t b = NEXTION.read();
+        if (n < sizeof(f))
+            f[n++] = b;
+        if (b == 0xFF)
+        {
+            if (++ffs >= 3)
+            {
+                StashFrame(f, n >= 3 ? n - 3 : 0);
+                n = 0;
+                ffs = 0;
+            }
+        }
+        else
+            ffs = 0;
         delayMicroseconds(20); // one byte at 921600 baud takes ~11 us
     }
+    if (n)
+        StashFrame(f, n);   // (an unterminated tail: a word still arriving)
+}
+
+// B69 (Malcolm, 8 Oct: "Receive once was not enough ... this bug was definitely here on version one as well"): the
+// screen's touch words are frames ending in FF FF FF, and so are the replies to "get". A reply's collector used to stop
+// at the FIRST terminator: a touch word that arrived just ahead of the reply ended the collecting, the reply itself was
+// then read as debris, and the word was rescued only if PRINTABLE (StashPrintableBytes) - a button code such as the
+// Models page's Receive (C1 00 00 00) is not, so it was lost whenever it landed inside one of the page's constant
+// "get MMems.val" windows. Now a reply is collected FRAME BY FRAME: a frame that is not the reply is kept whole for
+// GetButtonPress (codes, 24-bit codes and words alike; the one-byte return codes are let go), and the collecting goes
+// on until the reply, or the timeout.
+void StashFrame(const uint8_t *f, uint16_t n) // a frame without its FF FF FF
+{
+    if (n == 0)
+        return;
+    const uint8_t first = f[0];
+    const bool code7 = first >= 0x80;                          // a button's 7-bit code (128 + n), 4 bytes
+    const bool code24 = first == 0 && n == 4;                  // va0.val=n<<8: 00 n 00 00
+    const bool word = first >= 0x20 && first < 0x7F;           // a word, "SendModel", "Import x.MOD" ...
+    if (!(code7 || code24 || word))
+        return;                                                // return-code debris (01, 1A ...)
+    if (PendingEventLen + n >= sizeof(PendingEvent) - 1)
+        return;
+    memcpy(PendingEvent + PendingEventLen, f, n);
+    PendingEventLen += n;
     PendingEvent[PendingEventLen] = 0;
+}
+// The reply to a "get": the frame that begins with `expected` ('q' a value, 'p' a text), into TextIn (k = its length,
+// terminator included). Other frames meanwhile are stashed. False: no such frame within 100 ms.
+bool CollectReply(uint8_t expected, uint16_t &k)
+{
+    const uint32_t begun = millis();
+    uint8_t ffs = 0;
+    k = 0;
+    while ((millis() - begun) < 100)
+    {
+        while (NEXTION.available())
+        {
+            const uint8_t b = NEXTION.read();
+            if (k < MAXTEXTIN)
+                TextIn[k++] = b;
+            if (b != 0xFF)
+            {
+                ffs = 0;
+                continue;
+            }
+            if (++ffs < 3)
+                continue;
+            if (TextIn[0] == expected)                        // the reply: done
+                return true;
+            StashFrame((const uint8_t *)TextIn, k >= 3 ? k - 3 : 0);   // something else first: kept for GetButtonPress
+            k = 0;
+            ffs = 0;
+        }
+        KickTheDog();
+    }
+    return false;
 }
 
 void GetTextIn() 
@@ -297,38 +368,9 @@ uint32_t getvalue(char *nbox)
     NEXTION.print(CB);
     EndSend();
     {
-        uint32_t begun = millis();
         uint16_t k = 0;
-        uint8_t ffs = 0;
-        bool done = false;
-        while (!done && (millis() - begun) < 100)
-        {
-            while (NEXTION.available())
-            {
-                uint8_t b = NEXTION.read();
-                if (k < MAXTEXTIN)
-                    TextIn[k++] = b;
-                if (b == 0xFF)
-                {
-                    if (++ffs >= 3)
-                    {
-                        done = true;
-                        break;
-                    }
-                }
-                else
-                    ffs = 0;
-            }
-            KickTheDog();
-        }
-        // ClaudeFix-14-7-2026 A touch event that arrived just before the reply sits IN FRONT
-        // of the 8-byte 'q' frame. Rescue it and realign -- otherwise the read
-        // "fails" (65535), GetValue retries 25x with flushes, and the press dies.
-        if (done && k > 8)
-        {
-            StashPrintableBytes((char *)TextIn, k - 8);
-            memmove(TextIn, TextIn + (k - 8), 8);
-        }
+        if (!CollectReply('q', k))   // (B69: frame by frame; a touch word ahead of the reply is kept, binary or not)
+            TextIn[0] = 0;
     }
     if (TextIn[0] == 'q')
     {
@@ -396,30 +438,9 @@ uint16_t GetText(char *TextBoxName, char *TheText, uint16_t maxlen)
     // A reply is 'p' + text + FF FF FF: collect until that terminator, with
     // a timeout so a dead display can't hang us (normal replies take ~2 ms).
     {
-        uint32_t begun = millis();
         uint16_t k = 0;
-        uint8_t ffs = 0;
-        bool done = false;
-        while (!done && (millis() - begun) < 100)
-        {
-            while (NEXTION.available())
-            {
-                uint8_t b = NEXTION.read();
-                if (k < MAXTEXTIN)
-                    TextIn[k++] = b;
-                if (b == 0xFF)
-                {
-                    if (++ffs >= 3)
-                    {
-                        done = true;
-                        break;
-                    }
-                }
-                else
-                    ffs = 0;
-            }
-            KickTheDog();
-        }
+        if (!CollectReply('p', k))   // (B69: frame by frame; a touch word ahead of the reply is kept, binary or not)
+            TextIn[0] = 0;
     }
 
     if (TextIn[0] == 'p')
@@ -449,38 +470,9 @@ int GetOtherValue(char *nbox)
     NEXTION.print(CB);
     EndSend();
     {
-        uint32_t begun = millis();
         uint16_t k = 0;
-        uint8_t ffs = 0;
-        bool done = false;
-        while (!done && (millis() - begun) < 100)
-        {
-            while (NEXTION.available())
-            {
-                uint8_t b = NEXTION.read();
-                if (k < MAXTEXTIN)
-                    TextIn[k++] = b;
-                if (b == 0xFF)
-                {
-                    if (++ffs >= 3)
-                    {
-                        done = true;
-                        break;
-                    }
-                }
-                else
-                    ffs = 0;
-            }
-            KickTheDog();
-        }
-        // ClaudeFix-14-7-2026 A touch event that arrived just before the reply sits IN FRONT
-        // of the 8-byte 'q' frame. Rescue it and realign -- otherwise the read
-        // "fails" (65535), GetValue retries 25x with flushes, and the press dies.
-        if (done && k > 8)
-        {
-            StashPrintableBytes((char *)TextIn, k - 8);
-            memmove(TextIn, TextIn + (k - 8), 8);
-        }
+        if (!CollectReply('q', k))   // (B69: frame by frame; a touch word ahead of the reply is kept, binary or not)
+            TextIn[0] = 0;
     }
     if (TextIn[0] == 'q')
     {
