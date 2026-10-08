@@ -186,6 +186,20 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## An ID heard twice before it is believed (V2 B73, 8 Oct 2026)
+
+Malcolm, on the second transmitter: "the model ID was lost. I saved it again, reconnected, and again it was lost" -
+and on the next try "it was found and it matched". And Bluetooth would not join meanwhile. ONE CAUSE: the receiver
+puts its ID on ack slots 0 and 1 only for the first two hundred acks of a connection (RXV2 Radio.h, MAC_ACK_THRESHOLD),
+then those slots carry telemetry - slot 0 its version, slot 1 its packet count, both never zero. A transmitter still
+unmatched when the telemetry begins took those two words for the halves of the ID: "AMS is on and model's ID was not
+found. Save this ID?" - and stored the garbage; the next connection brought the real ID, which did not match the garbage
+(so "not found" again, stored again, and the third time it matched). The Bluetooth join is told the receiver's ID
+from the same words, so it looked for a receiver that does not exist. B73: a half of the ID is taken only when it has
+come TWICE THE SAME (the ID's halves come on every ack, alternating; a packet count never repeats). The log's "Model
+memory NOT found" line now carries the ID heard and the ID stored. Version 1 behaved the same; the window is the
+receiver's. Untested on hardware as written.
+
 ## In-flight adjustments on the transmitter, with the USB cable (V2 B72 + card files, 8 Oct 2026)
 
 Malcolm: "is it possible to add in those functions which require the USB connection? It would be wonderful if we could

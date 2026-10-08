@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B72 08/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B73 08/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -1633,6 +1633,8 @@ uint8_t PowerOffWarningSeconds = 2;
 uint8_t ConnectionAssessSeconds = 1;
 uint32_t PreviousPowerOffTimer = 0;
 bool ModelIdentified = false;
+extern uint32_t MacHalfSeen[2];   // B73: transceiver.h - the ID's halves as last heard, taken only when heard twice the same
+extern uint8_t MacHalfStable;
 bool ModelMatched = false;
 bool ModelMatchFailed = false;
 bool AutoModelSelect = true;

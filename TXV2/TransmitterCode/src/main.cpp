@@ -190,6 +190,7 @@ void ClearMostParameters()
     RXVoltsDetected = false;
     LedGreenMoment = 0;
     ModelsMacUnion.Val64 = 0;
+    MacHalfSeen[0] = MacHalfSeen[1] = 0; MacHalfStable = 0;   // B73: the ID's halves are collected afresh
     LedWasGreen = false;
     ModelIdentified = false;
     ModelMatched = false;

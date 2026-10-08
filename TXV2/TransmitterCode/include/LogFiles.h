@@ -277,10 +277,10 @@ FASTRUN void LogConnection()
 // ************************************************************************
 
 void MMLog(char *TheText)
-{ // Model Memory Log called from below
-    char buf[40] = " ";
-    strcpy(buf, TheText);
-    strcat(buf, ModelName);
+{ // Model Memory Log called from below. B73: with the ID heard and the ID stored, so a "NOT found" can be read afterwards
+    char buf[110];
+    snprintf(buf, sizeof(buf), "%s%s (heard %08lX%08lX, stored %08lX%08lX)", TheText, ModelName,
+             (unsigned long)ModelsMacUnion.Val32[1], (unsigned long)ModelsMacUnion.Val32[0], (unsigned long)ModelsMacUnionSaved.Val32[1], (unsigned long)ModelsMacUnionSaved.Val32[0]);
     LogText(buf, strlen(buf), false);
 }
 // ************************************************************************

@@ -1012,27 +1012,39 @@ void GetRXVersionNumber()
     CompareVersionNumbers();
 }
 /************************************************************************************************************/
+// B73 (Malcolm, 8 Oct 2026: "the model ID was lost. I saved it again, reconnected, and again it was lost" - and the
+// second time it matched): the receiver puts its ID on ack slots 0 and 1 only for the first acks of a connection, then
+// those slots carry telemetry (slot 0 its version, slot 1 its packet count - both never zero). A transmitter that is
+// still unmatched when the telemetry begins took those words for the two halves of the ID, said "model's ID was not
+// found", and stored the garbage; the next connection brought the real ID, which did not match it. A half is taken
+// only when it comes TWICE THE SAME: the ID's halves do (one on every ack, alternating), a packet count never does.
+uint32_t MacHalfSeen[2] = {0, 0};
+uint8_t MacHalfStable = 0;   // bit 0 / bit 1: that half has come twice the same
 void GetModelsMacAddress()
 { // Gets a 64 bit value in two hunks of 32 bits
 
     if (BuddyPupilOnWireless)
         return; //  Don't do this if we are a pupil
-    switch (AckPayload.Ack_Payload_byte[0])
+    const uint8_t half = AckPayload.Ack_Payload_byte[0];
+    if (half > 1)
+        return;
+    const uint32_t v = GetIntFromAckPayload();
+    if (!v)
+        return;
+    if (MacHalfSeen[half] == v)
+        MacHalfStable |= (uint8_t)(1 << half);
+    else
     {
-    case 0:
-        ModelsMacUnion.Val32[0] = GetIntFromAckPayload();
-        break;
-    case 1:
-        ModelsMacUnion.Val32[1] = GetIntFromAckPayload();
-        break;
-    default:
-        break;
+        MacHalfSeen[half] = v;
+        MacHalfStable &= (uint8_t)~(1 << half);
     }
+    if (MacHalfStable & (1 << half))
+        ModelsMacUnion.Val32[half] = v;
 
     if (!ModelMatched)
     {
-        if (ModelsMacUnion.Val32[0] && ModelsMacUnion.Val32[1])
-        { // got both bits yet?
+        if (MacHalfStable == 3 && ModelsMacUnion.Val32[0] && ModelsMacUnion.Val32[1])
+        { // got both bits yet, each of them twice?
             ModelIdentified = true;
             CompareModelsIDs();
         }
