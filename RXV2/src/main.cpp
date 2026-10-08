@@ -335,6 +335,7 @@ void setup() {
             LittleFS.remove("/evprev.txt");
             LittleFS.rename("/evcur.txt", "/evprev.txt");
         }
+        adjCacheLoad();   // the flight controller's adjustment lines as last seen (0.9.880)
         if (prefs.isKey(NVS_KEY_FLT_HEAD)) {
             fltHead = prefs.getUChar(NVS_KEY_FLT_HEAD, 0) % FLIGHT_KEEP;
         } else {
@@ -1211,6 +1212,7 @@ void loop() {
     { StallScope s("heartbeat"); heartbeat(); }
     { StallScope s("statusLed"); statusLedTick(); }    // D4 connection-status LED (2-radio boards)
     { StallScope s("netStep");   netStep(); }
+    adjCacheTick();
     { StallScope s("rxUpdStep"); rxUpdStep(); }   // a receiver update ordered by the transmitter (0.9.864): idle unless one is pending
 
     // Periodic free-heap snapshot to the event log so we can spot leaks

@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Switches &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=382">
-<script src="/app.js?v=382" defer></script>
+<link rel=stylesheet href="/style.css?v=383">
+<script src="/app.js?v=383" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -235,8 +235,37 @@ function localProf(){
     }
     return out;
 }
+// THE RECEIVER'S COPY of the flight controller's adjustment lines (0.9.880, /api/adjustments.json: every MSP 52 read and 53
+// write through it, kept on flash). Rotorflight cannot send the list over the link, and the transmitter's Adjustments page
+// writes lines this phone never saw - it put the bank selector in slot 0 (875..1890) while this page drew its own idea
+// (equal sections over 988..2012) and saved it into slot 30, a second bank line (Malcolm, 8 Oct 2026 23:05). Now the real
+// line is drawn, with its own travel, and Save writes THAT slot and removes any duplicate.
+let ADJ=null;                 // the 42 lines, or null when the receiver does not know them (older receiver, or never read)
+let adjSeen=false;            // the endpoint answered at all (0.9.880+)
+function adjLines(hex){ const L=[]; for(let i=0;i*28+28<=hex.length;i++){ const b=[]; for(let k=0;k<14;k++) b.push(parseInt(hex.substr(i*28+k*2,2),16));
+    L.push({slot:i,fn:b[0],ena:b[1],enaLo:stepUsQ(b[2]),enaHi:stepUsQ(b[3]),adj:b[4],a1Lo:stepUsQ(b[5]),a1Hi:stepUsQ(b[6]),min:b[9]|(b[10]<<8),max:b[11]|(b[12]<<8),stp:b[13]}); } return L; }
+async function loadFromReceiver(){
+    try{
+        const r=await fetch('/api/adjustments.json',{cache:'no-store'}); if(!r.ok) return false;
+        const d=await r.json(); adjSeen=true;
+        if(!d.known||typeof d.hex!=='string'||d.hex.length<42*28) { ADJ=null; return true; }
+        ADJ=adjLines(d.hex);
+        const out=[];
+        for(const p of [{k:'bank',t:'Bank (Profile)',sb:23,base:30,adj:2},{k:'rate',t:'Rates',sb:25,base:36,adj:1}]){
+            const mine=ADJ.filter(l=>l.fn===p.adj&&l.stp===0);
+            if(!mine.length){ const l=PROF.find(x=>x.k===p.k); if(l) out.push({...l,slot:null,extra:[]}); continue; }
+            const l=mine[0], old=l.min===l.max;                       // (the once-only form: one line per position)
+            const tx=l.adj+6;
+            const b=old?{lo:988,hi:2012,k:Math.max(2,Math.min(6,mine.length))}:{lo:l.a1Lo,hi:l.a1Hi,k:Math.max(2,Math.min(6,l.max-l.min+1))};
+            localStorage.setItem('rfTxCh.'+p.k+'.bounds',JSON.stringify(b)); localStorage.setItem('rfTxCh.'+p.k,String(tx));
+            out.push({...p,tx,b,secs:profSecs(b),src:'fc',slot:l.slot,extra:mine.slice(1).map(x=>x.slot),old});
+        }
+        PROF=out; return true;
+    }catch(e){ return false; }
+}
 async function loadDeclared(){
     PROF=localProf();
+    if(await loadFromReceiver()) return;
     try{
         const d=await (await fetch('/app/declared',{cache:'no-store'})).json();
         const out=[];
@@ -263,15 +292,19 @@ async function loadDeclared(){
 // CRSF clamps every channel to 988-2012 us: travel ends are KNOWN, nothing
 // to drag (Malcolm 2026-08-31). Only the position count is remembered.
 function selBounds(key){
-    let k=4;
+    let k=4, lo=988, hi=2012;
     try{ const b=JSON.parse(localStorage.getItem(key)||'null');
-        if(b&&typeof b==='object'&&!Array.isArray(b)&&b.k>=2) k=b.k;
+        if(b&&typeof b==='object'&&!Array.isArray(b)&&b.k>=2){ k=b.k; if(ADJ&&b.lo>=RMINQ&&b.hi<=RMAXQ&&b.hi>b.lo+5){ lo=b.lo; hi=b.hi; } }   // (the real line's travel, once the receiver knows it)
         else if(Array.isArray(b)&&b.length===7){ let n=0; for(let i=0;i<6;i++) if(b[i+1]-b[i]>=5) n++; k=Math.max(2,n); }
     }catch(e){}
-    return {lo:988, hi:2012, k};
+    return {lo, hi, k};
 }
+// Rotorflight's pick (rc_adjustments.c): the travel's even divisions, recomputed only within a margin of W/(2(k-1)) beyond
+// each end - outside that the bank stays as it was (0 here)
+function selMargin(b){ return Math.max(5, Math.floor((b.hi-b.lo)/(2*(b.k-1)))); }
 function selSection(b, us){
     const W=b.hi-b.lo; if(W<=0) return 1;
+    const m=selMargin(b); if(!(us>b.lo-m && us<b.hi+m)) return 0;
     return Math.max(1, Math.min(b.k, 1+Math.floor(((us-b.lo)*(b.k-1)+Math.floor(W/2))/W)));
 }
 function selPayload(slot, func, aux, b, usStepFn){
@@ -279,8 +312,8 @@ function selPayload(slot, func, aux, b, usStepFn){
 }
 const usStepQ = u => (Math.max(-125, Math.min(125, Math.round((u - 1500) / 5))) + 256) & 0xFF;
 function profSecs(b){
-    const W=b.hi-b.lo, s=[];
-    for(let q=0;q<b.k;q++){ const sLo=q===0?b.lo:b.lo+W*(q-0.5)/(b.k-1), sHi=q===b.k-1?b.hi:b.lo+W*(q+0.5)/(b.k-1); s.push({n:q+1,lo:sLo,hi:sHi}); }
+    const W=b.hi-b.lo, s=[], m=selMargin(b);
+    for(let q=0;q<b.k;q++){ const sLo=q===0?Math.max(RMINQ,b.lo-m):b.lo+W*(q-0.5)/(b.k-1), sHi=q===b.k-1?Math.min(RMAXQ,b.hi+m):b.lo+W*(q+0.5)/(b.k-1); s.push({n:q+1,lo:sLo,hi:sHi}); }
     return s;
 }
 function paintProfBar(p){
@@ -292,18 +325,31 @@ function paintProfBar(p){
 }
 async function saveProf(k){
     const p=PROF.find(x=>x.k===k); if(!p)return;
+    if(adjSeen&&!ADJ){ $('pmsg_'+k).textContent='The receiver does not know the flight controller\u2019s lines yet: open In-flight adjustments with the USB cable once (or the transmitter\u2019s Adjustments page), then Save here.'; return; }
     const tx=parseInt($('pc_'+k).value); localStorage.setItem('rfTxCh.'+k,String(tx));
     const b=selBounds('rfTxCh.'+k+'.bounds'), hx=a=>a.map(v=>v.toString(16).padStart(2,'0')).join('');
     const msg=$('pmsg_'+k); msg.textContent='Writing…';
     try{
-        for(let n=1;n<=6;n++){
-            const slot=p.base+n-1;
-            const payload=hx(n===1 ? selPayload(slot, p.adj, tx-6, b, usStepQ) : [slot, 0, 0, 0,0, 0, 0,0, 0,0, 0,0, 0,0, 0]);
-            await LDRC.msp(53,payload);
-            try{ fetch('/app/declare?key=adj'+slot+'&hex='+payload,{cache:'no-store'}); }catch(e){}
+        if(ADJ){
+            // the line where the flight controller has it (or the page's own slot when it has none), every duplicate blanked
+            const slot=p.slot===null||p.slot===undefined?p.base:p.slot;
+            const blank=s=>[s, 0, 0, 0,0, 0, 0,0, 0,0, 0,0, 0,0, 0];
+            const todo=[{slot,payload:selPayload(slot, p.adj, tx-6, b, usStepQ)}];
+            for(const x of (p.extra||[])) todo.push({slot:x,payload:blank(x)});
+            for(const t of todo){ await LDRC.msp(53,hx(t.payload)); }
+        } else {
+            for(let n=1;n<=6;n++){
+                const slot=p.base+n-1;
+                const payload=hx(n===1 ? selPayload(slot, p.adj, tx-6, b, usStepQ) : [slot, 0, 0, 0,0, 0, 0,0, 0,0, 0,0, 0,0, 0]);
+                await LDRC.msp(53,payload);
+                try{ fetch('/app/declare?key=adj'+slot+'&hex='+payload,{cache:'no-store'}); }catch(e){}
+            }
         }
         await LDRC.msp(250);
-        p.tx=tx; p.src='fc'; msg.textContent='✅ Saved — flip the switch and watch the flight controller line';
+        p.tx=tx; p.src='fc';
+        const removed=(p.extra||[]).length; p.extra=[]; p.old=false;
+        msg.textContent='✅ Saved'+(removed?' — '+removed+' duplicate line'+(removed>1?'s':'')+' removed':'')+' — flip the switch and watch the flight controller line';
+        if(ADJ){ await loadFromReceiver(); paintProf(); const m2=$('pmsg_'+k); if(m2) m2.textContent=msg.textContent; }
     }catch(e){ msg.textContent='⚠️ '+e.message; }
 }
 
@@ -328,12 +374,14 @@ function paintProf(){
           +'<div><label data-help="How many positions your physical switch has (2–6). The bar divides into that many equal sections.">How many positions</label><select id=qk_'+p.k+'>'+ko+'</select></div>'
           +'<div></div>'
           +'</div>'
-          +(p.src==='local'?'<div class=muted style="font-size:.8em;margin:.3em 0">From this phone\u2019s choices &mdash; tap Save to write them to the flight controller.</div>':'')
+          +(p.src==='local'?'<div class=muted style="font-size:.8em;margin:.3em 0">'+(adjSeen&&!ADJ?'The receiver does not know the flight controller\u2019s lines yet: open In-flight adjustments with the USB cable once (or the transmitter\u2019s Adjustments page) and the real line shows here.':'From this phone\u2019s choices &mdash; tap Save to write them to the flight controller.')+'</div>':'')
+          +(p.old?'<div class=banner style="background:#dca08c;color:#5c2a1a;font-size:.85em;padding:.5em;margin:.3em 0">On the flight controller in a form Rotorflight applies once per power-up (one line per position). Tap Save to put it right.</div>':'')
+          +((p.extra&&p.extra.length)?'<div class=banner style="background:#dca08c;color:#5c2a1a;font-size:.85em;padding:.5em;margin:.3em 0">The flight controller has '+(p.extra.length+1)+' '+p.t.toLowerCase()+' selector lines (rows '+[p.slot,...p.extra].map(x=>x+1).join(', ')+'): they fight. Tap Save to keep this one and remove the rest.</div>':'')
           +'<div class=rTrack id=qt_'+p.k+' style="margin-top:1.2em">'+z+'<div class=rDot id=dot_'+p.k+' style="display:none"></div></div>'
           +'<div class=rScale><span>875</span><span>1500</span><span>2125&nbsp;&micro;s</span></div>'
-          +'<div class=muted style="font-size:.8em;margin:.2em 0">Equal sections across the switch&rsquo;s travel.</div>'
+          +'<div class=muted style="font-size:.8em;margin:.2em 0">'+(p.src==='fc'&&ADJ?'Rotorflight divides the line\u2019s travel ('+b.lo+' to '+b.hi+' &micro;s) evenly; the transmitter\u2019s Adjustments page sets the travel to suit its banks.':'Equal sections across the switch&rsquo;s travel.')+'</div>'
           +'<div class=pAns id=ans_'+p.k+'>Flight controller: &hellip;</div>'
-          +'<div class=muted style="font-size:.78em;margin-top:.25em">In the configurator this is Adjustments row '+(p.base+1)+' &mdash; scroll a long way down.</div>'
+          +'<div class=muted style="font-size:.78em;margin-top:.25em">In the configurator this is Adjustments row '+((p.slot===null||p.slot===undefined?p.base:p.slot)+1)+'.</div>'
           +'<div class=mBtns><button class=mSave onclick="saveProf(\''+p.k+'\')">&#128190; Save</button></div>'
           +'<div class=mMsg id=pmsg_'+p.k+'></div></div>';
     }
@@ -347,8 +395,9 @@ function pollProf(b, st){
         const i=(p.tx-1)*2;
         if(b.length>=i+2){ const us=b[i]|(b[i+1]<<8); dot.style.display=''; dot.style.left=qpct(us)+'%';
             const sec=selSection(p.b,us);
-            for(let n=1;n<=6;n++){ const z=$('q_'+p.k+n); if(z) z.classList.toggle('on', n===sec); } }
-        if(st&&st.length>p.sb){ const idx=st[p.sb]; $('ans_'+p.k).textContent='Flight controller: '+(p.k==='bank'?'Bank ':'Rates ')+(idx+1); }
+            for(let n=1;n<=6;n++){ const z=$('q_'+p.k+n); if(z) z.classList.toggle('on', n===sec); }
+            p.beyond=sec===0; }
+        if(st&&st.length>p.sb){ const idx=st[p.sb]; $('ans_'+p.k).textContent='Flight controller: '+(p.k==='bank'?'Bank ':'Rates ')+(idx+1)+(p.beyond?' (the channel is beyond the line\u2019s reach: no change)':''); }
     }
 }
 function paint(){

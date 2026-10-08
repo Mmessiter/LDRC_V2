@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.879-switch-one-line";
+constexpr const char* FW_VERSION = "RXV2-0.9.880-adjustment-lines-known";
 
 //*********************************************************************
 //  Auto-update manifest URLs

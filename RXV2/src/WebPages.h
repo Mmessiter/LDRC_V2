@@ -386,6 +386,63 @@ inline void handleFcTelemRestore() {
 // GET /api/banks.json — {"pid":6,"rate":6,"shown":0}. Deliberately tiny:
 // every tuning page needs these three numbers to draw its bank row, and
 // /api/state.json is 4.4 kB, which over Bluetooth is a visible pause.
+// THE FLIGHT CONTROLLER'S ADJUSTMENT LINES, as last seen through this receiver (0.9.880). Rotorflight cannot send MSP 52
+// over the link (the 588-byte reply overflows its CRSF buffer and wipes the telemetry setup), so a phone without the
+// USB cable, and a phone that did not write the lines itself (the transmitter's Adjustments page writes through the
+// Bluetooth pipe), had no way of knowing them: the app's Switches page drew its own idea of the bank selector (equal
+// sections over 988..2012, in slot 30) while the flight controller held the transmitter's 875..1890 line in slot 0,
+// and a Save there made a second bank line (Malcolm, 8 Oct 23:05). Every MSP 52 answer and every MSP 53 write that
+// passes through /api/msp lands here; the copy is kept on flash across reboots (a quiet-moment write, as the other
+// flash writes); /api/adjustments.json serves it, over WiFi and Bluetooth alike.
+inline uint8_t  adjCache[588];
+inline bool     adjCacheKnown   = false;   // ever filled (this boot or from flash)
+inline uint32_t adjCacheReadMs  = 0;       // millis() of the last whole read (MSP 52); 0 = none this boot
+inline bool     adjCacheDirty   = false;   // owed to flash
+inline uint32_t adjCacheDirtyMs = 0;
+constexpr const char* ADJ_CACHE_PATH = "/adjcache.bin";
+inline void adjCacheLoad() {
+    if (!littleFsMounted || !LittleFS.exists(ADJ_CACHE_PATH)) return;
+    File f = LittleFS.open(ADJ_CACHE_PATH, "r");
+    if (!f) return;
+    if (f.size() == sizeof(adjCache) && f.read(adjCache, sizeof(adjCache)) == sizeof(adjCache)) adjCacheKnown = true;
+    f.close();
+}
+inline void adjCacheNote(uint8_t fn, const uint8_t* req, uint8_t reqLen, const uint8_t* resp, uint16_t respLen) {
+    if (fn == 52 && respLen >= sizeof(adjCache)) {
+        memcpy(adjCache, resp, sizeof(adjCache));
+        adjCacheKnown = true; adjCacheReadMs = millis(); adjCacheDirty = true; adjCacheDirtyMs = millis();
+    } else if (fn == 53 && reqLen >= 15 && req[0] < 42 && adjCacheKnown) {   // (one line into an unknown set tells nothing of the rest)
+        memcpy(adjCache + req[0] * 14, req + 1, 14);
+        adjCacheDirty = true; adjCacheDirtyMs = millis();
+    }
+}
+inline void adjCacheTick() {   // from loop(): the flash write, 2 s after the last change, in a provably quiet moment only
+    if (!adjCacheDirty || !littleFsMounted || fcInfo.armed) return;
+    const uint32_t now = millis();
+    if ((uint32_t)(now - adjCacheDirtyMs) < 2000) return;
+    const bool sticksStill = lastChMoveMs && (uint32_t)(now - lastChMoveMs) >= 2000;
+    const bool linkDead    = !rx.lastMillis || (uint32_t)(now - rx.lastMillis) > 3000;
+    if (!sticksStill && !linkDead) return;
+    File f = LittleFS.open(ADJ_CACHE_PATH, "w");
+    if (f) { f.write(adjCache, sizeof(adjCache)); f.close(); }
+    adjCacheDirty = false;
+}
+inline void handleAdjustmentsJson() {
+    String j;
+    j.reserve(1300);
+    j += "{\"known\":"; j += adjCacheKnown ? "true" : "false";
+    j += ",\"read_age\":"; j += adjCacheReadMs ? (long)((millis() - adjCacheReadMs) / 1000) : -1;
+    j += ",\"fc\":"; j += fcInfo.detected ? "true" : "false";
+    if (adjCacheKnown) {
+        j += ",\"hex\":\"";
+        char tmp[4];
+        for (size_t i = 0; i < sizeof(adjCache); ++i) { snprintf(tmp, sizeof(tmp), "%02X", adjCache[i]); j += tmp; }
+        j += '"';
+    }
+    j += '}';
+    server.sendHeader("Cache-Control", "no-store");
+    server.send(200, "application/json", j);
+}
 inline void handleBanksJson() {
     String j = "{\"pid\":";  j += (int)banks.pidCount;
     j += ",\"rate\":";       j += (int)banks.rateCount;
@@ -1047,6 +1104,7 @@ inline void handleMspApi() {
     // mid-reassembly (2026-08-19, first fn-120 read).
     bool ok = mspRequestAndWait(fn, reqBuf, reqLen, respBuf, &respLen, 1200);
     bankAfterClientRequest(fn, reqBuf, reqLen, ok);
+    if (ok) adjCacheNote(fn, reqBuf, (uint8_t)reqLen, respBuf, respLen);   // the adjustment lines as the flight controller now has them (0.9.880)
     if (!ok) {
         if (mspWaitRespError) { server.send(502, "text/plain", "flight controller rejected fn " + String(fn)); return; }
         server.send(504, "text/plain", "flight controller did not respond within 1200 ms"); return;
@@ -3842,6 +3900,7 @@ inline void registerWebRoutes() {
     server.on("/api/fc/telemetry/speed",   HTTP_POST, handleFcTelemSpeed);
     server.on("/api/fc/banks",             HTTP_POST, handleFcBanksShown);
     server.on("/api/banks.json",           HTTP_GET,  handleBanksJson);
+    server.on("/api/adjustments.json",     HTTP_GET,  handleAdjustmentsJson);
     server.on("/api/esc/catch", HTTP_POST, handleEscCatchArm);
     server.on("/api/esc/catch", HTTP_GET,  handleEscCatchStatus);
     server.on("/rotorflight-tuning",    handleRotorflightTuning);

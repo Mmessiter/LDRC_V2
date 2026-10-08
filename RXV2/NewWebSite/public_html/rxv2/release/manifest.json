@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.880-adjustment-lines-known",
+      "url": "https://messiter.com/rxv2/release/v0.9.880/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.880/littlefs.bin",
+      "fs_md5": "25e28987cbe9661d8ddf3e4bb0f1cffa",
+      "notes": "The receiver keeps a copy of the flight controller's adjustment lines as they pass through it (every read over the USB cable, every write from the app or the transmitter) and serves it to the app, so the Switches page now shows the bank selector as the flight controller really has it - the travel the transmitter set, in the slot it lives in - and a Save there writes that slot and removes any duplicate line instead of adding one."
+    },
+    {
       "name": "RXV2-0.9.879-switch-one-line",
       "url": "https://messiter.com/rxv2/release/v0.9.879/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.879/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.869/littlefs.bin",
       "fs_md5": "cc4878104ade8765b32ab2b7b6cb420e",
       "notes": "Same firmware as 0.9.868: something for a receiver on 0.9.868 to install from the transmitter."
-    },
-    {
-      "name": "RXV2-0.9.868-release-list-read-as-written",
-      "url": "https://messiter.com/rxv2/release/v0.9.868/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.868/littlefs.bin",
-      "fs_md5": "cc4878104ade8765b32ab2b7b6cb420e",
-      "notes": "Transmitter-ordered update: the release list is read as the website writes it (a space after every colon); 0.9.864-867 expected none and would have reported 'release not in the list'."
     }
   ],
   "rotorflight": {
