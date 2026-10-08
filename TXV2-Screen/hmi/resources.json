@@ -4614,6 +4614,10 @@
    "member": "93.wav",
    "file": "audio/103.wav",
    "bytes": 55684
+  },
+  "104": {
+   "file": "audio/104.wav",
+   "name": "Update completed (screen 1.11.37: the update panel plays it at Update complete)"
   }
  }
 }

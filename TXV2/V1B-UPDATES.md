@@ -186,6 +186,19 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Announcements whole, and "Update completed" (screen 1.11.37, 8 Oct 2026)
+
+Malcolm: "when I connect to the model, the transmitter announces connected - model memory matched. But these
+announcements are slightly broken up probably by the process of doing something else at the same time." They were: a
+clip the screen has not got in memory streamed from the card as the main loop found time, and "Model memory matched"
+(56 kB, above the 40 kB the idle warming keeps) played at the very moment the loop was loading the front page and
+the model's picture from the same card. 1.11.37: a clip not in memory is read WHOLE before a sample of it is played
+(some tens of milliseconds, once; kept afterwards), and the ring ahead of the speaker holds 5.9 s instead of 1.5 s, so
+no clip depends on the loop while it plays. And: "when the update to the transmitter has completed, it makes no sound
+at all" - clip 104, "Update completed" (the Mac's British voice Daniel, made loud and clean like the others), plays at
+the panel's good ending, for the transmitter's update and the receiver's, once per verdict, including the verdict
+shown again after the screen's own restart.
+
 ## The adjustments page, second try: the bar IS the page (V2 B75 + screen 1.11.36, 8 Oct 2026)
 
 Malcolm, with B74 on the bench: "The blobs are at the extreme ends, but they should mark the thresholds between zones.

@@ -553,6 +553,11 @@ static void updPoll() {
     const uint32_t barKey = v.barTotal ? (uint32_t) ((uint64_t) 1000 * min(v.barDone, v.barTotal) / v.barTotal) : 0;
     if (up) {
         if (!wasUp || v.serial != drawnSerial || updRedraw) {
+            // (1.11.37, Malcolm: "when the update to the transmitter has completed, it makes no sound at all") the good
+            // ending is announced: clip 104 "Update completed", once per verdict - also at the start after the screen's
+            // own restart, where the verdict is shown again
+            static uint32_t saidSerial = 0;
+            if (v.kind == ldrc::UpdView::GOOD && v.serial != saidSerial && (v.title.rfind("Update complete", 0) == 0 || v.title.rfind("Receiver updated", 0) == 0)) { saidSerial = v.serial; audioStart(104, false); }
             { TopDraw on; updDrawPanel(v); }
             drawnSerial = v.serial; drawnBar = barKey; updRedraw = false;
             topX = UPD_X; topY = UPD_Y; topW = UPD_W; topH = UPD_H; topWho = 1; topOn = true;

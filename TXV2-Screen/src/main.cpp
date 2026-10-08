@@ -42,7 +42,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.36"
+#define SCREEN_VERSION "1.11.37"
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room
 #endif
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -2260,7 +2260,7 @@ static void netBegin() {
 // or card access can interrupt them. Small clips are fetched in the background while the link is quiet.
 #include <driver/i2s.h>
 static const i2s_port_t I2S_PORT = I2S_NUM_0;
-static const size_t RING = 65536;                       // 1.5 s of audio ahead of the DMA
+static const size_t RING = 262144;                      // 5.9 s of audio ahead of the DMA (1.11.37: every clip fits whole, so a stall of the main loop - a page and its picture loading from the card - cannot starve the speaker; was 1.5 s)
 static const int FRAMES = 256;                          // one DMA buffer
 static uint8_t *audioRing = nullptr;
 static volatile size_t ringHead = 0, ringTail = 0;      // head: loop() writes; tail: the task reads
@@ -2361,7 +2361,22 @@ static void audioStart(int id, bool loopIt) {
     uint32_t rate;
     if (!sdOk || !wavOpen(id, rate)) { audioId = -1; return; }
     if (rate != audioRate) { i2s_set_sample_rates(I2S_PORT, rate); audioRate = rate; }
-    if (audioDataSize <= CLIP_BUDGET / 2) { clipMakeRoom(audioDataSize); capture = (uint8_t *) ps_malloc(audioDataSize); captureLen = 0; }
+    // (1.11.37) A clip not yet in memory is read WHOLE before a sample of it is played, and kept. It used to stream from
+    // the card as the main loop found time, and "Model memory matched" (56 kB, above the size the idle warming keeps)
+    // came out broken up: the loop was busy loading the front page and the model's picture from the same card at that
+    // very moment (Malcolm, 8 Oct). The read takes some tens of milliseconds, once.
+    if (audioDataSize <= CLIP_BUDGET / 2) {
+        clipMakeRoom(audioDataSize);
+        uint8_t *buf = (uint8_t *) ps_malloc(audioDataSize);
+        if (buf) {
+            uint32_t got = 0;
+            while (got < audioDataSize) { const int n = audioFile.read(buf + got, min((uint32_t) 4096, audioDataSize - got)); if (n <= 0) break; got += n; }
+            audioFile.close();
+            if (got == audioDataSize) { clipAdd(id, buf, audioDataSize); if (Clip *c = clipFind(id)) { curClip = c; curPos = 0; audioPlaying = true; audioFill(); return; } }
+            free(buf);
+            if (!wavOpen(id, rate)) { audioId = -1; return; }   // (the read fell short: streamed as before)
+        }
+    }
     audioPlaying = true;
     audioFill();
 }
