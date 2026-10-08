@@ -186,6 +186,13 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The calibrations to one decimal (V2 B67, 8 Oct 2026)
+
+Malcolm's photographs of Rescue, the four servos and the Mixer beside the configurator: every value agreed. One
+thing seen in them: the configurator shows the cyclic, collective and yaw calibrations to one decimal (86.0) and
+the transmitter rounded them to whole percent, so an 86.5 would have gone back as 87 on a save. B67 shows and reads
+them to one decimal.
+
 ## The Mixer pages as the configurator's Mixer tab (V2 B66 + card files, 8 Oct 2026)
 
 Malcolm, with the configurator's Mixer tab and the two Travel extents pages side by side: every value agreed, the names

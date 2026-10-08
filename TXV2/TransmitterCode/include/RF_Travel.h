@@ -68,8 +68,8 @@ static void TravShowPage1()
 }
 static void TravShowPage2()
 {
-    TravNum("tn0", (labs(TravInWant[1][0]) + 5) / 10);              // Cyclic calibration % (roll's; pitch gets the same on a save)
-    TravNum("tn1", (labs(TravInWant[4][0]) + 5) / 10);              // Collective calibration %
+    TravTenths("tn0", labs(TravInWant[1][0]));                      // Cyclic calibration %, to one decimal as the configurator (B67; roll's; pitch gets the same on a save)
+    TravTenths("tn1", labs(TravInWant[4][0]));                      // Collective calibration %
     { const int geo = TravCfgWant[18] > 127 ? TravCfgWant[18] - 256 : TravCfgWant[18]; TravTenths("tn2", geo * 2); }   // geometry correction: raw/5, to one decimal (raw 15 = 3.0)
     TravTenths("tn3", RawToDegTenths(TravInWant[2][2], 12));        // Cyclic blade pitch limit: input 2's max
     TravTenths("tn4", RawToDegTenths(TravInWant[4][2], 12));        // Collective blade pitch limit: input 4's max
@@ -91,7 +91,7 @@ static void TravShowPage3()
     SendText((char *)"ltn4", (char *)(TailMotorised() ? "CCW yaw limit [%]" : "Yaw limit CCW [deg]"));
     if (TailMotorised()) { TravTenths("tn1", S16At(TravCfgWant, 3)); TravTenths("tn3", labs(TravInWant[3][1])); TravTenths("tn4", TravInWant[3][2]); }
     else { TravTenths("tn1", RawToDegTenths(S16At(TravCfgWant, 3), ts)); TravTenths("tn3", RawToDegTenths(labs(TravInWant[3][1]), ts)); TravTenths("tn4", RawToDegTenths(TravInWant[3][2], ts)); }
-    TravNum("tn2", (labs(TravInWant[3][0]) + 5) / 10);              // Yaw calibration %
+    TravTenths("tn2", labs(TravInWant[3][0]));                      // Yaw calibration %
     TravTenths("tn5", TravCfgWant[2]);                              // Motor idle throttle, 0.1 % (a motorised tail only)
     SendCommand((char *)(TailMotorised() ? "vis ltn5,1" : "vis ltn5,0"));
     SendCommand((char *)(TailMotorised() ? "vis tn5,1" : "vis tn5,0"));
@@ -126,7 +126,7 @@ static void TravGatherPage1()
 }
 static void TravGatherPage2()
 {
-    const long gCyc = FieldNumber("tn0", 0, 1000) * 10, gColl = FieldNumber("tn1", 0, 1000) * 10;
+    const long gCyc = FieldTenthsL("tn0", 0, 10000), gColl = FieldTenthsL("tn1", 0, 10000);   // (B67: "86.5" -> 865)
     TravInWant[1][0] = (int16_t)(TravRevAil ? -gCyc : gCyc);
     TravInWant[2][0] = (int16_t)(TravRevEle ? -gCyc : gCyc);
     TravInWant[4][0] = (int16_t)(TravRevColl ? -gColl : gColl);
@@ -147,7 +147,7 @@ static void TravGatherPage3()
     else { ctr = DegTenthsToRaw(FieldTenthsL("tn1", -240, 240), ts); tmin = DegTenthsToRaw(FieldTenthsL("tn3", 0, 600), ts); tmax = DegTenthsToRaw(FieldTenthsL("tn4", 0, 600), ts); }
     PutS16(TravCfgWant, 3, ctr);
     TravInWant[3][1] = (int16_t)-tmin; TravInWant[3][2] = (int16_t)tmax;
-    const long gYaw = FieldNumber("tn2", 0, 1000) * 10;
+    const long gYaw = FieldTenthsL("tn2", 0, 10000);
     TravInWant[3][0] = (int16_t)(TravRevYaw ? -gYaw : gYaw);
     if (TailMotorised()) TravCfgWant[2] = (uint8_t)FieldTenthsL("tn5", 0, 250);
 }
