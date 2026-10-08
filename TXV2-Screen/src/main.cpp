@@ -42,7 +42,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.33"
+#define SCREEN_VERSION "1.11.34"
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room
 #endif
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -2485,10 +2485,11 @@ void setup() {
     const std::string last = rtcPage;
     if (warm && !pageNames.empty()) { if (!last.empty() && pageIds.count(last)) loadPage(last); else loadPage(pageNames[0]); }   // cold: the Teensy sends its page
     if (why != ESP_RST_POWERON && rtcDimMagic == RTC_DIM_MAGIC) { sysDim = constrain(rtcDim, 0, 100); blDark = false; blWant = sysDim * 255 / 100; blFadeTo(blWant, 500); }   // our own restart: back to the brightness it had, gently
-    // After a restart mid-session (an OTA update) the Teensy still thinks the
-    // screen is showing everything: nudge it to repaint the front page — the
-    // word "FrontView" is one of its legacy text commands.
-    if (page.name == "FrontView" && why == ESP_RST_SW) { delay(300); Serial.print("FrontView"); }
+    // After a restart mid-session (an OTA update, a fresh start to put the memory together, a look copied in) the
+    // Teensy still thinks the screen is showing everything: nudge it to the front page, which it fills in by itself -
+    // the word "FrontView" is one of its legacy text commands. (1.11.34: whatever page it was: a page put back from
+    // the card alone has none of the words the Teensy wrote on it, and the Teensy would never write them again.)
+    if (why == ESP_RST_SW && !pageNames.empty()) { delay(300); Serial.print("FrontView"); }
     bootMs = millis(); blog("boot", std::string("loop ") + (warm ? "(warm)" : "(cold)"));
     netBegin();
     updater.resume();                                      // a verdict nobody has seen, an update cut short, or new firmware on trial

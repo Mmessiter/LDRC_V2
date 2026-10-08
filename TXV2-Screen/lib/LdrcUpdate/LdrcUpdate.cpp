@@ -363,7 +363,7 @@ void Updater::freshStart(const std::string &kind) {
     st += "resume=" + kind + "\n" + "descr=" + descrUrl_ + "\n" + std::string("again=") + (again_ ? "1" : "0") + "\n" + std::string("choosing=") + (choosing_ ? "1" : "0") + "\n";
     host_.writeText(STATE_FILE, st);
     show(UpdView::WORKING, "Making room"); line("The screen restarts, and carries on by itself.");
-    changing_ = false; phase_ = P_FRESH; restartAt_ = host_.ms() + 1500;
+    changing_ = false; freshKind_ = kind; phase_ = P_FRESH; restartAt_ = host_.ms() + 1500;
 }
 // A job failed for want of memory (the screen says so: a secure connection could not be made, -0x7F00). Before anything
 // is changed, the cure is a fresh start - once; a second shortage gets the usual verdict.
@@ -837,6 +837,14 @@ void Updater::resume() {
         { const size_t cut = latestUrl_.rfind('/'); recentUrl_ = latestUrl_.substr(0, cut + 1) + "recent.txt"; }
         note("---- fresh start: the " + freshKind_ + " goes on by itself (largest piece of memory now " + num(host_.roomForTls()) + " bytes)");
         if (!host_.wifiAny()) { noWifi("No WiFi yet", "The transmitter fetches its updates over WiFi.", "Choose a network and give its password, once."); return; }
+        if (freshKind_ == "rxcheck") {                        // (1.11.34) the receiver's check, from its beginning: the model is still connected (the main board kept it)
+            rxFlow_ = true; rxHave_ = 0; rxLatest_ = 0; rxLatestName_.clear(); rxNotes_.clear();
+            host_.wifiWanted(true);
+            host_.keepAwake(); lastPoke_ = host_.ms();
+            show(UpdView::BUSY, "Checking the receiver"); line("Joining the WiFi"); buttons("Cancel", "");
+            phase_ = P_RX_WIFI; since_ = host_.ms();
+            return;
+        }
         host_.wifiWanted(true);
         host_.keepAwake(); lastPoke_ = host_.ms();
         show(UpdView::BUSY, freshKind_ == "install" ? "Installing the update" : "Checking for an update"); line("Joining the WiFi"); buttons("Cancel", "");
@@ -1073,14 +1081,17 @@ void Updater::poll() {
         afterAll();
         return;
     case P_RESTART: case P_FRESH:
-        if (host_.flying() != UpdateHost::FLY_NO) { restartAt_ = now + 1500; return; }     // nobody restarts a screen in flight: it waits
+        if (flyingNow() != UpdateHost::FLY_NO) { restartAt_ = now + 1500; return; }        // nobody restarts a screen in flight: it waits (1.11.34: the receiver's check, which NEEDS the model connected, may make room with it connected and safe - the main board flies, the screen only talks)
         if ((int32_t) (now - restartAt_) >= 0) { restartAt_ = now + 600000; host_.restart(); }
         return;
     case P_TRIAL:
         trialPoll();
         return;
     case P_RX_WIFI:
-        if (host_.wifiUp()) { setLine(0, "Asking messiter.com"); fetchAsked(rxManifestUrl_, 20000); phase_ = P_RX_LATEST; }
+        if (host_.wifiUp()) {
+            if (freshNeeded()) { freshStart("rxcheck"); return; }    // (1.11.34: after a Bluetooth session the memory is in pieces here too - "No connection to messiter.com (-1, -0x7F00) [largest 17396]" on Receiver updates, 8 Oct)
+            setLine(0, "Asking messiter.com"); fetchAsked(rxManifestUrl_, 20000); phase_ = P_RX_LATEST;
+        }
         else if (now - since_ > 45000) noWifi("No WiFi", "None of the networks the transmitter knows could be joined.", "A phone's hotspot: open its hotspot page, then try again.");
         return;
     case P_RX_LATEST:

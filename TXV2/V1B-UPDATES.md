@@ -186,6 +186,20 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The receiver's check makes room first, with the model connected (screen 1.11.34, 8 Oct 2026)
+
+Malcolm, after testing B71's offline PIDs over Bluetooth: Model setup > Receiver updates said "messiter.com did not
+answer: No connection to messiter.com (-1, -0x7F00) [heap 100896, largest 17396, rssi -41]". The same shortage as the
+transmitter's update after a Bluetooth session (1.11.31/32): mbedTLS cannot get its buffers from memory left in pieces.
+The transmitter's own check restarts the screen first ("Making room") - but only with no model connected, and the
+receiver's check NEEDS the model connected, so it had no cure. 1.11.34: the receiver's check makes room the same way
+(resume=rxcheck: the check begins again by itself after the restart), and a fresh start is allowed with the model
+connected and safe, for that check only (flyingNow(): the main board flies, the screen only talks; the motor on or the
+safety off still hold any restart). And after ANY restart of the screen mid-session the main board is now nudged to the
+front page, whatever page was showing: a page put back from the card alone has none of the words the main board wrote on
+it, and it would never write them again. test_update 342 checks (the receiver's fresh start with the model connected;
+the transmitter's check still refuses with a model). Untested on hardware as written.
+
 ## The PIDs, rates and governor pages join the backup; a write's parts in the right order (V2 B71, 8 Oct 2026)
 
 Malcolm's first test of B70 (the test flight controller as Black Thunder 2): "When reconnecting after editing a backup, it
