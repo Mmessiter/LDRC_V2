@@ -1,0 +1,9 @@
+Tail Rotor Settings, as the configurator's section.||
+
+Tail rotor type is shown as the flight controller has it (Variable pitch, Motorised or Bi-directional); it is set in the configurator. Yaw reversed: the configurator's Yaw Control Direction, a switch: green = reversed.||
+
+Variable pitch tail: Yaw center trim, and Yaw limit CW and CCW in degrees of blade angle (0 to 60). Motorised tail: Yaw center offset [%], CW and CCW yaw limits [%], and Motor idle throttle [%].||
+
+Yaw calibration [%]: how much of a full stick reaches the tail (0 to 1000).||
+
+Save writes all three pages; OK leaves (it asks if something was edited and not saved).||

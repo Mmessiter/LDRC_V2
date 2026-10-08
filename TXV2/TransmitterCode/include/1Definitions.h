@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B65 08/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B66 08/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -332,6 +332,7 @@ bool GapStartedDisarmed = false; // Rotorflight arming in use and DISARMED when 
 #define TRAVEL2VIEW 63           // B57: ... the tail and the swashplate
 #define FILTERVIEW 64            // B58: the gyro filters (RF_Filters.h)
 #define FILTER2VIEW 65           // B61: ... the expert-mode items
+#define TRAVEL3VIEW 66           // B66: the mixer's third page, the tail rotor (RF_Travel.h)
 #define MODELIDVIEW 56
 
 // **************************************************************************
@@ -886,6 +887,8 @@ void TravelEleTapped();
 void TravelCollTapped();
 void StartTravel2View();
 void EndTravel2View();
+void StartTravel3View();                     // B66: the tail rotor page
+void TravelYawTapped();
 void FilterPoll();                            // B58: RF_Filters.h
 void StartFilterView();
 void EndFilterView();

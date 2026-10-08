@@ -1,11 +1,7 @@
-Travel extents: how far the swash and the tail may move, as the configurator's Mixer tab has them. It needs a Version 2 receiver with Bluetooth, the safety on and the model disarmed. These are not per bank.||
+Mixer: how the sticks reach the swash and the tail, laid out as the configurator's Mixer tab, with its names. Needs a Version 2 receiver with Bluetooth, the safety on and the model disarmed. Not per bank. Three pages: Next and Previous.||
 
-Collective pitch limit and Cyclic pitch limit [deg]: the most collective and cyclic pitch the swash may give, either way (0 to 30). Total pitch limit [deg]: collective and cyclic together; 0 = off. Rotorflight raises it to at least the collective limit plus six degrees when it stores.||
+Main Rotor Settings. Swashplate Type and Main Rotor Direction are shown as the flight controller has them; they are set in the configurator. Aileron, Elevator and Collective reversed: the configurator's Control Direction (Normal or Reverse), a switch each: green = reversed. Check the swash moves the right way on the bench before flying.||
 
-Collective, Cyclic and Yaw gain [%]: how much of a full stick reaches the swash or tail (0 to 1000). The cyclic gain is written to roll and pitch alike.||
+Swashplate Trims: Roll trim, Pitch trim and Collective trim, in percent, to one decimal, to level the swash.||
 
-Aileron, Elevator and Collective reversed: the direction of each control, a switch each (green = reversed). Check the direction with the model on the bench before flying.||
-
-Swash trim roll, pitch and coll. [%]: small corrections to where the swash sits (-100 to 100, in tenths).||
-
-Next > opens the tail and swashplate values. Save writes everything on both pages, stores it in the flight controller and reads it back; it asks first, because these change how FAR things move: check the new extents on the bench with the blades off. OK leaves; if something was edited and not saved, it asks.||
+Press a number to type a new one. Save writes everything on all three pages to the flight controller, asks first, stores there, and reads back. OK leaves; if something was edited and not saved, it asks.||

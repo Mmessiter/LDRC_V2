@@ -13,7 +13,10 @@ static const int CFG_BYTES = 21;
 static uint8_t TravCfg[CFG_BYTES], TravCfgWant[CFG_BYTES];
 static int16_t TravIn[5][3], TravInWant[5][3];       // inputs 1..4 (index 0 unused): rate, min, max
 static bool TravHave = false, Trav_Was_Edited = false;
-static int TravRevAil = 0, TravRevEle = 0, TravRevColl = 0;
+static int TravRevAil = 0, TravRevEle = 0, TravRevColl = 0, TravRevYaw = 0;   // (B66: yaw too - the configurator's Yaw Control Direction)
+static const char *TravPageWord() { return CurrentView == TRAVEL3VIEW ? "page Travel3View" : CurrentView == TRAVEL2VIEW ? "page Travel2View" : "page TravelView"; }
+static const char *SwashTypeWords[7] = {"None", "Direct", "CCPM 120 deg", "CCPM 135 deg", "CCPM 140 deg", "FPM 90 deg L", "FPM 90 deg V"};   // the configurator's, byte 5
+static const char *TailTypeWords[3] = {"Variable pitch", "Motorised", "Bi-directional"};   // byte 1
 enum { TRV_IDLE = 0, TRV_READ_CFG, TRV_READ_IN, TRV_WRITE_CFG, TRV_WRITE_IN, TRV_STORE, TRV_VERIFY_CFG, TRV_VERIFY_IN };
 static int TravStep = TRV_IDLE, TravReq = 0, TravIdx = 1;
 static bool TravReadAgainWanted = false;
@@ -45,40 +48,66 @@ static void PutS16(uint8_t *b, int o, long v) { if (v < -32768) v = -32768; if (
 static bool TailMotorised() { return TravCfg[1] != 0; }   // tail_rotor_mode: 0 variable pitch, else motorised / bidirectional
 static int TailScale() { return TailMotorised() ? 1 : 24; } // motorised: 0.1 %; variable pitch: 1000 raw = 24 deg
 
+// B66 (Malcolm, 8 Oct, the configurator's Mixer tab beside the transmitter: "the same names in the same places"): three
+// pages laid out as its four sections. Page 1 Main Rotor Settings (the swashplate type and the rotor direction told, the
+// three control directions as switches) and Swashplate Trims; page 2 Main Rotor Geometry; page 3 Tail Rotor Settings.
 static void TravShowPage1()
 {
-    TravTenths("tn0", RawToDegTenths(TravInWant[4][2], 12));        // Collective pitch limit: input 4's max
-    TravTenths("tn1", RawToDegTenths(TravInWant[2][2], 12));        // Cyclic pitch limit: input 2's max
-    TravTenths("tn2", RawToDegTenths(S16At(TravCfgWant, 9), 12));   // Total pitch limit
-    TravNum("tn3", (labs(TravInWant[4][0]) + 5) / 10);              // Collective gain %
-    TravNum("tn4", (labs(TravInWant[1][0]) + 5) / 10);              // Cyclic gain % (roll's; pitch gets the same on a save)
-    TravNum("tn5", (labs(TravInWant[3][0]) + 5) / 10);              // Yaw gain %
-    TravRevAil = TravInWant[1][0] < 0; TravRevEle = TravInWant[2][0] < 0; TravRevColl = TravInWant[4][0] < 0;
-    SendValue((char *)"tn6", TravRevAil ? 1 : 0);   // (B65: a switch)
-    SendValue((char *)"tn7", TravRevEle ? 1 : 0);   // (B65: a switch)
-    SendValue((char *)"tn8", TravRevColl ? 1 : 0);   // (B65: a switch)
+    char b[48];
+    snprintf(b, sizeof(b), "Swashplate Type: %s", TravCfgWant[5] < 7 ? SwashTypeWords[TravCfgWant[5]] : "?");
+    SendText((char *)"i0", b);
+    snprintf(b, sizeof(b), "Main Rotor Direction: %s", TravCfgWant[0] ? "Counter-clockwise" : "Clockwise");
+    SendText((char *)"i1", b);
+    TravRevAil = TravInWant[1][0] < 0; TravRevEle = TravInWant[2][0] < 0; TravRevColl = TravInWant[4][0] < 0; TravRevYaw = TravInWant[3][0] < 0;
+    SendValue((char *)"tn6", TravRevAil ? 1 : 0);
+    SendValue((char *)"tn7", TravRevEle ? 1 : 0);
+    SendValue((char *)"tn8", TravRevColl ? 1 : 0);
     TravTenths("tn9", S16At(TravCfgWant, 11));                      // swash trims, 0.1 %
     TravTenths("tn10", S16At(TravCfgWant, 13));
     TravTenths("tn11", S16At(TravCfgWant, 15));
 }
 static void TravShowPage2()
 {
-    const int ts = TailScale();
-    if (TailMotorised()) { TravTenths("tn0", labs(TravInWant[3][1])); TravTenths("tn1", TravInWant[3][2]); TravTenths("tn2", S16At(TravCfgWant, 3)); }
-    else { TravTenths("tn0", RawToDegTenths(labs(TravInWant[3][1]), ts)); TravTenths("tn1", RawToDegTenths(TravInWant[3][2], ts)); TravTenths("tn2", RawToDegTenths(S16At(TravCfgWant, 3), ts)); }
-    SendText((char *)"ltn0", (char *)(TailMotorised() ? "Tail min [%]" : "Tail yaw min [deg]"));
-    SendText((char *)"ltn1", (char *)(TailMotorised() ? "Tail max [%]" : "Tail yaw max [deg]"));
-    TravTenths("tn3", TravCfgWant[2]);                              // tail motor idle, 0.1 %
-    TravTenths("tn4", S16At(TravCfgWant, 7));                       // phase angle, 0.1 deg
-    TravNum("tn5", TravCfgWant[6]);                                 // swash ring %
-    { const int geo = TravCfgWant[18] > 127 ? TravCfgWant[18] - 256 : TravCfgWant[18]; TravTenths("tn6", geo * 2); }   // geo correction: raw/5, shown to one decimal (raw 3 = 0.6)
-    TravNum("tn7", TravCfgWant[19] > 127 ? TravCfgWant[19] - 256 : TravCfgWant[19]);
+    TravNum("tn0", (labs(TravInWant[1][0]) + 5) / 10);              // Cyclic calibration % (roll's; pitch gets the same on a save)
+    TravNum("tn1", (labs(TravInWant[4][0]) + 5) / 10);              // Collective calibration %
+    { const int geo = TravCfgWant[18] > 127 ? TravCfgWant[18] - 256 : TravCfgWant[18]; TravTenths("tn2", geo * 2); }   // geometry correction: raw/5, to one decimal (raw 15 = 3.0)
+    TravTenths("tn3", RawToDegTenths(TravInWant[2][2], 12));        // Cyclic blade pitch limit: input 2's max
+    TravTenths("tn4", RawToDegTenths(TravInWant[4][2], 12));        // Collective blade pitch limit: input 4's max
+    TravTenths("tn5", RawToDegTenths(S16At(TravCfgWant, 9), 12));   // Total blade pitch limit
+    TravTenths("tn6", S16At(TravCfgWant, 7));                       // Swashplate phase angle, 0.1 deg
+    TravNum("tn7", TravCfgWant[19] > 127 ? TravCfgWant[19] - 256 : TravCfgWant[19]);   // tilt corrections
     TravNum("tn8", TravCfgWant[20] > 127 ? TravCfgWant[20] - 256 : TravCfgWant[20]);
+}
+static void TravShowPage3()
+{
+    const int ts = TailScale();
+    char b[48];
+    snprintf(b, sizeof(b), "Tail rotor type: %s", TravCfgWant[1] < 3 ? TailTypeWords[TravCfgWant[1]] : "?");
+    SendText((char *)"i0", b);
+    TravRevYaw = TravInWant[3][0] < 0;
+    SendValue((char *)"tn0", TravRevYaw ? 1 : 0);
+    SendText((char *)"ltn1", (char *)(TailMotorised() ? "Yaw center offset [%]" : "Yaw center trim"));
+    SendText((char *)"ltn3", (char *)(TailMotorised() ? "CW yaw limit [%]" : "Yaw limit CW [deg]"));
+    SendText((char *)"ltn4", (char *)(TailMotorised() ? "CCW yaw limit [%]" : "Yaw limit CCW [deg]"));
+    if (TailMotorised()) { TravTenths("tn1", S16At(TravCfgWant, 3)); TravTenths("tn3", labs(TravInWant[3][1])); TravTenths("tn4", TravInWant[3][2]); }
+    else { TravTenths("tn1", RawToDegTenths(S16At(TravCfgWant, 3), ts)); TravTenths("tn3", RawToDegTenths(labs(TravInWant[3][1]), ts)); TravTenths("tn4", RawToDegTenths(TravInWant[3][2], ts)); }
+    TravNum("tn2", (labs(TravInWant[3][0]) + 5) / 10);              // Yaw calibration %
+    TravTenths("tn5", TravCfgWant[2]);                              // Motor idle throttle, 0.1 % (a motorised tail only)
+    SendCommand((char *)(TailMotorised() ? "vis ltn5,1" : "vis ltn5,0"));
+    SendCommand((char *)(TailMotorised() ? "vis tn5,1" : "vis tn5,0"));
 }
 static void TravShow()
 {
     if (CurrentView == TRAVELVIEW) TravShowPage1();
     else if (CurrentView == TRAVEL2VIEW) TravShowPage2();
+    else if (CurrentView == TRAVEL3VIEW) TravShowPage3();
+}
+static void TravGatherDirections() // the four switches' states into the signs of the inputs' rates
+{
+    TravInWant[1][0] = (int16_t)(TravRevAil ? -labs(TravInWant[1][0]) : labs(TravInWant[1][0]));
+    TravInWant[2][0] = (int16_t)(TravRevEle ? -labs(TravInWant[2][0]) : labs(TravInWant[2][0]));
+    TravInWant[4][0] = (int16_t)(TravRevColl ? -labs(TravInWant[4][0]) : labs(TravInWant[4][0]));
+    TravInWant[3][0] = (int16_t)(TravRevYaw ? -labs(TravInWant[3][0]) : labs(TravInWant[3][0]));
 }
 static long FieldTenthsL(const char *name, long lo, long hi) // "-12.5" -> -125
 {
@@ -90,33 +119,43 @@ static long FieldTenthsL(const char *name, long lo, long hi) // "-12.5" -> -125
 }
 static void TravGatherPage1()
 {
-    const long coll = DegTenthsToRaw(FieldTenthsL("tn0", 0, 300), 12), cyc = DegTenthsToRaw(FieldTenthsL("tn1", 0, 300), 12);
-    TravInWant[4][1] = (int16_t)-coll; TravInWant[4][2] = (int16_t)coll;
-    TravInWant[1][1] = TravInWant[2][1] = (int16_t)-cyc; TravInWant[1][2] = TravInWant[2][2] = (int16_t)cyc;
-    PutS16(TravCfgWant, 9, DegTenthsToRaw(FieldTenthsL("tn2", 0, 360), 12));
-    const long gColl = FieldNumber("tn3", 0, 1000) * 10, gCyc = FieldNumber("tn4", 0, 1000) * 10, gYaw = FieldNumber("tn5", 0, 1000) * 10;
-    TravInWant[4][0] = (int16_t)(TravRevColl ? -gColl : gColl);
-    TravInWant[1][0] = (int16_t)(TravRevAil ? -gCyc : gCyc);
-    TravInWant[2][0] = (int16_t)(TravRevEle ? -gCyc : gCyc);
-    TravInWant[3][0] = (int16_t)(TravIn[3][0] < 0 ? -gYaw : gYaw);   // the yaw direction stays as it is
     PutS16(TravCfgWant, 11, FieldTenthsL("tn9", -1000, 1000));
     PutS16(TravCfgWant, 13, FieldTenthsL("tn10", -1000, 1000));
     PutS16(TravCfgWant, 15, FieldTenthsL("tn11", -1000, 1000));
+    TravGatherDirections();
 }
 static void TravGatherPage2()
 {
-    const int ts = TailScale();
-    long tmin, tmax, ctr;
-    if (TailMotorised()) { tmin = FieldTenthsL("tn0", 0, 2500); tmax = FieldTenthsL("tn1", 0, 2500); ctr = FieldTenthsL("tn2", -1000, 1000); }
-    else { tmin = DegTenthsToRaw(FieldTenthsL("tn0", 0, 600), ts); tmax = DegTenthsToRaw(FieldTenthsL("tn1", 0, 600), ts); ctr = DegTenthsToRaw(FieldTenthsL("tn2", -240, 240), ts); }
-    TravInWant[3][1] = (int16_t)-tmin; TravInWant[3][2] = (int16_t)tmax;
-    PutS16(TravCfgWant, 3, ctr);
-    TravCfgWant[2] = (uint8_t)FieldTenthsL("tn3", 0, 250);
-    PutS16(TravCfgWant, 7, FieldTenthsL("tn4", -1800, 1800));
-    TravCfgWant[6] = (uint8_t)FieldNumber("tn5", 0, 100);
-    { const long g = FieldTenthsL("tn6", -250, 250); const long raw = (g * 5 + (g < 0 ? -5 : 5)) / 10; TravCfgWant[18] = (uint8_t)(raw & 0xFF); }   // ui/5 -> raw: ui 0.6 (6 tenths) -> 3
+    const long gCyc = FieldNumber("tn0", 0, 1000) * 10, gColl = FieldNumber("tn1", 0, 1000) * 10;
+    TravInWant[1][0] = (int16_t)(TravRevAil ? -gCyc : gCyc);
+    TravInWant[2][0] = (int16_t)(TravRevEle ? -gCyc : gCyc);
+    TravInWant[4][0] = (int16_t)(TravRevColl ? -gColl : gColl);
+    { const long g = FieldTenthsL("tn2", -250, 250); const long raw = (g * 5 + (g < 0 ? -5 : 5)) / 10; TravCfgWant[18] = (uint8_t)(raw & 0xFF); }   // ui/5 -> raw: 3.0 (30 tenths) -> 15
+    const long cyc = DegTenthsToRaw(FieldTenthsL("tn3", 0, 300), 12), coll = DegTenthsToRaw(FieldTenthsL("tn4", 0, 300), 12);
+    TravInWant[1][1] = TravInWant[2][1] = (int16_t)-cyc; TravInWant[1][2] = TravInWant[2][2] = (int16_t)cyc;
+    TravInWant[4][1] = (int16_t)-coll; TravInWant[4][2] = (int16_t)coll;
+    PutS16(TravCfgWant, 9, DegTenthsToRaw(FieldTenthsL("tn5", 0, 360), 12));
+    PutS16(TravCfgWant, 7, FieldTenthsL("tn6", -1800, 1800));
     TravCfgWant[19] = (uint8_t)(FieldNumber("tn7", -100, 100) & 0xFF);
     TravCfgWant[20] = (uint8_t)(FieldNumber("tn8", -100, 100) & 0xFF);
+}
+static void TravGatherPage3()
+{
+    const int ts = TailScale();
+    long tmin, tmax, ctr;
+    if (TailMotorised()) { ctr = FieldTenthsL("tn1", -1000, 1000); tmin = FieldTenthsL("tn3", 0, 2500); tmax = FieldTenthsL("tn4", 0, 2500); }
+    else { ctr = DegTenthsToRaw(FieldTenthsL("tn1", -240, 240), ts); tmin = DegTenthsToRaw(FieldTenthsL("tn3", 0, 600), ts); tmax = DegTenthsToRaw(FieldTenthsL("tn4", 0, 600), ts); }
+    PutS16(TravCfgWant, 3, ctr);
+    TravInWant[3][1] = (int16_t)-tmin; TravInWant[3][2] = (int16_t)tmax;
+    const long gYaw = FieldNumber("tn2", 0, 1000) * 10;
+    TravInWant[3][0] = (int16_t)(TravRevYaw ? -gYaw : gYaw);
+    if (TailMotorised()) TravCfgWant[2] = (uint8_t)FieldTenthsL("tn5", 0, 250);
+}
+static void TravGather()
+{
+    if (CurrentView == TRAVELVIEW) TravGatherPage1();
+    else if (CurrentView == TRAVEL2VIEW) TravGatherPage2();
+    else if (CurrentView == TRAVEL3VIEW) TravGatherPage3();
 }
 static void TravPageHead();
 static void TravFail(const char *what)
@@ -126,7 +165,7 @@ static void TravFail(const char *what)
     TravStep = TRV_IDLE;
     TravBusy("");
     PlaySound(WHAHWHAHMSG);
-    MsgBox((char *)(CurrentView == TRAVEL2VIEW ? "page Travel2View" : "page TravelView"), msg);
+    MsgBox((char *)TravPageWord(), msg);
     TravPageHead();
     TravShow();
 }
@@ -153,7 +192,7 @@ static bool TravTakeInput(int16_t (*in)[3]) // the reply of a 174: rate, min, ma
 }
 void TravelPoll()
 {
-    if (CurrentView != TRAVELVIEW && CurrentView != TRAVEL2VIEW) { TravStep = TRV_IDLE; TravMsgUntil = 0; return; }
+    if (CurrentView != TRAVELVIEW && CurrentView != TRAVEL2VIEW && CurrentView != TRAVEL3VIEW) { TravStep = TRV_IDLE; TravMsgUntil = 0; return; }
     if (TravMsgUntil && (int32_t)(millis() - TravMsgUntil) >= 0) { TravMsgUntil = 0; TravBusy(""); TravShow(); }
     if (TravStep == TRV_IDLE) { if (TravReadAgainWanted) { TravReadAgainWanted = false; TravRead(); } return; }
     if (!PipeReplyReady(TravReq)) { if (PipeReplyLate()) TravFail("No answer"); return; }
@@ -248,8 +287,8 @@ void EndTravelView() // OK on either page
 {
     if (Trav_Was_Edited)
     {
-        if (CurrentView == TRAVELVIEW) TravGatherPage1(); else TravGatherPage2();   // (B59) before the question's page takes the fields away
-        if (!GetConfirmation((char *)(CurrentView == TRAVEL2VIEW ? "page Travel2View" : "page TravelView"), (char *)"Discard the edited travel extents?"))
+        TravGather();   // (B59) before the question's page takes the fields away
+        if (!GetConfirmation((char *)TravPageWord(), (char *)"Discard the edited mixer values?"))
         {
             TravPageHead();
             TravShow();
@@ -264,6 +303,7 @@ void TravelWasEdited() { SendCommand((char *)"vis b3,1"); Trav_Was_Edited = true
 void TravelAilTapped() { TravRevAil = !TravRevAil; SendValue((char *)"tn6", TravRevAil ? 1 : 0); TravelWasEdited(); }
 void TravelEleTapped() { TravRevEle = !TravRevEle; SendValue((char *)"tn7", TravRevEle ? 1 : 0); TravelWasEdited(); }
 void TravelCollTapped() { TravRevColl = !TravRevColl; SendValue((char *)"tn8", TravRevColl ? 1 : 0); TravelWasEdited(); }
+void TravelYawTapped() { TravRevYaw = !TravRevYaw; SendValue((char *)"tn0", TravRevYaw ? 1 : 0); TravelWasEdited(); }   // (B66, page 3)
 void SaveTravel()
 {
     if (!TravHave)
@@ -272,13 +312,13 @@ void SaveTravel()
     if (ModelSeemsArmed(why, sizeof(why)) || RfPipeBlocked(why, sizeof(why)))
     {
         PlaySound(WHAHWHAHMSG);
-        MsgBox((char *)(CurrentView == TRAVEL2VIEW ? "page Travel2View" : "page TravelView"), why);
+        MsgBox((char *)TravPageWord(), why);
         return;
     }
     // B59: the fields FIRST. The question is a page of its own, and the travel page comes back from it reloaded, every
     // field blank: read after the question, they were zeros, and zeros were written (Malcolm, 7 Oct: "It wrote zero").
-    if (CurrentView == TRAVELVIEW) TravGatherPage1(); else TravGatherPage2();
-    if (!GetConfirmation((char *)(CurrentView == TRAVEL2VIEW ? "page Travel2View" : "page TravelView"), (char *)"Save the travel extents?\r\nThey change how FAR the swash and tail move:\r\ncheck them on the bench, blades off."))
+    TravGather();
+    if (!GetConfirmation((char *)TravPageWord(), (char *)"Save the mixer?\r\nIt changes how FAR the swash and tail move:\r\ncheck them on the bench, blades off."))
     {
         TravPageHead();
         TravShow(); // the page came back blank: the edited values again
@@ -290,20 +330,28 @@ void SaveTravel()
     TravReq = MspAsk(43, TravCfgWant, CFG_BYTES);
     TravStep = TRV_WRITE_CFG;
 }
-void StartTravel2View() // Next >
+void StartTravel2View() // Next > on page 1 (and < Previous on page 3, B66)
 {
-    if (CurrentView == TRAVELVIEW) TravGatherPage1();
+    TravGather();
     SendCommand((char *)"page Travel2View");
     CurrentView = TRAVEL2VIEW;
     TravPageHead();
     if (TravHave) TravShowPage2(); else TravRead();
 }
-void EndTravel2View() // < Previous
+void EndTravel2View() // < Previous on page 2
 {
-    TravGatherPage2();
+    TravGather();
     SendCommand((char *)"page TravelView");
     CurrentView = TRAVELVIEW;
     TravPageHead();
-    if (TravHave) TravShowPage1();
+    if (TravHave) TravShowPage1(); else TravRead();
+}
+void StartTravel3View() // Next > on page 2 (B66)
+{
+    TravGather();
+    SendCommand((char *)"page Travel3View");
+    CurrentView = TRAVEL3VIEW;
+    TravPageHead();
+    if (TravHave) TravShowPage3(); else TravRead();
 }
 #endif

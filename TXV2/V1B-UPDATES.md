@@ -186,6 +186,18 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The Mixer pages as the configurator's Mixer tab (V2 B66 + card files, 8 Oct 2026)
+
+Malcolm, with the configurator's Mixer tab and the two Travel extents pages side by side: every value agreed, the names
+and places did not. Now three pages laid out as the tab's four sections, with its names: "Mixer" (Main Rotor Settings:
+Swashplate Type and Main Rotor Direction shown as the flight controller has them, Aileron, Elevator and Collective
+reversed as switches; Swashplate Trims: Roll, Pitch, Collective trim), "Mixer: main rotor geometry" (Cyclic and
+Collective calibration, Geometry correction, Cyclic, Collective and Total pitch limit, Swash phase angle, Positive and
+Negative tilt correction) and "Mixer: tail rotor" (Tail rotor type shown, Yaw reversed - new, the configurator's Yaw
+Control Direction, which the pages did not offer - Yaw center trim, Yaw calibration, the CW and CCW yaw limits, and
+the motor idle throttle of a motorised tail). The swash ring, which the configurator's tab does not show, is left as it
+is. The menu's button says Mixer. Help: TRAVEL, TRAVEL2, TRAVEL3. Pages 62, 63 and the new 66; codes 108-110.
+
 ## Switches for every yes/no; the screen saver returns to a Rotorflight page; a save says when the other page changed (V2 B65, 8 Oct 2026)
 
 Three things from Malcolm's testing of the filters pages on the second transmitter, 8 Oct. "The yes/no boxes should be

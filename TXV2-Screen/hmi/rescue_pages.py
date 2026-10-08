@@ -12,7 +12,7 @@ def comp(proto, **kw):
     c = json.loads(json.dumps(proto)); c.update(kw); return c
 
 def page(pid, name, title, fields, buttons, help_file):
-    """fields: (name, label, column, row, kind, code[, keypad label]) with kind 'num' (the keypad), 'cycle' (a tap), 'switch' (on/off) or 'head' (a group heading, no value)"""
+    """fields: (name, label, column, row, kind, code[, keypad label]) with kind 'num' (the keypad), 'cycle' (a tap), 'switch' (on/off), 'info' (told, not changed) or 'head' (a group heading, no value)"""
     comps = []; i = [1]
     def add(c): c['i'] = i[0]; i[0] += 1; comps.append(c); return c
     add(comp(TITLE, n='t0', txt=title))
@@ -30,6 +30,9 @@ def page(pid, name, title, fields, buttons, help_file):
             h = comp(LABEL_L, n=nm, x=lx, y=y, w=lw + vw + (vx - lx - lw), h=36, txt=label, g='g', font=6)
             h['c'] = {'pco': 65535, 'borderc': CARD['c']['bco'], 'bco': CARD['c']['bco']}; h['a'] = dict(h['a'], borderw=0, xcen=0, txt_maxl=30)
             add(h); continue
+        if kind == 'info':   # 1.11.34: a row that only tells (the configurator's selects the transmitter does not change): label box across the column, the main board sets its text
+            f = comp(LABEL_L if col == 0 else LABEL_R, n=nm, x=lx, y=y, w=lw + vw + (vx - lx - lw), h=36, txt=label, g='g')
+            f['a'] = dict(f['a'], txt_maxl=40); add(f); continue
         add(comp(LABEL_L if col == 0 else LABEL_R, n='l' + nm, x=lx, y=y, w=lw, h=36, txt=label, g='g'))
         if kind == 'switch':   # 1.11.34 (Malcolm, 8 Oct: "the yes/no boxes should be switches"): the screen's own switch, grey off / green on, its val set by the main board
             sw = {'n': nm, 't': 'switch', 'g': 'g', 'x': vx + (vw - 80) // 2, 'y': y + 1, 'w': 80, 'h': 34, 'font': 0,

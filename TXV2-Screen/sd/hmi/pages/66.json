@@ -1,6 +1,6 @@
 {
- "name": "TravelView",
- "id": 62,
+ "name": "Travel3View",
+ "id": 66,
  "w": 800,
  "h": 480,
  "bg": {
@@ -15,7 +15,7 @@
   "right": 255
  },
  "ev": {
-  "preinitialize": "vis busy,0\nTravelView.pic=Screen_Background"
+  "preinitialize": "vis busy,0\nTravel3View.pic=Screen_Background"
  },
  "comps": [
   {
@@ -34,7 +34,7 @@
     "borderc": 0,
     "bco": 2214
    },
-   "txt": "Mixer (Rotorflight)",
+   "txt": "Mixer: tail rotor",
    "a": {
     "style": 0,
     "key": 255,
@@ -171,7 +171,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "print \"HelpView:TRAVEL.TXT\"\nLogView.t0.txt=\"Mixer (Rotorflight) help\"\nLogView.return.txt=\"TravelView\""
+    "r": "print \"HelpView:TRAVEL3.TXT\"\nLogView.t0.txt=\"Mixer: tail rotor help\"\nLogView.return.txt=\"Travel3View\""
    }
   },
   {
@@ -190,7 +190,7 @@
     "borderc": 4426,
     "bco": 4426
    },
-   "txt": "Main Rotor Settings",
+   "txt": "Tail Rotor Settings",
    "a": {
     "style": 0,
     "key": 255,
@@ -218,7 +218,7 @@
     "borderc": 0,
     "bco": 63752
    },
-   "txt": "Swashplate Type",
+   "txt": "Tail rotor type",
    "a": {
     "style": 0,
     "key": 255,
@@ -231,40 +231,12 @@
    }
   },
   {
-   "n": "i1",
+   "n": "ltn0",
    "i": 9,
    "t": "text",
    "g": "g",
    "x": 34,
    "y": 174,
-   "w": 380,
-   "h": 36,
-   "font": 2,
-   "sta": 1,
-   "c": {
-    "pco": 0,
-    "borderc": 0,
-    "bco": 63752
-   },
-   "txt": "Main Rotor Direction",
-   "a": {
-    "style": 0,
-    "key": 255,
-    "borderw": 2,
-    "xcen": 1,
-    "ycen": 1,
-    "pw": 0,
-    "txt_maxl": 40,
-    "isbr": 0
-   }
-  },
-  {
-   "n": "ltn6",
-   "i": 10,
-   "t": "text",
-   "g": "g",
-   "x": 34,
-   "y": 214,
    "w": 254,
    "h": 36,
    "font": 2,
@@ -274,7 +246,7 @@
     "borderc": 0,
     "bco": 63752
    },
-   "txt": "Aileron reversed",
+   "txt": "Yaw reversed",
    "a": {
     "style": 0,
     "key": 255,
@@ -287,11 +259,11 @@
    }
   },
   {
-   "n": "tn6",
+   "n": "tn0",
    "t": "switch",
    "g": "g",
    "x": 314,
-   "y": 215,
+   "y": 175,
    "w": 80,
    "h": 34,
    "font": 0,
@@ -310,13 +282,72 @@
     "txt_maxl": 24
    },
    "ev": {
-    "r": "va0.val=87<<8\nprint va0.val"
+    "r": "va0.val=108<<8\nprint va0.val"
    },
-   "i": 11
+   "i": 10
   },
   {
-   "n": "ltn7",
+   "n": "ltn1",
+   "i": 11,
+   "t": "text",
+   "g": "g",
+   "x": 34,
+   "y": 214,
+   "w": 254,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 63752
+   },
+   "txt": "Yaw center trim",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "tn1",
    "i": 12,
+   "t": "text",
+   "g": "g",
+   "x": 294,
+   "y": 214,
+   "w": 120,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Yaw center trim\"\nva0.val=86<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "ltn2",
+   "i": 13,
    "t": "text",
    "g": "g",
    "x": 34,
@@ -330,7 +361,7 @@
     "borderc": 0,
     "bco": 63752
    },
-   "txt": "Elevator reversed",
+   "txt": "Yaw calibration [%]",
    "a": {
     "style": 0,
     "key": 255,
@@ -343,36 +374,39 @@
    }
   },
   {
-   "n": "tn7",
-   "t": "switch",
+   "n": "tn2",
+   "i": 14,
+   "t": "text",
    "g": "g",
-   "x": 314,
-   "y": 255,
-   "w": 80,
-   "h": 34,
-   "font": 0,
+   "x": 294,
+   "y": 254,
+   "w": 120,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
    "c": {
-    "pco1": 0,
-    "bco2": 2016,
-    "pco": 65535,
-    "bco": 33808,
-    "pco2": 65535
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
    },
-   "txt": " / ",
-   "val": 0,
+   "txt": "0",
    "a": {
-    "dez": 0,
-    "dis": 100,
-    "txt_maxl": 24
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
    },
    "ev": {
-    "r": "va0.val=88<<8\nprint va0.val"
-   },
-   "i": 13
+    "r": "keybdB.t1.txt=\"Yaw calibration [%]\"\nva0.val=86<<8\nprint va0.val"
+   }
   },
   {
-   "n": "ltn8",
-   "i": 14,
+   "n": "ltn3",
+   "i": 15,
    "t": "text",
    "g": "g",
    "x": 34,
@@ -386,7 +420,7 @@
     "borderc": 0,
     "bco": 63752
    },
-   "txt": "Collective reversed",
+   "txt": "Yaw limit CW [deg]",
    "a": {
     "style": 0,
     "key": 255,
@@ -399,78 +433,53 @@
    }
   },
   {
-   "n": "tn8",
-   "t": "switch",
-   "g": "g",
-   "x": 314,
-   "y": 295,
-   "w": 80,
-   "h": 34,
-   "font": 0,
-   "c": {
-    "pco1": 0,
-    "bco2": 2016,
-    "pco": 65535,
-    "bco": 33808,
-    "pco2": 65535
-   },
-   "txt": " / ",
-   "val": 0,
-   "a": {
-    "dez": 0,
-    "dis": 100,
-    "txt_maxl": 24
-   },
-   "ev": {
-    "r": "va0.val=89<<8\nprint va0.val"
-   },
-   "i": 15
-  },
-  {
-   "n": "h1",
+   "n": "tn3",
    "i": 16,
    "t": "text",
    "g": "g",
-   "x": 430,
-   "y": 94,
-   "w": 336,
+   "x": 294,
+   "y": 294,
+   "w": 120,
    "h": 36,
-   "font": 6,
+   "font": 2,
    "sta": 1,
    "c": {
-    "pco": 65535,
-    "borderc": 4426,
-    "bco": 4426
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
    },
-   "txt": "Swashplate Trims",
+   "txt": "0",
    "a": {
-    "style": 0,
-    "key": 255,
-    "borderw": 0,
-    "xcen": 0,
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
     "ycen": 1,
     "pw": 0,
-    "txt_maxl": 30,
+    "txt_maxl": 10,
     "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"CW yaw blade angle limit [deg]\"\nva0.val=86<<8\nprint va0.val"
    }
   },
   {
-   "n": "ltn9",
+   "n": "ltn4",
    "i": 17,
    "t": "text",
    "g": "g",
-   "x": 430,
-   "y": 134,
-   "w": 236,
+   "x": 34,
+   "y": 334,
+   "w": 254,
    "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 44369
+    "bco": 63752
    },
-   "txt": "Roll trim [%]",
+   "txt": "Yaw limit CCW [deg]",
    "a": {
     "style": 0,
     "key": 255,
@@ -478,18 +487,18 @@
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
-    "txt_maxl": 20,
+    "txt_maxl": 10,
     "isbr": 0
    }
   },
   {
-   "n": "tn9",
+   "n": "tn4",
    "i": 18,
    "t": "text",
    "g": "g",
-   "x": 672,
-   "y": 134,
-   "w": 94,
+   "x": 294,
+   "y": 334,
+   "w": 120,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -510,26 +519,26 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Roll trim [%]\"\nva0.val=86<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"CCW yaw blade angle limit [deg]\"\nva0.val=86<<8\nprint va0.val"
    }
   },
   {
-   "n": "ltn10",
+   "n": "ltn5",
    "i": 19,
    "t": "text",
    "g": "g",
-   "x": 430,
-   "y": 174,
-   "w": 236,
+   "x": 34,
+   "y": 374,
+   "w": 254,
    "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 44369
+    "bco": 63752
    },
-   "txt": "Pitch trim [%]",
+   "txt": "Motor idle throttle [%]",
    "a": {
     "style": 0,
     "key": 255,
@@ -537,18 +546,18 @@
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
-    "txt_maxl": 20,
+    "txt_maxl": 10,
     "isbr": 0
    }
   },
   {
-   "n": "tn10",
+   "n": "tn5",
    "i": 20,
    "t": "text",
    "g": "g",
-   "x": 672,
-   "y": 174,
-   "w": 94,
+   "x": 294,
+   "y": 374,
+   "w": 120,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -569,71 +578,12 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Pitch trim [%]\"\nva0.val=86<<8\nprint va0.val"
-   }
-  },
-  {
-   "n": "ltn11",
-   "i": 21,
-   "t": "text",
-   "g": "g",
-   "x": 430,
-   "y": 214,
-   "w": 236,
-   "h": 36,
-   "font": 2,
-   "sta": 1,
-   "c": {
-    "pco": 0,
-    "borderc": 0,
-    "bco": 44369
-   },
-   "txt": "Collective trim [%]",
-   "a": {
-    "style": 0,
-    "key": 255,
-    "borderw": 2,
-    "xcen": 1,
-    "ycen": 1,
-    "pw": 0,
-    "txt_maxl": 20,
-    "isbr": 0
-   }
-  },
-  {
-   "n": "tn11",
-   "i": 22,
-   "t": "text",
-   "g": "g",
-   "x": 672,
-   "y": 214,
-   "w": 94,
-   "h": 36,
-   "font": 2,
-   "sta": 1,
-   "c": {
-    "pco": 0,
-    "borderc": 0,
-    "bco": 65535
-   },
-   "txt": "0",
-   "a": {
-    "style": 2,
-    "key": 2,
-    "borderw": 2,
-    "xcen": 1,
-    "ycen": 1,
-    "pw": 0,
-    "txt_maxl": 10,
-    "isbr": 0
-   },
-   "ev": {
-    "r": "keybdB.t1.txt=\"Collective trim [%]\"\nva0.val=86<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Motor idle throttle [%]\"\nva0.val=86<<8\nprint va0.val"
    }
   },
   {
    "n": "b3",
-   "i": 23,
+   "i": 21,
    "t": "button",
    "g": "l",
    "x": 14,
@@ -665,7 +615,7 @@
   },
   {
    "n": "b2",
-   "i": 24,
+   "i": 22,
    "t": "button",
    "g": "l",
    "x": 408,
@@ -681,7 +631,7 @@
     "bco": 54938,
     "pco2": 65535
    },
-   "txt": "Next >",
+   "txt": "< Previous",
    "val": 0,
    "a": {
     "style": 4,
@@ -692,12 +642,12 @@
     "isbr": 0
    },
    "ev": {
-    "r": "va0.val=90<<8\nprint va0.val"
+    "r": "va0.val=110<<8\nprint va0.val"
    }
   },
   {
    "n": "b1",
-   "i": 25,
+   "i": 23,
    "t": "button",
    "g": "l",
    "x": 605,
@@ -729,7 +679,7 @@
   },
   {
    "n": "busy",
-   "i": 26,
+   "i": 24,
    "t": "text",
    "g": "l",
    "x": 40,

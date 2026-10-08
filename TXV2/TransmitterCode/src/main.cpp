@@ -3028,7 +3028,7 @@ void RestoreCurrentModel()
 // ******************************** Global Array1 of numbered function pointers OK up the **********************************
 
 // This new list can be huge - up to 24 BITS unsigned!  ( Use "NUMBER<<8" )
-#define LASTFUNCTION1 108 // One more than final one
+#define LASTFUNCTION1 111 // One more than final one
 
 void (*NumberedFunctions1[LASTFUNCTION1])(){
     Blank,                   // 0 Cannot be used
@@ -3138,7 +3138,10 @@ void (*NumberedFunctions1[LASTFUNCTION1])(){
     FilterLpf2EnableTapped,  // 104 Lowpass Filter 2: Enable
     FilterDynCutoffTapped,   // 105 Dynamic Cutoff (lowpass 1): Enable
     FilterNotch1Tapped,      // 106 Notch Filter 1: Enable
-    FilterNotch2Tapped       // 107 Notch Filter 2: Enable
+    FilterNotch2Tapped,      // 107 Notch Filter 2: Enable
+    TravelYawTapped,         // 108 B66: Mixer page 3, Yaw reversed
+    StartTravel3View,        // 109 Next > (page 2 to the tail rotor page)
+    StartTravel2View         // 110 < Previous (page 3 back to page 2)
 };
 
 // This list migth become MUCH longer as it limit is 24 bits big

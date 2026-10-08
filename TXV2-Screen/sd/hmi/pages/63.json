@@ -34,7 +34,7 @@
     "borderc": 0,
     "bco": 2214
    },
-   "txt": "Tail and swash (Rotorflight)",
+   "txt": "Mixer: main rotor geometry",
    "a": {
     "style": 0,
     "key": 255,
@@ -171,16 +171,44 @@
     "isbr": 0
    },
    "ev": {
-    "r": "print \"HelpView:TRAVEL2.TXT\"\nLogView.t0.txt=\"Tail and swash (Rotorflight) help\"\nLogView.return.txt=\"Travel2View\""
+    "r": "print \"HelpView:TRAVEL2.TXT\"\nLogView.t0.txt=\"Mixer: main rotor geometry help\"\nLogView.return.txt=\"Travel2View\""
    }
   },
   {
-   "n": "ltn0",
+   "n": "h0",
    "i": 7,
    "t": "text",
    "g": "g",
    "x": 34,
    "y": 94,
+   "w": 380,
+   "h": 36,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 4426,
+    "bco": 4426
+   },
+   "txt": "Main Rotor Geometry",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "ltn0",
+   "i": 8,
+   "t": "text",
+   "g": "g",
+   "x": 34,
+   "y": 134,
    "w": 254,
    "h": 36,
    "font": 2,
@@ -190,7 +218,7 @@
     "borderc": 0,
     "bco": 63752
    },
-   "txt": "Tail yaw min [deg]",
+   "txt": "Cyclic calibration [%]",
    "a": {
     "style": 0,
     "key": 255,
@@ -204,11 +232,11 @@
   },
   {
    "n": "tn0",
-   "i": 8,
+   "i": 9,
    "t": "text",
    "g": "g",
    "x": 294,
-   "y": 94,
+   "y": 134,
    "w": 120,
    "h": 36,
    "font": 2,
@@ -230,16 +258,16 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Tail yaw min [deg]\"\nva0.val=86<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Cyclic calibration [%]\"\nva0.val=86<<8\nprint va0.val"
    }
   },
   {
    "n": "ltn1",
-   "i": 9,
+   "i": 10,
    "t": "text",
    "g": "g",
    "x": 34,
-   "y": 134,
+   "y": 174,
    "w": 254,
    "h": 36,
    "font": 2,
@@ -249,7 +277,7 @@
     "borderc": 0,
     "bco": 63752
    },
-   "txt": "Tail yaw max [deg]",
+   "txt": "Collective calib. [%]",
    "a": {
     "style": 0,
     "key": 255,
@@ -263,11 +291,11 @@
   },
   {
    "n": "tn1",
-   "i": 10,
+   "i": 11,
    "t": "text",
    "g": "g",
    "x": 294,
-   "y": 134,
+   "y": 174,
    "w": 120,
    "h": 36,
    "font": 2,
@@ -289,16 +317,16 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Tail yaw max [deg]\"\nva0.val=86<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Collective calibration [%]\"\nva0.val=86<<8\nprint va0.val"
    }
   },
   {
    "n": "ltn2",
-   "i": 11,
+   "i": 12,
    "t": "text",
    "g": "g",
    "x": 34,
-   "y": 174,
+   "y": 214,
    "w": 254,
    "h": 36,
    "font": 2,
@@ -308,7 +336,7 @@
     "borderc": 0,
     "bco": 63752
    },
-   "txt": "Tail center trim",
+   "txt": "Geometry correction [%]",
    "a": {
     "style": 0,
     "key": 255,
@@ -322,11 +350,11 @@
   },
   {
    "n": "tn2",
-   "i": 12,
+   "i": 13,
    "t": "text",
    "g": "g",
    "x": 294,
-   "y": 174,
+   "y": 214,
    "w": 120,
    "h": 36,
    "font": 2,
@@ -348,16 +376,16 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Tail center trim\"\nva0.val=86<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Collective geometry correction [%]\"\nva0.val=86<<8\nprint va0.val"
    }
   },
   {
    "n": "ltn3",
-   "i": 13,
+   "i": 14,
    "t": "text",
    "g": "g",
    "x": 34,
-   "y": 214,
+   "y": 254,
    "w": 254,
    "h": 36,
    "font": 2,
@@ -367,7 +395,7 @@
     "borderc": 0,
     "bco": 63752
    },
-   "txt": "Tail motor idle [%]",
+   "txt": "Cyclic pitch limit [deg]",
    "a": {
     "style": 0,
     "key": 255,
@@ -381,11 +409,11 @@
   },
   {
    "n": "tn3",
-   "i": 14,
+   "i": 15,
    "t": "text",
    "g": "g",
    "x": 294,
-   "y": 214,
+   "y": 254,
    "w": 120,
    "h": 36,
    "font": 2,
@@ -407,26 +435,26 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Tail motor idle [%]\"\nva0.val=86<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Cyclic blade pitch limit [deg]\"\nva0.val=86<<8\nprint va0.val"
    }
   },
   {
    "n": "ltn4",
-   "i": 15,
+   "i": 16,
    "t": "text",
    "g": "g",
-   "x": 430,
-   "y": 94,
-   "w": 236,
+   "x": 34,
+   "y": 294,
+   "w": 254,
    "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 44369
+    "bco": 63752
    },
-   "txt": "Phase angle [deg]",
+   "txt": "Collective pitch limit [deg]",
    "a": {
     "style": 0,
     "key": 255,
@@ -434,18 +462,18 @@
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
-    "txt_maxl": 20,
+    "txt_maxl": 10,
     "isbr": 0
    }
   },
   {
    "n": "tn4",
-   "i": 16,
+   "i": 17,
    "t": "text",
    "g": "g",
-   "x": 672,
-   "y": 94,
-   "w": 94,
+   "x": 294,
+   "y": 294,
+   "w": 120,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -466,26 +494,26 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Phase angle [deg]\"\nva0.val=86<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Collective blade pitch limit [deg]\"\nva0.val=86<<8\nprint va0.val"
    }
   },
   {
    "n": "ltn5",
-   "i": 17,
+   "i": 18,
    "t": "text",
    "g": "g",
-   "x": 430,
-   "y": 134,
-   "w": 236,
+   "x": 34,
+   "y": 334,
+   "w": 254,
    "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 44369
+    "bco": 63752
    },
-   "txt": "Swash ring [%]",
+   "txt": "Total pitch limit [deg]",
    "a": {
     "style": 0,
     "key": 255,
@@ -493,18 +521,18 @@
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
-    "txt_maxl": 20,
+    "txt_maxl": 10,
     "isbr": 0
    }
   },
   {
    "n": "tn5",
-   "i": 18,
+   "i": 19,
    "t": "text",
    "g": "g",
-   "x": 672,
-   "y": 134,
-   "w": 94,
+   "x": 294,
+   "y": 334,
+   "w": 120,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -525,26 +553,26 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Swash ring [%]\"\nva0.val=86<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Total blade pitch limit [deg]\"\nva0.val=86<<8\nprint va0.val"
    }
   },
   {
    "n": "ltn6",
-   "i": 19,
+   "i": 20,
    "t": "text",
    "g": "g",
-   "x": 430,
-   "y": 174,
-   "w": 236,
+   "x": 34,
+   "y": 374,
+   "w": 254,
    "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 44369
+    "bco": 63752
    },
-   "txt": "Geo correction",
+   "txt": "Swash phase angle [deg]",
    "a": {
     "style": 0,
     "key": 255,
@@ -552,18 +580,18 @@
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
-    "txt_maxl": 20,
+    "txt_maxl": 10,
     "isbr": 0
    }
   },
   {
    "n": "tn6",
-   "i": 20,
+   "i": 21,
    "t": "text",
    "g": "g",
-   "x": 672,
-   "y": 174,
-   "w": 94,
+   "x": 294,
+   "y": 374,
+   "w": 120,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -584,16 +612,16 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Geo correction\"\nva0.val=86<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Swashplate phase angle [deg]\"\nva0.val=86<<8\nprint va0.val"
    }
   },
   {
    "n": "ltn7",
-   "i": 21,
+   "i": 22,
    "t": "text",
    "g": "g",
    "x": 430,
-   "y": 214,
+   "y": 134,
    "w": 236,
    "h": 36,
    "font": 2,
@@ -603,7 +631,7 @@
     "borderc": 0,
     "bco": 44369
    },
-   "txt": "Tilt corr. pos [%]",
+   "txt": "Positive tilt corr. [%]",
    "a": {
     "style": 0,
     "key": 255,
@@ -617,11 +645,11 @@
   },
   {
    "n": "tn7",
-   "i": 22,
+   "i": 23,
    "t": "text",
    "g": "g",
    "x": 672,
-   "y": 214,
+   "y": 134,
    "w": 94,
    "h": 36,
    "font": 2,
@@ -643,16 +671,16 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Tilt corr. pos [%]\"\nva0.val=86<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Positive collective tilt correction\"\nva0.val=86<<8\nprint va0.val"
    }
   },
   {
    "n": "ltn8",
-   "i": 23,
+   "i": 24,
    "t": "text",
    "g": "g",
    "x": 430,
-   "y": 254,
+   "y": 174,
    "w": 236,
    "h": 36,
    "font": 2,
@@ -662,7 +690,7 @@
     "borderc": 0,
     "bco": 44369
    },
-   "txt": "Tilt corr. neg [%]",
+   "txt": "Negative tilt corr. [%]",
    "a": {
     "style": 0,
     "key": 255,
@@ -676,11 +704,11 @@
   },
   {
    "n": "tn8",
-   "i": 24,
+   "i": 25,
    "t": "text",
    "g": "g",
    "x": 672,
-   "y": 254,
+   "y": 174,
    "w": 94,
    "h": 36,
    "font": 2,
@@ -702,12 +730,12 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Tilt corr. neg [%]\"\nva0.val=86<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Negative collective tilt correction\"\nva0.val=86<<8\nprint va0.val"
    }
   },
   {
    "n": "b3",
-   "i": 25,
+   "i": 26,
    "t": "button",
    "g": "l",
    "x": 14,
@@ -738,11 +766,11 @@
    }
   },
   {
-   "n": "b2",
-   "i": 26,
+   "n": "b4",
+   "i": 27,
    "t": "button",
    "g": "l",
-   "x": 408,
+   "x": 208,
    "y": 414,
    "w": 180,
    "h": 56,
@@ -770,11 +798,43 @@
    }
   },
   {
-   "n": "b1",
-   "i": 27,
+   "n": "b2",
+   "i": 28,
    "t": "button",
    "g": "l",
-   "x": 605,
+   "x": 402,
+   "y": 414,
+   "w": 180,
+   "h": 56,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Next >",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=109<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "b1",
+   "i": 29,
+   "t": "button",
+   "g": "l",
+   "x": 596,
    "y": 414,
    "w": 180,
    "h": 56,
@@ -803,7 +863,7 @@
   },
   {
    "n": "busy",
-   "i": 28,
+   "i": 30,
    "t": "text",
    "g": "l",
    "x": 40,

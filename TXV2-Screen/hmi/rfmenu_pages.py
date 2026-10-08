@@ -39,7 +39,7 @@ add(comps, comp(by['t14'])); add(comps, comp(by['t8']))
 add(comps, comp(by['va0']))
 BUTTONS = [  # (name, words, code) in the order they sit, three to a row: the pages with values to edit first, the settings last
     ('Pid', 'PIDs ...', 18), ('b1', 'Rates ...', 22), ('b2', 'Governor ...', 50),
-    ('Rescue', 'Rescue ...', 64), ('Servos', 'Servos ...', 73), ('Travel', 'Travel extents ...', 83),
+    ('Rescue', 'Rescue ...', 64), ('Servos', 'Servos ...', 73), ('Travel', 'Mixer ...', 83),
     ('Filters', 'Filters ...', 92), ('Setup', 'Settings ...', 81),
 ]
 proto = by['Pid']

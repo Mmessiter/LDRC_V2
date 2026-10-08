@@ -1,9 +1,9 @@
-Tail and swashplate: the rest of the configurator's Mixer tab.||
+Main Rotor Geometry, as the configurator's section.||
 
-Tail yaw min and max [deg]: how far the tail may move each way with the rudder stick (0 to 60), or, with a motorised tail, min and max in percent. Tail center trim: where the tail sits with the stick centred (degrees, or percent for a motorised tail). Tail motor idle [%]: a motorised tail's idle (0 to 25).||
+Cyclic calibration and Collective calibration [%]: how much of a full stick reaches the swash (0 to 1000). Geometry correction [%]: the configurator's Collective Geometry Correction, evens out the collective's arc (-50 to 50, to one decimal).||
 
-Phase angle [deg]: the swashplate's phase (-180 to 180, in tenths). Swash ring [%]: limits combined cyclic to a circle (0 to 100).||
+Cyclic pitch limit and Collective pitch limit [deg]: the most cyclic and collective pitch the swash may give, either way (0 to 30). Total pitch limit [deg]: collective and cyclic together; 0 = off. Rotorflight raises it to at least the collective limit plus six degrees when it stores.||
 
-Geo correction: evens out the swash geometry (-25 to 25, in fifths). Tilt corr. pos and neg [%]: collective tilt correction each way (-100 to 100).||
+Swash phase angle [deg]: turns the cyclic a little round the mast. Positive and Negative tilt correction [%]: the configurator's Collective Tilt Correction, for a swash that tilts with collective.||
 
-< Previous returns to the first page with your edits kept. Save writes everything on both pages; OK leaves, asking first if something is edited and not saved.||
+Save writes all three pages; OK leaves (it asks if something was edited and not saved).||
