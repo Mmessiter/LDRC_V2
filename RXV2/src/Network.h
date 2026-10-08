@@ -314,7 +314,54 @@ inline void disableWifi() {
 
 inline uint32_t bleBootGraceUntil = 0;   // BLE-only boot window when the TX was on first
 
+// ONE LOOK for the home WiFi in a transmitter-on session (0.9.879, Malcolm 2026-10-08: "When arming is turned off, we
+// might as well turn Wi-Fi on"). A receiver that heard the transmitter at boot never tried the home network, and a
+// landing or a transmitter switched off brought Bluetooth back only: the full STA hunt (four joins, ~100 s of channel
+// hopping) swamped a phone's Bluetooth at the field (Goblin 2026-09-03). A SCAN is two or three seconds, once per boot:
+// the home network in sight, WiFi comes up as after a WiFi boot; not in sight, the field is proven (staGaveUp) and
+// Bluetooth stays alone, as before. Stalls the loop ~100 ms when the WiFi driver starts: called on the ground only, by
+// the paths that already pardon their revivals.
+inline bool wifiProbed = false, wifiProbeRunning = false;   // per boot
+inline void wifiProbeStart() {
+    if (wifiProbed || wifiProbeRunning || staGaveUp || staConnectedThisBoot) return;
+    wifiProbed = true;
+    const bool apOnly = prefs.isKey(NVS_KEY_AP_ONLY) && prefs.getBool(NVS_KEY_AP_ONLY, false);
+    if (apOnly || getEffectiveSsid().length() == 0) return;          // nothing to look for
+    WiFi.persistent(false);
+    WiFi.mode(WIFI_STA);
+    WiFi.setSleep(true);                                              // mandatory beside the BT controller (see startWifiStation)
+    if (WiFi.scanNetworks(true, false, false, 120) == WIFI_SCAN_FAILED) {
+        WiFi.mode(WIFI_OFF);
+        staGaveUp = true;
+        events.add("Home WiFi: the scan would not start - Bluetooth only");
+        return;
+    }
+    wifiProbeRunning = true;
+    events.add("One look for the home WiFi (a scan, not the long hunt)");
+}
+inline void wifiProbeTick() {
+    if (!wifiProbeRunning) return;
+    const int n = WiFi.scanComplete();
+    if (n == WIFI_SCAN_RUNNING) return;
+    wifiProbeRunning = false;
+    bool seen = false;
+    const String want = getEffectiveSsid();
+    for (int i = 0; n > 0 && i < n; ++i) if (WiFi.SSID(i) == want) seen = true;
+    WiFi.scanDelete();
+    if (seen) {
+        events.add("Home WiFi in sight - joining");
+        eventsPersist();
+        startWifiStation();                                           // AP + STA, as after a WiFi boot
+    } else {
+        WiFi.mode(WIFI_OFF);
+        staGaveUp = true;                                             // the field, proven: no hunt this session
+        char m[EventLog::MSG_LEN];
+        snprintf(m, sizeof m, "Home WiFi not in sight (%d network%s seen) - Bluetooth only", n < 0 ? 0 : n, n == 1 ? "" : "s");
+        events.add(m);
+    }
+}
 inline void netStep() {
+    wifiProbeTick();
     // Close the boot BLE window: stop advertising; keep a live client's link.
     if (bleBootGraceUntil && (int32_t)(millis() - bleBootGraceUntil) >= 0) {
         bleBootGraceUntil = 0;
@@ -620,12 +667,15 @@ inline void netStep() {
                     // Field (RF-only boot, or home WiFi already proved absent):
                     // Bluetooth only — a STA hunt now would swamp the phone's
                     // link (Goblin 2026-09-03). Once per link-loss episode.
+                    // 0.9.879: a transmitter-on boot that never looked takes
+                    // ONE look (a scan) for the home network first.
                     static uint32_t revivedForLoss = 0;
                     if (revivedForLoss != rx.lastMillis) {
                         revivedForLoss = rx.lastMillis;
-                        events.add("TX lost — Bluetooth back (field: no WiFi hunt)");
+                        events.add(wifiProbed || staGaveUp ? "TX lost — Bluetooth back (field: no WiFi hunt)" : "TX lost — Bluetooth back, and one look for the home WiFi");
                         eventsPersist();
                         if (!bleAdvertising() && !bleHasClient()) bleStart();
+                        wifiProbeStart();
                     }
                 }
             }
@@ -670,7 +720,7 @@ inline void netStep() {
                     // WiFi only where home WiFi is PROVEN this boot. A field
                     // landing revives Bluetooth alone: the STA hunt swamped
                     // the phone's link (Goblin 2026-09-03, "nothing came").
-                    const bool wifiWanted = !staGaveUp && staConnectedThisBoot;
+                    const bool wifiWanted = !staGaveUp && (staConnectedThisBoot || !wifiProbed);   // (0.9.879: never looked yet = one look)
                     const bool bleDown    = !bleAdvertising() && !bleHasClient();
                     if (bleDown && disarmedFor > 500 && !bleReviveAnnouncedMs) {
                         announcePardon();
@@ -693,9 +743,14 @@ inline void netStep() {
                     if (wifiReviveAnnouncedMs && pardonDelivered(wifiReviveAnnouncedMs)) {
                         wifiReviveAnnouncedMs = 0;
                         statsSelfStallUntilMs = millis() + 2000;
-                        events.add("AUTO fly mode: disarmed — WiFi back on");
-                        eventsPersist();
-                        startWifiStation();      // leaves NET_NO_WIFI: runs once
+                        if (staConnectedThisBoot) {
+                            events.add("AUTO fly mode: disarmed — WiFi back on");
+                            eventsPersist();
+                            startWifiStation();      // leaves NET_NO_WIFI: runs once
+                        } else {
+                            events.add("AUTO fly mode: disarmed — one look for the home WiFi");
+                            wifiProbeStart();        // (in sight: WiFi comes up from the probe; not: Bluetooth only, proven)
+                        }
                     }
                 } else { disarmSinceMs = 0; bleReviveAnnouncedMs = 0; wifiReviveAnnouncedMs = 0; }
             }

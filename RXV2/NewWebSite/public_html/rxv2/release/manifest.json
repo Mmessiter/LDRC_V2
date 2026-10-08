@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.879-switch-one-line",
+      "url": "https://messiter.com/rxv2/release/v0.9.879/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.879/littlefs.bin",
+      "fs_md5": "e3d491add30944527f9e67c4f6f158c2",
+      "notes": "A switch on the Adjustments page is one Rotorflight line, so it works at every change (one line per position worked once per power-up: Rotorflight applies a fixed value only the first time); switches found in the old form are converted when the page opens: save to keep them. After a transmitter-on boot the receiver takes one look (a scan) for the home WiFi when the transmitter goes off or the model is disarmed, and joins if it is there."
+    },
+    {
       "name": "RXV2-0.9.878-fresh-block-reads",
       "url": "https://messiter.com/rxv2/release/v0.9.878/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.878/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.868/littlefs.bin",
       "fs_md5": "cc4878104ade8765b32ab2b7b6cb420e",
       "notes": "Transmitter-ordered update: the release list is read as the website writes it (a space after every colon); 0.9.864-867 expected none and would have reported 'release not in the list'."
-    },
-    {
-      "name": "RXV2-0.9.867-install-time-logged",
-      "url": "https://messiter.com/rxv2/release/v0.9.867/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.867/littlefs.bin",
-      "fs_md5": "cc4878104ade8765b32ab2b7b6cb420e",
-      "notes": "The event log says how long an install took (firmware and pages, in seconds), so the transmitter's silence during a transmitter-ordered update can be sized from real numbers."
     }
   ],
   "rotorflight": {

@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>In-flight adjustments &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=381">
-<script src="/app.js?v=381" defer></script>
+<link rel=stylesheet href="/style.css?v=382">
+<script src="/app.js?v=382" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -69,9 +69,10 @@
 <li><b>Save to flight controller</b>. The button says when there are unsaved changes. Remove saves by itself.</li>
 </ol>
 <h3>Switch</h3>
-<p>Each position sets the value you give it, two or three positions. Drag the round dividers to where the switch changes over. Move the switch: the red line follows it and the lit region is the position it is in.</p>
+<p>Two or more positions. Give the first and last positions their values; Rotorflight spaces the positions evenly between them, and the page shows the value each position gets. Drag the round ends to the switch&rsquo;s first and last positions (a switch normally spans 988 to 2012). Move the switch: the red line follows it and the lit region is the position it is in.</p>
+<p>Rotorflight keeps a switch as one line: its travel mapped onto the values. A line that sets one fixed value is applied only once, the first time the switch reaches it, and never again until the flight controller restarts &mdash; so this page never writes that form. Rows found in that form (made by this page before 9 October 2026) are converted when the page opens: save to keep them working.</p>
 <h3>Knob</h3>
-<p>Turning it slides the setting between the two values. Drag the round ends to where the knob starts and stops changing it.</p>
+<p>Turning it slides the setting between the two values. Drag the round ends to where the knob starts and stops changing it. The right end&rsquo;s value must be above the left end&rsquo;s: Rotorflight counts low to high.</p>
 <h3>Banks</h3>
 <p>A line for bank 1 works only while your bank switch (set on the <a href="/rotorflight-modes">Switches page</a>) has bank 1 in use. Another line can serve bank 3 with values that suit it.</p>
 <p>The list offers PIDs and rates. <b>Show every setting</b> adds the rest of Rotorflight&rsquo;s adjustments, over 400 entries, including &ldquo;in the bank in use&rdquo;: whichever bank is flying at the time.</p>
@@ -91,6 +92,7 @@ const RMIN = 875, RMAX = 2125, MAXR = 42;
 const us = b => 1500 + 5 * (b > 127 ? b - 256 : b);                 // Rotorflight: signed 5 us steps around 1500
 const step = v => { const st = Math.max(-125, Math.min(125, Math.round((v - 1500) / 5))); return st < 0 ? st + 256 : st; };
 const u16 = (b, o) => b[o] | (b[o + 1] << 8);
+const us5 = v => Math.round(v / 5) * 5;
 function parseLines(b) {                 // 42 x 14 bytes -> line objects (positions in us)
     const L = [];
     for (let i = 0; i < MAXR && (i + 1) * 14 <= b.length; i++) {
@@ -99,7 +101,38 @@ function parseLines(b) {                 // 42 x 14 bytes -> line objects (posit
     }
     return L;
 }
-// Rows the page shows: kind 'switch' (dividers t[], one value per position), 'knob' (ends lo/hi, min..max), 'nudge' (dividers t[0]=down below, t[1]=up above)
+// ONE Rotorflight line per switch (0.9.879, found on the transmitter 8 Oct 2026, and in rc_adjustments.c of 4.6.0): a
+// line whose value is a single number ("set 3 when the switch is here") is applied ONCE - the line remembers the value it
+// applied and never applies it again until the flight controller reboots or saves - so a switch made of one such line per
+// position worked the first time each position was visited and then jammed (Malcolm: "the first three bank changes work,
+// after that nothing changes"). Rotorflight's own switch is one line: the travel lo..hi mapped evenly onto the values
+// first..last, rounded to whole numbers, which fires at every change. So a switch row is now that one line, and the page
+// shows where Rotorflight divides the travel; the first and last values are the pilot's, the ones between are evenly
+// spaced. Lines of the old form are gathered into a row (legacy: true) with the ends fitted to the old dividers, to be
+// saved in the new form.
+// Where Rotorflight changes value q (1..n-1) on a switch of n positions over lo..hi: the first u with
+// floor(((u - lo) * (n - 1) + floor(W / 2)) / W) == q (rc_adjustments.c, integer arithmetic)
+function switchThresholds(lo, hi, n) {
+    const W = hi - lo, t = [];
+    if (n < 2 || W <= 0) return t;
+    for (let q = 1; q < n; q++) t.push(lo + Math.ceil((q * W - Math.floor(W / 2)) / (n - 1)));
+    return t;
+}
+function switchValues(first, last, n) {  // the value at each position: the ends as given, the rest evenly between (Rotorflight rounds)
+    const out = [];
+    for (let k = 0; k < n; k++) out.push(n > 1 ? Math.round(+first + (+last - +first) * k / (n - 1)) : +first);
+    return out;
+}
+function fitEnds(t, n) {                 // the old dividers of n positions -> ends lo..hi whose even divisions come nearest
+    let lo, hi;
+    if (n <= 2) { const m = t[0]; const W = Math.min(1000, 2 * (m - RMIN), 2 * (RMAX - m)); lo = m - W / 2; hi = m + W / 2; }
+    else { const W = Math.round((t[n - 2] - t[0]) * (n - 1) / (n - 2)); lo = t[0] - Math.round(W / (2 * (n - 1))); hi = lo + W; }
+    lo = us5(Math.max(RMIN, lo)); hi = us5(Math.min(RMAX, hi));
+    if (hi < lo + 5) hi = lo + 5;
+    return [lo, hi];
+}
+// Rows the page shows: kind 'switch' (ends lo/hi, n positions, values[] the value at each), 'knob' (ends lo/hi, min..max),
+// 'nudge' (dividers t[0]=down below, t[1]=up above)
 function linesToRows(L) {
     const rows = [], used = new Set();
     L.forEach((l, i) => {
@@ -108,20 +141,39 @@ function linesToRows(L) {
         const selfEna = l.ena === l.adj && l.enaLo === l.a1Lo && l.enaHi === l.a1Hi;   // enabled by its own position = no condition
         const cond = selfEna || (l.enaLo <= RMIN && l.enaHi >= RMAX) ? null : { ena: l.ena, enaLo: l.enaLo, enaHi: l.enaHi };
         if (l.min === l.max) {
-            // a switch position: gather every line with the same setting, switch and condition that is also a fixed value
+            // the old form: gather every line with the same setting, switch and condition that is also a fixed value
             const same = m => m.fn === l.fn && m.adj === l.adj && m.stp === 0 && m.min === m.max &&
                               ((m.ena === m.adj && m.enaLo === m.a1Lo && m.enaHi === m.a1Hi) === selfEna) &&
                               (selfEna || (m.ena === l.ena && m.enaLo === l.enaLo && m.enaHi === l.enaHi));
             const grp = L.map((m, j) => ({ m, j })).filter(x => !used.has(x.j) && same(x.m));
             grp.sort((a, b) => a.m.a1Lo - b.m.a1Lo);
             grp.forEach(x => used.add(x.j));
-            const t = grp.slice(1).map(x => x.m.a1Lo);
-            rows.push({ kind: 'switch', fn: l.fn, ch: l.adj, t, values: grp.map(x => x.m.min), cond });
+            if (grp.length === 1) { rows.push({ kind: 'knob', fn: l.fn, ch: l.adj, lo: l.a1Lo, hi: l.a1Hi, min: l.min, max: l.max, cond }); return; }   // one fixed value: kept as it is
+            const t = grp.slice(1).map(x => x.m.a1Lo), vals = grp.map(x => x.m.min), n = grp.length;
+            const [lo, hi] = fitEnds(t, n);
+            const old = {}; regions(t).forEach(([a, b], k) => { old[vals[k]] = [a, b]; });
+            rows.push({ kind: 'switch', fn: l.fn, ch: l.adj, lo, hi, n, values: switchValues(vals[0], vals[n - 1], n), cond, legacy: true, oldRegions: old });
             return;
         }
         used.add(i);
+        const n = l.max - l.min + 1;
+        if (n >= 2 && n <= 6) { rows.push({ kind: 'switch', fn: l.fn, ch: l.adj, lo: l.a1Lo, hi: l.a1Hi, n, values: switchValues(l.min, l.max, n), cond }); return; }
         rows.push({ kind: 'knob', fn: l.fn, ch: l.adj, lo: l.a1Lo, hi: l.a1Hi, min: l.min, max: l.max, cond });
     });
+    // a bank line of the old form divided the channel differently: the rows held in a bank move to its new divisions
+    const b = rows.find(r => r.fn === 2 && r.kind === 'switch' && r.legacy);
+    if (b) {
+        const br = bankRegions(rows);
+        rows.forEach(r => {
+            const c = r.kind === 'nudge' ? { ena: r.ena, enaLo: r.enaLo, enaHi: r.enaHi } : r.cond;   // (a nudge keeps its enable as its own fields)
+            if (r === b || !c || c.ena !== b.ch) return;
+            for (const v of Object.keys(b.oldRegions)) { const [lo, hi] = b.oldRegions[v]; if (Math.abs(lo - c.enaLo) <= 5 && Math.abs(hi - c.enaHi) <= 5) {
+                const nc = bankToCond(+v, br); if (!nc) break;
+                if (r.kind === 'nudge') { r.ena = nc.ena; r.enaLo = nc.enaLo; r.enaHi = nc.enaHi; } else r.cond = nc;
+                break; } }
+        });
+    }
+    rows.forEach(r => { delete r.oldRegions; });
     return rows;
 }
 function regions(t) {                    // dividers -> [lo,hi) regions across the whole bar
@@ -134,15 +186,11 @@ function rowsToLines(rows) {             // -> array of 42 line objects (fn 0 = 
     const blank = () => ({ fn: 0, ena: 0, enaLo: 1500, enaHi: 1500, adj: 0, a1Lo: 1500, a1Hi: 1500, a2Lo: 1500, a2Hi: 1500, min: 0, max: 0, stp: 0 });   // Rotorflight's own empty line
     for (const r of rows) {
         if (!r.fn) continue;
-        if (r.kind === 'switch') {
-            regions(r.t).forEach(([lo, hi], k) => {
-                const v = r.values[k]; if (v === undefined || v === null || v === '') return;
-                const e = r.cond ? r.cond : { ena: r.ch, enaLo: lo, enaHi: hi };
-                L.push({ fn: r.fn, ena: e.ena, enaLo: e.enaLo, enaHi: e.enaHi, adj: r.ch, a1Lo: lo, a1Hi: hi, a2Lo: 1500, a2Hi: 1500, min: +v, max: +v, stp: 0 });
-            });
-        } else if (r.kind === 'knob') {
+        if (r.kind === 'switch' || r.kind === 'knob') {
             const e = r.cond ? r.cond : { ena: r.ch, enaLo: RMIN, enaHi: RMAX };
-            L.push({ fn: r.fn, ena: e.ena, enaLo: e.enaLo, enaHi: e.enaHi, adj: r.ch, a1Lo: r.lo, a1Hi: r.hi, a2Lo: 1500, a2Hi: 1500, min: +r.min, max: +r.max, stp: 0 });
+            const mn = r.kind === 'switch' ? r.values[0] : r.min, mx = r.kind === 'switch' ? r.values[r.values.length - 1] : r.max;
+            if (mn === undefined || mn === null || mn === '' || mx === undefined || mx === null || mx === '') continue;
+            L.push({ fn: r.fn, ena: e.ena, enaLo: e.enaLo, enaHi: e.enaHi, adj: r.ch, a1Lo: r.lo, a1Hi: r.hi, a2Lo: 1500, a2Hi: 1500, min: +mn, max: +mx, stp: 0 });
         } else {
             L.push({ fn: r.fn, ena: r.ena ?? r.ch, enaLo: r.enaLo ?? RMIN, enaHi: r.enaHi ?? RMAX, adj: r.ch, a1Lo: RMIN, a1Hi: r.t[0], a2Lo: r.t[1], a2Hi: RMAX, min: +r.min, max: +r.max, stp: Math.max(1, +r.stp) });
         }
@@ -150,19 +198,17 @@ function rowsToLines(rows) {             // -> array of 42 line objects (fn 0 = 
     while (L.length < MAXR) L.push(blank());
     return L.slice(0, MAXR);
 }
-// Which channel range means "bank N"? Read it off the PID-bank line (fn 2): a knob maps lo..hi to min..max
-// linearly (Rotorflight rounds), a switch gives one region per position.
+// Which channel range means "bank N"? Read it off the PID-bank line (fn 2): lo..hi maps to the first..last value
+// linearly (Rotorflight rounds), so value v holds where round(min + (u-lo)*n/(hi-lo)) == v
 function bankRegions(rows) {
     const b = rows.find(r => r.fn === 2 && r.kind !== 'nudge'); if (!b) return null;
+    const mn = b.kind === 'switch' ? +b.values[0] : +b.min, mx = b.kind === 'switch' ? +b.values[b.values.length - 1] : +b.max;
+    const n = mx - mn; if (n <= 0) return null;
     const out = {};
-    if (b.kind === 'switch') { regions(b.t).forEach(([lo, hi], k) => { const v = +b.values[k]; if (v >= 1 && v <= LDRC.BANKS_MAX) out[v] = [lo, hi]; }); }
-    else {
-        const n = +b.max - +b.min; if (n <= 0) return null;
-        for (let v = +b.min; v <= +b.max; v++) {           // value v is chosen where round(min + (u-lo)*n/(hi-lo)) == v
-            const f0 = (v - 0.5 - +b.min) / n, f1 = (v + 0.5 - +b.min) / n;
-            const lo = Math.max(b.lo, Math.round((b.lo + f0 * (b.hi - b.lo)) / 5) * 5), hi = Math.min(b.hi, Math.round((b.lo + f1 * (b.hi - b.lo)) / 5) * 5);
-            out[v] = [v === +b.min ? RMIN : lo, v === +b.max ? RMAX : hi];
-        }
+    for (let v = mn; v <= mx; v++) {
+        const f0 = (v - 0.5 - mn) / n, f1 = (v + 0.5 - mn) / n;
+        const lo = Math.max(b.lo, Math.round((b.lo + f0 * (b.hi - b.lo)) / 5) * 5), hi = Math.min(b.hi, Math.round((b.lo + f1 * (b.hi - b.lo)) / 5) * 5);
+        if (v >= 1 && v <= LDRC.BANKS_MAX) out[v] = [v === mn ? RMIN : lo, v === mx ? RMAX : hi];
     }
     return { ch: b.ch, regions: out };
 }
@@ -172,6 +218,21 @@ function condToBank(cond, br) {           // a stored condition -> bank number, 
     return -1;                             // some other range on the bank channel
 }
 function bankToCond(v, br) { if (!v || !br || !br.regions[v]) return null; const [lo, hi] = br.regions[v]; return { ena: br.ch, enaLo: lo, enaHi: hi }; }
+// What stops a set of rows being saved: the words, or null
+function rowsProblem(rows, labels) {
+    for (let i = 0; i < rows.length; i++) {
+        const r = rows[i]; if (!r.fn) continue;
+        const name = (labels && labels[r.fn]) || ('adjustment ' + (i + 1));
+        if (r.kind === 'switch') {
+            const a = r.values[0], z = r.values[r.values.length - 1];
+            if (a === '' || a === undefined || a === null || z === '' || z === undefined || z === null) return name + ': give the first and last positions a value';
+            if (+z <= +a) return name + ': the last position’s value must be above the first’s (Rotorflight counts low to high; reverse the channel on the transmitter if your switch goes the other way)';
+        } else if (r.kind === 'knob') {
+            if (+r.max <= +r.min) return name + ': the value at the right end must be above the one at the left (Rotorflight counts low to high; reverse the channel on the transmitter if your knob goes the other way)';
+        }
+    }
+    return null;
+}
 function encodeLine(i, l) {
     const b = new Uint8Array(15);
     b[0] = i; b[1] = l.fn; b[2] = l.ena; b[3] = step(l.enaLo); b[4] = step(l.enaHi); b[5] = l.adj;
@@ -238,12 +299,14 @@ function fnSel(id, r, br) {
 function regionNames(r) {
     if (r.kind === 'nudge') return ['down', '', 'up'];
     if (r.kind === 'knob') return ['', 'knob', ''];
-    return r.values.map((v, k) => 'position ' + (k + 1) + (v === '' || v === undefined ? '' : ' = ' + v));
+    const vals = switchRowValues(r);
+    return vals.map((v, k) => 'position ' + (k + 1) + (v === '' || v === undefined || v === null ? '' : ' = ' + v));
 }
 function drawBar(i) {
     const r = rows[i], tr = $('tr' + i); if (!tr) return;
     let regs, dividers;
     if (r.kind === 'knob') { regs = [[RMIN, r.lo], [r.lo, r.hi], [r.hi, RMAX]]; dividers = [r.lo, r.hi]; }
+    else if (r.kind === 'switch') { regs = regions(switchThresholds(r.lo, r.hi, r.n)); dividers = [r.lo, r.hi]; }
     else { regs = regions(r.t); dividers = r.t; }
     const names = regionNames(r);
     let h = '';
@@ -267,17 +330,23 @@ function wireHandle(i, h) {
             let u = RMIN + (ev.clientX - rc.left) / rc.width * (RMAX - RMIN);
             u = Math.max(RMIN + 5, Math.min(RMAX - 5, Math.round(u / 5) * 5));
             const r = rows[i];
-            if (r.kind === 'knob') { if (k === 0) r.lo = Math.min(u, r.hi - 5); else r.hi = Math.max(u, r.lo + 5); }
+            if (r.kind === 'knob' || r.kind === 'switch') { if (k === 0) r.lo = Math.min(u, r.hi - 5); else r.hi = Math.max(u, r.lo + 5); }
             else { const lo = k > 0 ? r.t[k - 1] + 5 : RMIN + 5, hi = k + 1 < r.t.length ? r.t[k + 1] - 5 : RMAX - 5; r.t[k] = Math.max(lo, Math.min(hi, u)); }
             markDirty();
             // move the regions and this handle without a full repaint (keeps the capture)
-            const regs = r.kind === 'knob' ? [[RMIN, r.lo], [r.lo, r.hi], [r.hi, RMAX]] : regions(r.t);
+            const regs = r.kind === 'knob' ? [[RMIN, r.lo], [r.lo, r.hi], [r.hi, RMAX]] : r.kind === 'switch' ? regions(switchThresholds(r.lo, r.hi, r.n)) : regions(r.t);
             track.querySelectorAll('.rReg').forEach((el, j) => { const [lo2, hi2] = regs[j]; el.style.left = pct(lo2) + '%'; el.style.width = Math.max(0, pct(hi2) - pct(lo2)) + '%'; });
-            h.style.left = pct(r.kind === 'knob' ? (k === 0 ? r.lo : r.hi) : r.t[k]) + '%';
+            h.style.left = pct(r.kind !== 'nudge' ? (k === 0 ? r.lo : r.hi) : r.t[k]) + '%';
         };
         const up = () => { try { h.releasePointerCapture(e.pointerId); } catch (_) {} h.removeEventListener('pointermove', move); h.removeEventListener('pointerup', up); h.removeEventListener('pointercancel', up); };
         h.addEventListener('pointermove', move); h.addEventListener('pointerup', up); h.addEventListener('pointercancel', up);
     });
+}
+// The value each position of a switch row gets: the first and last as typed, the rest evenly between (Rotorflight's own spacing)
+function switchRowValues(r) {
+    const n = r.n || r.values.length, a = r.values[0], z = r.values[n - 1];
+    if (a === '' || a === undefined || a === null || z === '' || z === undefined || z === null) return r.values.slice(0, n);
+    return switchValues(+a, +z, n);
 }
 // Sensible starting values for the positions: banks count 1, 2, 3; anything else spreads the old knob range
 function prefill(r, n, old, lo, hi) {
@@ -341,7 +410,8 @@ async function fillCurrent(i, force) {
     let v; try { v = await currentValue(r); } catch (e) { return false; }
     if (v === null || v === undefined || rows[i] !== r) return false;
     let changed = false;
-    if (r.kind === 'switch') r.values = r.values.map(x => { if (force || x === '' || x === undefined || x === null) { changed = changed || String(x) !== String(v); return String(v); } return x; });
+    if (r.kind === 'switch') { const a = r.values[0], z = r.values[r.n - 1]; const fa = force || a === '' || a === undefined || a === null, fz = force || z === '' || z === undefined || z === null;
+        if (fa) { changed = changed || String(a) !== String(v); r.values[0] = String(v); } if (fz) { changed = changed || String(z) !== String(v); r.values[r.n - 1] = String(v); } r.values = switchRowValues(r); }
     else if (r.kind === 'knob') { if (force || !+r.min) { changed = changed || +r.min !== v; r.min = v; } if (force || !+r.max) { changed = changed || +r.max !== v; r.max = v; } }
     return changed;
 }
@@ -358,11 +428,13 @@ function paint() {
             ? '<select id=kind' + i + ' disabled><option>a step adjustment from the configurator (kept as it is)</option></select>'
             : '<select id=kind' + i + ' class=usbOnly><option value=knob' + (r.kind === 'knob' ? ' selected' : '') + '>Knob</option><option value=switch' + (r.kind === 'switch' ? ' selected' : '') + '>Switch</option></select>';
         let h = '<div class=r><label data-help="The Rotorflight setting this line changes, and the bank it changes it in. Yaw P gain in bank 1 works only while your bank switch has bank 1 in use; another line can serve bank 3 with values that suit it. Banks need a PID bank line on this page.">What it changes</label>' + fnSel('fn' + i, r, bankRegions(rows)) + '</div>' +
-                '<div class=r><label data-help="Knob: continuous adjustment within a range. Switch: choosing between settings, two or three positions. The help button explains both.">Control</label>' + kindSel + '<label>on</label>' + chanSel('ch' + i, r.ch) + '</div>';
-        if (r.kind === 'switch') h += '<div class=r><label data-help="Two positions have one divider, three positions have two.">Positions</label><select id=npos' + i + ' class=usbOnly><option value=2' + (r.t.length === 1 ? ' selected' : '') + '>2</option><option value=3' + (r.t.length === 2 ? ' selected' : '') + '>3</option></select></div>';
+                '<div class=r><label data-help="Knob: continuous adjustment within a range. Switch: choosing between settings, two to six positions, evenly spaced between the first and last values. The help button explains both.">Control</label>' + kindSel + '<label>on</label>' + chanSel('ch' + i, r.ch) + '</div>';
+        if (r.kind === 'switch') h += '<div class=r><label data-help="How many positions the switch has. Rotorflight divides the travel between the ends evenly.">Positions</label><select id=npos' + i + ' class=usbOnly>' + [2, 3, 4, 5, 6].map(n => '<option value=' + n + (r.n === n ? ' selected' : '') + '>' + n + '</option>').join('') + '</select></div>';
         h += '<div class=rScale><span>875</span><span>1500</span><span>2125</span></div><div class=rTrack id=tr' + i + '></div><div class=rLive id=lv' + i + '>&nbsp;</div>';
         if (r.kind === 'switch') {
-            h += '<div class=vals>' + r.values.map((v, k) => '<div><input id=v' + i + '_' + k + ' class=usbOnly type=number min=0 max=65535 value="' + (v ?? '') + '"><small>position ' + (k + 1) + '</small></div>').join('') + '</div>';
+            const vals = switchRowValues(r);
+            h += '<div class=vals>' + vals.map((v, k) => { const end = k === 0 || k === r.n - 1;
+                return '<div><input id=v' + i + '_' + k + ' class=usbOnly type=number min=0 max=65535 value="' + (v ?? '') + '"' + (end ? '' : ' disabled') + '><small>position ' + (k + 1) + (end ? '' : ' (between)') + '</small></div>'; }).join('') + '</div>';
         } else if (r.kind === 'knob') {
             h += '<div class=r><label data-help="The value at the left end of the zone and at the right end.">Sets the value from</label><input id=min' + i + ' class=usbOnly type=number min=0 max=65535 value=' + r.min + '><label>to</label><input id=max' + i + ' class=usbOnly type=number min=0 max=65535 value=' + r.max + '></div>';
         } else {
@@ -373,14 +445,13 @@ function paint() {
         drawBar(i);
         $('fn' + i).onchange = async () => { collect(); await fillCurrent(i, true); paint(); };
         if (r.kind !== 'nudge') $('kind' + i).onchange = () => { collect(); const r2 = rows[i]; const k = $('kind' + i).value;
-            if (k === 'switch') { r2.kind = 'switch'; r2.t = r2.t && r2.t.length ? r2.t.slice(0, 2) : [1500]; r2.values = prefill(r2, r2.t.length + 1, r2.values, r2.min, r2.max); }
-            else if (k === 'knob') { r2.kind = 'knob'; r2.lo = r2.lo ?? RMIN; r2.hi = r2.hi ?? RMAX; r2.min = r2.min ?? 0; r2.max = r2.max ?? 0; }
+            if (k === 'switch') { r2.kind = 'switch'; r2.n = r2.n && r2.n >= 2 ? r2.n : 2; r2.lo = r2.lo ?? 988; r2.hi = r2.hi ?? 2012; if (r2.lo < RMIN || r2.hi > RMAX || r2.hi <= r2.lo) { r2.lo = 988; r2.hi = 2012; } r2.values = prefill(r2, r2.n, r2.values, r2.min, r2.max); }
+            else if (k === 'knob') { r2.kind = 'knob'; r2.lo = r2.lo ?? RMIN; r2.hi = r2.hi ?? RMAX; r2.min = r2.min ?? (r2.values ? +r2.values[0] || 0 : 0); r2.max = r2.max ?? (r2.values ? +r2.values[r2.values.length - 1] || 0 : 0); }
             paint(); fillCurrent(i, false).then(c => { if (c) paint(); }); };
         const np = $('npos' + i); if (np) np.onchange = () => { collect(); const r2 = rows[i]; const n = +np.value;
-            if (n === 3 && r2.t.length === 1) { r2.t = [Math.min(r2.t[0], 1300), Math.max(r2.t[0] + 200, 1700)]; r2.values = prefill(r2, 3, r2.values); }
-            if (n === 2 && r2.t.length === 2) { r2.t = [1500]; r2.values = prefill(r2, 2, r2.values); }
+            if (n !== r2.n) { const a = r2.values[0], z = r2.values[r2.n - 1]; r2.n = n; r2.values = prefill(r2, n, [a, ...new Array(Math.max(0, n - 2)).fill(undefined), z]); }
             paint(); fillCurrent(i, false).then(c => { if (c) paint(); }); };
-        if (r.kind === 'switch') r.values.forEach((v, k) => { $('v' + i + '_' + k).oninput = () => { rows[i].values[k] = $('v' + i + '_' + k).value; drawBar(i); }; });
+        if (r.kind === 'switch') for (let k = 0; k < r.n; k++) { const el = $('v' + i + '_' + k); if (el) el.oninput = () => { rows[i].values[k] = el.value; const vals = switchRowValues(rows[i]); for (let j = 1; j + 1 < rows[i].n; j++) { const m = $('v' + i + '_' + j); if (m) m.value = vals[j] ?? ''; } drawBar(i); }; }
     });
     if (!rows.length) R.innerHTML = '<p class=sub>No adjustments yet.</p>';
     R.querySelectorAll('button[data-clear]').forEach(b => b.onclick = async () => {
@@ -399,7 +470,7 @@ function collect() {
         const [fnS, bankS] = g('fn').value.split(':'); r.fn = +fnS; r.ch = +g('ch').value;
         if (r.fn === 1 || r.fn === 2) r.cond = null;
         else if (bankS !== '-1') r.cond = bankToCond(+bankS, bankRegions(rows));
-        if (r.kind === 'switch') r.values = r.values.map((v, k) => { const el = document.getElementById('v' + i + '_' + k); return el ? el.value : v; });
+        if (r.kind === 'switch') { const vals = []; for (let k = 0; k < r.n; k++) { const el = document.getElementById('v' + i + '_' + k); vals.push(el && (k === 0 || k === r.n - 1) ? el.value : (r.values[k] ?? '')); } r.values = switchRowValues({ n: r.n, values: vals }); }
         else if (r.kind === 'knob') { r.min = +g('min').value; r.max = +g('max').value; }
         else { /* a configurator step line: untouched */ }
     });
@@ -414,7 +485,7 @@ async function pollRc() {
             if (b.length < (chIdx + 1) * 2) { dot.style.display = 'none'; return; }
             const u = u16(b, chIdx * 2);
             dot.style.display = ''; dot.style.left = pct(u) + '%';
-            const regs = r.kind === 'knob' ? [[RMIN, r.lo], [r.lo, r.hi], [r.hi, RMAX]] : regions(r.t);
+            const regs = r.kind === 'knob' ? [[RMIN, r.lo], [r.lo, r.hi], [r.hi, RMAX]] : r.kind === 'switch' ? regions(switchThresholds(r.lo, r.hi, r.n)) : regions(r.t);
             let inK = -1; regs.forEach(([lo, hi], k) => { if (u >= lo && u < hi) inK = k; });
             tr.querySelectorAll('.rReg').forEach(el => el.classList.toggle('live', +el.dataset.k === inK));
             const names = regionNames(r);
@@ -444,14 +515,26 @@ async function load() {
         const r = await fetch('/api/msp?fn=52', { cache: 'no-store' });
         if (!r.ok) { setStatus('bad', LDRC.replay ? 'Adjustments are not in the recording \u2014 they need the model connected.' : await r.text()); return; }
         const hex = (await r.text()).trim();
+        // a line cannot say how many positions a switch has: a switch shown until now (50, 55, 60 over 988..2012, say) comes back
+        // from the flight controller as the same line and is shown as that switch again, not as a knob 50 to 60
+        const memo = rows.filter(r => r.kind === 'switch' && r.n >= 2 && r.values[0] !== '' && r.values[r.n - 1] !== '').map(r => ({ fn: r.fn, ch: r.ch, lo: us5(r.lo), hi: us5(r.hi), first: +r.values[0], last: +r.values[r.n - 1], n: r.n }));
         rows = scaleRows(linesToRows(parseLines(hexToBytes(hex))), 1);
+        rows.forEach(r => {
+            if (r.kind !== 'knob') return;
+            const m = memo.find(m => m.fn === r.fn && m.ch === r.ch && m.lo === r.lo && m.hi === r.hi && m.first === r.min && m.last === r.max);
+            if (m) { r.kind = 'switch'; r.n = m.n; r.values = switchValues(r.min, r.max, m.n); delete r.min; delete r.max; }
+        });
         cacheStore(hex); cacheAt = '';
         setStatus('', ''); paint(); markClean();
+        const old = rows.filter(r => r.legacy).length;
+        if (old) { markDirty(); setStatus('bad', old + (old === 1 ? ' switch was' : ' switches were') + ' in a form Rotorflight applies only once per power-up (made by this page before 9 October 2026). Converted to Rotorflight\u2019s own form: check the positions and save.'); }
     } catch (e) { setStatus('bad', 'no answer'); }
 }
 async function save() {
     if (!(await usbGate())) return false;
     collect();
+    const problem = rowsProblem(rows, LABELS);
+    if (problem) { setStatus('bad', problem); return false; }
     const L = rowsToLines(scaleRows(rows, -1));
     if (rows.some(r => r.fn) && L.filter(l => l.fn).length === 0) { setStatus('bad', 'Give each position a value first'); return false; }
     setStatus('info', 'Writing…');
@@ -482,7 +565,7 @@ async function save() {
 }
 document.addEventListener('DOMContentLoaded', async () => {
     { const sa = $('showAll'); sa.checked = showAll; sa.onchange = () => { showAll = sa.checked; try { localStorage.setItem('adj.showAll', showAll ? '1' : '0'); } catch (e) {} collect(); paint(); }; }
-    $('addBtn').onclick = async () => { collect(); const br = bankRegions(rows); rows.push({ kind: 'switch', fn: 14, ch: 1, t: [1500], values: ['', ''], cond: br ? bankToCond(1, br) : null }); paint(); markDirty(); if (await fillCurrent(rows.length - 1, true)) paint(); };
+    $('addBtn').onclick = async () => { collect(); const br = bankRegions(rows); rows.push({ kind: 'switch', fn: 14, ch: 1, lo: 988, hi: 2012, n: 2, values: ['', ''], cond: br ? bankToCond(1, br) : null }); paint(); markDirty(); if (await fillCurrent(rows.length - 1, true)) paint(); };
     $('saveBtn').onclick = save;
     $('rows').addEventListener('input', markDirty); $('rows').addEventListener('change', markDirty);
     await load();

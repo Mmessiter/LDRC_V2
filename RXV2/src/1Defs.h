@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.878-fresh-block-reads";
+constexpr const char* FW_VERSION = "RXV2-0.9.879-switch-one-line";
 
 //*********************************************************************
 //  Auto-update manifest URLs
