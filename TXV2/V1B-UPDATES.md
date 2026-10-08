@@ -186,6 +186,13 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## A touch on the bank switch's bar says nothing (V2 B85, 9 Oct 2026)
+
+B84 confirmed ("it does seem to work perfectly now"). The yellow banner a touch on the bank bar brought up ("A bank
+switch counts its banks 1, 2, 3 ...: nothing to type") was "strange, perhaps unnecessary": gone. The hint line under
+the bar already says there is nothing to drag. Malcolm's reading is right: the bank switch is set by the channel's
+value per bank in Model setup; this page only matches it.
+
 ## The bank switch matched by a search, not by the ends (V2 B84, 9 Oct 2026)
 
 B83 on the bench: "the banks are changing properly now" - but the Adjustments page showed the bank switch with its blobs

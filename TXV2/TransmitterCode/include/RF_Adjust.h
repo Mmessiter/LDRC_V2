@@ -663,7 +663,7 @@ FLASHMEM void AdjustBarMoved()
         int k = AdjRegionOf(r, tap);
         if (r.kind == AK_SWITCH)
         { // the first and last positions take a value; the rest are evenly between (Rotorflight's own spacing)
-            if (r.fn == 1 || r.fn == 2) { AdjBusy("A bank switch counts its banks 1, 2, 3 ...: nothing to type"); AdjMsgUntil = millis() + 3000; return; }
+            if (r.fn == 1 || r.fn == 2) return;   // (a bank switch counts its banks: nothing to type, and nothing to say - Malcolm, B85)
             if (k < 0) k = tap < (r.lo + r.hi) / 2 ? 0 : r.n - 1;   // (beyond the reach: the nearer end)
             if (k == 0) AdjClickBox("tp0");
             else if (k == r.n - 1 && k < ADJ_POS_MAX) { char nm[8]; snprintf(nm, sizeof(nm), "tp%d", k); AdjClickBox(nm); }
