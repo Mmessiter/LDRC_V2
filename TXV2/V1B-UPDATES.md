@@ -186,6 +186,31 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Backup of everything over Bluetooth, and the backup as the model's stand-in (V2 B70 + card files, 8 Oct 2026)
+
+Malcolm: "convert [the Version 1 backup] to BLE and expand it to cover all the settings ... when the transmitter has that
+model selected but has not connected, if a backup has been made, accessing those pages should read the data in the
+backup file and even be capable of writing to it ... on a subsequent connection the user should be informed if the
+backup contains edits and offered the option to restore." B70 (RF_Backup.h, modelled on the phone app's backup, whose
+restore map is proven byte for byte): one file per model on the card (/rfbak/<model>.rfb: key=hex lines, the key a
+Rotorflight function, with its bank or its index). Back up sweeps every bank (PIDs, advanced PIDs, governor profile,
+rescue; rates) and the bankless set (governor global, mixer and inputs, servos, rules, motor and gear, blackbox,
+name, features, alignments, arming, trims, sensors, channel map, receiver setup, stick centre and travel, failsafe,
+RSSI, telemetry, filters, battery, ESC telemetry, RPM notches, meters, modes, failsafe values), about sixty reads, and
+puts the transmitter's banks back. Restore all writes what differs, one servo, rule, meter, mode slot or failsafe value
+per write, each read back; 222 made from 131 without its motor count, 81 from 80 without its first byte; the FC's own
+copy stored once something was written; a restart only when the governor global or the motor block changed.
+
+THE STAND-IN: with no model connected and the model's file on the card, every Rotorflight page opens: the pipe's
+MspAsk hands a read to the file and a write into it, marking the key as an edit (the pages' own writes: filters,
+features, rescue, servos, mixer, inputs, and the plain pairs); the menu says "From the backup file". Opening the
+Rotorflight menu with the model connected and edits waiting asks once per connection: "Write them to the flight
+controller now?" - Write edits writes only the marked keys and clears the marks; Forget edits clears them unwritten.
+The Version 1 backup (PIDs and rates of a bank into the model record, over the radio link) is retired; its space in
+the model record is spare (the fingerprint untouched). Page 12 RFBackUpView remade (hmi/backup_pages.py), codes
+111-115, help BACKUP.TXT; host test dev/test_backup (50 checks: the store, the stand-in, the sweep, a restore that
+writes only what differs, the edits, the restart rule). Untested on hardware as written.
+
 ## Pale shades, black words, one shade per section (card files, 8 Oct 2026)
 
 Malcolm: "the red background colour chosen has insufficient contrast with the text. I suggest that the background

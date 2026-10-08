@@ -1,0 +1,11 @@
+Backup: every Rotorflight setting of this model, kept on the transmitter's card and put back from it. Needs a Version 2 receiver with Bluetooth, the safety on and the model disarmed. One file per model.||
+
+Back up: reads everything from the flight controller, every bank (PIDs, advanced PIDs, rates, governor profile, rescue), then the governor global, mixer and its inputs, servos, mixer rules, motor and gear ratio, blackbox, filters, features, alignments, trims, battery and meters, receiver setup, channel map, failsafe, modes, RSSI, telemetry, RPM notches. About a minute. Do not move the bank switch while it runs.||
+
+Restore all: writes every setting in the backup to the flight controller, one at a time, skipping those it already has, reading each back to check. The flight controller stores them, and restarts only if the governor global or the motor block changed. The model's setup is replaced by the backup's: be sure it is the backup you mean.||
+
+Without the model: with a backup on the card, every Rotorflight page opens with no model connected and reads the backup; a Save writes the backup instead and marks the setting as an edit. The menu says "From the backup file".||
+
+Write edits: with the model connected again, the marked edits are written to the flight controller, checked, and the marks go. You are also offered this when you open the Rotorflight menu with the model connected and edits waiting. Forget edits: the marks go without writing (the values in the backup stay as edited; a new Back up replaces them).||
+
+OK leaves. Nothing on this page runs while another job runs.||

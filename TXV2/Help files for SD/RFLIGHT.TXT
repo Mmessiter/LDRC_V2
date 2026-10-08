@@ -4,7 +4,7 @@ PIDs, Rates (each with an Advanced page), Governor, Rescue and Servos read their
 
 Settings holds what the transmitter itself needs to know: whether rates follow the banks, the Rotorflight version (as the receiver reports it), the arming channel, and the main rotor to motor RPM ratio.||
 
-Backup / Restore saves the PIDs and rates of a bank to the transmitter's card, and puts them back. Save as soon as you are happy with them; never restore what was never saved.||
+Backup / Restore keeps EVERY Rotorflight setting of the model on the transmitter's card, over Bluetooth, and puts them back. With no model connected, the pages read and edit the backup instead, and the edits are offered to the model when it is next connected. Back up as soon as you are happy with a setup.||
 
 Without a model connected, PIDs and Rates show and edit the copies on the card. The other pages need the model.||
 

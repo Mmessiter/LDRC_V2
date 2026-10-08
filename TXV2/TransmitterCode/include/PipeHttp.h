@@ -46,8 +46,19 @@ void PipeReplyFromScreen(const char *text) // "<id> <code> <body>" (up to the li
     PipeRepId = (int)id;
 }
 // A Rotorflight request: fn, and the bytes to send with it (none for a read).
+bool BakOffline();                                                  // RF_Backup.h (B70): no model, but this model's backup file
+bool BakOfflineAnswer(uint8_t fn, const uint8_t *data, int len);    // ... which answers in the flight controller's stead
 int MspAsk(uint8_t fn, const uint8_t *data, int len)
 {
+    if (BakOffline() && BakOfflineAnswer(fn, data, len))
+    { // B70: answered from the backup file, at once; the page finds the reply at its next look
+        ++PipeReqId;
+        if (PipeReqId > 30000)
+            PipeReqId = 1;
+        PipeRepId = PipeReqId;
+        PipeReqSentMs = millis();
+        return PipeReqId;
+    }
     char path[360];
     int n = snprintf(path, sizeof(path), "/api/msp?fn=%u", (unsigned)fn);
     if (data && len > 0)

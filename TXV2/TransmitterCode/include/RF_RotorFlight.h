@@ -53,6 +53,7 @@ void RotorFlightStart()
     (void)Vbuf; // (B56: the four settings have a page of their own, RFSetupView: StartRFSettingsView)
     ShowRFBank();
     ShowRFRate();
+    BakOfferEdits(); // B70: edits made without the model, offered once per connection
 }
 // B56 (Malcolm, 7 Oct: the menu "will become a bit overcrowded ... redesign it slightly"): the four settings that were on
 // the menu - link rates and banks, version, arming channel, main RPM ratio - on a page of their own, and the menu a grid

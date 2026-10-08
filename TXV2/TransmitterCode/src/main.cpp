@@ -167,6 +167,7 @@
 #include "RF_Rates_Advanced.h"
 #include "RF_PID_Advanced.h"
 #include "RF_Save_Restore.h"
+#include "RF_Backup.h" // B70: backup and restore of everything over the pipe, and the file as the FC's stand-in offline
 #include "SDFiles.h"
 #include "ChooseImage.h"
 #include "Calibrate.h"
@@ -3028,7 +3029,7 @@ void RestoreCurrentModel()
 // ******************************** Global Array1 of numbered function pointers OK up the **********************************
 
 // This new list can be huge - up to 24 BITS unsigned!  ( Use "NUMBER<<8" )
-#define LASTFUNCTION1 111 // One more than final one
+#define LASTFUNCTION1 116 // One more than final one
 
 void (*NumberedFunctions1[LASTFUNCTION1])(){
     Blank,                   // 0 Cannot be used
@@ -3079,8 +3080,8 @@ void (*NumberedFunctions1[LASTFUNCTION1])(){
     EndChooseImage,          // 45
     ImageScrollStop,         // 46
     LinkRatesToBanksChanged, // 47
-    Start_RF_Backup_Restore, // 48
-    End_RF_Backup_Restore,   // 49
+    StartBackupView,         // 48 B70: the menu's Backup/Restore (was Start_RF_Backup_Restore, the Version 1 picker)
+    EndBackupView,           // 49
     Start_RF_Governor,       // 50
     End_RF_Governor,         // 51
     Save_RF_Governor,        // 52
@@ -3141,7 +3142,12 @@ void (*NumberedFunctions1[LASTFUNCTION1])(){
     FilterNotch2Tapped,      // 107 Notch Filter 2: Enable
     TravelYawTapped,         // 108 B66: Mixer page 3, Yaw reversed
     StartTravel3View,        // 109 Next > (page 2 to the tail rotor page)
-    StartTravel2View         // 110 < Previous (page 3 back to page 2)
+    StartTravel2View,        // 110 < Previous (page 3 back to page 2)
+    BackupNow,               // 111 B70: the backup page's Back up
+    RestoreAll,              // 112 Restore all
+    WriteEdits,              // 113 Write edits
+    DiscardEdits,            // 114 Forget edits
+    EndBackupView            // 115 OK
 };
 
 // This list migth become MUCH longer as it limit is 24 bits big
@@ -5012,12 +5018,9 @@ FASTRUN void loop()
     case LISTENMODE: // 6 for wireless buddy
         DoWirelessBuddyListen();
         break;
-    case SAVE_RF_SETTINGS: // 7 for RotorFlight options
-        Save_SOME_RF_Parameters();
-        SendData();
-        break;
-    case RESTORE_RF_SETTINGS: // 8 for RotorFlight options
-        Restore_SOME_RF_Parameters();
+    case SAVE_RF_SETTINGS: // 7 B70: a backup or a restore over the pipe (RF_Backup.h), the link kept going
+    case RESTORE_RF_SETTINGS: // 8
+        BackupRun();
         SendData();
         break;
     default:

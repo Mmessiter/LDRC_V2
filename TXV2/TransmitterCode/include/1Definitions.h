@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B69 08/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B70 08/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -888,6 +888,14 @@ void TravelCollTapped();
 void StartTravel2View();
 void EndTravel2View();
 void StartTravel3View();                     // B66: the tail rotor page
+void StartBackupView();                      // B70: RF_Backup.h
+void EndBackupView();
+void BackupNow();
+void RestoreAll();
+void WriteEdits();
+void DiscardEdits();
+void BackupRun();
+void BakOfferEdits();
 void TravelYawTapped();
 void FilterPoll();                            // B58: RF_Filters.h
 void StartFilterView();

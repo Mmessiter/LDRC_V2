@@ -1,1 +1,450 @@
-{"name":"RFBackUpView","id":12,"w":800,"h":480,"bg":{"sta":2,"mode":"image","picture":3},"nav":{"up":255,"down":255,"left":255,"right":255},"ev":{"preinitialize":"RFBackUpView.pic=Screen_Background"},"comps":[{"n":"t0","i":3,"t":"text","g":"l","x":0,"y":0,"w":800,"h":58,"font":0,"sta":1,"c":{"pco":65535,"borderc":0,"bco":2214},"txt":"Rotorflight backup","a":{"style":0,"key":255,"borderw":0,"xcen":1,"ycen":1,"pw":0,"txt_maxl":30,"isbr":0}},{"n":"card","i":11,"t":"text","g":"l","x":110,"y":86,"w":580,"h":300,"font":6,"sta":1,"c":{"pco":65535,"borderc":65535,"bco":4426},"txt":"","a":{"style":1,"key":255,"borderw":2,"xcen":0,"ycen":1,"pw":0,"txt_maxl":1,"isbr":0}},{"n":"b2","i":1,"t":"button","g":"g","x":150,"y":104,"w":500,"h":64,"font":6,"sta":1,"c":{"bco2":1024,"pco":0,"borderc":0,"bco":8160,"pco2":65535},"txt":"Backup to transmitter SD card","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":30,"isbr":0},"ev":{"r":"va0.val=36<<8\nprint va0.val"}},{"n":"b3","i":2,"t":"button","g":"g","x":150,"y":190,"w":500,"h":64,"font":6,"sta":1,"c":{"bco2":1024,"pco":0,"borderc":0,"bco":64070,"pco2":65535},"txt":"Restore to flight controller","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":30,"isbr":0},"ev":{"r":"va0.val=37<<8\nprint va0.val"}},{"n":"b0","i":4,"t":"button","g":"l","x":620,"y":4,"w":170,"h":50,"font":6,"sta":1,"c":{"bco2":1024,"pco":0,"borderc":0,"bco":54938,"pco2":65535},"txt":"Help","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":10,"isbr":0},"ev":{"r":"print \"HelpView:RFLIGHT.TXT\"\nLogView.t0.txt=\"RotorFlight setup help\"\nLogView.return.txt=\"RFView\""}},{"n":"t14","i":5,"t":"text","g":"g","x":10,"y":3,"w":170,"h":26,"font":2,"sta":1,"c":{"pco":65535,"borderc":0,"bco":2214},"txt":"Bank","a":{"style":0,"key":255,"borderw":0,"xcen":0,"ycen":1,"pw":0,"txt_maxl":80,"isbr":0}},{"n":"t8","i":6,"t":"text","g":"g","x":10,"y":29,"w":170,"h":26,"font":2,"sta":1,"c":{"pco":65535,"borderc":0,"bco":2214},"txt":"Rate","a":{"style":0,"key":255,"borderw":0,"xcen":0,"ycen":1,"pw":0,"txt_maxl":80,"isbr":0}},{"n":"t11","i":7,"t":"text","g":"g","x":130,"y":320,"w":540,"h":50,"font":0,"sta":1,"c":{"pco":65504,"borderc":0,"bco":4426},"txt":"Model name","a":{"style":0,"key":255,"borderw":0,"xcen":1,"ycen":1,"pw":0,"txt_maxl":30,"isbr":0}},{"n":"b4","i":8,"t":"button","g":"l","x":605,"y":414,"w":180,"h":56,"font":6,"sta":1,"c":{"bco2":1024,"pco":0,"borderc":0,"bco":54938,"pco2":65535},"txt":"OK","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":10,"isbr":0},"ev":{"r":"va0.val=49<<8\nprint va0.val"}},{"n":"va0","i":9,"t":"variable","g":"l","sta":0,"txt":"newtxt","val":0,"a":{"txt_maxl":10}},{"n":"t1","i":10,"t":"text","g":"l","x":150,"y":262,"w":500,"h":40,"font":2,"sta":1,"c":{"pco":65504,"borderc":0,"bco":4426},"txt":"Only press the red button if you are quite sure.","a":{"style":0,"key":255,"borderw":0,"xcen":1,"ycen":1,"pw":0,"txt_maxl":60,"isbr":0}}]}
+{
+ "name": "RFBackUpView",
+ "id": 12,
+ "w": 800,
+ "h": 480,
+ "bg": {
+  "sta": 2,
+  "mode": "image",
+  "picture": 3
+ },
+ "nav": {
+  "up": 255,
+  "down": 255,
+  "left": 255,
+  "right": 255
+ },
+ "ev": {
+  "preinitialize": "vis busy,0\nRFBackUpView.pic=Screen_Background"
+ },
+ "comps": [
+  {
+   "n": "t0",
+   "i": 1,
+   "t": "text",
+   "g": "l",
+   "x": 0,
+   "y": 0,
+   "w": 800,
+   "h": 58,
+   "font": 0,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 2214
+   },
+   "txt": "Backup (Rotorflight)",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "card",
+   "i": 2,
+   "t": "text",
+   "g": "l",
+   "x": 0,
+   "y": 58,
+   "w": 800,
+   "h": 422,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 65535,
+    "bco": 4426
+   },
+   "txt": "",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 1,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t9",
+   "i": 3,
+   "t": "text",
+   "g": "g",
+   "x": 10,
+   "y": 4,
+   "w": 200,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 2214
+   },
+   "txt": "No model",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t11",
+   "i": 4,
+   "t": "text",
+   "g": "g",
+   "x": 10,
+   "y": 30,
+   "w": 200,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65504,
+    "borderc": 0,
+    "bco": 2214
+   },
+   "txt": "Model name",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "va0",
+   "i": 5,
+   "t": "variable",
+   "g": "l",
+   "sta": 0,
+   "txt": "newtxt",
+   "val": 0,
+   "a": {
+    "txt_maxl": 10
+   }
+  },
+  {
+   "n": "b0",
+   "i": 6,
+   "t": "button",
+   "g": "l",
+   "x": 620,
+   "y": 4,
+   "w": 170,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Help",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"HelpView:BACKUP.TXT\"\nLogView.t0.txt=\"Backup help\"\nLogView.return.txt=\"RFBackUpView\""
+   }
+  },
+  {
+   "n": "i0",
+   "i": 7,
+   "t": "text",
+   "g": "g",
+   "x": 34,
+   "y": 94,
+   "w": 732,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65497
+   },
+   "txt": "No backup of this model on the card yet",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 90,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "i1",
+   "i": 8,
+   "t": "text",
+   "g": "g",
+   "x": 34,
+   "y": 134,
+   "w": 732,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65497
+   },
+   "txt": "No edits waiting",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 90,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "i2",
+   "i": 9,
+   "t": "text",
+   "g": "g",
+   "x": 34,
+   "y": 186,
+   "w": 732,
+   "h": 96,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 4426,
+    "bco": 4426
+   },
+   "txt": "Back up keeps every Rotorflight setting of this model on the card, over Bluetooth. With no model connected, the Rotorflight pages read and edit the backup instead; Write edits puts those edits into the model when it is next connected.",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 0,
+    "pw": 0,
+    "txt_maxl": 300,
+    "isbr": 1
+   }
+  },
+  {
+   "n": "b3",
+   "i": 10,
+   "t": "button",
+   "g": "l",
+   "x": 14,
+   "y": 414,
+   "w": 150,
+   "h": 56,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Back up",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=111<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "b2",
+   "i": 11,
+   "t": "button",
+   "g": "l",
+   "x": 170,
+   "y": 414,
+   "w": 150,
+   "h": 56,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Restore all",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=112<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "b4",
+   "i": 12,
+   "t": "button",
+   "g": "l",
+   "x": 326,
+   "y": 414,
+   "w": 150,
+   "h": 56,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Write edits",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=113<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "b5",
+   "i": 13,
+   "t": "button",
+   "g": "l",
+   "x": 482,
+   "y": 414,
+   "w": 150,
+   "h": 56,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Forget edits",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=114<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "b1",
+   "i": 14,
+   "t": "button",
+   "g": "l",
+   "x": 638,
+   "y": 414,
+   "w": 150,
+   "h": 56,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "OK",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=115<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "busy",
+   "i": 15,
+   "t": "text",
+   "g": "l",
+   "x": 40,
+   "y": 296,
+   "w": 720,
+   "h": 44,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65504
+   },
+   "txt": "",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 50,
+    "isbr": 0
+   }
+  }
+ ]
+}

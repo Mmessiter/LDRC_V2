@@ -102,11 +102,13 @@ void PipeTick() // B44: once a second from the main loop: the ask is renewed eve
     PipeAskedMs = millis();
     AddParameterstoQueue(BLUETOOTH_WANTED);
 }
+bool BakHaveFile();   // RF_Backup.h (B70)
 void ShowPipeState() // B42: on the Rotorflight menu, which way the values travel
 {
     if (CurrentView != ROTORFLIGHTVIEW)
         return;
     static const char *words[4] = {"No Bluetooth", "Connecting Bluetooth: wait", "By Bluetooth", "Bluetooth: not joined"};   // B48: no radio-link fallback
+    if (!(BoundFlag && ModelMatched) && BakHaveFile()) { SendText((char *)"pipe", (char *)"From the backup file"); return; }   // B70
     SendText((char *)"pipe", (char *)words[PipeState <= 3 ? PipeState : 0]);
 }
 void PipeOff()
@@ -159,7 +161,9 @@ bool RfNeedsModel(char *why, size_t n)
 {
     if (BoundFlag && ModelMatched)
         return false;
-    snprintf(why, n, "No model is connected.\r\nThese values live in the flight controller.");
+    if (BakHaveFile())
+        return false;   // B70: no model, but its backup on the card: the pages read and edit that
+    snprintf(why, n, "No model is connected, and no backup\r\nof it is on the card. These values live\r\nin the flight controller: back it up once\r\n(Rotorflight, Backup) to edit them here.");
     return true;
 }
 bool RfPipeBlocked(char *why, size_t n)
