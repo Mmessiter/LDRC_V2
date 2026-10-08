@@ -186,6 +186,38 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The bank switch jammed: one Rotorflight line per switch (V2 B83, screen 1.11.38, 9 Oct 2026)
+
+**Found.** B82's bank word showed it: "Bank 4 / FC 3", "Bank 1 / FC 4" - the flight controller was not following the
+switch, and the receiver's log showed the receiver had done nothing to the banks. The cause is in Rotorflight 4.6
+itself (rc_adjustments.c, release/4.6.0, and master): an adjustment line remembers the value it last applied and
+applies again only when the value the channel maps to differs. A line whose value is one fixed number ("set bank 3
+when the switch is here") never differs, so it fires the first time its zone is entered and never again until the
+flight controller reboots or saves. The transmitter's Adjustments page (B74-B76) wrote the bank switch as one such line
+per zone - "which Rotorflight treats the same", it said; it does not - and the phone app's Adjustments page writes its
+switch rows the same way (the app's Switches page, which makes the bank selector, already knew: Malcolm, 30 Aug).
+Hence "the first three bank changes work, then nothing", and the phone app reading right (it selects the bank itself).
+
+**Done.** A switch is ONE line, Rotorflight's own: the travel lo..hi mapped evenly onto the values first..last,
+rounded to whole numbers, which fires at every change. On the page the round handles are now the two ENDS of the
+travel (the switch's first and last positions); the zones between are Rotorflight's even divisions, drawn where the
+flight controller will change (screen 1.11.38: bar kinds 3 and 4); the first and last positions take a value, the
+rest are evenly between. Lines of the old form are gathered when the page opens, the ends fitted to the old dividers,
+and the banner says "1 switch in the old once-only form: put right, press Save". A save is refused while a switch's
+last value is not above its first (Rotorflight counts low to high).
+
+**The bank switch and this transmitter's banks.** Black Thunder 2's channel 7 is not a switch: its curve is flat in
+each bank at a value of that bank's own (13, 54, 90, 151 degrees = 1062, 1296, 1500, 1847 us at the flight
+controller). The flight controller follows the banks only if the even divisions of the bank line's travel put each
+value in its own zone - over 988..2012 they fall at 1159, 1500 and 1842, with bank 3 exactly on a division. The
+transmitter knows its own values (computed from the model's curve, trims and reversal; measured from its own output
+whenever a bank is in use on the page, which wins) and sets the bank line's ends to bank 1's and the last bank's, so
+every bank has its own zone ("Banks 1 to 4 of this transmitter"; the line under the bar: "Bank 2: 1296 us", or
+"... - the flight controller would pick bank 3"). A bank line that already puts every bank in its own zone is left
+alone. A channel that cannot tell the banks apart is said so, with what to do in Model setup. Rows held "in bank 2"
+follow the bank line's divisions whenever it changes. The same fix is in the receiver's page (RXV2 0.9.879) for the
+apps. Host tests: dev/test_adjust (1332 checks, against the phone page's model) and test_adjust_page (57).
+
 ## The flight controller's own bank, beside the transmitter's (V2 B82, 9 Oct 2026)
 
 With B81 the result was the same and no banner came: the receiver answered, with the same numbers. So the question is

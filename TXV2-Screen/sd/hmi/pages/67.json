@@ -499,7 +499,7 @@
     "borderc": 4426,
     "bco": 4426
    },
-   "txt": "Tap a zone to type its value. Drag a blob to move the divider.",
+   "txt": "Tap a zone to type its value. Drag the round ends.",
    "a": {
     "style": 0,
     "key": 255,

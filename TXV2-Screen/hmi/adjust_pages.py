@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""The In-flight adjustments pages of the transmitter (screen 1.11.36, B75): sd/hmi/pages/67.json (AdjustView) and
+"""The In-flight adjustments pages of the transmitter (screen 1.11.36, B75; 1.11.38, B83: a switch is ONE Rotorflight line, its
+ends dragged and its zones Rotorflight's even divisions; a bank switch is matched to the transmitter's own banks): sd/hmi/pages/67.json (AdjustView) and
 68.json (AdjPickView). Malcolm, 8 Oct, on the first try: the arrows must move between the adjustments defined, Add
 makes a new one; the value boxes, the "Now" box and the Kind / In bank row were "mysterious": so the page is the BAR
 (the screen's 'rangebar': zones coloured and labelled with their values, TAP a zone to type its value, DRAG a blob to
@@ -57,7 +58,7 @@ bar = {'n': 'bar', 't': 'rangebar', 'g': 'g', 'x': 34, 'y': 194, 'w': 732, 'h': 
        'a': {'lo': 875, 'hi': 2125, 'n': 2, 'kind': 0, 'mk': -1, 'd0': 1500, 'd1': 1700, 'd2': 1900, 'd3': 2000, 'd4': 2100, 'txt_maxl': 160}, 'ev': ev(130)}
 add(bar)
 live = label('tn8', 34, 262, 732, '', 30); live['a'] = dict(live['a'], txt_maxl=60)
-hint = label('hint', 34, 350, 732, 'Tap a zone to type its value. Drag a blob to move the divider.', 30, pale=False); hint['font'] = 2; hint['c']['pco'] = 50712
+hint = label('hint', 34, 350, 732, 'Tap a zone to type its value. Drag the round ends.', 30, pale=False); hint['font'] = 2; hint['c']['pco'] = 50712   # (worded per kind by the main board)
 for k in range(6): hidden('tp%d' % k, 'Position %d' % (k + 1))
 hidden('tk0', 'Low end value'); hidden('tk1', 'High end value'); hidden('ts0', 'Step size'); hidden('ts1', 'Lowest value'); hidden('ts2', 'Highest value')
 for (nm, txt, x, w, code) in [('b5', 'Add', 14, 180, 128), ('b6', 'Remove', 214, 180, 129), ('b3', 'Save', 414, 180, 118), ('b1', 'OK', 605, 180, 117)]:

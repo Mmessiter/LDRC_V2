@@ -42,7 +42,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.37"
+#define SCREEN_VERSION "1.11.38"
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room
 #endif
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -841,6 +841,14 @@ static std::string imagePath(const std::string &base) {
 // kind 0 a switch (every region live), 1 a knob (the outer regions dead), 2 a nudge (the middle dead); a marker at mk
 // (the channel now; -1 none); round handles on the dividers, which the finger drags (5 us steps, never past a neighbour).
 // Set by the main board as attributes (bar.d0=1300, bar.mk=1512 ...) and read back the same way (get bar.d0).
+// 1.11.38 (B83): kind 3 a SELECTOR - Rotorflight's own switch: the handles are the two ENDS d0 and d1 of its travel, and
+// the n regions between are its even divisions (it changes to position q where ((u - d0) * (n - 1) + W / 2) / W reaches q),
+// drawn as the flight controller will have them; kind 4 the same with no handles (the ends are the transmitter's own banks).
+static void rbSelectorEdges(int d0, int d1, int n, int lo, int hi, int *edges) {
+    edges[0] = lo; edges[n] = hi;
+    const long W = d1 - d0;
+    for (int q = 1; q < n; ++q) { const long num = q * W - W / 2; edges[q] = W > 0 ? constrain((int) (d0 + (num + (n - 1) - 1) / (n - 1)), lo, hi) : d0; }
+}
 static int rbPad(const Comp &c) { return min(14, c.h / 2); }
 static int rbAt(const Comp &c, int us, int lo, int hi) { const int p = rbPad(c); return c.x + p + (int) ((long) (c.w - 2 * p) * (us - lo) / max(1, hi - lo)); }
 static int rbUs(const Comp &c, int x, int lo, int hi) { const int p = rbPad(c); return lo + (int) ((long) (x - c.x - p) * (hi - lo) / max(1, c.w - 2 * p)); }
@@ -848,7 +856,9 @@ static int rbGet(const Comp &c, const char *k, int d) { auto it = c.extra.find(k
 static void drawRangeBar(Comp &c) {
     const int lo = rbGet(c, "lo", 875), hi = rbGet(c, "hi", 2125), n = constrain(rbGet(c, "n", 2), 1, 6), kind = rbGet(c, "kind", 0), mk = rbGet(c, "mk", -1);
     int edges[7]; edges[0] = lo; edges[n] = hi;
-    for (int k = 0; k < n - 1 && k < 5; ++k) { char key[3] = {'d', (char) ('0' + k), 0}; edges[k + 1] = constrain(rbGet(c, key, lo), lo, hi); }
+    const int d0 = constrain(rbGet(c, "d0", lo), lo, hi), d1 = constrain(rbGet(c, "d1", hi), lo, hi);
+    if (kind >= 3) rbSelectorEdges(d0, d1, n, lo, hi, edges);
+    else for (int k = 0; k < n - 1 && k < 5; ++k) { char key[3] = {'d', (char) ('0' + k), 0}; edges[k + 1] = constrain(rbGet(c, key, lo), lo, hi); }
     gfx->fillRect(c.x, c.y, c.w, c.h, c.bco);
     const int p = rbPad(c), th = max(12, c.h - 2 * 9), ty = c.y + (c.h - th) / 2, mid = c.y + c.h / 2;
     static const uint16_t cols[3] = { 0x4C7E, 0x4E69, 0xFC80 };   // blue, green, orange (the phone page's)
@@ -866,7 +876,8 @@ static void drawRangeBar(Comp &c) {
         }
     }
     if (mk >= lo && mk <= hi) { const int mx = rbAt(c, mk, lo, hi); gfx->fillRect(mx - 2, c.y + 1, 5, c.h - 2, 0x0320); gfx->fillRect(mx - 1, c.y + 1, 3, c.h - 2, 0x07E0); }
-    for (int k = 0; k < n - 1; ++k) { const int hx = rbAt(c, edges[k + 1], lo, hi); gfx->fillCircle(hx, mid, p - 1, 0xFFFF); gfx->fillCircle(hx, mid, p - 4, 0x2A5F); }
+    if (kind == 3) { for (int k = 0; k < 2; ++k) { const int hx = rbAt(c, k ? d1 : d0, lo, hi); gfx->fillCircle(hx, mid, p - 1, 0xFFFF); gfx->fillCircle(hx, mid, p - 4, 0x2A5F); } }
+    else if (kind < 3) for (int k = 0; k < n - 1; ++k) { const int hx = rbAt(c, edges[k + 1], lo, hi); gfx->fillCircle(hx, mid, p - 1, 0xFFFF); gfx->fillCircle(hx, mid, p - 4, 0x2A5F); }
     (void) p;
 }
 static void drawComp(Comp &c) {
@@ -1815,9 +1826,10 @@ static void pollTouch() {
         for (auto &o : page.comps) if (o.type == "combobox" && o.open && (int) (&o - page.comps.data()) != held) closeCombo(o);
         if (held >= 0 && needUnmet(page.comps[held])) held = -1;   // greyed out: deaf, and the touch goes to the page (a keep-awake, nothing more)
         if (held >= 0 && page.comps[held].type == "rangebar") {   // the handle nearest the finger, if it is near enough; else a tap on a zone (reported at the release)
-            Comp &c = page.comps[held]; const int lo = rbGet(c, "lo", 875), hi = rbGet(c, "hi", 2125), n = constrain(rbGet(c, "n", 2), 1, 6);
+            Comp &c = page.comps[held]; const int lo = rbGet(c, "lo", 875), hi = rbGet(c, "hi", 2125), n = constrain(rbGet(c, "n", 2), 1, 6), kind = rbGet(c, "kind", 0);
             int best = -1, bestD = 30;
-            for (int k = 0; k < n - 1 && k < 5; ++k) { char key[3] = {'d', (char) ('0' + k), 0}; const int d = abs(x[0] - rbAt(c, rbGet(c, key, lo), lo, hi)); if (d < bestD) { bestD = d; best = k; } }
+            const int handles = kind == 3 ? 2 : kind >= 4 ? 0 : n - 1;   // (a selector: its two ends; its fixed form: none)
+            for (int k = 0; k < handles && k < 5; ++k) { char key[3] = {'d', (char) ('0' + k), 0}; const int d = abs(x[0] - rbAt(c, rbGet(c, key, lo), lo, hi)); if (d < bestD) { bestD = d; best = k; } }
             c.extra["drag"] = best;
             c.extra["tap"] = best < 0 ? constrain(rbUs(c, x[0], lo, hi), lo, hi) : -1;
         }
@@ -1828,9 +1840,10 @@ static void pollTouch() {
         if (k >= 0 && now - lastDragDraw > 40) {
             const int lo = rbGet(c, "lo", 875), hi = rbGet(c, "hi", 2125);
             char key[3] = {'d', (char) ('0' + k), 0}, kp[3] = {'d', (char) ('0' + k - 1), 0}, kn[3] = {'d', (char) ('0' + k + 1), 0};
-            const int n = constrain(rbGet(c, "n", 2), 1, 6);
+            const int n = constrain(rbGet(c, "n", 2), 1, 6), kind = rbGet(c, "kind", 0);
             int us = ((rbUs(c, x[0], lo, hi) + 2) / 5) * 5;
-            const int minUs = k > 0 ? rbGet(c, kp, lo) + 5 : lo + 5, maxUs = k + 1 < n - 1 ? rbGet(c, kn, hi) - 5 : hi - 5;
+            const int handles = kind == 3 ? 2 : n - 1;   // (a selector's ends never pass each other either)
+            const int minUs = k > 0 ? rbGet(c, kp, lo) + 5 : lo + 5, maxUs = k + 1 < handles ? rbGet(c, kn, hi) - 5 : hi - 5;
             us = constrain(us, minUs, maxUs);
             if (us != rbGet(c, key, lo)) { c.extra[key] = us; c.extra["tap"] = -1; lastDragDraw = now; redraw(c); runScript(c.evMove, c.name); }
         }
