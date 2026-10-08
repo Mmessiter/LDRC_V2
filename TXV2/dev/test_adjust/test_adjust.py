@@ -134,7 +134,7 @@ int main(int argc, char **argv) {
     }
     // the Setting order: rates and PIDs first, then the rest, wrapping both ways
     vi = 0;
-    CHECK(AdjNextFn(5, 1) == 6 && AdjNextFn(25, 1) == 3 && AdjNextFn(3, 1) == 4 && AdjNextFn(4, 1) == 26 && AdjNextFn(81, 1) == 5 && AdjNextFn(5, -1) == 81 && AdjNextFn(26, -1) == 4, "the Setting order");
+    CHECK(AdjFnAt(0) == 5 && AdjFnAt(20) == 25 && AdjFnAt(21) == 3 && AdjFnAt(22) == 4 && AdjFnAt(23) == 26 && AdjFnAt(78) == 81 && AdjIdxOf(14) == 9 && AdjIdxOf(22) == 17 && AdjIdxOf(3) == 21 && AdjIdxOf(81) == 78, "the picker's order: rates and PIDs first, then the rest");
     CHECK(AdjStep(1500) == 0 && AdjStep(1505) == 1 && AdjStep(1495) == 255 && AdjStep(875) == 131 && AdjStep(2125) == 125 && AdjStep(1502) == 0 && AdjStep(1503) == 1 && AdjStep(1497) == 255 && AdjStep(1498) == 0, "the step rounding");
     CHECK(AdjUs(131) == 875 && AdjUs(125) == 2125 && AdjUs(0) == 1500, "steps to microseconds");
     { uint8_t rfn; int off, by, side; CHECK(AdjValueSource(14, rfn, off, by, side) && rfn == 112 && off == 8 && by == 2 && side == 1, "Pitch P gain reads bytes 8-9 of the PIDs");

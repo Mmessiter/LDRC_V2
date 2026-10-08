@@ -42,7 +42,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.35"
+#define SCREEN_VERSION "1.11.36"
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room
 #endif
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -603,6 +603,7 @@ static void prefsPoll() {
     if (pendingVol != INT32_MIN) { if (prefs.getInt("vol", -1) != pendingVol) prefs.putInt("vol", pendingVol); pendingVol = INT32_MIN; }
 }
 
+static void openKeyboard(int key, int compId);   // (below: the keyboard pages)
 static Comp *find(const std::string &nm) { auto it = page.byName.find(nm); return it == page.byName.end() ? nullptr : &page.comps[it->second]; }
 
 // ------------------------------------------------------------------ background + drawing
@@ -1165,7 +1166,9 @@ struct Host : public NextionHost {
     void click(const std::string &pg, const std::string &nm, bool press) override {
         bool off; Comp *c = get(pg, nm, off); if (off || !c) return;
         if (c->type == "dual-state button" && !press) { c->val = !c->val; keepTouched(*c); redraw(*c); }
+        const int key = c->key, cid = c->id; const std::string pgName = page.name;
         runScript(press ? c->evPress : c->evRelease, nm);
+        if (!press && key != 255 && page.name == pgName) openKeyboard(key, cid);   // (1.11.36) a box clicked by the main board opens its keyboard, as a finger would: the adjustments bar's zones edit their values that way
     }
     void vis(const std::string &pg, const std::string &nm, bool on) override {
         bool off; Comp *c = get(pg, nm, off);
@@ -1811,11 +1814,12 @@ static void pollTouch() {
         }
         for (auto &o : page.comps) if (o.type == "combobox" && o.open && (int) (&o - page.comps.data()) != held) closeCombo(o);
         if (held >= 0 && needUnmet(page.comps[held])) held = -1;   // greyed out: deaf, and the touch goes to the page (a keep-awake, nothing more)
-        if (held >= 0 && page.comps[held].type == "rangebar") {   // the handle nearest the finger, if it is near enough
+        if (held >= 0 && page.comps[held].type == "rangebar") {   // the handle nearest the finger, if it is near enough; else a tap on a zone (reported at the release)
             Comp &c = page.comps[held]; const int lo = rbGet(c, "lo", 875), hi = rbGet(c, "hi", 2125), n = constrain(rbGet(c, "n", 2), 1, 6);
             int best = -1, bestD = 30;
             for (int k = 0; k < n - 1 && k < 5; ++k) { char key[3] = {'d', (char) ('0' + k), 0}; const int d = abs(x[0] - rbAt(c, rbGet(c, key, lo), lo, hi)); if (d < bestD) { bestD = d; best = k; } }
             c.extra["drag"] = best;
+            c.extra["tap"] = best < 0 ? constrain(rbUs(c, x[0], lo, hi), lo, hi) : -1;
         }
         if (held >= 0) { Comp &c = page.comps[held]; c.pressed = true; dragS0 = c.scroll; if (c.type == "slider" && sliderTo(c, x[0], y[0])) keepTouched(c); if (c.type == "button" || c.type == "slider") redraw(c); runScript(c.evPress, c.name); }
         else runScript(page.evPress, "");
@@ -1828,7 +1832,7 @@ static void pollTouch() {
             int us = ((rbUs(c, x[0], lo, hi) + 2) / 5) * 5;
             const int minUs = k > 0 ? rbGet(c, kp, lo) + 5 : lo + 5, maxUs = k + 1 < n - 1 ? rbGet(c, kn, hi) - 5 : hi - 5;
             us = constrain(us, minUs, maxUs);
-            if (us != rbGet(c, key, lo)) { c.extra[key] = us; lastDragDraw = now; redraw(c); runScript(c.evMove, c.name); }
+            if (us != rbGet(c, key, lo)) { c.extra[key] = us; c.extra["tap"] = -1; lastDragDraw = now; redraw(c); runScript(c.evMove, c.name); }
         }
     } else if (pressed && down && held >= 0 && held < (int) page.comps.size() && page.comps[held].type == "slider") {
         Comp &c = page.comps[held];                          // dragging the knob

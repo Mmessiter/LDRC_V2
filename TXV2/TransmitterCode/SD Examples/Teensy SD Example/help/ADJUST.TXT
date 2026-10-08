@@ -1,12 +1,12 @@
 Adjustments: a knob or a switch on this transmitter changes a Rotorflight setting in flight (the configurator's Adjustments tab). Needs the model connected, the safety on, and the USB-C cable from the receiver to the flight controller: Rotorflight cannot send its adjustments over the receiver's lead.||
 
-One adjustment at a time: < Prev and Next > move between them, Add makes a new one after the one showing, Remove takes it away. Setting: < and > step through what can be adjusted, rates and PIDs first. Channel: the knob or switch, by this transmitter's channel number and name (channel 6 is AUX1).||
+The arrows beside the title move between the adjustments defined. Add makes a new one after the one showing; Remove takes it away.||
 
-Kind, tap to change: Knob (the whole travel maps the low end value to the high end value), Switch with 2 or 3 positions (one value per position), Step up / down (a three-position switch: up adds the step, down takes it, within the lowest and highest values).||
+Changes: tap the setting to choose another from the list (rates and PIDs first). Tap the bank box for "in bank 1" and so on, or "in any bank": a bank needs a 'PID bank switch (1 to 6)' adjustment first, with one zone per bank, which is how Rotorflight knows what the switch means.||
 
-In bank: Any, or one bank only. Needs a 'PID bank switch (1 to 6)' adjustment first, with one value per position: that is how Rotorflight knows which bank the switch means.||
+Control: tap the first box for a Knob (the whole travel maps the low end value to the high end), a Switch with 2 or 3 zones (one value each), or Step up / down (a three-position switch: up adds the step, down takes it, within the lowest and highest values). Tap the channel box for the next channel (channel 6 is AUX1).||
 
-Now shows the setting's present value, read from the flight controller when the adjustment is added or its setting changed (in the bank in use only). Channel now is this transmitter's live output for the channel: move the knob or switch to see where its positions fall (875 to 2125).||
+The bar is the switch or knob's travel, 875 to 2125. Tap a zone to type its value. Drag a blob to move the divider between two zones. The green marker is where the channel is now, from this transmitter's own output as the flight controller sees it, and the line under the bar says what that gives. A knob giving a few whole numbers (a bank switch) is shown as zones, the blobs at the thresholds where the number changes.||
 
 Save writes all 42 of Rotorflight's lines, stores them, and reads them back. A rate (top rotation speed) is shown in degrees per second as on the Rates page.||
 

@@ -41,7 +41,9 @@ static void RotorFlightStart() { ++rfStarts; CurrentView = 47; }
 static bool ModelSeemsArmed(char *, int) { return false; }
 static bool RfPipeBlocked(char *, int) { return false; }
 static long FieldNumber(const char *name, long lo, long hi) { long v = atol(fields[name].c_str()); return v < lo ? lo : v > hi ? hi : v; }
-static std::map<std::string, int> attrs; static int GetOtherValue(char *n) { return attrs.count(n) ? attrs[n] : 0; }   // the bar's handles, as the screen holds them
+static std::map<std::string, int> attrs; static int GetOtherValue(char *n) { return attrs.count(n) ? attrs[n] : 0; }
+static std::map<std::string, int> vals; static void SendValue(char *n, int v) { vals[n] = v; } static uint32_t GetValue(char *n) { return (uint32_t) (vals.count(n) ? vals[n] : 0); }
+#define ADJPICKVIEW 68   // the bar's handles, as the screen holds them
 static int cmdValue(const char *attr) { for (int i = (int) cmds.size() - 1; i >= 0; --i) { const std::string pre = std::string(attr) + "="; if (cmds[i].rfind(pre, 0) == 0) return atoi(cmds[i].c_str() + pre.size()); } return -9999; }
 // ---- the pipe and a fake flight controller
 static int PipeReqId = 0, PipeRepId = -1, PipeRepCode = 0; static char PipeRepBody[1600] = ""; static uint32_t PipeReqSentMs = 0;
@@ -84,43 +86,57 @@ int main() {
     // 1. open: the read, the first row shown
     StartAdjustView(); CHECK(CurrentView == ADJUSTVIEW && fcLog.size() == 1 && fcLog[0].fn == 111);
     run(4);
-    CHECK(AdjHave && AdjN == 3 && AdjAt == 0 && fields["t0"] == "Adjustment 1 of 3" && fields["tn0"] == "PID bank switch (1 to 6)" && fields["tn1"] == "Channel 6: AUX1" && fields["tn2"] == "Switch 3" && fields["tn3"] == "Any");
-    CHECK(fields["tn4"] == "1" && fields["tn5"] == "2" && fields["tn6"] == "3");
-    CHECK(fields["tn8"] == "Now 1500 us: position 2 = 2" && cmdValue("bar.mk") == 1500 && cmdValue("bar.n") == 3 && cmdValue("bar.d0") == 1300 && cmdValue("bar.d1") == 1700 && fields["bar"] == "1 = 1|2 = 2|3 = 3");
+    CHECK(AdjHave && AdjN == 3 && AdjAt == 0 && fields["t0"] == "Adjustment 1 of 3" && fields["tn0"] == "PID bank switch (1 to 6)" && fields["tn1"] == "Channel 6: AUX1" && fields["tn2"] == "Switch, 3 positions" && fields["tn3"] == "in any bank");
+    CHECK(fields["tp0"] == "1" && fields["tp1"] == "2" && fields["tp2"] == "3");   // (the boxes the keypad edits, out of sight)
+    CHECK(fields["tn8"] == "Now 1500 us: position 2 = 2" && cmdValue("bar.mk") == 1500 && cmdValue("bar.n") == 3 && cmdValue("bar.d0") == 1300 && cmdValue("bar.d1") == 1700 && fields["bar"] == "1|2|3");
     // the second row: the knob in bank 2, with its present value read from the PIDs (bank 2 is the bank in use)
     AdjustNext(); run(6);
-    CHECK(AdjAt == 1 && fields["tn0"] == "Yaw P gain" && fields["tn1"] == "Channel 8: AUX3" && fields["tn2"] == "Knob" && fields["tn3"] == "Bank 2" && fields["tn4"] == "60" && fields["tn5"] == "120");
+    CHECK(AdjAt == 1 && fields["tn0"] == "Yaw P gain" && fields["tn1"] == "Channel 8: AUX3" && fields["tn2"] == "Knob" && fields["tn3"] == "in bank 2" && fields["tk0"] == "60" && fields["tk1"] == "120");
     CHECK(cmdValue("bar.kind") == 1 && cmdValue("bar.d0") == 1000 && cmdValue("bar.d1") == 2000 && fields["bar"] == "|60 to 120|" && fields["tn8"] == "Now 1500 us: about 90");
-    CHECK(fields["tn7"] == "Now: 95");
+    CHECK(AdjNowKnown && AdjNow == 95);
     // the third: the nudge, a Rate shown x5
     AdjustNext(); run(6);
-    CHECK(AdjAt == 2 && fields["tn0"] == "Pitch top rotation speed (Rate)" && fields["tn2"] == "Up/down" && fields["tn4"] == "2" && fields["tn5"] == "100" && fields["tn6"] == "500");
-    CHECK(cmdValue("bar.kind") == 2 && fields["bar"] == "down 2||up 2" && fields["tn8"] == "Now 1500 us: holding");
-    CHECK(fields["tn7"] == "Now: 240");
+    CHECK(AdjAt == 2 && fields["tn0"] == "Pitch top rotation speed (Rate)" && fields["tn2"] == "Step up / down" && fields["ts0"] == "2" && fields["ts1"] == "100" && fields["ts2"] == "500");
+    CHECK(cmdValue("bar.kind") == 2 && fields["bar"] == "down 2|100 to 500|up 2" && fields["tn8"] == "Now 1500 us: holding");
+    CHECK(AdjNow == 240);
     // 2. edit the knob's high end, save: only line 3 is written, then the store, then the read-back
-    AdjustPrevious(); run(6); fields["tn5"] = "130"; AdjustWasEdited(); CHECK(Adj_Was_Edited);
-    attrs["bar.d0"] = 1100; attrs["bar.d1"] = 2000; AdjustBarMoved(); CHECK(AdjRows[1].lo == 1100 && AdjRows[1].hi == 2000 && fields["tn8"] == "Now 1500 us: about 91");   // (a handle dragged: the knob's travel)
+    AdjustPrevious(); run(6);
+    // a tap on the knob's zone, right half: the high end's box is clicked (the keypad opens); the page comes back with 130 typed
+    attrs["bar.tap"] = 1800; cmds.clear(); AdjustBarMoved(); CHECK(cmds.size() == 1 && cmds[0] == "click tk1,0");
+    attrs["bar.tap"] = -1; fields["tk1"] = "130"; AdjustWasEdited(); AdjustPageBack(); CHECK(Adj_Was_Edited && AdjRows[1].v[1] == 130 && fields["bar"] == "|60 to 130|");
+    attrs["bar.d0"] = 1100; attrs["bar.d1"] = 2000; attrs["bar.tap"] = -1; AdjustBarMoved(); CHECK(AdjRows[1].lo == 1100 && AdjRows[1].hi == 2000 && fields["tn8"] == "Now 1500 us: about 91");   // (a handle dragged: the knob's travel)
     fcLog.clear(); busyOnce = 1; SaveAdjustments(); run(30);
     CHECK(writes(53) == 2 && fcLog[0].fn == 53 && fcLog[1].fn == 53 && fcLog[0].data == fcLog[1].data && fcLog[0].data.substr(0, 2) == "03");   // (the 503 answered again)
     CHECK(writes(250) == 1 && writes(52) == 1 && AdjStep_ == ADJ_IDLE && !Adj_Was_Edited && adj[3 * 14 + 11] == 130 && adj[3 * 14 + 12] == 0 && adj[3 * 14 + 5] == stp(1100));
-    CHECK(fields["busy"].find("Saved, and read back the same") == 0 && fields["tn5"] == "130");
+    CHECK(fields["busy"].find("Saved, and read back the same") == 0 && fields["tk1"] == "130");
     // the nudge's Rate goes back /5
-    AdjustNext(); run(6); fields["tn6"] = "600"; AdjustWasEdited(); fcLog.clear(); SaveAdjustments(); run(30);
-    CHECK(writes(53) == 1 && adj[4 * 14 + 11] == 120 && fields["tn6"] == "600");
+    AdjustNext(); run(6); fields["ts2"] = "600"; AdjustWasEdited(); fcLog.clear(); SaveAdjustments(); run(30);
+    CHECK(writes(53) == 1 && adj[4 * 14 + 11] == 120 && fields["ts2"] == "600");
     // 3. Add: a knob on the same channel, Pitch P gain, its values from the present value
     fcLog.clear(); AdjustAdd(); run(8);
-    CHECK(AdjN == 4 && AdjAt == 3 && fields["tn0"] == "Pitch P gain" && fields["tn2"] == "Knob" && fields["tn3"] == "Any" && fields["tn4"] == "55" && fields["tn5"] == "55" && fields["tn7"] == "Now: 55");
-    AdjustBankTapped(); run(2); CHECK(fields["tn3"] == "Bank 1" && fields["tn7"] == "Now: in bank 1 only");   // (bank 1 is not the bank in use: not read)
-    AdjustBankTapped(); run(6); CHECK(fields["tn3"] == "Bank 2" && fields["tn7"] == "Now: 55");
-    AdjustKindTapped(); CHECK(fields["tn2"] == "Switch 2" && fields["tn4"] == "55" && fields["tn5"] == "55");
-    AdjustKindTapped(); CHECK(fields["tn2"] == "Switch 3" && fields["tn6"] == "55");
-    fields["tn4"] = "50"; fields["tn6"] = "60"; AdjustChannelNext(); CHECK(fields["tn1"] == "Channel 11: AUX6");   // (Add took the channel of the row showing, the nudge on AUX5)
+    CHECK(AdjN == 4 && AdjAt == 3 && fields["tn0"] == "Pitch P gain" && fields["tn2"] == "Knob" && fields["tn3"] == "in any bank" && fields["tk0"] == "55" && fields["tk1"] == "55" && AdjNow == 55);
+    AdjustBankTapped(); run(2); CHECK(fields["tn3"] == "in bank 1" && AdjNowBank == 1);   // (bank 1 is not the bank in use: not read)
+    AdjustBankTapped(); run(6); CHECK(fields["tn3"] == "in bank 2" && AdjNow == 55);
+    AdjustKindTapped(); CHECK(fields["tn2"] == "Switch, 2 positions" && fields["tp0"] == "55" && fields["tp1"] == "55");
+    AdjustKindTapped(); CHECK(fields["tn2"] == "Switch, 3 positions" && fields["tp2"] == "55");
+    // the picker: Pitch P gain is first in its wheel; Yaw P gain chosen
+    AdjustSettingNext(); CHECK(CurrentView == ADJPICKVIEW && vals["list"] == 9);
+    vals["list"] = 17; AdjustPickOk(); CHECK(CurrentView == ADJUSTVIEW && fields["tn0"] == "Yaw P gain" && AdjRows[3].fn == 22);
+    AdjustSettingNext(); AdjustPickCancel(); CHECK(CurrentView == ADJUSTVIEW && AdjRows[3].fn == 22);
+    AdjustSettingNext(); vals["list"] = 9; AdjustPickOk(); CHECK(fields["tn0"] == "Pitch P gain" && AdjRows[3].fn == 14); run(6);
+    fields["tp0"] = "50"; fields["tp2"] = "60"; AdjustChannelNext(); CHECK(fields["tn1"] == "Channel 11: AUX6");   // (Add took the channel of the row showing, the nudge on AUX5)
     fcLog.clear(); SaveAdjustments(); run(40);
     CHECK(writes(53) == 3 && writes(250) == 1 && AdjN == 4);
-    { AdjLine L[42]; AdjParseLines(adj, 588, L); int k = 0; for (int i = 0; i < 42; ++i) if (L[i].fn == 14) ++k; CHECK(k == 3); CHECK(L[5].fn == 14 && L[5].adj == 5 && L[5].ena == 0 && L[5].enaLo == 1300 && L[5].enaHi == 1700 && L[5].min == 50 && L[7].min == 60 && L[6].min == 55); }
+    { AdjLine L[42]; AdjParseLines(adj, 588, L); int k = 0; for (int i = 0; i < 42; ++i) if (L[i].fn == 14) ++k; CHECK(k == 3); if (fails) for (int i = 3; i < 9; ++i) fprintf(stderr, "L[%d] fn %d adj %d ena %d %d-%d min %d max %d a1 %d-%d\n", i, L[i].fn, L[i].adj, L[i].ena, L[i].enaLo, L[i].enaHi, L[i].min, L[i].max, L[i].a1Lo, L[i].a1Hi); CHECK(L[5].fn == 14 && L[5].adj == 5 && L[5].ena == 0 && L[5].enaLo == 1300 && L[5].enaHi == 1700 && L[5].min == 50 && L[7].min == 60 && L[6].min == 55); }
     // 4. Remove it
     confirmAnswer = true; fcLog.clear(); AdjustRemove(); run(4); CHECK(AdjN == 3 && AdjAt == 2 && Adj_Was_Edited);
     SaveAdjustments(); run(40); CHECK(writes(53) == 3 && AdjN == 3);   // (the three lines blanked)
+    // 4b. a knob giving 1 to 4 across the travel (the bank switch Malcolm saw) is shown as four zones, the blobs at Rotorflight's thresholds
+    putLine(8, 1, 7, 875, 2125, 7, 875, 2125, 1500, 1500, 1, 4, 0);
+    confirmAnswer = true; StartAdjustView(); run(6); AdjustNext(); AdjustNext(); AdjustNext(); run(4);
+    CHECK(AdjN == 4 && fields["tn0"] == "Rates bank switch (1 to 6)" && fields["tn2"] == "Switch, 4 positions" && fields["bar"] == "1|2|3|4" && cmdValue("bar.d0") == 1085 && cmdValue("bar.d1") == 1500 && cmdValue("bar.d2") == 1915);
+    fcLog.clear(); SaveAdjustments(); run(40);
+    { AdjLine L[42]; AdjParseLines(adj, 588, L); int k = 0; for (int i = 0; i < 42; ++i) if (L[i].fn == 1) ++k; CHECK(k == 4 && writes(53) == 4); }
     // 5. no USB cable: the refusal, in the receiver's words, and back to the menu
     usb = false; boxes = 0; rfStarts = 0; StartAdjustView(); run(6);
     CHECK(boxes == 1 && rfStarts == 1 && lastBox.find("Adjustments need the USB cable") == 0 && lastBox.find("Plug the flight controller's USB") != std::string::npos && CurrentView == 47);

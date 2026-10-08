@@ -186,6 +186,24 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The adjustments page, second try: the bar IS the page (V2 B75 + screen 1.11.36, 8 Oct 2026)
+
+Malcolm, with B74 on the bench: "The blobs are at the extreme ends, but they should mark the thresholds between zones.
+The left and right arrows on the settings line move between all possible settings. I think they should move only
+between the settings we have already defined. Then we should press the add button to create a new one. The section
+marks low end value, high end value ... is both mysterious and unnecessary. Similarly, now 2012 us: about four and
+now:? ... the landmark kind knob in bank any makes very little sense." So: the arrows beside the TITLE move between
+the adjustments defined, Add makes a new one. Two lines worded as the phone page: "Changes [Pitch P gain] [in bank 1]"
+and "Control [Switch, 3 positions] on [Channel 7: AUX2]", every box tapped to change - the setting opens a PICKER page
+(68 AdjPickView: the screen's wheel of every setting, rates and PIDs first). The BAR is the editor: tap a zone to type
+its value (the screen's `click` now opens the keypad as a finger would; the boxes the keypad edits are a pixel wide in
+the header's corner), drag a blob to move a divider; the line under it says what the channel's position gives, in the
+phone's words. No value boxes, no "Now: ?", no Kind / In bank row. A knob giving a few whole numbers (the bank switch,
+1 to 4) is shown as ZONES with the blobs at Rotorflight's rounding thresholds (AdjKnobToZones; saved as one line per
+zone, which Rotorflight treats the same). The page's postinitialize prints "ldrcadj" so the main board draws the bar
+afresh whenever the page is back (from the keypad, a question, or just opened). Help ADJUST.TXT rewritten.
+test_adjust_page 36. Untested on hardware as written.
+
 ## The adjustments page as the phone's: the bar, the blobs, the marker (V2 B74 + screen 1.11.35, 8 Oct 2026)
 
 Malcolm, after the first adjustment saved from the transmitter landed in the configurator: "It appears to be working

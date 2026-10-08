@@ -15,7 +15,8 @@
   "right": 255
  },
  "ev": {
-  "preinitialize": "vis busy,0\nAdjustView.pic=Screen_Background"
+  "preinitialize": "vis busy,0\nAdjustView.pic=Screen_Background",
+  "postinitialize": "print \"ldrcadj\""
  },
  "comps": [
   {
@@ -175,42 +176,14 @@
    }
   },
   {
-   "n": "ltn0",
+   "n": "bprev",
    "i": 7,
-   "t": "text",
-   "g": "g",
-   "x": 34,
-   "y": 94,
-   "w": 150,
-   "h": 36,
-   "font": 2,
-   "sta": 1,
-   "c": {
-    "pco": 0,
-    "borderc": 0,
-    "bco": 65497
-   },
-   "txt": "Setting",
-   "a": {
-    "style": 0,
-    "key": 255,
-    "borderw": 2,
-    "xcen": 1,
-    "ycen": 1,
-    "pw": 0,
-    "txt_maxl": 10,
-    "isbr": 0
-   }
-  },
-  {
-   "n": "ptn0",
-   "i": 8,
    "t": "button",
    "g": "l",
-   "x": 190,
-   "y": 92,
-   "w": 50,
-   "h": 40,
+   "x": 215,
+   "y": 7,
+   "w": 56,
+   "h": 44,
    "font": 6,
    "sta": 1,
    "c": {
@@ -231,49 +204,18 @@
     "isbr": 0
    },
    "ev": {
-    "r": "va0.val=121<<8\nprint va0.val"
+    "r": "va0.val=126<<8\nprint va0.val"
    }
   },
   {
-   "n": "tn0",
-   "i": 9,
-   "t": "text",
-   "g": "g",
-   "x": 246,
-   "y": 94,
-   "w": 464,
-   "h": 36,
-   "font": 2,
-   "sta": 1,
-   "c": {
-    "pco": 0,
-    "borderc": 0,
-    "bco": 65535
-   },
-   "txt": "",
-   "a": {
-    "style": 2,
-    "key": 255,
-    "borderw": 2,
-    "xcen": 1,
-    "ycen": 1,
-    "pw": 0,
-    "txt_maxl": 40,
-    "isbr": 0
-   },
-   "ev": {
-    "r": "keybdB.t1.txt=\"Roll \"+t5.txt\nva0.val=24<<8\nprint va0.val"
-   }
-  },
-  {
-   "n": "ntn0",
-   "i": 10,
+   "n": "bnext",
+   "i": 8,
    "t": "button",
    "g": "l",
-   "x": 716,
-   "y": 92,
-   "w": 50,
-   "h": 40,
+   "x": 540,
+   "y": 7,
+   "w": 56,
+   "h": 44,
    "font": 6,
    "sta": 1,
    "c": {
@@ -291,6 +233,65 @@
     "xcen": 1,
     "ycen": 1,
     "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=127<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "ltn0",
+   "i": 9,
+   "t": "text",
+   "g": "g",
+   "x": 34,
+   "y": 94,
+   "w": 150,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65497
+   },
+   "txt": "Changes",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "tn0",
+   "i": 10,
+   "t": "text",
+   "g": "g",
+   "x": 190,
+   "y": 94,
+   "w": 420,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "",
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 40,
     "isbr": 0
    },
    "ev": {
@@ -298,73 +299,13 @@
    }
   },
   {
-   "n": "ltn1",
+   "n": "tn3",
    "i": 11,
    "t": "text",
    "g": "g",
-   "x": 34,
-   "y": 134,
+   "x": 616,
+   "y": 94,
    "w": 150,
-   "h": 36,
-   "font": 2,
-   "sta": 1,
-   "c": {
-    "pco": 0,
-    "borderc": 0,
-    "bco": 65497
-   },
-   "txt": "Channel",
-   "a": {
-    "style": 0,
-    "key": 255,
-    "borderw": 2,
-    "xcen": 1,
-    "ycen": 1,
-    "pw": 0,
-    "txt_maxl": 10,
-    "isbr": 0
-   }
-  },
-  {
-   "n": "ptn1",
-   "i": 12,
-   "t": "button",
-   "g": "l",
-   "x": 190,
-   "y": 132,
-   "w": 50,
-   "h": 40,
-   "font": 6,
-   "sta": 1,
-   "c": {
-    "bco2": 54938,
-    "pco": 0,
-    "borderc": 0,
-    "bco": 54938,
-    "pco2": 65535
-   },
-   "txt": "<",
-   "val": 0,
-   "a": {
-    "style": 4,
-    "borderw": 2,
-    "xcen": 1,
-    "ycen": 1,
-    "txt_maxl": 10,
-    "isbr": 0
-   },
-   "ev": {
-    "r": "va0.val=123<<8\nprint va0.val"
-   }
-  },
-  {
-   "n": "tn1",
-   "i": 13,
-   "t": "text",
-   "g": "g",
-   "x": 246,
-   "y": 134,
-   "w": 464,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -381,53 +322,21 @@
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
-    "txt_maxl": 40,
+    "txt_maxl": 16,
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Roll \"+t5.txt\nva0.val=24<<8\nprint va0.val"
-   }
-  },
-  {
-   "n": "ntn1",
-   "i": 14,
-   "t": "button",
-   "g": "l",
-   "x": 716,
-   "y": 132,
-   "w": 50,
-   "h": 40,
-   "font": 6,
-   "sta": 1,
-   "c": {
-    "bco2": 54938,
-    "pco": 0,
-    "borderc": 0,
-    "bco": 54938,
-    "pco2": 65535
-   },
-   "txt": ">",
-   "val": 0,
-   "a": {
-    "style": 4,
-    "borderw": 2,
-    "xcen": 1,
-    "ycen": 1,
-    "txt_maxl": 10,
-    "isbr": 0
-   },
-   "ev": {
-    "r": "va0.val=122<<8\nprint va0.val"
+    "r": "va0.val=125<<8\nprint va0.val"
    }
   },
   {
    "n": "ltn2",
-   "i": 15,
+   "i": 12,
    "t": "text",
    "g": "g",
    "x": 34,
-   "y": 174,
-   "w": 254,
+   "y": 140,
+   "w": 150,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -436,7 +345,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Kind",
+   "txt": "Control",
    "a": {
     "style": 0,
     "key": 255,
@@ -450,12 +359,12 @@
   },
   {
    "n": "tn2",
-   "i": 16,
+   "i": 13,
    "t": "text",
    "g": "g",
-   "x": 294,
-   "y": 174,
-   "w": 120,
+   "x": 190,
+   "y": 140,
+   "w": 240,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -472,7 +381,7 @@
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
-    "txt_maxl": 10,
+    "txt_maxl": 24,
     "isbr": 0
    },
    "ev": {
@@ -480,26 +389,26 @@
    }
   },
   {
-   "n": "ltn3",
-   "i": 17,
+   "n": "lon",
+   "i": 14,
    "t": "text",
    "g": "g",
-   "x": 430,
-   "y": 174,
-   "w": 236,
+   "x": 436,
+   "y": 140,
+   "w": 50,
    "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
-    "pco": 0,
-    "borderc": 0,
-    "bco": 65497
+    "pco": 65535,
+    "borderc": 4426,
+    "bco": 4426
    },
-   "txt": "In bank",
+   "txt": "on",
    "a": {
     "style": 0,
     "key": 255,
-    "borderw": 2,
+    "borderw": 0,
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
@@ -508,13 +417,13 @@
    }
   },
   {
-   "n": "tn3",
-   "i": 18,
+   "n": "tn1",
+   "i": 15,
    "t": "text",
    "g": "g",
-   "x": 672,
-   "y": 174,
-   "w": 94,
+   "x": 492,
+   "y": 140,
+   "w": 274,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -531,11 +440,11 @@
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
-    "txt_maxl": 10,
+    "txt_maxl": 24,
     "isbr": 0
    },
    "ev": {
-    "r": "va0.val=125<<8\nprint va0.val"
+    "r": "va0.val=122<<8\nprint va0.val"
    }
   },
   {
@@ -543,9 +452,9 @@
    "t": "rangebar",
    "g": "g",
    "x": 34,
-   "y": 214,
+   "y": 194,
    "w": 732,
-   "h": 56,
+   "h": 60,
    "font": 2,
    "txt": "",
    "val": 0,
@@ -567,118 +476,214 @@
     "d2": 1900,
     "d3": 2000,
     "d4": 2100,
-    "txt_maxl": 120
+    "txt_maxl": 160
    },
    "ev": {
     "r": "va0.val=130<<8\nprint va0.val"
    },
-   "i": 19
+   "i": 16
   },
   {
    "n": "tn8",
+   "i": 17,
+   "t": "text",
+   "g": "g",
+   "x": 34,
+   "y": 262,
+   "w": 732,
+   "h": 30,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65497
+   },
+   "txt": "",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 60,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "hint",
+   "i": 18,
+   "t": "text",
+   "g": "g",
+   "x": 34,
+   "y": 350,
+   "w": 732,
+   "h": 30,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 50712,
+    "borderc": 4426,
+    "bco": 4426
+   },
+   "txt": "Tap a zone to type its value. Drag a blob to move the divider.",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "tp0",
+   "i": 19,
+   "t": "text",
+   "g": "g",
+   "x": 1,
+   "y": 1,
+   "w": 1,
+   "h": 1,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 0
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 0,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Position 1\"\nva0.val=119<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "tp1",
    "i": 20,
    "t": "text",
    "g": "g",
-   "x": 34,
-   "y": 276,
-   "w": 480,
-   "h": 30,
+   "x": 1,
+   "y": 1,
+   "w": 1,
+   "h": 1,
    "font": 2,
    "sta": 1,
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 65497
+    "bco": 0
    },
-   "txt": "Channel now",
+   "txt": "0",
    "a": {
-    "style": 0,
-    "key": 255,
-    "borderw": 2,
+    "style": 2,
+    "key": 2,
+    "borderw": 0,
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
-    "txt_maxl": 48,
+    "txt_maxl": 10,
     "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Position 2\"\nva0.val=119<<8\nprint va0.val"
    }
   },
   {
-   "n": "tn7",
+   "n": "tp2",
    "i": 21,
    "t": "text",
    "g": "g",
-   "x": 524,
-   "y": 276,
-   "w": 242,
-   "h": 30,
+   "x": 1,
+   "y": 1,
+   "w": 1,
+   "h": 1,
    "font": 2,
    "sta": 1,
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 65497
+    "bco": 0
    },
-   "txt": "Now: ?",
+   "txt": "0",
    "a": {
-    "style": 0,
-    "key": 255,
-    "borderw": 2,
+    "style": 2,
+    "key": 2,
+    "borderw": 0,
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
-    "txt_maxl": 24,
+    "txt_maxl": 10,
     "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Position 3\"\nva0.val=119<<8\nprint va0.val"
    }
   },
   {
-   "n": "ltn4",
+   "n": "tp3",
    "i": 22,
    "t": "text",
    "g": "g",
-   "x": 34,
-   "y": 342,
-   "w": 244,
-   "h": 32,
+   "x": 1,
+   "y": 1,
+   "w": 1,
+   "h": 1,
    "font": 2,
    "sta": 1,
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 65497
+    "bco": 0
    },
-   "txt": "Position 1",
+   "txt": "0",
    "a": {
-    "style": 0,
-    "key": 255,
-    "borderw": 2,
+    "style": 2,
+    "key": 2,
+    "borderw": 0,
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
     "txt_maxl": 10,
     "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Position 4\"\nva0.val=119<<8\nprint va0.val"
    }
   },
   {
-   "n": "tn4",
+   "n": "tp4",
    "i": 23,
    "t": "text",
    "g": "g",
-   "x": 34,
-   "y": 377,
-   "w": 244,
-   "h": 34,
+   "x": 1,
+   "y": 1,
+   "w": 1,
+   "h": 1,
    "font": 2,
    "sta": 1,
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 65535
+    "bco": 0
    },
    "txt": "0",
    "a": {
     "style": 2,
     "key": 2,
-    "borderw": 2,
+    "borderw": 0,
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
@@ -686,58 +691,61 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Value\"\nva0.val=119<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Position 5\"\nva0.val=119<<8\nprint va0.val"
    }
   },
   {
-   "n": "ltn5",
+   "n": "tp5",
    "i": 24,
    "t": "text",
    "g": "g",
-   "x": 278,
-   "y": 342,
-   "w": 244,
-   "h": 32,
+   "x": 1,
+   "y": 1,
+   "w": 1,
+   "h": 1,
    "font": 2,
    "sta": 1,
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 65497
+    "bco": 0
    },
-   "txt": "Position 2",
+   "txt": "0",
    "a": {
-    "style": 0,
-    "key": 255,
-    "borderw": 2,
+    "style": 2,
+    "key": 2,
+    "borderw": 0,
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
     "txt_maxl": 10,
     "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Position 6\"\nva0.val=119<<8\nprint va0.val"
    }
   },
   {
-   "n": "tn5",
+   "n": "tk0",
    "i": 25,
    "t": "text",
    "g": "g",
-   "x": 278,
-   "y": 377,
-   "w": 244,
-   "h": 34,
+   "x": 1,
+   "y": 1,
+   "w": 1,
+   "h": 1,
    "font": 2,
    "sta": 1,
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 65535
+    "bco": 0
    },
    "txt": "0",
    "a": {
     "style": 2,
     "key": 2,
-    "borderw": 2,
+    "borderw": 0,
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
@@ -745,58 +753,30 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Value\"\nva0.val=119<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Low end value\"\nva0.val=119<<8\nprint va0.val"
    }
   },
   {
-   "n": "ltn6",
+   "n": "tk1",
    "i": 26,
    "t": "text",
    "g": "g",
-   "x": 522,
-   "y": 342,
-   "w": 244,
-   "h": 32,
+   "x": 1,
+   "y": 1,
+   "w": 1,
+   "h": 1,
    "font": 2,
    "sta": 1,
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 65497
-   },
-   "txt": "Position 3",
-   "a": {
-    "style": 0,
-    "key": 255,
-    "borderw": 2,
-    "xcen": 1,
-    "ycen": 1,
-    "pw": 0,
-    "txt_maxl": 10,
-    "isbr": 0
-   }
-  },
-  {
-   "n": "tn6",
-   "i": 27,
-   "t": "text",
-   "g": "g",
-   "x": 522,
-   "y": 377,
-   "w": 244,
-   "h": 34,
-   "font": 2,
-   "sta": 1,
-   "c": {
-    "pco": 0,
-    "borderc": 0,
-    "bco": 65535
+    "bco": 0
    },
    "txt": "0",
    "a": {
     "style": 2,
     "key": 2,
-    "borderw": 2,
+    "borderw": 0,
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
@@ -804,113 +784,110 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Value\"\nva0.val=119<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"High end value\"\nva0.val=119<<8\nprint va0.val"
    }
   },
   {
-   "n": "b3",
+   "n": "ts0",
+   "i": 27,
+   "t": "text",
+   "g": "g",
+   "x": 1,
+   "y": 1,
+   "w": 1,
+   "h": 1,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 0
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 0,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Step size\"\nva0.val=119<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "ts1",
    "i": 28,
-   "t": "button",
-   "g": "l",
-   "x": 14,
-   "y": 414,
-   "w": 120,
-   "h": 56,
-   "font": 6,
+   "t": "text",
+   "g": "g",
+   "x": 1,
+   "y": 1,
+   "w": 1,
+   "h": 1,
+   "font": 2,
    "sta": 1,
    "c": {
-    "bco2": 54938,
     "pco": 0,
     "borderc": 0,
-    "bco": 54938,
-    "pco2": 65535
+    "bco": 0
    },
-   "txt": "Save",
-   "val": 0,
+   "txt": "0",
    "a": {
-    "style": 4,
-    "borderw": 2,
+    "style": 2,
+    "key": 2,
+    "borderw": 0,
     "xcen": 1,
     "ycen": 1,
+    "pw": 0,
     "txt_maxl": 10,
     "isbr": 0
    },
    "ev": {
-    "r": "va0.val=118<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Lowest value\"\nva0.val=119<<8\nprint va0.val"
    }
   },
   {
-   "n": "b4",
+   "n": "ts2",
    "i": 29,
-   "t": "button",
-   "g": "l",
-   "x": 142,
-   "y": 414,
-   "w": 120,
-   "h": 56,
-   "font": 6,
+   "t": "text",
+   "g": "g",
+   "x": 1,
+   "y": 1,
+   "w": 1,
+   "h": 1,
+   "font": 2,
    "sta": 1,
    "c": {
-    "bco2": 54938,
     "pco": 0,
     "borderc": 0,
-    "bco": 54938,
-    "pco2": 65535
+    "bco": 0
    },
-   "txt": "< Prev",
-   "val": 0,
+   "txt": "0",
    "a": {
-    "style": 4,
-    "borderw": 2,
+    "style": 2,
+    "key": 2,
+    "borderw": 0,
     "xcen": 1,
     "ycen": 1,
+    "pw": 0,
     "txt_maxl": 10,
     "isbr": 0
    },
    "ev": {
-    "r": "va0.val=126<<8\nprint va0.val"
-   }
-  },
-  {
-   "n": "b2",
-   "i": 30,
-   "t": "button",
-   "g": "l",
-   "x": 270,
-   "y": 414,
-   "w": 120,
-   "h": 56,
-   "font": 6,
-   "sta": 1,
-   "c": {
-    "bco2": 54938,
-    "pco": 0,
-    "borderc": 0,
-    "bco": 54938,
-    "pco2": 65535
-   },
-   "txt": "Next >",
-   "val": 0,
-   "a": {
-    "style": 4,
-    "borderw": 2,
-    "xcen": 1,
-    "ycen": 1,
-    "txt_maxl": 10,
-    "isbr": 0
-   },
-   "ev": {
-    "r": "va0.val=127<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Highest value\"\nva0.val=119<<8\nprint va0.val"
    }
   },
   {
    "n": "b5",
-   "i": 31,
+   "i": 30,
    "t": "button",
    "g": "l",
-   "x": 398,
+   "x": 14,
    "y": 414,
-   "w": 120,
+   "w": 180,
    "h": 56,
    "font": 6,
    "sta": 1,
@@ -937,12 +914,12 @@
   },
   {
    "n": "b6",
-   "i": 32,
+   "i": 31,
    "t": "button",
    "g": "l",
-   "x": 526,
+   "x": 214,
    "y": 414,
-   "w": 120,
+   "w": 180,
    "h": 56,
    "font": 6,
    "sta": 1,
@@ -968,13 +945,45 @@
    }
   },
   {
+   "n": "b3",
+   "i": 32,
+   "t": "button",
+   "g": "l",
+   "x": 414,
+   "y": 414,
+   "w": 180,
+   "h": 56,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Save",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=118<<8\nprint va0.val"
+   }
+  },
+  {
    "n": "b1",
    "i": 33,
    "t": "button",
    "g": "l",
-   "x": 654,
+   "x": 605,
    "y": 414,
-   "w": 120,
+   "w": 180,
    "h": 56,
    "font": 6,
    "sta": 1,

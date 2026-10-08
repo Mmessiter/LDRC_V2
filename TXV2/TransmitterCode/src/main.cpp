@@ -3031,7 +3031,7 @@ void RestoreCurrentModel()
 // ******************************** Global Array1 of numbered function pointers OK up the **********************************
 
 // This new list can be huge - up to 24 BITS unsigned!  ( Use "NUMBER<<8" )
-#define LASTFUNCTION1 131 // One more than final one
+#define LASTFUNCTION1 133 // One more than final one
 
 void (*NumberedFunctions1[LASTFUNCTION1])(){
     Blank,                   // 0 Cannot be used
@@ -3164,7 +3164,9 @@ void (*NumberedFunctions1[LASTFUNCTION1])(){
     AdjustNext,              // 127 Next >
     AdjustAdd,               // 128 Add
     AdjustRemove,            // 129 Remove
-    AdjustBarMoved           // 130 B74: a handle of the bar dragged
+    AdjustBarMoved,          // 130 B74: the bar touched (a zone tapped, a handle dragged)
+    AdjustPickOk,            // 131 B75: the picker's OK
+    AdjustPickCancel         // 132 Cancel
 };
 
 // This list migth become MUCH longer as it limit is 24 bits big
@@ -4004,6 +4006,12 @@ FASTRUN void ButtonWasPressed()
         { // B41: the block the receiver holds, by the pipe, as telemetry items
             p = InStrng((char *)"ldrctel ", TextIn);
             TelemetryFromPipe(TextIn + p + 7);
+            ClearText();
+            return;
+        }
+        if (InStrng((char *)"ldrcadj", TextIn) > 0)
+        { // B75: the adjustments page is on the screen again (from the keypad, a question, or just opened): its bar drawn afresh
+            AdjustPageBack();
             ClearText();
             return;
         }

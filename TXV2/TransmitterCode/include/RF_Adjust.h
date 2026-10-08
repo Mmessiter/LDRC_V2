@@ -50,17 +50,17 @@ static const char *const AdjNames[ADJ_NAMES] PROGMEM = {
     "Governor idle throttle", "Governor auto throttle", "Governor max throttle", "Governor min throttle", "Governor headspeed", "Governor yaw feedforward"};
 // The order the Setting steps through: rates and PIDs first (the phone page's BASIC set), then the rest
 static const uint8_t ADJ_FIRST = 5, ADJ_LAST_BASIC = 25;
-FLASHMEM static uint8_t AdjNextFn(uint8_t fn, int dir) // the next function in that order, wrapping (dir +1 / -1)
+// The order the picker page lists them in (hmi/adjust_pages.py ORDER must agree): 5..25, then 3, 4, 26..81
+FLASHMEM static const uint8_t *AdjOrder(int &n)
 {
-    // the sequence: 5..25, then 3, 4, 26..81
     static uint8_t seq[ADJ_NAMES];
-    static int n = 0;
-    if (!n) { for (int f = ADJ_FIRST; f <= ADJ_LAST_BASIC; ++f) seq[n++] = (uint8_t)f; seq[n++] = 3; seq[n++] = 4; for (int f = ADJ_LAST_BASIC + 1; f < ADJ_NAMES; ++f) seq[n++] = (uint8_t)f; }
-    int at = 0;
-    for (int i = 0; i < n; ++i) if (seq[i] == fn) { at = i; break; }
-    at = (at + dir + n) % n;
-    return seq[at];
+    static int cnt = 0;
+    if (!cnt) { for (int f = ADJ_FIRST; f <= ADJ_LAST_BASIC; ++f) seq[cnt++] = (uint8_t)f; seq[cnt++] = 3; seq[cnt++] = 4; for (int f = ADJ_LAST_BASIC + 1; f < ADJ_NAMES; ++f) seq[cnt++] = (uint8_t)f; }
+    n = cnt;
+    return seq;
 }
+FLASHMEM static int AdjIdxOf(uint8_t fn) { int n; const uint8_t *seq = AdjOrder(n); for (int i = 0; i < n; ++i) if (seq[i] == fn) return i; return 0; }
+FLASHMEM static uint8_t AdjFnAt(int idx) { int n; const uint8_t *seq = AdjOrder(n); return (idx >= 0 && idx < n) ? seq[idx] : seq[0]; }
 
 struct AdjLine { uint8_t fn, ena, adj, stp; int16_t enaLo, enaHi, a1Lo, a1Hi, a2Lo, a2Hi; uint16_t min, max; };
 enum { AK_SWITCH = 0, AK_KNOB = 1, AK_NUDGE = 2 };
@@ -276,7 +276,6 @@ static int AdjStep_ = ADJ_IDLE, AdjReq = 0, AdjTries = 0, AdjLineAt = 0;
 static uint32_t AdjMsgUntil = 0, AdjLiveMs = 0;
 static bool AdjNowKnown = false; static int32_t AdjNow = 0; static uint8_t AdjNowFn = 0; static int AdjNowRow = -1;
 static uint8_t AdjNowRfn = 0; static int AdjNowOff = 0, AdjNowBytes = 0, AdjNowSide = 0, AdjNowBank = 0;
-static const char *AdjKindWords[3] = {"Switch", "Knob", "Up/down"};   // (the field holds nine characters)
 DMAMEM static uint8_t AdjImg[600];       // the 52 image as it comes (588 bytes)
 
 FLASHMEM static void AdjBusy(const char *msg)
@@ -287,7 +286,6 @@ FLASHMEM static void AdjBusy(const char *msg)
 static void AdjText(const char *name, const char *t) { SendText((char *)name, (char *)t); }
 static void AdjNum(const char *name, long v) { char b[16]; snprintf(b, sizeof(b), "%ld", v); SendText((char *)name, b); }
 static void AdjVis(const char *name, bool on) { char c[24]; snprintf(c, sizeof(c), "vis %s,%d", name, on ? 1 : 0); SendCommand(c); }
-static void AdjRowVis(int i, bool on) { char n[8]; snprintf(n, sizeof(n), "tn%d", i); AdjVis(n, on); snprintf(n, sizeof(n), "ltn%d", i); AdjVis(n, on); }
 FLASHMEM static void AdjHead()
 {
     SendText((char *)"t11", ModelName);
@@ -347,79 +345,73 @@ FLASHMEM static void AdjLive() // the chosen channel's position, from this trans
 }
 static void AdjGather();
 static void AdjEdited();
-FLASHMEM static void AdjShowNow()
-{
-    char b[40];
-    if (AdjN && AdjNowKnown && AdjNowRow == AdjAt && AdjNowFn == AdjRows[AdjAt].fn) snprintf(b, sizeof(b), "Now: %ld", (long)AdjNow);
-    else if (AdjN && AdjNowRow == AdjAt && AdjNowBank > 0) snprintf(b, sizeof(b), "Now: in bank %d only", AdjNowBank);
-    else snprintf(b, sizeof(b), "Now: ?");
-    AdjText("tn7", b);
-}
+FLASHMEM static void AdjShowNow() {}   // (B75: the setting's present value is no longer shown - it only seeds a new row; Malcolm found "Now: ?" mysterious)
 FLASHMEM static void AdjShow()
 {
     AdjBankRegions(AdjRows, AdjN, AdjBk);   // (the bank line may just have been edited)
     AdjTitle();
     if (!AdjN)
     {
-        AdjText("tn0", (char *)"(none: Add one)"); AdjText("tn1", (char *)""); AdjText("tn2", (char *)""); AdjText("tn3", (char *)"");
-        for (int i = 4; i <= 6; ++i) AdjRowVis(i, false);
-        AdjText("tn7", (char *)""); AdjText("tn8", (char *)"");
+        AdjText("tn0", (char *)"(none yet: press Add)"); AdjText("tn3", (char *)""); AdjText("tn2", (char *)""); AdjText("tn1", (char *)"");
+        AdjText("tn8", (char *)"");
         SendCommand((char *)"bar.n=1"); SendCommand((char *)"bar.kind=0"); SendCommand((char *)"bar.mk=-1"); AdjText("bar", (char *)"");
         return;
     }
     const AdjRow &r = AdjRows[AdjAt];
     char b[48];
     AdjText("tn0", AdjNames[r.fn < ADJ_NAMES ? r.fn : 0]);
+    const int bank = AdjCondToBank(r, AdjBk);
+    if (bank > 0) snprintf(b, sizeof(b), "in bank %d", bank); else snprintf(b, sizeof(b), "%s", bank < 0 ? "in bank ?" : "in any bank");
+    AdjText("tn3", b);
+    if (r.kind == AK_SWITCH) snprintf(b, sizeof(b), "Switch, %d positions", r.n); else snprintf(b, sizeof(b), "%s", r.kind == AK_KNOB ? "Knob" : "Step up / down");
+    AdjText("tn2", b);
     const int ch = r.ch + 6;
     snprintf(b, sizeof(b), "Channel %d: %s", ch, (ch >= 1 && ch <= CHANNELSUSED) ? ChannelNames[ch - 1] : "?");
     AdjText("tn1", b);
-    if (r.kind == AK_SWITCH) snprintf(b, sizeof(b), "Switch %d", r.n); else snprintf(b, sizeof(b), "%s", AdjKindWords[r.kind]);
-    AdjText("tn2", b);
-    const int bank = AdjCondToBank(r, AdjBk);
-    if (bank > 0) snprintf(b, sizeof(b), "Bank %d", bank); else snprintf(b, sizeof(b), "%s", bank < 0 ? "Other" : "Any");
-    AdjText("tn3", b);
-    // the bar: its kind, its regions and their dividers, the labels in them
+    // the bar: its kind, its zones and their dividers, the values in them; and the boxes the keypad edits, out of sight
     char labels[160] = "";
     if (r.kind == AK_KNOB)
     {
         SendCommand((char *)"bar.kind=1"); SendCommand((char *)"bar.n=3");
         snprintf(b, sizeof(b), "bar.d0=%d", r.lo); SendCommand(b); snprintf(b, sizeof(b), "bar.d1=%d", r.hi); SendCommand(b);
         snprintf(labels, sizeof(labels), "|%ld to %ld|", (long)r.v[0], (long)r.v[1]);
-        AdjRowVis(4, true); AdjRowVis(5, true); AdjRowVis(6, false);
-        AdjText("ltn4", (char *)"Low end value"); AdjNum("tn4", r.v[0]);
-        AdjText("ltn5", (char *)"High end value"); AdjNum("tn5", r.v[1]);
+        AdjNum("tk0", r.v[0]); AdjNum("tk1", r.v[1]);
     }
     else if (r.kind == AK_SWITCH)
     {
         SendCommand((char *)"bar.kind=0"); snprintf(b, sizeof(b), "bar.n=%d", r.n); SendCommand(b);
         for (int k = 0; k + 1 < r.n && k < 5; ++k) { snprintf(b, sizeof(b), "bar.d%d=%d", k, r.t[k]); SendCommand(b); }
-        for (int k = 0; k < r.n; ++k) { char one[28]; snprintf(one, sizeof(one), "%s%d = %ld", k ? "|" : "", k + 1, (long)r.v[k]); strncat(labels, one, sizeof(labels) - strlen(labels) - 1); }
-        AdjRowVis(4, true); AdjRowVis(5, r.n >= 2); AdjRowVis(6, r.n >= 3);
-        AdjText("ltn4", (char *)"Position 1"); AdjNum("tn4", r.v[0]);
-        AdjText("ltn5", (char *)"Position 2"); AdjNum("tn5", r.v[1]);
-        AdjText("ltn6", (char *)(r.n > 3 ? "Position 3 (of more)" : "Position 3")); AdjNum("tn6", r.v[2]);
+        for (int k = 0; k < r.n && k < ADJ_POS_MAX; ++k) { char one[20]; snprintf(one, sizeof(one), "%s%ld", k ? "|" : "", (long)r.v[k]); strncat(labels, one, sizeof(labels) - strlen(labels) - 1); char nm[8]; snprintf(nm, sizeof(nm), "tp%d", k); AdjNum(nm, r.v[k]); }
     }
     else
     {
         SendCommand((char *)"bar.kind=2"); SendCommand((char *)"bar.n=3");
         snprintf(b, sizeof(b), "bar.d0=%d", r.t[0]); SendCommand(b); snprintf(b, sizeof(b), "bar.d1=%d", r.t[1]); SendCommand(b);
-        snprintf(labels, sizeof(labels), "down %d||up %d", r.stp, r.stp);
-        AdjRowVis(4, true); AdjRowVis(5, true); AdjRowVis(6, true);
-        AdjText("ltn4", (char *)"Step size"); AdjNum("tn4", r.stp);
-        AdjText("ltn5", (char *)"Lowest value"); AdjNum("tn5", r.v[0]);
-        AdjText("ltn6", (char *)"Highest value"); AdjNum("tn6", r.v[1]);
+        snprintf(labels, sizeof(labels), "down %d|%ld to %ld|up %d", r.stp, (long)r.v[0], (long)r.v[1], r.stp);
+        AdjNum("ts0", r.stp); AdjNum("ts1", r.v[0]); AdjNum("ts2", r.v[1]);
     }
     AdjText("bar", labels);
-    AdjShowNow();
     AdjLiveCh = -1;   // (the line under the bar is worded from the row: said again)
     AdjLive();
 }
+// The bar was touched (the screen's release event): a TAP on a zone opens the keypad for that zone's value (the box the
+// keypad edits is clicked, as a finger would); a DRAG moved a divider: the dividers as the screen now has them, into the row
+FLASHMEM static void AdjClickBox(const char *box) { char c[24]; snprintf(c, sizeof(c), "click %s,0", box); SendCommand(c); }
 // A handle of the bar was dragged (the screen's release event): the dividers as the screen now has them, into the row
 FLASHMEM void AdjustBarMoved()
 {
     if (!AdjN || AdjStep_ != ADJ_IDLE) return;
     AdjGather();
     AdjRow &r = AdjRows[AdjAt];
+    const int tap = GetOtherValue((char *)"bar.tap");
+    if (tap >= ADJ_RMIN && tap <= ADJ_RMAX)
+    { // a tap: which zone, which value
+        const int k = AdjRegionOf(r, tap);
+        if (r.kind == AK_SWITCH) { if (k >= 0 && k < r.n && k < ADJ_POS_MAX) { char nm[8]; snprintf(nm, sizeof(nm), "tp%d", k); AdjClickBox(nm); } }
+        else if (r.kind == AK_KNOB) { if (k == 1) AdjClickBox(tap < (r.lo + r.hi) / 2 ? "tk0" : "tk1"); }
+        else { if (k != 1) AdjClickBox("ts0"); else AdjClickBox(tap < (r.t[0] + r.t[1]) / 2 ? "ts1" : "ts2"); }
+        return;
+    }
     int d[5];
     const int nd = r.kind == AK_SWITCH ? r.n - 1 : 2;
     for (int k = 0; k < nd && k < 5; ++k) { char n[10]; snprintf(n, sizeof(n), "bar.d%d", k); const int v = GetOtherValue((char *)n); d[k] = (v >= ADJ_RMIN && v <= ADJ_RMAX) ? v : -1; }
@@ -438,9 +430,18 @@ FLASHMEM static void AdjGather() // the typed values of the row showing
 {
     if (!AdjN || CurrentView != ADJUSTVIEW) return;
     AdjRow &r = AdjRows[AdjAt];
-    if (r.kind == AK_KNOB) { r.v[0] = FieldNumber("tn4", 0, 65535); r.v[1] = FieldNumber("tn5", 0, 65535); }
-    else if (r.kind == AK_SWITCH) { r.v[0] = FieldNumber("tn4", 0, 65535); if (r.n >= 2) r.v[1] = FieldNumber("tn5", 0, 65535); if (r.n >= 3) r.v[2] = FieldNumber("tn6", 0, 65535); }
-    else { r.stp = (uint8_t)FieldNumber("tn4", 1, 255); r.v[0] = FieldNumber("tn5", 0, 65535); r.v[1] = FieldNumber("tn6", 0, 65535); }
+    if (r.kind == AK_KNOB) { r.v[0] = FieldNumber("tk0", 0, 65535); r.v[1] = FieldNumber("tk1", 0, 65535); }
+    else if (r.kind == AK_SWITCH) { for (int k = 0; k < r.n && k < ADJ_POS_MAX; ++k) { char nm[8]; snprintf(nm, sizeof(nm), "tp%d", k); r.v[k] = FieldNumber(nm, 0, 65535); } }
+    else { r.stp = (uint8_t)FieldNumber("ts0", 1, 255); r.v[0] = FieldNumber("ts1", 0, 65535); r.v[1] = FieldNumber("ts2", 0, 65535); }
+}
+// The page is back on the screen - from the keypad, from a question, or just opened (its postinitialize prints "ldrcadj"):
+// the values as typed, and the bar drawn again from them
+FLASHMEM void AdjustPageBack()
+{
+    if (CurrentView != ADJUSTVIEW || !AdjHave) return;
+    AdjGather();
+    AdjHead();
+    AdjShow();
 }
 static void AdjEdited() { Adj_Was_Edited = true; SendCommand((char *)"vis b3,1"); }
 FLASHMEM static void AdjFail(const char *what, bool leave)
@@ -454,6 +455,28 @@ FLASHMEM static void AdjFail(const char *what, bool leave)
     if (leave) { RotorFlightStart(); return; }
     AdjHead(); AdjShow();
 }
+// A knob that gives a few whole numbers - the bank switches above all (1 to 4 across the travel) - is really a set of
+// zones: Rotorflight rounds the knob's position to the nearest number, so it changes at thresholds. Shown as a switch
+// with one zone per number and the blobs at those thresholds (Malcolm, 8 Oct: "The blobs are at the extreme ends, but
+// they should mark the thresholds between zones"). Saved as a switch - one line per zone - which Rotorflight treats the same.
+FLASHMEM static void AdjKnobToZones(AdjRow &r)
+{
+    if (r.kind != AK_KNOB || r.v[1] <= r.v[0] || r.v[1] - r.v[0] > ADJ_POS_MAX - 1 || r.v[0] < 0) return;
+    const int32_t mn = r.v[0], mx = r.v[1];
+    const int n = (int)(mx - mn) + 1;
+    const float span = (float)(r.hi - r.lo);
+    int16_t t[ADJ_POS_MAX];
+    for (int k = 0; k + 1 < n; ++k)
+    { // the threshold before the number mn + k + 1
+        const float f = ((float)(k + 1) - 0.5f) / (float)(mx - mn);
+        int us = (int)(floorf(((float)r.lo + f * span) / 5.0f + 0.5f) * 5);
+        if (us <= ADJ_RMIN) us = ADJ_RMIN + 5;
+        if (us >= ADJ_RMAX) us = ADJ_RMAX - 5;
+        t[k] = (int16_t)us;
+    }
+    r.kind = AK_SWITCH; r.n = (uint8_t)n;
+    for (int k = 0; k < n; ++k) { r.v[k] = mn + k; if (k + 1 < n) r.t[k] = t[k]; }
+}
 FLASHMEM static void AdjTakeRows(const uint8_t *b, int n) // the 52 image -> rows in page units
 {
     AdjLine L[ADJ_MAX];
@@ -463,8 +486,8 @@ FLASHMEM static void AdjTakeRows(const uint8_t *b, int n) // the 52 image -> row
     for (int i = 0; i < AdjN; ++i)
     {
         const int sc = AdjFnScale(AdjRows[i].fn);
-        if (sc == 1) continue;
-        for (int k = 0; k < ADJ_POS_MAX; ++k) AdjRows[i].v[k] *= sc;
+        if (sc != 1) for (int k = 0; k < ADJ_POS_MAX; ++k) AdjRows[i].v[k] *= sc;
+        AdjKnobToZones(AdjRows[i]);
     }
     AdjBankRegions(AdjRows, AdjN, AdjBk);
     if (AdjAt >= AdjN) AdjAt = AdjN ? AdjN - 1 : 0;
@@ -481,11 +504,14 @@ FLASHMEM static int AdjLinesToWrite(AdjLine *L) // the rows, back in raw units
     }
     return AdjRowsToLines(R, AdjN, L);
 }
+static bool AdjNowAgain = false;   // asked while another read was on its way: asked again when it is done
 FLASHMEM static void AdjAskNow() // the setting's present value, from the flight controller's bank in use (never another bank under a live transmitter)
 {
     AdjNowKnown = false; AdjNowRow = AdjAt; AdjNowBank = 0;
     AdjShowNow();
-    if (!AdjN || AdjStep_ != ADJ_IDLE) return;
+    if (!AdjN) return;
+    if (AdjStep_ != ADJ_IDLE) { AdjNowAgain = AdjStep_ == ADJ_NOW_STATUS || AdjStep_ == ADJ_NOW_READ; return; }
+    AdjNowAgain = false;
     const AdjRow &r = AdjRows[AdjAt];
     AdjNowFn = r.fn;
     if (!AdjValueSource(r.fn, AdjNowRfn, AdjNowOff, AdjNowBytes, AdjNowSide)) return;
@@ -590,6 +616,7 @@ FLASHMEM void AdjustPoll()
         const int n = ok ? PipeReplyBytes(b, sizeof(b)) : 0;
         AdjStep_ = ADJ_IDLE;
         if (n < 26) return;
+        if (AdjNowAgain) { AdjAskNow(); return; }
         const int cur = (AdjNowSide == 2 ? b[25] : b[23]) + 1;
         if (AdjNowBank && AdjNowBank != cur) { AdjShowNow(); return; }   // (another bank's value: not read under a live transmitter)
         AdjNowBank = 0;
@@ -601,10 +628,11 @@ FLASHMEM void AdjustPoll()
         uint8_t b[128];
         const int n = ok ? PipeReplyBytes(b, sizeof(b)) : 0;
         AdjStep_ = ADJ_IDLE;
-        if (n < AdjNowOff + AdjNowBytes) return;
+        if (n < AdjNowOff + AdjNowBytes) { if (AdjNowAgain) AdjAskNow(); return; }
         int32_t v = AdjNowBytes == 2 ? (int32_t)(b[AdjNowOff] | (b[AdjNowOff + 1] << 8)) : (int32_t)b[AdjNowOff];
         v *= AdjFnScale(AdjNowFn);
         AdjNowKnown = true; AdjNow = v;
+        if (AdjNowAgain) { AdjAskNow(); return; }   // (the row changed meanwhile: that one's value)
         if (AdjN && AdjNowRow == AdjAt && AdjRows[AdjAt].fn == AdjNowFn)
         { // a row just added, or its setting just changed: its values start from the present one
             AdjRow &r = AdjRows[AdjAt];
@@ -648,7 +676,7 @@ FLASHMEM void EndAdjustView() // OK
     AdjStep_ = ADJ_IDLE; Adj_Was_Edited = false;
     RotorFlightStart();
 }
-void AdjustWasEdited() { AdjEdited(); }
+FLASHMEM void AdjustWasEdited() { AdjEdited(); }
 FLASHMEM void SaveAdjustments()
 {
     if (!AdjHave || AdjStep_ != ADJ_IDLE) return;
@@ -669,10 +697,34 @@ FLASHMEM static void AdjMove(int to)
     AdjShow();
     AdjAskNow();
 }
-void AdjustPrevious() { AdjMove(AdjAt - 1); }
-void AdjustNext() { AdjMove(AdjAt + 1); }
-void AdjustSettingNext() { if (!AdjN) return; AdjGather(); AdjRows[AdjAt].fn = AdjNextFn(AdjRows[AdjAt].fn, 1); for (int k = 0; k < ADJ_POS_MAX; ++k) AdjRows[AdjAt].v[k] = 0; AdjEdited(); AdjShow(); AdjAskNow(); }
-void AdjustSettingPrev() { if (!AdjN) return; AdjGather(); AdjRows[AdjAt].fn = AdjNextFn(AdjRows[AdjAt].fn, -1); for (int k = 0; k < ADJ_POS_MAX; ++k) AdjRows[AdjAt].v[k] = 0; AdjEdited(); AdjShow(); AdjAskNow(); }
+FLASHMEM void AdjustPrevious() { AdjMove(AdjAt - 1); }
+FLASHMEM void AdjustNext() { AdjMove(AdjAt + 1); }
+FLASHMEM void AdjustSettingNext() // the setting box tapped: the picker page, a wheel of every setting, the row's own selected
+{
+    if (!AdjN || AdjStep_ != ADJ_IDLE) return;
+    AdjGather();
+    SendCommand((char *)"page AdjPickView");
+    CurrentView = ADJPICKVIEW;
+    SendText((char *)"t11", ModelName);
+    SendValue((char *)"list", AdjIdxOf(AdjRows[AdjAt].fn));
+}
+FLASHMEM static void AdjPickLeave()
+{
+    SendCommand((char *)"page AdjustView");
+    CurrentView = ADJUSTVIEW;
+    AdjHead(); AdjShow();
+}
+FLASHMEM void AdjustPickOk()
+{
+    const uint8_t fn = AdjFnAt((int)GetValue((char *)"list"));
+    AdjPickLeave();
+    if (!AdjN || fn == AdjRows[AdjAt].fn || fn < 1 || fn >= ADJ_NAMES) return;
+    AdjRows[AdjAt].fn = fn;
+    for (int k = 0; k < ADJ_POS_MAX; ++k) AdjRows[AdjAt].v[k] = 0;   // (the present value seeds them, when it can be read)
+    AdjEdited(); AdjShow(); AdjAskNow();
+}
+FLASHMEM void AdjustPickCancel() { AdjPickLeave(); }
+FLASHMEM void AdjustSettingPrev() { AdjustSettingNext(); }   // (B75: both codes open the picker)
 FLASHMEM static void AdjChannel(int dir)
 {
     if (!AdjN) return;
@@ -683,8 +735,8 @@ FLASHMEM static void AdjChannel(int dir)
     AdjRows[AdjAt].ch = (uint8_t)ch;
     AdjEdited(); AdjShow();
 }
-void AdjustChannelNext() { AdjChannel(1); }
-void AdjustChannelPrev() { AdjChannel(-1); }
+FLASHMEM void AdjustChannelNext() { AdjChannel(1); }
+FLASHMEM void AdjustChannelPrev() { AdjChannel(-1); }
 FLASHMEM void AdjustKindTapped() // Knob -> Switch 2 -> Switch 3 -> Step up/down -> Knob, keeping what values it can
 {
     if (!AdjN) return;
