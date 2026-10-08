@@ -164,6 +164,18 @@ int main(int argc, char **argv) {
       CHECK(AdjThresholds(1062, 1847, 4, t) == 3 && t[0] == 1193 && t[1] == 1455 && t[2] == 1717, "the thresholds of 4 banks over 1062..1847");
       CHECK(AdjThresholds(988, 2012, 2, t) == 1 && t[0] == 1500, "two positions change half way");
       CHECK(AdjThresholds(1500, 1500, 3, t) == 0 && AdjThresholds(988, 2012, 1, t) == 0, "no thresholds without a travel or a second position"); }
+    // Rotorflight's pick with its reach: beyond (lo - margin, hi + margin) the setting is left as it was (0)
+    CHECK(AdjZoneOf(990, 2010, 4, 988) == 1 && AdjZoneOf(990, 2010, 4, 1091) == 1 && AdjZoneOf(990, 2010, 4, 1500) == 3 && AdjZoneOf(990, 2010, 4, 2012) == 4 && AdjZoneOf(990, 2010, 4, 700) == 0 && AdjZoneOf(990, 2010, 4, 2125) == 4 && AdjZoneOf(1000, 1100, 2, 1200) == 0, "the zone Rotorflight picks, and its reach");
+    // Black Thunder 2's channel 7 (8 Oct 2026: 988, 1091, 1500, 2012 us, far from even): the ends at the first and last
+    // values put bank 2 in zone 1; the search finds a travel that gives every bank its own zone, with ~50 us to spare
+    { int vals[5] = {0, 988, 1091, 1500, 2012}; int16_t lo, hi; int room;
+      CHECK(AdjBestEnds(vals, 4, lo, hi, room), "a travel exists for Black Thunder 2's banks");
+      bool each = true; for (int b = 1; b <= 4; ++b) if (AdjZoneOf(lo, hi, 4, vals[b]) != b) each = false;
+      fprintf(stderr, "   (Black Thunder 2: ends %d..%d, room %d us)\n", lo, hi, room);
+      CHECK(each && room >= 45 && lo % 5 == 0 && hi % 5 == 0, "each bank in its own zone with room to spare");
+      int even[5] = {0, 988, 1300, 1700, 2012}; CHECK(AdjBestEnds(even, 4, lo, hi, room) && room >= 140, "evenly spaced banks leave much room");
+      int tight[4] = {0, 1000, 1004, 2000}; CHECK(!AdjBestEnds(tight, 3, lo, hi, room), "values 4 us apart cannot be told apart");
+      int two[3] = {0, 988, 2012}; CHECK(AdjBestEnds(two, 2, lo, hi, room) && AdjZoneOf(lo, hi, 2, 988) == 1 && AdjZoneOf(lo, hi, 2, 2012) == 2, "two banks"); }
     CHECK(AdjSwitchValue(40, 60, 3, 1) == 50 && AdjSwitchValue(1, 4, 4, 2) == 3 && AdjSwitchValue(0, 1, 2, 1) == 1 && AdjSwitchValue(10, 11, 3, 1) == 11 && AdjSwitchValue(7, 7, 1, 0) == 7, "the values between the ends");
     { int16_t lo, hi; int t2[1] = {1500}; AdjFitEnds(t2, 2, lo, hi); CHECK(lo == 1000 && hi == 2000, "two old positions divided at 1500: ends 1000..2000");
       int t3[1] = {1000}; AdjFitEnds(t3, 2, lo, hi); CHECK(lo == 875 && hi == 1125, "two old positions divided at 1000: ends as wide as the travel allows");

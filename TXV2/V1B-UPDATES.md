@@ -186,6 +186,19 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The bank switch matched by a search, not by the ends (V2 B84, 9 Oct 2026)
+
+B83 on the bench: "the banks are changing properly now" - but the Adjustments page showed the bank switch with its blobs
+at the ends of the converted old lines (875..1910) and "Switch, 4 positions", not matched. The transmitter's curve range
+is 500..2500 us (MINMICROS/MAXMICROS), so Black Thunder 2's channel 7 is 644, 1100, 1500 and 2178 us, which the
+receiver clamps to 988, 1091, 1500 and 2012 at the flight controller: far from even, and B83's rule "ends at bank 1's
+and the last bank's values" leaves bank 2 in zone 1, so the match gave up. B84 searches every travel in 5 us steps
+(AdjBestEnds) for the one whose even divisions give every bank its own zone with the most room, honouring Rotorflight's
+reach (it recomputes only within lo - W/(2(n-1)) .. hi + the same; beyond that the bank stays as it was - AdjZoneOf):
+875..1890 for Black Thunder 2, 46 us to spare. A bar that already gives every bank its own zone, whatever its ends, is
+left alone and shown "Banks 1 to 4 of this transmitter" (his converted 875..1910 qualifies). Only the bank channel's own
+value counts as news for a re-fit (a stick moving is not). Live line: "... - beyond the switch's reach: no change".
+
 ## The bank switch jammed: one Rotorflight line per switch (V2 B83, screen 1.11.38, 9 Oct 2026)
 
 **Found.** B82's bank word showed it: "Bank 4 / FC 3", "Bank 1 / FC 4" - the flight controller was not following the

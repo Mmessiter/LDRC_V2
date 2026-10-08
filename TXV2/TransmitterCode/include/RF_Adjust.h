@@ -105,6 +105,55 @@ FLASHMEM static int AdjThresholds(int lo, int hi, int n, int *t)
     for (int q = 1; q < n; ++q) { const long num = q * W - W / 2; t[q - 1] = (int)(lo + (num + (n - 1) - 1) / (n - 1)); }
     return n - 1;
 }
+// The position Rotorflight picks for a channel value on a switch of n positions over lo..hi: 1..n, or 0 when the value is
+// beyond the switch's reach - rc_adjustments.c recomputes only within (lo - margin, hi + margin), margin = max(5, W/(2(n-1))),
+// and leaves the setting as it was outside that
+FLASHMEM static int AdjZoneOf(int lo, int hi, int n, int u)
+{
+    const int W = hi - lo;
+    if (n < 2 || W <= 0) return 0;
+    int margin = W / (2 * (n - 1));
+    if (margin < 5) margin = 5;
+    if (!(u > lo - margin && u < hi + margin)) return 0;
+    int t[ADJ_POS_MAX]; const int nt = AdjThresholds(lo, hi, n, t);
+    int z = 1;
+    for (int k = 0; k < nt; ++k) if (u >= t[k]) z = k + 2;
+    return z;
+}
+// The ends lo..hi that give each of n rising values its own position, with the most room to spare: a search over every
+// travel in 5 us steps (the transmitter's banks are seldom evenly spaced: Black Thunder 2's channel 7 is 988, 1091, 1500,
+// 2012 us, which no "ends at the first and last value" can divide). False when no travel does. Room = the least distance
+// from any value to the nearest division or edge of the reach.
+FLASHMEM static bool AdjBestEnds(const int *vals, int n, int16_t &lo, int16_t &hi, int &room)
+{
+    int bestLo = 0, bestHi = 0, best = -1;
+    for (int W = 5 * (n - 1); W <= ADJ_RMAX - ADJ_RMIN; W += 5)
+    {
+        int margin = W / (2 * (n - 1));
+        if (margin < 5) margin = 5;
+        int t[ADJ_POS_MAX];
+        for (int l = ADJ_RMIN; l + W <= ADJ_RMAX; l += 5)
+        {
+            const int h = l + W;
+            const int nt = AdjThresholds(l, h, n, t);
+            int rm = 100000;
+            bool ok = true;
+            for (int b = 1; b <= n && ok; ++b)
+            {
+                const int u = vals[b];
+                const int zlo = b == 1 ? l - margin + 1 : t[b - 2], zhi = b == n ? h + margin - 1 : t[b - 1] - 1;   // the value must sit in [zlo, zhi]
+                if (u < zlo || u > zhi) { ok = false; break; }
+                const int d = u - zlo < zhi - u ? u - zlo : zhi - u;
+                if (d < rm) rm = d;
+            }
+            (void)nt;
+            if (ok && rm > best) { best = rm; bestLo = l; bestHi = h; }
+        }
+    }
+    if (best < 0) return false;
+    lo = (int16_t)bestLo; hi = (int16_t)bestHi; room = best;
+    return true;
+}
 FLASHMEM static int32_t AdjSwitchValue(int32_t first, int32_t last, int n, int k) // the value at position k: the ends as given, the rest evenly between
 {
     if (n <= 1) return first;
@@ -398,12 +447,7 @@ FLASHMEM static int AdjFcUs(uint16_t txUs)
 FLASHMEM static int AdjRegionOf(const AdjRow &r, int us) // which region of the row's bar the channel is in (0..), -1 for none
 {
     if (r.kind == AK_KNOB) return us < r.lo ? 0 : us > r.hi ? 2 : 1;
-    if (r.kind == AK_SWITCH)
-    { // the position Rotorflight picks: where the travel's even divisions put it
-        int t[ADJ_POS_MAX]; const int nt = AdjThresholds(r.lo, r.hi, r.n, t);
-        for (int k = 0; k < nt; ++k) if (us < t[k]) return k;
-        return nt;
-    }
+    if (r.kind == AK_SWITCH) return AdjZoneOf(r.lo, r.hi, r.n, us) - 1;   // the position Rotorflight picks (-1: beyond the switch's reach)
     for (int k = 0; k < 2; ++k) if (us < r.t[k]) return k;
     return 2;
 }
@@ -435,32 +479,38 @@ FLASHMEM static int AdjTxBankUs(int ch0, int bank) // this transmitter's output 
     if (ReversedChannelBITS & (1 << ch0)) v = MAXMICROS - (v - MINMICROS);
     return AdjFcUs((uint16_t)v);
 }
-// The bank line's ends for this transmitter: lo = bank 1's value, hi = bank n's, n = how many banks the channel tells apart
-// (rising from bank 1); false, with the reason, when it cannot (fewer than two, or a bank's value not in its own zone).
+// How many banks the channel tells apart, rising from bank 1 (their values into vals[1..]); 1 = none
+FLASHMEM static int AdjBankValues(int ch0, int *vals)
+{
+    for (int b = 1; b <= BANKS_USED; ++b) vals[b] = AdjTxBankUs(ch0, b);
+    int n = 1;
+    while (n < BANKS_USED && vals[n + 1] > vals[n]) ++n;
+    return n;
+}
+// The bank line's ends for this transmitter: the travel whose even divisions give each bank its own zone with the most room
+// (AdjBestEnds), n = how many banks the channel tells apart (rising from bank 1); false, with the reason, when it cannot.
 FLASHMEM static bool AdjBankFit(int ch0, int16_t &lo, int16_t &hi, int &n, char *why, size_t len)
 {
     int vals[BANKS_USED + 1];
-    for (int b = 1; b <= BANKS_USED; ++b) vals[b] = AdjTxBankUs(ch0, b);
-    n = 1;
-    while (n < BANKS_USED && vals[n + 1] > vals[n]) ++n;
+    n = AdjBankValues(ch0, vals);
     if (n < 2) { snprintf(why, len, "Channel %d has no value of its own in each bank of this transmitter (bank 1 %d us, bank 2 %d us): the flight controller cannot tell the banks apart on it.", ch0 + 1, vals[1], vals[2]); return false; }
-    lo = (int16_t)AdjUs(AdjStep(vals[1])); hi = (int16_t)AdjUs(AdjStep(vals[n]));   // (as Rotorflight will hold them: 5 us steps)
-    int t[ADJ_POS_MAX]; AdjThresholds(lo, hi, n, t);
-    for (int b = 2; b < n; ++b)
+    int room = 0;
+    if (!AdjBestEnds(vals, n, lo, hi, room))
     {
-        int zone = 1; for (int k = 0; k < n - 1; ++k) if (vals[b] >= t[k]) zone = k + 2;
-        if (zone != b) { snprintf(why, len, "Bank %d's value on channel %d (%d us) is too close to bank %d's for Rotorflight's even spacing: space the banks' values evenly in Model setup.", b, ch0 + 1, vals[b], zone < b ? b - 1 : b + 1); return false; }
+        char v[40] = ""; for (int b = 1; b <= n; ++b) { char one[10]; snprintf(one, sizeof(one), "%s%d", b > 1 ? ", " : "", vals[b]); strncat(v, one, sizeof(v) - strlen(v) - 1); }
+        snprintf(why, len, "This transmitter's bank values on channel %d (%s us) cannot all be told apart by Rotorflight's even spacing: space them more evenly in Model setup.", ch0 + 1, v);
+        return false;
     }
     if (n < BANKS_USED) snprintf(why, len, "Banks 1 to %d; bank %d has no value of its own on channel %d (%d us).", n, n + 1, ch0 + 1, vals[n + 1]);
     else why[0] = 0;
     return true;
 }
-FLASHMEM static bool AdjBankRowRight(const AdjRow &r) // does the bank line as it is put every bank of this transmitter in its own zone?
+FLASHMEM static bool AdjBankRowRight(const AdjRow &r) // does the bank line as it is give every bank of this transmitter its own zone?
 {
-    int16_t lo, hi; int n; char why[8];
-    if (!AdjBankFit(r.ch + 5, lo, hi, n, why, sizeof(why))) return true;   // nothing to compare with: leave it
-    if (r.n < n || r.v[0] != 1) return false;
-    for (int b = 1; b <= n; ++b) { const int us = AdjTxBankUs(r.ch + 5, b); if (us < 0 || AdjRegionOf(r, us) + 1 != b) return false; }
+    int vals[BANKS_USED + 1];
+    const int n = AdjBankValues(r.ch + 5, vals);
+    if (n < 2 || r.kind != AK_SWITCH || r.n < n || r.v[0] != 1) return false;
+    for (int b = 1; b <= n; ++b) if (AdjZoneOf(r.lo, r.hi, r.n, vals[b]) != b) return false;
     return true;
 }
 static bool AdjBankFitted[ADJ_MAX];   // the row's ends are this transmitter's (no handles to drag)
@@ -505,13 +555,19 @@ FLASHMEM static void AdjLive() // the chosen channel's position, from this trans
     const int us = (ch >= 1 && ch <= CHANNELSUSED) ? AdjFcUs(SendBuffer[ch - 1]) : -1;
     if (Bank >= 1 && Bank <= BANKS_USED && (BoundFlag && ModelMatched))
     { // what this transmitter sends in the bank in use, for the bank line's fit (measured beats computed)
-        bool fresh = false;
-        for (int c = 0; c < CHANNELSUSED; ++c) { const int v = AdjFcUs(SendBuffer[c]); if (AdjSeenUs[Bank][c] != v) { AdjSeenUs[Bank][c] = (int16_t)v; fresh = true; } }
-        if (fresh && (r.fn == 1 || r.fn == 2) && AdjStep_ == ADJ_IDLE && !AdjBankRowRight(r) && AdjFitBankRow(AdjAt))
-        { // a bank seen for the first time shows the line as it is cannot follow this transmitter: the ends re-fitted
-            AdjEdited(); AdjShow();
-            AdjBusy("The bank switch did not follow this transmitter's banks: matched - press Save"); AdjMsgUntil = millis() + 6000;
-            return;
+        bool fresh = false;   // (the bank channel of the row showing: a stick moving is not news)
+        for (int c = 0; c < CHANNELSUSED; ++c) { const int v = AdjFcUs(SendBuffer[c]); if (AdjSeenUs[Bank][c] != v) { AdjSeenUs[Bank][c] = (int16_t)v; if (c == ch - 1) fresh = true; } }
+        if (fresh && (r.fn == 1 || r.fn == 2) && AdjStep_ == ADJ_IDLE)
+        {
+            const bool wasRight = AdjBankFitted[AdjAt];
+            AdjBankFitted[AdjAt] = AdjBankRowRight(r);
+            if (!AdjBankFitted[AdjAt] && AdjFitBankRow(AdjAt))
+            { // a bank seen for the first time shows the line as it is cannot follow this transmitter: the ends re-fitted
+                AdjEdited(); AdjShow();
+                AdjBusy("The bank switch did not follow this transmitter's banks: matched - press Save"); AdjMsgUntil = millis() + 6000;
+                return;
+            }
+            if (wasRight != AdjBankFitted[AdjAt]) { AdjShow(); return; }
         }
     }
     if (ch == AdjLiveCh && us == AdjLiveUs) return;
@@ -523,8 +579,10 @@ FLASHMEM static void AdjLive() // the chosen channel's position, from this trans
     else if (r.kind == AK_SWITCH && (r.fn == 1 || r.fn == 2))
     { // the bank switch: this transmitter's bank, and the bank Rotorflight picks from the channel
         if (k + 1 == Bank) snprintf(b, sizeof(b), "Bank %d: %d us", Bank, us);
+        else if (k < 0) snprintf(b, sizeof(b), "Bank %d: %d us - beyond the switch's reach: no change", Bank, us);
         else snprintf(b, sizeof(b), "Bank %d: %d us - the flight controller would pick bank %d", Bank, us, k + 1);
     }
+    else if (r.kind == AK_SWITCH && k < 0) snprintf(b, sizeof(b), "Beyond the switch's reach (no change): %d us", us);
     else if (r.kind == AK_SWITCH) snprintf(b, sizeof(b), "Position %d: %d us", k + 1, us);
     else if (r.kind == AK_KNOB)
     {
@@ -583,7 +641,7 @@ FLASHMEM static void AdjShow()
     }
     AdjText("bar", labels);
     // the hint under the bar, for the kind (B83)
-    if (r.kind == AK_SWITCH && (r.fn == 1 || r.fn == 2)) AdjText("hint", AdjBankFitted[AdjAt] ? "The zones follow this transmitter's banks: nothing to drag." : "Drag the round ends to bank 1's and the last bank's values.");
+    if (r.kind == AK_SWITCH && (r.fn == 1 || r.fn == 2)) AdjText("hint", AdjBankFitted[AdjAt] ? "Every bank of this transmitter has its own zone: nothing to drag." : "No travel gives every bank its own zone: tap the kind box for why.");
     else if (r.kind == AK_SWITCH) AdjText("hint", "Tap the first or last zone to type its value. Drag the round ends.");
     else if (r.kind == AK_KNOB) AdjText("hint", "Tap the knob's zone to type its values. Drag the round ends.");
     else AdjText("hint", "Tap a zone to type its value. Drag the round dividers.");
@@ -602,10 +660,11 @@ FLASHMEM void AdjustBarMoved()
     const int tap = GetOtherValue((char *)"bar.tap");
     if (tap >= ADJ_RMIN && tap <= ADJ_RMAX)
     { // a tap: which zone, which value
-        const int k = AdjRegionOf(r, tap);
+        int k = AdjRegionOf(r, tap);
         if (r.kind == AK_SWITCH)
         { // the first and last positions take a value; the rest are evenly between (Rotorflight's own spacing)
             if (r.fn == 1 || r.fn == 2) { AdjBusy("A bank switch counts its banks 1, 2, 3 ...: nothing to type"); AdjMsgUntil = millis() + 3000; return; }
+            if (k < 0) k = tap < (r.lo + r.hi) / 2 ? 0 : r.n - 1;   // (beyond the reach: the nearer end)
             if (k == 0) AdjClickBox("tp0");
             else if (k == r.n - 1 && k < ADJ_POS_MAX) { char nm[8]; snprintf(nm, sizeof(nm), "tp%d", k); AdjClickBox(nm); }
             else { AdjBusy("Type the first and last positions: Rotorflight spaces the rest evenly"); AdjMsgUntil = millis() + 3000; }
@@ -708,7 +767,7 @@ FLASHMEM static void AdjTakeRows(const uint8_t *b, int n) // the 52 image -> row
     {
         AdjRow &r = AdjRows[i];
         if (r.fn != 1 && r.fn != 2) { AdjBankFitted[i] = false; continue; }
-        if (AdjBankRowRight(r)) { int16_t lo, hi; int n; char why[8]; AdjBankFitted[i] = AdjBankFit(r.ch + 5, lo, hi, n, why, sizeof(why)) && r.lo == lo && r.hi == hi; continue; }
+        if (AdjBankRowRight(r)) { AdjBankFitted[i] = true; continue; }   // every bank has its own zone: left as it is
         if (AdjFitBankRow(i)) refit = true;
     }
     AdjTakeNote[0] = 0;

@@ -117,14 +117,16 @@ int main() {
     run(4);
     CHECK(AdjHave && AdjN == 3 && AdjAt == 0 && fields["t0"] == "Adjustment 1 of 3" && fields["tn0"] == "PID bank switch (1 to 6)" && fields["tn1"] == "Channel 6: AUX1" && fields["tn3"] == "in any bank");
     if (fields["tn2"] != "Banks 1 to 4 of this transmitter") fprintf(stderr, "tn2 = '%s' busy = '%s' lo %d hi %d n %d\n", fields["tn2"].c_str(), fields["busy"].c_str(), AdjRows[0].lo, AdjRows[0].hi, AdjRows[0].n);
-    CHECK(fields["tn2"] == "Banks 1 to 4 of this transmitter" && AdjRows[0].legacy && AdjRows[0].kind == AK_SWITCH && AdjRows[0].n == 4 && AdjRows[0].lo == 1060 && AdjRows[0].hi == 1845);   // (the ends in Rotorflight's 5 us steps)
+    CHECK(fields["tn2"] == "Banks 1 to 4 of this transmitter" && AdjRows[0].legacy && AdjRows[0].kind == AK_SWITCH && AdjRows[0].n == 4 && AdjBankRowRight(AdjRows[0]) && AdjRows[0].lo % 5 == 0 && AdjRows[0].hi % 5 == 0);
+    const int bankLo = AdjRows[0].lo, bankHi = AdjRows[0].hi;
+    fprintf(stderr, "   (the stub's banks %d, %d, %d, %d us: ends %d..%d)\n", fc1, fc2, fc3, fc4, bankLo, bankHi);
     CHECK(Adj_Was_Edited && fields["busy"] == "1 switch in the old once-only form: put right, press Save");
     CHECK(fields["tp0"] == "1" && fields["tp1"] == "2" && fields["tp2"] == "3" && fields["tp3"] == "4");   // (the boxes the keypad edits, out of sight)
     CHECK(cmds.size() && std::find(cmds.begin(), cmds.end(), "vis tn3,0") != cmds.end());   // (a bank switch: no bank box)
-    CHECK(cmdValue("bar.kind") == 4 && cmdValue("bar.n") == 4 && cmdValue("bar.d0") == 1060 && cmdValue("bar.d1") == 1845 && fields["bar"] == "1|2|3|4" && cmdValue("bar.mk") == fc2);
+    CHECK(cmdValue("bar.kind") == 4 && cmdValue("bar.n") == 4 && cmdValue("bar.d0") == bankLo && cmdValue("bar.d1") == bankHi && fields["bar"] == "1|2|3|4" && cmdValue("bar.mk") == fc2);
     if (fields["tn8"] != "Bank 2: 1296 us") fprintf(stderr, "tn8 = '%s'\n", fields["tn8"].c_str());
     CHECK(fields["tn8"] == "Bank 2: 1296 us");   // (this transmitter's bank, and Rotorflight picks the same from the channel)
-    { int t[6]; AdjThresholds(1060, 1845, 4, t); CHECK(t[0] == 1191 && t[1] == 1453 && t[2] == 1715); }
+    { int t[6]; AdjThresholds(1060, 1845, 4, t); CHECK(t[0] == 1191 && t[1] == 1453 && t[2] == 1715); CHECK(AdjZoneOf(bankLo, bankHi, 4, fc1) == 1 && AdjZoneOf(bankLo, bankHi, 4, fc2) == 2 && AdjZoneOf(bankLo, bankHi, 4, fc3) == 3 && AdjZoneOf(bankLo, bankHi, 4, fc4) == 4); }
     // the second row: the knob in bank 2 - the old zone 2 (1300..1700) became the new bank 2 - with its present value read from the PIDs (bank 2 is the bank in use)
     cmds.clear(); AdjustNext(); run(6);
     CHECK(std::find(cmds.begin(), cmds.end(), "vis tn3,1") != cmds.end());   // (a gain: the bank box shows)
@@ -143,11 +145,11 @@ int main() {
     if (writes(53) != 5) { fprintf(stderr, "writes 53 %d 250 %d 52 %d step %d edited %d boxes %d last '%s' busy '%s'\n", writes(53), writes(250), writes(52), AdjStep_, Adj_Was_Edited, boxes, lastBox.c_str(), fields["busy"].c_str()); for (auto &r : fcLog) fprintf(stderr, "  fn %d %s\n", r.fn, r.data.c_str()); }
     CHECK(writes(53) == 5 && writes(250) == 1 && writes(52) == 1 && AdjStep_ == ADJ_IDLE && !Adj_Was_Edited);
     { AdjLine L[42]; AdjParseLines(adj, 588, L);
-      CHECK(L[0].fn == 2 && L[0].adj == 0 && L[0].ena == 0 && L[0].enaLo == 875 && L[0].enaHi == 2125 && L[0].a1Lo == 1060 && L[0].a1Hi == 1845 && L[0].min == 1 && L[0].max == 4 && L[0].stp == 0);
+      CHECK(L[0].fn == 2 && L[0].adj == 0 && L[0].ena == 0 && L[0].enaLo == 875 && L[0].enaHi == 2125 && L[0].a1Lo == bankLo && L[0].a1Hi == bankHi && L[0].min == 1 && L[0].max == 4 && L[0].stp == 0);
       CHECK(L[1].fn == 22 && L[1].ena == 0 && L[2].fn == 8 && L[3].fn == 0 && L[4].fn == 0);
-      AdjBanks bk; AdjBankRegions(AdjRows, AdjN, bk); CHECK(bk.have && L[1].enaLo == bk.lo[2] && L[1].enaHi == bk.hi[2] && bk.lo[2] > 1150 && bk.hi[2] < 1500); }
+      AdjBanks bk; AdjBankRegions(AdjRows, AdjN, bk); CHECK(bk.have && L[1].enaLo == bk.lo[2] && L[1].enaHi == bk.hi[2] && bk.lo[2] > 1100 && bk.hi[2] < 1500); }
     if (fields["busy"].find("Saved, and read back the same") != 0) fprintf(stderr, "busy '%s' legacy %d lo %d tn3 '%s' tn2 '%s' at %d\n", fields["busy"].c_str(), AdjRows[0].legacy, AdjRows[0].lo, fields["tn3"].c_str(), fields["tn2"].c_str(), AdjAt);
-    CHECK(fields["busy"].find("Saved, and read back the same") == 0 && !AdjRows[0].legacy && AdjRows[0].lo == 1060);
+    CHECK(fields["busy"].find("Saved, and read back the same") == 0 && !AdjRows[0].legacy && AdjRows[0].lo == bankLo);
     // the matched bank switch, read back, stays matched (no banner): every bank in its own zone
     CHECK(AdjBankRowRight(AdjRows[0]) && AdjBankFitted[0]);
     // 3. edit the knob's high end, save: only its line (1) is written
@@ -202,11 +204,20 @@ int main() {
     boxes = 0; AdjustKindTapped();
     CHECK(boxes == 1 && lastBox.find("Channel 7 has no value of its own") == 0 && !Adj_Was_Edited);
     // moved to channel 6 it is matched at once
-    AdjustChannelPrev(); CHECK(fields["tn1"] == "Channel 6: AUX1" && fields["tn2"] == "Banks 1 to 4 of this transmitter" && cmdValue("bar.kind") == 4 && AdjRows[3].lo == 1060 && Adj_Was_Edited);
-    // 7. the bank in use is measured: bank 3's value seen on the channel beats the computed one; a bank 3 that now sits in
-    // bank 2's zone has the ends re-fitted (the live line says so first)
+    AdjustChannelPrev(); CHECK(fields["tn1"] == "Channel 6: AUX1" && fields["tn2"] == "Banks 1 to 4 of this transmitter" && cmdValue("bar.kind") == 4 && AdjRows[3].lo == bankLo && Adj_Was_Edited);
+    // 7. the bank in use is measured: bank 3's value seen on the channel beats the computed one
     AdjustPrevious(); AdjustPrevious(); AdjustPrevious(); run(4); CHECK(AdjAt == 0 && fields["tn2"] == "Banks 1 to 4 of this transmitter");
     Bank = 3; SendBuffer[5] = 1500; run(8); CHECK(fields["tn8"] == "Bank 3: 1500 us" && AdjSeenUs[3][5] == 1500);
+    // 7b. a bank line with other ends that still gives every bank its own zone (1000..1850 divides at 1142, 1425, 1709 for
+    // the stub's 1062, 1296, 1500, 1847) is left as it is and shown as matched; one whose ends leave bank 2 in zone 1 is
+    // re-fitted when the page opens
+    Bank = 2; SendBuffer[5] = 1300; AdjSeenClear();
+    putLine(0, 2, 0, 875, 2125, 0, 1000, 1850, 1500, 1500, 1, 4, 0);
+    confirmAnswer = true; StartAdjustView(); run(6);
+    CHECK(AdjAt == 0 && fields["tn2"] == "Banks 1 to 4 of this transmitter" && AdjRows[0].lo == 1000 && AdjRows[0].hi == 1850 && !Adj_Was_Edited && cmdValue("bar.kind") == 4);
+    putLine(0, 2, 0, 875, 2125, 0, 1300, 1400, 1500, 1500, 1, 4, 0);
+    StartAdjustView(); run(6);
+    CHECK(AdjAt == 0 && fields["tn2"] == "Banks 1 to 4 of this transmitter" && AdjRows[0].lo == bankLo && AdjRows[0].hi == bankHi && Adj_Was_Edited && fields["busy"] == "The bank switch did not follow this transmitter's banks: matched - press Save");
     // 8. no USB cable: the refusal, in the receiver's words, and back to the menu
     usb = false; boxes = 0; rfStarts = 0; StartAdjustView(); run(6);
     CHECK(boxes == 1 && rfStarts == 1 && lastBox.find("Adjustments need the USB cable") == 0 && lastBox.find("Plug the flight controller's USB") != std::string::npos && CurrentView == 47);
