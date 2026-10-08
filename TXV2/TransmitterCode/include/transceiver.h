@@ -1161,10 +1161,12 @@ void ReadPIDs_Advanced_FromAckPayload(uint8_t n, uint8_t m)
         Display_PID_Advanced_Values(n, m);
 }
 // ******************************************************************************************
+static void BlockMaskTick();   // (below, with the block reads)
 void Hide_msg_if_needed()
 {
 
     uint32_t now = millis();
+    BlockMaskTick();
 
     if (Reading_PIDS_Now)
     {
@@ -1310,8 +1312,34 @@ FASTRUN void ParseAckPayload()
 }
 // B41: the telemetry items themselves, from an ack payload (above) or from the screen's Bluetooth pipe (TelemetryFromPipe):
 // one path for what they mean, wherever they came from
+// B79: which items of the block being read have come since the read began. The "Loading ..." message goes as soon as
+// the set is complete; the read stays open for its whole window (MSP_WAIT_TIME), so a fresh read that follows a bank
+// change (the receiver's first answer may still be the old bank's) still lands on the page.
+static bool BlockWasReading = false;   // (BlockSeen itself lives in 1Definitions.h: the parameter queue clears it when a block is asked for)
+static void BlockMaskTick()
+{
+    const bool reading = Reading_PIDS_Now || Reading_RATES_Now || Reading_RATES_Advanced_Now || Reading_PIDS_Advanced_Now || Reading_GOV_Now || Reading_GOV_Config_Now;
+    if (reading && !BlockWasReading) BlockSeen = 0;
+    BlockWasReading = reading;
+}
+static void BlockItemSeen(uint8_t item)
+{
+    if (item < 25 || item > 34) return;
+    BlockSeen |= (uint16_t)(1 << (item - 25));
+    const uint16_t want = Reading_PIDS_Now ? 0x3BF : Reading_PIDS_Advanced_Now ? 0xBF : Reading_GOV_Config_Now ? 0x3F : Reading_GOV_Now ? 0x1F : (Reading_RATES_Now || Reading_RATES_Advanced_Now) ? 0x0F : 0;
+    if (!want || (BlockSeen & want) != want) return;
+    if (Reading_PIDS_Now) HidePIDMsg();
+    else if (Reading_PIDS_Advanced_Now) HidePID_Advanced_Msg();
+    else if (Reading_GOV_Config_Now) HideGOVConfigMsg();
+    else if (Reading_GOV_Now) HideGOVMsg();
+    else if (Reading_RATES_Now) HideRATESMsg();
+    else if (Reading_RATES_Advanced_Now) Hide_Advanced_Rates_Msg();
+    BlockSeen = 0;   // (the set is shown; another complete set - a fresh read - hides again, harmlessly)
+}
 FASTRUN void ParseTelemetryItem()
 {
+    BlockMaskTick();
+    BlockItemSeen(AckPayload.Ack_Payload_byte[0]);
     switch (AckPayload.Ack_Payload_byte[0]) // Only looking at the low 7 BITS (127 values max)
     {
     case 0:

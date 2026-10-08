@@ -186,6 +186,19 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## A bank change shows the new bank's PIDs, every time (V2 B79 + RXV2 0.9.878, 8 Oct 2026)
+
+Malcolm: "when I switched banks reading PIDs, it doesn't always update to the PIDs for that bank, so I was briefly under
+the illusion that all banks were the same!" THE RACE: on a bank change the PIDs page asks the receiver for the block;
+the receiver answered the ask AT ONCE with its cache - the values of the bank the flight controller was on BEFORE the
+switch moved - and the screen passed them on; the fresh read came 50 ms later and its mail reached the transmitter
+after one or two Bluetooth round trips, often beyond the transmitter's one-second listening window, so the page kept
+the old bank's numbers. RXV2 0.9.878: a "send me the block" request EMPTIES that block's cache first, so nothing is
+served until the flight controller has answered afresh (a Version 1 transmitter loses 50 ms). B79: the listening
+window is 2.5 s (MSP_WAIT_TIME, GOV_PROFILE_WAIT_TIME), the "Loading ..." message goes as soon as the set is complete
+(BlockSeen, cleared when a block is asked for; the window stays open for a late correction), and the rescue page
+re-reads 400 ms after a bank change, when the flight controller has moved. Untested on hardware as written.
+
 ## Copy a bank; the newer pages in the backup, the restore and the offline editing (V2 B78 + card files, 8 Oct 2026)
 
 Malcolm: "Shall we move onto the next one? Copy a bank?!" and "let us not forget that these new functions need to be

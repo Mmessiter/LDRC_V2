@@ -214,6 +214,8 @@ void AddParameterstoQueue(uint8_t ID) // this queue is essentially a LIFO stack
 {
     if (RfParamOverPipe(ID)) // B41/B48: the Rotorflight ones travel by the screen's Bluetooth pipe and by nothing else; B71: or into the backup file
     {
+        if (ID == SEND_PID_VALUES || ID == SEND_RATES_VALUES || ID == SEND_RATES_ADVANCED_VALUES || ID == SEND_PID_ADVANCED_VALUES || ID == SEND_GOV_VALUES || ID == SEND_GOV_CONFIG_VALUES)
+            BlockSeen = 0;   // B79: a fresh set is awaited
         if (ID && (BakOffline() || (ModelMatched && BoundFlag && PipeState == 2)) && PipeStackN < PIPE_STACK_MAX)
             PipeStack[PipeStackN++] = ID;
         return; // (no pipe: the pages refuse first, RfPipeBlocked; a packet that slips past them is dropped, never sent by radio)

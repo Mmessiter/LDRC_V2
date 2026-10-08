@@ -177,6 +177,7 @@ FLASHMEM static void RescueFail(const char *what) // B54 (Malcolm: "the error ba
     RescueShow(); // the page came back from the box: its fields again
 }
 static bool RescueRereadWanted = false;    // B54: the bank switch moved while a read or a save was under way
+static uint32_t RescueRereadAt = 0;        // B79: ... and not before this moment
 FLASHMEM void RescueBankChanged()                   // from BankHasChanged (Switches.h): the values of the new bank, the edits of the old one let go
 {
     if (CurrentView != RESCUEVIEW && CurrentView != RESCUE2VIEW)
@@ -197,12 +198,9 @@ FLASHMEM void RescueBankChanged()                   // from BankHasChanged (Swit
     }
     Rescue_Was_Edited = false;
     SendCommand((char *)"vis b3,0");
-    if (RescueStep != RSC_IDLE)
-    {
-        RescueRereadWanted = true;
-        return;
-    }
-    RescueRead();
+    RescueRereadWanted = true;             // B79: read in a moment, when the flight controller has moved to the new bank (the switch's channel reaches it a few tens of milliseconds after the move)
+    RescueRereadAt = millis() + 400;
+    RescueBusy("Loading the new bank ...");
 }
 // Each time round the loop (ManageTransmitter)
 FLASHMEM void RescuePoll()
@@ -221,7 +219,7 @@ FLASHMEM void RescuePoll()
     }
     if (RescueStep == RSC_IDLE)
     {
-        if (RescueRereadWanted)
+        if (RescueRereadWanted && (int32_t)(millis() - RescueRereadAt) >= 0)
         {
             RescueRereadWanted = false;
             RescueRead();

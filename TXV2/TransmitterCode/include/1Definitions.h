@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B78 08/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B79 08/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -94,9 +94,9 @@
 #define BATTERY_CHECK_INTERVAL 1000           // 2 seconds between battery checks
 #define POWERONOFFDELAY 1000                  // Delay after power OFF before transmit stops.
 #define POWERONOFFDELAY2 4000                 // Delay after power ON before Off is possible....
-#define MSP_WAIT_TIME 1000                    // Time to allow for reading MSP data from RX and FC
+#define MSP_WAIT_TIME 2500                    // Time to allow for reading MSP data from RX and FC (B79: 2.5 s over the pipe - the fresh read after a bank change took up to a second to arrive and was ignored; the Loading message goes when the set is complete)
 
-#define GOV_PROFILE_WAIT_TIME 1000 // Profiles GOV values reading time
+#define GOV_PROFILE_WAIT_TIME 2500 // Profiles GOV values reading time (B79: as MSP_WAIT_TIME)
 #define GOV_GLOBAL_WAIT_TIME 4000  // Global GOV values reading time
 #define GOV_CONFIG_PAYLOAD_SIZE 42 // bytes [0]-[41]; we use [18]-[41]
 
@@ -1983,6 +1983,7 @@ bool Reading_RATES_Now = false;
 bool Reading_RATES_Advanced_Now = false;
 bool Reading_GOV_Now = false;
 bool Reading_GOV_Config_Now = false;
+uint16_t BlockSeen = 0;   // B79: the items of the block being read that have come (transceiver.h BlockItemSeen); cleared when a block is asked for
 
 uint8_t GovWritePayload[GOV_ACK_PAYLOAD_SIZE] = {0};
 uint8_t GovAckPayload[GOV_ACK_PAYLOAD_SIZE] = {0};

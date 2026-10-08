@@ -25,6 +25,13 @@ static int seen = 0; static uint8_t last[5];
 void ParseTelemetryItem() { ++seen; for (int i = 0; i < 5; ++i) last[i] = AckPayload.Ack_Payload_byte[i]; }
 #define FASTRUN
 static bool LedWasGreen = false, ModelMatched = true, BoundFlag = true, BakOfflineNow = false;
+#define SEND_PID_VALUES 9
+#define SEND_RATES_VALUES 12
+#define SEND_RATES_ADVANCED_VALUES 15
+#define SEND_PID_ADVANCED_VALUES 18
+#define SEND_GOV_VALUES 27
+#define SEND_GOV_CONFIG_VALUES 28
+static uint16_t BlockSeen = 0x3FF;
 static int PipeState = 2, ParametersToBeSentPointer = 0, ParameterRepeats = 0;
 #define PARAMETER_SEND_REPEATS 1
 #define PARAMETER_QUEUE_MAXIMUM 32
@@ -54,7 +61,8 @@ int main() {
     sentN = 0; PipeState = 1; AddParameterstoQueue(9); PipeFlush(); CHECK(sentN == 0);                       // (no pipe: dropped, never the radio)
     PipeState = 2; ModelMatched = false; AddParameterstoQueue(9); PipeFlush(); CHECK(sentN == 0 && fileN == 0); // (no model, no file: dropped)
     BakOfflineNow = true; AddParameterstoQueue(14); AddParameterstoQueue(13); PipeFlush(); CHECK(sentN == 0 && fileN == 2 && fileOrder[0] == 13 && fileOrder[1] == 14);   // (no model, a file: to the file, in order)
-    ModelMatched = true; BakOfflineNow = false; AddParameterstoQueue(2); CHECK(ParametersToBeSentPointer == 1 && ParametersToBeSent[1] == 2);   // (the others still queue for the radio)
+    ModelMatched = true; BakOfflineNow = false; AddParameterstoQueue(9); CHECK(BlockSeen == 0);   // (B79: a block asked for: the set is awaited afresh)
+    AddParameterstoQueue(2); CHECK(ParametersToBeSentPointer == 1 && ParametersToBeSent[1] == 2);   // (the others still queue for the radio)
     printf("test_pipe: %d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }
