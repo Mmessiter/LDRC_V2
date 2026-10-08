@@ -1,0 +1,7 @@
+Copy a bank: the tuning of one bank into another, as the receiver's own page does it. Needs the model connected, the safety on and a Version 2 receiver with Bluetooth - or, with no model, the backup on the card, where the copy is made and offered to the model as edits on the next connection.||
+
+From and To: tap to step through the banks the flight controller has. What to copy: PIDs, PID+ and rescue (the whole flight tuning), Rates, and Governor gains. Head speed too is normally OFF: each bank keeps its own head speed, which is usually the whole point of having banks. Scale gains to rpm: the rotor's control power grows with head speed squared, so a tune made at one head speed is too sharp faster and too soft slower; with this on, the copied P, I, D, F and B gains are scaled by the two head speeds (down by the ratio to the power 1.5 going faster, up by the plain ratio, at most 25 %, going slower).||
+
+The copy is Rotorflight's own, the governor profile put right afterwards, stored, and the target read back and compared: the verdict says what was copied and whether it read back the same. The transmitter's own banks are put back at the end. Do not move the bank switch while it runs.||
+
+OK leaves.||

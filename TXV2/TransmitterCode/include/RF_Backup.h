@@ -235,7 +235,7 @@ FLASHMEM static void BakReply(int code, const char *body)
 }
 FLASHMEM bool BakOfflineAnswer(uint8_t fn, const uint8_t *data, int len) // true: answered (PipeRep* set)
 {
-    char key[16], hex[700];
+    char key[16], hex[1250];
     if (fn == 210 && len >= 1)
     {
         if (data[0] & 0x80) BakSelRate = data[0] & 0x7F; else BakSelPid = data[0] & 0x7F;
@@ -249,11 +249,54 @@ FLASHMEM bool BakOfflineAnswer(uint8_t fn, const uint8_t *data, int len) // true
         return true;
     }
     if (fn == 101)
-    { // status: the banks chosen, for a page that asks (bytes 23 and 25 as Rotorflight 4.6 has them)
+    { // status: the banks chosen, for a page that asks (bytes 23 and 25 as Rotorflight 4.6 has them), and how many there are (24, 26: the file's "banks=" line)
         uint8_t b[32] = {0};
         b[23] = BakSelPid; b[25] = BakSelRate;
+        char bk[16];
+        if (BakGet("banks", bk, sizeof(bk)) >= 3) { b[24] = (uint8_t)atoi(bk); const char *sl = strchr(bk, '/'); b[26] = sl ? (uint8_t)atoi(sl + 1) : b[24]; }
         BytesToHex(b, 32, hex, sizeof(hex));
         BakReply(200, hex);
+        return true;
+    }
+    if (fn == 35 && len >= 5)
+    { // a switch action: patched into the 34 image (4 bytes a slot)
+        char img[400];
+        if (BakGet("34", img, sizeof(img)) < 8) { BakReply(404, "no switches in the backup"); return true; }
+        const int i = data[0];
+        if ((int)strlen(img) < (i + 1) * 8) { BakReply(404, "no such switch slot in the backup"); return true; }
+        BytesToHex(data + 1, 4, hex, sizeof(hex));
+        memcpy(img + i * 8, hex, 8);
+        BakSet("34", img); BakMarkEdit("34");
+        BakReply(200, "");
+        return true;
+    }
+    if (fn == 53 && len >= 15)
+    { // an adjustment line: patched into the 52 image (14 bytes a line)
+        char img[1250];
+        if (BakGet("52", img, sizeof(img)) < 28) { BakReply(404, "no adjustments in the backup: back up once with the USB cable in"); return true; }
+        const int i = data[0];
+        if ((int)strlen(img) < (i + 1) * 28) { BakReply(404, "no such adjustment line in the backup"); return true; }
+        BytesToHex(data + 1, 14, hex, sizeof(hex));
+        memcpy(img + i * 28, hex, 28);
+        BakSet("52", img); BakMarkEdit("52");
+        BakReply(200, "");
+        return true;
+    }
+    if (fn == 183 && len == 3)
+    { // Rotorflight's copy of a bank, within the file: the PID profile (112, 94, 146, 148) or the rates (111), source to destination
+        char img[1250], from[16], to[16];
+        const uint8_t dst = data[1], src = data[2];
+        static const uint8_t pidKeys[4] = {112, 94, 146, 148};
+        const int nk = data[0] == 0 ? 4 : 1;
+        for (int k = 0; k < nk; ++k)
+        {
+            const uint8_t rfn = data[0] == 0 ? pidKeys[k] : 111;
+            BakKey(from, sizeof(from), rfn, src, -1); BakKey(to, sizeof(to), rfn, dst, -1);
+            if (BakGet(from, img, sizeof(img)) < 2) { BakReply(404, "the source bank is not in the backup"); return true; }
+            if (!BakSet(to, img)) { BakReply(507, "the backup file is full"); return true; }
+            BakMarkEdit(to);
+        }
+        BakReply(200, "");
         return true;
     }
     const uint8_t rfn = BakReadOfWrite(fn);
@@ -274,7 +317,7 @@ FLASHMEM bool BakOfflineAnswer(uint8_t fn, const uint8_t *data, int len) // true
     }
     if (fn == 212 && len >= 17)
     { // a servo: patched into the 120 image (count, then 16 bytes a servo)
-        char img[700];
+        char img[1250];
         if (BakGet("120", img, sizeof(img)) < 2) { BakReply(404, "no servos in the backup"); return true; }
         const int i = data[0];
         if ((int)strlen(img) < 2 + (i + 1) * 32) { BakReply(404, "no such servo in the backup"); return true; }
@@ -322,7 +365,7 @@ FLASHMEM static void BakItemPair(uint8_t item, uint16_t a, uint16_t b) { BakItem
 FLASHMEM static void BakItemsTell() { TelemetryFromPipe(BakItems); BakItemsN = 0; BakItems[0] = 0; }
 FLASHMEM static bool BakBlock(uint8_t fn, int bank, uint8_t *out, int max, int &n) // the file's image of a block, as bytes
 {
-    char key[16], hex[700];
+    char key[16], hex[1250];
     BakKey(key, sizeof(key), fn, bank, -1);
     if (BakGet(key, hex, sizeof(hex)) < 0)
         return false;
@@ -589,10 +632,10 @@ static const BakReadItem BAK_READS[] = {
     {131, -1, false}, {80, -1, false}, {10, -1, false}, {36, -1, false}, {38, -1, false}, {61, -1, false}, {240, -1, false}, {96, -1, false},
     {126, -1, false}, {64, -1, false}, {44, -1, false}, {66, -1, false}, {75, -1, false}, {50, -1, false}, {73, -1, false}, {92, -1, false},
     {32, -1, false}, {123, -1, true}, {154, 0, true}, {154, 1, true}, {154, 2, true}, {56, -1, false}, {40, -1, false}, {34, -1, false},
-    {238, -1, false}, {77, -1, false}};
+    {238, -1, false}, {77, -1, false}, {52, -1, true}};   // (52 the in-flight adjustments: only with the USB cable, B78)
 static const int BAK_READS_N = sizeof(BAK_READS) / sizeof(BAK_READS[0]);
 // The restore map: what to write for a key, how, and how to check it
-enum { BK_WHOLE = 0, BK_INDEXED, BK_SERVOS, BK_RULES, BK_MOTOR, BK_BLACKBOX, BK_METERS, BK_MODES, BK_FAILSAFE, BK_TELEM };
+enum { BK_WHOLE = 0, BK_INDEXED, BK_SERVOS, BK_RULES, BK_MOTOR, BK_BLACKBOX, BK_METERS, BK_MODES, BK_FAILSAFE, BK_TELEM, BK_ADJ };
 struct BakRestoreItem { const char *label; uint8_t readFn; int8_t bank; int8_t idx; uint8_t writeFn; uint8_t kind; };
 static const BakRestoreItem BAK_RESTORE[] = {
     // (the per-bank ones are made in code: 112->202, 94->95, 148->149, 146->147 per PID bank; 111->204 per rates bank)
@@ -613,7 +656,8 @@ static const BakRestoreItem BAK_RESTORE[] = {
     {"RPM notches roll", 154, -1, 0, 155, BK_INDEXED}, {"RPM notches pitch", 154, -1, 1, 155, BK_INDEXED}, {"RPM notches yaw", 154, -1, 2, 155, BK_INDEXED},
     {"voltage meters", 56, -1, -1, 57, BK_METERS}, {"current meters", 40, -1, -1, 41, BK_METERS},
     {"modes", 34, -1, -1, 35, BK_MODES},
-    {"failsafe values", 77, -1, -1, 78, BK_FAILSAFE}};
+    {"failsafe values", 77, -1, -1, 78, BK_FAILSAFE},
+    {"adjustments", 52, -1, -1, 53, BK_ADJ}};   // (B78: 42 lines of 14 bytes, one write each; needs the USB cable - skipped without it)
 static const int BAK_RESTORE_N = sizeof(BAK_RESTORE) / sizeof(BAK_RESTORE[0]);
 static const int BAK_BANKED_N = 5;   // per bank: 112, 94, 148, 146; per rates bank: 111
 
@@ -747,7 +791,7 @@ FLASHMEM static void BakBuildList()
 // image, in hex characters; -1 = the whole), and whether there is another part after this one
 FLASHMEM static bool BakWritePayload(const BakTodo &t, int part, char *out, size_t n, int &verifyOff, int &verifyLen, bool &more)
 {
-    char key[16], img[700];
+    char key[16], img[1250];
     const int bankNo = t.bank < 0 ? -1 : (t.bank & 0x3F);
     BakKey(key, sizeof(key), t.readFn, bankNo, t.idx);
     if (BakGet(key, img, sizeof(img)) < 2) return false;
@@ -800,17 +844,24 @@ FLASHMEM static bool BakWritePayload(const BakTodo &t, int part, char *out, size
         snprintf(out, n, "%02X%.6s", (unsigned)part, img + part * 6);
         verifyOff = part * 6; verifyLen = 6; more = part + 1 < count; return true;
     }
+    case BK_ADJ:
+    { // 52: 14 bytes a line, 42 lines; 53 writes one: index + its 28 hex
+        const int count = L / 28 < 42 ? L / 28 : 42;
+        if (part >= count) return false;
+        snprintf(out, n, "%02X%.28s", (unsigned)part, img + part * 28);
+        verifyOff = part * 28; verifyLen = 28; more = part + 1 < count; return true;
+    }
     }
     return false;
 }
 // Is the image read from the FC the same as the file's, for this part?
 FLASHMEM static bool BakSame(const BakTodo &t, int part, const char *fcHex)
 {
-    char key[16], img[700];
+    char key[16], img[1250];
     const int bankNo = t.bank < 0 ? -1 : (t.bank & 0x3F);
     BakKey(key, sizeof(key), t.readFn, bankNo, t.idx);
     if (BakGet(key, img, sizeof(img)) < 2) return true;
-    char payload[700]; int off, len; bool more;
+    char payload[1250]; int off, len; bool more;
     if (!BakWritePayload(t, part, payload, sizeof(payload), off, len, more)) return true;
     if (off >= 0) return strlen(fcHex) >= (size_t)(off + len) && strncmp(fcHex + off, img + off, len) == 0;
     if (t.kind == BK_TELEM) return strlen(fcHex) >= strlen(img) && strncmp(fcHex, img, 16) == 0 && strncmp(fcHex + 24, img + 24, strlen(img) - 24) == 0;
@@ -847,7 +898,7 @@ FLASHMEM static void BakNoteFail(const BakTodo &t)
 FLASHMEM static void BakRestoreTake(bool ok)
 {
     BakTodo &t = BakList[BakIdx];
-    char payload[700]; int off, len; bool more;
+    char payload[1250]; int off, len; bool more;
     switch (BakStep)
     {
     case 10: // the bank selected
@@ -857,6 +908,7 @@ FLASHMEM static void BakRestoreTake(bool ok)
     case 11: // the FC's own image: the same already?
         if (!ok)
         {
+            if (t.readFn == 52 && PipeRepCode == 409) { ++BakIdx; ++BakDone; BakSub = 0; BakTries = 0; BakRestoreNext(); return; }   // (the adjustments need the USB cable: left for a day it is there, not counted)
             if (++BakTries < 3) { BakReq = BakRestoreReadAsk(t); return; }
             BakNoteFail(t); ++BakIdx; ++BakDone; BakSub = 0; BakTries = 0; BakRestoreNext(); return;
         }
@@ -984,7 +1036,7 @@ FLASHMEM static void BakEditsText(char *out, size_t n)
     for (char *p = strtok(e, ","); p; p = strtok(nullptr, ","))
     {
         const int fn = atoi(p); const char *dot = strchr(p, '.');
-        const char *name = fn == 92 ? "filters" : fn == 36 ? "features" : fn == 146 ? "rescue" : fn == 120 ? "servos" : fn == 42 ? "mixer" : fn == 174 ? "mixer input" : fn == 112 ? "PIDs" : fn == 94 ? "adv. PIDs" : fn == 111 ? "rates" : fn == 148 ? "governor" : fn == 142 ? "governor global" : p;
+        const char *name = fn == 92 ? "filters" : fn == 36 ? "features" : fn == 146 ? "rescue" : fn == 120 ? "servos" : fn == 42 ? "mixer" : fn == 174 ? "mixer input" : fn == 112 ? "PIDs" : fn == 94 ? "adv. PIDs" : fn == 111 ? "rates" : fn == 148 ? "governor" : fn == 142 ? "governor global" : fn == 34 ? "switches" : fn == 52 ? "adjustments" : p;
         char w[40];
         if (dot && fn != 174 && fn != 154) snprintf(w, sizeof(w), "%s bank %d", name, atoi(dot + 1) + 1); else snprintf(w, sizeof(w), "%s", name);
         if (out[0]) strncat(out, ", ", n - strlen(out) - 1);

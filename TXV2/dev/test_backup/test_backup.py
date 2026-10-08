@@ -111,7 +111,7 @@ int PipeReplyBytes(uint8_t *out, int max) { int n = 0; const char *p = PipeRepBo
 struct FcReq { int fn; std::string data; };
 static std::vector<FcReq> fcLog;
 static std::map<std::string, std::string> fc;   // the FC's images by the file's keys
-static int fcPid = 1, fcRate = 0, fcPidBanks = 3, fcRateBanks = 3;
+static int fcPid = 1, fcRate = 0, fcPidBanks = 3, fcRateBanks = 3; static bool fcUsb = false;
 static std::string hexOf(const uint8_t *d, int n) { char b[4]; std::string s; for (int i = 0; i < n; ++i) { snprintf(b, sizeof b, "%02X", d[i]); s += b; } return s; }
 static std::string fcKey(int fn, const uint8_t *d, int n) {
     char k[16];
@@ -132,6 +132,9 @@ int MspAsk(uint8_t fn, const uint8_t *data, int len) {
     if (BakOffline() && BakOfflineAnswer(fn, data, len)) { PipeRepId = PipeReqId; return PipeReqId; }
     fcLog.push_back({fn, hexOf(data, len)});
     if (fn == 101) { uint8_t b[32] = {0}; b[23] = fcPid; b[25] = fcRate; b[24] = fcPidBanks; b[26] = fcRateBanks; fcReply(200, hexOf(b, 32)); return PipeReqId; }
+    if (fn == 52 && len == 0) { if (!fcUsb) { fcReply(409, "refused: Rotorflight 4.6 cannot send its adjustments list over the receiver link ... Plug the flight controller's USB"); return PipeReqId; } fcReply(200, fc["52"]); return PipeReqId; }
+    if (fn == 53 && len == 15) { std::string &img = fc["52"]; const int i = data[0]; if ((int) img.size() >= (i + 1) * 28) img.replace(i * 28, 28, hexOf(data + 1, 14)); fcReply(200, ""); return PipeReqId; }
+    if (fn == 183 && len == 3) { char a[16], b2[16]; for (int k : (data[0] == 0 ? std::vector<int>{112, 94, 146, 148} : std::vector<int>{111})) { snprintf(a, sizeof a, "%d.%d", k, data[2]); snprintf(b2, sizeof b2, "%d.%d", k, data[1]); fc[b2] = fc[a]; } fcReply(200, ""); return PipeReqId; }
     if (fn == 210) { if (data[0] & 0x80) fcRate = data[0] & 0x7F; else fcPid = data[0]; fcReply(200, ""); return PipeReqId; }
     if (fn == 250 || fn == 68) { fcReply(200, ""); return PipeReqId; }
     const int r = readOf(fn);
@@ -172,6 +175,7 @@ static void fillFc() {   // a believable flight controller: 3 banks, 4 servos, 2
     fc["56"] = "02" "08" "0A" "01" "6E" "05" "0A" "00" "00" "08" "0B" "01" "6E" "05" "0A" "00" "00"; fc["40"] = "02" "07" "0A" "01" "90" "01" "00" "00" "07" "0B" "01" "90" "01" "00" "00";
     fc["34"] = "0000" "0607" "0100" "0809"; fc["238"] = "02" "00" "0000" "00" "0101" "0000" ;
     fc["77"] = "00E803" "00E803" "00E803" "01DC05";
+    { std::string a; for (int i = 0; i < 42; ++i) { char l[32]; snprintf(l, sizeof l, "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X", i ? 0 : 14, 1, 0x85, 0x7D, 2, 0x85, 0x7D, 0, 0, i ? 0 : 100, 0, i ? 0 : 100, 0, 0); a += l; } fc["52"] = a; }   // one adjustment line, 41 blank
 }
 static int runUntilDone(int limit = 4000) { int n = 0; while (BakJob != BAK_JOB_NONE && n < limit) { BackupRun(); now += 50; ++n; } return n; }
 int main() {
@@ -284,6 +288,31 @@ int main() {
     PipeState = 2; BakOfferTick(); CHECK(lastBox.find("The backup holds edits") == 0 && BakOffered);
     lastBox = ""; BakOfferTick(); CHECK(lastBox == "");                                   // (once per connection)
     BoundFlag = false; BakOfferTick(); CHECK(!BakOffered); BoundFlag = true; CurrentView = PIDVIEW; BakOfferTick(); CHECK(lastBox == "" && !BakOffered);   // (not from another page)
+    // 11. the newer pages (B77/B78): the switches and the adjustments in the backup, the restore and the stand-in; a bank copied within the file
+    BoundFlag = true; ModelMatched = true; confirmAnswer = true; CurrentView = RFBACKUP_RESTOREVIEW; fillFc(); fcUsb = false; card.clear(); strcpy(BakModel, ""); BakLoaded = false; Bak[0] = 0;
+    BackupNow(); runUntilDone(); CHECK(BakFails == 0 && lastBox.find("Backed up: ") == 0);
+    { char a[1300]; CHECK(BakGet("34", a, sizeof a) == 16 && BakGet("52", a, sizeof a) < 0); }   // (no cable: the adjustments are not there, and that is no failure)
+    fcUsb = true; BackupNow(); runUntilDone(); CHECK(BakFails == 0);
+    { char a[1300]; CHECK(BakGet("52", a, sizeof a) == 42 * 28); }
+    // the stand-in, offline: a switch action patched into 34, an adjustment line into 52, 101 says the bank counts
+    BoundFlag = false;
+    { uint8_t sw[5] = {1, 53, 2, 0x28, 0x7D}; MspAsk(35, sw, 5); CHECK(PipeRepCode == 200); char a[100]; BakGet("34", a, sizeof a); CHECK(strncmp(a + 8, "3502287D", 8) == 0 && BakEdited("34")); }
+    { uint8_t ln[15] = {3, 22, 0, 0x85, 0x7D, 2, 0x85, 0x7D, 0, 0, 60, 0, 120, 0, 0}; MspAsk(53, ln, 15); CHECK(PipeRepCode == 200); char a[1300]; BakGet("52", a, sizeof a); CHECK(strncmp(a + 3 * 28, "1600857D02857D00003C007800", 26) == 0 && BakEdited("52")); }
+    { MspAsk(101, nullptr, 0); uint8_t b[32]; PipeReplyBytes(b, 32); CHECK(b[24] == 3 && b[26] == 3); }
+    // a bank copied within the file: the PID profile of bank 1 (112/94/146/148) into bank 3, and the rates
+    { char a[400], b2[400]; BakGet("112.0", a, sizeof a); BakGet("112.2", b2, sizeof b2); CHECK(strcmp(a, b2) == 0);   // (the fake FC had every bank alike: make bank 1 differ)
+      BakSet("112.0", rep("7E", 50).c_str()); BakSet("148.0", rep("7F", 14).c_str()); BakSet("111.0", rep("6A", 25).c_str());
+      uint8_t c[3] = {0, 2, 0}; MspAsk(183, c, 3); CHECK(PipeRepCode == 200); uint8_t r[3] = {1, 2, 0}; MspAsk(183, r, 3); CHECK(PipeRepCode == 200);
+      BakGet("112.2", b2, sizeof b2); CHECK(strcmp(b2, rep("7E", 50).c_str()) == 0); BakGet("148.2", b2, sizeof b2); CHECK(strcmp(b2, rep("7F", 14).c_str()) == 0); BakGet("111.2", b2, sizeof b2); CHECK(strcmp(b2, rep("6A", 25).c_str()) == 0);
+      CHECK(BakEdited("112.2") && BakEdited("94.2") && BakEdited("146.2") && BakEdited("148.2") && BakEdited("111.2")); }
+    { char e[300]; BakEditsText(e, sizeof e); CHECK(strstr(e, "switches") && strstr(e, "adjustments") && strstr(e, "PIDs bank 3") && strstr(e, "rates bank 3")); }
+    MspAsk(250, nullptr, 0);
+    // connected again: Write edits writes the switch slot, the adjustment line (one write each), and the copied bank; the marks go
+    BoundFlag = true; fcLog.clear(); confirmAnswer = true; BakOffered = false; BakOfferEdits(); CHECK(BakJob == BAK_JOB_EDITS); runUntilDone();
+    { int w35 = 0, w53 = 0, w202 = 0, w204 = 0; for (auto &r : fcLog) { if (r.fn == 35) ++w35; if (r.fn == 53) ++w53; if (r.fn == 202) ++w202; if (r.fn == 204) ++w204; } CHECK(w35 == 1 && w53 == 1 && w202 == 1 && w204 == 1); }
+    CHECK(!BakEditsWaiting() && fc["34"].substr(8, 8) == "3502287D" && fc["52"].substr(3 * 28, 26) == "1600857D02857D00003C007800" && fc["112.2"] == rep("7E", 50));
+    // a restore without the cable: the adjustments are skipped, not failed
+    fcUsb = false; fc["52"][0] = '0'; RestoreAll(); runUntilDone(); CHECK(BakFails == 0 && lastBox.find("could not be") == std::string::npos);
     printf("test_backup: %d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }

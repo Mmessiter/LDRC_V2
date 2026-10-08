@@ -166,6 +166,7 @@
 #include "RF_Filters.h" // B58: the gyro filters, over the pipe
 #include "RF_Adjust.h" // B72: the in-flight adjustments, over the pipe with the USB cable
 #include "RF_Switches.h" // B77: the switches (modes), over the pipe
+#include "RF_CopyBank.h" // B78: copy a bank, over the pipe
 #include "RF_Rates_Advanced.h"
 #include "RF_PID_Advanced.h"
 #include "RF_Save_Restore.h"
@@ -3032,7 +3033,7 @@ void RestoreCurrentModel()
 // ******************************** Global Array1 of numbered function pointers OK up the **********************************
 
 // This new list can be huge - up to 24 BITS unsigned!  ( Use "NUMBER<<8" )
-#define LASTFUNCTION1 145 // One more than final one
+#define LASTFUNCTION1 155 // One more than final one
 
 void (*NumberedFunctions1[LASTFUNCTION1])(){
     Blank,                   // 0 Cannot be used
@@ -3179,7 +3180,17 @@ void (*NumberedFunctions1[LASTFUNCTION1])(){
     SwitchRemove,            // 141 Remove
     SwitchBarMoved,          // 142 the bar's blobs dragged
     SwitchPickOk,            // 143 the picker's OK
-    SwitchPickCancel         // 144 Cancel
+    SwitchPickCancel,        // 144 Cancel
+    StartCopyBankView,       // 145 B78: the menu's Copy a bank ...
+    EndCopyBankView,         // 146 OK
+    CopyBankNow,             // 147 Copy bank A to bank B
+    CopyBankFromTapped,      // 148 the source bank
+    CopyBankToTapped,        // 149 the target bank
+    CopyBankFlightTapped,    // 150 Flight tuning
+    CopyBankRatesTapped,     // 151 Rates
+    CopyBankGovTapped,       // 152 Governor gains
+    CopyBankHsTapped,        // 153 Head speed too
+    CopyBankAdjTapped        // 154 Adjust gains for head speed
 };
 
 // This list migth become MUCH longer as it limit is 24 bits big
@@ -4927,6 +4938,7 @@ void FASTRUN ManageTransmitter()
     FilterPoll();      // B58: the filters page
     AdjustPoll();      // B72: the adjustments page
     SwitchPoll();      // B77: the switches page
+    CopyBankPoll();    // B78: a bank being copied
 
     if (RightNow - LastTimeRead >= 1000)
     { // Only once a second for these..

@@ -63,6 +63,7 @@ bool PipePageShowing()
     case ADJPICKVIEW:
     case SWITCHVIEW:
     case SWITCHPICKVIEW:
+    case COPYBANKVIEW:
         return true;
     default:
         return false;

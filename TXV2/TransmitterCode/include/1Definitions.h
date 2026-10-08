@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B77 08/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B78 08/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -337,6 +337,7 @@ bool GapStartedDisarmed = false; // Rotorflight arming in use and DISARMED when 
 #define ADJPICKVIEW 68           // B75: its picker of settings
 #define SWITCHVIEW 69            // B77: the switches (RF_Switches.h)
 #define SWITCHPICKVIEW 70        // B77: its picker of actions
+#define COPYBANKVIEW 71          // B78: copy a bank (RF_CopyBank.h)
 #define MODELIDVIEW 56
 
 // **************************************************************************
@@ -950,6 +951,17 @@ void SwitchRemove();
 void SwitchBarMoved();
 void SwitchPickOk();
 void SwitchPickCancel();
+void CopyBankPoll();                          // B78: RF_CopyBank.h
+void StartCopyBankView();
+void EndCopyBankView();
+void CopyBankNow();
+void CopyBankFromTapped();
+void CopyBankToTapped();
+void CopyBankFlightTapped();
+void CopyBankRatesTapped();
+void CopyBankGovTapped();
+void CopyBankHsTapped();
+void CopyBankAdjTapped();
 void StartModelSetup();
 bool GetConfirmation(char *goback, char *Prompt);
 void GotoModelsView();

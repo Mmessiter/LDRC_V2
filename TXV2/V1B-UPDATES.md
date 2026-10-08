@@ -186,6 +186,26 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Copy a bank; the newer pages in the backup, the restore and the offline editing (V2 B78 + card files, 8 Oct 2026)
+
+Malcolm: "Shall we move onto the next one? Copy a bank?!" and "let us not forget that these new functions need to be
+reflected in the backups and restores and the offline editing". B78, RF_CopyBank.h: the receiver's page step for step -
+where the flight controller is (101), the source read (112, 94, 146, 148; 111), the target's governor read, Rotorflight's
+own copy (183: the PID profile, then the rates), the target's governor put right (149: the source's gains with the
+target's own head speed, unless "Head speed too"; its whole governor if the gains are not wanted), Malcolm's head-speed
+scaling of the copied gains (5 Sep: (source rpm / target rpm)^1.5 going faster, the plain ratio capped at +25 % going
+slower, words 0-14 of the PIDs, O untouched), the store, the target read back and compared, the transmitter's own banks
+put back; the bank switch held throughout; the verdict names what was copied, whether it read back the same, and the
+gain change. Page 71 CopyBankView (hmi/copybank_pages.py): From / To, five switches, the button names the copy; the
+menu's row 4. Test dev/test_copybank (20 checks).
+THE BACKUP: the adjustments (52) join the sweep, optional (refused without the USB cable, and then not a failure), and the
+restore map (one line a write, 53; skipped without the cable, not counted); the switches (34/35/238) were there. The
+stand-in offline: 35 patches a switch slot into the 34 image, 53 an adjustment line into 52 (the file's buffers grew to
+1250 for 52's 1176 characters), 183 copies the bank's keys within the file (marked as edits), 101 tells the bank counts
+from the file's banks= line; the edits' names say "switches", "adjustments". So the Switches, Adjustments and Copy a
+bank pages all work on the backup with no model, and Write edits sends the result on the next connection. test_backup
+111 checks. Untested on hardware as written.
+
 ## Switches on the transmitter (V2 B77 + card files, 8 Oct 2026)
 
 Malcolm: "If we can fit them all into available memory, then let's do this, yes! ... Shall we start with the switches?"

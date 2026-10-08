@@ -41,6 +41,7 @@ static void PlaySound(int) { ++sounds; }
 static void RotorFlightStart() { ++rfStarts; CurrentView = 47; }
 static bool ModelSeemsArmed(char *, int) { return false; }
 static bool RfPipeBlocked(char *, int) { return false; }
+static bool BakOffline() { return false; }   // (the backup's stand-in: not in this test)
 static long FieldNumber(const char *name, long lo, long hi) { long v = atol(fields[name].c_str()); return v < lo ? lo : v > hi ? hi : v; }
 static std::map<std::string, int> attrs; static int GetOtherValue(char *n) { return attrs.count(n) ? attrs[n] : 0; }
 static std::map<std::string, int> vals; static void SendValue(char *n, int v) { vals[n] = v; } static uint32_t GetValue(char *n) { return (uint32_t) (vals.count(n) ? vals[n] : 0); }

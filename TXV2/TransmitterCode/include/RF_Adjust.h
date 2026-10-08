@@ -652,7 +652,7 @@ FLASHMEM void AdjustPoll()
 FLASHMEM void StartAdjustView() // the menu's Adjustments ...
 {
     char why[120];
-    if (!(BoundFlag && ModelMatched)) { PlaySound(WHAHWHAHMSG); MsgBox((char *)"page RFView", (char *)"Adjustments need the model connected,\r\nwith the USB cable from the receiver\r\nto the flight controller."); return; }
+    if (!(BoundFlag && ModelMatched) && !BakOffline()) { PlaySound(WHAHWHAHMSG); MsgBox((char *)"page RFView", (char *)"Adjustments need the model connected,\r\nwith the USB cable from the receiver\r\nto the flight controller - or a backup\r\nmade with the cable in."); return; }
     if (ModelSeemsArmed(why, sizeof(why)) || RfPipeBlocked(why, sizeof(why)))
     {
         PlaySound(WHAHWHAHMSG);

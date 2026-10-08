@@ -41,7 +41,7 @@ BUTTONS = [  # (name, words, code) in the order they sit, three to a row: the pa
     ('Pid', 'PIDs ...', 18), ('b1', 'Rates ...', 22), ('b2', 'Governor ...', 50),
     ('Rescue', 'Rescue ...', 64), ('Servos', 'Servos ...', 73), ('Travel', 'Mixer ...', 83),
     ('Filters', 'Filters ...', 92), ('Adjust', 'Adjustments ...', 116), ('Switches', 'Switches ...', 133),
-    ('Setup', 'Settings ...', 81),
+    ('CopyBank', 'Copy a bank ...', 145), ('Setup', 'Settings ...', 81),
 ]   # (B77: a fourth row; the rows are 62 apart, the model name and the pipe word below them at 340)
 proto = by['Pid']
 for k, (name, words, code) in enumerate(BUTTONS):
