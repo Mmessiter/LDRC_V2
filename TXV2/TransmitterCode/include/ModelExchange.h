@@ -48,6 +48,18 @@ static uint16_t FileCrc16(const char *data, uint32_t len)
     return crc;
 }
 
+// B68 (Malcolm, 8 Oct, the second transmitter: "I had to press Receive more than once", and the screen's record of what it
+// sent: Receive, Yes, and the main board straight back to the Models page). The exchange gave up its wait on ANY bytes from the
+// screen ("the user can abandon by hitting a button"), and the Yes button of the "Overwrite?" box prints its word on the
+// press AND on the lift: a finger that lifted a little late put the second word into the wait, and the wait ended at once.
+// Now only the exchange page's own button (code 128+61, the one button FileExchView has) abandons; everything else the
+// screen may say meanwhile - a lift, the page's "UKRULES", a late reply, the time from the internet - is read and let go.
+static bool ExchangeAbandoned()
+{
+    if (!GetButtonPress())
+        return false;
+    return (uint8_t)TextIn[0] == 128 + 61;
+}
 /*********************************************************************************************************************************/
 void ShowFileProgress(char *Msg)
 {
@@ -241,7 +253,7 @@ void SendModelFile()
             while (!ReceiverConnected)
             {
                 KickTheDog();
-                if (GetButtonPress())
+                if (ExchangeAbandoned())
                 {
                     abandoned = true;
                     break;
@@ -435,8 +447,8 @@ void ReceiveModelFile()
     while (!Radio1.available())
     { // Await the sender....
         delay(1);
-        if (GetButtonPress())
-        { // user can abandon the transfer wait by hitting a button now
+        if (ExchangeAbandoned())
+        { // user can abandon the transfer wait by hitting the page's button now (B68: and nothing else ends it)
             GotoModelsView();
             ClearText();
             NormaliseTheRadio();
@@ -516,8 +528,8 @@ void ReceiveModelFile()
     while (Fposition < Fsize)
     {    
         KickTheDog(); //  Watchdog
-        if (GetButtonPress())
-        { // user can abandon the transfer by hitting a button
+        if (ExchangeAbandoned())
+        { // user can abandon the transfer by hitting the page's button
             ButtonWasPressed();
             NormaliseTheRadio();
             SendCommand(ProgressEnd);

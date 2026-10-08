@@ -186,6 +186,17 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Receive once is enough (V2 B68, 8 Oct 2026)
+
+"I had to press Receive more than once" (Malcolm, on the second transmitter, 7 and 8 Oct). The screen's record of what it
+sent, read live during his presses: the Receive word, his Yes to "Overwrite?", and the main board straight back to the
+Models page. The exchange gave up its wait on ANY bytes from the screen ("the user can abandon by hitting a button"),
+and the Yes button of the question box prints its word on the press and again on the lift: a finger that lifted a
+little late put the second word into the wait, which ended at once - so a quick tap worked first time and a slower one
+did not. B68: only the exchange page's own button (its one button, Cancel) abandons a wait or a transfer; a lift, the
+page's keep-awake word, a late reply or the time from the internet are read and let go. The same guard on the sender's
+new wait (B64).
+
 ## The calibrations to one decimal (V2 B67, 8 Oct 2026)
 
 Malcolm's photographs of Rescue, the four servos and the Mixer beside the configurator: every value agreed. One
