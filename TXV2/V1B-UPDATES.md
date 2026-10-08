@@ -186,6 +186,20 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## A page that cannot read says so, and reads when it can (V2 B80, 8 Oct 2026)
+
+Malcolm, after B79: "The first few bank changes were read correctly, but when I changed banks back the other way they
+were all the same ... and now, whenever I put the switch on any bank, nothing changes, I think it's not re-reading
+them." With no Bluetooth pipe (the phone app on the receiver, which takes one client; or the join not yet made) the
+PIDs, rates and governor pages asked for their block, the ask was dropped - rightly, nothing goes by radio - and the page
+showed "Loading ..." for the window, then its OLD numbers, with nothing said. B80: a block asked for with no pipe is
+refused out loud on the page ("No Bluetooth to the receiver: NOT read (the phone app connected?). It is tried again." -
+or "Bluetooth is joining: not read yet" while the screen joins), the old numbers stay hidden, the bank switch is freed
+at once, and when the screen reports the pipe ready the page reads its block by itself (RfPipeBack). The join is
+retried every fifteen seconds while the menu is open, as before. The bank-4 note: with the motor switch forcing bank 4
+the switch's channel does not move, so the flight controller stays on the profile the bank switch selects - "bank 4"
+and that bank read alike on the flight controller side, which is right.
+
 ## A bank change shows the new bank's PIDs, every time (V2 B79 + RXV2 0.9.878, 8 Oct 2026)
 
 Malcolm: "when I switched banks reading PIDs, it doesn't always update to the PIDs for that bank, so I was briefly under

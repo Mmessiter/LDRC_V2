@@ -210,12 +210,38 @@ void PipeFlush()
 // controller's, over the pipe, or the backup file's when no model is connected - and on the model file's copies only
 // when there is neither (B71).
 bool RfLive() { return LedWasGreen || BakOffline(); }
+bool PipeReadRefused = false;   // B80: a page asked for its block with no pipe: read again when the pipe is back (RfPipeBack)
+void ShowPIDBank(); void ShowRatesBank(); void ShowRatesAdvancedBank(); void ShowPIDAdvancedBank(); void ShowGOVBank(); void ShowGOV_Global_Bank();
+void RfPipeBack() // the screen says the pipe is ready: a Rotorflight page left unread reads its block now
+{
+    if (!PipeReadRefused) return;
+    PipeReadRefused = false;
+    switch (CurrentView)
+    {
+    case PIDVIEW: ShowPIDBank(); break;
+    case RATESVIEW_RF: ShowRatesBank(); break;
+    case RATESADVANCEDVIEW: ShowRatesAdvancedBank(); break;
+    case PIDADVANCEDVIEW: ShowPIDAdvancedBank(); break;
+    case RFGOVERNORVIEW_PROFILE: ShowGOVBank(); break;
+    case RFGOVERNORVIEW_GLOBAL: ShowGOV_Global_Bank(); break;
+    default: break;
+    }
+}
 void AddParameterstoQueue(uint8_t ID) // this queue is essentially a LIFO stack
 {
     if (RfParamOverPipe(ID)) // B41/B48: the Rotorflight ones travel by the screen's Bluetooth pipe and by nothing else; B71: or into the backup file
     {
-        if (ID == SEND_PID_VALUES || ID == SEND_RATES_VALUES || ID == SEND_RATES_ADVANCED_VALUES || ID == SEND_PID_ADVANCED_VALUES || ID == SEND_GOV_VALUES || ID == SEND_GOV_CONFIG_VALUES)
-            BlockSeen = 0;   // B79: a fresh set is awaited
+        const bool sendMe = ID == SEND_PID_VALUES || ID == SEND_RATES_VALUES || ID == SEND_RATES_ADVANCED_VALUES || ID == SEND_PID_ADVANCED_VALUES || ID == SEND_GOV_VALUES || ID == SEND_GOV_CONFIG_VALUES;
+        if (sendMe) BlockSeen = 0;   // B79: a fresh set is awaited
+        if (sendMe && ModelMatched && BoundFlag && !BakOffline() && PipeState != 2)
+        { // B80: no pipe - the page used to show "Loading ..." for the window and then its OLD numbers, with nothing said (Malcolm, 8 Oct: "whenever I put the switch on any bank, nothing changes")
+            Reading_PIDS_Now = Reading_RATES_Now = Reading_RATES_Advanced_Now = Reading_PIDS_Advanced_Now = Reading_GOV_Now = Reading_GOV_Config_Now = false;
+            BlockBankChanges = false;
+            PipeReadRefused = true;
+            SendText((char *)(CurrentView == RFGOVERNORVIEW_GLOBAL ? "t4" : "busy"), (char *)(PipeState == 1 ? "Bluetooth is joining: not read yet. Read again in a moment." : "No Bluetooth to the receiver: NOT read (the phone app connected?). It is tried again."));
+            SendCommand((char *)(CurrentView == RFGOVERNORVIEW_GLOBAL ? "vis t4,1" : "vis busy,1"));
+            return;
+        }
         if (ID && (BakOffline() || (ModelMatched && BoundFlag && PipeState == 2)) && PipeStackN < PIPE_STACK_MAX)
             PipeStack[PipeStackN++] = ID;
         return; // (no pipe: the pages refuse first, RfPipeBlocked; a packet that slips past them is dropped, never sent by radio)

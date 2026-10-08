@@ -20,6 +20,8 @@ prog = r'''
 #include <cstring>
 #include <cctype>
 #include <cstdint>
+#include <string>
+#include <vector>
 struct Payload { uint8_t Ack_Payload_byte[32]; } AckPayload;
 static int seen = 0; static uint8_t last[5];
 void ParseTelemetryItem() { ++seen; for (int i = 0; i < 5; ++i) last[i] = AckPayload.Ack_Payload_byte[i]; }
@@ -32,6 +34,10 @@ static bool LedWasGreen = false, ModelMatched = true, BoundFlag = true, BakOffli
 #define SEND_GOV_VALUES 27
 #define SEND_GOV_CONFIG_VALUES 28
 static uint16_t BlockSeen = 0x3FF;
+static bool PipeReadRefused = false, Reading_PIDS_Now = false, Reading_RATES_Now = false, Reading_RATES_Advanced_Now = false, Reading_PIDS_Advanced_Now = false, Reading_GOV_Now = false, Reading_GOV_Config_Now = false, BlockBankChanges = false;
+static int CurrentView = 45;
+#define RFGOVERNORVIEW_GLOBAL 55
+static std::vector<std::string> texts; static void SendText(char *n, char *t) { texts.push_back(std::string(n) + "=" + t); } static void SendCommand(char *c) { texts.push_back(c); }
 static int PipeState = 2, ParametersToBeSentPointer = 0, ParameterRepeats = 0;
 #define PARAMETER_SEND_REPEATS 1
 #define PARAMETER_QUEUE_MAXIMUM 32
@@ -58,7 +64,10 @@ int main() {
     AddParameterstoQueue(11); AddParameterstoQueue(10); CHECK(sentN == 0); PipeFlush(); CHECK(sentN == 2 && sentOrder[0] == 10 && sentOrder[1] == 11);
     sentN = 0; AddParameterstoQueue(21); AddParameterstoQueue(20); AddParameterstoQueue(19); PipeFlush(); CHECK(sentN == 3 && sentOrder[0] == 19 && sentOrder[1] == 20 && sentOrder[2] == 21);
     sentN = 0; AddParameterstoQueue(33); AddParameterstoQueue(32); AddParameterstoQueue(31); PipeFlush(); CHECK(sentN == 3 && sentOrder[0] == 31 && sentOrder[2] == 33);
-    sentN = 0; PipeState = 1; AddParameterstoQueue(9); PipeFlush(); CHECK(sentN == 0);                       // (no pipe: dropped, never the radio)
+    sentN = 0; PipeState = 1; Reading_PIDS_Now = true; BlockBankChanges = true; AddParameterstoQueue(9); PipeFlush(); CHECK(sentN == 0);   // (no pipe: dropped, never the radio)
+    CHECK(PipeReadRefused && !Reading_PIDS_Now && !BlockBankChanges && texts.size() == 2 && texts[0].find("busy=Bluetooth is joining") == 0 && texts[1] == "vis busy,1");   // B80: the page is told, and freed
+    PipeState = 3; texts.clear(); AddParameterstoQueue(12); CHECK(texts[0].find("busy=No Bluetooth to the receiver") == 0);
+    PipeState = 2; sentN = 0; AddParameterstoQueue(10); PipeFlush(); CHECK(sentN == 1); sentN = 0;   // (a write part: not a block ask, nothing said)
     PipeState = 2; ModelMatched = false; AddParameterstoQueue(9); PipeFlush(); CHECK(sentN == 0 && fileN == 0); // (no model, no file: dropped)
     BakOfflineNow = true; AddParameterstoQueue(14); AddParameterstoQueue(13); PipeFlush(); CHECK(sentN == 0 && fileN == 2 && fileOrder[0] == 13 && fileOrder[1] == 14);   // (no model, a file: to the file, in order)
     ModelMatched = true; BakOfflineNow = false; AddParameterstoQueue(9); CHECK(BlockSeen == 0);   // (B79: a block asked for: the set is awaited afresh)

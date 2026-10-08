@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B79 08/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B80 08/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -1108,6 +1108,8 @@ bool RfParamOverPipe(uint8_t id);             // B41: this parameter ID goes by 
 void SendParameterByPipe(uint8_t id);         // B41: as words, to the screen
 void PipeFlush();                             // B71: the words waiting, in the queue's order (last in, first out)
 bool RfLive();                                // B71: live values - the flight controller's or the backup file's - not the model file's copies
+void RfPipeBack();                            // B80: the pipe is back: a page left unread reads its block
+extern bool PipeReadRefused;
 void PipeOn();                                // B41: ask the screen to join the model's receiver
 void PipeOff();
 void PipeTick();                              // B44: renew the ask to the receiver while the menu is open; B49: the join begins on Model setup

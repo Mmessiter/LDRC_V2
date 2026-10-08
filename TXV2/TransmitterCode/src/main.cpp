@@ -4021,8 +4021,12 @@ FASTRUN void ButtonWasPressed()
         if (InStrng((char *)"ldrcpipe=", TextIn) > 0)
         { // B41: the screen's Bluetooth pipe to the receiver: 0 off, 1 joining, 2 ready, 3 failed
             p = InStrng((char *)"ldrcpipe=", TextIn);
-            PipeState = (uint8_t)CheckRange(atoi(TextIn + p + 8), 0, 3);
-            ShowPipeState();
+            {
+                const uint8_t was = PipeState;
+                PipeState = (uint8_t)CheckRange(atoi(TextIn + p + 8), 0, 3);
+                ShowPipeState();
+                if (PipeState == 2 && was != 2) RfPipeBack();   // B80: a page left unread reads now
+            }
             ClearText();
             return;
         }
