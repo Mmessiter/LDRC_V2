@@ -33,7 +33,7 @@ static bool LedWasGreen = false, ModelMatched = true, BoundFlag = true, BakOffli
 #define SEND_PID_ADVANCED_VALUES 18
 #define SEND_GOV_VALUES 27
 #define SEND_GOV_CONFIG_VALUES 28
-static uint16_t BlockSeen = 0x3FF;
+static uint16_t BlockSeen = 0x3FF; static bool BlockShown = true;
 static bool PipeReadRefused = false, Reading_PIDS_Now = false, Reading_RATES_Now = false, Reading_RATES_Advanced_Now = false, Reading_PIDS_Advanced_Now = false, Reading_GOV_Now = false, Reading_GOV_Config_Now = false, BlockBankChanges = false;
 static int CurrentView = 45;
 #define RFGOVERNORVIEW_GLOBAL 55

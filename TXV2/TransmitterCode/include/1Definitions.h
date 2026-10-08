@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B80 08/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B81 09/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -1986,6 +1986,7 @@ bool Reading_RATES_Advanced_Now = false;
 bool Reading_GOV_Now = false;
 bool Reading_GOV_Config_Now = false;
 uint16_t BlockSeen = 0;   // B79: the items of the block being read that have come (transceiver.h BlockItemSeen); cleared when a block is asked for
+bool BlockShown = false;  // B81: the set came whole and the Loading message went (once per ask)
 
 uint8_t GovWritePayload[GOV_ACK_PAYLOAD_SIZE] = {0};
 uint8_t GovAckPayload[GOV_ACK_PAYLOAD_SIZE] = {0};

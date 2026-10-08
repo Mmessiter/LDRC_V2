@@ -186,6 +186,16 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## A read that gets no answer says so (V2 B81, 9 Oct 2026)
+
+Malcolm, with B80: "No change, and no messages. The first four bank changes worked. After that it didn't change again,
+no matter what I did with the switches" - and the rates likewise. The pipe was up (no refusal), so the ask went out
+and nothing came back, which the page hid: "Loading ..." for the window, then the old numbers. B81: a read window that
+ends with none of the block's items come keeps the banner up for six seconds - "PIDs: nothing came back in 2 s
+(Bluetooth 2). Bank switch again, or leave and return." - so the fault shows where it happens, with the pipe's state.
+The cause is being read from the receiver's event log. (BlockShown: the Loading message goes once per ask, the item
+mask is kept whole for the verdict.)
+
 ## A page that cannot read says so, and reads when it can (V2 B80, 8 Oct 2026)
 
 Malcolm, after B79: "The first few bank changes were read correctly, but when I changed banks back the other way they

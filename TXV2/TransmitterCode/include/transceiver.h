@@ -1162,11 +1162,25 @@ void ReadPIDs_Advanced_FromAckPayload(uint8_t n, uint8_t m)
 }
 // ******************************************************************************************
 static void BlockMaskTick();   // (below, with the block reads)
+// B81: a read window that ends with NOTHING come back says so on the page's banner (and keeps it a few seconds), with
+// the pipe's state and how many of the block's items came - instead of hiding the "Loading ..." message over the old
+// numbers as if they were fresh (Malcolm, 9 Oct: "no change, and no messages").
+static uint32_t SilenceMsgUntil = 0;
+static void BlockSilence(const char *what)
+{
+    char b[110];
+    if (BlockSeen) return;   // something came: the page shows it
+    snprintf(b, sizeof(b), "%s: nothing came back in %u s (Bluetooth %u). Bank switch again, or leave and return.", what, (unsigned)(MSP_WAIT_TIME / 1000), (unsigned)PipeState);
+    SendText((char *)(CurrentView == RFGOVERNORVIEW_GLOBAL ? "t4" : "busy"), b);
+    SendCommand((char *)(CurrentView == RFGOVERNORVIEW_GLOBAL ? "vis t4,1" : "vis busy,1"));
+    SilenceMsgUntil = millis() + 6000;
+}
 void Hide_msg_if_needed()
 {
 
     uint32_t now = millis();
     BlockMaskTick();
+    if (SilenceMsgUntil && (int32_t)(now - SilenceMsgUntil) >= 0) { SilenceMsgUntil = 0; SendCommand((char *)(CurrentView == RFGOVERNORVIEW_GLOBAL ? "vis t4,0" : "vis busy,0")); }
 
     if (Reading_PIDS_Now)
     {
@@ -1174,6 +1188,7 @@ void Hide_msg_if_needed()
         {
             Reading_PIDS_Now = false;
             HidePIDMsg();
+            BlockSilence("PIDs");
             return;
         }
     }
@@ -1183,6 +1198,7 @@ void Hide_msg_if_needed()
         {
             Reading_RATES_Now = false;
             HideRATESMsg();
+            BlockSilence("Rates");
             return;
         }
     }
@@ -1192,6 +1208,7 @@ void Hide_msg_if_needed()
         {
             Reading_RATES_Advanced_Now = false;
             Hide_Advanced_Rates_Msg();
+            BlockSilence("Advanced rates");
             return;
         }
     }
@@ -1201,6 +1218,7 @@ void Hide_msg_if_needed()
         {
             Reading_PIDS_Advanced_Now = false;
             HidePID_Advanced_Msg();
+            BlockSilence("Advanced PIDs");
             return;
         }
     }
@@ -1211,6 +1229,7 @@ void Hide_msg_if_needed()
         {
             Reading_GOV_Now = false;
             HideGOVMsg();
+            BlockSilence("Governor");
             return;
         }
     }
@@ -1221,6 +1240,7 @@ void Hide_msg_if_needed()
         {
             Reading_GOV_Config_Now = false;
             HideGOVConfigMsg();
+            BlockSilence("Governor global");
             return;
         }
     }
@@ -1319,7 +1339,7 @@ static bool BlockWasReading = false;   // (BlockSeen itself lives in 1Definition
 static void BlockMaskTick()
 {
     const bool reading = Reading_PIDS_Now || Reading_RATES_Now || Reading_RATES_Advanced_Now || Reading_PIDS_Advanced_Now || Reading_GOV_Now || Reading_GOV_Config_Now;
-    if (reading && !BlockWasReading) BlockSeen = 0;
+    if (reading && !BlockWasReading) { BlockSeen = 0; BlockShown = false; }
     BlockWasReading = reading;
 }
 static void BlockItemSeen(uint8_t item)
@@ -1327,14 +1347,14 @@ static void BlockItemSeen(uint8_t item)
     if (item < 25 || item > 34) return;
     BlockSeen |= (uint16_t)(1 << (item - 25));
     const uint16_t want = Reading_PIDS_Now ? 0x3BF : Reading_PIDS_Advanced_Now ? 0xBF : Reading_GOV_Config_Now ? 0x3F : Reading_GOV_Now ? 0x1F : (Reading_RATES_Now || Reading_RATES_Advanced_Now) ? 0x0F : 0;
-    if (!want || (BlockSeen & want) != want) return;
+    if (!want || (BlockSeen & want) != want || BlockShown) return;
+    BlockShown = true;   // (the set is shown; a fresh read that follows updates the numbers without another hide)
     if (Reading_PIDS_Now) HidePIDMsg();
     else if (Reading_PIDS_Advanced_Now) HidePID_Advanced_Msg();
     else if (Reading_GOV_Config_Now) HideGOVConfigMsg();
     else if (Reading_GOV_Now) HideGOVMsg();
     else if (Reading_RATES_Now) HideRATESMsg();
     else if (Reading_RATES_Advanced_Now) Hide_Advanced_Rates_Msg();
-    BlockSeen = 0;   // (the set is shown; another complete set - a fresh read - hides again, harmlessly)
 }
 FASTRUN void ParseTelemetryItem()
 {
