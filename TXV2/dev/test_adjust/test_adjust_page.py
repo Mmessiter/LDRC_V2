@@ -16,6 +16,7 @@ prog = r'''
 #include <string>
 #include <map>
 #include <vector>
+#include <algorithm>
 #define DMAMEM
 #define FLASHMEM
 #define PROGMEM
@@ -88,23 +89,25 @@ int main() {
     run(4);
     CHECK(AdjHave && AdjN == 3 && AdjAt == 0 && fields["t0"] == "Adjustment 1 of 3" && fields["tn0"] == "PID bank switch (1 to 6)" && fields["tn1"] == "Channel 6: AUX1" && fields["tn2"] == "Switch, 3 positions" && fields["tn3"] == "in any bank");
     CHECK(fields["tp0"] == "1" && fields["tp1"] == "2" && fields["tp2"] == "3");   // (the boxes the keypad edits, out of sight)
-    CHECK(fields["tn8"] == "Now 1500 us: position 2 = 2" && cmdValue("bar.mk") == 1500 && cmdValue("bar.n") == 3 && cmdValue("bar.d0") == 1300 && cmdValue("bar.d1") == 1700 && fields["bar"] == "1|2|3");
+    CHECK(cmds.size() && std::find(cmds.begin(), cmds.end(), "vis tn3,0") != cmds.end());   // (a bank switch: no bank box)
+    CHECK(fields["tn8"] == "Position 2: 1500 us" && cmdValue("bar.mk") == 1500 && cmdValue("bar.n") == 3 && cmdValue("bar.d0") == 1300 && cmdValue("bar.d1") == 1700 && fields["bar"] == "1|2|3");
     // the second row: the knob in bank 2, with its present value read from the PIDs (bank 2 is the bank in use)
-    AdjustNext(); run(6);
+    cmds.clear(); AdjustNext(); run(6);
+    CHECK(std::find(cmds.begin(), cmds.end(), "vis tn3,1") != cmds.end());   // (a gain: the bank box shows)
     CHECK(AdjAt == 1 && fields["tn0"] == "Yaw P gain" && fields["tn1"] == "Channel 8: AUX3" && fields["tn2"] == "Knob" && fields["tn3"] == "in bank 2" && fields["tk0"] == "60" && fields["tk1"] == "120");
-    CHECK(cmdValue("bar.kind") == 1 && cmdValue("bar.d0") == 1000 && cmdValue("bar.d1") == 2000 && fields["bar"] == "|60 to 120|" && fields["tn8"] == "Now 1500 us: about 90");
+    CHECK(cmdValue("bar.kind") == 1 && cmdValue("bar.d0") == 1000 && cmdValue("bar.d1") == 2000 && fields["bar"] == "|60 to 120|" && fields["tn8"] == "Knob 1500 us: 90");
     CHECK(AdjNowKnown && AdjNow == 95);
     // the third: the nudge, a Rate shown x5
     AdjustNext(); run(6);
     CHECK(AdjAt == 2 && fields["tn0"] == "Pitch top rotation speed (Rate)" && fields["tn2"] == "Step up / down" && fields["ts0"] == "2" && fields["ts1"] == "100" && fields["ts2"] == "500");
-    CHECK(cmdValue("bar.kind") == 2 && fields["bar"] == "down 2|100 to 500|up 2" && fields["tn8"] == "Now 1500 us: holding");
+    CHECK(cmdValue("bar.kind") == 2 && fields["bar"] == "down 2|100 to 500|up 2" && fields["tn8"] == "Holding: 1500 us");
     CHECK(AdjNow == 240);
     // 2. edit the knob's high end, save: only line 3 is written, then the store, then the read-back
     AdjustPrevious(); run(6);
     // a tap on the knob's zone, right half: the high end's box is clicked (the keypad opens); the page comes back with 130 typed
     attrs["bar.tap"] = 1800; cmds.clear(); AdjustBarMoved(); CHECK(cmds.size() == 1 && cmds[0] == "click tk1,0");
     attrs["bar.tap"] = -1; fields["tk1"] = "130"; AdjustWasEdited(); AdjustPageBack(); CHECK(Adj_Was_Edited && AdjRows[1].v[1] == 130 && fields["bar"] == "|60 to 130|");
-    attrs["bar.d0"] = 1100; attrs["bar.d1"] = 2000; attrs["bar.tap"] = -1; AdjustBarMoved(); CHECK(AdjRows[1].lo == 1100 && AdjRows[1].hi == 2000 && fields["tn8"] == "Now 1500 us: about 91");   // (a handle dragged: the knob's travel)
+    attrs["bar.d0"] = 1100; attrs["bar.d1"] = 2000; attrs["bar.tap"] = -1; AdjustBarMoved(); CHECK(AdjRows[1].lo == 1100 && AdjRows[1].hi == 2000 && fields["tn8"] == "Knob 1500 us: 91");   // (a handle dragged: the knob's travel)
     fcLog.clear(); busyOnce = 1; SaveAdjustments(); run(30);
     CHECK(writes(53) == 2 && fcLog[0].fn == 53 && fcLog[1].fn == 53 && fcLog[0].data == fcLog[1].data && fcLog[0].data.substr(0, 2) == "03");   // (the 503 answered again)
     CHECK(writes(250) == 1 && writes(52) == 1 && AdjStep_ == ADJ_IDLE && !Adj_Was_Edited && adj[3 * 14 + 11] == 130 && adj[3 * 14 + 12] == 0 && adj[3 * 14 + 5] == stp(1100));

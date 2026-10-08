@@ -51,7 +51,7 @@ def hidden(nm, klabel, code=119):   # a box the keypad edits, out of sight (one 
 bp = comp(rp.BUTTON, n='bprev', x=215, y=7, w=56, h=44, txt='<'); bp['ev'] = ev(126); add(bp)
 bn = comp(rp.BUTTON, n='bnext', x=540, y=7, w=56, h=44, txt='>'); bn['ev'] = ev(127); add(bn)
 label('ltn0', 34, 94, 150, 'Changes'); tapbox('tn0', 190, 94, 420, 120); tapbox('tn3', 616, 94, 150, 125, maxl=16)
-label('ltn2', 34, 140, 150, 'Control'); tapbox('tn2', 190, 140, 240, 124, maxl=24); label('lon', 436, 140, 50, 'on', pale=False); tapbox('tn1', 492, 140, 274, 122, maxl=24)
+tapbox('tn2', 34, 140, 396, 124, maxl=24); label('lon', 436, 140, 50, 'on', pale=False); tapbox('tn1', 492, 140, 274, 122, maxl=24)   # (B76: no 'Control' label - the line reads as a sentence)
 bar = {'n': 'bar', 't': 'rangebar', 'g': 'g', 'x': 34, 'y': 194, 'w': 732, 'h': 60, 'font': 2, 'txt': '', 'val': 0,
        'c': {'pco': 65535, 'bco': rp.CARD['c']['bco'], 'borderc': 0, 'pco2': 65535, 'bco2': 0},
        'a': {'lo': 875, 'hi': 2125, 'n': 2, 'kind': 0, 'mk': -1, 'd0': 1500, 'd1': 1700, 'd2': 1900, 'd3': 2000, 'd4': 2100, 'txt_maxl': 160}, 'ev': ev(130)}

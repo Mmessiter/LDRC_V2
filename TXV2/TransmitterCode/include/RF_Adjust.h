@@ -332,15 +332,15 @@ FLASHMEM static void AdjLive() // the chosen channel's position, from this trans
     AdjLiveCh = ch; AdjLiveUs = us;
     char c[24], b[64];
     snprintf(c, sizeof(c), "bar.mk=%d", us); SendCommand(c);
-    const int k = us >= 0 ? AdjRegionOf(r, us) : -1;
-    if (k < 0) snprintf(b, sizeof(b), "Channel %d now: ?", ch);
-    else if (r.kind == AK_SWITCH) snprintf(b, sizeof(b), "Now %d us: position %d = %ld", us, k + 1, (long)r.v[k]);
+    const int k = us >= 0 ? AdjRegionOf(r, us) : -1;   // (B76, Malcolm: "nothing more than position: 988 us")
+    if (k < 0) snprintf(b, sizeof(b), "Channel %d: ?", ch);
+    else if (r.kind == AK_SWITCH) snprintf(b, sizeof(b), "Position %d: %d us", k + 1, us);
     else if (r.kind == AK_KNOB)
     {
-        if (k != 1) snprintf(b, sizeof(b), "Now %d us: outside the knob's travel", us);
-        else { const long span = r.hi > r.lo ? r.hi - r.lo : 1; const long v = r.v[0] + ((r.v[1] - r.v[0]) * (long)(us - r.lo) + span / 2) / span; snprintf(b, sizeof(b), "Now %d us: about %ld", us, v); }
+        if (k != 1) snprintf(b, sizeof(b), "Outside the knob's travel: %d us", us);
+        else { const long span = r.hi > r.lo ? r.hi - r.lo : 1; const long v = r.v[0] + ((r.v[1] - r.v[0]) * (long)(us - r.lo) + span / 2) / span; snprintf(b, sizeof(b), "Knob %d us: %ld", us, v); }
     }
-    else snprintf(b, sizeof(b), "Now %d us: %s", us, k == 0 ? "stepping down" : k == 2 ? "stepping up" : "holding");
+    else snprintf(b, sizeof(b), "%s: %d us", k == 0 ? "Stepping down" : k == 2 ? "Stepping up" : "Holding", us);
     AdjText("tn8", b);
 }
 static void AdjGather();
@@ -363,6 +363,7 @@ FLASHMEM static void AdjShow()
     const int bank = AdjCondToBank(r, AdjBk);
     if (bank > 0) snprintf(b, sizeof(b), "in bank %d", bank); else snprintf(b, sizeof(b), "%s", bank < 0 ? "in bank ?" : "in any bank");
     AdjText("tn3", b);
+    AdjVis("tn3", r.fn > 2);   // (B76, Malcolm: a bank switch IS the bank - no bank box for it)
     if (r.kind == AK_SWITCH) snprintf(b, sizeof(b), "Switch, %d positions", r.n); else snprintf(b, sizeof(b), "%s", r.kind == AK_KNOB ? "Knob" : "Step up / down");
     AdjText("tn2", b);
     const int ch = r.ch + 6;

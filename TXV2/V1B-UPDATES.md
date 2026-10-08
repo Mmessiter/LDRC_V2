@@ -186,6 +186,17 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The adjustments page, trimmed again (V2 B76 + card files, 8 Oct 2026)
+
+Malcolm, with B75 on the bench: "far, far better. Even I could understand it! I still think we could keep things even
+simpler. The box containing in any bank seems to be unnecessary, because actually this switch changes the bank! The box
+containing switch, four positions is perhaps superfluous as well. But we do need on channel 7. Below ... now 988 us:
+position one equals one can I think be reduced to nothing more than position: 988 us." B76: no bank box for a bank
+switch (it IS the bank; the box stays for the gains and rates, where "in bank 1" means something); the "Control" label
+goes and the line reads "Switch, 4 positions on Channel 7: AUX2" - the first box stays because it is how a knob becomes
+a switch or four zones become three; the line under the bar says "Position 1: 988 us" (a knob: "Knob 988 us: 61"; a
+step: "Stepping up: 988 us"). Help ADJUST.TXT follows.
+
 ## Announcements whole, and "Update completed" (screen 1.11.37, 8 Oct 2026)
 
 Malcolm: "when I connect to the model, the transmitter announces connected - model memory matched. But these

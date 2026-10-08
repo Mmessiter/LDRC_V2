@@ -2,9 +2,9 @@ Adjustments: a knob or a switch on this transmitter changes a Rotorflight settin
 
 The arrows beside the title move between the adjustments defined. Add makes a new one after the one showing; Remove takes it away.||
 
-Changes: tap the setting to choose another from the list (rates and PIDs first). Tap the bank box for "in bank 1" and so on, or "in any bank": a bank needs a 'PID bank switch (1 to 6)' adjustment first, with one zone per bank, which is how Rotorflight knows what the switch means.||
+Changes: tap the setting to choose another from the list (rates and PIDs first). Tap the bank box for "in bank 1" and so on, or "in any bank": a bank needs a 'PID bank switch (1 to 6)' adjustment first, with one zone per bank, which is how Rotorflight knows what the switch means. A bank switch has no bank box: it is the bank.||
 
-Control: tap the first box for a Knob (the whole travel maps the low end value to the high end), a Switch with 2 or 3 zones (one value each), or Step up / down (a three-position switch: up adds the step, down takes it, within the lowest and highest values). Tap the channel box for the next channel (channel 6 is AUX1).||
+The line under the setting: tap the first box for a Knob (the whole travel maps the low end value to the high end), a Switch with 2 or 3 zones (one value each), or Step up / down (a three-position switch: up adds the step, down takes it, within the lowest and highest values). Tap the channel box for the next channel (channel 6 is AUX1).||
 
 The bar is the switch or knob's travel, 875 to 2125. Tap a zone to type its value. Drag a blob to move the divider between two zones. The green marker is where the channel is now, from this transmitter's own output as the flight controller sees it, and the line under the bar says what that gives. A knob giving a few whole numbers (a bank switch) is shown as zones, the blobs at the thresholds where the number changes.||
 
