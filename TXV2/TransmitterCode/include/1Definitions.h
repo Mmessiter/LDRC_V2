@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B76 08/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B77 08/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -335,6 +335,8 @@ bool GapStartedDisarmed = false; // Rotorflight arming in use and DISARMED when 
 #define TRAVEL3VIEW 66           // B66: the mixer's third page, the tail rotor (RF_Travel.h)
 #define ADJUSTVIEW 67            // B72: the in-flight adjustments (RF_Adjust.h)
 #define ADJPICKVIEW 68           // B75: its picker of settings
+#define SWITCHVIEW 69            // B77: the switches (RF_Switches.h)
+#define SWITCHPICKVIEW 70        // B77: its picker of actions
 #define MODELIDVIEW 56
 
 // **************************************************************************
@@ -935,6 +937,19 @@ void AdjustBarMoved();                        // B74: the bar touched
 void AdjustPickOk();                          // B75: the setting picker
 void AdjustPickCancel();
 void AdjustPageBack();
+void SwitchPoll();                            // B77: RF_Switches.h
+void StartSwitchView();
+void EndSwitchView();
+void SaveSwitchActions();
+void SwitchModeTapped();
+void SwitchChannelTapped();
+void SwitchPrevious();
+void SwitchNext();
+void SwitchAdd();
+void SwitchRemove();
+void SwitchBarMoved();
+void SwitchPickOk();
+void SwitchPickCancel();
 void StartModelSetup();
 bool GetConfirmation(char *goback, char *Prompt);
 void GotoModelsView();

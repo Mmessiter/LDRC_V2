@@ -1,0 +1,325 @@
+{
+ "name": "SwitchPickView",
+ "id": 70,
+ "w": 800,
+ "h": 480,
+ "bg": {
+  "sta": 2,
+  "mode": "image",
+  "picture": 3
+ },
+ "nav": {
+  "up": 255,
+  "down": 255,
+  "left": 255,
+  "right": 255
+ },
+ "ev": {
+  "preinitialize": "vis busy,0\nSwitchPickView.pic=Screen_Background"
+ },
+ "comps": [
+  {
+   "n": "t0",
+   "i": 1,
+   "t": "text",
+   "g": "l",
+   "x": 0,
+   "y": 0,
+   "w": 800,
+   "h": 58,
+   "font": 0,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 2214
+   },
+   "txt": "What the switch does",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "card",
+   "i": 2,
+   "t": "text",
+   "g": "l",
+   "x": 0,
+   "y": 58,
+   "w": 800,
+   "h": 422,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 65535,
+    "bco": 4426
+   },
+   "txt": "",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 1,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t9",
+   "i": 3,
+   "t": "text",
+   "g": "g",
+   "x": 10,
+   "y": 4,
+   "w": 200,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 2214
+   },
+   "txt": "USB cable",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t11",
+   "i": 4,
+   "t": "text",
+   "g": "g",
+   "x": 10,
+   "y": 30,
+   "w": 200,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65504,
+    "borderc": 0,
+    "bco": 2214
+   },
+   "txt": "Model name",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "va0",
+   "i": 5,
+   "t": "variable",
+   "g": "l",
+   "sta": 0,
+   "txt": "newtxt",
+   "val": 0,
+   "a": {
+    "txt_maxl": 10
+   }
+  },
+  {
+   "n": "b0",
+   "i": 6,
+   "t": "button",
+   "g": "l",
+   "x": 620,
+   "y": 4,
+   "w": 170,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Help",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"HelpView:SWITCHES.TXT\"\nLogView.t0.txt=\"What the switch does help\"\nLogView.return.txt=\"SwitchPickView\""
+   }
+  },
+  {
+   "n": "list",
+   "i": 7,
+   "t": "textselect",
+   "g": "g",
+   "x": 14,
+   "y": 66,
+   "w": 772,
+   "h": 333,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco1": 31695,
+    "pco": 31695,
+    "borderc": 65504,
+    "bco": 65535,
+    "pco2": 0
+   },
+   "txt": "",
+   "val": 0,
+   "opt": [
+    "Arm - motor enable (ARM)",
+    "Rescue - the safety net (RESCUE)",
+    "Self-level (ANGLE)",
+    "Self-level, blended (HORIZON)",
+    "Altitude hold (ALTHOLD)",
+    "Acro trainer (TRAINER)",
+    "GPS rescue (GPS RESCUE)",
+    "Failsafe test (FAILSAFE)",
+    "Beeper on (BEEPER)",
+    "Beeper mute (BEEPER MUTE)",
+    "Black box recording (BLACKBOX)",
+    "Black box erase (BLACKBOX ERASE)",
+    "Pre-arm safety (PREARM)",
+    "Lock the model - anti-tamper (PARALYZE)",
+    "Governor fallback (GOVERNOR FALLBACK)",
+    "Governor suspend (GOVERNOR SUSPEND)",
+    "Governor bypass (GOVERNOR BYPASS)",
+    "Calibrate (CALIB)",
+    "Telemetry on/off (TELEMETRY)",
+    "Stick commands off (STICK COMMANDS DISABLE)",
+    "User switch 1 (USER1)",
+    "User switch 2 (USER2)",
+    "User switch 3 (USER3)",
+    "User switch 4 (USER4)"
+   ],
+   "a": {
+    "style": 2,
+    "borderw": 3,
+    "hig": 37,
+    "dis": 1,
+    "txt_maxl": 255
+   },
+   "ev": {}
+  },
+  {
+   "n": "b1",
+   "i": 8,
+   "t": "button",
+   "g": "l",
+   "x": 414,
+   "y": 414,
+   "w": 180,
+   "h": 56,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Cancel",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=144<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "b3",
+   "i": 9,
+   "t": "button",
+   "g": "l",
+   "x": 605,
+   "y": 414,
+   "w": 180,
+   "h": 56,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "OK",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=143<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "busy",
+   "i": 10,
+   "t": "text",
+   "g": "l",
+   "x": 40,
+   "y": 296,
+   "w": 720,
+   "h": 44,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65504
+   },
+   "txt": "",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 50,
+    "isbr": 0
+   }
+  }
+ ]
+}

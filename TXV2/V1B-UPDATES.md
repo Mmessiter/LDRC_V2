@@ -186,6 +186,25 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Switches on the transmitter (V2 B77 + card files, 8 Oct 2026)
+
+Malcolm: "If we can fit them all into available memory, then let's do this, yes! ... Shall we start with the switches?"
+B77, RF_Switches.h: the configurator's Modes tab - what each switch makes the flight controller do - as the adjustments
+page is: "Does [Rescue - the safety net] on [Channel 8: AUX3]", the bar with its one ON zone (the blobs its ends, the
+marker the switch now, "ON: 1909 us" under it), Add through a picker of the 24 actions the phone page offers (plain
+English, Rotorflight's name in brackets), Remove, Save (only the slots that changed, 35 each, then 250, then 34 read
+back). Rotorflight's 20 slots of MSP 34: id, AUX index, the ends as signed 5 us steps about 1500 (NOT Betaflight's
+25 us; a zone with no width = the slot unused). THE ARM SWITCH IS THE SAFETY SWITCH: with a Rotorflight model the
+safety drives the arming channel (667/2233 us, which the flight controller sees as 988/2012), so the arm action
+stays on that channel, cannot be removed (Rotorflight requires one), and a save refuses an ON zone reaching 988 (the
+model would arm with the safety on) or stopping short of 2012 (the safety off would not arm). Pages 69 SwitchView and
+70 SwitchPickView (hmi/switch_pages.py); the menu gets a fourth row (62 apart; the model name and the tooth at 340):
+Switches beside Adjustments, Settings below. Help SWITCHES.TXT. Codes 133-144, LASTFUNCTION1 145. Test
+dev/test_switches (23 checks). MEMORY: this module took the code over the 32 kB boundary again (free for locals 58 kB);
+it and the Version 1 Rotorflight pages, the model IDs page, the picture chooser and the help page now run from flash
+(119 more functions): code 277 kB, 91 kB free for locals, 18 kB of code before the next boundary. Untested on
+hardware as written.
+
 ## The adjustments page, trimmed again (V2 B76 + card files, 8 Oct 2026)
 
 Malcolm, with B75 on the bench: "far, far better. Even I could understand it! I still think we could keep things even

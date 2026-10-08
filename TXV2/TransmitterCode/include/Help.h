@@ -5,7 +5,7 @@
 #include <Arduino.h>
 #include "1Definitions.h"
 // ******************************************************************************************************************************/
-void SendHelp()
+FLASHMEM void SendHelp()
 { // load new help file
     uint8_t i = 0;
     while (TextIn[i + 9] > 32 && TextIn[i + 9] < 127 && i < 15)

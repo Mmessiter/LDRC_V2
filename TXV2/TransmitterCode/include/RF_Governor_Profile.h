@@ -18,7 +18,7 @@ char GOV_Labels[GOVERNOR_LABELS_COUNT][4] = {
 // ShowLocalGovBank()
 // Shows saved governor profile values from SD card when not connected
 // ====================================================
-void ShowLocalGovBank()
+FLASHMEM void ShowLocalGovBank()
 {
     for (int i = 0; i < GOVERNOR_LABELS_COUNT; ++i)
     {
@@ -43,7 +43,7 @@ void ShowLocalGovBank()
 // SaveToLocalGovBank()
 // Saves edited governor profile values to SD card when not connected
 // ====================================================
-void SaveToLocalGovBank()
+FLASHMEM void SaveToLocalGovBank()
 {
     ShowGOVMsg((char *)"Saving governor values ...", Gray);
     LoadGovWritePayload(); // read from Nextion into GovWritePayload[]
@@ -64,7 +64,7 @@ void SaveToLocalGovBank()
 // Reads all 14 profile fields from Nextion into GovWritePayload[]
 // Flags (b[16-17]) preserved from last read — not editable on this screen
 // ====================================================
-void LoadGovWritePayload()
+FLASHMEM void LoadGovWritePayload()
 {
     GovWritePayload[0] = 0; // RF23 flag — not written back
 
@@ -96,7 +96,7 @@ void LoadGovWritePayload()
 // Sends profile governor values to Nextion numeric fields n0-n13
 // Called with byte range [n, m) from GovAckPayload[]
 // ====================================================
-void DisplayGovValues(uint8_t n, uint8_t m)
+FLASHMEM void DisplayGovValues(uint8_t n, uint8_t m)
 {
     if (CurrentView != RFGOVERNORVIEW_PROFILE)
         return;
@@ -162,14 +162,14 @@ void DisplayGovValues(uint8_t n, uint8_t m)
 }
 
 // ====================================================
-void ForegroundColourGOVLabels(uint16_t Colour)
+FLASHMEM void ForegroundColourGOVLabels(uint16_t Colour)
 {
     for (int i = 0; i < GOVERNOR_LABELS_COUNT; ++i)
         SendForegroundColour(GOV_Labels[i], Colour);
 }
 
 // ====================================================
-void HideGOVMsg()
+FLASHMEM void HideGOVMsg()
 {
     if (CurrentView == RFGOVERNORVIEW_PROFILE)
     {
@@ -182,7 +182,7 @@ void HideGOVMsg()
 }
 
 // ====================================================
-void ShowGOVMsg(const char *msg, uint16_t Colour)
+FLASHMEM void ShowGOVMsg(const char *msg, uint16_t Colour)
 {
     if (CurrentView == RFGOVERNORVIEW_PROFILE)
     {
@@ -194,7 +194,7 @@ void ShowGOVMsg(const char *msg, uint16_t Colour)
     }
 }
 // ====================================================
-void FixHeading()
+FLASHMEM void FixHeading()
 {
     char temp[60];
     char NB[10];
@@ -205,7 +205,7 @@ void FixHeading()
 }
 
 // ====================================================
-void ShowGOVBank()
+FLASHMEM void ShowGOVBank()
 {
     if (CurrentView == RFGOVERNORVIEW_PROFILE)
     {
@@ -250,7 +250,7 @@ void ShowGOVBank()
 }
 
 // ====================================================
-void Start_RF_Governor()
+FLASHMEM void Start_RF_Governor()
 {
     {
         char why[120];
@@ -284,7 +284,7 @@ void Start_RF_Governor()
 }
 
 // ====================================================
-void End_RF_Governor()
+FLASHMEM void End_RF_Governor()
 {
     if (GOVS_PROFILE_Were_Edited)
     {
@@ -304,7 +304,7 @@ void End_RF_Governor()
 }
 
 // ====================================================
-void SendEditedGovValues()
+FLASHMEM void SendEditedGovValues()
 {
     if (!RfLive())
     {
@@ -335,14 +335,14 @@ void SendEditedGovValues()
 }
 
 // ====================================================
-void GOVS_P_Were_Edited()
+FLASHMEM void GOVS_P_Were_Edited()
 {
     SendCommand((char *)"vis b3,1"); // show Save button
     GOVS_PROFILE_Were_Edited = true;
 }
 
 // ====================================================
-void Save_RF_Governor()
+FLASHMEM void Save_RF_Governor()
 {
     SendEditedGovValues();
 }

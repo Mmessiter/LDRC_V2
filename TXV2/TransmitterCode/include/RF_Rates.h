@@ -20,7 +20,7 @@ float GetFactoredValue(uint8_t i) // this function gets the value to show
 }
 
 // ************************************************************************************************************/
-void ReadEditedRateValues()
+FLASHMEM void ReadEditedRateValues()
 {
 
     for (int i = 1; i < MAX_RATES_BYTES; ++i) // start at 1 because 0 is Rates Type and not yet edited here
@@ -40,7 +40,7 @@ void ReadEditedRateValues()
 }
 
 // ************************************************************************************************************/
-void SaveRatesLocalBank()
+FLASHMEM void SaveRatesLocalBank()
 {
     RatesMsg((char *)"Saving edited Rates ...", Gray); // Show sending message
     Rates_Were_Edited = false;
@@ -56,7 +56,7 @@ void SaveRatesLocalBank()
     PlaySound(BEEPCOMPLETE);         // let user know we're done
 }
 // ************************************************************************************************************/
-void SendEditedRates()
+FLASHMEM void SendEditedRates()
 {
     if (!RfLive()) // Model not connected so save to local RATES
     {
@@ -85,7 +85,7 @@ void SendEditedRates()
     PlaySound(BEEPCOMPLETE);                            // let user know we're done
 }
 // ************************************************************************************************************/
-char *FixDecimalDisplay(char *temp, float ThisValue, uint8_t i, size_t tempSize) // this function removes trailing zeros and decimal point if not needed and also rounds to 2 decimal places if needed
+FLASHMEM char *FixDecimalDisplay(char *temp, float ThisValue, uint8_t i, size_t tempSize) // this function removes trailing zeros and decimal point if not needed and also rounds to 2 decimal places if needed
 {
     if (RotorFlight_V == 1)
     {
@@ -129,7 +129,7 @@ char *FixDecimalDisplay(char *temp, float ThisValue, uint8_t i, size_t tempSize)
 }
 
 // ************************************************************************************************************/
-void DisplayRatesValues(uint8_t startIndex, uint8_t stopIndex) // Displays RATES values on screen a few at a time as they arrive in Ack payloads
+FLASHMEM void DisplayRatesValues(uint8_t startIndex, uint8_t stopIndex) // Displays RATES values on screen a few at a time as they arrive in Ack payloads
 {
     for (uint8_t i = startIndex; i < stopIndex; ++i)
     {
@@ -149,7 +149,7 @@ void DisplayRatesValues(uint8_t startIndex, uint8_t stopIndex) // Displays RATES
 }
 
 // ********************************************************************************************************
-void ForegroundColourRATESLabels(uint16_t Colour)
+FLASHMEM void ForegroundColourRATESLabels(uint16_t Colour)
 {
     for (int i = 1; i < 13; ++i)
     {
@@ -157,7 +157,7 @@ void ForegroundColourRATESLabels(uint16_t Colour)
     }
 }
 // ********************************************************************************************************
-void RatesMsg(const char *msg, uint16_t Colour)
+FLASHMEM void RatesMsg(const char *msg, uint16_t Colour)
 {
     if (CurrentView == RATESVIEW_RF) // Must be in RATES view
     {
@@ -170,7 +170,7 @@ void RatesMsg(const char *msg, uint16_t Colour)
 }
 
 // ************************************************************************************************************/
-void HideRATESMsg()
+FLASHMEM void HideRATESMsg()
 {
     if (CurrentView == RATESVIEW_RF) // Must be in RATES view
     {
@@ -183,7 +183,7 @@ void HideRATESMsg()
 }
 
 // ******************************************************************************************************************************/
-void ShowRatesLocalBank()
+FLASHMEM void ShowRatesLocalBank()
 {
     for (int i = 0; i < MAX_RATES_BYTES; ++i)
     {
@@ -205,7 +205,7 @@ void ShowRatesLocalBank()
 }
 // ******************************************************************************************************************************/
 
-void ShowRatesBank()
+FLASHMEM void ShowRatesBank()
 {
     if (CurrentView == RATESVIEW_RF) // Must be in RATES view
     {
@@ -242,7 +242,7 @@ void ShowRatesBank()
     }
 }
 // ******************************************************************************************************************************/
-void Modify_Labels_For_RATES_View()
+FLASHMEM void Modify_Labels_For_RATES_View()
 { // make sure labels are correct for RATES view in Rotorflight because some are different than for Betaflight etc
 
     if (RotorFlight_V >= 2)
@@ -257,7 +257,7 @@ void Modify_Labels_For_RATES_View()
     }
 }
 // ******************************************************************************************************************************/
-void StartRFRatesView()
+FLASHMEM void StartRFRatesView()
 {
     char why[80];
     if (ModelSeemsArmed(why, sizeof(why)) || RfPipeBlocked(why, sizeof(why))) // B45: says what it saw; B47/B48: or the pipe is not ready (joining, or none)
@@ -274,7 +274,7 @@ void StartRFRatesView()
     Rates_Were_Edited = false;
 }
 // ******************************************************************************************************************************/
-void EndRFRatesView()
+FLASHMEM void EndRFRatesView()
 {
     if (Rates_Were_Edited)
     {
@@ -286,7 +286,7 @@ void EndRFRatesView()
     BlockBankChanges = false;
 }
 // ************************************************************************************************************/
-void RatesWereEdited()
+FLASHMEM void RatesWereEdited()
 {
     SendCommand((char *)"vis b3,1"); // show "Send" button
     Rates_Were_Edited = true;

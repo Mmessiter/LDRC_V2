@@ -40,14 +40,15 @@ add(comps, comp(by['va0']))
 BUTTONS = [  # (name, words, code) in the order they sit, three to a row: the pages with values to edit first, the settings last
     ('Pid', 'PIDs ...', 18), ('b1', 'Rates ...', 22), ('b2', 'Governor ...', 50),
     ('Rescue', 'Rescue ...', 64), ('Servos', 'Servos ...', 73), ('Travel', 'Mixer ...', 83),
-    ('Filters', 'Filters ...', 92), ('Adjust', 'Adjustments ...', 116), ('Setup', 'Settings ...', 81),
-]
+    ('Filters', 'Filters ...', 92), ('Adjust', 'Adjustments ...', 116), ('Switches', 'Switches ...', 133),
+    ('Setup', 'Settings ...', 81),
+]   # (B77: a fourth row; the rows are 62 apart, the model name and the pipe word below them at 340)
 proto = by['Pid']
 for k, (name, words, code) in enumerate(BUTTONS):
-    b = comp(proto, n=name, x=34 + 246 * (k % 3), y=84 + 66 * (k // 3), w=240, h=56, txt=words); b['ev'] = {'r': 'va0.val=%d<<8\nprint va0.val' % code}
+    b = comp(proto, n=name, x=34 + 246 * (k % 3), y=84 + 62 * (k // 3), w=240, h=54, txt=words); b['ev'] = {'r': 'va0.val=%d<<8\nprint va0.val' % code}
     add(comps, b)
-add(comps, comp(by['t11'], x=34, y=300, w=480, h=40))
-add(comps, comp(by['pipe'], x=524, y=300, w=242, h=40))
+add(comps, comp(by['t11'], x=34, y=340, w=480, h=40))
+add(comps, comp(by['pipe'], x=524, y=340, w=242, h=40))
 add(comps, comp(by['Progress']))
 bk = comp(by['b3'], n='b3', x=14, y=414, w=260, h=56, txt='Backup / Restore ...'); bk['ev'] = {'r': 'va0.val=48<<8\nprint va0.val'}; add(comps, bk)
 add(comps, comp(by['b4']))

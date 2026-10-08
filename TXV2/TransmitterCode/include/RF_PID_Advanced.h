@@ -11,7 +11,7 @@ char PID_Advanced_Labels[26][4] = {"sw0", "t1", "t2", "t3", "t4", "t5", "t6", "t
                                    "t13", "t14", "t15", "t16", "t17", "t18", "t19", "t20", "t21", "t22", "t23", "t24", "t25"}; // Text boxes for PID Advanced view
 
 // ************************************************************************************************************/
-void Display_PID_Advanced_Values(uint8_t n, uint8_t m) // display PID Advanced values n to m on screen as they are read from RX
+FLASHMEM void Display_PID_Advanced_Values(uint8_t n, uint8_t m) // display PID Advanced values n to m on screen as they are read from RX
 {
   char TextFloat[10];
     for (uint8_t i = n; i < m; ++i)
@@ -33,7 +33,7 @@ void Display_PID_Advanced_Values(uint8_t n, uint8_t m) // display PID Advanced v
     }
 }
 // ************************************************************************************************************/
-void ReadEditedPIDAdvancedValues()
+FLASHMEM void ReadEditedPIDAdvancedValues()
 {
     for (uint8_t i = 0; i < MAX_PIDS_ADVANCED_BYTES; ++i)
     {
@@ -51,13 +51,13 @@ void ReadEditedPIDAdvancedValues()
     }
 }
 // ************************************************************************************************************/
-void ForegroundColourPIDAdvancedLabels(uint16_t Colour)
+FLASHMEM void ForegroundColourPIDAdvancedLabels(uint16_t Colour)
 {
     for (int i = 0; i < MAX_PIDS_ADVANCED_BYTES; ++i)
         SendForegroundColour(PID_Advanced_Labels[i], Colour);
 }
 // ************************************************************************************************************/
-void HidePID_Advanced_Msg()
+FLASHMEM void HidePID_Advanced_Msg()
 {
     if (CurrentView == PIDADVANCEDVIEW) // Must be in PIDAdvanced view
     {
@@ -67,7 +67,7 @@ void HidePID_Advanced_Msg()
     }
 }
 // **********************************************************************************************************/
-void PIDAdvancedMsg(const char *msg, uint16_t Colour)
+FLASHMEM void PIDAdvancedMsg(const char *msg, uint16_t Colour)
 {
     if (CurrentView == PIDADVANCEDVIEW) // Must be in PIDAdvanced view
     {
@@ -78,13 +78,13 @@ void PIDAdvancedMsg(const char *msg, uint16_t Colour)
     }
 }
 // ************************************************************************************************************/
-void PIDsAdvancedWereEdited()
+FLASHMEM void PIDsAdvancedWereEdited()
 {
     SendCommand((char *)"vis b3,1"); // show "Send" button
     PIDS_Advanced_Were_Edited = true;
 }
 // ************************************************************************************************************/
-void ShowLocalPIDsAdvancedBank()
+FLASHMEM void ShowLocalPIDsAdvancedBank()
 {
     char TextFloat[10];
     for (uint8_t i = 0; i < MAX_PIDS_ADVANCED_BYTES; ++i)
@@ -107,7 +107,7 @@ void ShowLocalPIDsAdvancedBank()
     HidePID_Advanced_Msg();
 }
 //************************************************************************************************************/
-void ShowPIDAdvancedBank() // this is called when bank is changed so new bank's PID Advanced values are requested from Nexus and shown
+FLASHMEM void ShowPIDAdvancedBank() // this is called when bank is changed so new bank's PID Advanced values are requested from Nexus and shown
 {
     char buf[40];
     strcpy(buf, "Loading Values for  ");
@@ -144,7 +144,7 @@ void ShowPIDAdvancedBank() // this is called when bank is changed so new bank's 
     }
 }
 // ************************************************************************************************************/
-void SaveToLocalABank()
+FLASHMEM void SaveToLocalABank()
 {
     PIDAdvancedMsg((char *)"Saving edited PID Advanced values ...", Gray); // Show sending message
     ReadEditedPIDAdvancedValues();                                         // read the edited PID Advanced values from the screen;
@@ -159,7 +159,7 @@ void SaveToLocalABank()
     PlaySound(BEEPCOMPLETE);           // let user know we're done
 }
 // ************************************************************************************************************/
-void SendEditedPID_Advanced()
+FLASHMEM void SendEditedPID_Advanced()
 {
     if (!RfLive())
     { // Model not connected so save to local PIDs
@@ -188,7 +188,7 @@ void SendEditedPID_Advanced()
     PlaySound(BEEPCOMPLETE);                                                // let user know we're done
 }
 // ********************************************************************************************************
-void StartPIDAdvancedView()
+FLASHMEM void StartPIDAdvancedView()
 {
     if (PIDS_Were_Edited)
     {
@@ -207,7 +207,7 @@ void StartPIDAdvancedView()
     SendText((char *)"t27", ModelName); // Show model name
 }
 // **********************************************************************************************************/
-void EndPIDsAdvancedView()
+FLASHMEM void EndPIDsAdvancedView()
 {
     if (PIDS_Advanced_Were_Edited)
     {

@@ -24,14 +24,14 @@ char Gov_Mode_types[5][20] = {"(Mode 0 = Off)", "(Mode 1 = Limit)", "(Mode 2 = D
 char Throttle_types[3][20] = {"(Type 0 = Normal)", "(Type 1 = Switch)", "(Type 2 = Function)"};
 
 // ====================================================
-void ForegroundColourGOVConfigLabels(uint16_t Colour)
+FLASHMEM void ForegroundColourGOVConfigLabels(uint16_t Colour)
 {
     for (int i = 0; i < GOVERNOR_GLOBAL_LABELS_COUNT; ++i)
         SendForegroundColour(GOV_Global_Labels[i], Colour);
 }
 
 // ====================================================
-void ShowGOVConfigMsg(const char *msg, uint16_t Colour)
+FLASHMEM void ShowGOVConfigMsg(const char *msg, uint16_t Colour)
 {
     if (CurrentView == RFGOVERNORVIEW_GLOBAL)
     {
@@ -43,7 +43,7 @@ void ShowGOVConfigMsg(const char *msg, uint16_t Colour)
     }
 }
 // ====================================================
-void AddWords() // Add in the text words to describe the meaning of numeric config values, so user doesn't have to keep the manual open
+FLASHMEM void AddWords() // Add in the text words to describe the meaning of numeric config values, so user doesn't have to keep the manual open
 {
     uint8_t temp = GetValue((char *)"n14"); // Current governor mode
     static uint8_t last_temp = -1;
@@ -69,7 +69,7 @@ void AddWords() // Add in the text words to describe the meaning of numeric conf
     }
 }
 // ====================================================
-void HideGOVConfigMsg()
+FLASHMEM void HideGOVConfigMsg()
 {
     BlockBankChanges = false; // ALWAYS clear — a view change before this call
                               // must never leave the bank switch dead (ClaudeFix 25-8-2026)
@@ -88,7 +88,7 @@ void HideGOVConfigMsg()
 }
 
 // ====================================================
-void GOVS_G_Were_Edited()
+FLASHMEM void GOVS_G_Were_Edited()
 {
     SendCommand((char *)"vis b3,1");
     GOVS_GLOBAL_Were_Edited = true;
@@ -101,7 +101,7 @@ void GOVS_G_Were_Edited()
 // Off-screen fields preserved directly from GovAckPayload[]
 // U16 fields split into lo/hi byte pairs
 // ====================================================
-void LoadGovConfigWritePayload()
+FLASHMEM void LoadGovConfigWritePayload()
 {
     // Gov mode and Handover thr — visible, editable
     GovWritePayload[18] = (uint8_t)GetValue((char *)"n14"); // Gov mode
@@ -151,7 +151,7 @@ void LoadGovConfigWritePayload()
 }
 
 // ====================================================
-bool AllGlobalConfigBytesReceived()
+FLASHMEM bool AllGlobalConfigBytesReceived()
 {
     for (int i = 0; i < 24; ++i)
     {
@@ -168,7 +168,7 @@ bool AllGlobalConfigBytesReceived()
 // Off-screen fields: stored in GovAckPayload[] but not sent to Nextion
 // All U16 pairs: skip lo byte, display on hi byte once both are in buffer
 // ====================================================
-void DisplayGovConfigValues(uint8_t n, uint8_t m)
+FLASHMEM void DisplayGovConfigValues(uint8_t n, uint8_t m)
 {
     if (CurrentView != RFGOVERNORVIEW_GLOBAL)
         return;
@@ -270,7 +270,7 @@ void DisplayGovConfigValues(uint8_t n, uint8_t m)
 // Shows saved config values from SD card when not connected
 // Off-screen fields not sent to Nextion
 // ====================================================
-void ShowLocalGovConfigBank()
+FLASHMEM void ShowLocalGovConfigBank()
 {
     SendValue((char *)"n14", Saved_GOV_Config_Values[18]); // Gov mode
     SendValue((char *)"n15", Saved_GOV_Config_Values[19]); // Handover thr %
@@ -297,7 +297,7 @@ void ShowLocalGovConfigBank()
 // ====================================================
 // SaveToLocalGovConfigBank()
 // ====================================================
-void SaveToLocalGovGLOBAL() // "Save FC to SD" button
+FLASHMEM void SaveToLocalGovGLOBAL() // "Save FC to SD" button
 { // This function only works when connected. The values are already on screen so it's easy enough.
     
     if (!GetConfirmation((char *)"page RFGovViewGlbl", (char *)"Save these config values to SD card?"))
@@ -321,7 +321,7 @@ void SaveToLocalGovGLOBAL() // "Save FC to SD" button
 // Reads saved config values from SD card, displays them on screen,
 // and sends them to the FC via MSP. Only works when connected.
 // ====================================================
-void RestoreFromSDGlobalGOV()
+FLASHMEM void RestoreFromSDGlobalGOV()
 {
     if (!LedWasGreen)
     {
@@ -364,7 +364,7 @@ void RestoreFromSDGlobalGOV()
 // SendEditedGovConfigValues()
 // Writes config values to FC via MSP, then reboots FC
 // ====================================================
-void SendEditedGovConfigValues()
+FLASHMEM void SendEditedGovConfigValues()
 {
     if (!RfLive())
     {
@@ -396,7 +396,7 @@ void SendEditedGovConfigValues()
     // Reboot FC is done at receiver.
 }
 // ====================================================
-void ShowGOV_Global_Bank()
+FLASHMEM void ShowGOV_Global_Bank()
 {
     if (CurrentView == RFGOVERNORVIEW_GLOBAL)
     {
@@ -426,7 +426,7 @@ void ShowGOV_Global_Bank()
 }
 
 // ====================================================
-void Start_Gov_Global()
+FLASHMEM void Start_Gov_Global()
 {
     {
         char why[120];
@@ -446,7 +446,7 @@ void Start_Gov_Global()
 }
 
 // ====================================================
-void End_Gov_Global()
+FLASHMEM void End_Gov_Global()
 {
     if (GOVS_GLOBAL_Were_Edited)
     {
@@ -466,19 +466,19 @@ void End_Gov_Global()
 }
 
 // ====================================================
-void Restore_FROM_SD_Global_GOV()
+FLASHMEM void Restore_FROM_SD_Global_GOV()
 {
     // Implementation for restoring from SD card
 }
 // ====================================================
-void Gov_Global_Were_Edited()
+FLASHMEM void Gov_Global_Were_Edited()
 {
     SendCommand((char *)"vis b3,1");
     GOVS_GLOBAL_Were_Edited = true;
 }
 
 // ====================================================
-void Save_Gov_Global()
+FLASHMEM void Save_Gov_Global()
 {
     SendEditedGovConfigValues();
     AddWords();

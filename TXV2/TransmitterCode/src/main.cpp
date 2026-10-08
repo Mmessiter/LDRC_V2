@@ -165,6 +165,7 @@
 #include "RF_Travel.h" // B57: travel extents, over the pipe
 #include "RF_Filters.h" // B58: the gyro filters, over the pipe
 #include "RF_Adjust.h" // B72: the in-flight adjustments, over the pipe with the USB cable
+#include "RF_Switches.h" // B77: the switches (modes), over the pipe
 #include "RF_Rates_Advanced.h"
 #include "RF_PID_Advanced.h"
 #include "RF_Save_Restore.h"
@@ -3031,7 +3032,7 @@ void RestoreCurrentModel()
 // ******************************** Global Array1 of numbered function pointers OK up the **********************************
 
 // This new list can be huge - up to 24 BITS unsigned!  ( Use "NUMBER<<8" )
-#define LASTFUNCTION1 133 // One more than final one
+#define LASTFUNCTION1 145 // One more than final one
 
 void (*NumberedFunctions1[LASTFUNCTION1])(){
     Blank,                   // 0 Cannot be used
@@ -3166,7 +3167,19 @@ void (*NumberedFunctions1[LASTFUNCTION1])(){
     AdjustRemove,            // 129 Remove
     AdjustBarMoved,          // 130 B74: the bar touched (a zone tapped, a handle dragged)
     AdjustPickOk,            // 131 B75: the picker's OK
-    AdjustPickCancel         // 132 Cancel
+    AdjustPickCancel,        // 132 Cancel
+    StartSwitchView,         // 133 B77: the menu's Switches ...
+    EndSwitchView,           // 134 OK
+    SaveSwitchActions,       // 135 Save
+    SwitchModeTapped,        // 136 the action (the picker)
+    SwitchChannelTapped,     // 137 the channel
+    SwitchPrevious,          // 138 <
+    SwitchNext,              // 139 >
+    SwitchAdd,               // 140 Add
+    SwitchRemove,            // 141 Remove
+    SwitchBarMoved,          // 142 the bar's blobs dragged
+    SwitchPickOk,            // 143 the picker's OK
+    SwitchPickCancel         // 144 Cancel
 };
 
 // This list migth become MUCH longer as it limit is 24 bits big
@@ -4913,6 +4926,7 @@ void FASTRUN ManageTransmitter()
     TravelPoll();      // B57: the travel extents pages
     FilterPoll();      // B58: the filters page
     AdjustPoll();      // B72: the adjustments page
+    SwitchPoll();      // B77: the switches page
 
     if (RightNow - LastTimeRead >= 1000)
     { // Only once a second for these..

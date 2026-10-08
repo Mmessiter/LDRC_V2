@@ -22,7 +22,7 @@ uint8_t LocalBank = 1;         // bank being saved to or restored from
 uint8_t SelectedItemCount = 0; // number of items selected to save or restore
 
 // ************************************************************************************************************/
-uint8_t CountSelectedParams(uint8_t mask)
+FLASHMEM uint8_t CountSelectedParams(uint8_t mask)
 {
     uint8_t n = 0;
     if (mask & DO_PIDS)
@@ -38,7 +38,7 @@ uint8_t CountSelectedParams(uint8_t mask)
     return n;
 }
 //  ************************************************************************************************************/
-void Restore_SOME_RF_Parameters()
+FLASHMEM void Restore_SOME_RF_Parameters()
 {
     char msg[120];
     char t2[20] = "t2";
@@ -215,7 +215,7 @@ void Restore_SOME_RF_Parameters()
 }
 
 // ************************************************************************************************************/
-void Save_SOME_RF_Parameters()
+FLASHMEM void Save_SOME_RF_Parameters()
 {
     char msg[120];
     char t2[20] = "t2";
@@ -410,7 +410,7 @@ void Save_SOME_RF_Parameters()
     }
 }
 // ************************************************************************************************************/
-void Collect_data_from_dialog() // and close it
+FLASHMEM void Collect_data_from_dialog() // and close it
 {
     LocalBank = GetValue((char *)"n0");
     if (LocalBank < 1 || LocalBank > 4)
@@ -432,7 +432,7 @@ void Collect_data_from_dialog() // and close it
     RotorFlightStart();
 }
 // ************************************************************************************************************/
-void RestoreRFParameters() // show dialog to pick bank and params to save // heer
+FLASHMEM void RestoreRFParameters() // show dialog to pick bank and params to save // heer
 {
     if (!(LedWasGreen))
     {
@@ -452,7 +452,7 @@ void RestoreRFParameters() // show dialog to pick bank and params to save // hee
 }
 
 // ************************************************************************************************************/
-void SaveRFParameters() // show dialog to pick bank and params to save // heer
+FLASHMEM void SaveRFParameters() // show dialog to pick bank and params to save // heer
 {
     if (!(LedWasGreen))
     {
@@ -472,7 +472,7 @@ void SaveRFParameters() // show dialog to pick bank and params to save // heer
 }
 
 // ************************************************************************************************************/
-void Start_RESTORE()
+FLASHMEM void Start_RESTORE()
 {
     bool PreviousLinkRatesToBanks = LinkRatesToBanks;
     LinkRatesToBanks = true;
@@ -488,7 +488,7 @@ void Start_RESTORE()
     LinkRatesToBanks = PreviousLinkRatesToBanks;
 }
 // ************************************************************************************************************/
-void Start_SAVE()
+FLASHMEM void Start_SAVE()
 {
     bool PreviousLinkRatesToBanks = LinkRatesToBanks;
     LinkRatesToBanks = true;
@@ -506,7 +506,7 @@ void Start_SAVE()
 }
 
 // ************************************************************************************************************/
-void Cancel_SAVE()
+FLASHMEM void Cancel_SAVE()
 {
     Start_RF_Backup_Restore();
     BlockBankChanges = false;
@@ -514,12 +514,12 @@ void Cancel_SAVE()
 // ************************************************************************************************************/
 
 // ************************************************************************************************************/
-void Cancel_RESTORE()
+FLASHMEM void Cancel_RESTORE()
 {
     Cancel_SAVE();
 }
 // ************************************************************************************************************/
-void Start_RF_Backup_Restore()
+FLASHMEM void Start_RF_Backup_Restore()
 {
     SendCommand((char *)"page RFBackUpView");
     CurrentView = RFBACKUP_RESTOREVIEW;
@@ -528,7 +528,7 @@ void Start_RF_Backup_Restore()
     SendText((char *)"t11", ModelName); // Show model name
 }
 // ************************************************************************************************************/
-void End_RF_Backup_Restore()
+FLASHMEM void End_RF_Backup_Restore()
 {
     RotorFlightStart();
 }

@@ -10,21 +10,21 @@
 #include "1Definitions.h"
 
 // ********************************************************************************************************
-void SendBackgroundColour(const char *label, uint16_t colour)
+FLASHMEM void SendBackgroundColour(const char *label, uint16_t colour)
 {
     char cmd[80];
     snprintf(cmd, sizeof(cmd), "%s.bco=%u", label, (unsigned)colour);
     SendCommand(cmd);
 }
 // ********************************************************************************************************
-void SendForegroundColour(const char *label, uint16_t colour)
+FLASHMEM void SendForegroundColour(const char *label, uint16_t colour)
 {
     char cmd[160];
     snprintf(cmd, sizeof(cmd), "%s.pco=%u", label, (unsigned)colour);
     SendCommand(cmd);
 }
 // ********************************************************************************************************
-void BackgroundColourPIDLabels(uint16_t Colour)
+FLASHMEM void BackgroundColourPIDLabels(uint16_t Colour)
 {
     for (int i = 0; i < MAX_PID_WORDS + 5; ++i) // +5 for the 3 boost PIDs and 2 HSI offsets
     {
@@ -32,7 +32,7 @@ void BackgroundColourPIDLabels(uint16_t Colour)
     }
 }
 // ********************************************************************************************************
-void ForegroundColourPIDLabels(uint16_t Colour)
+FLASHMEM void ForegroundColourPIDLabels(uint16_t Colour)
 {
     for (int i = 0; i < MAX_PID_WORDS + 5; ++i) // +5 for the 3 boost PIDs and 2 HSI offsets
     {
@@ -41,7 +41,7 @@ void ForegroundColourPIDLabels(uint16_t Colour)
 }
 
 // ********************************************************************************************************
-void ReadEditedPIDs()
+FLASHMEM void ReadEditedPIDs()
 {
     for (int i = 0; i < MAX_PID_WORDS; ++i)
     {
@@ -60,7 +60,7 @@ void ReadEditedPIDs()
     return;
 }
 // ********************************************************************************************************
-void Display2PIDValues(uint8_t i) // Displays two PID values as soon as they arrive in Ack payload th
+FLASHMEM void Display2PIDValues(uint8_t i) // Displays two PID values as soon as they arrive in Ack payload th
 {                                 // (They arrive in pairs because Ack payload has four usable bytes)
     if (CurrentMode == RESTORE_RF_SETTINGS)
         return;
@@ -71,7 +71,7 @@ void Display2PIDValues(uint8_t i) // Displays two PID values as soon as they arr
     }
 }
 // **********************************************************************************************************/
-void DisplayBoostPidValues() // Displays Boost PID values as soon as they arrive in Ack payload Theses are at the end of the normal PIDs ... tacked on
+FLASHMEM void DisplayBoostPidValues() // Displays Boost PID values as soon as they arrive in Ack payload Theses are at the end of the normal PIDs ... tacked on
 {
     if (CurrentMode == RESTORE_RF_SETTINGS)
         return;
@@ -86,7 +86,7 @@ void DisplayBoostPidValues() // Displays Boost PID values as soon as they arrive
 }
 
 // **********************************************************************************************************/
-void PIDMsg(const char *msg, uint16_t Colour)
+FLASHMEM void PIDMsg(const char *msg, uint16_t Colour)
 {
     if (CurrentView == PIDVIEW) // Must be in PID view
     {
@@ -99,7 +99,7 @@ void PIDMsg(const char *msg, uint16_t Colour)
     }
 }
 // **********************************************************************************************************/
-void HidePIDMsg()
+FLASHMEM void HidePIDMsg()
 {
     if (CurrentView == PIDVIEW) // Must be in PID view
     {
@@ -111,7 +111,7 @@ void HidePIDMsg()
                               // must never leave the bank switch dead (ClaudeFix 25-8-2026)
 }
 //***********************************************************************************************************/
-void ShowLocalBank()
+FLASHMEM void ShowLocalBank()
 {
     for (int i = 0; i < MAX_PID_WORDS + 5; ++i)
         if (CurrentView == PIDVIEW && i < MAX_PID_WORDS + 5) // Must be in PID view and a valid index
@@ -120,7 +120,7 @@ void ShowLocalBank()
     BlockBankChanges = false;
 }
 //************************************************************************************************************/
-void ShowPIDBank() // this is called when bank is changed so new bank's PID values are requested from Nexus and shown
+FLASHMEM void ShowPIDBank() // this is called when bank is changed so new bank's PID values are requested from Nexus and shown
 {
     if (CurrentView == PIDVIEW) // Must be in PID view
     {
@@ -156,13 +156,13 @@ void ShowPIDBank() // this is called when bank is changed so new bank's PID valu
     }
 }
 //************************************************************************************************************/
-void PIDs_Were_edited()
+FLASHMEM void PIDs_Were_edited()
 {
     SendCommand((char *)"vis b3,1"); // show "Send" button
     PIDS_Were_Edited = true;
 }
 //************************************************************************************************************/
-void SaveToLocalBank()
+FLASHMEM void SaveToLocalBank()
 {
     PIDMsg((char *)"Saving edited PIDs ...", Gray); // Show sending message
     ReadEditedPIDs();                               // read the edited PIDs from the screen;
@@ -187,7 +187,7 @@ void SaveToLocalBank()
 
 /***********************************************************************************************************/
 
-void SendEditedPIDs()
+FLASHMEM void SendEditedPIDs()
 {
     if (!RfLive()) // Model not connected so save to local PIDs
     {
@@ -217,7 +217,7 @@ void SendEditedPIDs()
     HidePIDMsg();
 }
 //************************************************************************************************************/
-void StartPIDView() // this starts PID view
+FLASHMEM void StartPIDView() // this starts PID view
 {
     char why[80];
     if (ModelSeemsArmed(why, sizeof(why)) || RfPipeBlocked(why, sizeof(why))) // B45: says what it saw; B47/B48: or the pipe is not ready (joining, or none)
@@ -233,7 +233,7 @@ void StartPIDView() // this starts PID view
     PIDS_Were_Edited = false;
 }
 //***********************************************************************************************************/
-void EndPIDView()
+FLASHMEM void EndPIDView()
 {
     if (PIDS_Were_Edited)
     {

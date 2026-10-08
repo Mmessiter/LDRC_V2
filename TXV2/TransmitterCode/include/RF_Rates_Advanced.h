@@ -10,7 +10,7 @@
 
 char RatesAWindows[15][4] = {"n0", "n1", "n2", "n3", "n4", "n5", "n6", "n7", "n8", "n9", "n10", "n11", "n12", "n13", "t14"}; // Text boxes for Rates Advanced view
 // ************************************************************************************************************/
-void Hide_Advanced_Rates_Msg()
+FLASHMEM void Hide_Advanced_Rates_Msg()
 {
     if (CurrentView == RATESADVANCEDVIEW) // Must be in RATESADVANCEDVIEW view
     {
@@ -20,7 +20,7 @@ void Hide_Advanced_Rates_Msg()
     }
 }
 // ************************************************************************************************************/
-void Display_Advanced_Rates_Values(uint8_t n, uint8_t m)
+FLASHMEM void Display_Advanced_Rates_Values(uint8_t n, uint8_t m)
 {
     char TextFloat[10];
     for (uint8_t i = n; i < m; ++i)
@@ -40,7 +40,7 @@ void Display_Advanced_Rates_Values(uint8_t n, uint8_t m)
 }
 
 // ************************************************************************************************************/
-void ForegroundColourAdvancedRates(uint16_t Colour)
+FLASHMEM void ForegroundColourAdvancedRates(uint16_t Colour)
 {
     for (int i = 0; i < 15; ++i)
     {
@@ -48,13 +48,13 @@ void ForegroundColourAdvancedRates(uint16_t Colour)
     }
 }
 // ************************************************************************************************************/
-void RatesAdvancedWereEdited()
+FLASHMEM void RatesAdvancedWereEdited()
 {
     SendCommand((char *)"vis b3,1"); // show "Send" button
     Rates_Advanced_Were_Edited = true;
 }
 // ********************************************************************************************************
-void RatesAdvancedMsg(const char *msg, uint16_t Colour)
+FLASHMEM void RatesAdvancedMsg(const char *msg, uint16_t Colour)
 {
     if (CurrentView == RATESADVANCEDVIEW) // Must be in RATESADVANCEDVIEW view
     {
@@ -65,7 +65,7 @@ void RatesAdvancedMsg(const char *msg, uint16_t Colour)
     }
 }
 // ************************************************************************************************************/
-void ShowLocalRatesAdvancedBank()
+FLASHMEM void ShowLocalRatesAdvancedBank()
 {
     for (uint8_t i = 0; i < MAX_RATES_ADVANCED_BYTES; ++i)
     {
@@ -86,7 +86,7 @@ void ShowLocalRatesAdvancedBank()
 }
 
 // ************************************************************************************************************/
-void ShowRatesAdvancedBank()
+FLASHMEM void ShowRatesAdvancedBank()
 {
     if (CurrentView != RATESADVANCEDVIEW) // Must be in  RATESADVANCEDVIEW
         return;
@@ -129,7 +129,7 @@ void ShowRatesAdvancedBank()
 }
 
 // **********************************************************************************************************/
-void StartRatesAdvancedView()
+FLASHMEM void StartRatesAdvancedView()
 {
     if (Rates_Were_Edited)
     {
@@ -148,7 +148,7 @@ void StartRatesAdvancedView()
     SendText((char *)"t11", ModelName); // Show model name
     Rates_Advanced_Were_Edited = false;
 } // **********************************************************************************************************/
-void EndRatesAdvancedView()
+FLASHMEM void EndRatesAdvancedView()
 {
     if (Rates_Advanced_Were_Edited)
     {
@@ -162,7 +162,7 @@ void EndRatesAdvancedView()
     }
 }
 // ************************************************************************************************************/
-void ReadRatesAdvanced()
+FLASHMEM void ReadRatesAdvanced()
 {
     for (uint8_t i = 0; i < MAX_RATES_ADVANCED_BYTES; ++i)
     {
@@ -179,7 +179,7 @@ void ReadRatesAdvanced()
 }
 
 // ************************************************************************************************************/
-void SaveLocalRatesAdvancedBank()
+FLASHMEM void SaveLocalRatesAdvancedBank()
 {
     RatesAdvancedMsg((char *)"Saving edited Advanced Rates ...", Gray); // Show sending message
     Rates_Advanced_Were_Edited = false;
@@ -195,7 +195,7 @@ void SaveLocalRatesAdvancedBank()
 }
 
 // **********************************************************************************************************/
-void SendEditedRatesAdvanced()
+FLASHMEM void SendEditedRatesAdvanced()
 {
     Rates_Advanced_Were_Edited = false;
     if (!(RfLive())) // Model not connected so save to local Advanced RATES

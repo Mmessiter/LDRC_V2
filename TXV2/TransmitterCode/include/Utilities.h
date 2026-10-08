@@ -67,7 +67,7 @@ void SaveOrRestoreScreen(bool Restore)
         // B65 (Malcolm, 8 Oct: "when the screen times out, it would be helpful if it returned to the one I was editing"):
         // the Rotorflight pages of B50-B61, with their edits, as the screen kept them
         {RESCUEVIEW, "RescueView"}, {RESCUE2VIEW, "Rescue2View"}, {SERVOVIEW, "ServoView"}, {RFSETUPVIEW, "RFSetupView"},
-        {TRAVELVIEW, "TravelView"}, {TRAVEL2VIEW, "Travel2View"}, {TRAVEL3VIEW, "Travel3View"}, {FILTERVIEW, "FilterView"}, {FILTER2VIEW, "Filter2View"}, {ADJUSTVIEW, "AdjustView"}, {ADJPICKVIEW, "AdjPickView"}};
+        {TRAVELVIEW, "TravelView"}, {TRAVEL2VIEW, "Travel2View"}, {TRAVEL3VIEW, "Travel3View"}, {FILTERVIEW, "FilterView"}, {FILTER2VIEW, "Filter2View"}, {ADJUSTVIEW, "AdjustView"}, {ADJPICKVIEW, "AdjPickView"}, {SWITCHVIEW, "SwitchView"}, {SWITCHPICKVIEW, "SwitchPickView"}};
     for (const auto &p : Pages)
     {
         if (p.view != LastScreen)

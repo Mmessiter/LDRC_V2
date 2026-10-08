@@ -8,7 +8,7 @@
 #ifndef MODEL_IDS_H
 #define MODEL_IDS_H
 
-void CheckAllModelIds()
+FLASHMEM void CheckAllModelIds()
 {
     char Vbuf[15];
     char MMemsp[] = "MMems.path=\"";
@@ -83,7 +83,7 @@ void CheckAllModelIds()
 }
 
 // *********************************************************************************************************************************/
-void DisplayStoredID()
+FLASHMEM void DisplayStoredID()
 {
     char buf[20];
     if (ModelsMacUnionSaved.Val64)
@@ -97,7 +97,7 @@ void DisplayStoredID()
     }
 }
 
-void DisplayCurrentID()
+FLASHMEM void DisplayCurrentID()
 {
     char buf[20];
     if (ModelsMacUnion.Val64)
@@ -111,7 +111,7 @@ void DisplayCurrentID()
     }
 }
 /******************************************************************************************************************************/
-void DeleteModelID()
+FLASHMEM void DeleteModelID()
 {
 
     // This deletes current model ID
@@ -146,7 +146,7 @@ void DeleteModelID()
 }
 /*********************************************************************************************************************************/
 
-void StoreModelID()
+FLASHMEM void StoreModelID()
 { // This stores current model ID
 
     char prompt[60];
@@ -188,7 +188,7 @@ void StoreModelID()
     DisplayCurrentID();
 }
 /// *********************************************************************************************************************************/
-void StartModelIDView()
+FLASHMEM void StartModelIDView()
 {
     SendCommand((char *)"page IDsStartView");
     CurrentView = MODELIDVIEW;
@@ -197,7 +197,7 @@ void StartModelIDView()
     DisplayCurrentID();
 }
 // *********************************************************************************************************************************/
-void EndModelIDView()
+FLASHMEM void EndModelIDView()
 {
     GotoFrontView();
 }

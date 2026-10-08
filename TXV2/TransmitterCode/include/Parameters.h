@@ -61,6 +61,8 @@ bool PipePageShowing()
     case TRAVEL3VIEW:
     case ADJUSTVIEW:
     case ADJPICKVIEW:
+    case SWITCHVIEW:
+    case SWITCHPICKVIEW:
         return true;
     default:
         return false;

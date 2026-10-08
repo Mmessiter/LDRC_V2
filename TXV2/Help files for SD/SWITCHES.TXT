@@ -1,11 +1,11 @@
-Any of the EIGHT switches can do any job. The top edge's four (1 to 4) are shown as they are seen from above with the sticks towards you; the front four (5 to 8) are the inputs of channels 5 to 8, and a knob in one of those places reads as a three-position switch.||
+Switches: what each switch of this transmitter makes the flight controller do - arm, rescue, self-level, the beeper, the black box and so on (the configurator's Modes tab). Needs the model connected, the safety on and a Version 2 receiver with Bluetooth.||
 
-Beside each switch is where it is now: near (towards you), mid, or away. Move a switch to see which number it is.||
+The arrows beside the title move between the switch actions defined. Add makes a new one: choose what it should do from the list, and it appears on the next channel, ON in the upper third of the travel. Remove takes the action showing away.||
 
-Touch a number or its job to choose the job: Banks 1 2 3, Bank 4 & Motor, Safety, Rates, Buddy, or Channel 5 to 16: the switch becomes that channel's input (any channel can use it on the Inputs page; on 5 to 8 it takes the place of the front switch or knob). 'Reversed' turns the switch's sense round. A switch that behaves strangely probably still needs calibrating.||
+Does: tap to choose another action from the list. On: tap for the next channel (channel 6 is AUX1).||
 
-A front switch with no other job is its channel's input, and is marked 'Channel 5' to 'Channel 8', or with the channel's name where you have renamed it (Flaps, say). Given any other job it lets go of its channel, whose input then sits at its centre (give that channel another input on the Inputs page if you need it). 'Not used' does the same and nothing else.||
+The bar is the switch's travel, 875 to 2125. The green zone is where the action is ON: drag the blobs to set its ends. The marker is where the switch is now, from this transmitter's own output as the flight controller sees it (988 to 2012), and the line under the bar says ON or OFF.||
 
-When using the Buddy box feature, one switch must be defined as 'Buddy'. It's probably best if this is a spring-return switch.||
+The arm switch is this transmitter's safety switch: with a Rotorflight model the safety drives the arming channel (Settings). So the arm action stays on that channel, cannot be removed, and a save refuses an ON zone that reaches 988 us (the model would arm with the safety on) or stops short of 2012 us (the safety off would not arm).||
 
-The jobs belong to the transmitter, not to the model: they stay the same whichever model is loaded.
+Save writes the slots that changed, stores them, and reads them back. OK leaves; edits not saved are discarded after a question.||

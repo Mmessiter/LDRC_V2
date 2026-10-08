@@ -7,7 +7,7 @@
 #include <Arduino.h>
 #include "1Definitions.h"
 
-void ShowRFRate()
+FLASHMEM void ShowRFRate()
 {
     char NB[10];
     Str(NB, DualRateInUse, 0);
@@ -18,7 +18,7 @@ void ShowRFRate()
 }
 
 // **********************************************************************************************************/
-void ShowRFBank()
+FLASHMEM void ShowRFBank()
 {
     char NB[10];
     Str(NB, Bank, 0);
@@ -29,7 +29,7 @@ void ShowRFBank()
 }
 
 // **********************************************************************************************************/
-void RotorFlightStart()
+FLASHMEM void RotorFlightStart()
 {
     char Vbuf[15];
 
@@ -59,7 +59,7 @@ void RotorFlightStart()
 // B56 (Malcolm, 7 Oct: the menu "will become a bit overcrowded ... redesign it slightly"): the four settings that were on
 // the menu - link rates and banks, version, arming channel, main RPM ratio - on a page of their own, and the menu a grid
 // of buttons. The fields keep their names (sw0, t5, Arming, Ratio), so the keypad and LinkRatesToBanksChanged work as before.
-void StartRFSettingsView()
+FLASHMEM void StartRFSettingsView()
 {
     char Vbuf[15];
     SendCommand((char *)"page RFSetupView");
@@ -78,12 +78,12 @@ void StartRFSettingsView()
 }
 
 // **********************************************************************************************************/
-void RotorFlightEnd() // OK on the menu: to the front page (B56: the fields are on the settings page; EndRFSettingsView reads them)
+FLASHMEM void RotorFlightEnd() // OK on the menu: to the front page (B56: the fields are on the settings page; EndRFSettingsView reads them)
 {
     ZeroDataScreen();        // clear the screen data because editing Rotorflight parameters may have created misleading comms gaps
     GotoFrontView();
 }
-void EndRFSettingsView() // OK on the settings page: the fields read back, the model saved, back to the menu
+FLASHMEM void EndRFSettingsView() // OK on the settings page: the fields read back, the model saved, back to the menu
 {
     char temp[15];
     // Nextion serial can carry stale bytes after heavy MSP traffic, so GetText may fail silently.
@@ -115,7 +115,7 @@ void EndRFSettingsView() // OK on the settings page: the fields read back, the m
     RotorFlightStart();
 }
 // **********************************************************************************************************/
-void LinkRatesToBanksChanged()
+FLASHMEM void LinkRatesToBanksChanged()
 {
     {
         uint32_t sw = GetValue((char *)"sw0");

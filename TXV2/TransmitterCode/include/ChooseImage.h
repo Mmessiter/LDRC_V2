@@ -10,7 +10,7 @@
 #ifndef CHOOSEIMAGE_H
 #define CHOOSEIMAGE_H
 // *********************************************************************************************************************************/
-char *GetModelImageFileName(char *fname)
+FLASHMEM char *GetModelImageFileName(char *fname)
 {
     FileNumberInView = GetValue((char *)"MMems");
     for (int i = 0; i < 12; ++i)
@@ -27,7 +27,7 @@ char *GetModelImageFileName(char *fname)
 
 // *************************************************************************************************************************/
 
-void ImageScrollStop() // finger lifted from the screen, so stop scrolling and show the currently selected image
+FLASHMEM void ImageScrollStop() // finger lifted from the screen, so stop scrolling and show the currently selected image
 {
     DisplayModelImage();        // show the currently selected image
     for (int i = 0; i < 5; ++i) // display the image repeatedly for a second as it's often slow to respond.
@@ -39,7 +39,7 @@ void ImageScrollStop() // finger lifted from the screen, so stop scrolling and s
 }
 
 // *************************************************************************************************************************/
-uint16_t GetThisImageNumber()
+FLASHMEM uint16_t GetThisImageNumber()
 {
     char temp[30];
     for (int j = 0; j < 89; ++j)
@@ -60,7 +60,7 @@ uint16_t GetThisImageNumber()
 }
 
 // *************************************************************************************************************************/
-void StartChooseImage()
+FLASHMEM void StartChooseImage()
 {
     // V1B (B22): the screen's own chooser (screen 1.5.0 and later) covers this page from its very first frame and shows
     // the pictures on ITS card, so this transmitter no longer lists /Images on its own card nor scrolls a list. It says
@@ -75,7 +75,7 @@ void StartChooseImage()
     CurrentView = CHOOSEIMAGEVIEW;
 }
 // *********************************************************************************************************************************/
-void EndChooseImage()
+FLASHMEM void EndChooseImage()
 {
     SaveOneModel(ModelNumber);
     RXOptionsViewStart();
@@ -85,7 +85,7 @@ void EndChooseImage()
 // and photos sent from a phone) and answers as the pilot presses OK or Cancel: "LDRCIMG <name>", or "LDRCIMG" alone
 // (keep the picture). The pictures live on the screen's card only: no copy on this card is needed any more. The name
 // is kept as before (8 characters, ModelImageFileName), and the model saved as the page's own OK button does.
-void ChooseImageFromScreen(const char *text)
+FLASHMEM void ChooseImageFromScreen(const char *text)
 {
     const char *p = strstr(text, LDRC_IMAGE_WORD);
     if (!p || CurrentView != CHOOSEIMAGEVIEW) // only as the answer to this page: a late repeat finds another page, and is ignored
