@@ -7,6 +7,13 @@ ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 src = open(os.path.join(ROOT, 'TransmitterCode', 'include', 'transceiver.h')).read()
 m = re.search(r'void TelemetryFromPipe\(const char \*list\)\n\{.*?\n\}\n', src, re.S)
 assert m, 'TelemetryFromPipe not found'
+# B71: the words wait on a stack and go out last in first out (the trigger part of a write LAST): PipeFlush and
+# AddParameterstoQueue as they are in include/Parameters.h
+psrc = open(os.path.join(ROOT, 'TransmitterCode', 'include', 'Parameters.h')).read()
+mq = re.search(r'static const uint8_t PIPE_STACK_MAX = 8;.*?\nbool RfLive\(\) \{[^\n]*\n', psrc, re.S)
+assert mq, 'PipeFlush not found'
+ma = re.search(r'void AddParameterstoQueue\(uint8_t ID\)[^\n]*\n\{.*?\n\}\n', psrc, re.S)
+assert ma, 'AddParameterstoQueue not found'
 prog = r'''
 #include <cstdio>
 #include <cstdlib>
@@ -17,7 +24,17 @@ struct Payload { uint8_t Ack_Payload_byte[32]; } AckPayload;
 static int seen = 0; static uint8_t last[5];
 void ParseTelemetryItem() { ++seen; for (int i = 0; i < 5; ++i) last[i] = AckPayload.Ack_Payload_byte[i]; }
 #define FASTRUN
-''' + m.group(0) + r'''
+static bool LedWasGreen = false, ModelMatched = true, BoundFlag = true, BakOfflineNow = false;
+static int PipeState = 2, ParametersToBeSentPointer = 0, ParameterRepeats = 0;
+#define PARAMETER_SEND_REPEATS 1
+#define PARAMETER_QUEUE_MAXIMUM 32
+static uint8_t ParametersToBeSent[40];
+static int sentOrder[16], sentN = 0, fileOrder[16], fileN = 0;
+bool RfParamOverPipe(uint8_t id) { return (id >= 9 && id <= 21) || (id >= 27 && id <= 33); }
+void SendParameterByPipe(uint8_t id) { if (sentN < 16) sentOrder[sentN++] = id; }
+bool BakOffline() { return BakOfflineNow; }
+bool BakOfflineWords(uint8_t id) { if (fileN < 16) fileOrder[fileN++] = id; return true; }
+''' + m.group(0) + mq.group(0) + ma.group(0) + r'''
 static int checks = 0, fails = 0;
 #define CHECK(c) do { ++checks; if (!(c)) { ++fails; fprintf(stderr, "FAIL line %d: %s\n", __LINE__, #c); } } while (0)
 int main() {
@@ -30,6 +47,14 @@ int main() {
     seen = 0; TelemetryFromPipe("25:AABBCCDD 999:00000000"); CHECK(seen == 1);                     // (an item out of range stops it)
     seen = 0; TelemetryFromPipe("25:A"); CHECK(seen == 0);                                          // (half a byte: nothing)
     seen = 0; TelemetryFromPipe("25:AABBCCDD 26:EEFF0011x"); CHECK(seen == 2);
+    // B71: a write queued as the pages queue it (the trigger part first) goes out trigger LAST, and nothing goes before the flush
+    AddParameterstoQueue(11); AddParameterstoQueue(10); CHECK(sentN == 0); PipeFlush(); CHECK(sentN == 2 && sentOrder[0] == 10 && sentOrder[1] == 11);
+    sentN = 0; AddParameterstoQueue(21); AddParameterstoQueue(20); AddParameterstoQueue(19); PipeFlush(); CHECK(sentN == 3 && sentOrder[0] == 19 && sentOrder[1] == 20 && sentOrder[2] == 21);
+    sentN = 0; AddParameterstoQueue(33); AddParameterstoQueue(32); AddParameterstoQueue(31); PipeFlush(); CHECK(sentN == 3 && sentOrder[0] == 31 && sentOrder[2] == 33);
+    sentN = 0; PipeState = 1; AddParameterstoQueue(9); PipeFlush(); CHECK(sentN == 0);                       // (no pipe: dropped, never the radio)
+    PipeState = 2; ModelMatched = false; AddParameterstoQueue(9); PipeFlush(); CHECK(sentN == 0 && fileN == 0); // (no model, no file: dropped)
+    BakOfflineNow = true; AddParameterstoQueue(14); AddParameterstoQueue(13); PipeFlush(); CHECK(sentN == 0 && fileN == 2 && fileOrder[0] == 13 && fileOrder[1] == 14);   // (no model, a file: to the file, in order)
+    ModelMatched = true; BakOfflineNow = false; AddParameterstoQueue(2); CHECK(ParametersToBeSentPointer == 1 && ParametersToBeSent[1] == 2);   // (the others still queue for the radio)
     printf("test_pipe: %d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }

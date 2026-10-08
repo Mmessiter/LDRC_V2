@@ -136,8 +136,10 @@ static bool BakSave()
 }
 void BakForModel() // the file of the model in use, when it changes (ChangeModel): loaded, or none
 {
-    if (strcmp(BakModel, ModelName) == 0 && BakLoaded)
-        return;
+    static uint32_t triedMs = 0;
+    if (strcmp(BakModel, ModelName) == 0 && (BakLoaded || (uint32_t)(millis() - triedMs) < 5000))
+        return; // (B71: a model with no file is looked for on the card at most every five seconds, not at every ask)
+    triedMs = millis();
     BakLoad(ModelName);
 }
 bool BakHaveFile() { BakForModel(); return BakLoaded; }
@@ -298,6 +300,278 @@ bool BakOfflineAnswer(uint8_t fn, const uint8_t *data, int len) // true: answere
     }
     BakReply(405, "not editable without the model");
     return true;
+}
+
+// ---------------------------------------------------------------- the stand-in for the Version 1 word route (B71)
+// The PIDs, advanced PIDs, rates, advanced rates, governor profile and governor global pages still speak the Version 1
+// parameter words (Parameters.h LoadOneParameter: "send me the block" 9/12/15/18/27/28, and the multi-part writes
+// 10-11, 13-14, 16-17, 19-21, 29-30, 31-33), which the receiver's TxParams.h turns into and out of the flight
+// controller's MSP images. With no model connected, PipeFlush hands those words here instead: a read is answered from
+// the file's image of the block - built into the telemetry items the receiver would send, as its buildXFromMsp and
+// fillParamAck make them, and fed to the same parser - and a write is staged part by part and, on its trigger part,
+// applied to the image as the receiver's applyWriteToScratch applies it, then written to the file and marked edited.
+// Byte for byte the receiver's code (RXV2 src/TxParams.h), so an offline edit lands as the online one would.
+static char BakItems[160];
+static int BakItemsN = 0;
+static void BakItem(uint8_t item, uint8_t a, uint8_t b, uint8_t c, uint8_t d)
+{
+    if (BakItemsN < (int)sizeof(BakItems) - 14)
+        BakItemsN += snprintf(BakItems + BakItemsN, sizeof(BakItems) - BakItemsN, "%u:%02X%02X%02X%02X ", (unsigned)item, a, b, c, d);
+}
+static void BakItemPair(uint8_t item, uint16_t a, uint16_t b) { BakItem(item, (uint8_t)a, (uint8_t)(a >> 8), (uint8_t)b, (uint8_t)(b >> 8)); }
+static void BakItemsTell() { TelemetryFromPipe(BakItems); BakItemsN = 0; BakItems[0] = 0; }
+static bool BakBlock(uint8_t fn, int bank, uint8_t *out, int max, int &n) // the file's image of a block, as bytes
+{
+    char key[16], hex[700];
+    BakKey(key, sizeof(key), fn, bank, -1);
+    if (BakGet(key, hex, sizeof(hex)) < 0)
+        return false;
+    n = HexToBytes(hex, out, max);
+    return true;
+}
+static const char *BakPageOf(uint8_t view)
+{
+    switch (view)
+    {
+    case PIDVIEW: return "page PIDView";
+    case PIDADVANCEDVIEW: return "page PID_A_View";
+    case RATESVIEW_RF: return "page RatesView";
+    case RATESADVANCEDVIEW: return "page Rates_A_View";
+    case RFGOVERNORVIEW_PROFILE: return "page RFGovView";
+    case RFGOVERNORVIEW_GLOBAL: return "page RFGovViewGlbl";
+    default: return "page RFView";
+    }
+}
+static void BakNotInFile(const char *what, int bank) // the block is not in the file: say so, and back to the menu (nothing to edit)
+{
+    char m[150];
+    if (bank >= 0)
+        snprintf(m, sizeof(m), "The %s for bank %d are not in the\r\nbackup file. Back it up again with\r\nthe model connected.", what, bank + 1);
+    else
+        snprintf(m, sizeof(m), "The %s is not in the backup file.\r\nBack it up again with the model\r\nconnected.", what);
+    Reading_PIDS_Now = Reading_PIDS_Advanced_Now = Reading_RATES_Now = Reading_RATES_Advanced_Now = Reading_GOV_Now = Reading_GOV_Config_Now = false;
+    BlockBankChanges = false;
+    MsgBox((char *)BakPageOf(CurrentView), m);
+    RotorFlightStart();
+}
+static uint16_t BwPid[17];
+static uint8_t BwRatesType, BwRoll[3], BwPitch[3], BwYaw[3], BwColl[3], BwResp[4], BwBoostGain[4], BwBoostCutoff[4], BwYawDyn[3], BwAdvPid[26], BwGov[46];
+static bool BwBasicPending = false;
+static const uint8_t BAK_ADV_PID_MAP[26] = {6, 1, 17, 18, 19, 7, 8, 9, 36, 37, 10, 11, 12, 13, 14, 15, 38, 39, 40, 20, 21, 22, 23, 24, 41, 42}; // compact byte i <-> MSP 94 byte
+static void BakSecsFromTenths(uint8_t *dst, int i, const uint8_t *p, int j) // the receiver shows the governor's times in whole seconds
+{
+    const uint16_t tenths = (uint16_t)(p[j] | (p[j + 1] << 8)), secs = (uint16_t)((tenths + 5) / 10);
+    dst[i] = (uint8_t)secs; dst[i + 1] = (uint8_t)(secs >> 8);
+}
+static void BakTenthsFromSecs(uint8_t *dst, int i, const uint8_t *w, int j)
+{
+    uint32_t tenths = (uint32_t)(w[j] | (w[j + 1] << 8)) * 10;
+    if (tenths > 65535) tenths = 65535;
+    dst[i] = (uint8_t)tenths; dst[i + 1] = (uint8_t)(tenths >> 8);
+}
+enum { BW_RATES = 0, BW_RATES_ADV, BW_PID, BW_PID_ADV, BW_GOV_PROFILE, BW_GOV_CONFIG };
+static bool BakWriteBlock(int kind) // a trigger part arrived: the block's image, patched as the receiver patches the flight controller's, back into the file
+{
+    const uint8_t fn = kind == BW_PID ? 112 : kind == BW_PID_ADV ? 94 : kind == BW_GOV_PROFILE ? 148 : kind == BW_GOV_CONFIG ? 142 : 111;
+    const int bank = fn == 142 ? -1 : fn == 111 ? (DualRateInUse > 0 ? DualRateInUse - 1 : 0) : (Bank > 0 ? Bank - 1 : 0);
+    const int need = kind == BW_RATES ? 25 : kind == BW_RATES_ADV ? 36 : kind == BW_PID ? 34 : kind == BW_PID_ADV ? 43 : kind == BW_GOV_PROFILE ? 17 : 33;
+    const char *what = kind == BW_PID ? "PIDs" : kind == BW_PID_ADV ? "advanced PIDs" : kind == BW_GOV_PROFILE ? "governor values" : kind == BW_GOV_CONFIG ? "governor global setup" : "rates";
+    uint8_t p[128];
+    int n = 0;
+    if (!BakBlock(fn, bank, p, sizeof(p), n) || n < need) { BakNotInFile(what, bank); return false; }
+    if (kind == BW_RATES || (kind == BW_RATES_ADV && BwBasicPending))
+    {
+        p[0] = BwRatesType;
+        p[1] = BwRoll[0];  p[2] = BwRoll[2];   p[3] = BwRoll[1];     // (Centre, Expo, Max per axis)
+        p[7] = BwPitch[0]; p[8] = BwPitch[2];  p[9] = BwPitch[1];
+        p[13] = BwYaw[0];  p[14] = BwYaw[2];   p[15] = BwYaw[1];
+        p[19] = BwColl[0]; p[20] = BwColl[2];  p[21] = BwColl[1];
+    }
+    if (kind == BW_RATES_ADV)
+    {
+        p[4] = BwResp[0]; p[10] = BwResp[1]; p[16] = BwResp[2]; p[22] = BwResp[3];
+        p[25] = BwBoostGain[0]; p[26] = BwBoostCutoff[0];
+        p[27] = BwBoostGain[1]; p[28] = BwBoostCutoff[1];
+        p[29] = BwBoostGain[2]; p[30] = BwBoostCutoff[2];
+        p[31] = BwBoostGain[3]; p[32] = BwBoostCutoff[3];
+        p[33] = BwYawDyn[0]; p[34] = BwYawDyn[1]; p[35] = BwYawDyn[2];
+    }
+    if (kind == BW_PID)
+        for (int i = 0; i < 17; ++i) { p[i * 2] = (uint8_t)BwPid[i]; p[i * 2 + 1] = (uint8_t)(BwPid[i] >> 8); }
+    if (kind == BW_PID_ADV)
+        for (int i = 0; i < 26; ++i) p[BAK_ADV_PID_MAP[i]] = BwAdvPid[i];
+    if (kind == BW_GOV_PROFILE)
+    {
+        p[0] = BwGov[1]; p[1] = BwGov[2];                                                           // Headspeed
+        p[2] = BwGov[3]; p[3] = BwGov[4]; p[4] = BwGov[5]; p[5] = BwGov[6]; p[6] = BwGov[7];         // Gain, P, I, D, F
+        p[7] = BwGov[8]; p[8] = BwGov[9];                                                           // TTA gain, limit
+        p[9] = BwGov[13]; p[10] = BwGov[14]; p[11] = BwGov[15];                                     // yaw, cyclic, collective weight
+        p[12] = BwGov[10]; p[13] = BwGov[11];                                                       // max, min throttle
+        p[14] = BwGov[12];                                                                          // fallback drop
+        p[15] = BwGov[16]; p[16] = BwGov[17];                                                       // flags
+    }
+    if (kind == BW_GOV_CONFIG)
+    {
+        p[0] = BwGov[18];
+        BakTenthsFromSecs(p, 1, BwGov, 20); BakTenthsFromSecs(p, 3, BwGov, 22); BakTenthsFromSecs(p, 5, BwGov, 26);
+        BakTenthsFromSecs(p, 7, BwGov, 28); BakTenthsFromSecs(p, 9, BwGov, 30);
+        p[13] = BwGov[32]; p[14] = BwGov[33];
+        p[19] = BwGov[19]; p[20] = BwGov[35]; p[21] = BwGov[34]; p[22] = BwGov[38]; p[23] = BwGov[37]; p[25] = BwGov[36];
+        BakTenthsFromSecs(p, 26, BwGov, 24);
+        p[28] = BwGov[39]; p[31] = BwGov[40]; p[32] = BwGov[41];
+    }
+    char key[16], hex[300];
+    BakKey(key, sizeof(key), fn, bank, -1);
+    BytesToHex(p, n, hex, sizeof(hex));
+    BwBasicPending = false;
+    if (!BakSet(key, hex)) { MsgBox((char *)BakPageOf(CurrentView), (char *)"The backup file is full: the edit\r\nwas not kept."); return false; }
+    BakMarkEdit(key);
+    BakSave();
+    return true;
+}
+bool BakOfflineWords(uint8_t id) // a Version 1 parameter word packet, with no model connected: answered from, or into, the file
+{
+    uint8_t p[128];
+    int n = 0;
+    const int bank = Bank > 0 ? Bank - 1 : 0, rbank = DualRateInUse > 0 ? DualRateInUse - 1 : 0;
+    Parameters.ID = id;
+    LoadOneParameter();
+    uint16_t w[12];
+    w[0] = id;
+    for (int i = 1; i < 12; ++i)
+        w[i] = Parameters.word[i] & 0xFFF;   // (the pipe carries twelve bits a word, as the radio link did)
+    switch (id)
+    {
+    case SEND_PID_VALUES:
+    {
+        if (!BakBlock(112, bank, p, sizeof(p), n) || n < 34) { BakNotInFile("PIDs", bank); return true; }
+        uint16_t v[17];
+        for (int i = 0; i < 17; ++i) v[i] = (uint16_t)p[i * 2] | ((uint16_t)p[i * 2 + 1] << 8);
+        BakItemPair(25, v[0], v[1]); BakItemPair(26, v[2], v[3]); BakItemPair(27, v[4], v[5]); BakItemPair(28, v[6], v[7]);
+        BakItemPair(29, v[8], v[9]); BakItemPair(30, v[10], v[11]); BakItemPair(32, v[12], v[13]); BakItemPair(33, v[14], 0); BakItemPair(34, v[15], v[16]);
+        BakItemsTell();
+        PID_Send_Duration = 0;
+        return true;
+    }
+    case SEND_RATES_VALUES:
+    {
+        if (!BakBlock(111, rbank, p, sizeof(p), n) || n < 25) { BakNotInFile("rates", rbank); return true; }
+        BakItem(25, p[0], p[1], p[3], p[2]); BakItem(26, p[7], p[9], p[8], 0); BakItem(27, p[13], p[15], p[14], p[19]); BakItem(28, p[21], p[20], 0, 0);
+        BakItemsTell();
+        RATES_Send_Duration = 0;
+        return true;
+    }
+    case SEND_RATES_ADVANCED_VALUES:
+    {
+        if (!BakBlock(111, rbank, p, sizeof(p), n) || n < 36) { BakNotInFile("rates", rbank); return true; }
+        BakItem(25, p[4], p[10], p[16], p[22]); BakItem(26, p[25], p[27], p[29], p[31]); BakItem(27, p[26], p[28], p[30], p[32]); BakItem(28, p[33], p[34], p[35], 0);
+        BakItemsTell();
+        Rates_Advanced_Send_Duration = 0;
+        return true;
+    }
+    case SEND_PID_ADVANCED_VALUES:
+    {
+        if (!BakBlock(94, bank, p, sizeof(p), n) || n < 43) { BakNotInFile("advanced PIDs", bank); return true; }
+        uint8_t c[26];
+        for (int i = 0; i < 26; ++i) c[i] = p[BAK_ADV_PID_MAP[i]];
+        BakItem(25, c[0], c[1], c[2], c[3]); BakItem(26, c[4], c[5], c[6], c[7]); BakItem(27, c[8], c[9], c[10], c[11]);
+        BakItem(28, c[12], c[13], c[14], c[15]); BakItem(29, c[16], c[17], c[18], c[19]); BakItem(30, c[20], c[21], c[22], c[23]); BakItem(32, c[24], c[25], 0, 0);
+        BakItemsTell();
+        PID_Advanced_Send_Duration = 0;
+        return true;
+    }
+    case SEND_GOV_VALUES:
+    {
+        if (!BakBlock(148, bank, p, sizeof(p), n) || n < 17) { BakNotInFile("governor values", bank); return true; }
+        uint8_t g[18];
+        g[0] = RotorFlight_V >= 2 ? 1 : 0;
+        g[1] = p[0]; g[2] = p[1];
+        g[3] = p[2]; g[4] = p[3]; g[5] = p[4]; g[6] = p[5]; g[7] = p[6];
+        g[8] = p[7]; g[9] = p[8];
+        g[10] = p[12]; g[11] = p[13];
+        g[12] = p[14];
+        g[13] = p[9]; g[14] = p[10]; g[15] = p[11];
+        g[16] = p[15]; g[17] = p[16];
+        BakItem(25, g[0], g[1], g[2], g[3]); BakItem(26, g[4], g[5], g[6], g[7]); BakItem(27, g[8], g[9], g[10], g[11]); BakItem(28, g[12], g[13], g[14], g[15]); BakItem(29, g[16], g[17], 0, 0);
+        BakItemsTell();
+        GOV_Send_Duration = 0;
+        return true;
+    }
+    case SEND_GOV_CONFIG_VALUES:
+    {
+        if (!BakBlock(142, -1, p, sizeof(p), n) || n < 33) { BakNotInFile("governor global setup", -1); return true; }
+        uint8_t g[42] = {0};
+        g[18] = p[0]; g[19] = p[19];
+        BakSecsFromTenths(g, 20, p, 1); BakSecsFromTenths(g, 22, p, 3); BakSecsFromTenths(g, 24, p, 26);
+        BakSecsFromTenths(g, 26, p, 5); BakSecsFromTenths(g, 28, p, 7); BakSecsFromTenths(g, 30, p, 9);
+        g[32] = p[13]; g[33] = p[14];
+        g[34] = p[21]; g[35] = p[20]; g[36] = p[25]; g[37] = p[23]; g[38] = p[22]; g[39] = p[28]; g[40] = p[31]; g[41] = p[32];
+        BakItem(25, g[18], g[19], g[20], g[21]); BakItem(26, g[22], g[23], g[24], g[25]); BakItem(27, g[26], g[27], g[28], g[29]);
+        BakItem(28, g[30], g[31], g[32], g[33]); BakItem(29, g[34], g[35], g[36], g[37]); BakItem(30, g[38], g[39], g[40], g[41]);
+        BakItemsTell();
+        GOV_Config_Send_Duration = 0;
+        return true;
+    }
+    // ---- the writes: staged as the receiver stages them; the trigger part applies ----
+    case GET_FIRST_7_RATES_VALUES: // 13: type, roll, pitch
+        BwRatesType = (uint8_t)w[1];
+        BwRoll[0] = (uint8_t)w[2]; BwRoll[1] = (uint8_t)w[3]; BwRoll[2] = (uint8_t)w[4];
+        BwPitch[0] = (uint8_t)w[5]; BwPitch[1] = (uint8_t)w[6]; BwPitch[2] = (uint8_t)w[7];
+        BwBasicPending = true;
+        return true;
+    case GET_SECOND_6_RATES_VALUES: // 14: yaw, collective; word 7 clear = the basic write now, set = with the advanced one (16)
+        BwYaw[0] = (uint8_t)w[1]; BwYaw[1] = (uint8_t)w[2]; BwYaw[2] = (uint8_t)w[3];
+        BwColl[0] = (uint8_t)w[4]; BwColl[1] = (uint8_t)w[5]; BwColl[2] = (uint8_t)w[6];
+        BwBasicPending = true;
+        if (!w[7]) BakWriteBlock(BW_RATES);
+        return true;
+    case GET_RATES_ADVANCED_VALUES_FIRST_7: // 17
+        BwResp[0] = (uint8_t)w[1]; BwResp[1] = (uint8_t)w[2]; BwResp[2] = (uint8_t)w[3]; BwResp[3] = (uint8_t)w[4];
+        BwBoostGain[0] = (uint8_t)w[5]; BwBoostGain[1] = (uint8_t)w[6]; BwBoostGain[2] = (uint8_t)w[7];
+        return true;
+    case GET_RATES_ADVANCED_VALUES_SECOND_8: // 16: the trigger
+        BwBoostGain[3] = (uint8_t)w[1];
+        BwBoostCutoff[0] = (uint8_t)w[2]; BwBoostCutoff[1] = (uint8_t)w[3]; BwBoostCutoff[2] = (uint8_t)w[4]; BwBoostCutoff[3] = (uint8_t)w[5];
+        BwYawDyn[0] = (uint8_t)w[6]; BwYawDyn[1] = (uint8_t)w[7]; BwYawDyn[2] = (uint8_t)w[8];
+        BakWriteBlock(BW_RATES_ADV);
+        return true;
+    case GET_FIRST_6_PID_VALUES: // 10
+        for (int i = 0; i < 6; ++i) BwPid[i] = w[i + 1];
+        return true;
+    case GET_SECOND_11_PID_VALUES: // 11: the trigger
+        for (int i = 0; i < 11; ++i) BwPid[i + 6] = w[i + 1];
+        BakWriteBlock(BW_PID);
+        return true;
+    case GET_FIRST_9_ADVANCED_PID_VALUES: // 19
+        for (int i = 0; i < 9; ++i) BwAdvPid[i] = (uint8_t)w[i + 1];
+        return true;
+    case GET_SECOND_9_ADVANCED_PID_VALUES: // 20
+        for (int i = 0; i < 9; ++i) BwAdvPid[i + 9] = (uint8_t)w[i + 1];
+        return true;
+    case GET_THIRD_8_ADVANCED_PID_VALUES: // 21: the trigger
+        for (int i = 0; i < 8; ++i) BwAdvPid[i + 18] = (uint8_t)w[i + 1];
+        BakWriteBlock(BW_PID_ADV);
+        return true;
+    case SEND_GOV_WRITE_PROFILE1: // 29
+        for (int i = 0; i < 11; ++i) BwGov[i + 1] = (uint8_t)w[i + 1];
+        return true;
+    case SEND_GOV_WRITE_PROFILE2: // 30: the trigger
+        for (int i = 0; i < 6; ++i) BwGov[i + 12] = (uint8_t)w[i + 1];
+        BakWriteBlock(BW_GOV_PROFILE);
+        return true;
+    case SEND_GOV_WRITE_CONFIG1: // 31
+        for (int i = 0; i < 11; ++i) BwGov[i + 18] = (uint8_t)w[i + 1];
+        return true;
+    case SEND_GOV_WRITE_CONFIG2: // 32
+        for (int i = 0; i < 11; ++i) BwGov[i + 29] = (uint8_t)w[i + 1];
+        return true;
+    case SEND_GOV_WRITE_CONFIG3: // 33: the trigger
+        for (int i = 0; i < 6; ++i) BwGov[i + 40] = (uint8_t)w[i + 1];
+        BakWriteBlock(BW_GOV_CONFIG);
+        return true;
+    default:
+        return false;
+    }
 }
 
 // ---------------------------------------------------------------- the jobs: back up, restore, write the edits
@@ -779,8 +1053,17 @@ void DiscardEdits()
     BakClearEdits(); BakSave();
     BakShowPage();
 }
-// At the Rotorflight menu with a model connected: edits waiting are offered, once per connection
+// At the Rotorflight menu with a model connected: edits waiting are offered, once per connection - when the pipe is ready
+// to carry them (B71: not while the screen is still joining, which burnt the one offer on "please wait"), and so also
+// when the model comes on, or the join completes, while the menu is already showing (BakOfferTick, once a second)
 static bool BakOffered = false;
+void BakOfferEdits();
+void BakOfferTick()
+{
+    if (!(BoundFlag && ModelMatched)) { BakOffered = false; return; }
+    if (CurrentView == ROTORFLIGHTVIEW && PipeState == 2 && BakJob == BAK_JOB_NONE && !ModalWaits)
+        BakOfferEdits();
+}
 void BakOfferEdits()
 {
     if (!(BoundFlag && ModelMatched)) { BakOffered = false; return; }

@@ -87,8 +87,8 @@ void LoadGovWritePayload()
     GovWritePayload[15] = (uint8_t)GetValue((char *)"n13"); // Collective weight
 
     // Flags — preserve existing values. Use saved values if not connected, GovAckPayload if connected
-    GovWritePayload[16] = LedWasGreen ? GovAckPayload[16] : Saved_GOV_Profiles_Values[16][Bank - 1];
-    GovWritePayload[17] = LedWasGreen ? GovAckPayload[17] : Saved_GOV_Profiles_Values[17][Bank - 1];
+    GovWritePayload[16] = RfLive() ? GovAckPayload[16] : Saved_GOV_Profiles_Values[16][Bank - 1];
+    GovWritePayload[17] = RfLive() ? GovAckPayload[17] : Saved_GOV_Profiles_Values[17][Bank - 1];
 }
 
 // ====================================================
@@ -230,7 +230,7 @@ void ShowGOVBank()
         strcpy(buf, "Loading governor values ...");
         SendText((char *)"t26", BankNames[BanksInUse[Bank - 1]]);
         FixHeading();
-        if (!LedWasGreen)
+        if (!RfLive())
         {
             ShowGOVMsg(buf, Gray);
             GOVS_PROFILE_Were_Edited = false; // reset before showing local values
@@ -306,7 +306,7 @@ void End_RF_Governor()
 // ====================================================
 void SendEditedGovValues()
 {
-    if (!LedWasGreen)
+    if (!RfLive())
     {
         // Not connected — save to local SD card instead
         SaveToLocalGovBank();

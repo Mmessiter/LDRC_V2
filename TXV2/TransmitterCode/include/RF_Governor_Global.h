@@ -78,9 +78,9 @@ void HideGOVConfigMsg()
         SendCommand((char *)"vis t4,0");
         SendCommand((char *)"vis b1,1");
         ForegroundColourGOVConfigLabels(Black);
-        if (LedWasGreen && !AllGlobalConfigBytesReceived())
+        if (RfLive() && !AllGlobalConfigBytesReceived())
         {
-            MsgBox((char *)"page RFGovGlobalView", (char *)"Failed to read global \r\n(config) bytes. Try again.");
+            MsgBox((char *)"page RFGovViewGlbl", (char *)"Failed to read global \r\n(config) bytes. Try again.");
             Start_RF_Governor();
         }
         AddWords();
@@ -366,7 +366,7 @@ void RestoreFromSDGlobalGOV()
 // ====================================================
 void SendEditedGovConfigValues()
 {
-    if (!LedWasGreen)
+    if (!RfLive())
     {
         SaveToLocalGovGLOBAL();
         return;
@@ -406,7 +406,7 @@ void ShowGOV_Global_Bank()
         // Reset received flags for fresh read
         memset(Global_Params_Received_Flags, 0, sizeof(Global_Params_Received_Flags));
 
-        if (!LedWasGreen)
+        if (!RfLive())
         {
             ShowGOVConfigMsg((char *)"Loading config values ...", Gray);
             GOVS_GLOBAL_Were_Edited = false;

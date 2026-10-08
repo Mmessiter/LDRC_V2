@@ -186,6 +186,35 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The PIDs, rates and governor pages join the backup; a write's parts in the right order (V2 B71, 8 Oct 2026)
+
+Malcolm's first test of B70 (the test flight controller as Black Thunder 2): "When reconnecting after editing a backup, it
+didn't think I'd edited it at all. But my edits were still there." He had edited the Roll row of the PIDs page with the menu
+saying "From the backup file". THE GAP: the PIDs, advanced PIDs, rates, advanced rates, governor profile and governor
+global pages still speak the Version 1 parameter words (AddParameterstoQueue: "send me the block" and the multi-part
+writes), which B70's stand-in did not see; with no model those pages showed and saved the model file's own copies
+(Saved_PID_Values and the rest), as Version 1 did, so the backup was never touched. B71: the words now wait on a small
+stack of their own and go out from ManageTransmitter (PipeFlush); with no model but the model's backup on the card they
+go to RF_Backup.h BakOfflineWords instead, which answers a read from the file's image of the block - built into the
+telemetry items the receiver would send (its buildXFromMsp and fillParamAck, byte for byte) and fed to the same parser -
+and stages a write part by part, applying it on the trigger part as the receiver's applyWriteToScratch does, then
+writes the file and marks the key (112.<bank>, 94.<bank>, 111.<rates bank>, 148.<bank>, 142), so Write edits sends it
+on the next connection. The six pages use RfLive() (the flight controller's or the file's values) in place of
+LedWasGreen; the model file's copies serve only when there is neither. A bank the file has not: told, back to the
+menu. The offer of waiting edits now comes once the pipe is READY (BakOfferTick once a second on the menu: not while
+joining, which burnt the one offer on "please wait"), so also when the model comes on while the menu shows.
+
+AND A SAFETY FIX FOUND ON THE WAY: over the pipe, B41-B70 sent each part of a multi-part write the moment it was
+queued. The pages queue the trigger part FIRST (the radio queue was last in, first out, so it went last); over the
+pipe it went first, and the receiver began its read-modify-write at once, so the rest of the block could be written
+from what it held before - stale, or ZERO after the receiver's power-up (roll and pitch PIDs from the first six words;
+rates type, roll and pitch; the first advanced bytes; the first governor bytes). The receiver's verify pass could
+catch it only when the late part arrived within a few milliseconds. The stack is popped last in first out, as the radio
+queue was: the trigger part goes last. (The pipe pages' own writes - filters, rescue, servos, mixer - were never
+affected: each is one request.) Host tests: dev/test_backup 90 checks (the items of every block from a counted image,
+every write's patch against the receiver's map, the missing bank, the offer tick), dev/test_pipe 19 (the order).
+Untested on hardware as written.
+
 ## Backup of everything over Bluetooth, and the backup as the model's stand-in (V2 B70 + card files, 8 Oct 2026)
 
 Malcolm: "convert [the Version 1 backup] to BLE and expand it to cover all the settings ... when the transmitter has that

@@ -64,9 +64,11 @@ bool PipePageShowing()
         return false;
     }
 }
+void BakOfferTick();   // RF_Backup.h (B71)
 void PipeTick() // B44: once a second from the main loop: the ask is renewed every five seconds while the menu is open (the receiver forgets it after twenty)
 {
     static uint32_t PipeFailedAt = 0;
+    BakOfferTick();
     if (RadiosMustBeOff())
     { // B49 (Malcolm: "Turning safety off should instantly turn Bluetooth and WiFi off"): the screen does that by itself
       // the moment it hears; the receiver is told at once too, instead of waiting twenty seconds for the ask to lapse
@@ -177,16 +179,42 @@ bool RfPipeBlocked(char *why, size_t n)
     snprintf(why, n, "No Bluetooth link to the receiver.\r\nRotorflight needs a Version 2 receiver\r\n(0.9.874 or later), in reach.");
     return true;
 }
+// B71: the Rotorflight parameter words wait on a small stack of their own and go out from ManageTransmitter (PipeFlush),
+// LAST IN FIRST OUT like the radio queue they replaced. The pages were written for that: a multi-part write queues its
+// trigger part first so that it is SENT last, after the parts it completes. B41-B70 sent each part the moment it was
+// queued, so over the pipe the trigger went FIRST and the receiver could write the rest of the block from what it held
+// before (stale, or zero after its power-up). With no model connected but the model's backup file on the card, the same
+// words go to the file instead (RF_Backup.h BakOfflineWords): the pages read the backup and their saves edit it.
+bool BakOffline();                  // RF_Backup.h (B70)
+bool BakOfflineWords(uint8_t id);   // RF_Backup.h (B71)
+static const uint8_t PIPE_STACK_MAX = 8;
+static uint8_t PipeStack[PIPE_STACK_MAX];
+static uint8_t PipeStackN = 0;
+void PipeFlush()
+{
+    while (PipeStackN)
+    {
+        const uint8_t id = PipeStack[--PipeStackN];
+        if (BakOffline())
+            BakOfflineWords(id);
+        else if (PipeState == 2 && ModelMatched && BoundFlag)
+            SendParameterByPipe(id);
+    }
+}
+// The pages that keep a copy of their values in the model file (PIDs, rates, governor) work on LIVE values - the flight
+// controller's, over the pipe, or the backup file's when no model is connected - and on the model file's copies only
+// when there is neither (B71).
+bool RfLive() { return LedWasGreen || BakOffline(); }
 void AddParameterstoQueue(uint8_t ID) // this queue is essentially a LIFO stack
 {
-    if (!ModelMatched || !BoundFlag || ID == 0)
-        return;
-    if (RfParamOverPipe(ID)) // B41: the screen's Bluetooth pipe carries the Rotorflight ones, once; B48: and nothing else does
+    if (RfParamOverPipe(ID)) // B41/B48: the Rotorflight ones travel by the screen's Bluetooth pipe and by nothing else; B71: or into the backup file
     {
-        if (PipeState == 2)
-            SendParameterByPipe(ID);
+        if (ID && (BakOffline() || (ModelMatched && BoundFlag && PipeState == 2)) && PipeStackN < PIPE_STACK_MAX)
+            PipeStack[PipeStackN++] = ID;
         return; // (no pipe: the pages refuse first, RfPipeBlocked; a packet that slips past them is dropped, never sent by radio)
     }
+    if (!ModelMatched || !BoundFlag || ID == 0)
+        return;
     for (int i = 0; i < PARAMETER_SEND_REPEATS; ++i)
     {
         if (ParametersToBeSentPointer < PARAMETER_QUEUE_MAXIMUM)

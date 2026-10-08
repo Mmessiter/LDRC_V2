@@ -4919,6 +4919,7 @@ void FASTRUN ManageTransmitter()
         LastTimeRead = millis();   // Reset this timer
         return;                    // That's enough housekeeping for this time around
     }
+    PipeFlush();                          // B71: the Rotorflight words, in the queue's order, to the pipe or the backup file
     if (ParametersToBeSentPointer)        // Any parameters to be sent?
         ActuallySendParameters(RightNow); // yes, send them
     if (CurrentView == MODELSVIEW)

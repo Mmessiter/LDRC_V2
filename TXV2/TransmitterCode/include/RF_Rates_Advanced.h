@@ -96,14 +96,14 @@ void ShowRatesAdvancedBank()
     strcpy(buf, "Rate ");
     strcat(buf, Str(NB, DualRateInUse, 0));
     SendText((char *)"t9", buf); // Show bank number etc
-    if (!(LedWasGreen))
+    if (!(RfLive()))
     {
         ShowLocalRatesAdvancedBank();
         return;
     }
 
     
-    if (LedWasGreen)
+    if (RfLive())
     {
         strcpy(buf, "Loading values for Rate ");
         strcat(buf,Str(NB, DualRateInUse, 0));
@@ -198,7 +198,7 @@ void SaveLocalRatesAdvancedBank()
 void SendEditedRatesAdvanced()
 {
     Rates_Advanced_Were_Edited = false;
-    if (!(LedWasGreen)) // Model not connected so save to local Advanced RATES
+    if (!(RfLive())) // Model not connected so save to local Advanced RATES
     {
         SaveLocalRatesAdvancedBank();
         return;

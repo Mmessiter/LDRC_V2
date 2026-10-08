@@ -62,6 +62,43 @@ static bool GetConfirmation(char *page, char *prompt) { lastBox = prompt; return
 static void PlaySound(int) { ++sounds; }
 static void RotorFlightStart() { ++rfStarts; }
 static bool ModelSeemsArmed(char *, int) { return false; }
+// ---- the Version 1 word route (B71): the pages' parameter words, and the telemetry items the file answers with
+#define PIDVIEW 45
+#define RATESVIEW_RF 46
+#define RATESADVANCEDVIEW 48
+#define PIDADVANCEDVIEW 49
+#define RFGOVERNORVIEW_PROFILE 54
+#define RFGOVERNORVIEW_GLOBAL 55
+#define SEND_PID_VALUES 9
+#define GET_FIRST_6_PID_VALUES 10
+#define GET_SECOND_11_PID_VALUES 11
+#define SEND_RATES_VALUES 12
+#define GET_FIRST_7_RATES_VALUES 13
+#define GET_SECOND_6_RATES_VALUES 14
+#define SEND_RATES_ADVANCED_VALUES 15
+#define GET_RATES_ADVANCED_VALUES_SECOND_8 16
+#define GET_RATES_ADVANCED_VALUES_FIRST_7 17
+#define SEND_PID_ADVANCED_VALUES 18
+#define GET_FIRST_9_ADVANCED_PID_VALUES 19
+#define GET_SECOND_9_ADVANCED_PID_VALUES 20
+#define GET_THIRD_8_ADVANCED_PID_VALUES 21
+#define SEND_GOV_VALUES 27
+#define SEND_GOV_CONFIG_VALUES 28
+#define SEND_GOV_WRITE_PROFILE1 29
+#define SEND_GOV_WRITE_PROFILE2 30
+#define SEND_GOV_WRITE_CONFIG1 31
+#define SEND_GOV_WRITE_CONFIG2 32
+#define SEND_GOV_WRITE_CONFIG3 33
+static struct { uint8_t ID; uint16_t word[12]; } Parameters;
+static std::map<int, std::vector<uint16_t>> words;   // id -> w1..w11, as the page would load them
+static void LoadOneParameter() { auto &v = words[Parameters.ID]; for (int i = 1; i < 12; ++i) Parameters.word[i] = (i - 1 < (int) v.size()) ? v[i - 1] : 0; }
+static std::string told; static void TelemetryFromPipe(const char *l) { told = l; }
+static bool Reading_PIDS_Now = false, Reading_PIDS_Advanced_Now = false, Reading_RATES_Now = false, Reading_RATES_Advanced_Now = false, Reading_GOV_Now = false, Reading_GOV_Config_Now = false;
+static uint16_t PID_Send_Duration = 1000, PID_Advanced_Send_Duration = 1000, RATES_Send_Duration = 1000, Rates_Advanced_Send_Duration = 1000;
+static uint32_t GOV_Send_Duration = 1000, GOV_Config_Send_Duration = 1000;
+static uint8_t RotorFlight_V = 2;
+#define ROTORFLIGHTVIEW 47
+static int PipeState = 2; static bool ModalWaits = false;
 static bool RfPipeBlocked(char *, int) { return false; }
 static bool RfNeedsModel(char *, int) { return false; }
 // ---- the pipe: PipeHttp.h's names, a fake flight controller behind it
@@ -200,6 +237,51 @@ int main() {
     // 8. a FC that refuses an optional read: not a failure; one that fails a required read: counted and named
     BoundFlag = true; fillFc(); fc.erase("123"); fc.erase("154.00"); fc.erase("154.01"); fc.erase("154.02"); fc.erase("77");
     BackupNow(); runUntilDone(); CHECK(BakFails == 1 && lastBox.find("Backed up, but 1 could not be read") == 0 && strstr(BakFailed, "77"));
+    // 9. the Version 1 word route offline (B71): the six pages read the file's images as the receiver's items ...
+    BoundFlag = false; fillFc(); strcpy(Bak, "rfb=1\nmodel=Goblin\nedits=\n"); for (auto &kv : fc) BakSet(kv.first.c_str(), kv.second.c_str()); BakSet("edits", ""); BakSave();
+    { std::string h; for (int i = 0; i < 50; ++i) { char b[4]; snprintf(b, sizeof b, "%02X", i); h += b; } BakSet("112.1", h.c_str()); BakSet("94.1", h.c_str()); BakSet("111.0", h.c_str()); BakSet("148.1", h.substr(0, 34).c_str()); BakSet("142", h.c_str()); }
+    Bank = 2; DualRateInUse = 1; CurrentView = PIDVIEW; boxes = 0; rfStarts = 0;
+    told = ""; Reading_PIDS_Now = true; CHECK(BakOfflineWords(SEND_PID_VALUES)); CHECK(told == "25:00010203 26:04050607 27:08090A0B 28:0C0D0E0F 29:10111213 30:14151617 32:18191A1B 33:1C1D0000 34:1E1F2021 " && PID_Send_Duration == 0);
+    told = ""; CHECK(BakOfflineWords(SEND_RATES_VALUES)); CHECK(told == "25:00010302 26:07090800 27:0D0F0E13 28:15140000 " && RATES_Send_Duration == 0);
+    told = ""; CHECK(BakOfflineWords(SEND_RATES_ADVANCED_VALUES)); CHECK(told == "25:040A1016 26:191B1D1F 27:1A1C1E20 28:21222300 " && Rates_Advanced_Send_Duration == 0);
+    told = ""; CHECK(BakOfflineWords(SEND_PID_ADVANCED_VALUES)); CHECK(told == "25:06011112 26:13070809 27:24250A0B 28:0C0D0E0F 29:26272814 30:15161718 32:292A0000 " && PID_Advanced_Send_Duration == 0);
+    told = ""; CHECK(BakOfflineWords(SEND_GOV_VALUES)); CHECK(told == "25:01000102 26:03040506 27:07080C0D 28:0E090A0B 29:0F100000 " && GOV_Send_Duration == 0);
+    // governor global: times in tenths on the FC come as whole seconds (0x0201 = 513 tenths -> 51 s = 0x33; 0x0403 = 1027 -> 103 = 0x67; 0x1B1A = 6938 -> 694 = 0x2B6; 0x0605 = 1541 -> 154 = 0x9A; 0x0807 = 2055 -> 206 = 0xCE; 0x0A09 = 2569 -> 257 = 0x101)
+    told = ""; CHECK(BakOfflineWords(SEND_GOV_CONFIG_VALUES)); CHECK(told == "25:00133300 26:6700B602 27:9A00CE00 28:01010D0E 29:15141917 30:161C1F20 " && GOV_Config_Send_Duration == 0);
+    CHECK(boxes == 0 && rfStarts == 0);
+    // ... a bank the file has not: told, and back to the menu
+    Bank = 6; told = ""; Reading_PIDS_Now = true; BlockBankChanges = true; CHECK(BakOfflineWords(SEND_PID_VALUES)); CHECK(told == "" && boxes == 1 && rfStarts == 1 && lastBox.find("The PIDs for bank 6 are not in") == 0 && !Reading_PIDS_Now && !BlockBankChanges);
+    Bank = 2;
+    // ... and their saves patch the images as the receiver patches the flight controller's, mark the key, write the file
+    words[GET_FIRST_6_PID_VALUES] = {100, 101, 102, 103, 104, 105}; words[GET_SECOND_11_PID_VALUES] = {106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116};
+    CHECK(BakOfflineWords(GET_FIRST_6_PID_VALUES) && BakOfflineWords(GET_SECOND_11_PID_VALUES));
+    { char a[200]; CHECK(BakGet("112.1", a, sizeof a) == 100 && strncmp(a, "6400650066006700680069006A006B006C006D006E006F0070007100720073007400", 68) == 0 && strncmp(a + 68, "22232425", 8) == 0); }
+    CHECK(BakEdited("112.1") && !BakEdited("112.0") && !BakDirty && card["/rfbak/Goblin.rfb"].find("edits=112.1") != std::string::npos);
+    words[GET_FIRST_7_RATES_VALUES] = {4, 10, 11, 12, 20, 21, 22}; words[GET_SECOND_6_RATES_VALUES] = {30, 31, 32, 40, 41, 42, 0};
+    CHECK(BakOfflineWords(GET_FIRST_7_RATES_VALUES) && BakOfflineWords(GET_SECOND_6_RATES_VALUES));
+    { char a[200]; BakGet("111.0", a, sizeof a); CHECK(strncmp(a, "040A0C0B" "040506" "141615" "0A0B0C" "1E201F" "101112" "282A29", 44) == 0 && strncmp(a + 44, "16", 2) == 0); CHECK(BakEdited("111.0")); }
+    words[GET_RATES_ADVANCED_VALUES_FIRST_7] = {50, 51, 52, 53, 60, 61, 62}; words[GET_RATES_ADVANCED_VALUES_SECOND_8] = {63, 70, 71, 72, 73, 80, 81, 82};
+    CHECK(BakOfflineWords(GET_RATES_ADVANCED_VALUES_FIRST_7) && BakOfflineWords(GET_RATES_ADVANCED_VALUES_SECOND_8));
+    { char a[200]; BakGet("111.0", a, sizeof a); CHECK(strncmp(a + 8, "32", 2) == 0 && strncmp(a + 20, "33", 2) == 0 && strncmp(a + 32, "34", 2) == 0 && strncmp(a + 44, "35", 2) == 0 && strncmp(a + 50, "3C463D473E483F49505152", 22) == 0 && strncmp(a, "040A0C0B", 8) == 0); }
+    words[GET_FIRST_9_ADVANCED_PID_VALUES] = {200, 201, 202, 203, 204, 205, 206, 207, 208}; words[GET_SECOND_9_ADVANCED_PID_VALUES] = {209, 210, 211, 212, 213, 214, 215, 216, 217}; words[GET_THIRD_8_ADVANCED_PID_VALUES] = {218, 219, 220, 221, 222, 223, 224, 225};
+    CHECK(BakOfflineWords(GET_FIRST_9_ADVANCED_PID_VALUES) && BakOfflineWords(GET_SECOND_9_ADVANCED_PID_VALUES) && BakOfflineWords(GET_THIRD_8_ADVANCED_PID_VALUES));
+    { uint8_t p[64]; int n; CHECK(BakBlock(94, 1, p, sizeof p, n) && n == 50 && p[6] == 200 && p[1] == 201 && p[17] == 202 && p[19] == 204 && p[7] == 205 && p[36] == 208 && p[37] == 209 && p[10] == 210 && p[15] == 215 && p[38] == 216 && p[40] == 218 && p[20] == 219 && p[22] == 221 && p[24] == 223 && p[41] == 224 && p[42] == 225 && p[0] == 0 && p[2] == 2 && p[16] == 16); CHECK(BakEdited("94.1")); }
+    words[SEND_GOV_WRITE_PROFILE1] = {0x34, 0x12, 3, 4, 5, 6, 7, 8, 9, 10, 11}; words[SEND_GOV_WRITE_PROFILE2] = {12, 13, 14, 15, 16, 17};
+    CHECK(BakOfflineWords(SEND_GOV_WRITE_PROFILE1) && BakOfflineWords(SEND_GOV_WRITE_PROFILE2));
+    { char a[200]; BakGet("148.1", a, sizeof a); CHECK(strcmp(a, "3412" "0304050607" "0809" "0D0E0F" "0A0B" "0C" "1011") == 0 && BakEdited("148.1")); }
+    words[SEND_GOV_WRITE_CONFIG1] = {1, 2, 3, 0, 4, 0, 5, 0, 6, 0, 7}; words[SEND_GOV_WRITE_CONFIG2] = {0, 8, 0, 9, 0, 10, 11, 12, 13, 14, 15}; words[SEND_GOV_WRITE_CONFIG3] = {16, 17, 0, 0, 0, 0};
+    CHECK(BakOfflineWords(SEND_GOV_WRITE_CONFIG1) && BakOfflineWords(SEND_GOV_WRITE_CONFIG2) && BakOfflineWords(SEND_GOV_WRITE_CONFIG3));
+    { uint8_t p[64]; int n; CHECK(BakBlock(142, -1, p, sizeof p, n) && n == 50);
+      CHECK(p[0] == 1 && p[1] == 30 && p[2] == 0 && p[3] == 40 && p[5] == 60 && p[7] == 70 && p[9] == 80 && p[13] == 9 && p[14] == 0 && p[19] == 2 && p[20] == 11 && p[21] == 10 && p[22] == 14 && p[23] == 13 && p[25] == 12 && p[26] == 50 && p[28] == 15 && p[31] == 16 && p[32] == 17);
+      CHECK(p[11] == 11 && p[12] == 12 && p[15] == 15 && p[24] == 24 && p[29] == 29 && p[33] == 33);   // the bytes no page edits keep the file's
+      CHECK(BakEdited("142")); }
+    { char e[200]; BakEditsText(e, sizeof e); CHECK(strcmp(e, "PIDs bank 2, rates bank 1, adv. PIDs bank 2, governor bank 2, governor global") == 0); }
+    CHECK(!BakOfflineWords(1) && !BakOfflineWords(36));
+    // 10. the offer comes from the tick once the pipe is ready, and is forgotten when the model goes
+    BoundFlag = true; CurrentView = ROTORFLIGHTVIEW; BakOffered = false; confirmAnswer = false; lastBox = ""; PipeState = 1; BakOfferTick(); CHECK(lastBox == "" && !BakOffered);
+    PipeState = 2; BakOfferTick(); CHECK(lastBox.find("The backup holds edits") == 0 && BakOffered);
+    lastBox = ""; BakOfferTick(); CHECK(lastBox == "");                                   // (once per connection)
+    BoundFlag = false; BakOfferTick(); CHECK(!BakOffered); BoundFlag = true; CurrentView = PIDVIEW; BakOfferTick(); CHECK(lastBox == "" && !BakOffered);   // (not from another page)
     printf("test_backup: %d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }

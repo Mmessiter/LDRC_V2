@@ -116,7 +116,7 @@ void ShowPIDAdvancedBank() // this is called when bank is changed so new bank's 
     if (CurrentView == PIDADVANCEDVIEW) // Must be in PIDAdvanced view
     {
         SendText((char *)"t26", BankNames[BanksInUse[Bank - 1]]); // Show bank number etc
-        if (!LedWasGreen)
+        if (!RfLive())
         {
             PIDAdvancedMsg(buf, Gray); // Show loading message and hides old PIDs
             ShowLocalPIDsAdvancedBank();
@@ -161,7 +161,7 @@ void SaveToLocalABank()
 // ************************************************************************************************************/
 void SendEditedPID_Advanced()
 {
-    if (!LedWasGreen)
+    if (!RfLive())
     { // Model not connected so save to local PIDs
         SaveToLocalABank();
         return;

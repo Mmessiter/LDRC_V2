@@ -58,7 +58,7 @@ void SaveRatesLocalBank()
 // ************************************************************************************************************/
 void SendEditedRates()
 {
-    if (!LedWasGreen) // Model not connected so save to local RATES
+    if (!RfLive()) // Model not connected so save to local RATES
     {
         SaveRatesLocalBank();
         return;
@@ -216,7 +216,7 @@ void ShowRatesBank()
         snprintf(Rmsg, sizeof(Rmsg), "Rate %u", (unsigned)DualRateInUse);
         SendText((char *)"t9", Rmsg); // Show rate number etc
 
-        if (LedWasGreen)
+        if (RfLive())
         {
             strcpy(buf, "Loading rates for Rate ");
             strcat(buf, Str(NB, DualRateInUse, 0));

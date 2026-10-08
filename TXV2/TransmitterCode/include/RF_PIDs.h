@@ -129,7 +129,7 @@ void ShowPIDBank() // this is called when bank is changed so new bank's PID valu
         strcat(buf, BankNames[BanksInUse[Bank - 1]]);
         strcat(buf, " ...");
         SendText((char *)"t9", BankNames[BanksInUse[Bank - 1]]); // Show bank number etc
-        if (!LedWasGreen)
+        if (!RfLive())
         {                      // Model not connected so show local saved PIDs
             PIDMsg(buf, Gray); // Show loading message and hides old PIDs
             ShowLocalBank();
@@ -189,7 +189,7 @@ void SaveToLocalBank()
 
 void SendEditedPIDs()
 {
-    if (!LedWasGreen) // Model not connected so save to local PIDs
+    if (!RfLive()) // Model not connected so save to local PIDs
     {
         SaveToLocalBank();
         return;
