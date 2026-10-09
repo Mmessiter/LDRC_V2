@@ -167,6 +167,7 @@
 #include "RF_Adjust.h" // B72: the in-flight adjustments, over the pipe with the USB cable
 #include "RF_Switches.h" // B77: the switches (modes), over the pipe
 #include "RF_CopyBank.h" // B78: copy a bank, over the pipe
+#include "RF_FcSetup.h" // B88: battery, black box, calibrate, and why it will not arm, over the pipe
 #include "RF_Rates_Advanced.h"
 #include "RF_PID_Advanced.h"
 #include "RF_Save_Restore.h"
@@ -3033,7 +3034,7 @@ void RestoreCurrentModel()
 // ******************************** Global Array1 of numbered function pointers OK up the **********************************
 
 // This new list can be huge - up to 24 BITS unsigned!  ( Use "NUMBER<<8" )
-#define LASTFUNCTION1 155 // One more than final one
+#define LASTFUNCTION1 176 // One more than final one
 
 void (*NumberedFunctions1[LASTFUNCTION1])(){
     Blank,                   // 0 Cannot be used
@@ -3190,7 +3191,28 @@ void (*NumberedFunctions1[LASTFUNCTION1])(){
     CopyBankRatesTapped,     // 151 Rates
     CopyBankGovTapped,       // 152 Governor gains
     CopyBankHsTapped,        // 153 Head speed too
-    CopyBankAdjTapped        // 154 Adjust gains for head speed
+    CopyBankAdjTapped,       // 154 Adjust gains for head speed
+    StartBatteryView,        // 155 B88: the menu's Battery ...
+    EndBatteryView,          // 156 OK
+    SaveBattery,             // 157 Save
+    BatteryWasEdited,        // 158 a number typed
+    BatteryVoltageSourceTapped, // 159 Voltage from
+    BatteryCurrentSourceTapped, // 160 Current from
+    StartBlackboxView,       // 161 the menu's Black box ...
+    EndBlackboxView,         // 162 OK
+    SaveBlackbox,            // 163 Save
+    BlackboxWasEdited,       // 164 a number typed
+    BlackboxModeTapped,      // 165 When
+    BlackboxDeviceTapped,    // 166 Where
+    BlackboxRateTapped,      // 167 How often
+    BlackboxRollTapped,      // 168 Overwrite the oldest
+    BlackboxErase,           // 169 Erase all logs
+    StartCalibrateView,      // 170 the menu's Calibrate ...
+    EndCalibrateView,        // 171 OK
+    CalibrateNow,            // 172 Calibrate level
+    SaveLevelTrims,          // 173 Save
+    CalibrateWasEdited,      // 174 a trim typed
+    ArmingWhy                // 175 the menu's arming line tapped
 };
 
 // This list migth become MUCH longer as it limit is 24 bits big
@@ -4943,6 +4965,9 @@ void FASTRUN ManageTransmitter()
     AdjustPoll();      // B72: the adjustments page
     SwitchPoll();      // B77: the switches page
     CopyBankPoll();    // B78: a bank being copied
+    BatteryPoll();     // B88: the battery page
+    BlackboxPoll();    // B88: the black box page
+    CalibratePoll();   // B88: the calibrate page
 
     if (RightNow - LastTimeRead >= 1000)
     { // Only once a second for these..
@@ -4998,6 +5023,7 @@ void FASTRUN ManageTransmitter()
         {
             Hide_msg_if_needed(); // Hide any message in rotoflight config area
             FcBankTick();         // B82: which bank the flight controller is really on
+            ArmTick();            // B88: why it will not arm, on the Rotorflight menu
         }
         TransmitterLastManaged = millis();
     }

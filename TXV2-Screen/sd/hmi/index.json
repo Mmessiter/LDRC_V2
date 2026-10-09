@@ -47,7 +47,7 @@
   {
    "id": 8,
    "name": "RFView",
-   "n": 22
+   "n": 26
   },
   {
    "id": 9,
@@ -363,6 +363,21 @@
    "id": 71,
    "name": "CopyBankView",
    "n": 24
+  },
+  {
+   "id": 72,
+   "name": "BatteryView",
+   "n": 35
+  },
+  {
+   "id": 73,
+   "name": "BlackboxView",
+   "n": 24
+  },
+  {
+   "id": 74,
+   "name": "CalibrateView",
+   "n": 18
   }
  ],
  "fonts": {

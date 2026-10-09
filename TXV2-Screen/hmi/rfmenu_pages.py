@@ -14,44 +14,66 @@ if os.path.exists(os.path.join(PAGES, '61.json')):          # the settings' comp
 def comp(proto, **kw):
     c = copy.deepcopy(proto); c.update(kw); return c
 
+# 1.11.40 (Malcolm, 9 Oct: "look critically at the UI design of all our new pages ... groups of buttons tidy, centred, and
+# lined up"): the header as on the other Rotorflight pages (bank and rate on its first line, the model's name under them),
+# the settings as label boxes and values in the Rescue pages' rows, the buttons by the shared row rule.
+import rescue_pages as rp
+def header(lst):
+    add(lst, comp(by['t14'], x=10, y=3, w=86, h=26))
+    add(lst, comp(by['t8'], x=100, y=3, w=110, h=26))
+    m = comp(rp.MODEL, n='t11', txt='Model name'); add(lst, m)
+
 # ---- the settings page, from the menu's own components
 settings = []; i = [1]
 def add(lst, c): c['i'] = i[0]; i[0] += 1; lst.append(c); return c
 add(settings, comp(by['t0'], txt='Rotorflight settings'))
 add(settings, comp(by['card']))
-add(settings, comp(by['t14'])); add(settings, comp(by['t8']))
-add(settings, comp(by['t11'], x=34, y=352, w=732, h=46))
+header(settings)
 add(settings, comp(by['va0']))
 h = comp(by['b0']); h['ev'] = {'r': 'print "HelpView:RFSETUP.TXT"\nLogView.t0.txt="Rotorflight settings help"\nLogView.return.txt="RFSetupView"'}; add(settings, h)
-for lab, val in (('t3', 'sw0'), ('t4', 't5'), ('t6', 'Arming'), ('t1', 'Ratio')):
-    add(settings, comp(by[lab]))
-    add(settings, comp(by[val]))
-ok = comp(by['b4']); ok['ev'] = {'r': 'va0.val=82<<8\nprint va0.val'}; add(settings, ok)
+ROWS = (('t3', 'sw0', 'Link rates and banks', None), ('t4', 't5', 'Rotorflight version', None), ('t6', 'Arming', 'Arming channel', 'Arming channel'), ('t1', 'Ratio', 'Main RPM ratio', 'Rotor to motor RPM ratio'))
+for r, (lab, val, words, klabel) in enumerate(ROWS):
+    y = 94 + r * 40
+    l = comp(by[lab], x=34, y=y, w=254, h=36, txt=words, font=2); l['c'] = dict(l['c'], pco=0, bco=rp.PALE[0]); l['a'] = dict(l['a'], xcen=1, ycen=1); add(settings, l)
+    v = by[val]
+    if v['t'] == 'switch': v = comp(v, x=314, y=y + 1, w=80, h=34)
+    else:
+        v = comp(v, x=294, y=y, w=120, h=36, font=2)
+        if klabel: v['ev'] = {'p': 'keybdB.t1.txt="%s"' % klabel}   # (the arming channel's keypad was titled "Rotor to motor RPM ratio")
+    add(settings, v)
+for nm, txt, x, w, code in rp.bottom_row([('b4', 'OK', 82)]):
+    ok = comp(by['b4'], x=x, y=414, w=w, h=56); ok['ev'] = {'r': 'va0.val=82<<8\nprint va0.val'}; add(settings, ok)
 page61 = {'name': 'RFSetupView', 'id': 61, 'w': 800, 'h': 480, 'bg': menu['bg'], 'nav': menu['nav'], 'ev': {'preinitialize': 'RFSetupView.pic=Screen_Background'}, 'comps': settings}
 json.dump(page61, open(os.path.join(PAGES, '61.json'), 'w'), indent=1)
 
-# ---- the menu: a grid of buttons
+# ---- the menu: a grid of buttons, three by five, the arming line under it (B88)
 i = [1]; comps = []
 add(comps, comp(by['t0']))
 add(comps, comp(by['card']))
 add(comps, comp(by['b0']))
-add(comps, comp(by['t14'])); add(comps, comp(by['t8']))
+header(comps)
 add(comps, comp(by['va0']))
 BUTTONS = [  # (name, words, code) in the order they sit, three to a row: the pages with values to edit first, the settings last
     ('Pid', 'PIDs ...', 18), ('b1', 'Rates ...', 22), ('b2', 'Governor ...', 50),
     ('Rescue', 'Rescue ...', 64), ('Servos', 'Servos ...', 73), ('Travel', 'Mixer ...', 83),
     ('Filters', 'Filters ...', 92), ('Adjust', 'Adjustments ...', 116), ('Switches', 'Switches ...', 133),
-    ('CopyBank', 'Copy a bank ...', 145), ('Setup', 'Settings ...', 81),
-]   # (B77: a fourth row; the rows are 62 apart, the model name and the pipe word below them at 340)
+    ('CopyBank', 'Copy a bank ...', 145), ('Battery', 'Battery ...', 155), ('Blackbox', 'Black box ...', 161),
+    ('Calibrate', 'Calibrate ...', 170), ('Setup', 'Settings ...', 81), ('b3', 'Backup / Restore ...', 48),
+]   # (B88: five rows of three, 56 apart from y 66; Backup / Restore joined the grid, so only OK is left below)
 proto = by['Pid']
 for k, (name, words, code) in enumerate(BUTTONS):
-    b = comp(proto, n=name, x=34 + 246 * (k % 3), y=84 + 62 * (k // 3), w=240, h=54, txt=words); b['ev'] = {'r': 'va0.val=%d<<8\nprint va0.val' % code}
+    b = comp(proto, n=name, x=34 + 246 * (k % 3), y=66 + 56 * (k // 3), w=240, h=50, txt=words); b['ev'] = {'r': 'va0.val=%d<<8\nprint va0.val' % code}
     add(comps, b)
-add(comps, comp(by['t11'], x=34, y=340, w=480, h=40))
-add(comps, comp(by['pipe'], x=524, y=340, w=242, h=40))
+# B88 "why it will not arm": the flight controller's arming blocks in plain words, a tap for all of them (code 175)
+arm = comp(rp.LABEL_L, n='arm', x=34, y=352, w=732, h=44, txt='', g='g', font=6)   # (the longest, "Will not arm: Arm switch on too soon: off, then on (and 9 more)", is 705 px)
+arm['c'] = {'pco': 65535, 'borderc': rp.CARD['c']['bco'], 'bco': rp.CARD['c']['bco']}; arm['a'] = dict(arm['a'], borderw=0, xcen=0, ycen=1, txt_maxl=90, key=255)
+arm['ev'] = {'r': 'va0.val=175<<8\nprint va0.val'}
+add(comps, arm)
+pw = comp(by['pipe'], x=14, y=414, w=574, h=56, font=2); pw['a'] = dict(pw['a'], xcen=2)   # (the Bluetooth word or its tooth, on the bottom row against OK, which keeps the bottom right)
+add(comps, pw)
 add(comps, comp(by['Progress']))
-bk = comp(by['b3'], n='b3', x=14, y=414, w=260, h=56, txt='Backup / Restore ...'); bk['ev'] = {'r': 'va0.val=48<<8\nprint va0.val'}; add(comps, bk)
-add(comps, comp(by['b4']))
+for nm, txt, x, w, code in rp.bottom_row([('b4', 'OK', 0)]):
+    add(comps, comp(by['b4'], x=x, y=414, w=w, h=56))
 menu['comps'] = comps
 json.dump(menu, open(os.path.join(PAGES, '8.json'), 'w'), indent=1)
 idx = json.load(open(os.path.join(PAGES, '..', 'index.json')))

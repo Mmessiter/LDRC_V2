@@ -1,6 +1,6 @@
 {
- "name": "RFSetupView",
- "id": 61,
+ "name": "CalibrateView",
+ "id": 74,
  "w": 800,
  "h": 480,
  "bg": {
@@ -15,7 +15,7 @@
   "right": 255
  },
  "ev": {
-  "preinitialize": "RFSetupView.pic=Screen_Background"
+  "preinitialize": "vis busy,0\nCalibrateView.pic=Screen_Background"
  },
  "comps": [
   {
@@ -34,7 +34,7 @@
     "borderc": 0,
     "bco": 2214
    },
-   "txt": "Rotorflight settings",
+   "txt": "Calibrate (Rotorflight)",
    "a": {
     "style": 0,
     "key": 255,
@@ -75,14 +75,14 @@
    }
   },
   {
-   "n": "t14",
+   "n": "t9",
    "i": 3,
    "t": "text",
    "g": "g",
    "x": 10,
-   "y": 3,
-   "w": 86,
-   "h": 26,
+   "y": 4,
+   "w": 200,
+   "h": 25,
    "font": 2,
    "sta": 1,
    "c": {
@@ -90,7 +90,7 @@
     "borderc": 0,
     "bco": 2214
    },
-   "txt": "Bank",
+   "txt": "Bank 1",
    "a": {
     "style": 0,
     "key": 255,
@@ -98,41 +98,13 @@
     "xcen": 0,
     "ycen": 1,
     "pw": 0,
-    "txt_maxl": 80,
-    "isbr": 0
-   }
-  },
-  {
-   "n": "t8",
-   "i": 4,
-   "t": "text",
-   "g": "g",
-   "x": 100,
-   "y": 3,
-   "w": 110,
-   "h": 26,
-   "font": 2,
-   "sta": 1,
-   "c": {
-    "pco": 65535,
-    "borderc": 0,
-    "bco": 2214
-   },
-   "txt": "Rate",
-   "a": {
-    "style": 0,
-    "key": 255,
-    "borderw": 0,
-    "xcen": 0,
-    "ycen": 1,
-    "pw": 0,
-    "txt_maxl": 80,
+    "txt_maxl": 10,
     "isbr": 0
    }
   },
   {
    "n": "t11",
-   "i": 5,
+   "i": 4,
    "t": "text",
    "g": "g",
    "x": 10,
@@ -160,7 +132,7 @@
   },
   {
    "n": "va0",
-   "i": 6,
+   "i": 5,
    "t": "variable",
    "g": "l",
    "sta": 0,
@@ -172,7 +144,7 @@
   },
   {
    "n": "b0",
-   "i": 7,
+   "i": 6,
    "t": "button",
    "g": "l",
    "x": 620,
@@ -182,7 +154,7 @@
    "font": 6,
    "sta": 1,
    "c": {
-    "bco2": 1024,
+    "bco2": 54938,
     "pco": 0,
     "borderc": 0,
     "bco": 54938,
@@ -199,73 +171,45 @@
     "isbr": 0
    },
    "ev": {
-    "r": "print \"HelpView:RFSETUP.TXT\"\nLogView.t0.txt=\"Rotorflight settings help\"\nLogView.return.txt=\"RFSetupView\""
+    "r": "print \"HelpView:RFCALIB.TXT\"\nLogView.t0.txt=\"Calibrate (Rotorflight) help\"\nLogView.return.txt=\"CalibrateView\""
    }
   },
   {
-   "n": "t3",
-   "i": 8,
+   "n": "h0",
+   "i": 7,
    "t": "text",
-   "g": "l",
+   "g": "g",
    "x": 34,
    "y": 94,
-   "w": 254,
+   "w": 380,
    "h": 36,
-   "font": 2,
+   "font": 6,
    "sta": 1,
    "c": {
-    "pco": 0,
-    "borderc": 0,
-    "bco": 65497
+    "pco": 65535,
+    "borderc": 4426,
+    "bco": 4426
    },
-   "txt": "Link rates and banks",
+   "txt": "Level (accelerometer)",
    "a": {
     "style": 0,
     "key": 255,
     "borderw": 0,
-    "xcen": 1,
+    "xcen": 0,
     "ycen": 1,
     "pw": 0,
-    "txt_maxl": 40,
+    "txt_maxl": 30,
     "isbr": 0
    }
   },
   {
-   "n": "sw0",
-   "i": 9,
-   "t": "switch",
-   "g": "g",
-   "x": 314,
-   "y": 95,
-   "w": 80,
-   "h": 34,
-   "font": 0,
-   "c": {
-    "pco1": 0,
-    "bco2": 2016,
-    "pco": 65535,
-    "bco": 33808,
-    "pco2": 65535
-   },
-   "txt": " / ",
-   "val": 0,
-   "a": {
-    "dez": 0,
-    "dis": 100,
-    "txt_maxl": 24
-   },
-   "ev": {
-    "r": "va0.val=47<<8\nprint va0.val"
-   }
-  },
-  {
-   "n": "t4",
-   "i": 10,
+   "n": "tn0",
+   "i": 8,
    "t": "text",
-   "g": "l",
+   "g": "g",
    "x": 34,
    "y": 134,
-   "w": 254,
+   "w": 380,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -274,11 +218,11 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Rotorflight version",
+   "txt": "",
    "a": {
     "style": 0,
     "key": 255,
-    "borderw": 0,
+    "borderw": 2,
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
@@ -287,13 +231,97 @@
    }
   },
   {
-   "n": "t5",
+   "n": "tn1",
+   "i": 9,
+   "t": "text",
+   "g": "g",
+   "x": 34,
+   "y": 174,
+   "w": 380,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65497
+   },
+   "txt": "",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 40,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "h1",
+   "i": 10,
+   "t": "text",
+   "g": "g",
+   "x": 430,
+   "y": 94,
+   "w": 336,
+   "h": 36,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 4426,
+    "bco": 4426
+   },
+   "txt": "Level trims",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "ltn2",
    "i": 11,
    "t": "text",
    "g": "g",
-   "x": 294,
+   "x": 430,
    "y": 134,
-   "w": 120,
+   "w": 236,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 57215
+   },
+   "txt": "Pitch trim [deg]",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "tn2",
+   "i": 12,
+   "t": "text",
+   "g": "g",
+   "x": 672,
+   "y": 134,
+   "w": 94,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -302,116 +330,57 @@
     "borderc": 0,
     "bco": 65535
    },
-   "txt": "?",
+   "txt": "0",
    "a": {
     "style": 2,
-    "key": 255,
+    "key": 2,
     "borderw": 2,
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
-    "txt_maxl": 40,
+    "txt_maxl": 10,
     "isbr": 0
    },
    "ev": {
-    "p": "keybdB.t1.txt=\"Rotor to motor RPM ratio\""
+    "r": "keybdB.t1.txt=\"Pitch trim degrees\"\nva0.val=174<<8\nprint va0.val"
    }
   },
   {
-   "n": "t6",
-   "i": 12,
-   "t": "text",
-   "g": "l",
-   "x": 34,
-   "y": 174,
-   "w": 254,
-   "h": 36,
-   "font": 2,
-   "sta": 1,
-   "c": {
-    "pco": 0,
-    "borderc": 0,
-    "bco": 65497
-   },
-   "txt": "Arming channel",
-   "a": {
-    "style": 0,
-    "key": 255,
-    "borderw": 0,
-    "xcen": 1,
-    "ycen": 1,
-    "pw": 0,
-    "txt_maxl": 40,
-    "isbr": 0
-   }
-  },
-  {
-   "n": "Arming",
+   "n": "ltn3",
    "i": 13,
    "t": "text",
    "g": "g",
-   "x": 294,
+   "x": 430,
    "y": 174,
-   "w": 120,
+   "w": 236,
    "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 65535
+    "bco": 57215
    },
-   "txt": "?",
-   "a": {
-    "style": 2,
-    "key": 2,
-    "borderw": 2,
-    "xcen": 1,
-    "ycen": 1,
-    "pw": 0,
-    "txt_maxl": 40,
-    "isbr": 0
-   },
-   "ev": {
-    "p": "keybdB.t1.txt=\"Arming channel\""
-   }
-  },
-  {
-   "n": "t1",
-   "i": 14,
-   "t": "text",
-   "g": "l",
-   "x": 34,
-   "y": 214,
-   "w": 254,
-   "h": 36,
-   "font": 2,
-   "sta": 1,
-   "c": {
-    "pco": 0,
-    "borderc": 0,
-    "bco": 65497
-   },
-   "txt": "Main RPM ratio",
+   "txt": "Roll trim [deg]",
    "a": {
     "style": 0,
     "key": 255,
-    "borderw": 0,
+    "borderw": 2,
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
-    "txt_maxl": 40,
+    "txt_maxl": 10,
     "isbr": 0
    }
   },
   {
-   "n": "Ratio",
-   "i": 15,
+   "n": "tn3",
+   "i": 14,
    "t": "text",
    "g": "g",
-   "x": 294,
-   "y": 214,
-   "w": 120,
+   "x": 672,
+   "y": 174,
+   "w": 94,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -420,7 +389,7 @@
     "borderc": 0,
     "bco": 65535
    },
-   "txt": "?",
+   "txt": "0",
    "a": {
     "style": 2,
     "key": 2,
@@ -428,16 +397,80 @@
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
-    "txt_maxl": 40,
+    "txt_maxl": 10,
     "isbr": 0
    },
    "ev": {
-    "p": "keybdB.t1.txt=\"Rotor to motor RPM ratio\""
+    "r": "keybdB.t1.txt=\"Roll trim degrees\"\nva0.val=174<<8\nprint va0.val"
    }
   },
   {
-   "n": "b4",
+   "n": "b2",
+   "i": 15,
+   "t": "button",
+   "g": "l",
+   "x": 211,
+   "y": 414,
+   "w": 180,
+   "h": 56,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Calibrate level",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=172<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "b3",
    "i": 16,
+   "t": "button",
+   "g": "l",
+   "x": 408,
+   "y": 414,
+   "w": 180,
+   "h": 56,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Save",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=173<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "b1",
+   "i": 17,
    "t": "button",
    "g": "l",
    "x": 605,
@@ -447,7 +480,7 @@
    "font": 6,
    "sta": 1,
    "c": {
-    "bco2": 1024,
+    "bco2": 54938,
     "pco": 0,
     "borderc": 0,
     "bco": 54938,
@@ -464,7 +497,35 @@
     "isbr": 0
    },
    "ev": {
-    "r": "va0.val=82<<8\nprint va0.val"
+    "r": "va0.val=171<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "busy",
+   "i": 18,
+   "t": "text",
+   "g": "l",
+   "x": 110,
+   "y": 168,
+   "w": 580,
+   "h": 124,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 65535,
+    "bco": 4426
+   },
+   "txt": "",
+   "a": {
+    "style": 5,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 200,
+    "isbr": 1
    }
   }
  ]

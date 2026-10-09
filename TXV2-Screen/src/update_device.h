@@ -485,6 +485,12 @@ static void updDrawPanel(const ldrc::UpdView &v) {
         const std::string *labels[3] = { &v.button1, &v.button2, &v.button3 };
         int n = 0, idx[3];
         for (int i = 0; i < 3; ++i) if (updBtn[i].there) idx[n++] = i;
+        // 1.11.40 (Malcolm, 9 Oct: "please move the Install now and OK buttons to the right from the left"): the button
+        // that goes ahead - OK, Install now - is the rightmost; the others keep their order to its left
+        for (int k = 0; k + 1 < n; ++k) {
+            const std::string &l = *labels[idx[k]];
+            if (l == "OK" || l == "Install now") { const int go = idx[k]; for (int j = k; j + 1 < n; ++j) idx[j] = idx[j + 1]; idx[n - 1] = go; break; }
+        }
         const int gap = 20, side = 24;
         const int bw = n ? min(280, (w - 2 * side - (n - 1) * gap) / n) : 0;
         int bx = x + (w - (n * bw + (n - 1) * gap)) / 2;

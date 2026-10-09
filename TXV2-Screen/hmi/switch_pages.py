@@ -38,9 +38,9 @@ bar = {'n': 'bar', 't': 'rangebar', 'g': 'g', 'x': 34, 'y': 194, 'w': 732, 'h': 
 add(bar)
 live = label('tn8', 34, 262, 732, '', 30); live['a'] = dict(live['a'], txt_maxl=40)
 hint = label('hint', 34, 350, 732, 'Drag the blobs to set where the switch turns it on.', 30, pale=False); hint['font'] = 2; hint['c']['pco'] = 50712; hint['a']['txt_maxl'] = 90
-for (nm, txt, x, w, code) in [('b5', 'Add', 14, 180, 140), ('b6', 'Remove', 214, 180, 141), ('b3', 'Save', 414, 180, 135), ('b1', 'OK', 605, 180, 134)]:
+for (nm, txt, x, w, code) in rp.bottom_row([('b5', 'Add', 140), ('b6', 'Remove', 141), ('b3', 'Save', 135), ('b1', 'OK', 134)]):
     b = comp(rp.BUTTON, n=nm, x=x, y=414, w=w, h=56, txt=txt); b['ev'] = ap.ev(code); add(b)
-b = comp(rp.BUSY, n='busy', x=40, y=296, w=720, h=44, txt='', font=2); b['c'] = {'pco': 0, 'borderc': 0, 'bco': 65504}; b['a'] = dict(b['a'], borderw=2); add(b)
+add(rp.message_box(rect=(110, 300, 580, 104)))   # (1.11.40: a message box, under the bar so the bar stays in sight)
 ap.finish(69, 'SwitchView', comps)
 
 comps = []; i = [1]; add = ap.header('SwitchPickView', 'What the switch does', 'SWITCHES.TXT', comps, i)
@@ -49,7 +49,7 @@ for c in json.load(open(os.path.join(rp.PAGES, '46.json')))['comps']:
     if c['t'] == 'textselect': proto = c
 wheel = comp(proto, n='list', x=14, y=66, w=772, h=333, txt='', val=0, opt=MODES); wheel['a'] = dict(wheel['a'], hig=37); wheel['ev'] = {}
 add(wheel)
-for (nm, txt, x, w, code) in [('b1', 'Cancel', 414, 180, 144), ('b3', 'OK', 605, 180, 143)]:
+for (nm, txt, x, w, code) in rp.bottom_row([('b1', 'Cancel', 144), ('b3', 'OK', 143)]):
     b = comp(rp.BUTTON, n=nm, x=x, y=414, w=w, h=56, txt=txt); b['ev'] = ap.ev(code); add(b)
-b = comp(rp.BUSY, n='busy', x=40, y=296, w=720, h=44, txt='', font=2); b['c'] = {'pco': 0, 'borderc': 0, 'bco': 65504}; b['a'] = dict(b['a'], borderw=2); add(b)
+add(rp.message_box())
 ap.finish(70, 'SwitchPickView', comps)

@@ -42,7 +42,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.39"
+#define SCREEN_VERSION "1.11.40"
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room
 #endif
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -658,9 +658,18 @@ static uint16_t shade(uint16_t c, int pct) {              // pct > 0 towards whi
 }
 // The Nextion's frame styles: 0 flat (nothing — the help page's boxes), 1 border in borderc, 2 3D down
 // (sunk), 3 3D up (raised), 4 3D auto (raised, sunk while pressed). Drawn from the box's own colour.
+// 1.11.40 (Malcolm, 9 Oct: "Information and warning banners should look like message boxes rather than yellow text
+// stripes"): text style 5 is a MESSAGE BOX, as the yes/no question (PopupView) has it - a dark ring, a white frame inside
+// it, the panel's colour, the words wrapped and kept clear of the frame (MSGBOX_PAD). The pages' "busy" banners use it.
+static const int MSGBOX_RING = 3, MSGBOX_FRAME = 2, MSGBOX_PAD = 16;
 static void drawFrame(const Comp &c, uint16_t bg, bool down) {
     const int x = c.x, y = c.y, w = c.w, h = c.h;
     if (c.style == 1) { for (int i = 0; i < max(1, c.borderw); ++i) gfx->drawRect(x + i, y + i, w - 2 * i, h - 2 * i, c.borderc); return; }
+    if (c.style == 5) {
+        for (int i = 0; i < MSGBOX_RING; ++i) gfx->drawRect(x + i, y + i, w - 2 * i, h - 2 * i, 0x08A6);
+        for (int i = MSGBOX_RING; i < MSGBOX_RING + MSGBOX_FRAME; ++i) gfx->drawRect(x + i, y + i, w - 2 * i, h - 2 * i, c.borderc);
+        return;
+    }
     if (c.style < 2) return;
     const bool sunk = c.style == 2 || (c.style == 4 && down);
     const uint16_t tl = sunk ? shade(bg, -45) : shade(bg, 60), br = sunk ? shade(bg, 60) : shade(bg, -45);
@@ -697,7 +706,7 @@ static std::vector<std::string> textLines(const std::string &s, int font, int ma
 static std::string inkOf(const std::string &s) { size_t e = s.find_last_not_of(' '); return e == std::string::npos ? std::string() : s.substr(0, e + 1); }
 // cutInset >= 0: a single line too wide for its box ends in "..." rather than in half a letter (screen 1.5.6, Malcolm's
 // pages at night: a long model name, the owner's name); the frame's width is kept clear. -1: clipped, as the Nextion does.
-static int frameWidth(const Comp &c) { return c.style == 1 ? max(1, c.borderw) : (c.style >= 2 && c.style <= 4) ? 2 : 0; }
+static int frameWidth(const Comp &c) { return c.style == 1 ? max(1, c.borderw) : (c.style >= 2 && c.style <= 4) ? 2 : c.style == 5 ? MSGBOX_RING + MSGBOX_FRAME : 0; }
 static void drawTextIn(int x, int y, int w, int h, int font, uint16_t col, const std::string &s, int xcen, int ycen, bool wrap = false, int offY = 0, int cutInset = -1) {
     if (s.empty()) return;
     const int fh = fontHeight(font), pad = 2;
@@ -931,6 +940,17 @@ static void drawComp(Comp &c) {
         if (t == "number") { char b[16]; if (c.lenth > 0) snprintf(b, sizeof(b), "%0*ld", c.lenth, (long) c.val); else snprintf(b, sizeof(b), "%ld", (long) c.val); s = b; }   // (one format string with two arguments printed the digit count — every free-length number read 0)
         else if (t == "combobox") s = (c.val >= 0 && c.val < (int) c.options.size()) ? c.options[c.val] : c.txt;
         else s = c.txt;
+        if (t == "text" && c.style == 5) {   // (1.11.40: the message box's words, wrapped inside its padding, each line centred, the lines centred as a block)
+            if (s.empty()) return;
+            const int p = MSGBOX_PAD, fh = fontHeight(c.font), lineH = fh + 4;
+            const std::vector<std::string> ls = textLines(s, c.font, c.w - 2 * p, true);
+            int y0 = c.y + (c.h - ((int) ls.size() * lineH - 4)) / 2;
+            if (y0 < c.y + p / 2) y0 = c.y + p / 2;
+            gfx->startWrite();
+            for (const auto &l : ls) { if (y0 + fh > c.y + c.h - p / 2) break; drawGlyphs(c.x + (c.w - textWidth(c.font, l)) / 2, y0, c.font, c.pco, l); y0 += lineH; }
+            gfx->endWrite();
+            return;
+        }
         drawTextIn(c.x, c.y, c.w, c.h, c.font, c.pco, s, c.xcen, c.ycen, t == "text" && c.isbr != 0, 0, t == "number" || c.isbr ? -1 : frameWidth(c));   // numbers never wrap ("-16" took two lines on the trims page), nor end in dots
         return;
     }

@@ -313,6 +313,28 @@ int main() {
     CHECK(!BakEditsWaiting() && fc["34"].substr(8, 8) == "3502287D" && fc["52"].substr(3 * 28, 26) == "1600857D02857D00003C007800" && fc["112.2"] == rep("7E", 50));
     // a restore without the cable: the adjustments are skipped, not failed
     fcUsb = false; fc["52"][0] = '0'; RestoreAll(); runUntilDone(); CHECK(BakFails == 0 && lastBox.find("could not be") == std::string::npos);
+    // 12. B88: the battery, black box, sensor and trim writes in the stand-in (33 over the image's first bytes, 81 after its
+    // "supported" byte, 57 / 41 into their frames by id, 239 whole), named in the edits, read back offline, and written to
+    // the model by Write edits
+    BoundFlag = true; ModelMatched = true; confirmAnswer = true; CurrentView = RFBACKUP_RESTOREVIEW; fillFc(); fcUsb = true; fc["32"] = rep("11", 27); card.clear(); strcpy(BakModel, ""); BakLoaded = false; Bak[0] = 0;
+    BackupNow(); runUntilDone(); CHECK(BakFails == 0);
+    BoundFlag = false;
+    { uint8_t b[15]; for (int i = 0; i < 15; ++i) b[i] = 0x20 + i; MspAsk(33, b, 15); CHECK(PipeRepCode == 200); char a[200]; BakGet("32", a, sizeof a);
+      CHECK(strlen(a) == 54 && strncmp(a, "202122232425262728292A2B2C2D2E", 30) == 0 && strcmp(a + 30, rep("11", 12).c_str()) == 0 && BakEdited("32")); }   // (the other profiles' capacities kept)
+    { uint8_t b[12]; for (int i = 0; i < 12; ++i) b[i] = 0x40 + i; MspAsk(81, b, 12); CHECK(PipeRepCode == 200); char a[64]; BakGet("80", a, sizeof a); CHECK(strcmp(a, "01404142434445464748494A4B") == 0 && BakEdited("80")); }
+    { uint8_t v[6] = {0x0B, 0x73, 0x00, 0x0B, 0x00, 0x02}; MspAsk(57, v, 6); CHECK(PipeRepCode == 200); char a[200]; BakGet("56", a, sizeof a);
+      CHECK(strncmp(a + 24, "73000B0002", 10) == 0 && strncmp(a + 8, "6E050A0000", 10) == 0 && BakEdited("56")); }   // (id 11's frame, id 10's kept)
+    { uint8_t c[5] = {0x0A, 0x86, 0x01, 0xE7, 0xFF}; MspAsk(41, c, 5); CHECK(PipeRepCode == 200); char a[200]; BakGet("40", a, sizeof a); CHECK(strncmp(a + 8, "8601E7FF", 8) == 0 && BakEdited("40")); }
+    { uint8_t c[5] = {0x55, 1, 2, 3, 4}; MspAsk(41, c, 5); CHECK(PipeRepCode == 404); }   // (no such sensor)
+    { uint8_t t[4] = {0x0F, 0x00, 0xEC, 0xFF}; MspAsk(239, t, 4); CHECK(PipeRepCode == 200); char a[20]; BakGet("240", a, sizeof a); CHECK(strcmp(a, "0F00ECFF") == 0 && BakEdited("240")); }
+    { char e[300]; BakEditsText(e, sizeof e); CHECK(strstr(e, "battery") && strstr(e, "black box") && strstr(e, "voltage sensor") && strstr(e, "current sensor") && strstr(e, "level trims")); }
+    { MspAsk(80, nullptr, 0); CHECK(PipeRepCode == 200 && strcmp(PipeRepBody, "01404142434445464748494A4B") == 0); MspAsk(70, nullptr, 0); CHECK(PipeRepCode == 404); MspAsk(108, nullptr, 0); CHECK(PipeRepCode == 404); }
+    MspAsk(250, nullptr, 0);
+    BoundFlag = true; fcLog.clear(); confirmAnswer = true; BakOffered = false; BakOfferEdits(); CHECK(BakJob == BAK_JOB_EDITS); runUntilDone();
+    { int w33 = 0, w81 = 0, w57 = 0, w41 = 0, w239 = 0; for (auto &r : fcLog) { if (r.fn == 33) ++w33; if (r.fn == 81) ++w81; if (r.fn == 57) ++w57; if (r.fn == 41) ++w41; if (r.fn == 239) ++w239; }
+      if (!(w33 == 1 && w81 == 1 && w57 >= 1 && w41 >= 1 && w239 == 1)) fprintf(stderr, "writes 33 %d 81 %d 57 %d 41 %d 239 %d fails %d '%s'\n", w33, w81, w57, w41, w239, BakFails, lastBox.c_str());
+      CHECK(w33 == 1 && w81 == 1 && w57 >= 1 && w41 >= 1 && w239 == 1); }
+    CHECK(!BakEditsWaiting() && fc["80"] == "01404142434445464748494A4B" && fc["240"] == "0F00ECFF" && fc["56"].substr(24, 10) == "73000B0002");
     printf("test_backup: %d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }

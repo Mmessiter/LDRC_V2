@@ -11,11 +11,42 @@ TITLE, CARD, LABEL_L, LABEL_R, BUTTON, FIELD, BANK, MODEL, VA0, BUSY = (by[n] fo
 def comp(proto, **kw):
     c = json.loads(json.dumps(proto)); c.update(kw); return c
 
+# 1.11.40 (Malcolm, 9 Oct: "The groups of buttons should look tidy, centred, and lined up wherever possible"; 4 Oct: OK at
+# the bottom right, as on every page): the bottom row sits in the system pages' four slots (x 14, 211, 408, 605, 180
+# wide), the same on every page: OK always in the last, Save always just left of it, the page's other buttons in the
+# slots to their left, side by side - no gaps, and Save and OK where the finger expects them. A label too wide for a slot
+# takes two; five buttons share the width.
+SLOT_X, SLOT_W, SLOT_PITCH = 14, 180, 197
+def bottom_row(buttons, y=414, h=56, minw=180):
+    """buttons: (name, words, code) -> (name, words, x, w, code), in the order they sit"""
+    from fontw import width
+    ok = [b for b in buttons if b[1] == 'OK']; save = [b for b in buttons if b[1] == 'Save']
+    ordered = [b for b in buttons if b not in ok and b not in save] + save + ok
+    need = [2 if width(6, t) + 16 > minw else 1 for _, t, _ in ordered]   # (8 px either side of the words, inside the bevel)
+    if sum(need) > 4:   # (five or more: the width shared alike, centred)
+        n = len(ordered); gap = 12; w = (772 - (n - 1) * gap) // n; x0 = (800 - (n * w + (n - 1) * gap)) // 2
+        return [(nm, t, x0 + k * (w + gap), w, code) for k, (nm, t, code) in enumerate(ordered)]
+    out, end = [], 4
+    for (nm, t, code), k in reversed(list(zip(ordered, need))):
+        start = end - k
+        out.append((nm, t, SLOT_X + start * SLOT_PITCH, k * SLOT_W + (k - 1) * (SLOT_PITCH - SLOT_W), code)); end = start
+    return list(reversed(out))
+
+# 1.11.40 (Malcolm, 9 Oct: "Information and warning banners should look like message boxes rather than yellow text
+# stripes"): the page's "busy" banner in the message box's own dress (the screen's text style 5: a dark ring, a white
+# frame, the panel's colour, white words wrapped inside), over the middle of the page, last so it lies on top.
+MSGBOX = (110, 168, 580, 124)
+def message_box(name='busy', rect=MSGBOX, font=2):
+    b = comp(BUSY, n=name, x=rect[0], y=rect[1], w=rect[2], h=rect[3], txt='', font=font)
+    b['sta'] = 1; b['c'] = {'pco': 65535, 'borderc': 65535, 'bco': CARD['c']['bco']}
+    b['a'] = dict(b.get('a', {}), style=5, borderw=0, xcen=1, ycen=1, isbr=1, txt_maxl=200)
+    return b
+
 # 1.11.34 (Malcolm, 8 Oct: "the red background colour chosen has insufficient contrast with the text ... very pale shades
 # ... and black text ... the different colours should suggest the groupings"): a label's box is a pale shade, black words,
 # one shade per group (each heading starts the next), the first shade for a page without headings.
 PALE = (65497, 57215, 59323, 61215, 65402, 65341)   # pale yellow, blue, green, lavender, peach, pink (RGB565)
-def page(pid, name, title, fields, buttons, help_file):
+def page(pid, name, title, fields, buttons, help_file, busy_rect=MSGBOX):
     """fields: (name, label, column, row, kind, code[, keypad label]) with kind 'num' (the keypad), 'cycle' (a tap), 'switch' (on/off), 'info' (told, not changed),
     'head' (a group heading, no value) or 'pick' (1.11.35: a choice from a long list, the whole row: label, a < button, the choice, a > button;
     code = the > button's, the 7th element = the < button's)"""
@@ -45,6 +76,11 @@ def page(pid, name, title, fields, buttons, help_file):
             f = comp(FIELD, n=nm, x=246, y=y, w=464, h=36, txt='', g='g'); f['a'] = dict(f['a'], key=255, txt_maxl=40); add(f)
             bn = comp(BUTTON, n='n' + nm, x=716, y=y - 2, w=50, h=40, txt='>'); bn['ev'] = {'r': 'va0.val=%d<<8\nprint va0.val' % code}; add(bn)
             continue
+        if kind == 'wide':   # 1.11.40: a value stepped by a tap whose words need room ("Whenever armed"): a shorter label, a wider box
+            lw2, vx2, vw2 = (150, 190, 224) if col == 0 else (150, 586, 180)
+            lab = comp(LABEL_L, n='l' + nm, x=lx, y=y, w=lw2, h=36, txt=label, g='g'); lab['c'] = dict(lab['c'], pco=0, bco=shade()); add(lab)
+            f = comp(FIELD, n=nm, x=vx2, y=y, w=vw2, h=36, txt='', g='g'); f['a'] = dict(f['a'], key=255, txt_maxl=30); f['ev'] = {'r': 'va0.val=%d<<8\nprint va0.val' % code}; add(f)
+            continue
         if kind == 'info':   # 1.11.34: a row that only tells (the configurator's selects the transmitter does not change): label box across the column, the main board sets its text
             f = comp(LABEL_L, n=nm, x=lx, y=y, w=lw + vw + (vx - lx - lw), h=36, txt=label, g='g')
             f['c'] = dict(f['c'], pco=0, bco=shade()); f['a'] = dict(f['a'], txt_maxl=40); add(f); continue
@@ -60,11 +96,9 @@ def page(pid, name, title, fields, buttons, help_file):
         if kind == 'num': f['ev'] = {'r': 'keybdB.t1.txt="%s"\nva0.val=%d<<8\nprint va0.val' % (klabel, code)}
         else: f['a'] = dict(f['a'], key=255); f['ev'] = {'r': 'va0.val=%d<<8\nprint va0.val' % code}
         add(f)
-    for (nm, txt, x, w, code) in buttons:
+    for (nm, txt, x, w, code) in bottom_row([(b[0], b[1], b[4]) for b in buttons]):   # (1.11.40: the x and w given are not used: the row is laid out by its rule)
         b = comp(BUTTON, n=nm, x=x, y=414, w=w, h=56, txt=txt); b['ev'] = {'r': 'va0.val=%d<<8\nprint va0.val' % code}; add(b)
-    b = comp(BUSY, n='busy', x=40, y=296, w=720, h=44, txt='', font=2)   # over rows 5-6 while it shows (vis 0 the rest of the time)
-    b['c'] = {'pco': 0, 'borderc': 0, 'bco': 65504}; b['a'] = dict(b['a'], borderw=2)   # 1.11.22 (Malcolm: "more obviously a banner and a bit brighter, perhaps with a border"): yellow, black words (a flat text's border does not draw: the colour does the work)
-    add(b)
+    add(message_box(rect=busy_rect))   # (vis 0 the rest of the time; 1.11.22's yellow stripe became a message box in 1.11.40)
     out = {'name': name, 'id': pid, 'w': 800, 'h': 480, 'bg': rates['bg'], 'nav': rates['nav'], 'ev': {'preinitialize': 'vis busy,0\n%s.pic=Screen_Background' % name}, 'comps': comps}
     json.dump(out, open(os.path.join(PAGES, '%d.json' % pid), 'w'), indent=1)
     print(pid, name, len(comps), 'components')

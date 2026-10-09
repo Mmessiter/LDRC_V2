@@ -14,7 +14,7 @@ rp.page(71, 'CopyBankView', 'Copy a bank', [
     ('tn2', 'PIDs, PID+ and rescue', 0, 2, 'switch', 150), ('tn3', 'Rates', 1, 2, 'switch', 151),
     ('tn4', 'Governor gains', 0, 3, 'switch', 152), ('tn5', 'Head speed too', 1, 3, 'switch', 153),
     ('tn6', 'Scale gains to rpm', 0, 4, 'switch', 154),
-], [('b3', 'Copy bank 1 to bank 2', 14, 420, 147), ('b1', 'OK', 605, 180, 146)], 'COPYBANK.TXT')
+], [('b3', 'Copy bank 1 to bank 2', 14, 420, 147), ('b1', 'OK', 605, 180, 146)], 'COPYBANK.TXT', busy_rect=(110, 296, 580, 108))   # (1.11.40: the message box below the rows)
 idx = json.load(open(os.path.join(rp.PAGES, '..', 'index.json')))
 pg = json.load(open(os.path.join(rp.PAGES, '71.json')))
 if 71 not in {x['id'] for x in idx['pages']}: idx['pages'].append({'id': 71, 'name': 'CopyBankView', 'n': len(pg['comps'])}); idx['pages'].sort(key=lambda x: x['id'])

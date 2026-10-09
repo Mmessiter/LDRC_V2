@@ -61,9 +61,9 @@ live = label('tn8', 34, 262, 732, '', 30); live['a'] = dict(live['a'], txt_maxl=
 hint = label('hint', 34, 350, 732, 'Tap a zone to type its value. Drag the round ends.', 30, pale=False); hint['font'] = 2; hint['c']['pco'] = 50712   # (worded per kind by the main board)
 for k in range(6): hidden('tp%d' % k, 'Position %d' % (k + 1))
 hidden('tk0', 'Low end value'); hidden('tk1', 'High end value'); hidden('ts0', 'Step size'); hidden('ts1', 'Lowest value'); hidden('ts2', 'Highest value')
-for (nm, txt, x, w, code) in [('b5', 'Add', 14, 180, 128), ('b6', 'Remove', 214, 180, 129), ('b3', 'Save', 414, 180, 118), ('b1', 'OK', 605, 180, 117)]:
+for (nm, txt, x, w, code) in rp.bottom_row([('b5', 'Add', 128), ('b6', 'Remove', 129), ('b3', 'Save', 118), ('b1', 'OK', 117)]):
     b = comp(rp.BUTTON, n=nm, x=x, y=414, w=w, h=56, txt=txt); b['ev'] = ev(code); add(b)
-b = comp(rp.BUSY, n='busy', x=40, y=296, w=720, h=44, txt='', font=2); b['c'] = {'pco': 0, 'borderc': 0, 'bco': 65504}; b['a'] = dict(b['a'], borderw=2); add(b)
+add(rp.message_box(rect=(110, 300, 580, 104)))   # (1.11.40: a message box, under the bar so the bar stays in sight)
 finish(67, 'AdjustView', comps)
 
 # ---- page 68: the picker
@@ -74,7 +74,7 @@ for pg in (46,):
         if c['t'] == 'textselect': proto = c
 wheel = comp(proto, n='list', x=14, y=66, w=772, h=333, txt='', val=0, opt=[NAMES[f] for f in ORDER]); wheel['a'] = dict(wheel['a'], hig=37); wheel['ev'] = {}
 add(wheel)
-for (nm, txt, x, w, code) in [('b1', 'Cancel', 414, 180, 132), ('b3', 'OK', 605, 180, 131)]:
+for (nm, txt, x, w, code) in rp.bottom_row([('b1', 'Cancel', 132), ('b3', 'OK', 131)]):
     b = comp(rp.BUTTON, n=nm, x=x, y=414, w=w, h=56, txt=txt); b['ev'] = ev(code); add(b)
-b = comp(rp.BUSY, n='busy', x=40, y=296, w=720, h=44, txt='', font=2); b['c'] = {'pco': 0, 'borderc': 0, 'bco': 65504}; b['a'] = dict(b['a'], borderw=2); add(b)
+add(rp.message_box())
 finish(68, 'AdjPickView', comps)

@@ -186,13 +186,41 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
-## "Close the phone app if it is running" (V2 B87, screen 1.11.39, 9 Oct 2026)
+## The last Rotorflight settings, message boxes, tidy buttons (V2 B88, screen 1.11.40, 9 Oct 2026)
 
-Malcolm, 9 Oct morning, after a Bluetooth that would not connect because his iPhone's app held the receiver's one link:
-"when it says cannot connect to Bluetooth or words to that effect, let's add the message 'Close the app if it is
-running!'". The screen's Connecting Bluetooth notice says "still trying: close the phone app if it is running" after
-six seconds; the transmitter's refusal on entering a page says the same, and the "NOT read" banner now says "Close the
-phone app if it is running" rather than asking whether it is connected.
+Malcolm, 9 Oct, before the gym: "implement all the remaining possible Rotorflight configuration options, and then look
+critically at the ui design of all our new pages ... Information and warning banners should look like message boxes
+rather than yellow text stripes ... On the tx update page, please move the Install now and OK buttons to the right ...
+The groups of buttons should look tidy, centred, and lined up wherever possible."
+
+**New on the Rotorflight menu** (RF_FcSetup.h, pages 72-74, hmi/fcsetup_pages.py), worded as the receiver's own pages:
+- **Battery**: cells (0 automatic), capacity, voltage from / current from (None, FC pads, ESC telemetry), each cell's
+  Full / Warning / Empty / Highest allowed (they must rise), and the FC pads' sensors (voltage scale; current scale
+  and offset) shown only when the pads are the source. MSP 32 / 33 (the first 15 bytes: the battery profile in use,
+  the others untouched), 56 / 57 and 40 / 41 by the meter's id, only when changed.
+- **Black box**: when (whenever armed, while switch on, armed + switch, never), where (FC memory, SD card, serial
+  logger, nowhere), how often (1 in N, with the rate a second), after disarm, overwrite oldest; the memory (used of
+  size, ready / full) and Erase all logs (one 72, then 70 until it is empty). Where and how often apply at boot, so a
+  save that changes them restarts the flight controller; the switch choices warn when no Black box switch is set up.
+- **Calibrate**: the level, live (MSP 108), Calibrate level (205, stored 2.5 s later), the level trims in degrees (240 /
+  239, signed).
+- **Why it will not arm**: a line under the buttons, every 2 s with the model connected and Bluetooth joined: "Ready
+  to arm" (green), "Will not arm: Throttle is not at idle (and 1 more)" (yellow), "Armed" (red), from MSP 101's
+  arming-disable flags in plain words; a tap lists every reason. It never asks on top of another request.
+- All of them were in the backup's sweep and restore already; with no model the backup stands in, now with the
+  patches these writes need (33 over the image's first bytes, 81 after its "supported" byte, 57 / 41 into their frame
+  by id), named in the edits ("battery", "black box", "voltage sensor", "current sensor", "level trims").
+The menu is five rows of three (Backup / Restore joined the grid), the arming line under it, the Bluetooth word
+beside OK. What stays on the phone or computer: ESC setup, motor test, the command line, the black box check, the
+first-time wizard, ports, the receiver tab and the guided tuning.
+
+**The look** (screen 1.11.40): every page's banner is a message box (text style 5: a dark ring, a white frame, the
+panel's colour, the words wrapped and centred), below a table where there is room, else over the middle; the yellow
+stripes are gone. The bottom row of every Rotorflight page sits in the four fixed slots: OK always bottom right, Save
+always just left of it, the page's other buttons to their left, no gaps (rescue_pages.bottom_row; the PID, rates and
+governor pages by hmi/tidy_rf_pages.py). The settings page has the other pages' header and label boxes (and its
+arming-channel keypad was titled "Rotor to motor RPM ratio"). The update panel puts OK and Install now on the right.
+Host tests: dev/test_fcsetup (43), test_backup section 12 (130 in all).
 
 ## "Close the phone app if it is running" (V2 B87, screen 1.11.39, 9 Oct 2026)
 

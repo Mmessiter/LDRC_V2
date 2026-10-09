@@ -1,0 +1,9 @@
+Battery: how the flight controller sees the flight pack, for its warnings and the telemetry. Needs the model connected, the safety on and a Version 2 receiver with Bluetooth - or, with no model, the backup on the card, where the changes wait as edits for the next connection.||
+
+Cells: how many cells the pack has; 0 = the flight controller works it out from the voltage. Capacity: the pack in mAh, for the fuel gauge (the battery profile in use, if you have several). Voltage from and Current from: tap to step - usually ESC telemetry; FC pads when the battery wires go to the flight controller's own sensor pads; None.||
+
+Each cell: Full (fresh off the charger, 4.20 for LiPo), Warning (time to land, 3.50 is common), Empty (the bottom of the fuel gauge) and Highest allowed (for counting the cells). They must rise: Empty, Warning, Full, Highest.||
+
+FC pads: the scale of the voltage sensor, and the scale and offset of the current sensor, show only when the pads are the source. Adjust them until the flight controller's reading matches a meter.||
+
+Save writes, stores and reads back. OK leaves (edits not saved are asked about).||

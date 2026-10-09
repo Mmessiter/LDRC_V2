@@ -36,7 +36,8 @@ def text_of(c):
 
 def lint(pid):
     pg = json.load(open(os.path.join(PAGES, f'{pid}.json'))); found = []
-    comps = [c for c in pg['comps'] if c.get('x') is not None and c['x'] >= 0 and c['t'] not in ('variable', 'timer', 'audio', 'hotspot')]
+    comps = [c for c in pg['comps'] if c.get('x') is not None and c['x'] >= 0 and c['t'] not in ('variable', 'timer', 'audio', 'hotspot')
+             and c.get('a', {}).get('style') != 5]   # (1.11.40: a message box lies over the page while it shows, hidden the rest of the time)
     for c in comps:
         if c['t'] not in TEXTY: continue
         a = c.get('a', {}); s = text_of(c)

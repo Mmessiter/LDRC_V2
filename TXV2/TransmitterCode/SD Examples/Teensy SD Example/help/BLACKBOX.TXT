@@ -1,0 +1,11 @@
+Black box: the flight controller's flight recorder. Needs the model connected, the safety on and a Version 2 receiver with Bluetooth; with no model, the settings in the backup can be changed, to be written at the next connection.||
+
+When: Whenever armed records every flight with no switch. While switch on and Armed + switch need a Black box switch on the Switches page (the page asks if there is none). Never turns it off.||
+
+Where: the flight controller's own memory chip is usual (16 MB on most boards); SD card and a serial logger are for boards that have them. How often: 1 in 8 control loops is plenty for tuning and governor problems; 1 in 1 or 2 for vibration hunting, but the memory fills that much faster. Where and How often apply when the flight controller starts, so a save that changes them restarts it.||
+
+After disarm: seconds of recording after you disarm, so the landing is in the log. Overwrite oldest: on, a full memory keeps recording by wiping the oldest flight; off, it stops when full.||
+
+Memory: how full it is. Erase all logs deletes every flight log for good (the flight controller beeps while it erases, 10 to 60 seconds); download them first with the Configurator if you want to keep them.||
+
+Save writes, stores and reads back. OK leaves.||

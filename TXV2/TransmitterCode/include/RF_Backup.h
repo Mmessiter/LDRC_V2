@@ -299,6 +299,53 @@ FLASHMEM bool BakOfflineAnswer(uint8_t fn, const uint8_t *data, int len) // true
         BakReply(200, "");
         return true;
     }
+    if (fn == 33 && len > 0)
+    { // B88: the battery page writes the first 15 bytes (the active profile's capacity and on): over the image, the other profiles' capacities kept
+        char img[200];
+        const int have = BakGet("32", img, sizeof(img));
+        BytesToHex(data, len, hex, sizeof(hex));
+        if (have > len * 2) memcpy(img, hex, (size_t)len * 2); else snprintf(img, sizeof(img), "%s", hex);
+        if (!BakSet("32", img)) { BakReply(507, "the backup file is full"); return true; }
+        BakMarkEdit("32");
+        BakReply(200, "");
+        return true;
+    }
+    if (fn == 81 && len >= 12)
+    { // B88: the black box setup: the image is the "supported" byte, then what was written
+        char img[64];
+        const int have = BakGet("80", img, sizeof(img));
+        if (have < 2) { BakReply(404, "no black box setup in the backup"); return true; }
+        BytesToHex(data, 12, hex, sizeof(hex));
+        if (have >= 26) memcpy(img + 2, hex, 24); else snprintf(img + 2, sizeof(img) - 2, "%s", hex);
+        if (!BakSet("80", img)) { BakReply(507, "the backup file is full"); return true; }
+        BakMarkEdit("80");
+        BakReply(200, "");
+        return true;
+    }
+    if ((fn == 57 && len >= 6) || (fn == 41 && len >= 5))
+    { // B88: a voltage (57: id, scale, divider, divmul) or current (41: id, scale, offset) sensor, into its frame of the 56 / 40 image (count, then a frame each: length, id, type, the values), found by its id
+        const char *k = fn == 57 ? "56" : "40";
+        const int frame = fn == 57 ? 8 : 7, vals = fn == 57 ? 5 : 4;
+        char img[200];
+        const int hl = BakGet(k, img, sizeof(img));
+        if (hl < 2) { BakReply(404, "no sensors in the backup"); return true; }
+        const int count = Hex2(img);
+        bool found = false;
+        for (int i = 0; i < count && !found; ++i)
+        {
+            const int off = (1 + i * frame) * 2;   // (in hex characters: the frame's length byte)
+            if (off + frame * 2 > hl) break;
+            if (Hex2(img + off + 2) != data[0]) continue;
+            BytesToHex(data + 1, vals, hex, sizeof(hex));
+            memcpy(img + off + 6, hex, (size_t)vals * 2);
+            found = true;
+        }
+        if (!found) { BakReply(404, "no such sensor in the backup"); return true; }
+        if (!BakSet(k, img)) { BakReply(507, "the backup file is full"); return true; }
+        BakMarkEdit(k);
+        BakReply(200, "");
+        return true;
+    }
     const uint8_t rfn = BakReadOfWrite(fn);
     if (rfn && len > 0)
     { // a write: into the file
@@ -1036,7 +1083,7 @@ FLASHMEM static void BakEditsText(char *out, size_t n)
     for (char *p = strtok(e, ","); p; p = strtok(nullptr, ","))
     {
         const int fn = atoi(p); const char *dot = strchr(p, '.');
-        const char *name = fn == 92 ? "filters" : fn == 36 ? "features" : fn == 146 ? "rescue" : fn == 120 ? "servos" : fn == 42 ? "mixer" : fn == 174 ? "mixer input" : fn == 112 ? "PIDs" : fn == 94 ? "adv. PIDs" : fn == 111 ? "rates" : fn == 148 ? "governor" : fn == 142 ? "governor global" : fn == 34 ? "switches" : fn == 52 ? "adjustments" : p;
+        const char *name = fn == 92 ? "filters" : fn == 36 ? "features" : fn == 146 ? "rescue" : fn == 120 ? "servos" : fn == 42 ? "mixer" : fn == 174 ? "mixer input" : fn == 112 ? "PIDs" : fn == 94 ? "adv. PIDs" : fn == 111 ? "rates" : fn == 148 ? "governor" : fn == 142 ? "governor global" : fn == 34 ? "switches" : fn == 52 ? "adjustments" : fn == 32 ? "battery" : fn == 80 ? "black box" : fn == 240 ? "level trims" : fn == 56 ? "voltage sensor" : fn == 40 ? "current sensor" : p;
         char w[40];
         if (dot && fn != 174 && fn != 154) snprintf(w, sizeof(w), "%s bank %d", name, atoi(dot + 1) + 1); else snprintf(w, sizeof(w), "%s", name);
         if (out[0]) strncat(out, ", ", n - strlen(out) - 1);

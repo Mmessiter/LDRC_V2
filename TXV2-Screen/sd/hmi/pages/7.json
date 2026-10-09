@@ -1,1 +1,1876 @@
-{"name":"PID_A_View","id":7,"w":800,"h":480,"bg":{"sta":2,"mode":"image","picture":3},"nav":{"up":255,"down":255,"left":255,"right":255},"ev":{"preinitialize":"PID_A_View.pic=Screen_Background\nvis busy,0"},"comps":[{"n":"t0","i":1,"t":"text","g":"g","x":0,"y":0,"w":800,"h":42,"font":0,"sta":1,"c":{"pco":65535,"borderc":0,"bco":2214},"txt":"PID + (Rotorflight)","a":{"style":0,"key":255,"borderw":0,"xcen":1,"ycen":1,"pw":0,"txt_maxl":30,"isbr":0}},{"n":"card","i":61,"t":"text","g":"l","x":0,"y":42,"w":800,"h":438,"font":6,"sta":1,"c":{"pco":65535,"borderc":65535,"bco":4426},"txt":"","a":{"style":0,"key":255,"borderw":0,"xcen":0,"ycen":1,"pw":0,"txt_maxl":1,"isbr":0}},{"n":"t1","i":2,"t":"text","g":"g","x":250,"y":82,"w":88,"h":25,"font":2,"sta":1,"c":{"pco":0,"borderc":0,"bco":65535},"txt":"0.0","a":{"style":2,"key":2,"borderw":2,"xcen":1,"ycen":1,"pw":0,"txt_maxl":10,"isbr":0},"ev":{"r":"keybdB.t1.txt=\"Ground error decay \"\nva0.val=33<<8\nprint va0.val"}},{"n":"t2","i":3,"t":"text","g":"g","x":250,"y":110,"w":88,"h":25,"font":2,"sta":1,"c":{"pco":0,"borderc":0,"bco":65535},"txt":"0.0","a":{"style":2,"key":2,"borderw":2,"xcen":1,"ycen":1,"pw":0,"txt_maxl":10,"isbr":0},"ev":{"r":"keybdB.t1.txt=\"Cutoff point for Roll \"\nva0.val=33<<8\nprint va0.val"}},{"n":"t3","i":4,"t":"text","g":"g","x":250,"y":138,"w":88,"h":25,"font":2,"sta":1,"c":{"pco":0,"borderc":0,"bco":65535},"txt":"0.0","a":{"style":2,"key":2,"borderw":2,"xcen":1,"ycen":1,"pw":0,"txt_maxl":10,"isbr":0},"ev":{"r":"keybdB.t1.txt=\"Cutoff point for Pitch \"\nva0.val=33<<8\nprint va0.val"}},{"n":"t4","i":5,"t":"text","g":"g","x":250,"y":166,"w":88,"h":25,"font":2,"sta":1,"c":{"pco":0,"borderc":0,"bco":65535},"txt":"0.0","a":{"style":2,"key":2,"borderw":2,"xcen":1,"ycen":1,"pw":0,"txt_maxl":10,"isbr":0},"ev":{"r":"keybdB.t1.txt=\"Cutoff point for Yaw \"\nva0.val=33<<8\nprint va0.val"}},{"n":"t5","i":6,"t":"text","g":"g","x":250,"y":194,"w":88,"h":25,"font":2,"sta":1,"c":{"pco":0,"borderc":0,"bco":65535},"txt":"0.0","a":{"style":2,"key":2,"borderw":2,"xcen":1,"ycen":1,"pw":0,"txt_maxl":10,"isbr":0},"ev":{"r":"keybdB.t1.txt=\"Error limit Roll \"\nva0.val=33<<8\nprint va0.val"}},{"n":"t6","i":7,"t":"text","g":"g","x":250,"y":222,"w":88,"h":25,"font":2,"sta":1,"c":{"pco":0,"borderc":0,"bco":65535},"txt":"0.0","a":{"style":2,"key":2,"borderw":2,"xcen":1,"ycen":1,"pw":0,"txt_maxl":10,"isbr":0},"ev":{"r":"keybdB.t1.txt=\"Error limit Pitch \"\nva0.val=33<<8\nprint va0.val"}},{"n":"t7","i":8,"t":"text","g":"g","x":250,"y":250,"w":88,"h":25,"font":2,"sta":1,"c":{"pco":0,"borderc":0,"bco":65535},"txt":"0.0","a":{"style":2,"key":2,"borderw":2,"xcen":1,"ycen":1,"pw":0,"txt_maxl":10,"isbr":0},"ev":{"r":"keybdB.t1.txt=\"Error limit Yaw \"\nva0.val=33<<8\nprint va0.val"}},{"n":"t8","i":9,"t":"text","g":"g","x":250,"y":278,"w":88,"h":25,"font":2,"sta":1,"c":{"pco":0,"borderc":0,"bco":65535},"txt":"0.0","a":{"style":2,"key":2,"borderw":2,"xcen":1,"ycen":1,"pw":0,"txt_maxl":10,"isbr":0},"ev":{"r":"keybdB.t1.txt=\"HSI offset limit Roll \"\nva0.val=33<<8\nprint va0.val"}},{"n":"t9","i":10,"t":"text","g":"g","x":250,"y":306,"w":88,"h":25,"font":2,"sta":1,"c":{"pco":0,"borderc":0,"bco":65535},"txt":"0.0","a":{"style":2,"key":2,"borderw":2,"xcen":1,"ycen":1,"pw":0,"txt_maxl":10,"isbr":0},"ev":{"r":"keybdB.t1.txt=\"HSI offset limit Pitch \"\nva0.val=33<<8\nprint va0.val"}},{"n":"t10","i":11,"t":"text","g":"g","x":250,"y":334,"w":88,"h":25,"font":2,"sta":1,"c":{"pco":0,"borderc":0,"bco":65535},"txt":"0.0","a":{"style":2,"key":2,"borderw":2,"xcen":1,"ycen":1,"pw":0,"txt_maxl":10,"isbr":0},"ev":{"r":"keybdB.t1.txt=\"Roll bandwidth \"\nva0.val=33<<8\nprint va0.val"}},{"n":"t11","i":12,"t":"text","g":"g","x":250,"y":362,"w":88,"h":25,"font":2,"sta":1,"c":{"pco":0,"borderc":0,"bco":65535},"txt":"0.0","a":{"style":2,"key":2,"borderw":2,"xcen":1,"ycen":1,"pw":0,"txt_maxl":10,"isbr":0},"ev":{"r":"keybdB.t1.txt=\"Pitch bandwidth \"\nva0.val=33<<8\nprint va0.val"}},{"n":"t12","i":13,"t":"text","g":"g","x":250,"y":390,"w":88,"h":25,"font":2,"sta":1,"c":{"pco":0,"borderc":0,"bco":65535},"txt":"0.0","a":{"style":2,"key":2,"borderw":2,"xcen":1,"ycen":1,"pw":0,"txt_maxl":10,"isbr":0},"ev":{"r":"keybdB.t1.txt=\"Yaw bandwidth \"\nva0.val=33<<8\nprint va0.val"}},{"n":"t13","i":14,"t":"text","g":"g","x":676,"y":54,"w":88,"h":25,"font":2,"sta":1,"c":{"pco":0,"borderc":0,"bco":65535},"txt":"0.0","a":{"style":2,"key":2,"borderw":2,"xcen":1,"ycen":1,"pw":0,"txt_maxl":10,"isbr":0},"ev":{"r":"keybdB.t1.txt=\"Roll D-Term cutoff \"\nva0.val=33<<8\nprint va0.val"}},{"n":"t14","i":15,"t":"text","g":"g","x":676,"y":82,"w":88,"h":25,"font":2,"sta":1,"c":{"pco":0,"borderc":0,"bco":65535},"txt":"0.0","a":{"style":2,"key":2,"borderw":2,"xcen":1,"ycen":1,"pw":0,"txt_maxl":10,"isbr":0},"ev":{"r":"keybdB.t1.txt=\"Pitch D-Term cutoff \"\nva0.val=33<<8\nprint va0.val"}},{"n":"t15","i":16,"t":"text","g":"g","x":676,"y":110,"w":88,"h":25,"font":2,"sta":1,"c":{"pco":0,"borderc":0,"bco":65535},"txt":"0.0","a":{"style":2,"key":2,"borderw":2,"xcen":1,"ycen":1,"pw":0,"txt_maxl":10,"isbr":0},"ev":{"r":"keybdB.t1.txt=\"Yaw D-Term cutoff \"\nva0.val=33<<8\nprint va0.val"}},{"n":"t16","i":17,"t":"text","g":"g","x":676,"y":138,"w":88,"h":25,"font":2,"sta":1,"c":{"pco":0,"borderc":0,"bco":65535},"txt":"0.0","a":{"style":2,"key":2,"borderw":2,"xcen":1,"ycen":1,"pw":0,"txt_maxl":10,"isbr":0},"ev":{"r":"keybdB.t1.txt=\"Roll B-Term cutoff \"\nva0.val=33<<8\nprint va0.val"}},{"n":"t17","i":18,"t":"text","g":"g","x":676,"y":166,"w":88,"h":25,"font":2,"sta":1,"c":{"pco":0,"borderc":0,"bco":65535},"txt":"0.0","a":{"style":2,"key":2,"borderw":2,"xcen":1,"ycen":1,"pw":0,"txt_maxl":10,"isbr":0},"ev":{"r":"keybdB.t1.txt=\"Pitch B-Term cutoff \"\nva0.val=33<<8\nprint va0.val"}},{"n":"t18","i":19,"t":"text","g":"g","x":676,"y":194,"w":88,"h":25,"font":2,"sta":1,"c":{"pco":0,"borderc":0,"bco":65535},"txt":"0.0","a":{"style":2,"key":2,"borderw":2,"xcen":1,"ycen":1,"pw":0,"txt_maxl":10,"isbr":0},"ev":{"r":"keybdB.t1.txt=\"Yaw B-Term cutoff \"\nva0.val=33<<8\nprint va0.val"}},{"n":"t19","i":20,"t":"text","g":"g","x":676,"y":222,"w":88,"h":25,"font":2,"sta":1,"c":{"pco":0,"borderc":0,"bco":65535},"txt":"0.0","a":{"style":2,"key":2,"borderw":2,"xcen":1,"ycen":1,"pw":0,"txt_maxl":10,"isbr":0},"ev":{"r":"keybdB.t1.txt=\"CW Yaw stop gain \"\nva0.val=33<<8\nprint va0.val"}},{"n":"t20","i":21,"t":"text","g":"g","x":676,"y":250,"w":88,"h":25,"font":2,"sta":1,"c":{"pco":0,"borderc":0,"bco":65535},"txt":"0.0","a":{"style":2,"key":2,"borderw":2,"xcen":1,"ycen":1,"pw":0,"txt_maxl":10,"isbr":0},"ev":{"r":"keybdB.t1.txt=\"CCW Yaw stop gain \"\nva0.val=33<<8\nprint va0.val"}},{"n":"t21","i":22,"t":"text","g":"g","x":676,"y":278,"w":88,"h":25,"font":2,"sta":1,"c":{"pco":0,"borderc":0,"bco":65535},"txt":"0.0","a":{"style":2,"key":2,"borderw":2,"xcen":1,"ycen":1,"pw":0,"txt_maxl":10,"isbr":0},"ev":{"r":"keybdB.t1.txt=\"Yaw Precomp cutoff \"\nva0.val=33<<8\nprint va0.val"}},{"n":"t22","i":23,"t":"text","g":"g","x":676,"y":306,"w":88,"h":25,"font":2,"sta":1,"c":{"pco":0,"borderc":0,"bco":65535},"txt":"0.0","a":{"style":2,"key":2,"borderw":2,"xcen":1,"ycen":1,"pw":0,"txt_maxl":10,"isbr":0},"ev":{"r":"keybdB.t1.txt=\"Cyclic FF gain \"\nva0.val=33<<8\nprint va0.val"}},{"n":"t23","i":24,"t":"text","g":"g","x":676,"y":334,"w":88,"h":25,"font":2,"sta":1,"c":{"pco":0,"borderc":0,"bco":65535},"txt":"0.0","a":{"style":2,"key":2,"borderw":2,"xcen":1,"ycen":1,"pw":0,"txt_maxl":10,"isbr":0},"ev":{"r":"keybdB.t1.txt=\"Collective FF gain \"\nva0.val=33<<8\nprint va0.val"}},{"n":"t24","i":25,"t":"text","g":"g","x":676,"y":362,"w":88,"h":25,"font":2,"sta":1,"c":{"pco":0,"borderc":0,"bco":65535},"txt":"0.0","a":{"style":2,"key":2,"borderw":2,"xcen":1,"ycen":1,"pw":0,"txt_maxl":10,"isbr":0},"ev":{"r":"keybdB.t1.txt=\"Inertia precomp gain \"\nva0.val=33<<8\nprint va0.val"}},{"n":"t25","i":26,"t":"text","g":"g","x":676,"y":390,"w":88,"h":25,"font":2,"sta":1,"c":{"pco":0,"borderc":0,"bco":65535},"txt":"0.0","a":{"style":2,"key":2,"borderw":2,"xcen":1,"ycen":1,"pw":0,"txt_maxl":10,"isbr":0},"ev":{"r":"keybdB.t1.txt=\"Inertia precomp cutoff \"\nva0.val=33<<8\nprint va0.val"}},{"n":"sw0","i":27,"t":"switch","g":"g","x":250,"y":55,"w":88,"h":23,"font":2,"c":{"pco1":0,"bco2":22476,"pco":65535,"bco":63752,"pco2":65535},"txt":"off/on","val":0,"a":{"dez":0,"dis":100,"txt_maxl":24},"ev":{"r":"va0.val=33<<8\nprint va0.val"}},{"n":"t29","i":28,"t":"text","g":"l","x":36,"y":82,"w":210,"h":25,"font":2,"sta":1,"c":{"pco":65535,"borderc":0,"bco":4426},"txt":"Ground error decay ","a":{"style":0,"key":255,"borderw":0,"xcen":0,"ycen":1,"pw":0,"txt_maxl":30,"isbr":0},"ev":{"p":"click t1,0"}},{"n":"t30","i":29,"t":"text","g":"l","x":36,"y":110,"w":210,"h":25,"font":2,"sta":1,"c":{"pco":65535,"borderc":0,"bco":4426},"txt":"Cutoff point for Roll ","a":{"style":0,"key":255,"borderw":0,"xcen":0,"ycen":1,"pw":0,"txt_maxl":30,"isbr":0},"ev":{"p":"click t2,0"}},{"n":"t31","i":30,"t":"text","g":"l","x":36,"y":138,"w":210,"h":25,"font":2,"sta":1,"c":{"pco":65535,"borderc":0,"bco":4426},"txt":"Cutoff point for Pitch ","a":{"style":0,"key":255,"borderw":0,"xcen":0,"ycen":1,"pw":0,"txt_maxl":30,"isbr":0},"ev":{"p":"click t3,0"}},{"n":"t34","i":31,"t":"text","g":"l","x":36,"y":54,"w":210,"h":25,"font":2,"sta":1,"c":{"pco":65535,"borderc":0,"bco":4426},"txt":"Piro compensation ","a":{"style":0,"key":255,"borderw":0,"xcen":0,"ycen":1,"pw":0,"txt_maxl":30,"isbr":0}},{"n":"t28","i":32,"t":"text","g":"l","x":36,"y":166,"w":210,"h":25,"font":2,"sta":1,"c":{"pco":65535,"borderc":0,"bco":4426},"txt":"Cutoff point for Yaw ","a":{"style":0,"key":255,"borderw":0,"xcen":0,"ycen":1,"pw":0,"txt_maxl":30,"isbr":0},"ev":{"p":"click t4,0"}},{"n":"t35","i":33,"t":"text","g":"l","x":36,"y":194,"w":210,"h":25,"font":2,"sta":1,"c":{"pco":65535,"borderc":0,"bco":4426},"txt":"Error limit Roll ","a":{"style":0,"key":255,"borderw":0,"xcen":0,"ycen":1,"pw":0,"txt_maxl":30,"isbr":0},"ev":{"p":"click t5,0"}},{"n":"t36","i":34,"t":"text","g":"l","x":36,"y":222,"w":210,"h":25,"font":2,"sta":1,"c":{"pco":65535,"borderc":0,"bco":4426},"txt":"Error limit Pitch ","a":{"style":0,"key":255,"borderw":0,"xcen":0,"ycen":1,"pw":0,"txt_maxl":30,"isbr":0},"ev":{"p":"click t6,0"}},{"n":"t37","i":35,"t":"text","g":"l","x":36,"y":250,"w":210,"h":25,"font":2,"sta":1,"c":{"pco":65535,"borderc":0,"bco":4426},"txt":"Error limit Yaw ","a":{"style":0,"key":255,"borderw":0,"xcen":0,"ycen":1,"pw":0,"txt_maxl":30,"isbr":0},"ev":{"p":"click t7,0"}},{"n":"t32","i":36,"t":"text","g":"l","x":36,"y":278,"w":210,"h":25,"font":2,"sta":1,"c":{"pco":65535,"borderc":0,"bco":4426},"txt":"HSI offset limit Roll ","a":{"style":0,"key":255,"borderw":0,"xcen":0,"ycen":1,"pw":0,"txt_maxl":30,"isbr":0},"ev":{"p":"click t8,0"}},{"n":"t33","i":37,"t":"text","g":"l","x":36,"y":306,"w":210,"h":25,"font":2,"sta":1,"c":{"pco":65535,"borderc":0,"bco":4426},"txt":"HSI offset limit Pitch ","a":{"style":0,"key":255,"borderw":0,"xcen":0,"ycen":1,"pw":0,"txt_maxl":30,"isbr":0},"ev":{"p":"click t19,0"}},{"n":"t38","i":38,"t":"text","g":"l","x":36,"y":334,"w":210,"h":25,"font":2,"sta":1,"c":{"pco":65535,"borderc":0,"bco":4426},"txt":"Roll bandwidth ","a":{"style":0,"key":255,"borderw":0,"xcen":0,"ycen":1,"pw":0,"txt_maxl":30,"isbr":0},"ev":{"p":"click t10,0"}},{"n":"t39","i":39,"t":"text","g":"l","x":36,"y":362,"w":210,"h":25,"font":2,"sta":1,"c":{"pco":65535,"borderc":0,"bco":4426},"txt":"Pitch bandwidth ","a":{"style":0,"key":255,"borderw":0,"xcen":0,"ycen":1,"pw":0,"txt_maxl":30,"isbr":0},"ev":{"p":"click t11,0"}},{"n":"t40","i":40,"t":"text","g":"l","x":36,"y":390,"w":210,"h":25,"font":2,"sta":1,"c":{"pco":65535,"borderc":0,"bco":4426},"txt":"Yaw bandwidth ","a":{"style":0,"key":255,"borderw":0,"xcen":0,"ycen":1,"pw":0,"txt_maxl":30,"isbr":0},"ev":{"p":"click t12,0"}},{"n":"t41","i":41,"t":"text","g":"l","x":451,"y":54,"w":220,"h":25,"font":2,"sta":1,"c":{"pco":65535,"borderc":0,"bco":4426},"txt":"Roll D-Term cutoff ","a":{"style":0,"key":255,"borderw":0,"xcen":0,"ycen":1,"pw":0,"txt_maxl":30,"isbr":0},"ev":{"p":"click t13,0"}},{"n":"t42","i":42,"t":"text","g":"l","x":451,"y":82,"w":220,"h":25,"font":2,"sta":1,"c":{"pco":65535,"borderc":0,"bco":4426},"txt":"Pitch D-Term cutoff ","a":{"style":0,"key":255,"borderw":0,"xcen":0,"ycen":1,"pw":0,"txt_maxl":30,"isbr":0},"ev":{"p":"click t14,0"}},{"n":"t43","i":43,"t":"text","g":"l","x":451,"y":110,"w":220,"h":25,"font":2,"sta":1,"c":{"pco":65535,"borderc":0,"bco":4426},"txt":"Yaw D-Term cutoff ","a":{"style":0,"key":255,"borderw":0,"xcen":0,"ycen":1,"pw":0,"txt_maxl":30,"isbr":0},"ev":{"p":"click t15,0"}},{"n":"t44","i":44,"t":"text","g":"l","x":451,"y":138,"w":220,"h":25,"font":2,"sta":1,"c":{"pco":65535,"borderc":0,"bco":4426},"txt":"Roll B-Term cutoff ","a":{"style":0,"key":255,"borderw":0,"xcen":0,"ycen":1,"pw":0,"txt_maxl":30,"isbr":0},"ev":{"p":"click t16,0"}},{"n":"t45","i":45,"t":"text","g":"l","x":451,"y":166,"w":220,"h":25,"font":2,"sta":1,"c":{"pco":65535,"borderc":0,"bco":4426},"txt":"Pitch B-Term cutoff ","a":{"style":0,"key":255,"borderw":0,"xcen":0,"ycen":1,"pw":0,"txt_maxl":30,"isbr":0},"ev":{"p":"click t17,0"}},{"n":"t46","i":46,"t":"text","g":"l","x":451,"y":194,"w":220,"h":25,"font":2,"sta":1,"c":{"pco":65535,"borderc":0,"bco":4426},"txt":"Yaw B-Term cutoff ","a":{"style":0,"key":255,"borderw":0,"xcen":0,"ycen":1,"pw":0,"txt_maxl":30,"isbr":0},"ev":{"p":"click t18,0"}},{"n":"t47","i":47,"t":"text","g":"l","x":451,"y":222,"w":220,"h":25,"font":2,"sta":1,"c":{"pco":65535,"borderc":0,"bco":4426},"txt":"CW Yaw stop gain ","a":{"style":0,"key":255,"borderw":0,"xcen":0,"ycen":1,"pw":0,"txt_maxl":30,"isbr":0},"ev":{"p":"click t19,0"}},{"n":"t48","i":48,"t":"text","g":"l","x":451,"y":250,"w":220,"h":25,"font":2,"sta":1,"c":{"pco":65535,"borderc":0,"bco":4426},"txt":"CCW Yaw stop gain ","a":{"style":0,"key":255,"borderw":0,"xcen":0,"ycen":1,"pw":0,"txt_maxl":30,"isbr":0},"ev":{"p":"click t20,0"}},{"n":"t49","i":49,"t":"text","g":"l","x":451,"y":278,"w":220,"h":25,"font":2,"sta":1,"c":{"pco":65535,"borderc":0,"bco":4426},"txt":"Yaw Precomp cutoff ","a":{"style":0,"key":255,"borderw":0,"xcen":0,"ycen":1,"pw":0,"txt_maxl":30,"isbr":0},"ev":{"p":"click t21,0"}},{"n":"t50","i":50,"t":"text","g":"l","x":451,"y":306,"w":220,"h":25,"font":2,"sta":1,"c":{"pco":65535,"borderc":0,"bco":4426},"txt":"Cyclic FF gain ","a":{"style":0,"key":255,"borderw":0,"xcen":0,"ycen":1,"pw":0,"txt_maxl":30,"isbr":0},"ev":{"p":"click t22,0"}},{"n":"t51","i":51,"t":"text","g":"l","x":451,"y":334,"w":220,"h":25,"font":2,"sta":1,"c":{"pco":65535,"borderc":0,"bco":4426},"txt":"Collective FF gain ","a":{"style":0,"key":255,"borderw":0,"xcen":0,"ycen":1,"pw":0,"txt_maxl":30,"isbr":0},"ev":{"p":"click t23,0"}},{"n":"t52","i":52,"t":"text","g":"l","x":451,"y":362,"w":220,"h":25,"font":2,"sta":1,"c":{"pco":65535,"borderc":0,"bco":4426},"txt":"Inertia precomp gain ","a":{"style":0,"key":255,"borderw":0,"xcen":0,"ycen":1,"pw":0,"txt_maxl":30,"isbr":0},"ev":{"p":"click t24,0"}},{"n":"t53","i":53,"t":"text","g":"l","x":451,"y":390,"w":220,"h":25,"font":2,"sta":1,"c":{"pco":65535,"borderc":0,"bco":4426},"txt":"Inertia precomp cutoff ","a":{"style":0,"key":255,"borderw":0,"xcen":0,"ycen":1,"pw":0,"txt_maxl":30,"isbr":0},"ev":{"p":"click t25,0"}},{"n":"b0","i":54,"t":"button","g":"l","x":630,"y":2,"w":160,"h":38,"font":6,"sta":1,"c":{"bco2":1024,"pco":0,"borderc":0,"bco":54938,"pco2":65535},"txt":"Help","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":10,"isbr":0},"ev":{"r":"print \"HelpView:PID_A.TXT\"\nLogView.t0.txt=\"PID advanced setup help\"\nLogView.return.txt=\"PID_A_View\""}},{"n":"t26","i":55,"t":"text","g":"g","x":10,"y":8,"w":200,"h":26,"font":2,"sta":1,"c":{"pco":65535,"borderc":0,"bco":2214},"txt":"Bank 1","a":{"style":0,"key":255,"borderw":2,"xcen":0,"ycen":1,"pw":0,"txt_maxl":10,"isbr":0}},{"n":"b3","i":56,"t":"button","g":"l","x":14,"y":430,"w":150,"h":44,"font":6,"sta":1,"c":{"bco2":1024,"pco":0,"borderc":0,"bco":54938,"pco2":65535},"txt":"Save","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":20,"isbr":0},"ev":{"r":"va0.val=34<<8\nprint va0.val"}},{"n":"b1","i":57,"t":"button","g":"l","x":636,"y":430,"w":150,"h":44,"font":6,"sta":1,"c":{"bco2":1024,"pco":0,"borderc":0,"bco":54938,"pco2":65535},"txt":"OK","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":10,"isbr":0},"ev":{"r":"va0.val=35<<8\nprint va0.val"}},{"n":"t27","i":58,"t":"text","g":"g","x":174,"y":430,"w":452,"h":44,"font":0,"sta":1,"c":{"pco":65504,"borderc":0,"bco":4426},"txt":"Model name","a":{"style":0,"key":255,"borderw":0,"xcen":1,"ycen":1,"pw":0,"txt_maxl":30,"isbr":0}},{"n":"va0","i":59,"t":"variable","g":"l","sta":0,"txt":"newtxt","val":0,"a":{"txt_maxl":10}},{"n":"busy","i":60,"t":"text","g":"g","x":174,"y":430,"w":452,"h":44,"font":2,"sta":1,"c":{"pco":65535,"borderc":0,"bco":4426},"txt":"Reading values ...","a":{"style":0,"key":255,"borderw":0,"xcen":1,"ycen":1,"pw":0,"txt_maxl":50,"isbr":0}}]}
+{
+ "name": "PID_A_View",
+ "id": 7,
+ "w": 800,
+ "h": 480,
+ "bg": {
+  "sta": 2,
+  "mode": "image",
+  "picture": 3
+ },
+ "nav": {
+  "up": 255,
+  "down": 255,
+  "left": 255,
+  "right": 255
+ },
+ "ev": {
+  "preinitialize": "PID_A_View.pic=Screen_Background\nvis busy,0"
+ },
+ "comps": [
+  {
+   "n": "t0",
+   "i": 1,
+   "t": "text",
+   "g": "g",
+   "x": 0,
+   "y": 0,
+   "w": 800,
+   "h": 42,
+   "font": 0,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 2214
+   },
+   "txt": "PID + (Rotorflight)",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "card",
+   "i": 61,
+   "t": "text",
+   "g": "l",
+   "x": 0,
+   "y": 42,
+   "w": 800,
+   "h": 438,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 65535,
+    "bco": 4426
+   },
+   "txt": "",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 1,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t1",
+   "i": 2,
+   "t": "text",
+   "g": "g",
+   "x": 250,
+   "y": 82,
+   "w": 88,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0.0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Ground error decay \"\nva0.val=33<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "t2",
+   "i": 3,
+   "t": "text",
+   "g": "g",
+   "x": 250,
+   "y": 110,
+   "w": 88,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0.0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Cutoff point for Roll \"\nva0.val=33<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "t3",
+   "i": 4,
+   "t": "text",
+   "g": "g",
+   "x": 250,
+   "y": 138,
+   "w": 88,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0.0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Cutoff point for Pitch \"\nva0.val=33<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "t4",
+   "i": 5,
+   "t": "text",
+   "g": "g",
+   "x": 250,
+   "y": 166,
+   "w": 88,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0.0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Cutoff point for Yaw \"\nva0.val=33<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "t5",
+   "i": 6,
+   "t": "text",
+   "g": "g",
+   "x": 250,
+   "y": 194,
+   "w": 88,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0.0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Error limit Roll \"\nva0.val=33<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "t6",
+   "i": 7,
+   "t": "text",
+   "g": "g",
+   "x": 250,
+   "y": 222,
+   "w": 88,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0.0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Error limit Pitch \"\nva0.val=33<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "t7",
+   "i": 8,
+   "t": "text",
+   "g": "g",
+   "x": 250,
+   "y": 250,
+   "w": 88,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0.0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Error limit Yaw \"\nva0.val=33<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "t8",
+   "i": 9,
+   "t": "text",
+   "g": "g",
+   "x": 250,
+   "y": 278,
+   "w": 88,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0.0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"HSI offset limit Roll \"\nva0.val=33<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "t9",
+   "i": 10,
+   "t": "text",
+   "g": "g",
+   "x": 250,
+   "y": 306,
+   "w": 88,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0.0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"HSI offset limit Pitch \"\nva0.val=33<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "t10",
+   "i": 11,
+   "t": "text",
+   "g": "g",
+   "x": 250,
+   "y": 334,
+   "w": 88,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0.0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Roll bandwidth \"\nva0.val=33<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "t11",
+   "i": 12,
+   "t": "text",
+   "g": "g",
+   "x": 250,
+   "y": 362,
+   "w": 88,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0.0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Pitch bandwidth \"\nva0.val=33<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "t12",
+   "i": 13,
+   "t": "text",
+   "g": "g",
+   "x": 250,
+   "y": 390,
+   "w": 88,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0.0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Yaw bandwidth \"\nva0.val=33<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "t13",
+   "i": 14,
+   "t": "text",
+   "g": "g",
+   "x": 676,
+   "y": 54,
+   "w": 88,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0.0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Roll D-Term cutoff \"\nva0.val=33<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "t14",
+   "i": 15,
+   "t": "text",
+   "g": "g",
+   "x": 676,
+   "y": 82,
+   "w": 88,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0.0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Pitch D-Term cutoff \"\nva0.val=33<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "t15",
+   "i": 16,
+   "t": "text",
+   "g": "g",
+   "x": 676,
+   "y": 110,
+   "w": 88,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0.0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Yaw D-Term cutoff \"\nva0.val=33<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "t16",
+   "i": 17,
+   "t": "text",
+   "g": "g",
+   "x": 676,
+   "y": 138,
+   "w": 88,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0.0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Roll B-Term cutoff \"\nva0.val=33<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "t17",
+   "i": 18,
+   "t": "text",
+   "g": "g",
+   "x": 676,
+   "y": 166,
+   "w": 88,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0.0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Pitch B-Term cutoff \"\nva0.val=33<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "t18",
+   "i": 19,
+   "t": "text",
+   "g": "g",
+   "x": 676,
+   "y": 194,
+   "w": 88,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0.0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Yaw B-Term cutoff \"\nva0.val=33<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "t19",
+   "i": 20,
+   "t": "text",
+   "g": "g",
+   "x": 676,
+   "y": 222,
+   "w": 88,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0.0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"CW Yaw stop gain \"\nva0.val=33<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "t20",
+   "i": 21,
+   "t": "text",
+   "g": "g",
+   "x": 676,
+   "y": 250,
+   "w": 88,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0.0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"CCW Yaw stop gain \"\nva0.val=33<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "t21",
+   "i": 22,
+   "t": "text",
+   "g": "g",
+   "x": 676,
+   "y": 278,
+   "w": 88,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0.0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Yaw Precomp cutoff \"\nva0.val=33<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "t22",
+   "i": 23,
+   "t": "text",
+   "g": "g",
+   "x": 676,
+   "y": 306,
+   "w": 88,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0.0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Cyclic FF gain \"\nva0.val=33<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "t23",
+   "i": 24,
+   "t": "text",
+   "g": "g",
+   "x": 676,
+   "y": 334,
+   "w": 88,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0.0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Collective FF gain \"\nva0.val=33<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "t24",
+   "i": 25,
+   "t": "text",
+   "g": "g",
+   "x": 676,
+   "y": 362,
+   "w": 88,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0.0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Inertia precomp gain \"\nva0.val=33<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "t25",
+   "i": 26,
+   "t": "text",
+   "g": "g",
+   "x": 676,
+   "y": 390,
+   "w": 88,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0.0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Inertia precomp cutoff \"\nva0.val=33<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "sw0",
+   "i": 27,
+   "t": "switch",
+   "g": "g",
+   "x": 250,
+   "y": 55,
+   "w": 88,
+   "h": 23,
+   "font": 2,
+   "c": {
+    "pco1": 0,
+    "bco2": 22476,
+    "pco": 65535,
+    "bco": 63752,
+    "pco2": 65535
+   },
+   "txt": "off/on",
+   "val": 0,
+   "a": {
+    "dez": 0,
+    "dis": 100,
+    "txt_maxl": 24
+   },
+   "ev": {
+    "r": "va0.val=33<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "t29",
+   "i": 28,
+   "t": "text",
+   "g": "l",
+   "x": 36,
+   "y": 82,
+   "w": 210,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Ground error decay ",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "p": "click t1,0"
+   }
+  },
+  {
+   "n": "t30",
+   "i": 29,
+   "t": "text",
+   "g": "l",
+   "x": 36,
+   "y": 110,
+   "w": 210,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Cutoff point for Roll ",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "p": "click t2,0"
+   }
+  },
+  {
+   "n": "t31",
+   "i": 30,
+   "t": "text",
+   "g": "l",
+   "x": 36,
+   "y": 138,
+   "w": 210,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Cutoff point for Pitch ",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "p": "click t3,0"
+   }
+  },
+  {
+   "n": "t34",
+   "i": 31,
+   "t": "text",
+   "g": "l",
+   "x": 36,
+   "y": 54,
+   "w": 210,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Piro compensation ",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t28",
+   "i": 32,
+   "t": "text",
+   "g": "l",
+   "x": 36,
+   "y": 166,
+   "w": 210,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Cutoff point for Yaw ",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "p": "click t4,0"
+   }
+  },
+  {
+   "n": "t35",
+   "i": 33,
+   "t": "text",
+   "g": "l",
+   "x": 36,
+   "y": 194,
+   "w": 210,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Error limit Roll ",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "p": "click t5,0"
+   }
+  },
+  {
+   "n": "t36",
+   "i": 34,
+   "t": "text",
+   "g": "l",
+   "x": 36,
+   "y": 222,
+   "w": 210,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Error limit Pitch ",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "p": "click t6,0"
+   }
+  },
+  {
+   "n": "t37",
+   "i": 35,
+   "t": "text",
+   "g": "l",
+   "x": 36,
+   "y": 250,
+   "w": 210,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Error limit Yaw ",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "p": "click t7,0"
+   }
+  },
+  {
+   "n": "t32",
+   "i": 36,
+   "t": "text",
+   "g": "l",
+   "x": 36,
+   "y": 278,
+   "w": 210,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "HSI offset limit Roll ",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "p": "click t8,0"
+   }
+  },
+  {
+   "n": "t33",
+   "i": 37,
+   "t": "text",
+   "g": "l",
+   "x": 36,
+   "y": 306,
+   "w": 210,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "HSI offset limit Pitch ",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "p": "click t19,0"
+   }
+  },
+  {
+   "n": "t38",
+   "i": 38,
+   "t": "text",
+   "g": "l",
+   "x": 36,
+   "y": 334,
+   "w": 210,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Roll bandwidth ",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "p": "click t10,0"
+   }
+  },
+  {
+   "n": "t39",
+   "i": 39,
+   "t": "text",
+   "g": "l",
+   "x": 36,
+   "y": 362,
+   "w": 210,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Pitch bandwidth ",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "p": "click t11,0"
+   }
+  },
+  {
+   "n": "t40",
+   "i": 40,
+   "t": "text",
+   "g": "l",
+   "x": 36,
+   "y": 390,
+   "w": 210,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Yaw bandwidth ",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "p": "click t12,0"
+   }
+  },
+  {
+   "n": "t41",
+   "i": 41,
+   "t": "text",
+   "g": "l",
+   "x": 451,
+   "y": 54,
+   "w": 220,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Roll D-Term cutoff ",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "p": "click t13,0"
+   }
+  },
+  {
+   "n": "t42",
+   "i": 42,
+   "t": "text",
+   "g": "l",
+   "x": 451,
+   "y": 82,
+   "w": 220,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Pitch D-Term cutoff ",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "p": "click t14,0"
+   }
+  },
+  {
+   "n": "t43",
+   "i": 43,
+   "t": "text",
+   "g": "l",
+   "x": 451,
+   "y": 110,
+   "w": 220,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Yaw D-Term cutoff ",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "p": "click t15,0"
+   }
+  },
+  {
+   "n": "t44",
+   "i": 44,
+   "t": "text",
+   "g": "l",
+   "x": 451,
+   "y": 138,
+   "w": 220,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Roll B-Term cutoff ",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "p": "click t16,0"
+   }
+  },
+  {
+   "n": "t45",
+   "i": 45,
+   "t": "text",
+   "g": "l",
+   "x": 451,
+   "y": 166,
+   "w": 220,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Pitch B-Term cutoff ",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "p": "click t17,0"
+   }
+  },
+  {
+   "n": "t46",
+   "i": 46,
+   "t": "text",
+   "g": "l",
+   "x": 451,
+   "y": 194,
+   "w": 220,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Yaw B-Term cutoff ",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "p": "click t18,0"
+   }
+  },
+  {
+   "n": "t47",
+   "i": 47,
+   "t": "text",
+   "g": "l",
+   "x": 451,
+   "y": 222,
+   "w": 220,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "CW Yaw stop gain ",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "p": "click t19,0"
+   }
+  },
+  {
+   "n": "t48",
+   "i": 48,
+   "t": "text",
+   "g": "l",
+   "x": 451,
+   "y": 250,
+   "w": 220,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "CCW Yaw stop gain ",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "p": "click t20,0"
+   }
+  },
+  {
+   "n": "t49",
+   "i": 49,
+   "t": "text",
+   "g": "l",
+   "x": 451,
+   "y": 278,
+   "w": 220,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Yaw Precomp cutoff ",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "p": "click t21,0"
+   }
+  },
+  {
+   "n": "t50",
+   "i": 50,
+   "t": "text",
+   "g": "l",
+   "x": 451,
+   "y": 306,
+   "w": 220,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Cyclic FF gain ",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "p": "click t22,0"
+   }
+  },
+  {
+   "n": "t51",
+   "i": 51,
+   "t": "text",
+   "g": "l",
+   "x": 451,
+   "y": 334,
+   "w": 220,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Collective FF gain ",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "p": "click t23,0"
+   }
+  },
+  {
+   "n": "t52",
+   "i": 52,
+   "t": "text",
+   "g": "l",
+   "x": 451,
+   "y": 362,
+   "w": 220,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Inertia precomp gain ",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "p": "click t24,0"
+   }
+  },
+  {
+   "n": "t53",
+   "i": 53,
+   "t": "text",
+   "g": "l",
+   "x": 451,
+   "y": 390,
+   "w": 220,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Inertia precomp cutoff ",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "p": "click t25,0"
+   }
+  },
+  {
+   "n": "b0",
+   "i": 54,
+   "t": "button",
+   "g": "l",
+   "x": 630,
+   "y": 2,
+   "w": 160,
+   "h": 38,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Help",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"HelpView:PID_A.TXT\"\nLogView.t0.txt=\"PID advanced setup help\"\nLogView.return.txt=\"PID_A_View\""
+   }
+  },
+  {
+   "n": "t26",
+   "i": 55,
+   "t": "text",
+   "g": "g",
+   "x": 10,
+   "y": 8,
+   "w": 200,
+   "h": 26,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 2214
+   },
+   "txt": "Bank 1",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "b3",
+   "i": 56,
+   "t": "button",
+   "g": "l",
+   "x": 408,
+   "y": 430,
+   "w": 180,
+   "h": 44,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Save",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 20,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=34<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "b1",
+   "i": 57,
+   "t": "button",
+   "g": "l",
+   "x": 605,
+   "y": 430,
+   "w": 180,
+   "h": 44,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "OK",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=35<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "t27",
+   "i": 58,
+   "t": "text",
+   "g": "g",
+   "x": 14,
+   "y": 430,
+   "w": 380,
+   "h": 44,
+   "font": 0,
+   "sta": 1,
+   "c": {
+    "pco": 65504,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Model name",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "va0",
+   "i": 59,
+   "t": "variable",
+   "g": "l",
+   "sta": 0,
+   "txt": "newtxt",
+   "val": 0,
+   "a": {
+    "txt_maxl": 10
+   }
+  },
+  {
+   "n": "busy",
+   "i": 60,
+   "t": "text",
+   "g": "g",
+   "x": 110,
+   "y": 168,
+   "w": 580,
+   "h": 124,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 65535,
+    "bco": 4426
+   },
+   "txt": "Reading values ...",
+   "a": {
+    "style": 5,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 200,
+    "isbr": 1
+   }
+  }
+ ]
+}

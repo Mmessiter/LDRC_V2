@@ -1,6 +1,6 @@
 {
- "name": "FilterView",
- "id": 64,
+ "name": "BatteryView",
+ "id": 72,
  "w": 800,
  "h": 480,
  "bg": {
@@ -15,7 +15,7 @@
   "right": 255
  },
  "ev": {
-  "preinitialize": "vis busy,0\nFilterView.pic=Screen_Background"
+  "preinitialize": "vis busy,0\nBatteryView.pic=Screen_Background"
  },
  "comps": [
   {
@@ -34,7 +34,7 @@
     "borderc": 0,
     "bco": 2214
    },
-   "txt": "Gyro filters (Rotorflight)",
+   "txt": "Battery (Rotorflight)",
    "a": {
     "style": 0,
     "key": 255,
@@ -171,7 +171,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "print \"HelpView:FILTERS.TXT\"\nLogView.t0.txt=\"Gyro filters (Rotorflight) help\"\nLogView.return.txt=\"FilterView\""
+    "r": "print \"HelpView:BATTERY.TXT\"\nLogView.t0.txt=\"Battery (Rotorflight) help\"\nLogView.return.txt=\"BatteryView\""
    }
   },
   {
@@ -190,7 +190,7 @@
     "borderc": 4426,
     "bco": 4426
    },
-   "txt": "Lowpass Filter",
+   "txt": "Flight pack",
    "a": {
     "style": 0,
     "key": 255,
@@ -218,7 +218,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Enable",
+   "txt": "Cells (0 = automatic)",
    "a": {
     "style": 0,
     "key": 255,
@@ -232,31 +232,34 @@
   },
   {
    "n": "tn0",
-   "t": "switch",
+   "i": 9,
+   "t": "text",
    "g": "g",
-   "x": 314,
-   "y": 135,
-   "w": 80,
-   "h": 34,
-   "font": 0,
+   "x": 294,
+   "y": 134,
+   "w": 120,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
    "c": {
-    "pco1": 0,
-    "bco2": 2016,
-    "pco": 65535,
-    "bco": 33808,
-    "pco2": 65535
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
    },
-   "txt": " / ",
-   "val": 0,
+   "txt": "0",
    "a": {
-    "dez": 0,
-    "dis": 100,
-    "txt_maxl": 24
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
    },
    "ev": {
-    "r": "va0.val=99<<8\nprint va0.val"
-   },
-   "i": 9
+    "r": "keybdB.t1.txt=\"Cells\"\nva0.val=158<<8\nprint va0.val"
+   }
   },
   {
    "n": "ltn1",
@@ -274,7 +277,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Filter type",
+   "txt": "Capacity [mAh]",
    "a": {
     "style": 0,
     "key": 255,
@@ -305,7 +308,7 @@
    "txt": "0",
    "a": {
     "style": 2,
-    "key": 255,
+    "key": 2,
     "borderw": 2,
     "xcen": 1,
     "ycen": 1,
@@ -314,7 +317,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "va0.val=96<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Capacity mAh\"\nva0.val=158<<8\nprint va0.val"
    }
   },
   {
@@ -324,7 +327,7 @@
    "g": "g",
    "x": 34,
    "y": 214,
-   "w": 254,
+   "w": 150,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -333,7 +336,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Cutoff frequency [Hz]",
+   "txt": "Voltage from",
    "a": {
     "style": 0,
     "key": 255,
@@ -350,9 +353,9 @@
    "i": 13,
    "t": "text",
    "g": "g",
-   "x": 294,
+   "x": 190,
    "y": 214,
-   "w": 120,
+   "w": 224,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -361,66 +364,38 @@
     "borderc": 0,
     "bco": 65535
    },
-   "txt": "0",
+   "txt": "",
    "a": {
     "style": 2,
-    "key": 2,
+    "key": 255,
     "borderw": 2,
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
-    "txt_maxl": 10,
+    "txt_maxl": 30,
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Lowpass cutoff [Hz]\"\nva0.val=95<<8\nprint va0.val"
+    "r": "va0.val=159<<8\nprint va0.val"
    }
   },
   {
-   "n": "h1",
+   "n": "ltn3",
    "i": 14,
    "t": "text",
    "g": "g",
    "x": 34,
    "y": 254,
-   "w": 380,
-   "h": 36,
-   "font": 6,
-   "sta": 1,
-   "c": {
-    "pco": 65535,
-    "borderc": 4426,
-    "bco": 4426
-   },
-   "txt": "RPM Filter",
-   "a": {
-    "style": 0,
-    "key": 255,
-    "borderw": 0,
-    "xcen": 0,
-    "ycen": 1,
-    "pw": 0,
-    "txt_maxl": 30,
-    "isbr": 0
-   }
-  },
-  {
-   "n": "ltn3",
-   "i": 15,
-   "t": "text",
-   "g": "g",
-   "x": 34,
-   "y": 294,
-   "w": 254,
+   "w": 150,
    "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 57215
+    "bco": 65497
    },
-   "txt": "Enable",
+   "txt": "Current from",
    "a": {
     "style": 0,
     "key": 255,
@@ -434,40 +409,71 @@
   },
   {
    "n": "tn3",
-   "t": "switch",
+   "i": 15,
+   "t": "text",
    "g": "g",
-   "x": 314,
-   "y": 295,
-   "w": 80,
-   "h": 34,
-   "font": 0,
+   "x": 190,
+   "y": 254,
+   "w": 224,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
    "c": {
-    "pco1": 0,
-    "bco2": 2016,
-    "pco": 65535,
-    "bco": 33808,
-    "pco2": 65535
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
    },
-   "txt": " / ",
-   "val": 0,
+   "txt": "",
    "a": {
-    "dez": 0,
-    "dis": 100,
-    "txt_maxl": 24
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
    },
    "ev": {
-    "r": "va0.val=100<<8\nprint va0.val"
+    "r": "va0.val=160<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "h1",
+   "i": 16,
+   "t": "text",
+   "g": "g",
+   "x": 430,
+   "y": 94,
+   "w": 336,
+   "h": 36,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 4426,
+    "bco": 4426
    },
-   "i": 16
+   "txt": "Each cell [V]",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
   },
   {
    "n": "ltn4",
    "i": 17,
    "t": "text",
    "g": "g",
-   "x": 34,
-   "y": 334,
-   "w": 254,
+   "x": 430,
+   "y": 134,
+   "w": 236,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -476,7 +482,7 @@
     "borderc": 0,
     "bco": 57215
    },
-   "txt": "Strength",
+   "txt": "Full",
    "a": {
     "style": 0,
     "key": 255,
@@ -493,9 +499,9 @@
    "i": 18,
    "t": "text",
    "g": "g",
-   "x": 294,
-   "y": 334,
-   "w": 120,
+   "x": 672,
+   "y": 134,
+   "w": 94,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -507,7 +513,7 @@
    "txt": "0",
    "a": {
     "style": 2,
-    "key": 255,
+    "key": 2,
     "borderw": 2,
     "xcen": 1,
     "ycen": 1,
@@ -516,7 +522,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "va0.val=98<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Full cell volts\"\nva0.val=158<<8\nprint va0.val"
    }
   },
   {
@@ -524,9 +530,9 @@
    "i": 19,
    "t": "text",
    "g": "g",
-   "x": 34,
-   "y": 374,
-   "w": 254,
+   "x": 430,
+   "y": 174,
+   "w": 236,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -535,7 +541,7 @@
     "borderc": 0,
     "bco": 57215
    },
-   "txt": "Minimum frequency [Hz]",
+   "txt": "Warning",
    "a": {
     "style": 0,
     "key": 255,
@@ -552,8 +558,213 @@
    "i": 20,
    "t": "text",
    "g": "g",
+   "x": 672,
+   "y": 174,
+   "w": 94,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Warning cell volts\"\nva0.val=158<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "ltn6",
+   "i": 21,
+   "t": "text",
+   "g": "g",
+   "x": 430,
+   "y": 214,
+   "w": 236,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 57215
+   },
+   "txt": "Empty",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "tn6",
+   "i": 22,
+   "t": "text",
+   "g": "g",
+   "x": 672,
+   "y": 214,
+   "w": 94,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Empty cell volts\"\nva0.val=158<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "ltn7",
+   "i": 23,
+   "t": "text",
+   "g": "g",
+   "x": 430,
+   "y": 254,
+   "w": 236,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 57215
+   },
+   "txt": "Highest allowed",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "tn7",
+   "i": 24,
+   "t": "text",
+   "g": "g",
+   "x": 672,
+   "y": 254,
+   "w": 94,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Highest cell volts\"\nva0.val=158<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "h2",
+   "i": 25,
+   "t": "text",
+   "g": "g",
+   "x": 34,
+   "y": 294,
+   "w": 380,
+   "h": 36,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 4426,
+    "bco": 4426
+   },
+   "txt": "Voltage sensor (FC pads)",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "ltn8",
+   "i": 26,
+   "t": "text",
+   "g": "g",
+   "x": 34,
+   "y": 334,
+   "w": 254,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 59323
+   },
+   "txt": "Scale",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "tn8",
+   "i": 27,
+   "t": "text",
+   "g": "g",
    "x": 294,
-   "y": 374,
+   "y": 334,
    "w": 120,
    "h": 36,
    "font": 2,
@@ -575,16 +786,16 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"RPM filter minimum [Hz]\"\nva0.val=95<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Voltage scale\"\nva0.val=158<<8\nprint va0.val"
    }
   },
   {
-   "n": "h2",
-   "i": 21,
+   "n": "h3",
+   "i": 28,
    "t": "text",
    "g": "g",
    "x": 430,
-   "y": 94,
+   "y": 294,
    "w": 336,
    "h": 36,
    "font": 6,
@@ -594,7 +805,7 @@
     "borderc": 4426,
     "bco": 4426
    },
-   "txt": "Dynamic Filter",
+   "txt": "Current sensor (FC pads)",
    "a": {
     "style": 0,
     "key": 255,
@@ -607,186 +818,12 @@
    }
   },
   {
-   "n": "ltn6",
-   "i": 22,
-   "t": "text",
-   "g": "g",
-   "x": 430,
-   "y": 134,
-   "w": 236,
-   "h": 36,
-   "font": 2,
-   "sta": 1,
-   "c": {
-    "pco": 0,
-    "borderc": 0,
-    "bco": 59323
-   },
-   "txt": "Enable",
-   "a": {
-    "style": 0,
-    "key": 255,
-    "borderw": 2,
-    "xcen": 1,
-    "ycen": 1,
-    "pw": 0,
-    "txt_maxl": 10,
-    "isbr": 0
-   }
-  },
-  {
-   "n": "tn6",
-   "t": "switch",
-   "g": "g",
-   "x": 679,
-   "y": 135,
-   "w": 80,
-   "h": 34,
-   "font": 0,
-   "c": {
-    "pco1": 0,
-    "bco2": 2016,
-    "pco": 65535,
-    "bco": 33808,
-    "pco2": 65535
-   },
-   "txt": " / ",
-   "val": 0,
-   "a": {
-    "dez": 0,
-    "dis": 100,
-    "txt_maxl": 24
-   },
-   "ev": {
-    "r": "va0.val=101<<8\nprint va0.val"
-   },
-   "i": 23
-  },
-  {
-   "n": "ltn7",
-   "i": 24,
-   "t": "text",
-   "g": "g",
-   "x": 430,
-   "y": 174,
-   "w": 236,
-   "h": 36,
-   "font": 2,
-   "sta": 1,
-   "c": {
-    "pco": 0,
-    "borderc": 0,
-    "bco": 59323
-   },
-   "txt": "Notch count",
-   "a": {
-    "style": 0,
-    "key": 255,
-    "borderw": 2,
-    "xcen": 1,
-    "ycen": 1,
-    "pw": 0,
-    "txt_maxl": 10,
-    "isbr": 0
-   }
-  },
-  {
-   "n": "tn7",
-   "i": 25,
-   "t": "text",
-   "g": "g",
-   "x": 672,
-   "y": 174,
-   "w": 94,
-   "h": 36,
-   "font": 2,
-   "sta": 1,
-   "c": {
-    "pco": 0,
-    "borderc": 0,
-    "bco": 65535
-   },
-   "txt": "0",
-   "a": {
-    "style": 2,
-    "key": 2,
-    "borderw": 2,
-    "xcen": 1,
-    "ycen": 1,
-    "pw": 0,
-    "txt_maxl": 10,
-    "isbr": 0
-   },
-   "ev": {
-    "r": "keybdB.t1.txt=\"Notch count\"\nva0.val=95<<8\nprint va0.val"
-   }
-  },
-  {
-   "n": "ltn8",
-   "i": 26,
-   "t": "text",
-   "g": "g",
-   "x": 430,
-   "y": 214,
-   "w": 236,
-   "h": 36,
-   "font": 2,
-   "sta": 1,
-   "c": {
-    "pco": 0,
-    "borderc": 0,
-    "bco": 59323
-   },
-   "txt": "Notch Q",
-   "a": {
-    "style": 0,
-    "key": 255,
-    "borderw": 2,
-    "xcen": 1,
-    "ycen": 1,
-    "pw": 0,
-    "txt_maxl": 10,
-    "isbr": 0
-   }
-  },
-  {
-   "n": "tn8",
-   "i": 27,
-   "t": "text",
-   "g": "g",
-   "x": 672,
-   "y": 214,
-   "w": 94,
-   "h": 36,
-   "font": 2,
-   "sta": 1,
-   "c": {
-    "pco": 0,
-    "borderc": 0,
-    "bco": 65535
-   },
-   "txt": "0",
-   "a": {
-    "style": 2,
-    "key": 2,
-    "borderw": 2,
-    "xcen": 1,
-    "ycen": 1,
-    "pw": 0,
-    "txt_maxl": 10,
-    "isbr": 0
-   },
-   "ev": {
-    "r": "keybdB.t1.txt=\"Notch Q\"\nva0.val=95<<8\nprint va0.val"
-   }
-  },
-  {
    "n": "ltn9",
-   "i": 28,
+   "i": 29,
    "t": "text",
    "g": "g",
    "x": 430,
-   "y": 254,
+   "y": 334,
    "w": 236,
    "h": 36,
    "font": 2,
@@ -794,9 +831,9 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 59323
+    "bco": 61215
    },
-   "txt": "Notch minimum [Hz]",
+   "txt": "Scale",
    "a": {
     "style": 0,
     "key": 255,
@@ -810,11 +847,11 @@
   },
   {
    "n": "tn9",
-   "i": 29,
+   "i": 30,
    "t": "text",
    "g": "g",
    "x": 672,
-   "y": 254,
+   "y": 334,
    "w": 94,
    "h": 36,
    "font": 2,
@@ -836,16 +873,16 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Notch minimum [Hz]\"\nva0.val=95<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Current scale\"\nva0.val=158<<8\nprint va0.val"
    }
   },
   {
    "n": "ltn10",
-   "i": 30,
+   "i": 31,
    "t": "text",
    "g": "g",
    "x": 430,
-   "y": 294,
+   "y": 374,
    "w": 236,
    "h": 36,
    "font": 2,
@@ -853,9 +890,9 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 59323
+    "bco": 61215
    },
-   "txt": "Notch maximum [Hz]",
+   "txt": "Offset",
    "a": {
     "style": 0,
     "key": 255,
@@ -869,11 +906,11 @@
   },
   {
    "n": "tn10",
-   "i": 31,
+   "i": 32,
    "t": "text",
    "g": "g",
    "x": 672,
-   "y": 294,
+   "y": 374,
    "w": 94,
    "h": 36,
    "font": 2,
@@ -895,39 +932,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Notch maximum [Hz]\"\nva0.val=95<<8\nprint va0.val"
-   }
-  },
-  {
-   "n": "b2",
-   "i": 32,
-   "t": "button",
-   "g": "l",
-   "x": 211,
-   "y": 414,
-   "w": 180,
-   "h": 56,
-   "font": 6,
-   "sta": 1,
-   "c": {
-    "bco2": 54938,
-    "pco": 0,
-    "borderc": 0,
-    "bco": 54938,
-    "pco2": 65535
-   },
-   "txt": "Next >",
-   "val": 0,
-   "a": {
-    "style": 4,
-    "borderw": 2,
-    "xcen": 1,
-    "ycen": 1,
-    "txt_maxl": 10,
-    "isbr": 0
-   },
-   "ev": {
-    "r": "va0.val=102<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Current offset\"\nva0.val=158<<8\nprint va0.val"
    }
   },
   {
@@ -959,7 +964,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "va0.val=94<<8\nprint va0.val"
+    "r": "va0.val=157<<8\nprint va0.val"
    }
   },
   {
@@ -991,7 +996,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "va0.val=93<<8\nprint va0.val"
+    "r": "va0.val=156<<8\nprint va0.val"
    }
   },
   {

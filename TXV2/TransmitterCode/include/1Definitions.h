@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B87 09/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B88 09/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -338,6 +338,9 @@ bool GapStartedDisarmed = false; // Rotorflight arming in use and DISARMED when 
 #define SWITCHVIEW 69            // B77: the switches (RF_Switches.h)
 #define SWITCHPICKVIEW 70        // B77: its picker of actions
 #define COPYBANKVIEW 71          // B78: copy a bank (RF_CopyBank.h)
+#define BATTERYVIEW 72           // B88: the battery (RF_FcSetup.h)
+#define BLACKBOXVIEW 73          // B88: the black box
+#define CALIBRATEVIEW 74         // B88: calibrate the level
 #define MODELIDVIEW 56
 
 // **************************************************************************
@@ -962,6 +965,31 @@ void CopyBankRatesTapped();
 void CopyBankGovTapped();
 void CopyBankHsTapped();
 void CopyBankAdjTapped();
+void BatteryPoll();                           // B88: RF_FcSetup.h
+void StartBatteryView();
+void EndBatteryView();
+void SaveBattery();
+void BatteryWasEdited();
+void BatteryVoltageSourceTapped();
+void BatteryCurrentSourceTapped();
+void BlackboxPoll();
+void StartBlackboxView();
+void EndBlackboxView();
+void SaveBlackbox();
+void BlackboxWasEdited();
+void BlackboxModeTapped();
+void BlackboxDeviceTapped();
+void BlackboxRateTapped();
+void BlackboxRollTapped();
+void BlackboxErase();
+void CalibratePoll();
+void StartCalibrateView();
+void EndCalibrateView();
+void CalibrateNow();
+void SaveLevelTrims();
+void CalibrateWasEdited();
+void ArmTick();
+void ArmingWhy();
 void StartModelSetup();
 bool GetConfirmation(char *goback, char *Prompt);
 void GotoModelsView();

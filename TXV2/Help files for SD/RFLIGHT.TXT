@@ -2,10 +2,14 @@ Rotorflight options: the pages that view and edit a flight controller running Ro
 
 PIDs, Rates (each with an Advanced page), Governor, Rescue and Servos read their values from the flight controller when opened, for the bank shown at the top left (change bank with the bank switch), and Save writes them back, stores them, and reads them back to check.||
 
+Battery, Black box and Calibrate set the flight pack, the flight recorder and the level. Copy a bank copies the tuning of one bank into another.||
+
+The line under the buttons says whether the flight controller will arm, and if not, why ("Will not arm: Throttle is not at idle"). Tap it for every reason at once. It shows only with the model connected and Bluetooth joined.||
+
 Settings holds what the transmitter itself needs to know: whether rates follow the banks, the Rotorflight version (as the receiver reports it), the arming channel, and the main rotor to motor RPM ratio.||
 
 Backup / Restore keeps EVERY Rotorflight setting of the model on the transmitter's card, over Bluetooth, and puts them back. With no model connected, the pages read and edit the backup instead, and the edits are offered to the model when it is next connected. Back up as soon as you are happy with a setup.||
 
-Without a model connected, PIDs and Rates show and edit the copies on the card. The other pages need the model.||
+Without a model connected, the pages read and edit the model's backup on the card (made with Backup / Restore); Calibrate, the black box's memory and the arming line need the model itself.||
 
 The blue tooth at the right means the link to the receiver is up; the words say when it is connecting, or absent. Land and disarm before using these pages: with the safety off, nothing here will open.||

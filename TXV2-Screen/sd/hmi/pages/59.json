@@ -529,43 +529,11 @@
    }
   },
   {
-   "n": "b3",
+   "n": "b2",
    "i": 19,
    "t": "button",
    "g": "l",
-   "x": 14,
-   "y": 414,
-   "w": 180,
-   "h": 56,
-   "font": 6,
-   "sta": 1,
-   "c": {
-    "bco2": 54938,
-    "pco": 0,
-    "borderc": 0,
-    "bco": 54938,
-    "pco2": 65535
-   },
-   "txt": "Save",
-   "val": 0,
-   "a": {
-    "style": 4,
-    "borderw": 2,
-    "xcen": 1,
-    "ycen": 1,
-    "txt_maxl": 10,
-    "isbr": 0
-   },
-   "ev": {
-    "r": "va0.val=66<<8\nprint va0.val"
-   }
-  },
-  {
-   "n": "b2",
-   "i": 20,
-   "t": "button",
-   "g": "l",
-   "x": 408,
+   "x": 211,
    "y": 414,
    "w": 180,
    "h": 56,
@@ -590,6 +558,38 @@
    },
    "ev": {
     "r": "va0.val=71<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "b3",
+   "i": 20,
+   "t": "button",
+   "g": "l",
+   "x": 408,
+   "y": 414,
+   "w": 180,
+   "h": 56,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Save",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=66<<8\nprint va0.val"
    }
   },
   {
@@ -629,27 +629,27 @@
    "i": 22,
    "t": "text",
    "g": "l",
-   "x": 40,
-   "y": 296,
-   "w": 720,
-   "h": 44,
+   "x": 110,
+   "y": 168,
+   "w": 580,
+   "h": 124,
    "font": 2,
    "sta": 1,
    "c": {
-    "pco": 0,
-    "borderc": 0,
-    "bco": 65504
+    "pco": 65535,
+    "borderc": 65535,
+    "bco": 4426
    },
    "txt": "",
    "a": {
-    "style": 0,
+    "style": 5,
     "key": 255,
-    "borderw": 2,
+    "borderw": 0,
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
-    "txt_maxl": 50,
-    "isbr": 0
+    "txt_maxl": 200,
+    "isbr": 1
    }
   }
  ]
