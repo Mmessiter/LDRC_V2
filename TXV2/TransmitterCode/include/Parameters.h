@@ -156,7 +156,7 @@ bool PipeJoining(char *why, size_t n)
 {
     if (PipeState != 1)
         return false;
-    snprintf(why, n, "Connecting Bluetooth.\r\nPlease wait a moment.");
+    snprintf(why, n, "Connecting Bluetooth.\r\nPlease wait a moment.\r\nIf it goes on: close the phone app\r\nif it is running (one at a time).");
     return true;
 }
 // B48 (Malcolm, 7 Oct: "I think we can remove the By radio fallback. I think Rotorflight editing should be entirely over
@@ -222,7 +222,7 @@ void AddParameterstoQueue(uint8_t ID) // this queue is essentially a LIFO stack
             Reading_PIDS_Now = Reading_RATES_Now = Reading_RATES_Advanced_Now = Reading_PIDS_Advanced_Now = Reading_GOV_Now = Reading_GOV_Config_Now = false;
             BlockBankChanges = false;
             PipeReadRefused = true;
-            SendText((char *)(CurrentView == RFGOVERNORVIEW_GLOBAL ? "t4" : "busy"), (char *)(PipeState == 1 ? "Bluetooth is joining: not read yet. Read again in a moment." : "No Bluetooth to the receiver: NOT read (the phone app connected?). It is tried again."));
+            SendText((char *)(CurrentView == RFGOVERNORVIEW_GLOBAL ? "t4" : "busy"), (char *)(PipeState == 1 ? "Bluetooth is joining: not read yet. Read again in a moment." : "No Bluetooth to the receiver: NOT read. Close the phone app if it is running. It is tried again."));
             SendCommand((char *)(CurrentView == RFGOVERNORVIEW_GLOBAL ? "vis t4,1" : "vis busy,1"));
             return;
         }

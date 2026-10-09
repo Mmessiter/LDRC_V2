@@ -290,12 +290,15 @@ static bool bleAsk(const std::string &method, const std::string &path, const std
 // Rotorflight menu's four buttons says so, in the biggest letters we have; it goes when the join ends. The main board
 // refuses those pages meanwhile (B47), with the same words.
 static bool pipeNoticeUp = false; static int pipeNoticePage = -1;
+static uint32_t pipeNoticeSince = 0; static bool pipeNoticeLate = false;   // 1.11.39: after a while the notice says what usually stands in the way
 static const int PN_X = 34, PN_Y = 280, PN_W = 732, PN_H = 112;   // (1.11.26: a strip under the menu's grid of buttons, over the model name's line)
 static void pipeNoticeDraw() {
     gfx->fillRect(PN_X, PN_Y, PN_W, PN_H, OUR_PANEL);
     gfx->drawRect(PN_X, PN_Y, PN_W, PN_H, OUR_INK); gfx->drawRect(PN_X + 1, PN_Y + 1, PN_W - 2, PN_H - 2, OUR_INK);
     gfx->startWrite();
-    const std::string a = "Connecting Bluetooth", c = "please wait a moment";
+    // 1.11.39 (Malcolm, 9 Oct, after an hour lost to the phone app holding the receiver's one Bluetooth link): after six
+    // seconds of trying, the notice says so
+    const std::string a = "Connecting Bluetooth", c = pipeNoticeLate ? "still trying: close the phone app if it is running" : "please wait a moment";
     int y = PN_Y + 10;
     drawGlyphs(PN_X + (PN_W - textWidth(1, a)) / 2, y, 1, OUR_INK, a); y += fontHeight(1) + 4;
     drawGlyphs(PN_X + (PN_W - textWidth(2, c)) / 2, y, 2, OUR_INK, c);
@@ -311,8 +314,10 @@ static void pipeNoticePoll() {
     const bool joining = bleState == BLE_STARTING || bleState == BLE_SCANNING || bleState == BLE_CONNECTING;
     const bool want = joining && page.id == 8 && !topOn && !loadingPage;
     if (pipeNoticeUp && page.id != pipeNoticePage) pipeNoticeUp = false;   // the page went: it was drawn afresh without us
-    if (want && !pipeNoticeUp) { pipeNoticeDraw(); pipeNoticeUp = true; pipeNoticePage = page.id; }
+    if (!joining) pipeNoticeSince = 0;
+    if (want && !pipeNoticeUp) { if (!pipeNoticeSince) pipeNoticeSince = millis(); pipeNoticeLate = millis() - pipeNoticeSince > 6000; pipeNoticeDraw(); pipeNoticeUp = true; pipeNoticePage = page.id; }
     else if (!want && pipeNoticeUp) { pipeNoticeUp = false; pipeNoticeClear(); }
+    else if (want && pipeNoticeUp && !pipeNoticeLate && millis() - pipeNoticeSince > 6000) { pipeNoticeLate = true; pipeNoticeDraw(); }
 }
 static void blePoll() {
     static bool wasArmed = false;

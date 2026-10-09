@@ -186,6 +186,22 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## "Close the phone app if it is running" (V2 B87, screen 1.11.39, 9 Oct 2026)
+
+Malcolm, 9 Oct morning, after a Bluetooth that would not connect because his iPhone's app held the receiver's one link:
+"when it says cannot connect to Bluetooth or words to that effect, let's add the message 'Close the app if it is
+running!'". The screen's Connecting Bluetooth notice says "still trying: close the phone app if it is running" after
+six seconds; the transmitter's refusal on entering a page says the same, and the "NOT read" banner now says "Close the
+phone app if it is running" rather than asking whether it is connected.
+
+## "Close the phone app if it is running" (V2 B87, screen 1.11.39, 9 Oct 2026)
+
+Malcolm, 9 Oct morning, after a Bluetooth that would not connect because his iPhone's app held the receiver's one link:
+"when it says cannot connect to Bluetooth or words to that effect, let's add the message 'Close the app if it is
+running!'". The screen's Connecting Bluetooth notice says "still trying: close the phone app if it is running" after
+six seconds; the transmitter's refusal on entering a page says the same, and the "NOT read" banner now says "Close the
+phone app if it is running" rather than asking whether it is connected.
+
 ## A second bank switch line is removed (V2 B86, 9 Oct 2026)
 
 The phone app's Switches page knew nothing of the line the transmitter had written (Rotorflight cannot send the list
