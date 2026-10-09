@@ -1,0 +1,910 @@
+{
+ "name": "GPSView",
+ "id": 52,
+ "w": 800,
+ "h": 480,
+ "bg": {
+  "sta": 2,
+  "mode": "image",
+  "picture": 3
+ },
+ "nav": {
+  "up": 255,
+  "down": 255,
+  "left": 255,
+  "right": 255
+ },
+ "ev": {
+  "preinitialize": "GPSView.pic=Screen_Background"
+ },
+ "comps": [
+  {
+   "n": "t0",
+   "i": 25,
+   "t": "text",
+   "g": "l",
+   "x": 0,
+   "y": 0,
+   "w": 800,
+   "h": 58,
+   "font": 0,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 2214
+   },
+   "txt": "GPS",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "card",
+   "i": 31,
+   "t": "text",
+   "g": "l",
+   "x": 0,
+   "y": 58,
+   "w": 800,
+   "h": 422,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 65535,
+    "bco": 4426
+   },
+   "txt": "",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 1,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t5",
+   "i": 1,
+   "t": "text",
+   "g": "l",
+   "x": 26,
+   "y": 177,
+   "w": 176,
+   "h": 34,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Longitude",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "Lon",
+   "i": 2,
+   "t": "text",
+   "g": "l",
+   "x": 206,
+   "y": 177,
+   "w": 182,
+   "h": 34,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 15,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t20",
+   "i": 3,
+   "t": "text",
+   "g": "l",
+   "x": 26,
+   "y": 93,
+   "w": 176,
+   "h": 34,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "GPS fix",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 14,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "Lat",
+   "i": 4,
+   "t": "text",
+   "g": "l",
+   "x": 206,
+   "y": 219,
+   "w": 182,
+   "h": 34,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 15,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t22",
+   "i": 5,
+   "t": "text",
+   "g": "l",
+   "x": 26,
+   "y": 219,
+   "w": 176,
+   "h": 34,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Latitude",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 9,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "Fix",
+   "i": 6,
+   "t": "text",
+   "g": "l",
+   "x": 206,
+   "y": 93,
+   "w": 182,
+   "h": 34,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 5,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t26",
+   "i": 7,
+   "t": "text",
+   "g": "l",
+   "x": 26,
+   "y": 345,
+   "w": 176,
+   "h": 34,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Meters to mark",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 26,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t27",
+   "i": 8,
+   "t": "text",
+   "g": "l",
+   "x": 402,
+   "y": 135,
+   "w": 210,
+   "h": 34,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Speed (mph)",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 23,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "Dist",
+   "i": 9,
+   "t": "text",
+   "g": "l",
+   "x": 206,
+   "y": 345,
+   "w": 182,
+   "h": 34,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 15,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "Sped",
+   "i": 10,
+   "t": "text",
+   "g": "l",
+   "x": 616,
+   "y": 135,
+   "w": 156,
+   "h": 34,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 15,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "Bear",
+   "i": 11,
+   "t": "text",
+   "g": "l",
+   "x": 206,
+   "y": 261,
+   "w": 182,
+   "h": 34,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 15,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t6",
+   "i": 12,
+   "t": "text",
+   "g": "l",
+   "x": 26,
+   "y": 303,
+   "w": 176,
+   "h": 34,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Heading to mark",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 27,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "BTo",
+   "i": 13,
+   "t": "text",
+   "g": "l",
+   "x": 206,
+   "y": 303,
+   "w": 182,
+   "h": 34,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 15,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t17",
+   "i": 14,
+   "t": "text",
+   "g": "l",
+   "x": 26,
+   "y": 261,
+   "w": 176,
+   "h": 34,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Heading",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 8,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t18",
+   "i": 15,
+   "t": "text",
+   "g": "l",
+   "x": 26,
+   "y": 135,
+   "w": 176,
+   "h": 34,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Satellites",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 11,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "Sat",
+   "i": 16,
+   "t": "text",
+   "g": "l",
+   "x": 206,
+   "y": 135,
+   "w": 182,
+   "h": 34,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 3,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t12",
+   "i": 17,
+   "t": "text",
+   "g": "l",
+   "x": 402,
+   "y": 177,
+   "w": 210,
+   "h": 34,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Max speed (mph)",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 23,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "MxS",
+   "i": 18,
+   "t": "text",
+   "g": "l",
+   "x": 616,
+   "y": 177,
+   "w": 156,
+   "h": 34,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 15,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t19",
+   "i": 19,
+   "t": "text",
+   "g": "l",
+   "x": 402,
+   "y": 93,
+   "w": 210,
+   "h": 34,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Max distance (yards)",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 23,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "Mxd",
+   "i": 20,
+   "t": "text",
+   "g": "l",
+   "x": 616,
+   "y": 93,
+   "w": 156,
+   "h": 34,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 15,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "ALT",
+   "i": 21,
+   "t": "text",
+   "g": "l",
+   "x": 616,
+   "y": 219,
+   "w": 156,
+   "h": 34,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 15,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t23",
+   "i": 22,
+   "t": "text",
+   "g": "l",
+   "x": 402,
+   "y": 219,
+   "w": 210,
+   "h": 34,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Altitude (feet)",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 23,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "MALT",
+   "i": 23,
+   "t": "text",
+   "g": "l",
+   "x": 616,
+   "y": 261,
+   "w": 156,
+   "h": 34,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 15,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t24",
+   "i": 24,
+   "t": "text",
+   "g": "l",
+   "x": 402,
+   "y": 261,
+   "w": 210,
+   "h": 34,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Max altitude (feet)",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 23,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "b2",
+   "i": 26,
+   "t": "button",
+   "g": "l",
+   "x": 14,
+   "y": 414,
+   "w": 180,
+   "h": 56,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Zero alt",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"AltZero\""
+   }
+  },
+  {
+   "n": "b1",
+   "i": 27,
+   "t": "button",
+   "g": "l",
+   "x": 211,
+   "y": 414,
+   "w": 180,
+   "h": 56,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Mark here",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"Mark\""
+   }
+  },
+  {
+   "n": "b10",
+   "i": 28,
+   "t": "button",
+   "g": "l",
+   "x": 605,
+   "y": 414,
+   "w": 180,
+   "h": 56,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "OK",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"DataEnd\""
+   }
+  },
+  {
+   "n": "b15",
+   "i": 29,
+   "t": "button",
+   "g": "l",
+   "x": 620,
+   "y": 4,
+   "w": 170,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Help",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"HelpView:GPS.TXT\"\nLogView.t0.txt=\"GPS help\"\nLogView.return.txt=\"GPSView\""
+   }
+  },
+  {
+   "n": "b0",
+   "i": 30,
+   "t": "button",
+   "g": "l",
+   "x": 408,
+   "y": 414,
+   "w": 180,
+   "h": 56,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 214,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Data ...",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"DataView\""
+   }
+  }
+ ]
+}

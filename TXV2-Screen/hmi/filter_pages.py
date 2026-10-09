@@ -10,6 +10,7 @@ import rescue_pages as rp
 # codes (the main board's NumberedFunctions1): 92 open, 93 OK, 94 save, 95 a number edited, 96 lowpass 1 type, 97 lowpass 2 type,
 # 98 RPM strength, 99 lowpass 1 enable, 100 RPM filter enable, 101 dynamic filter enable, 102 next page, 103 previous page,
 # 104 lowpass 2 enable, 105 dynamic cutoff enable, 106 notch 1 enable, 107 notch 2 enable
+rp.series_begin()   # (B91: one island, one size of row, for the series)
 rp.page(64, 'FilterView', 'Gyro filters (Rotorflight)', [
     ('h0', 'Lowpass Filter', 0, 0, 'head', 0),
     ('tn0', 'Enable', 0, 1, 'switch', 99), ('tn1', 'Filter type', 0, 2, 'cycle', 96),
@@ -36,6 +37,7 @@ rp.page(65, 'Filter2View', 'Gyro filters: expert', [   # in the configurator's e
     ('tn9', 'Enable', 1, 5, 'switch', 107), ('tn10', 'Center frequency [Hz]', 1, 6, 'num', 95, 'Notch 2 center [Hz]'),
     ('tn11', 'Cutoff frequency [Hz]', 1, 7, 'num', 95, 'Notch 2 cutoff [Hz]'),
 ], [('b3', 'Save', 14, 180, 94), ('b2', '< Previous', 408, 180, 103), ('b1', 'OK', 605, 180, 93)], 'FILTERS2.TXT')
+rp.series_end()
 idx = json.load(open(os.path.join(rp.PAGES, '..', 'index.json')))
 have = {x['id']: x for x in idx['pages']}
 for pid, name in ((64, 'FilterView'), (65, 'Filter2View')):

@@ -1,0 +1,791 @@
+{
+ "name": "AudioView",
+ "id": 55,
+ "w": 800,
+ "h": 480,
+ "bg": {
+  "sta": 2,
+  "mode": "image",
+  "picture": 3
+ },
+ "nav": {
+  "up": 255,
+  "down": 255,
+  "left": 255,
+  "right": 255
+ },
+ "ev": {
+  "preinitialize": "AudioView.pic=Screen_Background",
+  "postinitialize": "volume=Ex1.val\nif(h0.val<15)\n{\n  h0.val=15\n}\ndim=h0.val",
+  "touch_release": "print \"UKRULES\""
+ },
+ "comps": [
+  {
+   "n": "t0",
+   "i": 1,
+   "t": "text",
+   "g": "l",
+   "x": 0,
+   "y": 0,
+   "w": 800,
+   "h": 58,
+   "font": 0,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 2214
+   },
+   "txt": "Sounds and brightness",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "card",
+   "i": 29,
+   "t": "text",
+   "g": "l",
+   "x": 0,
+   "y": 58,
+   "w": 800,
+   "h": 422,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 65535,
+    "bco": 4426
+   },
+   "txt": "",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 1,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"UKRULES\""
+   }
+  },
+  {
+   "n": "b0",
+   "i": 2,
+   "t": "button",
+   "g": "l",
+   "x": 620,
+   "y": 4,
+   "w": 170,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Help",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"HelpView:AUDIO.TXT\"\nLogView.t0.txt=\"Audio help\"\nLogView.return.txt=\"AudioView\""
+   }
+  },
+  {
+   "n": "b10",
+   "i": 3,
+   "t": "button",
+   "g": "l",
+   "x": 605,
+   "y": 414,
+   "w": 180,
+   "h": 56,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "OK",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va1.val=3<<8\nprint va1.val"
+   }
+  },
+  {
+   "n": "wav0",
+   "i": 4,
+   "t": "audio",
+   "g": "l",
+   "a": {
+    "en": 0,
+    "dis": 100,
+    "tim": 0
+   }
+  },
+  {
+   "n": "va0",
+   "i": 5,
+   "t": "variable",
+   "g": "l",
+   "sta": 1,
+   "txt": "newtxt",
+   "val": 0,
+   "a": {
+    "txt_maxl": 20
+   }
+  },
+  {
+   "n": "Ex1",
+   "i": 6,
+   "t": "slider",
+   "g": "l",
+   "x": 190,
+   "y": 356,
+   "w": 570,
+   "h": 40,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "bco": 33808,
+    "bco1": 65504
+   },
+   "val": 50,
+   "a": {
+    "mode": 0,
+    "psta": 0,
+    "wid": 255,
+    "hig": 255,
+    "dis": 100,
+    "maxval": 100,
+    "minval": 0
+   },
+   "ev": {
+    "r": "volume=Ex1.val"
+   }
+  },
+  {
+   "n": "t2",
+   "i": 7,
+   "t": "text",
+   "g": "l",
+   "x": 28,
+   "y": 356,
+   "w": 150,
+   "h": 40,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Volume",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 14,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "h0",
+   "i": 8,
+   "t": "slider",
+   "g": "l",
+   "x": 190,
+   "y": 310,
+   "w": 570,
+   "h": 40,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "bco": 33808,
+    "bco1": 65504
+   },
+   "val": 100,
+   "a": {
+    "mode": 0,
+    "psta": 0,
+    "wid": 255,
+    "hig": 255,
+    "dis": 100,
+    "maxval": 100,
+    "minval": 0
+   },
+   "ev": {
+    "r": "if(h0.val<10)\n{\n  h0.val=10\n}\ndim=h0.val"
+   }
+  },
+  {
+   "n": "t1",
+   "i": 9,
+   "t": "text",
+   "g": "l",
+   "x": 28,
+   "y": 310,
+   "w": 150,
+   "h": 40,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Brightness",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 14,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t3",
+   "i": 10,
+   "t": "text",
+   "g": "l",
+   "x": 28,
+   "y": 210,
+   "w": 262,
+   "h": 38,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Start and close sounds",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t4",
+   "i": 11,
+   "t": "text",
+   "g": "l",
+   "x": 28,
+   "y": 254,
+   "w": 262,
+   "h": 38,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Trim change clicks",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 20,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t5",
+   "i": 12,
+   "t": "text",
+   "g": "l",
+   "x": 410,
+   "y": 78,
+   "w": 262,
+   "h": 38,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Vario tones",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 15,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t7",
+   "i": 13,
+   "t": "text",
+   "g": "l",
+   "x": 28,
+   "y": 78,
+   "w": 262,
+   "h": 38,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Timer voice",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 20,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t8",
+   "i": 14,
+   "t": "text",
+   "g": "l",
+   "x": 28,
+   "y": 122,
+   "w": 262,
+   "h": 38,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Bank voice",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 20,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t10",
+   "i": 15,
+   "t": "text",
+   "g": "l",
+   "x": 28,
+   "y": 166,
+   "w": 262,
+   "h": 38,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Connected voice",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 20,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "va1",
+   "i": 16,
+   "t": "variable",
+   "g": "l",
+   "sta": 0,
+   "txt": "newtxt",
+   "val": 0,
+   "a": {
+    "txt_maxl": 10
+   }
+  },
+  {
+   "n": "n2",
+   "i": 17,
+   "t": "number",
+   "g": "g",
+   "x": 680,
+   "y": 122,
+   "w": 84,
+   "h": 38,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "val": 1,
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "lenth": 0,
+    "format": 0,
+    "isbr": 1
+   },
+   "ev": {
+    "p": "keybdB.t1.txt=\"Variometer bank\""
+   }
+  },
+  {
+   "n": "t11",
+   "i": 18,
+   "t": "text",
+   "g": "l",
+   "x": 410,
+   "y": 122,
+   "w": 262,
+   "h": 38,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Vario bank (0 = all)",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 33,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t9",
+   "i": 19,
+   "t": "text",
+   "g": "l",
+   "x": 410,
+   "y": 166,
+   "w": 262,
+   "h": 38,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Vario threshold (fpm)",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 33,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t12",
+   "i": 20,
+   "t": "text",
+   "g": "l",
+   "x": 410,
+   "y": 210,
+   "w": 262,
+   "h": 38,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Vario spacing (fpm)",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 33,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "n3",
+   "i": 21,
+   "t": "number",
+   "g": "g",
+   "x": 680,
+   "y": 210,
+   "w": 84,
+   "h": 38,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "val": 125,
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "lenth": 0,
+    "format": 0,
+    "isbr": 1
+   },
+   "ev": {
+    "p": "keybdB.t1.txt=\"Variometer spacing\""
+   }
+  },
+  {
+   "n": "n0",
+   "i": 22,
+   "t": "number",
+   "g": "g",
+   "x": 680,
+   "y": 166,
+   "w": 84,
+   "h": 38,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "val": 1,
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "lenth": 0,
+    "format": 0,
+    "isbr": 1
+   },
+   "ev": {
+    "p": "keybdB.t1.txt=\"Variometer threshold\""
+   }
+  },
+  {
+   "n": "c3",
+   "i": 23,
+   "t": "switch",
+   "g": "l",
+   "x": 298,
+   "y": 80,
+   "w": 84,
+   "h": 34,
+   "font": 0,
+   "c": {
+    "pco1": 0,
+    "bco2": 2016,
+    "pco": 65535,
+    "bco": 33808,
+    "pco2": 65535
+   },
+   "txt": " / ",
+   "val": 0,
+   "a": {
+    "dez": 0,
+    "dis": 100,
+    "txt_maxl": 24
+   }
+  },
+  {
+   "n": "c4",
+   "i": 24,
+   "t": "switch",
+   "g": "l",
+   "x": 298,
+   "y": 124,
+   "w": 84,
+   "h": 34,
+   "font": 0,
+   "c": {
+    "pco1": 0,
+    "bco2": 2016,
+    "pco": 65535,
+    "bco": 33808,
+    "pco2": 65535
+   },
+   "txt": " / ",
+   "val": 0,
+   "a": {
+    "dez": 0,
+    "dis": 100,
+    "txt_maxl": 24
+   }
+  },
+  {
+   "n": "c5",
+   "i": 25,
+   "t": "switch",
+   "g": "l",
+   "x": 298,
+   "y": 168,
+   "w": 84,
+   "h": 34,
+   "font": 0,
+   "c": {
+    "pco1": 0,
+    "bco2": 2016,
+    "pco": 65535,
+    "bco": 33808,
+    "pco2": 65535
+   },
+   "txt": " / ",
+   "val": 0,
+   "a": {
+    "dez": 0,
+    "dis": 100,
+    "txt_maxl": 24
+   }
+  },
+  {
+   "n": "c0",
+   "i": 26,
+   "t": "switch",
+   "g": "l",
+   "x": 298,
+   "y": 212,
+   "w": 84,
+   "h": 34,
+   "font": 0,
+   "c": {
+    "pco1": 0,
+    "bco2": 2016,
+    "pco": 65535,
+    "bco": 33808,
+    "pco2": 65535
+   },
+   "txt": " / ",
+   "val": 0,
+   "a": {
+    "dez": 0,
+    "dis": 100,
+    "txt_maxl": 24
+   }
+  },
+  {
+   "n": "c1",
+   "i": 27,
+   "t": "switch",
+   "g": "l",
+   "x": 298,
+   "y": 256,
+   "w": 84,
+   "h": 34,
+   "font": 0,
+   "c": {
+    "pco1": 0,
+    "bco2": 2016,
+    "pco": 65535,
+    "bco": 33808,
+    "pco2": 65535
+   },
+   "txt": " / ",
+   "val": 0,
+   "a": {
+    "dez": 0,
+    "dis": 100,
+    "txt_maxl": 24
+   }
+  },
+  {
+   "n": "c2",
+   "i": 28,
+   "t": "switch",
+   "g": "l",
+   "x": 680,
+   "y": 80,
+   "w": 84,
+   "h": 34,
+   "font": 0,
+   "c": {
+    "pco1": 0,
+    "bco2": 2016,
+    "pco": 65535,
+    "bco": 33808,
+    "pco2": 65535
+   },
+   "txt": " / ",
+   "val": 0,
+   "a": {
+    "dez": 0,
+    "dis": 100,
+    "txt_maxl": 24
+   }
+  }
+ ]
+}

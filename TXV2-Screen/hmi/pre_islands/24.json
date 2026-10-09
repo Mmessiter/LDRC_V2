@@ -1,0 +1,762 @@
+{
+ "name": "OptionView2",
+ "id": 24,
+ "w": 800,
+ "h": 480,
+ "bg": {
+  "sta": 2,
+  "mode": "image",
+  "picture": 3
+ },
+ "nav": {
+  "up": 255,
+  "down": 255,
+  "left": 255,
+  "right": 255
+ },
+ "ev": {
+  "preinitialize": "OptionView2.pic=Screen_Background"
+ },
+ "comps": [
+  {
+   "n": "t0",
+   "i": 1,
+   "t": "text",
+   "g": "l",
+   "x": 0,
+   "y": 0,
+   "w": 800,
+   "h": 58,
+   "font": 0,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 2214
+   },
+   "txt": "Clock  (2 of 3)",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "card",
+   "i": 26,
+   "t": "text",
+   "g": "l",
+   "x": 0,
+   "y": 58,
+   "w": 800,
+   "h": 422,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 65535,
+    "bco": 4426
+   },
+   "txt": "",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 1,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "b2",
+   "i": 2,
+   "t": "button",
+   "g": "l",
+   "x": 634,
+   "y": 262,
+   "w": 132,
+   "h": 54,
+   "font": 0,
+   "sta": 1,
+   "c": {
+    "bco2": 16392,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "-",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"DecMinute\""
+   }
+  },
+  {
+   "n": "b1",
+   "i": 3,
+   "t": "button",
+   "g": "l",
+   "x": 634,
+   "y": 160,
+   "w": 132,
+   "h": 54,
+   "font": 0,
+   "sta": 1,
+   "c": {
+    "bco2": 16392,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "+",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"IncMinute\""
+   }
+  },
+  {
+   "n": "DateTime",
+   "i": 4,
+   "t": "text",
+   "g": "l",
+   "x": 18,
+   "y": 72,
+   "w": 764,
+   "h": 76,
+   "font": 1,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "11 Sept 2022 20:50:25",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 25,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "b3",
+   "i": 5,
+   "t": "button",
+   "g": "l",
+   "x": 484,
+   "y": 262,
+   "w": 132,
+   "h": 54,
+   "font": 0,
+   "sta": 1,
+   "c": {
+    "bco2": 16392,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "-",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"DecHour\""
+   }
+  },
+  {
+   "n": "b4",
+   "i": 6,
+   "t": "button",
+   "g": "l",
+   "x": 484,
+   "y": 160,
+   "w": 132,
+   "h": 54,
+   "font": 0,
+   "sta": 1,
+   "c": {
+    "bco2": 16392,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "+",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"IncHour\""
+   }
+  },
+  {
+   "n": "b5",
+   "i": 7,
+   "t": "button",
+   "g": "l",
+   "x": 334,
+   "y": 262,
+   "w": 132,
+   "h": 54,
+   "font": 0,
+   "sta": 1,
+   "c": {
+    "bco2": 16392,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "-",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"DecYear\""
+   }
+  },
+  {
+   "n": "b6",
+   "i": 8,
+   "t": "button",
+   "g": "l",
+   "x": 334,
+   "y": 160,
+   "w": 132,
+   "h": 54,
+   "font": 0,
+   "sta": 1,
+   "c": {
+    "bco2": 16392,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "+",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"IncYear\""
+   }
+  },
+  {
+   "n": "b7",
+   "i": 9,
+   "t": "button",
+   "g": "l",
+   "x": 184,
+   "y": 160,
+   "w": 132,
+   "h": 54,
+   "font": 0,
+   "sta": 1,
+   "c": {
+    "bco2": 16392,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "+",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"IncMonth\""
+   }
+  },
+  {
+   "n": "b8",
+   "i": 10,
+   "t": "button",
+   "g": "l",
+   "x": 184,
+   "y": 262,
+   "w": 132,
+   "h": 54,
+   "font": 0,
+   "sta": 1,
+   "c": {
+    "bco2": 16392,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "-",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"DecMonth\""
+   }
+  },
+  {
+   "n": "b9",
+   "i": 11,
+   "t": "button",
+   "g": "l",
+   "x": 34,
+   "y": 160,
+   "w": 132,
+   "h": 54,
+   "font": 0,
+   "sta": 1,
+   "c": {
+    "bco2": 16392,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "+",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"IncDate\""
+   }
+  },
+  {
+   "n": "b11",
+   "i": 12,
+   "t": "button",
+   "g": "l",
+   "x": 34,
+   "y": 262,
+   "w": 132,
+   "h": 54,
+   "font": 0,
+   "sta": 1,
+   "c": {
+    "bco2": 16392,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "-",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"DecDate\""
+   }
+  },
+  {
+   "n": "b10",
+   "i": 13,
+   "t": "button",
+   "g": "l",
+   "x": 605,
+   "y": 414,
+   "w": 180,
+   "h": 56,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 16392,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "OK",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=128+23\nprint va0.val"
+   }
+  },
+  {
+   "n": "t8",
+   "i": 14,
+   "t": "text",
+   "g": "l",
+   "x": 30,
+   "y": 336,
+   "w": 444,
+   "h": 46,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Time zone (hours from GMT)",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 28,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "dGMT",
+   "i": 15,
+   "t": "number",
+   "g": "g",
+   "x": 484,
+   "y": 336,
+   "w": 120,
+   "h": 46,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "val": 0,
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "lenth": 0,
+    "format": 0,
+    "isbr": 1
+   }
+  },
+  {
+   "n": "b13",
+   "i": 16,
+   "t": "button",
+   "g": "l",
+   "x": 408,
+   "y": 414,
+   "w": 180,
+   "h": 56,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 16392,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Next  >",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=128+26\nprint va0.val"
+   }
+  },
+  {
+   "n": "b0",
+   "i": 17,
+   "t": "button",
+   "g": "l",
+   "x": 14,
+   "y": 414,
+   "w": 180,
+   "h": 56,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 16392,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "<  Back",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "//print \"OptionsViewS\"\nva0.val=7<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "va0",
+   "i": 18,
+   "t": "variable",
+   "g": "l",
+   "sta": 0,
+   "txt": "newtxt",
+   "val": 0,
+   "a": {
+    "txt_maxl": 10
+   }
+  },
+  {
+   "n": "b12",
+   "i": 19,
+   "t": "button",
+   "g": "l",
+   "x": 614,
+   "y": 336,
+   "w": 156,
+   "h": 46,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 16392,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Reset clock",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 20,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=128+71\nprint va0.val"
+   }
+  },
+  {
+   "n": "lb0",
+   "i": 27,
+   "t": "text",
+   "g": "l",
+   "x": 34,
+   "y": 216,
+   "w": 132,
+   "h": 44,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Day",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 5,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "lb1",
+   "i": 28,
+   "t": "text",
+   "g": "l",
+   "x": 184,
+   "y": 216,
+   "w": 132,
+   "h": 44,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Month",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 7,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "lb2",
+   "i": 29,
+   "t": "text",
+   "g": "l",
+   "x": 334,
+   "y": 216,
+   "w": 132,
+   "h": 44,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Year",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 6,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "lb3",
+   "i": 30,
+   "t": "text",
+   "g": "l",
+   "x": 484,
+   "y": 216,
+   "w": 132,
+   "h": 44,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Hour",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 6,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "lb4",
+   "i": 31,
+   "t": "text",
+   "g": "l",
+   "x": 634,
+   "y": 216,
+   "w": 132,
+   "h": 44,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Minute",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 8,
+    "isbr": 0
+   }
+  }
+ ]
+}

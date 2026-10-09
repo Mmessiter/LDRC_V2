@@ -19,8 +19,11 @@ PLAN = {   # page: (the bottom row's buttons left to right, OK last - None keeps
     6: (['b3', 'b1'], 'busy', rp.MSGBOX),
     7: (['b3', 'b1'], 'busy', rp.MSGBOX),   # (its lower row, y 430, kept: the rows run to 415; the model's name moves left of Save)
 }
+# B91: these pages are islands now (hmi/islands.py), made from their copies in hmi/pre_islands: this works on THOSE copies
+# (where they exist), and hmi/islands.py must be run after it
+PRE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pre_islands')
 for pid, (row, banner, rect) in PLAN.items():
-    path = os.path.join(PAGES, '%d.json' % pid)
+    path = os.path.join(PRE, '%d.json' % pid) if os.path.exists(os.path.join(PRE, '%d.json' % pid)) else os.path.join(PAGES, '%d.json' % pid)
     pg = json.load(open(path))
     by = {c['n']: c for c in pg['comps']}
     if row:
@@ -36,3 +39,4 @@ for pid, (row, banner, rect) in PLAN.items():
     if 'vis %s,0' % banner not in pre: pg['ev']['preinitialize'] = 'vis %s,0\n' % banner + pre   # (6 and 42 showed theirs until the first read ended: a message box must wait to be asked for)
     json.dump(pg, open(path, 'w'), indent=1)
     print(pid, pg['name'], 'row' if row else 'row kept', banner, rect)
+print('now: python3 hmi/islands.py')

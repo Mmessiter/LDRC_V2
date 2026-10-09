@@ -186,6 +186,33 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Islands on most pages (V2 B90 card files, screen 1.11.40, 9 Oct 2026)
+
+Malcolm, 9 Oct evening, of B90's compact pages: "It's fabulous! I especially like a centered island of solid background
+colour with buttons contained within, surrounded by the background image. This idea could be implemented on more screens
+maybe by making buttons a little smaller to make the island smaller. This would give it a greater sense of unity."
+
+- **Every Rotorflight page** is now an island: the menu, Settings, PIDs, PID+ (no: too full), Rates, Rates+, Governor and
+  Governor (global), Rescue 1-2, Servos, Mixer 1-3, Filters 1-2, Adjustments and its picker, Switches and its picker,
+  Copy a bank, Battery and its sensors, Black box, Calibrate, Backup. The generated ones are laid out in the largest of
+  four row sizes that fits (`hmi/rescue_pages.py compact_plan`, `island`); pages in a series (Next / < Previous) share
+  one island and one row size, so their buttons stand in the same places.
+- **22 other pages** too: Model setup, Transmitter setup, Model IDs and its duplicates, General / Clock / Advanced (one
+  island for the three), Wireless buddy, Files, Bank names, Macros, Mixes, Rates, Batteries, Sounds and brightness, Set
+  trim directions, Rename. `hmi/islands.py` closes up the empty space between rows and columns, narrows fixed labels to
+  their words, centres the card, and keeps the bottom row's slots (an empty slot stays empty, so "< Back" tapped twice
+  never lands on "Bind"); per-page tweaks are listed in it. A page that cannot leave at least 24 px of picture at the
+  sides and 16 above and below keeps its full card: PID+, Model options, Buddy channels, Trims, Telemetry, Subtrim, PWM
+  servo types, Servo speed, Failsafe, Reverse, Inputs, GPS, Switches, Switch 1 (Malcolm, 3 Oct: "it doesn't have to be
+  the same for every screen").
+- **Buttons 160 x 50** on the islands (they were 180 x 56). The model's name moves into the title strip (top left, as on
+  the Rotorflight pages) on Model setup, Transmitter setup and Batteries. Governor's "Global governor parameters ..."
+  is "Global ..." beside Save, as "Advanced ..." is on Rates and PIDs. The pickers show seven rows; the backup page's
+  four actions are a block of two by two beside its guidance.
+- Teensy unchanged (B90). Checks: the screen's host tests, `lint_pages.py` (no new findings), every island's
+  components inside its card, every page rendered on the Mac over two pictures, the generators and `islands.py` run
+  twice to the same bytes.
+
 ## The small pages on a card of their own; the model gone, the backup answers; LevelView (V2 B90, 9 Oct 2026)
 
 Malcolm, 9 Oct afternoon, of Battery, Rotorflight settings and Calibrate: "These three screens would look better if

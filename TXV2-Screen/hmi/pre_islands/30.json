@@ -1,0 +1,1305 @@
+{
+ "name": "DataView",
+ "id": 30,
+ "w": 800,
+ "h": 480,
+ "bg": {
+  "sta": 2,
+  "mode": "image",
+  "picture": 3
+ },
+ "nav": {
+  "up": 255,
+  "down": 255,
+  "left": 255,
+  "right": 255
+ },
+ "ev": {
+  "preinitialize": "DataView.pic=Screen_Background",
+  "touch_release": "print \"UKRULES\""
+ },
+ "comps": [
+  {
+   "n": "t0",
+   "i": 1,
+   "t": "text",
+   "g": "l",
+   "x": 0,
+   "y": 0,
+   "w": 800,
+   "h": 58,
+   "font": 0,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 2214
+   },
+   "txt": "Telemetry",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "card",
+   "i": 46,
+   "t": "text",
+   "g": "l",
+   "x": 0,
+   "y": 58,
+   "w": 800,
+   "h": 422,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 65535,
+    "bco": 4426
+   },
+   "txt": "",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 1,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"UKRULES\""
+   }
+  },
+  {
+   "n": "lps",
+   "i": 2,
+   "t": "number",
+   "g": "l",
+   "x": 242,
+   "y": 150,
+   "w": 108,
+   "h": 31,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "val": 0,
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "lenth": 0,
+    "format": 0,
+    "isbr": 1
+   }
+  },
+  {
+   "n": "t1",
+   "i": 3,
+   "t": "text",
+   "g": "l",
+   "x": 26,
+   "y": 150,
+   "w": 212,
+   "h": 31,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Lost data packets",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t2",
+   "i": 4,
+   "t": "text",
+   "g": "l",
+   "x": 26,
+   "y": 115,
+   "w": 212,
+   "h": 31,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Current frame rate",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "pps",
+   "i": 5,
+   "t": "number",
+   "g": "l",
+   "x": 242,
+   "y": 115,
+   "w": 108,
+   "h": 31,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "val": 0,
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "lenth": 0,
+    "format": 0,
+    "isbr": 1
+   }
+  },
+  {
+   "n": "t4",
+   "i": 6,
+   "t": "text",
+   "g": "l",
+   "x": 370,
+   "y": 150,
+   "w": 198,
+   "h": 31,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Max rotor RPM",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "b10",
+   "i": 7,
+   "t": "button",
+   "g": "l",
+   "x": 605,
+   "y": 414,
+   "w": 180,
+   "h": 56,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "OK",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"DataEnd\""
+   }
+  },
+  {
+   "n": "alt",
+   "i": 8,
+   "t": "text",
+   "g": "l",
+   "x": 572,
+   "y": 150,
+   "w": 200,
+   "h": 31,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t7",
+   "i": 9,
+   "t": "text",
+   "g": "l",
+   "x": 370,
+   "y": 325,
+   "w": 198,
+   "h": 31,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "RX firmware",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 25,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t8",
+   "i": 10,
+   "t": "text",
+   "g": "l",
+   "x": 370,
+   "y": 360,
+   "w": 198,
+   "h": 31,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "TX firmware",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 12,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "rxv",
+   "i": 11,
+   "t": "text",
+   "g": "l",
+   "x": 572,
+   "y": 325,
+   "w": 200,
+   "h": 31,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "2.5.6K",
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "txv",
+   "i": 12,
+   "t": "text",
+   "g": "l",
+   "x": 572,
+   "y": 360,
+   "w": 200,
+   "h": 31,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 20,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t10",
+   "i": 13,
+   "t": "text",
+   "g": "l",
+   "x": 26,
+   "y": 185,
+   "w": 212,
+   "h": 31,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Longest comms gap",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t11",
+   "i": 14,
+   "t": "text",
+   "g": "l",
+   "x": 370,
+   "y": 80,
+   "w": 198,
+   "h": 31,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Transceiver swaps",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "Ls",
+   "i": 15,
+   "t": "number",
+   "g": "l",
+   "x": 242,
+   "y": 185,
+   "w": 108,
+   "h": 31,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "val": 0,
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "lenth": 0,
+    "format": 0,
+    "isbr": 1
+   }
+  },
+  {
+   "n": "Ts",
+   "i": 16,
+   "t": "number",
+   "g": "l",
+   "x": 572,
+   "y": 80,
+   "w": 200,
+   "h": 31,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "val": 0,
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "lenth": 0,
+    "format": 0,
+    "isbr": 1
+   }
+  },
+  {
+   "n": "MaxAlt",
+   "i": 17,
+   "t": "text",
+   "g": "l",
+   "x": 572,
+   "y": 185,
+   "w": 200,
+   "h": 31,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t13",
+   "i": 18,
+   "t": "text",
+   "g": "l",
+   "x": 370,
+   "y": 185,
+   "w": 198,
+   "h": 31,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Max ESC temp",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "b15",
+   "i": 19,
+   "t": "button",
+   "g": "l",
+   "x": 620,
+   "y": 4,
+   "w": 170,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Help",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"HelpView:DATA.TXT\"\nLogView.t0.txt=\"Data help\"\nLogView.return.txt=\"DataView\""
+   }
+  },
+  {
+   "n": "t14",
+   "i": 20,
+   "t": "text",
+   "g": "l",
+   "x": 26,
+   "y": 255,
+   "w": 212,
+   "h": 31,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Packets received",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 25,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "rx",
+   "i": 21,
+   "t": "text",
+   "g": "l",
+   "x": 242,
+   "y": 255,
+   "w": 108,
+   "h": 31,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 20,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t9",
+   "i": 22,
+   "t": "text",
+   "g": "l",
+   "x": 26,
+   "y": 290,
+   "w": 212,
+   "h": 31,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Transceiver 1 time",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t15",
+   "i": 23,
+   "t": "text",
+   "g": "l",
+   "x": 26,
+   "y": 220,
+   "w": 212,
+   "h": 31,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Average comms gap",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "Ag",
+   "i": 24,
+   "t": "number",
+   "g": "l",
+   "x": 242,
+   "y": 220,
+   "w": 108,
+   "h": 31,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "val": 0,
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "lenth": 0,
+    "format": 0,
+    "isbr": 1
+   }
+  },
+  {
+   "n": "t16",
+   "i": 25,
+   "t": "text",
+   "g": "l",
+   "x": 26,
+   "y": 325,
+   "w": 212,
+   "h": 31,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Transceiver 2 time",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "b0",
+   "i": 26,
+   "t": "button",
+   "g": "l",
+   "x": 14,
+   "y": 414,
+   "w": 180,
+   "h": 56,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Clear",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"Clear\""
+   }
+  },
+  {
+   "n": "t3",
+   "i": 27,
+   "t": "text",
+   "g": "l",
+   "x": 370,
+   "y": 220,
+   "w": 198,
+   "h": 31,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "ESC temp",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 17,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "Temp",
+   "i": 28,
+   "t": "text",
+   "g": "l",
+   "x": 572,
+   "y": 220,
+   "w": 200,
+   "h": 31,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t21",
+   "i": 29,
+   "t": "text",
+   "g": "l",
+   "x": 370,
+   "y": 115,
+   "w": 198,
+   "h": 31,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Receiver type",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 25,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "Sbus",
+   "i": 30,
+   "t": "text",
+   "g": "l",
+   "x": 572,
+   "y": 115,
+   "w": 200,
+   "h": 31,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 20,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "wav0",
+   "i": 31,
+   "t": "audio",
+   "g": "l",
+   "a": {
+    "en": 1,
+    "dis": 100,
+    "tim": 0
+   }
+  },
+  {
+   "n": "b13",
+   "i": 32,
+   "t": "button",
+   "g": "l",
+   "x": 211,
+   "y": 414,
+   "w": 180,
+   "h": 56,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Gaps ...",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 15,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=17<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "va0",
+   "i": 33,
+   "t": "variable",
+   "g": "l",
+   "sta": 0,
+   "txt": "newtxt",
+   "val": 0,
+   "a": {
+    "txt_maxl": 10
+   }
+  },
+  {
+   "n": "b1",
+   "i": 34,
+   "t": "button",
+   "g": "l",
+   "x": 408,
+   "y": 414,
+   "w": 180,
+   "h": 56,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "GPS ...",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=128+49\nprint va0.val"
+   }
+  },
+  {
+   "n": "t5",
+   "i": 35,
+   "t": "text",
+   "g": "l",
+   "x": 370,
+   "y": 255,
+   "w": 198,
+   "h": 31,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "RX volts per cell",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 23,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t6",
+   "i": 36,
+   "t": "text",
+   "g": "l",
+   "x": 572,
+   "y": 255,
+   "w": 200,
+   "h": 31,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t12",
+   "i": 37,
+   "t": "text",
+   "g": "l",
+   "x": 370,
+   "y": 290,
+   "w": 198,
+   "h": 31,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "TX volts per cell",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t17",
+   "i": 38,
+   "t": "text",
+   "g": "l",
+   "x": 572,
+   "y": 290,
+   "w": 200,
+   "h": 31,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t29",
+   "i": 39,
+   "t": "text",
+   "g": "l",
+   "x": 26,
+   "y": 80,
+   "w": 212,
+   "h": 31,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Average frame rate",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "n0",
+   "i": 40,
+   "t": "number",
+   "g": "l",
+   "x": 242,
+   "y": 80,
+   "w": 108,
+   "h": 31,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "val": 0,
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "lenth": 0,
+    "format": 0,
+    "isbr": 1
+   }
+  },
+  {
+   "n": "t30",
+   "i": 41,
+   "t": "text",
+   "g": "l",
+   "x": 26,
+   "y": 360,
+   "w": 212,
+   "h": 31,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Transceiver 3 time",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 20,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "b2",
+   "i": 42,
+   "t": "button",
+   "g": "l",
+   "x": 167,
+   "y": 486,
+   "w": 130,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Zero alt",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"AltZero\""
+   }
+  },
+  {
+   "n": "Sg",
+   "i": 43,
+   "t": "text",
+   "g": "l",
+   "x": 242,
+   "y": 290,
+   "w": 108,
+   "h": 31,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "Gc",
+   "i": 44,
+   "t": "text",
+   "g": "l",
+   "x": 242,
+   "y": 325,
+   "w": 108,
+   "h": 31,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "n1",
+   "i": 45,
+   "t": "text",
+   "g": "l",
+   "x": 242,
+   "y": 360,
+   "w": 108,
+   "h": 31,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "0",
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  }
+ ]
+}

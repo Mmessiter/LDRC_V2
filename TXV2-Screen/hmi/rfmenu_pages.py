@@ -34,14 +34,14 @@ add(settings, comp(by['card'], x=plan['card'][0], y=plan['card'][1], w=plan['car
 header(settings)
 add(settings, comp(by['va0']))
 h = comp(by['b0']); h['ev'] = {'r': 'print "HelpView:RFSETUP.TXT"\nLogView.t0.txt="Rotorflight settings help"\nLogView.return.txt="RFSetupView"'}; add(settings, h)
-lx, cw = plan['col'][0]; lw = cw - rp.C_LVGAP - rp.C_VAL_W; vx = lx + lw + rp.C_LVGAP
+lx, cw = plan['col'][0]; VW, RH, FT = plan['val_w'], plan['row_h'], plan['font']; lw = cw - rp.C_LVGAP - VW; vx = lx + lw + rp.C_LVGAP
 for r, (lab, val, words, klabel) in enumerate(ROWS):
     y = plan['y'](r)
-    l = comp(by[lab], x=lx, y=y, w=lw, h=rp.C_ROW, txt=words, font=rp.C_FONT); l['c'] = dict(l['c'], pco=0, bco=rp.PALE[0]); l['a'] = dict(l['a'], xcen=1, ycen=1); add(settings, l)
+    l = comp(by[lab], x=lx, y=y, w=lw, h=RH, txt=words, font=FT); l['c'] = dict(l['c'], pco=0, bco=rp.PALE[0]); l['a'] = dict(l['a'], xcen=1, ycen=1); add(settings, l)
     v = by[val]
-    if v['t'] == 'switch': v = comp(v, x=vx + (rp.C_VAL_W - 80) // 2, y=y + (rp.C_ROW - 34) // 2, w=80, h=34)
+    if v['t'] == 'switch': v = comp(v, x=vx + (VW - 80) // 2, y=y + (RH - 34) // 2, w=80, h=34)
     else:
-        v = comp(v, x=vx, y=y, w=rp.C_VAL_W, h=rp.C_ROW, font=rp.C_FONT)
+        v = comp(v, x=vx, y=y, w=VW, h=RH, font=FT)
         if klabel: v['ev'] = {'p': 'keybdB.t1.txt="%s"' % klabel}   # (the arming channel's keypad was titled "Rotor to motor RPM ratio")
     add(settings, v)
 for nm, txt, x, y, w, code in plan['btn']:
@@ -52,7 +52,12 @@ json.dump(page61, open(os.path.join(PAGES, '61.json'), 'w'), indent=1)
 # ---- the menu: a grid of buttons, three by five, the arming line under it (B88)
 i = [1]; comps = []
 add(comps, comp(by['t0']))
-add(comps, comp(by['card']))
+# B91: the menu on an island - the grid 232 wide a button (the arming line's longest words, 705 px, fit under it), 44 high,
+# the arming line under it, the Bluetooth word against OK at the foot
+BW, BH, GX, GY = 232, 44, 8, 6
+GRID_W = 3 * BW + 2 * GX
+isl = rp.island(GRID_W, 5 * BH + 4 * GY + 8 + 40, [('b4', 'OK', 0)])
+add(comps, comp(by['card'], x=isl['card'][0], y=isl['card'][1], w=isl['card'][2], h=isl['card'][3]))
 add(comps, comp(by['b0']))
 header(comps)
 add(comps, comp(by['va0']))
@@ -65,18 +70,19 @@ BUTTONS = [  # (name, words, code) in the order they sit, three to a row: the pa
 ]   # (B88: five rows of three, 56 apart from y 66; Backup / Restore joined the grid, so only OK is left below)
 proto = by['Pid']
 for k, (name, words, code) in enumerate(BUTTONS):
-    b = comp(proto, n=name, x=34 + 246 * (k % 3), y=66 + 56 * (k // 3), w=240, h=50, txt=words); b['ev'] = {'r': 'va0.val=%d<<8\nprint va0.val' % code}
+    b = comp(proto, n=name, x=isl['x0'] + (BW + GX) * (k % 3), y=isl['y0'] + (BH + GY) * (k // 3), w=BW, h=BH, txt=words); b['ev'] = {'r': 'va0.val=%d<<8\nprint va0.val' % code}
     add(comps, b)
 # B88 "why it will not arm": the flight controller's arming blocks in plain words, a tap for all of them (code 175)
-arm = comp(rp.LABEL_L, n='arm', x=34, y=352, w=732, h=44, txt='', g='g', font=6)   # (the longest, "Will not arm: Arm switch on too soon: off, then on (and 9 more)", is 705 px)
+arm = comp(rp.LABEL_L, n='arm', x=isl['x0'], y=isl['y0'] + 5 * BH + 4 * GY + 8, w=GRID_W, h=40, txt='', g='g', font=6)   # (the longest, "Will not arm: Arm switch on too soon: off, then on (and 9 more)", is 705 px)
 arm['c'] = {'pco': 65535, 'borderc': rp.CARD['c']['bco'], 'bco': rp.CARD['c']['bco']}; arm['a'] = dict(arm['a'], borderw=0, xcen=0, ycen=1, txt_maxl=90, key=255)
 arm['ev'] = {'r': 'va0.val=175<<8\nprint va0.val'}
 add(comps, arm)
-pw = comp(by['pipe'], x=14, y=414, w=574, h=56, font=2); pw['a'] = dict(pw['a'], xcen=2)   # (the Bluetooth word or its tooth, on the bottom row against OK, which keeps the bottom right)
+okx = isl['btn'][0][2]
+pw = comp(by['pipe'], x=isl['card'][0] + rp.C_PAD, y=isl['foot_y'], w=okx - rp.C_BTN_GAP - isl['card'][0] - rp.C_PAD, h=rp.C_BTN_H, font=2); pw['a'] = dict(pw['a'], xcen=2)   # (the Bluetooth word or its tooth, against OK, which keeps the bottom right)
 add(comps, pw)
-add(comps, comp(by['Progress']))
-for nm, txt, x, w, code in rp.bottom_row([('b4', 'OK', 0)]):
-    add(comps, comp(by['b4'], x=x, y=414, w=w, h=56))
+add(comps, comp(by['Progress'], x=isl['card'][0] + rp.C_PAD, y=isl['foot_y'] - 10, w=isl['card'][2] - 2 * rp.C_PAD, h=5))
+for nm, txt, x, y, w, code in isl['btn']:
+    add(comps, comp(by['b4'], x=x, y=y, w=w, h=rp.C_BTN_H))
 menu['comps'] = comps
 json.dump(menu, open(os.path.join(PAGES, '8.json'), 'w'), indent=1)
 idx = json.load(open(os.path.join(PAGES, '..', 'index.json')))

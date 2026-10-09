@@ -1,0 +1,266 @@
+{
+ "name": "TrimDefView",
+ "id": 49,
+ "w": 800,
+ "h": 480,
+ "bg": {
+  "sta": 2,
+  "mode": "image",
+  "picture": 3
+ },
+ "nav": {
+  "up": 255,
+  "down": 255,
+  "left": 255,
+  "right": 255
+ },
+ "ev": {
+  "preinitialize": "TrimDefView.pic=Screen_Background"
+ },
+ "comps": [
+  {
+   "n": "t0",
+   "i": 1,
+   "t": "text",
+   "g": "l",
+   "x": 0,
+   "y": 0,
+   "w": 800,
+   "h": 58,
+   "font": 0,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 2214
+   },
+   "txt": "Set trim directions",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "card",
+   "i": 9,
+   "t": "text",
+   "g": "l",
+   "x": 0,
+   "y": 58,
+   "w": 800,
+   "h": 422,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 65535,
+    "bco": 4426
+   },
+   "txt": "",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 1,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "b2",
+   "i": 2,
+   "t": "button",
+   "g": "l",
+   "x": 605,
+   "y": 414,
+   "w": 180,
+   "h": 56,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "OK",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=128+24\nprint va0.val"
+   }
+  },
+  {
+   "n": "ail",
+   "i": 3,
+   "t": "text",
+   "g": "l",
+   "x": 60,
+   "y": 86,
+   "w": 680,
+   "h": 52,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "Push the AILERON trim button RIGHT",
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 40,
+    "isbr": 0
+   },
+   "fresh": true
+  },
+  {
+   "n": "va0",
+   "i": 4,
+   "t": "variable",
+   "g": "l",
+   "sta": 0,
+   "txt": "newtxt",
+   "val": 0,
+   "a": {
+    "txt_maxl": 10
+   }
+  },
+  {
+   "n": "ele",
+   "i": 5,
+   "t": "text",
+   "g": "l",
+   "x": 60,
+   "y": 148,
+   "w": 680,
+   "h": 52,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "Push the ELEVATOR trim button DOWN",
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 40,
+    "isbr": 0
+   },
+   "fresh": true
+  },
+  {
+   "n": "thr",
+   "i": 6,
+   "t": "text",
+   "g": "l",
+   "x": 60,
+   "y": 210,
+   "w": 680,
+   "h": 52,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "Push the THROTTLE trim button DOWN",
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 42,
+    "isbr": 0
+   },
+   "fresh": true
+  },
+  {
+   "n": "rud",
+   "i": 7,
+   "t": "text",
+   "g": "l",
+   "x": 60,
+   "y": 272,
+   "w": 680,
+   "h": 52,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "Push the RUDDER trim button RIGHT",
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 40,
+    "isbr": 0
+   },
+   "fresh": true
+  },
+  {
+   "n": "t1",
+   "i": 8,
+   "t": "text",
+   "g": "l",
+   "x": 60,
+   "y": 342,
+   "w": 680,
+   "h": 44,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 50712,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Push them one at a time, in any order.",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 50,
+    "isbr": 0
+   }
+  }
+ ]
+}

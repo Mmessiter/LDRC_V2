@@ -30,26 +30,33 @@ def tapbox(nm, x, y, w, code, h=36, maxl=40):
     f = comp(rp.FIELD, n=nm, x=x, y=y, w=w, h=h, txt='', g='g'); f['a'] = dict(f['a'], key=255, txt_maxl=maxl); f['ev'] = ap.ev(code); return add(f)
 bp = comp(rp.BUTTON, n='bprev', x=215, y=7, w=56, h=44, txt='<'); bp['ev'] = ap.ev(138); add(bp)
 bn = comp(rp.BUTTON, n='bnext', x=540, y=7, w=56, h=44, txt='>'); bn['ev'] = ap.ev(139); add(bn)
-label('ltn0', 34, 94, 150, 'Does'); tapbox('tn0', 190, 94, 576, 136, maxl=48)
-label('lon', 34, 140, 150, 'on'); tapbox('tn1', 190, 140, 576, 137, maxl=24)
-bar = {'n': 'bar', 't': 'rangebar', 'g': 'g', 'x': 34, 'y': 194, 'w': 732, 'h': 60, 'font': 2, 'txt': '|ON|', 'val': 0,
+# B91: an island, as the adjustments page
+W = 680; isl = rp.island(W, 236, [('b5', 'Add', 140), ('b6', 'Remove', 141), ('b3', 'Save', 135), ('b1', 'OK', 134)])
+comps[1].update(x=isl['card'][0], y=isl['card'][1], w=isl['card'][2], h=isl['card'][3])
+X, Y = isl['x0'], isl['y0']
+label('ltn0', X, Y, 140, 'Does'); tapbox('tn0', X + 146, Y, W - 146, 136, maxl=48)
+label('lon', X, Y + 46, 140, 'on'); tapbox('tn1', X + 146, Y + 46, W - 146, 137, maxl=24)
+bar = {'n': 'bar', 't': 'rangebar', 'g': 'g', 'x': X, 'y': Y + 100, 'w': W, 'h': 60, 'font': 2, 'txt': '|ON|', 'val': 0,
        'c': {'pco': 65535, 'bco': rp.CARD['c']['bco'], 'borderc': 0, 'pco2': 65535, 'bco2': 0},
        'a': {'lo': 875, 'hi': 2125, 'n': 3, 'kind': 1, 'mk': -1, 'd0': 1700, 'd1': 2125, 'd2': 1900, 'd3': 2000, 'd4': 2100, 'txt_maxl': 40}, 'ev': ap.ev(142)}
 add(bar)
-live = label('tn8', 34, 262, 732, '', 30); live['a'] = dict(live['a'], txt_maxl=40)
-hint = label('hint', 34, 350, 732, 'Drag the blobs to set where the switch turns it on.', 30, pale=False); hint['font'] = 2; hint['c']['pco'] = 50712; hint['a']['txt_maxl'] = 90
-for (nm, txt, x, w, code) in rp.bottom_row([('b5', 'Add', 140), ('b6', 'Remove', 141), ('b3', 'Save', 135), ('b1', 'OK', 134)]):
-    b = comp(rp.BUTTON, n=nm, x=x, y=414, w=w, h=56, txt=txt); b['ev'] = ap.ev(code); add(b)
-add(rp.message_box(rect=(110, 300, 580, 104)))   # (1.11.40: a message box, under the bar so the bar stays in sight)
+live = label('tn8', X, Y + 168, W, '', 30); live['a'] = dict(live['a'], txt_maxl=40)
+hint = label('hint', X, Y + 206, W, 'Drag the blobs to set where the switch turns it on.', 30, pale=False); hint['font'] = 2; hint['c']['pco'] = 50712; hint['a']['txt_maxl'] = 90
+for (nm, txt, x, y, w, code) in isl['btn']:
+    b = comp(rp.BUTTON, n=nm, x=x, y=y, w=w, h=rp.C_BTN_H, txt=txt); b['ev'] = ap.ev(code); add(b)
+add(rp.message_box(rect=(isl['box'][0], Y + 168, isl['box'][2], 104)))   # (a message box under the bar, so the bar stays in sight)
 ap.finish(69, 'SwitchView', comps)
 
 comps = []; i = [1]; add = ap.header('SwitchPickView', 'What the switch does', 'SWITCHES.TXT', comps, i)
 proto = None
 for c in json.load(open(os.path.join(rp.PAGES, '46.json')))['comps']:
     if c['t'] == 'textselect': proto = c
-wheel = comp(proto, n='list', x=14, y=66, w=772, h=333, txt='', val=0, opt=MODES); wheel['a'] = dict(wheel['a'], hig=37); wheel['ev'] = {}
+LW, LH = 640, 7 * 37 + 6   # (B91: the wheel on an island: as wide as the longest action needs, seven whole rows)
+isl = rp.island(LW, LH, [('b1', 'Cancel', 144), ('b3', 'OK', 143)])
+comps[1].update(x=isl['card'][0], y=isl['card'][1], w=isl['card'][2], h=isl['card'][3])
+wheel = comp(proto, n='list', x=isl['x0'], y=isl['y0'], w=LW, h=LH, txt='', val=0, opt=MODES); wheel['a'] = dict(wheel['a'], hig=37); wheel['ev'] = {}
 add(wheel)
-for (nm, txt, x, w, code) in rp.bottom_row([('b1', 'Cancel', 144), ('b3', 'OK', 143)]):
-    b = comp(rp.BUTTON, n=nm, x=x, y=414, w=w, h=56, txt=txt); b['ev'] = ap.ev(code); add(b)
-add(rp.message_box())
+for (nm, txt, x, y, w, code) in isl['btn']:
+    b = comp(rp.BUTTON, n=nm, x=x, y=y, w=w, h=rp.C_BTN_H, txt=txt); b['ev'] = ap.ev(code); add(b)
+add(rp.message_box(rect=isl['box']))
 ap.finish(70, 'SwitchPickView', comps)

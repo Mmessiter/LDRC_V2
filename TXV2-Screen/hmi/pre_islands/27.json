@@ -1,0 +1,1070 @@
+{
+ "name": "MacrosView",
+ "id": 27,
+ "w": 800,
+ "h": 480,
+ "bg": {
+  "sta": 2,
+  "mode": "image",
+  "picture": 3
+ },
+ "nav": {
+  "up": 255,
+  "down": 255,
+  "left": 255,
+  "right": 255
+ },
+ "ev": {
+  "preinitialize": "MacrosView.pic=Screen_Background"
+ },
+ "comps": [
+  {
+   "n": "t0",
+   "i": 1,
+   "t": "text",
+   "g": "l",
+   "x": 0,
+   "y": 0,
+   "w": 800,
+   "h": 58,
+   "font": 0,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 2214
+   },
+   "txt": "Macros",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "card",
+   "i": 31,
+   "t": "text",
+   "g": "l",
+   "x": 0,
+   "y": 58,
+   "w": 800,
+   "h": 422,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 65535,
+    "bco": 4426
+   },
+   "txt": "",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 1,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "b15",
+   "i": 2,
+   "t": "button",
+   "g": "l",
+   "x": 620,
+   "y": 4,
+   "w": 170,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Help",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"HelpView:MACROS.TXT\"\nLogView.t0.txt=\"Macros help\"\nLogView.return.txt=\"MacrosView\""
+   }
+  },
+  {
+   "n": "b10",
+   "i": 3,
+   "t": "button",
+   "g": "l",
+   "x": 605,
+   "y": 414,
+   "w": 180,
+   "h": 56,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "OK",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=128+7\nprint va0.val"
+   }
+  },
+  {
+   "n": "t1",
+   "i": 4,
+   "t": "text",
+   "g": "l",
+   "x": 30,
+   "y": 186,
+   "w": 300,
+   "h": 46,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Channel to move (1 - 16)",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t2",
+   "i": 5,
+   "t": "text",
+   "g": "l",
+   "x": 30,
+   "y": 294,
+   "w": 300,
+   "h": 46,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Delay",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t3",
+   "i": 6,
+   "t": "text",
+   "g": "l",
+   "x": 30,
+   "y": 132,
+   "w": 300,
+   "h": 46,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Trigger channel",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t4",
+   "i": 7,
+   "t": "text",
+   "g": "l",
+   "x": 30,
+   "y": 348,
+   "w": 300,
+   "h": 46,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Duration",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "Mch",
+   "i": 8,
+   "t": "number",
+   "g": "g",
+   "x": 340,
+   "y": 186,
+   "w": 70,
+   "h": 46,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "val": 1,
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "lenth": 0,
+    "format": 0,
+    "isbr": 1
+   }
+  },
+  {
+   "n": "Del",
+   "i": 9,
+   "t": "number",
+   "g": "g",
+   "x": 340,
+   "y": 294,
+   "w": 70,
+   "h": 46,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "val": 0,
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "lenth": 0,
+    "format": 0,
+    "isbr": 1
+   }
+  },
+  {
+   "n": "Tch",
+   "i": 10,
+   "t": "number",
+   "g": "g",
+   "x": 340,
+   "y": 132,
+   "w": 70,
+   "h": 46,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "val": 0,
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "lenth": 0,
+    "format": 0,
+    "isbr": 1
+   }
+  },
+  {
+   "n": "t7",
+   "i": 11,
+   "t": "text",
+   "g": "l",
+   "x": 30,
+   "y": 78,
+   "w": 300,
+   "h": 46,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Macro number",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 20,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "Mno",
+   "i": 12,
+   "t": "number",
+   "g": "g",
+   "x": 340,
+   "y": 78,
+   "w": 70,
+   "h": 46,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "val": 1,
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "lenth": 0,
+    "format": 0,
+    "isbr": 1
+   }
+  },
+  {
+   "n": "b0",
+   "i": 13,
+   "t": "button",
+   "g": "l",
+   "x": 480,
+   "y": 78,
+   "w": 56,
+   "h": 46,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "+",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "Mno.val+=1\nif(Mno.val>8)\n{\n  Mno.val=1\n}\nva0.val=128+6\nprint va0.val"
+   }
+  },
+  {
+   "n": "b1",
+   "i": 14,
+   "t": "button",
+   "g": "l",
+   "x": 418,
+   "y": 78,
+   "w": 56,
+   "h": 46,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "-",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "Mno.val-=1\nif(Mno.val<1)\n{\n  Mno.val=8\n}\nva0.val=128+6\nprint va0.val"
+   }
+  },
+  {
+   "n": "b2",
+   "i": 15,
+   "t": "button",
+   "g": "l",
+   "x": 480,
+   "y": 132,
+   "w": 56,
+   "h": 46,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "+",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "Tch.val+=1\nif(Tch.val>16)\n{\n  Tch.val=0\n}"
+   }
+  },
+  {
+   "n": "b3",
+   "i": 16,
+   "t": "button",
+   "g": "l",
+   "x": 418,
+   "y": 132,
+   "w": 56,
+   "h": 46,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "-",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "Tch.val-=1\nif(Tch.val<0)\n{\n  Tch.val=16\n}"
+   }
+  },
+  {
+   "n": "b4",
+   "i": 17,
+   "t": "button",
+   "g": "l",
+   "x": 480,
+   "y": 186,
+   "w": 56,
+   "h": 46,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "+",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "Mch.val+=1\nif(Mch.val>16)\n{\n  Mch.val=1\n}\nva0.val=128+8\nprint va0.val"
+   }
+  },
+  {
+   "n": "b5",
+   "i": 18,
+   "t": "button",
+   "g": "l",
+   "x": 418,
+   "y": 186,
+   "w": 56,
+   "h": 46,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "-",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "Mch.val-=1\nif(Mch.val<1)\n{\n  Mch.val=16\n}\nva0.val=128+8\nprint va0.val"
+   }
+  },
+  {
+   "n": "b6",
+   "i": 19,
+   "t": "button",
+   "g": "l",
+   "x": 480,
+   "y": 294,
+   "w": 56,
+   "h": 46,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "+",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "Del.val+=1\nif(Del.val>255)\n{\n  Del.val=1\n}"
+   }
+  },
+  {
+   "n": "b7",
+   "i": 20,
+   "t": "button",
+   "g": "l",
+   "x": 418,
+   "y": 294,
+   "w": 56,
+   "h": 46,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "-",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "Del.val-=1\nif(Del.val<0)\n{\n  Del.val=255\n}"
+   }
+  },
+  {
+   "n": "b13",
+   "i": 21,
+   "t": "button",
+   "g": "l",
+   "x": 480,
+   "y": 348,
+   "w": 56,
+   "h": 46,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "+",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "Dur.val+=1\nif(Dur.val>255)\n{\n  Dur.val=1\n}"
+   }
+  },
+  {
+   "n": "b14",
+   "i": 22,
+   "t": "button",
+   "g": "l",
+   "x": 418,
+   "y": 348,
+   "w": 56,
+   "h": 46,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "-",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "Dur.val-=1\nif(Dur.val<1)\n{\n  Dur.val=255\n}"
+   }
+  },
+  {
+   "n": "Dur",
+   "i": 23,
+   "t": "number",
+   "g": "g",
+   "x": 340,
+   "y": 348,
+   "w": 70,
+   "h": 46,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "val": 1,
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "lenth": 0,
+    "format": 0,
+    "isbr": 1
+   }
+  },
+  {
+   "n": "t5",
+   "i": 24,
+   "t": "text",
+   "g": "l",
+   "x": 30,
+   "y": 240,
+   "w": 300,
+   "h": 46,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Move to position",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "Pos",
+   "i": 25,
+   "t": "number",
+   "g": "g",
+   "x": 340,
+   "y": 240,
+   "w": 70,
+   "h": 46,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "val": 0,
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "lenth": 0,
+    "format": 0,
+    "isbr": 1
+   }
+  },
+  {
+   "n": "b8",
+   "i": 26,
+   "t": "button",
+   "g": "l",
+   "x": 418,
+   "y": 240,
+   "w": 56,
+   "h": 46,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "-",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "Pos.val-=1\nif(Pos.val<0)\n{\n  Pos.val=180\n}"
+   }
+  },
+  {
+   "n": "b9",
+   "i": 27,
+   "t": "button",
+   "g": "l",
+   "x": 480,
+   "y": 240,
+   "w": 56,
+   "h": 46,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "+",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "Pos.val+=1\nif(Pos.val>180)\n{\n  Pos.val=1\n}"
+   }
+  },
+  {
+   "n": "va0",
+   "i": 28,
+   "t": "variable",
+   "g": "l",
+   "sta": 0,
+   "txt": "newtxt",
+   "val": 0,
+   "a": {
+    "txt_maxl": 10
+   }
+  },
+  {
+   "n": "chM",
+   "i": 29,
+   "t": "text",
+   "g": "g",
+   "x": 546,
+   "y": 186,
+   "w": 230,
+   "h": 46,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65504,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Elevator",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 20,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "ModelName",
+   "i": 30,
+   "t": "text",
+   "g": "l",
+   "x": 10,
+   "y": 4,
+   "w": 200,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65504,
+    "borderc": 0,
+    "bco": 2214
+   },
+   "txt": "Model name",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 24,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "rng_Mno",
+   "i": 32,
+   "t": "text",
+   "g": "l",
+   "x": 546,
+   "y": 78,
+   "w": 230,
+   "h": 46,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 50712,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "1 - 8",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 7,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "rng_Tch",
+   "i": 33,
+   "t": "text",
+   "g": "l",
+   "x": 546,
+   "y": 132,
+   "w": 230,
+   "h": 46,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 50712,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "0 - 16",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 8,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "rng_Pos",
+   "i": 34,
+   "t": "text",
+   "g": "l",
+   "x": 546,
+   "y": 240,
+   "w": 230,
+   "h": 46,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 50712,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "0 - 180",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 9,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "rng_Del",
+   "i": 35,
+   "t": "text",
+   "g": "l",
+   "x": 546,
+   "y": 294,
+   "w": 230,
+   "h": 46,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 50712,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "0 - 255 (x 0.1 s)",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 19,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "rng_Dur",
+   "i": 36,
+   "t": "text",
+   "g": "l",
+   "x": 546,
+   "y": 348,
+   "w": 230,
+   "h": 46,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 50712,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "1 - 255 (x 0.1 s)",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 19,
+    "isbr": 0
+   }
+  }
+ ]
+}

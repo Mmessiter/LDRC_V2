@@ -1,1 +1,703 @@
-{"name":"BankNameView","id":20,"w":800,"h":480,"bg":{"sta":2,"mode":"image","picture":3},"nav":{"up":255,"down":255,"left":255,"right":255},"ev":{"preinitialize":"BankNameView.pic=Screen_Background"},"comps":[{"n":"t0","i":1,"t":"text","g":"l","x":0,"y":0,"w":800,"h":58,"font":0,"sta":1,"c":{"pco":65535,"borderc":0,"bco":2214},"txt":"Bank names","a":{"style":0,"key":255,"borderw":0,"xcen":1,"ycen":1,"pw":0,"txt_maxl":30,"isbr":0}},{"n":"card","i":19,"t":"text","g":"l","x":0,"y":58,"w":800,"h":422,"font":6,"sta":1,"c":{"pco":65535,"borderc":65535,"bco":4426},"txt":"","a":{"style":0,"key":255,"borderw":0,"xcen":0,"ycen":1,"pw":0,"txt_maxl":1,"isbr":0}},{"n":"b17","i":2,"t":"button","g":"l","x":620,"y":4,"w":170,"h":50,"font":6,"sta":1,"c":{"bco2":1024,"pco":0,"borderc":0,"bco":54938,"pco2":65535},"txt":"Help","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":10,"isbr":0},"ev":{"r":"print \"HelpView:BANKNAME.TXT\"\nLogView.t0.txt=\"Bank names help\"\nLogView.return.txt=\"BankNameView\""}},{"n":"t1","i":3,"t":"text","g":"l","x":34,"y":136,"w":110,"h":32,"font":6,"sta":1,"c":{"pco":65535,"borderc":0,"bco":4426},"txt":"Bank 1","a":{"style":0,"key":255,"borderw":0,"xcen":2,"ycen":1,"pw":0,"txt_maxl":10,"isbr":0}},{"n":"t2","i":4,"t":"text","g":"l","x":34,"y":303,"w":110,"h":32,"font":6,"sta":1,"c":{"pco":65535,"borderc":0,"bco":4426},"txt":"Bank 2","a":{"style":0,"key":255,"borderw":0,"xcen":2,"ycen":1,"pw":0,"txt_maxl":10,"isbr":0}},{"n":"t3","i":5,"t":"text","g":"l","x":426,"y":136,"w":110,"h":32,"font":6,"sta":1,"c":{"pco":65535,"borderc":0,"bco":4426},"txt":"Bank 3","a":{"style":0,"key":255,"borderw":0,"xcen":2,"ycen":1,"pw":0,"txt_maxl":10,"isbr":0}},{"n":"t4","i":6,"t":"text","g":"l","x":426,"y":303,"w":110,"h":32,"font":6,"sta":1,"c":{"pco":65535,"borderc":0,"bco":4426},"txt":"Bank 4","a":{"style":0,"key":255,"borderw":0,"xcen":2,"ycen":1,"pw":0,"txt_maxl":10,"isbr":0}},{"n":"BK1","i":7,"t":"textselect","g":"g","x":154,"y":92,"w":220,"h":121,"font":6,"sta":1,"c":{"pco1":31695,"pco":31695,"borderc":63488,"bco":65535,"pco2":16392},"txt":"test","val":0,"opt":["Flight mode 1","Flight mode 2","Flight mode 3","Flight mode 4","Bank 1","Bank 2","Bank 3","Bank 4","Aerobatics","Auto","Cruise","Flaps","Hover","Idle up 1","Idle up 2","Landing","Launch","Normal","Speed","Take off","Thermal","Hold","3D","Brakes","Stunt 1","Stunt 2","Gear down","Gear up","Profile 1","Profile 2","Profile 3","Profile 4",""],"a":{"style":2,"borderw":2,"hig":39,"dis":1,"txt_maxl":255}},{"n":"b10","i":8,"t":"button","g":"l","x":664,"y":414,"w":122,"h":56,"font":6,"sta":1,"c":{"bco2":1024,"pco":0,"borderc":0,"bco":54938,"pco2":65535},"txt":"OK","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":10,"isbr":0},"ev":{"r":"va0.val=128+53\nprint va0.val"}},{"n":"va0","i":9,"t":"variable","g":"l","sta":0,"txt":"newtxt","val":0,"a":{"txt_maxl":10}},{"n":"BK2","i":10,"t":"textselect","g":"g","x":154,"y":259,"w":220,"h":121,"font":6,"sta":1,"c":{"pco1":31695,"pco":31695,"borderc":63488,"bco":65535,"pco2":16392},"txt":"test","val":0,"opt":["Flight mode 1","Flight mode 2","Flight mode 3","Flight mode 4","Bank 1","Bank 2","Bank 3","Bank 4","Aerobatics","Auto","Cruise","Flaps","Hover","Idle up 1","Idle up 2","Landing","Launch","Normal","Speed","Take off","Thermal","Hold","3D","Brakes","Stunt 1","Stunt 2","Gear down","Gear up","Profile 1","Profile 2","Profile 3","Profile 4"],"a":{"style":2,"borderw":2,"hig":39,"dis":1,"txt_maxl":255}},{"n":"BK3","i":11,"t":"textselect","g":"g","x":546,"y":92,"w":220,"h":121,"font":6,"sta":1,"c":{"pco1":31695,"pco":31695,"borderc":63488,"bco":65535,"pco2":16392},"txt":"test","val":0,"opt":["Flight mode 1","Flight mode 2","Flight mode 3","Flight mode 4","Bank 1","Bank 2","Bank 3","Bank 4","Aerobatics","Auto","Cruise","Flaps","Hover","Idle up 1","Idle up 2","Landing","Launch","Normal","Speed","Take off","Thermal","Hold","3D","Brakes","Stunt 1","Stunt 2","Gear down","Gear up","Profile 1","Profile 2","Profile 3","Profile 4"],"a":{"style":2,"borderw":2,"hig":39,"dis":1,"txt_maxl":255}},{"n":"BK4","i":12,"t":"textselect","g":"g","x":546,"y":259,"w":220,"h":121,"font":6,"sta":1,"c":{"pco1":31695,"pco":31695,"borderc":63488,"bco":65535,"pco2":16392},"txt":"test","val":0,"opt":["Flight mode 1","Flight mode 2","Flight mode 3","Flight mode 4","Bank 1","Bank 2","Bank 3","Bank 4","Aerobatics","Auto","Cruise","Flaps","Hover","Idle up 1","Idle up 2","Landing","Launch","Normal","Speed","Take off","Thermal","Hold","3D","Brakes","Stunt 1","Stunt 2","Gear down","Gear up","Profile 1","Profile 2","Profile 3","Profile 4"],"a":{"style":2,"borderw":2,"hig":39,"dis":1,"txt_maxl":255}},{"n":"b0","i":13,"t":"button","g":"l","x":14,"y":414,"w":122,"h":56,"font":6,"sta":1,"c":{"bco2":1024,"pco":0,"borderc":0,"bco":54938,"pco2":65535},"txt":"Default","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":10,"isbr":0},"ev":{"r":"BK1.val=0\nBK2.val=1\nBK3.val=2\nBK4.val=3"}},{"n":"b1","i":14,"t":"button","g":"l","x":144,"y":414,"w":122,"h":56,"font":6,"sta":1,"c":{"bco2":1024,"pco":0,"borderc":0,"bco":54938,"pco2":65535},"txt":"Vbar","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":10,"isbr":0},"ev":{"r":"BK1.val=4\nBK2.val=5\nBK3.val=6\nBK4.val=7"}},{"n":"b2","i":15,"t":"button","g":"l","x":404,"y":414,"w":122,"h":56,"font":6,"sta":1,"c":{"bco2":1024,"pco":0,"borderc":0,"bco":54938,"pco2":65535},"txt":"Glider","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":10,"isbr":0},"ev":{"r":"BK1.val=16\nBK2.val=17\nBK3.val=18\nBK4.val=20"}},{"n":"b3","i":16,"t":"button","g":"l","x":534,"y":414,"w":122,"h":56,"font":6,"sta":1,"c":{"bco2":1024,"pco":0,"borderc":0,"bco":54938,"pco2":65535},"txt":"Listen","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":10,"isbr":0},"ev":{"r":"va0.val=128+54\nprint va0.val"}},{"n":"b4","i":17,"t":"button","g":"l","x":274,"y":414,"w":122,"h":56,"font":6,"sta":1,"c":{"bco2":1024,"pco":0,"borderc":0,"bco":54938,"pco2":65535},"txt":"Heli","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":10,"isbr":0},"ev":{"r":"BK1.val=12\nBK2.val=13\nBK3.val=14\nBK4.val=21"}},{"n":"ModelName","i":18,"t":"text","g":"g","x":10,"y":4,"w":200,"h":25,"font":2,"sta":1,"c":{"pco":65504,"borderc":0,"bco":2214},"txt":"Model Name","a":{"style":0,"key":255,"borderw":0,"xcen":0,"ycen":1,"pw":0,"txt_maxl":20,"isbr":0}}]}
+{
+ "name": "BankNameView",
+ "id": 20,
+ "w": 800,
+ "h": 480,
+ "bg": {
+  "sta": 2,
+  "mode": "image",
+  "picture": 3
+ },
+ "nav": {
+  "up": 255,
+  "down": 255,
+  "left": 255,
+  "right": 255
+ },
+ "ev": {
+  "preinitialize": "BankNameView.pic=Screen_Background"
+ },
+ "comps": [
+  {
+   "n": "t0",
+   "i": 1,
+   "t": "text",
+   "g": "l",
+   "x": 0,
+   "y": 0,
+   "w": 800,
+   "h": 58,
+   "font": 0,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 2214
+   },
+   "txt": "Bank names",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "card",
+   "i": 19,
+   "t": "text",
+   "g": "l",
+   "x": 24,
+   "y": 91,
+   "w": 752,
+   "h": 356,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 65535,
+    "bco": 4426
+   },
+   "txt": "",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 1,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "b17",
+   "i": 2,
+   "t": "button",
+   "g": "l",
+   "x": 620,
+   "y": 4,
+   "w": 170,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Help",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"HelpView:BANKNAME.TXT\"\nLogView.t0.txt=\"Bank names help\"\nLogView.return.txt=\"BankNameView\""
+   }
+  },
+  {
+   "n": "t1",
+   "i": 3,
+   "t": "text",
+   "g": "l",
+   "x": 46,
+   "y": 151,
+   "w": 110,
+   "h": 32,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Bank 1",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 2,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t2",
+   "i": 4,
+   "t": "text",
+   "g": "l",
+   "x": 46,
+   "y": 290,
+   "w": 110,
+   "h": 32,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Bank 2",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 2,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t3",
+   "i": 5,
+   "t": "text",
+   "g": "l",
+   "x": 414,
+   "y": 151,
+   "w": 110,
+   "h": 32,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Bank 3",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 2,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t4",
+   "i": 6,
+   "t": "text",
+   "g": "l",
+   "x": 414,
+   "y": 290,
+   "w": 110,
+   "h": 32,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Bank 4",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 2,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "BK1",
+   "i": 7,
+   "t": "textselect",
+   "g": "g",
+   "x": 166,
+   "y": 107,
+   "w": 220,
+   "h": 121,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco1": 31695,
+    "pco": 31695,
+    "borderc": 63488,
+    "bco": 65535,
+    "pco2": 16392
+   },
+   "txt": "test",
+   "val": 0,
+   "opt": [
+    "Flight mode 1",
+    "Flight mode 2",
+    "Flight mode 3",
+    "Flight mode 4",
+    "Bank 1",
+    "Bank 2",
+    "Bank 3",
+    "Bank 4",
+    "Aerobatics",
+    "Auto",
+    "Cruise",
+    "Flaps",
+    "Hover",
+    "Idle up 1",
+    "Idle up 2",
+    "Landing",
+    "Launch",
+    "Normal",
+    "Speed",
+    "Take off",
+    "Thermal",
+    "Hold",
+    "3D",
+    "Brakes",
+    "Stunt 1",
+    "Stunt 2",
+    "Gear down",
+    "Gear up",
+    "Profile 1",
+    "Profile 2",
+    "Profile 3",
+    "Profile 4",
+    ""
+   ],
+   "a": {
+    "style": 2,
+    "borderw": 2,
+    "hig": 39,
+    "dis": 1,
+    "txt_maxl": 255
+   }
+  },
+  {
+   "n": "b10",
+   "i": 8,
+   "t": "button",
+   "g": "l",
+   "x": 650,
+   "y": 381,
+   "w": 110,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "OK",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=128+53\nprint va0.val"
+   }
+  },
+  {
+   "n": "va0",
+   "i": 9,
+   "t": "variable",
+   "g": "l",
+   "sta": 0,
+   "txt": "newtxt",
+   "val": 0,
+   "a": {
+    "txt_maxl": 10
+   }
+  },
+  {
+   "n": "BK2",
+   "i": 10,
+   "t": "textselect",
+   "g": "g",
+   "x": 166,
+   "y": 246,
+   "w": 220,
+   "h": 121,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco1": 31695,
+    "pco": 31695,
+    "borderc": 63488,
+    "bco": 65535,
+    "pco2": 16392
+   },
+   "txt": "test",
+   "val": 0,
+   "opt": [
+    "Flight mode 1",
+    "Flight mode 2",
+    "Flight mode 3",
+    "Flight mode 4",
+    "Bank 1",
+    "Bank 2",
+    "Bank 3",
+    "Bank 4",
+    "Aerobatics",
+    "Auto",
+    "Cruise",
+    "Flaps",
+    "Hover",
+    "Idle up 1",
+    "Idle up 2",
+    "Landing",
+    "Launch",
+    "Normal",
+    "Speed",
+    "Take off",
+    "Thermal",
+    "Hold",
+    "3D",
+    "Brakes",
+    "Stunt 1",
+    "Stunt 2",
+    "Gear down",
+    "Gear up",
+    "Profile 1",
+    "Profile 2",
+    "Profile 3",
+    "Profile 4"
+   ],
+   "a": {
+    "style": 2,
+    "borderw": 2,
+    "hig": 39,
+    "dis": 1,
+    "txt_maxl": 255
+   }
+  },
+  {
+   "n": "BK3",
+   "i": 11,
+   "t": "textselect",
+   "g": "g",
+   "x": 534,
+   "y": 107,
+   "w": 220,
+   "h": 121,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco1": 31695,
+    "pco": 31695,
+    "borderc": 63488,
+    "bco": 65535,
+    "pco2": 16392
+   },
+   "txt": "test",
+   "val": 0,
+   "opt": [
+    "Flight mode 1",
+    "Flight mode 2",
+    "Flight mode 3",
+    "Flight mode 4",
+    "Bank 1",
+    "Bank 2",
+    "Bank 3",
+    "Bank 4",
+    "Aerobatics",
+    "Auto",
+    "Cruise",
+    "Flaps",
+    "Hover",
+    "Idle up 1",
+    "Idle up 2",
+    "Landing",
+    "Launch",
+    "Normal",
+    "Speed",
+    "Take off",
+    "Thermal",
+    "Hold",
+    "3D",
+    "Brakes",
+    "Stunt 1",
+    "Stunt 2",
+    "Gear down",
+    "Gear up",
+    "Profile 1",
+    "Profile 2",
+    "Profile 3",
+    "Profile 4"
+   ],
+   "a": {
+    "style": 2,
+    "borderw": 2,
+    "hig": 39,
+    "dis": 1,
+    "txt_maxl": 255
+   }
+  },
+  {
+   "n": "BK4",
+   "i": 12,
+   "t": "textselect",
+   "g": "g",
+   "x": 534,
+   "y": 246,
+   "w": 220,
+   "h": 121,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco1": 31695,
+    "pco": 31695,
+    "borderc": 63488,
+    "bco": 65535,
+    "pco2": 16392
+   },
+   "txt": "test",
+   "val": 0,
+   "opt": [
+    "Flight mode 1",
+    "Flight mode 2",
+    "Flight mode 3",
+    "Flight mode 4",
+    "Bank 1",
+    "Bank 2",
+    "Bank 3",
+    "Bank 4",
+    "Aerobatics",
+    "Auto",
+    "Cruise",
+    "Flaps",
+    "Hover",
+    "Idle up 1",
+    "Idle up 2",
+    "Landing",
+    "Launch",
+    "Normal",
+    "Speed",
+    "Take off",
+    "Thermal",
+    "Hold",
+    "3D",
+    "Brakes",
+    "Stunt 1",
+    "Stunt 2",
+    "Gear down",
+    "Gear up",
+    "Profile 1",
+    "Profile 2",
+    "Profile 3",
+    "Profile 4"
+   ],
+   "a": {
+    "style": 2,
+    "borderw": 2,
+    "hig": 39,
+    "dis": 1,
+    "txt_maxl": 255
+   }
+  },
+  {
+   "n": "b0",
+   "i": 13,
+   "t": "button",
+   "g": "l",
+   "x": 40,
+   "y": 381,
+   "w": 110,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Default",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "BK1.val=0\nBK2.val=1\nBK3.val=2\nBK4.val=3"
+   }
+  },
+  {
+   "n": "b1",
+   "i": 14,
+   "t": "button",
+   "g": "l",
+   "x": 162,
+   "y": 381,
+   "w": 110,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Vbar",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "BK1.val=4\nBK2.val=5\nBK3.val=6\nBK4.val=7"
+   }
+  },
+  {
+   "n": "b2",
+   "i": 15,
+   "t": "button",
+   "g": "l",
+   "x": 406,
+   "y": 381,
+   "w": 110,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Glider",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "BK1.val=16\nBK2.val=17\nBK3.val=18\nBK4.val=20"
+   }
+  },
+  {
+   "n": "b3",
+   "i": 16,
+   "t": "button",
+   "g": "l",
+   "x": 528,
+   "y": 381,
+   "w": 110,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Listen",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=128+54\nprint va0.val"
+   }
+  },
+  {
+   "n": "b4",
+   "i": 17,
+   "t": "button",
+   "g": "l",
+   "x": 284,
+   "y": 381,
+   "w": 110,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Heli",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "BK1.val=12\nBK2.val=13\nBK3.val=14\nBK4.val=21"
+   }
+  },
+  {
+   "n": "ModelName",
+   "i": 18,
+   "t": "text",
+   "g": "g",
+   "x": 10,
+   "y": 4,
+   "w": 200,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65504,
+    "borderc": 0,
+    "bco": 2214
+   },
+   "txt": "Model Name",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 20,
+    "isbr": 0
+   }
+  }
+ ]
+}

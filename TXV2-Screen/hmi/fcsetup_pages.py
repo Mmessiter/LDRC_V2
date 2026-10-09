@@ -12,6 +12,7 @@ import rescue_pages as rp
 # 168 overwrite the oldest, 169 erase; 170 Calibrate open, 171 OK, 172 calibrate level, 173 Save, 174 a trim typed
 # B90: the FC pads' sensors on a page of their own (75), reached by "Sensors >", which the main board shows only while a
 # source is FC pads - so the battery page has five rows and lays out compact (rescue_pages.compact_plan), as Malcolm asked
+rp.series_begin()   # (B91: the battery and its sensors, one island)
 rp.page(72, 'BatteryView', 'Battery (Rotorflight)', [
     ('h0', 'Flight pack', 0, 0, 'head', 0),
     ('tn0', 'Cells (0 = automatic)', 0, 1, 'num', 158, 'Cells'),
@@ -31,6 +32,7 @@ rp.page(75, 'BatSensorsView', 'Battery sensors (FC pads)', [
     ('tn9', 'Scale', 1, 1, 'num', 158, 'Current scale'),
     ('tn10', 'Offset', 1, 2, 'num', 158, 'Current offset'),
 ], [('b2', '< Battery', 0, 0, 177), ('b3', 'Save', 0, 0, 157), ('b1', 'OK', 0, 0, 156)], 'BATTERY.TXT')
+rp.series_end()
 rp.page(73, 'BlackboxView', 'Black box (Rotorflight)', [
     ('h0', 'Recording', 0, 0, 'head', 0),
     ('tn0', 'When', 0, 1, 'wide', 165),

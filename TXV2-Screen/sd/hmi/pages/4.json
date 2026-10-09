@@ -1,1 +1,803 @@
-{"name":"RXSetupView","id":4,"w":800,"h":480,"bg":{"sta":2,"mode":"image","picture":3},"nav":{"up":255,"down":255,"left":255,"right":255},"ev":{"preinitialize":"RXSetupView.pic=Screen_Background"},"comps":[{"n":"t0","i":3,"t":"text","g":"l","x":0,"y":0,"w":800,"h":58,"font":0,"sta":1,"c":{"pco":65535,"borderc":0,"bco":2214},"txt":"Model setup","a":{"style":0,"key":255,"borderw":0,"xcen":1,"ycen":1,"pw":0,"txt_maxl":30,"isbr":0}},{"n":"card","i":26,"t":"text","g":"l","x":0,"y":58,"w":800,"h":422,"font":6,"sta":1,"c":{"pco":65535,"borderc":65535,"bco":4426},"txt":"","a":{"style":0,"key":255,"borderw":0,"xcen":0,"ycen":1,"pw":0,"txt_maxl":1,"isbr":0}},{"n":"b2","i":1,"t":"button","g":"l","x":605,"y":414,"w":180,"h":56,"font":6,"sta":1,"c":{"bco2":1024,"pco":0,"borderc":0,"bco":54938,"pco2":65535},"txt":"OK","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":30,"isbr":0},"ev":{"r":"va0.val=128+48\nprint va0.val"}},{"n":"b17","i":2,"t":"button","g":"l","x":620,"y":4,"w":170,"h":50,"font":6,"sta":1,"c":{"bco2":1024,"pco":0,"borderc":0,"bco":54938,"pco2":65535},"txt":"Help","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":10,"isbr":0},"ev":{"r":"print \"HelpView:RXSETUP.TXT\"\nLogView.t0.txt=\"RX setup help\"\nLogView.return.txt=\"RXSetupView\""}},{"n":"b1","i":4,"t":"button","g":"l","x":34,"y":167,"w":236,"h":40,"font":6,"sta":1,"c":{"bco2":0,"pco":0,"borderc":0,"bco":54938,"pco2":65535},"txt":"Channels","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":15,"isbr":0},"ev":{"r":"print \"SticksView\""}},{"n":"b3","i":5,"t":"button","g":"l","x":282,"y":167,"w":236,"h":40,"font":6,"sta":1,"c":{"bco2":0,"pco":0,"borderc":0,"bco":54938,"pco2":65535},"txt":"Failsafe","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":30,"isbr":0},"ev":{"r":"print \"FailSafe\""}},{"n":"b12","i":6,"t":"button","g":"l","x":34,"y":120,"w":236,"h":40,"font":6,"sta":1,"c":{"bco2":0,"pco":0,"borderc":0,"bco":54938,"pco2":65535},"txt":"Models","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":20,"isbr":0},"ev":{"r":"va0.val=128+4\nprint va0.val // was ModelsView\n//page ModelsView"}},{"n":"b8","i":7,"t":"button","g":"l","x":530,"y":214,"w":236,"h":40,"font":6,"sta":1,"c":{"bco2":0,"pco":0,"borderc":0,"bco":54938,"pco2":65535},"txt":"Telemetry","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":30,"isbr":0},"ev":{"r":"print \"DataView\""}},{"n":"b14","i":8,"t":"button","g":"l","x":530,"y":308,"w":236,"h":40,"font":6,"sta":1,"c":{"bco2":0,"pco":0,"borderc":0,"bco":54938,"pco2":65535},"txt":"Reverse","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":30,"isbr":0},"ev":{"r":"va0.val=128+9\nprint va0.val"}},{"n":"b4","i":9,"t":"button","g":"l","x":34,"y":214,"w":236,"h":40,"font":6,"sta":1,"c":{"bco2":0,"pco":0,"borderc":0,"bco":54938,"pco2":65535},"txt":"Trims","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":10,"isbr":0},"ev":{"r":"print \"TrimView\""}},{"n":"b9","i":10,"t":"button","g":"l","x":530,"y":355,"w":236,"h":40,"font":6,"sta":1,"c":{"bco2":0,"pco":0,"borderc":0,"bco":54938,"pco2":65535},"txt":"Mixes","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":10,"isbr":0},"ev":{"r":"print \"MIXESVIEW\" // first time"}},{"n":"b19","i":11,"t":"button","g":"l","x":530,"y":167,"w":236,"h":40,"font":6,"sta":1,"c":{"bco2":0,"pco":0,"borderc":0,"bco":54938,"pco2":65535},"txt":"Log","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":30,"isbr":0},"ev":{"r":"va0.val=128+18\nprint va0.val"}},{"n":"b10","i":12,"t":"button","g":"l","x":530,"y":120,"w":236,"h":40,"font":6,"sta":1,"c":{"bco2":0,"pco":0,"borderc":0,"bco":54938,"pco2":65535},"txt":"Batteries","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":20,"isbr":0},"ev":{"r":"print \"TypeView\""}},{"n":"b16","i":13,"t":"button","g":"l","x":282,"y":214,"w":236,"h":40,"font":6,"sta":1,"c":{"bco2":0,"pco":0,"borderc":0,"bco":54938,"pco2":65535},"txt":"Inputs","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":30,"isbr":0},"ev":{"r":"print \"InputsView\""}},{"n":"b13","i":14,"t":"button","g":"l","x":282,"y":261,"w":236,"h":40,"font":6,"sta":1,"c":{"bco2":0,"pco":0,"borderc":0,"bco":54938,"pco2":65535},"txt":"Subtrim","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":30,"isbr":0},"ev":{"r":"va0.val=128+20\nprint va0.val"}},{"n":"b18","i":15,"t":"button","g":"l","x":530,"y":261,"w":236,"h":40,"font":6,"sta":1,"c":{"bco2":0,"pco":0,"borderc":0,"bco":54938,"pco2":65535},"txt":"Macros","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":30,"isbr":0},"ev":{"r":"va0.val=128+5\nprint va0.val //MacrosView\n//page MacrosView"}},{"n":"va0","i":16,"t":"variable","g":"l","sta":0,"txt":"newtxt","val":0,"a":{"txt_maxl":10}},{"n":"b0","i":17,"t":"button","g":"l","x":34,"y":308,"w":236,"h":40,"font":6,"sta":1,"c":{"bco2":0,"pco":0,"borderc":0,"bco":54938,"pco2":65535},"txt":"Banks","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":30,"isbr":0},"ev":{"r":"va0.val=128+52\nprint va0.val"}},{"n":"ModelName","i":18,"t":"text","g":"g","x":34,"y":72,"w":732,"h":42,"font":0,"sta":1,"c":{"pco":65504,"borderc":0,"bco":4426},"txt":"Model Name","a":{"style":0,"key":255,"borderw":0,"xcen":1,"ycen":1,"pw":0,"txt_maxl":33,"isbr":0}},{"n":"b5","i":19,"t":"button","g":"l","x":282,"y":308,"w":236,"h":40,"font":6,"sta":1,"c":{"bco2":0,"pco":0,"borderc":0,"bco":54938,"pco2":65535},"txt":"Speed","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":30,"isbr":0},"ev":{"r":"va0.val=128+55\nprint va0.val"}},{"n":"b6","i":20,"t":"button","g":"l","x":282,"y":120,"w":236,"h":40,"font":6,"sta":1,"c":{"bco2":0,"pco":0,"borderc":0,"bco":54938,"pco2":65535},"txt":"Options","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":10,"isbr":0},"ev":{"r":"va0.val=128+38\nprint va0.val"}},{"n":"b15","i":21,"t":"button","g":"l","x":34,"y":261,"w":236,"h":40,"font":6,"sta":1,"c":{"bco2":0,"pco":0,"borderc":0,"bco":54938,"pco2":65535},"txt":"Rates","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":10,"isbr":0},"ev":{"r":"va0.val=128+45\nprint va0.val"}},{"n":"b7","i":22,"t":"button","g":"l","x":282,"y":355,"w":236,"h":40,"font":6,"sta":1,"c":{"bco2":1024,"pco":0,"borderc":0,"bco":54938,"pco2":65535},"txt":"RotorFlight","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":30,"isbr":0},"ev":{"r":"va0.val=26<<8\nprint va0.val"}},{"n":"b11","i":23,"t":"button","g":"l","x":34,"y":355,"w":236,"h":40,"font":6,"sta":1,"c":{"bco2":1024,"pco":0,"borderc":0,"bco":54938,"pco2":65535},"txt":"Model IDs","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":30,"isbr":0},"ev":{"r":"va0.val=59<<8\nprint va0.val"}},{"n":"va1","i":24,"t":"variable","g":"l","sta":0,"txt":"newtxt","val":0,"a":{"txt_maxl":10}},{"g":"l","n":"ldrcRxUpdate","i":25,"t":"button","x":14,"y":414,"w":377,"h":56,"font":6,"sta":1,"c":{"bco2":1024,"pco":0,"borderc":0,"bco":54938,"pco2":65535},"txt":"Receiver updates","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":30,"isbr":0},"ev":{"r":"ldrc rxupdate"},"need":"model"}]}
+{
+ "name": "RXSetupView",
+ "id": 4,
+ "w": 800,
+ "h": 480,
+ "bg": {
+  "sta": 2,
+  "mode": "image",
+  "picture": 3
+ },
+ "nav": {
+  "up": 255,
+  "down": 255,
+  "left": 255,
+  "right": 255
+ },
+ "ev": {
+  "preinitialize": "RXSetupView.pic=Screen_Background"
+ },
+ "comps": [
+  {
+   "n": "t0",
+   "i": 3,
+   "t": "text",
+   "g": "l",
+   "x": 0,
+   "y": 0,
+   "w": 800,
+   "h": 58,
+   "font": 0,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 2214
+   },
+   "txt": "Model setup",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "card",
+   "i": 26,
+   "t": "text",
+   "g": "l",
+   "x": 46,
+   "y": 83,
+   "w": 708,
+   "h": 371,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 65535,
+    "bco": 4426
+   },
+   "txt": "",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 1,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "b2",
+   "i": 1,
+   "t": "button",
+   "g": "l",
+   "x": 578,
+   "y": 388,
+   "w": 160,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "OK",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=128+48\nprint va0.val"
+   }
+  },
+  {
+   "n": "b17",
+   "i": 2,
+   "t": "button",
+   "g": "l",
+   "x": 620,
+   "y": 4,
+   "w": 170,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Help",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"HelpView:RXSETUP.TXT\"\nLogView.t0.txt=\"RX setup help\"\nLogView.return.txt=\"RXSetupView\""
+   }
+  },
+  {
+   "n": "b1",
+   "i": 4,
+   "t": "button",
+   "g": "l",
+   "x": 73,
+   "y": 146,
+   "w": 210,
+   "h": 40,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 0,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Channels",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 15,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"SticksView\""
+   }
+  },
+  {
+   "n": "b3",
+   "i": 5,
+   "t": "button",
+   "g": "l",
+   "x": 295,
+   "y": 146,
+   "w": 210,
+   "h": 40,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 0,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Failsafe",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"FailSafe\""
+   }
+  },
+  {
+   "n": "b12",
+   "i": 6,
+   "t": "button",
+   "g": "l",
+   "x": 73,
+   "y": 99,
+   "w": 210,
+   "h": 40,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 0,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Models",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 20,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=128+4\nprint va0.val // was ModelsView\n//page ModelsView"
+   }
+  },
+  {
+   "n": "b8",
+   "i": 7,
+   "t": "button",
+   "g": "l",
+   "x": 517,
+   "y": 193,
+   "w": 210,
+   "h": 40,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 0,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Telemetry",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"DataView\""
+   }
+  },
+  {
+   "n": "b14",
+   "i": 8,
+   "t": "button",
+   "g": "l",
+   "x": 517,
+   "y": 287,
+   "w": 210,
+   "h": 40,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 0,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Reverse",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=128+9\nprint va0.val"
+   }
+  },
+  {
+   "n": "b4",
+   "i": 9,
+   "t": "button",
+   "g": "l",
+   "x": 73,
+   "y": 193,
+   "w": 210,
+   "h": 40,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 0,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Trims",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"TrimView\""
+   }
+  },
+  {
+   "n": "b9",
+   "i": 10,
+   "t": "button",
+   "g": "l",
+   "x": 517,
+   "y": 334,
+   "w": 210,
+   "h": 40,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 0,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Mixes",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"MIXESVIEW\" // first time"
+   }
+  },
+  {
+   "n": "b19",
+   "i": 11,
+   "t": "button",
+   "g": "l",
+   "x": 517,
+   "y": 146,
+   "w": 210,
+   "h": 40,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 0,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Log",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=128+18\nprint va0.val"
+   }
+  },
+  {
+   "n": "b10",
+   "i": 12,
+   "t": "button",
+   "g": "l",
+   "x": 517,
+   "y": 99,
+   "w": 210,
+   "h": 40,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 0,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Batteries",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 20,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"TypeView\""
+   }
+  },
+  {
+   "n": "b16",
+   "i": 13,
+   "t": "button",
+   "g": "l",
+   "x": 295,
+   "y": 193,
+   "w": 210,
+   "h": 40,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 0,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Inputs",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"InputsView\""
+   }
+  },
+  {
+   "n": "b13",
+   "i": 14,
+   "t": "button",
+   "g": "l",
+   "x": 295,
+   "y": 240,
+   "w": 210,
+   "h": 40,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 0,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Subtrim",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=128+20\nprint va0.val"
+   }
+  },
+  {
+   "n": "b18",
+   "i": 15,
+   "t": "button",
+   "g": "l",
+   "x": 517,
+   "y": 240,
+   "w": 210,
+   "h": 40,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 0,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Macros",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=128+5\nprint va0.val //MacrosView\n//page MacrosView"
+   }
+  },
+  {
+   "n": "va0",
+   "i": 16,
+   "t": "variable",
+   "g": "l",
+   "sta": 0,
+   "txt": "newtxt",
+   "val": 0,
+   "a": {
+    "txt_maxl": 10
+   }
+  },
+  {
+   "n": "b0",
+   "i": 17,
+   "t": "button",
+   "g": "l",
+   "x": 73,
+   "y": 287,
+   "w": 210,
+   "h": 40,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 0,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Banks",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=128+52\nprint va0.val"
+   }
+  },
+  {
+   "n": "ModelName",
+   "i": 18,
+   "t": "text",
+   "g": "g",
+   "x": 10,
+   "y": 16,
+   "w": 270,
+   "h": 26,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65504,
+    "borderc": 0,
+    "bco": 2214
+   },
+   "txt": "Model Name",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 33,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "b5",
+   "i": 19,
+   "t": "button",
+   "g": "l",
+   "x": 295,
+   "y": 287,
+   "w": 210,
+   "h": 40,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 0,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Speed",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=128+55\nprint va0.val"
+   }
+  },
+  {
+   "n": "b6",
+   "i": 20,
+   "t": "button",
+   "g": "l",
+   "x": 295,
+   "y": 99,
+   "w": 210,
+   "h": 40,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 0,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Options",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=128+38\nprint va0.val"
+   }
+  },
+  {
+   "n": "b15",
+   "i": 21,
+   "t": "button",
+   "g": "l",
+   "x": 73,
+   "y": 240,
+   "w": 210,
+   "h": 40,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 0,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Rates",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=128+45\nprint va0.val"
+   }
+  },
+  {
+   "n": "b7",
+   "i": 22,
+   "t": "button",
+   "g": "l",
+   "x": 295,
+   "y": 334,
+   "w": 210,
+   "h": 40,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "RotorFlight",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=26<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "b11",
+   "i": 23,
+   "t": "button",
+   "g": "l",
+   "x": 73,
+   "y": 334,
+   "w": 210,
+   "h": 40,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Model IDs",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=59<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "va1",
+   "i": 24,
+   "t": "variable",
+   "g": "l",
+   "sta": 0,
+   "txt": "newtxt",
+   "val": 0,
+   "a": {
+    "txt_maxl": 10
+   }
+  },
+  {
+   "g": "l",
+   "n": "ldrcRxUpdate",
+   "i": 25,
+   "t": "button",
+   "x": 62,
+   "y": 388,
+   "w": 332,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Receiver updates",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "ldrc rxupdate"
+   },
+   "need": "model"
+  }
+ ]
+}

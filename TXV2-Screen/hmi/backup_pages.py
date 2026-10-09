@@ -14,15 +14,24 @@ add(rp.comp(rp.BANK, n='t9', txt='No model'))
 add(rp.comp(rp.MODEL, n='t11', txt='Model name'))
 add(rp.comp(rp.VA0, n='va0'))
 h = rp.comp(rp.by['b0'], n='b0'); h['ev'] = {'r': 'print "HelpView:BACKUP.TXT"\nLogView.t0.txt="Backup help"\nLogView.return.txt="RFBackUpView"'}; add(h)
-for nm, y, txt in (('i0', 94, 'No backup of this model on the card yet'), ('i1', 134, 'No edits waiting')):
-    f = rp.comp(rp.LABEL_L, n=nm, x=34, y=y, w=732, h=36, txt=txt, g='g')
+# B91: an island - the two lines of fact across it; under them the guidance, and beside it the four things to do with the
+# backup as a block of two by two (Back up, Restore all / Write edits, Forget edits: the backup's pair over the edits'
+# pair); OK alone at the foot, at the right
+W = 704; GW = 2 * rp.C_BTN_W + rp.C_BTN_GAP; GH = 6 * 26 + 4; isl = rp.island(W, 76 + 12 + GH, [('b1', 'OK', 115)])   # (GH: the guidance's six lines)
+comps[1].update(x=isl['card'][0], y=isl['card'][1], w=isl['card'][2], h=isl['card'][3])
+X, Y = isl['x0'], isl['y0']
+for nm, y, txt in (('i0', Y, 'No backup of this model on the card yet'), ('i1', Y + 40, 'No edits waiting')):
+    f = rp.comp(rp.LABEL_L, n=nm, x=X, y=y, w=W, h=36, txt=txt, g='g')
     f['c'] = dict(f['c'], pco=0, bco=rp.PALE[0]); f['a'] = dict(f['a'], txt_maxl=90); add(f)
-g = rp.comp(rp.LABEL_L, n='i2', x=34, y=186, w=732, h=96, g='g', font=2,
+g = rp.comp(rp.LABEL_L, n='i2', x=X, y=Y + 88, w=W - GW - 16, h=GH, g='g', font=2,
             txt='Back up after every setup you are happy with. With no model connected, the Rotorflight pages edit this backup; Write edits sends those edits to the model when it is connected.')   # (1.11.40: do first, why second, and shorter)
 g['c'] = {'pco': 65535, 'borderc': rp.CARD['c']['bco'], 'bco': rp.CARD['c']['bco']}; g['a'] = dict(g['a'], borderw=0, xcen=0, ycen=0, txt_maxl=300, isbr=1); add(g)
-for nm, txt, x, w, code in rp.bottom_row([('b3', 'Back up', 111), ('b2', 'Restore all', 112), ('b4', 'Write edits', 113), ('b5', 'Forget edits', 114), ('b1', 'OK', 115)]):
-    b = rp.comp(rp.BUTTON, n=nm, x=x, y=414, w=w, h=56, txt=txt); b['ev'] = {'r': 'va0.val=%d<<8\nprint va0.val' % code}; add(b)
-add(rp.message_box(rect=(110, 296, 580, 108)))   # (1.11.40: the progress in a message box, below the two lines of fact)
+gx = X + W - GW
+for nm, txt, col, row, code in (('b3', 'Back up', 0, 0, 111), ('b2', 'Restore all', 1, 0, 112), ('b4', 'Write edits', 0, 1, 113), ('b5', 'Forget edits', 1, 1, 114)):
+    b = rp.comp(rp.BUTTON, n=nm, x=gx + col * (rp.C_BTN_W + rp.C_BTN_GAP), y=Y + 88 + row * (rp.C_BTN_H + 10), w=rp.C_BTN_W, h=rp.C_BTN_H, txt=txt); b['ev'] = {'r': 'va0.val=%d<<8\nprint va0.val' % code}; add(b)
+for (nm, txt, x, y, w, code) in isl['btn']:
+    b = rp.comp(rp.BUTTON, n=nm, x=x, y=y, w=w, h=rp.C_BTN_H, txt=txt); b['ev'] = {'r': 'va0.val=%d<<8\nprint va0.val' % code}; add(b)
+add(rp.message_box(rect=isl['box']))   # (the progress, over the island's middle)
 out = {'name': 'RFBackUpView', 'id': 12, 'w': 800, 'h': 480, 'bg': rp.rates['bg'], 'nav': rp.rates['nav'], 'ev': {'preinitialize': 'vis busy,0\nRFBackUpView.pic=Screen_Background'}, 'comps': comps}
 json.dump(out, open(os.path.join(rp.PAGES, '12.json'), 'w'), indent=1)
 idx = json.load(open(os.path.join(rp.PAGES, '..', 'index.json')))

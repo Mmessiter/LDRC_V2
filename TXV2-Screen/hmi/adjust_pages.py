@@ -51,19 +51,23 @@ def hidden(nm, klabel, code=119):   # a box the keypad edits, out of sight (one 
     f['ev'] = {'r': 'keybdB.t1.txt="%s"\nva0.val=%d<<8\nprint va0.val' % (klabel, code)}; return add(f)
 bp = comp(rp.BUTTON, n='bprev', x=215, y=7, w=56, h=44, txt='<'); bp['ev'] = ev(126); add(bp)
 bn = comp(rp.BUTTON, n='bnext', x=540, y=7, w=56, h=44, txt='>'); bn['ev'] = ev(127); add(bn)
-label('ltn0', 34, 94, 150, 'Changes'); tapbox('tn0', 190, 94, 420, 120); tapbox('tn3', 616, 94, 150, 125, maxl=16)
-tapbox('tn2', 34, 140, 396, 124, maxl=24); label('lon', 436, 140, 50, 'on', pale=False); tapbox('tn1', 492, 140, 274, 122, maxl=24)   # (B76: no 'Control' label - the line reads as a sentence)
-bar = {'n': 'bar', 't': 'rangebar', 'g': 'g', 'x': 34, 'y': 194, 'w': 732, 'h': 60, 'font': 2, 'txt': '', 'val': 0,
+# B91: an island (rescue_pages.island) - the two lines, the bar, the live line and the hint 680 wide, the buttons at its foot
+W = 680; isl = rp.island(W, 236, [('b5', 'Add', 128), ('b6', 'Remove', 129), ('b3', 'Save', 118), ('b1', 'OK', 117)])
+comps[1].update(x=isl['card'][0], y=isl['card'][1], w=isl['card'][2], h=isl['card'][3])
+X, Y = isl['x0'], isl['y0']
+label('ltn0', X, Y, 140, 'Changes'); tapbox('tn0', X + 146, Y, 380, 120); tapbox('tn3', X + 532, Y, 148, 125, maxl=16)
+tapbox('tn2', X, Y + 46, 360, 124, maxl=24); label('lon', X + 366, Y + 46, 44, 'on', pale=False); tapbox('tn1', X + 416, Y + 46, 264, 122, maxl=24)   # (B76: no 'Control' label - the line reads as a sentence)
+bar = {'n': 'bar', 't': 'rangebar', 'g': 'g', 'x': X, 'y': Y + 100, 'w': W, 'h': 60, 'font': 2, 'txt': '', 'val': 0,
        'c': {'pco': 65535, 'bco': rp.CARD['c']['bco'], 'borderc': 0, 'pco2': 65535, 'bco2': 0},
        'a': {'lo': 875, 'hi': 2125, 'n': 2, 'kind': 0, 'mk': -1, 'd0': 1500, 'd1': 1700, 'd2': 1900, 'd3': 2000, 'd4': 2100, 'txt_maxl': 160}, 'ev': ev(130)}
 add(bar)
-live = label('tn8', 34, 262, 732, '', 30); live['a'] = dict(live['a'], txt_maxl=60)
-hint = label('hint', 34, 350, 732, 'Tap a zone to type its value. Drag the round ends.', 30, pale=False); hint['font'] = 2; hint['c']['pco'] = 50712   # (worded per kind by the main board)
+live = label('tn8', X, Y + 168, W, '', 30); live['a'] = dict(live['a'], txt_maxl=60)
+hint = label('hint', X, Y + 206, W, 'Tap a zone to type its value. Drag the round ends.', 30, pale=False); hint['font'] = 2; hint['c']['pco'] = 50712   # (worded per kind by the main board)
 for k in range(6): hidden('tp%d' % k, 'Position %d' % (k + 1))
 hidden('tk0', 'Low end value'); hidden('tk1', 'High end value'); hidden('ts0', 'Step size'); hidden('ts1', 'Lowest value'); hidden('ts2', 'Highest value')
-for (nm, txt, x, w, code) in rp.bottom_row([('b5', 'Add', 128), ('b6', 'Remove', 129), ('b3', 'Save', 118), ('b1', 'OK', 117)]):
-    b = comp(rp.BUTTON, n=nm, x=x, y=414, w=w, h=56, txt=txt); b['ev'] = ev(code); add(b)
-add(rp.message_box(rect=(110, 300, 580, 104)))   # (1.11.40: a message box, under the bar so the bar stays in sight)
+for (nm, txt, x, y, w, code) in isl['btn']:
+    b = comp(rp.BUTTON, n=nm, x=x, y=y, w=w, h=rp.C_BTN_H, txt=txt); b['ev'] = ev(code); add(b)
+add(rp.message_box(rect=(isl['box'][0], Y + 168, isl['box'][2], 104)))   # (a message box under the bar, so the bar stays in sight)
 finish(67, 'AdjustView', comps)
 
 # ---- page 68: the picker
@@ -72,9 +76,12 @@ proto = None
 for pg in (46,):
     for c in json.load(open(os.path.join(rp.PAGES, '%d.json' % pg)))['comps']:
         if c['t'] == 'textselect': proto = c
-wheel = comp(proto, n='list', x=14, y=66, w=772, h=333, txt='', val=0, opt=[NAMES[f] for f in ORDER]); wheel['a'] = dict(wheel['a'], hig=37); wheel['ev'] = {}
+LW, LH = 460, 7 * 37 + 6   # (B91: the wheel on an island: as wide as the longest setting needs, seven whole rows)
+isl = rp.island(LW, LH, [('b1', 'Cancel', 132), ('b3', 'OK', 131)])
+comps[1].update(x=isl['card'][0], y=isl['card'][1], w=isl['card'][2], h=isl['card'][3])
+wheel = comp(proto, n='list', x=isl['x0'], y=isl['y0'], w=LW, h=LH, txt='', val=0, opt=[NAMES[f] for f in ORDER]); wheel['a'] = dict(wheel['a'], hig=37); wheel['ev'] = {}
 add(wheel)
-for (nm, txt, x, w, code) in rp.bottom_row([('b1', 'Cancel', 132), ('b3', 'OK', 131)]):
-    b = comp(rp.BUTTON, n=nm, x=x, y=414, w=w, h=56, txt=txt); b['ev'] = ev(code); add(b)
-add(rp.message_box())
+for (nm, txt, x, y, w, code) in isl['btn']:
+    b = comp(rp.BUTTON, n=nm, x=x, y=y, w=w, h=rp.C_BTN_H, txt=txt); b['ev'] = ev(code); add(b)
+add(rp.message_box(rect=isl['box']))
 finish(68, 'AdjPickView', comps)

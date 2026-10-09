@@ -9,6 +9,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import rescue_pages as rp
 # codes: 83 open, 84 OK, 85 save, 86 a number edited, 87/88/89 aileron / elevator / collective reversed, 90 next (1>2),
 # 91 previous (2>1), 108 yaw reversed, 109 next (2>3), 110 previous (3>2)
+rp.series_begin()   # (B91: one island, one size of row, for the series)
 rp.page(62, 'TravelView', 'Mixer (Rotorflight)', [
     ('h0', 'Main Rotor Settings', 0, 0, 'head', 0),
     ('i0', 'Swashplate Type', 0, 1, 'info', 0), ('i1', 'Main Rotor Direction', 0, 2, 'info', 0),
@@ -37,6 +38,7 @@ rp.page(66, 'Travel3View', 'Mixer: tail rotor', [
     ('tn4', 'Yaw limit CCW [deg]', 0, 6, 'num', 86, 'CCW yaw blade angle limit [deg]'),
     ('tn5', 'Motor idle throttle [%]', 0, 7, 'num', 86),
 ], [('b3', 'Save', 14, 180, 85), ('b2', '< Previous', 408, 180, 110), ('b1', 'OK', 605, 180, 84)], 'TRAVEL3.TXT')
+rp.series_end()
 idx = json.load(open(os.path.join(rp.PAGES, '..', 'index.json')))
 have = {x['id']: x for x in idx['pages']}
 for pid, name in ((62, 'TravelView'), (63, 'Travel2View'), (66, 'Travel3View')):

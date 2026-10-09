@@ -1,0 +1,1590 @@
+{
+ "name": "FailSafeView",
+ "id": 36,
+ "w": 800,
+ "h": 480,
+ "bg": {
+  "sta": 2,
+  "mode": "image",
+  "picture": 3
+ },
+ "nav": {
+  "up": 255,
+  "down": 255,
+  "left": 255,
+  "right": 255
+ },
+ "ev": {
+  "preinitialize": "FailSafeView.pic=Screen_Background",
+  "postinitialize": "vis Progress,0",
+  "touch_release": "print \"UKRULES\""
+ },
+ "comps": [
+  {
+   "n": "t0",
+   "i": 2,
+   "t": "text",
+   "g": "l",
+   "x": 0,
+   "y": 0,
+   "w": 800,
+   "h": 58,
+   "font": 0,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 2214
+   },
+   "txt": "Failsafe",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "card",
+   "i": 60,
+   "t": "text",
+   "g": "l",
+   "x": 0,
+   "y": 58,
+   "w": 800,
+   "h": 422,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 65535,
+    "bco": 4426
+   },
+   "txt": "",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 1,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"UKRULES\""
+   }
+  },
+  {
+   "n": "b10",
+   "i": 1,
+   "t": "button",
+   "g": "l",
+   "x": 605,
+   "y": 414,
+   "w": 180,
+   "h": 56,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "OK",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=128+50\nprint va0.val\nprints change.txt,0"
+   }
+  },
+  {
+   "n": "t3",
+   "i": 3,
+   "t": "text",
+   "g": "l",
+   "x": 26,
+   "y": 74,
+   "w": 72,
+   "h": 36,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Ch 1",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 20,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t1",
+   "i": 4,
+   "t": "text",
+   "g": "l",
+   "x": 26,
+   "y": 115,
+   "w": 72,
+   "h": 36,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Ch 2",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 20,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t2",
+   "i": 5,
+   "t": "text",
+   "g": "l",
+   "x": 26,
+   "y": 156,
+   "w": 72,
+   "h": 36,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Ch 3",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 20,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t4",
+   "i": 6,
+   "t": "text",
+   "g": "l",
+   "x": 26,
+   "y": 197,
+   "w": 72,
+   "h": 36,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Ch 4",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 20,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t5",
+   "i": 7,
+   "t": "text",
+   "g": "l",
+   "x": 26,
+   "y": 238,
+   "w": 72,
+   "h": 36,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Ch 5",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 20,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t6",
+   "i": 8,
+   "t": "text",
+   "g": "l",
+   "x": 26,
+   "y": 279,
+   "w": 72,
+   "h": 36,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Ch 6",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 25,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t7",
+   "i": 9,
+   "t": "text",
+   "g": "l",
+   "x": 26,
+   "y": 320,
+   "w": 72,
+   "h": 36,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Ch 7",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 20,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t8",
+   "i": 10,
+   "t": "text",
+   "g": "l",
+   "x": 26,
+   "y": 361,
+   "w": 72,
+   "h": 36,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Ch 8",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 20,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t17",
+   "i": 11,
+   "t": "text",
+   "g": "l",
+   "x": 410,
+   "y": 74,
+   "w": 72,
+   "h": 36,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Ch 9",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 20,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t18",
+   "i": 12,
+   "t": "text",
+   "g": "l",
+   "x": 410,
+   "y": 115,
+   "w": 72,
+   "h": 36,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Ch 10",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 20,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t19",
+   "i": 13,
+   "t": "text",
+   "g": "l",
+   "x": 410,
+   "y": 156,
+   "w": 72,
+   "h": 36,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Ch 11",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 20,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t20",
+   "i": 14,
+   "t": "text",
+   "g": "l",
+   "x": 410,
+   "y": 197,
+   "w": 72,
+   "h": 36,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Ch 12",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 20,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "fs1",
+   "i": 15,
+   "t": "checkbox",
+   "g": "g",
+   "x": 108,
+   "y": 75,
+   "w": 34,
+   "h": 34,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "val": 1,
+   "a": {
+    "style": 1,
+    "borderw": 2
+   },
+   "ev": {
+    "p": "change.txt+=\"fs1\""
+   }
+  },
+  {
+   "n": "fs2",
+   "i": 16,
+   "t": "checkbox",
+   "g": "g",
+   "x": 108,
+   "y": 116,
+   "w": 34,
+   "h": 34,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "val": 1,
+   "a": {
+    "style": 1,
+    "borderw": 2
+   },
+   "ev": {
+    "p": "change.txt+=\"fs2\""
+   }
+  },
+  {
+   "n": "fs3",
+   "i": 17,
+   "t": "checkbox",
+   "g": "g",
+   "x": 108,
+   "y": 157,
+   "w": 34,
+   "h": 34,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "val": 1,
+   "a": {
+    "style": 1,
+    "borderw": 2
+   },
+   "ev": {
+    "p": "change.txt+=\"fs3\""
+   }
+  },
+  {
+   "n": "fs4",
+   "i": 18,
+   "t": "checkbox",
+   "g": "g",
+   "x": 108,
+   "y": 198,
+   "w": 34,
+   "h": 34,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "val": 1,
+   "a": {
+    "style": 1,
+    "borderw": 2
+   },
+   "ev": {
+    "p": "change.txt+=\"fs4\""
+   }
+  },
+  {
+   "n": "fs5",
+   "i": 19,
+   "t": "checkbox",
+   "g": "g",
+   "x": 108,
+   "y": 239,
+   "w": 34,
+   "h": 34,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "val": 1,
+   "a": {
+    "style": 1,
+    "borderw": 2
+   },
+   "ev": {
+    "p": "change.txt+=\"fs5\""
+   }
+  },
+  {
+   "n": "fs6",
+   "i": 20,
+   "t": "checkbox",
+   "g": "g",
+   "x": 108,
+   "y": 280,
+   "w": 34,
+   "h": 34,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "val": 1,
+   "a": {
+    "style": 1,
+    "borderw": 2
+   },
+   "ev": {
+    "p": "change.txt+=\"fs6\""
+   }
+  },
+  {
+   "n": "fs7",
+   "i": 21,
+   "t": "checkbox",
+   "g": "g",
+   "x": 108,
+   "y": 321,
+   "w": 34,
+   "h": 34,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "val": 1,
+   "a": {
+    "style": 1,
+    "borderw": 2
+   },
+   "ev": {
+    "p": "change.txt+=\"fs7\""
+   }
+  },
+  {
+   "n": "fs8",
+   "i": 22,
+   "t": "checkbox",
+   "g": "g",
+   "x": 108,
+   "y": 362,
+   "w": 34,
+   "h": 34,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "val": 1,
+   "a": {
+    "style": 1,
+    "borderw": 2
+   },
+   "ev": {
+    "p": "change.txt+=\"fs8\""
+   }
+  },
+  {
+   "n": "fs9",
+   "i": 23,
+   "t": "checkbox",
+   "g": "g",
+   "x": 492,
+   "y": 75,
+   "w": 34,
+   "h": 34,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "val": 1,
+   "a": {
+    "style": 1,
+    "borderw": 2
+   },
+   "ev": {
+    "p": "change.txt+=\"fs9\""
+   }
+  },
+  {
+   "n": "fs10",
+   "i": 24,
+   "t": "checkbox",
+   "g": "g",
+   "x": 492,
+   "y": 116,
+   "w": 34,
+   "h": 34,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "val": 1,
+   "a": {
+    "style": 1,
+    "borderw": 2
+   },
+   "ev": {
+    "p": "change.txt+=\"fs10\""
+   }
+  },
+  {
+   "n": "fs11",
+   "i": 25,
+   "t": "checkbox",
+   "g": "g",
+   "x": 492,
+   "y": 157,
+   "w": 34,
+   "h": 34,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "val": 1,
+   "a": {
+    "style": 1,
+    "borderw": 2
+   },
+   "ev": {
+    "p": "change.txt+=\"fs11\""
+   }
+  },
+  {
+   "n": "fs12",
+   "i": 26,
+   "t": "checkbox",
+   "g": "g",
+   "x": 492,
+   "y": 198,
+   "w": 34,
+   "h": 34,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "val": 1,
+   "a": {
+    "style": 1,
+    "borderw": 2
+   },
+   "ev": {
+    "p": "change.txt+=\"fs12\""
+   }
+  },
+  {
+   "n": "b0",
+   "i": 27,
+   "t": "button",
+   "g": "l",
+   "x": 408,
+   "y": 414,
+   "w": 180,
+   "h": 56,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Save",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"FailSAVE\""
+   }
+  },
+  {
+   "n": "ch1",
+   "i": 28,
+   "t": "text",
+   "g": "g",
+   "x": 188,
+   "y": 74,
+   "w": 210,
+   "h": 36,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 50712,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "(Aileron)",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "ch2",
+   "i": 29,
+   "t": "text",
+   "g": "g",
+   "x": 188,
+   "y": 115,
+   "w": 210,
+   "h": 36,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 50712,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "(Elevator)",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "ch3",
+   "i": 30,
+   "t": "text",
+   "g": "g",
+   "x": 188,
+   "y": 156,
+   "w": 210,
+   "h": 36,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 50712,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "(Throttle)",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "ch4",
+   "i": 31,
+   "t": "text",
+   "g": "g",
+   "x": 188,
+   "y": 197,
+   "w": 210,
+   "h": 36,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 50712,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "(Rudder)",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "ch5",
+   "i": 32,
+   "t": "text",
+   "g": "g",
+   "x": 188,
+   "y": 238,
+   "w": 210,
+   "h": 36,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 50712,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "(Gear)",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "ch6",
+   "i": 33,
+   "t": "text",
+   "g": "g",
+   "x": 188,
+   "y": 279,
+   "w": 210,
+   "h": 36,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 50712,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "(AUX1)",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "ch7",
+   "i": 34,
+   "t": "text",
+   "g": "g",
+   "x": 188,
+   "y": 320,
+   "w": 210,
+   "h": 36,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 50712,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "(AUX2)",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "ch8",
+   "i": 35,
+   "t": "text",
+   "g": "g",
+   "x": 188,
+   "y": 361,
+   "w": 210,
+   "h": 36,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 50712,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "(AUX3)",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "ch9",
+   "i": 36,
+   "t": "text",
+   "g": "g",
+   "x": 572,
+   "y": 74,
+   "w": 210,
+   "h": 36,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 50712,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "(AUX4)",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "ch10",
+   "i": 37,
+   "t": "text",
+   "g": "g",
+   "x": 572,
+   "y": 115,
+   "w": 210,
+   "h": 36,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 50712,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "(AUX5)",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "ch11",
+   "i": 38,
+   "t": "text",
+   "g": "g",
+   "x": 572,
+   "y": 156,
+   "w": 210,
+   "h": 36,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 50712,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "(AUX6)",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "ch12",
+   "i": 39,
+   "t": "text",
+   "g": "g",
+   "x": 572,
+   "y": 197,
+   "w": 210,
+   "h": 36,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 50712,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "(AUX7)",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "Progress",
+   "i": 40,
+   "t": "progress bar",
+   "g": "l",
+   "x": 14,
+   "y": 407,
+   "w": 772,
+   "h": 5,
+   "sta": 0,
+   "c": {
+    "pco": 53248,
+    "bco": 54938
+   },
+   "val": 5,
+   "a": {
+    "dez": 0,
+    "dis": 25
+   }
+  },
+  {
+   "n": "ch13",
+   "i": 41,
+   "t": "text",
+   "g": "g",
+   "x": 572,
+   "y": 238,
+   "w": 210,
+   "h": 36,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 50712,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "(AUX8)",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "ch14",
+   "i": 42,
+   "t": "text",
+   "g": "g",
+   "x": 572,
+   "y": 279,
+   "w": 210,
+   "h": 36,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 50712,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "(AUX9)",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "ch15",
+   "i": 43,
+   "t": "text",
+   "g": "g",
+   "x": 572,
+   "y": 320,
+   "w": 210,
+   "h": 36,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 50712,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "(AUX10)",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "ch16",
+   "i": 44,
+   "t": "text",
+   "g": "g",
+   "x": 572,
+   "y": 361,
+   "w": 210,
+   "h": 36,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 50712,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "(AUX11)",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "fs13",
+   "i": 45,
+   "t": "checkbox",
+   "g": "g",
+   "x": 492,
+   "y": 239,
+   "w": 34,
+   "h": 34,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "val": 1,
+   "a": {
+    "style": 1,
+    "borderw": 2
+   },
+   "ev": {
+    "p": "change.txt+=\"fs13\""
+   }
+  },
+  {
+   "n": "fs14",
+   "i": 46,
+   "t": "checkbox",
+   "g": "g",
+   "x": 492,
+   "y": 280,
+   "w": 34,
+   "h": 34,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "val": 1,
+   "a": {
+    "style": 1,
+    "borderw": 2
+   },
+   "ev": {
+    "p": "change.txt+=\"fs14\""
+   }
+  },
+  {
+   "n": "fs15",
+   "i": 47,
+   "t": "checkbox",
+   "g": "g",
+   "x": 492,
+   "y": 321,
+   "w": 34,
+   "h": 34,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "val": 1,
+   "a": {
+    "style": 1,
+    "borderw": 2
+   },
+   "ev": {
+    "p": "change.txt+=\"fs15\""
+   }
+  },
+  {
+   "n": "fs16",
+   "i": 48,
+   "t": "checkbox",
+   "g": "g",
+   "x": 492,
+   "y": 362,
+   "w": 34,
+   "h": 34,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "val": 1,
+   "a": {
+    "style": 1,
+    "borderw": 2
+   },
+   "ev": {
+    "p": "change.txt+=\"fs16\""
+   }
+  },
+  {
+   "n": "t10",
+   "i": 49,
+   "t": "text",
+   "g": "l",
+   "x": 410,
+   "y": 238,
+   "w": 72,
+   "h": 36,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Ch 13",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 20,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t11",
+   "i": 50,
+   "t": "text",
+   "g": "l",
+   "x": 410,
+   "y": 279,
+   "w": 72,
+   "h": 36,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Ch 14",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 20,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t12",
+   "i": 51,
+   "t": "text",
+   "g": "l",
+   "x": 410,
+   "y": 320,
+   "w": 72,
+   "h": 36,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Ch 15",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 20,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t13",
+   "i": 52,
+   "t": "text",
+   "g": "l",
+   "x": 410,
+   "y": 361,
+   "w": 72,
+   "h": 36,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Ch 16",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 20,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "b15",
+   "i": 53,
+   "t": "button",
+   "g": "l",
+   "x": 620,
+   "y": 4,
+   "w": 170,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Help",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"HelpView:FAILSAFE.TXT\"\nLogView.t0.txt=\"Failsafe help\"\nLogView.return.txt=\"FailSafeView\""
+   }
+  },
+  {
+   "n": "b1",
+   "i": 54,
+   "t": "button",
+   "g": "l",
+   "x": 14,
+   "y": 414,
+   "w": 180,
+   "h": 56,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "All",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "fs1.val=1\nfs2.val=1\nfs3.val=1\nfs4.val=1\nfs5.val=1\nfs6.val=1\nfs7.val=1\nfs8.val=1\nfs9.val=1\nfs10.val=1\nfs11.val=1\nfs12.val=1\nfs13.val=1\nfs14.val=1\nfs15.val=1\nfs16.val=1\nchange.txt=\"fs1fs2fs3fs4fs5fs6fs7fs8fs9fs10fs11fs12fs13fs14fs15fs16\""
+   }
+  },
+  {
+   "n": "b2",
+   "i": 55,
+   "t": "button",
+   "g": "l",
+   "x": 211,
+   "y": 414,
+   "w": 180,
+   "h": 56,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "None",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "fs1.val=0\nfs2.val=0\nfs3.val=0\nfs4.val=0\nfs5.val=0\nfs6.val=0\nfs7.val=0\nfs8.val=0\nfs9.val=0\nfs10.val=0\nfs11.val=0\nfs12.val=0\nfs13.val=0\nfs14.val=0\nfs15.val=0\nfs16.val=0\nchange.txt=\"fs1fs2fs3fs4fs5fs6fs7fs8fs9fs10fs11fs12fs13fs14fs15fs16\""
+   }
+  },
+  {
+   "n": "wav0",
+   "i": 56,
+   "t": "audio",
+   "g": "l",
+   "a": {
+    "en": 1,
+    "dis": 100,
+    "tim": 0
+   }
+  },
+  {
+   "n": "ModelName",
+   "i": 57,
+   "t": "text",
+   "g": "l",
+   "x": 10,
+   "y": 4,
+   "w": 200,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65504,
+    "borderc": 0,
+    "bco": 2214
+   },
+   "txt": "",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 24,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "va0",
+   "i": 58,
+   "t": "variable",
+   "g": "l",
+   "sta": 0,
+   "txt": "newtxt",
+   "val": 0,
+   "a": {
+    "txt_maxl": 10
+   }
+  },
+  {
+   "n": "change",
+   "i": 59,
+   "t": "variable",
+   "g": "g",
+   "sta": 1,
+   "txt": "XX:",
+   "val": 0,
+   "a": {
+    "txt_maxl": 520
+   }
+  }
+ ]
+}

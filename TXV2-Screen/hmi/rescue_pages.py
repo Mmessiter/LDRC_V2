@@ -50,54 +50,114 @@ PALE = (65497, 57215, 59323, 61215, 65402, 65341)   # pale yellow, blue, green, 
 # B90 (Malcolm, 9 Oct, of Battery, Rotorflight settings and Calibrate: "These three screens would look better if the
 # boxes were more central on the screen. They could perhaps afford to be a little larger. Also, because so much of the
 # screen remains bare, we should perhaps consider using the background image instead of a plain background colour ...
-# true for all screens with very little on them"): a page of up to five rows is laid out COMPACT: the rows in the
-# buttons' font (28 px, not 24) and taller, each column as wide as its words need, on a card no bigger than they need,
-# centred under the title strip on the pilot's background picture, the buttons along the card's foot with OK at its
-# right. A fuller page keeps the card that fills the screen. A field's 7th element, for an 'info' or 'wide' row, is the
-# longest text the main board will put in it (the column is made wide enough).
-COMPACT_ROWS = 5
-C_FONT, C_ROW, C_PITCH, C_PAD, C_COLGAP, C_LVGAP, C_VAL_W, C_WIDE_L = 6, 42, 50, 18, 20, 6, 110, 160
-C_BTN_W, C_BTN_H, C_BTN_GAP, C_BTN_ABOVE = 160, 56, 14, 20
-def compact_plan(fields, buttons):
-    """fields as page() takes them; buttons: (name, words, code). None when the page is too full or too wide for a compact
-    card, else a dict: card (x, y, w, h), col[(lx, cw)], y(row), btn[(name, words, x, y, w, code)], box (the message box)."""
+# true for all screens with very little on them"): a page laid out COMPACT - each column as wide as its words need, on a
+# card no bigger than they need, centred under the title strip on the pilot's background picture, the buttons along the
+# card's foot with OK at its right. A field's 7th element, for an 'info' or 'wide' row, is the longest text the main
+# board will put in it (the column is made wide enough).
+# B91 (Malcolm, 9 Oct, of B90: "It's fabulous! I especially like a centered island of solid background colour with
+# buttons contained within, surrounded by the background image. This idea could be implemented on more screens maybe by
+# making buttons a little smaller to make the island smaller. This would give it a greater sense of unity."): EVERY page
+# made here is an island now, in the largest of four sizes of row that fits with at least ISLAND_MX / ISLAND_MY of
+# picture round it (the few rows of B90's pages in 28 px; eight rows in 24 px, as before); the buttons 160 x 50 (they
+# were 180 x 56); pages in a series (Next / < Previous) share one size of island and row, so their buttons stand in the
+# same places (series_begin / series_end). The same measures as hmi/islands.py, which does the Version 1 pages.
+TIERS = [(6, 42, 50, 110, 160), (6, 40, 46, 110, 160), (2, 36, 40, 100, 150), (2, 35, 37, 100, 150)]   # font, row, pitch, value box, short label of a 'wide' row
+C_FONT, C_ROW, C_PITCH, C_VAL_W, C_WIDE_L = TIERS[0]
+C_PAD, C_COLGAP, C_LVGAP = 16, 20, 6
+C_BTN_W, C_BTN_H, C_BTN_GAP, C_BTN_ABOVE = 160, 50, 12, 14
+ISLAND_MX, ISLAND_MY = 24, 16
+STRETCH = 60   # (a column is made at most this much wider than its words need)
+def compact_plan(fields, buttons, tier=None, min_size=None):
+    """fields as page() takes them; buttons: (name, words, code). None when no size of row lets the page be an island,
+    else a dict: card (x, y, w, h), col[(lx, cw)], y(row), btn[(name, words, x, y, w, code)], box (the message box),
+    font, row_h, val_w, wide_l, tier."""
     from fontw import width
+    if any(f[4] == 'pick' for f in fields): return None
     rows = max((f[3] for f in fields), default=-1) + 1
-    if rows > COMPACT_ROWS or any(f[4] == 'pick' for f in fields): return None
-    cols = [0, 0]
-    for f in fields:
-        nm, label, col, row, kind = f[:5]; hint = f[6] if len(f) > 6 else None
-        if kind == 'head': need = width(C_FONT, label) + 8
-        elif kind == 'info': need = width(C_FONT, hint or label) + 24
-        elif kind == 'wide': need = C_WIDE_L + C_LVGAP + width(C_FONT, hint or '') + 24
-        else: need = width(C_FONT, label) + 20 + C_LVGAP + C_VAL_W
-        cols[col] = max(cols[col], need, 300 if kind != 'head' else 0)
-    ncol = 2 if cols[1] else 1
-    content_w = cols[0] + (C_COLGAP + cols[1] if ncol == 2 else 0)
-    bw = [2 * C_BTN_W + C_BTN_GAP if width(C_FONT, t) + 16 > C_BTN_W else C_BTN_W for _, t, _ in buttons]
-    btn_w = sum(bw) + (len(bw) - 1) * C_BTN_GAP if bw else 0
-    card_w = 2 * C_PAD + max(content_w, btn_w)
-    if card_w > 800: return None
-    card_h = C_PAD + rows * C_PITCH - (C_PITCH - C_ROW) + C_BTN_ABOVE + C_BTN_H + C_PAD
-    if card_h > 422: return None
+    for t in ([tier] if tier is not None else range(len(TIERS))):
+        font, row_h, pitch, val_w, wide_l = TIERS[t]
+        cols = [0, 0]; minc = 300 if font == 6 else 260
+        for f in fields:
+            nm, label, col, row, kind = f[:5]; hint = f[6] if len(f) > 6 else None
+            if kind == 'head': need = width(6, label) + 8
+            elif kind == 'info': need = width(font, hint or label) + 24
+            elif kind == 'wide': need = wide_l + C_LVGAP + width(font, hint or '') + 24
+            else: need = width(font, label) + 20 + C_LVGAP + val_w
+            cols[col] = max(cols[col], need, minc if kind != 'head' else 0)
+        ncol = 2 if cols[1] else 1
+        content_w = cols[0] + (C_COLGAP + cols[1] if ncol == 2 else 0)
+        bw = [2 * C_BTN_W + C_BTN_GAP if width(6, tx) + 16 > C_BTN_W else C_BTN_W for _, tx, _ in buttons]
+        btn_w = sum(bw) + (len(bw) - 1) * C_BTN_GAP if bw else 0
+        card_w = 2 * C_PAD + max(content_w, btn_w)
+        card_h = C_PAD + rows * pitch - (pitch - row_h) + C_BTN_ABOVE + C_BTN_H + C_PAD
+        if card_w > 800 - 2 * ISLAND_MX or card_h > 422 - 2 * ISLAND_MY:
+            if tier is not None: return None
+            continue
+        if min_size: card_w, card_h = max(card_w, min_size[0]), max(card_h, min_size[1])
+        card_x, card_y = (800 - card_w) // 2, 58 + (422 - card_h) // 2
+        inner = card_w - 2 * C_PAD; off = 0
+        if content_w < inner:   # (the buttons, or the series, are the wider: the columns share some of the room, up to STRETCH each, and stand in the middle of the rest)
+            extra = inner - content_w; per = min(STRETCH, extra // ncol)
+            cols[0] += per; cols[1] += per if ncol == 2 else 0
+            off = (extra - per * ncol) // 2
+        col = [(card_x + C_PAD + off, cols[0]), (card_x + C_PAD + off + cols[0] + C_COLGAP, cols[1])]
+        ok = [b for b in buttons if b[1] == 'OK']; save = [b for b in buttons if b[1] == 'Save']
+        ordered = [b for b in buttons if b not in ok and b not in save] + save + ok
+        by = card_y + card_h - C_PAD - C_BTN_H; x_end = card_x + card_w - C_PAD; btn = []
+        for (nm, tx, code), w in reversed(list(zip(ordered, [bw[buttons.index(b)] for b in ordered]))):
+            btn.append((nm, tx, x_end - w, by, w, code)); x_end -= w + C_BTN_GAP
+        bwid = min(580, card_w - 20)
+        return {'card': (card_x, card_y, card_w, card_h), 'col': col, 'y': (lambda row, y0=card_y + C_PAD, p=pitch: y0 + row * p),
+                'btn': list(reversed(btn)), 'box': (card_x + (card_w - bwid) // 2, card_y + (card_h - 124) // 2, bwid, 124),
+                'font': font, 'row_h': row_h, 'val_w': val_w, 'wide_l': wide_l, 'tier': t, 'size': (card_w, card_h)}
+    return None
+
+def island(content_w, content_h, buttons, min_size=None):
+    """For a page laid out by hand (the menu, the bars, the lists): the island round content_w x content_h and its bottom
+    row of buttons [(name, words, code)] (OK last, Save beside it) - a dict: card (x, y, w, h), x0 / y0 (where the content
+    starts), btn [(name, words, x, y, w, code)], foot_y, box (the message box), size."""
+    from fontw import width
+    bw = [2 * C_BTN_W + C_BTN_GAP if width(6, tx) + 16 > C_BTN_W else C_BTN_W for _, tx, _ in buttons]
+    row = sum(bw) + (len(bw) - 1) * C_BTN_GAP if bw else 0
+    card_w = 2 * C_PAD + max(content_w, row)
+    card_h = C_PAD + content_h + (C_BTN_ABOVE + C_BTN_H if buttons else 0) + C_PAD
+    if min_size: card_w, card_h = max(card_w, min_size[0]), max(card_h, min_size[1])
+    assert card_w <= 800 - 2 * ISLAND_MX and card_h <= 422 - 2 * ISLAND_MY, 'no island fits: %dx%d' % (card_w, card_h)
     card_x, card_y = (800 - card_w) // 2, 58 + (422 - card_h) // 2
-    inner = card_w - 2 * C_PAD
-    if content_w < inner:   # (the buttons are the wider: the columns share the room)
-        extra = inner - content_w; cols[0] += extra if ncol == 1 else extra // 2; cols[1] += extra - extra // 2 if ncol == 2 else 0
-    col = [(card_x + C_PAD, cols[0]), (card_x + C_PAD + cols[0] + C_COLGAP, cols[1])]
     ok = [b for b in buttons if b[1] == 'OK']; save = [b for b in buttons if b[1] == 'Save']
     ordered = [b for b in buttons if b not in ok and b not in save] + save + ok
     by = card_y + card_h - C_PAD - C_BTN_H; x_end = card_x + card_w - C_PAD; btn = []
-    for (nm, t, code), w in reversed(list(zip(ordered, [bw[buttons.index(b)] for b in ordered]))):
-        btn.append((nm, t, x_end - w, by, w, code)); x_end -= w + C_BTN_GAP
+    for (nm, tx, code), w in reversed(list(zip(ordered, [bw[buttons.index(b)] for b in ordered]))):
+        btn.append((nm, tx, x_end - w, by, w, code)); x_end -= w + C_BTN_GAP
     bwid = min(580, card_w - 20)
-    return {'card': (card_x, card_y, card_w, card_h), 'col': col, 'y': lambda row: card_y + C_PAD + row * C_PITCH,
-            'btn': list(reversed(btn)), 'box': (card_x + (card_w - bwid) // 2, card_y + (card_h - 124) // 2, bwid, 124)}
+    return {'card': (card_x, card_y, card_w, card_h), 'x0': card_x + (card_w - content_w) // 2, 'y0': card_y + C_PAD, 'btn': list(reversed(btn)),
+            'foot_y': by, 'box': (card_x + (card_w - bwid) // 2, card_y + (card_h - 124) // 2, bwid, 124), 'size': (card_w, card_h)}
 
-def page(pid, name, title, fields, buttons, help_file, busy_rect=MSGBOX, compact=None):
+_series = None
+def series_begin():
+    """The pages made until series_end() are one series: one size of row, one size of island."""
+    global _series; _series = []
+def series_end():
+    global _series
+    pending, _series = _series, None
+    plans = [compact_plan(a[3], [(b[0], b[1], b[4]) for b in a[4]]) for a, k in pending]
+    if any(p is None for p in plans):
+        for a, k in pending: page(*a, **k)
+        return
+    tier = max(p['tier'] for p in plans)
+    sized = [compact_plan(a[3], [(b[0], b[1], b[4]) for b in a[4]], tier=tier) for a, k in pending]
+    if any(p is None for p in sized):
+        for a, k in pending: page(*a, **k)
+        return
+    size = (max(p['size'][0] for p in sized), max(p['size'][1] for p in sized))
+    for a, k in pending: page(*a, **dict(k, tier=tier, min_size=size))
+
+def page(pid, name, title, fields, buttons, help_file, busy_rect=MSGBOX, compact=None, tier=None, min_size=None):
     """fields: (name, label, column, row, kind, code[, keypad label]) with kind 'num' (the keypad), 'cycle' (a tap), 'switch' (on/off), 'info' (told, not changed),
     'head' (a group heading, no value) or 'pick' (1.11.35: a choice from a long list, the whole row: label, a < button, the choice, a > button;
     code = the > button's, the 7th element = the < button's)"""
+    if _series is not None:
+        _series.append(((pid, name, title, fields, buttons, help_file), dict(busy_rect=busy_rect, compact=compact))); return
     comps = []; i = [1]
     def add(c): c['i'] = i[0]; i[0] += 1; comps.append(c); return c
     add(comp(TITLE, n='t0', txt=title))
@@ -107,18 +167,19 @@ def page(pid, name, title, fields, buttons, help_file, busy_rect=MSGBOX, compact
     add(comp(VA0, n='va0'))
     help_btn = comp(by['b0'], n='b0'); help_btn['ev'] = {'r': 'print "HelpView:%s"\nLogView.t0.txt="%s"\nLogView.return.txt="%s"' % (help_file, title + ' help', name)}
     add(help_btn)
-    plan = compact_plan(fields, [(b[0], b[1], b[4]) for b in buttons]) if compact is not False else None   # (B90: None = too full)
+    plan = compact_plan(fields, [(b[0], b[1], b[4]) for b in buttons], tier=tier, min_size=min_size) if compact is not False else None   # (None: no island fits)
     if plan:
         comps[1].update(x=plan['card'][0], y=plan['card'][1], w=plan['card'][2], h=plan['card'][3])
         busy_rect = plan['box']
-    FONT, ROW_H = (C_FONT, C_ROW) if plan else (2, 36)
+    FONT, ROW_H = (plan['font'], plan['row_h']) if plan else (2, 36)
+    VAL_W, WIDE_L = (plan['val_w'], plan['wide_l']) if plan else (C_VAL_W, C_WIDE_L)
     group = -1
     def shade(): return PALE[max(group, 0) % len(PALE)]
     for field in fields:
         (nm, label, col, row, kind, code), klabel = field[:6], (field[6] if len(field) > 6 else field[1])   # klabel: what the keypad calls it (1.11.30)
         if plan:
             y = plan['y'](row); lx, cw = plan['col'][col]
-            lw, vw = cw - C_LVGAP - C_VAL_W, C_VAL_W; vx = lx + lw + C_LVGAP
+            lw, vw = cw - C_LVGAP - VAL_W, VAL_W; vx = lx + lw + C_LVGAP
         else:
             y = 94 + row * 40
             lx, lw, vx, vw = (34, 254, 294, 120) if col == 0 else (430, 236, 672, 94)
@@ -134,7 +195,7 @@ def page(pid, name, title, fields, buttons, help_file, busy_rect=MSGBOX, compact
             bn = comp(BUTTON, n='n' + nm, x=716, y=y - 2, w=50, h=40, txt='>'); bn['ev'] = {'r': 'va0.val=%d<<8\nprint va0.val' % code}; add(bn)
             continue
         if kind == 'wide':   # 1.11.40: a value stepped by a tap whose words need room ("Whenever armed"): a shorter label, a wider box
-            if plan: lw2, vx2, vw2 = C_WIDE_L, lx + C_WIDE_L + C_LVGAP, cw - C_WIDE_L - C_LVGAP
+            if plan: lw2, vx2, vw2 = WIDE_L, lx + WIDE_L + C_LVGAP, cw - WIDE_L - C_LVGAP
             else: lw2, vx2, vw2 = (150, 190, 224) if col == 0 else (150, 586, 180)
             lab = comp(LABEL_L, n='l' + nm, x=lx, y=y, w=lw2, h=ROW_H, txt=label, g='g', font=FONT); lab['c'] = dict(lab['c'], pco=0, bco=shade()); add(lab)
             f = comp(FIELD, n=nm, x=vx2, y=y, w=vw2, h=ROW_H, txt='', g='g', font=FONT); f['a'] = dict(f['a'], key=255, txt_maxl=30); f['ev'] = {'r': 'va0.val=%d<<8\nprint va0.val' % code}; add(f)
@@ -166,6 +227,7 @@ def page(pid, name, title, fields, buttons, help_file, busy_rect=MSGBOX, compact
     print(pid, name, len(comps), 'components', ('compact: card %dx%d at %d,%d' % (plan['card'][2], plan['card'][3], plan['card'][0], plan['card'][1])) if plan else 'full')
 
 # codes (the main board's NumberedFunctions1): 64 open, 65 OK, 66 save, 67 a number edited, 68 the mode tapped, 69 flip tapped, 70 page 2, 71 back to page 1
+series_begin()
 page(58, 'RescueView', 'Rescue (Rotorflight)', [          # the configurator's names, order and units (Malcolm, 7 Oct: "use the same names in the same places")
     ('tn0', 'Enable Rescue', 0, 0, 'switch', 68), ('tn1', 'Flip to upright', 0, 1, 'switch', 69),
     ('tn2', 'Pull-up Collective [%]', 0, 2, 'num', 67), ('tn3', 'Pull-up Time [s]', 0, 3, 'num', 67),
@@ -180,6 +242,7 @@ page(59, 'Rescue2View', 'Rescue: height hold', [
     ('tn2', 'Height hold P', 0, 2, 'num', 67), ('tn3', 'Height hold I', 0, 3, 'num', 67),
     ('tn4', 'Height hold D', 0, 4, 'num', 67), ('tn5', 'Max Collective [%]', 0, 5, 'num', 67),
 ], [('b3', 'Save', 14, 180, 66), ('b2', '< Previous', 408, 180, 71), ('b1', 'OK', 605, 180, 65)], 'RESCUE2.TXT')
+series_end()
 
 # (the Rotorflight menu itself is made by hmi/rfmenu_pages.py since 1.11.26)
 idx = json.load(open(os.path.join(PAGES, '..', 'index.json')))

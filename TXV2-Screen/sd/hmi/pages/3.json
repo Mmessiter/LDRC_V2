@@ -1,1 +1,403 @@
-{"name":"IDsStartView","id":3,"w":800,"h":480,"bg":{"sta":2,"mode":"image","picture":3},"nav":{"up":255,"down":255,"left":255,"right":255},"ev":{"preinitialize":"IDsStartView.pic=Screen_Background"},"comps":[{"n":"t0","i":3,"t":"text","g":"l","x":0,"y":0,"w":800,"h":58,"font":0,"sta":1,"c":{"pco":65535,"borderc":0,"bco":2214},"txt":"Model IDs","a":{"style":0,"key":255,"borderw":0,"xcen":1,"ycen":1,"pw":0,"txt_maxl":30,"isbr":0}},{"n":"card","i":14,"t":"text","g":"l","x":0,"y":58,"w":800,"h":422,"font":6,"sta":1,"c":{"pco":65535,"borderc":65535,"bco":4426},"txt":"","a":{"style":0,"key":255,"borderw":0,"xcen":0,"ycen":1,"pw":0,"txt_maxl":1,"isbr":0}},{"n":"b7","i":1,"t":"button","g":"l","x":500,"y":90,"w":266,"h":50,"font":6,"sta":1,"c":{"bco2":0,"pco":0,"borderc":0,"bco":54938,"pco2":65535},"txt":"Delete stored ID","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":30,"isbr":0},"ev":{"r":"va0.val=128+68\nprint va0.val"}},{"n":"b11","i":2,"t":"button","g":"l","x":500,"y":160,"w":266,"h":50,"font":6,"sta":1,"c":{"bco2":0,"pco":0,"borderc":0,"bco":54938,"pco2":65535},"txt":"Store this model's ID","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":30,"isbr":0},"ev":{"r":"va0.val=128+70\nprint va0.val"}},{"n":"b4","i":4,"t":"button","g":"l","x":605,"y":414,"w":180,"h":56,"font":6,"sta":1,"c":{"bco2":1024,"pco":0,"borderc":0,"bco":54938,"pco2":65535},"txt":"OK","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":10,"isbr":0},"ev":{"r":"va0.val=60<<8\nprint va0.val"}},{"n":"b17","i":5,"t":"button","g":"l","x":620,"y":4,"w":170,"h":50,"font":6,"sta":1,"c":{"bco2":1024,"pco":0,"borderc":0,"bco":54938,"pco2":65535},"txt":"Help","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":10,"isbr":0},"ev":{"r":"print \"HelpView:IDS.TXT\"\nLogView.t0.txt=\"RX setup help\"\nLogView.return.txt=\"RXSetupView\""}},{"n":"va0","i":6,"t":"variable","g":"l","sta":0,"txt":"newtxt","val":0,"a":{"txt_maxl":10}},{"n":"va1","i":7,"t":"variable","g":"l","sta":0,"txt":"newtxt","val":0,"a":{"txt_maxl":10}},{"n":"b3","i":8,"t":"button","g":"l","x":500,"y":240,"w":266,"h":50,"font":6,"sta":1,"c":{"bco2":1024,"pco":0,"borderc":0,"bco":54938,"pco2":65535},"txt":"Check for duplicates","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":30,"isbr":0},"ev":{"p":"va0.val=128+63\nprint va0.val","r":"va0.val=128+63\nprint va0.val"}},{"n":"t1","i":9,"t":"text","g":"g","x":34,"y":330,"w":732,"h":56,"font":0,"sta":1,"c":{"pco":65504,"borderc":0,"bco":4426},"txt":"Model name","a":{"style":0,"key":255,"borderw":0,"xcen":1,"ycen":1,"pw":0,"txt_maxl":30,"isbr":0}},{"n":"t2","i":10,"t":"text","g":"g","x":34,"y":90,"w":210,"h":50,"font":6,"sta":1,"c":{"pco":65535,"borderc":0,"bco":4426},"txt":"Stored ID","a":{"style":0,"key":255,"borderw":0,"xcen":0,"ycen":1,"pw":0,"txt_maxl":30,"isbr":0}},{"n":"t3","i":11,"t":"text","g":"g","x":34,"y":160,"w":210,"h":50,"font":6,"sta":1,"c":{"pco":65535,"borderc":0,"bco":4426},"txt":"This model's ID","a":{"style":0,"key":255,"borderw":0,"xcen":0,"ycen":1,"pw":0,"txt_maxl":30,"isbr":0}},{"n":"t4","i":12,"t":"text","g":"g","x":250,"y":90,"w":230,"h":50,"font":6,"sta":1,"c":{"pco":0,"borderc":0,"bco":65535},"txt":"1234567890","a":{"style":2,"key":255,"borderw":2,"xcen":1,"ycen":1,"pw":0,"txt_maxl":30,"isbr":0}},{"n":"t5","i":13,"t":"text","g":"g","x":250,"y":160,"w":230,"h":50,"font":6,"sta":1,"c":{"pco":0,"borderc":0,"bco":65535},"txt":"1234567890","a":{"style":2,"key":255,"borderw":2,"xcen":1,"ycen":1,"pw":0,"txt_maxl":30,"isbr":0}}]}
+{
+ "name": "IDsStartView",
+ "id": 3,
+ "w": 800,
+ "h": 480,
+ "bg": {
+  "sta": 2,
+  "mode": "image",
+  "picture": 3
+ },
+ "nav": {
+  "up": 255,
+  "down": 255,
+  "left": 255,
+  "right": 255
+ },
+ "ev": {
+  "preinitialize": "IDsStartView.pic=Screen_Background"
+ },
+ "comps": [
+  {
+   "n": "t0",
+   "i": 3,
+   "t": "text",
+   "g": "l",
+   "x": 0,
+   "y": 0,
+   "w": 800,
+   "h": 58,
+   "font": 0,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 2214
+   },
+   "txt": "Model IDs",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "card",
+   "i": 14,
+   "t": "text",
+   "g": "l",
+   "x": 30,
+   "y": 95,
+   "w": 740,
+   "h": 348,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 65535,
+    "bco": 4426
+   },
+   "txt": "",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 1,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "b7",
+   "i": 1,
+   "t": "button",
+   "g": "l",
+   "x": 488,
+   "y": 111,
+   "w": 266,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 0,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Delete stored ID",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=128+68\nprint va0.val"
+   }
+  },
+  {
+   "n": "b11",
+   "i": 2,
+   "t": "button",
+   "g": "l",
+   "x": 488,
+   "y": 171,
+   "w": 266,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 0,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Store this model's ID",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=128+70\nprint va0.val"
+   }
+  },
+  {
+   "n": "b4",
+   "i": 4,
+   "t": "button",
+   "g": "l",
+   "x": 594,
+   "y": 377,
+   "w": 160,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "OK",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=60<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "b17",
+   "i": 5,
+   "t": "button",
+   "g": "l",
+   "x": 620,
+   "y": 4,
+   "w": 170,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Help",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"HelpView:IDS.TXT\"\nLogView.t0.txt=\"RX setup help\"\nLogView.return.txt=\"RXSetupView\""
+   }
+  },
+  {
+   "n": "va0",
+   "i": 6,
+   "t": "variable",
+   "g": "l",
+   "sta": 0,
+   "txt": "newtxt",
+   "val": 0,
+   "a": {
+    "txt_maxl": 10
+   }
+  },
+  {
+   "n": "va1",
+   "i": 7,
+   "t": "variable",
+   "g": "l",
+   "sta": 0,
+   "txt": "newtxt",
+   "val": 0,
+   "a": {
+    "txt_maxl": 10
+   }
+  },
+  {
+   "n": "b3",
+   "i": 8,
+   "t": "button",
+   "g": "l",
+   "x": 488,
+   "y": 239,
+   "w": 266,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Check for duplicates",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "p": "va0.val=128+63\nprint va0.val",
+    "r": "va0.val=128+63\nprint va0.val"
+   }
+  },
+  {
+   "n": "t1",
+   "i": 9,
+   "t": "text",
+   "g": "g",
+   "x": 152,
+   "y": 307,
+   "w": 496,
+   "h": 56,
+   "font": 0,
+   "sta": 1,
+   "c": {
+    "pco": 65504,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Model name",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t2",
+   "i": 10,
+   "t": "text",
+   "g": "g",
+   "x": 46,
+   "y": 111,
+   "w": 121,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Stored ID",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t3",
+   "i": 11,
+   "t": "text",
+   "g": "g",
+   "x": 46,
+   "y": 171,
+   "w": 188,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "This model's ID",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t4",
+   "i": 12,
+   "t": "text",
+   "g": "g",
+   "x": 246,
+   "y": 111,
+   "w": 230,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "1234567890",
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t5",
+   "i": 13,
+   "t": "text",
+   "g": "g",
+   "x": 246,
+   "y": 171,
+   "w": 230,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "1234567890",
+   "a": {
+    "style": 2,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  }
+ ]
+}
