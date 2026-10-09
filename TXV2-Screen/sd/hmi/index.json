@@ -367,7 +367,7 @@
   {
    "id": 72,
    "name": "BatteryView",
-   "n": 35
+   "n": 28
   },
   {
    "id": 73,
@@ -376,7 +376,12 @@
   },
   {
    "id": 74,
-   "name": "CalibrateView",
+   "name": "LevelView",
+   "n": 18
+  },
+  {
+   "id": 75,
+   "name": "BatSensorsView",
    "n": 18
   }
  ],

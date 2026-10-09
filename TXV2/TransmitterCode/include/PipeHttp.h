@@ -47,6 +47,16 @@ void PipeReplyFromScreen(const char *text) // "<id> <code> <body>" (up to the li
 }
 // A Rotorflight request: fn, and the bytes to send with it (none for a read).
 bool BakOffline();                                                  // RF_Backup.h (B70): no model, but this model's backup file
+// B90 (Malcolm, 9 Oct: "when I disconnected the receiver, I went immediately to the adjustments page, but it failed to
+// give me the offline reading. After rebooting the transmitter, it succeeded"): the transmitter declares a model lost
+// two seconds after its last packet (RED_LED_ON_TIME). A page opened inside those two seconds asks the receiver, which
+// has gone, and waits nine seconds for nothing; by then the backup file could answer, but nothing asks it. The last
+// read sent to the receiver is kept; when the model is declared lost with it unanswered, the file answers it, as it
+// would have had the page been opened a moment later (PipeModelGoneTick). A write is left alone: it is reported as
+// not done, as before.
+static uint8_t PipeLastFn = 0, PipeLastIdx = 0;
+static int PipeLastLen = -1;   // (-1: nothing kept)
+bool BakOfflineRead(uint8_t fn, int len);   // RF_Backup.h: a request the file answers as a read
 bool BakOfflineAnswer(uint8_t fn, const uint8_t *data, int len);    // ... which answers in the flight controller's stead
 int MspAsk(uint8_t fn, const uint8_t *data, int len)
 {
@@ -57,8 +67,10 @@ int MspAsk(uint8_t fn, const uint8_t *data, int len)
             PipeReqId = 1;
         PipeRepId = PipeReqId;
         PipeReqSentMs = millis();
+        PipeLastLen = -1;
         return PipeReqId;
     }
+    PipeLastFn = fn; PipeLastLen = len; PipeLastIdx = (data && len >= 1) ? data[0] : 0;   // B90
     char path[360];
     int n = snprintf(path, sizeof(path), "/api/msp?fn=%u", (unsigned)fn);
     if (data && len > 0)
@@ -134,10 +146,8 @@ void FcBankTick() // every 50 ms (ManageTransmitter)
     FcBankPending = true;
 }
 void ShowPIDBank(); void ShowRatesBank(); void ShowRatesAdvancedBank(); void ShowPIDAdvancedBank(); void ShowGOVBank(); void ShowGOV_Global_Bank();
-void RfPipeBack() // the screen says the pipe is ready: a Rotorflight page left unread reads its block now
+static void RfReadBlockAgain() // the Version 1 word page in view reads its block afresh
 {
-    if (!PipeReadRefused) return;
-    PipeReadRefused = false;
     switch (CurrentView)
     {
     case PIDVIEW: ShowPIDBank(); break;
@@ -148,6 +158,34 @@ void RfPipeBack() // the screen says the pipe is ready: a Rotorflight page left 
     case RFGOVERNORVIEW_GLOBAL: ShowGOV_Global_Bank(); break;
     default: break;
     }
+}
+void RfPipeBack() // the screen says the pipe is ready: a Rotorflight page left unread reads its block now
+{
+    if (!PipeReadRefused) return;
+    PipeReadRefused = false;
+    RfReadBlockAgain();
+}
+bool BakHaveFile();   // RF_Backup.h
+void PipeModelGoneTick() // B90 (every 50 ms, ManageTransmitter): the model gone, a read of the receiver's left unanswered: the file answers it
+{
+    if (PipeRepId != -1 || !PipeReqId || PipeLastLen < 0 || PipeReplyLate()) return;
+    if (CurrentMode == SAVE_RF_SETTINGS || CurrentMode == RESTORE_RF_SETTINGS) return;   // (a backup or restore says for itself that the model went)
+    if (!BakOffline() || !BakOfflineRead(PipeLastFn, PipeLastLen)) return;
+    const int len = PipeLastLen;
+    PipeLastLen = -1;
+    if (BakOfflineAnswer(PipeLastFn, &PipeLastIdx, len)) PipeRepId = PipeReqId;
+}
+void RfModelGone() // B90 (RedLedOn, once, as the model is declared lost): a Rotorflight page in view goes over to the backup file
+{
+    if (!BakHaveFile()) return;
+    ShowPipeState();   // the menu's "From the backup file"
+    // a Version 1 word page whose read is still open, or that was refused for want of the pipe (B80), reads the file now; one
+    // that already shows the flight controller's numbers keeps them (its next save edits the file). A page that asked by
+    // MspAsk has its read answered by PipeModelGoneTick.
+    const bool reading = Reading_PIDS_Now || Reading_RATES_Now || Reading_RATES_Advanced_Now || Reading_PIDS_Advanced_Now || Reading_GOV_Now || Reading_GOV_Config_Now;
+    if (!reading && !PipeReadRefused) return;
+    PipeReadRefused = false;
+    RfReadBlockAgain();
 }
 
 #endif

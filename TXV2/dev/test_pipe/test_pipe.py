@@ -164,4 +164,88 @@ prog2 = prog2.replace('SHOWN_FIELDS', str(md.group(0).count('SendValue(')))
 cpp2 = os.path.join(d, 't2.cpp'); open(cpp2, 'w').write(prog2)
 r = subprocess.run(['clang++', '-std=c++11', '-Wall', '-o', os.path.join(d, 't2'), cpp2], capture_output=True, text=True)
 if r.returncode: print(r.stderr); sys.exit(1)
-sys.exit(subprocess.run([os.path.join(d, 't2')]).returncode)
+if subprocess.run([os.path.join(d, 't2')]).returncode: sys.exit(1)
+
+# B90: a read sent to the receiver inside the two seconds before the model is declared lost is answered from the backup
+# file at the moment of the loss (PipeModelGoneTick); a write is not; a word page with its read still open reads the
+# file (RfModelGone). The real PipeHttp.h request bookkeeping and the two B90 functions, compiled with a fake file.
+hsrc = open(os.path.join(ROOT, 'TransmitterCode', 'include', 'PipeHttp.h')).read()
+mh1 = re.search(r'static int PipeReqId = 0;.*?\nint PipeReplyBytes\(uint8_t \*out, int max\)\n\{.*?\n\}\n', hsrc, re.S)
+mh2 = re.search(r'static void RfReadBlockAgain\(\).*?\nvoid RfModelGone\(\)[^\n]*\n\{.*?\n\}\n', hsrc, re.S)
+assert mh1 and mh2, 'the pipe bookkeeping or the B90 functions not found'
+bsrc = open(os.path.join(ROOT, 'TransmitterCode', 'include', 'RF_Backup.h')).read()
+mb1 = re.search(r'FLASHMEM static bool BakIndexed\(uint8_t fn\)[^\n]*\n', bsrc)
+mb2 = re.search(r'FLASHMEM bool BakOfflineRead\(uint8_t fn, int len\)[^\n]*\n', bsrc)
+assert mb1 and mb2, 'BakIndexed / BakOfflineRead not found'
+prog3 = r'''
+#include <cstdio>
+#include <cstdint>
+#include <cstring>
+#include <cstdlib>
+#include <string>
+#include <vector>
+#define FLASHMEM
+#define PIDVIEW 45
+#define RATESVIEW_RF 46
+#define RATESADVANCEDVIEW 48
+#define PIDADVANCEDVIEW 49
+#define RFGOVERNORVIEW_PROFILE 54
+#define RFGOVERNORVIEW_GLOBAL 55
+#define NORMAL 0
+#define SAVE_RF_SETTINGS 7
+#define RESTORE_RF_SETTINGS 8
+static uint32_t now = 10000; static uint32_t millis() { return now; }
+static int CurrentView = 67, CurrentMode = NORMAL;
+static bool offline = false, haveFile = true, PipeReadRefused = false;
+static bool Reading_PIDS_Now = false, Reading_RATES_Now = false, Reading_RATES_Advanced_Now = false, Reading_PIDS_Advanced_Now = false, Reading_GOV_Now = false, Reading_GOV_Config_Now = false;
+static std::vector<std::string> sent; static void SendCommand(char *c) { sent.push_back(c); }
+static int answered = 0, lastFn = -1, lastLen = -1, lastIdx = -1, pipeShown = 0, pidReads = 0, govReads = 0;
+static void ShowPipeState() { ++pipeShown; }
+void ShowPIDBank() { ++pidReads; } void ShowRatesBank() {} void ShowRatesAdvancedBank() {} void ShowPIDAdvancedBank() {} void ShowGOVBank() { ++govReads; } void ShowGOV_Global_Bank() {}
+bool BakOffline() { return offline; }
+bool BakHaveFile() { return haveFile; }
+bool BakOfflineRead(uint8_t fn, int len);
+''' + mb1.group(0) + mb2.group(0) + r'''
+static int PipeRepCodeSet = 200;
+void PipeRepSet(int code, const char *body);
+bool BakOfflineAnswer(uint8_t fn, const uint8_t *data, int len) { ++answered; lastFn = fn; lastLen = len; lastIdx = (data && len >= 1) ? data[0] : -1; PipeRepSet(PipeRepCodeSet, "AABB"); return true; }
+''' + mh1.group(0) + mh2.group(0) + r'''
+void PipeRepSet(int code, const char *body) { PipeRepCode = code; snprintf(PipeRepBody, sizeof(PipeRepBody), "%s", body); }
+static int checks = 0, fails = 0;
+#define CHECK(c) do { ++checks; if (!(c)) { ++fails; fprintf(stderr, "FAIL line %d: %s\n", __LINE__, #c); } } while (0)
+int main() {
+    // a read asked of the receiver with the model there; the model is declared lost 1.5 s later: the file answers it
+    offline = false; const int r1 = MspAsk(111, nullptr, 0);
+    CHECK(sent.size() == 1 && sent[0].find("ldrcreq") == 0 && PipeRepId == -1);
+    PipeModelGoneTick(); CHECK(PipeRepId == -1 && answered == 0);                    // (the model is still there)
+    now += 1500; offline = true; RfModelGone(); CHECK(pipeShown == 1 && pidReads == 0);   // (no word read open: nothing re-read, the menu word only)
+    PipeModelGoneTick(); CHECK(answered == 1 && lastFn == 111 && lastLen == 0 && PipeReplyReady(r1) && PipeRepCode == 200);
+    PipeModelGoneTick(); CHECK(answered == 1);                                        // (once)
+    // a write (53, 15 bytes) left unanswered is NOT answered by the file: the page reports it as not done
+    offline = false; uint8_t line[15] = {3, 1, 2}; const int r2 = MspAsk(53, line, 15); CHECK(PipeRepId == -1);
+    offline = true; PipeModelGoneTick(); CHECK(answered == 1 && !PipeReplyReady(r2));
+    // an indexed read (174 with its index) is answered, with its index
+    offline = false; uint8_t idx[1] = {2}; const int r3 = MspAsk(174, idx, 1); offline = true; PipeModelGoneTick();
+    CHECK(answered == 2 && lastFn == 174 && lastLen == 1 && lastIdx == 2 && PipeReplyReady(r3));
+    // too late (the page has given up at 9 s): not answered
+    offline = false; const int r4 = MspAsk(52, nullptr, 0); now += 9500; offline = true; PipeModelGoneTick(); CHECK(answered == 2 && !PipeReplyReady(r4));
+    // a backup or restore in progress says for itself that the model went: not answered
+    offline = false; const int r5 = MspAsk(52, nullptr, 0); offline = true; CurrentMode = SAVE_RF_SETTINGS; PipeModelGoneTick(); CHECK(answered == 2 && !PipeReplyReady(r5));
+    CurrentMode = NORMAL; PipeModelGoneTick(); CHECK(answered == 3 && PipeReplyReady(r5));
+    // a request already answered by the file (asked with no model) leaves nothing for the tick
+    offline = true; const int r6 = MspAsk(101, nullptr, 0); CHECK(answered == 4 && PipeReplyReady(r6)); PipeModelGoneTick(); CHECK(answered == 4);
+    // a word page with its read still open when the model goes reads the file; one whose read is done keeps its numbers
+    CurrentView = PIDVIEW; Reading_PIDS_Now = true; RfModelGone(); CHECK(pidReads == 1);
+    Reading_PIDS_Now = false; RfModelGone(); CHECK(pidReads == 1);
+    PipeReadRefused = true; RfModelGone(); CHECK(pidReads == 2 && !PipeReadRefused);   // (B80: refused for want of the pipe: reads now)
+    CurrentView = RFGOVERNORVIEW_PROFILE; Reading_GOV_Now = true; RfModelGone(); CHECK(govReads == 1 && pidReads == 2);
+    // no backup file: nothing happens at all
+    haveFile = false; pipeShown = 0; Reading_GOV_Now = true; RfModelGone(); CHECK(pipeShown == 0 && govReads == 1);
+    printf("test_pipe (model gone): %d checks, %d failures\n", checks, fails);
+    return fails ? 1 : 0;
+}
+'''
+cpp3 = os.path.join(d, 't3.cpp'); open(cpp3, 'w').write(prog3)
+r = subprocess.run(['clang++', '-std=c++11', '-Wall', '-o', os.path.join(d, 't3'), cpp3], capture_output=True, text=True)
+if r.returncode: print(r.stderr); sys.exit(1)
+sys.exit(subprocess.run([os.path.join(d, 't3')]).returncode)

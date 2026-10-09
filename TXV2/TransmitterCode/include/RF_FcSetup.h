@@ -10,7 +10,7 @@
 //    12 after "supported"; ignored by the flight controller while it records or erases, so every save is read back),
 //    70 the memory (flags, sectors, size, used), 72 erase (asynchronous: 70 asked until it is empty), 34 the switches
 //    (is a Black box switch set up?). Device and rate apply at boot: a save that changes them restarts it (68).
-//  - CALIBRATE (page 74, rotorflight-calibrate.html): the level as the flight controller sees it (108, tenths of a
+//  - CALIBRATE (page 74 "LevelView", rotorflight-calibrate.html): the level as the flight controller sees it (108, tenths of a
 //    degree), Calibrate level (205, then 250 after 2.5 s), the level trims (240 read / 239 write: pitch, roll, signed
 //    tenths of a degree, -30.0 to 30.0).
 //  - WHY IT WILL NOT ARM (the menu's line, code 175 for the whole list): MSP 101's arming-disable flags (bytes 17-20,
@@ -102,6 +102,12 @@ FLASHMEM static bool BatVmThere() { return VmN >= 9 && VmWant[0] >= 1; }   // th
 FLASHMEM static bool BatCmThere() { return CmN >= 8 && CmWant[0] >= 1; }   // the first current meter whole: [1] 6, [2] id, [3] type, [4-5] scale, [6-7] offset
 FLASHMEM static bool BatVmShown() { return BatWant[3] == 1 && BatVmThere(); }
 FLASHMEM static bool BatCmShown() { return BatWant[4] == 1 && BatCmThere(); }
+// B90: the FC pads' sensors (scale, offset) are on a page of their own, 75, reached by the battery page's "Sensors >",
+// which shows only while a source is FC pads (Malcolm, 9 Oct: the battery page's boxes "more central ... a little
+// larger" - with the sensors' rows gone it has five rows and lays out compact). Both pages are this one setup: the
+// values are gathered from whichever page shows, kept in BatWant / VmWant / CmWant, and saved together.
+FLASHMEM static bool BatOnPage() { return CurrentView == BATTERYVIEW || CurrentView == BATSENSORSVIEW; }
+FLASHMEM static const char *BatPage() { return CurrentView == BATSENSORSVIEW ? "page BatSensorsView" : "page BatteryView"; }
 FLASHMEM static void BatHead()
 {
     SendText((char *)"t11", ModelName);
@@ -110,16 +116,21 @@ FLASHMEM static void BatHead()
 }
 FLASHMEM static void BatShow()
 {
-    if (CurrentView != BATTERYVIEW) return;
-    FsNum("tn0", BatWant[2]);
-    FsNum("tn1", RdU16(BatWant, 0));
-    SendText((char *)"tn2", (char *)BatSourceWords[BatWant[3] < 4 ? BatWant[3] : 0]);
-    SendText((char *)"tn3", (char *)BatSourceWords[BatWant[4] < 4 ? BatWant[4] : 0]);
-    FsHundredths("tn4", RdU16(BatWant, 9));    // full
-    FsHundredths("tn5", RdU16(BatWant, 11));   // warning
-    FsHundredths("tn6", RdU16(BatWant, 5));    // empty (Rotorflight's minimum)
-    FsHundredths("tn7", RdU16(BatWant, 7));    // highest allowed (its maximum)
     const bool v = BatVmShown(), c = BatCmShown();   // the FC pads' sensors only when they are the source
+    if (CurrentView == BATTERYVIEW)
+    {
+        FsNum("tn0", BatWant[2]);
+        FsNum("tn1", RdU16(BatWant, 0));
+        SendText((char *)"tn2", (char *)BatSourceWords[BatWant[3] < 4 ? BatWant[3] : 0]);
+        SendText((char *)"tn3", (char *)BatSourceWords[BatWant[4] < 4 ? BatWant[4] : 0]);
+        FsHundredths("tn4", RdU16(BatWant, 9));    // full
+        FsHundredths("tn5", RdU16(BatWant, 11));   // warning
+        FsHundredths("tn6", RdU16(BatWant, 5));    // empty (Rotorflight's minimum)
+        FsHundredths("tn7", RdU16(BatWant, 7));    // highest allowed (its maximum)
+        FsVis("b2", BatHave && (v || c));          // Sensors >
+        return;
+    }
+    if (CurrentView != BATSENSORSVIEW) return;
     FsVis("h2", v); FsVis("ltn8", v); FsVis("tn8", v);
     FsVis("h3", c); FsVis("ltn9", c); FsVis("tn9", c); FsVis("ltn10", c); FsVis("tn10", c);
     if (v) FsNum("tn8", RdU16(VmWant, 4));
@@ -127,17 +138,32 @@ FLASHMEM static void BatShow()
 }
 FLASHMEM static void BatGather()
 {
-    if (CurrentView != BATTERYVIEW || !BatHave) return;
-    BatWant[2] = (uint8_t)FieldNumber("tn0", 0, 24);
-    WrU16(BatWant, 0, FieldNumber("tn1", 0, 65000));
-    WrU16(BatWant, 9, FieldHundredths("tn4", 100, 500));    // (Rotorflight's own range for a cell: 1.00 to 5.00 V)
-    WrU16(BatWant, 11, FieldHundredths("tn5", 100, 500));
-    WrU16(BatWant, 5, FieldHundredths("tn6", 100, 500));
-    WrU16(BatWant, 7, FieldHundredths("tn7", 100, 500));
+    if (!BatHave) return;
+    if (CurrentView == BATTERYVIEW)
+    {
+        BatWant[2] = (uint8_t)FieldNumber("tn0", 0, 24);
+        WrU16(BatWant, 0, FieldNumber("tn1", 0, 65000));
+        WrU16(BatWant, 9, FieldHundredths("tn4", 100, 500));    // (Rotorflight's own range for a cell: 1.00 to 5.00 V)
+        WrU16(BatWant, 11, FieldHundredths("tn5", 100, 500));
+        WrU16(BatWant, 5, FieldHundredths("tn6", 100, 500));
+        WrU16(BatWant, 7, FieldHundredths("tn7", 100, 500));
+        return;
+    }
+    if (CurrentView != BATSENSORSVIEW) return;
     if (BatVmShown()) WrU16(VmWant, 4, FieldNumber("tn8", 0, 65535));
     if (BatCmShown()) { WrS16(CmWant, 4, FieldNumber("tn9", -32768, 32767)); WrS16(CmWant, 6, FieldNumber("tn10", -32768, 32767)); }
 }
-FLASHMEM static void BatFail(const char *what) { BatStep = BAT_IDLE; FsFail("page BatteryView", what); BatHead(); BatShow(); }
+FLASHMEM static void BatFail(const char *what) { BatStep = BAT_IDLE; FsFail(BatPage(), what); BatHead(); BatShow(); }
+FLASHMEM static void BatGoTo(int view) // B90: the other of the two pages, the edits in hand
+{
+    if (!BatHave || BatStep != BAT_IDLE) return;
+    BatGather();
+    SendCommand((char *)(view == BATSENSORSVIEW ? "page BatSensorsView" : "page BatteryView"));
+    CurrentView = view;
+    BatHead(); BatShow();
+}
+FLASHMEM void BatterySensorsView() { BatGoTo(BATSENSORSVIEW); }   // 176
+FLASHMEM void BatterySensorsBack() { BatGoTo(BATTERYVIEW); }      // 177
 FLASHMEM static void BatAfterWrites() { BatReq = MspAsk(250, nullptr, 0); BatStep = BAT_STORE; }
 FLASHMEM static void BatWriteCm()
 {
@@ -161,7 +187,7 @@ FLASHMEM static void BatWriteVm()
 }
 FLASHMEM void BatteryPoll()
 {
-    if (CurrentView != BATTERYVIEW) { BatStep = BAT_IDLE; BatMsgUntil = 0; return; }
+    if (!BatOnPage()) { BatStep = BAT_IDLE; BatMsgUntil = 0; return; }
     if (BatMsgUntil && (int32_t)(millis() - BatMsgUntil) >= 0) { BatMsgUntil = 0; FsBusy(""); BatShow(); }
     if (BatStep == BAT_IDLE) return;
     if (!PipeReplyReady(BatReq))
@@ -252,6 +278,7 @@ FLASHMEM void StartBatteryView() // the menu's Battery ...
     SendCommand((char *)"page BatteryView");
     CurrentView = BATTERYVIEW;
     BatHave = false; Bat_Was_Edited = false; BatN = VmN = CmN = 0;
+    FsVis("b2", false);   // (B90: Sensors > once the read says a source is FC pads)
     BatHead();
     FsBusy("Reading from the flight controller ...");
     BatReq = MspAsk(32, nullptr, 0); BatStep = BAT_READ;
@@ -262,7 +289,7 @@ FLASHMEM void EndBatteryView() // OK
     if (Bat_Was_Edited)
     {
         BatGather();
-        if (!GetConfirmation((char *)"page BatteryView", (char *)"Discard the edited battery values?")) { BatHead(); BatShow(); return; }
+        if (!GetConfirmation((char *)BatPage(), (char *)"Discard the edited battery values?")) { BatHead(); BatShow(); return; }
     }
     Bat_Was_Edited = false;
     RotorFlightStart();
@@ -283,13 +310,13 @@ FLASHMEM void BatteryCurrentSourceTapped() { BatSource(4); }
 FLASHMEM void SaveBattery()
 {
     if (!BatHave || BatStep != BAT_IDLE) return;
-    if (FsRefused("page BatteryView", false)) { BatHead(); BatShow(); return; }
+    if (FsRefused(BatPage(), false)) { BatHead(); BatShow(); return; }
     BatGather();
     const int full = RdU16(BatWant, 9), warn = RdU16(BatWant, 11), empty = RdU16(BatWant, 5), top = RdU16(BatWant, 7);
     if (!(empty < warn && warn < full && full <= top))
     {
         PlaySound(WHAHWHAHMSG);
-        MsgBox((char *)"page BatteryView", (char *)"Not saved: each cell's voltages must rise,\r\nEmpty < Warning < Full, and Full no\r\nhigher than Highest allowed.");
+        MsgBox((char *)BatPage(), (char *)"Not saved: each cell's voltages must rise,\r\nEmpty < Warning < Full, and Full no\r\nhigher than Highest allowed.");
         BatHead(); BatShow();
         return;
     }
@@ -548,28 +575,28 @@ FLASHMEM static void CalHead()
 FLASHMEM static void CalShowLevel()
 {
     char a[64], b[64];
-    if (!(BoundFlag && ModelMatched)) { snprintf(a, sizeof(a), "Connect the model to see its level"); b[0] = 0; }
+    if (!(BoundFlag && ModelMatched)) { snprintf(a, sizeof(a), "No model: level not known"); b[0] = 0; }   // (B90: within the compact card's column)
     else if (!CalLevelKnown) { snprintf(a, sizeof(a), "Reading the level ..."); b[0] = 0; }
     else
     {
         snprintf(a, sizeof(a), "Roll %s%d.%d   Pitch %s%d.%d deg", CalRoll < 0 ? "-" : "", abs(CalRoll) / 10, abs(CalRoll) % 10, CalPitch < 0 ? "-" : "", abs(CalPitch) / 10, abs(CalPitch) % 10);
-        snprintf(b, sizeof(b), "%s", (abs(CalRoll) < 20 && abs(CalPitch) < 20) ? "Level" : "Not level: stand it level, then Calibrate");
+        snprintf(b, sizeof(b), "%s", (abs(CalRoll) < 20 && abs(CalPitch) < 20) ? "Level" : "Not level: level it, then Calibrate");
     }
     SendText((char *)"tn0", a); SendText((char *)"tn1", b);
 }
 FLASHMEM static void CalShow()
 {
-    if (CurrentView != CALIBRATEVIEW) return;
+    if (CurrentView != LEVELVIEW) return;
     CalShowLevel();
     if (CalHave) { FsTenths("tn2", RdS16(CalWant, 0)); FsTenths("tn3", RdS16(CalWant, 2)); }
 }
 FLASHMEM static void CalGather()
 {
-    if (CurrentView != CALIBRATEVIEW || !CalHave) return;
+    if (CurrentView != LEVELVIEW || !CalHave) return;
     WrS16(CalWant, 0, FieldTenths("tn2", -300, 300));
     WrS16(CalWant, 2, FieldTenths("tn3", -300, 300));
 }
-FLASHMEM static void CalFail(const char *what) { CalStep = CAL_IDLE; FsFail("page CalibrateView", what); CalHead(); CalShow(); }
+FLASHMEM static void CalFail(const char *what) { CalStep = CAL_IDLE; FsFail("page LevelView", what); CalHead(); CalShow(); }
 FLASHMEM static void CalTakeLevel(bool ok)
 {
     uint8_t b[16];
@@ -577,7 +604,7 @@ FLASHMEM static void CalTakeLevel(bool ok)
 }
 FLASHMEM void CalibratePoll()
 {
-    if (CurrentView != CALIBRATEVIEW) { CalStep = CAL_IDLE; CalMsgUntil = 0; return; }
+    if (CurrentView != LEVELVIEW) { CalStep = CAL_IDLE; CalMsgUntil = 0; return; }
     if (CalMsgUntil && (int32_t)(millis() - CalMsgUntil) >= 0) { CalMsgUntil = 0; FsBusy(""); CalShow(); }
     if (CalStep == CAL_IDLE)
     { // the level, live, while the page is idle and the model is there (and no stale reading once it has gone)
@@ -661,8 +688,8 @@ FLASHMEM void CalibratePoll()
 FLASHMEM void StartCalibrateView() // the menu's Calibrate ...
 {
     if (FsEntryRefused()) return;
-    SendCommand((char *)"page CalibrateView");
-    CurrentView = CALIBRATEVIEW;
+    SendCommand((char *)"page LevelView");
+    CurrentView = LEVELVIEW;
     CalHave = false; Cal_Was_Edited = false; CalLevelKnown = false;
     CalHead();
     CalShowLevel();
@@ -675,7 +702,7 @@ FLASHMEM void EndCalibrateView() // OK
     if (Cal_Was_Edited)
     {
         CalGather();
-        if (!GetConfirmation((char *)"page CalibrateView", (char *)"Discard the edited level trims?")) { CalHead(); CalShow(); return; }
+        if (!GetConfirmation((char *)"page LevelView", (char *)"Discard the edited level trims?")) { CalHead(); CalShow(); return; }
     }
     CalStep = CAL_IDLE; Cal_Was_Edited = false;
     RotorFlightStart();
@@ -684,8 +711,8 @@ FLASHMEM void CalibrateWasEdited() { Cal_Was_Edited = true; SendCommand((char *)
 FLASHMEM void CalibrateNow()
 {
     if (!CalHave || (CalStep != CAL_IDLE && CalStep != CAL_ATT)) return;
-    if (FsRefused("page CalibrateView", true)) { CalHead(); CalShow(); return; }
-    if (!GetConfirmation((char *)"page CalibrateView", (char *)"Is the model level and perfectly still?\r\n(Best done on a flat desk, before\r\nthe board goes into the model.)")) { CalHead(); CalShow(); return; }
+    if (FsRefused("page LevelView", true)) { CalHead(); CalShow(); return; }
+    if (!GetConfirmation((char *)"page LevelView", (char *)"Is the model level and perfectly still?\r\n(Best done on a flat desk, before\r\nthe board goes into the model.)")) { CalHead(); CalShow(); return; }
     CalHead(); CalShow();
     FsBusy("Calibrating: keep it still ...");
     CalReq = MspAsk(205, nullptr, 0); CalStep = CAL_CAL;
@@ -693,7 +720,7 @@ FLASHMEM void CalibrateNow()
 FLASHMEM void SaveLevelTrims()
 {
     if (!CalHave || (CalStep != CAL_IDLE && CalStep != CAL_ATT)) return;
-    if (FsRefused("page CalibrateView", false)) { CalHead(); CalShow(); return; }
+    if (FsRefused("page LevelView", false)) { CalHead(); CalShow(); return; }
     CalGather();
     FsBusy("Writing to the flight controller ...");
     CalReq = MspAsk(239, CalWant, 4); CalStep = CAL_WRITE;

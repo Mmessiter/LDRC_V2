@@ -257,6 +257,7 @@ void EnsureMotorIsOff()
 
 void RedLedOn() // heer
 {
+    const bool wasGreen = LedWasGreen;   // B90: the moment of the loss, once (the blinking LED calls this again and again)
     analogWrite(GREENLED, 0);
     analogWrite(BLUELED, 0);
     analogWrite(REDLED, GetLEDBrightness()); // Brightness is a function of maybe blinking
@@ -282,6 +283,7 @@ void RedLedOn() // heer
     ClearMostParameters();
     LedWasRed = true;
     EnsureMotorIsOff();
+    if (wasGreen) RfModelGone();   // B90: a Rotorflight page in view goes over to the backup file (PipeHttp.h)
 }
 
 /*********************************************************************************************************************************/
@@ -3034,7 +3036,7 @@ void RestoreCurrentModel()
 // ******************************** Global Array1 of numbered function pointers OK up the **********************************
 
 // This new list can be huge - up to 24 BITS unsigned!  ( Use "NUMBER<<8" )
-#define LASTFUNCTION1 176 // One more than final one
+#define LASTFUNCTION1 178 // One more than final one
 
 void (*NumberedFunctions1[LASTFUNCTION1])(){
     Blank,                   // 0 Cannot be used
@@ -3212,7 +3214,9 @@ void (*NumberedFunctions1[LASTFUNCTION1])(){
     CalibrateNow,            // 172 Calibrate level
     SaveLevelTrims,          // 173 Save
     CalibrateWasEdited,      // 174 a trim typed
-    ArmingWhy                // 175 the menu's arming line tapped
+    ArmingWhy,               // 175 the menu's arming line tapped
+    BatterySensorsView,      // 176 B90: the battery page's Sensors > (the FC pads' sensors, a page of their own)
+    BatterySensorsBack       // 177 B90: its < Battery
 };
 
 // This list migth become MUCH longer as it limit is 24 bits big
@@ -5018,6 +5022,7 @@ void FASTRUN ManageTransmitter()
         RxUpdateTick();    // V1B: a receiver update through the transmitter (RxUpdate.h)
         if (LedIsBlinking && LedWasRed)
             RedLedOn();
+        PipeModelGoneTick(); // B90: the model gone, a page's read of the receiver left unanswered: the backup file answers it
 
         if (CurrentView >= PIDVIEW && CurrentView <= RFGOVERNORVIEW_GLOBAL)
         {

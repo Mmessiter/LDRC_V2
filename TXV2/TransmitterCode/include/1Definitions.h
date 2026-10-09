@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B89 09/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B90 09/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -340,7 +340,8 @@ bool GapStartedDisarmed = false; // Rotorflight arming in use and DISARMED when 
 #define COPYBANKVIEW 71          // B78: copy a bank (RF_CopyBank.h)
 #define BATTERYVIEW 72           // B88: the battery (RF_FcSetup.h)
 #define BLACKBOXVIEW 73          // B88: the black box
-#define CALIBRATEVIEW 74         // B88: calibrate the level
+#define BATSENSORSVIEW 75        // B90: the FC pads' sensors (RF_FcSetup.h, from the battery page)
+#define LEVELVIEW 74             // B88: calibrate the level (B90: it was CALIBRATEVIEW, the stick calibration's number 6 - redefined, so both were 74)
 #define MODELIDVIEW 56
 
 // **************************************************************************
@@ -972,6 +973,8 @@ void SaveBattery();
 void BatteryWasEdited();
 void BatteryVoltageSourceTapped();
 void BatteryCurrentSourceTapped();
+void BatterySensorsView();   // B90: the FC pads' sensors on a page of their own (75)
+void BatterySensorsBack();
 void BlackboxPoll();
 void StartBlackboxView();
 void EndBlackboxView();

@@ -1,6 +1,6 @@
 {
- "name": "BatteryView",
- "id": 72,
+ "name": "BatSensorsView",
+ "id": 75,
  "w": 800,
  "h": 480,
  "bg": {
@@ -15,7 +15,7 @@
   "right": 255
  },
  "ev": {
-  "preinitialize": "vis busy,0\nBatteryView.pic=Screen_Background"
+  "preinitialize": "vis busy,0\nBatSensorsView.pic=Screen_Background"
  },
  "comps": [
   {
@@ -34,7 +34,7 @@
     "borderc": 0,
     "bco": 2214
    },
-   "txt": "Battery (Rotorflight)",
+   "txt": "Battery sensors (FC pads)",
    "a": {
     "style": 0,
     "key": 255,
@@ -51,10 +51,10 @@
    "i": 2,
    "t": "text",
    "g": "l",
-   "x": 29,
-   "y": 92,
-   "w": 742,
-   "h": 354,
+   "x": 72,
+   "y": 142,
+   "w": 656,
+   "h": 254,
    "font": 6,
    "sta": 1,
    "c": {
@@ -171,17 +171,17 @@
     "isbr": 0
    },
    "ev": {
-    "r": "print \"HelpView:BATTERY.TXT\"\nLogView.t0.txt=\"Battery (Rotorflight) help\"\nLogView.return.txt=\"BatteryView\""
+    "r": "print \"HelpView:BATTERY.TXT\"\nLogView.t0.txt=\"Battery sensors (FC pads) help\"\nLogView.return.txt=\"BatSensorsView\""
    }
   },
   {
-   "n": "h0",
+   "n": "h2",
    "i": 7,
    "t": "text",
    "g": "g",
-   "x": 47,
-   "y": 110,
-   "w": 371,
+   "x": 90,
+   "y": 160,
+   "w": 300,
    "h": 42,
    "font": 6,
    "sta": 1,
@@ -190,7 +190,7 @@
     "borderc": 4426,
     "bco": 4426
    },
-   "txt": "Flight pack",
+   "txt": "Voltage sensor",
    "a": {
     "style": 0,
     "key": 255,
@@ -203,13 +203,13 @@
    }
   },
   {
-   "n": "ltn0",
+   "n": "ltn8",
    "i": 8,
    "t": "text",
    "g": "g",
-   "x": 47,
-   "y": 160,
-   "w": 255,
+   "x": 90,
+   "y": 210,
+   "w": 184,
    "h": 42,
    "font": 6,
    "sta": 1,
@@ -218,7 +218,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Cells (0 = automatic)",
+   "txt": "Scale",
    "a": {
     "style": 0,
     "key": 255,
@@ -231,12 +231,12 @@
    }
   },
   {
-   "n": "tn0",
+   "n": "tn8",
    "i": 9,
    "t": "text",
    "g": "g",
-   "x": 308,
-   "y": 160,
+   "x": 280,
+   "y": 210,
    "w": 110,
    "h": 42,
    "font": 6,
@@ -258,194 +258,17 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Cells\"\nva0.val=158<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Voltage scale\"\nva0.val=158<<8\nprint va0.val"
    }
   },
   {
-   "n": "ltn1",
+   "n": "h3",
    "i": 10,
    "t": "text",
    "g": "g",
-   "x": 47,
-   "y": 210,
-   "w": 255,
-   "h": 42,
-   "font": 6,
-   "sta": 1,
-   "c": {
-    "pco": 0,
-    "borderc": 0,
-    "bco": 65497
-   },
-   "txt": "Capacity [mAh]",
-   "a": {
-    "style": 0,
-    "key": 255,
-    "borderw": 2,
-    "xcen": 1,
-    "ycen": 1,
-    "pw": 0,
-    "txt_maxl": 10,
-    "isbr": 0
-   }
-  },
-  {
-   "n": "tn1",
-   "i": 11,
-   "t": "text",
-   "g": "g",
-   "x": 308,
-   "y": 210,
-   "w": 110,
-   "h": 42,
-   "font": 6,
-   "sta": 1,
-   "c": {
-    "pco": 0,
-    "borderc": 0,
-    "bco": 65535
-   },
-   "txt": "0",
-   "a": {
-    "style": 2,
-    "key": 2,
-    "borderw": 2,
-    "xcen": 1,
-    "ycen": 1,
-    "pw": 0,
-    "txt_maxl": 10,
-    "isbr": 0
-   },
-   "ev": {
-    "r": "keybdB.t1.txt=\"Capacity mAh\"\nva0.val=158<<8\nprint va0.val"
-   }
-  },
-  {
-   "n": "ltn2",
-   "i": 12,
-   "t": "text",
-   "g": "g",
-   "x": 47,
-   "y": 260,
-   "w": 160,
-   "h": 42,
-   "font": 6,
-   "sta": 1,
-   "c": {
-    "pco": 0,
-    "borderc": 0,
-    "bco": 65497
-   },
-   "txt": "Voltage from",
-   "a": {
-    "style": 0,
-    "key": 255,
-    "borderw": 2,
-    "xcen": 1,
-    "ycen": 1,
-    "pw": 0,
-    "txt_maxl": 10,
-    "isbr": 0
-   }
-  },
-  {
-   "n": "tn2",
-   "i": 13,
-   "t": "text",
-   "g": "g",
-   "x": 213,
-   "y": 260,
-   "w": 205,
-   "h": 42,
-   "font": 6,
-   "sta": 1,
-   "c": {
-    "pco": 0,
-    "borderc": 0,
-    "bco": 65535
-   },
-   "txt": "",
-   "a": {
-    "style": 2,
-    "key": 255,
-    "borderw": 2,
-    "xcen": 1,
-    "ycen": 1,
-    "pw": 0,
-    "txt_maxl": 30,
-    "isbr": 0
-   },
-   "ev": {
-    "r": "va0.val=159<<8\nprint va0.val"
-   }
-  },
-  {
-   "n": "ltn3",
-   "i": 14,
-   "t": "text",
-   "g": "g",
-   "x": 47,
-   "y": 310,
-   "w": 160,
-   "h": 42,
-   "font": 6,
-   "sta": 1,
-   "c": {
-    "pco": 0,
-    "borderc": 0,
-    "bco": 65497
-   },
-   "txt": "Current from",
-   "a": {
-    "style": 0,
-    "key": 255,
-    "borderw": 2,
-    "xcen": 1,
-    "ycen": 1,
-    "pw": 0,
-    "txt_maxl": 10,
-    "isbr": 0
-   }
-  },
-  {
-   "n": "tn3",
-   "i": 15,
-   "t": "text",
-   "g": "g",
-   "x": 213,
-   "y": 310,
-   "w": 205,
-   "h": 42,
-   "font": 6,
-   "sta": 1,
-   "c": {
-    "pco": 0,
-    "borderc": 0,
-    "bco": 65535
-   },
-   "txt": "",
-   "a": {
-    "style": 2,
-    "key": 255,
-    "borderw": 2,
-    "xcen": 1,
-    "ycen": 1,
-    "pw": 0,
-    "txt_maxl": 30,
-    "isbr": 0
-   },
-   "ev": {
-    "r": "va0.val=160<<8\nprint va0.val"
-   }
-  },
-  {
-   "n": "h1",
-   "i": 16,
-   "t": "text",
-   "g": "g",
-   "x": 438,
-   "y": 110,
-   "w": 315,
+   "x": 410,
+   "y": 160,
+   "w": 300,
    "h": 42,
    "font": 6,
    "sta": 1,
@@ -454,7 +277,7 @@
     "borderc": 4426,
     "bco": 4426
    },
-   "txt": "Each cell [V]",
+   "txt": "Current sensor",
    "a": {
     "style": 0,
     "key": 255,
@@ -467,72 +290,13 @@
    }
   },
   {
-   "n": "ltn4",
-   "i": 17,
+   "n": "ltn9",
+   "i": 11,
    "t": "text",
    "g": "g",
-   "x": 438,
-   "y": 160,
-   "w": 199,
-   "h": 42,
-   "font": 6,
-   "sta": 1,
-   "c": {
-    "pco": 0,
-    "borderc": 0,
-    "bco": 57215
-   },
-   "txt": "Full",
-   "a": {
-    "style": 0,
-    "key": 255,
-    "borderw": 2,
-    "xcen": 1,
-    "ycen": 1,
-    "pw": 0,
-    "txt_maxl": 10,
-    "isbr": 0
-   }
-  },
-  {
-   "n": "tn4",
-   "i": 18,
-   "t": "text",
-   "g": "g",
-   "x": 643,
-   "y": 160,
-   "w": 110,
-   "h": 42,
-   "font": 6,
-   "sta": 1,
-   "c": {
-    "pco": 0,
-    "borderc": 0,
-    "bco": 65535
-   },
-   "txt": "0",
-   "a": {
-    "style": 2,
-    "key": 2,
-    "borderw": 2,
-    "xcen": 1,
-    "ycen": 1,
-    "pw": 0,
-    "txt_maxl": 10,
-    "isbr": 0
-   },
-   "ev": {
-    "r": "keybdB.t1.txt=\"Full cell volts\"\nva0.val=158<<8\nprint va0.val"
-   }
-  },
-  {
-   "n": "ltn5",
-   "i": 19,
-   "t": "text",
-   "g": "g",
-   "x": 438,
+   "x": 410,
    "y": 210,
-   "w": 199,
+   "w": 184,
    "h": 42,
    "font": 6,
    "sta": 1,
@@ -541,7 +305,7 @@
     "borderc": 0,
     "bco": 57215
    },
-   "txt": "Warning",
+   "txt": "Scale",
    "a": {
     "style": 0,
     "key": 255,
@@ -554,11 +318,11 @@
    }
   },
   {
-   "n": "tn5",
-   "i": 20,
+   "n": "tn9",
+   "i": 12,
    "t": "text",
    "g": "g",
-   "x": 643,
+   "x": 600,
    "y": 210,
    "w": 110,
    "h": 42,
@@ -581,17 +345,17 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Warning cell volts\"\nva0.val=158<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Current scale\"\nva0.val=158<<8\nprint va0.val"
    }
   },
   {
-   "n": "ltn6",
-   "i": 21,
+   "n": "ltn10",
+   "i": 13,
    "t": "text",
    "g": "g",
-   "x": 438,
+   "x": 410,
    "y": 260,
-   "w": 199,
+   "w": 184,
    "h": 42,
    "font": 6,
    "sta": 1,
@@ -600,7 +364,7 @@
     "borderc": 0,
     "bco": 57215
    },
-   "txt": "Empty",
+   "txt": "Offset",
    "a": {
     "style": 0,
     "key": 255,
@@ -613,11 +377,11 @@
    }
   },
   {
-   "n": "tn6",
-   "i": 22,
+   "n": "tn10",
+   "i": 14,
    "t": "text",
    "g": "g",
-   "x": 643,
+   "x": 600,
    "y": 260,
    "w": 110,
    "h": 42,
@@ -640,75 +404,16 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Empty cell volts\"\nva0.val=158<<8\nprint va0.val"
-   }
-  },
-  {
-   "n": "ltn7",
-   "i": 23,
-   "t": "text",
-   "g": "g",
-   "x": 438,
-   "y": 310,
-   "w": 199,
-   "h": 42,
-   "font": 6,
-   "sta": 1,
-   "c": {
-    "pco": 0,
-    "borderc": 0,
-    "bco": 57215
-   },
-   "txt": "Highest allowed",
-   "a": {
-    "style": 0,
-    "key": 255,
-    "borderw": 2,
-    "xcen": 1,
-    "ycen": 1,
-    "pw": 0,
-    "txt_maxl": 10,
-    "isbr": 0
-   }
-  },
-  {
-   "n": "tn7",
-   "i": 24,
-   "t": "text",
-   "g": "g",
-   "x": 643,
-   "y": 310,
-   "w": 110,
-   "h": 42,
-   "font": 6,
-   "sta": 1,
-   "c": {
-    "pco": 0,
-    "borderc": 0,
-    "bco": 65535
-   },
-   "txt": "0",
-   "a": {
-    "style": 2,
-    "key": 2,
-    "borderw": 2,
-    "xcen": 1,
-    "ycen": 1,
-    "pw": 0,
-    "txt_maxl": 10,
-    "isbr": 0
-   },
-   "ev": {
-    "r": "keybdB.t1.txt=\"Highest cell volts\"\nva0.val=158<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Current offset\"\nva0.val=158<<8\nprint va0.val"
    }
   },
   {
    "n": "b2",
-   "i": 25,
+   "i": 15,
    "t": "button",
    "g": "l",
-   "x": 245,
-   "y": 372,
+   "x": 202,
+   "y": 322,
    "w": 160,
    "h": 56,
    "font": 6,
@@ -720,7 +425,7 @@
     "bco": 54938,
     "pco2": 65535
    },
-   "txt": "Sensors >",
+   "txt": "< Battery",
    "val": 0,
    "a": {
     "style": 4,
@@ -731,16 +436,16 @@
     "isbr": 0
    },
    "ev": {
-    "r": "va0.val=176<<8\nprint va0.val"
+    "r": "va0.val=177<<8\nprint va0.val"
    }
   },
   {
    "n": "b3",
-   "i": 26,
+   "i": 16,
    "t": "button",
    "g": "l",
-   "x": 419,
-   "y": 372,
+   "x": 376,
+   "y": 322,
    "w": 160,
    "h": 56,
    "font": 6,
@@ -768,11 +473,11 @@
   },
   {
    "n": "b1",
-   "i": 27,
+   "i": 17,
    "t": "button",
    "g": "l",
-   "x": 593,
-   "y": 372,
+   "x": 550,
+   "y": 322,
    "w": 160,
    "h": 56,
    "font": 6,
@@ -800,7 +505,7 @@
   },
   {
    "n": "busy",
-   "i": 28,
+   "i": 18,
    "t": "text",
    "g": "l",
    "x": 110,

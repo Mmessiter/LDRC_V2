@@ -4,6 +4,6 @@ Cells: how many cells the pack has; 0 = the flight controller works it out from 
 
 Each cell: Full (fresh off the charger, 4.20 for LiPo), Warning (time to land, 3.50 is common), Empty (the bottom of the fuel gauge) and Highest allowed (for counting the cells). They must rise: Empty, Warning, Full, Highest.||
 
-FC pads: the scale of the voltage sensor, and the scale and offset of the current sensor, show only when the pads are the source. Adjust them until the flight controller's reading matches a meter.||
+Sensors: the button shows when a source is FC pads. Its page has the scale of the voltage sensor, and the scale and offset of the current sensor: adjust them until the flight controller's reading matches a meter. Save and OK work from either page.||
 
 Save writes, stores and reads back. OK leaves (edits not saved are asked about).||

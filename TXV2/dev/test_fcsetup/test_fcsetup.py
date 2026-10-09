@@ -25,8 +25,9 @@ prog = r'''
 #define BEEPCOMPLETE 2
 #define ROTORFLIGHTVIEW 47
 #define BATTERYVIEW 72
+#define BATSENSORSVIEW 75
 #define BLACKBOXVIEW 73
-#define CALIBRATEVIEW 74
+#define LEVELVIEW 74
 static int CurrentView = 0, PipeState = 2;
 static bool BoundFlag = true, ModelMatched = true, offline = false;
 static char ModelName[20] = "Goblin";
@@ -110,24 +111,29 @@ int main() {
     StartBatteryView(); CHECK(CurrentView == BATTERYVIEW && fcLog.size() == 1 && fcLog[0].fn == 32); runBat();
     CHECK(BatHave && writes(56) == 1 && writes(40) == 1 && fields["tn0"] == "6" && fields["tn1"] == "2200" && fields["tn2"] == "ESC telemetry" && fields["tn3"] == "ESC telemetry");
     CHECK(fields["tn4"] == "4.10" && fields["tn5"] == "3.50" && fields["tn6"] == "3.30" && fields["tn7"] == "4.30");
-    CHECK(cmd("vis tn8,0") && cmd("vis h2,0") && cmd("vis tn10,0"));
-    // the voltage from the FC pads: ESC -> None -> FC pads; its scale shows
-    cmds.clear(); BatteryVoltageSourceTapped(); CHECK(fields["tn2"] == "None"); BatteryVoltageSourceTapped(); CHECK(fields["tn2"] == "FC pads" && cmd("vis tn8,1") && fields["tn8"] == "110" && Bat_Was_Edited);
+    CHECK(cmd("vis b2,0"));   // (B90: no Sensors > while the ESC is the source)
+    // the voltage from the FC pads: ESC -> None -> FC pads; Sensors > appears (B90: the sensors are on page 75)
+    cmds.clear(); BatteryVoltageSourceTapped(); CHECK(fields["tn2"] == "None"); BatteryVoltageSourceTapped(); CHECK(fields["tn2"] == "FC pads" && cmd("vis b2,1") && Bat_Was_Edited);
     // the cell voltages must rise: a warning above full is refused, nothing written
     fields["tn5"] = "4.25"; fcLog.clear(); boxes = 0; SaveBattery(); CHECK(boxes == 1 && lastBox.find("must rise") != std::string::npos && fcLog.empty());
-    // a save: 33 = the first 15 bytes only (the other profiles' capacities are not sent); 57 the changed scale by its id; no 41
-    fields["tn5"] = "3.6"; fields["tn0"] = "12"; fields["tn1"] = "5000"; fields["tn7"] = "4.35"; fields["tn8"] = "115";
+    // a save from the sensors page: the battery page's edits were gathered on the way there; 33 = the first 15 bytes only
+    // (the other profiles' capacities are not sent); 57 the changed scale by its id; no 41
+    fields["tn5"] = "3.6"; fields["tn0"] = "12"; fields["tn1"] = "5000"; fields["tn7"] = "4.35";
+    cmds.clear(); BatterySensorsView(); CHECK(CurrentView == BATSENSORSVIEW && cmd("page BatSensorsView") && cmd("vis tn8,1") && cmd("vis h2,1") && cmd("vis tn10,0") && fields["tn8"] == "110");
+    fields["tn8"] = "115";
     fcLog.clear(); SaveBattery(); runBat();
     CHECK(writes(33) == 1 && lastData(33).size() == 30 && writes(57) == 1 && writes(41) == 0 && writes(250) == 1 && writes(32) == 1 && writes(56) == 1 && writes(40) == 1);
     CHECK(lastData(33).substr(0, 10) == "88130C0102" && bat[2] == 12 && RdU16(bat, 0) == 5000 && RdU16(bat, 11) == 360 && RdU16(bat, 7) == 435 && bat[3] == 1);
     CHECK(RdU16(bat, 15) == 1000 && RdU16(bat, 25) == 1500);   // (the profiles' capacities untouched)
     CHECK(lastData(57) == "0A73000A0001" && RdU16(vm, 4) == 115 && RdU16(vm, 12) == 110);   // (id 10's scale; id 20's kept)
     CHECK(!Bat_Was_Edited && fields["busy"] == "Saved, and read back the same.");
-    // the current from the FC pads too: its scale and offset, signed
-    BatteryCurrentSourceTapped(); BatteryCurrentSourceTapped(); CHECK(fields["tn3"] == "FC pads" && fields["tn9"] == "400" && fields["tn10"] == "0");
+    // the current from the FC pads too (tapped on the battery page): its scale and offset on the sensors page, signed
+    cmds.clear(); BatterySensorsBack(); CHECK(CurrentView == BATTERYVIEW && cmd("page BatteryView") && fields["tn0"] == "12");
+    BatteryCurrentSourceTapped(); BatteryCurrentSourceTapped(); CHECK(fields["tn3"] == "FC pads");
+    cmds.clear(); BatterySensorsView(); CHECK(cmd("vis tn9,1") && fields["tn9"] == "400" && fields["tn10"] == "0");
     fields["tn9"] = "390"; fields["tn10"] = "-25"; fcLog.clear(); SaveBattery(); runBat();
     CHECK(writes(41) == 1 && lastData(41) == "0A8601E7FF" && RdS16(cm, 6) == -25 && fields["tn10"] == "-25");
-    // OK with nothing edited: back to the menu
+    // OK from the sensors page with nothing edited: back to the menu
     EndBatteryView(); CHECK(CurrentView == 47 && rfStarts == 1);
     // ---- 2. black box: 101 (the loop time), 80, the switches, the memory
     bb[0] = 1; bb[1] = 1; bb[2] = 2; WrU16(bb, 3, 8); put32(bb, 5, 0x7EE7F); WrU16(bb, 9, 0); bb[11] = 0; bb[12] = 5;
@@ -170,7 +176,7 @@ int main() {
     fcLog.clear(); SaveLevelTrims(); runCal(30);
     CHECK(writes(239) == 1 && lastData(239) == "0F00ECFF" && RdS16(trims, 2) == -20 && fields["tn3"] == "-2.0" && !Cal_Was_Edited);
     // offline: no level asked, Calibrate refused
-    offline = true; BoundFlag = false; fcLog.clear(); runCal(30); CHECK(writes(108) == 0 && fields["tn0"].find("Connect the model") == 0);
+    offline = true; BoundFlag = false; fcLog.clear(); runCal(30); CHECK(writes(108) == 0 && fields["tn0"] == "No model: level not known");
     boxes = 0; CalibrateNow(); CHECK(boxes == 1 && writes(205) == 0);
     offline = false; BoundFlag = true; EndCalibrateView();
     // ---- 4. the menu's arming line

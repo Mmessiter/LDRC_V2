@@ -233,6 +233,7 @@ FLASHMEM static void BakReply(int code, const char *body)
     strncpy(PipeRepBody, body, sizeof(PipeRepBody) - 1);
     PipeRepBody[sizeof(PipeRepBody) - 1] = 0;
 }
+FLASHMEM bool BakOfflineRead(uint8_t fn, int len) { return len == 0 || (BakIndexed(fn) && len == 1); }   // B90: a request the file answers as a read (PipeModelGoneTick)
 FLASHMEM bool BakOfflineAnswer(uint8_t fn, const uint8_t *data, int len) // true: answered (PipeRep* set)
 {
     char key[16], hex[1250];

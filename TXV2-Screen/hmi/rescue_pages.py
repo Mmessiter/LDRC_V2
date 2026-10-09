@@ -46,7 +46,55 @@ def message_box(name='busy', rect=MSGBOX, font=2):
 # ... and black text ... the different colours should suggest the groupings"): a label's box is a pale shade, black words,
 # one shade per group (each heading starts the next), the first shade for a page without headings.
 PALE = (65497, 57215, 59323, 61215, 65402, 65341)   # pale yellow, blue, green, lavender, peach, pink (RGB565)
-def page(pid, name, title, fields, buttons, help_file, busy_rect=MSGBOX):
+
+# B90 (Malcolm, 9 Oct, of Battery, Rotorflight settings and Calibrate: "These three screens would look better if the
+# boxes were more central on the screen. They could perhaps afford to be a little larger. Also, because so much of the
+# screen remains bare, we should perhaps consider using the background image instead of a plain background colour ...
+# true for all screens with very little on them"): a page of up to five rows is laid out COMPACT: the rows in the
+# buttons' font (28 px, not 24) and taller, each column as wide as its words need, on a card no bigger than they need,
+# centred under the title strip on the pilot's background picture, the buttons along the card's foot with OK at its
+# right. A fuller page keeps the card that fills the screen. A field's 7th element, for an 'info' or 'wide' row, is the
+# longest text the main board will put in it (the column is made wide enough).
+COMPACT_ROWS = 5
+C_FONT, C_ROW, C_PITCH, C_PAD, C_COLGAP, C_LVGAP, C_VAL_W, C_WIDE_L = 6, 42, 50, 18, 20, 6, 110, 160
+C_BTN_W, C_BTN_H, C_BTN_GAP, C_BTN_ABOVE = 160, 56, 14, 20
+def compact_plan(fields, buttons):
+    """fields as page() takes them; buttons: (name, words, code). None when the page is too full or too wide for a compact
+    card, else a dict: card (x, y, w, h), col[(lx, cw)], y(row), btn[(name, words, x, y, w, code)], box (the message box)."""
+    from fontw import width
+    rows = max((f[3] for f in fields), default=-1) + 1
+    if rows > COMPACT_ROWS or any(f[4] == 'pick' for f in fields): return None
+    cols = [0, 0]
+    for f in fields:
+        nm, label, col, row, kind = f[:5]; hint = f[6] if len(f) > 6 else None
+        if kind == 'head': need = width(C_FONT, label) + 8
+        elif kind == 'info': need = width(C_FONT, hint or label) + 24
+        elif kind == 'wide': need = C_WIDE_L + C_LVGAP + width(C_FONT, hint or '') + 24
+        else: need = width(C_FONT, label) + 20 + C_LVGAP + C_VAL_W
+        cols[col] = max(cols[col], need, 300 if kind != 'head' else 0)
+    ncol = 2 if cols[1] else 1
+    content_w = cols[0] + (C_COLGAP + cols[1] if ncol == 2 else 0)
+    bw = [2 * C_BTN_W + C_BTN_GAP if width(C_FONT, t) + 16 > C_BTN_W else C_BTN_W for _, t, _ in buttons]
+    btn_w = sum(bw) + (len(bw) - 1) * C_BTN_GAP if bw else 0
+    card_w = 2 * C_PAD + max(content_w, btn_w)
+    if card_w > 800: return None
+    card_h = C_PAD + rows * C_PITCH - (C_PITCH - C_ROW) + C_BTN_ABOVE + C_BTN_H + C_PAD
+    if card_h > 422: return None
+    card_x, card_y = (800 - card_w) // 2, 58 + (422 - card_h) // 2
+    inner = card_w - 2 * C_PAD
+    if content_w < inner:   # (the buttons are the wider: the columns share the room)
+        extra = inner - content_w; cols[0] += extra if ncol == 1 else extra // 2; cols[1] += extra - extra // 2 if ncol == 2 else 0
+    col = [(card_x + C_PAD, cols[0]), (card_x + C_PAD + cols[0] + C_COLGAP, cols[1])]
+    ok = [b for b in buttons if b[1] == 'OK']; save = [b for b in buttons if b[1] == 'Save']
+    ordered = [b for b in buttons if b not in ok and b not in save] + save + ok
+    by = card_y + card_h - C_PAD - C_BTN_H; x_end = card_x + card_w - C_PAD; btn = []
+    for (nm, t, code), w in reversed(list(zip(ordered, [bw[buttons.index(b)] for b in ordered]))):
+        btn.append((nm, t, x_end - w, by, w, code)); x_end -= w + C_BTN_GAP
+    bwid = min(580, card_w - 20)
+    return {'card': (card_x, card_y, card_w, card_h), 'col': col, 'y': lambda row: card_y + C_PAD + row * C_PITCH,
+            'btn': list(reversed(btn)), 'box': (card_x + (card_w - bwid) // 2, card_y + (card_h - 124) // 2, bwid, 124)}
+
+def page(pid, name, title, fields, buttons, help_file, busy_rect=MSGBOX, compact=None):
     """fields: (name, label, column, row, kind, code[, keypad label]) with kind 'num' (the keypad), 'cycle' (a tap), 'switch' (on/off), 'info' (told, not changed),
     'head' (a group heading, no value) or 'pick' (1.11.35: a choice from a long list, the whole row: label, a < button, the choice, a > button;
     code = the > button's, the 7th element = the < button's)"""
@@ -59,15 +107,24 @@ def page(pid, name, title, fields, buttons, help_file, busy_rect=MSGBOX):
     add(comp(VA0, n='va0'))
     help_btn = comp(by['b0'], n='b0'); help_btn['ev'] = {'r': 'print "HelpView:%s"\nLogView.t0.txt="%s"\nLogView.return.txt="%s"' % (help_file, title + ' help', name)}
     add(help_btn)
+    plan = compact_plan(fields, [(b[0], b[1], b[4]) for b in buttons]) if compact is not False else None   # (B90: None = too full)
+    if plan:
+        comps[1].update(x=plan['card'][0], y=plan['card'][1], w=plan['card'][2], h=plan['card'][3])
+        busy_rect = plan['box']
+    FONT, ROW_H = (C_FONT, C_ROW) if plan else (2, 36)
     group = -1
     def shade(): return PALE[max(group, 0) % len(PALE)]
     for field in fields:
         (nm, label, col, row, kind, code), klabel = field[:6], (field[6] if len(field) > 6 else field[1])   # klabel: what the keypad calls it (1.11.30)
-        y = 94 + row * 40
-        lx, lw, vx, vw = (34, 254, 294, 120) if col == 0 else (430, 236, 672, 94)
+        if plan:
+            y = plan['y'](row); lx, cw = plan['col'][col]
+            lw, vw = cw - C_LVGAP - C_VAL_W, C_VAL_W; vx = lx + lw + C_LVGAP
+        else:
+            y = 94 + row * 40
+            lx, lw, vx, vw = (34, 254, 294, 120) if col == 0 else (430, 236, 672, 94)
         if kind == 'head':   # 1.11.30: a group heading across the column, white on the card, as the configurator's sections (no value)
             group += 1
-            h = comp(LABEL_L, n=nm, x=lx, y=y, w=lw + vw + (vx - lx - lw), h=36, txt=label, g='g', font=6)
+            h = comp(LABEL_L, n=nm, x=lx, y=y, w=lw + vw + (vx - lx - lw), h=ROW_H, txt=label, g='g', font=6)
             h['c'] = {'pco': 65535, 'borderc': CARD['c']['bco'], 'bco': CARD['c']['bco']}; h['a'] = dict(h['a'], borderw=0, xcen=0, txt_maxl=30)
             add(h); continue
         if kind == 'pick':   # 1.11.35: a choice from a long list (the adjustments' settings), across the page: label, <, the choice, >
@@ -77,31 +134,36 @@ def page(pid, name, title, fields, buttons, help_file, busy_rect=MSGBOX):
             bn = comp(BUTTON, n='n' + nm, x=716, y=y - 2, w=50, h=40, txt='>'); bn['ev'] = {'r': 'va0.val=%d<<8\nprint va0.val' % code}; add(bn)
             continue
         if kind == 'wide':   # 1.11.40: a value stepped by a tap whose words need room ("Whenever armed"): a shorter label, a wider box
-            lw2, vx2, vw2 = (150, 190, 224) if col == 0 else (150, 586, 180)
-            lab = comp(LABEL_L, n='l' + nm, x=lx, y=y, w=lw2, h=36, txt=label, g='g'); lab['c'] = dict(lab['c'], pco=0, bco=shade()); add(lab)
-            f = comp(FIELD, n=nm, x=vx2, y=y, w=vw2, h=36, txt='', g='g'); f['a'] = dict(f['a'], key=255, txt_maxl=30); f['ev'] = {'r': 'va0.val=%d<<8\nprint va0.val' % code}; add(f)
+            if plan: lw2, vx2, vw2 = C_WIDE_L, lx + C_WIDE_L + C_LVGAP, cw - C_WIDE_L - C_LVGAP
+            else: lw2, vx2, vw2 = (150, 190, 224) if col == 0 else (150, 586, 180)
+            lab = comp(LABEL_L, n='l' + nm, x=lx, y=y, w=lw2, h=ROW_H, txt=label, g='g', font=FONT); lab['c'] = dict(lab['c'], pco=0, bco=shade()); add(lab)
+            f = comp(FIELD, n=nm, x=vx2, y=y, w=vw2, h=ROW_H, txt='', g='g', font=FONT); f['a'] = dict(f['a'], key=255, txt_maxl=30); f['ev'] = {'r': 'va0.val=%d<<8\nprint va0.val' % code}; add(f)
             continue
         if kind == 'info':   # 1.11.34: a row that only tells (the configurator's selects the transmitter does not change): label box across the column, the main board sets its text
-            f = comp(LABEL_L, n=nm, x=lx, y=y, w=lw + vw + (vx - lx - lw), h=36, txt=label, g='g')
+            f = comp(LABEL_L, n=nm, x=lx, y=y, w=lw + vw + (vx - lx - lw), h=ROW_H, txt=label, g='g', font=FONT)
             f['c'] = dict(f['c'], pco=0, bco=shade()); f['a'] = dict(f['a'], txt_maxl=40); add(f); continue
-        lab = comp(LABEL_L, n='l' + nm, x=lx, y=y, w=lw, h=36, txt=label, g='g')
+        lab = comp(LABEL_L, n='l' + nm, x=lx, y=y, w=lw, h=ROW_H, txt=label, g='g', font=FONT)
         lab['c'] = dict(lab['c'], pco=0, bco=shade())
         add(lab)
         if kind == 'switch':   # 1.11.34 (Malcolm, 8 Oct: "the yes/no boxes should be switches"): the screen's own switch, grey off / green on, its val set by the main board
-            sw = {'n': nm, 't': 'switch', 'g': 'g', 'x': vx + (vw - 80) // 2, 'y': y + 1, 'w': 80, 'h': 34, 'font': 0,
+            sw = {'n': nm, 't': 'switch', 'g': 'g', 'x': vx + (vw - 80) // 2, 'y': y + (ROW_H - 34) // 2, 'w': 80, 'h': 34, 'font': 0,
                   'c': {'pco1': 0, 'bco2': 2016, 'pco': 65535, 'bco': 33808, 'pco2': 65535}, 'txt': ' / ', 'val': 0, 'a': {'dez': 0, 'dis': 100, 'txt_maxl': 24},
                   'ev': {'r': 'va0.val=%d<<8\nprint va0.val' % code}}
             add(sw); continue
-        f = comp(FIELD, n=nm, x=vx, y=y, w=vw, h=36, txt='0', g='g')
+        f = comp(FIELD, n=nm, x=vx, y=y, w=vw, h=ROW_H, txt='0', g='g', font=FONT)
         if kind == 'num': f['ev'] = {'r': 'keybdB.t1.txt="%s"\nva0.val=%d<<8\nprint va0.val' % (klabel, code)}
         else: f['a'] = dict(f['a'], key=255); f['ev'] = {'r': 'va0.val=%d<<8\nprint va0.val' % code}
         add(f)
-    for (nm, txt, x, w, code) in bottom_row([(b[0], b[1], b[4]) for b in buttons]):   # (1.11.40: the x and w given are not used: the row is laid out by its rule)
-        b = comp(BUTTON, n=nm, x=x, y=414, w=w, h=56, txt=txt); b['ev'] = {'r': 'va0.val=%d<<8\nprint va0.val' % code}; add(b)
+    if plan:
+        for (nm, txt, x, y, w, code) in plan['btn']:
+            b = comp(BUTTON, n=nm, x=x, y=y, w=w, h=C_BTN_H, txt=txt); b['ev'] = {'r': 'va0.val=%d<<8\nprint va0.val' % code}; add(b)
+    else:
+        for (nm, txt, x, w, code) in bottom_row([(b[0], b[1], b[4]) for b in buttons]):   # (1.11.40: the x and w given are not used: the row is laid out by its rule)
+            b = comp(BUTTON, n=nm, x=x, y=414, w=w, h=56, txt=txt); b['ev'] = {'r': 'va0.val=%d<<8\nprint va0.val' % code}; add(b)
     add(message_box(rect=busy_rect))   # (vis 0 the rest of the time; 1.11.22's yellow stripe became a message box in 1.11.40)
     out = {'name': name, 'id': pid, 'w': 800, 'h': 480, 'bg': rates['bg'], 'nav': rates['nav'], 'ev': {'preinitialize': 'vis busy,0\n%s.pic=Screen_Background' % name}, 'comps': comps}
     json.dump(out, open(os.path.join(PAGES, '%d.json' % pid), 'w'), indent=1)
-    print(pid, name, len(comps), 'components')
+    print(pid, name, len(comps), 'components', ('compact: card %dx%d at %d,%d' % (plan['card'][2], plan['card'][3], plan['card'][0], plan['card'][1])) if plan else 'full')
 
 # codes (the main board's NumberedFunctions1): 64 open, 65 OK, 66 save, 67 a number edited, 68 the mode tapped, 69 flip tapped, 70 page 2, 71 back to page 1
 page(58, 'RescueView', 'Rescue (Rotorflight)', [          # the configurator's names, order and units (Malcolm, 7 Oct: "use the same names in the same places")

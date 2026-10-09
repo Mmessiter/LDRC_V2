@@ -186,6 +186,33 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The small pages on a card of their own; the model gone, the backup answers; LevelView (V2 B90, 9 Oct 2026)
+
+Malcolm, 9 Oct afternoon, of Battery, Rotorflight settings and Calibrate: "These three screens would look better if
+the boxes were more central on the screen. They could perhaps afford to be a little larger. Also, because so much of
+the screen remains bare, we should perhaps consider using the background image instead of a plain background colour.
+This particular fact is true for all screens with very little on them."
+
+- **Compact pages** (screen card files; `hmi/rescue_pages.py compact_plan`): a page of up to five rows is laid out on
+  a card no bigger than its rows need, centred under the title strip on the pilot's background picture; the rows in
+  the buttons' 28 px font and taller; each column as wide as its words need; the buttons along the card's foot, OK at
+  its right. So laid out: Rotorflight settings (61), Battery (72), Battery sensors (75, new), Calibrate (74), Copy a
+  bank (71), Servos (60). Fuller pages keep the card that fills the screen.
+- **Battery sensors** on a page of their own (75): the FC pads' voltage scale and current scale / offset. "Sensors >"
+  on the battery page shows only while a source is FC pads; "< Battery" comes back; Save and OK work from either page
+  (codes 176, 177). The battery page then has five rows.
+- **The model gone, the backup answers** (`PipeHttp.h PipeModelGoneTick`, `RfModelGone`): Malcolm: "when I
+  disconnected the receiver, I went immediately to the adjustments page, but it failed to give me the offline reading.
+  After rebooting the transmitter, it succeeded." The transmitter declares a model lost two seconds after its last
+  packet; a page opened inside those seconds asked the receiver, which had gone, and waited nine seconds for nothing.
+  Now the last read sent to the receiver is kept, and the moment the model is declared lost (RedLedOn), the backup file
+  answers it; a Version 1 word page with its read still open reads the file. A write is left alone (reported not done).
+- **LevelView**: the Rotorflight Calibrate page (74) was named CalibrateView and numbered CALIBRATEVIEW - the name and
+  the macro of the Version 1 stick calibration page (6). The macro was redefined (both 74) and the screen opened the
+  last page of the name, so since B88 the stick calibration opened the Rotorflight page. Page 74 is LevelView, LEVELVIEW.
+- Tests: `dev/test_pipe` (the hand-over, 18 checks), `dev/test_fcsetup` (the two battery pages); the screen's
+  `hmi/lint_pages.py` clean on the new layouts; every page rendered on the Mac.
+
 ## Governor (global) offline said "Failed to read" (V2 B89, 9 Oct 2026)
 
 Malcolm, 9 Oct, after a morning's tests: the Governor (global) page, opened with no model from the backup, put up

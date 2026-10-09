@@ -27,22 +27,25 @@ def header(lst):
 settings = []; i = [1]
 def add(lst, c): c['i'] = i[0]; i[0] += 1; lst.append(c); return c
 add(settings, comp(by['t0'], txt='Rotorflight settings'))
-add(settings, comp(by['card']))
+ROWS = (('t3', 'sw0', 'Link rates and banks', None), ('t4', 't5', 'Rotorflight version', None), ('t6', 'Arming', 'Arming channel', 'Arming channel'), ('t1', 'Ratio', 'Main RPM ratio', 'Rotor to motor RPM ratio'))
+# B90: four rows lay out compact (rescue_pages.compact_plan): a card their size, centred on the background picture, the rows in the larger font
+plan = rp.compact_plan([(lab, words, 0, r, 'switch' if val == 'sw0' else 'num', 0) for r, (lab, val, words, klabel) in enumerate(ROWS)], [('b4', 'OK', 82)])
+add(settings, comp(by['card'], x=plan['card'][0], y=plan['card'][1], w=plan['card'][2], h=plan['card'][3]))
 header(settings)
 add(settings, comp(by['va0']))
 h = comp(by['b0']); h['ev'] = {'r': 'print "HelpView:RFSETUP.TXT"\nLogView.t0.txt="Rotorflight settings help"\nLogView.return.txt="RFSetupView"'}; add(settings, h)
-ROWS = (('t3', 'sw0', 'Link rates and banks', None), ('t4', 't5', 'Rotorflight version', None), ('t6', 'Arming', 'Arming channel', 'Arming channel'), ('t1', 'Ratio', 'Main RPM ratio', 'Rotor to motor RPM ratio'))
+lx, cw = plan['col'][0]; lw = cw - rp.C_LVGAP - rp.C_VAL_W; vx = lx + lw + rp.C_LVGAP
 for r, (lab, val, words, klabel) in enumerate(ROWS):
-    y = 94 + r * 40
-    l = comp(by[lab], x=34, y=y, w=254, h=36, txt=words, font=2); l['c'] = dict(l['c'], pco=0, bco=rp.PALE[0]); l['a'] = dict(l['a'], xcen=1, ycen=1); add(settings, l)
+    y = plan['y'](r)
+    l = comp(by[lab], x=lx, y=y, w=lw, h=rp.C_ROW, txt=words, font=rp.C_FONT); l['c'] = dict(l['c'], pco=0, bco=rp.PALE[0]); l['a'] = dict(l['a'], xcen=1, ycen=1); add(settings, l)
     v = by[val]
-    if v['t'] == 'switch': v = comp(v, x=314, y=y + 1, w=80, h=34)
+    if v['t'] == 'switch': v = comp(v, x=vx + (rp.C_VAL_W - 80) // 2, y=y + (rp.C_ROW - 34) // 2, w=80, h=34)
     else:
-        v = comp(v, x=294, y=y, w=120, h=36, font=2)
+        v = comp(v, x=vx, y=y, w=rp.C_VAL_W, h=rp.C_ROW, font=rp.C_FONT)
         if klabel: v['ev'] = {'p': 'keybdB.t1.txt="%s"' % klabel}   # (the arming channel's keypad was titled "Rotor to motor RPM ratio")
     add(settings, v)
-for nm, txt, x, w, code in rp.bottom_row([('b4', 'OK', 82)]):
-    ok = comp(by['b4'], x=x, y=414, w=w, h=56); ok['ev'] = {'r': 'va0.val=82<<8\nprint va0.val'}; add(settings, ok)
+for nm, txt, x, y, w, code in plan['btn']:
+    ok = comp(by['b4'], x=x, y=y, w=w, h=rp.C_BTN_H); ok['ev'] = {'r': 'va0.val=82<<8\nprint va0.val'}; add(settings, ok)
 page61 = {'name': 'RFSetupView', 'id': 61, 'w': 800, 'h': 480, 'bg': menu['bg'], 'nav': menu['nav'], 'ev': {'preinitialize': 'RFSetupView.pic=Screen_Background'}, 'comps': settings}
 json.dump(page61, open(os.path.join(PAGES, '61.json'), 'w'), indent=1)
 
