@@ -186,6 +186,16 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Governor (global) offline said "Failed to read" (V2 B89, 9 Oct 2026)
+
+Malcolm, 9 Oct, after a morning's tests: the Governor (global) page, opened with no model from the backup, put up
+"Failed to read global (config) bytes. Try again." (the numbers were there behind it). That page is the one that counts
+its 24 bytes before it believes a read. Since B79 the "Loading ..." message goes as soon as a block's set of items is
+complete, and the item that completed the set was counted BEFORE its four bytes were stored: the page was asked with 20
+of 24 in. The same would have met the page over the pipe or the radio. B89 counts an item after its bytes are stored
+(`ParseTelemetryItem`, transceiver.h). Test: `dev/test_pipe` compiles the real counter, byte store and governor global
+page together, in B79's order (the box) and B89's (no box), and checks the shape of the real parser.
+
 ## The last Rotorflight settings, message boxes, tidy buttons (V2 B88, screen 1.11.40, 9 Oct 2026)
 
 Malcolm, 9 Oct, before the gym: "implement all the remaining possible Rotorflight configuration options, and then look

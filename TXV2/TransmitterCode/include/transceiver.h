@@ -1359,8 +1359,8 @@ static void BlockItemSeen(uint8_t item)
 FASTRUN void ParseTelemetryItem()
 {
     BlockMaskTick();
-    BlockItemSeen(AckPayload.Ack_Payload_byte[0]);
-    switch (AckPayload.Ack_Payload_byte[0]) // Only looking at the low 7 BITS (127 values max)
+    const uint8_t item = AckPayload.Ack_Payload_byte[0];
+    switch (item) // Only looking at the low 7 BITS (127 values max)
     {
     case 0:
         GetRXVersionNumber();
@@ -1749,6 +1749,11 @@ FASTRUN void ParseTelemetryItem()
     default:
         break;
     }
+    // B89: the item is counted AFTER its bytes are stored. B79 counted it first, so the hide that follows the last item
+    // of a set ran before that item's bytes were in: the governor global page, which counts its 24 bytes before it
+    // believes a read, said "Failed to read global (config) bytes" with 20 of them (Malcolm, 9 Oct, offline from the backup -
+    // the same would have met a read over the pipe or the radio).
+    BlockItemSeen(item);
 }
 
 // B41: the Rotorflight block the receiver holds, told by the screen over its Bluetooth pipe as the items the ack payload
