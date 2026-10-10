@@ -94,7 +94,7 @@ private:
     CliHost &host_; Page page_; Step step_; WifiScene scene_; std::vector<WifiItem> next_;
     std::vector<std::string> lines_; int top_; bool follow_;
     std::string typed_; int layer_;
-    int job_; bool cliOpen_, leaveSave_, closeAfter_, closing_;
+    int job_; bool cliOpen_, leaveSave_, closeAfter_, closing_, changed_;   // changed_: a command that sets something has gone since the line opened (OK asks only then)
     std::vector<std::string> exec_; size_t execAt_; int sent_, refused_; std::string execFile_;
     std::string pending_, diffText_, savedAs_;
     std::string noteL1_, noteL2_, noteL3_, noteL4_, noteB1_, noteB2_; bool noteBad_; int noteFrom_;
@@ -110,6 +110,7 @@ std::string cliModelPrefix(const std::string &model);                           
 bool cliNewer(const std::string &a, const std::string &b, const std::string &prefix);  // of two of a model's files (prefix = "/rfdiff/" + cliModelPrefix), is a the newer? (stamped beat numbered; numbered compare as numbers)
 // The commands of a diff file: every line that is not empty and not a comment; save / exit / reboot left out (the save is the job's own)
 void cliCommands(const std::string &text, std::vector<std::string> &out);
+bool cliReadOnly(const std::string &cmd);   // a command that changes nothing: diff, dump, get, status, version, help and their like
 // Words wrapped at spaces into lines of at most `width` characters (a word longer than that is cut), at most `most` lines; the rest ends in " ..."
 void cliWrap(const std::string &text, size_t width, size_t most, std::vector<std::string> &out);
 

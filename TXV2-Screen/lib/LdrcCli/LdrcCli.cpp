@@ -75,6 +75,13 @@ void cliCommands(const std::string &text, std::vector<std::string> &out) {
     }
 }
 
+bool cliReadOnly(const std::string &cmd) {
+    static const char *words[] = { "diff", "dump", "get", "status", "version", "help", "tasks", "mcu_id", "bootlog", "sd_info", "flash_info", "gyroregisters",
+                                   "dshot_telemetry_info", "rc_smoothing_info", "beacon", "batch", "exit", "save", "reboot", "#", "?" };
+    std::string w; for (char c : cmd) { if (c == ' ' || c == '\t') break; w.push_back((char) tolower((unsigned char) c)); }
+    for (const char *k : words) if (w == k) return true;
+    return false;
+}
 void cliWrap(const std::string &text, size_t width, size_t most, std::vector<std::string> &out) {
     out.clear();
     std::string rest = text;
@@ -103,7 +110,7 @@ static const char *LAYERS[3][4] = {
 static const int CON_X = 6, CON_Y = 64, CON_W = 788, CON_H = 312;   // the console (1.11.44: across the page; a finger scrolls it, as the help pages)
 
 CliPage::CliPage(CliHost &host)
-    : host_(host), page_(PG_NONE), step_(ST_IDLE), top_(0), follow_(true), layer_(0), job_(0), cliOpen_(false), leaveSave_(false), closeAfter_(false), closing_(false),
+    : host_(host), page_(PG_NONE), step_(ST_IDLE), top_(0), follow_(true), layer_(0), job_(0), cliOpen_(false), leaveSave_(false), closeAfter_(false), closing_(false), changed_(false),
       execAt_(0), sent_(0), refused_(0), noteBad_(false), noteFrom_(0), down_(false), pressed_(0), lastX_(0), lastY_(0), downY_(0), dragTop_(0), dragged_(false), seenDown_(0), repeatAt_(0), repeated_(false), serial_(1), askedAt_(0) {}
 
 std::string CliPage::pageName() const {
@@ -206,7 +213,7 @@ void CliPage::refusal(const std::string &why) {                   // (the receiv
 
 // ------------------------------------------------------------------ open, close, the steps
 void CliPage::open(int job) {
-    job_ = job; cliOpen_ = false; closeAfter_ = false; closing_ = false; step_ = ST_IDLE; lines_.clear(); top_ = 0; follow_ = true; typed_.clear(); layer_ = 0;
+    job_ = job; cliOpen_ = false; closeAfter_ = false; closing_ = false; changed_ = false; step_ = ST_IDLE; lines_.clear(); top_ = 0; follow_ = true; typed_.clear(); layer_ = 0;
     pending_.clear(); diffText_.clear(); savedAs_.clear(); down_ = false; pressed_ = 0; exec_.clear(); execAt_ = 0; sent_ = 0; refused_ = 0; execFile_.clear();
     if (host_.armed()) { page_ = PG_CONSOLE; note("Not while the model could be flying.", "Safety on, motor off.", "", "OK", "", true); closeAfter_ = true; return; }
     if (!host_.pipeReady()) {
@@ -249,6 +256,7 @@ static std::string urlEncode(const std::string &s) {
 }
 void CliPage::send(const std::string &cmd, Step step) {
     pending_ = cmd; step_ = step; askedAt_ = host_.ms();
+    if ((step == ST_COMMAND || step == ST_EXEC) && !cliReadOnly(cmd)) changed_ = true;
     if (!host_.ask("GET", "/api/cli?cmd=" + urlEncode(cmd))) { step_ = ST_IDLE; say("The pipe is busy: try again."); }
     build();
 }
@@ -282,6 +290,7 @@ void CliPage::finish(bool ok, const std::string &body, const std::string &err) {
             note(l1, refused_ ? "The refused ones are in the console (###ERROR)." : "Saved. The flight controller is restarting with them.", refused_ ? "Saved all the same; the flight controller is restarting." : "", "OK", "", refused_ > 0);
             closeAfter_ = true; return;
         }
+        changed_ = false;
         if (closing_) { closing_ = false; close(); return; }
         say(leaveSave_ ? "Saved. The flight controller is restarting." : "Left without saving. The flight controller is restarting.");
         say("Type a command to open it again (once it is back)."); build(); return;
@@ -377,8 +386,9 @@ void CliPage::act(int id) {
     case PG_CONSOLE: {
         if (step_ != ST_IDLE) { build(); return; }
         if (id == CLI_ID_FIELD) { go(PG_KEYS); return; }
-        if (id == ID_CLOSE) {                                           // OK: out - once the command line is closed; open, it asks (leaving restarts the flight controller)
+        if (id == ID_CLOSE) {                                           // OK: out. The line still open with nothing changed: left (the flight controller restarts, as it must); something changed: asked
             if (!cliOpen_) { close(); return; }
+            if (!changed_) { closing_ = true; leave(false); return; }   // (Malcolm, 10 Oct: "I'm invited to save, even though I have changed nothing")
             note("Leave the command line without saving?", "Type save first to keep what you changed.", "The flight controller restarts either way.", "Leave", "Stay", false);
             return;
         }

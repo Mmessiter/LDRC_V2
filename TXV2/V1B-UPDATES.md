@@ -186,6 +186,13 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## OK asks only when something was set (V2 B90, screen 1.11.47, 10 Oct 2026)
+
+Malcolm, 10 Oct: "now I'm invited to save, even though I have changed nothing". OK on the command line page asks
+"Leave without saving?" only after a command that sets something (set, feature, servo, mixer and their like); after
+reads alone (diff, dump, get, status, version, help ...) it leaves at once. The flight controller still restarts on
+leaving, as Rotorflight has it. hmi/test_cli: 87 checks.
+
 ## The menu whole again after the command line (V2 B90, screen 1.11.46, 10 Oct 2026)
 
 Malcolm's photo, 10 Oct: back from the command line, the Rotorflight menu showed only its two lowest rows, the arming
