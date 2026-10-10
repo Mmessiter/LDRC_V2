@@ -34,7 +34,7 @@ public:
     virtual uint32_t ms() = 0;
     virtual bool pipeReady() = 0;             // the Bluetooth pipe to the receiver is joined
     virtual bool armed() = 0;                 // the model could be flying: nothing goes
-    virtual bool ask(const std::string &method, const std::string &path) = 0;   // one request at a time (false: busy, not joined)
+    virtual bool ask(const std::string &method, const std::string &path, uint32_t waitMs) = 0;   // one request at a time (false: busy, not joined); waitMs: how long the reply may take
     virtual int askState() = 0;               // 0 waiting, 1 answered, -1 no answer
     virtual int askCode() = 0;                // the answer's HTTP code
     virtual std::string askBody() = 0;
@@ -85,9 +85,11 @@ private:
     void leave(bool save);
     void print(const std::string &text);      // the flight controller's reply, line by line, into the console
     void say(const std::string &line);        // a line of our own
+    void sent(const std::string &cmd);        // the echo of a command sent: the console follows its reply again
     void note(const std::string &l1, const std::string &l2, const std::string &l3, const std::string &b1, const std::string &b2, bool bad, const std::string &l4 = "");
     void refusal(const std::string &why);     // the receiver's reason, wrapped over three lines under "The command line could not be opened:"
     void finish(bool ok, const std::string &body, const std::string &err);
+    void left(const std::string &how);      // the command line is closed on the receiver, or given up on (how = "" when the receiver said so)
     std::string fileName();
     void execNext();                          // Execute diff: the next command of the file, or the save
 
@@ -95,7 +97,8 @@ private:
     std::vector<std::string> lines_; int top_; bool follow_;
     std::string typed_; int layer_;
     int job_; bool cliOpen_, leaveSave_, closeAfter_, closing_, changed_;   // changed_: a command that sets something has gone since the line opened (OK asks only then)
-    std::string waitMethod_, waitPath_; uint32_t waitUntil_;   // (1.11.51) a request the pipe was too busy for: tried again until then
+    std::string waitMethod_, waitPath_; uint32_t waitUntil_, waitMs_;   // (1.11.51) a request the pipe was too busy for: tried again until then
+    bool wasReady_;                                          // (1.11.56) the pipe was joined at the last poll: its going is said once
     bool more_; uint32_t moreAt_, moreSince_; size_t moreLines_;   // (1.11.53) the reply came 202, its start only: /api/cli/out is fetched until it is whole
     std::string jobFailed_;                                   // (1.11.51) a job that could not finish: why, said in a note once the line is left
     std::vector<std::string> exec_; size_t execAt_; int sent_, refused_; std::string execFile_;

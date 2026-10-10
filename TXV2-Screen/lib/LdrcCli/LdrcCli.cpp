@@ -136,7 +136,7 @@ static const char *LAYERS[3][4] = {
 static const int CON_X = 6, CON_Y = 64, CON_W = 788, CON_H = 312;   // the console (1.11.44: across the page; a finger scrolls it, as the help pages)
 
 CliPage::CliPage(CliHost &host)
-    : host_(host), page_(PG_NONE), step_(ST_IDLE), top_(0), follow_(true), layer_(0), job_(0), cliOpen_(false), leaveSave_(false), closeAfter_(false), closing_(false), changed_(false), waitUntil_(0), more_(false), moreAt_(0), moreSince_(0), moreLines_(0),
+    : host_(host), page_(PG_NONE), step_(ST_IDLE), top_(0), follow_(true), layer_(0), job_(0), cliOpen_(false), leaveSave_(false), closeAfter_(false), closing_(false), changed_(false), waitUntil_(0), waitMs_(0), wasReady_(false), more_(false), moreAt_(0), moreSince_(0), moreLines_(0),
       execAt_(0), sent_(0), refused_(0), noteBad_(false), noteFrom_(0), down_(false), pressed_(0), lastX_(0), lastY_(0), downY_(0), dragTop_(0), dragged_(false), seenDown_(0), repeatAt_(0), repeated_(false), serial_(1), askedAt_(0) {}
 
 std::string CliPage::pageName() const {
@@ -229,6 +229,12 @@ void CliPage::say(const std::string &line) {
     }
     if (follow_) top_ = (int) lines_.size() > CLI_VISIBLE ? (int) lines_.size() - CLI_VISIBLE : 0;
 }
+void CliPage::sent(const std::string &cmd) {
+    // 1.11.56 (Malcolm, 10 Oct: "after executing a command, the screen should scroll automatically down to see what just
+    // happened"): a command sent is a request to see its reply, so the console follows again, however far up it was dragged.
+    follow_ = true;
+    say("# " + cmd);
+}
 void CliPage::print(const std::string &text) {
     std::vector<std::string> ls; cliLines(text, ls);
     for (auto &l : ls) say(l);
@@ -254,6 +260,7 @@ void CliPage::open(int job) {
         note("No Bluetooth link to the receiver.", "The command line needs the model on, its USB cable", "in, and the screen's Bluetooth joined (the Rotorflight menu).", "OK", "", true);
         closeAfter_ = true; return;
     }
+    wasReady_ = true;
     go(PG_CONSOLE);
     if (job == CLI_EXECUTE) {
         const std::string model = host_.modelName();
@@ -281,7 +288,7 @@ void CliPage::execNext() {
         say("All sent. Saving ..."); leave(true); return;
     }
     const std::string &c = exec_[execAt_++];
-    say("# " + c);
+    sent(c);
     send(c, ST_EXEC);
 }
 void CliPage::close() { page_ = PG_NONE; step_ = ST_IDLE; scene_.items.clear(); scene_.layout++; }
@@ -298,14 +305,38 @@ void CliPage::send(const std::string &cmd, Step step) {
     pending_ = cmd; step_ = step; askedAt_ = host_.ms();
     if ((step == ST_COMMAND || step == ST_EXEC) && !cliReadOnly(cmd)) changed_ = true;
     const std::string path = "/api/cli?cmd=" + urlEncode(cmd) + "&wait=5000";   // (1.11.53: the receiver answers within 5 s - with 202 and the start, when the flight controller is still printing)
-    if (!host_.ask("GET", path)) { waitMethod_ = "GET"; waitPath_ = path; waitUntil_ = host_.ms() + 5000; }   // (busy: tried again in poll(), 5 s)
+    waitMs_ = 18000;                                                   // (a diff all, every bank, is 20 kB and more: the flight controller's seconds and the Bluetooth's)
+    if (!host_.ask("GET", path, waitMs_)) { waitMethod_ = "GET"; waitPath_ = path; waitUntil_ = host_.ms() + 5000; }   // (busy: tried again in poll(), 5 s)
     build();
 }
 void CliPage::leave(bool save) {
     leaveSave_ = save; step_ = ST_LEAVING; askedAt_ = host_.ms();
     const std::string path = std::string("/api/cli/leave?save=") + (save ? "1" : "0");
-    if (!host_.ask("POST", path)) { waitMethod_ = "POST"; waitPath_ = path; waitUntil_ = host_.ms() + 5000; }
+    waitMs_ = 6000;                                                    // (the receiver answers a leave at once; 1.11.56: a receiver that is off is not waited 18 s for)
+    if (!host_.ask("POST", path, waitMs_)) { waitMethod_ = "POST"; waitPath_ = path; waitUntil_ = host_.ms() + 5000; }
     build();
+}
+void CliPage::left(const std::string &how) {
+    // how = "": the receiver closed the command line (the flight controller restarts); otherwise why it was given up on -
+    // nothing is known to be saved, and the notes say so instead of "restarting"
+    const bool sure = how.empty();
+    cliOpen_ = false;
+    if (job_ == CLI_TO_CARD && !jobFailed_.empty()) {
+        std::vector<std::string> w; cliWrap(jobFailed_, 58, 3, w); while (w.size() < 3) w.push_back("");
+        note("Diff to card: NOT saved -", w[0], w[1], "OK", "", true, w[2]); closeAfter_ = true; return;
+    }
+    if (job_ == CLI_TO_CARD && !savedAs_.empty()) { note("Saved on the screen's card as", savedAs_, sure ? "The flight controller is restarting (nothing changed)." : "(" + how + ": nothing changed on the model)", "OK", "", false); closeAfter_ = true; return; }
+    if (job_ == CLI_EXECUTE && leaveSave_ && !exec_.empty()) {
+        char l1[80]; snprintf(l1, sizeof l1, "Executed: %d commands sent, %d refused.", sent_, refused_);
+        if (!sure) { note(l1, "NOT saved: " + how + ".", "Execute diff again when the model is back.", "OK", "", true); closeAfter_ = true; return; }
+        note(l1, refused_ ? "The refused ones are in the console (###ERROR)." : "Saved. The flight controller is restarting with them.", refused_ ? "Saved all the same; the flight controller is restarting." : "", "OK", "", refused_ > 0);
+        closeAfter_ = true; return;
+    }
+    changed_ = false;
+    if (closing_) { closing_ = false; close(); return; }
+    if (!sure) { say("Not left (" + how + "): nothing saved. OK leaves."); build(); return; }
+    say(leaveSave_ ? "Saved. The flight controller is restarting." : "Left without saving. The flight controller is restarting.");
+    say("Type a command to open it again (once it is back)."); build();
 }
 std::string CliPage::fileName() {
     const std::string stamp = host_.stamp(), model = host_.modelName();
@@ -320,27 +351,20 @@ void CliPage::finish(bool ok, const std::string &body, const std::string &err) {
         // (the receiver's reasons are plain words: no USB cable, armed, the transmitter linked and not safe, the FC silent)
         std::string why = body.empty() ? err : body;
         if (step == ST_OPENING || (job_ == CLI_TO_CARD && step == ST_DIFF) || (job_ == CLI_EXECUTE && step == ST_EXEC && sent_ == 0)) { refusal(why); return; }
-        if (step == ST_LEAVING) { say("Not left: " + why); build(); return; }
+        if (step == ST_LEAVING) {
+            // 1.11.56 (Malcolm, 10 Oct: "switching off the receiver leaves the transmitter unable to depart from the page. I had
+            // to switch off"): a receiver that has gone is not asked again - the page does what it would have (the receiver
+            // leaves an idle command line by itself); one that is there but does not answer is left on the pilot's word.
+            if (!host_.pipeReady()) { left("the receiver has gone"); return; }
+            std::vector<std::string> w; cliWrap("Not left: " + why, 56, 2, w); while (w.size() < 2) w.push_back("");
+            note(w[0], w[1], "Leave anyway? The receiver keeps its command line open", "Leave anyway", "Stay", true, "until it is left again, or the model is switched off.");
+            return;
+        }
         if (step == ST_EXEC) { char b[80]; snprintf(b, sizeof b, "Stopped at command %d of %u: ", sent_ + 1, (unsigned) exec_.size()); say(b + why); say("Nothing saved. OK leaves it - or Execute diff again."); exec_.clear(); build(); return; }
+        if (!host_.pipeReady()) { say("The receiver has gone. OK leaves."); build(); return; }
         say("No answer: " + why); build(); return;
     }
-    if (step == ST_LEAVING) {
-        cliOpen_ = false;
-        if (job_ == CLI_TO_CARD && !jobFailed_.empty()) {
-            std::vector<std::string> w; cliWrap(jobFailed_, 58, 3, w); while (w.size() < 3) w.push_back("");
-            note("Diff to card: NOT saved -", w[0], w[1], "OK", "", true, w[2]); closeAfter_ = true; return;
-        }
-        if (job_ == CLI_TO_CARD && !savedAs_.empty()) { note("Saved on the screen's card as", savedAs_, "The flight controller is restarting (nothing changed).", "OK", "", false); closeAfter_ = true; return; }
-        if (job_ == CLI_EXECUTE && leaveSave_ && !exec_.empty()) {
-            char l1[80]; snprintf(l1, sizeof l1, "Executed: %d commands sent, %d refused.", sent_, refused_);
-            note(l1, refused_ ? "The refused ones are in the console (###ERROR)." : "Saved. The flight controller is restarting with them.", refused_ ? "Saved all the same; the flight controller is restarting." : "", "OK", "", refused_ > 0);
-            closeAfter_ = true; return;
-        }
-        changed_ = false;
-        if (closing_) { closing_ = false; close(); return; }
-        say(leaveSave_ ? "Saved. The flight controller is restarting." : "Left without saving. The flight controller is restarting.");
-        say("Type a command to open it again (once it is back)."); build(); return;
-    }
+    if (step == ST_LEAVING) { left(""); return; }
     cliOpen_ = true;
     if (step == ST_EXEC) {
         sent_++;
@@ -384,13 +408,17 @@ void CliPage::finish(bool ok, const std::string &body, const std::string &err) {
 }
 void CliPage::poll() {
     if (page_ == PG_NONE) return;
+    const bool ready = host_.pipeReady();                             // (1.11.56, Malcolm: "switching off the receiver leaves the transmitter unable to depart from the page")
+    if (wasReady_ && !ready && step_ == ST_IDLE) { say("The receiver has gone. OK leaves."); build(); }   // (on the keys or a note: in the console on return)
+    wasReady_ = ready;
     if (step_ != ST_IDLE && !waitPath_.empty()) {                    // (1.11.51) the pipe was busy: again, until it takes it or 5 s have gone
-        if (host_.ask(waitMethod_, waitPath_)) { waitPath_.clear(); askedAt_ = host_.ms(); }
+        if (!host_.pipeReady()) { waitPath_.clear(); finish(false, "", "the receiver is not joined"); return; }   // (1.11.56: no 5 s for a receiver that has gone)
+        if (host_.ask(waitMethod_, waitPath_, waitMs_)) { waitPath_.clear(); askedAt_ = host_.ms(); }
         else if ((int32_t) (host_.ms() - waitUntil_) >= 0) { waitPath_.clear(); finish(false, "", "the Bluetooth pipe stayed busy"); }
         return;
     }
     if (step_ != ST_IDLE && more_ && moreAt_ && (int32_t) (host_.ms() - moreAt_) >= 0) {   // (1.11.53) the rest of a long reply
-        if (host_.ask("GET", "/api/cli/out")) moreAt_ = 0; else if (host_.ms() - moreSince_ > 90000) { more_ = false; finish(false, "", "the reply never ended"); }
+        if (host_.ask("GET", "/api/cli/out", 6000)) moreAt_ = 0; else if (host_.ms() - moreSince_ > 90000) { more_ = false; finish(false, "", "the reply never ended"); }
         return;
     }
     if (step_ != ST_IDLE && !(more_ && moreAt_)) {                   // (a fetch of the rest is scheduled: no request is out, nothing to look for)
@@ -462,6 +490,7 @@ void CliPage::act(int id) {
         if (id == CLI_ID_FIELD) { go(PG_KEYS); return; }
         if (id == ID_CLOSE) {                                           // OK: out. The line still open with nothing changed: left (the flight controller restarts, as it must); something changed: asked
             if (!cliOpen_) { close(); return; }
+            if (!host_.pipeReady()) { closing_ = true; left("the receiver has gone"); return; }   // (1.11.56: nothing to tell it, nothing can be saved)
             if (!changed_) { closing_ = true; leave(false); return; }   // (Malcolm, 10 Oct: "I'm invited to save, even though I have changed nothing")
             note("Leave the command line without saving?", "Type save first to keep what you changed.", "The flight controller restarts either way.", "Leave", "Stay", false);
             return;
@@ -478,10 +507,10 @@ void CliPage::act(int id) {
             if (cmd.empty()) return;
             const std::string low = [&] { std::string l = cmd; for (auto &c : l) c = (char) tolower((unsigned char) c); return l; }();
             if (low == "save" || low == "exit" || low == "reboot") {      // the receiver takes these on its own line (and the flight controller restarts)
-                if (!cliOpen_) { say("# " + cmd); say("The command line is not open: type a command first."); build(); return; }
-                say("# " + cmd); closing_ = false; leave(low == "save"); return;
+                if (!cliOpen_) { sent(cmd); say("The command line is not open: type a command first."); build(); return; }
+                sent(cmd); closing_ = false; leave(low == "save"); return;
             }
-            say("# " + cmd); send(cmd, ST_COMMAND); return;
+            sent(cmd); send(cmd, ST_COMMAND); return;
         }
         key(id); return;
     }
@@ -490,6 +519,7 @@ void CliPage::act(int id) {
         if (closeAfter_) { close(); return; }
         if (noteB1_ == "Execute") { go(PG_CONSOLE); execNext(); return; }
         if (noteB1_ == "Leave") { go(PG_CONSOLE); closing_ = true; leave(false); return; }
+        if (noteB1_ == "Leave anyway") { go(PG_CONSOLE); closing_ = true; left("the receiver did not answer"); return; }   // (1.11.56)
         go(PG_CONSOLE); return;
     }
     case PG_NONE: break;

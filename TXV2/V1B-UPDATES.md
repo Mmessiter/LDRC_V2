@@ -186,6 +186,21 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The console follows every command, and the page can always be left (V2 B90, screen 1.11.56, 10 Oct 2026)
+
+Malcolm, after `set`, `get` and `save` all worked: "after executing a command, the screen should scroll automatically
+down to see what just happened". The console followed new lines only until a finger had scrolled it up; after that a
+command's reply landed out of sight. Now sending a command (typed, or one of Execute diff's) makes the console follow
+again, so the reply is on the glass; a finger can still scroll up while a long reply is printing.
+
+Then: "switching off the receiver leaves the transmitter unable to depart from the page. I had to switch off". OK asked
+the receiver to close its command line, and with the receiver off the answer never came: "Not left", and again. Now
+the receiver's going is said in the console ("The receiver has gone. OK leaves."), OK goes straight out when the
+receiver is not joined (nothing to tell it: a receiver leaves an idle command line by itself after 90 s, and one that
+is off has nothing open), a leave that is out when the receiver goes ends the page by itself, and a receiver that is
+there but does not answer gets a question - Leave anyway / Stay. Execute diff whose save never got an answer says
+"NOT saved" rather than "restarting with them". A leave is waited 6 s for, not 18.
+
 ## The diff was whole all along (V2 B90, screen 1.11.55, 10 Oct 2026)
 
 1.11.54's note: "347 lines, first '# version', last 'save'; batch start yes, batch end NO". A Rotorflight 4.6 `diff all`

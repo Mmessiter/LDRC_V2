@@ -11,7 +11,7 @@ struct ScreenCli : public ldrc::CliHost {
     uint32_t ms() override { return millis(); }
     bool pipeReady() override { return bleState == BLE_READY; }
     bool armed() override { return armedNow; }
-    bool ask(const std::string &method, const std::string &path) override { asked = bleAsk(method, path, "", "", 18000); return asked; }   // (a diff all, every bank, is 20 kB and more: the flight controller's seconds and the Bluetooth's)
+    bool ask(const std::string &method, const std::string &path, uint32_t waitMs) override { asked = bleAsk(method, path, "", "", waitMs); return asked; }   // (the page says how long: 18 s for a command - a diff all, every bank, is 20 kB and more - 6 s for a leave)
     int askState() override { if (!asked) return -1; if (bleReqPending || !bleReqDone) return 0; asked = false; return bleReqError.empty() ? 1 : -1; }
     int askCode() override { return bleLast.code; }
     std::string askBody() override { return bleLast.body; }
