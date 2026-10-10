@@ -186,6 +186,22 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Command line on the menu, Execute diff on the Backup page (V2 B90, screen 1.11.42, 10 Oct 2026)
+
+Malcolm, 10 Oct, having found the buttons: "'Command line' option should move to the main Rotorflight area, 'Diff to
+card' can stay on the back up screen, where if possible we might add 'Execute Diff' as well. On the main rotorflight
+screen let's move Backup and restore to the bottom extreme left opposite the ok button."
+
+- **The Rotorflight menu**: "Command line ..." in the grid (where Backup / Restore was); "Backup / Restore ..." at the
+  island's foot, far left, with the Bluetooth word between it and OK.
+- **Execute diff** (the Backup page, beside Diff to card): the newest diff file of the model on the screen's card
+  (stamped files by their time, numbered ones by their number), every command of it sent to the flight controller's
+  command line, then saved - it restarts with those settings. Asked first, with the file's name and the count;
+  comments, `save`, `exit` and `reboot` lines are left out; the flight controller's refusals (###ERROR) are counted
+  and shown, the rest saved all the same; the receiver going quiet half way stops it with nothing saved and the
+  command line left for the pilot. Host-tested (hmi/test_cli, 79 checks).
+- Teensy unchanged (B90). Help: RFLIGHT.TXT, BACKUP.TXT.
+
 ## Rotorflight's command line on the transmitter, and Diff to card (V2 B90, screen 1.11.41, 10 Oct 2026)
 
 Malcolm, 10 Oct: "Are we able to add CLI?" ... "Yes - let's add save diff to card! And let's do it!"

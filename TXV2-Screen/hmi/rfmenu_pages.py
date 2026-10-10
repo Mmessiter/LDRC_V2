@@ -66,11 +66,13 @@ BUTTONS = [  # (name, words, code) in the order they sit, three to a row: the pa
     ('Rescue', 'Rescue ...', 64), ('Servos', 'Servos ...', 73), ('Travel', 'Mixer ...', 83),
     ('Filters', 'Filters ...', 92), ('Adjust', 'Adjustments ...', 116), ('Switches', 'Switches ...', 133),
     ('CopyBank', 'Copy a bank ...', 145), ('Battery', 'Battery ...', 155), ('Blackbox', 'Black box ...', 161),
-    ('Calibrate', 'Calibrate ...', 170), ('Setup', 'Settings ...', 81), ('b3', 'Backup / Restore ...', 48),
-]   # (B88: five rows of three, 56 apart from y 66; Backup / Restore joined the grid, so only OK is left below)
+    ('Calibrate', 'Calibrate ...', 170), ('Setup', 'Settings ...', 81), ('Cli', 'Command line ...', 'ldrc cli'),
+]   # (screen 1.11.42, Malcolm 10 Oct: "Command line" in the grid - the screen's own page, the word never reaches the main
+    # board; Backup / Restore at the island's foot, far left, opposite OK)
 proto = by['Pid']
 for k, (name, words, code) in enumerate(BUTTONS):
-    b = comp(proto, n=name, x=isl['x0'] + (BW + GX) * (k % 3), y=isl['y0'] + (BH + GY) * (k // 3), w=BW, h=BH, txt=words); b['ev'] = {'r': 'va0.val=%d<<8\nprint va0.val' % code}
+    b = comp(proto, n=name, x=isl['x0'] + (BW + GX) * (k % 3), y=isl['y0'] + (BH + GY) * (k // 3), w=BW, h=BH, txt=words)
+    b['ev'] = {'r': code} if isinstance(code, str) else {'r': 'va0.val=%d<<8\nprint va0.val' % code}
     add(comps, b)
 # B88 "why it will not arm": the flight controller's arming blocks in plain words, a tap for all of them (code 175)
 arm = comp(rp.LABEL_L, n='arm', x=isl['x0'], y=isl['y0'] + 5 * BH + 4 * GY + 8, w=GRID_W, h=40, txt='', g='g', font=6)   # (the longest, "Will not arm: Arm switch on too soon: off, then on (and 9 more)", is 705 px)
@@ -78,7 +80,9 @@ arm['c'] = {'pco': 65535, 'borderc': rp.CARD['c']['bco'], 'bco': rp.CARD['c']['b
 arm['ev'] = {'r': 'va0.val=175<<8\nprint va0.val'}
 add(comps, arm)
 okx = isl['btn'][0][2]
-pw = comp(by['pipe'], x=isl['card'][0] + rp.C_PAD, y=isl['foot_y'], w=okx - rp.C_BTN_GAP - isl['card'][0] - rp.C_PAD, h=rp.C_BTN_H, font=2); pw['a'] = dict(pw['a'], xcen=2)   # (the Bluetooth word or its tooth, against OK, which keeps the bottom right)
+bk = comp(proto, n='b3', x=isl['card'][0] + rp.C_PAD, y=isl['foot_y'], w=240, h=rp.C_BTN_H, txt='Backup / Restore ...'); bk['ev'] = {'r': 'va0.val=48<<8\nprint va0.val'}   # (far left of the foot)
+add(comps, bk)
+pw = comp(by['pipe'], x=bk['x'] + bk['w'] + rp.C_BTN_GAP, y=isl['foot_y'], w=okx - rp.C_BTN_GAP - (bk['x'] + bk['w'] + rp.C_BTN_GAP), h=rp.C_BTN_H, font=2); pw['a'] = dict(pw['a'], xcen=2)   # (the Bluetooth word or its tooth, against OK, which keeps the bottom right)
 add(comps, pw)
 add(comps, comp(by['Progress'], x=isl['card'][0] + rp.C_PAD, y=isl['foot_y'] - 10, w=isl['card'][2] - 2 * rp.C_PAD, h=5))
 for nm, txt, x, y, w, code in isl['btn']:

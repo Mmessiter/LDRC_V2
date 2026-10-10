@@ -10,6 +10,6 @@ Write edits: with the model connected again, the marked edits are written to the
 
 Diff to card: asks the flight controller for its complete settings as text (the command line's diff all) and keeps them on the screen's card, in /rfdiff, named after the model and the time. The configurator can replay that file. It needs the model on with the USB cable from the receiver to the flight controller, the safety on, and the screen's Bluetooth joined; the flight controller restarts afterwards (nothing is changed).||
 
-Command line: Rotorflight's own command line, the same way. Type a command on the screen's keys, or use the buttons; what the flight controller prints scrolls in the box (drag it, or Up and Down). Save and restart keeps what you set; Leave, no save does not; either restarts the flight controller. The model cannot arm while the command line is open.||
+Execute diff: the newest diff file of this model on the screen's card, every command of it sent to the flight controller's command line, then saved: the flight controller restarts with those settings. You are asked first, with the file's name and how many commands. Commands the flight controller refuses are counted and shown; the rest are saved all the same. Rotorflight's command line itself is on the Rotorflight menu.||
 
 OK leaves. Nothing on this page runs while another job runs.||

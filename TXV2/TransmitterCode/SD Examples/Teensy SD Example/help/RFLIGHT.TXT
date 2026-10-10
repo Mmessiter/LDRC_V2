@@ -8,7 +8,9 @@ The line under the buttons says whether the flight controller will arm, and if n
 
 Settings holds what the transmitter itself needs to know: whether rates follow the banks, the Rotorflight version (as the receiver reports it), the arming channel, and the main rotor to motor RPM ratio.||
 
-Backup / Restore keeps EVERY Rotorflight setting of the model on the transmitter's card, over Bluetooth, and puts them back. With no model connected, the pages read and edit the backup instead, and the edits are offered to the model when it is next connected. Back up as soon as you are happy with a setup.||
+Command line is Rotorflight's own command line on the screen, through the USB cable from the receiver to the flight controller. Type a command on the screen's keys, or use the buttons; what the flight controller prints scrolls in the box (drag it, or Up and Down). Save and restart keeps what you set; Leave, no save does not; either restarts the flight controller. The model cannot arm while the command line is open.||
+
+Backup / Restore (at the foot) keeps EVERY Rotorflight setting of the model on the transmitter's card, over Bluetooth, and puts them back; it also keeps the flight controller's settings as text (Diff to card) and replays them (Execute diff). With no model connected, the pages read and edit the backup instead, and the edits are offered to the model when it is next connected. Back up as soon as you are happy with a setup.||
 
 Without a model connected, the pages read and edit the model's backup on the card (made with Backup / Restore); Calibrate, the black box's memory and the arming line need the model itself.||
 

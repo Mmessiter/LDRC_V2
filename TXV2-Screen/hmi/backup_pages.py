@@ -15,7 +15,7 @@ add(rp.comp(rp.MODEL, n='t11', txt='Model name'))
 add(rp.comp(rp.VA0, n='va0'))
 h = rp.comp(rp.by['b0'], n='b0'); h['ev'] = {'r': 'print "HelpView:BACKUP.TXT"\nLogView.t0.txt="Backup help"\nLogView.return.txt="RFBackUpView"'}; add(h)
 # B91: an island - the two lines of fact across it; under them the guidance, and beside it the four things to do with the
-# backup as a block of two by three (Back up, Restore all / Write edits, Forget edits / Diff to card, Command line); OK
+# backup as a block of two by three (Back up, Restore all / Write edits, Forget edits / Diff to card, Execute diff); OK
 # alone at the foot, at the right
 W = 704; BW = 176; GW = 2 * BW + rp.C_BTN_GAP; GH = 3 * rp.C_BTN_H + 2 * 10
 isl = rp.island(W, 76 + 12 + GH, [('b1', 'OK', 115)])   # (BW: the block's buttons a little wider than the row's, for "Command line"; GH: the block of six, three rows; the guidance's six lines fit beside it)
@@ -28,10 +28,11 @@ g = rp.comp(rp.LABEL_L, n='i2', x=X, y=Y + 88, w=W - GW - 16, h=GH, g='g', font=
             txt='Back up after every setup you are happy with. With no model connected, the Rotorflight pages edit this backup; Write edits sends those edits to the model when it is connected.')   # (1.11.40: do first, why second, and shorter)
 g['c'] = {'pco': 65535, 'borderc': rp.CARD['c']['bco'], 'bco': rp.CARD['c']['bco']}; g['a'] = dict(g['a'], borderw=0, xcen=0, ycen=0, txt_maxl=300, isbr=1); add(g)
 gx = X + W - GW
-# screen 1.11.41: the third row is the screen's own - "Diff to card" (diff all onto the screen's card, as a text file the
-# configurator can replay) and "Command line ..." (Rotorflight's command line, through the receiver's USB cable): the
-# words "ldrc diff" / "ldrc cli" open the screen's page and never reach the main board
-for nm, txt, col, row, code in (('b3', 'Back up', 0, 0, 111), ('b2', 'Restore all', 1, 0, 112), ('b4', 'Write edits', 0, 1, 113), ('b5', 'Forget edits', 1, 1, 114), ('ldrcDiff', 'Diff to card', 0, 2, 'ldrc diff'), ('ldrcCli', 'Command line', 1, 2, 'ldrc cli')):
+# screen 1.11.41/42: the third row is the screen's own - "Diff to card" (diff all onto the screen's card, as a text file the
+# configurator can replay) and "Execute diff" (the newest such file of the model, every command of it to the command
+# line, then save - Malcolm, 10 Oct): the words "ldrc diff" / "ldrc exec" open the screen's page and never reach the
+# main board (the command line itself is on the Rotorflight menu, "ldrc cli")
+for nm, txt, col, row, code in (('b3', 'Back up', 0, 0, 111), ('b2', 'Restore all', 1, 0, 112), ('b4', 'Write edits', 0, 1, 113), ('b5', 'Forget edits', 1, 1, 114), ('ldrcDiff', 'Diff to card', 0, 2, 'ldrc diff'), ('ldrcExec', 'Execute diff', 1, 2, 'ldrc exec')):
     b = rp.comp(rp.BUTTON, n=nm, x=gx + col * (BW + rp.C_BTN_GAP), y=Y + 88 + row * (rp.C_BTN_H + 10), w=BW, h=rp.C_BTN_H, txt=txt)
     b['ev'] = {'r': code} if isinstance(code, str) else {'r': 'va0.val=%d<<8\nprint va0.val' % code}; add(b)
 for (nm, txt, x, y, w, code) in isl['btn']:

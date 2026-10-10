@@ -24,7 +24,7 @@ void cliLines(const std::string &reply, std::vector<std::string> &out) {
         break;
     }
 }
-std::string cliFileName(const std::string &model, const std::string &stamp, int n) {
+static std::string cliSafeName(const std::string &model) {
     std::string name;
     for (char c : model) {
         if (name.size() >= 20) break;
@@ -33,10 +33,46 @@ std::string cliFileName(const std::string &model, const std::string &stamp, int 
     }
     while (!name.empty() && name[name.size() - 1] == '_') name.erase(name.size() - 1);
     if (name.empty()) name = "model";
+    return name;
+}
+std::string cliFileName(const std::string &model, const std::string &stamp, int n) {
+    const std::string name = cliSafeName(model);
     char b[64];
     if (!stamp.empty()) snprintf(b, sizeof b, "/rfdiff/%s_%s.txt", name.c_str(), stamp.c_str());
     else snprintf(b, sizeof b, "/rfdiff/%s_%d.txt", name.c_str(), n);
     return b;
+}
+std::string cliModelPrefix(const std::string &model) { return cliSafeName(model) + "_"; }
+static bool cliTail(const std::string &path, const std::string &prefix, std::string &tail, long &num) {   // what follows the model's prefix, without ".txt"; num = it as a number, or -1
+    if (path.size() <= prefix.size() || path.compare(0, prefix.size(), prefix) != 0) return false;
+    tail = path.substr(prefix.size());
+    if (tail.size() > 4 && tail.compare(tail.size() - 4, 4, ".txt") == 0) tail.erase(tail.size() - 4);
+    num = -1;
+    if (!tail.empty() && tail.find_first_not_of("0123456789") == std::string::npos) num = atol(tail.c_str());
+    return true;
+}
+bool cliNewer(const std::string &a, const std::string &b, const std::string &prefix) {
+    std::string ta, tb; long na, nb;
+    if (!cliTail(a, prefix, ta, na)) return false;
+    if (!cliTail(b, prefix, tb, nb)) return true;
+    if (na >= 0 && nb >= 0) return na > nb;
+    if (na >= 0) return false;                                      // (a numbered file is older than any stamped one: it was made with no clock)
+    if (nb >= 0) return true;
+    return ta > tb;                                                 // (stamps, "YYYY-MM-DD_HHMM", sort as time does)
+}
+void cliCommands(const std::string &text, std::vector<std::string> &out) {
+    out.clear();
+    std::vector<std::string> ls; cliLines(text, ls);
+    for (auto &l : ls) {
+        std::string c = l;
+        while (!c.empty() && (c[0] == ' ' || c[0] == '\t')) c.erase(0, 1);
+        while (!c.empty() && (c[c.size() - 1] == ' ' || c[c.size() - 1] == '\t')) c.erase(c.size() - 1);
+        if (c.empty() || c[0] == '#') continue;
+        std::string low = c; for (auto &ch : low) ch = (char) tolower((unsigned char) ch);
+        if (low == "save" || low == "exit" || low == "reboot" || low == "defaults" || low.rfind("dfu", 0) == 0 || low == "msc") continue;
+        if (c.size() > 160) continue;
+        out.push_back(c);
+    }
 }
 
 // ------------------------------------------------------------------ the pages: what is where
@@ -50,8 +86,8 @@ static const char *LAYERS[3][4] = {
 static const int CON_X = 6, CON_Y = 64, CON_W = 700, CON_H = 312;   // the console; the Up / Down buttons at its right
 
 CliPage::CliPage(CliHost &host)
-    : host_(host), page_(PG_NONE), step_(ST_IDLE), top_(0), follow_(true), layer_(0), job_(false), cliOpen_(false), leaveSave_(false), closeAfter_(false),
-      noteBad_(false), noteFrom_(0), down_(false), pressed_(0), lastX_(0), lastY_(0), downY_(0), dragTop_(0), dragged_(false), seenDown_(0), repeatAt_(0), repeated_(false), serial_(1), askedAt_(0) {}
+    : host_(host), page_(PG_NONE), step_(ST_IDLE), top_(0), follow_(true), layer_(0), job_(0), cliOpen_(false), leaveSave_(false), closeAfter_(false),
+      execAt_(0), sent_(0), refused_(0), noteBad_(false), noteFrom_(0), down_(false), pressed_(0), lastX_(0), lastY_(0), downY_(0), dragTop_(0), dragged_(false), seenDown_(0), repeatAt_(0), repeated_(false), serial_(1), askedAt_(0) {}
 
 std::string CliPage::pageName() const {
     static const char *names[] = { "", "console", "keys", "note" };
@@ -72,7 +108,9 @@ void CliPage::build() {
     case PG_NONE: break;
     case PG_CONSOLE: {
         add(WifiItem::TITLE, CLI_ID_TITLE, 6, 6, 460, 48, cliOpen_ ? "Command line (Rotorflight)" : "Command line");
-        add(WifiItem::TEXT, CLI_ID_HINT, 470, 6, 160, 48, busy ? "Working ..." : (cliOpen_ ? "Open" : "")); last().strong = true;
+        { std::string h = busy ? "Working ..." : (cliOpen_ ? "Open" : "");
+          if (step_ == ST_EXEC) { char b[32]; snprintf(b, sizeof b, "%d of %u", sent_, (unsigned) exec_.size()); h = b; }
+          add(WifiItem::TEXT, CLI_ID_HINT, 470, 6, 160, 48, h); last().strong = true; }
         add(WifiItem::BUTTON, ID_CLOSE, 650, 6, 144, 48, "Close"); last().enabled = !busy && !cliOpen_;
         add(WifiItem::ROW, CLI_ID_CONSOLE, CON_X, CON_Y, CON_W, CON_H, "");   // (drawn by the screen as the console: ROW only so a touch lands on it)
         add(WifiItem::BUTTON, ID_UP, 712, CON_Y, 82, 150, "Up"); last().enabled = top_ > 0;
@@ -144,9 +182,9 @@ void CliPage::note(const std::string &l1, const std::string &l2, const std::stri
 }
 
 // ------------------------------------------------------------------ open, close, the steps
-void CliPage::open(bool job) {
+void CliPage::open(int job) {
     job_ = job; cliOpen_ = false; closeAfter_ = false; step_ = ST_IDLE; lines_.clear(); top_ = 0; follow_ = true; typed_.clear(); layer_ = 0;
-    pending_.clear(); diffText_.clear(); savedAs_.clear(); down_ = false; pressed_ = 0;
+    pending_.clear(); diffText_.clear(); savedAs_.clear(); down_ = false; pressed_ = 0; exec_.clear(); execAt_ = 0; sent_ = 0; refused_ = 0; execFile_.clear();
     if (host_.armed()) { page_ = PG_CONSOLE; note("Not while the model could be flying.", "Safety on, motor off.", "", "OK", "", true); closeAfter_ = true; return; }
     if (!host_.pipeReady()) {
         page_ = PG_CONSOLE;
@@ -154,8 +192,27 @@ void CliPage::open(bool job) {
         closeAfter_ = true; return;
     }
     go(PG_CONSOLE);
-    say(job ? "Diff to card: asking the flight controller for diff all ..." : "Opening the flight controller's command line ...");
-    if (job) send("diff all", ST_DIFF); else send("", ST_OPENING);
+    if (job == CLI_EXECUTE) {
+        execFile_ = host_.newestDiff(host_.modelName());
+        std::string text;
+        if (execFile_.empty() || !host_.load(execFile_, text)) { note("No diff of this model on the screen's card yet.", "Diff to card makes one.", "", "OK", "", true); closeAfter_ = true; return; }
+        cliCommands(text, exec_);
+        if (exec_.empty()) { note("Nothing to execute in", execFile_, "(no commands in it).", "OK", "", true); closeAfter_ = true; return; }
+        say("Execute " + execFile_ + ": " + std::to_string(exec_.size()) + " commands");
+        char l2[80]; snprintf(l2, sizeof l2, "Its %u commands go to the flight controller's command line,", (unsigned) exec_.size());
+        note("Execute " + execFile_.substr(execFile_.rfind('/') + 1) + "?", l2, "then save: it restarts with those settings.", "Execute", "Cancel", false);
+        return;
+    }
+    say(job == CLI_TO_CARD ? "Diff to card: asking the flight controller for diff all ..." : "Opening the flight controller's command line ...");
+    if (job == CLI_TO_CARD) send("diff all", ST_DIFF); else send("", ST_OPENING);
+}
+void CliPage::execNext() {
+    if (execAt_ >= exec_.size()) {                                   // every command sent: the save, and the flight controller restarts
+        say("All sent. Saving ..."); leave(true); return;
+    }
+    const std::string &c = exec_[execAt_++];
+    say("# " + c);
+    send(c, ST_EXEC);
 }
 void CliPage::close() { page_ = PG_NONE; step_ = ST_IDLE; scene_.items.clear(); scene_.layout++; }
 
@@ -189,21 +246,36 @@ void CliPage::finish(bool ok, const std::string &body, const std::string &err) {
     if (!ok) {
         // (the receiver's reasons are plain words: no USB cable, armed, the transmitter linked and not safe, the FC silent)
         std::string why = body.empty() ? err : body;
-        if (step == ST_OPENING || (job_ && step == ST_DIFF)) {
+        if (step == ST_OPENING || (job_ == CLI_TO_CARD && step == ST_DIFF) || (job_ == CLI_EXECUTE && step == ST_EXEC && sent_ == 0)) {
             if (why.size() > 56) { size_t cut = why.rfind(' ', 56); if (cut == std::string::npos || cut < 30) cut = 56; note("The command line could not be opened:", why.substr(0, cut), why.substr(cut + (why[cut] == ' ' ? 1 : 0), 56), "OK", "", true); }
             else note("The command line could not be opened:", why, "", "OK", "", true);
             closeAfter_ = true; return;
         }
         if (step == ST_LEAVING) { say("Not left: " + why); build(); return; }
+        if (step == ST_EXEC) { char b[80]; snprintf(b, sizeof b, "Stopped at command %d of %u: ", sent_ + 1, (unsigned) exec_.size()); say(b + why); say("Nothing saved. Leave, no save - or Execute diff again."); exec_.clear(); build(); return; }
         say("No answer: " + why); build(); return;
     }
     if (step == ST_LEAVING) {
         cliOpen_ = false;
-        if (job_ && !savedAs_.empty()) { note("Saved on the screen's card as", savedAs_, "The flight controller is restarting (nothing changed).", "OK", "", false); closeAfter_ = true; return; }
+        if (job_ == CLI_TO_CARD && !savedAs_.empty()) { note("Saved on the screen's card as", savedAs_, "The flight controller is restarting (nothing changed).", "OK", "", false); closeAfter_ = true; return; }
+        if (job_ == CLI_EXECUTE && leaveSave_ && !exec_.empty()) {
+            char l1[80]; snprintf(l1, sizeof l1, "Executed: %d commands sent, %d refused.", sent_, refused_);
+            note(l1, refused_ ? "The refused ones are in the console (###ERROR)." : "Saved. The flight controller is restarting with them.", refused_ ? "Saved all the same; the flight controller is restarting." : "", "OK", "", refused_ > 0);
+            closeAfter_ = true; return;
+        }
         note(leaveSave_ ? "Saved. The flight controller is restarting." : "Left without saving. The flight controller is restarting.", "", "", "OK", "", false);
         closeAfter_ = true; return;
     }
     cliOpen_ = true;
+    if (step == ST_EXEC) {
+        sent_++;
+        std::vector<std::string> ls; cliLines(body, ls);
+        bool bad = false;
+        const std::string &was = exec_[execAt_ - 1];
+        for (auto &l : ls) { if (l.find("###ERROR") != std::string::npos || l.find("Invalid") != std::string::npos || l.find("UNKNOWN COMMAND") != std::string::npos) bad = true; if (l != was) say(l); }   // (the echo of the command is not repeated)
+        if (bad) refused_++;
+        execNext(); return;
+    }
     if (step == ST_OPENING) { say("Command line open. Type a command, or use the buttons."); build(); return; }
     if (step == ST_DIFF) {
         std::vector<std::string> ls; cliLines(body, ls);
@@ -215,7 +287,7 @@ void CliPage::finish(bool ok, const std::string &body, const std::string &err) {
         if (!host_.save(name, text, errf)) { say("Could not save " + name + ": " + errf); print(body); build(); return; }
         savedAs_ = name;
         char b[80]; snprintf(b, sizeof b, "Saved: %s (%u lines)", name.c_str(), (unsigned) ls.size());
-        if (!job_) { print(body); say(b); build(); return; }
+        if (job_ != CLI_TO_CARD) { print(body); say(b); build(); return; }
         say(b); leave(false);                                       // the job: and out again (the FC restarts; nothing was changed)
         return;
     }
@@ -311,8 +383,9 @@ void CliPage::act(int id) {
         key(id); return;
     }
     case PG_NOTE: {
-        if (id == ID_NOTE2) { go(PG_CONSOLE); return; }             // "Stay"
+        if (id == ID_NOTE2) { if (noteB1_ == "Execute") { close(); return; } go(PG_CONSOLE); return; }   // "Cancel" / "Stay"
         if (closeAfter_) { close(); return; }
+        if (noteB1_ == "Execute") { go(PG_CONSOLE); execNext(); return; }
         if (noteB1_ == "Save and restart") { go(PG_CONSOLE); leave(true); return; }
         if (noteB1_ == "Leave, no save") { go(PG_CONSOLE); leave(false); return; }
         go(PG_CONSOLE); return;

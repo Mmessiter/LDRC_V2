@@ -651,7 +651,7 @@
    }
   },
   {
-   "n": "b3",
+   "n": "Cli",
    "i": 22,
    "t": "button",
    "g": "l",
@@ -668,7 +668,7 @@
     "bco": 54938,
     "pco2": 65535
    },
-   "txt": "Backup / Restore ...",
+   "txt": "Command line ...",
    "val": 0,
    "a": {
     "style": 4,
@@ -679,7 +679,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "va0.val=48<<8\nprint va0.val"
+    "r": "ldrc cli"
    }
   },
   {
@@ -714,13 +714,45 @@
    }
   },
   {
-   "n": "pipe",
+   "n": "b3",
    "i": 24,
-   "t": "text",
+   "t": "button",
    "g": "l",
    "x": 44,
    "y": 397,
-   "w": 540,
+   "w": 240,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Backup / Restore ...",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=48<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "pipe",
+   "i": 25,
+   "t": "text",
+   "g": "l",
+   "x": 296,
+   "y": 397,
+   "w": 288,
    "h": 50,
    "font": 2,
    "sta": 1,
@@ -743,7 +775,7 @@
   },
   {
    "n": "Progress",
-   "i": 25,
+   "i": 26,
    "t": "progress bar",
    "g": "l",
    "x": 44,
@@ -763,7 +795,7 @@
   },
   {
    "n": "b4",
-   "i": 26,
+   "i": 27,
    "t": "button",
    "g": "l",
    "x": 596,

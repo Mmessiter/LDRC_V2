@@ -42,7 +42,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.41"
+#define SCREEN_VERSION "1.11.42"
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room
 #endif
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -436,7 +436,7 @@ static bool wifiRequested = false;                     // the button has been pr
 static bool wifiPageUp();
 static void wifiTouch(bool pressed, int x, int y, uint32_t now);
 static bool wifiSecretShown();                         // a password can be read on the glass: no picture of the screen leaves the transmitter
-static bool cliRequested = false, cliJobRequested = false;   // (1.11.41) "ldrc cli" / "ldrc diff": the command line page (src/cli_device.h) at the next pass of loop()
+static int cliJobWanted = -1;                          // (1.11.41) "ldrc cli" 0 / "ldrc diff" 1 / "ldrc exec" 2: the command line page (src/cli_device.h) at the next pass of loop()
 static bool cliUp();                                   // the command line page has the screen
 static void cliTouch(bool pressed, int x, int y, uint32_t now);
 static void cliPoll(); static void cliWeb();
@@ -1235,7 +1235,7 @@ struct Host : public NextionHost {
     std::map<std::string, int32_t> sys;
     void unknownCommand(const std::string &line) override {
         // "ldrc <word>": a button of our own, added to a page by hmi/overrides.json. Nothing goes to the Teensy.
-        if (line.rfind("ldrc ", 0) == 0) { if (line == "ldrc update") updRequested = true; else if (line == "ldrc rxupdate") rxUpdRequested = true; else if (line == "ldrc wifi") wifiRequested = true; else if (line == "ldrc flight") flightRequested = true; else if (line == "ldrc colours") coloursRequested = true; else if (line == "ldrc appearance") appearanceRequested = true; else if (line == "ldrc defined") flightDefinedRequested = true; else if (line == "ldrc cli") cliRequested = true; else if (line == "ldrc diff") cliJobRequested = true; else if (line == "ldrc door") doorToggle(); return; }   // (1.11.4: Transmitter setup's "Workshop door" button, Malcolm: "an ordinary button that switches it on")
+        if (line.rfind("ldrc ", 0) == 0) { if (line == "ldrc update") updRequested = true; else if (line == "ldrc rxupdate") rxUpdRequested = true; else if (line == "ldrc wifi") wifiRequested = true; else if (line == "ldrc flight") flightRequested = true; else if (line == "ldrc colours") coloursRequested = true; else if (line == "ldrc appearance") appearanceRequested = true; else if (line == "ldrc defined") flightDefinedRequested = true; else if (line == "ldrc cli") cliJobWanted = 0; else if (line == "ldrc diff") cliJobWanted = 1; else if (line == "ldrc exec") cliJobWanted = 2; else if (line == "ldrc door") doorToggle(); return; }   // (1.11.4: Transmitter setup's "Workshop door" button, Malcolm: "an ordinary button that switches it on")
         unknownFromTeensy(line);
     }
     void unknownFromTeensy(const std::string &line) { badCount++; oddTrace += "script:" + line + " | "; if (oddTrace.size() > 400) oddTrace.erase(0, oddTrace.size() - 400); }

@@ -33,10 +33,38 @@ struct ScreenCli : public ldrc::CliHost {
         blog("cli", "diff saved: " + p + " (" + std::to_string(text.size()) + " bytes)");
         return true;
     }
+    std::string newestDiff(const std::string &model) override {   // the model's files of /rfdiff, the newest by their stamp or number (lib/LdrcCli cliNewer)
+        if (!sdOk) return "";
+        const std::string pre = "/rfdiff/" + ldrc::cliModelPrefix(model);
+        File d = SD.open("/rfdiff");
+        if (!d || !d.isDirectory()) return "";
+        std::string best;
+        for (int guard = 0; guard < 2000; ++guard) {
+            boolean isDir = false;
+            const String full = d.getNextFileName(&isDir);
+            if (full.length() == 0) break;
+            if (isDir) continue;
+            std::string n = full.c_str();
+            if (n.rfind("/rfdiff/", 0) != 0) { const size_t slash = n.find_last_of('/'); n = "/rfdiff/" + (slash == std::string::npos ? n : n.substr(slash + 1)); }
+            if (n.rfind(pre, 0) == 0 && n.size() > 4 && n.compare(n.size() - 4, 4, ".txt") == 0 && (best.empty() || ldrc::cliNewer(n, best, pre))) best = n;
+        }
+        d.close();
+        return best;
+    }
+    bool load(const std::string &p, std::string &text) override {
+        if (!sdOk) return false;
+        File f = SD.open(p.c_str(), FILE_READ);
+        if (!f) return false;
+        text.clear();
+        char b[256];
+        while (f.available() && text.size() < 60000) { const int n = f.read((uint8_t *) b, sizeof b); if (n <= 0) break; text.append(b, (size_t) n); }
+        f.close();
+        return true;
+    }
 };
 static ScreenCli cliHost;
 static ldrc::CliPage cliPage(cliHost);
-static uint32_t cliTouchedAt = 0;
+static uint32_t cliTouchedAt = 0;   // (cliJobWanted, the page to open at the next pass of loop(), is main.cpp's: CLI_CONSOLE, CLI_TO_CARD or CLI_EXECUTE from "ldrc cli" / "ldrc diff" / "ldrc exec")
 static bool cliUp() { return topOn && topWho == CLI_WHO; }
 static void cliDrawConsole(const ldrc::WifiItem &it) {
     const uint16_t back = shade(WF_BACK, -35);
@@ -65,8 +93,8 @@ static void cliTouch(bool pressed, int x, int y, uint32_t now) {
 }
 static void cliPoll() {
     static uint32_t drawnLayout = 0, lastPoke = 0; static bool wasUp = false; static std::map<int, uint32_t> drawn;
-    if ((cliRequested || cliJobRequested) && !radioHeld) {
-        const bool job = cliJobRequested; cliRequested = false; cliJobRequested = false;
+    if (cliJobWanted >= 0 && !radioHeld) {
+        const int job = cliJobWanted; cliJobWanted = -1;
         if (!updShowing() && !wifiPage.showing() && !cliPage.showing() && topReady()) { cliTouchedAt = millis(); cliPage.open(job); }
     }
     cliPage.poll();
@@ -103,7 +131,7 @@ static void cliPoll() {
     wasUp = up;
 }
 static void cliWeb() {                                          // the bench, through the workshop door
-    doorOn("/cli/open", HTTP_POST, []() { if (web.hasArg("job")) cliJobRequested = true; else cliRequested = true; web.send(200, "text/plain", "opening"); });
+    doorOn("/cli/open", HTTP_POST, []() { cliJobWanted = web.hasArg("job") ? atoi(web.arg("job").c_str()) : 0; web.send(200, "text/plain", "opening"); });
     doorOn("/cli/close", HTTP_POST, []() { cliPage.close(); web.send(200, "text/plain", "closed"); });
     doorOn("/cli/status", HTTP_GET, []() {
         auto esc = [](const std::string &t) { std::string o; for (char c : t) { if (c == '"' || c == '\\') o.push_back('\\'); if ((unsigned char) c >= 32) o.push_back(c); } return o; };
