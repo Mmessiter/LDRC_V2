@@ -186,6 +186,13 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Receiver 0.9.884: the prompt is not a comment (10 Oct 2026)
+
+Still 347 lines with 0.9.883. The receiver took a reply as ended whenever what had arrived ended in "# " - the prompt -
+but a diff is full of comment lines that begin "# ", and when the USB packets break just after one, the reply looks
+ended there; the same bytes break the same way every time. Now the prompt is "# " at a line's start with 120 ms of
+silence after it. No transmitter change: screen 1.11.53 as it is.
+
 ## A long reply, fetched until whole (V2 B90, screen 1.11.53, receiver 0.9.883, 10 Oct 2026)
 
 Still "not a whole diff (347 lines)" with 0.9.882: not size then, but time. The receiver waited six seconds for the

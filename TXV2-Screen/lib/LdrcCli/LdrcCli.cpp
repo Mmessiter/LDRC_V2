@@ -325,8 +325,8 @@ void CliPage::finish(bool ok, const std::string &body, const std::string &err) {
     if (step == ST_LEAVING) {
         cliOpen_ = false;
         if (job_ == CLI_TO_CARD && !jobFailed_.empty()) {
-            std::vector<std::string> w; cliWrap(jobFailed_, 58, 2, w); while (w.size() < 2) w.push_back("");
-            note("Diff to card: NOT saved -", w[0], w[1], "OK", "", true); closeAfter_ = true; return;
+            std::vector<std::string> w; cliWrap(jobFailed_, 58, 3, w); while (w.size() < 3) w.push_back("");
+            note("Diff to card: NOT saved -", w[0], w[1], "OK", "", true, w[2]); closeAfter_ = true; return;
         }
         if (job_ == CLI_TO_CARD && !savedAs_.empty()) { note("Saved on the screen's card as", savedAs_, "The flight controller is restarting (nothing changed).", "OK", "", false); closeAfter_ = true; return; }
         if (job_ == CLI_EXECUTE && leaveSave_ && !exec_.empty()) {
@@ -356,7 +356,14 @@ void CliPage::finish(bool ok, const std::string &body, const std::string &err) {
         for (auto &l : ls) { text += l; text += '\n'; }
         diffText_ = text;
         if (!cliDiffWhole(ls)) {
-            if (job_ == CLI_TO_CARD) { print(body); jobFailed_ = "the flight controller's answer was not a whole diff (" + std::to_string(ls.size()) + " lines)"; leave(false); return; }
+            if (job_ == CLI_TO_CARD) {
+                print(body);
+                // 1.11.54: what came, in the note - the first and last lines, and the batch marks - so the cut can be seen (10 Oct: 347 lines four times)
+                bool bs = false, be = false, err = false; for (auto &l : ls) { if (l == "batch start") bs = true; if (l == "batch end") be = true; if (l.find("###ERROR") != std::string::npos) err = true; }
+                std::string first = ls.empty() ? "" : ls.front().substr(0, 24), last = ls.empty() ? "" : ls.back().substr(0, 24);
+                jobFailed_ = "not a whole diff: " + std::to_string(ls.size()) + " lines, first \"" + first + "\", last \"" + last + "\"; batch start " + (bs ? "yes" : "NO") + ", batch end " + (be ? "yes" : "NO") + (err ? ", an ###ERROR in it" : "");
+                leave(false); return;
+            }
             say("That did not look like a diff: not saved."); print(body); build(); return;
         }
         std::string errf; const std::string name = fileName();
