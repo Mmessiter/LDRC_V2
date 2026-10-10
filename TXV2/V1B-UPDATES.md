@@ -186,6 +186,14 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The start-up picture says V2 (V2 B90, screen 1.11.56, 10 Oct 2026)
+
+Malcolm: "is it possible for you to edit this image such that it declares LockDownRadioControl V2". The picture on the
+screen's card that shows while the transmitter starts (picture 0, page SplashView) now reads "LockDownRadioControl V2"
+over "is loading...". The old title was painted out with the sky above and below it and the new one drawn in the same
+face, weight and colour as "is loading..."; the capitals are a little smaller (41 px, were 44) so that " V2" fits
+inside the old margins. hmi/splash_v2.py makes it. Only the card changes: the screen fetches that one picture.
+
 ## The console follows every command, and the page can always be left (V2 B90, screen 1.11.56, 10 Oct 2026)
 
 Malcolm, after `set`, `get` and `save` all worked: "after executing a command, the screen should scroll automatically
