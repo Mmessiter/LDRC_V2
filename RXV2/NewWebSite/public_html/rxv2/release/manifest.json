@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.883-cli-long-replies",
+      "url": "https://messiter.com/rxv2/release/v0.9.883/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.883/littlefs.bin",
+      "fs_md5": "229c6d3d6e6ee62d684462c6fffbcea2",
+      "notes": "A command line reply the flight controller is still printing after the wait (a diff all of every bank) now comes back as its start with 202, and /api/cli/out gives the rest until it is whole; before, what had come in six seconds went out as the whole reply. The phone's command line page fetches the rest too."
+    },
+    {
       "name": "RXV2-0.9.882-cli-diff-all-whole",
       "url": "https://messiter.com/rxv2/release/v0.9.882/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.882/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.872/littlefs.bin",
       "fs_md5": "cc4878104ade8765b32ab2b7b6cb420e",
       "notes": "Same firmware as 0.9.871: something for a receiver on 0.9.871 to install from the transmitter."
-    },
-    {
-      "name": "RXV2-0.9.871-release-number-always-sent",
-      "url": "https://messiter.com/rxv2/release/v0.9.871/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.871/littlefs.bin",
-      "fs_md5": "cc4878104ade8765b32ab2b7b6cb420e",
-      "notes": "Telemetry items 39 and 40 (the release number, and the transmitter-ordered update) were skipped whenever no phone had set the clock this boot: the rotation went from item 37 straight back to 0. Now sent every time. Found on the bench: the transmitter said 'The receiver did not say its version' as soon as the receiver was power-cycled."
     }
   ],
   "rotorflight": {

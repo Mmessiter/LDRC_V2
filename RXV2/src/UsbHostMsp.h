@@ -319,21 +319,37 @@ namespace UsbHostMsp {
         { char m[96]; snprintf(m, sizeof m, "%s: Rotorflight command line open over USB (MSP paused until save/exit)", who()); events.add(m); }
         return true;
     }
-    // Send one command, return everything the FC printed up to its next prompt.
+    // 0.9.883: the command last sent, for the echo to be dropped from what the FC printed - by cliExchange as it answers,
+    // and by cliOutput later, when a long reply (a diff all of every bank) outran the wait and the client comes back for it
+    inline String cliLastCmd;
+    inline void cliTidy(String& out) {                   // drop the echoed command line and the trailing prompt
+        int nl = out.indexOf('\n'); if (nl >= 0 && out.startsWith(cliLastCmd)) out = out.substring(nl + 1);
+        if (out.endsWith("# ")) out = out.substring(0, out.length() - 2);
+        out.trim();
+    }
+    // Send one command, return everything the FC printed up to its next prompt. False with `out` filled: the prompt had
+    // not come within the wait - what is there is the START of the reply, and cliOutput() gives the rest later.
     inline bool cliExchange(const String& cmd, String& out, uint32_t timeoutMs) {
         if (!cliMode) return false;
         cliTouchedMs = millis();
-        cliBuf = "";
+        cliBuf = ""; cliLastCmd = cmd;
         String line = cmd; line += "\n";
         if (!send((const uint8_t*)line.c_str(), line.length())) return false;
         const bool ok = cliWait(timeoutMs);
         out = cliBuf;
-        // drop the echoed command line and the trailing prompt
-        int nl = out.indexOf('\n'); if (nl >= 0 && out.startsWith(cmd)) out = out.substring(nl + 1);
-        if (out.endsWith("# ")) out = out.substring(0, out.length() - 2);
-        out.trim();
+        cliTidy(out);
         cliLines++;
         return ok;
+    }
+    // What the last command has printed so far; true once its prompt is back (the reply is whole)
+    inline bool cliOutput(String& out) {
+        if (!cliMode) { out = ""; return false; }
+        cliTouchedMs = millis();
+        poll();
+        const bool done = cliPromptSeen();
+        out = cliBuf;
+        cliTidy(out);
+        return done;
     }
     inline void cliLeave(bool save) {
         if (!cliMode) return;

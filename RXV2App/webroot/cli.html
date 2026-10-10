@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Command line &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=383">
-<script src="/app.js?v=383" defer></script>
+<link rel=stylesheet href="/style.css?v=384">
+<script src="/app.js?v=384" defer></script>
 <style>
 /* Malcolm 2026-09-14: "long pauses might cause panic so let's add a please
    wait or even a progress bar". A Rotorflight `diff` or `dump` genuinely takes
@@ -120,8 +120,15 @@ async function run(cmd) {
     $('send').disabled = true;
     waitOn('Asking the flight controller\u2026');
     try {
-        const r = await fetch('/api/cli?cmd=' + encodeURIComponent(cmd), { cache: 'no-store' });
-        const t = await r.text();
+        // 0.9.883: a long reply (diff all of every bank) comes back 202 with its start; the rest is fetched from /api/cli/out
+        // until that answers 200 (up to a minute). Before, what had come in six seconds was shown as the whole.
+        let r = await fetch('/api/cli?cmd=' + encodeURIComponent(cmd) + '&wait=5000', { cache: 'no-store' });
+        let t = await r.text();
+        for (let n = 0; r.status === 202 && n < 120; ++n) {
+            waitOn('Still printing\u2026 ' + t.split('\n').length + ' lines so far');
+            await new Promise(res => setTimeout(res, 500));
+            r = await fetch('/api/cli/out', { cache: 'no-store' }); t = await r.text();
+        }
         if (!r.ok) { setStatus('bad', t); print('! ' + t); }
         else { setStatus('', ''); print(t); }
     } catch (e) { setStatus('bad', 'no answer from the flight controller'); }

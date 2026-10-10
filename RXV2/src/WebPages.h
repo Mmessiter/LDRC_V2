@@ -3866,10 +3866,23 @@ inline void handleCliApi() {
     }
     if (!UsbHostMsp::cliMode && !UsbHostMsp::cliEnter(2500)) { server.send(504, "text/plain", "the flight controller did not open its command line"); return; }
     if (cmd.length() == 0) { server.send(200, "text/plain", "CLI open"); return; }
+    // 0.9.883 (the transmitter's Diff to card, 10 Oct: "not a whole diff (347 lines)", twice the same): a diff all of every
+    // bank takes the flight controller longer than the 6 s waited here, and what had come by then went out as the whole
+    // reply, with 200. Now a reply whose prompt has not come goes out with 202 - it is the START - and the client fetches
+    // the rest from /api/cli/out until that says 200. The wait is the client's to set (wait=, up to 10 s).
+    uint32_t wait = 6000;
+    if (server.hasArg("wait")) { const long w = server.arg("wait").toInt(); if (w >= 500 && w <= 10000) wait = (uint32_t)w; }
     String out;
-    const bool ok = UsbHostMsp::cliExchange(cmd, out, 6000);
+    const bool ok = UsbHostMsp::cliExchange(cmd, out, wait);
     if (!ok && out.length() == 0) { server.send(504, "text/plain", "no reply from the flight controller"); return; }
-    server.send(200, "text/plain", out);
+    server.send(ok ? 200 : 202, "text/plain", out);
+}
+inline void handleCliOut() {                              // GET /api/cli/out: what the last command has printed so far; 200 once whole, 202 while it still prints
+    server.sendHeader("Cache-Control", "no-store");
+    if (!UsbHostMsp::cliMode) { server.send(409, "text/plain", "the command line is not open"); return; }
+    String out;
+    const bool done = UsbHostMsp::cliOutput(out);
+    server.send(done ? 200 : 202, "text/plain", out);
 }
 inline void handleCliLeave() {
     if (refuseIfArmed("leave the command line")) return;   // 2026-09-16 review: on a dongle the TX-link gates are no-ops
@@ -3934,6 +3947,7 @@ inline void registerWebRoutes() {
     server.on("/rotorflight-filters", []() { if (!serveLittleFsFile("/rotorflight-filters.html", "text/html")) server.send(503, "text/plain", "page missing - update the web files"); });
     server.on("/cli",                   []() { if (!serveLittleFsFile("/cli.html", "text/html")) server.send(503, "text/plain", "page missing - update the web files"); });
     server.on("/api/cli",               handleCliApi);          // USB only: one Rotorflight command, its printed reply
+    server.on("/api/cli/out",           HTTP_GET, handleCliOut);   // 0.9.883: the rest of a long reply
     server.on("/api/cli/leave",         HTTP_POST, handleCliLeave);
     server.on("/rotorflight-backup",    handleRotorflightBackupPage);
     server.on("/rotorflight-copybank",  handleRotorflightCopyBank);
