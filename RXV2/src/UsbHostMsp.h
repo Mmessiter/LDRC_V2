@@ -155,6 +155,7 @@ namespace UsbHostMsp {
     // the serial ports) was gone, for the phone's command line as for the transmitter's. 64 kB now (in PSRAM: the S3's
     // allocations over 4 kB go there); the tail is still what is kept if a dump ever runs longer.
     constexpr size_t CLI_BUF_MAX = 64000;
+    inline uint32_t cliLastByteMs = 0;     // 0.9.884: when the last byte came (the prompt test wants a quiet moment after "# ")
     inline volatile bool cliMode = false;
     inline uint32_t cliTouchedMs = 0;      // 0.9.705: last time anything used the command line
     inline String   cliBuf;
@@ -286,16 +287,26 @@ namespace UsbHostMsp {
             while ((n = xStreamBufferReceive(rxbuf, b, sizeof b, 0)) > 0) {
                 bytesIn += n;
                 crumb(2, n);
-                if (cliMode) { cliBuf.concat((const char*)b, n); if (cliBuf.length() > CLI_BUF_MAX) cliBuf.remove(0, cliBuf.length() - CLI_BUF_MAX); }   // keep the TAIL: the prompt ends it, however long a dump is (0.9.642)
+                if (cliMode) { cliBuf.concat((const char*)b, n); cliLastByteMs = millis(); if (cliBuf.length() > CLI_BUF_MAX) cliBuf.remove(0, cliBuf.length() - CLI_BUF_MAX); }   // keep the TAIL: the prompt ends it, however long a dump is (0.9.642)
                 else { crumb(3, n); for (size_t i = 0; i < n; i++) mspSerialFeed(b[i]); }
                 crumbDone();
             }
         }
     }
     // --- command line -------------------------------------------------
+    // 0.9.884 (Malcolm, 10 Oct: the transmitter's Diff to card ended "not a whole diff (347 lines)" three times running,
+    // through two fixes that were not it): a reply was taken as ended whenever what had arrived ended in "# ". That is the
+    // prompt - but a diff is full of comment lines that BEGIN "# " ("# profile 1", "# version"), and when the USB packets
+    // happen to break just after one of those, the reply looks ended there. The same bytes break the same way every time,
+    // hence 347 lines every time. The prompt is "# " at the START of a line with NOTHING after it: so the test now also
+    // wants a quiet moment (CLI_QUIET_MS without a byte) - after the prompt the flight controller falls silent, after a
+    // comment's "# " the rest of its line follows at once.
+    constexpr uint32_t CLI_QUIET_MS = 120;
     inline bool cliPromptSeen() {
         const int L = cliBuf.length();
-        return L >= 2 && cliBuf.charAt(L - 1) == ' ' && cliBuf.charAt(L - 2) == '#';
+        if (!(L >= 2 && cliBuf.charAt(L - 1) == ' ' && cliBuf.charAt(L - 2) == '#')) return false;
+        if (L >= 3 && cliBuf.charAt(L - 3) != '\n' && cliBuf.charAt(L - 3) != '\r') return false;   // ("# " not at a line's start: a comment or a word, never the prompt)
+        return (uint32_t)(millis() - cliLastByteMs) >= CLI_QUIET_MS;
     }
     inline bool cliWait(uint32_t timeoutMs) {          // pump the link until the prompt is back
         // A receiver keeps flying while it waits, exactly as mspRequestAndWait does

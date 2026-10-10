@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.884-cli-prompt-not-a-comment",
+      "url": "https://messiter.com/rxv2/release/v0.9.884/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.884/littlefs.bin",
+      "fs_md5": "229c6d3d6e6ee62d684462c6fffbcea2",
+      "notes": "The command line's reply was taken as ended at any \"# \" that a USB packet happened to end on - a diff is full of comment lines that begin so, which is why a long diff all ended at the same 347 lines every time. The prompt is now \"# \" at a line's start followed by silence."
+    },
+    {
       "name": "RXV2-0.9.883-cli-long-replies",
       "url": "https://messiter.com/rxv2/release/v0.9.883/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.883/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.873/littlefs.bin",
       "fs_md5": "cc4878104ade8765b32ab2b7b6cb420e",
       "notes": "Transmitter-ordered update: the transmitter is asked to stay silent for 60 s instead of 90 (the bench: accepted to restarted in 20 s at home), and a download that fails with an HTTP error is tried once more after 5 s (the first bench run met a 404 for a file that was there)."
-    },
-    {
-      "name": "RXV2-0.9.872-installable-from-the-transmitter",
-      "url": "https://messiter.com/rxv2/release/v0.9.872/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.872/littlefs.bin",
-      "fs_md5": "cc4878104ade8765b32ab2b7b6cb420e",
-      "notes": "Same firmware as 0.9.871: something for a receiver on 0.9.871 to install from the transmitter."
     }
   ],
   "rotorflight": {

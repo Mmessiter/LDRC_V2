@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.883-cli-long-replies";
+constexpr const char* FW_VERSION = "RXV2-0.9.884-cli-prompt-not-a-comment";
 
 //*********************************************************************
 //  Auto-update manifest URLs
