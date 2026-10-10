@@ -186,6 +186,15 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The menu whole again after the command line (V2 B90, screen 1.11.46, 10 Oct 2026)
+
+Malcolm's photo, 10 Oct: back from the command line, the Rotorflight menu showed only its two lowest rows, the arming
+line and the tooth. The "Connecting Bluetooth" notice had been cleared while the command line page covered the menu,
+and its clearing (1.11.26) redrew only the components touching its rectangle: among them the island's card, which
+painted over the rows and the foot that were not redrawn. The notice's hole is now repainted as every other hole is
+(what it touches, and everything over the area those cover), and the notice sits over the island's arming line and
+foot rather than where the old full-page menu had room.
+
 ## The keys: Delete beside the box, the big yellow key acts (V2 B90, screen 1.11.45, 10 Oct 2026)
 
 Malcolm, 10 Oct, of the command line's keys: "the delete button, I think should be on the right-hand side of the text

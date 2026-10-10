@@ -293,7 +293,7 @@ static bool bleAsk(const std::string &method, const std::string &path, const std
 // refuses those pages meanwhile (B47), with the same words.
 static bool pipeNoticeUp = false; static int pipeNoticePage = -1;
 static uint32_t pipeNoticeSince = 0; static bool pipeNoticeLate = false;   // 1.11.39: after a while the notice says what usually stands in the way
-static const int PN_X = 34, PN_Y = 280, PN_W = 732, PN_H = 112;   // (1.11.26: a strip under the menu's grid of buttons, over the model name's line)
+static const int PN_X = 40, PN_Y = 336, PN_W = 720, PN_H = 116;   // (1.11.46: over the island menu's arming line and foot - rows of the grid were under 1.11.26's place)
 static void pipeNoticeDraw() {
     gfx->fillRect(PN_X, PN_Y, PN_W, PN_H, OUR_PANEL);
     gfx->drawRect(PN_X, PN_Y, PN_W, PN_H, OUR_INK); gfx->drawRect(PN_X + 1, PN_Y + 1, PN_W - 2, PN_H - 2, OUR_INK);
@@ -308,9 +308,11 @@ static void pipeNoticeDraw() {
     memoTouched(PN_X, PN_Y, PN_W, PN_H); dirty(PN_X, PN_Y, PN_W, PN_H); damage(PN_X, PN_Y, PN_W, PN_H);
 }
 static void pipeNoticeClear() {
-    restoreRect(PN_X, PN_Y, PN_W, PN_H);
-    for (auto &c : page.comps) if (c.x < PN_X + PN_W && c.x + c.w > PN_X && c.y < PN_Y + PN_H && c.y + c.h > PN_Y) drawComp(c);
-    memoTouched(PN_X, PN_Y, PN_W, PN_H); dirty(PN_X, PN_Y, PN_W, PN_H);
+    // 1.11.46 (Malcolm's photo, 10 Oct: back from the command line, the menu had lost its top rows and its foot): the hole is
+    // repainted as every other hole is (repaintHole: the components it touches, and then everything over the area THEY cover -
+    // the island's card touches it, and drawing the card again paints over the whole island, so the rest must follow).
+    // 1.11.26's own loop drew only what touched the rectangle.
+    repaintHole(PN_X, PN_Y, PN_W, PN_H);
 }
 static void pipeNoticePoll() {
     const bool joining = bleState == BLE_STARTING || bleState == BLE_SCANNING || bleState == BLE_CONNECTING;
