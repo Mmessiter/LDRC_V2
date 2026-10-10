@@ -186,6 +186,18 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The front page after an update: its picture back, and "V2" in its title (V2 B92, screen 1.11.56, 10 Oct 2026)
+
+Malcolm: "After updating the firmware and getting rid of the completed screen by pressing OK, it returned to the front
+screen but without the image of the model." An update with new card files restarts the screen at its end. The screen
+puts its last page back from its card - the front page, whose own start hides the picture (vis exp0,0) - and says
+"FrontView" to the main board, which only set its names and bank: nothing showed the picture again. B92 answers
+"FrontView" with the whole front page, as GotoFrontView makes it (the picture, the trims, the bank, the names, and the
+page itself, should the screen have put back another page than the one the main board is on).
+
+And: "let's add V2 to the title at the top as we did to the opening splash screen". The title is
+"LockDownRadioControl V2"; its box (and the date's) is wider, and Help is 160 wide (was 170), clear of the right-hand trim.
+
 ## Black box: every answer in full (V2 B91, screen 1.11.56, 10 Oct 2026)
 
 Malcolm, of "Armed + swi..." and "Whenever ar...": "The answer to the 'when' is so abbreviated, it's difficult to

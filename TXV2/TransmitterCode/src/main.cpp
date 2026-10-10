@@ -4300,11 +4300,13 @@ FASTRUN void ButtonWasPressed()
 
         if (InStrng(Front_View, TextIn))
         {
-            CurrentView = FRONTVIEW;
-            ClearText();
+            // B92 (Malcolm, 10 Oct, after an update: "it returned to the front screen but without the image of the model"):
+            // no page says "FrontView" - the screen does, after its own restart (an update with new card files restarts it),
+            // having put its last page back from its card. That page has none of what this board wrote on it, and the front
+            // page's own preinitialize hides the picture (vis exp0,0). So: the whole front page, as GotoFrontView makes it -
+            // the picture, the trims, the bank, the names - and the page itself, should the screen have put back another.
             PreviousBank = 250; // sure to be different
-            UpdateModelsNameEveryWhere();
-            ClearText();
+            GotoFrontView();
             return;
         }
 

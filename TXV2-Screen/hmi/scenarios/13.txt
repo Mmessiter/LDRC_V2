@@ -1,0 +1,12 @@
+# FrontView (page 13), as Malcolm's photo of 10 Oct (Black Thunder 2, bank 4): GotoFrontView (main.cpp) fills it in.
+# B92: the title "LockDownRadioControl V2" (375 px in font 0) in its wider box, Help 160 wide; the model's picture shown
+# (vis exp0,1), as GotoFrontView now does after the screen's own restart too.
+Screen_Background=8
+@model 1
+page FrontView
+t4.txt="Bank 4"
+rate.txt="Rate"
+DateTime.txt="10 October 2026 17:10:53"
+exp0.path="sd0/images/Bthundr1.jpg"
+vis exp0,1
+@shot 13_front

@@ -339,6 +339,19 @@
     },
     "BackGround": {
       "val": 0
+    },
+    "Title": {
+      "txt": "LockDownRadioControl V2",
+      "x": 221,
+      "w": 386
+    },
+    "DateTime": {
+      "x": 221,
+      "w": 386
+    },
+    "b17": {
+      "x": 610,
+      "w": 160
     }
   },
   "SticksView": {
@@ -392,5 +405,6 @@
     }
   },
   "_comment_centre": "Channel bars that grow from the middle (screen 1.7.0, Malcolm 2026-10-04): \"centre\": true on a progress bar.",
-  "_comment_front": "FrontView bottom row (screen 1.7.3, 1.8.6): three equal buttons, Transmitter / Defined screen / Model; the link word and bar side by side above them (hmi/front_buttons.py). BackGround.val starts at 0 (black), as the main board sets it at every power-on; the HMI had 214, an old blue, which showed when only the screen had restarted (1.9.7)."
+  "_comment_front": "FrontView bottom row (screen 1.7.3, 1.8.6): three equal buttons, Transmitter / Defined screen / Model; the link word and bar side by side above them (hmi/front_buttons.py). BackGround.val starts at 0 (black), as the main board sets it at every power-on; the HMI had 214, an old blue, which showed when only the screen had restarted (1.9.7).",
+  "_comment_title": "FrontView title (B92, Malcolm 10 Oct: \"let's add V2 to the title at the top as we did to the opening splash screen\"): \"LockDownRadioControl V2\" is 375 px in font 0, more than the old 355 px box; the box (and the date under it) runs 221..607, and Help is 160 wide at 610 (it was 170 at 595), clear of the right-hand trim at 780."
 }
