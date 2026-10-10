@@ -239,8 +239,8 @@ void CliPage::open(int job) {
         note("Execute " + execFile_.substr(execFile_.rfind('/') + 1) + "?", l2, "then save: it restarts with those settings.", "Execute", "Cancel", false);
         return;
     }
-    say(job == CLI_TO_CARD ? "Diff to card: asking the flight controller for diff all ..." : "Opening the flight controller's command line ...");
-    if (job == CLI_TO_CARD) send("diff all", ST_DIFF); else send("", ST_OPENING);
+    if (job == CLI_TO_CARD) { say("Diff to card: asking the flight controller for diff all ..."); send("diff all", ST_DIFF); }
+    else send("", ST_OPENING);                                        // (nothing said while it opens: "Working ..." stands in the strip)
 }
 void CliPage::execNext() {
     if (execAt_ >= exec_.size()) {                                   // every command sent: the save, and the flight controller restarts
@@ -311,7 +311,7 @@ void CliPage::finish(bool ok, const std::string &body, const std::string &err) {
         if (bad) refused_++;
         execNext(); return;
     }
-    if (step == ST_OPENING) { say("Command line open. Type a command."); say("save keeps your changes, exit drops them; either restarts the flight controller."); build(); return; }
+    if (step == ST_OPENING) { say("Type a command"); build(); return; }   // (1.11.49, Malcolm: "If they've got this far, they will know that already, so let's keep the words a bit shorter")
     if (step == ST_DIFF) {
         std::vector<std::string> ls; cliLines(body, ls);
         std::string text;

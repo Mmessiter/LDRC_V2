@@ -186,6 +186,12 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## "Type a command" (V2 B90, screen 1.11.49, 10 Oct 2026)
+
+Malcolm, 10 Oct: the console's opening words are "Type a command" and no more - "users will already know that they must
+hit save to save them or ignore changes by just leaving. If they've got this far, they will know that already". Nothing
+is said while the line opens: "Working ..." in the strip is enough.
+
 ## Long lines wrap in the console (V2 B90, screen 1.11.48, 10 Oct 2026)
 
 Malcolm, 10 Oct, of a console line that ended "(b...": "I'm curious to know what the last word would have been here!"
