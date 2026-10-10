@@ -93,6 +93,7 @@ static void cliPoll() {
     }
     cliPage.poll();
     if (cliPage.showing() && !topReady()) cliPage.close();
+    cliPageUp = cliPage.showing();
     const bool up = cliPage.showing() && !updShowing() && topReady();
     if (up) {
         const ldrc::WifiScene &sc = cliPage.scene();

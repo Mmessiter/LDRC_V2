@@ -186,6 +186,18 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Diff to card: the pipe is the page's, and a failure says so (V2 B90, screen 1.11.51, 10 Oct 2026)
+
+1.11.50's note showed that /rfdiff did not exist: Diff to card had never reached the save. Its failures went into a
+console line that OK then closed, so nothing was seen. Three changes:
+- while the command line page is up, the main board's own asks through the pipe (the menu's "why will it not arm",
+  every 2 s) are answered by the screen at once instead of going to the receiver: a command of the page's that met
+  one was refused "busy";
+- a request the pipe is busy for is tried again for up to 5 s instead of being refused;
+- Diff to card that cannot finish (not a diff, the card refusing, no answer) leaves the command line and ends in a
+  note "Diff to card: NOT saved" with the reason.
+hmi/test_cli: 99 checks.
+
 ## Execute diff says what it looked for (V2 B90, screen 1.11.50, 10 Oct 2026)
 
 Malcolm, 10 Oct: after Diff to card, Execute diff said there was no file. Not yet understood, so the page now tells:

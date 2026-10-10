@@ -95,6 +95,8 @@ private:
     std::vector<std::string> lines_; int top_; bool follow_;
     std::string typed_; int layer_;
     int job_; bool cliOpen_, leaveSave_, closeAfter_, closing_, changed_;   // changed_: a command that sets something has gone since the line opened (OK asks only then)
+    std::string waitMethod_, waitPath_; uint32_t waitUntil_;   // (1.11.51) a request the pipe was too busy for: tried again until then
+    std::string jobFailed_;                                   // (1.11.51) a job that could not finish: why, said in a note once the line is left
     std::vector<std::string> exec_; size_t execAt_; int sent_, refused_; std::string execFile_;
     std::string pending_, diffText_, savedAs_;
     std::string noteL1_, noteL2_, noteL3_, noteL4_, noteB1_, noteB2_; bool noteBad_; int noteFrom_;

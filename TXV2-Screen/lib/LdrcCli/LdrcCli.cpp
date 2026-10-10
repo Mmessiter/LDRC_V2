@@ -123,7 +123,7 @@ static const char *LAYERS[3][4] = {
 static const int CON_X = 6, CON_Y = 64, CON_W = 788, CON_H = 312;   // the console (1.11.44: across the page; a finger scrolls it, as the help pages)
 
 CliPage::CliPage(CliHost &host)
-    : host_(host), page_(PG_NONE), step_(ST_IDLE), top_(0), follow_(true), layer_(0), job_(0), cliOpen_(false), leaveSave_(false), closeAfter_(false), closing_(false), changed_(false),
+    : host_(host), page_(PG_NONE), step_(ST_IDLE), top_(0), follow_(true), layer_(0), job_(0), cliOpen_(false), leaveSave_(false), closeAfter_(false), closing_(false), changed_(false), waitUntil_(0),
       execAt_(0), sent_(0), refused_(0), noteBad_(false), noteFrom_(0), down_(false), pressed_(0), lastX_(0), lastY_(0), downY_(0), dragTop_(0), dragged_(false), seenDown_(0), repeatAt_(0), repeated_(false), serial_(1), askedAt_(0) {}
 
 std::string CliPage::pageName() const {
@@ -232,7 +232,7 @@ void CliPage::refusal(const std::string &why) {                   // (the receiv
 
 // ------------------------------------------------------------------ open, close, the steps
 void CliPage::open(int job) {
-    job_ = job; cliOpen_ = false; closeAfter_ = false; closing_ = false; changed_ = false; step_ = ST_IDLE; lines_.clear(); top_ = 0; follow_ = true; typed_.clear(); layer_ = 0;
+    job_ = job; cliOpen_ = false; closeAfter_ = false; closing_ = false; changed_ = false; step_ = ST_IDLE; waitPath_.clear(); waitUntil_ = 0; jobFailed_.clear(); lines_.clear(); top_ = 0; follow_ = true; typed_.clear(); layer_ = 0;
     pending_.clear(); diffText_.clear(); savedAs_.clear(); down_ = false; pressed_ = 0; exec_.clear(); execAt_ = 0; sent_ = 0; refused_ = 0; execFile_.clear();
     if (host_.armed()) { page_ = PG_CONSOLE; note("Not while the model could be flying.", "Safety on, motor off.", "", "OK", "", true); closeAfter_ = true; return; }
     if (!host_.pipeReady()) {
@@ -283,12 +283,13 @@ static std::string urlEncode(const std::string &s) {
 void CliPage::send(const std::string &cmd, Step step) {
     pending_ = cmd; step_ = step; askedAt_ = host_.ms();
     if ((step == ST_COMMAND || step == ST_EXEC) && !cliReadOnly(cmd)) changed_ = true;
-    if (!host_.ask("GET", "/api/cli?cmd=" + urlEncode(cmd))) { step_ = ST_IDLE; say("The pipe is busy: try again."); }
+    if (!host_.ask("GET", "/api/cli?cmd=" + urlEncode(cmd))) { waitMethod_ = "GET"; waitPath_ = "/api/cli?cmd=" + urlEncode(cmd); waitUntil_ = host_.ms() + 5000; }   // (busy: tried again in poll(), 5 s)
     build();
 }
 void CliPage::leave(bool save) {
     leaveSave_ = save; step_ = ST_LEAVING; askedAt_ = host_.ms();
-    if (!host_.ask("POST", std::string("/api/cli/leave?save=") + (save ? "1" : "0"))) { step_ = ST_IDLE; say("The pipe is busy: try again."); }
+    const std::string path = std::string("/api/cli/leave?save=") + (save ? "1" : "0");
+    if (!host_.ask("POST", path)) { waitMethod_ = "POST"; waitPath_ = path; waitUntil_ = host_.ms() + 5000; }
     build();
 }
 std::string CliPage::fileName() {
@@ -310,6 +311,10 @@ void CliPage::finish(bool ok, const std::string &body, const std::string &err) {
     }
     if (step == ST_LEAVING) {
         cliOpen_ = false;
+        if (job_ == CLI_TO_CARD && !jobFailed_.empty()) {
+            std::vector<std::string> w; cliWrap(jobFailed_, 58, 2, w); while (w.size() < 2) w.push_back("");
+            note("Diff to card: NOT saved -", w[0], w[1], "OK", "", true); closeAfter_ = true; return;
+        }
         if (job_ == CLI_TO_CARD && !savedAs_.empty()) { note("Saved on the screen's card as", savedAs_, "The flight controller is restarting (nothing changed).", "OK", "", false); closeAfter_ = true; return; }
         if (job_ == CLI_EXECUTE && leaveSave_ && !exec_.empty()) {
             char l1[80]; snprintf(l1, sizeof l1, "Executed: %d commands sent, %d refused.", sent_, refused_);
@@ -337,9 +342,15 @@ void CliPage::finish(bool ok, const std::string &body, const std::string &err) {
         std::string text;
         for (auto &l : ls) { text += l; text += '\n'; }
         diffText_ = text;
-        if (ls.size() < 3 || text.find("diff") == std::string::npos) { say("That did not look like a diff: not saved."); print(body); build(); return; }
+        if (ls.size() < 3 || text.find("diff") == std::string::npos) {
+            if (job_ == CLI_TO_CARD) { print(body); jobFailed_ = "the flight controller's answer was not a diff (" + std::to_string(ls.size()) + " lines)"; leave(false); return; }
+            say("That did not look like a diff: not saved."); print(body); build(); return;
+        }
         std::string errf; const std::string name = fileName();
-        if (!host_.save(name, text, errf)) { say("Could not save " + name + ": " + errf); print(body); build(); return; }
+        if (!host_.save(name, text, errf)) {
+            if (job_ == CLI_TO_CARD) { jobFailed_ = "the card would not keep " + name + ": " + errf; leave(false); return; }
+            say("Could not save " + name + ": " + errf); print(body); build(); return;
+        }
         savedAs_ = name;
         char b[80]; snprintf(b, sizeof b, "Saved: %s (%u lines)", name.c_str(), (unsigned) ls.size());
         if (job_ != CLI_TO_CARD) { print(body); say(b); build(); return; }
@@ -351,6 +362,11 @@ void CliPage::finish(bool ok, const std::string &body, const std::string &err) {
 }
 void CliPage::poll() {
     if (page_ == PG_NONE) return;
+    if (step_ != ST_IDLE && !waitPath_.empty()) {                    // (1.11.51) the pipe was busy: again, until it takes it or 5 s have gone
+        if (host_.ask(waitMethod_, waitPath_)) { waitPath_.clear(); askedAt_ = host_.ms(); }
+        else if ((int32_t) (host_.ms() - waitUntil_) >= 0) { waitPath_.clear(); finish(false, "", "the Bluetooth pipe stayed busy"); }
+        return;
+    }
     if (step_ != ST_IDLE) {
         const int st = host_.askState();
         if (st == 1) finish(host_.askCode() == 200, host_.askBody(), "");

@@ -375,6 +375,10 @@ static void bleHttpCommand(const std::string &a) {             // (1.11.18) "ldr
     while (!q.path.empty() && (q.path.back() == ' ' || q.path.back() == '\r' || q.path.back() == '\n')) q.path.pop_back();
     if (q.path.empty() || q.path[0] != '/') return;
     if (bleState != BLE_READY) { bleMailPost("ldrcrep " + std::to_string(q.id) + " 0 not joined\n"); return; }
+    // 1.11.51: while the command line page is up the pipe is its own. The main board's own asks (the menu's "why will it not
+    // arm", every 2 s) are answered here at once: through to the receiver they took the pipe at random moments, and a
+    // command of the page's that met one was refused "busy" (Malcolm, 10 Oct: Diff to card made no file)
+    if (cliPageUp) { bleMailPost("ldrcrep " + std::to_string(q.id) + " 409 the command line page is open\n"); return; }
     if (bleMutex && xSemaphoreTake(bleMutex, pdMS_TO_TICKS(5)) == pdTRUE) { if (bleHttpQueue.size() < 8) bleHttpQueue.push_back(q); xSemaphoreGive(bleMutex); }
 }
 static std::string bleStatusJson() {
