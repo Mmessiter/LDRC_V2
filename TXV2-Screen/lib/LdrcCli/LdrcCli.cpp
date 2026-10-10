@@ -95,6 +95,17 @@ bool cliReadOnly(const std::string &cmd) {
     for (const char *k : words) if (w == k) return true;
     return false;
 }
+bool cliDiffWhole(const std::vector<std::string> &lines) {
+    bool head = false, start = false, end = false;
+    for (size_t i = 0; i < lines.size(); ++i) {
+        const std::string &l = lines[i];
+        if (i < 5 && l.find("diff") != std::string::npos) head = true;
+        if (l.find("###ERROR") != std::string::npos) return false;
+        if (l == "batch start") start = true;
+        if (l == "batch end") end = true;
+    }
+    return head && lines.size() >= 3 && (!start || end);
+}
 void cliWrap(const std::string &text, size_t width, size_t most, std::vector<std::string> &out) {
     out.clear();
     std::string rest = text;
@@ -342,8 +353,8 @@ void CliPage::finish(bool ok, const std::string &body, const std::string &err) {
         std::string text;
         for (auto &l : ls) { text += l; text += '\n'; }
         diffText_ = text;
-        if (ls.size() < 3 || text.find("diff") == std::string::npos) {
-            if (job_ == CLI_TO_CARD) { print(body); jobFailed_ = "the flight controller's answer was not a diff (" + std::to_string(ls.size()) + " lines)"; leave(false); return; }
+        if (!cliDiffWhole(ls)) {
+            if (job_ == CLI_TO_CARD) { print(body); jobFailed_ = "the flight controller's answer was not a whole diff (" + std::to_string(ls.size()) + " lines)"; leave(false); return; }
             say("That did not look like a diff: not saved."); print(body); build(); return;
         }
         std::string errf; const std::string name = fileName();

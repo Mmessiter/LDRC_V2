@@ -186,6 +186,14 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## A whole diff all (V2 B90, screen 1.11.52, receiver 0.9.882, 10 Oct 2026)
+
+1.11.51's note: "the flight controller's answer was not a diff (347 lines)". The receiver kept only the LAST 16,000
+characters of a command line reply, and Rotorflight's `diff all` (every bank) is longer: its head was gone - for the
+phone's command line too. Receiver 0.9.882 keeps 64 kB. The screen now saves a diff only when it is whole ("diff" in
+its first lines, no ###ERROR, "batch end" when it has "batch start") and gives the reply 18 s to arrive. A diff file
+is never a cut one. hmi/test_cli: 103 checks.
+
 ## Diff to card: the pipe is the page's, and a failure says so (V2 B90, screen 1.11.51, 10 Oct 2026)
 
 1.11.50's note showed that /rfdiff did not exist: Diff to card had never reached the save. Its failures went into a
