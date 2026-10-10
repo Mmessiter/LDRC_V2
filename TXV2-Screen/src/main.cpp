@@ -42,7 +42,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.40"
+#define SCREEN_VERSION "1.11.41"
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room
 #endif
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -436,6 +436,10 @@ static bool wifiRequested = false;                     // the button has been pr
 static bool wifiPageUp();
 static void wifiTouch(bool pressed, int x, int y, uint32_t now);
 static bool wifiSecretShown();                         // a password can be read on the glass: no picture of the screen leaves the transmitter
+static bool cliRequested = false, cliJobRequested = false;   // (1.11.41) "ldrc cli" / "ldrc diff": the command line page (src/cli_device.h) at the next pass of loop()
+static bool cliUp();                                   // the command line page has the screen
+static void cliTouch(bool pressed, int x, int y, uint32_t now);
+static void cliPoll(); static void cliWeb();
 static void wifiWeb();
 static void updWeb();
 // The model pictures (src/pics_device.h, lib/LdrcPics): the chooser over the Teensy's "Choose image" page, photos from a phone
@@ -1231,7 +1235,7 @@ struct Host : public NextionHost {
     std::map<std::string, int32_t> sys;
     void unknownCommand(const std::string &line) override {
         // "ldrc <word>": a button of our own, added to a page by hmi/overrides.json. Nothing goes to the Teensy.
-        if (line.rfind("ldrc ", 0) == 0) { if (line == "ldrc update") updRequested = true; else if (line == "ldrc rxupdate") rxUpdRequested = true; else if (line == "ldrc wifi") wifiRequested = true; else if (line == "ldrc flight") flightRequested = true; else if (line == "ldrc colours") coloursRequested = true; else if (line == "ldrc appearance") appearanceRequested = true; else if (line == "ldrc defined") flightDefinedRequested = true; else if (line == "ldrc door") doorToggle(); return; }   // (1.11.4: Transmitter setup's "Workshop door" button, Malcolm: "an ordinary button that switches it on")
+        if (line.rfind("ldrc ", 0) == 0) { if (line == "ldrc update") updRequested = true; else if (line == "ldrc rxupdate") rxUpdRequested = true; else if (line == "ldrc wifi") wifiRequested = true; else if (line == "ldrc flight") flightRequested = true; else if (line == "ldrc colours") coloursRequested = true; else if (line == "ldrc appearance") appearanceRequested = true; else if (line == "ldrc defined") flightDefinedRequested = true; else if (line == "ldrc cli") cliRequested = true; else if (line == "ldrc diff") cliJobRequested = true; else if (line == "ldrc door") doorToggle(); return; }   // (1.11.4: Transmitter setup's "Workshop door" button, Malcolm: "an ordinary button that switches it on")
         unknownFromTeensy(line);
     }
     void unknownFromTeensy(const std::string &line) { badCount++; oddTrace += "script:" + line + " | "; if (oddTrace.size() > 400) oddTrace.erase(0, oddTrace.size() - 400); }
@@ -1803,10 +1807,10 @@ static void pollTouch() {
         return;
     }
     static bool oursWasUp = false; static uint32_t oursWentAt = 0;
-    if (!(updPanelUp() || wifiPageUp() || picPanelUp() || flightUp() || coloursUp() || appearanceUp()) && oursWasUp) {   // our page has just gone: the finger that closed it, and the second tap of a double tap, are not for the page underneath
+    if (!(updPanelUp() || wifiPageUp() || picPanelUp() || flightUp() || coloursUp() || appearanceUp() || cliUp()) && oursWasUp) {   // our page has just gone: the finger that closed it, and the second tap of a double tap, are not for the page underneath
         oursWasUp = false; oursWentAt = now; touchLockout = true; lastSeen = now;
     }
-    if (updPanelUp() || wifiPageUp() || picPanelUp() || flightUp() || coloursUp() || appearanceUp()) {   // a page of our own has the screen
+    if (updPanelUp() || wifiPageUp() || picPanelUp() || flightUp() || coloursUp() || appearanceUp() || cliUp()) {   // a page of our own has the screen
         oursWasUp = true;
         if (down && held >= 0 && held < (int) page.comps.size()) { page.comps[held].pressed = false; }
         down = false; held = -1;
@@ -1815,6 +1819,7 @@ static void pollTouch() {
         else if (flightUp()) flightTouch(pressed, pressed ? x[0] : 0, pressed ? y[0] : 0, now);
         else if (coloursUp()) coloursTouch(pressed, pressed ? x[0] : 0, pressed ? y[0] : 0, now);
         else if (appearanceUp()) appearanceTouch(pressed, pressed ? x[0] : 0, pressed ? y[0] : 0, now);
+        else if (cliUp()) cliTouch(pressed, pressed ? x[0] : 0, pressed ? y[0] : 0, now);
         else updTouch(pressed, pressed ? x[0] : 0, pressed ? y[0] : 0, now);
         return;
     }
@@ -2263,7 +2268,7 @@ static void webBegin() {
         web.send(200, "text/plain", on ? ("open on " + doorSsid).c_str() : "shut");
     });
     updWeb();
-    wifiWeb();
+    wifiWeb(); cliWeb();
     picWeb();
     bleWeb();
     static const char *wanted[] = { "X-LDRC" };
@@ -2530,6 +2535,7 @@ static void netPoll() {
 #include "theme_device.h"
 #include "pong_device.h"
 #include "ble_device.h"
+#include "cli_device.h"
 
 void setup() {
     Serial.setRxBufferSize(32768);                        // BEFORE begin(): set afterwards it stayed at 256 bytes and telemetry bursts overran it
@@ -2610,7 +2616,7 @@ void loop() {
     lastLoop = now;
     uint32_t t = micros(), u;
     #define PHASE(i) u = micros(); if (u - t > phaseMax[i]) phaseMax[i] = u - t; t = u;
-    pumpSerial(); linkPoll(); updPoll(); wifiPoll(); picPoll(); flightPoll(); coloursPoll(); appearancePoll(); pongPoll(); blPoll(); blePoll(); PHASE(0)
+    pumpSerial(); linkPoll(); updPoll(); wifiPoll(); picPoll(); flightPoll(); coloursPoll(); appearancePoll(); pongPoll(); blPoll(); blePoll(); cliPoll(); PHASE(0)
     audioFill(); if (!teensyLink.running()) audioWarm(); PHASE(1)
     if (!teensyLink.running()) prefsPoll(); PHASE(2)
     pollTouch(); PHASE(3)

@@ -1,0 +1,325 @@
+// LdrcCli - the command line page's thinking (see LdrcCli.h).
+#include "LdrcCli.h"
+#include <cstdio>
+#include <cstring>
+
+namespace ldrc {
+
+// ------------------------------------------------------------------ the reply as lines, the file's name
+void cliLines(const std::string &reply, std::vector<std::string> &out) {
+    out.clear();
+    std::string cur;
+    for (size_t i = 0; i <= reply.size(); ++i) {
+        const char c = i < reply.size() ? reply[i] : '\n';
+        if (c == '\r') continue;
+        if (c == '\n') { out.push_back(cur); cur.clear(); continue; }
+        if ((unsigned char) c < 32) continue;
+        cur.push_back(c);
+    }
+    while (!out.empty()) {                                         // the prompt, and nothing after it
+        std::string &l = out.back();
+        while (!l.empty() && l[l.size() - 1] == ' ') l.erase(l.size() - 1);
+        if (l.empty() || l == "#") { out.pop_back(); continue; }
+        if (l.size() >= 2 && l.compare(l.size() - 2, 2, " #") == 0) { l.erase(l.size() - 2); continue; }
+        break;
+    }
+}
+std::string cliFileName(const std::string &model, const std::string &stamp, int n) {
+    std::string name;
+    for (char c : model) {
+        if (name.size() >= 20) break;
+        if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-') name.push_back(c);
+        else if (c == ' ' || c == '_') { if (!name.empty() && name[name.size() - 1] != '_') name.push_back('_'); }
+    }
+    while (!name.empty() && name[name.size() - 1] == '_') name.erase(name.size() - 1);
+    if (name.empty()) name = "model";
+    char b[64];
+    if (!stamp.empty()) snprintf(b, sizeof b, "/rfdiff/%s_%s.txt", name.c_str(), stamp.c_str());
+    else snprintf(b, sizeof b, "/rfdiff/%s_%d.txt", name.c_str(), n);
+    return b;
+}
+
+// ------------------------------------------------------------------ the pages: what is where
+// The screen is 800 x 480. Ids: 1.. buttons, 60.. the console and its line, 90.. the keys' row, 100.. keys.
+enum { ID_CLOSE = 1, ID_DIFF, ID_STATUS, ID_VERSION, ID_TOCARD, ID_SAVE, ID_LEAVE, ID_UP, ID_DOWN, ID_CANCEL, ID_SEND, ID_NOTE1, ID_NOTE2,
+       ID_LOWER = 90, ID_UPPER, ID_SYMBOLS, ID_SPACE, ID_DELETE, ID_KEY = 100 };
+static const char *LAYERS[3][4] = {
+    { "1234567890", "qwertyuiop", "asdfghjkl-", "zxcvbnm._=" },
+    { "1234567890", "QWERTYUIOP", "ASDFGHJKL-", "ZXCVBNM._=" },
+    { "!\"#$%&'()*", "+,-./:;<=>", "?@[\\]^_`{|", "}~        " } };
+static const int CON_X = 6, CON_Y = 64, CON_W = 700, CON_H = 312;   // the console; the Up / Down buttons at its right
+
+CliPage::CliPage(CliHost &host)
+    : host_(host), page_(PG_NONE), step_(ST_IDLE), top_(0), follow_(true), layer_(0), job_(false), cliOpen_(false), leaveSave_(false), closeAfter_(false),
+      noteBad_(false), noteFrom_(0), down_(false), pressed_(0), lastX_(0), lastY_(0), downY_(0), dragTop_(0), dragged_(false), seenDown_(0), repeatAt_(0), repeated_(false), serial_(1), askedAt_(0) {}
+
+std::string CliPage::pageName() const {
+    static const char *names[] = { "", "console", "keys", "note" };
+    return names[page_];
+}
+std::string CliPage::wantsToLeaveWith() const { return step_ == ST_LEAVING ? (leaveSave_ ? "save" : "exit") : ""; }
+
+void CliPage::add(WifiItem::Kind kind, int id, int x, int y, int w, int h, const std::string &text) {
+    WifiItem it; it.kind = kind; it.id = id; it.x = x; it.y = y; it.w = w; it.h = h; it.text = text;
+    it.pressed = down_ && pressed_ == id;
+    next_.push_back(it);
+}
+void CliPage::go(Page p) { page_ = p; build(); scene_.layout++; }
+void CliPage::build() {
+    next_.clear();
+    const bool busy = step_ != ST_IDLE;
+    switch (page_) {
+    case PG_NONE: break;
+    case PG_CONSOLE: {
+        add(WifiItem::TITLE, CLI_ID_TITLE, 6, 6, 460, 48, cliOpen_ ? "Command line (Rotorflight)" : "Command line");
+        add(WifiItem::TEXT, CLI_ID_HINT, 470, 6, 160, 48, busy ? "Working ..." : (cliOpen_ ? "Open" : "")); last().strong = true;
+        add(WifiItem::BUTTON, ID_CLOSE, 650, 6, 144, 48, "Close"); last().enabled = !busy && !cliOpen_;
+        add(WifiItem::ROW, CLI_ID_CONSOLE, CON_X, CON_Y, CON_W, CON_H, "");   // (drawn by the screen as the console: ROW only so a touch lands on it)
+        add(WifiItem::BUTTON, ID_UP, 712, CON_Y, 82, 150, "Up"); last().enabled = top_ > 0;
+        add(WifiItem::BUTTON, ID_DOWN, 712, CON_Y + 162, 82, 150, "Down"); last().enabled = top_ + CLI_VISIBLE < (int) lines_.size();
+        add(WifiItem::FIELD, CLI_ID_FIELD, 6, 384, 788, 46, typed_); last().hint = "Touch here to type a command"; last().enabled = !busy;
+        add(WifiItem::BUTTON, ID_DIFF, 6, 436, 120, 40, "diff all"); last().enabled = !busy;
+        add(WifiItem::BUTTON, ID_STATUS, 132, 436, 120, 40, "status"); last().enabled = !busy;
+        add(WifiItem::BUTTON, ID_TOCARD, 258, 436, 160, 40, "Diff to card"); last().enabled = !busy; last().strong = true;
+        add(WifiItem::BUTTON, ID_SAVE, 440, 436, 180, 40, "Save and restart"); last().enabled = !busy && cliOpen_;
+        add(WifiItem::BUTTON, ID_LEAVE, 626, 436, 168, 40, "Leave, no save"); last().enabled = !busy && cliOpen_;
+        break;
+    }
+    case PG_KEYS: {
+        add(WifiItem::BUTTON, ID_CANCEL, 6, 6, 140, 48, "Cancel");
+        add(WifiItem::TITLE, CLI_ID_TITLE, 154, 6, 488, 48, "Command");
+        add(WifiItem::BUTTON, ID_SEND, 650, 6, 144, 48, "Send"); last().strong = true; last().enabled = !typed_.empty();
+        add(WifiItem::FIELD, CLI_ID_FIELD, 6, 60, 788, 54, typed_);
+        { char b[24]; snprintf(b, sizeof b, "%u", (unsigned) typed_.size()); last().note = b; }
+        last().hint = "set name = value, get name, diff all, status ...";
+        for (int r = 0; r < 4; ++r)
+            for (int c = 0; c < 10; ++c) {
+                const char ch = LAYERS[layer_][r][c];
+                if (ch == ' ') continue;
+                add(WifiItem::KEY, ID_KEY + r * 10 + c, c * 80 + 1, 120 + r * 72, 78, 70, std::string(1, ch));
+            }
+        add(WifiItem::KEY, ID_LOWER, 1, 408, 108, 70, "abc"); last().strong = true; last().good = layer_ == 0;
+        add(WifiItem::KEY, ID_UPPER, 111, 408, 108, 70, "ABC"); last().strong = true; last().good = layer_ == 1;
+        add(WifiItem::KEY, ID_SYMBOLS, 221, 408, 108, 70, "#+="); last().strong = true; last().good = layer_ == 2;
+        add(WifiItem::KEY, ID_SPACE, 331, 408, 248, 70, "Space"); last().strong = true;
+        add(WifiItem::KEY, ID_DELETE, 581, 408, 218, 70, "Delete"); last().strong = true; last().enabled = !typed_.empty();
+        break;
+    }
+    case PG_NOTE: {
+        add(WifiItem::TITLE, CLI_ID_TITLE, 16, 6, 768, 50, "Command line"); last().bad = noteBad_;
+        add(WifiItem::TEXT, CLI_ID_NOTE1, 20, 150, 760, 40, noteL1_);
+        add(WifiItem::TEXT, CLI_ID_NOTE2, 20, 196, 760, 40, noteL2_);
+        add(WifiItem::TEXT, CLI_ID_NOTE3, 20, 242, 760, 40, noteL3_);
+        if (!noteB2_.empty()) { add(WifiItem::BUTTON, ID_NOTE2, 200, 412, 250, 56, noteB2_); add(WifiItem::BUTTON, ID_NOTE1, 466, 412, 250, 56, noteB1_); last().strong = true; }
+        else { add(WifiItem::BUTTON, ID_NOTE1, 622, 412, 170, 56, noteB1_); last().strong = true; }
+        break;
+    }
+    }
+    // what changed is drawn again: an item keeps its serial while nothing about it has
+    std::vector<WifiItem> &old = scene_.items;
+    for (auto &it : next_) {
+        bool same = false;
+        for (auto &o : old)
+            if (o.id == it.id && o.kind == it.kind && o.x == it.x && o.y == it.y && o.w == it.w && o.h == it.h && o.text == it.text && o.note == it.note && o.hint == it.hint &&
+                o.pressed == it.pressed && o.enabled == it.enabled && o.good == it.good && o.strong == it.strong && o.bad == it.bad) { it.serial = o.serial; same = true; break; }
+        if (!same) it.serial = serial_++;
+    }
+    scene_.items = next_;
+    if (page_ == PG_CONSOLE) for (auto &it : scene_.items) if (it.id == CLI_ID_CONSOLE) it.serial = serial_++;   // (the console is drawn every time it is built: its lines are not in the item)
+}
+
+// ------------------------------------------------------------------ the console
+void CliPage::say(const std::string &line) {
+    lines_.push_back(line);
+    while (lines_.size() > CLI_LINES_MAX) lines_.erase(lines_.begin());
+    if (follow_) top_ = (int) lines_.size() > CLI_VISIBLE ? (int) lines_.size() - CLI_VISIBLE : 0;
+}
+void CliPage::print(const std::string &text) {
+    std::vector<std::string> ls; cliLines(text, ls);
+    for (auto &l : ls) say(l);
+}
+void CliPage::note(const std::string &l1, const std::string &l2, const std::string &l3, const std::string &b1, const std::string &b2, bool bad) {
+    noteL1_ = l1; noteL2_ = l2; noteL3_ = l3; noteB1_ = b1; noteB2_ = b2; noteBad_ = bad; noteFrom_ = page_;
+    go(PG_NOTE);
+}
+
+// ------------------------------------------------------------------ open, close, the steps
+void CliPage::open(bool job) {
+    job_ = job; cliOpen_ = false; closeAfter_ = false; step_ = ST_IDLE; lines_.clear(); top_ = 0; follow_ = true; typed_.clear(); layer_ = 0;
+    pending_.clear(); diffText_.clear(); savedAs_.clear(); down_ = false; pressed_ = 0;
+    if (host_.armed()) { page_ = PG_CONSOLE; note("Not while the model could be flying.", "Safety on, motor off.", "", "OK", "", true); closeAfter_ = true; return; }
+    if (!host_.pipeReady()) {
+        page_ = PG_CONSOLE;
+        note("No Bluetooth link to the receiver.", "The command line needs the model on, its USB cable", "in, and the screen's Bluetooth joined (the Rotorflight menu).", "OK", "", true);
+        closeAfter_ = true; return;
+    }
+    go(PG_CONSOLE);
+    say(job ? "Diff to card: asking the flight controller for diff all ..." : "Opening the flight controller's command line ...");
+    if (job) send("diff all", ST_DIFF); else send("", ST_OPENING);
+}
+void CliPage::close() { page_ = PG_NONE; step_ = ST_IDLE; scene_.items.clear(); scene_.layout++; }
+
+static std::string urlEncode(const std::string &s) {
+    std::string o;
+    for (unsigned char c : s) {
+        if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-' || c == '_' || c == '.' || c == '~') o.push_back((char) c);
+        else { char b[4]; snprintf(b, sizeof b, "%%%02X", c); o += b; }
+    }
+    return o;
+}
+void CliPage::send(const std::string &cmd, Step step) {
+    pending_ = cmd; step_ = step; askedAt_ = host_.ms();
+    if (!host_.ask("GET", "/api/cli?cmd=" + urlEncode(cmd))) { step_ = ST_IDLE; say("The pipe is busy: try again."); }
+    build();
+}
+void CliPage::leave(bool save) {
+    leaveSave_ = save; step_ = ST_LEAVING; askedAt_ = host_.ms();
+    if (!host_.ask("POST", std::string("/api/cli/leave?save=") + (save ? "1" : "0"))) { step_ = ST_IDLE; say("The pipe is busy: try again."); }
+    build();
+}
+std::string CliPage::fileName() {
+    const std::string stamp = host_.stamp(), model = host_.modelName();
+    if (!stamp.empty()) return cliFileName(model, stamp, 0);
+    for (int n = 1; n < 1000; ++n) { const std::string f = cliFileName(model, "", n); if (!host_.exists(f)) return f; }
+    return cliFileName(model, "", 999);
+}
+// The answer to the request on its way: what the step does with it
+void CliPage::finish(bool ok, const std::string &body, const std::string &err) {
+    const Step step = step_; step_ = ST_IDLE;
+    if (!ok) {
+        // (the receiver's reasons are plain words: no USB cable, armed, the transmitter linked and not safe, the FC silent)
+        std::string why = body.empty() ? err : body;
+        if (step == ST_OPENING || (job_ && step == ST_DIFF)) {
+            if (why.size() > 56) { size_t cut = why.rfind(' ', 56); if (cut == std::string::npos || cut < 30) cut = 56; note("The command line could not be opened:", why.substr(0, cut), why.substr(cut + (why[cut] == ' ' ? 1 : 0), 56), "OK", "", true); }
+            else note("The command line could not be opened:", why, "", "OK", "", true);
+            closeAfter_ = true; return;
+        }
+        if (step == ST_LEAVING) { say("Not left: " + why); build(); return; }
+        say("No answer: " + why); build(); return;
+    }
+    if (step == ST_LEAVING) {
+        cliOpen_ = false;
+        if (job_ && !savedAs_.empty()) { note("Saved on the screen's card as", savedAs_, "The flight controller is restarting (nothing changed).", "OK", "", false); closeAfter_ = true; return; }
+        note(leaveSave_ ? "Saved. The flight controller is restarting." : "Left without saving. The flight controller is restarting.", "", "", "OK", "", false);
+        closeAfter_ = true; return;
+    }
+    cliOpen_ = true;
+    if (step == ST_OPENING) { say("Command line open. Type a command, or use the buttons."); build(); return; }
+    if (step == ST_DIFF) {
+        std::vector<std::string> ls; cliLines(body, ls);
+        std::string text;
+        for (auto &l : ls) { text += l; text += '\n'; }
+        diffText_ = text;
+        if (ls.size() < 3 || text.find("diff") == std::string::npos) { say("That did not look like a diff: not saved."); print(body); build(); return; }
+        std::string errf; const std::string name = fileName();
+        if (!host_.save(name, text, errf)) { say("Could not save " + name + ": " + errf); print(body); build(); return; }
+        savedAs_ = name;
+        char b[80]; snprintf(b, sizeof b, "Saved: %s (%u lines)", name.c_str(), (unsigned) ls.size());
+        if (!job_) { print(body); say(b); build(); return; }
+        say(b); leave(false);                                       // the job: and out again (the FC restarts; nothing was changed)
+        return;
+    }
+    print(body);                                                    // a command's reply
+    build();
+}
+void CliPage::poll() {
+    if (page_ == PG_NONE) return;
+    if (step_ != ST_IDLE) {
+        const int st = host_.askState();
+        if (st == 1) finish(host_.askCode() == 200, host_.askBody(), "");
+        else if (st == -1) finish(false, "", host_.askError());
+        else if (host_.ms() - askedAt_ > 20000) finish(false, "", "no answer in 20 s");
+    }
+}
+
+// ------------------------------------------------------------------ touches
+int CliPage::hit(int x, int y) const {
+    for (size_t i = scene_.items.size(); i > 0; --i) {
+        const WifiItem &it = scene_.items[i - 1];
+        if (it.kind != WifiItem::BUTTON && it.kind != WifiItem::KEY && it.kind != WifiItem::ROW && it.kind != WifiItem::FIELD) continue;
+        if (!it.enabled) continue;
+        if (x >= it.x && x < it.x + it.w && y >= it.y && y < it.y + it.h) return it.id;
+    }
+    return 0;
+}
+void CliPage::touch(bool down, int x, int y) {
+    if (page_ == PG_NONE) return;
+    const uint32_t now = host_.ms();
+    if (down) {
+        seenDown_ = now; lastX_ = x; lastY_ = y;
+        if (!down_) {
+            down_ = true; repeated_ = false; dragged_ = false; downY_ = y; dragTop_ = top_;
+            pressed_ = hit(x, y); repeatAt_ = now + 600;
+            if (pressed_ && pressed_ != CLI_ID_CONSOLE) build();
+        } else if (pressed_ == CLI_ID_CONSOLE) {                      // a finger moving up or down the console scrolls it
+            const int lines = (downY_ - y) / 26;
+            int t = dragTop_ + lines;
+            const int most = (int) lines_.size() > CLI_VISIBLE ? (int) lines_.size() - CLI_VISIBLE : 0;
+            if (t < 0) t = 0; if (t > most) t = most;
+            if (t != top_) { top_ = t; follow_ = top_ >= most; dragged_ = true; build(); }
+        } else if (pressed_ == ID_DELETE && (int32_t) (now - repeatAt_) >= 0 && hit(x, y) == ID_DELETE) {
+            repeated_ = true; repeatAt_ = now + 110; key(ID_DELETE);
+        }
+        return;
+    }
+    if (!down_ || now - seenDown_ <= 80) return;
+    down_ = false;
+    const int id = pressed_; pressed_ = 0;
+    if (!id) return;
+    if (id == CLI_ID_CONSOLE) { if (!dragged_) build(); return; }
+    if (hit(lastX_, lastY_) == id && !repeated_) act(id);
+    else build();
+}
+void CliPage::key(int id) {
+    if (id == ID_DELETE) { if (!typed_.empty()) typed_.erase(typed_.size() - 1); }
+    else if (id == ID_SPACE) { if (typed_.size() < CLI_CMD_MAX) typed_.push_back(' '); }
+    else if (id == ID_LOWER) layer_ = 0; else if (id == ID_UPPER) layer_ = 1; else if (id == ID_SYMBOLS) layer_ = 2;
+    else if (id >= ID_KEY && id < ID_KEY + 40) {
+        const char ch = LAYERS[layer_][(id - ID_KEY) / 10][(id - ID_KEY) % 10];
+        if (ch != ' ' && typed_.size() < CLI_CMD_MAX) typed_.push_back(ch);
+    }
+    build();
+}
+void CliPage::act(int id) {
+    switch (page_) {
+    case PG_CONSOLE: {
+        if (step_ != ST_IDLE) { build(); return; }
+        const int most = (int) lines_.size() > CLI_VISIBLE ? (int) lines_.size() - CLI_VISIBLE : 0;
+        if (id == ID_UP) { top_ -= CLI_VISIBLE - 2; if (top_ < 0) top_ = 0; follow_ = false; build(); return; }
+        if (id == ID_DOWN) { top_ += CLI_VISIBLE - 2; if (top_ > most) top_ = most; follow_ = top_ >= most; build(); return; }
+        if (id == CLI_ID_FIELD) { go(PG_KEYS); return; }
+        if (id == ID_DIFF) { say("# diff all"); send("diff all", ST_COMMAND); return; }
+        if (id == ID_STATUS) { say("# status"); send("status", ST_COMMAND); return; }
+        if (id == ID_TOCARD) { say("# diff all (to the card)"); send("diff all", ST_DIFF); return; }
+        if (id == ID_SAVE) { note("Save and restart the flight controller?", "Everything set on the command line is kept.", "", "Save and restart", "Stay", false); return; }
+        if (id == ID_LEAVE) { note("Leave without saving?", "What was set on the command line is lost;", "the flight controller restarts.", "Leave, no save", "Stay", false); return; }
+        if (id == ID_CLOSE) { if (cliOpen_) { build(); return; } close(); return; }
+        break;
+    }
+    case PG_KEYS: {
+        if (id == ID_CANCEL) { typed_.clear(); go(PG_CONSOLE); return; }
+        if (id == ID_SEND) {
+            std::string cmd = typed_;
+            while (!cmd.empty() && cmd[cmd.size() - 1] == ' ') cmd.erase(cmd.size() - 1);
+            while (!cmd.empty() && cmd[0] == ' ') cmd.erase(0, 1);
+            typed_.clear(); go(PG_CONSOLE);
+            if (cmd.empty()) return;
+            const std::string low = [&] { std::string l = cmd; for (auto &c : l) c = (char) tolower((unsigned char) c); return l; }();
+            if (low == "save" || low == "exit" || low == "reboot") { say("Use the buttons for that: Save and restart, or Leave, no save."); build(); return; }
+            say("# " + cmd); send(cmd, ST_COMMAND); return;
+        }
+        key(id); return;
+    }
+    case PG_NOTE: {
+        if (id == ID_NOTE2) { go(PG_CONSOLE); return; }             // "Stay"
+        if (closeAfter_) { close(); return; }
+        if (noteB1_ == "Save and restart") { go(PG_CONSOLE); leave(true); return; }
+        if (noteB1_ == "Leave, no save") { go(PG_CONSOLE); leave(false); return; }
+        go(PG_CONSOLE); return;
+    }
+    case PG_NONE: break;
+    }
+    build();
+}
+
+}  // namespace ldrc

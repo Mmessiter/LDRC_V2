@@ -42,6 +42,7 @@ static unsigned bleStackSpare() { return bleTaskHandle ? (unsigned) uxTaskGetSta
 // one request at a time
 struct BleRequest { std::string method, path, body, type; uint32_t id = 0; };
 static BleRequest bleReq; static volatile bool bleReqPending = false, bleReqDone = false; static ldrc::BleReply bleLast; static std::string bleReqError;
+static volatile uint32_t bleReqWaitMs = 6000;                  // (1.11.41) how long bleServe waits for the reply: the command line page asks for more (a diff takes the FC a few seconds)
 static uint32_t bleNextId = 1, bleReqStartedAt = 0;
 // The main board's pipe (1.11.1): its Rotorflight parameter packets, as words, to the receiver's /api/txparams, and the
 // block being read back to it as telemetry items ("ldrctel 25:AABBCCDD 26:..."), the way the radio link's acks carried
@@ -199,9 +200,9 @@ static void bleServe() {                                       // in the task: o
     for (auto &f : frames) {
         if (!bleReqChr || !bleClient->isConnected() || !bleReqChr->writeValue((const uint8_t *) f.data(), f.size(), true)) { bleReqError = "the write failed"; bleReqPending = false; bleReqDone = true; return; }
     }
-    const uint32_t t0 = millis();
-    while (!bleReplyReady && millis() - t0 < 6000 && bleClient && bleClient->isConnected()) vTaskDelay(pdMS_TO_TICKS(10));
-    if (!bleReplyReady) bleReqError = bleClient && bleClient->isConnected() ? "no reply in 6 s" : "the connection went";
+    const uint32_t t0 = millis(), wait = bleReqWaitMs;
+    while (!bleReplyReady && millis() - t0 < wait && bleClient && bleClient->isConnected()) vTaskDelay(pdMS_TO_TICKS(10));
+    if (!bleReplyReady) bleReqError = bleClient && bleClient->isConnected() ? "no reply in " + std::to_string(wait / 1000) + " s" : "the connection went";
     bleReqPending = false; bleReqDone = true;
 }
 static bool bleServeNow(const std::string &method, const std::string &path, const std::string &body, const std::string &type, ldrc::BleReply &out, std::string &err) {
@@ -279,8 +280,9 @@ static void bleTask(void *) {
 }
 static void bleStartTask() { if (!bleMutex) bleMutex = xSemaphoreCreateMutex(); if (!bleTaskHandle) xTaskCreatePinnedToCore(bleTask, "ldrcble", 12288, nullptr, 1, &bleTaskHandle, 0); /* 1.11.7: 8 kB was never measured; the screen restarted once mid-session, cause unknown */ }
 // loop(): the radio rule, and the bench
-static bool bleAsk(const std::string &method, const std::string &path, const std::string &body, const std::string &type) {   // false: busy or not joined
+static bool bleAsk(const std::string &method, const std::string &path, const std::string &body, const std::string &type, uint32_t waitMs = 6000) {   // false: busy or not joined
     if (bleReqPending || bleState != BLE_READY) return false;
+    bleReqWaitMs = waitMs;
     bleReq.method = method; bleReq.path = path; bleReq.body = body; bleReq.type = type; bleReq.id = bleNextId++;
     bleReqDone = false; bleReqError.clear(); bleReqStartedAt = millis(); bleReqPending = true;
     return true;

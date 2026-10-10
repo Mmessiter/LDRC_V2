@@ -2,7 +2,7 @@
 # Every host test of the screen's project, and the release tool's gate. One line for each; the whole story with -v.
 cd "$(dirname "$0")"
 bad=0
-for t in test_link test_update test_wifi test_device test_pics test_flight test_theme test_ble; do
+for t in test_link test_update test_wifi test_device test_pics test_flight test_theme test_ble test_cli; do
     out=$(./$t/run.sh 2>&1); code=$?
     if [ "$1" = "-v" ]; then echo "$out"; fi
     echo "$t: $(echo "$out" | grep -E 'checks, [0-9]+ failures' | tr '\n' ' ')"

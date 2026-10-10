@@ -186,6 +186,26 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Rotorflight's command line on the transmitter, and Diff to card (V2 B90, screen 1.11.41, 10 Oct 2026)
+
+Malcolm, 10 Oct: "Are we able to add CLI?" ... "Yes - let's add save diff to card! And let's do it!"
+
+- **Diff to card** (the Backup page): the flight controller's complete settings as text (the command line's `diff
+  all`), kept on the screen's card as `/rfdiff/<Model>_<date>_<time>.txt` (numbered when the clock is not set), a
+  file the configurator's command line can replay. The flight controller restarts afterwards (leaving its command
+  line does that; nothing is changed). It is the check Malcolm made by hand on 9 Oct, one touch.
+- **Command line** (the Backup page): Rotorflight's own command line on the screen - a console of what the flight
+  controller prints (drag it, or Up and Down), a line to type on with the WiFi page's keys, `diff all` and `status`
+  as buttons, Diff to card, and the two ways out: Save and restart, or Leave without saving. Close is offered only
+  while the command line is not open, so it is never left open by accident; `save`, `exit` and `reboot` typed are
+  turned into the buttons.
+- Both are the screen's own page (`src/cli_device.h`, `lib/LdrcCli`, host-tested in `hmi/test_cli`: 58 checks),
+  reached over the screen's Bluetooth pipe to the receiver's `/api/cli`. They need the model on with the USB cable
+  from the receiver to the flight controller, the safety on, and Bluetooth joined (the Rotorflight menu does that).
+- Receiver 0.9.881: a linked transmitter may use the command line when the safety is on (the arming channel low on
+  the live link, the flight controller's own word not "armed"); before, any live link was refused.
+- The Teensy is unchanged (B90). Help: BACKUP.TXT.
+
 ## Islands on most pages (V2 B90 card files, screen 1.11.40, 9 Oct 2026)
 
 Malcolm, 9 Oct evening, of B90's compact pages: "It's fabulous! I especially like a centered island of solid background

@@ -8,4 +8,8 @@ Without the model: with a backup on the card, every Rotorflight page (PIDs, rate
 
 Write edits: with the model connected again, the marked edits are written to the flight controller, checked, and the marks go. You are also offered this when you open the Rotorflight menu with the model connected and edits waiting. Forget edits: the marks go without writing (the values in the backup stay as edited; a new Back up replaces them).||
 
+Diff to card: asks the flight controller for its complete settings as text (the command line's diff all) and keeps them on the screen's card, in /rfdiff, named after the model and the time. The configurator can replay that file. It needs the model on with the USB cable from the receiver to the flight controller, the safety on, and the screen's Bluetooth joined; the flight controller restarts afterwards (nothing is changed).||
+
+Command line: Rotorflight's own command line, the same way. Type a command on the screen's keys, or use the buttons; what the flight controller prints scrolls in the box (drag it, or Up and Down). Save and restart keeps what you set; Leave, no save does not; either restarts the flight controller. The model cannot arm while the command line is open.||
+
 OK leaves. Nothing on this page runs while another job runs.||
