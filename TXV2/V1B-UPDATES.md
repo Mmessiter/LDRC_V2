@@ -186,6 +186,13 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## A refusal shown whole (V2 B90, screen 1.11.43, 10 Oct 2026)
+
+Malcolm's photo, 10 Oct: the receiver's reason for refusing the command line ended "... restarts the flight contr".
+The page had cut the words at 56 characters a line and kept two lines. Now a reason is wrapped at spaces over up to
+three lines under "The command line could not be opened:", none of it lost (hmi/test_cli, 83 checks). The reason in
+the photo was the OLD receiver's (0.9.880): receiver 0.9.881 allows a linked transmitter with the safety on.
+
 ## Command line on the menu, Execute diff on the Backup page (V2 B90, screen 1.11.42, 10 Oct 2026)
 
 Malcolm, 10 Oct, having found the buttons: "'Command line' option should move to the main Rotorflight area, 'Diff to

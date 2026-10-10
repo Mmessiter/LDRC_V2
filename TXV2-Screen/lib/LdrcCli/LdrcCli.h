@@ -48,7 +48,7 @@ public:
 };
 enum CliJob { CLI_CONSOLE = 0, CLI_TO_CARD = 1, CLI_EXECUTE = 2 };
 
-enum { CLI_ID_CONSOLE = 60, CLI_ID_FIELD = 61, CLI_ID_TITLE = 62, CLI_ID_HINT = 63, CLI_ID_NOTE1 = 64, CLI_ID_NOTE2 = 65, CLI_ID_NOTE3 = 66 };
+enum { CLI_ID_CONSOLE = 60, CLI_ID_FIELD = 61, CLI_ID_TITLE = 62, CLI_ID_HINT = 63, CLI_ID_NOTE1 = 64, CLI_ID_NOTE2 = 65, CLI_ID_NOTE3 = 66, CLI_ID_NOTE4 = 67 };
 
 class CliPage {
 public:
@@ -85,7 +85,8 @@ private:
     void leave(bool save);
     void print(const std::string &text);      // the flight controller's reply, line by line, into the console
     void say(const std::string &line);        // a line of our own
-    void note(const std::string &l1, const std::string &l2, const std::string &l3, const std::string &b1, const std::string &b2, bool bad);
+    void note(const std::string &l1, const std::string &l2, const std::string &l3, const std::string &b1, const std::string &b2, bool bad, const std::string &l4 = "");
+    void refusal(const std::string &why);     // the receiver's reason, wrapped over three lines under "The command line could not be opened:"
     void finish(bool ok, const std::string &body, const std::string &err);
     std::string fileName();
     void execNext();                          // Execute diff: the next command of the file, or the save
@@ -96,7 +97,7 @@ private:
     int job_; bool cliOpen_, leaveSave_, closeAfter_;
     std::vector<std::string> exec_; size_t execAt_; int sent_, refused_; std::string execFile_;
     std::string pending_, diffText_, savedAs_;
-    std::string noteL1_, noteL2_, noteL3_, noteB1_, noteB2_; bool noteBad_; int noteFrom_;
+    std::string noteL1_, noteL2_, noteL3_, noteL4_, noteB1_, noteB2_; bool noteBad_; int noteFrom_;
     bool down_; int pressed_; int lastX_, lastY_, downY_, dragTop_; bool dragged_; uint32_t seenDown_, repeatAt_; bool repeated_;
     uint32_t serial_, askedAt_;
 };
@@ -109,6 +110,8 @@ std::string cliModelPrefix(const std::string &model);                           
 bool cliNewer(const std::string &a, const std::string &b, const std::string &prefix);  // of two of a model's files (prefix = "/rfdiff/" + cliModelPrefix), is a the newer? (stamped beat numbered; numbered compare as numbers)
 // The commands of a diff file: every line that is not empty and not a comment; save / exit / reboot left out (the save is the job's own)
 void cliCommands(const std::string &text, std::vector<std::string> &out);
+// Words wrapped at spaces into lines of at most `width` characters (a word longer than that is cut), at most `most` lines; the rest ends in " ..."
+void cliWrap(const std::string &text, size_t width, size_t most, std::vector<std::string> &out);
 
 }  // namespace ldrc
 #endif

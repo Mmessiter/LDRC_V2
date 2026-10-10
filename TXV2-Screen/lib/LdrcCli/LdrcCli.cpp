@@ -75,6 +75,23 @@ void cliCommands(const std::string &text, std::vector<std::string> &out) {
     }
 }
 
+void cliWrap(const std::string &text, size_t width, size_t most, std::vector<std::string> &out) {
+    out.clear();
+    std::string rest = text;
+    while (!rest.empty() && out.size() < most) {
+        while (!rest.empty() && rest[0] == ' ') rest.erase(0, 1);
+        if (rest.size() <= width) { out.push_back(rest); rest.clear(); break; }
+        size_t cut = rest.rfind(' ', width);
+        if (cut == std::string::npos || cut < width / 2) cut = width;
+        out.push_back(rest.substr(0, cut)); rest.erase(0, cut);
+    }
+    if (!rest.empty() && !out.empty()) {                            // more than fits: the last line ends in dots
+        std::string &l = out.back();
+        if (l.size() + 4 > width) { const size_t sp = l.rfind(' ', width - 4); l.erase(sp == std::string::npos ? width - 4 : sp); }
+        l += " ...";
+    }
+}
+
 // ------------------------------------------------------------------ the pages: what is where
 // The screen is 800 x 480. Ids: 1.. buttons, 60.. the console and its line, 90.. the keys' row, 100.. keys.
 enum { ID_CLOSE = 1, ID_DIFF, ID_STATUS, ID_VERSION, ID_TOCARD, ID_SAVE, ID_LEAVE, ID_UP, ID_DOWN, ID_CANCEL, ID_SEND, ID_NOTE1, ID_NOTE2,
@@ -148,6 +165,7 @@ void CliPage::build() {
         add(WifiItem::TEXT, CLI_ID_NOTE1, 20, 150, 760, 40, noteL1_);
         add(WifiItem::TEXT, CLI_ID_NOTE2, 20, 196, 760, 40, noteL2_);
         add(WifiItem::TEXT, CLI_ID_NOTE3, 20, 242, 760, 40, noteL3_);
+        add(WifiItem::TEXT, CLI_ID_NOTE4, 20, 288, 760, 40, noteL4_);
         if (!noteB2_.empty()) { add(WifiItem::BUTTON, ID_NOTE2, 200, 412, 250, 56, noteB2_); add(WifiItem::BUTTON, ID_NOTE1, 466, 412, 250, 56, noteB1_); last().strong = true; }
         else { add(WifiItem::BUTTON, ID_NOTE1, 622, 412, 170, 56, noteB1_); last().strong = true; }
         break;
@@ -176,9 +194,15 @@ void CliPage::print(const std::string &text) {
     std::vector<std::string> ls; cliLines(text, ls);
     for (auto &l : ls) say(l);
 }
-void CliPage::note(const std::string &l1, const std::string &l2, const std::string &l3, const std::string &b1, const std::string &b2, bool bad) {
-    noteL1_ = l1; noteL2_ = l2; noteL3_ = l3; noteB1_ = b1; noteB2_ = b2; noteBad_ = bad; noteFrom_ = page_;
+void CliPage::note(const std::string &l1, const std::string &l2, const std::string &l3, const std::string &b1, const std::string &b2, bool bad, const std::string &l4) {
+    noteL1_ = l1; noteL2_ = l2; noteL3_ = l3; noteL4_ = l4; noteB1_ = b1; noteB2_ = b2; noteBad_ = bad; noteFrom_ = page_;
     go(PG_NOTE);
+}
+void CliPage::refusal(const std::string &why) {                   // (the receiver's reasons are plain words: no USB cable, the transmitter linked with the safety off, armed, the FC silent)
+    std::vector<std::string> ls; cliWrap(why, 58, 3, ls);
+    while (ls.size() < 3) ls.push_back("");
+    note("The command line could not be opened:", ls[0], ls[1], "OK", "", true, ls[2]);
+    closeAfter_ = true;
 }
 
 // ------------------------------------------------------------------ open, close, the steps
@@ -246,11 +270,7 @@ void CliPage::finish(bool ok, const std::string &body, const std::string &err) {
     if (!ok) {
         // (the receiver's reasons are plain words: no USB cable, armed, the transmitter linked and not safe, the FC silent)
         std::string why = body.empty() ? err : body;
-        if (step == ST_OPENING || (job_ == CLI_TO_CARD && step == ST_DIFF) || (job_ == CLI_EXECUTE && step == ST_EXEC && sent_ == 0)) {
-            if (why.size() > 56) { size_t cut = why.rfind(' ', 56); if (cut == std::string::npos || cut < 30) cut = 56; note("The command line could not be opened:", why.substr(0, cut), why.substr(cut + (why[cut] == ' ' ? 1 : 0), 56), "OK", "", true); }
-            else note("The command line could not be opened:", why, "", "OK", "", true);
-            closeAfter_ = true; return;
-        }
+        if (step == ST_OPENING || (job_ == CLI_TO_CARD && step == ST_DIFF) || (job_ == CLI_EXECUTE && step == ST_EXEC && sent_ == 0)) { refusal(why); return; }
         if (step == ST_LEAVING) { say("Not left: " + why); build(); return; }
         if (step == ST_EXEC) { char b[80]; snprintf(b, sizeof b, "Stopped at command %d of %u: ", sent_ + 1, (unsigned) exec_.size()); say(b + why); say("Nothing saved. Leave, no save - or Execute diff again."); exec_.clear(); build(); return; }
         say("No answer: " + why); build(); return;
