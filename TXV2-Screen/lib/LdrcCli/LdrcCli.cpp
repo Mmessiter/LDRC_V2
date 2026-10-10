@@ -96,15 +96,17 @@ bool cliReadOnly(const std::string &cmd) {
     return false;
 }
 bool cliDiffWhole(const std::vector<std::string> &lines) {
-    bool head = false, start = false, end = false;
+    // 1.11.55 (Malcolm's photo, 10 Oct: 347 lines, first "# version", last "save", "batch end NO"): a Rotorflight 4.6 diff all
+    // begins "# version" (the receiver drops the echoed command) and ENDS WITH "save", not "batch end" - so the end is not
+    // asked for. The receiver (0.9.883) sends 200 only once the flight controller's prompt is back: that is what says the
+    // reply is whole. Here: a diff's head, and no error in it.
+    bool head = false;
     for (size_t i = 0; i < lines.size(); ++i) {
         const std::string &l = lines[i];
-        if (i < 5 && l.find("diff") != std::string::npos) head = true;
+        if (i < 5 && (l.find("diff") != std::string::npos || l.find("# version") != std::string::npos)) head = true;
         if (l.find("###ERROR") != std::string::npos) return false;
-        if (l == "batch start") start = true;
-        if (l == "batch end") end = true;
     }
-    return head && lines.size() >= 3 && (!start || end);
+    return head && lines.size() >= 3;
 }
 void cliWrap(const std::string &text, size_t width, size_t most, std::vector<std::string> &out) {
     out.clear();

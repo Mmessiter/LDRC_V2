@@ -186,6 +186,15 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The diff was whole all along (V2 B90, screen 1.11.55, 10 Oct 2026)
+
+1.11.54's note: "347 lines, first '# version', last 'save'; batch start yes, batch end NO". A Rotorflight 4.6 `diff all`
+begins "# version" (the receiver drops the echoed command) and ends with a `save` line - there is no "batch end". The
+screen's test for a whole diff (1.11.52) wanted one, and refused every diff. Now a diff is a reply with "diff" or
+"# version" in its first lines and no error in it; that it is whole is the receiver's word (200 once the prompt is
+back). The three receiver fixes of the day (the 64 kB buffer, the 202 and /api/cli/out for a slow reply, the prompt
+told from a comment) stand: each was real, none was this.
+
 ## Receiver 0.9.884: the prompt is not a comment (10 Oct 2026)
 
 Still 347 lines with 0.9.883. The receiver took a reply as ended whenever what had arrived ended in "# " - the prompt -

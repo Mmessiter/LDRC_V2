@@ -115,8 +115,8 @@ bool cliNewer(const std::string &a, const std::string &b, const std::string &pre
 // The commands of a diff file: every line that is not empty and not a comment; save / exit / reboot left out (the save is the job's own)
 void cliCommands(const std::string &text, std::vector<std::string> &out);
 bool cliReadOnly(const std::string &cmd);
-// A reply that is a WHOLE diff: "diff" in its first lines, no ###ERROR, and when it has "batch start" it has "batch end"
-// too (1.11.52: a reply cut short at its head or its tail is never saved as one)
+// A reply that is a diff: "diff" or "# version" in its first lines and no ###ERROR (1.11.55: a Rotorflight 4.6 diff all ends
+// with "save", not "batch end"; the receiver's 200 is what says the reply is whole)
 bool cliDiffWhole(const std::vector<std::string> &lines);   // a command that changes nothing: diff, dump, get, status, version, help and their like
 // Words wrapped at spaces into lines of at most `width` characters (a word longer than that is cut), at most `most` lines; the rest ends in " ..."
 void cliWrap(const std::string &text, size_t width, size_t most, std::vector<std::string> &out);
