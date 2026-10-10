@@ -186,6 +186,15 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## A long reply, fetched until whole (V2 B90, screen 1.11.53, receiver 0.9.883, 10 Oct 2026)
+
+Still "not a whole diff (347 lines)" with 0.9.882: not size then, but time. The receiver waited six seconds for the
+flight controller's prompt and sent whatever had come as the whole reply, with 200; a diff all of every bank takes
+longer. Receiver 0.9.883: a reply still printing after the wait (wait=, 5 s from the screen) goes out as its start
+with 202, and /api/cli/out gives it again, whole, once the prompt is back. The screen fetches that every half
+second, "N lines ..." in the strip meanwhile, up to 90 s; the phone's command line page does the same.
+hmi/test_cli: 106 checks, the fake receiver answering once as the real one does.
+
 ## A whole diff all (V2 B90, screen 1.11.52, receiver 0.9.882, 10 Oct 2026)
 
 1.11.51's note: "the flight controller's answer was not a diff (347 lines)". The receiver kept only the LAST 16,000

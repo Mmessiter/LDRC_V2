@@ -134,7 +134,7 @@ static const char *LAYERS[3][4] = {
 static const int CON_X = 6, CON_Y = 64, CON_W = 788, CON_H = 312;   // the console (1.11.44: across the page; a finger scrolls it, as the help pages)
 
 CliPage::CliPage(CliHost &host)
-    : host_(host), page_(PG_NONE), step_(ST_IDLE), top_(0), follow_(true), layer_(0), job_(0), cliOpen_(false), leaveSave_(false), closeAfter_(false), closing_(false), changed_(false), waitUntil_(0),
+    : host_(host), page_(PG_NONE), step_(ST_IDLE), top_(0), follow_(true), layer_(0), job_(0), cliOpen_(false), leaveSave_(false), closeAfter_(false), closing_(false), changed_(false), waitUntil_(0), more_(false), moreAt_(0), moreSince_(0), moreLines_(0),
       execAt_(0), sent_(0), refused_(0), noteBad_(false), noteFrom_(0), down_(false), pressed_(0), lastX_(0), lastY_(0), downY_(0), dragTop_(0), dragged_(false), seenDown_(0), repeatAt_(0), repeated_(false), serial_(1), askedAt_(0) {}
 
 std::string CliPage::pageName() const {
@@ -162,6 +162,7 @@ void CliPage::build() {
         add(WifiItem::TITLE, CLI_ID_TITLE, 6, 6, 620, 48, "Command line (Rotorflight)");
         { std::string h = busy ? "Working ..." : "";
           if (step_ == ST_EXEC) { char b[32]; snprintf(b, sizeof b, "%d of %u", sent_, (unsigned) exec_.size()); h = b; }
+          else if (more_) { char b[32]; snprintf(b, sizeof b, "%u lines ...", (unsigned) moreLines_); h = b; }
           add(WifiItem::TEXT, CLI_ID_HINT, 630, 6, 164, 48, h); last().strong = true; }
         add(WifiItem::ROW, CLI_ID_CONSOLE, CON_X, CON_Y, CON_W, CON_H, "");   // (drawn by the screen as the console: ROW only so a touch lands on it)
         add(WifiItem::FIELD, CLI_ID_FIELD, 6, 384, 788, 46, typed_); last().hint = "Touch here to type a command"; last().enabled = !busy;
@@ -243,7 +244,7 @@ void CliPage::refusal(const std::string &why) {                   // (the receiv
 
 // ------------------------------------------------------------------ open, close, the steps
 void CliPage::open(int job) {
-    job_ = job; cliOpen_ = false; closeAfter_ = false; closing_ = false; changed_ = false; step_ = ST_IDLE; waitPath_.clear(); waitUntil_ = 0; jobFailed_.clear(); lines_.clear(); top_ = 0; follow_ = true; typed_.clear(); layer_ = 0;
+    job_ = job; cliOpen_ = false; closeAfter_ = false; closing_ = false; changed_ = false; step_ = ST_IDLE; waitPath_.clear(); waitUntil_ = 0; jobFailed_.clear(); more_ = false; lines_.clear(); top_ = 0; follow_ = true; typed_.clear(); layer_ = 0;
     pending_.clear(); diffText_.clear(); savedAs_.clear(); down_ = false; pressed_ = 0; exec_.clear(); execAt_ = 0; sent_ = 0; refused_ = 0; execFile_.clear();
     if (host_.armed()) { page_ = PG_CONSOLE; note("Not while the model could be flying.", "Safety on, motor off.", "", "OK", "", true); closeAfter_ = true; return; }
     if (!host_.pipeReady()) {
@@ -294,7 +295,8 @@ static std::string urlEncode(const std::string &s) {
 void CliPage::send(const std::string &cmd, Step step) {
     pending_ = cmd; step_ = step; askedAt_ = host_.ms();
     if ((step == ST_COMMAND || step == ST_EXEC) && !cliReadOnly(cmd)) changed_ = true;
-    if (!host_.ask("GET", "/api/cli?cmd=" + urlEncode(cmd))) { waitMethod_ = "GET"; waitPath_ = "/api/cli?cmd=" + urlEncode(cmd); waitUntil_ = host_.ms() + 5000; }   // (busy: tried again in poll(), 5 s)
+    const std::string path = "/api/cli?cmd=" + urlEncode(cmd) + "&wait=5000";   // (1.11.53: the receiver answers within 5 s - with 202 and the start, when the flight controller is still printing)
+    if (!host_.ask("GET", path)) { waitMethod_ = "GET"; waitPath_ = path; waitUntil_ = host_.ms() + 5000; }   // (busy: tried again in poll(), 5 s)
     build();
 }
 void CliPage::leave(bool save) {
@@ -378,11 +380,21 @@ void CliPage::poll() {
         else if ((int32_t) (host_.ms() - waitUntil_) >= 0) { waitPath_.clear(); finish(false, "", "the Bluetooth pipe stayed busy"); }
         return;
     }
-    if (step_ != ST_IDLE) {
+    if (step_ != ST_IDLE && more_ && moreAt_ && (int32_t) (host_.ms() - moreAt_) >= 0) {   // (1.11.53) the rest of a long reply
+        if (host_.ask("GET", "/api/cli/out")) moreAt_ = 0; else if (host_.ms() - moreSince_ > 90000) { more_ = false; finish(false, "", "the reply never ended"); }
+        return;
+    }
+    if (step_ != ST_IDLE && !(more_ && moreAt_)) {                   // (a fetch of the rest is scheduled: no request is out, nothing to look for)
         const int st = host_.askState();
-        if (st == 1) finish(host_.askCode() == 200, host_.askBody(), "");
-        else if (st == -1) finish(false, "", host_.askError());
-        else if (host_.ms() - askedAt_ > 20000) finish(false, "", "no answer in 20 s");
+        if (st == 1 && host_.askCode() == 202 && (step_ == ST_COMMAND || step_ == ST_DIFF || step_ == ST_EXEC)) {   // the start only: the flight controller still prints
+            if (!more_) { more_ = true; moreSince_ = host_.ms(); }
+            std::vector<std::string> ls; cliLines(host_.askBody(), ls); moreLines_ = ls.size();
+            if (host_.ms() - moreSince_ > 90000) { more_ = false; finish(false, "", "the reply never ended (" + std::to_string(moreLines_) + " lines)"); return; }
+            moreAt_ = host_.ms() + 500; askedAt_ = host_.ms(); build(); return;
+        }
+        if (st == 1) { more_ = false; finish(host_.askCode() == 200, host_.askBody(), ""); }
+        else if (st == -1) { more_ = false; finish(false, "", host_.askError()); }
+        else if (host_.ms() - askedAt_ > 20000) { more_ = false; finish(false, "", "no answer in 20 s"); }
     }
 }
 

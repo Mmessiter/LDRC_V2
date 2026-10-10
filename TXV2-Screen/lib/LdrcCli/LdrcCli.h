@@ -96,6 +96,7 @@ private:
     std::string typed_; int layer_;
     int job_; bool cliOpen_, leaveSave_, closeAfter_, closing_, changed_;   // changed_: a command that sets something has gone since the line opened (OK asks only then)
     std::string waitMethod_, waitPath_; uint32_t waitUntil_;   // (1.11.51) a request the pipe was too busy for: tried again until then
+    bool more_; uint32_t moreAt_, moreSince_; size_t moreLines_;   // (1.11.53) the reply came 202, its start only: /api/cli/out is fetched until it is whole
     std::string jobFailed_;                                   // (1.11.51) a job that could not finish: why, said in a note once the line is left
     std::vector<std::string> exec_; size_t execAt_; int sent_, refused_; std::string execFile_;
     std::string pending_, diffText_, savedAs_;
