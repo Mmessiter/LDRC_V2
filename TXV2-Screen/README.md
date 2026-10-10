@@ -16,8 +16,8 @@ What is in this folder:
 | | |
 |---|---|
 | `src/main.cpp` | The emulator: the serial protocol, the pages and their components, the little script interpreter's host, drawing, touch, WiFi, the web tools, the workshop door |
-| `src/*_device.h`, `src/*_draw.h` | The screen's own pages (update, wifi, pics, flight, theme, pong): the part that touches the hardware, and the drawing |
-| `lib/Ldrc*` | The same pages' thinking, portable C++ with no Arduino in it, tested on a Mac: `LdrcUpdate`, `LdrcWifi`, `LdrcPics`, `LdrcFlight`, `LdrcTheme`, `LdrcLink` (the framed file link to the Teensy, identical to the Teensy's copy) |
+| `src/*_device.h`, `src/*_draw.h` | The screen's own pages (update, wifi, pics, flight, theme, cli, pong): the part that touches the hardware, and the drawing |
+| `lib/Ldrc*` | The same pages' thinking, portable C++ with no Arduino in it, tested on a Mac: `LdrcUpdate`, `LdrcWifi`, `LdrcPics`, `LdrcFlight`, `LdrcTheme`, `LdrcCli` (Rotorflight's command line through the receiver's USB cable), `LdrcLink` (the framed file link to the Teensy, identical to the Teensy's copy) |
 | `lib/NextionScript`, `lib/NextionFonts` | The interpreter for the pages' own event code, and the Nextion font format |
 | `sd/` | **Everything on the screen's card**: `hmi/pages/*.json` (the pages), `hmi/pic/` (the pages' pictures), `hmi/font*_aa.bin` (the fonts), `hmi/audio/` (the sounds), `hmi/web/` (the pages the phone sees), `images/` (model pictures) |
 | `hmi/` | How `sd/` is made: `extract_hmi.py` decodes the Version 1 Nextion project, `build_sd.py` writes the card, `pagestyle.py` and `overrides.json` restyle the pages, `render_host/` draws any page on the Mac, `test_*/` are the host tests, `README.md` documents the Nextion file format |
@@ -86,7 +86,7 @@ Besides the Nextion protocol, a handful of words pass between the boards on the 
 | Teensy → screen | `ldrcst=<bits>` | The transmitter's state: model connected, motor armed, safety, and so on |
 | Teensy → screen | `ldrcrx=...` | The connected receiver's version and update progress, once a second |
 | Teensy → screen | `pong=x,y,ly,ry`, `pong=start` | Pong's ball and paddles, once a frame; the screen draws it smoothly |
-| Screen → Teensy | `ldrc update`, `ldrc rxupdate`, `ldrc wifi`, `ldrc appearance`, `ldrc colours`, `ldrc flight`, `ldrc defined` | The screen's own buttons, placed on the Teensy's pages by `hmi/overrides.json` |
+| Screen → Teensy | `ldrc update`, `ldrc rxupdate`, `ldrc wifi`, `ldrc appearance`, `ldrc colours`, `ldrc flight`, `ldrc defined`, `ldrc cli`, `ldrc diff` | The screen's own buttons, placed on the Teensy's pages by `hmi/overrides.json` or its page generators; the screen acts on them itself |
 | Screen → Teensy | `TIME=<epoch>` | The local time, from the internet; the Teensy sets its clock module from it |
 | Screen → Teensy | `LDRCLINK` | Opens the framed file link (`lib/LdrcLink`): files on the Teensy's card, and firmware |
 | Screen → Teensy | `LDRCRXUP major minor patch` | Orders the connected receiver to update itself |

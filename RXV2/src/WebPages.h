@@ -3831,10 +3831,32 @@ inline void handleApiState() {
 // "add the options which were not possible without USB"). One command per
 // request; the first request opens the CLI ('#'). Never over a UART or a
 // radio link: the reply would be telemetry-shaped garbage and MSP would die.
+// 0.9.881 (the transmitter's own command line page, screen 1.11.41): a LINKED transmitter may use the command line when
+// the model is known to be safe - the arming channel on the live link low (the safety on) and the flight controller's
+// own word not "armed". Before, any live link refused it ("turn the transmitter off first"), which was right for a phone
+// at the field but makes no sense for the transmitter itself, whose pilot is at the bench with the safety on. A linked
+// transmitter with no arming channel set, or with it high, is refused as before: the flight controller cannot arm while
+// its command line is open, and save or exit restart it, so this must never be near a flight.
+inline bool txLinkedButSafe() {
+    if (!rxTxLinkedRecently()) return false;
+    const bool armLink = rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 1000;
+    if (!armLink || armingChannel < 1 || armingChannel > 16 || channelMicros[armingChannel - 1] >= 1500) return false;
+    if (fcInfo.armed && fcInfo.armedMs && (uint32_t)(millis() - fcInfo.armedMs) < 5000) return false;
+    return true;
+}
+inline bool refuseCliIfTxLinkedUnsafe(const char* what) {
+    if (!rxTxLinkedRecently() || txLinkedButSafe()) return false;
+    server.sendHeader("Cache-Control", "no-store");
+    char m[200];
+    snprintf(m, sizeof m, "the transmitter is linked: %s needs the safety on (arming channel %u low) - the command line pauses the receiver's line to the flight controller, and save or exit restart it",
+             what, (unsigned)armingChannel);
+    server.send(409, "text/plain", m);
+    return true;
+}
 inline void handleCliApi() {
     server.sendHeader("Cache-Control", "no-store");
     if (!UsbHostMsp::active()) { server.send(409, "text/plain", "needs the USB connection: plug the flight controller's USB socket into the dongle or receiver"); return; }
-    if (refuseIfTxLinked("turn the transmitter off first - the command line pauses the receiver, and save or exit restarts the flight controller")) return;
+    if (refuseCliIfTxLinkedUnsafe("the command line")) return;
     if (fcInfo.armed && fcInfo.armedMs && (uint32_t)(millis() - fcInfo.armedMs) < 5000) { server.send(409, "text/plain", "ARMED - disarm first"); return; }
     String cmd = server.hasArg("cmd") ? server.arg("cmd") : String("");
     cmd.trim();
@@ -3853,7 +3875,7 @@ inline void handleCliLeave() {
     if (refuseIfArmed("leave the command line")) return;   // 2026-09-16 review: on a dongle the TX-link gates are no-ops
     server.sendHeader("Cache-Control", "no-store");
     if (!UsbHostMsp::cliMode) { server.send(200, "text/plain", "the command line was not open"); return; }
-    if (refuseIfTxLinked("turn the transmitter off first - leaving the command line restarts the flight controller")) return;
+    if (refuseCliIfTxLinkedUnsafe("leaving the command line")) return;   // (0.9.881: a linked transmitter with the safety on may)
     const bool save = server.hasArg("save") && server.arg("save") == "1";
     UsbHostMsp::cliLeave(save);
     fcInfo.telemCfgKnown = false;  fcInfo.telemCfgTries = 0;   // the FC restarts: fresh look at everything

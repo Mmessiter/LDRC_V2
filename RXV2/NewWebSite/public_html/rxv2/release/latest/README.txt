@@ -1,5 +1,5 @@
 These five files flash a bare Seeed XIAO ESP32-S3 into an LDRC dongle or receiver.
-Build: RXV2-0.9.880-adjustment-lines-known
+Build: RXV2-0.9.881-cli-from-the-transmitter
 
 esptool write_flash offsets:
   0x0       bootloader.bin
