@@ -43,7 +43,7 @@ public:
     virtual std::string stamp() = 0;          // "2026-10-10_0915", or "" when the clock is not set
     virtual bool exists(const std::string &path) = 0;
     virtual bool save(const std::string &path, const std::string &text, std::string &err) = 0;
-    virtual std::string newestDiff(const std::string &model) = 0;   // the newest /rfdiff file of the model ("" = none): the stamped ones by their stamp, the numbered by their number
+    virtual void listDiffs(std::vector<std::string> &out) = 0;   // every file of /rfdiff, as "/rfdiff/<name>" (1.11.50: the choosing is cliNewest's, tested on the Mac)
     virtual bool load(const std::string &path, std::string &text) = 0;
 };
 enum CliJob { CLI_CONSOLE = 0, CLI_TO_CARD = 1, CLI_EXECUTE = 2 };
@@ -107,6 +107,7 @@ private:
 void cliLines(const std::string &reply, std::vector<std::string> &out);
 std::string cliFileName(const std::string &model, const std::string &stamp, int n);   // "/rfdiff/<Model>_<stamp>.txt", or "..._<n>.txt" with no stamp
 std::string cliModelPrefix(const std::string &model);                                 // "<Model>_" as the file names begin
+std::string cliNewest(const std::string &model, const std::vector<std::string> &files);   // the newest of the model's files ("" = none)
 bool cliNewer(const std::string &a, const std::string &b, const std::string &prefix);  // of two of a model's files (prefix = "/rfdiff/" + cliModelPrefix), is a the newer? (stamped beat numbered; numbered compare as numbers)
 // The commands of a diff file: every line that is not empty and not a comment; save / exit / reboot left out (the save is the job's own)
 void cliCommands(const std::string &text, std::vector<std::string> &out);

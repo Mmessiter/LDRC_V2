@@ -60,6 +60,19 @@ bool cliNewer(const std::string &a, const std::string &b, const std::string &pre
     if (nb >= 0) return true;
     return ta > tb;                                                 // (stamps, "YYYY-MM-DD_HHMM", sort as time does)
 }
+std::string cliNewest(const std::string &model, const std::vector<std::string> &files) {
+    const std::string pre = "/rfdiff/" + cliModelPrefix(model);
+    std::string best;
+    for (auto &f0 : files) {
+        std::string f = f0;
+        if (f.rfind("/rfdiff/", 0) != 0) { const size_t slash = f.find_last_of('/'); f = "/rfdiff/" + (slash == std::string::npos ? f : f.substr(slash + 1)); }
+        if (f.size() < pre.size() + 5 || f.compare(0, pre.size(), pre) != 0) continue;
+        std::string low = f.substr(f.size() - 4); for (auto &c : low) c = (char) tolower((unsigned char) c);
+        if (low != ".txt") continue;
+        if (best.empty() || cliNewer(f, best, pre)) best = f;
+    }
+    return best;
+}
 void cliCommands(const std::string &text, std::vector<std::string> &out) {
     out.clear();
     std::vector<std::string> ls; cliLines(text, ls);
@@ -229,9 +242,16 @@ void CliPage::open(int job) {
     }
     go(PG_CONSOLE);
     if (job == CLI_EXECUTE) {
-        execFile_ = host_.newestDiff(host_.modelName());
+        const std::string model = host_.modelName();
+        std::vector<std::string> files; host_.listDiffs(files);
+        execFile_ = cliNewest(model, files);
         std::string text;
-        if (execFile_.empty() || !host_.load(execFile_, text)) { note("No diff of this model on the screen's card yet.", "Diff to card makes one.", "", "OK", "", true); closeAfter_ = true; return; }
+        if (execFile_.empty()) {                                     // (1.11.50: what it looked for, and what is there - Malcolm, 10 Oct: Execute found no file after a Diff to card)
+            std::string there = files.empty() ? "The folder /rfdiff is empty." : "There: " + files[0].substr(files[0].rfind('/') + 1) + (files.size() > 1 ? " and " + std::to_string(files.size() - 1) + " more" : "");
+            note("No diff of " + (model.empty() ? std::string("this model") : model) + " on the screen's card.", "Looked for /rfdiff/" + cliModelPrefix(model) + "...txt", there, "OK", "", true, "Diff to card makes one.");
+            closeAfter_ = true; return;
+        }
+        if (!host_.load(execFile_, text)) { note("Could not read", execFile_, "", "OK", "", true); closeAfter_ = true; return; }
         cliCommands(text, exec_);
         if (exec_.empty()) { note("Nothing to execute in", execFile_, "(no commands in it).", "OK", "", true); closeAfter_ = true; return; }
         say("Execute " + execFile_ + ": " + std::to_string(exec_.size()) + " commands");

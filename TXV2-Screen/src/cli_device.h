@@ -30,26 +30,20 @@ struct ScreenCli : public ldrc::CliHost {
         if (!f) { err = "the card would not take it"; return false; }
         const size_t n = f.write((const uint8_t *) text.data(), text.size()); f.close();
         if (n != text.size()) { SD.remove(p.c_str()); err = "the card is full"; return false; }
-        blog("cli", "diff saved: " + p + " (" + std::to_string(text.size()) + " bytes)");
+        blog("cli", "diff saved: " + p + " (" + std::to_string(text.size()) + " bytes; " + (SD.exists(p.c_str()) ? "there" : "NOT there") + " on reading back)");
         return true;
     }
-    std::string newestDiff(const std::string &model) override {   // the model's files of /rfdiff, the newest by their stamp or number (lib/LdrcCli cliNewer)
-        if (!sdOk) return "";
-        const std::string pre = "/rfdiff/" + ldrc::cliModelPrefix(model);
+    void listDiffs(std::vector<std::string> &out) override {   // every file of /rfdiff (the choosing is lib/LdrcCli cliNewest's)
+        out.clear();
+        if (!sdOk) return;
         File d = SD.open("/rfdiff");
-        if (!d || !d.isDirectory()) return "";
-        std::string best;
-        for (int guard = 0; guard < 2000; ++guard) {
-            boolean isDir = false;
-            const String full = d.getNextFileName(&isDir);
-            if (full.length() == 0) break;
-            if (isDir) continue;
-            std::string n = full.c_str();
-            if (n.rfind("/rfdiff/", 0) != 0) { const size_t slash = n.find_last_of('/'); n = "/rfdiff/" + (slash == std::string::npos ? n : n.substr(slash + 1)); }
-            if (n.rfind(pre, 0) == 0 && n.size() > 4 && n.compare(n.size() - 4, 4, ".txt") == 0 && (best.empty() || ldrc::cliNewer(n, best, pre))) best = n;
+        if (!d || !d.isDirectory()) { blog("cli", "no /rfdiff folder"); return; }
+        for (File f = d.openNextFile(); f && out.size() < 500; f = d.openNextFile()) {   // (as the door's /ls lists: openNextFile and name)
+            if (!f.isDirectory()) { std::string n = f.name(); if (n.rfind("/rfdiff/", 0) != 0) { const size_t slash = n.find_last_of('/'); n = "/rfdiff/" + (slash == std::string::npos ? n : n.substr(slash + 1)); } out.push_back(n); }
+            f.close();
         }
         d.close();
-        return best;
+        blog("cli", "/rfdiff holds " + std::to_string(out.size()) + " file(s)" + (out.empty() ? "" : ", the first " + out[0]) + "; the model is \"" + modelName() + "\"");
     }
     bool load(const std::string &p, std::string &text) override {
         if (!sdOk) return false;

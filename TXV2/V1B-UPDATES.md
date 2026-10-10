@@ -186,6 +186,14 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Execute diff says what it looked for (V2 B90, screen 1.11.50, 10 Oct 2026)
+
+Malcolm, 10 Oct: after Diff to card, Execute diff said there was no file. Not yet understood, so the page now tells:
+when it finds no diff of the model it names the model, the pattern it looked for, and what /rfdiff holds; the screen's
+log records each save (and whether the file reads back) and each look. The choosing of the newest file moved into the
+host-tested part (lib/LdrcCli cliNewest: names bare or with the folder, .TXT in any case), and the folder is listed as
+the door's /ls lists it.
+
 ## "Type a command" (V2 B90, screen 1.11.49, 10 Oct 2026)
 
 Malcolm, 10 Oct: the console's opening words are "Type a command" and no more - "users will already know that they must
