@@ -94,7 +94,7 @@ private:
     CliHost &host_; Page page_; Step step_; WifiScene scene_; std::vector<WifiItem> next_;
     std::vector<std::string> lines_; int top_; bool follow_;
     std::string typed_; int layer_;
-    int job_; bool cliOpen_, leaveSave_, closeAfter_;
+    int job_; bool cliOpen_, leaveSave_, closeAfter_, closing_;
     std::vector<std::string> exec_; size_t execAt_; int sent_, refused_; std::string execFile_;
     std::string pending_, diffText_, savedAs_;
     std::string noteL1_, noteL2_, noteL3_, noteL4_, noteB1_, noteB2_; bool noteBad_; int noteFrom_;

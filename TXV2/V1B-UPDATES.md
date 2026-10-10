@@ -186,6 +186,16 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The command line page made plain (V2 B90, screen 1.11.44, 10 Oct 2026)
+
+Malcolm, 10 Oct, after the first command line through the receiver worked ("Bravo, it seems to work!"): OK at the
+right, "standard for our system and means leave"; the row of buttons gone, "the user can type in whatever he wants";
+"Open" and "Close" at the top unexplained; Up and Down unneeded, "we can scroll with a finger just as in the help
+files". So the page is the console across the width, the line to type on, and OK. Typed `save` keeps the changes and
+`exit` leaves them; either restarts the flight controller, and the console says so. OK with the command line still
+open asks once (leaving restarts the flight controller); closed, it leaves at once. "Working ..." at the right of the
+title strip while the flight controller is being asked. hmi/test_cli: 80 checks.
+
 ## A refusal shown whole (V2 B90, screen 1.11.43, 10 Oct 2026)
 
 Malcolm's photo, 10 Oct: the receiver's reason for refusing the command line ended "... restarts the flight contr".

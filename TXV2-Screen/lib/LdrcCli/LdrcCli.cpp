@@ -94,16 +94,16 @@ void cliWrap(const std::string &text, size_t width, size_t most, std::vector<std
 
 // ------------------------------------------------------------------ the pages: what is where
 // The screen is 800 x 480. Ids: 1.. buttons, 60.. the console and its line, 90.. the keys' row, 100.. keys.
-enum { ID_CLOSE = 1, ID_DIFF, ID_STATUS, ID_VERSION, ID_TOCARD, ID_SAVE, ID_LEAVE, ID_UP, ID_DOWN, ID_CANCEL, ID_SEND, ID_NOTE1, ID_NOTE2,
+enum { ID_CLOSE = 1, ID_CANCEL, ID_SEND, ID_NOTE1, ID_NOTE2,
        ID_LOWER = 90, ID_UPPER, ID_SYMBOLS, ID_SPACE, ID_DELETE, ID_KEY = 100 };
 static const char *LAYERS[3][4] = {
     { "1234567890", "qwertyuiop", "asdfghjkl-", "zxcvbnm._=" },
     { "1234567890", "QWERTYUIOP", "ASDFGHJKL-", "ZXCVBNM._=" },
     { "!\"#$%&'()*", "+,-./:;<=>", "?@[\\]^_`{|", "}~        " } };
-static const int CON_X = 6, CON_Y = 64, CON_W = 700, CON_H = 312;   // the console; the Up / Down buttons at its right
+static const int CON_X = 6, CON_Y = 64, CON_W = 788, CON_H = 312;   // the console (1.11.44: across the page; a finger scrolls it, as the help pages)
 
 CliPage::CliPage(CliHost &host)
-    : host_(host), page_(PG_NONE), step_(ST_IDLE), top_(0), follow_(true), layer_(0), job_(0), cliOpen_(false), leaveSave_(false), closeAfter_(false),
+    : host_(host), page_(PG_NONE), step_(ST_IDLE), top_(0), follow_(true), layer_(0), job_(0), cliOpen_(false), leaveSave_(false), closeAfter_(false), closing_(false),
       execAt_(0), sent_(0), refused_(0), noteBad_(false), noteFrom_(0), down_(false), pressed_(0), lastX_(0), lastY_(0), downY_(0), dragTop_(0), dragged_(false), seenDown_(0), repeatAt_(0), repeated_(false), serial_(1), askedAt_(0) {}
 
 std::string CliPage::pageName() const {
@@ -124,20 +124,17 @@ void CliPage::build() {
     switch (page_) {
     case PG_NONE: break;
     case PG_CONSOLE: {
-        add(WifiItem::TITLE, CLI_ID_TITLE, 6, 6, 460, 48, cliOpen_ ? "Command line (Rotorflight)" : "Command line");
-        { std::string h = busy ? "Working ..." : (cliOpen_ ? "Open" : "");
+        // 1.11.44 (Malcolm, 10 Oct, of the first page: OK at the right "means leave"; the buttons "we can remove for simplicity
+        // because the user can type in whatever he wants"; "Open" and "Close" unexplained; Up and Down unneeded, "we can scroll
+        // with a finger just as in the help files"): the console, the line to type on, OK. Typed save / exit do what the
+        // buttons did; "Working ..." at the right of the strip while the flight controller is being asked.
+        add(WifiItem::TITLE, CLI_ID_TITLE, 6, 6, 620, 48, "Command line (Rotorflight)");
+        { std::string h = busy ? "Working ..." : "";
           if (step_ == ST_EXEC) { char b[32]; snprintf(b, sizeof b, "%d of %u", sent_, (unsigned) exec_.size()); h = b; }
-          add(WifiItem::TEXT, CLI_ID_HINT, 470, 6, 160, 48, h); last().strong = true; }
-        add(WifiItem::BUTTON, ID_CLOSE, 650, 6, 144, 48, "Close"); last().enabled = !busy && !cliOpen_;
+          add(WifiItem::TEXT, CLI_ID_HINT, 630, 6, 164, 48, h); last().strong = true; }
         add(WifiItem::ROW, CLI_ID_CONSOLE, CON_X, CON_Y, CON_W, CON_H, "");   // (drawn by the screen as the console: ROW only so a touch lands on it)
-        add(WifiItem::BUTTON, ID_UP, 712, CON_Y, 82, 150, "Up"); last().enabled = top_ > 0;
-        add(WifiItem::BUTTON, ID_DOWN, 712, CON_Y + 162, 82, 150, "Down"); last().enabled = top_ + CLI_VISIBLE < (int) lines_.size();
         add(WifiItem::FIELD, CLI_ID_FIELD, 6, 384, 788, 46, typed_); last().hint = "Touch here to type a command"; last().enabled = !busy;
-        add(WifiItem::BUTTON, ID_DIFF, 6, 436, 120, 40, "diff all"); last().enabled = !busy;
-        add(WifiItem::BUTTON, ID_STATUS, 132, 436, 120, 40, "status"); last().enabled = !busy;
-        add(WifiItem::BUTTON, ID_TOCARD, 258, 436, 160, 40, "Diff to card"); last().enabled = !busy; last().strong = true;
-        add(WifiItem::BUTTON, ID_SAVE, 440, 436, 180, 40, "Save and restart"); last().enabled = !busy && cliOpen_;
-        add(WifiItem::BUTTON, ID_LEAVE, 626, 436, 168, 40, "Leave, no save"); last().enabled = !busy && cliOpen_;
+        add(WifiItem::BUTTON, ID_CLOSE, 634, 436, 160, 40, "OK"); last().enabled = !busy;
         break;
     }
     case PG_KEYS: {
@@ -207,7 +204,7 @@ void CliPage::refusal(const std::string &why) {                   // (the receiv
 
 // ------------------------------------------------------------------ open, close, the steps
 void CliPage::open(int job) {
-    job_ = job; cliOpen_ = false; closeAfter_ = false; step_ = ST_IDLE; lines_.clear(); top_ = 0; follow_ = true; typed_.clear(); layer_ = 0;
+    job_ = job; cliOpen_ = false; closeAfter_ = false; closing_ = false; step_ = ST_IDLE; lines_.clear(); top_ = 0; follow_ = true; typed_.clear(); layer_ = 0;
     pending_.clear(); diffText_.clear(); savedAs_.clear(); down_ = false; pressed_ = 0; exec_.clear(); execAt_ = 0; sent_ = 0; refused_ = 0; execFile_.clear();
     if (host_.armed()) { page_ = PG_CONSOLE; note("Not while the model could be flying.", "Safety on, motor off.", "", "OK", "", true); closeAfter_ = true; return; }
     if (!host_.pipeReady()) {
@@ -272,7 +269,7 @@ void CliPage::finish(bool ok, const std::string &body, const std::string &err) {
         std::string why = body.empty() ? err : body;
         if (step == ST_OPENING || (job_ == CLI_TO_CARD && step == ST_DIFF) || (job_ == CLI_EXECUTE && step == ST_EXEC && sent_ == 0)) { refusal(why); return; }
         if (step == ST_LEAVING) { say("Not left: " + why); build(); return; }
-        if (step == ST_EXEC) { char b[80]; snprintf(b, sizeof b, "Stopped at command %d of %u: ", sent_ + 1, (unsigned) exec_.size()); say(b + why); say("Nothing saved. Leave, no save - or Execute diff again."); exec_.clear(); build(); return; }
+        if (step == ST_EXEC) { char b[80]; snprintf(b, sizeof b, "Stopped at command %d of %u: ", sent_ + 1, (unsigned) exec_.size()); say(b + why); say("Nothing saved. OK leaves it - or Execute diff again."); exec_.clear(); build(); return; }
         say("No answer: " + why); build(); return;
     }
     if (step == ST_LEAVING) {
@@ -283,8 +280,9 @@ void CliPage::finish(bool ok, const std::string &body, const std::string &err) {
             note(l1, refused_ ? "The refused ones are in the console (###ERROR)." : "Saved. The flight controller is restarting with them.", refused_ ? "Saved all the same; the flight controller is restarting." : "", "OK", "", refused_ > 0);
             closeAfter_ = true; return;
         }
-        note(leaveSave_ ? "Saved. The flight controller is restarting." : "Left without saving. The flight controller is restarting.", "", "", "OK", "", false);
-        closeAfter_ = true; return;
+        if (closing_) { closing_ = false; close(); return; }
+        say(leaveSave_ ? "Saved. The flight controller is restarting." : "Left without saving. The flight controller is restarting.");
+        say("Type a command to open it again (once it is back)."); build(); return;
     }
     cliOpen_ = true;
     if (step == ST_EXEC) {
@@ -296,7 +294,7 @@ void CliPage::finish(bool ok, const std::string &body, const std::string &err) {
         if (bad) refused_++;
         execNext(); return;
     }
-    if (step == ST_OPENING) { say("Command line open. Type a command, or use the buttons."); build(); return; }
+    if (step == ST_OPENING) { say("Command line open. Type a command; save keeps changes, exit does not (both restart the flight controller)."); build(); return; }
     if (step == ST_DIFF) {
         std::vector<std::string> ls; cliLines(body, ls);
         std::string text;
@@ -376,16 +374,12 @@ void CliPage::act(int id) {
     switch (page_) {
     case PG_CONSOLE: {
         if (step_ != ST_IDLE) { build(); return; }
-        const int most = (int) lines_.size() > CLI_VISIBLE ? (int) lines_.size() - CLI_VISIBLE : 0;
-        if (id == ID_UP) { top_ -= CLI_VISIBLE - 2; if (top_ < 0) top_ = 0; follow_ = false; build(); return; }
-        if (id == ID_DOWN) { top_ += CLI_VISIBLE - 2; if (top_ > most) top_ = most; follow_ = top_ >= most; build(); return; }
         if (id == CLI_ID_FIELD) { go(PG_KEYS); return; }
-        if (id == ID_DIFF) { say("# diff all"); send("diff all", ST_COMMAND); return; }
-        if (id == ID_STATUS) { say("# status"); send("status", ST_COMMAND); return; }
-        if (id == ID_TOCARD) { say("# diff all (to the card)"); send("diff all", ST_DIFF); return; }
-        if (id == ID_SAVE) { note("Save and restart the flight controller?", "Everything set on the command line is kept.", "", "Save and restart", "Stay", false); return; }
-        if (id == ID_LEAVE) { note("Leave without saving?", "What was set on the command line is lost;", "the flight controller restarts.", "Leave, no save", "Stay", false); return; }
-        if (id == ID_CLOSE) { if (cliOpen_) { build(); return; } close(); return; }
+        if (id == ID_CLOSE) {                                           // OK: out - once the command line is closed; open, it asks (leaving restarts the flight controller)
+            if (!cliOpen_) { close(); return; }
+            note("Leave the command line without saving?", "Type save first to keep what you changed.", "The flight controller restarts either way.", "Leave", "Stay", false);
+            return;
+        }
         break;
     }
     case PG_KEYS: {
@@ -397,7 +391,10 @@ void CliPage::act(int id) {
             typed_.clear(); go(PG_CONSOLE);
             if (cmd.empty()) return;
             const std::string low = [&] { std::string l = cmd; for (auto &c : l) c = (char) tolower((unsigned char) c); return l; }();
-            if (low == "save" || low == "exit" || low == "reboot") { say("Use the buttons for that: Save and restart, or Leave, no save."); build(); return; }
+            if (low == "save" || low == "exit" || low == "reboot") {      // the receiver takes these on its own line (and the flight controller restarts)
+                if (!cliOpen_) { say("# " + cmd); say("The command line is not open: type a command first."); build(); return; }
+                say("# " + cmd); closing_ = false; leave(low == "save"); return;
+            }
             say("# " + cmd); send(cmd, ST_COMMAND); return;
         }
         key(id); return;
@@ -406,8 +403,7 @@ void CliPage::act(int id) {
         if (id == ID_NOTE2) { if (noteB1_ == "Execute") { close(); return; } go(PG_CONSOLE); return; }   // "Cancel" / "Stay"
         if (closeAfter_) { close(); return; }
         if (noteB1_ == "Execute") { go(PG_CONSOLE); execNext(); return; }
-        if (noteB1_ == "Save and restart") { go(PG_CONSOLE); leave(true); return; }
-        if (noteB1_ == "Leave, no save") { go(PG_CONSOLE); leave(false); return; }
+        if (noteB1_ == "Leave") { go(PG_CONSOLE); closing_ = true; leave(false); return; }
         go(PG_CONSOLE); return;
     }
     case PG_NONE: break;
