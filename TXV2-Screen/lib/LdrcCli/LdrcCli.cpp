@@ -138,12 +138,14 @@ void CliPage::build() {
         break;
     }
     case PG_KEYS: {
+        // 1.11.45 (Malcolm, 10 Oct, of the keys: Delete "should be on the right-hand side of the text entry box"; the big key at
+        // the bottom right "should be the one for send. And bright yellow is a good colour"): Delete at the box's end, Send the
+        // big yellow key at the bottom right. The WiFi page's keys are laid out the same.
         add(WifiItem::BUTTON, ID_CANCEL, 6, 6, 140, 48, "Cancel");
-        add(WifiItem::TITLE, CLI_ID_TITLE, 154, 6, 488, 48, "Command");
-        add(WifiItem::BUTTON, ID_SEND, 650, 6, 144, 48, "Send"); last().strong = true; last().enabled = !typed_.empty();
-        add(WifiItem::FIELD, CLI_ID_FIELD, 6, 60, 788, 54, typed_);
-        { char b[24]; snprintf(b, sizeof b, "%u", (unsigned) typed_.size()); last().note = b; }
+        add(WifiItem::TITLE, CLI_ID_TITLE, 154, 6, 640, 48, "Command");
+        add(WifiItem::FIELD, CLI_ID_FIELD, 6, 60, 660, 54, typed_);
         last().hint = "set name = value, get name, diff all, status ...";
+        add(WifiItem::KEY, ID_DELETE, 672, 60, 122, 54, "Delete"); last().strong = true; last().enabled = !typed_.empty();
         for (int r = 0; r < 4; ++r)
             for (int c = 0; c < 10; ++c) {
                 const char ch = LAYERS[layer_][r][c];
@@ -154,7 +156,7 @@ void CliPage::build() {
         add(WifiItem::KEY, ID_UPPER, 111, 408, 108, 70, "ABC"); last().strong = true; last().good = layer_ == 1;
         add(WifiItem::KEY, ID_SYMBOLS, 221, 408, 108, 70, "#+="); last().strong = true; last().good = layer_ == 2;
         add(WifiItem::KEY, ID_SPACE, 331, 408, 248, 70, "Space"); last().strong = true;
-        add(WifiItem::KEY, ID_DELETE, 581, 408, 218, 70, "Delete"); last().strong = true; last().enabled = !typed_.empty();
+        add(WifiItem::BUTTON, ID_SEND, 581, 408, 218, 70, "Send"); last().strong = true; last().enabled = !typed_.empty();
         break;
     }
     case PG_NOTE: {

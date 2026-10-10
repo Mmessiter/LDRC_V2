@@ -143,13 +143,15 @@ void WifiSetup::build() {
         break;
     }
     case PG_KEYS: {
+        // 1.11.45: Delete at the right end of the box, Join the big yellow key at the bottom right - as the command line's
+        // keys (Malcolm, 10 Oct), so the two keyboards are one
         add(WifiItem::BUTTON, ID_CANCEL, 6, 6, 140, 48, "Cancel");
-        add(WifiItem::TITLE, ID_TITLE, 154, 6, 360, 48, wifiShown(target_.ssid));
-        add(WifiItem::BUTTON, ID_HIDE, 522, 6, 120, 48, hidden_ ? "Show" : "Hide");
-        add(WifiItem::BUTTON, ID_GO, 650, 6, 144, 48, "Join"); last().strong = true; last().enabled = typed_.size() >= WIFI_PASS_MIN;
-        add(WifiItem::FIELD, ID_FIELD, 6, 60, 788, 54, hidden_ ? std::string(typed_.size(), '*') : typed_);
+        add(WifiItem::TITLE, ID_TITLE, 154, 6, 488, 48, wifiShown(target_.ssid));
+        add(WifiItem::BUTTON, ID_HIDE, 650, 6, 144, 48, hidden_ ? "Show" : "Hide");
+        add(WifiItem::FIELD, ID_FIELD, 6, 60, 660, 54, hidden_ ? std::string(typed_.size(), '*') : typed_);
         { char b[48]; snprintf(b, sizeof b, typed_.size() < WIFI_PASS_MIN ? "%u of at least %u" : "%u", (unsigned) typed_.size(), (unsigned) WIFI_PASS_MIN); last().note = b; }
         last().hint = "Password for " + wifiShown(target_.ssid);
+        add(WifiItem::KEY, ID_DELETE, 672, 60, 122, 54, "Delete"); last().strong = true; last().enabled = !typed_.empty();
         for (int r = 0; r < 4; ++r)
             for (int c = 0; c < 10; ++c) {
                 const char ch = LAYERS[layer_][r][c];
@@ -160,7 +162,7 @@ void WifiSetup::build() {
         add(WifiItem::KEY, ID_UPPER, 111, 408, 108, 70, "ABC"); last().strong = true; last().good = layer_ == 1;
         add(WifiItem::KEY, ID_SYMBOLS, 221, 408, 108, 70, "#+="); last().strong = true; last().good = layer_ == 2;
         add(WifiItem::KEY, ID_SPACE, 331, 408, 248, 70, "Space"); last().strong = true;
-        add(WifiItem::KEY, ID_DELETE, 581, 408, 218, 70, "Delete"); last().strong = true; last().enabled = !typed_.empty();
+        add(WifiItem::BUTTON, ID_GO, 581, 408, 218, 70, "Join"); last().strong = true; last().enabled = typed_.size() >= WIFI_PASS_MIN;
         break;
     }
     case PG_JOINING:

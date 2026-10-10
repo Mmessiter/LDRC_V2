@@ -186,6 +186,14 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The keys: Delete beside the box, the big yellow key acts (V2 B90, screen 1.11.45, 10 Oct 2026)
+
+Malcolm, 10 Oct, of the command line's keys: "the delete button, I think should be on the right-hand side of the text
+entry box where it currently says 4. The button which is currently marked delete should be the one for send. And
+bright yellow is a good colour." So on both keyboards (the command line's and the WiFi page's): Delete at the right end
+of the box, and the big key at the bottom right is the one that acts - Send, or Join - in yellow. The count of
+characters is gone from the command line's box.
+
 ## The command line page made plain (V2 B90, screen 1.11.44, 10 Oct 2026)
 
 Malcolm, 10 Oct, after the first command line through the receiver worked ("Bravo, it seems to work!"): OK at the
