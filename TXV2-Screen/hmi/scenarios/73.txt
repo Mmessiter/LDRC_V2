@@ -1,0 +1,23 @@
+# BlackboxView (page 73), as Malcolm's photos of 10 Oct (Black Thunder 2): BbHead, BbShow, BbShowMemory (RF_FcSetup.h).
+# B91: the longest words of each box, so a cut shows here first: "Whenever armed", "1 in 2 (1012/s)", "20.8 of 125.3 MB used".
+Screen_Background=8
+@model 1
+page BlackboxView
+t9.txt="All banks"
+t11.txt="Black Thunder 2"
+vis b3,0
+tn0.txt="Whenever armed"
+tn1.txt="FC memory"
+tn2.txt="1 in 2 (1012/s)"
+tn3.txt="5"
+tn4.val=1
+tn5.txt="20.8 of 125.3 MB used"
+tn6.txt="Ready to record"
+@shot 73_blackbox
+tn0.txt="While switch on"
+tn1.txt="Serial logger"
+tn2.txt="1 in 128 (63/s)"
+tn5.txt="No memory chip on board"
+tn6.txt="Full: erase before flying"
+vis b3,1
+@shot 73_blackbox_longest

@@ -76,6 +76,10 @@ def compact_plan(fields, buttons, tier=None, min_size=None):
     rows = max((f[3] for f in fields), default=-1) + 1
     for t in ([tier] if tier is not None else range(len(TIERS))):
         font, row_h, pitch, val_w, wide_l = TIERS[t]
+        # (B91, Malcolm of the Black box page: "The answer to the 'when' is so abbreviated, it's difficult to understand ... perhaps
+        # by making the relative sizes of the boxes different"): a 'wide' row's label is no wider than its words need, so its box
+        # has the room - and each 'wide' row names (7th element) the longest words the main board puts in it
+        wide_l = min(wide_l, max((width(font, f[1]) + 20 for f in fields if f[4] == 'wide'), default=wide_l))
         cols = [0, 0]; minc = 300 if font == 6 else 260
         for f in fields:
             nm, label, col, row, kind = f[:5]; hint = f[6] if len(f) > 6 else None

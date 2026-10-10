@@ -348,13 +348,14 @@ FLASHMEM static void BbShowMemory()
     char a[64], b[64];
     if (!(BoundFlag && ModelMatched)) { snprintf(a, sizeof(a), "Connect the model to see"); snprintf(b, sizeof(b), "how full its memory is"); }
     else if (BbMemN < 13) { snprintf(a, sizeof(a), "Memory: not known"); b[0] = 0; }
-    else if (!(BbMem[0] & 2)) { snprintf(a, sizeof(a), "No memory chip on this board"); snprintf(b, sizeof(b), "SD card or serial logger only"); }
+    else if (!(BbMem[0] & 2)) { snprintf(a, sizeof(a), "No memory chip on board"); snprintf(b, sizeof(b), "SD card or logger only"); }
     else
     {
         const uint32_t size = RdU32(BbMem, 5), used = RdU32(BbMem, 9);
         const unsigned pct = size ? (unsigned)((uint64_t)used * 100 / size) : 0;
-        snprintf(a, sizeof(a), "%lu.%lu of %lu.%lu MB used (%u %%)", (unsigned long)(used / 1048576), (unsigned long)(used % 1048576 * 10 / 1048576),
-                 (unsigned long)(size / 1048576), (unsigned long)(size % 1048576 * 10 / 1048576), pct);
+        // B91 (Malcolm, 10 Oct: the page's boxes cut their words - "20.8 of 125.3 MB used (1..."): no per cent; the line below says Full at 95 %
+        snprintf(a, sizeof(a), "%lu.%lu of %lu.%lu MB used", (unsigned long)(used / 1048576), (unsigned long)(used % 1048576 * 10 / 1048576),
+                 (unsigned long)(size / 1048576), (unsigned long)(size % 1048576 * 10 / 1048576));
         snprintf(b, sizeof(b), "%s", !(BbMem[0] & 1) ? "Busy: erasing?" : pct >= 95 ? "Full: erase before flying" : used == 0 ? "Empty: ready to record" : "Ready to record");
     }
     SendText((char *)"tn5", a); SendText((char *)"tn6", b);

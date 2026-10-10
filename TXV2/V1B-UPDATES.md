@@ -186,6 +186,16 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Black box: every answer in full (V2 B91, screen 1.11.56, 10 Oct 2026)
+
+Malcolm, of "Armed + swi..." and "Whenever ar...": "The answer to the 'when' is so abbreviated, it's difficult to
+understand. I wonder if we can fix this, perhaps by making the relative sizes of the boxes different". The page now
+names the longest words each box can show ("Whenever armed", "Serial logger", "1 in 128 (8000/s)"), and a row whose
+answer is words has a label only as wide as its own words ("How often"), so the answer box takes the rest. The memory
+line was cut too ("20.8 of 125.3 MB used (1..."): it is "20.8 of 125.3 MB used" now (B91; the line below still says
+"Full: erase before flying" at 95 %), and a board with no memory chip says "No memory chip on board" / "SD card or
+logger only". The battery pages keep their layout.
+
 ## The start-up picture says V2 (V2 B90, screen 1.11.56, 10 Oct 2026)
 
 Malcolm: "is it possible for you to edit this image such that it declares LockDownRadioControl V2". The picture on the

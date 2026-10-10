@@ -35,14 +35,14 @@ rp.page(75, 'BatSensorsView', 'Battery sensors (FC pads)', [
 rp.series_end()
 rp.page(73, 'BlackboxView', 'Black box (Rotorflight)', [
     ('h0', 'Recording', 0, 0, 'head', 0),
-    ('tn0', 'When', 0, 1, 'wide', 165),
-    ('tn1', 'Where', 0, 2, 'wide', 166),
-    ('tn2', 'How often', 0, 3, 'wide', 167),
+    ('tn0', 'When', 0, 1, 'wide', 165, 'Whenever armed'),        # (B91: the longest words each box shows - BbModeWord, BbDevWord, BbShow -
+    ('tn1', 'Where', 0, 2, 'wide', 166, 'Serial logger'),         #  so the column is wide enough for them: Malcolm, 10 Oct, of "Armed + swi...")
+    ('tn2', 'How often', 0, 3, 'wide', 167, '1 in 128 (8000/s)'),
     ('tn3', 'After disarm [s]', 0, 4, 'num', 164, 'Seconds after disarm'),
     ('tn4', 'Overwrite oldest', 0, 5, 'switch', 168),
     ('h1', 'Memory', 1, 0, 'head', 0),
-    ('tn5', '', 1, 1, 'info', 0),
-    ('tn6', '', 1, 2, 'info', 0),
+    ('tn5', '', 1, 1, 'info', 0, 'No memory chip on board'),      # (BbShowMemory's longest: "125.3 of 125.3 MB used", "Connect the model to see")
+    ('tn6', '', 1, 2, 'info', 0, 'Full: erase before flying'),
 ], [('b2', 'Erase all logs', 0, 0, 169), ('b3', 'Save', 0, 0, 163), ('b1', 'OK', 0, 0, 162)], 'BLACKBOX.TXT', busy_rect=(110, 336, 580, 70))   # (the erase's progress below the rows)
 rp.page(74, 'LevelView', 'Calibrate (Rotorflight)', [
     ('h0', 'Level (accelerometer)', 0, 0, 'head', 0),

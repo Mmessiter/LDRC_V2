@@ -142,7 +142,7 @@ int main() {
     fcLog.clear(); StartBlackboxView(); runBb();
     CHECK(BbHave && fcLog.size() >= 4 && fcLog[0].fn == 101 && fcLog[1].fn == 80 && fcLog[2].fn == 34 && fcLog[3].fn == 70);
     CHECK(fields["tn0"] == "Whenever armed" && fields["tn1"] == "FC memory" && fields["tn2"] == "1 in 8 (250/s)" && fields["tn3"] == "5" && vals["tn4"] == 0);
-    CHECK(fields["tn5"] == "3.2 of 16.0 MB used (20 %)" && fields["tn6"] == "Ready to record");
+    CHECK(fields["tn5"] == "3.2 of 16.0 MB used" && fields["tn6"] == "Ready to record");
     // While switch on, with no Black box switch: asked first; No = nothing written
     BlackboxModeTapped(); CHECK(fields["tn0"] == "While switch on");
     confirmAnswer = false; asked = 0; fcLog.clear(); SaveBlackbox(); CHECK(asked == 1 && lastBox.find("No Black box switch") == 0 && fcLog.empty());
