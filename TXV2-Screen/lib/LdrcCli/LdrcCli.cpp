@@ -192,8 +192,14 @@ void CliPage::build() {
 
 // ------------------------------------------------------------------ the console
 void CliPage::say(const std::string &line) {
-    lines_.push_back(line);
-    while (lines_.size() > CLI_LINES_MAX) lines_.erase(lines_.begin());
+    // 1.11.48 (Malcolm, 10 Oct, of a line that ended "(b...": "I'm curious to know what the last word would have been"): a line
+    // too long for the console wraps at a space, the rest indented, so nothing is lost. 62 characters of the 24 px font fit
+    // the console in ordinary words (the screen still cuts a line of wide letters with dots).
+    std::vector<std::string> ls; cliWrap(line, 62, 20, ls);
+    for (size_t i = 0; i < ls.size(); ++i) {
+        lines_.push_back(i ? "  " + ls[i] : ls[i]);
+        while (lines_.size() > CLI_LINES_MAX) lines_.erase(lines_.begin());
+    }
     if (follow_) top_ = (int) lines_.size() > CLI_VISIBLE ? (int) lines_.size() - CLI_VISIBLE : 0;
 }
 void CliPage::print(const std::string &text) {
@@ -305,7 +311,7 @@ void CliPage::finish(bool ok, const std::string &body, const std::string &err) {
         if (bad) refused_++;
         execNext(); return;
     }
-    if (step == ST_OPENING) { say("Command line open. Type a command; save keeps changes, exit does not (both restart the flight controller)."); build(); return; }
+    if (step == ST_OPENING) { say("Command line open. Type a command."); say("save keeps your changes, exit drops them; either restarts the flight controller."); build(); return; }
     if (step == ST_DIFF) {
         std::vector<std::string> ls; cliLines(body, ls);
         std::string text;

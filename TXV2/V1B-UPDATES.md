@@ -186,6 +186,12 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Long lines wrap in the console (V2 B90, screen 1.11.48, 10 Oct 2026)
+
+Malcolm, 10 Oct, of a console line that ended "(b...": "I'm curious to know what the last word would have been here!"
+A line too long for the console now wraps at a space, the rest indented, so nothing is lost; the opening words are two
+shorter lines. hmi/test_cli: 92 checks.
+
 ## OK asks only when something was set (V2 B90, screen 1.11.47, 10 Oct 2026)
 
 Malcolm, 10 Oct: "now I'm invited to save, even though I have changed nothing". OK on the command line page asks
