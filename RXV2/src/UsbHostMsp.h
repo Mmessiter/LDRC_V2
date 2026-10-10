@@ -150,6 +150,11 @@ namespace UsbHostMsp {
     // 'save' or 'exit' leave it - both restart the flight controller. While
     // it is open MSP is dead, so the status poll and probes stand down and
     // the bytes go to cliBuf instead of the MSP parser.
+    // 0.9.882 (Malcolm, 10 Oct: the transmitter's Diff to card said "not a diff (347 lines)"): Rotorflight's `diff all`, every
+    // bank, runs past 16,000 characters, and the receiver kept only the LAST 16,000 - the head ("# diff all", the features,
+    // the serial ports) was gone, for the phone's command line as for the transmitter's. 64 kB now (in PSRAM: the S3's
+    // allocations over 4 kB go there); the tail is still what is kept if a dump ever runs longer.
+    constexpr size_t CLI_BUF_MAX = 64000;
     inline volatile bool cliMode = false;
     inline uint32_t cliTouchedMs = 0;      // 0.9.705: last time anything used the command line
     inline String   cliBuf;
@@ -281,7 +286,7 @@ namespace UsbHostMsp {
             while ((n = xStreamBufferReceive(rxbuf, b, sizeof b, 0)) > 0) {
                 bytesIn += n;
                 crumb(2, n);
-                if (cliMode) { cliBuf.concat((const char*)b, n); if (cliBuf.length() > 16000) cliBuf.remove(0, cliBuf.length() - 16000); }   // keep the TAIL: the prompt ends it, however long a dump is (0.9.642)
+                if (cliMode) { cliBuf.concat((const char*)b, n); if (cliBuf.length() > CLI_BUF_MAX) cliBuf.remove(0, cliBuf.length() - CLI_BUF_MAX); }   // keep the TAIL: the prompt ends it, however long a dump is (0.9.642)
                 else { crumb(3, n); for (size_t i = 0; i < n; i++) mspSerialFeed(b[i]); }
                 crumbDone();
             }
