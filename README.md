@@ -233,7 +233,7 @@ Current versions and release notes: [Help & updates](https://messiter.com/ldrc/h
 ### Safety and the law
 
 - **Check your local rules.** A home-built transmitter has no CE, UKCA or FCC marking. In the UK and EU, 2.4 GHz equipment is expected to meet ETSI EN 300 328, which asks for "adaptivity" such as listen-before-talk. LDRC has no listen-before-talk mode.
-- **Full power, always.** The transmitter's and the receiver's radio modules always run at full power, about 100 mW (20 dBm). The UK and EU limit is 100 mW including the aerial's gain. A normal aerial adds 2 to 3 dBi, so **the total is probably over that limit**.
+- **Full power, always.** The transmitter's and the receiver's radio modules always run at full power, about 100 mW (20 dBm), the UK and EU limit for 2.4 GHz. An aerial cannot add power: it only shapes where the signal goes.
   <!-- TODO Malcolm: please confirm the radio modules' output. Ebyte sells the ML01DP5 (transmitter) and the ML01SP4 (receiver) as 20 dBm (100 mW); both firmwares always set RF24_PA_MAX (TXV1B transceiver.h line 16, RXV2 Radio.h line 553). -->
 - **Test every new build on the ground first**, blades off: do every check in [Build one](https://messiter.com/ldrc/build.html#testing), the failsafe and range tests included.
 - You fly at your own risk. The licences below come with no warranty.
