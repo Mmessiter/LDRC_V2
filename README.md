@@ -117,20 +117,13 @@ Other systems have most of these too.
 </p>
 <p align="center"><sub>Left: how long the link took to come back after each drop. Right: a scan of the 2.4 GHz band. Sample values.</sub></p>
 
-### Where commercial radios are better
+### Yours to change
 
-We would rather you knew now.
+LDRC changes when a need appears. Its author, Malcolm Messiter, often adds a feature within a day of a pilot asking for it: the transmitter's command line and the defined front screens were each built the day they were asked for. The new version then reaches every transmitter and receiver over the internet.
 
-- **Range.** LDRC has no published range test. It is a line-of-sight link for club flying, not a long-range link. ExpressLRS claims over 40 km in ideal conditions. It shows no signal strength, so lost packets are the first sign of the edge of range.
-- **Certification.** Bought radios are certified (CE or UKCA in Europe, FCC in the US). A home-built transmitter is not. **Check your local rules before you fly.**
-- **No building.** A bought radio needs no soldering, 3D printing or flashing.
-- **Support.** Big makers have shops, dealers and warranties. LDRC has one developer and an email address.
-- **Receivers.** The Version 2 receiver only talks to a flight controller. It has no servo (PWM) outputs and no GPS or vario. For those, use the Version 1 receiver.
-- **Mixer depth and scripts.** EdgeTX has 9 flight modes, 64 mixes, 64 logical switches and Lua scripts. LDRC has 4 flight modes, 32 mixes and no scripts. It is simpler on purpose.
-- **Rotorflight breadth on the radio.** Rotorflight's own scripts set up ESCs of 8 makes on EdgeTX radios, and its suite for FrSky Ethos radios has over 80 pages with ESC tools for 10 makes. LDRC sets up ESCs only from the phone, Scorpion only, as a beta.
-- **One band.** LDRC is 2.4 GHz only. Some radios add 900 MHz.
-- **Age.** The radio link and the Version 1 transmitter have flown since 2020. Many Version 2 features are only weeks old.
-- **Price.** A budget EdgeTX radio (about £130) comes complete, with ExpressLRS built in. Our transmitter's parts cost about that before the switches, trims, radio, battery, board, case and small parts.
+It is yours to change too. Every line of code, the circuit boards and the case are open, so you can change anything yourself, or ask for it.
+
+Commercial systems are almost always take it or leave it: you fly what the maker decided, and you cannot easily change it.
 
 ### Side by side
 
