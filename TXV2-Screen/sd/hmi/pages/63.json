@@ -81,7 +81,7 @@
    "g": "g",
    "x": 10,
    "y": 4,
-   "w": 200,
+   "w": 183,
    "h": 25,
    "font": 2,
    "sta": 1,
@@ -109,7 +109,7 @@
    "g": "g",
    "x": 10,
    "y": 30,
-   "w": 200,
+   "w": 183,
    "h": 25,
    "font": 2,
    "sta": 1,
@@ -179,8 +179,8 @@
    "i": 7,
    "t": "text",
    "g": "g",
-   "x": 40,
-   "y": 90,
+   "x": -2000,
+   "y": -2000,
    "w": 372,
    "h": 35,
    "font": 6,
@@ -190,7 +190,7 @@
     "borderc": 4426,
     "bco": 4426
    },
-   "txt": "Main Rotor Geometry",
+   "txt": "Main rotor geometry",
    "a": {
     "style": 0,
     "key": 255,
@@ -208,9 +208,9 @@
    "t": "text",
    "g": "g",
    "x": 40,
-   "y": 127,
+   "y": 90,
    "w": 266,
-   "h": 35,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -236,9 +236,9 @@
    "t": "text",
    "g": "g",
    "x": 312,
-   "y": 127,
+   "y": 90,
    "w": 100,
-   "h": 35,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -267,9 +267,9 @@
    "t": "text",
    "g": "g",
    "x": 40,
-   "y": 164,
+   "y": 130,
    "w": 266,
-   "h": 35,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -277,7 +277,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Collective calib. [%]",
+   "txt": "Collective calibration [%]",
    "a": {
     "style": 0,
     "key": 255,
@@ -295,9 +295,9 @@
    "t": "text",
    "g": "g",
    "x": 312,
-   "y": 164,
+   "y": 130,
    "w": 100,
-   "h": 35,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -326,9 +326,9 @@
    "t": "text",
    "g": "g",
    "x": 40,
-   "y": 201,
+   "y": 170,
    "w": 266,
-   "h": 35,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -354,9 +354,9 @@
    "t": "text",
    "g": "g",
    "x": 312,
-   "y": 201,
+   "y": 170,
    "w": 100,
-   "h": 35,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -376,7 +376,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Collective geometry correction [%]\"\nva0.val=86<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Geometry correction [%]\"\nva0.val=86<<8\nprint va0.val"
    }
   },
   {
@@ -385,9 +385,9 @@
    "t": "text",
    "g": "g",
    "x": 40,
-   "y": 238,
+   "y": 210,
    "w": 266,
-   "h": 35,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -413,9 +413,9 @@
    "t": "text",
    "g": "g",
    "x": 312,
-   "y": 238,
+   "y": 210,
    "w": 100,
-   "h": 35,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -444,9 +444,9 @@
    "t": "text",
    "g": "g",
    "x": 40,
-   "y": 275,
+   "y": 250,
    "w": 266,
-   "h": 35,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -472,9 +472,9 @@
    "t": "text",
    "g": "g",
    "x": 312,
-   "y": 275,
+   "y": 250,
    "w": 100,
-   "h": 35,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -494,7 +494,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Collective blade pitch limit [deg]\"\nva0.val=86<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Collective pitch limit [deg]\"\nva0.val=86<<8\nprint va0.val"
    }
   },
   {
@@ -503,9 +503,9 @@
    "t": "text",
    "g": "g",
    "x": 40,
-   "y": 312,
+   "y": 290,
    "w": 266,
-   "h": 35,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -531,9 +531,9 @@
    "t": "text",
    "g": "g",
    "x": 312,
-   "y": 312,
+   "y": 290,
    "w": 100,
-   "h": 35,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -562,9 +562,9 @@
    "t": "text",
    "g": "g",
    "x": 40,
-   "y": 349,
+   "y": 330,
    "w": 266,
-   "h": 35,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -590,9 +590,9 @@
    "t": "text",
    "g": "g",
    "x": 312,
-   "y": 349,
+   "y": 330,
    "w": 100,
-   "h": 35,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -621,9 +621,9 @@
    "t": "text",
    "g": "g",
    "x": 432,
-   "y": 127,
+   "y": 90,
    "w": 222,
-   "h": 35,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -649,9 +649,9 @@
    "t": "text",
    "g": "g",
    "x": 660,
-   "y": 127,
+   "y": 90,
    "w": 100,
-   "h": 35,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -671,7 +671,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Positive collective tilt correction\"\nva0.val=86<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Positive tilt correction [%]\"\nva0.val=86<<8\nprint va0.val"
    }
   },
   {
@@ -680,9 +680,9 @@
    "t": "text",
    "g": "g",
    "x": 432,
-   "y": 164,
+   "y": 130,
    "w": 222,
-   "h": 35,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -708,9 +708,9 @@
    "t": "text",
    "g": "g",
    "x": 660,
-   "y": 164,
+   "y": 130,
    "w": 100,
-   "h": 35,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -730,7 +730,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Negative collective tilt correction\"\nva0.val=86<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Negative tilt correction [%]\"\nva0.val=86<<8\nprint va0.val"
    }
   },
   {
@@ -866,10 +866,10 @@
    "i": 30,
    "t": "text",
    "g": "l",
-   "x": 110,
-   "y": 207,
-   "w": 580,
-   "h": 124,
+   "x": 40,
+   "y": 208,
+   "w": 720,
+   "h": 80,
    "font": 2,
    "sta": 1,
    "c": {

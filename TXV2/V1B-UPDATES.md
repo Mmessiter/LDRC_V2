@@ -186,6 +186,32 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Every screen polished, every help text rewritten (V2 B93, screen 1.11.57, 11 Oct 2026)
+
+Malcolm, 10 Oct: "make the screens look more beautiful, well designed and easy to use ... also the help screens ... Don't
+change the logic anywhere ... If you find a bug, tell me about it, but don't fix it until I give the okay."
+
+- **All 76 pages** in one house style: solid text everywhere (nothing see-through on the picture), the title strip with the
+  model's name and bank top left, Help top right, OK bottom right with Save beside it, sentence case, plain words, units
+  written one way, pale label boxes with black text on the Rotorflight pages (one colour per axis or group). Pages that were
+  still in Version 1 dress are restyled: the front page (a strip and a dashboard card; the timer reads 00:04:07 again),
+  Channels, Reconnection times (green / amber / red columns), Interference scan, Calibration (labelled bars from the middle),
+  Curves, both keyboards (Cancel, Delete, a yellow OK, bigger keys), the help viewer, the question box.
+- **The screen's own pages**: readable on the light themes (White, Yellow, Sky) and the Red theme; warnings in a box on the
+  defined front screen get a white frame; the update panel fills the screen, its notes always fit, and DO NOT FLY leads its
+  title; WiFi, picture chooser and command line on the same button places as every page.
+- **The Teensy's words**: typos gone ("Calbrate again?"), questions say what happened and what to do ("The model is connected.
+  Switch it off, then press Calibrate."), "Rotorflight" spelt one way, words that were cut off now fit.
+- **Help**: all 60 help texts rewritten for clarity, each checked against the code by a second reader; IDS.TXT is new (the
+  Model IDs page's Help asked for it); lines broken by hand so the viewer never splits a word or starts a line with a space.
+- **Nothing a page does has changed.** hmi/logic_guard.py compares every page with the one before the polish (names, ids,
+  types, keyboards, scripts) and hmi/touch_audit.py checks, pixel by pixel, that no button lost the place where a finger
+  finds it. The Teensy diff is string literals only (and one colour). Host tests, both builds and the release gate pass.
+- **Bugs found and NOT fixed** (awaiting Malcolm's choice): 134, six of them flight-safety (a message box in flight freezes
+  the switches; power-button knocks add up to a switch-off; a motor-off value below -100; a reused model slot keeps its
+  Rotorflight flag; the motor check after a link loss; opening Mixes can change a mix). The list with tick boxes:
+  https://claude.ai/artifact/89njDkpMEor8d6fDmus41u
+
 ## The front page after an update: its picture back, and "V2" in its title (V2 B92, screen 1.11.56, 10 Oct 2026)
 
 Malcolm: "After updating the firmware and getting rid of the completed screen by pressing OK, it returned to the front

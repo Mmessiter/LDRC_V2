@@ -1,9 +1,9 @@
 Screen_Background=8
 @model 0
-# GotoModelsView (MenuOptions.h:378)
-page ModelsView
+# GotoModelsView (MenuOptions.h:382; since B29 the picture is asked for BEFORE the page: CheckModelImageFileName)
 findfile "sd0/images/Raw420.jpg",sys0
 get sys0
+page ModelsView
 exp0.path="sd0/images/Raw420.jpg"
 ModelName.txt="RAW 420 MCM"
 Mfiles.path="BTHUNDER.MOD\r\nEDGE540.MOD\r\nEXTRA330.MOD\r\nGOBLIN70.MOD\r\nHAVOK.MOD\r\nLOGO200.MOD\r\nOMPM2PIN.MOD\r\nRAW420MC.MOD\r\nRIOT.MOD\r\nTUNDRA.MOD\r\nYAK54.MOD\r\n"
@@ -15,7 +15,7 @@ modelname.txt="RAW 420 MCM"
 @shot 15_open
 # Backup (Export) with an existing file: BackupView OK -> page ModelsView, Overwrite? -> WriteBackup (main.cpp:2901)
 page BackupView
-t0.txt="Filename?"
+t0.txt="File name"
 t1.txt="RAW420MC.MOD"
 Modelname.txt="RAW 420 MCM"
 t3.txt="Create backup file for"
@@ -56,10 +56,10 @@ get Mfiles.val
 filename.txt="RAW420MC.MOD"
 @shot 15_scrolled
 # worst case: the current model is the 30-char one (number 13); 12-char file names are the longest the list gets (SDFiles.h:300)
-# GotoModelsView (MenuOptions.h:378)
-page ModelsView
+# GotoModelsView (MenuOptions.h:382; since B29 the picture is asked for BEFORE the page: CheckModelImageFileName)
 findfile "sd0/images/.jpg",sys0
 get sys0
+page ModelsView
 exp0.path="sd0/images/Noimage.jpg"
 ModelName.txt="SAB GOBLIN 700 COMPETITION MK2"
 Mfiles.path="BTHUNDER.MOD\r\nEDGE540.MOD\r\nEXTRA330.MOD\r\nGOBLIN70.MOD\r\nHAVOK.MOD\r\nLOGO200.MOD\r\nOMPM2PIN.MOD\r\nRAW420MC.MOD\r\nRIOT.MOD\r\nSABGOBLI.MOD\r\nTUNDRA.MOD\r\nYAK54.MOD\r\n"

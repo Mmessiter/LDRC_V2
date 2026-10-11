@@ -1,34 +1,62 @@
-Scroll the left side of the screen to select a model from 1 to 89.||
-
-'Backup' creates (or overwrites) a separate file of the current model.||
-
-Backing up a model memory is very strongly recommended once that model is setup well. When sharing model memories with other transmitters, it is the backup file that is sent. So you must hit Backup before you can share the model.||
-
-Backup files are listed on the right hand side.||
-
-'Restore' reads a file into the currently selected model number, overwriting whatever was there. ||
-
-'ID check' will display receiver IDs for model memories stored, and check for any duplicates which should be avoided. ||
-
-When AMS (automatic model selection) is turned off, or the ID of the connecting model is not stored yet, the transmitter will connect to the currently loaded model - whatever it's stored ID.||
-
-On the main 'Model Setup' screen is the option to delete or to store the currently connected model ID. An ID cannot be stored when not connected, but it can be deleted.||
-
-To use AMS, be sure to store the IDs of your models with the right memory.||
-
-To 'Send' a model memory file wirelessly to another transmitter:||
-
-(1)  Select a model number at the receive end that will be overwritten.|
-(2)  Backup the model to be sent at the send end.|
-(3)  Put both transmitters onto the 'Models' screen. |
-(4)  Select the Backup file which you want to send. |
-(5)  Press 'Receive' at the Receive end.|
-(6)  WITHIN 30 SECONDS press 'Send' at the Send end.||
-
-The transfer will create (or overwrite) the file at the receive end. The file is checked before it replaces the old one: a bad transfer leaves the old file as it was. If the other transmitter stops answering, both ends say so and give up.||
-
-The received file will have the same name as the sent file.||
-
-After sending a model memory, be sure to CHECK ALL FUNCTIONS before flying!||
-
-Check and edit as needed BEFORE flying!
+Choose a model to fly. Back up, restore, send and receive them.||
+TO CHOOSE A MODEL:|
+Touch it in 'Models loaded', then press 'OK'.|
+Its picture and name show in the middle.|
+'OK' goes to the front screen. If you chose another model, it|
+asks first: 'OK' takes the new one, 'Cancel' keeps the old one.||
+MODELS LOADED (LEFT):|
+The 90 model memories. Each name ends with its number:|
+in round brackets, like (3), when its receiver ID is stored;|
+in square brackets, like [12], when no ID is stored yet.|
+The buttons on the left act on the chosen model memory:|
+'Delete' empties it, after a question.|
+It then shows 'Not in use'.|
+'Rename' changes the model's name.|
+'Receive' takes in a model from another transmitter (see below).|
+'Check IDs' lists the stored IDs and finds any ID stored twice.|
+Touch the picture to choose another picture for the model.||
+BACKUP FILES (RIGHT):|
+The model files on the transmitter's card (.MOD).|
+'> Backup >' copies the chosen model into a backup file.|
+A box shows the file name. Touch the name to change it|
+(8 letters or digits at most), then press 'OK'.|
+You are asked before a file of the same name is replaced.|
+'< Restore <' copies the chosen file into the chosen model|
+memory, replacing what was there. You are asked first.|
+The buttons on the right act on the chosen backup file:|
+'Delete' removes it, after a question.|
+'Rename' renames the file only: 8 letters or digits at most.|
+'Send' sends it to another transmitter.|
+'File error!' flashes when a file could not be written or read,|
+or when a new file name is too long.||
+Back up each model once it is set up well. It is the backup file|
+that is sent, so press '> Backup >' before you send a model.||
+TO SEND A MODEL TO ANOTHER TRANSMITTER:|
+Open the 'Models' page on both transmitters.|
+1. Receiving end: choose the model memory to be replaced.|
+2. Sending end: choose the model and press '> Backup >'.|
+3. Sending end: choose that file in 'Backup files'.|
+4. Receiving end: press 'Receive', and 'OK' if asked.|
+5. Sending end: press 'Send', then 'OK'.|
+Do steps 4 and 5 within 15 seconds, in either order.|
+'Cancel' stops the wait at either end.||
+The file is checked before anything is replaced: a bad transfer|
+leaves the old one as it was. If the other transmitter stops|
+answering, both ends say so and give up.|
+The received model replaces the chosen model memory. It is also|
+kept as a backup file with the same name as the sent file|
+(an old file of that name is replaced).||
+Check every control before you fly a received model.||
+MODEL IDS AND AMS:|
+Every receiver has its own ID. With automatic model selection|
+(AMS) on, the transmitter loads the model memory that holds|
+the ID of the model as it connects.|
+If no memory holds that ID, you are asked whether to store it|
+with the model now loaded. 'OK' stores it and connects.|
+'Cancel' stores nothing, and the model does not connect.|
+Then choose the right model here and press 'OK'. If that memory|
+holds the ID it connects; if not, you are asked again.|
+With AMS off, the model now loaded is used, whatever its ID.|
+Switch AMS on or off in 'Transmitter setup', then 'System'.|
+Store each model's ID on 'Model setup', then 'Model IDs'. An ID|
+can be stored only while connected, and deleted at any time.|

@@ -1,11 +1,9 @@
-When it rains, you can't really fly but you can play Pong!||
-
-Use the sticks to move paddles up and down.||
-
-The first player to score 10 points wins. A new game will then start automatically.||
-
-Press OK to stop playing - if the rain has stopped.||
-
-
-
- 
+Pong: a game for a day too wet to fly|
+('Raining' on Transmitter setup).|
+Move each stick up and down to move the paddle on its side.|
+The first player to score 10 points wins.|
+A new game then starts by itself.|
+Press 'OK' to stop playing and go to the front screen.||
+Pong will not start while a model is connected|
+('The model is connected. Switch it off to play Pong.').|
+The radio is off while you play.|

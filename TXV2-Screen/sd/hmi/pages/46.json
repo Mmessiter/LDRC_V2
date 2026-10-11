@@ -51,9 +51,9 @@
    "i": 8,
    "t": "text",
    "g": "l",
-   "x": 64,
+   "x": 32,
    "y": 88,
-   "w": 672,
+   "w": 736,
    "h": 361,
    "font": 6,
    "sta": 1,
@@ -103,7 +103,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "print \"HelpView:IDCHECK.TXT\"\nLogView.t0.txt=\"ID Check help\"\nLogView.return.txt=\"IDsView\""
+    "r": "print \"HelpView:IDCHECK.TXT\"\nLogView.t0.txt=\"Model IDs: duplicates help\"\nLogView.return.txt=\"IDsView\""
    }
   },
   {
@@ -111,9 +111,9 @@
    "i": 2,
    "t": "textselect",
    "g": "g",
-   "x": 80,
+   "x": 48,
    "y": 104,
-   "w": 640,
+   "w": 704,
    "h": 265,
    "font": 6,
    "sta": 1,
@@ -153,7 +153,7 @@
    "i": 4,
    "t": "button",
    "g": "g",
-   "x": 560,
+   "x": 592,
    "y": 383,
    "w": 160,
    "h": 50,
@@ -185,7 +185,7 @@
    "i": 5,
    "t": "text",
    "g": "l",
-   "x": 80,
+   "x": 48,
    "y": 385,
    "w": 170,
    "h": 46,
@@ -213,7 +213,7 @@
    "i": 6,
    "t": "number",
    "g": "g",
-   "x": 256,
+   "x": 224,
    "y": 385,
    "w": 90,
    "h": 46,

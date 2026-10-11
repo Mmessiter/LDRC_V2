@@ -1,9 +1,28 @@
-Gyro filters, expert: what the configurator's expert mode adds to its Gyro tab. Rarely needed: the defaults suit most helicopters.||
-
-Lowpass Filter 2: a second lowpass after the first, 1st or 2nd order, with its own cutoff. Off on most helicopters.||
-
-Dynamic Cutoff (lowpass 1): the first lowpass's cutoff follows the head speed between Min cutoff and Max cutoff instead of staying at its fixed cutoff. Enable off = fixed cutoff.||
-
-Notch Filter 1 and 2: a notch at one fixed frequency, for a vibration that stays put whatever the head speed. Center frequency is the middle of the notch; Cutoff frequency is where it starts: center 260 and cutoff 160 cover 160 to 360 Hz. Enable off = no notch.||
-
-Save writes every page's values together, stores, and reads back. < Previous returns to the first page; OK leaves; if something was edited and not saved, it asks.||
+What the configurator's expert mode adds to its Gyro tab.|
+Rarely needed: the defaults suit most helicopters.||
+Tap a number to type a new one. Tap Filter type to switch|
+between 1st and 2nd order.|
+Each section's Enable turns it on or off (green = on). Off sets|
+its values to 0 and hides its rows. On again before you leave|
+these pages, it gets its values back; otherwise it starts from|
+the configurator's defaults.|
+'Save' appears once something is changed. It writes both filter|
+pages, stores them and reads them back. If the first page was|
+changed too, it asks first.|
+'< Previous' goes back to the first page, changes kept.|
+'OK' leaves; if a change was not saved, it asks first.||
+LOWPASS 1 DYNAMIC CUTOFF:|
+The first page's lowpass cutoff follows the head speed, from|
+Min cutoff to Max cutoff (0 to 1000 Hz), instead of staying|
+fixed. Enable off = the fixed cutoff.|
+Min cutoff must be below Max cutoff, or it counts as off.|
+Turning the first page's lowpass off turns this off too.||
+LOWPASS FILTER 2:|
+A second lowpass after the first, 1st or 2nd order, with its|
+own cutoff (0 to 1000 Hz). Off on most helicopters.||
+NOTCH FILTER 1 AND 2:|
+A notch at one fixed frequency, for a vibration that stays put|
+whatever the head speed. Enable off = no notch.|
+Centre frequency is the middle of the notch, and Cutoff|
+frequency is where it starts (0 to 1000 Hz each).|
+For example, centre 260 and cutoff 160 cover 160 to 360 Hz.|

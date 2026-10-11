@@ -166,7 +166,7 @@ FLASHMEM void ServoPoll() // each time round the loop (ManageTransmitter)
         Servo_Was_Edited = false;
         SendCommand((char *)"vis b3,0");
         ServoShow();
-        ServoBusy(same ? "Saved, and read back the same." : "Saved; the flight controller adjusted some values (shown).");
+        ServoBusy(same ? "Saved, and read back the same." : "Saved, but the flight controller adjusted some values.");
         ServoMsgUntil = millis() + 4000;
         PlaySound(BEEPCOMPLETE);
         return;

@@ -26,7 +26,7 @@
    "x": 0,
    "y": 0,
    "w": 800,
-   "h": 42,
+   "h": 58,
    "font": 0,
    "sta": 1,
    "c": {
@@ -52,9 +52,9 @@
    "t": "text",
    "g": "l",
    "x": 0,
-   "y": 42,
+   "y": 58,
    "w": 800,
-   "h": 438,
+   "h": 422,
    "font": 6,
    "sta": 1,
    "c": {
@@ -80,7 +80,7 @@
    "t": "text",
    "g": "g",
    "x": 250,
-   "y": 82,
+   "y": 91,
    "w": 88,
    "h": 25,
    "font": 2,
@@ -111,7 +111,7 @@
    "t": "text",
    "g": "g",
    "x": 250,
-   "y": 110,
+   "y": 118,
    "w": 88,
    "h": 25,
    "font": 2,
@@ -142,7 +142,7 @@
    "t": "text",
    "g": "g",
    "x": 250,
-   "y": 138,
+   "y": 145,
    "w": 88,
    "h": 25,
    "font": 2,
@@ -173,7 +173,7 @@
    "t": "text",
    "g": "g",
    "x": 250,
-   "y": 166,
+   "y": 172,
    "w": 88,
    "h": 25,
    "font": 2,
@@ -204,7 +204,7 @@
    "t": "text",
    "g": "g",
    "x": 250,
-   "y": 194,
+   "y": 199,
    "w": 88,
    "h": 25,
    "font": 2,
@@ -235,7 +235,7 @@
    "t": "text",
    "g": "g",
    "x": 250,
-   "y": 222,
+   "y": 226,
    "w": 88,
    "h": 25,
    "font": 2,
@@ -266,7 +266,7 @@
    "t": "text",
    "g": "g",
    "x": 250,
-   "y": 250,
+   "y": 253,
    "w": 88,
    "h": 25,
    "font": 2,
@@ -297,7 +297,7 @@
    "t": "text",
    "g": "g",
    "x": 250,
-   "y": 278,
+   "y": 280,
    "w": 88,
    "h": 25,
    "font": 2,
@@ -328,7 +328,7 @@
    "t": "text",
    "g": "g",
    "x": 250,
-   "y": 306,
+   "y": 307,
    "w": 88,
    "h": 25,
    "font": 2,
@@ -390,7 +390,7 @@
    "t": "text",
    "g": "g",
    "x": 250,
-   "y": 362,
+   "y": 361,
    "w": 88,
    "h": 25,
    "font": 2,
@@ -421,7 +421,7 @@
    "t": "text",
    "g": "g",
    "x": 250,
-   "y": 390,
+   "y": 388,
    "w": 88,
    "h": 25,
    "font": 2,
@@ -452,7 +452,7 @@
    "t": "text",
    "g": "g",
    "x": 676,
-   "y": 54,
+   "y": 64,
    "w": 88,
    "h": 25,
    "font": 2,
@@ -474,7 +474,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Roll D-Term cutoff \"\nva0.val=33<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Roll D-term cutoff \"\nva0.val=33<<8\nprint va0.val"
    }
   },
   {
@@ -483,7 +483,7 @@
    "t": "text",
    "g": "g",
    "x": 676,
-   "y": 82,
+   "y": 91,
    "w": 88,
    "h": 25,
    "font": 2,
@@ -505,7 +505,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Pitch D-Term cutoff \"\nva0.val=33<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Pitch D-term cutoff \"\nva0.val=33<<8\nprint va0.val"
    }
   },
   {
@@ -514,7 +514,7 @@
    "t": "text",
    "g": "g",
    "x": 676,
-   "y": 110,
+   "y": 118,
    "w": 88,
    "h": 25,
    "font": 2,
@@ -536,7 +536,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Yaw D-Term cutoff \"\nva0.val=33<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Yaw D-term cutoff \"\nva0.val=33<<8\nprint va0.val"
    }
   },
   {
@@ -545,7 +545,7 @@
    "t": "text",
    "g": "g",
    "x": 676,
-   "y": 138,
+   "y": 145,
    "w": 88,
    "h": 25,
    "font": 2,
@@ -567,7 +567,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Roll B-Term cutoff \"\nva0.val=33<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Roll B-term cutoff \"\nva0.val=33<<8\nprint va0.val"
    }
   },
   {
@@ -576,7 +576,7 @@
    "t": "text",
    "g": "g",
    "x": 676,
-   "y": 166,
+   "y": 172,
    "w": 88,
    "h": 25,
    "font": 2,
@@ -598,7 +598,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Pitch B-Term cutoff \"\nva0.val=33<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Pitch B-term cutoff \"\nva0.val=33<<8\nprint va0.val"
    }
   },
   {
@@ -607,7 +607,7 @@
    "t": "text",
    "g": "g",
    "x": 676,
-   "y": 194,
+   "y": 199,
    "w": 88,
    "h": 25,
    "font": 2,
@@ -629,7 +629,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Yaw B-Term cutoff \"\nva0.val=33<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Yaw B-term cutoff \"\nva0.val=33<<8\nprint va0.val"
    }
   },
   {
@@ -638,7 +638,7 @@
    "t": "text",
    "g": "g",
    "x": 676,
-   "y": 222,
+   "y": 226,
    "w": 88,
    "h": 25,
    "font": 2,
@@ -660,7 +660,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"CW Yaw stop gain \"\nva0.val=33<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"CW yaw stop gain \"\nva0.val=33<<8\nprint va0.val"
    }
   },
   {
@@ -669,7 +669,7 @@
    "t": "text",
    "g": "g",
    "x": 676,
-   "y": 250,
+   "y": 253,
    "w": 88,
    "h": 25,
    "font": 2,
@@ -691,7 +691,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"CCW Yaw stop gain \"\nva0.val=33<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"CCW yaw stop gain \"\nva0.val=33<<8\nprint va0.val"
    }
   },
   {
@@ -700,7 +700,7 @@
    "t": "text",
    "g": "g",
    "x": 676,
-   "y": 278,
+   "y": 280,
    "w": 88,
    "h": 25,
    "font": 2,
@@ -722,7 +722,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Yaw Precomp cutoff \"\nva0.val=33<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Yaw precomp cutoff \"\nva0.val=33<<8\nprint va0.val"
    }
   },
   {
@@ -731,7 +731,7 @@
    "t": "text",
    "g": "g",
    "x": 676,
-   "y": 306,
+   "y": 307,
    "w": 88,
    "h": 25,
    "font": 2,
@@ -793,7 +793,7 @@
    "t": "text",
    "g": "g",
    "x": 676,
-   "y": 362,
+   "y": 361,
    "w": 88,
    "h": 25,
    "font": 2,
@@ -824,7 +824,7 @@
    "t": "text",
    "g": "g",
    "x": 676,
-   "y": 390,
+   "y": 388,
    "w": 88,
    "h": 25,
    "font": 2,
@@ -855,15 +855,15 @@
    "t": "switch",
    "g": "g",
    "x": 250,
-   "y": 55,
+   "y": 65,
    "w": 88,
    "h": 23,
    "font": 2,
    "c": {
     "pco1": 0,
-    "bco2": 22476,
+    "bco2": 2016,
     "pco": 65535,
-    "bco": 63752,
+    "bco": 33808,
     "pco2": 65535
    },
    "txt": "off/on",
@@ -883,7 +883,7 @@
    "t": "text",
    "g": "l",
    "x": 36,
-   "y": 82,
+   "y": 91,
    "w": 210,
    "h": 25,
    "font": 2,
@@ -914,7 +914,7 @@
    "t": "text",
    "g": "l",
    "x": 36,
-   "y": 110,
+   "y": 118,
    "w": 210,
    "h": 25,
    "font": 2,
@@ -945,7 +945,7 @@
    "t": "text",
    "g": "l",
    "x": 36,
-   "y": 138,
+   "y": 145,
    "w": 210,
    "h": 25,
    "font": 2,
@@ -976,7 +976,7 @@
    "t": "text",
    "g": "l",
    "x": 36,
-   "y": 54,
+   "y": 64,
    "w": 210,
    "h": 25,
    "font": 2,
@@ -1004,7 +1004,7 @@
    "t": "text",
    "g": "l",
    "x": 36,
-   "y": 166,
+   "y": 172,
    "w": 210,
    "h": 25,
    "font": 2,
@@ -1035,7 +1035,7 @@
    "t": "text",
    "g": "l",
    "x": 36,
-   "y": 194,
+   "y": 199,
    "w": 210,
    "h": 25,
    "font": 2,
@@ -1066,7 +1066,7 @@
    "t": "text",
    "g": "l",
    "x": 36,
-   "y": 222,
+   "y": 226,
    "w": 210,
    "h": 25,
    "font": 2,
@@ -1097,7 +1097,7 @@
    "t": "text",
    "g": "l",
    "x": 36,
-   "y": 250,
+   "y": 253,
    "w": 210,
    "h": 25,
    "font": 2,
@@ -1128,7 +1128,7 @@
    "t": "text",
    "g": "l",
    "x": 36,
-   "y": 278,
+   "y": 280,
    "w": 210,
    "h": 25,
    "font": 2,
@@ -1159,7 +1159,7 @@
    "t": "text",
    "g": "l",
    "x": 36,
-   "y": 306,
+   "y": 307,
    "w": 210,
    "h": 25,
    "font": 2,
@@ -1221,7 +1221,7 @@
    "t": "text",
    "g": "l",
    "x": 36,
-   "y": 362,
+   "y": 361,
    "w": 210,
    "h": 25,
    "font": 2,
@@ -1252,7 +1252,7 @@
    "t": "text",
    "g": "l",
    "x": 36,
-   "y": 390,
+   "y": 388,
    "w": 210,
    "h": 25,
    "font": 2,
@@ -1283,7 +1283,7 @@
    "t": "text",
    "g": "l",
    "x": 451,
-   "y": 54,
+   "y": 64,
    "w": 220,
    "h": 25,
    "font": 2,
@@ -1293,7 +1293,7 @@
     "borderc": 0,
     "bco": 4426
    },
-   "txt": "Roll D-Term cutoff ",
+   "txt": "Roll D-term cutoff ",
    "a": {
     "style": 0,
     "key": 255,
@@ -1314,7 +1314,7 @@
    "t": "text",
    "g": "l",
    "x": 451,
-   "y": 82,
+   "y": 91,
    "w": 220,
    "h": 25,
    "font": 2,
@@ -1324,7 +1324,7 @@
     "borderc": 0,
     "bco": 4426
    },
-   "txt": "Pitch D-Term cutoff ",
+   "txt": "Pitch D-term cutoff ",
    "a": {
     "style": 0,
     "key": 255,
@@ -1345,7 +1345,7 @@
    "t": "text",
    "g": "l",
    "x": 451,
-   "y": 110,
+   "y": 118,
    "w": 220,
    "h": 25,
    "font": 2,
@@ -1355,7 +1355,7 @@
     "borderc": 0,
     "bco": 4426
    },
-   "txt": "Yaw D-Term cutoff ",
+   "txt": "Yaw D-term cutoff ",
    "a": {
     "style": 0,
     "key": 255,
@@ -1376,7 +1376,7 @@
    "t": "text",
    "g": "l",
    "x": 451,
-   "y": 138,
+   "y": 145,
    "w": 220,
    "h": 25,
    "font": 2,
@@ -1386,7 +1386,7 @@
     "borderc": 0,
     "bco": 4426
    },
-   "txt": "Roll B-Term cutoff ",
+   "txt": "Roll B-term cutoff ",
    "a": {
     "style": 0,
     "key": 255,
@@ -1407,7 +1407,7 @@
    "t": "text",
    "g": "l",
    "x": 451,
-   "y": 166,
+   "y": 172,
    "w": 220,
    "h": 25,
    "font": 2,
@@ -1417,7 +1417,7 @@
     "borderc": 0,
     "bco": 4426
    },
-   "txt": "Pitch B-Term cutoff ",
+   "txt": "Pitch B-term cutoff ",
    "a": {
     "style": 0,
     "key": 255,
@@ -1438,7 +1438,7 @@
    "t": "text",
    "g": "l",
    "x": 451,
-   "y": 194,
+   "y": 199,
    "w": 220,
    "h": 25,
    "font": 2,
@@ -1448,7 +1448,7 @@
     "borderc": 0,
     "bco": 4426
    },
-   "txt": "Yaw B-Term cutoff ",
+   "txt": "Yaw B-term cutoff ",
    "a": {
     "style": 0,
     "key": 255,
@@ -1469,7 +1469,7 @@
    "t": "text",
    "g": "l",
    "x": 451,
-   "y": 222,
+   "y": 226,
    "w": 220,
    "h": 25,
    "font": 2,
@@ -1479,7 +1479,7 @@
     "borderc": 0,
     "bco": 4426
    },
-   "txt": "CW Yaw stop gain ",
+   "txt": "CW yaw stop gain ",
    "a": {
     "style": 0,
     "key": 255,
@@ -1500,7 +1500,7 @@
    "t": "text",
    "g": "l",
    "x": 451,
-   "y": 250,
+   "y": 253,
    "w": 220,
    "h": 25,
    "font": 2,
@@ -1510,7 +1510,7 @@
     "borderc": 0,
     "bco": 4426
    },
-   "txt": "CCW Yaw stop gain ",
+   "txt": "CCW yaw stop gain ",
    "a": {
     "style": 0,
     "key": 255,
@@ -1531,7 +1531,7 @@
    "t": "text",
    "g": "l",
    "x": 451,
-   "y": 278,
+   "y": 280,
    "w": 220,
    "h": 25,
    "font": 2,
@@ -1541,7 +1541,7 @@
     "borderc": 0,
     "bco": 4426
    },
-   "txt": "Yaw Precomp cutoff ",
+   "txt": "Yaw precomp cutoff ",
    "a": {
     "style": 0,
     "key": 255,
@@ -1562,7 +1562,7 @@
    "t": "text",
    "g": "l",
    "x": 451,
-   "y": 306,
+   "y": 307,
    "w": 220,
    "h": 25,
    "font": 2,
@@ -1624,7 +1624,7 @@
    "t": "text",
    "g": "l",
    "x": 451,
-   "y": 362,
+   "y": 361,
    "w": 220,
    "h": 25,
    "font": 2,
@@ -1655,7 +1655,7 @@
    "t": "text",
    "g": "l",
    "x": 451,
-   "y": 390,
+   "y": 388,
    "w": 220,
    "h": 25,
    "font": 2,
@@ -1685,10 +1685,10 @@
    "i": 54,
    "t": "button",
    "g": "l",
-   "x": 630,
-   "y": 2,
-   "w": 160,
-   "h": 38,
+   "x": 620,
+   "y": 4,
+   "w": 170,
+   "h": 50,
    "font": 6,
    "sta": 1,
    "c": {
@@ -1709,7 +1709,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "print \"HelpView:PID_A.TXT\"\nLogView.t0.txt=\"PID advanced setup help\"\nLogView.return.txt=\"PID_A_View\""
+    "r": "print \"HelpView:PID_A.TXT\"\nLogView.t0.txt=\"PID + (Rotorflight) help\"\nLogView.return.txt=\"PID_A_View\""
    }
   },
   {
@@ -1718,9 +1718,9 @@
    "t": "text",
    "g": "g",
    "x": 10,
-   "y": 8,
+   "y": 4,
    "w": 200,
-   "h": 26,
+   "h": 25,
    "font": 2,
    "sta": 1,
    "c": {
@@ -1732,7 +1732,7 @@
    "a": {
     "style": 0,
     "key": 255,
-    "borderw": 2,
+    "borderw": 0,
     "xcen": 0,
     "ycen": 1,
     "pw": 0,
@@ -1746,9 +1746,9 @@
    "t": "button",
    "g": "l",
    "x": 408,
-   "y": 430,
+   "y": 420,
    "w": 180,
-   "h": 44,
+   "h": 50,
    "font": 6,
    "sta": 1,
    "c": {
@@ -1778,9 +1778,9 @@
    "t": "button",
    "g": "l",
    "x": 605,
-   "y": 430,
+   "y": 420,
    "w": 180,
-   "h": 44,
+   "h": 50,
    "font": 6,
    "sta": 1,
    "c": {
@@ -1809,18 +1809,18 @@
    "i": 58,
    "t": "text",
    "g": "g",
-   "x": 14,
-   "y": 430,
-   "w": 380,
-   "h": 44,
-   "font": 0,
+   "x": 10,
+   "y": 30,
+   "w": 200,
+   "h": 25,
+   "font": 2,
    "sta": 1,
    "c": {
     "pco": 65504,
     "borderc": 0,
-    "bco": 4426
+    "bco": 2214
    },
-   "txt": "Model name",
+   "txt": "",
    "a": {
     "style": 0,
     "key": 255,
@@ -1849,10 +1849,10 @@
    "i": 60,
    "t": "text",
    "g": "g",
-   "x": 110,
-   "y": 168,
-   "w": 580,
-   "h": 124,
+   "x": 250,
+   "y": 174,
+   "w": 421,
+   "h": 106,
    "font": 2,
    "sta": 1,
    "c": {

@@ -161,9 +161,9 @@ void ShowFreeSpaceEtc()
 void RenameFile()
 {
     char ModelsView_filename[] = "filename";
-    char Head[] = "Rename this backup";
-    char model[] = "(i.e. just change its filename)";
-    char prompt[] = "New filename?";
+    char Head[] = "Rename backup file";
+    char model[] = "Only the file name changes";
+    char prompt[] = "New file name";
     char Prompt[50];
     char overwr[] = "Overwrite ";
     char ques[] = "?";

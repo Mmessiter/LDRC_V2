@@ -10,7 +10,7 @@ c0.val=1
 Bwn.val=42
 @shot 25_open
 # Bind pressed on this page (va1.val=63<<8 -> Enable_Binding, Utilities.h:1406-1414)
-OptionsView.b0.txt="Stop Bind"
+OptionsView.b0.txt="Stop binding"
 @shot 25_bind
 # OK pressed (va1.val=6<<8 -> SystemPage1End, MenuOptions.h:35-60): progress bar shown while reading back + saving
 OptionsView.b0.txt="Bind"
@@ -28,5 +28,5 @@ Pto.val=60
 TxName.txt="Malcolm Messiter's transmitter"
 c0.val=0
 Bwn.val=100
-OptionsView.b0.txt="Stop Bind"
+OptionsView.b0.txt="Stop binding"
 @shot 25_long

@@ -1,0 +1,40 @@
+# keybdB (page 57): the number pad, over the page that opened it (no background of its own). The box's touch event sets
+# the question (keybdB.t1.txt=...; here "click NAME,1|0" runs that event); the screen sets loadpageid / loadcmpid; the pad's
+# preinitialize copies the value.
+# The longest questions (hmi: Travel2View tn2 "Collective geometry correction [%]", 332 px in font 2) and a short one.
+Screen_Background=8
+@model 1
+# ---- Mixer: main rotor geometry (Travel2View, page 63)
+page Travel2View
+tn2.txt="0"
+click tn2,0
+keybdB.loadpageid.val=63
+keybdB.loadcmpid.val=13
+page keybdB
+show.txt="-12.5|"
+@shot 57_long
+# ---- Rotorflight settings: the gear ratio (RFSetupView Ratio, page 61)
+page RFSetupView
+Ratio.txt="10.5"
+click Ratio,1
+keybdB.loadpageid.val=61
+keybdB.loadcmpid.val=15
+page keybdB
+@shot 57_ratio
+# ---- Advanced (3 of 3): a whole number (OptionView3 n0, page 23)
+page OptionView3
+n0.val=200
+click n0,1
+keybdB.loadpageid.val=23
+keybdB.loadcmpid.val=21
+page keybdB
+@shot 57_gap
+# ---- PIDs: a short question, the most digits the pad takes
+page PIDView
+n7.val=0
+click n7,0
+keybdB.loadpageid.val=40
+keybdB.loadcmpid.val=17
+page keybdB
+show.txt="12345678901234"
+@shot 57_short

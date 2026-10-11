@@ -1,13 +1,28 @@
-To move a point up or down, touch the screen above or below the point. ||
-
-That point will move close to where you touched. For finer adjustment, use the buttons at the bottom left. First select the point you want to move, then press + or - .||
-
-Three type of interpolation are supported:||
-
-1. Straight: 4 straight lines joining 5 points.|
-2. Smooth: Smoothed curve between 5 points.|
-3. Exponential: 3 points joined by 2 exponential curves with expo values between -50% and +150%. Straight is obtained with an expo value of zero. Because it's tricky to stop the slider exactly at zero, an extra button is provided at the bottom for this function.
-
-
-  
-
+The curve sets how far this channel's servo moves (up the graph)|
+for each stick position (across). The channel is named at the top|
+right, with the bank under it.||
+TO CHANGE THE CURVE:|
+- Touch the graph above or below a point: the point moves there.|
+- For small steps, press 'Next point' until the ring is on the|
+point you want, then press '-' or '+'.|
+- Choose the shape: 'Straight', 'Smooth' or 'Exponential'.|
+- Turn on 'Copy to all banks' to copy this curve to all four|
+banks when you press 'OK'.|
+- Press 'OK' to save.|
+Each bank has its own curve.|
+Move the bank switch to change another bank's curve.||
+THE NUMBERS:|
+The numbers along the top are the points' heights, -100 to 100.|
+The upright line is where the stick is now.|
+'Stick input' and 'Servo output' show where the stick and the|
+servo are now (-100 to 100).||
+THE SHAPES:|
+1. Straight: four straight lines join the five points.|
+2. Smooth: a smooth curve through the five points.|
+3. Exponential: three points (the ends and the centre) joined|
+by two expo curves. Only those three points can be moved, and|
+'Next point' skips the other two.|
+Set 'Expo' (-50 to +150) with the slider, or with the '-' and '+'|
+beside it for single steps. Expo 0 gives straight lines.|
+The slider is hard to stop at exactly 0, so 'Zero expo' sets 0|
+for you (and chooses 'Exponential').|

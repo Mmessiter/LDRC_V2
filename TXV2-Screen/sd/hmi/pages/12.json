@@ -52,9 +52,9 @@
    "t": "text",
    "g": "l",
    "x": 32,
-   "y": 92,
+   "y": 82,
    "w": 736,
-   "h": 354,
+   "h": 374,
    "font": 6,
    "sta": 1,
    "c": {
@@ -171,7 +171,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "print \"HelpView:BACKUP.TXT\"\nLogView.t0.txt=\"Backup help\"\nLogView.return.txt=\"RFBackUpView\""
+    "r": "print \"HelpView:BACKUP.TXT\"\nLogView.t0.txt=\"Backup (Rotorflight) help\"\nLogView.return.txt=\"RFBackUpView\""
    }
   },
   {
@@ -180,7 +180,7 @@
    "t": "text",
    "g": "g",
    "x": 48,
-   "y": 108,
+   "y": 98,
    "w": 704,
    "h": 36,
    "font": 2,
@@ -208,9 +208,9 @@
    "t": "text",
    "g": "g",
    "x": 48,
-   "y": 148,
+   "y": 138,
    "w": 704,
-   "h": 36,
+   "h": 56,
    "font": 2,
    "sta": 1,
    "c": {
@@ -227,7 +227,7 @@
     "ycen": 1,
     "pw": 0,
     "txt_maxl": 90,
-    "isbr": 0
+    "isbr": 1
    }
   },
   {
@@ -236,7 +236,7 @@
    "t": "text",
    "g": "g",
    "x": 48,
-   "y": 196,
+   "y": 206,
    "w": 324,
    "h": 170,
    "font": 2,
@@ -246,7 +246,7 @@
     "borderc": 4426,
     "bco": 4426
    },
-   "txt": "Back up after every setup you are happy with. With no model connected, the Rotorflight pages edit this backup; Write edits sends those edits to the model when it is connected.",
+   "txt": "Back up after every setup you are happy with.",
    "a": {
     "style": 0,
     "key": 255,
@@ -264,7 +264,7 @@
    "t": "button",
    "g": "l",
    "x": 388,
-   "y": 196,
+   "y": 206,
    "w": 176,
    "h": 50,
    "font": 6,
@@ -296,7 +296,7 @@
    "t": "button",
    "g": "l",
    "x": 576,
-   "y": 196,
+   "y": 206,
    "w": 176,
    "h": 50,
    "font": 6,
@@ -328,7 +328,7 @@
    "t": "button",
    "g": "l",
    "x": 388,
-   "y": 256,
+   "y": 326,
    "w": 176,
    "h": 50,
    "font": 6,
@@ -360,7 +360,7 @@
    "t": "button",
    "g": "l",
    "x": 576,
-   "y": 256,
+   "y": 326,
    "w": 176,
    "h": 50,
    "font": 6,
@@ -392,7 +392,7 @@
    "t": "button",
    "g": "l",
    "x": 388,
-   "y": 316,
+   "y": 266,
    "w": 176,
    "h": 50,
    "font": 6,
@@ -424,7 +424,7 @@
    "t": "button",
    "g": "l",
    "x": 576,
-   "y": 316,
+   "y": 266,
    "w": 176,
    "h": 50,
    "font": 6,
@@ -456,7 +456,7 @@
    "t": "button",
    "g": "l",
    "x": 592,
-   "y": 380,
+   "y": 390,
    "w": 160,
    "h": 50,
    "font": 6,
@@ -487,10 +487,10 @@
    "i": 17,
    "t": "text",
    "g": "l",
-   "x": 110,
-   "y": 207,
-   "w": 580,
-   "h": 124,
+   "x": 48,
+   "y": 206,
+   "w": 324,
+   "h": 170,
    "font": 2,
    "sta": 1,
    "c": {

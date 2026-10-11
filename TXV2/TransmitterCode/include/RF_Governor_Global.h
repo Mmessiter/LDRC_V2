@@ -300,10 +300,10 @@ FLASHMEM void ShowLocalGovConfigBank()
 FLASHMEM void SaveToLocalGovGLOBAL() // "Save FC to SD" button
 { // This function only works when connected. The values are already on screen so it's easy enough.
     
-    if (!GetConfirmation((char *)"page RFGovViewGlbl", (char *)"Save these config values to SD card?"))
+    if (!GetConfirmation((char *)"page RFGovViewGlbl", (char *)"Keep a copy of these governor\r\nsettings on the card?"))
         return;
     
-    ShowGOVConfigMsg((char *)"Saving config values ...", Gray);
+    ShowGOVConfigMsg((char *)"Keeping a copy on the card ...", Gray);
     LoadGovConfigWritePayload();
 
     for (int i = 18; i < GOV_CONFIG_PAYLOAD_SIZE; ++i)
@@ -337,10 +337,10 @@ FLASHMEM void RestoreFromSDGlobalGOV()
         return;
     }
 
-    if (!GetConfirmation((char *)"page RFGovViewGlbl", (char *)"Restore config values from SD card?"))
+    if (!GetConfirmation((char *)"page RFGovViewGlbl", (char *)"Send the kept copy of the governor\r\nsettings to the flight controller?"))
         return;
 
-    ShowGOVConfigMsg((char *)"Restoring config values ...", Gray);
+    ShowGOVConfigMsg((char *)"Sending the kept copy ...", Gray);
 
     // Copy SD values into GovWritePayload[18..41]
     for (int i = 18; i < GOV_CONFIG_PAYLOAD_SIZE; ++i)

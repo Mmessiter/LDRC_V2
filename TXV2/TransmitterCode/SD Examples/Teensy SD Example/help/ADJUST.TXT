@@ -1,17 +1,92 @@
-Adjustments: a knob or a switch on this transmitter changes a Rotorflight setting in flight (the configurator's Adjustments tab). Needs the model connected, the safety on, and the USB-C cable from the receiver to the flight controller: Rotorflight cannot send its adjustments over the receiver's lead.||
-
-The arrows beside the title move between the adjustments defined. Add makes a new one after the one showing; Remove takes it away.||
-
-Changes: tap the setting to choose another from the list (rates and PIDs first). Tap the bank box for "in bank 1" and so on, or "in any bank": a bank needs a 'PID bank switch (1 to 6)' adjustment first, which is how Rotorflight knows what the switch means. A bank switch has no bank box: it is the bank.||
-
-The line under the setting: tap the first box for a Knob (the whole travel maps the low end value to the high end), a Switch with 2, 3 or 4 positions, or Step up / down (a three-position switch: up adds the step, down takes it, within the lowest and highest values). Tap the channel box for the next channel (channel 6 is AUX1).||
-
-A switch: give the first and last positions their values; Rotorflight spaces the positions evenly between them, and the zones show the value each gets. The round blobs are the ends of the switch's travel: drag them to where its first and last positions are (a real switch spans about 988 to 2012). Rotorflight keeps a switch as one line, the travel mapped onto the values, so it works at every change. One line per position, which the transmitter wrote until 9 October 2026, worked once per power-up only: such lines are converted when the page opens - press Save.||
-
-The bank switch: its zones are matched to this transmitter's own banks. Each bank of a model sends its own value on the bank channel (bank 1 the lowest; Black Thunder 2's channel 7 sends 988, 1091, 1500 and 2012), and the transmitter looks for the travel whose even divisions give every bank its own zone with the most room to spare, so no blob needs dragging. A bar that already does that is left as it is. Flip through the banks and the line under the bar says which bank Rotorflight picks. If no travel can tell the banks apart, the page says so: space the banks' values more evenly on that channel in Model setup.||
-
-The bar is the switch or knob's travel, 875 to 2125. Tap a zone to type its value. The green marker is where the channel is now, from this transmitter's own output as the flight controller sees it, and the line under the bar says what that gives.||
-
-Save writes all 42 of Rotorflight's lines, stores them, and reads them back. A rate (top rotation speed) is shown in degrees per second as on the Rates page.||
-
-OK leaves; edits not saved are discarded after a question.||
+Make a knob or a switch on this transmitter change a Rotorflight|
+setting in flight (the Configurator's Adjustments tab). Each adjustment|
+is one setting, worked by one channel.||
+It needs the model connected, with the safety on,|
+and a Version 2 receiver with Bluetooth.|
+It also needs the USB-C cable from the receiver to the flight controller|
+('USB cable' at the top left).|
+Rotorflight cannot send adjustments over the receiver's lead.|
+Without the cable, the page says so and goes back.|
+With no model, the page shows the backup on the card,|
+if the backup was made with the cable in.|
+'Save' then changes the backup.|
+The change is offered to the model when it next connects.||
+THE PAGE:|
+'<' and '>' beside the title step through the adjustments.|
+'Add' makes a new one after the one showing: a Knob for|
+'Pitch P gain', on the same channel. Rotorflight holds up to 42.|
+'Remove' deletes the one showing, after a question.||
+THE SETTING AND THE BANK:|
+Tap the setting box beside 'Changes' to open the list,|
+'What it changes'.|
+Rates and PIDs come first.|
+Turn the list (drag it, or tap a row) until the setting is in the|
+middle, then press 'OK'. 'Cancel' keeps the old one.|
+A new setting starts at the value it has now, if it can be read.|
+A rate (top rotation speed) is in degrees per second,|
+as on the Rates page.|
+The box on the right says when it works: tap it for 'in bank 1',|
+'in bank 2' and so on, then 'in any bank'.|
+The bank box needs a 'PID bank switch (1 to 6)' adjustment: it tells|
+Rotorflight which bank the switch has chosen.|
+Without one, every adjustment works in every bank.|
+The list here does not offer one. If the model has none, make one|
+in the Rotorflight Configurator.|
+A bank switch is the bank itself, so it has no bank box.||
+KIND AND CHANNEL:|
+Tap the box under 'Changes' to step to the next kind:|
+Knob: the travel between the round ends sets the value, from the|
+low end value to the high end value.|
+Switch, 2, 3 or 4 positions: each position sets its own value.|
+Step up / down: a three-position switch. Up adds the step, down|
+takes it away, and the centre holds. The value stays between the|
+lowest and the highest value.|
+Tap the channel box for the next channel, 6 to 16.|
+(Channel 6 is AUX1 in Rotorflight.)||
+THE BAR:|
+The bar is the channel's travel, 875 to 2125 microseconds (us).|
+A real switch spans about 988 to 2012.|
+The marker line (white, edged in black) is where the channel is now:|
+this transmitter's output, as the flight controller sees it.|
+The line under the bar says what that gives.|
+Knob: tap the left half of its zone for the low end value,|
+or the right half for the high end value.|
+Drag the round ends to set its travel.|
+Switch: tap the first or last zone to type its value. The zones between|
+are spaced evenly, and each zone shows its value.|
+Drag the round ends to the switch's two end positions.|
+Step up / down: tap an outer zone to type the step.|
+Tap the grey middle zone's left half for the lowest value,|
+or its right half for the highest.|
+Drag the round dividers to where up and down start.|
+A switch's last value must be above its first.|
+A knob's high end value must be above its low end value.|
+'Save' refuses otherwise.|
+If your switch or knob works the other way round,|
+reverse the channel.||
+THE BANK SWITCH:|
+A bank switch ('PID bank switch' or 'Rates bank switch') is matched|
+to this transmitter's banks, so there is nothing to drag.|
+Its kind box then says, for example,|
+'Banks 1 to 4 of this transmitter'.|
+Each bank sends its own value on the bank channel.|
+The values rise from bank 1.|
+The transmitter picks the travel whose even divisions give each bank|
+its own zone, with the most room to spare.|
+A bank switch that already does that is left alone.|
+Flip through the banks: the line under the bar shows each bank's|
+value, and says so if Rotorflight would pick another bank.|
+When no travel can tell the banks apart, the hint says so.|
+Tap the kind box for why. Then space the banks' values on that channel|
+more evenly in Model setup.||
+SAVE AND OK:|
+'Save' appears once something is changed. It writes only the lines|
+that changed, stores them, and reads them all back to check.|
+A note that starts 'Press Save:' means the page has put something|
+right. Press 'Save' to keep it. This happens for:|
+a bank switch that did not follow this transmitter's banks;|
+an extra bank switch line (it would fight the first);|
+a switch in the old form, one line per position. Rotorflight applies|
+those only once per power-up. A switch is now one line, its travel|
+mapped onto the values, so it works at every change.||
+'OK' leaves; if a change was not saved, it asks first.|

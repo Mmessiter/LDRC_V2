@@ -1,0 +1,32 @@
+Store or delete the receiver ID kept with this model memory.||
+'Stored ID': the ID kept with this model memory.|
+'No ID stored' means it has none yet.|
+'This model's ID': the ID of the receiver connected now.|
+'No ID received' means no model is connected.||
+TO STORE THE ID:|
+1. Load the model ('Model setup', then 'Models').|
+2. Switch the model on and let it connect.|
+3. Press 'Store this model's ID', then 'OK' to the question.|
+'No ID to store.' means no model is connected.||
+TO DELETE THE ID:|
+Press 'Delete stored ID', then 'OK' to the question.|
+Nothing else changes. It works at any time, connected or not.||
+'Check for duplicates' lists the ID of every model memory,|
+and finds any ID stored twice.|
+'OK' goes to the front screen.||
+WHY IT MATTERS:|
+Every receiver has its own ID. With automatic model selection|
+(AMS) on, the transmitter loads the model memory that holds|
+the ID of the model as it connects. So each ID must be stored|
+with the right model memory, and with one only.|
+If no memory holds that ID, you are asked whether to store it|
+with the model now loaded.|
+With AMS off, the model now loaded is used, whatever its ID.|
+Switch AMS on or off in 'Transmitter setup', then 'System'.||
+Storing an ID here does not remove it from any other model.|
+After moving a receiver, press 'Check for duplicates'.||
+IF YOU ARE NOT SURE AN ID IS RIGHT:|
+Turn AMS off, load the right model and connect. Then press|
+'Store this model's ID', and turn AMS on again.||
+A backup file keeps the model's ID; a restore brings it back.|
+A model sent to another transmitter takes its ID with it.|

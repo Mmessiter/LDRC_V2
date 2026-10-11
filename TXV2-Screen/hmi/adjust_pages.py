@@ -19,11 +19,38 @@ comp, PALE = rp.comp, rp.PALE
 NAMES = ["(nothing)", "Rates bank switch (1 to 6)", "PID bank switch (1 to 6)", "Led profile", "Battery profile", "Pitch rate curve shape (Shape)", "Roll rate curve shape (Shape)", "Yaw rate curve shape (Shape)", "Pitch top rotation speed (Rate)", "Roll top rotation speed (Rate)", "Yaw top rotation speed (Rate)", "Pitch expo", "Roll expo", "Yaw expo", "Pitch P gain", "Pitch I gain", "Pitch D gain", "Pitch F gain", "Roll P gain", "Roll I gain", "Roll D gain", "Roll F gain", "Yaw P gain", "Yaw I gain", "Yaw D gain", "Yaw F gain", "Yaw clockwise gain", "Yaw anticlockwise gain", "Yaw cyclic feedforward", "Yaw collective feedforward", "Yaw collective dynamic", "Yaw collective decay", "Pitch collective feedforward", "Pitch gyro cutoff", "Roll gyro cutoff", "Yaw gyro cutoff", "Pitch d-term cutoff", "Roll d-term cutoff", "Yaw d-term cutoff", "Rescue climb collective", "Rescue hover collective", "Rescue hover altitude", "Rescue altitude P gain", "Rescue altitude I gain", "Rescue altitude D gain", "Angle level gain", "Horizon level gain", "Acro trainer gain", "Governor gain", "Governor P gain", "Governor I gain", "Governor D gain", "Governor F gain", "Governor tail torque assist gain", "Governor cyclic feedforward", "Governor collective feedforward", "Pitch B gain", "Roll B gain", "Yaw B gain", "Pitch O gain", "Roll O gain", "Cross coupling gain", "Cross coupling ratio", "Cross coupling cutoff", "Level trim pitch", "Level trim roll", "Inertia precomp gain", "Inertia precomp cutoff", "Pitch setpoint boost gain", "Roll setpoint boost gain", "Yaw setpoint boost gain", "Collective setpoint boost gain", "Yaw dynamic ceiling gain", "Yaw dynamic deadband gain", "Yaw dynamic deadband filter", "Yaw precomp cutoff", "Governor idle throttle", "Governor auto throttle", "Governor max throttle", "Governor min throttle", "Governor headspeed", "Governor yaw feedforward"]
 ORDER = list(range(5, 26)) + [3, 4] + list(range(26, 82))   # the main board's AdjNextFn order: rates and PIDs first (RF_Adjust.h must agree)
 
-def header(name, title, help_file, comps, i):
+# Polish (10 Oct, Malcolm: "make the screens look more beautiful, well designed and easy to use ... Don't change the logic"):
+# link = the header's word for how the page reaches the model, as the main board writes it there (the switches' pages
+# go by Bluetooth: their picker's main board never writes t9, so the page's own word is what shows); help_title = the
+# help viewer's title when the page's own title changes as it is used ("Adjustment 3 of 10": its help is "Adjustments
+# help"); name_w = the model name's box, stopped 20 px short of the title's arrows.
+def header(name, title, help_file, comps, i, link='USB cable', help_title=None, name_w=None):
     def add(c): c['i'] = i[0]; i[0] += 1; comps.append(c); return c
-    add(comp(rp.TITLE, n='t0', txt=title)); add(comp(rp.CARD, n='card')); add(comp(rp.BANK, n='t9', txt='USB cable')); add(comp(rp.MODEL, n='t11', txt='Model name')); add(comp(rp.VA0, n='va0'))
-    hb = comp(rp.by['b0'], n='b0'); hb['ev'] = {'r': 'print "HelpView:%s"\nLogView.t0.txt="%s"\nLogView.return.txt="%s"' % (help_file, title + ' help', name)}; add(hb)
+    add(comp(rp.TITLE, n='t0', txt=title)); add(comp(rp.CARD, n='card')); add(comp(rp.BANK, n='t9', txt=link)); m = add(comp(rp.MODEL, n='t11', txt='Model name')); add(comp(rp.VA0, n='va0'))
+    if name_w: m['w'] = name_w
+    hb = comp(rp.by['b0'], n='b0'); hb['ev'] = {'r': 'print "HelpView:%s"\nLogView.t0.txt="%s"\nLogView.return.txt="%s"' % (help_file, (help_title or title) + ' help', name)}; add(hb)
     return add
+# The arrows beside a title that counts ("< Adjustment 3 of 10 >"): symmetric about the middle of the screen, 288 px of
+# title between them - the widest titles the main board writes there ("Adjustment 12 of 42", "No adjustments yet",
+# "Adjustments: none yet" is the one that cannot fit: reworded on the main board) clear them; 44 x 44 is still a whole
+# thumb. The model name's box stops 20 px short of the left one.
+ARROW_W, TITLE_ROOM = 44, 288
+ARROW_PREV_X, ARROW_NEXT_X = 400 - TITLE_ROOM // 2 - ARROW_W, 400 + TITLE_ROOM // 2
+NAME_W = ARROW_PREV_X - 20 - rp.MODEL['x']
+def arrows(add, prev_code, next_code):
+    bp = comp(rp.BUTTON, n='bprev', x=ARROW_PREV_X, y=7, w=ARROW_W, h=44, txt='<'); bp['ev'] = ev(prev_code); add(bp)
+    bn = comp(rp.BUTTON, n='bnext', x=ARROW_NEXT_X, y=7, w=ARROW_W, h=44, txt='>'); bn['ev'] = ev(next_code); add(bn)
+# The page's notes and progress (the main board's "busy", shown 3-8 s while the page is in use: "Press Save: ...",
+# "Type the first and last positions ...", "Saved ...") as wide as the bar, BETWEEN the bar and the buttons: over the live
+# line and the hint, which are words only. Fix (11 Oct, touch audit): over the two lines above the bar it took the taps
+# of the setting, kind, bank and channel boxes while it showed (the screen's hit(): the topmost visible part wins);
+# here the boxes, the bar and the four buttons all stay live (a note that says "press Save" never covers Save).
+# 4 px clear of the bar (Y + 160) and of the buttons (the island's foot, Y + 236 + C_BTN_ABOVE): 82 px, two lines of
+# font 2 in the message box's padding - the longest note, AdjBankWhy's "Banks 1 to 6; bank 7 has no value of its own on
+# channel 16 (2012 us).", is 672 px: two lines in the 648 px the box leaves for words
+def note_box(X, Y, W):
+    top, foot = Y + 164, Y + 236 + rp.C_BTN_ABOVE
+    return rp.message_box(rect=(X, top, W, foot - 4 - top))
 def ev(code): return {'r': 'va0.val=%d<<8\nprint va0.val' % code}
 def finish(pid, name, comps, extra_pre=''):
     out = {'name': name, 'id': pid, 'w': 800, 'h': 480, 'bg': rp.rates['bg'], 'nav': rp.rates['nav'], 'ev': {'preinitialize': 'vis busy,0\n%s.pic=Screen_Background%s' % (name, extra_pre)}, 'comps': comps}
@@ -37,7 +64,7 @@ def finish(pid, name, comps, extra_pre=''):
     json.dump(idx, open(os.path.join(rp.PAGES, '..', 'index.json'), 'w'), indent=1)
 
 # ---- page 67: the adjustment
-comps = []; i = [1]; add = header('AdjustView', 'Adjustment 1 of 1', 'ADJUST.TXT', comps, i)
+comps = []; i = [1]; add = header('AdjustView', 'Adjustment 1 of 1', 'ADJUST.TXT', comps, i, help_title='Adjustments', name_w=NAME_W)
 shade = PALE[0]
 def label(nm, x, y, w, txt, h=36, pale=True):
     l = comp(rp.LABEL_L, n=nm, x=x, y=y, w=w, h=h, txt=txt, g='g')
@@ -47,10 +74,12 @@ def label(nm, x, y, w, txt, h=36, pale=True):
 def tapbox(nm, x, y, w, code, h=36, maxl=40):
     f = comp(rp.FIELD, n=nm, x=x, y=y, w=w, h=h, txt='', g='g'); f['a'] = dict(f['a'], key=255, txt_maxl=maxl); f['ev'] = ev(code); return add(f)
 def hidden(nm, klabel, code=119):   # a box the keypad edits, out of sight (one pixel in the header's corner); opened by the main board's click
-    f = comp(rp.FIELD, n=nm, x=1, y=1, w=1, h=1, txt='0', g='g'); f['a'] = dict(f['a'], borderw=0); f['c'] = dict(f['c'], bco=0, pco=0, borderc=0)
+    # Fix (11 Oct): flat (style 0) and in the strip's own colour (0x08A6, which every theme recolours as the strip), so the
+    # pixel is invisible - its sunken frame (style 2) drew a grey speck in the strip's corner. It keeps its place: the
+    # pixel it wins stays its own (not parked), so nothing a touch reaches changes.
+    f = comp(rp.FIELD, n=nm, x=1, y=1, w=1, h=1, txt='0', g='g'); f['a'] = dict(f['a'], borderw=0, style=0); f['c'] = dict(f['c'], bco=rp.TITLE['c']['bco'], pco=rp.TITLE['c']['bco'], borderc=rp.TITLE['c']['bco'])
     f['ev'] = {'r': 'keybdB.t1.txt="%s"\nva0.val=%d<<8\nprint va0.val' % (klabel, code)}; return add(f)
-bp = comp(rp.BUTTON, n='bprev', x=215, y=7, w=56, h=44, txt='<'); bp['ev'] = ev(126); add(bp)
-bn = comp(rp.BUTTON, n='bnext', x=540, y=7, w=56, h=44, txt='>'); bn['ev'] = ev(127); add(bn)
+arrows(add, 126, 127)
 # B91: an island (rescue_pages.island) - the two lines, the bar, the live line and the hint 680 wide, the buttons at its foot
 W = 680; isl = rp.island(W, 236, [('b5', 'Add', 128), ('b6', 'Remove', 129), ('b3', 'Save', 118), ('b1', 'OK', 117)])
 comps[1].update(x=isl['card'][0], y=isl['card'][1], w=isl['card'][2], h=isl['card'][3])
@@ -61,13 +90,13 @@ bar = {'n': 'bar', 't': 'rangebar', 'g': 'g', 'x': X, 'y': Y + 100, 'w': W, 'h':
        'c': {'pco': 65535, 'bco': rp.CARD['c']['bco'], 'borderc': 0, 'pco2': 65535, 'bco2': 0},
        'a': {'lo': 875, 'hi': 2125, 'n': 2, 'kind': 0, 'mk': -1, 'd0': 1500, 'd1': 1700, 'd2': 1900, 'd3': 2000, 'd4': 2100, 'txt_maxl': 160}, 'ev': ev(130)}
 add(bar)
-live = label('tn8', X, Y + 168, W, '', 30); live['a'] = dict(live['a'], txt_maxl=60)
-hint = label('hint', X, Y + 206, W, 'Tap a zone to type its value. Drag the round ends.', 30, pale=False); hint['font'] = 2; hint['c']['pco'] = 50712   # (worded per kind by the main board)
+live = label('tn8', X, Y + 168, W, '', 30, pale=False); live['a'] = dict(live['a'], txt_maxl=60)   # (polish: the live line white on the card - live data, not a label; no empty box with no adjustment)
+hint = label('hint', X, Y + 206, W, '', 30, pale=False); hint['font'] = 2; hint['c']['pco'] = 50712   # (worded per kind by the main board; polish: empty until it does - the page's default is no hint, as with no adjustment)
 for k in range(6): hidden('tp%d' % k, 'Position %d' % (k + 1))
 hidden('tk0', 'Low end value'); hidden('tk1', 'High end value'); hidden('ts0', 'Step size'); hidden('ts1', 'Lowest value'); hidden('ts2', 'Highest value')
 for (nm, txt, x, y, w, code) in isl['btn']:
     b = comp(rp.BUTTON, n=nm, x=x, y=y, w=w, h=rp.C_BTN_H, txt=txt); b['ev'] = ev(code); add(b)
-add(rp.message_box(rect=(isl['box'][0], Y + 168, isl['box'][2], 104)))   # (a message box under the bar, so the bar stays in sight)
+add(note_box(X, Y, W))
 finish(67, 'AdjustView', comps)
 
 # ---- page 68: the picker

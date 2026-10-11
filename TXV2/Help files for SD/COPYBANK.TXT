@@ -1,7 +1,47 @@
-Copy a bank: the tuning of one bank into another, as the receiver's own page does it. Needs the model connected, the safety on and a Version 2 receiver with Bluetooth - or, with no model, the backup on the card, where the copy is made and offered to the model as edits on the next connection.||
-
-From and To: tap to step through the banks the flight controller has. What to copy: PIDs, PID+ and rescue (the whole flight tuning), Rates, and Governor gains. Head speed too is normally OFF: each bank keeps its own head speed, which is usually the whole point of having banks. Scale gains to rpm: the rotor's control power grows with head speed squared, so a tune made at one head speed is too sharp faster and too soft slower; with this on, the copied P, I, D, F and B gains are scaled by the two head speeds (down by the ratio to the power 1.5 going faster, up by the plain ratio, at most 25 %, going slower).||
-
-The copy is Rotorflight's own, the governor profile put right afterwards, stored, and the target read back and compared: the verdict says what was copied and whether it read back the same. The transmitter's own banks are put back at the end. Do not move the bank switch while it runs.||
-
-OK leaves.||
+Copy the tuning of one bank into another, so you can tune one bank|
+and give it to the others.||
+It needs the model connected, with the safety on,|
+and a Version 2 receiver with Bluetooth.|
+With no model, the copy is made in the backup on the card.|
+It is offered to the model as edits when it next connects.||
+HOW:|
+1. Tap the box beside 'From' for the bank to copy,|
+and the box beside 'To' for the bank to copy into.|
+Each tap steps to the next bank.|
+'From' and 'To' are never the same bank.|
+2. Switch on what to copy (green = on).|
+3. Press 'Copy bank 1 to bank 2' (it names your banks),|
+then 'OK' to the question.|
+Do NOT move the bank switch while it runs.||
+WHAT TO COPY:|
+PIDs, PID+ and rescue: the whole flight tuning.|
+Rates: the rates of the 'From' bank, into the 'To' bank.|
+Governor gains: the governor settings, but not the head speed.|
+Head speed too: the head speed as well.|
+Leave it OFF normally: each bank keeps its own head speed, which|
+is usually the whole point of having banks.|
+Switching it on switches on 'Governor gains'. Switching|
+'Governor gains' off switches it off.|
+Whatever is off stays as it was in the target bank.||
+SCALE GAINS TO RPM:|
+Switch it on when the two banks fly at different head speeds.|
+Why: the rotor's control power grows with head speed squared.|
+A tune made at one head speed is too sharp at a faster one,|
+and too soft at a slower one.|
+With this on, the copied P, I, D, F and B gains are scaled by the|
+two banks' head speeds:|
+Into a faster bank: down by the speed ratio to the power 1.5.|
+Into a slower bank: up by the plain speed ratio, at most 25 %.|
+It works only with 'PIDs, PID+ and rescue' on.|
+With 'Head speed too' on, both banks run one speed: no change.|
+If a bank has no head speed set, the gains are copied unchanged.||
+WHAT HAPPENS:|
+The copy is Rotorflight's own, as on the receiver's own page.|
+It brings the source's governor along,|
+so the target's governor is put right afterwards.|
+Everything is stored, then the target is read back and compared.|
+Then the flight controller goes back to the transmitter's banks.|
+The answer lists what was copied, and any change to the gains.|
+It also says if the target read back the same.|
+If it did not, check that bank.|
+'OK' leaves (not while a copy runs).|

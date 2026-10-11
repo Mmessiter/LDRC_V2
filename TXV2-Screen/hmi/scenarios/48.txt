@@ -1,9 +1,9 @@
 Screen_Background=8
 @model 0
-# GotoModelsView (MenuOptions.h:378)
-page ModelsView
+# GotoModelsView (MenuOptions.h:382; since B29 the picture is asked for BEFORE the page: CheckModelImageFileName)
 findfile "sd0/images/Raw420.jpg",sys0
 get sys0
+page ModelsView
 exp0.path="sd0/images/Raw420.jpg"
 ModelName.txt="RAW 420 MCM"
 Mfiles.path="BTHUNDER.MOD\r\nEDGE540.MOD\r\nEXTRA330.MOD\r\nGOBLIN70.MOD\r\nHAVOK.MOD\r\nLOGO200.MOD\r\nOMPM2PIN.MOD\r\nRAW420MC.MOD\r\nRIOT.MOD\r\nTUNDRA.MOD\r\nYAK54.MOD\r\n"
@@ -15,28 +15,29 @@ modelname.txt="RAW 420 MCM"
 # Export (main.cpp:3878): GetDefaultFilename -> "RAW420MC.MOD"
 # GetBackupFilename (Utilities.h:1231)
 page BackupView
-t0.txt="Filename?"
+t0.txt="File name"
 t1.txt="RAW420MC.MOD"
 Modelname.txt="RAW 420 MCM"
 t3.txt="Create backup file for"
 @shot 48_open
 get t1.txt
 page ModelsView
-# Rename a backup (SDFiles.h:161 RenameFile)
+# Rename a backup (SDFiles.h:161 RenameFile; the words since TXV1B 2e06271 - were "New filename?", "(i.e. just change its filename)",
+# "Rename this backup"; the backup prompt was "Filename?")
 get filename.txt
 page BackupView
-t0.txt="New filename?"
+t0.txt="New file name"
 t1.txt="BTHUNDER.MOD"
-Modelname.txt="(i.e. just change its filename)"
-t3.txt="Rename this backup"
+Modelname.txt="Only the file name changes"
+t3.txt="Rename backup file"
 @shot 48_rename
 get t1.txt
 page ModelsView
 # worst case: 30-char model, its default file name, the longest prompt
-# GotoModelsView (MenuOptions.h:378)
-page ModelsView
+# GotoModelsView (MenuOptions.h:382; since B29 the picture is asked for BEFORE the page: CheckModelImageFileName)
 findfile "sd0/images/.jpg",sys0
 get sys0
+page ModelsView
 exp0.path="sd0/images/Noimage.jpg"
 ModelName.txt="SAB GOBLIN 700 COMPETITION MK2"
 Mfiles.path="BTHUNDER.MOD\r\nEDGE540.MOD\r\nEXTRA330.MOD\r\nGOBLIN70.MOD\r\nHAVOK.MOD\r\nLOGO200.MOD\r\nOMPM2PIN.MOD\r\nRAW420MC.MOD\r\nRIOT.MOD\r\nSABGOBLI.MOD\r\nTUNDRA.MOD\r\nYAK54.MOD\r\n"
@@ -46,7 +47,7 @@ MMems.path="Logo 200 (1)\r\nOMP M2 Pink (2)\r\nRAW 420 MCM (3)\r\nGoblin 700 Com
 MMems.val=12
 modelname.txt="SAB GOBLIN 700 COMPETITION MK2"
 page BackupView
-t0.txt="New filename?"
+t0.txt="New file name"
 t1.txt="SABGOBLI.MOD"
 Modelname.txt="SAB GOBLIN 700 COMPETITION MK2"
 t3.txt="Create backup file for"

@@ -57,6 +57,17 @@ uint16_t themeReadable(uint16_t ink, uint16_t face) {
     if (themeContrast(ink, face) >= 3.0) return ink;
     return themeContrast(0x0000, face) >= themeContrast(0xFFFF, face) ? 0x0000 : 0xFFFF;
 }
+bool themeStandsOut(uint16_t a, uint16_t b) { return themeContrast(a, b) >= 3.0; }
+uint16_t themeInkOn(uint16_t ink, uint16_t face) {
+    if (themeStandsOut(ink, face)) return ink;
+    const uint16_t to = themeContrast(0x0000, face) >= themeContrast(0xFFFF, face) ? 0x0000 : 0xFFFF;   // (towards whichever of black and white reads better there)
+    for (int pct = 90; pct > 0; pct -= 10) { const uint16_t c = themeBlend(ink, to, pct); if (themeContrast(c, face) >= 4.5) return c; }   // (green on White: a dark green, not black)
+    return to;
+}
+uint16_t themeMarkOn(uint16_t mark, uint16_t face, uint16_t themeInk) {
+    if (themeStandsOut(mark, face)) return mark;
+    return themeStandsOut(themeInk, face) ? themeInk : themeReadable(mark, face);
+}
 static int nearest(const uint16_t *list, int n, uint16_t c) {
     int best = 0; long bestD = -1, cr, cg, cb;
     { int r, g, b; rgbOf(c, r, g, b); cr = r; cg = g; cb = b; }
@@ -193,7 +204,7 @@ void ColoursPage::build() {
             t.face = pick.panels[i]; t.ink = pick.inks[i]; t.chosen = i == pick.no; sc.tiles.push_back(t);
         }
         b.id = ID_CANCEL; b.r = slot(0); b.text = "Cancel"; sc.tiles.push_back(b);
-        b.id = ID_EDIT; b.r = slot(1); b.text = "Edit themes"; sc.tiles.push_back(b);
+        b.id = ID_EDIT; b.r = slot(1); b.text = "Edit themes ..."; sc.tiles.push_back(b);   // (it opens a page: " ...")
         b.id = ID_OK; b.r = slot(3); b.text = "OK"; sc.tiles.push_back(b);
     } else {                                            // Edit themes: either colour of any of the twelve made from any colour
         sc.layout = 7000u + (uint32_t) editKind * 100u + (uint32_t) editIndex;
@@ -321,12 +332,15 @@ void AppearancePage::poll(const AppearanceWorld &w) {
 }
 const AppearanceScene &AppearancePage::scene() {
     sc = AppearanceScene(); sc.layout = 9000; sc.title = "Appearance";
-    static const struct { int id; const char *text; } BUTTONS[] = { { APP_BACKGROUND, "Background picture" }, { APP_COLOURS, "Themes" }, { APP_FRONT, "6 defined front screens" } };
+    // An island, as Transmitter setup that opens it (hmi/islands.py's rule: the card 16 px round what is on it): its three
+    // rows at Transmitter setup's heights (134, 206, 278), OK at the island's bottom right, at Transmitter setup's OK height
+    static const struct { int id; const char *text; } BUTTONS[] = { { APP_BACKGROUND, "Background picture" }, { APP_COLOURS, "Themes" }, { APP_FRONT, "Defined front screens" } };
+    const ThemeRect &c = APPEARANCE_CARD;
     for (int k = 0; k < 3; ++k) {
         ThemeTile t; t.button = true; t.face = 0xD69A; t.ink = 0x0000; t.id = BUTTONS[k].id; t.text = BUTTONS[k].text;
-        t.r = ThemeRect(190, 96 + k * 96, 420, 76); sc.tiles.push_back(t);
+        t.r = ThemeRect(c.x + 16, c.y + 16 + k * 72, c.w - 32, 62); sc.tiles.push_back(t);
     }
-    ThemeTile b; b.button = true; b.face = 0xD69A; b.ink = 0x0000; b.id = APP_BACK; b.text = "OK"; b.r = slot(3); sc.tiles.push_back(b);   // (OK at the bottom right, as on every page - Malcolm, 10-04)
+    ThemeTile b; b.button = true; b.face = 0xD69A; b.ink = 0x0000; b.id = APP_BACK; b.text = "OK"; b.r = ThemeRect(c.x + c.w - 16 - 160, c.y + c.h - 16 - 50, 160, 50); sc.tiles.push_back(b);   // (OK at the bottom right, as on every page - Malcolm, 10-04)
     b.id = APP_HELP; b.text = "Help"; b.r = ThemeRect(620, 4, 170, 50); sc.tiles.push_back(b);   // (where the pages have theirs)
     for (auto &t : sc.tiles) { t.pressed = t.id == pressedId && !slidOff; t.serial = hashOf(t.text, 2166136261u) ^ (t.pressed ? 1u : 0u); }
     return sc;

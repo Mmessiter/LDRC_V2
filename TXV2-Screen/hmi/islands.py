@@ -38,8 +38,10 @@ PLACEHOLDERS = ('model name', 'please wait', 'unknown', 'untitled')
 # the pages, and the series that share an island (their bottom rows must line up)
 PAGES_WANTED = [1, 3, 4, 5, 6, 7, 9, 16, 18, 19, 20, 23, 24, 25, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 39, 40, 42, 46, 49, 50, 51, 52, 53, 54, 55]
 SERIES = [[25, 24, 23]]
-# a label the Teensy writes whose words are not in its source as a literal (seen on the bench): never narrowed
-KEEP_WIDE = {}
+# a label the Teensy writes whose words are not in its source as a literal (seen on the bench): never narrowed. (10 Oct 2026:
+# and the plainly numbered labels it writes by name, as numbered names say nothing by themselves - see narrow_labels: the
+# Mixes page's bank name, the Rates page's eight channel names and its "'Flight mode 1' will use rate switch" line)
+KEEP_WIDE = {29: ('t10',), 31: ('t12', 't8', 't11', 't13', 't16', 't14', 't15', 't17', 't3')}
 
 def squeeze(pg, y0, y1, x0, x1, cols):
     """A table in [x0, x1] x [y0, y1]: its columns narrower, cols = [(left edge, right edge, new width)] left to right;
@@ -66,10 +68,8 @@ TWEAKS = {
     6: dict(foot=['b2'], txt={'b2': 'Global ...'}),                       # (Global governor parameters ...: beside Save, as Advanced ... is on Rates and PIDs)
     19: dict(w={'FilesBox': 420, 't4': 140, 't5': 140, 't6': 140}),
     25: dict(w={'TxName': 470}),
-    27: dict(w={'chM': 180}),
-    29: dict(w={'chM': 120, 't10': 120, 'chS': 120}),
     31: dict(dy=dict([(n, -2) for n in ('t8', 'n0', 't14', 'n4')] + [(n, -4) for n in ('t11', 'n1', 't15', 'n5')] + [(n, -6) for n in ('t13', 'n3', 't17', 'n7')] + [('t3', -16), ('t7', -18)]),   # (the channels' rows 44 apart, not 46, the two lines under them closer)
-             h={'rate': 3 * 35 + 6}, w={'t12': 70, 't8': 70, 't11': 70, 't13': 70, 't16': 70, 't14': 70, 't15': 70, 't17': 70, 't3': 340, 't7': 340}),
+             h={'rate': 3 * 35 + 6}, w=dict([(n, 124) for n in ('t12', 't8', 't11', 't13', 't16', 't14', 't15', 't17')] + [(n, 64) for n in ('n2', 'n0', 'n1', 'n3', 'n6', 'n4', 'n5', 'n7')] + [('t3', 340), ('t7', 340)])),   # (10 Oct 2026: the names 124 wide, not 70 - 'Aileron' is 80 px, 'Not used' 101, 'Collective' 111 in font 6; the channel numbers, 0 to 16, 64)
     40: dict(squeeze=(90, 300, 40, 773, [(40, 130, 82)] + [(131 + 107 * k, 236 + 107 * k, 101) for k in range(6)])),
     42: dict(squeeze=(100, 360, 324, 770, [(324 + 112 * k, 434 + 112 * k, 104) for k in range(4)])),
     46: dict(w={'MMems': 640}, h={'MMems': 7 * 37 + 6}),                 # (the list: 7 whole rows, not 9 - an odd number, as every list)
@@ -161,10 +161,15 @@ def original_names(pid):
 def narrow_labels(pg, body):
     """A fixed label on the card narrows to its words (+ a little). Fixed: a label the restyle ADDED (not on the Version 1
     page, so the Teensy cannot know it), or words the Teensy never sends (not a literal in its source) that are not a
-    placeholder; never one the page knows to keep wide."""
+    placeholder; never one the page knows to keep wide, and never one the Teensy writes into BY NAME (10 Oct 2026: the
+    Mixes page's slave channel "chS", placeholder "Flap", was narrowed to 57 px and showed "Ru..." for Rudder). A name
+    counts when it is a literal in the Teensy's code and was on the Version 1 page; plain numbered names (t3, b12 ...) are
+    on nearly every page and in the Teensy's code many times over, so they say nothing - those go in KEEP_WIDE."""
     lits = teensy_literals(); keep = KEEP_WIDE.get(pg['id'], ()); orig = original_names(pg['id'])
+    def written_by_name(n):
+        return n in lits and (orig is None or n in orig) and not re.fullmatch(r'[a-z]\d+', n)
     for c in body:
-        if not plain_label(c) or c['n'] in keep: continue
+        if not plain_label(c) or c['n'] in keep or written_by_name(c['n']): continue
         t = c.get('txt', '')
         added = orig is not None and c['n'] not in orig
         if not t or (not added and (t in lits or any(p in t.lower() for p in PLACEHOLDERS))): continue
@@ -405,4 +410,8 @@ def run(ids, report=False):
 
 if __name__ == '__main__':
     args = [a for a in sys.argv[1:] if not a.startswith('--')]
-    run([int(a) for a in args] or PAGES_WANTED, report='--report' in sys.argv)
+    ids = [int(a) for a in args] or PAGES_WANTED
+    run(ids, report='--report' in sys.argv)
+    if '--report' not in sys.argv:   # (10 Oct 2026) the polish is the pages' last step: put it back over what this just wrote
+        import polish_pages
+        for b in polish_pages.run(ids): print('POLISH PROBLEM', b)

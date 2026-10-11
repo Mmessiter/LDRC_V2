@@ -13,10 +13,10 @@ namespace ldrc {
 // not jump as the value changes); unit: what follows the number.
 static const struct { const char *key, *name, *ref, *unit; } ITEMS[FL_ITEMS] = {
     { "none", "Nothing", "", "" }, { "timer", "Timer", "88:88", "" }, { "rxbat", "Flight battery", "88.88", "V" },
-    { "txbat", "Transmitter battery", "88.88", "V" }, { "link", "Link", "100", "%" }, { "fps", "Frame rate", "888", "fps" }, { "rpm", "Head speed", "8888", "RPM" },
+    { "txbat", "TX battery", "88.88", "V" }, { "link", "Link", "100", "%" }, { "fps", "Frame rate", "888", "fps" }, { "rpm", "Head speed", "8888", "RPM" },
     { "esc", "ESC temperature", "188", "\xB0" "C" }, { "amps", "Current", "88.8", "A" }, { "mah", "Capacity used", "8888", "mAh" },
     { "bank", "Bank", "Bank 8", "" }, { "rate", "Rate", "Rate 8", "" }, { "motor", "Motor", "OFF", "" }, { "clock", "Clock", "88:88", "" },
-    { "model", "Model name", "RAW 420 MCM", "" }, { "image", "Model image", "", "" }, { "bars8", "Channel bars 1-8", "", "" }, { "bars16", "Channel bars 1-16", "", "" } };
+    { "model", "Model name", "RAW 420 MCM", "" }, { "image", "Model image", "", "" }, { "bars8", "Channels 1-8", "", "" }, { "bars16", "Channels 1-16", "", "" } };
 const char *flightItemName(int item) { return item > 0 && item < FL_ITEMS ? ITEMS[item].name : ITEMS[0].name; }
 const char *flightItemKey(int item) { return item > 0 && item < FL_ITEMS ? ITEMS[item].key : ITEMS[0].key; }
 const char *flightItemReference(int item) { return item > 0 && item < FL_ITEMS ? ITEMS[item].ref : ""; }
@@ -64,6 +64,7 @@ FlightValue flightValue(int item, FlightSource &src) {
     FlightValue v; v.label = flightItemName(item);
     const bool linked = src.linked();
     auto unknown = [&](const char *small) { v.big = "--"; v.small = small ? small : ""; v.state = FS_STALE; };
+    auto noModel = [&]() { return src.flying() ? "no link" : "no model"; };   // (in flight the model is there: it is the link that is not)
     float a = 0, b = 0;
     switch (item) {
     case FL_NONE: v.label = ""; v.state = FS_EMPTY; break;
@@ -72,14 +73,14 @@ FlightValue flightValue(int item, FlightSource &src) {
         break;
     case FL_RXBAT: case FL_TXBAT: {
         const bool rx = item == FL_RXBAT;
-        if (rx && !linked) { unknown("no model"); break; }
+        if (rx && !linked) { unknown(noModel()); break; }
         if (!flightBattery(src.text(rx ? "RXBV" : "TXBV"), a, b)) { unknown(nullptr); break; }
         const long pct = src.number(rx ? "JRX" : "JTX", -1);
         // the cell big, the whole pack below, named (1.10.9, Malcolm 10-06: "make the PER CELL voltage big, and the total
         // voltage smaller"). The small line says "total" so it cannot be read as the cell (10-04: "per cell  7.82 V" below
         // a big number had read as if the total were per cell).
         v.big = fmt("%.2f", b); v.unit = "V";
-        v.small = fmt("%.2f V total", a) + (pct >= 0 && pct <= 100 ? "   " + fmt("%.0f %%", (double) pct) : "");
+        v.small = fmt("%.2f V total", a) + (pct >= 0 && pct <= 100 ? "  " + fmt("%.0f %%", (double) pct) : "");
         if (pct >= 0 && pct <= 20) v.state = FS_ALARM; else if (pct >= 0 && pct <= 40) v.state = FS_WARN;
         // (the front page's "Battery LOW" is for either battery: it turns the strip red, not this box)
         break;
@@ -93,30 +94,30 @@ FlightValue flightValue(int item, FlightSource &src) {
         break;
     }
     case FL_FPS: {                                     // packets a second (B26 writes "pps" to the front page once a second while a model is connected; the page has no such box: the screen keeps it)
-        if (!linked) { unknown("no model"); break; }
+        if (!linked) { unknown(noModel()); break; }
         const long p = src.number("pps", -1);
         if (p < 0 || p > 9999) { unknown(nullptr); break; }
         v.big = std::to_string(p); v.unit = "fps";
         break;
     }
     case FL_RPM:
-        if (!linked) { unknown("no model"); break; }
+        if (!linked) { unknown(noModel()); break; }
         if (!flightNumberAfter(src.text("rpm"), "RPM:", a)) { unknown(nullptr); break; }   // (its words tell: the box is hidden at each page load until the main board shows it again)
         v.big = fmt("%.0f", a); v.unit = "RPM";
         break;
     case FL_ESC:
-        if (!linked) { unknown("no model"); break; }
+        if (!linked) { unknown(noModel()); break; }
         if (!flightNumberAfter(src.text("Warning"), "ESC:", a)) { unknown(nullptr); break; }   // (the same box says "Battery LOW" on other models: the words tell)
         v.big = fmt("%.0f", a); v.unit = "\xB0" "C";             // (the screen's fonts are ISO 8859-1: B0 is the degree sign)
         v.state = a >= 95 ? FS_ALARM : a >= 80 ? FS_WARN : FS_NORMAL;
         break;
     case FL_AMPS:
-        if (!linked) { unknown("no model"); break; }
+        if (!linked) { unknown(noModel()); break; }
         if (!flightNumberAfter(src.text("StillConnected"), "Amps:", a)) { unknown(nullptr); break; }   // ("Turning off... 5" in the same box is not a current)
         v.big = fmt("%.1f", a); v.unit = "A";
         break;
     case FL_MAH:
-        if (!linked) { unknown("no model"); break; }
+        if (!linked) { unknown(noModel()); break; }
         if (!flightNumberAfter(src.text("wb"), "mAh:", a)) { unknown(nullptr); break; }   // (nor is the buddy's news)
         v.big = fmt("%.0f", a); v.unit = "mAh";
         break;
@@ -350,7 +351,7 @@ void FlightScreen::build(FlightSource &src, FlightFonts *fonts) {
         const int bw = (FLIGHT_W - 12 - 2 * 19) / 3;
         for (int k = 0; k < 3; ++k) { FlightButton bt; bt.id = BUTTONS[k].id; bt.r = FlightRect(6 + k * (bw + 19), FLIGHT_BUTTONS_Y, bw, FLIGHT_BUTTONS_H); bt.text = BUTTONS[k].text; sc.buttons.push_back(bt); }
         // and Help at the top right, as on the front page: this screen's own help (FLIGHT.TXT on the main board's card)
-        FlightButton help; help.id = ID_HELP; help.r = FlightRect(FLIGHT_W - 6 - 120, 3, 120, FLIGHT_STRIP - 6); help.text = "Help"; sc.buttons.push_back(help);
+        FlightButton help; help.id = ID_HELP; help.r = FlightRect(FLIGHT_W - 6 - 120, 4, 120, 42); help.text = "Help"; sc.buttons.push_back(help);   // (top and bottom in line with the tabs)
         // the six screens as small tabs before Help (1.10.1, Malcolm: "when a defined front screen is in view, please try to
         // squeeze in those 6 buttons so that a user can rapidly switch to another defined screen"): the one in use yellow
         const int tabW = 38, tabGap = 4, tabsX = help.r.x - 6 - (FLIGHT_SLOTS * tabW + (FLIGHT_SLOTS - 1) * tabGap);   // (1.10.5: as big as the setup page's, Malcolm: "a bit too small")
@@ -358,8 +359,8 @@ void FlightScreen::build(FlightSource &src, FlightFonts *fonts) {
         sc.stripRight = tabsX - 6;
     } else if (colourFor >= 0) {                          // a box's theme: the Themes page's twelve, the box as it will look
         sc.layout = 5000 + colourFor; sc.title = "Defined front screen";
-        char b[64]; snprintf(b, sizeof(b), "Box %d: its theme.", colourFor + 1); sc.hint = b;
-        FlightTile t; t.id = 0; t.r = FlightRect(528, 94, 258, 252); t.item = cfg.items[colourFor]; paint(t, colourFor); t.v = flightValue(t.item, src);
+        char b[64]; snprintf(b, sizeof(b), "Choose a theme for box %d.", colourFor + 1); sc.hint = b;
+        FlightTile t; t.id = 0; t.r = FlightRect(528, 100, 258, 260); t.item = cfg.items[colourFor]; paint(t, colourFor); t.v = flightValue(t.item, src);   // (top and bottom in line with the themes beside it)
         if (t.item == FL_NONE) { t.v.label = "Nothing"; t.v.state = FS_NORMAL; t.v.big = "--"; }
         sc.tiles.push_back(t);
         const int f = cfg.boxTheme[colourFor];
@@ -374,12 +375,12 @@ void FlightScreen::build(FlightSource &src, FlightFonts *fonts) {
             sc.buttons.push_back(bt);
         }
         // (OK at the bottom right, as on every page - Malcolm, 10-04; "Same as screens" on the left)
-        FlightButton bt; bt.id = ID_SAME; bt.r = FlightRect(14, 414, 377, 56); bt.text = "Same as screens"; sc.buttons.push_back(bt);
+        FlightButton bt; bt.id = ID_SAME; bt.r = FlightRect(14, 414, 246, 56); bt.text = "Same as screens"; sc.buttons.push_back(bt);   // (its right edge under the second column of themes)
         bt.id = ID_COLOUR_DONE; bt.r = slot(3); bt.text = "OK"; sc.buttons.push_back(bt);
     } else if (chooser == -1) {
-        sc.layout = 2000 + cfg.layout + 32 * slotNo; sc.title = "Defined front screen"; sc.hint = "Touch a box to choose what it shows. Tabs: six screens to design."; sc.tabs = true;
+        sc.layout = 2000 + cfg.layout + 32 * slotNo; sc.title = "Defined front screen"; sc.hint = "Touch a box to choose what it shows."; sc.tabs = true;
         for (int k = 0; k < FLIGHT_SLOTS; ++k) {                      // the six definitions, as tabs in the strip: the one in use marked
-            FlightButton tb; tb.id = ID_SLOT + k; tb.r = FlightRect(FLIGHT_W - 14 - (FLIGHT_SLOTS - k) * 42 + 4, 8, 38, 42); tb.text = std::to_string(k + 1); tb.chosen = k == slotNo; sc.buttons.push_back(tb);
+            FlightButton tb; tb.id = ID_SLOT + k; tb.r = FlightRect(FLIGHT_W - 6 - (FLIGHT_SLOTS - k) * 42 + 4, 8, 38, 42); tb.text = std::to_string(k + 1); tb.chosen = k == slotNo; sc.buttons.push_back(tb);
         }
         const std::vector<FlightRect> rs = flightLayout(cfg.layout, FlightRect(6, 92, FLIGHT_W - 12, 312));
         for (size_t i = 0; i < rs.size(); ++i) { FlightTile t; t.id = (int) i; t.r = rs[i]; t.item = cfg.items[i]; paint(t, (int) i); t.v = flightValue(t.item, src); if (t.v.coloured) { t.own = true; t.face = t.v.face; t.ink = t.v.ink; } t.pressed = pressedId == (int) i && !slidOff;
@@ -399,7 +400,7 @@ void FlightScreen::build(FlightSource &src, FlightFonts *fonts) {
             FlightButton bt; bt.id = ID_LAYOUT + k; bt.r = FlightRect(x0 + (k % cols) * (w + gap), y0 + (k / cols) * (h + gap), w, h);
             bt.text = FLIGHT_LAYOUTS[k].name; bt.layout = (int8_t) k; bt.chosen = cfg.layout == k; sc.buttons.push_back(bt);
         }
-        FlightButton bt; bt.id = ID_BACK; bt.r = slot(3); bt.text = "OK"; sc.buttons.push_back(bt);   // (OK at the bottom right, as on every page)
+        FlightButton bt; bt.id = ID_BACK; bt.r = FlightRect(x0 + (cols - 1) * (w + gap), SLOT_Y, FLIGHT_W - 15 - (x0 + (cols - 1) * (w + gap)), SLOT_H); bt.text = "OK"; sc.buttons.push_back(bt);   // (OK at the bottom right, as on every page: under the grid's last column, its right edge where it was, 785)
     } else if (chooser >= 0) {
         sc.layout = 3000 + chooser; sc.title = "Defined front screen";
         char b[48]; snprintf(b, sizeof(b), "Box %d shows:", chooser + 1); sc.hint = b;
@@ -412,8 +413,9 @@ void FlightScreen::build(FlightSource &src, FlightFonts *fonts) {
             if (item != FL_NONE) for (int k = 0; k < cfg.boxes(); ++k) if (k != chooser && cfg.items[k] == item) { bt.usedBy = (uint8_t) (k + 1); break; }
             sc.buttons.push_back(bt);
         }
-        FlightButton bt; bt.id = ID_BACK; bt.r = slot(3); bt.text = "OK"; sc.buttons.push_back(bt);   // (OK at the bottom right, as on every page)
-        bt.id = ID_COLOUR; bt.r = slot(0); bt.text = "Theme"; sc.buttons.push_back(bt);   // (its theme: a page of its own)
+        // (the bottom row on the grid's first and last columns: x 14 and 596, 189 wide)
+        FlightButton bt; bt.id = ID_BACK; bt.r = FlightRect(x0 + 3 * (w + gap), SLOT_Y, w, SLOT_H); bt.text = "OK"; sc.buttons.push_back(bt);   // (OK at the bottom right, as on every page)
+        bt.id = ID_COLOUR; bt.r = FlightRect(x0, SLOT_Y, w, SLOT_H); bt.text = "Theme"; sc.buttons.push_back(bt);   // (its theme: a page of its own)
     }
     for (auto &b : sc.buttons) {
         b.pressed = b.id == pressedId && !slidOff && !b.label;

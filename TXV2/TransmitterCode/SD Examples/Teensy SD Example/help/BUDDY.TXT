@@ -1,29 +1,59 @@
-Buddy-Boxing:||
-
-This feature allows 'dual control' which is really handy when teaching beginners to fly.||
-
-It needs two transmitters of course, one for the 'Master' and one for the pupil ('Buddy').||
-
-The Master uses a switch on the Master's transmitter to give control to the Buddy - and to take control back fast when pupil screws up - as they usually do.||
-
-When using the Buddy box feature, a switch on the Master transmitter must be defined as 'Buddy'. It's probably best if this is a spring-return switch because then simply releasing the switch will return full control to the Master instantly. ||
-
-On the Master transmitter, you can select which channels are enabled for the Buddy. Any channels not selected will remain always under the control of the Master even after selecting Buddy with the switch.||
-
-On that same screen, near the bottom, you can control whether Master or Buddy 'switches' will be used when Buddy is in control. In general it's probably better NOT to give Buddy control of the switches, especially for a beginner. That way the Master can always control motor on/off, safety, Bank and Rates. But if the buddy is more advanced and is perhaps learning to do autorotations with a helicopter, he or she will ideally need to control these switches too when in control. When Master is in control, Master's switches are always used.
-
-The same model memory should be loaded on both transmitters, and the Buddy (pupil) needs to know the ID of the Master transmitter. Both of these are easily achieved by sending the model memory from the Master to the pupil wirelessly. Embedded in the data sent is the needed ID of the sending transmitter as well as the ID of the model being sent.|| 
-
- *** The Master should save the model ID *BEFORE* sending the model memory to buddy!! *** ||
-
-If AMS (automatic model selection) is enabled on both transmitters and both transmitters have saved the ID of the model in use, then BOTH transmitters will automatically select the correct model if either had the wrong model loaded. || 
-
-When moving the Buddy switch, both transmitters will announce 'Master' or 'Buddy' in order to make clearer who is in control.||
-
-The Master transmitter might also announce "Buddy with nudge" if that option was setup. This mode has buddy in control, but Master can use his own sticks to nudge gently the model if needed, rather than take over full control. The Nudge feature operates on all channels EXCEPT Collective/Throttle since these usually do not self centre.||
-
-The wireless buddy feature is even supported when using a third party transmitter module. ||
-
-Wired Buddy-Boxing:||
-
-The wired buddy-boxing feature has been removed because no one wanted to use it. Wireless is much simpler and much better.
+Wireless buddy: dual control, for teaching beginners to fly.|
+The Instructor (Master) and the Pupil (Buddy) fly one model.|
+The Instructor's buddy switch gives the Pupil control.|
+Move it back, and the Instructor flies again at once.|
+Only the Instructor's transmitter talks to the model.|
+The Pupil's talks to the Instructor's.||
+SET UP THE INSTRUCTOR'S TRANSMITTER:|
+1. Connect the model. On Model setup > 'Model IDs',|
+press 'Store this model's ID'.|
+2. Back up the model with '> Backup >' on the 'Models' page.|
+Then 'Send' it to the Pupil (see the 'Models' help).|
+The file carries the model's ID and the Instructor's ID.|
+So store the model's ID BEFORE you send the model.|
+3. Give a switch the job 'Buddy' on the 'Switches' page.|
+A spring-return switch is best: let go to take control back.|
+4. Here, turn 'Instructor (Master)' on.|
+Under 'Buddy switch', choose who flies at Down, Middle and Up:|
+'Master', 'Nudge' or 'Buddy'.|
+5. 'Buddy channels ...': turn on the channels the Pupil may fly.|
+'All' and 'None' set every channel, and 'Top switches too'.|
+The others stay with the Instructor, whoever has control.|
+Each model keeps its own choice.||
+SET UP THE PUPIL'S TRANSMITTER:|
+Receive the model from the Instructor into the memory you chose.|
+Then turn 'Pupil (Buddy)' on here.||
+On either transmitter, 'OK' saves and goes to the front screen.|
+If 'Middle' and 'Up' are both 'Master', you are asked to check.||
+THE TOP SWITCHES:|
+On the Buddy channels page,|
+'Top switches too (motor, safety, bank and rates)' decides whose|
+switches count while the Pupil has control.|
+For a beginner, leave it OFF:|
+the Instructor keeps motor on / off, safety, bank and rates.|
+A more advanced pupil, perhaps learning autorotations,|
+will need these switches too.|
+When the Instructor flies, the Instructor's switches count.||
+NUDGE:|
+With 'Nudge' the Pupil flies, but the Instructor's sticks can gently|
+nudge the model, rather than take over.|
+Not on channel 3 (collective / throttle):|
+that stick does not self-centre.||
+AMS:|
+If AMS (automatic model selection) is on in both transmitters,|
+and both have the model's ID stored,|
+BOTH load the right model by themselves,|
+even if one had the wrong model loaded.||
+WHO HAS CONTROL:|
+When the buddy switch moves, both transmitters say who flies:|
+'Master', 'Buddy' or 'Buddy with nudge'.|
+The Instructor's front screen shows|
+'Buddy found!' or 'Buddy missing'.|
+The Pupil's shows 'Master found!' or 'Master missing'.|
+If the Pupil's signal is lost, the Instructor gets control back|
+by itself after about 5 seconds.|
+To take it back at once, use the buddy switch.|
+'Extra buddies!' (Pupil's screen): a second buddy is on the air.|
+Use one Pupil at a time.||
+WIRED BUDDY:|
+There is no wired buddy: wireless is much simpler and better.|

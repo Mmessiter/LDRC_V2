@@ -1,11 +1,41 @@
-This is your own front screen: big, clear numbers while you fly.||
-
-'Transmitter' and 'Model' open the setups, as on the original front screen.||
-
-'Original screen' shows the original front screen. Its 'Defined screens' button brings this screen back. Your choice stays, through take-offs, landings and switching off, until you press the other button.||
-
-To change what one box shows without leaving this screen, press and hold the box for two full seconds (on the ground, with the safety on): its chooser opens, and your choice brings this screen straight back. A tap or a slide does nothing.||
-
-A box turns amber or red when its value needs a look. The top line turns red for BATTERY LOW, or NO LINK in flight.||
-
-To choose what the boxes show, their themes and their sizes: Transmitter setup, Appearance, then 6 defined front screens. There are six screens to design, and the tabs 1 to 6 at the top of this screen switch between them at a touch; the yellow tab is the one in use, and each keeps its own design. (The time is a box you can add; the tabs took its place in the top line.)
+Your own front screen (a defined front screen): big, clear|
+numbers while you fly.|
+The top line shows the model's name and the bank.||
+BUTTONS:|
+'Transmitter' and 'Model' open the setups.|
+'Original screen' shows the original front screen.|
+Its 'Defined screens' button brings this one back.|
+Your choice stays through take-offs, landings and switching off,|
+until you press the other button.|
+The tabs 1 to 6 (top right) switch between your six screens at|
+a touch, even in flight. The yellow tab is the one in use.||
+TO CHANGE A BOX FROM HERE:|
+On the ground, press and hold the box for two full seconds.|
+Its chooser opens. Your choice brings this screen straight back.|
+A tap or a slide does nothing.|
+(On the ground means the safety is on. With no safety switch,|
+it means the motor is off.)||
+WARNING COLOURS:|
+A box turns amber or red, with a white frame, when its value|
+needs a look:|
+- Battery: amber at 40 per cent or less, red at 20 or less.|
+- Link: amber below 75 per cent, red below 50.|
+- ESC temperature: amber from 80 degrees, red from 95.|
+The top line turns red for BATTERY LOW, or for NO LINK in|
+flight (the Link box then says LOST).||
+WHAT THE BOXES SHOW:|
+A battery box: the voltage per cell, big; under it, the total|
+voltage and the per cent.|
+A box shows -- when there is nothing to show. Its small line|
+says 'no model' on the ground, or 'no link' in flight.|
+Head speed, current, capacity used and|
+ESC temperature need Rotorflight.|
+A Motor box takes the safety's colours, as the original front|
+screen's Motor box does.||
+While you hold the power button to switch off, the original|
+front screen shows, with its countdown.||
+TO DESIGN THE SCREENS:|
+Transmitter setup / 'Appearance' / 'Defined front screens'.|
+There you choose what each box shows, the box sizes and the box|
+themes, for each of the six screens.|
+For the time of day, give a box the 'Clock'.|

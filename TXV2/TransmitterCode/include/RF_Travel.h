@@ -54,9 +54,9 @@ FLASHMEM static int TailScale() { return TailMotorised() ? 1 : 24; } // motorise
 FLASHMEM static void TravShowPage1()
 {
     char b[48];
-    snprintf(b, sizeof(b), "Swashplate Type: %s", TravCfgWant[5] < 7 ? SwashTypeWords[TravCfgWant[5]] : "?");
+    snprintf(b, sizeof(b), "Swashplate type: %s", TravCfgWant[5] < 7 ? SwashTypeWords[TravCfgWant[5]] : "?");
     SendText((char *)"i0", b);
-    snprintf(b, sizeof(b), "Main Rotor Direction: %s", TravCfgWant[0] ? "Counter-clockwise" : "Clockwise");
+    snprintf(b, sizeof(b), "Main rotor direction: %s", TravCfgWant[0] ? "Anticlockwise" : "Clockwise");
     SendText((char *)"i1", b);
     TravRevAil = TravInWant[1][0] < 0; TravRevEle = TravInWant[2][0] < 0; TravRevColl = TravInWant[4][0] < 0; TravRevYaw = TravInWant[3][0] < 0;
     SendValue((char *)"tn6", TravRevAil ? 1 : 0);
@@ -86,9 +86,9 @@ FLASHMEM static void TravShowPage3()
     SendText((char *)"i0", b);
     TravRevYaw = TravInWant[3][0] < 0;
     SendValue((char *)"tn0", TravRevYaw ? 1 : 0);
-    SendText((char *)"ltn1", (char *)(TailMotorised() ? "Yaw center offset [%]" : "Yaw center trim"));
-    SendText((char *)"ltn3", (char *)(TailMotorised() ? "CW yaw limit [%]" : "Yaw limit CW [deg]"));
-    SendText((char *)"ltn4", (char *)(TailMotorised() ? "CCW yaw limit [%]" : "Yaw limit CCW [deg]"));
+    SendText((char *)"ltn1", (char *)(TailMotorised() ? "Yaw centre offset [%]" : "Yaw centre trim [deg]"));
+    SendText((char *)"ltn3", (char *)(TailMotorised() ? "Yaw limit CW [%]" : "Yaw limit CW [deg]"));
+    SendText((char *)"ltn4", (char *)(TailMotorised() ? "Yaw limit CCW [%]" : "Yaw limit CCW [deg]"));
     if (TailMotorised()) { TravTenths("tn1", S16At(TravCfgWant, 3)); TravTenths("tn3", labs(TravInWant[3][1])); TravTenths("tn4", TravInWant[3][2]); }
     else { TravTenths("tn1", RawToDegTenths(S16At(TravCfgWant, 3), ts)); TravTenths("tn3", RawToDegTenths(labs(TravInWant[3][1]), ts)); TravTenths("tn4", RawToDegTenths(TravInWant[3][2], ts)); }
     TravTenths("tn2", labs(TravInWant[3][0]));                      // Yaw calibration %
@@ -250,7 +250,7 @@ FLASHMEM void TravelPoll()
         memcpy(TravCfgWant, TravCfg, CFG_BYTES); memcpy(TravInWant, TravIn, sizeof(TravIn));
         TravStep = TRV_IDLE; Trav_Was_Edited = false;
         SendCommand((char *)"vis b3,0"); TravShow();
-        TravBusy(same ? "Saved, and read back the same." : "Saved; the flight controller adjusted some values (shown).");
+        TravBusy(same ? "Saved, and read back the same." : "Saved, but the flight controller adjusted some values.");
         TravMsgUntil = millis() + 4000;
         PlaySound(BEEPCOMPLETE);
         return;

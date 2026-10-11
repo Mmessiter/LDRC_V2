@@ -1,1 +1,50 @@
-This screen allows you to edit global governor parameters. There is a separate screen for profile dependent (bank dependent) governor parameters.
+The governor settings shared by every bank:|
+its mode, the throttle and the times.|
+Each bank's head speed and gains are on the Governor page.|
+It needs Rotorflight 2.3.||
+TO CHANGE THEM:|
+Touch a value, or its name, and type the new value.|
+Then press 'Save': it writes the values, checks and stores them.|
+Then the flight controller restarts: Rotorflight reads these|
+only as it starts.|
+'Save' is refused while the model could be armed.|
+If a read fails, it goes back to the Governor page: try again.||
+GENERAL:|
+Governor mode: 0 Off, 1 Limit, 2 Direct, 3 Electric, 4 Nitro.|
+The box above it says which, in words.|
+Electric is the full governor for an electric helicopter.|
+Handover [%]: above this throttle the governor takes over,|
+and spools up to the bank's head speed.|
+Autorot timeout: in seconds. How long an autorotation keeps|
+the quick bail-out ready. 0: no autorotation.||
+THROTTLE:|
+Throttle type: 0 Normal, 1 Switch, 2 Function, as in|
+Rotorflight's Configurator. The box above it says which.|
+Idle thr x10: the throttle while idling below handover.|
+Auto thr x10: the throttle during an autorotation.|
+x10 means tenths of a per cent: 50 is 5 %.||
+TIMES:|
+In whole seconds. Rotorflight keeps tenths, so a time of|
+2.5 s shows as 3, and is saved as 3.|
+Spool-up: the time to reach head speed. Higher is gentler.|
+Spool-down: the time to wind down when you lower the throttle.|
+Tracking: how fast the head speed follows a change,|
+such as a bank change.|
+The time is for the whole range: a small change is quicker.|
+Recovery: the quick spool-up after a short throttle hold.|
+Hold timeout: how long the quick spool-up stays ready|
+after a throttle hold.|
+Startup time and the governor filters are not on this page.|
+'Save' keeps them (the startup time in whole seconds).||
+A COPY IN THE MODEL'S FILE:|
+'Keep a copy' stores the page's values in the model's file|
+on the transmitter's card. It asks first.|
+It does not send them to the flight controller:|
+press 'Save' first if you changed anything.|
+'Restore' writes that copy to the connected model's|
+flight controller, which then restarts. It asks first.|
+This copy is not the backup made with 'Backup / Restore ...'.||
+'OK' goes back to the Rotorflight options.|
+It asks first if you have unsaved changes.|
+No model connected: the page shows the model's backup.|
+With no backup either, 'Save' does the same as 'Keep a copy'.|

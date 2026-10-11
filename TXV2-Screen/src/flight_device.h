@@ -43,7 +43,7 @@ static void flightTouch(bool pressed, int x, int y, uint32_t now) {
     if (!setupBefore && flight.setupOpen()) { flightSetupOver = page.name; flightTouchedAt = now; }   // opened by a long press on a box (1.10.2): over the page that is there
     std::string comp;
     if (flight.takeFrontPress(comp) && page.name == "FrontView" && !teensyLink.running()) {   // "Transmitter setup", "Model setup": the front page's own button, pressed for the pilot
-        if (comp == "help") runScript("print \"HelpView:FLIGHT.TXT\"\nLogView.t0.txt=\"Front screen help\"\nLogView.return.txt=\"FrontView\"", "");   // (as the front page's Help asks for FRONT.TXT)
+        if (comp == "help") runScript("print \"HelpView:FLIGHT.TXT\"\nLogView.t0.txt=\"Defined front screen help\"\nLogView.return.txt=\"FrontView\"", "");   // (as the front page's Help asks for FRONT.TXT)
         else if (Comp *c = find(comp)) { runScript(c->evPress, c->name); runScript(c->evRelease, c->name); }   // (the main board hears what it always hears, and shows its page)
     }
 }

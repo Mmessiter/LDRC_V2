@@ -1,23 +1,74 @@
-How the screens look.||
-
-BACKGROUND PICTURE: the picture behind the screens. '+' and '-' choose it, 'OK' keeps it.||
-
-THEMES: twelve themes, each a panel colour with its own text colour. Touch one: the page shows it at once. 'OK' makes it the screens' theme, 'Cancel' leaves things as they were.||
-
-'Edit themes' changes either colour of any theme to any colour at all: touch a theme, press 'Panel colour' or 'Text colour', then slide the three bars - colour, strength (grey to vivid), light (black to bright). The sample shows the theme as it will look. 'Defaults' puts all twelve back as they came.||
-
-The themes go by number, 1 to 12. Buttons, the white boxes you type into, and red and green words keep their own colours.||
-
-DEFINED FRONT SCREEN: your own front screen, with big, clear numbers while you fly.||
-
-SIX SCREENS: you can design six of them, numbered 1 to 6 on the tabs at the top right of the setup page. The yellow tab is the screen in use; touch another tab and that screen is in use at once, and the page shows its design. The same six tabs are on the defined front screen itself, so switching while you fly is one touch. On that screen, holding a box for two seconds (on the ground) opens its chooser directly. Each of the six keeps its own choice of boxes, box sizes, box themes and 'Stays lit', so a design for the simulator, one for a helicopter and one for a glider can all be ready, and switching between them is one touch instead of designing again. The six are kept in the screen through updates and switching off.||
-
-Touch a box to choose what it shows: the timer, a battery, the link, the frame rate, head speed, ESC temperature, current, capacity used, bank, rate, motor, the clock, the model's name, the model's picture, or the channel bars (channels 1 to 8, or all 16).||
-
-'Box sizes' offers twelve layouts, from one big box to nine small ones. Box 1 is always the biggest: put what matters most there. The numbers grow with their boxes.||
-
-A choice another box already shows is darker and carries that box's number, so nothing is chosen twice by mistake. A Motor box takes the safety's colours, as the original front screen's motor button does, whatever theme it was given. Box themes: touch a box, then 'Theme'. A box takes any of the twelve themes; a theme other boxes already wear carries their numbers. 'Same as screens' gives it the screens' theme again.||
-
-Which front screen shows is chosen on the front screens themselves: 'Defined screens' on the original brings yours, 'Original screen' on yours brings the original back, and the choice stays, through take-offs, landings and switching off, until you press the other button. Your screen's other buttons: 'Transmitter', 'Model' and 'Help'. A touch anywhere else does nothing.||
-
-'Stays lit: yes' keeps the screen from going dark while it shows. A warning (BATTERY LOW, NO LINK) turns its top line red, and the power-off countdown always shows on the original front screen.
+How the screens look: the background picture, the colours|
+(themes) and your own front screens.||
+BACKGROUND PICTURE:|
+The picture behind the pages. '-' and '+' step through the|
+43 pictures; 'OK' keeps the one showing.||
+THEMES:|
+Twelve themes, each a panel colour with its own text colour.|
+Touch one: the page shows it at once, framed in yellow.|
+'OK' makes it the screens' theme.|
+'Cancel' leaves things as they were.|
+Some things keep their own colours: buttons, the white boxes you|
+type into, and red and green words.||
+EDIT THEMES:|
+'Edit themes' changes either colour of any theme to any colour:|
+1. Touch a theme.|
+2. Press 'Panel colour' or 'Text colour'.|
+3. Slide the three bars: Colour, Strength (grey to vivid)|
+and Light (black to bright).|
+The sample shows the theme as it will look.|
+'Defaults' puts all twelve back as they came.|
+'OK' takes you back to Themes. Press 'OK' there as well, to keep|
+the new colours. 'Cancel', on either page, forgets them.|
+The themes go by number, 1 to 12, not by name: a name might not|
+match a colour you made.||
+DEFINED FRONT SCREENS:|
+Your own front screen: big, clear numbers while you fly.|
+'Defined front screens' opens the design page: it shows|
+the screen in use, live.|
+You can design six: one for the simulator, one for a helicopter,|
+one for a glider, all ready at a touch.|
+Each keeps its own boxes, box sizes, box themes and 'Stays lit'.|
+The six are kept through updates and switching off.||
+The tabs 1 to 6 at the top right choose the screen. The yellow|
+tab is the one in use: touch another and it is in use at once,|
+and the page shows its design.|
+The same tabs are on the defined front screen itself, so|
+switching while you fly is one touch. There, on the ground, hold|
+a box for two seconds to open its chooser there and then.||
+BOXES:|
+Touch a box to choose what it shows: Timer, Flight battery,|
+TX battery, Link, Frame rate, Head speed, ESC temperature,|
+Current, Capacity used, Bank, Rate, Motor, Clock, Model name,|
+Model image, Channels 1-8, Channels 1-16 or Nothing.|
+Touch a choice and it is made at once.|
+'OK' goes back with no change.|
+A choice another box already shows is darker and carries that|
+box's number, so nothing is chosen twice by mistake.||
+BOX THEMES:|
+In a box's chooser, press 'Theme'. A box takes any of the twelve|
+themes; a theme other boxes already wear carries their numbers.|
+'Same as screens' gives it the screens' theme again.|
+A Motor box takes the safety's colours, as the original front|
+screen's Motor box does, whatever its theme.||
+BOX SIZES:|
+'Box sizes' offers twelve layouts, from one big box to nine small|
+ones. The numbers grow with their boxes.|
+Box 1 is at the top left, and is always one of the biggest:|
+put what matters most there.||
+'Stays lit: yes' stops the screen going dark while your front|
+screen shows and a model is connected (or you are flying).|
+Changes are kept as you make them. 'OK' closes the design page.||
+WHICH FRONT SCREEN SHOWS:|
+You choose on the front screens themselves:|
+'Defined screens' on the original brings yours;|
+'Original screen' on yours brings the original back.|
+The choice stays through take-offs, landings and switching off,|
+until you press the other button.|
+Your screen's other buttons: 'Transmitter', 'Model', 'Help'|
+and the tabs 1 to 6. A tap anywhere else does nothing.||
+A warning (BATTERY LOW, NO LINK) turns its top line red.|
+The switch-off countdown always shows on the original screen.||
+While the safety is off, the 'Appearance', 'Themes' and design|
+pages close, and will not open.|
+(With no safety switch: while the motor is on.)|

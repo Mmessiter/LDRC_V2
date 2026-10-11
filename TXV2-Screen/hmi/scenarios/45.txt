@@ -1,0 +1,32 @@
+# 45 PongView ("Raining") - TXSetupView "Raining" (va0.val=128+69) -> StartPong, ZPong.h:24-39
+# (while a model is connected it is refused: MsgBox "The model is connected. ..." over Transmitter setup, then the front
+#  page; shot 45_connected at the end)
+# the page takes FrontView's colours in its preinitialize; "pong=start" then one "pong=x,y,ly,ry" a frame (SendPong): the
+# screen draws the court in a layer of its own (src/pong_draw.h; renderer line "@pong x,y,ly,ry")
+Screen_Background=8
+@model 0
+page PongView
+n0.val=0
+n1.val=0
+@shot 45_open
+@pong 405,235,235,235
+@shot 45_start
+# a rally: the scores are sent when they change (ZPong.h:171-174)
+n0.val=3
+n1.val=7
+@pong 600,140,300,180
+@shot 45_play
+# worst case: both scores at 10 (GameEnd plays the fanfare, then both go back to 0), ball and paddles at the court's edges
+n0.val=10
+n1.val=10
+@pong 780,403,410,60
+@shot 45_long
+# Raining pressed with a model connected (StartPong, ZPong.h:26-30): MsgBox over Transmitter setup (MsgBox's goback,
+# pFrontView, is sent after OK)
+@model 1
+page TXSetupView
+ModelName.txt="RAW 420 MCM (3)"
+page PopupView
+vis b1,0
+Dialog.txt="The model is connected.\r\nSwitch it off to play Pong."
+@shot 45_connected

@@ -147,7 +147,7 @@ void GetSlaveChannelValuesWireless()
 void MasterDetected(bool Detected)
 {
     static uint16_t LostMasterCount = 0;
-    char Mlost[] = "Master not found";
+    char Mlost[] = "Master missing";
     char Mfound[] = "Master found!";
     char wb[] = "wb"; // wb is the name of the label on front view
     char YesVisible[] = "vis wb,1";
@@ -185,7 +185,7 @@ void MasterDetected(bool Detected)
 void PupilDetected(bool Detected)
 {
     static uint16_t LostPupilCount = 0;
-    char Mlost[] = "Buddy not found";
+    char Mlost[] = "Buddy missing";
     char Mfound[] = "Buddy found!";
     char wb[] = "wb"; // wb is the name of the label on front view
     char YesVisible[] = "vis wb,1";

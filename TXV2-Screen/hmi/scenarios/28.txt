@@ -27,14 +27,14 @@ c4.txt="Rudder"
 play 0,0,0
 # "Move to subtrim" (128+75 TrimsToSubtrim, Trims.h:496): GetConfirmation (Utilities.h:1168)
 page PopupView
-Dialog.txt="Move these trims to Subtrims?\r\n\r\nThis would re-centre these trims."
+Dialog.txt="Move these trims into subtrim?\r\n\r\nThe trims of all four banks\r\ngo back to centre."
 @shot 28_confirm
 # Yes -> MsgBox(pTrimView, ItsAllDone)
 page TrimView
 play 0,17,0
 page PopupView
 vis b1,0
-Dialog.txt="Done!\r\nSubtrims have been amended.\r\n\r\nLook at the Subtrim view \r\nif you'd like to check."
+Dialog.txt="Done.\r\nThe trims are now in subtrim,\r\nand back at centre."
 @shot 28_done
 page TrimView
 # ForceDataRedisplay + UpdateTrimView: all trims re-centred
@@ -51,6 +51,15 @@ ch3.val=80
 n3.val=0
 c4.txt="Rudder"
 @shot 28_after_subtrim
+# "Move to subtrim", then Cancel (Trims.h:519-523): MsgBox(pTrimView, ItsCancelled)
+page PopupView
+Dialog.txt="Move these trims into subtrim?\r\n\r\nThe trims of all four banks\r\ngo back to centre."
+page TrimView
+page PopupView
+vis b1,0
+Dialog.txt="Cancelled.\r\nSubtrim not changed."
+@shot 28_cancelled
+page TrimView
 # ---- same page in sticks mode 1 (labels c2/c3 differ from mode 2)
 # StartTrimView (Trims.h:9), "TrimView" from FrontView. Sticks mode 1.
 page TrimView

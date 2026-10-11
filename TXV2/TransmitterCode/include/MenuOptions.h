@@ -303,7 +303,7 @@ void EndWifiScan()
 
 void StartWifiScan()
 {
-    char prompt[] = "Model still connected! Continue?";
+    char prompt[] = "The model is connected.\r\nScanning stops its radio link.\r\nScan anyway?";
     if (ModelMatched && BoundFlag)
     {
         if (!GetConfirmation(pTXSetupView, prompt))
@@ -381,7 +381,7 @@ void DisplayModelImage() // asked for and shown: where the name can have changed
 /******************************************************************************************************************************/
 void GotoModelsView()
 {
-    char prompt[] = "Model still connected! Continue?";
+    char prompt[] = "The model is connected.\r\n\r\nOpen Models anyway?";
     if (ModelMatched && BoundFlag)
     {
         if (!GetConfirmation(pRXSetupView, prompt))
@@ -732,7 +732,7 @@ void EndBuddyView()
     char cb0[] = "cb0";
     char cb1[] = "cb1";
     char cb2[] = "cb2";
-    char Prompt[] = "Are Master's switch positions OK?";
+    char Prompt[] = "Middle and Up both give control\r\nto the instructor (Master).\r\nKeep these switch positions?";
 
     BuddyPupilOnWireless = GetValue(BuddyP);
     BuddyMasterOnWireless = GetValue(BuddyM);
@@ -938,8 +938,8 @@ void OptionView2Start()
 void ResetClock()
 {
 
-    char Prompt[] = "Reset clock?";
-    char Done[] = "Clock reset!";
+    char Prompt[] = "Set clock to firmware build time?";
+    char Done[] = "Clock set to firmware build time.";
 
     if (GetConfirmation(pOptionView2, Prompt))
     {

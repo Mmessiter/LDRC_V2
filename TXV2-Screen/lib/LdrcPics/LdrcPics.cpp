@@ -52,12 +52,12 @@ PicRect picTile(int slot) {
     return r;
 }
 PicRect picLabel(int slot) { PicRect t = picTile(slot), r; r.x = t.x; r.y = t.y + t.h + 2; r.w = t.w; r.h = 28; return r; }
-PicRect picButton(int i) { PicRect r; r.x = 22 + i * 192; r.y = 402; r.w = 180; r.h = 68; return r; }
+PicRect picButton(int i) { PicRect r; r.x = 14 + i * 197; r.y = 414; r.w = 180; r.h = 56; return r; }   // (the pages' four button places: OK where every page has it)
 PicRect picArrow(int dir) { PicRect r; r.x = dir < 0 ? 2 : 754; r.y = 110; r.w = 44; r.h = 190; return r; }
 PicRect picStatus() { PicRect r; r.x = 16; r.y = 358; r.w = 768; r.h = 38; return r; }
 PicRect picQr() { PicRect r; r.x = 36; r.y = 82; r.w = 256; r.h = 256; return r; }
 PicRect picInfo() { PicRect r; r.x = 318; r.y = 82; r.w = 466; r.h = 256; return r; }
-PicRect picHelp() { PicRect r; r.x = 630; r.y = 7; r.w = 160; r.h = 44; return r; }
+PicRect picHelp() { PicRect r; r.x = 620; r.y = 4; r.w = 170; r.h = 50; return r; }   // (where the pages have theirs)
 
 // ------------------------------------------------------------------ the chooser
 void picBuildList(const std::vector<PicEntry> &fromCard, std::vector<PicEntry> &out, int maxEntries) {
@@ -172,7 +172,7 @@ void Pictures::touchUp(int x, int y) {
 
 void Pictures::answer(const std::string &name) {
     answer_ = name; mode_ = ANSWERED; answeredAt_ = sentAt_ = host_.ms();
-    host_.answer(name); say("Saving...", 0); wifi(false);
+    host_.answer(name); say("Saving ...", 0); wifi(false);
 }
 
 void Pictures::enterReceive() {
@@ -221,7 +221,7 @@ void Pictures::receiveStatus() {
     else if (!error_.empty()) say(error_, -1);
     else if (host_.flying()) say("The WiFi is off while the model can fly.", -1);
     else if (!host_.wifiUp()) say("The transmitter is not on WiFi yet.", 0);
-    else say("Waiting for the photo...", 0);
+    else say("Waiting for the photo ...", 0);
 }
 
 void Pictures::poll() {

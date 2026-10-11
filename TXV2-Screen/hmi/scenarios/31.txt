@@ -72,3 +72,30 @@ t1.txt="Flight mode 1"
 t3.txt="'Flight mode 1' will use rate switch"
 ModelName.txt="WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW (90)"
 @shot 31_long
+# ---- real names the pilot might give (up to 10 characters, ChannelNames[16][11]): the widest ordinary ones in font 6
+# ("Smoke pump" 149 px, "Bomb doors" 137, "Flaps down" 129) must show whole
+page DualRatesView
+rate1.val=100
+rate2.val=75
+rate3.val=50
+n2.val=7
+n0.val=8
+n1.val=9
+n3.val=10
+n6.val=11
+n4.val=12
+n5.val=13
+n7.val=14
+t12.txt="Smoke pump"
+t8.txt="Bomb doors"
+t11.txt="Flaps down"
+t13.txt="Headlights"
+t16.txt="Gyro gain"
+t14.txt="Collective"
+t15.txt="Retracts 2"
+t17.txt="Nav lights"
+rate.val=0
+t1.txt="Flight mode 1"
+t3.txt="'Flight mode 1' will use rate switch"
+ModelName.txt="RAW 420 MCM (3)"
+@shot 31_names

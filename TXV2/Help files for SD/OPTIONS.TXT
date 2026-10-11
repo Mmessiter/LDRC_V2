@@ -1,44 +1,84 @@
-Stick mode: transmitter modes 1 and 2 are supported. Set this option first, before calibration.||
-
-'Automatic model selection' (AMS) will attempt to match the model's ID with one stored in a model memory.||
-
-A receiver that boots up without a bind plug in place will connect with its own previously bound transmitter but no other transmitter. ||
-
-When a receiver boots up with bind plug in, it will immediately bind with a nearby transmitter that's switched o n and not yet connected.||
-
-If 'Automatic model selection' (AMS) is turned ON when connecting, all model memories are searched for a match with the connecting model's ID. If a match is found, the matched model memory is loaded.  ||
-
-If 'Automatic model selection' (AMS) is turned OFF when connecting, the model memory that was selected does not change. ||
-
-So when connecting to a model for the first time, manually load the correct Model memory on the transmitter before connection to receiver.||
-
-'Screen goes dark after' saves battery while you fly by turning off the screen. To switch it back on, touch the screen anywhere. ||
-
-'Switch off when unused for' switches off the transmitter after it's been forgotten and left on. It will never switch off while connected, nor if you move a stick or press a button.||
-
-Low battery warning will warn you when either the transmitter or receiver battery gets low. To be safe, set it quite high.||
-
-The Clock page (2 of 3) sets the clock: + and - change each part of the date and time.||
-
-'Time zone (hours from GMT)' selects your time zone. This is needed if GPS is connected as it will correct the Real Time Clock to GMT if zone is not known. ||
-
-On the Advanced page (3 of 3):||
-
-'QNH' means atmospheric pressure at sea level for the current time and location. This is needed for more accurate altitude readings from the BMP280 barometer, assuming one was fitted. ||
-
-Aviation web sites will give this information for nearby airports.||
-
-LED brightness can be 0 to 254 where zero is off and 254 is very bright.||
-
-If the voltage reported for either battery is different from that indicated by a very accurate voltmeter, the correction needed can be entered here in 100ths of a volt.
-
-The power-off button works immediately when there is no connection. ||
-
-When a model is connected it must be held down for a few seconds (the 'Switch-off countdown') to switch off.||
-
-On the front screen the connection quality indicator works by counting successful and unsuccessful packets over several seconds.| 
-The number of seconds can be between one and six: 'Connection quality measured over'.||
-
-
-
-  
+System: three pages of settings for the transmitter itself.|
+Press 'OK' on each page you change:|
+it saves that page and goes back to Transmitter setup.|
+'Next >' and '< Back' move between pages, but may lose changes.||
+GENERAL (1 OF 3):|
+'Automatic model selection (AMS)': when a model connects, the model|
+memory that holds its ID is loaded.|
+If none holds it, you are asked whether to store|
+it with the model now loaded.|
+'Cancel' stores nothing, and the model does not connect.|
+With AMS off, the loaded memory stays, whichever model connects.|
+So load the right model memory before you switch the model on.|
+Store each model's ID on Model setup > 'Model IDs'.||
+'Screen goes dark after' (seconds):|
+the screen turns off to save battery, even in flight.|
+Touch the screen anywhere to switch it back on.|
+'Switch off when unused for' (5 to 60 minutes):|
+switches off a transmitter left on by mistake.|
+It never switches off while a model is connected.|
+Touching the screen starts the count again;|
+moving a stick does not.|
+'Transmitter battery low at' (10 to 100 %):|
+warns you when the transmitter battery falls this low.|
+To be safe, set it quite high.|
+The model's warning is 'Stop flying volts (per cell)'|
+on Model setup > 'Options'.|
+'Stick mode' (1 or 2): set this first.|
+After a change, calibrate the sticks and the trims again.|
+'Owner's name': shown at the top left of the front screen.||
+BINDING (PAIRING A RECEIVER WITH THIS TRANSMITTER):|
+1. Get the receiver ready to bind:|
+- a new Version 2 receiver is ready already;|
+- a bound Version 2 receiver:|
+'Clear bind & restart' on its 'Bind' page (phone app or web page);|
+- a Version 1 receiver: switch it on with its bind plug in.|
+2. With no model connected, press 'Bind'|
+(it changes to 'Stop binding').|
+Or switch the transmitter on and keep holding|
+the power button until it beeps (2 to 5 seconds).|
+The light blinks while binding is on.|
+3. The receiver binds and connects.|
+Binding then stops by itself.|
+A bound receiver connects only to its own transmitter.||
+CLOCK (2 OF 3):|
+'+' and '-' change each part of the date and time, at once.|
+The clock also sets itself:|
+- from the internet when the screen is on WiFi|
+(UK time, summer time included);|
+- from your phone, through a Version 2 receiver;|
+- from GPS in the model (GMT).|
+'Time zone (hours from GMT)': hours added to the time shown|
+here, on the front screen and in the logs.|
+GPS sets the clock to GMT: with GPS, set your time zone here.|
+Leave it at 0 if the clock already keeps your local time.|
+'Reset clock' sets the clock to the date|
+and time this firmware was built.|
+You are asked first.||
+ADVANCED (3 OF 3):|
+'Keep log files': writes a log of each session on the card.|
+Read it on Model setup > 'Log'.|
+'Log receiver radio swaps':|
+logs each time the receiver changes to another of its radios.|
+'Log gaps longer than' (10 to 255 ms):|
+logs each gap in the link this long or longer.|
+These two work only with 'Keep log files' on.||
+'LED brightness' (15 to 254): the transmitter's coloured light.|
+'Transmitter battery correction' (0.01 V per cell, 0 to 20):|
+if the transmitter battery reads lower than an accurate|
+voltmeter, enter the difference per cell.|
+The model battery's correction is on Model setup > 'Options'.|
+'Hold power button for' (1 to 10 seconds): with a model|
+connected, hold the power button this long to switch off.|
+The front screen counts down.|
+With no model connected it switches off at once.|
+'Connection quality measured over': has no effect now.|
+The quality bar always counts the last 200 data packets.|
+'Radio scanner sensitivity' (1 to 255):|
+how slowly the bars of 'Scan RF' fall back.|
+Higher keeps them up longer.|
+'Sea-level pressure (QNH)' (hPa):|
+today's air pressure at sea level where you fly.|
+It makes altitude readings from a BMP280 barometer in the model more|
+accurate, if one is fitted (a Version 2 receiver has none).|
+Aviation web sites give it for nearby airports.|

@@ -1,0 +1,67 @@
+# 22 CalibrateView ("Calibration") - TXSetupView "Calibrate" (print "CalibrateView") -> main.cpp:4090-4103
+# (while a model is connected it is refused instead: MsgBox "The model is connected. ..." over TXSetupView, main.cpp:4092-4096)
+# Force_ReDisplay, then ShowServoPos sends Ch1..Ch8 (0..100, IntoLowerRes) when a channel moves (main.cpp:376-386)
+Screen_Background=8
+@model 0
+page CalibrateView
+Ch1.val=50
+Ch2.val=50
+Ch3.val=0
+Ch4.val=50
+Ch5.val=100
+Ch6.val=0
+Ch7.val=50
+Ch8.val=100
+@shot 22_open
+# "Calibrate sticks etc." (b0: print "Calibrate1") in NORMAL -> main.cpp:4453-4466: the limits step (SendText1 t11, SendText b0)
+t11.txt="Move all controls to their full\r\nextent several times,\r\nthen press Next."
+b0.txt="Next"
+Ch1.val=100
+Ch2.val=0
+Ch3.val=100
+Ch4.val=0
+Ch5.val=100
+Ch6.val=100
+Ch7.val=0
+Ch8.val=0
+@shot 22_step1
+# "Next" (Calibrate1 in CALIBRATELIMITS) -> main.cpp:4470-4480: the centre step
+t11.txt="Centre all channels.\r\nPut edge switches fully back,\r\nor fully forward, then press Finish."
+b0.txt="Finish"
+Ch1.val=50
+Ch2.val=51
+Ch3.val=49
+Ch4.val=50
+Ch5.val=50
+Ch6.val=0
+Ch7.val=50
+Ch8.val=100
+@shot 22_step2
+# "Finish" (Calibrate1 in CENTRESTICKS) -> main.cpp:4482-4494: saved (SaveTransmitterParameters), back to NORMAL
+b0.txt="Calibrate again"
+t11.txt="Calibration saved."
+@shot 22_done
+# "Reset transmitter" (b3: va0.val=128+40) -> ResetTransmitterSettings main.cpp:2601-2676: GetConfirmation (Utilities.h:1228)
+page PopupView
+Dialog.txt="Delete every model and all settings?\r\nThis cannot be undone."
+@shot 22_reset_ask
+# Yes: back to the page (its own words again), the progress bar while every model is rewritten, hidden at the end
+page CalibrateView
+vis Progress,1
+Progress.val=2
+Progress.val=25
+Progress.val=40
+@shot 22_reset
+# worst case: the widest words the Teensy writes into t11 (Cmsg3, three lines) with b0's widest ("Calibrate again", new)
+page CalibrateView
+t11.txt="Centre all channels.\r\nPut edge switches fully back,\r\nor fully forward, then press Finish."
+b0.txt="Calibrate again"
+Ch1.val=0
+Ch2.val=100
+Ch3.val=0
+Ch4.val=100
+Ch5.val=0
+Ch6.val=100
+Ch7.val=0
+Ch8.val=100
+@shot 22_long

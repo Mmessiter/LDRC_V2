@@ -121,7 +121,7 @@ n27.pco=33840
 n28.pco=33840
 n29.pco=33840
 n30.pco=33840
-t4.txt="Restoring config values ..."
+t4.txt="Sending the kept copy ..."
 vis t4,1
 vis b1,0
 vis b3,0
@@ -160,3 +160,20 @@ n28.pco=0
 n29.pco=0
 n30.pco=0
 @shot 5_long
+# the longest words the box is given: a read window that ends with nothing come back (transceiver.h BlockSilence, B81),
+# and a read refused with no Bluetooth to the receiver (Parameters.h:225, B80)
+t4.txt="Governor global: nothing came back in 2 s (Bluetooth 2). Bank switch again, or leave and return."
+vis t4,1
+@shot 5_nothing
+t4.txt="No Bluetooth to the receiver: NOT read. Close the phone app if it is running. It is tried again."
+@shot 5_nopipe
+# ---- Keep a copy: SaveToLocalGovGLOBAL RF_Governor_Global.h:306 "Keeping a copy on the card ..." (the longest)
+page RFGovViewGlbl
+t27.txt="RAW 420 MCM"
+GovMode.txt="(Mode 3 = Electric)"
+ThrMode.txt="(Type 0 = Normal)"
+t4.txt="Keeping a copy on the card ..."
+vis t4,1
+vis b1,0
+vis b3,0
+@shot 5_new_keeping

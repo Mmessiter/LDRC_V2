@@ -87,11 +87,11 @@ FLASHMEM static void SwLive() // the switch's position now, from this transmitte
 FLASHMEM static void SwShow()
 {
     char b[64];
-    if (SwN) snprintf(b, sizeof(b), "Switch %d of %d", SwAt + 1, SwN); else snprintf(b, sizeof(b), "Switches: none");
+    if (SwN) snprintf(b, sizeof(b), "Switch %d of %d", SwAt + 1, SwN); else snprintf(b, sizeof(b), "No switches yet");
     SwText("t0", b);
     if (!SwN)
     {
-        SwText("tn0", (char *)"(none: press Add)"); SwText("tn1", (char *)""); SwText("tn8", (char *)"");
+        SwText("tn0", (char *)"(none yet: press Add)"); SwText("tn1", (char *)""); SwText("tn8", (char *)"");
         SendCommand((char *)"bar.n=1"); SendCommand((char *)"bar.kind=0"); SendCommand((char *)"bar.mk=-1"); SwText("bar", (char *)"");
         SwText("hint", (char *)"");
         return;
@@ -104,7 +104,7 @@ FLASHMEM static void SwShow()
     SendCommand((char *)"bar.kind=1"); SendCommand((char *)"bar.n=3");
     snprintf(b, sizeof(b), "bar.d0=%d", s.lo); SendCommand(b); snprintf(b, sizeof(b), "bar.d1=%d", s.hi); SendCommand(b);
     SwText("bar", (char *)"|ON|");
-    SwText("hint", (char *)(s.perm == 0 ? "The arm switch is the safety switch: ON must reach 2012 us and stay above 988 us." : "Drag the blobs to set where the switch turns it on."));
+    SwText("hint", (char *)(s.perm == 0 ? "Safety switch: the ON zone must reach 2012 us, but not 988 us." : "Drag the round ends to set where the switch turns it on."));
     SwLiveCh = -1;
     SwLive();
 }
@@ -198,7 +198,7 @@ FLASHMEM void SwitchPoll()
         for (int i = 0; i < SW_SLOTS; ++i) if (!SwSame(want[i], SwNow[i])) same = false;
         Sw_Was_Edited = false; SwStep = SW_IDLE;
         SwHead(); SwShow();
-        SwBusy(same ? "Saved, and read back the same." : "Saved; the flight controller changed some of it (shown).");
+        SwBusy(same ? "Saved, and read back the same." : "Saved, but the flight controller changed some of it.");
         SwMsgUntil = millis() + 4000;
         PlaySound(BEEPCOMPLETE);
         return;
@@ -236,8 +236,8 @@ FLASHMEM static bool SwArmOk(const SwSlot &s, char *why, size_t n) // the arm ac
     if (s.perm != 0) return true;
     const int ac = SwArmChannel();
     if (ac && s.aux + 6 != ac) { snprintf(why, n, "The arm switch must be on channel %d,\r\nthis model's arming channel (Settings).", ac); return false; }
-    if (s.lo <= 988) { snprintf(why, n, "The arm zone reaches 988 us: the model\r\nwould arm with the safety ON. Move the\r\nleft blob above 988."); return false; }
-    if (s.hi < 2012) { snprintf(why, n, "The arm zone stops short of 2012 us: the\r\nsafety OFF would not arm. Move the right\r\nblob to the end."); return false; }
+    if (s.lo <= 988) { snprintf(why, n, "The arm zone reaches 988 us: the model\r\nwould arm with the safety ON. Move the\r\nleft end above 988."); return false; }
+    if (s.hi < 2012) { snprintf(why, n, "The arm zone stops short of 2012 us: the\r\nsafety OFF would not arm. Move the right\r\nend to 2012 us."); return false; }
     return true;
 }
 FLASHMEM void SaveSwitchActions() // (SaveSwitches is the transmitter's own switches page, MenuOptions.h)

@@ -34,7 +34,7 @@
     "borderc": 0,
     "bco": 2214
    },
-   "txt": "Governor (profile)",
+   "txt": "",
    "a": {
     "style": 0,
     "key": 255,
@@ -52,9 +52,9 @@
    "t": "text",
    "g": "l",
    "x": 87,
-   "y": 91,
+   "y": 83,
    "w": 626,
-   "h": 356,
+   "h": 372,
    "font": 6,
    "sta": 1,
    "c": {
@@ -80,22 +80,22 @@
    "t": "text",
    "g": "l",
    "x": 103,
-   "y": 145,
-   "w": 128,
-   "h": 32,
+   "y": 139,
+   "w": 218,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
-    "pco": 65535,
+    "pco": 0,
     "borderc": 0,
-    "bco": 4426
+    "bco": 65497
    },
    "txt": "Master gain",
    "a": {
     "style": 0,
     "key": 255,
     "borderw": 0,
-    "xcen": 0,
+    "xcen": 1,
     "ycen": 1,
     "pw": 0,
     "txt_maxl": 30,
@@ -111,22 +111,22 @@
    "t": "text",
    "g": "l",
    "x": 103,
-   "y": 183,
-   "w": 76,
-   "h": 32,
+   "y": 179,
+   "w": 218,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
-    "pco": 65535,
+    "pco": 0,
     "borderc": 0,
-    "bco": 4426
+    "bco": 65497
    },
    "txt": "P gain",
    "a": {
     "style": 0,
     "key": 255,
     "borderw": 0,
-    "xcen": 0,
+    "xcen": 1,
     "ycen": 1,
     "pw": 0,
     "txt_maxl": 30,
@@ -142,22 +142,22 @@
    "t": "text",
    "g": "l",
    "x": 103,
-   "y": 221,
-   "w": 67,
-   "h": 32,
+   "y": 219,
+   "w": 218,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
-    "pco": 65535,
+    "pco": 0,
     "borderc": 0,
-    "bco": 4426
+    "bco": 65497
    },
    "txt": "I gain",
    "a": {
     "style": 0,
     "key": 255,
     "borderw": 0,
-    "xcen": 0,
+    "xcen": 1,
     "ycen": 1,
     "pw": 0,
     "txt_maxl": 30,
@@ -173,22 +173,22 @@
    "t": "text",
    "g": "l",
    "x": 103,
-   "y": 107,
-   "w": 196,
-   "h": 32,
+   "y": 99,
+   "w": 218,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
-    "pco": 65535,
+    "pco": 0,
     "borderc": 0,
-    "bco": 4426
+    "bco": 65497
    },
-   "txt": "Headspeed (RPM)",
+   "txt": "Head speed [rpm]",
    "a": {
     "style": 0,
     "key": 255,
     "borderw": 0,
-    "xcen": 0,
+    "xcen": 1,
     "ycen": 1,
     "pw": 0,
     "txt_maxl": 30,
@@ -205,21 +205,21 @@
    "g": "l",
    "x": 103,
    "y": 259,
-   "w": 77,
-   "h": 32,
+   "w": 218,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
-    "pco": 65535,
+    "pco": 0,
     "borderc": 0,
-    "bco": 4426
+    "bco": 65497
    },
    "txt": "D gain",
    "a": {
     "style": 0,
     "key": 255,
     "borderw": 0,
-    "xcen": 0,
+    "xcen": 1,
     "ycen": 1,
     "pw": 0,
     "txt_maxl": 30,
@@ -235,22 +235,22 @@
    "t": "text",
    "g": "l",
    "x": 103,
-   "y": 297,
-   "w": 75,
-   "h": 32,
+   "y": 299,
+   "w": 218,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
-    "pco": 65535,
+    "pco": 0,
     "borderc": 0,
-    "bco": 4426
+    "bco": 65497
    },
    "txt": "F gain",
    "a": {
     "style": 0,
     "key": 255,
     "borderw": 0,
-    "xcen": 0,
+    "xcen": 1,
     "ycen": 1,
     "pw": 0,
     "txt_maxl": 30,
@@ -266,22 +266,22 @@
    "t": "text",
    "g": "l",
    "x": 103,
-   "y": 335,
-   "w": 104,
-   "h": 32,
+   "y": 339,
+   "w": 218,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
-    "pco": 65535,
+    "pco": 0,
     "borderc": 0,
-    "bco": 4426
+    "bco": 65497
    },
    "txt": "TTA gain",
    "a": {
     "style": 0,
     "key": 255,
     "borderw": 0,
-    "xcen": 0,
+    "xcen": 1,
     "ycen": 1,
     "pw": 0,
     "txt_maxl": 30,
@@ -297,22 +297,22 @@
    "t": "text",
    "g": "l",
    "x": 415,
-   "y": 107,
-   "w": 127,
-   "h": 32,
+   "y": 99,
+   "w": 200,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
-    "pco": 65535,
+    "pco": 0,
     "borderc": 0,
-    "bco": 4426
+    "bco": 65497
    },
-   "txt": "TTA limit %",
+   "txt": "TTA limit [%]",
    "a": {
     "style": 0,
     "key": 255,
     "borderw": 0,
-    "xcen": 0,
+    "xcen": 1,
     "ycen": 1,
     "pw": 0,
     "txt_maxl": 30,
@@ -328,22 +328,22 @@
    "t": "text",
    "g": "l",
    "x": 415,
-   "y": 145,
-   "w": 153,
-   "h": 32,
+   "y": 139,
+   "w": 200,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
-    "pco": 65535,
+    "pco": 0,
     "borderc": 0,
-    "bco": 4426
+    "bco": 65497
    },
-   "txt": "Max throttle %",
+   "txt": "Max throttle [%]",
    "a": {
     "style": 0,
     "key": 255,
     "borderw": 0,
-    "xcen": 0,
+    "xcen": 1,
     "ycen": 1,
     "pw": 0,
     "txt_maxl": 30,
@@ -359,22 +359,22 @@
    "t": "text",
    "g": "l",
    "x": 415,
-   "y": 183,
-   "w": 147,
-   "h": 32,
+   "y": 179,
+   "w": 200,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
-    "pco": 65535,
+    "pco": 0,
     "borderc": 0,
-    "bco": 4426
+    "bco": 65497
    },
-   "txt": "Min throttle %",
+   "txt": "Min throttle [%]",
    "a": {
     "style": 0,
     "key": 255,
     "borderw": 0,
-    "xcen": 0,
+    "xcen": 1,
     "ycen": 1,
     "pw": 0,
     "txt_maxl": 30,
@@ -390,22 +390,22 @@
    "t": "text",
    "g": "l",
    "x": 415,
-   "y": 221,
-   "w": 171,
-   "h": 32,
+   "y": 219,
+   "w": 200,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
-    "pco": 65535,
+    "pco": 0,
     "borderc": 0,
-    "bco": 4426
+    "bco": 65497
    },
-   "txt": "Fallback drop %",
+   "txt": "Fallback drop [%]",
    "a": {
     "style": 0,
     "key": 255,
     "borderw": 0,
-    "xcen": 0,
+    "xcen": 1,
     "ycen": 1,
     "pw": 0,
     "txt_maxl": 30,
@@ -422,21 +422,21 @@
    "g": "l",
    "x": 415,
    "y": 259,
-   "w": 126,
-   "h": 32,
+   "w": 200,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
-    "pco": 65535,
+    "pco": 0,
     "borderc": 0,
-    "bco": 4426
+    "bco": 65497
    },
    "txt": "Yaw weight",
    "a": {
     "style": 0,
     "key": 255,
     "borderw": 0,
-    "xcen": 0,
+    "xcen": 1,
     "ycen": 1,
     "pw": 0,
     "txt_maxl": 30,
@@ -452,22 +452,22 @@
    "t": "text",
    "g": "l",
    "x": 415,
-   "y": 297,
-   "w": 142,
-   "h": 32,
+   "y": 299,
+   "w": 200,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
-    "pco": 65535,
+    "pco": 0,
     "borderc": 0,
-    "bco": 4426
+    "bco": 65497
    },
    "txt": "Cyclic weight",
    "a": {
     "style": 0,
     "key": 255,
     "borderw": 0,
-    "xcen": 0,
+    "xcen": 1,
     "ycen": 1,
     "pw": 0,
     "txt_maxl": 30,
@@ -483,22 +483,22 @@
    "t": "text",
    "g": "l",
    "x": 415,
-   "y": 335,
-   "w": 178,
-   "h": 32,
+   "y": 339,
+   "w": 200,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
-    "pco": 65535,
+    "pco": 0,
     "borderc": 0,
-    "bco": 4426
+    "bco": 65497
    },
    "txt": "Collective weight",
    "a": {
     "style": 0,
     "key": 255,
     "borderw": 0,
-    "xcen": 0,
+    "xcen": 1,
     "ycen": 1,
     "pw": 0,
     "txt_maxl": 30,
@@ -537,7 +537,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "print \"HelpView:RFGOVP.TXT\"\nLogView.t0.txt=\"RF Governor profile help\"\nLogView.return.txt=\"RFGovView\""
+    "r": "print \"HelpView:RFGOVP.TXT\"\nLogView.t0.txt=\"Governor (Rotorflight) help\"\nLogView.return.txt=\"RFGovView\""
    }
   },
   {
@@ -574,7 +574,7 @@
    "t": "button",
    "g": "l",
    "x": 365,
-   "y": 381,
+   "y": 389,
    "w": 160,
    "h": 50,
    "font": 6,
@@ -606,7 +606,7 @@
    "t": "button",
    "g": "l",
    "x": 537,
-   "y": 381,
+   "y": 389,
    "w": 160,
    "h": 50,
    "font": 6,
@@ -648,7 +648,7 @@
     "borderc": 0,
     "bco": 2214
    },
-   "txt": "Model name",
+   "txt": "",
    "a": {
     "style": 0,
     "key": 255,
@@ -678,9 +678,9 @@
    "t": "number",
    "g": "g",
    "x": 327,
-   "y": 107,
+   "y": 99,
    "w": 76,
-   "h": 32,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -700,7 +700,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Headspeed (rpm)\"\nva0.val=53<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Head speed [rpm]\"\nva0.val=53<<8\nprint va0.val"
    }
   },
   {
@@ -709,9 +709,9 @@
    "t": "number",
    "g": "g",
    "x": 327,
-   "y": 145,
+   "y": 139,
    "w": 76,
-   "h": 32,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -740,9 +740,9 @@
    "t": "number",
    "g": "g",
    "x": 327,
-   "y": 183,
+   "y": 179,
    "w": 76,
-   "h": 32,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -771,9 +771,9 @@
    "t": "number",
    "g": "g",
    "x": 327,
-   "y": 221,
+   "y": 219,
    "w": 76,
-   "h": 32,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -804,7 +804,7 @@
    "x": 327,
    "y": 259,
    "w": 76,
-   "h": 32,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -833,9 +833,9 @@
    "t": "number",
    "g": "g",
    "x": 327,
-   "y": 297,
+   "y": 299,
    "w": 76,
-   "h": 32,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -864,9 +864,9 @@
    "t": "number",
    "g": "g",
    "x": 327,
-   "y": 335,
+   "y": 339,
    "w": 76,
-   "h": 32,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -895,9 +895,9 @@
    "t": "number",
    "g": "g",
    "x": 621,
-   "y": 107,
+   "y": 99,
    "w": 76,
-   "h": 32,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -917,7 +917,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"TTA limit %\"\nva0.val=53<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"TTA limit [%]\"\nva0.val=53<<8\nprint va0.val"
    }
   },
   {
@@ -926,9 +926,9 @@
    "t": "number",
    "g": "g",
    "x": 621,
-   "y": 145,
+   "y": 139,
    "w": 76,
-   "h": 32,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -948,7 +948,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Max throttle %\"\nva0.val=53<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Max throttle [%]\"\nva0.val=53<<8\nprint va0.val"
    }
   },
   {
@@ -957,9 +957,9 @@
    "t": "number",
    "g": "g",
    "x": 621,
-   "y": 183,
+   "y": 179,
    "w": 76,
-   "h": 32,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -979,7 +979,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Min throttle %\"\nva0.val=53<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Min throttle [%]\"\nva0.val=53<<8\nprint va0.val"
    }
   },
   {
@@ -988,9 +988,9 @@
    "t": "number",
    "g": "g",
    "x": 621,
-   "y": 221,
+   "y": 219,
    "w": 76,
-   "h": 32,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -1010,7 +1010,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Fallback drop %\"\nva0.val=53<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Fallback drop [%]\"\nva0.val=53<<8\nprint va0.val"
    }
   },
   {
@@ -1021,7 +1021,7 @@
    "x": 621,
    "y": 259,
    "w": 76,
-   "h": 32,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -1050,9 +1050,9 @@
    "t": "number",
    "g": "g",
    "x": 621,
-   "y": 297,
+   "y": 299,
    "w": 76,
-   "h": 32,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -1081,9 +1081,9 @@
    "t": "number",
    "g": "g",
    "x": 621,
-   "y": 335,
+   "y": 339,
    "w": 76,
-   "h": 32,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -1112,7 +1112,7 @@
    "t": "button",
    "g": "l",
    "x": 193,
-   "y": 381,
+   "y": 389,
    "w": 160,
    "h": 50,
    "font": 6,
@@ -1143,10 +1143,10 @@
    "i": 21,
    "t": "text",
    "g": "g",
-   "x": 110,
-   "y": 207,
-   "w": 580,
-   "h": 124,
+   "x": 126,
+   "y": 219,
+   "w": 564,
+   "h": 116,
    "font": 2,
    "sta": 1,
    "c": {

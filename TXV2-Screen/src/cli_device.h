@@ -61,12 +61,12 @@ static ldrc::CliPage cliPage(cliHost);
 static uint32_t cliTouchedAt = 0;   // (cliJobWanted, the page to open at the next pass of loop(), is main.cpp's: CLI_CONSOLE, CLI_TO_CARD or CLI_EXECUTE from "ldrc cli" / "ldrc diff" / "ldrc exec")
 static bool cliUp() { return topOn && topWho == CLI_WHO; }
 static void cliDrawConsole(const ldrc::WifiItem &it) {
-    const uint16_t back = shade(WF_BACK, -35);
+    const uint16_t back = ldrc::themeIsLight(WF_BACK) ? shade(WF_BACK, -8) : shade(WF_BACK, -35);   // (a light theme darkened by a third went muddy, and its soft words did not read)
     gfx->fillRect(it.x, it.y, it.w, it.h, back);
     gfx->drawRect(it.x, it.y, it.w, it.h, WF_SOFT);
     clipX0 = it.x + 2; clipY0 = it.y + 2; clipX1 = it.x + it.w - 2; clipY1 = it.y + it.h - 2;
     const std::vector<std::string> &ls = cliPage.lines();
-    const int pitch = 26;
+    const int pitch = (it.h - 8) / ldrc::CLI_VISIBLE;             // (12 lines of the 24 px letters filling the box: 27 in its 338; 1.11.44's 312 took 25 - at 26 the last was cut through)
     for (int k = 0; k < ldrc::CLI_VISIBLE; ++k) {
         const int i = cliPage.top() + k;
         if (i < 0 || i >= (int) ls.size()) break;

@@ -119,7 +119,7 @@ void SendModelFile()
     char Sent[] = "Sent ";
     char of[] = " of ";
     char msg[150];
-    char bytes[] = " bytes.";
+    char bytes[] = " bytes";
     char ModelsView_filename[] = "filename";
     char t0[] = "t0";
     char Fsend[] = "Sending file";
@@ -133,7 +133,7 @@ void SendModelFile()
 
     if (strlen(SingleModelFile) > 15)
     { // packet 1 has 16 bytes for the name (the sender's ID follows at byte 16): a longer name would be cut, or read wrong
-        strcpy(msg, "                Cannot send!\r\n\r\nThe file name is too long\r\n(15 characters at most).");
+        strcpy(msg, "Cannot send!\r\n\r\nThe file name is too long\r\n(15 characters at most).");
         MsgBox(GoModelsView, msg);
         SendCommand(GoModelsView);
         CurrentView = MODELSVIEW;
@@ -158,7 +158,7 @@ void SendModelFile()
     if (Fsize == 0 || Fsize > MAXFILELEN)
     {
         ModelsFileNumber.close();
-        strcpy(msg, "                Cannot send!\r\n\r\nThe file could not be read.");
+        strcpy(msg, "Cannot send!\r\n\r\nThe file could not be read.");
         SendCommand(ProgressEnd);
         RedLedOn();
         MsgBox(GoModelsView, msg);
@@ -172,7 +172,7 @@ void SendModelFile()
     ModelsFileNumber.close();
     if (got != Fsize)
     {
-        strcpy(msg, "                Cannot send!\r\n\r\nThe file could not be read.");
+        strcpy(msg, "Cannot send!\r\n\r\nThe file could not be read.");
         SendCommand(ProgressEnd);
         RedLedOn();
         MsgBox(GoModelsView, msg);
@@ -332,9 +332,9 @@ void SendModelFile()
     else
     {
         if (PacketNumber <= 1)
-            strcpy(msg, "                Cannot send!\r\n\r\nReceiving transmitter not ready. \r\n\r\n                File not sent.");
+            strcpy(msg, "Cannot send!\r\n\r\nReceiving transmitter not ready.\r\n\r\nFile not sent.");
         else
-            strcpy(msg, "                Cannot send!\r\n\r\nThe receiving transmitter stopped\r\nanswering. \r\n\r\n                File not sent.");
+            strcpy(msg, "Cannot send!\r\n\r\nThe receiving transmitter stopped answering.\r\n\r\nFile not sent.");
         for (int i = 0; i < 3; ++i)
         {
             PlaySound(BEEPMIDDLE);
@@ -380,9 +380,9 @@ void ReceiveModelFile()
     char WaitTime[6];
     char WaitMsg[17];
     char ThreeDots[] = "...";
-    char Receiving[] = "Receiving: ";
+    char Receiving[] = "";
     char fnamebuf[30];
-    char TimeoutMsg[] = "TIMEOUT";
+    char TimeoutMsg[] = "Nothing received";
     char Success[] = "* Success! *";
     unsigned long Fsize = 0;
     unsigned long Fposition = 0;
@@ -393,9 +393,9 @@ void ReceiveModelFile()
     char Received[] = "Received ";
     char of[] = " of ";
     char msg[50];
-    char bytes[] = " bytes.";
+    char bytes[] = " bytes";
     char t0[] = "t0";
-    char RXheader[] = "File receive";
+    char RXheader[] = "Receiving file";
     char ovwr[] = "Overwrite ";
     char ques[] = "?";
     char ProgressStart[] = "vis Progress,1";

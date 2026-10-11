@@ -1,3 +1,10 @@
-If a channel is moving the wrong way, check it here to reverse it.||
-
-The reversal happens at the channel input, and before any mixes or redirections are applied.||
+If a channel moves the wrong way, tick its box to reverse it.|
+Nothing changes until you press 'OK'.|
+'OK' keeps the changes and goes back to 'Model setup'.||
+Reversing comes last: after mixes, trims, subtrim|
+and any re-routing on the 'Inputs' page.|
+So each box reverses the receiver output of that number.|
+With the usual Out numbers on 'Inputs',|
+that is the channel named beside the box.||
+'Motor off value' ('Model setup', 'Options') is not reversed.|
+If you reverse the throttle, change that value to match.|

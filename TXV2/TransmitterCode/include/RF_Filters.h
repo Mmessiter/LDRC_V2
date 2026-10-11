@@ -218,7 +218,7 @@ FLASHMEM void FilterPoll()
         if (!ok) { FltFail("Not stored"); return; }
         if (FeatWant != FeatRaw)
         { // an Enable of the Dynamic or the RPM filter changed: it applies only when the flight controller boots (as the configurator, which restarts it on every save)
-            FltBusy("Restarting the flight controller (an Enable applies at boot) ...");
+            FltBusy("Restarting the flight controller to apply the Enable ...");
             FltReq = MspAsk(68, nullptr, 0); FltStep = FLT_REBOOT;
             return;
         }
@@ -247,7 +247,7 @@ FLASHMEM void FilterPoll()
         FeatWant = FeatRaw;
         FltStep = FLT_IDLE; Flt_Was_Edited = false;
         SendCommand((char *)"vis b3,0"); FltShow();
-        FltBusy(same ? "Saved, and read back the same." : "Saved; the flight controller adjusted some values (shown).");
+        FltBusy(same ? "Saved, and read back the same." : "Saved, but the flight controller adjusted some values.");
         FltMsgUntil = millis() + 4000;
         PlaySound(BEEPCOMPLETE);
         return;

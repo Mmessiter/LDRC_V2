@@ -14,3 +14,11 @@ ModelName.txt="RAW 420 MCM (3)"
 page TXSetupView
 ModelName.txt="SAB GOBLIN RAW 700 COMPETITION (90)"
 @shot 33_long
+# "Calibrate" while a model is connected (main.cpp:4092-4096): refused with a MsgBox over this page
+@model 1
+page TXSetupView
+ModelName.txt="RAW 420 MCM (3)"
+page PopupView
+vis b1,0
+Dialog.txt="The model is connected.\r\nSwitch it off, then press Calibrate."
+@shot 33_still_connected

@@ -1,0 +1,24 @@
+# RFSetupView (page 61), the Rotorflight settings (B56). StartRFSettingsView (RF_RotorFlight.h:63-79): t11 model name,
+# Ratio "%1.2f", Arming "%d", sw0 LinkRatesToBanks, t5 "%1.1f" of RFVersions (0.0 / 2.2 / 2.3), t14 "Bank n", t8 "Rate n".
+# EndRFSettingsView (:85-116) reads Ratio, Arming and sw0 back on OK.
+Screen_Background=8
+@model 1
+page RFSetupView
+t11.txt="RAW 420 MCM"
+Ratio.txt="10.30"
+Arming.txt="6"
+sw0.val=1
+t5.txt="2.3"
+t14.txt="Bank 1"
+t8.txt="Rate 1"
+@shot 61_open
+# worst case: 30-char model name, no Rotorflight seen yet (0.0), two-digit channel, the switch off, Bank 4 / Rate 4
+page RFSetupView
+t11.txt="GOBLIN RAW 700 COMPETITION MK2"
+Ratio.txt="13.33"
+Arming.txt="16"
+sw0.val=0
+t5.txt="0.0"
+t14.txt="Bank 4"
+t8.txt="Rate 4"
+@shot 61_long

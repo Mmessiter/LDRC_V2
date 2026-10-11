@@ -1,0 +1,52 @@
+# RescueView (page 58), Rotorflight Rescue page 1 (RF_Rescue.h). StartRescueView :305 writes t11 ModelName, t9 "Bank %d",
+# vis b3,0, then RescueRead :300 -> RescueBusy("Reading from the flight controller ...") :44. The read's answer ->
+# RescueShowPage1 :70: tn0/tn1 switches (.val), tn2..tn12 numbers (RescuePercent "65.5" / "45", RescueTenths "25.0",
+# RescueNumber up to 10000). An edit -> RescueWasEdited :341 vis b3,1. A save -> "Writing to the flight controller ..."
+# (SaveRescue :373), then :290 "Saved, and read back the same." or the longest, "Saved, but the flight controller adjusted some
+# values."
+# A bank change while reading or saving: "Loading the new bank ..." :203.
+Screen_Background=8
+@model 1
+page RescueView
+t11.txt="Black Thunder 2"
+t9.txt="Bank 1"
+vis b3,0
+vis busy,1
+busy.txt="Reading from the flight controller ..."
+@shot 58_reading
+vis busy,0
+tn0.val=1
+tn1.val=1
+tn2.txt="65.5"
+tn3.txt="0.3"
+tn4.txt="45"
+tn5.txt="4.0"
+tn6.txt="35"
+tn7.txt="2.0"
+tn8.txt="0.5"
+tn9.txt="25"
+tn10.txt="50"
+tn11.txt="250"
+tn12.txt="2000"
+@shot 58_loaded
+# the widest numbers each field takes (the gather's clamps :132-142)
+tn0.val=0
+tn1.val=0
+tn2.txt="100"
+tn3.txt="25.0"
+tn4.txt="100"
+tn5.txt="25.0"
+tn6.txt="100"
+tn7.txt="25.0"
+tn8.txt="25.0"
+tn9.txt="250"
+tn10.txt="250"
+tn11.txt="1000"
+tn12.txt="10000"
+vis b3,1
+@shot 58_edited_long
+vis busy,1
+busy.txt="Saved, but the flight controller adjusted some values."
+@shot 58_saved
+busy.txt="Loading the new bank ..."
+@shot 58_bank

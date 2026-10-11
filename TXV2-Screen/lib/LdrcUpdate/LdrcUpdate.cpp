@@ -205,7 +205,7 @@ bool Updater::notNow() {
     case UpdateHost::FLY_MOTOR:          message("The motor is on", "Switch the motor off,", "then check again."); return true;
     case UpdateHost::FLY_SAFETY:         message("The safety is off", "Put the safety on,", "then check again."); return true;
     case UpdateHost::FLY_MODEL:          message("A model is connected", "Switch the model off,", "then check again."); return true;
-    case UpdateHost::FLY_MODEL_JUST_NOW: message("A model was connected", "less than a minute ago.", "Wait a minute, then check again."); return true;
+    case UpdateHost::FLY_MODEL_JUST_NOW: message("A model was connected just now", "Wait a minute, then check again."); return true;
     default: return false;
     }
 }
@@ -303,22 +303,25 @@ void Updater::result(bool good, const std::string &title, const std::vector<std:
     note((good ? "DONE: " : "FAILED: ") + all);
 }
 void Updater::fail(const std::string &stage, const std::string &why) {
+    // What it means for the pilot first (what was changed, what to do), then where it stopped and why. A verdict that says
+    // DO NOT FLY says so in its title too: the first thing read, and kept with it after a restart.
     std::vector<std::string> lines;
-    lines.push_back("It stopped at: " + stage + ".");
-    lines.push_back(sentence(why));
+    const std::string at = "It stopped at: " + stage + ".", because = sentence(why);
     if (!changing_) { lines.push_back("Nothing was changed."); restoreHave(); }
     else if (phase_ == P_TEENSY && !stTeensyChanged_) lines.push_back("The screen was not changed.");
-    else if (phase_ == P_TEENSY || phase_ == P_PLACE) lines.push_back(std::string(stTeensyChanged_ ? "The main board was updated. " : "") + "Check for update again to finish.");
-    else if (phase_ == P_FLASH) lines.push_back(stTeensyChanged_ ? "The main board was updated. The screen's firmware was not." : "The screen's firmware was not changed.");
+    else if (phase_ == P_TEENSY || phase_ == P_PLACE) lines.push_back(std::string(stTeensyChanged_ ? "The transmitter was updated. " : "") + "Press Transmitter updates again to finish.");
+    else if (phase_ == P_FLASH) lines.push_back(stTeensyChanged_ ? "The transmitter was updated. The screen's firmware was not." : "The screen's firmware was not changed.");
+    lines.push_back(at);
+    lines.push_back(because);
     host_.stopWork();
-    result(false, "Update failed", lines);
+    result(false, mustSee_ ? "DO NOT FLY - update failed" : "Update failed", lines);
 }
 void Updater::finishGood() {
     std::vector<std::string> lines;
     host_.tidy(std::string(STAGING, strlen(STAGING) - 1));   // whatever earlier attempts fetched and this one did not need
     if (stKept_ > 0) lines.push_back("Your models, settings and logs were copied first: " + num((uint32_t) stKept_) + " files.");
     for (size_t i = 0; i < stWarn_.size() && i < 4; ++i) lines.push_back(sentence(stWarn_[i]));
-    if (stSettings_ == "same") lines.push_back("The new firmware reads your model's settings exactly as the old one did.");
+    if (stSettings_ == "same") lines.push_back("The new firmware reads your settings exactly as the old one did.");   // (one line)
     else if (stSettings_ == "unknown") lines.push_back("How the new firmware reads your model's settings could not be compared with the old one. Check the controls before flying.");
     result(true, "Update complete", lines);
 }
@@ -362,7 +365,7 @@ void Updater::freshStart(const std::string &kind) {
     std::string st = stateText("fresh");
     st += "resume=" + kind + "\n" + "descr=" + descrUrl_ + "\n" + std::string("again=") + (again_ ? "1" : "0") + "\n" + std::string("choosing=") + (choosing_ ? "1" : "0") + "\n";
     host_.writeText(STATE_FILE, st);
-    show(UpdView::WORKING, "Making room"); line("The screen restarts, and carries on by itself.");
+    show(UpdView::WORKING, "Restarting the screen first"); line("Then it carries on by itself.");
     changing_ = false; freshKind_ = kind; phase_ = P_FRESH; restartAt_ = host_.ms() + 1500;
 }
 // A job failed for want of memory (the screen says so: a secure connection could not be made, -0x7F00). Before anything
@@ -403,7 +406,7 @@ void Updater::asked() {
         switch (link_.refusal()) {
         case LE_OK: break;
         case LE_BUSY:           message("A model is connected", "Switch the model off,", "then check again."); return;
-        case LE_MODEL_JUST_NOW: message("A model was connected", "less than a minute ago.", "Wait a minute, then check again."); return;
+        case LE_MODEL_JUST_NOW: message("A model was connected just now", "Wait a minute, then check again."); return;
         case LE_MOTOR_ON:       message("The motor is on", "Switch the motor off,", "then check again."); return;
         case LE_SAFETY_OFF:     message("The safety is off", "Put the safety on,", "then check again."); return;
         default:                message("The transmitter is busy", "Finish what is on its screen,", "then check again."); return;
@@ -430,10 +433,10 @@ void Updater::decide() {
         freshKind_.clear();
         note(choosing_ ? "that version is the one installed (" + rel_.name + ")" : "up to date (release " + rel_.name + ")");
         show(UpdView::NOTE, choosing_ ? "This version is installed" : "Up to date"); versionRows();
-        if (!teensyThere_) line(host_.teensySeen() ? "The main board does not answer." : "No main board is connected.");
+        if (!teensyThere_) line(host_.teensySeen() ? "The transmitter does not answer." : "No transmitter is connected.");
         // Going back must be as easy as going forward: the few releases before this one can be put back.
         noteWifi_ = false; noteVersions_ = true;
-        buttons("OK", choosing_ ? "Versions" : "Earlier versions"); phase_ = P_NOTE;
+        buttons("OK", choosing_ ? "Back" : "Earlier versions"); phase_ = P_NOTE;   // ("Back" to the versions, as on "Install this version?")
         view_.button3 = "Install again"; changed();
         return;
     }
@@ -442,11 +445,11 @@ void Updater::decide() {
     if (choosing_) line(rel_.name + (rel_.date.empty() ? "" : ", " + rel_.date));
     if (needTeensyFw_) { row("Transmitter", teensyFw_, rel_.teensy.version); what += " main-board-firmware"; }
     if (needScreenFw_) { row("Screen", host_.screenVersion(), rel_.screen.version); what += " screen-firmware"; }
-    if (needTeensyFiles_) { row("Help files", "", "new"); what += " help-files"; }
-    if (needScreenFiles_) { row("Screen files", "", "new"); what += " screen-files"; }
+    if (needTeensyFiles_) { row("Help files", "", "changed"); what += " help-files"; }   // ("changed", not "new": an earlier version changes them too)
+    if (needScreenFiles_) { row("Screen files", "", "changed"); what += " screen-files"; }
     if (!rel_.notes.empty()) line(rel_.notes);
-    if (needTeensyFw_ && teensyFellBack_) line("The main board undid its last update by itself.");
-    if (!teensyThere_) line(host_.teensySeen() ? "The main board does not answer: only the screen is updated." : "No main board is connected: only the screen is updated.");
+    if (needTeensyFw_ && teensyFellBack_) line("The transmitter undid its last update by itself.");
+    if (!teensyThere_) line(host_.teensySeen() ? "The transmitter does not answer: only the screen is updated." : "No transmitter is connected: only the screen is updated.");
     buttons("Install now", choosing_ ? "Back" : "Later");
     if (!choosing_) { view_.button3 = "Earlier versions"; changed(); }
     note(std::string(choosing_ ? "chosen" : "update available") + ", release " + rel_.name + ":" + what);
@@ -473,7 +476,7 @@ bool Updater::textArrived() {
     note("asking messiter.com: " + w.error + (textTries_ < 3 ? " (it is asked again)" : ""));
     if (flyingNow() != UpdateHost::FLY_NO) { notNow(); return false; }
     if ((phase_ == P_LATEST || phase_ == P_DESCR) && freshForMemory(w)) return false;
-    if (textTries_ >= 3) { message("messiter.com did not answer", sentence(w.error)); return false; }
+    if (textTries_ >= 3) { message("messiter.com did not answer", "Check the WiFi, then try again.", sentence(w.error)); return false; }   // (what to do first, why after)
     textTries_++; waiting_ = true; since_ = now;
     return false;
 }
@@ -627,7 +630,7 @@ void Updater::startFetch() {
     fetchTotal_ = 0; fetchCount_ = 0;
     for (size_t i = 0; i < items_.size(); ++i) if (!items_[i].have && !items_[i].fetched) { fetchTotal_ += items_[i].size; fetchCount_++; }
     note(num((uint32_t) items_.size()) + " files in the update, " + num((uint32_t) fetchCount_) + " to fetch (" + sizeText(fetchTotal_) + ")");
-    if (fetchCount_ && host_.freeKb() < fetchTotal_ / 1024 + 4096) { fail("making room", "the screen's card is full: " + sizeText(fetchTotal_) + " are needed"); return; }
+    if (fetchCount_ && host_.freeKb() < fetchTotal_ / 1024 + 4096) { fail("checking the card's free space", "the screen's card is full: " + sizeText(fetchTotal_) + " are needed"); return; }
     fetchDone_ = 0; fetchIndex_ = 0; at_ = 0; tries_ = 0; waiting_ = false;
     bar(0, fetchTotal_ ? fetchTotal_ : 1);
     phase_ = P_FETCH; fetchNext();
@@ -869,7 +872,7 @@ void Updater::resume() {
     if (stage == "rejected") {
         lines.push_back(sentence(valueOf(text, "why")));
         lines.push_back("The previous screen firmware (" + host_.screenVersion() + ") is back.");
-        if (stTeensyChanged_) lines.push_back("The main board was updated.");
+        if (stTeensyChanged_) lines.push_back("The transmitter was updated.");
         result(false, "Update failed", lines);
         return;
     }
@@ -879,7 +882,7 @@ void Updater::resume() {
         if (flashed && host_.screenVersion() != stTo_) {
             lines.push_back("The screen's new firmware (" + stTo_ + ") did not start.");
             lines.push_back("The previous one (" + host_.screenVersion() + ") is back.");
-            if (stTeensyChanged_) lines.push_back("The main board was updated.");
+            if (stTeensyChanged_) lines.push_back("The transmitter was updated.");
             result(false, "Update failed", lines);
             return;
         }
@@ -893,9 +896,9 @@ void Updater::resume() {
         return;
     }
     // A power cut, or the power button, in the middle of it.
-    const std::string what = stage == "teensy" ? "updating the main board" : stage == "place" ? "putting the screen's files in place" : stage == "flash" ? "writing the screen's firmware" : "fetching the update";
+    const std::string what = stage == "teensy" ? "updating the transmitter" : stage == "place" ? "putting the screen's files in place" : stage == "flash" ? "writing the screen's firmware" : "fetching the update";
     lines.push_back("The last update was interrupted while " + what + ".");
-    lines.push_back(stage == "fetch" ? "Nothing was changed." : "Check for update again to finish.");
+    lines.push_back(stage == "fetch" ? "Nothing was changed." : "Press Transmitter updates again to finish.");
     result(false, "Update not finished", lines);
 }
 void Updater::rejectWith(const std::string &why) {
@@ -1183,9 +1186,9 @@ void Updater::rxGotLatest() {
     note("receivers: latest " + rxLatestName_ + ", this receiver " + (heard ? rxVersionText(rxHave_) : std::string("did not say")));
     if (!heard) {
         show(UpdView::NOTE, "The receiver did not say its version");
-        row("Latest", "", rxVersionText(rxLatest_));
-        line("It needs receiver firmware 0.9.864 or later:");
-        line("update it once with the phone app.");
+        row("Receiver", "?", rxVersionText(rxLatest_));   // (the receiver's row, as on every other receiver page: its number not known)
+        line("Update it once with the phone app.");          // (what to do first, then why)
+        line("It needs receiver firmware 0.9.864 or later.");
         buttons("OK", ""); phase_ = P_NOTE; noteWifi_ = false; noteVersions_ = false;
         return;
     }
@@ -1198,7 +1201,7 @@ void Updater::rxGotLatest() {
     show(UpdView::OFFER, "Receiver update available");
     row("Receiver", rxVersionText(rxHave_), rxVersionText(rxLatest_));
     if (!rxNotes_.empty()) line(rxNotes_);
-    line("The receiver fetches it over the WiFi it knows. The transmitter is silent meanwhile: about 2 minutes.");
+    line("The receiver fetches it over the WiFi it knows. The transmitter is silent meanwhile: about a minute.");
     buttons("Install now", "Later");
     phase_ = P_RX_OFFER;
 }
@@ -1243,7 +1246,7 @@ void Updater::rxPoll() {
         // The bar is the silence counting down (Malcolm, 30-9-2026: "there is no progress bar"): nothing else can be
         // measured while the transmitter is silent. Its length is the largest "left" seen, which is the whole silence.
         if (n.left > rxQuietTotal_) rxQuietTotal_ = n.left;
-        setLine(0, "The receiver is updating itself. Transmitter silent for " + mmss(n.left) + " more");
+        setLine(0, "Receiver updating: " + mmss(n.left) + " to go");   // (one line; the hint below says why the transmitter is silent)
         if (rxQuietTotal_) bar(rxQuietTotal_ - (n.left > rxQuietTotal_ ? rxQuietTotal_ : n.left), rxQuietTotal_);
         break;
     case RXUP_WAITING:
@@ -1257,15 +1260,15 @@ void Updater::rxPoll() {
 void Updater::rxVerdict(const RxNews &n) {
     std::vector<std::string> lines;
     if (n.phase == RXUP_DONE) {
-        lines.push_back("Receiver " + rxVersionText(rxLatest_) + " is running.");
-        rxHave_ = rxLatest_;
+        rxHave_ = rxLatest_;                                     // (the row says it: "Receiver" and the new number - no line to say it again)
         rxResult(true, "Receiver updated", lines);
         return;
     }
+    lines.push_back("Nothing was changed.");                     // (the outcome first, then why: as the transmitter's verdicts)
     switch (n.why) {
     case RXW_NO_MODEL:      lines.push_back("No model is connected."); break;
     case RXW_NOT_ALLOWED:   lines.push_back("The motor is on, or the safety is off."); break;
-    case RXW_NO_ANSWER:     lines.push_back("The receiver did not answer the order."); lines.push_back("It needs firmware 0.9.864 or later: update it once with the phone app."); break;
+    case RXW_NO_ANSWER:     lines.push_back("The receiver did not answer the order."); lines.push_back("It needs firmware 0.9.864 or later: update it with the phone app."); break;
     case RXW_ARMED:         lines.push_back("The receiver says the model is armed. Disarm it, then try again."); break;
     case RXW_NO_WIFI_KNOWN: lines.push_back("The receiver knows no WiFi network. Give it one on the phone app's WiFi page."); break;
     case RXW_NOT_BACK:      lines.push_back("The receiver did not come back within four minutes. Check it with the phone app."); break;
@@ -1276,7 +1279,7 @@ void Updater::rxVerdict(const RxNews &n) {
         case RXO_NO_MANIFEST:     lines.push_back("The receiver could not read the release list from messiter.com."); break;
         case RXO_NOT_FOUND:       lines.push_back("The release is not in the receiver's list."); break;
         case RXO_DOWNLOAD_FAILED: lines.push_back("The download failed. Try again."); break;
-        case RXO_DID_NOT_TAKE:    lines.push_back("The new firmware did not take: the receiver is back on the old one."); break;
+        case RXO_DID_NOT_TAKE:    lines.push_back("The new firmware did not take: the receiver runs the old one."); break;
         case RXO_NOT_QUIET:       lines.push_back("The receiver gave up: the transmitter did not go silent in time."); break;
         case RXO_PAGES_FAILED:    lines.push_back("The receiver's pages could not be written."); break;
         default:                  lines.push_back("The receiver came back on the old version."); break;
@@ -1284,7 +1287,6 @@ void Updater::rxVerdict(const RxNews &n) {
         break;
     default: lines.push_back("The receiver came back on the old version."); break;
     }
-    lines.push_back("Nothing was changed.");
     rxResult(false, "Receiver not updated", lines);
 }
 // The verdict panel of the receiver's update: its rows are the receiver's, not the transmitter's.

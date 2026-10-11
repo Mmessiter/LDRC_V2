@@ -5,8 +5,182 @@ Screen_Background=8
 @model 1
 page FrontView
 t4.txt="Bank 4"
-rate.txt="Rate"
+ModelName.txt="Black Thunder 2 (9)"
 DateTime.txt="10 October 2026 17:10:53"
 exp0.path="sd0/images/Bthundr1.jpg"
 vis exp0,1
 @shot 13_front
+# ---- connected, a Rotorflight heli 4 minutes into a flight (polish 10 Oct): GotoFrontView (main.cpp:4634) then
+# ShowConnectionQuality (Telemetry.h:401), ShowCurrentRate (:186), ShowAMS (:221 - hidden once connected), ShowTrimToAll
+# (:254), CheckTXVolts/CheckRXVolts (:11, :70: "%1.2f" + "V (" + per cell + "V per cell)"), the RPM box (transceiver.h:1494),
+# Amps (:1109 "Amps: %1.1f"), mAh (:1087 "mAh: %1.0f"), ESC (PopulateFrontView "ESC: %.1f"), ShowMotor (Motor_sign.h:127)
+# and ShowSafety (:20: safety OFF = bt0 green with black words), ShowMotorTimer (Hours/Mins/Secs).
+page FrontView
+ModelName.txt="RAW 420 MCM (3)"
+t4.txt="Bank 1"
+vis rate,1
+rate.txt="Rate 1"
+Owner.txt="Malcolm Messiter"
+vis ams,0
+trall.txt="Trims: all banks"
+Hours.val=0
+Mins.val=4
+Secs.val=7
+TXBV.txt="8.10V (4.05V per cell)"
+JTX.val=85
+RXBV.txt="23.46V (3.91V per cell)"
+JRX.val=64
+Connected.txt="Connected"
+vis Quality,1
+Quality.val=97
+vis rpm,1
+rpm.txt="RPM: 2150"
+vis StillConnected,1
+StillConnected.txt="Amps: 12.4"
+vis wb,1
+wb.txt="mAh: 345"
+vis Warning,1
+Warning.txt="ESC: 52.3"
+bt0.txt="Motor is ON"
+bt0.bco=2016
+bt0.bco2=2016
+bt0.pco=0
+bt0.pco2=0
+DateTime.txt="10 October 2026 17:14:07"
+Ch1.val=62
+Ch2.val=40
+Ch3.val=71
+Ch4.val=50
+Ch5.val=100
+Ch6.val=0
+Ch7.val=50
+Ch8.val=50
+ch1.val=84
+ch2.val=78
+ch3.val=80
+ch4.val=82
+exp0.path="sd0/images/Bthundr1.jpg"
+vis exp0,1
+@shot 13_conn
+# ---- worst case words: the longest bank name ("Flight mode 1", 189 px font 0), Rate 3, a model with no ID stored
+# ("[AMS is on]", Telemetry.h:236), "Trims: this bank", the power-off countdown in the Amps box ("TURN OFF?! 10", main.cpp:4893),
+# the buddy's news in the mAh box ("Master missing", BuddyWireless.h:150), a battery warning
+# (CheckBatteryStates "Battery LOW"), "Sending parameters ..." (Parameters.h:557), a 12S pack, safety ON (bt0 red/white),
+# the longest month, a 30-character model name, the timer at 59:59:59.
+@model 0
+page FrontView
+ModelName.txt="SAB GOBLIN 700 COMPETITION MK2 (12)"
+t4.txt="Flight mode 1"
+vis rate,1
+rate.txt="Rate 3"
+Owner.txt="Malcolm Messiter"
+vis ams,1
+ams.txt="[AMS is on]"
+trall.txt="Trims: this bank"
+Hours.val=59
+Mins.val=59
+Secs.val=59
+TXBV.txt="7.16V (3.58V per cell)"
+JTX.val=12
+RXBV.txt="50.40V (4.20V per cell)"
+JRX.val=100
+Connected.txt="Sending parameters ..."
+vis Quality,1
+Quality.val=41
+vis rpm,1
+rpm.txt="RPM: 65535"
+vis StillConnected,1
+StillConnected.txt="TURN OFF?! 10"
+vis wb,1
+wb.txt="Master missing"
+vis Warning,1
+Warning.txt="Battery LOW"
+bt0.txt="Motor is OFF"
+bt0.bco=63488
+bt0.bco2=63488
+bt0.pco=65535
+bt0.pco2=65535
+DateTime.txt="28 September 2026 23:59:59"
+exp0.path="sd0/images/Bthundr1.jpg"
+vis exp0,1
+@shot 13_long
+# ---- no model, no picture (a model with no image), the trims off (TrimMultiplier 0: vis ch1-ch4,0 and trall,0)
+page FrontView
+ModelName.txt="Test heli [12]"
+t4.txt="Bank 2"
+vis rate,0
+Owner.txt="Unknown"
+vis ams,1
+ams.txt="AMS is off"
+Hours.val=0
+Mins.val=0
+Secs.val=0
+TXBV.txt="8.32V (4.16V per cell)"
+JTX.val=100
+RXBV.txt=" "
+JRX.val=0
+Connected.txt=""
+vis Quality,0
+vis ch1,0
+vis ch2,0
+vis ch3,0
+vis ch4,0
+vis trall,0
+bt0.txt="Motor is OFF"
+DateTime.txt="1 May 2026 09:05:00"
+@shot 13_nomodel
+# ---- the same front page in a light theme and in another dark one (the strip, the dashboard and the chips follow)
+@model 1
+@theme white
+page FrontView
+ModelName.txt="RAW 420 MCM (3)"
+t4.txt="Bank 1"
+vis rate,1
+rate.txt="Rate 1"
+Owner.txt="Malcolm Messiter"
+vis ams,0
+vis trall,1
+trall.txt="Trims: all banks"
+Hours.val=0
+Mins.val=4
+Secs.val=7
+TXBV.txt="8.10V (4.05V per cell)"
+JTX.val=85
+RXBV.txt="23.46V (3.91V per cell)"
+JRX.val=64
+Connected.txt="Connected"
+vis Quality,1
+Quality.val=97
+vis rpm,1
+rpm.txt="RPM: 2150"
+vis StillConnected,1
+StillConnected.txt="Amps: 12.4"
+vis wb,1
+wb.txt="mAh: 345"
+vis Warning,1
+Warning.txt="ESC: 52.3"
+bt0.txt="Motor is ON"
+bt0.bco=2016
+bt0.bco2=2016
+bt0.pco=0
+bt0.pco2=0
+vis ch1,1
+vis ch2,1
+vis ch3,1
+vis ch4,1
+DateTime.txt="10 October 2026 17:14:07"
+exp0.path="sd0/images/Bthundr1.jpg"
+vis exp0,1
+@shot 13_white
+@theme wine
+page FrontView
+vis rate,1
+vis ams,0
+vis Quality,1
+vis rpm,1
+vis StillConnected,1
+vis wb,1
+vis Warning,1
+vis exp0,1
+@shot 13_wine
+@theme navy

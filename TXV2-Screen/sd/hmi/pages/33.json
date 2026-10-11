@@ -147,9 +147,9 @@
    "i": 4,
    "t": "button",
    "g": "l",
-   "x": 594,
+   "x": 586,
    "y": 354,
-   "w": 160,
+   "w": 168,
    "h": 50,
    "font": 6,
    "sta": 1,
@@ -236,7 +236,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "print \"HelpView:TXSETUP.TXT\"\nLogView.t0.txt=\"TX setup help\"\nLogView.return.txt=\"TXSetupView\""
+    "r": "print \"HelpView:TXSETUP.TXT\"\nLogView.t0.txt=\"Transmitter setup help\"\nLogView.return.txt=\"TXSetupView\""
    }
   },
   {
@@ -333,7 +333,7 @@
    "g": "l",
    "x": 10,
    "y": 16,
-   "w": 270,
+   "w": 247,
    "h": 26,
    "font": 2,
    "sta": 1,
@@ -596,9 +596,9 @@
    "i": 44,
    "t": "button",
    "g": "l",
-   "x": 250,
+   "x": 46,
    "y": 354,
-   "w": 332,
+   "w": 348,
    "h": 50,
    "font": 6,
    "sta": 1,

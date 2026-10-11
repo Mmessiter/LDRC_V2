@@ -29,9 +29,12 @@ struct File {
     bool seek(uint32_t pos) { return f && fseek(f, (long) pos, SEEK_SET) == 0; }
     void close() { if (f) fclose(f); f = nullptr; }
 };
+#define FILE_READ "r"                                       // (the card is only ever read here)
 struct SDClass {
-    File open(const char *p) { File r; r.f = fopen((sdRoot + p).c_str(), "rb"); if (r.f) { fseek(r.f, 0, SEEK_END); r.n = ftell(r.f); fseek(r.f, 0, SEEK_SET); } return r; }
-    bool exists(const char *p) { FILE *f = fopen((sdRoot + p).c_str(), "rb"); if (f) fclose(f); return f != nullptr; }
+    std::map<std::string, std::string> alias;          // a file the card does not hold, read from one it does (own.h: the pilot's own photos)
+    std::string where(const char *p) { auto a = alias.find(p); return sdRoot + (a == alias.end() ? std::string(p) : a->second); }
+    File open(const char *p, const char * = nullptr) { File r; r.f = fopen(where(p).c_str(), "rb"); if (r.f) { fseek(r.f, 0, SEEK_END); r.n = ftell(r.f); fseek(r.f, 0, SEEK_SET); } return r; }
+    bool exists(const char *p) { FILE *f = fopen(where(p).c_str(), "rb"); if (f) fclose(f); return f != nullptr; }
 };
 extern SDClass SD;
 struct SerialStub { size_t write(const uint8_t *, size_t n) { return n; } size_t print(const char *) { return 0; } int available() { return 0; } };

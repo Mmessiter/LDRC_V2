@@ -1,11 +1,22 @@
-Rescue, height hold: for the bank shown at the top left.||
-
-Rescue mode: Off, Climb (level the model and climb for the climb time), or Hold height (level it and climb to the hover height, then hold it). Tap to change. Off here is the same as Enable Rescue Off on the first page.||
-
-Hover height [m]: the height the model climbs to and holds (0 to 500, with two decimals).||
-
-Height hold P, I and D: how firmly the height is held (0 to 10000 each). Rotorflight's defaults suit most models; change them in small steps.||
-
-Max Collective [%]: the most collective rescue may ever use (1 to 100).||
-
-Save sends everything on both rescue pages to the flight controller, stores it there, and reads it back. < Previous returns to the first page with your edits kept, not yet saved. OK leaves the rescue pages; if something was edited and not saved, it asks.||
+What rescue does once the model is level: climb, or climb|
+and hold a height. For the bank shown at the top left.||
+Rescue mode: tap it to step through Off, Climb and Hold height.|
+Off: no rescue (as Enable rescue off on the first page).|
+Climb: levels the model, climbs for the climb time, then|
+hovers on the hover collective.|
+Hold height: levels it, climbs to the hover height and holds|
+it there. It needs the flight controller's altitude sensor|
+(barometer).||
+Hover height [m]: the height that Hold height climbs to and|
+holds (0 to 500, two decimals). Hold height only.|
+Height hold P, I and D: how firmly the height is held|
+(0 to 10000 each). Hold height only. Rotorflight's defaults|
+suit most models: change them in small steps.|
+Max collective [%]: the most collective rescue may ever use|
+(1 to 100, one decimal).||
+Tap a number to type a new one.|
+'Save' appears once something is changed. It writes both rescue|
+pages to the flight controller, stores them and reads them back.|
+'< Previous' goes back to the first page, with your changes|
+kept but not yet saved.|
+'OK' leaves; if a change was not saved, it asks first.|

@@ -125,7 +125,7 @@ FLASHMEM void ShowPIDBank() // this is called when bank is changed so new bank's
     if (CurrentView == PIDVIEW) // Must be in PID view
     {
         char buf[40];
-        strcpy(buf, "Loading PIDs for  ");
+        strcpy(buf, "Loading PIDs for ");
         strcat(buf, BankNames[BanksInUse[Bank - 1]]);
         strcat(buf, " ...");
         SendText((char *)"t9", BankNames[BanksInUse[Bank - 1]]); // Show bank number etc

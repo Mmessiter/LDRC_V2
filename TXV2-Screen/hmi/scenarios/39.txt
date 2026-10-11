@@ -1,8 +1,8 @@
 # 39 InputsView - group C scenario (what the Teensy sends; file:line = TXV1B/TransmitterCode)
 Screen_Background=8
 @model 0
-# "InputsView" from RXSetupView (main.cpp:3697): (with a model connected a "Warning: model is connected!"
-# question comes first, over RXSetupView), then page, UpdateButtonLabels, UpdateModelsNameEveryWhere
+# "InputsView" from RXSetupView (main.cpp:3697): (with a model connected a "The model is connected. ... Open Inputs
+# anyway?" question comes first, over RXSetupView), then page, UpdateButtonLabels, UpdateModelsNameEveryWhere
 page InputsView
 ch1.txt="Aileron"
 c1.val=1
@@ -67,8 +67,8 @@ Progress.val=42
 Progress.val=49
 @shot 39_saving
 # ---- worst case: inputs/outputs at 16, longest names and model name
-# "InputsView" from RXSetupView (main.cpp:3697): (with a model connected a "Warning: model is connected!"
-# question comes first, over RXSetupView), then page, UpdateButtonLabels, UpdateModelsNameEveryWhere
+# "InputsView" from RXSetupView (main.cpp:3697): (with a model connected a "The model is connected. ... Open Inputs
+# anyway?" question comes first, over RXSetupView), then page, UpdateButtonLabels, UpdateModelsNameEveryWhere
 page InputsView
 ch1.txt="WWWWWWWWWW"
 c1.val=16
@@ -124,3 +124,24 @@ c16.val=16
 n19.val=16
 ModelName.txt="WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW (90)"
 @shot 39_long
+# ---- real names of the longest kind (10 characters, ChannelNames[16][11]): do they fit the name box?
+# ("Smoke pump" 149 px and "Camera pan" 139 px in font 6: whole in the 154 px box, room 150; cut in the old 142 and 134)
+page InputsView
+ch1.txt="Collective"
+ch2.txt="Elevator"
+ch3.txt="Throttle"
+ch4.txt="Rudder"
+ch5.txt="Gear doors"
+ch6.txt="Arm switch"
+ch7.txt="Bank swtch"
+ch8.txt="Headlights"
+ch9.txt="Crow flaps"
+ch10.txt="Wing flaps"
+ch11.txt="Flaperons"
+ch12.txt="Smoke pump"
+ch13.txt="Camera pan"
+ch14.txt="AUX9"
+ch15.txt="AUX10"
+ch16.txt="AUX11"
+ModelName.txt="SAB GOBLIN RAW 700 (12)"
+@shot 39_names

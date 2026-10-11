@@ -1,0 +1,82 @@
+# The flight screen in the pilot's themes (screen 1.8.4: twelve themes, Appearance > Themes): the light ones (White,
+# Yellow, Sky) and the two whose panels are almost the warning colours (Red, Yellow). A box that needs a look is amber
+# or red AND framed in white, so it shows on every theme; the model's name and the channel bars take the theme's accent.
+Screen_Background=21
+@model 1
+page FrontView
+ModelName.txt="RAW 420 MCM"
+t4.txt="Bank 1"
+Hours.val=0
+Mins.val=4
+Secs.val=7
+RXBV.txt="7.82V (3.91V per cell)"
+JRX.val=31
+TXBV.txt="8.10V (4.05V per cell)"
+JTX.val=85
+vis Quality,1
+Quality.val=42
+vis rpm,1
+rpm.txt="RPM: 2150"
+vis Warning,1
+Warning.txt="ESC: 97.1"
+vis StillConnected,1
+StillConnected.txt="Amps: 12.4"
+vis wb,1
+wb.txt="mAh: 345"
+bt0.txt="Motor is ON"
+DateTime.txt="3 Oct. 2026 20:31:07"
+Ch1.val=50
+Ch2.val=32
+Ch3.val=71
+Ch4.val=25
+Ch5.val=75
+Ch6.val=50
+Ch7.val=88
+Ch8.val=12
+Ch9.val=50
+Ch10.val=60
+Ch11.val=40
+Ch12.val=50
+Ch13.val=50
+Ch14.val=50
+Ch15.val=66
+Ch16.val=50
+@flying 1
+@theme red
+@flight f2 w1 grid6 s1 timer,rxbat,rpm,link,esc,mah
+@shot ftheme_red_warn
+@theme yellow
+@flight f2 w1 grid6 s1 timer,rxbat,rpm,link,esc,mah
+@shot ftheme_yellow_warn
+@theme white
+@flight f2 w1 grid6 s1 timer,rxbat,rpm,link,esc,mah
+@shot ftheme_white_warn
+@theme sky
+@flight f2 w1 big4 s1 bars16,timer,rxbat,link,esc
+@shot ftheme_sky_bars
+@theme white
+@flight f2 w1 big4 s1 bars8,timer,motor,link,txbat
+@shot ftheme_white_bars
+@theme navy
+@flight f2 w1 grid6 s1 timer,rxbat,rpm,link,esc,mah b:9.,11.,10.,9.,11.,12.
+@shot ftheme_boxes_warn
+@flying 0
+@theme yellow
+page TXSetupView
+@flightsetup f2 w1 grid6 s1 timer,rxbat,rpm,link,esc,mah
+@shot ftheme_yellow_setup
+@flightsetup f2 w1 grid6 s1 timer,rxbat,rpm,link,esc,mah @box 3
+@shot ftheme_yellow_choose
+@theme sky
+@flightsetup f2 w1 grid6 s1 timer,rxbat,rpm,link,esc,mah @box 2 @boxcolour 10 5
+@shot ftheme_sky_box_page
+# no link in flight on a light theme: the red strip's words white, the boxes' "--" in the theme's quieter colour, "no link"
+@model 0
+@flying 1
+page FrontView
+@flight f2 w1 grid6 s1 timer,rxbat,rpm,image,esc,motor
+@shot ftheme_sky_nolink
+@theme white
+@flight f2 w1 grid6 s1 timer,rxbat,rpm,image,esc,motor
+@shot ftheme_white_nolink
+@theme navy

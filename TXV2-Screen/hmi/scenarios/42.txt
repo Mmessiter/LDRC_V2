@@ -76,7 +76,7 @@ n11.pco=33840
 n12.pco=33840
 n13.pco=33840
 t14.pco=33840
-busy.txt="Sending edited values ..."
+busy.txt="Sending edited advanced rates ..."
 vis busy,1
 vis b3,0
 @shot 42_sending
@@ -97,7 +97,7 @@ n12.pco=0
 n13.pco=0
 t14.pco=0
 # ---- worst case: Rate 4, 30-char model name, uint8 maxima ("25.5" in t14), longest message
-# ("Saving edited Advanced Rates ...", SaveLocalRatesAdvancedBank :182, the not-connected Save)
+# ("Saving edited advanced rates ...", SaveLocalRatesAdvancedBank :182, the not-connected Save)
 page Rates_A_View
 t9.txt="Rate 4"
 n0.pco=33840
@@ -115,7 +115,7 @@ n11.pco=33840
 n12.pco=33840
 n13.pco=33840
 t14.pco=33840
-busy.txt="Saving edited Advanced Rates ..."
+busy.txt="Saving edited advanced rates ..."
 vis busy,1
 vis b3,0
 t11.txt="GOBLIN RAW 700 COMPETITION MK2"
@@ -152,3 +152,10 @@ n12.pco=0
 n13.pco=0
 t14.pco=0
 @shot 42_long
+# the longest words the box is given: a read window that ends with nothing come back (transceiver.h BlockSilence, B81),
+# and a read refused with no Bluetooth to the receiver (Parameters.h:225, B80)
+busy.txt="Advanced rates: nothing came back in 2 s (Bluetooth 2). Bank switch again, or leave and return."
+vis busy,1
+@shot 42_nothing
+busy.txt="No Bluetooth to the receiver: NOT read. Close the phone app if it is running. It is tried again."
+@shot 42_nopipe

@@ -78,10 +78,10 @@ void ResetAllTrims()
 
 void SetATrimDefinition(int i)
 {
-    char AilDone[] = "Aileron trim is defined!";
-    char EleDone[] = "Elevator trim is defined!";
-    char ThrDone[] = "Throttle trim is defined!";
-    char RudDone[] = "Rudder trim is defined!";
+    char AilDone[] = "Aileron trim: done";
+    char EleDone[] = "Elevator trim: done";
+    char ThrDone[] = "Throttle trim: done";
+    char RudDone[] = "Rudder trim: done";
 
     char ail[] = "ail";
     char ele[] = "ele";
@@ -498,9 +498,9 @@ void TrimsToSubtrim()
 
     // Trims range from 40 to 120. 80 is centre.
 
-    char Prompt[] = "Move these trims to Subtrims?\r\n\r\nThis would re-centre these trims.";
-    char ItsCancelled[] = "Cancelled.\r\nSubtrims were not changed.\r\nLook at the Subtrim view \r\nif you'd like to check.";
-    char ItsAllDone[] = "Done!\r\nSubtrims have been amended.\r\n\r\nLook at the Subtrim view \r\nif you'd like to check.";
+    char Prompt[] = "Move these trims into subtrim?\r\n\r\nThe trims of all four banks\r\ngo back to centre.";
+    char ItsCancelled[] = "Cancelled.\r\nSubtrim not changed.";
+    char ItsAllDone[] = "Done.\r\nThe trims are now in subtrim,\r\nand back at centre.";
 
     if (GetConfirmation(pTrimView, Prompt))
     {

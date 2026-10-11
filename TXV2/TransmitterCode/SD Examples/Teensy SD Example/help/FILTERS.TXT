@@ -1,11 +1,45 @@
-Gyro filters: Rotorflight's filtering of the gyro signal, laid out as the configurator's Gyro tab, with its names. Needs a Version 2 receiver with Bluetooth, the safety on and the model disarmed. The same for every bank. Next > shows what the configurator's expert mode adds.||
-
-Lowpass Filter: smooths everything above the cutoff. Enable off = no lowpass (the type and cutoff are kept for an Enable on). Filter type: 1st order or 2nd order (tap to change; another type set from the configurator stays offered while it is the one set). Cutoff frequency: Rotorflight advises not below 60 Hz; 100 is usual.||
-
-Dynamic Filter: notches that find the strongest vibrations by themselves. Notch count 0 to 8 (4 to 6 alone, 2 to 4 with the RPM filter). Notch Q: how narrow each notch is, 2.0 to 4.0 recommended, below 2.0 adds delay. Notch minimum and maximum: the range they search, in Hz.||
-
-RPM Filter: follows the head speed and removes the rotor and motor vibrations wherever they are; the main filter on a helicopter. It needs a head-speed signal (ESC telemetry or an RPM sensor). Strength: Low, Medium or High (more removes more, with more delay); Custom keeps a table made in the configurator. Minimum frequency: set a little below the main rotor's frequency at the lowest flying head speed (20 Hz is usual).||
-
-The Enable of the Dynamic Filter and of the RPM Filter are Rotorflight features, which take effect only when the flight controller starts: a save that changes one restarts the flight controller (as the configurator does), and the page waits for it and reads back.||
-
-Press a number to type a new one. Save writes to the flight controller, stores there, and reads back. OK leaves; if something was edited and not saved, it asks.||
+How Rotorflight cleans vibration out of the gyro signal, laid|
+out as the configurator's Gyro tab, with its names. The same in|
+every bank ('All banks' at the top left).||
+It needs the safety on (model disarmed) and a Version 2|
+receiver with Bluetooth. With no model, the pages show the|
+model's backup on the card, if one was made: a 'Save' then|
+changes the backup, and the change is offered to the model|
+when it next connects.||
+Tap a number to type a new one. Tap Filter type or Strength|
+to step to the next choice.|
+Each section has an Enable (green = on). Off hides its rows.|
+'Next >' opens the extras of the configurator's expert mode.|
+'Save' appears once something is changed. It writes both filter|
+pages to the flight controller, stores them there and reads|
+them back. If the other page was changed too, it asks first.|
+'OK' leaves; if a change was not saved, it asks first.||
+LOWPASS FILTER:|
+Smooths all above the cutoff; lower is smoother but adds delay.|
+Enable off sets its type and cutoff to 0, as the configurator|
+does. On again before you leave these pages, it gets them|
+back; otherwise it starts at 1st order, 125 Hz.|
+Filter type: 1st order or 2nd order. Another type set in the|
+configurator stays offered while it is the one set.|
+Cutoff frequency [Hz]: 0 to 1000. 100 is usual, and|
+Rotorflight advises not below 60.||
+RPM FILTER:|
+The main filter on a helicopter: it follows the head speed and|
+removes the rotor and motor vibrations wherever they are.|
+It needs a head-speed signal (ESC telemetry or an RPM sensor).|
+Strength: Low, Medium or High (more removes more, with more|
+delay). Custom keeps a table made in the configurator.|
+Minimum frequency [Hz]: 1 to 100; 20 is usual. Set it a little|
+below the main rotor's frequency at your lowest head speed.||
+DYNAMIC FILTER:|
+Notches that find the strongest vibrations by themselves.|
+Notch count: 0 to 8 (4 to 6 alone, 2 to 4 with the RPM filter).|
+Notch Q: how narrow each notch is (1.0 to 10.0).|
+2.0 to 4.0 is recommended; below 2.0 adds delay.|
+Notch minimum and maximum [Hz]: the range they search|
+(10 to 200, and 100 to 500). The maximum must be above the|
+minimum, or 'Save' refuses.||
+RPM AND DYNAMIC FILTER ENABLE:|
+These two apply only when the flight controller starts.|
+A 'Save' that changes one restarts the flight controller (as|
+the configurator does); the page waits for it, then reads back.|

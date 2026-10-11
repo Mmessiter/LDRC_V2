@@ -21,3 +21,35 @@ tn5.txt="No memory chip on board"
 tn6.txt="Full: erase before flying"
 vis b3,1
 @shot 73_blackbox_longest
+# no model (BbShowMemory's first branch) and the erase's progress (RF_FcSetup.h:396-398, m[90]); the restart (:452)
+@model 0
+page BlackboxView
+t9.txt="All banks"
+t11.txt="Black Thunder 2"
+vis b3,0
+tn0.txt="Never"
+tn1.txt="Nowhere"
+tn2.txt="1 in 128 loops"
+tn3.txt="0"
+tn4.val=0
+tn5.txt="Connect the model to see"
+tn6.txt="how full its memory is"
+@shot 73_nomodel
+@model 1
+tn0.txt="Armed + switch"
+tn1.txt="SD card"
+tn2.txt="1 in 8 (500/s)"
+tn3.txt="5"
+tn4.val=1
+tn5.txt="125.3 of 125.3 MB used"
+tn6.txt="Busy: erasing?"
+vis busy,1
+busy.txt="Erasing the flight logs: 23 s (it beeps while it erases) ..."
+@shot 73_erasing
+busy.txt="Restarting the flight controller (where and how often apply at boot) ..."
+@shot 73_restart
+busy.txt="Still not erased after 2 minutes: is Where set to FC memory, and restarted since?"
+@shot 73_erase_timeout
+busy.txt="Not all saved: the flight controller keeps its setup while it records or erases."
+@shot 73_notsaved
+vis busy,0

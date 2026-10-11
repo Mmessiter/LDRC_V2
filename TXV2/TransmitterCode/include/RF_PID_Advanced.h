@@ -110,7 +110,7 @@ FLASHMEM void ShowLocalPIDsAdvancedBank()
 FLASHMEM void ShowPIDAdvancedBank() // this is called when bank is changed so new bank's PID Advanced values are requested from Nexus and shown
 {
     char buf[40];
-    strcpy(buf, "Loading Values for  ");
+    strcpy(buf, "Loading values for ");
     strcat(buf, BankNames[BanksInUse[Bank - 1]]);
     strcat(buf, " ...");
     if (CurrentView == PIDADVANCEDVIEW) // Must be in PIDAdvanced view
@@ -146,7 +146,7 @@ FLASHMEM void ShowPIDAdvancedBank() // this is called when bank is changed so ne
 // ************************************************************************************************************/
 FLASHMEM void SaveToLocalABank()
 {
-    PIDAdvancedMsg((char *)"Saving edited PID Advanced values ...", Gray); // Show sending message
+    PIDAdvancedMsg((char *)"Saving edited advanced PIDs ...", Gray); // Show sending message
     ReadEditedPIDAdvancedValues();                                         // read the edited PID Advanced values from the screen;
     for (int i = 0; i < MAX_PIDS_ADVANCED_BYTES; ++i)
     {
@@ -177,7 +177,7 @@ FLASHMEM void SendEditedPID_Advanced()
     PlaySound(BEEPMIDDLE);
     PIDS_Advanced_Were_Edited = false;
     DelayWithDog(100);                                                      // allow LOTS of time for screen to update BEFORE sending another Nextion command
-    PIDAdvancedMsg((char *)"Sending edited PID Advanced values ...", Gray); // Show sending message
+    PIDAdvancedMsg((char *)"Sending edited advanced PIDs ...", Gray); // Show sending message
     ReadEditedPIDAdvancedValues();                                          // read the edited PID Advanced values from the screen;
     AddParameterstoQueue(GET_THIRD_8_ADVANCED_PID_VALUES);                  // LAST MUST BE QUEUED FIRST!!!
     AddParameterstoQueue(GET_SECOND_9_ADVANCED_PID_VALUES);                 // the order of the other two doesn't matter ...

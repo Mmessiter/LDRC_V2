@@ -3,7 +3,9 @@
 #pragma once
 #include "LdrcFlight.h"
 
-static const uint16_t FL_GROUND = 0x0000, FL_DIM = 0x8410, FL_YELLOW = 0xFFE0, FL_GREEN = 0x87F0, FL_AMBER = 0xFD20,
+// (FL_ON_GROUND: the quieter words on the pages' black ground - light grey in every theme: a light theme's own quieter
+// colour is dark, made for its light panels, and did not read on black)
+static const uint16_t FL_GROUND = 0x0000, FL_DIM = 0x8410, FL_ON_GROUND = 0xC618, FL_YELLOW = 0xFFE0, FL_GREEN = 0x87F0, FL_AMBER = 0xFD20,
                       FL_RED = 0xD800, FL_BUTTON = 0xD69A, FL_CHOSEN = 0xFFF3;
 #define FL_STRIP OUR_STRIP                                      // the pilot's colours (src/theme_device.h): navy and white unless chosen
 #define FL_FACE OUR_PANEL
@@ -11,6 +13,7 @@ static const uint16_t FL_GROUND = 0x0000, FL_DIM = 0x8410, FL_YELLOW = 0xFFE0, F
 #define FL_INK OUR_INK
 #define FL_SOFT OUR_SOFT
 #define FL_LINE OUR_INK
+#define FL_ACCENT (theme.accent())                              // yellow on a dark theme; on a light one (white, yellow, sky) its text colour: yellow does not read there
 
 static void flClip(const ldrc::FlightRect &r) { clipX0 = max(0, (int) r.x); clipY0 = max(0, (int) r.y); clipX1 = min(W, r.x + r.w); clipY1 = min(H, r.y + r.h); }
 static void flUnclip() { clipX0 = 0; clipY0 = 0; clipX1 = W; clipY1 = H; }
@@ -37,10 +40,11 @@ static void flNumber(const ldrc::FlightRect &a, const std::string &big, const st
     if (s16 == 17) s16 = 16;                                      // (a sixteenth bigger is not worth the font's own crisp letters)
     if (s16 < 8) {                                                // too small for the big letters: the plain 28-pixel ones, cut to fit
         const int uw = unit.empty() ? 0 : textWidth(2, unit) + 6;
-        const std::string b = flCut(big, 6, a.w - uw); const int bw = textWidth(6, b);
-        const int x0 = a.x + (a.w - bw - uw) / 2, y0 = a.y + (a.h - fontHeight(6)) / 2;
-        flText(x0, y0, 6, ink, b);
-        if (uw) flText(x0 + bw + 6, y0 + fontHeight(6) - fontHeight(2), 2, unitInk, unit);
+        const int bf = textWidth(6, big) <= a.w - uw ? 6 : 2;        // (28 px where it fits, else 24 px: "RAW 420 MCM" whole, not "RAW 420 M...")
+        const std::string b = flCut(big, bf, a.w - uw); const int bw = textWidth(bf, b);
+        const int x0 = a.x + (a.w - bw - uw) / 2, y0 = a.y + (a.h - fontHeight(bf)) / 2;
+        flText(x0, y0, bf, ink, b);
+        if (uw) flText(x0 + bw + 6, y0 + fontHeight(bf) - fontHeight(2), 2, unitInk, unit);
         return;
     }
     // the 64-pixel font from three quarters of its size up; below that the 32-pixel one, enlarged (smoother than shrunk)
@@ -67,10 +71,11 @@ static void flRaised(const ldrc::FlightRect &r, uint16_t face, bool down) {     
 static void flBars(const ldrc::FlightRect &a, const std::vector<uint8_t> &bars, size_t from, int firstChannel, uint16_t track, uint16_t fill, uint16_t ink) {
     const int rows = 8, rowH = a.h / rows, barH = max(3, rowH - (rowH >= 12 ? 5 : 2));
     const bool numbers = rowH >= 18;
-    const int numW = numbers ? 28 : 0, tx = a.x + numW, tw = a.w - numW, cx = tx + tw / 2, half = tw / 2;
+    const int numFont = rowH >= 30 ? 2 : 4;                       // (in a big box the numbers in the 24 px letters of every other word, not the 16 px ones)
+    const int numW = numbers ? (numFont == 2 ? 34 : 28) : 0, tx = a.x + numW, tw = a.w - numW, cx = tx + tw / 2, half = tw / 2;
     for (int i = 0; i < rows && from + i < bars.size(); ++i) {
         const int y = a.y + i * rowH + (rowH - barH) / 2;
-        if (numbers) { char n[4]; snprintf(n, sizeof(n), "%d", firstChannel + i); flText(a.x, a.y + i * rowH + (rowH - fontHeight(4)) / 2, 4, ink, n); }
+        if (numbers) { char n[4]; snprintf(n, sizeof(n), "%d", firstChannel + i); flText(a.x, a.y + i * rowH + (rowH - fontHeight(numFont)) / 2, numFont, ink, n); }
         gfx->fillRect(tx, y, tw, barH, track);
         float d = ((int) bars[from + i] - 50) / 25.0f; if (d > 1) d = 1; if (d < -1) d = -1;
         const int len = (int) (d * half);
@@ -141,7 +146,7 @@ static void flightDrawTile(const ldrc::FlightTile &t, bool setup) {
     gfx->fillRect(r.x, r.y, r.w, r.h, FL_GROUND);
     if (v.state == FS_EMPTY) {                                    // nothing chosen: a dim outline on the setup page, nothing in flight
         if (setup) {
-            for (int k = 0; k < 2; ++k) gfx->drawRect(r.x + k, r.y + k, r.w - 2 * k, r.h - 2 * k, t.pressed ? FL_SOFT : FL_DIM);
+            for (int k = 0; k < 2; ++k) gfx->drawRect(r.x + k, r.y + k, r.w - 2 * k, r.h - 2 * k, t.pressed ? FL_ON_GROUND : FL_DIM);
             flClip(r);
             const std::string s = "Nothing";
             flText(r.x + (r.w - textWidth(6, s)) / 2, r.y + (r.h - fontHeight(6)) / 2, 6, FL_DIM, s);
@@ -158,37 +163,46 @@ static void flightDrawTile(const ldrc::FlightTile &t, bool setup) {
     else if (v.state == FS_ALARM) { face = FL_RED; ink = 0xFFFF; soft = 0xFFFF; }
     if (t.pressed) face = shade(face, ldrc::themeIsLight(face) ? -20 : -30);
     gfx->fillRoundRect(r.x, r.y, r.w, r.h, 10, face);
+    if (v.state == FS_WARN || v.state == FS_ALARM)               // a thick white frame as well as the colour: a red or yellow theme's boxes are almost amber and red themselves
+        for (int k = 0; k < 4; ++k) gfx->drawRoundRect(r.x + k, r.y + k, r.w - 2 * k, r.h - 2 * k, 10 - k, 0xFFFF);
     if (v.state == FS_NORMAL || v.state == FS_GOOD || v.state == FS_STALE) {
         gfx->drawRoundRect(r.x, r.y, r.w, r.h, 10, setup ? FL_SOFT : edge);
     }
-    // (green for "ON" and grey for "--" on a dark box; on a light one, its own text colour and its quieter blend)
-    const uint16_t valueInk = v.state == FS_STALE ? (own ? soft : FL_DIM) : v.state == FS_GOOD ? (own && ldrc::themeIsLight(face) ? ink : FL_GREEN) : ink;
+    // (green for "ON" and grey for "--" on a dark box; on a light one - its own theme's or the screens' - its own text colour and its quieter one)
+    const bool lightFace = ldrc::themeIsLight(face);
+    const uint16_t dim = own || lightFace ? soft : FL_DIM;
+    const uint16_t valueInk = v.state == FS_STALE ? dim : v.state == FS_GOOD ? (lightFace ? ink : FL_GREEN) : ink;
     flClip(FlightRect(r.x + 2, r.y + 2, r.w - 4, r.h - 4));
     const int pad = FLIGHT_PAD, tf = t.textFont, labelH = fontHeight(tf), smallH = labelH;   // (room for the small line in every box: the numbers of a row line up)
-    flText(r.x + pad, r.y + 8, tf, soft, flCut(v.label, tf, r.w - 2 * pad));
+    const int wpad = 10;                                          // (the words 10 px in, the number 12: "ESC temperature" whole in a 192 px box)
+    flText(r.x + wpad, r.y + 8, tf, soft, flCut(v.label, tf, r.w - 2 * wpad));
     if (!v.image.empty()) {                                       // the model's picture instead of a number, as big as the box allows: the whole box but its edge (1.9.11)
         const int top = r.y + 5;
         if (!flImage(FlightRect(r.x + 5, top, r.w - 10, r.h - 10), v.image)) {   // (no such picture on the card: say which)
-            flNumber(FlightRect(r.x + pad, top, r.w - 2 * pad, r.y + r.h - 10 - top - smallH - 4), "--", "", t.scale, FL_DIM, FL_DIM);
+            flNumber(FlightRect(r.x + pad, top, r.w - 2 * pad, r.y + r.h - 10 - top - smallH - 4), "--", "", t.scale, dim, dim);
             std::string base = v.image.substr(v.image.find_last_of("/\\") == std::string::npos ? 0 : v.image.find_last_of("/\\") + 1);
             const size_t dot = base.find_last_of('.'); if (dot != std::string::npos) base = base.substr(0, dot);
-            flText(r.x + pad, r.y + r.h - smallH - 8, tf, soft, flCut(base + ": no picture", tf, r.w - 2 * pad));
+            flText(r.x + wpad, r.y + r.h - smallH - 8, tf, soft, flCut(base + ": no picture", tf, r.w - 2 * wpad));
         }
         flUnclip();
         return;
     }
     if (!v.bars.empty()) {                                        // channel bars instead of a number: one column of eight, or two
         const int top = r.y + 8 + labelH + 6, h = r.h - (top - r.y) - 10;   // (as tall as the box: a big box, big bars)
-        if (v.bars.size() <= 8) flBars(FlightRect(r.x + pad, top, r.w - 2 * pad, h), v.bars, 0, 1, FL_STRIP, FL_YELLOW, soft);
+        if (v.bars.size() <= 8) flBars(FlightRect(r.x + pad, top, r.w - 2 * pad, h), v.bars, 0, 1, FL_STRIP, FL_ACCENT, soft);
         else {
             const int colW = (r.w - 2 * pad - 14) / 2;
-            flBars(FlightRect(r.x + pad, top, colW, h), v.bars, 0, 1, FL_STRIP, FL_YELLOW, soft);
-            flBars(FlightRect(r.x + pad + colW + 14, top, colW, h), v.bars, 8, 9, FL_STRIP, FL_YELLOW, soft);
+            flBars(FlightRect(r.x + pad, top, colW, h), v.bars, 0, 1, FL_STRIP, FL_ACCENT, soft);
+            flBars(FlightRect(r.x + pad + colW + 14, top, colW, h), v.bars, 8, 9, FL_STRIP, FL_ACCENT, soft);
         }
         flUnclip();
         return;
     }
-    if (!v.small.empty()) flText(r.x + pad, r.y + r.h - smallH - 8, tf, soft, flCut(v.small, tf, r.w - 2 * pad));
+    if (!v.small.empty()) {
+        std::string s = v.small;                                  // (a pack's "total" makes way before its percent - the number that turns amber - is cut)
+        if (textWidth(tf, s) > r.w - 2 * wpad) { const size_t at = s.find(" total"); if (at != std::string::npos) s.erase(at, 6); }
+        flText(r.x + wpad, r.y + r.h - smallH - 8, tf, soft, flCut(s, tf, r.w - 2 * wpad));
+    }
     // the number: as big as the box allows (Malcolm, 10-04: "Box size should be linked to font size"), its unit after it
     const int top = r.y + 8 + labelH, bottom = r.y + r.h - 8 - smallH;
     flNumber(FlightRect(r.x + pad, top, r.w - 2 * pad, bottom - top), v.big, v.unit, t.scale, valueInk, v.state == FS_STALE ? FL_DIM : soft);
@@ -198,7 +212,7 @@ static void flightDrawTile(const ldrc::FlightTile &t, bool setup) {
 static void flightDrawButton(const ldrc::FlightButton &b) {
     if (b.label) {                                                // words on the page (a box's colour page: "Box colour", "Text colour")
         gfx->fillRect(b.r.x, b.r.y, b.r.w, b.r.h, FL_GROUND);
-        flText(b.r.x, b.r.y + (b.r.h - fontHeight(6)) / 2, 6, FL_SOFT, b.text);
+        flText(b.r.x, b.r.y + (b.r.h - fontHeight(6)) / 2, 6, FL_ON_GROUND, b.text);
         return;
     }
     uint16_t face = b.chosen ? FL_CHOSEN : b.usedBy ? shade(FL_BUTTON, -18) : FL_BUTTON;   // (a thing another box shows: a shade darker, and badged below)
@@ -211,7 +225,7 @@ static void flightDrawButton(const ldrc::FlightButton &b) {
         if (b.chosen) {                                           // yellow, with black inside it: seen on a yellow pair too
             for (int k = 0; k < 3; ++k) gfx->drawRoundRect(r.x + k, r.y + k, r.w - 2 * k, r.h - 2 * k, 6, FL_YELLOW);
             gfx->drawRoundRect(r.x + 3, r.y + 3, r.w - 6, r.h - 6, 5, 0x0000);
-        } else gfx->drawRoundRect(r.x, r.y, r.w, r.h, 6, FL_SOFT);   // (black shows on the black page)
+        } else gfx->drawRoundRect(r.x, r.y, r.w, r.h, 6, FL_ON_GROUND);   // (black shows on the black page)
         if (!b.text.empty()) {
             const int font = r.h >= 60 && textWidth(0, b.text) <= r.w - 12 ? 0 : 2;
             flClip(r); flText(r.x + (r.w - textWidth(font, b.text)) / 2, r.y + (r.h - fontHeight(font)) / 2, font, b.ink, b.text); flUnclip();
@@ -235,7 +249,7 @@ static void flightDrawButton(const ldrc::FlightButton &b) {
         return;
     }
     flClip(b.r);
-    const int room = b.r.w - 16, d = b.pressed ? 1 : 0;
+    const int room = b.r.w - (b.usedBy ? 32 : 16), d = b.pressed ? 1 : 0;   // (room beside the disc of a thing another box shows: a wider name wraps, as 'ESC temperature' does, so 8 px of edge stay)
     std::vector<std::string> lines;
     if (textWidth(6, b.text) <= room) lines.push_back(b.text);
     else {                                                        // two lines where the button is tall enough ("Transmitter" / "battery")
@@ -244,16 +258,18 @@ static void flightDrawButton(const ldrc::FlightButton &b) {
             lines.push_back(b.text.substr(0, sp)); lines.push_back(b.text.substr(sp + 1));
         }
     }
+    // (a thing another box shows carries that box's number in a disc at the top right: the words keep clear of it)
+    auto wordsX = [&](int tw) { int x = b.r.x + (b.r.w - tw) / 2; if (b.usedBy) x = max(b.r.x + 4, min(x, b.r.x + b.r.w - 24 - tw)); return x; };
     if (!lines.empty()) {
         const int fh = fontHeight(6), y0 = b.r.y + (b.r.h - fh * (int) lines.size()) / 2;
-        for (size_t i = 0; i < lines.size(); ++i) flText(b.r.x + (b.r.w - textWidth(6, lines[i])) / 2 + d, y0 + (int) i * fh + d, 6, 0x0000, lines[i]);
+        for (size_t i = 0; i < lines.size(); ++i) flText(wordsX(textWidth(6, lines[i])) + d, y0 + (int) i * fh + d, 6, 0x0000, lines[i]);
     } else {
-        const std::string s = flCut(b.text, 2, b.r.w - 12);
-        flText(b.r.x + (b.r.w - textWidth(2, s)) / 2 + d, b.r.y + (b.r.h - fontHeight(2)) / 2 + d, 2, 0x0000, s);
+        const std::string s = flCut(b.text, 2, b.r.w - (b.usedBy ? 28 : 12));
+        flText(wordsX(textWidth(2, s)) + d, b.r.y + (b.r.h - fontHeight(2)) / 2 + d, 2, 0x0000, s);
     }
     if (b.usedBy) {                                               // the box that already shows this thing: its number in a dark disc, top right
-        const int cx = b.r.x + b.r.w - 16 + d, cy = b.r.y + 14 + d;
-        gfx->fillCircle(cx, cy, 11, 0x4A69);
+        const int cx = b.r.x + b.r.w - 13 + d, cy = b.r.y + 13 + d;
+        gfx->fillCircle(cx, cy, 9, 0x4A69);
         const std::string n = std::to_string((int) b.usedBy);
         flText(cx - textWidth(4, n) / 2, cy - fontHeight(4) / 2, 4, 0xFFFF, n);
     }
@@ -269,10 +285,10 @@ static void flightDrawStrip(const ldrc::FlightScene &sc) {
         gfx->fillRect(0, 0, W, FLIGHT_STRIP, alert ? FL_RED : FL_STRIP);
         const int y = (FLIGHT_STRIP - fontHeight(6)) / 2, third = W / 3;
         flClip(FlightRect(0, 0, W, FLIGHT_STRIP));
-        if (!sc.left.empty() && !alert) flText(12, y, 6, FL_YELLOW, flCut(sc.left, 6, third - 20));
+        if (!sc.left.empty() && !alert) flText(12, y, 6, FL_ACCENT, flCut(sc.left, 6, third - 20));
         if (alert) {                                             // the warning alone, centred in the strip before the tabs (1.10.1), as big as fits
             const int room = sc.stripRight - 12, font = textWidth(0, sc.alert) <= room ? 0 : 6;
-            flText(6 + (room - textWidth(font, sc.alert)) / 2, (FLIGHT_STRIP - fontHeight(font)) / 2, font, FL_INK, sc.alert);
+            flText(6 + (room - textWidth(font, sc.alert)) / 2, (FLIGHT_STRIP - fontHeight(font)) / 2, font, 0xFFFF, sc.alert);   // (white on the red, whatever the theme: a light theme's text colour did not read on it)
         }
         else if (!sc.middle.empty()) {                           // the bank, centred in what is left between the name and the tabs
             const int room = sc.stripRight - third - 8; const std::string m = flCut(sc.middle, 6, room);
@@ -285,7 +301,7 @@ static void flightDrawStrip(const ldrc::FlightScene &sc) {
     gfx->fillRect(0, 0, W, FLIGHT_SETUP_STRIP, FL_STRIP); gfx->drawFastHLine(0, FLIGHT_SETUP_STRIP, W, FL_LINE);
     flText(sc.tabs ? 14 : (W - textWidth(0, sc.title)) / 2, (FLIGHT_SETUP_STRIP - fontHeight(0)) / 2, 0, FL_INK, sc.title);   // (tabs at the right: the title on the left)
     gfx->fillRect(0, FLIGHT_SETUP_STRIP + 1, W, 32, FL_GROUND);
-    if (!sc.hint.empty()) flText((W - textWidth(6, sc.hint)) / 2, FLIGHT_SETUP_STRIP + 4, 6, FL_SOFT, sc.hint);
+    if (!sc.hint.empty()) flText((W - textWidth(6, sc.hint)) / 2, FLIGHT_SETUP_STRIP + 4, 6, FL_ON_GROUND, sc.hint);
 }
 
 static void flightDrawAll(const ldrc::FlightScene &sc) {

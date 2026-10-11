@@ -2,7 +2,8 @@
 # PopulateDataView Telemetry.h:326 every SHOWCOMMSDELAY (100 ms) as ONE combined command (BuildText/BuildValue);
 # CheckTXVolts Telemetry.h:58 -> t17, CheckRXVolts :102 -> t6.
 Screen_Background=8
-# no model connected (fresh power-on): n0 and rxv are NOT sent, so the page keeps its design-time "2.5.6K"
+# no model connected (fresh power-on): n0, rxv and t6 (RX volts) are NOT sent; rxv and t6 keep the page's own "-" (polish
+# 10 Oct: rxv said a made-up "2.5.6K" before, t6 "0")
 @model 0
 page DataView
 txv.txt="2.5.6B22 03/10/26"
@@ -15,8 +16,8 @@ Ag.val=0
 Gc.txt="0:00:00"
 n1.txt="0:00:00"
 alt.txt="0 RPM"
-MaxAlt.txt="0.0 C."
-Temp.txt="0.0 C."
+MaxAlt.txt="0.0 C"
+Temp.txt="0.0 C"
 rx.txt="0"
 Sbus.txt="Unknown"
 t17.txt="3.98"
@@ -35,8 +36,8 @@ Ag.val=6
 Gc.txt="0:03:18"
 n1.txt="0:00:56"
 alt.txt="2214 RPM"
-MaxAlt.txt="52.4 C."
-Temp.txt="44.8 C."
+MaxAlt.txt="52.4 C"
+Temp.txt="44.8 C"
 rx.txt="452117"
 Sbus.txt="TRX:3 V2"
 t17.txt="3.96"
@@ -56,8 +57,8 @@ Ag.val=2147483647
 Gc.txt="18:12:15"
 n1.txt="18:12:15"
 alt.txt="65534 RPM"
-MaxAlt.txt="299.9 C."
-Temp.txt="-99.9 C."
+MaxAlt.txt="299.9 C"
+Temp.txt="-99.9 C"
 rx.txt="999999"
 Sbus.txt="TRX:2 PWM:11"
 t17.txt="4.20"

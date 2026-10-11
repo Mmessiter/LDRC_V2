@@ -1,0 +1,40 @@
+# ServoView (page 60), one Rotorflight servo at a time (RF_Servos.h). StartServoView :179 writes t11, t9 "Bank %d" :190-193,
+# vis b3,0, then ServoRead -> ServoBusy("Reading the servos from the flight controller ...") :90. ServoShow :42:
+# t0 ServoTitle "Servo %d of %d (Rotorflight)" :30 (longest "Servo 8 of 8 (Rotorflight)"), tn0..tn6 numbers
+# (ServoGather's clamps :63-74: centre 750..2250, min -1000..0, max 0..1000, scales 50..1000, rate 25..5000, speed 0..60000),
+# tn7 Reverse / tn8 Geometry switches (.val). Save -> "Writing to the flight controller ..." :269, then :169.
+Screen_Background=8
+@model 1
+page ServoView
+t11.txt="Black Thunder 2"
+t9.txt="Bank 1"
+vis b3,0
+vis busy,1
+busy.txt="Reading the servos from the flight controller ..."
+@shot 60_reading
+vis busy,0
+t0.txt="Servo 1 of 4 (Rotorflight)"
+tn0.txt="1500"
+tn1.txt="-700"
+tn2.txt="700"
+tn3.txt="500"
+tn4.txt="500"
+tn5.txt="333"
+tn6.txt="0"
+tn7.val=0
+tn8.val=1
+@shot 60_loaded
+t0.txt="Servo 8 of 8 (Rotorflight)"
+tn0.txt="2250"
+tn1.txt="-1000"
+tn2.txt="1000"
+tn3.txt="1000"
+tn4.txt="1000"
+tn5.txt="5000"
+tn6.txt="60000"
+tn7.val=1
+vis b3,1
+@shot 60_edited_long
+vis busy,1
+busy.txt="Saved, but the flight controller adjusted some values."
+@shot 60_saved

@@ -115,7 +115,7 @@ FLASHMEM void ShowRatesAdvancedBank()
     if (Rates_Advanced_Were_Edited) // if RATES were edited but not sent and bank changed
     {
         {
-            char w1[] = "Values for last Rate were edited \r\nbut not saved.(Too late now !)\r\nSo you may want to check them.";
+            char w1[] = "Values for last Rate were edited \r\nbut not saved. (Too late now!)\r\nSo you may want to check them.";
             MsgBox((char *)"page Rates_A_View", w1); // Warn about unsaved edits
         }
     }
@@ -133,7 +133,7 @@ FLASHMEM void StartRatesAdvancedView()
 {
     if (Rates_Were_Edited)
     {
-        if (GetConfirmation((char *)"page RatesView", (char *)"Discard edited RATES values?"))
+        if (GetConfirmation((char *)"page RatesView", (char *)"Discard the edited rates?"))
         {
             Rates_Were_Edited = false;
         }
@@ -181,7 +181,7 @@ FLASHMEM void ReadRatesAdvanced()
 // ************************************************************************************************************/
 FLASHMEM void SaveLocalRatesAdvancedBank()
 {
-    RatesAdvancedMsg((char *)"Saving edited Advanced Rates ...", Gray); // Show sending message
+    RatesAdvancedMsg((char *)"Saving edited advanced rates ...", Gray); // Show sending message
     Rates_Advanced_Were_Edited = false;
     ReadRatesAdvanced();
     for (uint8_t i = 0; i < MAX_RATES_ADVANCED_BYTES; ++i)
@@ -214,7 +214,7 @@ FLASHMEM void SendEditedRatesAdvanced()
     PlaySound(BEEPMIDDLE);
     BlockBankChanges = true;
     DelayWithDog(100);                                           //  allow LOTS of time for screen to update BEFORE sending another Nextion command
-    RatesAdvancedMsg((char *)"Sending edited values ...", Gray); // Show sending message
+    RatesAdvancedMsg((char *)"Sending edited advanced rates ...", Gray); // Show sending message
     ReadRatesAdvanced();
     AddParameterstoQueue(GET_RATES_ADVANCED_VALUES_SECOND_8); // Send RATES ADVANCED values from TX to RX
     AddParameterstoQueue(GET_RATES_ADVANCED_VALUES_FIRST_7);  // Send RATES ADVANCED values from TX to RX ...because this queue is a LIFO stack

@@ -42,7 +42,7 @@ FLASHMEM void ReadEditedRateValues()
 // ************************************************************************************************************/
 FLASHMEM void SaveRatesLocalBank()
 {
-    RatesMsg((char *)"Saving edited Rates ...", Gray); // Show sending message
+    RatesMsg((char *)"Saving edited rates ...", Gray); // Show sending message
     Rates_Were_Edited = false;
     ReadEditedRateValues();
     Rate_Values[0] = 4; // set to "Actual" type
@@ -75,7 +75,7 @@ FLASHMEM void SendEditedRates()
     BlockBankChanges = true;
     PlaySound(BEEPMIDDLE);
     DelayWithDog(100);                                  // allow LOTS of time for screen to update BEFORE sending another Nextion command
-    RatesMsg((char *)"Sending edited Rates ...", Gray); // Show sending message
+    RatesMsg((char *)"Sending edited rates ...", Gray); // Show sending message
     ReadEditedRateValues();                             // read the edited RATES from the screen;
     Wait_for_Advanced_Rates_to_Be_Sent_Too = false;     // this flag tells the Ack payload parser not to wait until these have been sent before allowing bank changes again because rates changes can cause problems if a bank change happens while they are being sent
     AddParameterstoQueue(GET_SECOND_6_RATES_VALUES);    // SECOND MUST BE QUEUED FIRST!!! Send RATES 7-12 values from TX to RX
@@ -229,7 +229,7 @@ FLASHMEM void ShowRatesBank()
 
         if (Rates_Were_Edited) // if RATES were edited but not sent and bank changed
         {
-            char w1[] = "Values for last Rate were edited \r\nbut not saved.(Too late now !)\r\nSo you may want to check them.";
+            char w1[] = "Values for last Rate were edited \r\nbut not saved. (Too late now!)\r\nSo you may want to check them.";
             MsgBox((char *)"page RatesView", w1); // Warn about unsaved edits
         }
         RatesMsg(buf, Gray);
@@ -247,13 +247,13 @@ FLASHMEM void Modify_Labels_For_RATES_View()
 
     if (RotorFlight_V >= 2)
     {
-        SendText((char *)"t4", (char *)"Rates"); // in RF v2.2 this is called Axis but in RF v2.3 it's called Rates so change label accordingly
+        SendText((char *)"t4", (char *)"Axis"); // the configurator says Axis (RF 2.2) or Rates (RF 2.3): the rows are the axes either way
         SendText((char *)"t5", (char *)"Rate");
         SendText((char *)"t6", (char *)"Shape");
     }else{
         SendText((char *)"t4", (char *)"Axis"); // in RF v2.2 this is called Axis but in RF v2.3 it's called Rates so change label accordingly
-        SendText((char *)"t5", (char *)"Centre Sens.");
-        SendText((char *)"t6", (char *)"Maximum");
+        SendText((char *)"t5", (char *)"Centre rate");
+        SendText((char *)"t6", (char *)"Max rate");
     }
 }
 // ******************************************************************************************************************************/
@@ -278,7 +278,7 @@ FLASHMEM void EndRFRatesView()
 {
     if (Rates_Were_Edited)
     {
-        if (!GetConfirmation((char *)"page RatesView", (char *)"Discard edited RATES?"))
+        if (!GetConfirmation((char *)"page RatesView", (char *)"Discard the edited rates?"))
             return;
     }
     Rates_Were_Edited = false;

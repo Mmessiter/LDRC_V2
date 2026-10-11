@@ -246,7 +246,7 @@ void EnsureMotorIsOff()
         DelayWithDog(1200);
         Force_Early_Sound = true; // Force sound to play
         PlaySound(PLSTURNOFF);
-        MsgBox(pFrontView, (char *)"Motor switch is still ON!");
+        MsgBox(pFrontView, (char *)"The motor switch is ON.\r\nSwitch it off, then press OK.");
         DelayWithDog(500); // allow time for sound to play and for pilot to react
         CheckMotorOff();
     }
@@ -1371,7 +1371,7 @@ void DoOneSwitch(char *Sw, uint8_t n)
             continue;
         char c[32], label[16];
         ChannelLabel((uint8_t)(d + 5), label, sizeof(label)); // (B34: by number; B39: or its name, if the pilot has renamed it)
-        snprintf(c, sizeof(c), "%s R", label);
+        snprintf(c, sizeof(c), "%s  R", label);
         ShowSwitchNameWithReversed(Sw, n, c);
         return;
     }
@@ -1394,7 +1394,7 @@ void DoOneSwitch(char *Sw, uint8_t n)
     {
         char c[32], label[16];
         ChannelLabel(n, label, sizeof(label));
-        snprintf(c, sizeof(c), "%s R", label);
+        snprintf(c, sizeof(c), "%s  R", label);
         ShowSwitchNameWithReversed(Sw, n, c);
     }
 }
@@ -2604,7 +2604,7 @@ void ResetTransmitterSettings()
 
     const char Tn[32] = "Unknown";
 
-    char prompt[] = "Delete all settings and models?!";
+    char prompt[] = "Delete every model and all settings?\r\nThis cannot be undone.";
     int sofar = 0;
     char ProgressStart[] = "vis Progress,1";
     char Progress[] = "Progress";
@@ -3446,11 +3446,11 @@ FASTRUN void ButtonWasPressed()
         char SvT11[] = "t11";
         char CMsg1[] = "Move all controls to their full\r\nextent several times,\r\nthen press Next.";
         char SvB0[] = "b0";
-        char CMsg2[] = "Next ...";
+        char CMsg2[] = "Next";
         char Cmsg3[] = "Centre all channels.\r\nPut edge switches fully back,\r\nor fully forward, then press Finish.";
         char Cmsg4[] = "Finish";
-        char Cmsg5[] = "Repeat?";
-        char Cmsg6[] = "Calbrate again?";
+        char Cmsg5[] = "Calibrate again";
+        char Cmsg6[] = "Calibration saved.";
         char TypeView[] = "TypeView";
         char CopyToAllBanks[] = "callfm";
         char RXBAT[] = "RXBAT";
@@ -3527,13 +3527,13 @@ FASTRUN void ButtonWasPressed()
         char overwr[] = "Overwrite ";
         char ques[] = "?";
         char hhead[] = "Create backup file for";
-        char fprompt[] = "Filename?";
+        char fprompt[] = "File name";
         char ProgressStart[] = "vis Progress,1";
         char ProgressEnd[] = "vis Progress,0";
         char Progress[] = "Progress";
 
-        char NotConnected[] = "Model isn't connected!";
-        char IsConnected[] = "Warning: model is connected!";
+        char NotConnected[] = "No model is connected.\r\nSwitch it on, then press Save.";
+        char IsConnected[] = "The model is connected.\r\nChanges here move its controls.\r\n\r\nOpen Inputs anyway?";
         char invisb1[] = "vis b1,0";
         char invisb0[] = "vis b0,0";
         char visb1[] = "vis b1,1";
@@ -3818,9 +3818,9 @@ FASTRUN void ButtonWasPressed()
                 SingleModelFile[j] = 0;
             }
 
-            strcpy(PromtBeforeSendingModelFile, "Is '");
+            strcpy(PromtBeforeSendingModelFile, "Send '");
             strcat(PromtBeforeSendingModelFile, SingleModelFile);
-            strcat(PromtBeforeSendingModelFile, "' up to date?\r\nPress 'OK' to send it now, \r\n(otherwise press 'Cancel').");
+            strcat(PromtBeforeSendingModelFile, "' now?\r\n\r\nIf the model has changed,\r\nback it up first.");
 
             if (!GetConfirmation(pModelsView, PromtBeforeSendingModelFile))
             {
@@ -4091,7 +4091,7 @@ FASTRUN void ButtonWasPressed()
         {
             if (LedWasGreen)
             {
-                MsgBox(pTXSetupView, (char *)"Still connected!");
+                MsgBox(pTXSetupView, (char *)"The model is connected.\r\nSwitch it off, then press Calibrate.");
                 ClearText();
                 return;
             }
@@ -4735,7 +4735,7 @@ bool CheckModelName()
 void Close_TX_Down()
 {
     char NotInUse[] = "Not in use";
-    char ClosingDown[] = "Closing down ...";
+    char ClosingDown[] = "Switching off ...";
     char Saving[] = "Saving ";
     char msg1[80];
     char t0[] = "t0";
@@ -4773,7 +4773,7 @@ void Close_TX_Down()
         CloseLogFile();
         strcpy(TextFileName, ""); // no further logging to this file
     }
-    SendText(t0, ClosingDown);    // Show 'Closing down ...' on screen
+    SendText(t0, ClosingDown);    // Show 'Switching off ...' on screen
     for (int i = 0; i < 100; ++i) // fade in screen brightness
     {
         SetBrightness(100 - i);
@@ -4794,7 +4794,7 @@ void ShowBindingIsEnabled()
         SendText(wb, Mfound);    // Show binding enabled
         SendCommand(YesVisible); // Show binding enabled
         LedIsBlinking = true;    // Start blinking LED to show binding enabled
-        SendText((char *)"OptionsView.b0", (char *)"Stop Bind");
+        SendText((char *)"OptionsView.b0", (char *)"Stop binding");
     }
 }
 
@@ -4935,7 +4935,7 @@ void CheckMaxCurrent() // heer
         if (Battery_Amps > Max_Safe_Amps)
         {
             PlaySound(WHAHWHAHMSG); // Play sound to indicate there is a Problem.
-            MsgBox(pFrontView, (char *)"Max current exceeded!");
+            MsgBox(pFrontView, (char *)"Current too high!\r\nAbove the current warning\r\nin Model options.");
             warned = true;
         }
     }

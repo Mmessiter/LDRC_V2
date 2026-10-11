@@ -30,7 +30,7 @@ t22.pco=33840
 t23.pco=33840
 t24.pco=33840
 t25.pco=33840
-busy.txt="Loading Values for  Bank 1 ..."
+busy.txt="Loading values for Bank 1 ..."
 vis busy,1
 vis b3,0
 t27.txt="RAW 420 MCM"
@@ -120,7 +120,7 @@ t22.pco=33840
 t23.pco=33840
 t24.pco=33840
 t25.pco=33840
-busy.txt="Sending edited PID Advanced values ..."
+busy.txt="Sending edited advanced PIDs ..."
 vis busy,1
 vis b3,0
 @shot 7_sending
@@ -181,7 +181,7 @@ t22.pco=33840
 t23.pco=33840
 t24.pco=33840
 t25.pco=33840
-busy.txt="Loading Values for  Flight mode 4 ..."
+busy.txt="Loading values for Flight mode 4 ..."
 vis busy,1
 vis b3,0
 t27.txt="GOBLIN RAW 700 COMPETITION MK2"
@@ -211,7 +211,7 @@ t22.txt="255"
 t23.txt="255"
 t24.txt="255"
 t25.txt="25.5"
-busy.txt="Sending edited PID Advanced values ..."
+busy.txt="Sending edited advanced PIDs ..."
 @shot 7_long_busy
 vis busy,0
 sw0.pco=0
@@ -241,3 +241,10 @@ t23.pco=0
 t24.pco=0
 t25.pco=0
 @shot 7_long
+# the longest words the box is given: a read window that ends with nothing come back (transceiver.h BlockSilence, B81),
+# and a read refused with no Bluetooth to the receiver (Parameters.h:225, B80)
+busy.txt="Advanced PIDs: nothing came back in 2 s (Bluetooth 2). Bank switch again, or leave and return."
+vis busy,1
+@shot 7_nothing
+busy.txt="No Bluetooth to the receiver: NOT read. Close the phone app if it is running. It is tried again."
+@shot 7_nopipe

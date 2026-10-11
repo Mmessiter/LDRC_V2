@@ -1,11 +1,34 @@
-
-
-The screen allows editing of the advanced parameters on the rate screen of the Rotorflight Configurator.||
-
-1). First select the Bank you would like to edit using the Bank switch. After selecting a Bank  there will be a brief pause while the values for that Bank are loaded.||
-
-2). Then edit any of the 15 values by pressing the box containing that value. ||
-
-3). Then press Save and wait a moment while updated values are sent the the flight controller and saved in its EEPROM.||
-
-Confirm that your new values were indeed saved by moving the Bank switch briefly to another Bank and then back to the one you just edited. Check its values; because they were just read back from the flight controller. If all looks good, fly!!
+How the model follows the stick, for the rate shown at the|
+top left. These are the advanced part of the Rates tab|
+in Rotorflight's Configurator.||
+TO CHANGE THEM:|
+1. Choose the rate with its switch, as on the Rates page.|
+Wait while it loads.|
+2. Touch a box and type the new value.|
+3. Press 'Save' (it appears once you touch a box).|
+The values are written to the flight controller,|
+read back to check, and stored.||
+GOOD TO KNOW:|
+Save before you move the switch: a move loads the other rate,|
+and unsaved changes are lost.|
+To check a save, move the switch away and back.|
+The page reads the values again.|
+If the page says nothing came back, do the same,|
+or leave the page and open it again.|
+'Rate 2 / FC 1' at the top left: the flight controller|
+is on rate 1, so the page shows and saves rate 1.||
+FOR ROLL, PITCH, YAW AND COLLECTIVE:|
+Response time [ms]: how long the model takes to reach the rate|
+the stick asks for. Higher feels softer. 0 is off.|
+Setpoint boost gain: extra response on quick stick moves.|
+Setpoint boost cutoff [Hz]: the filter on that boost.|
+Lower is smoother.||
+FOR YAW ONLY:|
+Dynamic ceiling gain, Dynamic deadband gain and|
+Dynamic deadband filter [Hz], as in the Configurator.||
+THE NUMBERS:|
+Dynamic deadband filter has one decimal place, such as 6.0|
+(up to 25.5). All the others are whole numbers, 0 to 255.||
+'OK' leaves the page. It asks first if you have unsaved changes.|
+With no model connected the page shows the model's backup|
+(see the Rotorflight options help).|

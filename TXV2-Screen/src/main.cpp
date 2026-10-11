@@ -42,7 +42,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.56"
+#define SCREEN_VERSION "1.11.57"
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room
 #endif
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -369,6 +369,7 @@ static ldrc::Theme theme;
 #define OUR_STRIP (theme.strip())
 #define OUR_INK (theme.ink())
 #define OUR_SOFT (theme.soft())
+#define OUR_GOOD(bg) (ldrc::themeIsLight(bg) ? 0x01E0 : 0x87F0)   // green words that read on bg: pale on a dark theme, dark on a light one (White, Yellow, Sky)
 // The style's colours as the pilot has chosen them: at every page load, and on the page showing when they are chosen.
 static void themeComp(Comp &c) {
     if (!c.roles) return;
@@ -645,15 +646,37 @@ static void restoreRect(int x, int y, int w, int h) {
 // track, a see-through text, a model picture's frame): the solid component it sits on, if one was drawn before it and
 // covers it (the System pages' navy card: Malcolm saw the red of his background picture in the switches' corners,
 // 10-03; screen 1.5.6: the same red showed behind the sliders and the empty picture frame), else the page's own picture.
-static void restoreUnder(const Comp &c) {
+static const Comp *cardUnder(const Comp &c) {
     const long me = (long) (&c - page.comps.data());
     if (me > 0 && me < (long) page.comps.size())
         for (long i = me - 1; i >= 0; --i) {
             const Comp &o = page.comps[i];
             if (!o.vis || o.sta != 1 || (o.type != "text" && o.type != "number")) continue;
-            if (o.x <= c.x && o.y <= c.y && o.x + o.w >= c.x + c.w && o.y + o.h >= c.y + c.h) { gfx->fillRect(c.x, c.y, c.w, c.h, o.bco); return; }
+            if (o.x <= c.x && o.y <= c.y && o.x + o.w >= c.x + c.w && o.y + o.h >= c.y + c.h) return &o;
         }
+    return nullptr;
+}
+static void restoreUnder(const Comp &c) {
+    if (const Comp *o = cardUnder(c)) { gfx->fillRect(c.x, c.y, c.w, c.h, o->bco); return; }
     restoreRect(c.x, c.y, c.w, c.h);
+}
+// The light themes (10-10). The pages were made on navy, so what is drawn on a theme's panel in a fixed colour - a
+// slider's white knob, a radio button's white disc, the arming line's green - can vanish on White, Yellow or Sky. These
+// keep each such colour exactly as it is wherever it already reads (lib/LdrcTheme: 3:1), so the dark themes look just as
+// they did, and give it another only where it does not.
+static bool themeFaceUnder(const Comp &c, uint16_t &face) {   // the theme's panel (or strip) colour that c sits on, if it sits on one
+    const Comp *o = cardUnder(c);
+    if (!o || !ldrc::themeRole(o->roles, ldrc::TF_BCO)) return false;
+    face = (uint16_t) o->bco; return true;
+}
+// The colour of a box's words: a colour of the main board's (or the page's) that is not one of the style's, on a box in
+// the theme's panel or strip colour, made to read there - RFView's arming line ("Ready to arm" green, "Armed" light red)
+// on White, Yellow, Sky or Red - keeping its colour (a darker green, not black). The style's own colours follow the theme
+// already (themeComp); what the main board wrote stays as it wrote it (c.pco), only the drawing differs.
+static uint16_t inkOf(const Comp &c, bool second = false) {
+    const uint16_t ink = (uint16_t) (second ? c.pco2 : c.pco);
+    if (!ldrc::themeRole(c.roles, second ? ldrc::TF_BCO2 : ldrc::TF_BCO) || ldrc::themeRole(c.roles, second ? ldrc::TF_PCO2 : ldrc::TF_PCO)) return ink;
+    return ldrc::themeInkOn(ink, (uint16_t) (second ? c.bco2 : c.bco));
 }
 static uint16_t shade(uint16_t c, int pct) {              // pct > 0 towards white, < 0 towards black
     int r = (c >> 11) & 31, g = (c >> 5) & 63, b = c & 31;
@@ -677,7 +700,12 @@ static void drawFrame(const Comp &c, uint16_t bg, bool down) {
     }
     if (c.style < 2) return;
     const bool sunk = c.style == 2 || (c.style == 4 && down);
-    const uint16_t tl = sunk ? shade(bg, -45) : shade(bg, 60), br = sunk ? shade(bg, 60) : shade(bg, -45);
+    const uint16_t tl = sunk ? shade(bg, -45) : shade(bg, 60);
+    uint16_t br = sunk ? shade(bg, 60) : shade(bg, -45), face;
+    // (a white entry box on White, Yellow or Sky: the box and its light lower edge both vanish on the panel, so only its top
+    // and left lines showed; that edge takes the theme's outline colour, as a radio button's ring does. Where either one
+    // already reads - every dark theme - nothing changes.)
+    if (sunk && themeFaceUnder(c, face) && !ldrc::themeStandsOut(bg, face) && !ldrc::themeStandsOut(br, face)) br = theme.edge();
     for (int i = 0; i < 2; ++i) {
         gfx->drawFastHLine(x + i, y + i, w - 2 * i, tl); gfx->drawFastVLine(x + i, y + i, h - 2 * i, tl);
         gfx->drawFastHLine(x + i, y + h - 1 - i, w - 2 * i, br); gfx->drawFastVLine(x + w - 1 - i, y + i, h - 2 * i, br);
@@ -874,22 +902,30 @@ static void drawRangeBar(Comp &c) {
     if (kind >= 3) rbSelectorEdges(d0, d1, n, lo, hi, edges);
     else for (int k = 0; k < n - 1 && k < 5; ++k) { char key[3] = {'d', (char) ('0' + k), 0}; edges[k + 1] = constrain(rbGet(c, key, lo), lo, hi); }
     gfx->fillRect(c.x, c.y, c.w, c.h, c.bco);
+    if (n == 1 && kind == 0 && c.txt.empty() && mk < 0) return;  // (nothing to show - no adjustments or switches yet: no bar, not a full-width blue one)
     const int p = rbPad(c), th = max(12, c.h - 2 * 9), ty = c.y + (c.h - th) / 2, mid = c.y + c.h / 2;
     static const uint16_t cols[3] = { 0x4C7E, 0x4E69, 0xFC80 };   // blue, green, orange (the phone page's)
     std::vector<std::string> labels; { size_t a = 0; while (true) { size_t b = c.txt.find('|', a); labels.push_back(c.txt.substr(a, b == std::string::npos ? std::string::npos : b - a)); if (b == std::string::npos) break; a = b + 1; } }
     const int fh = fontHeight(c.font);
-    for (int k = 0; k < n; ++k) {
+    for (int k = 0; k < n; ++k) {                                 // the zones
         const bool dead = (kind == 1 && k != 1) || (kind == 2 && k == 1);
         const int x0 = rbAt(c, edges[k], lo, hi), x1 = rbAt(c, edges[k + 1], lo, hi);
         if (x1 <= x0) continue;
         gfx->fillRoundRect(x0, ty, x1 - x0, th, 6, dead ? 0x9CD3 : cols[k % 3]);
-        if (k < (int) labels.size() && !labels[k].empty()) {
-            std::string l = labels[k]; int tw = textWidth(c.font, l);
-            while (tw > x1 - x0 - 6 && l.size() > 1) { l.erase(l.size() - 1); tw = textWidth(c.font, l); }
-            if (tw <= x1 - x0 - 6) drawGlyphs((x0 + x1 - tw) / 2, mid - fh / 2, c.font, dead ? 0x4208 : 0xFFFF, l);
-        }
     }
-    if (mk >= lo && mk <= hi) { const int mx = rbAt(c, mk, lo, hi); gfx->fillRect(mx - 2, c.y + 1, 5, c.h - 2, 0x0320); gfx->fillRect(mx - 1, c.y + 1, 3, c.h - 2, 0x07E0); }
+    // the marker (the channel now): a white line edged in black, seen on every zone (green on the green zone was not)
+    if (mk >= lo && mk <= hi) { const int mx = rbAt(c, mk, lo, hi); gfx->fillRect(mx - 2, c.y + 1, 5, c.h - 2, 0x0000); gfx->fillRect(mx - 1, c.y + 1, 3, c.h - 2, 0xFFFF); }
+    // the zones' words over it, black on every zone (white read poorly on green and orange); a selector's end zones' words
+    // in the room beside their round ends, not under them
+    for (int k = 0; k < n; ++k) {
+        int x0 = rbAt(c, edges[k], lo, hi), x1 = rbAt(c, edges[k + 1], lo, hi);
+        if (x1 <= x0 || k >= (int) labels.size() || labels[k].empty()) continue;
+        if (kind == 3 && k == 0) x0 = max(x0, rbAt(c, d0, lo, hi) + p);
+        if (kind == 3 && k == n - 1) x1 = min(x1, rbAt(c, d1, lo, hi) - p);
+        std::string l = labels[k]; int tw = textWidth(c.font, l);
+        while (tw > x1 - x0 - 6 && l.size() > 1) { l.erase(l.size() - 1); tw = textWidth(c.font, l); }
+        if (tw <= x1 - x0 - 6) drawGlyphs((x0 + x1 - tw) / 2, mid - fh / 2, c.font, 0x0000, l);
+    }
     if (kind == 3) { for (int k = 0; k < 2; ++k) { const int hx = rbAt(c, k ? d1 : d0, lo, hi); gfx->fillCircle(hx, mid, p - 1, 0xFFFF); gfx->fillCircle(hx, mid, p - 4, 0x2A5F); } }
     else if (kind < 3) for (int k = 0; k < n - 1; ++k) { const int hx = rbAt(c, edges[k + 1], lo, hi); gfx->fillCircle(hx, mid, p - 1, 0xFFFF); gfx->fillCircle(hx, mid, p - 4, 0x2A5F); }
     (void) p;
@@ -922,7 +958,7 @@ static void drawComp(Comp &c) {
         if (c.sta == 1) gfx->fillRect(c.x, c.y, c.w, c.h, c.bco); else restoreUnder(c);
         drawFrame(c, c.bco, false);
         const int bw = c.borderw;
-        drawTextIn(c.x + bw, c.y + bw, c.w - 2 * bw, c.h - 2 * bw, c.font, c.pco, c.txt, c.xcen, c.ycen, c.isbr != 0, c.scroll);
+        drawTextIn(c.x + bw, c.y + bw, c.w - 2 * bw, c.h - 2 * bw, c.font, c.sta == 1 ? inkOf(c) : (uint16_t) c.pco, c.txt, c.xcen, c.ycen, c.isbr != 0, c.scroll);
         return;
     }
     if (t == "text" || t == "number" || t == "combobox") {
@@ -952,16 +988,17 @@ static void drawComp(Comp &c) {
             int y0 = c.y + (c.h - ((int) ls.size() * lineH - 4)) / 2;
             if (y0 < c.y + p / 2) y0 = c.y + p / 2;
             gfx->startWrite();
-            for (const auto &l : ls) { if (y0 + fh > c.y + c.h - p / 2) break; drawGlyphs(c.x + (c.w - textWidth(c.font, l)) / 2, y0, c.font, c.pco, l); y0 += lineH; }
+            const uint16_t ink = c.sta == 1 ? inkOf(c) : (uint16_t) c.pco;
+            for (const auto &l : ls) { if (y0 + fh > c.y + c.h - p / 2) break; drawGlyphs(c.x + (c.w - textWidth(c.font, l)) / 2, y0, c.font, ink, l); y0 += lineH; }
             gfx->endWrite();
             return;
         }
-        drawTextIn(c.x, c.y, c.w, c.h, c.font, c.pco, s, c.xcen, c.ycen, t == "text" && c.isbr != 0, 0, t == "number" || c.isbr ? -1 : frameWidth(c));   // numbers never wrap ("-16" took two lines on the trims page), nor end in dots
+        drawTextIn(c.x, c.y, c.w, c.h, c.font, c.sta == 1 ? inkOf(c) : (uint16_t) c.pco, s, c.xcen, c.ycen, t == "text" && c.isbr != 0, 0, t == "number" || c.isbr ? -1 : frameWidth(c));   // numbers never wrap ("-16" took two lines on the trims page), nor end in dots
         return;
     }
     if (t == "button" || t == "dual-state button") {
         const bool on = (t == "dual-state button") ? (c.val != 0) : c.pressed;
-        const uint16_t bg = on ? c.bco2 : c.bco, fg = needUnmet(c) ? (uint16_t) 0x8410 : (on ? c.pco2 : c.pco);   // greyed out: mid-grey text
+        const uint16_t bg = on ? c.bco2 : c.bco, fg = needUnmet(c) ? (uint16_t) 0x8410 : c.sta == 3 ? (uint16_t) (on ? c.pco2 : c.pco) : inkOf(c, on);   // greyed out: mid-grey text
         if (c.sta == 3) restoreUnder(c);
         else { gfx->fillRect(c.x, c.y, c.w, c.h, bg); drawFrame(c, bg, on); }
         drawTextIn(c.x, c.y, c.w, c.h, c.font, fg, c.txt, c.xcen ? c.xcen : 1, c.ycen ? c.ycen : 1, false, 0, c.sta == 3 ? 0 : frameWidth(c));
@@ -987,14 +1024,16 @@ static void drawComp(Comp &c) {
         restoreUnder(c);
         const int range = max(1, c.maxval - c.minval);
         const int v = constrain((int) c.val - c.minval, 0, range);
+        uint16_t knob = (uint16_t) c.pco, face;                // (white: on White, Yellow or Sky the theme's text colour)
+        if (themeFaceUnder(c, face)) knob = ldrc::themeMarkOn(knob, face, theme.ink());
         if (c.mode == 0) {
             const int d = max(6, c.h), r = d / 2, track = max(3, c.h / 4);
             gfx->fillRoundRect(c.x, c.y + (c.h - track) / 2, c.w, track, track / 2, c.bco);
-            gfx->fillCircle(c.x + r + (long) (c.w - d) * v / range, c.y + c.h / 2, r - 1, c.pco);
+            gfx->fillCircle(c.x + r + (long) (c.w - d) * v / range, c.y + c.h / 2, r - 1, knob);
         } else {
             const int d = max(6, c.w), r = d / 2, track = max(3, c.w / 4);
             gfx->fillRoundRect(c.x + (c.w - track) / 2, c.y, track, c.h, track / 2, c.bco);
-            gfx->fillCircle(c.x + c.w / 2, c.y + c.h - r - (long) (c.h - d) * v / range, r - 1, c.pco);
+            gfx->fillCircle(c.x + c.w / 2, c.y + c.h - r - (long) (c.h - d) * v / range, r - 1, knob);
         }
         return;
     }
@@ -1003,7 +1042,9 @@ static void drawComp(Comp &c) {
         const int s = min(c.w, c.h);
         if (t == "radio") {                                  // a disc in bco; chosen, a dot in pco at its centre (the V1's pale disc with a red dot)
             const int r = s / 2 - 1, cx = c.x + c.w / 2, cy = c.y + c.h / 2;
-            gfx->fillCircle(cx, cy, r, c.bco); gfx->drawCircle(cx, cy, r, shade(c.bco, -25));
+            uint16_t ring = shade(c.bco, -25), face;          // (a white disc on White, Yellow or Sky: outlined in the theme's outline colour)
+            if (themeFaceUnder(c, face) && !ldrc::themeStandsOut((uint16_t) c.bco, face)) ring = theme.edge();
+            gfx->fillCircle(cx, cy, r, c.bco); gfx->drawCircle(cx, cy, r, ring);
             if (c.val) gfx->fillCircle(cx, cy, max(3, r * 45 / 100), c.pco);
         }
         else if (t == "switch") { const int r = c.h / 2; gfx->fillRoundRect(c.x, c.y, c.w, c.h, r, c.val ? c.bco2 : c.bco); gfx->fillCircle(c.val ? c.x + c.w - r : c.x + r, c.y + r, max(2, r - 3), c.pco); }
@@ -1640,13 +1681,16 @@ static void linkPanel(bool result) {
     TopDraw on;
     const bool bad = teensyLink.failed();
     const uint16_t back = result ? (bad ? 0x8000 : 0x0320) : OUR_PANEL, ink = result ? 0xFFFF : OUR_INK, dim = result ? 0xC618 : OUR_SOFT;
-    gfx->fillRect(x, y, w, h, back); gfx->drawRect(x, y, w, h, ink); gfx->drawRect(x + 1, y + 1, w - 2, h - 2, ink);
-    const char *title = result ? (bad ? "Transmitter update FAILED" : "Transmitter updated") : "Updating the transmitter";
+    gfx->fillRect(x, y, w, h, back);
+    for (int i = 0; i < 3; ++i) gfx->drawRect(x + i, y + i, w - 2 * i, h - 2 * i, 0x08A6);   // (the message boxes' dress: a dark ring, a frame inside it)
+    for (int i = 3; i < 5; ++i) gfx->drawRect(x + i, y + i, w - 2 * i, h - 2 * i, ink);
+    const char *title = result ? (bad ? "Transmitter update failed" : "Transmitter updated") : "Updating the transmitter";   // (the red face says it failed: no capitals needed)
     clipX0 = x + 8; clipY0 = y + 4; clipX1 = x + w - 8; clipY1 = y + h - 4;
     gfx->startWrite();
     drawGlyphs(x + (w - textWidth(0, title)) / 2, y + 14, 0, ink, title);
     std::string line = result ? teensyLink.result() : teensyLink.stage();
     if (result && line.rfind("FAILED at ", 0) == 0) line = line.substr(10);
+    if (!line.empty() && line[0] >= 'a' && line[0] <= 'z') line[0] = (char) (line[0] - 32);   // (shown as a sentence: "Sending /FW/TXFW.BIN", as the update panel says it)
     // two lines of 28-point text, broken at a space
     std::string l1 = line, l2;
     if (textWidth(6, l1) > w - 40) { size_t cut = l1.size(); while (cut > 0 && textWidth(6, l1.substr(0, cut)) > w - 40) cut = l1.rfind(' ', cut - 1) == std::string::npos ? 0 : l1.rfind(' ', cut - 1); if (cut) { l2 = l1.substr(cut + 1); l1 = l1.substr(0, cut); } }
@@ -1656,11 +1700,11 @@ static void linkPanel(bool result) {
     if (!result) {
         const uint32_t size = teensyLink.fileSize(), done = teensyLink.fileDone();
         gfx->drawRect(x + 40, y + 140, w - 80, 22, ink);
-        if (size) gfx->fillRect(x + 42, y + 142, (int) ((uint64_t) (w - 84) * min(done, size) / size), 18, 0x07E0);
-        char b[64]; snprintf(b, sizeof(b), "step %u of %u", (unsigned) min(teensyLink.stepIndex() + 1, teensyLink.stepCount()), (unsigned) teensyLink.stepCount());
+        if (size) gfx->fillRect(x + 42, y + 142, (int) ((uint64_t) (w - 84) * min(done, size) / size), 18, ldrc::themeIsLight(back) ? 0x0320 : 0x07E0);   // (bright green does not show on a light theme)
+        char b[64]; snprintf(b, sizeof(b), "Step %u of %u", (unsigned) min(teensyLink.stepIndex() + 1, teensyLink.stepCount()), (unsigned) teensyLink.stepCount());
         gfx->startWrite(); drawGlyphs(x + 40, y + 172, 2, dim, b);
         const char *warn = "Do not switch off";
-        drawGlyphs(x + w - 40 - textWidth(2, warn), y + 172, 2, 0xFFE0, warn); gfx->endWrite();
+        drawGlyphs(x + w - 40 - textWidth(2, warn), y + 172, 2, theme.accent(), warn); gfx->endWrite();   // (yellow, or on a light theme its text colour)
     }
     clipX0 = 0; clipY0 = 0; clipX1 = W; clipY1 = H;
     topX = x; topY = y; topW = w; topH = h; topWho = 3; topOn = true;
@@ -2444,7 +2488,7 @@ static void netDot(bool force = false) {
 static const int BANNER_H = 34;
 static void banner(const char *msg) {
     gfx->fillRect(0, 0, W, BANNER_H, OUR_PANEL); gfx->drawFastHLine(0, BANNER_H - 1, W, OUR_INK);
-    gfx->startWrite(); drawGlyphs(12, 5, 2, OUR_INK, msg); gfx->endWrite();
+    gfx->startWrite(); drawGlyphs(max(12, (W - textWidth(2, msg)) / 2), 5, 2, OUR_INK, msg); gfx->endWrite();   // (centred, as every title and message of the screen's)
     memoTouched(0, 0, W, BANNER_H); dirty(0, 0, W, BANNER_H); damage(0, 0, W, BANNER_H);
     bannerUntil = millis() + 2000;
 }

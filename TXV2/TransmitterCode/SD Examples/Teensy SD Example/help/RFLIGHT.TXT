@@ -1,17 +1,91 @@
-Rotorflight options: the pages that view and edit a flight controller running Rotorflight (2.2 or later), over the receiver's Bluetooth. Do the first setup of the helicopter with Rotorflight's Configurator; at the field, tune it from here with no laptop.||
-
-PIDs, Rates (each with an Advanced page), Governor, Rescue and Servos read their values from the flight controller when opened, for the bank shown at the top left (change bank with the bank switch), and Save writes them back, stores them, and reads them back to check.||
-
-Battery, Black box and Calibrate set the flight pack, the flight recorder and the level. Copy a bank copies the tuning of one bank into another.||
-
-The line under the buttons says whether the flight controller will arm, and if not, why ("Will not arm: Throttle is not at idle"). Tap it for every reason at once. It shows only with the model connected and Bluetooth joined.||
-
-Settings holds what the transmitter itself needs to know: whether rates follow the banks, the Rotorflight version (as the receiver reports it), the arming channel, and the main rotor to motor RPM ratio.||
-
-Command line is Rotorflight's own command line on the screen, through the USB cable from the receiver to the flight controller. Touch the line to type a command on the screen's keys; what the flight controller prints scrolls in the box (drag it with a finger). Type save to keep what you set, or exit to leave it; either restarts the flight controller. OK leaves the page, and asks first if the command line is still open. The model cannot arm while the command line is open.||
-
-Backup / Restore (at the foot) keeps EVERY Rotorflight setting of the model on the transmitter's card, over Bluetooth, and puts them back; it also keeps the flight controller's settings as text (Diff to card) and replays them (Execute diff). With no model connected, the pages read and edit the backup instead, and the edits are offered to the model when it is next connected. Back up as soon as you are happy with a setup.||
-
-Without a model connected, the pages read and edit the model's backup on the card (made with Backup / Restore); Calibrate, the black box's memory and the arming line need the model itself.||
-
-The blue tooth at the right means the link to the receiver is up; the words say when it is connecting, or absent. Land and disarm before using these pages: with the safety off, nothing here will open.||
+View and change the setup of a flight controller that runs|
+Rotorflight (2.2 or later), at the field, with no laptop.|
+Set the helicopter up first with Rotorflight's Configurator.||
+BEFORE YOU START:|
+Land, put the safety on and switch the motor off.|
+If the safety is off or the motor is on, this page warns you.|
+The pages that change the flight controller will not work|
+while the model could be armed.|
+The model needs a Version 2 receiver: these pages use Bluetooth.|
+Back up each setup you are happy with: 'Backup / Restore ...'.||
+HOW THE PAGES WORK:|
+Each page reads the flight controller's values as it opens.|
+Touch a box, type the new value, then press 'Save'.|
+The values are written to the flight controller,|
+read back to check, and stored.|
+Every page has its own 'Help'.||
+BANKS:|
+The top left shows the bank and the rate in use.|
+The bank switch chooses the bank for 'PIDs ...',|
+'Governor ...' and 'Rescue ...'.|
+The 'Rates' switch chooses the rate for 'Rates ...'.|
+With 'Link rates and banks' on ('Settings ...'),|
+the bank switch chooses the rate too.|
+Each 'Advanced ...' page follows the switch of its main page.||
+THE BUTTONS:|
+'PIDs ...' and 'Rates ...': the tuning of each bank.|
+Each has an 'Advanced ...' page: 'PID +' and 'Rates +'.|
+'Governor ...': the head speed and the governor.|
+It needs Rotorflight 2.3.|
+'Rescue ...': what happens when you flick the rescue switch.|
+'Servos ...', 'Mixer ...' and 'Filters ...': the servos,|
+the swash and tail mixer, and the gyro filters.|
+'Adjustments ...': a knob or switch changes a setting in flight.|
+It needs the USB cable between receiver and flight controller.|
+'Switches ...': what each switch makes the flight controller do.|
+'Copy a bank ...': copies the tuning of one bank into another.|
+'Battery ...', 'Black box ...' and 'Calibrate ...':|
+the flight pack, the flight recorder and the level.|
+'Settings ...': 'Link rates and banks', the Rotorflight version,|
+the arming channel and the main gear ratio.|
+'OK' goes back to the front page.||
+THE ARMING LINE:|
+The line under the buttons says whether the model will arm:|
+'Ready to arm' (green), 'Armed' (red), or 'Will not arm:'|
+and the main reason (yellow), such as 'Throttle is not at idle'.|
+Touch the line to list the reasons (up to four).|
+It shows only with the model connected and Bluetooth joined.||
+BLUETOOTH:|
+The box left of 'OK' shows the link to the receiver.|
+A blue tooth: joined.|
+'Connecting Bluetooth: wait': joining.|
+'Bluetooth: not joined': it could not join. It tries again.|
+'No Bluetooth': no receiver that can carry it.|
+It needs a Version 2 receiver (0.9.874 or later),|
+switched on and in reach.|
+Bluetooth is off while the safety is off|
+(with no safety switch: while the motor is on).|
+If it keeps connecting, close the phone app if it is open:|
+the receiver takes one Bluetooth connection at a time.||
+COMMAND LINE:|
+'Command line ...' opens Rotorflight's own command line (CLI).|
+It needs Bluetooth joined, and the USB cable|
+between the receiver and the flight controller.|
+Touch the line at the bottom to type a command.|
+What the flight controller prints scrolls in the box:|
+drag it with a finger.|
+Type save to keep what you set, or exit to leave without saving.|
+Either one restarts the flight controller.|
+'OK' leaves too, and restarts it once a command was typed.|
+If you changed something and did not type save, it asks first.|
+The model cannot arm while the command line is open.||
+BACKUP AND RESTORE:|
+'Backup / Restore ...' keeps the model's Rotorflight tune and|
+set-up (not ports, LED, GPS or ESC) on the transmitter's card,|
+and puts it back.|
+It can also keep the settings as text ('Diff to card')|
+and replay them ('Execute diff').||
+NO MODEL CONNECTED:|
+The pages show and edit the model's backup on the card.|
+The box left of 'OK' then says 'From the backup file'.|
+Your edits wait in the backup.|
+When the model is next connected and you open this page,|
+it asks once to write them to the model.|
+To send them later, use 'Write edits' on 'Backup / Restore ...'.|
+With no backup, 'PIDs ...', 'Rates ...' and 'Governor ...'|
+show an older copy kept in the model's file.|
+A 'Save' there changes only that copy.|
+It is not offered to the model when it is next connected.|
+Most other pages need the model, or its backup.|
+'Calibrate level', the black box's memory and the arming line|
+always need the model itself.|

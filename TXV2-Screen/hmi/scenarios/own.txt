@@ -1,0 +1,401 @@
+# The screen's OWN pages (drawn by the screen's C++, not loaded from the card), in the states worth looking at:
+# hmi/render_host/own.h draws them with the screen's own drawing code (cut out of src/*.h by extract.py) and drives the
+# real lib/Ldrc* code into each state with make-believe radios, card, receiver and Teensy (the update panel's states:
+# the host tests' bench, render_host/updscenes.cpp). Each is drawn over the Teensy's page it opens from.
+Screen_Background=8
+@model 0
+
+# ---- the WiFi page (Transmitter setup > WiFi; lib/LdrcWifi, src/wifi_device.h)
+page TXSetupView
+ModelName.txt="RAW 420 MCM (3)"
+@wifi list
+@shot own_wifi_list
+@wifi looking
+@shot own_wifi_looking
+@wifi nonets
+@shot own_wifi_nonets
+@wifi off
+@shot own_wifi_off
+@wifi many
+@shot own_wifi_many
+@wifi many2
+@shot own_wifi_many2
+@wifi known
+@shot own_wifi_known
+@wifi saved
+@shot own_wifi_saved
+@wifi away
+@shot own_wifi_away
+@wifi keys
+@shot own_wifi_keys
+@wifi keys_empty
+@shot own_wifi_keys_empty
+@wifi keys_caps
+@shot own_wifi_keys_caps
+@wifi keys_symbols
+@shot own_wifi_keys_symbols
+@wifi keys_hidden
+@shot own_wifi_keys_hidden
+@wifi keys_pressed
+@shot own_wifi_keys_pressed
+@wifi joining
+@shot own_wifi_joining
+@wifi joined
+@shot own_wifi_joined
+@wifi refused
+@shot own_wifi_refused
+@wifi notfound
+@shot own_wifi_notfound
+@wifi motor
+@shot own_wifi_motor
+@wifi safety
+@shot own_wifi_safety
+
+# ---- Transmitter updates (Transmitter setup > Transmitter updates; lib/LdrcUpdate, src/update_device.h)
+page TXSetupView
+ModelName.txt="RAW 420 MCM (3)"
+@update checking
+@shot own_upd_checking
+@update uptodate
+@shot own_upd_uptodate
+@update offer
+@shot own_upd_offer
+@update fetching
+@shot own_upd_fetching
+@update copying
+@shot own_upd_copying
+@update teensy
+@shot own_upd_teensy
+@update trial
+@shot own_upd_trial
+@update screenfiles
+@shot own_upd_screenfiles
+@update screenflash
+@shot own_upd_screenflash
+@update finishing
+@shot own_upd_finishing
+@update done
+@shot own_upd_done
+@update failed
+@shot own_upd_failed
+@update cardfull
+@shot own_upd_cardfull
+@update donotfly
+@shot own_upd_donotfly
+@update fellback
+@shot own_upd_fellback
+@update noserver
+@shot own_upd_noserver
+@update nowifi
+@shot own_upd_nowifi
+@update nowifiyet
+@shot own_upd_nowifiyet
+@update motor
+@shot own_upd_motor
+@update safety
+@shot own_upd_safety
+@update model
+@shot own_upd_model
+@update modeljustnow
+@shot own_upd_modeljustnow
+@update room
+@shot own_upd_room
+@update versions
+@shot own_upd_versions
+@update installed
+@shot own_upd_installed
+@update older
+@shot own_upd_older
+@update picking
+@shot own_upd_picking
+
+# ---- Receiver updates (Model setup > Receiver updates; the same panel, through the main board)
+@model 1
+page RXSetupView
+ModelName.txt="RAW 420 MCM (3)"
+@rxupdate checking
+@shot own_rx_checking
+@rxupdate offer
+@shot own_rx_offer
+@rxupdate working
+@shot own_rx_working
+@rxupdate waiting
+@shot own_rx_waiting
+@rxupdate done
+@shot own_rx_done
+@rxupdate uptodate
+@shot own_rx_uptodate
+@rxupdate nomodel
+@shot own_rx_nomodel
+@rxupdate noversion
+@shot own_rx_noversion
+@rxupdate armed
+@shot own_rx_armed
+@rxupdate nowifi
+@shot own_rx_nowifi
+@rxupdate failed
+@shot own_rx_failed
+@rxupdate noanswer
+@shot own_rx_noanswer
+@rxupdate safety
+@shot own_rx_safety
+
+# ---- the picture chooser (Model options > Model image...; lib/LdrcPics, src/pics_device.h): it covers ImageView
+page ImageView
+t0.txt="RAW 420 MCM"
+@pics choose
+@shot own_pics_choose
+@pics first
+@shot own_pics_first
+@pics mine
+@shot own_pics_mine
+@pics page2
+@shot own_pics_page2
+@pics pressed
+@shot own_pics_pressed
+@pics ask_delete
+@shot own_pics_ask_delete
+@pics deleted
+@shot own_pics_deleted
+@pics receive
+@shot own_pics_receive
+@pics receive_nowifi
+@shot own_pics_receive_nowifi
+@pics receive_flying
+@shot own_pics_receive_flying
+@pics receiving
+@shot own_pics_receiving
+@pics received
+@shot own_pics_received
+@pics upload_failed
+@shot own_pics_upload_failed
+@pics saving
+@shot own_pics_saving
+page RXOptionsView
+@pics opening
+@shot own_pics_opening
+
+# ---- the command line (Rotorflight menu > Command line ..., Backup > Diff to card / Execute diff; lib/LdrcCli, src/cli_device.h)
+page RFView
+t11.txt="RAW 420 MCM"
+t14.txt="Bank 1"
+t8.txt="Rate 1"
+@cli opening
+@shot own_cli_opening
+@cli console
+@shot own_cli_console
+@cli scrolled
+@shot own_cli_scrolled
+@cli longreply
+@shot own_cli_longreply
+@cli keys
+@shot own_cli_keys
+@cli keys_empty
+@shot own_cli_keys_empty
+@cli keys_symbols
+@shot own_cli_keys_symbols
+@cli leave
+@shot own_cli_leave
+@cli gone
+@shot own_cli_gone
+@cli nopipe
+@shot own_cli_nopipe
+@cli armed
+@shot own_cli_armed
+@cli refused
+@shot own_cli_refused
+@cli refused_linked
+@shot own_cli_refused_linked
+@cli diffcard
+@shot own_cli_diffcard
+@cli diffcard_saved
+@shot own_cli_diffcard_saved
+@cli diffcard_failed
+@shot own_cli_diffcard_failed
+@cli exec_ask
+@shot own_cli_exec_ask
+@cli exec_running
+@shot own_cli_exec_running
+@cli exec_done
+@shot own_cli_exec_done
+@cli exec_refused
+@shot own_cli_exec_refused
+@cli exec_nofile
+@shot own_cli_exec_nofile
+
+# ---- "Connecting Bluetooth" over the Rotorflight menu (src/ble_device.h pipeNoticeDraw)
+page RFView
+t11.txt="RAW 420 MCM"
+t14.txt="Bank 1"
+t8.txt="Rate 1"
+@pipe
+@shot own_pipe
+page RFView
+t11.txt="RAW 420 MCM"
+t14.txt="Bank 1"
+t8.txt="Rate 1"
+@pipe late
+@shot own_pipe_late
+
+# ---- the link's panel (a job on the Teensy's card or firmware that is not the update's: main.cpp linkPanel)
+page FrontView
+t4.txt="Bank 1"
+rate.txt="Rate"
+DateTime.txt="10 October 2026 17:10:53"
+@link working
+@shot own_link_working
+@link done
+@shot own_link_done
+@link failed
+@shot own_link_failed
+
+# ---- the banner along the top (main.cpp banner): the radios (TxState.h said/motorText/tick, setRadios, the chooser's
+# wifiWanted), the workshop door (doorToggle) and the chooser's word to an old main board (picPoll)
+page FrontView
+t4.txt="Bank 1"
+rate.txt="Rate"
+DateTime.txt="10 October 2026 17:10:53"
+@banner WiFi ON - joining...
+@shot own_banner_wifi_on
+@banner Motor on: WiFi and Bluetooth OFF
+@shot own_banner_motor
+@banner Safety off: WiFi and Bluetooth OFF
+@shot own_banner_safety
+@banner WiFi and Bluetooth OFF
+@shot own_banner_switch_off
+@banner Workshop door OPEN on House
+@shot own_banner_door_open
+@banner Workshop door: join a WiFi first
+@shot own_banner_door_nowifi
+@banner Update the transmitter to use the new picture chooser
+@shot own_banner_chooser_old
+
+# ---- the same pages in the pilot's light themes (Appearance > Themes): the screen's own pages take the theme's panel,
+# strip and text colours; the rows, keys and buttons keep colours of their own
+@model 0
+page TXSetupView
+ModelName.txt="RAW 420 MCM (3)"
+@theme white
+@wifi list
+@shot own_theme_white_wifi_list
+@wifi keys
+@shot own_theme_white_wifi_keys
+@update versions
+@shot own_theme_white_upd_versions
+@update offer
+@shot own_theme_white_upd_offer
+page ImageView
+t0.txt="RAW 420 MCM"
+@pics choose
+@shot own_theme_white_pics_choose
+page RFView
+t11.txt="RAW 420 MCM"
+@cli console
+@shot own_theme_white_cli_console
+page RFView
+t11.txt="RAW 420 MCM"
+@pipe
+@shot own_theme_white_pipe
+page TXSetupView
+ModelName.txt="RAW 420 MCM (3)"
+@update teensy
+@shot own_theme_white_upd_teensy
+@update done
+@shot own_theme_white_upd_done
+page FrontView
+t4.txt="Bank 1"
+@link working
+@shot own_theme_white_link_working
+page TXSetupView
+ModelName.txt="RAW 420 MCM (3)"
+@theme yellow
+@wifi list
+@shot own_theme_yellow_wifi_list
+@update versions
+@shot own_theme_yellow_upd_versions
+page RFView
+t11.txt="RAW 420 MCM"
+@cli console
+@shot own_theme_yellow_cli_console
+page TXSetupView
+ModelName.txt="RAW 420 MCM (3)"
+@theme sky
+@wifi list
+@shot own_theme_sky_wifi_list
+@update versions
+@shot own_theme_sky_upd_versions
+page ImageView
+t0.txt="RAW 420 MCM"
+@pics receive
+@shot own_theme_sky_pics_receive
+page FrontView
+t4.txt="Bank 1"
+@banner Motor on: WiFi and Bluetooth OFF
+@shot own_theme_sky_banner
+# words on the own pages' FIXED faces (the red and green strips, the dark rows and boxes, the red alert) keep fixed colours
+# in a light theme; the accents on the theme's own panels follow it (screen 1.11.58)
+@theme white
+page TXSetupView
+ModelName.txt="RAW 420 MCM (3)"
+@wifi refused
+@shot own_theme_white_wifi_refused
+@wifi joined
+@shot own_theme_white_wifi_joined
+@update donotfly
+@shot own_theme_white_upd_donotfly
+page ImageView
+t0.txt="RAW 420 MCM"
+@pics first
+@shot own_theme_white_pics_first
+@pics receive_nowifi
+@shot own_theme_white_pics_receive_nowifi
+page RFView
+t11.txt="RAW 420 MCM"
+@cli opening
+@shot own_theme_white_cli_opening
+page RFView
+t11.txt="RAW 420 MCM"
+@cli nopipe
+@shot own_theme_white_cli_nopipe
+@model 1
+page RXSetupView
+ModelName.txt="RAW 420 MCM (3)"
+@rxupdate working
+@shot own_theme_white_rx_working
+@model 0
+@theme yellow
+page RFView
+t11.txt="RAW 420 MCM"
+t14.txt="Bank 1"
+t8.txt="Rate 1"
+@pipe late
+@shot own_theme_yellow_pipe_late
+page TXSetupView
+ModelName.txt="RAW 420 MCM (3)"
+@update teensy
+@shot own_theme_yellow_upd_teensy
+@theme sky
+page TXSetupView
+ModelName.txt="RAW 420 MCM (3)"
+@update offer
+@shot own_theme_sky_upd_offer
+@wifi refused
+@shot own_theme_sky_wifi_refused
+page ImageView
+t0.txt="RAW 420 MCM"
+@pics choose
+@shot own_theme_sky_pics_choose
+@theme red
+page RFView
+t11.txt="RAW 420 MCM"
+t14.txt="Bank 1"
+t8.txt="Rate 1"
+@pipe
+@shot own_theme_red_pipe
+page TXSetupView
+ModelName.txt="RAW 420 MCM (3)"
+@wifi list
+@shot own_theme_red_wifi_list
+@update offer
+@shot own_theme_red_upd_offer
+@theme navy

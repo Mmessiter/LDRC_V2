@@ -5,6 +5,7 @@
 // with \r \n escapes, and lines of our own:
 //   @shot NAME   the screen as it is now, to <output prefix>NAME.ppm
 //   @model 0|1   no model connected / a model connected (buttons with a rule grey out as on the transmitter)
+//   @wifi, @update, @rxupdate, @pics, @cli, @link, @banner, @pipe: the screen's own pages and messages (own.h)
 // Build and run: hmi/render_host/build.sh; hmi/render_pages.py does the rest (scenarios, PNGs, sheets).
 #include "shim.h"
 std::string sdRoot; SDClass SD; SerialStub Serial;
@@ -23,6 +24,7 @@ static bool sdOk = true;
 #include "flight_draw.h"
 #include "theme_draw.h"
 #include "pong_draw.h"
+#include "own.h"                                         // the screen's own pages: WiFi, updates, pictures, command line, link, banners
 
 // "@flight CONFIG" / "@flightsetup CONFIG [@box N]": the flight screen (as it shows in flight) or its setup page, drawn
 // over whatever is on the glass with the front page's values as they stand. CONFIG: "default" or FlightConfig::save().
@@ -85,7 +87,7 @@ static void coloursShot(const std::string &arg) {
             continue;
         }
         if (word.rfind("ink:", 0) == 0) word = "text_colour";         // (1.7.6-1.8.3: a text colour of its own; now the theme's)
-        std::string want = word == "edit" ? "edit themes" : word; for (auto &ch : want) if (ch == '_') ch = ' ';   // ("text_colour": the Text colour button)
+        std::string want = word == "edit" ? "edit themes ..." : word; for (auto &ch : want) if (ch == '_') ch = ' ';   // ("text_colour": the Text colour button)
         const int th = themeByWord(want); if (th >= 0) want = std::to_string(th + 1);
         bool found = false;
         for (auto &tile : p.scene().tiles) {
@@ -144,6 +146,7 @@ int main(int argc, char **argv) {
         if (s == "@appearance") { appearanceShot(); continue; }
         if (s.rfind("@pong ", 0) == 0) { pongShot(s.substr(6)); continue; }
         if (s == "@colours" || s.rfind("@colours ", 0) == 0) { coloursShot(s.size() > 9 ? s.substr(9) : std::string()); continue; }
+        if (s[0] == '@' && ownCommand(s)) continue;
         handle(unescape(s));
     }
     fclose(in);

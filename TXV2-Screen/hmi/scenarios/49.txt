@@ -5,15 +5,15 @@ page TrimDefView
 @shot 49_open
 # pilot pushes the aileron trim, then the throttle trim (SticksMode 2)
 play 0,17,0
-ail.txt="Aileron trim is defined!"
+ail.txt="Aileron trim: done"
 play 0,17,0
-thr.txt="Throttle trim is defined!"
+thr.txt="Throttle trim: done"
 @shot 49_partial
 play 0,17,0
-ele.txt="Elevator trim is defined!"
+ele.txt="Elevator trim: done"
 play 0,17,0
-rud.txt="Rudder trim is defined!"
-# all four defined = every text the Teensy sends here (25 chars max)
+rud.txt="Rudder trim: done"
+# all four defined = every text the Teensy sends here (19 chars max)
 @shot 49_long
 # OK -> DefineTrimsEnd (Trims.h:36) -> CalibrateView; later "Calibrate trims" again -> StartTrimDefView sends only the page
 page CalibrateView

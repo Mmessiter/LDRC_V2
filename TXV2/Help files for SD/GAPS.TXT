@@ -1,9 +1,35 @@
-|This screen shows details of reconnection times. It can be very informative. In particular it clarifies how many reconnection events were of what sort of length. ||
-
-For example, the longest reconnection time may have occurred only once or twice whereas the majority of reconnection times were very much shorter. This can be reassuring news!||
-
-If you see a large number of reconnection times which are greater than 100 ms, or even 250 ms, then it might be time to consider relocating your antenna, and perhaps checking for damage to the antennae on the receiver and the transmitter.||
-
-When many models use FHSS simultaneously, frequency collisions are inevitable but they are brief as a rule because the system attempts to reconnect as quickly as possible. With this particular system reconnection times are usually extremely short. They are usually below 8 ms and sometimes below 4 ms. They only become noticeable to the pilot if they exceed about 350 ms which is approximately a third of a second.||
-
-I suggest you don't look at this screen while flying! Look at it after you have landed but before switching off.
+How long the radio link took to come back each time it was lost,|
+sorted by length: a quick way to judge the link.|
+Look at it after landing, before you switch off. Not while flying!||
+READING IT:|
+Each column is one range of times in milliseconds (ms), written|
+under it: '< 4' means under 4 ms.|
+The number under a column: how many reconnections took that|
+long. Its coloured bar grows with it, full at 50 or more.|
+The per cent above a column: its share of all reconnections.|
+Along the bottom: the 'Shortest', 'Average' and 'Longest' times.||
+Green columns (under 100 ms) are normal. Amber (100 to 249 ms)|
+and red (250 ms or more) are long gaps.||
+The longest time may have happened only once or twice, while most|
+were far shorter. This can be reassuring news!||
+WHAT IS NORMAL:|
+Reconnections are usually extremely short with this system:|
+below 8 ms, and sometimes below 4 ms.|
+You only notice gaps above about 350 ms (a third of a second).|
+Many above 100 ms, or even 250 ms? Then consider moving|
+the aerials, and check those on the receiver and on the|
+transmitter for damage.||
+WHY THERE ARE GAPS:|
+Many models hop between frequencies (FHSS) at the same time.|
+Collisions cannot be avoided, but they are brief: the system|
+reconnects as fast as it can.||
+NOT COUNTED:|
+- gaps that begin while the safety is on, with a Rotorflight|
+model that has an arming channel;|
+- gaps while a V2 receiver is saving flight data.|
+The log still notes these two (with 'Keep log files' on).|
+Gaps while the 'PID (Rotorflight)' page is open are|
+neither counted nor logged.||
+'Clear', on the Telemetry page, sets the counts back to zero.|
+They also start again a few seconds after each connection, and|
+when you press 'OK' on 'Rotorflight options'.|

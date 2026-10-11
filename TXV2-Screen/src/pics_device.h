@@ -174,7 +174,11 @@ static bool picPanelUp() { return topOn && topWho == 4; }
 #define PIC_STRIP OUR_STRIP
 #define PIC_INK OUR_INK
 #define PIC_SOFT OUR_SOFT
-static const uint16_t PIC_MINE_INK = 0x87F0, PIC_SEL = 0xFFE0;
+// the pilot's own photos green, the one chosen in the theme's accent: pale green and yellow on a dark theme; dark green and
+// the theme's text colour on a light one (White, Yellow, Sky), where yellow and pale green do not read
+#define PIC_MINE_INK (OUR_GOOD(PIC_BACK))
+#define PIC_SEL (theme.accent())
+static const uint16_t PIC_ON_DARK = 0xC618;                     // quieter words on the chooser's own dark faces ("No picture", "No WiFi"): light grey in every theme
 static int picBtnFont = 6;
 static void picText(int x, int y, int font, uint16_t col, const std::string &s) { gfx->startWrite(); drawGlyphs(x, y, font, col, s); gfx->endWrite(); }
 static void picTextCentred(const ldrc::PicRect &r, int font, uint16_t col, const std::string &s) {
@@ -210,7 +214,7 @@ static void picChooseFont() {                                    // one font for
     }
     picBtnFont = 2;
 }
-static const int PIC_HELP_X = 626;                               // the strip: the title left of it, Help right of it
+static const int PIC_HELP_X = 616;                               // the strip: the title left of it, Help right of it
 static void picDrawTitle() {
     const ldrc::PicRect r = { 0, 0, PIC_HELP_X, ldrc::PIC_STRIP_H };
     gfx->fillRect(r.x, r.y, r.w, r.h - 1, PIC_STRIP);
@@ -219,9 +223,9 @@ static void picDrawTitle() {
         pg = std::to_string(pictures.page() + 1) + " / " + std::to_string(pictures.pages());
     const int pw = pg.empty() ? 0 : textWidth(6, pg) + 24;
     const std::string t = pictures.title();
-    const int room = r.w - 28 - pw, font = picFit(t, room, 0, 6);
+    const int room = r.w - 34 - pw, font = picFit(t, room, 0, 6);   // (from x 20, ending 14 px before Help or the page number)
     picClip(r);
-    picText(14, (r.h - fontHeight(font)) / 2 + 2, font, PIC_INK, topCut(t, font, room));
+    picText(20, (r.h - fontHeight(font)) / 2 + 2, font, PIC_INK, topCut(t, font, room));
     if (!pg.empty()) picText(r.w - pw + 6, (r.h - fontHeight(6)) / 2 + 2, 6, PIC_SOFT, pg);
     picUnclip();
 }
@@ -260,16 +264,19 @@ static void picDrawTile(int slot) {
     const int ix = r.x + 4, iy = r.y + 4;
     if (ldrc::picSameName(en.name, ldrc::PIC_NONE)) {
         gfx->fillRect(ix, iy, ldrc::PIC_THUMB_W, ldrc::PIC_THUMB_H, 0x0000);
-        picClip(r); picTextCentred({ ix, iy, ldrc::PIC_THUMB_W, ldrc::PIC_THUMB_H }, 6, PIC_SOFT, "No picture"); picUnclip();
+        picClip(r); picTextCentred({ ix, iy, ldrc::PIC_THUMB_W, ldrc::PIC_THUMB_H }, 6, PIC_ON_DARK, "No picture"); picUnclip();
     } else {
         PicThumb *t = picThumbFind(picKey(en.name, en.mine));
         if (t && t->px) gfx->draw16bitRGBBitmap(ix, iy, t->px, ldrc::PIC_THUMB_W, ldrc::PIC_THUMB_H);
         else {
             gfx->fillRect(ix, iy, ldrc::PIC_THUMB_W, ldrc::PIC_THUMB_H, 0x2104);
-            picClip(r); picTextCentred({ ix, iy, ldrc::PIC_THUMB_W, ldrc::PIC_THUMB_H }, 6, PIC_SOFT, t && t->bad ? "?" : "..."); picUnclip();
+            picClip(r); picTextCentred({ ix, iy, ldrc::PIC_THUMB_W, ldrc::PIC_THUMB_H }, 6, PIC_ON_DARK, t && t->bad ? "?" : "..."); picUnclip();
         }
         picClip(l);
-        const uint16_t ink = chosen ? PIC_SEL : en.mine ? PIC_MINE_INK : PIC_INK;
+        // (on a light theme the accent is the text colour, the same as every other name: the chosen one is reversed out)
+        const bool lit = chosen && ldrc::themeIsLight(PIC_BACK);
+        if (lit) gfx->fillRect(l.x, l.y, l.w, l.h, PIC_SEL);
+        const uint16_t ink = lit ? PIC_BACK : chosen ? PIC_SEL : en.mine ? PIC_MINE_INK : PIC_INK;
         picTextCentred(l, picFit(en.name, l.w - 8, 6, 2), ink, en.name);
         picUnclip();
     }
@@ -287,7 +294,7 @@ static void picDrawQr() {
     gfx->fillRect(r.x, r.y, r.w, r.h, PIC_BACK);
     if (!picHost.wifiUp()) {
         gfx->fillRect(r.x, r.y, r.w, r.h, 0x4208);
-        picClip(r); picTextCentred(r, 0, PIC_SOFT, "No WiFi"); picUnclip();
+        picClip(r); picTextCentred(r, 0, PIC_ON_DARK, "No WiFi"); picUnclip();
         return;
     }
     static uint8_t qr[420], tmp[420];                             // version 10 at most: ((10*4+17)^2+7)/8+1 = 408 bytes
@@ -317,9 +324,17 @@ static void picDrawInfo() {
         line("Or type this address:", 6, 2, PIC_SOFT, 8);
         line(pictures.shortUrl(), 5, 2, PIC_INK, 0);
     } else {
-        line("The transmitter needs WiFi", 0, 6, PIC_INK, 8);
-        line("to receive a photo.", 0, 6, PIC_INK, 26);
-        line("Press WiFi setup to join a network.", 6, 2, PIC_SOFT, 0);
+        // (what to do first; the box beside it and the line below already say there is no WiFi. While the model could fly
+        // there is no WiFi setup button: the reason the radios are off says what to do instead)
+        const int why = picHost.flying();
+        if (why) {
+            line(why == 1 ? "Switch the motor off," : why == 2 ? "Put the safety on," : why == 4 ? "Wait a minute," : "Switch the model off,", 0, 6, PIC_INK, 8);
+            line("then add the photo.", 0, 6, PIC_INK, 26);
+        } else {
+            line("Press WiFi setup", 0, 6, PIC_INK, 8);
+            line("to join a network.", 0, 6, PIC_INK, 26);
+        }
+        line("A photo comes over WiFi.", 6, 2, PIC_SOFT, 0);
     }
     picUnclip();
 }
@@ -398,8 +413,8 @@ static void picSoon() {
         TopDraw on;
         gfx->fillRect(0, 0, W, H, PIC_BACK);
         gfx->fillRect(0, 0, W, ldrc::PIC_STRIP_H - 1, PIC_STRIP); gfx->drawFastHLine(0, ldrc::PIC_STRIP_H - 1, W, PIC_INK);
-        picText(14, (ldrc::PIC_STRIP_H - fontHeight(0)) / 2 + 2, 0, PIC_INK, "Pictures");
-        picTextCentred({ 0, 190, W, 60 }, 0, PIC_SOFT, "Opening...");
+        picText(20, (ldrc::PIC_STRIP_H - fontHeight(0)) / 2 + 2, 0, PIC_INK, "Choose a picture");   // (the chooser's own title: no jump when it opens)
+        picTextCentred({ 0, 190, W, 60 }, 0, PIC_SOFT, "Opening ...");
     }
     topX = 0; topY = 0; topW = W; topH = H; topWho = 4; topOn = true;
     dirty(0, 0, W, H); touchPainted = true;
@@ -448,7 +463,7 @@ static void picPoll() {
         if ((page.name == "RXOptionsView" || page.name == "ModelsView") && !topOn) picWarm();
     }
     pictures.poll();
-    if (pictures.gaveUp()) { picDeclined = true; banner("The main board did not answer: update the transmitter for the new chooser"); }
+    if (pictures.gaveUp()) { picDeclined = true; banner("Update the transmitter to use the new picture chooser"); }
     const bool up = pictures.mode() != P::CLOSED && !updShowing() && !wifiPage.showing() && topReady();
     if (up) {
         if (pictures.mode() != P::RECEIVE && !picJob.on) {      // the next thumbnail this page lacks
@@ -515,7 +530,7 @@ static void picWeb() {
     web.on("/photo", HTTP_GET, []() {
         if (!pictures.keyOk(web.arg("k").c_str())) {
             web.send(403, "text/html", "<!doctype html><meta name=viewport content='width=device-width'><body style='font:20px sans-serif;padding:20px'>"
-                                       "<h2>This link has expired</h2><p>On the transmitter, open <b>Choose image</b> and press <b>Add photo</b>, then scan the new code.</p>");
+                                       "<h2>This link has expired</h2><p>On the transmitter, open <b>Model options</b>, then <b>Model picture ...</b>, press <b>Add photo</b> and scan the new code.</p>");
             return;
         }
         File f = SD.open(PIC_PAGE_FILE, FILE_READ);

@@ -17,6 +17,21 @@ page TXSetupView
 ModelName.txt="RAW 420 MCM (3)"
 @appearance
 @shot app_page_white
+@theme yellow
+page TXSetupView
+ModelName.txt="RAW 420 MCM (3)"
+@appearance
+@shot app_page_yellow
+@theme sky
+page TXSetupView
+ModelName.txt="RAW 420 MCM (3)"
+@appearance
+@shot app_page_sky
+@theme red
+page TXSetupView
+ModelName.txt="RAW 420 MCM (3)"
+@appearance
+@shot app_page_red
 @theme navy white
 @model 0
 page BackGroundView

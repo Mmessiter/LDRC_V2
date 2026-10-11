@@ -19,3 +19,8 @@ and the channel bars that grow from the middle (renderer lines `@theme PANEL TEX
 `flight_sizes.txt`: the flight screen's box sizes (screen 1.7.1) - all twelve layouts, numbers as big as their boxes, the
 setup page and its choice of sizes (`@flightsetup CONFIG @sizes`).
 Renderer words for the Colours page (1.7.6): `@colours edit red hsv:200,80,70`, `@colours white ink:burgundy`; a box's colour page: `@flightsetup CONFIG @box N @boxcolour F I`.
+
+`light_themes.txt`: what a page draws in a fixed colour on a theme's panel, in White, Yellow, Sky (and Red for the
+arming line) - the Rotorflight menu's arming line in each of its colours (armed: light red 64235, since the Teensy
+polish), the sliders' knobs (Trims, Sounds) and the radio buttons (Switch N, Batteries). Every other scenario must render
+the same on Navy before and after a change to these colours (src/main.cpp inkOf, themeFaceUnder; lib/LdrcTheme).

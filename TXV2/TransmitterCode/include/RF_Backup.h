@@ -1105,7 +1105,7 @@ FLASHMEM static void BakShowPage()
     else snprintf(b, sizeof(b), "No backup of this model on the card yet");
     SendText((char *)"i0", b);
     BakEditsText(e, sizeof(e));
-    if (e[0]) snprintf(b, sizeof(b), "Edits made without the model: %.80s", e); else snprintf(b, sizeof(b), "No edits waiting");
+    if (e[0]) snprintf(b, sizeof(b), "Edits waiting: %.80s", e); else snprintf(b, sizeof(b), "No edits waiting");
     SendText((char *)"i1", b);
     SendCommand((char *)(e[0] ? "vis b4,1" : "vis b4,0"));
     SendCommand((char *)(BakHaveFile() ? "vis b2,1" : "vis b2,0"));
@@ -1148,7 +1148,7 @@ FLASHMEM void WriteEdits()
 FLASHMEM void DiscardEdits()
 {
     if (BakJob != BAK_JOB_NONE || !BakEditsWaiting()) return;
-    if (!GetConfirmation((char *)"page RFBackUpView", (char *)"Forget the edits made without the model?\r\nThe backup keeps them until they are written.")) { BakShowPage(); return; }
+    if (!GetConfirmation((char *)"page RFBackUpView", (char *)"Forget the edits waiting?\r\nWrite edits will not send them, but\r\nthe backup keeps their values\r\nuntil the next Back up.")) { BakShowPage(); return; }
     BakLoad(ModelName);   // (the file again: the edits as read ... then they are let go with their values? No: the values stay, the marks go)
     BakClearEdits(); BakSave();
     BakShowPage();

@@ -1,18 +1,40 @@
-Mixes can be applied to inputs or outputs. If neither is selected , then that mix is not enabled.||
-
-To make a Mix apply to all Banks, enter '0' (zero) as its 'Bank'. ||
-Each 'Master' channel can have many 'Slaves', and each Slave can also have multiple Masters ... just like in ancient Egypt.||
-
-A percentage of the curve that was defined for the Master is passed to each of its Slaves. The Slave's own curve is used when its stick or knob is moved.||
-
-A Slave's end points (as defined in the Slave's curve) are never exceeded.||
-
-A Slave can even have its own Master as its Slave. This is needed for V tails, flaperons, delta wings etc.||
-
-Master-Slave associations are not cascaded. That is, if a Slave is also a Master, its Slave(s) inherit nothing from their Master's Master.||
-
-Selecting 'One direction only' will only move the slave one way of course. This might be needed if for example you want up elevator with left AND right rudder.||
-
-Offset is needed when the default position of the Master channel is not in the centre. Test different values to find which value gets the slave centred when master is at default position.||
-
-The actual value needed for 'Offset' may change when the percentage for that mix changes. In a later version of the firmware this slight annoyance will be fixed! 
+A mix makes one channel (the slave) follow another (the master):|
+rudder that follows the ailerons, say.||
+TO SET UP A MIX:|
+1. Choose a 'Mix number' with its '-' and '+'.|
+2. Turn on 'Mix input' or 'Mix output' (see below). With both|
+off, the mix does nothing.|
+3. Set 'Bank (0 = all)', 'Master channel' and 'Slave channel'.|
+Their names show on the right.|
+4. Set 'Percent': how much of the master's movement the slave|
+gets (100 = all of it).|
+5. Press 'OK' to save.|
+Each '-' or '+' works at once: watch the servos as you go.||
+MIX INPUT OR MIX OUTPUT:|
+'Mix input' adds the master's stick movement to the slave's|
+stick, before the slave's curve.|
+The slave's own curve then shapes the result.|
+'Mix output' adds the master's output (after its own curve)|
+to the slave's output.|
+Either way, the slave still follows its own stick or knob|
+through its own curve.|
+It never goes past that curve's end points.||
+MASTERS AND SLAVES:|
+A master can have many slaves; a slave can have many masters.|
+A slave can even have its own master as its slave, as V tails,|
+flaperons and delta wings need. Use 'Mix output' for these.|
+Output mixes do not pass anything on: each one takes the master's|
+own output, never what another output mix added to it.|
+Input mixes work in 'Mix number' order, so a later input mix sees|
+what an earlier one did.||
+ONE DIRECTION AND REVERSED:|
+'One direction' moves the slave one way only, whichever way the|
+master moves: up elevator with left AND right rudder, say.|
+'Reversed' moves the slave the other way.|
+With 'One direction' on, 'Reversed' chooses which way.||
+OFFSET:|
+Use 'Offset' when the master does not rest at its centre,|
+as with a throttle.|
+Try values until the slave is centred with the master at rest.|
+If you change 'Percent', check 'Offset' again: the value|
+needed changes with it.|

@@ -1,15 +1,25 @@
 # 24 OptionView2 ("Clock (2 of 3)") - OptionsView "Next >" (va0.val=128+25) -> OptionView2Start, MenuOptions.h:902-929
-# then ReadTime() once a second (Utilities.h:704-773): DateTime.txt, OPTIONVIEW2 format pads a 1-digit day with 2 spaces
+# then ReadTime() once a second (Utilities.h:776-830): DateTime.txt, OPTIONVIEW2 format pads a 1-digit day with 2 spaces;
+# ShortMonth (Utilities.h:769) without its trailing space: one gap before the year
 Screen_Background=8
 @model 0
 page OptionView2
 dGMT.val=0
-DateTime.txt="3   Oct.  2026 20:31:07"
+DateTime.txt="3   Oct. 2026 20:31:07"
 @shot 24_open
 # a second later (two-digit day for comparison)
-DateTime.txt="13 Oct.  2026 20:31:08"
+DateTime.txt="13 Oct. 2026 20:31:08"
 @shot 24_day2
-# worst case: widest date string ReadTime can build (620 px in font 1) and a negative time zone
+# worst case: widest date string ReadTime can build (610 px in font 1: a one-digit day, "Sept.") and a negative time zone
 dGMT.val=-12
-DateTime.txt="9   June  2026 00:00:00"
+DateTime.txt="1   Sept. 2026 00:00:00"
 @shot 24_long
+# "Reset clock" (b12: va0.val=128+71) -> ResetClock MenuOptions.h:937-948: GetConfirmation over this page, then a MsgBox
+page PopupView
+Dialog.txt="Set clock to firmware build time?"
+@shot 24_reset_ask
+page OptionView2
+page PopupView
+vis b1,0
+Dialog.txt="Clock set to firmware build time."
+@shot 24_reset_done

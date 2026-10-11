@@ -1,27 +1,65 @@
-# 53 SwitchesView ("Switches on top") - TXSetupView "Switches" (print "SwitchesView") -> main.cpp:3851-3859
-# UpdateSwitchesView -> DoOneSwitch (main.cpp:1262-1343): each box first gets "Not used" + 9 trailing spaces, then
-# its job; a job's text ends in "  R" when reversed, else the R is cut off and two trailing spaces remain
-# (ShowSwitchNameWithReversed, main.cpp:1242-1258). Here: 1 Safety, 2 not used, 3 Bank 4 & Motor, 4 Banks 1 2 3 reversed.
+# 53 SwitchesView ("Switches") - Transmitter setup "Switches" (print "SwitchesView") -> main.cpp "SwitchesView": page SwitchesView,
+# UpdateSwitchesView, UpdateModelsNameEveryWhere. UpdateSwitchesView -> DoOneSwitch for the eight (main.cpp ~1347-1402): each box
+# first gets "Not used" + 9 spaces, then its job. A job's text ends in "  R" (a channel job too: "<label>  R") and the R is cut off when
+# the switch is not reversed (ShowSwitchNameWithReversed). A front switch (5-8) with no job is its own channel's input (B38):
+# "Channel N" or the channel's new name if the pilot renamed it (B39 ChannelLabel). Then ShowSwitchPositions sends p1-p8
+# "away" / "mid" / "near" whenever one changes (B37). Rewritten 10 Oct 2026 (the old one still had B33's "(Ch 10)" suffixes);
+# the words as TXV1B polish/teensy-text writes them ("%s  R": two spaces before a channel job's R, 11 Oct 2026).
 Screen_Background=8
 @model 0
 page SwitchesView
 sw1.txt="Not used         "
 sw1.txt="Safety  "
 sw2.txt="Not used         "
+sw2.txt="Rates  "
 sw3.txt="Not used         "
 sw3.txt="Bank 4 & Motor  "
 sw4.txt="Not used         "
 sw4.txt="Banks 1 2 3  R"
+sw5.txt="Not used         "
+sw5.txt="Channel 5  "
+sw6.txt="Not used         "
+sw6.txt="Flaps  R"
+sw7.txt="Not used         "
+sw7.txt="Channel 7  "
+sw8.txt="Not used         "
 ModelName.txt="RAW 420 MCM (3)"
+p1.txt="near"
+p2.txt="mid"
+p3.txt="away"
+p4.txt="away"
+p5.txt="mid"
+p6.txt="near"
+p7.txt="away"
+p8.txt="mid"
 @shot 53_open
-# worst case: the longest jobs - channel switches with 10-char channel names (ChannelNames[16][11]) - all reversed
+# ---- worst case: every switch reversed with its longest job; top switches given channel jobs with 10-character names
+# (ChannelNames[16][11]). Written with the two spaces before the R that the Teensy text change (mixing.18) gives a channel job,
+# one character longer than today's "Smoke pump R".
+page SwitchesView
 sw1.txt="Not used         "
 sw1.txt="Bank 4 & Motor  R"
 sw2.txt="Not used         "
-sw2.txt="Nav lights (Ch 10)  R"
+sw2.txt="Smoke pump  R"
 sw3.txt="Not used         "
-sw3.txt="Smoke pump (Ch 11)  R"
+sw3.txt="Collective  R"
 sw4.txt="Not used         "
-sw4.txt="Flaps down (Ch 12)  R"
-ModelName.txt="SAB GOBLIN RAW 700 COMPETITION (90)"
+sw4.txt="Banks 1 2 3  R"
+sw5.txt="Not used         "
+sw5.txt="Retracts 2  R"
+sw6.txt="Not used         "
+sw6.txt="Channel 16  R"
+sw7.txt="Not used         "
+sw7.txt="Nav lights  R"
+sw8.txt="Not used         "
+sw8.txt="Not used         "
+ModelName.txt="GOBLIN RAW 700 COMPETITION MK2 (90)"
+p1.txt="away"
+p2.txt="away"
+p3.txt="away"
+p4.txt="away"
+p5.txt="away"
+p6.txt="away"
+p7.txt="away"
+p8.txt="away"
 @shot 53_long

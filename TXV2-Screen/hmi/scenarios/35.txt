@@ -186,3 +186,6 @@ n14.val=100
 n15.val=100
 t14.txt="Flight mode 1"
 @shot 35_long
+# a 280 px name (font 2) shows whole: bank and name end at 294, 20 px before the title
+ModelName.txt="SAB GOBLIN RAW 700 (12)"
+@shot 35_name280

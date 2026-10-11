@@ -254,8 +254,8 @@ void ShowAMS()
 void ShowTrimToAll()
 {
     char trall[] = "trall";
-    char CopyTrimsToAllMSG[] = "TrimAll is on";
-    char CopyTrimsToNoneMSG[] = "TrimAll is off";
+    char CopyTrimsToAllMSG[] = "Trims: all banks";
+    char CopyTrimsToNoneMSG[] = "Trims: this bank";
 
     if (CopyTrimsToAll)
     {
@@ -299,26 +299,26 @@ void PopulateGPSView()
     if (GPS_RX_FIX)
     { // if no fix, then leave display as before
         SendText(Fix, yes);
-        snprintf(Vbuf, 7, "%.3f", GPS_RX_ANGLE);
+        snprintf(Vbuf, 7, "%.1f", GPS_RX_ANGLE);
         SendText(Bear, Vbuf);
-        snprintf(Vbuf, 6, "%.3f", GPS_RX_Altitude);
+        snprintf(Vbuf, 6, "%.1f", GPS_RX_Altitude);
         SendText(ALT, Vbuf);
-        snprintf(Vbuf, 7, "%.3f", GPS_RX_DistanceTo);
+        snprintf(Vbuf, 7, "%.1f", GPS_RX_DistanceTo);
         SendText(Dist, Vbuf);
-        snprintf(Vbuf, 6, "%.3f", GPS_RX_CourseTo);
+        snprintf(Vbuf, 6, "%.1f", GPS_RX_CourseTo);
         SendText(BTo, Vbuf);
         SimplePing();
-        snprintf(Vbuf, 15, "%.12f", GPS_RX_Longitude);
+        snprintf(Vbuf, 15, "%.6f", GPS_RX_Longitude);
         SendText(Lon, Vbuf);
-        snprintf(Vbuf, 15, "%.12f", GPS_RX_Latitude);
+        snprintf(Vbuf, 15, "%.6f", GPS_RX_Latitude);
         SendText(Lat, Vbuf);
-        snprintf(Vbuf, 6, "%.3f", GPS_RX_Speed);
+        snprintf(Vbuf, 6, "%.1f", GPS_RX_Speed);
         SendText(Sped, Vbuf);
-        snprintf(Vbuf, 6, "%.3f", GPS_RX_MaxSpeed);
+        snprintf(Vbuf, 6, "%.1f", GPS_RX_MaxSpeed);
         SendText(MxS, Vbuf);
-        snprintf(Vbuf, 6, "%.3f", GPS_RX_Maxaltitude); // ?? todo
+        snprintf(Vbuf, 6, "%.1f", GPS_RX_Maxaltitude); // ?? todo
         SendText(MALT, Vbuf);
-        snprintf(Vbuf, 6, "%.3f", GPS_RX_MaxDistance); //  ??
+        snprintf(Vbuf, 6, "%.1f", GPS_RX_MaxDistance); //  ??
         SendText(Mxd, Vbuf);
     }
     else
@@ -380,8 +380,8 @@ void PopulateDataView()
     BuildText(RX3Time, tempbuf);
     sprintf(Max_Rotor_RPM, "%" PRIu32 " RPM", Max_RotorRPM);
     BuildText(DataView_Alt, Max_Rotor_RPM);
-    sprintf(ESC_Temperature, "%.1f C.", ESC_Temp);
-    sprintf(MAX_ESC_Temperature, "%.1f C.", Max_ESC_Temp);
+    sprintf(ESC_Temperature, "%.1f C", ESC_Temp);
+    sprintf(MAX_ESC_Temperature, "%.1f C", Max_ESC_Temp);
     BuildText(DataView_MaxAlt, MAX_ESC_Temperature);
     BuildText(DataView_Temp, ESC_Temperature);
     snprintf(Vbuf, 7, "%" PRIu32, RXSuccessfulPackets);

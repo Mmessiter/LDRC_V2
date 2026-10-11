@@ -1,19 +1,35 @@
-Use this screen to view a log file of many communications events.||
-
-Log files are stored on the SD card.|
-A new LOG file is started every day. Its filename is built from the date.||
-
-You can opt to record (or not to record) when the receiver swapped transceivers.|
-The minimum 'Gap' that's logged is defined here too. Gaps are in milliseconds. ||
-
-Gaps occur when a data packet or packets fails to arrived owing to interference and/or great distance.|
-The system then reconnects as fast as possible.||
-
-Short gaps, up to 100 ms or so, are not detectable by most pilots. More than that might indicate an issue. ||
-
-Also this screen allows the the LOG function to be switched right off - to save wear and tear on the SD card.
-SD cards only last a year or so. They last longer when rarely written to. |
-So a backup of the SD card's files on your computer is a very good idea.
-
-
-
+Read the transmitter's log: what happened each day it was used.|
+'Log' on 'Model setup' opens today's log, named at the top.||
+TO MOVE AROUND:|
+Drag the text up or down to scroll.|
+'Top' and 'Bottom' jump to the start and the end.|
+'Files' lists all the log files, to view or delete them. With a|
+model connected it says 'Switch it off to see the files.'|
+No log yet today? Then it says 'File not found'.|
+Press 'Files' to read another day.|
+'OK' goes to the 'Telemetry' page.||
+WHAT IT RECORDS:|
+Connections, disconnections and gaps in the radio link.|
+Which model memory was found, and bank and rate changes.|
+The motor and safety switches, and the buddy switch.|
+How long the motor ran, battery voltages and warnings.|
+The highest head speed, current and temperature, and mAh used.|
+Each event is marked with the time.||
+GAPS:|
+A gap is when data packets fail to arrive, through interference|
+or great distance. The system reconnects as fast as possible.|
+Gaps are measured in milliseconds (ms).|
+Short gaps, up to 100 ms or so, are not noticed by most pilots.|
+Longer ones might point to a problem.||
+SETTINGS:|
+On 'Transmitter setup', 'System', then 'Next >' twice (Advanced):|
+'Keep log files' switches logging on or off.|
+'Log receiver radio swaps' records when the receiver swaps|
+between its radios (transceivers).|
+'Log gaps longer than' sets the shortest gap logged (in ms).||
+THE SD CARD:|
+Log files are kept on the transmitter's SD card.|
+A new file is started each day, named by the date.|
+SD cards only last a year or so; they last longer when rarely|
+written to. So switch logging off when you do not need it,|
+and keep a copy of the card's files on your computer.|

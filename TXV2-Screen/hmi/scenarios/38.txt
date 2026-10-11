@@ -1,0 +1,141 @@
+# GapsView (page 38, "Reconnection times"). StartGapsView (Telemetry.h:917): page GapsView; on the FIRST visit only
+# InitializeCommsGapScreen (Utilities.h:287: t1-t10 "< n" from GapThesholds {4,8,10,12,15,25,50,100,250,500}, t11 "> 500",
+# vis n0-n10,0); then PopulateGapsView (Telemetry.h:765) as ONE command: per column the count n0-n10 + vis, the bar
+# (j0,j10,j11,j6,j5,j4,j3,j9,j2,j8,j7 left to right; 0, n*6 up to 10, then 60 + (n-10)*40/40, at most 100), the percentage
+# t13,t15,t17-t25 ("n%", "< 1%", " " when empty), n13 longest, n12 average, n11 shortest (only while < 1000).
+Screen_Background=8
+@model 1
+page GapsView
+t1.txt="< 4"
+t2.txt="< 8"
+t3.txt="< 10"
+t4.txt="< 12"
+t5.txt="< 15"
+t6.txt="< 25"
+t7.txt="< 50"
+t8.txt="< 100"
+t9.txt="< 250"
+t10.txt="< 500"
+vis n0,0
+vis n1,0
+vis n2,0
+vis n3,0
+vis n4,0
+vis n5,0
+vis n6,0
+vis n7,0
+vis n8,0
+vis n9,0
+vis n10,0
+t11.txt="> 500"
+n0.val=812
+vis n0,1
+j0.val=100
+t13.txt="68%"
+n1.val=301
+vis n1,1
+j10.val=100
+t15.txt="25%"
+n2.val=40
+vis n2,1
+j11.val=90
+t17.txt="3%"
+n3.val=22
+vis n3,1
+j6.val=72
+t18.txt="1%"
+n4.val=9
+vis n4,1
+j5.val=54
+t19.txt="< 1%"
+n5.val=6
+vis n5,1
+j4.val=36
+t20.txt="< 1%"
+n6.val=3
+vis n6,1
+j3.val=18
+t21.txt="< 1%"
+n7.val=1
+vis n7,1
+j9.val=6
+t22.txt="< 1%"
+n8.val=0
+vis n8,0
+j2.val=0
+t23.txt=" "
+n9.val=0
+vis n9,0
+j8.val=0
+t24.txt=" "
+n10.val=0
+vis n10,0
+j7.val=0
+t25.txt=" "
+n13.val=86
+n12.val=5
+n11.val=2
+@shot 38_open
+# ---- a second visit: InitializeCommsGapScreen does not run again and nothing has changed, so nothing is sent; the screen
+# does not keep "vis" across page loads, so the empty columns show their 0 boxes (a reported bug, not fixed here)
+page DataView
+page GapsView
+@shot 38_again
+# ---- worst case: every column busy, five-digit counts, a long longest gap
+page GapsView
+n0.val=12345
+vis n0,1
+j0.val=100
+t13.txt="85%"
+n1.val=1234
+vis n1,1
+j10.val=100
+t15.txt="8%"
+n2.val=456
+vis n2,1
+j11.val=100
+t17.txt="3%"
+n3.val=210
+vis n3,1
+j6.val=100
+t18.txt="1%"
+n4.val=99
+vis n4,1
+j5.val=100
+t19.txt="< 1%"
+n5.val=50
+vis n5,1
+j4.val=100
+t20.txt="< 1%"
+n6.val=12
+vis n6,1
+j3.val=62
+t21.txt="< 1%"
+n7.val=10
+vis n7,1
+j9.val=60
+t22.txt="< 1%"
+n8.val=7
+vis n8,1
+j2.val=42
+t23.txt="< 1%"
+n9.val=3
+vis n9,1
+j8.val=18
+t24.txt="< 1%"
+n10.val=1
+vis n10,1
+j7.val=6
+t25.txt="< 1%"
+n13.val=123456
+n12.val=12
+n11.val=1
+@shot 38_long
+# ---- the same page in a light theme and in another dark one (the page's own words after a screen-only restart: --bare)
+@theme white
+page GapsView
+@shot 38_white
+@theme wine
+page GapsView
+@shot 38_wine
+@theme navy

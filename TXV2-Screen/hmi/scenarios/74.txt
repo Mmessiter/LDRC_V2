@@ -1,0 +1,39 @@
+# LevelView (page 74), Rotorflight's Calibrate (RF_FcSetup.h). StartCalibrateView :689 -> CalHead :570 (t11, t9 "All banks",
+# vis b3), CalShowLevel :576 (tn0/tn1: "No model: level not known" + an EMPTY line; "Reading the level ..."; or
+# "Roll %d.%d   Pitch %d.%d deg" + "Level" / "Not level: level it, then Calibrate"), "Reading from the flight controller
+# ..." :697. CalShow :589: tn2 pitch / tn3 roll trims in tenths (clamped -30.0..30.0 :596). CalibrateNow :712:
+# "Calibrating: keep it still ..." then :657 "Calibrated: roll %d.%d, pitch %d.%d degrees.".
+Screen_Background=8
+@model 1
+page LevelView
+t11.txt="Black Thunder 2"
+t9.txt="All banks"
+vis b3,0
+tn0.txt="Reading the level ..."
+tn1.txt=""
+vis busy,1
+busy.txt="Reading from the flight controller ..."
+@shot 74_reading
+vis busy,0
+tn0.txt="Roll -12.3   Pitch -12.3 deg"
+tn1.txt="Not level: level it, then Calibrate"
+tn2.txt="-1.5"
+tn3.txt="0.0"
+@shot 74_notlevel
+tn0.txt="Roll 0.4   Pitch -0.2 deg"
+tn1.txt="Level"
+tn2.txt="-30.0"
+tn3.txt="-30.0"
+vis b3,1
+@shot 74_level
+vis busy,1
+busy.txt="Calibrated: roll -0.1, pitch 0.2 degrees."
+@shot 74_calibrated
+@model 0
+page LevelView
+t11.txt="Black Thunder 2"
+t9.txt="All banks"
+vis b3,0
+tn0.txt="No model: level not known"
+tn1.txt=""
+@shot 74_nomodel

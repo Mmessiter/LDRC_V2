@@ -110,24 +110,25 @@ void WifiSetup::build() {
         add(WifiItem::TITLE, ID_TITLE, 16, 6, 200, 50, "WiFi");
         add(WifiItem::TEXT, ID_STATUS, 230, 6, 554, 50, st); last().good = good; last().strong = true;
         const bool on = host_.radioOn();
-        if (!on) { add(WifiItem::TEXT, ID_LINE1, 40, 180, 720, 40, "WiFi is switched off."); add(WifiItem::TEXT, ID_LINE2, 40, 230, 720, 40, "Switch it on to see the networks in range."); }
+        if (!on) { add(WifiItem::TEXT, ID_LINE1, 40, 200, 720, 40, "Press WiFi on to see the networks."); }   // (the strip says it is off: the page says what to do)
         else if (rows_.empty()) { add(WifiItem::TEXT, ID_LINE1, 40, 200, 720, 40, looking_ || !looked_ ? "Looking for networks" : "No network found. Look again?"); }
         for (size_t i = 0; on && i < (size_t) ROWS && first_ + i < rows_.size(); ++i) {
             const Row &r = rows_[first_ + i];
-            add(WifiItem::ROW, ID_ROW + (int) (first_ + i), 8, ROW_Y + (int) i * ROW_H, 784, ROW_H - 4, wifiShown(r.ssid));
+            add(WifiItem::ROW, ID_ROW + (int) (first_ + i), 14, ROW_Y + (int) i * ROW_H, 772, ROW_H - 4, wifiShown(r.ssid));   // (in line with the buttons below)
             WifiItem &it = last();
             it.bars = r.inRange ? wifiBars(r.rssi) : 0; it.locked = r.locked; it.good = r.joined; it.strong = r.known; it.enabled = r.inRange || r.known;
             // "Not in range" is only said once the radio HAS looked: until then it is "Checking" (Malcolm, 29-9-2026:
             // his own network, which he was joined to, stood there as "Not in range" for the seconds the looking takes).
             it.note = r.joined ? "Joined" : r.checking ? "Checking" : !r.inRange ? "Not in range" : r.known ? "Saved" : "";
         }
-        add(WifiItem::BUTTON, ID_SWITCH, 8, 420, 176, 54, on ? "WiFi off" : "WiFi on");
-        if (on) { add(WifiItem::BUTTON, ID_LOOK, 192, 420, 186, 54, "Look again"); last().enabled = !looking_; }
+        // (the pages' four button places, x 14 / 211 / 408 / 605, y 414, 180 x 56: "<" and ">" share the third)
+        add(WifiItem::BUTTON, ID_SWITCH, 14, 414, 180, 56, on ? "WiFi off" : "WiFi on");
+        if (on) { add(WifiItem::BUTTON, ID_LOOK, 211, 414, 180, 56, "Look again"); last().enabled = !looking_; }
         if (on && rows_.size() > (size_t) ROWS) {
-            add(WifiItem::BUTTON, ID_PREV, 398, 420, 96, 54, "<"); last().enabled = first_ > 0;
-            add(WifiItem::BUTTON, ID_NEXT, 502, 420, 96, 54, ">"); last().enabled = first_ + (size_t) ROWS < rows_.size();
+            add(WifiItem::BUTTON, ID_PREV, 408, 414, 86, 56, "<"); last().enabled = first_ > 0;
+            add(WifiItem::BUTTON, ID_NEXT, 502, 414, 86, 56, ">"); last().enabled = first_ + (size_t) ROWS < rows_.size();
         }
-        add(WifiItem::BUTTON, ID_DONE, 622, 420, 170, 54, "OK"); last().strong = true;   // (OK at the bottom right, as on every page - Malcolm, 10-04)
+        add(WifiItem::BUTTON, ID_DONE, 605, 414, 180, 56, "OK"); last().strong = true;   // (OK at the bottom right, as on every page - Malcolm, 10-04)
         break;
     }
     case PG_KNOWN: {
@@ -136,22 +137,24 @@ void WifiSetup::build() {
         if (target_.joined) { char b[64]; const int bars = wifiBars(host_.signal()); snprintf(b, sizeof b, "Signal: %s", bars >= 4 ? "strong" : bars == 3 ? "good" : bars == 2 ? "fair" : "weak"); add(WifiItem::TEXT, ID_LINE2, 40, 180, 720, 40, b); }
         const bool canJoin = target_.inRange && !target_.joined, canChange = target_.inRange && target_.locked;
         int x = (800 - ((canJoin ? 198 : 0) + (canChange ? 258 : 0) + 190)) / 2;          // the row of buttons, in the middle
-        if (canJoin) { add(WifiItem::BUTTON, ID_JOIN, x, 290, 190, 64, "Join"); last().strong = true; x += 198; }
+        // (the go-ahead, Join, rightmost: Forget, New password, Join)
+        add(WifiItem::BUTTON, ID_FORGET, x, 290, 190, 64, "Forget"); x += 198;
         if (canChange) { add(WifiItem::BUTTON, ID_NEWPASS, x, 290, 250, 64, "New password"); x += 258; }
-        add(WifiItem::BUTTON, ID_FORGET, x, 290, 190, 64, "Forget");
-        add(WifiItem::BUTTON, ID_BACK, 622, 420, 170, 54, "OK");
+        if (canJoin) { add(WifiItem::BUTTON, ID_JOIN, x, 290, 190, 64, "Join"); last().strong = true; }
+        add(WifiItem::BUTTON, ID_BACK, 605, 414, 180, 56, "OK");
         break;
     }
     case PG_KEYS: {
         // 1.11.45: Delete at the right end of the box, Join the big yellow key at the bottom right - as the command line's
         // keys (Malcolm, 10 Oct), so the two keyboards are one
-        add(WifiItem::BUTTON, ID_CANCEL, 6, 6, 140, 48, "Cancel");
-        add(WifiItem::TITLE, ID_TITLE, 154, 6, 488, 48, wifiShown(target_.ssid));
-        add(WifiItem::BUTTON, ID_HIDE, 650, 6, 144, 48, hidden_ ? "Show" : "Hide");
-        add(WifiItem::FIELD, ID_FIELD, 6, 60, 660, 54, hidden_ ? std::string(typed_.size(), '*') : typed_);
+        // (the top two rows on the keys' columns: Cancel over the first two, Hide and Delete over the last two)
+        add(WifiItem::BUTTON, ID_CANCEL, 1, 6, 158, 48, "Cancel");
+        add(WifiItem::TITLE, ID_TITLE, 167, 6, 466, 48, wifiShown(target_.ssid));
+        add(WifiItem::BUTTON, ID_HIDE, 641, 6, 158, 48, hidden_ ? "Show" : "Hide");
+        add(WifiItem::FIELD, ID_FIELD, 1, 60, 638, 54, hidden_ ? std::string(typed_.size(), '*') : typed_);
         { char b[48]; snprintf(b, sizeof b, typed_.size() < WIFI_PASS_MIN ? "%u of at least %u" : "%u", (unsigned) typed_.size(), (unsigned) WIFI_PASS_MIN); last().note = b; }
         last().hint = "Password for " + wifiShown(target_.ssid);
-        add(WifiItem::KEY, ID_DELETE, 672, 60, 122, 54, "Delete"); last().strong = true; last().enabled = !typed_.empty();
+        add(WifiItem::KEY, ID_DELETE, 641, 60, 158, 54, "Delete"); last().strong = true; last().enabled = !typed_.empty();
         for (int r = 0; r < 4; ++r)
             for (int c = 0; c < 10; ++c) {
                 const char ch = LAYERS[layer_][r][c];
@@ -168,14 +171,16 @@ void WifiSetup::build() {
     case PG_JOINING:
         add(WifiItem::TITLE, ID_TITLE, 16, 6, 768, 50, "Joining " + wifiShown(target_.ssid));
         add(WifiItem::TEXT, ID_LINE1, 40, 190, 720, 40, "This takes a few seconds.");
-        add(WifiItem::BUTTON, ID_CANCEL, 622, 420, 170, 54, "Cancel");
+        add(WifiItem::BUTTON, ID_CANCEL, 605, 414, 180, 56, "Cancel");
         break;
     case PG_NOTE:
         add(WifiItem::TITLE, ID_TITLE, 16, 6, 768, 50, noteTitle_); last().good = noteGood_; last().bad = noteBad_;
-        if (!noteL1_.empty()) add(WifiItem::TEXT, ID_LINE1, 40, 150, 720, 40, noteL1_);
-        if (!noteL2_.empty()) add(WifiItem::TEXT, ID_LINE2, 40, 200, 720, 40, noteL2_);
-        if (!noteB2_.empty()) { add(WifiItem::BUTTON, ID_NOTE1, 120, 320, 270, 64, noteB1_); last().strong = true; add(WifiItem::BUTTON, ID_NOTE2, 410, 320, 270, 64, noteB2_); }
-        else { add(WifiItem::BUTTON, ID_NOTE1, 265, 320, 270, 64, noteB1_); last().strong = true; }
+        if (!noteL1_.empty()) add(WifiItem::TEXT, ID_LINE1, 40, 180, 720, 40, noteL1_);   // (the words between the strip and the buttons' row)
+        if (!noteL2_.empty()) add(WifiItem::TEXT, ID_LINE2, 40, 226, 720, 40, noteL2_);
+        // (the buttons on the row every page has, y 414: a pair centred, the go-ahead - "Try again" - on the right, as the
+        // update panel's and the command line's notes; one alone where OK is on every page)
+        if (!noteB2_.empty()) { add(WifiItem::BUTTON, ID_NOTE2, 110, 414, 280, 56, noteB2_); add(WifiItem::BUTTON, ID_NOTE1, 410, 414, 280, 56, noteB1_); last().strong = true; }
+        else { add(WifiItem::BUTTON, ID_NOTE1, 605, 414, 180, 56, noteB1_); last().strong = true; }
         break;
     }
     // What is the same as before keeps its number and is not drawn again; a different set of things is a new layout.

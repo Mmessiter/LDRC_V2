@@ -1,0 +1,60 @@
+# keybdA (page 56): the full keyboard. A box whose key is 1 opens it after its own touch event has set the question
+# (keybdA.t1.txt=...); the screen sets loadpageid / loadcmpid (src/main.cpp openKeyboard) and the keyboard's
+# preinitialize copies the caller's text into input (txt_maxl: how many letters it takes). Callers: RenameView NewName
+# "Model name" (30), BackupView t1 "File name" (20), OptionsView TxName "Owner's name" (30), InputsView ch1-16
+# "Name for Channel n" (10). A finger is "click NAME,1" / "click NAME,0" (that part's press / release event): the box's own event
+# sets the question, as on the transmitter; the screen's part (loadpageid, loadcmpid, the page) is written out.
+Screen_Background=8
+@model 0
+# ---- Rename model (main.cpp StartRenameModel: NewName = the model's name)
+page RenameView
+NewName.txt="RAW 420 MCM"
+click NewName,1
+keybdA.loadpageid.val=50
+keybdA.loadcmpid.val=2
+page keybdA
+@shot 56_rename
+# ---- the longest name (30 letters) with the cursor
+page RenameView
+NewName.txt="SAB GOBLIN 700 COMPETITION MK2"
+click NewName,1
+keybdA.loadpageid.val=50
+keybdA.loadcmpid.val=2
+page keybdA
+show.txt="SAB GOBLIN 700 COMPETITION MK2|"
+@shot 56_long
+# ---- capitals (CAPS), then numbers and signs (123)
+click b220,0
+@shot 56_caps
+click b240,0
+@shot 56_numbers
+# ---- back to small letters (CAPS puts 123 back too)
+click b220,0
+# ---- the backup file's name (Utilities.h GetBackupFilename)
+page BackupView
+t0.txt="File name"
+t1.txt="RAW420MC.MOD"
+Modelname.txt="RAW 420 MCM"
+t3.txt="Create backup file for"
+click t1,1
+keybdA.loadpageid.val=48
+keybdA.loadcmpid.val=5
+page keybdA
+@shot 56_file
+# ---- the longest question: a channel's name
+page InputsView
+ch16.txt="AUX11"
+click ch16,0
+keybdA.loadpageid.val=39
+keybdA.loadcmpid.val=52
+page keybdA
+show.txt="AUX11"
+@shot 56_channel
+# ---- the owner's name, empty
+page OptionsView
+TxName.txt=""
+click TxName,1
+keybdA.loadpageid.val=25
+keybdA.loadcmpid.val=10
+page keybdA
+@shot 56_owner

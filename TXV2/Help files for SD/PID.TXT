@@ -1,13 +1,32 @@
-|This screen allows the editing of PID values for the Nexus helicopter flight controller, and probably other flight controllers that support the same MSP v1 protocol.||
-
-The screen will only appear when connected to a model which is using a compatible flight controller. ||
-
-Also the Safety switch must be ON - so the model had better be on the ground with motor off.||
-
-1). First select the Bank you would like to edit using the Bank switch. After selecting a Bank  there will be a brief pause while the values for that Bank are loaded.||
-
-2). Then edit any of the 12 values by pressing the box containing that value.||
-
-3). Then press Save and wait a moment while updated values are sent the the flight controller and saved in its EEPROM.||
-
-Confirm that your new values were indeed saved by moving the Bank switch briefly to another Bank and then back to the one you just edited. Check its values; because they were just read back from the flight controller. If all looks good, fly!!
+The flight controller's PID gains for Roll, Pitch and Yaw,|
+for the bank shown at the top left.||
+TO CHANGE THEM:|
+1. Choose the bank with the bank switch. Wait while it loads.|
+2. Touch a box and type the new value.|
+3. Press 'Save' (it appears once you touch a box).|
+The values are written to the flight controller,|
+read back to check, and stored.||
+GOOD TO KNOW:|
+Save before you move the switch: a move loads the other bank,|
+and unsaved changes are lost.|
+To check a save, move the switch away and back.|
+The page reads the values again.|
+If the page says nothing came back, do the same,|
+or leave the page and open it again.|
+Two numbers at the top left, such as 'Bank 3 / FC 2':|
+the flight controller is on bank 2, not your switch's bank 3.|
+The page shows and saves bank 2.||
+THE COLUMNS:|
+P: how hard it corrects. Too much gives a fast wobble.|
+I: how firmly it holds against drift and wind.|
+D: damping, against overshoot.|
+FF (feedforward): answers the stick at once.|
+Boost: an extra kick on quick stick moves.|
+HSI offset: Roll and Pitch only.|
+In the Configurator, FF is F, Boost is B and HSI offset is O.||
+'Advanced ...' opens 'PID +' for the same bank.|
+'OK' goes back to the Rotorflight options.|
+Both ask first if you have unsaved changes.|
+The page opens only with the safety on.|
+With no model connected, it shows the model's backup|
+(see the Rotorflight options help).|

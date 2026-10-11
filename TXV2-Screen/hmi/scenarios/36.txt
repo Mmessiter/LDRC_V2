@@ -118,11 +118,11 @@ Progress.val=87
 Progress.val=93
 Progress.val=100
 vis Progress,0
-# Save with NO model: MsgBox(pFailSafe, "Model isn't connected!") (main.cpp:3652, Utilities.h:1188)
+# Save with NO model: MsgBox(pFailSafe, NotConnected) (main.cpp:3535, Utilities.h:1188)
 @model 0
 page PopupView
 vis b1,0
-Dialog.txt="Model isn't connected!"
+Dialog.txt="No model is connected.\r\nSwitch it on, then press Save."
 @shot 36_nomodel
 page FailSafeView
 vis Progress,0

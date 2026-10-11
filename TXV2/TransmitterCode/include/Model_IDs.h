@@ -16,7 +16,7 @@ FLASHMEM void CheckAllModelIds()
     char crlf[] = {13, 10, 0};
     char lb[] = "(";
     char rb[] = ")  ";
-    char KO[] = ">Duplicate:";
+    char KO[] = " (same as ";
     char Okay[] = " (ID OK)";
     char n0[] = "n0";
     char nb[4];
@@ -66,7 +66,7 @@ FLASHMEM void CheckAllModelIds()
             {
                 strcat(buf, KO);
                 strcat(buf, Str(nb, p, 0));
-                strcat(buf, "<");
+                strcat(buf, ")");
                 ++DuplicatesCount;
             }
             else

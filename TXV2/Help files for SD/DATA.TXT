@@ -1,11 +1,44 @@
-This screen shows some information about the quality of the current connection and other data.||
-
-Pressing 'Clear' will zero many parameters.||
-
-It will show the current altitude using atmospheric pressure if a BMP280 sensor is fitted. The sensor needs to know the current local QNH (atmospheric pressure at sea level). Enter the QNH under Transmitter setup / Settings / page 3. This information can usually be found on the web site of a nearby airfield, or a decent AI system will often tell you what it is I have found. Altitude derived from atmospheric pressure is usually accurate within a foot or so. It's usually far more accurate than altitude derived from GPS.||
-
-Pressing 'Zero Alt' sets the current altitude as zero so that height above current height will be displayed. It's best to use this on the ground of course.||
-
-If you are using a two-transceiver receiver, then this screen shows which transceiver is in current use, and how long each was in use so far.||
-
-'Longest gap' means the greatest number of milliseconds recorded between losing a data packet and re-establishing a connection. While this number is below about 250 (= a quarter of a second) all should be ok. Normally it's well below 100. If it gets much higher, consider relocating the aerials on the receiver. Dipole antennae are recommended.||
+Telemetry: how well the radio link is working, and what the|
+model reports. Look at it after a flight, before you switch off.||
+'Clear' sets the counts back to zero: lost packets, the comms|
+gaps (and the 'Gaps ...' page), the frame rates, and the GPS|
+page's maximum speed and distance.|
+They also start again a few seconds after each connection, and|
+when you press 'OK' on 'Rotorflight options'.|
+'Gaps ...' shows how long each reconnection took.|
+'GPS ...' opens the GPS page.||
+THE LINK:|
+Average and current frame rate: packets received each second.|
+Lost data packets: packets that did not arrive.|
+Longest comms gap: the most milliseconds between losing a data|
+packet and being connected again. Below about 250 (a quarter of|
+a second) all should be well; normally it is well below 100.|
+If it is much higher, move the receiver's aerials, and check|
+them for damage. Dipole aerials are recommended.|
+Average comms gap: the average length of the gaps (ms).|
+Packets received: as counted by the receiver.||
+TRANSCEIVERS:|
+Receiver type: TRX is how many transceivers it has|
+(TRX:2 = two). V2 means a Version 2 receiver.|
+PWM:8 or PWM:11: the servo outputs of a Version 1 receiver.|
+Transceiver swaps: how often the receiver changed over from|
+one transceiver to another.|
+Transceiver 1, 2 and 3 time: how long each has been in use.||
+THE MODEL:|
+Max head speed, Max ESC temp and ESC temp come from Rotorflight.|
+RX volts per cell: the model's battery.|
+TX volts per cell: the transmitter's battery.|
+RX and TX firmware: the version numbers.||
+ALTITUDE:|
+Altitude is not shown on this page.|
+A Version 1 receiver with a BMP280 pressure sensor measures it.|
+With 'Keep log files' on, the highest altitude goes into the log|
+when the model disconnects.|
+The sensor needs the local sea-level pressure (QNH).|
+Enter it in 'Sea-level pressure (QNH)', on page 3 of|
+Transmitter setup / 'System'. A nearby airfield's web site,|
+or an AI assistant, will tell you.|
+To measure from where you stand, press 'Zero alt' on the GPS|
+page with the model on the ground.|
+Pressure altitude is usually right to within a foot or so,|
+far better than altitude from GPS.|

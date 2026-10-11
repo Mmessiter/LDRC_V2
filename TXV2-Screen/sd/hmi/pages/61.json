@@ -90,7 +90,7 @@
     "borderc": 0,
     "bco": 2214
    },
-   "txt": "Bank",
+   "txt": "",
    "a": {
     "style": 0,
     "key": 255,
@@ -118,7 +118,7 @@
     "borderc": 0,
     "bco": 2214
    },
-   "txt": "Rate",
+   "txt": "",
    "a": {
     "style": 0,
     "key": 255,
@@ -146,7 +146,7 @@
     "borderc": 0,
     "bco": 2214
    },
-   "txt": "Model name",
+   "txt": "",
    "a": {
     "style": 0,
     "key": 255,
@@ -300,11 +300,11 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 65535
+    "bco": 65497
    },
    "txt": "?",
    "a": {
-    "style": 2,
+    "style": 0,
     "key": 255,
     "borderw": 2,
     "xcen": 1,
@@ -392,7 +392,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Main RPM ratio",
+   "txt": "Main gear ratio",
    "a": {
     "style": 0,
     "key": 255,
@@ -432,7 +432,7 @@
     "isbr": 0
    },
    "ev": {
-    "p": "keybdB.t1.txt=\"Rotor to motor RPM ratio\""
+    "p": "keybdB.t1.txt=\"Main gear ratio\""
    }
   },
   {

@@ -1,0 +1,63 @@
+# Filter2View (page 65), gyro filters, expert (RF_Filters.h). StartFilter2View :287 -> FltHead :131, FltShowPage2 :80:
+# tn3 dynamic cutoff, tn0 lowpass 2, tn6 notch 1, tn9 notch 2 Enables (.val) with FltRows :57 hiding their rows,
+# tn1 FltTypeWords :29 (longest "2nd order"), numbers up to 1000.
+Screen_Background=8
+@model 1
+page Filter2View
+t11.txt="Black Thunder 2"
+t9.txt="All banks"
+vis b3,0
+tn3.val=0
+vis ltn4,0
+vis tn4,0
+vis ltn5,0
+vis tn5,0
+tn0.val=0
+vis ltn1,0
+vis tn1,0
+vis ltn2,0
+vis tn2,0
+tn6.val=0
+vis ltn7,0
+vis tn7,0
+vis ltn8,0
+vis tn8,0
+tn9.val=0
+vis ltn10,0
+vis tn10,0
+vis ltn11,0
+vis tn11,0
+@shot 65_alloff
+tn3.val=1
+vis ltn4,1
+vis tn4,1
+vis ltn5,1
+vis tn5,1
+tn4.txt="50"
+tn5.txt="150"
+tn0.val=1
+vis ltn1,1
+vis tn1,1
+vis ltn2,1
+vis tn2,1
+tn1.txt="2nd order"
+tn2.txt="1000"
+tn6.val=1
+vis ltn7,1
+vis tn7,1
+vis ltn8,1
+vis tn8,1
+tn7.txt="400"
+tn8.txt="300"
+tn9.val=1
+vis ltn10,1
+vis tn10,1
+vis ltn11,1
+vis tn11,1
+tn10.txt="200"
+tn11.txt="100"
+vis b3,1
+@shot 65_allon
+vis busy,1
+busy.txt="Reading from the flight controller ..."
+@shot 65_reading

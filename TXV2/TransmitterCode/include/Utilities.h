@@ -766,7 +766,7 @@ void ReadTime()
     CRUMB(CRUMB_TIME);
 
     static char month[12][15] = {"January", "February", "March", "April", "May", "June", "July", "August", "Sept", "October", "November", "December"};
-    static char ShortMonth[12][7] = {"Jan. ", "Feb. ", "Mar. ", "Apr. ", "May  ", "June ", "July ", "Aug. ", "Sept ", "Oct. ", "Nov. ", "Dec. "};
+    static char ShortMonth[12][7] = {"Jan.", "Feb.", "Mar.", "Apr.", "May", "June", "July", "Aug.", "Sept.", "Oct.", "Nov.", "Dec."};
 
     char NB[10];
     char TimeString[80];
@@ -1470,7 +1470,7 @@ void Enable_Binding()
         BindingEnabled = true;
         LedIsBlinking = true;
         PlaySound(BINDINGENABLED);
-        SendText((char *)"OptionsView.b0", (char *)"Stop Bind");
+        SendText((char *)"OptionsView.b0", (char *)"Stop binding");
     }
     else
     {

@@ -133,7 +133,7 @@ static const char *LAYERS[3][4] = {
     { "1234567890", "qwertyuiop", "asdfghjkl-", "zxcvbnm._=" },
     { "1234567890", "QWERTYUIOP", "ASDFGHJKL-", "ZXCVBNM._=" },
     { "!\"#$%&'()*", "+,-./:;<=>", "?@[\\]^_`{|", "}~        " } };
-static const int CON_X = 6, CON_Y = 64, CON_W = 788, CON_H = 312;   // the console (1.11.44: across the page; a finger scrolls it, as the help pages)
+static const int CON_X = 14, CON_Y = 64, CON_W = 772, CON_H = 338;   // the console (1.11.44: across the page; a finger scrolls it, as the help pages; on the pages' 14 px margins, down to the buttons' row)
 
 CliPage::CliPage(CliHost &host)
     : host_(host), page_(PG_NONE), step_(ST_IDLE), top_(0), follow_(true), layer_(0), job_(0), cliOpen_(false), leaveSave_(false), closeAfter_(false), closing_(false), changed_(false), waitUntil_(0), waitMs_(0), wasReady_(false), more_(false), moreAt_(0), moreSince_(0), moreLines_(0),
@@ -161,25 +161,27 @@ void CliPage::build() {
         // because the user can type in whatever he wants"; "Open" and "Close" unexplained; Up and Down unneeded, "we can scroll
         // with a finger just as in the help files"): the console, the line to type on, OK. Typed save / exit do what the
         // buttons did; "Working ..." at the right of the strip while the flight controller is being asked.
-        add(WifiItem::TITLE, CLI_ID_TITLE, 6, 6, 620, 48, "Command line (Rotorflight)");
+        add(WifiItem::TITLE, CLI_ID_TITLE, 16, 6, 610, 48, "Command line (Rotorflight)");
         { std::string h = busy ? "Working ..." : "";
           if (step_ == ST_EXEC) { char b[32]; snprintf(b, sizeof b, "%d of %u", sent_, (unsigned) exec_.size()); h = b; }
           else if (more_) { char b[32]; snprintf(b, sizeof b, "%u lines ...", (unsigned) moreLines_); h = b; }
           add(WifiItem::TEXT, CLI_ID_HINT, 630, 6, 164, 48, h); last().strong = true; }
         add(WifiItem::ROW, CLI_ID_CONSOLE, CON_X, CON_Y, CON_W, CON_H, "");   // (drawn by the screen as the console: ROW only so a touch lands on it)
-        add(WifiItem::FIELD, CLI_ID_FIELD, 6, 384, 788, 46, typed_); last().hint = "Touch here to type a command"; last().enabled = !busy;
-        add(WifiItem::BUTTON, ID_CLOSE, 634, 436, 160, 40, "OK"); last().enabled = !busy;
+        // (the line to type on and OK share the buttons' row, y 414: OK where it is on every page)
+        add(WifiItem::FIELD, CLI_ID_FIELD, 14, 414, 577, 56, typed_); last().hint = "Touch here to type a command"; last().enabled = !busy;
+        add(WifiItem::BUTTON, ID_CLOSE, 605, 414, 180, 56, "OK"); last().enabled = !busy;
         break;
     }
     case PG_KEYS: {
         // 1.11.45 (Malcolm, 10 Oct, of the keys: Delete "should be on the right-hand side of the text entry box"; the big key at
         // the bottom right "should be the one for send. And bright yellow is a good colour"): Delete at the box's end, Send the
         // big yellow key at the bottom right. The WiFi page's keys are laid out the same.
-        add(WifiItem::BUTTON, ID_CANCEL, 6, 6, 140, 48, "Cancel");
-        add(WifiItem::TITLE, CLI_ID_TITLE, 154, 6, 640, 48, "Command");
-        add(WifiItem::FIELD, CLI_ID_FIELD, 6, 60, 660, 54, typed_);
+        // (the top two rows on the keys' columns, as the WiFi page's keys: Cancel over the first two, Delete over the last two)
+        add(WifiItem::BUTTON, ID_CANCEL, 1, 6, 158, 48, "Cancel");
+        add(WifiItem::TITLE, CLI_ID_TITLE, 167, 6, 627, 48, "Command");
+        add(WifiItem::FIELD, CLI_ID_FIELD, 1, 60, 638, 54, typed_);
         last().hint = "set name = value, get name, diff all, status ...";
-        add(WifiItem::KEY, ID_DELETE, 672, 60, 122, 54, "Delete"); last().strong = true; last().enabled = !typed_.empty();
+        add(WifiItem::KEY, ID_DELETE, 641, 60, 158, 54, "Delete"); last().strong = true; last().enabled = !typed_.empty();
         for (int r = 0; r < 4; ++r)
             for (int c = 0; c < 10; ++c) {
                 const char ch = LAYERS[layer_][r][c];
@@ -199,8 +201,9 @@ void CliPage::build() {
         add(WifiItem::TEXT, CLI_ID_NOTE2, 20, 196, 760, 40, noteL2_);
         add(WifiItem::TEXT, CLI_ID_NOTE3, 20, 242, 760, 40, noteL3_);
         add(WifiItem::TEXT, CLI_ID_NOTE4, 20, 288, 760, 40, noteL4_);
-        if (!noteB2_.empty()) { add(WifiItem::BUTTON, ID_NOTE2, 200, 412, 250, 56, noteB2_); add(WifiItem::BUTTON, ID_NOTE1, 466, 412, 250, 56, noteB1_); last().strong = true; }
-        else { add(WifiItem::BUTTON, ID_NOTE1, 622, 412, 170, 56, noteB1_); last().strong = true; }
+        // (two buttons: centred as a pair, the go-ahead on the right; one: OK where every page has it)
+        if (!noteB2_.empty()) { add(WifiItem::BUTTON, ID_NOTE2, 110, 414, 280, 56, noteB2_); add(WifiItem::BUTTON, ID_NOTE1, 410, 414, 280, 56, noteB1_); last().strong = true; }   // (the update panel's and the WiFi page's pair)
+        else { add(WifiItem::BUTTON, ID_NOTE1, 605, 414, 180, 56, noteB1_); last().strong = true; }
         break;
     }
     }
@@ -243,10 +246,15 @@ void CliPage::note(const std::string &l1, const std::string &l2, const std::stri
     noteL1_ = l1; noteL2_ = l2; noteL3_ = l3; noteL4_ = l4; noteB1_ = b1; noteB2_ = b2; noteBad_ = bad; noteFrom_ = page_;
     go(PG_NOTE);
 }
+static std::string cliSentence(std::string s) {                   // words shown as a sentence: a capital first, a full stop last (the words themselves as they came)
+    if (!s.empty() && s[0] >= 'a' && s[0] <= 'z') s[0] = (char) (s[0] - 32);
+    if (!s.empty() && s.back() != '.' && s.back() != '?' && s.back() != '!') s += ".";
+    return s;
+}
 void CliPage::refusal(const std::string &why) {                   // (the receiver's reasons are plain words: no USB cable, the transmitter linked with the safety off, armed, the FC silent)
-    std::vector<std::string> ls; cliWrap(why, 58, 3, ls);
+    std::vector<std::string> ls; cliWrap(cliSentence(why), 58, 3, ls);
     while (ls.size() < 3) ls.push_back("");
-    note("The command line could not be opened:", ls[0], ls[1], "OK", "", true, ls[2]);
+    note("The command line did not open.", ls[0], ls[1], "OK", "", true, ls[2]);
     closeAfter_ = true;
 }
 
@@ -254,10 +262,10 @@ void CliPage::refusal(const std::string &why) {                   // (the receiv
 void CliPage::open(int job) {
     job_ = job; cliOpen_ = false; closeAfter_ = false; closing_ = false; changed_ = false; step_ = ST_IDLE; waitPath_.clear(); waitUntil_ = 0; jobFailed_.clear(); more_ = false; lines_.clear(); top_ = 0; follow_ = true; typed_.clear(); layer_ = 0;
     pending_.clear(); diffText_.clear(); savedAs_.clear(); down_ = false; pressed_ = 0; exec_.clear(); execAt_ = 0; sent_ = 0; refused_ = 0; execFile_.clear();
-    if (host_.armed()) { page_ = PG_CONSOLE; note("Not while the model could be flying.", "Safety on, motor off.", "", "OK", "", true); closeAfter_ = true; return; }
+    if (host_.armed()) { page_ = PG_CONSOLE; note("Not while the model could be flying.", "Put the safety on and the motor off first.", "", "OK", "", true); closeAfter_ = true; return; }
     if (!host_.pipeReady()) {
         page_ = PG_CONSOLE;
-        note("No Bluetooth link to the receiver.", "The command line needs the model on, its USB cable", "in, and the screen's Bluetooth joined (the Rotorflight menu).", "OK", "", true);
+        note("No Bluetooth link to the receiver.", "Switch the model on and plug in its USB cable,", "then open the Rotorflight menu (it joins Bluetooth).", "OK", "", true);
         closeAfter_ = true; return;
     }
     wasReady_ = true;
@@ -269,7 +277,7 @@ void CliPage::open(int job) {
         std::string text;
         if (execFile_.empty()) {                                     // (1.11.50: what it looked for, and what is there - Malcolm, 10 Oct: Execute found no file after a Diff to card)
             std::string there = files.empty() ? "The folder /rfdiff is empty." : "There: " + files[0].substr(files[0].rfind('/') + 1) + (files.size() > 1 ? " and " + std::to_string(files.size() - 1) + " more" : "");
-            note("No diff of " + (model.empty() ? std::string("this model") : model) + " on the screen's card.", "Looked for /rfdiff/" + cliModelPrefix(model) + "...txt", there, "OK", "", true, "Diff to card makes one.");
+            note("No diff of " + (model.empty() ? std::string("this model") : model) + " on the screen's card.", "Press Diff to card to make one.", "Looked for /rfdiff/" + cliModelPrefix(model) + "...txt", "OK", "", true, there);   // (what to do first, what was looked for after)
             closeAfter_ = true; return;
         }
         if (!host_.load(execFile_, text)) { note("Could not read", execFile_, "", "OK", "", true); closeAfter_ = true; return; }
@@ -322,8 +330,8 @@ void CliPage::left(const std::string &how) {
     const bool sure = how.empty();
     cliOpen_ = false;
     if (job_ == CLI_TO_CARD && !jobFailed_.empty()) {
-        std::vector<std::string> w; cliWrap(jobFailed_, 58, 3, w); while (w.size() < 3) w.push_back("");
-        note("Diff to card: NOT saved -", w[0], w[1], "OK", "", true, w[2]); closeAfter_ = true; return;
+        std::vector<std::string> w; cliWrap(cliSentence(jobFailed_), 58, 3, w); while (w.size() < 3) w.push_back("");
+        note("Diff to card: NOT saved.", w[0], w[1], "OK", "", true, w[2]); closeAfter_ = true; return;
     }
     if (job_ == CLI_TO_CARD && !savedAs_.empty()) { note("Saved on the screen's card as", savedAs_, sure ? "The flight controller is restarting (nothing changed)." : "(" + how + ": nothing changed on the model)", "OK", "", false); closeAfter_ = true; return; }
     if (job_ == CLI_EXECUTE && leaveSave_ && !exec_.empty()) {

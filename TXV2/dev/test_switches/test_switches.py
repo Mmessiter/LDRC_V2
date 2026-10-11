@@ -79,7 +79,7 @@ int main() {
     StartSwitchView(); run(4);
     CHECK(CurrentView == SWITCHVIEW && SwHave && SwN == 3 && SwAt == 0 && fields["t0"] == "Switch 1 of 3" && fields["tn0"] == "Arm - motor enable (ARM)" && fields["tn1"] == "Channel 6: AUX1");
     CHECK(cmdValue("bar.kind") == 1 && cmdValue("bar.d0") == 1500 && cmdValue("bar.d1") == 2125 && cmdValue("bar.mk") == 988 && fields["tn8"] == "OFF: 988 us" && fields["bar"] == "|ON|");
-    CHECK(fields["hint"].find("The arm switch is the safety switch") == 0);
+    CHECK(fields["hint"].find("Safety switch:") == 0);
     // the rescue: its switch is up (1900 us -> 1910 as the FC sees it): ON
     SwitchNext(); run(2); CHECK(SwAt == 1 && fields["tn0"] == "Rescue - the safety net (RESCUE)" && fields["tn1"] == "Channel 8: AUX3" && fields["tn8"] == "ON: 1909 us" && cmdValue("bar.d0") == 1700);
     SwitchNext(); run(2); CHECK(SwAt == 2 && fields["tn0"] == "Black box recording (BLACKBOX)" && fields["tn8"] == "ON: 1500 us");

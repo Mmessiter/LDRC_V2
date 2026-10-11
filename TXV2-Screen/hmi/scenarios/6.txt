@@ -4,7 +4,7 @@ Screen_Background=8
 @model 1
 page RFGovView
 t27.txt="RAW 420 MCM"
-t0.txt="RF Governor (Profile: 1)"
+t0.txt="Governor (bank 1)"
 n0.val=0
 n1.val=0
 n2.val=0
@@ -20,7 +20,7 @@ n11.val=0
 n12.val=0
 n13.val=0
 t26.txt="Bank 1"
-t0.txt="RF Governor (Profile: 1)"
+t0.txt="Governor (bank 1)"
 n0.pco=33840
 n1.pco=33840
 n2.pco=33840
@@ -80,7 +80,7 @@ vis b3,0
 # ---- worst case: profile 4 heading, 13-char bank name, 30-char model name, longest message, uint16/uint8 maxima
 page RFGovView
 t27.txt="GOBLIN RAW 700 COMPETITION MK2"
-t0.txt="RF Governor (Profile: 4)"
+t0.txt="Governor (bank 4)"
 n0.val=0
 n1.val=0
 n2.val=0
@@ -96,7 +96,7 @@ n11.val=0
 n12.val=0
 n13.val=0
 t26.txt="Flight mode 4"
-t0.txt="RF Governor (Profile: 4)"
+t0.txt="Governor (bank 4)"
 n0.pco=33840
 n1.pco=33840
 n2.pco=33840
@@ -147,3 +147,10 @@ n11.pco=0
 n12.pco=0
 n13.pco=0
 @shot 6_long
+# the longest words the box is given: a read window that ends with nothing come back (transceiver.h BlockSilence, B81),
+# and a read refused with no Bluetooth to the receiver (Parameters.h:225, B80)
+busy.txt="Governor: nothing came back in 2 s (Bluetooth 2). Bank switch again, or leave and return."
+vis busy,1
+@shot 6_nothing
+busy.txt="No Bluetooth to the receiver: NOT read. Close the phone app if it is running. It is tried again."
+@shot 6_nopipe

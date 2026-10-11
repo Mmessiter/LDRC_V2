@@ -1,0 +1,516 @@
+# 21 GraphView (Curves) - what the Teensy sends (TXV1B/TransmitterCode/src/main.cpp DisplayCurve, updateInterpolationTypes,
+# UpdateModelsNameEveryWhere, ShowServoPos; the curve lines worked out with the same formulas).
+# Written 10 Oct 2026 for the polish; b3/b4/b7/b8 are Version 1 buttons the page no longer has (the Teensy still hides them).
+Screen_Background=8
+@model 1
+# "Setup N" from the channels page (main.cpp: page GraphView, DisplayCurve, updateInterpolationTypes,
+# UpdateModelsNameEveryWhere, callfm=0), then ShowServoPos every 40 ms: Input/Output, DisplayCurve, the stick line
+page GraphView
+fill 36,36,360,360,0
+n1.val=-100
+n2.val=-50
+n3.val=0
+n4.val=50
+n5.val=100
+draw 35,35,395,395,65504
+line 35,217,395,217,63488
+line 215,35,215,395,63488
+vis b3,1
+vis b4,1
+vis b7,1
+vis b8,1
+vis n2,1
+vis n4,1
+line 35,391,125,305,65535
+line 125,305,215,215,65535
+line 215,215,305,125,65535
+line 305,125,395,39,65535
+cirs 35,391,4,65535
+cirs 125,305,4,65535
+cirs 215,215,4,65535
+cirs 305,125,4,65535
+cirs 395,39,4,65535
+cirs 215,215,10,65535
+cirs 215,215,8,65504
+cirs 215,215,6,65504
+cirs 215,215,7,0
+Lines.val=1
+Smooth.val=0
+Exp.val=0
+vis t3,0
+vis b13,0
+vis b12,0
+vis Expo,0
+vis Ex1,0
+ModelName.txt="RAW 420 MCM (3)"
+Channel.txt="Aileron"
+fmode.txt="Bank 1"
+callfm.val=0
+Input.val=24
+Output.val=24
+fill 36,36,360,360,0
+n1.val=-100
+n2.val=-50
+n3.val=0
+n4.val=50
+n5.val=100
+draw 35,35,395,395,65504
+line 35,217,395,217,63488
+line 215,35,215,395,63488
+vis b3,1
+vis b4,1
+vis b7,1
+vis b8,1
+vis n2,1
+vis n4,1
+line 35,391,125,305,65535
+line 125,305,215,215,65535
+line 215,215,305,125,65535
+line 305,125,395,39,65535
+cirs 35,391,4,65535
+cirs 125,305,4,65535
+cirs 215,215,4,65535
+cirs 305,125,4,65535
+cirs 395,39,4,65535
+cirs 215,215,10,65535
+cirs 215,215,8,65504
+cirs 215,215,6,65504
+cirs 215,215,7,0
+Lines.val=1
+Smooth.val=0
+Exp.val=0
+vis t3,0
+vis b13,0
+vis b12,0
+vis Expo,0
+vis Ex1,0
+line 258,38,258,392,65504
+@shot 21_straight
+# "Setup N" from the channels page (main.cpp: page GraphView, DisplayCurve, updateInterpolationTypes,
+# UpdateModelsNameEveryWhere, callfm=0), then ShowServoPos every 40 ms: Input/Output, DisplayCurve, the stick line
+page GraphView
+fill 36,36,360,360,0
+n1.val=-60
+n2.val=-10
+n3.val=20
+n4.val=60
+n5.val=90
+draw 35,35,395,395,65504
+line 35,217,395,217,63488
+line 215,35,215,395,63488
+vis b3,1
+vis b4,1
+vis b7,1
+vis b8,1
+vis n2,1
+vis n4,1
+line 47,315,35,323,65535
+line 59,304,47,315,65535
+line 71,291,59,304,65535
+line 83,277,71,291,65535
+line 95,263,83,277,65535
+line 107,250,95,263,65535
+line 119,238,107,250,65535
+line 131,228,119,238,65535
+line 143,220,131,228,65535
+line 155,213,143,220,65535
+line 167,206,155,213,65535
+line 179,200,167,206,65535
+line 191,193,179,200,65535
+line 203,186,191,193,65535
+line 215,179,203,186,65535
+line 227,170,215,179,65535
+line 239,160,227,170,65535
+line 251,150,239,160,65535
+line 263,140,251,150,65535
+line 275,130,263,140,65535
+line 287,120,275,130,65535
+line 299,111,287,120,65535
+line 311,102,299,111,65535
+line 323,94,311,102,65535
+line 335,85,323,94,65535
+line 347,77,335,85,65535
+line 359,69,347,77,65535
+line 371,63,359,69,65535
+line 383,57,371,63,65535
+line 395,53,383,57,65535
+cirs 35,323,4,65535
+cirs 125,233,4,65535
+cirs 215,179,4,65535
+cirs 305,107,4,65535
+cirs 395,53,4,65535
+cirs 125,233,10,65535
+cirs 125,233,8,65504
+cirs 125,233,6,65504
+cirs 125,233,7,0
+Lines.val=0
+Smooth.val=1
+Exp.val=0
+vis t3,0
+vis b13,0
+vis b12,0
+vis Expo,0
+vis Ex1,0
+ModelName.txt="RAW 420 MCM (3)"
+Channel.txt="Collective"
+fmode.txt="Idle up 1"
+callfm.val=0
+Input.val=-40
+Output.val=-40
+fill 36,36,360,360,0
+n1.val=-60
+n2.val=-10
+n3.val=20
+n4.val=60
+n5.val=90
+draw 35,35,395,395,65504
+line 35,217,395,217,63488
+line 215,35,215,395,63488
+vis b3,1
+vis b4,1
+vis b7,1
+vis b8,1
+vis n2,1
+vis n4,1
+line 47,315,35,323,65535
+line 59,304,47,315,65535
+line 71,291,59,304,65535
+line 83,277,71,291,65535
+line 95,263,83,277,65535
+line 107,250,95,263,65535
+line 119,238,107,250,65535
+line 131,228,119,238,65535
+line 143,220,131,228,65535
+line 155,213,143,220,65535
+line 167,206,155,213,65535
+line 179,200,167,206,65535
+line 191,193,179,200,65535
+line 203,186,191,193,65535
+line 215,179,203,186,65535
+line 227,170,215,179,65535
+line 239,160,227,170,65535
+line 251,150,239,160,65535
+line 263,140,251,150,65535
+line 275,130,263,140,65535
+line 287,120,275,130,65535
+line 299,111,287,120,65535
+line 311,102,299,111,65535
+line 323,94,311,102,65535
+line 335,85,323,94,65535
+line 347,77,335,85,65535
+line 359,69,347,77,65535
+line 371,63,359,69,65535
+line 383,57,371,63,65535
+line 395,53,383,57,65535
+cirs 35,323,4,65535
+cirs 125,233,4,65535
+cirs 215,179,4,65535
+cirs 305,107,4,65535
+cirs 395,53,4,65535
+cirs 125,233,10,65535
+cirs 125,233,8,65504
+cirs 125,233,6,65504
+cirs 125,233,7,0
+Lines.val=0
+Smooth.val=1
+Exp.val=0
+vis t3,0
+vis b13,0
+vis b12,0
+vis Expo,0
+vis Ex1,0
+line 144,38,144,392,65504
+@shot 21_smooth
+# "Setup N" from the channels page (main.cpp: page GraphView, DisplayCurve, updateInterpolationTypes,
+# UpdateModelsNameEveryWhere, callfm=0), then ShowServoPos every 40 ms: Input/Output, DisplayCurve, the stick line
+page GraphView
+fill 36,36,360,360,0
+n1.val=-100
+n2.val=-50
+n3.val=0
+n4.val=50
+n5.val=100
+draw 35,35,395,395,65504
+line 35,217,395,217,63488
+line 215,35,215,395,63488
+vis b3,0
+vis b4,0
+vis b7,0
+vis b8,0
+vis n2,0
+vis n4,0
+line 49,370,35,391,65535
+line 63,351,49,370,65535
+line 77,333,63,351,65535
+line 91,315,77,333,65535
+line 105,299,91,315,65535
+line 119,283,105,299,65535
+line 133,269,119,283,65535
+line 147,255,133,269,65535
+line 161,243,147,255,65535
+line 175,233,161,243,65535
+line 189,224,175,233,65535
+line 203,218,189,224,65535
+line 215,215,203,218,65535
+line 229,211,215,215,65535
+line 243,204,229,211,65535
+line 257,195,243,204,65535
+line 271,184,257,195,65535
+line 285,172,271,184,65535
+line 299,158,285,172,65535
+line 313,144,299,158,65535
+line 327,128,313,144,65535
+line 341,111,327,128,65535
+line 355,94,341,111,65535
+line 369,75,355,94,65535
+line 383,56,369,75,65535
+line 395,39,383,56,65535
+cirs 35,391,4,65535
+cirs 215,215,4,65535
+cirs 395,39,4,65535
+cirs 35,391,10,65535
+cirs 35,391,8,65504
+cirs 35,391,6,65504
+cirs 35,391,7,0
+Lines.val=0
+Smooth.val=0
+Exp.val=1
+vis t3,1
+vis b13,1
+vis b12,1
+vis Expo,1
+vis Ex1,1
+Ex1.val=80
+Expo.val=30
+ModelName.txt="RAW 420 MCM (3)"
+Channel.txt="Elevator"
+fmode.txt="Bank 2"
+callfm.val=0
+Input.val=60
+Output.val=60
+fill 36,36,360,360,0
+n1.val=-100
+n2.val=-50
+n3.val=0
+n4.val=50
+n5.val=100
+draw 35,35,395,395,65504
+line 35,217,395,217,63488
+line 215,35,215,395,63488
+vis b3,0
+vis b4,0
+vis b7,0
+vis b8,0
+vis n2,0
+vis n4,0
+line 49,370,35,391,65535
+line 63,351,49,370,65535
+line 77,333,63,351,65535
+line 91,315,77,333,65535
+line 105,299,91,315,65535
+line 119,283,105,299,65535
+line 133,269,119,283,65535
+line 147,255,133,269,65535
+line 161,243,147,255,65535
+line 175,233,161,243,65535
+line 189,224,175,233,65535
+line 203,218,189,224,65535
+line 215,215,203,218,65535
+line 229,211,215,215,65535
+line 243,204,229,211,65535
+line 257,195,243,204,65535
+line 271,184,257,195,65535
+line 285,172,271,184,65535
+line 299,158,285,172,65535
+line 313,144,299,158,65535
+line 327,128,313,144,65535
+line 341,111,327,128,65535
+line 355,94,341,111,65535
+line 369,75,355,94,65535
+line 383,56,369,75,65535
+line 395,39,383,56,65535
+cirs 35,391,4,65535
+cirs 215,215,4,65535
+cirs 395,39,4,65535
+cirs 35,391,10,65535
+cirs 35,391,8,65504
+cirs 35,391,6,65504
+cirs 35,391,7,0
+Lines.val=0
+Smooth.val=0
+Exp.val=1
+vis t3,1
+vis b13,1
+vis b12,1
+vis Expo,1
+vis Ex1,1
+Ex1.val=80
+Expo.val=30
+line 323,38,323,392,65504
+@shot 21_expo
+# Straight pressed while in expo ("Exrite"): the Teensy redraws, then hides the expo controls - the curve must survive
+fill 36,36,360,360,0
+n1.val=-100
+n2.val=-50
+n3.val=0
+n4.val=50
+n5.val=100
+draw 35,35,395,395,65504
+line 35,217,395,217,63488
+line 215,35,215,395,63488
+vis b3,1
+vis b4,1
+vis b7,1
+vis b8,1
+vis n2,1
+vis n4,1
+line 35,391,125,305,65535
+line 125,305,215,215,65535
+line 215,215,305,125,65535
+line 305,125,395,39,65535
+cirs 35,391,4,65535
+cirs 125,305,4,65535
+cirs 215,215,4,65535
+cirs 305,125,4,65535
+cirs 395,39,4,65535
+cirs 395,39,10,65535
+cirs 395,39,8,65504
+cirs 395,39,6,65504
+cirs 395,39,7,0
+Lines.val=1
+Smooth.val=0
+Exp.val=0
+vis t3,0
+vis b13,0
+vis b12,0
+vis Expo,0
+vis Ex1,0
+@shot 21_tostraight
+# ---- worst case: 10-char channel name, longest bank name, 30-char model name + 2-digit number, -100 everywhere, expo -50
+# "Setup N" from the channels page (main.cpp: page GraphView, DisplayCurve, updateInterpolationTypes,
+# UpdateModelsNameEveryWhere, callfm=0), then ShowServoPos every 40 ms: Input/Output, DisplayCurve, the stick line
+page GraphView
+fill 36,36,360,360,0
+n1.val=-100
+n2.val=-100
+n3.val=-100
+n4.val=-100
+n5.val=-100
+draw 35,35,395,395,65504
+line 35,217,395,217,63488
+line 215,35,215,395,63488
+vis b3,0
+vis b4,0
+vis b7,0
+vis b8,0
+vis n2,0
+vis n4,0
+line 49,391,35,391,65535
+line 63,391,49,391,65535
+line 77,391,63,391,65535
+line 91,391,77,391,65535
+line 105,391,91,391,65535
+line 119,391,105,391,65535
+line 133,391,119,391,65535
+line 147,391,133,391,65535
+line 161,391,147,391,65535
+line 175,391,161,391,65535
+line 189,391,175,391,65535
+line 203,391,189,391,65535
+line 215,391,203,391,65535
+line 229,391,215,391,65535
+line 243,391,229,391,65535
+line 257,391,243,391,65535
+line 271,391,257,391,65535
+line 285,391,271,391,65535
+line 299,391,285,391,65535
+line 313,391,299,391,65535
+line 327,391,313,391,65535
+line 341,391,327,391,65535
+line 355,391,341,391,65535
+line 369,391,355,391,65535
+line 383,391,369,391,65535
+line 395,391,383,391,65535
+cirs 35,391,4,65535
+cirs 215,391,4,65535
+cirs 395,391,4,65535
+cirs 395,391,10,65535
+cirs 395,391,8,65504
+cirs 395,391,6,65504
+cirs 395,391,7,0
+Lines.val=0
+Smooth.val=0
+Exp.val=1
+vis t3,1
+vis b13,1
+vis b12,1
+vis Expo,1
+vis Ex1,1
+Ex1.val=0
+Expo.val=-50
+ModelName.txt="WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW (90)"
+Channel.txt="WWWWWWWWWW"
+fmode.txt="Flight mode 1"
+callfm.val=0
+Input.val=-100
+Output.val=-100
+fill 36,36,360,360,0
+n1.val=-100
+n2.val=-100
+n3.val=-100
+n4.val=-100
+n5.val=-100
+draw 35,35,395,395,65504
+line 35,217,395,217,63488
+line 215,35,215,395,63488
+vis b3,0
+vis b4,0
+vis b7,0
+vis b8,0
+vis n2,0
+vis n4,0
+line 49,391,35,391,65535
+line 63,391,49,391,65535
+line 77,391,63,391,65535
+line 91,391,77,391,65535
+line 105,391,91,391,65535
+line 119,391,105,391,65535
+line 133,391,119,391,65535
+line 147,391,133,391,65535
+line 161,391,147,391,65535
+line 175,391,161,391,65535
+line 189,391,175,391,65535
+line 203,391,189,391,65535
+line 215,391,203,391,65535
+line 229,391,215,391,65535
+line 243,391,229,391,65535
+line 257,391,243,391,65535
+line 271,391,257,391,65535
+line 285,391,271,391,65535
+line 299,391,285,391,65535
+line 313,391,299,391,65535
+line 327,391,313,391,65535
+line 341,391,327,391,65535
+line 355,391,341,391,65535
+line 369,391,355,391,65535
+line 383,391,369,391,65535
+line 395,391,383,391,65535
+cirs 35,391,4,65535
+cirs 215,391,4,65535
+cirs 395,391,4,65535
+cirs 395,391,10,65535
+cirs 395,391,8,65504
+cirs 395,391,6,65504
+cirs 395,391,7,0
+Lines.val=0
+Smooth.val=0
+Exp.val=1
+vis t3,1
+vis b13,1
+vis b12,1
+vis Expo,1
+vis Ex1,1
+Ex1.val=0
+Expo.val=-50
+line 37,38,37,392,65504
+@shot 21_long

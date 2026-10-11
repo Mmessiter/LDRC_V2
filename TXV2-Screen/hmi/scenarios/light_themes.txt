@@ -1,0 +1,323 @@
+# Colours drawn in a fixed colour on a theme's panel, in the light themes (White, Yellow, Sky) and in Red (10-10): the
+# Rotorflight menu's arming line (RF_FcSetup.h ArmShow: green 2016 ready, yellow 65504 will not arm, light red 64235
+# armed), the sliders' knobs (Trims, Sounds), the radio buttons' discs (Switch N, Batteries).
+# On a dark theme each stays exactly as it is (they read there); here each is given a colour that reads (src/main.cpp
+# inkOf, themeFaceUnder; lib/LdrcTheme themeInkOn, themeMarkOn, themeStandsOut).
+Screen_Background=8
+@model 1
+
+# ---- white
+@theme white
+page RFView
+t11.txt="RAW 420 MCM"
+t14.txt="Bank 1"
+t8.txt="Rate 1"
+pipe.txt="By Bluetooth"
+arm.txt="Ready to arm"
+arm.pco=2016
+@shot lt_white_8_ready
+arm.txt="Armed"
+arm.pco=64235
+@shot lt_white_8_armed
+arm.txt="Will not arm: Arm switch on too soon: off, then on (and 9 more)"
+arm.pco=65504
+@shot lt_white_8_willnot
+page TrimView
+n0.val=5
+c0.val=1
+ModelName.txt="RAW 420 MCM (3)"
+t1.txt="Bank 1"
+ch1.val=82
+n1.val=2
+c1.txt="Aileron"
+ch2.val=80
+n2.val=0
+c2.txt="Elevator"
+ch4.val=77
+n4.val=-3
+c3.txt="Throttle"
+ch3.val=85
+n3.val=5
+c4.txt="Rudder"
+@shot lt_white_28_trims
+page AudioView
+Ex1.val=60
+n2.val=3
+n0.val=400
+n3.val=125
+h0.val=80
+c0.val=1
+c1.val=1
+c2.val=0
+c3.val=1
+c4.val=1
+c5.val=1
+volume=60
+@shot lt_white_55_sounds
+page OneSwitchView
+Sw.val=3
+r0.val=0
+r1.val=0
+r2.val=0
+r3.val=0
+r4.val=0
+r5.val=0
+r6.val=0
+r7.val=0
+r8.val=0
+r9.val=0
+r10.val=0
+r11.val=0
+r12.val=0
+r13.val=0
+r14.val=0
+r15.val=0
+r16.val=0
+r17.val=0
+r2.val=1
+c_revd.val=0
+c_revd.val=0
+t10.txt="Channel 5"
+t11.txt="Flaps"
+t12.txt="Channel 7"
+t13.txt="Channel 8"
+t3.txt="Channel 9"
+t4.txt="Channel 10"
+t5.txt="Channel 11"
+t6.txt="Channel 12"
+t14.txt="Channel 13"
+t15.txt="Channel 14"
+t16.txt="Channel 15"
+t17.txt="Channel 16"
+ModelName.txt="RAW 420 MCM (3)"
+@shot lt_white_54_switch
+page TypeView
+r2s.val=0
+r3s.val=0
+r4s.val=0
+r5s.val=0
+r6s.val=0
+r12s.val=0
+r0.val=0
+r1.val=0
+r6s.val=1
+r0.val=1
+ModelName.txt="RAW 420 MCM (3)"
+@shot lt_white_51_batteries
+
+# ---- yellow
+@theme yellow
+page RFView
+t11.txt="RAW 420 MCM"
+t14.txt="Bank 1"
+t8.txt="Rate 1"
+pipe.txt="By Bluetooth"
+arm.txt="Ready to arm"
+arm.pco=2016
+@shot lt_yellow_8_ready
+arm.txt="Armed"
+arm.pco=64235
+@shot lt_yellow_8_armed
+arm.txt="Will not arm: Arm switch on too soon: off, then on (and 9 more)"
+arm.pco=65504
+@shot lt_yellow_8_willnot
+page TrimView
+n0.val=5
+c0.val=1
+ModelName.txt="RAW 420 MCM (3)"
+t1.txt="Bank 1"
+ch1.val=82
+n1.val=2
+c1.txt="Aileron"
+ch2.val=80
+n2.val=0
+c2.txt="Elevator"
+ch4.val=77
+n4.val=-3
+c3.txt="Throttle"
+ch3.val=85
+n3.val=5
+c4.txt="Rudder"
+@shot lt_yellow_28_trims
+page AudioView
+Ex1.val=60
+n2.val=3
+n0.val=400
+n3.val=125
+h0.val=80
+c0.val=1
+c1.val=1
+c2.val=0
+c3.val=1
+c4.val=1
+c5.val=1
+volume=60
+@shot lt_yellow_55_sounds
+page OneSwitchView
+Sw.val=3
+r0.val=0
+r1.val=0
+r2.val=0
+r3.val=0
+r4.val=0
+r5.val=0
+r6.val=0
+r7.val=0
+r8.val=0
+r9.val=0
+r10.val=0
+r11.val=0
+r12.val=0
+r13.val=0
+r14.val=0
+r15.val=0
+r16.val=0
+r17.val=0
+r2.val=1
+c_revd.val=0
+c_revd.val=0
+t10.txt="Channel 5"
+t11.txt="Flaps"
+t12.txt="Channel 7"
+t13.txt="Channel 8"
+t3.txt="Channel 9"
+t4.txt="Channel 10"
+t5.txt="Channel 11"
+t6.txt="Channel 12"
+t14.txt="Channel 13"
+t15.txt="Channel 14"
+t16.txt="Channel 15"
+t17.txt="Channel 16"
+ModelName.txt="RAW 420 MCM (3)"
+@shot lt_yellow_54_switch
+page TypeView
+r2s.val=0
+r3s.val=0
+r4s.val=0
+r5s.val=0
+r6s.val=0
+r12s.val=0
+r0.val=0
+r1.val=0
+r6s.val=1
+r0.val=1
+ModelName.txt="RAW 420 MCM (3)"
+@shot lt_yellow_51_batteries
+
+# ---- sky
+@theme sky
+page RFView
+t11.txt="RAW 420 MCM"
+t14.txt="Bank 1"
+t8.txt="Rate 1"
+pipe.txt="By Bluetooth"
+arm.txt="Ready to arm"
+arm.pco=2016
+@shot lt_sky_8_ready
+arm.txt="Armed"
+arm.pco=64235
+@shot lt_sky_8_armed
+arm.txt="Will not arm: Arm switch on too soon: off, then on (and 9 more)"
+arm.pco=65504
+@shot lt_sky_8_willnot
+page TrimView
+n0.val=5
+c0.val=1
+ModelName.txt="RAW 420 MCM (3)"
+t1.txt="Bank 1"
+ch1.val=82
+n1.val=2
+c1.txt="Aileron"
+ch2.val=80
+n2.val=0
+c2.txt="Elevator"
+ch4.val=77
+n4.val=-3
+c3.txt="Throttle"
+ch3.val=85
+n3.val=5
+c4.txt="Rudder"
+@shot lt_sky_28_trims
+page AudioView
+Ex1.val=60
+n2.val=3
+n0.val=400
+n3.val=125
+h0.val=80
+c0.val=1
+c1.val=1
+c2.val=0
+c3.val=1
+c4.val=1
+c5.val=1
+volume=60
+@shot lt_sky_55_sounds
+page OneSwitchView
+Sw.val=3
+r0.val=0
+r1.val=0
+r2.val=0
+r3.val=0
+r4.val=0
+r5.val=0
+r6.val=0
+r7.val=0
+r8.val=0
+r9.val=0
+r10.val=0
+r11.val=0
+r12.val=0
+r13.val=0
+r14.val=0
+r15.val=0
+r16.val=0
+r17.val=0
+r2.val=1
+c_revd.val=0
+c_revd.val=0
+t10.txt="Channel 5"
+t11.txt="Flaps"
+t12.txt="Channel 7"
+t13.txt="Channel 8"
+t3.txt="Channel 9"
+t4.txt="Channel 10"
+t5.txt="Channel 11"
+t6.txt="Channel 12"
+t14.txt="Channel 13"
+t15.txt="Channel 14"
+t16.txt="Channel 15"
+t17.txt="Channel 16"
+ModelName.txt="RAW 420 MCM (3)"
+@shot lt_sky_54_switch
+page TypeView
+r2s.val=0
+r3s.val=0
+r4s.val=0
+r5s.val=0
+r6s.val=0
+r12s.val=0
+r0.val=0
+r1.val=0
+r6s.val=1
+r0.val=1
+ModelName.txt="RAW 420 MCM (3)"
+@shot lt_sky_51_batteries
+
+# ---- red
+@theme red
+page RFView
+t11.txt="RAW 420 MCM"
+t14.txt="Bank 1"
+t8.txt="Rate 1"
+pipe.txt="By Bluetooth"
+arm.txt="Ready to arm"
+arm.pco=2016
+@shot lt_red_8_ready
+arm.txt="Armed"
+arm.pco=64235
+@shot lt_red_8_armed
+arm.txt="Will not arm: Arm switch on too soon: off, then on (and 9 more)"
+arm.pco=65504
+@shot lt_red_8_willnot
+
+@theme navy

@@ -1,0 +1,33 @@
+# Travel2View (page 63), Mixer page 2: main rotor geometry (RF_Travel.h). StartTravel2View :333 -> TravPageHead :263, then
+# TravShowPage2 :69: tn0..tn6 in tenths (TravTenths), tn7/tn8 whole numbers (TravNum); TravGatherPage2 :127's clamps:
+# calibrations 0..1000.0, geometry -25.0..25.0, limits 0..30.0 / 36.0 deg, phase -180.0..180.0, tilts -100..100.
+Screen_Background=8
+@model 1
+page Travel2View
+t11.txt="Black Thunder 2"
+t9.txt="Bank 1"
+vis b3,0
+tn0.txt="86.5"
+tn1.txt="100.0"
+tn2.txt="3.0"
+tn3.txt="10.0"
+tn4.txt="12.0"
+tn5.txt="18.0"
+tn6.txt="0.0"
+tn7.txt="0"
+tn8.txt="0"
+@shot 63_loaded
+tn0.txt="1000.0"
+tn1.txt="1000.0"
+tn2.txt="-25.0"
+tn3.txt="30.0"
+tn4.txt="30.0"
+tn5.txt="36.0"
+tn6.txt="-180.0"
+tn7.txt="-100"
+tn8.txt="-100"
+vis b3,1
+@shot 63_long
+vis busy,1
+busy.txt="Saved, but the flight controller adjusted some values."
+@shot 63_saved

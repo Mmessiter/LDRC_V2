@@ -1,1 +1,39 @@
-This screen allows you to edit governor parameters which vary according to which profile (or bank) is currently running. There is a separate screen for global governor parameters: Global ... opens it.
+The governor values Rotorflight keeps for each bank:|
+the head speed, and how the governor holds it.|
+The title shows the bank, such as 'Governor (bank 2)'.|
+The settings shared by every bank are on 'Global ...'.|
+It needs Rotorflight 2.3 (the version is in 'Settings ...').||
+TO CHANGE THEM:|
+1. Choose the bank with the bank switch. Wait while it loads.|
+2. Touch a value, or its name, and type the new value.|
+3. Press 'Save'.|
+The values are written to the flight controller,|
+read back to check, and stored.|
+'Save' is refused while the model could be armed.||
+GOOD TO KNOW:|
+Save before you move the switch or press 'Global ...':|
+unsaved changes are lost.|
+To check a save, move the switch away and back.|
+The page reads the values again.|
+If the page says nothing came back, do the same,|
+or leave the page and open it again.|
+'Bank 3 / FC 2' at the top left: the flight controller|
+is on bank 2, so the page shows and saves bank 2.||
+THE VALUES:|
+Head speed [rpm]: the head speed this bank holds.|
+Master gain: the overall strength. It scales P, I, D and F.|
+P, I and D gain: how the governor corrects a head speed error.|
+F gain: the strength of the three weights below.|
+TTA gain and TTA limit [%]: tail torque assist.|
+The head speed may rise to help the tail in hard yaw.|
+The limit is the most it may rise.|
+Max throttle and Min throttle [%]: the most and the least|
+throttle the governor may use.|
+Fallback drop [%]: how much the throttle drops if the head|
+speed signal is lost (0 to 50).|
+Yaw, Cyclic and Collective weight: how much each stick adds|
+throttle before the load arrives.||
+'OK' goes back to the Rotorflight options.|
+It asks first if you have unsaved changes.|
+With no model connected the page shows the model's backup|
+(see the Rotorflight options help).|

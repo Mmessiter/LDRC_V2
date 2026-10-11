@@ -103,7 +103,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "print \"HelpView:RFLIGHT.TXT\"\nLogView.t0.txt=\"RotorFlight setup help\"\nLogView.return.txt=\"RFView\"\n// 54938 =  button colour"
+    "r": "print \"HelpView:RFLIGHT.TXT\"\nLogView.t0.txt=\"Rotorflight options help\"\nLogView.return.txt=\"RFView\"\n// 54938 =  button colour"
    }
   },
   {
@@ -122,7 +122,7 @@
     "borderc": 0,
     "bco": 2214
    },
-   "txt": "Bank",
+   "txt": "",
    "a": {
     "style": 0,
     "key": 255,
@@ -150,7 +150,7 @@
     "borderc": 0,
     "bco": 2214
    },
-   "txt": "Rate",
+   "txt": "",
    "a": {
     "style": 0,
     "key": 255,

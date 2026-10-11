@@ -1,19 +1,37 @@
-Three rates can be setup. One of these is normally set to 100%, but all can be 0% - 200% ||
-
-A three position edge switch can be allocated to select between rates, and/or rates can be selected according to which bank is selected.||
-
-The rates are applied to up to eight output channels, though usually only aileron, elevator and rudder are used.||
-
-If no switch is allocated to 'rates' then a rate of 100% is applied to all.||
-
-Each rate uses a percentage,  0% - 200%, of the values set for the selected channels, in all banks.||
-
-Any channel to which rates are not applied is sent as 100%.||
-
-To leave a channel unaltered (100%), set its channel number to 0.||
-
-After selecting channel numbers, press 'Refresh display' to display and confirm channel names.
-
-
-
-
+Rates make chosen channels move less (or more) for the|
+same stick movement.|
+There are three rates, each 0 to 200%. One is normally 100%.||
+TO SET UP RATES:|
+1. Touch the box beside 'Rate 1 (%)', 'Rate 2 (%)' and 'Rate 3 (%)'|
+in turn, and type each percentage.|
+2. Under 'Channels using these rates', touch a box and type|
+a channel number: up to eight, usually aileron, elevator and|
+rudder. 0 = not used.|
+Each channel's name appears beside its number.|
+3. Press 'Save' to keep your changes and stay, or 'OK' to|
+keep them and leave.||
+WHICH RATE IS USED:|
+The switch with the 'Rates' job picks the rate: away is rate 1,|
+mid is rate 2, near is rate 3.|
+The 'Rates' job is set in 'Transmitter setup', then 'Switches'.|
+With no 'Rates' switch, every channel gets 100%.|
+Channels not in the list always get 100%.||
+THE LIST OF CHOICES:|
+The list ('Use switch', 'Use rate 1', 'Use rate 2', 'Use rate 3')|
+is meant to let each bank choose: follow the rates switch,|
+or always use one rate.|
+It sets the bank in use now, named in the line under the|
+channels. Move the bank switch to set another bank.|
+For now the transmitter keeps this choice but does not act on it:|
+in flight, the rates switch alone picks the rate.||
+HOW A RATE WORKS:|
+A rate shrinks the channel's curve towards the middle (or, over|
+100%, stretches it).|
+At 50% the servo moves half as far.|
+The same three rates apply in every bank.||
+ROTORFLIGHT MODELS:|
+A Rotorflight model does not use these percentages.|
+Set its rates on 'Rotorflight', then 'Rates ...'.|
+There, the 'Rates' switch picks which rate you see and edit.|
+With 'Link rates and banks' on ('Settings ...'), the bank switch|
+picks it instead.|

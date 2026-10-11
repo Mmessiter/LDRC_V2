@@ -70,3 +70,14 @@ vis cb0,1
 vis cb1,1
 vis cb2,1
 @shot 16_long
+# OK with Middle and Up both "Master" while Instructor (Master) is on (EndBuddyView, MenuOptions.h:749-753): GetConfirmation
+# over this page; OK keeps the positions and saves, Cancel stays here
+page BuddyView
+BuddyM.val=1
+BuddyP.val=0
+cb0.val=0
+cb1.val=0
+cb2.val=0
+page PopupView
+Dialog.txt="Middle and Up both give control\r\nto the instructor (Master).\r\nKeep these switch positions?"
+@shot 16_master_ask

@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B92 10/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B93 11/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -668,7 +668,7 @@ enum Crumb : uint8_t
     CRUMB_LOAD = 11,       // loading the models file (SD)
     CRUMB_SOUND = 12,      // PlaySound
     CRUMB_GETVALUE = 13,   // waiting for a value from the screen
-    CRUMB_MOTORWAIT = 14,  // "Motor switch is still ON!" (main.cpp)
+    CRUMB_MOTORWAIT = 14,  // "The motor switch is ON. Switch it off, then press OK." (main.cpp)
     CRUMB_PARAMS = 15,     // sending parameters to the receiver
     CRUMB_RTC = 16,        // reading the clock (I2C)
     CRUMB_SDCARD = 17,     // CheckSDCard
@@ -1366,7 +1366,7 @@ char BankNames[32][14] = {{"Flight mode 1"},
                           {"Launch"},
                           {"Normal"},
                           {"Speed"},
-                          {"Takeoff"},
+                          {"Take off"},
                           {"Thermal"},
                           {"Hold"},
                           {"3D"},
@@ -1399,7 +1399,7 @@ uint8_t BankSounds[32] = {
     LAUNCH,     // "Launch"
     NORMALB,    // "Normal"
     SPEED,      // "Speed"
-    TAKEOFF,    // "Takeoff"
+    TAKEOFF,    // "Take off"
     THERMAL,    // "Thermal"
     THRHOLD,    // "Hold"
     THREEDEE,   // "3D"

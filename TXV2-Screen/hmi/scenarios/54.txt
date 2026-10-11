@@ -1,7 +1,8 @@
-# 54 OneSwitchView ("Switch") - SwitchesView: touch a number or its job (print "OneSwitchView 3") -> main.cpp:3681-3689
-# UpdateOneSwitchView/DoOneSwitchView (main.cpp:2285-2340): Sw = switch number (a number box in the title bar),
-# all ten radios cleared then one set, c_revd twice, t3..t6 "Channel 9".."Channel 12" each overwritten by the
-# model's channel names 9-12 when those are 2+ chars ("Ch 9".. for a model made with SetDefaultValues)
+# 54 OneSwitchView ("Switch N") - SwitchesView: touch a number or its job (print "OneSwitchView 3") -> main.cpp "OneSwitchView":
+# page OneSwitchView, UpdateOneSwitchView, UpdateModelsNameEveryWhere. UpdateOneSwitchView (main.cpp ~2373-2432): Sw = the
+# switch's number, the six job radios r0 r1 r2 r7 r8 r9 and the twelve channel radios cleared, the switch's job set (a front
+# switch with no job: its own channel's radio, B38), c_revd, then all twelve channel labels: "Channel N", or the channel's own
+# name where the pilot renamed it (B34/B39 ChannelLabel). Rewritten 10 Oct 2026 (the old one wrote B33's four labels only).
 Screen_Background=8
 @model 0
 page OneSwitchView
@@ -16,32 +17,44 @@ r6.val=0
 r7.val=0
 r8.val=0
 r9.val=0
+r10.val=0
+r11.val=0
+r12.val=0
+r13.val=0
+r14.val=0
+r15.val=0
+r16.val=0
+r17.val=0
 r2.val=1
 c_revd.val=0
 c_revd.val=0
+t10.txt="Channel 5"
+t11.txt="Flaps"
+t12.txt="Channel 7"
+t13.txt="Channel 8"
 t3.txt="Channel 9"
-t3.txt="Ch 9"
 t4.txt="Channel 10"
-t4.txt="Ch 10"
 t5.txt="Channel 11"
-t5.txt="Ch 11"
 t6.txt="Channel 12"
-t6.txt="Ch 12"
+t14.txt="Channel 13"
+t15.txt="Channel 14"
+t16.txt="Channel 15"
+t17.txt="Channel 16"
 ModelName.txt="RAW 420 MCM (3)"
 @shot 54_open
-# OK pressed (print "SwitchesView1" -> ReadNewSwitchFunction, main.cpp:2376-2504): progress bar while reading back
+# OK pressed (print "SwitchesView1" -> ReadNewSwitchFunction): the progress bar while the Teensy reads the page back
 vis Progress,1
 Progress.val=10
 Progress.val=15
 Progress.val=25
-Progress.val=30
 Progress.val=40
 Progress.val=50
 Progress.val=60
 @shot 54_busy
-# worst case: switch 4, channel 12 chosen, reversed, 10-char channel names, 30-char model name + 2-digit number
+# ---- worst case: switch 8 (a front switch), channel 11 chosen, reversed; many channels renamed with 10-character names
+# (ChannelNames[16][11]); 30-character model name + 2-digit number
 page OneSwitchView
-Sw.val=4
+Sw.val=8
 r0.val=0
 r1.val=0
 r2.val=0
@@ -52,16 +65,28 @@ r6.val=0
 r7.val=0
 r8.val=0
 r9.val=0
-r6.val=1
+r10.val=0
+r11.val=0
+r12.val=0
+r13.val=0
+r14.val=0
+r15.val=0
+r16.val=0
+r17.val=0
+r5.val=1
 c_revd.val=0
 c_revd.val=1
-t3.txt="Channel 9"
-t3.txt="Retracts 2"
+t10.txt="Retracts 2"
+t11.txt="Flaps down"
+t12.txt="Nav lights"
+t13.txt="Channel 8"
+t3.txt="Collective"
 t4.txt="Channel 10"
-t4.txt="Nav lights"
-t5.txt="Channel 11"
 t5.txt="Smoke pump"
-t6.txt="Channel 12"
-t6.txt="Flaps down"
-ModelName.txt="SAB GOBLIN RAW 700 COMPETITION (90)"
+t6.txt="Gyro gain"
+t14.txt="Channel 13"
+t15.txt="Bomb doors"
+t16.txt="Tow hook"
+t17.txt="Channel 16"
+ModelName.txt="GOBLIN RAW 700 COMPETITION MK2 (90)"
 @shot 54_long

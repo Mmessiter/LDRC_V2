@@ -366,8 +366,9 @@ static struct UpdaterSetup { UpdaterSetup() { updater.setReceiverManifest(RX_MAN
 
 // ------------------------------------------------------------------ the panel
 // Solid colours, large type, at most two buttons. It lives on its own layer (topFb): present() lays it
-// over the page, so the Teensy can go on drawing underneath.
-static const int UPD_X = 40, UPD_Y = 36, UPD_W = 720, UPD_H = 408;
+// over the page, so the Teensy can go on drawing underneath. The whole screen, as the screen's other pages of its own
+// (the WiFi page, the picture chooser): no half of the page's title and no Help that does nothing peep out round it.
+static const int UPD_X = 0, UPD_Y = 0, UPD_W = 800, UPD_H = 480;
 struct UpdButton { int x = 0, y = 0, w = 0, h = 0; bool there = false; };
 static UpdButton updBtn[3];
 static int updBtnFont = 0;                                // the one font of the panel's buttons (updDrawPanel chooses it)
@@ -388,7 +389,8 @@ static void updDrawButton(int i, const std::string &label) {
     UpdButton &b = updBtn[i];
     if (!b.there) return;
     const bool down = updPressed == i + 1;
-    const uint16_t face = down ? 0x9CD3 : 0xD69A, hi = shade(face, 60), lo = shade(face, -45);
+    const bool go = label == "Install now" || label == "OK";   // (the go-ahead in yellow, as the WiFi page's and the command line's: the same test that puts it rightmost)
+    const uint16_t face = down ? 0x9CD3 : go ? 0xFFF3 : 0xD69A, hi = shade(face, 60), lo = shade(face, -45);
     gfx->fillRect(b.x, b.y, b.w, b.h, face);
     for (int k = 0; k < 3; ++k) {
         gfx->drawFastHLine(b.x + k, b.y + k, b.w - 2 * k, down ? lo : hi); gfx->drawFastVLine(b.x + k, b.y + k, b.h - 2 * k, down ? lo : hi);
@@ -403,56 +405,67 @@ static void updDrawBar(const ldrc::UpdView &v) {
     gfx->drawRect(updBarX, updBarY, updBarW, updBarH, OUR_INK); gfx->drawRect(updBarX + 1, updBarY + 1, updBarW - 2, updBarH - 2, OUR_INK);
     const uint32_t total = v.barTotal ? v.barTotal : 1, done = min(v.barDone, total);
     const int w = (int) ((uint64_t) (updBarW - 8) * done / total);
-    if (w > 0) gfx->fillRect(updBarX + 4, updBarY + 4, w, updBarH - 8, 0x07E0);
+    if (w > 0) gfx->fillRect(updBarX + 4, updBarY + 4, w, updBarH - 8, ldrc::themeIsLight(updBack) ? 0x0320 : 0x07E0);   // (bright green does not show on a light theme)
 }
 static void updDrawPanel(const ldrc::UpdView &v) {
     using ldrc::UpdView;
     const bool mine = v.kind != UpdView::GOOD && v.kind != UpdView::BAD;                          // (the pilot's colours, unless it is good or bad news)
-    const uint16_t ink = mine ? OUR_INK : 0xFFFF, soft = mine ? OUR_SOFT : 0xC618, warn = 0xFFE0;
+    // (the warning and the new versions in the theme's accent: yellow, or on a light theme its text colour - yellow does not read on white)
+    const uint16_t ink = mine ? OUR_INK : 0xFFFF, soft = mine ? OUR_SOFT : 0xC618, warn = mine ? theme.accent() : 0xFFE0;
     updBack = v.kind == UpdView::GOOD ? 0x0320 : v.kind == UpdView::BAD ? 0x8000 : OUR_PANEL;   // solid: dark green, dark red, the panels' colour
     const uint16_t head = v.kind == UpdView::GOOD ? 0x0220 : v.kind == UpdView::BAD ? 0x5800 : OUR_STRIP;
     const int x = UPD_X, y = UPD_Y, w = UPD_W, h = UPD_H;
+    const int head_h = 58;                                       // (the strip of every page)
     gfx->fillRect(x, y, w, h, updBack);
-    gfx->fillRect(x, y, w, 64, head);
-    for (int k = 0; k < 3; ++k) gfx->drawRect(x + k, y + k, w - 2 * k, h - 2 * k, ink);
-    gfx->drawFastHLine(x, y + 64, w, ink); gfx->drawFastHLine(x, y + 65, w, ink);
+    gfx->fillRect(x, y, w, head_h, head);
+    gfx->drawFastHLine(x, y + head_h, w, ink);
     clipX0 = x + 6; clipY0 = y + 4; clipX1 = x + w - 6; clipY1 = y + h - 4;
-    { const int font = textWidth(0, v.title) <= w - 40 ? 0 : 6; updText(x + (w - textWidth(font, v.title)) / 2, y + (64 - fontHeight(font)) / 2 + 2, font, ink, v.title); }
+    { const int font = textWidth(0, v.title) <= w - 40 ? 0 : textWidth(6, v.title) <= w - 40 ? 6 : 2;   // (a long title - a release's name - cut with dots, not at both ends)
+      const std::string t = updCut(v.title, font, w - 40); updText(x + (w - textWidth(font, t)) / 2, y + (head_h - fontHeight(font)) / 2 + 2, font, ink, t); }
 
     const bool anyButton = !v.button1.empty() || !v.button2.empty();
     // The versions to choose from: a row each, the one installed in green.
     for (int i = 0; i < 4; ++i) updRow[i].there = false;
     int listH = 0;
     for (size_t i = 0; i < v.choices.size() && i < 4; ++i) {
-        UpdButton &r = updRow[i]; r.there = true; r.x = x + 30; r.w = w - 60; r.h = 52; r.y = y + 74 + (int) i * 58;
+        UpdButton &r = updRow[i]; r.there = true; r.x = x + 14; r.w = w - 28; r.h = 54; r.y = y + head_h + 12 + (int) i * 58;   // (as the WiFi page's rows: in line with the buttons)
         const bool down = updPressed == 10 + (int) i;
         const uint16_t face = down ? 0x4C9A : v.choices[i].current ? 0x0320 : 0x2A72;
         gfx->fillRect(r.x, r.y, r.w, r.h, face); gfx->drawRect(r.x, r.y, r.w, r.h, shade(face, 40));
         const std::string tag = v.choices[i].current ? "Installed" : v.choices[i].note;
         const int tw = textWidth(2, tag);
-        updText(r.x + r.w - 16 - tw, r.y + (r.h - fontHeight(2)) / 2 + 2, 2, v.choices[i].current ? 0x87F0 : soft, tag);
-        updText(r.x + 16, r.y + (r.h - fontHeight(6)) / 2 + 2, 6, ink, updCut(v.choices[i].name, 6, r.w - 48 - tw));
+        // (the rows keep their own dark faces in every theme: their words keep white and light grey, not the theme's text colour)
+        updText(r.x + r.w - 16 - tw, r.y + (r.h - fontHeight(2)) / 2 + 2, 2, v.choices[i].current ? 0x87F0 : 0xC618, tag);
+        updText(r.x + 16, r.y + (r.h - fontHeight(6)) / 2 + 2, 6, 0xFFFF, updCut(v.choices[i].name, 6, r.w - 48 - tw));
         listH = (int) (i + 1) * 58;
     }
-    const int top = y + 76 + listH, bottom = anyButton ? y + h - 96 : y + h - 16, room = bottom - top;
-    // what there is to show, and how tall it is
+    // the buttons' row, where every page has its own (y 414, 56 high); the words end 12 px above it
+    const int by = y + h - 66, bh = 56;
+    const int top = y + head_h + 12 + listH, bottom = anyButton ? by - 12 : y + h - 16, room = bottom - top;
+    // what there is to show, and how tall it is (the table where it stood on the 720-pixel panel: in the middle)
     bool three = false; for (auto &r : v.rows) if (!r.next.empty()) three = true;
-    const int cWhat = x + (three ? 28 : 110), cNow = x + (three ? 212 : 330), cNext = x + 468;
-    const int wWhat = cNow - cWhat - 10, wNow = three ? cNext - cNow - 10 : x + w - 24 - cNow, wNext = x + w - 20 - cNext;
+    const int tx = x + (w - 720) / 2;
+    const int cWhat = tx + (three ? 28 : 110), cNow = tx + (three ? 212 : 330), cNext = tx + 468;
+    const int wWhat = cNow - cWhat - 10, wNow = three ? cNext - cNow - 10 : tx + 720 - 24 - cNow, wNext = tx + 720 - 20 - cNext;
     int rowFont = 6;
     for (auto &r : v.rows) if (textWidth(6, r.what) > wWhat || textWidth(6, r.now) > wNow || (three && textWidth(6, r.next) > wNext)) rowFont = 2;
-    const int rowH = fontHeight(rowFont) + 12, headH = three ? 30 : 0;
-    const int tableH = v.rows.empty() ? 0 : headH + (int) v.rows.size() * rowH + 8;
-    const int fixedH = tableH + (v.warning.empty() ? 0 : 76) + (v.hint.empty() ? 0 : 30) + (v.bar ? 44 : 0);
-    static const int tryFonts[3] = { 6, 2, 4 };
-    int lineFont = 6; std::vector<std::string> shown;
-    for (int f = 0; f < 3; ++f) {
-        lineFont = tryFonts[f]; shown.clear();
+    // The words in 28 px if they fit; else the table in 24 px first; then the words in 24 px too - never the 16-px
+    // typewriter letters; and what still does not fit ends in " ..." (a release's notes were dropped without a word)
+    const int headH = three ? 30 : 0;
+    int rowH = 0, tableH = 0, fixedH = 0, lineFont = 6; std::vector<std::string> shown;
+    const int tries[3][2] = { { rowFont, 6 }, { 2, 6 }, { 2, 2 } };
+    for (int k = 0; k < 3; ++k) {
+        if (k == 1 && rowFont == 2) continue;                    // (the table already in 24 px)
+        rowFont = tries[k][0]; lineFont = tries[k][1]; shown.clear();
+        rowH = fontHeight(rowFont) + 12; tableH = v.rows.empty() ? 0 : headH + (int) v.rows.size() * rowH + 8;
+        fixedH = tableH + (v.warning.empty() ? 0 : 76) + (v.hint.empty() ? 0 : 30) + (v.bar ? 44 : 0);
         for (auto &l : v.lines) { if (l.empty()) continue; for (auto &part : textLines(l, lineFont, w - 64, true)) shown.push_back(part); }
         if ((int) shown.size() * (fontHeight(lineFont) + 6) + fixedH <= room) break;
     }
     const int lineH = fontHeight(lineFont) + 6;
-    while (!shown.empty() && (int) shown.size() * lineH + fixedH > room) shown.pop_back();          // (never over the buttons)
+    bool cutShort = false;
+    while (!shown.empty() && (int) shown.size() * lineH + fixedH > room) { shown.pop_back(); cutShort = true; }   // (never over the buttons)
+    if (cutShort && !shown.empty()) shown.back() = updCut(shown.back() + " ...", lineFont, w - 64);
     const int all = fixedH + (int) shown.size() * lineH;
     int cy = top + max(0, (room - all) / 2);
 
@@ -461,7 +474,7 @@ static void updDrawPanel(const ldrc::UpdView &v) {
         for (auto &r : v.rows) {
             updText(cWhat, cy + 6, rowFont, soft, updCut(r.what, rowFont, wWhat));
             updText(cNow, cy + 6, rowFont, ink, updCut(r.now, rowFont, wNow));
-            if (three) updText(cNext, cy + 6, rowFont, r.next.empty() ? soft : warn, updCut(r.next, rowFont, wNext));
+            if (three) updText(cNext, cy + 6, rowFont, r.next.empty() ? soft : (mine && ldrc::themeIsLight(updBack) ? 0x0320 : warn), updCut(r.next, rowFont, wNext));   // (on a light theme the accent is the text colour: what changes in the bar's dark green)
             cy += rowH;
         }
         cy += 8;
@@ -480,7 +493,6 @@ static void updDrawPanel(const ldrc::UpdView &v) {
     // side by side and centred, and all in ONE font - the largest in which every label fits (Arial 32 bold, else 28,
     // else 24). Three buttons came out 250/150/256 wide before, each in its own font, and "Earlier versions" overran.
     updBtn[0].there = !v.button1.empty(); updBtn[1].there = !v.button2.empty(); updBtn[2].there = !v.button3.empty();
-    const int by = y + h - 84, bh = 64;
     {
         const std::string *labels[3] = { &v.button1, &v.button2, &v.button3 };
         int n = 0, idx[3];
@@ -491,9 +503,9 @@ static void updDrawPanel(const ldrc::UpdView &v) {
             const std::string &l = *labels[idx[k]];
             if (l == "OK" || l == "Install now") { const int go = idx[k]; for (int j = k; j + 1 < n; ++j) idx[j] = idx[j + 1]; idx[n - 1] = go; break; }
         }
-        const int gap = 20, side = 24;
-        const int bw = n ? min(280, (w - 2 * side - (n - 1) * gap) / n) : 0;
-        int bx = x + (w - (n * bw + (n - 1) * gap)) / 2;
+        const int gap = 20, side = 16;
+        const int bw = n == 1 ? 180 : n ? min(280, (w - 2 * side - (n - 1) * gap) / n) : 0;
+        int bx = n == 1 ? x + 605 : x + (w - (n * bw + (n - 1) * gap)) / 2;   // (one button alone where OK is on every page: the house slot at the bottom right)
         for (int k = 0; k < n; ++k) { updBtn[idx[k]].x = bx; updBtn[idx[k]].w = bw; bx += bw + gap; }
         static const int fonts[3] = { 0, 6, 2 };
         updBtnFont = 2;

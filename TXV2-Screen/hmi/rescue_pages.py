@@ -4,7 +4,7 @@
 Re-run after a change here: python3 hmi/rescue_pages.py"""
 import json, os
 HERE = os.path.dirname(os.path.abspath(__file__)); PAGES = os.path.join(HERE, '..', 'sd', 'hmi', 'pages')
-rates = json.load(open(os.path.join(PAGES, '1.json')))
+rates = json.load(open(os.path.join(HERE, 'rf_prototypes.json')))   # (10 Oct 2026) the Rates page as it was before the polish: the prototypes of every RF page's parts, frozen so the polish of page 1 cannot leak into the generated pages
 by = {c['n']: c for c in rates['comps']}
 TITLE, CARD, LABEL_L, LABEL_R, BUTTON, FIELD, BANK, MODEL, VA0, BUSY = (by[n] for n in ('t0', 'card', 't1', 't5', 'b1', 'tn0', 't9', 't11', 'va0', 'busy'))
 
@@ -232,19 +232,23 @@ def page(pid, name, title, fields, buttons, help_file, busy_rect=MSGBOX, compact
 
 # codes (the main board's NumberedFunctions1): 64 open, 65 OK, 66 save, 67 a number edited, 68 the mode tapped, 69 flip tapped, 70 page 2, 71 back to page 1
 series_begin()
+# Polish (10 Oct 2026, Malcolm: "make the screens look more beautiful, well designed and easy to use"): the configurator's
+# names in sentence case and British spelling (the page had "Leveling" and "Levelling" side by side), the keypad asking in
+# the same words; page 1 in 7 + 6 rows, the left column what rescue does (the switches,
+# then each stage's collective and time), the right its time-outs and gains - same reading order, taller rows.
 page(58, 'RescueView', 'Rescue (Rotorflight)', [          # the configurator's names, order and units (Malcolm, 7 Oct: "use the same names in the same places")
-    ('tn0', 'Enable Rescue', 0, 0, 'switch', 68), ('tn1', 'Flip to upright', 0, 1, 'switch', 69),
-    ('tn2', 'Pull-up Collective [%]', 0, 2, 'num', 67), ('tn3', 'Pull-up Time [s]', 0, 3, 'num', 67),
-    ('tn4', 'Climb Collective [%]', 0, 4, 'num', 67), ('tn5', 'Climb Time [s]', 0, 5, 'num', 67),
-    ('tn6', 'Hover Collective [%]', 0, 6, 'num', 67), ('tn7', 'Flip Fail Time [s]', 0, 7, 'num', 67),
-    ('tn8', 'Exit Time [s]', 1, 0, 'num', 67), ('tn9', 'Leveling Gain', 1, 1, 'num', 67),
-    ('tn10', 'Flip-to-Upright Gain', 1, 2, 'num', 67), ('tn11', 'Max Levelling Rate', 1, 3, 'num', 67),
-    ('tn12', 'Max Leveling Accel.', 1, 4, 'num', 67),
+    ('tn0', 'Enable rescue', 0, 0, 'switch', 68), ('tn1', 'Flip to upright', 0, 1, 'switch', 69),
+    ('tn2', 'Pull-up collective [%]', 0, 2, 'num', 67), ('tn3', 'Pull-up time [s]', 0, 3, 'num', 67),
+    ('tn4', 'Climb collective [%]', 0, 4, 'num', 67), ('tn5', 'Climb time [s]', 0, 5, 'num', 67),
+    ('tn6', 'Hover collective [%]', 0, 6, 'num', 67),
+    ('tn7', 'Flip fail time [s]', 1, 0, 'num', 67), ('tn8', 'Exit time [s]', 1, 1, 'num', 67),
+    ('tn9', 'Levelling gain', 1, 2, 'num', 67), ('tn10', 'Flip to upright gain', 1, 3, 'num', 67),
+    ('tn11', 'Max levelling rate', 1, 4, 'num', 67), ('tn12', 'Max levelling accel.', 1, 5, 'num', 67),   # ("acceleration" in full: the island would not fit)
 ], [('b3', 'Save', 14, 180, 66), ('b2', 'Next >', 408, 180, 70), ('b1', 'OK', 605, 180, 65)], 'RESCUE.TXT')   # 1.11.22: Next / Previous between the two pages (Malcolm)
-page(59, 'Rescue2View', 'Rescue: height hold', [
+page(59, 'Rescue2View', 'Rescue: height hold', [   # (the polish, hmi/polish/rfmore.py, widens this page's value boxes for "Hold height")
     ('tn0', 'Rescue mode', 0, 0, 'cycle', 72), ('tn1', 'Hover height [m]', 0, 1, 'num', 67),
     ('tn2', 'Height hold P', 0, 2, 'num', 67), ('tn3', 'Height hold I', 0, 3, 'num', 67),
-    ('tn4', 'Height hold D', 0, 4, 'num', 67), ('tn5', 'Max Collective [%]', 0, 5, 'num', 67),
+    ('tn4', 'Height hold D', 0, 4, 'num', 67), ('tn5', 'Max collective [%]', 0, 5, 'num', 67),
 ], [('b3', 'Save', 14, 180, 66), ('b2', '< Previous', 408, 180, 71), ('b1', 'OK', 605, 180, 65)], 'RESCUE2.TXT')
 series_end()
 

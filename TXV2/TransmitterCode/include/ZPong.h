@@ -24,7 +24,7 @@ bool GameEnd(){
 void StartPong()
 {
     if (LedWasGreen) { // if connected to model, don't start pong
-        char no[] = "Please disconnect first!";
+        char no[] = "The model is connected.\r\nSwitch it off to play Pong.";
         MsgBox(pFrontView,no);
         GotoFrontView();
         return;

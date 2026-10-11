@@ -1527,8 +1527,8 @@ FASTRUN void ParseTelemetryItem()
         {
             Max_ESC_Temp = ESC_Temp;
         }
-        snprintf(ESC_Temperature, sizeof(ESC_Temperature), "%.1f C.", ESC_Temp);
-        snprintf(MAX_ESC_Temperature, sizeof(MAX_ESC_Temperature), "%.1f C.", Max_ESC_Temp);
+        snprintf(ESC_Temperature, sizeof(ESC_Temperature), "%.1f C", ESC_Temp);
+        snprintf(MAX_ESC_Temperature, sizeof(MAX_ESC_Temperature), "%.1f C", Max_ESC_Temp);
         break;
     case 25: // ROTORFLIGHT config PIDs and Rates **********************
         if (Reading_PIDS_Now)

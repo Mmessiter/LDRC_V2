@@ -1,10 +1,18 @@
-This screen allows you to view and delete log files. ||
-
-The filename for every log file is the date it was written. ||
-
-Only one file per day is created. Each event is marked with the time it occurred, using the current time. ||
-
-The 'Down' and 'Up' buttons will scroll the file when needed. The number of lines to scroll with each press can be defined (1-10) on the Transmitter setup (System page 1).||
-
-
-The transmitter keeps about the last 80 days' log files. When there are more than 90, the oldest are removed when the transmitter is switched on.
+See and delete the transmitter's log files.||
+Touch a file, then press 'View' to read it, or 'Delete' to|
+remove it (you are asked first).|
+'OK' goes back to the log viewer.||
+Each file is one day's log, named by its date: day, month, year.|
+So 01-10-26.LOG is 1 October 2026. Its size in KB is beside it.|
+Below the list: the card's total size, the space used and free.||
+Only one file is made each day. Each event in it is marked with|
+the time from the transmitter's clock. If the clock cannot be|
+read, the file is called NO_CLOCK.LOG.||
+In a log, drag the text up or down to scroll.|
+'Top' and 'Bottom' jump to the start and the end.||
+When there are more than 90 log files at switch-on, the oldest|
+are deleted, leaving the newest 80.||
+What is logged is set on 'Transmitter setup', 'System', then|
+'Next >' twice (Advanced).||
+Opened from a help page, this list shows the help files instead:|
+'View' reads one. Help files cannot be deleted.|

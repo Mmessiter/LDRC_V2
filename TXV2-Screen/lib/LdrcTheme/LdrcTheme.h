@@ -43,6 +43,11 @@ uint16_t themeBlend(uint16_t a, uint16_t b, int pctA); // pctA % of a, the rest 
 bool themeIsLight(uint16_t c);                         // dark words read on it
 double themeContrast(uint16_t a, uint16_t b);          // the web's measure: 4.5 reads well, 3 for big or quiet words
 uint16_t themeReadable(uint16_t ink, uint16_t face);   // ink if it reads on face, else black or white, whichever does
+// The light themes (White, Yellow, Sky) and colours made for the dark panels (10-10). Each keeps a colour exactly
+// as it is wherever it already reads (3:1) - so on the dark themes nothing changes - and only otherwise finds another:
+uint16_t themeInkOn(uint16_t ink, uint16_t face);      // words in a colour of their own (the arming line's green, light red): the same colour made darker (lighter) until it reads well on face (4.5:1)
+uint16_t themeMarkOn(uint16_t mark, uint16_t face, uint16_t themeInk);   // a mark (a slider's white knob): else the theme's text colour, else black or white
+bool themeStandsOut(uint16_t a, uint16_t b);           // a shape in a shows on b (3:1): else it needs an outline (a radio button's white disc on White)
 
 struct Theme {
     uint8_t no = 0;                                    // the screens' theme
@@ -96,6 +101,7 @@ struct ColoursScene {
     std::vector<ThemeTile> tiles;
 };
 static const int THEME_W = 800, THEME_H = 480, THEME_STRIP = 58;
+static const ThemeRect APPEARANCE_CARD(200, 118, 400, 302);   // the Appearance page's island (Transmitter setup's card is 30, 118, 740, 302)
 
 class ColoursPage {
 public:

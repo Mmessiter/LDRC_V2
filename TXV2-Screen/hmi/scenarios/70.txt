@@ -1,0 +1,8 @@
+# SwitchPickView (page 70), what a switch does: SwOpenPicker (TXV1B RF_Switches.h:279-285) writes t11 and list only (t9 is
+# the page's own word).
+Screen_Background=8
+@model 1
+page SwitchPickView
+t11.txt="Black Thunder 2"
+list.val=19
+@shot 70_open

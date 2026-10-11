@@ -1,19 +1,48 @@
-It's critically important to use this option before setting up and flying!  ||
-
-Also use this option again if sticks are replaced or sticks' mode is changed.||
-
-If the transmitter is new or has a new owner, you should start by selecting 'Reset Transmitter'. This function will take a few minutes to complete. It deletes all model memories (but NOT their backup files). It also sets sticks mode to MODE 2, so if you fly MODE 1, remember to change this (under TX settings) BEFORE calibrating.||
-
-Next calibrate the sticks and switches or knobs.||
-
-The system needs to know the end and centre points of all the sticks and the knobs or switches. Only channels 1 - 8 need to be calibrated.||
-
-Press the button ONCE, then move the sticks and move the knobs several times to all their extreme positions, then press the button ONCE again, then put all to their CENTRE positions and move all four TOP EDGE switches away from you before pressing it one last time to record centres and edge switch orientation.||
-
-From his screen the hardware trim sense can also be defined. The trims might be reversed if you don't define their sense!||
-
-Do not switch off the transmitter while calibrating it!|
-
-
-
- 
+Calibration teaches the transmitter where its sticks and switches|
+end and centre, and which way its trims work.|
+Do it before you set up and fly: it is critically important!|
+Do it again after new gimbals or a change of stick mode.|
+New transmitter, or a new owner?|
+Start with 'Reset transmitter' (see RESET TRANSMITTER below).|
+The page will not open while a model is connected.|
+Do not switch the transmitter off while calibrating!||
+STICKS AND SWITCHES:|
+Calibrate channels 1 to 8, the top edge switches and the trims.|
+Nothing else needs it.|
+Channels 1 to 4 are the two sticks;|
+channels 5 to 8 are the four front switches or knobs.|
+1. Press 'Calibrate sticks etc.'|
+2. Move both sticks, and the front switches or knobs, to all|
+their extreme positions several times.|
+Then press 'Next'.|
+3. Centre the sticks (the throttle stick too)|
+and the front switches or knobs.|
+Push all four top edge switches AWAY from you,|
+not in the middle.|
+The box says back or forward:|
+always use away, so each switch works the right way round.|
+Then press 'Finish'.|
+This records the centres, and which way each top switch works.|
+The box then says 'Calibration saved.'|
+and the button 'Calibrate again'.|
+Once you have started, go on to 'Finish' before you press 'OK'.|
+The bars 'Ch 1' to 'Ch 8' grow from the middle|
+as you move each control.||
+TRIMS:|
+'Calibrate trims ...' opens 'Set trim directions'.|
+Push each trim button the way the page asks,|
+one at a time, in any order:|
+aileron RIGHT, elevator DOWN, throttle DOWN, rudder RIGHT.|
+Each line then says '... trim: done'.|
+'OK' goes back to Calibration.|
+If you skip this, a trim might work backwards!||
+RESET TRANSMITTER:|
+For a new transmitter or a new owner. You are asked first.|
+It takes a few minutes.|
+It deletes all model memories (but NOT their backup files).|
+It puts most transmitter settings back to their defaults.|
+The clock goes back to the date this firmware was built.|
+Set it again on the Clock page: 'System', then 'Next >'.|
+Or let it set itself over WiFi.|
+The reset sets stick mode 2.|
+Fly mode 1? Set 'Stick mode' in 'System' BEFORE you calibrate.|

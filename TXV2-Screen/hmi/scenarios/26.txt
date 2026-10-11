@@ -1,0 +1,87 @@
+# SticksView (page 26, "Channels"). GotoSticksView (main.cpp:2899): page SticksView, UpdateButtonLabels (main.cpp:762:
+# odd "Name (n) >", even "< (n) Name"), UpdateModelsNameEveryWhere (ModelName = name + " (number)", t1 = the bank's name),
+# then the live bars Ch1-Ch16 (main.cpp:376-400, SendValue 0-100).
+Screen_Background=8
+@model 1
+page SticksView
+Sch1.txt="Aileron (1) >"
+Sch2.txt="< (2) Elevator"
+Sch3.txt="Throttle (3) >"
+Sch4.txt="< (4) Rudder"
+Sch5.txt="Gear (5) >"
+Sch6.txt="< (6) AUX1"
+Sch7.txt="AUX2 (7) >"
+Sch8.txt="< (8) AUX3"
+Sch9.txt="AUX4 (9) >"
+Sch10.txt="< (10) AUX5"
+Sch11.txt="AUX6 (11) >"
+Sch12.txt="< (12) AUX7"
+Sch13.txt="AUX8 (13) >"
+Sch14.txt="< (14) AUX9"
+Sch15.txt="AUX10 (15) >"
+Sch16.txt="< (16) AUX11"
+ModelName.txt="RAW 420 MCM (3)"
+t1.txt="Bank 1"
+Ch1.val=50
+Ch2.val=30
+Ch3.val=70
+Ch4.val=40
+Ch5.val=62
+Ch6.val=95
+Ch7.val=10
+Ch8.val=50
+Ch9.val=50
+Ch10.val=50
+Ch11.val=80
+Ch12.val=50
+Ch13.val=50
+Ch14.val=20
+Ch15.val=55
+Ch16.val=50
+@shot 26_open
+# ---- worst case: ten-letter channel names ("Collective (15) >" = 160 px font 2), the longest bank name, a long model name
+page SticksView
+Sch1.txt="Roll (1) >"
+Sch2.txt="< (2) Pitch"
+Sch3.txt="Throttle (3) >"
+Sch4.txt="< (4) Yaw"
+Sch5.txt="Collective (5) >"
+Sch6.txt="< (6) Arm"
+Sch7.txt="Bank (7) >"
+Sch8.txt="< (8) Rescue"
+Sch9.txt="Governor (9) >"
+Sch10.txt="< (10) Collective"
+Sch11.txt="Collective (11) >"
+Sch12.txt="< (12) Collective"
+Sch13.txt="Collective (13) >"
+Sch14.txt="< (14) Collective"
+Sch15.txt="Collective (15) >"
+Sch16.txt="< (16) Collective"
+ModelName.txt="SAB GOBLIN 700 COMPETITION MK2 (12)"
+t1.txt="Flight mode 1"
+Ch1.val=0
+Ch2.val=100
+Ch3.val=0
+Ch4.val=100
+Ch16.val=100
+@shot 26_long
+# ---- ten-letter names (ChannelNames[16][11]): the widest real ones keep their number and arrow ("Smoke pump (13) >" 193 px)
+page SticksView
+Sch1.txt="Main motor (1) >"
+Sch2.txt="< (2) Tail motor"
+Sch11.txt="Wing flaps (11) >"
+Sch12.txt="< (12) Smoke pump"
+Sch13.txt="Smoke pump (13) >"
+Sch14.txt="< (14) Gear doors"
+Sch15.txt="Gear doors (15) >"
+Sch16.txt="< (16) Arm switch"
+ModelName.txt="RAW 420 MCM (3)"
+t1.txt="Bank 1"
+@shot 26_names
+@theme white
+page SticksView
+@shot 26_white
+@theme wine
+page SticksView
+@shot 26_wine
+@theme navy

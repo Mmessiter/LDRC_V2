@@ -122,7 +122,7 @@
     "borderc": 0,
     "bco": 65535
    },
-   "txt": "Push the AILERON trim button RIGHT",
+   "txt": "Aileron trim: push RIGHT",
    "a": {
     "style": 2,
     "key": 255,
@@ -163,7 +163,7 @@
     "borderc": 0,
     "bco": 65535
    },
-   "txt": "Push the ELEVATOR trim button DOWN",
+   "txt": "Elevator trim: push DOWN",
    "a": {
     "style": 2,
     "key": 255,
@@ -192,7 +192,7 @@
     "borderc": 0,
     "bco": 65535
    },
-   "txt": "Push the THROTTLE trim button DOWN",
+   "txt": "Throttle trim: push DOWN",
    "a": {
     "style": 2,
     "key": 255,
@@ -221,7 +221,7 @@
     "borderc": 0,
     "bco": 65535
    },
-   "txt": "Push the RUDDER trim button RIGHT",
+   "txt": "Rudder trim: push RIGHT",
    "a": {
     "style": 2,
     "key": 255,

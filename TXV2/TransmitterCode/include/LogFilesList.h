@@ -22,13 +22,13 @@ void StartLogFilesListScreen()
     // it allows viewing of any help file.
 
     char pLogFiles[] = "page LogFiles";
-    char prompt[] = "Please disconnect first!";
+    char prompt[] = "The model is connected.\r\nSwitch it off to see the files.";
     char txt[] = ".TXT";
     char b15off[] = "vis b15,0";
     char b1off[] = "vis b1,0";
     char t0[] = "t0";
-    char LogfilesTitle[] = "All log files";
-    char HelpFilesTitle[] = "All help files";
+    char LogfilesTitle[] = "Log files";
+    char HelpFilesTitle[] = "Help files";
 
     if (LedWasGreen)
     {                             // Check if the device is connected

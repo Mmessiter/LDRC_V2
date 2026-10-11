@@ -1,20 +1,50 @@
+# RFBackUpView (page 12), the Rotorflight backup (B70): StartBackupView -> BakShowPage (TXV1B RF_Backup.h:1094-1117),
+# the progress in BakBusy / BakProgress (:712-724), verdicts and questions in PopupView (MsgBox / GetConfirmation).
 Screen_Background=8
 @model 1
-# Start_RF_Backup_Restore (RF_Save_Restore.h:522)
 page RFBackUpView
-t14.txt="Bank 1"
-t8.txt="Rate 1"
 t11.txt="RAW 420 MCM"
-@shot 12_open
-# bank change while showing (Switches.h:378)
-ModelName.txt="RAW 420 MCM (3)"
-t14.txt="Bank 3"
-t8.txt="Rate 3"
-@shot 12_bank3
-# worst case
-# Start_RF_Backup_Restore (RF_Save_Restore.h:522)
+t9.txt="Connected"
+i0.txt="Backup on the card: 2026-10-10 14:32 (412 lines)"
+i1.txt="Edits waiting: filters, rescue bank 2"
+vis b4,1
+vis b2,1
+@shot 12_edits
+# worst case: five edited keys (BakEditsText, cut by "%.80s": "Edits waiting: %.80s")
+i1.txt="Edits waiting: filters, rescue bank 2, PIDs bank 1, rates bank 3, governor bank 2"
+@shot 12_edits_long
+# the most "%.80s" lets through (80 characters of the list, cut mid-word as the Teensy cuts it; 929 px): two lines
+i1.txt="Edits waiting: governor global, adv. PIDs bank 6, governor bank 6, adv. PIDs bank 5, governor b"
+@shot 12_edits_most_new
+# a backup and nothing waiting (vis b4,0: Write edits hidden; Forget edits is never hidden - reported)
+i1.txt="No edits waiting"
+vis b4,0
+@shot 12_noedits
+# the progress of a back up (BakProgress: "%s %d of %d: %s", m[90])
+vis busy,1
+busy.txt="Reading 12 of 65: bank 3, advanced PIDs"
+@shot 12_busy
+busy.txt="Writing 41 of 98: stick centre and travel"
+@shot 12_busy_restore
+busy.txt="Restarting the flight controller ..."
+@shot 12_busy_restart
+vis busy,0
+# no model, no backup yet (BakShowPage with BakHaveFile() false: Restore all hidden)
+@model 0
 page RFBackUpView
-t14.txt="Bank 4"
-t8.txt="Rate 4"
 t11.txt="SAB GOBLIN 700 COMPETITION MK2"
-@shot 12_long
+t9.txt="No model"
+i0.txt="No backup of this model on the card yet"
+i1.txt="No edits waiting"
+vis b4,0
+vis b2,0
+@shot 12_nobackup
+# the Back up question (BackupNow, GetConfirmation)
+@model 1
+page PopupView
+Dialog.txt="Back up every Rotorflight setting\r\nof this model to the card?\r\n(Any backup there already is replaced.)"
+@shot 12_question
+# the Forget edits question (DiscardEdits, GetConfirmation; RF_Backup.h:1151, word for word)
+page PopupView
+Dialog.txt="Forget the edits waiting?\r\nWrite edits will not send them, but\r\nthe backup keeps their values\r\nuntil the next Back up."
+@shot 12_forget

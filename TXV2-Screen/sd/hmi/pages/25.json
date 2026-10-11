@@ -139,7 +139,7 @@
     "isbr": 1
    },
    "ev": {
-    "p": "keybdB.t1.txt=\"Screen timeout\""
+    "p": "keybdB.t1.txt=\"Screen goes dark after (seconds)\""
    }
   },
   {
@@ -147,7 +147,7 @@
    "i": 4,
    "t": "text",
    "g": "g",
-   "x": 65,
+   "x": 41,
    "y": 138,
    "w": 272,
    "h": 44,
@@ -226,7 +226,7 @@
     "isbr": 1
    },
    "ev": {
-    "p": "keybdB.t1.txt=\"Inactivity timeout\""
+    "p": "keybdB.t1.txt=\"Switch off when unused for (minutes)\""
    }
   },
   {
@@ -234,7 +234,7 @@
    "i": 7,
    "t": "text",
    "g": "g",
-   "x": 65,
+   "x": 41,
    "y": 186,
    "w": 318,
    "h": 44,
@@ -290,7 +290,7 @@
    "i": 9,
    "t": "text",
    "g": "l",
-   "x": 65,
+   "x": 41,
    "y": 330,
    "w": 176,
    "h": 44,
@@ -318,7 +318,7 @@
    "i": 10,
    "t": "text",
    "g": "g",
-   "x": 300,
+   "x": 324,
    "y": 330,
    "w": 435,
    "h": 44,
@@ -373,7 +373,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "print \"HelpView:OPTIONS.TXT\"\nLogView.t0.txt=\"Options help\"\nLogView.return.txt=\"OptionsView\""
+    "r": "print \"HelpView:OPTIONS.TXT\"\nLogView.t0.txt=\"System help\"\nLogView.return.txt=\"OptionsView\""
    }
   },
   {
@@ -401,9 +401,9 @@
    "i": 13,
    "t": "text",
    "g": "l",
-   "x": 65,
+   "x": 41,
    "y": 234,
-   "w": 269,
+   "w": 301,
    "h": 44,
    "font": 6,
    "sta": 1,
@@ -412,7 +412,7 @@
     "borderc": 0,
     "bco": 4426
    },
-   "txt": "Low battery warning at",
+   "txt": "Transmitter battery low at",
    "a": {
     "style": 0,
     "key": 255,
@@ -420,7 +420,7 @@
     "xcen": 0,
     "ycen": 1,
     "pw": 0,
-    "txt_maxl": 24,
+    "txt_maxl": 28,
     "isbr": 0
    }
   },
@@ -452,7 +452,7 @@
     "isbr": 1
    },
    "ev": {
-    "p": "keybdB.t1.txt=\"Low battery warning\""
+    "p": "keybdB.t1.txt=\"Transmitter battery low at (%)\""
    }
   },
   {
@@ -512,7 +512,7 @@
     "bco": 54938,
     "pco2": 65535
    },
-   "txt": "Next  >",
+   "txt": "Next >",
    "val": 0,
    "a": {
     "style": 4,
@@ -555,7 +555,7 @@
    "i": 20,
    "t": "text",
    "g": "g",
-   "x": 65,
+   "x": 41,
    "y": 282,
    "w": 140,
    "h": 44,
@@ -606,7 +606,7 @@
     "isbr": 1
    },
    "ev": {
-    "p": "keybdB.t1.txt=\"Transmitter mode\""
+    "p": "keybdB.t1.txt=\"Stick mode (1 or 2)\""
    }
   },
   {
@@ -614,7 +614,7 @@
    "i": 22,
    "t": "text",
    "g": "l",
-   "x": 65,
+   "x": 41,
    "y": 90,
    "w": 391,
    "h": 44,

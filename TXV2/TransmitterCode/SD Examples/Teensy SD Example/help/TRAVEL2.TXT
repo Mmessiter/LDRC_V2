@@ -1,9 +1,33 @@
-Main Rotor Geometry, as the configurator's section.||
-
-Cyclic calibration and Collective calibration [%]: how much of a full stick reaches the swash (0 to 1000). Geometry correction [%]: the configurator's Collective Geometry Correction, evens out the collective's arc (-50 to 50, to one decimal).||
-
-Cyclic pitch limit and Collective pitch limit [deg]: the most cyclic and collective pitch the swash may give, either way (0 to 30). Total pitch limit [deg]: collective and cyclic together; 0 = off. Rotorflight raises it to at least the collective limit plus six degrees when it stores.||
-
-Swash phase angle [deg]: turns the cyclic a little round the mast. Positive and Negative tilt correction [%]: the configurator's Collective Tilt Correction, for a swash that tilts with collective.||
-
-Save writes all three pages; OK leaves (it asks if something was edited and not saved).||
+How far the swash may move, and its calibration:|
+the configurator's Main rotor geometry section.||
+Tap a number to type a new one.|
+'Save' appears once something is changed: it writes all three|
+Mixer pages, after a question.|
+'Next >' goes on to the tail rotor, '< Previous' back to the|
+first Mixer page, changes kept.|
+'OK' leaves; if a change was not saved, it asks first.||
+ROLL AND PITCH TOGETHER:|
+Cyclic calibration and Cyclic pitch limit are each one value|
+for both roll and pitch, as in the configurator.|
+Leaving this page, or saving on it, gives roll and pitch the|
+same value. The next 'Save' writes it to both, even if they|
+were set differently before. (Where they differ, this page|
+shows the roll calibration and the pitch limit.)||
+CALIBRATION:|
+Cyclic calibration and Collective calibration [%]: how much of|
+a full stick reaches the swash (0 to 1000, one decimal).|
+Geometry correction [%]: the configurator's Collective geometry|
+correction. It evens out the collective's arc, so up and down|
+give the same pitch (-25 to 25, one decimal).||
+LIMITS:|
+Cyclic pitch limit and Collective pitch limit [deg]: the most|
+blade pitch each may give, either way (0 to 30, one decimal).|
+Total pitch limit [deg]: cyclic and collective together|
+(0 to 36; 0 = off). When on, Rotorflight keeps it at least|
+6 degrees above the collective limit: a 'Save' may raise it.||
+SWASH:|
+Swash phase angle [deg]: turns the cyclic a little round the|
+mast (-180 to 180, one decimal).|
+Positive and Negative tilt corr. [%]: the configurator's|
+Collective tilt correction, for a swash that tilts as the|
+collective moves (-100 to 100, whole numbers).|

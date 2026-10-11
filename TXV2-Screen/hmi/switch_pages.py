@@ -19,8 +19,8 @@ MODES = ["Arm - motor enable (ARM)", "Rescue - the safety net (RESCUE)", "Self-l
     "Governor suspend (GOVERNOR SUSPEND)", "Governor bypass (GOVERNOR BYPASS)", "Calibrate (CALIB)", "Telemetry on/off (TELEMETRY)",
     "Stick commands off (STICK COMMANDS DISABLE)", "User switch 1 (USER1)", "User switch 2 (USER2)", "User switch 3 (USER3)", "User switch 4 (USER4)"]
 
-comps = []; i = [1]; add = ap.header('SwitchView', 'Switch 1 of 1', 'SWITCHES.TXT', comps, i)
-shade = PALE[1]
+comps = []; i = [1]; add = ap.header('SwitchView', 'Switch 1 of 1', 'SWITCHES.TXT', comps, i, link='Bluetooth', help_title='Switches', name_w=ap.NAME_W)
+shade = PALE[0]   # (fix, 11 Oct: the adjustments page's shade - the twin pages' 'Changes' / 'Does' and 'on' read as one family)
 def label(nm, x, y, w, txt, h=36, pale=True):
     l = comp(rp.LABEL_L, n=nm, x=x, y=y, w=w, h=h, txt=txt, g='g')
     if pale: l['c'] = dict(l['c'], pco=0, bco=shade)
@@ -28,8 +28,7 @@ def label(nm, x, y, w, txt, h=36, pale=True):
     return add(l)
 def tapbox(nm, x, y, w, code, h=36, maxl=40):
     f = comp(rp.FIELD, n=nm, x=x, y=y, w=w, h=h, txt='', g='g'); f['a'] = dict(f['a'], key=255, txt_maxl=maxl); f['ev'] = ap.ev(code); return add(f)
-bp = comp(rp.BUTTON, n='bprev', x=215, y=7, w=56, h=44, txt='<'); bp['ev'] = ap.ev(138); add(bp)
-bn = comp(rp.BUTTON, n='bnext', x=540, y=7, w=56, h=44, txt='>'); bn['ev'] = ap.ev(139); add(bn)
+ap.arrows(add, 138, 139)
 # B91: an island, as the adjustments page
 W = 680; isl = rp.island(W, 236, [('b5', 'Add', 140), ('b6', 'Remove', 141), ('b3', 'Save', 135), ('b1', 'OK', 134)])
 comps[1].update(x=isl['card'][0], y=isl['card'][1], w=isl['card'][2], h=isl['card'][3])
@@ -40,14 +39,14 @@ bar = {'n': 'bar', 't': 'rangebar', 'g': 'g', 'x': X, 'y': Y + 100, 'w': W, 'h':
        'c': {'pco': 65535, 'bco': rp.CARD['c']['bco'], 'borderc': 0, 'pco2': 65535, 'bco2': 0},
        'a': {'lo': 875, 'hi': 2125, 'n': 3, 'kind': 1, 'mk': -1, 'd0': 1700, 'd1': 2125, 'd2': 1900, 'd3': 2000, 'd4': 2100, 'txt_maxl': 40}, 'ev': ap.ev(142)}
 add(bar)
-live = label('tn8', X, Y + 168, W, '', 30); live['a'] = dict(live['a'], txt_maxl=40)
-hint = label('hint', X, Y + 206, W, 'Drag the blobs to set where the switch turns it on.', 30, pale=False); hint['font'] = 2; hint['c']['pco'] = 50712; hint['a']['txt_maxl'] = 90
+live = label('tn8', X, Y + 168, W, '', 30, pale=False); live['a'] = dict(live['a'], txt_maxl=40)   # (polish: white on the card, as the adjustments page)
+hint = label('hint', X, Y + 206, W, '', 30, pale=False); hint['font'] = 2; hint['c']['pco'] = 50712; hint['a']['txt_maxl'] = 90   # (fix, 11 Oct: empty until the main board words it per switch - SwShow writes it, or '' with none - as the adjustments page)
 for (nm, txt, x, y, w, code) in isl['btn']:
     b = comp(rp.BUTTON, n=nm, x=x, y=y, w=w, h=rp.C_BTN_H, txt=txt); b['ev'] = ap.ev(code); add(b)
-add(rp.message_box(rect=(isl['box'][0], Y + 168, isl['box'][2], 104)))   # (a message box under the bar, so the bar stays in sight)
+add(ap.note_box(X, Y, W))   # (over the two lines above the bar, as the adjustments page)
 ap.finish(69, 'SwitchView', comps)
 
-comps = []; i = [1]; add = ap.header('SwitchPickView', 'What the switch does', 'SWITCHES.TXT', comps, i)
+comps = []; i = [1]; add = ap.header('SwitchPickView', 'What the switch does', 'SWITCHES.TXT', comps, i, link='Bluetooth')
 proto = None
 for c in json.load(open(os.path.join(rp.PAGES, '46.json')))['comps']:
     if c['t'] == 'textselect': proto = c

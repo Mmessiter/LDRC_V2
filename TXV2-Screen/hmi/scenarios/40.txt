@@ -21,7 +21,7 @@ n13.pco=33840
 n14.pco=33840
 n15.pco=33840
 n16.pco=33840
-busy.txt="Loading PIDs for  Bank 1 ..."
+busy.txt="Loading PIDs for Bank 1 ..."
 vis busy,1
 vis b2,0
 vis b3,0
@@ -150,7 +150,7 @@ n13.pco=33840
 n14.pco=33840
 n15.pco=33840
 n16.pco=33840
-busy.txt="Loading PIDs for  Flight mode 4 ..."
+busy.txt="Loading PIDs for Flight mode 4 ..."
 vis busy,1
 vis b2,0
 vis b3,0
@@ -193,3 +193,10 @@ n14.pco=0
 n15.pco=0
 n16.pco=0
 @shot 40_long
+# the longest words the box is given: a read window that ends with nothing come back (transceiver.h BlockSilence, B81),
+# and a read refused with no Bluetooth to the receiver (Parameters.h:225, B80)
+busy.txt="PIDs: nothing came back in 2 s (Bluetooth 2). Bank switch again, or leave and return."
+vis busy,1
+@shot 40_nothing
+busy.txt="No Bluetooth to the receiver: NOT read. Close the phone app if it is running. It is tried again."
+@shot 40_nopipe

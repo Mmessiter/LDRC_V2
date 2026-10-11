@@ -1,9 +1,29 @@
-This screen is for setting up Failsafe.||
-If signal is lost by the receiver for >2 seconds, each CHECKED channel will go to where it was when you pressed 'Save' on this screen. ||
-(Channels not checked will not move at all on loss of signal.)||
-
-If or when connection subsequently recovers, full control is resumed.||
-
-Failsafe data are saved AT THE RECEIVER, so use the screen ONLY WHEN CONNECTED!||
-(Pressing 'Save' when not connected saves nothing at the receiver.)
- 
+Choose where the controls go if the receiver loses the signal.||
+TO SET IT:|
+1. Switch the model on, and connect.|
+2. Tick the channels that should go to a set position.|
+3. Put the sticks and switches where the model should go,|
+with the motor switched off.|
+4. Hold them there, and press 'Save'.|
+'All' ticks every channel. 'None' clears them all.|
+'OK' keeps the ticks and goes back to 'Model setup'.||
+With the motor off, the throttle is saved at 'Motor off value'.|
+The positions are saved IN THE RECEIVER.|
+So 'Save' works ONLY WHILE CONNECTED.|
+If not, it says 'No model is connected.' and saves nothing.|
+'Save' also sends the ticks.|
+After changing them, press 'Save' again.||
+WHAT HAPPENS:|
+If the receiver hears nothing for about one and a half|
+seconds, it moves the controls to the saved positions.|
+When the signal comes back, full control returns.||
+WHICH RECEIVERS USE THE TICKS:|
+A Version 1 receiver moves only the ticked channels.|
+The others stay where they were.|
+A Version 2 receiver ignores the ticks, for now.|
+'Save' stores all 16 channels, and all 16 go to their|
+saved positions. So hold EVERY stick and switch|
+where it should be when you press 'Save'.||
+A Version 2 receiver that sends CRSF to a flight controller|
+(Rotorflight) does not use these positions.|
+The flight controller's own failsafe takes over: set it there.|

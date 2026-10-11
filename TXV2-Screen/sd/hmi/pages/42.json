@@ -51,10 +51,10 @@
    "i": 35,
    "t": "text",
    "g": "l",
-   "x": 29,
-   "y": 103,
-   "w": 742,
-   "h": 332,
+   "x": 24,
+   "y": 83,
+   "w": 752,
+   "h": 372,
    "font": 6,
    "sta": 1,
    "c": {
@@ -79,23 +79,23 @@
    "i": 2,
    "t": "text",
    "g": "l",
-   "x": 45,
-   "y": 153,
-   "w": 210,
-   "h": 32,
+   "x": 40,
+   "y": 139,
+   "w": 295,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
-    "pco": 65535,
+    "pco": 0,
     "borderc": 0,
-    "bco": 4426
+    "bco": 57215
    },
-   "txt": "Response time (ms)",
+   "txt": "Response time [ms]",
    "a": {
     "style": 0,
     "key": 255,
     "borderw": 0,
-    "xcen": 0,
+    "xcen": 1,
     "ycen": 1,
     "pw": 0,
     "txt_maxl": 30,
@@ -107,23 +107,23 @@
    "i": 3,
    "t": "text",
    "g": "l",
-   "x": 45,
-   "y": 187,
-   "w": 200,
-   "h": 32,
+   "x": 40,
+   "y": 179,
+   "w": 295,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
-    "pco": 65535,
+    "pco": 0,
     "borderc": 0,
-    "bco": 4426
+    "bco": 57215
    },
    "txt": "Setpoint boost gain",
    "a": {
     "style": 0,
     "key": 255,
     "borderw": 0,
-    "xcen": 0,
+    "xcen": 1,
     "ycen": 1,
     "pw": 0,
     "txt_maxl": 30,
@@ -135,23 +135,23 @@
    "i": 4,
    "t": "text",
    "g": "l",
-   "x": 45,
-   "y": 221,
-   "w": 245,
-   "h": 32,
+   "x": 40,
+   "y": 219,
+   "w": 295,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
-    "pco": 65535,
+    "pco": 0,
     "borderc": 0,
-    "bco": 4426
+    "bco": 57215
    },
-   "txt": "Setpoint boost cutoff Hz",
+   "txt": "Setpoint boost cutoff [Hz]",
    "a": {
     "style": 0,
     "key": 255,
     "borderw": 0,
-    "xcen": 0,
+    "xcen": 1,
     "ycen": 1,
     "pw": 0,
     "txt_maxl": 30,
@@ -163,23 +163,23 @@
    "i": 5,
    "t": "text",
    "g": "l",
-   "x": 45,
-   "y": 119,
-   "w": 286,
-   "h": 32,
+   "x": 40,
+   "y": 99,
+   "w": 295,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
-    "pco": 0,
+    "pco": 65535,
     "borderc": 0,
-    "bco": 44369
+    "bco": 4426
    },
    "txt": "Dynamics",
    "a": {
     "style": 0,
     "key": 255,
     "borderw": 2,
-    "xcen": 1,
+    "xcen": 0,
     "ycen": 1,
     "pw": 0,
     "txt_maxl": 30,
@@ -191,16 +191,16 @@
    "i": 6,
    "t": "text",
    "g": "l",
-   "x": 333,
-   "y": 119,
-   "w": 104,
-   "h": 32,
+   "x": 341,
+   "y": 99,
+   "w": 101,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 63752
+    "bco": 65341
    },
    "txt": "Roll",
    "a": {
@@ -219,16 +219,16 @@
    "i": 7,
    "t": "text",
    "g": "l",
-   "x": 439,
-   "y": 119,
-   "w": 104,
-   "h": 32,
+   "x": 447,
+   "y": 99,
+   "w": 101,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 22476
+    "bco": 59323
    },
    "txt": "Pitch",
    "a": {
@@ -247,16 +247,16 @@
    "i": 8,
    "t": "text",
    "g": "l",
-   "x": 545,
-   "y": 119,
-   "w": 104,
-   "h": 32,
+   "x": 553,
+   "y": 99,
+   "w": 101,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 41949
+    "bco": 61215
    },
    "txt": "Yaw",
    "a": {
@@ -275,16 +275,16 @@
    "i": 9,
    "t": "text",
    "g": "l",
-   "x": 651,
-   "y": 119,
-   "w": 104,
-   "h": 32,
+   "x": 659,
+   "y": 99,
+   "w": 101,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 61319
+    "bco": 65497
    },
    "txt": "Collective",
    "a": {
@@ -303,10 +303,10 @@
    "i": 10,
    "t": "number",
    "g": "g",
-   "x": 333,
-   "y": 153,
-   "w": 104,
-   "h": 32,
+   "x": 341,
+   "y": 139,
+   "w": 101,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -326,7 +326,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Roll RT\"\nva0.val=30<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Roll response time [ms]\"\nva0.val=30<<8\nprint va0.val"
    }
   },
   {
@@ -334,10 +334,10 @@
    "i": 11,
    "t": "number",
    "g": "g",
-   "x": 439,
-   "y": 153,
-   "w": 104,
-   "h": 32,
+   "x": 447,
+   "y": 139,
+   "w": 101,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -357,7 +357,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Pitch RT\"\nva0.val=30<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Pitch response time [ms]\"\nva0.val=30<<8\nprint va0.val"
    }
   },
   {
@@ -365,10 +365,10 @@
    "i": 12,
    "t": "number",
    "g": "g",
-   "x": 545,
-   "y": 153,
-   "w": 104,
-   "h": 32,
+   "x": 553,
+   "y": 139,
+   "w": 101,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -388,7 +388,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Yaw RT\"\nva0.val=30<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Yaw response time [ms]\"\nva0.val=30<<8\nprint va0.val"
    }
   },
   {
@@ -396,10 +396,10 @@
    "i": 13,
    "t": "number",
    "g": "g",
-   "x": 651,
-   "y": 153,
-   "w": 104,
-   "h": 32,
+   "x": 659,
+   "y": 139,
+   "w": 101,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -419,7 +419,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Col RT\"\nva0.val=30<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Collective response time [ms]\"\nva0.val=30<<8\nprint va0.val"
    }
   },
   {
@@ -427,10 +427,10 @@
    "i": 14,
    "t": "number",
    "g": "g",
-   "x": 333,
-   "y": 187,
-   "w": 104,
-   "h": 32,
+   "x": 341,
+   "y": 179,
+   "w": 101,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -450,7 +450,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Roll SPG\"\nva0.val=30<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Roll boost gain\"\nva0.val=30<<8\nprint va0.val"
    }
   },
   {
@@ -458,10 +458,10 @@
    "i": 15,
    "t": "number",
    "g": "g",
-   "x": 439,
-   "y": 187,
-   "w": 104,
-   "h": 32,
+   "x": 447,
+   "y": 179,
+   "w": 101,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -481,7 +481,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Pitch SPG\"\nva0.val=30<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Pitch boost gain\"\nva0.val=30<<8\nprint va0.val"
    }
   },
   {
@@ -489,10 +489,10 @@
    "i": 16,
    "t": "number",
    "g": "g",
-   "x": 545,
-   "y": 187,
-   "w": 104,
-   "h": 32,
+   "x": 553,
+   "y": 179,
+   "w": 101,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -512,7 +512,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Yaw SPG\"\nva0.val=30<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Yaw boost gain\"\nva0.val=30<<8\nprint va0.val"
    }
   },
   {
@@ -520,10 +520,10 @@
    "i": 17,
    "t": "number",
    "g": "g",
-   "x": 651,
-   "y": 187,
-   "w": 104,
-   "h": 32,
+   "x": 659,
+   "y": 179,
+   "w": 101,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -543,7 +543,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Col SPGF\"\nva0.val=30<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Collective boost gain\"\nva0.val=30<<8\nprint va0.val"
    }
   },
   {
@@ -551,10 +551,10 @@
    "i": 18,
    "t": "number",
    "g": "g",
-   "x": 333,
-   "y": 221,
-   "w": 104,
-   "h": 32,
+   "x": 341,
+   "y": 219,
+   "w": 101,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -574,7 +574,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Roll SPC\"\nva0.val=30<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Roll boost cutoff [Hz]\"\nva0.val=30<<8\nprint va0.val"
    }
   },
   {
@@ -582,10 +582,10 @@
    "i": 19,
    "t": "number",
    "g": "g",
-   "x": 439,
-   "y": 221,
-   "w": 104,
-   "h": 32,
+   "x": 447,
+   "y": 219,
+   "w": 101,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -605,7 +605,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Pitch SPC\"\nva0.val=30<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Pitch boost cutoff [Hz]\"\nva0.val=30<<8\nprint va0.val"
    }
   },
   {
@@ -613,10 +613,10 @@
    "i": 20,
    "t": "number",
    "g": "g",
-   "x": 545,
-   "y": 221,
-   "w": 104,
-   "h": 32,
+   "x": 553,
+   "y": 219,
+   "w": 101,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -636,7 +636,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Yaw SPC\"\nva0.val=30<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Yaw boost cutoff [Hz]\"\nva0.val=30<<8\nprint va0.val"
    }
   },
   {
@@ -644,10 +644,10 @@
    "i": 21,
    "t": "number",
    "g": "g",
-   "x": 651,
-   "y": 221,
-   "w": 104,
-   "h": 32,
+   "x": 659,
+   "y": 219,
+   "w": 101,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -667,7 +667,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Col SPC\"\nva0.val=30<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Collective boost cutoff [Hz]\"\nva0.val=30<<8\nprint va0.val"
    }
   },
   {
@@ -686,7 +686,7 @@
     "borderc": 0,
     "bco": 2214
    },
-   "txt": "Bank 1",
+   "txt": "",
    "a": {
     "style": 0,
     "key": 255,
@@ -727,7 +727,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "print \"HelpView:RATES_A.TXT\"\nLogView.t0.txt=\"Rates Advanced setup help\"\nLogView.return.txt=\"Rates_A_View\""
+    "r": "print \"HelpView:RATES_A.TXT\"\nLogView.t0.txt=\"Rates + (Rotorflight) help\"\nLogView.return.txt=\"Rates_A_View\""
    }
   },
   {
@@ -735,8 +735,8 @@
    "i": 24,
    "t": "button",
    "g": "l",
-   "x": 595,
-   "y": 369,
+   "x": 600,
+   "y": 389,
    "w": 160,
    "h": 50,
    "font": 6,
@@ -767,8 +767,8 @@
    "i": 25,
    "t": "button",
    "g": "l",
-   "x": 423,
-   "y": 369,
+   "x": 428,
+   "y": 389,
    "w": 160,
    "h": 50,
    "font": 6,
@@ -810,7 +810,7 @@
     "borderc": 0,
     "bco": 2214
    },
-   "txt": "Model name",
+   "txt": "",
    "a": {
     "style": 0,
     "key": 255,
@@ -839,10 +839,10 @@
    "i": 29,
    "t": "number",
    "g": "g",
-   "x": 545,
-   "y": 255,
-   "w": 104,
-   "h": 32,
+   "x": 553,
+   "y": 259,
+   "w": 101,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -862,7 +862,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Yaw DCG\"\nva0.val=30<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Yaw dynamic ceiling gain\"\nva0.val=30<<8\nprint va0.val"
    }
   },
   {
@@ -870,10 +870,10 @@
    "i": 30,
    "t": "number",
    "g": "g",
-   "x": 545,
-   "y": 289,
-   "w": 104,
-   "h": 32,
+   "x": 553,
+   "y": 299,
+   "w": 101,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -893,7 +893,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Yaw DDG\"\nva0.val=30<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Yaw dynamic deadband gain\"\nva0.val=30<<8\nprint va0.val"
    }
   },
   {
@@ -901,23 +901,23 @@
    "i": 31,
    "t": "text",
    "g": "l",
-   "x": 45,
-   "y": 255,
-   "w": 214,
-   "h": 32,
+   "x": 40,
+   "y": 259,
+   "w": 295,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
-    "pco": 65535,
+    "pco": 0,
     "borderc": 0,
-    "bco": 4426
+    "bco": 57215
    },
    "txt": "Dynamic ceiling gain",
    "a": {
     "style": 0,
     "key": 255,
     "borderw": 0,
-    "xcen": 0,
+    "xcen": 1,
     "ycen": 1,
     "pw": 0,
     "txt_maxl": 30,
@@ -929,23 +929,23 @@
    "i": 32,
    "t": "text",
    "g": "l",
-   "x": 45,
-   "y": 289,
-   "w": 248,
-   "h": 32,
+   "x": 40,
+   "y": 299,
+   "w": 295,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
-    "pco": 65535,
+    "pco": 0,
     "borderc": 0,
-    "bco": 4426
+    "bco": 57215
    },
    "txt": "Dynamic deadband gain",
    "a": {
     "style": 0,
     "key": 255,
     "borderw": 0,
-    "xcen": 0,
+    "xcen": 1,
     "ycen": 1,
     "pw": 0,
     "txt_maxl": 30,
@@ -957,23 +957,23 @@
    "i": 33,
    "t": "text",
    "g": "l",
-   "x": 45,
-   "y": 323,
-   "w": 282,
-   "h": 32,
+   "x": 40,
+   "y": 339,
+   "w": 295,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
-    "pco": 65535,
+    "pco": 0,
     "borderc": 0,
-    "bco": 4426
+    "bco": 57215
    },
-   "txt": "Dynamic deadband filter Hz",
+   "txt": "Dynamic deadband filter [Hz]",
    "a": {
     "style": 0,
     "key": 255,
     "borderw": 0,
-    "xcen": 0,
+    "xcen": 1,
     "ycen": 1,
     "pw": 0,
     "txt_maxl": 30,
@@ -985,10 +985,10 @@
    "i": 34,
    "t": "text",
    "g": "g",
-   "x": 545,
-   "y": 323,
-   "w": 104,
-   "h": 32,
+   "x": 553,
+   "y": 339,
+   "w": 101,
+   "h": 36,
    "font": 2,
    "sta": 1,
    "c": {
@@ -1008,7 +1008,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Yaw DDF\"\nva0.val=30<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Yaw deadband filter [Hz]\"\nva0.val=30<<8\nprint va0.val"
    }
   },
   {
@@ -1016,10 +1016,10 @@
    "i": 26,
    "t": "text",
    "g": "g",
-   "x": 110,
-   "y": 207,
-   "w": 580,
-   "h": 124,
+   "x": 40,
+   "y": 259,
+   "w": 720,
+   "h": 76,
    "font": 2,
    "sta": 1,
    "c": {

@@ -120,7 +120,7 @@ int main() {
     CHECK(fields["tn2"] == "Banks 1 to 4 of this transmitter" && AdjRows[0].legacy && AdjRows[0].kind == AK_SWITCH && AdjRows[0].n == 4 && AdjBankRowRight(AdjRows[0]) && AdjRows[0].lo % 5 == 0 && AdjRows[0].hi % 5 == 0);
     const int bankLo = AdjRows[0].lo, bankHi = AdjRows[0].hi;
     fprintf(stderr, "   (the stub's banks %d, %d, %d, %d us: ends %d..%d)\n", fc1, fc2, fc3, fc4, bankLo, bankHi);
-    CHECK(Adj_Was_Edited && fields["busy"] == "1 switch in the old once-only form: put right, press Save");
+    CHECK(Adj_Was_Edited && fields["busy"] == "Press Save: 1 switch put right (old once-only form).");
     CHECK(fields["tp0"] == "1" && fields["tp1"] == "2" && fields["tp2"] == "3" && fields["tp3"] == "4");   // (the boxes the keypad edits, out of sight)
     CHECK(cmds.size() && std::find(cmds.begin(), cmds.end(), "vis tn3,0") != cmds.end());   // (a bank switch: no bank box)
     CHECK(cmdValue("bar.kind") == 4 && cmdValue("bar.n") == 4 && cmdValue("bar.d0") == bankLo && cmdValue("bar.d1") == bankHi && fields["bar"] == "1|2|3|4" && cmdValue("bar.mk") == fc2);
@@ -217,13 +217,13 @@ int main() {
     CHECK(AdjAt == 0 && fields["tn2"] == "Banks 1 to 4 of this transmitter" && AdjRows[0].lo == 1000 && AdjRows[0].hi == 1850 && !Adj_Was_Edited && cmdValue("bar.kind") == 4);
     putLine(0, 2, 0, 875, 2125, 0, 1300, 1400, 1500, 1500, 1, 4, 0);
     StartAdjustView(); run(6);
-    CHECK(AdjAt == 0 && fields["tn2"] == "Banks 1 to 4 of this transmitter" && AdjRows[0].lo == bankLo && AdjRows[0].hi == bankHi && Adj_Was_Edited && fields["busy"] == "The bank switch did not follow this transmitter's banks: matched - press Save");
+    CHECK(AdjAt == 0 && fields["tn2"] == "Banks 1 to 4 of this transmitter" && AdjRows[0].lo == bankLo && AdjRows[0].hi == bankHi && Adj_Was_Edited && fields["busy"] == "Press Save: the bank switch now matches this transmitter's banks.");
     // 7c. a second bank line (the phone app's Switches page wrote its own into slot 30, 8 Oct): the first is kept, the
     // second removed, said in the banner, and the save blanks it
     putLine(0, 2, 0, 875, 2125, 0, 1000, 1850, 1500, 1500, 1, 4, 0);
     putLine(30, 2, 255, 1500, 1500, 0, 988, 2012, 1500, 1500, 1, 4, 0);
     StartAdjustView(); run(6);
-    CHECK(AdjN == 4 && Adj_Was_Edited && fields["busy"] == "1 extra bank switch line (they fight): removed - press Save");
+    CHECK(AdjN == 4 && Adj_Was_Edited && fields["busy"] == "Press Save: 1 extra bank switch line removed (they fight).");
     { int k = 0; for (int i = 0; i < AdjN; ++i) if (AdjRows[i].fn == 2) ++k; CHECK(k == 1 && AdjRows[0].lo == 1000 && AdjRows[0].hi == 1850); }
     fcLog.clear(); SaveAdjustments(); run(40);
     { AdjLine L[42]; AdjParseLines(adj, 588, L); int k = 0; for (int i = 0; i < 42; ++i) if (L[i].fn == 2) ++k; CHECK(k == 1 && L[30].fn == 0 && writes(53) >= 1); }

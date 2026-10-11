@@ -1,0 +1,52 @@
+# SwitchView (page 69), Rotorflight's modes (B77): StartSwitchView (TXV1B RF_Switches.h:212) -> SwHead (:54), SwShow (:87-110),
+# SwLive (:73-85), SwRead_'s busy (:132); the save's verdict (:201).
+Screen_Background=8
+@model 1
+page SwitchView
+t11.txt="Black Thunder 2"
+t9.txt="Bluetooth"
+vis b3,0
+t0.txt="No switches yet"
+tn0.txt="(none yet: press Add)"
+tn1.txt=""
+tn8.txt=""
+bar.n=1
+bar.kind=0
+bar.mk=-1
+bar.txt=""
+hint.txt=""
+vis busy,1
+busy.txt="Reading the switches ..."
+@shot 69_reading
+vis busy,0
+@shot 69_none
+# the arm switch (always the first shown) and its hint
+t0.txt="Switch 1 of 5"
+tn0.txt="Arm - motor enable (ARM)"
+tn1.txt="Channel 5: Gear"
+bar.kind=1
+bar.n=3
+bar.d0=1700
+bar.d1=2125
+bar.txt="|ON|"
+bar.mk=988
+tn8.txt="OFF: 988 us"
+hint.txt="Safety switch: the ON zone must reach 2012 us, but not 988 us."
+@shot 69_arm
+# the longest action, switched on
+t0.txt="Switch 20 of 20"
+tn0.txt="Stick commands off (STICK COMMANDS DISABLE)"
+tn1.txt="Channel 16: AUX11"
+bar.d0=1300
+bar.d1=1700
+bar.mk=1500
+tn8.txt="ON: 1500 us"
+hint.txt="Drag the round ends to set where the switch turns it on."
+vis b3,1
+@shot 69_long
+vis busy,1
+busy.txt="Saved, but the flight controller changed some of it."
+@shot 69_saved
+busy.txt="Storing ..."
+@shot 69_storing
+vis busy,0

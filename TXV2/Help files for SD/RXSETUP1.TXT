@@ -1,32 +1,56 @@
-'Copy trims to all banks' does what you might expect!||
-
-Trim multiplier selects how much trim to apply. 5 is a very good default setting||
-
-To disable trims (for flybarless helicopters etc.) set Trim multiplier to 0 (zero).||
-
-'Stop flying' voltage is the receiver voltage (per cell) at which the transmitter's speaker will suggest unambiguously that it's time to 'Stop Flying!' ||
-
-When you set this, bear in mind that when you turn off the motor, the voltage will recover a little. Therefore set it a bit lower than you might have. Find the best setting by experiment since all models vary in this respect.|| 
-
-'RX Battery voltage correction' allows you to correct any slight error that the on board voltage sensor might have. This correction can be positive or negative and is the per cell voltage - not the combined voltage of every cell. Use a good voltmeter to compare the transmitter's readout with the more accurate figure, and adjust this setting as needed.||
-
-Motor channel 'off' value is usually -67, and this is default. But in a few cases it might be different, if the servo was reversed etc.||
-
-Motor channel should be set to the number of the channel to which the motor is connected. Usually it's 3.||
-
-The 'motor kill switch' is the switch used for Bank 4. If you use this option, the three position switch will kill the motor when in its third position.||
-
-That is:||
-
-Position one = Bank 1,2, or 3.|
-Position two = Bank 4.|
-Position three = motor off. ( ... and still Bank 4)||
-
-'Run timer backwards' oddly enough will run the timer backwards starting from the number of minutes set just below. When the backwards timer reaches zero the loudspeaker will suggest that you 'Stop Flying!||
-
-The receiver can output SBUS or PPM, but not both as these use the same connector. SBUS will always give 16 channels. PPM usually supports fewer, and this number is selectable here. Don't use a number greater than needed as this might impair performance.
-
-
-
-
-  
+This model's trims, motor switch, timer and warnings.|
+Touch a box to type a new value.|
+Touch a switch to turn it on or off.|
+'OK' keeps the changes and goes to the Front screen.||
+TRIMS:|
+Trim multiplier (0 = off): how far each trim step moves.|
+5 is a very good default. Use 0 on a flybarless helicopter.|
+Copy trims to all banks: on, a trim change goes to every bank.|
+Off, each bank keeps its own trims.||
+MOTOR:|
+Throttle channel: the channel the motor (ESC) is on. Usually 3.|
+Motor off value: what the throttle channel is sent|
+while the motor is off or the safety is on.|
+-67 is the default, and nearly always right.|
+It is not reversed with the channel:|
+if you reverse the throttle, change this value to match.||
+Use motor kill switch: on, the transmitter checks the motor|
+switch before it connects: at switch-on, or after a lost link.|
+While the motor is on, it says 'The motor switch is ON.'|
+and waits until you switch it off.|
+The motor switch has the job 'Bank 4 & Motor'|
+('Transmitter setup', 'Switches'). Its three positions:|
+Away = bank 1, 2 or 3, motor on.|
+Mid = bank 4, motor on.|
+Near = bank 4, motor OFF.||
+TIMER:|
+The timer runs while the motor is on, and pauses when it is off.|
+Timer counts down: on, the timer counts down from|
+'Count down from (minutes)' and says the last ten seconds.|
+With 'Timer voice' on ('Transmitter setup', 'Sounds etc.'),|
+it then says 'Stop flying!'.|
+Off, it counts up, and the minutes box is grey.||
+WARNINGS:|
+Stop flying volts (per cell): below this, per cell,|
+the transmitter says 'Stop flying!'.|
+It watches the model's battery, as the receiver measures it.|
+When the motor stops, the voltage recovers a little.|
+So set this a little lower than you might think.|
+Find the best value by trying: every model differs.||
+Volts correction (x 0.01 V): corrects a small error|
+in that battery reading, in hundredths of a volt per cell.|
+For example, 5 adds 0.05 V to each cell. It may be negative.|
+Compare with a good voltmeter, and adjust until the two agree.||
+Current warning (A, 0 = off): above this current, the|
+transmitter sounds a warning and shows 'Current too high!'.|
+It warns once each time the model connects. 0 turns it off.||
+MORE:|
+'Model picture ...', or a touch on the picture,|
+chooses this model's picture.|
+'Servo types ...': each servo's pulse rate and centre,|
+for a Version 1 receiver.||
+The receiver's output (SBUS, CRSF, PPM ...) is not set here.|
+A Version 1 receiver always sends SBUS (all 16 channels)|
+as well as its servo outputs.|
+On a Version 2 receiver, choose it on the phone app's|
+'Output protocol' page.|

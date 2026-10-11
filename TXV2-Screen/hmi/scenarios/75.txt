@@ -1,0 +1,26 @@
+# BatSensorsView (page 75), the FC pads' sensors (B90): BatHead (TXV1B RF_FcSetup.h:111) and BatShow (:132-136) - a group
+# shows only while its source is FC pads.
+Screen_Background=8
+@model 1
+page BatSensorsView
+t11.txt="Black Thunder 2"
+t9.txt="All banks"
+vis b3,0
+tn8.txt="110"
+tn9.txt="400"
+tn10.txt="0"
+@shot 75_both
+vis h2,0
+vis ltn8,0
+vis tn8,0
+@shot 75_current_only
+vis h2,1
+vis ltn8,1
+vis tn8,1
+vis h3,0
+vis ltn9,0
+vis tn9,0
+vis ltn10,0
+vis tn10,0
+vis b3,1
+@shot 75_voltage_only

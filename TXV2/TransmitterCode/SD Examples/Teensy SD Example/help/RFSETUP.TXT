@@ -1,11 +1,30 @@
-Rotorflight settings: what the transmitter itself needs to know about this model's flight controller.||
-
-Link rates and banks: On makes the rates bank follow the PID bank (the bank switch sets both). Off leaves the rates bank to the rates switch.||
-
-Version: the Rotorflight version the receiver reports from the flight controller (2.2 or 2.3). 0.0 means it has not answered yet; the model keeps the last version it knew.||
-
-Arming channel: the channel the safety switch drives to arm the flight controller (usually 6). Press the box to type another.||
-
-Main RPM ratio: the main rotor's gear ratio, motor turns per rotor turn, so the head speed can be shown. Press the box to type it.||
-
-OK saves these with the model and returns to the Rotorflight options.||
+What the transmitter itself needs to know|
+about this model's flight controller.|
+Touch a white box to type a new value.|
+'OK' saves them with the model,|
+and goes back to the Rotorflight options.||
+LINK RATES AND BANKS:|
+On: the bank switch sets the rates too (Bank 2 uses Rate 2).|
+Off: the 'Rates' switch sets the rates on its own.|
+The switch is saved as soon as you touch it.||
+ROTORFLIGHT VERSION:|
+The version the receiver reports from the flight controller:|
+2.2 or 2.3. It cannot be typed.|
+0.0 means no version is known yet.|
+Once one is known, the model keeps it,|
+even while the flight controller is silent.|
+At 0.0 the safety switch does not drive the arming channel,|
+and 'Link rates and banks' has no effect.|
+At 2.2 or 2.3 the transmitter's own rate percentages|
+are not used: Rotorflight's rates are.|
+'Governor ...' needs 2.3.|
+The columns of the Rates page follow the version too.||
+ARMING CHANNEL:|
+The channel the safety switch drives (usually 6).|
+Safety off arms the flight controller.|
+1 to 16. Any other entry is ignored: the old channel stays.||
+MAIN GEAR RATIO:|
+Motor turns for one turn of the main rotor, such as 10.3.|
+A Version 1 receiver uses it to work out the head speed.|
+A Version 2 receiver does not: Rotorflight sends the head speed.|
+With a Version 2 receiver, set it in Rotorflight's Configurator.|

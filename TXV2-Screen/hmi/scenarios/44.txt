@@ -1,0 +1,58 @@
+# LogView (page 44): the help viewer and the log viewer. LogVIEWNew (LogFilesDisplay.h:436): page LogView, then ShowLogFileNew
+# (:162): t0 = the file name when a file was chosen from the list (help titles come from each Help button: LogView.t0.txt=...),
+# vis b15 (Help only on a .LOG), LogText = up to 40 pre-wrapped lines (MakeWrappedCopy :245, wrap after col 65), LogText.val_y=0.
+Screen_Background=8
+@model 0
+# ---- a log file, from Files > View (ReadingaFile: t0 = its name; .LOG: Help shows)
+page LogView
+vis b15,1
+t0.txt="01-10-26.LOG"
+LogText.txt="10:14:02 Transmitter started (V2 B92)\r\n10:14:05 Model: RAW 420 MCM (3)\r\n10:15:31 Connected in 312 ms\r\n10:15:31 Receiver: 0.9.884\r\n10:21:07 Gap: 142 ms\r\n10:21:44 Receiver radio swap\r\n10:26:12 Battery: 22.8 V (3.80 V/cell)\r\n10:31:40 Disconnected\r\n10:31:40 Flight time 16:09\r\n10:45:02 Connected in 297 ms\r\n10:52:18 Gap: 211 ms\r\n10:58:33 Disconnected\r\n11:02:10 Transmitter switched off\r\n11:02:10 Total packets: 412233 good of 412901\r\n11:40:51 Transmitter started (V2 B92)\r\n11:40:53 Model: Goblin 700 Comp (4)\r\n11:41:30 Connected in 305 ms\r\n"
+LogText.val_y=0
+@shot 44_log
+# ---- FAILSAFE.TXT: the widest wrapped lines of all the help files (Help hidden: not a .LOG)
+LogView.t0.txt="Failsafe help"
+page LogView
+vis b15,0
+LogText.txt="This screen is for setting up Failsafe.\r\n\r\nIf signal is lost by the receiver for >2 seconds, each CHECKED channel \r\nwill go to where it was when you pressed 'Save' on this screen. \r\n\r\n(Channels not checked will not move at all on loss of signal.)\r\n\r\nIf or when connection subsequently recovers, full control is resumed.\r\n\r\n\r\nFailsafe data are saved AT THE RECEIVER, so use the screen ONLY WHEN \r\nCONNECTED!\r\n\r\n(Pressing 'Save' when not connected saves nothing at the receiver.\r\n) \r\n"
+LogText.val_y=0
+@shot 44_failsafe
+# ---- TXSETUP.TXT: the widest wrapped lines of all the help files (Help hidden: not a .LOG)
+LogView.t0.txt="Transmitter setup help"
+page LogView
+vis b15,0
+LogText.txt="This screen offers all options for setting up the transmitter.\r\n\r\nUse the 'Calibrate' option first, and after making any major changes \r\nsuch as replacing the gimbals. \r\n\r\nOnly the first 8 channels, the edge switches and the hardware trims \r\nneed to be calibrated.\r\n\r\nTo setup a model, use the Model setup screen.To return to the Front \r\nscreen, press 'OK'.\r\n\r\nWIFI SETUP: choose your network and type its password, once. At the \r\nfield, your phone's hotspot will do.\r\n\r\nAPPEARANCE: the background picture, the themes (each a panel colour \r\nwith its text colour), and your own front screen. Its 'Help' says \r\nmore.\r\n\r\nTRANSMITTER UPDATES: asks messiter.com for the latest version. Nothing \r\nis installed unless you press 'Install now'. Your models, settings \r\nand logs are copied to the screen's card first.\r\n\r\n'Earlier versions' puts a previous version back.\r\n\r\n'Transmitter updates' updates the transmitter and its screen only,\r\n and is greyed out while a model is connected. The safety must be \r\non (with no safety switch: the motor off).\r\n\r\nThe receiver's own update is on the Model setup screen: 'Receiver \r\nupdates', available while a model is connected.\r\n\r\nWiFi and Bluetooth switch themselves off while the safety is off \r\n(with no safety switch: while the motor is on).\r\n\r\nIf new firmware reads a model's settings differently from the old \r\none, it is not kept: the old firmware comes back by itself, and the \r\nscreen says so.'Workshop door' lets a computer on the same WiFi talk \r\nto the screen (for Malcolm's bench tools). Press it again to shut \r\nthe door. Shut, the screen answers nothing but its status.\r\n"
+LogText.val_y=0
+@shot 44_txsetup
+# ---- Models help, Bottom pressed (BottomOfLogFileNEW :61: val_y = lines x 24 - LogViewHeight). Once the text has been touched
+# the Teensy knows the box (LogReleasedNEW :95: lines x 24 - maxval_y; 336 px since the polish of 10 Oct 2026, 366 before) ...
+LogView.t0.txt="Models help"
+page LogView
+vis b15,0
+LogText.txt="Scroll the left side of the screen to select a model from 1 to 89.\r\n\r\n\r\n'Backup' creates (or overwrites) a separate file of the current model.\r\n\r\n\r\nBacking up a model memory is very strongly recommended once that \r\nmodel is setup well. When sharing model memories with other transmitters,\r\n it is the backup file that is sent. So you must hit Backup before \r\nyou can share the model.\r\n\r\nBackup files are listed on the right hand side.\r\n\r\n'Restore' reads a file into the currently selected model number, \r\noverwriting whatever was there. \r\n\r\n'ID check' will display receiver IDs for model memories stored, and \r\ncheck for any duplicates which should be avoided. \r\n\r\nWhen AMS (automatic model selection) is turned off, or the ID of \r\nthe connecting model is not stored yet, the transmitter will connect \r\nto the currently loaded model - whatever it's stored ID.\r\n\r\nOn the main 'Model Setup' screen is the option to delete or to store \r\nthe currently connected model ID. An ID cannot be stored when not \r\nconnected, but it can be deleted.\r\n\r\nTo use AMS, be sure to store the IDs of your models with the right \r\nmemory.\r\n\r\nTo 'Send' a model memory file wirelessly to another transmitter:\r\n\r\n(1)  Select a model number at the receive end that will be overwritten.\r\n\r\n(2)  Backup the model to be sent at the send end.\r\n(3)  Put both transmitters onto the 'Models' screen. \r\n(4)  Select the Backup file which you want to send. \r\n(5)  Press 'Receive' at the Receive end.\r\n(6)  WITHIN 30 SECONDS press 'Send' at the Send end.\r\n\r\n"
+LogText.val_y=624
+@shot 44_bottom
+# ... before that, its first guess (BUFFEREDLINES x 24 = 240 px) scrolls too far: empty paper under the last line
+LogText.val_y=720
+@shot 44_bottom_first
+# ---- a help file that is not on the card (Model IDs > Help asks for IDS.TXT): ShowLogFileNew(6), then the message
+LogView.t0.txt="Model IDs help"
+page LogView
+vis b15,0
+LogText.txt="\r\n\r\n\r\n\r\n\r\n\r\n"
+LogText.txt="File not found: IDS.TXT"
+LogText.val_y=0
+@shot 44_notfound
+# ---- worst case: the longest help title (Help hidden), and the longest log name with Help showing
+LogView.t0.txt="Mixer: main rotor geometry help"
+page LogView
+vis b15,0
+LogText.txt="Mixer: how the sticks reach the swash and the tail, laid out as the \r\nconfigurator's Mixer tab, with its names. Needs a Version 2 receiver \r\nwith Bluetooth, the safety on and the model disarmed. Not per bank.\r\n Three pages: Next and Previous.\r\n\r\nMain Rotor Settings. Swashplate Type and Main Rotor Direction are \r\nshown as the flight controller has them; they are set in the configurator.\r\n Aileron, Elevator and Collective reversed: the configurator's Control \r\nDirection (Normal or Reverse), a switch each: green = reversed. Check \r\nthe swash moves the right way on the bench before flying.\r\n\r\nSwashplate Trims: Roll trim, Pitch trim and Collective trim, in percent,\r\n to one decimal, to level the swash.\r\n\r\nPress a number to type a new one. Save writes everything on all three \r\npages to the flight controller, asks first, stores there, and reads \r\nback. OK leaves; if something was edited and not saved, it asks.\r\n\r\n\r\n"
+LogText.val_y=0
+@shot 44_long
+page LogView
+vis b15,1
+t0.txt="NO_CLOCK.LOG"
+LogText.txt="10:14:02 Transmitter started (V2 B92)\r\n10:14:05 Model: RAW 420 MCM (3)\r\n10:15:31 Connected in 312 ms\r\n10:15:31 Receiver: 0.9.884\r\n10:21:07 Gap: 142 ms\r\n"
+LogText.val_y=0
+@shot 44_short

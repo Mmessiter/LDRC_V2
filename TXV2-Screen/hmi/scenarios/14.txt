@@ -1,0 +1,17 @@
+# ImageView (page 14): "Choose image". StartChooseImage (ChooseImage.h:61, B22): the model's picture and name FIRST, then the page.
+# The screen's own chooser (lib/LdrcPics, src/pics_device.h) covers it from its first frame (renderer: @pics, scenarios/own.txt).
+# The page itself shows only when the chooser cannot open (picDeclined: the main board did not answer; or no card).
+Screen_Background=8
+@model 0
+ImageView.exp0.path="sd0/images/Raw420.jpg"
+ImageView.t0.txt="RAW 420 MCM"
+page ImageView
+@shot 14_page
+# ---- what the pilot sees: the chooser over it
+@pics choose
+@shot 14_chooser
+# ---- worst case under it: the 30-letter name
+ImageView.exp0.path="sd0/images/Noimage.jpg"
+ImageView.t0.txt="SAB GOBLIN 700 COMPETITION MK2"
+page ImageView
+@shot 14_long

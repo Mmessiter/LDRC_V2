@@ -21,7 +21,7 @@ page ModelsView
 # Send a model (main.cpp:3631): 3 lines
 # GetConfirmation (Utilities.h:1168)
 page PopupView
-Dialog.txt="Is 'RAW420MC.MOD' up to date?\r\nPress 'OK' to send it now, \r\n(otherwise press 'Cancel')."
+Dialog.txt="Send 'RAW420MC.MOD' now?\r\n\r\nIf the model has changed,\r\nback it up first."
 @shot 41_sendask
 page ModelsView
 # SendModelFile with nobody listening (ModelExchange.h:181): MsgBox over FileExchView over ModelsView
@@ -40,7 +40,7 @@ play 0,16,0
 # MsgBox (Utilities.h:1188)
 page PopupView
 vis b1,0
-Dialog.txt="                Cannot send!\r\n\r\nReceiving transmitter not ready. \r\n\r\n                File not sent."
+Dialog.txt="Cannot send!\r\n\r\nReceiving transmitter not ready.\r\n\r\nFile not sent."
 @shot 41_cannotsend
 page ModelsView
 # Trims -> Subtrims (Trims.h:495), over TrimView
@@ -65,14 +65,14 @@ n3.val=1
 c4.txt="Rudder"
 # GetConfirmation (Utilities.h:1168)
 page PopupView
-Dialog.txt="Move these trims to Subtrims?\r\n\r\nThis would re-centre these trims."
+Dialog.txt="Move these trims into subtrim?\r\n\r\nThe trims of all four banks\r\ngo back to centre."
 @shot 41_subtrims_ask
 page TrimView
 play 0,17,0
 # MsgBox (Utilities.h:1188)
 page PopupView
 vis b1,0
-Dialog.txt="Done!\r\nSubtrims have been amended.\r\n\r\nLook at the Subtrim view \r\nif you'd like to check."
+Dialog.txt="Done.\r\nThe trims are now in subtrim,\r\nand back at centre."
 @shot 41_subtrims_done
 page TrimView
 # Model ID stored (Model_IDs.h:175): short MsgBox over IDsStartView
@@ -118,7 +118,7 @@ t8.txt="Rate 1"
 # MsgBox (Utilities.h:1188)
 page PopupView
 vis b1,0
-Dialog.txt="RotorFlight V2.3 is needed for all\r\ngovernor tuning features.\r\n\r\nYour current version is only V2.2.\r\nPlease update your flight controller!"
+Dialog.txt="Rotorflight V2.3 is needed for all\r\ngovernor tuning features.\r\n\r\nYour current version is only V2.2.\r\nPlease update your flight controller!"
 @shot 41_long
 page RFView
 # Not connected (RF_Save_Restore.h:455): MsgBox over RFBackUpView, then back to RFView
@@ -134,3 +134,52 @@ vis b1,0
 Dialog.txt="Not connected!"
 @shot 41_notconnected
 page RFView
+# Scan RF with a model connected (StartWifiScan, MenuOptions.h:304), over TXSetupView: today's words, then the Teensy-text
+# branch's (front.20, three lines) - the box must fit both
+@model 1
+page TXSetupView
+ModelName.txt="RAW 420 MCM (3)"
+# GetConfirmation (Utilities.h:1228)
+page PopupView
+Dialog.txt="Model still connected! Continue?"
+@shot 41_scan_old
+page TXSetupView
+page PopupView
+Dialog.txt="The model is connected.\r\nScanning stops its radio link.\r\nScan anyway?"
+@shot 41_scan_new
+page TXSetupView
+# Too much current (main.cpp:4938), MsgBox over FrontView: today's words and the Teensy-text branch's (polish/teensy-text)
+page FrontView
+ModelName.txt="RAW 420 MCM (3)"
+exp0.path="sd0/images/Bthundr1.jpg"
+vis exp0,1
+page PopupView
+vis b1,0
+Dialog.txt="Max current exceeded!"
+@shot 41_current_old
+page FrontView
+page PopupView
+vis b1,0
+Dialog.txt="Current too high!\r\nAbove the current warning\r\nin Model options."
+@shot 41_current_new
+page FrontView
+# The longest "Cannot send!" message (ModelExchange.h:337)
+page ModelsView
+page PopupView
+vis b1,0
+Dialog.txt="Cannot send!\r\n\r\nThe receiving transmitter stopped answering.\r\n\r\nFile not sent."
+@shot 41_cannotsend_new
+page ModelsView
+# the question in a light theme and in another dark one
+@theme white
+page TXSetupView
+page PopupView
+Dialog.txt="The model is connected.\r\nScanning stops its radio link.\r\nScan anyway?"
+@shot 41_white
+page TXSetupView
+@theme wine
+page PopupView
+Dialog.txt="Delete ID for SAB GOBLIN 700 COMPETITION MK2?"
+@shot 41_wine
+page TXSetupView
+@theme navy

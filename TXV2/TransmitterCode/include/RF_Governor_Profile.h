@@ -198,7 +198,7 @@ FLASHMEM void FixHeading()
 {
     char temp[60];
     char NB[10];
-    strcpy(temp, "RF Governor (Profile: ");
+    strcpy(temp, "Governor (bank ");
     strcat(temp, Str(NB, Bank, 0));
     strcat(temp, ")");
     SendText((char *)"t0", temp);
@@ -264,7 +264,7 @@ FLASHMEM void Start_RF_Governor()
     if (RotorFlight_Version < 2.25) // floats might not be exactly 2.2 or 2.3
     {
         char msg[160];
-        char w1[] = "RotorFlight V2.3 is needed for all\r\ngovernor tuning features.\r\n\r\nYour current version is only V";
+        char w1[] = "Rotorflight V2.3 is needed for all\r\ngovernor tuning features.\r\n\r\nYour current version is only V";
         char w2[] = ".\r\nPlease update your flight controller!";
         char Vbuf[10];
         snprintf(Vbuf, 10, "%1.1f", RotorFlight_Version);

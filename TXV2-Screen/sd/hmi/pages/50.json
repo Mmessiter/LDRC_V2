@@ -90,7 +90,7 @@
     "borderc": 0,
     "bco": 65535
    },
-   "txt": "Model Name",
+   "txt": "",
    "a": {
     "style": 2,
     "key": 1,
@@ -102,7 +102,7 @@
     "isbr": 1
    },
    "ev": {
-    "p": "keybdA.t1.txt=\"Model name?\""
+    "p": "keybdA.t1.txt=\"Model name\""
    }
   },
   {

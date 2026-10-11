@@ -1,0 +1,45 @@
+# FilterView (page 64), gyro filters (RF_Filters.h). StartFilterView :260 -> FltHead :131 (t11, t9 "All banks", vis b3),
+# FltRead -> "Reading from the flight controller ..." :150. FltShowPage1 :66: tn0/tn3/tn6 Enable switches (.val), FltRows
+# :57 hides a section's rows while it is off, tn1 FltTypeWords :29 (longest "2nd order"), tn4 FltPresetWords :30
+# ("Medium"), numbers; tn8 the Q "%d.%d". Save :368 -> "Writing ..." :398; an Enable changed -> "Restarting the flight
+# controller to apply the Enable ..." :221; then :250 "Saved, and read back the same." / "Saved, but the flight controller
+# adjusted some values."
+Screen_Background=8
+@model 1
+page FilterView
+t11.txt="Black Thunder 2"
+t9.txt="All banks"
+vis b3,0
+tn0.val=1
+tn1.txt="2nd order"
+tn2.txt="100"
+tn3.val=1
+tn4.txt="Medium"
+tn5.txt="20"
+tn6.val=1
+tn7.txt="4"
+tn8.txt="2.5"
+tn9.txt="60"
+tn10.txt="250"
+@shot 64_loaded
+tn6.val=0
+vis ltn7,0
+vis tn7,0
+vis ltn8,0
+vis tn8,0
+vis ltn9,0
+vis tn9,0
+vis ltn10,0
+vis tn10,0
+tn0.val=0
+vis ltn1,0
+vis tn1,0
+vis ltn2,0
+vis tn2,0
+vis b3,1
+@shot 64_offs
+vis busy,1
+busy.txt="Restarting the flight controller to apply the Enable ..."
+@shot 64_restarting
+busy.txt="Saved, but the flight controller adjusted some values."
+@shot 64_saved

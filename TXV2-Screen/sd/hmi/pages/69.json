@@ -90,7 +90,7 @@
     "borderc": 0,
     "bco": 2214
    },
-   "txt": "USB cable",
+   "txt": "Bluetooth",
    "a": {
     "style": 0,
     "key": 255,
@@ -109,7 +109,7 @@
    "g": "g",
    "x": 10,
    "y": 30,
-   "w": 200,
+   "w": 182,
    "h": 25,
    "font": 2,
    "sta": 1,
@@ -171,7 +171,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "print \"HelpView:SWITCHES.TXT\"\nLogView.t0.txt=\"Switch 1 of 1 help\"\nLogView.return.txt=\"SwitchView\""
+    "r": "print \"HelpView:SWITCHES.TXT\"\nLogView.t0.txt=\"Switches help\"\nLogView.return.txt=\"SwitchView\""
    }
   },
   {
@@ -179,9 +179,9 @@
    "i": 7,
    "t": "button",
    "g": "l",
-   "x": 215,
+   "x": 212,
    "y": 7,
-   "w": 56,
+   "w": 44,
    "h": 44,
    "font": 6,
    "sta": 1,
@@ -211,9 +211,9 @@
    "i": 8,
    "t": "button",
    "g": "l",
-   "x": 540,
+   "x": 544,
    "y": 7,
-   "w": 56,
+   "w": 44,
    "h": 44,
    "font": 6,
    "sta": 1,
@@ -252,7 +252,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 57215
+    "bco": 65497
    },
    "txt": "Does",
    "a": {
@@ -311,7 +311,7 @@
    "c": {
     "pco": 0,
     "borderc": 0,
-    "bco": 57215
+    "bco": 65497
    },
    "txt": "on",
    "a": {
@@ -404,15 +404,15 @@
    "font": 2,
    "sta": 1,
    "c": {
-    "pco": 0,
-    "borderc": 0,
-    "bco": 57215
+    "pco": 65535,
+    "borderc": 4426,
+    "bco": 4426
    },
    "txt": "",
    "a": {
     "style": 0,
     "key": 255,
-    "borderw": 2,
+    "borderw": 0,
     "xcen": 1,
     "ycen": 1,
     "pw": 0,
@@ -436,7 +436,7 @@
     "borderc": 4426,
     "bco": 4426
    },
-   "txt": "Drag the blobs to set where the switch turns it on.",
+   "txt": "",
    "a": {
     "style": 0,
     "key": 255,
@@ -581,10 +581,10 @@
    "i": 20,
    "t": "text",
    "g": "l",
-   "x": 110,
-   "y": 287,
-   "w": 580,
-   "h": 104,
+   "x": 60,
+   "y": 283,
+   "w": 680,
+   "h": 82,
    "font": 2,
    "sta": 1,
    "c": {

@@ -15,3 +15,28 @@ ModelName.txt="RAW 420 MCM (3)"
 page RXSetupView
 ModelName.txt="SAB GOBLIN RAW 700 COMPETITION (90)"
 @shot 4_long
+# a 280 px name (font 2) shows whole: the name box ends at 295, 20 px before the title
+page RXSetupView
+ModelName.txt="SAB GOBLIN RAW 700 (12)"
+@shot 4_name280
+# ---- questions and messages over Model setup (PopupView has no background of its own: it lies over this page;
+# GetConfirmation / MsgBox, Utilities.h:1228-1259, then "page RXSetupView" again)
+# "Models" with the model connected (GotoModelsView, MenuOptions.h:382-388; words of TXV1B fix/channels-teensy)
+@model 1
+page RXSetupView
+ModelName.txt="RAW 420 MCM (3)"
+page PopupView
+Dialog.txt="The model is connected.\r\n\r\nOpen Models anyway?"
+@shot 4_q_models
+# "Inputs" with the model connected (main.cpp:3887-3893, IsConnected main.cpp:3536)
+page RXSetupView
+page PopupView
+Dialog.txt="The model is connected.\r\nChanges here move its controls.\r\n\r\nOpen Inputs anyway?"
+@shot 4_q_inputs
+# "Rotorflight" with the motor enabled (RotorFlightStart, RF_RotorFlight.h:36-37; words of TXV1B fix/channels-teensy):
+# this message, then the page opens
+page RXSetupView
+page PopupView
+vis b1,0
+Dialog.txt="The motor is ON.\r\nSwitch it off first."
+@shot 4_msg_rf

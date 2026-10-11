@@ -1,5 +1,20 @@
-Here you should define how many cells are in the model's LiPo battery, and the type of battery in the transmitter. ||
-
-This information is needed so that the percentage remaining and the average cell voltages can be calculated.||
-
-If '12s' is selected for the receiver, please use a voltage divider to halve the actual voltage sent to the INA219 sensor. The firmware code will do the needed arithmetic and the INA219 voltage sensor cannot cope with more than 26 volts.   
+Batteries: tell the transmitter which batteries you use.|
+It needs this for the percentage left and the voltage per cell.|
+Touch a choice: it is saved at once.|
+'OK' goes back to Transmitter setup.||
+'Model battery': 2S to 6S or 12S LiPo, for the model now loaded.|
+Its name is at the top left. Each model keeps its own.|
+'Transmitter battery': 2 cells, LiFePO4 or LiPo / Li-ion.|
+It is the same for every model.||
+The warnings are set elsewhere:|
+- the transmitter's on Transmitter setup > 'System';|
+- the model's on Model setup > 'Options'.||
+12S:|
+Choose '12S LiPo'.|
+A Version 2 receiver needs nothing more.|
+It halves any voltage above 25.2 V (a full 6S pack),|
+and the transmitter doubles it back.|
+A Version 1 receiver needs a voltage divider that halves|
+the voltage to its INA219 sensor.|
+The sensor cannot cope with more than 26 volts.|
+The transmitter does the needed arithmetic.|

@@ -1,0 +1,34 @@
+# TravelView (page 62), Mixer page 1 (RF_Travel.h). StartTravelView :271 -> TravPageHead :263 (t11, t9 "Bank %d", vis b3),
+# TravRead :179 -> TravBusy("Reading from the flight controller ...") :181. TravShowPage1 :54: i0 "Swashplate type: %s"
+# (SwashTypeWords :18, longest "CCPM 120 deg"), i1 "Main rotor direction: %s" ("Anticlockwise" / "Clockwise"),
+# tn6/tn7/tn8 switches (.val), tn9..tn11 trims in tenths (TravGatherPage1 :120 clamps -100.0..100.0).
+# Save -> "Writing to the flight controller ..." :329, then :253.
+Screen_Background=8
+@model 1
+page TravelView
+t11.txt="Black Thunder 2"
+t9.txt="Bank 1"
+vis b3,0
+vis busy,1
+busy.txt="Reading from the flight controller ..."
+@shot 62_reading
+vis busy,0
+i0.txt="Swashplate type: CCPM 120 deg"
+i1.txt="Main rotor direction: Clockwise"
+tn6.val=0
+tn7.val=1
+tn8.val=0
+tn9.txt="-1.5"
+tn10.txt="0.0"
+tn11.txt="0.0"
+@shot 62_loaded
+# the longest words the Teensy writes
+i1.txt="Main rotor direction: Anticlockwise"
+tn9.txt="-100.0"
+tn10.txt="-100.0"
+tn11.txt="-100.0"
+vis b3,1
+@shot 62_long
+vis busy,1
+busy.txt="Saved, but the flight controller adjusted some values."
+@shot 62_saved

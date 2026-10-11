@@ -6,7 +6,7 @@ static int sysDim = 100; static int rtcDim = 0; static uint32_t rtcDimMagic = 0;
 static bool blDark = false, quietActive = false;
 static void backlight(int) {} static bool updHoldsLight() { return false; } static void applyRadios(const char *) {}
 static void picPageLoaded() {} static void flightPageLoaded() {} static uint32_t flightCountdownAt = 0; static void coloursPageLoaded() {} static bool coloursRequested = false; static bool flightDefinedRequested = false; static bool appearanceRequested = false; static void appearancePageLoaded() {} static void pongCommand(const std::string &) {} static void audioStart(int, bool) {} static int audioVolume = 50; static void audioSetVolume(int v) { audioVolume = v; }
-static int pendingVol = 0, pendingBg = 0; static bool updRequested = false, rxUpdRequested = false, wifiRequested = false, flightRequested = false;
+static int pendingVol = 0, pendingBg = 0; static bool updRequested = false, rxUpdRequested = false, wifiRequested = false, flightRequested = false; static int cliJobWanted = -1;            // (1.11.41: "ldrc cli" asks for the command line page; the renderer draws it with @cli, own.h)
 static std::string lastDateTime, sentTrace, outBuf, oddTrace; static int scriptDepth = 0;
 static std::string recent[64]; static int recentN = 0;
 static void blog(const char *, const std::string &) {}

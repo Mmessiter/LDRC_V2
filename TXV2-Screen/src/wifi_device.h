@@ -254,6 +254,9 @@ static uint32_t wifiTouchedAt = 0;
 #define WF_STRIP OUR_STRIP
 #define WF_INK OUR_INK
 #define WF_SOFT OUR_SOFT
+#ifndef OUR_GOOD                                                 // (main.cpp's green that reads on the theme; the host tests' make-believe screen is navy)
+#define OUR_GOOD(bg) ((uint16_t) 0x87F0)
+#endif
 static uint16_t wifiStrip = WF_STRIP;
 static void wifiErase(const ldrc::WifiItem &it) {               // what is behind it: the strip along the top, or the page
     const int strip = 58;
@@ -275,7 +278,10 @@ static void wifiDrawItem(const ldrc::WifiItem &it) {
     case WifiItem::TITLE: {
         wifiErase(it);
         const int font = textWidth(0, it.text) <= it.w - 8 ? 0 : 6;
-        topText(it.x + 4, it.y + (it.h - fontHeight(font)) / 2 + 2, font, WF_INK, topCut(it.text, font, it.w - 8));
+        const uint16_t ink = wifiStrip == WF_STRIP ? WF_INK : 0xFFFF;   // (white on the strip's own green or red, whatever the theme)
+        const std::string s = topCut(it.text, font, it.w - 8);
+        // (a title alone in the strip is centred, as the update panel's and the main board's pages are; one beside other things starts at x 20)
+        topText(it.w >= 700 ? it.x + (it.w - textWidth(font, s)) / 2 : it.x + 4, it.y + (it.h - fontHeight(font)) / 2 + 2, font, ink, s);
         break;
     }
     case WifiItem::TEXT: {
@@ -283,18 +289,18 @@ static void wifiDrawItem(const ldrc::WifiItem &it) {
         const int font = textWidth(6, it.text) <= it.w - 8 ? 6 : 2;
         const std::string s = topCut(it.text, font, it.w - 8);
         const int tw = textWidth(font, s);
-        topText(it.strong ? it.x + it.w - tw - 4 : it.x + (it.w - tw) / 2, it.y + (it.h - fontHeight(font)) / 2 + 2, font, it.good ? 0x87F0 : it.strong ? WF_SOFT : WF_INK, s);
+        topText(it.strong ? it.x + it.w - tw - 4 : it.x + (it.w - tw) / 2, it.y + (it.h - fontHeight(font)) / 2 + 2, font, it.good ? OUR_GOOD(it.y < 58 ? wifiStrip : WF_BACK) : it.strong ? WF_SOFT : WF_INK, s);
         break;
     }
     case WifiItem::ROW: {
         const uint16_t face = it.pressed ? 0x4C9A : it.good ? 0x0320 : it.strong ? 0x2A72 : 0x19CE;
         gfx->fillRect(it.x, it.y, it.w, it.h, face);
         gfx->drawRect(it.x, it.y, it.w, it.h, shade(face, 35));
-        const uint16_t ink = it.bars || it.good ? WF_INK : WF_SOFT;
+        const uint16_t ink = it.bars || it.good ? 0xFFFF : 0xC618;   // (the rows keep their own dark faces in every theme: so do their words)
         const int right = it.x + it.w - 14;
         int nx = right;
         if (it.bars) {                                          // four bars, as many of them lit as the signal is strong
-            for (int b = 0; b < 4; ++b) { const int bh = 7 + 5 * b, bx = right - 33 + b * 9; gfx->fillRect(bx, it.y + it.h - 14 - bh, 6, bh, b < it.bars ? WF_INK : shade(face, 30)); }
+            for (int b = 0; b < 4; ++b) { const int bh = 7 + 5 * b, bx = right - 33 + b * 9; gfx->fillRect(bx, it.y + it.h - 14 - bh, 6, bh, b < it.bars ? 0xFFFF : shade(face, 30)); }
             nx = right - 33 - 14;
         }
         if (it.locked && it.bars) {                             // a padlock: a body and a shackle
@@ -303,7 +309,7 @@ static void wifiDrawItem(const ldrc::WifiItem &it) {
             nx = lx - 14;
         }
         int nameW = nx - (it.x + 14);
-        if (!it.note.empty()) { const int nw = textWidth(2, it.note); topText(nx - nw, it.y + (it.h - fontHeight(2)) / 2 + 2, 2, it.good ? 0x87F0 : WF_SOFT, it.note); nameW -= nw + 16; }
+        if (!it.note.empty()) { const int nw = textWidth(2, it.note); topText(nx - nw, it.y + (it.h - fontHeight(2)) / 2 + 2, 2, it.good ? 0x87F0 : 0xC618, it.note); nameW -= nw + 16; }
         clipX1 = min(W, it.x + 14 + max(0, nameW));
         topText(it.x + 14, it.y + (it.h - fontHeight(6)) / 2 + 2, 6, ink, topCut(it.text, 6, nameW));
         break;
@@ -319,19 +325,20 @@ static void wifiDrawItem(const ldrc::WifiItem &it) {
         break;
     }
     case WifiItem::FIELD: {
-        gfx->fillRect(it.x, it.y, it.w, it.h, 0xFFFF);
+        // (switched off - the command line's, while it waits for the receiver - it is grey: touching it does nothing then)
+        gfx->fillRect(it.x, it.y, it.w, it.h, it.enabled ? 0xFFFF : 0xC618);
         gfx->drawRect(it.x, it.y, it.w, it.h, 0x0000); gfx->drawRect(it.x + 1, it.y + 1, it.w - 2, it.h - 2, 0x0000);
         const int nw = it.note.empty() ? 0 : textWidth(2, it.note) + 18, room = it.w - 28 - nw;
         if (nw) topText(it.x + it.w - nw - 2, it.y + (it.h - fontHeight(2)) / 2 + 2, 2, 0x8410, it.note);
         if (it.text.empty() && !it.hint.empty()) {              // nothing typed yet: what is wanted, in grey
             const int font = textWidth(6, it.hint) <= room ? 6 : 2;
-            topText(it.x + 24, it.y + (it.h - fontHeight(font)) / 2 + 2, font, 0x9CF3, topCut(it.hint, font, room));
+            topText(it.x + 24, it.y + (it.h - fontHeight(font)) / 2 + 2, font, it.enabled ? 0x9CF3 : 0x6B4D, topCut(it.hint, font, room));
         }
         std::string s = it.text;                                // (in the typewriter face: l, 1 and I, O and 0 are told apart)
         while (!s.empty() && textWidth(5, s) > room) s.erase(0, 1);   // too long for the box: its end is what is shown
         clipX1 = min(W, it.x + it.w - nw - 4);
         topText(it.x + 12, it.y + (it.h - fontHeight(5)) / 2 + 2, 5, 0x0000, s);
-        gfx->fillRect(it.x + 14 + textWidth(5, s), it.y + 9, 3, it.h - 18, 0x001F);
+        if (it.enabled) gfx->fillRect(it.x + 14 + textWidth(5, s), it.y + 9, 3, it.h - 18, 0x001F);   // (the place to type: not while it cannot be typed in)
         break;
     }
     }

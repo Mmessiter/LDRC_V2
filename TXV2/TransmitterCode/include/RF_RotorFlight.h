@@ -34,7 +34,7 @@ FLASHMEM void RotorFlightStart()
     char Vbuf[15];
 
     if (MotorEnabled || !SafetyON) // (B45: which one, so a refusal explains itself)
-        MsgBox(pRXSetupView, (char *)(MotorEnabled ? "The motor is enabled.\r\nDisarm first." : "The safety is off.\r\nSafety on first."));
+        MsgBox(pRXSetupView, (char *)(MotorEnabled ? "The motor is ON.\r\nSwitch it off first." : "The safety is off.\r\nSafety on first."));
 
     SendCommand((char *)"page RFView");
     CurrentView = ROTORFLIGHTVIEW;

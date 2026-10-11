@@ -90,7 +90,7 @@
     "borderc": 0,
     "bco": 2214
    },
-   "txt": "Bank 1",
+   "txt": "Bluetooth",
    "a": {
     "style": 0,
     "key": 255,
@@ -218,7 +218,7 @@
     "borderc": 0,
     "bco": 65535
    },
-   "txt": "0",
+   "txt": "",
    "a": {
     "style": 2,
     "key": 255,
@@ -277,7 +277,7 @@
     "borderc": 0,
     "bco": 65535
    },
-   "txt": "0",
+   "txt": "",
    "a": {
     "style": 2,
     "key": 255,

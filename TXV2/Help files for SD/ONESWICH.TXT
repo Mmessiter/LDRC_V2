@@ -1,7 +1,34 @@
-Choose the job of this switch. One job per switch; giving a job to this switch takes it from any other that had it.||
-
-A switch's positions are near (towards you), mid, and away. Banks 1 2 3: away is bank 1, mid bank 2, near bank 3. Bank 4 & Motor: away is the motor on; mid is bank 4 with the motor on; near is bank 4 with the motor off. Safety: near is 'safety off'. Rates: away, mid, near are rates 1, 2, 3. Buddy: hand control to the buddy. Channel 5 to 16 (shown by name where you have renamed a channel): the switch becomes that channel's input, which any channel may use on the Inputs page; a switch given channel 5 to 8 takes the place of the front switch or knob there.||
-
-'Reversed' turns the switch's sense round, so that near and away swap.||
-
-Switches 5 to 8 are the front four, the inputs of channels 5 to 8 (a knob there reads as a switch): with no other job, 'Channel 5' to 'Channel 8' is their marking. Any other job takes it away from its channel, whose input then sits at its centre. 'Not used' does the same and nothing else.
+Choose this switch's job, then press 'OK' to save it.|
+One job per switch: giving a job to this switch takes it from|
+any switch that had it.|
+The jobs belong to the transmitter, so every model uses|
+the same switches.||
+THE JOBS:|
+A switch's positions are near (towards you), mid and away.|
+'Banks 1 2 3': away is bank 1, mid is bank 2, near is bank 3.|
+'Bank 4 & Motor': away is motor on, in the bank the 'Banks 1 2 3'|
+switch picks. Mid is bank 4 with the motor on. Near is bank 4|
+with the motor off.|
+'Safety': near is safety off. With a Rotorflight model, safety|
+off arms the model.|
+'Rates': away, mid and near pick rates 1, 2 and 3.|
+'Buddy': hands control to the buddy.|
+A spring-return switch is best for 'Buddy'.|
+What each 'Buddy' position does is set on 'Transmitter setup',|
+then 'Buddy'. There, 'Down', 'Middle' and 'Up' mean|
+away, mid and near.|
+'Channel 5' to 'Channel 16' (by name if you renamed the channel):|
+the switch becomes that channel's input.|
+Any channel can then use it on the 'Inputs' page.|
+Given channel 5 to 8, the switch takes the place of the front|
+switch or knob there.|
+'Not used': no job.||
+'Reversed' turns the switch round, so that near and away swap.||
+SWITCHES 5 TO 8 (ON THE FRONT):|
+They are the inputs of channels 5 to 8 (a knob there|
+reads as a switch).|
+With no other job, each one is marked with its own channel,|
+'Channel 5' to 'Channel 8'.|
+Any other job takes the switch away from its channel, whose input|
+then sits at its centre.|
+'Not used' does the same and nothing else.|

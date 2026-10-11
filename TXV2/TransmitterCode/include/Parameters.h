@@ -554,7 +554,7 @@ int GetExtraParameters() // This gets extra parameters ready for sending and ret
 void ShowSendingParameters()
 {
     char FrontView_Connected[] = "Connected"; // this is the name of the Nextion screen's text box
-    char msg[] = "Sending Parameters ...";
+    char msg[] = "Sending parameters ...";
     if (!LedWasGreen || (millis() - LedGreenMoment) > 5000) // if no connection or connection isn't new any more then return
         return;
     SendText(FrontView_Connected, msg); // show that we are sending parameters

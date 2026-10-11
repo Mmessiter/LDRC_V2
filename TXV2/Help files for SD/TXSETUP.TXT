@@ -1,27 +1,63 @@
-This screen offers all options for setting up the transmitter.||
-
-Use the 'Calibrate' option first, and after making any major changes such as replacing the gimbals. ||
-
-Only the first 8 channels, the edge switches and the hardware trims need to be calibrated.||
-
-To setup a model, use the Model setup screen.
-
-To return to the Front screen, press 'OK'.||
-
-WIFI SETUP: choose your network and type its password, once. At the field, your phone's hotspot will do.||
-
-APPEARANCE: the background picture, the themes (each a panel colour with its text colour), and your own front screen. Its 'Help' says more.||
-
-TRANSMITTER UPDATES: asks messiter.com for the latest version. Nothing is installed unless you press 'Install now'. Your models, settings and logs are copied to the screen's card first.||
-
-'Earlier versions' puts a previous version back.||
-
-'Transmitter updates' updates the transmitter and its screen only, and is greyed out while a model is connected. The safety must be on (with no safety switch: the motor off).||
-
-The receiver's own update is on the Model setup screen: 'Receiver updates', available while a model is connected.||
-
-WiFi and Bluetooth switch themselves off while the safety is off (with no safety switch: while the motor is on).||
-
-If new firmware reads a model's settings differently from the old one, it is not kept: the old firmware comes back by itself, and the screen says so.
-
-'Workshop door' lets a computer on the same WiFi talk to the screen (for Malcolm's bench tools). Press it again to shut the door. Shut, the screen answers nothing but its status.
+Transmitter setup: the settings for the transmitter itself.|
+Most are the same for every model.|
+A model's own settings are on Model setup.||
+THE BUTTONS:|
+'Calibrate': set up the sticks, switches and trims.|
+Do this first, and again after new gimbals or a new stick mode.|
+It will not open while a model is connected.|
+'System': general settings and binding, the clock, advanced.|
+'Sounds etc.': voices, sounds, vario, brightness and volume.|
+'Switches': the job of each switch.|
+'Appearance': background picture, themes, your own front screen.|
+A theme is a panel colour with its text colour.|
+Its 'Help' says more.|
+'Batteries': model battery cells, transmitter battery type.|
+'Scan RF': the Interference scan (see SCAN RF below).|
+'Buddy': instructor and pupil fly one model, a transmitter each.|
+'Raining': Pong, a game for a day too wet to fly.|
+'WiFi': choose your network and type its password, once.|
+At the field, your phone's hotspot will do.|
+'OK': back to the front screen.||
+SCAN RF:|
+The Interference scan shows how busy each 2.4 GHz channel is.|
+The link to the model stops while the scan runs.|
+With a model connected you are asked first.|
+Never scan while the model flies.|
+Each yellow bar is one channel, 1 MHz wide.|
+The busiest channel fills the graph; the others are to scale.|
+The red line is the top of the legal band (2.4835 GHz).|
+Channels to its right are outside it.|
+A hit is a signal heard on a channel.|
+'Average hits per second' counts the whole band.|
+Lower is quieter.|
+'Quietest channel' and 'Noisiest channel' look only|
+inside the legal band.|
+Each shows the channel number and its hits since the scan began.|
+Channel numbers count MHz from 2.400 GHz:|
+channel 12 is 2.412 GHz.|
+'Restart' clears the graph and starts again.|
+'OK': back to Transmitter setup, and the radio back to normal.|
+How slowly the bars fall back: 'Radio scanner sensitivity'|
+on the Advanced page of 'System'.||
+TRANSMITTER UPDATES:|
+'Transmitter updates' asks messiter.com for the latest version.|
+Nothing is installed unless you press 'Install now'.|
+Your models, settings and logs are copied|
+to the screen's card first.|
+'Earlier versions' puts a previous version back.|
+It updates the transmitter and its screen only.|
+The button is greyed out while a model is connected.|
+Switch the model off and wait a minute.|
+The safety must be on (with no safety switch: the motor off).|
+Firmware that reads a model's settings differently is not kept:|
+the old firmware comes back by itself, and the screen says so.|
+The receiver's own update is 'Receiver updates' on Model setup.|
+It works while a model is connected.||
+WIFI AND BLUETOOTH:|
+They switch themselves off while the safety is off.|
+(With no safety switch: while the motor is on.)||
+WORKSHOP DOOR:|
+'Workshop door' lets workshop tools reach the screen over WiFi.|
+Join a WiFi network first: the door opens on that network only.|
+Press it again to shut the door.|
+Shut, the screen answers nothing but its status.|

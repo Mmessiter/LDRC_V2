@@ -65,3 +65,10 @@ page FrontView
 @model 0
 @flight f1 w1 b6 s1 timer,rxbat,rpm,clock,motor,txbat
 @shot flight_nolink
+# ---- the defined screen's Help (src/flight_device.h: FLIGHT.TXT, titled after its page, "Defined front screen help")
+LogView.t0.txt="Defined front screen help"
+page LogView
+vis b15,0
+LogText.txt="This is your own front screen: big, clear numbers while you fly.\r\n\r\n'Transmitter' and 'Model' open the setups, as on the original front \r\nscreen.\r\n\r\n'Original screen' shows the original front screen. Its 'Defined \r\nscreens' button brings this screen back. Your choice stays, through \r\ntake-offs, landings and switching off, until you press the other \r\nbutton.\r\n"
+LogText.val_y=0
+@shot flight_help

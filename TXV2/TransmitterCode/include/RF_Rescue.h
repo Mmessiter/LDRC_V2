@@ -287,7 +287,7 @@ FLASHMEM void RescuePoll()
         Rescue_Was_Edited = false;
         SendCommand((char *)"vis b3,0");
         RescueShow();
-        RescueBusy(same ? "Saved, and read back the same." : "Saved; the flight controller adjusted some values (shown).");
+        RescueBusy(same ? "Saved, and read back the same." : "Saved, but the flight controller adjusted some values.");
         RescueMsgUntil = millis() + 4000;
         PlaySound(BEEPCOMPLETE);
         return;

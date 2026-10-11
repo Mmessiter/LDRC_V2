@@ -108,7 +108,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "print \"HelpView:AUDIO.TXT\"\nLogView.t0.txt=\"Audio help\"\nLogView.return.txt=\"AudioView\""
+    "r": "print \"HelpView:AUDIO.TXT\"\nLogView.t0.txt=\"Sounds and brightness help\"\nLogView.return.txt=\"AudioView\""
    }
   },
   {
@@ -171,9 +171,9 @@
    "i": 6,
    "t": "slider",
    "g": "l",
-   "x": 224,
-   "y": 334,
-   "w": 514,
+   "x": 254,
+   "y": 328,
+   "w": 484,
    "h": 40,
    "sta": 1,
    "c": {
@@ -201,7 +201,7 @@
    "t": "text",
    "g": "l",
    "x": 62,
-   "y": 334,
+   "y": 328,
    "w": 88,
    "h": 40,
    "font": 2,
@@ -228,9 +228,9 @@
    "i": 8,
    "t": "slider",
    "g": "l",
-   "x": 224,
-   "y": 290,
-   "w": 514,
+   "x": 254,
+   "y": 288,
+   "w": 484,
    "h": 40,
    "sta": 1,
    "c": {
@@ -258,8 +258,8 @@
    "t": "text",
    "g": "l",
    "x": 62,
-   "y": 290,
-   "w": 118,
+   "y": 288,
+   "w": 191,
    "h": 40,
    "font": 2,
    "sta": 1,
@@ -268,7 +268,7 @@
     "borderc": 0,
     "bco": 4426
    },
-   "txt": "Brightness",
+   "txt": "Screen brightness",
    "a": {
     "style": 0,
     "key": 255,
@@ -276,7 +276,7 @@
     "xcen": 0,
     "ycen": 1,
     "pw": 0,
-    "txt_maxl": 14,
+    "txt_maxl": 19,
     "isbr": 0
    }
   },
@@ -341,7 +341,7 @@
    "i": 12,
    "t": "text",
    "g": "l",
-   "x": 406,
+   "x": 430,
    "y": 100,
    "w": 125,
    "h": 34,
@@ -465,9 +465,9 @@
    "i": 17,
    "t": "number",
    "g": "g",
-   "x": 654,
+   "x": 600,
    "y": 138,
-   "w": 84,
+   "w": 66,
    "h": 34,
    "font": 2,
    "sta": 1,
@@ -488,7 +488,38 @@
     "isbr": 1
    },
    "ev": {
-    "p": "keybdB.t1.txt=\"Variometer bank\""
+    "p": "keybdB.t1.txt=\"Vario in bank (0 = all)\""
+   }
+  },
+  {
+   "n": "u_n2",
+   "t": "text",
+   "g": "l",
+   "x": 672,
+   "y": 138,
+   "w": 66,
+   "h": 34,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "bco": 4426,
+    "pco": 50712,
+    "borderc": 0
+   },
+   "txt": "0 = all",
+   "a": {
+    "style": 0,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "isbr": 0,
+    "txt_maxl": 9,
+    "key": 255,
+    "pw": 0
+   },
+   "i": 30,
+   "ev": {
+    "r": "print \"UKRULES\""
    }
   },
   {
@@ -496,9 +527,9 @@
    "i": 18,
    "t": "text",
    "g": "l",
-   "x": 406,
+   "x": 430,
    "y": 138,
-   "w": 200,
+   "w": 142,
    "h": 34,
    "font": 2,
    "sta": 1,
@@ -507,7 +538,7 @@
     "borderc": 0,
     "bco": 4426
    },
-   "txt": "Vario bank (0 = all)",
+   "txt": "Vario in bank",
    "a": {
     "style": 0,
     "key": 255,
@@ -524,9 +555,9 @@
    "i": 19,
    "t": "text",
    "g": "l",
-   "x": 406,
+   "x": 430,
    "y": 176,
-   "w": 220,
+   "w": 130,
    "h": 34,
    "font": 2,
    "sta": 1,
@@ -535,7 +566,7 @@
     "borderc": 0,
     "bco": 4426
    },
-   "txt": "Vario threshold (fpm)",
+   "txt": "First tone at",
    "a": {
     "style": 0,
     "key": 255,
@@ -552,9 +583,9 @@
    "i": 20,
    "t": "text",
    "g": "l",
-   "x": 406,
+   "x": 430,
    "y": 214,
-   "w": 205,
+   "w": 167,
    "h": 34,
    "font": 2,
    "sta": 1,
@@ -563,7 +594,7 @@
     "borderc": 0,
     "bco": 4426
    },
-   "txt": "Vario spacing (fpm)",
+   "txt": "Next tone every",
    "a": {
     "style": 0,
     "key": 255,
@@ -580,9 +611,9 @@
    "i": 21,
    "t": "number",
    "g": "g",
-   "x": 654,
+   "x": 600,
    "y": 214,
-   "w": 84,
+   "w": 66,
    "h": 34,
    "font": 2,
    "sta": 1,
@@ -603,7 +634,38 @@
     "isbr": 1
    },
    "ev": {
-    "p": "keybdB.t1.txt=\"Variometer spacing\""
+    "p": "keybdB.t1.txt=\"Next tone every (ft/min)\""
+   }
+  },
+  {
+   "n": "u_n3",
+   "t": "text",
+   "g": "l",
+   "x": 672,
+   "y": 214,
+   "w": 66,
+   "h": 34,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "bco": 4426,
+    "pco": 50712,
+    "borderc": 0
+   },
+   "txt": "ft/min",
+   "a": {
+    "style": 0,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "isbr": 0,
+    "txt_maxl": 8,
+    "key": 255,
+    "pw": 0
+   },
+   "i": 32,
+   "ev": {
+    "r": "print \"UKRULES\""
    }
   },
   {
@@ -611,9 +673,9 @@
    "i": 22,
    "t": "number",
    "g": "g",
-   "x": 654,
+   "x": 600,
    "y": 176,
-   "w": 84,
+   "w": 66,
    "h": 34,
    "font": 2,
    "sta": 1,
@@ -634,7 +696,38 @@
     "isbr": 1
    },
    "ev": {
-    "p": "keybdB.t1.txt=\"Variometer threshold\""
+    "p": "keybdB.t1.txt=\"First tone at (ft/min)\""
+   }
+  },
+  {
+   "n": "u_n0",
+   "t": "text",
+   "g": "l",
+   "x": 672,
+   "y": 176,
+   "w": 66,
+   "h": 34,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "bco": 4426,
+    "pco": 50712,
+    "borderc": 0
+   },
+   "txt": "ft/min",
+   "a": {
+    "style": 0,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "isbr": 0,
+    "txt_maxl": 8,
+    "key": 255,
+    "pw": 0
+   },
+   "i": 31,
+   "ev": {
+    "r": "print \"UKRULES\""
    }
   },
   {
@@ -767,7 +860,7 @@
    "i": 28,
    "t": "switch",
    "g": "l",
-   "x": 654,
+   "x": 600,
    "y": 100,
    "w": 84,
    "h": 34,

@@ -1,25 +1,37 @@
-Each model's 'ID' is actually the MAC address of the Teensy 4.0 MCU in the model's receiver. It's a unique 6 BYTE number. ||
-
-These 48 BIT unique numbers are use by the radio's Automatic Model Selector function. Hence it's important that they are correct and not duplicated.|| 
-
-Duplicates can be created if you move a receiver from one model to another, etc., and duplicates can lead to the automatic selection of the wrong model memory, which is best avoided!||
-
-Displayed at the bottom of the screen is the number of duplicates found - ideally zero (0).||
-
-If duplicate IDs exist they are marked in the list with '>>Duplicate n<<'  where 'n' is the number of the model memory which has the same ID. ||
-
-Duplicates should be 'unmatched' or simply deleted. ||
-
-'Store ID records the ID of that model so that it can subsequently be automatically selected.
-
-'Delete ID' simply removes the ID without making any other change.||
-
-If duplicate IDs exist at connection time, the radio will connect to the model with the lowest model number.||
-
-When you save a model memory to a backup file, its ID is also saved, hence its ID will also be restored if you later restore from that file.||
-
-If you are not sure that the model's ID is correct for an installed receiver, turn off AMS (Automatic Model Selection) and manually select the correct model before connecting. Then after connecting, save the model ID from the Model setup screen. ||
-
-When you transfer a model memory to another transmitter wirelessly, that model's ID is also transferred, assuming you had earlier saved it. Hence the transmitter that receives that model memory will also be able immediately automatically to select that model memory when it connects.
-
-
+Lists every model memory with its stored ID,|
+and finds any ID stored twice.||
+Each line shows the model's number, its name and its stored ID.|
+'(ID OK)' means no other model has that ID.|
+'(same as 9)' means model 9 has the same ID.|
+A model with no stored ID shows its name only.|
+'Duplicates' at the bottom counts the models whose ID is also|
+stored with another model. It should be 0.|
+'OK' goes to the 'Model IDs' page, to store or delete an ID.||
+WHAT THE ID IS:|
+Each receiver has its own ID: the 6-byte (48-bit) number of its|
+processor chip (its MAC address), shown as 12 characters.|
+Automatic model selection (AMS) uses it to load the right model|
+memory when a model connects. So each ID must be right, and|
+stored with one model only.||
+DUPLICATES:|
+A duplicate can come from moving a receiver to another model,|
+or from restoring a backup into a second model memory.|
+It can make AMS load the wrong model memory: best avoided!|
+When an ID is stored twice, the transmitter uses the model now|
+loaded if it has that ID, or else the lowest-numbered one.|
+To clear a duplicate, load the model that should not have the|
+ID, then press 'Delete stored ID' on 'Model IDs'.||
+STORE AND DELETE:|
+On 'Model setup', then 'Model IDs':|
+'Store this model's ID' stores the ID of the model now|
+connected, so it can be selected automatically next time.|
+'Delete stored ID' removes the ID and changes nothing else.||
+IF YOU ARE NOT SURE AN ID IS RIGHT:|
+Turn AMS off ('Transmitter setup', then 'System').|
+Choose the right model on the 'Models' page, and connect.|
+Then press 'Store this model's ID', and turn AMS on again.||
+BACKUPS AND SENDING:|
+A backup file keeps the model's ID; a restore brings it back.|
+A model sent to another transmitter takes its ID with it, if one|
+was stored. With AMS on, that transmitter then selects it when|
+the model connects.|

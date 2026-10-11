@@ -293,15 +293,23 @@ static bool bleAsk(const std::string &method, const std::string &path, const std
 // refuses those pages meanwhile (B47), with the same words.
 static bool pipeNoticeUp = false; static int pipeNoticePage = -1;
 static uint32_t pipeNoticeSince = 0; static bool pipeNoticeLate = false;   // 1.11.39: after a while the notice says what usually stands in the way
-static const int PN_X = 40, PN_Y = 336, PN_W = 720, PN_H = 116;   // (1.11.46: over the island menu's arming line and foot - rows of the grid were under 1.11.26's place)
+// (1.11.46: over the island menu's arming line and foot - rows of the grid were under 1.11.26's place.) The notice is
+// only drawn: a touch on it goes to what is underneath. So it lies over the grid's third and fourth rows (Filters,
+// Adjustments, Switches, Copy a bank, Battery, Black box), the six buttons that do nothing during the join but say the
+// same as the notice (the main board refuses those pages while it runs: B47, "Connecting Bluetooth. Please wait a
+// moment."), between rows 2 and 5 with 2 px to spare - as wide as the grid. Everything that does something during the
+// join stays in sight: Command line (the screen's own page), the arming line, Backup / Restore, OK and Help. In the
+// dress of the pages' message boxes (text style 5): a dark ring, a frame inside it. If page 8's grid moves, this follows.
+static const int PN_X = 44, PN_Y = 187, PN_W = 712, PN_H = 102;
 static void pipeNoticeDraw() {
     gfx->fillRect(PN_X, PN_Y, PN_W, PN_H, OUR_PANEL);
-    gfx->drawRect(PN_X, PN_Y, PN_W, PN_H, OUR_INK); gfx->drawRect(PN_X + 1, PN_Y + 1, PN_W - 2, PN_H - 2, OUR_INK);
+    for (int i = 0; i < 3; ++i) gfx->drawRect(PN_X + i, PN_Y + i, PN_W - 2 * i, PN_H - 2 * i, 0x08A6);
+    for (int i = 3; i < 5; ++i) gfx->drawRect(PN_X + i, PN_Y + i, PN_W - 2 * i, PN_H - 2 * i, OUR_INK);
     gfx->startWrite();
     // 1.11.39 (Malcolm, 9 Oct, after an hour lost to the phone app holding the receiver's one Bluetooth link): after six
     // seconds of trying, the notice says so
-    const std::string a = "Connecting Bluetooth", c = pipeNoticeLate ? "still trying: close the phone app if it is running" : "please wait a moment";
-    int y = PN_Y + 10;
+    const std::string a = "Connecting Bluetooth", c = pipeNoticeLate ? "Still trying. Close the phone app if it is open." : "Please wait a moment.";
+    int y = PN_Y + (PN_H - (fontHeight(1) + 4 + fontHeight(2))) / 2;
     drawGlyphs(PN_X + (PN_W - textWidth(1, a)) / 2, y, 1, OUR_INK, a); y += fontHeight(1) + 4;
     drawGlyphs(PN_X + (PN_W - textWidth(2, c)) / 2, y, 2, OUR_INK, c);
     gfx->endWrite();

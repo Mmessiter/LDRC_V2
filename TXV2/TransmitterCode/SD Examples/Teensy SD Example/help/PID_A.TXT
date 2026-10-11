@@ -1,13 +1,31 @@
-|This screen allows the editing of PID Advanced values for the Nexus helicopter flight controller, and probably other flight controllers that support the same MSP v1 protocol.||
-
-
-The Numbers in the small yellow boxes are there to identify the parameter which you are currently editing. The edit box will display this number at the top to confirm you are editing the right one because it is easy to inadvertently select the wrong one. If you do select the wrong one, just press okay to save it unchanged.
-
-
-1). First select the Bank you would like to edit using the Bank switch. After selecting a Bank  there will be a brief pause while the values for that Bank are loaded.||
-
-2). Then edit any of the 25 values by pressing the box containing that value.||
-
-3). Then press Save and wait a moment while updated values are sent the the flight controller and saved in its EEPROM.||
-
-Confirm that your new values were indeed saved by moving the Bank switch briefly to another Bank and then back to the one you just edited. Check its values; because they were just read back from the flight controller. If all looks good, fly!!||
+The rest of the flight controller's PID settings, for the bank|
+shown at the top left (the Profiles tab of the Configurator).|
+Most models fly well on Rotorflight's own values.|
+Change one only when you know why.||
+TO CHANGE THEM:|
+1. Choose the bank with the bank switch. Wait while it loads.|
+2. Touch a value, or its name, and type the new value.|
+3. Press 'Save' (it appears once you touch a value).|
+The values are written to the flight controller,|
+read back to check, and stored.||
+CHECK THE NAME:|
+The keypad shows the name of the value you are changing.|
+Check it: the wrong one is easy to touch on this crowded page.|
+If it is the wrong one, press 'Cancel': nothing changes.||
+GOOD TO KNOW:|
+Save before you move the switch: a move loads the other bank,|
+and unsaved changes are lost.|
+To check a save, move the switch away and back.|
+The page reads the values again.|
+If the page says nothing came back, do the same,|
+or leave the page and open it again.|
+'Bank 3 / FC 2' at the top left: the flight controller|
+is on bank 2, so the page shows and saves bank 2.||
+THE NUMBERS:|
+'Piro compensation' is a switch: touch it to turn it on or off.|
+'Ground error decay' and 'Inertia precomp cutoff' have|
+one decimal place (0.0 to 25.5).|
+All the others are whole numbers, 0 to 255.||
+'OK' leaves the page. It asks first if you have unsaved changes.|
+With no model connected the page shows the model's backup|
+(see the Rotorflight options help).|

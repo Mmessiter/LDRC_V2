@@ -1,0 +1,39 @@
+# Travel3View (page 66), Mixer page 3: tail rotor (RF_Travel.h). StartTravel3View :349 -> TravPageHead :263, then
+# TravShowPage3 :81: i0 "Tail rotor type: %s" (TailTypeWords :19, longest "Variable pitch"), tn0 Yaw reversed (.val),
+# the labels ltn1/ltn3/ltn4 by the tail's type (:89-91), tn1..tn5 in tenths, ltn5/tn5 shown for a motorised tail only.
+Screen_Background=8
+@model 1
+page Travel3View
+t11.txt="Black Thunder 2"
+t9.txt="Bank 1"
+vis b3,0
+i0.txt="Tail rotor type: Variable pitch"
+tn0.val=0
+ltn1.txt="Yaw centre trim [deg]"
+ltn3.txt="Yaw limit CW [deg]"
+ltn4.txt="Yaw limit CCW [deg]"
+tn1.txt="0.0"
+tn3.txt="45.0"
+tn4.txt="45.0"
+tn2.txt="100.0"
+tn5.txt="0.0"
+vis ltn5,0
+vis tn5,0
+@shot 66_vp
+i0.txt="Tail rotor type: Bi-directional"
+tn0.val=1
+ltn1.txt="Yaw centre offset [%]"
+ltn3.txt="Yaw limit CW [%]"
+ltn4.txt="Yaw limit CCW [%]"
+tn1.txt="-100.0"
+tn3.txt="250.0"
+tn4.txt="250.0"
+tn2.txt="1000.0"
+tn5.txt="25.0"
+vis ltn5,1
+vis tn5,1
+vis b3,1
+@shot 66_motor
+vis busy,1
+busy.txt="Writing to the flight controller ..."
+@shot 66_writing

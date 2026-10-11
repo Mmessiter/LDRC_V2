@@ -1,0 +1,25 @@
+# CopyBankView (page 71), copy a bank (B78): CbShow (TXV1B RF_CopyBank.h:34-46), CbBusy (:29) with the copy's progress.
+Screen_Background=8
+@model 1
+page CopyBankView
+t11.txt="Black Thunder 2"
+t9.txt="Bluetooth"
+tn0.txt="Bank 2"
+tn1.txt="Bank 1"
+tn2.val=1
+tn3.val=1
+tn4.val=1
+tn5.val=0
+tn6.val=0
+b3.txt="Copy bank 2 to bank 1"
+@shot 71_open
+tn0.txt="Bank 6"
+tn1.txt="Bank 4"
+tn5.val=1
+tn6.val=1
+b3.txt="Copy bank 6 to bank 4"
+@shot 71_all
+vis busy,1
+busy.txt="Adjusting the gains for the head speed ..."
+@shot 71_busy
+vis busy,0

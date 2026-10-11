@@ -426,7 +426,7 @@ FLASHMEM static void AdjTitle()
 {
     char b[48];
     if (AdjN) snprintf(b, sizeof(b), "Adjustment %d of %d", AdjAt + 1, AdjN);
-    else snprintf(b, sizeof(b), "Adjustments: none yet");
+    else snprintf(b, sizeof(b), "No adjustments yet");
     SendText((char *)"t0", b);
 }
 FLASHMEM static int AdjLinesUsed(int exceptRow) // how many of the 42 lines the rows would take (one each, B83)
@@ -564,7 +564,7 @@ FLASHMEM static void AdjLive() // the chosen channel's position, from this trans
             if (!AdjBankFitted[AdjAt] && AdjFitBankRow(AdjAt))
             { // a bank seen for the first time shows the line as it is cannot follow this transmitter: the ends re-fitted
                 AdjEdited(); AdjShow();
-                AdjBusy("The bank switch did not follow this transmitter's banks: matched - press Save"); AdjMsgUntil = millis() + 6000;
+                AdjBusy("Press Save: the bank switch now matches this transmitter's banks."); AdjMsgUntil = millis() + 6000;
                 return;
             }
             if (wasRight != AdjBankFitted[AdjAt]) { AdjShow(); return; }
@@ -786,9 +786,9 @@ FLASHMEM static void AdjTakeRows(const uint8_t *b, int n) // the 52 image -> row
         if (AdjFitBankRow(i)) refit = true;
     }
     AdjTakeNote[0] = 0;
-    if (dups) snprintf(AdjTakeNote, sizeof(AdjTakeNote), "%d extra bank switch line%s (they fight): removed - press Save", dups, dups == 1 ? "" : "s");
-    else if (legacy) snprintf(AdjTakeNote, sizeof(AdjTakeNote), "%d switch%s in the old once-only form: put right, press Save", legacy, legacy == 1 ? "" : "es");
-    else if (refit) snprintf(AdjTakeNote, sizeof(AdjTakeNote), "The bank switch did not follow this transmitter's banks: matched - press Save");
+    if (dups) snprintf(AdjTakeNote, sizeof(AdjTakeNote), "Press Save: %d extra bank switch line%s removed (they fight).", dups, dups == 1 ? "" : "s");
+    else if (legacy) snprintf(AdjTakeNote, sizeof(AdjTakeNote), "Press Save: %d switch%s put right (old once-only form).", legacy, legacy == 1 ? "" : "es");
+    else if (refit) snprintf(AdjTakeNote, sizeof(AdjTakeNote), "Press Save: the bank switch now matches this transmitter's banks.");
 }
 FLASHMEM static int AdjLinesToWrite(AdjLine *L) // the rows, back in raw units
 {
@@ -912,7 +912,7 @@ FLASHMEM void AdjustPoll()
         AdjTakeRows(AdjImg, n);
         Adj_Was_Edited = AdjTakeNote[0] != 0; AdjStep_ = ADJ_IDLE;
         AdjHead(); AdjShow();
-        AdjBusy(AdjTakeNote[0] ? AdjTakeNote : same ? "Saved, and read back the same." : "Saved; the flight controller adjusted some values (shown).");
+        AdjBusy(AdjTakeNote[0] ? AdjTakeNote : same ? "Saved, and read back the same." : "Saved, but the flight controller adjusted some values.");
         AdjMsgUntil = millis() + 4000;
         PlaySound(BEEPCOMPLETE);
         return;

@@ -1,46 +1,54 @@
-This screen allows all channels to be re-named and re-routed from any input and to any output.||
-
-For each channel, the input number is displayed first (in yellow) then the channel name (white), then the channel output number (in red).||
-
-All three of these items can be edited.||
-
-(1) A channel can be routed from any input device.|
-(2) The name of each channel can be changed.|
-(3) A channel can be routed to any output channel.||
-
-All channel numbers by default are routed from the input of the same number (in yellow) to the output of the same number (in red).|
-This default channel order is the same as Futaba ('AETR'). And on this screen you can change it if you would like to.||
-
-Input 1 is always the default aileron input stick.|
-Input 2 is always the default elevator input stick.|
-Input 3 is always the default throttle input stick.|
-Input 4 is always the default rudder input stick.||
-
-These are true both in Mode 2 and Mode 1.||
-
-Inputs 5 - 8 are the four switches (or knobs/potentiometers) nearer the middle of the transmitter.||
-
-Inputs 9,10,11 and 12 can optionally be assigned to the Edge switches, but these switches are more usually used for Banks 1,2,3 & 4, Buddy box, Rates, Safety, etc.||
-
-Inputs 13,14,15 and 16 don't exist at all. Nonetheless these four channels can be useful for mixes and extra functions. Their inputs can be mapped from any stick switch or knob.||
-
-To check that you are moving the intended channel, watch the Channels screen while moving a stick or switch or knob.||
-
-One input can be mapped to multiple output channels, and these can be reversed independently.|
-But never map an output from more than one input channel! That won't work. Use a 'mix' instead for this.||
-
-The trims' output channel number may be redefined here. Almost always, it's best to leave them unedited (as 1,2,3,4).||
-
-However, for the power user, they can be reassigned here.||
-
-Trim 1 input (Tr1) is horizontal and under the aileron input stick.|
-Trim 2 input (Tr2) is vertical and next to the elevator input stick.|
-Trim 3 input (Tr3) is vertical and next to the throttle input stick.|
-Trim 4 input (Tr4) is horizontal and under the rudder input stick.||
-
-For example, if you set 'Tr1' to '14', then moving the trim that's usually for aileron will actually move channel 14.|
-You can then adjust the 'trims multiplier' of course so that the extent of the control over channel 14 is correct for your application.||
-
-After making changes, Be *SURE TO TEST* on the ground before flying!||
-
-Inputs 5 to 8 are the front switches or knobs. Any switch given the job 'Channel 5' to 'Channel 16' on the Switches page becomes that input (in place of the front switch or knob for 5 to 8), so a top-edge switch can drive any channel: give it that job, then choose its input number here.
+Choose what moves each channel, give it a name,|
+and choose the receiver output it goes to.|
+Touch a number or a name to change it.|
+'OK' keeps the changes and goes back to 'Model setup'.|
+With the model connected, you are asked first:|
+changes here move its controls.||
+In: the stick, switch or knob that moves this channel.|
+Name: the channel's name (up to 10 letters).|
+Other pages show it too.|
+Out: the receiver output this channel goes to.|
+Trim out: which channels each trim moves (see TRIMS).||
+By default each channel takes the input and the output|
+of its own number. This is Futaba's order (AETR).||
+INPUTS:|
+1 = aileron stick, 2 = elevator stick,|
+3 = throttle stick, 4 = rudder stick,|
+in Mode 1 and Mode 2 alike.|
+5 to 8 = the front switches or knobs.|
+9 to 16 have no stick or knob of their own.||
+To use input 9 to 16, give a switch the job 'Channel 9'|
+(and so on): 'Transmitter setup', 'Switches'.|
+That switch is then input 9, for any channel to take as its In.|
+(If you renamed channel 9, the job shows its name instead.)|
+A switch given the job 'Channel 5' to 'Channel 8'|
+takes the place of that front switch or knob.|
+The top-edge switches often have other jobs:|
+banks, motor, safety, rates or buddy.|
+Channels 9 to 16 are also useful for mixes.||
+One input may move several channels (two aileron servos, say).|
+Each of them can be reversed on its own.||
+OUTPUTS:|
+Each Out number may be used only once.|
+If two channels share one, every Out number|
+goes back to 1 to 16 when you press 'OK'.|
+To move a channel to another output, swap two Out numbers:|
+for example Ch 4 Out 5 and Ch 5 Out 4.|
+Swap in pairs only. Three or more moved round in a ring|
+do not go where their Out numbers say.|
+To move one output from two controls, use a mix ('Mixes').||
+To check which channel moves, watch the 'Channels' page|
+while you move a stick, switch or knob.||
+TRIMS:|
+Most models keep the Trim out numbers at 1, 2, 3, 4.|
+Tr1: horizontal trim, under the aileron stick.|
+Tr2: left vertical trim; Mode 1 elevator, Mode 2 throttle.|
+Tr3: right vertical trim; Mode 1 throttle, Mode 2 elevator.|
+Tr4: horizontal trim, under the rudder stick.|
+A trim moves every channel whose In is its Trim out number,|
+so two aileron servos both take the aileron trim.|
+(In Mode 2, Trim out 2 acts on In 3, and 3 acts on In 2.)|
+For example, set Tr1 to 14:|
+the aileron trim then moves channel 14 instead.|
+Its step is the 'Trim multiplier' ('Model setup', 'Options').||
+After any change here, TEST ON THE GROUND before flying!|

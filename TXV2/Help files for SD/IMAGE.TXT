@@ -1,14 +1,27 @@
-|
-Touch a picture, then press OK.||
-
-To add your own photo:|
-1. Press Add photo.|
-2. Scan the code with your phone's camera.|
-3. Choose a photo and fit it in the frame.|
-4. Press Send, then OK on the transmitter.||
-
-The phone must be on the same WiFi as the transmitter. The phone makes the photo the right size.||
-
-Your own photos have green names. Delete removes one of yours.||
-
-All pictures are kept on the screen's card. They are not needed on the Teensy's card any more.|
+Choose the picture shown for this model.||
+Touch a picture, then press 'OK'.|
+'Cancel' keeps the picture the model had.|
+Choose 'No picture' to show none.|
+The arrows at the sides turn the pages, numbered at the top.||
+TO ADD YOUR OWN PHOTO:|
+1. Press 'Add photo'.|
+2. Scan the code with your phone's camera, or type the address|
+shown into the phone's web browser.|
+3. On the phone, choose a photo and fit it in the frame.|
+4. On the phone, press 'Send to the transmitter'.|
+5. On the transmitter, press 'OK' to use it.||
+The phone must be on the same WiFi as the transmitter.|
+If the transmitter is not on WiFi, press 'WiFi setup'.|
+While the model could fly, the WiFi stays off. The page then says|
+what to do first: motor off, safety on, wait, or model off.|
+The code works only while this page is open.||
+The phone makes the photo the right size and names it after the|
+model. You can change the name: 8 letters or digits at most.|
+A photo sent again with the same name replaces your old one.|
+A photo with the name of one of the other pictures is shown|
+in its place.||
+Your own photos have green names. 'Delete' removes one of your|
+own. It asks first: press 'Delete' again, or 'No' to keep it.|
+The other pictures came with the transmitter.||
+All the pictures are kept on the screen's own card,|
+not on the main board's card.|

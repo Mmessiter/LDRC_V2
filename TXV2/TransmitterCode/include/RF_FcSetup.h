@@ -262,7 +262,7 @@ FLASHMEM void BatteryPoll()
         if (n > 0) { memcpy(CmRaw, b, sizeof(CmRaw)); memcpy(CmWant, b, sizeof(CmWant)); CmN = n; }
         BatStep = BAT_IDLE; Bat_Was_Edited = false;
         BatHead(); BatShow();
-        FsBusy(BatSame ? "Saved, and read back the same." : "Saved; the flight controller adjusted some values (shown).");
+        FsBusy(BatSame ? "Saved, and read back the same." : "Saved, but the flight controller adjusted some values.");
         BatMsgUntil = millis() + 4000;
         PlaySound(BEEPCOMPLETE);
         return;
@@ -676,7 +676,7 @@ FLASHMEM void CalibratePoll()
         if (n >= 4) { memcpy(CalRaw, b, sizeof(CalRaw)); memcpy(CalWant, b, sizeof(CalWant)); }
         CalStep = CAL_IDLE; Cal_Was_Edited = false; CalNextAtt = millis() + 700;
         CalHead(); CalShow();
-        FsBusy(same ? "Saved, and read back the same." : "Saved; the flight controller adjusted some values (shown).");
+        FsBusy(same ? "Saved, and read back the same." : "Saved, but the flight controller adjusted some values.");
         CalMsgUntil = millis() + 4000;
         PlaySound(BEEPCOMPLETE);
         return;
@@ -746,7 +746,7 @@ FLASHMEM static void ArmShow()
 {
     char b[96];
     uint16_t colour = 2016;   // green
-    if (ArmFcArmed) { snprintf(b, sizeof(b), "Armed"); colour = 63488; }
+    if (ArmFcArmed) { snprintf(b, sizeof(b), "Armed"); colour = 64235; }   // light red: reads on all eight dark themes and on white
     else if (!ArmFlags) snprintf(b, sizeof(b), "Ready to arm");
     else
     {

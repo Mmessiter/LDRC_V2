@@ -78,11 +78,13 @@ static void themeDrawAll(const ldrc::ColoursScene &sc) {
     for (auto &t : sc.tiles) themeDrawTile(t, th);
 }
 
-// The Appearance page: in the screens' colours, its three buttons in the middle, Back below
+// The Appearance page: an island in the screens' colours on the pilot's picture, as Transmitter setup (its rows at
+// Transmitter setup's heights, OK at the island's bottom right)
 static void appearanceDrawAll(const ldrc::AppearanceScene &sc, const ldrc::Theme &th) {
     using namespace ldrc;
     gfx->fillRect(0, 0, W, THEME_STRIP, th.strip());
-    gfx->fillRect(0, THEME_STRIP, W, H - THEME_STRIP, th.panel());
+    restoreRect(0, THEME_STRIP, W, H - THEME_STRIP);              // (the page's own picture round the island)
+    gfx->fillRect(APPEARANCE_CARD.x, APPEARANCE_CARD.y, APPEARANCE_CARD.w, APPEARANCE_CARD.h, th.panel());
     flText((W - textWidth(0, sc.title)) / 2, (THEME_STRIP - fontHeight(0)) / 2, 0, th.ink(), sc.title);
     for (auto &t : sc.tiles) themeDrawTile(t, th);
 }

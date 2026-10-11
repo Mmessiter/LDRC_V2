@@ -175,7 +175,7 @@ void LinkMaster::beginStep() {
         if (undoing_) {                           // the firmware that reads the settings differently could not be undone: nothing is more important to say
             stage_ = "putting the previous firmware back";
             fail(std::string(errorText(refusal_ ? refusal_ : (uint8_t) LE_NOT_NOW)) + ", so the previous firmware could NOT be put back. " + peerValue("fw") + " is running, and it reads this model's settings DIFFERENTLY from " + fwBefore_ +
-                 ". DO NOT FLY. Go back to the version before (Check for update, then Earlier versions), or CHECK EVERY CONTROL OF THE MODEL: directions, end points, mixes, switches");
+                 ". DO NOT FLY. Go back to the version before (Transmitter updates, then Earlier versions), or CHECK EVERY CONTROL OF THE MODEL: directions, end points, mixes, switches");
             return;
         }
         fail(errorText(refusal_ ? refusal_ : (uint8_t) LE_NOT_NOW)); return;
@@ -225,7 +225,7 @@ void LinkMaster::beginStep() {
         if (starts > 1) { char b[40]; snprintf(b, sizeof b, ", started %d times", starts); said += b; }
         note(said + ")");
         if (!s.expect.empty() && fw != s.expect) {
-            fail("it is running " + fw + ", not " + s.expect + (st == "rolledback" ? ": the new firmware did not stay up, and the transmitter put the previous firmware back by itself" : ""));
+            fail("it is running " + fw + ", not " + s.expect + (st == "rolledback" ? ". The new firmware did not stay up, so the transmitter went back to the previous one" : ""));
             return;
         }
         if (s.option && st != "confirmed") { fail("the new firmware is still on trial: it has not yet run for 30 seconds without restarting"); return; }

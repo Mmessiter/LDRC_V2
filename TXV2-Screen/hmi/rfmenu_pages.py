@@ -18,20 +18,24 @@ def comp(proto, **kw):
 # lined up"): the header as on the other Rotorflight pages (bank and rate on its first line, the model's name under them),
 # the settings as label boxes and values in the Rescue pages' rows, the buttons by the shared row rule.
 import rescue_pages as rp
-def header(lst):
-    add(lst, comp(by['t14'], x=10, y=3, w=86, h=26))
-    add(lst, comp(by['t8'], x=100, y=3, w=110, h=26))
-    m = comp(rp.MODEL, n='t11', txt='Model name'); add(lst, m)
+def header(lst, model='Model name'):
+    # (11 Oct 2026: the defaults empty - the Teensy writes "Bank n" and "Rate n", and a screen-only restart shows what is
+    # here; the menu's t11 keeps "Model name", which src/cli_device.h modelName() reads for the command line, "" = not known)
+    add(lst, comp(by['t14'], x=10, y=3, w=86, h=26, txt=''))
+    add(lst, comp(by['t8'], x=100, y=3, w=110, h=26, txt=''))
+    m = comp(rp.MODEL, n='t11', txt=model); add(lst, m)
 
 # ---- the settings page, from the menu's own components
 settings = []; i = [1]
 def add(lst, c): c['i'] = i[0]; i[0] += 1; lst.append(c); return c
 add(settings, comp(by['t0'], txt='Rotorflight settings'))
-ROWS = (('t3', 'sw0', 'Link rates and banks', None), ('t4', 't5', 'Rotorflight version', None), ('t6', 'Arming', 'Arming channel', 'Arming channel'), ('t1', 'Ratio', 'Main RPM ratio', 'Rotor to motor RPM ratio'))
+# (10 Oct 2026 polish, Malcolm: "make the screens look more beautiful, well designed and easy to use": "Main gear ratio",
+# the pilot's word for it - the help already says gear ratio - in its keypad's question too)
+ROWS = (('t3', 'sw0', 'Link rates and banks', None), ('t4', 't5', 'Rotorflight version', None), ('t6', 'Arming', 'Arming channel', 'Arming channel'), ('t1', 'Ratio', 'Main gear ratio', 'Main gear ratio'))
 # B90: four rows lay out compact (rescue_pages.compact_plan): a card their size, centred on the background picture, the rows in the larger font
 plan = rp.compact_plan([(lab, words, 0, r, 'switch' if val == 'sw0' else 'num', 0) for r, (lab, val, words, klabel) in enumerate(ROWS)], [('b4', 'OK', 82)])
 add(settings, comp(by['card'], x=plan['card'][0], y=plan['card'][1], w=plan['card'][2], h=plan['card'][3]))
-header(settings)
+header(settings, model='')
 add(settings, comp(by['va0']))
 h = comp(by['b0']); h['ev'] = {'r': 'print "HelpView:RFSETUP.TXT"\nLogView.t0.txt="Rotorflight settings help"\nLogView.return.txt="RFSetupView"'}; add(settings, h)
 lx, cw = plan['col'][0]; VW, RH, FT = plan['val_w'], plan['row_h'], plan['font']; lw = cw - rp.C_LVGAP - VW; vx = lx + lw + rp.C_LVGAP
@@ -43,6 +47,8 @@ for r, (lab, val, words, klabel) in enumerate(ROWS):
     else:
         v = comp(v, x=vx, y=y, w=VW, h=RH, font=FT)
         if klabel: v['ev'] = {'p': 'keybdB.t1.txt="%s"' % klabel}   # (the arming channel's keypad was titled "Rotor to motor RPM ratio")
+        if val == 't5':   # (polish: the version is only shown - no keypad - so not a white sunken box that says "tap to edit": flat, in its label's pale shade, one strip of information)
+            v['c'] = dict(v['c'], bco=rp.PALE[0], pco=0); v['a'] = dict(v['a'], style=0)
     add(settings, v)
 for nm, txt, x, y, w, code in plan['btn']:
     ok = comp(by['b4'], x=x, y=y, w=w, h=rp.C_BTN_H); ok['ev'] = {'r': 'va0.val=82<<8\nprint va0.val'}; add(settings, ok)
@@ -58,7 +64,8 @@ BW, BH, GX, GY = 232, 44, 8, 6
 GRID_W = 3 * BW + 2 * GX
 isl = rp.island(GRID_W, 5 * BH + 4 * GY + 8 + 40, [('b4', 'OK', 0)])
 add(comps, comp(by['card'], x=isl['card'][0], y=isl['card'][1], w=isl['card'][2], h=isl['card'][3]))
-add(comps, comp(by['b0']))
+h = comp(by['b0']); h['ev'] = dict(h['ev'], r=h['ev']['r'].replace('LogView.t0.txt="RotorFlight setup help"', 'LogView.t0.txt="Rotorflight options help"'))   # (polish: the help's title is the page's title + help)
+add(comps, h)
 header(comps)
 add(comps, comp(by['va0']))
 BUTTONS = [  # (name, words, code) in the order they sit, three to a row: the pages with values to edit first, the settings last

@@ -39,11 +39,13 @@ rp.page(73, 'BlackboxView', 'Black box (Rotorflight)', [
     ('tn1', 'Where', 0, 2, 'wide', 166, 'Serial logger'),         #  so the column is wide enough for them: Malcolm, 10 Oct, of "Armed + swi...")
     ('tn2', 'How often', 0, 3, 'wide', 167, '1 in 128 (8000/s)'),
     ('tn3', 'After disarm [s]', 0, 4, 'num', 164, 'Seconds after disarm'),
-    ('tn4', 'Overwrite oldest', 0, 5, 'switch', 168),
+    ('tn4', 'Overwrite oldest', 1, 3, 'switch', 168),            # (polish, 10 Oct: with the memory it acts on, under its two lines; in the
+                                                                  #  list where it was, so every part keeps its id - hmi/polish/rftools.py
+                                                                  #  gives its label the Memory shade and puts Erase all logs under it)
     ('h1', 'Memory', 1, 0, 'head', 0),
     ('tn5', '', 1, 1, 'info', 0, 'No memory chip on board'),      # (BbShowMemory's longest: "125.3 of 125.3 MB used", "Connect the model to see")
     ('tn6', '', 1, 2, 'info', 0, 'Full: erase before flying'),
-], [('b2', 'Erase all logs', 0, 0, 169), ('b3', 'Save', 0, 0, 163), ('b1', 'OK', 0, 0, 162)], 'BLACKBOX.TXT', busy_rect=(110, 336, 580, 70))   # (the erase's progress below the rows)
+], [('b2', 'Erase all logs', 0, 0, 169), ('b3', 'Save', 0, 0, 163), ('b1', 'OK', 0, 0, 162)], 'BLACKBOX.TXT', busy_rect=(110, 336, 580, 70))   # (meant: the erase's progress below the rows - but an island's centred box wins in rescue_pages.page(), so it is over the middle; reported, 10 Oct)
 rp.page(74, 'LevelView', 'Calibrate (Rotorflight)', [
     ('h0', 'Level (accelerometer)', 0, 0, 'head', 0),
     ('tn0', '', 0, 1, 'info', 0, 'Roll -12.3   Pitch -12.3 deg'),
