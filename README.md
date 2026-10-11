@@ -125,6 +125,14 @@ It is yours to change too. Every line of code, the circuit boards and the case a
 
 Commercial systems are almost always take it or leave it: you fly what the maker decided, and you cannot easily change it.
 
+### Range, and what really limits it
+
+ExpressLRS is rightly praised for its range, and its claims are fair. But with a model helicopter, the radio is not what limits range. Your eyesight is.
+
+In Malcolm's own tests at ground level, LDRC Version 2 kept its link at more than a kilometre. The makers of its radio modules claim more than two. Nobody can see a helicopter well enough to fly it at a kilometre, so more range than that makes no difference in the air.
+
+What matters more is that the link never fails. Now and then a commercial radio fails and a model crashes, through a faulty part or faulty assembly. Commercial makers must make a profit, so they have every reason to build quickly and with economical parts. LDRC is not built for profit. In about six years of flying, it has never had a radio failure, nor any problem with range.
+
 ### Side by side
 
 Key: **Yes** · **Partly** · **No** · **Not found** = not in the maker's documents we read · **?** = not checked, or we could not confirm · **n/a** = does not apply.
@@ -139,7 +147,7 @@ Prices are approximate retail prices in October 2026. LDRC prices are for parts 
 | Channels | 16 | Up to 32 (ExpressLRS carries 16) | Up to 24 | 20 | ? |
 | Fastest packet rate | 500 a second | Up to 1,000 a second | ? | ? | ? |
 | Bands | 2.4 GHz | 2.4 GHz and 900 MHz | 2.4 GHz and 900 MHz | 2.4 GHz | 2.4 GHz |
-| Published range | None yet | "Over 40 km" (ExpressLRS's own figure, ideal conditions) | "50–100 km" (FrSky's claim) | ? | ? |
+| Range | More than 1 km in ground-level tests (the module makers claim more than 2 km) | "Over 40 km" (ExpressLRS's own figure, ideal conditions) | "50–100 km" (FrSky's claim) | ? | ? |
 | Servo (PWM) outputs on the receiver | Version 1 receiver only | **Yes** | **Yes** | **Yes** | The VBar unit drives the servos |
 | GPS and vario | Version 1 receiver only | **Yes** | **Yes** | **Yes** | Partly |
 | Certified for sale | No: home-built | **Yes** | **Yes** | **Yes** | **Yes** |
