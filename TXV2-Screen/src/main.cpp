@@ -42,7 +42,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.58"
+#define SCREEN_VERSION "1.11.57"
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room
 #endif
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -71,26 +71,16 @@ static void present(int x, int y, int w, int h) {
     if (x + w > W) w = W - x; if (y + h > H) h = H - y;
     if (w <= 0 || h <= 0) return;
     const bool over = topOn && topFb && x < topX + topW && x + w > topX && y < topY + topH && y + h > topY;
-    // (1.11.58, Malcolm: "When switching to or from the Original front screen, the screen does an odd sideways flicker.")
-    // A whole-screen copy and ONE write-back of 768 kB at its end flooded the PSRAM that the panel's DMA reads the picture
-    // from, and the panel slipped sideways for a frame (the September flicker cure: never starve it). A big rectangle now
-    // goes in bands of rows, each written back as it is done, with a breath between bands for the DMA. Small ones as before.
-    const bool big = (long) w * h > 64000;
-    const int BAND = 24;
-    for (int y0 = 0; y0 < h; y0 += BAND) {
-        const int y1 = min(h, y0 + BAND);
-        for (int yy = y0; yy < y1; ++yy) {
-            const int row = y + yy;
-            if (over && row >= topY && row < topY + topH) {                     // page | panel | page: no pixel under the panel is ever shown, not even for a frame
-                const int a = max(x, topX), b = min(x + w, topX + topW);
-                if (a > x) memcpy(screenFb + row * W + x, pageFb + row * W + x, (a - x) * 2);
-                memcpy(screenFb + row * W + a, topFb + row * W + a, (b - a) * 2);
-                if (x + w > b) memcpy(screenFb + row * W + b, pageFb + row * W + b, (x + w - b) * 2);
-            } else memcpy(screenFb + row * W + x, pageFb + row * W + x, w * 2);
-        }
-        Cache_WriteBack_Addr((uint32_t) (screenFb + (y + y0) * W + x), (uint32_t) (((y1 - y0 - 1) * W + w) * 2));
-        if (big && y1 < h) delayMicroseconds(250);
+    for (int yy = 0; yy < h; ++yy) {
+        const int row = y + yy;
+        if (over && row >= topY && row < topY + topH) {                     // page | panel | page: no pixel under the panel is ever shown, not even for a frame
+            const int a = max(x, topX), b = min(x + w, topX + topW);
+            if (a > x) memcpy(screenFb + row * W + x, pageFb + row * W + x, (a - x) * 2);
+            memcpy(screenFb + row * W + a, topFb + row * W + a, (b - a) * 2);
+            if (x + w > b) memcpy(screenFb + row * W + b, pageFb + row * W + b, (x + w - b) * 2);
+        } else memcpy(screenFb + row * W + x, pageFb + row * W + x, w * 2);
     }
+    Cache_WriteBack_Addr((uint32_t) (screenFb + y * W + x), (uint32_t) (((h - 1) * W + w) * 2));
 }
 // What has changed on the canvas and is waiting to be shown: a short list of rectangles, merged only when
 // merging wastes little (a number top-right and a bar bottom-left must not become one screen-sized copy).
