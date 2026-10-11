@@ -1,4 +1,4 @@
-I XIAO ESP32-S3 pad → goes to                  Radio 1     Radio 2     Radio 3
+XIAO ESP32-S3 pad → goes to                  Radio 1     Radio 2     Radio 3
 ═══════════════════════════════════════════   ════════    ════════    ════════
  D2  (GPIO 3)   → CE  (chip enable)            CE pin       —           —
  D3  (GPIO 4)   → CSN (SPI chip select)        CSN pin      —           —
@@ -17,8 +17,8 @@ I XIAO ESP32-S3 pad → goes to                  Radio 1     Radio 2     Radio 3
  IRQ pin on every module → NOT CONNECTED      (we don't use the IRQ line)
 
 Reserved for the flight controller — leave clear:
-- D5 (GPIO 7) → UART RX from FC (CRSF telemetry in)
-- D6 (GPIO 21) → UART/RMT TX to FC (SBUS / CRSF / IBUS / PPM out)
+- D5 (GPIO 6)  → UART RX from FC (CRSF telemetry in)  ← the FC's TX
+- D6 (GPIO 43) → UART/RMT TX to FC (SBUS / CRSF / IBUS / PPM out)  → the FC's RX
 
 Reminders:
 - This is an S3-only layout — D9 is a regular GPIO on S3, but on the older C3 it's a BOOT-strap pin and Radio 3 would be unreliable
@@ -26,8 +26,9 @@ Reminders:
 - ML01SP4 / DP5 pinouts: GND, VCC, CE, CSN, SCK, MOSI, MISO, IRQ (in that order on the 2×4 header). Wire each socket the same; only the CE/CSN pair varies
 - Keep antenna ends spaced as far apart as practical — ideally orthogonal to each other for diversity
 
-With pluggable sockets you can test every combination (just 1 in slot 1, just 1 in slot 3, slots 1+2, slots 2+3, all three, etc.) and the firmware will adapt automatically — the home page banner tells you which slots came up at each boot. testing!
+With pluggable sockets you can test every combination (just 1 in slot 1, just 1 in slot 3, slots 1+2, slots 2+3, all three, etc.) and the firmware will adapt automatically — the home page banner tells you which slots came up at each boot.
 
 
 
-(GPIO numbers corrected 2026-07-15 to the S3 variant mapping — the old column had C3-era numbers. Code uses Dx macros, so firmware was always right; the doc was not. D9 = GPIO8 is the free pad used for the battery divider.)
+(GPIO numbers corrected to the S3 variant mapping: the radio pads on 2026-07-15, D5/D6 in October 2026 - they still had C3-era numbers. The code uses the Dx macros, so the firmware was always right; only this note was not.
+D9 = GPIO8 is Radio 3's CSN on a three-radio receiver. On a one- or two-radio receiver it is free, and it is the only pad allowed for the battery divider. D4 likewise drives the status LED when there is no third radio.)

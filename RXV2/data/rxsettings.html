@@ -52,7 +52,7 @@
 
     <div class=card>
         <h2>Automatic fly mode</h2>
-        <p class=muted style="font-size:.85em">WiFi and Bluetooth switch off by themselves 3&nbsp;s after arming, on the ground. Disarming brings them back. <b>&#128274; Always on with Rotorflight.</b></p>
+        <p class=muted style="font-size:.85em">WiFi and Bluetooth switch off by themselves about a second after arming, on the ground. Disarming brings them back. <b>&#128274; Always on with Rotorflight.</b></p>
         <label style="display:flex;align-items:center;gap:.6em;font-weight:700;margin:.3em 0">
             <input type=checkbox id=afOn style="width:1.3em;height:1.3em"> Radios off automatically when flying starts
         </label>
@@ -184,7 +184,7 @@ setInterval(refresh, 2000);
 <h3>Battery voltage</h3>
 <p>Measures the pack through a divider on <b>D9</b> (GPIO&nbsp;8), the spare pad on 2-radio boards (D4 carries the status LED). <b>220&thinsp;k&Omega; over 10&thinsp;k&Omega;</b> = ratio 23.0, good to 12S; 100&thinsp;k/10&thinsp;k = 11.0, good to 6S. Add 100&thinsp;nF pin&rarr;GND. Volts go to the transmitter as telemetry. With flight-controller telemetry switched off, the receiver finds the divider by itself on D9.</p>
 <h3>Automatic fly mode</h3>
-<p>The safety net for forgetting <b>Fly now</b>: three seconds after the model is armed &mdash; still on the ground, during spool-up &mdash; the receiver switches its WiFi and Bluetooth off by itself, so nothing interferes with the radio link. Disarming brings everything back, and so does switching the transmitter off after landing. With this on, the front page hides the Fly now button. On Rotorflight the arming channel is found automatically from the flight controller; for other setups, set it on the Transmitter channels page. It is always on when Rotorflight is present, and not switchable.</p>
+<p>The safety net for forgetting <b>Fly now</b>: about a second after the model is armed &mdash; still on the ground, during spool-up &mdash; the receiver switches its WiFi and Bluetooth off by itself, so nothing interferes with the radio link. Disarming brings everything back, and so does switching the transmitter off after landing. With this on, the front page hides the Fly now button. On Rotorflight the arming channel is found automatically from the flight controller; for other setups, set it on the Transmitter channels page. It is always on when Rotorflight is present, and not switchable.</p>
 <h3>Failsafe positions</h3>
 <p>Used when the transmitter link is <b>lost in flight</b>: the receiver drives every channel to the positions you save here. Set the model where you want it on signal loss (motor off, disarmed), then tap Save. To capture positions, first open <b>View channels</b>, set the sticks and switches, then come here and save.</p>
 <p>On <b>CRSF</b> the flight controller (Rotorflight) runs its own failsafe and overrules this &mdash; set that in its Failsafe tab. These positions apply on <b>SBUS / IBUS / PPM</b> models. A no-transmitter power-up is always disarmed-safe regardless.</p></template>

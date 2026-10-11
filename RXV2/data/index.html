@@ -684,7 +684,7 @@ function paintFlyButton(s) {
     // (Malcolm 2026-09-09: "Fly now isn't a good plan for the dongle").
     if (s && s.dongle) { fb.style.display = 'none'; saveFrontHint('flyHidden', true); return; }
     // Automatic fly mode + an arming channel = the button is redundant
-    // (radios switch off by themselves 3 s after arming, back on at
+    // (radios switch off by themselves about a second after arming, back on at
     // disarm) — hide it and say so. Models with no arming function keep
     // the button (Malcolm 2026-08-23).
     const autoCovered = !!(s && s.rf && s.rf.autofly && s.rf.arming_channel >= 1);
