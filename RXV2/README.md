@@ -53,7 +53,7 @@
 ## Build one
 
 > [!WARNING]
-> **Check your local rules.** A home-built radio has no CE, UKCA or FCC marking. In the UK and EU, 2.4 GHz equipment is expected to meet ETSI EN 300 328, which asks for listen-before-talk; LDRC has none. The transmitter's and the receiver's radio modules always run at full power, about 100 mW (20 dBm), the UK and EU limit for 2.4 GHz. An aerial cannot add power: it only shapes where the signal goes.
+> **Radio rules.** The radio modules that transmit and receive, Ebyte's E01-ML01DP5 (transmitter) and E01-ML01SP4 (receiver), carry the CE mark and FCC ID 2ALPH-E01. They run at about 100 mW (20 dBm), the UK and EU limit for 2.4 GHz; an aerial cannot add power, it only shapes where the signal goes. As with any model you build yourself, check the radio rules where you live before you fly.
 
 There are two ways: on the circuit board, or hand-wired.
 

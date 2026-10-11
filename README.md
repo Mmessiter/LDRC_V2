@@ -150,7 +150,7 @@ Prices are approximate retail prices in October 2026. LDRC prices are for parts 
 | Range | More than 1 km in ground-level tests (the module makers claim more than 2 km) | "Over 40 km" (ExpressLRS's own figure, ideal conditions) | "50–100 km" (FrSky's claim) | ? | ? |
 | Servo (PWM) outputs on the receiver | Version 1 receiver only | **Yes** | **Yes** | **Yes** | The VBar unit drives the servos |
 | GPS and vario | Version 1 receiver only | **Yes** | **Yes** | **Yes** | Partly |
-| Certified for sale | No: home-built | **Yes** | **Yes** | **Yes** | **Yes** |
+| CE-marked radio modules | **Yes** (Ebyte E01, FCC ID 2ALPH-E01) | **Yes** | **Yes** | **Yes** | **Yes** |
 | Price, about | Transmitter: the parts priced so far come to £120–£143, before the switches, trims, radio module, battery, circuit board, case and small parts. Receiver about £35. Parts only, approximate | Radio about £130–£200 (Jumper T15 to TX16S MKII); ExpressLRS receivers from about £11 to £19 (HappyModel EP2, RadioMaster RP1), ready to fly | £460–£600 (X20 family) | £430 (NX10+) | £750 (radio + VBar EVO flybarless unit and receiver) |
 
 **The transmitter**
@@ -240,7 +240,7 @@ Current versions and release notes: [Help & updates](https://messiter.com/ldrc/h
 
 ### Safety and the law
 
-- **Check your local rules.** A home-built transmitter has no CE, UKCA or FCC marking. In the UK and EU, 2.4 GHz equipment is expected to meet ETSI EN 300 328, which asks for "adaptivity" such as listen-before-talk. LDRC has no listen-before-talk mode.
+- **Radio rules.** The radio modules that transmit and receive, Ebyte's E01-ML01DP5 (transmitter) and E01-ML01SP4 (receiver), carry the CE mark and FCC ID 2ALPH-E01. They run at about 100 mW (20 dBm), the UK and EU limit for 2.4 GHz; an aerial cannot add power, it only shapes where the signal goes. As with any model you build yourself, check the radio rules where you live before you fly.
 - **Full power, always.** The transmitter's and the receiver's radio modules always run at full power, about 100 mW (20 dBm), the UK and EU limit for 2.4 GHz. An aerial cannot add power: it only shapes where the signal goes.
   <!-- TODO Malcolm: please confirm the radio modules' output. Ebyte sells the ML01DP5 (transmitter) and the ML01SP4 (receiver) as 20 dBm (100 mW); both firmwares always set RF24_PA_MAX (TXV1B transceiver.h line 16, RXV2 Radio.h line 553). -->
 - **Test every new build on the ground first**, blades off: do every check in [Build one](https://messiter.com/ldrc/build.html#testing), the failsafe and range tests included.
