@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Governor (global) &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=384">
-<script src="/app.js?v=384" defer></script>
+<link rel=stylesheet href="/style.css?v=385">
+<script src="/app.js?v=385" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;
         padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -58,8 +58,8 @@ input:disabled,select:disabled{background:#eee;color:#999}
             </select></div>
         <div class=fldRow><label data-help="Below this throttle the governor idles; above it, it takes control and spools toward the target head speed.">Governor takes over above (handover throttle, %)</label>    <input type=number id=g_hand></div>
         <div class=fldRow><label data-help="How the governor shapes its throttle output. Leave at the default unless your ESC maker says otherwise.">Throttle type</label>            <input type=number id=g_ttype></div>
-        <div class=fldRow><label data-help="Throttle sent while the governor is idling (below handover) — keeps the motor barely turning without spooling up.">Idle throttle (%)</label>        <input type=number id=g_idle></div>
-        <div class=fldRow><label data-help="THIS is what enables bail-out — there is no separate switch. Above 0: chopping the throttle in flight counts as an autorotation, the motor keeps this much throttle, and raising the stick again gives an instant bail-out spool-up. At 0: a chop is a plain throttle hold, no bail-out.">Auto throttle (%)</label>        <input type=number id=g_auto></div>
+        <div class=fldRow><label data-help="Throttle sent while the governor is idling (below handover) — keeps the motor barely turning without spooling up. Per cent, in steps of 0.1 (Rotorflight stores tenths: 0 to 25.0 %).">Idle throttle (%)</label>        <input type=number id=g_idle step=0.1 min=0 max=25></div>
+        <div class=fldRow><label data-help="The throttle kept by the motor during an autorotation, per cent in steps of 0.1 (Rotorflight stores tenths: 0 to 25.0 %). A throttle drop counts as an autorotation only while the stick stays AT OR ABOVE this level with bail-out enabled (Autorotation timeout above 0, next card); raising the stick again then gives the instant bail-out spool-up. Below it the drop is a plain throttle hold. Cannot be lower than the idle throttle.">Auto throttle (%)</label>        <input type=number id=g_auto step=0.1 min=0 max=25></div>
     </div>
 
     <div class=card>
@@ -82,8 +82,8 @@ input:disabled,select:disabled{background:#eee;color:#999}
         <div class=fldRow><label data-help="Seconds for a FULL-RANGE change, from 0 to full head speed. A bank change moves only a fraction of that range, so it takes a fraction of this time: with 2 s here, stepping 1800 to 2000 rpm on a 2000 rpm head takes about 0.2 s. Want a 2-second bank change? Set about 20.">Speed-change time (tracking time)</label>            <input type=number id=g_track step=0.1 min=0 max=600></div>
         <div class=fldRow><label data-help="The fast spool-up used when the rotor is still turning (after a brief throttle hold), in seconds.">Quick-restart time (recovery time)</label>            <input type=number id=g_recov step=0.1 min=0 max=600></div>
         <div class=fldRow><label data-help="For an ORDINARY throttle chop (throttle hold): the fast quick-restart stays available for this long, in seconds. Beyond it the governor insists on a full, slow spool-up — the rotor has slowed too much for a safe snap back.">Throttle-hold timeout</label>    <input type=number id=g_hold step=0.1 min=0 max=600></div>
-        <div class=fldRow><label data-help="For a DELIBERATE autorotation with bail-out enabled (Auto throttle above 0): the auto may last this long, in seconds, and still get the instant bail-out power. Usually set longer than the throttle-hold timeout — the rotor keeps its speed in an auto.">Autorotation timeout</label>     <input type=number id=g_auto_to step=1 min=0 max=250></div>
-        <p class=muted style="font-size:.8em;margin:.3em 0 0">Bail-out is enabled by <b>Auto throttle</b> (above 0) in the card above &mdash; there is no separate switch.</p>
+        <div class=fldRow><label data-help="THIS is what enables bail-out — there is no separate switch. Above 0: a deliberate autorotation may last this long, in seconds, and still get the instant bail-out power when the stick comes up. At 0: no bail-out, a throttle drop is a plain throttle hold. Usually set longer than the throttle-hold timeout — the rotor keeps its speed in an auto.">Autorotation timeout</label>     <input type=number id=g_auto_to step=1 min=0 max=250></div>
+        <p class=muted style="font-size:.8em;margin:.3em 0 0">Bail-out is enabled by <b>Autorotation timeout</b> (above 0) &mdash; there is no separate switch. <b>Auto throttle</b> in the card above is the throttle kept during the auto.</p>
     </div>
 
     <div class=card>
@@ -145,8 +145,8 @@ input:disabled,select:disabled{background:#eee;color:#999}
 //   [28]     u8   gov_throttle_type — new in 4.6
 //   [29]     i8   reserved (write 0)
 //   [30]     i8   reserved (write 0)
-//   [31]     u8   gov_idle_throttle (%) — new in 4.6
-//   [32]     u8   gov_auto_throttle (%) — new in 4.6
+//   [31]     u8   gov_idle_throttle (TENTHS of a per cent: 100 = 10 %) — new in 4.6; the page shows and types per cent
+//   [32]     u8   gov_auto_throttle (TENTHS of a per cent) — new in 4.6; the page shows and types per cent
 //   [33..41] 9×u8 gov_bypass_throttle[0..8] (%) — throttle curve
 const CONFIG_BYTES = 42;
 
@@ -489,8 +489,8 @@ async function load() {
         document.getElementById('g_feel').value   = numbersToFeel(u16(3) / 10);
         paintFeelNote();
         if (LDRC.baseFresh) document.getElementById('feelNote').textContent = LDRC.baseNotice();
-        document.getElementById('g_idle').value   = bytes[31];
-        document.getElementById('g_auto').value   = bytes[32];
+        document.getElementById('g_idle').value   = bytes[31] / 10;   // B15: Rotorflight stores tenths of a per cent
+        document.getElementById('g_auto').value   = bytes[32] / 10;
         for (let i = 0; i < 9; i++) {
             document.getElementById('g_byp' + i).value = bytes[33 + i];
         }
@@ -518,6 +518,7 @@ function buildPayload() {
     const putU16 = (o, v) => { bytes[o] = v & 0xff; bytes[o+1] = (v >> 8) & 0xff; };
     bytes[0]  = u8('g_mode');
     const secs = (id) => Math.max(0, Math.min(65535, Math.round(parseFloat(document.getElementById(id).value || '0') * 10)));
+    const tenths = (id) => Math.max(0, Math.min(250, Math.round(parseFloat(document.getElementById(id).value || '0') * 10)));   // B15: per cent typed, tenths sent
     putU16(1,  secs('g_start'));
     putU16(3, secs('g_spool'));
     putU16(5, secs('g_track'));
@@ -536,8 +537,8 @@ function buildPayload() {
     putU16(26, secs('g_spdwn'));
     bytes[28] = u8('g_ttype');
     // bytes 29-30 (i8 reserved) preserved
-    bytes[31] = u8('g_idle');
-    bytes[32] = u8('g_auto');
+    bytes[31] = tenths('g_idle');
+    bytes[32] = tenths('g_auto');
     // In 5-point mode the hidden midpoints must be recomputed from the
     // visible 5 before we serialise — otherwise stale values from a
     // previous load would be saved.

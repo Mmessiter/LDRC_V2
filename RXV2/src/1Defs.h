@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.884-cli-prompt-not-a-comment";
+constexpr const char* FW_VERSION = "RXV2-0.9.885-failsafe-ticks";
 
 //*********************************************************************
 //  Auto-update manifest URLs

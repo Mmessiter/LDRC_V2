@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.885-failsafe-ticks",
+      "url": "https://messiter.com/rxv2/release/v0.9.885/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.885/littlefs.bin",
+      "fs_md5": "017a9a3492967663a43b3c31637e491d",
+      "notes": "The receiver honours the transmitter's failsafe ticks: only the ticked channels move on signal loss, the rest hold (older firmware moved all 16). Rescue page: climb time 0 means no climb, it levels and hovers. Governor page: idle and auto throttle shown and typed in per cent, and the bail-out help put right."
+    },
+    {
       "name": "RXV2-0.9.884-cli-prompt-not-a-comment",
       "url": "https://messiter.com/rxv2/release/v0.9.884/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.884/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.874/littlefs.bin",
       "fs_md5": "cc4878104ade8765b32ab2b7b6cb420e",
       "notes": "The Version 2 transmitter's Rotorflight editing over Bluetooth: the transmitter's parameter packets arrive as words at /api/txparams and the block being read goes back at /api/txparams/ack, into the same code the radio link uses. Nothing changes for the radio link or the phone app."
-    },
-    {
-      "name": "RXV2-0.9.873-shorter-silence",
-      "url": "https://messiter.com/rxv2/release/v0.9.873/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.873/littlefs.bin",
-      "fs_md5": "cc4878104ade8765b32ab2b7b6cb420e",
-      "notes": "Transmitter-ordered update: the transmitter is asked to stay silent for 60 s instead of 90 (the bench: accepted to restarted in 20 s at home), and a download that fails with an HTTP error is tried once more after 5 s (the first bench run met a 404 for a file that was there)."
     }
   ],
   "rotorflight": {

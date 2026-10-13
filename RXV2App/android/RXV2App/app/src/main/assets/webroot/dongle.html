@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rotorflight dongle &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=384">
-<script src="/app.js?v=384" defer></script>
+<link rel=stylesheet href="/style.css?v=385">
+<script src="/app.js?v=385" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;gap:.6em;padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
 .fldRow label{flex:1;color:#3a5165;font-size:.95em}
@@ -121,7 +121,7 @@ table.wire td:first-child{font-weight:700;color:#3a5165;white-space:nowrap}
 <p>It recognises <b>CRSF, SBUS, IBUS and PPM</b> on its own &mdash; nothing to choose. The banner at the top says what it hears on D5: nothing yet (a wiring or power problem &mdash; is the receiver&rsquo;s LED on?), a signal it has not recognised (it keeps trying the four in turn), or the protocol and channel count once it has locked on. Everything else is on the <b>Simulator</b> pages: which stick drives which axis, reversing, the spool-up realism, and the camera keys.</p>
 <p><b>A receiver does not need this role at all &mdash; it is the simpler rig.</b> An LDRC receiver has its own radio, so it plugs straight into the computer and flies the simulator from your own transmitter: no wire, no second board. That is <b>Simulator mode</b>, on the receiver&rsquo;s own Simulator page, and it is unchanged. The <b>Simulator interface</b> role is for a spare board with <i>no</i> radio &mdash; to fly a simulator with someone else&rsquo;s receiver, or when all your own receivers are in helicopters.</p>
 <h3>Like it? The receiver needs no dongle</h3>
-<p>The dongle is the little brother of the LDRC <b>receiver</b>: the same brain with the radio fitted. The receiver does everything here <b>and flies the model</b>, so with an LDRC receiver and transmitter there is no dongle to fit at all, and no spare flight-controller port used up. It also updates itself over the air and flies a PC simulator from the same transmitter. Free and open source: roughly &pound;35 of parts for a receiver, &pound;120 for a transmitter &mdash; and the V2 receiver works with the original V1 transmitter. More at <b>messiter.com/LDRC.html</b>.</p></template>
+<p>The dongle is the little brother of the LDRC <b>receiver</b>: the same brain with the radio fitted. The receiver does everything here <b>and flies the model</b>, so with an LDRC receiver and transmitter there is no dongle to fit at all, and no spare flight-controller port used up. It also updates itself over the air and flies a PC simulator from the same transmitter. Free and open source: roughly &pound;35 of parts for a receiver, and from about &pound;110 for a transmitter &mdash; and the V2 receiver works with the original V1 transmitter. More at <b>messiter.com/LDRC.html</b>.</p></template>
 <script>
 let on = false, simIf = false, radios = false, curRole = 0, picked = 0, usbLink = false, pollTimer = null;
 
