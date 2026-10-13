@@ -123,7 +123,7 @@ void ReadDualRatesValues()
     DualRateChannels[5] = CheckRange(ScreenData[8], 0, 16);
     DualRateChannels[6] = CheckRange(ScreenData[9], 0, 16);
     DualRateChannels[7] = CheckRange(ScreenData[10], 0, 16);
-    DualRateRate[Bank - 1] = ScreenData[11];
+    DualRateRate[Bank - 1] = ScreenData[11] <= 3 ? ScreenData[11] : 0; // 0 = the switch, 1-3 a rate (B10: it is an index into the rates - anything else means the switch, as a load treats it)
 }
 
 /******************************************************************************************************************************/

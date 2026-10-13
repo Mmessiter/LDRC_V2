@@ -378,7 +378,7 @@ FASTRUN void ShowServoPos()
     {
         for (int i = 0; i < 8; ++i)
         {
-            if (ChannelOutPut[i] > 3)
+            if (SourceOfOutput(i) > 3) // (B31: output i shows the channel routed to it)
                 MinimumDistance = 40; // coarse for pots & switches...
             else
                 MinimumDistance = 3; // ...finer for sticks
@@ -543,6 +543,14 @@ void RerouteOutputs()
     }
     for (int i = 0; i < CHANNELSUSED; ++i)
         SendBuffer[i] = PreMixBuffer[i];
+}
+/*********************************************************************************************************************************/
+uint8_t SourceOfOutput(uint8_t out) // B31: the channel that is routed to output 'out' (ChannelOutPut[channel] == out); itself when none is
+{
+    for (uint8_t k = 0; k < CHANNELSUSED; ++k)
+        if (ChannelOutPut[k] == out)
+            return k;
+    return out;
 }
 
 /*********************************************************************************************************************************/
@@ -811,16 +819,7 @@ void UpdateButtonLabels()
     {
         for (int i = 0; i < 16; ++i)
         {
-            uint8_t src = i;
-            if (CurrentView == REVERSEVIEW)
-            { // B31: Reverse acts on OUTPUT i, after routing: name it by the channel that is routed there
-                for (uint8_t k = 0; k < CHANNELSUSED; ++k)
-                    if (ChannelOutPut[k] == i)
-                    {
-                        src = k;
-                        break;
-                    }
-            }
+            const uint8_t src = CurrentView == REVERSEVIEW ? SourceOfOutput(i) : i; // B31: Reverse acts on OUTPUT i, after routing: name it by the channel that is routed there
             SendText(fsch_labels[i], ChannelNames[src]);
             SendValue(InputStick_Labels[i], InPutStick[i] + 1);
             SendValue(OutputStick_Labels[i], ChannelOutPut[i] + 1);

@@ -467,7 +467,7 @@ FLASHMEM static int AdjTxBankUs(int ch0, int bank) // this transmitter's output 
     if (AdjSeenUs[bank][ch0] >= 0) return AdjSeenUs[bank][ch0];                  // measured beats computed
     const uint8_t saved = Bank;
     Bank = (uint8_t)bank;
-    const int src = ChannelOutPut[ch0] < CHANNELSUSED ? ChannelOutPut[ch0] : ch0;   // the output may be re-routed from another channel's computation
+    const int src = SourceOfOutput((uint8_t)ch0);   // the output may be re-routed from another channel's computation (B31: ChannelOutPut[channel] = output)
     GetCurveDots(src, DualRateValue);
     const uint8_t it = InterpolationTypes[Bank][src] < 3 ? InterpolationTypes[Bank][src] : 0;
     int v = (int)Interpolate[it](InputsBuffer[src], InPutStick[src], src);

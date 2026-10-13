@@ -63,11 +63,12 @@ FASTRUN void ShowMotorTimer() // Show timer for the motor on the front view and 
 
     uint8_t Cdown[10] = {TEN, NINE, EIGHT, SEVEN, SIX, FIVE, FOUR, THREE, TWO, ONE};
 
+    const bool CountingDown = TimerDownwards && TimerStartTime > 0; // B27: a countdown of no minutes counts up (it sat at zero and said "stop flying" at once)
     if ((MotorEnabled && (!LostContactFlag)))
     {
         MotorOnSeconds = ((millis() - MotorStartTime) / 1000) + PausedSecs;
         Secs = MotorOnSeconds;
-        if (TimerDownwards)
+        if (CountingDown)
             Secs = (MotorOnSeconds >= TimerStartTime) ? 0 : TimerStartTime - MotorOnSeconds; // B27: never past zero (unsigned, it wrapped to 1,193,046 hours)
         Hours = Secs / 3600;
         Secs %= 3600;
@@ -86,7 +87,7 @@ FASTRUN void ShowMotorTimer() // Show timer for the motor on the front view and 
         }
         LastSeconds = Secs;
     }
-    if (TimerDownwards && MotorEnabled && !LostContactFlag && MotorOnSeconds >= TimerStartTime && MotorOnSeconds > 2)
+    if (CountingDown && MotorEnabled && !LostContactFlag && MotorOnSeconds >= TimerStartTime && MotorOnSeconds > 2)
     { // B27: time's up whether or not the clock speaks (it sat inside the spoken-clock test, where the zero second could be missed)
         PlaySound(STORAGECHARGE); // = Stop Flying!
         TimesUp = true;
@@ -94,7 +95,7 @@ FASTRUN void ShowMotorTimer() // Show timer for the motor on the front view and 
         return;
     }
 
-    if (TimerDownwards)
+    if (CountingDown)
     {
         if ((Secs < 11) && !Mins && !ClockSpoken1 && (MotorOnSeconds > 2))
         {

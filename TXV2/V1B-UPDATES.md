@@ -186,6 +186,26 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Three of the fifty-five, put right after a night review (V2 B96, screen 1.11.60, 13 Oct 2026)
+
+Malcolm (13 Oct, bedtime): "take a good look at the bug fixes you did this evening to double-check they are good and
+that they didn't create any new bugs. Also create and run tests to check them all. Fix any which don't survive your
+tests." Every fix of B94 and B95 was read again against the code around it, and three were put right: (1) B10 - the
+Rates page's "Bank N will use rate X" is an index into the three rates: a choice read from the page is kept to 0-3,
+and anything else means the switch, as a load already treated it (a corrupt byte could have reached far past the rates);
+(2) B31 - the two other readers of the routing map (the Adjustments page computing this transmitter's own output, and
+the Sticks page's coarse-or-fine display) now read it the same way round as the outputs do (SourceOfOutput: the channel
+routed to an output); (3) B27 - a countdown set to no minutes counts up, instead of sitting at zero and saying "stop
+flying" three seconds in. New host test dev/test_bugfixes/test_bugfixes.py: the changed functions are lifted out of
+main.cpp and the headers by name and run on the Mac over fakes of the screen, the switches, the card and the clock -
+the routing (a ring of three, a swap, a corrupt entry; the Reverse and Inputs labels), the start-up motor check against
+the flight readers for every switch position and reversal, the per-bank rate, the countdown, Move to subtrim in both
+stick modes (the servos do not move), the Mixes page's channels and negative offset, the macros, servo speeds and types,
+the Motor off value, Scan RF, the status word, the motor-switch silence, the power button and the binding hold, the
+current warning, the logger's own file, the backup rename: 145 checks, and 33 checks of the source text for the fixes
+too entangled to lift (the calibration flow, the model loader, the help return). The Rotorflight, screen and receiver
+fixes were read again too and stand as they are; every existing host test is green (TXV1B 1900, screen 2046, receiver 16).
+
 ## Binding cannot be missed, and the hold never switches off (V2 B95, screen 1.11.60, 13 Oct 2026)
 
 Malcolm: "putting the transmitter into bind mode needs a long press of the button when starting it ... If sound volume

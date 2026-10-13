@@ -38,6 +38,7 @@ static uint32_t millis() { return now; }
 #define MAXMICROS 2000
 static uint8_t Bank = 2;
 static uint8_t ChannelOutPut[17] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+static uint8_t SourceOfOutput(uint8_t out) { for (uint8_t k = 0; k < 16; ++k) if (ChannelOutPut[k] == out) return k; return out; }   // (B31: main.cpp's - the channel routed to an output)
 static uint8_t DualRateValue = 100;
 static uint8_t InterpolationTypes[5][17] = {{0}};
 static uint16_t InputsBuffer[17] = {0};

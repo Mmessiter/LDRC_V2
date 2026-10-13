@@ -289,7 +289,7 @@ void ReadDualRateSwitch()
         DualRateInUse = GetSwitchPosition(DualRatesSwitch);
         if (DualRateInUse == 0) // if switch not used
             DualRateInUse = 4;
-        if (Bank >= 1 && Bank <= 4 && DualRateRate[Bank - 1] > 0)
+        if (Bank >= 1 && Bank <= 4 && DualRateRate[Bank - 1] >= 1 && DualRateRate[Bank - 1] <= 3)
             DualRateInUse = DualRateRate[Bank - 1]; // B10: the Rates page's "Bank N will use rate X" (it went missing in June 2025; the page kept offering it)
     }
 
