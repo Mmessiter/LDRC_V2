@@ -4841,13 +4841,18 @@ void CheckWhetherToEnableBinding()
     // This function checks whether binding is being enabled for this transmitter.
     // This is done by holding down the power button for two seconds at the start up.
 
-    if (!digitalRead(BUTTON_SENSE_PIN) && ((millis()) < 5000) && (millis() >= 2000)) //  To initiate Binding, hold ON button for 2-5 secs
+    if (!digitalRead(BUTTON_SENSE_PIN) && !ButtonUpSinceBoot && (millis() >= 2000)) // To initiate Binding, keep the ON button held from switch-on for 2 s (B95: however long it stays held)
     {
         if (!BindingEnabled)
         {
             SendCommand(pFrontView);      // Go to front view
             CurrentView = FRONTVIEW;      // Set to FrontView
             UpdateModelsNameEveryWhere(); // Update model name
+            if (AudioVolume < 50)
+            { // B95 (Malcolm): "if sound volume is zero we hear nothing" - this announcement plays at half volume at least; the pilot's volume comes back 5 s later (the once-a-second chores)
+                SetAudioVolume(50);
+                VolumeRestoreAt = millis() + 5000;
+            }
             Force_Early_Sound = true;     // Force sound to play
             PlaySound(BEEPCOMPLETE);      // Play sound to indicate binding enabled
             delay(500);                   // Wait for chirp to finish
@@ -4877,13 +4882,15 @@ void CheckPowerOffButton()
 
     if (CheckingPowerButton) // already checking power button
         return;
+    if (digitalRead(BUTTON_SENSE_PIN))
+        ButtonUpSinceBoot = true; // B95: let go at least once since switch-on - only then can a press switch off
     if (digitalRead(BUTTON_SENSE_PIN) && !PowerOffTimer && !PowerWarningVisible)
         return; // button not even pressed, and nothing to put back (B01: a release must reach the branch below that cancels the countdown and hides the box)
     CheckingPowerButton = true; // set flag to prevent re-entry
     if (!BuddyMasterOnWireless && !BuddyPupilOnWireless && SD_Card_Exists)
         CheckWhetherToEnableBinding(); // Check if binding is enabled Which is done by holding the start button for more than two seconds
 
-    if ((!digitalRead(BUTTON_SENSE_PIN)) && (millis() > POWERONOFFDELAY2)) // no power off for first 10 seconds in case button held down too long
+    if ((!digitalRead(BUTTON_SENSE_PIN)) && (millis() > POWERONOFFDELAY2) && ButtonUpSinceBoot) // no power off in the first seconds, nor while the button has been held since switch-on (B95: that hold enables binding, however long - it used to switch off at 4 s, often before 'Binding enabled' had been heard)
     {                                                                      // power button is pressed!
         if (BoundFlag && ModelMatched && CurrentView != FRONTVIEW)
             GotoFrontView();
@@ -5051,6 +5058,11 @@ void FASTRUN ManageTransmitter()
         CorrectRtcFromPhoneTime(); // apply any phone-true time from ack item 37 (RXV2)
         ShowMotorTimer();          // Show motor timer and send any queued parameters
         TellScreen(true);          // V1B: motor enabled? armed? a model connected? - once a second, whatever page is showing
+        if (VolumeRestoreAt && (int32_t)(millis() - VolumeRestoreAt) >= 0)
+        { // B95: the binding announcement played at half volume at least; the pilot's own volume comes back
+            VolumeRestoreAt = 0;
+            SetAudioVolume(AudioVolume);
+        }
         TellScreenRx();            // V1B: the receiver's release number, and how its update is going (RxUpdate.h)
         PipeTick();                // B44: the Rotorflight menu's ask for the receiver's Bluetooth, renewed (Parameters.h)
         ClockMessageTick();        // B63: the clock's word, once a trial is over

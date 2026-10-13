@@ -43,6 +43,7 @@ struct FlightSource {
     virtual long number(const char *comp, long dflt) = 0;
     virtual bool linked() = 0;                         // a model is connected
     virtual bool flying() = 0;
+    virtual bool binding() { return false; }           // B95: the main board has binding enabled (a hold of the power button from switch-on)
     virtual long attribute(const char *comp, const char *attr, long dflt) { (void) comp; (void) attr; return dflt; }   // a colour the main board wrote ("bt0.bco="), -1 if never
 };
 

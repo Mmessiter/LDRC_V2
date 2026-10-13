@@ -283,6 +283,8 @@ uint8_t ScreenStatusNow()
         s |= 16;
     if (RadiosMustBeOff())
         s |= 32;
+    if (BindingEnabled)
+        s |= 64; // B95: binding is enabled - the screen's own front screens say so in their strip
     return s;
 }
 

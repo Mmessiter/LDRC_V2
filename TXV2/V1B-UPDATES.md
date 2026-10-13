@@ -186,6 +186,18 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Binding cannot be missed, and the hold never switches off (V2 B95, screen 1.11.60, 13 Oct 2026)
+
+Malcolm: "putting the transmitter into bind mode needs a long press of the button when starting it ... If sound volume
+is zero we hear nothing of course and if defined front screen there's no message either ... Holding button too long
+switches it right off again!" Three things: (1) the announcement plays at half volume at least - the volume goes to 50
+for it when it was lower, and the pilot's own volume comes back five seconds later (VolumeRestoreAt); (2) the status
+word to the screen carries bit 64 while binding is enabled, and every defined front screen says BINDING ENABLED in its
+red strip (TxState binding, FlightSource::binding, flightAlert); the Original front screen shows "Binding enabled" as
+before; (3) a hold kept from switch-on can never switch the transmitter off, however long - the power button must have
+been let go once since switch-on before a press counts (ButtonUpSinceBoot; it used to switch off after four seconds,
+often before the words had been heard). Help: OPTIONS.TXT and FRONT.TXT. Host test: the screen's test_flight.
+
 ## Fifty-five bugs from the review list, fixed (V2 B94, screen 1.11.59, receiver 0.9.885, 13 Oct 2026)
 
 Malcolm ticked 55 of the review's bugs on the list and asked for them fixed. All ticked ones are in this release; none is

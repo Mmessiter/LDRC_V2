@@ -42,7 +42,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.59"
+#define SCREEN_VERSION "1.11.60"
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room
 #endif
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -1762,7 +1762,7 @@ static void pumpSerial() {
         if (b == 0xFF) {
             if (++ffs == 3) {
                 int bits = 0;
-                if (ldrc::txStatusCommand(buf.data(), (unsigned) buf.size(), bits)) { const bool modelWas = txStatus >= 0 && (txStatus & TX_MODEL); const char *why = tx.said(bits); if (why) applyRadios(why); if (modelWas != ((bits & TX_MODEL) != 0)) needRedraw(); teensyCommands++; teensyLink.sawDisplayTraffic(); }   // (from the wire only: nothing the Mac sends can say what the transmitter is doing)
+                if (ldrc::txStatusCommand(buf.data(), (unsigned) buf.size(), bits)) { const bool modelWas = txStatus >= 0 && (txStatus & TX_MODEL); const bool bindWas = tx.binding; const char *why = tx.said(bits); if (why) applyRadios(why); if (modelWas != ((bits & TX_MODEL) != 0) || bindWas != tx.binding) needRedraw(); teensyCommands++; teensyLink.sawDisplayTraffic(); }   // (from the wire only: nothing the Mac sends can say what the transmitter is doing)
                 else if (ldrc::rxStatusCommand(buf.data(), (unsigned) buf.size(), rxNews)) { rxNews.atMs = millis(); rxNewsAny = true; teensyCommands++; teensyLink.sawDisplayTraffic(); }
                 else if (!buf.empty()) { const uint32_t t0 = micros(); handle(buf); perfHandleUs += micros() - t0; perfCmds++; teensyCommands++; teensyLink.sawDisplayTraffic(); }
                 buf.clear(); ffs = 0;

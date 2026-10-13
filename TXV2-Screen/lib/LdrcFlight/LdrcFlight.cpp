@@ -163,6 +163,7 @@ FlightValue flightValue(int item, FlightSource &src) {
 }
 
 std::string flightAlert(FlightSource &src) {
+    if (src.binding()) return "BINDING ENABLED";                  // B95: on every front screen, as the Original one says it
     if (src.flying() && !src.linked()) return "NO LINK";
     if (src.shown("Warning") && src.text("Warning").find("LOW") != std::string::npos) return "BATTERY LOW";
     return std::string();

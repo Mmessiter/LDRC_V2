@@ -35,9 +35,11 @@ BINDING (PAIRING A RECEIVER WITH THIS TRANSMITTER):|
 - a Version 1 receiver: switch it on with its bind plug in.|
 2. With no model connected, press 'Bind'|
 (it changes to 'Stop binding').|
-Or switch the transmitter on and keep holding|
-the power button until it beeps (2 to 5 seconds).|
-The light blinks while binding is on.|
+Or keep holding the power button as you switch on:|
+after 2 seconds it says 'Binding enabled' (loud enough|
+even with the volume at 0) and every front screen shows it.|
+Holding on longer is safe: a hold kept from switch-on|
+never switches off. Let go: the light blinks while binding is on.|
 3. The receiver binds and connects.|
 Binding then stops by itself.|
 A bound receiver connects only to its own transmitter.||

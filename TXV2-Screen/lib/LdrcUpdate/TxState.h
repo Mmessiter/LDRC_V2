@@ -23,19 +23,21 @@
 
 namespace ldrc {
 
-enum { TX_MOTOR = 1, TX_SAFETY_OFF = 2, TX_MODEL = 4, TX_SAFETY_DEFINED = 8, TX_MODEL_JUST_NOW = 16, TX_RADIOS_OFF = 32 };
+enum { TX_MOTOR = 1, TX_SAFETY_OFF = 2, TX_MODEL = 4, TX_SAFETY_DEFINED = 8, TX_MODEL_JUST_NOW = 16, TX_RADIOS_OFF = 32, TX_BINDING = 64 };   // (TX_BINDING: B95, Teensy B95 - binding is enabled: the front screens say so)
 enum { TX_HOLD_MS = 8000 };
 
 struct TxState {
     int status;                                   // the bits the main board said last; -1: it has never said any
     bool held;                                    // start-up: the radios wait for the main board's word
     bool armed;                                   // the radios must be off
-    TxState() : status(-1), held(true), armed(false) {}
+    bool binding;                                 // B95: binding is enabled (the main board's bit 64)
+    TxState() : status(-1), held(true), armed(false), binding(false) {}
 
     // Each of these answers with the words for the banner when the radios are to be switched (the caller applies
     // radiosAllowed()), or with 0 when nothing has changed.
     const char *said(int bits) {                  // "ldrcst=<bits>" came over the wire
         const bool was = radiosAllowed(), first = held;
+        binding = (bits & TX_BINDING) != 0;
         status = bits & 63; held = false; armed = (bits & TX_RADIOS_OFF) != 0;
         if (radiosAllowed() == was) return 0;
         return armed ? ((bits & TX_SAFETY_DEFINED) ? "Safety off: WiFi and Bluetooth OFF" : "Motor on: WiFi and Bluetooth OFF") : first ? "WiFi ON - joining..." : "WiFi back ON";

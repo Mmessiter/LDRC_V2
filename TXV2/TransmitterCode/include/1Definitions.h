@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B94 13/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B95 13/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -1880,6 +1880,8 @@ char WarnOff[] = "vis Warning,0";
 bool BatteryWarningShown = false; // V1B B24: the front page's Warning box says "Battery LOW" (the ESC temperature waits)
 uint32_t PowerCountdownShownAt = 0; // V1B B24: when "TURN OFF?! n" was last written into StillConnected (the current waits while the power button is held)
 char Warning[] = "Warning";
+bool ButtonUpSinceBoot = false;   // B95: the power button has been let go at least once since switch-on; until then a press cannot switch off (a hold from switch-on enables binding, however long)
+uint32_t VolumeRestoreAt = 0;     // B95: when the pilot's volume comes back after the binding announcement (0 = nothing to put back)
 uint32_t CurrentWarningShownAt = 0; // B02: when "Current too high!" went into the front page's Warning box (0 = not showing)
 bool SD_Card_Exists = false;
 char err_MotorOn[] = " MOTOR IS ON! ";

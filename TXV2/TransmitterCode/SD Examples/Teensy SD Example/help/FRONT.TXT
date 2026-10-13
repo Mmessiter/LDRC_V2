@@ -80,6 +80,7 @@ Green = the radio is connected.|
 Blinking = binding is enabled.||
 POWER BUTTON:|
 With no model connected, one press switches the transmitter off.|
+Held from switch-on it never switches off: that enables binding.|
 With a model connected, the front screen comes back, and you|
 must hold the button down while a countdown runs (TURN OFF?!).|
 This guards against a knock in flight. Set the seconds in|

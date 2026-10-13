@@ -27,5 +27,6 @@ struct ScreenFront : public ldrc::FlightSource {
         if (txStatus >= 0) return (txStatus & TX_MODEL) != 0;
         Comp *q = live("Quality"); return q && q->vis;
     }
-    bool flying() override { return tx.armed; }        // its rule: the radios are off (from a main board too old to say, the front page's "Motor is ON")
+    bool flying() override { return tx.armed; }
+    bool binding() override { return tx.binding; }     // B95: the main board's word (bit 64 of ldrcst)        // its rule: the radios are off (from a main board too old to say, the front page's "Motor is ON")
 };
