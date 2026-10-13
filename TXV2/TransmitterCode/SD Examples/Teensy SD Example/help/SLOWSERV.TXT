@@ -6,7 +6,7 @@ Halve the number, and the move takes twice as long.|
 With the usual end points, 10 takes about|
 one and a half seconds from end to end.||
 Use 1 to 100 only. A 0, or more than 100,|
-puts every speed in every bank back to 100.||
+is put back to 100 by itself.||
 Each bank has its own speeds. The bank in use is shown|
 top left. Move the bank switch to set another bank's speeds.||
 'Reset' puts this bank's speeds back to 100.|

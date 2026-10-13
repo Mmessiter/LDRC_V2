@@ -11,6 +11,10 @@ struct ScreenCli : public ldrc::CliHost {
     uint32_t ms() override { return millis(); }
     bool pipeReady() override { return bleState == BLE_READY; }
     bool armed() override { return armedNow; }
+    bool mainBoardBusy() override {                           // (B52) the Backup page's busy box: the main board's backup, restore or write is running (RF_Backup.h "vis busy,1")
+        if (page.name != "RFBackUpView") return false;
+        Comp *c = find("busy"); return c && c->vis;
+    }
     bool ask(const std::string &method, const std::string &path, uint32_t waitMs) override { asked = bleAsk(method, path, "", "", waitMs); return asked; }   // (the page says how long: 18 s for a command - a diff all, every bank, is 20 kB and more - 6 s for a leave)
     int askState() override { if (!asked) return -1; if (bleReqPending || !bleReqDone) return 0; asked = false; return bleReqError.empty() ? 1 : -1; }
     int askCode() override { return bleLast.code; }
@@ -85,6 +89,7 @@ static void cliTouch(bool pressed, int x, int y, uint32_t now) {
     if (waking) { if (!pressed) waking = false; cliPage.touch(false, x, y); return; }
     cliPage.touch(pressed, x, y);
 }
+static void cliTouchCancel() { cliPage.cancelTouch(); }   // (B59) a corner held: not a press
 static void cliPoll() {
     static uint32_t drawnLayout = 0, lastPoke = 0; static bool wasUp = false; static std::map<int, uint32_t> drawn;
     if (cliJobWanted >= 0 && !radioHeld) {

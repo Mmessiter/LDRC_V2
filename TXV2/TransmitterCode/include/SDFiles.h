@@ -45,11 +45,11 @@ File OpenTextFileForReading()
 /************************************************************************************************************/
 FASTRUN void OpenLogFileW()
 {
-    if (!LogFileOpen)
-    {
-        AddPath(TextFileName);
-        LogFileNumber = TINYCARD.open(SearchFile, FILE_WRITE);
-        LogFileOpen = true;
+    if (!LogWriteOpen)
+    { // B56: the logger's own name and handle
+        AddPath(LogWriteName);
+        LogWriteFile = TINYCARD.open(SearchFile, FILE_WRITE);
+        LogWriteOpen = (bool)LogWriteFile;
     }
 }
 /************************************************************************************************************/
@@ -75,6 +75,7 @@ void DeleteThisLogFile()
     {
         AddPath(TextFileName);
         TINYCARD.remove(SearchFile);
+        strcpy(TextFileName, ""); // B56: a deleted file is not the one OK opens next
         strcpy(MOD, ".LOG");
         BuildDirectory();
         strcpy(Mfiles, "FilesBox");
@@ -176,26 +177,21 @@ void RenameFile()
     if (GetBackupFilename(pModelsView, SingleModelFile, model, Head, prompt))
     {
         FixFileName();
-        if (strcmp(Deleteable, SingleModelFile) == 0)
-            return;
-        Serial.println(SingleModelFile);
-        if (CheckFileExists(SingleModelFile))
+        if (strcmp(Deleteable, SingleModelFile) != 0) // B21: the same name = nothing to do, but the live model still comes back (below)
         {
-            strcpy(Prompt, overwr);
-            strcat(Prompt, SingleModelFile);
-            strcat(Prompt, ques);
-            if (GetConfirmation(pModelsView, Prompt))
+            bool go = true;
+            if (CheckFileExists(SingleModelFile))
             {
-                WriteBackup();
+                strcpy(Prompt, overwr);
+                strcat(Prompt, SingleModelFile);
+                strcat(Prompt, ques);
+                go = GetConfirmation(pModelsView, Prompt);
+            }
+            if (go && WriteBackup()) // B21: the old file goes only once the new one has been written (a refused name used to delete it all the same)
+            {
                 AddPath(Deleteable);
                 TINYCARD.remove(SearchFile); // ClaudeFix-2-7-2026 backups live in /mod/ -- a bare name removed nothing, leaving both files
             }
-        }
-        else
-        {
-            WriteBackup();
-            AddPath(Deleteable);
-            TINYCARD.remove(SearchFile);
         }
     }
     strcpy(MOD, ".MOD");

@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B93 11/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B94 13/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -840,6 +840,9 @@ void FillBox(int x1, int y1, int w, int h, int c);
 void LogConnection();
 void LogDisConnection();
 void CloseLogFile();
+void CloseLogWriteFile(); // B56
+void MakeLogWriteName();   // B56
+void MakeDatedLogName(char *Dest); // B56
 void LogLongestGap();
 void Force_ReDisplay();
 FASTRUN void Compress(uint16_t *compressed_buf, uint16_t *uncompressed_buf, uint8_t uncompressed_size);
@@ -861,6 +864,7 @@ FASTRUN void FlushDeferredLog();              // B47: the lines kept for a quiet
 FASTRUN void DeferLogText(const char *text, bool stamp);
 bool RxHasPipe();                             // B47: RxUpdate.h - the connected receiver can carry the Rotorflight pipe (0.9.874+)
 bool PipeJoining(char *why, size_t n);        // B47: Parameters.h - the screen is still joining the receiver: wait
+bool CopyBankRunning();                       // B45: RF_CopyBank.h - a copy walks the flight controller's banks: hold the bank switch
 bool RfPipeBlocked(char *why, size_t n);      // B48: Parameters.h - a model is connected and the pipe is not ready: the Rotorflight pages refuse
 bool RfNeedsModel(char *why, size_t n);       // B60: Parameters.h - no model: the pages without a copy on the card refuse
 void PipeReplyFromScreen(const char *text);   // B50: PipeHttp.h - "ldrcrep <id> <code> <body>"
@@ -1054,7 +1058,7 @@ void CheckMacrosBuffer();
 void FixMotorChannel();
 void SendInitialSetupParams();
 void AddParameterstoQueue(uint8_t ID);
-void SetDefaultValues();
+void SetDefaultValues(bool Calibrating = false); // B16: the calibration branch only when a calibration starts
 FASTRUN void LogThisRX();
 void CompareVersionNumbers();
 void PopulateFrontView();
@@ -1085,7 +1089,7 @@ void PopulateMacrosView();
 void LoadModelForRenaming();
 bool GetBackupFilename(char *goback, char *tt1, char *MMname, char *heading, char *pprompt);
 void FixFileName();
-void WriteBackup();
+bool WriteBackup(); // B21: true when the file was written
 void RestoreCurrentModel();
 void GetYesOrNo();
 uint16_t GetText(char *TextBoxName, char *TheText, uint16_t maxlen);  // ClaudeFix-2-7-2026
@@ -1184,6 +1188,7 @@ void RatesMsg(const char *msg, uint16_t Colour);
 void ShowRatesBank();
 void RotorFlightStart();
 void RXOptionsViewStart();
+void ReadRXOptionsView(); // B23: the Model options page's values into memory, staying on the page
 void RotorFlightEnd();
 void StartRatesAdvancedView();
 void StartPIDAdvancedView();
@@ -1245,7 +1250,7 @@ uint32_t GetBuildDaysSince2020();
 void ShowSafetyIsOn();
 void ShowSafetyIsOff();
 FASTRUN void DisplayCurveAndServoPos();
-void ReadSpeedsScreen(uint8_t bk);
+void ReadSpeedsScreen(uint8_t bk, bool FromPage = false); // B37: FromPage = the list of edited boxes is fetched from the page (a bank switch before OK)
 void ShowRatesAdvancedBank();
 void ShowPIDAdvancedBank();
 void LinkRatesToBanksChanged();
@@ -1428,6 +1433,9 @@ uint16_t ChanneltoSet = 0;
 bool Connected = false;
 File LogFileNumber;
 bool LogFileOpen = false;
+char LogWriteName[40] = ""; // B56: the LOGGER's own file (today's date); TextFileName is the viewer's (a chosen log, or a help text)
+File LogWriteFile;
+bool LogWriteOpen = false;
 uint16_t BuddyControlled = 0; // Flags
 bool BuddyHasAllSwitches = true;
 double PointsCount = 5; // This for displaying curves only
@@ -1872,6 +1880,7 @@ char WarnOff[] = "vis Warning,0";
 bool BatteryWarningShown = false; // V1B B24: the front page's Warning box says "Battery LOW" (the ESC temperature waits)
 uint32_t PowerCountdownShownAt = 0; // V1B B24: when "TURN OFF?! n" was last written into StillConnected (the current waits while the power button is held)
 char Warning[] = "Warning";
+uint32_t CurrentWarningShownAt = 0; // B02: when "Current too high!" went into the front page's Warning box (0 = not showing)
 bool SD_Card_Exists = false;
 char err_MotorOn[] = " MOTOR IS ON! ";
 uint8_t VariometerBank = 3;
@@ -2017,6 +2026,10 @@ bool Reading_RATES_Now = false;
 bool Reading_RATES_Advanced_Now = false;
 bool Reading_GOV_Now = false;
 bool Reading_GOV_Config_Now = false;
+bool PIDS_Loaded = false;    // B40: the PIDs page's set came whole (or the model file's copy shows): edits may be saved
+bool GOV_Loaded = false;     // B41: the same for the Governor (bank) page
+bool RfValueWasCut = false;  // B07: a typed Rotorflight value was too big for its byte and was cut (RF_Rates.h RfByteOf)
+bool HelpTookRead = false;   // B19: Help was tapped while a Rotorflight page was still reading: read again on return
 uint16_t BlockSeen = 0;   // B79: the items of the block being read that have come (transceiver.h BlockItemSeen); cleared when a block is asked for
 bool BlockShown = false;  // B81: the set came whole and the Loading message went (once per ask)
 uint32_t FcBankAskAt = 0, FcBankAskAt2 = 0;   // B82: when to ask the flight controller which bank it is on (PipeHttp.h FcBankTick)

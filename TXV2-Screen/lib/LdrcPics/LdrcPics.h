@@ -94,6 +94,7 @@ public:
     // The finger (debounced by the caller): down, then up where it was lifted.
     void touchDown(int x, int y);
     void touchUp(int x, int y);
+    void touchCancel();                                  // (B59) a corner held: the finger is forgotten, its lift presses nothing
     void poll();
 
     // The phone.

@@ -386,10 +386,12 @@ static void picDrawPart(int id) {
 static const int PIC_PARTS[] = { 1, 4, 2, 3, 10, 11, 12, 13, 14, 15, 16, 17, 20, 30, 31, 32, 33, 40, 41 };
 
 // ------------------------------------------------------------------ the finger
+static bool picDown = false;                               // the finger is down on the chooser (B59: file-wide, so a corner held can forget it)
+static void picTouchCancel() { if (!picDown) return; picDown = false; pictures.touchCancel(); }   // (B59) a corner held: not a press
 static void picTouch(bool pressed, int x, int y, uint32_t now) {
     { static uint32_t lastDownHere = 0; if (pressed) lastDownHere = now;   // a corner held (the door, the radios): that finger is not for this page (1.11.3)
       if (touchLockout) { if (!pressed && (int32_t) (now - lastDownHere) > 80) touchLockout = false; return; } }
-    static bool down = false; static uint32_t seen = 0; static int lastX = 0, lastY = 0;
+    bool &down = picDown; static uint32_t seen = 0; static int lastX = 0, lastY = 0;
     if (pressed) {
         seen = now; lastX = x; lastY = y;
         if (down) return;

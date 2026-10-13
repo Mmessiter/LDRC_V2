@@ -1349,10 +1349,10 @@ static void BlockItemSeen(uint8_t item)
     const uint16_t want = Reading_PIDS_Now ? 0x3BF : Reading_PIDS_Advanced_Now ? 0xBF : Reading_GOV_Config_Now ? 0x3F : Reading_GOV_Now ? 0x1F : (Reading_RATES_Now || Reading_RATES_Advanced_Now) ? 0x0F : 0;
     if (!want || (BlockSeen & want) != want || BlockShown) return;
     BlockShown = true;   // (the set is shown; a fresh read that follows updates the numbers without another hide)
-    if (Reading_PIDS_Now) HidePIDMsg();
+    if (Reading_PIDS_Now) { HidePIDMsg(); PIDS_Loaded = true; }   // B40: the set came whole: edits may be saved
     else if (Reading_PIDS_Advanced_Now) HidePID_Advanced_Msg();
     else if (Reading_GOV_Config_Now) HideGOVConfigMsg();
-    else if (Reading_GOV_Now) HideGOVMsg();
+    else if (Reading_GOV_Now) { HideGOVMsg(); GOV_Loaded = true; }   // B41
     else if (Reading_RATES_Now) HideRATESMsg();
     else if (Reading_RATES_Advanced_Now) Hide_Advanced_Rates_Msg();
 }
@@ -1520,9 +1520,11 @@ FASTRUN void ParseTelemetryItem()
             Receiver_type = 0; // ClaudeFix-2-7-2026 Rx_type table has 7 entries; a corrupt byte read far past it
         break;
     case 24:
-        ESC_Temp = GetFloatFromAckPayload(); // ESC Temperature
-        if (!(ESC_Temp > -100.0f && ESC_Temp < 300.0f))
+    {
+        const float t = GetFloatFromAckPayload(); // ESC Temperature
+        if (!(t > -100.0f && t < 300.0f))
             break; // ClaudeFix-2-7-2026 a garbage float (e.g. 3.4e38) sprintf'd ~44 bytes over the neighbours -- and the MAX latched it, repeating every second
+        ESC_Temp = t; // B13: stored only once it has passed the check (the Data page printed the raw value into a 10-byte buffer)
         if (ESC_Temp > Max_ESC_Temp)
         {
             Max_ESC_Temp = ESC_Temp;
@@ -1530,6 +1532,7 @@ FASTRUN void ParseTelemetryItem()
         snprintf(ESC_Temperature, sizeof(ESC_Temperature), "%.1f C", ESC_Temp);
         snprintf(MAX_ESC_Temperature, sizeof(MAX_ESC_Temperature), "%.1f C", Max_ESC_Temp);
         break;
+    }
     case 25: // ROTORFLIGHT config PIDs and Rates **********************
         if (Reading_PIDS_Now)
         {
@@ -1726,6 +1729,7 @@ FASTRUN void ParseTelemetryItem()
         {
             PID_HSI_Offset_Values[0] = GetFirstWordFromAckPayload();  // PID_Roll_HSI_Offset
             PID_HSI_Offset_Values[1] = GetSecondWordFromAckPayload(); // PID_Pitch_HSI_Offset
+            DisplayBoostPidValues();                                  // B40: drawn as they arrive, not from the previous read
             break;
         }
         break;

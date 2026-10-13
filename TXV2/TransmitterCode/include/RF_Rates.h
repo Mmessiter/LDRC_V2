@@ -7,35 +7,55 @@
 #define RATESRF_H
 #include <Arduino.h>
 #include "1Definitions.h"
+FLASHMEM void Modify_Labels_For_RATES_View();
 
+// B08: the scales and the headings come from the BANK'S rates type (byte 0), not from the firmware version. Rotorflight
+// 2.3's own type (6, "Rotorflight 2.3") has Rate / Shape / Expo columns (rate x5, x0.125 on the collective); every other
+// type (Actual, Betaflight, ...) keeps the Centre / Max / Expo scales of 2.2, whatever the firmware. Before, every bank on
+// a 2.3 flight controller got the type-6 scales: an Actual bank showed half its centre rate and a tenth of its max rate,
+// and typing 200 wrote a value the flight controller read as 400 deg/s.
+FLASHMEM bool RatesTypeIsRf23(uint8_t type) { return RotorFlight_V >= 2 && type == 6; }
+FLASHMEM const float *RatesFactors(uint8_t type) { return RatesTypeIsRf23(type) ? FactorTableRF2_3 : FactorTableRF2_2; }
 // ************************************************************************************************************/
 float GetFactoredValue(uint8_t i) // this function gets the value to show
 {
-    float ThisValue;
-    if (RotorFlight_V >= 2)
-        ThisValue = (Rate_Values[i] * FactorTableRF2_3[i]); // MULTIPLY BY factor to get display value
-    else
-        ThisValue = (Rate_Values[i] * FactorTableRF2_2[i]); // MULTIPLY BY factor to get display value
-    return ThisValue;
+    return Rate_Values[i] * RatesFactors(Rate_Values[0])[i]; // MULTIPLY BY factor to get display value
+}
+// B07: a typed value too big for its byte wrapped round (a rate of 1300 went as 20 deg/s, a collective of 40 deg as 8 deg),
+// and the screen kept showing what was typed. Now it is cut to what the byte holds, the pilot is told, and the page shows
+// what was written. (Rounded to the nearest byte too: 0.3 / 0.01 came out 29, not 30.)
+FLASHMEM uint8_t RfByteOf(float v)
+{
+    if (v < 0.0f)
+    {
+        RfValueWasCut = true;
+        return 0;
+    }
+    if (v > 255.0f)
+    {
+        RfValueWasCut = true;
+        return 255;
+    }
+    return (uint8_t)(v + 0.5f);
+}
+FLASHMEM void RfCutNote(const char *page) // after a save whose values were cut: the page shows them as written (the caller), the pilot told
+{
+    if (!RfValueWasCut)
+        return;
+    RfValueWasCut = false;
+    PlaySound(WHAHWHAHMSG);
+    MsgBox((char *)page, (char *)"A value was too big for Rotorflight and\r\nwas cut to the largest it can hold.\r\nThe page shows what was saved: check it.");
 }
 
 // ************************************************************************************************************/
 FLASHMEM void ReadEditedRateValues()
 {
-
+    const float *f = RatesFactors(Rate_Values[0]);
     for (int i = 1; i < MAX_RATES_BYTES; ++i) // start at 1 because 0 is Rates Type and not yet edited here
     {
         char temp[10];
         GetText(RatesWindows[i], temp, sizeof(temp));  // ClaudeFix-2-7-2026
-
-        if (RotorFlight_V >= 2) // 2
-        {
-            Rate_Values[i] = (uint8_t)(atof(temp) / FactorTableRF2_3[i]); // DIVIDE BY factor to get byte value
-        }
-        else
-        {
-            Rate_Values[i] = (uint8_t)(atof(temp) / FactorTableRF2_2[i]); // DIVIDE BY factor to get byte value
-        }
+        Rate_Values[i] = RfByteOf((float)atof(temp) / f[i]); // DIVIDE BY factor to get byte value (B07: cut, never wrapped)
     }
 }
 
@@ -44,8 +64,10 @@ FLASHMEM void SaveRatesLocalBank()
 {
     RatesMsg((char *)"Saving edited rates ...", Gray); // Show sending message
     Rates_Were_Edited = false;
+    Rate_Values[0] = Saved_Rate_Values[0][DualRateInUse - 1]; // B08: the saved bank's own type chooses the scales (it was always made "Actual")
+    if (Rate_Values[0] == 0 || Rate_Values[0] > 6)
+        Rate_Values[0] = 4; // (none known: "Actual", as before)
     ReadEditedRateValues();
-    Rate_Values[0] = 4; // set to "Actual" type
     for (int i = 0; i < MAX_RATES_BYTES; ++i)
     {
         Saved_Rate_Values[i][DualRateInUse - 1] = Rate_Values[i];
@@ -54,6 +76,11 @@ FLASHMEM void SaveRatesLocalBank()
     HideRATESMsg();                  // ...because this queue is a LIFO stack
     SendCommand((char *)"vis b3,0"); // hide "Send" button
     PlaySound(BEEPCOMPLETE);         // let user know we're done
+    if (RfValueWasCut)
+    { // B07
+        DisplayRatesValues(1, MAX_RATES_BYTES);
+        RfCutNote("page RatesView");
+    }
 }
 // ************************************************************************************************************/
 FLASHMEM void SendEditedRates()
@@ -83,11 +110,17 @@ FLASHMEM void SendEditedRates()
     HideRATESMsg();                                     // ...because this queue is a LIFO stack
     SendCommand((char *)"vis b3,0");                    // hide "Send" button
     PlaySound(BEEPCOMPLETE);                            // let user know we're done
+    if (RfValueWasCut)
+    { // B07
+        DisplayRatesValues(1, MAX_RATES_BYTES);
+        RfCutNote("page RatesView");
+    }
 }
 // ************************************************************************************************************/
 FLASHMEM char *FixDecimalDisplay(char *temp, float ThisValue, uint8_t i, size_t tempSize) // this function removes trailing zeros and decimal point if not needed and also rounds to 2 decimal places if needed
 {
-    if (RotorFlight_V == 1)
+    const bool rf23 = RatesTypeIsRf23(Rate_Values[0]); // B08: the decimals follow the scale table in use
+    if (!rf23)
     {
         if (ThisValue == int(ThisValue))
         {
@@ -106,7 +139,7 @@ FLASHMEM char *FixDecimalDisplay(char *temp, float ThisValue, uint8_t i, size_t 
         }
     }
 
-    if (RotorFlight_V >= 2)
+    if (rf23)
     {
         if (ThisValue == int(ThisValue))
         {
@@ -138,7 +171,8 @@ FLASHMEM void DisplayRatesValues(uint8_t startIndex, uint8_t stopIndex) // Displ
             char temp[10];
             if (i == 0)
             {
-                SendText(RatesWindows[0], Rate_Types[Rate_Values[0]]); // Show rates type but it cannot be edited here
+                SendText(RatesWindows[0], (char *)(Rate_Values[0] <= 6 ? Rate_Types[Rate_Values[0]] : "?")); // Show rates type but it cannot be edited here
+                Modify_Labels_For_RATES_View(); // B08: the headings follow the type
                 continue;
             }
             float ThisValue = GetFactoredValue(i);
@@ -185,17 +219,17 @@ FLASHMEM void HideRATESMsg()
 // ******************************************************************************************************************************/
 FLASHMEM void ShowRatesLocalBank()
 {
+    Rate_Values[0] = Saved_Rate_Values[0][DualRateInUse - 1]; // B08: the saved bank's type chooses the scales (and the edits' later)
+    const float *f = RatesFactors(Rate_Values[0]);
+    Modify_Labels_For_RATES_View();
     for (int i = 0; i < MAX_RATES_BYTES; ++i)
     {
         float ThisValue;
         char temp[10];
-        if (RotorFlight_V >= 2)
-            ThisValue = (Saved_Rate_Values[i][DualRateInUse - 1] * FactorTableRF2_3[i]); // MULTIPLY BY factor to get display value 2.3
-        else
-            ThisValue = (Saved_Rate_Values[i][DualRateInUse - 1] * FactorTableRF2_2[i]); // MULTIPLY BY factor to get display value 2.2
+        ThisValue = (Saved_Rate_Values[i][DualRateInUse - 1] * f[i]); // MULTIPLY BY factor to get display value
         FixDecimalDisplay(temp, ThisValue, i, sizeof(temp));
         if (i == 0)
-            SendText(RatesWindows[0], Rate_Types[Saved_Rate_Values[0][DualRateInUse - 1]]); // Show rates type but it cannot be edited here
+            SendText(RatesWindows[0], (char *)(Rate_Values[0] <= 6 ? Rate_Types[Rate_Values[0]] : "?")); // Show rates type but it cannot be edited here
         else
             SendText(RatesWindows[i], temp);
     }
@@ -245,7 +279,9 @@ FLASHMEM void ShowRatesBank()
 FLASHMEM void Modify_Labels_For_RATES_View()
 { // make sure labels are correct for RATES view in Rotorflight because some are different than for Betaflight etc
 
-    if (RotorFlight_V >= 2)
+    if (CurrentView != RATESVIEW_RF)
+        return;
+    if (RatesTypeIsRf23(Rate_Values[0])) // B08: by the bank's type, not the firmware
     {
         SendText((char *)"t4", (char *)"Axis"); // the configurator says Axis (RF 2.2) or Rates (RF 2.3): the rows are the axes either way
         SendText((char *)"t5", (char *)"Rate");

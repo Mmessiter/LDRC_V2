@@ -35,6 +35,7 @@ FLASHMEM void ShowLocalGovBank()
             break;
         }
     }
+    GOV_Loaded = true; // (the model file's own copy: editable)
     HideGOVMsg();
     BlockBankChanges = false;
 }
@@ -238,6 +239,7 @@ FLASHMEM void ShowGOVBank()
             return;
         }
 
+        GOV_Loaded = false; // B41: until the whole set has come (transceiver.h BlockItemSeen)
         BlockBankChanges = true;
         ShowGOVMsg(buf, Gray);
         GOV_Send_Duration = GOV_PROFILE_WAIT_TIME;
@@ -306,6 +308,8 @@ FLASHMEM void End_RF_Governor()
 // ====================================================
 FLASHMEM void SendEditedGovValues()
 {
+    if (RfBlockNotLoaded(GOV_Loaded, "page RFGovView", "governor values")) // B41: zeros from a read that got no answer are never written
+        return;
     if (!RfLive())
     {
         // Not connected — save to local SD card instead
@@ -337,6 +341,8 @@ FLASHMEM void SendEditedGovValues()
 // ====================================================
 FLASHMEM void GOVS_P_Were_Edited()
 {
+    if (RfBlockNotLoaded(GOV_Loaded, "page RFGovView", "governor values")) // B41
+        return;
     SendCommand((char *)"vis b3,1"); // show Save button
     GOVS_PROFILE_Were_Edited = true;
 }

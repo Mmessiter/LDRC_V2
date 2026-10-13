@@ -71,6 +71,17 @@ FLASHMEM void Display2PIDValues(uint8_t i) // Displays two PID values as soon as
     }
 }
 // **********************************************************************************************************/
+FLASHMEM bool RfBlockNotLoaded(bool loaded, const char *page, const char *what) // B40/B41: no Save on a set that never came whole
+{
+    if (loaded)
+        return false;
+    char m[150];
+    snprintf(m, sizeof(m), "The %s did not all come from the\r\nflight controller, so nothing can be\r\nsaved. Leave the page and return.", what);
+    PlaySound(WHAHWHAHMSG);
+    MsgBox((char *)page, m);
+    return true;
+}
+// **********************************************************************************************************/
 FLASHMEM void DisplayBoostPidValues() // Displays Boost PID values as soon as they arrive in Ack payload Theses are at the end of the normal PIDs ... tacked on
 {
     if (CurrentMode == RESTORE_RF_SETTINGS)
@@ -116,6 +127,7 @@ FLASHMEM void ShowLocalBank()
     for (int i = 0; i < MAX_PID_WORDS + 5; ++i)
         if (CurrentView == PIDVIEW && i < MAX_PID_WORDS + 5) // Must be in PID view and a valid index
             SendValue(PID_Labels[i], Saved_PID_Values[i][Bank - 1]);
+    PIDS_Loaded = true; // (the model file's own copy: editable)
     HidePIDMsg();
     BlockBankChanges = false;
 }
@@ -146,6 +158,7 @@ FLASHMEM void ShowPIDBank() // this is called when bank is changed so new bank's
             strcat(Wmsg, w2);
             MsgBox((char *)"page PIDView", Wmsg); // Warn about unsaved edits
         }
+        PIDS_Loaded = false;                    // B40: until the whole set has come (transceiver.h BlockItemSeen)
         BlockBankChanges = true;                // block bank changes while we do this
         PIDMsg(buf, Gray);                     // Show loading message and hides old PIDs
         PID_Send_Duration = MSP_WAIT_TIME;     // how many milliseconds to await PID values
@@ -158,6 +171,8 @@ FLASHMEM void ShowPIDBank() // this is called when bank is changed so new bank's
 //************************************************************************************************************/
 FLASHMEM void PIDs_Were_edited()
 {
+    if (RfBlockNotLoaded(PIDS_Loaded, "page PIDView", "PIDs")) // B40
+        return;
     SendCommand((char *)"vis b3,1"); // show "Send" button
     PIDS_Were_Edited = true;
 }
@@ -189,6 +204,8 @@ FLASHMEM void SaveToLocalBank()
 
 FLASHMEM void SendEditedPIDs()
 {
+    if (RfBlockNotLoaded(PIDS_Loaded, "page PIDView", "PIDs")) // B40: a set that never came whole is never written
+        return;
     if (!RfLive()) // Model not connected so save to local PIDs
     {
         SaveToLocalBank();

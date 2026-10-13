@@ -98,8 +98,8 @@ void CheckSelectedRatesMode()
 
 void ReadDualRatesValues()
 {
-    if (ScreenData[10] > 15)
-        return; //  if channel number is out of range means it is not updated yet
+    if (ScreenData[10] > 16)
+        return; //  if channel number is out of range means it is not updated yet (B34: 16 is a channel)
     if (!ScreenData[0])
         return; // if no data, return
     if (!ScreenData[1])
@@ -115,14 +115,14 @@ void ReadDualRatesValues()
     Drate3 = ScreenData[2];
     if (Drate3 > MAXDUALRATE)
         Drate3 = MAXDUALRATE;
-    DualRateChannels[0] = CheckRange(ScreenData[3], 0, 8);
-    DualRateChannels[1] = CheckRange(ScreenData[4], 0, 8);
-    DualRateChannels[2] = CheckRange(ScreenData[5], 0, 8);
-    DualRateChannels[3] = CheckRange(ScreenData[6], 0, 8);
-    DualRateChannels[4] = CheckRange(ScreenData[7], 0, 8);
-    DualRateChannels[5] = CheckRange(ScreenData[8], 0, 8);
-    DualRateChannels[6] = CheckRange(ScreenData[9], 0, 8);
-    DualRateChannels[7] = CheckRange(ScreenData[10], 0, 8);
+    DualRateChannels[0] = CheckRange(ScreenData[3], 0, 16);
+    DualRateChannels[1] = CheckRange(ScreenData[4], 0, 16);
+    DualRateChannels[2] = CheckRange(ScreenData[5], 0, 16);
+    DualRateChannels[3] = CheckRange(ScreenData[6], 0, 16);
+    DualRateChannels[4] = CheckRange(ScreenData[7], 0, 16);
+    DualRateChannels[5] = CheckRange(ScreenData[8], 0, 16);
+    DualRateChannels[6] = CheckRange(ScreenData[9], 0, 16);
+    DualRateChannels[7] = CheckRange(ScreenData[10], 0, 16);
     DualRateRate[Bank - 1] = ScreenData[11];
 }
 

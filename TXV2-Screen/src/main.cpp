@@ -42,7 +42,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.57"
+#define SCREEN_VERSION "1.11.59"
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room
 #endif
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -442,6 +442,9 @@ static bool cliPageUp = false;                         // (1.11.51) the command 
 static bool cliUp();                                   // the command line page has the screen
 static void cliTouch(bool pressed, int x, int y, uint32_t now);
 static void cliPoll(); static void cliWeb();
+// (B59) a corner held while one of our pages has the screen: that page forgets the finger (src/*_device.h)
+static void wifiTouchCancel(); static void cliTouchCancel(); static void picTouchCancel(); static void flightTouchCancel();
+static void coloursTouchCancel(); static void appearanceTouchCancel(); static void updTouchCancel();
 static void wifiWeb();
 static void updWeb();
 // The model pictures (src/pics_device.h, lib/LdrcPics): the chooser over the Teensy's "Choose image" page, photos from a phone
@@ -1252,6 +1255,10 @@ struct Host : public NextionHost {
         if (off || !c) return;
         if (c->vis && !on) { c->vis = false; repaintHole(c->x, c->y, c->w, c->h); }
         else if (!c->vis && on) { c->vis = true; redraw(*c); }
+        // B52 (10 Oct 2026): the Backup page's busy box is the main board's word that its backup, restore or write is running
+        // (RF_Backup.h "vis busy,1"); the two command-line buttons of ours beside it go with it, so neither job can be started
+        // under the other (the command line page refuses too: ScreenCli::mainBoardBusy)
+        if (nm == "busy" && page.name == "RFBackUpView") { vis(pg, "ldrcDiff", !on); vis(pg, "ldrcExec", !on); }
     }
     void gotoPage(const std::string &name) override;
     void delayMs(uint32_t ms) override { flushOut(); delay(ms); }
@@ -1848,6 +1855,10 @@ static void pollTouch() {
     else if (lifted) doorSince = 0;
     if (cornerHeld) {                                           // (our own pages: their handlers see no lift, the lockout holds until the finger is up)
         if (down && held >= 0 && held < (int) page.comps.size()) { Comp &c = page.comps[held]; c.pressed = false; if (c.type == "button" || c.type == "dual-state button") redraw(c); }
+        // B59 (10 Oct 2026): a page of our own forgets the finger too - before, its press stayed (the lift never reached it), so
+        // the button under the corner was still "down" and the next tap anywhere was swallowed (or pressed it, lifted on it)
+        if (wifiPageUp()) wifiTouchCancel(); else if (cliUp()) cliTouchCancel(); else if (picPanelUp()) picTouchCancel(); else if (flightUp()) flightTouchCancel();
+        else if (coloursUp()) coloursTouchCancel(); else if (appearanceUp()) appearanceTouchCancel(); else if (updPanelUp()) updTouchCancel();
         down = false; held = -1; touchLockout = true; touchPainted = true;
         return;
     }

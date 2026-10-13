@@ -62,6 +62,11 @@ FLASHMEM uint16_t GetThisImageNumber()
 // *************************************************************************************************************************/
 FLASHMEM void StartChooseImage()
 {
+    if (CurrentView == RXSETUPVIEW1)
+    { // B23: what was typed on Model options goes with us (EndChooseImage draws the page afresh)
+        ReadRXOptionsView();
+        SaveOneModel(ModelNumber);
+    }
     // V1B (B22): the screen's own chooser (screen 1.5.0 and later) covers this page from its very first frame and shows
     // the pictures on ITS card, so this transmitter no longer lists /Images on its own card nor scrolls a list. It says
     // FIRST whose picture is being chosen and which picture the model has now, so that first frame is right, and then

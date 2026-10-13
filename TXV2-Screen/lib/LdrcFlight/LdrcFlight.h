@@ -184,6 +184,7 @@ public:
     bool takeFrontPress(std::string &comp);            // true once after a button of the main board's: "b0" / "b1" (the front page's setups), "help"
     uint8_t manualChoice() const { return cfg.manual; }
     void touch(bool pressed, int x, int y, uint32_t now);   // while showing() or setupOpen(), at every pass: the chip drops samples mid-press, so a lift counts after 80 ms of none
+    void cancelTouch() { down = false; pressedId = -1; slidOff = false; heldBox = -1; }   // (B59) a corner held: the finger is forgotten, its lift presses nothing
     const FlightScene &scene(FlightSource &src, FlightFonts *fonts = nullptr);   // what to draw, now (fonts: the numbers' sizes)
 private:
     bool shown = false, setup = false, saved = false;

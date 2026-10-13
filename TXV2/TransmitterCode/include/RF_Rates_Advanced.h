@@ -170,11 +170,10 @@ FLASHMEM void ReadRatesAdvanced()
         {
             char temp[10];
             GetText(RatesAWindows[i], temp, sizeof(temp));  // ClaudeFix-2-7-2026
-            float q = atof(temp) * 10.0;
-            Rate_Advanced_Values[i] = (uint8_t)q;
+            Rate_Advanced_Values[i] = RfByteOf((float)atof(temp) * 10.0f); // B07: cut, never wrapped
             continue;
         }
-        Rate_Advanced_Values[i] = (uint8_t)GetValue(RatesAWindows[i]);
+        Rate_Advanced_Values[i] = RfByteOf((float)(int32_t)GetValue(RatesAWindows[i])); // B07
     }
 }
 
@@ -192,6 +191,11 @@ FLASHMEM void SaveLocalRatesAdvancedBank()
     Hide_Advanced_Rates_Msg();       // ...because this queue is a LIFO stack
     SendCommand((char *)"vis b3,0"); // hide "Send" button
     PlaySound(BEEPCOMPLETE);         // let user know we're done
+    if (RfValueWasCut)
+    { // B07
+        Display_Advanced_Rates_Values(0, MAX_RATES_ADVANCED_BYTES);
+        RfCutNote("page Rates_A_View");
+    }
 }
 
 // **********************************************************************************************************/
@@ -220,5 +224,10 @@ FLASHMEM void SendEditedRatesAdvanced()
     AddParameterstoQueue(GET_RATES_ADVANCED_VALUES_FIRST_7);  // Send RATES ADVANCED values from TX to RX ...because this queue is a LIFO stack
     Hide_Advanced_Rates_Msg();                                // SECOND MUST BE QUEUED FIRST!!!  because this queue is a LIFO stack
     PlaySound(BEEPCOMPLETE);                                  // let user know we're done
+    if (RfValueWasCut)
+    { // B07
+        Display_Advanced_Rates_Values(0, MAX_RATES_ADVANCED_BYTES);
+        RfCutNote("page Rates_A_View");
+    }
 }
 #endif // RATESRF_ADVANCED_H

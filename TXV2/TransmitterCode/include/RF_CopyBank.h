@@ -24,10 +24,15 @@ DMAMEM static uint8_t CbSrcPid[40], CbSrcAdv[64], CbSrcResc[40], CbSrcGov[32], C
 static int CbSrcPidN = 0, CbSrcAdvN = 0, CbSrcRescN = 0, CbSrcGovN = 0, CbSrcRatesN = 0, CbDstGovN = 0, CbExpGovN = 0, CbExpPidN = 0;
 static char CbBad[80], CbAdjText[110];
 static int CbHsSrc = 0, CbHsDst = 0;
+static bool CbFailed = false, CbQuiet = false;   // B44: putting the banks back after a failure; the page left (no box on another page)
+static char CbFailMsg[200];
 static bool CbTouchGov() { return CbFlight || CbGov; }
+FLASHMEM static void CbSelect(int bank, bool rates, int next);   // (B44: CbFail puts the banks back; defined below)
+bool CopyBankRunning() { return CbStep != CB_IDLE; }   // B45: Switches.h holds the bank switch while a copy walks the flight controller's banks
 
 FLASHMEM static void CbBusy(const char *msg)
 {
+    if (CurrentView != COPYBANKVIEW) return;   // (B44: the page may have been left while the banks are put back)
     SendCommand((char *)(msg && *msg ? "vis busy,1" : "vis busy,0"));
     if (msg && *msg) SendText((char *)"busy", (char *)msg);
 }
@@ -51,14 +56,24 @@ FLASHMEM static void CbEnd(bool ok)
     CbBusy("");
     (void)ok;
 }
+FLASHMEM static void CbFinish(const char *msg, bool ok) // the end, good or bad: the box only on the page
+{
+    CbEnd(ok);
+    PlaySound(ok ? BEEPCOMPLETE : WHAHWHAHMSG);
+    if (!CbQuiet)
+    {
+        MsgBox((char *)"page CopyBankView", (char *)msg);
+        CbShow();
+    }
+    CbQuiet = false; CbFailed = false;
+}
 FLASHMEM static void CbFail(const char *what)
 {
-    char msg[200];
-    snprintf(msg, sizeof(msg), "%s:\r\n%.100s\r\nThe flight controller was left as it was,\r\nor part copied: check bank %d.", what, PipeRepCode ? PipeRepBody : "the screen could not ask (no Bluetooth)", CbTo + 1);
-    CbEnd(false);
-    PlaySound(WHAHWHAHMSG);
-    MsgBox((char *)"page CopyBankView", msg);
-    CbShow();
+    if (CbFailed) { CbFinish(CbFailMsg, false); return; }   // (failed again while putting the banks back: give up)
+    snprintf(CbFailMsg, sizeof(CbFailMsg), "%s:\r\n%.100s\r\nThe flight controller was left as it was,\r\nor part copied: check bank %d.", what, PipeRepCode ? PipeRepBody : "the screen could not ask (no Bluetooth)", CbTo + 1);
+    CbFailed = true;   // B44: the flight controller back on the transmitter's banks first, then the box
+    CbBusy("Putting the banks back ...");
+    CbSelect(Bank > 0 ? Bank - 1 : 0, false, CB_BACK_P);
 }
 FLASHMEM static int CbBytes(uint8_t *out, int max) { return PipeReplyBytes(out, max); }
 FLASHMEM static bool CbSameBytes(const uint8_t *a, int na, const uint8_t *b, int nb) { return na == nb && memcmp(a, b, (size_t)na) == 0; }
@@ -107,8 +122,12 @@ FLASHMEM static void CbAfterSource() // the source read: on to the target's gove
 }
 FLASHMEM void CopyBankPoll()
 {
-    if (CurrentView != COPYBANKVIEW) { if (CbStep != CB_IDLE) CbEnd(false); return; }
     if (CbStep == CB_IDLE) return;
+    if (CurrentView != COPYBANKVIEW)
+    { // B44: the page left mid-copy (the motor switch, a message box): the banks are put back first, quietly
+        CbQuiet = true;
+        if (!CbFailed) { CbFailed = true; snprintf(CbFailMsg, sizeof(CbFailMsg), "Copy a bank was interrupted: check bank %d.", CbTo + 1); CbSelect(Bank > 0 ? Bank - 1 : 0, false, CB_BACK_P); return; }
+    }
     if (!PipeReplyReady(CbReq))
     {
         if (!PipeReplyLate()) return;
@@ -292,12 +311,10 @@ FLASHMEM void CopyBankPoll()
         if (CbFlight) strncat(what, "flight tuning", sizeof(what) - strlen(what) - 1);
         if (CbRates) { if (what[0]) strncat(what, ", ", sizeof(what) - strlen(what) - 1); strncat(what, "rates", sizeof(what) - strlen(what) - 1); }
         if (CbGov) { if (what[0]) strncat(what, ", ", sizeof(what) - strlen(what) - 1); strncat(what, CbHs ? "governor incl. head speed" : "governor gains (head speed kept)", sizeof(what) - strlen(what) - 1); }
+        if (CbFailed) { CbFinish(CbFailMsg, false); return; }   // B44: the banks are back: now the failure
         if (CbBad[0]) snprintf(msg, sizeof(msg), "Copied bank %d to bank %d (%s),\r\nbut read back DIFFERENT: %s\r\nCheck bank %d.", CbFrom + 1, CbTo + 1, what, CbBad, CbTo + 1);
         else snprintf(msg, sizeof(msg), "Copied bank %d to bank %d: %s.\r\nRead back the same.%s%s", CbFrom + 1, CbTo + 1, what, CbAdjText[0] ? "\r\n" : "", CbAdjText);
-        CbEnd(!CbBad[0]);
-        PlaySound(CbBad[0] ? WHAHWHAHMSG : BEEPCOMPLETE);
-        MsgBox((char *)"page CopyBankView", msg);
-        CbShow();
+        CbFinish(msg, !CbBad[0]);
         return;
     }
     default:
@@ -340,7 +357,7 @@ FLASHMEM void CopyBankNow()
     snprintf(q, sizeof(q), "Copy bank %d to bank %d?\r\nBank %d's own values for what is\r\nswitched on are overwritten.", CbFrom + 1, CbTo + 1, CbTo + 1);
     if (!GetConfirmation((char *)"page CopyBankView", q)) { CbShow(); return; }
     CbShow();
-    CbBad[0] = 0; CbAdjText[0] = 0; CbExpPidN = 0; CbExpGovN = 0; CbHsSrc = CbHsDst = 0;
+    CbBad[0] = 0; CbAdjText[0] = 0; CbExpPidN = 0; CbExpGovN = 0; CbHsSrc = CbHsDst = 0; CbFailed = false; CbQuiet = false;
     BlockBankChanges = true;
     CbBusy("Reading where the flight controller is ...");
     CbAsk(101, nullptr, 0, CB_STATUS);

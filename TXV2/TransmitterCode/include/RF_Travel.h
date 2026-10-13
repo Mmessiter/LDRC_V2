@@ -13,6 +13,7 @@ static const int CFG_BYTES = 21;
 static uint8_t TravCfg[CFG_BYTES], TravCfgWant[CFG_BYTES];
 static int16_t TravIn[5][3], TravInWant[5][3];       // inputs 1..4 (index 0 unused): rate, min, max
 static bool TravHave = false, Trav_Was_Edited = false;
+static bool TravPage2Edited = false;   // B49: page 2's fields are gathered only if one of them was edited
 static int TravRevAil = 0, TravRevEle = 0, TravRevColl = 0, TravRevYaw = 0;   // (B66: yaw too - the configurator's Yaw Control Direction)
 FLASHMEM static const char *TravPageWord() { return CurrentView == TRAVEL3VIEW ? "page Travel3View" : CurrentView == TRAVEL2VIEW ? "page Travel2View" : "page TravelView"; }
 static const char *SwashTypeWords[7] = {"None", "Direct", "CCPM 120 deg", "CCPM 135 deg", "CCPM 140 deg", "FPM 90 deg L", "FPM 90 deg V"};   // the configurator's, byte 5
@@ -126,13 +127,22 @@ FLASHMEM static void TravGatherPage1()
 }
 FLASHMEM static void TravGatherPage2()
 {
+    if (!TravPage2Edited) return;   // B49: a page only looked at changes nothing (it made roll and pitch the same)
     const long gCyc = FieldTenthsL("tn0", 0, 10000), gColl = FieldTenthsL("tn1", 0, 10000);   // (B67: "86.5" -> 865)
-    TravInWant[1][0] = (int16_t)(TravRevAil ? -gCyc : gCyc);
-    TravInWant[2][0] = (int16_t)(TravRevEle ? -gCyc : gCyc);
+    if (gCyc != labs(TravInWant[1][0]))
+    { // the one Cyclic calibration box (it shows roll's) was changed: both axes take it
+        TravInWant[1][0] = (int16_t)(TravRevAil ? -gCyc : gCyc);
+        TravInWant[2][0] = (int16_t)(TravRevEle ? -gCyc : gCyc);
+    }
+    else
+    { // B49: untouched: roll and pitch keep their own gains (a balance set in the configurator survives)
+        TravInWant[1][0] = (int16_t)(TravRevAil ? -labs(TravInWant[1][0]) : labs(TravInWant[1][0]));
+        TravInWant[2][0] = (int16_t)(TravRevEle ? -labs(TravInWant[2][0]) : labs(TravInWant[2][0]));
+    }
     TravInWant[4][0] = (int16_t)(TravRevColl ? -gColl : gColl);
     { const long g = FieldTenthsL("tn2", -250, 250); const long raw = (g * 5 + (g < 0 ? -5 : 5)) / 10; TravCfgWant[18] = (uint8_t)(raw & 0xFF); }   // ui/5 -> raw: 3.0 (30 tenths) -> 15
-    const long cyc = DegTenthsToRaw(FieldTenthsL("tn3", 0, 300), 12), coll = DegTenthsToRaw(FieldTenthsL("tn4", 0, 300), 12);
-    TravInWant[1][1] = TravInWant[2][1] = (int16_t)-cyc; TravInWant[1][2] = TravInWant[2][2] = (int16_t)cyc;
+    const long cycTenths = FieldTenthsL("tn3", 0, 300), cyc = DegTenthsToRaw(cycTenths, 12), coll = DegTenthsToRaw(FieldTenthsL("tn4", 0, 300), 12);
+    if (cycTenths != RawToDegTenths(TravInWant[2][2], 12)) { TravInWant[1][1] = TravInWant[2][1] = (int16_t)-cyc; TravInWant[1][2] = TravInWant[2][2] = (int16_t)cyc; }   // (B49: the one box changed: both axes; else each keeps its own limits)
     TravInWant[4][1] = (int16_t)-coll; TravInWant[4][2] = (int16_t)coll;
     PutS16(TravCfgWant, 9, DegTenthsToRaw(FieldTenthsL("tn5", 0, 360), 12));
     PutS16(TravCfgWant, 7, FieldTenthsL("tn6", -1800, 1800));
@@ -214,7 +224,7 @@ FLASHMEM void TravelPoll()
         if (!ok || !TravTakeInput(TravIn)) { TravFail("Could not read a mixer input"); return; }
         if (TravIdx < 4) { TravAskInput(TravIdx + 1, TRV_READ_IN); return; }
         memcpy(TravCfgWant, TravCfg, CFG_BYTES); memcpy(TravInWant, TravIn, sizeof(TravIn));
-        TravHave = true; TravStep = TRV_IDLE; Trav_Was_Edited = false;
+        TravHave = true; TravStep = TRV_IDLE; Trav_Was_Edited = false; TravPage2Edited = false;
         TravBusy(""); SendCommand((char *)"vis b3,0"); TravShow();
         return;
     case TRV_WRITE_CFG:
@@ -248,7 +258,7 @@ FLASHMEM void TravelPoll()
         bool same = memcmp(TravCfg + 2, TravCfgWant + 2, CFG_BYTES - 2) == 0;   // (the type bytes 0 and 1 are not ours)
         for (int i = 1; i <= 4 && same; ++i) for (int k = 0; k < 3; ++k) if (TravIn[i][k] != TravInWant[i][k]) same = false;
         memcpy(TravCfgWant, TravCfg, CFG_BYTES); memcpy(TravInWant, TravIn, sizeof(TravIn));
-        TravStep = TRV_IDLE; Trav_Was_Edited = false;
+        TravStep = TRV_IDLE; Trav_Was_Edited = false; TravPage2Edited = false;
         SendCommand((char *)"vis b3,0"); TravShow();
         TravBusy(same ? "Saved, and read back the same." : "Saved, but the flight controller adjusted some values.");
         TravMsgUntil = millis() + 4000;
@@ -279,7 +289,7 @@ FLASHMEM void StartTravelView()
     }
     SendCommand((char *)"page TravelView");
     CurrentView = TRAVELVIEW;
-    Trav_Was_Edited = false;
+    Trav_Was_Edited = false; TravPage2Edited = false;
     TravPageHead();
     TravRead();
 }
@@ -299,7 +309,7 @@ FLASHMEM void EndTravelView() // OK on either page
     Trav_Was_Edited = false;
     RotorFlightStart();
 }
-FLASHMEM void TravelWasEdited() { SendCommand((char *)"vis b3,1"); Trav_Was_Edited = true; }
+FLASHMEM void TravelWasEdited() { SendCommand((char *)"vis b3,1"); Trav_Was_Edited = true; if (CurrentView == TRAVEL2VIEW) TravPage2Edited = true; }   // (B49)
 FLASHMEM void TravelAilTapped() { TravRevAil = !TravRevAil; SendValue((char *)"tn6", TravRevAil ? 1 : 0); TravelWasEdited(); }
 FLASHMEM void TravelEleTapped() { TravRevEle = !TravRevEle; SendValue((char *)"tn7", TravRevEle ? 1 : 0); TravelWasEdited(); }
 FLASHMEM void TravelCollTapped() { TravRevColl = !TravRevColl; SendValue((char *)"tn8", TravRevColl ? 1 : 0); TravelWasEdited(); }

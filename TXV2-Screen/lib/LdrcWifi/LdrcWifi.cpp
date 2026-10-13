@@ -322,6 +322,13 @@ void WifiSetup::touch(bool down, int x, int y) {
     if (hit(lastX_, lastY_) == id && !repeated_) act(id);          // lifted where it was put down
     else build();
 }
+void WifiSetup::cancelTouch() {
+    // B59 (10 Oct 2026): a corner held for the radios or the workshop door is a corner, not a press (Cancel sits under the
+    // radios' corner on the keys page, Show / Hide under the door's): the finger is forgotten, its lift presses nothing.
+    if (!down_) return;
+    down_ = false; pressed_ = 0; repeated_ = false;
+    build();
+}
 void WifiSetup::key(int id) {
     if (id == ID_DELETE) { if (!typed_.empty()) typed_.erase(typed_.size() - 1); }
     else if (id == ID_SPACE) { if (typed_.size() < WIFI_PASS_MAX) typed_.push_back(' '); }

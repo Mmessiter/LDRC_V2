@@ -34,6 +34,7 @@ public:
     virtual uint32_t ms() = 0;
     virtual bool pipeReady() = 0;             // the Bluetooth pipe to the receiver is joined
     virtual bool armed() = 0;                 // the model could be flying: nothing goes
+    virtual bool mainBoardBusy() = 0;         // (B52) the main board's own backup, restore or write is running (its busy box on the Backup page): the pipe is its own, and a save or exit would restart the flight controller under it
     virtual bool ask(const std::string &method, const std::string &path, uint32_t waitMs) = 0;   // one request at a time (false: busy, not joined); waitMs: how long the reply may take
     virtual int askState() = 0;               // 0 waiting, 1 answered, -1 no answer
     virtual int askCode() = 0;                // the answer's HTTP code
@@ -59,6 +60,7 @@ public:
     bool typing() const { return page_ == PG_KEYS; }
     void poll();
     void touch(bool down, int x, int y);
+    void cancelTouch();                       // (B59) a corner held: the finger on the page is forgotten, nothing is pressed when it lifts
     const WifiScene &scene() const { return scene_; }
     std::string pageName() const;             // "console", "keys", "note", "" for the record
     bool cliOpen() const { return cliOpen_; }
@@ -101,6 +103,9 @@ private:
     bool wasReady_;                                          // (1.11.56) the pipe was joined at the last poll: its going is said once
     bool more_; uint32_t moreAt_, moreSince_; size_t moreLines_;   // (1.11.53) the reply came 202, its start only: /api/cli/out is fetched until it is whole
     std::string jobFailed_;                                   // (1.11.51) a job that could not finish: why, said in a note once the line is left
+    bool requested_;                                          // (B55) a request has gone to the receiver this time: it may have opened the flight controller's command line, which must be left before the page goes
+    bool batchOpen_;                                          // (B53) Execute diff: "batch start" has gone and no "batch end" after it - Rotorflight refuses a save while a batch with errors is open
+    bool ownCmd_ = false;                                     // (B53) the command out is the page's own "batch end", not one of the file's
     std::vector<std::string> exec_; size_t execAt_; int sent_, refused_; std::string execFile_;
     std::string pending_, diffText_, savedAs_;
     std::string noteL1_, noteL2_, noteL3_, noteL4_, noteB1_, noteB2_; bool noteBad_; int noteFrom_;
@@ -111,10 +116,16 @@ private:
 // The reply to one command as the flight controller printed it, made into lines: carriage returns dropped, the prompt
 // ("# " alone, or at the end of the last line) and empty lines at the end dropped. Shared with the file written by Diff to card.
 void cliLines(const std::string &reply, std::vector<std::string> &out);
-std::string cliFileName(const std::string &model, const std::string &stamp, int n);   // "/rfdiff/<Model>_<stamp>.txt", or "..._<n>.txt" with no stamp
+std::string cliFileName(const std::string &model, const std::string &stamp, long long n);   // "/rfdiff/<Model>_<stamp>.txt", or "..._<n>.txt" with no stamp
 std::string cliModelPrefix(const std::string &model);                                 // "<Model>_" as the file names begin
+// A file's place in time, from its name: a stamp "2026-10-10_0915" is 202610100915, a number is itself, anything else -1
+// (not one of this model's files: "Goblin_700_..." is not a diff of "Goblin" - B22). A file made with no clock takes the
+// number after the newest file there is (cliTopKey + 1), so it ranks newest - as it is (B54: a diff made at the field
+// used to lose to an older dated one from home).
+long long cliFileKey(const std::string &path, const std::string &prefix);
+long long cliTopKey(const std::string &model, const std::vector<std::string> &files);   // the largest key among the model's files (0 = none)
 std::string cliNewest(const std::string &model, const std::vector<std::string> &files);   // the newest of the model's files ("" = none)
-bool cliNewer(const std::string &a, const std::string &b, const std::string &prefix);  // of two of a model's files (prefix = "/rfdiff/" + cliModelPrefix), is a the newer? (stamped beat numbered; numbered compare as numbers)
+bool cliNewer(const std::string &a, const std::string &b, const std::string &prefix);  // of two of a model's files (prefix = "/rfdiff/" + cliModelPrefix), is a the newer? (by cliFileKey)
 // The commands of a diff file: every line that is not empty and not a comment; save / exit / reboot left out (the save is the job's own)
 void cliCommands(const std::string &text, std::vector<std::string> &out);
 bool cliReadOnly(const std::string &cmd);

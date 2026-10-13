@@ -236,6 +236,7 @@ struct RenderCli : public ldrc::CliHost {
     uint32_t ms() override { return t; }
     bool pipeReady() override { return ready; }
     bool armed() override { return armedV; }
+    bool mainBoardBusy() override { return false; }
     bool ask(const std::string &method, const std::string &path, uint32_t) override {
         asked = true; code = 200; body.clear(); err.clear();
         if (path.rfind("/api/cli/leave", 0) == 0) { body = "left"; return true; }

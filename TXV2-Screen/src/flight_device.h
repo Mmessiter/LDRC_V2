@@ -31,6 +31,7 @@ static void flightStore() {
     }
     if (prefs.getInt("flightSlot", 0) != flight.slotInUse()) prefs.putInt("flightSlot", flight.slotInUse());
 }
+static void flightTouchCancel() { flight.cancelTouch(); }   // (B59) a corner held: not a press
 static void flightTouch(bool pressed, int x, int y, uint32_t now) {
     static uint32_t lastDown = 0;
     if (pressed) { flightTouchedAt = now; lastDown = now; }

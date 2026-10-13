@@ -20,10 +20,10 @@ When the signal comes back, full control returns.||
 WHICH RECEIVERS USE THE TICKS:|
 A Version 1 receiver moves only the ticked channels.|
 The others stay where they were.|
-A Version 2 receiver ignores the ticks, for now.|
-'Save' stores all 16 channels, and all 16 go to their|
-saved positions. So hold EVERY stick and switch|
-where it should be when you press 'Save'.||
+A Version 2 receiver on 0.9.885 or later moves only the|
+ticked channels too. Older Version 2 firmware moves all 16:|
+there, hold EVERY stick and switch where it should be|
+when you press 'Save'.||
 A Version 2 receiver that sends CRSF to a flight controller|
 (Rotorflight) does not use these positions.|
 The flight controller's own failsafe takes over: set it there.|

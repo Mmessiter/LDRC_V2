@@ -7,7 +7,7 @@
 #ifndef BUDDYWIRELESS_H
 #define BUDDYWIRELESS_H
 
-#define LOSTCONTACTTHRESHOLD 1000 // 1000 fails in a row and we declare the buddy or master dead (5 seconds)
+#define LOSTCONTACTTHRESHOLD 100 // B26: 100 fails in a row (half a second at 200 Hz) and the buddy or master is declared gone - was 1000 (5 s of the pupil's last sticks)
 #define ENCRYPT_KEY 0xFEADFEADBB  // The encryption key is used for the Pipe address between the transmitters
 
 #define MASTER_HAS_CONTROL 0 // possible values for CurrentBuddyState

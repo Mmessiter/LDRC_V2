@@ -33,8 +33,12 @@ FLASHMEM void RotorFlightStart()
 {
     char Vbuf[15];
 
-    if (MotorEnabled || !SafetyON) // (B45: which one, so a refusal explains itself)
-        MsgBox(pRXSetupView, (char *)(MotorEnabled ? "The motor is ON.\r\nSwitch it off first." : "The safety is off.\r\nSafety on first."));
+    if (MotorEnabled || !SafetyON)
+    {
+        if (LedWasGreen)
+            return; // B02: with the model flying the touch is ignored - a box that waits for OK would stop the switches being read
+        MsgBox(pRXSetupView, (char *)(MotorEnabled ? "The motor is ON.\r\nSwitch it off first." : "The safety is off.\r\nSafety on first.")); // (B45: which one, so a refusal explains itself)
+    }
 
     SendCommand((char *)"page RFView");
     CurrentView = ROTORFLIGHTVIEW;
@@ -103,7 +107,9 @@ FLASHMEM void EndRFSettingsView() // OK on the settings page: the fields read ba
         if (temp[adc] < '0' || temp[adc] > '9')
             armDigitsOnly = false;
     int newArming = atoi(temp);
-    if (armDigitsOnly && newArming > 0 && newArming <= CHANNELSUSED)
+    if (armDigitsOnly && newArming >= 1 && newArming <= 5) // B48: Rotorflight's switch channels start at 6: 1-5 would make the Switches page refuse every save
+        MsgBox((char *)"page RFSetupView", (char *)"Rotorflight's switches start at channel 6:\r\nthe arming channel must be 6 to 16.\r\nIt was left as it was.");
+    else if (armDigitsOnly && newArming > 0 && newArming <= CHANNELSUSED)
         ArmingChannel = (uint8_t)newArming;
 
     {

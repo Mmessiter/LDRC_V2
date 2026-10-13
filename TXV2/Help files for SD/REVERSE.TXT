@@ -3,8 +3,7 @@ Nothing changes until you press 'OK'.|
 'OK' keeps the changes and goes back to 'Model setup'.||
 Reversing comes last: after mixes, trims, subtrim|
 and any re-routing on the 'Inputs' page.|
-So each box reverses the receiver output of that number.|
-With the usual Out numbers on 'Inputs',|
-that is the channel named beside the box.||
+So each box reverses the receiver output of that number,|
+and the name beside the box is the channel routed there.||
 'Motor off value' ('Model setup', 'Options') is not reversed.|
 If you reverse the throttle, change that value to match.|

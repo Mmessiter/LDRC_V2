@@ -119,6 +119,7 @@ static uint32_t GOV_Global_Start_Time = 1000;
 static int CurrentView = RFGOVERNORVIEW_GLOBAL, CurrentMode = 0;
 static uint16_t BlockSeen = 0; static bool BlockShown = false, BlockBankChanges = true;
 static bool Reading_PIDS_Now = false, Reading_RATES_Now = false, Reading_RATES_Advanced_Now = false, Reading_PIDS_Advanced_Now = false, Reading_GOV_Now = false, Reading_GOV_Config_Now = true;
+static bool PIDS_Loaded = false, GOV_Loaded = false;   // (B40/B41: set when a set comes whole)
 static int hides = 0, boxes = 0, restarts = 0, values = 0; static std::string lastBox;
 static void SendCommand(char *) {}
 static void SendValue(char *, int) { ++values; }

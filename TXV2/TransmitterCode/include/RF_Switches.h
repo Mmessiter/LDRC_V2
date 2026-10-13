@@ -43,7 +43,7 @@ static inline int SwUs(uint8_t b) { return 1500 + 5 * (b > 127 ? (int)b - 256 : 
 static inline uint8_t SwStepOf(int us) { int st = (int)floorf((float)(us - 1500) / 5.0f + 0.5f); if (st < -125) st = -125; if (st > 125) st = 125; return (uint8_t)(st < 0 ? st + 256 : st); }
 static inline bool SwUsed(const SwSlot &s) { return s.hi > s.lo; }
 static inline bool SwSame(const SwSlot &a, const SwSlot &b) { return a.perm == b.perm && a.aux == b.aux && SwStepOf(a.lo) == SwStepOf(b.lo) && SwStepOf(a.hi) == SwStepOf(b.hi); }
-FLASHMEM static int SwArmChannel() { return (RotorFlight_V && ArmingChannel >= 1 && ArmingChannel <= CHANNELSUSED) ? ArmingChannel : 0; }   // 1-based, 0 = none set
+FLASHMEM static int SwArmChannel() { return (RotorFlight_V && ArmingChannel >= 6 && ArmingChannel <= CHANNELSUSED) ? ArmingChannel : 0; }   // 1-based, 0 = none set (B48: 1-5 cannot be a switch channel: as none)
 
 FLASHMEM static void SwBusy(const char *msg)
 {
@@ -234,6 +234,7 @@ FLASHMEM void EndSwitchView() // OK
 FLASHMEM static bool SwArmOk(const SwSlot &s, char *why, size_t n) // the arm action and this transmitter's safety switch agree
 {
     if (s.perm != 0) return true;
+    if (RotorFlight_V && ArmingChannel >= 1 && ArmingChannel <= 5) { snprintf(why, n, "This model's arming channel is %d (Settings).\r\nRotorflight's switches start at channel 6:\r\nset it to 6 - 16 there first.", ArmingChannel); return false; }   // B48: said, not 'Channel 257: ?'
     const int ac = SwArmChannel();
     if (ac && s.aux + 6 != ac) { snprintf(why, n, "The arm switch must be on channel %d,\r\nthis model's arming channel (Settings).", ac); return false; }
     if (s.lo <= 988) { snprintf(why, n, "The arm zone reaches 988 us: the model\r\nwould arm with the safety ON. Move the\r\nleft end above 988."); return false; }

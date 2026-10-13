@@ -94,6 +94,9 @@ int main() {
     attrs["bar.d0"] = 980; attrs["bar.d1"] = 2125; SwitchBarMoved(); boxes = 0; fcLog.clear(); SaveSwitchActions(); run(4); CHECK(boxes == 1 && lastBox.find("The arm zone reaches 988") == 0 && writes(35) == 0);
     attrs["bar.d0"] = 1200; attrs["bar.d1"] = 1900; SwitchBarMoved(); boxes = 0; SaveSwitchActions(); run(4); CHECK(boxes == 1 && lastBox.find("The arm zone stops short of 2012") == 0);
     attrs["bar.d0"] = 1500; attrs["bar.d1"] = 2125; SwitchBarMoved(); boxes = 0; SwitchRemove(); CHECK(boxes == 1 && lastBox.find("The arm switch cannot be removed") == 0 && SwN == 3);
+    // 4b. B48: an arming channel of 1-5 (Settings) is said, and never 'Channel 257: ?'
+    ArmingChannel = 3; boxes = 0; SaveSwitchActions(); run(4); CHECK(boxes == 1 && lastBox.find("This model's arming channel is 3") == 0 && SwArmChannel() == 0);
+    ArmingChannel = 6;
     // 5. Add: the picker opens on Rescue; Self-level chosen: a free slot (slot 2), ON in the upper third of the next channel
     SwitchAdd(); CHECK(CurrentView == SWITCHPICKVIEW && vals["list"] == 1);
     vals["list"] = 2; SwitchPickOk(); run(2);

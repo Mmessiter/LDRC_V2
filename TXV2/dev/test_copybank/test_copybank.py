@@ -46,7 +46,7 @@ int PipeReplyBytes(uint8_t *out, int max) { int n = 0; const char *p = PipeRepBo
 struct FcReq { int fn; std::string data; };
 static std::vector<FcReq> fcLog;
 static std::string hexOf(const uint8_t *d, int n) { char b[4]; std::string s; for (int i = 0; i < n; ++i) { snprintf(b, sizeof b, "%02X", d[i]); s += b; } return s; }
-static std::string pid[6], adv[6], resc[6], gov[6], rates[6]; static int fcPid = 1, fcRate = 1, busyOnce = 0;
+static std::string pid[6], adv[6], resc[6], gov[6], rates[6]; static int fcPid = 1, fcRate = 1, busyOnce = 0; static bool refuse183 = false;
 static void fcReply(int code, const std::string &body) { PipeRepCode = code; strncpy(PipeRepBody, body.c_str(), sizeof(PipeRepBody) - 1); PipeRepBody[sizeof(PipeRepBody) - 1] = 0; PipeRepId = PipeReqId; }
 int MspAsk(uint8_t fn, const uint8_t *data, int len) {
     ++PipeReqId; PipeReqSentMs = now; fcLog.push_back({fn, hexOf(data, len)});
@@ -58,6 +58,7 @@ int MspAsk(uint8_t fn, const uint8_t *data, int len) {
     if (fn == 146) { fcReply(200, resc[fcPid]); return PipeReqId; }
     if (fn == 148) { fcReply(200, gov[fcPid]); return PipeReqId; }
     if (fn == 111) { fcReply(200, rates[fcRate]); return PipeReqId; }
+    if (fn == 183 && refuse183) { fcReply(400, "refused"); return PipeReqId; }
     if (fn == 183 && len == 3) { const int t = data[0], dst = data[1], src = data[2]; if (t == 0) { pid[dst] = pid[src]; adv[dst] = adv[src]; resc[dst] = resc[src]; gov[dst] = gov[src]; } else rates[dst] = rates[src]; fcReply(200, ""); return PipeReqId; }
     if (fn == 149) { gov[fcPid] = hexOf(data, len); fcReply(200, ""); return PipeReqId; }
     if (fn == 202) { pid[fcPid] = hexOf(data, len); fcReply(200, ""); return PipeReqId; }
@@ -113,6 +114,19 @@ int main() {
     // (the FC "forgets" the copy of PID+: the fake copies, then we spoil the target after the copy)
     for (int i = 0; i < 80 && CbStep != CB_IDLE; ++i) { CopyBankPoll(); now += 50; if (CbStep == CB_STORE) adv[1] = rep("00", 43); }
     CHECK(lastBox.find("but read back DIFFERENT: PID+") != std::string::npos);
+    // 8. B44: a copy that fails part way puts the flight controller back on the transmitter's banks before the box (B45: the
+    // bank switch is held meanwhile: CopyBankRunning)
+    CbFrom = 0; CbTo = 1; CbFlight = true; CbGov = true; CbRates = true; CbAdj = false; adv[0] = rep("3C", 43); refuse183 = true;
+    fcLog.clear(); boxes = 0; CopyBankNow(); CHECK(CopyBankRunning() && BlockBankChanges); run();
+    CHECK(CbStep == CB_IDLE && !CopyBankRunning() && !BlockBankChanges && boxes == 1 && lastBox.find("The flight tuning was not copied") == 0);
+    CHECK(fcPid == Bank - 1 && fcRate == DualRateInUse - 1);
+    { const int n = (int) fcLog.size(); CHECK(n >= 2 && fcLog[n - 1].fn == 210 && fcLog[n - 1].data == "81" && fcLog[n - 2].fn == 210 && fcLog[n - 2].data == "01"); }
+    refuse183 = false;
+    // 9. B44: the page left mid-copy: the banks put back, no box on the other page
+    fcLog.clear(); boxes = 0; CopyBankNow(); CHECK(CbStep != CB_IDLE);
+    CopyBankPoll(); now += 50; CurrentView = 47;   // (the menu: the motor switch moved, say)
+    run(); CHECK(CbStep == CB_IDLE && boxes == 0 && fcPid == Bank - 1 && fcRate == DualRateInUse - 1 && !BlockBankChanges);
+    CurrentView = COPYBANKVIEW;
     printf("test_copybank: %d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }

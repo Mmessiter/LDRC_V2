@@ -235,8 +235,8 @@ void ReadBankSwitch()
     static uint32_t blockedQuietSince = 0;
     if (BlockBankChanges)
     {
-        if (ParametersToBeSentPointer || CurrentMode != NORMAL)
-            blockedQuietSince = 0;                    // real transfer — block is doing its job
+        if (ParametersToBeSentPointer || CurrentMode != NORMAL || CopyBankRunning())
+            blockedQuietSince = 0;                    // real transfer — block is doing its job (B45: a bank copy over the pipe too)
         else if (!blockedQuietSince)
             blockedQuietSince = millis();
         else if (millis() - blockedQuietSince > 5000)
@@ -289,6 +289,8 @@ void ReadDualRateSwitch()
         DualRateInUse = GetSwitchPosition(DualRatesSwitch);
         if (DualRateInUse == 0) // if switch not used
             DualRateInUse = 4;
+        if (Bank >= 1 && Bank <= 4 && DualRateRate[Bank - 1] > 0)
+            DualRateInUse = DualRateRate[Bank - 1]; // B10: the Rates page's "Bank N will use rate X" (it went missing in June 2025; the page kept offering it)
     }
 
     if (LinkRatesToBanks && RotorFlight_V)
@@ -445,7 +447,7 @@ void BankHasChanged()
         DisplayCurveAndServoPos();
     if (CurrentView == SLOWSERVOVIEW)
     {
-        ReadSpeedsScreen(PreviousBank - 1);
+        ReadSpeedsScreen(PreviousBank - 1, true); // B37: with the edits made so far
         UpdateSpeedScreen();
     }
     if (CurrentView == DUALRATESVIEW)

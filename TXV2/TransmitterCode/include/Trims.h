@@ -506,12 +506,21 @@ void TrimsToSubtrim()
     {
         for (int i = 0; i < 4; ++i)
         {
-            int temp = (int)(Trims[Bank][InputTrim[i]] - 80) * (int)TrimMultiplier; // 'int temp' is needed to avoid overflow
-            temp /= 5;                                                              // Subtrims' multiplier is 5 always
-            int NewSubTrim = (int)SubTrims[InputTrim[i]] + temp;                    // ClaudeFix-2-7-2026 signed: a low trim + low subtrim used to wrap the uint8_t to ~230 (a JUMP to near max)
-            SubTrims[InputTrim[i]] = constrain(NewSubTrim, 0, 255);                 // Trims *affected* channels are in the InputTrim[] array
+            int ch = InputTrim[i]; // the channel that gets the subtrim (Trims *affected* channels are in the InputTrim[] array)
+            int tr = ch;           // B09: in stick mode 2 the elevator and throttle TRIMS are swapped, exactly as GetTrimAmount() applies them
+            if (SticksMode == 2)
+            {
+                if (ch == 1)
+                    tr = 2;
+                else if (ch == 2)
+                    tr = 1;
+            }
+            int temp = (int)(Trims[Bank][tr] - 80) * (int)TrimMultiplier; // 'int temp' is needed to avoid overflow
+            temp /= 5;                                                    // Subtrims' multiplier is 5 always
+            int NewSubTrim = (int)SubTrims[ch] + temp;                    // ClaudeFix-2-7-2026 signed: a low trim + low subtrim used to wrap the uint8_t to ~230 (a JUMP to near max)
+            SubTrims[ch] = constrain(NewSubTrim, 0, 255);
             for (int j = 1; j < 5; ++j)
-                Trims[j][InputTrim[i]] = 80; // Reset all four normal trims to centre
+                Trims[j][tr] = 80; // Reset all four normal trims to centre
         }
         PlaySound(BEEPCOMPLETE);
         MsgBox(pTrimView, ItsAllDone); // Done!

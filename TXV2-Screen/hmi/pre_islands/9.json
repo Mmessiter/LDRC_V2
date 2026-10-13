@@ -104,7 +104,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "print \"HelpView:RXSETUP1.TXT\"\nLogView.t0.txt=\"RX setup help\"\nLogView.return.txt=\"RXSetupView\""
+    "r": "print \"HelpView:RXSETUP1.TXT\"\nLogView.t0.txt=\"RX setup help\"\nLogView.return.txt=\"RXOptionsView\""
    }
   },
   {

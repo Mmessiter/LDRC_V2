@@ -177,7 +177,31 @@ FLASHMEM bool BakEditsWaiting()
     char e[8];
     return BakHaveFile() && BakGet("edits", e, sizeof(e)) > 0;
 }
+static bool BakItemOk[80];           // B43: a restore item written, or found the same already (never a failed or a skipped one)
+static bool BakCardFailed = false;   // B20: the card would not take the file
 FLASHMEM static void BakClearEdits() { BakSet("edits", ""); }
+FLASHMEM static void BakClearEdit(const char *key) // B43: one key's mark goes, the others stay
+{
+    char e[400] = "", out[400] = "";
+    if (BakGet("edits", e, sizeof(e)) <= 0)
+        return;
+    const size_t kl = strlen(key);
+    for (const char *p = e; *p;)
+    {
+        const char *q = strchr(p, ',');
+        const size_t len = q ? (size_t)(q - p) : strlen(p);
+        if (!(len == kl && strncmp(p, key, kl) == 0) && len > 0 && strlen(out) + len + 2 < sizeof(out))
+        {
+            if (out[0])
+                strcat(out, ",");
+            strncat(out, p, len);
+        }
+        if (!q)
+            break;
+        p = q + 1;
+    }
+    BakSet("edits", out);
+}
 FLASHMEM bool BakOffline() { return !(BoundFlag && ModelMatched) && BakHaveFile(); }
 
 // ---------------------------------------------------------------- hex helpers
@@ -729,7 +753,7 @@ FLASHMEM static void BakFinish(const char *verdict)
     BlockBankChanges = false;
     BakBusy("");
     BakShowPage();
-    PlaySound(BakFails ? WHAHWHAHMSG : BEEPCOMPLETE);
+    PlaySound((BakFails || BakCardFailed) ? WHAHWHAHMSG : BEEPCOMPLETE);
     MsgBox((char *)"page RFBackUpView", (char *)verdict);
     BakShowPage();
 }
@@ -743,7 +767,15 @@ FLASHMEM static void BakStart(int job)
         BakShowPage();
         return;
     }
-    BakJob = job; BakStep = 0; BakIdx = 0; BakSub = 0; BakTries = 0; BakDone = 0; BakFails = 0; BakWritten = 0; BakUnchanged = 0; BakFailed[0] = 0;
+    if (job == BAK_JOB_BACKUP && !(BoundFlag && ModelMatched))
+    { // B20: with no model the reads were answered from an emptied file, and that was saved over the good one
+        PlaySound(WHAHWHAHMSG);
+        MsgBox((char *)"page RFBackUpView", (char *)"The model is not connected: there is\r\nnothing to back up. The copy on the\r\ncard was left as it was.");
+        BakShowPage();
+        return;
+    }
+    BakJob = job; BakStep = 0; BakIdx = 0; BakSub = 0; BakTries = 0; BakDone = 0; BakFails = 0; BakWritten = 0; BakUnchanged = 0; BakFailed[0] = 0; BakCardFailed = false;
+    for (int i = 0; i < 80; ++i) BakItemOk[i] = false;
     BakWroteAny = BakWroteGov = BakWroteMotor = false;
     BlockBankChanges = true;
     CurrentMode = job == BAK_JOB_BACKUP ? SAVE_RF_SETTINGS : RESTORE_RF_SETTINGS;
@@ -965,6 +997,7 @@ FLASHMEM static void BakRestoreTake(bool ok)
         { // this part is as the file has it
             if (more) { ++BakSub; BakReq = BakRestoreReadAsk(t); return; }
             if (BakItemWrote) ++BakWritten; else ++BakUnchanged;
+            if (BakIdx < 80) BakItemOk[BakIdx] = true;   // B43
             BakItemWrote = false; ++BakIdx; ++BakDone; BakSub = 0; BakTries = 0; BakRestoreNext(); return;
         }
         { uint8_t b[360]; const int n = HexToBytes(payload, b, sizeof(b)); BakReq = MspAsk(t.writeFn, b, n); }
@@ -985,6 +1018,7 @@ FLASHMEM static void BakRestoreTake(bool ok)
             BakNoteFail(t); ++BakIdx; ++BakDone; BakSub = 0; BakTries = 0; BakRestoreNext(); return;
         }
         if (more) { ++BakSub; BakTries = 0; BakReq = BakRestoreReadAsk(t); BakStep = 11; return; }
+        if (BakIdx < 80) BakItemOk[BakIdx] = true;   // B43
         ++BakWritten; BakItemWrote = false; ++BakIdx; ++BakDone; BakSub = 0; BakTries = 0; BakRestoreNext();
         return;
     }
@@ -1001,7 +1035,8 @@ FLASHMEM void BackupRun()
     if (BakStep == 99)
     {
         char v[220];
-        if (BakJob == BAK_JOB_BACKUP) snprintf(v, sizeof(v), BakFails ? "Backed up, but %d could not be read:\r\n%.100s" : "Backed up: %d settings on the card.", BakFails ? BakFails : BakDone, BakFailed);
+        if (BakJob == BAK_JOB_BACKUP && BakCardFailed) snprintf(v, sizeof(v), "Not backed up: the card would not take\r\nthe file.");
+        else if (BakJob == BAK_JOB_BACKUP) snprintf(v, sizeof(v), BakFails ? "Not backed up: %d could not be read:\r\n%.90s\r\nThe copy on the card is as it was." : "Backed up: %d settings on the card.", BakFails ? BakFails : BakDone, BakFailed);
         else snprintf(v, sizeof(v), "%d written, %d were the same already%s%s%.90s", BakWritten, BakUnchanged, BakFails ? ".\r\nNot restored: " : ".", BakFails ? "" : "", BakFails ? BakFailed : "");
         BakFinish(v);
         return;
@@ -1043,7 +1078,8 @@ FLASHMEM void BackupRun()
         BakStep = 91;
         return;
     case 91:
-        if (!BakSave()) { ++BakFails; strncpy(BakFailed, "the card would not take the file", sizeof(BakFailed) - 1); }
+        if (BakFails) BakLoad(ModelName);   // B20: a sweep with holes never replaces the backup on the card: the card's own copy back in memory
+        else if (!BakSave()) BakCardFailed = true;
         BakStep = 99;
         return;
     case 10: case 11: case 12: case 13: BakRestoreTake(ok); return;
@@ -1058,7 +1094,18 @@ FLASHMEM void BackupRun()
         return;
     case 82:
         if (!ok) { if (++BakTries < 2) { BakReq = MspAsk(250, nullptr, 0); return; } ++BakFails; strncat(BakFailed, "the store (250): run the restore again", sizeof(BakFailed) - strlen(BakFailed) - 1); BakStep = 99; return; }
-        if (BakOnlyEdits()) { BakClearEdits(); BakSave(); }
+        if (BakOnlyEdits())
+        { // B43: the marks of what was written (or found the same) go; a failed or skipped edit keeps its mark and is offered again
+            for (int i = 0; i < BakListN && i < 80; ++i)
+            {
+                if (!BakItemOk[i]) continue;
+                char key[16];
+                const BakTodo &t = BakList[i];
+                BakKey(key, sizeof(key), t.readFn, t.bank < 0 ? -1 : (t.bank & 0x3F), t.idx);
+                BakClearEdit(key);
+            }
+            BakSave();
+        }
         if (BakWroteGov || BakWroteMotor)
         {
             BakBusy("Restarting the flight controller ...");

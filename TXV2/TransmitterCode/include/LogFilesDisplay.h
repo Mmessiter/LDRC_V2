@@ -66,6 +66,8 @@ void BottomOfLogFileNEW()
             break;
         if (L < 2)                     // safety: cannot make progress (shouldn't happen)
             break;
+        if (StartReadLine + (L - 1) >= MAXSEEKPOSITIONS - 1)
+            break;                     // B57: the table's end: Bottom stops here on a log of more than 5000 lines
         StartReadLine += (L - 1);      // stride almost a whole window — every line's seek position
                                        // in this window was stored, so the next start is always valid
     }
@@ -119,6 +121,8 @@ void LogReleasedNEW()
             int next = StartReadLine + BUFFEREDLINES;
             if (FinalReadStartLine != 0xFFFF && next > (int)FinalReadStartLine)
                 next = FinalReadStartLine;
+            if (next > MAXSEEKPOSITIONS - 1)
+                next = MAXSEEKPOSITIONS - 1; // B57: never past the table
             if (next == StartReadLine) // already showing the final window — nothing to fetch
             {
                 Previous_Current_Y = Current_Y;
@@ -390,6 +394,8 @@ uint16_t ReadAFewLines()
 {
     char ReadBuffer[READBUFFERSIZE + 50]; // a bit of extra just in case
 
+    if (StartReadLine >= MAXSEEKPOSITIONS - 1)
+        StartReadLine = MAXSEEKPOSITIONS - 1; // B57: the table of line starts ends here - a bigger log stops at its end instead of reading past the table
     if (!StartReadLine)
     {
         ThisSeekPosition = 0; // if at top of file

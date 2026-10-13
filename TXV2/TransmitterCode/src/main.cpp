@@ -343,6 +343,7 @@ void GreenLedOn()
         ResetMotorTimer();
         TotalPacketsAttempted = 0;
         strcpy(TextFileName, ""); // avoid logging to the wrong file
+        strcpy(LogWriteName, ""); // B56: today's name again, from the clock
     }
     else
     {
@@ -536,10 +537,12 @@ void RerouteOutputs()
         temp[i] = PreMixBuffer[i];
     }
     for (int i = 0; i < CHANNELSUSED; ++i)
-    {
-        PreMixBuffer[i] = temp[ChannelOutPut[i]];
-        SendBuffer[i] = PreMixBuffer[i];
+    { // B31: channel i goes OUT to output ChannelOutPut[i], as the Inputs page says (it gathered the other way round: a ring of three sent channel 1 to output 3)
+        const uint8_t out = ChannelOutPut[i] < CHANNELSUSED ? ChannelOutPut[i] : i;
+        PreMixBuffer[out] = temp[i];
     }
+    for (int i = 0; i < CHANNELSUSED; ++i)
+        SendBuffer[i] = PreMixBuffer[i];
 }
 
 /*********************************************************************************************************************************/
@@ -808,7 +811,17 @@ void UpdateButtonLabels()
     {
         for (int i = 0; i < 16; ++i)
         {
-            SendText(fsch_labels[i], ChannelNames[i]);
+            uint8_t src = i;
+            if (CurrentView == REVERSEVIEW)
+            { // B31: Reverse acts on OUTPUT i, after routing: name it by the channel that is routed there
+                for (uint8_t k = 0; k < CHANNELSUSED; ++k)
+                    if (ChannelOutPut[k] == i)
+                    {
+                        src = k;
+                        break;
+                    }
+            }
+            SendText(fsch_labels[i], ChannelNames[src]);
             SendValue(InputStick_Labels[i], InPutStick[i] + 1);
             SendValue(OutputStick_Labels[i], ChannelOutPut[i] + 1);
             if (CurrentView != SLOWSERVOVIEW)
@@ -1539,7 +1552,7 @@ int AnalogueReed(uint8_t InputChannel)
 
 /*********************************************************************************************************************************/
 
-void SetDefaultValues()
+void SetDefaultValues(bool Calibrating) // B16: the calibration branch only when a calibration starts (Reset transmitter ran from the Calibrate page and took it)
 {
     uint16_t j = 0;
     uint16_t i = 0;
@@ -1634,7 +1647,7 @@ void SetDefaultValues()
         InputTrim[i] = i;
     }
 
-    if (CurrentView == CALIBRATEVIEW)
+    if (Calibrating)
     {
         UseMotorKill = false;
         MotorChannelZero = 50;
@@ -1685,6 +1698,8 @@ void SetDefaultValues()
         ServoCentrePulse[i] = 1500;
     }
     ArmingChannel = 6; // for Rotorflight
+    RotorFlight_V = 0;        // B06: not a Rotorflight model until it is set up as one (a reused or reset slot kept the old flag)
+    LinkRatesToBanks = false; // B06
     GearRatio = 10.3;  // for helicopters with swash plates. This is the ratio between servo movement and blade pitch change. 10.3 is a typical value for a 700 size heli
     for (j = 0; j < 4; ++j)
     {
@@ -2853,7 +2868,7 @@ void StartSlowView()
 }
 
 /******************************************************************************************************************************/
-void ReadSpeedsScreen(uint8_t bk)
+void ReadSpeedsScreen(uint8_t bk, bool FromPage)
 {
     if (bk > 3)
         return; // ClaudeFix-2-7-2026 ServoSpeed is [5][17]; the motor-switch "force bank change" sentinel (254) used to arrive here and write 4 KB past it
@@ -2865,11 +2880,14 @@ void ReadSpeedsScreen(uint8_t bk)
     char chgs[512];
     char change[] = "change";
     char cleared[] = "XX:";
-    for (uint16_t i = 0; i < 500; ++i)
-    { // get copy of any changes
-        chgs[i] = TextIn[i + 4];
-        chgs[i + 1] = 0;
-    }
+    if (FromPage)
+        GetText(change, chgs, sizeof(chgs)); // B37: the bank switch moved before OK - the list of edited boxes is still on the page
+    else
+        for (uint16_t i = 0; i < 500; ++i)
+        { // get copy of any changes
+            chgs[i] = TextIn[i + 4];
+            chgs[i + 1] = 0;
+        }
     SendCommand(ProgressStart);
     for (int i = 0; i < 16; ++i)
     {
@@ -2970,9 +2988,9 @@ void FixFileName()
 }
 
 /******************************************************************************************************************************/
-void WriteBackup()
+bool WriteBackup() // B21: true when the file was written (a name too long, or with no .MOD, is refused)
 {
-
+    bool ok = false;
     char ModExt[] = ".MOD";
     uint8_t Iterations = 4;
     char ProgressStart[] = "vis Progress,1";
@@ -2992,6 +3010,7 @@ void WriteBackup()
         }
         CloseModelsFile();
         SingleModelFlag = false;
+        ok = !FileError;
     }
     else
     {
@@ -3003,6 +3022,7 @@ void WriteBackup()
     DelayWithDog(100);
     SendCommand(ProgressEnd);
     LastFileInView = 120;
+    return ok;
 }
 
 /******************************************************************************************************************************/
@@ -3447,7 +3467,7 @@ FASTRUN void ButtonWasPressed()
         char CMsg1[] = "Move all controls to their full\r\nextent several times,\r\nthen press Next.";
         char SvB0[] = "b0";
         char CMsg2[] = "Next";
-        char Cmsg3[] = "Centre all channels.\r\nPut edge switches fully back,\r\nor fully forward, then press Finish.";
+        char Cmsg3[] = "Centre all channels.\r\nPush every top switch fully AWAY\r\nfrom you, then press Finish."; // B30: the position held becomes "away"
         char Cmsg4[] = "Finish";
         char Cmsg5[] = "Calibrate again";
         char Cmsg6[] = "Calibration saved.";
@@ -3565,7 +3585,15 @@ FASTRUN void ButtonWasPressed()
         { //  goto main TX setup screen
             ClearText();
             if (CurrentView == CALIBRATEVIEW)
+            {
+                if (CurrentMode == CALIBRATELIMITS || CurrentMode == CENTRESTICKS)
+                { // B17: OK part way through: nothing half-swept is kept - the limits and switch directions come back from the card, normal mode again
+                    CurrentMode = NORMAL;
+                    LoadAllParameters();
+                    RedLedOn();
+                }
                 ReadOneModel(ModelNumber); // because it was cleared for calibration
+            }
             SaveAllParameters();
             CurrentView = TXSETUPVIEW;
             SendCommand(pTXSetupView);
@@ -3614,7 +3642,10 @@ FASTRUN void ButtonWasPressed()
 
         if (InStrng(HelpView, TextIn) > 0)
         { // Display Help screen(s)
+            if (CurrentView == RXSETUPVIEW1)
+                ReadRXOptionsView(); // B23: what was typed on Model options is kept (the page is drawn afresh on the way back)
             SavedCurrentView = CurrentView;
+            HelpTookRead = Reading_PIDS_Now || Reading_RATES_Now || Reading_RATES_Advanced_Now || Reading_PIDS_Advanced_Now || Reading_GOV_Now || Reading_GOV_Config_Now; // B19
             CurrentView = HELP_VIEW;
             SendHelp();
             ClearText();
@@ -3711,6 +3742,10 @@ FASTRUN void ButtonWasPressed()
             SendCommand(WhichPage); // this sends nextion back to last screen
 
             CurrentView = SavedCurrentView;
+            if (InStrng((char *)".TXT", TextFileName))
+                strcpy(TextFileName, ""); // B56: the help text is closed - the viewer must not keep its name (OK on the Files page brought the help back)
+            if (CurrentView == RXSETUPVIEW1)
+                RXOptionsViewStart(); // B23: Model options drawn afresh, with the values read before Help
 
             if (CurrentView == GRAPHVIEW)
             {
@@ -3772,6 +3807,23 @@ FASTRUN void ButtonWasPressed()
             {
                 SendCommand(pRXSetupView);
                 return;
+            }
+            if (HelpTookRead)
+            { // B19: a Rotorflight page was still reading when Help was tapped: what came went to a page not showing, and the
+              // screen brought the old numbers back as if they were fresh (Save would have written them). Read again.
+                HelpTookRead = false;
+                if (CurrentView == PIDVIEW)
+                    ShowPIDBank();
+                else if (CurrentView == RATESVIEW_RF)
+                    ShowRatesBank();
+                else if (CurrentView == PIDADVANCEDVIEW)
+                    ShowPIDAdvancedBank();
+                else if (CurrentView == RATESADVANCEDVIEW)
+                    ShowRatesAdvancedBank();
+                else if (CurrentView == RFGOVERNORVIEW_PROFILE)
+                    ShowGOVBank();
+                else if (CurrentView == RFGOVERNORVIEW_GLOBAL)
+                    ShowGOV_Global_Bank();
             }
             // B43 (Malcolm, 6 Oct 2026: "on returning from help, it goes all the way back to the front screen, which it
             // should not do"): every other page stays where help was opened. The page has been sent back already, and the
@@ -4339,9 +4391,7 @@ FASTRUN void ButtonWasPressed()
                 MixNumber = 1;
             LastMixNumber = MixNumber;
             SendValue(MixesView_MixNumber, MixNumber); // New load of mix window
-            ShowMixValues();
-            DelayWithDog(100); // allow time for screen to load  before reading data
-            ReceiveLotsofData();
+            ShowMixValues(); // B05: the values were just SENT to the page - reading them back here took the touch word for data and changed the mix
             FixCHNames();
             ClearText();
             return;
@@ -4454,10 +4504,9 @@ FASTRUN void ButtonWasPressed()
             {
                 Look("Starting calibration");
                 BlueLedOn();
-                SetDefaultValues();
+                SetDefaultValues(true);
                 ResetSwitchNumbers();
-                SaveTransmitterParameters();
-                ReduceLimits(); // Get setup for sticks calibration
+                ReduceLimits(); // Get setup for sticks calibration (B17: nothing is saved until Finish, so OK part way can put the card's values back)
                 CurrentMode = CALIBRATELIMITS;
                 CurrentView = CALIBRATEVIEW;
                 SendText1(SvT11, CMsg1);
@@ -4539,30 +4588,16 @@ void CheckMotorOff()
     MotorEnabled = false;
     SafetyON = false;
 
-    static const uint8_t Pins[4] = {7, 5, 0, 2};
-
-    // Handle AutoSwitch
-    if (Autoswitch >= 1 && Autoswitch <= 4)
+    // B12: the same reading as in flight (GetSwitchPosition: both contacts, reversal included) for all eight switches. The old
+    // private pin table was wrong for switches 3 and 4 and for a reversed 1 or 2: a false "motor still ON", or a false pass.
+    if (Autoswitch >= 1 && Autoswitch <= 8)
     {
-        uint8_t pin = Pins[Autoswitch - 1];
-        bool reversed = SwitchReversed[Autoswitch - 1];
-        if (Switch[pin] == reversed)
+        const uint8_t p = GetSwitchPosition(Autoswitch);
+        if (p == 1 || p == 2) // as ReadAutoAndMotorSwitch(): positions 1 and 2 are motor ON, 3 is OFF
             MotorEnabled = true;
     }
-
-    // Handle SafetySwitch
-    if (SafetySwitch >= 1 && SafetySwitch <= 4)
-    {
-        uint8_t pin = Pins[SafetySwitch - 1];
-        bool reversed = SwitchReversed[SafetySwitch - 1];
-        if (Switch[pin] == reversed)
-            SafetyON = true;
-    }
-    // B32: a job on a front switch (5-8): the same rules, from its three-position reading (ReadTheSwitchesAndTrims above read it)
-    if (Autoswitch >= 5 && Autoswitch <= 8 && GetSwitchPosition(Autoswitch) != 3)
-        MotorEnabled = true;
-    if (SafetySwitch >= 5 && SafetySwitch <= 8 && GetSwitchPosition(SafetySwitch) != 3)
-        SafetyON = true;
+    if (SafetySwitch >= 1 && SafetySwitch <= 8 && GetSwitchPosition(SafetySwitch) != 3)
+        SafetyON = true; // as ReadSafetySwitch(): any position but 3 is safety ON
 
     if (SafetyON)
         MotorEnabled = false;
@@ -4609,6 +4644,8 @@ void GetBank() // ... and the other three switches
         ReadBuddySwitch();
         ReadBankSwitch();
         ReadAutoAndMotorSwitch();
+        if (SendNoData && !MotorEnabled && !BuddyPupilOnWireless)
+            SendNoData = false; // B03: the motor switch is seen OFF: the silence after "please turn it off" ends here (the forced-off left no change for MotorEnabledHasChanged to notice)
     }
 
     ReadDualRateSwitch(); // only actually read hardware switches if not using wireless buddy box or if buddy has all switches
@@ -4770,8 +4807,8 @@ void Close_TX_Down()
         char PoweredOffMsg[] = "Transmitter powered off while still connected";
         LogText(PoweredOffMsg, strlen(PoweredOffMsg), true);
         LogDisConnection(); // the end-of-session summary + LogEndLine
-        CloseLogFile();
-        strcpy(TextFileName, ""); // no further logging to this file
+        CloseLogWriteFile();
+        strcpy(LogWriteName, ""); // no further logging to this file (B56: the logger's own name)
     }
     SendText(t0, ClosingDown);    // Show 'Switching off ...' on screen
     for (int i = 0; i < 100; ++i) // fade in screen brightness
@@ -4838,8 +4875,10 @@ void CheckPowerOffButton()
     char ShowStillConnected[] = "vis StillConnected,1";
     char StillConnectedBox[] = "StillConnected";
 
-    if (digitalRead(BUTTON_SENSE_PIN) || CheckingPowerButton) // already checking power button or button not even pressed!
+    if (CheckingPowerButton) // already checking power button
         return;
+    if (digitalRead(BUTTON_SENSE_PIN) && !PowerOffTimer && !PowerWarningVisible)
+        return; // button not even pressed, and nothing to put back (B01: a release must reach the branch below that cancels the countdown and hides the box)
     CheckingPowerButton = true; // set flag to prevent re-entry
     if (!BuddyMasterOnWireless && !BuddyPupilOnWireless && SD_Card_Exists)
         CheckWhetherToEnableBinding(); // Check if binding is enabled Which is done by holding the start button for more than two seconds
@@ -4928,14 +4967,26 @@ void CheckMaxCurrent() // heer
     if (!LedWasGreen)
     {
         warned = false;
+        CurrentWarningShownAt = 0;
         return;
+    }
+    if (CurrentWarningShownAt && (millis() - CurrentWarningShownAt) > 6000)
+    { // B02: the warning is a line in the front page's box for six seconds - never a box that waits for OK while flying (the switches were not read meanwhile)
+        CurrentWarningShownAt = 0;
+        if (!RotorFlight_V && !BatteryWarningShown && CurrentView == FRONTVIEW)
+            SendCommand(WarnOff); // (a Rotorflight model writes its ESC temperature into the box again by itself)
     }
     if (Battery_Amps && Max_Safe_Amps && !warned) // is the current current currently excessive?
     {
         if (Battery_Amps > Max_Safe_Amps)
         {
             PlaySound(WHAHWHAHMSG); // Play sound to indicate there is a Problem.
-            MsgBox(pFrontView, (char *)"Current too high!\r\nAbove the current warning\r\nin Model options.");
+            if (CurrentView == FRONTVIEW)
+            {
+                SendCommand(WarnNow);
+                SendText(Warning, (char *)"Current too high!");
+            }
+            CurrentWarningShownAt = millis();
             warned = true;
         }
     }

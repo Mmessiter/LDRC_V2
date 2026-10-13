@@ -571,6 +571,7 @@ void LinkMode()
     PerfWriteReport(false); // B15: where the time went while a model was connected (/PERF.TXT; Perf.h)
     CloseModelsFile();
     CloseLogFile();
+    CloseLogWriteFile(); // B56: the logger's own handle too
     bool leave = false;
     while (!leave && !session.expired(millis()))
     {

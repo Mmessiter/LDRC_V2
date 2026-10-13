@@ -98,26 +98,12 @@ void CheckOutPutChannels() // This function checks for bad or duplicate output c
 void CheckServoSpeeds()
 { // for slow servos
 
-    bool flag = false;
     for (int j = 0; j < BANKS_USED + 1; ++j)
     {
         for (int i = 0; i < CHANNELSUSED + 1; ++i)
         {
             if ((ServoSpeed[j][i] > 100) || (!ServoSpeed[j][i]))
-            { // out of range or zero means the list is corrupt and needs resetting
-                flag = true;
-                break;
-            }
-        }
-    }
-    if (flag)
-    {
-        for (int j = 0; j < BANKS_USED + 1; ++j)
-        {
-            for (int i = 0; i < CHANNELSUSED + 1; ++i)
-            {
-                ServoSpeed[j][i] = 100;
-            }
+                ServoSpeed[j][i] = 100; // B35: only the value that is out of range (0 or over 100) goes to full speed - it used to reset every servo in every bank
         }
     }
 }
@@ -137,6 +123,8 @@ void CheckServoType()
         if (ServoCentrePulse[i] < 300)
             ServoCentrePulse[i] = 760;
     }
+    ServoFrequency[3] = ServoFrequency[2]; // B51: channel 4 shares channel 3\'s timer, channel 10 channel 7\'s
+    ServoFrequency[9] = ServoFrequency[6];
 }
 
 /************************************************************************************************************************************************/
@@ -378,6 +366,8 @@ bool ReadOneModel(uint32_t Mnum)
     UseMotorKill = SDRead8BITS(SDCardAddress);
     ++SDCardAddress;
     MotorChannelZero = SDRead8BITS(SDCardAddress);
+    if (MotorChannelZero > 180)
+        MotorChannelZero = 0; // B04: a wrapped value goes to the LOW end, never to full throttle
     ++SDCardAddress;
     MotorChannel = SDRead8BITS(SDCardAddress);
     if (MotorChannel > 15)
@@ -394,16 +384,16 @@ bool ReadOneModel(uint32_t Mnum)
     // if (StopFlyingVoltsPerCell < 3 || StopFlyingVoltsPerCell > 4)
     //     StopFlyingVoltsPerCell = 3.50; // a useful default stop time?!
     Drate2 = SDRead8BITS(SDCardAddress);
-    if ((Drate2 < 10) || (Drate2 > 200))
-        Drate2 = 100;
+    if (Drate2 > 200)
+        Drate2 = 100; // B36: 0-9 % is allowed on the page; it used to become 100 % at the next load
     ++SDCardAddress;
     Drate3 = SDRead8BITS(SDCardAddress);
-    if ((Drate3 < 10) || (Drate3 > 200))
-        Drate3 = 100;
+    if (Drate3 > 200)
+        Drate3 = 100; // B36: 0-9 % is allowed on the page; it used to become 100 % at the next load
     ++SDCardAddress;
     Drate1 = SDRead8BITS(SDCardAddress);
-    if ((Drate1 < 10) || (Drate1 > 200))
-        Drate1 = 100;
+    if (Drate1 > 200)
+        Drate1 = 100; // B36: 0-9 % is allowed on the page; it used to become 100 % at the next load
     ++SDCardAddress;
     for (int i = 0; i < 8; ++i)
     {

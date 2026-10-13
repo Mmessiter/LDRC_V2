@@ -18,12 +18,10 @@ With no 'Rates' switch, every channel gets 100%.|
 Channels not in the list always get 100%.||
 THE LIST OF CHOICES:|
 The list ('Use switch', 'Use rate 1', 'Use rate 2', 'Use rate 3')|
-is meant to let each bank choose: follow the rates switch,|
+lets each bank choose: follow the rates switch,|
 or always use one rate.|
 It sets the bank in use now, named in the line under the|
-channels. Move the bank switch to set another bank.|
-For now the transmitter keeps this choice but does not act on it:|
-in flight, the rates switch alone picks the rate.||
+channels. Move the bank switch to set another bank.||
 HOW A RATE WORKS:|
 A rate shrinks the channel's curve towards the middle (or, over|
 100%, stretches it).|

@@ -45,9 +45,9 @@ FLASHMEM void ReadEditedPIDAdvancedValues()
         char temp[10];
         GetText(PID_Advanced_Labels[i], temp, sizeof(temp));  // ClaudeFix-2-7-2026
         if ((i == 1) || (i == 25)) // these two are floats multiplied by 10
-            PID_Advanced_Values[i] = (uint8_t)(atof(temp) * 10.0f);
+            PID_Advanced_Values[i] = RfByteOf((float)atof(temp) * 10.0f); // B07: cut, never wrapped
         else
-            PID_Advanced_Values[i] = (uint8_t)(atoi(temp));
+            PID_Advanced_Values[i] = RfByteOf((float)atoi(temp)); // B07
     }
 }
 // ************************************************************************************************************/
@@ -157,6 +157,11 @@ FLASHMEM void SaveToLocalABank()
     HidePID_Advanced_Msg();
     PIDS_Advanced_Were_Edited = false; // reset edited flag
     PlaySound(BEEPCOMPLETE);           // let user know we're done
+    if (RfValueWasCut)
+    { // B07
+        Display_PID_Advanced_Values(0, MAX_PIDS_ADVANCED_BYTES);
+        RfCutNote("page PID_A_View");
+    }
 }
 // ************************************************************************************************************/
 FLASHMEM void SendEditedPID_Advanced()
@@ -186,6 +191,11 @@ FLASHMEM void SendEditedPID_Advanced()
     SendCommand((char *)"vis b3,0");                                        // hide "Send" button
     PIDS_Advanced_Were_Edited = false;                                      // reset edited flag
     PlaySound(BEEPCOMPLETE);                                                // let user know we're done
+    if (RfValueWasCut)
+    { // B07
+        Display_PID_Advanced_Values(0, MAX_PIDS_ADVANCED_BYTES);
+        RfCutNote("page PID_A_View");
+    }
 }
 // ********************************************************************************************************
 FLASHMEM void StartPIDAdvancedView()

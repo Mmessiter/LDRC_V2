@@ -169,6 +169,7 @@ void Pictures::touchUp(int x, int y) {
     const int p = pressed_; pressed_ = 0;
     if (p && at(x, y) == p) act(p);                                 // lifted on what it was put down on
 }
+void Pictures::touchCancel() { pressed_ = 0; }                      // (B59) a corner held: the finger is forgotten, its lift presses nothing
 
 void Pictures::answer(const std::string &name) {
     answer_ = name; mode_ = ANSWERED; answeredAt_ = sentAt_ = host_.ms();

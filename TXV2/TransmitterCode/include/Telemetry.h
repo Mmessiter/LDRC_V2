@@ -378,10 +378,10 @@ void PopulateDataView()
     BuildText(DataView_Gc, tempbuf);
     Hours_Mins_Secs(RX3TotalTime, tempbuf, sizeof(tempbuf));
     BuildText(RX3Time, tempbuf);
-    sprintf(Max_Rotor_RPM, "%" PRIu32 " RPM", Max_RotorRPM);
+    snprintf(Max_Rotor_RPM, sizeof(Max_Rotor_RPM), "%" PRIu32 " RPM", Max_RotorRPM); // B13: bounded prints (10-byte buffers)
     BuildText(DataView_Alt, Max_Rotor_RPM);
-    sprintf(ESC_Temperature, "%.1f C", ESC_Temp);
-    sprintf(MAX_ESC_Temperature, "%.1f C", Max_ESC_Temp);
+    snprintf(ESC_Temperature, sizeof(ESC_Temperature), "%.1f C", ESC_Temp);
+    snprintf(MAX_ESC_Temperature, sizeof(MAX_ESC_Temperature), "%.1f C", Max_ESC_Temp);
     BuildText(DataView_MaxAlt, MAX_ESC_Temperature);
     BuildText(DataView_Temp, ESC_Temperature);
     snprintf(Vbuf, 7, "%" PRIu32, RXSuccessfulPackets);
@@ -461,7 +461,7 @@ void PopulateFrontView()
         SendText(FrontView_Connected, MsgBuddying);
     }
 
-    if (RotorFlight_V && LedWasGreen && !BatteryWarningShown) // V1B B24: a battery warning has the box
+    if (RotorFlight_V && LedWasGreen && !BatteryWarningShown && !CurrentWarningShownAt) // V1B B24: a battery warning has the box (B02: so has the current warning, for six seconds)
     {
         char ESC_Temp_Buf[20];
         SendCommand((char *)"vis Warning,1");

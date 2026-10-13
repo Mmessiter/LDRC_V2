@@ -82,6 +82,7 @@ public:
     bool typing() const { return page_ == PG_KEYS; }     // a password is on the screen: no pictures of it
     void poll();
     void touch(bool down, int x, int y);          // the finger, every pass while the page shows
+    void cancelTouch();                           // (B59) a corner held: the finger on the page is forgotten, nothing is pressed when it lifts
     const WifiScene &scene() const { return scene_; }
     std::string pageName() const;                 // "list", "keys", ... for the record
 

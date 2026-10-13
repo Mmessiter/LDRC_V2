@@ -68,7 +68,7 @@ FASTRUN void ShowMotorTimer() // Show timer for the motor on the front view and 
         MotorOnSeconds = ((millis() - MotorStartTime) / 1000) + PausedSecs;
         Secs = MotorOnSeconds;
         if (TimerDownwards)
-            Secs = TimerStartTime - MotorOnSeconds;
+            Secs = (MotorOnSeconds >= TimerStartTime) ? 0 : TimerStartTime - MotorOnSeconds; // B27: never past zero (unsigned, it wrapped to 1,193,046 hours)
         Hours = Secs / 3600;
         Secs %= 3600;
         Mins = Secs / 60;
@@ -85,6 +85,13 @@ FASTRUN void ShowMotorTimer() // Show timer for the motor on the front view and 
             SendValue(FrontView_Hours, Hours);
         }
         LastSeconds = Secs;
+    }
+    if (TimerDownwards && MotorEnabled && !LostContactFlag && MotorOnSeconds >= TimerStartTime && MotorOnSeconds > 2)
+    { // B27: time's up whether or not the clock speaks (it sat inside the spoken-clock test, where the zero second could be missed)
+        PlaySound(STORAGECHARGE); // = Stop Flying!
+        TimesUp = true;
+        CountDownIndex = 0;
+        return;
     }
 
     if (TimerDownwards)
@@ -110,15 +117,6 @@ FASTRUN void ShowMotorTimer() // Show timer for the motor on the front view and 
             {
                 LogTimer(Mins);
                 LogRPM(RotorRPM);
-            }
-        }
-        if (TimerDownwards)
-        {
-            if ((!Mins) && (!Secs) && (MotorOnSeconds > 2))
-            {
-                PlaySound(STORAGECHARGE); // = Stop Flying!
-                TimesUp = true;
-                CountDownIndex = 0;
             }
         }
     }

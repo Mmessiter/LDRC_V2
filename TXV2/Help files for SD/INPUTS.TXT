@@ -34,8 +34,8 @@ If two channels share one, every Out number|
 goes back to 1 to 16 when you press 'OK'.|
 To move a channel to another output, swap two Out numbers:|
 for example Ch 4 Out 5 and Ch 5 Out 4.|
-Swap in pairs only. Three or more moved round in a ring|
-do not go where their Out numbers say.|
+Three or more may be moved round in a ring too: each|
+channel goes to the output its Out number says.|
 To move one output from two controls, use a mix ('Mixes').||
 To check which channel moves, watch the 'Channels' page|
 while you move a stick, switch or knob.||

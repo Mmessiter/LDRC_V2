@@ -21,6 +21,7 @@ FASTRUN void MixInputs()
                     if ((Mixes[MixNumber][M_MasterChannel] - 1) == MasterChannel)
                     {
                         short SlaveChannel  =   (Mixes[MixNumber][M_SlaveChannel] - 1) ;
+                        if (SlaveChannel < 0 || SlaveChannel >= CHANNELSUSED) break; // B11: never outside the channel memory
                         short max           =   ChannelMax[SlaveChannel]; 
                         short mid           =   ChannelCentre[SlaveChannel];
                         short min           =   ChannelMin[SlaveChannel];

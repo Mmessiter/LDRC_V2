@@ -112,6 +112,7 @@ public:
     bool takeClosed(bool &kept);                       // true once after it has closed (kept: with OK)
     const Theme &chosen() const { return pick; }
     void touch(bool pressed, int x, int y, uint32_t now);   // at every pass while it is open: a lift counts after 80 ms with no samples
+    void cancelTouch() { down = false; pressedId = -1; slidOff = false; slideHave = false; slidePend = -1; }   // (B59) a corner held: the finger is forgotten, its lift presses nothing
     const ColoursScene &scene();
 private:
     bool openNow = false, closed = false, keptIt = false, edit = false;
@@ -159,6 +160,7 @@ public:
     void handOff(int act, uint32_t now);
     void poll(const AppearanceWorld &w);               // at every pass
     void touch(bool pressed, int x, int y, uint32_t now);   // while it shows: a lift counts after 80 ms with no samples
+    void cancelTouch() { down = false; pressedId = -1; slidOff = false; }   // (B59) a corner held: the finger is forgotten, its lift presses nothing
     const AppearanceScene &scene();
 private:
     bool openNow = false; int action = APP_NONE;

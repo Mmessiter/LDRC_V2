@@ -240,9 +240,15 @@ int main() {
     CHECK(card["/rfbak/Goblin.rfb"].find("edits=\n") != std::string::npos);
     // 7. forget edits
     BoundFlag = false; { uint8_t b[27] = {0}; MspAsk(93, b, 27); MspAsk(250, nullptr, 0); } CHECK(BakEditsWaiting()); confirmAnswer = true; DiscardEdits(); CHECK(!BakEditsWaiting());
-    // 8. a FC that refuses an optional read: not a failure; one that fails a required read: counted and named
+    // 8. a FC that refuses an optional read: not a failure; one that fails a required read: counted and named, and (B20)
+    // the backup on the card is NOT replaced by the one with the hole
     BoundFlag = true; fillFc(); fc.erase("123"); fc.erase("154.00"); fc.erase("154.01"); fc.erase("154.02"); fc.erase("77");
-    BackupNow(); runUntilDone(); CHECK(BakFails == 1 && lastBox.find("Backed up, but 1 could not be read") == 0 && strstr(BakFailed, "77"));
+    { const std::string before = card["/rfbak/Goblin.rfb"];
+      BackupNow(); runUntilDone(); CHECK(BakFails == 1 && lastBox.find("Not backed up: 1 could not be read") == 0 && strstr(BakFailed, "77") && lastBox.find("The copy on the card is as it was.") != std::string::npos);
+      CHECK(card["/rfbak/Goblin.rfb"] == before && BakLoaded && BakGet("77", v, sizeof v) == 24); }   // (the card's own copy back in memory)
+    // 8b. B20: no model, a backup on the card: Back up is refused and the file untouched (before: an emptied file saved over it)
+    { const std::string before = card["/rfbak/Goblin.rfb"]; BoundFlag = false; boxes = 0; BackupNow();
+      CHECK(boxes == 1 && lastBox.find("The model is not connected") == 0 && BakJob == BAK_JOB_NONE && card["/rfbak/Goblin.rfb"] == before); BoundFlag = true; }
     // 9. the Version 1 word route offline (B71): the six pages read the file's images as the receiver's items ...
     BoundFlag = false; fillFc(); strcpy(Bak, "rfb=1\nmodel=Goblin\nedits=\n"); for (auto &kv : fc) BakSet(kv.first.c_str(), kv.second.c_str()); BakSet("edits", ""); BakSave();
     { std::string h; for (int i = 0; i < 50; ++i) { char b[4]; snprintf(b, sizeof b, "%02X", i); h += b; } BakSet("112.1", h.c_str()); BakSet("94.1", h.c_str()); BakSet("111.0", h.c_str()); BakSet("148.1", h.substr(0, 34).c_str()); BakSet("142", h.c_str()); }
@@ -313,6 +319,15 @@ int main() {
     CHECK(!BakEditsWaiting() && fc["34"].substr(8, 8) == "3502287D" && fc["52"].substr(3 * 28, 26) == "1600857D02857D00003C007800" && fc["112.2"] == rep("7E", 50));
     // a restore without the cable: the adjustments are skipped, not failed
     fcUsb = false; fc["52"][0] = '0'; RestoreAll(); runUntilDone(); CHECK(BakFails == 0 && lastBox.find("could not be") == std::string::npos);
+    // 11b. B43: Write edits with the cable out: the switch edit is written and its mark goes; the adjustment edit is skipped
+    // (409) and KEEPS its mark, so it is offered again (before: every mark went, and the pilot thought it written)
+    BoundFlag = false; fcUsb = false;
+    { uint8_t sw[5] = {1, 53, 2, 0x30, 0x7D}; MspAsk(35, sw, 5); uint8_t ln[15] = {4, 22, 0, 0x85, 0x7D, 2, 0x85, 0x7D, 0, 0, 60, 0, 120, 0, 0}; MspAsk(53, ln, 15); MspAsk(250, nullptr, 0); }
+    CHECK(BakEdited("34") && BakEdited("52"));
+    BoundFlag = true; fcLog.clear(); confirmAnswer = true; BakOffered = false; BakOfferEdits(); CHECK(BakJob == BAK_JOB_EDITS); runUntilDone();
+    CHECK(!BakEdited("34") && BakEdited("52") && BakEditsWaiting());
+    { int w35 = 0, w53 = 0; for (auto &r : fcLog) { if (r.fn == 35) ++w35; if (r.fn == 53) ++w53; } CHECK(w35 == 1 && w53 == 0); }
+    fcUsb = true; fcLog.clear(); BakOffered = false; BakOfferEdits(); runUntilDone(); CHECK(!BakEdited("52") && !BakEditsWaiting() && fc["52"].substr(4 * 28, 26) == "1600857D02857D00003C007800");   // (with the cable: written, the mark goes)
     // 12. B88: the battery, black box, sensor and trim writes in the stand-in (33 over the image's first bytes, 81 after its
     // "supported" byte, 57 / 41 into their frames by id, 239 whole), named in the edits, read back offline, and written to
     // the model by Write edits

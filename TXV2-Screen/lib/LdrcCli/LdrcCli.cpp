@@ -35,41 +35,56 @@ static std::string cliSafeName(const std::string &model) {
     if (name.empty()) name = "model";
     return name;
 }
-std::string cliFileName(const std::string &model, const std::string &stamp, int n) {
+std::string cliFileName(const std::string &model, const std::string &stamp, long long n) {
     const std::string name = cliSafeName(model);
     char b[64];
     if (!stamp.empty()) snprintf(b, sizeof b, "/rfdiff/%s_%s.txt", name.c_str(), stamp.c_str());
-    else snprintf(b, sizeof b, "/rfdiff/%s_%d.txt", name.c_str(), n);
+    else snprintf(b, sizeof b, "/rfdiff/%s_%lld.txt", name.c_str(), n);
     return b;
 }
 std::string cliModelPrefix(const std::string &model) { return cliSafeName(model) + "_"; }
-static bool cliTail(const std::string &path, const std::string &prefix, std::string &tail, long &num) {   // what follows the model's prefix, without ".txt"; num = it as a number, or -1
-    if (path.size() <= prefix.size() || path.compare(0, prefix.size(), prefix) != 0) return false;
-    tail = path.substr(prefix.size());
-    if (tail.size() > 4 && tail.compare(tail.size() - 4, 4, ".txt") == 0) tail.erase(tail.size() - 4);
-    num = -1;
-    if (!tail.empty() && tail.find_first_not_of("0123456789") == std::string::npos) num = atol(tail.c_str());
-    return true;
+static std::string cliInFolder(const std::string &f0) {           // a name as a card may list it (bare, or with the folder) as "/rfdiff/<name>"
+    if (f0.rfind("/rfdiff/", 0) == 0) return f0;
+    const size_t slash = f0.find_last_of('/');
+    return "/rfdiff/" + (slash == std::string::npos ? f0 : f0.substr(slash + 1));
+}
+long long cliFileKey(const std::string &path, const std::string &prefix) {
+    // B22 (10 Oct 2026): "Goblin_700_2026-10-10_0915.txt" began with "Goblin_" and so passed as a diff of "Goblin"; now what
+    // follows the model's name must be a stamp or a number and nothing else. B54: a stamp "YYYY-MM-DD_HHMM" is the number
+    // YYYYMMDDHHMM, so stamped and numbered files sit on one line of time (see cliTopKey).
+    if (path.size() <= prefix.size() + 4 || path.compare(0, prefix.size(), prefix) != 0) return -1;
+    std::string tail = path.substr(prefix.size());
+    std::string ext = tail.substr(tail.size() - 4); for (auto &c : ext) c = (char) tolower((unsigned char) c);
+    if (ext != ".txt") return -1;
+    tail.erase(tail.size() - 4);
+    if (tail.empty() || tail.size() > 15) return -1;
+    std::string digits;
+    if (tail.size() == 15 && tail[4] == '-' && tail[7] == '-' && tail[10] == '_') {   // a stamp
+        for (size_t i = 0; i < tail.size(); ++i) { if (i == 4 || i == 7 || i == 10) continue; digits.push_back(tail[i]); }
+    } else digits = tail;
+    if (digits.find_first_not_of("0123456789") != std::string::npos) return -1;
+    return strtoll(digits.c_str(), 0, 10);
+}
+long long cliTopKey(const std::string &model, const std::vector<std::string> &files) {
+    const std::string pre = "/rfdiff/" + cliModelPrefix(model);
+    long long top = 0;
+    for (auto &f0 : files) { const long long k = cliFileKey(cliInFolder(f0), pre); if (k > top) top = k; }
+    return top;
 }
 bool cliNewer(const std::string &a, const std::string &b, const std::string &prefix) {
-    std::string ta, tb; long na, nb;
-    if (!cliTail(a, prefix, ta, na)) return false;
-    if (!cliTail(b, prefix, tb, nb)) return true;
-    if (na >= 0 && nb >= 0) return na > nb;
-    if (na >= 0) return false;                                      // (a numbered file is older than any stamped one: it was made with no clock)
-    if (nb >= 0) return true;
-    return ta > tb;                                                 // (stamps, "YYYY-MM-DD_HHMM", sort as time does)
+    const long long ka = cliFileKey(a, prefix), kb = cliFileKey(b, prefix);
+    if (ka < 0) return false;
+    if (kb < 0) return true;
+    return ka > kb;
 }
 std::string cliNewest(const std::string &model, const std::vector<std::string> &files) {
     const std::string pre = "/rfdiff/" + cliModelPrefix(model);
-    std::string best;
+    std::string best; long long bestKey = -1;
     for (auto &f0 : files) {
-        std::string f = f0;
-        if (f.rfind("/rfdiff/", 0) != 0) { const size_t slash = f.find_last_of('/'); f = "/rfdiff/" + (slash == std::string::npos ? f : f.substr(slash + 1)); }
-        if (f.size() < pre.size() + 5 || f.compare(0, pre.size(), pre) != 0) continue;
-        std::string low = f.substr(f.size() - 4); for (auto &c : low) c = (char) tolower((unsigned char) c);
-        if (low != ".txt") continue;
-        if (best.empty() || cliNewer(f, best, pre)) best = f;
+        const std::string f = cliInFolder(f0);
+        const long long k = cliFileKey(f, pre);
+        if (k < 0) continue;                                        // (another model's, or not a diff file)
+        if (k > bestKey) { bestKey = k; best = f; }
     }
     return best;
 }
@@ -137,7 +152,7 @@ static const int CON_X = 14, CON_Y = 64, CON_W = 772, CON_H = 338;   // the cons
 
 CliPage::CliPage(CliHost &host)
     : host_(host), page_(PG_NONE), step_(ST_IDLE), top_(0), follow_(true), layer_(0), job_(0), cliOpen_(false), leaveSave_(false), closeAfter_(false), closing_(false), changed_(false), waitUntil_(0), waitMs_(0), wasReady_(false), more_(false), moreAt_(0), moreSince_(0), moreLines_(0),
-      execAt_(0), sent_(0), refused_(0), noteBad_(false), noteFrom_(0), down_(false), pressed_(0), lastX_(0), lastY_(0), downY_(0), dragTop_(0), dragged_(false), seenDown_(0), repeatAt_(0), repeated_(false), serial_(1), askedAt_(0) {}
+      requested_(false), batchOpen_(false), execAt_(0), sent_(0), refused_(0), noteBad_(false), noteFrom_(0), down_(false), pressed_(0), lastX_(0), lastY_(0), downY_(0), dragTop_(0), dragged_(false), seenDown_(0), repeatAt_(0), repeated_(false), serial_(1), askedAt_(0) {}
 
 std::string CliPage::pageName() const {
     static const char *names[] = { "", "console", "keys", "note" };
@@ -261,8 +276,13 @@ void CliPage::refusal(const std::string &why) {                   // (the receiv
 // ------------------------------------------------------------------ open, close, the steps
 void CliPage::open(int job) {
     job_ = job; cliOpen_ = false; closeAfter_ = false; closing_ = false; changed_ = false; step_ = ST_IDLE; waitPath_.clear(); waitUntil_ = 0; jobFailed_.clear(); more_ = false; lines_.clear(); top_ = 0; follow_ = true; typed_.clear(); layer_ = 0;
-    pending_.clear(); diffText_.clear(); savedAs_.clear(); down_ = false; pressed_ = 0; exec_.clear(); execAt_ = 0; sent_ = 0; refused_ = 0; execFile_.clear();
+    pending_.clear(); diffText_.clear(); savedAs_.clear(); down_ = false; pressed_ = 0; exec_.clear(); execAt_ = 0; sent_ = 0; refused_ = 0; execFile_.clear(); requested_ = false; batchOpen_ = false;
     if (host_.armed()) { page_ = PG_CONSOLE; note("Not while the model could be flying.", "Put the safety on and the motor off first.", "", "OK", "", true); closeAfter_ = true; return; }
+    if (host_.mainBoardBusy()) {                                     // (B52) the main board's backup, restore or write has the pipe; a save or exit would restart the flight controller under it
+        page_ = PG_CONSOLE;
+        note("The transmitter is busy: a backup, restore or write is running.", "Wait until it has finished, then try again.", "", "OK", "", true);
+        closeAfter_ = true; return;
+    }
     if (!host_.pipeReady()) {
         page_ = PG_CONSOLE;
         note("No Bluetooth link to the receiver.", "Switch the model on and plug in its USB cable,", "then open the Rotorflight menu (it joins Bluetooth).", "OK", "", true);
@@ -293,7 +313,14 @@ void CliPage::open(int job) {
 }
 void CliPage::execNext() {
     if (execAt_ >= exec_.size()) {                                   // every command sent: the save, and the flight controller restarts
-        say("All sent. Saving ..."); leave(true); return;
+        if (refused_ > 0 && batchOpen_) {
+            // B53 (10 Oct 2026): Rotorflight refuses "save" while a command batch with errors in it is still open ("PLEASE FIX
+            // ERRORS THEN 'SAVE'"), and the receiver's leave does not read the answer - so the page said "Saved all the same" of
+            // settings that never were. A Rotorflight 4.6 diff opens its batch and never closes it (it ends with "save"): the
+            // batch is closed here first, so the save that follows is done, without the refused lines.
+            batchOpen_ = false; exec_.push_back("batch end"); ownCmd_ = true;
+            say("Closing the batch first: Rotorflight will not save one with errors still open.");
+        } else { say("All sent. Saving ..."); leave(true); return; }
     }
     const std::string &c = exec_[execAt_++];
     sent(c);
@@ -312,9 +339,14 @@ static std::string urlEncode(const std::string &s) {
 void CliPage::send(const std::string &cmd, Step step) {
     pending_ = cmd; step_ = step; askedAt_ = host_.ms();
     if ((step == ST_COMMAND || step == ST_EXEC) && !cliReadOnly(cmd)) changed_ = true;
+    if (step == ST_EXEC) {                                             // (B53) is a command batch open on the flight controller?
+        std::string low; for (char ch : cmd) { if (ch == ' ' || ch == '\t') { if (!low.empty() && low.back() != ' ') low.push_back(' '); } else low.push_back((char) tolower((unsigned char) ch)); }
+        if (low == "batch start") batchOpen_ = true; else if (low == "batch end") batchOpen_ = false;
+    }
     const std::string path = "/api/cli?cmd=" + urlEncode(cmd) + "&wait=5000";   // (1.11.53: the receiver answers within 5 s - with 202 and the start, when the flight controller is still printing)
     waitMs_ = 18000;                                                   // (a diff all, every bank, is 20 kB and more: the flight controller's seconds and the Bluetooth's)
-    if (!host_.ask("GET", path, waitMs_)) { waitMethod_ = "GET"; waitPath_ = path; waitUntil_ = host_.ms() + 5000; }   // (busy: tried again in poll(), 5 s)
+    if (host_.ask("GET", path, waitMs_)) requested_ = true;            // (B55: from here on the receiver may have the flight controller's command line open)
+    else { waitMethod_ = "GET"; waitPath_ = path; waitUntil_ = host_.ms() + 5000; }   // (busy: tried again in poll(), 5 s)
     build();
 }
 void CliPage::leave(bool save) {
@@ -329,15 +361,17 @@ void CliPage::left(const std::string &how) {
     // nothing is known to be saved, and the notes say so instead of "restarting"
     const bool sure = how.empty();
     cliOpen_ = false;
-    if (job_ == CLI_TO_CARD && !jobFailed_.empty()) {
-        std::vector<std::string> w; cliWrap(cliSentence(jobFailed_), 58, 3, w); while (w.size() < 3) w.push_back("");
-        note("Diff to card: NOT saved.", w[0], w[1], "OK", "", true, w[2]); closeAfter_ = true; return;
+    if (!jobFailed_.empty()) {
+        // a job that broke down (B55: after the receiver may have opened the line, which has just been left): what happened, in a note
+        std::vector<std::string> w; cliWrap(cliSentence(jobFailed_) + (sure ? " The command line was left: nothing changed." : ""), 58, 3, w); while (w.size() < 3) w.push_back("");
+        note(job_ == CLI_TO_CARD ? "Diff to card: NOT saved." : job_ == CLI_EXECUTE ? "Execute diff: NOT done, nothing saved." : "The command line did not answer.", w[0], w[1], "OK", "", true, w[2]);
+        closeAfter_ = true; return;
     }
     if (job_ == CLI_TO_CARD && !savedAs_.empty()) { note("Saved on the screen's card as", savedAs_, sure ? "The flight controller is restarting (nothing changed)." : "(" + how + ": nothing changed on the model)", "OK", "", false); closeAfter_ = true; return; }
     if (job_ == CLI_EXECUTE && leaveSave_ && !exec_.empty()) {
         char l1[80]; snprintf(l1, sizeof l1, "Executed: %d commands sent, %d refused.", sent_, refused_);
         if (!sure) { note(l1, "NOT saved: " + how + ".", "Execute diff again when the model is back.", "OK", "", true); closeAfter_ = true; return; }
-        note(l1, refused_ ? "The refused ones are in the console (###ERROR)." : "Saved. The flight controller is restarting with them.", refused_ ? "Saved all the same; the flight controller is restarting." : "", "OK", "", refused_ > 0);
+        note(l1, refused_ ? "The refused ones are in the console (###ERROR)." : "Saved. The flight controller is restarting with them.", refused_ ? "Saved without them; the flight controller is restarting." : "", "OK", "", refused_ > 0);
         closeAfter_ = true; return;
     }
     changed_ = false;
@@ -349,8 +383,11 @@ void CliPage::left(const std::string &how) {
 std::string CliPage::fileName() {
     const std::string stamp = host_.stamp(), model = host_.modelName();
     if (!stamp.empty()) return cliFileName(model, stamp, 0);
-    for (int n = 1; n < 1000; ++n) { const std::string f = cliFileName(model, "", n); if (!host_.exists(f)) return f; }
-    return cliFileName(model, "", 999);
+    // no clock (B54): the number after the newest file there is - a stamp counts as its own number - so the file ranks newest, as it is
+    std::vector<std::string> files; host_.listDiffs(files);
+    const long long top = cliTopKey(model, files);
+    for (long long n = top + 1; n < top + 1000; ++n) { const std::string f = cliFileName(model, "", n); if (!host_.exists(f)) return f; }
+    return cliFileName(model, "", top + 999);
 }
 // The answer to the request on its way: what the step does with it
 void CliPage::finish(bool ok, const std::string &body, const std::string &err) {
@@ -358,7 +395,13 @@ void CliPage::finish(bool ok, const std::string &body, const std::string &err) {
     if (!ok) {
         // (the receiver's reasons are plain words: no USB cable, armed, the transmitter linked and not safe, the FC silent)
         std::string why = body.empty() ? err : body;
-        if (step == ST_OPENING || (job_ == CLI_TO_CARD && step == ST_DIFF) || (job_ == CLI_EXECUTE && step == ST_EXEC && sent_ == 0)) { refusal(why); return; }
+        if (step == ST_OPENING || (job_ == CLI_TO_CARD && step == ST_DIFF) || (job_ == CLI_EXECUTE && step == ST_EXEC && sent_ == 0)) {
+            // the receiver's own no (its reason in the body): it opened nothing. No answer at all (B55): the request went, so the
+            // receiver may have opened the flight controller's command line - it is left before the page goes (a leave of a line
+            // that is not open is answered all the same), else the flight controller cannot arm until the model is power-cycled.
+            if (!body.empty() || !requested_ || !host_.pipeReady()) { refusal(why); return; }
+            jobFailed_ = why; exec_.clear(); leave(false); return;
+        }
         if (step == ST_LEAVING) {
             // 1.11.56 (Malcolm, 10 Oct: "switching off the receiver leaves the transmitter unable to depart from the page. I had
             // to switch off"): a receiver that has gone is not asked again - the page does what it would have (the receiver
@@ -375,7 +418,7 @@ void CliPage::finish(bool ok, const std::string &body, const std::string &err) {
     if (step == ST_LEAVING) { left(""); return; }
     cliOpen_ = true;
     if (step == ST_EXEC) {
-        sent_++;
+        if (ownCmd_) ownCmd_ = false; else sent_++;                  // (the page's own "batch end" is not one of the file's commands)
         std::vector<std::string> ls; cliLines(body, ls);
         bool bad = false;
         const std::string &was = exec_[execAt_ - 1];
@@ -421,7 +464,7 @@ void CliPage::poll() {
     wasReady_ = ready;
     if (step_ != ST_IDLE && !waitPath_.empty()) {                    // (1.11.51) the pipe was busy: again, until it takes it or 5 s have gone
         if (!host_.pipeReady()) { waitPath_.clear(); finish(false, "", "the receiver is not joined"); return; }   // (1.11.56: no 5 s for a receiver that has gone)
-        if (host_.ask(waitMethod_, waitPath_, waitMs_)) { waitPath_.clear(); askedAt_ = host_.ms(); }
+        if (host_.ask(waitMethod_, waitPath_, waitMs_)) { waitPath_.clear(); askedAt_ = host_.ms(); requested_ = true; }
         else if ((int32_t) (host_.ms() - waitUntil_) >= 0) { waitPath_.clear(); finish(false, "", "the Bluetooth pipe stayed busy"); }
         return;
     }
@@ -480,6 +523,13 @@ void CliPage::touch(bool down, int x, int y) {
     if (id == CLI_ID_CONSOLE) { if (!dragged_) build(); return; }
     if (hit(lastX_, lastY_) == id && !repeated_) act(id);
     else build();
+}
+void CliPage::cancelTouch() {
+    // B59 (10 Oct 2026): a corner held for the radios or the workshop door is a corner, not a press: the finger on the page is
+    // forgotten here, so its lift presses nothing and the next tap is a fresh one (before, the press stayed and swallowed it).
+    if (!down_) return;
+    down_ = false; pressed_ = 0; dragged_ = false; repeated_ = false;
+    build();
 }
 void CliPage::key(int id) {
     if (id == ID_DELETE) { if (!typed_.empty()) typed_.erase(typed_.size() - 1); }

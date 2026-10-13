@@ -52,7 +52,10 @@ void SystemPage1End()
     // must keep the previous setting, not become one (the low-battery
     // threshold could silently revert, among others).
     uint32_t gv;
+    const uint8_t OldSticksMode = SticksMode;
     gv = GetValue(n0);  if (gv != 65535) SticksMode = CheckRange(gv, 1, 2);
+    if (SticksMode != OldSticksMode)
+        ResetAllTrims(); // B38: the trim levers follow the sticks (their map is built per stick mode)
     SendValue(Progress, 20);
     GetText(TxNme, TxName, sizeof(TxName));  // ClaudeFix-2-7-2026
     SendValue(Progress, 40);
@@ -190,11 +193,11 @@ void ReadMixValues() // just reads from the screen and saves to Mixes array
     Mixes[MixNumber][M_MIX_INPUTS] = ScreenData[0];
     Mixes[MixNumber][M_MIX_OUTPUTS] = ScreenData[1];
     Mixes[MixNumber][M_Bank] = ScreenData[2];
-    Mixes[MixNumber][M_MasterChannel] = ScreenData[3];
-    Mixes[MixNumber][M_SlaveChannel] = ScreenData[4];
+    Mixes[MixNumber][M_MasterChannel] = CheckRange(ScreenData[3], 1, 16); // B11: 17-32 wrote past the channel memory every loop
+    Mixes[MixNumber][M_SlaveChannel] = CheckRange(ScreenData[4], 1, 16);
     Mixes[MixNumber][M_ONEDIRECTION] = ScreenData[5];
     Mixes[MixNumber][M_Reversed] = ScreenData[6];
-    Mixes[MixNumber][M_OFFSET] = ScreenData[7] + 127; // because it's unsigned
+    Mixes[MixNumber][M_OFFSET] = constrain((int)(int16_t)ScreenData[7], -100, 100) + 127; // because it's unsigned (B32: signed now, and within -100..100)
     Mixes[MixNumber][M_Percent] = ScreenData[8];
     FixCHNames();
 }
@@ -218,7 +221,7 @@ void ShowMixValues() // sends mix values to Nextion screen
     SendValue(MixesView_MixOutput, Mixes[MixNumber][M_MIX_OUTPUTS]); //  load the ScreenData array with the mix values tomorrow
     ScreenData[MIXINPUT] = Mixes[MixNumber][M_MIX_INPUTS];
     SendValue(MixesView_MixInput, Mixes[MixNumber][M_MIX_INPUTS]);
-    ScreenData[MIXOUTPUT] = Mixes[MixNumber][M_MIX_INPUTS];
+    ScreenData[MIXOUTPUT] = Mixes[MixNumber][M_MIX_OUTPUTS]; // B05: was M_MIX_INPUTS - a typo that switched the mix's output on or off
     SendValue(MixesView_Bank, Mixes[MixNumber][M_Bank]);
     ScreenData[BANK] = Mixes[MixNumber][M_Bank];
     if (Mixes[MixNumber][M_MasterChannel] == 0)
@@ -266,6 +269,14 @@ void ShowChannelName()
 }
 /*********************************************************************************************************************************/
 
+static uint8_t MacroValue(char *box, uint8_t old, int lo, int hi)
+{ // B33: a typed value beyond its range is cut to the range (a position over 180 drove the servo past its end and then wiped every macro); a comms error keeps the old value
+    const uint32_t v = GetValue(box);
+    if (v == 65535)
+        return old;
+    return (uint8_t)constrain((int)v, lo, hi);
+}
+
 void ExitMacrosView()
 {
     char MacroNumber[] = "Mno";
@@ -277,11 +288,11 @@ void ExitMacrosView()
     uint8_t n = GetValue(MacroNumber) - 1;
     if (n >= MAXMACROS)
         return; // 0 or a comms-error 65535 ClaudeFix-2-7-2026 would write ~1.5 KB past MacrosBuffer[8][6]
-    MacrosBuffer[n][MACROTRIGGERCHANNEL] = GetValue(TriggerChannel);
-    MacrosBuffer[n][MACROMOVECHANNEL] = GetValue(MoveToChannel);
-    MacrosBuffer[n][MACROMOVETOPOSITION] = GetValue(MoveToPosition);
-    MacrosBuffer[n][MACROSTARTTIME] = GetValue(Delay);
-    MacrosBuffer[n][MACRODURATION] = GetValue(Duration);
+    MacrosBuffer[n][MACROTRIGGERCHANNEL] = MacroValue(TriggerChannel, MacrosBuffer[n][MACROTRIGGERCHANNEL], 0, 16);
+    MacrosBuffer[n][MACROMOVECHANNEL] = MacroValue(MoveToChannel, MacrosBuffer[n][MACROMOVECHANNEL], 0, 16);
+    MacrosBuffer[n][MACROMOVETOPOSITION] = MacroValue(MoveToPosition, MacrosBuffer[n][MACROMOVETOPOSITION], 0, 180);
+    MacrosBuffer[n][MACROSTARTTIME] = MacroValue(Delay, MacrosBuffer[n][MACROSTARTTIME], 0, 255);
+    MacrosBuffer[n][MACRODURATION] = MacroValue(Duration, MacrosBuffer[n][MACRODURATION], 0, 255);
     UseMacros = true;
     SaveOneModel(ModelNumber);
     SendCommand(pRXSetupView);
@@ -303,11 +314,10 @@ void EndWifiScan()
 
 void StartWifiScan()
 {
-    char prompt[] = "The model is connected.\r\nScanning stops its radio link.\r\nScan anyway?";
     if (ModelMatched && BoundFlag)
-    {
-        if (!GetConfirmation(pTXSetupView, prompt))
-            return;
+    { // B24: refused while a model is connected (a scan stops the link and the model goes to failsafe), as Calibrate and Pong refuse
+        MsgBox(pTXSetupView, (char *)"The model is connected.\r\nA scan stops its radio link.\r\nSwitch the model off first.");
+        return;
     }
 
     SendCommand(pFhssView);
@@ -333,11 +343,11 @@ void PopulateMacrosView()
 
     if (n < 8)
     { // Read previous values before moveing to next
-        MacrosBuffer[n][MACROTRIGGERCHANNEL] = GetValue(TriggerChannel);
-        MacrosBuffer[n][MACROMOVECHANNEL] = GetValue(MoveToChannel);
-        MacrosBuffer[n][MACROMOVETOPOSITION] = GetValue(MoveToPosition);
-        MacrosBuffer[n][MACROSTARTTIME] = GetValue(Delay);
-        MacrosBuffer[n][MACRODURATION] = GetValue(Duration);
+        MacrosBuffer[n][MACROTRIGGERCHANNEL] = MacroValue(TriggerChannel, MacrosBuffer[n][MACROTRIGGERCHANNEL], 0, 16);
+        MacrosBuffer[n][MACROMOVECHANNEL] = MacroValue(MoveToChannel, MacrosBuffer[n][MACROMOVECHANNEL], 0, 16);
+        MacrosBuffer[n][MACROMOVETOPOSITION] = MacroValue(MoveToPosition, MacrosBuffer[n][MACROMOVETOPOSITION], 0, 180);
+        MacrosBuffer[n][MACROSTARTTIME] = MacroValue(Delay, MacrosBuffer[n][MACROSTARTTIME], 0, 255);
+        MacrosBuffer[n][MACRODURATION] = MacroValue(Duration, MacrosBuffer[n][MACRODURATION], 0, 255);
     }
     n = GetValue(MacroNumber) - 1;
     if (n >= MAXMACROS)
@@ -457,9 +467,10 @@ void ReceiveLotsofData()
         int offset = field * 4;
         for (int p = 0; p < 4; ++p)
             NextionData.First4Bytes[p] = TextIn[offset + p];
-        if (NextionData.FirstDWord < 0xFFFF)
-        {
-            ScreenData[i] = NextionData.FirstDWord;
+        const int32_t sv = (int32_t)NextionData.FirstDWord;
+        if (NextionData.FirstDWord < 0xFFFF || (CurrentView == MIXESVIEW && i == 7 && sv < 0 && sv >= -200))
+        { // B32: a negative Offset arrived as a huge unsigned number and ended the read here, so neither it nor the Percent after it was stored
+            ScreenData[i] = (uint16_t)(int16_t)sv;
             ++i;
         }
         else
@@ -742,9 +753,12 @@ void EndBuddyView()
     else
         FHSS_data::PaceMaker = PACEMAKER; // flat out speed without buddy
 
-    Buddy_Low_Position = GetValue(cb0); // here we read what to do at each switch position
-    Buddy_Mid_Position = GetValue(cb1);
-    Buddy_Hi_Position = GetValue(cb2);
+    { // B18: a list closed without a choice says 255 (and a comms error 65535): the old value stays
+        uint32_t v;
+        v = GetValue(cb0); if (v <= 3) Buddy_Low_Position = v; // here we read what to do at each switch position
+        v = GetValue(cb1); if (v <= 3) Buddy_Mid_Position = v;
+        v = GetValue(cb2); if (v <= 3) Buddy_Hi_Position = v;
+    }
 
     if (BuddyMasterOnWireless && (!Buddy_Mid_Position && !Buddy_Hi_Position))
     { // Bottom can be master but -- maybe not both top two.
@@ -1084,7 +1098,7 @@ void RXOptionsViewStart() // model Options screen
 
 /******************************************************************************************************************************/
 
-void RXOptionsViewEnd()
+void ReadRXOptionsView() // B23: the page's values into memory (RXOptionsViewEnd reads them and leaves; Help, Model picture and Servos read them and stay)
 {
     char UseKill[] = "c0";
     char Mchannel[] = "n1";
@@ -1099,8 +1113,6 @@ void RXOptionsViewEnd()
 
     char ProgressStart[] = "vis Progress,1";
     char Progress[] = "Progress";
-    char change[] = "change";
-    char cleared[] = "XX:";
 
     SendCommand(ProgressStart);
     CopyTrimsToAll = GetValue(c1);
@@ -1115,7 +1127,12 @@ void RXOptionsViewEnd()
     
     SFV = StopFlyingVoltsPerCell * 100; // this makes it a 16 bit value I can save easily
     SendValue(Progress, 15);
-    MotorChannelZero = map(GetValue(Mvalue), -100, 100, 0, 180); // map to 0 to 180
+    {
+        int32_t mv = (int32_t)GetValue(Mvalue); // B04: below -100 the byte wrapped round to full throttle
+        if (mv == 65535)
+            mv = map(MotorChannelZero, 0, 180, -100, 100); // (a comms error keeps the old value)
+        MotorChannelZero = map(constrain(mv, -100, 100), -100, 100, 0, 180); // map to 0 to 180
+    }
     SendValue(Progress, 30);
     RxVoltageCorrection = GetValue(RxVCorrextion);
     SendValue(Progress, 40);
@@ -1129,6 +1146,15 @@ void RXOptionsViewEnd()
     SendValue(Progress, 70);
     TimerStartTime = GetValue(n4) * 60;
 
+}
+
+/******************************************************************************************************************************/
+void RXOptionsViewEnd()
+{
+    char Progress[] = "Progress";
+    char change[] = "change";
+    char cleared[] = "XX:";
+    ReadRXOptionsView();
     SendValue(Progress, 100);
     CurrentView = RXSETUPVIEW;
     PreviousBank = 42;
@@ -1145,6 +1171,11 @@ void RXOptionsViewEnd()
 
 void StartServosTypeView() // Frequency and centre pulse width
 {
+    if (CurrentView == RXSETUPVIEW1)
+    { // B23: what was typed on Model options goes with us (the page is drawn afresh afterwards)
+        ReadRXOptionsView();
+        SaveOneModel(ModelNumber);
+    }
     char n_labels[22][5] = {{"n0"}, {"n1"}, {"n2"}, {"n3"}, {"n4"}, {"n5"}, {"n6"}, {"n7"}, {"n16"}, {"n18"}, {"n20"}, {"n8"}, {"n9"}, {"n10"}, {"n11"}, {"n12"}, {"n13"}, {"n14"}, {"n15"}, {"n17"}, {"n19"}, {"n21"}};
     char ch_labels[11][5] = {{"ch1"}, {"ch2"}, {"ch3"}, {"ch4"}, {"ch5"}, {"ch6"}, {"ch7"}, {"ch8"}, {"t13"}, {"t14"}, {"t16"}}; // 11
     char GoServoTypesView[] = "page ServosTypeView";
@@ -1193,6 +1224,12 @@ void EndServoTypeView()
             Altered = true;
         }
         SendValue(Progress, (i + 1) * (100 / 11));
+    }
+    if (ServoFrequency[3] != ServoFrequency[2] || ServoFrequency[9] != ServoFrequency[6])
+    { // B51: channel 4 shares channel 3's timer and channel 10 channel 7's (the page shows them in grey; they never came through the change list)
+        ServoFrequency[3] = ServoFrequency[2];
+        ServoFrequency[9] = ServoFrequency[6];
+        Altered = true;
     }
     SendValue(Progress, 100);
     SendCommand(ProgressEnd);

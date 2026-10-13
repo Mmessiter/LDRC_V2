@@ -186,6 +186,21 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Fifty-five bugs from the review list, fixed (V2 B94, screen 1.11.59, receiver 0.9.885, 13 Oct 2026)
+
+Malcolm ticked 55 of the review's bugs on the list and asked for them fixed. All ticked ones are in this release; none is
+tested on the transmitter yet. Teensy: B01-B13, B16-B21, B23, B24, B26, B27, B29-B38, B40-B49, B51, B56, B57. Screen
+1.11.59: B22, B52-B55, B59 and the page halves of B23, B50, B51. Receiver 0.9.885: B14, B15, B29. The six flight-safety
+ones: the power button released cancels the switch-off countdown (B01); no box that waits for OK while flying - the current
+warning is a line in the front page's box for six seconds and the RPM touch is ignored while armed (B02); the motor switch
+seen OFF ends the silence after "please turn it off" (B03); Motor off value within -100..100 (B04); opening the Mixes page
+changes nothing (B05); a reused slot is no longer a Rotorflight model (B06). Help texts changed to match: FAILSAFE (the
+Version 2 receiver honours the ticks from 0.9.885), INPUTS (a ring of three routes as the Out numbers say), REVERSE (the
+name beside a box is the channel routed there), SLOWSERV (a bad speed resets alone), DRATES (the per-bank rate works).
+Host tests: test_backup 137, test_copybank 26, test_switches 24, test_rates 15 (new), test_adjust 1338 + 63, test_fcsetup
+46, test_filters 84, test_pipe 18, test_nextion 18; the screen's test_cli 180; the receiver's failsafe_mask_test 16 (new).
+The record of each bug: the bug-list artifact (B01-B135) and the commits that name them.
+
 ## Every screen polished, every help text rewritten (V2 B93, screen 1.11.57, 11 Oct 2026)
 
 Malcolm, 10 Oct: "make the screens look more beautiful, well designed and easy to use ... also the help screens ... Don't

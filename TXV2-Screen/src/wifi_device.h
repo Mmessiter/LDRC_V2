@@ -361,6 +361,7 @@ static void wifiTouch(bool pressed, int x, int y, uint32_t now) {
     if (waking) { if (!pressed) waking = false; wifiPage.touch(false, x, y); return; }
     wifiPage.touch(pressed, x, y);
 }
+static void wifiTouchCancel() { wifiPage.cancelTouch(); }   // (B59) a corner held: not a press
 static void wifiPoll() {
     static uint32_t drawnLayout = 0, lastPoke = 0; static bool wasUp = false; static std::map<int, uint32_t> drawn;
     if (wifiRequested && !radioHeld) { wifiRequested = false; if (!updShowing() && !wifiPage.showing()) { wifiTouchedAt = millis(); wifiPage.open(); } }   // (in the first seconds the radio waits for the main board's word: so does the page)

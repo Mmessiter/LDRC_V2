@@ -303,6 +303,7 @@ FLASHMEM void SaveToLocalGovGLOBAL() // "Save FC to SD" button
     if (!GetConfirmation((char *)"page RFGovViewGlbl", (char *)"Keep a copy of these governor\r\nsettings on the card?"))
         return;
     
+    const bool edited = GOVS_GLOBAL_Were_Edited; // B47: a copy on the card is not a save to the model
     ShowGOVConfigMsg((char *)"Keeping a copy on the card ...", Gray);
     LoadGovConfigWritePayload();
 
@@ -310,9 +311,17 @@ FLASHMEM void SaveToLocalGovGLOBAL() // "Save FC to SD" button
         Saved_GOV_Config_Values[i] = GovWritePayload[i];
 
     SaveOneModel(ModelNumber);
-    SendCommand((char *)"vis b3,0");
     HideGOVConfigMsg();
-    GOVS_GLOBAL_Were_Edited = false;
+    if (edited && RfLive())
+    { // B47: the typed changes have not reached the model yet: Save stays, and OK still asks
+        SendCommand((char *)"vis b3,1");
+        GOVS_GLOBAL_Were_Edited = true;
+    }
+    else
+    {
+        SendCommand((char *)"vis b3,0");
+        GOVS_GLOBAL_Were_Edited = false;
+    }
     PlaySound(BEEPCOMPLETE);
 }
 
@@ -337,6 +346,17 @@ FLASHMEM void RestoreFromSDGlobalGOV()
         return;
     }
 
+    { // B42: only a copy that was kept: never 24 zeros (the governor off) from a model that never kept one
+        bool kept = false;
+        for (int i = 18; i < GOV_CONFIG_PAYLOAD_SIZE && !kept; ++i)
+            if (Saved_GOV_Config_Values[i])
+                kept = true;
+        if (!kept)
+        {
+            MsgBox((char *)"page RFGovViewGlbl", (char *)"No copy of the governor settings has\r\nbeen kept on the card for this model.\r\nUse 'Keep a copy' first.");
+            return;
+        }
+    }
     if (!GetConfirmation((char *)"page RFGovViewGlbl", (char *)"Send the kept copy of the governor\r\nsettings to the flight controller?"))
         return;
 
@@ -428,6 +448,12 @@ FLASHMEM void ShowGOV_Global_Bank()
 // ====================================================
 FLASHMEM void Start_Gov_Global()
 {
+    if (GOVS_PROFILE_Were_Edited && CurrentView == RFGOVERNORVIEW_PROFILE)
+    { // B46: the bank page's edits would go with the page: ask, as OK does
+        if (!GetConfirmation((char *)"page RFGovView", (char *)"Discard edited governor values?"))
+            return;
+        GOVS_PROFILE_Were_Edited = false;
+    }
     {
         char why[120];
         if (RfPipeBlocked(why, sizeof(why))) // B48: the pipe first

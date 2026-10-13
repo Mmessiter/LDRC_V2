@@ -83,36 +83,48 @@ FASTRUN void CreateTimeStamp(char *DateAndTime)
     }
 }
 /************************************************************************************************************/
-FASTRUN void MakeTextFileName()
+FASTRUN void MakeDatedLogName(char *Dest) // B56: today's log name, e.g. 13-10-2026.LOG, into Dest
 {
     char NB[10];
     char dash[] = "-";
-    if (strlen(TextFileName) > 0)
-        return; // Already done
     if (RTC.read(tm))
     {
         ReadTheRTC();
         if (MayBeAddZero(GmonthDay))
         {
-            strcpy(TextFileName, "0");
-            strcat(TextFileName, Str(NB, GmonthDay, 0));
+            strcpy(Dest, "0");
+            strcat(Dest, Str(NB, GmonthDay, 0));
         }
         else
         {
-            strcpy(TextFileName, Str(NB, GmonthDay, 0));
+            strcpy(Dest, Str(NB, GmonthDay, 0));
         }
-        strcat(TextFileName, dash);
+        strcat(Dest, dash);
         if (MayBeAddZero(Gmonth))
-            strcat(TextFileName, "0");
-        strcat(TextFileName, Str(NB, Gmonth, 0));
-        strcat(TextFileName, dash);
-        strcat(TextFileName, Str(NB, Gyear, 0));
-        strcat(TextFileName, ".LOG");
+            strcat(Dest, "0");
+        strcat(Dest, Str(NB, Gmonth, 0));
+        strcat(Dest, dash);
+        strcat(Dest, Str(NB, Gyear, 0));
+        strcat(Dest, ".LOG");
     }
     else
     {
-        strcpy(TextFileName, "NO_CLOCK.LOG");
+        strcpy(Dest, "NO_CLOCK.LOG");
     }
+}
+
+FASTRUN void MakeTextFileName() // the viewer's name, when none was chosen: today's log
+{
+    if (strlen(TextFileName) > 0)
+        return; // Already done
+    MakeDatedLogName(TextFileName);
+}
+/************************************************************************************************************/
+FASTRUN void MakeLogWriteName() // B56: the logger's own name
+{
+    if (strlen(LogWriteName) > 0)
+        return;
+    MakeDatedLogName(LogWriteName);
 }
 
 /************************************************************************************************************/
@@ -154,9 +166,9 @@ FASTRUN void LogRXsTotalTimes()
 // ************************************************************************
 FASTRUN void CheckLogFileIsOpen()
 {
-    if (!LogFileOpen)
+    if (!LogWriteOpen)
     {
-        MakeTextFileName(); // Create a "today" filename
+        MakeLogWriteName(); // Create a "today" filename (B56: the logger's own, never the viewer's)
         OpenLogFileW();     // Open file for writing
     }
 }
@@ -166,7 +178,7 @@ FASTRUN void DeleteLogFile1()
 {
     char LogTeXt1[] = "LogText";
     char BlankText[] = " ";
-    CloseLogFile();
+    CloseLogWriteFile(); // B56
     MakeTextFileName();
     DeleteLogFile();
     SendText1(LogTeXt1, BlankText);
@@ -174,19 +186,25 @@ FASTRUN void DeleteLogFile1()
 
 /************************************************************************************************************/
 
-FASTRUN void CloseLogFile()
+FASTRUN void CloseLogFile() // the viewer's handle
 {
     if (LogFileOpen)
         LogFileNumber.close();
     LogFileOpen = false;
 }
 /************************************************************************************************************/
+FASTRUN void CloseLogWriteFile() // B56: the logger's handle
+{
+    if (LogWriteOpen)
+        LogWriteFile.close();
+    LogWriteOpen = false;
+}
+/************************************************************************************************************/
 FASTRUN void WriteToLogFile(char *SomeData, uint16_t len)
 {
-    char txt[] = ".TXT";
-    if (InStrng(txt, TextFileName))
-        return; // Don't write to a HELP file
-    LogFileNumber.write(SomeData, len);
+    if (!LogWriteOpen)
+        return; // B56: the logger writes only through its own handle (a help text or a chosen log in the viewer never receives a line)
+    LogWriteFile.write(SomeData, len);
 }
 // ************************************************************************
 /**
@@ -242,7 +260,7 @@ FASTRUN void LogText(char *TheText, uint16_t len, bool TimeStamp)
     }
     WriteToLogFile(TheText, len);
     WriteToLogFile(crlf, strlen(crlf));
-    CloseLogFile();
+    CloseLogWriteFile(); // B56
     strcpy(TheText, "");
 }
 
@@ -569,7 +587,7 @@ FASTRUN void FlushDeferredLog()
         WriteToLogFile(crlf, strlen(crlf));
     }
     DeferredLogN = 0;
-    CloseLogFile();
+    CloseLogWriteFile(); // B56
 }
 FASTRUN void DeferLogText(const char *text, bool stamp) // as LogText, but for later: the same line, the same "not the same thing twice"
 {

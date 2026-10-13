@@ -17,6 +17,7 @@ static void themeLoad() {
     const std::string s = prefs.getString("theme", "").c_str();
     if (!s.empty() && !theme.load(s)) blog("theme", "setting not understood: " + s);
 }
+static void coloursTouchCancel() { colours.cancelTouch(); }   // (B59) a corner held: not a press
 static void coloursTouch(bool pressed, int x, int y, uint32_t now) {
     static uint32_t lastDown = 0;
     if (pressed) { coloursTouchedAt = now; lastDown = now; }
@@ -94,6 +95,7 @@ static const int APPEARANCE_WHO = 8;
 static ldrc::AppearancePage appearance;
 static uint32_t appearanceTouchedAt = 0;
 static bool appearanceUp() { return topOn && topWho == APPEARANCE_WHO; }
+static void appearanceTouchCancel() { appearance.cancelTouch(); }   // (B59) a corner held: not a press
 static void appearanceTouch(bool pressed, int x, int y, uint32_t now) {
     static uint32_t lastDown = 0;
     if (pressed) { lastDown = now; appearanceTouchedAt = now; }
