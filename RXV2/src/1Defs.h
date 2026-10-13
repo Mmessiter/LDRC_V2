@@ -378,6 +378,7 @@ constexpr const char* NVS_KEY_SSID       = "ssid";
 constexpr const char* NVS_KEY_PASS       = "pass";
 constexpr const char* NVS_KEY_BOARD_ID   = "board_id";   // 6-byte board ID; captured first boot, never changes
 constexpr const char* NVS_KEY_FAILSAFE   = "fs";         // 16 x uint16 failsafe channel values (us); absent = not configured
+constexpr const char* NVS_KEY_FAILSAFE_MASK = "fsm";    // B29: which channels move (bit i = channel i+1); absent = all 16
 constexpr const char* NVS_KEY_GEAR_RATIO = "gear";       // float extra head-speed divisor; normally 1.0 — Rotorflight's 0x0C frame already carries HEAD speed (see gearRatio)
 constexpr const char* NVS_KEY_ARM_CH     = "armch";      // uint8 arming channel (1..16, 0=off): flight saved on DISARM after a real flight
 constexpr const char* NVS_KEY_GAP_MIN    = "gapmin";
@@ -664,12 +665,41 @@ inline void keepLinkTick() {
 inline uint16_t channelMicros[16];                       // initialised in setup() to 1500us
 inline uint32_t lastChannelDataMs = 0;
 // Failsafe (no-signal) channel values, captured from the live channels via the
-// web UI and stored in NVS (NVS_KEY_FAILSAFE). When set, these are loaded as the
-// pre-link defaults at boot so a receiver powered up without a transmitter sits
-// in a SAFE posture (e.g. disarmed) instead of all-1500. failsafeSet=false => use
-// the generic safe default (ch1-5=1500, aux low) instead.
+// web UI or the transmitter's Failsafe page and stored in NVS (NVS_KEY_FAILSAFE).
+// Applied ONLY when the signal is lost in flight (sbusTick in Output.h, the sim in
+// main.cpp) - never at boot, which is always disarmed-safe (ch1-5=1500, aux low).
+// B29 (13 Oct 2026): failsafeMask says WHICH channels move (bit i = channel i+1),
+// as a V1 receiver's ticks do; the others hold their last position. The web page's
+// Save ticks all 16; the transmitter sends its ticks with parameter 1. A failsafe
+// stored before this build has no mask in NVS and reads as all 16, as it behaved.
+// B29-FAILSAFE-MASK-BEGIN (dev/failsafe_mask_test.sh compiles this block on the Mac)
 inline uint16_t failsafeMicros[16] = {0};
 inline bool     failsafeSet        = false;
+inline uint16_t failsafeMask       = 0xFFFF;
+// The transmitter's parameter 1: word[1] = the high byte, word[2] = the low byte of
+// 16 bits in which bit 15 is channel 1 ... bit 0 is channel 16 (V1's MakeTwobytes).
+inline uint16_t failsafeMaskFromTx(uint16_t hiWord, uint16_t loWord) {
+    const uint16_t tb = (uint16_t)(((hiWord & 0xFF) << 8) | (loWord & 0xFF));
+    uint16_t mask = 0;
+    for (uint8_t i = 0; i < 16; ++i)
+        if (tb & (1u << (15 - i))) mask |= (uint16_t)(1u << i);
+    return mask;
+}
+inline uint8_t failsafeMaskCount() {
+    uint8_t n = 0;
+    for (uint8_t i = 0; i < 16; ++i) if (failsafeMask & (1u << i)) ++n;
+    return n;
+}
+// Drive the ticked channels to their saved positions. False when there is nothing
+// to drive (no failsafe saved, or no channel ticked): the caller then leaves the
+// frames flagged as lost, so a flight controller runs its own failsafe.
+inline bool failsafeDrive() {
+    if (!failsafeSet || !failsafeMask) return false;
+    for (uint8_t i = 0; i < 16; ++i)
+        if (failsafeMask & (1u << i)) channelMicros[i] = failsafeMicros[i];
+    return true;
+}
+// B29-FAILSAFE-MASK-END
 // Extra head-speed divisor applied to the FC's RPM telemetry before it goes to
 // the TX. Rotorflight's CRSF 0x0C frame already carries HEAD speed (motor RPM ×
 // its own main_rotor_gear_ratio), so this stays 1.0; the gear-ratio page

@@ -890,8 +890,7 @@ void loop() {
                                                                   : lastChannelDataMs;
             bool lost = (lastChannelDataMs != 0) &&
                         (uint32_t)(millis() - linkRef) > OUTPUT_FAILSAFE_MS;
-            if (lost && failsafeSet) {
-                for (uint8_t i = 0; i < 16; ++i) channelMicros[i] = failsafeMicros[i];
+            if (lost && failsafeDrive()) {   // B29: the ticked channels only
                 if (!simFsPosture) { simFsPosture = true;
                     events.add("Signal lost — sim driven to failsafe positions"); }
             } else if (simFsPosture && !lost) {

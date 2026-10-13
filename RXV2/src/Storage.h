@@ -56,23 +56,32 @@ inline void loadFailsafeFromNvs() {
         prefs.getBytesLength(NVS_KEY_FAILSAFE) == sizeof(failsafeMicros)) {
         prefs.getBytes(NVS_KEY_FAILSAFE, failsafeMicros, sizeof(failsafeMicros));
         failsafeSet = true;
-        Serial.println("[failsafe] loaded from NVS");
+        // B29: the ticks. Absent (saved before 0.9.885) = all 16, as that build behaved.
+        failsafeMask = prefs.isKey(NVS_KEY_FAILSAFE_MASK) ? prefs.getUShort(NVS_KEY_FAILSAFE_MASK, 0xFFFF) : 0xFFFF;
+        Serial.printf("[failsafe] loaded from NVS (%u of 16 channels ticked)\n", (unsigned)failsafeMaskCount());
     } else {
         failsafeSet = false;
+        failsafeMask = 0xFFFF;
     }
 }
 
-// Capture the CURRENT channel values as the failsafe set.
-inline void saveFailsafeToNvs() {
+// Capture the CURRENT channel values as the failsafe set. mask = which channels
+// move on signal loss (bit i = channel i+1): the web page's Save = all 16, the
+// transmitter's Failsafe page sends its ticks (B29).
+inline void saveFailsafeToNvs(uint16_t mask = 0xFFFF) {
     for (uint8_t i = 0; i < 16; ++i) failsafeMicros[i] = channelMicros[i];
     prefs.putBytes(NVS_KEY_FAILSAFE, failsafeMicros, sizeof(failsafeMicros));
+    failsafeMask = mask;
+    prefs.putUShort(NVS_KEY_FAILSAFE_MASK, mask);
     failsafeSet = true;
-    Serial.println("[failsafe] saved current channels to NVS");
+    Serial.printf("[failsafe] saved current channels to NVS (%u of 16 ticked)\n", (unsigned)failsafeMaskCount());
 }
 
 inline void clearFailsafeNvs() {
     prefs.remove(NVS_KEY_FAILSAFE);
+    prefs.remove(NVS_KEY_FAILSAFE_MASK);
     failsafeSet = false;
+    failsafeMask = 0xFFFF;
     Serial.println("[failsafe] cleared NVS");
 }
 

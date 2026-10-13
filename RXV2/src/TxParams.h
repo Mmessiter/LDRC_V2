@@ -420,8 +420,13 @@ inline void txParamsWords(const uint16_t* w) {
     // same thing our web "Save failsafe" button does. Not Rotorflight-
     // gated: this must work on FC-less models (PWM converters etc).
     if (id == 1) {
-        saveFailsafeToNvs();
-        events.add("Failsafe captured (transmitter command)");
+        // B29: the page's ticks say which channels move on signal loss; the rest
+        // hold their last position, as a V1 receiver does. (Before 0.9.885 every
+        // channel moved, whatever was ticked.)
+        saveFailsafeToNvs(failsafeMaskFromTx(w[1], w[2]));
+        char fm[72];
+        snprintf(fm, sizeof(fm), "Failsafe captured (transmitter command): %u of 16 channels ticked", (unsigned)failsafeMaskCount());
+        events.add(fm);
         return;
     }
 

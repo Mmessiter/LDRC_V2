@@ -445,8 +445,11 @@ inline void sbusTick() {
     // too. (Previously CRSF always went silent and the converter drifted.)
     bool fsAuthority = failsafe && everConnected &&
                        (currentProtocol != PROTO_CRSF || !fcTelemetryEnabled);
-    if (fsAuthority && failsafeSet) {
-        for (uint8_t i = 0; i < 16; ++i) channelMicros[i] = failsafeMicros[i];
+    // B29: only the ticked channels move (failsafeDrive, 1Defs.h); the rest hold their
+    // last position. With no channel ticked nothing is driven, and the frames stay
+    // flagged as lost so a flight controller runs its own failsafe.
+    const bool fsDriving = fsAuthority && failsafeDrive();
+    if (fsDriving) {
         if (!inFailsafePosture) { inFailsafePosture = true; events.add("Signal lost — RX failsafe positions applied"); }
     } else if (inFailsafePosture) {
         inFailsafePosture = false;
@@ -584,7 +587,7 @@ inline void sbusTick() {
         }
     }
     // Present the frames as valid RC while the posture is being driven.
-    if (fsAuthority && failsafeSet) {
+    if (fsDriving) {
         frameLost = false;
         failsafe  = false;
     }

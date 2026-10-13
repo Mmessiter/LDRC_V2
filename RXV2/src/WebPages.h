@@ -3515,6 +3515,7 @@ inline void handleApiState() {
     j += ",\"being_flown\":"; j += (beingFlown ? "true" : "false");
     j += ",\"sbus_frames_out\":"; j += sbusFramesOut;
     j += ",\"failsafe_set\":"; j += (failsafeSet ? "true" : "false");
+    j += ",\"failsafe_mask\":"; j += (unsigned)failsafeMask;          // B29: which channels move (bit i = channel i+1)
     { char gb[48]; snprintf(gb, sizeof(gb), ",\"gear_ratio\":%.3f", gearRatio); j += gb; }
     { char vb[112]; snprintf(vb, sizeof(vb), ",\"vbat\":{\"pin\":%u,\"volts\":%.2f,\"ratio\":%.2f,\"cells\":%u,\"auto\":%s}",
                             vbatPin, vbatVolts, vbatRatio, vbatCellsCfg, vbatAuto ? "true" : "false"); j += vb; }

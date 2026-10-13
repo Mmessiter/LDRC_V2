@@ -1126,11 +1126,18 @@ function animateBars(now) {
 requestAnimationFrame(animateBars);
 
 // --- Failsafe (no-transmitter) positions ---------------------------------
-function setFsStatus(set) {
+function setFsStatus(set, mask) {
     const el = document.getElementById('fsStatus');
     if (!el) return;
+    // B29: the transmitter's Failsafe page can tick which channels move; the web Save ticks all 16.
+    let which = '';
+    if (set && typeof mask === 'number' && mask !== 0xFFFF) {
+        const chs = []; for (let i = 0; i < 16; i++) if (mask & (1 << i)) chs.push(i + 1);
+        which = chs.length ? ' Only channels ' + chs.join(', ') + ' move (ticked on the transmitter); the rest hold their last position.'
+                           : ' No channel is ticked, so nothing moves: a flight controller runs its own failsafe.';
+    }
     el.innerHTML = set
-        ? '<b style="color:#2e7d32">Failsafe is SET</b> — these saved positions are output when the receiver boots with no transmitter.'
+        ? '<b style="color:#2e7d32">Failsafe is SET</b> — these saved positions are applied when the signal is lost in flight (never at power-up, which is always disarmed-safe).' + which
         : 'No failsafe saved — using the built-in safe default (sticks centred, AUX channels low).';
 }
 let _lastFsFetch = 0;
@@ -1143,7 +1150,7 @@ async function refreshFsStatus() {
     if (streaming && (now - _lastFsFetch) < 10000) return;
     _lastFsFetch = now;
     try { const s = await (await fetch('/api/state.json', { cache: 'no-store' })).json();
-          setFsStatus(!!(s.rf && s.rf.failsafe_set));
+          setFsStatus(!!(s.rf && s.rf.failsafe_set), s.rf ? s.rf.failsafe_mask : undefined);
           if (s.rf && s.rf.vbat) {
               const v = s.rf.vbat;
               if (!vbatTouched) {

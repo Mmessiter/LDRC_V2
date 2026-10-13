@@ -174,6 +174,8 @@ for g in check_page_syntax check_links check_page_order check_banks name_gate_te
 done
 zsh dev/prelink_hold_test.sh | tail -1 | grep -q "ALL PASS" || die "dev/prelink_hold_test.sh failed - run it to see why"
 ok "prelink_hold_test"
+zsh dev/failsafe_mask_test.sh | tail -1 | grep -q "ALL PASS" || die "dev/failsafe_mask_test.sh failed - run it to see why"
+ok "failsafe_mask_test"
 # Every page against a real recording, as the app's review serves it (0.9.839).
 # The recording is personal data: gitignored under dev/private/, so this gate
 # runs only where one exists (Malcolm's Mac) and is skipped elsewhere.
