@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.886-arm-live",
+      "url": "https://messiter.com/rxv2/release/v0.9.886/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.886/littlefs.bin",
+      "fs_md5": "35226fead119b3b4a425619ba9b71452",
+      "notes": "The phone's Switches page keeps its live line while the model is armed: the receiver answers that one read (MSP_RC) from its own output without a word to the flight controller, the ARMED banner is a strip on that page, and an arm switch written from a page moves the arming channel the receiver watches at once (it was learned once at boot and never again)."
+    },
+    {
       "name": "RXV2-0.9.885-failsafe-ticks",
       "url": "https://messiter.com/rxv2/release/v0.9.885/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.885/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.875/littlefs.bin",
       "fs_md5": "cc4878104ade8765b32ab2b7b6cb420e",
       "notes": "A Version 2 transmitter in its Rotorflight menu now asks the receiver to open its Bluetooth (parameter 36), so the transmitter's screen can join it minutes after power-on, not only in the first 30 s. Honoured only while not armed; the ordinary rules shut it again afterwards."
-    },
-    {
-      "name": "RXV2-0.9.874-txparams-pipe",
-      "url": "https://messiter.com/rxv2/release/v0.9.874/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.874/littlefs.bin",
-      "fs_md5": "cc4878104ade8765b32ab2b7b6cb420e",
-      "notes": "The Version 2 transmitter's Rotorflight editing over Bluetooth: the transmitter's parameter packets arrive as words at /api/txparams and the block being read goes back at /api/txparams/ack, into the same code the radio link uses. Nothing changes for the radio link or the phone app."
     }
   ],
   "rotorflight": {

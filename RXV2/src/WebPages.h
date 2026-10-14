@@ -879,15 +879,28 @@ inline void handleMspApi() {
     // and for every other path: no config request touches the FC while the
     // model is armed with a live transmitter.
     {
-        if (fcInfo.armed && fcInfo.armedMs && (uint32_t)(millis() - fcInfo.armedMs) < 5000) {   // the FC's own word, dongle or receiver (0.9.640)
+        const bool fcArmed = fcInfo.armed && fcInfo.armedMs && (uint32_t)(millis() - fcInfo.armedMs) < 5000;   // the FC's own word, dongle or receiver (0.9.640)
+        const bool armLink = rx.lastMillis &&
+                             (uint32_t)(millis() - rx.lastMillis) < 1000;
+        const bool linkArmed = armLink && armingChannel >= 1 && armingChannel <= 16 &&
+                               channelMicros[armingChannel - 1] > 1500;
+        // 0.9.886: the live channel positions (MSP_RC) are the one read a page still needs while armed - the Switches
+        // page shows where the arm switch sits against its zone. They are answered from this receiver's own output
+        // (fcRcMicrosFromTx, 1Defs.h), on the flight controller's scale, without a word to the flight controller. Only
+        // with a live transmitter link: a dongle has no channels of its own.
+        if ((fcArmed || linkArmed) && armLink && !dongleEnabled && server.hasArg("fn") && server.arg("fn").toInt() == MSP_RC) {
+            char hex[65];
+            mspRcFromLink(hex);
+            server.sendHeader("Cache-Control", "no-store");
+            server.send(200, "text/plain", hex);
+            return;
+        }
+        if (fcArmed) {
             server.sendHeader("Cache-Control", "no-store");
             server.send(409, "text/plain", "ARMED - the flight controller says it is armed. Disarm first.");
             return;
         }
-        const bool armLink = rx.lastMillis &&
-                             (uint32_t)(millis() - rx.lastMillis) < 1000;
-        if (armLink && armingChannel >= 1 && armingChannel <= 16 &&
-            channelMicros[armingChannel - 1] > 1500) {
+        if (linkArmed) {
             static uint32_t lastArmRefuseLog = 0;
             if ((uint32_t)(millis() - lastArmRefuseLog) > 10000) {
                 lastArmRefuseLog = millis();
@@ -1104,6 +1117,19 @@ inline void handleMspApi() {
     // mid-reassembly (2026-08-19, first fn-120 read).
     bool ok = mspRequestAndWait(fn, reqBuf, reqLen, respBuf, &respLen, 1200);
     bankAfterClientRequest(fn, reqBuf, reqLen, ok);
+    // 0.9.886: an arm switch written from a page (the phone's Switches page, or the transmitter's) moves the arming
+    // channel this receiver watches, at once. It was learned once at boot from the flight controller's mode ranges and
+    // never again, so a change made while running left the radios-off rule, the armed lock and the ARMED banner on the
+    // OLD channel until a reboot. A channel the pilot set on the Receiver page (NVS) is their choice and stays.
+    if (ok && fn == 35 && reqLen >= 5 && reqBuf[1] == 0 && reqBuf[3] != reqBuf[4] && !prefs.getUChar(NVS_KEY_ARM_CH, 0)) {   // 35 = MSP_SET_MODE_RANGE: slot, mode id (0 = ARM), aux, start, end
+        const uint8_t ch = (uint8_t)(reqBuf[2] + 6);                                                                           // aux0 = channel 6 (0.9.572)
+        if (ch <= 16 && ch != armingChannel) {
+            char m[EventLog::MSG_LEN];
+            snprintf(m, sizeof(m), "Arming channel now ch%u (AUX%u): the arm switch was written from a page", ch, ch - 5);
+            events.add(m);
+            armingChannel = ch;
+        }
+    }
     if (ok) adjCacheNote(fn, reqBuf, (uint8_t)reqLen, respBuf, respLen);   // the adjustment lines as the flight controller now has them (0.9.880)
     if (!ok) {
         if (mspWaitRespError) { server.send(502, "text/plain", "flight controller rejected fn " + String(fn)); return; }

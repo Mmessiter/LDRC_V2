@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.885-failsafe-ticks";
+constexpr const char* FW_VERSION = "RXV2-0.9.886-arm-live";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -700,6 +700,31 @@ inline bool failsafeDrive() {
     return true;
 }
 // B29-FAILSAFE-MASK-END
+// ARM-LIVE-BEGIN (0.9.886, Malcolm 14 Oct 2026, setting up the Havoc: on the Switches page "if I switch on arming, I
+// immediately get a banner that covers the entire screen ... it hides the position of the little blip showing me where
+// the channel is in relation to the threshold"). Two things hid it: the banner, and that every flight-controller request
+// is refused the moment the arming channel goes high (handleMspApi), so the page's live read (MSP_RC, 105) froze at OFF.
+// What the flight controller receives is known HERE without asking it: channelMicros[] is what buildCrsfFrame() sends,
+// and Rotorflight turns a CRSF value back into microseconds with 0.62477120195241 x value + 881 (rx_crsf.c). So while
+// the model is armed, MSP_RC is answered from this, on the flight controller's own scale, and the flight controller is
+// left alone - the line on the page goes green inside the arm zone and stays there when the radios go off for flying.
+inline uint16_t fcRcMicrosFromTx(uint16_t txUs) {
+    long crsf = ((long)txUs - 1500) * 819L / 500L + 992L;          // exactly buildCrsfFrame()
+    if (crsf < 172)  crsf = 172;
+    if (crsf > 1811) crsf = 1811;
+    return (uint16_t)((crsf * 62477L + 88100000L + 50000L) / 100000L);   // 0.62477 x crsf + 881, to the nearest us
+}
+// The 16 channels as MSP_RC carries them (U16 each, low byte first), in the hex handleMspApi answers with: 64 digits + NUL.
+inline void mspRcFromLink(char* hex65) {
+    static const char* d = "0123456789ABCDEF";
+    for (int i = 0; i < 16; ++i) {
+        const uint16_t us = fcRcMicrosFromTx(channelMicros[i]);
+        hex65[i * 4]     = d[(us >> 4) & 15];  hex65[i * 4 + 1] = d[us & 15];
+        hex65[i * 4 + 2] = d[(us >> 12) & 15]; hex65[i * 4 + 3] = d[(us >> 8) & 15];
+    }
+    hex65[64] = 0;
+}
+// ARM-LIVE-END
 // Extra head-speed divisor applied to the FC's RPM telemetry before it goes to
 // the TX. Rotorflight's CRSF 0x0C frame already carries HEAD speed (motor RPM ×
 // its own main_rotor_gear_ratio), so this stays 1.0; the gear-ratio page

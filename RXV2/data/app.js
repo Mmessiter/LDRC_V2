@@ -1575,15 +1575,25 @@
     let overlay = null;
     function showArmedBanner() {
         if (overlay) return;
+        // The Switches page keeps its bars in view (Malcolm 2026-10-14, setting
+        // up the Havoc: the banner "hides the position of the little blip
+        // showing me where the channel is in relation to the threshold"): a
+        // strip across the top there (body data-armed-banner=strip), the whole
+        // screen everywhere else. The receiver answers that page's live read
+        // itself while armed (0.9.886), so the line is seen inside the zone.
+        const ds = document.body && document.body.dataset;
+        const strip = !!(ds && ds.armedBanner === 'strip');
         overlay = document.createElement('div');
-        overlay.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:#c0392b;color:#fff;' +
-            'display:flex;flex-direction:column;align-items:center;justify-content:center;' +
-            'text-align:center;padding:2em;gap:.7em';
-        overlay.innerHTML =
-            '<div style="font-size:3.2em">⚠️</div>' +
-            '<div style="font-size:1.7em;font-weight:800;letter-spacing:.02em">ARMED!</div>' +
-            '<div style="font-size:1.15em;font-weight:600;line-height:1.55">WiFi &amp; Bluetooth are switching OFF for flying.<br>The app disconnects in 3 seconds.</div>' +
-            '<div style="font-size:.95em;opacity:.92">Disarm the model to get it back.</div>';
+        overlay.style.cssText = (strip ? 'position:fixed;top:0;left:0;right:0;padding:.6em 1em;gap:.2em;' : 'position:fixed;inset:0;padding:2em;gap:.7em;') +
+            'z-index:2147483647;background:#c0392b;color:#fff;' +
+            'display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center';
+        overlay.innerHTML = strip
+            ? '<div style="font-size:1.35em;font-weight:800;letter-spacing:.02em">⚠️ ARMED!</div>' +
+              '<div style="font-size:.95em;font-weight:600;line-height:1.4">WiFi &amp; Bluetooth switch OFF for flying. Disarm the model to get the app back.</div>'
+            : '<div style="font-size:3.2em">⚠️</div>' +
+              '<div style="font-size:1.7em;font-weight:800;letter-spacing:.02em">ARMED!</div>' +
+              '<div style="font-size:1.15em;font-weight:600;line-height:1.55">WiFi &amp; Bluetooth are switching OFF for flying.<br>The app disconnects in a moment.</div>' +
+              '<div style="font-size:.95em;opacity:.92">Disarm the model to get it back.</div>';
         document.body.appendChild(overlay);
     }
     function hideArmedBanner() {
