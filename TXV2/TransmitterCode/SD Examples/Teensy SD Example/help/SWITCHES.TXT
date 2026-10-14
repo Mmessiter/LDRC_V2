@@ -61,8 +61,10 @@ THE ARM SWITCH:|
 The arm switch is this transmitter's safety switch. With a|
 Rotorflight model, the safety drives the arming channel (set|
 in 'Settings ...').|
-So the arm action stays on that channel. It cannot be swapped|
-for another action, or removed.|
+So the arm action is kept on that channel: if the flight|
+controller had it elsewhere, the page moves it there and says|
+so; 'Save' writes it. Change the channel in 'Settings ...'.|
+It cannot be swapped for another action, or removed.|
 'Save' refuses an ON zone that reaches 988 us: the model would|
 arm with the safety on.|
 It also refuses one that stops short of 2012 us (safety off would|

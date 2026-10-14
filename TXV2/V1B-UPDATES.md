@@ -186,6 +186,25 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The arm switch follows the arming channel (V2 B97, screen 1.11.60, receiver 0.9.886, 14 Oct 2026)
+
+Malcolm (14 Oct, setting up a SAB Havoc): "I discovered using the transmitter that for some reason I could not set the
+arming channel. So I reverted to the app." On the Rotorflight Switches page the arm action's channel could be neither
+tapped nor saved when it differed from this model's arming channel (Settings): the page refused both, so a flight
+controller set up from another model, or from the phone, could not be brought into line here. Now the arm action
+follows the arming channel: on reading the switches, and on a tap, it is moved there and shown as an edit ("Arm moved
+from channel 8 to 6, this model's arming channel (Settings). Save keeps it."), for Save to write. An arming channel of
+1-5 ties nothing, as before (B48). test_switches 31.
+
+The same morning, on the phone: "if I switch on arming, I immediately get a banner that covers the entire screen ... it
+hides the position of the little blip showing me where the channel is in relation to the threshold." Two things hid
+it: the banner, and that the receiver refuses every flight-controller request the moment the arming channel goes high,
+so the page's live read froze at OFF. Receiver 0.9.886 answers that one read (MSP_RC) from its own output while the
+model is armed, on the flight controller's scale and without a word to it, so the line is seen going green inside the
+arm zone; the ARMED banner is a strip across the top of the Switches page (the whole screen everywhere else); and an
+arm switch written from a page moves the arming channel the receiver watches at once (it was learned once at boot and
+never again). dev/arm_live_test 12.
+
 ## Three of the fifty-five, put right after a night review (V2 B96, screen 1.11.60, 13 Oct 2026)
 
 Malcolm (13 Oct, bedtime): "take a good look at the bug fixes you did this evening to double-check they are good and

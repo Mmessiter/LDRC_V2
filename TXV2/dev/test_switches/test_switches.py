@@ -115,6 +115,20 @@ int main() {
     // 7. no arm switch at all is refused
     for (int i = 0; i < 20; ++i) slot(i, 0, 0, 1500, 1500); slot(0, 53, 2, 1700, 2125);
     StartSwitchView(); run(4); boxes = 0; SwNow[0].lo = 1600; SwEdited(); SaveSwitchActions(); run(4); CHECK(boxes == 1 && lastBox.find("Rotorflight needs an arm switch") == 0);
+    // 8. B97: the flight controller's arm switch on another channel than this model's arming channel follows it
+    for (int i = 0; i < 20; ++i) slot(i, 0, 0, 1500, 1500); slot(0, 0, 2, 1500, 2125); slot(1, 53, 3, 1700, 2125);   // ARM on AUX3 (channel 8); the model's arming channel is 6
+    ArmingChannel = 6; cmds.clear(); StartSwitchView(); run(4);
+    CHECK(SwN == 2 && SwNow[0].perm == 0 && SwNow[0].aux == 0 && Sw_Was_Edited && fields["tn1"] == "Channel 6: AUX1" && fields["hint"].find("Arm moved from channel 8 to 6") == 0 && fields["hint"].size() <= 90);
+    CHECK(std::find(cmds.begin(), cmds.end(), std::string("vis b3,1")) != cmds.end());   // Save offered
+    fcLog.clear(); SaveSwitchActions(); run(30);
+    CHECK(writes(35) == 1 && fcLog[0].data.substr(0, 6) == "000000" && modes[1] == 0 && modes[4] == 53 && modes[5] == 3 && !Sw_Was_Edited && fields["hint"].find("Safety switch:") == 0);
+    // the tap on the arm row with the channels agreeing: the old message; after Settings changed the arming channel, the tap moves it
+    boxes = 0; SwitchChannelTapped(); CHECK(boxes == 1 && SwNow[0].aux == 0 && lastBox.find("The arm switch stays on this model") == 0);
+    ArmingChannel = 9; boxes = 0; SwitchChannelTapped(); CHECK(boxes == 0 && SwNow[0].aux == 3 && Sw_Was_Edited && fields["tn1"] == "Channel 9: AUX4" && fields["hint"].find("Arm moved from channel 6 to 9") == 0);
+    boxes = 0; fcLog.clear(); SaveSwitchActions(); run(30); CHECK(boxes == 0 && writes(35) == 1 && modes[1] == 3 && !Sw_Was_Edited);
+    // (B48) an arming channel of 1-5 ties nothing: the arm switch is left where the flight controller has it
+    ArmingChannel = 3; StartSwitchView(); run(4); CHECK(SwN == 2 && SwNow[0].aux == 3 && !Sw_Was_Edited && fields["hint"].find("Safety switch:") == 0);
+    ArmingChannel = 6;
     printf("test_switches: %d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }

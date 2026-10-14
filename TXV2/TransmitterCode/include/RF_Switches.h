@@ -28,6 +28,7 @@ static int SwStep = SW_IDLE, SwReq = 0, SwTries = 0, SwWriteAt = 0;
 static uint32_t SwMsgUntil = 0, SwLiveMs = 0;
 static int SwLiveCh = -1, SwLiveUs = -1;
 static uint8_t SwPickPerm = 0;                              // what the picker is for: 0 the row showing, else a new action
+static int SwArmFrom = 0;                                   // B97: the channel the flight controller had the arm action on, when it was not this model's arming channel (0 = it was)
 struct SwMode { uint8_t id; const char *name; };
 static const SwMode SwModes[] PROGMEM = {
     {0, "Arm - motor enable (ARM)"}, {53, "Rescue - the safety net (RESCUE)"}, {1, "Self-level (ANGLE)"}, {2, "Self-level, blended (HORIZON)"},
@@ -44,6 +45,26 @@ static inline uint8_t SwStepOf(int us) { int st = (int)floorf((float)(us - 1500)
 static inline bool SwUsed(const SwSlot &s) { return s.hi > s.lo; }
 static inline bool SwSame(const SwSlot &a, const SwSlot &b) { return a.perm == b.perm && a.aux == b.aux && SwStepOf(a.lo) == SwStepOf(b.lo) && SwStepOf(a.hi) == SwStepOf(b.hi); }
 FLASHMEM static int SwArmChannel() { return (RotorFlight_V && ArmingChannel >= 6 && ArmingChannel <= CHANNELSUSED) ? ArmingChannel : 0; }   // 1-based, 0 = none set (B48: 1-5 cannot be a switch channel: as none)
+// B97 (Malcolm, 14 Oct, setting up the Havoc: "I discovered using the transmitter that for some reason I could not set the
+// arming channel. So I reverted to the app."): the arm action's channel could be neither tapped nor saved when it differed
+// from this model's arming channel - the page refused both - so a flight controller set up from another model, or from the
+// phone, could not be brought into line here. Now the arm action FOLLOWS the arming channel (Settings): on reading the
+// switches, and on a tap, it is moved there and shown as an edit, for Save to write. True = something moved.
+FLASHMEM static bool SwArmFollow()
+{
+    const int ac = SwArmChannel();
+    bool moved = false;
+    if (!ac) return false;
+    for (int i = 0; i < SW_SLOTS; ++i)
+    {
+        SwSlot &s = SwNow[i];
+        if (!SwUsed(s) || s.perm != 0 || s.aux + 6 == ac) continue;
+        SwArmFrom = s.aux + 6;
+        s.aux = (uint8_t)(ac - 6);
+        moved = true;
+    }
+    return moved;
+}
 
 FLASHMEM static void SwBusy(const char *msg)
 {
@@ -104,7 +125,10 @@ FLASHMEM static void SwShow()
     SendCommand((char *)"bar.kind=1"); SendCommand((char *)"bar.n=3");
     snprintf(b, sizeof(b), "bar.d0=%d", s.lo); SendCommand(b); snprintf(b, sizeof(b), "bar.d1=%d", s.hi); SendCommand(b);
     SwText("bar", (char *)"|ON|");
-    SwText("hint", (char *)(s.perm == 0 ? "Safety switch: the ON zone must reach 2012 us, but not 988 us." : "Drag the round ends to set where the switch turns it on."));
+    char h[100];
+    if (s.perm == 0 && SwArmFrom && Sw_Was_Edited) snprintf(h, sizeof(h), "Arm moved from channel %d to %d, this model's arming channel (Settings). Save keeps it.", SwArmFrom, ch);   // B97
+    else snprintf(h, sizeof(h), "%s", s.perm == 0 ? "Safety switch: the ON zone must reach 2012 us, but not 988 us." : "Drag the round ends to set where the switch turns it on.");
+    SwText("hint", h);
     SwLiveCh = -1;
     SwLive();
 }
@@ -169,7 +193,8 @@ FLASHMEM void SwitchPoll()
         uint8_t b[96];
         const int n = PipeReplyBytes(b, sizeof(b));
         if (!SwTake(b, n)) { snprintf(PipeRepBody, sizeof(PipeRepBody), "only %d bytes came (Rotorflight sends 80)", n); SwFail("Could not read the switches", true); return; }
-        SwHave = true; Sw_Was_Edited = false; SwStep = SW_IDLE;
+        SwHave = true; Sw_Was_Edited = false; SwStep = SW_IDLE; SwArmFrom = 0;
+        if (SwArmFollow()) Sw_Was_Edited = true;   // B97: the arm action on this model's arming channel, as an edit for Save
         SwBusy(""); SwHead(); SwShow();
         return;
     }
@@ -196,7 +221,7 @@ FLASHMEM void SwitchPoll()
         if (!SwTake(b, n)) { SwFail("Could not read back", false); return; }
         bool same = true;
         for (int i = 0; i < SW_SLOTS; ++i) if (!SwSame(want[i], SwNow[i])) same = false;
-        Sw_Was_Edited = false; SwStep = SW_IDLE;
+        Sw_Was_Edited = false; SwStep = SW_IDLE; SwArmFrom = 0;
         SwHead(); SwShow();
         SwBusy(same ? "Saved, and read back the same." : "Saved, but the flight controller changed some of it.");
         SwMsgUntil = millis() + 4000;
@@ -219,7 +244,7 @@ FLASHMEM void StartSwitchView() // the menu's Switches ...
     }
     SendCommand((char *)"page SwitchView");
     CurrentView = SWITCHVIEW;
-    Sw_Was_Edited = false; SwHave = false; SwN = 0; SwAt = 0;
+    Sw_Was_Edited = false; SwHave = false; SwN = 0; SwAt = 0; SwArmFrom = 0;
     SwHead();
     SwShow();
     SwRead_();
@@ -271,7 +296,11 @@ FLASHMEM void SwitchChannelTapped() // the next channel; the arm action keeps th
 {
     if (!SwN) return;
     SwSlot &s = SwNow[SwShown[SwAt]];
-    if (s.perm == 0 && SwArmChannel()) { MsgBox((char *)"page SwitchView", (char *)"The arm switch stays on this model's\r\narming channel (Settings)."); SwHead(); SwShow(); return; }
+    if (s.perm == 0 && SwArmChannel())
+    {
+        if (SwArmFollow()) { SwEdited(); SwShow(); return; }   // B97: moved to this model's arming channel (Settings changed since the read)
+        MsgBox((char *)"page SwitchView", (char *)"The arm switch stays on this model's\r\narming channel (Settings)."); SwHead(); SwShow(); return;
+    }
     int ch = s.aux + 1;
     if (ch > CHANNELSUSED - 6) ch = 0;
     s.aux = (uint8_t)ch;
