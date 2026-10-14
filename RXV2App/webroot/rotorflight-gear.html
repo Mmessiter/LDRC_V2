@@ -8,9 +8,9 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Gear ratio &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=386">
-<script src="/app.js?v=386" defer></script>
-<script src="/gear.js?v=3" defer></script>
+<link rel=stylesheet href="/style.css?v=387">
+<script src="/app.js?v=387" defer></script>
+<script src="/gear.js?v=4" defer></script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -29,6 +29,7 @@
 <p>Rotorflight multiplies motor RPM by <b>rotor &divide; motor</b> to get head speed. The governor holds that head speed and the receiver passes it to the transmitter, so <b>one ratio, entered here, feeds both</b>.</p>
 <ul>
 <li><b>Rotor : motor</b> &mdash; turns, e.g. 1 : 10.2, or the teeth counts with the pinion first: 10 : 102, 11 : 110, 21 : 214. The rotor number is always the smaller one.</li>
+<li><b>Direct drive</b> (the motor on the main shaft, no main gear): 1 : 1 &mdash; head speed is motor RPM. That is also Rotorflight&rsquo;s factory setting, so a geared model left at 1 : 1 shows about ten times its real head speed.</li>
 <li><b>Two-stage drives</b> (belt to a big pulley on an intermediate shaft, then a pinion into the main gear &mdash; SAB Goblin, RAW, Black Thunder): multiply the stages. Main = motor pulley &times; drive pinion : big pulley &times; main gear; tail = tail pulley &times; drive pinion : front tail pulley &times; main gear. Goblin 770 with the 21T motor pulley = 399 : 4080 (1 : 10.23) and 475 : 2516 (tail 5.3&times;); the counts are in the kit manual&rsquo;s parts list.</li>
 <li><b>Backwards is the classic mistake</b>: 10 : 1 tells Rotorflight the head turns ten times <i>faster</i> than the motor. The governor then believes the head is doing 70,000 rpm, sits at minimum throttle, every bank gives the same speed and the vibration filters miss. A red line under the boxes means swap the numbers.</li>
 <li><b>Rotor : tail</b> &mdash; usually 1 : 4 to 1 : 5.5. Only the tail-speed readout and tail vibration filters use it.</li>

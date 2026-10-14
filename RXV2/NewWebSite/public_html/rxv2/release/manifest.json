@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.887-direct-drive",
+      "url": "https://messiter.com/rxv2/release/v0.9.887/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.887/littlefs.bin",
+      "fs_md5": "8f37f74f076019a2d0c0297eb34fa38c",
+      "notes": "The gear-ratio page accepts 1 : 1 as direct drive (head speed = motor RPM) with an amber note that it is also the factory setting; it called 1 : 1 'Not set' and asked to save anyway. Found on the SAB Havoc."
+    },
+    {
       "name": "RXV2-0.9.886-arm-live",
       "url": "https://messiter.com/rxv2/release/v0.9.886/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.886/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.876/littlefs.bin",
       "fs_md5": "cc4878104ade8765b32ab2b7b6cb420e",
       "notes": "When a Version 2 transmitter asks for Bluetooth and the receiver cannot open it (armed, or a receiver update), the events log says so and why; state.json ble.tx_ask shows the ask."
-    },
-    {
-      "name": "RXV2-0.9.875-ble-wanted",
-      "url": "https://messiter.com/rxv2/release/v0.9.875/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.875/littlefs.bin",
-      "fs_md5": "cc4878104ade8765b32ab2b7b6cb420e",
-      "notes": "A Version 2 transmitter in its Rotorflight menu now asks the receiver to open its Bluetooth (parameter 36), so the transmitter's screen can join it minutes after power-on, not only in the first 30 s. Honoured only while not armed; the ordinary rules shut it again afterwards."
     }
   ],
   "rotorflight": {

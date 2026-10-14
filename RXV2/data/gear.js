@@ -15,7 +15,11 @@
 // non-motorised tail: tailSpeed = headSpeed × tail[1]/tail[0]. So main[0]
 // = rotor turns, main[1] = motor turns; tail[0] = rotor, tail[1] = tail.
 // Both are computed at boot only, so a change needs a flight-controller
-// restart. MSP 131 reply = 29 B (has motorCount at [6]); MSP 222 write =
+// restart.
+//
+// Malcolm 2026-10-14, the SAB Havoc (direct drive): 1 : 1 was called 'Not
+// set' because a fresh FC reads 1 : 1 too. It is a valid ratio: amber note,
+// not a refusal (verdict.warn). MSP 131 reply = 29 B (has motorCount at [6]); MSP 222 write =
 // 28 B (same bytes without it). Ratios sit at reply [21..29) / write [20..28).
 (function(){
 const rdU16=(b,o)=>b[o]|(b[o+1]<<8);
@@ -41,7 +45,7 @@ function verdict(kind,n,d){
     if(!(n>0&&d>0)) return {bad:true,text:'Enter both numbers.'};
     const same=Math.abs(n-d)<1e-9;
     if(kind==='main'){
-        if(same) return {bad:true,text:'Not set (1 : 1) — head speed would read as motor RPM, about ten times too high.'};
+        if(same) return {bad:false,warn:true,text:'1 : 1 — direct drive: head speed is motor RPM ✓ Also the factory setting, so a geared model needs its real ratio here.'};
         if(n>d) return {bad:true,text:'⚠️ Backwards — this says the rotor turns '+fmt(n/d)+' times per motor turn. Swap the two numbers.'};
         return {bad:false,text:'= 1 : '+fmt(d/n)+' — the motor turns '+fmt(d/n)+' times per rotor turn ✓'};
     }
@@ -55,7 +59,7 @@ function attachHint(nId,dId,outId,kind){
     addCss();
     const n=document.getElementById(nId), d=document.getElementById(dId), out=document.getElementById(outId);
     if(!n||!d||!out) return;
-    const paint=()=>{ const v=verdict(kind,n.value,d.value); out.textContent=v.text; out.style.color=v.bad?'#8a2f2f':'#2f6b3a'; out.style.fontWeight=v.bad?'600':''; };
+    const paint=()=>{ const v=verdict(kind,n.value,d.value); out.textContent=v.text; out.style.color=v.bad?'#8a2f2f':v.warn?'#7a5412':'#2f6b3a'; out.style.fontWeight=v.bad?'600':''; };
     n.addEventListener('input',paint); d.addEventListener('input',paint);
     paint(); return paint;
 }
@@ -84,7 +88,7 @@ function mount(host,opts){
     const boxes=(a,b,ca,cb)=>'<span class=gPair><span class=gCell><span class=gCap>'+ca+'</span><input type=number id='+a+' min=0 max=65535 step=any inputmode=decimal></span>'+
       '<span class=gColon>:</span><span class=gCell><span class=gCap>'+cb+'</span><input type=number id='+b+' min=0 max=65535 step=any inputmode=decimal></span></span>';
     el.innerHTML=
-      '<div class=gRow><b data-help="Rotor : motor &mdash; how many turns each makes, e.g. 1 : 10.2, or the teeth counts (pinion : main gear, 10 : 102). Rotorflight turns motor RPM into head speed with this; the governor and the transmitter both depend on it. Two-stage belt + gear drive (SAB Goblin, RAW, Black Thunder): multiply the stages &mdash; motor pulley &times; drive pinion : big pulley &times; main gear, e.g. Goblin 770 = 21&times;19 : 60&times;68 = 399 : 4080. (Rotorflight: main_rotor_gear_ratio)">Main gear ratio</b>'+
+      '<div class=gRow><b data-help="Rotor : motor &mdash; how many turns each makes, e.g. 1 : 10.2, or the teeth counts (pinion : main gear, 10 : 102); direct drive 1 : 1. Rotorflight turns motor RPM into head speed with this; the governor and the transmitter both depend on it. Two-stage belt + gear drive (SAB Goblin, RAW, Black Thunder): multiply the stages &mdash; motor pulley &times; drive pinion : big pulley &times; main gear, e.g. Goblin 770 = 21&times;19 : 60&times;68 = 399 : 4080. (Rotorflight: main_rotor_gear_ratio)">Main gear ratio</b>'+
       boxes('gwMn','gwMd','rotor','motor')+'</div>'+
       '<p class=gHint id=gwMh></p>'+
       (opts.tail===false?'':'<div class=gRow><b data-help="Rotor : tail &mdash; how many turns each makes, usually 1 : 4 to 1 : 5.5. Only the tail-speed readout and tail vibration filters use it. Two-stage (SAB): tail pulley &times; drive pinion : front tail pulley &times; main gear, e.g. Goblin 770 = 25&times;19 : 37&times;68 = 475 : 2516. (Rotorflight: tail_rotor_gear_ratio)">Tail ratio</b>'+

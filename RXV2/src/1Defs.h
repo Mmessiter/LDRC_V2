@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.886-arm-live";
+constexpr const char* FW_VERSION = "RXV2-0.9.887-direct-drive";
 
 //*********************************************************************
 //  Auto-update manifest URLs
