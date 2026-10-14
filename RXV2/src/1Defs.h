@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.887-direct-drive";
+constexpr const char* FW_VERSION = "RXV2-0.9.888-hobbywing-v4";
 
 //*********************************************************************
 //  Auto-update manifest URLs

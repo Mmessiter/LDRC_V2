@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.888-hobbywing-v4",
+      "url": "https://messiter.com/rxv2/release/v0.9.888/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.888/littlefs.bin",
+      "fs_md5": "9b385921164b128c5a26d6ea12fba9b5",
+      "notes": "The ESC settings page answers for the brand the flight controller is set to (a Hobbywing V4 owner was told to 'set it to Scorpion'): the Scorpion is read and changed there; a Hobbywing Platinum V4 is read-only for Rotorflight (LCD box / WiFi module); the Platinum V5, FlyRotor, OpenYGE and XDFly are programmable but not from that page yet. Wiring + help: the Platinum V4's telemetry is its programming port's signal pin, never the red pin."
+    },
+    {
       "name": "RXV2-0.9.887-direct-drive",
       "url": "https://messiter.com/rxv2/release/v0.9.887/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.887/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.877/littlefs.bin",
       "fs_md5": "fdb41165a169db2bc62797e26c3711b3",
       "notes": "Filters page laid out as the configurator's Gyro tab: the lowpass type names were in the wrong order (1st order read as PT2), Notch Q now in tenths, Strength Custom/Low/Medium/High, and Enable on every section, with the restart the Dynamic and RPM filter Enables need."
-    },
-    {
-      "name": "RXV2-0.9.876-ble-ask-events",
-      "url": "https://messiter.com/rxv2/release/v0.9.876/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.876/littlefs.bin",
-      "fs_md5": "cc4878104ade8765b32ab2b7b6cb420e",
-      "notes": "When a Version 2 transmitter asks for Bluetooth and the receiver cannot open it (armed, or a receiver update), the events log says so and why; state.json ble.tx_ask shows the ask."
     }
   ],
   "rotorflight": {

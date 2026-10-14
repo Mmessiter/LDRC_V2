@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>ESC settings &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=387">
-<script src="/app.js?v=387" defer></script>
+<link rel=stylesheet href="/style.css?v=388">
+<script src="/app.js?v=388" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -121,6 +121,7 @@
 <li><b>Forgot to release?</b> Unplug the flight battery, wait 5 seconds and plug it back in &mdash; that clears programming mode too. Never fly with the ESC still in programming mode: the transmitter would show no head speed. This page warns in red when it sees an unreleased ESC.</li>
 <li>The telemetry protocol is shown but never written &mdash; changing it can sever the link between ESC and flight controller.</li>
 <li>Needs the ESC telemetry protocol set to Scorpion with two-way talk on (First-time basics &rarr; ESC), and the ESC wired to the flight controller&rsquo;s TLM pad.</li>
+<li><b>Other brands</b>: Rotorflight can also program a Hobbywing Platinum V5, FlyRotor, OpenYGE or XDFly through the wire, which this page does not do yet. A Hobbywing Platinum V4 or a Kontronik cannot be changed through the flight controller at all &mdash; Rotorflight only reads their telemetry; their settings live in their own programmer (LCD box, app or USB adapter).</li>
 </ul>
 </template>
 <script>
@@ -177,6 +178,22 @@ const FIELDS=[
 ];
 let blob=null, orig={}, pollTimer=null, polls=0, busy=false;
 let escState='probing', probeTimer=null, probeHoldUntil=0, fcMisses=0;
+// Which brand the flight controller is set to (MSP 123 byte 0); null until read.
+let escProto=null;
+const PROTO_NAMES=['None','BLHeli32','Hobbywing V4','Hobbywing V5','Scorpion','Kontronik','OMP Hobby','ZTW','APD','OpenYGE','FlyRotor','Graupner','XDFly','Record'];
+// What this page can do for the brand the flight controller is set to: only
+// the Scorpion is read and changed here, and the text says where the other
+// brands' settings live. (Malcolm 2026-10-14, the Havoc's Hobbywing Platinum
+// 60A V4: the old message told him to "set it to Scorpion".)
+function escProtoVerdict(p){
+    const name=PROTO_NAMES[p]||('protocol '+p);
+    if(p===4) return {ok:true,name,text:''};
+    if(p===0) return {ok:false,name,text:'No ESC telemetry protocol is set. Choose the ESC’s brand in First-time basics → ESC. Only a Scorpion can be read and changed from here.'};
+    if(p===2) return {ok:false,name,text:'The flight controller is set to Hobbywing V4. Rotorflight only reads that family’s telemetry: its settings are changed with Hobbywing’s LCD box or WiFi module, not from here.'};
+    if(p===3) return {ok:false,name,text:'The flight controller is set to Hobbywing V5. Rotorflight can program a V5, but this page does not know it yet: use Hobbywing’s LCD box or WiFi module for now.'};
+    if(p===9||p===10||p===12) return {ok:false,name,text:'The flight controller is set to '+name+'. Rotorflight can program it, but this page only knows the Scorpion so far: use the ESC’s own programmer.'};
+    return {ok:false,name,text:'The flight controller is set to '+name+'. Only a Scorpion can be read and changed from here; a '+name+' keeps its settings for its own programmer.'};
+}
 
 function fieldWire(f,b){ return f.wide?u32(b,f.off):u16(b,f.off); }
 function fieldText(f,wire){ return f.kind==='sel' ? (f.opts[wire]||('value '+wire)) : (wire/f.div).toFixed(f.dp)+(f.unit||''); }
@@ -245,7 +262,7 @@ async function checkWiring(){
     try{
         const b=hexToBytes(await LDRC.msp(123,'',2));
         if(b.length>=2){
-            if(b[0]!==4){ setStatus('bad','ESC telemetry protocol is not Scorpion — set it in First-time basics → ESC first.'); return false; }
+            { const v=escProtoVerdict(b[0]); if(!v.ok){ setStatus('bad',v.text); return false; } }
             if(b[1]!==1){ setStatus('bad','Two-way ESC talk (half-duplex) is OFF on the flight controller — turn it on in First-time basics → ESC, then come back.'); return false; }
         }
     }catch(e){ /* older FC or busy — let the read decide */ }
@@ -264,7 +281,7 @@ function gotBlob(b){
 }
 function notScorpion(b){
     stopPolling(); $('ritual').style.display='none';
-    setStatus('bad','An ESC answered, but not a Scorpion (signature '+b[0]+'). Hobbywing support is coming next.',60000);
+    setStatus('bad','An ESC answered, but not a Scorpion (signature '+b[0]+'): this page only knows the Scorpion so far.',60000);
     endRead();
 }
 let reading=false;
@@ -406,6 +423,9 @@ function applyState(state,arg){
     case 'deaf':      setButton('🔋 Prepare the receiver to read the ESC on reboot…',true);
                       say('info','Blades off / motor unplugged. Press the button, then unplug the flight battery, wait 5 seconds, plug it back in and leave this page open — the receiver reads the ESC for you.',
                           WHY_10S+'This one is already running, so it is deaf until the next plug-in; the receiver catches those 10 seconds itself — nothing to race. '+WHY_FREEZE); break;
+    case 'notscorpion': setButton('🔌 Read the ESC',false);
+                      say('bad',escProtoVerdict(arg).text,
+                          'Rotorflight reaches inside an ESC through its telemetry wire only for the brands it knows, and this page knows the Scorpion Tribunus.'); break;
     default:          setButton('🔌 Read the ESC',true);
                       say('info','Press Read the ESC. Blades off / motor unplugged.',
                           'If the ESC does not answer within a few seconds you will be walked through a battery restart — a Scorpion listens only for 10 seconds after power-up. '+WHY_FREEZE); break;
@@ -413,6 +433,12 @@ function applyState(state,arg){
 }
 async function probe(){
     if(busy||blob||Date.now()<probeHoldUntil) return;
+    // The brand first (MSP 123 is a plain config read, safe at any time): a
+    // brand this page cannot change gets its answer here, not the Scorpion's
+    // battery-restart ritual.
+    try{ const b=hexToBytes(await LDRC.msp(123,'',1)); if(b.length>=1) escProto=b[0]; }catch(e){}
+    if(busy||blob) return;
+    if(escProto!==null&&escProto!==4){ applyState('notscorpion',escProto); return; }
     const c=await catchStatus();
     if(busy||blob) return;                                  // the user pressed something meanwhile
     if(!c){ applyState('norx'); return; }

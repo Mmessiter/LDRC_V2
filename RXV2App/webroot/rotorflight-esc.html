@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>ESC setup &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=387">
-<script src="/app.js?v=387" defer></script>
+<link rel=stylesheet href="/style.css?v=388">
+<script src="/app.js?v=388" defer></script>
 <script src="/gear.js?v=4" defer></script>
 <style>
 .wcard{background:#f2f6f8;border-radius:12px;padding:.8em .9em;margin:.6em 0;box-shadow:0 2px 6px rgba(0,0,0,.08)}
@@ -144,7 +144,7 @@ window.addEventListener('pagehide',()=>{ if(calTimer){ clearInterval(calTimer); 
 document.addEventListener('DOMContentLoaded',()=>{ LDRCGear.mount('gearBox',{tail:true}); });
 </script>
 <template id=helpContent><h2>ESC setup</h2>
-<p>Helicopter ESCs keep their own settings inside themselves, and only their own programmer can change them &mdash; Scorpion (Sproto / phone app), Hobbywing (LCD box / app), YGE (USB adapter), Kontronik (ProgDisc / app). Rotorflight can read the ESC&rsquo;s telemetry and drive its throttle. For a <b>Scorpion Tribunus</b> it can also reach inside through the telemetry wire &mdash; the <b>Read &amp; change the ESC</b> button below does that with no cables. Other brands still need their own programmer.</p>
+<p>Helicopter ESCs keep their own settings inside themselves, and only their own programmer can change them &mdash; Scorpion (Sproto / phone app), Hobbywing (LCD box / app), YGE (USB adapter), Kontronik (ProgDisc / app). Rotorflight can read the ESC&rsquo;s telemetry and drive its throttle. For a <b>Scorpion Tribunus</b> it can also reach inside through the telemetry wire &mdash; the <b>Read &amp; change the ESC</b> button below does that with no cables. A <b>Hobbywing Platinum V4</b> cannot be changed through the flight controller by anyone: Rotorflight only reads it (volts, temperature, head speed; current on the 80 A and larger), and its settings live in Hobbywing&rsquo;s LCD box or WiFi module. Other brands still need their own programmer.</p>
 <ul>
 <li><b>One governor only.</b> Rotorflight&rsquo;s governor is excellent and lives in the tuning wizard; the ESC&rsquo;s must then be off / external. Choose the ESC&rsquo;s instead and Rotorflight&rsquo;s must be off.</li>
 <li><b>Telemetry protocol</b> in the ESC and the <b>brand</b> chosen in First-time basics must match, or the data wire stays silent.</li>

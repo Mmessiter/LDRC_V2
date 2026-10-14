@@ -49,10 +49,10 @@
   },
   {
    "brand": "Hobbywing",
-   "model": "Platinum PRO V4 / V4.1, FlyFun V5",
+   "model": "Platinum V4 / PRO V4 / V4.1 (25A-200A), FlyFun V5",
    "protocol": "HOBBYWINGV4",
    "halfduplex": false,
-   "wiring": "ESC telemetry wire to FC UART RX",
+   "wiring": "Programming-port SIGNAL pin (+ ground, never the red pin) to FC UART RX - the yellow lead is RPM pulses, not data",
    "reports": [
     "volts",
     "amps",
@@ -65,7 +65,8 @@
    "sources": [
     "https://rotorflight.org/docs/2.0.0/Wiki/Tutorial-Setup/ESC-Telemetry"
    ],
-   "protocol_index": 2
+   "protocol_index": 2,
+   "note": "Malcolm's SAB Havoc 2026-10-14: Platinum 60A V4. 25/40/60A V4 report volts, temp, rpm only (no current); needs non-VBar ESC firmware; settings only via Hobbywing's LCD box / WiFi module (Rotorflight has no write path for V4 - esc_sensor.c hw4SensorProcess is decode-only)"
   },
   {
    "brand": "Kontronik",
