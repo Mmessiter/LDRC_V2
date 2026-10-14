@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.889-save-bar",
+      "url": "https://messiter.com/rxv2/release/v0.9.889/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.889/littlefs.bin",
+      "fs_md5": "db27bf1bd16c6b57b4fae48a7cd0d802",
+      "notes": "The floating Save bar comes back after typing in a box: it hides only while a box is being typed in and the keyboard covers the window, measured zoom-proof (height x scale). A page zoomed in - by a pinch, or by iOS itself on focusing a small box - read as 'covered' before, and the bar stayed hidden for good (Malcolm, the Travel page). The leftover 2026-08-06 ride-up code that re-lifted the bar on every scroll is removed."
+    },
+    {
       "name": "RXV2-0.9.888-hobbywing-v4",
       "url": "https://messiter.com/rxv2/release/v0.9.888/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.888/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.878/littlefs.bin",
       "fs_md5": "fdb41165a169db2bc62797e26c3711b3",
       "notes": "A transmitter asking for a block of settings (PIDs, rates, governor) now gets a fresh read, never the cached values from before its bank switch moved: the Version 2 transmitter could keep showing the previous bank's PIDs."
-    },
-    {
-      "name": "RXV2-0.9.877-filters-as-configurator",
-      "url": "https://messiter.com/rxv2/release/v0.9.877/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.877/littlefs.bin",
-      "fs_md5": "fdb41165a169db2bc62797e26c3711b3",
-      "notes": "Filters page laid out as the configurator's Gyro tab: the lowpass type names were in the wrong order (1st order read as PT2), Notch Q now in tenths, Strength Custom/Low/Medium/High, and Enable on every section, with the restart the Dynamic and RPM filter Enables need."
     }
   ],
   "rotorflight": {

@@ -1187,23 +1187,10 @@
         // PHONE (Malcolm 2026-08-04). Only the Rotorflight tuning pages
         // capture edits in review — other pages' saves genuinely fail
         // offline, so their buttons keep their labels.
-        // Keyboard vs floating bar (Malcolm 2026-08-06: "the floating
-        // buttons sink behind it!"): the on-screen keyboard shrinks the
-        // VISUAL viewport but position:fixed still anchors to the layout
-        // viewport underneath it. Ride the visual viewport instead — the
-        // bar translates up to sit just above the keyboard while editing.
-        const fab = document.querySelector('.fabBar');
-        if (fab && window.visualViewport) {
-            const vv = window.visualViewport;
-            const place = () => {
-                const lift = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-                fab.style.transition = 'transform .15s';
-                fab.style.transform = lift ? 'translateY(-' + lift + 'px)' : '';
-            };
-            vv.addEventListener('resize', place);
-            vv.addEventListener('scroll', place);
-            place();
-        }
+        // (The 2026-08-06 ride-up of the floating bar lived here. The
+        // keyboard-aware bar at the end of this file replaced it on
+        // 2026-09-26; the copy left behind kept re-lifting the bar on every
+        // visual-viewport scroll until 2026-10-14.)
 
         LDRC.replayReady.then(isReplay => {
             if (!isReplay) return;
@@ -1551,17 +1538,35 @@
     // lags a frame. So while the keyboard is up the bar steps aside; tap ✓
     // on the keypad and it is back where it always was. (Replaces the
     // 2026-08-15 ride-up, which is what jumped.)
+    // Is a box being typed in? Only then can a keyboard be up at all.
+    function typing() {
+        const a = document.activeElement;
+        if (!a) return false;
+        if (a.tagName === 'TEXTAREA' || a.tagName === 'SELECT') return true;
+        if (a.tagName !== 'INPUT') return false;
+        return !/^(checkbox|radio|range|button|submit|reset|file|color)$/i.test(a.type || '');
+    }
     function adjust() {
         const bar = document.querySelector('.fabBar');
         if (!bar) return;
-        const covered = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-        bar.style.visibility = covered > 40 ? 'hidden' : '';
+        // Zoom-proof (Malcolm 2026-10-14, the Travel page: "the save button
+        // sometimes vanishes and cannot be restored"): the visual viewport's
+        // height is in zoomed pixels, so height × scale is what it spans of
+        // the window, and the rest is the keyboard. The old sum (height +
+        // offsetTop) read a page zoomed in - by a pinch, or by iOS itself on
+        // focusing a small box - as "covered" with no keyboard there, and the
+        // bar stayed hidden for good. And with nothing focused there is no
+        // keyboard, whatever the numbers say.
+        const covered = Math.max(0, window.innerHeight - vv.height * (vv.scale || 1));
+        bar.style.visibility = (covered > 40 && typing()) ? 'hidden' : '';
         bar.style.transform = '';
         bar.style.paddingBottom = '';
     }
     vv.addEventListener('resize', adjust);
+    addEventListener('resize', adjust);
     addEventListener('focusin',  () => setTimeout(adjust, 60));
-    addEventListener('focusout', () => setTimeout(adjust, 250));
+    // The keyboard is still sliding away when focus leaves: look again until it has gone.
+    addEventListener('focusout', () => { [250, 600, 1200].forEach(ms => setTimeout(adjust, ms)); });
 })();
 
 // ARMED banner (Malcolm 2026-08-24, after the crash: "make this clear to the

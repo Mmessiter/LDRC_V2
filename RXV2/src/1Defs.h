@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.888-hobbywing-v4";
+constexpr const char* FW_VERSION = "RXV2-0.9.889-save-bar";
 
 //*********************************************************************
 //  Auto-update manifest URLs
