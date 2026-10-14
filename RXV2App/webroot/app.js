@@ -1558,7 +1558,14 @@
         // bar stayed hidden for good. And with nothing focused there is no
         // keyboard, whatever the numbers say.
         const covered = Math.max(0, window.innerHeight - vv.height * (vv.scale || 1));
-        bar.style.visibility = (covered > 40 && typing()) ? 'hidden' : '';
+        // While the keyboard covers the window the bar LANDS in the page
+        // flow (its own place at the foot of the page, under Reload) instead
+        // of hiding: reachable by scrolling, never gone, and nothing to chase
+        // (Malcolm 2026-10-14: "I should be able to save it without getting
+        // rid of the keyboard"). Android resizes the window for its keyboard,
+        // so there covered stays 0 and the bar simply floats above it.
+        bar.classList.toggle('landed', covered > 40 && typing());
+        bar.style.visibility = '';
         bar.style.transform = '';
         bar.style.paddingBottom = '';
     }

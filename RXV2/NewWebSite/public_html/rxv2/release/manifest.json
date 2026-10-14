@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.890-save-lands",
+      "url": "https://messiter.com/rxv2/release/v0.9.890/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.890/littlefs.bin",
+      "fs_md5": "42b9a4f8ccbd52f72bd7f5083a040093",
+      "notes": "Save while the keyboard is up: the floating Save bar lands in the page flow (at the foot of the page, under Reload) for as long as a box is being typed in and the keyboard covers the window, and floats again when the keyboard goes - it used to step aside, so Save was out of reach until the keyboard was dismissed (Malcolm, the Travel page). Android, whose window shrinks for its keyboard, keeps the bar floating above it."
+    },
+    {
       "name": "RXV2-0.9.889-save-bar",
       "url": "https://messiter.com/rxv2/release/v0.9.889/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.889/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.879/littlefs.bin",
       "fs_md5": "e3d491add30944527f9e67c4f6f158c2",
       "notes": "A switch on the Adjustments page is one Rotorflight line, so it works at every change (one line per position worked once per power-up: Rotorflight applies a fixed value only the first time); switches found in the old form are converted when the page opens: save to keep them. After a transmitter-on boot the receiver takes one look (a scan) for the home WiFi when the transmitter goes off or the model is disarmed, and joins if it is there."
-    },
-    {
-      "name": "RXV2-0.9.878-fresh-block-reads",
-      "url": "https://messiter.com/rxv2/release/v0.9.878/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.878/littlefs.bin",
-      "fs_md5": "fdb41165a169db2bc62797e26c3711b3",
-      "notes": "A transmitter asking for a block of settings (PIDs, rates, governor) now gets a fresh read, never the cached values from before its bank switch moved: the Version 2 transmitter could keep showing the previous bank's PIDs."
     }
   ],
   "rotorflight": {

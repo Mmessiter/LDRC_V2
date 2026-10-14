@@ -416,6 +416,10 @@ body.stale-values td input{
     box-shadow:0 -3px 12px rgba(0,0,0,.18);
 }
 .fabBar .btn{flex:1;margin:0;padding:.85em .6em;font-size:1.02em;justify-content:center}
+/* Landed (app.js, keyboard up on iOS): the bar sits in the page flow at the
+ * foot of the page for as long as a box is being typed in - the keyboard
+ * would cover a fixed bar, and a bar chased above it jumps. */
+.fabBar.landed{position:static;background:transparent;box-shadow:none;padding:.5em 0 0}
 body.hasFab{padding-bottom:8em}
 
 

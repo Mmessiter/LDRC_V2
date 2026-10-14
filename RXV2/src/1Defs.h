@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.889-save-bar";
+constexpr const char* FW_VERSION = "RXV2-0.9.890-save-lands";
 
 //*********************************************************************
 //  Auto-update manifest URLs
