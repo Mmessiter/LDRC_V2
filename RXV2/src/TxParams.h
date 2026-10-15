@@ -672,7 +672,10 @@ inline bool applyWriteToScratch() {
         pmScratch[15] = govWrite[16]; pmScratch[16] = govWrite[17]; // Flags lo/hi
     } else if (pmWriteKind == WK_GOV_CONFIG) {
         if (pmScratchLen < 33) return false;          // govWrite[18..41] → MSP config order (rest preserved; write keeps the FC's own length)
-        pmScratch[0]  = govWrite[18];           // Gov_Mode
+        // 0.9.893: the two choices only from Rotorflight 2.3's lists - it keeps any byte it is sent, then calls its settings
+        // corrupted (the Havoc, 15 Oct: "gov_throttle_type = 3" in its diff). Out of range: the flight controller's own kept.
+        if (govWrite[18] <= 4) pmScratch[0] = govWrite[18];   // Gov_Mode: OFF LIMIT DIRECT ELECTRIC NITRO
+        else events.add("GovCfg: the TX's governor mode is out of range - the FC's kept");
         govScratchTenths(pmScratch, 1,  govWrite, 20); // Startup  (TX whole seconds → FC tenths)
         govScratchTenths(pmScratch, 3,  govWrite, 22); // Spoolup
         govScratchTenths(pmScratch, 5,  govWrite, 26); // Tracking
@@ -686,7 +689,8 @@ inline bool applyWriteToScratch() {
         pmScratch[23] = govWrite[37];           // Ff_Filter
         pmScratch[25] = govWrite[36];           // D_Filter
         govScratchTenths(pmScratch, 26, govWrite, 24); // Spooldown
-        pmScratch[28] = govWrite[39];           // Throttle_Type
+        if (govWrite[39] <= 2) pmScratch[28] = govWrite[39];  // Throttle_Type: NORMAL SWITCH FUNCTION
+        else events.add("GovCfg: the TX's throttle type is out of range - the FC's kept");
         pmScratch[31] = govWrite[40];           // Idle_Throttle
         pmScratch[32] = govWrite[41];           // Auto_Throttle
         // [11/12] lost-headspeed, [15-18] autorot bailout/min-entry, [24] spoolup-min,

@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.892-hobbywing-program-box";
+constexpr const char* FW_VERSION = "RXV2-0.9.893-governor-choices-in-range";
 
 //*********************************************************************
 //  Auto-update manifest URLs

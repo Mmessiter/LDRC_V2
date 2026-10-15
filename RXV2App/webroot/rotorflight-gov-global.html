@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Governor (global) &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=392">
-<script src="/app.js?v=392" defer></script>
+<link rel=stylesheet href="/style.css?v=394">
+<script src="/app.js?v=394" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;
         padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -57,7 +57,12 @@ input:disabled,select:disabled{background:#eee;color:#999}
                 <option value=4>4 — NITRO</option>
             </select></div>
         <div class=fldRow><label data-help="Below this throttle the governor idles; above it, it takes control and spools toward the target head speed.">Governor takes over above (handover throttle, %)</label>    <input type=number id=g_hand></div>
-        <div class=fldRow><label data-help="How the governor shapes its throttle output. Leave at the default unless your ESC maker says otherwise.">Throttle type</label>            <input type=number id=g_ttype></div>
+        <div class=fldRow><label data-help="How the governor reads your throttle channel. NORMAL (the usual): as it is. SWITCH: above handover the throttle sets the head speed - 80 % throttle asks for 80 % of the bank&#39;s head speed (ELECTRIC and NITRO only). FUNCTION: the channel works as a three-way switch - idle throttle, auto throttle, full.">Throttle type</label>
+            <select id=g_ttype>
+                <option value=0>0 — NORMAL</option>
+                <option value=1>1 — SWITCH</option>
+                <option value=2>2 — FUNCTION</option>
+            </select></div>
         <div class=fldRow><label data-help="Throttle sent while the governor is idling (below handover) — keeps the motor barely turning without spooling up. Per cent, in steps of 0.1 (Rotorflight stores tenths: 0 to 25.0 %).">Idle throttle (%)</label>        <input type=number id=g_idle step=0.1 min=0 max=25></div>
         <div class=fldRow><label data-help="The throttle kept by the motor during an autorotation, per cent in steps of 0.1 (Rotorflight stores tenths: 0 to 25.0 %). A throttle drop counts as an autorotation only while the stick stays AT OR ABOVE this level with bail-out enabled (Autorotation timeout above 0, next card); raising the stick again then gives the instant bail-out spool-up. Below it the drop is a plain throttle hold. Cannot be lower than the idle throttle.">Auto throttle (%)</label>        <input type=number id=g_auto step=0.1 min=0 max=25></div>
     </div>
@@ -469,7 +474,7 @@ async function load() {
         if (bytes.length < CONFIG_BYTES) throw new Error('short response: ' + bytes.length + ' (need ' + CONFIG_BYTES + ', is flight controller on Rotorflight 2.3?)');
         cachedRaw = bytes.slice(0, CONFIG_BYTES);
         const u16 = (o) => bytes[o] | (bytes[o+1] << 8);
-        document.getElementById('g_mode').value   = bytes[0];
+        setChoice('g_mode', bytes[0]);
         document.getElementById('g_start').value  = u16(1) / 10;
         document.getElementById('g_spool').value  = u16(3) / 10;
         document.getElementById('g_track').value  = u16(5) / 10;
@@ -483,7 +488,7 @@ async function load() {
         document.getElementById('g_fff').value    = bytes[23];
         document.getElementById('g_fd').value     = bytes[25];
         document.getElementById('g_spdwn').value  = u16(26) / 10;
-        document.getElementById('g_ttype').value  = bytes[28];
+        setChoice('g_ttype', bytes[28]);
         await LDRC.fetchState();
         feelBase = LDRC.baseFor('start', null, { spool: u16(3) / 10, hand: bytes[19], start: u16(1) / 10 });
         document.getElementById('g_feel').value   = numbersToFeel(u16(3) / 10);
@@ -506,9 +511,37 @@ async function load() {
         applyBypassPointsMode();
         LDRC.clearStale();
         if (LDRC.replay) setStatus('good', '✓ Loaded from the phone (recorded session)'); else setStatus('', '');
+        const bad = badChoice();
+        if (bad) setStatus('bad', bad.name + ' is ' + bad.value + ', outside Rotorflight’s list (it then calls its settings corrupted): choose one and Save.');
         paintEditable();
         LDRC.clearDirty();
     } catch (e) { setStatus('bad', 'Read failed: ' + e.message); }
+}
+
+// 0.9.893: a choice the flight controller holds outside Rotorflight's list (the Havoc, 15 Oct: throttle type 3) shows
+// as itself, marked - not as a blank - and Save refuses it until one of the list is chosen.
+function setChoice(id, v) {
+    const sel = document.getElementById(id), opts = sel.options || [];
+    let known = false;
+    for (let i = opts.length - 1; i >= 0; i--) {   // (backwards: the list shrinks as a marked one goes)
+        if (opts[i].dataset && opts[i].dataset.bad) opts[i].remove();
+        else if (+opts[i].value === v) known = true;
+    }
+    if (!known && opts.length) {
+        const o = document.createElement('option');
+        o.value = v; o.dataset.bad = '1'; o.textContent = v + ' — not valid: choose one';
+        sel.appendChild(o);
+    }
+    sel.value = String(v);
+}
+function badChoice() {   // {name, value} of the first choice outside the list, or null
+    for (const [id, name] of [['g_mode', 'Governor mode'], ['g_ttype', 'Throttle type']]) {
+        const sel = document.getElementById(id), opts = sel.options;
+        if (!opts) continue;
+        const o = opts[sel.selectedIndex];
+        if (!o || (o.dataset && o.dataset.bad)) return { name, value: o ? o.value : '?' };
+    }
+    return null;
 }
 
 function buildPayload() {
@@ -552,6 +585,8 @@ function buildPayload() {
 async function save() {
     if (!editable) { setStatus('bad', 'Disabled on this firmware version'); return; }
     if (!cachedRaw) { setStatus('bad', 'Read flight controller first'); return; }
+    const bad = badChoice();
+    if (bad) { setStatus('bad', 'Not saved: ' + bad.name + ' is ' + bad.value + '. Choose one of the list, then Save.'); return; }
     if (!(await LDRC.confirm(LDRC.replay
             ? 'Save these governor settings on the phone? They will be offered for sending to the model at the next connection.'
             : 'Global governor settings are only applied at flight-controller startup, so the flight controller must reboot after saving. Motors will stop briefly. Save and reboot now?',
