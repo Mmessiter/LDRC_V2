@@ -22,7 +22,7 @@ static const struct { const char *key, *name, *ref, *unit; } ITEMS[FL_ITEMS] = {
     { "bars8", "Channels 1-8", "", "" }, { "bars16", "Channels 1-16", "", "" } };
 // The two parts of each box of two (1.11.70): the upper first. The trims' widest words: "This bank" (and "All banks").
 static const struct { int item; const char *name, *shortName, *ref, *unit, *tagRef; } PARTS[] = {
-    { FL_BATTS, "Flight battery", "Flight", "88.88", "V", "100 %" }, { FL_BATTS, "TX battery", "TX", "88.88", "V", "100 %" },
+    { FL_BATTS, "RX battery", "RX", "88.88", "V", "100 %" }, { FL_BATTS, "TX battery", "TX", "88.88", "V", "100 %" },
     { FL_AMSTRIM, "AMS", "AMS", "OFF", "", "" }, { FL_AMSTRIM, "Trims", "Trims", "This bank", "", "" } };
 bool flightItemHasParts(int item) { return item == FL_BATTS || item == FL_AMSTRIM; }
 static int partIndex(int item, int part) { for (int i = 0; i < (int) (sizeof(PARTS) / sizeof(PARTS[0])); i += 2) if (PARTS[i].item == item) return i + (part ? 1 : 0); return -1; }

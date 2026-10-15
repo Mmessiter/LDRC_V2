@@ -311,6 +311,7 @@ G5_KEYS = {   # the keypad's question: the label's words with the unit (a lost m
     'n19': (('Tracking \ufffd0.1%/s', 'Tracking [s]'), 'Speed-change time (s)'), 'n20': (('Recovery \ufffd0.1%/s', 'Recovery [s]'), 'Quick-restart time (s)'),
     'n21': (('Hold timeout \ufffd0.1s', 'Hold timeout [s]'), 'Throttle-hold timeout (s)'), 'n22': (('Autorot timeout s', 'Autorot timeout [s]'), 'Autorotation timeout (s)'),
     'n15': (('Handover thr %', 'Handover [%]'), 'Handover throttle (%)'),
+    'n14': ('Gov mode (0 - 3)', 'Governor mode (0 - 4)'),   # (15 Oct 2026: Rotorflight 2.3 has five modes, 4 - NITRO)
     'n29': (('Idle thr \ufffd0.1%', 'Idle thr x0.1%'), 'Idle throttle (tenths of a %)'), 'n30': (('Auto thr \ufffd0.1%', 'Auto thr x0.1%'), 'Auto throttle (tenths of a %)'),
     'n16': ('Startup \ufffd0.1s', 'Startup x0.1s'), 'n25': ('D filter \ufffd0.1Hz', 'D filter x0.1Hz'),   # (parked off the glass: only the sign mended - ASCII)
 }

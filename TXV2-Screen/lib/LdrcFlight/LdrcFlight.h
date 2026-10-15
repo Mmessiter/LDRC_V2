@@ -31,15 +31,15 @@ namespace ldrc {
 enum FlightItem : uint8_t { FL_NONE = 0, FL_TIMER, FL_BATTS, FL_LINK, FL_FPS, FL_RPM, FL_ESC, FL_AMPS, FL_MAH,
                             FL_BANK, FL_RATE, FL_MOTOR, FL_AMSTRIM, FL_CLOCK, FL_MODEL, FL_IMAGE, FL_BARS8, FL_BARS16, FL_ITEMS };
 // (the settings keep the items' keys, not these numbers: a new item can go anywhere in the list)
-const char *flightItemName(int item);                  // the chooser's words: "Flight battery"
-const char *flightItemKey(int item);                   // the settings' words: "rxbat"
+const char *flightItemName(int item);                  // the chooser's words: "Batteries"
+const char *flightItemKey(int item);                   // the settings' words: "batts"
 int flightItemByKey(const std::string &key);           // FL_NONE if not known
 const char *flightItemReference(int item);             // the widest value it can be expected to show ("88:88"; "" for none, the bars)
 const char *flightItemUnit(int item);                  // what follows its number ("V"; "" for none)
 bool flightItemIsWords(int item);                      // it shows words, not a number (the bank, the rate, the model, the motor)
 bool flightItemHasParts(int item);                     // a box of two parts, one above the other (the batteries; AMS and trims)
-const char *flightPartName(int item, int part);        // part 0 the upper, 1 the lower: "Flight battery", "TX battery"
-const char *flightPartShort(int item, int part);       // the same in a part's one-row form: "Flight", "TX"
+const char *flightPartName(int item, int part);        // part 0 the upper, 1 the lower: "RX battery", "TX battery"
+const char *flightPartShort(int item, int part);       // the same in a part's one-row form: "RX", "TX"
 const char *flightPartReference(int item, int part);   // the widest value a part can be expected to show ("88.88", "OFF")
 const char *flightPartUnit(int item, int part);
 
@@ -58,7 +58,7 @@ struct FlightSource {
 
 enum FlightState : uint8_t { FS_NORMAL = 0, FS_GOOD, FS_WARN, FS_ALARM, FS_STALE, FS_EMPTY };
 struct FlightValue {
-    std::string label, big, unit, small;               // "Flight battery", "7.82", "V", "3.91 V per cell   78 %"
+    std::string label, big, unit, small;               // "RX battery", "7.82", "V", "3.91 V per cell   78 %"
     FlightState state = FS_NORMAL;
     std::vector<uint8_t> bars;                         // channel bars (Malcolm, 10-03: "Channel bars (first 8 or all 16)"): each 0..100, 50 = centre, as the front page has them
     bool coloured = false; uint16_t face = 0, ink = 0; // the box takes these colours whatever its theme (1.9.13: the Motor box in the safety's colours, as the original front page's button)

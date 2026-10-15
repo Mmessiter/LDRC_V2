@@ -186,6 +186,21 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The governor's choices kept in range, "RX battery" (screen 1.11.71, Teensy B103, receivers 0.9.893, 15 Oct 2026)
+
+The diff saved by 1.11.70 named the Havoc's fault: "a setting out of range: gov_throttle_type = 3". Rotorflight 2.3's
+throttle types are 0 - NORMAL, 1 - SWITCH and 2 - FUNCTION; it keeps any number it is sent, and then calls its settings
+corrupted (the Configurator will not load that diff). Its governor treats an unknown type as NORMAL, so the Havoc's
+governor tests stand. The Governor (global) page took any typed number (the keypad said "(0 - 2)", the box above said
+"0 - 2 only!", but Save sent it). B103: Save, Keep a copy and Restore refuse a governor mode outside 0 - 4 or a throttle
+type outside 0 - 2, and say which ("Not saved: Throttle type is 3. It must be 0 - 2. Usually 0 - NORMAL."); the page
+stays, with its edits. The governor mode's keypad said "(0 - 3)": now "Governor mode (0 - 4)". The receiver (0.9.893)
+never passes such a number on from the transmitter, and the phone's Governor (global) page chooses the throttle type
+from the three. Help: RFGOVG.TXT says what each type does. Host test: dev/test_govchoice.
+
+Malcolm: "Instead of 'flight' voltage, please write 'RX'". The Batteries box's upper part is "RX battery" ("RX" in its
+one-row form). Help: FLIGHT.TXT, APPEAR.TXT.
+
 ## Batteries in one box, AMS and trims, a diff with an error saved (screen 1.11.70, Teensy B102 unchanged, 15 Oct 2026)
 
 Malcolm: the flight battery and the TX battery "should be combined into a single option with the flight battery at the

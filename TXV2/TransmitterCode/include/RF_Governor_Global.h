@@ -69,6 +69,24 @@ FLASHMEM void AddWords() // Add in the text words to describe the meaning of num
     }
 }
 // ====================================================
+// B103 (15 Oct: the Havoc's diff said "gov_throttle_type = 3"). Rotorflight keeps any number it is sent, even one
+// outside its own list, and then calls its settings corrupted (the Configurator will not load such a diff).
+// So a governor mode or throttle type outside the list is never sent, nor kept: say which, and stay on the page.
+FLASHMEM bool GovChoiceBad(const uint8_t *p, const char *what)
+{
+    char m[120];
+    if (p[18] > 4)
+        snprintf(m, sizeof(m), "%s: Governor mode is %u.\r\nIt must be 0 - 4.", what, p[18]);
+    else if (p[39] > 2)
+        snprintf(m, sizeof(m), "%s: Throttle type is %u.\r\nIt must be 0 - 2. Usually 0 - NORMAL.", what, p[39]);
+    else
+        return false;
+    PlaySound(WHAHWHAHMSG);
+    MsgBox((char *)"page RFGovViewGlbl", m);
+    return true;
+}
+
+// ====================================================
 FLASHMEM void HideGOVConfigMsg()
 {
     BlockBankChanges = false; // ALWAYS clear — a view change before this call
@@ -304,8 +322,10 @@ FLASHMEM void SaveToLocalGovGLOBAL() // "Save FC to SD" button
         return;
     
     const bool edited = GOVS_GLOBAL_Were_Edited; // B47: a copy on the card is not a save to the model
-    ShowGOVConfigMsg((char *)"Keeping a copy on the card ...", Gray);
     LoadGovConfigWritePayload();
+    if (GovChoiceBad(GovWritePayload, "Not kept")) // B103
+        return;
+    ShowGOVConfigMsg((char *)"Keeping a copy on the card ...", Gray);
 
     for (int i = 18; i < GOV_CONFIG_PAYLOAD_SIZE; ++i)
         Saved_GOV_Config_Values[i] = GovWritePayload[i];
@@ -357,6 +377,8 @@ FLASHMEM void RestoreFromSDGlobalGOV()
             return;
         }
     }
+    if (GovChoiceBad(Saved_GOV_Config_Values, "Kept copy not sent")) // B103
+        return;
     if (!GetConfirmation((char *)"page RFGovViewGlbl", (char *)"Send the kept copy of the governor\r\nsettings to the flight controller?"))
         return;
 
@@ -400,9 +422,11 @@ FLASHMEM void SendEditedGovConfigValues()
         return;
     }
 
+    LoadGovConfigWritePayload();
+    if (GovChoiceBad(GovWritePayload, "Not saved")) // B103
+        return;
     PlaySound(BEEPMIDDLE);
     DelayWithDog(100);
-    LoadGovConfigWritePayload();
 
     // Queue in reverse order — LIFO executes CONFIG1 first, CONFIG2 second, CONFIG3 third
     AddParameterstoQueue(SEND_GOV_WRITE_CONFIG3); // executes 3rd

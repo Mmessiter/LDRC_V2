@@ -4,6 +4,9 @@ Each bank's head speed and gains are on the Governor page.|
 It needs Rotorflight 2.3.||
 TO CHANGE THEM:|
 Touch a value, or its name, and type the new value.|
+Governor mode and Throttle type take only the numbers listed|
+below: 'Save' refuses any other (Rotorflight would keep it,|
+then call its settings corrupted).|
 Then press 'Save': it writes the values, checks and stores them.|
 Then the flight controller restarts: Rotorflight reads these|
 only as it starts.|
@@ -19,9 +22,14 @@ and spools up to the bank's head speed.|
 Autorot. timeout: in seconds. How long an autorotation keeps|
 the quick bail-out ready. 0: no autorotation.||
 THROTTLE:|
-Throttle type: 0 to 2, as in Rotorflight's Configurator.|
-The box above it names the type: '0 - NORMAL', '1 - SWITCH'|
-or '2 - FUNCTION'.|
+Throttle type: 0 to 2. The box above it names the type:|
+'0 - NORMAL' (the usual): the throttle goes to the governor|
+as it is.|
+'1 - SWITCH': above handover, the throttle sets the head|
+speed (80 % throttle asks for 80 % of the bank's head speed).|
+For ELECTRIC and NITRO only.|
+'2 - FUNCTION': the throttle channel is a three-way switch:|
+idle throttle, auto throttle, full.|
 Idle throttle x10: the throttle while idling below handover.|
 Auto throttle x10: the throttle during an autorotation.|
 x10 means tenths of a per cent: 50 is 5 %.||

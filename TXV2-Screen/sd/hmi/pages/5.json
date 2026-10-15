@@ -1196,7 +1196,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Gov mode (0 - 3)\"\nva0.val=57<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Governor mode (0 - 4)\"\nva0.val=57<<8\nprint va0.val"
    }
   },
   {

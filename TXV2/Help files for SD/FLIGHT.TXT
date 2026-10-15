@@ -24,9 +24,9 @@ needs a look:|
 The top line turns red for BATTERY LOW, or for NO LINK in|
 flight (the Link box then says LOST).||
 WHAT THE BOXES SHOW:|
-Batteries: the flight battery above, the transmitter's below,|
-each with its voltage per cell (big) and its per cent. A big box|
-adds the total voltage.|
+Batteries: RX (the flight battery, read by the receiver) above,|
+TX (the transmitter's) below, each with its voltage per cell|
+(big) and its per cent. A big box adds the total voltage.|
 AMS and trims: AMS (automatic model selection) on or off, and|
 whether a trim moves the trims of every bank or of this bank.|
 'no model ID' beside AMS: this model has no receiver ID yet.|
