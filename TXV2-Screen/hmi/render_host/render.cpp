@@ -19,6 +19,12 @@ static Gfx gfxObj; static Gfx *gfx = &gfxObj;
 static uint16_t *fbNow = nullptr, *screenFb = nullptr, *pageFb = nullptr;
 static void present(int, int, int, int) {}
 static bool sdOk = true;
+// (1.11.67) the panel's quiet time: on the Mac there is no panel and no hook (vtNormal 0), so every job goes at once
+#define QT_MICROS() micros()
+#define QT_MILLIS() millis()
+#define QT_VT_SET(v) ((void) (v))
+#define QT_ISR
+#include "quiet_time.h"
 #include "gen/main_parts.inc"
 #include "flight_source.h"
 #include "flight_draw.h"

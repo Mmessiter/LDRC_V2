@@ -186,6 +186,19 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The defined front screen kept drawn (screen 1.11.68, Teensy B102 unchanged, 15 Oct 2026)
+
+Malcolm of 1.11.67: "It does flicker for perhaps a fifth of a second, and then jumps to the new screen ... All of the
+other screen changes are just fine ... Maybe we should simply use the other method?" His screen's own numbers (/status,
+"quiet") showed why: the copy took 35 ms inside the quiet frame every time, but the defined screen was drawn afresh at
+every switch, and that took 0.21 s (the model's picture read from the card and scaled, every box filled twice, the big
+numbers a pixel at a time). That was the flicker. Other pages are drawn in a fraction of the time. Now the defined screen
+is drawn once and kept: when it goes, its picture stays on our layer, and when it comes back it is shown as it was, by the
+copy alone, like any other page. Boxes whose values changed meanwhile are drawn again, two at a time. While the original
+front screen shows, the defined one is drawn behind it a piece at a time, so the first switch is ready too. It is drawn
+whole at the switch only if another page of ours used the layer meanwhile. /status "quiet" adds kept, full, warmed and
+step_max (the longest piece, in microseconds).
+
 ## The front screen's switch in the panel's quiet time (screen 1.11.67, Teensy B102 unchanged, 15 Oct 2026)
 
 Malcolm of 1.11.66: "It's slightly worse." Why: copying the whole screen takes 43 ms on his screen (measured 29 Sep),

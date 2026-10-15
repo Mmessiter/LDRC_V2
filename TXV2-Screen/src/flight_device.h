@@ -52,6 +52,19 @@ static void flightPoll() {
     static uint32_t drawnLayout = 0, lastBuild = 0, lastPoke = 0; static int wasWho = 0;
     static bool flightDrawWaits = false; static QuietJob flightDrawJob;   // (1.11.67) a whole drawing waiting for the panel's quiet time
     static std::map<int, uint32_t> drawn; static std::string drawnStrip;
+    // (1.11.68) What the layer holds while the defined screen is not showing is kept, and shown as it is next time - unless
+    // another page of ours has drawn there since (topEpoch), the theme has changed, or it was another screen (the setup page).
+    static int keptWho = 0; static uint32_t keptEpoch = 0; static uint16_t keptFace = 0, keptInk = 0;
+    static size_t tileFrom = 0;                                 // (the boxes drawn again: two a pass at most, in turn)
+    static int warm = -1; static uint32_t warmLayout = 0, warmEpoch = 0, warmAt = 0;   // (the defined screen drawn ahead, a piece at a time)
+    static std::map<int, uint32_t> warmDrawn; static std::string warmStrip, onPage; static uint32_t onPageSince = 0;
+    auto useTheme = [&]() {                                     // the screens' theme, and the twelve on offer (a box's choice)
+        flight.themeFace = theme.panel(); flight.themeInk = theme.ink();
+        for (int k = 0; k < ldrc::THEME_COUNT; ++k) { flight.palPanels[k] = theme.panels[k]; flight.palInks[k] = theme.inks[k]; }
+    };
+    auto stripOf = [](const ldrc::FlightScene &sc) { return sc.title + "|" + sc.left + "|" + sc.middle + "|" + sc.right + "|" + sc.hint + "|" + sc.alert; };
+    auto keptFor = [&](int w) { return topFb && keptWho == w && topEpoch == keptEpoch && keptFace == theme.panel() && keptInk == theme.ink(); };
+    auto keep = [&](int w) { keptWho = w; keptEpoch = topEpoch; keptFace = theme.panel(); keptInk = theme.ink(); };
     const uint32_t now = millis();
     if (flightRequested) {
         flightRequested = false;
@@ -85,14 +98,20 @@ static void flightPoll() {
     const int who = !layerFree || blank ? 0 : flight.setupOpen() ? FLIGHT_SETUP_WHO : flight.showing() ? FLIGHT_WHO : 0;
     if (who) {
         if (who == wasWho && !flightDrawWaits && now - lastBuild < 50) return;   // twenty times a second is plenty: the main board writes the front page ten times a second
-        lastBuild = now;
-        flight.themeFace = theme.panel(); flight.themeInk = theme.ink();   // the screens' theme, and the twelve on offer (a box's choice)
-        for (int k = 0; k < ldrc::THEME_COUNT; ++k) { flight.palPanels[k] = theme.panels[k]; flight.palInks[k] = theme.inks[k]; }
+        lastBuild = now; warm = -1;                             // (a drawing ahead stops: the screen itself is wanted)
+        useTheme();
         const ldrc::FlightScene &sc = flight.scene(flightSrc, &flightFonts);
-        const std::string strip = sc.title + "|" + sc.left + "|" + sc.middle + "|" + sc.right + "|" + sc.hint + "|" + sc.alert;
-        if (who != wasWho || sc.layout != drawnLayout) {
+        const std::string strip = stripOf(sc);
+        bool whole = false;
+        if (who != wasWho && keptFor(who) && sc.layout == drawnLayout) {
+            // (1.11.68) the layer still holds this screen as it was left, or as it was drawn ahead: shown at once, in the
+            // panel's quiet time, as every other page is; what has changed since is drawn below, two boxes a pass
+            topX = 0; topY = 0; topW = W; topH = H; topWho = who; topOn = true;
+            dirty(0, 0, W, H); touchPainted = true; quietSwitch = true; quietKeptN++;
+        } else if (who != wasWho || sc.layout != drawnLayout) {
             // (1.11.67) the whole screen is drawn afresh in the panel's quiet time (src/main.cpp quietTurn), and copied to the
-            // glass in the next: the fill and every box are PSRAM traffic that took scan time from the picture being shown
+            // glass in the next: the fill and every box are PSRAM traffic that took scan time from the picture being shown.
+            // (1.11.68: only when nothing is kept - the first time, or after another page of ours had the layer)
             if (!quietTurn(flightDrawJob)) { flightDrawWaits = true; return; }
             flightDrawWaits = false;
             const uint32_t d0 = micros();
@@ -103,18 +122,26 @@ static void flightPoll() {
             for (auto &b : sc.buttons) drawn[b.id] = b.serial;
             drawnLayout = sc.layout; drawnStrip = strip;
             topX = 0; topY = 0; topW = W; topH = H; topWho = who; topOn = true;
-            dirty(0, 0, W, H); touchPainted = true; quietSwitch = true;
-        } else {
+            dirty(0, 0, W, H); touchPainted = true; quietSwitch = true; quietFullN++; whole = true;
+        }
+        if (!whole) {
             if (strip != drawnStrip) {
                 { TopDraw on; flightDrawStrip(sc); }
                 drawnStrip = strip; dirty(0, 0, W, sc.setup ? ldrc::FLIGHT_SETUP_STRIP + 33 : ldrc::FLIGHT_STRIP); touchPainted = true;
                 for (auto &b : sc.buttons) if (b.r.y < (sc.setup ? ldrc::FLIGHT_SETUP_STRIP + 33 : ldrc::FLIGHT_STRIP)) drawn.erase(b.id);   // (the strip was painted over the Help button: it goes on again below)
             }
             if (flPicRetryDue(now)) for (auto &t : sc.tiles) if (!t.v.image.empty()) drawn.erase(t.id);   // (a picture that would not come: its boxes drawn again, which asks the card again)
-            for (auto &t : sc.tiles) {
+            // (1.11.68) two boxes a pass at most, in turn: a box takes up to 20 ms, and a long run of drawing is what the
+            // panel shows as a flicker (the others wait 50 ms, for the next pass)
+            const size_t nT = sc.tiles.size(); int redrawn = 0;
+            for (size_t k = 0; k < nT && redrawn < 2; ++k) {
+                const size_t i = (tileFrom + k) % nT; const ldrc::FlightTile &t = sc.tiles[i];
                 auto d = drawn.find(t.id); if (d != drawn.end() && d->second == t.serial) continue;
+                const uint32_t s0 = micros();
                 { TopDraw on; flightDrawTile(t, sc.setup); }
+                const uint32_t us = micros() - s0; if (us > quietStepMax) quietStepMax = us;
                 drawn[t.id] = t.serial; dirty(t.r.x, t.r.y, t.r.w, t.r.h); touchPainted = true;
+                if (++redrawn == 2) tileFrom = (i + 1) % nT;
             }
             for (auto &b : sc.buttons) {
                 auto d = drawn.find(b.id); if (d != drawn.end() && d->second == b.serial) continue;
@@ -122,6 +149,7 @@ static void flightPoll() {
                 drawn[b.id] = b.serial; dirty(b.r.x, b.r.y, b.r.w, b.r.h); touchPainted = true;
             }
         }
+        keep(who);                                              // (the layer holds this screen, as drawn so far)
         // Someone is here: the setup page while it is being used, the flight screen if the pilot asked ("Stays lit"). The
         // main board cannot see touches on our pages: its screen saver is told, as the update panel and the WiFi page tell it.
         // (with no model connected, and none a minute ago, nothing is said: the word also resets the main board's
@@ -131,11 +159,40 @@ static void flightPoll() {
         const bool poke = who == FLIGHT_SETUP_WHO ? now - flightTouchedAt < 180000 : flight.cfg.stayOn && modelNear;
         if (poke && now - lastPoke > 20000 && !teensyLink.running()) { lastPoke = now; flushOut(); Serial.write((const uint8_t *) "UKRULES", 7); }
     } else if (wasWho) {
-        flPicForget();                                          // (the model's picture: read afresh next time)
+        flPicForget();                                          // (the model's picture: read afresh next time it is drawn)
         if (topWho == wasWho) { topOn = false; topWho = 0; }    // (unless another page of ours has the layer now)
         dirty(0, 0, W, H); touchPainted = true;                 // the page, as the main board has drawn it meanwhile (a page of ours in our place covers less of the glass)
         if (topWho == 0) quietSwitch = true;                    // (back to the main board's own page: shown in the panel's quiet time)
-        drawn.clear(); drawnLayout = 0;
+        // (1.11.68: drawn, drawnLayout and drawnStrip stay, with the layer's picture: the screen as it was left, for next time)
+    } else {
+        // (1.11.68) While the main board's own front page shows, the defined screen is drawn behind it on the layer, a piece
+        // at a time 30 ms apart - the ground in eight bands, the strip, each box, the buttons - so that the switch to it is
+        // only the copy, as every other page change is (Malcolm, of 1.11.67: "All of the other screen changes are just fine
+        // ... Maybe we should simply use the other method?"). Drawn whole at the switch it took 0.21 s, and the panel showed
+        // that as a flicker. Not while flying, nor while anything else has the layer, nor in the first 1.5 s on the page.
+        if (page.name != onPage) { onPage = page.name; onPageSince = now; }
+        const bool calm = page.name == "FrontView" && !topOn && topWho == 0 && !flight.setupOpen() && !updShowing() && !wifiPage.showing()
+                          && !teensyLink.running() && !armedNow && now - onPageSince > 1500 && now - warmAt >= 30;
+        if (calm && !keptFor(FLIGHT_WHO) && topReady()) {
+            warmAt = now;
+            useTheme();
+            const ldrc::FlightScene &sc = flight.scene(flightSrc, &flightFonts);
+            if (!sc.setup) {
+                if (warm < 0 || sc.layout != warmLayout || topEpoch != warmEpoch) { warm = 0; warmLayout = sc.layout; warmDrawn.clear(); flPicForget(); }
+                const int bands = 8, nT = (int) sc.tiles.size(); bool done = false;
+                const uint32_t s0 = micros();
+                {
+                    TopDraw on;
+                    if (warm < bands) { const int y0 = warm * H / bands, y1 = (warm + 1) * H / bands; gfx->fillRect(0, y0, W, y1 - y0, FL_GROUND); }
+                    else if (warm == bands) { flightDrawStrip(sc); warmStrip = stripOf(sc); }
+                    else if (warm - bands - 1 < nT) { const ldrc::FlightTile &t = sc.tiles[warm - bands - 1]; flightDrawTile(t, false); warmDrawn[t.id] = t.serial; }
+                    else { for (auto &b : sc.buttons) { flightDrawButton(b); warmDrawn[b.id] = b.serial; } done = true; }
+                }
+                const uint32_t us = micros() - s0; if (us > quietStepMax) quietStepMax = us;
+                ++warm; warmEpoch = topEpoch;
+                if (done) { drawn = warmDrawn; drawnLayout = warmLayout; drawnStrip = warmStrip; keep(FLIGHT_WHO); warm = -1; quietWarmN++; }
+            }
+        }
     }
     if (!who) flightDrawWaits = false;                          // (a drawing that was waiting and is no longer wanted)
     wasWho = who;

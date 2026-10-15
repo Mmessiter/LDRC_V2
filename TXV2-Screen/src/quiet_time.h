@@ -39,6 +39,7 @@ struct QuietJob { uint32_t since = 0, last = 0; bool inQuiet = false; };
 static const uint32_t QUIET_NEED_US = 38000;            // (the copy takes ~36 ms with nothing else on the PSRAM; the blank is 45)
 static uint32_t quietN = 0, quietLateN = 0, quietOverN = 0, quietWaitMs = 0, quietCopyUs = 0, quietCopyMax = 0, quietDrawUs = 0, quietDrawMax = 0;
 static uint32_t quietSeenEnds = 0, quietSeenAt = 0;
+static uint32_t quietKeptN = 0, quietFullN = 0, quietWarmN = 0, quietStepMax = 0;   // (1.11.68, src/flight_device.h) the defined screen: shown as kept, drawn whole, drawn ahead; its longest piece (us)
 static bool quietTurn(QuietJob &j, uint32_t needUs = QUIET_NEED_US) {
     const uint32_t now = QT_MILLIS();
     if (!j.since || now - j.last > 200) j.since = now;
