@@ -3055,7 +3055,7 @@ void RestoreCurrentModel()
 // ******************************** Global Array1 of numbered function pointers OK up the **********************************
 
 // This new list can be huge - up to 24 BITS unsigned!  ( Use "NUMBER<<8" )
-#define LASTFUNCTION1 178 // One more than final one
+#define LASTFUNCTION1 183 // One more than final one
 
 void (*NumberedFunctions1[LASTFUNCTION1])(){
     Blank,                   // 0 Cannot be used
@@ -3235,7 +3235,12 @@ void (*NumberedFunctions1[LASTFUNCTION1])(){
     CalibrateWasEdited,      // 174 a trim typed
     ArmingWhy,               // 175 the menu's arming line tapped
     BatterySensorsView,      // 176 B90: the battery page's Sensors > (the FC pads' sensors, a page of their own)
-    BatterySensorsBack       // 177 B90: its < Battery
+    BatterySensorsBack,      // 177 B90: its < Battery
+    StartTravel4View,        // 178 B98: Next > (the Mixer's tail page to the bench measure page)
+    BenchAxisTapped,         // 179 the axis tapped (roll / pitch)
+    BenchWasEdited,          // 180 the angle or the gauge's reading tapped (the keypad)
+    BenchHoldTapped,         // 181 Hold swash / Release
+    BenchSuggestTapped       // 182 the suggested calibration tapped
 };
 
 // This list migth become MUCH longer as it limit is 24 bits big

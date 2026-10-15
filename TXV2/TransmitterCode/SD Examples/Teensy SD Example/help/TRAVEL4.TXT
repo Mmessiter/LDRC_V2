@@ -1,0 +1,36 @@
+The bench measure: the swash held at an exact angle, so a|
+pitch gauge can check the real blade angles.|
+It is the phone app's 'Bench measure' on its Travel extents|
+page, and Rotorflight's own way to set the cyclic calibration.||
+MOTOR OFF, BLADES CLEAR. It moves the swash.|
+It needs the model itself, switched on, joined by Bluetooth|
+and disarmed (safety on). Its backup on the card cannot do it.||
+HOW TO USE IT:|
+1. Axis: tap to choose Roll (aileron) or Pitch (elevator).|
+2. Hold angle: the angle to hold, up to 12 degrees either way.|
+   8 is a good one.|
+3. 'Hold swash': the swash goes to that angle, the gyros|
+   bypassed, the other two swash controls held at zero.|
+   The top line says HELD, and the button says 'Release'.|
+   Tap Axis while held: the swash goes over to the other axis.|
+4. Put the gauge on one blade and turn the head slowly by|
+   hand: note the HIGHEST reading anywhere round the circle.|
+5. Gauge reads: type that reading.|
+6. Tap the Suggested calibration box: it works out the|
+   calibration that makes the gauge agree with the angle|
+   (calibration x angle held / gauge reading), and puts it|
+   in the Cyclic calibration box. 'Save' then writes it.|
+7. 'Release' lets the swash go. Hold again to check.||
+Cyclic calibration [%] is the same value as on the main rotor|
+geometry page: one value for roll and pitch, as in the|
+configurator. A 'Save' here writes all four Mixer pages,|
+after a question.||
+THE HOLD LETS GO:|
+by 'Release', when you leave with 'OK' or '< Previous', and by|
+itself after five minutes. Rotorflight obeys a hold only while|
+disarmed: once armed, the sticks rule. If the link is lost|
+while held and the swash stays put, switch the flight|
+controller off and on.||
+COLLECTIVE is not measured here. Set it the direct way:|
+full stick, measure, adjust its calibration on the geometry|
+page.|

@@ -4,6 +4,13 @@
 // bytes) and the four mixer inputs roll, pitch, yaw, collective (MSP 174 read one, 171 write one: index, rate, min, max
 // as signed words). Angles: 1000 raw = 12 deg on cyclic and collective, 24 deg on yaw; gains in 0.1 %, the sign the
 // direction. A save writes 43, then 171 four times, stores (250), and reads it all back to compare.
+// B98 (Malcolm, 15 Oct: "travel extents is not yet available from our transmitter"): the one part of the receiver's
+// travel page these pages lacked, its BENCH MEASURE, as a fourth page (Travel4View): Rotorflight's mixer override (MSP
+// 191: the input's index and a signed word; 2501 = off) holds roll or pitch at an exact angle (1000 raw = 12 deg) with
+// the other two swash inputs at zero, for a pitch gauge. The suggested calibration = the cyclic calibration x the angle
+// held / what the gauge read (Rotorflight's own method, as the receiver's page says). Rotorflight 4.6 obeys an override
+// ONLY WHILE DISARMED (flight/mixer.c mixerSetInput): a hold left behind cannot fly. It is released by Release, on
+// leaving the page (OK or < Previous), and by itself after five minutes.
 #include <Arduino.h>
 #include "1Definitions.h"
 #ifndef RF_TRAVEL_H
@@ -15,13 +22,28 @@ static int16_t TravIn[5][3], TravInWant[5][3];       // inputs 1..4 (index 0 unu
 static bool TravHave = false, Trav_Was_Edited = false;
 static bool TravPage2Edited = false;   // B49: page 2's fields are gathered only if one of them was edited
 static int TravRevAil = 0, TravRevEle = 0, TravRevColl = 0, TravRevYaw = 0;   // (B66: yaw too - the configurator's Yaw Control Direction)
-FLASHMEM static const char *TravPageWord() { return CurrentView == TRAVEL3VIEW ? "page Travel3View" : CurrentView == TRAVEL2VIEW ? "page Travel2View" : "page TravelView"; }
+FLASHMEM static const char *TravPageWord() { return CurrentView == TRAVEL4VIEW ? "page Travel4View" : CurrentView == TRAVEL3VIEW ? "page Travel3View" : CurrentView == TRAVEL2VIEW ? "page Travel2View" : "page TravelView"; }
 static const char *SwashTypeWords[7] = {"None", "Direct", "CCPM 120 deg", "CCPM 135 deg", "CCPM 140 deg", "FPM 90 deg L", "FPM 90 deg V"};   // the configurator's, byte 5
 static const char *TailTypeWords[3] = {"Variable pitch", "Motorised", "Bi-directional"};   // byte 1
-enum { TRV_IDLE = 0, TRV_READ_CFG, TRV_READ_IN, TRV_WRITE_CFG, TRV_WRITE_IN, TRV_STORE, TRV_VERIFY_CFG, TRV_VERIFY_IN };
+enum { TRV_IDLE = 0, TRV_READ_CFG, TRV_READ_IN, TRV_WRITE_CFG, TRV_WRITE_IN, TRV_STORE, TRV_VERIFY_CFG, TRV_VERIFY_IN, TRV_HOLD, TRV_RELEASE };
 static int TravStep = TRV_IDLE, TravReq = 0, TravIdx = 1;
 static bool TravReadAgainWanted = false;
 static uint32_t TravMsgUntil = 0;
+// B98: the bench measure (page 4)
+static int BenchAxis = 1;                              // the input held: 1 roll, 2 pitch
+static long BenchDegTenths = 80, BenchGaugeTenths = 0; // the angle to hold, and what the gauge read, in tenths of a degree
+static long BenchSuggestTenths = 0;                    // the calibration worked out from them, tenths of a per cent (0 = none yet)
+static bool BenchHeld = false;                         // the flight controller holds the swash
+static int BenchHeldAxis = 1;                          // ... which axis, at what angle (the page may have other numbers typed since)
+static long BenchHeldDegTenths = 0;
+static uint32_t BenchHeldUntil = 0;                    // when a hold lets go by itself
+enum { BENCH_AFTER_NONE = 0, BENCH_AFTER_LEAVE, BENCH_AFTER_PREV };
+static int BenchAfter = BENCH_AFTER_NONE;              // what the Release now running was pressed for: nothing, OK, < Previous
+static bool TravPage4Edited = false;                   // the calibration box on page 4 was edited (gathered only then, as page 2)
+static const uint8_t BenchInputs[3] = {1, 2, 4};       // roll, pitch, collective: the three swash inputs a hold sets
+static const long BENCH_OFF = 2501;                    // Rotorflight's MIXER_OVERRIDE_OFF
+static const uint32_t BENCH_HOLD_MS = 5UL * 60 * 1000;
+FLASHMEM static bool OnTravelPage() { return CurrentView == TRAVELVIEW || CurrentView == TRAVEL2VIEW || CurrentView == TRAVEL3VIEW || CurrentView == TRAVEL4VIEW; }
 
 FLASHMEM static void TravBusy(const char *msg)
 {
@@ -97,11 +119,34 @@ FLASHMEM static void TravShowPage3()
     SendCommand((char *)(TailMotorised() ? "vis ltn5,1" : "vis ltn5,0"));
     SendCommand((char *)(TailMotorised() ? "vis tn5,1" : "vis tn5,0"));
 }
+FLASHMEM static void BenchStatus() // page 4's told row and its Hold swash / Release button
+{
+    char b[48];
+    if (BenchHeld)
+    {
+        const long a = BenchHeldDegTenths < 0 ? -BenchHeldDegTenths : BenchHeldDegTenths;
+        snprintf(b, sizeof(b), "HELD: %s at %s%ld.%ld deg (gyros bypassed)", BenchHeldAxis == 2 ? "pitch" : "roll", BenchHeldDegTenths < 0 ? "-" : "", a / 10, a % 10);
+    }
+    else
+        snprintf(b, sizeof(b), "Motor off, blades clear: it moves the swash");
+    SendText((char *)"i0", b);
+    SendText((char *)"b2", (char *)(BenchHeld ? "Release" : "Hold swash"));
+}
+FLASHMEM static void TravShowPage4()
+{
+    SendText((char *)"tn0", (char *)(BenchAxis == 2 ? "Pitch (elevator)" : "Roll (aileron)"));
+    TravTenths("tn1", BenchDegTenths);
+    if (BenchGaugeTenths > 0) TravTenths("tn2", BenchGaugeTenths); else SendText((char *)"tn2", (char *)"");
+    TravTenths("tn3", labs(TravInWant[1][0]));                      // the cyclic calibration as page 2 shows it (roll's; a save gives both axes the one value)
+    if (BenchSuggestTenths > 0) TravTenths("tn4", BenchSuggestTenths); else SendText((char *)"tn4", (char *)"tap");
+    BenchStatus();
+}
 FLASHMEM static void TravShow()
 {
     if (CurrentView == TRAVELVIEW) TravShowPage1();
     else if (CurrentView == TRAVEL2VIEW) TravShowPage2();
     else if (CurrentView == TRAVEL3VIEW) TravShowPage3();
+    else if (CurrentView == TRAVEL4VIEW) TravShowPage4();
 }
 FLASHMEM static void TravGatherDirections() // the four switches' states into the signs of the inputs' rates
 {
@@ -161,11 +206,43 @@ FLASHMEM static void TravGatherPage3()
     TravInWant[3][0] = (int16_t)(TravRevYaw ? -gYaw : gYaw);
     if (TailMotorised()) TravCfgWant[2] = (uint8_t)FieldTenthsL("tn5", 0, 250);
 }
+FLASHMEM static void TravGatherPage4()
+{
+    BenchDegTenths = FieldTenthsL("tn1", -120, 120);
+    BenchGaugeTenths = FieldTenthsL("tn2", 0, 300);
+    if (!TravPage4Edited) return;   // (as page 2: a page only looked at changes nothing)
+    const long gCyc = FieldTenthsL("tn3", 0, 10000);
+    if (gCyc != labs(TravInWant[1][0]))
+    { // the one cyclic calibration, as page 2's: both axes take it
+        TravInWant[1][0] = (int16_t)(TravRevAil ? -gCyc : gCyc);
+        TravInWant[2][0] = (int16_t)(TravRevEle ? -gCyc : gCyc);
+    }
+}
 FLASHMEM static void TravGather()
 {
     if (CurrentView == TRAVELVIEW) TravGatherPage1();
     else if (CurrentView == TRAVEL2VIEW) TravGatherPage2();
     else if (CurrentView == TRAVEL3VIEW) TravGatherPage3();
+    else if (CurrentView == TRAVEL4VIEW) TravGatherPage4();
+}
+// B98: a hold or a release = MSP 191 to the three swash inputs in turn (TravIdx counts them): the held axis at its angle,
+// the other two at ZERO - left to the mixer they follow the sticks, or a missing transmitter (the receiver's page found
+// its collective at full-low that way); a release puts all three to off
+FLASHMEM static void BenchAskOverride(int k, long value, int step)
+{
+    uint8_t f[3];
+    f[0] = BenchInputs[k];
+    PutS16(f, 1, value);
+    TravIdx = k;
+    TravReq = MspAsk(191, f, 3);
+    TravStep = step;
+}
+FLASHMEM static long BenchValueFor(int k) { return BenchInputs[k] == BenchAxis ? DegTenthsToRaw(BenchDegTenths, 12) : 0; }
+FLASHMEM static void BenchRelease(int after)
+{
+    BenchAfter = after;
+    if (OnTravelPage()) TravBusy("Releasing the swash ...");
+    BenchAskOverride(0, BENCH_OFF, TRV_RELEASE);
 }
 static void TravPageHead();
 FLASHMEM static void TravFail(const char *what)
@@ -173,6 +250,18 @@ FLASHMEM static void TravFail(const char *what)
     char msg[180];
     snprintf(msg, sizeof(msg), "%s:\r\n%.140s", what, PipeRepCode ? PipeRepBody : "the screen could not ask (no Bluetooth)");
     TravStep = TRV_IDLE;
+    TravBusy("");
+    PlaySound(WHAHWHAHMSG);
+    MsgBox((char *)TravPageWord(), msg);
+    TravPageHead();
+    TravShow();
+}
+FLASHMEM static void BenchReleaseFailed() // the flight controller may still hold the swash: said on the page; the pages go on (a hold cannot fly: armed, the sticks rule)
+{
+    BenchHeld = false; BenchHeldUntil = 0; BenchAfter = BENCH_AFTER_NONE; TravStep = TRV_IDLE;
+    if (!OnTravelPage()) return;
+    char msg[180];
+    snprintf(msg, sizeof(msg), "Could not release the swash:\r\n%.60s\r\nIf it stays held, switch the flight\r\ncontroller off and on.", PipeRepCode ? PipeRepBody : "the screen could not ask (no Bluetooth)");
     TravBusy("");
     PlaySound(WHAHWHAHMSG);
     MsgBox((char *)TravPageWord(), msg);
@@ -202,10 +291,12 @@ FLASHMEM static bool TravTakeInput(int16_t (*in)[3]) // the reply of a 174: rate
 }
 FLASHMEM void TravelPoll()
 {
-    if (CurrentView != TRAVELVIEW && CurrentView != TRAVEL2VIEW && CurrentView != TRAVEL3VIEW) { TravStep = TRV_IDLE; TravMsgUntil = 0; return; }
+    // B98: a held swash lets go by itself after five minutes, whatever page is showing by then (a release runs on from any page)
+    if (BenchHeld && BenchHeldUntil && TravStep == TRV_IDLE && (int32_t)(millis() - BenchHeldUntil) >= 0) { BenchHeldUntil = 0; BenchRelease(BENCH_AFTER_NONE); }
+    if (!OnTravelPage() && TravStep != TRV_RELEASE) { TravStep = TRV_IDLE; TravMsgUntil = 0; return; }
     if (TravMsgUntil && (int32_t)(millis() - TravMsgUntil) >= 0) { TravMsgUntil = 0; TravBusy(""); TravShow(); }
     if (TravStep == TRV_IDLE) { if (TravReadAgainWanted) { TravReadAgainWanted = false; TravRead(); } return; }
-    if (!PipeReplyReady(TravReq)) { if (PipeReplyLate()) TravFail("No answer"); return; }
+    if (!PipeReplyReady(TravReq)) { if (PipeReplyLate()) { if (TravStep == TRV_RELEASE) BenchReleaseFailed(); else TravFail("No answer"); } return; }
     const bool ok = PipeRepCode == 200;
     static int16_t check[5][3];
     switch (TravStep)
@@ -224,7 +315,7 @@ FLASHMEM void TravelPoll()
         if (!ok || !TravTakeInput(TravIn)) { TravFail("Could not read a mixer input"); return; }
         if (TravIdx < 4) { TravAskInput(TravIdx + 1, TRV_READ_IN); return; }
         memcpy(TravCfgWant, TravCfg, CFG_BYTES); memcpy(TravInWant, TravIn, sizeof(TravIn));
-        TravHave = true; TravStep = TRV_IDLE; Trav_Was_Edited = false; TravPage2Edited = false;
+        TravHave = true; TravStep = TRV_IDLE; Trav_Was_Edited = false; TravPage2Edited = false; TravPage4Edited = false;
         TravBusy(""); SendCommand((char *)"vis b3,0"); TravShow();
         return;
     case TRV_WRITE_CFG:
@@ -258,11 +349,32 @@ FLASHMEM void TravelPoll()
         bool same = memcmp(TravCfg + 2, TravCfgWant + 2, CFG_BYTES - 2) == 0;   // (the type bytes 0 and 1 are not ours)
         for (int i = 1; i <= 4 && same; ++i) for (int k = 0; k < 3; ++k) if (TravIn[i][k] != TravInWant[i][k]) same = false;
         memcpy(TravCfgWant, TravCfg, CFG_BYTES); memcpy(TravInWant, TravIn, sizeof(TravIn));
-        TravStep = TRV_IDLE; Trav_Was_Edited = false; TravPage2Edited = false;
+        TravStep = TRV_IDLE; Trav_Was_Edited = false; TravPage2Edited = false; TravPage4Edited = false;
         SendCommand((char *)"vis b3,0"); TravShow();
         TravBusy(same ? "Saved, and read back the same." : "Saved, but the flight controller adjusted some values.");
         TravMsgUntil = millis() + 4000;
         PlaySound(BEEPCOMPLETE);
+        return;
+    }
+    case TRV_HOLD: // B98
+        if (!ok) { BenchHeld = true; BenchHeldUntil = millis() + BENCH_HOLD_MS; TravFail("Could not hold the swash"); return; }   // (a part of it may be held: Release is offered)
+        if (TravIdx < 2) { BenchAskOverride(TravIdx + 1, BenchValueFor(TravIdx + 1), TRV_HOLD); return; }
+        BenchHeld = true; BenchHeldUntil = millis() + BENCH_HOLD_MS; TravStep = TRV_IDLE;
+        TravBusy(""); TravShow();
+        PlaySound(BEEPCOMPLETE);
+        return;
+    case TRV_RELEASE: // B98
+    {
+        if (!ok) { BenchReleaseFailed(); return; }
+        if (TravIdx < 2) { BenchAskOverride(TravIdx + 1, BENCH_OFF, TRV_RELEASE); return; }
+        BenchHeld = false; BenchHeldUntil = 0; TravStep = TRV_IDLE;
+        const int after = BenchAfter;
+        BenchAfter = BENCH_AFTER_NONE;
+        if (!OnTravelPage()) return;
+        TravBusy("");
+        if (after == BENCH_AFTER_LEAVE) { EndTravelView(); return; }
+        if (after == BENCH_AFTER_PREV) { StartTravel3View(); return; }
+        TravShow();
         return;
     }
     default:
@@ -289,12 +401,13 @@ FLASHMEM void StartTravelView()
     }
     SendCommand((char *)"page TravelView");
     CurrentView = TRAVELVIEW;
-    Trav_Was_Edited = false; TravPage2Edited = false;
+    Trav_Was_Edited = false; TravPage2Edited = false; TravPage4Edited = false;
     TravPageHead();
     TravRead();
 }
-FLASHMEM void EndTravelView() // OK on either page
+FLASHMEM void EndTravelView() // OK on any of the four pages
 {
+    if (BenchHeld) { if (TravStep == TRV_IDLE) BenchRelease(BENCH_AFTER_LEAVE); return; }   // B98: the swash let go first; back here once it is
     if (Trav_Was_Edited)
     {
         TravGather();   // (B59) before the question's page takes the fields away
@@ -309,7 +422,7 @@ FLASHMEM void EndTravelView() // OK on either page
     Trav_Was_Edited = false;
     RotorFlightStart();
 }
-FLASHMEM void TravelWasEdited() { SendCommand((char *)"vis b3,1"); Trav_Was_Edited = true; if (CurrentView == TRAVEL2VIEW) TravPage2Edited = true; }   // (B49)
+FLASHMEM void TravelWasEdited() { SendCommand((char *)"vis b3,1"); Trav_Was_Edited = true; if (CurrentView == TRAVEL2VIEW) TravPage2Edited = true; if (CurrentView == TRAVEL4VIEW) TravPage4Edited = true; }   // (B49, B98)
 FLASHMEM void TravelAilTapped() { TravRevAil = !TravRevAil; SendValue((char *)"tn6", TravRevAil ? 1 : 0); TravelWasEdited(); }
 FLASHMEM void TravelEleTapped() { TravRevEle = !TravRevEle; SendValue((char *)"tn7", TravRevEle ? 1 : 0); TravelWasEdited(); }
 FLASHMEM void TravelCollTapped() { TravRevColl = !TravRevColl; SendValue((char *)"tn8", TravRevColl ? 1 : 0); TravelWasEdited(); }
@@ -356,12 +469,82 @@ FLASHMEM void EndTravel2View() // < Previous on page 2
     TravPageHead();
     if (TravHave) TravShowPage1(); else TravRead();
 }
-FLASHMEM void StartTravel3View() // Next > on page 2 (B66)
+FLASHMEM void StartTravel3View() // Next > on page 2 (B66); < Previous on page 4 (B98)
 {
+    if (BenchHeld) { if (TravStep == TRV_IDLE) BenchRelease(BENCH_AFTER_PREV); return; }   // B98: the swash let go first; back here once it is
     TravGather();
     SendCommand((char *)"page Travel3View");
     CurrentView = TRAVEL3VIEW;
     TravPageHead();
     if (TravHave) TravShowPage3(); else TravRead();
+}
+// ---------------------------------------------------------------- B98: the bench measure (page 4)
+FLASHMEM void StartTravel4View() // Next > on page 3
+{
+    TravGather();
+    SendCommand((char *)"page Travel4View");
+    CurrentView = TRAVEL4VIEW;
+    TravPageHead();
+    if (TravHave) TravShowPage4(); else TravRead();
+}
+FLASHMEM static bool BenchNeedsModel(char *why, size_t n) // a hold needs the model itself, not its backup
+{
+    if (!BakOffline()) return false;
+    snprintf(why, n, "The bench measure needs the model\r\nitself, switched on and joined:\r\nits backup cannot move the swash.");
+    return true;
+}
+FLASHMEM static bool BenchHold() // the hold begun, or why not said
+{
+    char why[120];
+    if (RfNeedsModel(why, sizeof(why)) || ModelSeemsArmed(why, sizeof(why)) || RfPipeBlocked(why, sizeof(why)) || BenchNeedsModel(why, sizeof(why)))
+    {
+        PlaySound(WHAHWHAHMSG);
+        MsgBox((char *)TravPageWord(), why);
+        return false;
+    }
+    TravGatherPage4();   // the angle typed
+    BenchHeldAxis = BenchAxis; BenchHeldDegTenths = BenchDegTenths;
+    TravBusy("Holding the swash ...");
+    BenchAskOverride(0, BenchValueFor(0), TRV_HOLD);
+    return true;
+}
+FLASHMEM void BenchHoldTapped() // the one button: Hold swash, or Release while held
+{
+    if (TravStep != TRV_IDLE || !TravHave) return;
+    if (BenchHeld) { BenchRelease(BENCH_AFTER_NONE); return; }
+    BenchHold();
+}
+FLASHMEM void BenchAxisTapped() // Roll <-> Pitch; while held, the swash goes over to the other axis at once
+{
+    if (TravStep != TRV_IDLE || !TravHave) return;
+    BenchAxis = BenchAxis == 1 ? 2 : 1;
+    BenchSuggestTenths = 0;
+    SendText((char *)"tn0", (char *)(BenchAxis == 2 ? "Pitch (elevator)" : "Roll (aileron)"));
+    SendText((char *)"tn4", (char *)"tap");
+    if (BenchHeld) BenchHold();
+}
+FLASHMEM void BenchWasEdited() // the angle or the gauge's reading tapped (the keypad follows): the old suggestion no longer holds
+{
+    BenchSuggestTenths = 0;
+    SendText((char *)"tn4", (char *)"tap");
+}
+FLASHMEM void BenchSuggestTapped() // the suggested calibration row: worked out, shown, and put in the calibration box (Save then writes it)
+{
+    if (!TravHave) return;
+    TravGatherPage4();
+    const long gain = FieldTenthsL("tn3", 0, 10000);   // (the box: an edit not yet saved counts)
+    const long held = BenchDegTenths < 0 ? -BenchDegTenths : BenchDegTenths;
+    if (held == 0 || BenchGaugeTenths <= 0 || gain <= 0)
+    {
+        PlaySound(WHAHWHAHMSG);
+        MsgBox((char *)TravPageWord(), (char *)"Type the angle held and what the\r\ngauge read, then tap here again.");
+        return;
+    }
+    long sug = (gain * held + BenchGaugeTenths / 2) / BenchGaugeTenths;   // calibration x commanded / measured
+    if (sug > 10000) sug = 10000;
+    BenchSuggestTenths = sug;
+    TravTenths("tn4", sug);
+    TravTenths("tn3", sug);
+    TravelWasEdited();
 }
 #endif

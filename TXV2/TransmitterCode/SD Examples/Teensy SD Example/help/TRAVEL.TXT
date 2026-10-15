@@ -1,5 +1,6 @@
 How the sticks reach the swash and the tail, laid out as the|
-configurator's Mixer tab, with its names.|
+configurator's Mixer tab, with its names. The phone app calls|
+these pages 'Travel extents'.|
 The same in every bank: the bank shown at the top left does|
 not matter here.||
 It needs the safety on (model disarmed) and a Version 2|
@@ -7,11 +8,12 @@ receiver with Bluetooth. With no model, the pages show the|
 model's backup on the card, if one was made: a 'Save' then|
 changes the backup, and the change is offered to the model|
 when it next connects.||
-Three pages: this one, main rotor geometry and tail rotor.|
+Four pages: this one, main rotor geometry, tail rotor, and the|
+bench measure (the swash held at an angle for a pitch gauge).|
 'Next >' and '< Previous' move between them, changes kept.|
 Tap a number to type a new one.|
 Tap a switch to change it (green = on).|
-'Save' appears once something is changed. It writes all three|
+'Save' appears once something is changed. It writes all the|
 pages to the flight controller, stores them there and reads|
 them back. It asks first, because it changes how far the swash|
 and tail move: check them on the bench, blades off.|

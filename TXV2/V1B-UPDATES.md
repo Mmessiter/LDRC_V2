@@ -186,6 +186,19 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The bench measure on the Mixer pages (V2 B98, screen 1.11.61, 15 Oct 2026)
+
+Malcolm: "travel extents is not yet available from our transmitter. Can we add it?" The Mixer pages (B57/B66) already
+are the phone app's Travel extents under the configurator's name; the one part they lacked was the phone page's bench
+measure. A fourth Mixer page, Travel4View (page 76, `hmi/travel_pages.py`; `Next >` from the tail rotor page): Axis
+(roll or pitch), Hold angle, `Hold swash` (Rotorflight's mixer override, MSP 191, to inputs 1, 2 and 4: the axis at its
+angle, 1000 raw = 12 deg, the other two swash inputs at zero; the button then says `Release`, the top line says HELD),
+Gauge reads, and a Suggested calibration row that works out calibration x angle / reading and puts it in the Cyclic
+calibration box for `Save` (the one value for both axes, as page 2). The hold lets go by `Release`, before `OK` or
+`< Previous` take effect, and by itself after five minutes (from any page); Rotorflight 4.6 obeys an override only while
+disarmed. A release that fails is said, and the page goes on. Refused armed, and offline (a backup cannot move the swash).
+Help: TRAVEL4.TXT new; TRAVEL, TRAVEL2, TRAVEL3 and RFLIGHT say where Travel extents live. Host test: `dev/test_travel`.
+
 ## The arm switch follows the arming channel (V2 B97, screen 1.11.60, receiver 0.9.886, 14 Oct 2026)
 
 Malcolm (14 Oct, setting up a SAB Havoc): "I discovered using the transmitter that for some reason I could not set the

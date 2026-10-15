@@ -1,0 +1,30 @@
+# Travel4View (page 76), Mixer page 4: the bench measure (RF_Travel.h, B98). StartTravel4View -> TravPageHead, then
+# TravShowPage4: tn0 the axis, tn1 the angle to hold, tn2 what the gauge read ("" until typed), tn3 the cyclic
+# calibration, tn4 the suggested calibration ("tap" until worked out); BenchStatus: i0 the told line (the HELD line is
+# the longest), b2 "Hold swash" or "Release".
+Screen_Background=8
+@model 1
+page Travel4View
+t11.txt="Black Thunder 2"
+t9.txt="Bank 1"
+vis b3,0
+tn0.txt="Roll (aileron)"
+tn1.txt="8.0"
+tn2.txt=""
+tn3.txt="86.5"
+tn4.txt="tap"
+i0.txt="Motor off, blades clear: it moves the swash"
+b2.txt="Hold swash"
+@shot 76_ready
+i0.txt="HELD: pitch at -12.0 deg (gyros bypassed)"
+b2.txt="Release"
+tn0.txt="Pitch (elevator)"
+tn1.txt="-12.0"
+tn2.txt="5.6"
+tn4.txt="123.6"
+tn3.txt="123.6"
+vis b3,1
+@shot 76_held
+vis busy,1
+busy.txt="Holding the swash ..."
+@shot 76_holding

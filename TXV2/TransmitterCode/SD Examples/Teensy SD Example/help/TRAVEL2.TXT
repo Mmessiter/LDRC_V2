@@ -1,7 +1,7 @@
 How far the swash may move, and its calibration:|
 the configurator's Main rotor geometry section.||
 Tap a number to type a new one.|
-'Save' appears once something is changed: it writes all three|
+'Save' appears once something is changed: it writes all the|
 Mixer pages, after a question.|
 'Next >' goes on to the tail rotor, '< Previous' back to the|
 first Mixer page, changes kept.|

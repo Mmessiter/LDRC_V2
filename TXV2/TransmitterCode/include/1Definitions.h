@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B97 14/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B98 15/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -341,6 +341,7 @@ bool GapStartedDisarmed = false; // Rotorflight arming in use and DISARMED when 
 #define BATTERYVIEW 72           // B88: the battery (RF_FcSetup.h)
 #define BLACKBOXVIEW 73          // B88: the black box
 #define BATSENSORSVIEW 75        // B90: the FC pads' sensors (RF_FcSetup.h, from the battery page)
+#define TRAVEL4VIEW 76           // B98: the mixer's fourth page, the bench measure (RF_Travel.h)
 #define LEVELVIEW 74             // B88: calibrate the level (B90: it was CALIBRATEVIEW, the stick calibration's number 6 - redefined, so both were 74)
 #define MODELIDVIEW 56
 
@@ -901,6 +902,11 @@ void TravelCollTapped();
 void StartTravel2View();
 void EndTravel2View();
 void StartTravel3View();                     // B66: the tail rotor page
+void StartTravel4View();                     // B98: the bench measure page (Rotorflight's mixer override for a pitch gauge)
+void BenchAxisTapped();                      // B98: Roll <-> Pitch
+void BenchWasEdited();                       // B98: the angle or the gauge's reading tapped (the keypad follows)
+void BenchHoldTapped();                      // B98: Hold swash / Release
+void BenchSuggestTapped();                   // B98: the suggested calibration, worked out and put in the box
 void StartBackupView();                      // B70: RF_Backup.h
 void EndBackupView();
 void BackupNow();

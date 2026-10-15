@@ -30,6 +30,8 @@ It needs Rotorflight 2.3.|
 'Rescue ...': what happens when you flick the rescue switch.|
 'Servos ...', 'Mixer ...' and 'Filters ...': the servos,|
 the swash and tail mixer, and the gyro filters.|
+'Mixer' is the phone app's 'Travel extents': how far the|
+swash and tail move, and a bench measure for a pitch gauge.|
 'Adjustments ...': a knob or switch changes a setting in flight.|
 It needs the USB cable between receiver and flight controller.|
 'Switches ...': what each switch makes the flight controller do.|

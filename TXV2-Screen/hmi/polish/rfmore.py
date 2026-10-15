@@ -1,4 +1,4 @@
-"""Polish (10 Oct 2026) of the "rfmore" Rotorflight pages: 58/59 Rescue, 60 Servos, 62/63/66 Mixer, 64/65 Gyro filters,
+"""Polish (10 Oct 2026) of the "rfmore" Rotorflight pages: 58/59 Rescue, 60 Servos, 62/63/66/76 Mixer, 64/65 Gyro filters,
 74 Calibrate. Malcolm: "make the screens look more beautiful, well designed and easy to use ... Don't change the logic".
 Their words, rows and keypad questions are made by their generators (hmi/rescue_pages.py, servo_pages.py, travel_pages.py,
 filter_pages.py; 74 by fcsetup_pages.py); this module only moves and recolours what those make. Every value is absolute or
@@ -137,6 +137,13 @@ def mixer3(pg):
     # the message box over rows 3 and 4 (the yaw calibration and CW limit, which it covered before)
     message_box(pg, 'ltn2', 2, PITCH)
 
+def mixer4(pg):
+    # B98 (15 Oct 2026): the bench measure, made in the Mixer series' small row like its three elders: the same grid as
+    # theirs (mixer1-3), the told status line first; the message box ("Holding the swash ...", "Releasing ...") over rows
+    # 2 and 3 (the angle and the gauge's reading), across the island
+    regrid(pg, [['i0']] + [['ltn%d' % i, 'tn%d' % i] for i in range(5)], comp(pg, 'card')['y'] + 16)
+    message_box(pg, 'ltn1', 2, PITCH)
+
 def level(pg):
     all_banks(pg)
     # rfmore.5: "Calibrate level" from the left edge of the column above it (the level lines), up to 12 px before Save
@@ -152,4 +159,4 @@ def level(pg):
     top, foot = comp(pg, 'h0')['y'], comp(pg, 'b1')['y'] - 14
     box = comp(pg, 'busy'); put(pg, 'busy', y=top + (foot - top - box['h']) // 2)
 
-EDITS = {58: rescue1, 59: rescue2, 60: servos, 62: mixer1, 63: mixer2, 66: mixer3, 64: filters1, 65: filters2, 74: level}
+EDITS = {58: rescue1, 59: rescue2, 60: servos, 62: mixer1, 63: mixer2, 66: mixer3, 76: mixer4, 64: filters1, 65: filters2, 74: level}

@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 """The Mixer pages of the transmitter (screen 1.11.34, B66; the "Travel extents" of B57): sd/hmi/pages/62.json (TravelView),
-63.json (Travel2View) and 66.json (Travel3View), laid out as the Rotorflight configurator 2.3's Mixer tab - its four
-sections, their names, their order (Malcolm, 8 Oct: photographs of the two side by side). Page 1: Main Rotor Settings and
-Swashplate Trims; page 2: Main Rotor Geometry; page 3: Tail Rotor Settings. Swashplate type, main rotor direction and the
-tail rotor type are told, not changed, as on the configurator's selects. Re-run after a change here."""
+63.json (Travel2View), 66.json (Travel3View) and 76.json (Travel4View, screen 1.11.61, B98), laid out as the Rotorflight
+configurator 2.3's Mixer tab - its four sections, their names, their order (Malcolm, 8 Oct: photographs of the two side by
+side). Page 1: Main Rotor Settings and Swashplate Trims; page 2: Main Rotor Geometry; page 3: Tail Rotor Settings; page 4
+(B98, Malcolm 15 Oct: "travel extents is not yet available from our transmitter"): the receiver's travel page's BENCH
+MEASURE - the swash held at an exact angle for a pitch gauge (Rotorflight's mixer override), and the calibration worked
+out from what the gauge read. Swashplate type, main rotor direction and the tail rotor type are told, not changed, as on
+the configurator's selects. Re-run after a change here (then hmi/polish_pages.py)."""
 import json, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import rescue_pages as rp
 # codes: 83 open, 84 OK, 85 save, 86 a number edited, 87/88/89 aileron / elevator / collective reversed, 90 next (1>2),
-# 91 previous (2>1), 108 yaw reversed, 109 next (2>3), 110 previous (3>2)
+# 91 previous (2>1), 108 yaw reversed, 109 next (2>3), 110 previous (3>2, and 4>3); page 4: 178 next (3>4), 179 the axis
+# tapped, 180 the angle or the gauge's reading tapped (the keypad), 181 Hold swash / Release, 182 the suggested calibration
 rp.series_begin()   # (B91: one island, one size of row, for the series)
 # Polish (10 Oct 2026, Malcolm: "make the screens look more beautiful, well designed and easy to use"): the configurator's
 # names in sentence case and British spelling; each told row (7th element) sized for the longest line the main board writes
@@ -44,11 +48,22 @@ rp.page(66, 'Travel3View', 'Mixer: tail rotor', [
     ('tn3', 'Yaw limit CW [deg]', 0, 5, 'num', 86, 'Yaw limit CW'),
     ('tn4', 'Yaw limit CCW [deg]', 0, 6, 'num', 86, 'Yaw limit CCW'),
     ('tn5', 'Motor idle throttle [%]', 0, 7, 'num', 86),
-], [('b3', 'Save', 14, 180, 85), ('b2', '< Previous', 408, 180, 110), ('b1', 'OK', 605, 180, 84)], 'TRAVEL3.TXT')
+], [('b3', 'Save', 14, 180, 85), ('b4', '< Previous', 208, 180, 110), ('b2', 'Next >', 402, 180, 178), ('b1', 'OK', 596, 180, 84)], 'TRAVEL3.TXT')
+# B98: the told row i0 is the status line the main board writes (RF_Travel.h BenchStatus: the longest is the HELD line
+# below); b2 is the one button whose words it changes, "Hold swash" or "Release"; the axis row is 'wide' for "Pitch
+# (elevator)"; the suggested calibration row is a tap ("tap" until worked out)
+rp.page(76, 'Travel4View', 'Mixer: bench measure', [
+    ('i0', 'Motor off, blades clear: it moves the swash', 0, 0, 'info', 0, 'HELD: pitch at -12.0 deg (gyros bypassed)'),
+    ('tn0', 'Axis', 0, 1, 'wide', 179, 'Pitch (elevator)'),
+    ('tn1', 'Hold angle [deg]', 0, 2, 'num', 180),
+    ('tn2', 'Gauge reads [deg]', 0, 3, 'num', 180),
+    ('tn3', 'Cyclic calibration [%]', 0, 4, 'num', 86),
+    ('tn4', 'Suggested calibration [%]', 0, 5, 'cycle', 182),
+], [('b3', 'Save', 14, 180, 85), ('b2', 'Hold swash', 208, 180, 181), ('b4', '< Previous', 402, 180, 110), ('b1', 'OK', 596, 180, 84)], 'TRAVEL4.TXT')
 rp.series_end()
 idx = json.load(open(os.path.join(rp.PAGES, '..', 'index.json')))
 have = {x['id']: x for x in idx['pages']}
-for pid, name in ((62, 'TravelView'), (63, 'Travel2View'), (66, 'Travel3View')):
+for pid, name in ((62, 'TravelView'), (63, 'Travel2View'), (66, 'Travel3View'), (76, 'Travel4View')):
     n = len(json.load(open(os.path.join(rp.PAGES, '%d.json' % pid)))['comps'])
     if pid in have: have[pid]['n'] = n
     else: idx['pages'].append({'id': pid, 'name': name, 'n': n})
