@@ -30,8 +30,9 @@ The box on the right says when it works: tap it for 'in bank 1',|
 The bank box needs a 'PID bank switch (1 to 6)' adjustment: it tells|
 Rotorflight which bank the switch has chosen.|
 Without one, every adjustment works in every bank.|
-The list here does not offer one. If the model has none, make one|
-in the Rotorflight Configurator.|
+The list here does not offer one. If the model has none, choose|
+its 'Bank (Profile)' switch on the phone app's 'Transmitter|
+channels' page.|
 A bank switch is the bank itself, so it has no bank box.||
 KIND AND CHANNEL:|
 Tap the box under 'Changes' to step to the next kind:|

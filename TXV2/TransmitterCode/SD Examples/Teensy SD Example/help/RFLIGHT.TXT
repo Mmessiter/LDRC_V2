@@ -1,6 +1,11 @@
 View and change the setup of a flight controller that runs|
-Rotorflight (2.2 or later), at the field, with no laptop.|
-Set the helicopter up first with Rotorflight's Configurator.||
+Rotorflight (2.2 or later), at the field, with no laptop.||
+A NEW HELICOPTER:|
+Set it up with the phone app: 'Rotorflight', 'Wizards',|
+'New helicopter' takes you through every step.|
+Or do the basics here: 'Settings ...', then 'Model basics ...'.|
+Only putting Rotorflight onto the flight controller needs a|
+computer, with Rotorflight's Configurator.||
 BEFORE YOU START:|
 Land, put the safety on and switch the motor off.|
 If the safety is off or the motor is on, this page warns you.|

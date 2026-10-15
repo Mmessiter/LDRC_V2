@@ -456,7 +456,7 @@ FLASHMEM static void BasPortTapped(int row) // a port's function stepped to the 
     if (c == 7)
     {
         PlaySound(WHAHWHAHMSG);
-        MsgBox((char *)BasPageWord(), (char *)"This port carries the receiver's link to\r\nthe flight controller. Moved from here,\r\nthe transmitter would lose it: use the\r\nconfigurator, with the USB cable.");
+        MsgBox((char *)BasPageWord(), (char *)"This port carries the receiver's link to\r\nthe flight controller. Moved from here,\r\nthe transmitter would lose it: move it\r\non the phone app's Ports page, with a\r\nUSB cable to the flight controller.");
         return;
     }
     const int next = c >= 6 ? 0 : (c + 1) % 6;   // (Other goes to None, then round)

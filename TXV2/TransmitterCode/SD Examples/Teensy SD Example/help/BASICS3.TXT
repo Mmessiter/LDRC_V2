@@ -11,7 +11,9 @@ Blackbox. 'Other (as set)' is a job this page does not know;|
 a tap takes it to None.|
 'Receiver (this link)' is the port your receiver is wired to:|
 it cannot be changed here. Moved, the transmitter would lose|
-the flight controller. Use the configurator with the USB cable.||
+the flight controller. To move it, use the phone app's 'Ports'|
+page, with a USB-C cable from the receiver to the flight|
+controller.||
 'Save' writes all the Model basics pages, adds the features a|
 job needs (ESC telemetry, GPS, telemetry), stores them and|
 restarts the flight controller. It asks first.|

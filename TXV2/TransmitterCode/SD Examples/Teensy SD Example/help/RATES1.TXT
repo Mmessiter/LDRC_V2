@@ -35,11 +35,12 @@ Centre rate and Max rate go in steps of 10, up to 2550|
 (Collective: 0.25).|
 Exponential goes from 0 to 1, in steps of 0.01.||
 RATES TYPE:|
-'Rates type:' names the type set in Rotorflight's Configurator.|
-Change it there, not here.|
-The numbers here match the Configurator only for the|
-Rotorflight type on 2.3, and the Actual type on 2.2.|
-With any other type, set the rates in the Configurator.||
+'Rates type:' names the type the flight controller uses.|
+Change it on the phone app's 'Rates' page, not here.|
+The numbers here match the Configurator for the Actual type,|
+and for the Rotorflight type on 2.3. With any other type,|
+choose one of those two on the phone app's 'Rates' page,|
+then set the rates again.||
 'Advanced ...' opens 'Rates +' for the same rate.|
 'OK' goes back to the Rotorflight options.|
 Both ask first if you have unsaved changes.|

@@ -186,6 +186,18 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The help points to the phone app, not the Configurator (V2 B101, screen 1.11.63, 15 Oct 2026)
+
+Malcolm, on the Rotorflight options help: "This help says start with the configurator. Maybe it should suggest the phone
+app!" The phone app sets a new helicopter up from scratch (Rotorflight > Wizards > New helicopter); only flashing
+Rotorflight onto the flight controller needs a computer. RFLIGHT.TXT now says so and points to Model basics here too.
+The same advice elsewhere: BASICS3.TXT and the locked receiver-port message (`RF_Basics.h`) send a move of the receiver's
+port to the phone app's Ports page with the USB cable in; ADJUST.TXT makes a missing bank switch on the phone app's
+Transmitter channels page ('Bank (Profile)'); RATES1.TXT changes the rates type on the phone app's Rates page, and says the
+numbers here match the Configurator for the Actual type on any version (B08 made it so; the help still said 2.2 only).
+Help that only names a Configurator tab, so its users find their way, is kept. The black box logs still need the
+Configurator to be kept: the phone cannot download them either.
+
 ## Ports and the ESC throttle calibration (V2 B100, screen 1.11.63, 15 Oct 2026)
 
 Malcolm: "Can we also add ports and esc calibration?" Two more Model basics pages. **Ports** (page 79, `RF_Basics.h`):
