@@ -192,7 +192,7 @@ static void flightDrawTile(const ldrc::FlightTile &t, bool setup) {
         }
         return;
     }
-    if (v.twoPart) {                                              // (1.11.70) two boxes in one, the upper the taller
+    if (v.twoPart) {                                              // (1.11.70) two boxes in one (1.11.71: of one height, drawn alike)
         FlightRect up, low; flightSplit(r, up, low);
         flPart(up, t, 0, v.label, v.big, v.unit, v.small, v.tag, v.state, t.scale, setup);
         flPart(low, t, 1, v.label2, v.big2, v.unit2, v.small2, v.tag2, v.state2, t.scale2, setup);

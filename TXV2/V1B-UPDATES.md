@@ -186,6 +186,15 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The two batteries drawn alike (screen 1.11.72, Teensy B103 unchanged, 15 Oct 2026)
+
+Malcolm: "RX and TX voltages should employ the same format. Both should have per cell volts emphasised." The Batteries box
+gave its upper part 58 % of the box: the TX's per-cell number was the smaller, and in a box of the nine it had no room for
+its per cent. Now a box of two parts has two equal parts; the two batteries share one plan (the same form, letters and
+per cent, the per-cell volts big in the same place and of one size, the total below in a big box), and both parts of a
+box put their numbers at one x when each has its name on the left. A part 53 px tall (nine boxes) keeps its per cent
+under the name. AMS and trims get the equal parts too. Host test: test_flight (the two batteries alike in every layout).
+
 ## The governor's choices kept in range, "RX battery" (screen 1.11.71, Teensy B103, receivers 0.9.893, 15 Oct 2026)
 
 The diff saved by 1.11.70 named the Havoc's fault: "a setting out of range: gov_throttle_type = 3". Rotorflight 2.3's

@@ -320,9 +320,12 @@ std::vector<FlightRect> flightLayout(int layout, const FlightRect &a, int gap) {
 // Each box's letters: its number as big as the box allows for the widest value its thing is expected to show, at most
 // three times the 64-pixel font; boxes of one size alike (the smallest of theirs); the name and the small line bigger in a
 // big box. (Box size linked to font size: Malcolm, 10-04.)
+// A box of two parts: two equal parts, 6 or 7 px apart (1.11.71, Malcolm 15 Oct: "RX and TX voltages should employ the same
+// format. Both should have per cell volts emphasised". 1.11.70 gave the upper part 58 %: the TX's number was the smaller,
+// and a small box had no room for its per cent).
 void flightSplit(const FlightRect &r, FlightRect &upper, FlightRect &lower) {
-    const int gap = 6, hu = (r.h - gap) * 58 / 100;
-    upper = FlightRect(r.x, r.y, r.w, hu); lower = FlightRect(r.x, r.y + hu + gap, r.w, r.h - hu - gap);
+    const int gap = 6, h = (r.h - gap) / 2;
+    upper = FlightRect(r.x, r.y, r.w, h); lower = FlightRect(r.x, r.y + r.h - h, r.w, h);
 }
 // A part's number: as big as its area allows for the widest it is expected to show, at most three times the 64-pixel font
 static int16_t partScale(const FlightRect &a, const char *ref, const char *unit, FlightFonts *f) {
@@ -340,9 +343,13 @@ FlightPartPlan flightPartPlan(const FlightRect &p, int item, int part, FlightFon
     const int top = p.y + 8 + nameH, bottom = p.y + p.h - 8 - (st.small ? nameH : 0);
     st.number = FlightRect(p.x + FLIGHT_PAD, top, p.w - 2 * FLIGHT_PAD, bottom > top ? bottom - top : 0);
     rw.row = true;                                                    // the short name on the left, its tag under it if both lines fit
-    int col = f ? f->width(rw.font, flightPartShort(item, part)) : 60;
-    rw.tagBelow = p.h >= 2 * nameH + 8 && *partTagRef(item, part);
-    if (rw.tagBelow && f) col = std::max(col, f->width(rw.font, partTagRef(item, part)));
+    // (1.11.71) the column as wide as the wider of the box's two parts' words: both parts' numbers start at one place, and
+    // the two batteries are drawn alike. Both lines fit with 4 px to spare (a 53 px part of a nine-box screen keeps its per cent).
+    const int other = part ? 0 : 1;
+    auto wider = [&](const char *a, const char *b) { return f ? std::max(f->width(rw.font, a), f->width(rw.font, b)) : 60; };
+    int col = wider(flightPartShort(item, part), flightPartShort(item, other));
+    rw.tagBelow = p.h >= 2 * nameH + 4 && *partTagRef(item, part);
+    if (rw.tagBelow && f) col = std::max(col, wider(partTagRef(item, part), partTagRef(item, other)));
     if (col + 12 > p.w / 2) col = p.w / 2 - 12;                       // (the number keeps half the part at least)
     rw.column = col;
     rw.number = FlightRect(p.x + 10 + col + 12, p.y + 4, p.w - 20 - col - 12, p.h - 8);
@@ -358,7 +365,7 @@ void flightSizeTiles(std::vector<FlightTile> &tiles, FlightFonts *f) {
         FlightRect up, low; flightSplit(t.r, up, low);
         t.scale = partScale(flightPartPlan(up, t.item, 0, f).number, flightPartReference(t.item, 0), flightPartUnit(t.item, 0), f);
         t.scale2 = partScale(flightPartPlan(low, t.item, 1, f).number, flightPartReference(t.item, 1), flightPartUnit(t.item, 1), f);
-        if (t.item == FL_BATTS && t.scale2 > t.scale) t.scale2 = t.scale;   // (the flight battery at the top is never the smaller)
+        if (t.item == FL_BATTS) t.scale = t.scale2 = std::min(t.scale, t.scale2);   // (1.11.71: the two batteries' numbers alike)
     }
     for (auto &t : tiles) {
         const char *ref = flightItemReference(t.item), *unit = flightItemUnit(t.item);
