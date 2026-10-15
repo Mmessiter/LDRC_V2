@@ -30,8 +30,10 @@ A Version 2 receiver does not: Rotorflight sends the head speed.|
 With a Version 2 receiver, set Rotorflight's own gear ratio on|
 'Model basics ...' (its second page), not here.||
 MODEL BASICS:|
-'Model basics ...' opens two pages for a new model's set-up:|
+'Model basics ...' opens four pages for a new model's set-up:|
 swash type, which way the rotor turns, tail type, ESC signal|
-and brand, motor pole count, and the main and tail gear ratios.|
-They need the model (or its backup on the card).|
+and brand, motor pole count; the main and tail gear ratios;|
+the ports (what each UART does); the ESC throttle calibration.|
+The first two work from the model's backup too; the ports and|
+the calibration need the model itself.|
 A 'Save' there restarts the flight controller.|

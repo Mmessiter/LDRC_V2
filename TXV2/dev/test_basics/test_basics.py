@@ -26,6 +26,10 @@ prog = r'''
 #define RFSETUPVIEW 61
 #define BASICSVIEW 77
 #define BASICS2VIEW 78
+#define PORTSVIEW 79
+#define ESCCALVIEW 80
+#include <cctype>
+static int ecalStops = 0; void EscCalStop() { ++ecalStops; }
 static int CurrentView = 0;
 static bool offline = false, armed = false;
 static char ModelName[20] = "Havoc";
@@ -54,6 +58,8 @@ struct FcReq { int fn; std::string data; };
 static std::vector<FcReq> fcLog;
 static std::string hexOf(const uint8_t *d, int n) { char b[4]; std::string s; for (int i = 0; i < n; ++i) { snprintf(b, sizeof b, "%02X", d[i]); s += b; } return s; }
 static uint8_t mix[21], mot[29], esc[14]; static bool escMissing = false; static int rebootLeft = 0, reboots = 0, rebootLen = 2;
+static uint8_t ports[6 * 9]; static int portsN = 6; static bool portsMissing = false; static uint32_t feat = (1u << 3) | (1u << 26) | (1u << 29) | (1u << 30);
+static uint8_t board[48]; static int boardLen = 0;
 static void fcReply(int code, const std::string &body) { PipeRepCode = code; strncpy(PipeRepBody, body.c_str(), sizeof(PipeRepBody) - 1); PipeRepBody[sizeof(PipeRepBody) - 1] = 0; PipeRepId = PipeReqId; }
 static unsigned u16(const uint8_t *b, int o) { return b[o] | (b[o + 1] << 8); }
 static void w16(uint8_t *b, int o, unsigned v) { b[o] = v & 0xFF; b[o + 1] = v >> 8; }
@@ -69,6 +75,11 @@ int MspAsk(uint8_t fn, const uint8_t *data, int len) {
     case 216: memcpy(esc, data, 14); fcReply(200, ""); return PipeReqId;
     case 250: fcReply(200, ""); return PipeReqId;
     case 68: ++reboots; rebootLeft = rebootLen; fcReply(200, ""); return PipeReqId;   // (rebootLen requests fall into the restart)
+    case 4: fcReply(200, hexOf(board, boardLen)); return PipeReqId;
+    case 54: if (portsMissing) { fcReply(404, "unknown"); return PipeReqId; } fcReply(200, hexOf(ports, portsN * 9)); return PipeReqId;
+    case 55: for (int o = 0; o + 9 <= len; o += 9) for (int k = 0; k < portsN; ++k) if (ports[k * 9] == data[o]) memcpy(ports + k * 9, data + o, 9); fcReply(200, ""); return PipeReqId;
+    case 36: { uint8_t b[4] = {(uint8_t)feat, (uint8_t)(feat >> 8), (uint8_t)(feat >> 16), (uint8_t)(feat >> 24)}; fcReply(200, hexOf(b, 4)); return PipeReqId; }
+    case 37: feat = (uint32_t)data[0] | ((uint32_t)data[1] << 8) | ((uint32_t)data[2] << 16) | ((uint32_t)data[3] << 24); fcReply(200, ""); return PipeReqId;
     }
     fcReply(404, "unknown"); return PipeReqId;
 }
@@ -84,13 +95,22 @@ static void fakeFc() {
     memset(mot, 0, sizeof mot); w16(mot, 0, 1070); w16(mot, 2, 2000); w16(mot, 4, 1000); mot[6] = 1; mot[7] = 10; mot[9] = 0; w16(mot, 10, 250);
     mot[13] = 10; mot[14] = mot[15] = mot[16] = 10; w16(mot, 21, 10); w16(mot, 23, 102); w16(mot, 25, 19); w16(mot, 27, 85);
     memset(esc, 0, sizeof esc); esc[0] = 4; esc[1] = 1; w16(esc, 2, 50);              // Scorpion, half duplex
+    // the board: "RDMS", revision, type, capabilities, target "NEXUS_X" (7), board "NEXUS_X" (7)
+    memcpy(board, "RDMS", 4); board[4] = 1; board[5] = 0; board[6] = 2; board[7] = 0; board[8] = 7; memcpy(board + 9, "NEXUS_X", 7); board[16] = 7; memcpy(board + 17, "NEXUS_X", 7); boardLen = 24;
+    // six ports: UART1 the receiver, UART2 ESC telemetry, UART3 and UART4 nothing, UART6 the dongle (MSP at 115200), the USB socket MSP
+    memset(ports, 0, sizeof ports);
+    const uint8_t ids[6] = {0, 1, 2, 3, 5, 20}; const uint32_t masks[6] = {64, 1024, 0, 0, 1, 1};
+    for (int k = 0; k < 6; ++k) { uint8_t *p = ports + k * 9; p[0] = ids[k]; p[1] = masks[k] & 255; p[2] = (masks[k] >> 8) & 255; p[5] = k == 4 || k == 5 ? 5 : 0; p[6] = 1; p[7] = 1; p[8] = 5; }
+    portsN = 6; portsMissing = false; feat = (1u << 3) | (1u << 26) | (1u << 29) | (1u << 30);
 }
+static uint32_t pmask(int k) { const uint8_t *p = ports + k * 9; return (uint32_t)p[1] | ((uint32_t)p[2] << 8) | ((uint32_t)p[3] << 16) | ((uint32_t)p[4] << 24); }
 int main() {
     fakeFc();
     // ---- 1. from the settings page: its fields gathered, the three reads, the page
     CurrentView = RFSETUPVIEW; StartBasicsView();
     CHECK(gathers == 1 && CurrentView == BASICSVIEW && cmd("page BasicsView") && fields["t9"] == "All banks"); run();
-    CHECK(BasHave && BasEscHave && writes(42) == 1 && writes(131) == 1 && writes(123) == 1 && cmd("vis b3,0"));
+    CHECK(BasHave && BasEscHave && writes(42) == 1 && writes(131) == 1 && writes(123) == 1 && writes(4) == 1 && writes(54) == 1 && cmd("vis b3,0"));
+    CHECK(BasPortsHave && BasPortsN == 6 && !strcmp(BasBoard, "NEXUS_X"));
     CHECK(fields["tn0"] == "CCPM 120 deg" && fields["tn1"] == "Clockwise" && fields["tn2"] == "Variable pitch" && fields["tn3"] == "PWM (most heli ESCs)" && fields["tn4"] == "Scorpion" && fields["tn5"] == "10");
     // ---- 2. the choices step round; the typed pole count is left alone by a tap
     fields["tn5"] = "14"; cmds.clear();
@@ -147,6 +167,30 @@ int main() {
     escMissing = false;
     // ---- 9. refused while armed: nothing read, the settings page kept
     armed = true; boxes = 0; CurrentView = RFSETUPVIEW; fcLog.clear(); StartBasicsView(); CHECK(boxes == 1 && lastBox == "Model is armed" && CurrentView == RFSETUPVIEW && fcLog.empty()); armed = false;
+    // ---- 10. B100 the ports page: the rows named by the Nexus-X's sockets, the USB socket left out, the sixth row hidden
+    fakeFc(); CurrentView = RFSETUPVIEW; StartBasicsView(); run(); CHECK(BasHave && BasPortsHave);
+    StartBasics2View(); cmds.clear(); StartBasics3View();
+    CHECK(CurrentView == PORTSVIEW && cmd("page PortsView") && fields["ltn0"] == "S.BUS (1)" && fields["tn0"] == "Receiver (this link)" && fields["ltn1"] == "TELEM (2)" && fields["tn1"] == "ESC telemetry");
+    CHECK(fields["ltn2"] == "Port C (3)" && fields["tn2"] == "None" && fields["ltn3"] == "Port A (4)" && fields["tn3"] == "None" && fields["ltn4"] == "Port B (6)" && fields["tn4"] == "Dongle (MSP 115200)" && cmd("vis ltn5,0") && cmd("vis tn5,0"));
+    // the receiver's port is locked; the others step round; a job the page does not know is told, and a tap takes it to None
+    boxes = 0; BasicsPort1Tapped(); CHECK(boxes == 1 && lastBox.find("receiver's link") != std::string::npos && fields["tn0"] == "Receiver (this link)" && !BasPortsEdited && !Bas_Was_Edited);
+    cmds.clear(); BasicsPort3Tapped(); CHECK(fields["tn2"] == "ESC telemetry" && BasPortsEdited && Bas_Was_Edited && cmd("vis b3,1"));
+    BasicsPort3Tapped(); CHECK(fields["tn2"] == "GPS");
+    BasicsPort4Tapped(); BasicsPort4Tapped(); BasicsPort4Tapped(); CHECK(fields["tn3"] == "Dongle (MSP 115200)" && BasPortsWant[3 * 9 + 5] == 5);
+    for (int i = 0; i < 3; ++i) BasicsPort4Tapped(); CHECK(fields["tn3"] == "None");   // S.Port, Blackbox, None
+    BasPortsWant[2 * 9 + 1] = 33; BasPortsWant[2 * 9 + 2] = 0; BasShowPortRow(2); CHECK(fields["tn2"] == "Other (as set)"); BasicsPort3Tapped(); CHECK(fields["tn2"] == "None"); BasicsPort3Tapped(); CHECK(fields["tn2"] == "ESC telemetry");
+    // the save: 55 with all six ports, the features gaining ESC telemetry (27) and TELEMETRY (10), the restart, 54 read back
+    fcLog.clear(); asked = 0; SaveBasics(); CHECK(asked == 1 && lastBox.find("ports") != std::string::npos); run(60);
+    CHECK(writes(55) == 1 && lastData(55).size() == 108 && writes(36) == 1 && writes(37) == 1 && writes(250) == 1 && writes(68) == 1 && writes(54) == 1 && pmask(2) == 1024 && pmask(0) == 64 && pmask(5) == 1);
+    CHECK(feat == ((1u << 3) | (1u << 26) | (1u << 29) | (1u << 30) | (1u << 27) | (1u << 10)) && !BasPortsEdited && !Bas_Was_Edited && fields["busy"] == "Saved, and read back the same." && fields["tn2"] == "ESC telemetry");
+    // no feature write when nothing new is needed
+    BasicsPort3Tapped(); BasicsPort3Tapped(); CHECK(fields["tn2"] == "Dongle (MSP 115200)"); fcLog.clear(); SaveBasics(); run(60); CHECK(writes(55) == 1 && writes(36) == 1 && writes(37) == 0 && pmask(2) == 1);
+    // offline: the ports page is refused (the backup keeps no ports)
+    EndBasics3View(); CHECK(CurrentView == BASICS2VIEW); offline = true; boxes = 0; StartBasics3View(); CHECK(boxes == 1 && lastBox.find("need the model") != std::string::npos && CurrentView == BASICS2VIEW); offline = false;
+    // a flight controller that answers no 54: the page says so
+    fakeFc(); portsMissing = true; CurrentView = RFSETUPVIEW; StartBasicsView(); run(); CHECK(BasHave && !BasPortsHave); StartBasics2View(); StartBasics3View(); CHECK(fields["ltn0"] == "No ports read"); portsMissing = false;
+    // OK from any page lets a throttle hold go first (RF_EscCal.h)
+    ecalStops = 0; EndBasicsView(); CHECK(ecalStops == 1);
     printf("test_basics: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;
 }

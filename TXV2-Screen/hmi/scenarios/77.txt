@@ -36,3 +36,26 @@ tn1.txt="4080"
 tn2.txt="475"
 tn3.txt="2516"
 @shot 78_ready
+page PortsView
+t11.txt="Black Thunder 2"
+t9.txt="All banks"
+vis b3,0
+ltn0.txt="S.BUS (1)"
+tn0.txt="Receiver (this link)"
+ltn1.txt="TELEM (2)"
+tn1.txt="ESC telemetry"
+ltn2.txt="Port C (3)"
+tn2.txt="None"
+ltn3.txt="Port A (4)"
+tn3.txt="Dongle (MSP 115200)"
+ltn4.txt="Port B (6)"
+tn4.txt="Telemetry (S.Port)"
+vis ltn5,0
+vis tn5,0
+@shot 79_ready
+page EscCalView
+t11.txt="Black Thunder 2"
+t9.txt="All banks"
+tn3.txt="FULL THROTTLE held: plug the battery in"
+b2.txt="Minimum"
+@shot 80_held

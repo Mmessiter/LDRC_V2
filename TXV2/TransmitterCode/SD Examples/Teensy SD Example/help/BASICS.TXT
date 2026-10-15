@@ -5,11 +5,13 @@ configurator they are on the Mixer and Motor tabs.||
 Set them once, when a model is new. The Mixer pages show|
 the first three but do not change them.||
 Tap a choice to step to the next one; tap a number to type.|
-'Save' appears once something is changed. It writes both|
-pages, stores them, then RESTARTS the flight controller|
-(these take effect when it starts) and reads them back:|
+'Save' appears once something is changed. It writes all the|
+Model basics pages, stores them, then RESTARTS the flight|
+controller (these take effect when it starts) and reads them|
+back:|
 allow a few seconds. It asks first.|
-'Next >' goes on to the gear ratios, changes kept.|
+'Next >' goes on to the gear ratios, then the ports, then the|
+ESC throttle calibration, changes kept.|
 'OK' leaves; if a change was not saved, it asks first.||
 Swash type: None, Direct, CCPM 120, 135 or 140 degrees,|
 FPM 90 L or V. The configurator's Swashplate type.|

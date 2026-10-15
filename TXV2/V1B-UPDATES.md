@@ -186,6 +186,24 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Ports and the ESC throttle calibration (V2 B100, screen 1.11.63, 15 Oct 2026)
+
+Malcolm: "Can we also add ports and esc calibration?" Two more Model basics pages. **Ports** (page 79, `RF_Basics.h`):
+the flight controller's UART ports from MSP 54 (9 bytes a port), each a row named by the socket printed on a RadioMaster
+Nexus (the board's name from MSP 4: S.BUS, TELEM, Port A/B/C) or by its UART number; a tap steps its job - None, ESC
+telemetry, GPS, Dongle (MSP 115200), Telemetry (S.Port), Blackbox; a job the page does not know is told as "Other (as
+set)". The port carrying the receiver's own link (RX_SERIAL) is told and LOCKED: moved from here the transmitter would
+lose the flight controller. Save writes 55, adds the features the jobs need to 36/37 (RX_SERIAL 3 + TELEMETRY 10 for the
+receiver, GPS 7, ESC_SENSOR 27, TELEMETRY 10 for S.Port; never taken away), stores, restarts and reads 54 back. The ports
+need the model itself (the backup keeps none). **ESC throttle calibration** (page 80, `RF_EscCal.h`): the phone's ESC
+page's procedure - Rotorflight's motor override (MSP 195, motor 0 at 1000) holds FULL throttle, the pilot plugs the flight
+pack in, the ESC learns the top; `Minimum` lets go (0) and it learns the bottom. The flight controller obeys the hold
+only while disarmed and forgets it one second after the last renewal, so the page renews it as each reply comes (about
+every 350 ms over the pipe) and stops with a word if a renewal gets no answer in 1.2 s; leaving the page, OK or < Previous
+let go too. Checklist rows on the page (blades off / pinion out, flight pack unplugged, FC on USB power, safety on);
+refused armed and offline. Help BASICS3.TXT and BASICS4.TXT new; BASICS, BASICS2, RFSETUP, RFLIGHT updated. Host tests
+`dev/test_basics` (ports) and `dev/test_esccal`.
+
 ## Model basics on the transmitter (V2 B99, screen 1.11.62, 15 Oct 2026)
 
 Malcolm: "Perhaps now I'll be able to complete the Havoc setup without using my phone or the configurator?" - "Yes if we

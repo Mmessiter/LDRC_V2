@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B99 15/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B100 15/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -344,6 +344,8 @@ bool GapStartedDisarmed = false; // Rotorflight arming in use and DISARMED when 
 #define TRAVEL4VIEW 76           // B98: the mixer's fourth page, the bench measure (RF_Travel.h)
 #define BASICSVIEW 77            // B99: the model basics (RF_Basics.h): swashplate type, rotor direction, tail type, ESC signal and brand, poles
 #define BASICS2VIEW 78           // B99: ... the gear ratios
+#define PORTSVIEW 79             // B100: ... the ports (RF_Basics.h)
+#define ESCCALVIEW 80            // B100: ... the ESC throttle calibration (RF_EscCal.h)
 #define LEVELVIEW 74             // B88: calibrate the level (B90: it was CALIBRATEVIEW, the stick calibration's number 6 - redefined, so both were 74)
 #define MODELIDVIEW 56
 
@@ -922,6 +924,19 @@ void BasicsWasEdited();
 void StartBasics2View();                     // B99: the gear ratios page
 void EndBasics2View();
 void BasicsPoll();
+void StartBasics3View();                     // B100: the ports page
+void EndBasics3View();
+void BasicsPort1Tapped();
+void BasicsPort2Tapped();
+void BasicsPort3Tapped();
+void BasicsPort4Tapped();
+void BasicsPort5Tapped();
+void BasicsPort6Tapped();
+void StartEscCalView();                      // B100: the ESC throttle calibration page (RF_EscCal.h)
+void EndEscCalView();
+void EscCalTapped();
+void EscCalStop();
+void EscCalPoll();
 void StartBackupView();                      // B70: RF_Backup.h
 void EndBackupView();
 void BackupNow();

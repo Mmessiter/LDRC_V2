@@ -41,7 +41,8 @@ the flight pack, the flight recorder and the level.|
 'Settings ...': 'Link rates and banks', the Rotorflight version,|
 the arming channel and the main gear ratio; and 'Model basics|
 ...': swashplate type, rotor direction, tail type, ESC signal|
-and brand, motor poles and gear ratios (a new model's set-up).|
+and brand, motor poles, gear ratios, the ports and the ESC|
+throttle calibration (a new model's whole set-up).|
 'OK' goes back to the front page.||
 THE ARMING LINE:|
 The line under the buttons says whether the model will arm:|

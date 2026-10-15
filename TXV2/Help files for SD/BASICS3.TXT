@@ -1,0 +1,22 @@
+The flight controller's serial ports (UARTs), and what each|
+one does: the configurator's Ports tab.||
+Each row is a socket. On a RadioMaster Nexus the letters are|
+the ones printed on the board: Port A is UART 4, Port B is|
+UART 6, Port C is UART 3. On the Nexus-X, TELEM is UART 2 and|
+S.BUS is UART 1; on the original Nexus, S.BUS is UART 2 and|
+DSM is UART 1. Other boards show UART numbers only.||
+Tap a row to step its job: None, ESC telemetry, GPS, Dongle|
+(MSP 115200: an LDRC dongle on a wire), Telemetry (S.Port),|
+Blackbox. 'Other (as set)' is a job this page does not know;|
+a tap takes it to None.|
+'Receiver (this link)' is the port your receiver is wired to:|
+it cannot be changed here. Moved, the transmitter would lose|
+the flight controller. Use the configurator with the USB cable.||
+'Save' writes all the Model basics pages, adds the features a|
+job needs (ESC telemetry, GPS, telemetry), stores them and|
+restarts the flight controller. It asks first.|
+A port given a job it is not wired for is simply silent.|
+The ports need the model itself: its backup keeps no ports.|
+'< Previous' goes back to the gear ratios, 'Next >' on to the|
+ESC throttle calibration.|
+'OK' leaves; if a change was not saved, it asks first.|

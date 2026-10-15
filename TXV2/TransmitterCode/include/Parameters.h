@@ -62,6 +62,8 @@ bool PipePageShowing()
     case TRAVEL4VIEW:
     case BASICSVIEW:
     case BASICS2VIEW:
+    case PORTSVIEW:
+    case ESCCALVIEW:
     case ADJUSTVIEW:
     case ADJPICKVIEW:
     case SWITCHVIEW:

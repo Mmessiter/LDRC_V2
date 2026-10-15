@@ -168,7 +168,8 @@
 #include "RF_Switches.h" // B77: the switches (modes), over the pipe
 #include "RF_CopyBank.h" // B78: copy a bank, over the pipe
 #include "RF_FcSetup.h" // B88: battery, black box, calibrate, and why it will not arm, over the pipe
-#include "RF_Basics.h" // B99: the model basics (swashplate type, rotor direction, tail type, motor protocol, ESC brand, poles, gear ratios), over the pipe
+#include "RF_Basics.h" // B99: the model basics (swashplate type, rotor direction, tail type, motor protocol, ESC brand, poles, gear ratios), over the pipe; B100: the ports
+#include "RF_EscCal.h" // B100: the ESC throttle calibration, over the pipe
 #include "RF_Rates_Advanced.h"
 #include "RF_PID_Advanced.h"
 #include "RF_Save_Restore.h"
@@ -3056,7 +3057,7 @@ void RestoreCurrentModel()
 // ******************************** Global Array1 of numbered function pointers OK up the **********************************
 
 // This new list can be huge - up to 24 BITS unsigned!  ( Use "NUMBER<<8" )
-#define LASTFUNCTION1 194 // One more than final one
+#define LASTFUNCTION1 205 // One more than final one
 
 void (*NumberedFunctions1[LASTFUNCTION1])(){
     Blank,                   // 0 Cannot be used
@@ -3252,7 +3253,18 @@ void (*NumberedFunctions1[LASTFUNCTION1])(){
     BasicsEscTapped,         // 190 ESC brand (the telemetry protocol)
     BasicsWasEdited,         // 191 a number typed (poles, the gear ratios)
     StartBasics2View,        // 192 Next > (the gear ratios)
-    EndBasics2View           // 193 < Previous
+    EndBasics2View,          // 193 < Previous
+    StartBasics3View,        // 194 B100: Next > (the ports)
+    EndBasics3View,          // 195 < Previous (the gear ratios)
+    BasicsPort1Tapped,       // 196 a port's function stepped (rows 1-6)
+    BasicsPort2Tapped,       // 197
+    BasicsPort3Tapped,       // 198
+    BasicsPort4Tapped,       // 199
+    BasicsPort5Tapped,       // 200
+    BasicsPort6Tapped,       // 201
+    StartEscCalView,         // 202 Next > (the ESC throttle calibration)
+    EndEscCalView,           // 203 < Previous (the ports)
+    EscCalTapped             // 204 Full throttle / Minimum
 };
 
 // This list migth become MUCH longer as it limit is 24 bits big
@@ -5042,6 +5054,7 @@ void FASTRUN ManageTransmitter()
     ServoPoll();       // B55: the servos page, likewise
     TravelPoll();      // B57: the travel extents pages
     BasicsPoll();      // B99: the model basics pages
+    EscCalPoll();      // B100: the ESC throttle calibration page (the hold renewed)
     FilterPoll();      // B58: the filters page
     AdjustPoll();      // B72: the adjustments page
     SwitchPoll();      // B77: the switches page
