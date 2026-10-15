@@ -40,6 +40,18 @@ static const uint32_t QUIET_NEED_US = 38000;            // (the copy takes ~36 m
 static uint32_t quietN = 0, quietLateN = 0, quietOverN = 0, quietWaitMs = 0, quietCopyUs = 0, quietCopyMax = 0, quietDrawUs = 0, quietDrawMax = 0;
 static uint32_t quietSeenEnds = 0, quietSeenAt = 0;
 static uint32_t quietKeptN = 0, quietFullN = 0, quietWarmN = 0, quietStepMax = 0;   // (1.11.68, src/flight_device.h) the defined screen: shown as kept, drawn whole, drawn ahead; its longest piece (us)
+static uint32_t quietStoreN = 0, quietStoreMax = 0;      // (1.11.69) the front screen's choice written to the flash: how often, the longest (us)
+// (1.11.69) The front screen's switch is copied at once, as every other page change is (Malcolm, of 1.11.67: "All of the
+// other screen changes are just fine ... Maybe we should simply use the other method?"): no quiet frame. The quiet time
+// stays here, unused, should it be wanted again.
+static const bool QUIET_SWITCH = false;
+// Wait for the panel's frame end (a frame at most): a short flash write started then is over in the blank before the next
+// picture (16 lines, 1.4 ms), so the panel's DMA does not wait for the PSRAM in the middle of a picture.
+static void quietAtFrameEnd() {
+    if (!vtNormal || !frameEnds) return;
+    const uint32_t f = frameEnds, t0 = QT_MICROS();
+    while (frameEnds == f && QT_MICROS() - t0 < 50000) { }
+}
 static bool quietTurn(QuietJob &j, uint32_t needUs = QUIET_NEED_US) {
     const uint32_t now = QT_MILLIS();
     if (!j.since || now - j.last > 200) j.since = now;

@@ -186,6 +186,18 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The front screen's switch copied at once, its choice one byte (screen 1.11.69, Teensy B102 unchanged, 15 Oct 2026)
+
+Malcolm of 1.11.68: "Still flickers." His screen said every switch had used the kept drawing (8 switches, none drawn
+afresh) and every copy had fitted its quiet frame. What this switch still did that no other page change does: it wrote
+the flash. The choice of front screen was kept inside each of the six screen definitions, so every switch wrote all six
+again a moment later (some 24 flash entries), and writing the flash takes the memory from the panel: the picture slips
+sideways. Now the choice is one byte of its own, a definition is written only when it really changes (on the setup page),
+and the byte is written just after the panel's frame end, in the blank before the next picture. And the switch is copied
+at once, as every other page change is (Malcolm: "Maybe we should simply use the other method?"): no quiet frame, whose
+long blank might itself show. The defined screen is still drawn ahead and kept (1.11.68). /status "quiet" adds stores and
+store_max. Host test: test_flight's choiceKey (a switch writes no definition; a real change still does).
+
 ## The defined front screen kept drawn (screen 1.11.68, Teensy B102 unchanged, 15 Oct 2026)
 
 Malcolm of 1.11.67: "It does flicker for perhaps a fifth of a second, and then jumps to the new screen ... All of the

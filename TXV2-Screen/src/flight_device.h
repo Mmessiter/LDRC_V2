@@ -23,13 +23,33 @@ static void flightLoad() {
         if (!s.empty() && !flight.loadSlot(k, s)) blog("flight", "setting not understood: " + s);
     }
     flight.startWithSlot(prefs.getInt("flightSlot", 0));      // (1.11.33: with its own stored Original / Defined choice)
+    // (1.11.69) the choice of the moment has a key of its own: the definitions' copies of it (" m:") are what an older screen
+    // reads, and are no longer written again at every switch
+    const uint8_t m = prefs.getUChar("flightMan", 0);
+    if (m == ldrc::FM_ORIGINAL || m == ldrc::FM_DEFINED) flight.cfg.manual = m;
 }
+// (1.11.69) Writing the flash takes the PSRAM from the panel while it lasts: the picture slips sideways. The switch between
+// the original and defined front screens did that every time - all six definitions written again (~24 flash entries) only
+// because each carries the choice - and no other page change writes the flash: the flicker that only this switch had. Now
+// the choice is one byte of its own, a definition is written only when it really changed (the setup page), and the writing
+// starts just after the panel's frame end, in the blank before its next picture.
 static void flightStore() {
+    std::vector<std::pair<std::string, std::string>> todo;
     for (int k = 0; k < ldrc::FlightScreen::FLIGHT_SLOTS; ++k) {
-        const std::string s = flight.slotToStore(k);
-        if (std::string(prefs.getString(flightKey(k).c_str(), "").c_str()) != s) prefs.putString(flightKey(k).c_str(), s.c_str());
+        const std::string s = flight.slotToStore(k), old = prefs.getString(flightKey(k).c_str(), "").c_str();
+        if (old == s) continue;
+        ldrc::FlightConfig was, now;
+        if (!old.empty() && was.load(old) && now.load(s)) { was.manual = now.manual; if (was == now) continue; }   // (only the choice differs: it has its own key)
+        todo.push_back({ flightKey(k), s });
     }
-    if (prefs.getInt("flightSlot", 0) != flight.slotInUse()) prefs.putInt("flightSlot", flight.slotInUse());
+    const bool slotNew = prefs.getInt("flightSlot", 0) != flight.slotInUse(), manNew = prefs.getUChar("flightMan", 0) != flight.manualChoice();
+    if (todo.empty() && !slotNew && !manNew) return;
+    quietAtFrameEnd();
+    const uint32_t t0 = micros();
+    if (manNew) prefs.putUChar("flightMan", flight.manualChoice());   // (first: the switch's one byte, in the blank)
+    if (slotNew) prefs.putInt("flightSlot", flight.slotInUse());
+    for (auto &kv : todo) prefs.putString(kv.first.c_str(), kv.second.c_str());
+    const uint32_t us = micros() - t0; quietStoreN++; if (us > quietStoreMax) quietStoreMax = us;
 }
 static void flightTouchCancel() { flight.cancelTouch(); }   // (B59) a corner held: not a press
 static void flightTouch(bool pressed, int x, int y, uint32_t now) {
@@ -107,12 +127,12 @@ static void flightPoll() {
             // (1.11.68) the layer still holds this screen as it was left, or as it was drawn ahead: shown at once, in the
             // panel's quiet time, as every other page is; what has changed since is drawn below, two boxes a pass
             topX = 0; topY = 0; topW = W; topH = H; topWho = who; topOn = true;
-            dirty(0, 0, W, H); touchPainted = true; quietSwitch = true; quietKeptN++;
+            dirty(0, 0, W, H); touchPainted = true; quietSwitch = QUIET_SWITCH; quietKeptN++;
         } else if (who != wasWho || sc.layout != drawnLayout) {
             // (1.11.67) the whole screen is drawn afresh in the panel's quiet time (src/main.cpp quietTurn), and copied to the
             // glass in the next: the fill and every box are PSRAM traffic that took scan time from the picture being shown.
             // (1.11.68: only when nothing is kept - the first time, or after another page of ours had the layer)
-            if (!quietTurn(flightDrawJob)) { flightDrawWaits = true; return; }
+            if (QUIET_SWITCH && !quietTurn(flightDrawJob)) { flightDrawWaits = true; return; }
             flightDrawWaits = false;
             const uint32_t d0 = micros();
             { TopDraw on; flightDrawAll(sc); }
@@ -122,7 +142,7 @@ static void flightPoll() {
             for (auto &b : sc.buttons) drawn[b.id] = b.serial;
             drawnLayout = sc.layout; drawnStrip = strip;
             topX = 0; topY = 0; topW = W; topH = H; topWho = who; topOn = true;
-            dirty(0, 0, W, H); touchPainted = true; quietSwitch = true; quietFullN++; whole = true;
+            dirty(0, 0, W, H); touchPainted = true; quietSwitch = QUIET_SWITCH; quietFullN++; whole = true;
         }
         if (!whole) {
             if (strip != drawnStrip) {
@@ -162,7 +182,7 @@ static void flightPoll() {
         flPicForget();                                          // (the model's picture: read afresh next time it is drawn)
         if (topWho == wasWho) { topOn = false; topWho = 0; }    // (unless another page of ours has the layer now)
         dirty(0, 0, W, H); touchPainted = true;                 // the page, as the main board has drawn it meanwhile (a page of ours in our place covers less of the glass)
-        if (topWho == 0) quietSwitch = true;                    // (back to the main board's own page: shown in the panel's quiet time)
+        if (topWho == 0) quietSwitch = QUIET_SWITCH;            // (back to the main board's own page; 1.11.67-68: in the panel's quiet time)
         // (1.11.68: drawn, drawnLayout and drawnStrip stay, with the layer's picture: the screen as it was left, for next time)
     } else {
         // (1.11.68) While the main board's own front page shows, the defined screen is drawn behind it on the layer, a piece
