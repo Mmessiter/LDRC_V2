@@ -140,22 +140,51 @@ static bool flImage(const ldrc::FlightRect &a, const std::string &fromTeensy) {
 }
 
 // One box: its name at the top, the number big in the middle with its unit, a small line at the bottom.
-// (1.11.70) A part of a box of two (the batteries: flight above, transmitter below; AMS above, trims below): drawn as a box of
-// its own, in the box's theme, amber or red by its own state. ldrc::flightPartPlan says where its name, number and small
-// line go - the sizing (flightSizeTiles) used the same sums.
+// (1.11.70) A box of two parts (the batteries: RX above, TX below; AMS above, trims below). (1.11.73, Malcolm 15 Oct: "one box
+// is made to appear as 2 smaller ones. I think one box is better - with 2 items in it") ONE box: one face, one frame, a thin
+// line between its two items. A part that needs a look turns its own half amber or red (square at the line, round at the
+// box's corners), and the box's frame white, as any box's. ldrc::flightPartPlan says where each part's name, number and
+// small line go - the sizing (flightSizeTiles) used the same sums.
+static uint16_t flPartFace(const ldrc::FlightTile &t, ldrc::FlightState state, uint16_t face) {
+    using namespace ldrc;
+    if (state == FS_WARN) face = FL_AMBER;
+    else if (state == FS_ALARM) face = FL_RED;
+    if (t.pressed) face = shade(face, ldrc::themeIsLight(face) ? -20 : -30);
+    return face;
+}
+static void flTwoPartBox(const ldrc::FlightTile &t, bool setup) {
+    using namespace ldrc;
+    const FlightRect &r = t.r; const FlightValue &v = t.v;
+    const bool own = t.own;
+    const uint16_t face = own ? t.face : FL_FACE, ink = own ? t.ink : FL_INK;
+    const uint16_t edge = own ? ldrc::themeBlend(ink, face, 30) : FL_EDGE;
+    FlightRect up, low; flightSplit(r, up, low);
+    const int mid = up.y + up.h + (low.y - up.y - up.h) / 2;     // the line between the two items: the middle of the gap
+    gfx->fillRoundRect(r.x, r.y, r.w, r.h, 10, flPartFace(t, FS_NORMAL, face));
+    const FlightState st[2] = { v.state, v.state2 };
+    bool look = false;
+    for (int k = 0; k < 2; ++k) {
+        if (st[k] != FS_WARN && st[k] != FS_ALARM) continue;
+        look = true;
+        const uint16_t c = flPartFace(t, st[k], face);
+        if (k == 0) { gfx->fillRoundRect(r.x, r.y, r.w, mid - r.y, 10, c); gfx->fillRect(r.x, mid - 10, r.w, 10, c); }
+        else { gfx->fillRoundRect(r.x, mid, r.w, r.y + r.h - mid, 10, c); gfx->fillRect(r.x, mid, r.w, 10, c); }
+    }
+    if (look)                                                     // (as a box: a thick white frame with the colour)
+        for (int k = 0; k < 4; ++k) gfx->drawRoundRect(r.x + k, r.y + k, r.w - 2 * k, r.h - 2 * k, 10 - k, 0xFFFF);
+    else {
+        gfx->drawRoundRect(r.x, r.y, r.w, r.h, 10, setup ? FL_SOFT : edge);
+        gfx->drawFastHLine(r.x + 10, mid, r.w - 20, setup ? FL_SOFT : edge);   // (a colour change is the line when a half needs a look)
+    }
+}
 static void flPart(const ldrc::FlightRect &p, const ldrc::FlightTile &t, int part, const std::string &label, const std::string &big,
-                   const std::string &unit, const std::string &small, const std::string &tag, ldrc::FlightState state, int scale, bool setup) {
+                   const std::string &unit, const std::string &small, const std::string &tag, ldrc::FlightState state, int scale) {
     using namespace ldrc;
     const bool own = t.own;
-    uint16_t face = own ? t.face : FL_FACE, ink = own ? t.ink : FL_INK, soft = own ? ldrc::themeBlend(t.ink, t.face, 72) : FL_SOFT;
-    const uint16_t edge = own ? ldrc::themeBlend(t.ink, t.face, 30) : FL_EDGE;
-    if (state == FS_WARN) { face = FL_AMBER; ink = 0x0000; soft = 0x0000; }
-    else if (state == FS_ALARM) { face = FL_RED; ink = 0xFFFF; soft = 0xFFFF; }
-    if (t.pressed) face = shade(face, ldrc::themeIsLight(face) ? -20 : -30);
-    gfx->fillRoundRect(p.x, p.y, p.w, p.h, 10, face);
-    if (state == FS_WARN || state == FS_ALARM)                    // (as a box: a thick white frame with the colour)
-        for (int k = 0; k < 4; ++k) gfx->drawRoundRect(p.x + k, p.y + k, p.w - 2 * k, p.h - 2 * k, 10 - k, 0xFFFF);
-    else gfx->drawRoundRect(p.x, p.y, p.w, p.h, 10, setup ? FL_SOFT : edge);
+    const uint16_t face = flPartFace(t, state, own ? t.face : FL_FACE);
+    uint16_t ink = own ? t.ink : FL_INK, soft = own ? ldrc::themeBlend(t.ink, t.face, 72) : FL_SOFT;
+    if (state == FS_WARN) { ink = 0x0000; soft = 0x0000; }
+    else if (state == FS_ALARM) { ink = 0xFFFF; soft = 0xFFFF; }
     const bool lightFace = ldrc::themeIsLight(face);
     const uint16_t dim = own || lightFace ? soft : FL_DIM;
     const uint16_t valueInk = state == FS_STALE ? dim : state == FS_GOOD ? (lightFace ? ink : FL_GREEN) : ink;
@@ -192,10 +221,11 @@ static void flightDrawTile(const ldrc::FlightTile &t, bool setup) {
         }
         return;
     }
-    if (v.twoPart) {                                              // (1.11.70) two boxes in one (1.11.71: of one height, drawn alike)
+    if (v.twoPart) {                                              // (1.11.70) two items in one box (1.11.71: of one height, drawn alike; 1.11.73: one box)
         FlightRect up, low; flightSplit(r, up, low);
-        flPart(up, t, 0, v.label, v.big, v.unit, v.small, v.tag, v.state, t.scale, setup);
-        flPart(low, t, 1, v.label2, v.big2, v.unit2, v.small2, v.tag2, v.state2, t.scale2, setup);
+        flTwoPartBox(t, setup);
+        flPart(up, t, 0, v.label, v.big, v.unit, v.small, v.tag, v.state, t.scale);
+        flPart(low, t, 1, v.label2, v.big2, v.unit2, v.small2, v.tag2, v.state2, t.scale2);
         return;
     }
     // its own theme (a panel colour and a text colour), else the screens' theme; the quieter words a

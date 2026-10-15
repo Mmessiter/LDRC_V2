@@ -1,6 +1,7 @@
 # Boxes of two parts (screen 1.11.70, Malcolm 15 Oct: the batteries "combined into a single option with the flight
 # battery at the top"; "another option which shows the state of AMS ... and the state of trimall"). In every size of box:
 # the parts' names, numbers and small lines, a part's own warning colour, and the short parts' one-row form.
+# (1.11.73: ONE box with two items in it, a line between them; a part that needs a look turns its own half amber or red.)
 Screen_Background=21
 @model 1
 page FrontView
@@ -49,3 +50,10 @@ trall.txt="Trims: this bank"
 @theme white
 @flight f2 w1 grid6 s1 timer,batts,rpm,link,esc,amstrim
 @shot fparts_white
+@theme navy
+JRX.val=15
+@flight f2 w1 grid9 s1 timer,batts,rpm,link,esc,mah,amps,amstrim,bank
+@shot fparts_grid9_rxlow_txlow
+JTX.val=85
+@flight f2 w1 big4 s1 batts,timer,amstrim,link,esc
+@shot fparts_big4_rxlow

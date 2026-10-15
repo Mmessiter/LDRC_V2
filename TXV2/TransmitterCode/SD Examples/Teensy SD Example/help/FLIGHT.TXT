@@ -18,7 +18,8 @@ it means the motor is off.)||
 WARNING COLOURS:|
 A box turns amber or red, with a white frame, when its value|
 needs a look:|
-- Batteries: each part amber at 40 per cent or less, red at 20.|
+- Batteries: a battery's half of the box amber at 40 per cent|
+  or less, red at 20.|
 - Link: amber below 75 per cent, red below 50.|
 - ESC temperature: amber from 80 degrees, red from 95.|
 The top line turns red for BATTERY LOW, or for NO LINK in|

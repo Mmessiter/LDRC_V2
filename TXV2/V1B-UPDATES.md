@@ -186,6 +186,13 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## A box of two items is one box (screen 1.11.73, Teensy B103 unchanged, 15 Oct 2026)
+
+Malcolm (the batteries "good I checked"): "But one box is made to appear as 2 smaller ones. I think one box is better - with
+2 items in it." A box of two parts is now drawn as ONE box: one face and one frame, a thin line between its two items, no
+gap. A battery that needs a look turns its own half amber or red (so the box still says which battery), and the box's
+frame white, as any box's. The same for AMS and trims. Help: FLIGHT.TXT (warning colours).
+
 ## The two batteries drawn alike (screen 1.11.72, Teensy B103 unchanged, 15 Oct 2026)
 
 Malcolm: "RX and TX voltages should employ the same format. Both should have per cell volts emphasised." The Batteries box
