@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.890-save-lands";
+constexpr const char* FW_VERSION = "RXV2-0.9.891-save-above-keyboard";
 
 //*********************************************************************
 //  Auto-update manifest URLs

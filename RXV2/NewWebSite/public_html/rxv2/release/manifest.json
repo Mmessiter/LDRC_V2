@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.891-save-above-keyboard",
+      "url": "https://messiter.com/rxv2/release/v0.9.891/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.891/littlefs.bin",
+      "fs_md5": "ff6c14f1cbc5134d77674caf1d152633",
+      "notes": "Save stays in view while typing: the iPhone page now shrinks above the keyboard, so the floating Save bar sits just over it; Filters and In-flight adjustments get the floating Save bar too."
+    },
+    {
       "name": "RXV2-0.9.890-save-lands",
       "url": "https://messiter.com/rxv2/release/v0.9.890/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.890/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.880/littlefs.bin",
       "fs_md5": "25e28987cbe9661d8ddf3e4bb0f1cffa",
       "notes": "The receiver keeps a copy of the flight controller's adjustment lines as they pass through it (every read over the USB cable, every write from the app or the transmitter) and serves it to the app, so the Switches page now shows the bank selector as the flight controller really has it - the travel the transmitter set, in the slot it lives in - and a Save there writes that slot and removes any duplicate line instead of adding one."
-    },
-    {
-      "name": "RXV2-0.9.879-switch-one-line",
-      "url": "https://messiter.com/rxv2/release/v0.9.879/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.879/littlefs.bin",
-      "fs_md5": "e3d491add30944527f9e67c4f6f158c2",
-      "notes": "A switch on the Adjustments page is one Rotorflight line, so it works at every change (one line per position worked once per power-up: Rotorflight applies a fixed value only the first time); switches found in the old form are converted when the page opens: save to keep them. After a transmitter-on boot the receiver takes one look (a scan) for the home WiFi when the transmitter goes off or the model is disarmed, and joins if it is there."
     }
   ],
   "rotorflight": {

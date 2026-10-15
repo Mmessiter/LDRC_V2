@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Filters &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=390">
-<script src="/app.js?v=390" defer></script>
+<link rel=stylesheet href="/style.css?v=391">
+<script src="/app.js?v=391" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -23,7 +23,7 @@ h2{font-size:1.05em;margin:.2em 0 .5em;color:#2c3e50}
 .unit{color:#5c6b75}
 </style>
 </head>
-<body>
+<body class=hasFab>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
 <div class=bg-photo aria-hidden=true></div>
 <div class=bg-wash  aria-hidden=true></div>
@@ -75,8 +75,11 @@ h2{font-size:1.05em;margin:.2em 0 .5em;color:#2c3e50}
     </details>
 
     <div class=card>
-        <button id=saveBtn class=btn type=button style="background:#6cab5e"><span class=ico>&#128190;</span>Save to flight controller</button>
-        <p class=sub style="margin:.6em 0 0">Takes effect at once. An Enable of the Dynamic or RPM filter takes effect when the flight controller restarts: the save offers that.</p>
+        <p class=sub style="margin:0">A save takes effect at once. An Enable of the Dynamic or RPM filter takes effect when the flight controller restarts: the save offers that.</p>
+    </div>
+    <!-- 0.9.891 (Malcolm, 15 Oct: "When editing a value, we need to have quick access to the save button"): Save floats, as on the tuning pages -->
+    <div class=fabBar>
+        <button id=saveBtn class=btn type=button style="background:#6cab5e;margin:0"><span class=ico>&#128190;</span>Save to flight controller</button>
     </div>
     <div class=footer></div>
 </div>

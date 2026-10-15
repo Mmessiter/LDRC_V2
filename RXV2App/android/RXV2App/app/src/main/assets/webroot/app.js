@@ -1563,7 +1563,11 @@
         // of hiding: reachable by scrolling, never gone, and nothing to chase
         // (Malcolm 2026-10-14: "I should be able to save it without getting
         // rid of the keyboard"). Android resizes the window for its keyboard,
-        // so there covered stays 0 and the bar simply floats above it.
+        // so there covered stays 0 and the bar simply floats above it - and since
+        // 0.9.891 the iPhone app's page shrinks above the keyboard too (RXV2App.swift
+        // keeps the keyboard's safe area), so there the bar floats in view as well
+        // (Malcolm 2026-10-15: "we need to have quick access to the save button").
+        // Landing is left for a browser whose keyboard still covers the page.
         bar.classList.toggle('landed', covered > 40 && typing());
         bar.style.visibility = '';
         bar.style.transform = '';

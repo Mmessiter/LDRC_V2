@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>In-flight adjustments &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=390">
-<script src="/app.js?v=390" defer></script>
+<link rel=stylesheet href="/style.css?v=391">
+<script src="/app.js?v=391" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -40,7 +40,7 @@
 .usbOnly:disabled{color:#2c3e50;-webkit-text-fill-color:#2c3e50;opacity:.8}   /* read-only, still readable (Malcolm 2026-09-11) */
 </style>
 </head>
-<body>
+<body class=hasFab>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
 <div class=bg-photo aria-hidden=true></div>
 <div class=bg-wash  aria-hidden=true></div>
@@ -55,8 +55,11 @@
         <button id=addBtn class="btn usbOnly" type=button style="background:#4f7fa0;margin-top:.4em"><span class=ico>&#10133;</span>Add an adjustment</button>
     </div>
     <div class=card>
-        <button id=saveBtn class="btn usbOnly" type=button style="background:#6cab5e"><span class=ico>&#128190;</span>Save to flight controller</button>
-        <p class=sub style="margin:.6em 0 0">Kept by the flight controller: they keep working with the USB unplugged.</p>
+        <p class=sub style="margin:0">Once saved they are kept by the flight controller: they keep working with the USB unplugged.</p>
+    </div>
+    <!-- 0.9.891 (Malcolm, 15 Oct: "When editing a value, we need to have quick access to the save button"): Save floats, as on the tuning pages -->
+    <div class=fabBar>
+        <button id=saveBtn class="btn usbOnly" type=button style="background:#6cab5e;margin:0"><span class=ico>&#128190;</span>Save to flight controller</button>
     </div>
     <div class=footer></div>
 </div>

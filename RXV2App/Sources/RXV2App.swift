@@ -52,8 +52,12 @@ struct RootView: View {
                 // pages as the stack's root, the pushed Connect page stayed
                 // on top and a live link looked like "Searching…").
                 // Disconnect lives on the page's Bluetooth badge.
+                // 0.9.891 (Malcolm, 15 Oct: "the save to flight controller option is not visible while the keyboard
+                // is up ... we need to have quick access to the save button"): the page shrinks ABOVE the keyboard,
+                // as Android's window does, so the floating Save bar sits just over it - nothing to chase. The safe
+                // areas of the screen's edges are still ignored (.container); only the keyboard's is kept.
                 WebScreen(link: link)
-                    .ignoresSafeArea()
+                    .ignoresSafeArea(.container)
                     .onAppear { onConnected(name) }
                     .onChange(of: link.state) { st in
                         if case .ready = st { SessionCache.shared.connectionStarted(); SessionPrefetcher.run(link: link) }
@@ -142,7 +146,7 @@ struct RootView: View {
         .fullScreenCover(isPresented: $reviewMode) {
             ZStack(alignment: .topTrailing) {
                 WebScreen(link: link, replay: true)
-                    .ignoresSafeArea()
+                    .ignoresSafeArea(.container)   // (0.9.891: above the keyboard, as live)
                 Button {
                     reviewMode = false
                 } label: {
@@ -156,7 +160,7 @@ struct RootView: View {
         .fullScreenCover(isPresented: $demoMode) {
             ZStack(alignment: .topTrailing) {
                 WebScreen(link: link, demo: true, demoRole: demoRole)
-                    .ignoresSafeArea()
+                    .ignoresSafeArea(.container)   // (0.9.891: above the keyboard, as live)
                 Button {
                     demoMode = false
                 } label: {
